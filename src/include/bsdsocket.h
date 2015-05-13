@@ -1,0 +1,4 @@
+ /*
+  * NO bsdsocket.library
+  */
+
