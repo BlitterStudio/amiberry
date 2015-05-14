@@ -20,10 +20,9 @@ static int kc_decode (SDL_keysym *prKeySym)
 #ifdef PANDORA
   // Special handling of Pandora keyboard:
   // Some keys requires shift on Amiga, so we simulate shift...
+
   switch (prKeySym->sym)
   {
-    case SDLK_COLON:
-      return SIMULATE_SHIFT | AK_SEMICOLON;
     case SDLK_QUESTION:
       return SIMULATE_SHIFT | AK_SLASH;
     case SDLK_HASH:
@@ -162,6 +161,75 @@ static int kc_decode (SDL_keysym *prKeySym)
     }
 }
 
+/*
+ * Handle keys specific to French (and Belgian) keymaps.
+ *
+ * Number keys are broken
+ */
+static int decode_fr (SDL_keysym *prKeySym)
+{
+    switch(prKeySym->sym) {
+	case SDLK_a:		return AK_Q;
+	case SDLK_m:		return AK_SEMICOLON;
+	case SDLK_q:		return AK_A;
+	case SDLK_y:		return AK_Y;
+	case SDLK_w:		return AK_Z;
+	case SDLK_z:		return AK_W;
+	case SDLK_LEFTBRACKET:	return AK_LBRACKET;
+	case SDLK_RIGHTBRACKET: return AK_RBRACKET;
+	case SDLK_COMMA:	return AK_M;
+	case SDLK_LESS:
+	case SDLK_GREATER:	return AK_LTGT;
+	case SDLK_PERIOD:
+	case SDLK_SEMICOLON:	return AK_COMMA;
+	case SDLK_RIGHTPAREN:	return AK_MINUS;
+	case SDLK_EQUALS:	return AK_SLASH;
+	case SDLK_HASH:		return AK_NUMBERSIGN;
+	case SDLK_SLASH:	return AK_PERIOD;      // Is it true ?
+	case SDLK_MINUS:	return AK_EQUAL;
+	case SDLK_BACKSLASH:	return AK_SLASH;
+	case SDLK_COLON:	return AK_PERIOD;
+	case SDLK_EXCLAIM:	return AK_BACKSLASH;   // Not really...
+	default: printf("Unknown key: %i\n",prKeySym->sym); return -1;
+    }
+}
+
+/*
+ * Handle keys specific to German keymaps.
+ */
+static int decode_de (SDL_keysym *prKeySym)
+{
+    switch(prKeySym->sym) {
+	case SDLK_a:		return AK_A;
+	case SDLK_m:		return AK_M;
+	case SDLK_q:		return AK_Q;
+	case SDLK_w:		return AK_W;
+	case SDLK_y:		return AK_Z;
+	case SDLK_z:		return AK_Y;
+	case SDLK_COLON:	return SIMULATE_SHIFT | AK_SEMICOLON;
+	/* German umlaut oe */
+	case SDLK_WORLD_86:	return AK_SEMICOLON;
+	/* German umlaut ae */
+	case SDLK_WORLD_68:	return AK_QUOTE;
+	/* German umlaut ue */
+	case SDLK_WORLD_92:	return AK_LBRACKET;
+	case SDLK_PLUS:
+	case SDLK_ASTERISK:	return AK_RBRACKET;
+	case SDLK_COMMA:	return AK_COMMA;
+	case SDLK_PERIOD:	return AK_PERIOD;
+	case SDLK_LESS:
+	case SDLK_GREATER:	return AK_LTGT;
+	case SDLK_HASH:		return AK_NUMBERSIGN;
+	/* German sharp s */
+	case SDLK_WORLD_63:	return AK_MINUS;
+	case SDLK_QUOTE:	return AK_EQUAL;
+	case SDLK_CARET:	return AK_BACKQUOTE;
+	case SDLK_MINUS:	return AK_SLASH;
+	default: return -1;
+    }
+}
+
+
 static int decode_us (SDL_keysym *prKeySym)
 {
     switch(prKeySym->sym)
@@ -173,6 +241,7 @@ static int decode_us (SDL_keysym *prKeySym)
     case SDLK_y: return AK_Y;
     case SDLK_w: return AK_W;
     case SDLK_z: return AK_Z;
+    case SDLK_COLON:   return SIMULATE_SHIFT | AK_SEMICOLON;
     case SDLK_LEFTBRACKET: return AK_LBRACKET;
     case SDLK_RIGHTBRACKET: return AK_RBRACKET;
     case SDLK_COMMA: return AK_COMMA;
