@@ -57,11 +57,12 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 
 	if (!triggerR /*R+dpad = arrow keys*/ && currprefs.pandora_custom_dpad==0)
 	{
-	  // get joystick direction via dPad or joystick
-		if (dpadRight || SDL_JoystickGetAxis(joy, 0) > 0) right=1;
-		if (dpadLeft || SDL_JoystickGetAxis(joy, 0) < 0) left=1;
-		if (dpadUp || SDL_JoystickGetAxis(joy, 1) < 0) top=1;
-		if (dpadDown || SDL_JoystickGetAxis(joy, 1) > 0) bot=1;
+		// get joystick direction via dPad or joystick
+		int hat=SDL_JoystickGetHat(joy,0);
+		if ((hat & SDL_HAT_RIGHT) || dpadRight || SDL_JoystickGetAxis(joy, 0) > 0) right=1;
+		if ((hat & SDL_HAT_LEFT)  || dpadLeft  || SDL_JoystickGetAxis(joy, 0) < 0) left=1;
+		if ((hat & SDL_HAT_UP)    || dpadUp    || SDL_JoystickGetAxis(joy, 1) < 0) top=1;
+		if ((hat & SDL_HAT_DOWN)  || dpadDown  || SDL_JoystickGetAxis(joy, 1) > 0) bot=1;
 		if (currprefs.pandora_joyConf)
 		{
 			if ((buttonX && currprefs.pandora_jump > -1) || SDL_JoystickGetButton(joy, currprefs.pandora_jump))
@@ -150,7 +151,17 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 		*button |= ((buttonB || SDL_JoystickGetButton(joy, currprefs.pandora_button2)) & 1) << 1;
 	}
 
-	// normal joystick movement
+
+  #ifdef SIX_AXIS_WORKAROUND
+  *button |= (SDL_JoystickGetButton(joy, 13)) & 1;
+  *button |= ((SDL_JoystickGetButton(joy, 14)) & 1) << 1;
+  if (SDL_JoystickGetButton(joy, 4))   top=1;
+  if (SDL_JoystickGetButton(joy, 5))   right=1;
+  if (SDL_JoystickGetButton(joy, 6))   bot=1;
+  if (SDL_JoystickGetButton(joy, 7))   left=1;
+  #endif
+
+  // normal joystick movement
   if (left) 
     top = !top;
 	if (right) 
@@ -205,11 +216,19 @@ void init_joystick(void)
     int i;
     nr_joysticks = SDL_NumJoysticks ();
     if (nr_joysticks > 0)
-	uae4all_joy0 = SDL_JoystickOpen (0);
+    {
+		uae4all_joy0 = SDL_JoystickOpen (0);
+                printf("    Joystick%d : %s\n",i,SDL_JoystickName(0));
+		printf("        Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy0),SDL_JoystickNumAxes(uae4all_joy0),SDL_JoystickNumHats(uae4all_joy0));
+    }
     if (nr_joysticks > 1)
-	uae4all_joy1 = SDL_JoystickOpen (1);
+    {
+		uae4all_joy1 = SDL_JoystickOpen (1);
+                printf("    Joystick%d : %s\n",i,SDL_JoystickName(1));
+		printf("        Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy1),SDL_JoystickNumAxes(uae4all_joy1),SDL_JoystickNumHats(uae4all_joy1));
+    }
     else
-	uae4all_joy1 = NULL;
+		uae4all_joy1 = NULL; 
 }
 
 void close_joystick(void)

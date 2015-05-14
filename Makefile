@@ -1,5 +1,4 @@
 PREFIX	=/usr
-$(shell ./link_pandora_dirs.sh)
 
 #SDL_BASE = $(PREFIX)/bin/
 SDL_BASE = 
@@ -7,8 +6,7 @@ SDL_BASE =
 NAME   = uae4arm
 O      = o
 RM     = rm -f
-#CC     = gcc
-#CXX    = g++
+CXX    = g++-4.8
 #STRIP  = strip
 #AS     = as
 
@@ -21,34 +19,34 @@ PANDORA=1
 DEFAULT_CFLAGS = `$(SDL_BASE)sdl-config --cflags`
 LDFLAGS = -lSDL -lpthread  -lz -lSDL_image -lpng -lrt
 
-MORE_CFLAGS += -DGP2X -DPANDORA -DDOUBLEBUFFER -DARMV6_ASSEMBLY -DUSE_ARMNEON
+MORE_CFLAGS += -DGP2X -DPANDORA -DDOUBLEBUFFER -DARMV6_ASSEMBLY -DUSE_ARMNEON -DRASPBERRY -DSIX_AXIS_WORKAROUND
 MORE_CFLAGS += -DSUPPORT_THREADS -DUAE_FILESYS_THREADS -DNO_MAIN_IN_MAIN_C -DFILESYS -DAUTOCONFIG -DSAVESTATE
 MORE_CFLAGS += -DDONT_PARSE_CMDLINE
 #MORE_CFLAGS += -DWITH_LOGGING
+MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
 
 MORE_CFLAGS += -DJIT -DCPU_arm -DARM_ASSEMBLY
 
-MORE_CFLAGS += -Isrc -Isrc/gp2x -Isrc/menu -Isrc/include -Isrc/gp2x/menu -fomit-frame-pointer -Wno-unused -Wno-format -DUSE_SDL -DGCCCONSTFUNC="__attribute__((const))" -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
-LDFLAGS +=  -lSDL_ttf -lguichan_sdl -lguichan
-MORE_CFLAGS += -fexceptions
+MORE_CFLAGS += -Isrc -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -fomit-frame-pointer -Wno-unused -Wno-format -DUSE_SDL -DGCCCONSTFUNC="__attribute__((const))" -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
+LDFLAGS +=  -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
+MORE_CFLAGS += -fexceptions -fpermissive
 
 
 MORE_CFLAGS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 
-MORE_CFLAGS += -msoft-float -ffast-math
+MORE_CFLAGS += -mhard-float -ffast-math -mfpu=neon
 ifndef DEBUG
-MORE_CFLAGS += -O2
-MORE_CFLAGS += -fstrict-aliasing -mstructure-size-boundary=32 -fexpensive-optimizations
+MORE_CFLAGS += -O3
+MORE_CFLAGS += -fstrict-aliasing
 MORE_CFLAGS += -fweb -frename-registers -fomit-frame-pointer
 #MORE_CFLAGS += -falign-functions=32 -falign-loops -falign-labels -falign-jumps
-MORE_CFLAGS += -falign-functions=32
 MORE_CFLAGS += -finline -finline-functions -fno-builtin
 #MORE_CFLAGS += -S
 else
 MORE_CFLAGS += -ggdb
 endif
 
-ASFLAGS += -mfloat-abi=soft
+ASFLAGS += -mfloat-abi=hard -mfpu=neon
 
 CFLAGS  = $(DEFAULT_CFLAGS) $(MORE_CFLAGS)
 CFLAGS+= -DCPUEMU_0 -DCPUEMU_5 -DFPUEMU
@@ -86,48 +84,48 @@ OBJS =	\
 	src/unzip.o \
 	src/zfile.o \
 	src/machdep/support.o \
-	src/osdep/neon_helper.o \
-	src/osdep/fsdb_host.o \
-	src/osdep/joystick.o \
-	src/osdep/keyboard.o \
-	src/osdep/inputmode.o \
-	src/osdep/writelog.o \
-	src/osdep/pandora.o \
-	src/osdep/pandora_filesys.o \
-	src/osdep/pandora_gui.o \
-	src/osdep/pandora_gfx.o \
-	src/osdep/pandora_mem.o \
-	src/osdep/sigsegv_handler.o \
-	src/osdep/menu/menu_config.o \
-	src/sounddep/sound.o \
-	src/osdep/gui/UaeRadioButton.o \
-	src/osdep/gui/UaeDropDown.o \
-	src/osdep/gui/UaeCheckBox.o \
-	src/osdep/gui/UaeListBox.o \
-	src/osdep/gui/InGameMessage.o \
-	src/osdep/gui/SelectorEntry.o \
-	src/osdep/gui/ShowMessage.o \
-	src/osdep/gui/SelectFolder.o \
-	src/osdep/gui/SelectFile.o \
-	src/osdep/gui/EditFilesysVirtual.o \
-	src/osdep/gui/EditFilesysHardfile.o \
-	src/osdep/gui/PanelPaths.o \
-	src/osdep/gui/PanelConfig.o \
-	src/osdep/gui/PanelCPU.o \
-	src/osdep/gui/PanelChipset.o \
-	src/osdep/gui/PanelROM.o \
-	src/osdep/gui/PanelRAM.o \
-	src/osdep/gui/PanelFloppy.o \
-	src/osdep/gui/PanelHD.o \
-	src/osdep/gui/PanelDisplay.o \
-	src/osdep/gui/PanelSound.o \
-	src/osdep/gui/PanelInput.o \
-	src/osdep/gui/PanelMisc.o \
-	src/osdep/gui/PanelSavestate.o \
-	src/osdep/gui/main_window.o \
-	src/osdep/gui/Navigation.o
+	src/od-pandora/neon_helper.o \
+	src/od-pandora/fsdb_host.o \
+	src/od-pandora/joystick.o \
+	src/od-pandora/keyboard.o \
+	src/od-pandora/inputmode.o \
+	src/od-pandora/writelog.o \
+	src/od-pandora/pandora.o \
+	src/od-pandora/pandora_filesys.o \
+	src/od-pandora/pandora_gui.o \
+	src/od-rasp/rasp_gfx.o \
+	src/od-pandora/pandora_mem.o \
+	src/od-pandora/sigsegv_handler.o \
+	src/od-pandora/menu/menu_config.o \
+	src/sd-sdl/sound_sdl_new.o \
+	src/od-pandora/gui/UaeRadioButton.o \
+	src/od-pandora/gui/UaeDropDown.o \
+	src/od-pandora/gui/UaeCheckBox.o \
+	src/od-pandora/gui/UaeListBox.o \
+	src/od-pandora/gui/InGameMessage.o \
+	src/od-pandora/gui/SelectorEntry.o \
+	src/od-pandora/gui/ShowMessage.o \
+	src/od-pandora/gui/SelectFolder.o \
+	src/od-pandora/gui/SelectFile.o \
+	src/od-pandora/gui/EditFilesysVirtual.o \
+	src/od-pandora/gui/EditFilesysHardfile.o \
+	src/od-pandora/gui/PanelPaths.o \
+	src/od-pandora/gui/PanelConfig.o \
+	src/od-pandora/gui/PanelCPU.o \
+	src/od-pandora/gui/PanelChipset.o \
+	src/od-pandora/gui/PanelROM.o \
+	src/od-pandora/gui/PanelRAM.o \
+	src/od-pandora/gui/PanelFloppy.o \
+	src/od-pandora/gui/PanelHD.o \
+	src/od-pandora/gui/PanelDisplay.o \
+	src/od-pandora/gui/PanelSound.o \
+	src/od-pandora/gui/PanelInput.o \
+	src/od-pandora/gui/PanelMisc.o \
+	src/od-pandora/gui/PanelSavestate.o \
+	src/od-pandora/gui/main_window.o \
+	src/od-pandora/gui/Navigation.o
 ifdef PANDORA
-OBJS += src/osdep/gui/sdltruetypefont.o
+OBJS += src/od-pandora/gui/sdltruetypefont.o
 endif
 
 OBJS += src/newcpu.o
@@ -144,7 +142,7 @@ OBJS += src/compemu_support.o
 CPPFLAGS  = $(CFLAGS)
 
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(CXX) -O3 -pipe -falign-functions=32 -march=armv7-a -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=neon -mfloat-abi=softfp -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
+	$(CXX) -O3 -pipe -march=armv7-a -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=neon -mfloat-abi=hard -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 
 $(PROG): $(OBJS)
 	$(CXX) $(CFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)

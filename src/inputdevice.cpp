@@ -344,8 +344,6 @@ void inputdevice_updateconfig (struct uae_prefs *prefs)
 
 void inputdevice_default_prefs (struct uae_prefs *p)
 {
-  inputdevice_init ();
-
   p->input_joymouse_multiplier = 20;
   p->input_autofire_framecnt = 8;
 }
@@ -353,7 +351,7 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 void inputdevice_init (void)
 {
   init_joystick ();
- 	inputmode_init();
+  inputmode_init();
 }
 
 void inputdevice_close (void)

@@ -90,7 +90,8 @@ void InitAmigaVidMode(struct uae_prefs *p)
   gfxvidinfo.width = p->gfx_size.width;
   gfxvidinfo.height = p->gfx_size.height;
   gfxvidinfo.maxblocklines = 0;
-  gfxvidinfo.rowbytes = prSDLScreen->pitch;
+  //gfxvidinfo.rowbytes = prSDLScreen->pitch;
+  gfxvidinfo.rowbytes = blit_rect.width * 2;
 }
 
 void graphics_dispmanshutdown (void)
@@ -139,11 +140,11 @@ void update_display(struct uae_prefs *p)
 
   uint32_t                    vc_image_ptr;
 
-  if(prSDLScreen != NULL)
-  {
-    SDL_FreeSurface(prSDLScreen);
-    prSDLScreen = NULL;
-  } 
+  //if(prSDLScreen != NULL)
+  //{
+  //  SDL_FreeSurface(prSDLScreen);
+  //  prSDLScreen = NULL;
+  //} 
 
   CalcPandoraWidth(p);
   if(curr_layer_width != p->gfx_size_fs.width)
@@ -152,11 +153,12 @@ void update_display(struct uae_prefs *p)
     snprintf(layersize, 20, "%dx480", p->gfx_size_fs.width);
   }
 
-  if(prSDLScreen == NULL || prSDLScreen->w != p->gfx_size.width || prSDLScreen->h != p->gfx_size.height)
+  if(prSDLScreen == NULL )
   {
-	  //prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_SWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
-	  prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_SWSURFACE);
-
+    const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
+    printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+    prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
+    //prSDLScreen = SDL_SetVideoMode(640,480,16,SDL_SWSURFACE );
   }
   SDL_ShowCursor(SDL_DISABLE);
 
@@ -165,7 +167,7 @@ void update_display(struct uae_prefs *p)
   // check if resolution hasn't change in menu. otherwise free the resources so that they will be re-generated with new resolution.
   if ((dispmanxresource_amigafb_1 != 0) && ((blit_rect.width != p->gfx_size.width) || (blit_rect.height != p->gfx_size.height)))
   {
-	printf("Resolution change detected.\n");
+	printf("Emulation resolution change detected.\n");
 	graphics_dispmanshutdown();
 	vc_dispmanx_resource_delete( dispmanxresource_amigafb_1 );
 	vc_dispmanx_resource_delete( dispmanxresource_amigafb_2 );
@@ -201,10 +203,10 @@ void update_display(struct uae_prefs *p)
 							dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 );
 
 	// For debug, in order to avoid full screen.
-	vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2),
-                             (dispmanxdinfo.height * 3)/100 ,
-                             (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/2,
-                             (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/2);
+	//vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2),
+        //                     (dispmanxdinfo.height * 3)/100 ,
+        //                     (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/2,
+        //                     (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/2);
 
 
   }

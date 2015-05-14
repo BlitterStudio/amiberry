@@ -328,7 +328,11 @@ extern void gui_message (const char *,...);
 #endif
 
 #ifndef STATIC_INLINE
+#ifdef RASPBERRY
+#define STATIC_INLINE static __inline__
+#else
 #define STATIC_INLINE static __inline__ __attribute__ ((always_inline))
+#endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
 #endif

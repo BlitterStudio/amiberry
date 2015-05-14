@@ -315,10 +315,16 @@ void gui_exit(void)
 
 void gui_purge_events(void)
 {
+	int counter = 0;
+
 	SDL_Event event;
 	SDL_Delay(150);
-	while(SDL_PollEvent(&event))
+	// Strangely PS3 controller always send events, so we need a maximum number of event to purge.
+	while(SDL_PollEvent(&event) && counter < 50)
+	{
+		counter++;
 		SDL_Delay(10);
+	}
 	keybuf_init();
 }
 

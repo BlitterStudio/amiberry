@@ -67,7 +67,13 @@ namespace sdl
     //-------------------------------------------------
     // Create new screen for GUI
     //-------------------------------------------------
+    #if defined (RASPBERRY)
+    const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
+    printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+    gui_screen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
+    #else
     gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
+    #endif
     SDL_EnableUNICODE(1);
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
     SDL_ShowCursor(SDL_ENABLE);
@@ -328,7 +334,8 @@ namespace widgets
     // Create container for main page
     //-------------------------------------------------
     gui_top = new gcn::Container();
-    gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
+    //gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
+    gui_top->setDimension(gcn::Rectangle((gui_screen->w - GUI_WIDTH) / 2, (gui_screen->h - GUI_HEIGHT) / 2, GUI_WIDTH, GUI_HEIGHT));
     gui_top->setBaseColor(gui_baseCol);
     uae_gui->setTop(gui_top);
 
