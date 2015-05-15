@@ -213,19 +213,18 @@ void handle_joymouse(void)
 
 void init_joystick(void)
 {
-    int i;
     nr_joysticks = SDL_NumJoysticks ();
     if (nr_joysticks > 0)
     {
 		uae4all_joy0 = SDL_JoystickOpen (0);
-                printf("    Joystick%d : %s\n",i,SDL_JoystickName(0));
-		printf("        Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy0),SDL_JoystickNumAxes(uae4all_joy0),SDL_JoystickNumHats(uae4all_joy0));
+                printf("Joystick0 : %s\n",SDL_JoystickName(0));
+		printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy0),SDL_JoystickNumAxes(uae4all_joy0),SDL_JoystickNumHats(uae4all_joy0));
     }
     if (nr_joysticks > 1)
     {
 		uae4all_joy1 = SDL_JoystickOpen (1);
-                printf("    Joystick%d : %s\n",i,SDL_JoystickName(1));
-		printf("        Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy1),SDL_JoystickNumAxes(uae4all_joy1),SDL_JoystickNumHats(uae4all_joy1));
+                printf("Joystick1 : %s\n",SDL_JoystickName(1));
+		printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy1),SDL_JoystickNumAxes(uae4all_joy1),SDL_JoystickNumHats(uae4all_joy1));
     }
     else
 		uae4all_joy1 = NULL; 
