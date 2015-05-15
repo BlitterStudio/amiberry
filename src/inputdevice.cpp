@@ -344,7 +344,7 @@ void inputdevice_updateconfig (struct uae_prefs *prefs)
 
 void inputdevice_default_prefs (struct uae_prefs *p)
 {
-  p->input_joymouse_multiplier = 20;
+  p->input_joymouse_multiplier = 2;
   p->input_autofire_framecnt = 8;
 }
 
