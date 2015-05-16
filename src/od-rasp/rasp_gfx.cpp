@@ -44,6 +44,8 @@ int mouseMoving = 0;
 int fcounter = 0;
 int doStylusRightClick = 0;
 
+int DispManXElementpresent = 0;
+
 static unsigned long previous_synctime = 0;
 static unsigned long next_synctime = 0;
 
@@ -96,9 +98,13 @@ void InitAmigaVidMode(struct uae_prefs *p)
 
 void graphics_dispmanshutdown (void)
 {
-    dispmanxupdate = vc_dispmanx_update_start( 10 );
-    vc_dispmanx_element_remove( dispmanxupdate, dispmanxelement);
-    vc_dispmanx_update_submit_sync(dispmanxupdate);
+    if (DispManXElementpresent == 1)
+    {
+       DispManXElementpresent = 0;
+       dispmanxupdate = vc_dispmanx_update_start( 10 );
+       vc_dispmanx_element_remove( dispmanxupdate, dispmanxelement);
+       vc_dispmanx_update_submit_sync(dispmanxupdate);
+    }
 }
 
 
@@ -140,6 +146,7 @@ void update_display(struct uae_prefs *p)
 
   uint32_t                    vc_image_ptr;
 
+
   //if(prSDLScreen != NULL)
   //{
   //  SDL_FreeSurface(prSDLScreen);
@@ -156,9 +163,9 @@ void update_display(struct uae_prefs *p)
   if(prSDLScreen == NULL )
   {
     const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
-    printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+    printf("DispmanX: Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
     prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
-    //prSDLScreen = SDL_SetVideoMode(640,480,16,SDL_SWSURFACE );
+    //prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
   }
   SDL_ShowCursor(SDL_DISABLE);
 
@@ -204,7 +211,7 @@ void update_display(struct uae_prefs *p)
 
 	// For debug, in order to avoid full screen.
 	//vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2),
-        //                     (dispmanxdinfo.height * 3)/100 ,
+        //                     (dispmanxdinfo.height /2) ,
         //                     (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/2,
         //                     (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/2);
 
@@ -219,8 +226,11 @@ void update_display(struct uae_prefs *p)
   }
 
 
-  dispmanxupdate = vc_dispmanx_update_start( 10 );
-  dispmanxelement = vc_dispmanx_element_add( dispmanxupdate,
+  if (DispManXElementpresent == 0)
+  {
+     DispManXElementpresent = 1;
+     dispmanxupdate = vc_dispmanx_update_start( 10 );
+     dispmanxelement = vc_dispmanx_element_add( dispmanxupdate,
                                         dispmanxdisplay,
                                         2000,               // layer
                                         &dst_rect,
@@ -231,8 +241,9 @@ void update_display(struct uae_prefs *p)
                                         NULL,             // clamp
                                         DISPMANX_NO_ROTATE );
 
-  vc_dispmanx_update_submit(dispmanxupdate,NULL,NULL);
-  //dispmanxupdate = vc_dispmanx_update_start( 10 );
+    vc_dispmanx_update_submit(dispmanxupdate,NULL,NULL);
+    //dispmanxupdate = vc_dispmanx_update_start( 10 );
+  }
 
 
   InitAmigaVidMode(p);
@@ -489,6 +500,7 @@ int graphics_init (void)
 void graphics_leave (void)
 {
 	graphics_subshutdown ();
+	bcm_host_deinit();
 	SDL_VideoQuit();
 	//dumpcustom ();
 }
