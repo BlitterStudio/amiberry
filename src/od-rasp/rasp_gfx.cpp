@@ -171,6 +171,7 @@ static void open_screen(struct uae_prefs *p)
 
   if (screen_is_picasso)
   {
+    printf("Picasso96 mode detected\n");
     width  = picasso_vidinfo.width;
     height = picasso_vidinfo.height;
   } else
@@ -230,7 +231,7 @@ static void open_screen(struct uae_prefs *p)
 
 	dispmanxresource_amigafb_1 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  width,   height,  &vc_image_ptr);
 	dispmanxresource_amigafb_2 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  width,   height,  &vc_image_ptr);
-	vc_dispmanx_rect_set( &blit_rect, 0, 0, p->gfx_size.width,p->gfx_size.height);
+	vc_dispmanx_rect_set( &blit_rect, 0, 0, width,height);
 	vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_1,
                                     VC_IMAGE_RGB565,
                                     width *2,
@@ -811,7 +812,7 @@ void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgb
   if (screen_is_picasso)
   {
   	open_screen(&currprefs);
-    picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+    picasso_vidinfo.rowbytes	= blit_rect.width * 2;
   }
 }
 
@@ -822,7 +823,7 @@ void gfx_set_picasso_state (int on)
 
 	screen_is_picasso = on;
   open_screen(&currprefs);
-  picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+  picasso_vidinfo.rowbytes	= blit_rect.width * 2;
 	if (on)
 		DX_SetPalette (0, 256);
 }
@@ -830,7 +831,7 @@ void gfx_set_picasso_state (int on)
 uae_u8 *gfx_lock_picasso (void)
 {
   // We lock the surface directly after create and flip
-  picasso_vidinfo.rowbytes = prSDLScreen->pitch;
+  picasso_vidinfo.rowbytes = blit_rect.width * 2;
   return (uae_u8 *)prSDLScreen->pixels;
 }
 
