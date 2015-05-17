@@ -1009,9 +1009,6 @@ static void drive_step (drive * drv)
     }
   }
   rand_shifter (drv);
-#ifdef DISK_DEBUG2
-    write_log (" ->step %d", drv->cyl);
-#endif
 }
 
 static int drive_track0 (drive * drv)
@@ -1034,9 +1031,6 @@ static void drive_motor (drive * drv, int off)
   if (drv->motoroff && !off) {
     drv->dskready_time = DSKREADY_TIME;
     rand_shifter (drv);
-#ifdef DISK_DEBUG2
-	  write_log (" ->motor on");
-#endif
   }
   if (!drv->motoroff && off) {
 	  drv->drive_id_scnt = 0; /* Reset id shift reg counter */
@@ -1170,8 +1164,6 @@ static void decode_pcdos (drive *drv)
         *dstmfmbuf++ = 0x9254;
     drv->skipoffset = 0;
     drv->tracklen = (dstmfmbuf - drv->bigmfmbuf) * 16;
-//    if (disk_debug_logging > 0)
-//        write_log ("pcdos read track %d\n", tr);
 }
 
 static void decode_amigados (drive *drv)
@@ -1262,9 +1254,6 @@ static void decode_amigados (drive *drv)
 		dstmfmoffset++;
 	}
      }
-
-//    if (disk_debug_logging > 0)
-//        write_log ("amigados read track %d\n", tr);
 }
 
 static void drive_fill_bigbuf (drive * drv, int force)
@@ -1293,9 +1282,6 @@ static void drive_fill_bigbuf (drive * drv, int force)
 	    uae_u8 *data = (uae_u8 *) mfm;
 	    *mfm = 256 * *data + *(data + 1);
 	}
-#ifdef DISK_DEBUG
-	write_log ("track %d, length %d read from \"saveimage\"\n", tr, drv->tracklen);
-#endif
     } /* else if (drv->filetype == ADF_CATWEASEL) {
 #ifdef CATWEASEL
 	drv->tracklen = 0;
@@ -1340,9 +1326,6 @@ static void drive_fill_bigbuf (drive * drv, int force)
 	    uae_u8 *data = (uae_u8 *) mfm;
 	    *mfm = 256 * *data + *(data + 1);
 	}
-#if 0 && defined DISK_DEBUG
-	    write_log ("rawtrack %d image offset=%x\n", tr, ti->offs);
-#endif
     }
     drv->buffered_side = side;
     drv->buffered_cyl = drv->cyl;
@@ -1374,9 +1357,6 @@ static void diskfile_update (struct zfile *diskfile, trackid *ti, int len, uae_u
 	zfile_fwrite (zerobuf, 1, ti->len, diskfile);
 	free (zerobuf);
     }
-#ifdef DISK_DEBUG
-    write_log ("track %d, raw track length %d written (total size %d)\n", ti->track, (ti->bitlen + 7) / 8, ti->len);
-#endif
 }
 
 #define MFMMASK 0x55555555
@@ -1488,10 +1468,6 @@ static int decode_buffer (uae_u16 *mbuf, int cyl, int drvsec, int ddhd, int file
   }
   if (filetype == ADF_EXT2 && (secwritten == 0 || secwritten < 0))
   	return 5;
-//  if (secwritten == 0)
-//    write_log ("Disk decode: unsupported format\n");
-//  if (secwritten < 0)
-//  	write_log ("Disk decode: sector labels ignored\n");
   *drvsecp = drvsec;
   return 0;
 }
@@ -1686,9 +1662,6 @@ static void drive_eject (drive * drv)
     drv->dskready_down_time = 0;
     drv->crc32 = 0;
     drive_settype_id (drv); /* Back to 35 DD */
-#ifdef DISK_DEBUG
-    write_log ("eject drive %d\n", drv - &floppy[0]);
-#endif
 }
 
 /* We use this function if we have no Kickstart ROM.
@@ -1976,9 +1949,6 @@ void DISK_check_change (void)
 	    drv->dskchange_time--;
 	    if (drv->dskchange_time == 0) {
 		drive_insert (drv, &currprefs, i, drv->newname);
-#ifdef DISK_DEBUG
-		write_log ("delayed insert, drive %d, image '%s'\n", i, drv->newname);
-#endif
 		update_drive_gui (i);
 	    }
 	}
@@ -2006,9 +1976,6 @@ void DISK_select (uae_u8 data)
     static uae_u8 prevdata;
     static int step;
 
-#ifdef DISK_DEBUG2
-    write_log ("%08.8X %02.2X %s", M68K_GETPC, data, tobin(data));
-#endif
     lastselected = selected;
     selected = (data >> 3) & 15;
     side = 1 - ((data >> 2) & 1);
@@ -2019,9 +1986,6 @@ void DISK_select (uae_u8 data)
 	for (dr = 0; dr < 4; dr++) {
 	    if (floppy[dr].indexhackmode > 1 && !(selected & (1 << dr))) {
 		floppy[dr].indexhack = 1;
-#ifdef DISK_DEBUG2
-		write_log (" indexhack!");
-#endif
 	    }
 	}
     }
@@ -2089,7 +2053,6 @@ uae_u8 DISK_status (void)
 		    st &= ~0x20;
 		/* dskrdy needs some cycles after switching the motor off.. (Pro Tennis Tour) */
 		if (drv->motordelay) {
-//		    write_log ("MOTORDELAY! %x\n", M68K_GETPC);
 		    st &= ~0x20;
 		    drv->motordelay = 0;
 		}
@@ -2135,21 +2098,15 @@ void dumpdisk (void)
     for (i = 0; i < MAX_FLOPPY_DRIVES; i++) {
 	drive *drv = &floppy[i];
 	if (!(disabled & (1 << i))) {
-	    write_log ("Drive %d: motor %s cylinder %2d sel %s %s mfmpos %d/%d\n",
-		i, drv->motoroff ? "off" : " on", drv->cyl, (selected & (1 << i)) ? "no" : "yes",
-		drive_writeprotected(drv) ? "ro" : "rw", drv->mfmpos, drv->tracklen);
 	    w = word;
 	    for (j = 0; j < 15; j++) {
-		write_log ("%04.4X ", w);
 		for (k = 0; k < 16; k++) {
 		    w <<= 1;
 		    w |= getonebit (drv->bigmfmbuf, drv->mfmpos + j * 16 + k);
 		}
 	    }
-	    write_log ("\n");
 	}
     }
-    write_log ("side %d, dma %d, bitoffset %d, word %04.4X, dskbytr %04.4X adkcon %04.4X dsksync %04.4X\n", side, dskdmaen, bitoffset, word, dskbytr_val, adkcon, dsksync);
 }
 
 static void disk_dmafinished (void)
@@ -2157,15 +2114,6 @@ static void disk_dmafinished (void)
     INTREQ (0x8002);
     longwritemode = 0;
     dskdmaen = 0;
-#ifdef DISK_DEBUG
-    {
-	int dr, mfmpos = -1;
-        write_log("disk dma finished %08.8X MFMpos=", dskpt);
-	for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++)
-	    write_log ("%d%s", floppy[dr].mfmpos, dr < MAX_FLOPPY_DRIVES - 1 ? "," : "");
-	write_log ("\n");
-    }
-#endif
 }
 
 static void fetchnextrevolution (drive *drv)
@@ -2528,8 +2476,6 @@ void DSKLEN (uae_u16 v, int hpos)
     if (!(v & 0x8000)) {
 	    if (dskdmaen) {
 	    /* Megalomania and Knightmare does this */
-    //	if (dskdmaen == 3)
-    //	    write_log ("warning: Disk write DMA aborted, %d words left\n", dsklength);
 	      dskdmaen = 0;
       }
     }
@@ -2553,23 +2499,6 @@ void DSKLEN (uae_u16 v, int hpos)
     if (dsklength == 1)
 	dsklength = 0;
 
-#ifdef DISK_DEBUG
-	for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
-	    drive *drv = &floppy[dr];
-	    if (drv->motoroff)
-		continue;
-	    if ((selected & (1 << dr)) == 0)
-		break;
-	}
-    if (dr == 4) {
-        write_log ("disk %s DMA started but no drive selected!\n",
-    	       dskdmaen == 3 ? "write" : "read");
-    } else {
-        write_log ("disk %s DMA started, drv=%x track %d mfmpos %d\n",
-	        dskdmaen == 3 ? "write" : "read", selected ^ 15, 
-          floppy[dr].cyl * 2 + side, floppy[dr].mfmpos);
-    }
-#endif
 
     for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++)
 	update_drive_gui (dr);
@@ -2655,15 +2584,6 @@ void DSKSYNC (int hpos, uae_u16 v)
 
 void DSKDAT (uae_u16 v)
 {
-//    static int count = 0;
-//    if (count < 5) {
-//	count++;
-//	write_log ("%04.4X written to DSKDAT. Not good. PC=%08.8X", v, M68K_GETPC);
-//	if (count == 5)
-//	    write_log ("(further messages suppressed)");
-
-//	write_log ("\n");
-//    }
 }
 void DSKPTH (uae_u16 v)
 {

@@ -36,6 +36,18 @@ unsigned int doMask (int p, int bits, int shift)
 }
 
 
+unsigned int doMask256 (int p, int bits, int shift)
+{
+    /* p is a value from 0 to 255 (Amiga color value)
+     * shift to align msb with mask, and apply mask */
+
+    unsigned long val = p * 0x01010101UL;
+    val >>= (32 - bits);
+    val <<= shift;
+
+    return val;
+}
+
 static unsigned int doColor(int i, int bits, int shift)
 {
     int shift2;

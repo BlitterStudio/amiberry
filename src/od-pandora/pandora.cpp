@@ -43,7 +43,8 @@ extern int justClicked;
 extern int fcounter;
 
 extern int keycode2amiga(SDL_keysym *prKeySym);
-extern int loadconfig_old(const char *orgpath, int general);
+extern int loadconfig_old(struct uae_prefs *p, const char *orgpath);
+extern void SetLastActiveConfig(const char *filename);
 
 /* Keyboard and mouse */
 /* Keyboard */
@@ -120,8 +121,6 @@ void logging_cleanup( void )
 
 void target_default_options (struct uae_prefs *p, int type)
 {
-  memcpy(&changed_prefs, &currprefs, sizeof(struct uae_prefs));
-
   p->pandora_horizontal_offset = 0;
   p->pandora_vertical_offset = 0;
   p->pandora_cpu_speed = 600;
@@ -249,12 +248,12 @@ void fetch_screenshotpath(char *out, int size)
 }
 
 
-int my_cfgfile_load (struct uae_prefs *p, const char *filename, int general)
+int target_cfgfile_load (struct uae_prefs *p, char *filename, int type, int isdefault)
 {
   int result = 0;
 
-  while(nr_units(currprefs.mountinfo) > 0)
-    kill_filesys_unit(currprefs.mountinfo, 0);
+  while(nr_units(p->mountinfo) > 0)
+    kill_filesys_unit(p->mountinfo, 0);
 
 	char *ptr = strstr(filename, ".uae");
   if(ptr > 0)
@@ -267,25 +266,20 @@ int my_cfgfile_load (struct uae_prefs *p, const char *filename, int general)
   	set_joyConf();
     extractFileName(filename, last_loaded_config);
   }
-  else if (general >= 0)
-    result = loadconfig_old(filename, general);
+  else 
+    result = loadconfig_old(p, filename);
 
   if(result)
   {
     for(int i=0; i < p->nr_floppies; ++i)
     {
-      if(strncmp(currprefs.df[i], p->df[i], 256))
-      {
-        if(strlen(p->df[i]) > 0)
-          disk_insert(i, p->df[i]);
-        else
-          disk_eject(i);
-      }
       if(strlen(p->df[i]) > 0)
         AddFileToDiskList(p->df[i], 1);
     }
 
     inputdevice_updateconfig (p);
+
+    SetLastActiveConfig(filename);
   }
 
   return result;

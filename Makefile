@@ -20,7 +20,7 @@ DEFAULT_CFLAGS = `$(SDL_BASE)sdl-config --cflags`
 LDFLAGS = -lSDL -lpthread  -lz -lSDL_image -lpng -lrt
 
 MORE_CFLAGS += -DGP2X -DPANDORA -DDOUBLEBUFFER -DARMV6_ASSEMBLY -DUSE_ARMNEON -DRASPBERRY -DSIX_AXIS_WORKAROUND
-MORE_CFLAGS += -DSUPPORT_THREADS -DUAE_FILESYS_THREADS -DNO_MAIN_IN_MAIN_C -DFILESYS -DAUTOCONFIG -DSAVESTATE
+MORE_CFLAGS += -DSUPPORT_THREADS -DUAE_FILESYS_THREADS -DNO_MAIN_IN_MAIN_C -DFILESYS -DAUTOCONFIG -DSAVESTATE -DPICASSO96
 MORE_CFLAGS += -DDONT_PARSE_CMDLINE
 #MORE_CFLAGS += -DWITH_LOGGING
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
@@ -81,6 +81,7 @@ OBJS =	\
 	src/savestate.o \
 	src/scsi-none.o \
 	src/traps.o \
+	src/uaelib.o \
 	src/unzip.o \
 	src/zfile.o \
 	src/machdep/support.o \
@@ -89,6 +90,7 @@ OBJS =	\
 	src/od-pandora/joystick.o \
 	src/od-pandora/keyboard.o \
 	src/od-pandora/inputmode.o \
+	src/od-pandora/picasso96.o \
 	src/od-pandora/writelog.o \
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \

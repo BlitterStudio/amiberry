@@ -202,3 +202,22 @@ extern void adjust_idletime(unsigned long ns_waited);
 /* Finally, stuff that shouldn't really be shared.  */
 
 extern int diwfirstword,diwlastword;
+#define IHF_SCROLLLOCK 0
+#define IHF_QUIT_PROGRAM 1
+#define IHF_PICASSO 2
+#define IHF_SOUNDADJUST 3
+
+extern int inhibit_frame;
+
+STATIC_INLINE void set_inhibit_frame (int bit)
+{
+    inhibit_frame |= 1 << bit;
+}
+STATIC_INLINE void clear_inhibit_frame (int bit)
+{
+    inhibit_frame &= ~(1 << bit);
+}
+STATIC_INLINE void toggle_inhibit_frame (int bit)
+{
+    inhibit_frame ^= 1 << bit;
+}

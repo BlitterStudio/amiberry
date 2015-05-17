@@ -605,6 +605,26 @@ LOWFUNC(NONE,NONE,3,raw_lea_l_brr,(W4 d, RR4 s, IMM offset))
 }
 LENDFUNC(NONE,NONE,3,raw_lea_l_brr,(W4 d, RR4 s, IMM offset))
 
+LOWFUNC(NONE,NONE,3,raw_lea_l_brr24,(W4 d, RR4 s, IMM offset))
+{
+#if defined(USE_DATA_BUFFER)
+  long offs = data_long_offs(offset);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr     r2, [pc, #offs]
+  BIC_rri(REG_WORK2, s, 0xff000000);    // bic  r3, r6, 0xff000000
+	ADD_rrr(d, REG_WORK2, REG_WORK1);     // add     r7, r3, r2
+#else
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4); 	// ldr     r2, [pc, #4]    ; <value>
+  BIC_rri(REG_WORK2, s, 0xff000000);  // bic  r3, r6, 0xff000000
+	ADD_rrr(d, REG_WORK2, REG_WORK1);  	// add     r7, r3, r2
+
+	B_i(0);                           	// b        <jp>
+	//<value>:
+	emit_long(offset);
+	//<jp>:
+#endif
+}
+LENDFUNC(NONE,NONE,3,raw_lea_l_brr24,(W4 d, RR4 s, IMM offset))
+
 LOWFUNC(NONE,NONE,5,raw_lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IMM factor, IMM offset))
 {
 	int shft;
@@ -672,12 +692,36 @@ LOWFUNC(NONE,READ,3,raw_mov_b_brR,(W1 d, RR4 s, IMM offset))
 }
 LENDFUNC(NONE,READ,3,raw_mov_b_brR,(W1 d, RR4 s, IMM offset))
 
+LOWFUNC(NONE,READ,3,raw_mov_b_brR24,(W1 d, RR4 s, IMM offset))
+{
+#if defined(USE_DATA_BUFFER)
+  long offs = data_long_offs(offset);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr  r2, [pc, #offs]
+#else
+	LDR_rRI(REG_WORK1, RPC_INDEX, 12); 	// ldr  r2, [pc, #12]   ; <value>
+#endif
+
+  BIC_rri(REG_WORK2, s, 0xff000000);          // bic  r3, r6, 0xff000000
+	LDRB_rRR(REG_WORK1, REG_WORK1, REG_WORK2); 	// ldrb	r2, [r2, r3]
+
+	BIC_rri(d, d, 0xff);              	// bic	r7, r7, #0xff
+	ORR_rrr(d, d, REG_WORK1);          	// orr	r7, r7, r2
+
+#if !defined(USE_DATA_BUFFER)
+	B_i(0);                            	// b	<jp>
+	//<value>:
+	emit_long(offset);
+	//<jp>:
+#endif
+}
+LENDFUNC(NONE,READ,3,raw_mov_b_brR24,(W1 d, RR4 s, IMM offset))
+
 LOWFUNC(NONE,WRITE,3,raw_mov_b_bRr,(RR4 d, RR1 s, IMM offset))
 {
 #if defined(USE_DATA_BUFFER)
   long offs = data_long_offs(offset);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr  r2,[pc, #offs]
-	STRB_rRR(s, d, REG_WORK1);			// strb r6,[r7, r2]
+  STRB_rRR(s, d, REG_WORK1);			// strb r6,[r7, r2]
 #else
 	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	// ldr  r2,[pc,#4]
 	STRB_rRR(s, d, REG_WORK1);			// strb r6,[r7, r2]
@@ -689,6 +733,27 @@ LOWFUNC(NONE,WRITE,3,raw_mov_b_bRr,(RR4 d, RR1 s, IMM offset))
 #endif
 }
 LENDFUNC(NONE,WRITE,3,raw_mov_b_bRr,(RR4 d, RR1 s, IMM offset))
+
+LOWFUNC(NONE,WRITE,3,raw_mov_b_bRr24,(RR4 d, RR1 s, IMM offset))
+{
+#if defined(USE_DATA_BUFFER)
+  long offs = data_long_offs(offset);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr  r2,[pc, #offs]
+
+  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
+  STRB_rRR(s, REG_WORK2, REG_WORK1);			// strb r6,[r3, r2]
+#else
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	      // ldr  r2,[pc,#4]
+  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
+  STRB_rRR(s, REG_WORK2, REG_WORK1);			// strb r6,[r3, r2]
+
+	B_i(0);								// b	<jp>
+	//<value>:
+	emit_long(offset);
+	//<jp>:
+#endif
+}
+LENDFUNC(NONE,WRITE,3,raw_mov_b_bRr24,(RR4 d, RR1 s, IMM offset))
 
 LOWFUNC(NONE,WRITE,2,raw_mov_b_mi,(MEMW d, IMM s))
 {
@@ -783,6 +848,25 @@ LOWFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, RR4 s, IMM offset))
 }
 LENDFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, RR4 s, IMM offset))
 
+LOWFUNC(NONE,READ,3,raw_mov_l_brR24,(W4 d, RR4 s, IMM offset))
+{
+#if defined(USE_DATA_BUFFER)
+  long offs = data_long_offs(offset);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr     r2, [pc, #offs]
+  BIC_rri(REG_WORK2, s, 0xff000000);    // bic     r3, r6, 0xff000000
+	LDR_rRR(d, REG_WORK1, REG_WORK2);     // ldr     r7, [r2, r3]
+#else
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4); 	  // ldr     r2, [pc, #4]    ; <value>
+  BIC_rri(REG_WORK2, s, 0xff000000);    // bic     r3, r6, 0xff000000
+	LDR_rRR(d, REG_WORK1, REG_WORK2);     // ldr     r7, [r2, r3]
+
+	B_i(0);                           	// b       <jp>
+	emit_long(offset);			//<value>:
+	//<jp>:
+#endif
+}
+LENDFUNC(NONE,READ,3,raw_mov_l_brR24,(W4 d, RR4 s, IMM offset))
+
 LOWFUNC(NONE,WRITE,3,raw_mov_l_bRr,(RR4 d, RR4 s, IMM offset))
 {
 #if defined(USE_DATA_BUFFER)
@@ -800,6 +884,26 @@ LOWFUNC(NONE,WRITE,3,raw_mov_l_bRr,(RR4 d, RR4 s, IMM offset))
 #endif
 }
 LENDFUNC(NONE,WRITE,3,raw_mov_l_bRr,(RR4 d, RR4 s, IMM offset))
+
+LOWFUNC(NONE,WRITE,3,raw_mov_l_bRr24,(RR4 d, RR4 s, IMM offset))
+{
+#if defined(USE_DATA_BUFFER)
+  long offs = data_long_offs(offset);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	  // ldr	r2,[pc, #offs]
+  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
+	STR_rRR(s, REG_WORK2, REG_WORK1);			  // str  R6,[R3, r2]
+#else
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	      // ldr	r2,[pc,#4]	; <value>
+  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
+	STR_rRR(s, REG_WORK2, REG_WORK1);			  // str  R6,[R3, r2]
+
+	B_i(0);								// b 	<jp>
+	//<value>:
+	emit_long(offset);
+	//<jp>:
+#endif
+}
+LENDFUNC(NONE,WRITE,3,raw_mov_l_bRr24,(RR4 d, RR4 s, IMM offset))
 
 LOWFUNC(NONE,WRITE,2,raw_mov_l_mi,(MEMW d, IMM s))
 {
@@ -855,6 +959,34 @@ LOWFUNC(NONE,READ,3,raw_mov_w_brR,(W2 d, RR4 s, IMM offset))
 }
 LENDFUNC(NONE,READ,3,raw_mov_w_brR,(W2 d, RR4 s, IMM offset))
 
+LOWFUNC(NONE,READ,3,raw_mov_w_brR24,(W2 d, RR4 s, IMM offset))
+{
+#if defined(USE_DATA_BUFFER)
+  long offs = data_long_offs(offset);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr     r2, [pc, #offs]
+#else
+	LDR_rRI(REG_WORK1, RPC_INDEX, 16); 	// ldr     r2, [pc, #16]   ; <value>
+#endif
+
+  BIC_rri(REG_WORK2, s, 0xff000000);          // bic  r3, r6, 0xff000000
+	LDRH_rRR(REG_WORK1, REG_WORK1, REG_WORK2); 	// ldrh    r2, [r2, r3]
+
+#if defined(ARMV6_ASSEMBLY)
+  PKHBT_rrr(d, REG_WORK1, d);         // pkhbt   r7, r2, r7
+#else
+	BIC_rri(d, d, 0xff);              	// bic     r7, r7, #0xff
+	BIC_rri(d, d, 0xff00);             	// bic     r7, r7, #0xff00
+	ORR_rrr(d, d, REG_WORK1);          	// orr     r7, r7, r2
+#endif
+
+#if !defined(USE_DATA_BUFFER)
+	B_i(0);                            	// b       <jp>
+	emit_long(offset);					//<value>:
+	//<jp>:
+#endif
+}
+LENDFUNC(NONE,READ,3,raw_mov_w_brR24,(W2 d, RR4 s, IMM offset))
+
 LOWFUNC(NONE,WRITE,3,raw_mov_w_bRr,(RR4 d, RR2 s, IMM offset))
 {
 #if defined(USE_DATA_BUFFER)
@@ -872,6 +1004,26 @@ LOWFUNC(NONE,WRITE,3,raw_mov_w_bRr,(RR4 d, RR2 s, IMM offset))
 #endif
 }
 LENDFUNC(NONE,WRITE,3,raw_mov_w_bRr,(RR4 d, RR2 s, IMM offset))
+
+LOWFUNC(NONE,WRITE,3,raw_mov_w_bRr24,(RR4 d, RR2 s, IMM offset))
+{
+#if defined(USE_DATA_BUFFER)
+  long offs = data_long_offs(offset);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr  r2,[pc, #offs]
+  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
+	STRH_rRR(s, REG_WORK2, REG_WORK1);			// strh r6,[r3, r2]
+#else
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	// ldr  r2,[pc,#4]
+  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
+	STRH_rRR(s, REG_WORK2, REG_WORK1);			// strh r6,[r3, r2]
+
+	B_i(0);								// b 	<jp>
+	//<value>:
+	emit_long(offset);
+	//<jp>:
+#endif
+}
+LENDFUNC(NONE,WRITE,3,raw_mov_w_bRr24,(RR4 d, RR2 s, IMM offset))
 
 LOWFUNC(NONE,WRITE,2,raw_mov_w_mr,(IMM d, RR2 s))
 {

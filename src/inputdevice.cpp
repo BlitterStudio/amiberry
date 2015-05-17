@@ -22,6 +22,7 @@
 #include "newcpu.h"
 #include "uae.h"
 #include "joystick.h"
+#include "picasso96.h"
 
 
 void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
@@ -211,8 +212,16 @@ void do_mouse_hack (void)
 	    if (sprvbfl && (sprvbfl-- > 1)) 
       {
         int stylusxpos, stylusypos;          
-	      stylusxpos = coord_native_to_amiga_x (lastmx);
-	      stylusypos = coord_native_to_amiga_y (lastmy) << 1;
+#ifdef PICASSO96
+        if (picasso_on) {
+	        stylusxpos = lastmx - picasso96_state.XOffset;
+	        stylusypos = lastmy - picasso96_state.YOffset;
+        } else
+#endif
+        {
+  	      stylusxpos = coord_native_to_amiga_x (lastmx);
+	        stylusypos = coord_native_to_amiga_y (lastmy) << 1;
+	      }
 	      if(stylusxpos != spr0x || stylusypos != spr0y)
         {
           diffx = (stylusxpos - spr0x);

@@ -2571,11 +2571,22 @@ static uintptr get_handler(uintptr addr)
 
 static void writemem_real(int address, int source,int size, int tmp)
 {
-	switch(size) {
-	 case 1: mov_b_bRr(address,source,NATMEM_OFFSETX); break;
-	 case 2: mov_w_rr(tmp,source); mid_bswap_16(tmp); mov_w_bRr(address,tmp,NATMEM_OFFSETX); break;
-	 case 4: mov_l_rr(tmp,source); mid_bswap_32(tmp); mov_l_bRr(address,tmp,NATMEM_OFFSETX); break;
-	}
+  if(currprefs.address_space_24)
+  {
+  	switch(size) {
+  	 case 1: mov_b_bRr24(address,source,NATMEM_OFFSETX); break;
+  	 case 2: mov_w_rr(tmp,source); mid_bswap_16(tmp); mov_w_bRr24(address,tmp,NATMEM_OFFSETX); break;
+  	 case 4: mov_l_rr(tmp,source); mid_bswap_32(tmp); mov_l_bRr24(address,tmp,NATMEM_OFFSETX); break;
+  	}
+  }
+  else
+  {
+  	switch(size) {
+  	 case 1: mov_b_bRr(address,source,NATMEM_OFFSETX); break;
+  	 case 2: mov_w_rr(tmp,source); mid_bswap_16(tmp); mov_w_bRr(address,tmp,NATMEM_OFFSETX); break;
+  	 case 4: mov_l_rr(tmp,source); mid_bswap_32(tmp); mov_l_bRr(address,tmp,NATMEM_OFFSETX); break;
+  	}
+  }
 	forget_about(tmp);
 }
 
@@ -2622,11 +2633,22 @@ STATIC_INLINE void writemem_real_clobber(int address, int source,int size, int t
 {
   int f=source;
 
-	switch(size) {
-	 case 1: mov_b_bRr(address,source,NATMEM_OFFSETX); break;
-	 case 2: mov_w_rr(f,source); mid_bswap_16(f); mov_w_bRr(address,f,NATMEM_OFFSETX); break;
-	 case 4: mov_l_rr(f,source); mid_bswap_32(f); mov_l_bRr(address,f,NATMEM_OFFSETX); break;
-	}
+  if(currprefs.address_space_24)
+  {
+  	switch(size) {
+  	 case 1: mov_b_bRr24(address,source,NATMEM_OFFSETX); break;
+  	 case 2: mov_w_rr(f,source); mid_bswap_16(f); mov_w_bRr24(address,f,NATMEM_OFFSETX); break;
+  	 case 4: mov_l_rr(f,source); mid_bswap_32(f); mov_l_bRr24(address,f,NATMEM_OFFSETX); break;
+  	}
+  }
+  else
+  {
+  	switch(size) {
+  	 case 1: mov_b_bRr(address,source,NATMEM_OFFSETX); break;
+  	 case 2: mov_w_rr(f,source); mid_bswap_16(f); mov_w_bRr(address,f,NATMEM_OFFSETX); break;
+  	 case 4: mov_l_rr(f,source); mid_bswap_32(f); mov_l_bRr(address,f,NATMEM_OFFSETX); break;
+  	}
+  }
 	forget_about(tmp);
 	forget_about(f);
 }
@@ -2646,18 +2668,28 @@ void writelong_clobber(int address, int source, int tmp)
 
 static void readmem_real(int address, int dest, int size, int tmp)
 {
-	switch(size) {
-	 case 1: mov_b_brR(dest,address,NATMEM_OFFSETX); break;
-	 case 2: mov_w_brR(dest,address,NATMEM_OFFSETX); mid_bswap_16(dest); break;
-	 case 4: mov_l_brR(dest,address,NATMEM_OFFSETX); mid_bswap_32(dest); break;
-	}
+  if(currprefs.address_space_24)
+  {
+  	switch(size) {
+  	 case 1: mov_b_brR24(dest,address,NATMEM_OFFSETX); break;
+  	 case 2: mov_w_brR24(dest,address,NATMEM_OFFSETX); mid_bswap_16(dest); break;
+  	 case 4: mov_l_brR24(dest,address,NATMEM_OFFSETX); mid_bswap_32(dest); break;
+  	}
+  }
+  else
+  {
+  	switch(size) {
+  	 case 1: mov_b_brR(dest,address,NATMEM_OFFSETX); break;
+  	 case 2: mov_w_brR(dest,address,NATMEM_OFFSETX); mid_bswap_16(dest); break;
+  	 case 4: mov_l_brR(dest,address,NATMEM_OFFSETX); mid_bswap_32(dest); break;
+  	}
+  }
 	forget_about(tmp);
 }
 
 STATIC_INLINE void readmem(int address, int dest, int offset, int size, int tmp)
 {
     int f=tmp;
-
     mov_l_rr(f,address);
     shrl_l_ri(f,16);   /* The index into the mem bank table */
     mov_l_rm_indexed(f,(uae_u32)mem_banks,f,4);
@@ -2700,7 +2732,10 @@ STATIC_INLINE void get_n_addr_old(int address, int dest, int tmp)
 
 STATIC_INLINE void get_n_addr_real(int address, int dest, int tmp)
 {
-	lea_l_brr(dest,address,NATMEM_OFFSETX);
+  if(currprefs.address_space_24)
+  	lea_l_brr24(dest,address,NATMEM_OFFSETX);
+	else
+  	lea_l_brr(dest,address,NATMEM_OFFSETX);
 	forget_about(tmp);
 }
 

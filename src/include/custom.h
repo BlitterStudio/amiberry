@@ -32,6 +32,10 @@ extern void init_row_map (void);
 extern void init_hz (void);
 extern void init_custom (void);
 
+extern int screen_is_picasso;
+extern int picasso_requested_on;
+extern int picasso_on;
+
 /* Set to 1 to leave out the current frame in average frame time calculation.
  * Useful if the debugger was active.  */
 extern int bogusframe;

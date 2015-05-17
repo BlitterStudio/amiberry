@@ -11,6 +11,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
+#include "autoconf.h"
 #include "xwin.h"
 #include "custom.h"
 #include "drawing.h"
@@ -33,7 +34,8 @@ static gcn::Icon* icoSavestate = 0;
 static gcn::Image *imgSavestate = 0;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
-
+static gcn::Label *lblWarningHDDon;
+  
 
 class SavestateActionListener : public gcn::ActionListener
 {
@@ -140,12 +142,16 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
   cmdSaveState->setBaseColor(gui_baseCol);
   cmdSaveState->setId("SaveState");
   cmdSaveState->addActionListener(savestateActionListener);
+
+  lblWarningHDDon = new gcn::Label("State saves do not support harddrive emulation.");
+  lblWarningHDDon->setSize(360, LABEL_HEIGHT);
   
   category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
   category.panel->add(wndScreenshot, DISTANCE_BORDER + 100, DISTANCE_BORDER);
   int buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
   category.panel->add(cmdLoadState, DISTANCE_BORDER, buttonY);
   category.panel->add(cmdSaveState, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, buttonY);
+  category.panel->add(lblWarningHDDon, DISTANCE_BORDER + 100, DISTANCE_BORDER + 50);
   
   RefreshPanelSavestate();
 }
@@ -169,7 +175,8 @@ void ExitPanelSavestate(void)
 
   delete cmdLoadState;
   delete cmdSaveState;
-
+  delete lblWarningHDDon;
+  
   delete savestateActionListener;
 }
 
@@ -230,4 +237,14 @@ void RefreshPanelSavestate(void)
   		}
 		}
   }
+  
+  bool enabled = nr_units (currprefs.mountinfo) == 0;
+  optState0->setEnabled(enabled);
+  optState1->setEnabled(enabled);
+  optState2->setEnabled(enabled);
+  optState3->setEnabled(enabled);
+  wndScreenshot->setVisible(enabled);
+  cmdLoadState->setEnabled(enabled);
+  cmdSaveState->setEnabled(enabled);
+  lblWarningHDDon->setVisible(!enabled);
 }

@@ -8,9 +8,6 @@
   */
 
 
-//#define USE_BLITTER_EXTRA_INLINE
-#define STOP_WHEN_NASTY
-
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -23,56 +20,6 @@
 #include "blitter.h"
 #include "blit.h"
 #include "savestate.h"
-
-// Do some statistics
-/*
-int count_blitter_normal[256];
-int count_blitter_fast[256];
-int count_blitter_desc_normal[256];
-int count_blitter_desc_fast[256];
-int count_blitter_line[256];
-
-void dump_blitter_stat(void)
-{
-  int i;
-  
-  printf("count_blitter_normal:\n");
-  for(i=0; i<256; ++i)
-  {
-    if(count_blitter_normal[i])
-      printf("  0x%02x: %d\n", i, count_blitter_normal[i]);
-  }
-
-  printf("count_blitter_fast:\n");
-  for(i=0; i<256; ++i)
-  {
-    if(count_blitter_fast[i])
-      printf("  0x%02x: %d\n", i, count_blitter_fast[i]);
-  }
-
-  printf("count_blitter_desc_normal:\n");
-  for(i=0; i<256; ++i)
-  {
-    if(count_blitter_desc_normal[i])
-      printf("  0x%02x: %d\n", i, count_blitter_desc_normal[i]);
-  }
-
-  printf("count_blitter_desc_fast:\n");
-  for(i=0; i<256; ++i)
-  {
-    if(count_blitter_desc_fast[i])
-      printf("  0x%02x: %d\n", i, count_blitter_desc_fast[i]);
-  }
-
-  printf("count_blitter_line:\n");
-  for(i=0; i<256; ++i)
-  {
-    if(count_blitter_line[i])
-      printf("  0x%02x: %d\n", i, count_blitter_line[i]);
-  }
-}
-*/
-
 
 uae_u16 bltcon0, bltcon1;
 uae_u32 bltapt, bltbpt, bltcpt, bltdpt;
@@ -244,8 +191,7 @@ static __inline__ void blitter_done (void)
 	eventtab[ev_blitter].active = 0;
 	unset_special (&regs, SPCFLAG_BLTNASTY);
 #ifdef BLITTER_DEBUG
-    write_log ("vpos=%d, cycles %d, missed %d, total %d\n",
-	vpos, blit_cyclecounter, blit_misscyclecounter, blit_cyclecounter + blit_misscyclecounter);
+    write_log ("vpos=%d, cycles %d\n", vpos, blit_cyclecounter);
 #endif
 }
 
@@ -276,11 +222,9 @@ static void blitter_dofast(void)
     }
 
     if (blitfunc_dofast[mt] && !blitfill) {
-//  count_blitter_fast[mt]++;
 	(*blitfunc_dofast[mt])(bltadatptr, bltbdatptr, bltcdatptr, bltddatptr, &blt_info);
     } else
     {
-//  count_blitter_normal[mt]++;
 	uae_u32 blitbhold = blt_info.bltbhold;
 	uaecptr dstp = 0;
 	uae_u32 *blit_masktable_p = blit_masktable + BLITTER_MAX_WORDS - blt_info.hblitsize;
@@ -368,11 +312,9 @@ static void blitter_dofast_desc(void)
 	bltdpt -= (blt_info.hblitsize*2 + blt_info.bltdmod)*blt_info.vblitsize;
     }
     if (blitfunc_dofast_desc[mt] && !blitfill) {
-//    count_blitter_desc_fast[mt]++;
 		(*blitfunc_dofast_desc[mt])(bltadatptr, bltbdatptr, bltcdatptr, bltddatptr, &blt_info);
     } else
     {
-//  count_blitter_desc_normal[mt]++;
 	uae_u32 blitbhold = blt_info.bltbhold;
 	uaecptr dstp = 0;
 	uae_u32 *blit_masktable_p = blit_masktable + BLITTER_MAX_WORDS - blt_info.hblitsize;
@@ -534,7 +476,6 @@ STATIC_INLINE void blitter_nxline(void)
 static void actually_do_blit(void)
 {
     if (blitline) {
-//  count_blitter_line[bltcon0 & 0xFF]++;
 	do {
 			blitter_read ();
 			if (ddat1use)
@@ -611,18 +552,7 @@ static void blitter_force_finish (void)
 	  odmacon = dmacon;
 	  dmacon |= DMA_MASTER | DMA_BLITTER;
 	  write_log ("forcing blitter finish\n");
-//	  if (currprefs.blitter_cycle_exact) {
-//	    int rounds = 10000;
-//	    while (bltstate != BLT_done && rounds > 0) {
-//	      memset (cycle_line, 0, maxhpos);
-//		    decide_blitter (maxhpos);
-//		    rounds--;
-//	    }
-//	    if (rounds == 0)
-//		write_log ("blitter froze!?\n");
-//	  } else {
-	    actually_do_blit ();
-//	  }
+	  actually_do_blit ();
 	  blitter_done ();
 	  dmacon = odmacon;
   }

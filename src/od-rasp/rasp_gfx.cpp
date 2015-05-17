@@ -10,6 +10,7 @@
 #include "events.h"
 #include "osdep/inputmode.h"
 #include "savestate.h"
+#include "picasso96.h"
 
 #include <png.h>
 #include <SDL.h>
@@ -26,8 +27,23 @@ extern int stylusClickOverride;
 
 /* SDL variable for output of emulation and menu */
 SDL_Surface *prSDLScreen = NULL;
-uae_u16 *prSDLScreenPixels;
 static SDL_Surface *current_screenshot = NULL;
+/* Possible screen modes (x and y resolutions) */
+#define MAX_SCREEN_MODES 6
+static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 800, 1024, 1152, 1280 };
+static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 480,  768,  864,  960 };
+
+static int red_bits, green_bits, blue_bits;
+static int red_shift, green_shift, blue_shift;
+
+int screen_is_picasso;
+static char picasso_invalid_lines[1201];
+static int picasso_has_invalid_lines;
+static int picasso_invalid_start, picasso_invalid_stop;
+static int picasso_maxw = 0, picasso_maxh = 0;
+
+static int bitdepth, bit_unit;
+
 static int curr_layer_width = 0;
 
 static char screenshot_filename_default[255]={
@@ -48,6 +64,7 @@ int DispManXElementpresent = 0;
 
 static unsigned long previous_synctime = 0;
 static unsigned long next_synctime = 0;
+
 
 uae_sem_t vsync_wait_sem;
 
@@ -77,6 +94,9 @@ void vsync_callback(unsigned int a, void* b)
 
 int graphics_setup (void)
 {
+#ifdef PICASSO96
+  InitPicasso96();
+#endif
   bcm_host_init();
   return 1;
 }
@@ -136,8 +156,9 @@ static void CalcPandoraWidth(struct uae_prefs *p)
 }
 
 
-void update_display(struct uae_prefs *p)
+static void open_screen(struct uae_prefs *p)
 {
+  char layersize[20];
 
   VC_DISPMANX_ALPHA_T alpha = { (DISPMANX_FLAGS_ALPHA_T ) (DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS), 
                             255, /*alpha 0->255*/
@@ -145,6 +166,18 @@ void update_display(struct uae_prefs *p)
 
 
   uint32_t                    vc_image_ptr;
+  int width;
+  int height;
+
+  if (screen_is_picasso)
+  {
+    width  = picasso_vidinfo.width;
+    height = picasso_vidinfo.height;
+  } else
+  {
+    width  = p->gfx_size.width;
+    height = p->gfx_size.height;
+  }
 
 
   //if(prSDLScreen != NULL)
@@ -153,11 +186,17 @@ void update_display(struct uae_prefs *p)
   //  prSDLScreen = NULL;
   //} 
 
-  CalcPandoraWidth(p);
-  if(curr_layer_width != p->gfx_size_fs.width)
+  if(!screen_is_picasso)
   {
-    char layersize[20];
-    snprintf(layersize, 20, "%dx480", p->gfx_size_fs.width);
+    CalcPandoraWidth(p);
+    if(curr_layer_width != p->gfx_size_fs.width)
+    {
+      snprintf(layersize, 20, "%dx480", p->gfx_size_fs.width);
+    }
+  }
+  else
+  {
+	  snprintf(layersize, 20, "%dx%d", picasso_vidinfo.width, picasso_vidinfo.height);
   }
 
   if(prSDLScreen == NULL )
@@ -172,7 +211,7 @@ void update_display(struct uae_prefs *p)
 
 
   // check if resolution hasn't change in menu. otherwise free the resources so that they will be re-generated with new resolution.
-  if ((dispmanxresource_amigafb_1 != 0) && ((blit_rect.width != p->gfx_size.width) || (blit_rect.height != p->gfx_size.height)))
+  if ((dispmanxresource_amigafb_1 != 0) && ((blit_rect.width != width) || (blit_rect.height != height)))
   {
 	printf("Emulation resolution change detected.\n");
 	graphics_dispmanshutdown();
@@ -187,17 +226,17 @@ void update_display(struct uae_prefs *p)
 	dispmanxdisplay = vc_dispmanx_display_open( 0 );
 	vc_dispmanx_display_get_info( dispmanxdisplay, &dispmanxdinfo);
 
-	printf("Emulation resolution: Width %i Height: %i\n",p->gfx_size.width,p->gfx_size.height);
+	printf("Emulation resolution: Width %i Height: %i\n",width,height);
 
-	dispmanxresource_amigafb_1 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  p->gfx_size.width,   p->gfx_size.height,  &vc_image_ptr);
-	dispmanxresource_amigafb_2 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  p->gfx_size.width,   p->gfx_size.height,  &vc_image_ptr);
+	dispmanxresource_amigafb_1 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  width,   height,  &vc_image_ptr);
+	dispmanxresource_amigafb_2 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  width,   height,  &vc_image_ptr);
 	vc_dispmanx_rect_set( &blit_rect, 0, 0, p->gfx_size.width,p->gfx_size.height);
 	vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_1,
                                     VC_IMAGE_RGB565,
-                                    p->gfx_size.width *2,
+                                    width *2,
                                     prSDLScreen->pixels,
                                     &blit_rect );
-	vc_dispmanx_rect_set( &src_rect, 0, 0, p->gfx_size.width << 16, p->gfx_size.height << 16 );
+	vc_dispmanx_rect_set( &src_rect, 0, 0, width << 16, height << 16 );
 
   }
   // Currently on fullscreen is available in uae4all2/uae4arm, no 16/9 to 4/3 ratio adaptation is available.
@@ -246,8 +285,19 @@ void update_display(struct uae_prefs *p)
   }
 
 
-  InitAmigaVidMode(p);
+  //InitAmigaVidMode(p);
   init_row_map();
+  //framecnt = 1; // Don't draw frame before reset done
+}
+
+
+void update_display(struct uae_prefs *p)
+{
+  open_screen(p);
+    
+  SDL_ShowCursor(SDL_DISABLE);
+
+  InitAmigaVidMode(p);
   framecnt = 1; // Don't draw frame before reset done
 }
 
@@ -419,10 +469,6 @@ static void graphics_subinit (void)
 	}
 	else
 	{
-		prSDLScreenPixels=(uae_u16 *)prSDLScreen->pixels;
-		//SDL_LockSurface(prSDLScreen);
-		//SDL_UnlockSurface(prSDLScreen);
-		//SDL_Flip(prSDLScreen);
 		SDL_ShowCursor(SDL_DISABLE);
 
     InitAmigaVidMode(&currprefs);
@@ -478,6 +524,27 @@ static int init_colors (void)
 }
 
 
+/*
+ * Find the colour depth of the display
+ */
+static int get_display_depth (void)
+{
+  const SDL_VideoInfo *vid_info;
+  int depth = 0;
+
+  if ((vid_info = SDL_GetVideoInfo())) {
+  	depth = vid_info->vfmt->BitsPerPixel;
+
+	  /* Don't trust the answer if it's 16 bits; the display
+	   * could actually be 15 bits deep. We'll count the bits
+	   * ourselves */
+	  if (depth == 16)
+	    depth = bitsInMask (vid_info->vfmt->Rmask) + bitsInMask (vid_info->vfmt->Gmask) + bitsInMask (vid_info->vfmt->Bmask);
+  }
+  return depth;
+}
+
+
 int graphics_init (void)
 {
 	int i,j;
@@ -486,7 +553,7 @@ int graphics_init (void)
 
 	graphics_subinit ();
 
-	init_row_map ();
+	//init_row_map ();
 
 	if (!init_colors ())
 		return 0;
@@ -613,3 +680,163 @@ static int save_thumb(char *path)
 	}
 	return ret;
 }
+
+#ifdef PICASSO96
+
+uae_u16 picasso96_pixel_format = RGBFF_CHUNKY;
+
+
+void DX_Invalidate (int first, int last)
+{
+  if (first > last)
+	  return;
+
+  picasso_has_invalid_lines = 1;
+  if (first < picasso_invalid_start)
+  	picasso_invalid_start = first;
+  if (last > picasso_invalid_stop)
+	  picasso_invalid_stop = last;
+
+  while (first <= last) {
+  	picasso_invalid_lines[first] = 1;
+	  first++;
+  }
+}
+
+int DX_BitsPerCannon (void)
+{
+    return 8;
+}
+
+static int palette_update_start = 256;
+static int palette_update_end   = 0;
+
+void DX_SetPalette (int start, int count)
+{
+    if (! screen_is_picasso || picasso96_state.RGBFormat != RGBFB_CHUNKY)
+	return;
+
+    if (picasso_vidinfo.pixbytes != 1) {
+	/* This is the case when we're emulating a 256 color display. */
+	while (count-- > 0) {
+	    int r = picasso96_state.CLUT[start].Red;
+	    int g = picasso96_state.CLUT[start].Green;
+	    int b = picasso96_state.CLUT[start].Blue;
+	    picasso_vidinfo.clut[start++] =
+				 (doMask256 (r, red_bits, red_shift)
+				| doMask256 (g, green_bits, green_shift)
+				| doMask256 (b, blue_bits, blue_shift));
+	}
+	notice_screen_contents_lost();
+    }
+}
+
+int DX_Fill (int dstx, int dsty, int width, int height, uae_u32 color, RGBFTYPE rgbtype)
+{
+	int result = 0;
+
+	SDL_Rect rect = {dstx, dsty, width, height};
+
+	if (SDL_FillRect (prSDLScreen, &rect, color) == 0) {
+		DX_Invalidate (dsty, dsty + height);
+		result = 1;
+	}
+
+	return result;
+}
+
+int DX_FillResolutions (uae_u16 *ppixel_format)
+{
+  int i, count = 0;
+  int w = 0;
+  int h = 0;
+  int emulate_chunky = 0;
+
+  /* In the new scheme of things, this function is called *before* graphics_init.
+   * Hence, we need to find the display depth ourselves - Rich */
+  bitdepth = get_display_depth ();
+  bit_unit = (bitdepth + 1) & 0xF8;
+
+  picasso_vidinfo.rgbformat = (bit_unit == 8 ? RGBFB_CHUNKY
+		: bitdepth == 15 && bit_unit == 16 ? RGBFB_R5G5B5
+		: bitdepth == 16 && bit_unit == 16 ? RGBFB_R5G6B5
+		: bit_unit == 24 ? RGBFB_B8G8R8
+		: bit_unit == 32 ? RGBFB_A8R8G8B8
+		: RGBFB_NONE);
+
+  *ppixel_format = 1 << picasso_vidinfo.rgbformat;
+  if (bit_unit == 16 || bit_unit == 32) {
+	  *ppixel_format |= RGBFF_CHUNKY;
+//	  emulate_chunky = 1;
+  }
+
+  for (i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++) {
+	  int j;
+	  if (SDL_VideoModeOK (x_size_table[i], y_size_table[i],	bitdepth, SDL_SWSURFACE))
+	  {
+	    for (j = 0; j <= emulate_chunky && count < MAX_PICASSO_MODES; j++) {
+		    if (x_size_table[i] > picasso_maxw)
+		      picasso_maxw = x_size_table[i];
+		    if (y_size_table[i] > picasso_maxh)
+		      picasso_maxh = y_size_table[i];
+		    DisplayModes[count].res.width = x_size_table[i];
+		    DisplayModes[count].res.height = y_size_table[i];
+		    DisplayModes[count].depth = j == 1 ? 1 : bit_unit >> 3;
+        DisplayModes[count].refresh = 60;
+
+		    count++;
+	    }
+    }
+  }
+  
+  return count;
+}
+
+void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
+{
+  depth >>= 3;
+  if( ((unsigned)picasso_vidinfo.width == w ) &&
+    ( (unsigned)picasso_vidinfo.height == h ) &&
+    ( (unsigned)picasso_vidinfo.depth == depth ) &&
+    ( picasso_vidinfo.selected_rgbformat == rgbfmt) )
+  	return;
+
+  picasso_vidinfo.selected_rgbformat = rgbfmt;
+  picasso_vidinfo.width = w;
+  picasso_vidinfo.height = h;
+  picasso_vidinfo.depth = depth;
+  picasso_vidinfo.extra_mem = 1;
+
+  picasso_vidinfo.pixbytes = depth;
+  if (screen_is_picasso)
+  {
+  	open_screen(&currprefs);
+    picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+  }
+}
+
+void gfx_set_picasso_state (int on)
+{
+	if (on == screen_is_picasso)
+		return;
+
+	screen_is_picasso = on;
+  open_screen(&currprefs);
+  picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+	if (on)
+		DX_SetPalette (0, 256);
+}
+
+uae_u8 *gfx_lock_picasso (void)
+{
+  // We lock the surface directly after create and flip
+  picasso_vidinfo.rowbytes = prSDLScreen->pitch;
+  return (uae_u8 *)prSDLScreen->pixels;
+}
+
+void gfx_unlock_picasso (void)
+{
+  // We lock the surface directly after create and flip, so no unlock here
+}
+
+#endif // PICASSO96

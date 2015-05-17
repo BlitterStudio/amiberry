@@ -53,9 +53,9 @@
 #include "autoconf.h"
 #include "custom.h"
 #include "sounddep/sound.h"
-#include "audio.h"
 #include "newcpu.h"
 #include "savestate.h"
+#include "audio.h"
 
 int savestate_state = 0;
 
@@ -355,11 +355,9 @@ void restore_state (char *filename)
 	} else if (!strcmp (name, "FRAM")) {
 	    restore_fram (totallen, filepos);
 	    continue;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 	} else if (!strcmp (name, "ZRAM")) {
 	    restore_zram (totallen, filepos);
 	    continue;
-#endif
 #endif
 #ifdef PICASSO96
 	} else if (!strcmp (name, "PRAM")) {
@@ -424,6 +422,10 @@ void restore_state (char *filename)
 #endif
 	else if (!strcmp (name, "ROM "))
 	    end = restore_rom (chunk);
+#ifdef PICASSO96
+	else if (!strcmp (name, "P96 "))
+	    end = restore_p96 (chunk);
+#endif
 #ifdef FILESYS
 	else if (!strcmp (name, "FSYS"))
 	    end = restore_filesys (chunk);
@@ -477,10 +479,8 @@ static void save_rams (struct zfile *f, int comp)
 #ifdef AUTOCONFIG
     dst = save_fram (&len);
     save_chunk (f, dst, len, (char *)"FRAM", comp);
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
     dst = save_zram (&len);
     save_chunk (f, dst, len, "ZRAM", comp);
-#endif
 #endif
 #ifdef PICASSO96
     dst = save_pram (&len);

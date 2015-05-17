@@ -195,26 +195,39 @@ static void update_68k_cycles (void)
     }
 }
 
+void check_prefs_changed_adr24 (void)
+{
+  if(currprefs.address_space_24 != changed_prefs.address_space_24)
+  {
+    currprefs.address_space_24 = changed_prefs.address_space_24;
+    if (currprefs.address_space_24) {
+    	regs.address_space_mask = 0x00ffffff;
+    } else {
+    	regs.address_space_mask = 0xffffffff;
+    }
+  }
+}
+
 void check_prefs_changed_cpu (void)
 {
-    if (currprefs.cpu_level != changed_prefs.cpu_level
+  if (currprefs.cpu_level != changed_prefs.cpu_level
 	|| currprefs.cpu_compatible != changed_prefs.cpu_compatible) {
 
-	if (!currprefs.cpu_compatible && changed_prefs.cpu_compatible)
-	    fill_prefetch_slow (&regs);
-
-	currprefs.cpu_level = changed_prefs.cpu_level;
-	currprefs.cpu_compatible = changed_prefs.cpu_compatible;
-	build_cpufunctbl ();
-    }
-    if (currprefs.m68k_speed != changed_prefs.m68k_speed) {
-	currprefs.m68k_speed = changed_prefs.m68k_speed;
-	reset_frame_rate_hack ();
-	update_68k_cycles ();
-    }
-    if (currprefs.cpu_idle != changed_prefs.cpu_idle) {
-	currprefs.cpu_idle = changed_prefs.cpu_idle;
-    }
+  	if (!currprefs.cpu_compatible && changed_prefs.cpu_compatible)
+  	    fill_prefetch_slow (&regs);
+  
+  	currprefs.cpu_level = changed_prefs.cpu_level;
+  	currprefs.cpu_compatible = changed_prefs.cpu_compatible;
+  	build_cpufunctbl ();
+  }
+  if (currprefs.m68k_speed != changed_prefs.m68k_speed) {
+  	currprefs.m68k_speed = changed_prefs.m68k_speed;
+  	reset_frame_rate_hack ();
+  	update_68k_cycles ();
+  }
+  if (currprefs.cpu_idle != changed_prefs.cpu_idle) {
+  	currprefs.cpu_idle = changed_prefs.cpu_idle;
+  }
 }
 
 void init_m68k (void)
@@ -1418,6 +1431,7 @@ void m68k_go (int may_quit)
 //	    else if (savestate_state == STATE_REWIND)
 //		savestate_rewind ();
 #endif
+      check_prefs_changed_adr24();
 	    /* following three lines must not be reordered or
 	     * fastram state restore breaks
 	     */

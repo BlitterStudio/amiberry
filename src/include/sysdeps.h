@@ -317,10 +317,15 @@ extern void mallocemu_free (void *ptr);
 #ifdef write_log
 #undef write_log
 #endif
+#ifndef WITH_LOGGING
 #define write_log(FORMATO, RESTO...)
 #define write_log_standard(FORMATO, RESTO...)
 #define console_out(FORMATO, RESTO...)
 #define console_get(FORMATO, RESTO...)
+#else
+extern void write_log (const char *format,...);
+extern FILE *debugfile;
+#endif
 extern void gui_message (const char *,...);
 
 #ifndef O_BINARY

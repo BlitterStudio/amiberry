@@ -17,7 +17,6 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "autoconf.h"
-#include "osdep/exectasks.h"
 #include "traps.h"
 
 /* Commonly used autoconfig strings */
@@ -186,11 +185,11 @@ static uae_u32 REGPARAM2 uae_puts (TrapContext *context)
 
 static void rtarea_init_mem (void)
 {
-    rtarea = natmem_offset + RTAREA_BASE; //mapped_malloc (0x10000, "rtarea");
-//    if (!rtarea) {
-//	write_log ("virtual memory exhausted (rtarea)!\n");
-//	return;
-//    }
+    rtarea = mapped_malloc (0x10000, "rtarea");
+    if (!rtarea) {
+	write_log ("virtual memory exhausted (rtarea)!\n");
+	return;
+    }
     rtarea_bank.baseaddr = rtarea;
 }
 

@@ -37,12 +37,18 @@ bool LoadConfigByName(const char *name)
   {
     txtName->setText(config->Name);
     txtDesc->setText(config->Description);
-    my_cfgfile_load(&changed_prefs, config->FullPath, 0);
+    target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
     strncpy(last_active_config, config->Name, MAX_PATH);
     RefreshAllPanels();
   }
 
   return false;
+}
+
+void SetLastActiveConfig(const char *filename)
+{
+  extractFileName(filename, last_active_config);
+  removeFileExtension(last_active_config);
 }
 
 
@@ -99,7 +105,7 @@ class ConfigButtonActionListener : public gcn::ActionListener
         // Load selected configuration
         //-----------------------------------------------
         i = lstConfigs->getSelected();
-        my_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0);
+        target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
         strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_PATH);
         RefreshAllPanels();
       }
@@ -167,10 +173,10 @@ class ConfigsListActionListener : public gcn::ActionListener
         //-----------------------------------------------
         // Selected same config again -> load and start it
         //-----------------------------------------------
-        my_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0);
+        target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
         strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_PATH);
         RefreshAllPanels();
-  			uae_reset(0);
+  			uae_reset(1);
   			gui_running = false;
       }
       else

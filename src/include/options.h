@@ -78,7 +78,7 @@ struct uae_prefs {
     int chipset_refreshrate;
     int collision_level;
     int leds_on_screen;
-    int fast_copper;            // Not used in UAE4ALL
+    int fast_copper;
     int scsi;                   // Not used in UAE4ALL
     int cpu_idle;
     int floppy_speed;
@@ -96,6 +96,7 @@ struct uae_prefs {
     int cpu_level;
     int cpu_compatible;
     int address_space_24;
+    int picasso96_nocustom;
 
     uae_u32 z3fastmem_size;
     uae_u32 z3fastmem_start;
@@ -155,6 +156,8 @@ extern void cfgfile_backup (const char *path);
 extern void default_prefs (struct uae_prefs *, int);
 extern void discard_prefs (struct uae_prefs *, int);
 
+int parse_cmdline_option (struct uae_prefs *, char, char *);
+
 extern int cfgfile_yesno (char *option, char *value, const char *name, int *location);
 extern int cfgfile_intval (char *option, char *value, const char *name, int *location, int scale);
 extern int cfgfile_strval (char *option, char *value, const char *name, int *location, const char *table[], int more);
@@ -172,6 +175,9 @@ extern int cfgfile_save (struct uae_prefs *, const char *filename, int);
 extern void cfgfile_parse_line (struct uae_prefs *p, char *, int);
 extern int cfgfile_parse_option (struct uae_prefs *p, char *option, char *value, int);
 extern int cfgfile_get_description (const char *filename, char *description);
+extern uae_u32 cfgfile_uaelib (int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
+extern uae_u32 cfgfile_uaelib_modify (uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
+extern void cfgfile_addcfgparam (char *);
 extern int cfgfile_configuration_change(int);
 extern void fixup_prefs_dimensions (struct uae_prefs *prefs);
 extern void fixup_prefs (struct uae_prefs *prefs);

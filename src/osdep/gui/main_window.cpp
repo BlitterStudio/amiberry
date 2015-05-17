@@ -234,7 +234,7 @@ namespace widgets
           //-------------------------------------------------
           // Reset Amiga via click on Reset-button
           //-------------------------------------------------
-    			uae_reset(0);
+    			uae_reset(1);
     			gui_running = false;
         }
   			else if(actionEvent.getSource() == cmdRestart)

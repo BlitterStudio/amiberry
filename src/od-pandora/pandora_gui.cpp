@@ -423,11 +423,11 @@ static int getMapping(int customId)
 
 void moveVertical(int value)
 {
-	currprefs.pandora_vertical_offset += value;
-	if(currprefs.pandora_vertical_offset < -16)
-		currprefs.pandora_vertical_offset = -16;
-	else if(currprefs.pandora_vertical_offset > 16)
-		currprefs.pandora_vertical_offset = 16;
+	changed_prefs.pandora_vertical_offset += value;
+	if(changed_prefs.pandora_vertical_offset < -16)
+		changed_prefs.pandora_vertical_offset = -16;
+	else if(changed_prefs.pandora_vertical_offset > 16)
+		changed_prefs.pandora_vertical_offset = 16;
 }
 
 void gui_handle_events (void)

@@ -12,7 +12,8 @@
 FILE *debugfile = NULL;
 
 #ifdef WITH_LOGGING
-void write_log (const char *format, ...)
+
+void write_log (const char *format,...)
 {
   int count;
   int numwritten;

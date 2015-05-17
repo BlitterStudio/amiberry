@@ -443,7 +443,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
     cfgfile_write (f, "cpu_compatible=%s\n", p->cpu_compatible ? "true" : "false");
 //    cfgfile_write (f, "cpu_cycle_exact=%s\n", p->cpu_cycle_exact ? "true" : "false");
 //    cfgfile_write (f, "blitter_cycle_exact=%s\n", p->blitter_cycle_exact ? "true" : "false");
-//    cfgfile_write (f, "rtg_nocustom=%s\n", p->picasso96_nocustom ? "true" : "false");
+    cfgfile_write (f, "rtg_nocustom=%s\n", p->picasso96_nocustom ? "true" : "false");
 
 //    cfgfile_write (f, "log_illegal_mem=%s\n", p->illegal_mem ? "true" : "false");
 //    if (p->catweasel >= 100)
@@ -940,7 +940,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, char *option, char *valu
 //	|| cfgfile_yesno (option, value, "fpu_strict", &p->fpu_strict)
 //	|| cfgfile_yesno (option, value, "comp_midopt", &p->comp_midopt)
 //	|| cfgfile_yesno (option, value, "comp_lowopt", &p->comp_lowopt)
-//	|| cfgfile_yesno (option, value, "rtg_nocustom", &p->picasso96_nocustom)
+	|| cfgfile_yesno (option, value, "rtg_nocustom", &p->picasso96_nocustom)
 	|| cfgfile_yesno (option, value, "scsi", &p->scsi))
 	return 1;
     if (cfgfile_intval (option, value, "cachesize", &p->cachesize, 1)
@@ -1525,6 +1525,49 @@ char * make_hard_file_cfg_line (char *src, char *dst) {
 	return dst;
 }
 
+static void parse_sound_spec (struct uae_prefs *p, char *spec)
+{
+    char *x0 = my_strdup (spec);
+    char *x1, *x2 = NULL, *x3 = NULL, *x4 = NULL, *x5 = NULL;
+
+    x1 = strchr (x0, ':');
+    if (x1 != NULL) {
+	*x1++ = '\0';
+	x2 = strchr (x1 + 1, ':');
+	if (x2 != NULL) {
+	    *x2++ = '\0';
+	    x3 = strchr (x2 + 1, ':');
+	    if (x3 != NULL) {
+		*x3++ = '\0';
+		x4 = strchr (x3 + 1, ':');
+		if (x4 != NULL) {
+		    *x4++ = '\0';
+		    x5 = strchr (x4 + 1, ':');
+		}
+	    }
+	}
+    }
+    p->produce_sound = atoi (x0);
+    if (x1) {
+	p->sound_stereo_separation = 16;
+	if (*x1 == 'S') {
+	    p->sound_stereo = 1;
+	    p->sound_stereo_separation = 10;
+	} else if (*x1 == 's')
+	    p->sound_stereo = 1;
+	else
+	    p->sound_stereo = 0;
+    }
+    if (x2)
+	p->sound_bits = atoi (x2);
+    if (x3)
+	p->sound_freq = atoi (x3);
+//    if (x4)
+//	p->sound_maxbsiz = atoi (x4);
+    free (x0);
+    return;
+}
+
 void parse_filesys_spec (int readonly, char *spec)
 {
 	/* spec example (<UAE name>:<dir>):
@@ -1591,10 +1634,196 @@ void parse_hardfile_spec (char *spec)
     return;
 }
 
+static void parse_cpu_specs (struct uae_prefs *p, char *spec)
+{
+    if (*spec < '0' || *spec > '4') {
+	write_log ("CPU parameter string must begin with '0', '1', '2', '3' or '4'.\n");
+	return;
+    }
+
+    p->cpu_level = *spec++ - '0';
+    p->address_space_24 = p->cpu_level < 2;
+    p->cpu_compatible = 0;
+    while (*spec != '\0') {
+	switch (*spec) {
+	 case 'a':
+	    if (p->cpu_level < 2)
+		write_log ("In 68000/68010 emulation, the address space is always 24 bit.\n");
+	    else if (p->cpu_level >= 4)
+		write_log ("In 68040/060 emulation, the address space is always 32 bit.\n");
+	    else
+		p->address_space_24 = 1;
+	    break;
+	 case 'c':
+	    if (p->cpu_level != 0)
+		write_log  ("The more compatible CPU emulation is only available for 68000\n"
+			 "emulation, not for 68010 upwards.\n");
+	    else
+		p->cpu_compatible = 1;
+	    break;
+	 default:
+	    write_log  ("Bad CPU parameter specified - type \"uae -h\" for help.\n");
+	    break;
+	}
+	spec++;
+    }
+}
+
+/* Returns the number of args used up (0 or 1).  */
+int parse_cmdline_option (struct uae_prefs *p, char c, char *arg)
+{
+    struct strlist *u = (struct strlist *) xcalloc (sizeof (struct strlist), 1);
+    const char arg_required[] = "0123rKpImWSAJwNCZUFcblOdHRv";
+
+    if (strchr (arg_required, c) && ! arg) {
+	write_log ("Missing argument for option `-%c'!\n", c);
+	return 0;
+    }
+
+    u->option = (char *)malloc (2);
+    u->option[0] = c;
+    u->option[1] = 0;
+    u->value = my_strdup(arg);
+    u->next = p->all_lines;
+    p->all_lines = u;
+
+    switch (c) {
+//    case 'h': usage (); exit (0);
+
+    case '0': strncpy (p->df[0], arg, 255); p->df[0][255] = 0; break;
+    case '1': strncpy (p->df[1], arg, 255); p->df[1][255] = 0; break;
+    case '2': strncpy (p->df[2], arg, 255); p->df[2][255] = 0; break;
+    case '3': strncpy (p->df[3], arg, 255); p->df[3][255] = 0; break;
+    case 'r': strncpy (p->romfile, arg, 255); p->romfile[255] = 0; break;
+    case 'K': strncpy (p->romextfile, arg, 255); p->romextfile[255] = 0; break;
+//    case 'p': strncpy (p->prtname, arg, 255); p->prtname[255] = 0; break;
+	/*     case 'I': strncpy (p->sername, arg, 255); p->sername[255] = 0; currprefs.use_serial = 1; break; */
+    case 'm': case 'M': parse_filesys_spec (c == 'M', arg); break;
+    case 'W': parse_hardfile_spec (arg); break;
+    case 'S': parse_sound_spec (p, arg); break;
+    case 'R': p->gfx_framerate = atoi (arg); break;
+//    case 'x': p->no_xhair = 1; break;
+//    case 'i': p->illegal_mem = 1; break;
+//    case 'J': parse_joy_spec (p, arg); break;
+
+//    case 't': p->test_drawing_speed = 1; break;
+#ifdef USE_X11_GFX
+    case 'L': p->x11_use_low_bandwidth = 1; break;
+    case 'T': p->x11_use_mitshm = 1; break;
+#endif
+    case 'w': p->m68k_speed = atoi (arg); break;
+
+	/* case 'g': p->use_gfxlib = 1; break; */
+    case 'G': p->start_gui = 0; break;
+//    case 'D': p->start_debugger = 1; break;
+
+    case 'n':
+	if (strchr (arg, 'i') != 0)
+	    p->immediate_blits = 1;
+	break;
+
+    case 'v':
+	set_chipset_mask (p, atoi (arg));
+	break;
+
+    case 'C':
+	parse_cpu_specs (p, arg);
+	break;
+
+    case 'Z':
+	p->z3fastmem_size = atoi (arg) * 0x100000;
+	break;
+
+    case 'U':
+	p->gfxmem_size = atoi (arg) * 0x100000;
+	break;
+
+    case 'F':
+	p->fastmem_size = atoi (arg) * 0x100000;
+	break;
+
+    case 'b':
+	p->bogomem_size = atoi (arg) * 0x40000;
+	break;
+
+    case 'c':
+	p->chipmem_size = atoi (arg) * 0x80000;
+	break;
+
+//    case 'l':
+//	if (0 == strcasecmp(arg, "de"))
+//	    p->keyboard_lang = KBD_LANG_DE;
+//	else if (0 == strcasecmp(arg, "dk"))
+//	    p->keyboard_lang = KBD_LANG_DK;
+//	else if (0 == strcasecmp(arg, "us"))
+//	    p->keyboard_lang = KBD_LANG_US;
+//	else if (0 == strcasecmp(arg, "se"))
+//	    p->keyboard_lang = KBD_LANG_SE;
+//	else if (0 == strcasecmp(arg, "fr"))
+//	    p->keyboard_lang = KBD_LANG_FR;
+//	else if (0 == strcasecmp(arg, "it"))
+//	    p->keyboard_lang = KBD_LANG_IT;
+//	else if (0 == strcasecmp(arg, "es"))
+//	    p->keyboard_lang = KBD_LANG_ES;
+//	break;
+
+//    case 'O': parse_gfx_specs (p, arg); break;
+//    case 'd':
+//	if (strchr (arg, 'S') != NULL || strchr (arg, 's')) {
+//	    write_log ("  Serial on demand.\n");
+//	    p->serial_demand = 1;
+//	}
+//	if (strchr (arg, 'P') != NULL || strchr (arg, 'p')) {
+//	    write_log ("  Parallel on demand.\n");
+//	    p->parallel_demand = 1;
+//	}
+
+//	break;
+
+//    case 'H':
+//	p->color_mode = atoi (arg);
+//	if (p->color_mode < 0) {
+//	    write_log ("Bad color mode selected. Using default.\n");
+//	    p->color_mode = 0;
+//	}
+//	break;
+    default:
+	write_log ("Unknown option `-%c'!\n", c);
+	break;
+    }
+    return !! strchr (arg_required, c);
+}
+
+void cfgfile_addcfgparam (char *line)
+{
+    struct strlist *u;
+    char line1b[CONFIG_BLEN], line2b[CONFIG_BLEN];
+
+    if (!line) {
+	struct strlist **ps = &temp_lines;
+	while (*ps) {
+	    struct strlist *s = *ps;
+	    *ps = s->next;
+	    free (s->value);
+	    free (s->option);
+	    free (s);
+	}
+	temp_lines = 0;
+	return;
+    }
+    if (!cfgfile_separate_line (line, line1b, line2b))
+	return;
+    u = (struct strlist *) xcalloc (sizeof (struct strlist), 1);
+    u->option = my_strdup(line1b);
+    u->value = my_strdup(line2b);
+    u->next = temp_lines;
+    temp_lines = u;
+}
+
 void default_prefs (struct uae_prefs *p, int type)
 {
   int i;
-  memset (p, 0, sizeof (*p));
+  memset (p, 0, sizeof (struct uae_prefs));
   strcpy (p->description, "UAE default configuration");
 
   p->start_gui = 1;
@@ -1612,6 +1841,8 @@ void default_prefs (struct uae_prefs *p, int type)
   p->sound_filter_type = 0;
   p->sound_auto = 1;
 
+  p->cachesize = 0;
+
   for (i = 0;i < 10; i++)
 	  p->optcount[i] = -1;
   p->optcount[0] = 4;	/* How often a block has to be executed before it is translated */
@@ -1622,8 +1853,13 @@ void default_prefs (struct uae_prefs *p, int type)
   p->optcount[5] = 0;
 
   p->gfx_framerate = 0;
+#ifdef RASPBERRY
+  p->gfx_size.width = 640;
+  p->gfx_size.height = 256;
+#else
   p->gfx_size.width = 320;
   p->gfx_size.height = 240;
+#endif
   p->gfx_size_win.width = 320;
   p->gfx_size_win.height = 240;
   p->gfx_size_fs.width = 640;
@@ -1640,8 +1876,10 @@ void default_prefs (struct uae_prefs *p, int type)
   p->leds_on_screen = 0;
   p->fast_copper = 1;
   p->scsi = 0;
+  p->cpu_idle = 0;
   p->floppy_speed = 100;
   p->tod_hack = 1;
+  p->picasso96_nocustom = 1;
 
   strcpy (p->df[0], "df0.adf");
   strcpy (p->df[1], "df1.adf");
@@ -1655,12 +1893,8 @@ void default_prefs (struct uae_prefs *p, int type)
   sprintf (p->path_floppy, "%s/disks/", start_path_data);
   sprintf (p->path_hardfile, "%s/", start_path_data);
 
-  p->cpu_level = M68000;
-
+  p->cpu_level = 0;
   p->m68k_speed = 0;
-  p->cpu_idle = 0;
-  p->cachesize = 0;//8192;
-
   p->cpu_compatible = 0;
   p->address_space_24 = 1;
   p->chipset_mask = CSMASK_ECS_AGNUS;
@@ -1669,7 +1903,7 @@ void default_prefs (struct uae_prefs *p, int type)
   p->fastmem_size = 0x00000000;
   p->a3000mem_size = 0x00000000;
   p->z3fastmem_size = 0x00000000;
-  p->z3fastmem_start = 0x10000000;
+  p->z3fastmem_start = 0x01000000;
   p->chipmem_size = 0x00100000;
   p->bogomem_size = 0x00000000;
   p->gfxmem_size = 0x00000000;

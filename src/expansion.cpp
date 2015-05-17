@@ -127,6 +127,7 @@ uaecptr ROM_hardfile_init;
 
 static void (*card_init[MAX_EXPANSION_BOARDS]) (void);
 static void (*card_map[MAX_EXPANSION_BOARDS]) (void);
+static int card_is_gfx[MAX_EXPANSION_BOARDS];
 
 static int ecard;
 
@@ -255,6 +256,14 @@ static void REGPARAM2 expamem_wput (uaecptr addr, uae_u32 value)
 	switch (addr & 0xff) {
 	 case 0x44:
 	    if (expamem_type() == zorroIII) {
+		// +Bernd Roesch
+    if(card_is_gfx[ecard])
+  		value = (gfxmem_start >> 16); /* hack address (TB) */
+  	else
+  		value = (value - 0x4000) + (z3fastmem_start >> 16); /* hack address (TW) */
+		chipmem_wput (regs.regs[11] + 0x20, value);
+		chipmem_wput (regs.regs[11] + 0x28, value);
+		// -Bernd Roesch
 		expamem_hi = value;
 		(*card_map[ecard]) ();
 		write_log ("   Card %d (Zorro%s) done.\n", ecard + 1, expamem_type() == 0xc0 ? "II" : "III");
@@ -429,7 +438,7 @@ uae_u32 REGPARAM2 filesys_lget (uaecptr addr)
 #ifdef JIT
     special_mem |= S_READ;
 #endif
-    addr -= filesys_start & 65535;
+    addr -= filesys_start /*& 65535*/;
     addr &= 65535;
     m = filesysory + addr;
     return do_get_mem_long ((uae_u32 *)m);
@@ -441,7 +450,7 @@ uae_u32 REGPARAM2 filesys_wget (uaecptr addr)
 #ifdef JIT
     special_mem |= S_READ;
 #endif
-    addr -= filesys_start & 65535;
+    addr -= filesys_start /*& 65535*/;
     addr &= 65535;
     m = filesysory + addr;
     return do_get_mem_word ((uae_u16 *)m);
@@ -452,7 +461,7 @@ uae_u32 REGPARAM2 filesys_bget (uaecptr addr)
 #ifdef JIT
     special_mem |= S_READ;
 #endif
-    addr -= filesys_start & 65535;
+    addr -= filesys_start /*& 65535*/;
     addr &= 65535;
     return filesysory[addr];
 }
@@ -494,7 +503,6 @@ static addrbank filesys_bank = {
 
 #endif /* FILESYS */
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 /*
  *  Z3fastmem Memory
  */
@@ -517,7 +525,7 @@ static uae_u8 *z3fastmem;
 uae_u32 REGPARAM2 z3fastmem_lget (uaecptr addr)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start & z3fastmem_mask;
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     return do_get_mem_long ((uae_u32 *)m);
@@ -526,7 +534,7 @@ uae_u32 REGPARAM2 z3fastmem_lget (uaecptr addr)
 uae_u32 REGPARAM2 z3fastmem_wget (uaecptr addr)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start & z3fastmem_mask;
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     return do_get_mem_word ((uae_u16 *)m);
@@ -534,15 +542,17 @@ uae_u32 REGPARAM2 z3fastmem_wget (uaecptr addr)
 
 uae_u32 REGPARAM2 z3fastmem_bget (uaecptr addr)
 {
-    addr -= z3fastmem_start & z3fastmem_mask;
+    uae_u8 *m;    
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
-    return z3fastmem[addr];
+    m = z3fastmem + addr;
+    return do_get_mem_byte (m);
 }
 
 void REGPARAM2 z3fastmem_lput (uaecptr addr, uae_u32 l)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start & z3fastmem_mask;
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     do_put_mem_long ((uae_u32 *)m, l);
@@ -551,7 +561,7 @@ void REGPARAM2 z3fastmem_lput (uaecptr addr, uae_u32 l)
 void REGPARAM2 z3fastmem_wput (uaecptr addr, uae_u32 w)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start & z3fastmem_mask;
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     do_put_mem_word ((uae_u16 *)m, w);
@@ -559,21 +569,23 @@ void REGPARAM2 z3fastmem_wput (uaecptr addr, uae_u32 w)
 
 void REGPARAM2 z3fastmem_bput (uaecptr addr, uae_u32 b)
 {
-    addr -= z3fastmem_start & z3fastmem_mask;
+    uae_u8 *m;
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
-    z3fastmem[addr] = b;
+    m = z3fastmem + addr;
+    do_put_mem_byte (m, b);
 }
 
 static int REGPARAM2 z3fastmem_check (uaecptr addr, uae_u32 size)
 {
-    addr -= z3fastmem_start & z3fastmem_mask;
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
     return (addr + size) <= allocated_z3fastmem;
 }
 
 static uae_u8 *REGPARAM2 z3fastmem_xlate (uaecptr addr)
 {
-    addr -= z3fastmem_start & z3fastmem_mask;
+    addr -= z3fastmem_start /*& z3fastmem_mask*/;
     addr &= z3fastmem_mask;
     return z3fastmem + addr;
 }
@@ -588,7 +600,6 @@ addrbank z3fastmem_bank = {
 uae_u32 gfxmem_mask; /* for memory.c */
 uae_u8 *gfxmemory;
 uae_u32 gfxmem_start;
-#endif
 
 /* ********************************************************** */
 
@@ -700,7 +711,6 @@ static void expamem_init_filesys (void)
 
 #endif
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 /*
  * Zorro III expansion memory
  */
@@ -710,7 +720,7 @@ static void expamem_map_z3fastmem (void)
 	int z3fs = ((expamem_hi | (expamem_lo >> 4)) << 16);
 
 	if (z3fastmem_start != z3fs) {
-		write_log("WARNING: Z3FAST mapping changed from $%lx to $%lx\n", z3fastmem_start, z3fs);
+    	write_log("WARNING: Z3FAST mapping changed from $%lx to $%lx\n", z3fastmem_start, z3fs);
 		map_banks(&dummy_bank, z3fastmem_start >> 16, currprefs.z3fastmem_size >> 16,
 			allocated_z3fastmem);
 		z3fastmem_start = z3fs;
@@ -805,35 +815,29 @@ static void expamem_init_gfxcard (void)
 #endif
 
 static size_t fast_filepos, z3_filepos, p96_filepos;
-#else
-static size_t fast_filepos;
-#endif
 
 static void allocate_expamem (void)
 {
     currprefs.fastmem_size = changed_prefs.fastmem_size;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
     currprefs.z3fastmem_size = changed_prefs.z3fastmem_size;
     currprefs.gfxmem_size = changed_prefs.gfxmem_size;
-#endif
 
     if (allocated_fastmem != currprefs.fastmem_size) {
-//    	if (fastmemory)
-//    		mapped_free (fastmemory);
+    	if (fastmemory)
+    		mapped_free (fastmemory);
     	fastmemory = 0;
     	allocated_fastmem = currprefs.fastmem_size;
     	fastmem_mask = allocated_fastmem - 1;
 
     	if (allocated_fastmem) {
-    		fastmemory = natmem_offset + 0x200000; //mapped_malloc (allocated_fastmem, "fast");
-//    		if (fastmemory == 0) {
-//    			write_log ("Out of memory for fastmem card.\n");
-//    			allocated_fastmem = 0;
-//    		}
+    		fastmemory = mapped_malloc (allocated_fastmem, "fast");
+    		if (fastmemory == 0) {
+    			write_log ("Out of memory for fastmem card.\n");
+    			allocated_fastmem = 0;
+    		}
     	}
 	    memory_hardreset();
     }
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
     if (allocated_z3fastmem != currprefs.z3fastmem_size) {
     	if (z3fastmem)
     		mapped_free (z3fastmem);
@@ -843,6 +847,10 @@ static void allocate_expamem (void)
     	z3fastmem_mask = allocated_z3fastmem - 1;
 
     	if (allocated_z3fastmem) {
+        if(z3fastmem_start != currprefs.z3fastmem_start)
+          z3fastmem_start = currprefs.z3fastmem_start;
+        if(z3fastmem_start != 0x1000000)
+          z3fastmem_start = 0x1000000;
     		z3fastmem = mapped_malloc (allocated_z3fastmem, "z3");
     		if (z3fastmem == 0) {
     			write_log ("Out of memory for 32 bit fast memory.\n");
@@ -861,6 +869,7 @@ static void allocate_expamem (void)
     	gfxmem_mask = allocated_gfxmem - 1;
 
     	if (allocated_gfxmem) {
+    	  gfxmem_start = 0x3000000;
     		gfxmemory = mapped_malloc (allocated_gfxmem, "gfx");
     		if (gfxmemory == 0) {
     			write_log ("Out of memory for graphics card memory\n");
@@ -872,7 +881,6 @@ static void allocate_expamem (void)
 #endif
 
     z3fastmem_bank.baseaddr = z3fastmem;
-#endif
     fastmem_bank.baseaddr = fastmemory;
 
 #ifdef SAVESTATE
@@ -882,7 +890,6 @@ static void allocate_expamem (void)
     		map_banks (&fastmem_bank, fastmem_start >> 16, currprefs.fastmem_size >> 16,
     				allocated_fastmem);
     	}
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
     	if (allocated_z3fastmem > 0) {
 	      restore_ram (z3_filepos, z3fastmem);
     		map_banks (&z3fastmem_bank, z3fastmem_start >> 16, currprefs.z3fastmem_size >> 16,
@@ -894,7 +901,6 @@ static void allocate_expamem (void)
 	      map_banks (&gfxmem_bank, gfxmem_start >> 16, currprefs.gfxmem_size >> 16,
 		       allocated_gfxmem);
     	}
-#endif
 #endif
     }
 #endif /* SAVESTATE */
@@ -925,35 +931,37 @@ void expamem_reset (void)
       do_mount = 0;
 #endif
    if (fastmemory != NULL) {
+      card_is_gfx[cardno] = 0;
       card_init[cardno] = expamem_init_fastcard;
       card_map[cardno++] = expamem_map_fastcard;
    }
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
    if (z3fastmem != NULL) {
+      card_is_gfx[cardno] = 0;
       card_init[cardno] = expamem_init_z3fastmem;
       card_map[cardno++] = expamem_map_z3fastmem;
    }
-#endif
 #ifdef PICASSO96
    if (gfxmemory != NULL) {
+      card_is_gfx[cardno] = 1;
       card_init[cardno] = expamem_init_gfxcard;
       card_map[cardno++] = expamem_map_gfxcard;
    }
 #endif
 #ifdef FILESYS
    if (do_mount && ! ersatzkickfile) {
+      card_is_gfx[cardno] = 0;
       card_init[cardno] = expamem_init_filesys;
       card_map[cardno++] = expamem_map_filesys;
    }
 #endif
    while (cardno < MAX_EXPANSION_BOARDS) {
+      card_is_gfx[cardno] = 0;
       card_init[cardno] = expamem_init_clear;
       card_map[cardno++] = expamem_map_clear;
    }
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    z3fastmem_start = currprefs.z3fastmem_start;
-#endif
+   z3fastmem_start = currprefs.z3fastmem_start;
+   gfxmem_start = 0x3000000;
    (*card_init[0]) ();
 }
 
@@ -973,16 +981,14 @@ void expansion_init (void)
     filesysory = 0;
 #endif
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
     allocated_z3fastmem = 0;
     z3fastmem_mask = z3fastmem_start = 0;
     z3fastmem = 0;
-#endif
 
     allocate_expamem ();
 
 #ifdef FILESYS
-    filesysory = (uae_u8 *) mapped_malloc (0x10000, "filesys");
+    filesysory = (uae_u8 *) malloc (0x10000); //mapped_malloc (0x10000, "filesys");
     if (!filesysory) {
 	write_log ("virtual memory exhausted (filesysory)!\n");
 	exit (0);
@@ -993,14 +999,12 @@ void expansion_init (void)
 
 void expansion_cleanup (void)
 {
-//    if (fastmemory)
-//	mapped_free (fastmemory);
+    if (fastmemory)
+	mapped_free (fastmemory);
     fastmemory = 0;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
     if (z3fastmem)
 	mapped_free (z3fastmem);
     z3fastmem = 0;
-#endif
 #ifdef PICASSO96
     if (gfxmemory)
 	mapped_free (gfxmemory);
@@ -1008,7 +1012,7 @@ void expansion_cleanup (void)
 #endif
 #ifdef FILESYS
     if (filesysory)
-	mapped_free (filesysory);
+	free (filesysory); //mapped_free (filesysory);
     filesysory = 0;
 #endif
 }
@@ -1017,14 +1021,10 @@ void expansion_clear(void)
 {
     if (fastmemory)
 	memset (fastmemory, 0, allocated_fastmem);
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
     if (z3fastmem)
 	memset (z3fastmem, 0, allocated_z3fastmem > 0x800000 ? 0x800000 : allocated_z3fastmem);
-#endif
-#ifdef PICASSO96
     if (gfxmemory)
 	memset (gfxmemory, 0, allocated_gfxmem);
-#endif
 }
 
 #ifdef SAVESTATE
@@ -1037,7 +1037,6 @@ uae_u8 *save_fram (int *len)
     return fastmemory;
 }
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 uae_u8 *save_zram (int *len)
 {
     *len = allocated_z3fastmem;
@@ -1049,7 +1048,6 @@ uae_u8 *save_pram (int *len)
     *len = allocated_gfxmem;
     return gfxmemory;
 }
-#endif
 
 void restore_fram (uae_u32 len, size_t filepos)
 {
@@ -1057,7 +1055,6 @@ void restore_fram (uae_u32 len, size_t filepos)
     changed_prefs.fastmem_size = len;
 }
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 void restore_zram (uae_u32 len, size_t filepos)
 {
     z3_filepos = filepos;
@@ -1069,7 +1066,6 @@ void restore_pram (int len, size_t filepos)
     p96_filepos = filepos;
     changed_prefs.gfxmem_size = len;
 }
-#endif
 
 uae_u8 *save_expansion (int *len, uae_u8 *dstptr)
 {
@@ -1079,13 +1075,8 @@ uae_u8 *save_expansion (int *len, uae_u8 *dstptr)
     else
       dstbak = dst = (uae_u8 *)malloc (16);
     save_u32 (fastmem_start);
-#if defined(PANDORA) || defined(ANDROIDSDL)
-    save_u32 (0);
-    save_u32 (0);
-#else
     save_u32 (z3fastmem_start);
     save_u32 (gfxmem_start);
-#endif
     *len = dst - dstbak;
     return dstbak;
 }
@@ -1093,13 +1084,8 @@ uae_u8 *save_expansion (int *len, uae_u8 *dstptr)
 uae_u8 *restore_expansion (uae_u8 *src)
 {
     fastmem_start = restore_u32 ();
-#if defined(PANDORA) || defined(ANDROIDSDL)
-    restore_u32 ();
-    restore_u32 ();
-#else
     z3fastmem_start = restore_u32 ();
     gfxmem_start = restore_u32 ();
-#endif
     return src;
 }
 

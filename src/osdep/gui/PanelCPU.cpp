@@ -44,22 +44,31 @@ class CPUButtonActionListener : public gcn::ActionListener
 	    {
   		  changed_prefs.cpu_level = 0;
   		  changed_prefs.address_space_24 = true;
+  		  changed_prefs.z3fastmem_size = 0;
+  		  changed_prefs.gfxmem_size = 0;
       }
       else if (actionEvent.getSource() == optCPU68010)
       {
 	      changed_prefs.cpu_level = 1;
   		  changed_prefs.address_space_24 = true;
+  		  changed_prefs.z3fastmem_size = 0;
+  		  changed_prefs.gfxmem_size = 0;
   		  changed_prefs.cpu_compatible = 0;
       }
       else if (actionEvent.getSource() == optCPU68EC020)
       {
 	      changed_prefs.cpu_level = 2;
   		  changed_prefs.address_space_24 = true;
+  		  changed_prefs.z3fastmem_size = 0;
+  		  changed_prefs.gfxmem_size = 0;
   		  changed_prefs.cpu_compatible = 0;
       }
       else if (actionEvent.getSource() == optCPU68020)
       {
-	      changed_prefs.cpu_level = 2;
+	      if(optFPU68881->isSelected())
+	        changed_prefs.cpu_level = 3; // with 68881
+	      else
+	        changed_prefs.cpu_level = 2; // no fpu
   		  changed_prefs.address_space_24 = false;
   		  changed_prefs.cpu_compatible = 0;
       }
@@ -70,6 +79,7 @@ class CPUButtonActionListener : public gcn::ActionListener
   		  changed_prefs.cpu_compatible = 0;
       }
 	    RefreshPanelCPU();
+	    RefreshPanelRAM();
     }
 };
 static CPUButtonActionListener* cpuButtonActionListener;
@@ -290,7 +300,7 @@ void RefreshPanelCPU(void)
   }
   else
   {
-    if(changed_prefs.cpu_level == 2)
+    if(changed_prefs.cpu_level == 2 || changed_prefs.cpu_level == 3)
       optCPU68020->setSelected(true);
     else if(changed_prefs.cpu_level == 4)
       optCPU68040->setSelected(true);

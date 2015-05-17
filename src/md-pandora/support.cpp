@@ -8,6 +8,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "events.h"
+#include "custom.h"
 
 
 int64_t g_uae_epoch = 0;
@@ -15,6 +16,10 @@ int64_t g_uae_epoch = 0;
 
 void machdep_init (void)
 {
+  picasso_requested_on = 0;
+  picasso_on = 0;
+  screen_is_picasso = 0;
+
   // Initialize timebase
   g_uae_epoch = read_processor_time();
   syncbase = 1000000; // Microseconds

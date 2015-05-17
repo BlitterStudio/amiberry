@@ -44,9 +44,9 @@ extern uae_u8 *chipmemory;
 extern uae_u32 allocated_chipmem;
 extern uae_u32 allocated_fastmem;
 extern uae_u32 allocated_bogomem;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 extern uae_u32 allocated_gfxmem;
 extern uae_u32 allocated_z3fastmem, max_z3fastmem;
+#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 extern uae_u32 allocated_a3000mem;
 #endif
 
@@ -110,11 +110,9 @@ extern void rtarea_setup (void);
 extern void expamem_init (void);
 extern void expamem_reset (void);
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
 extern uae_u32 gfxmem_start;
 extern uae_u8 *gfxmemory;
 extern uae_u32 gfxmem_mask;
-#endif
 
 /* Default memory access functions */
 
@@ -312,7 +310,6 @@ static __inline void CHIPMEM_AGNUS_WPUT_CUSTOM (uae_u32 PT, uae_u16 DA) {
 static __inline__ uae_u32 CHIPMEM_LGET_CUSTOM(uae_u32 PT) {
   return do_get_mem_long((uae_u32 *)&chipmemory[PT & chipmem_mask]);
 }
-
 
 extern uae_u8 *mapped_malloc (size_t, const char *);
 extern void mapped_free (uae_u8 *);

@@ -63,7 +63,6 @@ extern void extractPath(char *str, char *buffer);
 extern void removeFileExtension(char *filename);
 extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
-extern int my_cfgfile_load (struct uae_prefs *p, const char *filename, int general);
 
 #include <vector>
 #include <string>

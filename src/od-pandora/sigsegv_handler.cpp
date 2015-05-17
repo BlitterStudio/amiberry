@@ -76,7 +76,7 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 {
 	unsigned int *pc = (unsigned int *)pregs[ARM_REG_PC];
 
-	D(panicbug("IP: %p [%08x] %p\n", pc, pc[0], addr));
+	panicbug("IP: %p [%08x] %p\n", pc, pc[0], addr);
 	if (pc == 0) return false;
 
 	if (in_handler > 0) 
@@ -158,11 +158,8 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 //  }
 #endif
 
-    	if (addr >= 0xff000000)
-          addr &= 0x00ffffff;
-
-        if ((addr < 0x00f00000) || (addr > 0x00ffffff))
-          goto buserr;
+//  if ((addr < 0x00f00000) || (addr > 0x00ffffff))
+//    goto buserr;
 
 	if (transfer_type == TYPE_LOAD) {
 		switch(transfer_size) {
@@ -197,14 +194,14 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 	}
 
  	pregs[ARM_REG_PC] += 4;
-	D(panicbug("processed: %p \n", pregs[ARM_REG_PC]));
+	panicbug("processed: %p \n", pregs[ARM_REG_PC]);
 
   in_handler--;
 
 	return true;
 
 buserr:
-  D(panicbug("Amiga bus error\n"));
+  panicbug("Amiga bus error\n");
 
 //  BUS_ERROR(addr);
 	return false;

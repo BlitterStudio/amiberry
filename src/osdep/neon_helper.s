@@ -4,6 +4,8 @@
 
 .global TRACE_Start
 .global TRACE_mem
+.global pixcpy_swap16
+.global pixcpy_swap32
 .global ARM_doline_n1
 .global NEON_doline_n2
 .global NEON_doline_n3
@@ -60,6 +62,50 @@ TRACE_Start:
   bx      lr
     
 
+@----------------------------------------------------------------
+@ pixcpy_swap16
+@
+@ r0: uae_u16   *dstp
+@ r1: uae_u16   *srcp
+@ r2: int       cols 
+@
+@ void pixcpy_swap16(uae_u16 *dstp, uae_u16 *srcp, int cols);
+@
+@----------------------------------------------------------------
+pixcpy_swap16:
+  subs    r2, r2, #1
+  bxmi    lr
+pixcpy_swap16_1:
+  ldrh    r3, [r1], #2
+  rev16   r3, r3
+  strh    r3, [r0], #2
+  subs    r2, r2, #1
+  bge     pixcpy_swap16_1
+  bx      lr
+
+
+@----------------------------------------------------------------
+@ pixcpy_swap32
+@
+@ r0: uae_u32   *dstp
+@ r1: uae_u32   *srcp
+@ r2: int       cols 
+@
+@ void pixcpy_swap32(uae_u32 *dstp, uae_u32 *srcp, int cols);
+@
+@----------------------------------------------------------------
+pixcpy_swap32:
+  subs    r2, r2, #1
+  bxmi    lr
+pixcpy_swap32_1:
+  ldr     r3, [r1], #4
+  rev     r3, r3
+  str     r3, [r0], #4
+  subs    r2, r2, #1
+  bge     pixcpy_swap32_1
+  bx      lr
+  
+  
 @----------------------------------------------------------------
 @ ARM_doline_n1
 @

@@ -8,7 +8,6 @@
   * Copyright 2000-2004 Toni Wilen
   */
 
-#define STOP_WHEN_NASTY
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
 
@@ -36,12 +35,18 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "gui.h"
+#include "picasso96.h"
 #include "drawing.h"
 #include "savestate.h"
 #include "filesys.h"
 #include <SDL.h>
 
-#define setcopper() set_special(&regs, SPCFLAG_COPPER)
+STATIC_INLINE int nocustom(void)
+{
+    if (picasso_on && currprefs.picasso96_nocustom)
+	return 1;
+    return 0;
+}
 
 static uae_u16 last_custom_value;
 
@@ -287,11 +292,6 @@ STATIC_INLINE void setclr (uae_u16 *_GCCRES_ p, uae_u16 val)
 	*p &= ~val;
 }
 
-//STATIC_INLINE int current_hpos (void)
-//{
-//    return (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
-//}
-
 STATIC_INLINE uae_u8 *_GCCRES_ pfield_xlateptr (uaecptr plpt, int bytecount)
 {
   plpt &= chipmem_mask;
@@ -441,7 +441,6 @@ static const int fetchstarts[] = { 3,2,1,0, 4,3,2,0, 5,4,3,0 };
 static const int fm_maxplanes[] = { 3,2,1,0, 3,3,2,0, 3,3,3,0 };
 
 static int cycle_diagram_table[3][3][9][32];
-// blitter_slowdown doesn't work at the moment (causes gfx glitches in Shadow of the Beast)
 static int cycle_diagram_free_cycles[3][3][9];
 static int cycle_diagram_total_cycles[3][3][9];
 static int *curr_diagram;
@@ -1937,6 +1936,9 @@ void init_hz (void)
   eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
   events_schedule ();
   compute_vsynctime ();
+#ifdef PICASSO96
+  init_hz_p96 ();
+#endif
 }
 
 static void calcdiw (void)
@@ -2106,6 +2108,10 @@ static void COPJMP (int num)
   int oldstrobe = cop_state.strobe;
 
 	eventtab[ev_copper].active = 0;
+  if (nocustom()) {
+	  immediate_copper (num);
+	  return;
+  }
 	if (was_active)
 		events_schedule ();
 	
@@ -2121,7 +2127,7 @@ static void COPJMP (int num)
 	
 	if (dmaen (DMA_COPPER)) {
 		copper_enabled_thisline = 1;
-		setcopper();
+		set_special(&regs, SPCFLAG_COPPER);
 	} else if (oldstrobe > 0 && oldstrobe != num && cop_state.state_prev == COP_wait) {
 	/* dma disabled, copper idle and accessing both COPxJMPs -> copper stops! */
 	  cop_state.state = COP_stop;
@@ -2736,22 +2742,12 @@ static void SPRxPTH (int hpos, uae_u16 v, int num)
     decide_sprites (hpos);
     spr[num].pt &= 0xffff;
     spr[num].pt |= (uae_u32)v << 16;
-#if SPRITE_DEBUG > 0
-    if (vpos >= SPRITE_DEBUG_MINY && vpos <= SPRITE_DEBUG_MAXY) {
-        write_log ("%d:%d:SPR%dPTH %06.6X\n", vpos, hpos, num, spr[num].pt);
-    }
-#endif
 }
 static void SPRxPTL (int hpos, uae_u16 v, int num)
 {
     decide_sprites (hpos);
     spr[num].pt &= ~0xffff;
     spr[num].pt |= v;
-#if SPRITE_DEBUG > 0
-     if (vpos >= SPRITE_DEBUG_MINY && vpos <= SPRITE_DEBUG_MAXY) {
-	      write_log ("%d:%d:SPR%dPTL %06.6X\n", vpos, hpos, num, spr[num].pt);
-     }
-#endif
 }
 
 static void CLXCON (uae_u16 v)
@@ -3074,7 +3070,7 @@ static __inline__ void perform_copper_write (int old_hpos)
   	cop_state.last_write = cop_state.saved_i1;
 	  cop_state.last_write_hpos = old_hpos;
 	  old_hpos++;
-	  if (cop_state.saved_i1 >= 0x140 && cop_state.saved_i1 < 0x180 && old_hpos >= SPR0_HPOS && old_hpos < SPR0_HPOS + 4 * MAX_SPRITES) {
+	  if (!nocustom() && cop_state.saved_i1 >= 0x140 && cop_state.saved_i1 < 0x180 && old_hpos >= SPR0_HPOS && old_hpos < SPR0_HPOS + 4 * MAX_SPRITES) {
 	    //write_log ("%d:%d %04.4X:%04.4X\n", vpos, old_hpos, cop_state.saved_i1, cop_state.saved_i2);
 	    do_sprites (old_hpos);
   	}
@@ -3105,6 +3101,11 @@ static void update_copper (int until_hpos)
 	int vp = vpos & (((cop_state.saved_i2 >> 8) & 0x7F) | 0x80);    
 	int c_hpos = cop_state.hpos;
 	
+    if (nocustom()) {
+	eventtab[ev_copper].active = 0;
+	return;
+    }
+
 	if (eventtab[ev_copper].active) {
     eventtab[ev_copper].active = 0;
 		return;
@@ -3360,7 +3361,7 @@ static void compute_spcflag_copper (void)
 {
 	copper_enabled_thisline = 0;
 	unset_special (&regs, SPCFLAG_COPPER);
-  if (! dmaen (DMA_COPPER) || cop_state.state == COP_stop || cop_state.state == COP_bltwait)
+  if (!dmaen (DMA_COPPER) || cop_state.state == COP_stop || cop_state.state == COP_bltwait || nocustom())
 		return;
 	
 	if (cop_state.state == COP_wait) {
@@ -3376,13 +3377,13 @@ static void compute_spcflag_copper (void)
 #endif
 	
 	if (! eventtab[ev_copper].active)
-		setcopper();
+	  set_special (&regs, SPCFLAG_COPPER);
 }
 
 static void copper_handler (void)
 {
-    /* This will take effect immediately, within the same cycle.  */
-	setcopper();
+  /* This will take effect immediately, within the same cycle.  */
+  set_special (&regs, SPCFLAG_COPPER);
 	
 	if (! copper_enabled_thisline)
 		return;
@@ -3435,7 +3436,7 @@ STATIC_INLINE void sync_copper_with_cpu (int hpos, int do_schedule)
 		eventtab[ev_copper].active = 0;
 		if (do_schedule)
 			events_schedule ();
-		setcopper();
+	  set_special (&regs, SPCFLAG_COPPER);
 	}
 	if (copper_enabled_thisline)
 		update_copper (hpos);
@@ -3718,9 +3719,9 @@ static void vsync_handler (void)
 	  }
 #ifdef JIT
 	} else {
-	  if (currprefs.m68k_speed >= 0) {
+//	  if (currprefs.m68k_speed >= 0) {
 //		framewait ();
-	  }
+//	  }
 	}
 #endif
 
@@ -3731,6 +3732,12 @@ static void vsync_handler (void)
 	if (bplcon0 & 4)
 		lof ^= 0x8000;
 	
+#ifdef PICASSO96
+  /* And now let's update the Picasso palette, if required */
+  if (picasso_on)
+	  picasso_handle_vsync ();
+#endif
+
 	vsync_handle_redraw (lof, lof_changed);
 
 #ifdef JIT
@@ -3807,8 +3814,6 @@ static void frh_handler(void)
 	/* Allow this to be one frame's worth of cycles out */
 	while (diff32 (curr_time, vsyncmintime + vsynctime) > 0) {
 	    vsyncmintime += vsynctime * N_LINES / maxvpos;
-//	    if (turbo_emulation)
-//		break;
 	}
     }
 }
@@ -3816,37 +3821,44 @@ static void frh_handler(void)
 
 static void hsync_handler (void)
 {
-   static int ciahsync;
+  static int ciahsync;
+
+  if (!nocustom()) {
 #ifdef FAST_COPPER
    /* Using 0x8A makes sure that we don't accidentally trip over the
        modified_regtypes check.  */
-   sync_copper_with_cpu (maxhpos, 0, 0x8A);
+    sync_copper_with_cpu (maxhpos, 0, 0x8A);
 #else
-   sync_copper_with_cpu (maxhpos, 0);
+    sync_copper_with_cpu (maxhpos, 0);
 #endif
    
-   if(currprefs.pandora_partial_blits && bltstate == BLT_work)
-     blitter_do_partial(0);
+    if(currprefs.pandora_partial_blits && bltstate == BLT_work)
+      blitter_do_partial(0);
 
-   finish_decisions ();
-   if (thisline_decision.plfleft != -1) {
+    finish_decisions ();
+    if (thisline_decision.plfleft != -1) {
       if (currprefs.collision_level > 1)
         DO_SPRITE_COLLISIONS
       if (currprefs.collision_level > 2)
         DO_PLAYFIELD_COLLISIONS
-   }
+    }
    
-   hsync_record_line_state (next_lineno);
+    hsync_record_line_state (next_lineno);
+  }
    
-   eventtab[ev_hsync].evtime += get_cycles () - eventtab[ev_hsync].oldcycles;
-   eventtab[ev_hsync].oldcycles = get_cycles ();
-   CIA_hsync_handler ();
+  eventtab[ev_hsync].evtime += get_cycles () - eventtab[ev_hsync].oldcycles;
+  eventtab[ev_hsync].oldcycles = get_cycles ();
+  CIA_hsync_handler ();
    
-   ciahsync++;
-    if (ciahsync >= (currprefs.ntscmode ? MAXVPOS_NTSC : MAXVPOS_PAL) * MAXHPOS_PAL / maxhpos) { /* not so perfect.. */
-      CIA_vsync_handler ();
-	    ciahsync = 0;
-   }
+#ifdef PICASSO96
+  picasso_handle_hsync ();
+#endif
+
+  ciahsync++;
+  if (ciahsync >= (currprefs.ntscmode ? MAXVPOS_NTSC : MAXVPOS_PAL) * MAXHPOS_PAL / maxhpos) { /* not so perfect.. */
+    CIA_vsync_handler ();
+	  ciahsync = 0;
+  }
 
 // Slows down emulation without improving compatability a lot
 //    if ((currprefs.chipset_mask & CSMASK_AGA) || (!currprefs.chipset_mask & CSMASK_ECS_AGNUS))
@@ -3897,11 +3909,13 @@ static void hsync_handler (void)
     }
 #endif
 
-   if (!nodraw ()) {
+  if (!nocustom()) {
+    if (!nodraw ()) {
       int lineno = vpos;
       next_lineno = lineno;
       reset_decisions ();
-   }
+    }
+  }
 
 #ifdef FILESYS    
    if (uae_int_requested) {
@@ -4960,7 +4974,9 @@ void check_prefs_changed_custom (void)
   currprefs.collision_level = changed_prefs.collision_level;
 
   if (currprefs.chipset_mask != changed_prefs.chipset_mask ||
+	currprefs.picasso96_nocustom != changed_prefs.picasso96_nocustom ||
 	currprefs.ntscmode != changed_prefs.ntscmode) {
+	  currprefs.picasso96_nocustom = changed_prefs.picasso96_nocustom;
 	  currprefs.chipset_mask = changed_prefs.chipset_mask;
     if (currprefs.ntscmode != changed_prefs.ntscmode) {
 	    currprefs.ntscmode = changed_prefs.ntscmode;

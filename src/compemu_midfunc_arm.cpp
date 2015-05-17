@@ -957,6 +957,65 @@ MIDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMM offset))
 }
 MENDFUNC(3,mov_b_brR,(W1 d, RR4 s, IMM offset))
 
+/* read the long at the address contained in s+offset and store in d */
+MIDFUNC(3,mov_l_brR24,(W4 d, RR4 s, IMM offset))
+{
+	int sreg=s;
+	if (isconst(s)) {
+		COMPCALL(mov_l_rm)(d,(live.state[s].val & 0x00ffffff)+offset);
+		return;
+	}
+	CLOBBER_MOV;
+	s=readreg_offset(s,4);
+	offset+=get_offset(sreg);
+	d=writereg(d,4);
+
+	raw_mov_l_brR24(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(3,mov_l_brR24,(W4 d, RR4 s, IMM offset))
+
+/* read the word at the address contained in s+offset and store in d */
+MIDFUNC(3,mov_w_brR24,(W2 d, RR4 s, IMM offset))
+{
+	int sreg=s;
+	if (isconst(s)) {
+		COMPCALL(mov_w_rm)(d,(live.state[s].val & 0x00ffffff)+offset);
+		return;
+	}
+	CLOBBER_MOV;
+	remove_offset(d,-1);
+	s=readreg_offset(s,4);
+	offset+=get_offset(sreg);
+	d=writereg(d,2);
+
+	raw_mov_w_brR24(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(3,mov_w_brR24,(W2 d, RR4 s, IMM offset))
+
+/* read the word at the address contained in s+offset and store in d */
+MIDFUNC(3,mov_b_brR24,(W1 d, RR4 s, IMM offset))
+{
+	int sreg=s;
+	if (isconst(s)) {
+		COMPCALL(mov_b_rm)(d,(live.state[s].val & 0x00ffffff)+offset);
+		return;
+	}
+	CLOBBER_MOV;
+	remove_offset(d,-1);
+	s=readreg_offset(s,4);
+	offset+=get_offset(sreg);
+	d=writereg(d,1);
+
+	raw_mov_b_brR24(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(3,mov_b_brR24,(W1 d, RR4 s, IMM offset))
+
 MIDFUNC(3,mov_l_Ri,(RR4 d, IMM i, IMM offset))
 {
 	int dreg=d;
@@ -1052,6 +1111,27 @@ MIDFUNC(3,lea_l_brr,(W4 d, RR4 s, IMM offset))
 }
 MENDFUNC(3,lea_l_brr,(W4 d, RR4 s, IMM offset))
 
+MIDFUNC(3,lea_l_brr24,(W4 d, RR4 s, IMM offset))
+{
+	if (isconst(s)) {
+		COMPCALL(mov_l_ri)(d,(live.state[s].val & 0x00ffffff)+offset);
+		return;
+	}
+#if USE_OFFSET
+	if (d==s) {
+		add_offset(d,offset);
+		return;
+	}
+#endif
+	CLOBBER_LEA;
+	s=readreg(s,4);
+	d=writereg(d,4);
+	raw_lea_l_brr24(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(3,lea_l_brr24,(W4 d, RR4 s, IMM offset))
+
 MIDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IMM factor, IMM offset))
 {
 	if (!offset) {
@@ -1141,6 +1221,64 @@ MIDFUNC(3,mov_b_bRr,(RR4 d, RR1 s, IMM offset))
 	unlock2(s);
 }
 MENDFUNC(3,mov_b_bRr,(RR4 d, RR1 s, IMM offset))
+
+/* write d to the long at the address contained in s+offset */
+MIDFUNC(3,mov_l_bRr24,(RR4 d, RR4 s, IMM offset))
+{
+	int dreg=d;
+	if (isconst(d)) {
+		COMPCALL(mov_l_mr)((live.state[d].val & 0x00ffffff)+offset,s);
+		return;
+	}
+
+	CLOBBER_MOV;
+	s=readreg(s,4);
+	d=readreg_offset(d,4);
+	offset+=get_offset(dreg);
+
+	raw_mov_l_bRr24(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(3,mov_l_bRr24,(RR4 d, RR4 s, IMM offset))
+
+/* write the word at the address contained in s+offset and store in d */
+MIDFUNC(3,mov_w_bRr24,(RR4 d, RR2 s, IMM offset))
+{
+	int dreg=d;
+
+	if (isconst(d)) {
+		COMPCALL(mov_w_mr)((live.state[d].val & 0x00ffffff)+offset,s);
+		return;
+	}
+
+	CLOBBER_MOV;
+	s=readreg(s,2);
+	d=readreg_offset(d,4);
+	offset+=get_offset(dreg);
+	raw_mov_w_bRr24(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(3,mov_w_bRr24,(RR4 d, RR2 s, IMM offset))
+
+MIDFUNC(3,mov_b_bRr24,(RR4 d, RR1 s, IMM offset))
+{
+	int dreg=d;
+	if (isconst(d)) {
+		COMPCALL(mov_b_mr)((live.state[d].val & 0x00ffffff)+offset,s);
+		return;
+	}
+
+	CLOBBER_MOV;
+	s=readreg(s,1);
+	d=readreg_offset(d,4);
+	offset+=get_offset(dreg);
+	raw_mov_b_bRr24(d,s,offset);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(3,mov_b_bRr24,(RR4 d, RR1 s, IMM offset))
 
 MIDFUNC(1,mid_bswap_32,(RW4 r))
 {

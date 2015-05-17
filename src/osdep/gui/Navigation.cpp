@@ -94,7 +94,9 @@ static NavigationMap navMap[] =
 //PanelRAM
   { "Chipmem",        "",               "",               "RAM",            "Slowmem" },
   { "Slowmem",        "",               "",               "Chipmem",        "Fastmem" },
-  { "Fastmem",        "",               "",               "Slowmem",        "RAM" },
+  { "Fastmem",        "",               "",               "Slowmem",        "Z3mem" },
+  { "Z3mem",          "",               "",               "Fastmem",        "Gfxmem" },
+  { "Gfxmem",         "",               "",               "Z3mem",          "RAM" },
 
 //PanelFloppy
   { "DF0:",           "Floppy drives",  "cboType0",       "SaveForDisk",     "cboDisk0" },

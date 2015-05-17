@@ -29,6 +29,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "osemu.h"
+#include "picasso96.h"
 #include "bsdsocket.h"
 #include "drawing.h"
 #include "native2amiga.h"
@@ -114,7 +115,34 @@ void fixup_prefs (struct uae_prefs *p)
 	write_log ("Unsupported fastmem size %x!\n", p->fastmem_size);
 	err = 1;
     }
-
+    if ((p->gfxmem_size & (p->gfxmem_size - 1)) != 0
+	|| (p->gfxmem_size != 0 && (p->gfxmem_size < 0x100000 || p->gfxmem_size > 0x8000000)))
+    {
+	write_log ("Unsupported graphics card memory size %x!\n", p->gfxmem_size);
+	p->gfxmem_size = 0;
+	err = 1;
+    }
+    gfxmem_start = 0x3000000;
+    
+   if ((p->z3fastmem_size & (p->z3fastmem_size - 1)) != 0
+	|| (p->z3fastmem_size != 0 && (p->z3fastmem_size < 0x100000 || p->z3fastmem_size > max_z3fastmem)))
+    {
+	if (p->z3fastmem_size > max_z3fastmem)
+	    p->z3fastmem_size = max_z3fastmem;
+	else
+	    p->z3fastmem_size = 0;
+	write_log ("Unsupported Zorro III fastmem size!\n");
+	err = 1;
+    }
+    p->z3fastmem_start &= ~0xffff;
+    if (p->z3fastmem_start != 0x1000000)
+	p->z3fastmem_start = 0x1000000;
+    
+    if (p->address_space_24 && (p->gfxmem_size != 0 || p->z3fastmem_size != 0)) {
+	p->z3fastmem_size = p->gfxmem_size = 0;
+	write_log ("Can't use a graphics card or Zorro III fastmem when using a 24 bit\n"
+		 "address space - sorry.\n");
+    }
     if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
 	p->bogomem_size = 0;
 	write_log ("Unsupported bogomem size!\n");
@@ -134,6 +162,23 @@ void fixup_prefs (struct uae_prefs *p)
     if (p->produce_sound < 0 || p->produce_sound > 3) {
 	write_log ("Bad value for -S parameter: enable value must be within 0..3\n");
 	p->produce_sound = 0;
+	err = 1;
+    }
+    if (p->cachesize < 0 || p->cachesize > 16384) {
+	write_log ("Bad value for cachesize parameter: value must be within 0..16384\n");
+	p->cachesize = 0;
+	err = 1;
+    }
+    if (p->cpu_level < 2 && p->z3fastmem_size > 0) {
+	write_log ("Z3 fast memory can't be used with a 68000/68010 emulation. It\n"
+		 "requires a 68020 emulation. Turning off Z3 fast memory.\n");
+	p->z3fastmem_size = 0;
+	err = 1;
+    }
+    if (p->gfxmem_size > 0 && (p->cpu_level < 2 || p->address_space_24)) {
+	write_log ("Picasso96 can't be used with a 68000/68010 or 68EC020 emulation. It\n"
+		 "requires a 68020 emulation. Turning off Picasso96.\n");
+	p->gfxmem_size = 0;
 	err = 1;
     }
 
@@ -156,7 +201,6 @@ void fixup_prefs (struct uae_prefs *p)
 	p->collision_level = 1;
 	err = 1;
     }
-    fixup_prefs_dimensions (&currprefs);
 
     fixup_prefs_dimensions (p);
 
@@ -193,8 +237,74 @@ void uae_restart (int opengui, char *cfgfile)
 	  strcpy (restart_config, cfgfile);
 }
 
+static void parse_cmdline_2 (int argc, char **argv)
+{
+    int i;
+
+    cfgfile_addcfgparam (0);
+    for (i = 1; i < argc; i++) {
+	if (strcmp (argv[i], "-cfgparam") == 0) {
+	    if (i + 1 == argc)
+		write_log ("Missing argument for '-cfgparam' option.\n");
+	    else
+		cfgfile_addcfgparam (argv[++i]);
+	}
+    }
+}
+
+
+static void parse_cmdline (int argc, char **argv)
+{
+  int i;
+
+  for (i = 1; i < argc; i++) {
+    if (strcmp (argv[i], "-cfgparam") == 0) {
+	    if (i + 1 < argc)
+		    i++;
+	  } else if (strncmp (argv[i], "-config=", 8) == 0) {
+#ifdef FILESYS
+	    free_mountinfo (currprefs.mountinfo);
+#endif
+	    target_cfgfile_load (&currprefs, argv[i] + 8, -1, 1);
+	  }
+	  /* Check for new-style "-f xxx" argument, where xxx is config-file */
+	  else if (strcmp (argv[i], "-f") == 0) {
+	    if (i + 1 == argc) {
+		    write_log ("Missing argument for '-f' option.\n");
+	    } else {
+#ifdef FILESYS
+		    free_mountinfo (currprefs.mountinfo);
+#endif
+		    target_cfgfile_load (&currprefs, argv[++i], -1, 1);
+	    }
+	  } else if (strcmp (argv[i], "-s") == 0) {
+	    if (i + 1 == argc)
+		    write_log ("Missing argument for '-s' option.\n");
+	    else
+		    cfgfile_parse_line (&currprefs, argv[++i], 0);
+	  } else {
+	    if (argv[i][0] == '-' && argv[i][1] != '\0') {
+		    const char *arg = argv[i] + 2;
+		    int extra_arg = *arg == '\0';
+		    if (extra_arg)
+		      arg = i + 1 < argc ? argv[i + 1] : 0;
+		    if (parse_cmdline_option (&currprefs, argv[i][1], (char*)arg) && extra_arg)
+		      i++;
+	    }
+	  }
+  }
+}
+
 static void parse_cmdline_and_init_file (int argc, char **argv)
 {
+    parse_cmdline_2 (argc, argv);
+
+    if (! target_cfgfile_load (&currprefs, restart_config, 0, 0)) {
+	write_log ("failed to load config '%s'\n", restart_config);
+    }
+    fixup_prefs (&currprefs);
+
+    parse_cmdline (argc, argv);
 }
 
 void reset_all_systems (void)
@@ -228,14 +338,11 @@ void do_start_program (void)
 	m68k_go (1);
 }
 
-extern void dump_blitter_stat(void);
-
 void do_leave_program (void)
 {
 #ifdef JIT
     compiler_exit();
 #endif
-//    dump_blitter_stat();
   graphics_leave ();
   inputdevice_close ();
   DISK_free ();
@@ -252,6 +359,7 @@ void do_leave_program (void)
   filesys_cleanup ();
 #endif
   memory_cleanup ();
+  cfgfile_addcfgparam (0);
   machdep_free ();
 }
 
@@ -268,7 +376,7 @@ void leave_program (void)
 static void real_main2 (int argc, char **argv)
 {
 #ifdef RASPBERRY
-  printf("Uae4arm v0.1 for Raspberry Pi by Chips\n");
+  printf("Uae4arm v0.2 for Raspberry Pi by Chips\n");
 #endif
 #ifdef PANDORA
   SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
@@ -283,9 +391,6 @@ static void real_main2 (int argc, char **argv)
 	  free_mountinfo (currprefs.mountinfo);
 #endif
 	  default_prefs (&currprefs, 0);
-	  changed_prefs = currprefs;
-    my_cfgfile_load(&changed_prefs, restart_config, 0);
-    currprefs = changed_prefs;
 	  fixup_prefs (&currprefs);
   }
 
@@ -298,6 +403,9 @@ static void real_main2 (int argc, char **argv)
   hardfile_install();
 #endif
 
+  if (restart_config[0])
+	  parse_cmdline_and_init_file (argc, argv);
+  else
   	currprefs = changed_prefs;
 
   machdep_init ();
@@ -328,7 +436,7 @@ static void real_main2 (int argc, char **argv)
   else
   {
   	setCpuSpeed();
-    update_display(&changed_prefs);
+    update_display(&currprefs);
   }
 
   fixup_prefs (&currprefs);
@@ -351,6 +459,7 @@ static void real_main2 (int argc, char **argv)
   filesys_install (); 
 #endif
 #ifdef AUTOCONFIG
+  emulib_install ();
   native2amiga_install ();
 #endif
 
