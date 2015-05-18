@@ -22,10 +22,11 @@
 
 static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkShowGUI;
+#ifndef RASPBERRY
 static gcn::Label* lblPandoraSpeed;
 static gcn::Label* lblPandoraSpeedInfo;
 static gcn::Slider* sldPandoraSpeed;
-
+#endif
 
 class MiscActionListener : public gcn::ActionListener
 {
@@ -38,6 +39,7 @@ class MiscActionListener : public gcn::ActionListener
       else if (actionEvent.getSource() == chkShowGUI)
         changed_prefs.start_gui = chkShowGUI->isSelected();
 
+#ifndef RASPBERRY
       else if (actionEvent.getSource() == sldPandoraSpeed)
       {
         int newspeed = (int) sldPandoraSpeed->getValue();
@@ -48,6 +50,7 @@ class MiscActionListener : public gcn::ActionListener
           RefreshPanelMisc();
         }
       }
+#endif
     }
 };
 MiscActionListener* miscActionListener;
@@ -64,6 +67,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkShowGUI->setId("ShowGUI");
   chkShowGUI->addActionListener(miscActionListener);
   
+#ifndef RASPBERRY
 	lblPandoraSpeed = new gcn::Label("Pandora Speed:");
   lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
   lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
@@ -75,17 +79,18 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	sldPandoraSpeed->setId("PandSpeed");
   sldPandoraSpeed->addActionListener(miscActionListener);
   lblPandoraSpeedInfo = new gcn::Label("1000 MHz");
-
+#endif
 	int posY = DISTANCE_BORDER;
   category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
   posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
   category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
   posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
+#ifndef RASPBERRY
   category.panel->add(lblPandoraSpeed, DISTANCE_BORDER, posY);
   category.panel->add(sldPandoraSpeed, DISTANCE_BORDER + lblPandoraSpeed->getWidth() + 8, posY);
   category.panel->add(lblPandoraSpeedInfo, sldPandoraSpeed->getX() + sldPandoraSpeed->getWidth() + 12, posY);
   posY += sldPandoraSpeed->getHeight() + DISTANCE_NEXT_Y;
-  
+#endif
   RefreshPanelMisc();
 }
 
@@ -94,9 +99,11 @@ void ExitPanelMisc(void)
 {
   delete chkStatusLine;
   delete chkShowGUI;
+#ifndef RASPBERRY
   delete lblPandoraSpeed;
   delete sldPandoraSpeed;
   delete lblPandoraSpeedInfo;
+#endif
   delete miscActionListener;
 }
 
@@ -107,8 +114,9 @@ void RefreshPanelMisc(void)
 
   chkStatusLine->setSelected(changed_prefs.leds_on_screen);
   chkShowGUI->setSelected(changed_prefs.start_gui);
-
+#ifndef RASPBERRY
   sldPandoraSpeed->setValue(changed_prefs.pandora_cpu_speed);
   snprintf(tmp, 20, "%d MHz", changed_prefs.pandora_cpu_speed);
   lblPandoraSpeedInfo->setCaption(tmp);
+#endif
 }
