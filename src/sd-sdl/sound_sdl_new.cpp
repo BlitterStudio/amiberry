@@ -20,7 +20,7 @@
 #include "debug.h"
 #include "audio.h"
 #include "gensound.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 #include "custom.h"
 #include <SDL.h>
 

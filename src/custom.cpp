@@ -18,7 +18,7 @@
 #include "options.h"
 #include "uae.h"
 #include "gensound.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 #include "events.h"
 #include "memory.h"
 #include "custom.h"

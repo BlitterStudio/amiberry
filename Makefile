@@ -84,7 +84,7 @@ OBJS =	\
 	src/uaelib.o \
 	src/unzip.o \
 	src/zfile.o \
-	src/machdep/support.o \
+	src/md-pandora/support.o \
 	src/od-pandora/neon_helper.o \
 	src/od-pandora/fsdb_host.o \
 	src/od-pandora/joystick.o \

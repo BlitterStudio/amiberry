@@ -31,7 +31,7 @@
   */
 
 #include "readcpu.h"
-#include "machdep/m68k.h"
+#include "md-pandora/m68k.h"
 #include "events.h"
 
 #ifndef SET_CFLG

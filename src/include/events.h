@@ -12,7 +12,7 @@
   * Copyright 1995-1998 Bernd Schmidt
   */
 
-#include "machdep/rpt.h"
+#include "md-pandora/rpt.h"
 
 extern volatile frame_time_t vsynctime, vsyncmintime;
 extern void reset_frame_rate_hack (void);

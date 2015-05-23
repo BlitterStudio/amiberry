@@ -20,7 +20,7 @@
 #include "events.h"
 #include "newcpu.h"
 #include "ersatz.h"
-#include "machdep/md-fpp.h"
+#include "md-pandora/md-fpp.h"
 #include "savestate.h"
 
 #define DEBUG_FPP 0

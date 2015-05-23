@@ -52,7 +52,7 @@
 #include "zfile.h"
 #include "autoconf.h"
 #include "custom.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 #include "newcpu.h"
 #include "savestate.h"
 #include "audio.h"

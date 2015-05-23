@@ -10,11 +10,11 @@
 #include "sysdeps.h"
 #include <assert.h>
 #include "options.h"
-#include "threaddep/thread.h"
+#include "td-sdl/thread.h"
 #include "uae.h"
 #include "gensound.h"
 #include "audio.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 #include "events.h"
 #include "memory.h"
 #include "custom.h"

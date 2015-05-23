@@ -25,7 +25,7 @@
 #include "zfile.h"
 #include "filesys.h"
 #include "fsdb.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 
 static int config_newfilesystem;
 static struct strlist *temp_lines;

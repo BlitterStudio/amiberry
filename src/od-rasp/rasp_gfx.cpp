@@ -8,7 +8,7 @@
 #include "custom.h"
 #include "drawing.h"
 #include "events.h"
-#include "osdep/inputmode.h"
+#include "od-pandora/inputmode.h"
 #include "savestate.h"
 #include "picasso96.h"
 
@@ -19,7 +19,7 @@
 #ifdef ANDROIDSDL
 #include <android/log.h>
 #endif
-#include "thread.h"
+#include "td-sdl/thread.h"
 #include "bcm_host.h"
 
 extern int stylusClickOverride;

@@ -4,7 +4,7 @@
  * Copyright 1996-1998 Bernd Schmidt
  */
 
-#include "osdep/inputmode.h"
+#include "od-pandora/inputmode.h"
 
 #define MAX_PLANES 8
 

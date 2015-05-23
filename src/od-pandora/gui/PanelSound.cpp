@@ -16,7 +16,7 @@
 #include "custom.h"
 #include "target.h"
 #include "gui_handling.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 
 
 static gcn::Window *grpSound;

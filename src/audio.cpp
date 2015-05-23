@@ -21,7 +21,7 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "gensound.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 #include "events.h"
 #include "audio.h"
 #include "savestate.h"

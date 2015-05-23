@@ -32,7 +32,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "options.h"
-#include "threaddep/thread.h"
+#include "td-sdl/thread.h"
 #include "uae.h"
 #include "memory.h"
 #include "custom.h"
@@ -43,7 +43,7 @@
 #include "picasso96.h"
 #include "drawing.h"
 #include "savestate.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 #include <sys/time.h>
 #include <time.h>
 

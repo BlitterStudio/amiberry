@@ -262,7 +262,7 @@ int keycode2amiga(SDL_keysym *prKeySym)
 {
   int iAmigaKeycode = kc_decode(prKeySym);
   if (iAmigaKeycode == -1)
-    return decode_fr(prKeySym);
+    return decode_us(prKeySym);
   return iAmigaKeycode;
 }
 
