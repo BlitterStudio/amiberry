@@ -7,7 +7,7 @@ NAME   = uae4arm
 O      = o
 RM     = rm -f
 CXX    = g++-4.8
-#STRIP  = strip
+STRIP  = strip
 #AS     = as
 
 PROG   = $(NAME)
@@ -148,9 +148,11 @@ src/osdep/neon_helper.o: src/osdep/neon_helper.s
 
 $(PROG): $(OBJS)
 	$(CXX) $(CFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
+
 ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
+
 
 clean:
 	$(RM) $(PROG) $(OBJS)

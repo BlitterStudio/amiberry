@@ -495,6 +495,10 @@ void setCpuSpeed()
 {
 	char speedCmd[128];
 
+#ifdef RASPBERRY
+	return;
+#endif
+
   currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed;
 
 	if(currprefs.pandora_cpu_speed != lastCpuSpeed)
@@ -516,6 +520,9 @@ void setCpuSpeed()
 
 void resetCpuSpeed(void)
 {
+#ifdef RASPBERRY
+	return;
+#endif
   if(cpuSpeedChanged)
   {
     FILE* f = fopen ("/etc/pandora/conf/cpu.conf", "rt");
@@ -652,7 +659,11 @@ void handle_events (void)
 					// back to start of state
 
 					currprefs.pandora_custom_dpad++;
+#ifdef RASPBERRY
+					if(currprefs.pandora_custom_dpad > 1)
+#else
 					if(currprefs.pandora_custom_dpad > 2)
+#endif
 					  currprefs.pandora_custom_dpad = 0;
           changed_prefs.pandora_custom_dpad = currprefs.pandora_custom_dpad;
           if(currprefs.pandora_custom_dpad == 2)

@@ -25,8 +25,10 @@
 extern int stylusClickOverride;
 
 
-/* SDL variable for output of emulation and menu */
+/* SDL surface variable for output of emulation */
 SDL_Surface *prSDLScreen = NULL;
+/* Dummy SDL variable for screen init */
+SDL_Surface *Dummy_prSDLScreen = NULL;
 static SDL_Surface *current_screenshot = NULL;
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 6
@@ -133,8 +135,8 @@ void graphics_subshutdown (void)
   if (dispmanxresource_amigafb_1 != 0)
     graphics_dispmanshutdown();
   // Dunno if below lines are usefull for Rpi...
-  SDL_FreeSurface(prSDLScreen);
-  prSDLScreen = NULL;
+  //SDL_FreeSurface(prSDLScreen);
+  //prSDLScreen = NULL;
 }
 
 
@@ -171,7 +173,6 @@ static void open_screen(struct uae_prefs *p)
 
   if (screen_is_picasso)
   {
-    printf("Picasso96 mode detected\n");
     width  = picasso_vidinfo.width;
     height = picasso_vidinfo.height;
   } else
@@ -200,21 +201,26 @@ static void open_screen(struct uae_prefs *p)
 	  snprintf(layersize, 20, "%dx%d", picasso_vidinfo.width, picasso_vidinfo.height);
   }
 
-  if(prSDLScreen == NULL )
+
+  if(Dummy_prSDLScreen == NULL )
   {
     const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
     printf("DispmanX: Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
-    prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
-    //prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
+    Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
+    //Dummy_prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
   }
+
   SDL_ShowCursor(SDL_DISABLE);
-
-
 
   // check if resolution hasn't change in menu. otherwise free the resources so that they will be re-generated with new resolution.
   if ((dispmanxresource_amigafb_1 != 0) && ((blit_rect.width != width) || (blit_rect.height != height)))
   {
 	printf("Emulation resolution change detected.\n");
+	if(prSDLScreen != NULL )
+	{
+		SDL_FreeSurface(prSDLScreen);
+		prSDLScreen = 0;
+	}
 	graphics_dispmanshutdown();
 	vc_dispmanx_resource_delete( dispmanxresource_amigafb_1 );
 	vc_dispmanx_resource_delete( dispmanxresource_amigafb_2 );
@@ -224,10 +230,16 @@ static void open_screen(struct uae_prefs *p)
 
   if (dispmanxresource_amigafb_1 == 0)
   {
+	printf("Emulation resolution: Width %i Height: %i\n",width,height);
+
+	prSDLScreen = SDL_CreateRGBSurface(SDL_SWSURFACE,width,height,16,
+		Dummy_prSDLScreen->format->Rmask,
+		Dummy_prSDLScreen->format->Gmask,
+		Dummy_prSDLScreen->format->Bmask,
+		Dummy_prSDLScreen->format->Amask);
+
 	dispmanxdisplay = vc_dispmanx_display_open( 0 );
 	vc_dispmanx_display_get_info( dispmanxdisplay, &dispmanxdinfo);
-
-	printf("Emulation resolution: Width %i Height: %i\n",width,height);
 
 	dispmanxresource_amigafb_1 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  width,   height,  &vc_image_ptr);
 	dispmanxresource_amigafb_2 = vc_dispmanx_resource_create( VC_IMAGE_RGB565,  width,   height,  &vc_image_ptr);
@@ -351,20 +363,23 @@ void unlockscr (void)
 
 void flush_block ()
 {
-	//SDL_UnlockSurface (prSDLScreen);
+    //SDL_UnlockSurface (prSDLScreen);
 
-	if (show_inputmode)
-		inputmode_redraw();	
+    if (show_inputmode)
+    {
+        inputmode_redraw();	
+    }
 
-	if (savestate_state == STATE_DOSAVE)
-	{
+
+    if (savestate_state == STATE_DOSAVE)
+    {
     if(delay_savestate_frame > 0)
       --delay_savestate_frame;
     else
     {
-	    CreateScreenshot();
-		  save_thumb(screenshot_filename);
-	    savestate_state = 0;
+        CreateScreenshot();
+        save_thumb(screenshot_filename);
+        savestate_state = 0;
     }
   }
 
@@ -568,6 +583,7 @@ int graphics_init (void)
 void graphics_leave (void)
 {
 	graphics_subshutdown ();
+	SDL_FreeSurface(Dummy_prSDLScreen);
 	bcm_host_deinit();
 	SDL_VideoQuit();
 	//dumpcustom ();
@@ -812,7 +828,7 @@ void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgb
   if (screen_is_picasso)
   {
   	open_screen(&currprefs);
-    picasso_vidinfo.rowbytes	= blit_rect.width * 2;
+    picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
   }
 }
 
@@ -823,7 +839,7 @@ void gfx_set_picasso_state (int on)
 
 	screen_is_picasso = on;
   open_screen(&currprefs);
-  picasso_vidinfo.rowbytes	= blit_rect.width * 2;
+  picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
 	if (on)
 		DX_SetPalette (0, 256);
 }
@@ -831,7 +847,7 @@ void gfx_set_picasso_state (int on)
 uae_u8 *gfx_lock_picasso (void)
 {
   // We lock the surface directly after create and flip
-  picasso_vidinfo.rowbytes = blit_rect.width * 2;
+  picasso_vidinfo.rowbytes = prSDLScreen->pitch;
   return (uae_u8 *)prSDLScreen->pixels;
 }
 
