@@ -1866,7 +1866,11 @@ void default_prefs (struct uae_prefs *p, int type)
   p->gfx_size_fs.height = 480;
   p->gfx_vsync = 1;
   p->gfx_lores = 1;
+#ifdef RASPBERRY
+  p->gfx_correct_aspect = 1;
+#else
   p->gfx_correct_aspect = 0;
+#endif
   p->gfx_xcenter = 0;
   p->gfx_ycenter = 0;
   
