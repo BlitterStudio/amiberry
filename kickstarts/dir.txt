@@ -1,0 +1,2 @@
+Put your kickstarts files here.
+They should be named accordingly depending on version: kick12.rom , kick13.rom , kick20.rom, kick31.rom
