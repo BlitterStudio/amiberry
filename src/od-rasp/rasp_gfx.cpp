@@ -213,7 +213,8 @@ static void open_screen(struct uae_prefs *p)
   SDL_ShowCursor(SDL_DISABLE);
 
   // check if resolution hasn't change in menu. otherwise free the resources so that they will be re-generated with new resolution.
-  if ((dispmanxresource_amigafb_1 != 0) && ((blit_rect.width != width) || (blit_rect.height != height)))
+  if ((dispmanxresource_amigafb_1 != 0) && 
+     ((blit_rect.width != width) || (blit_rect.height != height) || (currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect)))
   {
 	printf("Emulation resolution change detected.\n");
 	if(prSDLScreen != NULL )
@@ -231,7 +232,7 @@ static void open_screen(struct uae_prefs *p)
   if (dispmanxresource_amigafb_1 == 0)
   {
 	printf("Emulation resolution: Width %i Height: %i\n",width,height);
-
+	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 	prSDLScreen = SDL_CreateRGBSurface(SDL_SWSURFACE,width,height,16,
 		Dummy_prSDLScreen->format->Rmask,
 		Dummy_prSDLScreen->format->Gmask,
@@ -252,10 +253,10 @@ static void open_screen(struct uae_prefs *p)
 	vc_dispmanx_rect_set( &src_rect, 0, 0, width << 16, height << 16 );
 
   }
-  // Currently on fullscreen is available in uae4all2/uae4arm, no 16/9 to 4/3 ratio adaptation is available.
-  //if (mainMenu_screenformat == 0)
-  if (1)
+  // 16/9 to 4/3 ratio adaptation.
+  if (currprefs.gfx_correct_aspect == 0)
   {
+	// Fullscreen.
 	vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width * 2)/100,
 							(dispmanxdinfo.height * 2)/100 ,
 							dispmanxdinfo.width - (dispmanxdinfo.width * 4)/100 ,
@@ -271,9 +272,10 @@ static void open_screen(struct uae_prefs *p)
   }
   else
   {
-	vc_dispmanx_rect_set( &dst_rect, ((dispmanxdinfo.width * 17)/100) ,
+	// 4/3 scrink.
+	vc_dispmanx_rect_set( &dst_rect, ((dispmanxdinfo.width * 13)/100) ,
 							(dispmanxdinfo.height * 3)/100 ,
-							(dispmanxdinfo.width - ((dispmanxdinfo.width * 36)/100)) ,
+							(dispmanxdinfo.width - ((dispmanxdinfo.width * 32)/100)) ,
 							dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 );
   }
 
