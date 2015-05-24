@@ -253,7 +253,14 @@ void do_mouse_hack (void)
 uae_u16 JOY0DAT (void)
 {
     do_mouse_hack ();
-    return ((uae_u8)mouse_x) + ((uae_u16)mouse_y << 8) + joy0dir;
+#ifdef RASPBERRY
+    if (currprefs.pandora_custom_dpad == 0)
+        return joy0dir;
+    if (currprefs.pandora_custom_dpad == 1)
+        return ((uae_u8)mouse_x) | ((uae_u16)mouse_y << 8);
+#else
+    return ((uae_u8)mouse_x) | ((uae_u16)mouse_y << 8) | joy0dir;
+#endif
 }
 
 uae_u16 JOY1DAT (void)

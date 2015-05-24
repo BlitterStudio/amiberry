@@ -132,7 +132,11 @@ void target_default_options (struct uae_prefs *p, int type)
   p->pandora_stylusOffset = 0;
   
 	p->pandora_customControls = 0;
+#ifdef RASPBERRY
+	p->pandora_custom_dpad = 1;
+#else
 	p->pandora_custom_dpad = 0;
+#endif
 	p->pandora_custom_up = 0;
 	p->pandora_custom_down = 0;
 	p->pandora_custom_left = 0;
