@@ -119,6 +119,9 @@ class DFxCheckActionListener : public gcn::ActionListener
 	    {
 	      if (actionEvent.getSource() == chkDFx[i])
         {
+	    // Patch done on RASPBERRY, but should be needed for everybody
+	    changed_prefs.nr_floppies = chkDFx[0]->isSelected()+chkDFx[1]->isSelected()+chkDFx[2]->isSelected()+chkDFx[3]->isSelected();
+	    // Patch done on RASPBERRY, but should be needed for everybody
     	    //---------------------------------------
           // Drive enabled/disabled
     	    //---------------------------------------
