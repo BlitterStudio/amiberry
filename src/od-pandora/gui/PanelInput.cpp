@@ -22,8 +22,10 @@
 
 static const char *mousespeed_list[] = { ".25", ".5", "1x", "2x", "4x" };
 static const int mousespeed_values[] = { 2, 5, 10, 20, 40 };
+#ifndef RASPBERRY
 static const char *stylusoffset_list[] = { "None", "1 px", "2 px", "3 px", "4 px", "5 px", "6 px", "7 px", "8 px", "9 px", "10 px" };
 static const int stylusoffset_values[] = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 };
+#endif
 
 static gcn::Label *lblCtrlConfig;
 static gcn::UaeDropDown* cboCtrlConfig;
@@ -34,11 +36,13 @@ static gcn::UaeDropDown* cboAutofire;
 static gcn::Label* lblMouseSpeed;
 static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
+#ifndef RASPBERRY
 static gcn::Label *lblTapDelay;
 static gcn::UaeDropDown* cboTapDelay;
 static gcn::Label* lblStylusOffset;
 static gcn::Label* lblStylusOffsetInfo;
 static gcn::Slider* sldStylusOffset;
+#endif
   
 static gcn::UaeCheckBox* chkCustomCtrl;
 static gcn::Label *lblDPAD;
@@ -102,10 +106,10 @@ StringListModel joystickList(joystickValues, 3);
 
 const char *autofireValues[] = { "Light", "Medium", "Heavy" };
 StringListModel autofireList(autofireValues, 3);
-
+#ifndef RASPBERRY
 const char *tapDelayValues[] = { "Normal", "Short", "None" };
 StringListModel tapDelayList(tapDelayValues, 3);
-
+#endif
 const char *dPADValues[] = { "Joystick", "Mouse", "Custom" };
 StringListModel dPADList(dPADValues, 3);
 
@@ -156,7 +160,7 @@ class InputActionListener : public gcn::ActionListener
     		changed_prefs.input_joymouse_multiplier = mousespeed_values[(int)(sldMouseSpeed->getValue())];
     		RefreshPanelInput();
     	}
-    	
+#ifndef RASPBERRY
       else if (actionEvent.getSource() == cboTapDelay)
       {
         if(cboTapDelay->getSelected() == 0)
@@ -166,13 +170,12 @@ class InputActionListener : public gcn::ActionListener
         else
           changed_prefs.pandora_tapDelay = 2;
       }
-    	
  	    else if (actionEvent.getSource() == sldStylusOffset)
  	    {
     		changed_prefs.pandora_stylusOffset = stylusoffset_values[(int)(sldStylusOffset->getValue())];
     		RefreshPanelInput();
     	}
-
+#endif
  	    else if (actionEvent.getSource() == chkCustomCtrl)
  	      changed_prefs.pandora_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
  	        
@@ -255,7 +258,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->setId("MouseSpeed");
   sldMouseSpeed->addActionListener(inputActionListener);
   lblMouseSpeedInfo = new gcn::Label(".25");
-
+#ifndef RASPBERRY
   lblTapDelay = new gcn::Label("Tap Delay:");
   lblTapDelay->setSize(100, LABEL_HEIGHT);
   lblTapDelay->setAlignment(gcn::Graphics::RIGHT);
@@ -264,7 +267,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
   cboTapDelay->setBaseColor(gui_baseCol);
   cboTapDelay->setId("cboTapDelay");
   cboTapDelay->addActionListener(inputActionListener);
-  
+
 	lblStylusOffset = new gcn::Label("Stylus Offset:");
   lblStylusOffset->setSize(100, LABEL_HEIGHT);
   lblStylusOffset->setAlignment(gcn::Graphics::RIGHT);
@@ -276,7 +279,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldStylusOffset->setId("StylusOffset");
   sldStylusOffset->addActionListener(inputActionListener);
   lblStylusOffsetInfo = new gcn::Label("10 px");
-
+#endif
 	chkCustomCtrl = new gcn::UaeCheckBox("Custom Control");
 	chkCustomCtrl->setId("CustomCtrl");
   chkCustomCtrl->addActionListener(inputActionListener);
@@ -389,18 +392,21 @@ void InitPanelInput(const struct _ConfigCategory& category)
   category.panel->add(lblAutofire, 300, posY);
   category.panel->add(cboAutofire, 300 + lblAutofire->getWidth() + 8, posY);
   posY += cboAutofire->getHeight() + DISTANCE_NEXT_Y;
+#ifndef RASPBERRY
   category.panel->add(lblTapDelay, DISTANCE_BORDER, posY);
   category.panel->add(cboTapDelay, DISTANCE_BORDER + lblTapDelay->getWidth() + 8, posY);
   posY += cboTapDelay->getHeight() + DISTANCE_NEXT_Y;
+#endif
   category.panel->add(lblMouseSpeed, DISTANCE_BORDER, posY);
   category.panel->add(sldMouseSpeed, DISTANCE_BORDER + lblMouseSpeed->getWidth() + 8, posY);
   category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 12, posY);
   posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
+#ifndef RASPBERRY
   category.panel->add(lblStylusOffset, DISTANCE_BORDER, posY);
   category.panel->add(sldStylusOffset, DISTANCE_BORDER + lblStylusOffset->getWidth() + 8, posY);
   category.panel->add(lblStylusOffsetInfo, sldStylusOffset->getX() + sldStylusOffset->getWidth() + 12, posY);
   posY += sldStylusOffset->getHeight() + DISTANCE_NEXT_Y;
-
+#endif
   category.panel->add(lblDPAD, DISTANCE_BORDER, posY);
   category.panel->add(cboDPAD, DISTANCE_BORDER + lblDPAD->getWidth() + 8, posY);
   category.panel->add(chkCustomCtrl, 320, posY);
@@ -446,12 +452,13 @@ void ExitPanelInput(void)
   delete lblMouseSpeed;
   delete sldMouseSpeed;
   delete lblMouseSpeedInfo;
+#ifndef RASPBERRY
   delete lblTapDelay;
   delete cboTapDelay;
   delete lblStylusOffset;
   delete sldStylusOffset;
   delete lblStylusOffsetInfo;
-  
+#endif
   delete chkCustomCtrl;
   delete lblDPAD;
   delete cboDPAD;
@@ -503,14 +510,14 @@ void RefreshPanelInput(void)
       break;
     }
   }
-
+#ifndef RASPBERRY
 	if (changed_prefs.pandora_tapDelay == 10)
     cboTapDelay->setSelected(0);
   else if (changed_prefs.pandora_tapDelay == 5)
     cboTapDelay->setSelected(1);
   else
     cboTapDelay->setSelected(2);
-  
+
   for(i=0; i<11; ++i)
   {
     if(changed_prefs.pandora_stylusOffset == stylusoffset_values[i])
@@ -520,7 +527,7 @@ void RefreshPanelInput(void)
       break;
     }
   }
-  
+#endif
   chkCustomCtrl->setSelected(changed_prefs.pandora_customControls);
   cboDPAD->setSelected(changed_prefs.pandora_custom_dpad);
   cboA->setSelected(changed_prefs.pandora_custom_A + 8);
