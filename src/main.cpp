@@ -376,7 +376,7 @@ void leave_program (void)
 static void real_main2 (int argc, char **argv)
 {
 #ifdef RASPBERRY
-  printf("Uae4arm v0.2 for Raspberry Pi by Chips\n");
+  printf("Uae4arm v0.3 for Raspberry Pi by Chips\n");
 #endif
 #ifdef PANDORA
   SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);

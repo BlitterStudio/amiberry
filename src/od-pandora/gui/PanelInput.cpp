@@ -284,7 +284,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	chkCustomCtrl->setId("CustomCtrl");
   chkCustomCtrl->addActionListener(inputActionListener);
 
-  lblDPAD = new gcn::Label("DPAD:");
+  lblDPAD = new gcn::Label("DPAD/Port1:");
   lblDPAD->setSize(100, LABEL_HEIGHT);
   lblDPAD->setAlignment(gcn::Graphics::RIGHT);
 	cboDPAD = new gcn::UaeDropDown(&dPADList);
