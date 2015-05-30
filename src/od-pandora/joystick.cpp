@@ -55,7 +55,11 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 
   SDL_JoystickUpdate ();
 
+  #ifdef RASPBERRY
+	// Always check joystick state on Raspberry pi.
+  #else
 	if (!triggerR /*R+dpad = arrow keys*/ && currprefs.pandora_custom_dpad==0)
+  #endif
 	{
 		// get joystick direction via dPad or joystick
 		int hat=SDL_JoystickGetHat(joy,0);
@@ -151,6 +155,10 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 		*button |= ((buttonB || SDL_JoystickGetButton(joy, currprefs.pandora_button2)) & 1) << 1;
 	}
 
+  #ifdef RASPBERRY
+  *button |= (SDL_JoystickGetButton(joy, 0)) & 1;
+  *button |= ((SDL_JoystickGetButton(joy, 1)) & 1) << 1;
+  #endif
 
   #ifdef SIX_AXIS_WORKAROUND
   *button |= (SDL_JoystickGetButton(joy, 13)) & 1;
