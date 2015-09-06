@@ -316,11 +316,14 @@ bool SelectFile(const char *title, char *value, const char *filter[])
   } else
   {
     strncpy(value,workingDir,MAX_PATH);
+    gui_top->add(wndSelectFile);
     wndSelectFile->setCaption(title);
     wndSelectFile->requestModalFocus();
     wndSelectFile->setVisible(true);
     gui_top->moveToTop(wndSelectFile);
   }
+  #else
+  InitSelectFile(title);
   #endif
 
   extractPath(value, workingDir);
