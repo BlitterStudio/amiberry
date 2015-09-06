@@ -18,7 +18,7 @@ How to compile on Raspbian:
    You need to install gcc-4.8 (or edit Makefile) and install some dev package.
    In order to do this enter the following in command line:
 
-      sudo apt-get install gcc-4.8
+      sudo apt-get install g++-4.8
       sudo apt-get install libsdl1.2-dev
       sudo apt-get install libsdl-gfx1.2-dev
       sudo apt-get install libsdl-ttf2.0-dev

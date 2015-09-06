@@ -84,8 +84,8 @@ static FilesysHardfileActionListener* filesysHardfileActionListener;
 
 static void InitEditFilesysHardfile(void)
 {
-	wndEditFilesysHardfile = new gcn::Window("Edit");
-	wndEditFilesysHardfile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
+  wndEditFilesysHardfile = new gcn::Window("Edit");
+  wndEditFilesysHardfile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
   wndEditFilesysHardfile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
   wndEditFilesysHardfile->setBaseColor(gui_baseCol + 0x202020);
   wndEditFilesysHardfile->setCaption("Volume settings");
@@ -93,16 +93,16 @@ static void InitEditFilesysHardfile(void)
   
   filesysHardfileActionListener = new FilesysHardfileActionListener();
   
-	cmdOK = new gcn::Button("Ok");
-	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+  cmdOK = new gcn::Button("Ok");
+  cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
   cmdOK->setBaseColor(gui_baseCol + 0x202020);
   cmdOK->setId("hdfOK");
   cmdOK->addActionListener(filesysHardfileActionListener);
   
-	cmdCancel = new gcn::Button("Cancel");
-	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+  cmdCancel = new gcn::Button("Cancel");
+  cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
   cmdCancel->setBaseColor(gui_baseCol + 0x202020);
   cmdCancel->setId("hdfCancel");
   cmdCancel->addActionListener(filesysHardfileActionListener);
@@ -114,7 +114,7 @@ static void InitEditFilesysHardfile(void)
   txtDevice->setSize(80, TEXTFIELD_HEIGHT);
   txtDevice->setId("hdfDev");
 
-	chkReadWrite = new gcn::UaeCheckBox("Read/Write", true);
+  chkReadWrite = new gcn::UaeCheckBox("Read/Write", true);
   chkReadWrite->setId("hdfRW");
 
   lblBootPri = new gcn::Label("Boot priority:");
@@ -331,10 +331,8 @@ bool EditFilesysHardfile(int unit_no)
     txtSectors->setText("32");
     txtBlocksize->setText("512");
   }
-
   EditFilesysHardfileLoop();
   ExitEditFilesysHardfile();
-  
   if(dialogResult)
   {
     if(unit_no >= 0)
@@ -347,6 +345,5 @@ bool EditFilesysHardfile(int unit_no)
       atoi(txtReserved->getText().c_str()), atoi(txtBlocksize->getText().c_str()), 
       atoi(txtBootPri->getText().c_str()), 0, 0);
   }
-
   return dialogResult;
 }

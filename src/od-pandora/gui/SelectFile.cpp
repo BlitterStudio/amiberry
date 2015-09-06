@@ -18,6 +18,10 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
+#ifdef RASPBERRY
+#define FILE_SELECT_KEEP_POSITION
+#endif
+
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static char workingDir[MAX_PATH];
@@ -153,8 +157,8 @@ static SelectFileActionListener* selectFileActionListener;
 
 static void InitSelectFile(const char *title)
 {
-	wndSelectFile = new gcn::Window("Load");
-	wndSelectFile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
+  wndSelectFile = new gcn::Window("Load");
+  wndSelectFile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
   wndSelectFile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
   wndSelectFile->setBaseColor(gui_baseCol + 0x202020);
   wndSelectFile->setCaption(title);
@@ -162,15 +166,15 @@ static void InitSelectFile(const char *title)
   
   fileButtonActionListener = new FileButtonActionListener();
   
-	cmdOK = new gcn::Button("Ok");
-	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+  cmdOK = new gcn::Button("Ok");
+  cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
   cmdOK->setBaseColor(gui_baseCol + 0x202020);
   cmdOK->addActionListener(fileButtonActionListener);
   
-	cmdCancel = new gcn::Button("Cancel");
-	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+  cmdCancel = new gcn::Button("Cancel");
+  cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
   cmdCancel->setBaseColor(gui_baseCol + 0x202020);
   cmdCancel->addActionListener(fileButtonActionListener);
 
@@ -201,10 +205,9 @@ static void InitSelectFile(const char *title)
   wndSelectFile->add(scrAreaFiles);
   
   gui_top->add(wndSelectFile);
-  
   lstFiles->requestFocus();
-  lstFiles->setSelected(0);
   wndSelectFile->requestModalFocus();
+
 }
 
 
@@ -294,22 +297,47 @@ static void SelectFileLoop(void)
   }  
 }
 
+#ifdef FILE_SELECT_KEEP_POSITION
+static int Already_init = 0;
+#endif
 
 bool SelectFile(const char *title, char *value, const char *filter[])
 {
   dialogResult = false;
   dialogFinished = false;
   filefilter = filter;
-  
-  InitSelectFile(title);
+
+
+  #ifdef FILE_SELECT_KEEP_POSITION
+  if (Already_init == 0)
+  {
+    InitSelectFile(title);
+    Already_init = 1;
+  } else
+  {
+    strncpy(value,workingDir,MAX_PATH);
+    wndSelectFile->setCaption(title);
+    wndSelectFile->requestModalFocus();
+    wndSelectFile->setVisible(true);
+    gui_top->moveToTop(wndSelectFile);
+  }
+  #endif
+
   extractPath(value, workingDir);
   checkfoldername(workingDir);
   checkfilename(value);
-  
   SelectFileLoop();
+#ifdef FILE_SELECT_KEEP_POSITION
+  wndSelectFile->releaseModalFocus();
+  wndSelectFile->setVisible(false);
+#else
   ExitSelectFile();
-  
+#endif
   if(dialogResult)
     strncpy(value, workingDir, MAX_PATH);
+#ifdef FILE_SELECT_KEEP_POSITION
+  else
+    strncpy(workingDir,value, MAX_PATH);
+#endif
   return dialogResult;
 }
