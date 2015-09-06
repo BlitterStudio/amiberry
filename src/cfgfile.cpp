@@ -1841,7 +1841,7 @@ void default_prefs (struct uae_prefs *p, int type)
   p->sound_filter_type = 0;
   p->sound_auto = 1;
 
-  p->cachesize = 0;
+  p->cachesize = DEFAULT_JIT_CACHE_SIZE;
 
   for (i = 0;i < 10; i++)
 	  p->optcount[i] = -1;

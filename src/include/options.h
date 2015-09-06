@@ -21,6 +21,8 @@ struct strlist {
     int unknown;
 };
 
+#define DEFAULT_JIT_CACHE_SIZE 8192
+
 #define PREFS_GFX_WIDTH 320
 #define PREFS_GFX_HEIGHT 240
 

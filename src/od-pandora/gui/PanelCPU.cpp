@@ -153,7 +153,7 @@ class JITActionListener : public gcn::ActionListener
 	    if (chkJIT->isSelected())
       {
 	      changed_prefs.cpu_compatible = 0;
-	      changed_prefs.cachesize = 8192;
+	      changed_prefs.cachesize = DEFAULT_JIT_CACHE_SIZE;
       }
       else
       {
