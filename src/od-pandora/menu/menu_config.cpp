@@ -305,8 +305,12 @@ static void SetPresetMode(int mode, struct uae_prefs *p)
 
 static void SetDefaultMenuSettings(struct uae_prefs *p)
 {
-  while(nr_units(p->mountinfo) > 0)
-		kill_filesys_unit(p->mountinfo, 0);
+  int i;
+
+  free_mountinfo();
+  for(i=0; i<MOUNT_CONFIG_SIZE; ++i)
+    kill_filesys_unitconfig(p, i);
+  p->mountitems = 0;
 
 	kickstart = 1;
 	
@@ -403,7 +407,8 @@ static bool CheckKickstart(struct uae_prefs *p)
 int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 {
   char path[MAX_PATH];
-
+  int cpu_level;
+  
   strcpy(path, orgpath);
 	char *ptr = strstr(path, ".uae");
 	if(ptr > 0)
@@ -498,10 +503,10 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f,"custom_Y=%d\n",&p->pandora_custom_Y);
 		fscanf(f,"custom_L=%d\n",&p->pandora_custom_L);
 		fscanf(f,"custom_R=%d\n",&p->pandora_custom_R);
-		fscanf(f,"cpu=%d\n", &p->cpu_level);
-		if(p->cpu_level > M68000)
+		fscanf(f,"cpu=%d\n", &cpu_level);
+		if(cpu_level > M68000)
 		  // Was old format
-		  p->cpu_level = M68020;
+		  cpu_level = M68020;
 		fscanf(f,"chipset=%d\n", &p->chipset_mask);
 		p->immediate_blits = (p->chipset_mask & 0x100) == 0x100;
 		p->pandora_partial_blits = (p->chipset_mask & 0x200) == 0x200;
@@ -523,7 +528,7 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	    if(p->m68k_speed >= 2)
       {
         // 1200: set to 68020 with 14 MHz
-        p->cpu_level = M68020;
+        cpu_level = M68020;
         p->m68k_speed--;
         if(p->m68k_speed > 2)
           p->m68k_speed = 2;
@@ -535,7 +540,30 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	    p->m68k_speed = M68K_SPEED_25MHZ_CYCLES;
     p->cachesize = 0;
     p->cpu_compatible = 0;
-      
+    switch(cpu_level)
+    {
+      case 0:
+        p->cpu_model = 68000;
+        p->fpu_model = 0;
+        break;
+      case 1:
+        p->cpu_model = 68010;
+        p->fpu_model = 0;
+        break;
+      case 2:
+        p->cpu_model = 68020;
+        p->fpu_model = 0;
+        break;
+      case 3:
+        p->cpu_model = 68020;
+        p->fpu_model = 68881;
+        break;
+      case 4:
+        p->cpu_model = 68040;
+        p->fpu_model = 68881;
+        break;
+    }
+    
 	  disk_eject(0);
 	  disk_eject(1);
 	  disk_eject(2);

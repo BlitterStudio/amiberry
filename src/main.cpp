@@ -78,7 +78,6 @@ void discard_prefs (struct uae_prefs *p, int type)
   }
 #ifdef FILESYS
   filesys_cleanup ();
-  free_mountinfo (p->mountinfo);
 #endif
 }
 
@@ -96,12 +95,45 @@ void fixup_prefs_dimensions (struct uae_prefs *prefs)
     fixup_prefs_dim2(&prefs->gfx_size_win);
 }
 
+void fixup_cpu(struct uae_prefs *p)
+{
+    switch(p->cpu_model)
+    {
+        case 68000:
+	p->address_space_24 = 1;
+	p->fpu_model = 0;
+        break;
+	case 68010:
+	p->address_space_24 = 1;
+	p->fpu_model = 0;
+	break;
+	case 68020:
+	break;
+	case 68030:
+	p->address_space_24 = 0;
+	break;
+	case 68040:
+	p->address_space_24 = 0;
+	if (p->fpu_model)
+	    p->fpu_model = 68040;
+	break;
+	case 68060:
+	p->address_space_24 = 0;
+	if (p->fpu_model)
+	    p->fpu_model = 68060;
+	break;
+    }
+}
+
+
 void fixup_prefs (struct uae_prefs *p)
 {
     int err = 0;
 
+    fixup_cpu(p);
+
     if ((p->chipmem_size & (p->chipmem_size - 1)) != 0
-	|| p->chipmem_size < 0x40000
+	|| p->chipmem_size < 0x20000
 	|| p->chipmem_size > 0x800000)
     {
 	write_log ("Unsupported chipmem size %x!\n", p->chipmem_size);
@@ -127,11 +159,11 @@ void fixup_prefs (struct uae_prefs *p)
    if ((p->z3fastmem_size & (p->z3fastmem_size - 1)) != 0
 	|| (p->z3fastmem_size != 0 && (p->z3fastmem_size < 0x100000 || p->z3fastmem_size > max_z3fastmem)))
     {
+	write_log ("Unsupported Zorro III fastmem size %x (%x)!\n", p->z3fastmem_size, max_z3fastmem);
 	if (p->z3fastmem_size > max_z3fastmem)
 	    p->z3fastmem_size = max_z3fastmem;
 	else
 	    p->z3fastmem_size = 0;
-	write_log ("Unsupported Zorro III fastmem size!\n");
 	err = 1;
     }
     p->z3fastmem_start &= ~0xffff;
@@ -148,7 +180,7 @@ void fixup_prefs (struct uae_prefs *p)
 	write_log ("Unsupported bogomem size!\n");
 	err = 1;
     }
-    if (p->bogomem_size > 0x100000 && ((p->chipset_mask & CSMASK_AGA) || p->cpu_level >= 2)) {
+    if (p->bogomem_size > 0x100000 && ((p->chipset_mask & CSMASK_AGA) || p->cpu_model >= 68020)) {
 	p->bogomem_size = 0x100000;
 	write_log ("Possible Gayle bogomem conflict fixed\n");
     }
@@ -169,13 +201,13 @@ void fixup_prefs (struct uae_prefs *p)
 	p->cachesize = 0;
 	err = 1;
     }
-    if (p->cpu_level < 2 && p->z3fastmem_size > 0) {
+    if (p->z3fastmem_size > 0 && (p->address_space_24 || p->cpu_model < 68020)) {
 	write_log ("Z3 fast memory can't be used with a 68000/68010 emulation. It\n"
 		 "requires a 68020 emulation. Turning off Z3 fast memory.\n");
 	p->z3fastmem_size = 0;
 	err = 1;
     }
-    if (p->gfxmem_size > 0 && (p->cpu_level < 2 || p->address_space_24)) {
+    if (p->gfxmem_size > 0 && (p->cpu_model < 68020 || p->address_space_24)) {
 	write_log ("Picasso96 can't be used with a 68000/68010 or 68EC020 emulation. It\n"
 		 "requires a 68020 emulation. Turning off Picasso96.\n");
 	p->gfxmem_size = 0;
@@ -201,11 +233,9 @@ void fixup_prefs (struct uae_prefs *p)
 	p->collision_level = 1;
 	err = 1;
     }
-
     fixup_prefs_dimensions (p);
 
-    if (err)
-	write_log ("Please use \"uae -h\" to get usage information.\n");
+    target_fixup_options (p);
 }
 
 int quit_program = 0;
@@ -225,6 +255,7 @@ void uae_quit (void)
 {
     if (quit_program != -1)
 	quit_program = -1;
+    target_quit ();
 }
 
 /* 0 = normal, 1 = nogui, -1 = disable nogui */
@@ -258,13 +289,29 @@ static void parse_cmdline (int argc, char **argv)
   int i;
 
   for (i = 1; i < argc; i++) {
+#ifdef DEBUG_M68K
+extern int debug_frame_start;
+extern int debug_frame_end;
+    if (strcmp (argv[i], "-debug_start") == 0) {
+      if(i < argc) {
+        ++i;
+        debug_frame_start = atoi(argv[i]);
+        continue;
+      }
+    }
+    if (strcmp (argv[i], "-debug_end") == 0) {
+      if(i < argc) {
+        ++i;
+        debug_frame_end = atoi(argv[i]);
+        continue;
+      }
+    }
+#endif
     if (strcmp (argv[i], "-cfgparam") == 0) {
 	    if (i + 1 < argc)
 		    i++;
 	  } else if (strncmp (argv[i], "-config=", 8) == 0) {
-#ifdef FILESYS
-	    free_mountinfo (currprefs.mountinfo);
-#endif
+	    currprefs.mountitems = 0;
 	    target_cfgfile_load (&currprefs, argv[i] + 8, -1, 1);
 	  }
 	  /* Check for new-style "-f xxx" argument, where xxx is config-file */
@@ -272,9 +319,7 @@ static void parse_cmdline (int argc, char **argv)
 	    if (i + 1 == argc) {
 		    write_log ("Missing argument for '-f' option.\n");
 	    } else {
-#ifdef FILESYS
-		    free_mountinfo (currprefs.mountinfo);
-#endif
+        currprefs.mountitems = 0;
 		    target_cfgfile_load (&currprefs, argv[++i], -1, 1);
 	    }
 	  } else if (strcmp (argv[i], "-s") == 0) {
@@ -310,9 +355,12 @@ static void parse_cmdline_and_init_file (int argc, char **argv)
 void reset_all_systems (void)
 {
     init_eventtab ();
+#ifdef FILESYS
+    filesys_prepare_reset ();
+    filesys_reset ();
+#endif
     memory_reset ();
 #ifdef FILESYS
-    filesys_reset ();
     filesys_start_threads ();
     hardfile_reset ();
 #endif
@@ -358,6 +406,9 @@ void do_leave_program (void)
 #ifdef FILESYS
   filesys_cleanup ();
 #endif
+#ifdef BSDSOCKET
+  bsdlib_reset ();
+#endif
   memory_cleanup ();
   cfgfile_addcfgparam (0);
   machdep_free ();
@@ -387,28 +438,23 @@ static void real_main2 (int argc, char **argv)
 #endif
 
   if (restart_config[0]) {
-#ifdef FILESYS
-	  free_mountinfo (currprefs.mountinfo);
-#endif
 	  default_prefs (&currprefs, 0);
 	  fixup_prefs (&currprefs);
   }
 
   if (! graphics_setup ()) {
-	exit (1);
+	abort();
   }
-
-#ifdef FILESYS
-  rtarea_init ();
-  hardfile_install();
-#endif
 
   if (restart_config[0])
 	  parse_cmdline_and_init_file (argc, argv);
   else
   	currprefs = changed_prefs;
 
-  machdep_init ();
+  if (!machdep_init ()) {
+	  restart_program = 0;
+	  return;
+  }
 
   if (! setup_sound ()) {
   	write_log ("Sound driver unavailable: Sound output disabled\n");
@@ -441,23 +487,27 @@ static void real_main2 (int argc, char **argv)
 
   fixup_prefs (&currprefs);
   changed_prefs = currprefs;
+  /* force sound settings change */
+  currprefs.produce_sound = 0;
 
 #ifdef AUTOCONFIG
-  /* Install resident module to get 8MB chipmem, if requested */
   rtarea_setup ();
 #endif
-
+#ifdef FILESYS
+  rtarea_init ();
+  hardfile_install();
+#endif
   keybuf_init (); /* Must come after init_joystick */
 
 #ifdef AUTOCONFIG
   expansion_init ();
 #endif
-  memory_init ();
-  memory_reset ();
-
 #ifdef FILESYS
   filesys_install (); 
 #endif
+  memory_init ();
+  memory_reset ();
+
 #ifdef AUTOCONFIG
   emulib_install ();
   native2amiga_install ();
@@ -472,11 +522,11 @@ static void real_main2 (int argc, char **argv)
   gui_update ();
 
   if (graphics_init ()) {
-#ifdef FILESYS
-  	filesys_init (); /* New function, to do 'add_filesys_unit()' calls at start-up */
-#endif
-  	if (sound_available && currprefs.produce_sound > 1 && ! init_audio ()) {
-		  write_log ("Sound driver unavailable: Sound output disabled\n");
+
+    if(!init_audio ()) {
+  	  if (sound_available && currprefs.produce_sound > 1) {
+		    write_log ("Sound driver unavailable: Sound output disabled\n");
+	    }
 		  currprefs.produce_sound = 0;
     }
 
@@ -486,8 +536,6 @@ static void real_main2 (int argc, char **argv)
 
 void real_main (int argc, char **argv)
 {
-  free_mountinfo (&options_mountinfo);
-  currprefs.mountinfo = changed_prefs.mountinfo = &options_mountinfo;
   restart_program = 1;
   fetch_configurationpath (restart_config, sizeof (restart_config));
   strcat (restart_config, OPTIONSFILENAME);

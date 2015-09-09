@@ -9,13 +9,15 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include <ctype.h>
+#include <SDL.h>
 
-#undef abort
+#ifndef abort
 #define abort() \
   do { \
     printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
     (abort) (); \
 } while (0)
+#endif
 
 #include "readcpu.h"
 
@@ -147,6 +149,8 @@ struct mnemolookup lookuptab[] = {
     { i_EMULOP_RETURN, "EMULOP_RETURN" },
     { i_EMULOP, "EMULOP" },
 
+    { i_MMUOP30A, "MMUOP30A" },
+    { i_MMUOP30B, "MMUOP30B" },
     { i_MMUOP, "MMUOP" },
 
     {i_NATFEAT_ID, "NATFEAT_ID" },
@@ -401,7 +405,7 @@ static void build_insn (int insn)
 	case 'A':
 	    srcmode = Areg;
 	    switch (opcstr[pos++]) {
-	     case 'l': srcmode = absl; break;
+	    case 'l': srcmode = absl; break;
 	    case 'r': srcreg = bitval[bitr]; srcgather = 1; srcpos = bitpos[bitr]; break;
 	    case 'R': srcreg = bitval[bitR]; srcgather = 1; srcpos = bitpos[bitR]; break;
 	    default: abort();

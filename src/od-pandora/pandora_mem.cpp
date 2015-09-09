@@ -61,7 +61,7 @@ void alloc_AmigaMem(void)
 {
 	int i;
 	uae_u64 total;
-	uae_u32 max_allowed_mman;
+	int max_allowed_mman;
 
   free_AmigaMem();
 
@@ -117,6 +117,9 @@ uae_u8 *mapped_malloc (size_t s, const char *file)
   if(!strcmp(file, "rom_e0"))
     return natmem_offset + 0xe00000;
 
+  if(!strcmp(file, "rom_a8"))
+    return natmem_offset + 0xa80000;
+
   if(!strcmp(file, "kick"))
     return natmem_offset + kickmem_start;
 
@@ -124,10 +127,13 @@ uae_u8 *mapped_malloc (size_t s, const char *file)
     return natmem_offset + 0x1000000; //z3fastmem_start;
 
   if(!strcmp(file, "gfx"))
-    return natmem_offset + 0x3000000; //gfxmem_start;
+  {
+    p96ram_start = 0x3000000;
+    return natmem_offset + p96ram_start;
+  }
 
   if(!strcmp(file, "rtarea"))
-    return natmem_offset + RTAREA_BASE;
+    return natmem_offset + rtarea_base;
 
   return NULL;
 }

@@ -14,7 +14,7 @@
 int64_t g_uae_epoch = 0;
 
 
-void machdep_init (void)
+int machdep_init (void)
 {
   picasso_requested_on = 0;
   picasso_on = 0;
@@ -23,6 +23,8 @@ void machdep_init (void)
   // Initialize timebase
   g_uae_epoch = read_processor_time();
   syncbase = 1000000; // Microseconds
+
+  return 1;
 }
 
 

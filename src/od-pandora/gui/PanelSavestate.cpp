@@ -238,7 +238,7 @@ void RefreshPanelSavestate(void)
 		}
   }
   
-  bool enabled = nr_units (currprefs.mountinfo) == 0;
+  bool enabled = nr_units () == 0;
   optState0->setEnabled(enabled);
   optState1->setEnabled(enabled);
   optState2->setEnabled(enabled);

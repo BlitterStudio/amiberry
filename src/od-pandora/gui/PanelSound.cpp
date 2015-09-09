@@ -217,9 +217,9 @@ class SoundActionListener : public gcn::ActionListener
         {
       		curr_stereodelay_idx = (int)(sldStereoDelay->getValue());
       		if(curr_stereodelay_idx > 0)
-      		  changed_prefs.sound_mixed_stereo = curr_stereodelay_idx;
+      		  changed_prefs.sound_mixed_stereo_delay = curr_stereodelay_idx;
       		else
-      		  changed_prefs.sound_mixed_stereo = -1;
+      		  changed_prefs.sound_mixed_stereo_delay = -1;
     	  }
       }
 
@@ -441,7 +441,7 @@ void RefreshPanelSound(void)
   else
   {
     curr_separation_idx = 10 - changed_prefs.sound_stereo_separation;
-    curr_stereodelay_idx = changed_prefs.sound_mixed_stereo > 0 ? changed_prefs.sound_mixed_stereo : 0;
+    curr_stereodelay_idx = changed_prefs.sound_mixed_stereo_delay > 0 ? changed_prefs.sound_mixed_stereo_delay : 0;
   }
 
   sldSeparation->setValue(curr_separation_idx);

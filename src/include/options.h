@@ -8,12 +8,10 @@
   */
 
 #define UAEMAJOR 1
-#define UAEMINOR 3
-#define UAESUBREV 3
+#define UAEMINOR 4
+#define UAESUBREV 6
 
 extern long int version;
-
-struct uaedev_mount_info;
 
 struct strlist {
     struct strlist *next;
@@ -38,26 +36,45 @@ struct wh {
     int width, height;
 };
 
+#define MOUNT_CONFIG_SIZE 30
+struct uaedev_config_info {
+    char devname[MAX_DPATH];
+    char volname[MAX_DPATH];
+    char rootdir[MAX_DPATH];
+    int ishdf;
+    int readonly;
+    int bootpri;
+    int autoboot;
+    int donotmount;
+    char filesys[MAX_DPATH];
+    int surfaces;
+    int sectors;
+    int reserved;
+    int blocksize;
+    int configoffset;
+    int controller;
+};
+
 struct uae_prefs {
     struct strlist *all_lines;
 
     char description[256];
-    char info[256];             // Not used in UAE4ALL
-    int config_version;         // Not used in UAE4ALL
+    char info[256];             // Not used in UAE4ARM
+    int config_version;         // Not used in UAE4ARM
 
-    int start_debugger;         // Not used in UAE4ALL
+    int start_debugger;         // Not used in UAE4ARM
     int start_gui;
 
     int produce_sound;
     int sound_stereo;
     int sound_stereo_separation;
-    int sound_mixed_stereo;
-    int sound_bits;             // Not used in UAE4ALL
+    int sound_mixed_stereo_delay;
+    int sound_bits;             // Not used in UAE4ARM
     int sound_freq;
     int sound_interpol;
     int sound_filter;
     int sound_filter_type;
-    int sound_volume;           // Not used in UAE4ALL
+    int sound_volume;           // Not used in UAE4ARM
     int sound_auto;
 
     int cachesize;
@@ -67,12 +84,12 @@ struct uae_prefs {
     struct wh gfx_size_win;
     struct wh gfx_size_fs;
     struct wh gfx_size;
-    int gfx_refreshrate;        // Not used in UAE4ALL
-    int gfx_vsync;              // Not used in UAE4ALL
-    int gfx_lores;              // Not used in UAE4ALL
-    int gfx_correct_aspect;     // Not used in UAE4ALL
-    int gfx_xcenter;            // Not used in UAE4ALL
-    int gfx_ycenter;            // Not used in UAE4ALL
+    int gfx_refreshrate;        // Not used in UAE4ARM
+    int gfx_avsync;             // Not used in UAE4ARM
+    int gfx_resolution;         // Not used in UAE4ARM
+    int gfx_correct_aspect;     // Not used in UAE4ARM
+    int gfx_xcenter;            // Not used in UAE4ARM
+    int gfx_ycenter;            // Not used in UAE4ARM
  
     int immediate_blits;
     unsigned int chipset_mask;
@@ -81,21 +98,24 @@ struct uae_prefs {
     int collision_level;
     int leds_on_screen;
     int fast_copper;
-    int scsi;                   // Not used in UAE4ALL
+    int scsi;                   // Not used in UAE4ARM
     int cpu_idle;
     int floppy_speed;
     int tod_hack;
+
+    int cs_a1000ram;            // Always 0 in UAE4ARM
 
     char df[4][MAX_DPATH];
     char romfile[MAX_DPATH];
     char romextfile[MAX_DPATH];
 
-    char path_floppy[256];      // Not used in UAE4ALL
-    char path_hardfile[256];    // Not used in UAE4ALL
-    char path_rom[256];         // Not used in UAE4ALL
+    char path_floppy[256];      // Not used in UAE4ARM
+    char path_hardfile[256];    // Not used in UAE4ARM
+    char path_rom[256];         // Not used in UAE4ARM
 
     int m68k_speed;
-    int cpu_level;
+    int cpu_model;
+    int fpu_model;
     int cpu_compatible;
     int address_space_24;
     int picasso96_nocustom;
@@ -105,16 +125,16 @@ struct uae_prefs {
     uae_u32 fastmem_size;
     uae_u32 chipmem_size;
     uae_u32 bogomem_size;
-    uae_u32 a3000mem_size;
     uae_u32 gfxmem_size;
 
-    struct uaedev_mount_info *mountinfo;
+    int mountitems;
+    struct uaedev_config_info mountconfig[MOUNT_CONFIG_SIZE];
 
     int nr_floppies;
     int dfxtype[4];
-    int dfxclick[4];            // Not used in UAE4ALL
-    char dfxclickexternal[4][256];  // Not used in UAE4ALL
-    int dfxclickvolume;         // Not used in UAE4ALL
+    int dfxclick[4];            // Not used in UAE4ARM
+    char dfxclickexternal[4][256];  // Not used in UAE4ARM
+    int dfxclickvolume;         // Not used in UAE4ARM
 
     /* Target specific options */
     int pandora_partial_blits;
@@ -153,27 +173,34 @@ struct uae_prefs {
 
 /* Contains the filename of .uaerc */
 extern void cfgfile_write (struct zfile *, const char *format,...);
+extern void cfgfile_dwrite (struct zfile *, const char *format,...);
 extern void cfgfile_backup (const char *path);
+extern struct uaedev_config_info *add_filesys_config (struct uae_prefs *p, int index,
+			char *devname, char *volname, char *rootdir, int readonly,
+			int secspertrack, int surfaces, int reserved,
+			int blocksize, int bootpri, char *filesysdir, int hdc, int flags);
 
 extern void default_prefs (struct uae_prefs *, int);
 extern void discard_prefs (struct uae_prefs *, int);
 
 int parse_cmdline_option (struct uae_prefs *, char, char *);
 
-extern int cfgfile_yesno (char *option, char *value, const char *name, int *location);
+extern int cfgfile_yesno (const char *option, const char *value, const char *name, int *location);
 extern int cfgfile_intval (char *option, char *value, const char *name, int *location, int scale);
-extern int cfgfile_strval (char *option, char *value, const char *name, int *location, const char *table[], int more);
-extern int cfgfile_string (char *option, char *value, const char *name, char *location, int maxsz);
+extern int cfgfile_strval (const char *option, const char *value, const char *name, int *location, const char *table[], int more);
+extern int cfgfile_string (const char *option, const char *value, const char *name, char *location, int maxsz);
 extern char *cfgfile_subst_path (const char *path, const char *subst, const char *file);
 
 extern int target_parse_option (struct uae_prefs *, char *option, char *value);
 extern void target_save_options (struct zfile*, struct uae_prefs *);
 extern void target_default_options (struct uae_prefs *, int type);
+extern void target_fixup_options (struct uae_prefs *);
 extern int target_cfgfile_load (struct uae_prefs *, char *filename, int type, int isdefault);
+extern void target_quit (void);
 extern void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type);
 
 extern int cfgfile_load (struct uae_prefs *p, const char *filename, int *type, int ignorelink);
-extern int cfgfile_save (struct uae_prefs *, const char *filename, int);
+extern int cfgfile_save (struct uae_prefs *p, const char *filename, int);
 extern void cfgfile_parse_line (struct uae_prefs *p, char *, int);
 extern int cfgfile_parse_option (struct uae_prefs *p, char *option, char *value, int);
 extern int cfgfile_get_description (const char *filename, char *description);
@@ -183,6 +210,7 @@ extern void cfgfile_addcfgparam (char *);
 extern int cfgfile_configuration_change(int);
 extern void fixup_prefs_dimensions (struct uae_prefs *prefs);
 extern void fixup_prefs (struct uae_prefs *prefs);
+extern void fixup_cpu (struct uae_prefs *prefs);
 
 extern void check_prefs_changed_custom (void);
 extern void check_prefs_changed_cpu (void);
@@ -191,7 +219,7 @@ extern int check_prefs_changed_gfx (void);
 
 extern struct uae_prefs currprefs, changed_prefs;
 
-extern void machdep_init (void);
+extern int machdep_init (void);
 extern void machdep_free (void);
 
 #define MAX_COLOR_MODES 5

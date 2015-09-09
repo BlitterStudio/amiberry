@@ -26,6 +26,7 @@
 #include "debug.h"
 #include "gensound.h"
 #include "picasso96.h"
+#include "filesys.h"
 
 /*
  * Returns UAE Version
@@ -313,8 +314,7 @@ static uae_u32 REGPARAM2 emulib_ExecuteNativeCode (struct regstruct *regs)
     if( get_mem_bank( object_AAM ).check( object_AAM, 1 ) )
 	object_UAM = get_mem_bank( object_AAM).xlateaddr( object_AAM );
 
-    if( object_UAM )
-    {
+    if(object_UAM) {
 	SET_NATIVE_FUNC( FindFunctionInObject( object_UAM ) );
 	CALL_NATIVE_FUNC( d1, d2, d3, d4, d5, d6, d7, a1, a2, a3, a4, a5, a6);
     }
@@ -326,6 +326,26 @@ static uae_u32 REGPARAM2 emulib_ExecuteNativeCode (struct regstruct *regs)
 static uae_u32 emulib_Minimize (void)
 {
     return 0; // OSDEP_minimize_uae();
+}
+
+static int native_dos_op (uae_u32 mode, uae_u32 p1, uae_u32 p2, uae_u32 p3)
+{
+    char tmp[MAX_DPATH];
+    int v, i;
+
+    if (mode)
+	return -1;
+    /* receive native path from lock
+     * p1 = dos.library:Lock, p2 = buffer, p3 = max buffer size 
+     */
+    v = get_native_path (p1, tmp);
+    if (v)
+	return v;
+    for (i = 0; i <= strlen(tmp) && i < p3 - 1; i++) {
+        put_byte (p2 + i, tmp[i]);
+        put_byte (p2 + i + 1, 0);
+    }
+    return 0;
 }
 
 static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
@@ -387,6 +407,8 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
      case 68: return emulib_Minimize ();
      case 69: return emulib_ExecuteNativeCode (&context->regs);
 
+     case 70: return 0; /* RESERVED. Something uses this.. */
+
      case 80: return /*currprefs.maprom ? currprefs.maprom :*/ 0xffffffff;
      case 81: return 0; //cfgfile_uaelib (ARG1, ARG2, ARG3, ARG4);
      case 82: return 0; //cfgfile_uaelib_modify (ARG1, ARG2, ARG3, ARG4, ARG5);
@@ -394,6 +416,11 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
 #ifdef DEBUGGER
      case 84: return mmu_init (ARG1, ARG2, ARG3);
 #endif
+     case 85: return native_dos_op (ARG1, ARG2, ARG3, ARG4);
+     case 86:
+    	 if (valid_address(ARG1, 1))
+    	    write_log("DBG: %s\n", get_real_address(ARG1));
+    	 return 1; 
     }
     return 0;
 }
@@ -403,13 +430,16 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
  */
 void emulib_install (void)
 {
-    uaecptr a = here ();
+    uaecptr a;
+    if (!uae_boot_rom)
+	return;
+    a = here ();
     //currprefs.mmkeyboard = 0;
-    org (RTAREA_BASE + 0xFF60);
+    org (rtarea_base + 0xFF60);
 #if 0
     dw (0x4eb9);
-    dw ((RTAREA_BASE >> 16) | get_word(RTAREA_BASE + 36));
-    dw (get_word(RTAREA_BASE + 38) + 12);
+    dw ((rtarea_base >> 16) | get_word(rtarea_base + 36));
+    dw (get_word(rtarea_base + 38) + 12);
 #endif
     calltrap (define_trap (uaelib_demux, 0, ""));
     dw (RTS);

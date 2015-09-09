@@ -52,7 +52,7 @@ class HDRemoveActionListener : public gcn::ActionListener
       {
         if (actionEvent.getSource() == listCmdDelete[i])
         {
-          kill_filesys_unit(currprefs.mountinfo, i);
+          kill_filesys_unitconfig(&changed_prefs, i);
           break;
         }
       }
@@ -72,7 +72,7 @@ class HDEditActionListener : public gcn::ActionListener
       {
         if (actionEvent.getSource() == listCmdProps[i])
         {
-          int type = is_hardfile (currprefs.mountinfo, i);
+          int type = is_hardfile (i);
           if(type == FILESYS_VIRTUAL)
             EditFilesysVirtual(i);
           else
@@ -232,49 +232,50 @@ void RefreshPanelHD(void)
 {
   int row, col;
   char tmp[32];
-  char *volname, *devname, *rootdir, *filesys;
-  int secspertrack, surfaces, cylinders, reserved, blocksize, readonly, type, bootpri;
-  uae_u64 size;
-  const char *failure;
-  int units = nr_units(currprefs.mountinfo);
+  struct mountedinfo mi;
+  struct uaedev_config_info *uci;
+  int nosize = 0, type;
+  int units = nr_units();
   
   for(row=0; row<MAX_HD_DEVICES; ++row)
   {
-    if(row < units)
+    uci = &changed_prefs.mountconfig[row];
+    if(uci->devname && uci->devname[0])
     {
-      failure = get_filesys_unit(currprefs.mountinfo, row, 
-        &devname, &volname, &rootdir, &readonly, &secspertrack, &surfaces, &reserved, 
-        &cylinders, &size, &blocksize, &bootpri, &filesys, 0);
-      type = is_hardfile (currprefs.mountinfo, row);
+      type = get_filesys_unitconfig(&changed_prefs, row, &mi);
+	    if (type < 0) {
+    		type = uci->ishdf ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
+    		nosize = 1;
+	    }
       
       if(type == FILESYS_VIRTUAL)
       {
-        listCells[row][COL_DEVICE]->setText(devname);
-        listCells[row][COL_VOLUME]->setText(volname);
-        listCells[row][COL_PATH]->setText(rootdir);
-        if(readonly)
+        listCells[row][COL_DEVICE]->setText(uci->devname);
+        listCells[row][COL_VOLUME]->setText(uci->volname);
+        listCells[row][COL_PATH]->setText(uci->rootdir);
+        if(uci->readonly)
           listCells[row][COL_READWRITE]->setText("no");
         else
           listCells[row][COL_READWRITE]->setText("yes");
         listCells[row][COL_SIZE]->setText("n/a");
-        snprintf(tmp, 32, "%d", bootpri);
+        snprintf(tmp, 32, "%d", uci->bootpri);
         listCells[row][COL_BOOTPRI]->setText(tmp);
       }
       else
       {
-        listCells[row][COL_DEVICE]->setText(devname);
+        listCells[row][COL_DEVICE]->setText(uci->devname);
         listCells[row][COL_VOLUME]->setText("n/a");
-        listCells[row][COL_PATH]->setText(rootdir);
-        if(readonly)
+        listCells[row][COL_PATH]->setText(uci->rootdir);
+        if(uci->readonly)
           listCells[row][COL_READWRITE]->setText("no");
         else
           listCells[row][COL_READWRITE]->setText("yes");
-  	    if (size >= 1024 * 1024 * 1024)
-	        snprintf (tmp, 32, "%.1fG", ((double)(uae_u32)(size / (1024 * 1024))) / 1024.0);
+  	    if (mi.size >= 1024 * 1024 * 1024)
+	        snprintf (tmp, 32, "%.1fG", ((double)(uae_u32)(mi.size / (1024 * 1024))) / 1024.0);
   	    else
-	        snprintf (tmp, 32, "%.1fM", ((double)(uae_u32)(size / (1024))) / 1024.0);
+	        snprintf (tmp, 32, "%.1fM", ((double)(uae_u32)(mi.size / (1024))) / 1024.0);
         listCells[row][COL_SIZE]->setText(tmp);
-        snprintf(tmp, 32, "%d", bootpri);
+        snprintf(tmp, 32, "%d", uci->bootpri);
         listCells[row][COL_BOOTPRI]->setText(tmp);
       }
       listCmdProps[row]->setEnabled(true);

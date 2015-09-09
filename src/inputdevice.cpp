@@ -259,7 +259,7 @@ uae_u16 JOY0DAT (void)
     if (currprefs.pandora_custom_dpad == 1)
         return ((uae_u8)mouse_x) | ((uae_u16)mouse_y << 8);
 #else
-    return ((uae_u8)mouse_x) | ((uae_u16)mouse_y << 8) | joy0dir;
+    return ((uae_u8)mouse_x) + ((uae_u16)mouse_y << 8) + joy0dir;
 #endif
 }
 
@@ -362,6 +362,7 @@ void inputdevice_updateconfig (struct uae_prefs *prefs)
 
 void inputdevice_default_prefs (struct uae_prefs *p)
 {
+  inputdevice_init ();
   p->input_joymouse_multiplier = 2;
   p->input_autofire_framecnt = 8;
 }
@@ -369,7 +370,7 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 void inputdevice_init (void)
 {
   init_joystick ();
-  inputmode_init();
+ 	inputmode_init();
 }
 
 void inputdevice_close (void)

@@ -64,8 +64,7 @@ int fsdb_set_file_attrs (a_inode *aino)
 	return ERROR_OBJECT_NOT_AROUND;
 	
     mode = statbuf.st_mode;
-    /* Unix dirs behave differently than AmigaOS ones.  */
-    if (! aino->dir) {
+
 	if (tmpmask & A_FIBF_READ)
 	    mode &= ~S_IRUSR;
 	else
@@ -82,7 +81,6 @@ int fsdb_set_file_attrs (a_inode *aino)
 	    mode |= S_IXUSR;
 
 	chmod (aino->nname, mode);
-    }
 
     aino->dirty = 1;
     return 0;
@@ -114,7 +112,7 @@ int fsdb_mode_representable_p (const a_inode *aino, int amigaos_mode)
 {
     int mask = amigaos_mode ^ 15;
 
-    if (aino->dir)
+    if (0 && aino->dir)
     	return amigaos_mode == 0;
     
     if (mask & A_FIBF_SCRIPT) /* script */
@@ -138,7 +136,7 @@ char *fsdb_create_unique_nname (a_inode *base, const char *suggestion)
 	int i;
 	char *p = build_nname (base->nname, tmp);
 	if (access (p, R_OK) < 0 && errno == ENOENT) {
-	    printf ("unique name: %s\n", p);
+	    write_log ("unique name: %s\n", p);
 	    return p;
 	}
 	free (p);

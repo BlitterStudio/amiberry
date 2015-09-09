@@ -1,4 +1,7 @@
- /*
+#ifndef UAE_SYSDEPS_H
+#define UAE_SYSDEPS_H
+
+/*
   * UAE - The Un*x Amiga Emulator
   *
   * Try to include the right system headers and get other system-specific
@@ -395,3 +398,5 @@ static inline uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
 #define FILEFLAG_EXECUTE 0x10
 #define FILEFLAG_SCRIPT  0x20
 #define FILEFLAG_PURE    0x40
+
+#endif

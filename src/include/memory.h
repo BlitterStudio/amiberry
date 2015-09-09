@@ -48,6 +48,7 @@ extern uae_u32 allocated_gfxmem;
 extern uae_u32 allocated_z3fastmem, max_z3fastmem;
 #if !( defined(PANDORA) || defined(ANDROIDSDL) )
 extern uae_u32 allocated_a3000mem;
+extern uae_u32 allocated_cardmem;
 #endif
 
 extern void wait_cpu_cycle (void);
@@ -58,16 +59,23 @@ extern void wait_cpu_cycle (void);
 #define chipmem_start 0x00000000
 #define bogomem_start 0x00C00000
 #if !( defined(PANDORA) || defined(ANDROIDSDL) )
-#define a3000mem_start 0x07000000
+#define cardmem_start 0x00E00000
 #endif
 #define kickmem_start 0x00F80000
 extern uaecptr z3fastmem_start;
+extern uaecptr p96ram_start;
 extern uaecptr fastmem_start;
+#if !( defined(PANDORA) || defined(ANDROIDSDL) )
+extern uaecptr a3000lmem_start, a3000hmem_start;
+#endif
 
 extern int ersatzkickfile;
 extern int cloanto_rom;
 extern uae_u16 kickstart_version;
+extern int uae_boot_rom, uae_boot_rom_size;
+extern uaecptr rtarea_base;
 
+enum { ABFLAG_UNK = 0, ABFLAG_RAM = 1, ABFLAG_ROM = 2, ABFLAG_ROMIN = 4, ABFLAG_IO = 8, ABFLAG_NONE = 16, ABFLAG_SAFE = 32 };
 typedef struct {
     /* These ones should be self-explanatory... */
     mem_get_func lget, wget, bget;
@@ -88,6 +96,9 @@ typedef struct {
        for this particular bank. */
     uae_u8 *baseaddr;
     const char *name;
+    /* for instruction opcode/operand fetches */
+    mem_get_func lgeti, wgeti;
+    int flags;
 } addrbank;
 
 extern uae_u8 *filesysory;
@@ -103,12 +114,22 @@ extern addrbank cia_bank;
 extern addrbank rtarea_bank;
 extern addrbank expamem_bank;
 extern addrbank fastmem_bank;
-extern addrbank gfxmem_bank;
+extern addrbank gfxmem_bank, gfxmem_bankx;
+#if !( defined(PANDORA) || defined(ANDROIDSDL) )
+extern addrbank gayle_bank;
+extern addrbank gayle2_bank;
+extern addrbank gayle_attr_bank;
+extern addrbank gayle_common_bank;
+extern addrbank mbres_bank;
+extern addrbank akiko_bank;
+extern addrbank cardmem_bank;
+#endif
 
 extern void rtarea_init (void);
 extern void rtarea_setup (void);
 extern void expamem_init (void);
 extern void expamem_reset (void);
+extern void expamem_next (void);
 
 extern uae_u32 gfxmem_start;
 extern uae_u8 *gfxmemory;
@@ -118,6 +139,9 @@ extern uae_u32 gfxmem_mask;
 
 extern int REGPARAM3 default_check(uaecptr addr, uae_u32 size) REGPARAM;
 extern uae_u8 *REGPARAM3 default_xlate(uaecptr addr) REGPARAM;
+/* 680x0 opcode fetches */
+extern uae_u32 REGPARAM3 dummy_lgeti (uaecptr addr) REGPARAM;
+extern uae_u32 REGPARAM3 dummy_wgeti (uaecptr addr) REGPARAM;
 
 #define bankindex(addr) (((uaecptr)(addr)) >> 16)
 
@@ -145,12 +169,15 @@ extern void memory_cleanup (void);
 extern void map_banks (addrbank *bank, int first, int count, int realsize);
 extern void map_overlay (int chip);
 extern void memory_hardreset (void);
+extern void free_fastmemory (void);
 
 #define NONEXISTINGDATA 0
 
 #define longget(addr) (call_mem_get_func(get_mem_bank(addr).lget, addr))
 #define wordget(addr) (call_mem_get_func(get_mem_bank(addr).wget, addr))
 #define byteget(addr) (call_mem_get_func(get_mem_bank(addr).bget, addr))
+#define longgeti(addr) (call_mem_get_func(get_mem_bank(addr).lgeti, addr))
+#define wordgeti(addr) (call_mem_get_func(get_mem_bank(addr).wgeti, addr))
 #define longput(addr,l) (call_mem_put_func(get_mem_bank(addr).lput, addr, l))
 #define wordput(addr,w) (call_mem_put_func(get_mem_bank(addr).wput, addr, w))
 #define byteput(addr,b) (call_mem_put_func(get_mem_bank(addr).bput, addr, b))
@@ -166,6 +193,14 @@ STATIC_INLINE uae_u32 get_word(uaecptr addr)
 STATIC_INLINE uae_u32 get_byte(uaecptr addr)
 {
     return byteget(addr);
+}
+STATIC_INLINE uae_u32 get_longi(uaecptr addr)
+{
+    return longgeti(addr);
+}
+STATIC_INLINE uae_u32 get_wordi(uaecptr addr)
+{
+    return wordgeti(addr);
 }
 
 /*
@@ -250,33 +285,15 @@ STATIC_INLINE int valid_address(uaecptr addr, uae_u32 size)
     return get_mem_bank(addr).check(addr, size);
 }
 
-/* For faster access in custom chip emulation.  */
-extern uae_u32 REGPARAM3 chipmem_lget (uaecptr) REGPARAM;
-extern uae_u32 REGPARAM3 chipmem_wget (uaecptr) REGPARAM;
-extern uae_u32 REGPARAM3 chipmem_bget (uaecptr) REGPARAM;
-extern void REGPARAM3 chipmem_lput (uaecptr, uae_u32) REGPARAM;
-extern void REGPARAM3 chipmem_wput (uaecptr, uae_u32) REGPARAM;
-extern void REGPARAM3 chipmem_bput (uaecptr, uae_u32) REGPARAM;
+extern int addr_valid(char*,uaecptr,uae_u32);
 
-extern uae_u32 REGPARAM3 chipmem_agnus_lget (uaecptr) REGPARAM;
+/* For faster access in custom chip emulation.  */
+extern void REGPARAM3 chipmem_wput (uaecptr, uae_u32) REGPARAM;
 extern uae_u32 REGPARAM3 chipmem_agnus_wget (uaecptr) REGPARAM;
-extern uae_u32 REGPARAM3 chipmem_agnus_bget (uaecptr) REGPARAM;
-extern void REGPARAM3 chipmem_agnus_lput (uaecptr, uae_u32) REGPARAM;
-extern void REGPARAM3 chipmem_agnus_wput (uaecptr, uae_u32) REGPARAM;
-extern void REGPARAM3 chipmem_agnus_bput (uaecptr, uae_u32) REGPARAM;
 
 extern uae_u32 chipmem_mask, chipmem_full_mask, kickmem_mask;
 extern uae_u8 *kickmemory;
-extern int kickmem_size;
 extern addrbank dummy_bank;
-
-/* 68020+ Chip RAM DMA contention emulation */
-extern uae_u32 REGPARAM3 chipmem_lget_ce2 (uaecptr) REGPARAM;
-extern uae_u32 REGPARAM3 chipmem_wget_ce2 (uaecptr) REGPARAM;
-extern uae_u32 REGPARAM3 chipmem_bget_ce2 (uaecptr) REGPARAM;
-extern void REGPARAM3 chipmem_lput_ce2 (uaecptr, uae_u32) REGPARAM;
-extern void REGPARAM3 chipmem_wput_ce2 (uaecptr, uae_u32) REGPARAM;
-extern void REGPARAM3 chipmem_bput_c2 (uaecptr, uae_u32) REGPARAM;
 
 
 static __inline__ uae_u16 CHIPMEM_WGET (uae_u32 PT) {
@@ -315,28 +332,48 @@ extern uae_u8 *mapped_malloc (size_t, const char *);
 extern void mapped_free (uae_u8 *);
 extern void clearexec (void);
 
-extern int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksum, int *cloanto_rom);
 extern void decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size, uae_u8 *key, int keysize);
 
 #define ROMTYPE_KICK 1
 #define ROMTYPE_KICKCD32 2
 #define ROMTYPE_EXTCD32 4
 #define ROMTYPE_EXTCDTV 8
-#define ROMTYPE_AR 16
-#define ROMTYPE_KEY 32
-#define ROMTYPE_ARCADIA 64
+#define ROMTYPE_A2091BOOT 16
+#define ROMTYPE_A4091BOOT 32
+#define ROMTYPE_AR 64
+#define ROMTYPE_SUPERIV 128
+#define ROMTYPE_KEY 256
+#define ROMTYPE_ARCADIABIOS 512
+#define ROMTYPE_ARCADIAGAME 1024
+#define ROMTYPE_HRTMON 2048
+#define ROMTYPE_NORDIC 4096
+#define ROMTYPE_XPOWER 8192
+#define ROMTYPE_CD32CART 16384
+#define ROMTYPE_EVEN 131072
+#define ROMTYPE_ODD 262144
+#define ROMTYPE_BYTESWAP 524288
+#define ROMTYPE_SCRAMBLED 1048576
+
+struct romheader {
+    char *name;
+    int id;
+};
 
 struct romdata {
     const char *name;
     int ver, rev;
     int subver, subrev;
     const char *model;
-    uae_u32 crc32;
     uae_u32 size;
     int id;
     int cpu;
     int cloanto;
     int type;
+    int group;
+    int title;
+    uae_u32 crc32;
+    uae_u32 sha1[5];
+    char *configname;
 };
 
 struct romlist {
@@ -344,19 +381,32 @@ struct romlist {
     struct romdata *rd;
 };
 
+extern struct romdata *getromdatabypath(char *path);
 extern struct romdata *getromdatabycrc (uae_u32 crc32);
 extern struct romdata *getromdatabydata (uae_u8 *rom, int size);
 extern struct romdata *getromdatabyid (int id);
 extern struct romdata *getromdatabyzfile (struct zfile *f);
+extern struct romlist **getarcadiaroms (void);
 extern struct romdata *getarcadiarombyname (char *name);
+extern struct romlist **getromlistbyident(int ver, int rev, int subver, int subrev, char *model, int all);
 extern void getromname (struct romdata*, char*);
 extern struct romdata *getromdatabyname (char*);
+extern struct romlist *getromlistbyids(int *ids);
+extern void romwarning(int *ids);
+extern struct romlist *getromlistbyromdata(struct romdata *rd);
 extern void romlist_add (char *path, struct romdata *rd);
 extern char *romlist_get (struct romdata *rd);
 extern void romlist_clear (void);
 
 extern uae_u8 *load_keyfile (struct uae_prefs *p, char *path, int *size);
 extern void free_keyfile (uae_u8 *key);
+
+uaecptr strcpyha_safe (uaecptr dst, const char *src);
+extern char *strcpyah_safe (char *dst, uaecptr src);
+void memcpyha_safe (uaecptr dst, const uae_u8 *src, int size);
+void memcpyha (uaecptr dst, const uae_u8 *src, int size);
+void memcpyah_safe (uae_u8 *dst, uaecptr src, int size);
+void memcpyah (uae_u8 *dst, uaecptr src, int size);
 
 #if defined(ARMV6_ASSEMBLY)
 

@@ -30,13 +30,14 @@
 %
 % Fields on a line:
 % 16 chars bitpattern :
-% CPU level / privildge level :
+% CPU level / privilege level :
 %   CPU level 0: 68000
 %             1: 68010
 %             2: 68020
-%             3: 68020/68881
+%             3: 68030
 %             4: 68040
-%             5: 68060
+%             5: 68060 (not used to produce a cputbl)
+%			  [Everything from 68020 possibly allows for FPU emulation]
 %   privilege level 0: not privileged
 %                   1: unprivileged only on 68000 (check regs.s)
 %                   2: privileged                 (check regs.s)
@@ -249,16 +250,22 @@
 1110 1111 11ss sSSS:20:-NZ00:-----:--:13: BFINS   #1,s[!Areg,Apdi,Aipi,Immd,PC8r,PC16]
 
 % floating point co processor
-1111 0010 00ss sSSS:30:-----:-----:--:11: FPP      #1,s
-1111 0010 01ss sSSS:30:-----:-----:-B:11: FDBcc    #1,s[Areg-Dreg]
-1111 0010 01ss sSSS:30:-----:-----:--:11: FScc     #1,s[!Areg,Immd,PC8r,PC16]
-1111 0010 0111 1010:30:-----:-----:T-:10: FTRAPcc  #1
-1111 0010 0111 1011:30:-----:-----:T-:10: FTRAPcc  #2
-1111 0010 0111 1100:30:-----:-----:T-:00: FTRAPcc
-1111 0010 10KK KKKK:30:-----:-----:-B:11: FBcc     #K,#1
-1111 0010 11KK KKKK:30:-----:-----:-B:11: FBcc     #K,#2
-1111 0011 00ss sSSS:32:-----:-----:--:20: FSAVE    s[!Dreg,Areg,Aipi,Immd,PC8r,PC16]
-1111 0011 01ss sSSS:32:-----:-----:--:10: FRESTORE s[!Dreg,Areg,Apdi,Immd]
+1111 0010 00ss sSSS:20:-----:-----:--:11: FPP      #1,s
+1111 0010 01ss sSSS:20:-----:-----:-B:11: FDBcc    #1,s[Areg-Dreg]
+1111 0010 01ss sSSS:20:-----:-----:--:11: FScc     #1,s[!Areg,Immd,PC8r,PC16]
+1111 0010 0111 1010:20:-----:-----:T-:10: FTRAPcc  #1
+1111 0010 0111 1011:20:-----:-----:T-:10: FTRAPcc  #2
+1111 0010 0111 1100:20:-----:-----:T-:00: FTRAPcc
+1111 0010 10KK KKKK:20:-----:-----:-B:11: FBcc     #K,#1
+1111 0010 11KK KKKK:20:-----:-----:-B:11: FBcc     #K,#2
+1111 0011 00ss sSSS:22:-----:-----:--:20: FSAVE    s[!Dreg,Areg,Aipi,Immd,PC8r,PC16]
+1111 0011 01ss sSSS:22:-----:-----:--:10: FRESTORE s[!Dreg,Areg,Apdi,Immd]
+
+% 68030 MMU (allowed addressing modes not checked!)
+1111 0000 00ss sSSS:30:?????:?????:T-:11: MMUOP30A s[!Immd],#1
+1111 1000 00ss sSSS:30:?????:?????:T-:11: MMUOP30B s[!Immd]
+% Misc MMU
+1111 0101 iiii iSSS:40:?????:?????:T-:11: MMUOP    #i,s
 
 % 68040 instructions
 1111 0100 pp00 1rrr:42:-----:-----:T-:02: CINVL    #p,Ar
@@ -273,13 +280,3 @@
 1111 0110 00dd dDDD:40:-----:-----:--:12: MOVE16   Al,d[Areg-Aipi]
 1111 0110 00ss sSSS:40:-----:-----:--:12: MOVE16   s[Aind],Al
 1111 0110 00dd dDDD:40:-----:-----:--:12: MOVE16   Al,d[Aipi-Aind]
-
-1111 0101 iiii iSSS:42:?????:?????:T-:11: MMUOP    #i,s
-
-% EmulOp instructions (deprecated, to be removed)
-%0111 0001 0000 0000:02:-----:-----:-R:00: EMULOP_RETURN
-%0111 0001 EEEE EEEE:02:-----:-----:-J:10: EMULOP   #E
-
-% NatFea instructions (do I have the srcaddr correct?)
-%0111 0011 0000 0000:00:-----:-----:-J:00: NATFEAT_ID
-%0111 0011 0000 0001:00:-----:-----:-J:00: NATFEAT_CALL

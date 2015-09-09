@@ -52,8 +52,8 @@ typedef uae_u32 uintptr;
 
 #define USE_ALIAS 1
 #define USE_F_ALIAS 1
-#define USE_OFFSET 1
-#define COMP_DEBUG 1
+#define USE_OFFSET 0
+#define COMP_DEBUG 0
 
 #if COMP_DEBUG
 #define Dif(x) if (x)
@@ -329,7 +329,7 @@ extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
 #define comp_get_ilong(o) do_get_mem_long((uae_u32 *)(comp_pc_p + (o)))
 
 /* Preferences handling */
-void check_prefs_changed_comp (void);
+int check_prefs_changed_comp (void);
 
 struct blockinfo_t;
 

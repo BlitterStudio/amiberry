@@ -14,7 +14,7 @@
 
 
 #ifdef ARMV6_ASSEMBLY
-static __inline__ uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
+STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
 {
   uae_u16 v;
    __asm__ __volatile__ (
@@ -24,7 +24,7 @@ static __inline__ uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
   return v;
 }
 #else
-static __inline__ uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
+STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
 {
     uae_u8 *b = (uae_u8 *)a;
     
@@ -34,7 +34,7 @@ static __inline__ uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
 
 
 #ifdef ARMV6_ASSEMBLY
-static inline uae_u32 do_get_mem_long(uae_u32 *a) 
+STATIC_INLINE uae_u32 do_get_mem_long(uae_u32 *a) 
 {
   uae_u32 v;
    __asm__ __volatile__ (
@@ -44,7 +44,7 @@ static inline uae_u32 do_get_mem_long(uae_u32 *a)
   return v;
 }
 #else
-static __inline__ uae_u32 do_get_mem_long(uae_u32 *_GCCRES_ a)
+STATIC_INLINE uae_u32 do_get_mem_long(uae_u32 *_GCCRES_ a)
 {
     uae_u8 *b = (uae_u8 *)a;
     
@@ -53,13 +53,13 @@ static __inline__ uae_u32 do_get_mem_long(uae_u32 *_GCCRES_ a)
 #endif
 
 
-static __inline__ uae_u8 do_get_mem_byte(uae_u8 *_GCCRES_ a)
+STATIC_INLINE uae_u8 do_get_mem_byte(uae_u8 *_GCCRES_ a)
 {
     return *a;
 }
 
 #ifdef ARMV6_ASSEMBLY
-static __inline__ void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
+STATIC_INLINE void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
 {
    __asm__ __volatile__ (
 						"rev16 r2, %[v] \n\t"
@@ -67,7 +67,7 @@ static __inline__ void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
            : : [v] "r" (v), [a] "r" (a) : "r2", "memory" ); 
 }
 #else
-static __inline__ void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
+STATIC_INLINE void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
 {
     uae_u8 *b = (uae_u8 *)a;
     
@@ -77,7 +77,7 @@ static __inline__ void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
 #endif
 
 #ifdef ARMV6_ASSEMBLY
-static __inline__ void do_put_mem_long(uae_u32 *_GCCRES_ a, uae_u32 v)
+STATIC_INLINE void do_put_mem_long(uae_u32 *_GCCRES_ a, uae_u32 v)
 {
    __asm__ __volatile__ (
 						"rev r2, %[v] \n\t"
@@ -85,7 +85,7 @@ static __inline__ void do_put_mem_long(uae_u32 *_GCCRES_ a, uae_u32 v)
            : : [v] "r" (v), [a] "r" (a) : "r2", "memory" ); 
 }
 #else
-static __inline__ void do_put_mem_long(uae_u32 *_GCCRES_ a, uae_u32 v)
+STATIC_INLINE void do_put_mem_long(uae_u32 *_GCCRES_ a, uae_u32 v)
 {
     uae_u8 *b = (uae_u8 *)a;
     
@@ -96,7 +96,7 @@ static __inline__ void do_put_mem_long(uae_u32 *_GCCRES_ a, uae_u32 v)
 }
 #endif
 
-static __inline__ void do_put_mem_byte(uae_u8 *_GCCRES_ a, uae_u8 v)
+STATIC_INLINE void do_put_mem_byte(uae_u8 *_GCCRES_ a, uae_u8 v)
 {
     *a = v;
 }

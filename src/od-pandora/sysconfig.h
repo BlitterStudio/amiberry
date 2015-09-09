@@ -395,3 +395,7 @@
 #define M68K_SPEED_7MHZ_CYCLES 0
 #define M68K_SPEED_14MHZ_CYCLES 1024
 #define M68K_SPEED_25MHZ_CYCLES 128
+
+typedef unsigned char boolean;
+#define FALSE 0
+#define TRUE 1

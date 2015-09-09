@@ -684,12 +684,16 @@ STATIC_INLINE void alloc_blockinfos(void)
 /********************************************************************
  * Preferences handling. This is just a convenient place to put it  *
  ********************************************************************/
-void check_prefs_changed_comp (void)
+int check_prefs_changed_comp (void)
 {
+    int changed = 0;
+
     if (currprefs.cachesize!=changed_prefs.cachesize) {
 	currprefs.cachesize = changed_prefs.cachesize;
 	alloc_cache();
+	changed = 1;
     }
+    return changed;
 }
 
 /********************************************************************
@@ -849,11 +853,10 @@ int start_trace = 0;
 void trace_func(void)
 {
   TRACE_Start();
-  printf("r0 =0x%08x, r1 =0x%08x, r2 =0x%08x, r3 =0x%08x\n", (&TRACE_mem)[0], (&TRACE_mem)[1], (&TRACE_mem)[2], (&TRACE_mem)[3]);
-  printf("r4 =0x%08x, r5 =0x%08x, r6 =0x%08x, r7 =0x%08x\n", (&TRACE_mem)[4], (&TRACE_mem)[5], (&TRACE_mem)[6], (&TRACE_mem)[7]);
-  printf("r8 =0x%08x, r9 =0x%08x, r10=0x%08x, r11=0x%08x\n", (&TRACE_mem)[8], (&TRACE_mem)[9], (&TRACE_mem)[10], (&TRACE_mem)[11]);
-  printf("r12=0x%08x, r13=0x%08x, r14=0x%08x, r15=0x%08x\n", (&TRACE_mem)[12], (&TRACE_mem)[13], (&TRACE_mem)[14], (&TRACE_mem)[15]);
-  printf("\n");
+  write_log("r0 =0x%08x, r1 =0x%08x, r2 =0x%08x, r3 =0x%08x\n", (&TRACE_mem)[0], (&TRACE_mem)[1], (&TRACE_mem)[2], (&TRACE_mem)[3]);
+  write_log("r4 =0x%08x, r5 =0x%08x, r6 =0x%08x, r7 =0x%08x\n", (&TRACE_mem)[4], (&TRACE_mem)[5], (&TRACE_mem)[6], (&TRACE_mem)[7]);
+  write_log("r8 =0x%08x, r9 =0x%08x, r10=0x%08x, r11=0x%08x\n", (&TRACE_mem)[8], (&TRACE_mem)[9], (&TRACE_mem)[10], (&TRACE_mem)[11]);
+  write_log("r12=0x%08x, r13=0x%08x, r14=0x%08x, r15=0x%08x\n", (&TRACE_mem)[12], (&TRACE_mem)[13], (&TRACE_mem)[14], (&TRACE_mem)[15]);
 }
 
 void emit_trace(void)
@@ -2993,17 +2996,19 @@ static void cache_miss(void)
 	execute_normal(); /* Compile this block now */
 	return;
     }
+#if COMP_DEBUG
     Dif (!bi2 || bi==bi2) {
 	D(panicbug("Unexplained cache miss %p %p\n",bi,bi2));
 	abort();
     }
+#endif
     raise_in_cl_list(bi);
     return;
 }
 
 static int called_check_checksum(blockinfo* bi);
 
-STATIC_INLINE int block_check_checksum(blockinfo* bi) 
+static int block_check_checksum(blockinfo* bi) 
 {
     uae_u32     c1,c2;
     int        isgood;
@@ -3287,9 +3292,9 @@ void build_comp(void)
     const struct comptbl* nftbl=op_smalltbl_0_comp_nf;
     int count;
 #ifdef NOFLAGS_SUPPORT
-    struct cputbl *nfctbl = (currprefs.cpu_level >= 4 ? op_smalltbl_0_nf
-			     : currprefs.cpu_level == 3 ? op_smalltbl_1_nf
-			     : currprefs.cpu_level == 2 ? op_smalltbl_2_nf
+    struct cputbl *nfctbl = (currprefs.cpu_level >= 5 ? op_smalltbl_0_nf
+			     : currprefs.cpu_level == 4 ? op_smalltbl_1_nf
+			     : (currprefs.cpu_level == 2 || currprefs.cpu_level == 3) ? op_smalltbl_2_nf
 			     : currprefs.cpu_level == 1 ? op_smalltbl_3_nf
 			     : ! currprefs.cpu_compatible ? op_smalltbl_4_nf
 			     : op_smalltbl_5_nf);
@@ -3347,8 +3352,12 @@ void build_comp(void)
 	cpuop_func *nfcf;
 #endif
 	int isaddx,cflow;
+	int lvl;
 
-	if (table68k[opcode].mnemo == i_ILLG || table68k[opcode].clev > currprefs.cpu_level)
+	lvl = (currprefs.cpu_model - 68000) / 10;
+	if (lvl > 4)
+	    lvl--;
+	if (table68k[opcode].mnemo == i_ILLG || table68k[opcode].clev > lvl)
 	    continue;
 
 	if (table68k[opcode].handler != -1) {
@@ -3549,7 +3558,7 @@ void compiler_dumpstate(void)
 
 void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 {
-    if (letit && compiled_code && currprefs.cpu_level>=2) {
+    if (letit && compiled_code && currprefs.cpu_model>=68020) {
 #ifdef PROFILE_COMPILE_TIME
 	compile_count++;
 	clock_t start_time = clock();
@@ -4001,7 +4010,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #ifdef PROFILE_COMPILE_TIME
 	compile_time += (clock() - start_time);
 #endif
-	do_extra_cycles(totcycles); /* for the compilation time */
     }
 }
 

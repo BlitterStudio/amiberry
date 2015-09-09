@@ -59,17 +59,21 @@ static NavigationMap navMap[] =
 
 //  active            move left         move right        move up           move down
 // PanelCPU
-  { "68000",          "CPU",            "7 Mhz",          "JIT",            "68010" },
-  { "68010",          "CPU",            "14 Mhz",         "68000",          "68EC020" },
-  { "68EC020",        "CPU",            "28 Mhz",         "68010",          "68020" },
-  { "68020",          "CPU",            "Fastest",        "68EC020",        "68040" },
-  { "68040",          "CPU",            "Fastest",        "68020",          "CPUComp" },
-  { "CPUComp",        "CPU",            "Fastest",        "68040",          "JIT" },
-  { "JIT",            "CPU",            "Fastest",        "CPUComp",        "68000" },
-  { "7 Mhz",          "68000",          "CPU",            "Fastest",        "14 Mhz" },
-  { "14 Mhz",         "68010",          "CPU",            "7 Mhz",          "28 Mhz" },
-  { "28 Mhz",         "68EC020",        "CPU",            "14 Mhz",         "Fastest" },
-  { "Fastest",        "68020",          "CPU",            "28 Mhz",         "7 Mhz" },
+  { "68000",          "CPU",            "FPUnone",        "JIT",            "68010" },
+  { "68010",          "CPU",            "68881",          "68000",          "68EC020" },
+  { "68EC020",        "CPU",            "68882",          "68010",          "68020" },
+  { "68020",          "CPU",            "CPU internal",   "68EC020",        "68040" },
+  { "68040",          "CPU",            "CPU internal",   "68020",          "CPUComp" },
+  { "CPUComp",        "CPU",            "CPU internal",   "68040",          "JIT" },
+  { "JIT",            "CPU",            "CPU internal",   "CPUComp",        "68000" },
+  { "FPUnone",        "68000",          "7 Mhz",          "CPU internal",   "68881" },
+  { "68881",          "68010",          "14 Mhz",         "FPUnone",        "68882" },
+  { "68882",          "68EC020",        "28 Mhz",         "68881",          "CPU internal" },
+  { "CPU internal",   "68020",          "Fastest",        "68882",          "FPUnone" },
+  { "7 Mhz",          "FPUnone",        "CPU",            "Fastest",        "14 Mhz" },
+  { "14 Mhz",         "68881",          "CPU",            "7 Mhz",          "28 Mhz" },
+  { "28 Mhz",         "68882",          "CPU",            "14 Mhz",         "Fastest" },
+  { "Fastest",        "CPU internal",   "CPU",            "28 Mhz",         "7 Mhz" },
 
 // PanelChipset
   { "OCS",            "Chipset",        "BlitNormal",     "CollFull",       "ECS" },

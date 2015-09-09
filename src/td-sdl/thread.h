@@ -28,16 +28,21 @@ extern void uae_set_thread_priority (int);
 typedef SDL_Thread *uae_thread_id;
 #define BAD_THREAD NULL
 
-STATIC_INLINE int uae_start_thread (void *(*f) (void *), void *arg, uae_thread_id *foo)
+STATIC_INLINE int uae_start_thread (const char *name, void *(*f) (void *), void *arg, uae_thread_id *foo)
 {
     *foo = SDL_CreateThread ((int (*)(void *))f, arg);
     return *foo == 0;
 }
 
-STATIC_INLINE int uae_wait_thread (uae_thread_id thread)
+STATIC_INLINE int uae_start_thread_fast (void *(*f) (void *), void *arg, uae_thread_id *foo)
+{
+    *foo = SDL_CreateThread ((int (*)(void *))f, arg);
+    return *foo == 0;
+}
+
+STATIC_INLINE void uae_wait_thread (uae_thread_id thread)
 {
     SDL_WaitThread (thread, (int*)0);
-    return 0;
 }
 
 /* Do nothing; thread exits if thread function returns.  */

@@ -44,4 +44,5 @@ struct bstring {
     int val;
 };
 
+#define uaerand() rand()
 #endif //UAE_UAE_H

@@ -261,14 +261,6 @@ static void open_screen(struct uae_prefs *p)
 							(dispmanxdinfo.height * 2)/100 ,
 							dispmanxdinfo.width - (dispmanxdinfo.width * 4)/100 ,
 							dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 );
-
-	// For debug, in order to avoid full screen.
-	//vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2),
-        //                     (dispmanxdinfo.height /2) ,
-        //                     (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/2,
-        //                     (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/2);
-
-
   }
   else
   {
@@ -278,6 +270,12 @@ static void open_screen(struct uae_prefs *p)
 							(dispmanxdinfo.width - ((dispmanxdinfo.width * 32)/100)) ,
 							dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 );
   }
+
+  // For debug, in order to avoid full screen.
+  //vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2),
+  //                     (dispmanxdinfo.height /2) ,
+  //                     (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/2,
+  //                     (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/2);
 
 
   if (DispManXElementpresent == 0)
@@ -705,6 +703,11 @@ static int save_thumb(char *path)
 uae_u16 picasso96_pixel_format = RGBFF_CHUNKY;
 
 
+void DX_Invalidate (int x, int y, int width, int height)
+{
+  // We draw everything direct to the frame buffer
+}
+#if 0
 void DX_Invalidate (int first, int last)
 {
   if (first > last)
@@ -721,7 +724,7 @@ void DX_Invalidate (int first, int last)
 	  first++;
   }
 }
-
+#endif
 int DX_BitsPerCannon (void)
 {
     return 8;
@@ -757,7 +760,7 @@ int DX_Fill (int dstx, int dsty, int width, int height, uae_u32 color, RGBFTYPE 
 	SDL_Rect rect = {dstx, dsty, width, height};
 
 	if (SDL_FillRect (prSDLScreen, &rect, color) == 0) {
-		DX_Invalidate (dsty, dsty + height);
+		DX_Invalidate (dstx, dsty, width, height);
 		result = 1;
 	}
 

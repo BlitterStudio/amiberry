@@ -27,7 +27,7 @@ MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/
 
 MORE_CFLAGS += -DJIT -DCPU_arm -DARM_ASSEMBLY
 
-MORE_CFLAGS += -Isrc -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -fomit-frame-pointer -Wno-unused -Wno-format -DUSE_SDL -DGCCCONSTFUNC="__attribute__((const))" -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
+MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -fomit-frame-pointer -Wno-unused -Wno-format -DUSE_SDL -DGCCCONSTFUNC="__attribute__((const))" -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
 LDFLAGS +=  -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
 MORE_CFLAGS += -fexceptions -fpermissive
 
@@ -49,7 +49,7 @@ endif
 ASFLAGS += -mfloat-abi=hard -mfpu=neon
 
 CFLAGS  = $(DEFAULT_CFLAGS) $(MORE_CFLAGS)
-CFLAGS+= -DCPUEMU_0 -DCPUEMU_5 -DFPUEMU
+CFLAGS+= -DCPUEMU_0 -DCPUEMU_11 -DFPUEMU
 
 OBJS =	\
 	src/audio.o \
@@ -82,8 +82,31 @@ OBJS =	\
 	src/scsi-none.o \
 	src/traps.o \
 	src/uaelib.o \
-	src/unzip.o \
 	src/zfile.o \
+	src/zfile_archive.o \
+	src/archivers/7z/7zAlloc.o \
+	src/archivers/7z/7zBuffer.o \
+	src/archivers/7z/7zCrc.o \
+	src/archivers/7z/7zDecode.o \
+	src/archivers/7z/7zExtract.o \
+	src/archivers/7z/7zHeader.o \
+	src/archivers/7z/7zIn.o \
+	src/archivers/7z/7zItem.o \
+	src/archivers/7z/7zMethodID.o \
+	src/archivers/7z/LzmaDecode.o \
+	src/archivers/dms/crc_csum.o \
+	src/archivers/dms/getbits.o \
+	src/archivers/dms/maketbl.o \
+	src/archivers/dms/pfile.o \
+	src/archivers/dms/tables.o \
+	src/archivers/dms/u_deep.o \
+	src/archivers/dms/u_heavy.o \
+	src/archivers/dms/u_init.o \
+	src/archivers/dms/u_medium.o \
+	src/archivers/dms/u_quick.o \
+	src/archivers/dms/u_rle.o \
+	src/archivers/wrp/warp.o \
+	src/archivers/zip/unzip.o \
 	src/md-pandora/support.o \
 	src/od-pandora/neon_helper.o \
 	src/od-pandora/fsdb_host.o \
@@ -135,7 +158,7 @@ OBJS += src/readcpu.o
 OBJS += src/cpudefs.o
 OBJS += src/cpustbl.o
 OBJS += src/cpuemu_0.o
-OBJS += src/cpuemu_5.o
+OBJS += src/cpuemu_11.o
 OBJS += src/compemu.o
 OBJS += src/compemu_fpp.o
 OBJS += src/compstbl.o

@@ -24,6 +24,8 @@
 #define min_diwlastword (0)
 #define max_diwlastword   (PIXEL_XPOS(0x1d4>> 1))
 
+extern int aga_mode, direct_rgb;
+
 // extern int sprite_width;
 
 STATIC_INLINE int coord_hw_to_window_x (int x)
@@ -68,7 +70,7 @@ struct color_entry {
 
 STATIC_INLINE xcolnr getxcolor (int c)
 {
-	if (currprefs.chipset_mask & CSMASK_AGA)
+	if (direct_rgb)
 		return CONVERT_RGB(c);
 	else
 		return xcolors[c];
@@ -77,7 +79,7 @@ STATIC_INLINE xcolnr getxcolor (int c)
 /* functions for reading, writing, copying and comparing struct color_entry */
 STATIC_INLINE int color_reg_get (struct color_entry *_GCCRES_ ce, int c)
 {
-	if (currprefs.chipset_mask & CSMASK_AGA)
+	if (aga_mode)
 		return ce->color_regs_aga[c];
 	else
 		return ce->color_regs_ecs[c];
@@ -85,7 +87,7 @@ STATIC_INLINE int color_reg_get (struct color_entry *_GCCRES_ ce, int c)
 
 STATIC_INLINE void color_reg_set (struct color_entry *_GCCRES_ ce, int c, int v)
 {
-	if (currprefs.chipset_mask & CSMASK_AGA)
+	if (aga_mode)
 		ce->color_regs_aga[c] = v;
 	else
 		ce->color_regs_ecs[c] = v;
@@ -94,7 +96,7 @@ STATIC_INLINE void color_reg_set (struct color_entry *_GCCRES_ ce, int c, int v)
 /* ugly copy hack, is there better solution? */
 STATIC_INLINE void color_reg_cpy (struct color_entry *_GCCRES_ dst, struct color_entry *_GCCRES_ src)
 {
-    if (currprefs.chipset_mask & CSMASK_AGA)
+    if (aga_mode)
     	/* copy acolors and color_regs_aga */
     	memcpy (dst->acolors, src->acolors, sizeof(struct color_entry) - sizeof(uae_u16) * 32);
     else
@@ -163,7 +165,6 @@ struct decision {
     uae_u16 bplcon3, bplcon4;
     uae_u8 nr_planes;
     uae_u8 bplres;
-//    unsigned int any_hires_sprites;
     unsigned int ham_seen;
     unsigned int ham_at_start;
 };

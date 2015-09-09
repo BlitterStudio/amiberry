@@ -24,28 +24,11 @@
 #include "savestate.h"
 #include "inputdevice.h"
 #include "audio.h"
+#include "keyboard.h"
 
 #define TOD_HACK
 
 #define DIV10 (10 * CYCLE_UNIT / 2) /* Yes, a bad identifier. */
-
-/* battclock stuff */
-#define RTC_D_ADJ      8
-#define RTC_D_IRQ      4
-#define RTC_D_BUSY     2
-#define RTC_D_HOLD     1
-#define RTC_E_t1       8
-#define RTC_E_t0       4
-#define RTC_E_INTR     2
-#define RTC_E_MASK     1
-#define RTC_F_TEST     8
-#define RTC_F_24_12    4
-#define RTC_F_STOP     2
-#define RTC_F_RSET     1
-
-static unsigned int clock_control_d = RTC_D_ADJ + RTC_D_HOLD;
-static unsigned int clock_control_e = 0;
-static unsigned int clock_control_f = RTC_F_24_12;
 
 static unsigned int ciaaicr, ciaaimask, ciabicr, ciabimask;
 static unsigned int ciaacra, ciaacrb, ciabcra, ciabcrb;
@@ -310,7 +293,7 @@ static int checkalarm (unsigned long tod, unsigned long alarm, int inc)
 	return 0;
     /* emulate buggy TODMED counter.
      * it counts: .. 29 2A 2B 2C 2D 2E 2F 20 30 31 32 ..
-     * (0F->00->10 only takes couple of cycles but it will trigger alarm..
+     * (2F->20->30 only takes couple of cycles but it will trigger alarm..
      */
     if (tod & 0x000fff)
 	return 0;
@@ -335,6 +318,11 @@ STATIC_INLINE void ciaa_checkalarm (int inc)
     }
 }
 
+STATIC_INLINE void setcode (uae_u8 keycode)
+{
+    ciaasdr = ~((keycode << 1) | (keycode >> 7));
+}
+
 void CIA_hsync_handler (void)
 {
     if (ciabtodon) {
@@ -343,7 +331,7 @@ void CIA_hsync_handler (void)
       ciab_checkalarm (1);
     }
 	  
-    if (keys_available() && kback && (ciaacra & 0x40) == 0 && (hsync_counter & 15) == 0) {
+    if ((keys_available() || kbstate < 2) && kback && (ciaacra & 0x40) == 0 && (hsync_counter & 15) == 0) {
 	    /*
 	     * This hack lets one possible ciaaicr cycle go by without any key
 	     * being read, for every cycle in which a key is pulled out of the
@@ -361,12 +349,12 @@ void CIA_hsync_handler (void)
 	    } else if (ciaasdr_unread == 0) {
 	        switch (kbstate) {
 	         case 0:
-		    ciaasdr = (uae_s8)~0xFB; /* aaarghh... stupid compiler */
+		    setcode (AK_INIT_POWERUP);
 		    kbstate++;
 		    break;
 	         case 1:
+		    setcode (AK_TERM_POWERUP);
 		    kbstate++;
-		    ciaasdr = (uae_s8)~0xFD;
 		    break;
 	         case 2:
 		    ciaasdr = ~get_next_key();
@@ -508,7 +496,9 @@ static uae_u8 ReadCIAA (unsigned int addr)
 	    return (uae_u8)(ciaatod >> 8);
     case 10:
 	if (!ciaatlatch) { /* only if not already latched. A1200 confirmed. (TW) */
-	  ciaatlatch = 1;
+    /* no latching if ALARM is set */
+    if (!(ciaacrb & 0x80))
+  	  ciaatlatch = 1;
   	ciaatol = ciaatod;
 	}
 	return (uae_u8)(ciaatol >> 16);
@@ -582,7 +572,9 @@ static uae_u8 ReadCIAB (unsigned int addr)
 	    return (uae_u8)(ciabtod >> 8);
     case 10:
 	if (!ciabtlatch) {
-	  ciabtlatch = 1;
+    /* no latching if ALARM is set */
+    if (!(ciabcrb & 0x80))
+  	  ciabtlatch = 1;
 	  ciabtol = ciabtod;
 	}
 	return (uae_u8)(ciabtol >> 16);
@@ -861,6 +853,8 @@ void CIA_reset (void)
 static uae_u32 REGPARAM3 cia_lget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 cia_wget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 cia_bget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 cia_lgeti (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 cia_wgeti (uaecptr) REGPARAM;
 static void REGPARAM3 cia_lput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 cia_wput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 cia_bput (uaecptr, uae_u32) REGPARAM;
@@ -868,7 +862,8 @@ static void REGPARAM3 cia_bput (uaecptr, uae_u32) REGPARAM;
 addrbank cia_bank = {
     cia_lget, cia_wget, cia_bget,
     cia_lput, cia_wput, cia_bput,
-    default_xlate, default_check, NULL, "CIA"
+    default_xlate, default_check, NULL, "CIA",
+    cia_lgeti, cia_wgeti, ABFLAG_IO
 };
 
 /* e-clock is 10 CPU cycles, 6 cycles low, 4 high
@@ -897,7 +892,7 @@ static void cia_wait_post (void)
     do_cycles (2 * CYCLE_UNIT / 2);
 }
 
-uae_u32 REGPARAM2 cia_bget (uaecptr addr)
+static uae_u32 REGPARAM2 cia_bget (uaecptr addr)
 {
    int r = (addr & 0xf00) >> 8;
    uae_u8 v;
@@ -907,8 +902,7 @@ uae_u32 REGPARAM2 cia_bget (uaecptr addr)
 #endif
    cia_wait_pre ();
    v = 0xff;
-   switch ((addr >> 12) & 3)
-   {
+   switch ((addr >> 12) & 3) {
       case 0:
 	v = (addr & 1) ? ReadCIAA (r) : ReadCIAB (r);
 	break;
@@ -919,7 +913,7 @@ uae_u32 REGPARAM2 cia_bget (uaecptr addr)
 	v = (addr & 1) ? ReadCIAA (r) : 0xff;
 	break;
     	case 3:
-	if (currprefs.cpu_level == 0 && currprefs.cpu_compatible)
+	if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible)
 	    v = (addr & 1) ? regs.irc : regs.irc >> 8;
 	break;
    }
@@ -927,7 +921,7 @@ uae_u32 REGPARAM2 cia_bget (uaecptr addr)
    return v;
 }
 
-uae_u32 REGPARAM2 cia_wget (uaecptr addr)
+static uae_u32 REGPARAM2 cia_wget (uaecptr addr)
 {
    int r = (addr & 0xf00) >> 8;
    uae_u16 v;
@@ -949,7 +943,7 @@ uae_u32 REGPARAM2 cia_wget (uaecptr addr)
 	v = (0xff << 8) | ReadCIAA (r);
 	break;
     	case 3:
-	if (currprefs.cpu_level == 0 && currprefs.cpu_compatible)
+	if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible)
 	    v = regs.irc;
 	break;
    }
@@ -957,7 +951,7 @@ uae_u32 REGPARAM2 cia_wget (uaecptr addr)
    return v;
 }
 
-uae_u32 REGPARAM2 cia_lget (uaecptr addr)
+static uae_u32 REGPARAM2 cia_lget (uaecptr addr)
 {
     uae_u32 v;
 #ifdef JIT
@@ -968,7 +962,20 @@ uae_u32 REGPARAM2 cia_lget (uaecptr addr)
     return v;
 }
 
-void REGPARAM2 cia_bput (uaecptr addr, uae_u32 value)
+static uae_u32 REGPARAM2 cia_wgeti (uaecptr addr)
+{
+    if (currprefs.cpu_model >= 68020)
+	return dummy_wgeti(addr);
+    return cia_wget(addr);
+}
+static uae_u32 REGPARAM2 cia_lgeti (uaecptr addr)
+{
+    if (currprefs.cpu_model >= 68020)
+	return dummy_lgeti(addr);
+    return cia_lget(addr);
+}
+
+static void REGPARAM2 cia_bput (uaecptr addr, uae_u32 value)
 {
     value&=0xFF;
     int r = (addr & 0xf00) >> 8;
@@ -984,7 +991,7 @@ void REGPARAM2 cia_bput (uaecptr addr, uae_u32 value)
     cia_wait_post ();
 }
 
-void REGPARAM2 cia_wput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 cia_wput (uaecptr addr, uae_u32 value)
 {
     value&=0xFFFF;
     int r = (addr & 0xf00) >> 8;
@@ -1000,7 +1007,7 @@ void REGPARAM2 cia_wput (uaecptr addr, uae_u32 value)
     cia_wait_post ();
 }
 
-void REGPARAM2 cia_lput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 cia_lput (uaecptr addr, uae_u32 value)
 {
 #ifdef JIT
     special_mem |= S_WRITE;
@@ -1021,71 +1028,97 @@ static void REGPARAM3 clock_bput (uaecptr, uae_u32) REGPARAM;
 addrbank clock_bank = {
     clock_lget, clock_wget, clock_bget,
     clock_lput, clock_wput, clock_bput,
-    default_xlate, default_check, NULL, "Battery backed up clock"
+    default_xlate, default_check, NULL, "Battery backed up clock (none)",
+    dummy_lgeti, dummy_wgeti, ABFLAG_IO
 };
 
-uae_u32 REGPARAM2 clock_lget (uaecptr addr)
+static unsigned int clock_control_d;
+static unsigned int clock_control_e;
+static unsigned int clock_control_f;
+
+void rtc_hardreset(void)
+{
+	clock_bank.name = "Battery backed up clock (MSM6242B)";
+  clock_control_d = 0x1;
+  clock_control_e = 0;
+  clock_control_f = 0x4; /* 24/12 */
+}
+
+static uae_u32 REGPARAM2 clock_lget (uaecptr addr)
 {
     return (clock_wget (addr) << 16) | clock_wget (addr + 2);
 }
 
-uae_u32 REGPARAM2 clock_wget (uaecptr addr)
+static uae_u32 REGPARAM2 clock_wget (uaecptr addr)
 {
     return (clock_bget (addr) << 8) | clock_bget (addr + 1);
 }
 
-uae_u32 REGPARAM2 clock_bget (uaecptr addr)
+static uae_u32 REGPARAM2 clock_bget (uaecptr addr)
 {
-   time_t t = time(0);
-   struct tm *ct;
+  time_t t;
+  struct tm *ct;
 
-   ct = localtime (&t);
 #ifdef JIT
-    special_mem |= S_READ;
+  special_mem |= S_READ;
 #endif
-   switch (addr & 0x3f) {
-      case 0x03: return ct->tm_sec % 10;
-      case 0x07: return ct->tm_sec / 10;
-      case 0x0b: return ct->tm_min % 10;
-      case 0x0f: return ct->tm_min / 10;
-      case 0x13: return ct->tm_hour % 10;
-      case 0x17: return ct->tm_hour / 10;
-      case 0x1b: return ct->tm_mday % 10;
-      case 0x1f: return ct->tm_mday / 10;
-      case 0x23: return (ct->tm_mon+1) % 10;
-      case 0x27: return (ct->tm_mon+1) / 10;
-      case 0x2b: return ct->tm_year % 10;
-      case 0x2f: return ct->tm_year / 10;
-
-      case 0x33: return ct->tm_wday;  /*Hack by -=SR=- */
-      case 0x37: return clock_control_d;
-      case 0x3b: return clock_control_e;
-      case 0x3f: return clock_control_f;
+  addr &= 0x3f;
+  if ((addr & 3) == 2 || (addr & 3) == 0) {
+   	int v = 0;
+	  if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible)
+	    v = regs.irc >> 8;
+	  return v;
+  }
+  t = time(0);
+  ct = localtime (&t);
+  addr >>= 2;
+  switch (addr) {
+	    case 0x0: return ct->tm_sec % 10;
+	    case 0x1: return ct->tm_sec / 10;
+	    case 0x2: return ct->tm_min % 10;
+	    case 0x3: return ct->tm_min / 10;
+	    case 0x4: return ct->tm_hour % 10;
+	    case 0x5: return ct->tm_hour / 10;
+	    case 0x6: return ct->tm_mday % 10;
+	    case 0x7: return ct->tm_mday / 10;
+	    case 0x8: return (ct->tm_mon + 1) % 10;
+	    case 0x9: return (ct->tm_mon + 1) / 10;
+	    case 0xA: return ct->tm_year % 10;
+	    case 0xB: return ct->tm_year / 10;
+	    case 0xC: return ct->tm_wday;
+	    case 0xD: return clock_control_d;
+	    case 0xE: return clock_control_e;
+	    case 0xF: return clock_control_f;
    }
    return 0;
 }
 
-void REGPARAM2 clock_lput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 clock_lput (uaecptr addr, uae_u32 value)
 {
     clock_wput (addr, value >> 16);
     clock_wput (addr + 2, value);
 }
 
-void REGPARAM2 clock_wput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 clock_wput (uaecptr addr, uae_u32 value)
 {
     clock_bput (addr, value >> 8);
     clock_bput (addr + 1, value);
 }
 
-void REGPARAM2 clock_bput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 clock_bput (uaecptr addr, uae_u32 value)
 {
 #ifdef JIT
     special_mem |= S_WRITE;
 #endif
-    switch (addr & 0x3f) {
-    case 0x37: clock_control_d = value; break;
-    case 0x3b: clock_control_e = value; break;
-    case 0x3f: clock_control_f = value; break;
+    addr &= 0x3f;
+    if ((addr & 1) != 1)
+    	return;
+    addr >>= 2;
+    value &= 0x0f;
+    switch (addr) {
+	    case 0xD: clock_control_d = value & (1|8); break;
+	    case 0xE: clock_control_e = value; break;
+	    case 0xF: clock_control_f = value; break;
     }
 }
 
@@ -1179,7 +1212,7 @@ uae_u8 *save_cia (int num, int *len, uae_u8 *dstptr)
     save_u8 (b);
     t = (num ? ciabta - ciabta_passed : ciaata - ciaata_passed);/* 4 TA */
     save_u16 (t);
-    t = (num ? ciabtb - ciabtb_passed : ciaatb - ciaatb_passed);/* 8 TB */
+    t = (num ? ciabtb - ciabtb_passed : ciaatb - ciaatb_passed);/* 6 TB */
     save_u16 (t);
     b = (num ? ciabtod : ciaatod);			/* 8 TODL */
     save_u8 (b);

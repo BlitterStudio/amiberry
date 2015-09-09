@@ -28,7 +28,7 @@ extern uae_u32 preva, prevb;
 
 extern void maybe_blit (int);
 extern int blitnasty (void);
-extern void blitter_handler (void);
+extern void blitter_handler (uae_u32);
 extern void build_blitfilltable (void);
 extern void do_blitter (void);
 extern void blitter_done_notify (void);

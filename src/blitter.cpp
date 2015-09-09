@@ -188,7 +188,7 @@ static __inline__ void blitter_done (void)
 	bltstate = BLT_done;
 	blitter_done_notify ();
 	INTREQ(0x8040);
-	eventtab[ev_blitter].active = 0;
+  event2_remevent(ev2_blitter);
 	unset_special (&regs, SPCFLAG_BLTNASTY);
 #ifdef BLITTER_DEBUG
     write_log ("vpos=%d, cycles %d\n", vpos, blit_cyclecounter);
@@ -505,14 +505,12 @@ static __inline__ void blitter_doit(void)
   blitter_done();
 }
 
-void blitter_handler(void)
+void blitter_handler(uae_u32 data)
 {
 	static int blitter_stuck;
 
 	if (!dmaen (DMA_BLITTER)) {
-	eventtab[ev_blitter].active = 1;
-	eventtab[ev_blitter].oldcycles = get_cycles ();
-	eventtab[ev_blitter].evtime = 10 * CYCLE_UNIT + get_cycles (); /* wait a little */
+	  event2_newevent (ev2_blitter, 10);
 		blitter_stuck++;
 		if (blitter_stuck < 20000 || !currprefs.immediate_blits)
 			return; /* gotta come back later. */
@@ -530,9 +528,7 @@ void blitter_handler(void)
 
 // blitter_slowdown doesn't work at the moment
 //	if (blit_slowdown > 0 && !currprefs.immediate_blits) {
-//	eventtab[ev_blitter].active = 1;
-//	eventtab[ev_blitter].oldcycles = get_cycles ();
-//	eventtab[ev_blitter].evtime = blit_slowdown * CYCLE_UNIT + get_cycles (); /* wait a little */
+//	  event2_newevent (ev2_blitter, blit_slowdown);
 //		blit_slowdown = -1;
 //		return;
 //	}
@@ -652,7 +648,7 @@ void do_blitter(void)
       blit_cycles_per_vsize = blit_cycles_per_op * blt_info.hblitsize;
       blit_init_cycles = 2;   // HRM says nothing about how much cycles required for blitter initialisation
       // Used from code below so that maybe_blit behaves same as in normal mode
-      blit_firstline_cycles = blit_first_cycle + (blit_diag[0] * blt_info.hblitsize) * CYCLE_UNIT;
+      blit_firstline_cycles = blit_first_cycle + (blit_diag[0] * blt_info.hblitsize + cpu_cycles) * CYCLE_UNIT;
     }
     blit_total_required_cycles = blit_cycles_per_vsize * blt_info.vblitsize;
     blit_cyclecounter = blit_init_cycles + blit_total_required_cycles;
@@ -665,7 +661,7 @@ void do_blitter(void)
   		cycles = blt_info.vblitsize;
   	} else {
   		cycles = blt_info.vblitsize * blt_info.hblitsize;
-  		blit_firstline_cycles = blit_first_cycle + (blit_diag[0] * blt_info.hblitsize) * CYCLE_UNIT;
+  		blit_firstline_cycles = blit_first_cycle + (blit_diag[0] * blt_info.hblitsize + cpu_cycles) * CYCLE_UNIT;
   	}
 	  blit_cyclecounter = cycles * (blit_dmacount2 + (blit_nod ? 0 : 1)); 
   }
@@ -700,10 +696,7 @@ void do_blitter(void)
     blit_cycle_current = blit_cycle_at_start;
   }
 
-  eventtab[ev_blitter].active = 1;
-  eventtab[ev_blitter].oldcycles = get_cycles ();
-  eventtab[ev_blitter].evtime = blit_cyclecounter * CYCLE_UNIT + get_cycles ();
-  events_schedule();
+  event2_newevent(ev2_blitter, blit_cyclecounter);
 }
 
 void blitter_dma_disabled(void)
@@ -717,8 +710,7 @@ void blitter_dma_disabled(void)
     // We still have something to do...
     bltstate = BLT_waitDMA;
     blit_cycle_entered_wait = get_cycles();
-    eventtab[ev_blitter].active = 0;
-    events_schedule();
+    event2_remevent(ev2_blitter);
   }
 }
 
@@ -731,9 +723,8 @@ void blitter_dma_enabled(void)
   // Add cycles we waited to current cycles...
   unsigned long cycles_waited = get_cycles() - blit_cycle_entered_wait;
   blit_cycle_current += cycles_waited;
-  eventtab[ev_blitter].active = 1;
-  eventtab[ev_blitter].evtime += cycles_waited;
-  events_schedule();
+  event2_remevent(ev2_blitter);  
+  event2_newevent(ev2_blitter, cycles_waited);  
   blit_cycle_entered_wait = 0;
 }
 
@@ -806,10 +797,7 @@ void blitter_check_start (void)
     blit_cycle_current = blit_cycle_at_start;
   }
 
-  eventtab[ev_blitter].active = 1;
-  eventtab[ev_blitter].oldcycles = get_cycles ();
-  eventtab[ev_blitter].evtime = blit_cyclecounter * CYCLE_UNIT + get_cycles ();
-  events_schedule();
+  event2_newevent(ev2_blitter, blit_cyclecounter);
 }
 
 void maybe_blit (int hack)
@@ -822,7 +810,7 @@ void maybe_blit (int hack)
     if (hack && get_cycles() < blit_firstline_cycles)
 	return;
 
-    blitter_handler ();
+    blitter_handler (0);
 }
 
 int blitnasty (void)

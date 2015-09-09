@@ -120,6 +120,9 @@ extern struct regstruct
     uae_u8 *pc_p;
     uae_u8 *pc_oldp;
 
+    uae_u16 irc, ir;
+    uae_u32 spcflags;
+
     uaecptr usp, isp, msp;
     uae_u16 sr;
     flagtype t1;
@@ -139,12 +142,21 @@ extern struct regstruct
     uae_u32 fpcr,fpsr, fpiar;
     uae_u32 fpsr_highbyte;
 #endif
+#ifndef CPUEMU_68000_ONLY
+    uae_u32 cacr, caar;
+    uae_u32 itt0, itt1, dtt0, dtt1;
+    uae_u32 tcr, mmusr, urp, srp, buscr;
 
-    uae_u32 spcflags;
-    uae_u32 kick_mask;
+    uae_u32 mmu_fslw, mmu_fault_addr;
+    uae_u16 mmu_ssw;
+    uae_u32 wb3_data;
+    uae_u16 wb3_status;
+    int mmu_enabled;
+    int mmu_pagesize_8k;
+#endif
+
+    uae_u32 pcr;
     uae_u32 address_space_mask;
-
-    uae_u16 irc, ir;
 
     uae_u8 panic;
     uae_u32 panic_pc, panic_addr;
@@ -176,6 +188,7 @@ STATIC_INLINE uae_u32 munge24(uae_u32 x)
 extern unsigned long irqcycles[15];
 extern int irqdelay[15];
 extern int mmu_enabled, mmu_triggered;
+extern int cpu_cycles;
 
 STATIC_INLINE void set_special (struct regstruct *regs, uae_u32 x)
 {
@@ -199,20 +212,67 @@ STATIC_INLINE void m68k_setpc (struct regstruct *regs, uaecptr newpc)
 
 STATIC_INLINE uaecptr m68k_getpc (struct regstruct *regs)
 {
-    return regs->pc + ((char *)regs->pc_p - (char *)regs->pc_oldp);
+    return (uaecptr)(regs->pc + ((char *)regs->pc_p - (char *)regs->pc_oldp));
 }
 #define M68K_GETPC m68k_getpc(&regs)
 
 STATIC_INLINE uaecptr m68k_getpc_p (struct regstruct *regs, uae_u8 *p)
 {
-    return regs->pc + ((char *)p - (char *)regs->pc_oldp);
+    return (uaecptr)(regs->pc + ((char *)p - (char *)regs->pc_oldp));
+}
+
+#define m68k_incpc(regs, o) ((regs)->pc_p += (o))
+
+STATIC_INLINE void m68k_setpci(struct regstruct *regs, uaecptr newpc)
+{
+    regs->pc = newpc;
+}
+STATIC_INLINE uaecptr m68k_getpci(struct regstruct *regs)
+{
+    return regs->pc;
+}
+STATIC_INLINE void m68k_incpci(struct regstruct *regs, int o)
+{
+    regs->pc += o;
+}
+
+STATIC_INLINE void m68k_do_rts(struct regstruct *regs)
+{
+    m68k_setpc(regs, get_long(m68k_areg(regs, 7)));
+    m68k_areg(regs, 7) += 4;
+}
+STATIC_INLINE void m68k_do_rtsi(struct regstruct *regs)
+{
+    m68k_setpci(regs, get_long(m68k_areg(regs, 7)));
+    m68k_areg(regs, 7) += 4;
+}
+
+STATIC_INLINE void m68k_do_bsr(struct regstruct *regs, uaecptr oldpc, uae_s32 offset)
+{
+    m68k_areg(regs, 7) -= 4;
+    put_long(m68k_areg(regs, 7), oldpc);
+    m68k_incpc(regs, offset);
+}
+STATIC_INLINE void m68k_do_bsri(struct regstruct *regs, uaecptr oldpc, uae_s32 offset)
+{
+    m68k_areg(regs, 7) -= 4;
+    put_long(m68k_areg(regs, 7), oldpc);
+    m68k_incpci(regs, offset);
+}
+
+STATIC_INLINE void m68k_do_jsr(struct regstruct *regs, uaecptr oldpc, uaecptr dest)
+{
+    m68k_areg(regs, 7) -= 4;
+    put_long(m68k_areg(regs, 7), oldpc);
+    m68k_setpc(regs, dest);
 }
 
 #define get_ibyte(regs, o) do_get_mem_byte((uae_u8 *)((regs)->pc_p + (o) + 1))
 #define get_iword(regs, o) do_get_mem_word((uae_u16 *)((regs)->pc_p + (o)))
 #define get_ilong(regs, o) do_get_mem_long((uae_u32 *)((regs)->pc_p + (o)))
 
-#define m68k_incpc(regs, o) ((regs)->pc_p += (o))
+#define get_iwordi(o) get_wordi(o)
+#define get_ilongi(o) get_longi(o)
 
 /* These are only used by the 68020/68881 code, and therefore don't
  * need to handle prefetch.  */
@@ -229,6 +289,12 @@ STATIC_INLINE uae_u32 next_iword (struct regstruct *regs)
     m68k_incpc (regs, 2);
     return r;
 }
+STATIC_INLINE uae_u32 next_iwordi (struct regstruct *regs)
+{
+    uae_u32 r = get_iwordi (m68k_getpci(regs));
+    m68k_incpc (regs, 2);
+    return r;
+}
 
 STATIC_INLINE uae_u32 next_ilong (struct regstruct *regs)
 {
@@ -236,25 +302,11 @@ STATIC_INLINE uae_u32 next_ilong (struct regstruct *regs)
     m68k_incpc (regs, 4);
     return r;
 }
-
-STATIC_INLINE void m68k_do_rts(struct regstruct *regs)
+STATIC_INLINE uae_u32 next_ilongi (struct regstruct *regs)
 {
-    m68k_setpc(regs, get_long(m68k_areg(regs, 7)));
-    m68k_areg(regs, 7) += 4;
-}
-
-STATIC_INLINE void m68k_do_bsr(struct regstruct *regs, uaecptr oldpc, uae_s32 offset)
-{
-    m68k_areg(regs, 7) -= 4;
-    put_long(m68k_areg(regs, 7), oldpc);
-    m68k_incpc(regs, offset);
-}
-
-STATIC_INLINE void m68k_do_jsr(struct regstruct *regs, uaecptr oldpc, uaecptr dest)
-{
-    m68k_areg(regs, 7) -= 4;
-    put_long(m68k_areg(regs, 7), oldpc);
-    m68k_setpc(regs, dest);
+    uae_u32 r = get_ilongi (m68k_getpci(regs));
+    m68k_incpc (regs, 4);
+    return r;
 }
 
 STATIC_INLINE void m68k_setstopped (struct regstruct *regs, int stop)
@@ -267,12 +319,15 @@ STATIC_INLINE void m68k_setstopped (struct regstruct *regs, int stop)
 }
 
 extern uae_u32 REGPARAM3 get_disp_ea_020 (struct regstruct *regs, uae_u32 base, uae_u32 dp) REGPARAM;
+extern uae_u32 REGPARAM3 get_disp_ea_020i (struct regstruct *regs, uae_u32 base, uae_u32 dp) REGPARAM;
 extern uae_u32 REGPARAM3 get_disp_ea_000 (struct regstruct *regs, uae_u32 base, uae_u32 dp) REGPARAM;
+extern int get_cpu_model(void);
 
 extern void REGPARAM3 MakeSR (struct regstruct *regs) REGPARAM;
 extern void REGPARAM3 MakeFromSR (struct regstruct *regs) REGPARAM;
 extern void REGPARAM3 Exception (int, struct regstruct *regs, uaecptr) REGPARAM;
-extern void Interrupt (int nr);
+extern void NMI (void);
+extern void doint (void);
 extern int m68k_move2c (int, uae_u32 *);
 extern int m68k_movec2 (int, uae_u32 *);
 extern void m68k_divl (uae_u32, uae_u32, uae_u16, uaecptr);
@@ -280,19 +335,20 @@ extern void m68k_mull (uae_u32, uae_u32, uae_u16);
 extern void init_m68k (void);
 extern void init_m68k_full (void);
 extern void m68k_go (int);
-extern void m68k_reset (void);
+extern void m68k_reset (int);
 extern int getDivu68kCycles(uae_u32 dividend, uae_u16 divisor);
 extern int getDivs68kCycles(uae_s32 dividend, uae_s16 divisor);
 
-extern void mmu_op       (uae_u32, struct regstruct *regs, uae_u16);
+extern void mmu_op       (uae_u32, struct regstruct *regs, uae_u32);
+extern void mmu_op30     (uaecptr, uae_u32, struct regstruct *regs, int, uaecptr);
 
-extern void fpp_opp      (uae_u32, struct regstruct *regs, uae_u16);
-extern void fdbcc_opp    (uae_u32, struct regstruct *regs, uae_u16);
-extern void fscc_opp     (uae_u32, struct regstruct *regs, uae_u16);
-extern void ftrapcc_opp  (uae_u32, struct regstruct *regs, uaecptr);
-extern void fbcc_opp     (uae_u32, struct regstruct *regs, uaecptr, uae_u32);
-extern void fsave_opp    (uae_u32, struct regstruct *regs);
-extern void frestore_opp (uae_u32, struct regstruct *regs);
+extern void fpuop_arithmetic(uae_u32, struct regstruct *regs, uae_u16);
+extern void fpuop_dbcc(uae_u32, struct regstruct *regs, uae_u16);
+extern void fpuop_scc(uae_u32, struct regstruct *regs, uae_u16);
+extern void fpuop_trapcc(uae_u32, struct regstruct *regs, uaecptr);
+extern void fpuop_bcc(uae_u32, struct regstruct *regs, uaecptr, uae_u32);
+extern void fpuop_save(uae_u32, struct regstruct *regs);
+extern void fpuop_restore(uae_u32, struct regstruct *regs);
 extern uae_u32 fpp_get_fpsr (const struct regstruct *regs);
 
 extern void exception3 (uae_u32 opcode, uaecptr addr, uaecptr fault);
@@ -304,20 +360,22 @@ extern void fill_prefetch_slow (struct regstruct *regs);
 
 #define CPU_OP_NAME(a) op ## a
 
-/* 68040 */
+/* 68060 */
 extern const struct cputbl op_smalltbl_0_ff[];
-/* 68020 + 68881 */
+/* 68040 */
 extern const struct cputbl op_smalltbl_1_ff[];
-/* 68020 */
+/* 68030 */
 extern const struct cputbl op_smalltbl_2_ff[];
-/* 68010 */
+/* 68020 */
 extern const struct cputbl op_smalltbl_3_ff[];
-/* 68000 */
+/* 68010 */
 extern const struct cputbl op_smalltbl_4_ff[];
-/* 68000 slow but compatible.  */
+/* 68000 */
 extern const struct cputbl op_smalltbl_5_ff[];
+/* 68000 slow but compatible.  */
+extern const struct cputbl op_smalltbl_11_ff[];
 /* 68000 slow but compatible and cycle-exact.  */
-extern const struct cputbl op_smalltbl_6_ff[];
+extern const struct cputbl op_smalltbl_12_ff[];
 
 extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC ("cpufunctbl");
 
@@ -338,7 +396,15 @@ void newcpu_showstate(void);
 #ifdef JIT
 extern void (*flush_icache)(int n);
 extern void compemu_reset(void);
-extern void check_prefs_changed_comp (void);
+extern int check_prefs_changed_comp (void);
 #else
 #define flush_icache(X) do {} while (0)
 #endif
+
+extern int movec_illg (int regno);
+extern uae_u32 val_move2c (int regno);
+struct cpum2c {
+    int regno;
+    char *regname;
+};
+extern struct cpum2c m2cregs[];

@@ -56,8 +56,17 @@ struct gui_msg {
   const char *msg;
 };
 struct gui_msg gui_msglist[] = {
-  { NUMSG_KS68EC020, "Your Kickstart requires a 68EC020 or later CPU." },
-  { NUMSG_KS68020, "Your Kickstart requires a 68020 CPU or later CPU." },
+  { NUMSG_NOROM,          "Could not load system ROM, trying system ROM replacement." },
+  { NUMSG_NOROMKEY,       "Could not find system ROM key file." },
+  { NUMSG_KSROMCRCERROR,  "System ROM checksum incorrect. The system ROM image file may be corrupt." },
+  { NUMSG_KSROMREADERROR, "Error while reading system ROM." },
+  { NUMSG_NOEXTROM,       "No extended ROM found." },
+  { NUMSG_KS68EC020,      "The selected system ROM requires a 68EC020 or later CPU." },
+  { NUMSG_KS68020,        "The selected system ROM requires a 68020 or later CPU." },
+  { NUMSG_KS68030,        "The selected system ROM requires a 68030 CPU." },
+  { NUMSG_STATEHD,        "WARNING: Current configuration is not fully compatible with state saves." },
+  { NUMSG_KICKREP,        "You need to have a floppy disk (image file) in DF0: to use the system ROM replacement." },
+  { NUMSG_KICKREPNO,      "The floppy disk (image file) in DF0: is not compatible with the system ROM replacement functionality." },
   { -1, "" }
 };
 
@@ -125,7 +134,7 @@ static struct romdata *scan_single_rom_2 (struct zfile *f, uae_u8 *keybuf, int k
   zfile_fseek (f, 0, SEEK_END);
   size = zfile_ftell (f);
   zfile_fseek (f, 0, SEEK_SET);
-  if (size > 1760 * 512) /* don't skip KICK disks */
+  if (size > 524288 * 2) /* don't skip KICK disks or 1M ROMs */
   	return 0;
   zfile_fread (buffer, 1, 11, f);
   if (!memcmp (buffer, "KICK", 4)) {
@@ -154,12 +163,36 @@ static struct romdata *scan_single_rom_2 (struct zfile *f, uae_u8 *keybuf, int k
   return rd;
 }
 
+static int isromext(char *path)
+{
+  char *ext = strrchr (path, '.');
+  int i;
+
+  if (!ext)
+  	return 0;
+  ext++;
+
+  if (!stricmp (ext, "rom") ||  !stricmp (ext, "adf") || !stricmp (ext, "key")
+	|| !stricmp (ext, "a500") || !stricmp (ext, "a1200") || !stricmp (ext, "a4000"))
+    return 1;
+  for (i = 0; uae_archive_extensions[i]; i++) {
+	  if (!stricmp (ext, uae_archive_extensions[i]))
+	    return 1;
+  }
+  return 0;
+}
+
 static int scan_rom_2 (struct zfile *f, void *rsd)
 {
-  struct romdata *rd = scan_single_rom_2(f, ((struct romscandata *)rsd)->keybuf, ((struct romscandata *)rsd)->keysize);
+  char *path = zfile_getname(f);
+  struct romdata *rd;
+
+  if (!isromext(path))
+	  return 0;
+  rd = scan_single_rom_2(f, ((struct romscandata *)rsd)->keybuf, ((struct romscandata *)rsd)->keysize);
   if (rd)
-    addrom (rd, zfile_getname(f));
-  return 1;
+    addrom (rd, path);
+  return 0;
 }
 
 static void scan_rom(char *path, uae_u8 *keybuf, int keysize)
@@ -167,6 +200,10 @@ static void scan_rom(char *path, uae_u8 *keybuf, int keysize)
   struct romdata *rd;
   struct romscandata rsd = { keybuf, keysize };
 
+    if (!isromext(path)) {
+	//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
+	return;
+    }
   rd = getarcadiarombyname(path);
   if (rd) 
     addrom(rd, path);
@@ -271,6 +308,22 @@ ConfigFileInfo* SearchConfigInList(const char *name)
 }
 
 
+static void prefs_to_gui()
+{
+  /* filesys hack */
+  changed_prefs.mountitems = currprefs.mountitems;
+  memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof (struct uaedev_config_info));
+}
+
+
+static void gui_to_prefs (void)
+{
+  /* filesys hack */
+  currprefs.mountitems = changed_prefs.mountitems;
+  memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof (struct uaedev_config_info));
+}
+
+
 int gui_init (void)
 {
   int ret = 0;
@@ -286,7 +339,9 @@ int gui_init (void)
     RescanROMs();
 
   graphics_subshutdown();
+  prefs_to_gui();
   run_gui();
+  gui_to_prefs();
   if(quit_program < 0)
     quit_program = -quit_program;
   if(quit_program == 1)
@@ -378,7 +433,9 @@ static void goMenu(void)
   if(lstAvailableROMs.size() == 0)
     RescanROMs();
   graphics_subshutdown();
+  prefs_to_gui();
   run_gui();
+  gui_to_prefs();
 	setCpuSpeed();
   update_display(&changed_prefs);
 

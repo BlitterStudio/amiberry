@@ -32,7 +32,7 @@ static gcn::Slider* sldDriveSpeed;
 static gcn::UaeCheckBox* chkLoadConfig;
 static gcn::Button *cmdSaveForDisk;
 
-static const char *diskfile_filter[] = { ".adf", ".adz", ".zip", ".gz", "\0" };
+static const char *diskfile_filter[] = { ".adf", ".adz", ".zip", ".gz", ".dms", "\0" };
 static const char *drivespeedlist[] = { "100% (compatible)", "200%", "400%", "800%" };
 static const int drivespeedvalues[] = { 100, 200, 400, 800 };
 

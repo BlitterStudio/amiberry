@@ -33,6 +33,8 @@
 #define ERROR_DELETE_PROTECTED		222
 #define ERROR_WRITE_PROTECTED		223
 #define ERROR_READ_PROTECTED		224
+#define ERROR_NOT_A_DOS_DISK		225
+#define ERROR_NO_DISK			226
 #define ERROR_NO_MORE_ENTRIES		232
 #define ERROR_NOT_IMPLEMENTED		236
 
@@ -83,6 +85,8 @@ typedef struct a_inode_struct {
     unsigned int deleted:1;
     /* target volume flag */
     unsigned int volflags;
+    /* not equaling unit.mountcount -> not in this volume */
+    unsigned int mountcount;
 } a_inode;
 
 extern char *nname_begin (char *);
@@ -130,3 +134,10 @@ extern int my_truncate (const char *name, long int len);
 extern int dos_errno (void);
 extern int my_existsfile (const char *name);
 extern int my_existsdir (const char *name);
+
+#define MYVOLUMEINFO_READONLY 1
+#define MYVOLUMEINFO_STREAMS 2
+#define MYVOLUMEINFO_ARCHIVE 4
+#define MYVOLUMEINFO_REUSABLE 8
+
+extern int my_getvolumeinfo (const char *root);

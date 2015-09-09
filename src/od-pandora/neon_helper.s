@@ -13,7 +13,6 @@
 .global NEON_doline_n6
 .global NEON_doline_n8
 
-
 .text
 
 .align 8

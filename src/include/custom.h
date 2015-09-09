@@ -19,7 +19,7 @@
 uae_u32 get_copper_address(int copno);
 
 extern int custom_init (void);
-extern void customreset (void);
+extern void customreset (int hardreset);
 extern int intlev (void);
 extern void dumpcustom (void);
 
@@ -42,7 +42,7 @@ extern int bogusframe;
 extern unsigned long int hsync_counter;
 
 extern uae_u16 dmacon;
-extern uae_u16 intena,intreq;
+extern uae_u16 intena, intreq, intreqr;
 
 // extern int current_hpos (void);
 extern int vpos;
@@ -76,6 +76,7 @@ extern int joy0button, joy1button;
 
 extern void INTREQ (uae_u16);
 extern void INTREQ_0 (uae_u16);
+extern void INTREQ_f (uae_u32);
 extern uae_u16 INTREQR (void);
 
 /* maximums for statically allocated tables */
@@ -142,6 +143,8 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 #define GET_SPRITEWIDTH(FMODE) ((((FMODE) >> 2) & 3) == 3 ? 64 : (((FMODE) >> 2) & 3) == 0 ? 16 : 32)
 /* Compute the number of bitplanes from a value written to BPLCON0  */
 #define GET_PLANES(x) ((((x) >> 12) & 7) | (((x) & 0x10) >> 1))
+
+extern void alloc_cycle_ext(int, int);
 
 extern void fpscounter_reset (void);
 

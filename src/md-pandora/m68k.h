@@ -68,11 +68,11 @@ struct flag_struct {
 #define FLAGVAL_V	(1 << FLAGBIT_V)
 #define FLAGVAL_X	(1 << FLAGBIT_X)
 
-#define SET_ZFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_Z) | (((y) & 1) << FLAGBIT_Z))
-#define SET_CFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_C) | (((y) & 1) << FLAGBIT_C))
-#define SET_VFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_V) | (((y) & 1) << FLAGBIT_V))
-#define SET_NFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_N) | (((y) & 1) << FLAGBIT_N))
-#define SET_XFLG(flags, y)	((flags)->x    = (y) << FLAGBIT_X)
+#define SET_ZFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_Z) | (((y) ? 1 : 0) << FLAGBIT_Z))
+#define SET_CFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_C) | (((y) ? 1 : 0) << FLAGBIT_C))
+#define SET_VFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_V) | (((y) ? 1 : 0) << FLAGBIT_V))
+#define SET_NFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_N) | (((y) ? 1 : 0) << FLAGBIT_N))
+#define SET_XFLG(flags, y)	((flags)->x    = ((y) ? 1 : 0) << FLAGBIT_X)
 
 #define GET_ZFLG(flags)		(((flags)->cznv >> FLAGBIT_Z) & 1)
 #define GET_CFLG(flags)		(((flags)->cznv >> FLAGBIT_C) & 1)
@@ -132,12 +132,12 @@ struct flag_struct {
 #define FLAGVAL_Z       0x40000000
 #define FLAGVAL_N       0x80000000
 
-#define SET_NFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x80000000) | ((y) << 31))
-#define SET_ZFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x40000000) | (((y) & 1) << 30))
-#define SET_CFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x20000000) | (((y) & 1) << 29))
-#define SET_VFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x10000000) | (((y) & 1) << 28))
+#define SET_NFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x80000000) | (((y) ? 1 : 0) << 31))
+#define SET_ZFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x40000000) | (((y) ? 1 : 0) << 30))
+#define SET_CFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x20000000) | (((y) ? 1 : 0) << 29))
+#define SET_VFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x10000000) | (((y) ? 1 : 0) << 28))
 
-#define SET_XFLG(flags, y)	((flags)->x = (y))
+#define SET_XFLG(flags, y)	((flags)->x = ((y) ? 1 : 0))
 
 #define GET_NFLG(flags) (((flags)->nzcv >> 31) & 1)
 #define GET_ZFLG(flags)	(((flags)->nzcv >> 30) & 1)

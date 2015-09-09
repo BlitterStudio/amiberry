@@ -17,11 +17,7 @@ extern void org (uae_u32);
 extern uae_u32 here (void);
 
 #define deftrap(f) define_trap((f), 0, "")
-#ifdef TRACE_TRAPS
 # define deftrap2(f, mode, str) define_trap((f), (mode), (str))
-#else
-# define deftrap2(f, mode, str) define_trap((f), (mode), "")
-#endif
 
 extern void align (int);
 
@@ -41,33 +37,39 @@ extern uaecptr ROM_hardfile_resname, ROM_hardfile_resid;
 extern uaecptr ROM_hardfile_init;
 extern uaecptr filesys_initcode;
 
-extern int nr_units (struct uaedev_mount_info *mountinfo);
-extern int is_hardfile (struct uaedev_mount_info *mountinfo, int unit_no);
-extern char *set_filesys_unit (struct uaedev_mount_info *mountinfo, int,
-			       char *devname, char *volname, char *rootdir, int readonly,
-			       int secs, int surfaces, int reserved,
-			       int blocksize, int bootpri, char *filesysdir, int flags);
-extern char *add_filesys_unit (struct uaedev_mount_info *mountinfo,
-			       char *devname, char *volname, char *rootdir, int readonly,
-			       int secs, int surfaces, int reserved,
-			       int blocksize, int bootpri, char *filesysdir, int flags);
-extern char *get_filesys_unit (struct uaedev_mount_info *mountinfo, int nr,
-			       char **devname, char **volname, char **rootdir, int *readonly,
-			       int *secspertrack, int *surfaces, int *reserved,
-			       int *cylinders, uae_u64 *size, int *blocksize, int *bootpri, char **filesysdir, int *flags);
-extern int kill_filesys_unit (struct uaedev_mount_info *mountinfo, int);
-extern int move_filesys_unit (struct uaedev_mount_info *mountinfo, int nr, int to);
-extern int sprintf_filesys_unit (struct uaedev_mount_info *mountinfo, char *buffer, int num);
-extern void write_filesys_config (struct uae_prefs *p, struct uaedev_mount_info *mountinfo, const char *unexpanded,
-				  const char *defaultpath, struct zfile *f);
+extern int is_hardfile (int unit_no);
+extern int nr_units (void);
+extern uaecptr need_uae_boot_rom (void);
 
-extern void free_mountinfo (struct uaedev_mount_info *);
+struct mountedinfo
+{
+    uae_u64 size;
+    int ismounted;
+    int ismedia;
+    int nrcyls;
+};
+
+extern int get_filesys_unitconfig (struct uae_prefs *p, int index, struct mountedinfo*);
+extern int kill_filesys_unitconfig (struct uae_prefs *p, int nr);
+extern int move_filesys_unitconfig (struct uae_prefs *p, int nr, int to);
+
+int filesys_insert(int nr, char *volume, const char *rootdir, int readonly, int flags);
+int filesys_eject(int nr);
+int filesys_media_change (const char *rootdir, int inserted, struct uaedev_config_info *uci);
+
+extern char *filesys_createvolname (const char *volname, const char *rootdir, const char *def);
+extern int target_get_volume_name(struct uaedev_mount_info *mtinf, const char *volumepath, char *volumename, int size, int inserted, int fullcheck);
+
+extern int sprintf_filesys_unit (char *buffer, int num);
 
 extern void filesys_reset (void);
 extern void filesys_cleanup (void);
 extern void filesys_prepare_reset (void);
 extern void filesys_start_threads (void);
 extern void filesys_flush_cache (void);
+extern void filesys_free_handles (void);
+extern void filesys_vsync (void);
+extern void free_mountinfo (void);
 
 extern void filesys_install (void);
 extern void filesys_install_code (void);
@@ -83,5 +85,3 @@ extern void expansion_clear (void);
 #define TRAPFLAG_NO_RETVAL 2
 #define TRAPFLAG_EXTRA_STACK 4
 #define TRAPFLAG_DORET 8
-
-#define RTAREA_BASE 0xF00000

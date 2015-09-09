@@ -20,13 +20,14 @@
 #include "gui_handling.h"
 
 
-#define DIALOG_WIDTH 520
+#define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 242
 
 static const char *harddisk_filter[] = { ".hdf", "\0" };
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
+static bool fileSelected = false;
 
 static gcn::Window *wndEditFilesysHardfile;
 static gcn::Button* cmdOK;
@@ -60,7 +61,10 @@ class FilesysHardfileActionListener : public gcn::ActionListener
         strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
         wndEditFilesysHardfile->releaseModalFocus();
         if(SelectFile("Select harddisk file", tmp, harddisk_filter))
+        {
           txtPath->setText(tmp);
+          fileSelected = true;
+        }
         wndEditFilesysHardfile->requestModalFocus();
         cmdPath->requestFocus();
       }
@@ -68,7 +72,7 @@ class FilesysHardfileActionListener : public gcn::ActionListener
       {
         if (actionEvent.getSource() == cmdOK)
         {
-          if(txtDevice->getText().length() <= 0)
+          if(txtDevice->getText().length() <= 0 || !fileSelected)
           {
             // ToDo: Message to user
             return;
@@ -118,35 +122,35 @@ static void InitEditFilesysHardfile(void)
   chkReadWrite->setId("hdfRW");
 
   lblBootPri = new gcn::Label("Boot priority:");
-  lblBootPri->setSize(84, LABEL_HEIGHT);
+  lblBootPri->setSize(100, LABEL_HEIGHT);
   lblBootPri->setAlignment(gcn::Graphics::RIGHT);
   txtBootPri = new gcn::TextField();
   txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
   txtBootPri->setId("hdfBootPri");
 
   lblSurfaces = new gcn::Label("Surfaces:");
-  lblSurfaces->setSize(84, LABEL_HEIGHT);
+  lblSurfaces->setSize(100, LABEL_HEIGHT);
   lblSurfaces->setAlignment(gcn::Graphics::RIGHT);
   txtSurfaces = new gcn::TextField();
   txtSurfaces->setSize(40, TEXTFIELD_HEIGHT);
   txtSurfaces->setId("hdfSurface");
 
   lblReserved = new gcn::Label("Reserved:");
-  lblReserved->setSize(84, LABEL_HEIGHT);
+  lblReserved->setSize(100, LABEL_HEIGHT);
   lblReserved->setAlignment(gcn::Graphics::RIGHT);
   txtReserved = new gcn::TextField();
   txtReserved->setSize(40, TEXTFIELD_HEIGHT);
   txtReserved->setId("hdfReserved");
 
   lblSectors = new gcn::Label("Sectors:");
-  lblSectors->setSize(84, LABEL_HEIGHT);
+  lblSectors->setSize(100, LABEL_HEIGHT);
   lblSectors->setAlignment(gcn::Graphics::RIGHT);
   txtSectors = new gcn::TextField();
   txtSectors->setSize(40, TEXTFIELD_HEIGHT);
   txtSectors->setId("hdfSectors");
 
   lblBlocksize = new gcn::Label("Blocksize:");
-  lblBlocksize->setSize(84, LABEL_HEIGHT);
+  lblBlocksize->setSize(100, LABEL_HEIGHT);
   lblBlocksize->setAlignment(gcn::Graphics::RIGHT);
   txtBlocksize = new gcn::TextField();
   txtBlocksize->setSize(40, TEXTFIELD_HEIGHT);
@@ -156,7 +160,7 @@ static void InitEditFilesysHardfile(void)
   lblPath->setSize(100, LABEL_HEIGHT);
   lblPath->setAlignment(gcn::Graphics::RIGHT);
   txtPath = new gcn::TextField();
-  txtPath->setSize(338, TEXTFIELD_HEIGHT);
+  txtPath->setSize(438, TEXTFIELD_HEIGHT);
   txtPath->setEnabled(false);
   cmdPath = new gcn::Button("...");
   cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -288,11 +292,10 @@ static void EditFilesysHardfileLoop(void)
 
 bool EditFilesysHardfile(int unit_no)
 {
-  char *volname, *devname, *rootdir, *filesys;
-  int secspertrack, surfaces, cylinders, reserved, blocksize, readonly, bootpri;
-  uae_u64 size;
-  const char *failure;
-  
+  struct mountedinfo mi;
+  struct uaedev_config_info *uci = &changed_prefs.mountconfig[unit_no];
+  std::string strdevname, strroot;
+    
   dialogResult = false;
   dialogFinished = false;
 
@@ -302,28 +305,32 @@ bool EditFilesysHardfile(int unit_no)
   {
     char tmp[32];
 
-    failure = get_filesys_unit(currprefs.mountinfo, unit_no, 
-      &devname, &volname, &rootdir, &readonly, &secspertrack, &surfaces, &reserved, 
-      &cylinders, &size, &blocksize, &bootpri, &filesys, 0);
+    get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
+    strdevname.assign(uci->devname);
+    txtDevice->setText(strdevname);
+    strroot.assign(uci->rootdir);
+    txtPath->setText(strroot);
+    fileSelected = true;
 
-    txtDevice->setText(devname);
-    txtPath->setText(rootdir);
-    chkReadWrite->setSelected(!readonly);
-    snprintf(tmp, 32, "%d", bootpri);
+    chkReadWrite->setSelected(!uci->readonly);
+    snprintf(tmp, 32, "%d", uci->bootpri >= -127 ? uci->bootpri : -127);
     txtBootPri->setText(tmp);
-    snprintf(tmp, 32, "%d", surfaces);
+    snprintf(tmp, 32, "%d", uci->surfaces);
     txtSurfaces->setText(tmp);
-    snprintf(tmp, 32, "%d", reserved);
+    snprintf(tmp, 32, "%d", uci->reserved);
     txtReserved->setText(tmp);
-    snprintf(tmp, 32, "%d", secspertrack);
+    snprintf(tmp, 32, "%d", uci->sectors);
     txtSectors->setText(tmp);
-    snprintf(tmp, 32, "%d", blocksize);
+    snprintf(tmp, 32, "%d", uci->blocksize);
     txtBlocksize->setText(tmp);
   }
   else
   {
     txtDevice->setText("");
-    txtPath->setText(currentDir);
+    strroot.assign(currentDir);
+    txtPath->setText(strroot);
+    fileSelected = false;
+    
     chkReadWrite->setSelected(true);
     txtBootPri->setText("0");
     txtSurfaces->setText("1");
@@ -336,14 +343,17 @@ bool EditFilesysHardfile(int unit_no)
   if(dialogResult)
   {
     if(unit_no >= 0)
-      kill_filesys_unit(currprefs.mountinfo, unit_no);
+      kill_filesys_unitconfig(&changed_prefs, unit_no);
     else
       extractPath((char *) txtPath->getText().c_str(), currentDir);
-    failure = add_filesys_unit(currprefs.mountinfo, (char *) txtDevice->getText().c_str(), 
+
+    uci = add_filesys_config(&changed_prefs, -1, (char *) txtDevice->getText().c_str(), 
       0, (char *) txtPath->getText().c_str(), !chkReadWrite->isSelected(), 
       atoi(txtSectors->getText().c_str()), atoi(txtSurfaces->getText().c_str()), 
       atoi(txtReserved->getText().c_str()), atoi(txtBlocksize->getText().c_str()), 
-      atoi(txtBootPri->getText().c_str()), 0, 0);
+      atoi(txtBootPri->getText().c_str()), 0, 0, 0);
+    if (uci)
+    	hardfile_do_disk_change (uci->configoffset, 1);
   }
   return dialogResult;
 }

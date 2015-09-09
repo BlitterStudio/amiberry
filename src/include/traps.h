@@ -44,6 +44,7 @@ unsigned int define_trap (TrapHandler handler_func, int flags, const char *name)
  * Call a 68k Library function from an extended trap
  */
 extern uae_u32 CallLib (TrapContext *context, uaecptr library_base, uae_s16 func_offset);
+extern uae_u32 CallFunc (TrapContext *context, uaecptr func);
 
 /*
  * Initialization

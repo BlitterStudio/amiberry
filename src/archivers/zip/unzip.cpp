@@ -427,7 +427,6 @@ extern int ZEXPORT unzClose (unzFile file)
     if (s->pfile_in_zip_read!=NULL)
         unzCloseCurrentFile(file);
 
-	zfile_fclose(s->file);
 	TRYFREE(s);
 	return UNZ_OK;
 }

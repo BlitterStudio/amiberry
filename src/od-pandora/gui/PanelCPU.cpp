@@ -28,6 +28,7 @@ static gcn::Window *grpFPU;
 static gcn::UaeRadioButton* optFPUnone;
 static gcn::UaeRadioButton* optFPU68881;
 static gcn::UaeRadioButton* optFPU68882;
+static gcn::UaeRadioButton* optFPUinternal;
 static gcn::Window *grpCPUSpeed;
 static gcn::UaeRadioButton* opt7Mhz;
 static gcn::UaeRadioButton* opt14Mhz;
@@ -42,14 +43,16 @@ class CPUButtonActionListener : public gcn::ActionListener
     {
 	    if (actionEvent.getSource() == optCPU68000)
 	    {
-  		  changed_prefs.cpu_level = 0;
+  		  changed_prefs.cpu_model = 68000;
+  		  changed_prefs.fpu_model = 0;
   		  changed_prefs.address_space_24 = true;
   		  changed_prefs.z3fastmem_size = 0;
   		  changed_prefs.gfxmem_size = 0;
       }
       else if (actionEvent.getSource() == optCPU68010)
       {
-	      changed_prefs.cpu_level = 1;
+  		  changed_prefs.cpu_model = 68010;
+  		  changed_prefs.fpu_model = 0;
   		  changed_prefs.address_space_24 = true;
   		  changed_prefs.z3fastmem_size = 0;
   		  changed_prefs.gfxmem_size = 0;
@@ -57,7 +60,9 @@ class CPUButtonActionListener : public gcn::ActionListener
       }
       else if (actionEvent.getSource() == optCPU68EC020)
       {
-	      changed_prefs.cpu_level = 2;
+  		  changed_prefs.cpu_model = 68020;
+  		  if(changed_prefs.fpu_model == 68040)
+  		    changed_prefs.fpu_model = 68881;
   		  changed_prefs.address_space_24 = true;
   		  changed_prefs.z3fastmem_size = 0;
   		  changed_prefs.gfxmem_size = 0;
@@ -65,16 +70,16 @@ class CPUButtonActionListener : public gcn::ActionListener
       }
       else if (actionEvent.getSource() == optCPU68020)
       {
-	      if(optFPU68881->isSelected())
-	        changed_prefs.cpu_level = 3; // with 68881
-	      else
-	        changed_prefs.cpu_level = 2; // no fpu
+  		  changed_prefs.cpu_model = 68020;
+  		  if(changed_prefs.fpu_model == 68040)
+  		    changed_prefs.fpu_model = 68881;
   		  changed_prefs.address_space_24 = false;
   		  changed_prefs.cpu_compatible = 0;
       }
       else if (actionEvent.getSource() == optCPU68040)
       {
-	      changed_prefs.cpu_level = 4;
+  		  changed_prefs.cpu_model = 68040;
+  		  changed_prefs.fpu_model = 68040;
   		  changed_prefs.address_space_24 = false;
   		  changed_prefs.cpu_compatible = 0;
       }
@@ -92,16 +97,22 @@ class FPUButtonActionListener : public gcn::ActionListener
     {
 	    if (actionEvent.getSource() == optFPUnone)
   		{
-  		  if(changed_prefs.cpu_level == 3)
-  		    changed_prefs.cpu_level = 2;
+  		  changed_prefs.fpu_model = 0;
   		}
       else if(actionEvent.getSource() == optFPU68881)
   		{
-  		  if(changed_prefs.cpu_level == 2)
-  		    changed_prefs.cpu_level = 3;
+  		  changed_prefs.fpu_model = 68881;
   		}
-	    else
-	      ;
+      else if(actionEvent.getSource() == optFPU68882)
+  		{
+  		  changed_prefs.fpu_model = 68882;
+  		}
+      else if(actionEvent.getSource() == optFPUinternal)
+  		{
+  		  changed_prefs.fpu_model = 68040;
+  		}
+	    RefreshPanelCPU();
+	    RefreshPanelRAM();
     }
 };
 static FPUButtonActionListener* fpuButtonActionListener;
@@ -217,13 +228,17 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	optFPU68882 = new gcn::UaeRadioButton("68882", "radiofpugroup");
 	optFPU68882->addActionListener(fpuButtonActionListener);
 
+	optFPUinternal = new gcn::UaeRadioButton("CPU internal", "radiofpugroup");
+	optFPUinternal->addActionListener(fpuButtonActionListener);
+
 	grpFPU = new gcn::Window("FPU");
-	grpFPU->setPosition(DISTANCE_BORDER, DISTANCE_BORDER + grpCPU->getHeight() + DISTANCE_NEXT_Y);
+	grpFPU->setPosition(DISTANCE_BORDER + grpCPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	grpFPU->add(optFPUnone,  5, 10);
 	grpFPU->add(optFPU68881, 5, 40);
-//	grpFPU->add(optFPU68882, 5, 70);
+	grpFPU->add(optFPU68882, 5, 70);
+	grpFPU->add(optFPUinternal, 5, 100);
 	grpFPU->setMovable(false);
-	grpFPU->setSize(grpCPU->getWidth(), 115);
+	grpFPU->setSize(140, 145);
   grpFPU->setBaseColor(gui_baseCol);
   
   category.panel->add(grpFPU);
@@ -243,7 +258,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");
-	grpCPUSpeed->setPosition(DISTANCE_BORDER + grpCPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
+	grpCPUSpeed->setPosition(grpFPU->getX() + grpFPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	grpCPUSpeed->add(opt7Mhz,  5, 10);
 	grpCPUSpeed->add(opt14Mhz, 5, 40);
 	grpCPUSpeed->add(opt28Mhz, 5, 70);
@@ -275,6 +290,7 @@ void ExitPanelCPU(void)
   delete optFPUnone;
   delete optFPU68881;
   delete optFPU68882;
+  delete optFPUinternal;
   delete grpFPU;
   delete fpuButtonActionListener;
   
@@ -291,29 +307,43 @@ void RefreshPanelCPU(void)
 {
   if(changed_prefs.address_space_24)
   {
-    if(changed_prefs.cpu_level == 0)
+    if(changed_prefs.cpu_model == 68000)
       optCPU68000->setSelected(true);
-    else if(changed_prefs.cpu_level == 1)
+    else if(changed_prefs.cpu_model == 68010)
       optCPU68010->setSelected(true);
-    else if(changed_prefs.cpu_level == 2)
+    else if(changed_prefs.cpu_model == 68020)
       optCPU68EC020->setSelected(true);
   }
   else
   {
-    if(changed_prefs.cpu_level == 2 || changed_prefs.cpu_level == 3)
+    if(changed_prefs.cpu_model == 68020 || changed_prefs.cpu_model == 68030)
       optCPU68020->setSelected(true);
-    else if(changed_prefs.cpu_level == 4)
+    else if(changed_prefs.cpu_model == 68040)
       optCPU68040->setSelected(true);
   }
 
   chkCPUCompatible->setSelected(changed_prefs.cpu_compatible > 0);
-  chkCPUCompatible->setEnabled(changed_prefs.cpu_level == 0);
+  chkCPUCompatible->setEnabled(changed_prefs.cpu_model == 68000);
   chkJIT->setSelected(changed_prefs.cachesize > 0);
 
-  if(changed_prefs.cpu_level <= 2)
-    optFPUnone->setSelected(true);
-  else
-    optFPU68881->setSelected(true);
+  switch(changed_prefs.fpu_model)
+  {
+    case 68881:
+      optFPU68881->setSelected(true);
+      break;
+    case 68882:
+      optFPU68882->setSelected(true);
+      break;
+    case 68040:
+      optFPUinternal->setSelected(true);
+      break;
+    default:
+      optFPUnone->setSelected(true);
+      break;
+  }
+  optFPU68881->setEnabled(changed_prefs.cpu_model >= 68020 && changed_prefs.cpu_model < 68040);
+  optFPU68882->setEnabled(changed_prefs.cpu_model >= 68020 && changed_prefs.cpu_model < 68040);
+  optFPUinternal->setEnabled(changed_prefs.cpu_model == 68040);
   
 	if (changed_prefs.m68k_speed == M68K_SPEED_7MHZ_CYCLES)
     opt7Mhz->setSelected(true);

@@ -39,13 +39,8 @@ STATIC_INLINE double to_double (uae_u32 wrd1, uae_u32 wrd2)
     uae_u32 u[2];
     } val;
 
-#ifdef WORDS_BIGENDIAN
-    val.u[0] = wrd1;
-    val.u[1] = wrd2;
-#else
     val.u[1] = wrd1;
     val.u[0] = wrd2;
-#endif
     return val.d;
 }
 
@@ -57,13 +52,8 @@ STATIC_INLINE void from_double (double src, uae_u32 * wrd1, uae_u32 * wrd2)
     } val;
 
     val.d = src;
-#ifdef WORDS_BIGENDIAN
-    *wrd1 = val.u[0];
-    *wrd2 = val.u[1];
-#else
     *wrd1 = val.u[1];
     *wrd2 = val.u[0];
-#endif
 }
 
 #define HAVE_from_double

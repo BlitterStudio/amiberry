@@ -5,7 +5,7 @@
   *
   * Copyright 1995-2000 Bernd Schmidt
   * Copyright 1995 Alessandro Bissacco
-  * Copyright 2000,2001 Toni Wilen
+  * Copyright 2000-2008 Toni Wilen
   */
 
 
@@ -49,6 +49,8 @@
 
 // In UAE4all, lores_shift is always 0, so use a constant instead of a var
 #define lores_shift 0
+int aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
+int direct_rgb; 
 
 #ifdef PANDORA
 #define OFFSET_Y_ADJUST 15
@@ -91,7 +93,8 @@ struct vidbuf_description gfxvidinfo;
 /* OCS/ECS color lookup table. */
 xcolnr xcolors[4096];
 
-static uae_u8 spriteagadpfpixels[MAX_PIXELS_PER_LINE * 2]; /* AGA dualplayfield sprite */
+static uae_u8 spritepixels[MAX_PIXELS_PER_LINE * 2]; /* used when sprite resolution > lores */
+
 /* AGA mode color lookup tables */
 unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 static int dblpf_ind1_aga[256], dblpf_ind2_aga[256];
@@ -106,8 +109,8 @@ union pixdata_u {
     double uupzuq;
     long int cruxmedo;
     uae_u8 apixels[MAX_PIXELS_PER_LINE * 2];
-    uae_u16 apixels_w[MAX_PIXELS_PER_LINE * 2 / 2];
-    uae_u32 apixels_l[MAX_PIXELS_PER_LINE * 2 / 4];
+    uae_u16 apixels_w[MAX_PIXELS_PER_LINE * 2 / sizeof (uae_u16)];
+    uae_u32 apixels_l[MAX_PIXELS_PER_LINE * 2 / sizeof (uae_u32)];
 } pixdata;
 
 uae_u16 spixels[MAX_SPR_PIXELS];
@@ -196,7 +199,9 @@ static __inline__ void count_frame (void)
 			if (fs_framecnt > 1)
 				fs_framecnt = 0;
       break;  
-   }
+  }
+  if (inhibit_frame)
+    fs_framecnt = 1;
 }
 
 int coord_native_to_amiga_x (int x)
@@ -1008,9 +1013,9 @@ STATIC_INLINE void draw_sprites_aga_1 (struct sprite_entry *e, int ham, int dual
         }
 
       if (dualpf) {
-			  spriteagadpfpixels[window_pos] = col;
+			  spritepixels[window_pos] = col;
 				if (doubling)
-					spriteagadpfpixels[window_pos + 1] = col;
+					spritepixels[window_pos + 1] = col;
 			} else if (ham) {
 				col = color_reg_get (&colors_for_drawing, col);
 					col ^= xor_val;
@@ -1722,31 +1727,8 @@ static void init_aspect_maps (void)
  */
 STATIC_INLINE void do_flush_screen ()
 {
-	flush_block ();
   unlockscr ();
-}
-
-static int drawing_color_matches;
-static enum { color_match_acolors, color_match_full } color_match_type;
-
-/* Set up colors_for_drawing to the state at the beginning of the currently drawn
-   line.  Try to avoid copying color tables around whenever possible.  */
-static __inline__ void adjust_drawing_colors (int ctable, int need_full)
-{
-    if (drawing_color_matches != ctable) {
-	if (need_full) {
-			color_reg_cpy (&colors_for_drawing, curr_color_tables + ctable);
-			color_match_type = color_match_full;
-	} else {
-			memcpy (colors_for_drawing.acolors, curr_color_tables[ctable].acolors,
-			sizeof colors_for_drawing.acolors);
-			color_match_type = color_match_acolors;
-	}
-		drawing_color_matches = ctable;
-    } else if (need_full && color_match_type != color_match_full) {
-		color_reg_cpy (&colors_for_drawing, &curr_color_tables[ctable]);
-		color_match_type = color_match_full;
-    }
+	flush_block ();
 }
 
 /* We only save hardware registers during the hardware frame. Now, when
@@ -1762,12 +1744,14 @@ static __inline__ void pfield_expand_dp_bplcon (void)
     	/* The KILLEHB bit exists in ECS, but is apparently meant for Genlock
     	 * stuff, and it's set by some demos (e.g. Andromeda Seven Seas) */
     	bplehb = ((dp_for_drawing->bplcon0 & 0x7010) == 0x6000 && !(dp_for_drawing->bplcon2 & 0x200));
-        bpldualpf2of = (dp_for_drawing->bplcon3 >> 10) & 7;
-        sbasecol[0] = ((dp_for_drawing->bplcon4 >> 4) & 15) << 4;
-        sbasecol[1] = ((dp_for_drawing->bplcon4 >> 0) & 15) << 4;
-    } else {
+      bpldualpf2of = (dp_for_drawing->bplcon3 >> 10) & 7;
+      sbasecol[0] = ((dp_for_drawing->bplcon4 >> 4) & 15) << 4;
+      sbasecol[1] = ((dp_for_drawing->bplcon4 >> 0) & 15) << 4;
+    } else if (currprefs.chipset_mask & CSMASK_ECS_DENISE)
+    	bplehb = (dp_for_drawing->bplcon0 & 0xFC00) == 0x6000 && !(dp_for_drawing->bplcon2 & 0x200);
+    else
     	bplehb = (dp_for_drawing->bplcon0 & 0xFC00) == 0x6000;
-    }
+
     plf1pri = dp_for_drawing->bplcon2 & 7;
     plf2pri = (dp_for_drawing->bplcon2 >> 3) & 7;
     plf_sprite_mask = 0xFFFF0000 << (4 * plf2pri);
@@ -1799,6 +1783,29 @@ static void pfield_expand_dp_bplcon2(int regno, int v)
   }
   pfield_expand_dp_bplcon();
 //  res_shift = lores_shift - bplres;
+}
+
+static int drawing_color_matches;
+static enum { color_match_acolors, color_match_full } color_match_type;
+
+/* Set up colors_for_drawing to the state at the beginning of the currently drawn
+   line.  Try to avoid copying color tables around whenever possible.  */
+static __inline__ void adjust_drawing_colors (int ctable, int need_full)
+{
+    if (drawing_color_matches != ctable) {
+	if (need_full) {
+			color_reg_cpy (&colors_for_drawing, curr_color_tables + ctable);
+			color_match_type = color_match_full;
+	} else {
+			memcpy (colors_for_drawing.acolors, curr_color_tables[ctable].acolors,
+			sizeof colors_for_drawing.acolors);
+			color_match_type = color_match_acolors;
+	}
+		drawing_color_matches = ctable;
+    } else if (need_full && color_match_type != color_match_full) {
+		color_reg_cpy (&colors_for_drawing, &curr_color_tables[ctable]);
+		color_match_type = color_match_full;
+    }
 }
 
 STATIC_INLINE void do_color_changes (line_draw_func worker_border, line_draw_func worker_pfield)
@@ -1853,13 +1860,13 @@ STATIC_INLINE void do_color_changes (line_draw_func worker_border, line_draw_fun
     }
 }
 
-/* move color changes in horizontal cycles 0 to HBLANK_OFFSET to previous line
- * cycles 0 to HBLANK_OFFSET must be visible in right border
+/* Move color changes in horizontal cycles 0 to HBLANK_OFFSET - 1 to previous line.
+ * Cycles 0 to HBLANK_OFFSET are visible in right border on real Amigas.
  */
-static void mungedip(int lineno)
+static void mungedip(int lineno, int next)
 {
   int i = dip_for_drawing->last_color_change;
-  struct draw_info *dip_for_drawing_next = curr_drawinfo + (lineno + 1);
+  struct draw_info *dip_for_drawing_next = curr_drawinfo + (lineno + next);
   if (dip_for_drawing_next->first_color_change == 0)
 	  dip_for_drawing_next = curr_drawinfo + (lineno + 2);
   while (i < dip_for_drawing_next->last_color_change) {
@@ -1910,7 +1917,7 @@ static __inline__ void pfield_draw_line (int lineno, int gfx_ypos)
 
    dp_for_drawing = line_decisions + lineno;
    dip_for_drawing = curr_drawinfo + lineno;
-   //mungedip(lineno);
+   //mungedip(lineno, (dp_for_drawing->bplcon0 & 4) ? 2 : 1));
    
 	if (dp_for_drawing->plfleft != -1)
 	{
@@ -2160,7 +2167,7 @@ static void draw_status_line (int line)
 	      write_tdnumber (x + offs, y - TD_PADY, (track / 10) % 10);
 	      write_tdnumber (x + offs + TD_NUM_WIDTH, y - TD_PADY, track % 10);
 	    }
-		  else if (nr_units(currprefs.mountinfo) > 0) {
+		  else if (nr_units() > 0) {
     		int offs = (TD_LED_WIDTH - 2 * TD_NUM_WIDTH) / 2;
 			  write_tdletter(x + offs, y - TD_PADY, 'H');
 			  write_tdletter(x + offs + TD_NUM_WIDTH, y - TD_PADY, 'D');
@@ -2200,7 +2207,7 @@ static void finish_drawing_frame (void)
 		where = amiga2aspect_line_map[i1];
 		if (where >= currprefs.gfx_size.height)
 			break;
-		if (where == -1)
+		if (where < 0)
 			continue;
 
 		pfield_draw_line (active_line, where);
@@ -2213,6 +2220,19 @@ static void finish_drawing_frame (void)
 		}
 	}
 	do_flush_screen ();
+
+#ifdef DEBUG_M68K
+extern int debug_frame_counter;
+extern int debug_frame_start;
+extern int debug_frame_end;
+  ++debug_frame_counter;
+  if(debug_frame_counter >= debug_frame_start && debug_frame_counter < debug_frame_end)
+  {
+    write_log("FRAME_SYNC ------------------------ FRAME_SYNC\n");
+    write_log("FRAME_SYNC --- start frame %4d --- FRAME_SYNC\n", debug_frame_counter);
+    write_log("FRAME_SYNC ------------------------ FRAME_SYNC\n");
+  }
+#endif  
 }
 
 STATIC_INLINE void check_picasso (void)
@@ -2237,6 +2257,7 @@ STATIC_INLINE void check_picasso (void)
 
     notice_screen_contents_lost ();
     notice_new_xcolors ();
+    count_frame ();
 #endif
 }
 
@@ -2289,9 +2310,6 @@ void vsync_handle_redraw (int long_frame, int lof_changed)
 			quit_program = -quit_program;
 	    set_inhibit_frame (IHF_QUIT_PROGRAM);
 			set_special (&regs, SPCFLAG_BRK);
-#ifdef FILESYS
-			filesys_prepare_reset (); 
-#endif
 			return;
 		}
 
@@ -2303,15 +2321,10 @@ void vsync_handle_redraw (int long_frame, int lof_changed)
 	  }
 
 	  check_prefs_changed_audio ();
-#ifdef JIT
-	  check_prefs_changed_comp ();
-#endif
 	  check_prefs_changed_custom ();
 	  check_prefs_changed_cpu ();
 
 		framecnt = fs_framecnt;
-  	if (inhibit_frame != 0)
-      framecnt = 1;
       
 		if (framecnt == 0)
 			init_drawing_frame ();
@@ -2385,10 +2398,12 @@ void drawing_init (void)
     gen_pfield_tables();
 
 #ifdef PICASSO96
-    InitPicasso96 ();
-    picasso_on = 0;
-    picasso_requested_on = 0;
-    gfx_set_picasso_state (0);
+    if (savestate_state != STATE_RESTORE) {
+      InitPicasso96 ();
+      picasso_on = 0;
+      picasso_requested_on = 0;
+      gfx_set_picasso_state (0);
+    }
 #endif
     xlinebuffer = gfxvidinfo.bufmem;
     inhibit_frame = 0;

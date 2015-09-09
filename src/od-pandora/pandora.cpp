@@ -119,6 +119,16 @@ void logging_cleanup( void )
 }
 
 
+void target_quit (void)
+{
+}
+
+
+void target_fixup_options (struct uae_prefs *p)
+{
+}
+
+
 void target_default_options (struct uae_prefs *p, int type)
 {
   p->pandora_horizontal_offset = 0;
@@ -254,10 +264,13 @@ void fetch_screenshotpath(char *out, int size)
 
 int target_cfgfile_load (struct uae_prefs *p, char *filename, int type, int isdefault)
 {
+  int i;
   int result = 0;
 
-  while(nr_units(p->mountinfo) > 0)
-    kill_filesys_unit(p->mountinfo, 0);
+  free_mountinfo();
+  for(i=0; i<MOUNT_CONFIG_SIZE; ++i)
+    kill_filesys_unitconfig(p, i);
+  p->mountitems = 0;
 
 	char *ptr = strstr(filename, ".uae");
   if(ptr > 0)

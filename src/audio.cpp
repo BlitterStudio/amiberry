@@ -21,9 +21,9 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "gensound.h"
+#include "audio.h"
 #include "sd-pandora/sound.h"
 #include "events.h"
-#include "audio.h"
 #include "savestate.h"
 #include "gui.h"
 
@@ -63,7 +63,7 @@ struct audio_channel_data{
     uae_u16 dat, dat2;
     int request_word, request_word_skip;
     int sample_accum, sample_accum_time;
-    int output_state;
+    int sinc_output_state;
     sinc_queue_t sinc_queue[SINC_QUEUE_LENGTH];
     int sinc_queue_length;
 };
@@ -84,7 +84,7 @@ void init_sound_table16 (void)
 
     for (i = 0; i < 256; i++)
 	for (j = 0; j < 64; j++)
-	    sound_table[j][i] = j * (uae_s8)i * (currprefs.sound_stereo ? 2 : 1);
+	    sound_table[j][i] = j * (uae_s8)i * get_audio_ismono() ? 1 : 2;
 }
 
 #define MULTIPLICATION_PROFITABLE
@@ -101,13 +101,10 @@ typedef uae_u8 sample8_t;
 #define FINISH_DATA(data,b,logn)
 #endif
 
-/* Always put the right word before the left word.  */
-#define MAX_DELAY_BUFFER 1024
-static uae_u32 right_word_saved[MAX_DELAY_BUFFER];
-static uae_u32 left_word_saved[MAX_DELAY_BUFFER];
+static uae_u32 right_word_saved[SOUND_MAX_DELAY_BUFFER];
+static uae_u32 left_word_saved[SOUND_MAX_DELAY_BUFFER];
 static int saved_ptr;
 
-#define MIXED_STEREO_MAX 32
 static int mixed_on, mixed_stereo_size, mixed_mul1, mixed_mul2;
 static int led_filter_forced, sound_use_filter, sound_use_filter_sinc, led_filter_on;
 
@@ -193,6 +190,8 @@ static int filter(int input, struct filter_state *fs)
   return o;
 }
 
+/* Always put the right word before the left word.  */
+
 STATIC_INLINE void put_sound_word_right (uae_u32 w)
 {
   if (mixed_on) {
@@ -214,12 +213,12 @@ STATIC_INLINE void put_sound_word_left (uae_u32 w)
     saved_ptr = (saved_ptr + 1) & mixed_stereo_size;
 
 	  lold = left_word_saved[saved_ptr] - SOUND16_BASE_VAL;
-	  tmp = (rnew * mixed_mul1 + lold * mixed_mul2) / MIXED_STEREO_MAX;
+	  tmp = (rnew * mixed_mul2 + lold * mixed_mul1) / MIXED_STEREO_SCALE;
 	  tmp += SOUND16_BASE_VAL;
 	  PUT_SOUND_WORD_RIGHT (tmp);
 
 	  rold = right_word_saved[saved_ptr] - SOUND16_BASE_VAL;
-	  w = (lnew * mixed_mul1 + rold * mixed_mul2) / MIXED_STEREO_MAX;
+	  w = (lnew * mixed_mul2 + rold * mixed_mul1) / MIXED_STEREO_SCALE;
   }
   PUT_SOUND_WORD_LEFT (w);
 }
@@ -270,7 +269,7 @@ static void sinc_prehandler(unsigned long best_evtime)
          
     /* if output state changes, record the state change and also
      * write data into sinc queue for mixing in the BLEP */
-    if (acd->output_state != output) {
+    if (acd->sinc_output_state != output) {
       if (acd->sinc_queue_length > SINC_QUEUE_LENGTH - 1) {
         //write_log("warning: sinc queue truncated. Last age: %d.\n", acd->sinc_queue[SINC_QUEUE_LENGTH-1].age);
         acd->sinc_queue_length = SINC_QUEUE_LENGTH - 1;
@@ -280,8 +279,8 @@ static void sinc_prehandler(unsigned long best_evtime)
         sizeof(acd->sinc_queue[0]) * acd->sinc_queue_length);
       acd->sinc_queue_length += 1;
       acd->sinc_queue[0].age = best_evtime;
-      acd->sinc_queue[0].output = output - acd->output_state;
-      acd->output_state = output;
+      acd->sinc_queue[0].output = output - acd->sinc_output_state;
+      acd->sinc_output_state = output;
     }
   }
 }
@@ -307,7 +306,7 @@ STATIC_INLINE void samplexx_sinc_handler (int *datasp)
     int j, v;
     struct audio_channel_data *acd = &audio_channel[i];
     /* The sum rings with harmonic components up to infinity... */
-  	int sum = acd->output_state << 17;
+  	int sum = acd->sinc_output_state << 17;
     /* ...but we cancel them through mixing in BLEPs instead */
     for (j = 0; j < acd->sinc_queue_length; j += 1)
       sum -= winsinc[acd->sinc_queue[j].age] * acd->sinc_queue[j].output;
@@ -691,6 +690,27 @@ static void sample16si_rh_handler (void)
 
 static int audio_work_to_do;
 
+STATIC_INLINE void zerostate(struct audio_channel_data *cdp)
+{
+    cdp->state = 0;
+    cdp->evtime = MAX_EV;
+    cdp->request_word = 0;
+}
+
+static void audio_event_reset(void)
+{
+    int i;
+
+    last_cycles = get_cycles () - 1;
+    next_sample_evtime = scaled_sample_evtime;
+    for (i = 0; i < 4; i++) {
+	struct audio_channel_data *cdp = audio_channel + i;
+        zerostate(cdp);
+    }
+    schedule_audio ();
+    events_schedule ();
+}
+
 static void audio_deactivate(void)
 {
     if (!currprefs.sound_auto)
@@ -698,6 +718,7 @@ static void audio_deactivate(void)
     gui_data.sndbuf_status = 3;
     gui_data.sndbuf = 0;
     clear_sound_buffers();
+    audio_event_reset();
 }
 
 int audio_activate(void)
@@ -706,6 +727,7 @@ int audio_activate(void)
     if (!audio_work_to_do) {
 	restart_sound_buffer();
 	ret = 1;
+	audio_event_reset();
     }
     audio_work_to_do = 4 * maxvpos * 50;
     return ret;
@@ -772,7 +794,7 @@ STATIC_INLINE void state23 (struct audio_channel_data *cdp)
     }
 }
 
-static void audio_handler (int nr, int timed)
+static void audio_handler (int nr)
 {
     struct audio_channel_data *cdp = audio_channel + nr;
 
@@ -786,24 +808,26 @@ static void audio_handler (int nr, int timed)
     switch (cdp->state) 
     {
      case 0:
-	    cdp->request_word = 0;
-	    cdp->request_word_skip = 0;
 	    cdp->intreq2 = 0;
 	    if (cdp->dmaen) {
 		cdp->state = 1;
 		cdp->wlen = cdp->len;
 		/* there are too many stupid sound routines that fail on "too" fast cpus.. */
-		if (currprefs.cpu_level > 1)
+		if (currprefs.cpu_model >= 68020)
 		  cdp->pt = cdp->lc;
-		audio_handler (nr, timed);
+    cdp->request_word = 0;
+    cdp->request_word_skip = 0;
+		audio_handler (nr);
 		return;
 	    } else if (!cdp->dmaen && cdp->request_word < 0 && !isirq (nr)) {
 		cdp->evtime = 0;
 		cdp->state = 2;
 		setirq (nr);
-		audio_handler (nr, timed);
+		audio_handler (nr);
 		return;
 	    }
+	    cdp->request_word = 0;
+	    cdp->request_word_skip = 0;
 	return;
 
      case 1:
@@ -842,9 +866,7 @@ static void audio_handler (int nr, int timed)
 		    cdp->per = PERIOD_MAX;
 
 	    if (!cdp->dmaen && isirq (nr) && (evtime == 0 || evtime == MAX_EV || evtime == cdp->per)) {
-	        cdp->state = 0;
-	        cdp->evtime = MAX_EV;
-	        cdp->request_word = 0;
+		      zerostate (cdp);
 	        return;
 	    }
 
@@ -943,7 +965,7 @@ STATIC_INLINE int sound_prefs_changed (void)
     return (changed_prefs.produce_sound != currprefs.produce_sound
 	    || changed_prefs.sound_stereo != currprefs.sound_stereo
 	    || changed_prefs.sound_stereo_separation != currprefs.sound_stereo_separation
-	    || changed_prefs.sound_mixed_stereo != currprefs.sound_mixed_stereo
+	    || changed_prefs.sound_mixed_stereo_delay != currprefs.sound_mixed_stereo_delay
 	    || changed_prefs.sound_freq != currprefs.sound_freq
 	    || changed_prefs.sound_auto != currprefs.sound_auto
 	    || changed_prefs.sound_interpol != currprefs.sound_interpol
@@ -982,12 +1004,15 @@ void check_prefs_changed_audio (void)
 
 void set_audio(void)
 {
-	close_sound ();
+  int old_mixed_on = mixed_on;
+  int old_mixed_size = mixed_stereo_size;
+  int sep, delay;
 
+	close_sound ();
 	currprefs.produce_sound = changed_prefs.produce_sound;
 	currprefs.sound_stereo = changed_prefs.sound_stereo;
   currprefs.sound_stereo_separation = changed_prefs.sound_stereo_separation;
-  currprefs.sound_mixed_stereo = changed_prefs.sound_mixed_stereo;
+  currprefs.sound_mixed_stereo_delay = changed_prefs.sound_mixed_stereo_delay;
   currprefs.sound_auto = changed_prefs.sound_auto;
 	currprefs.sound_interpol = changed_prefs.sound_interpol;
 	currprefs.sound_freq = changed_prefs.sound_freq;
@@ -1005,14 +1030,20 @@ void set_audio(void)
 	    }
     }
 	}
-	last_cycles = get_cycles () - 1;
 	next_sample_evtime = scaled_sample_evtime;
+  last_cycles = get_cycles () - 1;
 	compute_vsynctime ();
 
-  mixed_mul1 = MIXED_STEREO_MAX / 2 - ((currprefs.sound_stereo_separation * 3) / 2);
-  mixed_mul2 = MIXED_STEREO_MAX / 2 + ((currprefs.sound_stereo_separation * 3) / 2);
-  mixed_stereo_size = currprefs.sound_mixed_stereo > 0 ? (1 << (currprefs.sound_mixed_stereo - 1)) - 1 : 0;
-  mixed_on = (currprefs.sound_stereo_separation > 0 || currprefs.sound_mixed_stereo > 0) ? 1 : 0;
+  sep = (currprefs.sound_stereo_separation = changed_prefs.sound_stereo_separation) * 3 / 2;
+  delay = currprefs.sound_mixed_stereo_delay = changed_prefs.sound_mixed_stereo_delay;
+  mixed_mul1 = MIXED_STEREO_SCALE / 2 - sep;
+  mixed_mul2 = MIXED_STEREO_SCALE / 2 + sep;
+  mixed_stereo_size = delay > 0 ? (1 << (delay - 1)) - 1 : 0;
+  mixed_on = (sep > 0 && sep < MIXED_STEREO_MAX) || mixed_stereo_size > 0;
+  if (mixed_on && old_mixed_size != mixed_stereo_size) {
+  	saved_ptr = 0;
+  	memset (right_word_saved, 0, sizeof right_word_saved);
+  }
 
   led_filter_forced = -1; // always off
   sound_use_filter = sound_use_filter_sinc = 0;
@@ -1064,6 +1095,8 @@ void set_audio(void)
 	  sample_prehandler = anti_prehandler;
   }
 
+    audio_activate ();
+
     if (currprefs.produce_sound == 0) {
 	eventtab[ev_audio].active = 0;
 	events_schedule ();
@@ -1106,8 +1139,8 @@ void update_audio (void)
   	audio_channel[2].evtime -= best_evtime;
         if (audio_channel[3].evtime != MAX_EV)
   	audio_channel[3].evtime -= best_evtime;
-  	n_cycles -= best_evtime;
 
+  	n_cycles -= best_evtime;
   	if (currprefs.produce_sound > 1) {
 	    next_sample_evtime -= best_evtime;
 	    if (sample_prehandler)
@@ -1118,13 +1151,13 @@ void update_audio (void)
     	}
   	}
         if (audio_channel[0].evtime == 0)
-	    audio_handler (0, 1);
+	    audio_handler (0);
         if (audio_channel[1].evtime == 0)
-	    audio_handler (1, 1);
+	    audio_handler (1);
         if (audio_channel[2].evtime == 0)
-	    audio_handler (2, 1);
+	    audio_handler (2);
         if (audio_channel[3].evtime == 0)
-	    audio_handler (3, 1);
+	    audio_handler (3);
 	}
 end:
 	last_cycles = get_cycles () - n_cycles;
@@ -1196,7 +1229,7 @@ void audio_hsync (int dmaaction)
 	      handle2 = 1;
  	  }
     if (handle2)
-      audio_handler (nr, 0);
+      audio_handler (nr);
     handle |= handle2;
   }
   if (handle) {
@@ -1219,9 +1252,14 @@ void AUDxDAT (int nr, uae_u16 v)
     cdp->dat2 = v;
     cdp->request_word = -1;
     cdp->request_word_skip = 0;
-    if (cdp->state == 0) {
+    /* cpu >= 68020: another "too fast" memory/CPU hack */
+    if (cdp->state == 0 || currprefs.cpu_model >= 68020) {
     	cdp->state = 2;
-    	audio_handler (nr, 0);
+	    cdp->wlen = cdp->len;
+	    cdp->pt = cdp->lc;
+    	if (currprefs.cpu_model >= 68020)
+	      INTREQ (0x80 << nr);
+    	audio_handler (nr);
     	schedule_audio ();
     	events_schedule ();
     }
@@ -1254,6 +1292,7 @@ void AUDxPER (int nr, uae_u16 v)
     if (per < maxhpos * CYCLE_UNIT / 2 && currprefs.produce_sound < 3)
 	per = maxhpos * CYCLE_UNIT / 2;
     else if (per < 4 * CYCLE_UNIT)
+	 /* smaller value would cause extremely high cpu usage */
 	per = 4 * CYCLE_UNIT;
 
    if (audio_channel[nr].per == PERIOD_MAX - 1 && per != PERIOD_MAX - 1) {

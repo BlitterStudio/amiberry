@@ -226,40 +226,38 @@ LENDFUNC(RMW,NONE,2,raw_adc_w,(RW2 d, RR2 s))
 
 LOWFUNC(RMW,NONE,2,raw_adc_l,(RW4 d, RR4 s))
 {
-	ADCS_rrr(d, d, s);									// adcs	 	%[d],%[d],%[s]
+	ADCS_rrr(d, d, s);									  // adcs	 	%[d],%[d],%[s]
 }
 LENDFUNC(RMW,NONE,2,raw_adc_l,(RW4 d, RR4 s))
 
 LOWFUNC(WRITE,NONE,2,raw_add_b,(RW1 d, RR1 s))
 {
-	LSL_rri(REG_WORK1, s, 24);							// lsl     r2, %[s], #24
-	LSL_rri(REG_WORK2, d, 24); 							// lsl     r3, %[d], #24
+	LSL_rri(REG_WORK2, d, 24); 							    // lsl     r3, %[d], #24
+  ADDS_rrrLSLi(REG_WORK2, REG_WORK2, s, 24);  // adds    r3, r3, %[s], lsl #24
 
-	ADDS_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 			// adds    r3, r3, r2
-
-	BIC_rri(d, d, 0xFF);								// bic	   %[d],%[d],#0xFF
-	ORR_rrrLSRi(d, d, REG_WORK2, 24);					// orr 	   %[d],%[d], r3 LSR #24
+	BIC_rri(d, d, 0xFF);								        // bic	   %[d],%[d],#0xFF
+	ORR_rrrLSRi(d, d, REG_WORK2, 24);					  // orr 	   %[d],%[d], r3 LSR #24
 }
 LENDFUNC(WRITE,NONE,2,raw_add_b,(RW1 d, RR1 s))
 
 LOWFUNC(WRITE,NONE,2,raw_add_w,(RW2 d, RR2 s))
 {
-	LSL_rri(REG_WORK1, s, 16); 							// lsl     r2, %[s], #16
+	LSL_rri(REG_WORK1, s, 16); 							    // lsl     r2, %[s], #16
   ADDS_rrrLSLi(REG_WORK2, REG_WORK1, d, 16);  // adds r3, r2, %[d], lsl #16
 
 #if defined(ARMV6_ASSEMBLY)
   PKHTB_rrrASRi(d, d, REG_WORK2, 16);   // pkhtb %r, %r, r3, asr #16
 #else
-	BIC_rri(d, d, 0xff);								// bic		%[d],%[d],#0xff
+	BIC_rri(d, d, 0xff);								  // bic		%[d],%[d],#0xff
 	BIC_rri(d, d, 0xff00);								// bic		%[d],%[d],#0xff00
-	ORR_rrrLSRi(d, d, REG_WORK2, 16); 					// orr     r7, r7, r3, LSR #16
+	ORR_rrrLSRi(d, d, REG_WORK2, 16); 		// orr     r7, r7, r3, LSR #16
 #endif
 }
 LENDFUNC(WRITE,NONE,2,raw_add_w,(RW2 d, RR2 s))
 
 LOWFUNC(WRITE,NONE,2,raw_add_l,(RW4 d, RR4 s))
 {
-	ADDS_rrr(d, d, s); 									// adds  	%[d], %[d], %[s]
+	ADDS_rrr(d, d, s); 									  // adds  	%[d], %[d], %[s]
 }
 LENDFUNC(WRITE,NONE,2,raw_add_l,(RW4 d, RR4 s))
 
@@ -267,19 +265,21 @@ LOWFUNC(WRITE,NONE,2,raw_add_w_ri,(RW2 d, IMM i))
 {
 #if defined(USE_DATA_BUFFER)
   long offs = data_word_offs(i);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	  // ldrh    r2, [pc, #offs]
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldrh    r2, [pc, #offs]
 #else
-	LDRH_rRI(REG_WORK1, RPC_INDEX, 24); 				// ldrh    r2, [pc, #24]   ; <value>
+	LDRH_rRI(REG_WORK1, RPC_INDEX, 24); 	// ldrh    r2, [pc, #24]   ; <value>
 #endif
 
-	LSL_rri(REG_WORK2, d, 16);  						// lsl     r3, %[d], #16
-	LSL_rri(REG_WORK1, REG_WORK1, 16);  				// lsl     r2, r2, #16
+	LSL_rri(REG_WORK2, d, 16);  				  // lsl     r2, %[d], #16
+	ADDS_rrrLSLi(REG_WORK2, REG_WORK2, REG_WORK1, 16);  // adds    r3, r3, r2, LSL #16
 
-	ADDS_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 			// adds    r3, r3, r2
-
-	BIC_rri(d, d, 0xff);								// bic		%[d],%[d],#0xff
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(d, d, REG_WORK2, 16);   // pkhtb  %[d], %[d], r3, asr #16
+#else
+	BIC_rri(d, d, 0xff);								  // bic		%[d],%[d],#0xff
 	BIC_rri(d, d, 0xff00);								// bic		%[d],%[d],#0xff00
-	ORR_rrrLSRi(d, d, REG_WORK2, 16);					// orr     	%[d],%[d], r3, LSR #16
+	ORR_rrrLSRi(d, d, REG_WORK2, 16);			// orr   	%[d],%[d], r3, LSR #16
+#endif
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0); 											// b       <jp>
@@ -293,11 +293,11 @@ LENDFUNC(WRITE,NONE,2,raw_add_w_ri,(RW2 d, IMM i))
 
 LOWFUNC(WRITE,NONE,2,raw_add_b_ri,(RW1 d, IMM i))
 {
-	LSL_rri(REG_WORK2, d, 24);  						// lsl     r3, %[d], #24
+	LSL_rri(REG_WORK2, d, 24);  						  // lsl     r3, %[d], #24
 
-	ADDS_rri(REG_WORK2, REG_WORK2, i << 24); 			// adds    r3, r3, #0x12000000
+	ADDS_rri(REG_WORK2, REG_WORK2, i << 24); 	// adds    r3, r3, #0x12000000
 
-	BIC_rri(d, d, 0xFF);								// bic	   %[d],%[d], #0xFF
+	BIC_rri(d, d, 0xFF);								      // bic	   %[d],%[d], #0xFF
 	ORR_rrrLSRi(d, d, REG_WORK2, 24);					// orr     %[d],%[d], r3, lsr #24
 }
 LENDFUNC(WRITE,NONE,2,raw_add_b_ri,(RW1 d, IMM i))
@@ -323,12 +323,12 @@ LENDFUNC(WRITE,NONE,2,raw_add_l_ri,(RW4 d, IMM i))
 LOWFUNC(WRITE,NONE,2,raw_and_b,(RW1 d, RR1 s))
 {
 	MVN_rrLSLi(REG_WORK1, s, 24);						// mvn 	r2, %[s], lsl #24
-	MVN_rrLSRi(REG_WORK1, REG_WORK1, 24);				// mvn 	r2, %[s], lsr #24
-	AND_rrr(d, d, REG_WORK1);							// and  %[d], %[d], r2
+	MVN_rrLSRi(REG_WORK1, REG_WORK1, 24);		// mvn 	r2, r2, lsr #24
+	AND_rrr(d, d, REG_WORK1);							  // and  %[d], %[d], r2
 
 	LSLS_rri(REG_WORK1, d, 24);							// lsls r2, %[d], #24
 
-	MRS_CPSR(REG_WORK1);                    			// mrs  r2, CPSR
+	MRS_CPSR(REG_WORK1);                    			  // mrs  r2, CPSR
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_CV_FLAGS);		// bic  r2, r2, #0x30000000
 	MSR_CPSR_r(REG_WORK1);                    			// msr  CPSR_fc, r2
 }
@@ -337,12 +337,12 @@ LENDFUNC(WRITE,NONE,2,raw_and_b,(RW1 d, RR1 s))
 LOWFUNC(WRITE,NONE,2,raw_and_w,(RW2 d, RR2 s))
 {
 	MVN_rrLSLi(REG_WORK1, s, 16);						// mvn 		r2, %[s], lsl #16
-	MVN_rrLSRi(REG_WORK1, REG_WORK1, 16);				// mvn 		r2, %[s], lsr #16
-	AND_rrr(d, d, REG_WORK1); 							// and    	%[d], %[d], r2
+	MVN_rrLSRi(REG_WORK1, REG_WORK1, 16);		// mvn 		r2, r2, lsr #16
+	AND_rrr(d, d, REG_WORK1); 							// and    %[d], %[d], r2
 
 	LSLS_rri(REG_WORK1, d, 16);							// lsls 	r2, %[d], #16
 
-	MRS_CPSR(REG_WORK1);                    			// mrs     r2, CPSR
+	MRS_CPSR(REG_WORK1);                    			  // mrs     r2, CPSR
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_CV_FLAGS);		// bic     r2, r2, #0x30000000
 	MSR_CPSR_r(REG_WORK1);                    			// msr     CPSR_fc, r2
 }
@@ -350,9 +350,9 @@ LENDFUNC(WRITE,NONE,2,raw_and_w,(RW2 d, RR2 s))
 
 LOWFUNC(WRITE,NONE,2,raw_and_l,(RW4 d, RR4 s))
 {
-	ANDS_rrr(d, d, s); 									// ands	   r7, r7, r6
+	ANDS_rrr(d, d, s); 									            // ands	   %[d], %[d], %[s]
 
-	MRS_CPSR(REG_WORK1);                    			// mrs     r2, CPSR
+	MRS_CPSR(REG_WORK1);                    			  // mrs     r2, CPSR
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_CV_FLAGS); 		// bic     r2, r2, #0x30000000
 	MSR_CPSR_r(REG_WORK1);                    			// msr     CPSR_fc, r2
 }
@@ -362,16 +362,16 @@ LOWFUNC(WRITE,NONE,2,raw_and_l_ri,(RW4 d, IMM i))
 {
 #if defined(USE_DATA_BUFFER)
   long offs = data_long_offs(i);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr     r2, [pc, #offs]
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	        // ldr     r2, [pc, #offs]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 16); 					// ldr     r2, [pc, #16]   ; <value>
+	LDR_rRI(REG_WORK1, RPC_INDEX, 16); 					  // ldr     r2, [pc, #16]   ; <value>
 #endif
 
-	ANDS_rrr(d, d, REG_WORK1); 							// ands    %[d], %[d], r2
+	ANDS_rrr(d, d, REG_WORK1); 							      // ands    %[d], %[d], r2
 
-	MRS_CPSR(REG_WORK1);                    			// mrs     r2, CPSR
-	BIC_rri(REG_WORK1, REG_WORK1, ARM_CV_FLAGS);		// bic     r2, r2, #0x30000000
-	MSR_CPSR_r(REG_WORK1);                    			// msr     CPSR_fc, r2
+	MRS_CPSR(REG_WORK1);                    		  // mrs     r2, CPSR
+	BIC_rri(REG_WORK1, REG_WORK1, ARM_CV_FLAGS);	// bic     r2, r2, #0x30000000
+	MSR_CPSR_r(REG_WORK1);                    		// msr     CPSR_fc, r2
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0); 											// b       <jp>
@@ -384,37 +384,37 @@ LENDFUNC(WRITE,NONE,2,raw_and_l_ri,(RW4 d, IMM i))
 
 LOWFUNC(WRITE,NONE,2,raw_bsf_l_rr,(W4 d, RR4 s))
 {
-	MOV_rr(REG_WORK1, s);							// mov r2,%[s]
-	RSB_rri(REG_WORK2, REG_WORK1, 0);				// rsb r3,r2,#0
-	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);		// and r2,r2,r3
-	CLZ_rr(REG_WORK2, REG_WORK1);					// clz r3,r2
-	MOV_ri(d, 32);									// mov %[d],#32
-	SUB_rrr(d, d, REG_WORK2);						// sub %[d],%[d],r3
+	MOV_rr(REG_WORK1, s);							        // mov r2,%[s]
+	RSB_rri(REG_WORK2, REG_WORK1, 0);				  // rsb r3,r2,#0
+	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);	// and r2,r2,r3
+	CLZ_rr(REG_WORK2, REG_WORK1);					    // clz r3,r2
+	MOV_ri(d, 32);									          // mov %[d],#32
+	SUB_rrr(d, d, REG_WORK2);						      // sub %[d],%[d],r3
 
-	MRS_CPSR(REG_WORK2);							// mrs r3,cpsr
-	TEQ_ri(d, 0);									// teq %[d],#0
-	CC_SUBS_rri(NATIVE_CC_NE, d,d,1);				// sub %[d],%[d],#1
+	MRS_CPSR(REG_WORK2);							        // mrs r3,cpsr
+	TEQ_ri(d, 0);									            // teq %[d],#0
+	CC_SUBS_rri(NATIVE_CC_NE, d,d,1);				  // sub %[d],%[d],#1
 	CC_BIC_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_Z_FLAG);		// bic r3,r3,#0x40000000
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_Z_FLAG);		// orr r3,r3,#0x40000000
-	MSR_CPSR_r(REG_WORK2);							// msr cpsr,r3
+	MSR_CPSR_r(REG_WORK2);							      // msr cpsr,r3
 }
 LENDFUNC(WRITE,NONE,2,raw_bsf_l_rr,(W4 d, RR4 s))
 
 LOWFUNC(WRITE,NONE,1,raw_bswap_16,(RW2 r))
 {
 #if defined(ARMV6_ASSEMBLY)
-  REV_rr(REG_WORK1, r);                 // rev r2, %r
-  PKHTB_rrrASRi(r, r, REG_WORK1, 16);   // pkhtb %r, %r, r2, asr #16
+  REV_rr(REG_WORK1, r);                       // rev r2, %r
+  PKHTB_rrrASRi(r, r, REG_WORK1, 16);         // pkhtb %r, %r, r2, asr #16
 #else
-	MOV_rr(REG_WORK1, r); 						// mov	r2, r6
-	BIC_rri(REG_WORK1, REG_WORK1, 0xff0000); 	// bic	r2, r2, #0xff0000
+	MOV_rr(REG_WORK1, r); 						          // mov	r2, r6
+	BIC_rri(REG_WORK1, REG_WORK1, 0xff0000); 	  // bic	r2, r2, #0xff0000
 	BIC_rri(REG_WORK1, REG_WORK1, 0xff000000); 	// bic	r2, r2, #0xff000000
 
-	EOR_rrr(r, r, REG_WORK1); 					// eor	r6, r6, r2
+	EOR_rrr(r, r, REG_WORK1); 					        // eor	r6, r6, r2
 
-	ORR_rrrLSRi(r, r, REG_WORK1, 8); 			// orr	r6, r6, r2, lsr #8
-	BIC_rri(REG_WORK1, REG_WORK1, 0xff00); 		// bic	r2, r2, #0xff00
-	ORR_rrrLSLi(r,r,REG_WORK1, 8); 				// orr	r6, r6, r2, lsl #8
+	ORR_rrrLSRi(r, r, REG_WORK1, 8); 			      // orr	r6, r6, r2, lsr #8
+	BIC_rri(REG_WORK1, REG_WORK1, 0xff00); 		  // bic	r2, r2, #0xff00
+	ORR_rrrLSLi(r,r,REG_WORK1, 8); 				      // orr	r6, r6, r2, lsl #8
 #endif
 }
 LENDFUNC(WRITE,NONE,1,raw_bswap_16,(RW2 r))
@@ -426,7 +426,7 @@ LOWFUNC(NONE,NONE,1,raw_bswap_32,(RW4 r))
 #else
 	EOR_rrrRORi(REG_WORK1, r, r, 16);      		// eor     r2, r6, r6, ror #16
 	BIC_rri(REG_WORK1, REG_WORK1, 0xff0000); 	// bic     r2, r2, #0xff0000
-	ROR_rri(r, r, 8); 							// ror     r6, r6, #8
+	ROR_rri(r, r, 8); 							          // ror     r6, r6, #8
 	EOR_rrrLSRi(r, r, REG_WORK1, 8);      		// eor     r6, r6, r2, lsr #8
 #endif
 }
@@ -436,7 +436,7 @@ LOWFUNC(WRITE,NONE,2,raw_bt_l_ri,(RR4 r, IMM i))
 {
 	int imm = (1 << (i & 0x1f));
 
-	MRS_CPSR(REG_WORK2);                    	// mrs        r3, CPSR
+	MRS_CPSR(REG_WORK2);                    	  // mrs        r3, CPSR
 	TST_ri(r, imm);                            	// tst        r6, #0x1000000
 	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG); 	// bic        r3, r3, #0x20000000
 	CC_ORR_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_C_FLAG); 	// orr        r3, r3, #0x20000000
@@ -459,7 +459,7 @@ LENDFUNC(WRITE,NONE,2,raw_bt_l_rr,(RR4 r, RR4 b))
 
 LOWFUNC(WRITE,NONE,2,raw_btc_l_rr,(RW4 r, RR4 b))
 {
-	MOV_ri(REG_WORK1, 1);                  		// mov	r2, #1
+	MOV_ri(REG_WORK1, 1);                  		  // mov	r2, #1
 	AND_rri(REG_WORK2, b, 0x1f);               	// and  r3, r7, #0x1f
 	LSL_rrr(REG_WORK1, REG_WORK1, REG_WORK2); 	// lsl	r2, r2, r3
 
@@ -529,13 +529,9 @@ LENDFUNC(READ,NONE,3,raw_cmov_l_rr,(RW4 d, RR4 s, IMM cc))
 
 LOWFUNC(WRITE,NONE,2,raw_cmp_b,(RR1 d, RR1 s))
 {
-#if defined(ARMV6_ASSEMBLY)
-	SXTB_rr(REG_WORK1, d);							// sxtb r2,%[d]
-	SXTB_rr(REG_WORK2, s);							// sxtb r3,%[s]
-#else
 	LSL_rri(REG_WORK1, d, 24);						// lsl  r2,r6,#24
 	LSL_rri(REG_WORK2, s, 24);						// lsl  r3,r7,#24
-#endif
+
 	CMP_rr(REG_WORK1, REG_WORK2);					// cmp r2, r3
 
 	MRS_CPSR(REG_WORK1);                        	// mrs     r2, CPSR
@@ -546,13 +542,8 @@ LENDFUNC(WRITE,NONE,2,raw_cmp_b,(RR1 d, RR1 s))
 
 LOWFUNC(WRITE,NONE,2,raw_cmp_w,(RR2 d, RR2 s))
 {
-#if defined(ARMV6_ASSEMBLY)
-	SXTH_rr(REG_WORK1, d);						// sxtb r2,%[d]
-	SXTH_rr(REG_WORK2, s);						// sxtb r3,%[s]
-#else
 	LSL_rri(REG_WORK1, d, 16); 					// lsl	r6, r1, #16
 	LSL_rri(REG_WORK2, s, 16); 					// lsl	r7, r2, #16
-#endif
 
 	CMP_rr(REG_WORK1, REG_WORK2); 				// cmp	r7, r6, asr #16
 
@@ -680,8 +671,12 @@ LOWFUNC(NONE,READ,3,raw_mov_b_brR,(W1 d, RR4 s, IMM offset))
 
 	LDRB_rRR(REG_WORK1, REG_WORK1, s); 	// ldrb	r2, [r2, r6]
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, REG_WORK1, 0, 7);       // bfi  r7, r2, 0, 7
+#else
 	BIC_rri(d, d, 0xff);              	// bic	r7, r7, #0xff
 	ORR_rrr(d, d, REG_WORK1);          	// orr	r7, r7, r2
+#endif
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0);                            	// b	<jp>
@@ -698,14 +693,18 @@ LOWFUNC(NONE,READ,3,raw_mov_b_brR24,(W1 d, RR4 s, IMM offset))
   long offs = data_long_offs(offset);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr  r2, [pc, #offs]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 12); 	// ldr  r2, [pc, #12]   ; <value>
+	LDR_rRI(REG_WORK1, RPC_INDEX, 12); 	  // ldr  r2, [pc, #12]   ; <value>
 #endif
 
   BIC_rri(REG_WORK2, s, 0xff000000);          // bic  r3, r6, 0xff000000
 	LDRB_rRR(REG_WORK1, REG_WORK1, REG_WORK2); 	// ldrb	r2, [r2, r3]
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, REG_WORK1, 0, 7);       // bfi  r7, r2, 0, 7
+#else
 	BIC_rri(d, d, 0xff);              	// bic	r7, r7, #0xff
 	ORR_rrr(d, d, REG_WORK1);          	// orr	r7, r7, r2
+#endif
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0);                            	// b	<jp>
@@ -721,10 +720,10 @@ LOWFUNC(NONE,WRITE,3,raw_mov_b_bRr,(RR4 d, RR1 s, IMM offset))
 #if defined(USE_DATA_BUFFER)
   long offs = data_long_offs(offset);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr  r2,[pc, #offs]
-  STRB_rRR(s, d, REG_WORK1);			// strb r6,[r7, r2]
+  STRB_rRR(s, d, REG_WORK1);			      // strb r6,[r7, r2]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	// ldr  r2,[pc,#4]
-	STRB_rRR(s, d, REG_WORK1);			// strb r6,[r7, r2]
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	    // ldr  r2,[pc,#4]
+	STRB_rRR(s, d, REG_WORK1);			      // strb r6,[r7, r2]
 
 	B_i(0);								// b	<jp>
 	//<value>:
@@ -738,7 +737,7 @@ LOWFUNC(NONE,WRITE,3,raw_mov_b_bRr24,(RR4 d, RR1 s, IMM offset))
 {
 #if defined(USE_DATA_BUFFER)
   long offs = data_long_offs(offset);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr  r2,[pc, #offs]
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	  // ldr  r2,[pc, #offs]
 
   BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
   STRB_rRR(s, REG_WORK2, REG_WORK1);			// strb r6,[r3, r2]
@@ -759,13 +758,13 @@ LOWFUNC(NONE,WRITE,2,raw_mov_b_mi,(MEMW d, IMM s))
 {
 #if defined(USE_DATA_BUFFER)
   long offs = data_long_offs(d);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);  	// ldr	r2, [pc, #offs]	; <d>
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);  // ldr	r2, [pc, #offs]	; <d>
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 8);  	// ldr	r2, [pc, #8]	; <d>
+	LDR_rRI(REG_WORK1, RPC_INDEX, 8);  	  // ldr	r2, [pc, #8]	; <d>
 #endif
 
-	MOV_ri(REG_WORK2, s & 0xFF);		    // mov	r3, #0x34
-	STRB_rR(REG_WORK2, REG_WORK1);    	// strb	r3, [r2]
+	MOV_ri(REG_WORK2, s & 0xFF);		      // mov	r3, #0x34
+	STRB_rR(REG_WORK2, REG_WORK1);    	  // strb	r3, [r2]
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0);                             // b	<jp>
@@ -810,9 +809,14 @@ LOWFUNC(NONE,READ,2,raw_mov_b_rm,(W1 d, IMM s))
 	LDR_rRI(REG_WORK1, RPC_INDEX, 12); 	// ldr	r2, [pc, #12]	; <value>
 #endif
 
-	LDRB_rR(REG_WORK2, REG_WORK1);     	// ldrb	r2, [r2]
-	BIC_rri(d, d, 0xff);           		// bic	r7, r7, #0xff
-	ORR_rrr(d, REG_WORK2, d);  			// orr	r7, r2, r7
+	LDRB_rR(REG_WORK2, REG_WORK1);     	// ldrb	r3, [r2]
+
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, REG_WORK2, 0, 7);       // bfi  r7, r3, 0, 7
+#else
+	BIC_rri(d, d, 0xff);           		  // bic	r7, r7, #0xff
+	ORR_rrr(d, REG_WORK2, d);  			    // orr	r7, r3, r7
+#endif
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0);                            	// b	<jp>
@@ -825,9 +829,13 @@ LENDFUNC(NONE,READ,2,raw_mov_b_rm,(W1 d, IMM s))
 
 LOWFUNC(NONE,NONE,2,raw_mov_b_rr,(W1 d, RR1 s))
 {
-	AND_rri(REG_WORK1, s, 0xff);		// and  r2,r2, #0xff
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, s, 0, 7);             // bfi  %[d], %[s], 0, 7
+#else
+	AND_rri(REG_WORK1, s, 0xff);		  // and  r2,r2, #0xff
 	BIC_rri(d, d, 0x0ff);          		// bic	%[d], %[d], #0xff
 	ORR_rrr(d, d, REG_WORK1);      		// orr	%[d], %[d], r2
+#endif
 }
 LENDFUNC(NONE,NONE,2,raw_mov_b_rr,(W1 d, RR1 s))
 
@@ -838,8 +846,8 @@ LOWFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, RR4 s, IMM offset))
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr     r2, [pc, #offs]
 	LDR_rRR(d, REG_WORK1, s);         	  // ldr     r7, [r2, r6]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 4); 	// ldr     r2, [pc, #4]    ; <value>
-	LDR_rRR(d, REG_WORK1, s);         	// ldr     r7, [r2, r6]
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4); 	  // ldr     r2, [pc, #4]    ; <value>
+	LDR_rRR(d, REG_WORK1, s);         	  // ldr     r7, [r2, r6]
 
 	B_i(0);                           	// b       <jp>
 	emit_long(offset);			//<value>:
@@ -874,8 +882,8 @@ LOWFUNC(NONE,WRITE,3,raw_mov_l_bRr,(RR4 d, RR4 s, IMM offset))
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr	r2,[pc, #offs]
 	STR_rRR(s, d, REG_WORK1);			        // str  R6,[R7, r2]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	// ldr	r2,[pc,#4]	; <value>
-	STR_rRR(s, d, REG_WORK1);			// str  R6,[R7, r2]
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	    // ldr	r2,[pc,#4]	; <value>
+	STR_rRR(s, d, REG_WORK1);			        // str  R6,[R7, r2]
 
 	B_i(0);								// b 	<jp>
 	//<value>:
@@ -918,11 +926,11 @@ LOWFUNC(NONE,WRITE,2,raw_mov_l_mi,(MEMW d, IMM s))
 	offs = data_long_offs(s);
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs); 	// ldr    r3, [pc, #offs]    ; s
 
-	STR_rR(REG_WORK2, REG_WORK1);      	// str    r3, [r2]
+	STR_rR(REG_WORK2, REG_WORK1);      	  // str    r3, [r2]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 8); 	// ldr    r2, [pc, #8]    ; <value>
-	LDR_rRI(REG_WORK2, RPC_INDEX, 8); 	// ldr    r3, [pc, #8]    ; <value2>
-	STR_rR(REG_WORK2, REG_WORK1);      	// str    r3, [r2]
+	LDR_rRI(REG_WORK1, RPC_INDEX, 8); 	  // ldr    r2, [pc, #8]    ; <value>
+	LDR_rRI(REG_WORK2, RPC_INDEX, 8); 	  // ldr    r3, [pc, #8]    ; <value2>
+	STR_rR(REG_WORK2, REG_WORK1);      	  // str    r3, [r2]
 
 	B_i(1);                             // b      <jp>
 	emit_long(d);						//<value>:
@@ -992,10 +1000,10 @@ LOWFUNC(NONE,WRITE,3,raw_mov_w_bRr,(RR4 d, RR2 s, IMM offset))
 #if defined(USE_DATA_BUFFER)
   long offs = data_long_offs(offset);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr  r2,[pc, #offs]
-	STRH_rRR(s, d, REG_WORK1);			// strh r6,[r7, r2]
+	STRH_rRR(s, d, REG_WORK1);			      // strh r6,[r7, r2]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	// ldr  r2,[pc,#4]
-	STRH_rRR(s, d, REG_WORK1);			// strh r6,[r7, r2]
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	    // ldr  r2,[pc,#4]
+	STRH_rRR(s, d, REG_WORK1);			      // strh r6,[r7, r2]
 
 	B_i(0);								// b 	<jp>
 	//<value>:
@@ -1010,12 +1018,12 @@ LOWFUNC(NONE,WRITE,3,raw_mov_w_bRr24,(RR4 d, RR2 s, IMM offset))
 #if defined(USE_DATA_BUFFER)
   long offs = data_long_offs(offset);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);	// ldr  r2,[pc, #offs]
-  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
-	STRH_rRR(s, REG_WORK2, REG_WORK1);			// strh r6,[r3, r2]
+  BIC_rri(REG_WORK2, d, 0xff000000);    // bic  r3, r7, 0xff000000
+	STRH_rRR(s, REG_WORK2, REG_WORK1);		// strh r6,[r3, r2]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	// ldr  r2,[pc,#4]
-  BIC_rri(REG_WORK2, d, 0xff000000);      // bic  r3, r7, 0xff000000
-	STRH_rRR(s, REG_WORK2, REG_WORK1);			// strh r6,[r3, r2]
+	LDR_rRI(REG_WORK1, RPC_INDEX, 4);	    // ldr  r2,[pc,#4]
+  BIC_rri(REG_WORK2, d, 0xff000000);    // bic  r3, r7, 0xff000000
+	STRH_rRR(s, REG_WORK2, REG_WORK1);		// strh r6,[r3, r2]
 
 	B_i(0);								// b 	<jp>
 	//<value>:
@@ -1052,9 +1060,13 @@ LOWFUNC(NONE,NONE,2,raw_mov_w_ri,(W2 d, IMM s))
 	LDRH_rRI(REG_WORK2, RPC_INDEX, 12);   	// ldrh    r3, [pc, #12]   ; <value>
 #endif
 
+#if defined(ARMV6_ASSEMBLY)
+  PKHBT_rrr(d, REG_WORK2, d);             // pkhbt   %[d], r3, %[d]
+#else
 	BIC_rri(REG_WORK1, d, 0xff);          	// bic     r2, r7, #0xff
 	BIC_rri(REG_WORK1, REG_WORK1, 0xff00); 	// bic     r2, r2, #0xff00
 	ORR_rrr(d, REG_WORK2, REG_WORK1);     	// orr     r7, r3, r2
+#endif
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0);                                 // b       <jp>
@@ -1146,12 +1158,16 @@ LOWFUNC(NONE,READ,2,raw_mov_w_rm,(W2 d, IMM s))
   long offs = data_long_offs(s);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr	r2, [pc, #offs]
 #else
-	LDR_rRI(REG_WORK1, RPC_INDEX, 12); 	// ldr	r2, [pc, #12]	; <value>
+	LDR_rRI(REG_WORK1, RPC_INDEX, 12); 	  // ldr	r2, [pc, #12]	; <value>
 #endif
 
-	LDRH_rR(REG_WORK1, REG_WORK1);     	// ldrh	r2, [r2]
-	LSR_rri(d, d, 16);              	// lsr	r7, r7, #16
-	ORR_rrrLSLi(d, REG_WORK1, d, 16);  	// orr	r7, r2, r7, lsl #16
+	LDRH_rR(REG_WORK1, REG_WORK1);     	  // ldrh	r2, [r2]
+#if defined(ARMV6_ASSEMBLY)
+  PKHBT_rrr(d, REG_WORK1, d);           // pkhbt   %[d], r2, %[d]
+#else
+	LSR_rri(d, d, 16);              	    // lsr	r7, r7, #16
+	ORR_rrrLSLi(d, REG_WORK1, d, 16);  	  // orr	r7, r2, r7, lsl #16
+#endif
 
 #if !defined(USE_DATA_BUFFER)
 	B_i(0);                            	// b	<jp>
@@ -1164,9 +1180,13 @@ LENDFUNC(NONE,READ,2,raw_mov_w_rm,(W2 d, IMM s))
 
 LOWFUNC(NONE,NONE,2,raw_mov_w_rr,(W2 d, RR2 s))
 {
+#if defined(ARMV6_ASSEMBLY)
+  PKHBT_rrr(d, s, d);                 // pkhbt   %[d], %[s], %[d]
+#else
 	LSL_rri(REG_WORK1, s, 16);					// lsl  r2, r6, #16
-	ORR_rrrLSRi(d, REG_WORK1, d, 16);			// orr  r7, r2, r7, lsr #16
-	ROR_rri(d, d, 16);							// ror  r7, r7, #16
+	ORR_rrrLSRi(d, REG_WORK1, d, 16);		// orr  r7, r2, r7, lsr #16
+	ROR_rri(d, d, 16);							    // ror  r7, r7, #16
+#endif
 }
 LENDFUNC(NONE,NONE,2,raw_mov_w_rr,(W2 d, RR2 s))
 
@@ -1179,9 +1199,13 @@ LOWFUNC(NONE,READ,3,raw_mov_w_rR,(W2 d, RR4 s, IMM offset))
 	else
 		LDRH_rRi(REG_WORK1, s, -offset);	// ldrh	r2, [r6, #-12]
 
-	BIC_rri(d, d, 0xff);         			// bic	r7, r7, #0xff
+#if defined(ARMV6_ASSEMBLY)
+  PKHBT_rrr(d, REG_WORK1, d);         // pkhbt   %[d], r2, %[d]
+#else
+	BIC_rri(d, d, 0xff);         			  // bic	r7, r7, #0xff
 	BIC_rri(d, d, 0xff00);         			// bic	r7, r7, #0xff00
 	ORR_rrr(d, d, REG_WORK1);     			// orr	r7, r7, r2
+#endif
 }
 LENDFUNC(NONE,READ,3,raw_mov_w_rR,(W2 d, RR4 s, IMM offset))
 
@@ -1302,9 +1326,9 @@ LENDFUNC(NONE,NONE,2,raw_mul_64_32,(RW4 d, RW4 s))
 
 LOWFUNC(WRITE,NONE,2,raw_or_b,(RW1 d, RR1 s))
 {
-    AND_rri(REG_WORK1, s, 0xFF);					// and r2, %[s], 0xFF
-    ORR_rrr(d, d, REG_WORK1);						// orr %[d], %[d], r2
-    LSLS_rri(REG_WORK1, d, 24);						// lsls r2, %[d], #24
+  AND_rri(REG_WORK1, s, 0xFF);				// and r2, %[s], 0xFF
+  ORR_rrr(d, d, REG_WORK1);						// orr %[d], %[d], r2
+  LSLS_rri(REG_WORK1, d, 24);					// lsls r2, %[d], #24
 
 	MRS_CPSR(REG_WORK1);                    		// mrs  r2, CPSR
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_CV_FLAGS);	// bic  r2, r2, #0x30000000
@@ -1317,11 +1341,11 @@ LOWFUNC(WRITE,NONE,2,raw_or_w,(RW2 d, RR2 s))
 #if defined(ARMV6_ASSEMBLY)
 	UXTH_rr(REG_WORK1, s);							// UXTH r2, %[s]
 #else
-	BIC_rri(REG_WORK1, s, 0xff000000); 				// bic	r2, %[s], #0xff000000
-	BIC_rri(REG_WORK1, REG_WORK1, 0x00ff0000); 		// bic	r2, r2, #0x00ff0000
+	BIC_rri(REG_WORK1, s, 0xff000000); 				  // bic	r2, %[s], #0xff000000
+	BIC_rri(REG_WORK1, REG_WORK1, 0x00ff0000); 	// bic	r2, r2, #0x00ff0000
 #endif
-	ORR_rrr(d, d, REG_WORK1);						// orr %[d], %[d], r2
-	LSLS_rri(REG_WORK1, d, 16);						// lsls r2, %[d], #16
+	ORR_rrr(d, d, REG_WORK1);						        // orr %[d], %[d], r2
+	LSLS_rri(REG_WORK1, d, 16);						      // lsls r2, %[d], #16
 
 	MRS_CPSR(REG_WORK1);                    		// mrs  r2, CPSR
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_CV_FLAGS);	// bic  r2, r2, #0x30000000
@@ -1368,11 +1392,11 @@ LOWFUNC(WRITE,NONE,2,raw_rol_b_ri,(RW1 r, IMM i))
 	// TODO: Check if the Bittest is necessary. compemu.c seems to do it itself, but meanwhile make sure, that carry is set correctly
 	int imm = 32 - (i & 0x1f);
 
-	MOV_rrLSLi(REG_WORK1, r, 24);						// mov	r2,r7,lsl #24
+	MOV_rrLSLi(REG_WORK1, r, 24);						          // mov	r2,r7,lsl #24
 	ORR_rrrLSRi(REG_WORK1, REG_WORK1, REG_WORK1, 16);	// orr r2,r2,r2,lsr #16
 	ORR_rrrLSRi(REG_WORK1, REG_WORK1, REG_WORK1, 8); 	// orr r2,r2,r2,lsr #8
 
-	RORS_rri(REG_WORK1, REG_WORK1, imm);				// rors	r2,r2,#(32 - (i & 0x1f))
+	RORS_rri(REG_WORK1, REG_WORK1, imm);				      // rors	r2,r2,#(32 - (i & 0x1f))
 
 	MRS_CPSR(REG_WORK2);								// mrs	r3,cpsr
 	TST_ri(REG_WORK1, 1);								// tst	r2,#1
@@ -1380,9 +1404,13 @@ LOWFUNC(WRITE,NONE,2,raw_rol_b_ri,(RW1 r, IMM i))
 	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG); // bic r3,r3,#0x20000000
 	MSR_CPSR_r(REG_WORK2);
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(r, REG_WORK1, 0, 7);             // bfi  %[r], r2, 0, 7
+#else
 	AND_rri(REG_WORK1, REG_WORK1, 0xff);				// and r2,r2,#0xff
 	BIC_rri(r, r, 0xff); 								// bic r7,r7,#0xff
 	ORR_rrr(r, r, REG_WORK1);							// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_rol_b_ri,(RW1 r, IMM i))
 
@@ -1390,15 +1418,14 @@ LOWFUNC(WRITE,NONE,2,raw_rol_b_rr,(RW1 d, RR1 r))
 {
 	// TODO: Check if the Bittest is necessary. compemu.c seems to do it itself, but meanwhile make sure, that carry is set correctly
 
-	MOV_ri(REG_WORK2, 32);								// mov 	r3,#32
-	AND_rri(REG_WORK1, r, 0x1f);						// and	r2,r6,#0x1f
-	SUB_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 			// sub r3,r3,r2
-
-	MOV_rrLSLi(REG_WORK1, d, 24);						// mov	r2,r7,lsl #24
+	AND_rri(REG_WORK1, r, 0x1f);						  // and	r2,r6,#0x1f
+  RSB_rri(REG_WORK2, REG_WORK1, 32);        // rsb  r3, r2, #32
+  
+	MOV_rrLSLi(REG_WORK1, d, 24);						  // mov	r2,r7,lsl #24
 	ORR_rrrLSRi(REG_WORK1, REG_WORK1, REG_WORK1, 16);	// orr r2,r2,r2,lsr #16
 	ORR_rrrLSRi(REG_WORK1, REG_WORK1, REG_WORK1, 8);	// orr r2,r2,r2,lsr #8
 
-	RORS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);			// rors	r2,r2,r3
+	RORS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);			  // rors	r2,r2,r3
 
 	MRS_CPSR(REG_WORK2);								// mrs	r3,cpsr
 	TST_ri(REG_WORK1, 1);								// tst	r2,#1
@@ -1406,10 +1433,13 @@ LOWFUNC(WRITE,NONE,2,raw_rol_b_rr,(RW1 d, RR1 r))
 	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG); 			// bic r3,r3,#0x20000000
 	MSR_CPSR_r(REG_WORK2);
 
-	AND_rri(REG_WORK1, REG_WORK1, 0xff); 				// and r2,r2,#0xff
-	BIC_rri(d, d, 0xff);				 				// bic r7,r7,#0xff
-
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, REG_WORK1, 0, 7);             // bfi  %[d], r2, 0, 7
+#else
+	AND_rri(REG_WORK1, REG_WORK1, 0xff); 	// and r2,r2,#0xff
+	BIC_rri(d, d, 0xff);				 				  // bic r7,r7,#0xff
 	ORR_rrr(d, d, REG_WORK1);							// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_rol_b_rr,(RW1 d, RR1 r))
 
@@ -1429,10 +1459,13 @@ LOWFUNC(WRITE,NONE,2,raw_rol_w_ri,(RW2 r, IMM i))
 	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG); 			// bic r3,r3,#0x20000000
 	MSR_CPSR_r(REG_WORK2);
 
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(r, r, REG_WORK1, 16);   // pkhtb  %[r], %[r], r2, asr #16
+#else
 	BIC_rri(r, r, 0xff00); 								// bic r2,r2,#0xff00
-	BIC_rri(r, r, 0xff); 								// bic r2,r2,#0xff
-
-	ORR_rrrLSRi(r, r, REG_WORK1, 16);					// orr r7,r7,r2,lsr #16
+	BIC_rri(r, r, 0xff); 								  // bic r2,r2,#0xff
+	ORR_rrrLSRi(r, r, REG_WORK1, 16);			// orr r7,r7,r2,lsr #16
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_rol_w_ri,(RW2 r, IMM i))
 
@@ -1440,10 +1473,9 @@ LOWFUNC(WRITE,NONE,2,raw_rol_w_rr,(RW2 d, RR1 r))
 {
 	// TODO: Check if the Bittest is necessary. compemu.c seems to do it itself, but meanwhile make sure, that carry is set correctly
 
-	MOV_ri(REG_WORK2, 32);								// mov 	r3,#32
 	AND_rri(REG_WORK1, r, 0x1f);						// and	r2,r6,#0x1f
-	SUB_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 			// sub r3,r3,r2
-
+  RSB_rri(REG_WORK2, REG_WORK1, 32);      // rsb r3, r3, #32
+  
 	MOV_rrLSLi(REG_WORK1, d, 16);						// mov	r2,r7,lsl #16
 	ORR_rrrLSRi(REG_WORK1, REG_WORK1, REG_WORK1, 16);	// orr r2,r2,r2,lsr #16
 
@@ -1455,10 +1487,13 @@ LOWFUNC(WRITE,NONE,2,raw_rol_w_rr,(RW2 d, RR1 r))
 	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG); 			// bic r3,r3,#0x20000000
 	MSR_CPSR_r(REG_WORK2);
 
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(d, d, REG_WORK1, 16);   // pkhtb  %[d], %[d], r2, asr #16
+#else
 	BIC_rri(d, d, 0xff00); 								// bic r2,r2,#0xff00
 	BIC_rri(d, d, 0xff); 								// bic r2,r2,#0xff
-
 	ORR_rrrLSRi(d, d, REG_WORK1, 16);					// orr r2,r2,r7,lsr #16
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_rol_w_rr,(RW2 d, RR1 r))
 
@@ -1487,10 +1522,9 @@ LOWFUNC(WRITE,NONE,2,raw_rol_l_rr,(RW4 d, RR1 r))
 {
 	// TODO: Check if the Bittest is necessary. compemu.c seems to do it itself, but meanwhile make sure, that carry is set correctly
 
-	MOV_ri(REG_WORK1, 32);						// mov 	r2,#32
 	AND_rri(REG_WORK2, r, 0x1f);				// and	r3,r6,#0x1f
-	SUB_rrr(REG_WORK1, REG_WORK1, REG_WORK2); 	// sub r2,r2,r3
-
+  RSB_rri(REG_WORK1, REG_WORK2, 32);  // rsb r2, r3, #32
+  
 	RORS_rrr(d, d, REG_WORK1);					// rors	r7,r7,r2
 
 	MRS_CPSR(REG_WORK2);						// mrs	r3,cpsr
@@ -1515,9 +1549,13 @@ LOWFUNC(WRITE,NONE,2,raw_ror_b_ri,(RW1 r, IMM i))
 
 	RORS_rri(REG_WORK1, REG_WORK1, i & 0x1f);			// rors r2,r2,#12
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(r, REG_WORK1, 0, 7);             // bfi  %[r],r2, 0, 7
+#else
 	AND_rri(REG_WORK1, REG_WORK1, 0xff); 				// and r2,r2,#0xff
 	BIC_rri(r, r, 0xff);								// bic r7,r7,#0xff
 	ORR_rrr(r, r, REG_WORK1);							// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_ror_b_ri,(RW1 r, IMM i))
 
@@ -1529,9 +1567,13 @@ LOWFUNC(WRITE,NONE,2,raw_ror_b_rr,(RW1 d, RR1 r))
 
 	RORS_rrr(REG_WORK1, REG_WORK1, r);					// rors r2,r2,r6
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, REG_WORK1, 0, 7);             // bfi  %[d], r2, 0, 7
+#else
 	AND_rri(REG_WORK1, REG_WORK1, 0xff); 				// and r2,r2,#0xff
 	BIC_rri(d, d, 0xff);								// bic r7,r7,#0xff
 	ORR_rrr(d, d, REG_WORK1);							// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_ror_b_rr,(RW1 d, RR1 r))
 
@@ -1542,10 +1584,13 @@ LOWFUNC(WRITE,NONE,2,raw_ror_w_ri,(RW2 r, IMM i))
 
 	RORS_rri(REG_WORK1, REG_WORK1, i & 0x1f); 			// RORS r2,r2,#12
 
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(r, r, REG_WORK1, 16);   // pkhtb  %[r], %[r], r2, asr #16
+#else
 	BIC_rri(r, r, 0xff00); 								// bic r7,r7,#0xff00
-	BIC_rri(r, r, 0xff); 								// bic r7,r7,#0xff
-
-	ORR_rrrLSRi(r, r, REG_WORK1, 16);					// orr r7,r7,r2,lsr #16
+	BIC_rri(r, r, 0xff); 								  // bic r7,r7,#0xff
+	ORR_rrrLSRi(r, r, REG_WORK1, 16);			// orr r7,r7,r2,lsr #16
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_ror_w_ri,(RW2 r, IMM i))
 
@@ -1556,10 +1601,13 @@ LOWFUNC(WRITE,NONE,2,raw_ror_w_rr,(RW2 d, RR1 r))
 
 	RORS_rrr(REG_WORK1, REG_WORK1, r); 					// RORS r2,r2,r6
 
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(d, d, REG_WORK1, 16);   // pkhtb  %[d], %[d], r2, asr #16
+#else
 	BIC_rri(d, d, 0xff00); 								// bic r7,r7,#0xff00
-	BIC_rri(d, d, 0xff); 								// bic r7,r7,#0xff
-
-	ORR_rrrLSRi(d, d, REG_WORK1, 16);					// orr r7,r7,r2,lsr #16
+	BIC_rri(d, d, 0xff); 								  // bic r7,r7,#0xff
+	ORR_rrrLSRi(d, d, REG_WORK1, 16);			// orr r7,r7,r2,lsr #16
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_ror_w_rr,(RW2 d, RR1 r))
 
@@ -1606,9 +1654,13 @@ LOWFUNC(RMW,NONE,2,raw_sbb_w,(RW2 d, RR2 s))
 	LSL_rri(REG_WORK1, s, 16);  				// lsl     r2, r6, #16
 
 	SBCS_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 	// subs    r3, r3, r2
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(d, d, REG_WORK2, 16);   // pkhtb  %[d], %[d], r2, asr #16
+#else
 	BIC_rri(d,d, 0xff);
 	BIC_rri(d,d, 0xff00);
 	ORR_rrrLSRi(d, d, REG_WORK2, 16);  					// orr     r7, r7, r3
+#endif
 
 	MRS_CPSR(REG_WORK1);                        // mrs     r2, CPSR
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);  // eor     r2, r2, #0x20000000
@@ -1757,9 +1809,13 @@ LOWFUNC(WRITE,NONE,2,raw_shra_b_ri,(RW1 r, IMM i))
 
 	ASRS_rri(REG_WORK1, REG_WORK1, i & 0x1f); 	// asrs r2,r2,#12
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(r, REG_WORK1, 0, 7);             // bfi  %[r], r2, 0, 7
+#else
 	AND_rri(REG_WORK1, REG_WORK1, 0xff);		// and r2,r2,#0xff
 	BIC_rri(r,r, 0xff); 						// bic r7,r7,#0xff
 	ORR_rrr(r,r,REG_WORK1); 					// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shra_b_ri,(RW1 r, IMM i))
 
@@ -1770,10 +1826,13 @@ LOWFUNC(WRITE,NONE,2,raw_shra_b_rr,(RW1 d, RR1 r))
 
 	ASRS_rrr(REG_WORK1, REG_WORK1, r); 			// asrs r2,r2,r6
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, REG_WORK1, 0, 7);             // bfi  %[d], r2, 0, 7
+#else
 	AND_rri(REG_WORK1, REG_WORK1, 0xff);		// and r2,r2,#0xff
 	BIC_rri(d,d, 0xff); 						// bic r7,r7,#0xff
-
 	ORR_rrr(d,d,REG_WORK1); 					// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shra_b_rr,(RW1 d, RR1 r))
 
@@ -1785,16 +1844,15 @@ LOWFUNC(WRITE,NONE,2,raw_shra_w_ri,(RW2 r, IMM i))
 	ASRS_rri(REG_WORK1, REG_WORK1, i & 0x1f); 	// asrs r2,r2,#12
 
 #if defined(ARMV6_ASSEMBLY)
-	UXTH_rr(REG_WORK1, REG_WORK1);
+  PKHBT_rrr(r, REG_WORK1, r);             // pkhbt   %[r], r2, %[r]
 #else
 	BIC_rri(REG_WORK1, REG_WORK1, 0xff000000);
 	BIC_rri(REG_WORK1, REG_WORK1, 0xff0000);
-#endif
 
 	BIC_rri(r,r,0xff00); 						// bic r7,r7,#0xff00
 	BIC_rri(r,r,0xff); 							// bic r7,r7,#0xff
-
-	ORR_rrr(r,r,REG_WORK1); 					// orr r7,r7,r2
+	ORR_rrr(r,r,REG_WORK1); 				// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shra_w_ri,(RW2 r, IMM i))
 
@@ -1806,16 +1864,15 @@ LOWFUNC(WRITE,NONE,2,raw_shra_w_rr,(RW2 d, RR1 r))
 	ASRS_rrr(REG_WORK1, REG_WORK1, r); 			// asrs r2,r2,r6
 
 #if defined(ARMV6_ASSEMBLY)
-	UXTH_rr(REG_WORK1, REG_WORK1);
+  PKHBT_rrr(d, REG_WORK1, d);             // pkhbt   %[d], r2, %[d]
 #else
 	BIC_rri(REG_WORK1, REG_WORK1, 0xff000000); 	// bic r2,r2,#0xff000000
 	BIC_rri(REG_WORK1, REG_WORK1, 0xff0000); 	// bic r2,r2,#0xff0000
-#endif
 
 	BIC_rri(d,d, 0xff00); 						// bic r7,r7,#0xff00
-	BIC_rri(d,d, 0xff); 						// bic r7,r7,#0xff
-
+	BIC_rri(d,d, 0xff); 						  // bic r7,r7,#0xff
 	ORR_rrr(d,d,REG_WORK1); 					// orr r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shra_w_rr,(RW2 d, RR1 r))
 
@@ -1837,8 +1894,12 @@ LOWFUNC(WRITE,NONE,2,raw_shrl_b_ri,(RW1 r, IMM i))
 
 	LSRS_rri(REG_WORK1, REG_WORK1, i & 0x1f);	// LSRS r2,r2,r6
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(r, REG_WORK1, 0, 7);             // bfi  %[r], r2, 0, 7
+#else
 	BIC_rri(r, r, 0xFF);						// BIC r7,r7,#0xff
 	ORR_rrr(r, r, REG_WORK1); 					// ORR r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shrl_b_ri,(RW1 r, IMM i))
 
@@ -1848,8 +1909,12 @@ LOWFUNC(WRITE,NONE,2,raw_shrl_b_rr,(RW1 d, RR1 r))
 
 	LSRS_rrr(REG_WORK1, REG_WORK1, r);			// LSRS r2,r2,r6
 
+#if defined(ARMV6_ASSEMBLY)
+  BFI_rrii(d, REG_WORK1, 0, 7);             // bfi  %[d], r2, 0, 7
+#else
 	BIC_rri(d, d, 0xFF);						// BIC r7,r7,#0xff
 	ORR_rrr(d, d, REG_WORK1); 					// ORR r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shrl_b_rr,(RW1 d, RR1 r))
 
@@ -1870,9 +1935,13 @@ LOWFUNC(WRITE,NONE,2,raw_shrl_w_ri,(RW2 r, IMM i))
 
 	LSRS_rri(REG_WORK1, REG_WORK1, i & 0x1f);	// LSRS r2,r2,#12
 
+#if defined(ARMV6_ASSEMBLY)
+  PKHBT_rrr(r, REG_WORK1, r);     // pkhbt   %[r], r2, %[r]
+#else
 	BIC_rri(r, r, 0xFF);						// BIC r7,r7,#0xff
-	BIC_rri(r, r, 0xFF00);						// BIC r7,r7,#0xff00
-	ORR_rrr(r, r, REG_WORK1); 					// ORR r7,r7,r2
+	BIC_rri(r, r, 0xFF00);					// BIC r7,r7,#0xff00
+	ORR_rrr(r, r, REG_WORK1); 			// ORR r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shrl_w_ri,(RW2 r, IMM i))
 
@@ -1887,9 +1956,13 @@ LOWFUNC(WRITE,NONE,2,raw_shrl_w_rr,(RW2 d, RR1 r))
 
 	LSRS_rrr(REG_WORK1, REG_WORK1, r);			// LSRS r2,r2,r6
 
+#if defined(ARMV6_ASSEMBLY)
+  PKHBT_rrr(d, REG_WORK1, d);     // pkhbt   %[d], r2, %[d]
+#else
 	BIC_rri(d, d, 0xFF);						// BIC r7,r7,#0xff
-	BIC_rri(d, d, 0xFF00);						// BIC r7,r7,#0xff00
-	ORR_rrr(d, d, REG_WORK1); 					// ORR r7,r7,r2
+	BIC_rri(d, d, 0xFF00);					// BIC r7,r7,#0xff00
+	ORR_rrr(d, d, REG_WORK1); 			// ORR r7,r7,r2
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_shrl_w_rr,(RW2 d, RR1 r))
 
@@ -1901,10 +1974,9 @@ LENDFUNC(WRITE,NONE,2,raw_shrl_l_rr,(RW4 d, RR1 r))
 
 LOWFUNC(WRITE,NONE,2,raw_sub_b,(RW1 d, RR1 s))
 {
-	LSL_rri(REG_WORK1, s, 24);  				// lsl     r2, r6, #24
 	LSL_rri(REG_WORK2, d, 24); 					// lsl     r3, r7, #24
 
-	SUBS_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 	// subs    r3, r3, r2
+	SUBS_rrrLSLi(REG_WORK2, REG_WORK2, s, 24); 	// subs    r3, r3, %[s], lsl #24
 	BIC_rri(d, d, 0xFF);
 	ORR_rrrLSRi(d, d, REG_WORK2, 24);  			// orr     r7, r7, r3
 
@@ -1964,13 +2036,17 @@ LENDFUNC(WRITE,NONE,2,raw_sub_l_ri,(RW4 d, IMM i))
 
 LOWFUNC(WRITE,NONE,2,raw_sub_w,(RW2 d, RR2 s))
 {
-	LSL_rri(REG_WORK1, s, 16);  				// lsl     r2, r6, #16
 	LSL_rri(REG_WORK2, d, 16); 					// lsl     r3, r7, #16
 
-	SUBS_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 	// subs    r3, r3, r2
+	SUBS_rrrLSLi(REG_WORK2, REG_WORK2, s, 16); 	// subs    r3, r3, %[s], LSL #16
+
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(d, d, REG_WORK2, 16);     // pkhtb  %[d], %[d], r3, asr #16
+#else
 	BIC_rri(d, d, 0xff);
 	BIC_rri(d, d, 0xff00);
 	ORR_rrrLSRi(d, d, REG_WORK2, 16);  			// orr     r7, r7, r3
+#endif
 
 	MRS_CPSR(REG_WORK1);                        // mrs     r2, CPSR
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);  // eor     r2, r2, #0x20000000
@@ -1989,13 +2065,16 @@ LOWFUNC(WRITE,NONE,2,raw_sub_w_ri,(RW2 d, IMM i))
 	LDRH_rRI(REG_WORK1, RPC_INDEX, 36);   		// ldrh	r2, [pc, #36]	; <value>
 #endif
 
-	LSL_rri(REG_WORK1, REG_WORK1, 16);      	// lsl	r2, r2, #16
 	LSL_rri(REG_WORK2, d, 16);              	// lsl	r3, r6, #16
 
-	SUBS_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 	// subs	r3, r3, r2
+	SUBS_rrrLSLi(REG_WORK2, REG_WORK2, REG_WORK1, 16); 	// subs	r3, r3, r2, LSL #16
+#if defined(ARMV6_ASSEMBLY)
+  PKHTB_rrrASRi(d, d, REG_WORK2, 16);     // pkhtb  %[d], %[d], r3, asr #16
+#else
 	BIC_rri(d, d, 0xff);
 	BIC_rri(d, d, 0xff00);
 	ORR_rrrLSRi(d, d, REG_WORK2, 16);          	// orr	r6, r3, r6, lsr #16
+#endif
 
 	MRS_CPSR(REG_WORK1);                       	// mrs	r2, CPSR
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);	// eor	r2, r2, #0x20000000
@@ -2012,13 +2091,8 @@ LENDFUNC(WRITE,NONE,2,raw_sub_w_ri,(RW2 d, IMM i))
 
 LOWFUNC(WRITE,NONE,2,raw_test_b_rr,(RR1 d, RR1 s))
 {
-#if defined(ARMV6_ASSEMBLY)
-	SXTB_rr(REG_WORK1, s);
-	SXTB_rr(REG_WORK2, d);
-#else
 	LSL_rri(REG_WORK1, s, 24); 						// lsl	   r2, r6, #24
 	LSL_rri(REG_WORK2, d, 24); 						// lsl	   r3, r7, #24
-#endif
 
 	TST_rr(REG_WORK2, REG_WORK1);  					// tst     r3, r2
 	
@@ -2064,13 +2138,8 @@ LENDFUNC(WRITE,NONE,2,raw_test_l_rr,(RR4 d, RR4 s))
 
 LOWFUNC(WRITE,NONE,2,raw_test_w_rr,(RR2 d, RR2 s))
 {
-#ifdef ARMV6_ASSEMBLY
-	SXTH_rr(REG_WORK1, s);
-	SXTH_rr(REG_WORK2, d);
-#else
 	LSL_rri(REG_WORK1, s, 16); 						// lsl	   r2, r6, #16
 	LSL_rri(REG_WORK2, d, 16); 						// lsl	   r3, r7, #16
-#endif
 
 	TST_rr(REG_WORK2, REG_WORK1);  					// tst     r3, r2
 
@@ -2121,23 +2190,23 @@ LENDFUNC(WRITE,NONE,2,raw_xor_l,(RW4 d, RR4 s))
 
 LOWFUNC(NONE,NONE,2,raw_sign_extend_16_rr,(W4 d, RR2 s))
 {
-#if defined(ARMV6_ASSEMBLY)
-	SXTH_rr(d, s);			// sxth %[d],%[s]
-#else
+//#if defined(ARMV6_ASSEMBLY)
+//	SXTH_rr(d, s);			// sxth %[d],%[s] there is something wrong with SXTH...
+//#else
 	LSL_rri(d, s, 16); // lsl	r6, r7, #16
 	ASR_rri(d, d, 16); // asr	r6, r6, #16
-#endif
+//#endif
 }
 LENDFUNC(NONE,NONE,2,raw_sign_extend_16_rr,(W4 d, RR2 s))
 
 LOWFUNC(NONE,NONE,2,raw_sign_extend_8_rr,(W4 d, RR1 s))
 {
-#if defined(ARMV6_ASSEMBLY)
-	SXTB_rr(d, s);		// SXTB %[d],%[s]
-#else
+//#if defined(ARMV6_ASSEMBLY) there is something wrong with SXTB...
+//	SXTB_rr(d, s);		// SXTB %[d],%[s]
+//#else
 	ROR_rri(d, s, 8); 	// ror	r6, r7, #8
 	ASR_rri(d, d, 24); 	// asr	r6, r6, #24
-#endif
+//#endif
 }
 LENDFUNC(NONE,NONE,2,raw_sign_extend_8_rr,(W4 d, RR1 s))
 

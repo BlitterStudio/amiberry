@@ -135,7 +135,7 @@ read_counts (void)
 	fscanf (file, "Total: %lu\n", &total);
 	while (fscanf (file, "%lx: %lu %s\n", &opcode, &count, name) == 3)
 	{
-	    opcode_next_clev[nr] = 4;
+	    opcode_next_clev[nr] = 5;
 	    opcode_last_postfix[nr] = -1;
 	    opcode_map[nr++] = opcode;
 	    counts[opcode] = count;
@@ -149,7 +149,7 @@ read_counts (void)
 	if (table68k[opcode].handler == -1 && table68k[opcode].mnemo != i_ILLG
 	    && counts[opcode] == 0)
 	{
-	    opcode_next_clev[nr] = 4;
+	    opcode_next_clev[nr] = 5;
 	    opcode_last_postfix[nr] = -1;
 	    opcode_map[nr++] = opcode;
 	    counts[opcode] = count;
@@ -2752,6 +2752,8 @@ gen_opcode (unsigned long int opcode)
 	break;
 
      case i_MMUOP:
+     case i_MMUOP30A:
+     case i_MMUOP30B:
 	isjump;
 	failure;
 	break;
@@ -2979,7 +2981,7 @@ generate_func (int noflags)
     using_exception_3 = 0;
     for (i = 0; i < 1; i++) /* We only do one level! */
     {
-	cpu_level = 4 - i;
+	cpu_level = 5 - i;
 	postfix = i;
 
 	if (noflags)

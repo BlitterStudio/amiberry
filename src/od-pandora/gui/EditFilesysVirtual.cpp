@@ -251,10 +251,9 @@ static void EditFilesysVirtualLoop(void)
 
 bool EditFilesysVirtual(int unit_no)
 {
-  char *volname, *devname, *rootdir, *filesys;
-  int secspertrack, surfaces, cylinders, reserved, blocksize, readonly, bootpri;
-  uae_u64 size;
-  const char *failure;
+  struct mountedinfo mi;
+  struct uaedev_config_info *uci = &changed_prefs.mountconfig[unit_no];
+  std::string strdevname, strvolname, strroot;
   
   dialogResult = false;
   dialogFinished = false;
@@ -265,22 +264,24 @@ bool EditFilesysVirtual(int unit_no)
   {
     char tmp[32];
 
-    failure = get_filesys_unit(currprefs.mountinfo, unit_no, 
-      &devname, &volname, &rootdir, &readonly, &secspertrack, &surfaces, &reserved, 
-      &cylinders, &size, &blocksize, &bootpri, &filesys, 0);
+    get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
-    txtDevice->setText(devname);
-    txtVolume->setText(volname);
-    txtPath->setText(rootdir);
-    chkReadWrite->setSelected(!readonly);
-    snprintf(tmp, 32, "%d", bootpri);
+    strdevname.assign(uci->devname);
+    txtDevice->setText(strdevname);
+    strvolname.assign(uci->volname);
+    txtVolume->setText(strvolname);
+    strroot.assign(uci->rootdir);
+    txtPath->setText(strroot);
+    chkReadWrite->setSelected(!uci->readonly);
+    snprintf(tmp, 32, "%d", uci->bootpri >= -127 ? uci->bootpri : -127);
     txtBootPri->setText(tmp);
   }
   else
   {
     txtDevice->setText("");
     txtVolume->setText("");
-    txtPath->setText(currentDir);
+    strroot.assign(currentDir);
+    txtPath->setText(strroot);
     chkReadWrite->setSelected(true);
     txtBootPri->setText("0");
   }
@@ -291,12 +292,15 @@ bool EditFilesysVirtual(int unit_no)
   if(dialogResult)
   {
     if(unit_no >= 0)
-      kill_filesys_unit(currprefs.mountinfo, unit_no);
+      kill_filesys_unitconfig(&changed_prefs, unit_no);
     else
       extractPath((char *) txtPath->getText().c_str(), currentDir);
-    failure = add_filesys_unit(currprefs.mountinfo, (char *) txtDevice->getText().c_str(), 
+
+    uci = add_filesys_config(&changed_prefs, -1, (char *) txtDevice->getText().c_str(), 
       (char *) txtVolume->getText().c_str(), (char *) txtPath->getText().c_str(), 
-      !chkReadWrite->isSelected(), 0, 0, 0, 0, atoi(txtBootPri->getText().c_str()), 0, 0);
+      !chkReadWrite->isSelected(), 0, 0, 0, 0, atoi(txtBootPri->getText().c_str()), 0, 0, 0);
+    if (uci)
+    	filesys_media_change (uci->rootdir, 1, uci);
   }
 
   return dialogResult;

@@ -7,11 +7,6 @@
 #include "zfile.h"
 
 
-void filesys_init( void )
-{
-}
-
-
 int my_existsfile (const char *name)
 {
 	struct stat st;
@@ -36,6 +31,19 @@ int my_existsdir(const char *name)
       return 1;
   }
   return 0;
+}
+
+
+int my_getvolumeinfo (const char *root)
+{
+  struct stat st;
+  int ret = 0;
+
+  if (lstat (root, &st) == -1)
+    return -1;
+  if (!S_ISDIR(st.st_mode))
+    return -1;
+  return ret;
 }
 
 
@@ -123,4 +131,12 @@ unsigned int my_write (void* f, void* b, unsigned int len)
 int my_truncate (const char *name, long int len)
 {
   return truncate(name, len);
+}
+
+
+/* Returns 1 if an actual volume-name was found, 2 if no volume-name (so uses some defaults) */
+int target_get_volume_name(struct uaedev_mount_info *mtinf, const char *volumepath, char *volumename, int size, int inserted, int fullcheck)
+{
+	sprintf(volumename, "DH_%c", volumepath[0]);
+  return 2;
 }

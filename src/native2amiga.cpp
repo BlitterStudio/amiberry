@@ -30,7 +30,7 @@ static uae_sem_t n2asem;
 
 void native2amiga_install (void)
 {
-    init_comm_pipe (&native2amiga_pending, 10, 2);
+    init_comm_pipe (&native2amiga_pending, 100, 2);
     uae_sem_init (&n2asem, 0, 1);
 }
 

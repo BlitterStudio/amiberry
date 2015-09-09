@@ -1249,4 +1249,7 @@ enum {
 #define CC_SADD16_rrr(cc,Rd,Rn,Rm)    _W(((cc) << 28) | (0x61 << 20) | (Rn << 16) | (Rd << 12) | (0xf1 << 4) | (Rm))
 #define SADD16_rrr(Rd,Rn,Rm)					CC_SADD16_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
+#define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
+#define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
+
 #endif /* ARM_RTASM_H */

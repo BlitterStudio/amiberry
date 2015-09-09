@@ -29,6 +29,7 @@ uaecptr EXPANSION_bootcode, EXPANSION_nullfunc;
 /* ROM tag area memory access */
 
 uae_u8 *rtarea;
+uaecptr rtarea_base;
 
 static uae_u32 REGPARAM3 rtarea_lget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 rtarea_wget (uaecptr) REGPARAM;
@@ -37,20 +38,28 @@ static void REGPARAM3 rtarea_lput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 rtarea_wput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 rtarea_bput (uaecptr, uae_u32) REGPARAM;
 static uae_u8 *REGPARAM3 rtarea_xlate (uaecptr) REGPARAM;
+static int REGPARAM3 rtarea_check (uaecptr addr, uae_u32 size) REGPARAM;
 
 addrbank rtarea_bank = {
     rtarea_lget, rtarea_wget, rtarea_bget,
     rtarea_lput, rtarea_wput, rtarea_bput,
-    rtarea_xlate, default_check, NULL, "UAE Boot ROM"
+    rtarea_xlate, rtarea_check, NULL, "UAE Boot ROM",
+    rtarea_lget, rtarea_wget, ABFLAG_ROMIN
 };
 
-uae_u8 *REGPARAM2 rtarea_xlate (uaecptr addr)
+static uae_u8 *REGPARAM2 rtarea_xlate (uaecptr addr)
 {
     addr &= 0xFFFF;
     return rtarea + addr;
 }
 
-uae_u32 REGPARAM2 rtarea_lget (uaecptr addr)
+static int REGPARAM2 rtarea_check (uaecptr addr, uae_u32 size)
+{
+    addr &= 0xFFFF;
+    return (addr + size) <= 0xFFFF;
+}
+
+static uae_u32 REGPARAM2 rtarea_lget (uaecptr addr)
 {
 #ifdef JIT
     special_mem |= S_READ;
@@ -59,7 +68,7 @@ uae_u32 REGPARAM2 rtarea_lget (uaecptr addr)
     return (uae_u32)(rtarea_wget (addr) << 16) + rtarea_wget (addr+2);
 }
 
-uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
+static uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
 {
 #ifdef JIT
     special_mem |= S_READ;
@@ -68,7 +77,7 @@ uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
     return (rtarea[addr]<<8) + rtarea[addr+1];
 }
 
-uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
+static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 {
 #ifdef JIT
     special_mem |= S_READ;
@@ -77,21 +86,21 @@ uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
     return rtarea[addr];
 }
 
-void REGPARAM2 rtarea_lput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 rtarea_lput (uaecptr addr, uae_u32 value)
 {
 #ifdef JIT
     special_mem |= S_WRITE;
 #endif
 }
 
-void REGPARAM2 rtarea_wput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 rtarea_wput (uaecptr addr, uae_u32 value)
 {
 #ifdef JIT
     special_mem |= S_WRITE;
 #endif
 }
 
-void REGPARAM2 rtarea_bput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 rtarea_bput (uaecptr addr, uae_u32 value)
 {
 #ifdef JIT
     special_mem |= S_WRITE;
@@ -107,7 +116,7 @@ static int rt_straddr;
 
 uae_u32 addr (int ptr)
 {
-    return (uae_u32)ptr + RTAREA_BASE;
+    return (uae_u32)ptr + rtarea_base;
 }
 
 void db (uae_u8 data)
@@ -134,8 +143,11 @@ void dl (uae_u32 data)
 
 uae_u32 ds (const char *str)
 {
-    int len = strlen (str) + 1;
+    int len;
 
+    if (!str)
+	return addr (rt_straddr);
+    len = strlen (str) + 1;
     rt_straddr -= len;
     
     int i;
@@ -152,7 +164,7 @@ void calltrap (uae_u32 n)
 
 void org (uae_u32 a)
 {
-    rt_addr = a - RTAREA_BASE;
+    rt_addr = a & 0xffff;
 }
 
 uae_u32 here (void)
@@ -219,13 +231,13 @@ void rtarea_init (void)
 
     a = here();
     /* Dummy trap - removing this breaks the filesys emulation. */
-    org (RTAREA_BASE + 0xFF00);
+    org (rtarea_base + 0xFF00);
     calltrap (deftrap2 (nullfunc, TRAPFLAG_NO_RETVAL, ""));
 
-    org (RTAREA_BASE + 0xFF80);
+    org (rtarea_base + 0xFF80);
     calltrap (deftrap2 (getchipmemsize, TRAPFLAG_DORET, ""));
 
-    org (RTAREA_BASE + 0xFF10);
+    org (rtarea_base + 0xFF10);
     calltrap (deftrap2 (uae_puts, TRAPFLAG_NO_RETVAL, ""));
     dw (RTS);
 
@@ -235,6 +247,7 @@ void rtarea_init (void)
     filesys_install_code ();
 #endif
 
+    uae_boot_rom_size = here() - rtarea_base;
     init_extended_traps();
 }
 
@@ -242,9 +255,14 @@ volatile int uae_int_requested = 0;
 
 void set_uae_int_flag (void)
 {
-    rtarea[0xFFFB] = uae_int_requested;
+    rtarea[0xFFFB] = uae_int_requested & 1;
 }
 
 void rtarea_setup(void)
 {
+    uaecptr base = need_uae_boot_rom ();
+    if (base) {
+	write_log ("RTAREA located at %08X\n", base);
+	rtarea_base = base;
+    }
 }

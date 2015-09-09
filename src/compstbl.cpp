@@ -1809,6 +1809,17 @@ extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { NULL, 0x00000000, 61424 }, /* BFINS */
 { NULL, 0x00000000, 61432 }, /* BFINS */
 { NULL, 0x00000000, 61433 }, /* BFINS */
+{ NULL, 0x00000001, 61440 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61448 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61456 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61464 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61472 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61480 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61488 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61496 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61497 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61498 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61499 }, /* MMUOP30A */
 { NULL, 0x00000020, 61952 }, /* FPP */
 { NULL, 0x00000020, 61960 }, /* FPP */
 { NULL, 0x00000020, 61968 }, /* FPP */
@@ -1875,6 +1886,17 @@ extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { op_f610_0_comp_ff, 0x00000002, 62992 }, /* MOVE16 */
 { op_f618_0_comp_ff, 0x00000002, 63000 }, /* MOVE16 */
 { op_f620_0_comp_ff, 0x00000002, 63008 }, /* MOVE16 */
+{ NULL, 0x00000001, 63488 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63496 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63504 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63512 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63520 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63528 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63536 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63544 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63545 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63546 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63547 }, /* MMUOP30B */
 { 0, 0,65536 }};
 extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { op_0_0_comp_nf, 0x00000002, 0 }, /* OR */
@@ -3677,6 +3699,17 @@ extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { NULL, 0x00000000, 61424 }, /* BFINS */
 { NULL, 0x00000000, 61432 }, /* BFINS */
 { NULL, 0x00000000, 61433 }, /* BFINS */
+{ NULL, 0x00000001, 61440 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61448 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61456 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61464 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61472 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61480 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61488 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61496 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61497 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61498 }, /* MMUOP30A */
+{ NULL, 0x00000001, 61499 }, /* MMUOP30A */
 { NULL, 0x00000020, 61952 }, /* FPP */
 { NULL, 0x00000020, 61960 }, /* FPP */
 { NULL, 0x00000020, 61968 }, /* FPP */
@@ -3743,5 +3776,16 @@ extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { op_f610_0_comp_nf, 0x00000002, 62992 }, /* MOVE16 */
 { op_f618_0_comp_nf, 0x00000002, 63000 }, /* MOVE16 */
 { op_f620_0_comp_nf, 0x00000002, 63008 }, /* MOVE16 */
+{ NULL, 0x00000001, 63488 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63496 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63504 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63512 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63520 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63528 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63536 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63544 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63545 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63546 }, /* MMUOP30B */
+{ NULL, 0x00000001, 63547 }, /* MMUOP30B */
 { 0, 0,65536 }};
 #endif

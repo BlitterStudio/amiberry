@@ -18,7 +18,7 @@ extern void disk_insert (int num, const char *name);
 extern void disk_insert_force (int num, const char *name);
 extern void DISK_check_change (void);
 extern struct zfile *DISK_validate_filename (const char *, int, int *, uae_u32 *);
-extern void DISK_handler (void);
+extern void DISK_handler (uae_u32);
 extern void DISK_update (int hpos);
 extern void DISK_hsync (int hpos);
 extern void DISK_reset (void);

@@ -73,7 +73,7 @@ static void ersatz_failed (void)
     if (already_failed)
 	    return;
     already_failed = 1;
-    //notify_user (NUMSG_KICKREPNO);
+    notify_user (NUMSG_KICKREPNO);
     uae_restart (-1, NULL);
 }
 
@@ -82,6 +82,7 @@ static void ersatz_doio (void)
     uaecptr request = m68k_areg(&regs, 1);
     switch (get_word (request + 0x1C)) {
      case 9: /* TD_MOTOR is harmless */
+	return;
      case 2: case 0x8002: /* READ commands */
 	break;
 
@@ -114,7 +115,7 @@ static void ersatz_init (void)
     write_log ("initializing kickstart replacement\n");
     if (disk_empty (0)) {
 	    already_failed = 1;
-	    //notify_user (NUMSG_KICKREP);
+	    notify_user (NUMSG_KICKREP);
 	    uae_restart (-1, NULL);
 	    return;
     }

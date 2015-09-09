@@ -1,1 +1,0 @@
-od-pandora/sysconfig.h

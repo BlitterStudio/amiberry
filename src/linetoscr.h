@@ -31,9 +31,9 @@ static __inline__ int LNAME (int spix, int dpix, int stoppos)
       while (dpix < stoppos) {
             int pixcol = pixdata.apixels[spix];
             TYPE d;
-            if (spriteagadpfpixels[spix]) {
-               d = colors_for_drawing.acolors[spriteagadpfpixels[spix]];
-               spriteagadpfpixels[spix]=0;
+            if (spritepixels[spix]) {
+               d = colors_for_drawing.acolors[spritepixels[spix]];
+               spritepixels[spix]=0;
             } else {
                int val = lookup[pixcol];
                if (lookup_no[pixcol] == 2)  val += dblpfofs[bpldualpf2of];
