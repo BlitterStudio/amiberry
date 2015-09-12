@@ -1,6 +1,11 @@
 # uae4arm-rpi
 Port of uae4arm on Raspberry Pi
 
+v0.4:
+Merge of latest TomB version for Pandora.
+Keep position between file selection 
+Joystick management improved.
+
 v0.3:
 Rework of dispmanX management. It improve picasso
 Add 4/3 shrink for 16/9 screen.
