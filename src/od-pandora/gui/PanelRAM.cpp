@@ -82,57 +82,57 @@ static MemorySliderActionListener* memorySliderActionListener;
 
 void InitPanelRAM(const struct _ConfigCategory& category)
 {
-  memorySliderActionListener = new MemorySliderActionListener();
+	memorySliderActionListener = new MemorySliderActionListener();
   
 	lblChipmem = new gcn::Label("Chip:");
-  sldChipmem = new gcn::Slider(0, 4);
-  sldChipmem->setSize(110, SLIDER_HEIGHT);
-  sldChipmem->setBaseColor(gui_baseCol);
+	sldChipmem = new gcn::Slider(0, 4);
+	sldChipmem->setSize(110, SLIDER_HEIGHT);
+	sldChipmem->setBaseColor(gui_baseCol);
 	sldChipmem->setMarkerLength(20);
 	sldChipmem->setStepLength(1);
 	sldChipmem->setId("Chipmem");
-  sldChipmem->addActionListener(memorySliderActionListener);
-  lblChipsize = new gcn::Label("None  ");
+	sldChipmem->addActionListener(memorySliderActionListener);
+	lblChipsize = new gcn::Label("None  ");
 
 	lblSlowmem = new gcn::Label("Slow:");
-  sldSlowmem = new gcn::Slider(0, 4);
-  sldSlowmem->setSize(110, SLIDER_HEIGHT);
-  sldSlowmem->setBaseColor(gui_baseCol);
+	sldSlowmem = new gcn::Slider(0, 4);
+	sldSlowmem->setSize(110, SLIDER_HEIGHT);
+	sldSlowmem->setBaseColor(gui_baseCol);
 	sldSlowmem->setMarkerLength(20);
 	sldSlowmem->setStepLength(1);
 	sldSlowmem->setId("Slowmem");
-  sldSlowmem->addActionListener(memorySliderActionListener);
-  lblSlowsize = new gcn::Label("None  ");
+	sldSlowmem->addActionListener(memorySliderActionListener);
+	lblSlowsize = new gcn::Label("None  ");
 
 	lblFastmem = new gcn::Label("Fast:");
-  sldFastmem = new gcn::Slider(0, 4);
-  sldFastmem->setSize(110, SLIDER_HEIGHT);
-  sldFastmem->setBaseColor(gui_baseCol);
+	sldFastmem = new gcn::Slider(0, 4);
+	sldFastmem->setSize(110, SLIDER_HEIGHT);
+	sldFastmem->setBaseColor(gui_baseCol);
 	sldFastmem->setMarkerLength(20);
 	sldFastmem->setStepLength(1);
 	sldFastmem->setId("Fastmem");
-  sldFastmem->addActionListener(memorySliderActionListener);
-  lblFastsize = new gcn::Label("None  ");
+	sldFastmem->addActionListener(memorySliderActionListener);
+	lblFastsize = new gcn::Label("None  ");
 
 	lblZ3mem = new gcn::Label("Z3 fast:");
-  sldZ3mem = new gcn::Slider(0, 7);
-  sldZ3mem->setSize(110, SLIDER_HEIGHT);
-  sldZ3mem->setBaseColor(gui_baseCol);
+	sldZ3mem = new gcn::Slider(0, 7);
+	sldZ3mem->setSize(110, SLIDER_HEIGHT);
+	sldZ3mem->setBaseColor(gui_baseCol);
 	sldZ3mem->setMarkerLength(20);
 	sldZ3mem->setStepLength(1);
 	sldZ3mem->setId("Z3mem");
-  sldZ3mem->addActionListener(memorySliderActionListener);
-  lblZ3size = new gcn::Label("None  ");
-  
+	sldZ3mem->addActionListener(memorySliderActionListener);
+	lblZ3size = new gcn::Label("None  ");
+
 	lblGfxmem = new gcn::Label("RTG:");
-  sldGfxmem = new gcn::Slider(0, 5);
-  sldGfxmem->setSize(110, SLIDER_HEIGHT);
-  sldGfxmem->setBaseColor(gui_baseCol);
+	sldGfxmem = new gcn::Slider(0, 5);
+	sldGfxmem->setSize(110, SLIDER_HEIGHT);
+	sldGfxmem->setBaseColor(gui_baseCol);
 	sldGfxmem->setMarkerLength(20);
 	sldGfxmem->setStepLength(1);
 	sldGfxmem->setId("Gfxmem");
-  sldGfxmem->addActionListener(memorySliderActionListener);
-  lblGfxsize = new gcn::Label("None  ");
+	sldGfxmem->addActionListener(memorySliderActionListener);
+	lblGfxsize = new gcn::Label("None  ");
 
 	grpRAM = new gcn::Window("Memory Settings");
 	grpRAM->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
@@ -157,19 +157,19 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	grpRAM->add(sldZ3mem, 70, posY);
 	grpRAM->add(lblZ3size, 70 + sldZ3mem->getWidth() + 12, posY);
 	posY += sldZ3mem->getHeight() + DISTANCE_NEXT_Y;
-
+#ifdef PICASSO96
 	grpRAM->add(lblGfxmem, 8, posY);
 	grpRAM->add(sldGfxmem, 70, posY);
 	grpRAM->add(lblGfxsize, 70 + sldGfxmem->getWidth() + 12, posY);
 	posY += sldGfxmem->getHeight() + DISTANCE_NEXT_Y;
-
+#endif
 	grpRAM->setMovable(false);
 	grpRAM->setSize(250, posY + DISTANCE_BORDER);
-  grpRAM->setBaseColor(gui_baseCol);
+	grpRAM->setBaseColor(gui_baseCol);
   
-  category.panel->add(grpRAM);
+	category.panel->add(grpRAM);
   
-  RefreshPanelRAM();
+	RefreshPanelRAM();
 }
 
 

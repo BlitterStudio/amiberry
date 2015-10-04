@@ -834,6 +834,15 @@ STATIC_INLINE void reset_data_buffer(void)
  ********************************************************************/
 void emit_trace_pc(uae_u8 i);
 
+#ifndef USE_ARMNEON
+extern "C" {
+void TRACE_Start(void)
+{
+// TBD for non neon platform...
+}
+}
+#endif
+
 #if defined(CPU_arm) 
 #include "codegen_arm.cpp"
 #else

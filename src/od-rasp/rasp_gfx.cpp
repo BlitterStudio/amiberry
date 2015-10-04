@@ -38,7 +38,7 @@ static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 480,  768,  864,  960 };
 static int red_bits, green_bits, blue_bits;
 static int red_shift, green_shift, blue_shift;
 
-int screen_is_picasso;
+int screen_is_picasso = 0;
 static int picasso_maxw = 0, picasso_maxh = 0;
 
 static int bitdepth, bit_unit;
@@ -169,11 +169,13 @@ static void open_screen(struct uae_prefs *p)
   int width;
   int height;
 
+#ifdef PICASSO96
   if (screen_is_picasso)
   {
     width  = picasso_vidinfo.width;
     height = picasso_vidinfo.height;
   } else
+#endif
   {
     width  = p->gfx_size.width;
     height = p->gfx_size.height;
@@ -194,11 +196,12 @@ static void open_screen(struct uae_prefs *p)
       snprintf(layersize, 20, "%dx480", p->gfx_size_fs.width);
     }
   }
+#ifdef PICASSO96
   else
   {
 	  snprintf(layersize, 20, "%dx%d", picasso_vidinfo.width, picasso_vidinfo.height);
   }
-
+#endif
 
   if(Dummy_prSDLScreen == NULL )
   {

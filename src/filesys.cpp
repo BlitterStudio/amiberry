@@ -4820,7 +4820,9 @@ static uae_u32 REGPARAM2 filesys_init_storeinfo (TrapContext *context)
     {
 	case 1:
 	mountertask = m68k_areg (&context->regs, 1);
+#ifdef PICASSO96
 	picasso96_alloc (context);
+#endif
 	break;
 	case 2:
 	ret = automountunit;

@@ -2076,6 +2076,7 @@ static void draw_status_line (int line)
   int on_rgb, off_rgb, c;
   uae_u8 *buf;
 
+#ifdef PICASSO96
   if(picasso_on)
   {
 #ifdef RASPBERRY
@@ -2090,6 +2091,7 @@ static void draw_status_line (int line)
 #endif
   }
   else
+#endif
   {
     x = gfxvidinfo.width - TD_PADX - 6 * TD_WIDTH;
     y = line - (gfxvidinfo.height - TD_TOTAL_HEIGHT);
@@ -2097,7 +2099,7 @@ static void draw_status_line (int line)
   }
 
 	x+=100 - (TD_WIDTH*(currprefs.nr_floppies-1)) - TD_WIDTH;
-
+#ifdef PICASSO96
   if(picasso_on)
 #ifdef RASPBERRY
     memset (xlinebuffer + (x - 4) * 2, 0, (picasso_vidinfo.width - x + 4) * 2);
@@ -2105,6 +2107,7 @@ static void draw_status_line (int line)
     memset (xlinebuffer + (x - 4) * 2, 0, (prSDLScreen->w - x + 4) * 2);
 #endif
   else
+#endif
     memset (xlinebuffer + (x - 4) * gfxvidinfo.pixbytes, 0, (gfxvidinfo.width - x + 4) * gfxvidinfo.pixbytes);
 
 	for (led = -2; led < (currprefs.nr_floppies+1); led++) {
@@ -2280,6 +2283,7 @@ void vsync_handle_redraw (int long_frame, int lof_changed)
 			#endif
 			finish_drawing_frame ();
 		}
+#ifdef PICASSO96
     else if(picasso_on && currprefs.leds_on_screen)
     {
       int i;
@@ -2292,7 +2296,7 @@ void vsync_handle_redraw (int long_frame, int lof_changed)
   			draw_status_line (line);
   		}
     }
-
+#endif
 		/* At this point, we have finished both the hardware and the
 		 * drawing frame. Essentially, we are outside of all loops and
 		 * can do some things which would cause confusion if they were
