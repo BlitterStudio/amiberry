@@ -55,8 +55,6 @@
  *     - 8th unlock2 all registers that were locked
  */
 
-static bool inverted_carry = false;
-
 MIDFUNC(0,live_flags,(void))
 {
 	live.flags_on_stack=TRASH;

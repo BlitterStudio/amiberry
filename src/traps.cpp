@@ -194,7 +194,7 @@ static uaecptr m68k_return_trapaddr;
 static uaecptr exit_trap_trapaddr;
 
 /* For IPC between main thread and trap context */
-static uae_sem_t trap_mutex;
+static uae_sem_t trap_mutex = 0;
 static ExtendedTrapContext *current_context;
 
 
@@ -240,6 +240,7 @@ static void *trap_thread (void *arg)
     /* Good bye, cruel world... */
 
     /* dummy return value */
+    write_log("trap_thread: exit (arg=0x%08X)\n", arg);
     return 0;
 }
 
@@ -474,5 +475,8 @@ void init_extended_traps (void)
     exit_trap_trapaddr = here();
     calltrap (deftrap2 ((TrapHandler)exit_trap_handler, TRAPFLAG_NO_RETVAL, "exit_trap"));
 
+    if(trap_mutex != 0)
+      uae_sem_destroy(&trap_mutex);
+    trap_mutex = 0;
     uae_sem_init (&trap_mutex, 0, 1);
 }

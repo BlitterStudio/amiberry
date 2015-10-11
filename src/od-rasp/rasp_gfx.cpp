@@ -298,9 +298,11 @@ static void open_screen(struct uae_prefs *p)
     //dispmanxupdate = vc_dispmanx_update_start( 10 );
   }
 
-
-  //InitAmigaVidMode(p);
-  init_row_map();
+  if(prSDLScreen != NULL)
+  {
+    InitAmigaVidMode(p);
+    init_row_map();
+  }    
   //framecnt = 1; // Don't draw frame before reset done
 }
 
@@ -311,7 +313,6 @@ void update_display(struct uae_prefs *p)
     
   SDL_ShowCursor(SDL_DISABLE);
 
-  InitAmigaVidMode(p);
   framecnt = 1; // Don't draw frame before reset done
 }
 
@@ -362,7 +363,7 @@ void unlockscr (void)
 }
 
 
-void flush_block ()
+void flush_screen ()
 {
     //SDL_UnlockSurface (prSDLScreen);
 
@@ -489,8 +490,6 @@ static void graphics_subinit (void)
 
     InitAmigaVidMode(&currprefs);
 	}
-	lastmx = lastmy = 0;
-	newmousecounters = 0;
 }
 
 STATIC_INLINE int bitsInMask (unsigned long mask)

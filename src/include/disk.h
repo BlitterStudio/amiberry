@@ -15,7 +15,6 @@ extern uae_u8 DISK_status (void);
 extern void disk_eject (int num);
 extern int disk_empty (int num);
 extern void disk_insert (int num, const char *name);
-extern void disk_insert_force (int num, const char *name);
 extern void DISK_check_change (void);
 extern struct zfile *DISK_validate_filename (const char *, int, int *, uae_u32 *);
 extern void DISK_handler (uae_u32);
@@ -33,9 +32,16 @@ extern void DISK_reinsert (int num);
 
 extern void DSKLEN (uae_u16 v, int hpos);
 extern uae_u16 DSKBYTR (int hpos);
-extern void DSKDAT (uae_u16);
+#define DSKDAT(uae_u16)
 extern void DSKSYNC (int, uae_u16);
 extern void DSKPTL (uae_u16);
 extern void DSKPTH (uae_u16);
+
+extern int disk_debug_logging;
+extern int disk_debug_mode;
+extern int disk_debug_track;
+#define DISK_DEBUG_DMA_READ 1
+#define DISK_DEBUG_DMA_WRITE 2
+#define DISK_DEBUG_PIO 4
 
 #define MAX_PREVIOUS_FLOPPIES 99

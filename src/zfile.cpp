@@ -50,13 +50,9 @@ int mkstemp(char *templ)
 }
 #endif
 
-#ifndef MAX_PATH
-#define MAX_PATH 256
-#endif
-
 static struct zfile *zlist = 0;
 
-const char *uae_archive_extensions[] = { "zip", /*"rar",*/ "7z", NULL };
+const char *uae_archive_extensions[] = { "zip", "7z", "lha", "lzh", "lzx", NULL };
 
 static struct zfile *zfile_create (void)
 {
@@ -77,7 +73,6 @@ static void zfile_free (struct zfile *f)
 	fclose (f->f);
     if (f->deleteafterclose) {
 	unlink (f->name);
-	write_log ("deleted temporary file '%s'\n", f->name);
     }
     xfree (f->name);
     xfree (f->data);
@@ -104,7 +99,6 @@ void zfile_fclose (struct zfile *f)
 	return;
     while (l!=f) {
 	if (l == 0) {
-	    write_log ("zfile: tried to free already freed filehandle!\n");
 	    return;
 	}
 	pl = l;
@@ -122,7 +116,7 @@ void zfile_fclose (struct zfile *f)
 }
 
 static uae_u8 exeheader[]={0x00,0x00,0x03,0xf3,0x00,0x00,0x00,0x00};
-static char *diskimages[] = { "adf", "adz", /*"ipf", "fdi", "dms",*/ "wrp", /*"dsq",*/ 0 };
+static char *diskimages[] = { "adf", "adz", "ipf", "fdi", "dms", "wrp", "dsq", 0 };
 int zfile_gettype (struct zfile *z)
 {
     uae_u8 buf[8];
@@ -248,6 +242,44 @@ struct zfile *zfile_gunzip (struct zfile *z)
     return z2;
 }
 
+static struct zfile *dsq (struct zfile *z)
+{
+    struct zfile *zo;
+
+    zo = zfile_fopen_empty ("zipped.dsq", 1760 * 512);
+    if (zo) {
+	struct zvolume *zv = archive_directory_lzx (z);
+	if (zv) {
+	    if (zv->root.child) {
+		struct zfile *zi = archive_access_lzx (zv->root.child);
+		if (zi && zi->data && zi->size > 1000) {
+		    uae_u8 *buf = zi->data;
+		    if (!memcmp (buf, "PKD\x13", 4) || !memcmp (buf, "PKD\x11", 4)) {
+			int sectors = buf[18];
+			int heads = buf[15];
+			int blocks = (buf[6] << 8) | buf[7];
+			int blocksize = (buf[10] << 8) | buf[11];
+			if (blocksize == 512 && blocks == 1760 && sectors == 22 && heads == 2) {
+			    int off = buf[3] == 0x13 ? 52 : 32;
+			    int i;
+			    for (i = 0; i < blocks / (sectors / heads); i++) {
+				zfile_fwrite (zi->data + off, sectors * blocksize / heads, 1, zo);
+				off += sectors * (blocksize + 16) / heads;
+			    }
+			    zfile_fclose_archive (zv);
+			    zfile_fclose (z);
+			    return zo;
+			}
+		    }
+		}
+		zfile_fclose (zi);
+	    }
+	}
+	zfile_fclose (zo);
+    }
+    return z;
+}
+
 static struct zfile *wrp (struct zfile *z)
 {
     return unwarp (z);
@@ -272,7 +304,7 @@ static struct zfile *dms (struct zfile *z)
 const char *uae_ignoreextensions[] = 
     { ".gif", ".jpg", ".png", ".xml", ".pdf", ".txt", 0 };
 const char *uae_diskimageextensions[] =
-    { ".adf", ".adz", ".ipf", ".fdi", ".exe", ".dms", ".wrp", 0 };
+    { ".adf", ".adz", ".ipf", ".fdi", ".exe", ".dms", ".wrp", ".dsq", 0 };
 
 int zfile_is_ignore_ext(const char *name)
 {
@@ -299,9 +331,9 @@ int zfile_isdiskimage (const char *name)
     return 0;
 }
 
-static const char *plugins_7z[] = { "7z", "rar", "zip", "lha", "lzh", "lzx", NULL };
-static const char *plugins_7z_x[] = { "7z", "Rar!", "MK", NULL, NULL, NULL, NULL };
-static const int plugins_7z_t[] = { ArchiveFormat7Zip, ArchiveFormatRAR, ArchiveFormatZIP, ArchiveFormatLHA, ArchiveFormatLHA, ArchiveFormatLZX };
+static const char *plugins_7z[] = { "7z", "zip", "lha", "lzh", "lzx", NULL };
+static const char *plugins_7z_x[] = { "7z", "MK", NULL, NULL, NULL, NULL };
+static const int plugins_7z_t[] = { ArchiveFormat7Zip, ArchiveFormatZIP, ArchiveFormatLHA, ArchiveFormatLHA, ArchiveFormatLZX };
 
 int iszip (struct zfile *z)
 {
@@ -320,8 +352,6 @@ int iszip (struct zfile *z)
 	    return ArchiveFormatZIP;
     if (!strcasecmp (ext, ".7z") && header[0] == '7' && header[1] == 'z')
 	    return ArchiveFormat7Zip;
-    if (!strcasecmp (ext, ".rar") && header[0] == 'R' && header[1] == 'a' && header[2] == 'r' && header[3] == '!')
-	    return ArchiveFormatRAR;
     if ((!strcasecmp (ext, ".lha") || !strcasecmp (ext, ".lzh")) && header[2] == '-' && header[3] == 'l' && header[4] == 'h' && header[6] == '-')
 	return ArchiveFormatLHA;
     if (!strcasecmp (ext, ".lzx") && header[0] == 'L' && header[1] == 'Z' && header[2] == 'X')
@@ -349,12 +379,10 @@ static struct zfile *zuncompress (struct zfile *z, int dodefault)
 	     return archive_access_select (z, ArchiveFormat7Zip, dodefault);
 	if (strcasecmp (ext, "zip") == 0)
 	     return archive_access_select (z, ArchiveFormatZIP, dodefault);
-//	if (strcasecmp (ext, "lha") == 0 || strcasecmp (ext, "lzh") == 0)
-//	     return archive_access_select (z, ArchiveFormatLHA, dodefault);
-//	if (strcasecmp (ext, "lzx") == 0)
-//	     return archive_access_select (z, ArchiveFormatLZX, dodefault);
-//	if (strcasecmp (ext, "rar") == 0)
-//	     return archive_access_select (z, ArchiveFormatRAR, dodefault);
+	if (strcasecmp (ext, "lha") == 0 || strcasecmp (ext, "lzh") == 0)
+	     return archive_access_select (z, ArchiveFormatLHA, dodefault);
+	if (strcasecmp (ext, "lzx") == 0)
+	     return archive_access_select (z, ArchiveFormatLZX, dodefault);
 	if (strcasecmp (ext, "gz") == 0)
 	     return zfile_gunzip (z);
 	if (strcasecmp (ext, "adz") == 0)
@@ -367,6 +395,8 @@ static struct zfile *zuncompress (struct zfile *z, int dodefault)
 	     return dms (z);
 	if (strcasecmp (ext, "wrp") == 0)
 	     return wrp (z);
+	if (strcasecmp (ext, "dsq") == 0)
+	     return dsq (z);
 #if defined(ARCHIVEACCESS)
 	for (i = 0; plugins_7z_x[i]; i++) {
 	    if (strcasecmp (ext, plugins_7z[i]) == 0)
@@ -381,54 +411,15 @@ static struct zfile *zuncompress (struct zfile *z, int dodefault)
 	    return zfile_gunzip (z);
 	if (header[0] == 'P' && header[1] == 'K')
 	     return archive_access_select (z, ArchiveFormatZIP, dodefault);
-//	if (header[0] == 'R' && header[1] == 'a' && header[2] == 'r' && header[3] == '!')
-//	     return archive_access_select (z, ArchiveFormatRAR, dodefault);
 	if (header[0] == 'D' && header[1] == 'M' && header[2] == 'S' && header[3] == '!')
 	    return dms (z);
-//	if (header[0] == 'L' && header[1] == 'Z' && header[2] == 'X')
-//	     return archive_access_select (z, ArchiveFormatLZX, dodefault);
-//	if (header[2] == '-' && header[3] == 'l' && header[4] == 'h' && header[6] == '-')
-//	     return archive_access_select (z, ArchiveFormatLHA, dodefault);
+	if (header[0] == 'L' && header[1] == 'Z' && header[2] == 'X')
+	     return archive_access_select (z, ArchiveFormatLZX, dodefault);
+	if (header[2] == '-' && header[3] == 'l' && header[4] == 'h' && header[6] == '-')
+	     return archive_access_select (z, ArchiveFormatLHA, dodefault);
     }
     return z;
 }
-
-#ifdef SINGLEFILE
-extern uae_u8 singlefile_data[];
-
-static struct zfile *zfile_opensinglefile(struct zfile *l)
-{
-    uae_u8 *p = singlefile_data;
-    int size, offset;
-    char tmp[256], *s;
-
-    strcpy (tmp, l->name);
-    s = tmp + strlen (tmp) - 1;
-    while (*s != 0 && *s != '/' && *s != '\\') s--;
-    if (s > tmp)
-	s++;
-    write_log("loading from singlefile: '%s'\n", tmp);
-    while (*p++);
-    offset = (p[0] << 24)|(p[1] << 16)|(p[2] << 8)|(p[3] << 0);
-    p += 4;
-    for (;;) {
-	size = (p[0] << 24)|(p[1] << 16)|(p[2] << 8)|(p[3] << 0);
-	if (!size)
-	    break;
-	if (!strcmpi (tmp, p + 4)) {
-	    l->data = singlefile_data + offset;
-	    l->size = size;
-	    write_log ("found, size %d\n", size);
-	    return l;
-	}
-	offset += size;
-	p += 4;
-	p += strlen (p) + 1;
-    }
-    write_log ("not found\n");
-    return 0;
-}
-#endif
 
 static struct zfile *zfile_fopen_nozip (const char *name, const char *mode)
 {
@@ -974,16 +965,14 @@ static struct zvolume *zfile_fopen_archive_ext(struct zfile *zf)
 
     if (ext != NULL) {
 	ext++;
-//	if (strcasecmp (ext, "lha") == 0 || strcasecmp (ext, "lzh") == 0)
-//	     zv = archive_directory_lha (zf);
+	if (strcasecmp (ext, "lha") == 0 || strcasecmp (ext, "lzh") == 0)
+	     zv = archive_directory_lha (zf);
 	if (strcasecmp (ext, "zip") == 0)
 	     zv = archive_directory_zip (zf);
 	if (strcasecmp (ext, "7z") == 0)
 	     zv = archive_directory_7z (zf);
-//	if (strcasecmp (ext, "lzx") == 0)
-//	     zv = archive_directory_lzx (zf);
-//	if (strcasecmp (ext, "rar") == 0)
-//	     zv = archive_directory_rar (zf);
+	if (strcasecmp (ext, "lzx") == 0)
+	     zv = archive_directory_lzx (zf);
     }
     return zv;
 }
@@ -999,12 +988,10 @@ struct zvolume *zfile_fopen_archive_data(struct zfile *zf)
     zfile_fseek (zf, 0, SEEK_SET);
     if (header[0] == 'P' && header[1] == 'K')
          zv = archive_directory_zip (zf);
-//    if (header[0] == 'R' && header[1] == 'a' && header[2] == 'r' && header[3] == '!')
-//         zv = archive_directory_rar (zf);
-//    if (header[0] == 'L' && header[1] == 'Z' && header[2] == 'X')
-//         zv = archive_directory_lzx (zf);
-//    if (header[2] == '-' && header[3] == 'l' && header[4] == 'h' && header[6] == '-')
-//         zv = archive_directory_lha (zf);
+    if (header[0] == 'L' && header[1] == 'Z' && header[2] == 'X')
+         zv = archive_directory_lzx (zf);
+    if (header[2] == '-' && header[3] == 'l' && header[4] == 'h' && header[6] == '-')
+         zv = archive_directory_lha (zf);
     return zv;
 }
 
@@ -1061,7 +1048,6 @@ static struct zvolume *prepare_recursive_volume(struct zvolume *zv, const char *
     struct zfile *zf = NULL;
     struct zvolume *zvnew = NULL;
 
-    write_log("unpacking '%s'\n", path);
     zf = (struct zfile *) zfile_open_archive(path, 0);
     if (!zf)
 	goto end;
@@ -1073,7 +1059,6 @@ static struct zvolume *prepare_recursive_volume(struct zvolume *zv, const char *
     zfile_fclose_archive(zv);
     return zvnew;
 end:
-    write_log("unpack failed\n");
     zfile_fclose_archive (zvnew);
     zfile_fclose(zf);
     return NULL;
@@ -1105,7 +1090,6 @@ static struct znode *get_znode(struct zvolume *zv, const char *ppath)
 		    if (zvdeep->archive == NULL) {
 			zvdeep = prepare_recursive_volume(zvdeep, zn->fullname);
 			if (!zvdeep) {
-			    write_log("failed to unpack '%s'\n", zn->fullname);
 			    return NULL;
 			}
 			/* replace dummy empty volume with real volume */

@@ -59,4 +59,19 @@ namespace gcn
     {
       return mDroppedDown;
     }
+    
+    void UaeDropDown::setEnabled(bool enabled)
+    {
+      if(mEnabled != enabled)
+      {
+        mEnabled = enabled;
+        if(mEnabled)
+          mBackgroundColor = mBackgroundColorBackup;
+        else
+        {
+          mBackgroundColorBackup = mBackgroundColor;
+          mBackgroundColor = mBackgroundColor - 0x303030;
+        }
+      }
+    }
 }

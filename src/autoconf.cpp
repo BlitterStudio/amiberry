@@ -10,7 +10,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "config.h"
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
@@ -28,7 +27,7 @@ uaecptr EXPANSION_bootcode, EXPANSION_nullfunc;
 
 /* ROM tag area memory access */
 
-uae_u8 *rtarea;
+uae_u8 *rtarea = 0;
 uaecptr rtarea_base;
 
 static uae_u32 REGPARAM3 rtarea_lget (uaecptr) REGPARAM;
@@ -197,12 +196,15 @@ static uae_u32 REGPARAM2 uae_puts (TrapContext *context)
 
 static void rtarea_init_mem (void)
 {
-    rtarea = mapped_malloc (0x10000, "rtarea");
-    if (!rtarea) {
-	write_log ("virtual memory exhausted (rtarea)!\n");
-	return;
-    }
-    rtarea_bank.baseaddr = rtarea;
+  if(rtarea != 0)
+    mapped_free(rtarea);
+
+  rtarea = mapped_malloc (0x10000, "rtarea");
+  if (!rtarea) {
+  	write_log ("virtual memory exhausted (rtarea)!\n");
+  	return;
+  }
+  rtarea_bank.baseaddr = rtarea;
 }
 
 void rtarea_init (void)
@@ -260,9 +262,11 @@ void set_uae_int_flag (void)
 
 void rtarea_setup(void)
 {
-    uaecptr base = need_uae_boot_rom ();
-    if (base) {
-	write_log ("RTAREA located at %08X\n", base);
-	rtarea_base = base;
-    }
+  rtarea_base = 0;
+  uae_int_requested = 0;
+  uaecptr base = need_uae_boot_rom ();
+  if (base) {
+  	write_log ("RTAREA located at %08X\n", base);
+	  rtarea_base = base;
+  }
 }

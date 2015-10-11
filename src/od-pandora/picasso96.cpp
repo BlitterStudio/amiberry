@@ -652,7 +652,7 @@ void picasso_handle_vsync (void)
 	  palette_changed = 0;
   }
 
-  flush_block ();
+  flush_screen ();
 }
 
 static int set_panning_called = 0;
@@ -1019,7 +1019,7 @@ static void FillBoardInfo (uaecptr amigamemptr, struct LibResolution *res, struc
     put_byte (amigamemptr + PSSO_ModeInfo_second_union, 14);
 
     put_long (amigamemptr + PSSO_ModeInfo_PixelClock, 
-      dm->res.width * dm->res.height * (currprefs.gfx_refreshrate ? abs (currprefs.gfx_refreshrate) : 50));
+      dm->res.width * dm->res.height * (currprefs.ntscmode ? 60 : 50));
 }
 
 struct modeids {

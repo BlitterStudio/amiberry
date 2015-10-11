@@ -2,17 +2,17 @@
 static __inline__ int LNAME (int spix, int dpix, int stoppos)
 {
    TYPE *buf = ((TYPE *)xlinebuffer);
-#if AGA
+#if AGA_LTS
    uae_u8 xor_val;
 #endif
 
-#if AGA
+#if AGA_LTS
    xor_val = (uae_u8)(dp_for_drawing->bplcon4 >> 8);
 #endif
    if (dp_for_drawing->ham_seen) {
       /* HAM 6 / HAM 8 */
       while (dpix < stoppos) {
-#if AGA
+#if AGA_LTS
             TYPE d = CONVERT_RGB (ham_linebuf[spix]);
 #else
             TYPE d = xcolors[ham_linebuf[spix]];
@@ -24,7 +24,7 @@ static __inline__ int LNAME (int spix, int dpix, int stoppos)
 #endif
       }
    } else if (bpldualpf) {
-#if AGA
+#if AGA_LTS
       /* AGA Dual playfield */
       int *lookup = bpldualpfpri ? dblpf_ind2_aga : dblpf_ind1_aga;
       int *lookup_no = bpldualpfpri ? dblpf_2nd2 : dblpf_2nd1;
@@ -61,7 +61,7 @@ static __inline__ int LNAME (int spix, int dpix, int stoppos)
 #endif
    } else if (bplehb) {
       while (dpix < stoppos) {
-#if AGA
+#if AGA_LTS
             /* AGA EHB playfield */
             int p = pixdata.apixels[spix]^xor_val;
             TYPE d;
@@ -89,7 +89,7 @@ static __inline__ int LNAME (int spix, int dpix, int stoppos)
       }
    } else {
       while (dpix < stoppos) {
-#if AGA
+#if AGA_LTS
             TYPE d = colors_for_drawing.acolors[pixdata.apixels[spix]^xor_val];
 #else
             TYPE d = colors_for_drawing.acolors[pixdata.apixels[spix]];
@@ -107,4 +107,4 @@ static __inline__ int LNAME (int spix, int dpix, int stoppos)
 #undef LNAME
 #undef HDOUBLE
 #undef SRC_INC
-#undef AGA
+#undef AGA_LTS

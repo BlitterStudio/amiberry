@@ -39,6 +39,7 @@ bool LoadConfigByName(const char *name)
     txtDesc->setText(config->Description);
     target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
     strncpy(last_active_config, config->Name, MAX_PATH);
+    DisableResume();
     RefreshAllPanels();
   }
 
@@ -107,6 +108,7 @@ class ConfigButtonActionListener : public gcn::ActionListener
         i = lstConfigs->getSelected();
         target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
         strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_PATH);
+        DisableResume();
         RefreshAllPanels();
       }
       else if(actionEvent.getSource() == cmdSave)
@@ -175,6 +177,7 @@ class ConfigsListActionListener : public gcn::ActionListener
         //-----------------------------------------------
         target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
         strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_PATH);
+        DisableResume();
         RefreshAllPanels();
   			uae_reset(1);
   			gui_running = false;

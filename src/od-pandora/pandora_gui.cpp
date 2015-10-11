@@ -26,6 +26,8 @@
 #include "keyboard.h"
 #include "disk.h"
 #include "savestate.h"
+#include "filesys.h"
+#include "autoconf.h"
 #include <SDL.h>
 
 
@@ -56,6 +58,7 @@ struct gui_msg {
   const char *msg;
 };
 struct gui_msg gui_msglist[] = {
+  { NUMSG_NEEDEXT2,       "The software uses a non-standard floppy disk format. You may need to use a custom floppy disk image file instead of a standard one. This message will not appear again." },
   { NUMSG_NOROM,          "Could not load system ROM, trying system ROM replacement." },
   { NUMSG_NOROMKEY,       "Could not find system ROM key file." },
   { NUMSG_KSROMCRCERROR,  "System ROM checksum incorrect. The system ROM image file may be corrupt." },
@@ -112,8 +115,10 @@ static void ClearAvailableROMList(void)
 static void addrom(struct romdata *rd, char *path)
 {
   AvailableROM *tmp;
+  char tmpName[MAX_DPATH];
   tmp = new AvailableROM();
-  strncpy(tmp->Name, rd->name, MAX_PATH);
+  getromname(rd, tmpName);
+  strncpy(tmp->Name, tmpName, MAX_PATH);
   strncpy(tmp->Path, path, MAX_PATH);
   tmp->ROMType = rd->type;
   lstAvailableROMs.push_back(tmp);
@@ -124,7 +129,7 @@ struct romscandata {
     int keysize;
 };
 
-static struct romdata *scan_single_rom_2 (struct zfile *f, uae_u8 *keybuf, int keysize)
+static struct romdata *scan_single_rom_2 (struct zfile *f)
 {
   uae_u8 buffer[20] = { 0 };
   uae_u8 *rombuf;
@@ -143,8 +148,6 @@ static struct romdata *scan_single_rom_2 (struct zfile *f, uae_u8 *keybuf, int k
 	    size = 262144;
   } else if (!memcmp (buffer, "AMIROMTYPE1", 11)) {
   	cl = 1;
-	  if (keybuf == 0)
-	    cl = -1;
 	  size -= 11;
   } else {
 	  zfile_fseek (f, 0, SEEK_SET);
@@ -154,8 +157,8 @@ static struct romdata *scan_single_rom_2 (struct zfile *f, uae_u8 *keybuf, int k
   	return 0;
   zfile_fread (rombuf, 1, size, f);
   if (cl > 0) {
-  	decode_cloanto_rom_do (rombuf, size, size, keybuf, keysize);
-	  cl = 0;
+  	if(decode_cloanto_rom_do (rombuf, size, size))
+	    cl = 0;
   }
   if (!cl)
   	rd = getromdatabydata (rombuf, size);
@@ -163,11 +166,30 @@ static struct romdata *scan_single_rom_2 (struct zfile *f, uae_u8 *keybuf, int k
   return rd;
 }
 
+static struct romdata *scan_single_rom (char *path)
+{
+    struct zfile *z;
+    char tmp[MAX_DPATH];
+    struct romdata *rd;
+
+    strcpy (tmp, path);
+    rd = getromdatabypath(path);
+    if (rd && rd->crc32 == 0xffffffff)
+	return rd;
+    z = zfile_fopen (path, "rb");
+    if (!z)
+	return 0;
+    return scan_single_rom_2 (z);
+}
+
 static int isromext(char *path)
 {
-  char *ext = strrchr (path, '.');
+  char *ext;
   int i;
 
+  if (!path)
+	  return 0;
+  ext = strrchr (path, '.');
   if (!ext)
   	return 0;
   ext++;
@@ -182,23 +204,22 @@ static int isromext(char *path)
   return 0;
 }
 
-static int scan_rom_2 (struct zfile *f, void *rsd)
+static int scan_rom_2 (struct zfile *f, void *dummy)
 {
   char *path = zfile_getname(f);
   struct romdata *rd;
 
   if (!isromext(path))
 	  return 0;
-  rd = scan_single_rom_2(f, ((struct romscandata *)rsd)->keybuf, ((struct romscandata *)rsd)->keysize);
+  rd = scan_single_rom_2(f);
   if (rd)
     addrom (rd, path);
   return 0;
 }
 
-static void scan_rom(char *path, uae_u8 *keybuf, int keysize)
+static void scan_rom(char *path)
 {
   struct romdata *rd;
-  struct romscandata rsd = { keybuf, keysize };
 
     if (!isromext(path)) {
 	//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
@@ -208,30 +229,27 @@ static void scan_rom(char *path, uae_u8 *keybuf, int keysize)
   if (rd) 
     addrom(rd, path);
   else
-    zfile_zopen (path, scan_rom_2, &rsd);
+    zfile_zopen (path, scan_rom_2, 0);
 }
 
 
 void RescanROMs(void)
 {
-  int keysize;
-  uae_u8 *keybuf;
   std::vector<std::string> files;
   char path[MAX_DPATH];
   
   ClearAvailableROMList();
   fetch_rompath(path, MAX_DPATH);
   
-  keybuf = load_keyfile (&changed_prefs, path, &keysize);
+  load_keyring(&changed_prefs, path);
   ReadDirectory(path, NULL, &files);
   for(int i=0; i<files.size(); ++i)
   {
     char tmppath[MAX_PATH];
     strncpy(tmppath, path, MAX_PATH);
     strncat(tmppath, files[i].c_str(), MAX_PATH);
-    scan_rom (tmppath, keybuf, keysize);
+    scan_rom (tmppath);
   }
-  free_keyfile (keybuf);
 }
 
 static void ClearConfigFileList(void)
@@ -327,7 +345,7 @@ static void gui_to_prefs (void)
 int gui_init (void)
 {
   int ret = 0;
-
+  
 #ifndef ANDROIDSDL
   SDL_JoystickEventState(SDL_ENABLE);
   SDL_JoystickOpen(0);
@@ -610,13 +628,7 @@ void gui_handle_events (void)
 
 	else if(triggerL)
 	{
-		if(keystate[SDLK_a])
-		{
-			keystate[SDLK_a]=0;
-			currprefs.m68k_speed == 2 ? changed_prefs.m68k_speed = 0 : changed_prefs.m68k_speed++;
-			check_prefs_changed_cpu();
-		}
-		else if(keystate[SDLK_c])
+		if(keystate[SDLK_c])
 		{
 			keystate[SDLK_c]=0;
 		  currprefs.pandora_customControls = !currprefs.pandora_customControls;
@@ -1376,4 +1388,51 @@ void FilterFiles(std::vector<std::string> *files, const char *filter[])
       --q;
     }
   }  
+}
+
+
+bool DevicenameExists(const char *name)
+{
+  int i;
+  struct uaedev_config_info *uci;
+    
+  for(i=0; i<MAX_HD_DEVICES; ++i)
+  {
+    uci = &changed_prefs.mountconfig[i];
+
+    if(uci->devname && uci->devname[0])
+    {
+      if(!strcmp(uci->devname, name))
+        return true;
+      if(uci->volname != 0 && !strcmp(uci->volname, name))
+        return true;
+    }
+  }
+  return false;
+}
+
+
+void CreateDefaultDevicename(char *name)
+{
+  int freeNum = 0;
+  bool foundFree = false;
+  
+  while(!foundFree && freeNum < 10)
+  {
+    sprintf(name, "DH%d", freeNum);
+    foundFree = !DevicenameExists(name);
+    ++freeNum;
+  }
+}
+
+
+int tweakbootpri (int bp, int ab, int dnm)
+{
+    if (dnm)
+	return -129;
+    if (!ab)
+	return -128;
+    if (bp < -127)
+	bp = -127;
+    return bp;
 }

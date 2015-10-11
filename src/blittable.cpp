@@ -1,7 +1,5 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
-#include "uae.h"
 #include "options.h"
 #include "custom.h"
 #include "memory.h"
@@ -40,7 +38,7 @@ blitdofast_d8, 0, 0, 0, 0, 0, 0, 0,
 0, 0, blitdofast_e2, 0, 0, 0, 0, 0, 
 0, 0, blitdofast_ea, 0, 0, 0, 0, 0, 
 blitdofast_f0, 0, 0, 0, 0, 0, 0, 0, 
-0, 0, blitdofast_fa, 0, blitdofast_fc, 0, blitdofast_fe, 0
+0, 0, blitdofast_fa, 0, blitdofast_fc, 0, 0, 0
 };
 
 blitter_func * const blitfunc_dofast_desc[256] = {

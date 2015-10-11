@@ -11,6 +11,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "uae.h"
+#include "fsdb.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -24,6 +25,7 @@
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
+static bool createNew = false;
 static char workingDir[MAX_PATH];
 static const char **filefilter;
 
@@ -33,6 +35,8 @@ static gcn::Button* cmdCancel;
 static gcn::ListBox* lstFiles;
 static gcn::ScrollArea* scrAreaFiles;
 static gcn::TextField *txtCurrent;
+static gcn::Label *lblFilename;
+static gcn::TextField *txtFilename;
 
 
 class SelectFileListModel : public gcn::ListModel
@@ -85,11 +89,29 @@ class FileButtonActionListener : public gcn::ActionListener
       {
         int selected_item;
         selected_item = lstFiles->getSelected();
-        if(fileList->isDir(selected_item))
-          return; // Directory selected -> Ok not possible
-        strcat(workingDir, "/");
-        strcat(workingDir, fileList->getElementAt(selected_item).c_str());
-        dialogResult = true;
+        if(createNew)
+        {
+          char tmp[MAX_PATH];
+          if(txtFilename->getText().length() <= 0)
+            return;
+          strcpy(tmp, workingDir);
+          strcat(tmp, "/");
+          strcat(tmp, txtFilename->getText().c_str());
+          if(strstr(tmp, filefilter[0]) == NULL)
+            strcat(tmp, filefilter[0]);
+          if(my_existsfile(tmp) == 1)
+            return; // File already exists
+          strcpy(workingDir, tmp);
+          dialogResult = true;
+        }
+        else
+        {
+          if(fileList->isDir(selected_item))
+            return; // Directory selected -> Ok not possible
+          strcat(workingDir, "/");
+          strcat(workingDir, fileList->getElementAt(selected_item).c_str());
+          dialogResult = true;
+        }
       }
       dialogFinished = true;
     }
@@ -144,7 +166,7 @@ class SelectFileActionListener : public gcn::ActionListener
       strcat(foldername, fileList->getElementAt(selected_item).c_str());
       if(fileList->isDir(selected_item))
         checkfoldername(foldername);
-      else
+      else if(!createNew)
       {
         strncpy(workingDir, foldername, sizeof(workingDir));
         dialogResult = true;
@@ -198,6 +220,22 @@ static void InitSelectFile(const char *title)
   scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
   scrAreaFiles->setScrollbarWidth(20);
   scrAreaFiles->setBaseColor(gui_baseCol + 0x202020);
+
+  if(createNew)
+  {
+    scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272 - TEXTFIELD_HEIGHT - DISTANCE_NEXT_Y);
+    lblFilename = new gcn::Label("Filename:");
+    lblFilename->setSize(80, LABEL_HEIGHT);
+    lblFilename->setAlignment(gcn::Graphics::LEFT);
+    lblFilename->setPosition(DISTANCE_BORDER, scrAreaFiles->getY() + scrAreaFiles->getHeight() + DISTANCE_NEXT_Y);
+    txtFilename = new gcn::TextField();
+    txtFilename->setSize(120, TEXTFIELD_HEIGHT);
+    txtFilename->setId("Filename");
+    txtFilename->setPosition(lblFilename->getX() + lblFilename->getWidth() + DISTANCE_NEXT_X, lblFilename->getY());
+    
+    wndSelectFile->add(lblFilename);
+    wndSelectFile->add(txtFilename);
+  }
   
   wndSelectFile->add(cmdOK);
   wndSelectFile->add(cmdCancel);
@@ -225,6 +263,11 @@ static void ExitSelectFile(void)
   delete scrAreaFiles;
   delete selectFileActionListener;
   delete fileList;
+  if(createNew)
+  {
+    delete lblFilename;
+    delete txtFilename;
+  }
   
   delete wndSelectFile;
 }
@@ -254,6 +297,11 @@ static void SelectFileLoop(void)
               else if(activeWidget == cmdCancel)
                 cmdOK->requestFocus();
               else if(activeWidget == cmdOK)
+                if(createNew)
+                  txtFilename->requestFocus();
+                else
+                  lstFiles->requestFocus();
+              else if(activeWidget == txtFilename)
                 lstFiles->requestFocus();
               continue;
             }
@@ -264,6 +312,11 @@ static void SelectFileLoop(void)
               gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
               gcn::Widget* activeWidget = focusHdl->getFocused();
               if(activeWidget == lstFiles)
+                if(createNew)
+                  txtFilename->requestFocus();
+                else
+                  cmdOK->requestFocus();
+              else if(activeWidget == txtFilename)
                 cmdOK->requestFocus();
               else if(activeWidget == cmdCancel)
                 lstFiles->requestFocus();
@@ -301,10 +354,11 @@ static void SelectFileLoop(void)
 static int Already_init = 0;
 #endif
 
-bool SelectFile(const char *title, char *value, const char *filter[])
+bool SelectFile(const char *title, char *value, const char *filter[], bool create)
 {
   dialogResult = false;
   dialogFinished = false;
+  createNew = create;
   filefilter = filter;
 
 

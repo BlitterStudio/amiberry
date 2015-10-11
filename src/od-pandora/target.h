@@ -1,21 +1,16 @@
  /*
   * UAE - The Un*x Amiga Emulator
   *
-  * Target specific stuff
+  * Target specific stuff, Pandora version
   *
   * Copyright 1997 Bernd Schmidt
   */
 
 #define TARGET_NAME "pandora"
 
+#define NO_MAIN_IN_MAIN_C
+
 #define OPTIONSFILENAME "uaeconfig"
-
-/* Just 0x0 and not 680x0, so that constants can fit in ARM instructions */
-#define M68000 0
-#define M68020 2
-
-#define SIMULATE_SHIFT 0x200
-#define SIMULATE_RELEASED_SHIFT 0x400
 
 extern int emulating;
 extern int uae4all_keystate[256];
@@ -33,3 +28,6 @@ void graphics_subshutdown (void);
 void pandora_stop_sound(void);
 
 void keyboard_init(void);
+
+void reinit_amiga(void);
+int count_HDs(struct uae_prefs *p);

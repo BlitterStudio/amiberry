@@ -24,9 +24,15 @@ namespace gcn
       
       virtual void keyPressed(KeyEvent& keyEvent);
 
+      virtual void setEnabled(bool enabled);
+      
       void clearSelected(void);
 
       bool isDroppedDown(void);
+    
+    protected:
+      Color mBackgroundColorBackup;
+      
   };
 }
 

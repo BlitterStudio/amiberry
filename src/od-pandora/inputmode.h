@@ -5,6 +5,6 @@
 void inputmode_init(void);
 void inputmode_redraw(void);
 
-void set_joyConf(void);
+void set_joyConf(struct uae_prefs *p);
 
 extern int show_inputmode;

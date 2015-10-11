@@ -8,25 +8,19 @@
 
 #define MAX_PLANES 8
 
-#define gfxHeight 270
-
 /* According to the HRM, pixel data spends a couple of cycles somewhere in the chips
    before it appears on-screen.  */
 #define DIW_DDF_OFFSET 9
-/* this many cycles starting from hpos=0 are visible on right border */
-#define HBLANK_OFFSET 4
 
 /* We ignore that many lores pixels at the start of the display. These are
  * invisible anyway due to hardware DDF limits. */
 #define DISPLAY_LEFT_SHIFT 0x40
 #define PIXEL_XPOS(HPOS) ((((HPOS)<<1) - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) )
 
-#define min_diwlastword (0)
 #define max_diwlastword   (PIXEL_XPOS(0x1d4>> 1))
 
+extern int lores_shift;
 extern int aga_mode, direct_rgb;
-
-// extern int sprite_width;
 
 STATIC_INLINE int coord_hw_to_window_x (int x)
 {
@@ -65,8 +59,24 @@ struct color_entry {
 
 /* convert 24 bit AGA Amiga RGB to native color */
 /* warning: this is still ugly, but now works with either byte order */
+//#ifndef PANDORA
+#if !defined(PANDORA) || !defined(USE_ARMNEON)  // Well not really since ubfx is arm6t2...
 #define CONVERT_RGB(c) \
     ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
+#else
+STATIC_INLINE uae_u16 CONVERT_RGB(uae_u32 c)
+{
+  uae_u16 ret;
+  __asm__ __volatile__ (
+			"ubfx    r1, %[c], #19, #5 \n\t"
+			"ubfx    r2, %[c], #10, #6 \n\t"
+			"ubfx    %[v], %[c], #3, #5 \n\t"
+			"orr     %[v], %[v], r1, lsl #11 \n\t"
+			"orr     %[v], %[v], r2, lsl #5 \n\t"
+           : [v] "=r" (ret) : [c] "r" (c) : "r1", "r2" );
+  return ret;
+}
+#endif
 
 STATIC_INLINE xcolnr getxcolor (int c)
 {
@@ -121,7 +131,8 @@ struct color_change {
 };
 
 /* 440 rather than 880, since sprites are always lores.  */
-#define MAX_PIXELS_PER_LINE 1760
+#define MAX_PIXELS_PER_LINE 880
+#define MAX_VIDHEIGHT 270
 
 /* No divisors for MAX_PIXELS_PER_LINE; we support AGA and may one day
    want to use SHRES sprites.  */
@@ -177,8 +188,6 @@ struct draw_info {
     int nr_color_changes, nr_sprites;
 };
 
-// extern int next_sprite_entry;
-
 extern struct decision line_decisions[2 * (MAXVPOS+1) + 1];
 extern struct draw_info curr_drawinfo[2 * (MAXVPOS+1) + 1];
 
@@ -187,9 +196,6 @@ extern uae_u8 line_data[(MAXVPOS+1) * 2][MAX_PLANES * MAX_WORDS_PER_LINE * 2];
 /* Functions in drawing.c.  */
 extern int coord_native_to_amiga_y (int);
 extern int coord_native_to_amiga_x (int);
-
-extern void record_diw_line (int first, int last);
-extern void hardware_line_completed (int lineno);
 
 extern void hsync_record_line_state (int lineno);
 extern void vsync_handle_redraw (int long_frame, int lof_changed);

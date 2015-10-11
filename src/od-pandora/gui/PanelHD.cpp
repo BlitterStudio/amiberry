@@ -20,7 +20,6 @@
 #include "gui_handling.h"
 
 
-#define MAX_HD_DEVICES 5
 enum { COL_DEVICE, COL_VOLUME, COL_PATH, COL_READWRITE, COL_SIZE, COL_BOOTPRI, COL_COUNT };
 
 static const char *column_caption[] = {
@@ -41,6 +40,22 @@ static gcn::Button* listCmdProps[MAX_HD_DEVICES];
 static gcn::ImageButton* listCmdDelete[MAX_HD_DEVICES];
 static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
+static gcn::Button* cmdCreateHardfile;
+  
+
+static int GetHDType(int index)
+{
+  int type;
+  struct uaedev_config_info *uci;
+  struct mountedinfo mi;
+
+  type = get_filesys_unitconfig(&changed_prefs, index, &mi);
+  if (type < 0) {
+    uci = &changed_prefs.mountconfig[index];
+		type = uci->ishdf ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
+  }
+  return type;
+}
 
 
 class HDRemoveActionListener : public gcn::ActionListener
@@ -72,8 +87,7 @@ class HDEditActionListener : public gcn::ActionListener
       {
         if (actionEvent.getSource() == listCmdProps[i])
         {
-          int type = is_hardfile (i);
-          if(type == FILESYS_VIRTUAL)
+          if (GetHDType(i) == FILESYS_VIRTUAL)
             EditFilesysVirtual(i);
           else
             EditFilesysHardfile(i);
@@ -113,6 +127,19 @@ class AddHardfileActionListener : public gcn::ActionListener
 AddHardfileActionListener* addHardfileActionListener;
 
 
+class CreateHardfileActionListener : public gcn::ActionListener
+{
+  public:
+    void action(const gcn::ActionEvent& actionEvent)
+    {
+      CreateFilesysHardfile();
+      cmdCreateHardfile->requestFocus();
+      RefreshPanelHD();
+    }
+};
+CreateHardfileActionListener* createHardfileActionListener;
+
+
 void InitPanelHD(const struct _ConfigCategory& category)
 {
   int row, col;
@@ -124,6 +151,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
   hdEditActionListener = new HDEditActionListener();
   addVirtualHDActionListener = new AddVirtualHDActionListener();
   addHardfileActionListener = new AddHardfileActionListener();
+  createHardfileActionListener = new CreateHardfileActionListener();
   
   for(col=0; col<COL_COUNT; ++col)
     lblList[col] = new gcn::Label(column_caption[col]);
@@ -169,6 +197,12 @@ void InitPanelHD(const struct _ConfigCategory& category)
   cmdAddHardfile->setSize(BUTTON_WIDTH + 20, BUTTON_HEIGHT);
   cmdAddHardfile->setId("cmdAddHDF");
   cmdAddHardfile->addActionListener(addHardfileActionListener);
+
+  cmdCreateHardfile = new gcn::Button("Create Hardfile");
+  cmdCreateHardfile->setBaseColor(gui_baseCol);
+  cmdCreateHardfile->setSize(BUTTON_WIDTH + 20, BUTTON_HEIGHT);
+  cmdCreateHardfile->setId("cmdCreateHDF");
+  cmdCreateHardfile->addActionListener(createHardfileActionListener);
   
   posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
   for(col=0; col<COL_COUNT; ++col)
@@ -197,6 +231,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
   posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
   category.panel->add(cmdAddDirectory, DISTANCE_BORDER, posY);
   category.panel->add(cmdAddHardfile, DISTANCE_BORDER + cmdAddDirectory->getWidth() + DISTANCE_NEXT_X, posY);
+  category.panel->add(cmdCreateHardfile, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
   
   RefreshPanelHD();
 }
@@ -220,11 +255,13 @@ void ExitPanelHD(void)
   
   delete cmdAddDirectory;
   delete cmdAddHardfile;
+  delete cmdCreateHardfile;
   
   delete hdRemoveActionListener;
   delete hdEditActionListener;
   delete addVirtualHDActionListener;
   delete addHardfileActionListener;
+  delete createHardfileActionListener;
 }
 
 
@@ -235,7 +272,6 @@ void RefreshPanelHD(void)
   struct mountedinfo mi;
   struct uaedev_config_info *uci;
   int nosize = 0, type;
-  int units = nr_units();
   
   for(row=0; row<MAX_HD_DEVICES; ++row)
   {
@@ -290,4 +326,23 @@ void RefreshPanelHD(void)
       listCmdDelete[row]->setEnabled(false);
     }
   }
+}
+
+
+int count_HDs(struct uae_prefs *p)
+{
+  int row;
+  struct uaedev_config_info *uci;
+  int cnt = 0;
+  
+  for(row=0; row<MAX_HD_DEVICES; ++row)
+  {
+    uci = &p->mountconfig[row];
+    if(uci->devname && uci->devname[0])
+    {
+      ++cnt;
+    }
+  }
+
+  return cnt;
 }

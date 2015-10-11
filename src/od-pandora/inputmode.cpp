@@ -85,34 +85,34 @@ void inputmode_redraw(void)
 }
 
 
-void set_joyConf(void)
+void set_joyConf(struct uae_prefs *p)
 {
-	if(changed_prefs.pandora_joyConf == 0)
+	if(p->pandora_joyConf == 0)
 	{
-		changed_prefs.pandora_button1 = GP2X_BUTTON_X;
-		changed_prefs.pandora_button2 = GP2X_BUTTON_A;
-		changed_prefs.pandora_jump = -1;
-		changed_prefs.pandora_autofireButton1 = GP2X_BUTTON_B;
+		p->pandora_button1 = GP2X_BUTTON_X;
+		p->pandora_button2 = GP2X_BUTTON_A;
+		p->pandora_jump = -1;
+		p->pandora_autofireButton1 = GP2X_BUTTON_B;
 	}
-	else if(changed_prefs.pandora_joyConf == 1)
+	else if(p->pandora_joyConf == 1)
 	{
-		changed_prefs.pandora_button1 = GP2X_BUTTON_B;
-		changed_prefs.pandora_button2 = GP2X_BUTTON_A;
-		changed_prefs.pandora_jump = -1;
-		changed_prefs.pandora_autofireButton1 = GP2X_BUTTON_X;
+		p->pandora_button1 = GP2X_BUTTON_B;
+		p->pandora_button2 = GP2X_BUTTON_A;
+		p->pandora_jump = -1;
+		p->pandora_autofireButton1 = GP2X_BUTTON_X;
 	}	
-	else if(changed_prefs.pandora_joyConf == 2)
+	else if(p->pandora_joyConf == 2)
 	{
-		changed_prefs.pandora_button1 = GP2X_BUTTON_Y;
-		changed_prefs.pandora_button2 = GP2X_BUTTON_A;
-		changed_prefs.pandora_jump = GP2X_BUTTON_X;
-		changed_prefs.pandora_autofireButton1 = GP2X_BUTTON_B;
+		p->pandora_button1 = GP2X_BUTTON_Y;
+		p->pandora_button2 = GP2X_BUTTON_A;
+		p->pandora_jump = GP2X_BUTTON_X;
+		p->pandora_autofireButton1 = GP2X_BUTTON_B;
 	}
 	else if(changed_prefs.pandora_joyConf == 3)
 	{
-		changed_prefs.pandora_button1 = GP2X_BUTTON_B;
-		changed_prefs.pandora_button2 = GP2X_BUTTON_A;
-		changed_prefs.pandora_jump = GP2X_BUTTON_X;
-		changed_prefs.pandora_autofireButton1 = GP2X_BUTTON_Y;
+		p->pandora_button1 = GP2X_BUTTON_B;
+		p->pandora_button2 = GP2X_BUTTON_A;
+		p->pandora_jump = GP2X_BUTTON_X;
+		p->pandora_autofireButton1 = GP2X_BUTTON_Y;
 	}
 }

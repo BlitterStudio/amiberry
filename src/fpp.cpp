@@ -183,8 +183,6 @@ STATIC_INLINE int fault_if_no_fpu(uae_u32 opcode, struct regstruct *regs, int pc
 static int get_fpu_version(void)
 {
     int v = 0;
-//    if (currprefs.fpu_revision >= 0)
-//	return currprefs.fpu_revision;
     switch (currprefs.fpu_model)
     {
 	case 68881:

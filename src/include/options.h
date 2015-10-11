@@ -21,12 +21,6 @@ struct strlist {
 
 #define DEFAULT_JIT_CACHE_SIZE 8192
 
-#define PREFS_GFX_WIDTH 320
-#define PREFS_GFX_HEIGHT 240
-
-#define PREFS_GFX_SCALED_WIDTH 328
-#define PREFS_GFX_SCALED_HEIGHT 256
-
 #define CONFIG_TYPE_HARDWARE 1
 #define CONFIG_TYPE_HOST 2
 #define CONFIG_BLEN 2560
@@ -59,22 +53,19 @@ struct uae_prefs {
     struct strlist *all_lines;
 
     char description[256];
-    char info[256];             // Not used in UAE4ARM
-    int config_version;         // Not used in UAE4ARM
+    char info[256];
+    int config_version;
 
-    int start_debugger;         // Not used in UAE4ARM
     int start_gui;
 
     int produce_sound;
     int sound_stereo;
     int sound_stereo_separation;
     int sound_mixed_stereo_delay;
-    int sound_bits;             // Not used in UAE4ARM
     int sound_freq;
     int sound_interpol;
     int sound_filter;
     int sound_filter_type;
-    int sound_volume;           // Not used in UAE4ARM
     int sound_auto;
 
     int cachesize;
@@ -84,13 +75,11 @@ struct uae_prefs {
     struct wh gfx_size_win;
     struct wh gfx_size_fs;
     struct wh gfx_size;
-    int gfx_refreshrate;        // Not used in UAE4ARM
-    int gfx_avsync;             // Not used in UAE4ARM
-    int gfx_resolution;         // Not used in UAE4ARM
-    int gfx_correct_aspect;     // Not used in UAE4ARM
-    int gfx_xcenter;            // Not used in UAE4ARM
-    int gfx_ycenter;            // Not used in UAE4ARM
  
+#ifdef RASPBERRY
+    int gfx_correct_aspect;
+#endif
+
     int immediate_blits;
     unsigned int chipset_mask;
     int ntscmode;
@@ -98,20 +87,20 @@ struct uae_prefs {
     int collision_level;
     int leds_on_screen;
     int fast_copper;
-    int scsi;                   // Not used in UAE4ARM
     int cpu_idle;
     int floppy_speed;
     int tod_hack;
 
-    int cs_a1000ram;            // Always 0 in UAE4ARM
+    int cs_a1000ram;
+    int cs_df0idhw;
 
     char df[4][MAX_DPATH];
     char romfile[MAX_DPATH];
     char romextfile[MAX_DPATH];
 
-    char path_floppy[256];      // Not used in UAE4ARM
-    char path_hardfile[256];    // Not used in UAE4ARM
-    char path_rom[256];         // Not used in UAE4ARM
+    char path_floppy[256];
+    char path_hardfile[256];
+    char path_rom[256];
 
     int m68k_speed;
     int cpu_model;
@@ -132,12 +121,8 @@ struct uae_prefs {
 
     int nr_floppies;
     int dfxtype[4];
-    int dfxclick[4];            // Not used in UAE4ARM
-    char dfxclickexternal[4][256];  // Not used in UAE4ARM
-    int dfxclickvolume;         // Not used in UAE4ARM
 
     /* Target specific options */
-    int pandora_partial_blits;
     int pandora_horizontal_offset;
     int pandora_vertical_offset;
     int pandora_cpu_speed;

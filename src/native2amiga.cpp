@@ -22,7 +22,7 @@
 #include "native2amiga.h"
 
 smp_comm_pipe native2amiga_pending;
-static uae_sem_t n2asem;
+static uae_sem_t n2asem = 0;
 
 /*
  * to be called when setting up the hardware
@@ -30,8 +30,12 @@ static uae_sem_t n2asem;
 
 void native2amiga_install (void)
 {
+  if(native2amiga_pending.size != 100)
     init_comm_pipe (&native2amiga_pending, 100, 2);
-    uae_sem_init (&n2asem, 0, 1);
+  if(n2asem != 0)
+    uae_sem_destroy(&n2asem);
+  n2asem = 0;
+  uae_sem_init (&n2asem, 0, 1);
 }
 
 /*

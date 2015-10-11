@@ -27,8 +27,7 @@ extern int zfile_ferror (struct zfile *z);
 extern char *zfile_getdata (struct zfile *z, int offset, int len);
 extern void zfile_exit (void);
 
-//extern int execute_command (char *);
-#define execute_command(CMD) system(CMD)
+extern int execute_command (char *);
 extern int zfile_iscompressed (struct zfile *z);
 extern int zfile_zcompress (struct zfile *dst, void *src, int size);
 extern int zfile_zuncompress (void *dst, int dstsize, struct zfile *src, int srcsize);

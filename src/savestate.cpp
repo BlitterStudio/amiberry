@@ -52,7 +52,6 @@
 #include "zfile.h"
 #include "autoconf.h"
 #include "custom.h"
-#include "sd-pandora/sound.h"
 #include "newcpu.h"
 #include "savestate.h"
 #include "gui.h"
@@ -74,20 +73,8 @@ static void state_incompatible_warn(void)
     int dowarn = 0;
     int i;
 
-#ifdef BSDSOCKET
-    if (currprefs.socket_emu)
-	dowarn = 1;
-#endif
-#ifdef UAESERIAL
-    if (currprefs.uaeserial)
-	dowarn = 1;
-#endif
 #ifdef SCSIEMU
     if (currprefs.scsi)
-	dowarn = 1;
-#endif
-#ifdef CATWEASEL
-    if (currprefs.catweasel)
 	dowarn = 1;
 #endif
 #ifdef FILESYS
@@ -493,20 +480,6 @@ void restore_state (char *filename)
 	else if (!strcmp (name, "FSYC"))
 	    end = restore_filesys_common (chunk);
 #endif
-#ifdef CD32
-	else if (!strcmp (name, "CD32"))
-	    end = restore_akiko (chunk);
-#endif
-#ifndef PANDORA
-	else if (!strcmp (name, "GAYL"))
-	    end = restore_gayle (chunk);
-	else if (!strcmp (name, "IDE "))
-	    end = restore_ide (chunk);
-	else if (!strcmp (name, "CONF"))
-	    end = restore_configuration (chunk);
-	else if (!strcmp (name, "LOG "))
-	    end = restore_log (chunk);
-#endif
 	else {
 	    end = chunk + len;
 	    write_log ("unknown chunk '%s' size %d bytes\n", name, len);
@@ -598,23 +571,8 @@ int save_state (char *filename, const char *description)
 	return 0;
     if (savestate_specialdump) {
 	    size_t pos;
-//	    if (savestate_specialdump == 2)
-//	      write_wavheader(f, 0, 22050);
 	    pos = zfile_ftell(f);
 	    save_rams (f, -1);
-//	if (savestate_specialdump == 2) {
-//	    int len, len2, i;
-//	    uae_u8 *tmp;
-//	    len = zfile_ftell(f) - pos;
-//	    tmp = (uae_u8*)xmalloc(len);
-//	    zfile_fseek(f, pos, SEEK_SET);
-//	    len2 = zfile_fread(tmp, 1, len, f);
-//	    for (i = 0; i < len2; i++)
-//		tmp[i] += 0x80;
-//	    write_wavheader(f, len, 22050);
-//	    zfile_fwrite(tmp, len2, 1, f);
-//	    xfree(tmp);
-//	}
       zfile_fclose (f);
 	    return 1;
     }
@@ -705,11 +663,6 @@ int save_state (char *filename, const char *description)
 	xfree (dst);
     } while ((dst = save_rom (0, &len, 0)));
 
-#ifdef CD32
-    dst = save_akiko (&len);
-    save_chunk (f, dst, len, (char *)"CD32", 0);
-    xfree (dst);
-#endif
 #ifdef FILESYS
     dst = save_filesys_common (&len);
     if (dst) {
@@ -723,39 +676,8 @@ int save_state (char *filename, const char *description)
     }
   }
 #endif
-#ifndef PANDORA
-    dst = save_gayle(&len);
-    if (dst) {
-        save_chunk (f, dst, len, "GAYL", 0);
-	xfree(dst);
-    }
-    for (i = 0; i < 4; i++) {
-	dst = save_ide (i, &len);
-	if (dst) {
-	    save_chunk (f, dst, len, "IDE ", 0);
-	    xfree(dst);
-	}
-    }
-#endif
-
-    /* add fake END tag, makes it easy to strip CONF and LOG hunks */
-    /* move this if you want to use CONF or LOG hunks when restoring state */
-    zfile_fwrite (endhunk, 1, 8, f);
-
-#ifndef PANDORA
-    dst = save_configuration (&len);
-    if (dst) {
-	save_chunk (f, dst, len, "CONF", 1);
-	xfree(dst);
-    }
-    dst = save_log (&len);
-    if (dst) {
-	save_chunk (f, dst, len, "LOG ", 1);
-	xfree(dst);
-    }
 
     zfile_fwrite (endhunk, 1, 8, f);
-#endif
 
     write_log ("Save of '%s' complete\n", filename);
     zfile_fclose (f);

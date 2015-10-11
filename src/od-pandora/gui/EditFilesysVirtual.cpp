@@ -37,6 +37,7 @@ static gcn::Label *lblPath;
 static gcn::TextField *txtPath;
 static gcn::Button* cmdPath;
 static gcn::UaeCheckBox* chkReadWrite;
+static gcn::UaeCheckBox* chkAutoboot;
 static gcn::Label *lblBootPri;
 static gcn::TextField *txtBootPri;
 
@@ -62,12 +63,12 @@ class FilesysVirtualActionListener : public gcn::ActionListener
         {
           if(txtDevice->getText().length() <= 0)
           {
-            // ToDo: Message to user
+            wndEditFilesysVirtual->setCaption("Please enter a device name.");
             return;
           }
           if(txtVolume->getText().length() <= 0)
           {
-            // ToDo: Message to user
+            wndEditFilesysVirtual->setCaption("Please enter a volume name.");
             return;
           }
           dialogResult = true;
@@ -133,6 +134,9 @@ static void InitEditFilesysVirtual(void)
 	chkReadWrite = new gcn::UaeCheckBox("Read/Write", true);
   chkReadWrite->setId("virtRW");
 
+	chkAutoboot = new gcn::UaeCheckBox("Bootable", true);
+  chkAutoboot->setId("virtAutoboot");
+
   lblBootPri = new gcn::Label("Boot priority:");
   lblBootPri->setSize(84, LABEL_HEIGHT);
   lblBootPri->setAlignment(gcn::Graphics::RIGHT);
@@ -143,12 +147,13 @@ static void InitEditFilesysVirtual(void)
   int posY = DISTANCE_BORDER;
   wndEditFilesysVirtual->add(lblDevice, DISTANCE_BORDER, posY);
   wndEditFilesysVirtual->add(txtDevice, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
-  wndEditFilesysVirtual->add(chkReadWrite, 260, posY);
+  wndEditFilesysVirtual->add(chkReadWrite, 250, posY + 1);
   posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
   wndEditFilesysVirtual->add(lblVolume, DISTANCE_BORDER, posY);
   wndEditFilesysVirtual->add(txtVolume, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
-  wndEditFilesysVirtual->add(lblBootPri, 260, posY);
-  wndEditFilesysVirtual->add(txtBootPri, 260 + lblBootPri->getWidth() + 8, posY);
+  wndEditFilesysVirtual->add(chkAutoboot, 250, posY + 1);
+  wndEditFilesysVirtual->add(lblBootPri, 374, posY);
+  wndEditFilesysVirtual->add(txtBootPri, 374 + lblBootPri->getWidth() + 8, posY);
   posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
   wndEditFilesysVirtual->add(lblPath, DISTANCE_BORDER, posY);
   wndEditFilesysVirtual->add(txtPath, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
@@ -178,6 +183,7 @@ static void ExitEditFilesysVirtual(void)
   delete txtPath;
   delete cmdPath;
   delete chkReadWrite;
+  delete chkAutoboot;
   delete lblBootPri;
   delete txtBootPri;
   
@@ -252,8 +258,9 @@ static void EditFilesysVirtualLoop(void)
 bool EditFilesysVirtual(int unit_no)
 {
   struct mountedinfo mi;
-  struct uaedev_config_info *uci = &changed_prefs.mountconfig[unit_no];
+  struct uaedev_config_info *uci;
   std::string strdevname, strvolname, strroot;
+  char tmp[32];
   
   dialogResult = false;
   dialogFinished = false;
@@ -262,8 +269,7 @@ bool EditFilesysVirtual(int unit_no)
 
   if(unit_no >= 0)
   {
-    char tmp[32];
-
+    uci = &changed_prefs.mountconfig[unit_no];
     get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
     strdevname.assign(uci->devname);
@@ -273,13 +279,15 @@ bool EditFilesysVirtual(int unit_no)
     strroot.assign(uci->rootdir);
     txtPath->setText(strroot);
     chkReadWrite->setSelected(!uci->readonly);
+    chkAutoboot->setSelected(uci->bootpri != -128);
     snprintf(tmp, 32, "%d", uci->bootpri >= -127 ? uci->bootpri : -127);
     txtBootPri->setText(tmp);
   }
   else
   {
-    txtDevice->setText("");
-    txtVolume->setText("");
+    CreateDefaultDevicename(tmp);
+    txtDevice->setText(tmp);
+    txtVolume->setText(tmp);
     strroot.assign(currentDir);
     txtPath->setText(strroot);
     chkReadWrite->setSelected(true);
@@ -291,14 +299,12 @@ bool EditFilesysVirtual(int unit_no)
   
   if(dialogResult)
   {
-    if(unit_no >= 0)
-      kill_filesys_unitconfig(&changed_prefs, unit_no);
-    else
-      extractPath((char *) txtPath->getText().c_str(), currentDir);
-
-    uci = add_filesys_config(&changed_prefs, -1, (char *) txtDevice->getText().c_str(), 
+    int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
+    extractPath((char *) txtPath->getText().c_str(), currentDir);
+    
+    uci = add_filesys_config(&changed_prefs, unit_no, (char *) txtDevice->getText().c_str(), 
       (char *) txtVolume->getText().c_str(), (char *) txtPath->getText().c_str(), 
-      !chkReadWrite->isSelected(), 0, 0, 0, 0, atoi(txtBootPri->getText().c_str()), 0, 0, 0);
+      !chkReadWrite->isSelected(), 0, 0, 0, 0, bp, 0, 0, 0);
     if (uci)
     	filesys_media_change (uci->rootdir, 1, uci);
   }

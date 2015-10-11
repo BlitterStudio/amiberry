@@ -11,6 +11,17 @@
 #define WRITE_LOG_BUF_SIZE 4096
 FILE *debugfile = NULL;
 
+void console_out (const char *format,...)
+{
+    va_list parms;
+    char buffer[WRITE_LOG_BUF_SIZE];
+
+    va_start (parms, format);
+    vsnprintf (buffer, WRITE_LOG_BUF_SIZE-1, format, parms);
+    va_end (parms);
+    printf(buffer);
+}
+
 #ifdef WITH_LOGGING
 
 void write_log (const char *format,...)

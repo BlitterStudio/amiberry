@@ -49,6 +49,15 @@ extern "C" {
 #include "zlib.h"
 #endif
 
+typedef int (ZEXPORT *INFLATEINIT2)(z_streamp strm, int windowBits, const char *version, int stream_size);
+typedef int (ZEXPORT *INFLATEINIT)(z_streamp strm, const char *version, int stream_size);
+typedef int (ZEXPORT *INFLATEEND)(z_streamp strm);
+typedef int (ZEXPORT *INFLATE)(z_streamp strm, int flush);
+typedef int (ZEXPORT *DEFLATEINIT)(z_streamp strm, int level, const char *version, int stream_size);
+typedef int (ZEXPORT *DEFLATEEND)(z_streamp strm);
+typedef int (ZEXPORT *DEFLATE)(z_streamp strm, int flush);
+typedef uLong (ZEXPORT *CRC32)(uLong crc, const Bytef *buf, uInt len);
+
 #if defined(STRICTUNZIP) || defined(STRICTZIPUNZIP)
 /* like the STRICT of WIN32, we define a pointer that cannot be converted
     from (void*) without cast */

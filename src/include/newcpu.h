@@ -185,8 +185,6 @@ STATIC_INLINE uae_u32 munge24(uae_u32 x)
     return x & regs.address_space_mask;
 }
 
-extern unsigned long irqcycles[15];
-extern int irqdelay[15];
 extern int mmu_enabled, mmu_triggered;
 extern int cpu_cycles;
 
@@ -338,6 +336,22 @@ extern void m68k_go (int);
 extern void m68k_reset (int);
 extern int getDivu68kCycles(uae_u32 dividend, uae_u16 divisor);
 extern int getDivs68kCycles(uae_s32 dividend, uae_s16 divisor);
+
+STATIC_INLINE int bitset_count(uae_u32 data)
+{
+    unsigned int const MASK1  = 0x55555555;
+    unsigned int const MASK2  = 0x33333333;
+    unsigned int const MASK4  = 0x0f0f0f0f;
+    unsigned int const MASK6 = 0x0000003f;
+
+    unsigned int const w = (data & MASK1) + ((data >> 1) & MASK1);
+    unsigned int const x = (w & MASK2) + ((w >> 2) & MASK2);
+    unsigned int const y = ((x + (x >> 4)) & MASK4);
+    unsigned int const z = (y + (y >> 8));
+    unsigned int const c = (z + (z >> 16)) & MASK6;
+
+    return c;
+}
 
 extern void mmu_op       (uae_u32, struct regstruct *regs, uae_u32);
 extern void mmu_op30     (uaecptr, uae_u32, struct regstruct *regs, int, uaecptr);

@@ -577,7 +577,7 @@ extern void picasso_enablescreen (int on);
 extern void picasso_refresh (int);
 extern void picasso_handle_vsync (void);
 extern void init_hz_p96 (void);
-static inline void picasso_handle_hsync (void)
+static __inline__ void picasso_handle_hsync (void)
 {
 }
 

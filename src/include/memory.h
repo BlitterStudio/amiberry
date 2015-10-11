@@ -46,10 +46,6 @@ extern uae_u32 allocated_fastmem;
 extern uae_u32 allocated_bogomem;
 extern uae_u32 allocated_gfxmem;
 extern uae_u32 allocated_z3fastmem, max_z3fastmem;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-extern uae_u32 allocated_a3000mem;
-extern uae_u32 allocated_cardmem;
-#endif
 
 extern void wait_cpu_cycle (void);
 
@@ -58,16 +54,10 @@ extern void wait_cpu_cycle (void);
 
 #define chipmem_start 0x00000000
 #define bogomem_start 0x00C00000
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-#define cardmem_start 0x00E00000
-#endif
 #define kickmem_start 0x00F80000
 extern uaecptr z3fastmem_start;
 extern uaecptr p96ram_start;
 extern uaecptr fastmem_start;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-extern uaecptr a3000lmem_start, a3000hmem_start;
-#endif
 
 extern int ersatzkickfile;
 extern int cloanto_rom;
@@ -115,15 +105,6 @@ extern addrbank rtarea_bank;
 extern addrbank expamem_bank;
 extern addrbank fastmem_bank;
 extern addrbank gfxmem_bank, gfxmem_bankx;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-extern addrbank gayle_bank;
-extern addrbank gayle2_bank;
-extern addrbank gayle_attr_bank;
-extern addrbank gayle_common_bank;
-extern addrbank mbres_bank;
-extern addrbank akiko_bank;
-extern addrbank cardmem_bank;
-#endif
 
 extern void rtarea_init (void);
 extern void rtarea_setup (void);
@@ -170,8 +151,6 @@ extern void map_banks (addrbank *bank, int first, int count, int realsize);
 extern void map_overlay (int chip);
 extern void memory_hardreset (void);
 extern void free_fastmemory (void);
-
-#define NONEXISTINGDATA 0
 
 #define longget(addr) (call_mem_get_func(get_mem_bank(addr).lget, addr))
 #define wordget(addr) (call_mem_get_func(get_mem_bank(addr).wget, addr))
@@ -332,7 +311,7 @@ extern uae_u8 *mapped_malloc (size_t, const char *);
 extern void mapped_free (uae_u8 *);
 extern void clearexec (void);
 
-extern void decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size, uae_u8 *key, int keysize);
+extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 
 #define ROMTYPE_KICK 1
 #define ROMTYPE_KICKCD32 2
@@ -398,8 +377,10 @@ extern void romlist_add (char *path, struct romdata *rd);
 extern char *romlist_get (struct romdata *rd);
 extern void romlist_clear (void);
 
-extern uae_u8 *load_keyfile (struct uae_prefs *p, char *path, int *size);
-extern void free_keyfile (uae_u8 *key);
+extern int load_keyring (struct uae_prefs *p, char *path);
+extern uae_u8 *target_load_keyfile (struct uae_prefs *p, char *path, int *size, char *name);
+extern void free_keyring (void);
+extern int get_keyring (void);
 
 uaecptr strcpyha_safe (uaecptr dst, const char *src);
 extern char *strcpyah_safe (char *dst, uaecptr src);

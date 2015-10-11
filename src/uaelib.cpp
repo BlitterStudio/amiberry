@@ -409,10 +409,10 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
 
      case 70: return 0; /* RESERVED. Something uses this.. */
 
-     case 80: return /*currprefs.maprom ? currprefs.maprom :*/ 0xffffffff;
-     case 81: return 0; //cfgfile_uaelib (ARG1, ARG2, ARG3, ARG4);
-     case 82: return 0; //cfgfile_uaelib_modify (ARG1, ARG2, ARG3, ARG4, ARG5);
-     case 83: /*currprefs.mmkeyboard = ARG1 ? 1 : 0; return currprefs.mmkeyboard*/ return 0;
+     case 80: return 0xffffffff;
+     case 81: return 0;
+     case 82: return 0;
+     case 83: return 0;
 #ifdef DEBUGGER
      case 84: return mmu_init (ARG1, ARG2, ARG3);
 #endif
@@ -434,7 +434,6 @@ void emulib_install (void)
     if (!uae_boot_rom)
 	return;
     a = here ();
-    //currprefs.mmkeyboard = 0;
     org (rtarea_base + 0xFF60);
 #if 0
     dw (0x4eb9);

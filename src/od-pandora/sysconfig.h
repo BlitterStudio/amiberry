@@ -1,3 +1,64 @@
+
+#define SUPPORT_THREADS
+#define MAX_DPATH 256
+
+/* #define DRIVESOUND */
+/* #define GFXFILTER */
+
+/* #define DEBUGGER */
+#define FILESYS /* filesys emulation */
+#define UAE_FILESYS_THREADS
+#define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
+#define JIT /* JIT compiler support */
+/* #define NATMEM_OFFSET natmem_offset */
+/* #define CATWEASEL */ /* Catweasel MK2/3 support */
+/* #define AHI */ /* AHI sound emulation */
+/* #define ENFORCER */ /* UAE Enforcer */
+#define ECS_DENISE /* ECS DENISE new features */
+#define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
+/* #define CD32 */ /* CD32 emulation */
+/* #define CDTV */ /* CDTV emulation */
+/* #define PARALLEL_PORT */ /* parallel port emulation */
+/* #define SERIAL_PORT */ /* serial port emulation */
+/* #define SCSIEMU */ /* uaescsi.device emulation */
+/* #define UAESERIAL */ /* uaeserial.device emulation */
+#define FPUEMU /* FPU emulation */
+/* #define FPU_UAE */
+/* #define MMUEMU */
+#define CPUEMU_0 /* generic 680x0 emulation */
+#define CPUEMU_11 /* 68000+prefetch emulation */
+/* #define CPUEMU_12 */ /* cycle-exact cpu&blitter */
+/* #define ACTION_REPLAY */ /* Action Replay 1/2/3 support */
+#if !defined(RASPBERRY)
+#define PICASSO96 /* Picasso96 display card emulation */
+#endif
+/* #define BSDSOCKET */ /* bsdsocket.library emulation */
+/* #define CAPS */ /* CAPS-image support */
+/* #define FDI2RAW */ /* FDI 1.0 and 2.x image support */
+/* #define AVIOUTPUT */ /* Avioutput support */
+/* #define PROWIZARD */ /* Pro-Wizard module ripper */
+/* #define ARCADIA */ /* Arcadia arcade system */
+/* #define ARCHIVEACCESS */ /* ArchiveAccess decompression library */
+/* #define LOGITECHLCD */ /* Logitech G15 LCD */
+#define SAVESTATE /* State file support */
+/* #define A2091 */ /* A590/A2091 SCSI */
+/* #define NCR */ /* A4000T/A4091 SCSI */
+/* #define SANA2 */ /* SANA2 network driver */
+/* #define AMAX */ /* A-Max ROM adapater emulation */
+/* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
+
+/* #define INPUT_RECORDER */ /* Use input recoder */
+
+/* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
+/* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
+/* #define ADDRESS_SPACE_24BIT */
+
+#define SIZEOF_VOID_P 4
+
+#if !defined(AHI)
+#undef ENFORCER
+#endif
+
 /* src/sysconfig.h.  Generated automatically by configure.  */
 /* src/sysconfig.h.in.  Generated automatically from configure.in by autoheader.  */
 
@@ -144,8 +205,6 @@
 #define SIZEOF_FLOAT 4
 #define SIZEOF_DOUBLE 8
 
-#define SIZEOF_VOID_P 4
-
 #define HAVE_ISNAN
 #undef HAVE_ISINF
 
@@ -260,9 +319,6 @@
 /* Define if you have the <dirent.h> header file.  */
 #define HAVE_DIRENT_H 1
 
-/* Define if you have the <dmedia/audio.h> header file.  */
-/* #undef HAVE_DMEDIA_AUDIO_H */
-
 /* Define if you have the <fcntl.h> header file.  */
 #define HAVE_FCNTL_H 1
 
@@ -271,6 +327,9 @@
 
 /* Define if you have the <getopt.h> header file.  */
 #define HAVE_GETOPT_H 1
+
+/* Define if you have the <ggi/libggi.h> header file.  */
+/* #undef HAVE_GGI_LIBGGI_H */
 
 /* Define if you have the <libraries/cybergraphics.h> header file.  */
 /* #undef HAVE_LIBRARIES_CYBERGRAPHICS_H */
@@ -388,7 +447,6 @@
 #ifndef MAX_PATH
 #define MAX_PATH 256
 #endif
-#define MAX_DPATH 256
 
 #define WORDS_BIGENDIAN 1
 

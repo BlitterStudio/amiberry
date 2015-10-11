@@ -58,8 +58,6 @@ extern uae_u8* compiled_code;
 #include <signal.h>
 /* For faster cycles handling */
 signed long pissoff=0;
-/* Counter for missed vsyncmintime deadlines */
-int gonebad=0;
 #else
 /* Need to have these somewhere */
 static void build_comp(void) {}
@@ -76,10 +74,9 @@ uaecptr last_fault_for_exception_3;
 static int last_writeaccess_for_exception_3;
 /* instruction (1) or data (0) access */
 static int last_instructionaccess_for_exception_3;
-unsigned long irqcycles[15];
-int irqdelay[15];
 int mmu_enabled, mmu_triggered;
 int cpu_cycles;
+static uaecptr last_trace_ad = 0;
 
 const int areg_byteinc[] = { 1,1,1,1,1,1,1,2 };
 const int imm8_table[] = { 8,1,2,3,4,5,6,7 };
@@ -98,15 +95,6 @@ extern uae_u32 get_fpsr(void);
 static uae_u64 srp_030, crp_030;
 static uae_u32 tt0_030, tt1_030, tc_030;
 static uae_u16 mmusr_030;
-
-static __inline__ unsigned int cft_map (unsigned int f)
-{
-//#if ((!defined(HAVE_GET_WORD_UNSWAPPED)) || (defined(FULLMMU)))
-    return f;
-//#else
-//    return do_byteswap_16(f);
-//#endif
-}
 
 #ifdef DEBUG_M68K
 
@@ -160,11 +148,11 @@ static void set_cpu_caches(void)
 #endif
 }
 
-unsigned long REGPARAM3 op_illg_1 (uae_u32 opcode, struct regstruct *regs) REGPARAM;
+static unsigned long REGPARAM3 op_illg_1 (uae_u32 opcode, struct regstruct *regs) REGPARAM;
 
-unsigned long REGPARAM2 op_illg_1 (uae_u32 opcode, struct regstruct *regs)
+static unsigned long REGPARAM2 op_illg_1 (uae_u32 opcode, struct regstruct *regs)
 {
-    op_illg (cft_map (opcode), regs);
+    op_illg (opcode, regs);
     return 4;
 }
 
@@ -217,9 +205,9 @@ static void build_cpufunctbl (void)
     }
 
     for (opcode = 0; opcode < 65536; opcode++)
-	cpufunctbl[cft_map (opcode)] = op_illg_1;
+	cpufunctbl[opcode] = op_illg_1;
     for (i = 0; tbl[i].handler != NULL; i++)
-	cpufunctbl[cft_map (tbl[i].opcode)] = tbl[i].handler;
+	cpufunctbl[tbl[i].opcode] = tbl[i].handler;
 
     for (opcode = 0; opcode < 65536; opcode++) {
 	cpuop_func *f;
@@ -228,10 +216,10 @@ static void build_cpufunctbl (void)
 	    continue;
 
 	if (table68k[opcode].handler != -1) {
-	    f = cpufunctbl[cft_map (table68k[opcode].handler)];
+	    f = cpufunctbl[table68k[opcode].handler];
 	    if (f == op_illg_1)
 		abort();
-	    cpufunctbl[cft_map (opcode)] = f;
+	    cpufunctbl[opcode] = f;
 	}
     }
 #ifdef JIT
@@ -247,25 +235,41 @@ void fill_prefetch_slow (struct regstruct *regs)
 	regs->irc = get_word (m68k_getpc (regs) + 2);
 }
 
-unsigned long cycles_mask, cycles_val;
+unsigned long cycles_shift;
+unsigned long cycles_shift_2;
 
 static void update_68k_cycles (void)
 {
-    cycles_mask = 0;
-    cycles_val = currprefs.m68k_speed;
-    if (currprefs.m68k_speed < 1) {
-	cycles_mask = 0xFFFFFFFF;
-	cycles_val = 0;
+    cycles_shift = 0;
+    cycles_shift_2 = 0;
+    if(currprefs.m68k_speed == M68K_SPEED_14MHZ_CYCLES)
+      cycles_shift = 1;
+    else if(currprefs.m68k_speed == M68K_SPEED_25MHZ_CYCLES)
+    {
+      cycles_shift = 2;
+      cycles_shift_2 = 5;
     }
 }
+
+STATIC_INLINE unsigned long adjust_cycles(unsigned long cycles)
+{
+  unsigned long res = cycles >> cycles_shift;
+  if(cycles_shift_2 > 0)
+    return res + (cycles >> cycles_shift_2);
+  else
+    return res;
+}
+
 
 void check_prefs_changed_adr24 (void)
 {
   if(currprefs.address_space_24 != changed_prefs.address_space_24)
   {
     currprefs.address_space_24 = changed_prefs.address_space_24;
+    
     if (currprefs.address_space_24) {
     	regs.address_space_mask = 0x00ffffff;
+    	fixup_prefs(&changed_prefs);
     } else {
     	regs.address_space_mask = 0xffffffff;
     }
@@ -278,8 +282,6 @@ static void prefs_changed_cpu (void)
     currprefs.cpu_model = changed_prefs.cpu_model;
     currprefs.fpu_model = changed_prefs.fpu_model;
     currprefs.cpu_compatible = changed_prefs.cpu_compatible;
-//    currprefs.cpu_cycle_exact = changed_prefs.cpu_cycle_exact;
-//    currprefs.blitter_cycle_exact = changed_prefs.cpu_cycle_exact;
 }
 
 void check_prefs_changed_cpu (void)
@@ -351,7 +353,6 @@ void init_m68k (void)
 }
 
 struct regstruct regs;
-static long int m68kpc_offset;
 
 int get_cpu_model(void)
 {
@@ -510,18 +511,6 @@ static void exception_trace (int nr)
 	    set_special (&regs, SPCFLAG_DOTRACE);
     }
     regs.t1 = regs.t0 = regs.m = 0;
-}
-
-/* for building exception frames */
-static __inline__ void exc_push_word(uae_u16 w)
-{
-    m68k_areg(&regs, 7) -= 2;
-    put_word(m68k_areg(&regs, 7), w);
-}
-static __inline__ void exc_push_long(uae_u32 l)
-{
-    m68k_areg(&regs, 7) -= 4;
-    put_long (m68k_areg(&regs, 7), l);
 }
 
 void REGPARAM2 Exception (int nr, struct regstruct *regs, uaecptr oldpc)
@@ -1062,9 +1051,13 @@ void m68k_mull (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 
 void m68k_reset (int hardreset)
 {
+  pissoff = 0;
+  cpu_cycles = 0;
+  last_trace_ad = 0;
+  
     regs.spcflags = 0;
 #ifdef SAVESTATE
-    if (savestate_state == STATE_RESTORE /* || savestate_state == STATE_REWIND */) {
+    if (savestate_state == STATE_RESTORE) {
 	m68k_setpc (&regs, regs.pc);
 	/* MakeFromSR() must not swap stack pointer */
 	regs.s = (regs.sr >> 13) & 1;
@@ -1100,7 +1093,6 @@ void m68k_reset (int hardreset)
     regs.itt0 = regs.itt1 = regs.dtt0 = regs.dtt1 = 0;
     regs.tcr = regs.mmusr = regs.urp = regs.srp = regs.buscr = 0;
 
-//    a3000_fakekick(0);
     /* only (E)nable bit is zeroed when CPU is reset, A3000 SuperKickstart expects this */
     tc_030 &= ~0x80000000;
     tt0_030 &= ~0x80000000;
@@ -1117,7 +1109,6 @@ void m68k_reset (int hardreset)
     regs.pcr = 0;
     if (currprefs.cpu_model == 68060) {
         regs.pcr = currprefs.fpu_model ? MC68060_PCR : MC68EC060_PCR;
-	//regs.pcr |= (currprefs.cpu060_revision & 0xff) << 8;
 	regs.pcr |= 2;
     }
     fill_prefetch_slow (&regs);
@@ -1198,7 +1189,6 @@ static void mmu_op30_pmove(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr ext
     int rw = (next >> 9) & 1;
     int fd = (next >> 8) & 1;
     char *reg = NULL;
-    uae_u32 otc = tc_030;
     int siz;
 
     switch (preg)
@@ -1263,11 +1253,6 @@ static void mmu_op30_pmove(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr ext
 	op_illg(opcode, &regs);
 	return;
     }
-//    if (currprefs.cs_mbdmac == 1 && currprefs.mbresmem_low_size > 0) {
-//	if (otc != tc_030) {
-//	    a3000_fakekick(tc_030 & 0x80000000);
-//	}
-//    }
 }
 
 static void mmu_op30_ptest(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
@@ -1327,8 +1312,6 @@ void mmu_op(uae_u32 opcode, struct regstruct *regs, uae_u32 extra)
 }
 
 #endif
-
-static uaecptr last_trace_ad = 0;
 
 static void do_trace (void)
 {
@@ -1477,13 +1460,12 @@ static void m68k_run_1 (void)
 
 	do_cycles (cpu_cycles);
 	cpu_cycles = (*cpufunctbl[opcode])(opcode, r);
-	cpu_cycles &= cycles_mask;
-	cpu_cycles |= cycles_val;
+	cpu_cycles = adjust_cycles(cpu_cycles);
 	if (r->spcflags) {
 	    if (do_specialties (cpu_cycles, r))
 		return;
 	}
-	if (!currprefs.cpu_compatible || (currprefs.cpu_model == 68000))
+	if (!currprefs.cpu_compatible)
 	    return;
     }
 }
@@ -1509,8 +1491,7 @@ void exec_nostats(void)
 	uae_u16 opcode = get_iword(r, 0);
 
 	cpu_cycles = (*cpufunctbl[opcode])(opcode, r);
-	cpu_cycles &= cycles_mask;
-	cpu_cycles |= cycles_val;
+	cpu_cycles = adjust_cycles(cpu_cycles);
 
 	do_cycles (cpu_cycles);
 
@@ -1518,8 +1499,6 @@ void exec_nostats(void)
 	    return; /* We will deal with the spcflags in the caller */
     }
 }
-
-static int triggered;
 
 void execute_normal(void)
 {
@@ -1547,8 +1526,7 @@ void execute_normal(void)
 
 	cpu_cycles = (*cpufunctbl[opcode])(opcode, r);
 
-	cpu_cycles &= cycles_mask;
-	cpu_cycles |= cycles_val;
+	cpu_cycles = adjust_cycles(cpu_cycles);
 	do_cycles (cpu_cycles);
 	total_cycles += cpu_cycles;
 	pc_hist[blocklen].specmem = special_mem;
@@ -1614,8 +1592,7 @@ static void m68k_run_2p (void)
 	prefetch_pc = m68k_getpc (r) + 2;
 	prefetch = get_longi (prefetch_pc);
 	cpu_cycles = (*cpufunctbl[opcode])(opcode, r);
-	cpu_cycles &= cycles_mask;
-	cpu_cycles |= cycles_val;
+	cpu_cycles = adjust_cycles(cpu_cycles);
 	if (r->spcflags) {
 	    if (do_specialties (cpu_cycles, r))
 		return;
@@ -1636,8 +1613,7 @@ static void m68k_run_2 (void)
   m68k_dumpstate();
 #endif
 	cpu_cycles = (*cpufunctbl[opcode])(opcode, r);
-	cpu_cycles &= cycles_mask;
-	cpu_cycles |= cycles_val;
+	cpu_cycles = adjust_cycles(cpu_cycles);
 	if (r->spcflags) {
 	    if (do_specialties (cpu_cycles, r))
 		return;
@@ -1652,8 +1628,7 @@ static void m68k_run_mmu (void)
 	uae_u32 opcode = get_iword (&regs, 0);
 	do_cycles (cpu_cycles);
 	cpu_cycles = (*cpufunctbl[opcode])(opcode, &regs);
-	cpu_cycles &= cycles_mask;
-	cpu_cycles |= cycles_val;
+	cpu_cycles = adjust_cycles(cpu_cycles);
 	if (regs.spcflags) {
 	    if (do_specialties (cpu_cycles, &regs))
 		return;
@@ -1691,13 +1666,13 @@ void m68k_go (int may_quit)
 	    int hardreset = (quit_program == 3 ? 1 : 0) | hardboot;
 	    if (quit_program == 1)
 		break;
+	    if(quit_program == 3)
+	      reinit_amiga();
 	    quit_program = 0;
 	    hardboot = 0;
 #ifdef SAVESTATE
 	    if (savestate_state == STATE_RESTORE)
 		restore_state (savestate_fname);
-//	    else if (savestate_state == STATE_REWIND)
-//		savestate_rewind ();
 #endif
       check_prefs_changed_adr24();
 	    customreset (hardreset);
@@ -1954,7 +1929,7 @@ void cpureset (void)
     uaecptr ksboot = 0xf80002 - 2; /* -2 = RESET hasn't increased PC yet */
     uae_u16 ins;
 
-    if (currprefs.cpu_compatible /*|| currprefs.cpu_cycle_exact*/) {
+    if (currprefs.cpu_compatible) {
 	customreset (0);
 	return;
     }

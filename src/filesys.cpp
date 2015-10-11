@@ -37,11 +37,9 @@
 #include "traps.h"
 #include "fsusage.h"
 #include "native2amiga.h"
-#include "scsidev.h"
 #include "fsdb.h"
 #include "zfile.h"
 #include "gui.h"
-#include "cfgfile.h"
 #include "savestate.h"
 
 #define TRACING_ENABLED 0
@@ -52,35 +50,6 @@
 #define TRACE(x)
 #define DUMPLOCK(u,x)
 #endif
-
-static void aino_test (a_inode *aino)
-{
-#ifdef AINO_DEBUG
-    a_inode *aino2 = aino, *aino3;
-    for (;;) {
-        if (!aino || !aino->next)
-	    return;
-	if ((aino->checksum1 ^ aino->checksum2) != 0xaaaa5555) {
-	    write_log ("PANIC: corrupted or freed but used aino detected!", aino);
-	}
-	aino3 = aino;
-	aino = aino->next;
-	if (aino->prev != aino3) {
-	    write_log ("PANIC: corrupted aino linking!\n");
-	    break;
-	}
-	if (aino == aino2) break;
-    }
-#endif
-}
-
-static void aino_test_init (a_inode *aino)
-{
-#ifdef AINO_DEBUG
-    aino->checksum1 = (uae_u32)aino;
-    aino->checksum2 = aino->checksum1 ^ 0xaaaa5555;
-#endif
-}
 
 uaecptr filesys_initcode;
 static uae_u32 fsdevname, filesys_configdev;
@@ -161,10 +130,9 @@ static void close_filesys_unit (UnitInfo *uip)
     if (uip->rootdir != 0)
 	xfree (uip->rootdir);
     if (uip->unit_pipe)
-	xfree (uip->unit_pipe);
+  xfree (uip->unit_pipe);
     if (uip->back_pipe)
-	xfree (uip->back_pipe);
-
+  xfree (uip->back_pipe);
     uip->unit_pipe = 0;
     uip->back_pipe = 0;
 
@@ -230,7 +198,7 @@ int get_filesys_unitconfig (struct uae_prefs *p, int index, struct mountedinfo *
       ui->hf.fd = 0;
     }
   } else {
-	  if (!ui->controller /*|| (ui->controller && p->cs_ide)*/) {
+	  if (!ui->controller) {
 	    mi->ismounted = 1;
 	    if (uci->ishdf)
 		mi->ismedia = ui->hf.drive_empty ? 0 : 1;
@@ -536,27 +504,7 @@ static void initialize_mountinfo(void)
     		ui = &mountinfo.ui[idx];
     		ui->configureddrive = 1;
 	    }
-  } /* else if (uci->controller <= HD_CONTROLLER_IDE3 ) {
-	    gayle_add_ide_unit (uci->controller - HD_CONTROLLER_IDE0, uci->rootdir, uci->blocksize, uci->readonly,
-		uci->devname, uci->sectors, uci->surfaces, uci->reserved,
-		uci->bootpri, uci->filesys);
-	} else if (uci->controller <= HD_CONTROLLER_SCSI6) {
-	    if (currprefs.cs_mbdmac) {
-		a3000_add_scsi_unit (uci->controller - HD_CONTROLLER_SCSI0, uci->rootdir, uci->blocksize, uci->readonly,
-		    uci->devname, uci->sectors, uci->surfaces, uci->reserved,
-		    uci->bootpri, uci->filesys);
-	    } else if (currprefs.cs_a2091) {
-		a2091_add_scsi_unit (uci->controller - HD_CONTROLLER_SCSI0, uci->rootdir, uci->blocksize, uci->readonly,
-		    uci->devname, uci->sectors, uci->surfaces, uci->reserved,
-		    uci->bootpri, uci->filesys);
-	    } else if (currprefs.cs_cdtvscsi) {
-		cdtv_add_scsi_unit (uci->controller - HD_CONTROLLER_SCSI0, uci->rootdir, uci->blocksize, uci->readonly,
-		    uci->devname, uci->sectors, uci->surfaces, uci->reserved,
-		    uci->bootpri, uci->filesys);
-	    }
-	} else if (uci->controller == HD_CONTROLLER_PCMCIA_SRAM) {
-	    gayle_add_pcmcia_sram_unit (uci->rootdir, uci->readonly);
-	} */
+  }
     }
 }
 
@@ -578,7 +526,6 @@ void free_mountinfo (void)
     int i;
     for (i = 0; i < MAX_FILESYSTEM_UNITS; i++)
 	close_filesys_unit (mountinfo.ui + i);
-    //gayle_free_units();
 }
 
 struct hardfiledata *get_hardfile_data (int nr)
@@ -1027,7 +974,7 @@ int filesys_media_change (const char *rootdir, int inserted, struct uaedev_confi
     if (nr >= 0)
 	ui = &mountinfo.ui[nr];
     /* only configured drives have automount support if automount is disabled */
-    if (/*!currprefs.win32_automount_removable &&*/ (!ui || !ui->configureddrive) && (inserted == 0 || inserted == 1))
+    if ((!ui || !ui->configureddrive) && (inserted == 0 || inserted == 1))
         return 0;
     if (nr < 0 && !inserted)
 	return 0;
@@ -1177,20 +1124,11 @@ static int fsdb_cando (Unit *unit)
 {
     if (unit->volflags & MYVOLUMEINFO_ARCHIVE)
 	return 1;
-//    if (currprefs.filesys_custom_uaefsdb  && (unit->volflags & MYVOLUMEINFO_STREAMS))
-//	return 1;
-//    if (!currprefs.filesys_no_uaefsdb)
-//	return 1;
     return 0;
-}
-
-static void prepare_for_open (char *name)
-{
 }
 
 static void de_recycle_aino (Unit *unit, a_inode *aino)
 {
-    aino_test (aino);
     if (aino->next == 0 || aino == &unit->rootnode)
 	return;
     aino->next->prev = aino->prev;
@@ -1238,11 +1176,9 @@ static int flush_cache(Unit *unit, int num)
 	a_inode **aip;
 
 	aip = &parent->child;
-	aino_test (parent);
 	if (parent && !parent->locked_children) {
 	    for (;;) {
 		a_inode *aino = *aip;
-		aino_test (aino);
 		if (aino == 0)
 		    break;
 		/* Not recyclable if next == 0 (i.e., not chained into
@@ -1284,7 +1220,6 @@ static int flush_cache(Unit *unit, int num)
 
 static void recycle_aino (Unit *unit, a_inode *new_aino)
 {
-    aino_test (new_aino);
     if (new_aino->dir || new_aino->shlock > 0
 	|| new_aino->elock || new_aino == &unit->rootnode)
 	/* Still in use */
@@ -1297,14 +1232,11 @@ static void recycle_aino (Unit *unit, a_inode *new_aino)
 	flush_cache (unit, 50);
     }
 
-    aino_test (new_aino);
     /* Chain it into circular list. */
     new_aino->next = unit->rootnode.next;
     new_aino->prev = &unit->rootnode;
     new_aino->prev->next = new_aino;
     new_aino->next->prev = new_aino;
-    aino_test (new_aino->next);
-    aino_test (new_aino->prev);
 
     unit->aino_cache_size++;
 }
@@ -1342,8 +1274,6 @@ static void update_child_names (Unit *unit, a_inode *a, a_inode *parent)
 
 static void move_aino_children (Unit *unit, a_inode *from, a_inode *to)
 {
-    aino_test (from);
-    aino_test (to);
     to->child = from->child;
     from->child = 0;
     update_child_names (unit, to->child, to);
@@ -1355,7 +1285,6 @@ static void delete_aino (Unit *unit, a_inode *aino)
 
     TRACE(("deleting aino %x\n", aino->uniq));
 
-    aino_test (aino);
     aino->dirty = 1;
     aino->deleted = 1;
     de_recycle_aino (unit, aino);
@@ -1436,7 +1365,6 @@ static a_inode *lookup_aino (Unit *unit, uae_u32 uniq)
 	unit->nr_cache_hits++;
     unit->nr_cache_lookups++;
     unit->aino_hash[hash] = a;
-    aino_test (a);
     return a;
 }
 
@@ -1475,8 +1403,6 @@ static char *get_nname (Unit *unit, a_inode *base, char *rel,
 	return 0;
     }
 
-    aino_test (base);
-
     /* If we have a mapping of some other aname to "rel", we must pretend
      * it does not exist.
      * This can happen for example if an Amiga program creates a
@@ -1508,28 +1434,16 @@ static char *create_nname (Unit *unit, a_inode *base, char *rel)
 {
     char *p;
 
-    aino_test (base);
     /* We are trying to create a file called REL.  */
     
     /* If the name is used otherwise in the directory (or globally), we
      * need a new unique nname.  */
     if (fsdb_name_invalid (rel) || fsdb_used_as_nname (base, rel)) {
-#if 0
-	oh_dear:
-#endif
 	p = fsdb_create_unique_nname (base, rel);
 	return p;
     }
     p = build_nname (base->nname, rel);
 
-#if 0
-    /* Delete this code once we know everything works.  */
-    if (access (p, R_OK) >= 0 || errno != ENOENT) {
-	write_log ("Filesystem in trouble... please report.\n");
-	xfree (p);
-	goto oh_dear;
-    }
-#endif
     return p;
 }
 
@@ -1598,9 +1512,6 @@ static void init_child_aino (Unit *unit, a_inode *base, a_inode *aino)
 	base->locked_children++;
     }
     init_child_aino_tree(unit, base, aino);
-
-    aino_test_init (aino);
-    aino_test (aino);
 }
 
 static a_inode *new_child_aino (Unit *unit, a_inode *base, char *rel)
@@ -1673,9 +1584,6 @@ static a_inode *lookup_child_aino (Unit *unit, a_inode *base, char *rel, uae_u32
    a_inode *c = base->child;
    int l0 = strlen (rel);
 
-   aino_test (base);
-   aino_test (c);
-   
    if (base->dir == 0) {
       *err = ERROR_OBJECT_WRONG_TYPE;
       return 0;
@@ -1702,9 +1610,6 @@ static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, char *r
     a_inode *c = base->child;
     int l0 = strlen (rel);
     int isarch = unit->volflags & MYVOLUMEINFO_ARCHIVE;
-
-    aino_test (base);
-    aino_test (c);
 
     *err = 0;
     while (c != 0) {
@@ -1753,8 +1658,6 @@ static a_inode *get_aino (Unit *unit, a_inode *base, const char *rel, uae_u32 *e
    a_inode *curr;
    int i;
 
-   aino_test (base);
-   
    *err = 0;
    TRACE(("get_path(%s,%s)\n", base->aname, rel));
    
@@ -1912,7 +1815,6 @@ static Unit *startup_create_unit (UnitInfo *uinfo, int num)
     unit->rootnode.comment = 0;
     unit->rootnode.has_dbentry = 0;
     unit->rootnode.volflags = uinfo->volflags;
-    aino_test_init (&unit->rootnode);
     unit->aino_cache_size = 0;
     for (i = 0; i < MAX_AINO_HASH; i++)
 	unit->aino_hash[i] = 0;
@@ -2176,7 +2078,6 @@ static a_inode *find_aino (Unit *unit, uaecptr lock, const char *name, uae_u32 *
    if (a) {
       TRACE(("aino=\"%s\"\n", a->nname));
    }
-   aino_test (a);
    return a;
 }
 
@@ -3244,8 +3145,6 @@ static void do_find (Unit *unit, dpacket packet, int mode, int create, int fallb
       aino_created = 1;
    }
    
-   prepare_for_open (aino->nname);
-   
    openmode = (((mode & A_FIBF_READ) == 0 ? O_WRONLY
          : (mode & A_FIBF_WRITE) == 0 ? O_RDONLY
                : O_RDWR)
@@ -3307,7 +3206,6 @@ action_fh_from_lock (Unit *unit, dpacket packet)
 	aino = &unit->rootnode;
     mode = aino->amigaos_mode; /* Use same mode for opened filehandle as existing Lock() */
 
-    prepare_for_open (aino->nname);
     TRACE (("  mode is %d\n", mode));
     openmode = (((mode & A_FIBF_READ) ? O_WRONLY
 		 : (mode & A_FIBF_WRITE) ? O_RDONLY
@@ -4287,7 +4185,7 @@ action_write_protect (Unit *unit, dpacket packet)
 
 /* We don't want multiple interrupts to be active at the same time. I don't
  * know whether AmigaOS takes care of that, but this does. */
-static uae_sem_t singlethread_int_sem;
+static uae_sem_t singlethread_int_sem = 0;
 
 static uae_u32 REGPARAM2 exter_int_helper (TrapContext *context)
 {
@@ -4529,6 +4427,7 @@ static void *filesys_thread (void *unit_v)
 	    /* Death message received. */
 	    uae_sem_post (&ui->reset_sync_sem);
 	    /* Die.  */
+      write_log("filesys_thread: Die\n");
 	    return 0;
 	}
 
@@ -4551,6 +4450,7 @@ static void *filesys_thread (void *unit_v)
 	    write_comm_pipe_int (ui->back_pipe, (int)(get_long (ui->self->locklist)), 0);
 	put_long (ui->self->locklist, 0);
     }
+    write_log("filesys_thread: exit\n");
     return 0;
 }
 #endif
@@ -4631,8 +4531,16 @@ void filesys_start_threads (void)
 
 void filesys_cleanup (void)
 {
-    filesys_free_handles();
+    filesys_prepare_reset();
     free_mountinfo ();
+    
+    if(singlethread_int_sem != 0)
+      uae_sem_destroy(&singlethread_int_sem);
+    singlethread_int_sem = 0;
+      
+    filesys_in_interrupt = 0;
+    mountertask = 0;
+    automountunit = -1;
 }
 
 void filesys_free_handles(void)
@@ -4695,6 +4603,12 @@ void filesys_prepare_reset (void)
 	    write_comm_pipe_int (uip[i].unit_pipe, 0, 0);
 	    write_comm_pipe_int (uip[i].unit_pipe, 0, 1);
 	    uae_sem_wait (&uip[i].reset_sync_sem);
+      uae_sem_destroy(&uip[i].reset_sync_sem);
+      uip[i].reset_sync_sem = 0;
+      destroy_comm_pipe(uip[i].unit_pipe);
+      uip[i].unit_pipe = 0;
+      destroy_comm_pipe(uip[i].back_pipe);
+      uip[i].back_pipe = 0;
 	}
     }
 #endif
@@ -4742,9 +4656,6 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *context)
      * Resident structures and call InitResident() for them at the end of the
      * diag entry. */
 
-#ifdef SCSIEMU
-    resaddr = scsidev_startup(resaddr);
-#endif
     /* scan for Residents and return pointer to array of them */
     residents = resaddr;
     while (tmp < residents && tmp > start) {
@@ -5611,14 +5522,14 @@ uae_u8 *save_filesys (int num, int *len)
     save_string (ui->rootdir);
     save_string (ui->devname);
     save_string (ui->volname);
-    save_string (/*ui->filesysdir*/ "");
+    save_string ("");
     save_u8 (ui->bootpri);
     save_u8 (ui->readonly);
     save_u32 (ui->startup);
     save_u32 (filesys_configdev);
     if (type == FILESYS_VIRTUAL)
 	dst = save_filesys_virtual (ui, dst);
-    if (type == FILESYS_HARDFILE /*|| type == FILESYS_HARDFILE_RDB*/)
+    if (type == FILESYS_HARDFILE)
 	dst = save_filesys_hardfile (ui, dst);
     *len = dst - dstbak;
     return dstbak;
@@ -5644,7 +5555,7 @@ uae_u8 *restore_filesys (uae_u8 *src)
     ui = &mountinfo.ui[devno];
     ui->startup = restore_u32 ();
     filesys_configdev = restore_u32 ();
-    if (type == FILESYS_HARDFILE /*|| type == FILESYS_HARDFILE_RDB*/)
+    if (type == FILESYS_HARDFILE)
 	src = restore_filesys_hardfile(ui, src);
     if (set_filesys_unit (devno, devname, volname, rootdir, readonly,
 	ui->hf.secspertrack, ui->hf.surfaces, ui->hf.reservedblocks, ui->hf.blocksize,

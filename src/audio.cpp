@@ -74,7 +74,7 @@ static int sound_table[64][256];
 void (*sample_handler) (void);
 static void (*sample_prehandler) (unsigned long best_evtime);
 
-unsigned long sample_evtime, scaled_sample_evtime;
+unsigned long scaled_sample_evtime;
 
 static unsigned long last_cycles, next_sample_evtime;
 
@@ -492,6 +492,7 @@ static void sample16i_crux_handler (void)
 
 /* This interpolator examines sample points when Paula switches the output
  * voltage and computes the average of Paula's output */
+
 static void sample16si_anti_handler (void)
 {
     int datas[4], data1, data2;
@@ -505,7 +506,6 @@ static void sample16si_anti_handler (void)
     put_sound_word_right (data2);
     check_sound_buffers ();
 }
-
 
 static void sample16si_sinc_handler (void)
 {

@@ -35,6 +35,7 @@ static gcn::Button* cmdCancel;
 static gcn::Label *lblDevice;
 static gcn::TextField *txtDevice;
 static gcn::UaeCheckBox* chkReadWrite;
+static gcn::UaeCheckBox* chkAutoboot;
 static gcn::Label *lblBootPri;
 static gcn::TextField *txtBootPri;
 static gcn::Label *lblPath;
@@ -72,9 +73,14 @@ class FilesysHardfileActionListener : public gcn::ActionListener
       {
         if (actionEvent.getSource() == cmdOK)
         {
-          if(txtDevice->getText().length() <= 0 || !fileSelected)
+          if(txtDevice->getText().length() <= 0)
           {
-            // ToDo: Message to user
+            wndEditFilesysHardfile->setCaption("Please enter a device name.");
+            return;
+          }
+          if(!fileSelected)
+          {
+            wndEditFilesysHardfile->setCaption("Please select a filename.");
             return;
           }
           dialogResult = true;
@@ -120,6 +126,9 @@ static void InitEditFilesysHardfile(void)
 
   chkReadWrite = new gcn::UaeCheckBox("Read/Write", true);
   chkReadWrite->setId("hdfRW");
+
+	chkAutoboot = new gcn::UaeCheckBox("Bootable", true);
+  chkAutoboot->setId("hdfAutoboot");
 
   lblBootPri = new gcn::Label("Boot priority:");
   lblBootPri->setSize(100, LABEL_HEIGHT);
@@ -171,9 +180,10 @@ static void InitEditFilesysHardfile(void)
   int posY = DISTANCE_BORDER;
   wndEditFilesysHardfile->add(lblDevice, DISTANCE_BORDER, posY);
   wndEditFilesysHardfile->add(txtDevice, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
-  wndEditFilesysHardfile->add(chkReadWrite, 240, posY);
-  wndEditFilesysHardfile->add(lblBootPri, 374, posY);
-  wndEditFilesysHardfile->add(txtBootPri, 374 + lblBootPri->getWidth() + 8, posY);
+  wndEditFilesysHardfile->add(chkReadWrite, 235, posY + 1);
+  wndEditFilesysHardfile->add(chkAutoboot, 360, posY + 1);
+  wndEditFilesysHardfile->add(lblBootPri, 460, posY);
+  wndEditFilesysHardfile->add(txtBootPri, 460 + lblBootPri->getWidth() + 8, posY);
   posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
   wndEditFilesysHardfile->add(lblPath, DISTANCE_BORDER, posY);
   wndEditFilesysHardfile->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);
@@ -208,6 +218,7 @@ static void ExitEditFilesysHardfile(void)
   delete lblDevice;
   delete txtDevice;
   delete chkReadWrite;
+  delete chkAutoboot;
   delete lblBootPri;
   delete txtBootPri;
   delete lblPath;
@@ -295,6 +306,7 @@ bool EditFilesysHardfile(int unit_no)
   struct mountedinfo mi;
   struct uaedev_config_info *uci = &changed_prefs.mountconfig[unit_no];
   std::string strdevname, strroot;
+  char tmp[32];
     
   dialogResult = false;
   dialogFinished = false;
@@ -303,8 +315,6 @@ bool EditFilesysHardfile(int unit_no)
 
   if(unit_no >= 0)
   {
-    char tmp[32];
-
     get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
     strdevname.assign(uci->devname);
     txtDevice->setText(strdevname);
@@ -313,6 +323,7 @@ bool EditFilesysHardfile(int unit_no)
     fileSelected = true;
 
     chkReadWrite->setSelected(!uci->readonly);
+    chkAutoboot->setSelected(uci->bootpri != -128);
     snprintf(tmp, 32, "%d", uci->bootpri >= -127 ? uci->bootpri : -127);
     txtBootPri->setText(tmp);
     snprintf(tmp, 32, "%d", uci->surfaces);
@@ -326,7 +337,8 @@ bool EditFilesysHardfile(int unit_no)
   }
   else
   {
-    txtDevice->setText("");
+    CreateDefaultDevicename(tmp);
+    txtDevice->setText(tmp);
     strroot.assign(currentDir);
     txtPath->setText(strroot);
     fileSelected = false;
@@ -342,16 +354,14 @@ bool EditFilesysHardfile(int unit_no)
   ExitEditFilesysHardfile();
   if(dialogResult)
   {
-    if(unit_no >= 0)
-      kill_filesys_unitconfig(&changed_prefs, unit_no);
-    else
-      extractPath((char *) txtPath->getText().c_str(), currentDir);
-
-    uci = add_filesys_config(&changed_prefs, -1, (char *) txtDevice->getText().c_str(), 
+    int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
+    extractPath((char *) txtPath->getText().c_str(), currentDir);
+    
+    uci = add_filesys_config(&changed_prefs, unit_no, (char *) txtDevice->getText().c_str(), 
       0, (char *) txtPath->getText().c_str(), !chkReadWrite->isSelected(), 
       atoi(txtSectors->getText().c_str()), atoi(txtSurfaces->getText().c_str()), 
       atoi(txtReserved->getText().c_str()), atoi(txtBlocksize->getText().c_str()), 
-      atoi(txtBootPri->getText().c_str()), 0, 0, 0);
+      bp, 0, 0, 0);
     if (uci)
     	hardfile_do_disk_change (uci->configoffset, 1);
   }

@@ -610,8 +610,7 @@ static void genmov16(uae_u32 opcode, struct instr *curi)
 	comprintf("\tuae_u16 dstreg=((%s)>>12)&0x07;\n", gen_nextiword());
 	comprintf("\tmov_l_rr(src,8+srcreg);\n");
 	comprintf("\tmov_l_rr(dst,8+dstreg);\n");
-	}
-	else {
+	}	else {
 	/* Other variants */
 	genamode (curi->smode, "srcreg", curi->size, "src", 0, 2);
 	genamode (curi->dmode, "dstreg", curi->size, "dst", 0, 2);
@@ -627,8 +626,7 @@ static void genmov16(uae_u32 opcode, struct instr *curi)
 	comprintf("\tif (srcreg != dstreg)\n");
 	comprintf("\tarm_ADD_l_ri8(srcreg+8,16);\n");
 	comprintf("\tarm_ADD_l_ri8(dstreg+8,16);\n");
-	}
-	else if ((opcode & 0xfff8) == 0xf600)
+	}	else if ((opcode & 0xfff8) == 0xf600)
 	comprintf("\tarm_ADD_l_ri8(srcreg+8,16);\n");
     else if ((opcode & 0xfff8) == 0xf608)
 	comprintf("\tarm_ADD_l_ri8(dstreg+8,16);\n");
@@ -675,7 +673,7 @@ genmovemel (uae_u16 opcode)
     comprintf ("\tuae_u16 mask = %s;\n", gen_nextiword ());
     comprintf ("\tint native=scratchie++;\n");
     comprintf ("\tint i;\n");
-    comprintf ("\tsigned char offset=0;\n");
+    comprintf ("\tint offset=0;\n");
     genamode (table68k[opcode].dmode, "dstreg", table68k[opcode].size, "src", 2, 1);
     comprintf("\tif (1 && !special_mem) {\n");
 
@@ -770,8 +768,7 @@ genmovemle (uae_u16 opcode)
 	    break;
 	 default: abort();
 	}
-    }
-    else {  /* Pre-decrement */
+    } else {  /* Pre-decrement */
 	comprintf("\tfor (i=0;i<16;i++) {\n"
 		  "\t\tif ((mask>>i)&1) {\n");
 	switch(table68k[opcode].size) {
@@ -872,8 +869,8 @@ genflags (flagtypes type, wordsizes size, char *value, char *src, char *dst)
 	    {
 		char* op;
 		switch(type) {
-		 case flag_add: op="add"; break; // nf
-		 case flag_sub: op="sub"; break; // nf
+		 case flag_add: op="add"; break;
+		 case flag_sub: op="sub"; break;
 		 default: abort();
 		}
 		switch (size)
@@ -899,7 +896,7 @@ genflags (flagtypes type, wordsizes size, char *value, char *src, char *dst)
 	     case sz_byte:
 		comprintf("if (kill_rodent(dst)) {\n");
 		comprintf("\tzero_extend_8_rr(scratchie,%s);\n",src);
-		comprintf("\tor_l_ri(scratchie,0xffffff00);\n"); // nf
+		comprintf("\tor_l_ri(scratchie,0xffffff00);\n");
 		comprintf("\tarm_AND_l(%s,scratchie);\n",dst);
 		comprintf("\tforget_about(scratchie);\n");
 		comprintf("\t} else \n"
@@ -908,7 +905,7 @@ genflags (flagtypes type, wordsizes size, char *value, char *src, char *dst)
 	     case sz_word:
 		comprintf("if (kill_rodent(dst)) {\n");
 		comprintf("\tzero_extend_16_rr(scratchie,%s);\n",src);
-		comprintf("\tor_l_ri(scratchie,0xffff0000);\n"); // nf
+		comprintf("\tor_l_ri(scratchie,0xffff0000);\n");
 		comprintf("\tarm_AND_l(%s,scratchie);\n",dst);
 		comprintf("\tforget_about(scratchie);\n");
 		comprintf("\t} else \n"
@@ -927,7 +924,7 @@ genflags (flagtypes type, wordsizes size, char *value, char *src, char *dst)
 	     case sz_byte:
 		comprintf("if (kill_rodent(dst)) {\n");
 		comprintf("\tzero_extend_8_rr(scratchie,%s);\n",src);
-		comprintf("\tand_l_ri(%s,0xffffff00);\n",dst); // nf
+		comprintf("\tand_l_ri(%s,0xffffff00);\n",dst);
 		comprintf("\tarm_ORR_l(%s,scratchie);\n",dst);
 		comprintf("\tforget_about(scratchie);\n");
 		comprintf("\t} else \n"
@@ -936,7 +933,7 @@ genflags (flagtypes type, wordsizes size, char *value, char *src, char *dst)
 	     case sz_word:
 		comprintf("if (kill_rodent(dst)) {\n");
 		comprintf("\tzero_extend_16_rr(scratchie,%s);\n",src);
-		comprintf("\tand_l_ri(%s,0xffff0000);\n",dst); // nf
+		comprintf("\tand_l_ri(%s,0xffff0000);\n",dst);
 		comprintf("\tarm_ORR_l(%s,scratchie);\n",dst);
 		comprintf("\tforget_about(scratchie);\n");
 		comprintf("\t} else \n"
@@ -955,8 +952,8 @@ genflags (flagtypes type, wordsizes size, char *value, char *src, char *dst)
 	    {
 		char* op;
 		switch(type) {
-		 case flag_or:  op="ORR"; break; // nf
-		 case flag_eor: op="EOR"; break; // nf
+		 case flag_or:  op="ORR"; break;
+		 case flag_eor: op="EOR"; break;
 		 default: abort();
 		}
 		switch (size)
@@ -1752,8 +1749,7 @@ gen_opcode (unsigned long int opcode)
 	 default: abort();  /* Seems this only comes in word flavour */
 	}
 	comprintf("\tsub_l_ri(offs,m68k_pc_offset-m68k_pc_offset_thisinst-2);\n");
-	comprintf("\tarm_ADD_l_ri(offs,(uintptr)comp_pc_p);\n");
-	/* New PC,
+	comprintf("\tarm_ADD_l_ri(offs,(uintptr)comp_pc_p);\n"); /* New PC,
 								once the
 								offset_68k is
 								* also added */
@@ -3031,10 +3027,10 @@ main (int argc, char **argv)
     read_table68k ();
     do_merges ();
 
-    opcode_map = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    opcode_last_postfix = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    opcode_next_clev = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    counts = (unsigned long *) malloc (65536 * sizeof (unsigned long));
+    opcode_map = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    opcode_last_postfix = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    opcode_next_clev = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    counts = (unsigned long *) xmalloc (65536 * sizeof (unsigned long));
     read_counts ();
 
     /* It would be a lot nicer to put all in one file (we'd also get rid of
@@ -3053,23 +3049,23 @@ main (int argc, char **argv)
     noflags=0;
     generate_func (noflags);
 
-	free(opcode_map);
-	free(opcode_last_postfix);
-	free(opcode_next_clev);
-	free(counts);
+	xfree(opcode_map);
+	xfree(opcode_last_postfix);
+	xfree(opcode_next_clev);
+	xfree(counts);
 
-    opcode_map = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    opcode_last_postfix = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    opcode_next_clev = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    counts = (unsigned long *) malloc (65536 * sizeof (unsigned long));
+    opcode_map = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    opcode_last_postfix = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    opcode_next_clev = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    counts = (unsigned long *) xmalloc (65536 * sizeof (unsigned long));
     read_counts ();
     noflags=1;
     generate_func (noflags);
 
-	free(opcode_map);
-	free(opcode_last_postfix);
-	free(opcode_next_clev);
-	free(counts);
+	xfree(opcode_map);
+	xfree(opcode_last_postfix);
+	xfree(opcode_next_clev);
+	xfree(counts);
 
     printf ("#endif\n");
     fprintf (stblfile, "#endif\n");

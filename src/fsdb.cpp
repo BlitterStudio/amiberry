@@ -18,7 +18,6 @@
 #include "filesys.h"
 #include "autoconf.h"
 #include "fsusage.h"
-#include "scsidev.h"
 #include "fsdb.h"
 
 /* The on-disk format is as follows:

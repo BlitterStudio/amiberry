@@ -14,11 +14,8 @@
 
 #include "md-pandora/rpt.h"
 
-#define FAST_COPPER
-
 extern volatile frame_time_t vsynctime, vsyncmintime;
 extern void reset_frame_rate_hack (void);
-extern int rpt_available;
 extern frame_time_t syncbase;
 extern int speedup_cycles, speedup_timelimit;
 
@@ -51,9 +48,7 @@ struct ev2
 
 enum {
     ev_hsync, 
-#ifdef FAST_COPPER
     ev_copper, 
-#endif
     ev_audio, ev_cia, ev_misc,
     ev_max
 };

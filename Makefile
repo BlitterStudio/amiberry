@@ -16,16 +16,17 @@ all: $(PROG)
 
 PANDORA=1
 
+#USE_XFD=1
+
 DEFAULT_CFLAGS = `$(SDL_BASE)sdl-config --cflags`
 LDFLAGS = -lSDL -lpthread  -lz -lSDL_image -lpng -lrt
 
-MORE_CFLAGS += -DGP2X -DPANDORA -DDOUBLEBUFFER -DARMV6_ASSEMBLY -DUSE_ARMNEON -DRASPBERRY -DSIX_AXIS_WORKAROUND
-MORE_CFLAGS += -DSUPPORT_THREADS -DUAE_FILESYS_THREADS -DNO_MAIN_IN_MAIN_C -DFILESYS -DAUTOCONFIG -DSAVESTATE -DPICASSO96
-MORE_CFLAGS += -DDONT_PARSE_CMDLINE
-#MORE_CFLAGS += -DWITH_LOGGING
+MORE_CFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+
+MORE_CFLAGS += -DGP2X -DPANDORA -DDOUBLEBUFFER -DARMV6_ASSEMBLY -DUSE_ARMNEON -DRASPBERRY -DPICASSO96 -DSIX_AXIS_WORKAROUND
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
 
-MORE_CFLAGS += -DJIT -DCPU_arm -DARM_ASSEMBLY
+MORE_CFLAGS += -DCPU_arm -DARM_ASSEMBLY
 
 MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -fomit-frame-pointer -Wno-unused -Wno-format -DUSE_SDL -DGCCCONSTFUNC="__attribute__((const))" -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
 LDFLAGS +=  -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
@@ -49,7 +50,6 @@ endif
 ASFLAGS += -mfloat-abi=hard -mfpu=neon
 
 CFLAGS  = $(DEFAULT_CFLAGS) $(MORE_CFLAGS)
-CFLAGS+= -DCPUEMU_0 -DCPUEMU_11 -DFPUEMU
 
 OBJS =	\
 	src/audio.o \
@@ -79,7 +79,6 @@ OBJS =	\
 	src/missing.o \
 	src/native2amiga.o \
 	src/savestate.o \
-	src/scsi-none.o \
 	src/traps.o \
 	src/uaelib.o \
 	src/zfile.o \
@@ -105,6 +104,18 @@ OBJS =	\
 	src/archivers/dms/u_medium.o \
 	src/archivers/dms/u_quick.o \
 	src/archivers/dms/u_rle.o \
+	src/archivers/lha/crcio.o \
+	src/archivers/lha/dhuf.o \
+	src/archivers/lha/header.o \
+	src/archivers/lha/huf.o \
+	src/archivers/lha/larc.o \
+	src/archivers/lha/lhamaketbl.o \
+	src/archivers/lha/lharc.o \
+	src/archivers/lha/shuf.o \
+	src/archivers/lha/slide.o \
+	src/archivers/lha/uae_lha.o \
+	src/archivers/lha/util.o \
+	src/archivers/lzx/unlzx.o \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/md-pandora/support.o \
@@ -132,6 +143,7 @@ OBJS =	\
 	src/od-pandora/gui/ShowMessage.o \
 	src/od-pandora/gui/SelectFolder.o \
 	src/od-pandora/gui/SelectFile.o \
+	src/od-pandora/gui/CreateFilesysHardfile.o \
 	src/od-pandora/gui/EditFilesysVirtual.o \
 	src/od-pandora/gui/EditFilesysHardfile.o \
 	src/od-pandora/gui/PanelPaths.o \
@@ -153,11 +165,19 @@ ifdef PANDORA
 OBJS += src/od-pandora/gui/sdltruetypefont.o
 endif
 
+ifdef USE_XFD
+OBJS += src/cpu_small.o \
+	src/cpuemu_small.o \
+	src/cpustbl_small.o \
+	src/archivers/xfd/xfd.o
+endif
+
 OBJS += src/newcpu.o
 OBJS += src/readcpu.o
 OBJS += src/cpudefs.o
 OBJS += src/cpustbl.o
 OBJS += src/cpuemu_0.o
+OBJS += src/cpuemu_4.o
 OBJS += src/cpuemu_11.o
 OBJS += src/compemu.o
 OBJS += src/compemu_fpp.o
@@ -171,11 +191,9 @@ src/osdep/neon_helper.o: src/osdep/neon_helper.s
 
 $(PROG): $(OBJS)
 	$(CXX) $(CFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
-
 ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
-
 
 clean:
 	$(RM) $(PROG) $(OBJS)

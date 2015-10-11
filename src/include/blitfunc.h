@@ -42,4 +42,3 @@ extern blitter_func blitdofast_fa;
 extern blitter_func blitdofast_desc_fa;
 extern blitter_func blitdofast_fc;
 extern blitter_func blitdofast_desc_fc;
-extern blitter_func blitdofast_fe;

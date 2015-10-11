@@ -24,8 +24,6 @@
 #include "gui.h"
 #include "uae.h"
 
-#define FILESYS_MAX_BLOCKSIZE 512
-
 #define CMD_INVALID	0
 #define CMD_RESET	1
 #define CMD_READ	2
@@ -80,7 +78,7 @@ struct hardfileprivdata {
     int changenum;
 };
 
-static uae_sem_t change_sem;
+static uae_sem_t change_sem = 0;
 
 static struct hardfileprivdata hardfpd[MAX_FILESYSTEM_UNITS];
 
@@ -103,7 +101,7 @@ static uae_u64 cmd_read (struct hardfiledata *hfd, uaecptr dataptr, uae_u64 offs
 }
 static uae_u64 cmd_writex (struct hardfiledata *hfd, uae_u8 *dataptr, uae_u64 offset, uae_u64 len)
 {
-    gui_hd_led (1);
+    gui_hd_led (2);
     write_log ("cmd_write: %p %04.4x-%08.8x %08.8x\n", dataptr, (uae_u32)(offset >> 32), (uae_u32)offset, (uae_u32)(offset / hfd->blocksize), (uae_u32)len, (uae_u32)(len / hfd->blocksize));
     fseek (hfd->fd, offset, SEEK_SET);
     return fwrite (dataptr, 1, len, hfd->fd);
@@ -562,6 +560,7 @@ static void *hardfile_thread (void *devs)
 	    hfpd->thread_running = 0;
 	    uae_sem_post (&hfpd->sync_sem);
 	    uae_sem_post (&change_sem);
+      write_log("hardfile_thread: leave\n");
 	    return 0;
 	} else if (hardfile_do_io (get_hardfile_data (hfpd - &hardfpd[0]), hfpd, request) == 0) {
             put_byte (request + 30, get_byte (request + 30) & ~1);
@@ -572,24 +571,34 @@ static void *hardfile_thread (void *devs)
 	}
 	uae_sem_post (&change_sem);
     }
+  write_log("hardfile_thread: exit\n");
 }
 
 void hardfile_reset (void)
 {
-    int i, j;
-    struct hardfileprivdata *hfpd;
+  int i, j;
+  struct hardfileprivdata *hfpd;
 
-    for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-	 hfpd = &hardfpd[i];
-	if (hfpd->base && valid_address(hfpd->base, 36) && get_word(hfpd->base + 32) > 0) {
+  for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+	  hfpd = &hardfpd[i];
+	  if (hfpd->base && valid_address(hfpd->base, 36) && get_word(hfpd->base + 32) > 0) {
 	    for (j = 0; j < MAX_ASYNC_REQUESTS; j++) {
-	        uaecptr request;
-		if ((request = hfpd->d_request[i]))
-		    abort_async (hfpd, request, 0, 0);
+	      uaecptr request;
+		    if ((request = hfpd->d_request[j]))
+		      abort_async (hfpd, request, 0, 0);
 	    }
-	}
-	memset (hfpd, 0, sizeof (struct hardfileprivdata));
+	  }
+    if(hfpd->thread_running)
+    {
+      uae_sem_wait (&change_sem);
+      write_comm_pipe_u32(&hfpd->requests, 0, 1);
+      uae_sem_post (&change_sem);
+      uae_sem_wait (&hfpd->sync_sem);
+      uae_sem_destroy (&hfpd->sync_sem);
+      destroy_comm_pipe (&hfpd->requests);
     }
+	  memset (hfpd, 0, sizeof (struct hardfileprivdata));
+  }
 }
 
 void hardfile_install (void)
@@ -597,6 +606,9 @@ void hardfile_install (void)
     uae_u32 functable, datatable;
     uae_u32 initcode, openfunc, closefunc, expungefunc;
     uae_u32 beginiofunc, abortiofunc;
+    if(change_sem != 0)
+      uae_sem_destroy(&change_sem);
+    change_sem = 0;
     uae_sem_init (&change_sem, 0, 1);
 
     ROM_hardfile_resname = ds ("uaehf.device");

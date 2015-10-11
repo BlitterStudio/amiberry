@@ -2959,10 +2959,10 @@ int main (int argc, char **argv)
     read_table68k ();
     do_merges ();
 
-    opcode_map = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    opcode_last_postfix = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    opcode_next_clev = (int *) malloc (sizeof (int) * nr_cpuop_funcs);
-    counts = (unsigned long *) malloc (65536 * sizeof (unsigned long));
+    opcode_map = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    opcode_last_postfix = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    opcode_next_clev = (int *) xmalloc (sizeof (int) * nr_cpuop_funcs);
+    counts = (unsigned long *) xmalloc (65536 * sizeof (unsigned long));
     read_counts ();
 
     /* It would be a lot nicer to put all in one file (we'd also get rid of

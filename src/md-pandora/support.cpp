@@ -11,6 +11,8 @@
 #include "custom.h"
 
 
+extern int screen_is_picasso;
+
 int64_t g_uae_epoch = 0;
 
 

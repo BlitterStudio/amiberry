@@ -187,6 +187,7 @@ static void open_screen(struct uae_prefs *p)
   }
   if(prSDLScreen != NULL)
   {
+    InitAmigaVidMode(p);
     init_row_map();
   }
 }
@@ -198,7 +199,6 @@ void update_display(struct uae_prefs *p)
     
   SDL_ShowCursor(SDL_DISABLE);
 
-  InitAmigaVidMode(p);
   framecnt = 1; // Don't draw frame before reset done
 }
 
@@ -248,7 +248,7 @@ void unlockscr (void)
   SDL_UnlockSurface(prSDLScreen);
 }
 
-void flush_block ()
+void flush_screen ()
 {
 	if (show_inputmode)
 		inputmode_redraw();	
@@ -278,6 +278,7 @@ void flush_block ()
   {
     SDL_Flip(prSDLScreen);
     last_synctime = read_processor_time();
+  	gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
   }
   
   if(last_synctime - next_synctime > time_per_frame - 1000)
@@ -349,8 +350,6 @@ static void graphics_subinit (void)
 
     InitAmigaVidMode(&currprefs);
 	}
-	lastmx = lastmy = 0;
-	newmousecounters = 0;
 }
 
 STATIC_INLINE int bitsInMask (unsigned long mask)

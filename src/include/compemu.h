@@ -149,7 +149,6 @@ extern void* pushall_call_handler;
 typedef struct {
   uae_u32* mem;
   uae_u32 val;
-  uae_u8 is_swapped;
   uae_u8 status;
   uae_s8 realreg; /* gb-- realreg can hold -1 */
   uae_u8 realind; /* The index in the holds[] array */
@@ -245,12 +244,6 @@ typedef struct {
     /* FPU part */
     freg_status fate[VFREGS];
     fn_status   fat[N_FREGS];
-#endif
-#ifdef USE_JIT_FPU
-    /* x86 FPU part */
-    uae_s8 spos[N_FREGS];
-    uae_s8 onstack[6];
-    uae_s8 tos;
 #endif
 } bigstate;
 

@@ -12,6 +12,8 @@
 #include "gui.h"
 #include "target.h"
 #include "gui_handling.h"
+#include "memory.h"
+#include "autoconf.h"
 
 bool gui_running = false;
 static int last_active_panel = 1;
@@ -20,7 +22,7 @@ static int last_active_panel = 1;
 ConfigCategory categories[] = {
   { "Paths",            "data/paths.ico",     NULL, NULL, InitPanelPaths,     ExitPanelPaths,   RefreshPanelPaths },
   { "Configurations",   "data/file.ico",      NULL, NULL, InitPanelConfig,    ExitPanelConfig,  RefreshPanelConfig },
-  { "CPU",              "data/cpu.ico",       NULL, NULL, InitPanelCPU,       ExitPanelCPU,     RefreshPanelCPU },
+  { "CPU and FPU",      "data/cpu.ico",       NULL, NULL, InitPanelCPU,       ExitPanelCPU,     RefreshPanelCPU },
   { "Chipset",          "data/cpu.ico",       NULL, NULL, InitPanelChipset,   ExitPanelChipset, RefreshPanelChipset },
   { "ROM",              "data/chip.ico",      NULL, NULL, InitPanelROM,       ExitPanelROM,     RefreshPanelROM },
   { "RAM",              "data/chip.ico",      NULL, NULL, InitPanelRAM,       ExitPanelRAM,     RefreshPanelRAM },
@@ -50,6 +52,29 @@ SDL_Surface* gui_screen;
 gcn::SDLGraphics* gui_graphics;
 gcn::SDLInput* gui_input;
 gcn::SDLImageLoader* gui_imageLoader;
+
+namespace widgets 
+{
+  // Main buttons
+  gcn::Button* cmdQuit;
+  gcn::Button* cmdReset;
+  gcn::Button* cmdRestart;
+  gcn::Button* cmdStart;
+}
+
+
+int gui_check_boot_rom(struct uae_prefs *p)
+{
+  if(count_HDs(p) > 0)
+    return 1;
+  if(p->gfxmem_size)
+    return 1;
+  if (p->chipmem_size > 2 * 1024 * 1024)
+    return 1;
+
+  return 0;
+}
+
 
 namespace sdl
 {
@@ -142,12 +167,12 @@ namespace sdl
               //-------------------------------------------------
               // Reset Amiga
               //-------------------------------------------------
-        			uae_reset(0);
+        			uae_reset(1);
         			gui_running = false;
         			break;
 
             case SDLK_LCTRL:
-    			    if(emulating)
+    			    if(emulating && widgets::cmdStart->isEnabled())
     		      {
                 //------------------------------------------------
                 // Continue emulation
@@ -213,15 +238,9 @@ namespace sdl
 
 }
 
+
 namespace widgets 
 {
-  // Main buttons
-  gcn::Button* cmdQuit;
-  gcn::Button* cmdReset;
-  gcn::Button* cmdRestart;
-  gcn::Button* cmdStart;
-
-
   class MainButtonActionListener : public gcn::ActionListener
   {
     public:
@@ -262,7 +281,7 @@ namespace widgets
 			  }
 			  else if(actionEvent.getSource() == cmdStart)
 			  {
-			    if(emulating)
+			    if(emulating && widgets::cmdStart->isEnabled())
 		      {
             //------------------------------------------------
             // Continue emulation
@@ -475,9 +494,27 @@ void RefreshAllPanels(void)
 }
 
 
+void DisableResume(void)
+{
+	if(emulating)
+  {
+    widgets::cmdStart->setEnabled(false);
+    gcn::Color backCol;
+    backCol.r = 128;
+    backCol.g = 128;
+    backCol.b = 128;
+    widgets::cmdStart->setForegroundColor(backCol);
+  }
+}
+
+
 void run_gui(void)
 {
+  int boot_rom_on_enter;
+  
   gui_running = true;
+  boot_rom_on_enter = gui_check_boot_rom(&currprefs);
+
   try
   {
     sdl::gui_init();
@@ -510,5 +547,8 @@ void run_gui(void)
     // Prepare everything for Reset of Amiga
   	//--------------------------------------------------
 		currprefs.nr_floppies = changed_prefs.nr_floppies;
+		
+		if(boot_rom_on_enter != gui_check_boot_rom(&changed_prefs))
+	    quit_program = -3; // Hardreset required...
   }
 }

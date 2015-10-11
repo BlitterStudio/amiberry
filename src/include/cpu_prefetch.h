@@ -15,7 +15,7 @@ STATIC_INLINE uae_u32 get_long_prefetch (struct regstruct *regs, int o)
 #ifdef CPUEMU_12
 STATIC_INLINE uae_u32 mem_access_delay_word_read (uaecptr addr)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000)) {
+    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
 	return wait_cpu_cycle_read (addr, 1);
     } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
@@ -24,16 +24,17 @@ STATIC_INLINE uae_u32 mem_access_delay_word_read (uaecptr addr)
 }
 STATIC_INLINE uae_u32 mem_access_delay_wordi_read (uaecptr addr)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000)) {
+    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
 	return wait_cpu_cycle_read (addr, 1);
     } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
     }
     return get_wordi (addr);
 }
+
 STATIC_INLINE uae_u32 mem_access_delay_byte_read (uaecptr addr)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000)) {
+    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
 	return wait_cpu_cycle_read (addr, 0);
     } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
@@ -42,7 +43,7 @@ STATIC_INLINE uae_u32 mem_access_delay_byte_read (uaecptr addr)
 }
 STATIC_INLINE void mem_access_delay_byte_write (uaecptr addr, uae_u32 v)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000)) {
+    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
 	wait_cpu_cycle_write (addr, 0, v);
 	return;
     } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
@@ -52,7 +53,7 @@ STATIC_INLINE void mem_access_delay_byte_write (uaecptr addr, uae_u32 v)
 }
 STATIC_INLINE void mem_access_delay_word_write (uaecptr addr, uae_u32 v)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000)) {
+    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
 	wait_cpu_cycle_write (addr, 1, v);
 	return;
     } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {

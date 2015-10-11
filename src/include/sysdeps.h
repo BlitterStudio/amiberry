@@ -21,10 +21,6 @@
 #include <assert.h>
 #include <limits.h>
 
-#define likely(x)       __builtin_expect((x),1)
-#define unlikely(x)     __builtin_expect((x),0)
-
-
 #ifdef _GCCRES_
 #undef _GCCRES_
 #endif
@@ -108,8 +104,46 @@
 #define BROKEN_OS_PROBABLY_AIX
 #endif
 
+#ifdef __NeXT__
+#define S_IRUSR S_IREAD
+#define S_IWUSR S_IWRITE
+#define S_IXUSR S_IEXEC
+#define S_ISDIR(val) (S_IFDIR & val)
+struct utimbuf
+{
+    time_t actime;
+    time_t modtime;
+};
+#endif
+
+#if defined(__GNUC__) && defined(AMIGA)
+/* gcc on the amiga need that __attribute((regparm)) must */
+/* be defined in function prototypes as well as in        */
+/* function definitions !                                 */
+#define REGPARAM2 REGPARAM
+#else /* not(GCC & AMIGA) */
 #define REGPARAM2
-#define REGPARAM3 
+#endif
+
+/* sam: some definitions so that SAS/C can compile UAE */
+#if defined(__SASC) && defined(AMIGA)
+#define REGPARAM2
+#define REGPARAM
+#define S_IRUSR S_IREAD
+#define S_IWUSR S_IWRITE
+#define S_IXUSR S_IEXECUTE
+#define S_ISDIR(val) (S_IFDIR & val)
+#define mkdir(x,y) mkdir(x)
+#define truncate(x,y) 0
+#define creat(x,y) open("T:creat",O_CREAT|O_TEMP|O_RDWR) /* sam: for zfile.c */
+#define strcasecmp stricmp
+#define utime(file,time) 0
+struct utimbuf
+{
+    time_t actime;
+    time_t modtime;
+};
+#endif
 
 #if defined(WARPUP)
 #include "devices/timer.h"
@@ -122,7 +156,7 @@
 #define memcpy q_memcpy
 #define memset q_memset
 #define strdup my_strdup
-// #define random rand
+#define random rand
 #define creat(x,y) open("T:creat",O_CREAT|O_RDWR|O_TRUNC,777)
 extern void* q_memset(void*,int,size_t);
 extern void* q_memcpy(void*,const void*,size_t);
@@ -133,17 +167,26 @@ extern void* q_memcpy(void*,const void*,size_t);
 #include <io.h>
 #endif
 
+/* Acorn specific stuff */
+#ifdef ACORN
+
+#define S_IRUSR S_IREAD
+#define S_IWUSR S_IWRITE
+#define S_IXUSR S_IEXEC
+
+#define strcasecmp stricmp
+
+#endif
+
 #ifndef L_tmpnam
 #define L_tmpnam 128 /* ought to be safe */
 #endif
-
 
 /* If char has more then 8 bits, good night. */
 typedef unsigned char uae_u8;
 typedef signed char uae_s8;
 
 typedef struct { uae_u8 RGB[3]; } RGB;
-
 
 #if SIZEOF_SHORT == 2
 typedef unsigned short uae_u16;
@@ -210,6 +253,10 @@ extern void xfree(void*);
     SDL_Quit(); \
     (abort) (); \
 } while (0)
+#else
+#define ENUMDECL enum
+#define ENUMNAME(name) ; typedef int name
+#endif
 
 /*
  * Porters to weird systems, look! This is the preferred way to get
@@ -226,6 +273,22 @@ extern void xfree(void*);
 
 #if defined(WARPUP)
 #define DONT_HAVE_POSIX
+#endif
+
+#if defined PANDORA
+
+#define FILEFLAG_DIR     0x1
+#define FILEFLAG_ARCHIVE 0x2
+#define FILEFLAG_WRITE   0x4
+#define FILEFLAG_READ    0x8
+#define FILEFLAG_EXECUTE 0x10
+#define FILEFLAG_SCRIPT  0x20
+#define FILEFLAG_PURE    0x40
+
+#define REGPARAM2
+#define REGPARAM3 
+#define REGPARAM
+
 #endif
 
 #ifdef DONT_HAVE_POSIX
@@ -312,23 +375,17 @@ extern void mallocemu_free (void *ptr);
 #ifdef UAE_CONSOLE
 #undef write_log
 #define write_log write_log_standard
-#else
-#undef write_log
-#define write_log(FORMATO, RESTO...)
 #endif
 
-#ifdef write_log
-#undef write_log
-#endif
 #ifndef WITH_LOGGING
+#undef write_log
 #define write_log(FORMATO, RESTO...)
 #define write_log_standard(FORMATO, RESTO...)
-#define console_out(FORMATO, RESTO...)
-#define console_get(FORMATO, RESTO...)
 #else
 extern void write_log (const char *format,...);
 extern FILE *debugfile;
 #endif
+extern void console_out (const char *, ...);
 extern void gui_message (const char *,...);
 
 #ifndef O_BINARY
@@ -336,6 +393,7 @@ extern void gui_message (const char *,...);
 #endif
 
 #ifndef STATIC_INLINE
+#if __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
 #ifdef RASPBERRY
 #define STATIC_INLINE static __inline__
 #else
@@ -343,27 +401,15 @@ extern void gui_message (const char *,...);
 #endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
-#endif
-
+#elif _MSC_VER
+#define STATIC_INLINE static __forceinline
+#define NOINLINE __declspec(noinline)
+#define NORETURN __declspec(noreturn)
 #else
-#ifndef STATIC_INLINE
 #define STATIC_INLINE static __inline__
+#define NOINLINE
+#define NORETURN
 #endif
-#define ENUMDECL enum
-#define ENUMNAME(name) ; typedef int name
-#endif
-
-#ifdef ARMV6_ASSEMBLY
-
-static inline uae_u32 do_byteswap_32(uae_u32 v) {__asm__ (
-						"rev %0, %0"
-                                                : "=r" (v) : "0" (v) ); return v;}
-
-static inline uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
-  						"revsh %0, %0\n\t"
-              "uxth %0, %0"
-                                                : "=r" (v) : "0" (v) ); return v;}
-
 #endif
 
 /* Every Amiga hardware clock cycle takes this many "virtual" cycles.  This
@@ -388,15 +434,21 @@ static inline uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
  */
 #define CPU_EMU_SIZE 0
 
-#undef REGPARAM
-#define REGPARAM
+/*
+ * Byte-swapping functions
+ */
 
-#define FILEFLAG_DIR     0x1
-#define FILEFLAG_ARCHIVE 0x2
-#define FILEFLAG_WRITE   0x4
-#define FILEFLAG_READ    0x8
-#define FILEFLAG_EXECUTE 0x10
-#define FILEFLAG_SCRIPT  0x20
-#define FILEFLAG_PURE    0x40
+#ifdef ARMV6_ASSEMBLY
+
+static inline uae_u32 do_byteswap_32(uae_u32 v) {__asm__ (
+						"rev %0, %0"
+                                                : "=r" (v) : "0" (v) ); return v;}
+
+static inline uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
+  						"revsh %0, %0\n\t"
+              "uxth %0, %0"
+                                                : "=r" (v) : "0" (v) ); return v;}
+
+#endif
 
 #endif

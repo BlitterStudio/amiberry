@@ -9,7 +9,6 @@
 #include "sd-pandora/sound.h"
 #include "custom.h"
 #include "od-pandora/gp2x.h"
-#include "cfgfile.h"
 #include "uae.h"
 #include "disk.h"
 #include "../inputmode.h"
@@ -305,13 +304,6 @@ static void SetPresetMode(int mode, struct uae_prefs *p)
 
 static void SetDefaultMenuSettings(struct uae_prefs *p)
 {
-  int i;
-
-  free_mountinfo();
-  for(i=0; i<MOUNT_CONFIG_SIZE; ++i)
-    kill_filesys_unitconfig(p, i);
-  p->mountitems = 0;
-
 	kickstart = 1;
 	
 	SetPresetMode(2, p);
@@ -504,12 +496,11 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f,"custom_L=%d\n",&p->pandora_custom_L);
 		fscanf(f,"custom_R=%d\n",&p->pandora_custom_R);
 		fscanf(f,"cpu=%d\n", &cpu_level);
-		if(cpu_level > M68000)
+		if(cpu_level > 0) // M68000
 		  // Was old format
-		  cpu_level = M68020;
+		  cpu_level = 2; // M68020
 		fscanf(f,"chipset=%d\n", &p->chipset_mask);
 		p->immediate_blits = (p->chipset_mask & 0x100) == 0x100;
-		p->pandora_partial_blits = (p->chipset_mask & 0x200) == 0x200;
   	switch (p->chipset_mask & 0xff) 
   	{
   		case 1: p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE; break;
@@ -528,7 +519,7 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	    if(p->m68k_speed >= 2)
       {
         // 1200: set to 68020 with 14 MHz
-        cpu_level = M68020;
+        cpu_level = 2; // M68020
         p->m68k_speed--;
         if(p->m68k_speed > 2)
           p->m68k_speed = 2;
@@ -570,14 +561,20 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	  disk_eject(3);
 		fscanf(f,"df0=%s\n",&filebuffer);
 		replace(filebuffer,' ','|');
-		strcpy(p->df[0], filebuffer);	
+		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
+  		strcpy(p->df[0], filebuffer);
+  	else
+  	  p->df[0][0] = 0;
 		disk_insert(0, filebuffer);
 		if(p->nr_floppies > 1)
 		{
 			memset(filebuffer, 0, 256);
 			fscanf(f,"df1=%s\n",&filebuffer);
 			replace(filebuffer,' ','|');
-			strcpy(p->df[1], filebuffer);
+  		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
+    		strcpy(p->df[1], filebuffer);
+    	else
+    	  p->df[1][0] = 0;
 			disk_insert(1, filebuffer);
 		}
 		if(p->nr_floppies > 2)
@@ -585,7 +582,10 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 			memset(filebuffer, 0, 256);
 			fscanf(f,"df2=%s\n",&filebuffer);
 			replace(filebuffer,' ','|');
-			strcpy(p->df[2], filebuffer);
+  		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
+    		strcpy(p->df[2], filebuffer);
+    	else
+    	  p->df[2][0] = 0;
 			disk_insert(2, filebuffer);
 		}
 		if(p->nr_floppies > 3)
@@ -593,7 +593,10 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 			memset(filebuffer, 0, 256);
 			fscanf(f,"df3=%s\n",&filebuffer);
 			replace(filebuffer,' ','|');
-			strcpy(p->df[3], filebuffer);
+  		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
+    		strcpy(p->df[3], filebuffer);
+    	else
+    	  p->df[3][0] = 0;
 			disk_insert(3, filebuffer);
 		}
 
@@ -656,7 +659,7 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	SetPresetMode(presetModeId, p);
 
   CheckKickstart(p);
-	set_joyConf();
+	set_joyConf(p);
 
 	return 1;
 }

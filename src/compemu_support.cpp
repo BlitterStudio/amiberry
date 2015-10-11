@@ -29,7 +29,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define USE_MATCH 0
 
 #define writemem_special writemem
 #define readmem_special  readmem
@@ -988,39 +987,6 @@ static uae_s8 nstate[N_REGS];
 #define L_NEEDED -2
 #define L_UNNEEDED -3
 
-STATIC_INLINE void big_to_small_state(bigstate* b, smallstate* s)
-{
-    int i;
-
-  for (i = 0; i < VREGS; i++)
-	s->virt[i] = vstate[i];
-  for (i = 0; i < N_REGS; i++)
-	s->nat[i] = nstate[i];
-	}
-
-STATIC_INLINE int callers_need_recompile(bigstate * b, smallstate * s)
-{
-  int i;
-  int reverse = 0;
-
-  for (i = 0; i < VREGS; i++) {
-	if (vstate[i] != L_UNNEEDED && s->virt[i] == L_UNNEEDED)
-	  return 1;
-	if (vstate[i] == L_UNNEEDED && s->virt[i] != L_UNNEEDED)
-	  reverse++;
-  }
-  for (i = 0; i < N_REGS; i++) {
-	if (nstate[i] >= 0 && nstate[i] != s->nat[i])
-	  return 1;
-	if (nstate[i] < 0 && s->nat[i] >= 0)
-	  reverse++;
-  }
-  if (reverse >= 2 && USE_MATCH)
-	return 1;	/* In this case, it might be worth recompiling the
-				 * callers */
-  return 0;
-}
-
 STATIC_INLINE void log_startblock(void)
 {
     int i;
@@ -1069,15 +1035,12 @@ STATIC_INLINE void log_vwrite(int r)
 /* Using an n-reg to hold a v-reg */
 STATIC_INLINE void log_isreg(int n, int r)
 {
-  if (nstate[n] == L_UNKNOWN && r < 16 && !vwritten[r] && USE_MATCH)
-	nstate[n] = r;
-  else {
-	do_load_reg(n, r);
-    if (nstate[n]==L_UNKNOWN)
+ 	do_load_reg(n, r);
+  if (nstate[n]==L_UNKNOWN)
 	  nstate[n] = L_UNAVAIL;
-  }
-    if (vstate[r]==L_UNKNOWN)
-	vstate[r]=L_NEEDED;
+
+  if (vstate[r]==L_UNKNOWN)
+  	vstate[r]=L_NEEDED;
 }
 
 STATIC_INLINE void log_clobberreg(int r)
@@ -1098,11 +1061,6 @@ STATIC_INLINE void log_flush(void)
     for (i=0;i<N_REGS;i++)
 	if (nstate[i]==L_UNKNOWN)
 	    nstate[i]=L_UNAVAIL;
-}
-
-STATIC_INLINE void log_dump(void)
-{
-    return;
 }
 
 /********************************************************************
@@ -2895,8 +2853,6 @@ void alloc_cache(void)
     }
 }
 
-extern void op_illg_1 (uae_u32 opcode) REGPARAM;
-
 static void calc_checksum(blockinfo* bi, uae_u32* c1, uae_u32* c2)
 {
     uae_u32 k1=0;
@@ -2935,33 +2891,6 @@ static void calc_checksum(blockinfo* bi, uae_u32* c1, uae_u32* c2)
 	*c1=k1;
 	*c2=k2;
 }
-
-#if 0
-static void show_checksum(CSI_TYPE* csi)
-{
-    uae_u32 k1=0;
-    uae_u32 k2=0;
-    uae_s32 len=CSI_LENGTH(csi);
-    uae_u32 tmp=(uintptr)CSI_START_P(csi);
-    uae_u32* pos;
-
-    len+=(tmp&3);
-    tmp&=(~3);
-    pos=(uae_u32*)tmp;
-
-    if (len<0 || len>MAX_CHECKSUM_LEN) {
-	return;
-    }
-    else {
-	while (len>0) {
-	    D(panicbug("%08x ",*pos));
-	    pos++;
-	    len-=4;
-	}
-	D(panicbug(" bla"));
-    }
-}
-#endif
 
 
 int check_for_cache_miss(void)
@@ -3313,9 +3242,6 @@ void build_comp(void)
 
     for (opcode = 0; opcode < 65536; opcode++) {
 		reset_compop(opcode);
-#ifdef NOFLAGS_SUPPORT
-	nfcpufunctbl[opcode] = op_illg_1;
-#endif
 	prop[opcode].use_flags = 0x1f;
 	prop[opcode].set_flags = 0x1f;
 		prop[opcode].cflow = fl_trap; // ILLEGAL instructions do trap
@@ -3522,13 +3448,6 @@ STATIC_INLINE void flush_icache_lazy(int n)
     active->prev_p=&dormant;
     active=NULL;
 }
-
-/*
-static void catastrophe(void)
-{
-    abort();
-}
-*/
 
 int failure;
 
@@ -3937,14 +3856,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 	    }
 	}
 
-#if USE_MATCH	
-	if (callers_need_recompile(&live,&(bi->env))) {
-	    mark_callers_recompile(bi);
-	}
-
-	big_to_small_state(&live,&(bi->env));
-#endif
-
 #if USE_CHECKSUM_INFO
 	remove_from_list(bi);
 	if (trace_in_rom) {
@@ -3986,7 +3897,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 		bi->direct_handler_size = get_target() - (uae_u8 *)current_block_start_target;
 #endif
 
-	log_dump();
 #ifndef ALIGN_NOT_NEEDED
 	align_target(align_jumps);
 #endif

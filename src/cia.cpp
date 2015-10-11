@@ -16,7 +16,6 @@
 #include "memory.h"
 #include "custom.h"
 #include "cia.h"
-#include "serial.h"
 #include "disk.h"
 #include "xwin.h"
 #include "keybuf.h"
@@ -374,7 +373,7 @@ void CIA_hsync_handler (void)
 static void tod_hack_reset (void)
 {
     struct timeval tv;
-    uae_u32 rate = currprefs.chipset_refreshrate;
+    uae_u32 rate = currprefs.ntscmode ? 60 : 50;
     gettimeofday (&tv, NULL);
     tod_hack = (uae_u32)(((uae_u64)tv.tv_sec) * rate  + tv.tv_usec / (1000000 / rate));
     tod_hack -= ciaatod;
@@ -387,7 +386,7 @@ void CIA_vsync_handler ()
 #ifdef TOD_HACK
   if (currprefs.tod_hack && ciaatodon) {
     struct timeval tv;
-  	uae_u32 t, nt, rate = currprefs.chipset_refreshrate;
+	  uae_u32 t, nt, rate = currprefs.ntscmode ? 60 : 50;
   	if (tod_hack_delay > 0) {
 	    tod_hack_delay--;
 	    if (tod_hack_delay == 0) {
@@ -835,6 +834,7 @@ void CIA_reset (void)
     	ciaasdr_cnt = 0; ciaasdr = 0;
     	ciabsdr_cnt = 0; ciabsdr = 0;
       ciaata_passed = ciaatb_passed = ciabta_passed = ciabtb_passed = 0;
+      ciaatol = ciabtol = ciaaprb = ciaadrb = ciabprb = ciabdrb = sleepyhead = 0;
     }
 
     CIA_calctimers ();
@@ -874,6 +874,7 @@ addrbank cia_bank = {
 
 static void cia_wait_pre (void)
 {
+#ifndef CUSTOM_SIMPLE
   int div10 = (get_cycles () - eventtab[ev_cia].oldcycles) % DIV10;
   int cycles;
 
@@ -885,6 +886,7 @@ static void cia_wait_pre (void)
 	  cycles += DIV10 * ECLOCK_DATA_CYCLE / 10 - div10;
   }
 	do_cycles (cycles);
+#endif
 }
 
 static void cia_wait_post (void)

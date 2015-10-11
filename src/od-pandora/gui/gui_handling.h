@@ -86,12 +86,15 @@ void RefreshPanelSavestate(void);
 
 void RefreshAllPanels(void);
 
+void DisableResume(void);
+
 void InGameMessage(const char *msg);
 bool ShowMessage(const char *title, const char *line1, const char *line2, const char *button1, const char *button2);
 bool SelectFolder(const char *title, char *value);
-bool SelectFile(const char *title, char *value, const char *filter[]);
+bool SelectFile(const char *title, char *value, const char *filter[], bool create = false);
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
+bool CreateFilesysHardfile(void);
 
 bool LoadConfigByName(const char *name);
 ConfigFileInfo* SearchConfigInList(const char *name);
@@ -102,6 +105,11 @@ extern void FilterFiles(std::vector<std::string> *files, const char *filter[]);
 enum { DIRECTION_NONE, DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT };
 bool HandleNavigation(int direction);
 
+#define MAX_HD_DEVICES 5
+extern void CreateDefaultDevicename(char *name);
+extern bool DevicenameExists(const char *name);
+extern int tweakbootpri (int bp, int ab, int dnm);
+  
 extern char *screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;

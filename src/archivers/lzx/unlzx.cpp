@@ -642,9 +642,9 @@ struct zfile *archive_access_lzx (struct znode *zn)
     startpos = znlast->offset;
     compsize = znlast->packedsize;
     zfile_fseek (zf, startpos, SEEK_SET);
-    buf = xmalloc(compsize);
+    buf = (uae_u8 *)xmalloc(compsize);
     zfile_fread (buf, compsize, 1, zf);
-    dbuf = xcalloc (unpsize, 1);
+    dbuf = (uae_u8 *)xcalloc (unpsize, 1);
 
     /* unpack complete block */
     memset(offset_len, 0, sizeof offset_len);
@@ -768,9 +768,9 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
           second = temp & 63;
 
 	  memset(&zai, 0, sizeof zai);
-	  zai.name = header_filename;
+	  zai.name = (const char *)header_filename;
 	  if (header_comment[0])
-	   zai.comment = header_comment;
+	   zai.comment = (char *)header_comment;
 	  zai.flags |= (attributes & 32) ? 0x80 : 0;
 	  zai.flags |= (attributes & 64) ? 0x40 : 0;
 	  zai.flags |= (attributes & 128) ? 0x20 : 0;

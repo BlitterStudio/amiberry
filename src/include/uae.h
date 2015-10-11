@@ -27,7 +27,6 @@ extern void reset_all_systems (void);
 
 extern int quit_program;
 
-extern char warning_buffer[256];
 extern char start_path_data[256];
 
 /* This structure is used to define menus. The val field can hold key
@@ -44,5 +43,6 @@ struct bstring {
     int val;
 };
 
+extern void fetch_saveimagepath (char*, int, int);
 #define uaerand() rand()
 #endif //UAE_UAE_H

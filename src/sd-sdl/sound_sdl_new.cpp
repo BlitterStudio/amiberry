@@ -1,6 +1,6 @@
  /* 
-  * Minimalistic sound.c implementation
-  * (c) notaz, 2007
+  * Sdl sound.c implementation
+  * (c) 2015
   */
 
 #include <sys/types.h>
@@ -35,7 +35,7 @@ int changed_produce_sound=0;
 
 #define SOUND_USE_SEMAPHORES
 #define SOUND_BUFFERS_COUNT 4
-static uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
+uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
 unsigned n_callback_sndbuff, n_render_sndbuff;
 uae_u16 *sndbufpt = sndbuffer[0];
 uae_u16 *render_sndbuff = sndbuffer[0];
@@ -76,10 +76,18 @@ void restart_sound_buffer(void) { }
 
 
 static int have_sound = 0;
+static int lastfreq;
 
-void sound_default_evtime(void)
+extern unsigned int new_beamcon0;
+
+void sound_default_evtime(int freq)
 {
-	int pal = beamcon0 & 0x20;
+	int pal = new_beamcon0 & 0x20;
+
+	if (freq < 0)
+		freq = lastfreq;
+	lastfreq = freq;
+
 #if !( defined(PANDORA) || defined(ANDROIDSDL) )
 	switch(m68k_speed)
 	{
@@ -106,10 +114,17 @@ void sound_default_evtime(void)
 		case 1:
 		default: // MAXVPOS_PAL?
 #endif
+#if 1
+		if (pal)
+			scaled_sample_evtime = (MAXHPOS_PAL * MAXVPOS_PAL * freq * CYCLE_UNIT + currprefs.sound_freq - 1) / currprefs.sound_freq;
+		else
+			scaled_sample_evtime = (MAXHPOS_NTSC * MAXVPOS_NTSC * freq * CYCLE_UNIT + currprefs.sound_freq - 1) / currprefs.sound_freq;
+#else
 		if (pal)
 			scaled_sample_evtime=(MAXHPOS_PAL*313*VBLANK_HZ_PAL*CYCLE_UNIT)/currprefs.sound_freq;
 		else
 			scaled_sample_evtime=(MAXHPOS_NTSC*MAXVPOS_NTSC*VBLANK_HZ_NTSC*CYCLE_UNIT)/currprefs.sound_freq + 1;
+#endif
 #if !( defined(PANDORA) || defined(ANDROIDSDL) )
 		break;
 	}
@@ -286,7 +301,7 @@ int setup_sound (void)
 
 void update_sound (int freq)
 {
-  sound_default_evtime();
+  sound_default_evtime(freq);
 }
 
 
@@ -301,7 +316,6 @@ static int open_sound (void)
 	    return 0;
 
     init_sound_table16 ();
-    
 
     have_sound = 1;
     sound_available = 1;
@@ -326,7 +340,7 @@ void close_sound (void)
     if (!have_sound)
 	return;
 
-    // testing shows that reopenning sound device is not a good idea on gp2x (causes random sound driver crashes)
+    // testing shows that reopenning sound device is not a good idea (causes random sound driver crashes)
     // we will close it on real exit instead
 #ifdef RASPBERRY
     //pandora_stop_sound();

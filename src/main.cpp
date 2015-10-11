@@ -30,7 +30,6 @@
 #include "traps.h"
 #include "osemu.h"
 #include "picasso96.h"
-#include "bsdsocket.h"
 #include "drawing.h"
 #include "native2amiga.h"
 #include "savestate.h"
@@ -47,14 +46,9 @@ long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 struct uae_prefs currprefs, changed_prefs; 
 
 int no_gui = 0;
-int joystickpresent = 0;
 int cloanto_rom = 0;
 
 struct gui_info gui_data;
-
-char warning_buffer[256];
-
-char optionsfile[256];
 
 /* If you want to pipe printer output to a file, put something like
  * "cat >>printerfile.tmp" above.
@@ -78,6 +72,7 @@ void discard_prefs (struct uae_prefs *p, int type)
   }
 #ifdef FILESYS
   filesys_cleanup ();
+  p->mountitems = 0;
 #endif
 }
 
@@ -395,8 +390,7 @@ void do_leave_program (void)
   inputdevice_close ();
   DISK_free ();
   close_sound ();
-//    if (! no_gui)
-  	gui_exit ();
+ 	gui_exit ();
 #ifdef USE_SDL
   SDL_Quit ();
 #endif

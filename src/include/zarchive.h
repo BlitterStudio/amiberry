@@ -59,7 +59,6 @@ struct zarchive_info
 };
 
 #define ArchiveFormat7Zip '7z  '
-#define ArchiveFormatRAR 'rar '
 #define ArchiveFormatZIP 'zip '
 #define ArchiveFormatLHA 'lha '
 #define ArchiveFormatLZX 'lzx '
@@ -83,8 +82,6 @@ extern struct zvolume *archive_directory_zip(struct zfile *zf);
 extern struct zfile *archive_access_zip (struct znode *zn);
 extern struct zvolume *archive_directory_7z (struct zfile *z);
 extern struct zfile *archive_access_7z (struct znode *zn);
-extern struct zvolume *archive_directory_rar (struct zfile *z);
-extern struct zfile *archive_access_rar (struct znode *zn);
 extern struct zvolume *archive_directory_lzx (struct zfile *in_file);
 extern struct zfile *archive_access_lzx (struct znode *zn);
 extern struct zvolume *archive_directory_arcacc (struct zfile *z, unsigned int id);
@@ -93,10 +90,10 @@ extern struct zfile *archive_access_arcacc (struct znode *zn);
 extern struct zfile *archive_access_select (struct zfile *zf, unsigned int id, int doselect);
 extern struct zfile *archive_access_arcacc_select (struct zfile *zf, unsigned int id);
 
-
-
 extern void archive_access_scan (struct zfile *zf, zfile_callback zc, void *user, unsigned int id);
 
 extern void archive_access_close (void *handle, unsigned int id);
 
 extern struct zfile *archive_getzfile(struct znode *zn, unsigned int id);
+
+extern struct zfile *decompress_zfd (struct zfile*);

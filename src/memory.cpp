@@ -38,11 +38,6 @@ uae_u32 allocated_fastmem;
 uae_u32 allocated_bogomem;
 uae_u32 allocated_gfxmem;
 uae_u32 allocated_z3fastmem;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-uae_u32 allocated_a3000lmem;
-uae_u32 allocated_a3000hmem;
-uae_u32 allocated_cardmem;
-#endif
 
 uae_u32 max_z3fastmem = 64 * 1024 * 1024;
 
@@ -415,14 +410,38 @@ static int kickstart_checksum_do (uae_u8 *mem, int size)
     return cksum == 0xffffffff;
 }
 
-void decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size, uae_u8 *key, int keysize)
+#define ROM_KEY_NUM 3
+struct rom_key {
+    uae_u8 *key;
+    int size;
+};
+
+static struct rom_key keyring[ROM_KEY_NUM];
+
+int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size)
 {
-    long cnt, t;
+    int cnt, t, i, keysize;
+    uae_u8 *key;
+
+    for (i = ROM_KEY_NUM - 1; i >= 0; i--) {
+	keysize = keyring[i].size;
+	key = keyring[i].key;
+	if (!key)
+	    continue;
     for (t = cnt = 0; cnt < size; cnt++, t = (t + 1) % keysize)  {
         mem[cnt] ^= key[t];
         if (real_size == cnt + 1)
 	    t = keysize - 1;
     }
+	if ((mem[2] == 0x4e && mem[3] == 0xf9) || (mem[0] == 0x11 && (mem[1] == 0x11 || mem[1] == 0x14)))
+	    return 1;
+	for (t = cnt = 0; cnt < size; cnt++, t = (t + 1) % keysize)  {
+	    mem[cnt] ^= key[t];
+	    if (real_size == cnt + 1)
+		t = keysize - 1;
+	}
+    }
+    return get_keyring();
 }
 
 static int decode_rekick_rom_do (uae_u8 *mem, int size, int real_size)
@@ -447,86 +466,156 @@ static int decode_rekick_rom_do (uae_u8 *mem, int size, int real_size)
     return 1;
 }
 
-uae_u8 *load_keyfile (struct uae_prefs *p, char *path, int *size)
+static void addkey(int *pkeyid, uae_u8 *key, int size, const char *name)
+{
+    int keyid = *pkeyid;
+    int i;
+
+    if (key == NULL || size == 0 || keyid >= ROM_KEY_NUM) {
+	xfree (key);
+	return;
+    }
+    for (i = 0; i < keyid; i++) {
+	if (keyring[i].key && keyring[i].size == size && !memcmp (keyring[i].key, key, size)) {
+	    xfree (key);
+	    return;
+	}
+    }
+    keyring[keyid].key = key;
+    keyring[keyid++].size = size;
+    write_log ("ROM KEY '%s' %d bytes loaded\n", name, size);
+    *pkeyid = keyid;
+}
+
+int get_keyring (void)
+{
+    int i, num = 0;
+    for (i = 0; i < ROM_KEY_NUM; i++) {
+	if (keyring[i].key)
+	    num++;
+    }
+    return num;
+}
+
+int load_keyring (struct uae_prefs *p, char *path)
 {
     struct zfile *f;
-    uae_u8 *keybuf = 0;
-    int keysize = 0;
+    uae_u8 *keybuf;
+    int keysize;
     char tmp[MAX_PATH], *d;
- 
-    tmp[0] = 0;
-    if (path)
-	strcpy (tmp, path);
-    strcat (tmp, "rom.key");
-    f = zfile_fopen (tmp, "rb");
-    if (!f) {
-	strcpy (tmp, p->romfile);
-	d = strrchr(tmp, '/');
-	if (!d)
-	    d = strrchr(tmp, '\\');
-	if (d) {
-	    strcpy (d + 1, "rom.key");
-	    f = zfile_fopen(tmp, "rb");
-	}
-    if (!f) {
-	struct romdata *rd = getromdatabyid (0);
-        char *s = romlist_get (rd);
-        if (s)
-	    f = zfile_fopen (s, "rb");
-	if (!f) {
-	    strcpy (tmp, p->path_rom);
-	    strcat (tmp, "rom.key");
-	    f = zfile_fopen (tmp, "rb");
-	    if (!f) {
-		f = zfile_fopen ("roms/rom.key", "rb");
-		if (!f) {
-		    strcpy (tmp, start_path_data);
-		    strcat (tmp, "rom.key");
-		    f = zfile_fopen(tmp, "rb");
-		    if (!f) {
-			    sprintf (tmp, "%s../shared/rom/rom.key", start_path_data);
-			f = zfile_fopen(tmp, "rb");
+    int keyids[] = { 0, 48, -1 };
+    int keyid;
+    int cnt, i;
+
+    free_keyring();
+    keyid = 0;
+    keybuf = target_load_keyfile(p, path, &keysize, tmp);
+    addkey(&keyid, keybuf, keysize, tmp);
+    for (i = 0; keyids[i] >= 0 && keyid < ROM_KEY_NUM; i++) {
+	struct romdata *rd = getromdatabyid (keyids[i]);
+	char *s;
+	if (rd) {
+	    s = romlist_get (rd);
+	    if (s) {
+		f = zfile_fopen (s, "rb");
+		if (f) {
+		    zfile_fseek (f, 0, SEEK_END);
+		    keysize = zfile_ftell (f);
+		    if (keysize > 0) {
+			zfile_fseek (f, 0, SEEK_SET);
+			keybuf = (uae_u8*)xmalloc (keysize);
+			zfile_fread (keybuf, 1, keysize, f);
+			addkey(&keyid, keybuf, keysize, s);
 		    }
-		    }
+		    zfile_fclose (f);
 		}
 	    }
 	}
     }
-    keysize = 0;
-    if (f) {
-	write_log("ROM.key loaded '%s'\n", tmp);
+
+    cnt = 0;
+    for (;;) {
+	keybuf = NULL;
+	keysize = 0;
+	tmp[0] = 0;
+	switch (cnt)
+	{
+	case 0:
+	  if (path)
+    {
+	    strcpy (tmp, path);
+	    strcat (tmp, "rom.key");
+	  }
+	break;
+	case 1:
+	    if (p) {
+		strcpy (tmp, p->path_rom);
+		strcat (tmp, "rom.key");
+	    }
+	break;
+	case 2:
+	    strcpy (tmp, "roms/rom.key");
+	break;
+	case 3:
+	    strcpy (tmp, start_path_data);
+	    strcat (tmp, "rom.key");
+	break;
+	case 4:
+	    sprintf (tmp, "%s../shared/rom/rom.key", start_path_data);
+	break;
+	case 5:
+	    if (p) {
+		for (i = 0; uae_archive_extensions[i]; i++) {
+		    if (strstr(p->romfile, uae_archive_extensions[i]))
+			break;
+		}
+		if (!uae_archive_extensions[i]) {
+		    strcpy (tmp, p->romfile);
+		    d = strrchr(tmp, '/');
+		    if (!d)
+			d = strrchr(tmp, '\\');
+		    if (d)
+			strcpy (d + 1, "rom.key");
+		}
+	    }
+	break;
+	case 6:
+	return keyid;
+	}
+	cnt++;
+	if (!tmp[0])
+	    continue;
+	f = zfile_fopen(tmp, "rb");
+	if (!f)
+	    continue;
 	zfile_fseek (f, 0, SEEK_END);
 	keysize = zfile_ftell (f);
 	if (keysize > 0) {
 	    zfile_fseek (f, 0, SEEK_SET);
-	    keybuf = (uae_u8 *) xmalloc (keysize);
+	    keybuf = (uae_u8*)xmalloc (keysize);
 	    zfile_fread (keybuf, 1, keysize, f);
+	    addkey (&keyid, keybuf, keysize, tmp);
 	}
 	zfile_fclose (f);
     }
-    *size = keysize;
-    return keybuf;
 }
-void free_keyfile (uae_u8 *key)
+void free_keyring (void)
 {
-    xfree (key);
+    int i;
+    for (i = 0; i < ROM_KEY_NUM; i++)
+	xfree (keyring[i].key);
+    memset(keyring, 0, sizeof (struct rom_key) * ROM_KEY_NUM);
 }
 
 static int decode_rom (uae_u8 *mem, int size, int mode, int real_size)
 {
-  uae_u8 *p;
-  int keysize;
-
   if (mode == 1) {
-    p = load_keyfile (&currprefs, NULL, &keysize);
-    if (!p) {
+	  if (!decode_cloanto_rom_do (mem, size, real_size)) {
 #ifndef SINGLEFILE
     	notify_user (NUMSG_NOROMKEY);
 #endif
     	return 0;
     }
-    decode_cloanto_rom_do (mem, size, real_size, p, keysize);
-    free_keyfile (p);
     return 1;
   } else if (mode == 2) {
   	decode_rekick_rom_do (mem, size, real_size);
@@ -827,88 +916,6 @@ uae_u8 *chipmemory;
 static int REGPARAM3 chipmem_check (uaecptr addr, uae_u32 size) REGPARAM;
 static uae_u8 *REGPARAM3 chipmem_xlate (uaecptr addr) REGPARAM;
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-
-/* AGA ce-chipram access */
-
-static void ce2_timeout (void)
-{
-    wait_cpu_cycle_read (0, -1);
-}
-
-static uae_u32 REGPARAM2 chipmem_lget_ce2 (uaecptr addr)
-{
-    uae_u32 *m;
-
-#ifdef JIT
-    special_mem |= S_READ;
-#endif
-    addr &= chipmem_mask;
-    m = (uae_u32 *)(chipmemory + addr);
-    ce2_timeout ();
-    return do_get_mem_long (m);
-}
-
-static uae_u32 REGPARAM2 chipmem_wget_ce2 (uaecptr addr)
-{
-    uae_u16 *m;
-
-#ifdef JIT
-    special_mem |= S_READ;
-#endif
-    addr &= chipmem_mask;
-    m = (uae_u16 *)(chipmemory + addr);
-    ce2_timeout ();
-    return do_get_mem_word (m);
-}
-
-static uae_u32 REGPARAM2 chipmem_bget_ce2 (uaecptr addr)
-{
-#ifdef JIT
-    special_mem |= S_READ;
-#endif
-    addr &= chipmem_mask;
-    ce2_timeout ();
-    return chipmemory[addr];
-}
-
-static void REGPARAM2 chipmem_lput_ce2 (uaecptr addr, uae_u32 l)
-{
-    uae_u32 *m;
-
-#ifdef JIT
-    special_mem |= S_WRITE;
-#endif
-    addr &= chipmem_mask;
-    m = (uae_u32 *)(chipmemory + addr);
-    ce2_timeout ();
-    do_put_mem_long (m, l);
-}
-
-static void REGPARAM2 chipmem_wput_ce2 (uaecptr addr, uae_u32 w)
-{
-    uae_u16 *m;
-
-#ifdef JIT
-    special_mem |= S_WRITE;
-#endif
-    addr &= chipmem_mask;
-    m = (uae_u16 *)(chipmemory + addr);
-    ce2_timeout ();
-    do_put_mem_word (m, w);
-}
-
-static void REGPARAM2 chipmem_bput_ce2 (uaecptr addr, uae_u32 b)
-{
-#ifdef JIT
-    special_mem |= S_WRITE;
-#endif
-    addr &= chipmem_mask;
-    ce2_timeout ();
-    chipmemory[addr] = b;
-}
-#endif
-
 uae_u32 REGPARAM2 chipmem_lget (uaecptr addr)
 {
     uae_u32 *m;
@@ -1105,213 +1112,6 @@ static uae_u8 *REGPARAM2 bogomem_xlate (uaecptr addr)
     return bogomemory + addr;
 }
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-
-/* CDTV expension memory card memory */
-
-uae_u8 *cardmemory;
-
-static uae_u32 REGPARAM3 cardmem_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 cardmem_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 cardmem_bget (uaecptr) REGPARAM;
-static void REGPARAM3 cardmem_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 cardmem_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 cardmem_bput (uaecptr, uae_u32) REGPARAM;
-static int REGPARAM3 cardmem_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 *REGPARAM3 cardmem_xlate (uaecptr addr) REGPARAM;
-
-static uae_u32 REGPARAM2 cardmem_lget (uaecptr addr)
-{
-    uae_u32 *m;
-    addr &= cardmem_mask;
-    m = (uae_u32 *)(cardmemory + addr);
-    return do_get_mem_long (m);
-}
-
-static uae_u32 REGPARAM2 cardmem_wget (uaecptr addr)
-{
-    uae_u16 *m;
-    addr &= cardmem_mask;
-    m = (uae_u16 *)(cardmemory + addr);
-    return do_get_mem_word (m);
-}
-
-static uae_u32 REGPARAM2 cardmem_bget (uaecptr addr)
-{
-    addr &= cardmem_mask;
-    return cardmemory[addr];
-}
-
-static void REGPARAM2 cardmem_lput (uaecptr addr, uae_u32 l)
-{
-    uae_u32 *m;
-    addr &= cardmem_mask;
-    m = (uae_u32 *)(cardmemory + addr);
-    do_put_mem_long (m, l);
-}
-
-static void REGPARAM2 cardmem_wput (uaecptr addr, uae_u32 w)
-{
-    uae_u16 *m;
-    addr &= cardmem_mask;
-    m = (uae_u16 *)(cardmemory + addr);
-    do_put_mem_word (m, w);
-}
-
-static void REGPARAM2 cardmem_bput (uaecptr addr, uae_u32 b)
-{
-    addr &= cardmem_mask;
-    cardmemory[addr] = b;
-}
-
-static int REGPARAM2 cardmem_check (uaecptr addr, uae_u32 size)
-{
-    addr &= cardmem_mask;
-    return (addr + size) <= allocated_cardmem;
-}
-
-static uae_u8 *REGPARAM2 cardmem_xlate (uaecptr addr)
-{
-    addr &= cardmem_mask;
-    return cardmemory + addr;
-}
-
-/* A3000 motherboard fast memory */
-static uae_u8 *a3000lmemory, *a3000hmemory;
-uae_u32 a3000lmem_start, a3000hmem_start;
-
-static uae_u32 REGPARAM3 a3000lmem_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 a3000lmem_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 a3000lmem_bget (uaecptr) REGPARAM;
-static void REGPARAM3 a3000lmem_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 a3000lmem_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 a3000lmem_bput (uaecptr, uae_u32) REGPARAM;
-static int REGPARAM3 a3000lmem_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 *REGPARAM3 a3000lmem_xlate (uaecptr addr) REGPARAM;
-
-static uae_u32 REGPARAM2 a3000lmem_lget (uaecptr addr)
-{
-    uae_u32 *m;
-    addr &= a3000lmem_mask;
-    m = (uae_u32 *)(a3000lmemory + addr);
-    return do_get_mem_long (m);
-}
-
-static uae_u32 REGPARAM2 a3000lmem_wget (uaecptr addr)
-{
-    uae_u16 *m;
-    addr &= a3000lmem_mask;
-    m = (uae_u16 *)(a3000lmemory + addr);
-    return do_get_mem_word (m);
-}
-
-static uae_u32 REGPARAM2 a3000lmem_bget (uaecptr addr)
-{
-    addr &= a3000lmem_mask;
-    return a3000lmemory[addr];
-}
-
-static void REGPARAM2 a3000lmem_lput (uaecptr addr, uae_u32 l)
-{
-    uae_u32 *m;
-    addr &= a3000lmem_mask;
-    m = (uae_u32 *)(a3000lmemory + addr);
-    do_put_mem_long (m, l);
-}
-
-static void REGPARAM2 a3000lmem_wput (uaecptr addr, uae_u32 w)
-{
-    uae_u16 *m;
-    addr &= a3000lmem_mask;
-    m = (uae_u16 *)(a3000lmemory + addr);
-    do_put_mem_word (m, w);
-}
-
-static void REGPARAM2 a3000lmem_bput (uaecptr addr, uae_u32 b)
-{
-    addr &= a3000lmem_mask;
-    a3000lmemory[addr] = b;
-}
-
-static int REGPARAM2 a3000lmem_check (uaecptr addr, uae_u32 size)
-{
-    addr &= a3000lmem_mask;
-    return (addr + size) <= allocated_a3000lmem;
-}
-
-static uae_u8 *REGPARAM2 a3000lmem_xlate (uaecptr addr)
-{
-    addr &= a3000lmem_mask;
-    return a3000lmemory + addr;
-}
-
-static uae_u32 REGPARAM3 a3000hmem_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 a3000hmem_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 a3000hmem_bget (uaecptr) REGPARAM;
-static void REGPARAM3 a3000hmem_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 a3000hmem_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 a3000hmem_bput (uaecptr, uae_u32) REGPARAM;
-static int REGPARAM3 a3000hmem_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 *REGPARAM3 a3000hmem_xlate (uaecptr addr) REGPARAM;
-
-static uae_u32 REGPARAM2 a3000hmem_lget (uaecptr addr)
-{
-    uae_u32 *m;
-    addr &= a3000hmem_mask;
-    m = (uae_u32 *)(a3000hmemory + addr);
-    return do_get_mem_long (m);
-}
-
-static uae_u32 REGPARAM2 a3000hmem_wget (uaecptr addr)
-{
-    uae_u16 *m;
-    addr &= a3000hmem_mask;
-    m = (uae_u16 *)(a3000hmemory + addr);
-    return do_get_mem_word (m);
-}
-
-static uae_u32 REGPARAM2 a3000hmem_bget (uaecptr addr)
-{
-    addr &= a3000hmem_mask;
-    return a3000hmemory[addr];
-}
-
-static void REGPARAM2 a3000hmem_lput (uaecptr addr, uae_u32 l)
-{
-    uae_u32 *m;
-    addr &= a3000hmem_mask;
-    m = (uae_u32 *)(a3000hmemory + addr);
-    do_put_mem_long (m, l);
-}
-
-static void REGPARAM2 a3000hmem_wput (uaecptr addr, uae_u32 w)
-{
-    uae_u16 *m;
-    addr &= a3000hmem_mask;
-    m = (uae_u16 *)(a3000hmemory + addr);
-    do_put_mem_word (m, w);
-}
-
-static void REGPARAM2 a3000hmem_bput (uaecptr addr, uae_u32 b)
-{
-    addr &= a3000hmem_mask;
-    a3000hmemory[addr] = b;
-}
-
-static int REGPARAM2 a3000hmem_check (uaecptr addr, uae_u32 size)
-{
-    addr &= a3000hmem_mask;
-    return (addr + size) <= allocated_a3000hmem;
-}
-
-static uae_u8 *REGPARAM2 a3000hmem_xlate (uaecptr addr)
-{
-    addr &= a3000hmem_mask;
-    return a3000hmemory + addr;
-}
-
-#endif
-
 /* Kick memory */
 
 uae_u8 *kickmemory;
@@ -1502,7 +1302,7 @@ static uae_u8 *REGPARAM3 extendedkickmem_xlate (uaecptr addr) REGPARAM;
 static uae_u32 REGPARAM2 extendedkickmem_lget (uaecptr addr)
 {
     uae_u32 *m;
-    addr -= extendedkickmem_start /*& extendedkickmem_mask*/;
+    addr -= extendedkickmem_start;
     addr &= extendedkickmem_mask;
     m = (uae_u32 *)(extendedkickmemory + addr);
     return do_get_mem_long (m);
@@ -1511,7 +1311,7 @@ static uae_u32 REGPARAM2 extendedkickmem_lget (uaecptr addr)
 static uae_u32 REGPARAM2 extendedkickmem_wget (uaecptr addr)
 {
     uae_u16 *m;
-    addr -= extendedkickmem_start /*& extendedkickmem_mask*/;
+    addr -= extendedkickmem_start;
     addr &= extendedkickmem_mask;
     m = (uae_u16 *)(extendedkickmemory + addr);
     return do_get_mem_word (m);
@@ -1519,7 +1319,7 @@ static uae_u32 REGPARAM2 extendedkickmem_wget (uaecptr addr)
 
 static uae_u32 REGPARAM2 extendedkickmem_bget (uaecptr addr)
 {
-    addr -= extendedkickmem_start /*& extendedkickmem_mask*/;
+    addr -= extendedkickmem_start;
     addr &= extendedkickmem_mask;
     return extendedkickmemory[addr];
 }
@@ -1547,14 +1347,14 @@ static void REGPARAM2 extendedkickmem_bput (uaecptr addr, uae_u32 b)
 
 static int REGPARAM2 extendedkickmem_check (uaecptr addr, uae_u32 size)
 {
-    addr -= extendedkickmem_start /*& extendedkickmem_mask*/;
+    addr -= extendedkickmem_start;
     addr &= extendedkickmem_mask;
     return (addr + size) <= extendedkickmem_size;
 }
 
 static uae_u8 *REGPARAM2 extendedkickmem_xlate (uaecptr addr)
 {
-    addr -= extendedkickmem_start /*& extendedkickmem_mask*/;
+    addr -= extendedkickmem_start;
     addr &= extendedkickmem_mask;
     return extendedkickmemory + addr;
 }
@@ -1570,7 +1370,7 @@ static uae_u8 *REGPARAM3 extendedkickmem2_xlate (uaecptr addr) REGPARAM;
 static uae_u32 REGPARAM2 extendedkickmem2_lget (uaecptr addr)
 {
     uae_u32 *m;
-    addr -= extendedkickmem2_start /*& extendedkickmem2_mask*/;
+    addr -= extendedkickmem2_start;
     addr &= extendedkickmem2_mask;
     m = (uae_u32 *)(extendedkickmemory2 + addr);
     return do_get_mem_long (m);
@@ -1578,14 +1378,14 @@ static uae_u32 REGPARAM2 extendedkickmem2_lget (uaecptr addr)
 static uae_u32 REGPARAM2 extendedkickmem2_wget (uaecptr addr)
 {
     uae_u16 *m;
-    addr -= extendedkickmem2_start /*& extendedkickmem2_mask*/;
+    addr -= extendedkickmem2_start;
     addr &= extendedkickmem2_mask;
     m = (uae_u16 *)(extendedkickmemory2 + addr);
     return do_get_mem_word (m);
 }
 static uae_u32 REGPARAM2 extendedkickmem2_bget (uaecptr addr)
 {
-    addr -= extendedkickmem2_start /*& extendedkickmem2_mask*/;
+    addr -= extendedkickmem2_start;
     addr &= extendedkickmem2_mask;
     return extendedkickmemory2[addr];
 }
@@ -1609,13 +1409,13 @@ static void REGPARAM2 extendedkickmem2_bput (uaecptr addr, uae_u32 b)
 }
 static int REGPARAM2 extendedkickmem2_check (uaecptr addr, uae_u32 size)
 {
-    addr -= extendedkickmem2_start /*& extendedkickmem2_mask*/;
+    addr -= extendedkickmem2_start;
     addr &= extendedkickmem2_mask;
     return (addr + size) <= extendedkickmem2_size;
 }
 static uae_u8 *REGPARAM2 extendedkickmem2_xlate (uaecptr addr)
 {
-    addr -= extendedkickmem2_start /*& extendedkickmem2_mask*/;
+    addr -= extendedkickmem2_start;
     addr &= extendedkickmem2_mask;
     return extendedkickmemory2 + addr;
 }
@@ -1657,15 +1457,6 @@ addrbank chipmem_bank = {
     chipmem_lget, chipmem_wget, ABFLAG_RAM
 };
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-addrbank chipmem_bank_ce2 = {
-    chipmem_lget_ce2, chipmem_wget_ce2, chipmem_bget_ce2,
-    chipmem_lput_ce2, chipmem_wput_ce2, chipmem_bput_ce2,
-    chipmem_xlate, chipmem_check, NULL, "Chip memory (68020 'ce')",
-    chipmem_lget_ce2, chipmem_wget_ce2, ABFLAG_RAM
-};
-#endif
-
 addrbank bogomem_bank = {
     bogomem_lget, bogomem_wget, bogomem_bget,
     bogomem_lput, bogomem_wput, bogomem_bput,
@@ -1673,29 +1464,6 @@ addrbank bogomem_bank = {
     bogomem_lget, bogomem_wget, ABFLAG_RAM
 
 };
-
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-addrbank cardmem_bank = {
-    cardmem_lget, cardmem_wget, cardmem_bget,
-    cardmem_lput, cardmem_wput, cardmem_bput,
-    cardmem_xlate, cardmem_check, NULL, "CDTV memory card",
-    cardmem_lget, cardmem_wget, ABFLAG_RAM
-};
-
-addrbank a3000lmem_bank = {
-    a3000lmem_lget, a3000lmem_wget, a3000lmem_bget,
-    a3000lmem_lput, a3000lmem_wput, a3000lmem_bput,
-    a3000lmem_xlate, a3000lmem_check, NULL, "RAMSEY memory (low)",
-    a3000lmem_lget, a3000lmem_wget, ABFLAG_RAM
-};
-
-addrbank a3000hmem_bank = {
-    a3000hmem_lget, a3000hmem_wget, a3000hmem_bget,
-    a3000hmem_lput, a3000hmem_wput, a3000hmem_bput,
-    a3000hmem_xlate, a3000hmem_check, NULL, "RAMSEY memory (high)",
-    a3000hmem_lget, a3000hmem_wget, ABFLAG_RAM
-};
-#endif
 
 addrbank kickmem_bank = {
     kickmem_lget, kickmem_wget, kickmem_bget,
@@ -1724,203 +1492,6 @@ addrbank extendedkickmem2_bank = {
     extendedkickmem2_lget, extendedkickmem2_wget, ABFLAG_ROM
 };
 
-
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-static uae_u32 allocated_custmem1, allocated_custmem2;
-static uae_u32 custmem1_mask, custmem2_mask;
-static uae_u8 *custmem1, *custmem2;
-
-static uae_u32 REGPARAM3 custmem1_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custmem1_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custmem1_bget (uaecptr) REGPARAM;
-static void REGPARAM3 custmem1_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 custmem1_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 custmem1_bput (uaecptr, uae_u32) REGPARAM;
-static int REGPARAM3 custmem1_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 *REGPARAM3 custmem1_xlate (uaecptr addr) REGPARAM;
-
-static uae_u32 REGPARAM2 custmem1_lget (uaecptr addr)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    m = custmem1 + addr;
-    return do_get_mem_long ((uae_u32 *)m);
-}
-static uae_u32 REGPARAM2 custmem1_wget (uaecptr addr)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    m = custmem1 + addr;
-    return do_get_mem_word ((uae_u16 *)m);
-}
-static uae_u32 REGPARAM2 custmem1_bget (uaecptr addr)
-{
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    return custmem1[addr];
-}
-static void REGPARAM2 custmem1_lput (uaecptr addr, uae_u32 l)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    m = custmem1 + addr;
-    do_put_mem_long ((uae_u32 *)m, l);
-}
-static void REGPARAM2 custmem1_wput (uaecptr addr, uae_u32 w)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    m = custmem1 + addr;
-    do_put_mem_word ((uae_u16 *)m, w);
-}
-static void REGPARAM2 custmem1_bput (uaecptr addr, uae_u32 b)
-{
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    custmem1[addr] = b;
-}
-static int REGPARAM2 custmem1_check (uaecptr addr, uae_u32 size)
-{
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    return (addr + size) <= currprefs.custom_memory_sizes[0];
-}
-static uae_u8 *REGPARAM2 custmem1_xlate (uaecptr addr)
-{
-    addr -= currprefs.custom_memory_addrs[0] & custmem1_mask;
-    addr &= custmem1_mask;
-    return custmem1 + addr;
-}
-
-static uae_u32 REGPARAM3 custmem2_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custmem2_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custmem2_bget (uaecptr) REGPARAM;
-static void REGPARAM3 custmem2_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 custmem2_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 custmem2_bput (uaecptr, uae_u32) REGPARAM;
-static int REGPARAM3 custmem2_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 *REGPARAM3 custmem2_xlate (uaecptr addr) REGPARAM;
-
-static uae_u32 REGPARAM2 custmem2_lget (uaecptr addr)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    m = custmem2 + addr;
-    return do_get_mem_long ((uae_u32 *)m);
-}
-static uae_u32 REGPARAM2 custmem2_wget (uaecptr addr)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    m = custmem2 + addr;
-    return do_get_mem_word ((uae_u16 *)m);
-}
-static uae_u32 REGPARAM2 custmem2_bget (uaecptr addr)
-{
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    return custmem2[addr];
-}
-static void REGPARAM2 custmem2_lput (uaecptr addr, uae_u32 l)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    m = custmem2 + addr;
-    do_put_mem_long ((uae_u32 *)m, l);
-}
-static void REGPARAM2 custmem2_wput (uaecptr addr, uae_u32 w)
-{
-    uae_u8 *m;
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    m = custmem2 + addr;
-    do_put_mem_word ((uae_u16 *)m, w);
-}
-static void REGPARAM2 custmem2_bput (uaecptr addr, uae_u32 b)
-{
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    custmem2[addr] = b;
-}
-static int REGPARAM2 custmem2_check (uaecptr addr, uae_u32 size)
-{
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    return (addr + size) <= currprefs.custom_memory_sizes[1];
-}
-static uae_u8 *REGPARAM2 custmem2_xlate (uaecptr addr)
-{
-    addr -= currprefs.custom_memory_addrs[1] & custmem2_mask;
-    addr &= custmem2_mask;
-    return custmem2 + addr;
-}
-
-addrbank custmem1_bank = {
-    custmem1_lget, custmem1_wget, custmem1_bget,
-    custmem1_lput, custmem1_wput, custmem1_bput,
-    custmem1_xlate, custmem1_check, NULL, "Non-autoconfig RAM #1",
-    custmem1_lget, custmem1_wget, ABFLAG_RAM
-};
-addrbank custmem2_bank = {
-    custmem1_lget, custmem1_wget, custmem1_bget,
-    custmem1_lput, custmem1_wput, custmem1_bput,
-    custmem1_xlate, custmem1_check, NULL, "Non-autoconfig RAM #2",
-    custmem1_lget, custmem1_wget, ABFLAG_RAM
-};
-
-#define fkickmem_size 524288
-void a3000_fakekick(int map)
-{
-    static uae_u8 *blop;
-    static int f0;
-
-    if (map) {
-	uae_u8 *fkickmemory = a3000lmemory + allocated_a3000lmem - fkickmem_size;
-	if (fkickmemory[2] == 0x4e && fkickmemory[3] == 0xf9 && fkickmemory[4] == 0x00) {
-	    if (!blop)
-		blop = xmalloc (fkickmem_size);
-	    memcpy (blop, kickmemory, fkickmem_size);
-	    if (fkickmemory[5] == 0xfc) {
-		memcpy (kickmemory, fkickmemory, fkickmem_size / 2);
-		memcpy (kickmemory + fkickmem_size / 2, fkickmemory, fkickmem_size / 2);
-		if (!extendedkickmemory) {
-		    if (need_uae_boot_rom() != 0xf00000) {
-			extendedkickmem_size = 65536;
-			extendedkickmem_mask = extendedkickmem_size - 1;
-			extendedkickmemory = (uae_u8 *) mapped_malloc (extendedkickmem_size, "rom_f0");
-			extendedkickmem_bank.baseaddr = (uae_u8 *) extendedkickmemory;
-			memcpy(extendedkickmemory, fkickmemory + fkickmem_size / 2, 65536);
-			map_banks(&extendedkickmem_bank, 0xf0, 1, 1);
-			f0 = 1;
-		    } else {
-			write_log("A3000 Bonus hack: can't map bonus when uae boot rom is enabled\n");
-		    }
-		}
-	    } else {
-		memcpy (kickmemory, fkickmemory, fkickmem_size);
-	    }
-	}
-    } else {
-	if (f0) {
-	    map_banks(&dummy_bank, 0xf0, 1, 1);
-	    mapped_free(extendedkickmemory);
-	    extendedkickmemory = NULL;
-	    f0 = 0;
-	}
-	if (blop)
-	    memcpy (kickmemory, blop, fkickmem_size);
-	xfree(blop);
-	blop = NULL;
-    }
-}
-#endif
 
 static int kickstart_checksum (uae_u8 *mem, int size)
 {
@@ -2102,8 +1673,6 @@ static int patch_residents (uae_u8 *kickmemory, int size)
 static void patch_kick(void)
 {
     int patched = 0;
-//    if (kickmem_size >= 524288 && currprefs.kickshifter)
-//        patched += patch_shapeshifter (kickmemory);
     patched += patch_residents (kickmemory, kickmem_size);
     if (extendedkickmemory) {
 	    patched += patch_residents (extendedkickmemory, extendedkickmem_size);
@@ -2126,15 +1695,11 @@ static int load_kickstart (void)
     	f = zfile_fopen (tmprom2, "rb");
     	if (f == NULL) {
   	    sprintf (currprefs.romfile, "%sroms/kick.rom", start_path_data);
-    	f = zfile_fopen (currprefs.romfile, "rb");
-    	if (f == NULL) {
-      		sprintf (currprefs.romfile, "%skick.rom", start_path_data);
-    	    f = zfile_fopen( currprefs.romfile, "rb" );
-//    	    if (f == NULL) {
-//		        sprintf (currprefs.romfile, "%s../shared/rom/kick.rom", start_path_data);
-//        		f = zfile_fopen( currprefs.romfile, "rb" );
-//    	    }
-      }
+      	f = zfile_fopen (currprefs.romfile, "rb");
+      	if (f == NULL) {
+        		sprintf (currprefs.romfile, "%skick.rom", start_path_data);
+      	    f = zfile_fopen( currprefs.romfile, "rb" );
+        }
     	} else {
     	    strcpy (currprefs.romfile, tmprom2);
       }
@@ -2283,106 +1848,15 @@ static void allocate_memory (void)
 		}
 	  need_hardreset = 1;
 	}
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-
-    if (allocated_a3000lmem != currprefs.mbresmem_low_size) {
-	if (a3000lmemory)
-	    mapped_free (a3000lmemory);
-	a3000lmemory = 0;
-
-	allocated_a3000lmem = currprefs.mbresmem_low_size;
-	a3000lmem_mask = allocated_a3000lmem - 1;
-	a3000lmem_start = 0x08000000 - allocated_a3000lmem;
-	if (allocated_a3000lmem) {
-	    a3000lmemory = mapped_malloc (allocated_a3000lmem, "ramsey_low");
-	    if (a3000lmemory == 0) {
-		write_log ("Out of memory for a3000lowmem.\n");
-		allocated_a3000lmem = 0;
-	    }
-	}
-	need_hardreset = 1;
-    }
-    if (allocated_a3000hmem != currprefs.mbresmem_high_size) {
-	if (a3000hmemory)
-	    mapped_free (a3000hmemory);
-	a3000hmemory = 0;
-
-	allocated_a3000hmem = currprefs.mbresmem_high_size;
-	a3000hmem_mask = allocated_a3000hmem - 1;
-	a3000hmem_start = 0x08000000;
-	if (allocated_a3000hmem) {
-	    a3000hmemory = mapped_malloc (allocated_a3000hmem, "ramsey_high");
-	    if (a3000hmemory == 0) {
-		write_log ("Out of memory for a3000highmem.\n");
-		allocated_a3000hmem = 0;
-	    }
-	}
-	need_hardreset = 1;
-    }
-    if (allocated_cardmem != currprefs.cs_cdtvcard * 1024) {
-	if (cardmemory)
-	    mapped_free (cardmemory);
-	cardmemory = 0;
-
-	allocated_cardmem = currprefs.cs_cdtvcard * 1024;
-	cardmem_mask = allocated_cardmem - 1;
-	if (allocated_cardmem) {
-	    cardmemory = mapped_malloc (allocated_cardmem, "rom_e0");
-	    if (cardmemory == 0) {
-		write_log ("Out of memory for cardmem.\n");
-		allocated_cardmem = 0;
-	    }
-	}
-	cdtv_loadcardmem(cardmemory, allocated_cardmem);
-    }
-    if (allocated_custmem1 != currprefs.custom_memory_sizes[0]) {
-	if (custmem1)
-	    mapped_free (custmem1);
-	custmem1 = 0;
-	allocated_custmem1 = currprefs.custom_memory_sizes[0];
-	custmem1_mask = allocated_custmem1 - 1;
-	if (allocated_custmem1) {
-	    custmem1 = mapped_malloc (allocated_custmem1, "custmem1");
-	    if (!custmem1)
-		allocated_custmem1 = 0;
-	}
-    }
-    if (allocated_custmem2 != currprefs.custom_memory_sizes[1]) {
-	if (custmem2)
-	    mapped_free (custmem2);
-	custmem2 = 0;
-	allocated_custmem2 = currprefs.custom_memory_sizes[1];
-	custmem2_mask = allocated_custmem2 - 1;
-	if (allocated_custmem2) {
-	    custmem2 = mapped_malloc (allocated_custmem2, "custmem2");
-	    if (!custmem2)
-		allocated_custmem2 = 0;
-	}
-    }
-#endif
 
     if (savestate_state == STATE_RESTORE) {
     	restore_ram (bootrom_filepos, rtarea);
 	    restore_ram (chip_filepos, chipmemory);
 	    if (allocated_bogomem > 0)
     	    restore_ram (bogo_filepos, bogomemory);
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-	  if (allocated_a3000lmem > 0)
-	      restore_ram (a3000lmem_filepos, a3000lmemory);
-	  if (allocated_a3000hmem > 0)
-	      restore_ram (a3000hmem_filepos, a3000hmemory);
-#endif
     }
 	chipmem_bank.baseaddr = chipmemory;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-  chipmem_bank_ce2.baseaddr = chipmemory;
-#endif
 	bogomem_bank.baseaddr = bogomemory;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-  a3000lmem_bank.baseaddr = a3000lmemory;
-  a3000hmem_bank.baseaddr = a3000hmemory;
-  cardmem_bank.baseaddr = cardmemory;
-#endif
 }
 
 void map_overlay (int chip)
@@ -2392,10 +1866,6 @@ void map_overlay (int chip)
     int currPC = m68k_getpc(&regs);
 
     cb = &chipmem_bank;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    if (currprefs.cpu_cycle_exact && currprefs.cpu_model >= 68020)
-	cb = &chipmem_bank_ce2;
-#endif
     if (chip) {
 	map_banks (cb, 0, i, allocated_chipmem);
     } else {
@@ -2420,16 +1890,6 @@ void memory_reset (void)
 
     currprefs.chipmem_size = changed_prefs.chipmem_size;
     currprefs.bogomem_size = changed_prefs.bogomem_size;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    currprefs.mbresmem_low_size = changed_prefs.mbresmem_low_size;
-    currprefs.mbresmem_high_size = changed_prefs.mbresmem_high_size;
-    currprefs.cs_ksmirror = changed_prefs.cs_ksmirror;
-    currprefs.cs_cdtvram = changed_prefs.cs_cdtvram;
-    currprefs.cs_cdtvcard = changed_prefs.cs_cdtvcard;
-    currprefs.cs_ide = changed_prefs.cs_ide;
-    currprefs.cs_fatgaryrev = changed_prefs.cs_fatgaryrev;
-    currprefs.cs_ramseyrev = changed_prefs.cs_ramseyrev;
-#endif
     currprefs.cs_a1000ram = changed_prefs.cs_a1000ram;
 
     need_hardreset = 0;
@@ -2487,23 +1947,10 @@ void memory_reset (void)
 		}
 		  if (rd->cloanto)
 		    cloanto_rom = 1;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-		if ((rd->cpu & 4) && currprefs.cs_compatible) { 
-		    /* A4000 ROM = need ramsey, gary and ide */
-		    if (currprefs.cs_ramseyrev < 0) 
-			changed_prefs.cs_ramseyrev = currprefs.cs_ramseyrev = 0x0f;
-		    changed_prefs.cs_fatgaryrev = currprefs.cs_fatgaryrev = 0;
-		    if (currprefs.cs_ide != 2)
-			changed_prefs.cs_ide = currprefs.cs_ide = -1;
-		}
-#endif
     }
   }
 	patch_kick ();
     }
-
-//    if (cloanto_rom)
-//    	currprefs.maprom = changed_prefs.maprom = 0;
 
     map_banks (&custom_bank, 0xC0, 0xE0 - 0xC0, 0);
     map_banks (&cia_bank, 0xA0, 32, 0);
@@ -2515,7 +1962,7 @@ void memory_reset (void)
     bnk = allocated_chipmem >> 16;
     if (bnk < 0x20 + (currprefs.fastmem_size >> 16))
        bnk = 0x20 + (currprefs.fastmem_size >> 16);
-    bnk_end = (((currprefs.chipset_mask & CSMASK_AGA) /*|| currprefs.cs_pcmcia*/) ? 0xBF : 0xA0);
+    bnk_end = ((currprefs.chipset_mask & CSMASK_AGA) ? 0xBF : 0xA0);
     map_banks (&dummy_bank, bnk, bnk_end - bnk, 0);
     if (currprefs.chipset_mask & CSMASK_AGA)
        map_banks (&dummy_bank, 0xc0, 0xd8 - 0xc0, 0);
@@ -2524,47 +1971,9 @@ void memory_reset (void)
       int t = allocated_bogomem >> 16;
 	    map_banks (&bogomem_bank, 0xC0, t, 0);
     }
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    if (currprefs.cs_ide || currprefs.cs_pcmcia) {
-	if (currprefs.cs_ide == 1 || currprefs.cs_pcmcia) {
-	    map_banks (&gayle_bank, 0xD8, 6, 0);
-	    map_banks (&gayle2_bank, 0xDD, 2, 0);
-	}
-	if (currprefs.cs_pcmcia) {
-	    map_banks (&gayle_attr_bank, 0xA0, 8, 0);
-	    if (currprefs.chipmem_size <= 4 * 1024 * 1024 && currprefs.fastmem_size <= 4 * 1024 * 1024)
-	        map_banks (&gayle_common_bank, PCMCIA_COMMON_START >> 16, PCMCIA_COMMON_SIZE >> 16, 0);
-	}
-	if (currprefs.cs_ide == 2 || currprefs.cs_mbdmac == 2)
-	    map_banks (&gayle_bank, 0xDD, 1, 0);
-	if (currprefs.cs_ide < 0 && !currprefs.cs_pcmcia)
-	    map_banks (&gayle_bank, 0xD8, 6, 0);
-	if (currprefs.cs_ide < 0)
-	    map_banks (&gayle_bank, 0xDD, 1, 0);
-	}
-    if (currprefs.cs_rtc || currprefs.cs_cdtvram)
-#endif
     map_banks (&clock_bank, 0xDC, 1, 0);
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    else if (currprefs.cs_ksmirror_a8 || currprefs.cs_ide > 0 || currprefs.cs_pcmcia)
-	map_banks (&clock_bank, 0xDC, 1, 0); /* none clock */
-    if (currprefs.cs_fatgaryrev >= 0|| currprefs.cs_ramseyrev >= 0)
-	map_banks (&mbres_bank, 0xDE, 1, 0);
-    if (currprefs.cs_cd32c2p || currprefs.cs_cd32cd || currprefs.cs_cd32nvram)
-	map_banks (&akiko_bank, AKIKO_BASE >> 16, 1, 0);
-    if (currprefs.cs_mbdmac == 1)
-	a3000scsi_reset();
-    if (a3000lmemory != 0)
-        map_banks (&a3000lmem_bank, a3000lmem_start >> 16, allocated_a3000lmem >> 16, 0);
-    if (a3000hmemory != 0)
-        map_banks (&a3000hmem_bank, a3000hmem_start >> 16, allocated_a3000hmem >> 16, 0);
-    if (cardmemory != 0)
-	map_banks (&cardmem_bank, cardmem_start >> 16, allocated_cardmem >> 16, 0);
-#endif
 
     map_banks (&kickmem_bank, 0xF8, 8, 0);
-//    if (currprefs.maprom)
-//    	map_banks (&kickram_bank, currprefs.maprom >> 16, 8, 0);
     /* map beta Kickstarts at 0x200000/0xC00000/0xF00000 */
     if (kickmemory[0] == 0x11 && kickmemory[2] == 0x4e && kickmemory[3] == 0xf9 && kickmemory[4] == 0x00) {
        uae_u32 addr = kickmemory[5];
@@ -2596,38 +2005,9 @@ void memory_reset (void)
 	map_banks (&rtarea_bank, rtarea_base >> 16, 1, 0);
 #endif
 
-	  if ((cloanto_rom  /*|| currprefs.cs_ksmirror_e0*/) /*&& !currprefs.maprom*/ && !extendedkickmem_type)
+	  if ((cloanto_rom) && !extendedkickmem_type)
       map_banks (&kickmem_bank, 0xE0, 8, 0);
-
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    if (currprefs.cs_ksmirror_a8) {
-	if (extendedkickmem2_size) {
-	    map_banks (&extendedkickmem2_bank, 0xa8, 16, 0);
-	} else {
-	    struct romdata *rd = getromdatabypath(currprefs.cartfile);
-	    if (!rd || rd->id != 63) {
-		if (extendedkickmem_type == EXTENDED_ROM_CD32 || extendedkickmem_type == EXTENDED_ROM_KS)
-		    map_banks (&extendedkickmem_bank, 0xb0, 8, 0);
-		else
-		    map_banks (&kickmem_bank, 0xb0, 8, 0);
-		map_banks (&kickmem_bank, 0xa8, 8, 0);
-	    }
-	}
-    }
-
-    if (currprefs.custom_memory_sizes[0]) {
-	map_banks (&custmem1_bank,
-	    currprefs.custom_memory_addrs[0] >> 16,
-	    currprefs.custom_memory_sizes[0] >> 16, 0);
-    }
-    if (currprefs.custom_memory_sizes[1]) {
-	map_banks (&custmem2_bank,
-	    currprefs.custom_memory_addrs[1] >> 16,
-	    currprefs.custom_memory_sizes[1] >> 16, 0);
-    }
-#endif
 }
-
 
 void memory_init (void)
 {
@@ -2640,16 +2020,7 @@ void memory_init (void)
     extendedkickmem2_size = 0;
     extendedkickmem_type = 0;
     chipmemory = 0;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    allocated_a3000lmem = allocated_a3000hmem = 0;
-    a3000lmemory = a3000hmemory = 0;
-#endif
     bogomemory = 0;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    cardmemory = 0;
-    custmem1 = 0;
-    custmem2 = 0;
-#endif
 
     kickmemory = mapped_malloc (0x80000, "kick");
     memset (kickmemory, 0, 0x80000);
@@ -2666,12 +2037,6 @@ void memory_init (void)
 
 void memory_cleanup (void)
 {
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    if (a3000lmemory)
-	mapped_free (a3000lmemory);
-    if (a3000hmemory)
-	mapped_free (a3000hmemory);
-#endif
     if (bogomemory)
 	mapped_free (bogomemory);
     if (kickmemory)
@@ -2680,30 +2045,12 @@ void memory_cleanup (void)
 	xfree (a1000_bootrom);
     if (chipmemory)
 	mapped_free (chipmemory);
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    if (cardmemory) {
-	cdtv_savecardmem (cardmemory, allocated_cardmem);
-	mapped_free (cardmemory);
-    }
-    if (custmem1)
-	mapped_free (custmem1);
-    if (custmem2)
-	mapped_free (custmem2);
-#endif
 
     bogomemory = 0;
     kickmemory = 0;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    a3000lmemory = a3000hmemory = 0;
-#endif
     a1000_bootrom = 0;
     a1000_kickstart_mode = 0;
     chipmemory = 0;
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    cardmemory = 0;
-    custmem1 = 0;
-    custmem2 = 0;
-#endif
 }
 
 void memory_hardreset(void)
@@ -2714,12 +2061,6 @@ void memory_hardreset(void)
 	memset (chipmemory, 0, allocated_chipmem);
     if (bogomemory)
 	memset (bogomemory, 0, allocated_bogomem);
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-    if (a3000lmemory)
-	memset (a3000lmemory, 0, allocated_a3000lmem);
-    if (a3000hmemory)
-	memset (a3000hmemory, 0, allocated_a3000hmem);
-#endif
     expansion_clear();
 }
 
@@ -2796,20 +2137,6 @@ uae_u8 *save_bram (int *len)
     return bogomemory;
 }
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-uae_u8 *save_a3000lram (int *len)
-{
-    *len = allocated_a3000lmem;
-    return a3000lmemory;
-}
-
-uae_u8 *save_a3000hram (int *len)
-{
-    *len = allocated_a3000hmem;
-    return a3000hmemory;
-}
-#endif
-
 void restore_bootrom (int len, size_t filepos)
 {
     bootrom_filepos = filepos;
@@ -2826,20 +2153,6 @@ void restore_bram (int len, size_t filepos)
     bogo_filepos = filepos;
     changed_prefs.bogomem_size = len;
 }
-
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-void restore_a3000lram (int len, size_t filepos)
-{
-    a3000lmem_filepos = filepos;
-    changed_prefs.mbresmem_low_size = len;
-}
-
-void restore_a3000hram (int len, size_t filepos)
-{
-    a3000hmem_filepos = filepos;
-    changed_prefs.mbresmem_high_size = len;
-}
-#endif
 
 uae_u8 *restore_rom (uae_u8 *src)
 {
@@ -2876,7 +2189,7 @@ uae_u8 *restore_rom (uae_u8 *src)
 	        break;
 	    }
     }
-    src+=strlen((char *)src)+1;
+    src += strlen((char *)src) + 1;
 
     return src;
 }

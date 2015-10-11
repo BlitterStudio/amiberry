@@ -19,11 +19,6 @@
 
 #include <zlib.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#include "win32.h"
-#endif
-
 static time_t fromdostime(uae_u32 dd)
 {
     struct tm tm;
@@ -53,15 +48,12 @@ static struct zvolume *getzvolume(struct zfile *zf, unsigned int id)
 	case ArchiveFormat7Zip:
 	zv = archive_directory_7z (zf);
 	break;
-//	case ArchiveFormatRAR:
-//	zv = archive_directory_rar (zf);
-//	break;
-//	case ArchiveFormatLHA:
-//	zv = archive_directory_lha (zf);
-//	break;
-//	case ArchiveFormatLZX:
-//	zv = archive_directory_lzx (zf);
-//	break;
+	case ArchiveFormatLHA:
+	zv = archive_directory_lha (zf);
+	break;
+	case ArchiveFormatLZX:
+	zv = archive_directory_lzx (zf);
+	break;
 	case ArchiveFormatPLAIN:
 	zv = archive_directory_plain (zf);
 	break;
@@ -84,15 +76,12 @@ struct zfile *archive_getzfile(struct znode *zn, unsigned int id)
 	case ArchiveFormat7Zip:
 	zf = archive_access_7z (zn);
 	break;
-//	case ArchiveFormatRAR:
-//	zf = archive_access_rar (zn);
-//	break;
-//	case ArchiveFormatLHA:
-//	zf = archive_access_lha (zn);
-//	break;
-//	case ArchiveFormatLZX:
-//	zf = archive_access_lzx (zn);
-//	break;
+	case ArchiveFormatLHA:
+	zf = archive_access_lha (zn);
+	break;
+	case ArchiveFormatLZX:
+	zf = archive_access_lzx (zn);
+	break;
 	case ArchiveFormatPLAIN:
 	zf = archive_access_plain (zn);
 	break;
@@ -417,186 +406,6 @@ struct zfile *archive_access_7z (struct znode *zn)
     return z;
 }
 
-/* RAR */
-
-
-#ifdef _WIN32
-
-/* copy and paste job? you are only imagining it! */
-static struct zfile *rarunpackzf; /* stupid unrar.dll */
-#include <unrar.h>
-typedef HANDLE (_stdcall* RAROPENARCHIVE)(struct RAROpenArchiveData*);
-static RAROPENARCHIVE pRAROpenArchive;
-typedef int (_stdcall* RARREADHEADEREX)(HANDLE,struct RARHeaderDataEx*);
-static RARREADHEADEREX pRARReadHeaderEx;
-typedef int (_stdcall* RARPROCESSFILE)(HANDLE,int,char*,char *);
-static RARPROCESSFILE pRARProcessFile;
-typedef int (_stdcall* RARCLOSEARCHIVE)(HANDLE);
-static RARCLOSEARCHIVE pRARCloseArchive;
-typedef void (_stdcall* RARSETCALLBACK)(HANDLE,UNRARCALLBACK,LONG);
-static RARSETCALLBACK pRARSetCallback;
-typedef int (_stdcall* RARGETDLLVERSION)(void);
-static RARGETDLLVERSION pRARGetDllVersion;
-
-#endif
-
-static int rar_resetf(struct zfile *z)
-{
-    z->f = fopen (z->name, "rb");
-    if (!z->f) {
-        zfile_fclose (z);
-        return 0;
-    }
-    return 1;
-}
-
-static int canrar(void)
-{
-    static int israr;
-
-    if (israr == 0) {
-	israr = -1;
-#ifdef _WIN32
-	{
-	    HMODULE rarlib;
-
-	    rarlib = WIN32_LoadLibrary("unrar.dll");
-	    if (rarlib) {
-		pRAROpenArchive = (RAROPENARCHIVE)GetProcAddress (rarlib, "RAROpenArchive");
-		pRARReadHeaderEx = (RARREADHEADEREX)GetProcAddress (rarlib, "RARReadHeaderEx");
-		pRARProcessFile = (RARPROCESSFILE)GetProcAddress (rarlib, "RARProcessFile");
-		pRARCloseArchive = (RARCLOSEARCHIVE)GetProcAddress (rarlib, "RARCloseArchive");
-		pRARSetCallback = (RARSETCALLBACK)GetProcAddress (rarlib, "RARSetCallback");
-		pRARGetDllVersion = (RARGETDLLVERSION)GetProcAddress (rarlib, "RARGetDllVersion");
-		if (pRAROpenArchive && pRARReadHeaderEx && pRARProcessFile && pRARCloseArchive && pRARSetCallback) {
-		    israr = 1;
-		    write_log ("unrar.dll version %08.8X detected and used\n", pRARGetDllVersion ? pRARGetDllVersion() : -1);
-
-		}
-	    }
-	}
-#endif
-    }
-    return israr < 0 ? 0 : 1;
-}
-
-#ifdef _WIN32
-static int CALLBACK RARCallbackProc(UINT msg,LONG UserData,LONG P1,LONG P2)
-{
-    if (msg == UCM_PROCESSDATA) {
-	zfile_fwrite((uae_u8*)P1, 1, P2, rarunpackzf);
-	return 0;
-    }
-    return -1;
-}
-#endif
-
-#ifdef _WIN32
-struct RARContext
-{
-    struct RAROpenArchiveData OpenArchiveData;
-    struct RARHeaderDataEx HeaderData;	
-    HANDLE hArcData;
-};
-#endif
-
-
-static void archive_close_rar(struct RARContext *rc)
-{
-#ifdef _WIN32
-    xfree(rc);
-#endif
-}
-
-struct zvolume *archive_directory_rar (struct zfile *z)
-{
-#ifdef _WIN32
-    struct zvolume *zv;
-    struct RARContext *rc;
-    struct zfile *zftmp;
-    int cnt;
-
-    if (!canrar())
-	return archive_directory_arcacc (z, ArchiveFormatRAR);
-    if (z->data)
-	 /* wtf? stupid unrar.dll only accept filename as an input.. */
-	return archive_directory_arcacc (z, ArchiveFormatRAR);
-    rc = xcalloc (sizeof (struct RARContext), 1);
-    zv = zvolume_alloc(z, ArchiveFormatRAR, rc);
-    fclose (z->f); /* bleh, unrar.dll fails to open the archive if it is already open.. */
-    z->f = NULL;
-    rc->OpenArchiveData.ArcName = z->name;
-    rc->OpenArchiveData.OpenMode = RAR_OM_LIST;
-    rc->hArcData = pRAROpenArchive(&rc->OpenArchiveData);
-    if (rc->OpenArchiveData.OpenResult != 0) {
-	xfree(rc);
-	if (!rar_resetf(z)) {
-	    zfile_fclose_archive(zv);
-	    return NULL;
-	}
-        zfile_fclose_archive(zv);
-	return archive_directory_arcacc (z, ArchiveFormatRAR);
-    }
-    pRARSetCallback(rc->hArcData, RARCallbackProc, 0);
-    cnt = 0;
-    while (pRARReadHeaderEx(rc->hArcData, &rc->HeaderData) == 0) {
-	char *name = rc->HeaderData.FileName;
-	struct zarchive_info zai;
-	struct znode *zn;
-	memset(&zai, 0, sizeof zai);
-	zai.name = name;
-	zai.size = rc->HeaderData.UnpSize;
-	zai.t = fromdostime(rc->HeaderData.FileTime);
-        zn = zvolume_addfile_abs(zv, &zai);
-	zn->offset = cnt++;
-        pRARProcessFile(rc->hArcData, RAR_SKIP, NULL, NULL);
-    }
-    pRARCloseArchive(rc->hArcData);
-    zftmp = zfile_fopen_empty (z->name, 0);
-    zv->archive = zftmp;
-    zv->method = ArchiveFormatRAR;
-    return zv;
-#else
-  return NULL;
-#endif
-}
-
-struct zfile *archive_access_rar (struct znode *zn)
-{
-#ifdef _WIN32
-    struct RARContext *rc = zn->volume->handle;
-    int i;
-    struct zfile *zf = NULL;
-
-    if (zn->volume->method != ArchiveFormatRAR)
-	return archive_access_arcacc (zn);
-    rc->OpenArchiveData.OpenMode = RAR_OM_EXTRACT;
-    rc->hArcData = pRAROpenArchive(&rc->OpenArchiveData);
-    if (rc->OpenArchiveData.OpenResult != 0)
-	return NULL;
-    pRARSetCallback(rc->hArcData, RARCallbackProc, 0);
-    for (i = 0; i <= zn->offset; i++) {
-	if (pRARReadHeaderEx(rc->hArcData, &rc->HeaderData))
-	    return NULL;
-	if (i < zn->offset) {
-	    if (pRARProcessFile(rc->hArcData, RAR_SKIP, NULL, NULL))
-		goto end;
-	}
-    }
-    zf = zfile_fopen_empty (zn->fullname, zn->size);
-    rarunpackzf = zf;
-    if (pRARProcessFile(rc->hArcData, RAR_TEST, NULL, NULL)) {
-	zfile_fclose(zf);
-	zf = NULL;
-    }
-end:
-    pRARCloseArchive(rc->hArcData);
-    return zf;
-#else
-  return NULL;
-#endif
-}
-
 /* ArchiveAccess */
 
 
@@ -799,9 +608,6 @@ void archive_access_close (void *handle, unsigned int id)
 	break;
 	case ArchiveFormat7Zip:
 	archive_close_7z((struct SevenZContext *)handle);
-	break;
-	case ArchiveFormatRAR:
-	archive_close_rar((struct RARContext *)handle);
 	break;
 	case ArchiveFormatLHA:
 	break;

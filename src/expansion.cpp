@@ -358,7 +358,7 @@ static uae_u8 *fastmemory;
 static uae_u32 REGPARAM2 fastmem_lget (uaecptr addr)
 {
     uae_u8 *m;
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     m = fastmemory + addr;
     return do_get_mem_long ((uae_u32 *)m);
@@ -367,7 +367,7 @@ static uae_u32 REGPARAM2 fastmem_lget (uaecptr addr)
 static uae_u32 REGPARAM2 fastmem_wget (uaecptr addr)
 {
     uae_u8 *m;
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     m = fastmemory + addr;
     return do_get_mem_word ((uae_u16 *)m);
@@ -376,7 +376,7 @@ static uae_u32 REGPARAM2 fastmem_wget (uaecptr addr)
 static uae_u32 REGPARAM2 fastmem_bget (uaecptr addr)
 {
     uae_u8 *m;
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     m = (uae_u8 *)(fastmemory + addr);
     return do_get_mem_byte(m);
@@ -385,7 +385,7 @@ static uae_u32 REGPARAM2 fastmem_bget (uaecptr addr)
 static void REGPARAM2 fastmem_lput (uaecptr addr, uae_u32 l)
 {
     uae_u8 *m;
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     m = fastmemory + addr;
     do_put_mem_long ((uae_u32 *)m, l);
@@ -394,7 +394,7 @@ static void REGPARAM2 fastmem_lput (uaecptr addr, uae_u32 l)
 static void REGPARAM2 fastmem_wput (uaecptr addr, uae_u32 w)
 {
     uae_u8 *m;
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     m = fastmemory + addr;
     do_put_mem_word ((uae_u16 *)m, w);
@@ -403,7 +403,7 @@ static void REGPARAM2 fastmem_wput (uaecptr addr, uae_u32 w)
 static void REGPARAM2 fastmem_bput (uaecptr addr, uae_u32 b)
 {
     uae_u8 *m;
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     m = (uae_u8 *)(fastmemory + addr);
     do_put_mem_byte(m, b);
@@ -411,14 +411,14 @@ static void REGPARAM2 fastmem_bput (uaecptr addr, uae_u32 b)
 
 static int REGPARAM2 fastmem_check (uaecptr addr, uae_u32 size)
 {
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     return (addr + size) <= allocated_fastmem;
 }
 
 static uae_u8 *REGPARAM2 fastmem_xlate (uaecptr addr)
 {
-    addr -= fastmem_start /*& fastmem_mask*/;
+    addr -= fastmem_start;
     addr &= fastmem_mask;
     return fastmemory + addr;
 }
@@ -453,7 +453,7 @@ static uae_u32 REGPARAM2 filesys_lget (uaecptr addr)
 #ifdef JIT
     special_mem |= S_READ;
 #endif
-    addr -= filesys_start /*& 65535*/;
+    addr -= filesys_start;
     addr &= 65535;
     m = filesysory + addr;
     return do_get_mem_long ((uae_u32 *)m);
@@ -465,7 +465,7 @@ static uae_u32 REGPARAM2 filesys_wget (uaecptr addr)
 #ifdef JIT
     special_mem |= S_READ;
 #endif
-    addr -= filesys_start /*& 65535*/;
+    addr -= filesys_start;
     addr &= 65535;
     m = filesysory + addr;
     return do_get_mem_word ((uae_u16 *)m);
@@ -476,7 +476,7 @@ static uae_u32 REGPARAM2 filesys_bget (uaecptr addr)
 #ifdef JIT
     special_mem |= S_READ;
 #endif
-    addr -= filesys_start /*& 65535*/;
+    addr -= filesys_start;
     addr &= 65535;
     return filesysory[addr];
 }
@@ -535,7 +535,7 @@ static uae_u8 *z3fastmem;
 static uae_u32 REGPARAM2 z3fastmem_lget (uaecptr addr)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     return do_get_mem_long ((uae_u32 *)m);
@@ -544,7 +544,7 @@ static uae_u32 REGPARAM2 z3fastmem_lget (uaecptr addr)
 static uae_u32 REGPARAM2 z3fastmem_wget (uaecptr addr)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     return do_get_mem_word ((uae_u16 *)m);
@@ -553,7 +553,7 @@ static uae_u32 REGPARAM2 z3fastmem_wget (uaecptr addr)
 static uae_u32 REGPARAM2 z3fastmem_bget (uaecptr addr)
 {
     uae_u8 *m;    
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     return do_get_mem_byte (m);
@@ -562,7 +562,7 @@ static uae_u32 REGPARAM2 z3fastmem_bget (uaecptr addr)
 static void REGPARAM2 z3fastmem_lput (uaecptr addr, uae_u32 l)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     do_put_mem_long ((uae_u32 *)m, l);
@@ -571,7 +571,7 @@ static void REGPARAM2 z3fastmem_lput (uaecptr addr, uae_u32 l)
 static void REGPARAM2 z3fastmem_wput (uaecptr addr, uae_u32 w)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     do_put_mem_word ((uae_u16 *)m, w);
@@ -580,7 +580,7 @@ static void REGPARAM2 z3fastmem_wput (uaecptr addr, uae_u32 w)
 static void REGPARAM2 z3fastmem_bput (uaecptr addr, uae_u32 b)
 {
     uae_u8 *m;
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     m = z3fastmem + addr;
     do_put_mem_byte (m, b);
@@ -588,14 +588,14 @@ static void REGPARAM2 z3fastmem_bput (uaecptr addr, uae_u32 b)
 
 static int REGPARAM2 z3fastmem_check (uaecptr addr, uae_u32 size)
 {
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     return (addr + size) <= allocated_z3fastmem;
 }
 
 static uae_u8 *REGPARAM2 z3fastmem_xlate (uaecptr addr)
 {
-    addr -= z3fastmem_start /*& z3fastmem_mask*/;
+    addr -= z3fastmem_start;
     addr &= z3fastmem_mask;
     return z3fastmem + addr;
 }
@@ -627,8 +627,8 @@ static void expamem_map_fastcard (void)
 
 static void expamem_init_fastcard (void)
 {
-    uae_u16 mid = /*currprefs.cs_a2091 ? commodore :*/ uae_id;
-    uae_u8 pid = /*currprefs.cs_a2091 ? commodore_a2091_ram :*/ 1;
+    uae_u16 mid = uae_id;
+    uae_u8 pid = 1;
 
     expamem_init_clear();
     if (allocated_fastmem == 0x100000)
@@ -952,22 +952,8 @@ static uaecptr check_boot_rom (void)
 	if (uci->controller == 0)
     	return b;
     }
-/*
-    if (currprefs.socket_emu)
-	return b;
-    if (currprefs.uaeserial)
-	return b;
-    if (currprefs.scsi == 1)
-	return b;
-    if (currprefs.sana2)
-	return b;
-    if (currprefs.win32_outsidemouse)
-	return b;
-*/
     if (currprefs.gfxmem_size)
 	return b;
-//    if (currprefs.win32_automount_removable)
-//	return b;
     if (currprefs.chipmem_size > 2 * 1024 * 1024)
 	return b;
     return 0;
@@ -1079,6 +1065,9 @@ void expansion_init (void)
     z3fastmem_mask = z3fastmem_start = 0;
     z3fastmem = 0;
 
+    expamem_lo = 0;
+    expamem_hi = 0;
+    
     allocate_expamem ();
 
 #ifdef FILESYS
@@ -1106,7 +1095,7 @@ void expansion_cleanup (void)
 #endif
 #ifdef FILESYS
     if (filesysory)
-	free (filesysory); //mapped_free (filesysory);
+	free (filesysory);
     filesysory = 0;
 #endif
 }

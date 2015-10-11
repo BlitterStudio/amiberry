@@ -26,18 +26,24 @@
 #include "savestate.h"
 
 
-extern unsigned long next_sample_evtime;
-
 uae_u16 sndbuffer[4][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
 uae_u16 *sndbufpt = sndbuffer[0];
 uae_u16 *render_sndbuff = sndbuffer[0];
 uae_u16 *finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN*2;
 
 static int have_sound = 0;
+static int lastfreq;
 
-static __inline__ void sound_default_evtime(void)
+extern unsigned int new_beamcon0;
+
+static __inline__ void sound_default_evtime(int freq)
 {
-	int pal = beamcon0 & 0x20;
+	int pal = new_beamcon0 & 0x20;
+
+  if (freq < 0)
+  	freq = lastfreq;
+  lastfreq = freq;
+
 #ifndef PANDORA
 	switch(m68k_speed)
 	{
@@ -65,9 +71,9 @@ static __inline__ void sound_default_evtime(void)
 		default: // MAXVPOS_PAL?
 #endif
 			if (pal)
-				scaled_sample_evtime = (MAXHPOS_PAL*313*VBLANK_HZ_PAL*CYCLE_UNIT)/currprefs.sound_freq;
+				scaled_sample_evtime = (MAXHPOS_PAL * MAXVPOS_PAL * freq * CYCLE_UNIT + currprefs.sound_freq - 1) / currprefs.sound_freq;
 			else
-				scaled_sample_evtime = (MAXHPOS_NTSC*MAXVPOS_NTSC*VBLANK_HZ_NTSC*CYCLE_UNIT)/currprefs.sound_freq + 1;
+				scaled_sample_evtime = (MAXHPOS_NTSC * MAXVPOS_NTSC * freq * CYCLE_UNIT + currprefs.sound_freq - 1) / currprefs.sound_freq;
 #ifndef PANDORA
 			break;
 	}
@@ -78,6 +84,8 @@ static __inline__ void sound_default_evtime(void)
 static int sounddev = -1, s_oldrate = 0, s_oldbits = 0, s_oldstereo = 0;
 static int sound_thread_active = 0, sound_thread_exit = 0;
 static sem_t sound_sem;
+static sem_t sound_out_sem;
+static int output_cnt = 0;
 
 static void *sound_thread(void *unused)
 {
@@ -90,21 +98,24 @@ static void *sound_thread(void *unused)
 		while (sem_val > 1)
 		{
 			sem_wait(&sound_sem);
-			cnt++;
 			sem_getvalue(&sound_sem, &sem_val);
 		}
 
 		sem_wait(&sound_sem);
-		if (sound_thread_exit) break;
+		if (sound_thread_exit) 
+		  break;
 
+    cnt = output_cnt;
+    sem_post(&sound_out_sem);
+    
 		if(currprefs.sound_stereo)
 		  write(sounddev, sndbuffer[cnt&3], SNDBUFFER_LEN*2);
 		else
 		  write(sounddev, sndbuffer[cnt&3], SNDBUFFER_LEN);
-		cnt++;
 	}
 
   sound_thread_active = 0;
+  sem_post(&sound_out_sem);
 	return NULL;
 }
 
@@ -129,6 +140,7 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 		ret = sem_init(&sound_sem, 0, 0);
 		if (ret != 0) 
 		  write_log("sem_init() failed: %i, errno=%i\n", ret, errno);
+		sem_init(&sound_out_sem, 0, 0);
 		ret = pthread_create(&thr, NULL, sound_thread, NULL);
 		if (ret != 0) 
 		  write_log("pthread_create() failed: %i\n", ret);
@@ -172,12 +184,14 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 void pandora_stop_sound(void)
 {
 	if (sound_thread_exit)
-		printf("don't call gp2x_stop_sound more than once!\n");
+		printf("don't call pandora_stop_sound more than once!\n");
 	if (sound_thread_active)
 	{
 		sound_thread_exit = 1;
 		sem_post(&sound_sem);
-		usleep(100*1000);
+		sem_wait(&sound_out_sem);
+		sem_destroy(&sound_sem);
+		sem_destroy(&sound_out_sem);
 	}
 
 	if (sounddev > 0)
@@ -190,7 +204,9 @@ static int wrcnt = 0;
 
 void finish_sound_buffer (void)
 {
+  output_cnt = wrcnt;
 	sem_post(&sound_sem);
+	sem_wait(&sound_out_sem);
 	wrcnt++;
 	sndbufpt = render_sndbuff = sndbuffer[wrcnt&3];
 	if(currprefs.sound_stereo)
@@ -221,7 +237,7 @@ int setup_sound (void)
 
 void update_sound (int freq)
 {
-  sound_default_evtime();
+  sound_default_evtime(freq);
 }
 
 static int open_sound (void)
@@ -230,8 +246,6 @@ static int open_sound (void)
 	    return 0;
 
   init_sound_table16 ();
-
-  sample_handler = currprefs.sound_stereo ? sample16s_handler : sample16_handler;
 
   have_sound = 1;
   sound_available = 1;
@@ -249,7 +263,7 @@ void close_sound (void)
   if (!have_sound)
 	  return;
 
-  // testing shows that reopenning sound device is not a good idea on gp2x (causes random sound driver crashes)
+  // testing shows that reopenning sound device is not a good idea on pandora (causes random sound driver crashes)
   // we will close it on real exit instead
   //pandora_stop_sound();
   have_sound = 0;

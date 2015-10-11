@@ -32,19 +32,14 @@ extern void init_row_map (void);
 extern void init_hz (void);
 extern void init_custom (void);
 
-extern int screen_is_picasso;
 extern int picasso_requested_on;
 extern int picasso_on;
 
-/* Set to 1 to leave out the current frame in average frame time calculation.
- * Useful if the debugger was active.  */
-extern int bogusframe;
 extern unsigned long int hsync_counter;
 
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
 
-// extern int current_hpos (void);
 extern int vpos;
 #define current_hpos() ((get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT)
 
@@ -137,17 +132,12 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 #define RES_SHIFT(res) ((res) == RES_LORES ? 8 : (res) == RES_HIRES ? 4 : 2)
 
 /* get resolution from bplcon0 */
-//#define GET_RES(CON0) (((CON0) & 0x8000) ? RES_HIRES : ((CON0) & 0x40) ? RES_SUPERHIRES : RES_LORES)
-#define GET_RES(CON0) (((CON0) & 0x8000) ? RES_HIRES : RES_LORES)
+#define GET_RES(CON0) (((CON0) & 0x8000) ? RES_HIRES : ((CON0) & 0x40) ? RES_SUPERHIRES : RES_LORES)
 /* get sprite width from FMODE */
 #define GET_SPRITEWIDTH(FMODE) ((((FMODE) >> 2) & 3) == 3 ? 64 : (((FMODE) >> 2) & 3) == 0 ? 16 : 32)
 /* Compute the number of bitplanes from a value written to BPLCON0  */
 #define GET_PLANES(x) ((((x) >> 12) & 7) | (((x) & 0x10) >> 1))
 
-extern void alloc_cycle_ext(int, int);
-
 extern void fpscounter_reset (void);
-
-extern unsigned int beamcon0, new_beamcon0;
 
 #endif
