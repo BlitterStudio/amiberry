@@ -29,7 +29,8 @@ How to compile on Raspbian:
       sudo apt-get install libsdl-ttf2.0-dev
       sudo apt-get install libguichan-dev
 
-   Then:
-      make
-
+   Then for Raspberry Pi 2:
+	make CXX=gcc-4.8
+   Or for Raspberry Pi 1:
+	make PLATFORM=rpi1 CXX=g++-4.8
 
