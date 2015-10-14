@@ -1,3 +1,7 @@
+ifeq ($(PLATFORM),)
+	PLATFORM = rpi2
+endif
+
 ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	DEFS += -DRASPBERRY
