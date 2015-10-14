@@ -1,14 +1,20 @@
-PREFIX	=/usr
-
-#SDL_BASE = $(PREFIX)/bin/
-SDL_BASE = 
+ifeq ($(PLATFORM),rpi2)
+	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	DEFS += -DRASPBERRY
+	HAVE_NEON = 1
+	USE_PICASSO96 = 1
+else ifeq ($(PLATFORM),rpi1)
+	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
+	DEFS += -DRASPBERRY
+else ifeq ($(PLATFORM),armv6)
+	CPU_FLAGS += -march=armv6j -mfpu=vfp -mfloat-abi=hard
+endif
 
 NAME   = uae4arm
 O      = o
 RM     = rm -f
-CXX    = g++-4.8
+CXX    = g++
 STRIP  = strip
-#AS     = as
 
 PROG   = $(NAME)
 
@@ -18,38 +24,37 @@ PANDORA=1
 
 #USE_XFD=1
 
-DEFAULT_CFLAGS = `$(SDL_BASE)sdl-config --cflags`
-LDFLAGS = -lSDL -lpthread  -lz -lSDL_image -lpng -lrt
+SDL_CFLAGS = `sdl-config --cflags`
 
-MORE_CFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DDOUBLEBUFFER -DSIX_AXIS_WORKAROUND
+DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
+DEFS += -DUSE_SDL -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
 
-MORE_CFLAGS += -DGP2X -DPANDORA -DDOUBLEBUFFER -DARMV6_ASSEMBLY -DUSE_ARMNEON -DRASPBERRY -DPICASSO96 -DSIX_AXIS_WORKAROUND
+ifeq ($(USE_PICASSO96), 1)
+	DEFS += -DPICASSO96
+endif
+
+ifeq ($(HAVE_NEON), 1)
+	DEFS += -DUSE_ARMNEON
+endif
+
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
 
-MORE_CFLAGS += -DCPU_arm -DARM_ASSEMBLY
-
-MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -fomit-frame-pointer -Wno-unused -Wno-format -DUSE_SDL -DGCCCONSTFUNC="__attribute__((const))" -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
-LDFLAGS +=  -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
+MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -Wno-unused -Wno-format  -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
+LDFLAGS +=  -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
 
-MORE_CFLAGS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
-
-MORE_CFLAGS += -mhard-float -ffast-math -mfpu=neon
 ifndef DEBUG
-MORE_CFLAGS += -O3
-MORE_CFLAGS += -fstrict-aliasing
-MORE_CFLAGS += -fweb -frename-registers -fomit-frame-pointer
-#MORE_CFLAGS += -falign-functions=32 -falign-loops -falign-labels -falign-jumps
-MORE_CFLAGS += -finline -finline-functions -fno-builtin
-#MORE_CFLAGS += -S
+MORE_CFLAGS += -O3 -fomit-frame-pointer
+MORE_CFLAGS += -finline -fno-builtin
 else
 MORE_CFLAGS += -ggdb
 endif
 
-ASFLAGS += -mfloat-abi=hard -mfpu=neon
+ASFLAGS += $(CPU_FLAGS)
 
-CFLAGS  = $(DEFAULT_CFLAGS) $(MORE_CFLAGS)
+CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
 OBJS =	\
 	src/audio.o \
@@ -119,12 +124,10 @@ OBJS =	\
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/md-pandora/support.o \
-	src/od-pandora/neon_helper.o \
 	src/od-pandora/fsdb_host.o \
 	src/od-pandora/joystick.o \
 	src/od-pandora/keyboard.o \
 	src/od-pandora/inputmode.o \
-	src/od-pandora/picasso96.o \
 	src/od-pandora/writelog.o \
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \
@@ -165,6 +168,14 @@ ifdef PANDORA
 OBJS += src/od-pandora/gui/sdltruetypefont.o
 endif
 
+ifeq ($(USE_PICASSO96), 1)
+	OBJS += src/od-pandora/picasso96.o
+endif
+
+ifeq ($(HAVE_NEON), 1)
+	OBJS += src/od-pandora/neon_helper.o
+endif
+
 ifdef USE_XFD
 OBJS += src/cpu_small.o \
 	src/cpuemu_small.o \
@@ -187,10 +198,10 @@ OBJS += src/compemu_support.o
 CPPFLAGS  = $(CFLAGS)
 
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(CXX) -O3 -pipe -march=armv7-a -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=neon -mfloat-abi=hard -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
+	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 
 $(PROG): $(OBJS)
-	$(CXX) $(CFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
+	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
