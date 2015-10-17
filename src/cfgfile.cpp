@@ -408,6 +408,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
     cfgfile_dwrite (f, "gfx_width_fullscreen=%d\n", p->gfx_size_fs.width);
     cfgfile_dwrite (f, "gfx_height_fullscreen=%d\n", p->gfx_size_fs.height);
 
+#ifdef RASPBERRY
+    cfgfile_dwrite (f, "gfx_correct_aspect=%d\n", p->gfx_correct_aspect);
+#endif
+
     cfgfile_write (f, "immediate_blits=%s\n", p->immediate_blits ? "true" : "false");
     cfgfile_write (f, "fast_copper=%s\n", p->fast_copper ? "true" : "false");
     cfgfile_write (f, "ntsc=%s\n", p->ntscmode ? "true" : "false");
@@ -621,6 +625,13 @@ static int cfgfile_parse_host (struct uae_prefs *p, char *option, char *value)
 	|| cfgfile_intval (option, value, "gfx_height_fullscreen", &p->gfx_size_fs.height, 1))
 
 	    return 1;
+
+#ifdef RASPBERRY
+    if (cfgfile_intval (option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
+	    return 1;   
+#endif
+
+
 
 	if (cfgfile_string (option, value, "config_info", p->info, sizeof p->info)
 	|| cfgfile_string (option, value, "config_description", p->description, sizeof p->description))
