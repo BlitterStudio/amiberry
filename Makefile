@@ -199,8 +199,6 @@ OBJS += src/compemu_fpp.o
 OBJS += src/compstbl.o
 OBJS += src/compemu_support.o
 
-CPPFLAGS  = $(CFLAGS)
-
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 
