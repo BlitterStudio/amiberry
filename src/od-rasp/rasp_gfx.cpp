@@ -258,18 +258,18 @@ static void open_screen(struct uae_prefs *p)
   if (currprefs.gfx_correct_aspect == 0)
   {
 	// Fullscreen.
-	vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width * 2)/100,
+	vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width * 1)/100,
 							(dispmanxdinfo.height * 2)/100 ,
-							dispmanxdinfo.width - (dispmanxdinfo.width * 4)/100 ,
-							dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 );
+							dispmanxdinfo.width - (dispmanxdinfo.width * 2)/100 ,
+							dispmanxdinfo.height - (dispmanxdinfo.height * 4)/100 );
   }
   else
   {
 	// 4/3 scrink.
 	vc_dispmanx_rect_set( &dst_rect, ((dispmanxdinfo.width * 13)/100) ,
-							(dispmanxdinfo.height * 3)/100 ,
-							(dispmanxdinfo.width - ((dispmanxdinfo.width * 32)/100)) ,
-							dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 );
+							(dispmanxdinfo.height * 1)/100 ,
+							(dispmanxdinfo.width - ((dispmanxdinfo.width * 26)/100)) ,
+							dispmanxdinfo.height - (dispmanxdinfo.height * 2)/100 );
   }
 
   // For debug, in order to avoid full screen.
@@ -472,8 +472,8 @@ void flush_screen ()
 
 void black_screen_now(void)
 {
-	//SDL_FillRect(prSDLScreen,NULL,0);
-	//SDL_Flip(prSDLScreen);
+	SDL_FillRect(Dummy_prSDLScreen,NULL,0);
+	SDL_Flip(Dummy_prSDLScreen);
 }
 
 
