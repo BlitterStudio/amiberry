@@ -348,7 +348,7 @@ static int native_dos_op (uae_u32 mode, uae_u32 p1, uae_u32 p2, uae_u32 p3)
     return 0;
 }
 
-static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
+static uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *context)
 {
 #define ARG0 (get_long (m68k_areg (&context->regs, 7) + 4))
 #define ARG1 (get_long (m68k_areg (&context->regs, 7) + 8))
@@ -357,7 +357,8 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
 #define ARG4 (get_long (m68k_areg (&context->regs, 7) + 20))
 #define ARG5 (get_long (m68k_areg (&context->regs, 7) + 24))
 
-    switch (ARG0) {
+    switch (ARG0) 
+    {
      case 0: return emulib_GetVersion ();
      case 1: return emulib_GetUaeConfig (ARG1);
      case 2: return emulib_SetUaeConfig (ARG1);
@@ -376,34 +377,6 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
      case 14: return emulib_GetDisk (ARG1, ARG2);
      case 15: return emulib_Debug ();
 
-#ifdef PICASSO96
-     case 16: return picasso_FindCard (&context->regs);
-     case 17: return picasso_FillRect (&context->regs);
-     case 18: return picasso_SetSwitch (&context->regs);
-     case 19: return picasso_SetColorArray (&context->regs);
-     case 20: return picasso_SetDAC (&context->regs);
-     case 21: return picasso_SetGC (&context->regs);
-     case 22: return picasso_SetPanning (&context->regs);
-     case 23: return picasso_CalculateBytesPerRow (&context->regs);
-     case 24: return picasso_BlitPlanar2Chunky (&context->regs);
-     case 25: return picasso_BlitRect (&context->regs);
-     case 26: return picasso_SetDisplay (&context->regs);
-     case 27: return picasso_BlitTemplate (&context->regs);
-     case 28: return picasso_BlitRectNoMaskComplete (&context->regs);
-     case 29: return picasso_InitCard (&context->regs);
-     case 30: return picasso_BlitPattern (&context->regs);
-     case 31: return picasso_InvertRect (&context->regs);
-     case 32: return picasso_BlitPlanar2Direct (&context->regs);
-     /* case 34: return picasso_WaitVerticalSync (); handled in asm-code */
-     case 35: return allocated_gfxmem ? 1 : 0;
-#ifdef HARDWARE_SPRITE_EMULATION
-     case 36: return picasso_SetSprite (&context->regs);
-     case 37: return picasso_SetSpritePosition (&context->regs);
-     case 38: return picasso_SetSpriteImage (&context->regs);
-     case 39: return picasso_SetSpriteColor (&context->regs);
-#endif
-     case 40: return picasso_DrawLine (&context->regs);
-#endif
      case 68: return emulib_Minimize ();
      case 69: return emulib_ExecuteNativeCode (&context->regs);
 
@@ -425,6 +398,19 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
     return 0;
 }
 
+static uae_u32 REGPARAM2 uaelib_demux (TrapContext *context)
+{
+    uae_u32 v;
+    struct regstruct *r = &context->regs;
+
+    if (ARG0 >= 16 && ARG0 <= 39) {
+	write_log ("uaelib: obsolete Picasso96 uaelib hook called, call ignored\n");
+	return 0;
+    }
+    v = uaelib_demux2 (context);
+    return v;
+}
+
 /*
  * Installs the UAE LIBRARY
  */
@@ -440,7 +426,7 @@ void emulib_install (void)
     dw ((rtarea_base >> 16) | get_word(rtarea_base + 36));
     dw (get_word(rtarea_base + 38) + 12);
 #endif
-    calltrap (define_trap (uaelib_demux, 0, ""));
+    calltrap (deftrapres (uaelib_demux, 0, "uaelib_demux"));
     dw (RTS);
     org (a);
 }

@@ -34,7 +34,7 @@ uae_u16 *finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN*2;
 static int have_sound = 0;
 static int lastfreq;
 
-extern unsigned int new_beamcon0;
+extern uae_u16 new_beamcon0;
 
 static __inline__ void sound_default_evtime(int freq)
 {
@@ -291,4 +291,8 @@ void reset_sound (void)
   	return;
 
   memset(sndbuffer, 0, 2 * 4 * (SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS);
+}
+
+void sound_volume (int dir)
+{
 }

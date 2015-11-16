@@ -409,7 +409,7 @@ static int NOINLINE linetoscr_16_shrink1 (int spix, int dpix, int stoppos)
 static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
-    uae_u8 xor_val = (uae_u8)(dp_for_drawing->bplcon4 >> 8);
+    uae_u8 xor_val = bplxor;
 
     if (dp_for_drawing->ham_seen) {
         int rem;
@@ -453,7 +453,6 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
             uae_u32 dpix_val;
             if (spritepixels[spix]) {
                 dpix_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -477,7 +476,6 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
         
             if (spritepixels[spix]) {
                 out_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -489,7 +487,6 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
             spix++;
             if (spritepixels[spix]) {
                 dpix_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -514,7 +511,6 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
             uae_u32 dpix_val;
             if (spritepixels[spix]) {
                 dpix_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -628,7 +624,7 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
 static int NOINLINE linetoscr_16_stretch1_aga (int spix, int dpix, int stoppos)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
-    uae_u8 xor_val = (uae_u8)(dp_for_drawing->bplcon4 >> 8);
+    uae_u8 xor_val = bplxor;
 
     if (dp_for_drawing->ham_seen) {
         while (dpix < stoppos) {
@@ -656,7 +652,6 @@ static int NOINLINE linetoscr_16_stretch1_aga (int spix, int dpix, int stoppos)
         
             if (spritepixels[spix]) {
                 out_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -724,7 +719,7 @@ static int NOINLINE linetoscr_16_stretch1_aga (int spix, int dpix, int stoppos)
 static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
-    uae_u8 xor_val = (uae_u8)(dp_for_drawing->bplcon4 >> 8);
+    uae_u8 xor_val = bplxor;
 
     if (dp_for_drawing->ham_seen) {
         int rem;
@@ -768,7 +763,6 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
             uae_u32 dpix_val;
             if (spritepixels[spix]) {
                 dpix_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -792,7 +786,6 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
         
             if (spritepixels[spix]) {
                 out_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -804,7 +797,6 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
             spix += 2;
             if (spritepixels[spix]) {
                 dpix_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];
@@ -829,7 +821,6 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
             uae_u32 dpix_val;
             if (spritepixels[spix]) {
                 dpix_val = colors_for_drawing.acolors[spritepixels[spix]];
-                spritepixels[spix] = 0;
             } else {
                 spix_val = pixdata.apixels[spix];
                 unsigned int val = lookup[spix_val];

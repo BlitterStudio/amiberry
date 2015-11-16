@@ -1366,7 +1366,7 @@ createio:
 	jsr AllocMem(a6)
 	move.l d0,a0
 	move.b #10,8(a0) ;NT_MESSAGE
-	move.l d2,18(a0)
+	move.w d2,18(a0)
 	move.l a2,14(a0)
 .f	tst.l d0
 	movem.l (sp)+,d2/a2/a6
@@ -1586,7 +1586,7 @@ mousehackint:
 	move.l 12(a1),a1
 	move.l 4.w,a6
 	jsr -$0144(a6) ; Signal
-.l2 lea $dff000,a0
+.l2	lea $dff000,a0
 	moveq #0,d0
 	rts
 

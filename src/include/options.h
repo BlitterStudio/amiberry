@@ -8,8 +8,8 @@
   */
 
 #define UAEMAJOR 1
-#define UAEMINOR 4
-#define UAESUBREV 6
+#define UAEMINOR 5
+#define UAESUBREV 3
 
 extern long int version;
 
@@ -75,6 +75,7 @@ struct uae_prefs {
     struct wh gfx_size_win;
     struct wh gfx_size_fs;
     struct wh gfx_size;
+    int gfx_resolution;
  
 #ifdef RASPBERRY
     int gfx_correct_aspect;
@@ -89,6 +90,7 @@ struct uae_prefs {
     int fast_copper;
     int cpu_idle;
     int floppy_speed;
+    int floppy_write_length;
     int tod_hack;
 
     int cs_a1000ram;
@@ -108,6 +110,7 @@ struct uae_prefs {
     int cpu_compatible;
     int address_space_24;
     int picasso96_nocustom;
+    int picasso96_modeflags;
 
     uae_u32 z3fastmem_size;
     uae_u32 z3fastmem_start;

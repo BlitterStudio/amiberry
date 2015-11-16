@@ -11,6 +11,7 @@ struct zvolume;
 typedef int (*zfile_callback)(struct zfile*, void*);
 
 extern struct zfile *zfile_fopen (const char *, const char *);
+extern struct zfile *zfile_fopen_nozip (const char *, const char *);
 extern struct zfile *zfile_fopen_empty (const char *name, int size);
 extern struct zfile *zfile_fopen_data (const char *name, int size, uae_u8 *data);
 extern int zfile_exists (const char *name);
@@ -48,6 +49,7 @@ extern int iszip (struct zfile *z);
 #define ZFILE_HDF 5
 #define ZFILE_STATEFILE 6
 #define ZFILE_NVR 7
+#define ZFILE_HDFRDB 8
 
 extern const char *uae_archive_extensions[];
 extern const char *uae_ignoreextensions[];

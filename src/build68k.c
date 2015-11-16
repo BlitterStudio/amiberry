@@ -283,13 +283,13 @@ int main(int argc, char **argv)
 	    while (!isspace(*p++));
 	    *p = 0;
 	    printf("/* %s */\n", tmp);
-	    printf("{0x%04.4X,%2d,{", bitpattern, n_variable);
+	    printf("{0x%04X,%2d,{", bitpattern, n_variable);
 	    for (j = 0; j < 16; j++) {
 		printf("%2d", bitpos[j]);
 		if (j < 15)
 		    printf(",");
 	    }
-	    printf ("},0x%04.4X,%d,%d,{", bitmask, cpulevel, plevel);
+	    printf ("},0x%04X,%d,%d,{", bitmask, cpulevel, plevel);
 	    for(i = 0; i < 5; i++) {
 		printf("{%d,%d}%s", flaguse[i], flagset[i], i == 4 ? "" : ",");
 	    }

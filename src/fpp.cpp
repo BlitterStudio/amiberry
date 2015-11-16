@@ -146,6 +146,7 @@ static void fpu_op_illg (uae_u32 opcode, struct regstruct *regs, int pcoffset)
 	 * Line F exception with different stack frame.. */
 	uaecptr newpc = m68k_getpc(regs);
 	uaecptr oldpc = newpc - pcoffset;
+	regs->t0 = regs->t1 = 0;
 	MakeSR(regs);
         if (!regs->s) {
 	    regs->usp = m68k_areg(regs, 7);
@@ -500,7 +501,7 @@ STATIC_INLINE int put_fp_value (struct regstruct *regs, fptype value, uae_u32 op
 
 #if DEBUG_FPP
     if (!isinrom ())
-	write_log ("PUTFP: %f %04.4X %04.4X\n", value, opcode, extra);
+	write_log ("PUTFP: %f %04X %04X\n", value, opcode, extra);
 #endif
     if (!(extra & 0x4000)) {
 	regs->fp[(extra >> 10) & 7] = value;
@@ -1614,6 +1615,7 @@ uae_u8 *restore_fpu (uae_u8 *src)
 	regs.fp[i] = to_exten (w1, w2, w3);
     }
     regs.fpcr = restore_u32 ();
+    native_set_fpucw (regs.fpcr);
     regs.fpsr = restore_u32 ();
     regs.fpiar = restore_u32 ();
     if (flags & 0x80000000) {

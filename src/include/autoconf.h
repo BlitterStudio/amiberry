@@ -7,6 +7,9 @@
   */
 
 
+#define RTAREA_DEFAULT 0xf00000
+#define RTAREA_BACKUP  0xef0000
+
 extern uae_u32 addr (int);
 extern void db (uae_u8);
 extern void dw (uae_u16);
@@ -15,9 +18,11 @@ extern uae_u32 ds (const char *);
 extern void calltrap (uae_u32);
 extern void org (uae_u32);
 extern uae_u32 here (void);
+extern uaecptr makedatatable (uaecptr resid, uaecptr resname, uae_u8 type, uae_s8 priority, uae_u16 ver, uae_u16 rev);
 
 #define deftrap(f) define_trap((f), 0, "")
-# define deftrap2(f, mode, str) define_trap((f), (mode), (str))
+#define deftrap2(f, mode, str) define_trap((f), (mode), (str))
+#define deftrapres(f, mode, str) define_trap((f), (mode | TRAPFLAG_UAERES), (str))
 
 extern void align (int);
 
@@ -39,6 +44,7 @@ extern uaecptr filesys_initcode;
 
 extern int is_hardfile (int unit_no);
 extern int nr_units (void);
+extern int nr_directory_units (struct uae_prefs*);
 extern uaecptr need_uae_boot_rom (void);
 
 struct mountedinfo
@@ -80,7 +86,4 @@ extern void expansion_init (void);
 extern void expansion_cleanup (void);
 extern void expansion_clear (void);
 
-#define TRAPFLAG_NO_REGSAVE 1
-#define TRAPFLAG_NO_RETVAL 2
-#define TRAPFLAG_EXTRA_STACK 4
-#define TRAPFLAG_DORET 8
+extern void uaegfx_install_code (void);

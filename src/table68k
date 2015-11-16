@@ -26,6 +26,7 @@
 %
 % Arp: --> -(Ar)
 % ArP: --> (Ar)+
+% Ara: --> (Ar)
 % L: --> (xxx.L)
 %
 % Fields on a line:
@@ -129,7 +130,7 @@
 0100 1000 10dd dDDD:00:-----:-----:--:02: MVMLE.W #1,d[!Dreg,Areg,Aipi]
 0100 1000 11dd dDDD:00:-NZ00:-----:--:30: EXT.L   d[Dreg]
 0100 1000 11dd dDDD:00:-----:-----:--:02: MVMLE.L #1,d[!Dreg,Areg,Aipi]
-0100 1001 11dd dDDD:00:-NZ00:-----:--:30: EXT.B   d[Dreg]
+0100 1001 11dd dDDD:20:-NZ00:-----:--:30: EXT.B   d[Dreg]
 0100 1010 zzss sSSS:00:-NZ00:-----:--:10: TST.z   s
 0100 1010 11dd dDDD:00:-NZ00:-----:--:30: TAS.B   d[!Areg]
 0100 1010 1111 1100:00:-----:-----:T-:00: ILLEGAL
@@ -153,7 +154,7 @@
 0100 1110 0111 1010:12:-----:-----:T-:10: MOVEC2  #1
 0100 1110 0111 1011:12:-----:-----:T-:10: MOVE2C  #1
 0100 1110 10ss sSSS:00://///://///:-J:80: JSR.L   s[!Dreg,Areg,Aipi,Apdi,Immd]
-0100 rrr1 00ss sSSS:00:-N???:-----:T-:11: CHK.L   s[!Areg],Dr
+0100 rrr1 00ss sSSS:20:-N???:-----:T-:11: CHK.L   s[!Areg],Dr
 0100 rrr1 10ss sSSS:00:-N???:-----:T-:11: CHK.W   s[!Areg],Dr
 0100 1110 11ss sSSS:00://///://///:-J:80: JMP.L   s[!Dreg,Areg,Aipi,Apdi,Immd]
 0100 rrr1 11ss sSSS:00:-----:-----:--:02: LEA.L   s[!Dreg,Areg,Aipi,Apdi,Immd],Ar
@@ -262,21 +263,30 @@
 1111 0011 01ss sSSS:22:-----:-----:--:10: FRESTORE s[!Dreg,Areg,Apdi,Immd]
 
 % 68030 MMU (allowed addressing modes not checked!)
-1111 0000 00ss sSSS:30:?????:?????:T-:11: MMUOP30A s[!Immd],#1
-1111 1000 00ss sSSS:30:?????:?????:T-:11: MMUOP30B s[!Immd]
-% Misc MMU
-1111 0101 iiii iSSS:40:?????:?????:T-:11: MMUOP    #i,s
+1111 0000 00ss sSSS:32:?????:?????:T-:11: MMUOP030 s[!Immd],#1
 
-% 68040 instructions
+% 68040/68060 instructions
 1111 0100 pp00 1rrr:42:-----:-----:T-:02: CINVL    #p,Ar
 1111 0100 pp01 0rrr:42:-----:-----:T-:02: CINVP    #p,Ar
 1111 0100 pp01 1rrr:42:-----:-----:T-:00: CINVA    #p
 1111 0100 pp10 1rrr:42:-----:-----:T-:02: CPUSHL   #p,Ar
 1111 0100 pp11 0rrr:42:-----:-----:T-:02: CPUSHP   #p,Ar
 1111 0100 pp11 1rrr:42:-----:-----:T-:00: CPUSHA   #p
+1111 0101 0000 0rrr:42:-----:-----:T-:00: PFLUSHN  Ara
+1111 0101 0000 1rrr:42:-----:-----:T-:00: PFLUSH   Ara
+1111 0101 0001 0rrr:42:-----:-----:T-:00: PFLUSHAN Ara
+1111 0101 0001 1rrr:42:-----:-----:T-:00: PFLUSHA  Ara
+1111 0101 0100 1rrr:42:-----:-----:T-:00: PTESTR   Ara
+1111 0101 0110 1rrr:42:-----:-----:T-:00: PTESTW   Ara
+
 % destination register number is encoded in the following word
 1111 0110 0010 0rrr:40:-----:-----:--:12: MOVE16   ArP,AxP
 1111 0110 00ss sSSS:40:-----:-----:--:12: MOVE16   s[Dreg-Aipi],Al
 1111 0110 00dd dDDD:40:-----:-----:--:12: MOVE16   Al,d[Areg-Aipi]
 1111 0110 00ss sSSS:40:-----:-----:--:12: MOVE16   s[Aind],Al
 1111 0110 00dd dDDD:40:-----:-----:--:12: MOVE16   Al,d[Aipi-Aind]
+
+% 68060
+1111 1000 0000 0000:52:?????:?????:T-:10: LPSTOP   #1
+1111 0101 1000 1rrr:52:-----:-----:T-:00: PLPAR    Ara
+1111 0101 1100 1rrr:52:-----:-----:T-:00: PLPAW    Ara

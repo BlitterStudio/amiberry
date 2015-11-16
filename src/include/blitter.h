@@ -33,6 +33,7 @@ extern void build_blitfilltable (void);
 extern void do_blitter (void);
 extern void blitter_done_notify (void);
 extern void blitter_slowdown (int, int, int, int);
+
 extern void blitter_check_start (void);
 typedef void blitter_func(uaecptr, uaecptr, uaecptr, uaecptr, struct bltinfo *_GCCRES_);
 

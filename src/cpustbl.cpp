@@ -827,17 +827,39 @@ const struct cputbl CPUFUNC(op_smalltbl_0)[] = {
 { CPUFUNC(op_40f0_0), 16624 }, /* MVSR2 */
 { CPUFUNC(op_40f8_0), 16632 }, /* MVSR2 */
 { CPUFUNC(op_40f9_0), 16633 }, /* MVSR2 */
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4100_0), 16640 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4110_0), 16656 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4118_0), 16664 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4120_0), 16672 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4128_0), 16680 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4130_0), 16688 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4138_0), 16696 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_4139_0), 16697 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_413a_0), 16698 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_413b_0), 16699 }, /* CHK */
+#endif
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_413c_0), 16700 }, /* CHK */
+#endif
 { CPUFUNC(op_4180_0), 16768 }, /* CHK */
 { CPUFUNC(op_4190_0), 16784 }, /* CHK */
 { CPUFUNC(op_4198_0), 16792 }, /* CHK */
@@ -1010,7 +1032,9 @@ const struct cputbl CPUFUNC(op_smalltbl_0)[] = {
 { CPUFUNC(op_48f0_0), 18672 }, /* MVMLE */
 { CPUFUNC(op_48f8_0), 18680 }, /* MVMLE */
 { CPUFUNC(op_48f9_0), 18681 }, /* MVMLE */
+#ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_49c0_0), 18880 }, /* EXT */
+#endif
 { CPUFUNC(op_4a00_0), 18944 }, /* TST */
 { CPUFUNC(op_4a10_0), 18960 }, /* TST */
 { CPUFUNC(op_4a18_0), 18968 }, /* TST */
@@ -2282,37 +2306,37 @@ const struct cputbl CPUFUNC(op_smalltbl_0)[] = {
 { CPUFUNC(op_eff9_0), 61433 }, /* BFINS */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP30A */
+{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP30A */
+{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f010_0), 61456 }, /* MMUOP30A */
+{ CPUFUNC(op_f010_0), 61456 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP30A */
+{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP30A */
+{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f028_0), 61480 }, /* MMUOP30A */
+{ CPUFUNC(op_f028_0), 61480 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f030_0), 61488 }, /* MMUOP30A */
+{ CPUFUNC(op_f030_0), 61488 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f038_0), 61496 }, /* MMUOP30A */
+{ CPUFUNC(op_f038_0), 61496 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f039_0), 61497 }, /* MMUOP30A */
+{ CPUFUNC(op_f039_0), 61497 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f03a_0), 61498 }, /* MMUOP30A */
+{ CPUFUNC(op_f03a_0), 61498 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f03b_0), 61499 }, /* MMUOP30A */
+{ CPUFUNC(op_f03b_0), 61499 }, /* MMUOP030 */
 #endif
 #ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_f200_0), 61952 }, /* FPP */
@@ -2495,7 +2519,28 @@ const struct cputbl CPUFUNC(op_smalltbl_0)[] = {
 { CPUFUNC(op_f43f_0), 62527 }, /* CPUSHA */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f500_0), 62720 }, /* MMUOP */
+{ CPUFUNC(op_f500_0), 62720 }, /* PFLUSHN */
+#endif
+#ifndef CPUEMU_68000_ONLY
+{ CPUFUNC(op_f508_0), 62728 }, /* PFLUSH */
+#endif
+#ifndef CPUEMU_68000_ONLY
+{ CPUFUNC(op_f510_0), 62736 }, /* PFLUSHAN */
+#endif
+#ifndef CPUEMU_68000_ONLY
+{ CPUFUNC(op_f518_0), 62744 }, /* PFLUSHA */
+#endif
+#ifndef CPUEMU_68000_ONLY
+{ CPUFUNC(op_f548_0), 62792 }, /* PTESTR */
+#endif
+#ifndef CPUEMU_68000_ONLY
+{ CPUFUNC(op_f568_0), 62824 }, /* PTESTW */
+#endif
+#ifndef CPUEMU_68000_ONLY
+{ CPUFUNC(op_f588_0), 62856 }, /* PLPAR */
+#endif
+#ifndef CPUEMU_68000_ONLY
+{ CPUFUNC(op_f5c8_0), 62920 }, /* PLPAW */
 #endif
 #ifndef CPUEMU_68000_ONLY
 { CPUFUNC(op_f600_0), 62976 }, /* MOVE16 */
@@ -2513,37 +2558,7 @@ const struct cputbl CPUFUNC(op_smalltbl_0)[] = {
 { CPUFUNC(op_f620_0), 63008 }, /* MOVE16 */
 #endif
 #ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f800_0), 63488 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f808_0), 63496 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f810_0), 63504 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f818_0), 63512 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f820_0), 63520 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f828_0), 63528 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f830_0), 63536 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f838_0), 63544 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f839_0), 63545 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f83a_0), 63546 }, /* MMUOP30B */
-#endif
-#ifndef CPUEMU_68000_ONLY
-{ CPUFUNC(op_f83b_0), 63547 }, /* MMUOP30B */
+{ CPUFUNC(op_f800_0), 63488 }, /* LPSTOP */
 #endif
 { 0, 0 }};
 #endif /* CPUEMU_0 */
@@ -4349,17 +4364,17 @@ const struct cputbl CPUFUNC(op_smalltbl_1)[] = {
 { CPUFUNC(op_eff0_0), 61424 }, /* BFINS */
 { CPUFUNC(op_eff8_0), 61432 }, /* BFINS */
 { CPUFUNC(op_eff9_0), 61433 }, /* BFINS */
-{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP30A */
-{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP30A */
-{ CPUFUNC(op_f010_0), 61456 }, /* MMUOP30A */
-{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP30A */
-{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP30A */
-{ CPUFUNC(op_f028_0), 61480 }, /* MMUOP30A */
-{ CPUFUNC(op_f030_0), 61488 }, /* MMUOP30A */
-{ CPUFUNC(op_f038_0), 61496 }, /* MMUOP30A */
-{ CPUFUNC(op_f039_0), 61497 }, /* MMUOP30A */
-{ CPUFUNC(op_f03a_0), 61498 }, /* MMUOP30A */
-{ CPUFUNC(op_f03b_0), 61499 }, /* MMUOP30A */
+{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP030 */
+{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP030 */
+{ CPUFUNC(op_f010_0), 61456 }, /* MMUOP030 */
+{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP030 */
+{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP030 */
+{ CPUFUNC(op_f028_0), 61480 }, /* MMUOP030 */
+{ CPUFUNC(op_f030_0), 61488 }, /* MMUOP030 */
+{ CPUFUNC(op_f038_0), 61496 }, /* MMUOP030 */
+{ CPUFUNC(op_f039_0), 61497 }, /* MMUOP030 */
+{ CPUFUNC(op_f03a_0), 61498 }, /* MMUOP030 */
+{ CPUFUNC(op_f03b_0), 61499 }, /* MMUOP030 */
 { CPUFUNC(op_f200_0), 61952 }, /* FPP */
 { CPUFUNC(op_f208_0), 61960 }, /* FPP */
 { CPUFUNC(op_f210_0), 61968 }, /* FPP */
@@ -4420,23 +4435,17 @@ const struct cputbl CPUFUNC(op_smalltbl_1)[] = {
 { CPUFUNC(op_f43d_0), 62525 }, /* CPUSHA */
 { CPUFUNC(op_f43e_0), 62526 }, /* CPUSHA */
 { CPUFUNC(op_f43f_0), 62527 }, /* CPUSHA */
-{ CPUFUNC(op_f500_0), 62720 }, /* MMUOP */
+{ CPUFUNC(op_f500_0), 62720 }, /* PFLUSHN */
+{ CPUFUNC(op_f508_0), 62728 }, /* PFLUSH */
+{ CPUFUNC(op_f510_0), 62736 }, /* PFLUSHAN */
+{ CPUFUNC(op_f518_0), 62744 }, /* PFLUSHA */
+{ CPUFUNC(op_f548_0), 62792 }, /* PTESTR */
+{ CPUFUNC(op_f568_0), 62824 }, /* PTESTW */
 { CPUFUNC(op_f600_0), 62976 }, /* MOVE16 */
 { CPUFUNC(op_f608_0), 62984 }, /* MOVE16 */
 { CPUFUNC(op_f610_0), 62992 }, /* MOVE16 */
 { CPUFUNC(op_f618_0), 63000 }, /* MOVE16 */
 { CPUFUNC(op_f620_0), 63008 }, /* MOVE16 */
-{ CPUFUNC(op_f800_0), 63488 }, /* MMUOP30B */
-{ CPUFUNC(op_f808_0), 63496 }, /* MMUOP30B */
-{ CPUFUNC(op_f810_0), 63504 }, /* MMUOP30B */
-{ CPUFUNC(op_f818_0), 63512 }, /* MMUOP30B */
-{ CPUFUNC(op_f820_0), 63520 }, /* MMUOP30B */
-{ CPUFUNC(op_f828_0), 63528 }, /* MMUOP30B */
-{ CPUFUNC(op_f830_0), 63536 }, /* MMUOP30B */
-{ CPUFUNC(op_f838_0), 63544 }, /* MMUOP30B */
-{ CPUFUNC(op_f839_0), 63545 }, /* MMUOP30B */
-{ CPUFUNC(op_f83a_0), 63546 }, /* MMUOP30B */
-{ CPUFUNC(op_f83b_0), 63547 }, /* MMUOP30B */
 { 0, 0 }};
 #endif /* CPUEMU_68000_ONLY */
 #ifndef CPUEMU_68000_ONLY
@@ -6241,17 +6250,17 @@ const struct cputbl CPUFUNC(op_smalltbl_2)[] = {
 { CPUFUNC(op_eff0_0), 61424 }, /* BFINS */
 { CPUFUNC(op_eff8_0), 61432 }, /* BFINS */
 { CPUFUNC(op_eff9_0), 61433 }, /* BFINS */
-{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP30A */
-{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP30A */
-{ CPUFUNC(op_f010_0), 61456 }, /* MMUOP30A */
-{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP30A */
-{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP30A */
-{ CPUFUNC(op_f028_0), 61480 }, /* MMUOP30A */
-{ CPUFUNC(op_f030_0), 61488 }, /* MMUOP30A */
-{ CPUFUNC(op_f038_0), 61496 }, /* MMUOP30A */
-{ CPUFUNC(op_f039_0), 61497 }, /* MMUOP30A */
-{ CPUFUNC(op_f03a_0), 61498 }, /* MMUOP30A */
-{ CPUFUNC(op_f03b_0), 61499 }, /* MMUOP30A */
+{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP030 */
+{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP030 */
+{ CPUFUNC(op_f010_0), 61456 }, /* MMUOP030 */
+{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP030 */
+{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP030 */
+{ CPUFUNC(op_f028_0), 61480 }, /* MMUOP030 */
+{ CPUFUNC(op_f030_0), 61488 }, /* MMUOP030 */
+{ CPUFUNC(op_f038_0), 61496 }, /* MMUOP030 */
+{ CPUFUNC(op_f039_0), 61497 }, /* MMUOP030 */
+{ CPUFUNC(op_f03a_0), 61498 }, /* MMUOP030 */
+{ CPUFUNC(op_f03b_0), 61499 }, /* MMUOP030 */
 { CPUFUNC(op_f200_0), 61952 }, /* FPP */
 { CPUFUNC(op_f208_0), 61960 }, /* FPP */
 { CPUFUNC(op_f210_0), 61968 }, /* FPP */
@@ -6292,17 +6301,6 @@ const struct cputbl CPUFUNC(op_smalltbl_2)[] = {
 { CPUFUNC(op_f379_0), 62329 }, /* FRESTORE */
 { CPUFUNC(op_f37a_0), 62330 }, /* FRESTORE */
 { CPUFUNC(op_f37b_0), 62331 }, /* FRESTORE */
-{ CPUFUNC(op_f800_0), 63488 }, /* MMUOP30B */
-{ CPUFUNC(op_f808_0), 63496 }, /* MMUOP30B */
-{ CPUFUNC(op_f810_0), 63504 }, /* MMUOP30B */
-{ CPUFUNC(op_f818_0), 63512 }, /* MMUOP30B */
-{ CPUFUNC(op_f820_0), 63520 }, /* MMUOP30B */
-{ CPUFUNC(op_f828_0), 63528 }, /* MMUOP30B */
-{ CPUFUNC(op_f830_0), 63536 }, /* MMUOP30B */
-{ CPUFUNC(op_f838_0), 63544 }, /* MMUOP30B */
-{ CPUFUNC(op_f839_0), 63545 }, /* MMUOP30B */
-{ CPUFUNC(op_f83a_0), 63546 }, /* MMUOP30B */
-{ CPUFUNC(op_f83b_0), 63547 }, /* MMUOP30B */
 { 0, 0 }};
 #endif /* CPUEMU_68000_ONLY */
 #ifndef CPUEMU_68000_ONLY
@@ -8723,17 +8721,6 @@ const struct cputbl CPUFUNC(op_smalltbl_4)[] = {
 { CPUFUNC(op_40f0_4), 16624 }, /* MVSR2 */
 { CPUFUNC(op_40f8_4), 16632 }, /* MVSR2 */
 { CPUFUNC(op_40f9_4), 16633 }, /* MVSR2 */
-{ CPUFUNC(op_4100_4), 16640 }, /* CHK */
-{ CPUFUNC(op_4110_4), 16656 }, /* CHK */
-{ CPUFUNC(op_4118_4), 16664 }, /* CHK */
-{ CPUFUNC(op_4120_4), 16672 }, /* CHK */
-{ CPUFUNC(op_4128_4), 16680 }, /* CHK */
-{ CPUFUNC(op_4130_4), 16688 }, /* CHK */
-{ CPUFUNC(op_4138_4), 16696 }, /* CHK */
-{ CPUFUNC(op_4139_4), 16697 }, /* CHK */
-{ CPUFUNC(op_413a_4), 16698 }, /* CHK */
-{ CPUFUNC(op_413b_4), 16699 }, /* CHK */
-{ CPUFUNC(op_413c_4), 16700 }, /* CHK */
 { CPUFUNC(op_4180_4), 16768 }, /* CHK */
 { CPUFUNC(op_4190_4), 16784 }, /* CHK */
 { CPUFUNC(op_4198_4), 16792 }, /* CHK */
@@ -8884,7 +8871,6 @@ const struct cputbl CPUFUNC(op_smalltbl_4)[] = {
 { CPUFUNC(op_48f0_4), 18672 }, /* MVMLE */
 { CPUFUNC(op_48f8_4), 18680 }, /* MVMLE */
 { CPUFUNC(op_48f9_4), 18681 }, /* MVMLE */
-{ CPUFUNC(op_49c0_4), 18880 }, /* EXT */
 { CPUFUNC(op_4a00_4), 18944 }, /* TST */
 { CPUFUNC(op_4a10_4), 18960 }, /* TST */
 { CPUFUNC(op_4a18_4), 18968 }, /* TST */
@@ -10288,17 +10274,6 @@ const struct cputbl CPUFUNC(op_smalltbl_5)[] = {
 { CPUFUNC(op_40f0_5), 16624 }, /* MVSR2 */
 { CPUFUNC(op_40f8_5), 16632 }, /* MVSR2 */
 { CPUFUNC(op_40f9_5), 16633 }, /* MVSR2 */
-{ CPUFUNC(op_4100_4), 16640 }, /* CHK */
-{ CPUFUNC(op_4110_4), 16656 }, /* CHK */
-{ CPUFUNC(op_4118_4), 16664 }, /* CHK */
-{ CPUFUNC(op_4120_4), 16672 }, /* CHK */
-{ CPUFUNC(op_4128_4), 16680 }, /* CHK */
-{ CPUFUNC(op_4130_4), 16688 }, /* CHK */
-{ CPUFUNC(op_4138_4), 16696 }, /* CHK */
-{ CPUFUNC(op_4139_4), 16697 }, /* CHK */
-{ CPUFUNC(op_413a_4), 16698 }, /* CHK */
-{ CPUFUNC(op_413b_4), 16699 }, /* CHK */
-{ CPUFUNC(op_413c_4), 16700 }, /* CHK */
 { CPUFUNC(op_4180_4), 16768 }, /* CHK */
 { CPUFUNC(op_4190_4), 16784 }, /* CHK */
 { CPUFUNC(op_4198_4), 16792 }, /* CHK */
@@ -10441,7 +10416,6 @@ const struct cputbl CPUFUNC(op_smalltbl_5)[] = {
 { CPUFUNC(op_48f0_4), 18672 }, /* MVMLE */
 { CPUFUNC(op_48f8_4), 18680 }, /* MVMLE */
 { CPUFUNC(op_48f9_4), 18681 }, /* MVMLE */
-{ CPUFUNC(op_49c0_4), 18880 }, /* EXT */
 { CPUFUNC(op_4a00_4), 18944 }, /* TST */
 { CPUFUNC(op_4a10_4), 18960 }, /* TST */
 { CPUFUNC(op_4a18_4), 18968 }, /* TST */
@@ -11843,17 +11817,6 @@ const struct cputbl CPUFUNC(op_smalltbl_11)[] = {
 { CPUFUNC(op_40f0_11), 16624 }, /* MVSR2 */
 { CPUFUNC(op_40f8_11), 16632 }, /* MVSR2 */
 { CPUFUNC(op_40f9_11), 16633 }, /* MVSR2 */
-{ CPUFUNC(op_4100_11), 16640 }, /* CHK */
-{ CPUFUNC(op_4110_11), 16656 }, /* CHK */
-{ CPUFUNC(op_4118_11), 16664 }, /* CHK */
-{ CPUFUNC(op_4120_11), 16672 }, /* CHK */
-{ CPUFUNC(op_4128_11), 16680 }, /* CHK */
-{ CPUFUNC(op_4130_11), 16688 }, /* CHK */
-{ CPUFUNC(op_4138_11), 16696 }, /* CHK */
-{ CPUFUNC(op_4139_11), 16697 }, /* CHK */
-{ CPUFUNC(op_413a_11), 16698 }, /* CHK */
-{ CPUFUNC(op_413b_11), 16699 }, /* CHK */
-{ CPUFUNC(op_413c_11), 16700 }, /* CHK */
 { CPUFUNC(op_4180_11), 16768 }, /* CHK */
 { CPUFUNC(op_4190_11), 16784 }, /* CHK */
 { CPUFUNC(op_4198_11), 16792 }, /* CHK */
@@ -11996,7 +11959,6 @@ const struct cputbl CPUFUNC(op_smalltbl_11)[] = {
 { CPUFUNC(op_48f0_11), 18672 }, /* MVMLE */
 { CPUFUNC(op_48f8_11), 18680 }, /* MVMLE */
 { CPUFUNC(op_48f9_11), 18681 }, /* MVMLE */
-{ CPUFUNC(op_49c0_11), 18880 }, /* EXT */
 { CPUFUNC(op_4a00_11), 18944 }, /* TST */
 { CPUFUNC(op_4a10_11), 18960 }, /* TST */
 { CPUFUNC(op_4a18_11), 18968 }, /* TST */

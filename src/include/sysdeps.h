@@ -451,4 +451,6 @@ static inline uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
 
 #endif
 
+#define bswap_16(x) (((x) >> 8) | (((x) & 0xFF) << 8))
+
 #endif

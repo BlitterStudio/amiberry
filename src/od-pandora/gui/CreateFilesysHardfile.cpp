@@ -304,7 +304,7 @@ bool CreateFilesysHardfile(void)
       32, (size / 1024) + 1, 2, 512, 
       bp, 0, 0, 0);
     if (uci)
-    	hardfile_do_disk_change (uci->configoffset, 1);
+    	hardfile_do_disk_change (uci, 1);
   }
 
   return dialogResult;

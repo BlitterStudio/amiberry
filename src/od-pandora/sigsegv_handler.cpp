@@ -31,8 +31,8 @@
 #include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "comptbl.h"
-#include "compemu.h"
+#include "jit/comptbl.h"
+#include "jit/compemu.h"
 
 #include <asm/sigcontext.h>
 #include <signal.h>

@@ -56,7 +56,7 @@ extern int n_frames;
 #define SPCFLAG_EXTRA_CYCLES 32
 #define SPCFLAG_TRACE 64
 #define SPCFLAG_DOTRACE 128
-#define SPCFLAG_DOINT 256
+#define SPCFLAG_DOINT 256 /* arg, JIT fails without this.. */
 #define SPCFLAG_BLTNASTY 512
 #define SPCFLAG_EXEC 1024
 #define SPCFLAG_ACTION_REPLAY 2048
@@ -85,8 +85,8 @@ extern uae_u16 INTREQR (void);
 #define MAXHPOS_NTSC 227
 #define MAXVPOS_PAL 312
 #define MAXVPOS_NTSC 262
-#define VBLANK_ENDLINE_PAL 27
-#define VBLANK_ENDLINE_NTSC 28
+#define VBLANK_ENDLINE_PAL 26
+#define VBLANK_ENDLINE_NTSC 21
 #define VBLANK_SPRITE_PAL 25
 #define VBLANK_SPRITE_NTSC 20
 #define VBLANK_HZ_PAL 50
@@ -108,7 +108,7 @@ extern int vblank_hz;
 #define DMA_MASTER    0x0200
 #define DMA_BLITPRI   0x0400
 
-extern uae_u16 htotal, vtotal;
+extern uae_u16 htotal, vtotal, beamcon0;
 
 /* 100 words give you 1600 horizontal pixels. Should be more than enough for
  * superhires. Don't forget to update the definition in genp2c.c as well.
@@ -127,6 +127,7 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 #define RES_LORES 0
 #define RES_HIRES 1
 #define RES_SUPERHIRES 2
+#define RES_MAX 2
 
 /* calculate shift depending on resolution (replaced "decided_hires ? 4 : 8") */
 #define RES_SHIFT(res) ((res) == RES_LORES ? 8 : (res) == RES_HIRES ? 4 : 2)

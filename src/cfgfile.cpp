@@ -31,6 +31,7 @@
 static int config_newfilesystem;
 static struct strlist *temp_lines;
 static struct zfile *default_file;
+static int uaeconfig;
 
 /* @@@ need to get rid of this... just cut part of the manual and print that
  * as a help text.  */
@@ -133,6 +134,7 @@ static const char *collmode[] = { "none", "sprites", "playfields", "full", 0 };
 static const char *compmode[] = { "direct", "indirect", "indirectKS", "afterPic", 0 };
 static const char *flushmode[]   = { "soft", "hard", 0 };
 static const char *kbleds[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD", 0 };
+static const char *onscreenleds[] = { "false", "true", "rtg", "both", 0 };
 static const char *soundfiltermode1[] = { "off", "emulated", "on", 0 };
 static const char *soundfiltermode2[] = { "standard", "enhanced", 0 };
 static const char *lorestype1[] = { "lores", "hires", "superhires" };
@@ -155,15 +157,17 @@ static const char *cscompa[] = {
 static const char *fullmodes[] = { "false", "true", /* "FILE_NOT_FOUND", */ "fullwindow", 0 };
 /* bleh for compatibility */
 static const char *scsimode[] = { "false", "true", "scsi", 0 };
+static const char *maxhoriz[] = { "lores", "hires", "superhires", 0 };
+static const char *maxvert[] = { "nointerlace", "interlace", 0 };
 
 static const char *obsolete[] = {
     "accuracy", "gfx_opengl", "gfx_32bit_blits", "32bit_blits",
     "gfx_immediate_blits", "gfx_ntsc", "win32", "gfx_filter_bits",
-    "sound_pri_cutoff", "sound_pri_time", "sound_min_buff",
+    "sound_pri_cutoff", "sound_pri_time", "sound_min_buff", "sound_bits",
     "gfx_test_speed", "gfxlib_replacement", "enforcer", "catweasel_io",
     "kickstart_key_file", "sound_adjust",
-    "serial_hardware_dtrdsr",
-    0
+    "serial_hardware_dtrdsr", "gfx_filter_upscale",
+    NULL
 };
 
 #define UNEXPANDED "$(FILE_PATH)"
@@ -207,7 +211,7 @@ char *cfgfile_subst_path (const char *path, const char *subst, const char *file)
 static int isdefault (const char *s)
 {
     char tmp[MAX_DPATH];
-    if (!default_file)
+    if (!default_file || uaeconfig)
 	return 0;
     zfile_fseek (default_file, 0, SEEK_SET);
     while (zfile_fgets (tmp, sizeof tmp, default_file)) {
@@ -235,7 +239,7 @@ void cfgfile_dwrite (struct zfile *f, const char *format,...)
 
     va_start (parms, format);
     vsprintf (tmp, format, parms);
-    if (1 || !isdefault (tmp))
+    if (!isdefault (tmp))
 	zfile_fwrite (tmp, 1, strlen (tmp), f);
     va_end (parms);
 }
@@ -400,13 +404,15 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 
     cfgfile_write (f, "synchronize_clock=%s\n", p->tod_hack ? "yes" : "no");
 
-    cfgfile_dwrite (f, "gfx_framerate=%d\n", p->gfx_framerate);
-    cfgfile_dwrite (f, "gfx_width=%d\n", p->gfx_size.width);
-    cfgfile_dwrite (f, "gfx_height=%d\n", p->gfx_size.height);
-    cfgfile_dwrite (f, "gfx_width_windowed=%d\n", p->gfx_size_win.width);
-    cfgfile_dwrite (f, "gfx_height_windowed=%d\n", p->gfx_size_win.height);
-    cfgfile_dwrite (f, "gfx_width_fullscreen=%d\n", p->gfx_size_fs.width);
-    cfgfile_dwrite (f, "gfx_height_fullscreen=%d\n", p->gfx_size_fs.height);
+    cfgfile_write (f, "gfx_framerate=%d\n", p->gfx_framerate);
+    cfgfile_write (f, "gfx_width=%d\n", p->gfx_size.width);
+    cfgfile_write (f, "gfx_height=%d\n", p->gfx_size.height);
+    cfgfile_write (f, "gfx_width_windowed=%d\n", p->gfx_size_win.width);
+    cfgfile_write (f, "gfx_height_windowed=%d\n", p->gfx_size_win.height);
+    cfgfile_write (f, "gfx_width_fullscreen=%d\n", p->gfx_size_fs.width);
+    cfgfile_write (f, "gfx_height_fullscreen=%d\n", p->gfx_size_fs.height);
+    cfgfile_write (f, "gfx_lores=%s\n", p->gfx_resolution == 0 ? "true" : "false");
+    cfgfile_write (f, "gfx_resolution=%s\n", lorestype1[p->gfx_resolution]);
 
 #ifdef RASPBERRY
     cfgfile_dwrite (f, "gfx_correct_aspect=%d\n", p->gfx_correct_aspect);
@@ -451,6 +457,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
     cfgfile_write (f, "cpu_24bit_addressing=%s\n", p->address_space_24 ? "true" : "false");
     /* do not reorder end */
     cfgfile_write (f, "rtg_nocustom=%s\n", p->picasso96_nocustom ? "true" : "false");
+    cfgfile_write (f, "rtg_modes=0x%x\n", p->picasso96_modeflags);
 
 #ifdef FILESYS
     write_filesys_config (p, UNEXPANDED, p->path_hardfile, f);
@@ -649,7 +656,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, char *option, char *value)
 	|| cfgfile_strval (option, value, "sound_filter_type", &p->sound_filter_type, soundfiltermode2, 0)
 	|| cfgfile_strval (option, value, "use_gui", &p->start_gui, guimode1, 1)
 	|| cfgfile_strval (option, value, "use_gui", &p->start_gui, guimode2, 1)
-	|| cfgfile_strval (option, value, "use_gui", &p->start_gui, guimode3, 0))
+	|| cfgfile_strval (option, value, "use_gui", &p->start_gui, guimode3, 0)
+	|| cfgfile_strval (option, value, "gfx_resolution", &p->gfx_resolution, lorestype1, 0)
+	|| cfgfile_strval (option, value, "gfx_lores", &p->gfx_resolution, lorestype2, 0)
+    )
 	    return 1;
 	
 
@@ -660,8 +670,29 @@ static int cfgfile_parse_host (struct uae_prefs *p, char *option, char *value)
     }
 
     if (cfgfile_string (option, value, "statefile", tmpbuf, sizeof (tmpbuf))) {
-	savestate_state = STATE_DORESTORE;
 	strcpy (savestate_fname, tmpbuf);
+	if (zfile_exists (savestate_fname)) {
+	    savestate_state = STATE_DORESTORE;
+	} else {
+	    int ok = 0;
+	    if (savestate_fname[0]) {
+		for (;;) {
+		    char *p;
+		    if (my_existsdir (savestate_fname)) {
+		        ok = 1;
+		        break;
+		    }
+		    p = strrchr (savestate_fname, '\\');
+		    if (!p)
+		        p = strrchr (savestate_fname, '/');
+		    if (!p)
+		        break;
+		    *p = 0;
+		}
+	    }
+	    if (!ok)
+		savestate_fname[0] = 0;
+	}
 	return 1;
     }
 
@@ -763,7 +794,7 @@ struct uaedev_config_info *add_filesys_config (struct uae_prefs *p, int index,
 
 static int cfgfile_parse_hardware (struct uae_prefs *p, char *option, char *value)
 {
-    int tmpval, dummy, i;
+    int tmpval, dummyint, i;
     char *section = 0;
     char tmpbuf[CONFIG_BLEN];
 
@@ -782,7 +813,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, char *option, char *valu
 	|| cfgfile_intval (option, value, "z3mem_start", (int *) &p->z3fastmem_start, 1)
 	|| cfgfile_intval (option, value, "bogomem_size", (int *) &p->bogomem_size, 0x40000)
 	|| cfgfile_intval (option, value, "gfxcard_size", (int *) &p->gfxmem_size, 0x100000)
+	|| cfgfile_intval (option, value, "rtg_modes", &p->picasso96_modeflags, 1)
 	|| cfgfile_intval (option, value, "floppy_speed", &p->floppy_speed, 1)
+	|| cfgfile_intval (option, value, "floppy_write_length", &p->floppy_write_length, 1)
 	|| cfgfile_intval (option, value, "nr_floppies", &p->nr_floppies, 1)
 	|| cfgfile_intval (option, value, "floppy0type", &p->dfxtype[0], 1)
 	|| cfgfile_intval (option, value, "floppy1type", &p->dfxtype[1], 1)
@@ -801,13 +834,13 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, char *option, char *valu
 	    return 1;
     }
 
-    if (cfgfile_intval (option, value, "chipmem_size", &dummy, 1)) {
-	if (dummy < 0)
+    if (cfgfile_intval (option, value, "chipmem_size", &dummyint, 1)) {
+	if (dummyint < 0)
 	    p->chipmem_size = 0x20000; /* 128k, prototype support */
-	else if (dummy == 0)
+	else if (dummyint == 0)
 	    p->chipmem_size = 0x40000; /* 256k */
 	else
-	    p->chipmem_size = dummy * 0x80000;
+	    p->chipmem_size = dummyint * 0x80000;
 	return 1;
     }
 
@@ -1236,7 +1269,7 @@ static int cfgfile_load_2 (struct uae_prefs *p, const char *filename, int real, 
 	    if (real) {
 		cfgfile_parse_separated_line (p, line1b, line2b, askedtype);
 	    } else {
-		cfgfile_string (line1b, line2b, "config_description", p->description, 128);
+		cfgfile_string (line1b, line2b, "config_description", p->description, sizeof p->description);
 	    }
 	}
     }
@@ -1324,7 +1357,7 @@ int cfgfile_get_description (const char *filename, char *description)
 	  if (description)
 	    strcpy (description, p->description);
   }
-  free (p);
+  xfree (p);
   return result;
 }
 
@@ -1616,6 +1649,7 @@ void default_prefs (struct uae_prefs *p, int type)
   p->gfx_size_win.height = 240;
   p->gfx_size_fs.width = 640;
   p->gfx_size_fs.height = 480;
+  p->gfx_resolution = 0;
 #ifdef RASPBERRY
   p->gfx_correct_aspect = 1;
 #endif
@@ -1627,6 +1661,7 @@ void default_prefs (struct uae_prefs *p, int type)
   p->fast_copper = 1;
   p->cpu_idle = 0;
   p->floppy_speed = 100;
+  p->floppy_write_length = 0;
   p->tod_hack = 1;
   p->picasso96_nocustom = 1;
 
@@ -1674,7 +1709,6 @@ void default_prefs (struct uae_prefs *p, int type)
   p->dfxtype[1] = DRV_35_DD;
   p->dfxtype[2] = DRV_NONE;
   p->dfxtype[3] = DRV_NONE;
-  p->floppy_speed = 100;
   
   target_default_options (p, type);
 

@@ -157,11 +157,22 @@ static struct romdata *scan_single_rom_2 (struct zfile *f)
   	return 0;
   zfile_fread (rombuf, 1, size, f);
   if (cl > 0) {
-  	if(decode_cloanto_rom_do (rombuf, size, size))
-	    cl = 0;
+  	decode_cloanto_rom_do (rombuf, size, size);
+	  cl = 0;
   }
-  if (!cl)
+  if (!cl) {
   	rd = getromdatabydata (rombuf, size);
+  	if (!rd && (size & 65535) == 0) {
+	    /* check byteswap */
+	    int i;
+	    for (i = 0; i < size; i+=2) {
+    		uae_u8 b = rombuf[i];
+    		rombuf[i] = rombuf[i + 1];
+    		rombuf[i + 1] = b;
+ 	    }
+ 	    rd = getromdatabydata (rombuf, size);
+  	}
+  }
   free (rombuf);
   return rd;
 }
@@ -1300,6 +1311,10 @@ void gui_handle_events (void)
         break;    
     }
   }
+}
+
+void gui_disk_image_change (int unitnum, const char *name)
+{
 }
 
 void gui_hd_led (int led)

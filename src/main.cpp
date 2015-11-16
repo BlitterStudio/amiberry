@@ -34,8 +34,9 @@
 #include "native2amiga.h"
 #include "savestate.h"
 #include "filesys.h"
+#include "uaeresource.h"
 #ifdef JIT
-#include "compemu.h"
+#include "jit/compemu.h"
 #endif
 
 #ifdef USE_SDL
@@ -47,6 +48,7 @@ struct uae_prefs currprefs, changed_prefs;
 
 int no_gui = 0;
 int cloanto_rom = 0;
+int kickstart_rom = 1;
 
 struct gui_info gui_data;
 
@@ -66,9 +68,9 @@ void discard_prefs (struct uae_prefs *p, int type)
   while (*ps) {
 	  struct strlist *s = *ps;
 	  *ps = s->next;
-	  free (s->value);
-	  free (s->option);
-	  free (s);
+	  xfree (s->value);
+	  xfree (s->option);
+	  xfree (s);
   }
 #ifdef FILESYS
   filesys_cleanup ();
@@ -96,11 +98,13 @@ void fixup_cpu(struct uae_prefs *p)
     {
         case 68000:
 	p->address_space_24 = 1;
-	p->fpu_model = 0;
+	if (p->cpu_compatible)
+	  p->fpu_model = 0;
         break;
 	case 68010:
 	p->address_space_24 = 1;
-	p->fpu_model = 0;
+	if (p->cpu_compatible)
+	  p->fpu_model = 0;
 	break;
 	case 68020:
 	break;
@@ -127,7 +131,7 @@ void fixup_prefs (struct uae_prefs *p)
 
     fixup_cpu(p);
 
-    if ((p->chipmem_size & (p->chipmem_size - 1)) != 0
+    if (((p->chipmem_size & (p->chipmem_size - 1)) != 0 && p->chipmem_size != 0x180000)
 	|| p->chipmem_size < 0x20000
 	|| p->chipmem_size > 0x800000)
     {
@@ -308,6 +312,9 @@ extern int debug_frame_end;
 	  } else if (strncmp (argv[i], "-config=", 8) == 0) {
 	    currprefs.mountitems = 0;
 	    target_cfgfile_load (&currprefs, argv[i] + 8, -1, 1);
+	  } else if (strncmp (argv[i], "-statefile=", 11) == 0) {
+	    savestate_state = STATE_DORESTORE;
+	    strcpy (savestate_fname, argv[++i]);
 	  }
 	  /* Check for new-style "-f xxx" argument, where xxx is config-file */
 	  else if (strcmp (argv[i], "-f") == 0) {
@@ -350,6 +357,10 @@ static void parse_cmdline_and_init_file (int argc, char **argv)
 void reset_all_systems (void)
 {
     init_eventtab ();
+
+#ifdef PICASSO96
+    picasso_reset ();
+#endif
 #ifdef FILESYS
     filesys_prepare_reset ();
     filesys_reset ();
@@ -489,6 +500,7 @@ static void real_main2 (int argc, char **argv)
 #endif
 #ifdef FILESYS
   rtarea_init ();
+  uaeres_install ();
   hardfile_install();
 #endif
   keybuf_init (); /* Must come after init_joystick */

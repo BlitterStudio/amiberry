@@ -13,6 +13,7 @@ typedef unsigned long frame_time_t;
 
 extern int64_t g_uae_epoch;
 
+/* Returns elapsed time in microseconds since start of emulator. */
 static __inline__ frame_time_t read_processor_time (void)
 {
   int64_t time;

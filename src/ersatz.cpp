@@ -35,6 +35,17 @@ static int already_failed = 0;
 
 void init_ersatz_rom (uae_u8 *data)
 {
+    uae_u8 *end = data + 262144 - 16;
+    /* cpu emulation uses these now */
+    end[1] = 0x18;
+    end[3] = 0x19;
+    end[5] = 0x1a;
+    end[7] = 0x1b;
+    end[9] = 0x1c;
+    end[11] = 0x1d;
+    end[13] = 0x1e;
+    end[15] = 0x1f;
+
     *data++ = 0x00; *data++ = 0x08; /* initial SP */
     *data++ = 0x00; *data++ = 0x00;
     *data++ = 0x00; *data++ = 0xF8; /* initial PC */
@@ -66,6 +77,12 @@ void init_ersatz_rom (uae_u8 *data)
     *data++ = 0x00; *data++ = EOP_ALLOCABS;
 
     *data++ = 0x4E; *data++ = 0x75;
+}
+
+void ersatz_chipcopy (void)
+{
+    /* because CPU emulation is updated and retrieves SP and PC from chip ram */
+    memcpy (chipmemory, kickmemory, 256);
 }
 
 static void ersatz_failed (void)

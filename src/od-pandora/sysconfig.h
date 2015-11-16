@@ -31,6 +31,7 @@
 /* #define ACTION_REPLAY */ /* Action Replay 1/2/3 support */
 #if !defined(RASPBERRY)
 #define PICASSO96 /* Picasso96 display card emulation */
+#define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
 #endif
 /* #define BSDSOCKET */ /* bsdsocket.library emulation */
 /* #define CAPS */ /* CAPS-image support */

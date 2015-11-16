@@ -24,6 +24,7 @@
 #include "inputdevice.h"
 #include "audio.h"
 #include "keyboard.h"
+#include "ersatz.h"
 
 #define TOD_HACK
 
@@ -49,12 +50,11 @@ static unsigned int ciaapra, ciaaprb, ciaadra, ciaadrb, ciaasdr, ciaasdr_cnt;
 static unsigned int ciabprb, ciabdra, ciabdrb, ciabsdr, ciabsdr_cnt;
 static int div10;
 static int kbstate, kback, ciaasdr_unread;
-static unsigned int sleepyhead = 0;
+static unsigned int sleepyhead;
 
 #ifdef TOD_HACK
 static int tod_hack, tod_hack_delay;
 #endif
-
 
 static __inline__ void setclr (unsigned int *_GCCRES_ p, unsigned int val)
 {
@@ -330,7 +330,7 @@ void CIA_hsync_handler (void)
       ciab_checkalarm (1);
     }
 	  
-    if ((keys_available() || kbstate < 2) && kback && (ciaacra & 0x40) == 0 && (hsync_counter & 15) == 0) {
+    if ((keys_available() || kbstate < 3) && kback && (ciaacra & 0x40) == 0 && (hsync_counter & 15) == 0) {
 	    /*
 	     * This hack lets one possible ciaaicr cycle go by without any key
 	     * being read, for every cycle in which a key is pulled out of the
@@ -348,14 +348,21 @@ void CIA_hsync_handler (void)
 	    } else if (ciaasdr_unread == 0) {
 	        switch (kbstate) {
 	         case 0:
-		    setcode (AK_INIT_POWERUP);
+		    ciaasdr = 0; /* powerup resync */
 		    kbstate++;
+		    ciaasdr_unread = 3;
 		    break;
 	         case 1:
-		    setcode (AK_TERM_POWERUP);
+		    setcode (AK_INIT_POWERUP);
 		    kbstate++;
+    		ciaasdr_unread = 3;
 		    break;
 	         case 2:
+		    setcode (AK_TERM_POWERUP);
+		    kbstate++;
+    		ciaasdr_unread = 3;
+		    break;
+	         case 3:
 		    ciaasdr = ~get_next_key();
 		    ciaasdr_unread = 1;      /* interlock to prevent lost keystrokes */
 		    break;
@@ -364,7 +371,10 @@ void CIA_hsync_handler (void)
 	        RethinkICRA();
 	        sleepyhead = 0;
 	    } else if (!(++sleepyhead & 15)) {
-	        ciaasdr_unread = 0;          /* give up on this key event after unread for a long time */
+	        if (ciaasdr_unread == 3)
+		    ciaaicr |= 8;
+	        if (ciaasdr_unread < 3)
+	      ciaasdr_unread = 0;          /* give up on this key event after unread for a long time */
 	    }
     }
 }
@@ -392,7 +402,7 @@ void CIA_vsync_handler ()
 	    if (tod_hack_delay == 0) {
     		tod_hack_reset ();
     		tod_hack_delay = 0;
-    		write_log ("TOD_HACK re-initialized CIATOD=%06.6X\n", ciaatod);
+    		write_log ("TOD_HACK re-initialized CIATOD=%06X\n", ciaatod);
 	    }
   	}
   	if (tod_hack_delay == 0) {
@@ -404,7 +414,7 @@ void CIA_vsync_handler ()
     	ciaatod = nt;
     	ciaatod &= 0xffffff;
     	ciaa_checkalarm (0);
-    	return;
+	return;
     }
   }
 #endif
@@ -418,22 +428,21 @@ void CIA_vsync_handler ()
 static void bfe001_change (void)
 {
     uae_u8 v = ciaapra;
+    int led;
 
     v |= ~ciaadra; /* output is high when pin's direction is input */
-    if ((v & 2) != oldled) {
-	    int led = (v & 2) ? 0 : 1;
-      oldled = v & 2;
+    led = (v & 2) ? 0 : 1;
+    if (led != oldled) {
+      oldled = led;
       gui_data.powerled = led;
       led_filter_audio();
     }
-    if ((v & 1) != oldovl) {
-	oldovl = v & 1;
-        if (!oldovl || ersatzkickfile) {
+    if (!(currprefs.chipset_mask & CSMASK_AGA) && (v & 1) != oldovl) {
+	      oldovl = v & 1;
+        if (!oldovl || ersatzkickfile)
 	    map_overlay (1);
-	} else if (!(currprefs.chipset_mask & CSMASK_AGA)) {
-	    /* pin disconnected in AGA chipset, CD audio mute on/off on CD32 */
+	      else
  	    map_overlay (0);
-        }
     }
 }
 
@@ -502,7 +511,7 @@ static uae_u8 ReadCIAA (unsigned int addr)
 	}
 	return (uae_u8)(ciaatol >> 16);
     case 12:
-	if (ciaasdr_unread == 1)
+	if (ciaasdr_unread >= 1)
 	  ciaasdr_unread = 2;
 	return ciaasdr;
     case 13:
@@ -592,6 +601,10 @@ static uae_u8 ReadCIAB (unsigned int addr)
 
 static void WriteCIAA (uae_u16 addr,uae_u8 val)
 {
+    if ((currprefs.chipset_mask & CSMASK_AGA) && oldovl) {
+	map_overlay (1);
+	oldovl = 0;
+    }
     switch (addr & 0xf) {
     case 0:
 	ciaapra = (ciaapra & ~0xc3) | (val & 0xc3);
@@ -816,12 +829,13 @@ void CIA_reset (void)
 	tod_hack_reset ();
 #endif
     kback = 1;
-    kbstate = 0;
+    kbstate = 3;
     ciaasdr_unread = 0;
-    oldovl = -1;
+    oldovl = 1;
     oldled = -1;
 
     if (!savestate_state) {
+	    kbstate = 0;
       ciaatlatch = ciabtlatch = 0;
       ciaapra = 0;  ciaadra = 0;
       ciaatod = ciabtod = 0; ciaatodon = ciabtodon = 0;
@@ -838,8 +852,11 @@ void CIA_reset (void)
     }
 
     CIA_calctimers ();
-    if (! ersatzkickfile)
+    if (ersatzkickfile)
+	    ersatz_chipcopy ();
+    else
     	map_overlay (0);
+    oldovl = 1;
     if (savestate_state) {
       bfe001_change ();
 	    /* select drives */

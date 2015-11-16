@@ -30,7 +30,6 @@ enum mousestate { mousehack_unknown, mousehack_normal, mousehack_dontcare, mouse
 extern void mousehack_set (enum mousestate);
 extern int mousehack_get (void);
 extern void mousehack_handle (int sprctl, int sprpos);
-extern int mousehack_alive (void);
 extern int mousehack_allowed (void);
 
 extern void inputdevice_updateconfig (struct uae_prefs *prefs);

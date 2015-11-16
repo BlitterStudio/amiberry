@@ -787,7 +787,7 @@ STATIC_INLINE void state23 (struct audio_channel_data *cdp)
 	cdp->intreq2 = 1;
 #ifdef DEBUG_AUDIO
 	if (debugchannel (cdp - audio_channel))
-	    write_log ("Channel %d looped, LC=%08.8X LEN=%d\n", cdp - audio_channel, cdp->pt, cdp->wlen);
+	    write_log ("Channel %d looped, LC=%08X LEN=%d\n", cdp - audio_channel, cdp->pt, cdp->wlen);
 #endif
     } else {
 	cdp->wlen = (cdp->wlen - 1) & 0xFFFF;
@@ -962,15 +962,19 @@ void audio_reset (void)
 
 STATIC_INLINE int sound_prefs_changed (void)
 {
-    return (changed_prefs.produce_sound != currprefs.produce_sound
+    if (changed_prefs.produce_sound != currprefs.produce_sound
 	    || changed_prefs.sound_stereo != currprefs.sound_stereo
-	    || changed_prefs.sound_stereo_separation != currprefs.sound_stereo_separation
-	    || changed_prefs.sound_mixed_stereo_delay != currprefs.sound_mixed_stereo_delay
 	    || changed_prefs.sound_freq != currprefs.sound_freq
-	    || changed_prefs.sound_auto != currprefs.sound_auto
+	    || changed_prefs.sound_auto != currprefs.sound_auto)
+      return 1;
+
+    if (changed_prefs.sound_stereo_separation != currprefs.sound_stereo_separation
+	    || changed_prefs.sound_mixed_stereo_delay != currprefs.sound_mixed_stereo_delay
 	    || changed_prefs.sound_interpol != currprefs.sound_interpol
 	    || changed_prefs.sound_filter != currprefs.sound_filter
-	    || changed_prefs.sound_filter_type != currprefs.sound_filter_type);
+	    || changed_prefs.sound_filter_type != currprefs.sound_filter_type)
+      return -1;
+    return 0;
 }
 
 /* This computes the 1st order low-pass filter term b0.
@@ -995,9 +999,15 @@ static float rc_calculate_a0(int sample_rate, int cutoff_freq)
 
 void check_prefs_changed_audio (void)
 {
-  if (!sound_available || !sound_prefs_changed ())
+    int ch;
+  if (!sound_available)
 	  return;
-  clear_sound_buffers();
+  ch = sound_prefs_changed ();
+  if (!ch)
+	  return;
+  if (ch > 0) {
+    clear_sound_buffers();
+  }
   set_audio();
   audio_activate();
 }
@@ -1007,32 +1017,42 @@ void set_audio(void)
   int old_mixed_on = mixed_on;
   int old_mixed_size = mixed_stereo_size;
   int sep, delay;
+  int ch;
 
-	close_sound ();
+  ch = sound_prefs_changed ();
+  if (ch >= 0)
+	  close_sound ();
+
 	currprefs.produce_sound = changed_prefs.produce_sound;
 	currprefs.sound_stereo = changed_prefs.sound_stereo;
+  currprefs.sound_auto = changed_prefs.sound_auto;
+	currprefs.sound_freq = changed_prefs.sound_freq;
+
   currprefs.sound_stereo_separation = changed_prefs.sound_stereo_separation;
   currprefs.sound_mixed_stereo_delay = changed_prefs.sound_mixed_stereo_delay;
-  currprefs.sound_auto = changed_prefs.sound_auto;
 	currprefs.sound_interpol = changed_prefs.sound_interpol;
-	currprefs.sound_freq = changed_prefs.sound_freq;
   currprefs.sound_filter = changed_prefs.sound_filter;
   currprefs.sound_filter_type = changed_prefs.sound_filter_type;
-	if (currprefs.produce_sound >= 2) {
-    if (!init_audio ()) {
-	    if (! sound_available) {
-	        write_log ("Sound is not supported.\n");
-	    } else {
-	      write_log ("Sorry, can't initialize sound.\n");
-	      currprefs.produce_sound = 0;
-	      /* So we don't do this every frame */
-	      changed_prefs.produce_sound = 0;
-	    }
-    }
-	}
-	next_sample_evtime = scaled_sample_evtime;
-  last_cycles = get_cycles () - 1;
-	compute_vsynctime ();
+
+  if (ch >= 0) {
+	  if (currprefs.produce_sound >= 2) {
+      if (!init_audio ()) {
+	      if (! sound_available) {
+	          write_log ("Sound is not supported.\n");
+	      } else {
+	        write_log ("Sorry, can't initialize sound.\n");
+	        currprefs.produce_sound = 0;
+	        /* So we don't do this every frame */
+	        changed_prefs.produce_sound = 0;
+	      }
+      }
+	  }
+	  next_sample_evtime = scaled_sample_evtime;
+    last_cycles = get_cycles () - 1;
+	  compute_vsynctime ();
+  } else {
+    sound_volume (0);
+  }
 
   sep = (currprefs.sound_stereo_separation = changed_prefs.sound_stereo_separation) * 3 / 2;
   delay = currprefs.sound_mixed_stereo_delay = changed_prefs.sound_mixed_stereo_delay;
@@ -1211,7 +1231,7 @@ void audio_hsync (int dmaaction)
 	        cdp->pt = cdp->lc;
 #ifdef DEBUG_AUDIO
 		if (debugchannel (nr))
-		    write_log ("%d:>5: LEN=%d PT=%08.8X\n", nr, cdp->wlen, cdp->pt);
+		    write_log ("%d:>5: LEN=%d PT=%08X\n", nr, cdp->wlen, cdp->pt);
 #endif
       }
  	    cdp->dat2 = CHIPMEM_AGNUS_WGET_CUSTOM (cdp->pt);
@@ -1244,12 +1264,14 @@ void AUDxDAT (int nr, uae_u16 v)
 
 #ifdef DEBUG_AUDIO
     if (debugchannel (nr))
-	write_log ("AUD%dDAT: %04.4X STATE=%d IRQ=%d %08.8X\n", nr,
+	write_log ("AUD%dDAT: %04X STATE=%d IRQ=%d %08X\n", nr,
 	    v, cdp->state, isirq(nr) ? 1 : 0, M68K_GETPC);
 #endif
     audio_activate();
    	update_audio ();
     cdp->dat2 = v;
+    if (cdp->request_word >= 2 && cdp->request_word_skip == 0)
+	audio_handler (nr);
     cdp->request_word = -1;
     cdp->request_word_skip = 0;
     /* cpu >= 68020: another "too fast" memory/CPU hack */
@@ -1292,7 +1314,7 @@ void AUDxPER (int nr, uae_u16 v)
     if (per < maxhpos * CYCLE_UNIT / 2 && currprefs.produce_sound < 3)
 	per = maxhpos * CYCLE_UNIT / 2;
     else if (per < 4 * CYCLE_UNIT)
-	 /* smaller value would cause extremely high cpu usage */
+	 /* smaller values would cause extremely high cpu usage */
 	per = 4 * CYCLE_UNIT;
 
    if (audio_channel[nr].per == PERIOD_MAX - 1 && per != PERIOD_MAX - 1) {
@@ -1349,7 +1371,6 @@ void led_filter_audio (void)
   led_filter_on = 0;
   if (led_filter_forced > 0 || (gui_data.powerled && led_filter_forced >= 0))
   	led_filter_on = 1;
-  gui_led (0, gui_data.powerled);
 }
 
 uae_u8 *restore_audio (int i, uae_u8 *src)

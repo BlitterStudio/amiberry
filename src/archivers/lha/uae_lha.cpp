@@ -30,6 +30,12 @@ struct zvolume *archive_directory_lha(struct zfile *zf)
     zv = zvolume_alloc(zf, ArchiveFormatLHA, NULL);
     while (get_header(zf, &hdr)) {
 	struct znode *zn;
+	int method;
+
+	for (i = 0; methods[i]; i++) {
+	    if (!strcmp(methods[i], hdr.method))
+		method = i;
+	}
 	memset(&zai, 0, sizeof zai);
 	zai.name = hdr.name;
 	zai.size = hdr.original_size;
@@ -37,12 +43,13 @@ struct zvolume *archive_directory_lha(struct zfile *zf)
 	zai.t = hdr.unix_last_modified_stamp -= timezone;
 	if (hdr.name[strlen(hdr.name) + 1] != 0)
 	    zai.comment = &hdr.name[strlen(hdr.name) + 1];
+	if (method == LZHDIRS_METHOD_NUM) {
+	    zvolume_adddir_abs(zv, &zai);
+	} else {
 	zn = zvolume_addfile_abs(zv, &zai);
 	zn->offset = zfile_ftell(zf);
 	zn->packedsize = hdr.packed_size;
-	for (i = 0; methods[i]; i++) {
-	    if (!strcmp(methods[i], hdr.method))
-		zn->method = i;
+	    zn->method = method;
 	}
 	zfile_fseek(zf, hdr.packed_size, SEEK_CUR);
 	

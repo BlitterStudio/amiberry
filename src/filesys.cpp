@@ -41,6 +41,7 @@
 #include "zfile.h"
 #include "gui.h"
 #include "savestate.h"
+#include "uaeresource.h"
 
 #define TRACING_ENABLED 0
 #if TRACING_ENABLED
@@ -105,6 +106,23 @@ int nr_units (void)
 	    cnt++;
     }
     return cnt;
+}
+
+int nr_directory_units (struct uae_prefs *p)
+{
+  int i, cnt = 0;
+  if (p) {
+  	for (i = 0; i < p->mountitems; i++) {
+	    if (p->mountconfig[i].controller == 0)
+    		cnt++;
+  	}
+  } else {
+    for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+    	if (mountinfo.ui[i].open && mountinfo.ui[i].controller == 0)
+  	    cnt++;
+    }
+  }
+  return cnt;
 }
 
 int is_hardfile (int unit_no)
@@ -339,14 +357,7 @@ static int set_filesys_unit_1 (int nr,
     }
 
     ui = &mountinfo.ui[nr];
-    ui->open = 0;
-    ui->devname = 0;
-    ui->volname = 0;
-    ui->rootdir = 0;
-    ui->unit_pipe = 0;
-    ui->back_pipe = 0;
-    ui->hf.fd = 0;
-    ui->bootpri = 0;
+    memset (ui, 0, sizeof (UnitInfo));
 
     if (volname != NULL) {
 	int flags = 0;
@@ -460,7 +471,8 @@ int kill_filesys_unitconfig (struct uae_prefs *p, int nr)
     if (nr < 0)
 	return 0;
     uci = &p->mountconfig[nr];
-    if (uci->configoffset >= 0)
+    hardfile_do_disk_change (uci, 0);
+    if (uci->configoffset >= 0 && uci->controller == 0)
 	filesys_media_change (uci->rootdir, 0, uci);
     while (nr < MOUNT_CONFIG_SIZE) {
 	memmove (&p->mountconfig[nr], &p->mountconfig[nr + 1], sizeof (struct uaedev_config_info));
@@ -1903,7 +1915,7 @@ static uae_u32 REGPARAM2 startup_handler (TrapContext *context)
 
 /*    write_comm_pipe_int (unit->ui.unit_pipe, -1, 1);*/
 
-    write_log ("FS: %s (flags=%08.8X) starting..\n", unit->ui.volname, unit->volflags);
+    write_log ("FS: %s (flags=%08X) starting..\n", unit->ui.volname, unit->volflags);
 
     /* fill in our process in the device node */
     devnode = get_long (pkt + dp_Arg3) << 2;
@@ -2010,17 +2022,15 @@ static void free_key (Unit *unit, Key *k)
 static Key *lookup_key (Unit *unit, uae_u32 uniq)
 {
     Key *k;
+    unsigned int total = 0;
     /* It's hardly worthwhile to optimize this - most of the time there are
      * only one or zero keys. */
     for (k = unit->keys; k; k = k->next) {
+	total++;
 	if (uniq == k->uniq)
 	    return k;
     }
-    write_log ("Error: couldn't find key!\n");
-
-    /* There isn't much hope we will recover. Unix would kill the process,
-     * AmigaOS gets killed by it. */
-    write_log ("Better reset that Amiga - the system is messed up.\n");
+    write_log ("Error: couldn't find key %u / %u!\n", uniq, total);
     return 0;
 }
 
@@ -3363,7 +3373,7 @@ action_read (Unit *unit, dpacket packet)
 	  if (size > filesize)
 	    size = filesize;
 
-	  buf = (char *)malloc(size);
+	  buf = (char *)xmalloc(size);
 		if (!buf) {
 			PUT_PCK_RES1 (packet, -1);
 			PUT_PCK_RES2 (packet, ERROR_NO_FREE_STORE);
@@ -4159,7 +4169,6 @@ action_inhibit (Unit *unit, dpacket packet)
     PUT_PCK_RES1 (packet, DOS_TRUE);
     flush_cache(unit, 0);
     unit->inhibited = GET_PCK_ARG1 (packet);
-    write_log("ACTION_INHIBIT %d:%d\n", unit->unit, unit->inhibited);
 }
 
 static void
@@ -4563,14 +4572,9 @@ void filesys_free_handles(void)
     }
 }
 
-void filesys_reset (void)
+static void filesys_reset2 (void)
 {
     Unit *u, *u1;
-
-    /* We get called once from customreset at the beginning of the program
-     * before filesys_start_threads has been called. Survive that.  */
-    if (savestate_state == STATE_RESTORE)
-	return;
 
     filesys_free_handles();
     for (u = units; u; u = u1) {
@@ -4584,14 +4588,19 @@ void filesys_reset (void)
     initialize_mountinfo();
 }
 
-void filesys_prepare_reset (void)
+void filesys_reset (void)
+{
+    if (savestate_state == STATE_RESTORE)
+	return;
+    filesys_reset2 ();
+}
+
+static void filesys_prepare_reset2 (void)
 {
     UnitInfo *uip;
     Unit *u;
     int i;
 
-    if (savestate_state == STATE_RESTORE)
-    	return;
     uip = mountinfo.ui;
 #ifdef UAE_FILESYS_THREADS
     for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
@@ -4620,6 +4629,13 @@ void filesys_prepare_reset (void)
 	u->aino_cache_size = 0;
 	u = u->next;
     }
+}
+
+void filesys_prepare_reset (void)
+{
+    if (savestate_state == STATE_RESTORE)
+	return;
+    filesys_prepare_reset2 ();
 }
 
 static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *context)
@@ -4656,6 +4672,7 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *context)
      * Resident structures and call InitResident() for them at the end of the
      * diag entry. */
 
+    resaddr = uaeres_startup (resaddr);
     /* scan for Residents and return pointer to array of them */
     residents = resaddr;
     while (tmp < residents && tmp > start) {
@@ -4821,7 +4838,7 @@ static void get_new_device (int type, uaecptr parmpacket, char **devname, uaecpt
     if (type == FILESYS_VIRTUAL)
 	write_log ("FS: mounted virtual unit %s (%s)\n", buffer, mountinfo.ui[unit_no].rootdir);
     else
-	write_log ("FS: mounted HDF unit %s (%04.4x-%08.8x, %s)\n", buffer,
+	write_log ("FS: mounted HDF unit %s (%04x-%08x, %s)\n", buffer,
 	    (uae_u32)(mountinfo.ui[unit_no].hf.size >> 32),
 	    (uae_u32)(mountinfo.ui[unit_no].hf.size),
 	    mountinfo.ui[unit_no].rootdir);
@@ -5266,7 +5283,7 @@ static uae_u8 *restore_notify(UnitInfo *ui, Unit *u, uae_u8 *src)
     hash = notifyhash (n->fullname);
     n->next = u->notifyhash[hash];
     u->notifyhash[hash] = n;
-    write_log("FS: notify %08.8X '%s' '%s'\n", n->notifyrequest, n->fullname, n->partname); 
+    write_log ("FS: notify %08X '%s' '%s'\n", n->notifyrequest, n->fullname, n->partname);
     return src;
 }
 
@@ -5404,7 +5421,7 @@ static uae_u8 *save_notify (UnitInfo *ui, uae_u8 *dst, Notify *n)
     if (strlen(s) >= strlen(ui->volname) && !memcmp(n->fullname, ui->volname, strlen(ui->volname)))
 	s = n->fullname + strlen(ui->volname) + 1;
     save_string(s);
-    write_log("FS: notify %08.8X '%s'\n", n->notifyrequest, n->fullname); 
+    write_log ("FS: notify %08X '%s'\n", n->notifyrequest, n->fullname);
     return dst;
 }
 
@@ -5496,7 +5513,8 @@ uae_u8 *restore_filesys_common (uae_u8 *src)
 {
     if (restore_u32 () != 2)
 	return src;
-    free_mountinfo();
+    filesys_prepare_reset2 ();
+    filesys_reset2 ();
     a_uniq = restore_u64 ();
     key_uniq = restore_u64 ();
     return src;
@@ -5555,8 +5573,11 @@ uae_u8 *restore_filesys (uae_u8 *src)
     ui = &mountinfo.ui[devno];
     ui->startup = restore_u32 ();
     filesys_configdev = restore_u32 ();
-    if (type == FILESYS_HARDFILE)
+    if (type == FILESYS_HARDFILE) {
 	src = restore_filesys_hardfile(ui, src);
+	xfree (volname);
+	volname = NULL;
+    }
     if (set_filesys_unit (devno, devname, volname, rootdir, readonly,
 	ui->hf.secspertrack, ui->hf.surfaces, ui->hf.reservedblocks, ui->hf.blocksize,
 	bootpri, 0, 1, filesysdir[0] ? filesysdir : NULL, 0, 0) < 0) {
@@ -5565,6 +5586,7 @@ uae_u8 *restore_filesys (uae_u8 *src)
     }
     if (type == FILESYS_VIRTUAL)
 	src = restore_filesys_virtual (ui, src, devno);
+    write_log ("'%s' restored\n", rootdir);
 end:
     xfree (rootdir);
     xfree (devname);

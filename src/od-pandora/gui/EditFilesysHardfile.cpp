@@ -363,7 +363,7 @@ bool EditFilesysHardfile(int unit_no)
       atoi(txtReserved->getText().c_str()), atoi(txtBlocksize->getText().c_str()), 
       bp, 0, 0, 0);
     if (uci)
-    	hardfile_do_disk_change (uci->configoffset, 1);
+    	hardfile_do_disk_change (uci, 1);
   }
   return dialogResult;
 }

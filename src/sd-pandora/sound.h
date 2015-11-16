@@ -27,6 +27,7 @@ extern int setup_sound (void);
 extern void resume_sound (void);
 extern void pause_sound (void);
 extern void reset_sound (void);
+extern void sound_volume (int);
 
 #define check_sound_buffers() { if (sndbufpt >= finish_sndbuff) finish_sound_buffer (); }
 

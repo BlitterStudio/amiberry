@@ -61,7 +61,7 @@
 int savestate_state = 0;
 
 struct zfile *savestate_file;
-static int savestate_docompress, savestate_specialdump;
+static int savestate_docompress, savestate_specialdump, savestate_nodialogs;
 
 char savestate_fname[MAX_DPATH]={
 	'/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'a', 's', 'f', '\0'
@@ -212,8 +212,10 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, char *name, 
     /* chunk data */
     if (compress) {
 	int tmplen = len;
+	size_t opos;
 	dst = &tmp[0];
 	save_u32 (len);
+	opos = zfile_ftell (f);
 	zfile_fwrite (&tmp[0], 1, 4, f);
 	len = zfile_zcompress (f, chunk, len);
 	if (len > 0) {
@@ -225,7 +227,7 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, char *name, 
 	} else {
 	    len = tmplen;
 	    compress = 0;
-	    zfile_fseek (f, -8, SEEK_CUR);
+	    zfile_fseek (f, opos, SEEK_SET);
 	    dst = &tmp[0];
 	    save_u32 (flags);
 	    zfile_fwrite (&tmp[0], 1, 4, f);
@@ -314,6 +316,8 @@ void restore_ram (size_t filepos, uae_u8 *memory)
     int size, fullsize;
     uae_u32 flags;
     
+    if (filepos == 0 || memory == NULL)
+	return;
     zfile_fseek (savestate_file, filepos, SEEK_SET);
     zfile_fread (tmp, 1, sizeof(tmp), savestate_file);
     size = restore_u32();
@@ -354,13 +358,14 @@ static void restore_header (uae_u8 *src)
 
 /* restore all subsystems */
 
-void restore_state (char *filename)
+void restore_state (const char *filename)
 {
     struct zfile *f;
     uae_u8 *chunk,*end;
     char name[5];
     size_t len, totallen;
     size_t filepos, filesize;
+    int z3num;
 
     chunk = 0;
     f = zfile_fopen (filename, "rb");
@@ -382,6 +387,7 @@ void restore_state (char *filename)
     changed_prefs.chipmem_size = 0;
     changed_prefs.fastmem_size = 0;
     changed_prefs.z3fastmem_size = 0;
+    z3num = 0;
     savestate_state = STATE_RESTORE;
     for (;;) {
 	name[0] = 0;
@@ -401,7 +407,7 @@ void restore_state (char *filename)
 	    restore_fram (totallen, filepos);
 	    continue;
 	} else if (!strcmp (name, "ZRAM")) {
-	    restore_zram (totallen, filepos);
+	    restore_zram (totallen, filepos, z3num++);
 	    continue;
 	} else if (!strcmp (name, "BORO")) {
 	    restore_bootrom (totallen, filepos);
@@ -484,13 +490,19 @@ void restore_state (char *filename)
 	    end = chunk + len;
 	    write_log ("unknown chunk '%s' size %d bytes\n", name, len);
 	}
-	if (len != end - chunk)
+	if (end == NULL)
+	    write_log ("Chunk '%s', size %d bytes was not accepted!\n",
+		      name, len);
+	else if (len != end - chunk)
 	    write_log ("Chunk '%s' total size %d bytes but read %d bytes!\n",
 		       name, len, end - chunk);
 	xfree (chunk);
     }
     restore_disk_finish();
     restore_blitter_finish();
+#ifdef PICASSO96
+    restore_p96_finish ();
+#endif
     return;
 
   error:
@@ -513,11 +525,19 @@ void savestate_restore_finish (void)
 }
 
 /* 1=compressed,2=not compressed,3=ram dump,4=audio dump */
-void savestate_initsave (char *filename, int mode)
+void savestate_initsave (const char *filename, int mode, int nodialogs)
 {
+    if (filename == NULL) {
+	savestate_fname[0] = 0;
+	savestate_docompress = 0;
+	savestate_specialdump = 0;
+	savestate_nodialogs = 0;
+	return;
+    }
     strcpy (savestate_fname, filename);
     savestate_docompress = (mode == 1) ? 1 : 0;
     savestate_specialdump = (mode == 3) ? 1 : (mode == 4) ? 2 : 0;
+    savestate_nodialogs = nodialogs;
 }
 
 static void save_rams (struct zfile *f, int comp)
@@ -526,28 +546,28 @@ static void save_rams (struct zfile *f, int comp)
     int len;
 
     dst = save_cram (&len);
-    save_chunk (f, dst, len, (char *)"CRAM", comp);
+    save_chunk (f, dst, len, "CRAM", comp);
     dst = save_bram (&len);
-    save_chunk (f, dst, len, (char *)"BRAM", comp);
+    save_chunk (f, dst, len, "BRAM", comp);
 #ifdef AUTOCONFIG
     dst = save_fram (&len);
-    save_chunk (f, dst, len, (char *)"FRAM", comp);
-    dst = save_zram (&len);
-    save_chunk (f, dst, len, (char *)"ZRAM", comp);
+    save_chunk (f, dst, len, "FRAM", comp);
+    dst = save_zram (&len, 0);
+    save_chunk (f, dst, len, "ZRAM", comp);
     dst = save_bootrom (&len);
-    save_chunk (f, dst, len, (char *)"BORO", comp);
+    save_chunk (f, dst, len, "BORO", comp);
 #endif
 #ifdef PICASSO96
     dst = save_p96 (&len, 0);
-    save_chunk (f, dst, len, (char *)"P96 ", 0);
+    save_chunk (f, dst, len, "P96 ", 0);
     dst = save_pram (&len);
-    save_chunk (f, dst, len, (char *)"PRAM", comp);
+    save_chunk (f, dst, len, "PRAM", comp);
 #endif
 }
 
 /* Save all subsystems  */
 
-int save_state (char *filename, const char *description)
+int save_state (const char *filename, const char *description)
 {
     uae_u8 endhunk[] = { 'E', 'N', 'D', ' ', 0, 0, 0, 8 };
     uae_u8 header[1000];
@@ -558,13 +578,14 @@ int save_state (char *filename, const char *description)
     char name[5];
     int comp = savestate_docompress;
 
-    if (!savestate_specialdump) {
+    if (!savestate_specialdump && !savestate_nodialogs) {
 	state_incompatible_warn();
 	if (!save_filesys_cando()) {
 	    gui_message("Filesystem active. Try again later");
 	    return -1;
 	}
     }
+    savestate_nodialogs = 0;
     custom_prepare_savestate ();
     f = zfile_fopen (filename, "w+b");
     if (!f)
@@ -583,14 +604,14 @@ int save_state (char *filename, const char *description)
     snprintf (tmp, 32, "%d.%d.%d", UAEMAJOR, UAEMINOR, UAESUBREV);
     save_string (tmp);
     save_string (description);
-    save_chunk (f, header, dst-header, (char *)"ASF ", 0);
+    save_chunk (f, header, dst-header, "ASF ", 0);
 
     dst = save_cpu (&len, 0);
-    save_chunk (f, dst, len, (char *)"CPU ", 0);
+    save_chunk (f, dst, len, "CPU ", 0);
     xfree (dst);
 #ifdef FPUEMU
     dst = save_fpu (&len, 0);
-    save_chunk (f, dst, len, (char *)"FPU ", 0);
+    save_chunk (f, dst, len, "FPU ", 0);
     xfree (dst);
 #endif
 
@@ -604,22 +625,22 @@ int save_state (char *filename, const char *description)
 	}
     }
     dst = save_floppy (&len, 0);
-    save_chunk (f, dst, len, (char *)"DISK", 0);
+    save_chunk (f, dst, len, "DISK", 0);
     xfree (dst);
 
     dst = save_blitter (&len, 0);
-    save_chunk (f, dst, len, (char *)"BLIT", 0);
+    save_chunk (f, dst, len, "BLIT", 0);
     xfree (dst);
 
     dst = save_custom (&len, 0, 0);
-    save_chunk (f, dst, len, (char *)"CHIP", 0);
+    save_chunk (f, dst, len, "CHIP", 0);
     xfree (dst);
 
     dst = save_custom_agacolors (&len, 0);
-    save_chunk (f, dst, len, (char *)"AGAC", 0);
+    save_chunk (f, dst, len, "AGAC", 0);
     xfree (dst);
 
-    strcpy (name, (char *)"SPRx");
+    strcpy (name, "SPRx");
     for (i = 0; i < 8; i++) {
 	dst = save_custom_sprite (i, &len, 0);
 	name[3] = i + '0';
@@ -627,7 +648,7 @@ int save_state (char *filename, const char *description)
 	xfree (dst);
     }
 
-    strcpy (name, (char *)"AUDx");
+    strcpy (name, "AUDx");
     for (i = 0; i < 4; i++) {
 	dst = save_audio (i, &len, 0);
 	name[3] = i + '0';
@@ -636,20 +657,20 @@ int save_state (char *filename, const char *description)
     }
 
     dst = save_cia (0, &len, 0);
-    save_chunk (f, dst, len, (char *)"CIAA", 0);
+    save_chunk (f, dst, len, "CIAA", 0);
     xfree (dst);
 
     dst = save_cia (1, &len, 0);
-    save_chunk (f, dst, len, (char *)"CIAB", 0);
+    save_chunk (f, dst, len, "CIAB", 0);
     xfree (dst);
 
     dst = save_keyboard (&len);
-    save_chunk (f, dst, len, (char *)"KEYB", 0);
+    save_chunk (f, dst, len, "KEYB", 0);
     xfree (dst);
 
 #ifdef AUTOCONFIG
     dst = save_expansion (&len, 0);
-    save_chunk (f, dst, len, (char *)"EXPA", 0);
+    save_chunk (f, dst, len, "EXPA", 0);
     xfree (dst);
 #endif
 
@@ -659,18 +680,18 @@ int save_state (char *filename, const char *description)
     do {
 	if (!dst)
 	    break;
-	save_chunk (f, dst, len, (char *)"ROM ", 0);
+	save_chunk (f, dst, len, "ROM ", 0);
 	xfree (dst);
     } while ((dst = save_rom (0, &len, 0)));
 
 #ifdef FILESYS
     dst = save_filesys_common (&len);
     if (dst) {
-	save_chunk (f, dst, len, (char *)"FSYC", 0);
+	save_chunk (f, dst, len, "FSYC", 0);
     for (i = 0; i < nr_units (); i++) {
 	dst = save_filesys (i, &len);
 	if (dst) {
-	    save_chunk (f, dst, len, (char *)"FSYS", 0);
+	    save_chunk (f, dst, len, "FSYS", 0);
 	    xfree (dst);
 	}
     }

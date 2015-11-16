@@ -58,7 +58,7 @@ static struct zfile *zfile_create (void)
 {
     struct zfile *z;
 
-    z = (struct zfile *)malloc (sizeof *z);
+    z = (struct zfile *)xmalloc (sizeof *z);
     if (!z)
 	return 0;
     memset (z, 0, sizeof *z);
@@ -122,7 +122,7 @@ int zfile_gettype (struct zfile *z)
     uae_u8 buf[8];
     char *ext;
     
-    if (!z)
+    if (!z || !z->name)
 	return ZFILE_UNKNOWN;
     ext = strrchr (z->name, '.');
     if (ext != NULL) {
@@ -132,28 +132,34 @@ int zfile_gettype (struct zfile *z)
 	    if (strcasecmp (ext, diskimages[i]) == 0)
 		return ZFILE_DISKIMAGE;
 	}
-	if (strcasecmp (ext, (char *)"roz") == 0)
+	if (strcasecmp (ext, "roz") == 0)
 	    return ZFILE_ROM;
-	if (strcasecmp (ext, (char *)"uss") == 0)
+	if (strcasecmp (ext, "uss") == 0)
 	    return ZFILE_STATEFILE;
-	if (strcasecmp (ext, (char *)"rom") == 0)
+	if (strcasecmp (ext, "rom") == 0)
 	    return ZFILE_ROM;
-	if (strcasecmp (ext, (char *)"key") == 0)
+	if (strcasecmp (ext, "key") == 0)
 	    return ZFILE_KEY;
-	if (strcasecmp (ext, (char *)"nvr") == 0)
+	if (strcasecmp (ext, "nvr") == 0)
 	    return ZFILE_NVR;
-	if (strcasecmp (ext, (char *)"uae") == 0)
+	if (strcasecmp (ext, "uae") == 0)
 	    return ZFILE_CONFIGURATION;
-	if (strcasecmp (ext, (char *)"hdf") == 0)
-	    return ZFILE_HDF;
-	if (strcasecmp (ext, (char *)"hdz") == 0)
-	    return ZFILE_HDF;
     }
     memset (buf, 0, sizeof (buf));
     zfile_fread (buf, 8, 1, z);
     zfile_fseek (z, -8, SEEK_CUR);
     if (!memcmp (buf, exeheader, sizeof(buf)))
 	    return ZFILE_DISKIMAGE;
+    if (!memcmp (buf, "RDSK", 4))
+	return ZFILE_HDFRDB;
+    if (!memcmp (buf, "DOS", 3))
+	return ZFILE_HDF;
+    if (ext != NULL) {
+	if (strcasecmp (ext, "hdf") == 0)
+	    return ZFILE_HDF;
+	if (strcasecmp (ext, "hdz") == 0)
+	    return ZFILE_HDF;
+    }
     return ZFILE_UNKNOWN;
 }
 
@@ -421,7 +427,7 @@ static struct zfile *zuncompress (struct zfile *z, int dodefault)
     return z;
 }
 
-static struct zfile *zfile_fopen_nozip (const char *name, const char *mode)
+struct zfile *zfile_fopen_nozip (const char *name, const char *mode)
 {
     struct zfile *l;
     FILE *f;
@@ -565,7 +571,7 @@ struct zfile *zfile_dup (struct zfile *zf)
     if (!zf || !zf->data)
 	return NULL;
     nzf = zfile_create();
-    nzf->data = (uae_u8 *)malloc (zf->size);
+    nzf->data = (uae_u8 *)xmalloc (zf->size);
     memcpy (nzf->data, zf->data, zf->size);
     nzf->size = zf->size;
     return nzf;
@@ -605,11 +611,10 @@ struct zfile *zfile_fopen_empty (const char *name, int size)
     l = zfile_create ();
     l->name = name ? strdup (name) : (char *)"";
     if (size) {
-      l->data = (uae_u8 *)malloc (size);
+      l->data = (uae_u8 *)xcalloc (size, 1);
       l->size = size;
-      memset (l->data, 0, size);
     } else {
-    	l->data = (uae_u8*)calloc (1, 1);
+    	l->data = (uae_u8*)xcalloc (1, 1);
     	l->size = 0;
     }
     return l;
@@ -620,7 +625,7 @@ struct zfile *zfile_fopen_data (const char *name, int size, uae_u8 *data)
     struct zfile *l;
     l = zfile_create ();
     l->name = name ? strdup (name) : (char *)"";
-    l->data = (uae_u8 *)malloc (size);
+    l->data = (uae_u8 *)xmalloc (size);
     l->size = size;
     memcpy (l->data, data, size);
     return l;
@@ -1152,6 +1157,13 @@ struct znode *zvolume_adddir_abs(struct zvolume *zv, struct zarchive_info *zai)
     char *p, *p2;
     int i;
 
+    if (strlen (path) > 0) {
+	/* remove possible trailing / or \ */
+	char last;
+	last = path[strlen (path) - 1];
+	if (last == '/' || last == '\\')
+	    path[strlen (path) - 1] = 0;
+    }
     zn2 = &zv->root;
     p = p2 = path;
     for (i = 0; path[i]; i++) {

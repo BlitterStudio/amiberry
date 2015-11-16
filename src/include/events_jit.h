@@ -28,8 +28,8 @@ extern signed long pissoff;
 
 STATIC_INLINE void cycles_do_special (void)
 {
-    if (pissoff >= 0)
-	pissoff = -1;
+    if (pissoff > 0)
+	pissoff = 0;
 }
 
 STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
@@ -49,7 +49,7 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 
 STATIC_INLINE void do_cycles_slow (unsigned long cycles_to_add)
 {
-    if ((pissoff -= cycles_to_add) >= 0)
+    if ((pissoff -= cycles_to_add) > 0)
 	return;
 
     cycles_to_add = -pissoff;
@@ -65,6 +65,7 @@ STATIC_INLINE void do_cycles_slow (unsigned long cycles_to_add)
 	    return;
 	}
     }
+
     while ((nextevent - currcycle) <= cycles_to_add) {
 	int i;
 	cycles_to_add -= (nextevent - currcycle);

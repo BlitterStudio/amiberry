@@ -59,4 +59,4 @@ extern struct uaedev_mount_info options_mountinfo;
 
 extern struct hardfiledata *get_hardfile_data (int nr);
 extern int get_native_path(uae_u32 lock, char *out);
-extern void hardfile_do_disk_change (int fsid, int insert);
+extern void hardfile_do_disk_change (struct uaedev_config_info *uci, int insert);

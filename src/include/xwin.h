@@ -11,6 +11,7 @@ typedef long int xcolnr;
 typedef int (*allocfunc_type)(int, int, int, xcolnr *);
 
 extern xcolnr xcolors[4096];
+extern uae_u32 p96_rgbx16[65536];
 
 extern int buttonstate[3];
 extern int newmousecounters;
@@ -40,6 +41,7 @@ extern int mask_shift (unsigned long mask);
 extern unsigned int doMask (int p, int bits, int shift);
 extern unsigned int doMask256 (int p, int bits, int shift);
 extern void alloc_colors64k (int, int, int, int, int, int, int);
+extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt);
 
 struct vidbuf_description
 {

@@ -50,6 +50,34 @@ typedef uae_u32 uintptr;
 #define USE_CHECKSUM_INFO 1
 #endif
 
+/* Flags for Bernie during development/debugging. Should go away eventually */
+#define DISTRUST_CONSISTENT_MEM 0
+#define TAGMASK 0x000fffff
+#define TAGSIZE (TAGMASK+1)
+#define MAXRUN 1024
+
+extern uae_u8* start_pc_p;
+extern uae_u32 start_pc;
+
+#define cacheline(x) (((uae_u32)x)&TAGMASK)
+
+typedef struct {
+  uae_u16* location;
+  uae_u8  cycles;
+  uae_u8  specmem;
+  uae_u8  dummy2;
+  uae_u8  dummy3;
+} cpu_history;
+
+struct blockinfo_t;
+
+typedef union {
+    cpuop_func* handler;
+    struct blockinfo_t* bi;
+} cacheline;
+
+extern signed long pissoff;
+
 #define USE_ALIAS 1
 #define USE_F_ALIAS 1
 #define USE_OFFSET 0

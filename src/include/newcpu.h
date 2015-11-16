@@ -153,6 +153,7 @@ extern struct regstruct
     uae_u16 wb3_status;
     int mmu_enabled;
     int mmu_pagesize_8k;
+    uae_u32 fault_pc;
 #endif
 
     uae_u32 pcr;
@@ -162,23 +163,6 @@ extern struct regstruct
     uae_u32 panic_pc, panic_addr;
 
 } regs, lastint_regs;
-
-typedef struct {
-  uae_u16* location;
-  uae_u8  cycles;
-  uae_u8  specmem;
-  uae_u8  dummy2;
-  uae_u8  dummy3;
-} cpu_history;
-
-struct blockinfo_t;
-
-typedef union {
-    cpuop_func* handler;
-    struct blockinfo_t* bi;
-} cacheline;
-
-extern signed long pissoff;
 
 STATIC_INLINE uae_u32 munge24(uae_u32 x)
 {
@@ -367,7 +351,6 @@ extern uae_u32 fpp_get_fpsr (const struct regstruct *regs);
 
 extern void exception3 (uae_u32 opcode, uaecptr addr, uaecptr fault);
 extern void exception3i (uae_u32 opcode, uaecptr addr, uaecptr fault);
-extern void exception2 (uaecptr addr, uaecptr fault);
 extern void cpureset (void);
 
 extern void fill_prefetch_slow (struct regstruct *regs);
@@ -392,18 +375,6 @@ extern const struct cputbl op_smalltbl_11_ff[];
 extern const struct cputbl op_smalltbl_12_ff[];
 
 extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC ("cpufunctbl");
-
-
-/* Flags for Bernie during development/debugging. Should go away eventually */
-#define DISTRUST_CONSISTENT_MEM 0
-#define TAGMASK 0x000fffff
-#define TAGSIZE (TAGMASK+1)
-#define MAXRUN 1024
-
-extern uae_u8* start_pc_p;
-extern uae_u32 start_pc;
-
-#define cacheline(x) (((uintptr)x)&TAGMASK)
 
 void newcpu_showstate(void);
 

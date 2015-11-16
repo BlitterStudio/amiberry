@@ -30,9 +30,9 @@ PANDORA=1
 
 SDL_CFLAGS = `sdl-config --cflags`
 
-DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DDOUBLEBUFFER -DSIX_AXIS_WORKAROUND
+DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
-DEFS += -DUSE_SDL -DUSE_UNDERSCORE -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS
+DEFS += -DUSE_SDL
 
 ifeq ($(USE_PICASSO96), 1)
 	DEFS += -DPICASSO96
@@ -90,6 +90,7 @@ OBJS =	\
 	src/savestate.o \
 	src/traps.o \
 	src/uaelib.o \
+	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \
 	src/archivers/7z/7zAlloc.o \
@@ -194,10 +195,10 @@ OBJS += src/cpustbl.o
 OBJS += src/cpuemu_0.o
 OBJS += src/cpuemu_4.o
 OBJS += src/cpuemu_11.o
-OBJS += src/compemu.o
-OBJS += src/compemu_fpp.o
-OBJS += src/compstbl.o
-OBJS += src/compemu_support.o
+OBJS += src/jit/compemu.o
+OBJS += src/jit/compemu_fpp.o
+OBJS += src/jit/compstbl.o
+OBJS += src/jit/compemu_support.o
 
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s

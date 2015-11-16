@@ -76,7 +76,6 @@ static int sprvbfl;
 int lastmx, lastmy;
 int newmousecounters;
 static int mouse_x, mouse_y;
-static int ievent_alive = 0;
 
 static enum mousestate mousestate;
 
@@ -146,11 +145,6 @@ int mousehack_get (void)
     return mousestate;
 }
 
-int mousehack_alive (void)
-{
-    return ievent_alive > 0;
-}
-
 void togglemouse (void)
 {
     switch (mousestate) {
@@ -175,11 +169,6 @@ void do_mouse_hack (void)
   int spr0y = ((spr0pos >> 8) | ((spr0ctl & 4) << 6)) << 1;
   int diffx, diffy;
 
-  if (ievent_alive > 0) 
-  {
-	  mouse_x = mouse_y = 0;
-	  return;
-  }
   switch (mousestate) {
     case mousehack_normal:
 	    diffx = lastmx - lastsampledmx;
@@ -336,9 +325,6 @@ void inputdevice_vsync (void)
 		back_joy0button= joy0button;
 		buttonstate[0]= joy0button & 0x01;
 	}
-
-  if (ievent_alive > 0)
-  	ievent_alive--;
 }
 
 
@@ -352,7 +338,6 @@ void inputdevice_reset (void)
   	mousehack_set (mousehack_dontcare);
   else
 	  mousehack_set (mousehack_normal);
-  ievent_alive = 0;
 }
 
 void inputdevice_updateconfig (struct uae_prefs *prefs)

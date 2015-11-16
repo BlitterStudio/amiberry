@@ -420,7 +420,7 @@ static USHORT Unpack_Track(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen, 
 	    if (usum1 == Calc_CheckSum(b2,(ULONG)unpklen)) {
 		passfound = maybeencrypted;
 		if (passfound)
-		    write_log("DMS: decryption key = 0x%04.4X\n", pass);
+		    write_log ("DMS: decryption key = 0x%04X\n", prevpass);
 		err = NO_PROBLEM;
 		pass = prevpass;
 		break;

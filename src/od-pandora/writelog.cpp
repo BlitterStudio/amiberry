@@ -7,6 +7,8 @@
   */
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "uae.h"
+
 
 #define WRITE_LOG_BUF_SIZE 4096
 FILE *debugfile = NULL;
@@ -42,3 +44,19 @@ void write_log (const char *format,...)
 
 #endif
 
+void jit_abort (const char *format,...)
+{
+    static int happened;
+    int count;
+    char buffer[WRITE_LOG_BUF_SIZE];
+    va_list parms;
+    va_start (parms, format);
+
+    count = vsnprintf (buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+    write_log (buffer);
+    va_end (parms);
+    if (!happened)
+	gui_message ("JIT: Serious error:\n%s", buffer);
+    happened = 1;
+    uae_reset (1);
+}

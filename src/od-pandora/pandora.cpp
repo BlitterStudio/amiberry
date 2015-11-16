@@ -36,6 +36,8 @@
 #include "newcpu.h"
 #include "traps.h"
 #include "native2amiga.h"
+#include "rtgmodes.h"
+#include "uaeresource.h"
 #include <SDL.h>
 #include "gp2x.h"
 
@@ -98,6 +100,7 @@ void reinit_amiga(void)
 #endif
 #ifdef FILESYS
   rtarea_init ();
+  uaeres_install ();
   hardfile_install();
 #endif
 
@@ -217,6 +220,8 @@ void target_default_options (struct uae_prefs *p, int type)
 	p->pandora_button2 = GP2X_BUTTON_A;
 	p->pandora_autofireButton1 = GP2X_BUTTON_B;
 	p->pandora_jump = -1;
+	
+	p->picasso96_modeflags = RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 }
 
 
@@ -656,7 +661,7 @@ int main (int argc, char *argv[])
     printf("Failed to set signal handler (SIGILL).\n");
     abort();
   }
-  
+
   alloc_AmigaMem();
   RescanROMs();
   real_main (argc, argv);
@@ -905,7 +910,8 @@ void handle_events (void)
   			else
   			{
 				  int mouseScale = currprefs.input_joymouse_multiplier / 2;
-  
+				  if(rEvent.motion.xrel > 20 || rEvent.motion.xrel < -20 || rEvent.motion.yrel > 20 || rEvent.motion.yrel < -20)
+				    break;
   				lastmx += rEvent.motion.xrel * mouseScale;
   				lastmy += rEvent.motion.yrel * mouseScale;
   				if(rEvent.motion.x == 0)

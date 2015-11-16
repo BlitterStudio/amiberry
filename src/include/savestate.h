@@ -78,6 +78,7 @@ extern uae_u8 *save_expansion (int *, uae_u8 *);
 
 extern uae_u8 *restore_p96 (uae_u8 *);
 extern uae_u8 *save_p96 (int *, uae_u8 *);
+extern void restore_p96_finish (void);
 
 extern uae_u8 *restore_keyboard (uae_u8 *);
 extern uae_u8 *save_keyboard (int *);
@@ -91,7 +92,7 @@ extern int save_filesys_cando(void);
 extern void restore_cram (int, size_t);
 extern void restore_bram (int, size_t);
 extern void restore_fram (uae_u32, size_t);
-extern void restore_zram (uae_u32, size_t);
+extern void restore_zram (uae_u32, size_t, int);
 extern void restore_bootrom (int, size_t);
 extern void restore_pram (int, size_t);
 extern void restore_ram (size_t, uae_u8*);
@@ -99,16 +100,16 @@ extern void restore_ram (size_t, uae_u8*);
 extern uae_u8 *save_cram (int *);
 extern uae_u8 *save_bram (int *);
 extern uae_u8 *save_fram (int *);
-extern uae_u8 *save_zram (int *);
+extern uae_u8 *save_zram (int *, int);
 extern uae_u8 *save_bootrom (int *);
 extern uae_u8 *save_pram (int *);
 
 extern uae_u8 *restore_rom (uae_u8 *);
 extern uae_u8 *save_rom (int, int *, uae_u8 *);
 
-extern void savestate_initsave (char *filename, int docompress);
-extern int save_state (char *filename, const char *description);
-extern void restore_state (char *filename);
+extern void savestate_initsave (const char *filename, int docompress, int nodialogs);
+extern int save_state (const char *filename, const char *description);
+extern void restore_state (const char *filename);
 extern void savestate_restore_finish (void);
 
 extern void custom_save_state (void);

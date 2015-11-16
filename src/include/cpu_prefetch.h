@@ -13,51 +13,71 @@ STATIC_INLINE uae_u32 get_long_prefetch (struct regstruct *regs, int o)
 }
 
 #ifdef CPUEMU_12
+#define CE_MEMBANK_FAST 0
+#define CE_MEMBANK_CHIP 1
+#define CE_MEMBANK_CIA 2
+extern uae_u8 ce_banktype[256];
 STATIC_INLINE uae_u32 mem_access_delay_word_read (uaecptr addr)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
+    switch (ce_banktype[(addr >> 16) & 0xff])
+    {
+	case CE_MEMBANK_CHIP:
 	return wait_cpu_cycle_read (addr, 1);
-    } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
+	case CE_MEMBANK_FAST:
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
+	break;
     }
     return get_word (addr);
 }
 STATIC_INLINE uae_u32 mem_access_delay_wordi_read (uaecptr addr)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
+    switch (ce_banktype[(addr >> 16) & 0xff])
+    {
+	case CE_MEMBANK_CHIP:
 	return wait_cpu_cycle_read (addr, 1);
-    } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
+	case CE_MEMBANK_FAST:
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
+	break;
     }
     return get_wordi (addr);
 }
 
 STATIC_INLINE uae_u32 mem_access_delay_byte_read (uaecptr addr)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
+    switch (ce_banktype[(addr >> 16) & 0xff])
+    {
+	case CE_MEMBANK_CHIP:
 	return wait_cpu_cycle_read (addr, 0);
-    } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
+	case CE_MEMBANK_FAST:
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
+	break;
     }
     return get_byte (addr);
 }
 STATIC_INLINE void mem_access_delay_byte_write (uaecptr addr, uae_u32 v)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
+    switch (ce_banktype[(addr >> 16) & 0xff])
+    {
+	case CE_MEMBANK_CHIP:
 	wait_cpu_cycle_write (addr, 0, v);
 	return;
-    } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
+	case CE_MEMBANK_FAST:
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
+	break;
     }
     put_byte (addr, v);
 }
 STATIC_INLINE void mem_access_delay_word_write (uaecptr addr, uae_u32 v)
 {
-    if (addr < 0x200000 || (addr >= 0xc00000 && addr < 0xe00000 && !currprefs.cs_slowmemisfast)) {
+    switch (ce_banktype[(addr >> 16) & 0xff])
+    {
+	case CE_MEMBANK_CHIP:
 	wait_cpu_cycle_write (addr, 1, v);
 	return;
-    } else if (!(addr >= 0xa00000 && addr < 0xc00000)) {
+	break;
+	case CE_MEMBANK_FAST:
 	do_cycles_ce (4 * CYCLE_UNIT / 2);
+	break;
     }
     put_word (addr, v);
 }

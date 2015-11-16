@@ -63,8 +63,8 @@ struct mnemolookup lookuptab[] = {
     { i_SWAP, "SWAP" },
     { i_EXG, "EXG" },
     { i_EXT, "EXT" },
-    { i_MVMEL, "MVMEL" },
-    { i_MVMLE, "MVMLE" },
+    { i_MVMEL, "MVMEL", "MOVEM" },
+    { i_MVMLE, "MVMLE", "MOVEM" },
     { i_TRAP, "TRAP" },
     { i_MVR2USP, "MVR2USP" },
     { i_MVUSP2R, "MVUSP2R" },
@@ -107,8 +107,8 @@ struct mnemolookup lookuptab[] = {
     { i_ROXLW, "ROXLW" },
     { i_ROXRW, "ROXRW" },
 
-    { i_MOVE2C, "MOVE2C" },
-    { i_MOVEC2, "MOVEC2" },
+    { i_MOVE2C, "MOVE2C", "MOVEC" },
+    { i_MOVEC2, "MOVEC2", "MOVEC" },
     { i_CAS, "CAS" },
     { i_CAS2, "CAS2" },
     { i_MULL, "MULL" },
@@ -149,9 +149,18 @@ struct mnemolookup lookuptab[] = {
     { i_EMULOP_RETURN, "EMULOP_RETURN" },
     { i_EMULOP, "EMULOP" },
 
-    { i_MMUOP30A, "MMUOP30A" },
-    { i_MMUOP30B, "MMUOP30B" },
-    { i_MMUOP, "MMUOP" },
+    { i_MMUOP030, "MMUOP030" },
+    { i_PFLUSHN, "PFLUSHN" },
+    { i_PFLUSH, "PFLUSH" },
+    { i_PFLUSHAN, "PFLUSHAN" },
+    { i_PFLUSHA, "PFLUSHA" },
+
+    { i_PLPAR, "PLPAR" },
+    { i_PLPAW, "PLPAW" },
+    { i_PTESTR, "PTESTR" },
+    { i_PTESTW, "PTESTW" },
+
+    { i_LPSTOP, "LPSTOP" },
 
     {i_NATFEAT_ID, "NATFEAT_ID" },
     {i_NATFEAT_CALL, "NATFEAT_CALL" },
@@ -413,6 +422,7 @@ static void build_insn (int insn)
 	    switch (opcstr[pos]) {
 	    case 'p': srcmode = Apdi; pos++; break;
 	    case 'P': srcmode = Aipi; pos++; break;
+	    case 'a': srcmode = Aind; pos++; break;
 	    }
 	    break;
 #if 0
@@ -767,7 +777,8 @@ static void build_insn (int insn)
 		    table68k[opc].mnemo = lookuptab[find].mnemo;
 		    break;
 		}
-		if (strlen(lookuptab[find].name) == 0) abort();
+		if (strlen(lookuptab[find].name) == 0) 
+      abort();
 	    }
 	}
 	else {

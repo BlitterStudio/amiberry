@@ -66,6 +66,7 @@ struct Trap
     TrapHandler handler;	/* Handler function to be invoked for this trap. */
     int         flags;		/* Trap attributes. */
     const char *name;		/* For debugging purposes. */
+    uaecptr addr;
 };
 
 #define MAX_TRAPS 4096
@@ -79,6 +80,19 @@ static const int trace_traps = 0;
 
 
 static void trap_HandleExtendedTrap (TrapHandler, int has_retval);
+
+uaecptr find_trap (const char *name)
+{
+    int i;
+
+    for (i = 0; i < trap_count; i++) {
+	struct Trap *trap = &traps[i];
+	if ((trap->flags & TRAPFLAG_UAERES) && trap->name && !strcmp (trap->name, name))
+	    return trap->addr;
+    }
+    return 0;
+}
+
 
 /*
  * Define an emulator trap
@@ -102,6 +116,7 @@ unsigned int define_trap (TrapHandler handler_func, int flags, const char *name)
 	trap->handler = handler_func;
 	trap->flags   = flags;
 	trap->name    = name;
+	trap->addr    = here ();
 
 	return trap_num;
     }

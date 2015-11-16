@@ -30,16 +30,20 @@ typedef SDL_Thread *uae_thread_id;
 
 STATIC_INLINE int uae_start_thread (const char *name, void *(*f) (void *), void *arg, uae_thread_id *foo)
 {
-    *foo = SDL_CreateThread ((int (*)(void *))f, arg);
-    write_log("uae_start_thread: %s, id=%d\n", name, *foo);
-    return *foo == 0;
+  uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, arg);
+  if(foo != NULL)
+    *foo = id;
+  write_log("uae_start_thread: %s, id=%d\n", name, id);
+  return id == 0;
 }
 
 STATIC_INLINE int uae_start_thread_fast (void *(*f) (void *), void *arg, uae_thread_id *foo)
 {
-    *foo = SDL_CreateThread ((int (*)(void *))f, arg);
-    write_log("uae_start_thread_fast: arg=0x%08X, id=%d\n", arg, *foo);
-    return *foo == 0;
+  uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, arg);
+  if(foo != NULL)
+    *foo = id;
+  write_log("uae_start_thread_fast: arg=0x%08X, id=%d\n", arg, id);
+  return id == 0;
 }
 
 STATIC_INLINE void uae_wait_thread (uae_thread_id thread)
