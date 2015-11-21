@@ -1912,7 +1912,7 @@ FillRect:
 * d5:	UBYTE Mask
 * d7:	uae_u32 RGBFormat
 ***********************************************************/
-static uae_u32 REGPARAM2 picasso_FillRect (TrapContext *ctx)
+__attribute__((optimize("O2"))) static uae_u32 REGPARAM2 picasso_FillRect (TrapContext *ctx)
 {
     struct regstruct *regs = &ctx->regs;
   uaecptr renderinfo = m68k_areg (regs, 1);
