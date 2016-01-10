@@ -1,0 +1,4 @@
+*.o
+conf/*.uae
+conf/*.conf
+kickstarts/*.rom
