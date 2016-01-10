@@ -910,8 +910,10 @@ void handle_events (void)
   			else
   			{
 				  int mouseScale = currprefs.input_joymouse_multiplier / 2;
+#ifndef RASPBERRY
 				  if(rEvent.motion.xrel > 20 || rEvent.motion.xrel < -20 || rEvent.motion.yrel > 20 || rEvent.motion.yrel < -20)
 				    break;
+#endif
   				lastmx += rEvent.motion.xrel * mouseScale;
   				lastmy += rEvent.motion.yrel * mouseScale;
   				if(rEvent.motion.x == 0)
