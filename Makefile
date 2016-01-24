@@ -6,12 +6,13 @@ ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
+	HAVE_DISPMANX = 1
 	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
+	HAVE_DISPMANX = 1
 	DEFS += -DRASPBERRY
-else ifeq ($(PLATFORM),armv6)
-	CPU_FLAGS += -march=armv6j -mfpu=vfp -mfloat-abi=hard
+else ifeq ($(PLATFORM),generic-sdl)
 endif
 
 NAME   = uae4arm
@@ -137,7 +138,6 @@ OBJS =	\
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \
 	src/od-pandora/pandora_gui.o \
-	src/od-rasp/rasp_gfx.o \
 	src/od-pandora/pandora_mem.o \
 	src/od-pandora/sigsegv_handler.o \
 	src/od-pandora/menu/menu_config.o \
@@ -169,6 +169,13 @@ OBJS =	\
 	src/od-pandora/gui/PanelSavestate.o \
 	src/od-pandora/gui/main_window.o \
 	src/od-pandora/gui/Navigation.o
+
+ifeq ($(HAVE_DISPMANX), 1)
+OBJS += src/od-rasp/rasp_gfx.o
+else
+OBJS += src/od-pandora/pandora_gfx.o
+endif
+
 ifdef PANDORA
 OBJS += src/od-pandora/gui/sdltruetypefont.o
 endif

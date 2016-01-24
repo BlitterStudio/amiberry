@@ -8,7 +8,7 @@
 #include "custom.h"
 #include "drawing.h"
 #include "events.h"
-#include "osdep/inputmode.h"
+#include "od-pandora/inputmode.h"
 #include "savestate.h"
 #include "picasso96.h"
 
@@ -139,10 +139,12 @@ static void open_screen(struct uae_prefs *p)
   }
   else
   {
+#ifdef PICASSO96
     if(picasso_vidinfo.height < 480)
 	    snprintf(layersize, 20, "%dx480", picasso_vidinfo.width);
 	  else
 	    snprintf(layersize, 20, "%dx%d", picasso_vidinfo.width, picasso_vidinfo.height);
+#endif
 #ifndef WIN32
   	setenv("SDL_OMAP_LAYER_SIZE", layersize, 1);
 #endif
@@ -167,7 +169,9 @@ static void open_screen(struct uae_prefs *p)
   }
   else
   {
+#ifdef PICASSO96
   	prSDLScreen = SDL_SetVideoMode(picasso_vidinfo.width, picasso_vidinfo.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
+#endif
   }
   if(prSDLScreen != NULL)
   {
