@@ -19,15 +19,34 @@ Use dispmanX for fast scaling and double buffering.
 Enable hat usage on joystick.  
 Add Sony 6axis joystick workaround.  
 
-How to compile on Raspbian:  
-   You need to install gcc-4.8 (or edit Makefile) and install some dev package.  
+
+How to compile on Raspbian Jessie:
+
+   Install following packages:
+
+      sudo apt-get install libsdl1.2-dev
+      sudo apt-get install libguichan-dev
+      sudo apt-get install libsdl-ttf2.0-dev
+      sudo apt-get install libsdl-gfx1.2-dev
+
+   Then for Raspberry Pi 2:  
+
+      make
+
+   Or for Raspberry Pi 1:  
+
+      make PLATFORM=rpi1
+
+
+
+How to compile on Raspbian Whezzy:  
+
+   You need to install same packages as Jessie (see above)
+   and a more updated gcc (otherwise alter Makefile).
    In order to do this enter the following in command line:  
 
       sudo apt-get install g++-4.8
-      sudo apt-get install libsdl1.2-dev
-      sudo apt-get install libsdl-gfx1.2-dev
-      sudo apt-get install libsdl-ttf2.0-dev
-      sudo apt-get install libguichan-dev
+
 
    Then for Raspberry Pi 2:  
 
