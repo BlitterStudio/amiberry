@@ -22,8 +22,6 @@
 #include "td-sdl/thread.h"
 #include "bcm_host.h"
 
-extern int stylusClickOverride;
-
 
 /* SDL surface variable for output of emulation */
 SDL_Surface *prSDLScreen = NULL;
@@ -145,37 +143,20 @@ void graphics_subshutdown (void)
 }
 
 
-static void CalcPandoraWidth(struct uae_prefs *p)
-{
-  int amigaWidth = p->gfx_size.width;
-  int amigaHeight = p->gfx_size.height;
-  int pandHeight = 480;
-  
-  p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
-  if(amigaWidth > 600)
-    amigaWidth = amigaWidth / 2; // Hires selected, but we calc in lores
-  int pandWidth = (amigaWidth * pandHeight) / amigaHeight;
-  pandWidth = pandWidth & (~1);
-  if((pandWidth * amigaHeight) / pandHeight < amigaWidth)
-    pandWidth += 2;
-  if(pandWidth > 800)
-    pandWidth = 800;
-  p->gfx_size_fs.width = pandWidth;
-}
+
 
 
 static void open_screen(struct uae_prefs *p)
 {
-  char layersize[20];
 
   VC_DISPMANX_ALPHA_T alpha = { (DISPMANX_FLAGS_ALPHA_T ) (DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS), 
                             255, /*alpha 0->255*/
                             0 };
 
 
-  uint32_t                    vc_image_ptr;
-  int width;
-  int height;
+  uint32_t     vc_image_ptr;
+  int          width;
+  int          height;
 
 #ifdef PICASSO96
   if (screen_is_picasso)
@@ -185,6 +166,7 @@ static void open_screen(struct uae_prefs *p)
   } else
 #endif
   {
+    p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
     width  = p->gfx_size.width;
     height = p->gfx_size.height;
   }
@@ -195,24 +177,6 @@ static void open_screen(struct uae_prefs *p)
   //  SDL_FreeSurface(prSDLScreen);
   //  prSDLScreen = NULL;
   //} 
-
-  if(!screen_is_picasso)
-  {
-    CalcPandoraWidth(p);
-    if(curr_layer_width != p->gfx_size_fs.width)
-    {
-      snprintf(layersize, 20, "%dx480", p->gfx_size_fs.width);
-    }
-  }
-#ifdef PICASSO96
-  else
-  {
-    if(picasso_vidinfo.height < 480)
-	    snprintf(layersize, 20, "%dx480", picasso_vidinfo.width);
-	  else
-	    snprintf(layersize, 20, "%dx%d", picasso_vidinfo.width, picasso_vidinfo.height);
-  }
-#endif
 
   if(Dummy_prSDLScreen == NULL )
   {
@@ -447,39 +411,6 @@ void flush_screen ()
 
 	init_row_map();
 
-	if(stylusClickOverride)
-	{
-		justClicked = 0;
-		mouseMoving = 0;
-	}
-	else
-	{
-		if(justClicked)
-		{
-			buttonstate[0] = 0;
-			buttonstate[2] = 0;
-			justClicked = 0;
-		}
-
-		if(mouseMoving)
-		{
-			if(fcounter >= currprefs.pandora_tapDelay)
-			{
-				if(doStylusRightClick)
-			  {
-					buttonstate[2] = 1;
-        }
-				else
-			  {
-					buttonstate[0] = 1;
-  				mouseMoving = 0;
-  				justClicked = 1;
-  				fcounter = 0;
-				}
-			}
-			fcounter++;
-		}
-	}
 }
 
 
