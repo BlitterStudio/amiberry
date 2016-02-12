@@ -13,6 +13,10 @@ else ifeq ($(PLATFORM),rpi1)
 	HAVE_DISPMANX = 1
 	DEFS += -DRASPBERRY
 else ifeq ($(PLATFORM),generic-sdl)
+	HAVE_SDL_DISPLAY = 1
+else ifeq ($(PLATFORM),gles)
+	HAVE_GLES_DISPLAY = 1
+	HAVE_NEON = 1
 endif
 
 NAME   = uae4arm
@@ -172,9 +176,21 @@ OBJS =	\
 
 ifeq ($(HAVE_DISPMANX), 1)
 OBJS += src/od-rasp/rasp_gfx.o
-else
+endif
+
+ifeq ($(HAVE_SDL_DISPLAY), 1)
 OBJS += src/od-pandora/pandora_gfx.o
 endif
+
+ifeq ($(HAVE_GLES_DISPLAY), 1)
+OBJS += src/od-gles/gl.o
+OBJS += src/od-gles/gl_platform.o
+OBJS += src/od-gles/gles_gfx.o
+MORE_CFLAGS += -I/opt/vc/include/
+MORE_CFLAGS += -DHAVE_GLES
+LDFLAGS +=  -ldl -lEGL -lGLESv2
+endif
+
 
 ifdef PANDORA
 OBJS += src/od-pandora/gui/sdltruetypefont.o
