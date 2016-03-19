@@ -4,17 +4,21 @@ endif
 
 ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	LDFLAGS += -lbcm_host
 	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
 	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
+	LDFLAGS += -lbcm_host
 	HAVE_DISPMANX = 1
 	DEFS += -DRASPBERRY
 else ifeq ($(PLATFORM),generic-sdl)
 	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),gles)
+	# For Raspberry Pi uncomment below line
+	#LDFLAGS += -lbcm_host
 	HAVE_GLES_DISPLAY = 1
 	HAVE_NEON = 1
 endif
@@ -52,7 +56,7 @@ MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/
 MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -Wno-unused -Wno-format  -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
-LDFLAGS +=  -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
+LDFLAGS +=  -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
 
 ifndef DEBUG
 MORE_CFLAGS += -O3 -fomit-frame-pointer
@@ -188,7 +192,7 @@ OBJS += src/od-gles/gl_platform.o
 OBJS += src/od-gles/gles_gfx.o
 MORE_CFLAGS += -I/opt/vc/include/
 MORE_CFLAGS += -DHAVE_GLES
-LDFLAGS +=  -ldl -lEGL -lGLESv2
+LDFLAGS +=  -ldl -lEGL -lGLESv1_CM
 endif
 
 
