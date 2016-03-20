@@ -15,7 +15,7 @@
 
 
 extern SDL_Surface *prSDLScreen;
-
+extern void flush_screen ();
 
 static int msg_done = 0;
 class DoneActionListener : public gcn::ActionListener
@@ -123,7 +123,8 @@ void InGameMessage(const char *msg)
     // Now we let the Gui object draw itself.
     msg_gui->draw();
     // Finally we update the screen.
-    SDL_Flip(prSDLScreen);
+    //SDL_Flip(prSDLScreen);
+    flush_screen ();
   }
 
   msg_top->remove(wndMsg);
