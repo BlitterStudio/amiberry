@@ -171,7 +171,7 @@ namespace sdl
         			gui_running = false;
         			break;
 
-            case SDLK_LCTRL:
+            case SDLK_F12:
     			    if(emulating && widgets::cmdStart->isEnabled())
     		      {
                 //------------------------------------------------

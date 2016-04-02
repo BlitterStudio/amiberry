@@ -6,6 +6,8 @@
   * (c) 1995 Bernd Schmidt
   */
 
+extern void  init_keyboard(void);
+
 /* First, two dummies */
 #define AK_mousestuff 0x100
 #define AK_inhibit 0x101

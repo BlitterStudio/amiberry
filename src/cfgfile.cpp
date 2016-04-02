@@ -1640,7 +1640,7 @@ void default_prefs (struct uae_prefs *p, int type)
   p->gfx_framerate = 0;
 #ifdef RASPBERRY
   p->gfx_size.width = 640;
-  p->gfx_size.height = 256;
+  p->gfx_size.height = 262;
 #else
   p->gfx_size.width = 320;
   p->gfx_size.height = 240;

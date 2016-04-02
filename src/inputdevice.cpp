@@ -362,7 +362,8 @@ void inputdevice_init (void)
   lastsampledmy = 0;
   
   init_joystick ();
- 	inputmode_init();
+  inputmode_init();
+  init_keyboard();
 }
 
 void inputdevice_close (void)

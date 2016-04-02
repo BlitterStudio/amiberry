@@ -140,7 +140,7 @@ OBJS =	\
 	src/md-pandora/support.o \
 	src/od-pandora/fsdb_host.o \
 	src/od-pandora/joystick.o \
-	src/od-pandora/keyboard.o \
+	src/kb-sdl/keyboard.o \
 	src/od-pandora/inputmode.o \
 	src/od-pandora/writelog.o \
 	src/od-pandora/pandora.o \

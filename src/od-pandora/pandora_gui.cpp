@@ -533,8 +533,12 @@ void gui_handle_events (void)
 	triggerL = keystate[SDLK_RSHIFT];
 	triggerR = keystate[SDLK_RCTRL];
 
-	if(keystate[SDLK_LCTRL])
+	if(keystate[SDLK_F12])
 		goMenu();
+
+#ifndef PANDORA_SPECIFIC
+	return;
+#endif
 
 	//L + R
 	if(triggerL && triggerR)

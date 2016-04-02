@@ -704,7 +704,9 @@ void handle_events (void)
 
   /* Handle GUI events */
   gui_handle_events ();
+#ifdef PANDORA_SPECIFIC
   handle_joymouse();
+#endif
     
   while (SDL_PollEvent(&rEvent))
   {
@@ -762,11 +764,12 @@ void handle_events (void)
 
 				if (rEvent.key.keysym.sym==SDLK_RSHIFT || rEvent.key.keysym.sym==SDLK_RCTRL)
 					doStylusRightClick = 1;
-
+#ifdef PANDORA_SPECIFIC
   			if (rEvent.key.keysym.sym!=SDLK_UP && rEvent.key.keysym.sym!=SDLK_DOWN && rEvent.key.keysym.sym!=SDLK_LEFT &&
   				rEvent.key.keysym.sym!=SDLK_RIGHT && rEvent.key.keysym.sym!=SDLK_PAGEUP && rEvent.key.keysym.sym!=SDLK_PAGEDOWN &&
   				rEvent.key.keysym.sym!=SDLK_HOME && rEvent.key.keysym.sym!=SDLK_END && rEvent.key.keysym.sym!=SDLK_LALT &&
   				rEvent.key.keysym.sym!=SDLK_LCTRL && rEvent.key.keysym.sym!=SDLK_RSHIFT && rEvent.key.keysym.sym!=SDLK_RCTRL)
+#endif
   			{
   				iAmigaKeyCode = keycode2amiga(&(rEvent.key.keysym));
   				if (iAmigaKeyCode >= 0)
@@ -839,10 +842,12 @@ void handle_events (void)
   			{
   				show_inputmode = 0;
   			}
+#ifdef PANDORA_SPECIFIC
   			if (rEvent.key.keysym.sym!=SDLK_UP && rEvent.key.keysym.sym!=SDLK_DOWN && rEvent.key.keysym.sym!=SDLK_LEFT &&
   				rEvent.key.keysym.sym!=SDLK_RIGHT && rEvent.key.keysym.sym!=SDLK_PAGEUP && rEvent.key.keysym.sym!=SDLK_PAGEDOWN &&
   				rEvent.key.keysym.sym!=SDLK_HOME && rEvent.key.keysym.sym!=SDLK_END && rEvent.key.keysym.sym!=SDLK_LALT &&
   				rEvent.key.keysym.sym!=SDLK_LCTRL && rEvent.key.keysym.sym!=SDLK_RSHIFT && rEvent.key.keysym.sym!=SDLK_RCTRL)
+#endif
   			{
   				iAmigaKeyCode = keycode2amiga(&(rEvent.key.keysym));
   				if (iAmigaKeyCode >= 0)
