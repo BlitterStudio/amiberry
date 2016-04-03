@@ -1841,16 +1841,9 @@ static void draw_status_line (int line)
 #ifdef PICASSO96
   if(picasso_on)
   {
-#ifdef RASPBERRY
-    // It should be thoses lines for everyones... 
     x = picasso_vidinfo.width - TD_PADX - 6 * TD_WIDTH;
     y = line - (picasso_vidinfo.height - TD_TOTAL_HEIGHT);
     xlinebuffer = (uae_u8*)prSDLScreen->pixels + picasso_vidinfo.rowbytes * line;
-#else
-    x = prSDLScreen->w - TD_PADX - 6 * TD_WIDTH;
-    y = line - (prSDLScreen->h - TD_TOTAL_HEIGHT);
-    xlinebuffer = (uae_u8*)prSDLScreen->pixels + prSDLScreen->pitch * line;
-#endif
   }
   else
 #endif
@@ -1864,11 +1857,7 @@ static void draw_status_line (int line)
 	x+=100 - (TD_WIDTH*(currprefs.nr_floppies-1)) - TD_WIDTH;
 #ifdef PICASSO96
   if(picasso_on)
-#ifdef RASPBERRY
     memset (buf + (x - 4) * 2, 0, (picasso_vidinfo.width - x + 4) * 2);
-#else
-    memset (buf + (x - 4) * 2, 0, (prSDLScreen->w - x + 4) * 2);
-#endif
   else
 #endif
     memset (buf + (x - 4) * gfxvidinfo.pixbytes, 0, (gfxvidinfo.width - x + 4) * gfxvidinfo.pixbytes);
@@ -2060,11 +2049,7 @@ void vsync_handle_redraw (int long_frame, int lof_changed)
         int i;
     		gfx_lock_picasso();
     		for (i = 0; i < TD_TOTAL_HEIGHT; i++) {
-#ifdef RASPBERRY
     			int line = picasso_vidinfo.height - TD_TOTAL_HEIGHT + i;
-#else
-    			int line = prSDLScreen->h - TD_TOTAL_HEIGHT + i;
-#endif
     			draw_status_line (line);
     		}
     		gfx_unlock_picasso();

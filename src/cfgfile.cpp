@@ -1672,15 +1672,11 @@ void default_prefs (struct uae_prefs *p, int type)
   strcpy (p->df[2], "");
   strcpy (p->df[3], "");
 
-  #ifdef RASPBERRY
   // Choose automatically first rom.
   if (lstAvailableROMs.size() >= 1)
     strncpy(currprefs.romfile,lstAvailableROMs[0]->Path,255);
   else
     strcpy (p->romfile, "kick.rom");
-  #else
-  strcpy (p->romfile, "kick.rom");
-  #endif
   strcpy (p->romextfile, "");
 
   sprintf (p->path_rom, "%s/kickstarts/", start_path_data);

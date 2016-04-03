@@ -197,7 +197,7 @@ void do_mouse_hack (void)
       //------------------------------------------
       // New stylus<->follow mouse mode
       //------------------------------------------
-      #ifndef RASPBERRY
+      #ifdef PANDORA_SPECIFIC
       printf("do_mouse_hack: sprvbfl=%d\n", sprvbfl);
       #endif
 	    if (sprvbfl && (sprvbfl-- > 1)) 

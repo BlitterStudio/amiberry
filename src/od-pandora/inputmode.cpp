@@ -66,15 +66,10 @@ void inputmode_redraw(void)
 	SDL_Rect r;
 	SDL_Surface* surface;
 
-#ifdef RASPBERRY
 	r.x=(prSDLScreen->w-160)/2;
 	r.y=(prSDLScreen->h-160)/2;
-#else
-	r.x=80;
-	r.y=prSDLScreen->h-200;
 	r.w=160;
 	r.h=160;
-#endif
 
 	if (inputMode[0] && inputMode[1] && inputMode[2])
 	{

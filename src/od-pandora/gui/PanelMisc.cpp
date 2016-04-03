@@ -24,7 +24,8 @@ static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkShowGUI;
 #ifdef RASPBERRY
 static gcn::UaeCheckBox* chkAspect;
-#else
+#endif
+#ifdef PANDORA_SPECIFIC
 static gcn::Label* lblPandoraSpeed;
 static gcn::Label* lblPandoraSpeedInfo;
 static gcn::Slider* sldPandoraSpeed;
@@ -44,7 +45,8 @@ class MiscActionListener : public gcn::ActionListener
 #ifdef RASPBERRY
       else if (actionEvent.getSource() == chkAspect)
         changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
-#else
+#endif
+#ifdef PANDORA_SPECIFIC
       else if (actionEvent.getSource() == sldPandoraSpeed)
       {
         int newspeed = (int) sldPandoraSpeed->getValue();
@@ -75,7 +77,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 #ifdef RASPBERRY
   chkAspect = new gcn::UaeCheckBox("4/3 ratio shrink");
   chkAspect->addActionListener(miscActionListener);
-#else
+#endif
+#ifdef PANDORA_SPECIFIC
   lblPandoraSpeed = new gcn::Label("Pandora Speed:");
   lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
   lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
@@ -96,7 +99,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 #ifdef RASPBERRY
   category.panel->add(chkAspect, DISTANCE_BORDER, posY);
   posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
-#else
+#endif
+#ifdef PANDORA_SPECIFIC
   category.panel->add(lblPandoraSpeed, DISTANCE_BORDER, posY);
   category.panel->add(sldPandoraSpeed, DISTANCE_BORDER + lblPandoraSpeed->getWidth() + 8, posY);
   category.panel->add(lblPandoraSpeedInfo, sldPandoraSpeed->getX() + sldPandoraSpeed->getWidth() + 12, posY);
@@ -112,7 +116,8 @@ void ExitPanelMisc(void)
   delete chkShowGUI;
 #ifdef RASPBERRY
   delete chkAspect;
-#else
+#endif
+#ifdef PANDORA_SPECIFIC
   delete lblPandoraSpeed;
   delete sldPandoraSpeed;
   delete lblPandoraSpeedInfo;
@@ -129,7 +134,8 @@ void RefreshPanelMisc(void)
   chkShowGUI->setSelected(changed_prefs.start_gui);
 #ifdef RASPBERRY
   chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
-#else
+#endif
+#ifdef PANDORA_SPECIFIC
   sldPandoraSpeed->setValue(changed_prefs.pandora_cpu_speed);
   snprintf(tmp, 20, "%d MHz", changed_prefs.pandora_cpu_speed);
   lblPandoraSpeedInfo->setCaption(tmp);

@@ -199,29 +199,29 @@ void target_default_options (struct uae_prefs *p, int type)
   p->pandora_tapDelay = 10;
   p->pandora_stylusOffset = 0;
   
-	p->pandora_customControls = 0;
+  p->pandora_customControls = 0;
 #ifdef RASPBERRY
-	p->pandora_custom_dpad = 1;
+  p->pandora_custom_dpad = 1;
 #else
-	p->pandora_custom_dpad = 0;
+  p->pandora_custom_dpad = 0;
 #endif
-	p->pandora_custom_up = 0;
-	p->pandora_custom_down = 0;
-	p->pandora_custom_left = 0;
-	p->pandora_custom_right = 0;
-	p->pandora_custom_A = 0;
-	p->pandora_custom_B = 0;
-	p->pandora_custom_X = 0;
-	p->pandora_custom_Y = 0;
-	p->pandora_custom_L = 0;
-	p->pandora_custom_R = 0;
+  p->pandora_custom_up = 0;
+  p->pandora_custom_down = 0;
+  p->pandora_custom_left = 0;
+  p->pandora_custom_right = 0;
+  p->pandora_custom_A = 0;
+  p->pandora_custom_B = 0;
+  p->pandora_custom_X = 0;
+  p->pandora_custom_Y = 0;
+  p->pandora_custom_L = 0;
+  p->pandora_custom_R = 0;
 
-	p->pandora_button1 = GP2X_BUTTON_X;
-	p->pandora_button2 = GP2X_BUTTON_A;
-	p->pandora_autofireButton1 = GP2X_BUTTON_B;
-	p->pandora_jump = -1;
+  p->pandora_button1 = GP2X_BUTTON_X;
+  p->pandora_button2 = GP2X_BUTTON_A;
+  p->pandora_autofireButton1 = GP2X_BUTTON_B;
+  p->pandora_jump = -1;
 	
-	p->picasso96_modeflags = RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+  p->picasso96_modeflags = RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 }
 
 
@@ -578,10 +578,10 @@ void loadAdfDir(void)
 
 void setCpuSpeed()
 {
-	char speedCmd[128];
+  char speedCmd[128];
 
-#ifdef RASPBERRY
-	return;
+#ifndef PANDORA_SPECIFIC
+  return;
 #endif
 
   currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed;
@@ -605,8 +605,8 @@ void setCpuSpeed()
 
 void resetCpuSpeed(void)
 {
-#ifdef RASPBERRY
-	return;
+#ifndef PANDORA_SPECIFIC
+  return;
 #endif
   if(cpuSpeedChanged)
   {
@@ -915,7 +915,7 @@ void handle_events (void)
   			else
   			{
 				  int mouseScale = currprefs.input_joymouse_multiplier / 2;
-#ifndef RASPBERRY
+#ifdef PANDORA_SPECIFIC
 				  if(rEvent.motion.xrel > 20 || rEvent.motion.xrel < -20 || rEvent.motion.yrel > 20 || rEvent.motion.yrel < -20)
 				    break;
 #endif
