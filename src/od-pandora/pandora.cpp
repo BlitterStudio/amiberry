@@ -738,7 +738,7 @@ void handle_events (void)
   				}
   			}
 			
-  			if (rEvent.key.keysym.sym==SDLK_LALT)
+  			if (rEvent.key.keysym.sym==SDLK_F11)
   			{
 					// state moves thus:
 					// joystick mode (with virt keyboard on L and R)
@@ -838,7 +838,7 @@ void handle_events (void)
   				buttonstate[2] = 0;
 				}
 
-  			if (rEvent.key.keysym.sym==SDLK_LALT)
+  			if (rEvent.key.keysym.sym==SDLK_F11)
   			{
   				show_inputmode = 0;
   			}
