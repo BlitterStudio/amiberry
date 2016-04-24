@@ -5,10 +5,9 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "zfile.h"
+#include "lha.h"
 #include "zarchive.h"
 
-#include "lha.h"
 
 static char *methods[] =
 {
@@ -26,8 +25,8 @@ struct zvolume *archive_directory_lha(struct zfile *zf)
     LzHeader hdr;
     int i;
 
-    tzset();
-    zv = zvolume_alloc(zf, ArchiveFormatLHA, NULL);
+    _tzset();
+    zv = zvolume_alloc(zf, ArchiveFormatLHA, NULL, NULL);
     while (get_header(zf, &hdr)) {
 	struct znode *zn;
 	int method;
@@ -40,7 +39,7 @@ struct zvolume *archive_directory_lha(struct zfile *zf)
 	zai.name = hdr.name;
 	zai.size = hdr.original_size;
 	zai.flags = hdr.attribute;
-	zai.t = hdr.unix_last_modified_stamp -= timezone;
+	zai.t = hdr.unix_last_modified_stamp -= _timezone;
 	if (hdr.name[strlen(hdr.name) + 1] != 0)
 	    zai.comment = &hdr.name[strlen(hdr.name) + 1];
 	if (method == LZHDIRS_METHOD_NUM) {
@@ -60,7 +59,7 @@ struct zvolume *archive_directory_lha(struct zfile *zf)
 struct zfile *archive_access_lha(struct znode *zn)
 {
     struct zfile *zf = zn->volume->archive;
-    struct zfile *out = zfile_fopen_empty (zn->name, zn->size);
+    struct zfile *out = zfile_fopen_empty (zf, zn->name, zn->size);
     struct interfacing lhinterface;
 
     zfile_fseek(zf, zn->offset, SEEK_SET);

@@ -46,21 +46,6 @@
 #undef USE_COMPILER
 #undef RELY_ON_LOADSEG_DETECTION
 
-/*
- * Set USER_PROGRAMS_BEHAVE to 1 or 2 to indicate that you are only running
- * non-hardware banging programs which leave all the dirty work to the
- * Kickstart. This affects the compiler. Any program that is _not_ in the ROM
- * (i.e. everything but the Kickstart) will use faster memory access 
- * functions.
- * There is of course the problem that the Amiga doesn't really distinguish
- * between user programs and the kernel. Not all of the OS is in the ROM,
- * e.g. the parallel.device is on the disk and gets loaded into RAM at least
- * with Kickstart 1.3 (don't know about newer Kickstarts). So you probably
- * can't print, and some other stuff may also fail to work.
- * A useless option, really, given the way lots of Amiga software is written.
-#define USER_PROGRAMS_BEHAVE 0
- */
-
 /***************************************************************************
  * Operating system/machine specific options
  * Configure these for your CPU. The default settings should work on any

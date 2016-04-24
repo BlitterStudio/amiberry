@@ -295,7 +295,6 @@ bool EditFilesysVirtual(int unit_no)
   }
 
   EditFilesysVirtualLoop();
-  ExitEditFilesysVirtual();
   
   if(dialogResult)
   {
@@ -308,6 +307,8 @@ bool EditFilesysVirtual(int unit_no)
     if (uci)
     	filesys_media_change (uci->rootdir, 1, uci);
   }
+
+  ExitEditFilesysVirtual();
 
   return dialogResult;
 }

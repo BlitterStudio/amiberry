@@ -7,6 +7,7 @@
 #define FTIME
 #define NOBSTRING
 #define NOINDEX
+#define MKTIME
 
 /* ------------------------------------------------------------------------ */
 /* LHa for UNIX    Archiver Driver											*/
@@ -167,12 +168,12 @@ EXTERN unsigned short dicbit;
 EXTERN unsigned short maxmatch;
 EXTERN unsigned long count;
 EXTERN unsigned long loc;			/* short -> long .. Changed N.Watazaki */
-EXTERN unsigned char *lha_text;
+EXTERN unsigned char *text;
 EXTERN int		prev_char;
 
 /* huf.c */
 #ifndef LHA_MAIN_SRC  /* t.okamoto 96/2/20 */
-EXTERN unsigned short lha_left[], lha_right[];
+EXTERN unsigned short h_left[], h_right[];
 EXTERN unsigned char c_len[], pt_len[];
 EXTERN unsigned short c_freq[], c_table[], c_code[];
 EXTERN unsigned short p_freq[], pt_table[], pt_code[], t_freq[];
@@ -228,13 +229,13 @@ extern void		build_standard_archive_name();
 
 extern FILE		*open_old_archive();
 extern void		init_header();
-extern boolean	get_header(struct zfile *, register LzHeader *);
+extern boolean get_header(struct zfile *fp, LzHeader *hdr);
 extern boolean	archive_is_msdos_sfx1();
 extern boolean	skip_msdos_sfx1_code();
 extern void		write_header();
 extern void		write_archive_tail();
 extern void		copy_old_one();
-extern unsigned char *convdelim(unsigned char  *path, unsigned char delim);
+extern unsigned char *convdelim(unsigned char *path, unsigned char delim);
 extern long		copyfile();
 
 extern void		cmd_list(), cmd_extract(), cmd_add(), cmd_delete();
@@ -245,7 +246,7 @@ extern char		*extract_directory;
 
 extern int		encode_alloc();
 extern void		encode();
-extern int		decode(struct interfacing *);
+extern int		decode(struct interfacing*);
 
 /* from append.c */
 extern void     start_indicator();
@@ -288,7 +289,8 @@ extern unsigned short decode_p_lz5();
 extern void			  decode_start_lzs();
 extern void			  decode_start_lz5();
 
-extern void	lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsigned short table[]);
+extern void lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsigned short table[]);
+
 
 /* from maketree.c */
 /*

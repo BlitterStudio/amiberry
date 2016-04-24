@@ -25,5 +25,17 @@ static __inline__ frame_time_t read_processor_time (void)
   return time - g_uae_epoch;
 }
 
+
+static __inline__ int64_t read_processor_time_ns (void)
+{
+  int64_t time;
+  struct timespec ts;
+  
+  clock_gettime (CLOCK_MONOTONIC, &ts);
+
+  time = (((int64_t) ts.tv_sec) * 1000000 * 1000) + (ts.tv_nsec);
+  return time;
+}
+
 #endif /* _RPT_H_ */
 

@@ -6,7 +6,6 @@
   * (c) 1996 Ed Hanway
   */
 
-
 #define RTAREA_DEFAULT 0xf00000
 #define RTAREA_BACKUP  0xef0000
 
@@ -14,15 +13,14 @@ extern uae_u32 addr (int);
 extern void db (uae_u8);
 extern void dw (uae_u16);
 extern void dl (uae_u32);
-extern uae_u32 ds (const char *);
+extern uae_u32 ds_ansi (const uae_char*);
+extern uae_u32 ds (const TCHAR*);
+extern uae_u32 ds_bstr_ansi (const uae_char*);
+extern uae_u8 dbg (uaecptr);
 extern void calltrap (uae_u32);
 extern void org (uae_u32);
 extern uae_u32 here (void);
 extern uaecptr makedatatable (uaecptr resid, uaecptr resname, uae_u8 type, uae_s8 priority, uae_u16 ver, uae_u16 rev);
-
-#define deftrap(f) define_trap((f), 0, "")
-#define deftrap2(f, mode, str) define_trap((f), (mode), (str))
-#define deftrapres(f, mode, str) define_trap((f), (mode | TRAPFLAG_UAERES), (str))
 
 extern void align (int);
 
@@ -50,23 +48,26 @@ extern uaecptr need_uae_boot_rom (void);
 struct mountedinfo
 {
     uae_u64 size;
-    int ismounted;
-    int ismedia;
+    bool ismounted;
+    bool ismedia;
     int nrcyls;
 };
 
+extern int add_filesys_unitconfig (struct uae_prefs *p, int index, TCHAR *error);
 extern int get_filesys_unitconfig (struct uae_prefs *p, int index, struct mountedinfo*);
 extern int kill_filesys_unitconfig (struct uae_prefs *p, int nr);
 extern int move_filesys_unitconfig (struct uae_prefs *p, int nr, int to);
+extern TCHAR *validatedevicename (TCHAR *s);
+extern TCHAR *validatevolumename (TCHAR *s);
 
-int filesys_insert(int nr, char *volume, const char *rootdir, int readonly, int flags);
-int filesys_eject(int nr);
-int filesys_media_change (const char *rootdir, int inserted, struct uaedev_config_info *uci);
+int filesys_insert (int nr, TCHAR *volume, const TCHAR *rootdir, bool readonly, int flags);
+int filesys_eject (int nr);
+int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_config_info *uci);
 
-extern char *filesys_createvolname (const char *volname, const char *rootdir, const char *def);
-extern int target_get_volume_name(struct uaedev_mount_info *mtinf, const char *volumepath, char *volumename, int size, int inserted, int fullcheck);
+extern TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, const TCHAR *def);
+extern int target_get_volume_name (struct uaedev_mount_info *mtinf, const TCHAR *volumepath, TCHAR *volumename, int size, bool inserted, bool fullcheck);
 
-extern int sprintf_filesys_unit (char *buffer, int num);
+extern int sprintf_filesys_unit (TCHAR *buffer, int num);
 
 extern void filesys_reset (void);
 extern void filesys_cleanup (void);
@@ -87,3 +88,5 @@ extern void expansion_cleanup (void);
 extern void expansion_clear (void);
 
 extern void uaegfx_install_code (void);
+
+extern uae_u32 emulib_target_getcpurate (uae_u32, uae_u32*);

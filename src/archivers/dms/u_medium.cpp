@@ -19,7 +19,7 @@
 #define MBITMASK 0x3fff
 
 
-USHORT medium_text_loc;
+USHORT dms_medium_text_loc;
 
 
 
@@ -34,7 +34,7 @@ USHORT Unpack_MEDIUM(UCHAR *in, UCHAR *out, USHORT origsize){
 	while (out < outend) {
 		if (GETBITS(1)!=0) {
 			DROPBITS(1);
-			*out++ = text[medium_text_loc++ & MBITMASK] = (UCHAR)GETBITS(8);
+			*out++ = dms_text[dms_medium_text_loc++ & MBITMASK] = (UCHAR)GETBITS(8);
 			DROPBITS(8);
 		} else {
 			DROPBITS(1);
@@ -44,13 +44,13 @@ USHORT Unpack_MEDIUM(UCHAR *in, UCHAR *out, USHORT origsize){
 			c = (USHORT) (((c << u) | GETBITS(u)) & 0xff);  DROPBITS(u);
 			u = d_len[c];
 			c = (USHORT) ((d_code[c] << 8) | (((c << u) | GETBITS(u)) & 0xff));  DROPBITS(u);
-			i = (USHORT) (medium_text_loc - c - 1);
+			i = (USHORT) (dms_medium_text_loc - c - 1);
 
-			while(j--) *out++ = text[medium_text_loc++ & MBITMASK] = text[i++ & MBITMASK];
+			while(j--) *out++ = dms_text[dms_medium_text_loc++ & MBITMASK] = dms_text[i++ & MBITMASK];
 
 		}
 	}
-	medium_text_loc = (USHORT)((medium_text_loc+66) & MBITMASK);
+	dms_medium_text_loc = (USHORT)((dms_medium_text_loc+66) & MBITMASK);
 
 	return 0;
 }

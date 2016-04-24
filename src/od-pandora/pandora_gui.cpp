@@ -10,14 +10,15 @@
 #include "uae.h"
 #include "options.h"
 #include "keybuf.h"
-#include "inputdevice.h"
-#include "memory.h"
 #include "zfile.h"
 #include "gui.h"
 #include "od-pandora/gui/SelectorEntry.hpp"
 #include "gui/gui_handling.h"
-#include "custom.h"
 #include "memory.h"
+#include "rommgr.h"
+#include "newcpu.h"
+#include "custom.h"
+#include "inputdevice.h"
 #include "xwin.h"
 #include "drawing.h"
 #include "sd-pandora/sound.h"
@@ -29,18 +30,20 @@
 #include "filesys.h"
 #include "autoconf.h"
 #include <SDL.h>
+#include "td-sdl/thread.h"
 
 
 int emulating = 0;
 extern bool switch_autofire;
+
 static int justMovedUp=0, justMovedDown=0, justMovedLeft=0, justMovedRight=0;
 static int justPressedA=0, justPressedB=0, justPressedX=0, justPressedY=0;
 static int justPressedL=0, justPressedR=0;
 int stylusClickOverride=0;
-int stylusAdjustX=0, stylusAdjustY=0;
 
 
 extern SDL_Surface *prSDLScreen;
+extern int screen_is_picasso;
 
 int dpadUp=0;
 int dpadDown=0;
@@ -70,6 +73,9 @@ struct gui_msg gui_msglist[] = {
   { NUMSG_STATEHD,        "WARNING: Current configuration is not fully compatible with state saves." },
   { NUMSG_KICKREP,        "You need to have a floppy disk (image file) in DF0: to use the system ROM replacement." },
   { NUMSG_KICKREPNO,      "The floppy disk (image file) in DF0: is not compatible with the system ROM replacement functionality." },
+  { NUMSG_ROMNEED,        "One of the following system ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
+  { NUMSG_EXPROMNEED,     "One of the following expansion boot ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
+
   { -1, "" }
 };
 
@@ -102,7 +108,7 @@ void AddFileToDiskList(const char *file, int moveToTop)
 }
 
 
-static void ClearAvailableROMList(void)
+void ClearAvailableROMList(void)
 {
   while(lstAvailableROMs.size() > 0)
   {
@@ -119,7 +125,8 @@ static void addrom(struct romdata *rd, char *path)
   tmp = new AvailableROM();
   getromname(rd, tmpName);
   strncpy(tmp->Name, tmpName, MAX_PATH);
-  strncpy(tmp->Path, path, MAX_PATH);
+  if(path != NULL)
+    strncpy(tmp->Path, path, MAX_PATH);
   tmp->ROMType = rd->type;
   lstAvailableROMs.push_back(tmp);
 }
@@ -152,7 +159,7 @@ static struct romdata *scan_single_rom_2 (struct zfile *f)
   } else {
 	  zfile_fseek (f, 0, SEEK_SET);
   }
-  rombuf = (uae_u8 *) xcalloc (size, 1);
+  rombuf = xcalloc (uae_u8, size);
   if (!rombuf)
   	return 0;
   zfile_fread (rombuf, 1, size, f);
@@ -187,7 +194,7 @@ static struct romdata *scan_single_rom (char *path)
     rd = getromdatabypath(path);
     if (rd && rd->crc32 == 0xffffffff)
 	return rd;
-    z = zfile_fopen (path, "rb");
+    z = zfile_fopen (path, "rb", ZFD_NORMAL);
     if (!z)
 	return 0;
     return scan_single_rom_2 (z);
@@ -232,10 +239,10 @@ static void scan_rom(char *path)
 {
   struct romdata *rd;
 
-    if (!isromext(path)) {
-	//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
-	return;
-    }
+  if (!isromext(path)) {
+	  //write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
+	  return;
+  }
   rd = getarcadiarombyname(path);
   if (rd) 
     addrom(rd, path);
@@ -261,6 +268,16 @@ void RescanROMs(void)
     strncat(tmppath, files[i].c_str(), MAX_PATH);
     scan_rom (tmppath);
   }
+  
+	int id = 1;
+	for (;;) {
+		struct romdata *rd = getromdatabyid (id);
+		if (!rd)
+			break;
+		if (rd->crc32 == 0xffffffff && strncmp(rd->model, "AROS", 4) == 0)
+			addrom (rd, ":AROS");
+		id++;
+	}
 }
 
 static void ClearConfigFileList(void)
@@ -379,7 +396,6 @@ int gui_init (void)
 	setCpuSpeed();
   update_display(&changed_prefs);
 
-	inputmode_init();
   inputdevice_copyconfig (&changed_prefs, &currprefs);
   inputdevice_config_change_test();
 	emulating=1;
@@ -420,8 +436,8 @@ int gui_update (void)
   fetch_savestatepath(savestate_fname, MAX_DPATH);
   fetch_screenshotpath(screenshot_filename, MAX_DPATH);
   
-  if(strlen(currprefs.df[0]) > 0)
-    extractFileName(currprefs.df[0], tmp);
+  if(strlen(currprefs.floppyslots[0].df) > 0)
+    extractFileName(currprefs.floppyslots[0].df, tmp);
   else
     strncpy(tmp, last_loaded_config, MAX_PATH);
 
@@ -466,11 +482,13 @@ static void goMenu(void)
   run_gui();
   gui_to_prefs();
 	setCpuSpeed();
+	if(quit_program)
+		screen_is_picasso = 0;
+
   update_display(&changed_prefs);
 
 	/* Clear menu garbage at the bottom of the screen */
 	black_screen_now();
-	notice_screen_contents_lost();
 	resume_sound();
 
   inputdevice_copyconfig (&changed_prefs, &currprefs);
@@ -480,7 +498,6 @@ static void goMenu(void)
 
   gui_purge_events();
   fpscounter_reset();
-  notice_screen_contents_lost();
 }
 
 
@@ -547,13 +564,11 @@ void gui_handle_events (void)
 		if(dpadUp)
 		{
 			moveVertical(1);
-			stylusAdjustY += 2;
 		}
 		//down
 		else if(dpadDown)
 		{
 			moveVertical(-1);
-			stylusAdjustY -= 2;
 		}
 		//1
 		else if(keystate[SDLK_1])
@@ -1299,48 +1314,44 @@ void gui_handle_events (void)
   				justMovedRight=0;
   			}
   			
-  			//L + up
-  			if(triggerL && dpadUp)
-  				stylusAdjustY-=2;
-  			//L + down
-  			if(triggerL && dpadDown)
-  				stylusAdjustY+=2;
-  			//L + left
-  			if(triggerL && dpadLeft)
-  				stylusAdjustX-=2;
-  			//L + right
-  			if(triggerL && dpadRight)
-  				stylusAdjustX+=2;
-  				
         break;    
     }
   }
 }
 
-void gui_disk_image_change (int unitnum, const char *name)
-{
-}
-
-void gui_hd_led (int led)
-{
-    static int resetcounter;
-
-    if (led == 0) {
-	    resetcounter--;
-	    if (resetcounter > 0)
-	      return;
-    }
-    gui_data.hd = led;
-    resetcounter = 2;
-}
-
-void gui_cd_led (int led)
+void gui_disk_image_change (int unitnum, const char *name, bool writeprotected)
 {
 }
 
 void gui_led (int led, int on)
 {
 }
+
+void gui_flicker_led (int led, int unitnum, int status)
+{
+  static int hd_resetcounter;
+
+  switch(led)
+  {
+    case -1: // Reset HD and CD
+      gui_data.hd = 0;
+      break;
+      
+    case LED_POWER:
+      break;
+
+    case LED_HD:
+      if (status == 0) {
+  	    hd_resetcounter--;
+  	    if (hd_resetcounter > 0)
+  	      return;
+      }
+      gui_data.hd = status;
+      hd_resetcounter = 2;
+      break;
+  }
+}
+
 
 void gui_filename (int num, const char *name)
 {
@@ -1372,6 +1383,21 @@ void notify_user (int msg)
   }
 }
 
+
+int translate_message (int msg,	TCHAR *out)
+{
+  int i=0;
+  while(gui_msglist[i].num >= 0)
+  {
+    if(gui_msglist[i].num == msg)
+    {
+      strcpy(out, gui_msglist[i].msg);
+      return 1;
+    }
+    ++i;
+  }
+  return 0;
+}
 
 void gui_lock (void)
 {

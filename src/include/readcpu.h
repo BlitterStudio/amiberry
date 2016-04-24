@@ -30,15 +30,16 @@ ENUMDECL {
     i_CINVL, i_CINVP, i_CINVA, i_CPUSHL, i_CPUSHP, i_CPUSHA, i_MOVE16,
     i_MMUOP030, i_PFLUSHN, i_PFLUSH, i_PFLUSHAN, i_PFLUSHA,
     i_PLPAR, i_PLPAW, i_PTESTR, i_PTESTW,
-    i_LPSTOP,
-    i_EMULOP_RETURN, i_EMULOP, i_NATFEAT_ID, i_NATFEAT_CALL
+    i_LPSTOP
 } ENUMNAME (instrmnem);
 
-extern struct mnemolookup {
+struct mnemolookup {
     instrmnem mnemo;
-    const char *name;
-    const char *friendlyname;
-} lookuptab[];
+    const TCHAR *name;
+    const TCHAR *friendlyname;
+};
+
+extern struct mnemolookup lookuptab[];
 
 ENUMDECL {
     sz_byte, sz_word, sz_long
@@ -72,7 +73,7 @@ ENUMDECL {
 struct instr_def {
     unsigned int bits;
     int n_variable;
-    char bitpos[16];
+    uae_u8 bitpos[16];
     unsigned int mask;
     int cpulevel;
     int plevel;
@@ -81,8 +82,8 @@ struct instr_def {
 	unsigned int flagset:3;
     } flaginfo[5];
     unsigned char cflow;
-    unsigned char sduse;
-    const char *opcstr;
+    uae_u8 sduse;
+    const TCHAR *opcstr;
 };
 
 extern struct instr_def defs68k[];

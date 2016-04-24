@@ -10,7 +10,7 @@
 #include "getbits.h"
 
 
-ULONG mask_bits[]={
+ULONG dms_mask_bits[]={
 	0x000000L,0x000001L,0x000003L,0x000007L,0x00000fL,0x00001fL,
 	0x00003fL,0x00007fL,0x0000ffL,0x0001ffL,0x0003ffL,0x0007ffL,
 	0x000fffL,0x001fffL,0x003fffL,0x007fffL,0x00ffffL,0x01ffffL,
@@ -19,15 +19,15 @@ ULONG mask_bits[]={
 };
 
 
-UCHAR *indata, bitcount;
-ULONG bitbuf;
+UCHAR *dms_indata, dms_bitcount;
+ULONG dms_bitbuf;
 
 
 
 void initbitbuf(UCHAR *in){
-	bitbuf = 0;
-	bitcount = 0;
-	indata = in;
+	dms_bitbuf = 0;
+	dms_bitcount = 0;
+	dms_indata = in;
 	DROPBITS(0);
 }
 

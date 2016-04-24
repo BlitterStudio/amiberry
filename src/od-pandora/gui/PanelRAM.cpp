@@ -22,8 +22,8 @@ static const char *ChipMem_list[] = { "512 K", "1 MB", "2 MB", "4 MB", "8 MB" };
 static const int ChipMem_values[] = { 0x080000, 0x100000, 0x200000, 0x400000, 0x800000 };
 static const char *SlowMem_list[] = { "None", "512 K", "1 MB", "1.5 MB", "1.8 MB" };
 static const int SlowMem_values[] = { 0x000000, 0x080000, 0x100000, 0x180000, 0x1c0000 };
-static const char *FastMem_list[] = { "None", "1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB" };
-static const int FastMem_values[] = { 0x000000, 0x100000, 0x200000, 0x400000, 0x800000, 0x1000000, 0x2000000, 0x4000000 };
+static const char *FastMem_list[] = { "None", "1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB" };
+static const int FastMem_values[] = { 0x000000, 0x100000, 0x200000, 0x400000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000 };
 
 static gcn::Window *grpRAM;
 static gcn::Label* lblChipmem;
@@ -71,7 +71,8 @@ class MemorySliderActionListener : public gcn::ActionListener
   		}	
 
 	    if (actionEvent.getSource() == sldGfxmem) {
-     		changed_prefs.gfxmem_size = FastMem_values[(int)(sldGfxmem->getValue())];
+     		changed_prefs.rtgmem_size = FastMem_values[(int)(sldGfxmem->getValue())];
+     		changed_prefs.rtgmem_type = 1;
   		}	
 
   		RefreshPanelRAM();
@@ -115,7 +116,7 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	lblFastsize = new gcn::Label("None  ");
 
 	lblZ3mem = new gcn::Label("Z3 fast:");
-	sldZ3mem = new gcn::Slider(0, 7);
+	sldZ3mem = new gcn::Slider(0, 8);
 	sldZ3mem->setSize(110, SLIDER_HEIGHT);
 	sldZ3mem->setBaseColor(gui_baseCol);
 	sldZ3mem->setMarkerLength(20);
@@ -229,7 +230,7 @@ void RefreshPanelRAM(void)
     }
   }
 
-  for(i=0; i<8; ++i)
+  for(i=0; i<9; ++i)
   {
     if(changed_prefs.z3fastmem_size == FastMem_values[i])
     {
@@ -242,7 +243,7 @@ void RefreshPanelRAM(void)
 
   for(i=0; i<6; ++i)
   {
-    if(changed_prefs.gfxmem_size == FastMem_values[i])
+    if(changed_prefs.rtgmem_size == FastMem_values[i])
     {
       sldGfxmem->setValue(i);
       lblGfxsize->setCaption(FastMem_list[i]);

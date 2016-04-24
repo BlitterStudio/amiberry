@@ -11,8 +11,7 @@
 /* ------------------------------------------------------------------------ */
 static int      flag, flagcnt, matchpos;
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_c_lzs( /*void*/ )
+unsigned short decode_c_lzs(void)
 {
 	if (getbits(1)) {
 		return getbits(8);
@@ -24,22 +23,19 @@ decode_c_lzs( /*void*/ )
 }
 
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_p_lzs( /*void*/ )
+unsigned short decode_p_lzs(void)
 {
 	return (loc - matchpos - MAGIC0) & 0x7ff;
 }
 
 /* ------------------------------------------------------------------------ */
-void
-decode_start_lzs( /*void*/ )
+void decode_start_lzs(void)
 {
 	init_getbits();
 }
 
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_c_lz5( /*void*/ )
+unsigned short decode_c_lz5(void)
 {
 	int             c;
 
@@ -61,25 +57,23 @@ decode_c_lz5( /*void*/ )
 }
 
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_p_lz5( /*void*/ )
+unsigned short decode_p_lz5(void)
 {
 	return (loc - matchpos - MAGIC5) & 0xfff;
 }
 
 /* ------------------------------------------------------------------------ */
-void
-decode_start_lz5( /*void*/ )
+void decode_start_lz5(void)
 {
 	int             i;
 
 	flagcnt = 0;
 	for (i = 0; i < 256; i++)
-		memset(&lha_text[i * 13 + 18], i, 13);
+		memset(&text[i * 13 + 18], i, 13);
 	for (i = 0; i < 256; i++)
-		lha_text[256 * 13 + 18 + i] = i;
+		text[256 * 13 + 18 + i] = i;
 	for (i = 0; i < 256; i++)
-		lha_text[256 * 13 + 256 + 18 + i] = 255 - i;
-	memset(&lha_text[256 * 13 + 512 + 18], 0, 128);
-	memset(&lha_text[256 * 13 + 512 + 128 + 18], ' ', 128 - 18);
+		text[256 * 13 + 256 + 18 + i] = 255 - i;
+	memset(&text[256 * 13 + 512 + 18], 0, 128);
+	memset(&text[256 * 13 + 512 + 128 + 18], ' ', 128 - 18);
 }

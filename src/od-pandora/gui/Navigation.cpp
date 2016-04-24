@@ -171,10 +171,10 @@ static NavigationMap navMap[] =
   { "cboJoystick",    "Input",          "cboAutofire",    "cboCtrlConfig",  "cboTapDelay" },
   { "cboAutofire",    "cboJoystick",    "Input",          "cboCtrlConfig",  "cboTapDelay" },
   { "cboTapDelay",    "Input",          "Input",          "cboJoystick",    "MouseSpeed" },
-  { "MouseSpeed",     "",               "",               "cboTapDelay",    "StylusOffset" },
-  { "StylusOffset",   "",               "",               "MouseSpeed",     "cboDPAD" },
-  { "cboDPAD",        "Input",          "CustomCtrl",     "StylusOffset",   "cboA" },
-  { "CustomCtrl",     "cboDPAD",        "Input",          "StylusOffset",   "cboB" },
+  { "MouseSpeed",     "",               "",               "cboTapDelay",    "cboDPAD" },
+  { "MouseHack",      "MouseSpeed",     "Input",          "cboTapDelay",    "CustomCtrl" },
+  { "cboDPAD",        "Input",          "CustomCtrl",     "MouseSpeed",     "cboA" },
+  { "CustomCtrl",     "cboDPAD",        "Input",          "MouseHack",      "cboB" },
   { "cboA",           "Input",          "cboB",           "cboDPAD",        "cboX" },
   { "cboB",           "cboA",           "Input",          "CustomCtrl",     "cboY" },
   { "cboX",           "Input",          "cboY",           "cboA",           "cboL" },
@@ -187,10 +187,11 @@ static NavigationMap navMap[] =
   { "cboRight",       "cboLeft",        "Input",          "cboDown",        "cboCtrlConfig" },
 
 // PanelMisc
-  { "Status Line",    "Miscellaneous",  "Miscellaneous",  "PandSpeed",      "ShowGUI" },
+  { "Status Line",    "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "ShowGUI" },
   { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "Status Line",    "PandSpeed" },
-  { "PandSpeed",      "",               "",               "ShowGUI",        "Status Line" },
-
+  { "PandSpeed",      "",               "",               "ShowGUI",        "BSDSocket" },
+  { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "PandSpeed",      "Status Line" },
+  
 // PanelSavestate
   { "State0",         "Savestates",     "Savestates",     "LoadState",      "State1" },
   { "State1",         "Savestates",     "Savestates",     "State0",         "State2" },
@@ -245,7 +246,7 @@ bool HandleNavigation(int direction)
   if(focusHdl != NULL)
   {
     gcn::Widget* activeWidget = focusHdl->getFocused();
-
+    
     if(activeWidget != NULL && activeWidget->getId().length() > 0)
     {
       std::string activeName = activeWidget->getId();

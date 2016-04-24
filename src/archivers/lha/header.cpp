@@ -16,8 +16,7 @@
 /* ------------------------------------------------------------------------ */
 static char    *get_ptr;
 /* ------------------------------------------------------------------------ */
-int
-calc_sum(register char  *p, register int len)
+int calc_sum(char *p, int len)
 {
 	register int    sum;
 
@@ -28,50 +27,45 @@ calc_sum(register char  *p, register int len)
 }
 
 /* ------------------------------------------------------------------------ */
-static unsigned short
-get_word()
+static unsigned short get_word (void)
 {
 	int             b0, b1;
 
-	b0 = get_byte();
-	b1 = get_byte();
+	b0 = get_byte ();
+	b1 = get_byte ();
 	return (b1 << 8) + b0;
 }
 
 /* ------------------------------------------------------------------------ */
-static void
-put_word(unsigned int v)
+static void put_word (unsigned int v)
 {
-	put_byte(v);
-	put_byte(v >> 8);
+	put_byte (v);
+	put_byte (v >> 8);
 }
 
 /* ------------------------------------------------------------------------ */
-static long
-get_longword()
+static long get_longword(void)
 {
 	long            b0, b1, b2, b3;
 
-	b0 = get_byte();
-	b1 = get_byte();
-	b2 = get_byte();
-	b3 = get_byte();
+	b0 = get_byte ();
+	b1 = get_byte ();
+	b2 = get_byte ();
+	b3 = get_byte ();
 	return (b3 << 24) + (b2 << 16) + (b1 << 8) + b0;
 }
 
 /* ------------------------------------------------------------------------ */
-static void
-put_longword(long v)
+static void put_longword(long v)
 {
-	put_byte(v);
-	put_byte(v >> 8);
-	put_byte(v >> 16);
-	put_byte(v >> 24);
+	put_byte (v);
+	put_byte (v >> 8);
+	put_byte (v >> 16);
+	put_byte (v >> 24);
 }
 
 /* ------------------------------------------------------------------------ */
-static void
-msdos_to_unix_filename(register char  *name, register int len)
+static void msdos_to_unix_filename(char *name, int len)
 {
 	register int    i;
 
@@ -96,8 +90,7 @@ msdos_to_unix_filename(register char  *name, register int len)
 }
 
 /* ------------------------------------------------------------------------ */
-static void
-generic_to_unix_filename(register char  *name, register int len)
+static void generic_to_unix_filename(char *name, int len)
 {
 	register int    i;
 	boolean         lower_case_used = FALSE;
@@ -138,7 +131,7 @@ generic_to_unix_filename(register char  *name, register int len)
 
 /* ------------------------------------------------------------------------ */
 static void
-macos_to_unix_filename(register char  *name, register int len)
+macos_to_unix_filename(char *name, int len)
 {
 	register int    i;
 
@@ -152,7 +145,7 @@ macos_to_unix_filename(register char  *name, register int len)
 
 /* ------------------------------------------------------------------------ */
 static void
-unix_to_generic_filename(register char  *name, register int len)
+unix_to_generic_filename(char *name, int len)
 {
 	register int    i;
 
@@ -274,7 +267,8 @@ gettz()
 /* ------------------------------------------------------------------------ */
 #ifdef NOT_USED
 static struct tm *
-msdos_to_unix_stamp_tm(long a)
+msdos_to_unix_stamp_tm(a)
+	long            a;
 {
 	static struct tm t;
 
@@ -289,8 +283,7 @@ msdos_to_unix_stamp_tm(long a)
 #endif
 
 /* ------------------------------------------------------------------------ */
-static          time_t
-generic_to_unix_stamp(long  t)
+static time_t generic_to_unix_stamp(long t)
 #if defined(MKTIME) || defined(TIMELOCAL)
 {
 	struct tm       dostm;
@@ -306,8 +299,8 @@ generic_to_unix_stamp(long  t)
 	dostm.tm_min = t >> 5 & 0x3f;
 	dostm.tm_hour = t >> 11 & 0x1f;
 	dostm.tm_mday = t >> 16 & 0x1f;
-	dostm.tm_mon = (t >> 16 + 5 & 0x0f) - 1;	/* 0..11 */
-	dostm.tm_year = (t >> 16 + 9 & 0x7f) + 80;
+	dostm.tm_mon = ((t >> 16) + 5 & 0x0f) - 1;	/* 0..11 */
+	dostm.tm_year = ((t >> 16) + 9 & 0x7f) + 80;
 #if 0
 	dostm.tm_isdst = 0;	/* correct? */
 #endif
@@ -363,8 +356,7 @@ generic_to_unix_stamp(long  t)
 #endif				/* defined(MKTIME) || defined(TIMELOCAL) */
 
 /* ------------------------------------------------------------------------ */
-static long
-unix_to_generic_stamp(time_t t)
+static long unix_to_generic_stamp(time_t t)
 {
 	struct tm      *tm = localtime(&t);
 
@@ -379,8 +371,7 @@ unix_to_generic_stamp(time_t t)
 /* ------------------------------------------------------------------------ */
 /* build header functions													*/
 /* ------------------------------------------------------------------------ */
-boolean
-get_header(struct zfile   *fp, register LzHeader *hdr)
+boolean get_header(struct zfile *fp, LzHeader *hdr)
 {
 	int             header_size;
 	int             name_length;
@@ -401,24 +392,24 @@ get_header(struct zfile   *fp, register LzHeader *hdr)
 
 	if (zfile_fread(data + I_HEADER_CHECKSUM,
 		  sizeof(char), header_size - 1, fp) < header_size - 1) {
-		fatal_error("Invalid header (LHarc file ?)");
+		fatal_error(_T("Invalid header (LHarc file ?)"));
 		return FALSE;	/* finish */
 	}
 	setup_get(data + I_HEADER_LEVEL);
-	hdr->header_level = get_byte();
+	hdr->header_level = get_byte ();
 	if (hdr->header_level != 2 &&
 	    zfile_fread(data + header_size, sizeof(char), 2, fp) < 2) {
-		fatal_error("Invalid header (LHarc file ?)");
+		fatal_error(_T("Invalid header (LHarc file ?)"));
 		return FALSE;	/* finish */
 	}
 
 	if (hdr->header_level >= 3) {
-		fatal_error("Unknown level header");
+		fatal_error(_T("Unknown level header"));
 		return FALSE;
 	}
 
 	setup_get(data + I_HEADER_CHECKSUM);
-	checksum = get_byte();
+	checksum = get_byte ();
 
 	if (hdr->header_level == 2) {
 		hdr->header_size = header_size + checksum*256;
@@ -430,14 +421,14 @@ get_header(struct zfile   *fp, register LzHeader *hdr)
 	hdr->packed_size = get_longword();
 	hdr->original_size = get_longword();
 	hdr->last_modified_stamp = get_longword();
-	hdr->attribute = get_byte();
+	hdr->attribute = get_byte ();
 
-	if ((hdr->header_level = get_byte()) != 2) {
+	if ((hdr->header_level = get_byte ()) != 2) {
 		if (calc_sum(data + I_METHOD, header_size) != checksum)
-			warning("Checksum error (LHarc file?)", "");
-		name_length = get_byte();
+			warning(_T("Checksum error (LHarc file?)"), _T(""));
+		name_length = get_byte ();
 		for (i = 0; i < name_length; i++)
-			hdr->name[i] = (char) get_byte();
+			hdr->name[i] = (char) get_byte ();
 		hdr->name[name_length] = '\0';
 	}
 	else {
@@ -457,60 +448,60 @@ get_header(struct zfile   *fp, register LzHeader *hdr)
 				hdr->extend_type = EXTEND_GENERIC;
 				hdr->has_crc = FALSE;
 			} else {
-				fatal_error("Unkonwn header (lha file?)");
+				fatal_error(_T("Unkonwn header (lha file?)"));
 				return FALSE;
 			}
 		} else {
 			hdr->has_crc = TRUE;
-			hdr->crc = get_word();
+			hdr->crc = get_word ();
 		}
 
 		if (extend_size >= 1) {
-			hdr->extend_type = get_byte();
+			hdr->extend_type = get_byte ();
 			extend_size--;
 		}
 		if (hdr->extend_type == EXTEND_UNIX || hdr->extend_type == EXTEND_AMIGAOS) {
 			if (extend_size >= 11) {
-				hdr->minor_version = get_byte();
+				hdr->minor_version = get_byte ();
 				hdr->unix_last_modified_stamp = (time_t) get_longword();
-				hdr->unix_mode = get_word();
-				hdr->unix_uid = get_word();
-				hdr->unix_gid = get_word();
+				hdr->unix_mode = get_word ();
+				hdr->unix_uid = get_word ();
+				hdr->unix_gid = get_word ();
 				extend_size -= 11;
 			} else {
 				hdr->extend_type = EXTEND_GENERIC;
 			}
 		}
 		while (extend_size-- > 0)
-			dmy = get_byte();
+			dmy = get_byte ();
 		if (hdr->extend_type == EXTEND_UNIX)
 			return TRUE;
 	} else if (hdr->header_level == 1) {
 		hdr->has_crc = TRUE;
 		extend_size = header_size - name_length-25;
-		hdr->crc = get_word();
-		hdr->extend_type = get_byte();
+		hdr->crc = get_word ();
+		hdr->extend_type = get_byte ();
 		while (extend_size-- > 0)
-			dmy = get_byte();
+			dmy = get_byte ();
 	} else { /* level 2 */
 		hdr->has_crc = TRUE;
-		hdr->crc = get_word();
-		hdr->extend_type = get_byte();
-	}		
+		hdr->crc = get_word ();
+		hdr->extend_type = get_byte ();
+	}
 
 	if (hdr->header_level > 0) {
 		/* Extend Header */
 		if (hdr->header_level != 2)
 			setup_get(data + hdr->header_size);
 		ptr = get_ptr;
-		while ((header_size = get_word()) != 0) {
+		while ((header_size = get_word ()) != 0) {
 			if (hdr->header_level != 2 &&
 			((data + LZHEADER_STRAGE - get_ptr < header_size) ||
 			 zfile_fread(get_ptr, sizeof(char), header_size, fp) < header_size)) {
-				fatal_error("Invalid header (LHa file ?)");
+				fatal_error(_T("Invalid header (LHa file ?)"));
 				return FALSE;
 			}
-			switch (get_byte()) {
+			switch (get_byte ()) {
 			case 0:
 				/*
 				 * header crc
@@ -524,7 +515,7 @@ get_header(struct zfile   *fp, register LzHeader *hdr)
 				if (header_size >= 256)
 				    return FALSE;
 				for (i = 0; i < header_size - 3; i++)
-					hdr->name[i] = (char) get_byte();
+					hdr->name[i] = (char) get_byte ();
 				hdr->name[header_size - 3] = '\0';
 				name_length = header_size - 3;
 				break;
@@ -535,9 +526,9 @@ get_header(struct zfile   *fp, register LzHeader *hdr)
 				if (header_size >= FILENAME_LENGTH)
 				    return FALSE;
 				for (i = 0; i < header_size - 3; i++)
-					dirname[i] = (char) get_byte();
+					dirname[i] = (char) get_byte ();
 				dirname[header_size - 3] = '\0';
-				convdelim((unsigned char *)dirname, DELIM);
+				convdelim((unsigned char*)dirname, DELIM);
 				dir_length = header_size - 3;
 				break;
 			case 0x40:
@@ -548,22 +539,22 @@ get_header(struct zfile   *fp, register LzHeader *hdr)
 				    hdr->extend_type == EXTEND_HUMAN ||
 				    hdr->extend_type == EXTEND_AMIGAOS ||
 				    hdr->extend_type == EXTEND_GENERIC)
-					hdr->attribute = get_word();
+					hdr->attribute = get_word ();
 				break;
 			case 0x50:
 				/*
 				 * UNIX permission
 				 */
 				if (hdr->extend_type == EXTEND_UNIX)
-					hdr->unix_mode = get_word();
+					hdr->unix_mode = get_word ();
 				break;
 			case 0x51:
 				/*
 				 * UNIX gid and uid
 				 */
 				if (hdr->extend_type == EXTEND_UNIX) {
-					hdr->unix_gid = get_word();
-					hdr->unix_uid = get_word();
+					hdr->unix_gid = get_word ();
+					hdr->unix_uid = get_word ();
 				}
 				break;
 			case 0x52:
@@ -646,8 +637,7 @@ get_header(struct zfile   *fp, register LzHeader *hdr)
 }
 
 /* ------------------------------------------------------------------------ */
-void
-init_header(char *name, struct stat *v_stat, LzHeader *hdr)
+void init_header(char *name, struct stat *v_stat, LzHeader *hdr)
 {
 	int             len;
 
@@ -686,10 +676,10 @@ init_header(char *name, struct stat *v_stat, LzHeader *hdr)
 			strcpy(&hdr->name[len++], "/");
 	}
 
-#ifdef S_IFLNK	
+#ifdef S_IFLNK
 	if (is_symlink(v_stat)) {
 		char	lkname[257];
-		int		len;	
+		int		len;
 		bcopy(LZHDIRS_METHOD, hdr->method, METHOD_TYPE_STRAGE);
 		hdr->attribute = GENERIC_DIRECTORY_ATTRIBUTE;
 		hdr->original_size = 0;

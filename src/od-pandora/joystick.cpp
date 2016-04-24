@@ -15,8 +15,10 @@
 #include "uae.h"
 #include "options.h"
 #include "memory.h"
+#include "newcpu.h"
 #include "custom.h"
 #include "joystick.h"
+#include "inputdevice.h"
 #include "SDL.h"
 
 #ifdef GP2X
@@ -45,13 +47,42 @@ static SDL_Joystick *uae4all_joy0, *uae4all_joy1;
 
 void read_joystick(int nr, unsigned int *dir, int *button)
 {
-  int left = 0, right = 0, top = 0, bot = 0, upRight=0, downRight=0, upLeft=0, downLeft=0, x=0, y=0, a=0, b=0;
-  SDL_Joystick *joy = nr == 0 ? uae4all_joy0 : uae4all_joy1;
+  int left = 0, right = 0, top = 0, bot = 0;
+  SDL_Joystick *joy = nr == 1 ? uae4all_joy0 : uae4all_joy1;
+
+  if(nr == 0)
+  {
+    static int last_buttonstate0 = 0;
+    static int delay_leftmouse = 0;
+
+    if(last_buttonstate0 != buttonstate[0])
+    {
+      last_buttonstate0 = buttonstate[0];
+      if(buttonstate[0])
+      {
+        // Left mousebutton click -> delay click
+        delay_leftmouse = 2;
+      }
+    }
+    if(delay_leftmouse)
+    {
+      --delay_leftmouse;  
+      *button = (buttonstate[2] ? 2 : 0) | (buttonstate[1] ? 4 : 0);
+    }
+    else
+      *button = (buttonstate[0] ? 1 : 0) | (buttonstate[2] ? 2 : 0) | (buttonstate[1] ? 4 : 0);
+  }
+  else
+    *button = 0;
+        
+  if(currprefs.pandora_joyPort != 0)
+  {
+    // Only one joystick active    
+    if((nr == 0 && currprefs.pandora_joyPort == 2) || (nr == 1 && currprefs.pandora_joyPort == 1))
+      return;
+  }
 
   *dir = 0;
-  *button = 0;
-
-  nr = (~nr)&0x1;
 
   SDL_JoystickUpdate ();
 
@@ -63,10 +94,12 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 	{
 		// get joystick direction via dPad or joystick
 		int hat=SDL_JoystickGetHat(joy,0);
-		if ((hat & SDL_HAT_RIGHT) || dpadRight || SDL_JoystickGetAxis(joy, 0) > 0) right=1;
-		if ((hat & SDL_HAT_LEFT)  || dpadLeft  || SDL_JoystickGetAxis(joy, 0) < 0) left=1;
-		if ((hat & SDL_HAT_UP)    || dpadUp    || SDL_JoystickGetAxis(joy, 1) < 0) top=1;
-		if ((hat & SDL_HAT_DOWN)  || dpadDown  || SDL_JoystickGetAxis(joy, 1) > 0) bot=1;
+		int val = SDL_JoystickGetAxis(joy, 0);
+		if ((hat & SDL_HAT_RIGHT) || dpadRight || val > 0) right=1;
+		if ((hat & SDL_HAT_LEFT)  || dpadLeft  || val < 0) left=1;
+		val = SDL_JoystickGetAxis(joy, 1);
+		if ((hat & SDL_HAT_UP)    || dpadUp    || val < 0) top=1;
+		if ((hat & SDL_HAT_DOWN)  || dpadDown  || val > 0) bot=1;
 		if (currprefs.pandora_joyConf)
 		{
 			if ((buttonX && currprefs.pandora_jump > -1) || SDL_JoystickGetButton(joy, currprefs.pandora_jump))
@@ -120,7 +153,7 @@ void read_joystick(int nr, unsigned int *dir, int *button)
   	     && delay > currprefs.input_autofire_framecnt))
   	{
   		if(!buttonB)
-  			*button=1;
+  			*button |= 1;
   		delay=0;
   		*button |= (buttonB & 1) << 1;
   	}
@@ -130,11 +163,11 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 	{
 	  // get joystick button via custom controls
 		if((currprefs.pandora_custom_A==-3 && buttonA) || (currprefs.pandora_custom_B==-3 && buttonB) || (currprefs.pandora_custom_X==-3 && buttonX) || (currprefs.pandora_custom_Y==-3 && buttonY) || (currprefs.pandora_custom_L==-3 && triggerL) || (currprefs.pandora_custom_R==-3 && triggerR))
-			*button = 1;
+			*button |= 1;
 		else if(currprefs.pandora_custom_dpad == 2)
 		{
 			if((currprefs.pandora_custom_up==-3 && dpadUp) || (currprefs.pandora_custom_down==-3 && dpadDown) || (currprefs.pandora_custom_left==-3 && dpadLeft) || (currprefs.pandora_custom_right==-3 && dpadRight))
-				*button = 1;
+				*button |= 1;
 		}
 
 		if((currprefs.pandora_custom_A==-4 && buttonA) || (currprefs.pandora_custom_B==-4 && buttonB) || (currprefs.pandora_custom_X==-4 && buttonX) || (currprefs.pandora_custom_Y==-4 && buttonY) || (currprefs.pandora_custom_L==-4 && triggerL) || (currprefs.pandora_custom_R==-4 && triggerR))
@@ -149,7 +182,7 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 	else
 	{
 	  // get joystick button via ABXY or joystick
- 		*button = ((currprefs.pandora_button1==GP2X_BUTTON_B && buttonA) || (currprefs.pandora_button1==GP2X_BUTTON_X && buttonX) || (currprefs.pandora_button1==GP2X_BUTTON_Y && buttonY) || SDL_JoystickGetButton(joy, currprefs.pandora_button1)) & 1;
+ 		*button |= ((currprefs.pandora_button1==GP2X_BUTTON_B && buttonA) || (currprefs.pandora_button1==GP2X_BUTTON_X && buttonX) || (currprefs.pandora_button1==GP2X_BUTTON_Y && buttonY) || SDL_JoystickGetButton(joy, currprefs.pandora_button1)) & 1;
 		delay++;
 
 		*button |= ((buttonB || SDL_JoystickGetButton(joy, currprefs.pandora_button2)) & 1) << 1;
@@ -175,48 +208,32 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 	if (right) 
 	  bot = !bot;
   *dir = bot | (right << 1) | (top << 8) | (left << 9);
-
-  if(currprefs.pandora_joyPort != 0)
-  {
-    // Only one joystick active    
-    if((nr == 0 && currprefs.pandora_joyPort == 2) || (nr == 1 && currprefs.pandora_joyPort == 1))
-    {
-      *dir = 0;
-      *button = 0;
-    }
-  }
 }
 
 void handle_joymouse(void)
 {
-	if (currprefs.pandora_custom_dpad == 1)
-	{
-    int mouseScale = currprefs.input_joymouse_multiplier / 2;
+  int y = 1024;
+  int mouseScale = currprefs.input_joymouse_multiplier / 2;
 
-		if (buttonY) // slow mouse active
-			mouseScale = currprefs.input_joymouse_multiplier / 10;
+	if (buttonY) // slow mouse active
+		mouseScale = currprefs.input_joymouse_multiplier / 10;
 
-		if (dpadLeft)
-		{
-			lastmx -= mouseScale;
-			newmousecounters=1;
-		}
-		if (dpadRight)
-		{
-			lastmx += mouseScale;
-			newmousecounters=1;
-		}
-		if (dpadUp)
-		{    
-			lastmy -= mouseScale;
-			newmousecounters=1;
-		}
-		if (dpadDown)
-		{
-			lastmy += mouseScale;
-			newmousecounters=1;
-		}
+	if (dpadLeft)	{
+	  setmousestate(0, 0, -mouseScale, 0);
+	  y = 0;
 	}
+	if (dpadRight) {
+	  setmousestate(0, 0, mouseScale, 0);
+	  y = 0;
+	}
+	if (dpadUp) {    
+	  y = -mouseScale;
+	}
+	if (dpadDown) {
+	  y = mouseScale;
+	}
+	if(y < 1024)
+	  setmousestate(0, 1, y, 0);
 }
 
 void init_joystick(void)

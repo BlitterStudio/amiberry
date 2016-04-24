@@ -12,6 +12,7 @@
 #include "config.h"
 #include "options.h"
 #include "memory.h"
+#include "rommgr.h"
 #include "uae.h"
 #include "gui.h"
 #include "target.h"

@@ -75,6 +75,6 @@
 #define DIR_SEPARATORS ":\\/"
 
 
-extern UCHAR *text;
-
+extern UCHAR *dms_text;
+extern USHORT dms_lastlen, dms_np;
 

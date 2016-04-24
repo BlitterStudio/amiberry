@@ -24,7 +24,6 @@ else ifeq ($(PLATFORM),gles)
 endif
 
 NAME   = uae4arm
-O      = o
 RM     = rm -f
 CXX    = g++
 STRIP  = strip
@@ -34,8 +33,6 @@ PROG   = $(NAME)
 all: $(PROG)
 
 PANDORA=1
-
-#USE_XFD=1
 
 SDL_CFLAGS = `sdl-config --cflags`
 
@@ -70,18 +67,21 @@ ASFLAGS += $(CPU_FLAGS)
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
 OBJS =	\
+	src/aros.rom.o \
 	src/audio.o \
 	src/autoconf.o \
 	src/blitfunc.o \
 	src/blittable.o \
 	src/blitter.o \
+	src/bsdsocket.o \
 	src/cfgfile.o \
 	src/cia.o \
 	src/crc32.o \
 	src/custom.o \
 	src/disk.o \
+	src/diskutil.o \
 	src/drawing.o \
-	src/ersatz.o \
+	src/events.o \
 	src/expansion.o \
 	src/filesys.o \
 	src/fpp.o \
@@ -94,24 +94,27 @@ OBJS =	\
 	src/keybuf.o \
 	src/main.o \
 	src/memory.o \
-	src/missing.o \
 	src/native2amiga.o \
+	src/rommgr.o \
 	src/savestate.o \
 	src/traps.o \
 	src/uaelib.o \
 	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \
-	src/archivers/7z/7zAlloc.o \
-	src/archivers/7z/7zBuffer.o \
+	src/archivers/7z/Archive/7z/7zAlloc.o \
+	src/archivers/7z/Archive/7z/7zDecode.o \
+	src/archivers/7z/Archive/7z/7zExtract.o \
+	src/archivers/7z/Archive/7z/7zHeader.o \
+	src/archivers/7z/Archive/7z/7zIn.o \
+	src/archivers/7z/Archive/7z/7zItem.o \
+	src/archivers/7z/7zBuf.o \
 	src/archivers/7z/7zCrc.o \
-	src/archivers/7z/7zDecode.o \
-	src/archivers/7z/7zExtract.o \
-	src/archivers/7z/7zHeader.o \
-	src/archivers/7z/7zIn.o \
-	src/archivers/7z/7zItem.o \
-	src/archivers/7z/7zMethodID.o \
-	src/archivers/7z/LzmaDecode.o \
+	src/archivers/7z/7zStream.o \
+  src/archivers/7z/Bcj2.o \
+	src/archivers/7z/Bra.o \
+	src/archivers/7z/Bra86.o \
+	src/archivers/7z/LzmaDec.o \
 	src/archivers/dms/crc_csum.o \
 	src/archivers/dms/getbits.o \
 	src/archivers/dms/maketbl.o \
@@ -138,6 +141,7 @@ OBJS =	\
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/md-pandora/support.o \
+	src/od-pandora/bsdsocket_host.o \
 	src/od-pandora/fsdb_host.o \
 	src/od-pandora/joystick.o \
 	src/kb-sdl/keyboard.o \
@@ -206,13 +210,6 @@ endif
 
 ifeq ($(HAVE_NEON), 1)
 	OBJS += src/od-pandora/neon_helper.o
-endif
-
-ifdef USE_XFD
-OBJS += src/cpu_small.o \
-	src/cpuemu_small.o \
-	src/cpustbl_small.o \
-	src/archivers/xfd/xfd.o
 endif
 
 OBJS += src/newcpu.o

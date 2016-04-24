@@ -28,7 +28,7 @@ static unsigned long encoded_origsize;
 static unsigned int *hash;
 static unsigned int *prev;
 
-/* static unsigned char  *lha_text; */
+/* static unsigned char  *text; */
 unsigned char *too_flag;
 
 #if 0
@@ -113,7 +113,8 @@ static unsigned int remainder;
 #if 0
 /* ------------------------------------------------------------------------ */
 int
-encode_alloc(int method)
+encode_alloc(method)
+	int             method;
 {
 	if (method == LZHUFF1_METHOD_NUM) {	/* Changed N.Watazaki */
 		encode_set = encode_define[0];
@@ -139,10 +140,10 @@ encode_alloc(int method)
 
 	hash = (unsigned int*)malloc(HSHSIZ * sizeof(unsigned int));
 	prev = (unsigned int*)malloc(DICSIZ * sizeof(unsigned int));
-	lha_text = (unsigned char*)malloc(TXTSIZ);
+	text = (unsigned char*)malloc(TXTSIZ);
 	too_flag = (unsigned char*)malloc(HSHSIZ);
 
-	if (hash == NULL || prev == NULL || lha_text == NULL || too_flag == NULL)
+	if (hash == NULL || prev == NULL || text == NULL || too_flag == NULL)
 		exit(207);
 
 	return method;
@@ -175,18 +176,18 @@ static void update()
 	long n;
 
 #if 0
-	memmove(&lha_text[0], &text[dicsiz], (unsigned)(txtsiz - dicsiz));
+	memmove(&text[0], &text[dicsiz], (unsigned)(txtsiz - dicsiz));
 #else
 	{
 		int m;
 		i = 0; j = dicsiz; m = txtsiz-dicsiz;
 		while (m-- > 0) {
-			lha_text[i++] = lha_text[j++];
+			text[i++] = text[j++];
 		}
 	}
 #endif
-	n = fread_crc(&lha_text[(unsigned)(txtsiz - dicsiz)], 
-	                           (unsigned)dicsiz, infile);
+	n = fread_crc(&text[(unsigned)(txtsiz - dicsiz)],
+				   (unsigned)dicsiz, infile);
 
 	remainder += n;
 	encoded_origsize += n;
@@ -227,7 +228,7 @@ static void match_insert()
 
 	off = 0;
 	for (h = hval; too_flag[h] && off < maxmatch - THRESHOLD; ) {
-		h = ((h << 5) ^ lha_text[pos + (++off) + 2]) & (unsigned)(HSHSIZ - 1);
+		h = ((h << 5) ^ text[pos + (++off) + 2]) & (unsigned)(HSHSIZ - 1);
 	}
 	if (off == maxmatch - THRESHOLD) off = 0;
 	for (;;) {
@@ -237,9 +238,9 @@ static void match_insert()
 		while (scan_pos > scan_end) {
 			chain++;
 
-			if (lha_text[scan_pos + matchlen - off] == lha_text[pos + matchlen]) {
+			if (text[scan_pos + matchlen - off] == text[pos + matchlen]) {
 				{
-					a = lha_text + scan_pos - off;  b = lha_text + pos;
+					a = text + scan_pos - off;  b = text + pos;
 					for (len = 0; len < max && *a++ == *b++; len++);
 				}
 
@@ -286,10 +287,11 @@ static void get_next()
 		noslide = 0;
 #endif
 	}
-	hval = ((hval << 5) ^ lha_text[pos + 2]) & (unsigned)(HSHSIZ - 1);
+	hval = ((hval << 5) ^ text[pos + 2]) & (unsigned)(HSHSIZ - 1);
 }
 
-void encode(struct interfacing *lhinterface)
+void encode(lhinterface)
+struct interfacing *lhinterface;
 {
 	int lastmatchlen;
 	unsigned int lastmatchoffset;
@@ -309,20 +311,20 @@ void encode(struct interfacing *lhinterface)
 	crc = unpackable = 0;
 
 	/* encode_alloc(); */ /* allocate_memory(); */
-	init_slide();  
+	init_slide();
 
 	encode_set.encode_start();
-	memset(&lha_text[0], ' ', (long)TXTSIZ);
+	memset(&text[0], ' ', (long)TXTSIZ);
 
-	remainder = fread_crc(&lha_text[dicsiz], txtsiz-dicsiz, infile);
+	remainder = fread_crc(&text[dicsiz], txtsiz-dicsiz, infile);
 	encoded_origsize = remainder;
 	matchlen = THRESHOLD - 1;
 
 	pos = dicsiz;
 
 	if (matchlen > remainder) matchlen = remainder;
-	hval = ((((lha_text[dicsiz] << 5) ^ lha_text[dicsiz + 1]) << 5) 
-	        ^ lha_text[dicsiz + 2]) & (unsigned)(HSHSIZ - 1);
+	hval = ((((text[dicsiz] << 5) ^ text[dicsiz + 1]) << 5)
+		^ text[dicsiz + 2]) & (unsigned)(HSHSIZ - 1);
 
 	insert();
 	while (remainder > 0 && ! unpackable) {
@@ -331,9 +333,9 @@ void encode(struct interfacing *lhinterface)
 		get_next();  match_insert();
 		if (matchlen > remainder) matchlen = remainder;
 		if (matchlen > lastmatchlen || lastmatchlen < THRESHOLD) {
-			encode_set.output(lha_text[pos - 1], 0);
+			encode_set.output(text[pos - 1], 0);
 #ifdef DEBUG
-			fprintf(fout, "%u C %02X\n", addr, lha_text[pos-1]);
+			fprintf(fout, "%u C %02X\n", addr, text[pos-1]);
 			addr++;
 #endif
 			count++;
@@ -350,7 +352,7 @@ void encode(struct interfacing *lhinterface)
 			{
 			  int t,cc;
 			for (t=0; t<lastmatchlen+1; t++) {
-			  cc = lha_text[(pos-(lastmatchoffset)) & (dicsiz-1)];
+			  cc = text[(pos-(lastmatchoffset)) & (dicsiz-1)];
 			  fprintf(fout, "%02X ", cc);
 			}
 			fprintf(fout, "\n");
@@ -376,13 +378,12 @@ void encode(struct interfacing *lhinterface)
 
 #endif
 
-int
-decode(struct interfacing *lhinterface)
+int decode(struct interfacing *lhinterface)
 {
 	unsigned int i, j, k, c;
 	unsigned int dicsiz1, offset;
 	unsigned char *dtext;
-	
+
 
 #ifdef DEBUG
 	fout = fopen("de", "wt");

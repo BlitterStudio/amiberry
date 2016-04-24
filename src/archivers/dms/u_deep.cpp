@@ -23,8 +23,8 @@ INLINE void update(USHORT c);
 static void reconst(void);
 
 
-USHORT deep_text_loc;
-int init_deep_tabs=1;
+USHORT dms_deep_text_loc;
+int dms_init_deep_tabs=1;
 
 
 
@@ -38,13 +38,13 @@ int init_deep_tabs=1;
 #define MAX_FREQ    0x8000      /* updates tree when the */
 
 
-USHORT freq[T + 1]; /* frequency table */
+static USHORT freq[T + 1]; /* frequency table */
 
-USHORT prnt[T + N_CHAR]; /* pointers to parent nodes, except for the */
+static USHORT prnt[T + N_CHAR]; /* pointers to parent nodes, except for the */
 				/* elements [T..T + N_CHAR - 1] which are used to get */
 				/* the positions of leaves corresponding to the codes. */
 
-USHORT son[T];   /* pointers to child nodes (son[], son[] + 1) */
+static USHORT son[T];   /* pointers to child nodes (son[], son[] + 1) */
 
 
 
@@ -66,7 +66,7 @@ void Init_DEEP_Tabs(void){
 	freq[T] = 0xffff;
 	prnt[R] = 0;
 
-	init_deep_tabs = 0;
+	dms_init_deep_tabs = 0;
 }
 
 
@@ -77,21 +77,21 @@ USHORT Unpack_DEEP(UCHAR *in, UCHAR *out, USHORT origsize){
 
 	initbitbuf(in);
 
-	if (init_deep_tabs) Init_DEEP_Tabs();
+	if (dms_init_deep_tabs) Init_DEEP_Tabs();
 
 	outend = out+origsize;
 	while (out < outend) {
 		c = DecodeChar();
 		if (c < 256) {
-			*out++ = text[deep_text_loc++ & DBITMASK] = (UCHAR)c;
+			*out++ = dms_text[dms_deep_text_loc++ & DBITMASK] = (UCHAR)c;
 		} else {
 			j = (USHORT) (c - 255 + THRESHOLD);
-			i = (USHORT) (deep_text_loc - DecodePosition() - 1);
-			while (j--) *out++ = text[deep_text_loc++ & DBITMASK] = text[i++ & DBITMASK];
+			i = (USHORT) (dms_deep_text_loc - DecodePosition() - 1);
+			while (j--) *out++ = dms_text[dms_deep_text_loc++ & DBITMASK] = dms_text[i++ & DBITMASK];
 		}
 	}
 
-	deep_text_loc = (USHORT)((deep_text_loc+60) & DBITMASK);
+	dms_deep_text_loc = (USHORT)((dms_deep_text_loc+60) & DBITMASK);
 
 	return 0;
 }

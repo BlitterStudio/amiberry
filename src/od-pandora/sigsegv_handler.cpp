@@ -27,10 +27,9 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "events.h"
 #include "include/memory.h"
-#include "custom.h"
 #include "newcpu.h"
+#include "custom.h"
 #include "jit/comptbl.h"
 #include "jit/compemu.h"
 

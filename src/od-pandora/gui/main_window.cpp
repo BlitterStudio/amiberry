@@ -63,16 +63,43 @@ namespace widgets
 }
 
 
-int gui_check_boot_rom(struct uae_prefs *p)
-{
-  if(count_HDs(p) > 0)
-    return 1;
-  if(p->gfxmem_size)
-    return 1;
-  if (p->chipmem_size > 2 * 1024 * 1024)
-    return 1;
+/* Flag for changes in rtarea:
+  Bit 0: any HD in config?
+  Bit 1: force because add/remove HD was clicked
+  Bit 2: socket_emu on
+  Bit 3: mousehack on
+  Bit 4: rtgmem on
+  Bit 5: chipmem larger than 2MB
+  
+  gui_rtarea_flags_onenter is set before GUI is shown, bit 1 may change during GUI display.
+*/
+static int gui_rtarea_flags_onenter;
 
-  return 0;
+static int gui_create_rtarea_flag(struct uae_prefs *p)
+{
+  int flag = 0;
+  
+  if(count_HDs(p) > 0)
+    flag |= 1;
+  
+	if (p->socket_emu)
+		flag |= 4;
+
+  if (p->input_tablet > 0)
+    flag |= 8;
+
+  if(p->rtgmem_size)
+    flag |= 16;
+
+  if (p->chipmem_size > 2 * 1024 * 1024)
+    flag |= 32;
+
+  return flag;
+}
+
+void gui_force_rtarea_hdchange(void)
+{
+  gui_rtarea_flags_onenter |= 2;
 }
 
 
@@ -152,14 +179,22 @@ namespace sdl
 
         else if (event.type == SDL_KEYDOWN)
         {
+          gcn::FocusHandler* focusHdl;
+          gcn::Widget* activeWidget;
+            
           switch(event.key.keysym.sym)
           {
             case SDLK_q:
               //-------------------------------------------------
               // Quit entire program via Q on keyboard
               //-------------------------------------------------
-        			uae_quit();
-        			gui_running = false;
+              focusHdl = gui_top->_getFocusHandler();
+              activeWidget = focusHdl->getFocused();
+              if(dynamic_cast<gcn::TextField*>(activeWidget) == NULL) {
+          			// ...but only if we are not in a Textfield...
+          			uae_quit();
+          			gui_running = false;
+          		}
         			break;
 
             case SDLK_ESCAPE:
@@ -226,6 +261,9 @@ namespace sdl
         //-------------------------------------------------
         gui_input->pushInput(event);
       }
+
+  		if(gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
+        DisableResume();
 
       // Now we let the Gui object perform its logic.
       uae_gui->logic();
@@ -510,10 +548,8 @@ void DisableResume(void)
 
 void run_gui(void)
 {
-  int boot_rom_on_enter;
-  
   gui_running = true;
-  boot_rom_on_enter = gui_check_boot_rom(&currprefs);
+  gui_rtarea_flags_onenter = gui_create_rtarea_flag(&currprefs);
 
   try
   {
@@ -548,7 +584,7 @@ void run_gui(void)
   	//--------------------------------------------------
 		currprefs.nr_floppies = changed_prefs.nr_floppies;
 		
-		if(boot_rom_on_enter != gui_check_boot_rom(&changed_prefs))
+		if(gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 	    quit_program = -3; // Hardreset required...
   }
 }

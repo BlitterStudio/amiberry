@@ -76,8 +76,6 @@ typedef union {
     struct blockinfo_t* bi;
 } cacheline;
 
-extern signed long pissoff;
-
 #define USE_ALIAS 1
 #define USE_F_ALIAS 1
 #define USE_OFFSET 0
@@ -143,23 +141,21 @@ extern void init_comp(void);
 extern void flush(int save_regs);
 extern void small_flush(int save_regs);
 extern void set_target(uae_u8* t);
-extern uae_u8* get_target(void);
 extern void freescratch(void);
 extern void build_comp(void);
 extern void set_cache_state(int enabled);
 extern int get_cache_state(void);
 extern uae_u32 get_jitted_size(void);
 #ifdef JIT
-extern void (*flush_icache)(int n);
+extern void (*flush_icache)(uaecptr ptr, int n);
 #endif
 extern void alloc_cache(void);
 extern void compile_block(cpu_history* pc_hist, int blocklen, int totcyles);
 extern int check_for_cache_miss(void);
 
-#define scaled_cycles(x) (currprefs.m68k_speed==-1?(((x)/SCALE)?(((x)/SCALE<MAXCYCLES?((x)/SCALE):MAXCYCLES)):1):(x))
+#define scaled_cycles(x) (currprefs.m68k_speed<0?(((x)/SCALE)?(((x)/SCALE<MAXCYCLES?((x)/SCALE):MAXCYCLES)):1):(x))
 
 extern uae_u32 needed_flags;
-extern cacheline cache_tags[];
 extern uae_u8* comp_pc_p;
 extern void* pushall_call_handler;
 
@@ -281,7 +277,6 @@ typedef struct {
   uae_s8 nat[N_REGS];
 } smallstate;
 
-extern bigstate live;
 extern int touchcnt;
 
 
@@ -348,9 +343,6 @@ extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
 #define comp_get_ibyte(o) do_get_mem_byte((uae_u8 *)(comp_pc_p + (o) + 1))
 #define comp_get_iword(o) do_get_mem_word((uae_u16 *)(comp_pc_p + (o)))
 #define comp_get_ilong(o) do_get_mem_long((uae_u32 *)(comp_pc_p + (o)))
-
-/* Preferences handling */
-int check_prefs_changed_comp (void);
 
 struct blockinfo_t;
 

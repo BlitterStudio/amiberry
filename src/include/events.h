@@ -14,18 +14,17 @@
 
 #include "md-pandora/rpt.h"
 
-extern volatile frame_time_t vsynctime, vsyncmintime;
+extern frame_time_t vsynctimebase, vsyncmintime;
 extern void reset_frame_rate_hack (void);
 extern frame_time_t syncbase;
-extern int speedup_cycles, speedup_timelimit;
+extern int speedup_timelimit;
 
 extern void compute_vsynctime (void);
 extern void init_eventtab (void);
-extern void do_cycles_ce (long cycles);
+extern void events_schedule (void);
+extern void do_cycles_slow (unsigned long cycles_to_add);
 
-extern unsigned long currcycle, nextevent, is_lastline;
 extern unsigned long last_synctime;
-extern unsigned long sample_evtime;
 typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 
@@ -33,43 +32,103 @@ typedef unsigned long int evt;
 
 struct ev
 {
-    int active;
+    bool active;
     evt evtime, oldcycles;
     evfunc handler;
 };
 
 struct ev2
 {
-    int active;
+    bool active;
     evt evtime;
     uae_u32 data;
     evfunc2 handler;
 };
 
 enum {
-    ev_hsync, 
     ev_copper, 
-    ev_audio, ev_cia, ev_misc,
+    ev_cia, ev_audio, ev_blitter, ev_dmal, ev_misc, ev_hsync,
     ev_max
 };
 
 enum {
-    ev2_blitter, ev2_disk, ev2_misc,
-    ev2_max = 8
+    ev2_disk, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
+    ev2_max
 };
+
+extern int pissoff_value;
+#define countdown pissoff
+#define do_cycles do_cycles_slow
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
 
-extern void event2_newevent(int, evt);
-extern void event2_newevent2(evt, uae_u32, evfunc2);
-extern void event2_remevent(int);
-
+STATIC_INLINE void cycles_do_special (void)
+{
 #ifdef JIT
-#include "events_jit.h"
-#else
-#include "events_normal.h"
+	if (currprefs.cachesize) {
+		if (pissoff >= 0)
+			pissoff = -1;
+	} else 
 #endif
+  {
+		pissoff = 0;
+	}
+}
+
+STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
+{
+  pissoff -= cycles_to_add;
+}
+
+STATIC_INLINE unsigned long int get_cycles (void)
+{
+  return currcycle;
+}
+
+STATIC_INLINE void set_cycles (unsigned long int x)
+{
+  currcycle = x;
+	eventtab[ev_hsync].oldcycles = x;
+}
+
+STATIC_INLINE int current_hpos (void)
+{
+  return (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
+}
+
+STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
+{
+	signed long c = get_cycles ();
+	return (signed long)endcycles - c > 0;
+}
+
+extern void MISC_handler(void);
+
+STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
+{
+	eventtab2[no].active = true;
+  eventtab2[no].evtime = (t * CYCLE_UNIT) + get_cycles();
+  eventtab2[no].data = data;
+  MISC_handler();
+}
+
+STATIC_INLINE void event2_remevent (int no)
+{
+	eventtab2[no].active = 0;
+}
+
+STATIC_INLINE void event_newevent (int no, evt t)
+{
+  evt ct = get_cycles();
+	eventtab[no].active = true;
+  eventtab[no].evtime = ct + t * CYCLE_UNIT;
+  events_schedule();
+}
+
+STATIC_INLINE void event_remevent (int no)
+{
+	eventtab[no].active = 0;
+}
 
 #endif
-

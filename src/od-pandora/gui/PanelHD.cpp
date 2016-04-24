@@ -68,6 +68,7 @@ class HDRemoveActionListener : public gcn::ActionListener
         if (actionEvent.getSource() == listCmdDelete[i])
         {
           kill_filesys_unitconfig(&changed_prefs, i);
+          gui_force_rtarea_hdchange();
           break;
         }
       }
@@ -88,9 +89,15 @@ class HDEditActionListener : public gcn::ActionListener
         if (actionEvent.getSource() == listCmdProps[i])
         {
           if (GetHDType(i) == FILESYS_VIRTUAL)
-            EditFilesysVirtual(i);
+          {
+            if(EditFilesysVirtual(i))
+              gui_force_rtarea_hdchange();
+          }
           else
-            EditFilesysHardfile(i);
+          {
+            if(EditFilesysHardfile(i))
+              gui_force_rtarea_hdchange();
+          }
           listCmdProps[i]->requestFocus();
           break;
         }
@@ -106,7 +113,8 @@ class AddVirtualHDActionListener : public gcn::ActionListener
   public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-      EditFilesysVirtual(-1);
+      if(EditFilesysVirtual(-1))
+        gui_force_rtarea_hdchange();
       cmdAddDirectory->requestFocus();
       RefreshPanelHD();
     }
@@ -119,7 +127,8 @@ class AddHardfileActionListener : public gcn::ActionListener
   public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-      EditFilesysHardfile(-1);
+      if(EditFilesysHardfile(-1))
+        gui_force_rtarea_hdchange();
       cmdAddHardfile->requestFocus();
       RefreshPanelHD();
     }
@@ -132,7 +141,8 @@ class CreateHardfileActionListener : public gcn::ActionListener
   public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-      CreateFilesysHardfile();
+      if(CreateFilesysHardfile())
+        gui_force_rtarea_hdchange();
       cmdCreateHardfile->requestFocus();
       RefreshPanelHD();
     }

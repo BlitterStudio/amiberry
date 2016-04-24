@@ -36,7 +36,8 @@ make_crctable( /* void */ )
 /* ------------------------------------------------------------------------ */
 #ifdef NEED_INCREMENTAL_INDICATOR
 static void
-put_indicator(long int count)
+put_indicator(count)
+	long int        count;
 {
 	if (!quiet && indicator_threshold) {
 		while (count > indicator_count) {
@@ -50,7 +51,7 @@ put_indicator(long int count)
 
 /* ------------------------------------------------------------------------ */
 unsigned short
-calccrc(unsigned char  *p, unsigned int n)
+calccrc(unsigned char *p, unsigned int n)
 {
 	reading_size += n;
 #ifdef NEED_INCREMENTAL_INDICATOR
@@ -94,7 +95,9 @@ getbits(unsigned char n)
 #if 0
 /* ------------------------------------------------------------------------ */
 void
-putcode(unsigned char n, unsigned short x)			/* Write rightmost n bits of x */
+putcode(n, x)			/* Write rightmost n bits of x */
+	unsigned char   n;
+	unsigned short  x;
 {
 	while (n >= bitcount) {
 		n -= bitcount;
@@ -119,7 +122,9 @@ putcode(unsigned char n, unsigned short x)			/* Write rightmost n bits of x */
 
 /* ------------------------------------------------------------------------ */
 void
-putbits(unsigned char n, unsigned short x)			/* Write rightmost n bits of x */
+putbits(n, x)			/* Write rightmost n bits of x */
+	unsigned char   n;
+	unsigned short  x;
 {
 	x <<= USHRT_BIT - n;
 	while (n >= bitcount) {
@@ -145,7 +150,7 @@ putbits(unsigned char n, unsigned short x)			/* Write rightmost n bits of x */
 #endif
 /* ------------------------------------------------------------------------ */
 int
-fread_crc(unsigned char  *p, int n, struct zfile   *fp)
+fread_crc(unsigned char *p, int n, struct zfile *fp)
 {
 	n = zfile_fread(p, 1, n, fp);
 
@@ -155,7 +160,7 @@ fread_crc(unsigned char  *p, int n, struct zfile   *fp)
 
 /* ------------------------------------------------------------------------ */
 void
-fwrite_crc(unsigned char  *p, int n, struct zfile   *fp)
+fwrite_crc(unsigned char *p, int n, struct zfile *fp)
 {
 	calccrc(p, n);
 	if (verify_mode)
@@ -168,7 +173,7 @@ fwrite_crc(unsigned char  *p, int n, struct zfile   *fp)
 
 /* ------------------------------------------------------------------------ */
 void
-init_code_cache( /* void */ )
+init_code_cache(void)
 {				/* called from copyfile() in util.c */
 #ifdef EUC
 	putc_euc_cache = EOF;
@@ -177,7 +182,7 @@ init_code_cache( /* void */ )
 }
 
 void
-init_getbits( /* void */ )
+init_getbits(void)
 {
 	lhabitbuf = 0;
 	subbitbuf = 0;
@@ -200,7 +205,9 @@ init_putbits( /* void */ )
 /* ------------------------------------------------------------------------ */
 #ifdef EUC
 void
-putc_euc(int  c, FILE *fd)
+putc_euc(c, fd)
+	int             c;
+	FILE           *fd;
 {
 	int             d;
 
@@ -238,7 +245,7 @@ putc_euc(int  c, FILE *fd)
 
 /* ------------------------------------------------------------------------ */
 int
-fwrite_txt(unsigned char  *p, int n, FILE *fp)
+fwrite_txt(unsigned char *p, int n, FILE *fp)
 {
 	while (--n >= 0) {
 		if (*p != '\015' && *p != '\032') {
@@ -256,7 +263,7 @@ fwrite_txt(unsigned char  *p, int n, FILE *fp)
 
 /* ------------------------------------------------------------------------ */
 int
-fread_txt(unsigned char  *p, int n, FILE *fp)
+fread_txt(unsigned char *p, int n, FILE *fp)
 {
 	int             c;
 	int             cnt = 0;
@@ -314,7 +321,7 @@ fread_txt(unsigned char  *p, int n, FILE *fp)
 
 /* ------------------------------------------------------------------------ */
 unsigned short
-calc_header_crc(unsigned char  *p, unsigned int n)		/* Thanks T.Okamoto */
+calc_header_crc(unsigned char *p, unsigned int n)		/* Thanks T.Okamoto */
 {
 	crc = 0;
 	while (n-- > 0)

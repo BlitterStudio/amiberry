@@ -17,11 +17,11 @@
 #include "uae.h"
 #include "options.h"
 #include "memory.h"
-#include "debug.h"
+#include "newcpu.h"
+#include "custom.h"
 #include "audio.h"
 #include "gensound.h"
 #include "sd-pandora/sound.h"
-#include "custom.h"
 #include <SDL.h>
 
 #ifdef ANDROIDSDL
@@ -78,57 +78,22 @@ void restart_sound_buffer(void) { }
 static int have_sound = 0;
 static int lastfreq;
 
-extern uae_u16 new_beamcon0;
-
-void sound_default_evtime(int freq)
+void update_sound (int freq, int lof)
 {
-	int pal = new_beamcon0 & 0x20;
+  float lines = maxvpos_nom;
+	float hpos = maxhpos;
+  float evtime;
 
-	if (freq < 0)
-		freq = lastfreq;
-	lastfreq = freq;
+  if (freq < 0)
+  	freq = lastfreq;
+  lastfreq = freq;
 
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-	switch(m68k_speed)
-	{
-		case 6:
-			scaled_sample_evtime=(unsigned)(MAXHPOS_PAL*MAXVPOS_PAL*VBLANK_HZ_PAL*CYCLE_UNIT/1.86)/sound_rate;
-			break;
+	if (lof < 0) {
+		lines += 0.5;
+  }
 
-		case 5:
-		case 4: // ~4/3 234
-			if (pal)
-				scaled_sample_evtime=(MAXHPOS_PAL*244*VBLANK_HZ_PAL*CYCLE_UNIT)/sound_rate; // ???
-			else
-				scaled_sample_evtime=(MAXHPOS_NTSC*255*VBLANK_HZ_NTSC*CYCLE_UNIT)/sound_rate;
-			break;
-
-		case 3:
-		case 2: // ~8/7 273
-			if (pal)
-				scaled_sample_evtime=(MAXHPOS_PAL*270*VBLANK_HZ_PAL*CYCLE_UNIT)/sound_rate;
-			else
-				scaled_sample_evtime=(MAXHPOS_NTSC*255*VBLANK_HZ_NTSC*CYCLE_UNIT)/sound_rate;
-			break;
-
-		case 1:
-		default: // MAXVPOS_PAL?
-#endif
-#if 1
-		if (pal)
-			scaled_sample_evtime = (MAXHPOS_PAL * MAXVPOS_PAL * freq * CYCLE_UNIT + currprefs.sound_freq - 1) / currprefs.sound_freq;
-		else
-			scaled_sample_evtime = (MAXHPOS_NTSC * MAXVPOS_NTSC * freq * CYCLE_UNIT + currprefs.sound_freq - 1) / currprefs.sound_freq;
-#else
-		if (pal)
-			scaled_sample_evtime=(MAXHPOS_PAL*313*VBLANK_HZ_PAL*CYCLE_UNIT)/currprefs.sound_freq;
-		else
-			scaled_sample_evtime=(MAXHPOS_NTSC*MAXVPOS_NTSC*VBLANK_HZ_NTSC*CYCLE_UNIT)/currprefs.sound_freq + 1;
-#endif
-#if !( defined(PANDORA) || defined(ANDROIDSDL) )
-		break;
-	}
-#endif
+  evtime = hpos * lines * freq * CYCLE_UNIT / (float)currprefs.sound_freq;
+	scaled_sample_evtime = (int)evtime;
 }
 
 
@@ -299,12 +264,6 @@ int setup_sound (void)
     return 1;
 }
 
-void update_sound (int freq)
-{
-  sound_default_evtime(freq);
-}
-
-
 static int open_sound (void)
 {
 #ifdef DEBUG_SOUND
@@ -315,7 +274,6 @@ static int open_sound (void)
     if (pandora_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
 	    return 0;
 
-    init_sound_table16 ();
 
     have_sound = 1;
     sound_available = 1;

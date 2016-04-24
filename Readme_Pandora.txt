@@ -36,11 +36,11 @@ The main differences to UAE4ALL:
  - Lot of new audio options
  - Picasso96
  - GUI
+ - bsdsockets
  
 What's missing compared to WinUAE:
  - Cycle exact emulation of cpu and blitter
  - SCSI support
- - bsdsockets
  - AHI
  - CD
  - Builtin debugger
@@ -145,7 +145,6 @@ Tap screen: left click
 L/R: Hold and tap with stylus performs right click
 D-pad: Left operates left mouse button, right operates right mouse button. Hold down on D-pad to prevent mouse from clicking and up on D-pad
 equals a right and left click together.
-Recalibration: Hold Stylus against screen, hold left trigger and reposition mouse pointer using d-pad.
 
 
 2.5 Specific controls inside GUI
@@ -262,7 +261,7 @@ When the game, demo or workbench uses Hires mode and you selected a "Width" lowe
 pixels.
 With "Vert. offset" you can adjust the position of the first drawn line of the Amiga screen. You can also change this during
 emulation with L+R + dpad up/down.
-When you activate "Frameskip", only every seconds frame is drawn. This will improve performance and some more games are
+When you activate "Frameskip", only every second frame is drawn. This will improve performance and some more games are
 playable.
 
 
@@ -285,8 +284,8 @@ With "Control config", you can choose one of four preset button configurations.
 Select the port for which the joystick should be emulated with "Joystick".
 "Tap Delay" specifies the time between taping the screen and an emulated mouse button click.
 Set the emulated mouse speed to .25x, .5x, 1x 2x and 4x to slow down or speed up the mouse.
-With "Stylus Offset", you can set the offset between the screen mouse pointer and the stylus by the following amount of 
-pixels: 0px, 1px, 3px, 5px and 8px.
+When "Enable mousehack" is activated, you can use the stylus to set the mouse pointer to the exact position. This works
+very well on Workbench, but many games using there own mouse handling and will not profit from this code.
 
 When enabling "Custom Control", you can define which Amiga key should be emulated by pressing one of the ABXY- or D-pad
 buttons. Useful to setup controls for pinball games. During emulation, you can switch between regular behaviour of the
@@ -298,12 +297,14 @@ buttons and custom settings by pressing left shoulder button and 'c'.
 "Status Line" shows/hides the status line indicator. During emulation, you can show/hide this by pressing left shoulder
 button and 'd'. The first value in the status line shows the idle time of the Pandora CPU in %, the second value is the 
 current frame rate. When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and write (red) access 
-to the HDD. The next values are showing the track number for each disk drive and indicated disk access.
+to the HDD. The next values are showing the track number for each disk drive and indicates disk access.
 
 When you deactivate the option "Show GUI on startup" and use this configuration by specifying it with the command line
 parameter "-config=<file>", the emulations starts directly without showing the GUI.
 
 Set the speed for the Pandora CPU to overclock it for games which need more power. Be careful with this parameter.
+
+"bsdsocket.library" enables network functions (i.e. for web browsers in OS3.9).
 
 
 3.13 Savestates

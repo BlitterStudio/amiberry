@@ -15,8 +15,8 @@
 
 #include "options.h"
 #include "memory.h"
-#include "custom.h"
 #include "newcpu.h"
+#include "custom.h"
 #include "ersatz.h"
 #include "compemu.h"
 

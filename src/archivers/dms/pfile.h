@@ -43,6 +43,8 @@
 #define USHORT unsigned short
 #endif
 
-USHORT DMS_Process_File(struct zfile *, struct zfile *, USHORT, USHORT, USHORT, USHORT);
+#define DMS_EXTRA_SIZE 10
+
+USHORT DMS_Process_File(struct zfile *, struct zfile *, USHORT, USHORT, USHORT, USHORT, int, struct zfile **extra);
 
 #endif /* _PFILE_H */

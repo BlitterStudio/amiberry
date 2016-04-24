@@ -13,10 +13,10 @@
 #define WRITE_LOG_BUF_SIZE 4096
 FILE *debugfile = NULL;
 
-void console_out (const char *format,...)
+void console_out (const TCHAR *format,...)
 {
     va_list parms;
-    char buffer[WRITE_LOG_BUF_SIZE];
+    TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
     va_start (parms, format);
     vsnprintf (buffer, WRITE_LOG_BUF_SIZE-1, format, parms);
@@ -26,11 +26,11 @@ void console_out (const char *format,...)
 
 #ifdef WITH_LOGGING
 
-void write_log (const char *format,...)
+void write_log (const TCHAR *format,...)
 {
   int count;
   int numwritten;
-  char buffer[WRITE_LOG_BUF_SIZE];
+  TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
   va_list parms;
   va_start (parms, format);
@@ -44,11 +44,11 @@ void write_log (const char *format,...)
 
 #endif
 
-void jit_abort (const char *format,...)
+void jit_abort (const TCHAR *format,...)
 {
     static int happened;
     int count;
-    char buffer[WRITE_LOG_BUF_SIZE];
+    TCHAR buffer[WRITE_LOG_BUF_SIZE];
     va_list parms;
     va_start (parms, format);
 

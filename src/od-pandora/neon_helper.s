@@ -2,8 +2,7 @@
 
 .arm
 
-.global TRACE_Start
-.global TRACE_mem
+.global copy_screen_8bit
 .global copy_screen_16bit_swap
 .global copy_screen_32bit_to_16bit_neon
 .global ARM_doline_n1
@@ -17,49 +16,43 @@
 
 .align 8
 
-TRACE_Start:
-  stmdb   sp!, {r0, r1}
-  stmdb   sp!, {r1}
-  ldr     r1, =TRACE_mem
-  str     r0, [r1]
-  add     r1, r1, #4
-  ldmia   sp!, {r0}
-  str     r0, [r1]
-  add     r1, r1, #4
-  str     r2, [r1]
-  add     r1, r1, #4
-  str     r3, [r1]
 
-  add     r1, r1, #4
-  str     r4, [r1]
-  add     r1, r1, #4
-  str     r5, [r1]
-  add     r1, r1, #4
-  str     r6, [r1]
-  add     r1, r1, #4
-  str     r7, [r1]
+@----------------------------------------------------------------
+@ copy_screen_8bit
+@
+@ r0: uae_u8   *dst
+@ r1: uae_u8   *src
+@ r2: int      bytes always a multiple of 64: even number of lines, number of pixel per line is multiple of 32 (320, 640, 800, 1024, 1152, 1280)
+@ r3: uae_u32  *clut
+@
+@ void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
+@
+@----------------------------------------------------------------
+copy_screen_8bit:
+  stmdb     sp!, {r4-r7, lr}
+copy_screen_8bit_loop:
+  pld       [r1, #192]
+  mov       r7, #64
+copy_screen_8bit_loop_2:
+  ldr       r4, [r1], #4
+  and       r5, r4, #255
+  ldr       r6, [r3, r5, lsl #2]
+  ubfx      r5, r4, #8, #8
+  strh      r6, [r0], #2
+  ldr       r6, [r3, r5, lsl #2]
+  ubfx      r5, r4, #16, #8
+  strh      r6, [r0], #2
+  ldr       r6, [r3, r5, lsl #2]
+  ubfx      r5, r4, #24, #8
+  strh      r6, [r0], #2
+  ldr       r6, [r3, r5, lsl #2]
+  subs      r7, r7, #4
+  strh      r6, [r0], #2
+  bgt       copy_screen_8bit_loop_2
+  subs      r2, r2, #64
+  bgt       copy_screen_8bit_loop
+  ldmia     sp!, {r4-r7, pc}
 
-  add     r1, r1, #4
-  str     r8, [r1]
-  add     r1, r1, #4
-  str     r9, [r1]
-  add     r1, r1, #4
-  str     r10, [r1]
-  add     r1, r1, #4
-  str     r11, [r1]
-
-  add     r1, r1, #4
-  str     r12, [r1]
-  add     r1, r1, #4
-  str     r13, [r1]
-  add     r1, r1, #4
-  str     r14, [r1]
-  add     r1, r1, #4
-  str     r15, [r1]
-
-  ldmia   sp!, {r0, r1}
-  bx      lr
-    
 
 @----------------------------------------------------------------
 @ copy_screen_16bit_swap
@@ -141,45 +134,34 @@ ARM_doline_n1:
   add       r3, r3, r2           @ real_bplpt[0]
 
   ldr       r4, =Lookup_doline_n1
-
-  sub       r3, r3, #4
-  
+ 
 ARM_doline_n1_loop:
-  ldr       r2, [r3, #4]!
-@  add       r3, r3, #4
+  ldr       r2, [r3], #4
 
   ubfx      r5, r2, #28, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r6, [r5]
+  ldr       r6, [r4, r5, lsl #2]
   
   ubfx      r5, r2, #24, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r7, [r5]
+  ldr       r7, [r4, r5, lsl #2]
 
   ubfx      r5, r2, #20, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r8, [r5]
+  ldr       r8, [r4, r5, lsl #2]
 
   ubfx      r5, r2, #16, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r9, [r5]
+  ldr       r9, [r4, r5, lsl #2]
   stmia     r0!, {r6-r9}
   
   ubfx      r5, r2, #12, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r6, [r5]
+  ldr       r6, [r4, r5, lsl #2]
 
   ubfx      r5, r2, #8, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r7, [r5]
+  ldr       r7, [r4, r5, lsl #2]
 
   ubfx      r5, r2, #4, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r8, [r5]
+  ldr       r8, [r4, r5, lsl #2]
 
   ubfx      r5, r2, #0, #4
-  add       r5, r4, r5, lsl #2
-  ldr       r9, [r5]
+  ldr       r9, [r4, r5, lsl #2]
   stmia     r0!, {r6-r9}
 
   subs      r1, r1, #1
@@ -207,60 +189,46 @@ NEON_doline_n2:
   ldr       r3, =line_data
   add       r2, r3, r2           @ real_bplpt[0]
   add       r3, r2, #200
-
+  
 @ Load masks to registers
   vmov.u8   d18, #0x55
-  vmov.u8   d19, #0x33
-  vmov.u8   d20, #0x0f
+  vmov.u8   q11, #0x03       @ -> d22 and d23
 
 NEON_doline_n2_loop:
-  @ Load data as early as possible
   vldmia    r2!, {d4}
   vldmia    r3!, {d6}
-
+  
 @      MERGE (b6, b7, 0x55555555, 1);
   vshr.u8   d16, d4, #1      @ tmpb = b >> shift
   vshl.u8   d17, d6, #1      @ tmpa = a << shift
   vbit.u8   d6, d16, d18     @ a = a and bit set from tmpb if mask is true 
   vbif.u8   d4, d17, d18     @ b = b and bit set from tmpa if mask is false
 
-@      MERGE_0(b4, b6, 0x33333333, 2);
-  vshr.u8   d16, d6, #2		  @ tmp = b >> shift
-  vand.8    d2, d16, d19     @ a = tmp & mask
-  vand.8    d6, d6, d19     @ b = b & mask
-@      MERGE_0(b5, b7, 0x33333333, 2);
-  vshr.u8   d16, d4, #2		  @ tmp = b >> shift
-  vand.8    d0, d16, d19     @ a = tmp & mask
-  vand.8    d4, d4, d19     @ b = b & mask
+  vshr.u8   d3, d6, #6
+  vshr.u8   d1, d4, #6
 
-@      MERGE_0(b0, b4, 0x0f0f0f0f, 4);
-  vshr.u8   d16, d2, #4		  @ tmp = b >> shift
-  vand.8    d3, d16, d20     @ a = tmp & mask
-  vand.8    d2, d2, d20     @ b = b & mask
-@      MERGE_0(b1, b5, 0x0f0f0f0f, 4);
-  vshr.u8   d16, d0, #4			@ tmp = b >> shift
-  vand.8    d1, d16, d20     @ a = tmp & mask
-  vand.8    d0, d0, d20     @ b = b & mask
-@      MERGE_0(b2, b6, 0x0f0f0f0f, 4);
-  vshr.u8   d16, d6, #4			@ tmp = b >> shift
-  vand.8    d7, d16, d20     @ a = tmp & mask
-  vand.8    d6, d6, d20     @ b = b & mask
-@      MERGE_0(b3, b7, 0x0f0f0f0f, 4);
-  vshr.u8   d16, d4, #4			@ tmp = b >> shift
-  vand.8    d5, d16, d20     @ a = tmp & mask
-  vand.8    d4, d4, d20     @ b = b & mask
-  
+  vshr.u8   d7, d6, #4
+  vshr.u8   d5, d4, #4
+
+  vshr.u8   d2, d6, #2
+  vshr.u8   d0, d4, #2
+
+  vand      d2, d2, d22
+  vand      d0, d0, d22
+  vand      q3, q3, q11      @ -> d6 and d7
+  vand      q2, q2, q11      @ -> d4 and d5
+   
   vzip.8    d3, d7
   vzip.8    d1, d5
   vzip.8    d2, d6
   vzip.8    d0, d4
-
+  
   vzip.8    d3, d1
   vzip.8    d2, d0
   vzip.32   d3, d2
   vzip.32   d1, d0
-
-  vst1.8    {d0, d1, d2, d3}, [r0]!
+  
+  vstmia    r0!, {d0, d1, d2, d3}
   
   cmp       r1, #1    @ Exit from here if odd number of words
   bxeq      lr
@@ -272,8 +240,8 @@ NEON_doline_n2_loop:
   vzip.32   d7, d6
   vzip.32   d5, d4
 
-  vst1.8    {d4, d5, d6, d7}, [r0]!
-
+  vstmia    r0!, {d4, d5, d6, d7}
+  
   bgt       NEON_doline_n2_loop
   
 NEON_doline_n2_exit:
@@ -799,13 +767,3 @@ Lookup_doline_n1:
   .long 0x00000100, 0x01000100, 0x00010100, 0x01010100
   .long 0x00000001, 0x01000001, 0x00010001, 0x01010001
   .long 0x00000101, 0x01000101, 0x00010101, 0x01010101
-
-TRACE_mem:
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000
-  .long 0x00000000, 0x00000000, 0x00000000, 0x00000000

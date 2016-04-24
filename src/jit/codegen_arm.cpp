@@ -92,9 +92,9 @@ extern void __clear_cache (char*, char*);
 #define STACK_ALIGN		4
 #define STACK_OFFSET	sizeof(void *)
 
-uae_s8 always_used[]={2,3,-1};
-uae_s8 can_byte[]={0,1,4,5,6,7,8,9,10,11,12,-1};
-uae_s8 can_word[]={0,1,4,5,6,7,8,9,10,11,12,-1};
+uae_u8 always_used[]={2,3,0xff};
+uae_u8 can_byte[]={0,1,4,5,6,7,8,9,10,11,12,0xff};
+uae_u8 can_word[]={0,1,4,5,6,7,8,9,10,11,12,0xff};
 
 uae_u8 call_saved[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 0,1,1,1};
 

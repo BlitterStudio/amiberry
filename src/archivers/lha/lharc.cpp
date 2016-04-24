@@ -129,8 +129,7 @@ init_variable()		/* Added N.Watazaki */
 /* ------------------------------------------------------------------------ */
 /*																			*/
 /* ------------------------------------------------------------------------ */
-static int
-sort_by_ascii(char **a, char **b)
+static int sort_by_ascii(char **a, char **b)
 {
 	register char  *p, *q;
 	register int    c1, c2;
@@ -158,12 +157,11 @@ sort_by_ascii(char **a, char **b)
 }
 
 /* ------------------------------------------------------------------------ */
-char           *
-xrealloc(char *old, int size)
+char *xxrealloc(char *old, int size)
 {
-	char           *p = (char *) realloc(old, size);
+	char           *p = (char *) xrealloc(char, old, size);
 	if (!p)
-		fatal_error("Not enough memory");
+		fatal_error(_T("Not enough memory"));
 	return p;
 }
 
@@ -186,22 +184,20 @@ xrealloc(char *old, int size)
 */
 
 /* ------------------------------------------------------------------------ */
-void
-init_sp(struct string_pool *sp)
+void init_sp(struct string_pool *sp)
 {
 	sp->size = 1024 - 8;	/* any ( >=0 ) */
 	sp->used = 0;
 	sp->n = 0;
-	sp->buffer = (char *) xmalloc(sp->size * sizeof(char));
+	sp->buffer = (char *) xmalloc(char, sp->size);
 }
 
 /* ------------------------------------------------------------------------ */
-void
-add_sp(struct string_pool *sp, char *name, int len)
+void add_sp(struct string_pool *sp, char *name, int len)
 {
 	while (sp->used + len > sp->size) {
 		sp->size *= 2;
-		sp->buffer = (char *) xrealloc(sp->buffer, sp->size * sizeof(char));
+		sp->buffer = (char *) xxrealloc(sp->buffer, sp->size * sizeof(char));
 	}
 	bcopy(name, sp->buffer + sp->used, len);
 	sp->used += len;
@@ -209,14 +205,13 @@ add_sp(struct string_pool *sp, char *name, int len)
 }
 
 /* ------------------------------------------------------------------------ */
-void
-finish_sp(register struct string_pool *sp, int *v_count, char ***v_vector)
+void finish_sp(struct string_pool *sp, int *v_count, char ***v_vector)
 {
 	int             i;
 	register char  *p;
 	char          **v;
 
-	v = (char **) xmalloc((sp->n + 1) * sizeof(char *));
+	v = (char **) xmalloc(char*, sp->n + 1);
 	*v++ = sp->buffer;
 	*v_vector = v;
 	*v_count = sp->n;
@@ -229,8 +224,7 @@ finish_sp(register struct string_pool *sp, int *v_count, char ***v_vector)
 }
 
 /* ------------------------------------------------------------------------ */
-void
-free_sp(char **vector)
+void free_sp(char **vector)
 {
 	vector--;
 	free(*vector);		/* free string pool */
@@ -241,8 +235,7 @@ free_sp(char **vector)
 /* ------------------------------------------------------------------------ */
 /*							READ DIRECTORY FILES							*/
 /* ------------------------------------------------------------------------ */
-static          boolean
-include_path_p(char *path, char *name)
+static boolean include_path_p(char *path, char *name)
 {
 	char           *n = name;
 	while (*path)

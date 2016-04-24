@@ -642,9 +642,9 @@ struct zfile *archive_access_lzx (struct znode *zn)
     startpos = znlast->offset;
     compsize = znlast->packedsize;
     zfile_fseek (zf, startpos, SEEK_SET);
-    buf = (uae_u8 *)xmalloc(compsize);
+    buf = xmalloc(uae_u8, compsize);
     zfile_fread (buf, compsize, 1, zf);
-    dbuf = (uae_u8 *)xcalloc (unpsize, 1);
+    dbuf = xcalloc (uae_u8, unpsize);
 
     /* unpack complete block */
     memset(offset_len, 0, sizeof offset_len);
@@ -667,7 +667,7 @@ struct zfile *archive_access_lzx (struct znode *zn)
 		unpsize -= decrunch_length;
 		crc_calc (pdest, decrunch_length);
 	} else {
-		write_log ("LZX corrupt compressed data %s\n", zn->name);
+		write_log (_T("LZX corrupt compressed data %s\n"), zn->name);
 	    goto end;
 	    }
 	}
@@ -675,7 +675,7 @@ struct zfile *archive_access_lzx (struct znode *zn)
     /* pre-cache all files we just decompressed */
     for (;;) {
         if (znfirst->size && !znfirst->f) {
-	    dstf = zfile_fopen_empty (znfirst->name, znfirst->size);
+	    dstf = zfile_fopen_empty (zf, znfirst->name, znfirst->size);
 	    zfile_fwrite(dbuf + znfirst->offset2, znfirst->size, 1, dstf);
 	    znfirst->f = dstf;
 	    if (znfirst == zn)
@@ -709,14 +709,14 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
  unsigned int pack_size;
  unsigned int unpack_size;
  unsigned char archive_header[31];
- unsigned char header_filename[256];
- unsigned char header_comment[256];
+ char header_filename[256];
+ char header_comment[256];
 
  if (zfile_fread(archive_header, 1, 10, in_file) != 10)
      return 0;
  if (memcmp(archive_header, "LZX", 3))
      return 0;
- zv = zvolume_alloc(in_file, ArchiveFormatLZX, NULL);
+ zv = zvolume_alloc(in_file, ArchiveFormatLZX, NULL, NULL);
 
  do
  {
@@ -742,7 +742,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
       if(actual == temp)
       {
        header_filename[temp] = 0;
-       crc_calc(header_filename, temp);
+       crc_calc((unsigned char*)header_filename, temp);
        temp = archive_header[14]; /* comment length */
        actual = zfile_fread(header_comment, 1, temp, in_file);
        if(!zfile_ferror(in_file))
@@ -750,7 +750,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
         if(actual == temp)
         {
          header_comment[temp] = 0;
-         crc_calc(header_comment, temp);
+         crc_calc((unsigned char*)header_comment, temp);
          if(sum == crc)
          {
 	  unsigned int year, month, day;
@@ -768,7 +768,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
           second = temp & 63;
 
 	  memset(&zai, 0, sizeof zai);
-	  zai.name = (const char *)header_filename;
+	  zai.name = (char *)header_filename;
 	  if (header_comment[0])
 	   zai.comment = (char *)header_comment;
 	  zai.flags |= (attributes & 32) ? 0x80 : 0;
@@ -809,7 +809,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
           }
           else
            abort = 0; /* continue */
-	  //write_log ("unp=%6d mrg=%6d pack=%6d off=%6d %s\n", unpack_size, merge_size, pack_size, zn->offset, zai.name);
+	  //write_log (_T("unp=%6d mrg=%6d pack=%6d off=%6d %s\n"), unpack_size, merge_size, pack_size, zn->offset, zai.name);
          }
         }
        }

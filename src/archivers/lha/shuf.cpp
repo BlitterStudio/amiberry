@@ -16,13 +16,12 @@
 #define NP2			(NP * 2 - 1)
 /* ------------------------------------------------------------------------ */
 static unsigned int np;
-int             fixed[2][16] = {
+static int             h_fixed[2][16] = {
 	{3, 0x01, 0x04, 0x0c, 0x18, 0x30, 0},	/* old compatible */
 	{2, 0x01, 0x01, 0x03, 0x06, 0x0D, 0x1F, 0x4E, 0}	/* 8K buf */
 };
 /* ------------------------------------------------------------------------ */
-void
-decode_start_st0( /*void*/ )
+void decode_start_st0(void)
 {
 	n_max = 286;
 	maxmatch = MAXMATCH;
@@ -38,7 +37,8 @@ decode_start_st0( /*void*/ )
 #if 0
 /* ------------------------------------------------------------------------ */
 void
-encode_p_st0(unsigned short j)
+encode_p_st0(j)
+	unsigned short  j;
 {
 	unsigned short  i;
 
@@ -48,14 +48,13 @@ encode_p_st0(unsigned short j)
 }
 #endif
 /* ------------------------------------------------------------------------ */
-static void
-ready_made(int method)
+static void ready_made(int method)
 {
 	int             i, j;
 	unsigned int    code, weight;
 	int            *tbl;
 
-	tbl = fixed[method];
+	tbl = h_fixed[method];
 	j = *tbl++;
 	weight = 1 << (16 - j);
 	code = 0;
@@ -85,8 +84,7 @@ encode_start_fix( /*void*/ )
 }
 #endif
 /* ------------------------------------------------------------------------ */
-static void
-read_tree_c( /*void*/ )
+static void read_tree_c(void)
 {				/* read tree from file */
 	int             i, c;
 
@@ -109,8 +107,7 @@ read_tree_c( /*void*/ )
 }
 
 /* ------------------------------------------------------------------------ */
-static void
-read_tree_p(/*void*/)
+static void read_tree_p(void)
 {				/* read tree from file */
 	int             i, c;
 
@@ -133,8 +130,7 @@ read_tree_p(/*void*/)
 }
 
 /* ------------------------------------------------------------------------ */
-void
-decode_start_fix(/*void*/)
+void decode_start_fix(void)
 {
 	n_max = 314;
 	maxmatch = 60;
@@ -146,8 +142,7 @@ decode_start_fix(/*void*/)
 }
 
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_c_st0(/*void*/)
+unsigned short decode_c_st0(void)
 {
 	int             i, j;
 	static unsigned short blocksize = 0;
@@ -172,9 +167,9 @@ decode_c_st0(/*void*/)
 		i = lhabitbuf;
 		do {
 			if ((short) i < 0)
-				j = lha_right[j];
+				j = h_right[j];
 			else
-				j = lha_left[j];
+				j = h_left[j];
 			i <<= 1;
 		} while (j >= N1);
 		fillbuf(c_len[j] - 12);
@@ -185,8 +180,7 @@ decode_c_st0(/*void*/)
 }
 
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_p_st0(/*void*/)
+unsigned short decode_p_st0(void)
 {
 	int             i, j;
 
@@ -199,9 +193,9 @@ decode_p_st0(/*void*/)
 		i = lhabitbuf;
 		do {
 			if ((short) i < 0)
-				j = lha_right[j];
+				j = h_right[j];
 			else
-				j = lha_left[j];
+				j = h_left[j];
 			i <<= 1;
 		} while (j >= np);
 		fillbuf(pt_len[j] - 8);

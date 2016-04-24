@@ -3,9 +3,8 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"
-#include "custom.h"
-#include "events.h"
 #include "newcpu.h"
+#include "custom.h"
 #include "comptbl.h"
 #include "debug.h"
 extern const struct comptbl op_smalltbl_0_comp_ff[] = {

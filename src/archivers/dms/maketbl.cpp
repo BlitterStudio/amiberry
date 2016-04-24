@@ -23,7 +23,7 @@ static USHORT mktbl(void);
 
 
 
-USHORT make_table(USHORT nchar, UCHAR bitlen[],USHORT tablebits, USHORT table[]){
+USHORT dms_make_table(USHORT nchar, UCHAR bitlen[],USHORT tablebits, USHORT table[]){
 	n = avail = nchar;
 	blen = bitlen;
 	tbl = table;
@@ -77,8 +77,8 @@ static USHORT mktbl(void){
 			TabErr = 3;
 			return 0;
 		}
-		left[i] = mktbl();
-		right[i] = mktbl();
+		dms_left[i] = mktbl();
+		dms_right[i] = mktbl();
 		if (codeword >= tblsiz) {
 			TabErr = 4;
 			return 0;

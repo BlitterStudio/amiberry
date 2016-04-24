@@ -24,16 +24,15 @@
 /* #define UAESERIAL */ /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
 /* #define FPU_UAE */
-/* #define MMUEMU */
+/* #define MMUEMU Aranym 68040 MMU */
+/* #define FULLMMU Aranym 68040 MMU */
 #define CPUEMU_0 /* generic 680x0 emulation */
 #define CPUEMU_11 /* 68000+prefetch emulation */
 /* #define CPUEMU_12 */ /* cycle-exact cpu&blitter */
 /* #define ACTION_REPLAY */ /* Action Replay 1/2/3 support */
-#if !defined(RASPBERRY)
 /* #define PICASSO96 */ /* Picasso96 display card emulation */
-#define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
-#endif
-/* #define BSDSOCKET */ /* bsdsocket.library emulation */
+/* #define UAEGFX_INTERNAL */ /* built-in libs:picasso96/uaegfx.card */
+#define BSDSOCKET /* bsdsocket.library emulation */
 /* #define CAPS */ /* CAPS-image support */
 /* #define FDI2RAW */ /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
@@ -441,6 +440,7 @@
 /* #undef HAVE_WINDOWS_H */
 
 #define FSDB_DIR_SEPARATOR '/'
+#define FSDB_DIR_SEPARATOR_S "/"
 
 #define strcmpi(x,y) strcasecmp(x,y)
 #define stricmp(x,y) strcasecmp(x,y)
@@ -455,6 +455,49 @@
 #define M68K_SPEED_14MHZ_CYCLES 1024
 #define M68K_SPEED_25MHZ_CYCLES 128
 
+typedef unsigned int WPARAM;
+typedef long LPARAM;
+typedef int SOCKET;
+#define INVALID_SOCKET -1
+
+typedef int BOOL;
 typedef unsigned char boolean;
 #define FALSE 0
 #define TRUE 1
+
+/* Some defines to make it easier to compare files with WinUAE */
+#define _T(x)               x
+#define TCHAR               char
+#define _tzset()            tzset()
+#define _tcsftime(w,x,y,z)  strftime(w,x,y,z)
+#define _timezone           timezone
+#define _daylight           daylight
+#define _tfopen(x,y)        fopen(x,y)
+#define _ftelli64(x)        ftello64(x)
+#define _fseeki64(x,y,z)    fseeko64(x,y,z)
+#define _stat64             stat64
+#define _wunlink(x)         unlink(x)
+#define _tcslen(x)          strlen(x)
+#define _tcscpy(x,y)        strcpy(x,y)
+#define _tcsncpy(x,y,z)     strncpy(x,y,z)
+#define _tcscat(x,y)        strcat(x,y)
+#define _tcsncat(x,y,z)     strncat(x,y,z)
+#define _tcscmp(x,y)        strcmp(x,y)
+#define _tcsicmp(x,y)       strcmpi(x,y)
+#define _tcsncmp(x,y,z)     strncmp(x,y,z)
+#define _tcsnicmp(x,y,z)    strncasecmp(x,y,z)
+#define _tcschr(x,y)        strchr(x,y)
+#define _tcsrchr(x,y)       strrchr(x,y)
+#define _tcsstr(x,y)        strstr(x,y)
+#define _tcscspn(x,y)       strcspn(x,y)
+#define _totupper(x)        toupper(x)
+#define _totlower(x)        tolower(x)
+#define _istupper(x)        isupper(x)
+#define _istspace(x)        isspace(x)
+#define _tstoi(x)           atoi(x)
+#define _tstol(x)           atol(x)
+#define _tcstol(x,y,z)      strtol(x,y,z)
+#define _tcstod(x,y)        strtod(x,y)
+#define _stprintf           sprintf
+#define _vstprintf(x,y,z)   vsprintf(x,y,z)
+#define _vsntprintf(w,x,y,z)  vsnprintf(w,x,y,z)

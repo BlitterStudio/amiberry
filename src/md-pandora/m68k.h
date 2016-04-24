@@ -68,32 +68,32 @@ struct flag_struct {
 #define FLAGVAL_V	(1 << FLAGBIT_V)
 #define FLAGVAL_X	(1 << FLAGBIT_X)
 
-#define SET_ZFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_Z) | (((y) ? 1 : 0) << FLAGBIT_Z))
-#define SET_CFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_C) | (((y) ? 1 : 0) << FLAGBIT_C))
-#define SET_VFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_V) | (((y) ? 1 : 0) << FLAGBIT_V))
-#define SET_NFLG(flags, y)	((flags)->cznv = ((flags)->cznv & ~FLAGVAL_N) | (((y) ? 1 : 0) << FLAGBIT_N))
-#define SET_XFLG(flags, y)	((flags)->x    = ((y) ? 1 : 0) << FLAGBIT_X)
+#define SET_ZFLG(y)	(regs.ccrflags.cznv = (regs.ccrflags.cznv & ~FLAGVAL_Z) | (((y) ? 1 : 0) << FLAGBIT_Z))
+#define SET_CFLG(y)	(regs.ccrflags.cznv = (regs.ccrflags.cznv & ~FLAGVAL_C) | (((y) ? 1 : 0) << FLAGBIT_C))
+#define SET_VFLG(y)	(regs.ccrflags.cznv = (regs.ccrflags.cznv & ~FLAGVAL_V) | (((y) ? 1 : 0) << FLAGBIT_V))
+#define SET_NFLG(y)	(regs.ccrflags.cznv = (regs.ccrflags.cznv & ~FLAGVAL_N) | (((y) ? 1 : 0) << FLAGBIT_N))
+#define SET_XFLG(y)	(regs.ccrflags.x    = ((y) ? 1 : 0) << FLAGBIT_X)
 
-#define GET_ZFLG(flags)		(((flags)->cznv >> FLAGBIT_Z) & 1)
-#define GET_CFLG(flags)		(((flags)->cznv >> FLAGBIT_C) & 1)
-#define GET_VFLG(flags)		(((flags)->cznv >> FLAGBIT_V) & 1)
-#define GET_NFLG(flags)		(((flags)->cznv >> FLAGBIT_N) & 1)
-#define GET_XFLG(flags)		(((flags)->x    >> FLAGBIT_X) & 1)
+#define GET_ZFLG()	((regs.ccrflags.cznv >> FLAGBIT_Z) & 1)
+#define GET_CFLG()	((regs.ccrflags.cznv >> FLAGBIT_C) & 1)
+#define GET_VFLG()	((regs.ccrflags.cznv >> FLAGBIT_V) & 1)
+#define GET_NFLG()	((regs.ccrflags.cznv >> FLAGBIT_N) & 1)
+#define GET_XFLG()	((regs.ccrflags.x    >> FLAGBIT_X) & 1)
 
-#define CLEAR_CZNV(flags)	((flags)->cznv  = 0)
-#define GET_CZNV(flags)		((flags)->cznv)
-#define IOR_CZNV(flags, X)	((flags)->cznv |= (X))
-#define SET_CZNV(flags, X)	((flags)->cznv  = (X))
+#define CLEAR_CZNV()	(regs.ccrflags.cznv  = 0)
+#define GET_CZNV()	(regs.ccrflags.cznv)
+#define IOR_CZNV(X)	(regs.ccrflags.cznv |= (X))
+#define SET_CZNV(X)	(regs.ccrflags.cznv  = (X))
 
-#define COPY_CARRY(flags)	((flags)->x = (flags)->cznv)
+#define COPY_CARRY() (regs.ccrflags.x = regs.ccrflags.cznv)
 
 
 /*
  * Test CCR condition
  */
-STATIC_INLINE int cctrue (struct flag_struct *flags, int cc)
+STATIC_INLINE int cctrue (struct flag_struct &flags, int cc)
 {
-    uae_u32 cznv = flags->cznv;
+    uae_u32 cznv = flags.cznv;
 
     switch (cc) {
 	case 0:  return 1;								/*				T  */
@@ -115,11 +115,10 @@ STATIC_INLINE int cctrue (struct flag_struct *flags, int cc)
 	case 15: cznv &= (FLAGVAL_N | FLAGVAL_Z | FLAGVAL_V);				/* ZFLG && (NFLG != VFLG)	LE */
 		 return (((cznv << (FLAGBIT_N - FLAGBIT_V)) ^ cznv) & (FLAGVAL_N | FLAGVAL_Z)) != 0;
     }
-    abort ();
     return 0;
 }
 
-#elif defined(CPU_arm) && defined(ARM_ASSEMBLY)
+#elif defined(CPU_arm) && defined(ARMV6_ASSEMBLY)
 
 struct flag_struct {
 	uae_u32 nzcv;
@@ -132,31 +131,29 @@ struct flag_struct {
 #define FLAGVAL_Z       0x40000000
 #define FLAGVAL_N       0x80000000
 
-#define SET_NFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x80000000) | (((y) ? 1 : 0) << 31))
-#define SET_ZFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x40000000) | (((y) ? 1 : 0) << 30))
-#define SET_CFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x20000000) | (((y) ? 1 : 0) << 29))
-#define SET_VFLG(flags, y)     ((flags)->nzcv = ((flags)->nzcv & ~0x10000000) | (((y) ? 1 : 0) << 28))
+#define SET_NFLG(y)     (regs.ccrflags.nzcv = (regs.ccrflags.nzcv & ~0x80000000) | (((y) ? 1 : 0) << 31))
+#define SET_ZFLG(y)     (regs.ccrflags.nzcv = (regs.ccrflags.nzcv & ~0x40000000) | (((y) ? 1 : 0) << 30))
+#define SET_CFLG(y)     (regs.ccrflags.nzcv = (regs.ccrflags.nzcv & ~0x20000000) | (((y) ? 1 : 0) << 29))
+#define SET_VFLG(y)     (regs.ccrflags.nzcv = (regs.ccrflags.nzcv & ~0x10000000) | (((y) ? 1 : 0) << 28))
 
-#define SET_XFLG(flags, y)	((flags)->x = ((y) ? 1 : 0))
+#define SET_XFLG(y)	(regs.ccrflags.x = ((y) ? 1 : 0))
 
-#define GET_NFLG(flags) (((flags)->nzcv >> 31) & 1)
-#define GET_ZFLG(flags)	(((flags)->nzcv >> 30) & 1)
-#define GET_CFLG(flags)	(((flags)->nzcv >> 29) & 1)
-#define GET_VFLG(flags)	(((flags)->nzcv >> 28) & 1)
-#define GET_XFLG(flags)	((flags)->x & 1)
+#define GET_NFLG()  ((regs.ccrflags.nzcv >> 31) & 1)
+#define GET_ZFLG()	((regs.ccrflags.nzcv >> 30) & 1)
+#define GET_CFLG()	((regs.ccrflags.nzcv >> 29) & 1)
+#define GET_VFLG()	((regs.ccrflags.nzcv >> 28) & 1)
+#define GET_XFLG()	(regs.ccrflags.x & 1)
 
-#define CLEAR_CZNV(flags)      ((flags)->nzcv = 0)
-#define GET_CZNV(flags)        ((flags)->nzcv)
-#define IOR_CZNV(flags,X)     ((flags)->nzcv |= (X))
-#define SET_CZNV(flags,X)     ((flags)->nzcv = (X))
+#define CLEAR_CZNV()    (regs.ccrflags.nzcv = 0)
+#define GET_CZNV()      (regs.ccrflags.nzcv)
+#define IOR_CZNV(X)     (regs.ccrflags.nzcv |= (X))
+#define SET_CZNV(X)     (regs.ccrflags.nzcv = (X))
 
-#define COPY_CARRY(flags)      ((flags)->x = ((flags)->nzcv)>>29)
+#define COPY_CARRY()      (regs.ccrflags.x = (regs.ccrflags.nzcv)>>29)
 
-extern struct flag_struct regflags __asm__ ("regflags");
-
-static inline int cctrue(struct flag_struct *flags, int cc)
+static inline int cctrue(struct flag_struct &flags, int cc)
 {
-    unsigned int nzcv = flags->nzcv;
+    unsigned int nzcv = flags.nzcv;
     switch(cc){
      case 0: return 1;                       /* T */
      case 1: return 0;                       /* F */
@@ -182,227 +179,6 @@ static inline int cctrue(struct flag_struct *flags, int cc)
     return 0;
 }
 
-#define optflag_testl(v) do {\
-  __asm__ __volatile__ ("tst %[rv],%[rv]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "bic %[nzcv],#0x30000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rv] "r" (v) \
-                        : "cc"); \
-  } while(0)
-
-#define optflag_addl(v, s, d) do { \
-  __asm__ __volatile__ ("adds %[rv],%[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_subl(v, s, d) do { \
-  __asm__ __volatile__ ("subs %[rv],%[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_cmpl(s, d) do { \
-  __asm__ __volatile__ ("cmp %[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rs] "ri" (s), [rd] "0" (d) \
-                        : "cc"); \
-  } while(0)
-
-#if defined(ARMV6_ASSEMBLY)
-
-// #pragma message "ARM/v6 Assembly optimized flags"
-
-#define optflag_testw(v) do { \
-  __asm__ __volatile__ ("sxth %[rv],%[rv]\n\t" \
-                        "tst %[rv],%[rv]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "bic %[nzcv],#0x30000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rv] "0" (v) \
-                        : "cc"); \
-        }while(0)
-
-#define optflag_testb(v) do {\
-  __asm__ __volatile__ ("sxtb %[rv],%[rv]\n\t" \
-                        "tst %[rv],%[rv]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "bic %[nzcv],#0x30000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rv] "0" (v) \
-                        : "cc"); \
-        }while(0)
-
-#define optflag_addw(v, s, d) do { \
-  __asm__ __volatile__ ("sxth %[rd],%[rd]\n\t" \
-			"sxth %[rs],%[rs]\n\t" \
-                        "adds %[rd],%[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_addb(v, s, d) do { \
-  __asm__ __volatile__ ("sxtb %[rd],%[rd]\n\t" \
-			"sxtb %[rs],%[rs]\n\t" \
-                        "adds %[rd],%[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_subw(v, s, d) do { \
-  __asm__ __volatile__ ("sxth %[rd],%[rd]\n\t" \
-			"sxth %[rs],%[rs]\n\t" \
-                        "subs %[rd],%[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_subb(v, s, d) do { \
-  __asm__ __volatile__ ("sxtb %[rd],%[rd]\n\t" \
-			"sxtb %[rs],%[rs]\n\t" \
-                        "subs %[rd],%[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_cmpw(s, d) do { \
-  __asm__ __volatile__ ("sxth %[rd],%[rd]\n\t" \
-			"sxth %[rs],%[rs]\n\t" \
-                        "cmp %[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rs] "ri" (s), [rd] "0" (d) \
-                        : "cc"); \
-  } while(0)
-
-#define optflag_cmpb(s, d) do { \
-  __asm__ __volatile__ ("sxtb %[rd],%[rd]\n\t" \
-			"sxtb %[rs],%[rs]\n\t" \
-                        "cmp %[rd],%[rs]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rs] "ri" (s), [rd] "0" (d) \
-                        : "cc"); \
-  } while(0)
-
-#else
-
-// #pragma message "ARM/generic Assembly optimized flags"
-
-#define optflag_testw(v) do { \
-  __asm__ __volatile__ ("lsl %[rv],%[rv],#16\n\t" \
-                        "tst %[rv],%[rv]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "bic %[nzcv],#0x30000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rv] "0" (v) \
-                        : "cc"); \
-	}while(0)
-
-#define optflag_testb(v) do {\
-  __asm__ __volatile__ ("lsl %[rv],%[rv],#24\n\t" \
-                        "tst %[rv],%[rv]\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "bic %[nzcv],#0x30000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rv] "0" (v) \
-                        : "cc"); \
-	}while(0)
-
-#define optflag_addw(v, s, d) do { \
-  __asm__ __volatile__ ("lsl %[rd],%[rd],#16\n\t" \
-                        "adds %[rd],%[rd],%[rs],lsl #16\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "lsr %[rv],%[rd],#16\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_addb(v, s, d) do { \
-  __asm__ __volatile__ ("lsl %[rd],%[rd],#24\n\t" \
-                        "adds %[rd],%[rd],%[rs],lsl #24\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "lsr %[rv],%[rd],#24\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_subw(v, s, d) do { \
-  __asm__ __volatile__ ("lsl %[rd],%[rd],#16\n\t" \
-                        "subs %[rd],%[rd],%[rs],lsl #16\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        "lsr %[rv],%[rd],#16\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_subb(v, s, d) do { \
-  __asm__ __volatile__ ("lsl %[rd],%[rd],#24\n\t" \
-                        "subs %[rd],%[rd],%[rs],lsl #24\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        "lsr %[rv],%[rd],#24\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv), [rv] "=r" (v) \
-                        : [rs] "ri" (s), [rd] "1" (d) \
-                        : "cc"); \
-    COPY_CARRY; \
-    } while(0)
-
-#define optflag_cmpw(s, d) do { \
-  __asm__ __volatile__ ("lsl %[rd],%[rd],#16\n\t" \
-                        "cmp %[rd],%[rs],lsl #16\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rs] "ri" (s), [rd] "0" (d) \
-                        : "cc"); \
-  } while(0)
-
-#define optflag_cmpb(s, d) do { \
-  __asm__ __volatile__ ("lsl %[rd],%[rd],#24\n\t" \
-                        "cmp %[rd],%[rs],lsl #24\n\t" \
-                        "mrs %[nzcv],cpsr\n\t" \
-                        "eor %[nzcv],#0x20000000\n\t" \
-                        : [nzcv] "=r" (regflags.nzcv) \
-                        : [rs] "ri" (s), [rd] "0" (d) \
-                        : "cc"); \
-  } while(0)
-
-#endif
-
 #else
 
 struct flag_struct {
@@ -413,38 +189,36 @@ struct flag_struct {
     unsigned int x;
 };
 
-extern struct flag_struct regflags;
+#define ZFLG (regs.ccrflags.z)
+#define NFLG (regs.ccrflags.n)
+#define CFLG (regs.ccrflags.c)
+#define VFLG (regs.ccrflags.v)
+#define XFLG (regs.ccrflags.x)
 
-#define ZFLG (regflags.z)
-#define NFLG (regflags.n)
-#define CFLG (regflags.c)
-#define VFLG (regflags.v)
-#define XFLG (regflags.x)
+#define SET_CFLG(x) (CFLG = (x))
+#define SET_NFLG(x) (NFLG = (x))
+#define SET_VFLG(x) (VFLG = (x))
+#define SET_ZFLG(x) (ZFLG = (x))
+#define SET_XFLG(x) (XFLG = (x))
 
-#define SET_CFLG(flags, x) (CFLG(flags) = (x))
-#define SET_NFLG(flags, x) (NFLG(flags) = (x))
-#define SET_VFLG(flags, x) (VFLG(flags) = (x))
-#define SET_ZFLG(flags, x) (ZFLG(flags) = (x))
-#define SET_XFLG(flags, x) (XFLG(flags) = (x))
+#define GET_CFLG() CFLG
+#define GET_NFLG() NFLG
+#define GET_VFLG() VFLG
+#define GET_ZFLG() ZFLG
+#define GET_XFLG() XFLG
 
-#define GET_CFLG(flags) CFLG(flags)
-#define GET_NFLG(flags) NFLG(flags)
-#define GET_VFLG(flags) VFLG(flags)
-#define GET_ZFLG(flags) ZFLG)flags)
-#define GET_XFLG(flags) XFLG(flags)
-
-#define CLEAR_CZNV(flags) do { \
- SET_CFLG (flags, 0); \
- SET_ZFLG (flags, 0); \
- SET_NFLG (flags, 0); \
- SET_VFLG (flags, 0); \
+#define CLEAR_CZNV() do { \
+ SET_CFLG (0); \
+ SET_ZFLG (0); \
+ SET_NFLG (0); \
+ SET_VFLG (0); \
 } while (0)
 
-#define COPY_CARRY(flags) ((flags)->x = (flags)->cznv)
+#define COPY_CARRY() (regs.ccrflags.x = regs.ccrflags.c)
 
-static inline int cctrue(struct flag_struct *flags, const int cc)
+static inline int cctrue(struct flag_struct &flags, const int cc)
 {
-    switch(flags->cc){
+    switch(cc){
      case 0: return 1;                       /* T */
      case 1: return 0;                       /* F */
      case 2: return !CFLG && !ZFLG;          /* HI */
@@ -465,4 +239,4 @@ static inline int cctrue(struct flag_struct *flags, const int cc)
     return 0;
 }
 
-#endif /* OPTIMIZED_FLAGS */
+#endif

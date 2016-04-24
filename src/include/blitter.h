@@ -9,7 +9,8 @@
 struct bltinfo {
     int blitzero;
     int blitashift,blitbshift,blitdownashift,blitdownbshift;
-    uae_u16 bltadat, bltbdat, bltcdat,bltddat,bltahold,bltbhold,bltafwm,bltalwm;
+    uae_u16 bltadat, bltbdat, bltcdat,bltddat;
+    uae_u16 bltahold,bltbhold,bltafwm,bltalwm;
     int vblitsize,hblitsize;
     int bltamod,bltbmod,bltcmod,bltdmod;
 };
@@ -22,17 +23,32 @@ extern struct bltinfo blt_info;
 
 extern uae_u16 bltsize;
 extern uae_u16 bltcon0,bltcon1;
-extern int blinea_shift;
 extern uae_u32 bltapt,bltbpt,bltcpt,bltdpt;
 
-extern void maybe_blit (int);
+extern long blit_firstline_cycles;
+
 extern void reset_blit (int);
 extern int blitnasty (void);
-extern void blitter_handler (uae_u32);
+extern void blitter_handler (void);
 extern void build_blitfilltable (void);
 extern void do_blitter (void);
 extern void blitter_done_notify (void);
 extern void blitter_slowdown (int, int, int, int);
+
+STATIC_INLINE void maybe_blit (int hack)
+{
+  if (bltstate == BLT_done)
+  	return;
+
+  if (savestate_state)
+  	return;
+
+  if (hack && get_cycles() < blit_firstline_cycles)
+  	return;
+
+  blitter_handler ();
+}
+
 
 extern void blitter_check_start (void);
 typedef void blitter_func(uaecptr, uaecptr, uaecptr, uaecptr, struct bltinfo *_GCCRES_);

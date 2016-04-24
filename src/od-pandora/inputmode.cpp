@@ -15,6 +15,19 @@ extern SDL_Surface *prSDLScreen;
 static SDL_Surface *inputMode[3];
 
 
+void inputmode_close(void)
+{
+  for(int i=0; i<3; ++i)
+  {
+    if(inputMode[i] != NULL)
+    {
+      SDL_FreeSurface(inputMode[i]);
+      inputMode[i] = NULL;
+    }
+  }
+}
+
+
 void inputmode_init(void)
 {
 	int i;
@@ -110,4 +123,10 @@ void set_joyConf(struct uae_prefs *p)
 		p->pandora_jump = GP2X_BUTTON_X;
 		p->pandora_autofireButton1 = GP2X_BUTTON_Y;
 	}
+}
+
+
+int is_tablet (void)
+{
+  return 0;
 }

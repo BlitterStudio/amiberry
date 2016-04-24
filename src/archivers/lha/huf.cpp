@@ -18,10 +18,10 @@
 #endif
 
 /* ------------------------------------------------------------------------ */
-unsigned short  lha_left[2 * NC - 1], lha_right[2 * NC - 1];
+unsigned short  h_left[2 * NC - 1], h_right[2 * NC - 1];
 unsigned char   c_len[NC], pt_len[NPT];
 unsigned short  c_freq[2 * NC - 1], c_table[4096], c_code[NC], p_freq[2 * NP - 1],
-                pt_table[256], pt_code[NPT], t_freq[2 * NT - 1];
+		pt_table[256], pt_code[NPT], t_freq[2 * NT - 1];
 
 static unsigned char *buf;
 static unsigned int bufsiz;
@@ -32,8 +32,7 @@ static 			int	  np;
 /* ------------------------------------------------------------------------ */
 /*								Encording									*/
 /* ------------------------------------------------------------------------ */
-static void
-count_t_freq(/*void*/)
+static void count_t_freq(void)
 {
 	short           i, k, n, count;
 
@@ -69,7 +68,10 @@ count_t_freq(/*void*/)
 /* ------------------------------------------------------------------------ */
 #if 0
 static void
-write_pt_len(short n, short nbit, short i_special)
+write_pt_len(n, nbit, i_special)
+	short           n;
+	short           nbit;
+	short           i_special;
 {
 	short           i, k;
 
@@ -134,14 +136,16 @@ write_c_len(/*void*/)
 
 /* ------------------------------------------------------------------------ */
 static void
-encode_c(short c)
+encode_c(c)
+	short           c;
 {
 	putcode(c_len[c], c_code[c]);
 }
 
 /* ------------------------------------------------------------------------ */
 static void
-encode_p(unsigned short p)
+encode_p(p)
+	unsigned short  p;
 {
 	unsigned short  c, q;
 
@@ -213,7 +217,9 @@ send_block( /* void */ )
 }
 /* ------------------------------------------------------------------------ */
 void
-output_st1(unsigned short c, unsigned short p)
+output_st1(c, p)
+	unsigned short  c;
+	unsigned short  p;
 {
 	static unsigned short cpos;
 
@@ -246,8 +252,7 @@ output_st1(unsigned short c, unsigned short p)
 #endif
 
 /* ------------------------------------------------------------------------ */
-unsigned char  *
-alloc_buf( /* void */ )
+unsigned char  *alloc_buf(void)
 {
 	bufsiz = 16 * 1024 *2;	/* 65408U; */ /* t.okamoto */
 	while ((buf = (unsigned char *) malloc(bufsiz)) == NULL) {
@@ -308,8 +313,7 @@ encode_end_st1( /* void */ )
 /* ------------------------------------------------------------------------ */
 /*								decoding									*/
 /* ------------------------------------------------------------------------ */
-static void
-read_pt_len(short nn, short nbit, short i_special)
+static void read_pt_len(short nn, short nbit, short i_special)
 {
 	int           i, c, n;
 
@@ -347,8 +351,7 @@ read_pt_len(short nn, short nbit, short i_special)
 }
 
 /* ------------------------------------------------------------------------ */
-static void
-read_c_len( /* void */ )
+static void read_c_len(void)
 {
 	short           i, c, n;
 
@@ -367,9 +370,9 @@ read_c_len( /* void */ )
 				unsigned short  mask = 1 << (16 - 9);
 				do {
 					if (lhabitbuf & mask)
-						c = lha_right[c];
+						c = h_right[c];
 					else
-						c = lha_left[c];
+						c = h_left[c];
 					mask >>= 1;
 				} while (c >= NT);
 			}
@@ -394,8 +397,7 @@ read_c_len( /* void */ )
 }
 
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_c_st1( /*void*/ )
+unsigned short decode_c_st1(void)
 {
 	unsigned short  j, mask;
 
@@ -414,9 +416,9 @@ decode_c_st1( /*void*/ )
 		mask = 1 << (16 - 1);
 		do {
 			if (lhabitbuf & mask)
-				j = lha_right[j];
+				j = h_right[j];
 			else
-				j = lha_left[j];
+				j = h_left[j];
 			mask >>= 1;
 		} while (j >= NC);
 		fillbuf(c_len[j] - 12);
@@ -425,8 +427,7 @@ decode_c_st1( /*void*/ )
 }
 
 /* ------------------------------------------------------------------------ */
-unsigned short
-decode_p_st1( /* void */ )
+unsigned short decode_p_st1(void)
 {
 	unsigned short  j, mask;
 
@@ -438,9 +439,9 @@ decode_p_st1( /* void */ )
 		mask = 1 << (16 - 1);
 		do {
 			if (lhabitbuf & mask)
-				j = lha_right[j];
+				j = h_right[j];
 			else
-				j = lha_left[j];
+				j = h_left[j];
 			mask >>= 1;
 		} while (j >= np);
 		fillbuf(pt_len[j] - 8);
@@ -451,8 +452,7 @@ decode_p_st1( /* void */ )
 }
 
 /* ------------------------------------------------------------------------ */
-void
-decode_start_st1( /* void */ )
+void decode_start_st1(void)
 {
 	if (dicbit <= 13)  {
 		np = 14;

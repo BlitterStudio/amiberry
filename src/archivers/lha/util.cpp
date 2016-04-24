@@ -21,8 +21,7 @@ extern unsigned short crc;
 /*	convert path delimit
 	erreturns *filename														*/
 /* ------------------------------------------------------------------------ */
-unsigned char  *
-convdelim(unsigned char  *path, unsigned char delim)
+unsigned char *convdelim(unsigned char *path, unsigned char delim)
 {
 	unsigned char   c;
 	unsigned char  *p;
@@ -57,7 +56,8 @@ convdelim(unsigned char  *path, unsigned char delim)
 /* ------------------------------------------------------------------------ */
 #ifdef NOSTRDUP
 char           *
-strdup(char *buf)
+strdup(buf)
+	char           *buf;
 {
 	char           *p;
 
@@ -75,7 +75,9 @@ strdup(char *buf)
 /* ------------------------------------------------------------------------ */
 #if 0 && defined(NOBSTRING) && !defined(__STDC__)
 void           *
-memmove(register char  *dst, register char  *src, register int cnt)
+memmove(dst, src, cnt)
+	register char  *dst, *src;
+	register int    cnt;
 {
 	if (dst == src)
 		return dst;
@@ -103,7 +105,8 @@ memmove(register char  *dst, register char  *src, register int cnt)
 
 /* ------------------------------------------------------------------------ */
 int
-rename(char *from, char *to)
+rename(from, to)
+	char           *from, *to;
 {
 	struct stat     s1, s2;
 	extern int      errno;
@@ -141,7 +144,8 @@ rename(char *from, char *to)
 #define	RMDIRPATH	"/bin/rmdir"
 #endif
 int
-rmdir(char *path)
+rmdir(path)
+	char           *path;
 {
 	int             stat, rtn = 0;
 	char           *cmdname;
@@ -163,7 +167,9 @@ rmdir(char *path)
 
 /* ------------------------------------------------------------------------ */
 int
-mkdir(char *path, int mode)
+mkdir(path, mode)
+	char           *path;
+	int             mode;
 {
 	int             child, stat;
 	char           *cmdname, *cmdpath = MKDIRPATH;
@@ -196,8 +202,7 @@ mkdir(char *path, int mode)
  */
 
 #ifndef USESTRCASECMP
-static int
-my_toupper(register int n)
+static int my_toupper(int n)
 {
 	if (n >= 'a' && n <= 'z')
 		return n & (~('a' - 'A'));
@@ -205,8 +210,7 @@ my_toupper(register int n)
 }
 
 /* ------------------------------------------------------------------------ */
-int
-strucmp(register char *s, register char *t)
+int strucmp(char *s, char *t)
 {
 	while (my_toupper(*s++) == my_toupper(*t++))
 		if (!*s || !*t)
@@ -221,7 +225,9 @@ strucmp(register char *s, register char *t)
 #ifdef NOMEMSET
 /* Public Domain memset(3) */
 char           *
-memset(char *s, int c, int n)
+memset(s, c, n)
+	char           *s;
+	int             c, n;
 {
 	char           *p = s;
 	while (n--)

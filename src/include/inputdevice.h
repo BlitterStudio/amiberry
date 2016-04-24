@@ -9,32 +9,36 @@
 
 extern void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst);
 extern int inputdevice_config_change_test (void);
-//extern uae_u8 handle_joystick_buttons (uae_u8);
-extern int joy1button;
+
+extern int joy0button, joy1button;
 extern int buttonstate[3];
-static __inline__ uae_u8 handle_joystick_buttons (uae_u8 dra)
+
+extern int buttonstate[3];
+static __inline__ uae_u8 handle_joystick_buttons (uae_u8 pra, uae_u8 dra)
 {
   uae_u8 but = 0;
 
-  if (!buttonstate[0])
+  if (!(joy0button & 1))
 	    but |= 0x40;
 	if (!(joy1button & 1))
 	    but |= 0x80;
+	if (dra & 0x40)
+		but = (but & ~0x40) | (pra & 0x40);
+	if (dra & 0x80)
+		but = (but & ~0x80) | (pra & 0x80);
 
   return but;
 }
 
+extern int is_tablet (void);
+extern int inputdevice_is_tablet (void);
+extern void input_mousehack_status (int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset);
+extern void input_mousehack_mouseoffset (uaecptr pointerprefs);
+extern void inputdevice_mouselimit(int x, int y);
 
-enum mousestate { mousehack_unknown, mousehack_normal, mousehack_dontcare, mousehack_follow };
-
-extern void mousehack_set (enum mousestate);
-extern int mousehack_get (void);
-extern void mousehack_handle (int sprctl, int sprpos);
-extern int mousehack_allowed (void);
+void setmousestate (int mouse, int axis, int data, int isabs);
 
 extern void inputdevice_updateconfig (struct uae_prefs *prefs);
-
-extern void do_mouse_hack (void);
 
 extern uae_u16 potgo_value;
 extern uae_u16 POTGOR (void);
@@ -50,9 +54,11 @@ extern void inputdevice_hsync (void);
 extern void inputdevice_reset (void);
 
 extern void write_inputdevice_config (struct uae_prefs *p, struct zfile *f);
-extern void read_inputdevice_config (struct uae_prefs *p, char *option, char *value);
+extern void read_inputdevice_config (struct uae_prefs *p, TCHAR *option, TCHAR *value);
 extern void reset_inputdevice_config (struct uae_prefs *pr);
 
 extern void inputdevice_init (void);
 extern void inputdevice_close (void);
 extern void inputdevice_default_prefs (struct uae_prefs *p);
+
+extern void inputdevice_tablet_strobe (void);

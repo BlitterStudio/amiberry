@@ -26,7 +26,7 @@ int fsdb_name_invalid (const char *n)
     return n[1] == '.' && n[2] == '\0';
 }
 
-int fsdb_exists (const char *nname)
+int fsdb_exists (char *nname)
 {
     struct stat statbuf;
     return (stat (nname, &statbuf) != -1);

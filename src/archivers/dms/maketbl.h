@@ -1,5 +1,5 @@
 
-extern USHORT left[], right[];
+extern USHORT dms_left[], dms_right[];
 
-USHORT make_table(USHORT nchar, UCHAR bitlen[], USHORT tablebits, USHORT table[]);
+USHORT dms_make_table(USHORT nchar, UCHAR bitlen[], USHORT tablebits, USHORT table[]);
 

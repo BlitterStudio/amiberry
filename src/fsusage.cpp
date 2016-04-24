@@ -53,7 +53,7 @@ static long adjust_blocks(long blocks, int fromsize, int tosize)
 int
 safe_read
       (int desc,
-      char *ptr,
+      TCHAR *ptr,
       int len)
 {
   int n_chars;
@@ -83,8 +83,8 @@ safe_read
    on a system that requires a non-NULL value.  */
 int
 get_fs_usage
-	(const char *path,
-	const char *disk,
+	(const TCHAR *path,
+	const TCHAR *disk,
 	struct fs_usage *fsp)
 {
 	/* TODO: *** use RFs:Volume() to get free space *** */
@@ -140,7 +140,7 @@ get_fs_usage
   if (fd < 0)
     return -1;
   lseek (fd, (long) SUPERBOFF, 0);
-  if (safe_read (fd, (char *) &fsd, sizeof fsd) != sizeof fsd)
+  if (safe_read (fd, (TCHAR *) &fsd, sizeof fsd) != sizeof fsd)
     {
       close (fd);
       return -1;

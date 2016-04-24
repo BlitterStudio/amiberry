@@ -14,6 +14,7 @@
 
 
 #ifdef ARMV6_ASSEMBLY
+
 STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
 {
   uae_u16 v;
@@ -34,6 +35,7 @@ STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
 
 
 #ifdef ARMV6_ASSEMBLY
+
 STATIC_INLINE uae_u32 do_get_mem_long(uae_u32 *a) 
 {
   uae_u32 v;

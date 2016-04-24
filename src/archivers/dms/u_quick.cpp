@@ -17,7 +17,7 @@
 #define QBITMASK 0xff
 
 
-USHORT quick_text_loc;
+USHORT dms_quick_text_loc;
 
 
 USHORT Unpack_QUICK(UCHAR *in, UCHAR *out, USHORT origsize){
@@ -30,17 +30,17 @@ USHORT Unpack_QUICK(UCHAR *in, UCHAR *out, USHORT origsize){
 	while (out < outend) {
 		if (GETBITS(1)!=0) {
 			DROPBITS(1);
-			*out++ = text[quick_text_loc++ & QBITMASK] = (UCHAR)GETBITS(8);  DROPBITS(8);
+			*out++ = dms_text[dms_quick_text_loc++ & QBITMASK] = (UCHAR)GETBITS(8);  DROPBITS(8);
 		} else {
 			DROPBITS(1);
 			j = (USHORT) (GETBITS(2)+2);  DROPBITS(2);
-			i = (USHORT) (quick_text_loc - GETBITS(8) - 1);  DROPBITS(8);
+			i = (USHORT) (dms_quick_text_loc - GETBITS(8) - 1);  DROPBITS(8);
 			while(j--) {
-				*out++ = text[quick_text_loc++ & QBITMASK] = text[i++ & QBITMASK];
+				*out++ = dms_text[dms_quick_text_loc++ & QBITMASK] = dms_text[i++ & QBITMASK];
 			}
 		}
 	}
-	quick_text_loc = (USHORT)((quick_text_loc+5) & QBITMASK);
+	dms_quick_text_loc = (USHORT)((dms_quick_text_loc+5) & QBITMASK);
 
 	return 0;
 }

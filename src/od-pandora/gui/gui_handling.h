@@ -34,6 +34,8 @@ extern gcn::Color gui_baseCol;
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 
+extern void gui_force_rtarea_hdchange(void);
+
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
@@ -88,7 +90,6 @@ void RefreshAllPanels(void);
 
 void DisableResume(void);
 
-void InGameMessage(const char *msg);
 bool ShowMessage(const char *title, const char *line1, const char *line2, const char *button1, const char *button2);
 bool SelectFolder(const char *title, char *value);
 bool SelectFile(const char *title, char *value, const char *filter[], bool create = false);

@@ -7,6 +7,8 @@
 #include "options.h"
 #include "gui.h"
 #include "sd-pandora/sound.h"
+#include "memory.h"
+#include "newcpu.h"
 #include "custom.h"
 #include "od-pandora/gp2x.h"
 #include "uae.h"
@@ -459,7 +461,7 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		p->pandora_joyPort = ((joybuffer >> 4) & 0x0f);
 		fscanf(f,"autofireRate=%d\n",&p->input_autofire_framecnt);
 		fscanf(f,"autofire=%d\n", &dummy);
-		fscanf(f,"stylusOffset=%d\n",&p->pandora_stylusOffset);
+		fscanf(f,"stylusOffset=%d\n",&dummy);
 		fscanf(f,"tapDelay=%d\n",&p->pandora_tapDelay);
 		fscanf(f,"scanlines=%d\n", &dummy);
 #if defined(PANDORA) || defined(ANDROIDSDL)
@@ -561,20 +563,20 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	  disk_eject(3);
 		fscanf(f,"df0=%s\n",&filebuffer);
 		replace(filebuffer,' ','|');
-		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
-  		strcpy(p->df[0], filebuffer);
+		if(DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+  		strcpy(p->floppyslots[0].df, filebuffer);
   	else
-  	  p->df[0][0] = 0;
+  	  p->floppyslots[0].df[0] = 0;
 		disk_insert(0, filebuffer);
 		if(p->nr_floppies > 1)
 		{
 			memset(filebuffer, 0, 256);
 			fscanf(f,"df1=%s\n",&filebuffer);
 			replace(filebuffer,' ','|');
-  		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
-    		strcpy(p->df[1], filebuffer);
+  		if(DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+    		strcpy(p->floppyslots[1].df, filebuffer);
     	else
-    	  p->df[1][0] = 0;
+    	  p->floppyslots[1].df[0] = 0;
 			disk_insert(1, filebuffer);
 		}
 		if(p->nr_floppies > 2)
@@ -582,10 +584,10 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 			memset(filebuffer, 0, 256);
 			fscanf(f,"df2=%s\n",&filebuffer);
 			replace(filebuffer,' ','|');
-  		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
-    		strcpy(p->df[2], filebuffer);
+  		if(DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+    		strcpy(p->floppyslots[2].df, filebuffer);
     	else
-    	  p->df[2][0] = 0;
+    	  p->floppyslots[2].df[0] = 0;
 			disk_insert(2, filebuffer);
 		}
 		if(p->nr_floppies > 3)
@@ -593,19 +595,19 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 			memset(filebuffer, 0, 256);
 			fscanf(f,"df3=%s\n",&filebuffer);
 			replace(filebuffer,' ','|');
-  		if(DISK_validate_filename(filebuffer, 0, NULL, NULL))
-    		strcpy(p->df[3], filebuffer);
+  		if(DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+    		strcpy(p->floppyslots[3].df, filebuffer);
     	else
-    	  p->df[3][0] = 0;
+    	  p->floppyslots[3].df[0] = 0;
 			disk_insert(3, filebuffer);
 		}
 
 		for(int i=0; i<4; ++i)
 		{
 		  if(i < p->nr_floppies)
-		    p->dfxtype[i] = DRV_35_DD;
+		    p->floppyslots[i].dfxtype = DRV_35_DD;
 		  else
-		    p->dfxtype[i] = DRV_NONE;
+		    p->floppyslots[i].dfxtype = DRV_NONE;
 		}
 	
 		fscanf(f,"chipmemory=%d\n",&p->chipmem_size);

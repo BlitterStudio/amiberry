@@ -7,8 +7,9 @@
   */
 
 extern void CIA_reset (void);
-extern void CIA_vsync_handler (void);
-extern void CIA_hsync_handler (void);
+extern void CIA_vsync_prehandler (void);
+extern void CIA_vsync_posthandler (void);
+extern void CIA_hsync_posthandler (void);
 extern void CIA_handler (void);
 
 extern void diskindex_handler (void);

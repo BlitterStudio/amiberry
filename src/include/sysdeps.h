@@ -185,6 +185,7 @@ extern void* q_memcpy(void*,const void*,size_t);
 /* If char has more then 8 bits, good night. */
 typedef unsigned char uae_u8;
 typedef signed char uae_s8;
+typedef char uae_char;
 
 typedef struct { uae_u8 RGB[3]; } RGB;
 
@@ -233,12 +234,8 @@ typedef uae_u32 uaecptr;
 #ifdef HAVE_STRDUP
 #define my_strdup strdup
 #else
-extern char *my_strdup (const char*s);
+extern TCHAR *my_strdup (const TCHAR*s);
 #endif
-
-extern void *xmalloc(size_t);
-extern void *xcalloc(size_t, size_t);
-extern void xfree(void*);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
@@ -294,38 +291,38 @@ extern void xfree(void*);
 #ifdef DONT_HAVE_POSIX
 
 #define access posixemu_access
-extern int posixemu_access (const char *, int);
+extern int posixemu_access (const TCHAR *, int);
 #define open posixemu_open
-extern int posixemu_open (const char *, int, int);
+extern int posixemu_open (const TCHAR *, int, int);
 #define close posixemu_close
 extern void posixemu_close (int);
 #define read posixemu_read
-extern int posixemu_read (int, char *, int);
+extern int posixemu_read (int, TCHAR *, int);
 #define write posixemu_write
-extern int posixemu_write (int, const char *, int);
+extern int posixemu_write (int, const TCHAR *, int);
 #undef lseek
 #define lseek posixemu_seek
 extern int posixemu_seek (int, int, int);
 #define stat(a,b) posixemu_stat ((a), (b))
-extern int posixemu_stat (const char *, STAT *);
+extern int posixemu_stat (const TCHAR *, STAT *);
 #define mkdir posixemu_mkdir
-extern int mkdir (const char *, int);
+extern int mkdir (const TCHAR *, int);
 #define rmdir posixemu_rmdir
-extern int posixemu_rmdir (const char *);
+extern int posixemu_rmdir (const TCHAR *);
 #define unlink posixemu_unlink
-extern int posixemu_unlink (const char *);
+extern int posixemu_unlink (const TCHAR *);
 #define truncate posixemu_truncate
-extern int posixemu_truncate (const char *, long int);
+extern int posixemu_truncate (const TCHAR *, long int);
 #define rename posixemu_rename
-extern int posixemu_rename (const char *, const char *);
+extern int posixemu_rename (const TCHAR *, const TCHAR *);
 #define chmod posixemu_chmod
-extern int posixemu_chmod (const char *, int);
+extern int posixemu_chmod (const TCHAR *, int);
 #define tmpnam posixemu_tmpnam
-extern void posixemu_tmpnam (char *);
+extern void posixemu_tmpnam (TCHAR *);
 #define utime posixemu_utime
-extern int posixemu_utime (const char *, struct utimbuf *);
+extern int posixemu_utime (const TCHAR *, struct utimbuf *);
 #define opendir posixemu_opendir
-extern DIR * posixemu_opendir (const char *);
+extern DIR * posixemu_opendir (const TCHAR *);
 #define readdir posixemu_readdir
 extern struct dirent* readdir (DIR *);
 #define closedir posixemu_closedir
@@ -340,13 +337,13 @@ extern long dos_errno (void);
 
 #ifdef DONT_HAVE_STDIO
 
-extern FILE *stdioemu_fopen (const char *, const char *);
+extern FILE *stdioemu_fopen (const TCHAR *, const TCHAR *);
 #define fopen(a,b) stdioemu_fopen(a, b)
 extern int stdioemu_fseek (FILE *, int, int);
 #define fseek(a,b,c) stdioemu_fseek(a, b, c)
-extern int stdioemu_fread (char *, int, int, FILE *);
+extern int stdioemu_fread (TCHAR *, int, int, FILE *);
 #define fread(a,b,c,d) stdioemu_fread(a, b, c, d)
-extern int stdioemu_fwrite (const char *, int, int, FILE *);
+extern int stdioemu_fwrite (const TCHAR *, int, int, FILE *);
 #define fwrite(a,b,c,d) stdioemu_fwrite(a, b, c, d)
 extern int stdioemu_ftell (FILE *);
 #define ftell(a) stdioemu_ftell(a)
@@ -382,11 +379,11 @@ extern void mallocemu_free (void *ptr);
 #define write_log(FORMATO, RESTO...)
 #define write_log_standard(FORMATO, RESTO...)
 #else
-extern void write_log (const char *format,...);
+extern void write_log (const TCHAR *format,...);
 extern FILE *debugfile;
 #endif
-extern void console_out (const char *, ...);
-extern void gui_message (const char *,...);
+extern void console_out (const TCHAR *, ...);
+extern void gui_message (const TCHAR *,...);
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -452,5 +449,27 @@ static inline uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
 #endif
 
 #define bswap_16(x) (((x) >> 8) | (((x) & 0xFF) << 8))
+
+#endif
+
+#ifndef __cplusplus
+
+#define xmalloc(T, N) malloc(sizeof (T) * (N))
+#define xcalloc(T, N) calloc(sizeof (T), N)
+#define xfree(T) free(T)
+#define xrealloc(T, TP, N) realloc(TP, sizeof (T) * (N))
+
+#if 0
+extern void *xmalloc (size_t);
+extern void *xcalloc (size_t, size_t);
+extern void xfree (const void*);
+#endif
+
+#else
+
+#define xmalloc(T, N) static_cast<T*>(malloc (sizeof (T) * (N)))
+#define xcalloc(T, N) static_cast<T*>(calloc (sizeof (T), N))
+#define xrealloc(T, TP, N) static_cast<T*>(realloc (TP, sizeof (T) * (N)))
+#define xfree(T) free(T)
 
 #endif

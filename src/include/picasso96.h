@@ -269,7 +269,7 @@ struct RenderInfo {
 #define PSSO_Pattern_DrawMode 17
 #define PSSO_Pattern_sizeof 18
 struct Pattern {
-    char *Memory;
+    uae_u8 *Memory;
     uae_u16 XOffset, YOffset;
     uae_u32 FgPen, BgPen;
     uae_u8 Size;					/* Width: 16, Height: (1<<pat_Size) */
@@ -285,7 +285,7 @@ struct Pattern {
 #define PSSO_Template_sizeof 16
 
 struct Template {
-    char *Memory;
+    uae_u8 *Memory;
     uae_s16 BytesPerRow;
     uae_u8 XOffset;
     uae_u8 DrawMode;
@@ -587,19 +587,15 @@ extern int uaegfx_card_found;
 
 extern struct picasso96_state_struct picasso96_state;
 
-extern int  DX_InvertRect (int X, int Y, int Width, int Height);
-extern void DX_SetPalette (int start, int count);
-extern void DX_Invalidate (int, int, int, int);
-extern int  DX_Flip (void);
 extern void picasso_enablescreen (int on);
 extern void picasso_refresh (void);
-extern void picasso_handle_vsync (void);
 extern void init_hz_p96 (void);
 static __inline__ void picasso_handle_hsync (void)
 {
 }
-extern int picasso_palette (void);
+extern void picasso_handle_vsync (void);
 extern void picasso_reset (void);
+extern int picasso_palette (void);
 
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
@@ -609,6 +605,7 @@ struct picasso_vidbuf_description {
     int extra_mem; /* nonzero if there's a second buffer that must be updated */
     uae_u32 rgbformat;
     uae_u32 selected_rgbformat;
+    uae_u32 clut[256];
 };
 
 extern struct picasso_vidbuf_description picasso_vidinfo;
@@ -618,11 +615,7 @@ extern void gfx_set_picasso_baseaddr (uaecptr);
 extern void gfx_set_picasso_state (int on);
 extern uae_u8 *gfx_lock_picasso (void);
 extern void gfx_unlock_picasso (void);
-extern void picasso_clip_mouse (int *, int *);
-extern void picasso_putcursor (int,int,int,int);
-extern void picasso_clearcursor (void);
 
-extern int p96refresh_active;
 extern int p96hsync_counter;
 
 #define LIB_SIZE 34
@@ -636,20 +629,22 @@ extern int p96hsync_counter;
 #define CARD_RESLISTSIZE (CARD_RESLIST + 4)
 #define CARD_BOARDINFO (CARD_RESLISTSIZE + 4)
 #define CARD_VBLANKIRQ (CARD_BOARDINFO + 4)
-#define CARD_VBLANKFLAG (CARD_VBLANKIRQ + 22)
-#define CARD_VBLANKCODE (CARD_VBLANKFLAG + 4)
-#define CARD_END (CARD_VBLANKCODE + 16 * 2)
+#define CARD_PORTSIRQ (CARD_VBLANKIRQ + 22)
+#define CARD_IRQFLAG (CARD_PORTSIRQ + 22)
+#define CARD_IRQPTR (CARD_IRQFLAG + 4)
+#define CARD_IRQCODE (CARD_IRQPTR + 4)
+#define CARD_END (CARD_IRQCODE + 11 * 2)
 #define CARD_SIZEOF CARD_END
 
 #ifdef __cplusplus
   extern "C" {
 #endif
+  void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
   void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
   void copy_screen_32bit_to_16bit_neon(uae_u8 *dst, uae_u8 *src, int bytes);
 #ifdef __cplusplus
   }
 #endif
-
 
 #endif
 

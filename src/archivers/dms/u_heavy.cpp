@@ -21,11 +21,11 @@
 #define N1 510
 #define OFFSET 253
 
-USHORT left[2 * NC - 1], right[2 * NC - 1 + 9];
+USHORT dms_left[2 * NC - 1], dms_right[2 * NC - 1 + 9];
 static UCHAR c_len[NC], pt_len[NPT];
 static USHORT c_table[4096], pt_table[256];
-USHORT lastlen, np;
-USHORT heavy_text_loc;
+USHORT dms_lastlen, dms_np;
+USHORT dms_heavy_text_loc;
 
 
 static USHORT read_tree_c(void);
@@ -42,10 +42,10 @@ USHORT Unpack_HEAVY(UCHAR *in, UCHAR *out, UCHAR flags, USHORT origsize){
 	/*  Heavy 1 uses a 4Kb dictionary,  Heavy 2 uses 8Kb  */
 
 	if (flags & 8) {
-		np = 15;
+		dms_np = 15;
 		bitmask = 0x1fff;
 	} else {
-		np = 14;
+		dms_np = 14;
 		bitmask = 0x0fff;
 	}
 
@@ -61,11 +61,11 @@ USHORT Unpack_HEAVY(UCHAR *in, UCHAR *out, UCHAR flags, USHORT origsize){
 	while (out<outend) {
 		c = decode_c();
 		if (c < 256) {
-			*out++ = text[heavy_text_loc++ & bitmask] = (UCHAR)c;
+			*out++ = dms_text[dms_heavy_text_loc++ & bitmask] = (UCHAR)c;
 		} else {
 			j = (USHORT) (c - OFFSET);
-			i = (USHORT) (heavy_text_loc - decode_p() - 1);
-			while(j--) *out++ = text[heavy_text_loc++ & bitmask] = text[i++ & bitmask];
+			i = (USHORT) (dms_heavy_text_loc - decode_p() - 1);
+			while(j--) *out++ = dms_text[dms_heavy_text_loc++ & bitmask] = dms_text[i++ & bitmask];
 		}
 	}
 
@@ -85,8 +85,8 @@ INLINE USHORT decode_c(void){
 		i = GETBITS(16);
 		m = 0x8000;
 		do {
-			if (i & m) j = right[j];
-			else              j = left [j];
+			if (i & m) j = dms_right[j];
+			else              j = dms_left [j];
 			m >>= 1;
 		} while (j >= N1);
 		DROPBITS(c_len[j] - 12);
@@ -100,29 +100,29 @@ INLINE USHORT decode_p(void){
 	USHORT i, j, m;
 
 	j = pt_table[GETBITS(8)];
-	if (j < np) {
+	if (j < dms_np) {
 		DROPBITS(pt_len[j]);
 	} else {
 		DROPBITS(8);
 		i = GETBITS(16);
 		m = 0x8000;
 		do {
-			if (i & m) j = right[j];
-			else             j = left [j];
+			if (i & m) j = dms_right[j];
+			else             j = dms_left [j];
 			m >>= 1;
-		} while (j >= np);
+		} while (j >= dms_np);
 		DROPBITS(pt_len[j] - 8);
 	}
 
-	if (j != np-1) {
+	if (j != dms_np-1) {
 		if (j > 0) {
 			j = (USHORT)(GETBITS(i=(USHORT)(j-1)) | (1U << (j-1)));
 			DROPBITS(i);
 		}
-		lastlen=j;
+		dms_lastlen=j;
 	}
 
-	return lastlen;
+	return dms_lastlen;
 
 }
 
@@ -139,7 +139,7 @@ static USHORT read_tree_c(void){
 			DROPBITS(5);
 		}
 		for (i=n; i<510; i++) c_len[i] = 0;
-		if (make_table(510,c_len,12,c_table)) return 1;
+		if (dms_make_table(510,c_len,12,c_table)) return 1;
 	} else {
 		n = GETBITS(9);
 		DROPBITS(9);
@@ -161,12 +161,12 @@ static USHORT read_tree_p(void){
 			pt_len[i] = (UCHAR)GETBITS(4);
 			DROPBITS(4);
 		}
-		for (i=n; i<np; i++) pt_len[i] = 0;
-		if (make_table(np,pt_len,8,pt_table)) return 1;
+		for (i=n; i<dms_np; i++) pt_len[i] = 0;
+		if (dms_make_table(dms_np,pt_len,8,pt_table)) return 1;
 	} else {
 		n = GETBITS(5);
 		DROPBITS(5);
-		for (i=0; i<np; i++) pt_len[i] = 0;
+		for (i=0; i<dms_np; i++) pt_len[i] = 0;
 		for (i=0; i<256; i++) pt_table[i] = n;
 	}
 	return 0;

@@ -12,6 +12,8 @@
 #include "options.h"
 #include "uae.h"
 #include "gui.h"
+#include "memory.h"
+#include "newcpu.h"
 #include "custom.h"
 #include "target.h"
 #include "gui_handling.h"

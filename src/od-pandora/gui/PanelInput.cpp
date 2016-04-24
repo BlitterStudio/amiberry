@@ -22,10 +22,6 @@
 
 static const char *mousespeed_list[] = { ".25", ".5", "1x", "2x", "4x" };
 static const int mousespeed_values[] = { 2, 5, 10, 20, 40 };
-#ifndef RASPBERRY
-static const char *stylusoffset_list[] = { "None", "1 px", "2 px", "3 px", "4 px", "5 px", "6 px", "7 px", "8 px", "9 px", "10 px" };
-static const int stylusoffset_values[] = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 };
-#endif
 
 static gcn::Label *lblCtrlConfig;
 static gcn::UaeDropDown* cboCtrlConfig;
@@ -39,9 +35,7 @@ static gcn::Slider* sldMouseSpeed;
 #ifndef RASPBERRY
 static gcn::Label *lblTapDelay;
 static gcn::UaeDropDown* cboTapDelay;
-static gcn::Label* lblStylusOffset;
-static gcn::Label* lblStylusOffsetInfo;
-static gcn::Slider* sldStylusOffset;
+static gcn::UaeCheckBox* chkMouseHack;
 #endif
   
 static gcn::UaeCheckBox* chkCustomCtrl;
@@ -170,11 +164,11 @@ class InputActionListener : public gcn::ActionListener
         else
           changed_prefs.pandora_tapDelay = 2;
       }
- 	    else if (actionEvent.getSource() == sldStylusOffset)
- 	    {
-    		changed_prefs.pandora_stylusOffset = stylusoffset_values[(int)(sldStylusOffset->getValue())];
-    		RefreshPanelInput();
-    	}
+
+    	else if (actionEvent.getSource() == chkMouseHack)
+  	  {
+  	    changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
+  	  }
 #endif
  	    else if (actionEvent.getSource() == chkCustomCtrl)
  	      changed_prefs.pandora_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
@@ -267,24 +261,16 @@ void InitPanelInput(const struct _ConfigCategory& category)
   cboTapDelay->setBaseColor(gui_baseCol);
   cboTapDelay->setId("cboTapDelay");
   cboTapDelay->addActionListener(inputActionListener);
-
-	lblStylusOffset = new gcn::Label("Stylus Offset:");
-  lblStylusOffset->setSize(100, LABEL_HEIGHT);
-  lblStylusOffset->setAlignment(gcn::Graphics::RIGHT);
-  sldStylusOffset = new gcn::Slider(0, 10);
-  sldStylusOffset->setSize(110, SLIDER_HEIGHT);
-  sldStylusOffset->setBaseColor(gui_baseCol);
-	sldStylusOffset->setMarkerLength(20);
-	sldStylusOffset->setStepLength(1);
-	sldStylusOffset->setId("StylusOffset");
-  sldStylusOffset->addActionListener(inputActionListener);
-  lblStylusOffsetInfo = new gcn::Label("10 px");
+  
+  chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
+  chkMouseHack->setId("MouseHack");
+  chkMouseHack->addActionListener(inputActionListener);
 #endif
 	chkCustomCtrl = new gcn::UaeCheckBox("Custom Control");
 	chkCustomCtrl->setId("CustomCtrl");
   chkCustomCtrl->addActionListener(inputActionListener);
 
-  lblDPAD = new gcn::Label("DPAD/Port1:");
+  lblDPAD = new gcn::Label("DPAD:");
   lblDPAD->setSize(100, LABEL_HEIGHT);
   lblDPAD->setAlignment(gcn::Graphics::RIGHT);
 	cboDPAD = new gcn::UaeDropDown(&dPADList);
@@ -400,13 +386,11 @@ void InitPanelInput(const struct _ConfigCategory& category)
   category.panel->add(lblMouseSpeed, DISTANCE_BORDER, posY);
   category.panel->add(sldMouseSpeed, DISTANCE_BORDER + lblMouseSpeed->getWidth() + 8, posY);
   category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 12, posY);
-  posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
 #ifndef RASPBERRY
-  category.panel->add(lblStylusOffset, DISTANCE_BORDER, posY);
-  category.panel->add(sldStylusOffset, DISTANCE_BORDER + lblStylusOffset->getWidth() + 8, posY);
-  category.panel->add(lblStylusOffsetInfo, sldStylusOffset->getX() + sldStylusOffset->getWidth() + 12, posY);
-  posY += sldStylusOffset->getHeight() + DISTANCE_NEXT_Y;
+  category.panel->add(chkMouseHack, 320, posY);
 #endif
+  posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
+
   category.panel->add(lblDPAD, DISTANCE_BORDER, posY);
   category.panel->add(cboDPAD, DISTANCE_BORDER + lblDPAD->getWidth() + 8, posY);
   category.panel->add(chkCustomCtrl, 320, posY);
@@ -455,9 +439,7 @@ void ExitPanelInput(void)
 #ifndef RASPBERRY
   delete lblTapDelay;
   delete cboTapDelay;
-  delete lblStylusOffset;
-  delete sldStylusOffset;
-  delete lblStylusOffsetInfo;
+  delete chkMouseHack;
 #endif
   delete chkCustomCtrl;
   delete lblDPAD;
@@ -517,16 +499,8 @@ void RefreshPanelInput(void)
     cboTapDelay->setSelected(1);
   else
     cboTapDelay->setSelected(2);
-
-  for(i=0; i<11; ++i)
-  {
-    if(changed_prefs.pandora_stylusOffset == stylusoffset_values[i])
-    {
-      sldStylusOffset->setValue(i);
-      lblStylusOffsetInfo->setCaption(stylusoffset_list[i]);
-      break;
-    }
-  }
+  
+  chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 #endif
   chkCustomCtrl->setSelected(changed_prefs.pandora_customControls);
   cboDPAD->setSelected(changed_prefs.pandora_custom_dpad);

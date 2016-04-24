@@ -10,7 +10,7 @@
 
 /* ------------------------------------------------------------------------ */
 static short    child[TREESIZE], parent[TREESIZE], block[TREESIZE], edge[TREESIZE], stock[TREESIZE],
-                s_node[TREESIZE / 2];	/* Changed N.Watazaki */
+		s_node[TREESIZE / 2];	/* Changed N.Watazaki */
 /*	node[..] -> s_node[..] */
 
 static unsigned short freq[TREESIZE];
@@ -21,7 +21,7 @@ static int      most_p, nn;
 static unsigned long nextcount;
 /* ------------------------------------------------------------------------ */
 void
-start_c_dyn( /* void */ )
+start_c_dyn(void)
 {
 	int             i, j, f;
 
@@ -56,7 +56,7 @@ start_c_dyn( /* void */ )
 
 /* ------------------------------------------------------------------------ */
 static void
-start_p_dyn( /* void */ )
+start_p_dyn(void)
 {
 	freq[ROOT_P] = 1;
 	child[ROOT_P] = ~(N_CHAR);
@@ -70,7 +70,7 @@ start_p_dyn( /* void */ )
 
 /* ------------------------------------------------------------------------ */
 void
-decode_start_dyn( /* void */ )
+decode_start_dyn(void)
 {
 	n_max = 286;
 	maxmatch = MAXMATCH;
@@ -233,7 +233,8 @@ make_new_node(int p)
 #if 0
 /* ------------------------------------------------------------------------ */
 static void
-encode_c_dyn(unsigned int c)
+encode_c_dyn(c)
+	unsigned int    c;
 {
 	unsigned int    bits;
 	int             p, d, cnt;
@@ -262,7 +263,7 @@ encode_c_dyn(unsigned int c)
 #endif
 /* ------------------------------------------------------------------------ */
 unsigned short
-decode_c_dyn( /* void */ )
+decode_c_dyn(void)
 {
 	int             c;
 	short           buf, cnt;
@@ -289,7 +290,7 @@ decode_c_dyn( /* void */ )
 
 /* ------------------------------------------------------------------------ */
 unsigned short
-decode_p_dyn( /* void */ )
+decode_p_dyn(void)
 {
 	int             c;
 	short           buf, cnt;
@@ -320,7 +321,9 @@ decode_p_dyn( /* void */ )
 #if 0
 /* ------------------------------------------------------------------------ */
 void
-output_dyn(unsigned int code, unsigned int pos)
+output_dyn(code, pos)
+	unsigned int    code;
+	unsigned int    pos;
 {
 	encode_c_dyn(code);
 	if (code >= 0x100) {

@@ -14,15 +14,18 @@
 
 extern int emulating;
 extern int uae4all_keystate[256];
-extern int stylusAdjustX;
-extern int stylusAdjustY;
+
+extern int z3_start_adr;
+extern int rtg_start_adr;
 
 void run_gui(void);
+void InGameMessage(const char *msg);
 
 void saveAdfDir(void);
 void setCpuSpeed(void);
 void resetCpuSpeed(void);
 void update_display(struct uae_prefs *);
+void black_screen_now(void);
 void graphics_subshutdown (void);
 
 void pandora_stop_sound(void);

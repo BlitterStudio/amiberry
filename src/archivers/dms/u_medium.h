@@ -1,5 +1,5 @@
 
 USHORT Unpack_MEDIUM(UCHAR *, UCHAR *, USHORT);
 
-extern USHORT medium_text_loc;
+extern USHORT dms_medium_text_loc;
 

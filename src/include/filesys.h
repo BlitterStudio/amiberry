@@ -7,7 +7,7 @@
   */
 
 struct hardfiledata {
-    uae_u64 size;
+    uae_u64 virtsize; // virtual size
     uae_u64 offset;
     int nrcyls;
     int secspertrack;
@@ -17,20 +17,18 @@ struct hardfiledata {
     FILE *fd;
     int readonly;
     int flags;
-    char vendor_id[8 + 1];
-    char product_id[16 + 1];
-    char product_rev[4 + 1];
-    char device_name[256];
+    TCHAR vendor_id[8 + 1];
+    TCHAR product_id[16 + 1];
+    TCHAR product_rev[4 + 1];
+    TCHAR device_name[256];
     /* geometry from possible RDSK block */
-    unsigned int cylinders;
-    unsigned int sectors;
-    unsigned int heads;
+    int cylinders;
+    int sectors;
+    int heads;
+    int unitnum;
 
     int drive_empty;
 };
-#ifdef WIN32
-int truncate (const char *name, long int len);
-#endif
 
 #define HD_CONTROLLER_UAE 0
 #define HD_CONTROLLER_IDE0 1
@@ -51,6 +49,7 @@ int truncate (const char *name, long int len);
 #define FILESYS_HARDFILE 1
 #define FILESYS_HARDFILE_RDB 2
 #define FILESYS_HARDDRIVE 3
+#define FILESYS_CD 4
 
 #define MAX_FILESYSTEM_UNITS 30
 
@@ -58,5 +57,5 @@ struct uaedev_mount_info;
 extern struct uaedev_mount_info options_mountinfo;
 
 extern struct hardfiledata *get_hardfile_data (int nr);
-extern int get_native_path(uae_u32 lock, char *out);
+extern int get_native_path(uae_u32 lock, TCHAR *out);
 extern void hardfile_do_disk_change (struct uaedev_config_info *uci, int insert);

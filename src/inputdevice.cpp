@@ -11,37 +11,42 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "memory.h"
+#include "newcpu.h"
+#include "custom.h"
 #include "keyboard.h"
 #include "inputdevice.h"
 #include "keybuf.h"
-#include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
-#include "memory.h"
-#include "events.h"
-#include "newcpu.h"
 #include "uae.h"
 #include "joystick.h"
 #include "picasso96.h"
 
+int joy0button, joy1button;
+static unsigned int joy0dir, joy1dir;
+
+extern int bootrom_header, bootrom_items;
 
 void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
 {
-  cfgfile_write (f, "input.joymouse_speed_analog=%d\n", p->input_joymouse_multiplier);
-  cfgfile_write (f, "input.autofire=%d\n", p->input_autofire_framecnt);
+  cfgfile_write (f, "input.joymouse_speed_analog", "%d", p->input_joymouse_multiplier);
+  cfgfile_write (f, "input.autofire", "%d", p->input_autofire_framecnt);
 }
 
-static char *getstring (char **pp)
+static TCHAR *getstring (TCHAR **pp)
 {
     int i;
-    static char str[1000];
-    char *p = *pp;
+    static TCHAR str[1000];
+    TCHAR *p = *pp;
 
     if (*p == 0)
 	return 0;
     i = 0;
-    while (*p != 0 && *p !='.' && *p != ',') str[i++] = *p++;
-    if (*p == '.' || *p == ',') p++;
+    while (*p != 0 && *p !='.' && *p != ',') 
+  str[i++] = *p++;
+    if (*p == '.' || *p == ',') 
+  p++;
     str[i] = 0;
     *pp = p;
     return str;
@@ -51,197 +56,227 @@ void reset_inputdevice_config (struct uae_prefs *pr)
 {
 }
 
-void read_inputdevice_config (struct uae_prefs *pr, char *option, char *value)
+void read_inputdevice_config (struct uae_prefs *pr, TCHAR *option, TCHAR *value)
 {
   char *p;
 
   option += 6; /* "input." */
   p = getstring (&option);
     if (!strcasecmp (p, "joymouse_speed_analog"))
-	pr->input_joymouse_multiplier = atol (value);
+	pr->input_joymouse_multiplier = _tstol (value);
     if (!strcasecmp (p, "autofire"))
-	pr->input_autofire_framecnt = atol (value);
+	pr->input_autofire_framecnt = _tstol (value);
 }
 
 /* Mousehack stuff */
 
-#define defstepx (1<<16)
-#define defstepy (1<<16)
-
 static int lastsampledmx, lastsampledmy;
-static int lastspr0x,lastspr0y,spr0pos,spr0ctl;
-static int mstepx,mstepy;
-static int sprvbfl;
-
-int lastmx, lastmy;
-int newmousecounters;
 static int mouse_x, mouse_y;
+static int mouse_maxx, mouse_maxy;
 
-static enum mousestate mousestate;
+static int mousehack_alive_cnt;
+static int lastmx, lastmy;
+static int mouseoffset_x, mouseoffset_y;
+static int tablet_maxx, tablet_maxy, tablet_data;
 
-extern int mouseMoving;
-extern int fcounter;
-
-
-void mousehack_handle (int sprctl, int sprpos)
+int mousehack_alive (void)
 {
-    if (!sprvbfl && ((sprpos & 0xff) << 2) > 2 * DISPLAY_LEFT_SHIFT) {
-	spr0ctl = sprctl;
-	spr0pos = sprpos;
-	sprvbfl = 2;
+    return mousehack_alive_cnt > 0 ? mousehack_alive_cnt : 0;
+}
+
+#define MH_E 0
+#define MH_CNT 2
+#define MH_MAXX 4
+#define MH_MAXY 6
+#define MH_MAXZ 8
+#define MH_X 10
+#define MH_Y 12
+#define MH_Z 14
+#define MH_RESX 16
+#define MH_RESY 18
+#define MH_MAXAX 20
+#define MH_MAXAY 22
+#define MH_MAXAZ 24
+#define MH_AX 26
+#define MH_AY 28
+#define MH_AZ 30
+#define MH_PRESSURE 32
+#define MH_BUTTONBITS 34
+#define MH_INPROXIMITY 38
+#define MH_ABSX 40
+#define MH_ABSY 42
+
+#define MH_END 44
+#define MH_START 4
+
+int inputdevice_is_tablet (void)
+{
+    int v;
+    if (!uae_boot_rom)
+	return 0;
+    if (currprefs.input_tablet == TABLET_OFF)
+	return 0;
+    if (currprefs.input_tablet == TABLET_MOUSEHACK)
+	return -1;
+    v = is_tablet ();
+    if (!v)
+	return 0;
+    if (kickstart_version < 37)
+	return v ? -1 : 0;
+    return v ? 1 : 0;
+}
+
+static int getmhoffset (void)
+{
+    if (!uae_boot_rom)
+	return 0;
+    return get_long (rtarea_base + bootrom_header + 7 * 4) + bootrom_header;
+}
+
+static void mousehack_reset (void)
+{
+    int off;
+
+    mouseoffset_x = mouseoffset_y = 0;
+    mousehack_alive_cnt = 0;
+    tablet_data = 0;
+    off = getmhoffset ();
+    if (off)
+	rtarea[off + MH_E] = 0;
+}
+
+static void mousehack_enable (void)
+{
+    int off, mode;
+
+    if (!uae_boot_rom || currprefs.input_tablet == TABLET_OFF)
+	return;
+    off = getmhoffset ();
+    if (rtarea[off + MH_E])
+	return;
+    mode = 0x80;
+    if (currprefs.input_tablet == TABLET_MOUSEHACK)
+	mode |= 1;
+    if (inputdevice_is_tablet () > 0)
+	mode |= 2;
+    write_log ("Mouse driver enabled (%s)\n", ((mode & 3) == 3 ? "tablet+mousehack" : ((mode & 3) == 2) ? "tablet" : "mousehack"));
+    rtarea[off + MH_E] = 0x80;
+}
+
+void input_mousehack_mouseoffset (uaecptr pointerprefs)
+{
+    mouseoffset_x = (uae_s16)get_word (pointerprefs + 28);
+    mouseoffset_y = (uae_s16)get_word (pointerprefs + 30);
+}
+
+void input_mousehack_status (int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset)
+{
+    if (mode == 0) {
+	uae_u8 v = rtarea[getmhoffset ()];
+	v |= 0x40;
+	rtarea[getmhoffset ()] = v;
+	write_log ("Tablet driver running (%02x)\n", v);
+    } else if (mode == 2) {
+	if (mousehack_alive_cnt == 0)
+	    mousehack_alive_cnt = -100;
+	else if (mousehack_alive_cnt > 0)
+	    mousehack_alive_cnt = 100;
     }
 }
 
-static void mousehack_setunknown (void)
+void inputdevice_tablet_strobe (void)
 {
-    mousestate = mousehack_unknown;
-}
+    uae_u8 *p;
+    uae_u32 off;
 
-static void mousehack_setdontcare (void)
-{
-    if (mousestate == mousehack_dontcare)
+    mousehack_enable ();
+    if (!uae_boot_rom)
 	return;
-
-    write_log ("Don't care mouse mode set\n");
-    mousestate = mousehack_dontcare;
-    lastspr0x = lastmx; lastspr0y = lastmy;
-    mstepx = defstepx; mstepy = defstepy;
-}
-
-static void mousehack_setfollow (void)
-{
-    if (mousestate == mousehack_follow)
+    if (!tablet_data)
 	return;
-
-    if (!mousehack_allowed ()) {
-	    mousehack_set (mousehack_normal);
-	    return;
-    }
-    write_log ("Follow sprite mode set\n");
-    mousestate = mousehack_follow;
-    sprvbfl = 0;
-    spr0ctl = spr0pos = 0;
-    mstepx = defstepx; mstepy = defstepy;
+    off = getmhoffset ();
+    p = rtarea + off;
+    p[MH_CNT]++;
 }
 
-void mousehack_set (enum mousestate state)
+
+void getgfxoffset (int *dx, int *dy, int*,int*);
+
+static void inputdevice_mh_abs (int x, int y)
 {
-    switch (state)
+    uae_u8 *p;
+    uae_u8 tmp[4];
+    uae_u32 off;
+
+    mousehack_enable ();
+    off = getmhoffset ();
+    p = rtarea + off;
+
+    memcpy (tmp, p + MH_ABSX, 4);
+
+    x -= mouseoffset_x + 1;
+    y -= mouseoffset_y + 2;
+
+    p[MH_ABSX] = x >> 8;
+    p[MH_ABSX + 1] = x;
+    p[MH_ABSY] = y >> 8;
+    p[MH_ABSY + 1] = y;
+
+    if (!memcmp (tmp, p + MH_ABSX, 4))
+	return;
+    rtarea[off + MH_E] = 0xc0 | 1;
+    p[MH_CNT]++;
+    tablet_data = 1;
+}
+
+static void mousehack_helper (void)
+{
+    int x, y;
+
+    if (/*currprefs.input_magic_mouse == 0 ||*/ currprefs.input_tablet < TABLET_MOUSEHACK)
+	return;
+    x = lastmx;
+    y = lastmy;
+
+#ifdef PICASSO96
+    if (picasso_on) {
+	x -= picasso96_state.XOffset;
+	y -= picasso96_state.YOffset;
+    } else
+#endif
     {
-	case mousehack_dontcare:
-	mousehack_setdontcare();
-	break;
-	case mousehack_follow:
-	mousehack_setfollow();
-	break;
-	default:
-	mousestate = (enum mousestate) state;
-	break;
+  x = coord_native_to_amiga_x (x);
+	y = coord_native_to_amiga_y (y) << 1;
     }
+    inputdevice_mh_abs (x, y);
 }
 
-int mousehack_get (void)
-{
-    return mousestate;
-}
 
-void togglemouse (void)
+static void update_mouse_xy(void)
 {
-    switch (mousestate) {
-     case mousehack_dontcare: mousehack_setfollow (); break;
-     case mousehack_follow: mousehack_setdontcare (); break;
-     default: break; /* Nnnnnghh! */
-    }
-}
-
-STATIC_INLINE int adjust (int val)
-{
-  if (val > 127)
-	  return 127;
-  else if (val < -127)
-	  return -127;
-  return val;
-}
-
-void do_mouse_hack (void)
-{
-  int spr0x = ((spr0pos & 0xff) << 2) | ((spr0ctl & 1) << 1);
-  int spr0y = ((spr0pos >> 8) | ((spr0ctl & 4) << 6)) << 1;
   int diffx, diffy;
 
-  switch (mousestate) {
-    case mousehack_normal:
-	    diffx = lastmx - lastsampledmx;
-	    diffy = lastmy - lastsampledmy;
-	    if (!newmousecounters) {
-	      if (diffx > 127) diffx = 127;
-	      if (diffx < -127) diffx = -127;
-	      mouse_x += diffx;
-	      if (diffy > 127) diffy = 127;
-	      if (diffy < -127) diffy = -127;
-	      mouse_y += diffy;
-	    }
-	    lastsampledmx += diffx; lastsampledmy += diffy;
-	    break;
+  diffx = lastmx - lastsampledmx;
+  diffy = lastmy - lastsampledmy;
+  lastsampledmx = lastmx; 
+  lastsampledmy = lastmy;
 
-    case mousehack_dontcare:
-	    diffx = adjust (((lastmx - lastspr0x) * mstepx) >> 16);
-	    diffy = adjust (((lastmy - lastspr0y) * mstepy) >> 16);
-	    lastspr0x = lastmx; 
-	    lastspr0y = lastmy;
-	    mouse_x += diffx;
-	    mouse_y += diffy;
-	    break;
-
-    case mousehack_follow:
-      //------------------------------------------
-      // New stylus<->follow mouse mode
-      //------------------------------------------
-      #ifdef PANDORA_SPECIFIC
-      printf("do_mouse_hack: sprvbfl=%d\n", sprvbfl);
-      #endif
-	    if (sprvbfl && (sprvbfl-- > 1)) 
-      {
-        int stylusxpos, stylusypos;          
-#ifdef PICASSO96
-        if (picasso_on) {
-	        stylusxpos = lastmx - picasso96_state.XOffset;
-	        stylusypos = lastmy - picasso96_state.YOffset;
-        } else
-#endif
-        {
-  	      stylusxpos = coord_native_to_amiga_x (lastmx);
-	        stylusypos = coord_native_to_amiga_y (lastmy) << 1;
-	      }
-	      if(stylusxpos != spr0x || stylusypos != spr0y)
-        {
-          diffx = (stylusxpos - spr0x);
-          diffy = (stylusypos - spr0y);
-          if(diffx > 10 || diffx < -10)
-            diffx = diffx * 50;
-          else
-            diffx = diffx * 100;
-          if(diffy > 10 || diffy < -10)
-            diffy = diffy * 50;
-          else
-            diffy = diffy * 100;
-          mouse_x += adjust(diffx / 100);
-          mouse_y += adjust(diffy / 100);
-          mouseMoving = 1;
-          fcounter = 0;
-        }
-      }          
-      break;
-	
-    default:
-	    return;
-  }
+  if (diffx > 127) 
+    diffx = 127;
+  if (diffx < -127) 
+    diffx = -127;
+  mouse_x += diffx;
+  
+  if (diffy > 127) 
+    diffy = 127;
+  if (diffy < -127) 
+    diffy = -127;
+  mouse_y += diffy;
 }
-
 
 uae_u16 JOY0DAT (void)
 {
-    do_mouse_hack ();
+  update_mouse_xy();
 #ifdef RASPBERRY
     if (currprefs.pandora_custom_dpad == 0)
         return joy0dir;
@@ -259,8 +294,8 @@ uae_u16 JOY1DAT (void)
 
 void JOYTEST (uae_u16 v)
 {
-    mouse_x = v & 0xFC;
-    mouse_y = (v >> 8) & 0xFC;
+  mouse_x = (mouse_x & 3) | (v & 0xFC);
+  mouse_y = (mouse_y & 3) | ((v >> 8) & 0xFC);
 }
 
 
@@ -286,10 +321,10 @@ uae_u16 POTGOR (void)
 
     v |= (~potgo_value & 0xAA00) >> 1;
 
-    if (buttonstate[2] || (joy0button & 2))
+    if (joy0button & 2)
     	v &= 0xFBFF;
 
-    if (buttonstate[1] || (joy0button & 4))
+    if (joy0button & 4)
 	v &= 0xFEFF;
 
     if (joy1button & 2)
@@ -305,10 +340,10 @@ uae_u16 POT0DAT (void)
 {
 	static uae_u16 cnt = 0;
 	
-	if (buttonstate[2])
+	if (joy0button & 2)
 		cnt = ((cnt + 1) & 0xFF) | (cnt & 0xFF00);
 	
-	if (buttonstate[1])
+	if (joy0button & 4)
 		cnt += 0x100;
 	
 	return cnt;
@@ -316,43 +351,31 @@ uae_u16 POT0DAT (void)
 
 void inputdevice_vsync (void)
 {
-	static int back_joy0button=0;
-
-	getjoystate (0, &joy1dir, &joy1button);
-	getjoystate (1, &joy0dir, &joy0button);
-	if (joy0button!=back_joy0button)
-  {
-		back_joy0button= joy0button;
-		buttonstate[0]= joy0button & 0x01;
-	}
+	getjoystate (1, &joy1dir, &joy1button);
+	getjoystate (0, &joy0dir, &joy0button);
 }
 
 
 void inputdevice_reset (void)
 {
+  mousehack_reset ();
 	lastmx = lastmy = 0;
-	newmousecounters = 0;
+  lastsampledmx = lastsampledmy = 0;
   potgo_value = 0;
-  
-  if (needmousehack ())
-  	mousehack_set (mousehack_dontcare);
-  else
-	  mousehack_set (mousehack_normal);
 }
 
 void inputdevice_updateconfig (struct uae_prefs *prefs)
 {
-  if(prefs->pandora_custom_dpad == 2)
-  	mousehack_set(mousehack_follow);
-  else
-    mousehack_set (mousehack_dontcare);
   joystick_setting_changed ();
 }
 
 void inputdevice_default_prefs (struct uae_prefs *p)
 {
-  inputdevice_init ();
+#ifdef PANDORA_SPECIFIC
+  p->input_joymouse_multiplier = 20;
+#else
   p->input_joymouse_multiplier = 2;
+#endif
   p->input_autofire_framecnt = 8;
 }
 
@@ -369,6 +392,7 @@ void inputdevice_init (void)
 void inputdevice_close (void)
 {
   close_joystick ();
+  inputmode_close();
 }
 
 int inputdevice_config_change_test (void)
@@ -380,11 +404,11 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 {
   dst->input_joymouse_multiplier = src->input_joymouse_multiplier;
   dst->input_autofire_framecnt = src->input_autofire_framecnt;
-
+  dst->input_tablet = src->input_tablet;
+  
   dst->pandora_joyConf = src->pandora_joyConf;
   dst->pandora_joyPort = src->pandora_joyPort;
   dst->pandora_tapDelay = src->pandora_tapDelay;
-  dst->pandora_stylusOffset = src->pandora_stylusOffset;
 
   dst->pandora_customControls = src->pandora_customControls;
   dst->pandora_custom_dpad = src->pandora_custom_dpad;
@@ -405,4 +429,47 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
   dst->pandora_jump = src->pandora_jump;
 
   inputdevice_updateconfig (dst);
+}
+
+void inputdevice_mouselimit(int x, int y)
+{
+  mouse_maxx = x;
+  mouse_maxy = y;
+}
+
+void setmousestate (int mouse, int axis, int data, int isabs)
+{
+  if(currprefs.input_tablet > 0) {
+    // Use mousehack to set position
+    if(isabs) {
+      if (axis == 0)
+	      lastmx = data;
+      else
+	      lastmy = data;
+    } else {
+      if(axis == 0) {
+        lastmx += data;
+        if(lastmx < 0)
+          lastmx = 0;
+        else if (lastmx >= mouse_maxx)
+          lastmx = mouse_maxx - 1;
+      } else {
+        lastmy += data;
+        if(lastmy < 0)
+          lastmy = 0;
+        else if (lastmy >= mouse_maxy)
+          lastmy = mouse_maxy - 1;
+      }
+    }
+
+    if (axis)
+  	  mousehack_helper ();
+  } else {
+    // Set mouseposition without hack
+    if(axis == 0) {
+      lastmx += data;
+    } else {
+      lastmy += data;
+    }
+  }
 }

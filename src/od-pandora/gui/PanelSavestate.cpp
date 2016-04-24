@@ -12,8 +12,10 @@
 #include "config.h"
 #include "options.h"
 #include "autoconf.h"
-#include "xwin.h"
+#include "memory.h"
+#include "newcpu.h"
 #include "custom.h"
+#include "xwin.h"
 #include "drawing.h"
 #include "uae.h"
 #include "gui.h"
@@ -63,7 +65,7 @@ class SavestateActionListener : public gcn::ActionListener
       			if (f)
       			{
       				fclose(f);
-              savestate_initsave(savestate_fname, 2, 0);
+              savestate_initsave(savestate_fname, 2, 0, false);
       				savestate_state = STATE_DORESTORE;
       				gui_running = false;
       			}
@@ -81,7 +83,7 @@ class SavestateActionListener : public gcn::ActionListener
         //------------------------------------------
       	if(emulating)
     	  {
-          savestate_initsave(savestate_fname, 2, 0);
+          savestate_initsave(savestate_fname, 2, 0, false);
     			save_state (savestate_fname, "...");
           savestate_state = STATE_DOSAVE; // Just to create the screenshot
           delay_savestate_frame = 1;          

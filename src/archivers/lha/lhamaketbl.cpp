@@ -8,8 +8,7 @@
 /* ------------------------------------------------------------------------ */
 #include "lha.h"
 
-void
-lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsigned short table[])
+void lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsigned short table[])
 {
 	unsigned short  count[17];	/* count of bitlen */
 	unsigned short  weight[17];	/* 0x10000ul >> bitlen */
@@ -38,7 +37,7 @@ lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsigned sh
 		total += weight[i] * count[i];
 	}
 	if ((total & 0xffff) != 0)
-		error("make_table()", "Bad table (5)\n");
+		error(_T("make_table()"), _T("Bad table (5)\n"));
 
 	/* shift data for make table. */
 	m = 16 - tablebits;
@@ -73,13 +72,13 @@ lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsigned sh
 			/* make tree (n length) */
 			while (--n >= 0) {
 				if (*p == 0) {
-					lha_right[avail] = lha_left[avail] = 0;
+					h_right[avail] = h_left[avail] = 0;
 					*p = avail++;
 				}
 				if (i & 0x8000)
-					p = &lha_right[*p];
+					p = &h_right[*p];
 				else
-					p = &lha_left[*p];
+					p = &h_left[*p];
 				i <<= 1;
 			}
 			*p = j;

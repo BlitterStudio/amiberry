@@ -15,10 +15,9 @@
 #include "gensound.h"
 #include "audio.h"
 #include "sd-pandora/sound.h"
-#include "events.h"
 #include "memory.h"
-#include "custom.h"
 #include "newcpu.h"
+#include "custom.h"
 #include "disk.h"
 #include "debug.h"
 #include "xwin.h"
@@ -30,6 +29,7 @@
 #include "traps.h"
 #include "osemu.h"
 #include "picasso96.h"
+#include "bsdsocket.h"
 #include "drawing.h"
 #include "native2amiga.h"
 #include "savestate.h"
@@ -46,21 +46,39 @@ long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs; 
 
-int no_gui = 0;
-int cloanto_rom = 0;
-int kickstart_rom = 1;
+bool no_gui = 0;
+bool cloanto_rom = 0;
+bool kickstart_rom = 1;
 
 struct gui_info gui_data;
 
-/* If you want to pipe printer output to a file, put something like
- * "cat >>printerfile.tmp" above.
- * The printer support was only tested with the driver "PostScript" on
- * Amiga side, using apsfilter for linux to print ps-data.
- *
- * Under DOS it ought to be -p LPT1: or -p PRN: but you'll need a
- * PostScript printer or ghostscript -=SR=-
- */
+TCHAR optionsfile[256];
 
+void my_trim (TCHAR *s)
+{
+	int len;
+	while (_tcscspn (s, _T("\t \r\n")) == 0)
+		memmove (s, s + 1, (_tcslen (s + 1) + 1) * sizeof (TCHAR));
+	len = _tcslen (s);
+	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
+		s[--len] = '\0';
+}
+
+TCHAR *my_strdup_trim (const TCHAR *s)
+{
+	TCHAR *out;
+	int len;
+
+	while (_tcscspn (s, _T("\t \r\n")) == 0)
+		s++;
+	len = _tcslen (s);
+	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
+		len--;
+	out = xmalloc (TCHAR, len + 1);
+	memcpy (out, s, len * sizeof (TCHAR));
+	out[len] = 0;
+	return out;
+}
 
 void discard_prefs (struct uae_prefs *p, int type)
 {
@@ -80,166 +98,187 @@ void discard_prefs (struct uae_prefs *p, int type)
 
 static void fixup_prefs_dim2 (struct wh *wh)
 {
-    if (wh->width < 320)
-	wh->width = 320;
-    if (wh->height < 200)
-	wh->height = 200;
+  if (wh->width < 320)
+  	wh->width = 320;
+  if (wh->height < 200)
+  	wh->height = 200;
 }
 
 void fixup_prefs_dimensions (struct uae_prefs *prefs)
 {
-    fixup_prefs_dim2(&prefs->gfx_size_fs);
-    fixup_prefs_dim2(&prefs->gfx_size_win);
+  fixup_prefs_dim2(&prefs->gfx_size_fs);
+  fixup_prefs_dim2(&prefs->gfx_size_win);
 }
 
 void fixup_cpu(struct uae_prefs *p)
 {
-    switch(p->cpu_model)
-    {
-        case 68000:
-	p->address_space_24 = 1;
-	if (p->cpu_compatible)
-	  p->fpu_model = 0;
-        break;
-	case 68010:
-	p->address_space_24 = 1;
-	if (p->cpu_compatible)
-	  p->fpu_model = 0;
-	break;
-	case 68020:
-	break;
-	case 68030:
-	p->address_space_24 = 0;
-	break;
-	case 68040:
-	p->address_space_24 = 0;
-	if (p->fpu_model)
-	    p->fpu_model = 68040;
-	break;
-	case 68060:
-	p->address_space_24 = 0;
-	if (p->fpu_model)
-	    p->fpu_model = 68060;
-	break;
-    }
+  switch(p->cpu_model)
+  {
+    case 68000:
+    	p->address_space_24 = 1;
+    	if (p->cpu_compatible)
+    	  p->fpu_model = 0;
+      break;
+  	case 68010:
+    	p->address_space_24 = 1;
+    	if (p->cpu_compatible)
+    	  p->fpu_model = 0;
+    	break;
+  	case 68020:
+    	break;
+  	case 68030:
+    	p->address_space_24 = 0;
+    	break;
+  	case 68040:
+    	p->address_space_24 = 0;
+    	if (p->fpu_model)
+  	    p->fpu_model = 68040;
+    	break;
+  	case 68060:
+    	p->address_space_24 = 0;
+    	if (p->fpu_model)
+  	    p->fpu_model = 68060;
+    	break;
+  }
 }
 
 
 void fixup_prefs (struct uae_prefs *p)
 {
-    int err = 0;
+  int err = 0;
 
-    fixup_cpu(p);
+  fixup_cpu(p);
 
-    if (((p->chipmem_size & (p->chipmem_size - 1)) != 0 && p->chipmem_size != 0x180000)
+  if (((p->chipmem_size & (p->chipmem_size - 1)) != 0 && p->chipmem_size != 0x180000)
 	|| p->chipmem_size < 0x20000
 	|| p->chipmem_size > 0x800000)
-    {
-	write_log ("Unsupported chipmem size %x!\n", p->chipmem_size);
-	p->chipmem_size = 0x200000;
-	err = 1;
-    }
+  {
+		write_log (_T("Unsupported chipmem size %x!\n"), p->chipmem_size);
+	  p->chipmem_size = 0x200000;
+	  err = 1;
+  }
 
-    if ((p->fastmem_size & (p->fastmem_size - 1)) != 0
+  if ((p->fastmem_size & (p->fastmem_size - 1)) != 0
 	|| (p->fastmem_size != 0 && (p->fastmem_size < 0x100000 || p->fastmem_size > 0x800000)))
-    {
-	write_log ("Unsupported fastmem size %x!\n", p->fastmem_size);
-	err = 1;
-    }
-    if ((p->gfxmem_size & (p->gfxmem_size - 1)) != 0
-	|| (p->gfxmem_size != 0 && (p->gfxmem_size < 0x100000 || p->gfxmem_size > 0x8000000)))
-    {
-	write_log ("Unsupported graphics card memory size %x!\n", p->gfxmem_size);
-	p->gfxmem_size = 0;
-	err = 1;
-    }
-    gfxmem_start = 0x3000000;
+  {
+		write_log (_T("Unsupported fastmem size %x!\n"), p->fastmem_size);
+	  err = 1;
+  }
+  if ((p->rtgmem_size & (p->rtgmem_size - 1)) != 0
+	|| (p->rtgmem_size != 0 && (p->rtgmem_size < 0x100000 || p->rtgmem_size > 0x1000000)))
+  {
+	  write_log (_T("Unsupported graphics card memory size %x!\n"), p->rtgmem_size);
+		if (p->rtgmem_size > 0x1000000)
+			p->rtgmem_size = 0x1000000;
+		else
+	    p->rtgmem_size = 0;
+	  err = 1;
+  }
     
-   if ((p->z3fastmem_size & (p->z3fastmem_size - 1)) != 0
+  if ((p->z3fastmem_size & (p->z3fastmem_size - 1)) != 0
 	|| (p->z3fastmem_size != 0 && (p->z3fastmem_size < 0x100000 || p->z3fastmem_size > max_z3fastmem)))
-    {
-	write_log ("Unsupported Zorro III fastmem size %x (%x)!\n", p->z3fastmem_size, max_z3fastmem);
-	if (p->z3fastmem_size > max_z3fastmem)
+  {
+		write_log (_T("Unsupported Zorro III fastmem size %x (%x)!\n"), p->z3fastmem_size, max_z3fastmem);
+	  if (p->z3fastmem_size > max_z3fastmem)
 	    p->z3fastmem_size = max_z3fastmem;
-	else
-	    p->z3fastmem_size = 0;
-	err = 1;
-    }
-    p->z3fastmem_start &= ~0xffff;
-    if (p->z3fastmem_start != 0x1000000)
-	p->z3fastmem_start = 0x1000000;
+  	else
+     p->z3fastmem_size = 0;
+	  err = 1;
+  }
+  p->z3fastmem_start &= ~0xffff;
+	if (p->z3fastmem_start < 0x1000000)
+		p->z3fastmem_start = 0x1000000;
     
-    if (p->address_space_24 && (p->gfxmem_size != 0 || p->z3fastmem_size != 0)) {
-	p->z3fastmem_size = p->gfxmem_size = 0;
-	write_log ("Can't use a graphics card or Zorro III fastmem when using a 24 bit\n"
-		 "address space - sorry.\n");
-    }
-    if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
-	p->bogomem_size = 0;
-	write_log ("Unsupported bogomem size!\n");
-	err = 1;
-    }
-    if (p->bogomem_size > 0x100000 && ((p->chipset_mask & CSMASK_AGA) || p->cpu_model >= 68020)) {
-	p->bogomem_size = 0x100000;
-	write_log ("Possible Gayle bogomem conflict fixed\n");
-    }
+  if (p->address_space_24 && (p->z3fastmem_size != 0)) {
+  	p->z3fastmem_size = 0;
+  	write_log (_T("Can't use a graphics card or 32-bit memory when using a 24 bit\naddress space.\n"));
+  }
+  if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
+	  p->bogomem_size = 0;
+		write_log (_T("Unsupported bogomem size!\n"));
+	  err = 1;
+  }
+  if (p->bogomem_size > 0x180000 && ((p->chipset_mask & CSMASK_AGA) || p->cpu_model >= 68020)) {
+	  p->bogomem_size = 0x180000;
+		write_log (_T("Possible Gayle bogomem conflict fixed\n"));
+  }
 
-    if (p->chipmem_size > 0x200000 && p->fastmem_size != 0) {
-	write_log ("You can't use fastmem and more than 2MB chip at the same time!\n");
-	p->fastmem_size = 0;
-	err = 1;
-    }
+  if (p->chipmem_size > 0x200000 && p->fastmem_size != 0) {
+		write_log (_T("You can't use fastmem and more than 2MB chip at the same time!\n"));
+	  p->fastmem_size = 0;
+	  err = 1;
+  }
 
-    if (p->produce_sound < 0 || p->produce_sound > 3) {
-	write_log ("Bad value for -S parameter: enable value must be within 0..3\n");
-	p->produce_sound = 0;
-	err = 1;
-    }
-    if (p->cachesize < 0 || p->cachesize > 16384) {
-	write_log ("Bad value for cachesize parameter: value must be within 0..16384\n");
+	if (p->address_space_24 && p->rtgmem_size)
+		p->rtgmem_type = 0;
+	if (!p->rtgmem_type && (p->chipmem_size > 2 * 1024 * 1024 || getz2size (p) > 8 * 1024 * 1024 || getz2size (p) < 0)) {
+		p->rtgmem_size = 0;
+		write_log (_T("Too large Z2 RTG memory size\n"));
+	}
+
+  if (p->produce_sound < 0 || p->produce_sound > 3) {
+		write_log (_T("Bad value for -S parameter: enable value must be within 0..3\n"));
+	  p->produce_sound = 0;
+	  err = 1;
+  }
+  if (p->cachesize < 0 || p->cachesize > 16384) {
+		write_log (_T("Bad value for cachesize parameter: value must be within 0..16384\n"));
+	  p->cachesize = 0;
+	  err = 1;
+  }
+  if (p->z3fastmem_size > 0 && (p->address_space_24 || p->cpu_model < 68020)) {
+		write_log (_T("Z3 fast memory can't be used with a 68000/68010 emulation. It\n")
+			_T("requires a 68020 emulation. Turning off Z3 fast memory.\n"));
+	  p->z3fastmem_size = 0;
+	  err = 1;
+  }
+  if (p->rtgmem_size > 0 && p->rtgmem_type && (p->cpu_model < 68020 || p->address_space_24)) {
+		write_log (_T("RTG can't be used with a 68000/68010 or 68EC020 emulation. It\n")
+			_T("requires a 68020 emulation. Turning off RTG.\n"));
+	  p->rtgmem_size = 0;
+	  err = 1;
+  }
+#if !defined (BSDSOCKET)
+	if (p->socket_emu) {
+		write_log (_T("Compile-time option of BSDSOCKET_SUPPORTED was not enabled.  You can't use bsd-socket emulation.\n"));
+		p->socket_emu = 0;
+		err = 1;
+	}
+#endif
+
+  if (p->nr_floppies < 0 || p->nr_floppies > 4) {
+		write_log (_T("Invalid number of floppies.  Using 4.\n"));
+	  p->nr_floppies = 4;
+	  p->floppyslots[0].dfxtype = 0;
+	  p->floppyslots[1].dfxtype = 0;
+	  p->floppyslots[2].dfxtype = 0;
+	  p->floppyslots[3].dfxtype = 0;
+	  err = 1;
+  }
+
+  if (p->floppy_speed > 0 && p->floppy_speed < 10) {
+  	p->floppy_speed = 100;
+  }
+
+  if (p->collision_level < 0 || p->collision_level > 3) {
+		write_log (_T("Invalid collision support level.  Using 1.\n"));
+	  p->collision_level = 1;
+	  err = 1;
+  }
+  fixup_prefs_dimensions (p);
+
+#if !defined (JIT)
 	p->cachesize = 0;
-	err = 1;
-    }
-    if (p->z3fastmem_size > 0 && (p->address_space_24 || p->cpu_model < 68020)) {
-	write_log ("Z3 fast memory can't be used with a 68000/68010 emulation. It\n"
-		 "requires a 68020 emulation. Turning off Z3 fast memory.\n");
-	p->z3fastmem_size = 0;
-	err = 1;
-    }
-    if (p->gfxmem_size > 0 && (p->cpu_model < 68020 || p->address_space_24)) {
-	write_log ("Picasso96 can't be used with a 68000/68010 or 68EC020 emulation. It\n"
-		 "requires a 68020 emulation. Turning off Picasso96.\n");
-	p->gfxmem_size = 0;
-	err = 1;
-    }
-
-    if (p->nr_floppies < 0 || p->nr_floppies > 4) {
-	write_log ("Invalid number of floppies.  Using 4.\n");
-	p->nr_floppies = 4;
-	p->dfxtype[0] = 0;
-	p->dfxtype[1] = 0;
-	p->dfxtype[2] = 0;
-	p->dfxtype[3] = 0;
-	err = 1;
-    }
-
-    if (p->floppy_speed > 0 && p->floppy_speed < 10) {
-	p->floppy_speed = 100;
-    }
-
-    if (p->collision_level < 0 || p->collision_level > 3) {
-	write_log ("Invalid collision support level.  Using 1.\n");
-	p->collision_level = 1;
-	err = 1;
-    }
-    fixup_prefs_dimensions (p);
-
-    target_fixup_options (p);
+#endif
+#if !defined (BSDSOCKET)
+	p->socket_emu = 0;
+#endif
+  target_fixup_options (p);
 }
 
 int quit_program = 0;
 static int restart_program;
-static char restart_config[256];
+static TCHAR restart_config[MAX_DPATH];
 
 void uae_reset (int hardreset)
 {
@@ -252,124 +291,147 @@ void uae_reset (int hardreset)
 
 void uae_quit (void)
 {
-    if (quit_program != -1)
-	quit_program = -1;
-    target_quit ();
+  if (quit_program != -1)
+  	quit_program = -1;
+  target_quit ();
 }
 
 /* 0 = normal, 1 = nogui, -1 = disable nogui */
-void uae_restart (int opengui, char *cfgfile)
+void uae_restart (int opengui, TCHAR *cfgfile)
 {
   uae_quit ();
   restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
   restart_config[0] = 0;
   if (cfgfile)
-	  strcpy (restart_config, cfgfile);
+  	_tcscpy (restart_config, cfgfile);
 }
 
-static void parse_cmdline_2 (int argc, char **argv)
+static void parse_cmdline_2 (int argc, TCHAR **argv)
 {
-    int i;
+  int i;
 
-    cfgfile_addcfgparam (0);
-    for (i = 1; i < argc; i++) {
-	if (strcmp (argv[i], "-cfgparam") == 0) {
-	    if (i + 1 == argc)
-		write_log ("Missing argument for '-cfgparam' option.\n");
-	    else
-		cfgfile_addcfgparam (argv[++i]);
-	}
+  cfgfile_addcfgparam (0);
+  for (i = 1; i < argc; i++) {
+		if (_tcsncmp (argv[i], _T("-cfgparam="), 10) == 0) {
+      cfgfile_addcfgparam (argv[i] + 10);
+		} else if (_tcscmp (argv[i], _T("-cfgparam")) == 0) {
+      if (i + 1 == argc)
+				write_log (_T("Missing argument for '-cfgparam' option.\n"));
+      else
+	      cfgfile_addcfgparam (argv[++i]);
     }
+  }
 }
 
 
-static void parse_cmdline (int argc, char **argv)
+static TCHAR *parsetext (const TCHAR *s)
+{
+  if (*s == '"' || *s == '\'') {
+  	TCHAR *d;
+  	TCHAR c = *s++;
+  	int i;
+  	d = my_strdup (s);
+  	for (i = 0; i < _tcslen (d); i++) {
+	    if (d[i] == c) {
+    		d[i] = 0;
+    		break;
+	    }
+  	}
+  	return d;
+  } else {
+  	return my_strdup (s);
+  }
+}
+static TCHAR *parsetextpath (const TCHAR *s)
+{
+	TCHAR *s2 = parsetext (s);
+	TCHAR *s3 = target_expand_environment (s2);
+	xfree (s2);
+	return s3;
+}
+
+static void parse_cmdline (int argc, TCHAR **argv)
 {
   int i;
 
   for (i = 1; i < argc; i++) {
-#ifdef DEBUG_M68K
-extern int debug_frame_start;
-extern int debug_frame_end;
-    if (strcmp (argv[i], "-debug_start") == 0) {
-      if(i < argc) {
-        ++i;
-        debug_frame_start = atoi(argv[i]);
-        continue;
-      }
-    }
-    if (strcmp (argv[i], "-debug_end") == 0) {
-      if(i < argc) {
-        ++i;
-        debug_frame_end = atoi(argv[i]);
-        continue;
-      }
-    }
-#endif
-    if (strcmp (argv[i], "-cfgparam") == 0) {
+	  if (_tcscmp (argv[i], _T("-cfgparam")) == 0) {
 	    if (i + 1 < argc)
 		    i++;
-	  } else if (strncmp (argv[i], "-config=", 8) == 0) {
+		} else if (_tcsncmp (argv[i], _T("-config="), 8) == 0) {
+	    TCHAR *txt = parsetextpath (argv[i] + 8);
 	    currprefs.mountitems = 0;
-	    target_cfgfile_load (&currprefs, argv[i] + 8, -1, 1);
-	  } else if (strncmp (argv[i], "-statefile=", 11) == 0) {
+	    target_cfgfile_load (&currprefs, txt, -1, 0);
+	    xfree (txt);
+		} else if (_tcsncmp (argv[i], _T("-statefile="), 11) == 0) {
+	    TCHAR *txt = parsetextpath (argv[i] + 11);
 	    savestate_state = STATE_DORESTORE;
-	    strcpy (savestate_fname, argv[++i]);
-	  }
+	    _tcscpy (savestate_fname, txt);
+	    xfree (txt);
+		} else if (_tcscmp (argv[i], _T("-f")) == 0) {
 	  /* Check for new-style "-f xxx" argument, where xxx is config-file */
-	  else if (strcmp (argv[i], "-f") == 0) {
 	    if (i + 1 == argc) {
-		    write_log ("Missing argument for '-f' option.\n");
+				write_log (_T("Missing argument for '-f' option.\n"));
 	    } else {
+				TCHAR *txt = parsetextpath (argv[++i]);
         currprefs.mountitems = 0;
-		    target_cfgfile_load (&currprefs, argv[++i], -1, 1);
+		    target_cfgfile_load (&currprefs, txt, -1, 0);
+				xfree (txt);
 	    }
-	  } else if (strcmp (argv[i], "-s") == 0) {
+		} else if (_tcscmp (argv[i], _T("-s")) == 0) {
 	    if (i + 1 == argc)
-		    write_log ("Missing argument for '-s' option.\n");
+				write_log (_T("Missing argument for '-s' option.\n"));
 	    else
 		    cfgfile_parse_line (&currprefs, argv[++i], 0);
 	  } else {
 	    if (argv[i][0] == '-' && argv[i][1] != '\0') {
-		    const char *arg = argv[i] + 2;
+		    const TCHAR *arg = argv[i] + 2;
 		    int extra_arg = *arg == '\0';
 		    if (extra_arg)
 		      arg = i + 1 < argc ? argv[i + 1] : 0;
-		    if (parse_cmdline_option (&currprefs, argv[i][1], (char*)arg) && extra_arg)
+		    if (parse_cmdline_option (&currprefs, argv[i][1], arg) && extra_arg)
 		      i++;
 	    }
 	  }
   }
 }
 
-static void parse_cmdline_and_init_file (int argc, char **argv)
+static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
 {
-    parse_cmdline_2 (argc, argv);
+	_tcscpy (optionsfile, _T(""));
 
-    if (! target_cfgfile_load (&currprefs, restart_config, 0, 0)) {
-	write_log ("failed to load config '%s'\n", restart_config);
-    }
-    fixup_prefs (&currprefs);
+  parse_cmdline_2 (argc, argv);
 
-    parse_cmdline (argc, argv);
+	_tcscat (optionsfile, restart_config);
+
+  if (! target_cfgfile_load (&currprefs, optionsfile, 0, 0)) {
+  	write_log (_T("failed to load config '%s'\n"), optionsfile);
+  }
+  fixup_prefs (&currprefs);
+
+  parse_cmdline (argc, argv);
 }
 
 void reset_all_systems (void)
 {
-    init_eventtab ();
+  init_eventtab ();
 
 #ifdef PICASSO96
-    picasso_reset ();
+  picasso_reset ();
 #endif
 #ifdef FILESYS
-    filesys_prepare_reset ();
-    filesys_reset ();
+  filesys_prepare_reset ();
+  filesys_reset ();
 #endif
-    memory_reset ();
+  memory_reset ();
+#if defined (BSDSOCKET)
+	bsdlib_reset ();
+#endif
 #ifdef FILESYS
-    filesys_start_threads ();
-    hardfile_reset ();
+  filesys_start_threads ();
+  hardfile_reset ();
 #endif
+  native2amiga_reset ();
 }
 
 /* Okay, this stuff looks strange, but it is here to encourage people who
@@ -395,7 +457,7 @@ void do_start_program (void)
 void do_leave_program (void)
 {
 #ifdef JIT
-    compiler_exit();
+  compiler_exit();
 #endif
   graphics_leave ();
   inputdevice_close ();
@@ -410,6 +472,7 @@ void do_leave_program (void)
 #endif
 #ifdef FILESYS
   filesys_cleanup ();
+  hardfile_reset();
 #endif
 #ifdef BSDSOCKET
   bsdlib_reset ();
@@ -429,7 +492,7 @@ void leave_program (void)
     do_leave_program ();
 }
 
-static void real_main2 (int argc, char **argv)
+static int real_main2 (int argc, TCHAR **argv)
 {
 #ifdef RASPBERRY
   printf("Uae4arm v0.4 for Raspberry Pi by Chips\n");
@@ -448,7 +511,7 @@ static void real_main2 (int argc, char **argv)
   }
 
   if (! graphics_setup ()) {
-	abort();
+	  abort();
   }
 
   if (restart_config[0])
@@ -458,11 +521,11 @@ static void real_main2 (int argc, char **argv)
 
   if (!machdep_init ()) {
 	  restart_program = 0;
-	  return;
+	  return -1;
   }
 
   if (! setup_sound ()) {
-  	write_log ("Sound driver unavailable: Sound output disabled\n");
+		write_log (_T("Sound driver unavailable: Sound output disabled\n"));
   	currprefs.produce_sound = 0;
   }
   inputdevice_init();
@@ -474,14 +537,14 @@ static void real_main2 (int argc, char **argv)
   else if (restart_program == 3)
 	  no_gui = 0;
   restart_program = 0;
-
   if (! no_gui) {
 	  int err = gui_init ();
 	  currprefs = changed_prefs;
 	  if (err == -1) {
-      write_log ("Failed to initialize the GUI\n");
+			write_log (_T("Failed to initialize the GUI\n"));
+      return -1;
 	  } else if (err == -2) {
-      return;
+      return 1;
 	  }
   }
   else
@@ -492,6 +555,7 @@ static void real_main2 (int argc, char **argv)
 
   fixup_prefs (&currprefs);
   changed_prefs = currprefs;
+	target_run ();
   /* force sound settings change */
   currprefs.produce_sound = 0;
 
@@ -515,6 +579,9 @@ static void real_main2 (int argc, char **argv)
   memory_reset ();
 
 #ifdef AUTOCONFIG
+#if defined (BSDSOCKET)
+	bsdlib_install ();
+#endif
   emulib_install ();
   native2amiga_install ();
 #endif
@@ -531,21 +598,21 @@ static void real_main2 (int argc, char **argv)
 
     if(!init_audio ()) {
   	  if (sound_available && currprefs.produce_sound > 1) {
-		    write_log ("Sound driver unavailable: Sound output disabled\n");
+				write_log (_T("Sound driver unavailable: Sound output disabled\n"));
 	    }
 		  currprefs.produce_sound = 0;
     }
-
 		start_program ();
 	}
+  return 0;
 }
 
-void real_main (int argc, char **argv)
+void real_main (int argc, TCHAR **argv)
 {
   restart_program = 1;
-  fetch_configurationpath (restart_config, sizeof (restart_config));
-  strcat (restart_config, OPTIONSFILENAME);
-  strcat (restart_config, ".uae");
+  fetch_configurationpath (restart_config, sizeof (restart_config) / sizeof (TCHAR));
+  _tcscat (restart_config, OPTIONSFILENAME);
+  _tcscat (restart_config, ".uae");
   while (restart_program) {
 	  changed_prefs = currprefs;
 	  real_main2 (argc, argv);
@@ -556,7 +623,7 @@ void real_main (int argc, char **argv)
 }
 
 #ifndef NO_MAIN_IN_MAIN_C
-int main (int argc, char *argv[])
+int main (int argc, TCHAR **argv)
 {
     real_main (argc, argv);
     return 0;
