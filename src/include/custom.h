@@ -77,7 +77,7 @@ STATIC_INLINE uae_u16 INTREQR (void)
 /* maximums for statically allocated tables */
 
 #define MAXHPOS 227
-#define MAXVPOS 312
+#define MAXVPOS 314
 
 /* PAL/NTSC values */
 

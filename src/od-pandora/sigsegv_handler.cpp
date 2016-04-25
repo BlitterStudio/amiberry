@@ -65,7 +65,7 @@ enum {
 
 static inline void unknown_instruction(uae_u32 instr) 
 {
-	panicbug("Unknown instruction %08x!", instr);
+	panicbug("Unknown instruction %08x!\n", instr);
   SDL_Quit();
 	abort();
 }
@@ -80,7 +80,7 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 
 	if (in_handler > 0) 
 	{
-    panicbug("Segmentation fault in handler :-(");
+    panicbug("Segmentation fault in handler :-(\n");
     return false;
   }
 

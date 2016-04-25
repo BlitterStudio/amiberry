@@ -280,6 +280,8 @@ static void parse_peripheral(struct uae_prefs *p, xmlNode *node)
             p->cpu_model = atoi((const char *) attr);
             if(p->cpu_model > 68020)
               p->address_space_24 = 0;
+            if(p->cpu_model == 68040)
+              p->fpu_model = 68040;
             xmlFree(attr);
           }
           attr = xmlGetProp(curr_node, (const xmlChar *) _T("speed"));
@@ -287,6 +289,18 @@ static void parse_peripheral(struct uae_prefs *p, xmlNode *node)
           {
             if(strcmp((const char *) attr, "max") == 0)
               p->m68k_speed = -1;
+            xmlFree(attr);
+          }
+        }
+        else if(strcmp((const char *)content, "fpu") == 0)
+        {
+          xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *) _T("type"));
+          if(attr != NULL) 
+          {
+            if(strcmp((const char *) attr, "68881") == 0)
+              p->fpu_model = 68881;
+            else if(strcmp((const char *) attr, "68882") == 0)
+              p->fpu_model = 68882;
             xmlFree(attr);
           }
         }

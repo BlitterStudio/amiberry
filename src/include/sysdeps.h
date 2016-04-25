@@ -286,6 +286,13 @@ extern TCHAR *my_strdup (const TCHAR*s);
 #define REGPARAM3 
 #define REGPARAM
 
+#define abort() \
+  do { \
+    printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
+    SDL_Quit(); \
+    (abort) (); \
+} while (0)
+
 #endif
 
 #ifdef DONT_HAVE_POSIX

@@ -174,11 +174,11 @@ STATIC_INLINE int isword(uae_s32 x)
 	return (x>=-32768 && x<=32767);
 }
 
-#define jit_unimplemented(fmt, ...) do{ panicbug("**** Unimplemented ****"); panicbug(fmt, ## __VA_ARGS__); abort(); }while (0)
+#define jit_unimplemented(fmt, ...) do{ panicbug("**** Unimplemented ****\n"); panicbug(fmt, ## __VA_ARGS__); abort(); }while (0)
 
 static void jit_fail(const char *msg, const char *file, int line, const char *function)
 {
-	panicbug("JIT failure in function %s from file %s at line %d: %s",
+	panicbug("JIT failure in function %s from file %s at line %d: %s\n",
 			function, file, line, msg);
 	abort();
 }

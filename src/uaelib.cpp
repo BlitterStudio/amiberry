@@ -177,6 +177,7 @@ static uae_u32 emulib_InsertDisk (uaecptr name, uae_u32 drive)
  */
 static uae_u32 emulib_ExitEmu (void)
 {
+    gui_message("Amiga sent signal to quit emulator.");
     uae_quit ();
     return 1;
 }

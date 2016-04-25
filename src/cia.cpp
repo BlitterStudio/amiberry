@@ -600,9 +600,8 @@ static uae_u8 ReadCIAB (unsigned int addr)
 
   switch (reg) {
   case 0:
-	  /* Returning some 1 bits is necessary for Tie Break - otherwise its joystick
-	     code won't work.  */
-	  return ciabpra | 3;
+		tmp = 0;
+		return tmp;
   case 1:
 	  tmp = ciabprb;
 	  if (ciabcrb & 2) {
@@ -682,7 +681,6 @@ static void WriteCIAA (uae_u16 addr,uae_u8 val)
   	break;
   case 1:
 	  ciaaprb = val;
-	  ciaaicr |= 0x10;
 	  break;
   case 2:
 	  ciaadra = val; 

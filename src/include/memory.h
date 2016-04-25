@@ -180,15 +180,6 @@ STATIC_INLINE void put_byte(uaecptr addr, uae_u32 b)
     byteput(addr, b);
 }
 
-#define x_get_byte(a) get_byte(a)
-#define x_get_word(a) get_word(a)
-#define x_get_long(a) get_long(a)
-#define x_put_byte(a,d) put_byte(a,d)
-#define x_put_word(a,d) put_word(a,d)
-#define x_put_long(a,d) put_long(a,d)
-#define x_next_iword() next_iword(regs)
-#define x_next_ilong() next_ilong(regs)
-
 /*
  * Read a host pointer from addr
  */

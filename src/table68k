@@ -83,9 +83,9 @@
 0000 0110 11ss sSSS:20:-----:XNZVC:--:10: CALLM   s[!Dreg,Areg,Aipi,Apdi,Immd]
 0000 0110 11ss sSSS:20:XNZVC:-----:-R:10: RTM     s[Dreg,Areg]
 0000 1000 00ss sSSS:00:--Z--:-----:--:11: BTST    #1,s[!Areg]
-0000 1000 01ss sSSS:00:--Z--:-----:--:13: BCHG    #1,s[!Areg,Immd]
-0000 1000 10ss sSSS:00:--Z--:-----:--:13: BCLR    #1,s[!Areg,Immd]
-0000 1000 11ss sSSS:00:--Z--:-----:--:13: BSET    #1,s[!Areg,Immd]
+0000 1000 01ss sSSS:00:--Z--:-----:--:13: BCHG    #1,s[!Areg,Immd,PC8r,PC16]
+0000 1000 10ss sSSS:00:--Z--:-----:--:13: BCLR    #1,s[!Areg,Immd,PC8r,PC16]
+0000 1000 11ss sSSS:00:--Z--:-----:--:13: BSET    #1,s[!Areg,Immd,PC8r,PC16]
 0000 1010 0011 1100:00:XNZVC:XNZVC:--:10: EORSR.B #1
 0000 1010 0111 1100:02:XNZVC:XNZVC:T-:10: EORSR.W #1
 0000 1010 zzdd dDDD:00:-NZ00:-----:--:13: EOR.z   #z,d[!Areg]
@@ -103,9 +103,9 @@
 0000 rrr1 10dd dDDD:00:-----:-----:--:12: MVPRM.W Dr,d[Areg-Ad16]
 0000 rrr1 11dd dDDD:00:-----:-----:--:12: MVPRM.L Dr,d[Areg-Ad16]
 0000 rrr1 00ss sSSS:00:--Z--:-----:--:11: BTST    Dr,s[!Areg]
-0000 rrr1 01ss sSSS:00:--Z--:-----:--:13: BCHG    Dr,s[!Areg,Immd]
-0000 rrr1 10ss sSSS:00:--Z--:-----:--:13: BCLR    Dr,s[!Areg,Immd]
-0000 rrr1 11ss sSSS:00:--Z--:-----:--:13: BSET    Dr,s[!Areg,Immd]
+0000 rrr1 01ss sSSS:00:--Z--:-----:--:13: BCHG    Dr,s[!Areg,Immd,PC8r,PC16]
+0000 rrr1 10ss sSSS:00:--Z--:-----:--:13: BCLR    Dr,s[!Areg,Immd,PC8r,PC16]
+0000 rrr1 11ss sSSS:00:--Z--:-----:--:13: BSET    Dr,s[!Areg,Immd,PC8r,PC16]
 
 0001 DDDd ddss sSSS:00:-NZ00:-----:--:12: MOVE.B  s,d[!Areg]
 0010 DDDd ddss sSSS:00:-----:-----:--:12: MOVEA.L s,d[Areg]

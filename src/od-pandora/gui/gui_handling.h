@@ -85,6 +85,7 @@ void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);
 
 void RefreshAllPanels(void);
+void RegisterRefreshFunc(void (*func)(void));
 
 void DisableResume(void);
 

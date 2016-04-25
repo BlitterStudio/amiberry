@@ -87,14 +87,6 @@ get_fs_usage
 	const TCHAR *disk,
 	struct fs_usage *fsp)
 {
-	/* TODO: *** use RFs:Volume() to get free space *** */
-	/* Just a hack */
-	fsp->fsu_blocks = 507289;
-	fsp->fsu_bfree = 3435973;
-	fsp->fsu_bavail = 507289 / 2;
-	fsp->fsu_files = 3435973;
-	fsp->fsu_ffree = 3435973;
-		
 #ifdef STAT_STATFS3_OSF1
 # define CONVERT_BLOCKS(B) adjust_blocks ((B), fsd.f_fsize, 512)
 

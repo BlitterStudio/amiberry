@@ -2264,7 +2264,8 @@ static void init_hz (bool fullinit)
 		// (someone poked VPOSW)
 		if (vpos_count < 10)
 			vpos_count = 10;
-		vblank_hz = (isntsc ? 15734 : 15625) / vpos_count;
+		float new_hz = (isntsc ? 15734.0 : 15625.0) / (float)vpos_count;
+		vblank_hz = (int)(new_hz + 0.5);
 		maxvpos_nom = vpos_count - (lof_current ? 1 : 0);
 		reset_drawing ();
 	}
@@ -2276,7 +2277,8 @@ static void init_hz (bool fullinit)
 	  if (htotal >= MAXHPOS)
 	    htotal = MAXHPOS - 1;
 	  maxhpos = htotal + 1;
-	  vblank_hz = 227 * 312 * 50 / (maxvpos * maxhpos);
+	  float new_hz = 227.0 * 312.0 * 50.0 / (float)(maxvpos * maxhpos);
+	  vblank_hz = (int)(new_hz + 0.5);
 	  minfirstline = vsstop;
 	  if (minfirstline < 2)
 	      minfirstline = 2;
@@ -2401,8 +2403,8 @@ static uae_u32 REGPARAM2 timehack_helper (TrapContext *context)
   timehack_alive = 10;
 
   gettimeofday (&tv, NULL);
-  x_put_long (m68k_areg (regs, 0), tv.tv_sec - (((365 * 8 + 2) * 24) * 60 * 60));
-  x_put_long (m68k_areg (regs, 0) + 4, tv.tv_usec);
+  put_long (m68k_areg (regs, 0), tv.tv_sec - (((365 * 8 + 2) * 24) * 60 * 60));
+  put_long (m68k_areg (regs, 0) + 4, tv.tv_usec);
   return 0;
 #else
   return 2;

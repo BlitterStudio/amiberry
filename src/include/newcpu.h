@@ -48,7 +48,7 @@ extern int fpp_movem_next[256];
 
 struct regstruct;
 
-typedef unsigned long REGPARAM3 cpuop_func (uae_u32, struct regstruct &regs) REGPARAM;
+typedef uae_u32 REGPARAM3 cpuop_func (uae_u32, struct regstruct &regs) REGPARAM;
 typedef void REGPARAM3 cpuop_func_ce (uae_u32, struct regstruct &regs) REGPARAM;
 
 struct cputbl {
@@ -191,7 +191,6 @@ STATIC_INLINE void m68k_do_bsr (struct regstruct &regs, uaecptr oldpc, uae_s32 o
 }
 
 #define get_ibyte(o) do_get_mem_byte((uae_u8 *)((regs).pc_p + (o) + 1))
-
 #define get_iword(o) do_get_mem_word((uae_u16 *)((regs).pc_p + (o)))
 #define get_ilong(o) do_get_mem_long((uae_u32 *)((regs).pc_p + (o)))
 #define get_iword2(regs,o) do_get_mem_word((uae_u16 *)((regs).pc_p + (o)))
@@ -211,16 +210,8 @@ STATIC_INLINE uae_u32 next_ilong (struct regstruct &regs)
   return r;
 }
 
-#ifndef x_get_byte
-#define x_get_byte(x)     get_byte(x)
-#define x_get_word(x)     get_word(x)
-#define x_get_long(x)     get_long(x)
-#define x_put_byte(x,y)   put_byte(x,y)
-#define x_put_word(x,y)   put_word(x,y)
-#define x_put_long(x,y)   put_long(x,y)
-#endif
-
-extern uae_u32 REGPARAM3 x_get_disp_ea_020 (struct regstruct &regs, uae_u32 base, uae_u32 dp) REGPARAM;
+extern uae_u32 (*x_next_iword)(struct regstruct &regs);
+extern uae_u32 (*x_next_ilong)(struct regstruct &regs);
 
 extern void m68k_setstopped (void);
 extern void m68k_resumestopped (void);
@@ -261,6 +252,21 @@ STATIC_INLINE int bitset_count(uae_u32 data)
   return c;
 }
 
+STATIC_INLINE int bitset_count16(uae_u16 data)
+{
+  unsigned int const MASK1  = 0x5555;
+  unsigned int const MASK2  = 0x3333;
+  unsigned int const MASK4  = 0x0f0f;
+  unsigned int const MASK6  = 0x003f;
+
+  unsigned int const w = (data & MASK1) + ((data >> 1) & MASK1);
+  unsigned int const x = (w & MASK2) + ((w >> 2) & MASK2);
+  unsigned int const y = ((x + (x >> 4)) & MASK4);
+  unsigned int const z = (y + (y >> 8)) & MASK6;
+
+  return z;
+}
+
 extern void mmu_op (uae_u32, struct regstruct &regs, uae_u32);
 extern void mmu_op30 (uaecptr, uae_u32, struct regstruct &regs, uae_u16, uaecptr);
 
@@ -275,14 +281,13 @@ extern void fpu_reset (void);
 
 extern void exception3 (uae_u32 opcode, uaecptr addr);
 extern void exception3i (uae_u32 opcode, uaecptr addr);
+extern void exception2 (uaecptr addr);
 extern void cpureset (void);
 
 extern void fill_prefetch (void);
 
 #define CPU_OP_NAME(a) op ## a
 
-/* 68060 */
-extern const struct cputbl op_smalltbl_0_ff[];
 /* 68040 */
 extern const struct cputbl op_smalltbl_1_ff[];
 /* 68030 */

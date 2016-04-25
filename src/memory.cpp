@@ -120,7 +120,7 @@ static uae_u32 REGPARAM2 dummy_bget (uaecptr addr)
 #endif
   if (currprefs.cpu_model >= 68020)
     return NONEXISTINGDATA;
-  return (addr & 1) ? regs.irc : regs.irc >> 8;
+  return (addr & 1) ? (regs.irc & 0xff) : ((regs.irc >> 8) & 0xff);
 }
 
 static void REGPARAM2 dummy_lput (uaecptr addr, uae_u32 l)
@@ -555,13 +555,26 @@ int REGPARAM2 default_check (uaecptr a, uae_u32 b)
   return 0;
 }
 
+static int be_cnt;
+
 uae_u8 *REGPARAM2 default_xlate (uaecptr a)
 {
   if (quit_program == 0) {
     /* do this only in 68010+ mode, there are some tricky A500 programs.. */
     if(currprefs.cpu_model > 68000 || !currprefs.cpu_compatible) {
-      write_log (_T("Your Amiga program just did something terribly stupid %08X PC=%08X\n"), a, M68K_GETPC);
-      uae_reset (0);
+			if (be_cnt < 3) {
+        write_log (_T("Your Amiga program just did something terribly stupid %08X PC=%08X\n"), a, M68K_GETPC);
+      }
+			be_cnt++;
+			if (be_cnt > 1000) {
+        uae_reset (0);
+				be_cnt = 0;
+			} else {
+				regs.panic = 1;
+				regs.panic_pc = m68k_getpc (regs);
+				regs.panic_addr = a;
+				set_special (regs, SPCFLAG_BRK);
+			}
     }
   }
   return kickmem_xlate (2);	/* So we don't crash. */

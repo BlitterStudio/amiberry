@@ -244,7 +244,11 @@ static void *trap_thread (void *arg)
   /* Enter critical section - only one trap at a time, please! */
   uae_sem_wait (&trap_mutex);
 
+  // In WinUAE, ccrflags are not part of regs-struct, so don't restore
+  // these flags here. Keep the current flags...
+  struct flag_struct currflags = regs.ccrflags;
   regs = context->saved_regs;
+  regs.ccrflags = currflags;
   /* Don't allow an interrupt and thus potentially another
    * trap to be invoked while we hold the above mutex.
    * This is probably just being paranoid. */

@@ -50,6 +50,7 @@ void do_cycles_cpu_fastest (unsigned long cycles_to_add)
 	    regs.pissoff = pissoff_value;
 	    return;
   	}
+  	is_syncline = 0;
   }
 
   while ((nextevent - currcycle) <= cycles_to_add) {

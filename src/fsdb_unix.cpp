@@ -14,16 +14,38 @@
 
 #include "fsdb.h"
 
-/* Return nonzero for any name we can't create on the native filesystem.  */
-int fsdb_name_invalid (const char *n)
+/* these are deadly (but I think allowed on the Amiga): */
+#define NUM_EVILCHARS 7
+static TCHAR evilchars[NUM_EVILCHARS] = { '\\', '*', '?', '\"', '<', '>', '|' };
+
+static int fsdb_name_invalid_2 (const TCHAR *n, int dir)
 {
-    if (strcmp (n, FSDB_FILE) == 0)
-	return 1;
-    if (n[0] != '.')
-	return 0;
-    if (n[1] == '\0')
-	return 1;
-    return n[1] == '.' && n[2] == '\0';
+  int i;
+
+  /* the reserved fsdb filename */
+  if (_tcscmp (n, FSDB_FILE) == 0)
+  	return -1;
+
+  /* these characters are *never* allowed */
+  for (i = 0; i < NUM_EVILCHARS; i++) {
+    if (_tcschr (n, evilchars[i]) != 0)
+      return 1;
+  }
+
+  if (n[0] != '.')
+  	return 0;
+  if (n[1] == '\0')
+  	return 1;
+  return n[1] == '.' && n[2] == '\0';
+}
+
+int fsdb_name_invalid (const TCHAR *n)
+{
+        int v = fsdb_name_invalid_2 (n, 0);
+        if (v <= 0)
+                return v;
+        write_log (_T("FILESYS: '%s' illegal filename\n"), n);
+        return v;
 }
 
 int fsdb_exists (char *nname)

@@ -76,7 +76,7 @@
 #define HAVE_GETMNTENT 1
 
 /* Define if your struct stat has st_blocks.  */
-/* #undef HAVE_ST_BLOCKS */
+#define HAVE_ST_BLOCKS
 
 /* Define if utime(file, NULL) sets file's timestamp to the present.  */
 #define HAVE_UTIME_NULL 1
@@ -206,7 +206,7 @@
 #define SIZEOF_DOUBLE 8
 
 #define HAVE_ISNAN
-#undef HAVE_ISINF
+#define HAVE_ISINF
 
 /* Define if you have the bcopy function.  */
 #define HAVE_BCOPY 1

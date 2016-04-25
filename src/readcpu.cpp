@@ -412,11 +412,9 @@ out2:
 			case 'a': srcmode = Aind; pos++; break;
 			}
 			break;
-#if 0
 		case 'L':
 			srcmode = absl;
 			break;
-#endif
 		case '#':
 			switch (opcstr[pos++]) {
 			case 'z': srcmode = imm; break;
@@ -621,11 +619,9 @@ out2:
 			case 'P': destmode = Aipi; pos++; break;
 			}
 			break;
-#if 0
 		case 'L':
 			destmode = absl;
 			break;
-#endif
 		case '#':
 			switch (opcstr[pos++]) {
 			case 'z': destmode = imm; break;
@@ -757,7 +753,7 @@ out2:
 endofline:
 		/* now, we have a match */
 		if (table68k[opc].mnemo != i_ILLG)
-	    fprintf(stderr, "Double match: %x: %s\n", opc, opcstr);
+			;//write_log (_T("Double match: %x: %s\n"), opc, opcstr);
 		if (find == -1) {
 			for (find = 0;; find++) {
 				if (_tcscmp (mnemonic, lookuptab[find].name) == 0) {

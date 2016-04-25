@@ -51,7 +51,9 @@ extern int sprite_buffer_res;
 
 static void lores_reset (void)
 {
-	//sprite_buffer_res = currprefs.gfx_resolution;
+  sprite_buffer_res = (currprefs.chipset_mask & CSMASK_AGA) ? RES_SUPERHIRES : RES_LORES;
+  if (sprite_buffer_res > currprefs.gfx_resolution)
+  	sprite_buffer_res = currprefs.gfx_resolution;
 }
 
 bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */

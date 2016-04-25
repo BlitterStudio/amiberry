@@ -102,6 +102,13 @@ void gui_force_rtarea_hdchange(void)
   gui_rtarea_flags_onenter |= 2;
 }
 
+static void (*refreshFuncAfterDraw)(void) = NULL;
+
+void RegisterRefreshFunc(void (*func)(void))
+{
+  refreshFuncAfterDraw = func;
+}
+
 
 namespace sdl
 {
@@ -271,6 +278,13 @@ namespace sdl
       uae_gui->draw();
       // Finally we update the screen.
       SDL_Flip(gui_screen);
+      
+      if(refreshFuncAfterDraw != NULL)
+      {
+        void (*currFunc)(void) = refreshFuncAfterDraw;
+        refreshFuncAfterDraw = NULL;
+        currFunc();
+      }
     }
   }
 

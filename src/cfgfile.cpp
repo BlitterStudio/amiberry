@@ -1747,7 +1747,7 @@ void default_prefs (struct uae_prefs *p, int type)
   p->gfx_size_win.width = 320;
   p->gfx_size_win.height = 240;
 #ifdef RASPBERRY
-  p->gfx_size.width = 384;
+  p->gfx_size.width = 640;
   p->gfx_size.height = 262;
 #else
   p->gfx_size.width = 320;
@@ -1838,7 +1838,7 @@ int bip_a500 (struct uae_prefs *p, int rom)
   }
   p->chipmem_size = 0x00080000;
 	p->chipset_mask = 0;
-  p->cpu_compatible = 1;
+  p->cpu_compatible = 0;
   p->fast_copper = 0;
   p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
@@ -1866,7 +1866,7 @@ int bip_a500plus (struct uae_prefs *p, int rom)
   }
   p->chipmem_size = 0x00100000;
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-  p->cpu_compatible = 1;
+  p->cpu_compatible = 0;
   p->fast_copper = 0;
   p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
@@ -1927,7 +1927,7 @@ int bip_a2000 (struct uae_prefs *p, int rom)
   p->chipmem_size = 0x00080000;
   p->bogomem_size = 0x00080000;
 	p->chipset_mask = 0;
-  p->cpu_compatible = 1;
+  p->cpu_compatible = 0;
   p->fast_copper = 0;
   p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
@@ -1937,13 +1937,12 @@ int bip_a2000 (struct uae_prefs *p, int rom)
 
 int bip_a4000 (struct uae_prefs *p, int rom)
 {
-	int roms[8];
+	int roms[4];
 
-	roms[0] = 16;
-	roms[1] = 31;
-	roms[2] = 13;
-	roms[3] = 12;
-	roms[4] = -1;
+	roms[0] = 15;
+	roms[1] = 14;
+	roms[2] = 11;
+	roms[3] = -1;
 
 	p->immediate_blits = 1;
 	p->bogomem_size = 0;

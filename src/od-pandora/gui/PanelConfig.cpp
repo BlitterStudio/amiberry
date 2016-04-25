@@ -16,6 +16,7 @@
 
 
 static char last_active_config[MAX_PATH] = { '\0' };
+static int ensureVisible = -1;
 
 static gcn::Button *cmdLoad;
 static gcn::Button *cmdSave;
@@ -280,13 +281,13 @@ void InitPanelConfig(const struct _ConfigCategory& category)
   scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
   scrAreaConfigs->setScrollbarWidth(20);
   scrAreaConfigs->setBaseColor(gui_baseCol);
-
   category.panel->add(scrAreaConfigs);
 
   if(strlen(last_active_config) == 0)
     strncpy(last_active_config, OPTIONSFILENAME, MAX_PATH);
   txtName->setText(last_active_config);
   txtDesc->setText(changed_prefs.description);
+  ensureVisible = -1;
   RefreshPanelConfig();
 }
 
@@ -313,6 +314,16 @@ void ExitPanelConfig(void)
 }
 
 
+static void MakeCurrentVisible(void)
+{
+  if(ensureVisible >= 0)
+  {
+    scrAreaConfigs->setVerticalScrollAmount(ensureVisible * 19);
+    ensureVisible = -1;
+  }
+}
+
+
 void RefreshPanelConfig(void)
 {
   ReadConfigFileList();
@@ -327,6 +338,8 @@ void RefreshPanelConfig(void)
       {
         // Select current entry
         lstConfigs->setSelected(i);
+        ensureVisible = i;
+        RegisterRefreshFunc(MakeCurrentVisible);
         break;
       }
     }
