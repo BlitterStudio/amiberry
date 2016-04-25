@@ -127,14 +127,12 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)
 {
-  if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
-		con0 &= ~0x40; // SUPERHIRES
-  return ((con0) & 0x8000) ? RES_HIRES : ((con0) & 0x40) ? RES_SUPERHIRES : RES_LORES;
+  return ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 STATIC_INLINE int GET_RES_AGNUS (uae_u16 con0)
 {
   if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-		con0 &= ~0x40; // SUPERHIRES
+		con0 &= ~0x40; // no SUPERHIRES
   return ((con0) & 0x8000) ? RES_HIRES : ((con0) & 0x40) ? RES_SUPERHIRES : RES_LORES;
 }
 /* get sprite width from FMODE */

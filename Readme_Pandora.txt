@@ -37,6 +37,8 @@ The main differences to UAE4ALL:
  - Picasso96
  - GUI
  - bsdsockets
+ - RDB hardfiles
+ - Support for rp9
  
 What's missing compared to WinUAE:
  - Cycle exact emulation of cpu and blitter
@@ -44,7 +46,6 @@ What's missing compared to WinUAE:
  - AHI
  - CD
  - Builtin debugger
- - RDB-harddisks
 and some more...
  
 
@@ -85,6 +86,9 @@ necessary folders in pandora/appdata on you SD card.
 In order to use UAE4ALL you need an Amiga Bios image (kickstart rom). Place all your roms and the keyfiles (if required)
 in the appdata folder of UAE4ARM and select this folder with the GUI (goto page Paths, choose folder in option "System ROMS"
 and click on "Rescan ROMs").
+
+To use rp9, you have to copy the rp9 files and the files workbench-135.hdf, workbench-211.hdf and workbench-311.hdf from
+the AmigaForever data folder to appdata/uae4arm/rp9.
 
 
 ------------------------------------

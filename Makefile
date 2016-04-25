@@ -36,7 +36,9 @@ PANDORA=1
 
 SDL_CFLAGS = `sdl-config --cflags`
 
+DEFS +=  `xml2-config --cflags`
 DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
+DEFS += -DWITH_INGAME_WARNING
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 DEFS += -DUSE_SDL
 
@@ -53,7 +55,7 @@ MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/
 MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -Wno-unused -Wno-format  -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
-LDFLAGS +=  -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
+LDFLAGS +=  -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
 
 ifndef DEBUG
 MORE_CFLAGS += -O3 -fomit-frame-pointer
@@ -143,6 +145,7 @@ OBJS =	\
 	src/md-pandora/support.o \
 	src/od-pandora/bsdsocket_host.o \
 	src/od-pandora/fsdb_host.o \
+	src/od-pandora/hardfile_pandora.o \
 	src/od-pandora/joystick.o \
 	src/kb-sdl/keyboard.o \
 	src/od-pandora/inputmode.o \
@@ -150,6 +153,7 @@ OBJS =	\
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \
 	src/od-pandora/pandora_gui.o \
+	src/od-pandora/pandora_rp9.o \
 	src/od-pandora/pandora_mem.o \
 	src/od-pandora/sigsegv_handler.o \
 	src/od-pandora/menu/menu_config.o \

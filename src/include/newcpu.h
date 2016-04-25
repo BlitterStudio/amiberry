@@ -94,7 +94,7 @@ struct regstruct
   uae_u8 *pc_p;
   uae_u8 *pc_oldp;
   uae_u32 instruction_pc;
-
+  
   uae_u16 irc, ir;
   uae_u32 spcflags;
 
@@ -128,9 +128,9 @@ struct regstruct
 
   uae_u8 panic;
   uae_u32 panic_pc, panic_addr;
+  signed long pissoff;
 };
 extern unsigned long int nextevent, is_syncline, currcycle;
-extern signed long pissoff;
 
 extern struct regstruct regs;
 
@@ -146,7 +146,7 @@ extern int cpu_cycles;
 STATIC_INLINE void set_special (struct regstruct &regs, uae_u32 x)
 {
 	regs.spcflags |= x;
-  cycles_do_special();
+  cycles_do_special(regs);
 }
 
 STATIC_INLINE void unset_special (struct regstruct &regs, uae_u32 x)
@@ -168,11 +168,6 @@ STATIC_INLINE uaecptr m68k_getpc (struct regstruct &regs)
 	return (uaecptr)(regs.pc + ((uae_u8*)regs.pc_p - (uae_u8*)regs.pc_oldp));
 }
 #define M68K_GETPC m68k_getpc(regs)
-
-STATIC_INLINE uaecptr m68k_getpc_p (struct regstruct &regs, uae_u8 *p)
-{
-	return (uaecptr)(regs.pc + ((uae_u8*)p - (uae_u8*)regs.pc_oldp));
-}
 
 #define m68k_incpc(o) ((regs).pc_p += (o))
 

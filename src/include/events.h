@@ -22,11 +22,15 @@ extern int speedup_timelimit;
 extern void compute_vsynctime (void);
 extern void init_eventtab (void);
 extern void events_schedule (void);
-extern void do_cycles_slow (unsigned long cycles_to_add);
 
 extern unsigned long last_synctime;
 typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
+
+typedef void (*do_cycles_func)(unsigned long);
+extern do_cycles_func do_cycles;
+void do_cycles_cpu_fastest (unsigned long cycles_to_add);
+void do_cycles_cpu_norm (unsigned long cycles_to_add);
 
 typedef unsigned long int evt;
 
@@ -57,28 +61,22 @@ enum {
 };
 
 extern int pissoff_value;
-#define countdown pissoff
-#define do_cycles do_cycles_slow
+#define countdown (regs.pissoff)
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
 
-STATIC_INLINE void cycles_do_special (void)
+STATIC_INLINE void cycles_do_special (struct regstruct &regs)
 {
 #ifdef JIT
 	if (currprefs.cachesize) {
-		if (pissoff >= 0)
-			pissoff = -1;
+		if (regs.pissoff >= 0)
+			regs.pissoff = -1;
 	} else 
 #endif
   {
-		pissoff = 0;
+		regs.pissoff = 0;
 	}
-}
-
-STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
-{
-  pissoff -= cycles_to_add;
 }
 
 STATIC_INLINE unsigned long int get_cycles (void)

@@ -188,6 +188,11 @@ extern struct uaedev_config_info *add_filesys_config (struct uae_prefs *p, int i
 
 extern void default_prefs (struct uae_prefs *, int);
 extern void discard_prefs (struct uae_prefs *, int);
+extern int bip_a500 (struct uae_prefs *p, int rom);
+extern int bip_a500plus (struct uae_prefs *p, int rom);
+extern int bip_a1200 (struct uae_prefs *p, int rom);
+extern int bip_a2000 (struct uae_prefs *p, int rom);
+extern int bip_a4000 (struct uae_prefs *p, int rom);
 
 int parse_cmdline_option (struct uae_prefs *, TCHAR, const TCHAR *);
 

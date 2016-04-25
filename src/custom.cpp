@@ -136,7 +136,7 @@ static unsigned int bplcon0d, bplcon0dd, bplcon0_res, bplcon0_planes, bplcon0_pl
 static unsigned int diwstrt, diwstop, diwhigh;
 static int diwhigh_written;
 static unsigned int ddfstrt, ddfstop, ddfstrt_old_hpos;
-static int ddf_change, badmode;
+static int ddf_change;
 static int bplcon1_hpos;
 
 /* The display and data fetch windows */
@@ -283,7 +283,6 @@ STATIC_INLINE void setclr (uae_u16 *_GCCRES_ p, uae_u16 val)
 static void update_mirrors(void)
 {
   aga_mode = (currprefs.chipset_mask & CSMASK_AGA) ? 1 : 0;
-  direct_rgb = aga_mode;
 }
 
 STATIC_INLINE uae_u8 *_GCCRES_ pfield_xlateptr (uaecptr plpt, int bytecount)
@@ -484,7 +483,7 @@ static void create_cycle_diagram_table(void)
    		    rplanes = 0;
      		if (rplanes == 7 && fm == 0 && res == 0 && !(currprefs.chipset_mask & CSMASK_AGA))
    		    rplanes = 4;
-       		real_bitplane_number[fm][res][planes] = rplanes;
+       	real_bitplane_number[fm][res][planes] = rplanes;
       }
     }
   }
@@ -562,18 +561,9 @@ STATIC_INLINE int is_bitplane_dma (int hpos)
   return curr_diagram[(hpos - cycle_diagram_shift) & fetchstart_mask];
 }
 
-#ifdef WITH_LOGGING
-static bool shres_warned = false;
-#endif
 STATIC_INLINE void update_denise (int hpos)
 {
 	toscr_res = GET_RES_DENISE (bplcon0d);
-#ifdef WITH_LOGGING
-  if(toscr_res == RES_SUPERHIRES && !shres_warned) {
-    InGameMessage("Superhires resolution requested.\nNot supported in UAE4ARM.");
-    shres_warned = true;
-  }
-#endif
   toscr_res2 = 2 << toscr_res;
 	if (bplcon0dd != bplcon0d) {
 		record_color_change2 (hpos, 0x100 + 0x1000, bplcon0d);
@@ -584,6 +574,10 @@ STATIC_INLINE void update_denise (int hpos)
 
 static int bpldmasetuphpos;
 static int bpldmasetupphase;
+
+#ifdef WITH_INGAME_WARNING
+static bool shres_warned = false;
+#endif
 
 /* set currently active Agnus bitplane DMA sequence */
 static void setup_fmodes (int hpos)
@@ -604,8 +598,16 @@ static void setup_fmodes (int hpos)
  		delaymask = 63; // (16 << fetchmode) - 1;
  		break;
   }
-  badmode = GET_RES_AGNUS (bplcon0) != GET_RES_DENISE (bplcon0);
   bplcon0_res = GET_RES_AGNUS (bplcon0);
+	if(bplcon0_res == RES_SUPERHIRES) {
+#ifdef WITH_INGAME_WARNING
+    if(!shres_warned) {
+      InGameMessage("Superhires resolution requested.\nNot supported in UAE4ARM.");
+      shres_warned = true;
+    }
+#endif
+    bplcon0_res == RES_LORES;
+  }
   bplcon0_planes = GET_PLANES (bplcon0);
   bplcon0_planes_limit = GET_PLANES_LIMIT ();
   int fm_index = fetchmode * 4 + bplcon0_res;
@@ -633,7 +635,7 @@ static void BPLCON0_Denise (int hpos, uae_u16 v, bool);
 #define BPLCON_AGNUS_DELAY (4 + (bplcon0_planes == 8 ? 1 : 0))
 #define BPLCON_DENISE_DELAY 1
 
-static void maybe_setup_fmodes (int hpos)
+STATIC_INLINE void maybe_setup_fmodes (int hpos)
 {
 	switch (bpldmasetupphase)
 	{
@@ -797,8 +799,8 @@ STATIC_INLINE void shift32plus (uae_u32 *p, const int n)
 STATIC_INLINE void aga_shift (uae_u32 *p, const int n, const int fm)
 {
 	if (fm == 2) {
-		shift32plus (p + 2, n);
-		shift32plus (p + 1, n);
+	  shift32plus (p + 2, n);
+	  shift32plus (p + 1, n);
 	}
 	shift32plus (p + 0, n);
 	p[0] <<= n;
@@ -852,12 +854,12 @@ STATIC_INLINE void toscr_1 (int nbits, int fm)
 	    toscr_2_2 (nbits);
 	    break;
   }
-
+  
 	out_nbits += nbits;
   if (out_nbits == 32) {
     int i;
-    uae_u32 *dataptr32_start = (uae_u32 *)(line_data[next_lineno]);
-    uae_u32 *dataptr32 = dataptr32_start + out_offs;
+    uae_u32 *dataptr32 = (uae_u32 *)(line_data[next_lineno]);
+    dataptr32 += out_offs;
       
     for (i = 0; i < thisline_decision.nr_planes; i++) {
    	  if (i >= toscr_nr_planes)
@@ -1450,7 +1452,6 @@ STATIC_INLINE void update_fetch (int until, int fm)
 	if (plf_state < plf_passed_stop && ddf_change != vpos && ddf_change + 1 != vpos
 		&& dma
 		&& (fetch_cycle & fetchstart_mask) == (fm_maxplane & fetchstart_mask)
-		&& !badmode
 		&& toscr_nr_planes == thisline_decision.nr_planes)
 	{
 		int offs = (pos - fetch_cycle) & fetchunit_mask;

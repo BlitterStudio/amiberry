@@ -34,8 +34,6 @@ extern gcn::Color gui_baseCol;
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 
-extern void gui_force_rtarea_hdchange(void);
-
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 

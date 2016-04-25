@@ -34,3 +34,5 @@ void keyboard_init(void);
 
 void reinit_amiga(void);
 int count_HDs(struct uae_prefs *p);
+extern void gui_force_rtarea_hdchange(void);
+extern bool hardfile_testrdb (const TCHAR *filename);

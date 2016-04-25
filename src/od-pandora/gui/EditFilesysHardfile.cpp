@@ -29,6 +29,7 @@ static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool fileSelected = false;
 
+
 static gcn::Window *wndEditFilesysHardfile;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
@@ -51,6 +52,23 @@ static gcn::Label *lblBlocksize;
 static gcn::TextField *txtBlocksize;
 
 
+static void check_rdb(const TCHAR *filename)
+{
+  bool isrdb = hardfile_testrdb(filename);
+  if(isrdb)
+  {
+		txtSectors->setText("0");
+		txtSurfaces->setText("0");
+		txtReserved->setText("0");
+		txtBootPri->setText("0");
+  }
+  txtSectors->setEnabled(!isrdb);
+	txtSurfaces->setEnabled(!isrdb);
+	txtReserved->setEnabled(!isrdb);
+	txtBootPri->setEnabled(!isrdb);
+}
+
+
 class FilesysHardfileActionListener : public gcn::ActionListener
 {
   public:
@@ -65,6 +83,7 @@ class FilesysHardfileActionListener : public gcn::ActionListener
         {
           txtPath->setText(tmp);
           fileSelected = true;
+          check_rdb(tmp);
         }
         wndEditFilesysHardfile->requestModalFocus();
         cmdPath->requestFocus();
@@ -304,7 +323,7 @@ static void EditFilesysHardfileLoop(void)
 bool EditFilesysHardfile(int unit_no)
 {
   struct mountedinfo mi;
-  struct uaedev_config_info *uci = &changed_prefs.mountconfig[unit_no];
+  struct uaedev_config_info *uci;
   std::string strdevname, strroot;
   char tmp[32];
     
@@ -315,6 +334,7 @@ bool EditFilesysHardfile(int unit_no)
 
   if(unit_no >= 0)
   {
+    uci = &changed_prefs.mountconfig[unit_no];
     get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
     strdevname.assign(uci->devname);
     txtDevice->setText(strdevname);
@@ -334,6 +354,8 @@ bool EditFilesysHardfile(int unit_no)
     txtSectors->setText(tmp);
     snprintf(tmp, 32, "%d", uci->blocksize);
     txtBlocksize->setText(tmp);
+    
+    check_rdb(strroot.c_str());
   }
   else
   {

@@ -467,12 +467,12 @@ void do_leave_program (void)
 #ifdef USE_SDL
   SDL_Quit ();
 #endif
+  hardfile_reset();
 #ifdef AUTOCONFIG
   expansion_cleanup ();
 #endif
 #ifdef FILESYS
   filesys_cleanup ();
-  hardfile_reset();
 #endif
 #ifdef BSDSOCKET
   bsdlib_reset ();

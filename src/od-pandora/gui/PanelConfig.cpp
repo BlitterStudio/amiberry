@@ -179,7 +179,10 @@ class ConfigsListActionListener : public gcn::ActionListener
         strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_PATH);
         DisableResume();
         RefreshAllPanels();
-  			uae_reset(1);
+  			if(emulating)
+  			  uae_reset(1);
+  			else
+  			  uae_reset(0);
   			gui_running = false;
       }
       else

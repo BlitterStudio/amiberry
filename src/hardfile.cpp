@@ -70,6 +70,14 @@ static void getchs2 (struct hardfiledata *hfd, int *cyl, int *cylsec, int *head,
 	int heads;
 	int sectors = 63;
 
+	/* do we have RDB values? */
+	if (hfd->cylinders) {
+		*cyl = hfd->cylinders;
+		*tracksec = hfd->sectors;
+		*head = hfd->heads;
+		*cylsec = hfd->sectors * hfd->heads;
+		return;
+	}
 	/* what about HDF settings? */
 	if (hfd->surfaces && hfd->secspertrack) {
 		*head = hfd->surfaces;
@@ -103,13 +111,212 @@ static void getchs (struct hardfiledata *hfd, int *cyl, int *cylsec, int *head, 
 		*cyl, *cylsec, *head, *tracksec);
 }
 
+int hdf_open (struct hardfiledata *hfd, const TCHAR *pname)
+{
+	hfd->adide = 0;
+	hfd->byteswap = 0;
+	if (!hdf_open_target (hfd, pname))
+		return 0;
+	return 1;
+}
+
+void hdf_close (struct hardfiledata *hfd)
+{
+	hdf_close_target (hfd);
+}
+
+static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+{
+  return hdf_read_target (hfd, buffer, offset, len);
+}
+
+static void adide_decode (void *v, int len)
+{
+	int i;
+	uae_u8 *buffer = (uae_u8*)v;
+	for (i = 0; i < len; i += 2) {
+		uae_u8 *b =  buffer + i;
+		uae_u16 w = (b[0] << 8) | (b[1] << 0);
+		uae_u16 o = 0;
+
+		if (w & 0x8000)
+			o |= 0x0001;
+		if (w & 0x0001)
+			o |= 0x0002;
+
+		if (w & 0x4000)
+			o |= 0x0004;
+		if (w & 0x0002)
+			o |= 0x0008;
+
+		if (w & 0x2000)
+			o |= 0x0010;
+		if (w & 0x0004)
+			o |= 0x0020;
+
+		if (w & 0x1000)
+			o |= 0x0040;
+		if (w & 0x0008)
+			o |= 0x0080;
+
+		if (w & 0x0800)
+			o |= 0x0100;
+		if (w & 0x0010)
+			o |= 0x0200;
+
+		if (w & 0x0400)
+			o |= 0x0400;
+		if (w & 0x0020)
+			o |= 0x0800;
+
+		if (w & 0x0200)
+			o |= 0x1000;
+		if (w & 0x0040)
+			o |= 0x2000;
+
+		if (w & 0x0100)
+			o |= 0x4000;
+		if (w & 0x0080)
+			o |= 0x8000;
+
+		b[0] = o >> 8;
+		b[1] = o >> 0;
+	}
+}
+static void adide_encode (void *v, int len)
+{
+	int i;
+	uae_u8 *buffer = (uae_u8*)v;
+	for (i = 0; i < len; i += 2) {
+		uae_u8 *b =  buffer + i;
+		uae_u16 w = (b[0] << 8) | (b[1] << 0);
+		uae_u16 o = 0;
+
+		if (w & 0x0001)
+			o |= 0x8000;
+		if (w & 0x0002)
+			o |= 0x0001;
+
+		if (w & 0x0004)
+			o |= 0x4000;
+		if (w & 0x0008)
+			o |= 0x0002;
+
+		if (w & 0x0010)
+			o |= 0x2000;
+		if (w & 0x0020)
+			o |= 0x0004;
+
+		if (w & 0x0040)
+			o |= 0x1000;
+		if (w & 0x0080)
+			o |= 0x0008;
+
+		if (w & 0x0100)
+			o |= 0x0800;
+		if (w & 0x0200)
+			o |= 0x0010;
+
+		if (w & 0x0400)
+			o |= 0x0400;
+		if (w & 0x0800)
+			o |= 0x0020;
+
+		if (w & 0x1000)
+			o |= 0x0200;
+		if (w & 0x2000)
+			o |= 0x0040;
+
+		if (w & 0x4000)
+			o |= 0x0100;
+		if (w & 0x8000)
+			o |= 0x0080;
+
+		b[0] = o >> 8;
+		b[1] = o >> 0;
+	}
+}
+
+static void hdf_byteswap (void *v, int len)
+{
+	int i;
+	uae_u8 *b = (uae_u8*)v;
+
+	for (i = 0; i < len; i += 2) {
+		uae_u8 tmp = b[i];
+		b[i] = b[i + 1];
+		b[i + 1] = tmp;
+	}
+}
+
+int hdf_read_rdb (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+{
+	int v;
+	v = hdf_read (hfd, buffer, offset, len);
+	if (v > 0 && offset < 16 * 512 && !hfd->byteswap && !hfd->adide)  {
+		uae_u8 *buf = (uae_u8*)buffer;
+		bool changed = false;
+		if (buf[0] == 0x39 && buf[1] == 0x10 && buf[2] == 0xd3 && buf[3] == 0x12) { // AdIDE encoded "CPRM"
+			hfd->adide = 1;
+			changed = true;
+			write_log (_T("HDF: adide scrambling detected\n"));
+		} else if (!memcmp (buf, "DRKS", 4)) {
+			hfd->byteswap = 1;
+			changed = true;
+			write_log (_T("HDF: byteswapped RDB detected\n"));
+		}
+		if (changed)
+			v = hdf_read (hfd, buffer, offset, len);
+	}
+	return v;
+}
+
+int hdf_read (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+{
+	int v;
+
+	if (!hfd->adide) {
+		v = hdf_read2 (hfd, buffer, offset, len);
+	} else {
+		offset += 512;
+		v = hdf_read2 (hfd, buffer, offset, len);
+		adide_decode (buffer, len);
+	}
+	if (hfd->byteswap)
+		hdf_byteswap (buffer, len);
+	return v;
+}
+
+static int hdf_write2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+{
+	return hdf_write_target (hfd, buffer, offset, len);
+}
+
+int hdf_write (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+{
+	int v;
+
+	if (hfd->byteswap)
+		hdf_byteswap (buffer, len);
+	if (!hfd->adide) {
+		v = hdf_write2 (hfd, buffer, offset, len);
+	} else {
+		offset += 512;
+		adide_encode (buffer, len);
+		v = hdf_write2 (hfd, buffer, offset, len);
+		adide_decode (buffer, len);
+	}
+	if (hfd->byteswap)
+		hdf_byteswap (buffer, len);
+	return v;
+}
+
 static uae_u64 cmd_readx (struct hardfiledata *hfd, uae_u8 *dataptr, uae_u64 offset, uae_u64 len)
 {
 	gui_flicker_led (LED_HD, hfd->unitnum, 1);
   hf_log3 (_T("cmd_read: %p %04x-%08x (%d) %08x (%d)\n"), 
     dataptr, (uae_u32)(offset >> 32), (uae_u32)offset, (uae_u32)(offset / hfd->blocksize), (uae_u32)len, (uae_u32)(len / hfd->blocksize));
-  fseek (hfd->fd, offset, SEEK_SET);
-  return fread (dataptr, 1, len, hfd->fd);
+	return hdf_read (hfd, dataptr, offset, len);
 }
 static uae_u64 cmd_read (struct hardfiledata *hfd, uaecptr dataptr, uae_u64 offset, uae_u64 len)
 {
@@ -123,8 +330,7 @@ static uae_u64 cmd_writex (struct hardfiledata *hfd, uae_u8 *dataptr, uae_u64 of
 	gui_flicker_led (LED_HD, hfd->unitnum, 2);
 	hf_log3 (_T("cmd_write: %p %04x-%08x (%d) %08x (%d)\n"),
 		dataptr, (uae_u32)(offset >> 32), (uae_u32)offset, (uae_u32)(offset / hfd->blocksize), (uae_u32)len, (uae_u32)(len / hfd->blocksize));
-  fseek (hfd->fd, offset, SEEK_SET);
-  return fwrite (dataptr, 1, len, hfd->fd);
+	return hdf_write (hfd, dataptr, offset, len);
 }
 
 static uae_u64 cmd_write (struct hardfiledata *hfd, uaecptr dataptr, uae_u64 offset, uae_u64 len)
@@ -275,7 +481,7 @@ static uae_u32 REGPARAM2 hardfile_open (TrapContext *context)
     /* Check unit number */
     if (unit >= 0) {
     	struct hardfiledata *hfd = get_hardfile_data (unit);
-      if (hfd && hfd->fd != 0 && start_thread (context, unit)) {
+			if (hfd && hfd->handle_valid && start_thread (context, unit)) {
   	    put_word (hfpd->base + 32, get_word (hfpd->base + 32) + 1);
   	    put_long (ioreq + 24, unit); /* io_Unit */
   	    put_byte (ioreq + 31, 0); /* io_Error */
@@ -647,7 +853,7 @@ void hardfile_reset (void)
   struct hardfileprivdata *hfpd;
 
   for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-	  hfpd = &hardfpd[i];
+    hfpd = &hardfpd[i];
 	  if (hfpd->base && valid_address(hfpd->base, 36) && get_word(hfpd->base + 32) > 0) {
 	    for (j = 0; j < MAX_ASYNC_REQUESTS; j++) {
 	      uaecptr request;

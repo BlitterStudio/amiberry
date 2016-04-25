@@ -1816,3 +1816,149 @@ void default_prefs (struct uae_prefs *p, int type)
 
   inputdevice_default_prefs (p);
 }
+
+
+int bip_a500 (struct uae_prefs *p, int rom)
+{
+  int roms[4];
+
+	if(rom == 130)
+  {
+  	roms[0] = 6;
+  	roms[1] = 5;
+  	roms[2] = 4;
+    roms[3] = -1;
+  }
+  else
+  {
+  	roms[0] = 5;
+  	roms[1] = 4;
+  	roms[2] = 3;
+    roms[3] = -1;
+  }
+  p->chipmem_size = 0x00080000;
+	p->chipset_mask = 0;
+  p->cpu_compatible = 1;
+  p->fast_copper = 0;
+  p->nr_floppies = 1;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+  return configure_rom (p, roms, 0);
+}
+
+
+int bip_a500plus (struct uae_prefs *p, int rom)
+{
+  int roms[4];
+
+	if(rom == 130)
+  {
+  	roms[0] = 6;
+  	roms[1] = 5;
+  	roms[2] = 4;
+    roms[3] = -1;
+  }
+  else
+  {
+  	roms[0] = 7;
+  	roms[1] = 6;
+  	roms[2] = 5;
+    roms[3] = -1;
+  }
+  p->chipmem_size = 0x00100000;
+	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+  p->cpu_compatible = 1;
+  p->fast_copper = 0;
+  p->nr_floppies = 1;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+  return configure_rom (p, roms, 0);
+}
+
+
+int bip_a1200 (struct uae_prefs *p, int rom)
+{
+	int roms[4];
+
+	if(rom == 310)
+  {
+  	roms[0] = 15;
+  	roms[1] = 11;
+  	roms[2] = 31;
+    roms[3] = -1;
+  }
+  else
+  {
+  	roms[0] = 11;
+  	roms[1] = 15;
+  	roms[2] = 31;
+  	roms[3] = -1;
+  }
+	p->cpu_model = 68020;
+	p->address_space_24 = 1;
+	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+	p->chipmem_size = 0x200000;
+	p->bogomem_size = 0;
+	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
+
+  p->nr_floppies = 1;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+
+	return configure_rom (p, roms, 0);
+}
+
+
+int bip_a2000 (struct uae_prefs *p, int rom)
+{
+  int roms[4];
+
+	if(rom == 130)
+  {
+  	roms[0] = 6;
+  	roms[1] = 5;
+  	roms[2] = 4;
+    roms[3] = -1;
+  }
+  else
+  {
+  	roms[0] = 5;
+  	roms[1] = 4;
+  	roms[2] = 3;
+    roms[3] = -1;
+  }
+  p->chipmem_size = 0x00080000;
+  p->bogomem_size = 0x00080000;
+	p->chipset_mask = 0;
+  p->cpu_compatible = 1;
+  p->fast_copper = 0;
+  p->nr_floppies = 1;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+  return configure_rom (p, roms, 0);
+}
+
+
+int bip_a4000 (struct uae_prefs *p, int rom)
+{
+	int roms[8];
+
+	roms[0] = 16;
+	roms[1] = 31;
+	roms[2] = 13;
+	roms[3] = 12;
+	roms[4] = -1;
+
+	p->immediate_blits = 1;
+	p->bogomem_size = 0;
+	p->chipmem_size = 0x200000;
+	p->cpu_model = 68030;
+	p->fpu_model = 68882;
+	p->address_space_24 = 0;
+  p->cpu_compatible = 0;
+	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+	p->m68k_speed = -1;
+	p->cachesize = 8192;
+
+  p->nr_floppies = 2;
+	p->floppyslots[0].dfxtype = DRV_35_HD;
+	p->floppyslots[1].dfxtype = DRV_35_HD;
+
+	return configure_rom (p, roms, 0);
+}

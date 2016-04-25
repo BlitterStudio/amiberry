@@ -21,8 +21,8 @@
 
 #define max_diwlastword   (PIXEL_XPOS(0x1d4>> 1))
 
-extern int lores_shift;
-extern bool aga_mode, direct_rgb;
+#define lores_shift 0
+extern bool aga_mode;
 
 STATIC_INLINE int coord_hw_to_window_x (int x)
 {
@@ -82,7 +82,7 @@ STATIC_INLINE uae_u16 CONVERT_RGB(uae_u32 c)
 
 STATIC_INLINE xcolnr getxcolor (int c)
 {
-	if (direct_rgb)
+	if (aga_mode)
 		return CONVERT_RGB(c);
 	else
 		return xcolors[c];

@@ -29,10 +29,10 @@
 @
 @----------------------------------------------------------------
 copy_screen_8bit:
-  stmdb     sp!, {r4-r7, lr}
+  stmdb     sp!, {r4-r6, lr}
 copy_screen_8bit_loop:
   pld       [r1, #192]
-  mov       r7, #64
+  mov       lr, #64
 copy_screen_8bit_loop_2:
   ldr       r4, [r1], #4
   and       r5, r4, #255
@@ -46,12 +46,12 @@ copy_screen_8bit_loop_2:
   ubfx      r5, r4, #24, #8
   strh      r6, [r0], #2
   ldr       r6, [r3, r5, lsl #2]
-  subs      r7, r7, #4
+  subs      lr, lr, #4
   strh      r6, [r0], #2
   bgt       copy_screen_8bit_loop_2
   subs      r2, r2, #64
   bgt       copy_screen_8bit_loop
-  ldmia     sp!, {r4-r7, pc}
+  ldmia     sp!, {r4-r6, pc}
 
 
 @----------------------------------------------------------------
@@ -126,48 +126,48 @@ copy_screen_32bit_to_16bit_neon:
 @
 @----------------------------------------------------------------
 ARM_doline_n1:
-  stmdb     sp!, {r4-r9, lr}
+  stmdb     sp!, {r5-r9, lr}
 
   mov       r3, #1600
   mul       r2, r2, r3
   ldr       r3, =line_data
   add       r3, r3, r2           @ real_bplpt[0]
 
-  ldr       r4, =Lookup_doline_n1
+  ldr       lr, =Lookup_doline_n1
  
 ARM_doline_n1_loop:
   ldr       r2, [r3], #4
 
   ubfx      r5, r2, #28, #4
-  ldr       r6, [r4, r5, lsl #2]
+  ldr       r6, [lr, r5, lsl #2]
   
   ubfx      r5, r2, #24, #4
-  ldr       r7, [r4, r5, lsl #2]
+  ldr       r7, [lr, r5, lsl #2]
 
   ubfx      r5, r2, #20, #4
-  ldr       r8, [r4, r5, lsl #2]
+  ldr       r8, [lr, r5, lsl #2]
 
   ubfx      r5, r2, #16, #4
-  ldr       r9, [r4, r5, lsl #2]
+  ldr       r9, [lr, r5, lsl #2]
   stmia     r0!, {r6-r9}
   
   ubfx      r5, r2, #12, #4
-  ldr       r6, [r4, r5, lsl #2]
+  ldr       r6, [lr, r5, lsl #2]
 
   ubfx      r5, r2, #8, #4
-  ldr       r7, [r4, r5, lsl #2]
+  ldr       r7, [lr, r5, lsl #2]
 
   ubfx      r5, r2, #4, #4
-  ldr       r8, [r4, r5, lsl #2]
+  ldr       r8, [lr, r5, lsl #2]
 
   ubfx      r5, r2, #0, #4
-  ldr       r9, [r4, r5, lsl #2]
+  ldr       r9, [lr, r5, lsl #2]
   stmia     r0!, {r6-r9}
 
   subs      r1, r1, #1
   bgt       ARM_doline_n1_loop
   
-  ldmia     sp!, {r4-r9, pc}
+  ldmia     sp!, {r5-r9, pc}
 
 
 .align 8
@@ -261,17 +261,17 @@ NEON_doline_n2_exit:
 @
 @----------------------------------------------------------------
 NEON_doline_n3:
-  stmdb     sp!, {r4, lr}
+  stmdb     sp!, {lr}
 
   mov       r3, #1600
   mul       r2, r2, r3
   ldr       r3, =line_data
   add       r2, r3, r2           @ real_bplpt[0]
   add       r3, r2, #200
-  add       r4, r3, #200
+  add       lr, r3, #200
 
   @ Load data as early as possible
-  vldmia    r4!, {d0}
+  vldmia    lr!, {d0}
 
 @ Load masks to registers
   vmov.u8   d18, #0x55
@@ -280,7 +280,7 @@ NEON_doline_n3:
 
 NEON_doline_n3_loop:
 @ Load from real_bplpt (now loaded earlier)
-@  vld1.8    d0, [r4]!
+@  vld1.8    d0, [lr]!
 @  vld1.8    d4, [r2]!
 @  vld1.8    d6, [r3]!
 
@@ -340,12 +340,12 @@ NEON_doline_n3_loop:
   vst1.8    {d0, d1, d2, d3}, [r0]!
   
   cmp       r1, #1    @ Exit from here if odd number of words
-  ldmeqia   sp!, {r4, pc}
+  ldmeqia   sp!, {pc}
   
   subs      r1, r1, #2    @ We handle 2 words (64 bit) per loop: wordcount -= 2
 
   @ Load next data (if needed) as early as possible
-  vldmiagt  r4!, {d0}
+  vldmiagt  lr!, {d0}
 
   vzip.8    d7, d5
   vzip.8    d6, d4
@@ -357,7 +357,7 @@ NEON_doline_n3_loop:
   bgt       NEON_doline_n3_loop
   
 NEON_doline_n3_exit:
-  ldmia     sp!, {r4, pc}
+  ldmia     sp!, {pc}
 
 
 .align 8
@@ -373,7 +373,7 @@ NEON_doline_n3_exit:
 @
 @----------------------------------------------------------------
 NEON_doline_n4:
-  stmdb     sp!, {r4-r5, lr}
+  stmdb     sp!, {r4, lr}
 
   mov       r3, #1600
   mul       r2, r2, r3
@@ -381,11 +381,11 @@ NEON_doline_n4:
   add       r2, r3, r2           @ real_bplpt[0]
   add       r3, r2, #200
   add       r4, r3, #200
-  add       r5, r4, #200
+  add       lr, r4, #200
 
   @ Load data as early as possible
   vldmia    r4!, {d0}
-  vldmia    r5!, {d2}
+  vldmia    lr!, {d2}
 
 @ Load masks to registers
   vmov.u8   d18, #0x55
@@ -395,7 +395,7 @@ NEON_doline_n4:
 NEON_doline_n4_loop:
 @ Load from real_bplpt (now loaded earlier)
 @  vld1.8    d0, [r4]!
-@  vld1.8    d2, [r5]!
+@  vld1.8    d2, [lr]!
 @  vld1.8    d4, [r2]!
 @  vld1.8    d6, [r3]!
 
@@ -457,7 +457,7 @@ NEON_doline_n4_loop:
   vst1.8    {d0, d1, d2, d3}, [r0]!
   
   cmp       r1, #1    @ Exit from here if odd number of words
-  ldmeqia   sp!, {r4-r5, pc}
+  ldmeqia   sp!, {r4, pc}
   
   subs      r1, r1, #2    @ We handle 2 words (64 bit) per loop: wordcount -= 2
 
@@ -467,7 +467,7 @@ NEON_doline_n4_loop:
   vzip.8    d7, d5
   vzip.8    d6, d4
 
-  vldmiagt  r5!, {d2}
+  vldmiagt  lr!, {d2}
 
   vzip.32   d7, d6
   vzip.32   d5, d4
@@ -477,7 +477,7 @@ NEON_doline_n4_loop:
   bgt       NEON_doline_n4_loop
   
 NEON_doline_n4_exit:
-  ldmia     sp!, {r4-r5, pc}
+  ldmia     sp!, {r4, pc}
 
 
 .align 8
@@ -493,7 +493,7 @@ NEON_doline_n4_exit:
 @
 @----------------------------------------------------------------
 NEON_doline_n6:
-  stmdb     sp!, {r4-r7, lr}
+  stmdb     sp!, {r4-r6, lr}
   
   mov       r3, #1600
   mul       r2, r2, r3
@@ -503,7 +503,7 @@ NEON_doline_n6:
   add       r4, r3, #200
   add       r5, r4, #200
   add       r6, r5, #200
-  add       r7, r6, #200
+  add       lr, r6, #200
   
 @ Load masks to registers
   vmov.u8   d18, #0x55
@@ -513,7 +513,7 @@ NEON_doline_n6:
 NEON_doline_n6_loop:
   @ Load data as early as possible
   vldmia    r6!, {d5}
-  vldmia    r7!, {d7}
+  vldmia    lr!, {d7}
 
   @ Load data as early as possible
   vldmia    r4!, {d0}
@@ -592,7 +592,7 @@ NEON_doline_n6_loop:
   vst1.8    {d0, d1, d2, d3}, [r0]!
   
   cmp       r1, #1    @ Exit from here if odd number of words
-  ldmeqia   sp!, {r4-r7, pc}
+  ldmeqia   sp!, {r4-r6, pc}
 
   subs      r1, r1, #2    @ We handle 2 words (64 bit) per loop: wordcount -= 2
 
@@ -606,7 +606,7 @@ NEON_doline_n6_loop:
   bgt       NEON_doline_n6_loop
   
 NEON_doline_n6_exit:
-  ldmia     sp!, {r4-r7, pc}
+  ldmia     sp!, {r4-r6, pc}
  
 
 .align 8
@@ -622,7 +622,7 @@ NEON_doline_n6_exit:
 @
 @----------------------------------------------------------------
 NEON_doline_n8:
-  stmdb     sp!, {r4-r9, lr}
+  stmdb     sp!, {r4-r8, lr}
   
   mov       r3, #1600
   mul       r2, r2, r3
@@ -634,11 +634,11 @@ NEON_doline_n8:
   add       r6, r5, #200
   add       r7, r6, #200
   add       r8, r7, #200
-  add       r9, r8, #200
+  add       lr, r8, #200
   
   @ Load data as early as possible
   vldmia    r8!, {d1}
-  vldmia    r9!, {d3}
+  vldmia    lr!, {d3}
 
 @ Load masks to registers
   vmov.u8   d18, #0x55
@@ -734,7 +734,7 @@ NEON_doline_n8_loop:
   vst1.8    {d0, d1, d2, d3}, [r0]!
   
   cmp       r1, #1    @ Exit from here if odd number of words
-  ldmeqia   sp!, {r4-r9, pc}
+  ldmeqia   sp!, {r4-r8, pc}
 
   subs      r1, r1, #2    @ We handle 2 words (64 bit) per loop: wordcount -= 2
 
@@ -745,7 +745,7 @@ NEON_doline_n8_loop:
   vzip.8    d6, d4
 
   @ Load data as early as possible
-  vldmiagt  r9!, {d3}
+  vldmiagt  lr!, {d3}
 
   vzip.32   d7, d6
   vzip.32   d5, d4
@@ -755,7 +755,7 @@ NEON_doline_n8_loop:
   bgt       NEON_doline_n8_loop
   
 NEON_doline_n8_exit:
-  ldmia     sp!, {r4-r9, pc}
+  ldmia     sp!, {r4-r8, pc}
 
 
 .data

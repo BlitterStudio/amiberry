@@ -61,6 +61,7 @@ extern void fetch_configurationpath (char *out, int size);
 extern void set_configurationpath(char *newpath);
 extern void fetch_rompath (char *out, int size);
 extern void set_rompath(char *newpath);
+extern void fetch_rp9path (char *out, int size);
 extern void fetch_savestatepath(char *out, int size);
 extern void fetch_screenshotpath(char *out, int size);
 

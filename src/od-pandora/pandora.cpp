@@ -41,6 +41,7 @@
 #include "rommgr.h"
 #include <SDL.h>
 #include "gp2x.h"
+#include "pandora_rp9.h"
 
 /*
 #define DBG_MAX_THREADS 128
@@ -122,6 +123,7 @@ int sleep_resolution = 1000 / 1;
 
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
+static char rp9_path[MAX_DPATH];
 char last_loaded_config[MAX_DPATH] = { '\0' };
 
 static bool slow_mouse = false;
@@ -306,7 +308,7 @@ void target_default_options (struct uae_prefs *p, int type)
   p->pandora_cpu_speed = 600;
 
   p->pandora_joyConf = 0;
-  p->pandora_joyPort = 0;
+  p->pandora_joyPort = 2;
   p->pandora_tapDelay = 10;
   
   p->pandora_customControls = 0;
@@ -426,6 +428,12 @@ void set_rompath(char *newpath)
 }
 
 
+void fetch_rp9path (char *out, int size)
+{
+  strncpy(out, rp9_path, size);
+}
+
+
 void fetch_savestatepath(char *out, int size)
 {
   strncpy(out, start_path_data, size);
@@ -447,19 +455,33 @@ int target_cfgfile_load (struct uae_prefs *p, const char *filename, int type, in
 
   discard_prefs(p, type);
   
-	char *ptr = strstr(filename, ".uae");
+	char *ptr = strstr(filename, ".rp9");
   if(ptr > 0)
   {
-    int type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
-    result = cfgfile_load(p, filename, &type, 0, 1);
-  }
-  if(result)
-  {
-  	set_joyConf(p);
-    extractFileName(filename, last_loaded_config);
+    // Load rp9 config
+    result = rp9_parse_file(p, filename);
+    if(result)
+    {
+    	set_joyConf(p);
+      extractFileName(filename, last_loaded_config);
+    }
   }
   else 
-    result = loadconfig_old(p, filename);
+	{
+  	ptr = strstr(filename, ".uae");
+    if(ptr > 0)
+    {
+      int type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+      result = cfgfile_load(p, filename, &type, 0, 1);
+    }
+    if(result)
+    {
+    	set_joyConf(p);
+      extractFileName(filename, last_loaded_config);
+    }
+    else 
+      result = loadconfig_old(p, filename);
+  }
 
   if(result)
   {
@@ -645,6 +667,7 @@ void loadAdfDir(void)
 	strcpy(currentDir, start_path_data);
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
+	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
 	FILE *f1=fopen(path,"rt");
@@ -681,7 +704,12 @@ void loadAdfDir(void)
       {
         fscanf(f1, "Diskfile=");
         get_string(f1, disk, sizeof(disk));
-        lstMRUDiskList.push_back(disk);
+        FILE *f = fopen(disk, "rb");
+        if(f != NULL)
+        {
+          fclose(f);
+          lstMRUDiskList.push_back(disk);
+        }
       }
 	  }
 		fclose(f1);
@@ -776,8 +804,8 @@ int main (int argc, char *argv[])
 
   // Get startup path
 	getcwd(start_path_data, MAX_DPATH);
-
 	loadAdfDir();
+  rp9_init();
 
   snprintf(savestate_fname, MAX_PATH, "%s/saves/default.ads", start_path_data);
 	logging_init ();
@@ -802,9 +830,11 @@ int main (int argc, char *argv[])
   real_main (argc, argv);
   
   ClearAvailableROMList();
+  romlist_clear();
   free_keyring();
   free_AmigaMem();
   lstMRUDiskList.clear();
+  rp9_cleanup();
   
   logging_cleanup();
   

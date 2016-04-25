@@ -33,13 +33,13 @@ void events_schedule (void)
   nextevent = currcycle + mintime;
 }
 
-void do_cycles_slow (unsigned long cycles_to_add)
+void do_cycles_cpu_fastest (unsigned long cycles_to_add)
 {
-  if ((pissoff -= cycles_to_add) > 0)
+  if ((regs.pissoff -= cycles_to_add) > 0)
   	return;
 
-  cycles_to_add = -pissoff;
-  pissoff = 0;
+  cycles_to_add = -regs.pissoff;
+  regs.pissoff = 0;
 
   if (is_syncline && eventtab[ev_hsync].evtime - currcycle <= cycles_to_add) {
 	  int rpt = read_processor_time ();
@@ -47,7 +47,7 @@ void do_cycles_slow (unsigned long cycles_to_add)
 	  if (v > (int)syncbase || v < -((int)syncbase))
 	    vsyncmintime = rpt;
   	if (v < speedup_timelimit) {
-	    pissoff = pissoff_value;
+	    regs.pissoff = pissoff_value;
 	    return;
   	}
   }
@@ -66,6 +66,25 @@ void do_cycles_slow (unsigned long cycles_to_add)
   }
   currcycle += cycles_to_add;
 }
+
+void do_cycles_cpu_norm (unsigned long cycles_to_add)
+{
+  while ((nextevent - currcycle) <= cycles_to_add) {
+	  int i;
+	  cycles_to_add -= (nextevent - currcycle);
+	  currcycle = nextevent;
+
+  	for (i = 0; i < ev_max; i++) {
+	    if (eventtab[i].active && eventtab[i].evtime == currcycle) {
+    		(*eventtab[i].handler)();
+	    }
+  	}
+  	events_schedule();
+  }
+  currcycle += cycles_to_add;
+}
+
+do_cycles_func do_cycles = do_cycles_cpu_norm;
 
 void MISC_handler(void)
 {

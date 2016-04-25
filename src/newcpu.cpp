@@ -229,6 +229,11 @@ static void update_68k_cycles (void)
     cycles_shift = 2;
     cycles_shift_2 = 5;
   }
+
+  if(currprefs.m68k_speed < 0)
+    do_cycles = do_cycles_cpu_fastest;
+  else
+    do_cycles = do_cycles_cpu_norm;
 }
 
 STATIC_INLINE unsigned long adjust_cycles(unsigned long cycles)
@@ -278,15 +283,14 @@ void check_prefs_changed_cpu (void)
 
   	prefs_changed_cpu ();
   	if (!currprefs.cpu_compatible && changed_prefs.cpu_compatible)
-  	    fill_prefetch_quick ();
+  	  fill_prefetch_quick ();
   	build_cpufunctbl ();
   	changed = true;
   }
-  if (changed 
-    || currprefs.m68k_speed != changed_prefs.m68k_speed) {
-  	  currprefs.m68k_speed = changed_prefs.m68k_speed;
-  	  update_68k_cycles ();
-		  changed = true;
+  if (changed || currprefs.m68k_speed != changed_prefs.m68k_speed) {
+	  currprefs.m68k_speed = changed_prefs.m68k_speed;
+	  update_68k_cycles ();
+	  changed = true;
   }
   if (changed) {
   	set_special (regs, SPCFLAG_BRK);
@@ -340,7 +344,6 @@ void init_m68k (void)
 }
 
 unsigned long int nextevent, is_syncline, currcycle;
-signed long pissoff;
 
 struct regstruct regs;
 
@@ -1183,7 +1186,7 @@ void m68k_mull (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 
 void m68k_reset (int hardreset)
 {
-  pissoff = 0;
+  regs.pissoff = 0;
   cpu_cycles = 0;
   
   regs.spcflags = 0;

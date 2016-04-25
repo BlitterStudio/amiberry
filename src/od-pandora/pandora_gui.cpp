@@ -129,6 +129,7 @@ static void addrom(struct romdata *rd, char *path)
     strncpy(tmp->Path, path, MAX_PATH);
   tmp->ROMType = rd->type;
   lstAvailableROMs.push_back(tmp);
+  romlist_add(path, rd);
 }
 
 struct romscandata {
@@ -256,6 +257,8 @@ void RescanROMs(void)
   std::vector<std::string> files;
   char path[MAX_DPATH];
   
+  romlist_clear();
+  
   ClearAvailableROMList();
   fetch_rompath(path, MAX_DPATH);
   
@@ -295,11 +298,28 @@ void ReadConfigFileList(void)
 {
   char path[MAX_PATH];
   std::vector<std::string> files;
+  const char *filter_rp9[] = { ".rp9", "\0" };
   const char *filter_uae[] = { ".uae", "\0" };
   const char *filter_conf[] = { ".conf", "\0" };
     
   ClearConfigFileList();
   
+  // Read rp9 files
+  fetch_rp9path(path, MAX_PATH);
+  ReadDirectory(path, NULL, &files);
+  FilterFiles(&files, filter_rp9);
+  for (int i=0; i<files.size(); ++i)
+  {
+    ConfigFileInfo *tmp = new ConfigFileInfo();
+    strncpy(tmp->FullPath, path, MAX_DPATH);
+    strcat(tmp->FullPath, files[i].c_str());
+    strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
+    removeFileExtension(tmp->Name);
+    strcpy(tmp->Description, _T("rp9"));
+    ConfigFilesList.push_back(tmp);
+  }
+  
+  // Read standard config files
   fetch_configurationpath(path, MAX_PATH);
   ReadDirectory(path, NULL, &files);
   FilterFiles(&files, filter_uae);
@@ -1480,4 +1500,28 @@ int tweakbootpri (int bp, int ab, int dnm)
     if (bp < -127)
 	bp = -127;
     return bp;
+}
+
+
+bool hardfile_testrdb (const TCHAR *filename)
+{
+	bool isrdb = false;
+	struct zfile *f = zfile_fopen (filename, _T("rb"), ZFD_NORMAL);
+	uae_u8 tmp[8];
+	int i;
+
+	if (!f)
+		return false;
+	for (i = 0; i < 16; i++) {
+		zfile_fseek (f, i * 512, SEEK_SET);
+		memset (tmp, 0, sizeof tmp);
+		zfile_fread (tmp, 1, sizeof tmp, f);
+		if (!memcmp (tmp, "RDSK\0\0\0", 7) || !memcmp (tmp, "DRKS\0\0", 6) || (tmp[0] == 0x53 && tmp[1] == 0x10 && tmp[2] == 0x9b && tmp[3] == 0x13 && tmp[4] == 0 && tmp[5] == 0)) {
+			// RDSK or ADIDE "encoded" RDSK
+			isrdb = true;
+			break;
+		}
+	}
+	zfile_fclose (f);
+  return isrdb;
 }

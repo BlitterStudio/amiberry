@@ -34,12 +34,12 @@ static gcn::Button *cmdSaveForDisk;
 static gcn::Button *cmdCreateDDDisk;
 static gcn::Button *cmdCreateHDDisk;
 
-static const char *diskfile_filter[] = { ".adf", ".adz", ".zip", ".gz", ".dms", ".rp9", "\0" };
+static const char *diskfile_filter[] = { ".adf", ".adz", ".zip", ".gz", ".dms", "\0" };
 static const char *drivespeedlist[] = { "100% (compatible)", "200%", "400%", "800%" };
 static const int drivespeedvalues[] = { 100, 200, 400, 800 };
 
 static void AdjustDropDownControls(void);
-static bool bLoadConfigForDisk = true;
+static bool bLoadConfigForDisk = false;
 
 
 class DriveTypeListModel : public gcn::ListModel
@@ -415,7 +415,6 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
       chkLoadConfig = new gcn::UaeCheckBox("Load config with same name as disk");
       chkLoadConfig->setId("LoadDiskCfg");
       chkLoadConfig->addActionListener(dfxCheckActionListener);
-      chkLoadConfig->setSelected(false);
     }
 	}
 
