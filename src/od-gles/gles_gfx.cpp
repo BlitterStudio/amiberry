@@ -4,10 +4,12 @@
 #include "uae.h"
 #include "options.h"
 #include "gui.h"
-#include "xwin.h"
+#include "memory.h"
+#include "newcpu.h"
+#include "inputdevice.h"
 #include "custom.h"
+#include "xwin.h"
 #include "drawing.h"
-#include "events.h"
 #include "od-pandora/inputmode.h"
 #include "savestate.h"
 #include "picasso96.h"
@@ -83,18 +85,15 @@ void InitAmigaVidMode(struct uae_prefs *p)
   /* Initialize structure for Amiga video modes */
   gfxvidinfo.pixbytes = 2;
   gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
-  gfxvidinfo.linemem = 0;
-  gfxvidinfo.emergmem = 0;
-  gfxvidinfo.width = p->gfx_size.width;
-  gfxvidinfo.height = p->gfx_size.height;
+  gfxvidinfo.outwidth = p->gfx_size.width;
+  gfxvidinfo.outheight = p->gfx_size.height;
 #ifdef PICASSO96
   if(screen_is_picasso)
   {
-    gfxvidinfo.width  = picasso_vidinfo.width;
-    //gfxvidinfo.height = picasso_vidinfo.height;
+    gfxvidinfo.outwidth  = picasso_vidinfo.width;
+    //gfxvidinfo.outheight = picasso_vidinfo.height;
   }
 #endif
-  gfxvidinfo.maxblocklines = 0;
   gfxvidinfo.rowbytes = prSDLScreen->pitch;
   //gfxvidinfo.rowbytes = blit_rect.width * 2;
 }
@@ -225,7 +224,7 @@ int check_prefs_changed_gfx (void)
   if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate) 
   {
   	currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
-	  init_hz ();
+	  init_hz_full ();
 	  changed = 1;
   }
   
