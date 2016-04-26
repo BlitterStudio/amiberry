@@ -396,7 +396,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
   cfgfile_write_str (f, _T("gfx_resolution"), lorestype1[p->gfx_resolution]);
 
 #ifdef RASPBERRY
-    cfgfile_dwrite (f, "gfx_correct_aspect=%d\n", p->gfx_correct_aspect);
+  cfgfile_write (f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 #endif
 
   cfgfile_write_bool (f, _T("immediate_blits"), p->immediate_blits);
