@@ -109,28 +109,23 @@ static void sound_thread_mixer(void *ud, Uint8 *stream, int len)
 	if (sound_thread_exit) return;
 	int sem_val;
 	sound_thread_active = 1;
-	/*
-	// Sound is choppy, arrgh
-	sem_getvalue(&sound_sem, &sem_val);
-	while (sem_val > 1)
-	{
-		//printf("skip %i (%i)\n", cnt, sem_val);
-		sem_wait(&sound_sem);
-		cnt++;
-		sem_getvalue(&sound_sem, &sem_val);
-	}
-	*/
+
 
 #ifdef SOUND_USE_SEMAPHORES
 	sem_wait(&sound_sem);
-	sem_post(&callback_sem);
 #endif
-	cnt++;
+	//printf("Sound callback %i\n", cnt);
+
 	//__android_log_print(ANDROID_LOG_INFO, "UAE4ALL2","Sound callback cnt %d buf %d\n", cnt, cnt%SOUND_BUFFERS_COUNT);
 	if(currprefs.sound_stereo)
 		memcpy(stream, sndbuffer[cnt%SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN*2, len));
 	else
 	  	memcpy(stream, sndbuffer[cnt%SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN, len));
+
+	cnt++;
+#ifdef SOUND_USE_SEMAPHORES
+	sem_post(&callback_sem);
+#endif
 
 }
 
@@ -145,7 +140,7 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 		// init sem, start sound thread
 		printf("starting sound thread..\n");
 		ret = sem_init(&sound_sem, 0, 0);
-		sem_init(&callback_sem, 0, 0);
+		sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 1);
 		if (ret != 0) printf("sem_init() failed: %i, errno=%i\n", ret, errno);
 	}
 
@@ -207,7 +202,7 @@ void finish_sound_buffer (void)
 	dbg("sound.c : finish_sound_buffer");
 #endif
 
-	//printf("finish %i\n", wrcnt);
+	//printf("Sound finish %i\n", wrcnt);
 #if 0
 	if(currprefs.sound_stereo)
 	write(sounddev, sndbuffer[0], SNDBUFFER_LEN*2);
