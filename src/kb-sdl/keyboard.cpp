@@ -160,8 +160,9 @@ static int kc_decode (SDL_keysym *prKeySym)
     case 90: return AK_NP0;
     case 91: return AK_NPDEL;
 
-    case 0 : return AK_LAMI;  // Left amiga mapped to left Windows
-    case 135:return AK_LAMI;  // Right amiga mapped to Menu key.
+    case 133: return AK_LAMI;  // Left amiga mapped to left Windows
+    case 134: return AK_RAMI;  // Right amiga mapped to right windows key.
+    case 135: return AK_RAMI;  // Right amiga mapped to Menu key.
   }
 
   // In case are in unknown driver type... we can still rely on keysym...

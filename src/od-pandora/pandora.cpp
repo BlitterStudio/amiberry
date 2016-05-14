@@ -118,7 +118,9 @@ static int shiftWasPressed = 0;
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
 int show_inputmode = 0;
-
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+static int capslock = 0;
+#endif
 int sleep_resolution = 1000 / 1;
 
 static char config_path[MAX_DPATH];
@@ -935,6 +937,9 @@ void handle_events (void)
 #endif
   			{
   				iAmigaKeyCode = keycode2amiga(&(rEvent.key.keysym));
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+				if (iAmigaKeyCode == AK_CAPSLOCK && uae4all_keystate[AK_CAPSLOCK] == 1) {iAmigaKeyCode = -1; capslock = 1;}
+#endif
   				if (iAmigaKeyCode >= 0)
   				{
 #ifdef PANDORA
@@ -1013,6 +1018,9 @@ void handle_events (void)
 #endif
   			{
   				iAmigaKeyCode = keycode2amiga(&(rEvent.key.keysym));
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+				if (iAmigaKeyCode == AK_CAPSLOCK) if (capslock==0) iAmigaKeyCode = -1; else capslock = 0;
+#endif
   				if (iAmigaKeyCode >= 0)
   				{
 #ifdef PANDORA

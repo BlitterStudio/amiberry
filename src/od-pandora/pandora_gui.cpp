@@ -572,7 +572,8 @@ void gui_handle_events (void)
 
 	if(keystate[SDLK_F12])
 		goMenu();
-
+        if(uae4all_keystate[AK_CTRL] && uae4all_keystate[AK_LAMI] && uae4all_keystate[AK_RAMI])
+                uae_reset(0);
 #ifndef PANDORA_SPECIFIC
 	return;
 #endif

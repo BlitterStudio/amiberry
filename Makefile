@@ -4,6 +4,7 @@ endif
 
 ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
 	LDFLAGS += -lbcm_host
 	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
@@ -11,6 +12,7 @@ ifeq ($(PLATFORM),rpi2)
 	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
+	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
 	LDFLAGS += -lbcm_host
 	HAVE_DISPMANX = 1
 	DEFS += -DRASPBERRY
