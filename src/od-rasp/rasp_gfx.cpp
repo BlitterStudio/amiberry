@@ -189,7 +189,8 @@ static void open_screen(struct uae_prefs *p)
 
   // check if resolution hasn't change in menu. otherwise free the resources so that they will be re-generated with new resolution.
   if ((dispmanxresource_amigafb_1 != 0) && 
-     ((blit_rect.width != width) || (blit_rect.height != height) || (currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect)))
+     ((blit_rect.width != width) || (blit_rect.height != height) || (currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect) ||
+     (currprefs.gfx_fullscreen_ratio != changed_prefs.gfx_fullscreen_ratio)))
   {
 	printf("Emulation resolution change detected.\n");
 	if(prSDLScreen != NULL )
@@ -208,6 +209,7 @@ static void open_screen(struct uae_prefs *p)
   {
 	printf("Emulation resolution: Width %i Height: %i\n",width,height);
 	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
+	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
 	prSDLScreen = SDL_CreateRGBSurface(SDL_SWSURFACE,width,height,16,
 		Dummy_prSDLScreen->format->Rmask,
 		Dummy_prSDLScreen->format->Gmask,
@@ -232,18 +234,22 @@ static void open_screen(struct uae_prefs *p)
   if (currprefs.gfx_correct_aspect == 0)
   {
 	// Fullscreen.
-	vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width * 1)/100,
-							(dispmanxdinfo.height * 2)/100 ,
-							dispmanxdinfo.width - (dispmanxdinfo.width * 2)/100 ,
-							dispmanxdinfo.height - (dispmanxdinfo.height * 4)/100 );
+	int scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio/100;
+	int scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio/100;
+	vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width - scaled_width)/2 ,
+					 (dispmanxdinfo.height - scaled_height)/2 ,
+					 scaled_width ,
+					 scaled_height );
   }
   else
   {
 	// 4/3 shrink.
-	vc_dispmanx_rect_set( &dst_rect, ((dispmanxdinfo.width * 13)/100) ,
-							(dispmanxdinfo.height * 2)/100 ,
-							(dispmanxdinfo.width - ((dispmanxdinfo.width * 26)/100)) ,
-							dispmanxdinfo.height - (dispmanxdinfo.height * 4)/100 );
+	int scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio/100;
+	int scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio/100;
+	vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width - scaled_width/16*12)/2 ,
+					 (dispmanxdinfo.height - scaled_height)/2 ,
+					 scaled_width/16*12 ,
+					 scaled_height );
   }
 
   // For debug, in order to avoid full screen.

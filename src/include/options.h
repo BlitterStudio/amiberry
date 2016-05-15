@@ -89,7 +89,8 @@ struct uae_prefs {
   int gfx_resolution;
 
 #ifdef RASPBERRY
-    int gfx_correct_aspect;
+  int gfx_correct_aspect;
+  int gfx_fullscreen_ratio;
 #endif 
 
   bool immediate_blits;
