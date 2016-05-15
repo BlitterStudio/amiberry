@@ -40,6 +40,8 @@ static gcn::UaeCheckBox* chkFrameskip;
 static gcn::Label*  lblFSRatio;
 static gcn::Label*  lblFSRatioInfo;
 static gcn::Slider* sldFSRatio;
+
+static gcn::UaeCheckBox* chkAspect;
 #endif
 
 
@@ -85,6 +87,8 @@ class AmigaScreenActionListener : public gcn::ActionListener
       		RefreshPanelDisplay();
     	  }
       }
+      else if (actionEvent.getSource() == chkAspect)
+        changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
 #endif
     }
 };
@@ -144,6 +148,10 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
   sldFSRatio->setId("FSRatio");
   sldFSRatio->addActionListener(amigaScreenActionListener);
   lblFSRatioInfo = new gcn::Label("100%%");
+
+  chkAspect = new gcn::UaeCheckBox("4/3 ratio shrink");
+  chkAspect->addActionListener(amigaScreenActionListener);
+
 #endif
 
   chkFrameskip = new gcn::UaeCheckBox("Frameskip");
@@ -179,7 +187,13 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
   grpAmigaScreen->setBaseColor(gui_baseCol);
 
   category.panel->add(grpAmigaScreen);
+
+#ifdef RASPBERRY
+  category.panel->add(chkAspect   , DISTANCE_BORDER, DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y);
+  category.panel->add(chkFrameskip, DISTANCE_BORDER, DISTANCE_BORDER + grpAmigaScreen->getHeight() + chkAspect->getHeight() + 2*DISTANCE_NEXT_Y);
+#else
   category.panel->add(chkFrameskip, DISTANCE_BORDER, DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y);
+#endif
 
   RefreshPanelDisplay();
 }
@@ -203,6 +217,8 @@ void ExitPanelDisplay(void)
   delete lblFSRatio;
   delete sldFSRatio;
   delete lblFSRatioInfo;
+
+  delete chkAspect;
 #endif
 }
 
@@ -245,6 +261,8 @@ void RefreshPanelDisplay(void)
       break;
     }
   }
+
+  chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 #endif
 
   sldVertPos->setValue(changed_prefs.pandora_vertical_offset);
