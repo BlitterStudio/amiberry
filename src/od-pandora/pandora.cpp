@@ -888,6 +888,7 @@ void handle_events (void)
   		case SDL_KEYDOWN:
   			if(rEvent.key.keysym.sym==SDLK_PAGEUP)
   				slow_mouse=true;
+#ifdef PANDORA_SPECIFIC
   			if(currprefs.pandora_custom_dpad == 1) // dPad as mouse, why these emulation of key presses?
   			{
   				if(rEvent.key.keysym.sym==SDLK_RSHIFT)
@@ -906,7 +907,7 @@ void handle_events (void)
   					record_key(AK_DN << 1);
   				}
   			}
-			
+#endif
   			if (rEvent.key.keysym.sym==SDLK_F11)
   			{
 					// state moves thus:
