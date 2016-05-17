@@ -136,6 +136,8 @@ static int kc_decode (SDL_keysym *prKeySym)
     case 64: return AK_LALT;
     case 65: return AK_SPC;
 
+    case 108:return AK_RALT;
+
     //case 78: return AK_SCROLLOCK;
 
     //case 77: return AK_NUMLOCK;
