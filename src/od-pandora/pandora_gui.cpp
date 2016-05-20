@@ -559,25 +559,34 @@ void gui_handle_events (void)
   int key = 0;
 
 	Uint8 *keystate = SDL_GetKeyState(NULL);
-	dpadUp = keystate[SDLK_UP];
-	dpadDown = keystate[SDLK_DOWN];
-	dpadLeft = keystate[SDLK_LEFT];
-	dpadRight = keystate[SDLK_RIGHT];
-	buttonA = keystate[SDLK_HOME];
-	buttonB = keystate[SDLK_END];
-	buttonX = keystate[SDLK_PAGEDOWN];
-	buttonY = keystate[SDLK_PAGEUP];
-	triggerL = keystate[SDLK_RSHIFT];
-	triggerR = keystate[SDLK_RCTRL];
+
+	if(keystate[SDLK_HOME] || JoystickButton[0])  //Updated with Joystick input
+		buttonA = 1; else  buttonA = 0;
+	if(keystate[SDLK_END] || JoystickButton[1])
+		buttonB = 1; else  buttonB = 0;
+	if(keystate[SDLK_PAGEDOWN] || JoystickButton[2])
+		buttonX = 1; else  buttonX = 0;
+	if(keystate[SDLK_PAGEUP] || JoystickButton[3])
+		buttonY = 1; else  buttonY = 0;
+	if(keystate[SDLK_RSHIFT] || JoystickButton[4])
+		triggerL = 1; else triggerL = 0;
+	if(keystate[SDLK_RCTRL] || JoystickButton[5])
+		triggerR = 1; else triggerR = 0;
+	if(keystate[SDLK_UP] || JoystickButton[6])
+		dpadUp = 1; else  dpadUp = 0;
+	if(keystate[SDLK_DOWN] || JoystickButton[7]) 
+		dpadDown = 1; else  dpadDown = 0;
+	if(keystate[SDLK_LEFT] || JoystickButton[8])
+		dpadLeft = 1; else  dpadLeft = 0;
+	if(keystate[SDLK_RIGHT] || JoystickButton[9])
+		dpadRight = 1; else  dpadRight = 0;
 
 	if(keystate[SDLK_F12])
 		goMenu();
         if(uae4all_keystate[AK_CTRL] && uae4all_keystate[AK_LAMI] && uae4all_keystate[AK_RAMI])
                 uae_reset(0);
-#ifndef PANDORA_SPECIFIC
-	return;
-#endif
 
+#ifdef PANDORA_SPECIFIC
 	//L + R
 	if(triggerL && triggerR)
 	{
@@ -711,6 +720,7 @@ void gui_handle_events (void)
   	}
 	}
 
+#endif
   if(currprefs.pandora_customControls)
   {
     if(currprefs.pandora_custom_dpad == 2) // dPad is custom
@@ -1006,7 +1016,34 @@ void gui_handle_events (void)
 			justPressedR=0;
 		}
   }
-  
+
+#ifdef RASPBERRY
+
+  else if(currprefs.pandora_joyConf < 2)
+  {
+  // Y-Button mapped to Space
+	if(buttonY)
+	{
+		if(!justPressedY)
+		{
+			//SPACE
+			uae4all_keystate[AK_SPC] = 1;
+			record_key(AK_SPC << 1);
+			justPressedY=1;
+		}
+	}
+	else if(justPressedY)
+	{
+		//SPACE
+		uae4all_keystate[AK_SPC] = 0;
+		record_key((AK_SPC << 1) | 1);
+		justPressedY=0;
+	}
+  }
+	
+#endif
+ 
+#ifdef PANDORA_SPECIFIC  
   else // Custom controls not active
   {
     if(currprefs.pandora_custom_dpad < 2 && triggerR)
@@ -1338,6 +1375,7 @@ void gui_handle_events (void)
         break;    
     }
   }
+#endif
 }
 
 void gui_disk_image_change (int unitnum, const char *name, bool writeprotected)

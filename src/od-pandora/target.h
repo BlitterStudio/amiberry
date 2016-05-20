@@ -13,6 +13,7 @@
 #define OPTIONSFILENAME "uaeconfig"
 
 extern int emulating;
+extern int JoystickButton[20];  //Joystick Button state
 extern int uae4all_keystate[256];
 
 extern int z3_start_adr;

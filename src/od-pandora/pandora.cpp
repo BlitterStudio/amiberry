@@ -106,6 +106,10 @@ extern int keycode2amiga(SDL_keysym *prKeySym);
 extern int loadconfig_old(struct uae_prefs *p, const char *orgpath);
 extern void SetLastActiveConfig(const char *filename);
 
+/* Joystick */ 
+int JoystickButton[20];
+int JoystickQuit[2];
+
 /* Keyboard and mouse */
 int buttonstate[3];
 
@@ -1085,6 +1089,40 @@ void handle_events (void)
       	  setmousestate(0, 1, y * mouseScale, 0);
   		  }
   		  break;
+  		  
+		 case SDL_JOYBUTTONDOWN:  /* Handle Joystick Button Presses */
+			if (rEvent.jbutton.button == 8) JoystickQuit[0] = 1;  //Next if statements are for buttons 8 & 9 together to quit emulator
+			if (rEvent.jbutton.button == 9) JoystickQuit[1] = 1;
+			if (JoystickQuit[0] && JoystickQuit[1])
+			{
+				JoystickQuit[0] = 0;
+				JoystickQuit[1] = 0;
+				uae_quit();
+				break;
+			}
+			if (rEvent.jbutton.button > 5 && currprefs.pandora_custom_dpad < 3) break;  //Ignore buttons num above 5 if Custom DPad is not on special
+			if ((rEvent.jbutton.button == 0 || rEvent.jbutton.button == 1) && !currprefs.pandora_customControls) break; //Ignore buttons 0 & 1 if custom controls are not active to stop double triggering
+			JoystickButton[rEvent.jbutton.button] = 1;      
+			break;
+		
+		 case SDL_JOYBUTTONUP:  /* Handle Joystick Button Releases */
+			if (rEvent.jbutton.button == 8) JoystickQuit[0] = 0;
+			if (rEvent.jbutton.button == 9) JoystickQuit[1] = 0;
+			if (rEvent.jbutton.button > 5 && currprefs.pandora_custom_dpad < 3) break; //Ignore buttons num above 5 if Custom DPad is not on special
+			if ((rEvent.jbutton.button == 0 || rEvent.jbutton.button == 1) && !currprefs.pandora_customControls) break; //Ignore buttons 0 & 1 if custom controls are not active to stop double triggering
+			JoystickButton[rEvent.jbutton.button] = 0;
+			break;
+		
+		 if (currprefs.pandora_custom_dpad == 2 )
+		 {
+			case SDL_JOYHATMOTION:
+				if (rEvent.jhat.value & SDL_HAT_UP) JoystickButton[6] = 1; else JoystickButton[6] = 0;
+				if (rEvent.jhat.value & SDL_HAT_DOWN) JoystickButton[7] = 1; else JoystickButton[7] = 0;
+				if (rEvent.jhat.value & SDL_HAT_LEFT) JoystickButton[8] = 1; else JoystickButton[8] = 0;
+				if (rEvent.jhat.value & SDL_HAT_RIGHT) JoystickButton[9] = 1; else JoystickButton[9] = 0;
+				break;
+		 }  		  
+  		  
 		}
   }
 }
