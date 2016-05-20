@@ -1,11 +1,11 @@
 # uae4arm-rpi
 Port of uae4arm on Raspberry Pi
 
-v0.5:
-Merge of latest TomB version for Pandora.
-Picasso fully working.
-Keyboard management improved.
-Add deadzone for joystick.
+v0.5:  
+Merge of latest TomB version for Pandora.  
+Picasso fully working.  
+Keyboard management improved.  
+Add deadzone for joystick.  
 
 v0.4:  
 Merge of latest TomB version for Pandora.  
@@ -13,7 +13,7 @@ Keep position between file selection
 Joystick management improved.  
 
 v0.3:  
-Rework of dispmanX management (huge picasso improvement).
+Rework of dispmanX management (huge picasso improvement).  
 Add 4/3 shrink for 16/9 screen.  
 Alt key can now be used to switch between mouse and 2nd joystick.  
 
