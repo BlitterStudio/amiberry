@@ -150,6 +150,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
   lblFSRatioInfo = new gcn::Label("100%%");
 
   chkAspect = new gcn::UaeCheckBox("4/3 ratio shrink");
+  chkAspect->setId("4by3Ratio");
   chkAspect->addActionListener(amigaScreenActionListener);
 
 #endif
