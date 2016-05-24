@@ -40,9 +40,8 @@ static NavigationMap navMap[] =
   { "Miscellaneous",  "Status Line",    "Status Line",    "Input",          "Savestates" },
   { "Savestates",     "State0",         "State0",         "Miscellaneous",  "Reset" },
   { "Reset",          "Start",          "Quit",           "Savestates",     "Paths" },
-  { "Quit",           "Reset",          "Restart",        "Savestates",     "Paths" },
-  { "Restart",        "Quit",           "Start",          "Savestates",     "Paths" },
-  { "Start",          "Restart",        "Reset",          "Savestates",     "Paths" },
+  { "Quit",           "Reset",          "Start",        "Savestates",     "Paths" },
+  { "Start",          "Quit",          "Reset",          "Savestates",     "Paths" },
 
 // PanelPaths
   { "SystemROMs",     "Paths",          "Paths",          "RescanROMs",     "ConfigPath" },
@@ -147,11 +146,21 @@ static NavigationMap navMap[] =
   { "cmdAddHDF",      "cmdAddDir",      "cmdCreateHDF",   "cmdDel4",        "cmdDel0" },
   { "cmdCreateHDF",   "cmdAddHDF",      "Hard drives",    "cmdDel4",        "cmdDel0" },
 
+#ifndef RASPBERRY
 // PanelDisplay
-  { "sldWidth",       "",               "",               "Frameskip",      "sldHeight" },
-  { "sldHeight",      "",               "",               "sldWidth",       "sldVertPos" },
-  { "sldVertPos",     "",               "",               "sldHeight",      "Frameskip" },
+  { "sldWidth",       "Display",               "",               "Frameskip",      "sldHeight" },
+  { "sldHeight",      "Display",               "",               "sldWidth",       "sldVertPos" },
+  { "sldVertPos",     "Display",               "",               "sldHeight",      "Frameskip" },
   { "Frameskip",      "Display",        "Display",        "sldVertPos",     "sldWidth" },
+#else
+// PanelDisplay
+  { "sldWidth",       "Display",               "",               "Frameskip",      "sldHeight" },
+  { "sldHeight",      "Display",               "",               "sldWidth",       "sldVertPos" },
+  { "sldVertPos",     "Display",               "",               "sldHeight",      "FSRatio" },
+  { "FSRatio",     "Display",               "",               "sldVertPos",      "4by3Ratio" },  
+  { "4by3Ratio",     "Display",        "Display",               "FSRatio",      "Frameskip" },  
+  { "Frameskip",      "Display",        "Display",        "4by3Ratio",     "sldWidth" },
+#endif
 
 //PanelSound
   { "sndDisable",     "Sound",          "Mono",           "sldStereoDelay", "sndDisEmu" },
@@ -166,6 +175,7 @@ static NavigationMap navMap[] =
   { "sldSeparation",  "",               "",               "cboFilter",      "sldStereoDelay" },
   { "sldStereoDelay", "",               "",               "sldSeparation",  "sndDisable" },
 
+#ifndef RASPBERRY
 // PanelInput
   { "cboCtrlConfig",  "Input",          "Input",          "cboLeft",        "cboJoystick" },
   { "cboJoystick",    "Input",          "cboAutofire",    "cboCtrlConfig",  "cboTapDelay" },
@@ -185,12 +195,30 @@ static NavigationMap navMap[] =
   { "cboDown",        "cboUp",          "Input",          "cboR",           "cboRight" },
   { "cboLeft",        "Input",          "cboRight",       "cboUp",          "cboCtrlConfig" },
   { "cboRight",       "cboLeft",        "Input",          "cboDown",        "cboCtrlConfig" },
+#else
+// PanelInput
+  { "cboCtrlConfig",  "Input",          "Input",          "cboLeft",        "cboJoystick" },
+  { "cboJoystick",    "Input",          "cboAutofire",    "cboCtrlConfig",  "MouseSpeed" },
+  { "cboAutofire",    "cboJoystick",    "Input",          "cboCtrlConfig",  "MouseSpeed" },
+  { "MouseSpeed",     "",               "",               "cboJoystick",    "cboDPAD" },
+  { "cboDPAD",        "Input",          "CustomCtrl",     "MouseSpeed",     "cboA" },
+  { "CustomCtrl",     "cboDPAD",        "Input",          "MouseSpeed",      "cboB" },
+  { "cboA",           "Input",          "cboB",           "cboDPAD",        "cboX" },
+  { "cboB",           "cboA",           "Input",          "CustomCtrl",     "cboY" },
+  { "cboX",           "Input",          "cboY",           "cboA",           "cboL" },
+  { "cboY",           "cboX",           "Input",          "cboB",           "cboR" },
+  { "cboL",           "Input",          "cboR",           "cboX",           "cboUp" },
+  { "cboR",           "cboL",           "Input",          "cboY",           "cboDown" },
+  { "cboUp",          "Input",          "cboDown",        "cboL",           "cboLeft" },
+  { "cboDown",        "cboUp",          "Input",          "cboR",           "cboRight" },
+  { "cboLeft",        "Input",          "cboRight",       "cboUp",          "cboCtrlConfig" },
+  { "cboRight",       "cboLeft",        "Input",          "cboDown",        "cboCtrlConfig" },
+#endif
 
 // PanelMisc
   { "Status Line",    "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "ShowGUI" },
-  { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "Status Line",    "PandSpeed" },
-  { "PandSpeed",      "",               "",               "ShowGUI",        "BSDSocket" },
-  { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "PandSpeed",      "Status Line" },
+  { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "Status Line",    "BSDSocket" },
+  { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",      "Status Line" },
   
 // PanelSavestate
   { "State0",         "Savestates",     "Savestates",     "LoadState",      "State1" },
