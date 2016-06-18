@@ -528,7 +528,6 @@ static int real_main2 (int argc, TCHAR **argv)
 		write_log (_T("Sound driver unavailable: Sound output disabled\n"));
   	currprefs.produce_sound = 0;
   }
-  inputdevice_init();
 
   changed_prefs = currprefs;
   no_gui = ! currprefs.start_gui;
@@ -552,6 +551,8 @@ static int real_main2 (int argc, TCHAR **argv)
   	setCpuSpeed();
     update_display(&currprefs);
   }
+
+  inputdevice_init();
 
   fixup_prefs (&currprefs);
   changed_prefs = currprefs;
