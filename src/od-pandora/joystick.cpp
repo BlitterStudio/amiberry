@@ -74,38 +74,71 @@ void read_joystick(int nr, unsigned int *dir, int *button)
   }
   else
     *button = 0;
-        
+ 
+#ifndef RASPBERRY
   if(currprefs.pandora_joyPort != 0)
   {
     // Only one joystick active    
     if((nr == 0 && currprefs.pandora_joyPort == 2) || (nr == 1 && currprefs.pandora_joyPort == 1))
       return;
   }
+#endif
 
   *dir = 0;
 
   SDL_JoystickUpdate ();
 
-  #ifdef RASPBERRY
-	// Always check joystick state on Raspberry pi.
-  #else
+
+  if (nr != 1)
+  {
+    // get joystick direction via joystick or Hat
+    int hat = SDL_JoystickGetHat(joy,0);
+    int val = SDL_JoystickGetAxis(joy, 0);
+    if ((hat & SDL_HAT_RIGHT) || (val >  6000)) right=1;
+    if ((hat & SDL_HAT_LEFT)  || (val < -6000)) left=1;
+    val = SDL_JoystickGetAxis(joy, 1);
+    if ((hat & SDL_HAT_UP)    || (val < -6000)) top=1;
+    if ((hat & SDL_HAT_DOWN)  || (val >  6000)) bot=1;
+
+    *button |= (SDL_JoystickGetButton(joy, 0)) & 1;
+    *button |= ((SDL_JoystickGetButton(joy, 1)) & 1) << 1;
+
+    #ifdef SIX_AXIS_WORKAROUND
+    *button |= (SDL_JoystickGetButton(joy, 13)) & 1;
+    *button |= ((SDL_JoystickGetButton(joy, 14)) & 1) << 1;
+
+    if ( SDL_JoystickGetButton(joy, 4))   top  =1;
+    if ( SDL_JoystickGetButton(joy, 5))   right=1;
+    if ( SDL_JoystickGetButton(joy, 6))   bot  =1;
+    if ( SDL_JoystickGetButton(joy, 7))   left =1;
+    #endif
+
+    // Go over custom management which is only available for first joystick.
+    goto no_custom;
+  }
+
+
+#ifdef PANDORA_SPECIFIC
 	if (!triggerR /*R+dpad = arrow keys*/ && currprefs.pandora_custom_dpad==0)
-  #endif
+#endif
 	{
-		// get joystick direction via dPad or joystick
-		int hat=SDL_JoystickGetHat(joy,0);
+		// get joystick direction via dPad or joystick or Hat
+		int hat = SDL_JoystickGetHat(joy,0);
 		int val = SDL_JoystickGetAxis(joy, 0);
 		if (((hat & SDL_HAT_RIGHT) && currprefs.pandora_custom_dpad < 2) || (dpadRight && currprefs.pandora_custom_dpad < 2) || val > 6000) right=1;
 		if (((hat & SDL_HAT_LEFT) && currprefs.pandora_custom_dpad < 2)  || (dpadLeft && currprefs.pandora_custom_dpad < 2)  || val < -6000) left=1;
 		val = SDL_JoystickGetAxis(joy, 1);
 		if (((hat & SDL_HAT_UP) && currprefs.pandora_custom_dpad < 2)  || (dpadUp && currprefs.pandora_custom_dpad < 2)   || val < -6000) top=1;
 		if (((hat & SDL_HAT_DOWN) && currprefs.pandora_custom_dpad < 2) || (dpadDown && currprefs.pandora_custom_dpad < 2) || val > 6000) bot=1;
+
 		if (currprefs.pandora_joyConf)
 		{
 			if ((buttonX && currprefs.pandora_jump > -1) || SDL_JoystickGetButton(joy, currprefs.pandora_jump))
 				top = 1;
 		}
 	}
+
+
 
 	if(currprefs.pandora_customControls)
 	{
@@ -142,6 +175,7 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 				right = 1;
 		}
 	}
+
 
   if(currprefs.pandora_custom_dpad == 0) // dPad as joystick
   {
@@ -200,6 +234,7 @@ void read_joystick(int nr, unsigned int *dir, int *button)
 	
 	}
 
+
   #ifdef RASPBERRY
   if(!currprefs.pandora_customControls || currprefs.pandora_custom_A == 0)
 	  *button |= (SDL_JoystickGetButton(joy, 0)) & 1;
@@ -215,6 +250,8 @@ void read_joystick(int nr, unsigned int *dir, int *button)
   if (!currprefs.pandora_customControls && SDL_JoystickGetButton(joy, 6))   bot=1;
   if (!currprefs.pandora_customControls && SDL_JoystickGetButton(joy, 7))   left=1;
   #endif
+
+no_custom:
 
   // normal joystick movement
   if (left) 

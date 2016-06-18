@@ -1091,6 +1091,9 @@ void handle_events (void)
   		  break;
   		  
 		 case SDL_JOYBUTTONDOWN:  /* Handle Joystick Button Presses */
+			// Handle custom only for first joystick
+			if (rEvent.jbutton.which != 0)
+				break;
 			if (rEvent.jbutton.button == 8) JoystickQuit[0] = 1;  //Next if statements are for buttons 8 & 9 together to quit emulator
 			if (rEvent.jbutton.button == 9) JoystickQuit[1] = 1;
 			if (JoystickQuit[0] && JoystickQuit[1])
@@ -1106,6 +1109,9 @@ void handle_events (void)
 			break;
 		
 		 case SDL_JOYBUTTONUP:  /* Handle Joystick Button Releases */
+			// Handle custom only for first joystick
+			if (rEvent.jbutton.which != 0)
+				break;
 			if (rEvent.jbutton.button == 8) JoystickQuit[0] = 0;
 			if (rEvent.jbutton.button == 9) JoystickQuit[1] = 0;
 			if (rEvent.jbutton.button > 5 && currprefs.pandora_custom_dpad < 3) break; //Ignore buttons num above 5 if Custom DPad is not on special
@@ -1116,6 +1122,9 @@ void handle_events (void)
 		 if (currprefs.pandora_custom_dpad == 2 )
 		 {
 			case SDL_JOYHATMOTION:
+				// Handle custom only for first joystick
+				if (rEvent.jbutton.which != 0)
+					break;
 				if (rEvent.jhat.value & SDL_HAT_UP) JoystickButton[6] = 1; else JoystickButton[6] = 0;
 				if (rEvent.jhat.value & SDL_HAT_DOWN) JoystickButton[7] = 1; else JoystickButton[7] = 0;
 				if (rEvent.jhat.value & SDL_HAT_LEFT) JoystickButton[8] = 1; else JoystickButton[8] = 0;

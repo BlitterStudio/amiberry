@@ -278,10 +278,10 @@ uae_u16 JOY0DAT (void)
 {
   update_mouse_xy();
 #ifdef RASPBERRY
-    if (currprefs.pandora_custom_dpad == 0)
-        return joy0dir;
     if (currprefs.pandora_custom_dpad == 1)
         return ((uae_u8)mouse_x) | ((uae_u16)mouse_y << 8);
+    else
+        return joy0dir;
 #else
     return ((uae_u8)mouse_x) + ((uae_u16)mouse_y << 8) + joy0dir;
 #endif
