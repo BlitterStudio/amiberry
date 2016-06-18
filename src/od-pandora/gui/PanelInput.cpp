@@ -103,8 +103,10 @@ StringListModel autofireList(autofireValues, 3);
 #ifndef RASPBERRY
 const char *tapDelayValues[] = { "Normal", "Short", "None" };
 StringListModel tapDelayList(tapDelayValues, 3);
-#endif
 const char *dPADValues[] = { "Joystick", "Mouse", "Custom" };
+#else
+const char *dPADValues[] = { "Joystick", "Keyboard", "Custom" };
+#endif
 StringListModel dPADList(dPADValues, 3);
 
 const char *mappingValues[] = {
@@ -270,7 +272,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	chkCustomCtrl->setId("CustomCtrl");
   chkCustomCtrl->addActionListener(inputActionListener);
 
-  lblDPAD = new gcn::Label("DPAD:");
+  lblDPAD = new gcn::Label("Keyb DPAD:");
   lblDPAD->setSize(100, LABEL_HEIGHT);
   lblDPAD->setAlignment(gcn::Graphics::RIGHT);
 	cboDPAD = new gcn::UaeDropDown(&dPADList);

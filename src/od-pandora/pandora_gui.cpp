@@ -560,6 +560,32 @@ void gui_handle_events (void)
 
 	Uint8 *keystate = SDL_GetKeyState(NULL);
 
+#if 1
+	buttonA  = JoystickButton[0];
+	buttonB  = JoystickButton[1];
+	buttonX  = JoystickButton[2];
+	buttonY  = JoystickButton[3];
+	triggerL = JoystickButton[4];
+	triggerR = JoystickButton[5];
+	dpadUp   = JoystickButton[6];
+	dpadDown = JoystickButton[7];
+	dpadLeft = JoystickButton[8];
+	dpadRight= JoystickButton[9];
+
+	if (currprefs.pandora_custom_dpad != 1)
+	{
+		dpadUp   |= keystate[SDLK_UP];
+		dpadDown |= keystate[SDLK_DOWN];
+		dpadLeft |= keystate[SDLK_LEFT];
+		dpadRight|= keystate[SDLK_RIGHT];
+		buttonA  |= keystate[SDLK_HOME];
+		buttonB  |= keystate[SDLK_END];
+		buttonX  |= keystate[SDLK_PAGEDOWN];
+		buttonY  |= keystate[SDLK_PAGEUP];
+		triggerL |= keystate[SDLK_RSHIFT];
+		triggerR |= keystate[SDLK_RCTRL];
+	}
+#else
 	if(keystate[SDLK_HOME] || JoystickButton[0])  //Updated with Joystick input
 		buttonA = 1; else  buttonA = 0;
 	if(keystate[SDLK_END] || JoystickButton[1])
@@ -580,6 +606,7 @@ void gui_handle_events (void)
 		dpadLeft = 1; else  dpadLeft = 0;
 	if(keystate[SDLK_RIGHT] || JoystickButton[9])
 		dpadRight = 1; else  dpadRight = 0;
+#endif
 
 	if(keystate[SDLK_F12])
 		goMenu();
