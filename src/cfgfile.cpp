@@ -29,6 +29,8 @@
 #include "disk.h"
 #include "sd-pandora/sound.h"
 
+#include "SDL_keysym.h"
+
 static int config_newfilesystem;
 static struct strlist *temp_lines;
 static struct zfile *default_file;
@@ -385,6 +387,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
   cfgfile_write_bool (f, _T("synchronize_clock"), p->tod_hack);
   cfgfile_dwrite_str (f, _T("absolute_mouse"), abspointers[p->input_tablet]);
 
+  cfgfile_write (f, _T("key_for_menu"), _T("%d"), p->key_for_menu);
+  cfgfile_write (f, _T("key_for_input_switching"), _T("%d"), p->key_for_input_switching);
+
   cfgfile_write (f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
   cfgfile_write (f, _T("gfx_width"), _T("%d"), p->gfx_size.width);
   cfgfile_write (f, _T("gfx_height"), _T("%d"), p->gfx_size.height);
@@ -730,6 +735,13 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	  || cfgfile_strval (option, value, _T("gfx_lores"), &p->gfx_resolution, lorestype2, 0)
 	  || cfgfile_strval (option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
     return 1;
+
+
+    if (cfgfile_intval (option, value, "key_for_menu", &p->key_for_menu, 1)
+          || cfgfile_intval (option, value, "key_for_input_switching", &p->key_for_input_switching, 1));
+    return 1;
+
+
 	
   if(cfgfile_yesno (option, value, _T("show_leds"), &vb)) {
     p->leds_on_screen = vb;
@@ -1817,6 +1829,9 @@ void default_prefs (struct uae_prefs *p, int type)
 	p->socket_emu = 0;
 
   p->input_tablet = TABLET_OFF;
+
+  p->key_for_menu = SDLK_F12;
+  p->key_for_input_switching = SDLK_F11;
 
   target_default_options (p, type);
 

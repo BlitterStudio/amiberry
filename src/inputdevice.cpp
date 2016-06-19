@@ -428,6 +428,9 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
   dst->pandora_autofireButton1 = src->pandora_autofireButton1;
   dst->pandora_jump = src->pandora_jump;
 
+  dst->key_for_menu = src->key_for_menu;
+  dst->key_for_input_switching = src->key_for_input_switching;
+
   inputdevice_updateconfig (dst);
 }
 

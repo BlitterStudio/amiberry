@@ -61,6 +61,11 @@ static gcn::Label *lblLeft;
 static gcn::UaeDropDown* cboLeft;
 static gcn::Label *lblRight;
 static gcn::UaeDropDown* cboRight;
+static gcn::Label *lblKeyForMenu;
+static gcn::UaeDropDown* KeyForMenu;
+static gcn::Label *lblKeyForSwitching;
+static gcn::UaeDropDown* KeyForSwitching;
+
 
 
 class StringListModel : public gcn::ListModel
@@ -108,6 +113,12 @@ const char *dPADValues[] = { "Joystick", "Mouse", "Custom" };
 const char *dPADValues[] = { "Joystick", "Keyboard", "Custom" };
 #endif
 StringListModel dPADList(dPADValues, 3);
+
+
+static const int ControlKey_SDLKeyValues[] = { SDLK_F11 , SDLK_F12, SDLK_LALT , SDLK_LCTRL };
+
+const char *ControlKeyValues[] = { "F11", "F12", "LeftAlt", "LeftCtrl" };
+StringListModel ControlKeyList(ControlKeyValues, 4);
 
 const char *mappingValues[] = {
   "Joystick Right", "Joystick Left", "Joystick Down", "Joystick Up", 
@@ -207,6 +218,13 @@ class InputActionListener : public gcn::ActionListener
 
  	    else if (actionEvent.getSource() == cboRight)
         changed_prefs.pandora_custom_right = cboRight->getSelected() - 8;
+
+ 	    else if (actionEvent.getSource() == KeyForMenu)
+        changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()] ;
+
+ 	    else if (actionEvent.getSource() == KeyForSwitching)
+        changed_prefs.key_for_input_switching = ControlKey_SDLKeyValues[KeyForSwitching->getSelected()] ;
+
     }
 };
 static InputActionListener* inputActionListener;
@@ -371,6 +389,26 @@ void InitPanelInput(const struct _ConfigCategory& category)
   cboRight->setId("cboRight");
   cboRight->addActionListener(inputActionListener);
 
+  lblKeyForMenu = new gcn::Label("Key for Menu:");
+  lblKeyForMenu->setSize(100, LABEL_HEIGHT);
+  lblKeyForMenu->setAlignment(gcn::Graphics::RIGHT);
+  KeyForMenu = new gcn::UaeDropDown(&ControlKeyList);
+  KeyForMenu->setSize(150, DROPDOWN_HEIGHT);
+  KeyForMenu->setBaseColor(gui_baseCol);
+  KeyForMenu->setId("CKeyMenu");
+  KeyForMenu->addActionListener(inputActionListener);
+
+
+  lblKeyForSwitching = new gcn::Label("Mouse/joy sw:");
+  lblKeyForSwitching->setSize(100, LABEL_HEIGHT);
+  lblKeyForSwitching->setAlignment(gcn::Graphics::RIGHT);
+  KeyForSwitching = new gcn::UaeDropDown(&ControlKeyList);
+  KeyForSwitching->setSize(150, DROPDOWN_HEIGHT);
+  KeyForSwitching->setBaseColor(gui_baseCol);
+  KeyForSwitching->setId("CKeySwitching");
+  KeyForSwitching->addActionListener(inputActionListener);
+
+
   int posY = DISTANCE_BORDER;
   category.panel->add(lblCtrlConfig, DISTANCE_BORDER, posY);
   category.panel->add(cboCtrlConfig, DISTANCE_BORDER + lblCtrlConfig->getWidth() + 8, posY);
@@ -421,8 +459,16 @@ void InitPanelInput(const struct _ConfigCategory& category)
   category.panel->add(cboLeft, DISTANCE_BORDER + lblLeft->getWidth() + 8, posY);
   category.panel->add(lblRight, 300, posY);
   category.panel->add(cboRight, 300 + lblRight->getWidth() + 8, posY);
-  posY += cboLeft->getHeight() + 4;
+  posY += cboLeft->getHeight() + DISTANCE_NEXT_Y;
   
+  category.panel->add(lblKeyForMenu, DISTANCE_BORDER, posY);
+  category.panel->add(KeyForMenu, DISTANCE_BORDER + lblLeft->getWidth() + 8, posY);
+  posY += KeyForMenu->getHeight() + 4;
+
+  category.panel->add(lblKeyForSwitching, DISTANCE_BORDER, posY);
+  category.panel->add(KeyForSwitching, DISTANCE_BORDER + lblLeft->getWidth() + 8, posY);
+  posY += KeyForSwitching->getHeight() + DISTANCE_NEXT_Y;
+
   RefreshPanelInput();
 }
 
@@ -466,6 +512,12 @@ void ExitPanelInput(void)
   delete cboLeft;
   delete lblRight;
   delete cboRight;
+
+  delete lblKeyForMenu;
+  delete KeyForMenu;
+  delete lblKeyForSwitching;
+  delete KeyForSwitching;
+
 
   delete inputActionListener;
 }
@@ -516,4 +568,21 @@ void RefreshPanelInput(void)
   cboDown->setSelected(changed_prefs.pandora_custom_down + 8);
   cboLeft->setSelected(changed_prefs.pandora_custom_left + 8);
   cboRight->setSelected(changed_prefs.pandora_custom_right + 8);
+
+  for(i=0; i<4; ++i)
+  {
+    if(changed_prefs.key_for_menu == ControlKey_SDLKeyValues[i])
+    {
+      KeyForMenu->setSelected(i);
+      break;
+    }
+  }
+  for(i=0; i<4; ++i)
+  {
+    if(changed_prefs.key_for_input_switching == ControlKey_SDLKeyValues[i])
+    {
+      KeyForSwitching->setSelected(i);
+      break;
+    }
+  }
 }

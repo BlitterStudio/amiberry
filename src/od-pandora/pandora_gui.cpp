@@ -608,7 +608,7 @@ void gui_handle_events (void)
 		dpadRight = 1; else  dpadRight = 0;
 #endif
 
-	if(keystate[SDLK_F12])
+	if(keystate[currprefs.key_for_menu])
 		goMenu();
         if(uae4all_keystate[AK_CTRL] && uae4all_keystate[AK_LAMI] && uae4all_keystate[AK_RAMI])
                 uae_reset(0);

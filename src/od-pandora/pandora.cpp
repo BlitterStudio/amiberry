@@ -912,7 +912,7 @@ void handle_events (void)
   				}
   			}
 #endif
-  			if (rEvent.key.keysym.sym==SDLK_F11)
+  			if (rEvent.key.keysym.sym==currprefs.key_for_input_switching)
   			{
 					// state moves thus:
 					// joystick mode
@@ -1012,7 +1012,7 @@ void handle_events (void)
   				buttonstate[2] = 0;
 				}
 
-  			if (rEvent.key.keysym.sym==SDLK_F11)
+  			if (rEvent.key.keysym.sym==currprefs.key_for_input_switching)
   			{
   				show_inputmode = 0;
   			}

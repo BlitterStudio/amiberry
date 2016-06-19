@@ -159,6 +159,9 @@ struct uae_prefs {
   int pandora_autofireButton1;
   int pandora_jump;
 
+  int key_for_menu;
+  int key_for_input_switching;
+
   /* input */
 
   int input_joymouse_multiplier;

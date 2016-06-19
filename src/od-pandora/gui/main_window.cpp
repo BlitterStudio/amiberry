@@ -188,7 +188,26 @@ namespace sdl
         {
           gcn::FocusHandler* focusHdl;
           gcn::Widget* activeWidget;
-            
+
+
+          if (event.key.keysym.sym == currprefs.key_for_menu)
+          {
+            if(emulating && widgets::cmdStart->isEnabled())
+            {
+              //------------------------------------------------
+              // Continue emulation
+              //------------------------------------------------
+              gui_running = false;
+            }
+            else
+            {
+              //------------------------------------------------
+              // First start of emulator -> reset Amiga
+              //------------------------------------------------
+              uae_reset(0);
+              gui_running = false;
+            }
+           } else
           switch(event.key.keysym.sym)
           {
             case SDLK_q:
@@ -209,27 +228,9 @@ namespace sdl
               //-------------------------------------------------
               // Reset Amiga
               //-------------------------------------------------
-        			uae_reset(1);
-        			gui_running = false;
-        			break;
-
-            case SDLK_F12:
-    			    if(emulating && widgets::cmdStart->isEnabled())
-    		      {
-                //------------------------------------------------
-                // Continue emulation
-                //------------------------------------------------
-                gui_running = false;
-    		      }
-              else
-              {
-                //------------------------------------------------
-                // First start of emulator -> reset Amiga
-                //------------------------------------------------
-          			uae_reset(0);
-          			gui_running = false;
-              }
-              break;              
+              uae_reset(1);
+              gui_running = false;
+              break;
 
             case SDLK_PAGEDOWN:
             case SDLK_HOME:

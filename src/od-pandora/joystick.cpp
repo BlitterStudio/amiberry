@@ -41,9 +41,10 @@ static int delay=0;
 #endif
 
 
-static int nr_joysticks;
+int nr_joysticks;
+const char* JoystickName[4];
 
-static SDL_Joystick *uae4all_joy0, *uae4all_joy1;
+static SDL_Joystick *uae4all_joy0 = 0, *uae4all_joy1 = 0 , *uae4all_joy2 = 0, *uae4all_joy3 = 0;
 
 void read_joystick(int nr, unsigned int *dir, int *button)
 {
@@ -293,17 +294,32 @@ void init_joystick(void)
     if (nr_joysticks > 0)
     {
 		uae4all_joy0 = SDL_JoystickOpen (0);
-                printf("Joystick0 : %s\n",SDL_JoystickName(0));
+		JoystickName[0] = SDL_JoystickName(0);
+                printf("Joystick0 : %s\n",JoystickName[0]);
 		printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy0),SDL_JoystickNumAxes(uae4all_joy0),SDL_JoystickNumHats(uae4all_joy0));
     }
     if (nr_joysticks > 1)
     {
 		uae4all_joy1 = SDL_JoystickOpen (1);
-                printf("Joystick1 : %s\n",SDL_JoystickName(1));
+		JoystickName[1] = SDL_JoystickName(1);
+                printf("Joystick1 : %s\n",JoystickName[1]);
 		printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy1),SDL_JoystickNumAxes(uae4all_joy1),SDL_JoystickNumHats(uae4all_joy1));
     }
-    else
-		uae4all_joy1 = NULL; 
+    if (nr_joysticks > 2)
+    {
+		uae4all_joy2 = SDL_JoystickOpen (2);
+		JoystickName[2] = SDL_JoystickName(2);
+                printf("Joystick2 : %s\n",JoystickName[2]);
+		printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy2),SDL_JoystickNumAxes(uae4all_joy2),SDL_JoystickNumHats(uae4all_joy2));
+    }
+    if (nr_joysticks > 3)
+    {
+		uae4all_joy3 = SDL_JoystickOpen (3);
+		JoystickName[3] = SDL_JoystickName(3);
+                printf("Joystick3 : %s\n",JoystickName[3]);
+		printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(uae4all_joy3),SDL_JoystickNumAxes(uae4all_joy3),SDL_JoystickNumHats(uae4all_joy3));
+    }
+
 }
 
 void close_joystick(void)
@@ -312,4 +328,8 @@ void close_joystick(void)
 	SDL_JoystickClose (uae4all_joy0);
     if (nr_joysticks > 1)
 	SDL_JoystickClose (uae4all_joy1);
+    if (nr_joysticks > 2)
+	SDL_JoystickClose (uae4all_joy2);
+    if (nr_joysticks > 3)
+	SDL_JoystickClose (uae4all_joy3);
 }
