@@ -37,7 +37,7 @@ static NavigationMap navMap[] =
   { "Display",        "sldWidth",       "sldWidth",       "Hard drives",    "Sound" },
   { "Sound",          "sndDisable",     "sndDisable",     "Display",        "Input" },
   { "Input",          "cboCtrlConfig",  "cboCtrlConfig",  "Sound",          "Miscellaneous" },
-  { "Miscellaneous",  "Status Line",    "Status Line",    "Input",          "Savestates" },
+  { "Miscellaneous",  "StatusLine",     "StatusLine",     "Input",          "Savestates" },
   { "Savestates",     "State0",         "State0",         "Miscellaneous",  "Reset" },
   { "Reset",          "Start",          "Quit",           "Savestates",     "Paths" },
   { "Quit",           "Reset",          "Start",        "Savestates",     "Paths" },
@@ -216,8 +216,9 @@ static NavigationMap navMap[] =
 #endif
 
 // PanelMisc
-  { "Status Line",    "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "ShowGUI" },
-  { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "Status Line",    "BSDSocket" },
+  { "StatusLine",     "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "HideIdle" },
+  { "HideIdle",       "Miscellaneous",  "Miscellaneous",  "StatusLine",     "ShowGUI" },
+  { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "HideIdle",      "BSDSocket" },
   { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",      "Status Line" },
   
 // PanelSavestate

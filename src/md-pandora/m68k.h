@@ -149,7 +149,7 @@ struct flag_struct {
 #define IOR_CZNV(X)     (regs.ccrflags.nzcv |= (X))
 #define SET_CZNV(X)     (regs.ccrflags.nzcv = (X))
 
-#define COPY_CARRY()      (regs.ccrflags.x = (regs.ccrflags.nzcv)>>29)
+#define COPY_CARRY()      (regs.ccrflags.x = ((regs.ccrflags.nzcv >> 29) & 1))
 
 static inline int cctrue(struct flag_struct &flags, int cc)
 {

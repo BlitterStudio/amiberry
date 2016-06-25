@@ -47,8 +47,10 @@ static int frh_count = 0;
 #define LAST_SPEEDUP_LINE 30
 #define SPEEDUP_CYCLES_JIT 3000
 #define SPEEDUP_CYCLES_NONJIT 600
+#define SPEEDUP_CYCLES_HAM 1000
 #define SPEEDUP_TIMELIMIT_JIT -1000
 #define SPEEDUP_TIMELIMIT_NONJIT -2000
+#define SPEEDUP_TIMELIMIT_HAM -6500
 int pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
 
@@ -4110,17 +4112,27 @@ static void vsync_handler_post (void)
   if (currprefs.cachesize) {
     vsyncmintime = last_synctime;
     frh_count = 0;
-    pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
-    speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+    if(ham_drawn) {
+      pissoff_value = SPEEDUP_CYCLES_HAM * CYCLE_UNIT;
+      speedup_timelimit = SPEEDUP_TIMELIMIT_HAM;
+    } else {
+      pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
+      speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+    }
   }
   else
 #endif
   {
-    vsyncmintime = last_synctime + vsynctimebase * (maxvpos - LAST_SPEEDUP_LINE) / maxvpos;
+    vsyncmintime = last_synctime + vsynctimebase * (maxvpos_nom - LAST_SPEEDUP_LINE) / maxvpos_nom;
     pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
-    speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+    if(ham_drawn) {
+      speedup_timelimit = SPEEDUP_TIMELIMIT_HAM;
+    } else {
+      speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+    }
   }
-
+  ham_drawn = false;
+  
 	if ((beamcon0 & (0x20 | 0x80)) != (new_beamcon0 & (0x20 | 0x80)) || abs (vpos_count - vpos_count_diff) > 1 || lof_changed) {
 		init_hz ();
   }
@@ -4327,13 +4339,13 @@ static void hsync_handler_post (bool onvsync)
 #ifdef JIT
     if (currprefs.cachesize) {
 	    frh_count++;
-	    if (trigger_frh(frh_count) && vpos < maxvpos - LAST_SPEEDUP_LINE) {
+	    if (trigger_frh(frh_count) && vpos < maxvpos_nom - LAST_SPEEDUP_LINE) {
 		    frh_handler();
 	    }
-	    is_syncline = trigger_frh(frh_count+1) && vpos < maxvpos - LAST_SPEEDUP_LINE + 1 && ! rpt_did_reset;
+	    is_syncline = trigger_frh(frh_count+1) && vpos < maxvpos_nom - LAST_SPEEDUP_LINE + 1 && ! rpt_did_reset;
     } else {
 #endif
-	    is_syncline = vpos + 1 == maxvpos + lof_store - LAST_SPEEDUP_LINE;
+	    is_syncline = vpos + 1 == maxvpos_nom + lof_store - LAST_SPEEDUP_LINE;
 #ifdef JIT
     }
 #endif

@@ -136,6 +136,7 @@ struct uae_prefs {
   int pandora_horizontal_offset;
   int pandora_vertical_offset;
   int pandora_cpu_speed;
+  int pandora_hide_idle_led;
   
   int pandora_joyConf;
   int pandora_joyPort;
@@ -161,6 +162,9 @@ struct uae_prefs {
 
   int key_for_menu;
   int key_for_input_switching;
+
+  int Port1_selection;
+  int Port2_selection;
 
   /* input */
 

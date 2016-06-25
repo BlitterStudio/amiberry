@@ -6,6 +6,7 @@
 #include "options.h"
 #include "gui.h"
 #include "disk.h"
+#include "fsdb.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
@@ -417,6 +418,8 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
                   if(readsize == file_info.uncompressed_size)
                   {
                     char target_file[MAX_DPATH];
+                    if(!my_existsdir(rp9tmp_path))
+                      my_mkdir(rp9tmp_path);
                     snprintf(target_file, MAX_DPATH, "%s%s", rp9tmp_path, content);
                     FILE *f = fopen(target_file, "wb");
                     if(f != NULL)

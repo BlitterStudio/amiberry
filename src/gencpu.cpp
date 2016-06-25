@@ -2330,8 +2330,12 @@ static void genmovemle_ce (uae_u16 opcode)
 	if (table68k[opcode].size == sz_long) {
 		if (table68k[opcode].dmode == Apdi) {
 			printf ("\tuae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;\n");
+      if(cpu_level >= 2)
+        printf ("\tint type = get_cpu_model() >= 68020;\n");
 			printf ("\twhile (amask) {\n");
 			printf ("\t\tsrca -= %d;\n", size);
+      if(cpu_level >= 2)
+        printf ("\t\tif (type) m68k_areg (regs, dstreg) = srca;\n");
 			//printf ("\t\t%s (srca, m68k_areg (regs, movem_index2[amask]) >> 16);\n", dstw);
 			//printf ("\t\t%s (srca + 2, m68k_areg (regs, movem_index2[amask]));\n", dstw);
       printf ("\t\t%s (srca, m68k_areg (regs, movem_index2[amask]));\n", dstl);
@@ -2369,8 +2373,12 @@ static void genmovemle_ce (uae_u16 opcode)
 	} else {
 		if (table68k[opcode].dmode == Apdi) {
 			printf ("\tuae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;\n");
+      if(cpu_level >= 2)
+  			printf ("\tint type = get_cpu_model() >= 68020;\n");
 			printf ("\twhile (amask) {\n");
 			printf ("\t\tsrca -= %d;\n", size);
+      if(cpu_level >= 2)
+  			printf ("\t\tif (type) m68k_areg (regs, dstreg) = srca;\n");
 			printf ("\t\t%s (srca, m68k_areg (regs, movem_index2[amask]));\n", dstw);
 			printf ("\tamask = movem_next[amask];\n");
 			addcycles000_nonce("\t\t", cpu_level > 1 ? 3 : 4);
@@ -3061,6 +3069,9 @@ static void gen_opcode (unsigned int opcode)
 
 	resetvars ();
 	
+  if(curi->mnemo == i_DIVL)
+     printf ("\tuae_u32 cyc = 0;\n");
+
 	start_brace ();
 
 	m68k_pc_offset = 2;
@@ -5070,8 +5081,13 @@ bccl_not68020:
 		break;
 	case i_DIVL:
 		genamode (curi, curi->smode, "srcreg", curi->size, "extra", 1, 0, 0);
+    printf ("\tif (extra & 0x800) cyc = 12 * CYCLE_UNIT / 2;\n");
 		genamode (curi, curi->dmode, "dstreg", curi->size, "dst", 1, 0, 0);
 		sync_m68k_pc ();
+    printf ("\tif (dst == 0) {\n");
+    printf ("\t\tException (5, regs);\n");
+	  printf ("\t\treturn 4 * CYCLE_UNIT / 2;\n");
+    printf ("\t}\n");
 		printf ("\tm68k_divl(opcode, dst, extra);\n");
 		break;
 	case i_MULL:

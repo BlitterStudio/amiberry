@@ -33,6 +33,29 @@ typedef uae_u32 uintptr;
 
 #define panicbug printf
 
+/* Flags for Bernie during development/debugging. Should go away eventually */
+#define DISTRUST_CONSISTENT_MEM 0
+#define TAGMASK 0x0000ffff
+#define TAGSIZE (TAGMASK+1)
+#define MAXRUN 1024
+#define cacheline(x) (((uae_u32)x)&TAGMASK)
+
+extern uae_u8* start_pc_p;
+extern uae_u32 start_pc;
+
+struct blockinfo_t;
+
+typedef struct {
+  uae_u16* location;
+  uae_u8  cycles;
+  uae_u8  specmem;
+} cpu_history;
+
+typedef union {
+    cpuop_func* handler;
+    struct blockinfo_t* bi;
+} cacheline;
+
 /* (gb) When on, this option can save save up to 30% compilation time
  *  when many lazy flushes occur (e.g. apps in MacOS 8.x).
  */
@@ -50,35 +73,8 @@ typedef uae_u32 uintptr;
 #define USE_CHECKSUM_INFO 1
 #endif
 
-/* Flags for Bernie during development/debugging. Should go away eventually */
-#define DISTRUST_CONSISTENT_MEM 0
-#define TAGMASK 0x000fffff
-#define TAGSIZE (TAGMASK+1)
-#define MAXRUN 1024
-
-extern uae_u8* start_pc_p;
-extern uae_u32 start_pc;
-
-#define cacheline(x) (((uae_u32)x)&TAGMASK)
-
-typedef struct {
-  uae_u16* location;
-  uae_u8  cycles;
-  uae_u8  specmem;
-  uae_u8  dummy2;
-  uae_u8  dummy3;
-} cpu_history;
-
-struct blockinfo_t;
-
-typedef union {
-    cpuop_func* handler;
-    struct blockinfo_t* bi;
-} cacheline;
-
 #define USE_ALIAS 1
 #define USE_F_ALIAS 1
-#define USE_OFFSET 0
 #define COMP_DEBUG 0
 
 #if COMP_DEBUG
@@ -122,12 +118,10 @@ typedef union {
 #define FLAG_CZNV (FLAG_C | FLAG_Z | FLAG_N | FLAG_V)
 #define FLAG_ZNV  (FLAG_Z | FLAG_N | FLAG_V)
 
-#define KILLTHERAT 1  /* Set to 1 to avoid some partial_rat_stalls */
-
 #if defined(CPU_arm)
-#define USE_DATA_BUFFER
+//#define DEBUG_DATA_BUFFER
 #define ALIGN_NOT_NEEDED
-# define N_REGS 13  /* really 16, but 13 to 15 are SP, LR, PC */
+#define N_REGS 13  /* really 16, but 13 to 15 are SP, LR, PC */
 #else
 #define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
 #endif
@@ -176,10 +170,8 @@ typedef struct {
   uae_u8 status;
   uae_s8 realreg; /* gb-- realreg can hold -1 */
   uae_u8 realind; /* The index in the holds[] array */
-  uae_u8 needflush;
   uae_u8 validsize;
   uae_u8 dirtysize;
-  uae_u8 dummy;
 } reg_status;
 
 #ifdef USE_JIT_FPU
@@ -233,8 +225,6 @@ typedef struct {
   uae_u32 touched;
   uae_s8 holds[VREGS];
   uae_u8 nholds;
-  uae_u8 canbyte;
-  uae_u8 canword;
   uae_u8 locked;
 } n_status;
 
@@ -310,6 +300,7 @@ extern int touchcnt;
 
 #if defined(CPU_arm)
 #include "compemu_midfunc_arm.h"
+#include "compemu_midfunc_arm2.h"
 #else
 #include "compemu_midfunc_x86.h"
 #endif
@@ -331,9 +322,6 @@ extern void writelong_clobber(int address, int source, int tmp);
 extern void get_n_addr(int address, int dest, int tmp);
 extern void get_n_addr_jmp(int address, int dest, int tmp);
 extern void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp);
-/* Set native Z flag only if register is zero */
-extern void set_zero(int r, int tmp);
-extern int kill_rodent(int r);
 #define SYNC_PC_OFFSET 100
 extern void sync_m68k_pc(void);
 extern uae_u32 get_const(int r);

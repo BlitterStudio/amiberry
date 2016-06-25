@@ -57,6 +57,7 @@ static void lores_reset (void)
 }
 
 bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
+bool ham_drawn = false;
 
 #ifdef PANDORA
 #define OFFSET_Y_ADJUST 15
@@ -529,6 +530,7 @@ static void init_ham_decoding (void)
 static void decode_ham (int pix, int stoppos)
 {
 	int todraw_amiga = res_shift_from_window (stoppos - pix);
+	ham_drawn = true;
 	
 	if (!bplham) {
 		while (todraw_amiga-- > 0) {
@@ -1848,7 +1850,11 @@ static void draw_status_line (int line)
   }
   buf = xlinebuffer;
 
-	x+=100 - (TD_WIDTH*(currprefs.nr_floppies-1)) - TD_WIDTH;
+	x += 100 - (TD_WIDTH * (currprefs.nr_floppies - 1)) - TD_WIDTH;
+  if(nr_units() < 1)
+    x += TD_WIDTH;
+  if(currprefs.pandora_hide_idle_led)
+    x += TD_WIDTH;
 #ifdef PICASSO96
   if(picasso_on)
     memset (buf + (x - 4) * 2, 0, (picasso_vidinfo.width - x + 4) * 2);
@@ -1856,8 +1862,10 @@ static void draw_status_line (int line)
 #endif
     memset (buf + (x - 4) * gfxvidinfo.pixbytes, 0, (gfxvidinfo.outwidth - x + 4) * gfxvidinfo.pixbytes);
 
-	for (led = -2; led < (currprefs.nr_floppies+1); led++) {
+	for (led = (currprefs.pandora_hide_idle_led == 0) ? -2 : -1; led < (currprefs.nr_floppies+1); led++) {
 		int track;
+		if(led == 0 && nr_units() < 1)
+		  continue; // skip led for HD if not in use
 		if (led > 0) {
 			/* Floppy */
 			track = gui_data.drive_track[led-1];

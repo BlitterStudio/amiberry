@@ -1965,7 +1965,6 @@ int bip_a4000 (struct uae_prefs *p, int rom)
 	roms[2] = 11;
 	roms[3] = -1;
 
-	p->immediate_blits = 1;
 	p->bogomem_size = 0;
 	p->chipmem_size = 0x200000;
 	p->cpu_model = 68030;

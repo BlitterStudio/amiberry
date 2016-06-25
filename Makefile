@@ -226,8 +226,8 @@ OBJS += src/cpuemu_0.o
 OBJS += src/cpuemu_4.o
 OBJS += src/cpuemu_11.o
 OBJS += src/jit/compemu.o
-OBJS += src/jit/compemu_fpp.o
 OBJS += src/jit/compstbl.o
+OBJS += src/jit/compemu_fpp.o
 OBJS += src/jit/compemu_support.o
 
 src/osdep/neon_helper.o: src/osdep/neon_helper.s

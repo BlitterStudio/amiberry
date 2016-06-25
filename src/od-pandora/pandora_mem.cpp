@@ -17,6 +17,9 @@ uae_u32 natmem_size;
 static uae_u64 totalAmigaMemSize;
 #define MAXAMIGAMEM 0x6000000 // 64 MB (16 MB for standard Amiga stuff, 16 MG RTG, 64 MB Z3 fast)
 
+/* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
+#define BARRIER 32
+
 static uae_u8* additional_mem = (uae_u8*) MAP_FAILED;
 #define ADDITIONAL_MEMSIZE (128 + 16) * 1024 * 1024
 
@@ -56,7 +59,7 @@ void alloc_AmigaMem(void)
 		write_log("Can't allocate 16M of virtual address space!?\n");
     abort();
 	}
-  additional_mem = (uae_u8*) mmap(natmem_offset + 0x10000000, ADDITIONAL_MEMSIZE,
+  additional_mem = (uae_u8*) mmap(natmem_offset + 0x10000000, ADDITIONAL_MEMSIZE + BARRIER,
     PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
   if(additional_mem != MAP_FAILED)
   {
@@ -70,7 +73,7 @@ void alloc_AmigaMem(void)
   
   // Second attempt: allocate huge memory block for entire area
   natmem_size = ADDITIONAL_MEMSIZE + 256 * 1024 * 1024;
-  natmem_offset = (uae_u8*)valloc (natmem_size);
+  natmem_offset = (uae_u8*)valloc (natmem_size + BARRIER);
   if(natmem_offset)
   {
     // Allocation successful
@@ -95,11 +98,11 @@ void alloc_AmigaMem(void)
 		natmem_size = 16 * 1024 * 1024;
 
 	write_log("Total physical RAM %lluM. Attempting to reserve: %uM.\n", total >> 20, natmem_size >> 20);
-	natmem_offset = (uae_u8*)valloc (natmem_size);
+	natmem_offset = (uae_u8*)valloc (natmem_size + BARRIER);
 
 	if (!natmem_offset) {
 		for (;;) {
-			natmem_offset = (uae_u8*)valloc (natmem_size);
+			natmem_offset = (uae_u8*)valloc (natmem_size + BARRIER);
 			if (natmem_offset)
 				break;
 			natmem_size -= 16 * 1024 * 1024;

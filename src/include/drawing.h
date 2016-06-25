@@ -23,6 +23,7 @@
 
 #define lores_shift 0
 extern bool aga_mode;
+extern bool ham_drawn;
 
 STATIC_INLINE int coord_hw_to_window_x (int x)
 {

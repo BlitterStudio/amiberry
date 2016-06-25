@@ -529,6 +529,8 @@ static int real_main2 (int argc, TCHAR **argv)
   	currprefs.produce_sound = 0;
   }
 
+  inputdevice_init();
+
   changed_prefs = currprefs;
   no_gui = ! currprefs.start_gui;
   if (restart_program == 2)
@@ -552,7 +554,7 @@ static int real_main2 (int argc, TCHAR **argv)
     update_display(&currprefs);
   }
 
-  inputdevice_init();
+
 
   fixup_prefs (&currprefs);
   changed_prefs = currprefs;
