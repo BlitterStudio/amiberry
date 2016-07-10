@@ -1634,7 +1634,7 @@ static __inline__ void pfield_doline (int lineno)
 }
 
 
-void init_row_map (void)
+__attribute__((optimize("O2"))) void init_row_map (void)
 {
   int i, j;
 
