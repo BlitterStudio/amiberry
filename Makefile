@@ -4,7 +4,7 @@ endif
 
 ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
+	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
 	LDFLAGS += -lbcm_host
 	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
@@ -17,10 +17,12 @@ else ifeq ($(PLATFORM),rpi1)
 	HAVE_DISPMANX = 1
 	DEFS += -DRASPBERRY
 else ifeq ($(PLATFORM),generic-sdl)
+	MORE_CFLAGS += -DARMV6T2 
 	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),gles)
 	# For Raspberry Pi uncomment below line
 	#LDFLAGS += -lbcm_host
+	MORE_CFLAGS += -DARMV6T2
 	HAVE_GLES_DISPLAY = 1
 	HAVE_NEON = 1
 endif
@@ -39,7 +41,7 @@ PANDORA=1
 SDL_CFLAGS = `sdl-config --cflags`
 
 DEFS +=  `xml2-config --cflags`
-DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY  -DARMV6T2 -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
+DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
 DEFS += -DWITH_INGAME_WARNING
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 DEFS += -DUSE_SDL

@@ -461,7 +461,7 @@ static void dummy_worker (int start, int stop)
 {
 }
 
-
+#ifdef ARMV6T2
 STATIC_INLINE int DECODE_HAM8_1(int col, int pv)
 {
   __asm__ __volatile__ (
@@ -511,6 +511,7 @@ STATIC_INLINE int DECODE_HAM6_3(int col, int pv)
     : [col] "+r" (col) , [pv] "+r" (pv) );
   return (col);
 }
+#endif
 
 static int ham_decode_pixel;
 static uae_u16 ham_lastcolor;
@@ -542,9 +543,15 @@ static void init_ham_decoding (void)
 				switch (pv & 0x3) 
         {
 					case 0x0: ham_lastcolor = colors_for_drawing.acolors[pv >> 2]; break;
+#ifdef ARMV6T2
 					case 0x1: ham_lastcolor = DECODE_HAM8_1(ham_lastcolor, pv); break;
 					case 0x2: ham_lastcolor = DECODE_HAM8_2(ham_lastcolor, pv); break;
 					case 0x3: ham_lastcolor = DECODE_HAM8_3(ham_lastcolor, pv); break;
+#else
+					case 0x1: ham_lastcolor &= 0xFFFF03; ham_lastcolor |= (pv & 0xFC); break;
+					case 0x2: ham_lastcolor &= 0x03FFFF; ham_lastcolor |= (pv & 0xFC) << 16; break;
+					case 0x3: ham_lastcolor &= 0xFF03FF; ham_lastcolor |= (pv & 0xFC) << 8; break;
+#endif
 				}
 			}
 		} else { /* AGA mode HAM6 */
@@ -553,9 +560,15 @@ static void init_ham_decoding (void)
 				switch (pv & 0x30) 
         {
 					case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
+#ifdef ARMV6T2
 					case 0x10: ham_lastcolor = DECODE_HAM6_1(ham_lastcolor, pv); break;
 					case 0x20: ham_lastcolor = DECODE_HAM6_2(ham_lastcolor, pv); break;
 					case 0x30: ham_lastcolor = DECODE_HAM6_3(ham_lastcolor, pv); break;
+#else
+					case 0x10: ham_lastcolor &= 0xFFFF00; ham_lastcolor |= (pv & 0xF) << 4; break;
+					case 0x20: ham_lastcolor &= 0x00FFFF; ham_lastcolor |= (pv & 0xF) << 20; break;
+					case 0x30: ham_lastcolor &= 0xFF00FF; ham_lastcolor |= (pv & 0xF) << 12; break;
+#endif
 				}
 			}
 		}
@@ -566,9 +579,15 @@ static void init_ham_decoding (void)
 			switch (pv & 0x30) 
       {
 				case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
+#ifdef ARMV6T2
 				case 0x10: ham_lastcolor = DECODE_HAM6_1(ham_lastcolor, pv); break;
 				case 0x20: ham_lastcolor = DECODE_HAM6_2(ham_lastcolor, pv); break;
 				case 0x30: ham_lastcolor = DECODE_HAM6_3(ham_lastcolor, pv); break;
+#else
+				case 0x10: ham_lastcolor &= 0xFF0; ham_lastcolor |= (pv & 0xF); break;
+				case 0x20: ham_lastcolor &= 0x0FF; ham_lastcolor |= (pv & 0xF) << 8; break;
+				case 0x30: ham_lastcolor &= 0xF0F; ham_lastcolor |= (pv & 0xF) << 4; break;
+#endif
 			}
 		}
 	}
@@ -596,9 +615,15 @@ static void decode_ham (int pix, int stoppos)
 				switch (pv & 0x3) 
         {
 					case 0x0: ham_lastcolor = colors_for_drawing.acolors[pv >> 2]; break;
+#ifdef ARMV6T2
 					case 0x1: ham_lastcolor = DECODE_HAM8_1(ham_lastcolor, pv); break;
 					case 0x2: ham_lastcolor = DECODE_HAM8_2(ham_lastcolor, pv); break;
 					case 0x3: ham_lastcolor = DECODE_HAM8_3(ham_lastcolor, pv); break;
+#else
+					case 0x1: ham_lastcolor &= 0xFFFF03; ham_lastcolor |= (pv & 0xFC); break;
+					case 0x2: ham_lastcolor &= 0x03FFFF; ham_lastcolor |= (pv & 0xFC) << 16; break;
+					case 0x3: ham_lastcolor &= 0xFF03FF; ham_lastcolor |= (pv & 0xFC) << 8; break;
+#endif
 				}
 				ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
 			}
@@ -608,9 +633,15 @@ static void decode_ham (int pix, int stoppos)
 				switch (pv & 0x30) 
         {
 					case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
+#ifdef ARMV6T2
 					case 0x10: ham_lastcolor = DECODE_HAM6_1(ham_lastcolor, pv); break;
 					case 0x20: ham_lastcolor = DECODE_HAM6_2(ham_lastcolor, pv); break;
 					case 0x30: ham_lastcolor = DECODE_HAM6_3(ham_lastcolor, pv); break;
+#else
+					case 0x10: ham_lastcolor &= 0xFFFF00; ham_lastcolor |= (pv & 0xF) << 4; break;
+					case 0x20: ham_lastcolor &= 0x00FFFF; ham_lastcolor |= (pv & 0xF) << 20; break;
+					case 0x30: ham_lastcolor &= 0xFF00FF; ham_lastcolor |= (pv & 0xF) << 12; break;
+#endif
 				}
 				ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
 			}
@@ -622,9 +653,15 @@ static void decode_ham (int pix, int stoppos)
 			switch (pv & 0x30) 
       {
 				case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
+#ifdef ARMV6T2
 				case 0x10: ham_lastcolor = DECODE_HAM6_1(ham_lastcolor, pv); break;
 				case 0x20: ham_lastcolor = DECODE_HAM6_2(ham_lastcolor, pv); break;
 				case 0x30: ham_lastcolor = DECODE_HAM6_3(ham_lastcolor, pv); break;
+#else
+				case 0x10: ham_lastcolor &= 0xFF0; ham_lastcolor |= (pv & 0xF); break;
+				case 0x20: ham_lastcolor &= 0x0FF; ham_lastcolor |= (pv & 0xF) << 8; break;
+				case 0x30: ham_lastcolor &= 0xF0F; ham_lastcolor |= (pv & 0xF) << 4; break;
+#endif
 			}
 			ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
 		}
