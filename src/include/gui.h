@@ -13,17 +13,19 @@ extern void gui_led (int, int);
 extern void gui_handle_events (void);
 extern void gui_filename (int, const TCHAR *);
 extern void gui_fps (int fps);
-extern void gui_lock (void);
-extern void gui_unlock (void);
 extern void gui_flicker_led (int, int, int);
 extern void gui_disk_image_change (int, const TCHAR *, bool writeprotected);
 extern unsigned int gui_ledstate;
+extern void gui_display (int shortcut);
 
 extern bool no_gui;
 
 #define HDLED_OFF		0
 #define HDLED_READ		1
 #define HDLED_WRITE		2
+
+#define LED_CD_ACTIVE 1
+#define LED_CD_ACTIVE2 2
 
 #define LED_POWER 0
 #define LED_DF0 1
@@ -84,6 +86,10 @@ extern std::vector<AvailableROM*> lstAvailableROMs;
 #define MAX_MRU_DISKLIST 40
 extern std::vector<std::string> lstMRUDiskList;
 extern void AddFileToDiskList(const char *file, int moveToTop);
+
+#define MAX_MRU_CDLIST 10
+extern std::vector<std::string> lstMRUCDList;
+extern void AddFileToCDList(const char *file, int moveToTop);
 
 #define AMIGAWIDTH_COUNT 6
 #define AMIGAHEIGHT_COUNT 6

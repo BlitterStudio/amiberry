@@ -43,25 +43,9 @@
 #define RELY_ON_LOADSEG_DETECTION
  */
 
-#undef USE_COMPILER
-#undef RELY_ON_LOADSEG_DETECTION
-
 /***************************************************************************
  * Operating system/machine specific options
  * Configure these for your CPU. The default settings should work on any
  * machine, but may not give optimal performance everywhere.
  * (These don't do very much yet, except HAVE_RDTSC
  */
-
-/*
- * Define this on PPro's, K6's and maybe other non-x86 CPUs.
-#undef MULTIPLICATION_PROFITABLE
- */
-
-/*
- * PPros don't like branches. With this option, UAE tries to avoid them in some
- * places.
-#undef BRANCHES_ARE_EXPENSIVE
- */
-
-#define MUSIC_VOLUME 80

@@ -16,7 +16,7 @@
 /* #define ENFORCER */ /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
-/* #define CD32 */ /* CD32 emulation */
+#define CD32 /* CD32 emulation */
 /* #define CDTV */ /* CDTV emulation */
 /* #define PARALLEL_PORT */ /* parallel port emulation */
 /* #define SERIAL_PORT */ /* serial port emulation */
@@ -52,6 +52,7 @@
 /* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
 /* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
 /* #define ADDRESS_SPACE_24BIT */
+#define INPUTDEVICE_SIMPLE /* simplified inputdevice for faster emulation */
 
 #define SIZEOF_VOID_P 4
 
@@ -464,6 +465,8 @@ typedef int BOOL;
 typedef unsigned char boolean;
 #define FALSE 0
 #define TRUE 1
+
+#define Sleep(x) usleep(x*1000)
 
 /* Some defines to make it easier to compare files with WinUAE */
 #define _T(x)               x

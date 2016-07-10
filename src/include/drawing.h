@@ -4,8 +4,6 @@
  * Copyright 1996-1998 Bernd Schmidt
  */
 
-#include "od-pandora/inputmode.h"
-
 #define MAX_PLANES 8
 
 /* According to the HRM, pixel data spends a couple of cycles somewhere in the chips

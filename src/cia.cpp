@@ -22,6 +22,7 @@
 #include "gui.h"
 #include "savestate.h"
 #include "inputdevice.h"
+#include "akiko.h"
 #include "audio.h"
 #include "keyboard.h"
 
@@ -50,7 +51,7 @@ static unsigned long ciaata_passed, ciaatb_passed, ciabta_passed, ciabtb_passed;
 
 static unsigned long ciaatod, ciabtod, ciaatol, ciabtol, ciaaalarm, ciabalarm;
 static int ciaatlatch, ciabtlatch;
-static bool oldled, oldovl;
+static bool oldled, oldovl, oldcd32mute;
 
 static unsigned int ciabpra;
 
@@ -512,6 +513,10 @@ static void bfe001_change (void)
       map_overlay (0);
     }
   }
+	if (currprefs.cs_cd32cd && (v & 1) != oldcd32mute) {
+		oldcd32mute = v & 1;
+		akiko_mute (oldcd32mute ? 0 : 1);
+	}
 }
 
 static uae_u8 ReadCIAA (unsigned int addr)
@@ -528,7 +533,11 @@ static uae_u8 ReadCIAA (unsigned int addr)
 	  tmp |= (ciaapra | (ciaadra ^ 3)) & 0x03;
 	  return tmp;
   case 1:
-    tmp = ciaaprb;
+#ifdef INPUTDEVICE_SIMPLE
+    tmp = (ciaaprb & ciaadrb) | (ciaadrb ^ 0xff);
+#else
+		tmp = handle_parport_joystick (0, ciaaprb, ciaadrb);
+#endif
 	  if (ciaacrb & 2) {
 	    int pb7 = 0;
 	    if (ciaacrb & 4)
@@ -600,7 +609,12 @@ static uae_u8 ReadCIAB (unsigned int addr)
 
   switch (reg) {
   case 0:
+#ifdef INPUTDEVICE_SIMPLE
+		tmp = ((ciabpra & ciabdra) | (ciabdra ^ 0xff)) & 0x7;
+#else
 		tmp = 0;
+		tmp |= handle_parport_joystick (1, ciabpra, ciabdra);
+#endif
 		return tmp;
   case 1:
 	  tmp = ciabprb;
@@ -678,6 +692,7 @@ static void WriteCIAA (uae_u16 addr,uae_u8 val)
   case 0:
   	ciaapra = (ciaapra & ~0xc3) | (val & 0xc3);
   	bfe001_change ();
+		handle_cd32_joystick_cia (ciaapra, ciaadra);
   	break;
   case 1:
 	  ciaaprb = val;
@@ -914,6 +929,7 @@ void CIA_reset (void)
 #endif
   kblostsynccnt = 0;
   oldovl = 1;
+	oldcd32mute = 1;
   oldled = true;
 
   if (!savestate_state) {
@@ -942,6 +958,13 @@ void CIA_reset (void)
 			oldovl = false;
 		}
   }
+#ifdef CD32
+	if (!isrestore ()) {
+		akiko_reset ();
+		if (!akiko_init ())
+			currprefs.cs_cd32cd = changed_prefs.cs_cd32cd = 0;
+	}
+#endif
 }
 
 /* CIA memory access */

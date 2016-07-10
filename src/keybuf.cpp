@@ -21,8 +21,8 @@
 #include "keyboard.h"
 #include "memory.h"
 #include "newcpu.h"
-#include "custom.h"
 #include "inputdevice.h"
+#include "custom.h"
 #include "savestate.h"
 
 static int kpb_first, kpb_last;
@@ -66,10 +66,6 @@ int record_key (int kc)
   keybuf[kpb_first] = kc;
   kpb_first = kpb_next;
   return 1;
-}
-
-void joystick_setting_changed (void)
-{
 }
 
 void keybuf_init (void)

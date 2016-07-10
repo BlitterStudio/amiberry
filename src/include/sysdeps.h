@@ -274,6 +274,8 @@ extern TCHAR *my_strdup (const TCHAR*s);
 
 #if defined PANDORA
 
+#include <ctype.h>
+
 #define FILEFLAG_DIR     0x1
 #define FILEFLAG_ARCHIVE 0x2
 #define FILEFLAG_WRITE   0x4

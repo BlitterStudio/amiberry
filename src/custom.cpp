@@ -32,6 +32,8 @@
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"
+#include "akiko.h"
+#include "blkdev.h"
 
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
@@ -50,7 +52,7 @@ static int frh_count = 0;
 #define SPEEDUP_CYCLES_HAM 1000
 #define SPEEDUP_TIMELIMIT_JIT -1000
 #define SPEEDUP_TIMELIMIT_NONJIT -2000
-#define SPEEDUP_TIMELIMIT_HAM -6500
+#define SPEEDUP_TIMELIMIT_HAM -4000
 int pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
 
@@ -58,7 +60,7 @@ static int rpt_did_reset;
 struct ev eventtab[ev_max];
 struct ev2 eventtab2[ev2_max];
 
-static int vpos;
+int vpos;
 static int vpos_count, vpos_count_diff;
 static int lof_store; // real bit in custom registers
 static int lof_current; // what display device thinks
@@ -2213,6 +2215,11 @@ void compute_vsynctime (void)
 	  update_sound (vblank_hz, (bplcon0 & 4) ? -1 : lof_store);
 }
 
+int current_maxvpos (void)
+{
+	return maxvpos + (lof_store ? 1 : 0);
+}
+
 static void compute_framesync (void)
 {
 	if (abs (vblank_hz - 50) < 1 || abs (vblank_hz - 60) < 1) {
@@ -2730,6 +2737,9 @@ void INTREQ (uae_u16 data)
 {
   INTREQ_0 (data);
   rethink_cias ();
+#ifdef CD32
+	rethink_akiko ();
+#endif
 }
 
 static void ADKCON (int hpos, uae_u16 v)
@@ -4063,6 +4073,7 @@ static void vsync_handler_pre (void)
   picasso_handle_vsync ();
 #endif
 
+	blkdev_vsync ();
   CIA_vsync_prehandler();
 
 	if (quit_program > 0) {
@@ -4076,7 +4087,6 @@ static void vsync_handler_pre (void)
 	  timehack_alive--;
 
   inputdevice_vsync ();
-
   filesys_vsync ();
 
 	vsync_handle_redraw ();
@@ -4282,6 +4292,10 @@ static void hsync_handler_pre (bool onvsync)
     hsync_record_line_state (next_lineno);
   }
    
+#ifdef CD32
+	AKIKO_hsync_handler ();
+#endif
+
 #ifdef PICASSO96
   picasso_handle_hsync ();
 #endif
@@ -5170,8 +5184,8 @@ uae_u8 *restore_custom (uae_u8 *src)
   RW;				/* 004 VPOSR */
   RW;				/* 006 VHPOSR */
   RW;		    /* 008 DSKDATR (dummy register) */
-  RW;				/* 00A JOY0DAT */
-  RW;				/* 00C JOY1DAT */
+	JOYSET(0, RW);	/* 00A JOY0DAT */
+	JOYSET(1, RW);	/* 00C JOY1DAT */
   clxdat = RW;		/* 00E CLXDAT */
   RW;				      /* 010 ADKCONR -> see 09E */
   RW;				      /* 012 POT0DAT */
@@ -5323,8 +5337,8 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
   SW (VPOSR());		  /* 004 VPOSR */
   SW (VHPOSR());		/* 006 VHPOSR */
   SW (0);		        /* 008 DSKDATR */
-  SW (JOY0DAT());		/* 00A JOY0DAT */
-  SW (JOY1DAT());		/* 00C JOY1DAT */
+  SW (JOYGET (0));		/* 00A JOY0DAT */
+  SW (JOYGET (1));		/* 00C JOY1DAT */
   SW (clxdat | 0x8000);		/* 00E CLXDAT */
   SW (ADKCONR());		/* 010 ADKCONR */
   SW (POT0DAT());		/* 012 POT0DAT */
@@ -5523,6 +5537,39 @@ uae_u8 *save_custom_sprite(int num, int *len, uae_u8 *dstptr)
   return dstbak;
 }
 
+uae_u8 *restore_custom_extra (uae_u8 *src)
+{
+	uae_u32 v = restore_u32 ();
+
+	if (!(v & 1))
+		v = 0;
+
+	currprefs.cs_cd32c2p = changed_prefs.cs_cd32c2p = RBB;
+	currprefs.cs_cd32cd = changed_prefs.cs_cd32cd = RBB;
+	currprefs.cs_cd32nvram = changed_prefs.cs_cd32nvram = RBB;
+
+	return src;
+}
+
+uae_u8 *save_custom_extra (int *len, uae_u8 *dstptr)
+{
+	uae_u8 *dstbak, *dst;
+
+	if (dstptr)
+		dstbak = dst = dstptr;
+	else
+		dstbak = dst = xmalloc (uae_u8, 1000);
+
+	SL (1);
+
+	SB (currprefs.cs_cd32c2p);
+	SB (currprefs.cs_cd32cd);
+	SB (currprefs.cs_cd32nvram);
+
+	*len = dst - dstbak;
+	return dstbak;
+}
+
 #endif /* SAVESTATE */
 
 void check_prefs_changed_custom (void)
@@ -5533,6 +5580,9 @@ void check_prefs_changed_custom (void)
   currprefs.immediate_blits = changed_prefs.immediate_blits;
   currprefs.collision_level = changed_prefs.collision_level;
   currprefs.fast_copper = changed_prefs.fast_copper;
+	currprefs.cs_cd32cd = changed_prefs.cs_cd32cd;
+	currprefs.cs_cd32c2p = changed_prefs.cs_cd32c2p;
+	currprefs.cs_cd32nvram = changed_prefs.cs_cd32nvram;
   
   if (currprefs.chipset_mask != changed_prefs.chipset_mask ||
 	  currprefs.ntscmode != changed_prefs.ntscmode) {

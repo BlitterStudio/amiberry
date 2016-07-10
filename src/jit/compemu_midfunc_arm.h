@@ -54,7 +54,6 @@ DECLARE_MIDFUNC(mov_b_rm(W1 d, IMM s));
 DECLARE_MIDFUNC(mov_l_ri(W4 d, IMM s));
 DECLARE_MIDFUNC(mov_w_ri(W2 d, IMM s));
 DECLARE_MIDFUNC(mov_b_ri(W1 d, IMM s));
-DECLARE_MIDFUNC(test_w_rr(RR2 d, RR2 s));
 DECLARE_MIDFUNC(add_l(RW4 d, RR4 s));
 DECLARE_MIDFUNC(sub_l_ri(RW4 d, IMM i));
 DECLARE_MIDFUNC(sub_w_ri(RW2 d, IMM i));

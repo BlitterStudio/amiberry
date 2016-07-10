@@ -38,6 +38,8 @@ extern unsigned long int hsync_counter;
 extern uae_u16 dmacon;
 extern uae_u16 intreq;
 
+extern int vpos;
+
 extern void update_copper (int until_hpos);
 
 STATIC_INLINE void do_copper (void)
@@ -148,5 +150,7 @@ STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 }
 
 extern void fpscounter_reset (void);
+
+extern int current_maxvpos (void);
 
 #endif

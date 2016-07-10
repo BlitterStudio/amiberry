@@ -32,8 +32,10 @@
 #include "bsdsocket.h"
 #include "drawing.h"
 #include "native2amiga.h"
+#include "akiko.h"
 #include "savestate.h"
 #include "filesys.h"
+#include "blkdev.h"
 #include "uaeresource.h"
 #ifdef JIT
 #include "jit/compemu.h"
@@ -273,12 +275,16 @@ void fixup_prefs (struct uae_prefs *p)
 #if !defined (BSDSOCKET)
 	p->socket_emu = 0;
 #endif
+
+	blkdev_fix_prefs (p);
+
   target_fixup_options (p);
 }
 
 int quit_program = 0;
 static int restart_program;
 static TCHAR restart_config[MAX_DPATH];
+static int default_config;
 
 void uae_reset (int hardreset)
 {
@@ -302,6 +308,7 @@ void uae_restart (int opengui, TCHAR *cfgfile)
   uae_quit ();
   restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
   restart_config[0] = 0;
+	default_config = 0;
   if (cfgfile)
   	_tcscpy (restart_config, cfgfile);
 }
@@ -404,7 +411,7 @@ static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
 
 	_tcscat (optionsfile, restart_config);
 
-  if (! target_cfgfile_load (&currprefs, optionsfile, 0, 0)) {
+  if (! target_cfgfile_load (&currprefs, optionsfile, 0, default_config)) {
   	write_log (_T("failed to load config '%s'\n"), optionsfile);
   }
   fixup_prefs (&currprefs);
@@ -463,6 +470,9 @@ void do_leave_program (void)
   inputdevice_close ();
   DISK_free ();
   close_sound ();
+#ifdef CD32
+	akiko_free ();
+#endif
  	gui_exit ();
 #ifdef USE_SDL
   SDL_Quit ();
@@ -477,6 +487,7 @@ void do_leave_program (void)
 #ifdef BSDSOCKET
   bsdlib_reset ();
 #endif
+	device_func_reset ();
   memory_cleanup ();
   cfgfile_addcfgparam (0);
   machdep_free ();
@@ -498,7 +509,7 @@ static int real_main2 (int argc, TCHAR **argv)
   printf("Uae4arm v0.5 for Raspberry Pi by Chips\n");
 #endif
 #ifdef PANDORA
-  SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
+  SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else 
 #ifdef USE_SDL
   SDL_Init (SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE);
@@ -532,6 +543,7 @@ static int real_main2 (int argc, TCHAR **argv)
   inputdevice_init();
 
   changed_prefs = currprefs;
+
   no_gui = ! currprefs.start_gui;
   if (restart_program == 2)
   	no_gui = 1;
@@ -616,6 +628,8 @@ void real_main (int argc, TCHAR **argv)
   fetch_configurationpath (restart_config, sizeof (restart_config) / sizeof (TCHAR));
   _tcscat (restart_config, OPTIONSFILENAME);
   _tcscat (restart_config, ".uae");
+	default_config = 1;
+
   while (restart_program) {
 	  changed_prefs = currprefs;
 	  real_main2 (argc, argv);

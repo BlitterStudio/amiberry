@@ -13,8 +13,6 @@
 #define OPTIONSFILENAME "uaeconfig"
 
 extern int emulating;
-extern int JoystickButton[20];  //Joystick Button state
-extern int uae4all_keystate[256];
 
 extern int z3_start_adr;
 extern int rtg_start_adr;
@@ -31,7 +29,9 @@ void graphics_subshutdown (void);
 
 void pandora_stop_sound(void);
 
-void keyboard_init(void);
+void keyboard_settrans (void);
+int translate_pandora_keys(int symbol, int *modifier);
+void SimulateMouseOrJoy(int code, int keypressed);
 
 void reinit_amiga(void);
 int count_HDs(struct uae_prefs *p);

@@ -21,6 +21,47 @@ struct strlist {
 
 #define DEFAULT_JIT_CACHE_SIZE 8192
 
+#define MAX_TOTAL_SCSI_DEVICES 8
+
+/* maximum number native input devices supported (single type) */
+#define MAX_INPUT_DEVICES 8
+/* maximum number of native input device's buttons and axles supported */
+#define MAX_INPUT_DEVICE_EVENTS 256
+/* 4 different customization settings */
+#define MAX_INPUT_SETTINGS 4
+#define GAMEPORT_INPUT_SETTINGS 3 // last slot is for gameport panel mappings
+
+#define MAX_INPUT_SUB_EVENT 8
+#define MAX_INPUT_SUB_EVENT_ALL 9
+#define SPARE_SUB_EVENT 8
+
+struct uae_input_device {
+	TCHAR *name;
+	TCHAR *configname;
+	uae_s16 eventid[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
+	TCHAR *custom[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
+	uae_u32 flags[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
+	uae_s8 port[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
+	uae_s16 extra[MAX_INPUT_DEVICE_EVENTS];
+	uae_s8 enabled;
+};
+
+#define MAX_JPORTS 4
+#define NORMAL_JPORTS 2
+#define MAX_JPORTNAME 128
+struct jport {
+	int id;
+	int mode; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
+	int autofire;
+	TCHAR name[MAX_JPORTNAME];
+	TCHAR configname[MAX_JPORTNAME];
+};
+#define JPORT_NONE -1
+#define JPORT_CUSTOM -2
+#define JPORT_AF_NORMAL 1
+#define JPORT_AF_TOGGLE 2
+#define JPORT_AF_ALWAYS 3
+
 #define CONFIG_TYPE_HARDWARE 1
 #define CONFIG_TYPE_HOST 2
 #define CONFIG_BLEN 2560
@@ -29,6 +70,13 @@ struct strlist {
 #define TABLET_MOUSEHACK 1
 #define TABLET_REAL 2
 
+struct cdslot
+{
+	TCHAR name[MAX_DPATH];
+	bool inuse;
+	bool delayed;
+	int type;
+};
 struct floppyslot
 {
 	TCHAR df[MAX_DPATH];
@@ -78,6 +126,7 @@ struct uae_prefs {
   int sound_interpol;
   int sound_filter;
   int sound_filter_type;
+	int sound_volume_cd;
 
   int cachesize;
   int optcount[10];
@@ -104,12 +153,19 @@ struct uae_prefs {
   int floppy_write_length;
   bool tod_hack;
 
+	bool cs_cd32cd;
+	bool cs_cd32c2p;
+	bool cs_cd32nvram;
+
   TCHAR romfile[MAX_DPATH];
   TCHAR romextfile[MAX_DPATH];
+	TCHAR flashfile[MAX_DPATH];
+	struct cdslot cdslots[MAX_TOTAL_SCSI_DEVICES];
 
   TCHAR path_floppy[256];
   TCHAR path_hardfile[256];
   TCHAR path_rom[256];
+  TCHAR path_cd[256];
 
   int m68k_speed;
   int cpu_model;
@@ -138,39 +194,33 @@ struct uae_prefs {
   int pandora_cpu_speed;
   int pandora_hide_idle_led;
   
-  int pandora_joyConf;
-  int pandora_joyPort;
   int pandora_tapDelay;
-  
   int pandora_customControls;
-  int pandora_custom_dpad;    // 0-joystick, 1-mouse, 2-custom
-  int pandora_custom_A;
-  int pandora_custom_B;
-  int pandora_custom_X;
-  int pandora_custom_Y;
-  int pandora_custom_L;
-  int pandora_custom_R;
-  int pandora_custom_up;
-  int pandora_custom_down;
-  int pandora_custom_left;
-  int pandora_custom_right;
-    
-  int pandora_button1;
-  int pandora_button2;
-  int pandora_autofireButton1;
-  int pandora_jump;
+
 
   int key_for_menu;
   int key_for_input_switching;
 
-  int Port1_selection;
-  int Port2_selection;
 
   /* input */
 
+	struct jport jports[MAX_JPORTS];
+	int input_selected_setting;
   int input_joymouse_multiplier;
+	int input_joymouse_deadzone;
+	int input_joystick_deadzone;
+	int input_joymouse_speed;
+	int input_analog_joystick_mult;
+	int input_analog_joystick_offset;
   int input_autofire_framecnt;
+	int input_mouse_speed;
   int input_tablet;
+	int input_keyboard_type;
+	struct uae_input_device joystick_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
+	struct uae_input_device mouse_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
+	struct uae_input_device keyboard_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
+	TCHAR input_config_name[GAMEPORT_INPUT_SETTINGS][256];
+
 };
 
 /* Contains the filename of .uaerc */
@@ -201,6 +251,7 @@ extern int bip_a500plus (struct uae_prefs *p, int rom);
 extern int bip_a1200 (struct uae_prefs *p, int rom);
 extern int bip_a2000 (struct uae_prefs *p, int rom);
 extern int bip_a4000 (struct uae_prefs *p, int rom);
+extern int bip_cd32 (struct uae_prefs *p, int rom);
 
 int parse_cmdline_option (struct uae_prefs *, TCHAR, const TCHAR *);
 

@@ -88,7 +88,7 @@ MIDFUNC(2,shll_l_ri,(RW4 r, IMM i))
 		return;
 	}
 
-	r=rmw(r, 4, 4);
+	r = rmw(r, 4, 4);
 	raw_shll_l_ri(r, i);
 	unlock2(r);
 }
@@ -109,8 +109,7 @@ MIDFUNC(2,sign_extend_16_rr,(W4 d, RR2 s))
 		s = readreg(s, 2);
 		d = writereg(d, 4);
 	}
-	else { /* If we try to lock this twice, with different sizes, we
-	 are int trouble! */
+	else { /* If we try to lock this twice, with different sizes, we are int trouble! */
 		s = d = rmw(s, 4, 2);
 	}
 	SIGNED16_REG_2_REG(d, s);
@@ -166,7 +165,7 @@ MIDFUNC(3,lea_l_brr,(W4 d, RR4 s, IMM offset))
 	}
 
 	s = readreg(s, 4);
-	d = writereg(d ,4);
+	d = writereg(d, 4);
 	raw_lea_l_brr(d, s, offset);
 	unlock2(d);
 	unlock2(s);
@@ -179,10 +178,10 @@ MIDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IMM factor, IMM offset))
 		COMPCALL(lea_l_rr_indexed)(d, s, index, factor);
 		return;
 	}
+	
 	s = readreg(s, 4);
 	index = readreg(index, 4);
 	d = writereg(d, 4);
-
 	raw_lea_l_brr_indexed(d, s, index, factor, offset);
 	unlock2(d);
 	unlock2(index);
@@ -192,10 +191,9 @@ MENDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IMM factor, IMM offset))
 
 MIDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IMM factor))
 {
-	s=readreg(s, 4);
-	index=readreg(index, 4);
-	d=writereg(d, 4);
-
+	s = readreg(s, 4);
+	index = readreg(index, 4);
+	d = writereg(d, 4);
 	raw_lea_l_rr_indexed(d, s, index, factor);
 	unlock2(d);
 	unlock2(index);
@@ -237,8 +235,8 @@ MIDFUNC(2,mov_l_mr,(IMM d, RR4 s))
 		COMPCALL(mov_l_mi)(d, live.state[s].val);
 		return;
 	}
+	
 	s = readreg(s, 4);
-
 	raw_mov_l_mr(d, s);
 	unlock2(s);
 }
@@ -254,7 +252,6 @@ MENDFUNC(2,mov_l_ri,(W4 d, IMM s))
 MIDFUNC(2,mov_w_ri,(W2 d, IMM s))
 {
 	d = writereg(d, 2);
-
 	raw_mov_w_ri(d, s);
 	unlock2(d);
 }
@@ -263,26 +260,10 @@ MENDFUNC(2,mov_w_ri,(W2 d, IMM s))
 MIDFUNC(2,mov_b_ri,(W1 d, IMM s))
 {
 	d = writereg(d, 1);
-
 	raw_mov_b_ri(d, s);
 	unlock2(d);
 }
 MENDFUNC(2,mov_b_ri,(W1 d, IMM s))
-
-MIDFUNC(2,test_w_rr,(RR2 d, RR2 s))
-{
-  // Only EQ/NE relevant for caller -> much simpler compare in raw...
-
-	clobber_flags();
-
-	d = readreg(d, 2);
-	s = readreg(s, 2);
-
-	raw_test_eq_w_rr(d, s);
-	unlock2(d);
-	unlock2(s);
-}
-MENDFUNC(2,test_w_rr,(RR2 d, RR2 s))
 
 MIDFUNC(2,add_l,(RW4 d, RR4 s))
 {
@@ -291,11 +272,9 @@ MIDFUNC(2,add_l,(RW4 d, RR4 s))
 		return;
 	}
 
-	s=readreg(s, 4);
-	d=rmw(d, 4, 4);
-
+	s = readreg(s, 4);
+	d = rmw(d, 4, 4);
 	raw_add_l(d, s);
-
 	unlock2(d);
 	unlock2(s);
 }
@@ -311,7 +290,6 @@ MIDFUNC(2,sub_l_ri,(RW4 d, IMM i))
 	}
 
 	d = rmw(d, 4, 4);
-
 	raw_sub_l_ri(d, i);
 	unlock2(d);
 }
@@ -323,7 +301,6 @@ MIDFUNC(2,sub_w_ri,(RW2 d, IMM i))
 	clobber_flags();
 
 	d = rmw(d, 2, 2);
-
 	raw_sub_w_ri(d, i);
 	unlock2(d);
 }
@@ -338,7 +315,7 @@ MIDFUNC(2,add_l_ri,(RW4 d, IMM i))
 		return;
 	}
 
-	d=rmw(d, 4, 4);
+	d = rmw(d, 4, 4);
 	raw_add_l_ri(d, i);
 	unlock2(d);
 }
@@ -424,11 +401,9 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 		return;
 	}
 
-	s=readreg(s, 4);
-	d=rmw(d, 4, 4);
-
+	s = readreg(s, 4);
+	d = rmw(d, 4, 4);
 	raw_ADD_l_rr(d, s);
-
 	unlock2(d);
 	unlock2(s);
 }
@@ -445,7 +420,7 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IMM i))
 
 	d = rmw(d, 4, 4);
 
-	if(i >= 0 && i < 256) {
+	if(CHECK32(i)) {
     raw_ADD_l_rri(d, d, i);
 	} else {
   	raw_LDR_l_ri(REG_WORK1, i);
@@ -465,8 +440,7 @@ MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IMM i))
 		return;
 	}
 
-	d=rmw(d, 4, 4);
-
+	d = rmw(d, 4, 4);
 	raw_ADD_l_rri(d, d, i);
 	unlock2(d);
 }
@@ -481,18 +455,16 @@ MIDFUNC(2,arm_SUB_l_ri8,(RW4 d, IMM i))
 		return;
 	}
 
-	d=rmw(d, 4, 4);
-
+	d = rmw(d, 4, 4);
 	raw_SUB_l_rri(d, d, i);
 	unlock2(d);
 }
-MENDFUNC(2,arm_ADD_l_ri8,(RW4 d, IMM i))
+MENDFUNC(2,arm_SUB_l_ri8,(RW4 d, IMM i))
 
 
 // Other
 static inline void flush_cpu_icache(void *start, void *stop)
 {
-
 	register void *_beg __asm ("a1") = start;
 	register void *_end __asm ("a2") = stop;
 	register void *_flg __asm ("a3") = 0;

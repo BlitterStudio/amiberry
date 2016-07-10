@@ -7,6 +7,17 @@
 #include "zfile.h"
 
 
+int my_setcurrentdir (const TCHAR *curdir, TCHAR *oldcur)
+{
+	int ret = 0;
+	if (oldcur)
+		getcwd(oldcur, MAX_DPATH);
+	if (curdir)
+		chdir (curdir);
+	return ret;
+}
+
+
 int my_mkdir (const char*name)
 {
   return mkdir(name, 0777);

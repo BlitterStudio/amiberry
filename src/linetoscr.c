@@ -3,6 +3,22 @@
  *    colors_for_drawing.acolors (non AGA) contains 16-bit color information in both words
  *    colors_for_drawing.acolors (AGA) contains 16-bit color information in one word
  */
+
+STATIC_INLINE uae_u32 merge_words(uae_u32 val, uae_u32 val2)
+{
+  __asm__ __volatile__ (
+			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
+      : [o] "+r" (val) : [d] "r" (val2) );
+  return val;
+}
+
+STATIC_INLINE uae_u32 double_word(uae_u32 val)
+{
+  __asm__ __volatile__ (
+			"pkhbt   %[o], %[o], %[o], lsl #16 \n\t"
+      : [o] "+r" (val) );
+  return val;
+}
  
 static int NOINLINE linetoscr_16 (int spix, int dpix, int stoppos)
 {
@@ -11,7 +27,7 @@ static int NOINLINE linetoscr_16 (int spix, int dpix, int stoppos)
     if (dp_for_drawing->ham_seen) {
         int rem;
         if (((long)&buf[dpix]) & 2) {
-            buf[dpix++] = xcolors[ham_linebuf[spix++]];
+            buf[dpix++] = ham_linebuf[spix++];
         }
         if (dpix >= stoppos)
             return spix;
@@ -19,23 +35,15 @@ static int NOINLINE linetoscr_16 (int spix, int dpix, int stoppos)
         if (rem)
             stoppos--;
         while (dpix < stoppos) {
-            uae_u32 dpix_val;
             uae_u32 out_val;
         
-            out_val = xcolors[ham_linebuf[spix++]];
-            dpix_val = xcolors[ham_linebuf[spix++]];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
+            out_val = *((uae_u32 *)&ham_linebuf[spix]);
+            spix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
         if (rem) {
-            buf[dpix++] = xcolors[ham_linebuf[spix++]];
+            buf[dpix++] = ham_linebuf[spix++];
         }
     } else if (bpldualpf) {
         int *lookup = bpldualpfpri ? dblpf_ind2 : dblpf_ind1;
@@ -59,14 +67,7 @@ static int NOINLINE linetoscr_16 (int spix, int dpix, int stoppos)
             out_val = colors_for_drawing.acolors[lookup[spix_val]];
             spix_val = pixdata.apixels[spix++];
             dpix_val = colors_for_drawing.acolors[lookup[spix_val]];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -106,14 +107,7 @@ static int NOINLINE linetoscr_16 (int spix, int dpix, int stoppos)
                 dpix_val = colors_for_drawing.acolors[spix_val];
             else
                 dpix_val = xcolors[(colors_for_drawing.color_regs_ecs[spix_val - 32] >> 1) & 0x777];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -147,14 +141,7 @@ static int NOINLINE linetoscr_16 (int spix, int dpix, int stoppos)
             out_val = colors_for_drawing.acolors[spix_val];
             spix_val = pixdata.apixels[spix++];
             dpix_val = colors_for_drawing.acolors[spix_val];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -173,7 +160,8 @@ static int NOINLINE linetoscr_16_stretch1 (int spix, int dpix, int stoppos)
 
     if (dp_for_drawing->ham_seen) {
         while (dpix < stoppos) {
-            *((uae_u32 *)&buf[dpix]) = xcolors[ham_linebuf[spix++]];
+            uae_u32 out_val = ham_linebuf[spix++];
+            *((uae_u32 *)&buf[dpix]) = double_word(out_val);
             dpix += 2;
         }
     } else if (bpldualpf) {
@@ -194,15 +182,8 @@ static int NOINLINE linetoscr_16_stretch1 (int spix, int dpix, int stoppos)
             if (spix_val <= 31)
                 out_val = colors_for_drawing.acolors[spix_val];
             else
-                out_val = xcolors[(colors_for_drawing.color_regs_ecs[spix_val - 32] >> 1) & 0x0777];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (out_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[o], lsl #16 \n\t"
-                : [o] "+r" (out_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+              out_val = xcolors[(colors_for_drawing.color_regs_ecs[spix_val - 32] >> 1) & 0x0777];
+              *((uae_u32 *)&buf[dpix]) = double_word(out_val);
             dpix += 2;
         }
     } else {
@@ -226,7 +207,7 @@ static int NOINLINE linetoscr_16_shrink1 (int spix, int dpix, int stoppos)
         int rem;
         if (((long)&buf[dpix]) & 2) {
             uae_u32 dpix_val;
-            dpix_val = xcolors[ham_linebuf[spix]];
+            dpix_val = ham_linebuf[spix];
             spix += 2;
             buf[dpix++] = dpix_val;
         }
@@ -239,23 +220,18 @@ static int NOINLINE linetoscr_16_shrink1 (int spix, int dpix, int stoppos)
             uae_u32 dpix_val;
             uae_u32 out_val;
         
-            out_val = xcolors[ham_linebuf[spix]];
+            out_val = ham_linebuf[spix];
             spix += 2;
-            dpix_val = xcolors[ham_linebuf[spix]];
+            dpix_val = ham_linebuf[spix];
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
+            out_val = merge_words(out_val, dpix_val);
+
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
         if (rem) {
             uae_u32 dpix_val;
-            dpix_val = xcolors[ham_linebuf[spix]];
+            dpix_val = ham_linebuf[spix];
             spix += 2;
             buf[dpix++] = dpix_val;
         }
@@ -286,14 +262,7 @@ static int NOINLINE linetoscr_16_shrink1 (int spix, int dpix, int stoppos)
             spix_val = pixdata.apixels[spix];
             dpix_val = colors_for_drawing.acolors[lookup[spix_val]];
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -339,14 +308,7 @@ static int NOINLINE linetoscr_16_shrink1 (int spix, int dpix, int stoppos)
             else
                 dpix_val = xcolors[(colors_for_drawing.color_regs_ecs[spix_val - 32] >> 1) & 0x777];
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -384,14 +346,7 @@ static int NOINLINE linetoscr_16_shrink1 (int spix, int dpix, int stoppos)
             spix_val = pixdata.apixels[spix];
             dpix_val = colors_for_drawing.acolors[spix_val];
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -406,6 +361,7 @@ static int NOINLINE linetoscr_16_shrink1 (int spix, int dpix, int stoppos)
 }
 
 #ifdef AGA
+
 static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
@@ -414,7 +370,7 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
     if (dp_for_drawing->ham_seen) {
         int rem;
         if (((long)&buf[dpix]) & 2) {
-            buf[dpix++] = CONVERT_RGB (ham_linebuf[spix]);
+            buf[dpix++] = ham_linebuf[spix];
             spix++;
         }
         if (dpix >= stoppos)
@@ -423,25 +379,15 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
         if (rem)
             stoppos--;
         while (dpix < stoppos) {
-            uae_u32 dpix_val;
             uae_u32 out_val;
         
-            out_val = CONVERT_RGB (ham_linebuf[spix]);
-            spix++;
-            dpix_val = CONVERT_RGB (ham_linebuf[spix]);
-            spix++;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
+            out_val = *((uae_u32 *)&ham_linebuf[spix]);
+            spix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
         if (rem) {
-            buf[dpix++] = CONVERT_RGB (ham_linebuf[spix]);
+            buf[dpix++] = ham_linebuf[spix];
             spix++;
         }
     } else if (bpldualpf) {
@@ -496,14 +442,7 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
                 dpix_val = colors_for_drawing.acolors[val];
             }
             spix++;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -557,14 +496,7 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
                 dpix_val = CONVERT_RGB (c);
             } else
                 dpix_val = colors_for_drawing.acolors[spix_val];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -599,14 +531,7 @@ static int NOINLINE linetoscr_16_aga (int spix, int dpix, int stoppos)
             out_val = colors_for_drawing.acolors[spix_val];
             spix_val = pixdata.apixels[spix++] ^ xor_val;
             dpix_val = colors_for_drawing.acolors[spix_val];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -628,19 +553,9 @@ static int NOINLINE linetoscr_16_stretch1_aga (int spix, int dpix, int stoppos)
 
     if (dp_for_drawing->ham_seen) {
         while (dpix < stoppos) {
-            uae_u32 spix_val;
             uae_u32 out_val;
-        
-            spix_val = pixdata.apixels[spix++] ^ xor_val;
-            out_val = CONVERT_RGB (ham_linebuf[spix]);
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (out_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[o], lsl #16 \n\t"
-                : [o] "+r" (out_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            out_val = ham_linebuf[spix++];
+            *((uae_u32 *)&buf[dpix]) = double_word(out_val);
             dpix += 2;
         }
     } else if (bpldualpf) {
@@ -661,14 +576,7 @@ static int NOINLINE linetoscr_16_stretch1_aga (int spix, int dpix, int stoppos)
                 out_val = colors_for_drawing.acolors[val];
             }
             spix++;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (out_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[o], lsl #16 \n\t"
-                : [o] "+r" (out_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = double_word(out_val);
             dpix += 2;
         }
     } else if (bplehb) {
@@ -682,14 +590,7 @@ static int NOINLINE linetoscr_16_stretch1_aga (int spix, int dpix, int stoppos)
                 out_val = CONVERT_RGB (c);
             } else
                 out_val = colors_for_drawing.acolors[spix_val];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (out_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[o], lsl #16 \n\t"
-                : [o] "+r" (out_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = double_word(out_val);
             dpix += 2;
         }
     } else {
@@ -699,14 +600,7 @@ static int NOINLINE linetoscr_16_stretch1_aga (int spix, int dpix, int stoppos)
         
             spix_val = pixdata.apixels[spix++] ^ xor_val;
             out_val = colors_for_drawing.acolors[spix_val];
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (out_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[o], lsl #16 \n\t"
-                : [o] "+r" (out_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = double_word(out_val);
             dpix += 2;
         }
     }
@@ -724,7 +618,7 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
     if (dp_for_drawing->ham_seen) {
         int rem;
         if (((long)&buf[dpix]) & 2) {
-            buf[dpix++] = CONVERT_RGB (ham_linebuf[spix]);
+            buf[dpix++] = ham_linebuf[spix];
             spix += 2;
         }
         if (dpix >= stoppos)
@@ -736,22 +630,16 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
             uae_u32 dpix_val;
             uae_u32 out_val;
         
-            out_val = CONVERT_RGB (ham_linebuf[spix]);
+            out_val = ham_linebuf[spix];
             spix += 2;
-            dpix_val = CONVERT_RGB (ham_linebuf[spix]);
+            dpix_val = ham_linebuf[spix];
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
+            out_val = merge_words(out_val, dpix_val);
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
         if (rem) {
-            buf[dpix++] = CONVERT_RGB (ham_linebuf[spix]);
+            buf[dpix++] = ham_linebuf[spix];
             spix += 2;
         }
     } else if (bpldualpf) {
@@ -806,14 +694,7 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
                 dpix_val = colors_for_drawing.acolors[val];
             }
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -870,14 +751,7 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
             } else
                 dpix_val = colors_for_drawing.acolors[spix_val];
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {
@@ -916,14 +790,7 @@ static int NOINLINE linetoscr_16_shrink1_aga (int spix, int dpix, int stoppos)
             spix_val = pixdata.apixels[spix] ^ xor_val;
             dpix_val = colors_for_drawing.acolors[spix_val];
             spix += 2;
-#ifndef ARMV6_ASSEMBLY
-            out_val = (out_val & 0xFFFF) | (dpix_val << 16);
-#else
-            __asm__ __volatile__ (
-          			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
-                : [o] "+r" (out_val) : [d] "r" (dpix_val) );
-#endif            
-            *((uae_u32 *)&buf[dpix]) = out_val;
+            *((uae_u32 *)&buf[dpix]) = merge_words(out_val, dpix_val);
             dpix += 2;
         }
         if (rem) {

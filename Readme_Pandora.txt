@@ -1,6 +1,6 @@
 UAE4ARM - Pandora edition
 
-Version 1.0.0.0
+Version 1.0.0.12
 
 Thanks to all for working on the different versions of UAE this emulator based on:
  - Toni Wilen
@@ -39,12 +39,12 @@ The main differences to UAE4ALL:
  - bsdsockets
  - RDB hardfiles
  - Support for rp9
+ - CD32 support
  
 What's missing compared to WinUAE:
  - Cycle exact emulation of cpu and blitter
  - SCSI support
  - AHI
- - CD
  - Builtin debugger
 and some more...
  
@@ -55,9 +55,9 @@ Index
 
 2. Controls
    2.1 General and quick keys (outside of GUI)
-   2.2 Joystick mode
-   2.3 Mouse mode
-   2.4 Stylus mode
+   2.2 Nubs as mouse
+   2.3 dPad as mouse
+   2.4 Mousehack enabled
    2.5 Specific controls inside GUI
 
 3. GUI
@@ -68,7 +68,7 @@ Index
    3.5 ROM
    3.6 RAM
    3.7 Floppy drives
-   3.8 Hard drives
+   3.8 Hard drives / CD
    3.9 Display
    3.10 Sound
    3.11 Input
@@ -80,10 +80,10 @@ Index
 
 1. Setup
 
-Place the UAE4ALL PND in the required directory (menu, desktop or apps). Running it for the first time will create the 
+Place the UAE4ARM PND in the required directory (menu, desktop or apps). Running it for the first time will create the 
 necessary folders in pandora/appdata on you SD card.
 
-In order to use UAE4ALL you need an Amiga Bios image (kickstart rom). Place all your roms and the keyfiles (if required)
+In order to use UAE4ARM you need an Amiga Bios image (kickstart rom). Place all your roms and the keyfiles (if required)
 in the appdata folder of UAE4ARM and select this folder with the GUI (goto page Paths, choose folder in option "System ROMS"
 and click on "Rescan ROMs").
 
@@ -98,12 +98,15 @@ the AmigaForever data folder to appdata/uae4arm/rp9.
 2.1 General & Quick Keys (outside of GUI)
 
 SELECT: Open GUI
-START: Toggle joystick/mouse/stylus mode
-Pandora Key: pressing this at any time (inside or outside the GUI) and it will minimise UAE4AALL
+START: Play button of CD32
+Pandora Key: pressing this at any time (inside or outside the GUI) and it will minimise UAE4ARM
 Hold L+R + D-pad up/down: Move displayed gfx vertically
 Hold L+R + 1/2/3/4/5/6/7/8: select preset screenmode
 Hold L+R + 9/0: set number of displayed lines
 Hold L+R + w: change Amiga displayed width
+Hold L+R + r: toggle lores/hires
+L+START: RWD button of CD32
+R+START: FFW button of CD32
 L+c: Toggle custom controls
 L+d: Toggle status line
 L+f: Toggle frameskip
@@ -112,43 +115,36 @@ L+s: Quick save
 R+D-pad: Arrow keys in all control modes
 
 
-2.2 Joystick Mode
+2.2 Nubs as mouse
 
 D-pad: Joystick movement
-A/X: Joystick fire button (depends which button mode you are in)
-X/A: Up on joystick (used as jump in platform games, etc. depends which button mode you are in)
-B: mapped to the space bar
-Y: Space bar
-L: Alt
-L+D-pad: Move mouse pointer
-L+A: Left mouse click
-L+B: Right mouse click
+X: 1st Joystick button / RED button on CD32 controller
+B: 2nd Joystick button / BLUE button on CD32 controller
+A: GREEN button on CD32 controller
+Y: Space bar / YELLOW button on CD32 controller
 R+D-pad: Arrow keys
-R+Y: Toggle auto fire on/off
 R+A: Ctrl
+R+B: left Alt
 R+X: Help
-R+B: Num Enter
 
 
-2.3 Mouse Mode
+2.3 dPad as mouse
 
 D-pad: Move mouse pointer
-Left Nub: Move mouse pointer (not workng)
-Right Nub: Flick left for "left mouse button", flick right for "right mouse button" (not working)
-Y: Space bar
 A: left mouse click
 B: right mouse click
+Y: Space bar
 D-pad left or right: Left flipper (Pinball Dreams/Fantasies)
 A/B: Right flipper (Pinball Dreams/Fantasies)
 X: Pull spring (Pinball Dreams/Fantasies)
 
 
-2.4 Stylus Mode
+2.4 Mousehack enabled
 
 Tap screen: left click
 L/R: Hold and tap with stylus performs right click
-D-pad: Left operates left mouse button, right operates right mouse button. Hold down on D-pad to prevent mouse from clicking and up on D-pad
-equals a right and left click together.
+
+Other buttons same as in 2.1.
 
 
 2.5 Specific controls inside GUI
@@ -221,7 +217,7 @@ For "Collision Level", select "Sprites and Sprites vs. Playfield" which is fine 
 
 Select the required kickstart ROM for the Amiga you want to emulate.
 
-"Extended ROM File" isn't really useful in the current version of UAE4ARM.
+"Extended ROM File" is required for CD32.
 
 
 3.6 RAM
@@ -247,7 +243,7 @@ with higher drive speed and you have to select 100%.
 loaded each time you select the disk and have the option "Load config with same name as disk" enabled.
 
 
-3.8 Hard drives
+3.8 Hard drives / CD
 
 Use "Add Directory" to add a folder or "Add Hardfile" to add a HDF file as a hard disk.
 
@@ -255,6 +251,10 @@ To edit the settings of a HDD, click on "..." left to the entry in the list.
 
 With "Create Hardfile", you can create a new formatted HDF file up to 2 GB. For large files, it will take some time to
 create the new hard disk. You have to format the new HDD in Amiga via the Workbench.
+
+Select "CD drive" to emulate CD for CD32. Use "Eject"" to remove currentCD and click on "..." to open a dialog to select
+the iso/cue file for CD emulation.
+Note: in current version, only WAV is supported for audio tracks. MP3 and FLAC may be supported in a later version.
 
 
 3.9 Display
@@ -284,12 +284,11 @@ the left and right channels of the Pandora. A value of 70% for separation and no
 
 3.11 Input
 
-With "Control config", you can choose one of four preset button configurations.
-Select the port for which the joystick should be emulated with "Joystick".
-"Tap Delay" specifies the time between taping the screen and an emulated mouse button click.
+You can select the control type for both ports.
 Set the emulated mouse speed to .25x, .5x, 1x 2x and 4x to slow down or speed up the mouse.
 When "Enable mousehack" is activated, you can use the stylus to set the mouse pointer to the exact position. This works
 very well on Workbench, but many games using there own mouse handling and will not profit from this code.
+"Tap Delay" specifies the time between taping the screen and an emulated mouse button click.
 
 When enabling "Custom Control", you can define which Amiga key should be emulated by pressing one of the ABXY- or D-pad
 buttons. Useful to setup controls for pinball games. During emulation, you can switch between regular behaviour of the

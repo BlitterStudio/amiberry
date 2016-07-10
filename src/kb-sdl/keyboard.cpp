@@ -169,7 +169,7 @@ static int kc_decode (SDL_keysym *prKeySym)
 
   // In case are in unknown driver type... we can still rely on keysym...
 
-#ifdef PANDORA
+#ifdef PANDORA_SPECIFIC
   // Special handling of Pandora keyboard:
   // Some keys requires shift on Amiga, so we simulate shift...
 
@@ -358,7 +358,7 @@ static int decode_de (SDL_keysym *prKeySym)
 	case SDLK_w:		return AK_W;
 	case SDLK_y:		return AK_Z;
 	case SDLK_z:		return AK_Y;
-	case SDLK_COLON:	return SIMULATE_SHIFT | AK_SEMICOLON;
+	case SDLK_COLON:	return AK_SEMICOLON;
 	/* German umlaut oe */
 	case SDLK_WORLD_86:	return AK_SEMICOLON;
 	/* German umlaut ae */
@@ -393,7 +393,7 @@ static int decode_us (SDL_keysym *prKeySym)
     case SDLK_y: return AK_Y;
     case SDLK_w: return AK_W;
     case SDLK_z: return AK_Z;
-    case SDLK_COLON:   return SIMULATE_SHIFT | AK_SEMICOLON;
+    case SDLK_COLON:   return AK_SEMICOLON;
     case SDLK_LEFTBRACKET: return AK_LBRACKET;
     case SDLK_RIGHTBRACKET: return AK_RBRACKET;
     case SDLK_COMMA: return AK_COMMA;

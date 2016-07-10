@@ -21,6 +21,7 @@
 #include "savestate.h"
 #include "crc32.h"
 #include "gui.h"
+#include "akiko.h"
 
 #ifdef JIT
 /* Set by each memory handler that does not simply access real memory. */
@@ -718,7 +719,9 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 	extendedkickmem_size = 524288;
   off = 0;
 	if (type == 0) {
-    if (size > 300000) {
+		if (currprefs.cs_cd32cd) {
+			extendedkickmem_type = EXTENDED_ROM_CD32;
+    } else if (size > 300000) {
     	extendedkickmem_type = EXTENDED_ROM_CD32;
     } else if (need_uae_boot_rom () != 0xf00000) {
 	    extendedkickmem_type = EXTENDED_ROM_CDTV;
@@ -1138,6 +1141,9 @@ void memory_reset (void)
     map_banks (&bogomem_bank, 0xC0, t, 0);
   }
   map_banks (&clock_bank, 0xDC, 1, 0);
+	if (currprefs.cs_cd32c2p || currprefs.cs_cd32cd || currprefs.cs_cd32nvram) {
+		map_banks (&akiko_bank, AKIKO_BASE >> 16, 1, 0);
+	}
 
   map_banks (&kickmem_bank, 0xF8, 8, 0);
   /* map beta Kickstarts at 0x200000/0xC00000/0xF00000 */
@@ -1162,6 +1168,11 @@ void memory_reset (void)
     case EXTENDED_ROM_KS:
       map_banks (&extendedkickmem_bank, 0xE0, 8, 0);
       break;
+#ifdef CD32
+	  case EXTENDED_ROM_CD32:
+		  map_banks (&extendedkickmem_bank, 0xE0, 8, 0);
+		  break;
+#endif
   }
 #ifdef AUTOCONFIG
   if (need_uae_boot_rom ())
@@ -1170,6 +1181,10 @@ void memory_reset (void)
 
   if ((cloanto_rom) && !extendedkickmem_type)
     map_banks (&kickmem_bank, 0xE0, 8, 0);
+
+				if (extendedkickmem_type == EXTENDED_ROM_CD32 || extendedkickmem_type == EXTENDED_ROM_KS)
+					map_banks (&extendedkickmem_bank, 0xb0, 8, 0);
+
   write_log (_T("memory init end\n"));
 }
 

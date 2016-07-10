@@ -1047,6 +1047,17 @@ void expamem_reset (void)
     card_map[cardno++] = expamem_map_fastcard;
   }
 
+#ifdef CD32
+	if (currprefs.cs_cd32cd && currprefs.fastmem_size == 0 && currprefs.chipmem_size <= 0x200000) {
+		int ids[] = { 23, -1 };
+		//struct romlist *rl = getromlistbyids (ids);
+		//if (rl && !_tcscmp (rl->path, currprefs.cartfile)) {
+		//	card_name[cardno] = _T("CD32MPEG");
+		//	card_init[cardno] = expamem_init_cd32fmv;
+		//	card_map[cardno++] = expamem_map_cd32fmv;
+		//}
+	}
+#endif
 #ifdef FILESYS
   if (do_mount) {
 		card_name[cardno] = _T("UAEFS");

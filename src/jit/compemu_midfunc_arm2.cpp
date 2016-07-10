@@ -52,9 +52,16 @@ const uae_u32 ARM_CCR_MAP[] = { 0, ARM_C_FLAG, // 1 C
 #define DUPLICACTE_CARRY            \
   if (needed_flags & FLAG_X) {      \
     int x = writereg(FLAGX, 4);     \
-  	MOV_ri(x, 1);                   \
-	  CC_MOV_ri(NATIVE_CC_CC, x, 0);  \
+		MOV_ri(x, 0);                   \
+	  ADC_rri(x, x, 0);               \
     unlock2(x);                     \
+  }
+
+#define DUPLICACTE_CARRY_FROM_REG(r)  \
+  if (needed_flags & FLAG_X) {        \
+    int x = writereg(FLAGX, 4);       \
+  	UBFX_rrii(x, r, 29, 1);           \
+    unlock2(x);                       \
   }
 
 /*
@@ -81,7 +88,7 @@ MIDFUNC(3,jnf_ADD_imm,(W4 d, RR4 s, IMM v))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-  if(v >= 0 && v < 256) {
+  if(CHECK32(v)) {
     ADD_rri(d, s, v);
   } else {
 	  compemu_raw_mov_l_ri(REG_WORK1, v);
@@ -173,8 +180,13 @@ MIDFUNC(3,jff_ADD_w_imm,(W4 d, RR2 s, IMM v))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK1, v);
+  LSL_rri(REG_WORK1, REG_WORK1, 16);
+#else
   uae_s32 offs = data_long_offs(v << 16);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
   ADDS_rrrLSLi(d, REG_WORK1, s, 16);
 	ASR_rri(d, d, 16);
 	
@@ -212,7 +224,7 @@ MIDFUNC(3,jff_ADD_l_imm,(W4 d, RR4 s, IMM v))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-  if(v >= 0 && v < 256) {
+  if(CHECK32(v)) {
     ADDS_rri(d, s, v);
   } else {
 	  compemu_raw_mov_l_ri(REG_WORK2, v);
@@ -261,8 +273,7 @@ MIDFUNC(2,jnf_ADDA_b,(W4 d, RR1 s))
 	s = readreg(s, 4);
 	d = rmw(d, 4, 4);
 
-	SIGNED8_REG_2_REG(REG_WORK1, s);
-	ADD_rrr(d, d, REG_WORK1);
+	SXTAB_rrr(d, d, s);
 
 	unlock2(d);
 	unlock2(s);
@@ -274,8 +285,7 @@ MIDFUNC(2,jnf_ADDA_w,(W4 d, RR2 s))
 	s = readreg(s, 4);
 	d = rmw(d, 4, 4);
 
-	SIGNED16_REG_2_REG(REG_WORK1, s);
-	ADD_rrr(d, d, REG_WORK1);
+	SXTAH_rrr(d, d, s);
 
 	unlock2(d);
 	unlock2(s);
@@ -319,10 +329,9 @@ MIDFUNC(3,jnf_ADDX,(W4 d, RR4 s, RR4 v))
 
   clobber_flags();
 
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
+	// Restore X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 	
 	ADC_rrr(d, s, v);
 
@@ -340,13 +349,12 @@ MIDFUNC(3,jff_ADDX_b,(W4 d, RR1 s, RR1 v))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
-
-	CC_MVN_ri(NATIVE_CC_EQ, REG_WORK2, 0);
+	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 
 	MVN_ri(REG_WORK1, 0);
 	BFI_rrii(REG_WORK1, s, 24, 31);
@@ -356,7 +364,7 @@ MIDFUNC(3,jff_ADDX_b,(W4 d, RR1 s, RR1 v))
 	MRS_CPSR(REG_WORK1);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -372,13 +380,12 @@ MIDFUNC(3,jff_ADDX_w,(W4 d, RR2 s, RR2 v))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
-
-	CC_MVN_ri(NATIVE_CC_EQ, REG_WORK2, 0);
+	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 
 	MVN_ri(REG_WORK1, 0);
 	BFI_rrii(REG_WORK1, s, 16, 31);
@@ -388,7 +395,7 @@ MIDFUNC(3,jff_ADDX_w,(W4 d, RR2 s, RR2 v))
 	MRS_CPSR(REG_WORK1);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -404,20 +411,19 @@ MIDFUNC(3,jff_ADDX_l,(W4 d, RR4 s, RR4 v))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
-
-	CC_MVN_ri(NATIVE_CC_EQ, REG_WORK2, 0);
+	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 
 	ADCS_rrr(d, s, v);
 
 	MRS_CPSR(REG_WORK1);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -772,10 +778,11 @@ MIDFUNC(2,jff_ASLW,(W4 d, RR4 s))
 
 	MSR_CPSRf_i(0);
 	LSLS_rri(d, s, 17);
-	DUPLICACTE_CARRY
+
+	MRS_CPSR(REG_WORK1);
+	DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
   // Calculate V flag
-	MRS_CPSR(REG_WORK1);
 	CC_ORR_rri(NATIVE_CC_MI, REG_WORK1, REG_WORK1, ARM_V_FLAG);
 	CC_EOR_rri(NATIVE_CC_CS, REG_WORK1, REG_WORK1, ARM_V_FLAG);
 	MSR_CPSRf_r(REG_WORK1);
@@ -1136,12 +1143,11 @@ MIDFUNC(2,jff_BCHG_b_imm,(RW4 d, IMM s))
 
 	uae_u32 v = (1 << s);
 	MRS_CPSR(REG_WORK1);
-	TST_ri(d, v);
-	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
 	EOR_rri(d, d, v);
-
+  UBFX_rrii(REG_WORK2, d, s, 1);
+  BFI_rrii(REG_WORK1, REG_WORK2, 30, 30);
+  MSR_CPSRf_r(REG_WORK1);
+  
 	unlock2(d);
 }
 MENDFUNC(2,jff_BCHG_b_imm,(RW4 d, IMM s))
@@ -1152,11 +1158,10 @@ MIDFUNC(2,jff_BCHG_l_imm,(RW4 d, IMM s))
 
 	uae_u32 v = (1 << s);
 	MRS_CPSR(REG_WORK1);
-	TST_ri(d, v);
-	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
 	EOR_rri(d, d, v);
+  UBFX_rrii(REG_WORK2, d, s, 1);
+  BFI_rrii(REG_WORK1, REG_WORK2, 30, 30);
+  MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(d);
 }
@@ -1179,9 +1184,9 @@ MIDFUNC(2,jff_BCHG_b,(RW4 d, RR4 s))
 	TST_rr(d, REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	EOR_rrr(d, d, REG_WORK2);
-
+  
 	unlock2(d);
 	unlock2(s);
 }
@@ -1205,7 +1210,7 @@ MIDFUNC(2,jff_BCHG_l,(RW4 d, RR4 s))
 	TST_rr(d, REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	EOR_rrr(d, d, REG_WORK2);
 
 	unlock2(d);
@@ -1291,7 +1296,7 @@ MIDFUNC(2,jff_BCLR_b_imm,(RW4 d, IMM s))
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	BIC_rri(d, d, v);
 
 	unlock2(d);
@@ -1307,7 +1312,7 @@ MIDFUNC(2,jff_BCLR_l_imm,(RW4 d, IMM s))
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	BIC_rri(d, d, v);
 
 	unlock2(d);
@@ -1331,7 +1336,7 @@ MIDFUNC(2,jff_BCLR_b,(RW4 d, RR4 s))
 	TST_rr(d,REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	BIC_rrr(d, d, REG_WORK2);
 
 	unlock2(d);
@@ -1357,7 +1362,7 @@ MIDFUNC(2,jff_BCLR_l,(RW4 d, RR4 s))
 	TST_rr(d, REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	BIC_rrr(d, d ,REG_WORK2);
 
 	unlock2(d);
@@ -1443,7 +1448,7 @@ MIDFUNC(2,jff_BSET_b_imm,(RW4 d, IMM s))
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	ORR_rri(d, d, v);
 
 	unlock2(d);
@@ -1459,7 +1464,7 @@ MIDFUNC(2,jff_BSET_l_imm,(RW4 d, IMM s))
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	ORR_rri(d, d, v);
 
 	unlock2(d);
@@ -1483,7 +1488,7 @@ MIDFUNC(2,jff_BSET_b,(RW4 d, RR4 s))
 	TST_rr(d, REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	ORR_rrr(d, d, REG_WORK2);
 
 	unlock2(d);
@@ -1509,7 +1514,7 @@ MIDFUNC(2,jff_BSET_l,(RW4 d, RR4 s))
 	TST_rr(d, REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 	ORR_rrr(d, d, REG_WORK2);
 
 	unlock2(d);
@@ -1539,7 +1544,7 @@ MIDFUNC(2,jff_BTST_b_imm,(RR4 d, IMM s))
 	TST_ri(d, (1 << s));
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(d);
 }
@@ -1553,7 +1558,7 @@ MIDFUNC(2,jff_BTST_l_imm,(RR4 d, IMM s))
 	TST_ri(d, (1 << s));
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(d);
 }
@@ -1576,7 +1581,7 @@ MIDFUNC(2,jff_BTST_b,(RR4 d, RR4 s))
 	TST_rr(d, REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(d);
 	unlock2(s);
@@ -1601,7 +1606,7 @@ MIDFUNC(2,jff_BTST_l,(RR4 d, RR4 s))
 	TST_rr(d, REG_WORK2);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(d);
 	unlock2(s);
@@ -1633,7 +1638,7 @@ MIDFUNC(1,jff_CLR,(W4 d))
 {
 	d = writereg(d, 4);
 	MOV_ri(d, 0);
-	MSR_CPSR_i(ARM_Z_FLAG);
+	MSR_CPSRf_i(ARM_Z_FLAG);
 	unlock2(d);
 }
 MENDFUNC(1,jff_CLR,(W4 d))
@@ -1661,7 +1666,7 @@ MIDFUNC(2,jff_CMP_b,(RR1 d, RR1 s))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(s);
 	unlock2(d);
@@ -1678,7 +1683,7 @@ MIDFUNC(2,jff_CMP_w,(RR2 d, RR2 s))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(s);
 	unlock2(d);
@@ -1694,7 +1699,7 @@ MIDFUNC(2,jff_CMP_l,(RR4 d, RR4 s))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(s);
 	unlock2(d);
@@ -1724,7 +1729,7 @@ MIDFUNC(2,jff_CMPA_w,(RR2 d, RR2 s))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(s);
 	unlock2(d);
@@ -1740,7 +1745,7 @@ MIDFUNC(2,jff_CMPA_l,(RR4 d, RR4 s))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(s);
 	unlock2(d);
@@ -2623,9 +2628,12 @@ MIDFUNC(2,jff_MOVE_b_imm,(W4 d, IMM s))
 {
 	d = writereg(d, 4);
 
-	SIGNED8_IMM_2_REG(d, (uae_u8)s);
 	MSR_CPSRf_i(0);
-	TST_rr(d, d);
+	if (s & 0x80) {
+		MVNS_ri(d, (uae_u8) ~s);
+	} else {
+		MOVS_ri(d, (uae_u8) s);
+	}
   
 	unlock2(d);
 }
@@ -2723,8 +2731,7 @@ MIDFUNC(3,jnf_MVMEL_w,(W4 d, RR4 s, IMM offset))
 	d = writereg(d, 4);
 
 	LDRH_rRI(REG_WORK1, s, offset);
-  REV16_rr(REG_WORK1, REG_WORK1);
-  SIGNED16_REG_2_REG(d, REG_WORK1);
+  REVSH_rr(d, REG_WORK1);
 
 	unlock2(d);
 	unlock2(s);
@@ -2798,8 +2805,13 @@ MIDFUNC(2,jnf_MOVE16,(RR4 d, RR4 s))
 	BIC_rri(s, s, 0x0000000F);
 	BIC_rri(d, d, 0x0000000F);
 
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK1, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK1, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 
 	ADD_rrr(s, s, REG_WORK1);
 	ADD_rrr(d, d, REG_WORK1);
@@ -3124,8 +3136,8 @@ MIDFUNC(2,jff_NEG_b,(W4 d, RR1 s))
   
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -3142,8 +3154,8 @@ MIDFUNC(2,jff_NEG_w,(W4 d, RR2 s))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -3159,8 +3171,8 @@ MIDFUNC(2,jff_NEG_l,(W4 d, RR4 s))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -3189,11 +3201,10 @@ MIDFUNC(2,jnf_NEGX_b,(W4 d, RR4 s))
 	d = writereg(d, 4);
   clobber_flags();
   
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	SIGNED8_REG_2_REG(REG_WORK1, s);
 	RSC_rri(d, REG_WORK1, 0);
@@ -3212,11 +3223,10 @@ MIDFUNC(2,jnf_NEGX_w,(W4 d, RR4 s))
 
   clobber_flags();
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	SIGNED16_REG_2_REG(REG_WORK1, s);
 	RSC_rri(d, REG_WORK1, 0);
@@ -3235,11 +3245,10 @@ MIDFUNC(2,jnf_NEGX_l,(W4 d, RR4 s))
 
   clobber_flags();
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	RSC_rri(d, s, 0);
 
@@ -3255,14 +3264,13 @@ MIDFUNC(2,jff_NEGX_b,(W4 d, RR1 s))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-
 	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
 
 	SIGNED8_REG_2_REG(REG_WORK1, s);
 	RSCS_rri(d, REG_WORK1, 0);
@@ -3271,7 +3279,7 @@ MIDFUNC(2,jff_NEGX_b,(W4 d, RR1 s))
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -3285,14 +3293,13 @@ MIDFUNC(2,jff_NEGX_w,(W4 d, RR2 s))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-
 	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
 
 	SIGNED16_REG_2_REG(REG_WORK1, s);
 	RSCS_rri(d, REG_WORK1, 0);
@@ -3301,7 +3308,7 @@ MIDFUNC(2,jff_NEGX_w,(W4 d, RR2 s))
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -3315,14 +3322,13 @@ MIDFUNC(2,jff_NEGX_l,(W4 d, RR4 s))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-
 	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
 
 	RSCS_rri(d, s, 0);
 
@@ -3330,7 +3336,7 @@ MIDFUNC(2,jff_NEGX_l,(W4 d, RR4 s))
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -3553,8 +3559,7 @@ MIDFUNC(3,jnf_ROL_w_imm,(W4 d, RR4 s, IMM i))
 	d = writereg(d, 4);
 
   if(i & 0x1f) {
-  	LSL_rri(d, s, 16);
-  	ORR_rrrLSRi(d, d, d, 16);
+  	PKHBT_rrrLSLi(d, s, s, 16);
   	ROR_rri(d, d, (32 - (i & 0x1f)));
   } else {
     MOV_rr(d, s);
@@ -3597,10 +3602,8 @@ MIDFUNC(3,jff_ROL_b_imm,(W4 d, RR4 s, IMM i))
       TST_rr(d, d);     
 
 		MRS_CPSR(REG_WORK2);
-		TST_ri(d, 1);
-		CC_ORR_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-		CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-		MSR_CPSR_r(REG_WORK2);
+		BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+		MSR_CPSRf_r(REG_WORK2);
 	} else {
 		TST_rr(d, d);
 	}
@@ -3615,8 +3618,7 @@ MIDFUNC(3,jff_ROL_w_imm,(W4 d, RR4 s, IMM i))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	MSR_CPSRf_i(0);
 	if (i) {
 		if(i & 0x1f)
@@ -3625,10 +3627,8 @@ MIDFUNC(3,jff_ROL_w_imm,(W4 d, RR4 s, IMM i))
       TST_rr(d, d);
       
 		MRS_CPSR(REG_WORK2);
-		TST_ri(d, 1);
-		CC_ORR_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-		CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-		MSR_CPSR_r(REG_WORK2);
+		BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+		MSR_CPSRf_r(REG_WORK2);
 	} else {
 		TST_rr(d, d);
 	}
@@ -3651,10 +3651,8 @@ MIDFUNC(3,jff_ROL_l_imm,(W4 d, RR4 s, IMM i))
       MOVS_rr(d, s);
 
 		MRS_CPSR(REG_WORK2);
-		TST_ri(d, 1);
-		CC_ORR_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-		CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-		MSR_CPSR_r(REG_WORK2);
+		BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+		MSR_CPSRf_r(REG_WORK2);
 	} else {
 		MOVS_rr(d, s);
 	}
@@ -3701,8 +3699,7 @@ MIDFUNC(3,jnf_ROL_w,(W4 d, RR4 s, RR4 i))
 	AND_rri(REG_WORK1, i, 0x1f);
 	RSB_rri(REG_WORK1, REG_WORK1, 32);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	ROR_rrr(d, d, REG_WORK1);
 
 	unlock2(d);
@@ -3753,10 +3750,8 @@ MIDFUNC(3,jff_ROL_b,(W4 d, RR4 s, RR4 i))
 	RORS_rrr(d, d, REG_WORK1);
 
 	MRS_CPSR(REG_WORK2);
-	TST_ri(d, 1);
-	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK2);
+	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
 	unlock2(s);
@@ -3778,16 +3773,13 @@ MIDFUNC(3,jff_ROL_w,(W4 d, RR4 s, RR4 i))
 	AND_rri(REG_WORK1, i, 0x1f);
 	RSB_rri(REG_WORK1, REG_WORK1, 32);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	MSR_CPSRf_i(0);
 	RORS_rrr(d, d, REG_WORK1);
 
 	MRS_CPSR(REG_WORK2);
-	TST_ri(d, 1);
-	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK2);
+	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
 	unlock2(s);
@@ -3813,10 +3805,8 @@ MIDFUNC(3,jff_ROL_l,(W4 d, RR4 s, RR4 i))
 	RORS_rrr(d, s, REG_WORK1);
 
 	MRS_CPSR(REG_WORK2);
-	TST_ri(d, 1);
-	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK2);
+	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
 	unlock2(s);
@@ -3842,8 +3832,7 @@ MIDFUNC(2,jnf_ROLW,(W4 d, RR4 s))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	ROR_rri(d, d, (32 - 1));
 
 	unlock2(d);
@@ -3856,16 +3845,13 @@ MIDFUNC(2,jff_ROLW,(W4 d, RR4 s))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	MSR_CPSRf_i(0);
 	RORS_rri(d, d, (32 - 1));
 
 	MRS_CPSR(REG_WORK2);
-	TST_ri(d, 1);
-	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK2);
+	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
 	unlock2(s);
@@ -3967,10 +3953,9 @@ MIDFUNC(2,jnf_ROXLW,(W4 d, RR4 s))
 
   clobber_flags();
 
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
+	// Restore X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 
 	LSL_rri(d, s, 1);
 	ADC_rri(d, d, 0);
@@ -3987,10 +3972,9 @@ MIDFUNC(2,jff_ROXLW,(W4 d, RR4 s))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
   
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
+	// Restore X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 
 	LSL_rri(d, s, 1);
 	ADC_rri(d, d, 0);
@@ -4048,8 +4032,7 @@ MIDFUNC(3,jnf_ROR_w_imm,(W4 d, RR4 s, IMM i))
 	d = writereg(d, 4);
 
 	if(i & 0x0f) {
-  	LSL_rri(d, s, 16);
-  	ORR_rrrLSRi(d, d, d, 16);
+  	PKHBT_rrrLSLi(d, s, s, 16);
   	ROR_rri(d, d, i & 0x0f);
   } else {
     MOV_ri(d, s);
@@ -4086,10 +4069,9 @@ MIDFUNC(3,jff_ROR_b_imm,(W4 d, RR4 s, IMM i))
   } else if (i > 0x07) {
     TST_rr(d, d);
     // We need to copy MSB to carry
-  	MRS_CPSR(REG_WORK1);
-  	BIC_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+  	MRS_CPSR(REG_WORK1); // carry is cleared
 	  CC_ORR_rri(NATIVE_CC_MI, REG_WORK1, REG_WORK1, ARM_C_FLAG);
-    MSR_CPSR_r(REG_WORK1);
+    MSR_CPSRf_r(REG_WORK1);
   } else {
     TST_rr(d, d);
   }
@@ -4104,18 +4086,16 @@ MIDFUNC(3,jff_ROR_w_imm,(W4 d, RR4 s, IMM i))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	MSR_CPSRf_i(0);
 	if(i & 0x0f) {
   	RORS_rri(d, d, i & 0x0f);
   } else if (i > 0x0f) {
     TST_rr(d, d);
     // We need to copy MSB to carry
-  	MRS_CPSR(REG_WORK1);
-  	BIC_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+  	MRS_CPSR(REG_WORK1); // carry is cleared
 	  CC_ORR_rri(NATIVE_CC_MI, REG_WORK1, REG_WORK1, ARM_C_FLAG);
-    MSR_CPSR_r(REG_WORK1);
+    MSR_CPSRf_r(REG_WORK1);
   } else {
     TST_rr(d, d);
   }
@@ -4136,10 +4116,9 @@ MIDFUNC(3,jff_ROR_l_imm,(W4 d, RR4 s, IMM i))
   } else if (i > 0x1f) {
     MOVS_ri(d, s);
     // We need to copy MSB to carry
-  	MRS_CPSR(REG_WORK1);
-  	BIC_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+  	MRS_CPSR(REG_WORK1); // carry is cleared
 	  CC_ORR_rri(NATIVE_CC_MI, REG_WORK1, REG_WORK1, ARM_C_FLAG);
-    MSR_CPSR_r(REG_WORK1);
+    MSR_CPSRf_r(REG_WORK1);
   } else {
     MOVS_ri(d, s);
   }
@@ -4180,8 +4159,7 @@ MIDFUNC(3,jnf_ROR_w,(W4 d, RR4 s, RR4 i))
 	i = readreg(i, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	ROR_rrr(d, d, i);
 
 	unlock2(d);
@@ -4243,8 +4221,7 @@ MIDFUNC(3,jff_ROR_w,(W4 d, RR4 s, RR4 i))
 	i = readreg(i, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	MSR_CPSRf_i(0);
 	AND_rri(REG_WORK1, i, 63);
 	RORS_rrr(d, d, REG_WORK1);
@@ -4294,8 +4271,7 @@ MIDFUNC(2,jnf_RORW,(W4 d, RR4 s))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	ROR_rri(d, d, 1);
 
 	unlock2(d);
@@ -4308,8 +4284,7 @@ MIDFUNC(2,jff_RORW,(W4 d, RR4 s))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-	LSL_rri(d, s, 16);
-	ORR_rrrLSRi(d, d, d, 16);
+	PKHBT_rrrLSLi(d, s, s, 16);
 	MSR_CPSRf_i(0);
 	RORS_rri(d, d, 1);
 
@@ -4413,10 +4388,9 @@ MIDFUNC(2,jnf_ROXRW,(W4 d, RR4 s))
 
   clobber_flags();
 
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
+	// Restore X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 
 	LSL_rri(d, s, 16);
 	RRX_rr(d, d);
@@ -4434,18 +4408,14 @@ MIDFUNC(2,jff_ROXRW,(W4 d, RR4 s))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
   
-	// Restore X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	MSR_CPSR_r(REG_WORK1);
+	// Restore X to carry (clears also V flag, don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	MSR_CPSRf_r(REG_WORK1);
 
 	LSL_rri(d, s, 16);
 	ORR_rrrLSRi(d, d, d, 16);
 	RRXS_rr(d, d);
 	LSR_rri(d, d, 16);
-	MRS_CPSR(REG_WORK1);
-	BIC_rri(REG_WORK1, REG_WORK1, ARM_V_FLAG);
-	MSR_CPSR_r(REG_WORK1);
 
   // Duplicate carry
 	MOV_ri(x, 1);
@@ -4624,8 +4594,8 @@ MIDFUNC(3,jff_SUB_b_imm,(W4 d, RR1 s, IMM v))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -4649,8 +4619,8 @@ MIDFUNC(3,jff_SUB_b,(W4 d, RR1 s, RR1 v))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -4663,16 +4633,24 @@ MIDFUNC(3,jff_SUB_w_imm,(W4 d, RR2 s, IMM v))
 	s = readreg(s, 4);
 	d = writereg(d, 4);
 
-  uae_s32 offs = data_word_offs(v);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+  if(CHECK32(v)) {
+    MOV_ri(REG_WORK1, v);
+  } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, v);
+#else
+    uae_s32 offs = data_word_offs(v);
+	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+  }
 	LSL_rri(REG_WORK2, s, 16);
 	SUBS_rrrLSLi(d, REG_WORK2, REG_WORK1, 16);
   ASR_rri(d, d, 16);
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -4696,8 +4674,8 @@ MIDFUNC(3,jff_SUB_w,(W4 d, RR2 s, RR2 v))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -4715,8 +4693,8 @@ MIDFUNC(3,jff_SUB_l_imm,(W4 d, RR4 s, IMM v))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -4738,8 +4716,8 @@ MIDFUNC(3,jff_SUB_l,(W4 d, RR4 s, RR4 v))
 
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-  DUPLICACTE_CARRY
+	MSR_CPSRf_r(REG_WORK1);
+  DUPLICACTE_CARRY_FROM_REG(REG_WORK1)
 
 	unlock2(d);
 	unlock2(s);
@@ -4807,11 +4785,10 @@ MIDFUNC(3,jnf_SUBX,(W4 d, RR4 s, RR4 v))
 
   clobber_flags();
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	SBC_rrr(d, s, v);
 
@@ -4829,14 +4806,13 @@ MIDFUNC(3,jff_SUBX_b,(W4 d, RR1 s, RR1 v))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-
 	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
 
 	LSL_rri(REG_WORK1, s, 24);
 	SBCS_rrrLSLi(d, REG_WORK1, v, 24);
@@ -4846,7 +4822,7 @@ MIDFUNC(3,jff_SUBX_b,(W4 d, RR1 s, RR1 v))
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -4862,14 +4838,13 @@ MIDFUNC(3,jff_SUBX_w,(W4 d, RR2 s, RR2 v))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-
 	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
 
 	LSL_rri(REG_WORK1, s, 16);
 	SBCS_rrrLSLi(d,REG_WORK1,v, 16);
@@ -4879,7 +4854,7 @@ MIDFUNC(3,jff_SUBX_w,(W4 d, RR2 s, RR2 v))
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -4895,14 +4870,13 @@ MIDFUNC(3,jff_SUBX_l,(W4 d, RR4 s, RR4 v))
 	d = writereg(d, 4);
   int x = rmw(FLAGX, 4, 4);
 
-	// Restore inverted X to carry
-	MRS_CPSR(REG_WORK1);
-	BFI_rrii(REG_WORK1, x, 29, 29);
-	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
-	MSR_CPSR_r(REG_WORK1);
-
 	MVN_ri(REG_WORK2, 0);
 	CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, ARM_Z_FLAG);
+
+	// Restore inverted X to carry (don't care about other flags)
+  LSL_rri(REG_WORK1, x, 29);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
 
 	SBCS_rrr(d, s, v);
 
@@ -4910,7 +4884,7 @@ MIDFUNC(3,jff_SUBX_l,(W4 d, RR4 s, RR4 v))
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
-	MSR_CPSR_r(REG_WORK1);
+	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
 	unlock2(d);
@@ -5019,8 +4993,13 @@ MENDFUNC(1,jff_TST_l,(RR4 s))
  */
 MIDFUNC(2,jnf_MEM_WRITE_OFF_b,(RR4 adr, RR4 b))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   b = readreg(b, 4);
@@ -5034,8 +5013,13 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_b,(RR4 adr, RR4 b))
 
 MIDFUNC(2,jnf_MEM_WRITE_OFF_w,(RR4 adr, RR4 w))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   w = readreg(w, 4);
@@ -5050,8 +5034,13 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_w,(RR4 adr, RR4 w))
 
 MIDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   l = readreg(l, 4);
@@ -5067,8 +5056,13 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_b,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5082,8 +5076,13 @@ MENDFUNC(2,jnf_MEM_READ_OFF_b,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_w,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5098,8 +5097,13 @@ MENDFUNC(2,jnf_MEM_READ_OFF_w,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5115,8 +5119,13 @@ MENDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_b,(RR4 adr, RR4 b))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   b = readreg(b, 4);
@@ -5131,16 +5140,20 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_b,(RR4 adr, RR4 b))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_w,(RR4 adr, RR4 w))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   w = readreg(w, 4);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
-  ADD_rrr(REG_WORK2, REG_WORK1, REG_WORK2);
-  REV16_rr(REG_WORK1, w);
-  STRH_rR(REG_WORK1, REG_WORK2);
+  REV16_rr(REG_WORK3, w);
+  STRH_rRR(REG_WORK3, REG_WORK1, REG_WORK2);
   
   unlock2(w);
   unlock2(adr);
@@ -5149,16 +5162,20 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_w,(RR4 adr, RR4 w))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   l = readreg(l, 4);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
-  ADD_rrr(REG_WORK2, REG_WORK1, REG_WORK2);
-  REV_rr(REG_WORK1, l);
-  STR_rR(REG_WORK1, REG_WORK2);
+  REV_rr(REG_WORK3, l);
+  STR_rRR(REG_WORK3, REG_WORK1, REG_WORK2);
   
   unlock2(l);
   unlock2(adr);
@@ -5168,8 +5185,13 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_b,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5184,8 +5206,13 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_b,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_w,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5201,8 +5228,13 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_w,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5219,8 +5251,13 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5234,8 +5271,13 @@ MENDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
+  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
+#else
 	uae_s32 offs = get_data_natmem();
 	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5254,8 +5296,13 @@ MIDFUNC(2,jnf_MEM_GETBANKFUNC,(W4 d, RR4 adr, IMM offset))
   adr = readreg(adr, 4);
   d = writereg(d, 4);
 	
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, (uae_u32)mem_banks);
+  MOVT_ri16(REG_WORK2, (uae_u32)mem_banks >> 16);
+#else
   uae_s32 offs = data_long_offs((uae_u32)mem_banks);
   LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
   LSR_rri(REG_WORK1, adr, 16);
   LDR_rRR_LSLi(d, REG_WORK2, REG_WORK1, 2);
   LDR_rRI(d, d, offset);

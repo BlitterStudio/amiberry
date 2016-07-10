@@ -29,32 +29,14 @@
 #include "savestate.h"
 #include "filesys.h"
 #include "autoconf.h"
+#include "blkdev.h"
 #include <SDL.h>
 #include "td-sdl/thread.h"
 
 
 int emulating = 0;
-extern bool switch_autofire;
 
-static int justMovedUp=0, justMovedDown=0, justMovedLeft=0, justMovedRight=0;
-static int justPressedA=0, justPressedB=0, justPressedX=0, justPressedY=0;
-static int justPressedL=0, justPressedR=0;
-int stylusClickOverride=0;
-
-
-extern SDL_Surface *prSDLScreen;
 extern int screen_is_picasso;
-
-int dpadUp=0;
-int dpadDown=0;
-int dpadLeft=0;
-int dpadRight=0;
-int buttonA=0;
-int buttonB=0;
-int buttonX=0;
-int buttonY=0;
-int triggerL=0;
-int triggerR=0;
 
 struct gui_msg {
   int num;
@@ -82,6 +64,7 @@ struct gui_msg gui_msglist[] = {
 std::vector<ConfigFileInfo*> ConfigFilesList;
 std::vector<AvailableROM*> lstAvailableROMs;
 std::vector<std::string> lstMRUDiskList;
+std::vector<std::string> lstMRUCDList;
 
 
 void AddFileToDiskList(const char *file, int moveToTop)
@@ -105,6 +88,30 @@ void AddFileToDiskList(const char *file, int moveToTop)
 
   while(lstMRUDiskList.size() > MAX_MRU_DISKLIST)
     lstMRUDiskList.pop_back();
+}
+
+
+void AddFileToCDList(const char *file, int moveToTop)
+{
+  int i;
+  
+  for(i=0; i<lstMRUCDList.size(); ++i)
+  {
+    if(!strcasecmp(lstMRUCDList[i].c_str(), file))
+    {
+      if(moveToTop)
+      {
+        lstMRUCDList.erase(lstMRUCDList.begin() + i);
+        lstMRUCDList.insert(lstMRUCDList.begin(), file);
+      }
+      break;
+    }
+  }
+  if(i >= lstMRUCDList.size())
+    lstMRUCDList.insert(lstMRUCDList.begin(), file);
+
+  while(lstMRUCDList.size() > MAX_MRU_CDLIST)
+    lstMRUCDList.pop_back();
 }
 
 
@@ -304,6 +311,30 @@ void ReadConfigFileList(void)
     
   ClearConfigFileList();
   
+  // Add built-in configs: A500
+  ConfigFileInfo *buildin = new ConfigFileInfo();
+  strcpy(buildin->FullPath, "");
+  strcpy(buildin->Name, "Amiga 500");
+  strcpy(buildin->Description, _T("Built-in, A500, OCS, 512KB"));
+  buildin->BuildInID = BUILDINID_A500;
+  ConfigFilesList.push_back(buildin);
+
+  // A1200
+  buildin = new ConfigFileInfo();
+  strcpy(buildin->FullPath, "");
+  strcpy(buildin->Name, "Amiga 1200");
+  strcpy(buildin->Description, _T("Built-in, A1200"));
+  buildin->BuildInID = BUILDINID_A1200;
+  ConfigFilesList.push_back(buildin);
+  
+  // CD32
+  buildin = new ConfigFileInfo();
+  strcpy(buildin->FullPath, "");
+  strcpy(buildin->Name, "CD32");
+  strcpy(buildin->Description, _T("Built-in"));
+  buildin->BuildInID = BUILDINID_CD32;
+  ConfigFilesList.push_back(buildin);
+
   // Read rp9 files
   fetch_rp9path(path, MAX_PATH);
   ReadDirectory(path, NULL, &files);
@@ -316,6 +347,7 @@ void ReadConfigFileList(void)
     strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
     removeFileExtension(tmp->Name);
     strcpy(tmp->Description, _T("rp9"));
+    tmp->BuildInID = BUILDINID_NONE;
     ConfigFilesList.push_back(tmp);
   }
   
@@ -331,6 +363,7 @@ void ReadConfigFileList(void)
     strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
     removeFileExtension(tmp->Name);
     cfgfile_get_description(tmp->FullPath, tmp->Description);
+    tmp->BuildInID = BUILDINID_NONE;
     ConfigFilesList.push_back(tmp);
   }
 
@@ -347,6 +380,7 @@ void ReadConfigFileList(void)
       strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
       removeFileExtension(tmp->Name);
       strcpy(tmp->Description, "Old style configuration file");
+      tmp->BuildInID = BUILDINID_NONE;
       for(int j=0; j<ConfigFilesList.size(); ++j)
       {
         if(!strcmp(ConfigFilesList[j]->Name, tmp->Name))
@@ -390,15 +424,31 @@ static void gui_to_prefs (void)
 }
 
 
+static void after_leave_gui(void)
+{
+  // Check if we have to set or clear autofire
+  int new_af = (changed_prefs.input_autofire_framecnt == 0) ? 0 : 1;
+  int update = 0;
+  int num;
+  
+  for(num = 0; num < 2; ++num) {
+    if(changed_prefs.jports[num].id == JSEM_JOYS && changed_prefs.jports[num].autofire != new_af) {
+      changed_prefs.jports[num].autofire = new_af;
+      update = 1;
+    }
+  }
+  if(update)
+    inputdevice_updateconfig(&changed_prefs);
+
+  inputdevice_copyconfig (&changed_prefs, &currprefs);
+  inputdevice_config_change_test();
+}
+
+
 int gui_init (void)
 {
   int ret = 0;
   
-#ifndef ANDROIDSDL
-  SDL_JoystickEventState(SDL_ENABLE);
-  SDL_JoystickOpen(0);
-#endif
-
 	emulating=0;
 
   if(lstAvailableROMs.size() == 0)
@@ -416,8 +466,8 @@ int gui_init (void)
 	setCpuSpeed();
   update_display(&changed_prefs);
 
-  inputdevice_copyconfig (&changed_prefs, &currprefs);
-  inputdevice_config_change_test();
+  after_leave_gui();
+    
 	emulating=1;
   return ret;
 }
@@ -484,16 +534,17 @@ int gui_update (void)
   	   	strcat(savestate_fname,".uss");
     		strcat(screenshot_filename,".png");
   }
-    return 0;
+  return 0;
 }
 
 
-static void goMenu(void)
+void gui_display (int shortcut)
 {
 	if (quit_program != 0)
 		return;
 	emulating=1;
 	pause_sound();
+  blkdev_entergui();
 
   if(lstAvailableROMs.size() == 0)
     RescanROMs();
@@ -510,9 +561,9 @@ static void goMenu(void)
 	/* Clear menu garbage at the bottom of the screen */
 	black_screen_now();
 	resume_sound();
+  blkdev_exitgui();
 
-  inputdevice_copyconfig (&changed_prefs, &currprefs);
-  inputdevice_config_change_test ();
+  after_leave_gui();
 
   gui_update ();
 
@@ -520,30 +571,7 @@ static void goMenu(void)
   fpscounter_reset();
 }
 
-
-static int customKey[256] = 
- { 0,             AK_UP,    AK_DN,      AK_LF,    AK_RT,        AK_NP0,       AK_NP1,         AK_NP2,       /*   0 -   7 */
-   AK_NP3,        AK_NP4,   AK_NP5,     AK_NP6,   AK_NP7,       AK_NP8,       AK_NP9,         AK_ENT,       /*   8 -  15 */
-   AK_NPDIV,      AK_NPMUL, AK_NPSUB,   AK_NPADD, AK_NPDEL,     AK_NPLPAREN,  AK_NPRPAREN,    AK_SPC,       /*  16 -  23 */
-   AK_BS,         AK_TAB,   AK_RET,     AK_ESC,   AK_DEL,       AK_LSH,       AK_RSH,         AK_CAPSLOCK,  /*  24 -  31 */
-   AK_CTRL,       AK_LALT,  AK_RALT,    AK_LAMI,  AK_RAMI,      AK_HELP,      AK_LBRACKET,    AK_RBRACKET,  /*  32 -  39 */
-   AK_SEMICOLON,  AK_COMMA, AK_PERIOD,  AK_SLASH, AK_BACKSLASH, AK_QUOTE,     AK_NUMBERSIGN,  AK_LTGT,      /*  40 -  47 */
-   AK_BACKQUOTE,  AK_MINUS, AK_EQUAL,   AK_A,     AK_B,         AK_C,         AK_D,           AK_E,         /*  48 -  55 */
-   AK_F,          AK_G,     AK_H,       AK_I,     AK_J,         AK_K,         AK_L,           AK_M,         /*  56 -  63 */
-   AK_N,          AK_O,     AK_P,       AK_Q,     AK_R,         AK_S,         AK_T,           AK_U,         /*  64 -  71 */
-   AK_V,          AK_W,     AK_X,       AK_Y,     AK_Z,         AK_1,         AK_2,           AK_3,         /*  72 -  79 */
-   AK_4,          AK_5,     AK_6,       AK_7,     AK_8,         AK_9,         AK_0,           AK_F1,        /*  80 -  87 */
-   AK_F2,         AK_F3,    AK_F4,      AK_F5,    AK_F6,        AK_F7,        AK_F8,          AK_F9,        /*  88 -  95 */
-   AK_F10,        0 }; /*  96 -  97 */
   
-static int getMapping(int customId)
-{
-  if(customId > 96)
-    return 0;
-  else
-    return customKey[customId];
-}
-
 void moveVertical(int value)
 {
 	changed_prefs.pandora_vertical_offset += value;
@@ -556,77 +584,21 @@ void moveVertical(int value)
 void gui_handle_events (void)
 {
   int i;
-  int key = 0;
 
 	Uint8 *keystate = SDL_GetKeyState(NULL);
+	int triggerL = keystate[SDLK_RSHIFT];
+	int triggerR = keystate[SDLK_RCTRL];
 
-#if 1
-	buttonA  = JoystickButton[0];
-	buttonB  = JoystickButton[1];
-	buttonX  = JoystickButton[2];
-	buttonY  = JoystickButton[3];
-	triggerL = JoystickButton[4];
-	triggerR = JoystickButton[5];
-	dpadUp   = JoystickButton[6];
-	dpadDown = JoystickButton[7];
-	dpadLeft = JoystickButton[8];
-	dpadRight= JoystickButton[9];
-
-	if (currprefs.pandora_custom_dpad != 1)
-	{
-		dpadUp   |= keystate[SDLK_UP];
-		dpadDown |= keystate[SDLK_DOWN];
-		dpadLeft |= keystate[SDLK_LEFT];
-		dpadRight|= keystate[SDLK_RIGHT];
-		buttonA  |= keystate[SDLK_HOME];
-		buttonB  |= keystate[SDLK_END];
-		buttonX  |= keystate[SDLK_PAGEDOWN];
-		buttonY  |= keystate[SDLK_PAGEUP];
-		triggerL |= keystate[SDLK_RSHIFT];
-		triggerR |= keystate[SDLK_RCTRL];
-	}
-#else
-	if(keystate[SDLK_HOME] || JoystickButton[0])  //Updated with Joystick input
-		buttonA = 1; else  buttonA = 0;
-	if(keystate[SDLK_END] || JoystickButton[1])
-		buttonB = 1; else  buttonB = 0;
-	if(keystate[SDLK_PAGEDOWN] || JoystickButton[2])
-		buttonX = 1; else  buttonX = 0;
-	if(keystate[SDLK_PAGEUP] || JoystickButton[3])
-		buttonY = 1; else  buttonY = 0;
-	if(keystate[SDLK_RSHIFT] || JoystickButton[4])
-		triggerL = 1; else triggerL = 0;
-	if(keystate[SDLK_RCTRL] || JoystickButton[5])
-		triggerR = 1; else triggerR = 0;
-	if(keystate[SDLK_UP] || JoystickButton[6])
-		dpadUp = 1; else  dpadUp = 0;
-	if(keystate[SDLK_DOWN] || JoystickButton[7]) 
-		dpadDown = 1; else  dpadDown = 0;
-	if(keystate[SDLK_LEFT] || JoystickButton[8])
-		dpadLeft = 1; else  dpadLeft = 0;
-	if(keystate[SDLK_RIGHT] || JoystickButton[9])
-		dpadRight = 1; else  dpadRight = 0;
-#endif
-
-	if(keystate[currprefs.key_for_menu])
-		goMenu();
-        if(uae4all_keystate[AK_CTRL] && uae4all_keystate[AK_LAMI] && uae4all_keystate[AK_RAMI])
-                uae_reset(0);
-
-#ifdef PANDORA_SPECIFIC
-	//L + R
+	// L + R
 	if(triggerL && triggerR)
 	{
 		//up
-		if(dpadUp)
-		{
+		if(keystate[SDLK_UP])
 			moveVertical(1);
-		}
 		//down
-		else if(dpadDown)
-		{
+		else if(keystate[SDLK_DOWN])
 			moveVertical(-1);
-		}
+
 		//1
 		else if(keystate[SDLK_1])
 		{
@@ -711,34 +683,35 @@ void gui_handle_events (void)
 			}
 			update_display(&changed_prefs);
 		}
+		// r
+		else if(keystate[SDLK_r])
+		{
+		  // Change resolution (lores/hires)
+		  if(currprefs.gfx_size.width > 600)
+		    changed_prefs.gfx_size.width = currprefs.gfx_size.width / 2;
+		  else
+		    changed_prefs.gfx_size.width = currprefs.gfx_size.width * 2;
+			update_display(&changed_prefs);
+		}
 	}
 
 	else if(triggerL)
 	{
 		if(keystate[SDLK_c])
-		{
-			keystate[SDLK_c]=0;
 		  currprefs.pandora_customControls = !currprefs.pandora_customControls;
-		}
+
 		else if(keystate[SDLK_d])
-		{
-			keystate[SDLK_d]=0;
 			changed_prefs.leds_on_screen = !currprefs.leds_on_screen;
-		}
+
 		else if(keystate[SDLK_f])
-		{
-			keystate[SDLK_f]=0;
 			changed_prefs.gfx_framerate ? changed_prefs.gfx_framerate = 0 : changed_prefs.gfx_framerate = 1;
-		}
+
   	else if(keystate[SDLK_s])
-  	{
-  		keystate[SDLK_s]=0;
   		savestate_state = STATE_DOSAVE;
-  	}
+
 	  else if(keystate[SDLK_l])
   	{
   		FILE *f=fopen(savestate_fname, "rb");
-  		keystate[SDLK_l]=0;
   		if(f)
   		{
   			fclose(f);
@@ -746,663 +719,6 @@ void gui_handle_events (void)
   		}
   	}
 	}
-
-#endif
-  if(currprefs.pandora_customControls)
-  {
-    if(currprefs.pandora_custom_dpad == 2) // dPad is custom
-    {
-			//UP
-			if(dpadUp)
-			{
-				if(!justMovedUp)
-				{
-					if(currprefs.pandora_custom_up == -1) buttonstate[0]=1;
-					else if(currprefs.pandora_custom_up == -2) buttonstate[2]=1;
-					else if(currprefs.pandora_custom_up > 0)
-					{
-						key = getMapping(currprefs.pandora_custom_up);
-						uae4all_keystate[key] = 1;
-						record_key(key << 1);
-					}
-					justMovedUp=1;
-				}
-			}
-			else if(justMovedUp)
-			{
-				if(currprefs.pandora_custom_up == -1) buttonstate[0]=0;
-				else if(currprefs.pandora_custom_up == -2) buttonstate[2]=0;
-				else if(currprefs.pandora_custom_up > 0)
-				{		
-					key = getMapping(currprefs.pandora_custom_up);
-					uae4all_keystate[key] = 0;
-					record_key((key << 1) | 1);
-				}
-				justMovedUp=0;
-			}
-
-			//DOWN
-			if(dpadDown)
-			{
-				if(!justMovedDown)
-				{
-					if(currprefs.pandora_custom_down == -1) buttonstate[0]=1;
-					else if(currprefs.pandora_custom_down == -2) buttonstate[2]=1;
-					else if(currprefs.pandora_custom_down > 0)
-					{
-						key = getMapping(currprefs.pandora_custom_down);
-						uae4all_keystate[key] = 1;
-						record_key(key << 1);
-					}
-					justMovedDown=1;
-				}
-			}
-			else if(justMovedDown)
-			{
-				if(currprefs.pandora_custom_down == -1) buttonstate[0]=0;
-				else if(currprefs.pandora_custom_down == -2) buttonstate[2]=0;
-				else if(currprefs.pandora_custom_down > 0)
-				{		
-					key = getMapping(currprefs.pandora_custom_down);
-					uae4all_keystate[key] = 0;
-					record_key((key << 1) | 1);
-				}
-				justMovedDown=0;
-			}
-
-			//LEFT
-			if(dpadLeft)
-			{
-				if(!justMovedLeft)
-				{
-					if(currprefs.pandora_custom_left == -1) buttonstate[0]=1;
-					else if(currprefs.pandora_custom_left == -2) buttonstate[2]=1;
-					else if(currprefs.pandora_custom_left > 0)
-					{
-						key = getMapping(currprefs.pandora_custom_left);
-						uae4all_keystate[key] = 1;
-						record_key(key << 1);
-					}
-					justMovedLeft=1;
-				}
-			}
-			else if(justMovedLeft)
-			{
-				if(currprefs.pandora_custom_left == -1) buttonstate[0]=0;
-				else if(currprefs.pandora_custom_left == -2) buttonstate[2]=0;
-				else if(currprefs.pandora_custom_left > 0)
-				{		
-					key = getMapping(currprefs.pandora_custom_left);
-					uae4all_keystate[key] = 0;
-					record_key((key << 1) | 1);
-				}
-				justMovedLeft=0;
-			}
-
- 			//RIGHT
-			if(dpadRight)
-			{
-				if(!justMovedRight)
-				{
-					if(currprefs.pandora_custom_right == -1) buttonstate[0]=1;
-					else if(currprefs.pandora_custom_right == -2) buttonstate[2]=1;
-					else if(currprefs.pandora_custom_right > 0)
-					{
-						key = getMapping(currprefs.pandora_custom_right);
-						uae4all_keystate[key] = 1;
-						record_key(key << 1);
-					}
-					justMovedRight=1;
-				}
-			}
-			else if(justMovedRight)
-			{
-				if(currprefs.pandora_custom_right == -1) buttonstate[0]=0;
-				else if(currprefs.pandora_custom_right == -2) buttonstate[2]=0;
-				else if(currprefs.pandora_custom_right > 0)
-				{		
-					key = getMapping(currprefs.pandora_custom_right);
-					uae4all_keystate[key] = 0;
-					record_key((key << 1) | 1);
-				}
-				justMovedRight=0;
-			}
-    }
-
-		//(A)
-		if(buttonA)
-		{
-			if(!justPressedA)
-			{
-				if(currprefs.pandora_custom_A == -1) buttonstate[0]=1;
-				else if(currprefs.pandora_custom_A == -2) buttonstate[2]=1;
-				else if(currprefs.pandora_custom_A > 0)
-				{
-					key = getMapping(currprefs.pandora_custom_A);
-					uae4all_keystate[key] = 1;
-					record_key(key << 1);
-				}
-				justPressedA=1;
-			}
-		}
-		else if(justPressedA)
-		{
-			if(currprefs.pandora_custom_A == -1) buttonstate[0]=0;
-			else if(currprefs.pandora_custom_A == -2) buttonstate[2]=0;
-			else if(currprefs.pandora_custom_A > 0)
-			{
-				key = getMapping(currprefs.pandora_custom_A);
-				uae4all_keystate[key] = 0;
-				record_key((key << 1) | 1);
-			}
-			justPressedA=0;
-		}
-
-		//(B)
-		if(buttonB)
-		{
-			if(!justPressedB)
-			{
-				if(currprefs.pandora_custom_B == -1) buttonstate[0]=1;
-				else if(currprefs.pandora_custom_B == -2) buttonstate[2]=1;
-				else if(currprefs.pandora_custom_B > 0)
-				{
-					key = getMapping(currprefs.pandora_custom_B);
-					uae4all_keystate[key] = 1;
-					record_key(key << 1);
-				}
-				justPressedB=1;
-			}
-		}
-		else if(justPressedB)
-		{
-			if(currprefs.pandora_custom_B == -1) buttonstate[0]=0;
-			else if(currprefs.pandora_custom_B == -2) buttonstate[2]=0;
-			else if(currprefs.pandora_custom_B > 0)
-			{
-				key = getMapping(currprefs.pandora_custom_B);
-				uae4all_keystate[key] = 0;
-				record_key((key << 1) | 1);
-			}
-			justPressedB=0;
-		}
-
-		//(X)
-		if(buttonX)
-		{
-			if(!justPressedX)
-			{
-				if(currprefs.pandora_custom_X == -1) buttonstate[0]=1;
-				else if(currprefs.pandora_custom_X == -2) buttonstate[2]=1;
-				else if(currprefs.pandora_custom_X > 0)
-				{
-					key = getMapping(currprefs.pandora_custom_X);
-					uae4all_keystate[key] = 1;
-					record_key(key << 1);
-				}
-				justPressedX=1;
-			}
-		}
-		else if(justPressedX)
-		{
-			if(currprefs.pandora_custom_X == -1) buttonstate[0]=0;
-			else if(currprefs.pandora_custom_X == -2) buttonstate[2]=0;
-			else if(currprefs.pandora_custom_X > 0)
-			{		
-				key = getMapping(currprefs.pandora_custom_X);
-				uae4all_keystate[key] = 0;
-				record_key((key << 1) | 1);
-			}
-			justPressedX=0;
-		}
-
-		//(Y)
-		if(buttonY)
-		{
-			if(!justPressedY)
-			{
-				if(currprefs.pandora_custom_Y == -1) buttonstate[0]=1;
-				else if(currprefs.pandora_custom_Y == -2) buttonstate[2]=1;
-				else if(currprefs.pandora_custom_Y > 0)
-				{
-					key = getMapping(currprefs.pandora_custom_Y);
-					uae4all_keystate[key] = 1;
-					record_key(key << 1);
-				}
-				justPressedY=1;
-			}
-		}
-		else if(justPressedY)
-		{
-			if(currprefs.pandora_custom_Y == -1) buttonstate[0]=0;
-			else if(currprefs.pandora_custom_Y == -2) buttonstate[2]=0;
-			else if(currprefs.pandora_custom_Y > 0)
-			{		
-				key = getMapping(currprefs.pandora_custom_Y);
-				uae4all_keystate[key] = 0;
-				record_key((key << 1) | 1);
-			}
-			justPressedY=0;
-		}
-
-		//(L)
-		if(triggerL)
-		{
-			if(!justPressedL)
-			{
-				if(currprefs.pandora_custom_L == -1) buttonstate[0]=1;
-				else if(currprefs.pandora_custom_L == -2) buttonstate[2]=1;
-				else if(currprefs.pandora_custom_L > 0)
-				{
-					key = getMapping(currprefs.pandora_custom_L);
-					uae4all_keystate[key] = 1;
-					record_key(key << 1);
-				}
-				justPressedL=1;
-			}
-		}
-		else if(justPressedL)
-		{
-			if(currprefs.pandora_custom_L == -1) buttonstate[0]=0;
-			else if(currprefs.pandora_custom_L == -2) buttonstate[2]=0;
-			else if(currprefs.pandora_custom_L > 0)
-			{		
-				key = getMapping(currprefs.pandora_custom_L);
-				uae4all_keystate[key] = 0;
-				record_key((key << 1) | 1);
-			}
-			justPressedL=0;
-		}
-
-		//(R)
-		if(triggerR)
-		{
-			if(!justPressedR)
-			{
-				if(currprefs.pandora_custom_R == -1) buttonstate[0]=1;
-				else if(currprefs.pandora_custom_R == -2) buttonstate[2]=1;
-				else if(currprefs.pandora_custom_R > 0)
-				{
-					key = getMapping(currprefs.pandora_custom_R);
-					uae4all_keystate[key] = 1;
-					record_key(key << 1);
-				}
-				justPressedR=1;
-			}
-		}
-		else if(justPressedR)
-		{
-			if(currprefs.pandora_custom_R == -1) buttonstate[0]=0;
-			else if(currprefs.pandora_custom_R == -2) buttonstate[2]=0;
-			else if(currprefs.pandora_custom_R > 0)
-			{		
-				key = getMapping(currprefs.pandora_custom_R);
-				uae4all_keystate[key] = 0;
-				record_key((key << 1) | 1);
-			}
-			justPressedR=0;
-		}
-  }
-
-#ifdef RASPBERRY
-
-  else if(currprefs.pandora_joyConf < 2)
-  {
-  // Y-Button mapped to Space
-	if(buttonY)
-	{
-		if(!justPressedY)
-		{
-			//SPACE
-			uae4all_keystate[AK_SPC] = 1;
-			record_key(AK_SPC << 1);
-			justPressedY=1;
-		}
-	}
-	else if(justPressedY)
-	{
-		//SPACE
-		uae4all_keystate[AK_SPC] = 0;
-		record_key((AK_SPC << 1) | 1);
-		justPressedY=0;
-	}
-  }
-	
-#endif
- 
-#ifdef PANDORA_SPECIFIC  
-  else // Custom controls not active
-  {
-    if(currprefs.pandora_custom_dpad < 2 && triggerR)
-    {
-  		//R+dpad = arrow keys in joystick and mouse mode
-  		//dpad up
-  		if(dpadUp)
-  		{
-  			if(!justMovedUp)
-  			{
-  				//arrow up
-  				uae4all_keystate[AK_UP] = 1;
-  				record_key(AK_UP << 1);
-  				justMovedUp=1;
-  			}
-  		}
-  		else if(justMovedUp)
-  		{
-  			//arrow up
-  			uae4all_keystate[AK_UP] = 0;
-  			record_key((AK_UP << 1) | 1);
-  			justMovedUp=0;
-  		}
-  		//dpad down
-  		if(dpadDown)
-  		{
-  			if(!justMovedDown)
-  			{
-  				//arrow down
-  				uae4all_keystate[AK_DN] = 1;
-  				record_key(AK_DN << 1);
-  				justMovedDown=1;
-  			}
-  		}
-  		else if(justMovedDown)
-  		{
-  			//arrow down
-  			uae4all_keystate[AK_DN] = 0;
-  			record_key((AK_DN << 1) | 1);
-  			justMovedDown=0;
-  		}
-  		//dpad left
-  		if(dpadLeft)
-  		{
-  			if(!justMovedLeft)
-  			{
-  				//arrow left
-  				uae4all_keystate[AK_LF] = 1;
-  				record_key(AK_LF << 1);
-  				justMovedLeft=1;
-  			}
-  		}
-  		else if(justMovedLeft)
-  		{
-  			//arrow left
-  			uae4all_keystate[AK_LF] = 0;
-  			record_key((AK_LF << 1) | 1);
-  			justMovedLeft=0;
-  		}
-  		//dpad right
-  		if (dpadRight)
-  		{
-  			if(!justMovedRight)
-  			{
-  				//arrow right
-  				uae4all_keystate[AK_RT] = 1;
-  				record_key(AK_RT << 1);
-  				justMovedRight=1;
-  			}
-  		}
-  		else if(justMovedRight)
-  		{
-  			//arrow right
-  			uae4all_keystate[AK_RT] = 0;
-  			record_key((AK_RT << 1) | 1);
-  			justMovedRight=0;
-  		}
-    }
-
-    switch(currprefs.pandora_custom_dpad)
-    {
-      case 0: // dPad is joystick
-        // R-trigger emulates some Amiga-Keys
-        if(triggerR)
-		    {
-    			//(A) button
-    			if(buttonA)
-    			{
-    				if(!justPressedA)
-    				{
-    					//CTRL
-    					uae4all_keystate[AK_CTRL] = 1;
-    					record_key(AK_CTRL << 1);
-    					justPressedA=1;
-    				}
-    			}
-    			else if(justPressedA)
-    			{
-    				uae4all_keystate[AK_CTRL] = 0;
-    				record_key((AK_CTRL << 1) | 1);
-    				justPressedA=0;
-    			}
-    			//(B) button
-    			if(buttonB)
-    			{
-    				if(!justPressedB)
-    				{
-    					//left ALT
-    					uae4all_keystate[AK_LALT] = 1;
-    					record_key(AK_LALT << 1);
-    					justPressedB=1;
-    				}
-    			}
-    			else if(justPressedB)
-    			{
-    				uae4all_keystate[AK_LALT] = 0;
-    				record_key((AK_LALT << 1) | 1);
-    				justPressedB=0;
-    			}
-    			//(X) button
-    			if(buttonX)
-    			{
-    				if(!justPressedX)
-    				{
-    					//HELP
-    					uae4all_keystate[AK_HELP] = 1;
-    					record_key(AK_HELP << 1);
-    					justPressedX=1;
-    				}
-    			}
-    			else if(justPressedX)
-    			{
-    				//HELP
-    				uae4all_keystate[AK_HELP] = 0;
-    				record_key((AK_HELP << 1) | 1);
-    				justPressedX=0;
-    			}
-		    }
-		    // L-trigger emulates left and right mouse button
-		    else if(triggerL)
-        {
-    			//(A) button
-    			if(buttonA)
-    			{
-    				if(!justPressedA)
-    				{
-    					//left mouse-button down
-    					buttonstate[0] = 1;
-    					justPressedA=1;
-    				}
-    			}
-    			else if(justPressedA)
-    			{
-    				//left mouse-button up
-    				buttonstate[0] = 0;
-    				justPressedA=0;
-    			}
-    			//(B) button
-    			if(buttonB)
-    			{
-    				if(!justPressedB)
-    				{
-    					//right mouse-button down
-    					buttonstate[2] = 1;
-    					justPressedB=1;
-    				}
-    			}
-    			else if(justPressedB)
-    			{
-    				//right mouse-button up
-    				buttonstate[2] = 0;
-    				justPressedB=0;
-    			}
-		    }
-
-    		else if(currprefs.pandora_joyConf < 2)
-    		{
-    		  // Y-Button mapped to Space
-    			if(buttonY)
-    			{
-    				if(!justPressedY)
-    				{
-    					//SPACE
-    					uae4all_keystate[AK_SPC] = 1;
-    					record_key(AK_SPC << 1);
-    					justPressedY=1;
-    				}
-    			}
-    			else if(justPressedY)
-    			{
-    				//SPACE
-    				uae4all_keystate[AK_SPC] = 0;
-    				record_key((AK_SPC << 1) | 1);
-    				justPressedY=0;
-    			}
-    		}
-		    
-        break;
-      
-      case 1: // dPad is mouse
-        // A and B emulates mouse buttons
-    		if(buttonA)
-    		{
-    			if(!justPressedA)
-    			{
-    				//left mouse-button down
-    				buttonstate[0] = 1;
-    				justPressedA=1;
-    			}
-    		}
-    		else if(justPressedA)
-    		{
-    			//left mouse-button up
-    			buttonstate[0] = 0;
-    			justPressedA=0;
-    		}
-    		//(B) button
-    		if(buttonB)
-    		{
-    			if(!justPressedB)
-    			{
-    				//right mouse-button down
-    				buttonstate[2] = 1;
-    				justPressedB=1;
-    			}
-    		}
-    		else if(justPressedB)
-    		{
-    			//right mouse-button up
-    			buttonstate[2] = 0;
-    			justPressedB=0;
-    		}
-
-        // Y emulates Space
-    		if(buttonY)
-    		{
-    			if(!justPressedY)
-    			{
-    				//SPACE
-    				uae4all_keystate[AK_SPC] = 1;
-    				record_key(AK_SPC << 1);
-    				justPressedY=1;
-    			}
-    		}
-    		else if(justPressedY)
-    		{
-    			//SPACE
-    			uae4all_keystate[AK_SPC] = 0;
-    			record_key((AK_SPC << 1) | 1);
-    			justPressedY=0;
-    		}
-    		
-        break;
-        
-      case 2: // dPad is custom (stylus) -> dPad decides which mouse button is clicked
-  			//dpad up
-  			if (dpadUp)
-  			{
-  				if(!justMovedUp)
-  				{
-  					//left and right mouse-buttons down
-  					buttonstate[0] = 1;
-  					buttonstate[2] = 1;
-  					stylusClickOverride = 1;
-  					justMovedUp=1;
-  				}
-  			}
-  			else if(justMovedUp)
-  			{
-  				//left and right mouse-buttons up
-  				buttonstate[0] = 0;
-  				buttonstate[2] = 0;
-  				stylusClickOverride = 0;
-  				justMovedUp=0;
-  			}
-  			//dpad down
-  			if (dpadDown)
-  			{
-  				if(!justMovedDown)
-  				{
-  					//no clicks with stylus now
-  					stylusClickOverride=1;
-  					justMovedDown=1;
-  				}
-  			}
-  			else if(justMovedDown)
-  			{
-  				//clicks active again
-  				stylusClickOverride=0;
-  				justMovedDown=0;
-  			}
-  			//dpad left
-  			if (dpadLeft)
-  			{
-  				if(!justMovedLeft)
-  				{
-  					//left mouse-button down
-  					buttonstate[0] = 1;
-  					stylusClickOverride = 1;
-  					justMovedLeft=1;
-  				}
-  			}
-  			else if(justMovedLeft)
-  			{
-  				//left mouse-button up
-  				buttonstate[0] = 0;
-  				stylusClickOverride = 0;
-  				justMovedLeft=0;
-  			}
-  			//dpad right
-  			if (dpadRight)
-  			{
-  				if(!justMovedRight)
-  				{
-  					//right mouse-button down
-  					buttonstate[2] = 1;
-  					stylusClickOverride = 1;
-  					justMovedRight=1;
-  				}
-  			}
-  			else if(justMovedRight)
-  			{
-  				//right mouse-button up
-  				buttonstate[2] = 0;
-  				stylusClickOverride = 0;
-  				justMovedRight=0;
-  			}
-  			
-        break;    
-    }
-  }
-#endif
 }
 
 void gui_disk_image_change (int unitnum, const char *name, bool writeprotected)
@@ -1483,14 +799,6 @@ int translate_message (int msg,	TCHAR *out)
     ++i;
   }
   return 0;
-}
-
-void gui_lock (void)
-{
-}
-
-void gui_unlock (void)
-{
 }
 
 

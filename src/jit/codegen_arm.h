@@ -85,6 +85,23 @@
                         0\
                  )
 
+#define CHECK32(c) ((c & 0xffffff00) == 0 || \
+                  (c & 0x3fffffc0) == 0 || \
+                  (c & 0x0ffffff0) == 0 || \
+                  (c & 0x03fffffc) == 0 || \
+                  (c & 0x00ffffff) == 0 || \
+                  (c & 0xc03fffff) == 0 || \
+                  (c & 0xf00fffff) == 0 || \
+                  (c & 0xfc03ffff) == 0 || \
+                  (c & 0xff00ffff) == 0 || \
+                  (c & 0xffc03fff) == 0 || \
+                  (c & 0xfff00fff) == 0 || \
+                  (c & 0xfffc03ff) == 0 || \
+                  (c & 0xffff00ff) == 0 || \
+                  (c & 0xffffc03f) == 0 || \
+                  (c & 0xfffff00f) == 0 || \
+                  (c & 0xfffffc03) == 0)
+
 #define SHIFT_IMM(c) (0x02000000 | (IMM32((c))))
 
 #define UNSHIFTED_IMM8(c) (0x02000000 | (c))
@@ -613,7 +630,7 @@ enum {
 #define RSBS_rrrRORr(Rd,Rn,Rm,Rs)       	CC_RSBS_rrrRORr(NATIVE_CC_AL,Rd,Rn,Rm,Rs)
 #define RSBS_rrrRRX(Rd,Rn,Rm)           	CC_RSBS_rrrRRX(NATIVE_CC_AL,Rd,Rn,Rm)
 
-#define CC_ADD_rri8(cc,Rd,Rn,i)          	_OP3(cc,_ADD,0,Rd,Rn,UNSHIFT_IMM8(i))
+#define CC_ADD_rri8(cc,Rd,Rn,i)          	_OP3(cc,_ADD,0,Rd,Rn,UNSHIFTED_IMM8(i))
 #define CC_ADD_rri8RORi(cc,Rd,Rn,Rm,i)   	_OP3(cc,_ADD,0,Rd,Rn,SHIFT_IMM8_ROR(Rm,i))
 
 #define CC_ADD_rri(cc,Rd,Rn,i)          	_OP3(cc,_ADD,0,Rd,Rn,SHIFT_IMM(i))
@@ -918,8 +935,8 @@ enum {
 #define BICS_rrrRRX(Rd,Rn,Rm)           	CC_BICS_rrrRRX(NATIVE_CC_AL,Rd,Rn,Rm)
 
 /* Branch instructions */
-#define CC_B_i(cc,i)                        _W(((cc) << 28) | (10 << 24) | (i))
-#define CC_BL_i(cc,i)                       _W(((cc) << 28) | (11 << 24) | (i))
+#define CC_B_i(cc,i)                        _W(((cc) << 28) | (10 << 24) | (i & 0x00ffffff))
+#define CC_BL_i(cc,i)                       _W(((cc) << 28) | (11 << 24) | (i & 0x00ffffff))
 #define CC_BLX_r(cc,r)                      _W(((cc) << 28) | (0x12 << 20) | (3 << 4) | (0xfff << 8) | (r))
 #define CC_BX_r(cc,r)                       _W(((cc) << 28) | (0x12 << 20) | (1 << 4) | (0xfff << 8) | (r))
 #define CC_BXJ_r(cc,r)                      _W(((cc) << 28) | (0x12 << 20) | (2 << 4) | (0xfff << 8) | (r))
@@ -952,11 +969,11 @@ enum {
 #define CC_MRS_SPSR(cc,Rd)					_W(((cc) << 28) | (0x14 << 20) | ((Rd) << 12) | (0xf << 16))
 #define MRS_SPSR(Rd)						CC_MRS_SPSR(NATIVE_CC_AL,Rd)
 
-#define CC_MSR_CPSR_i(cc,i)					_W(((cc) << 28) | (0x32 << 20) | (0x9 << 16) | (0xf << 12) | SHIFT_IMM(i))
-#define CC_MSR_CPSR_r(cc,Rm)				_W(((cc) << 28) | (0x12 << 20) | (0x9 << 16) | (0xf << 12) | (Rm))
-
-#define MSR_CPSR_i(i)						CC_MSR_CPSR_i(NATIVE_CC_AL,(i))
-#define MSR_CPSR_r(Rm)						CC_MSR_CPSR_r(NATIVE_CC_AL,(Rm))
+// Never use these, they are for system level and slower...
+//#define CC_MSR_CPSR_i(cc,i)					_W(((cc) << 28) | (0x32 << 20) | (0x9 << 16) | (0xf << 12) | SHIFT_IMM(i))
+//#define CC_MSR_CPSR_r(cc,Rm)				_W(((cc) << 28) | (0x12 << 20) | (0x9 << 16) | (0xf << 12) | (Rm))
+//#define MSR_CPSR_i(i)						CC_MSR_CPSR_i(NATIVE_CC_AL,(i))
+//#define MSR_CPSR_r(Rm)						CC_MSR_CPSR_r(NATIVE_CC_AL,(Rm))
 
 #define CC_MSR_CPSRf_i(cc,i)				_W(((cc) << 28) | (0x32 << 20) | (0x8 << 16) | (0xf << 12) | SHIFT_IMM(i))
 #define CC_MSR_CPSRf_r(cc,Rm)				_W(((cc) << 28) | (0x12 << 20) | (0x8 << 16) | (0xf << 12) | (Rm))
@@ -964,11 +981,11 @@ enum {
 #define MSR_CPSRf_i(i)						CC_MSR_CPSRf_i(NATIVE_CC_AL,(i))
 #define MSR_CPSRf_r(Rm)						CC_MSR_CPSRf_r(NATIVE_CC_AL,(Rm))
 
-#define CC_MSR_CPSRc_i(cc,i)				_W(((cc) << 28) | (0x32 << 20) | (0x1 << 16) | (0xf << 12) | SHIFT_IMM(i))
-#define CC_MSR_CPSRc_r(cc,Rm)				_W(((cc) << 28) | (0x12 << 20) | (0x1 << 16) | (0xf << 12) | (Rm))
-
-#define MSR_CPSRc_i(i)						CC_MSR_CPSRc_i(NATIVE_CC_AL,(i))
-#define MSR_CPSRc_r(Rm)						CC_MSR_CPSRc_r(NATIVE_CC_AL,(Rm))
+// Never use these, they are for system level and slower...
+//#define CC_MSR_CPSRc_i(cc,i)				_W(((cc) << 28) | (0x32 << 20) | (0x1 << 16) | (0xf << 12) | SHIFT_IMM(i))
+//#define CC_MSR_CPSRc_r(cc,Rm)				_W(((cc) << 28) | (0x12 << 20) | (0x1 << 16) | (0xf << 12) | (Rm))
+//#define MSR_CPSRc_i(i)						CC_MSR_CPSRc_i(NATIVE_CC_AL,(i))
+//#define MSR_CPSRc_r(Rm)						CC_MSR_CPSRc_r(NATIVE_CC_AL,(Rm))
 
 /* Load Store instructions */
 
@@ -1303,6 +1320,18 @@ enum {
 #define CC_UBFX_rrii(cc,Rd,Rn,lsb,width)   _W(((cc) << 28) | (0x3f << 21) | ((width-1) << 16) | (Rd << 12) | ((lsb) << 7) | (0x5 << 4) | (Rn))
 #define UBFX_rrii(Rd,Rn,lsb,width)         CC_UBFX_rrii(NATIVE_CC_AL,Rd,Rn,lsb,width)
 
+#define CC_SXTAB_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6a << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
+#define SXTAB_rrr(Rd,Rn,Rm)             CC_SXTAB_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+
+#define CC_SXTAH_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6b << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
+#define SXTAH_rrr(Rd,Rn,Rm)             CC_SXTAH_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+
+// ARMv6T2
+#define CC_MOVW_ri16(cc,Rd,i)                _W(((cc) << 28) | (0x30 << 20) | (((i >> 12) & 0xf) << 16) | (Rd << 12) | (i & 0x0fff))
+#define MOVW_ri16(Rd,i)					             CC_MOVW_ri16(NATIVE_CC_AL,Rd,i)
+
+#define CC_MOVT_ri16(cc,Rd,i)                _W(((cc) << 28) | (0x34 << 20) | (((i >> 12) & 0xf) << 16) | (Rd << 12) | (i & 0x0fff))
+#define MOVT_ri16(Rd,i)					             CC_MOVT_ri16(NATIVE_CC_AL,Rd,i)
 
 // Floatingpoint
 

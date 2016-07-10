@@ -73,6 +73,8 @@ extern void restore_disk_finish (void);
 
 extern uae_u8 *restore_custom (uae_u8 *);
 extern uae_u8 *save_custom (int *, uae_u8 *, int);
+extern uae_u8 *restore_custom_extra (uae_u8 *);
+extern uae_u8 *save_custom_extra (int *, uae_u8 *);
 
 extern uae_u8 *restore_custom_sprite (int num, uae_u8 *src);
 extern uae_u8 *save_custom_sprite (int num, int *len, uae_u8 *);
@@ -103,11 +105,22 @@ extern void restore_p96_finish (void);
 extern uae_u8 *restore_keyboard (uae_u8 *);
 extern uae_u8 *save_keyboard (int *,uae_u8*);
 
+extern uae_u8 *restore_akiko (uae_u8 *src);
+extern uae_u8 *save_akiko (int *len, uae_u8*);
+extern void restore_akiko_finish (void);
+
 extern uae_u8 *restore_filesys (uae_u8 *src);
 extern uae_u8 *save_filesys (int num, int *len);
 extern uae_u8 *restore_filesys_common (uae_u8 *src);
 extern uae_u8 *save_filesys_common (int *len);
 extern int save_filesys_cando(void);
+
+extern uae_u8 *save_cd (int num, int *len);
+extern uae_u8 *restore_cd (int, uae_u8 *src);
+extern void restore_cd_finish (void);
+
+extern uae_u8 *restore_input (uae_u8 *src);
+extern uae_u8 *save_input (int *len, uae_u8 *dstptr);
 
 extern void restore_cram (int, size_t);
 extern void restore_bram (int, size_t);

@@ -18,7 +18,6 @@ extern void usage (void);
 extern void sleep_millis (int ms);
 extern void sleep_millis_main (int ms);
 extern void sleep_millis_busy (int ms);
-extern int sleep_resolution;
 
 
 extern void uae_reset (int);
@@ -52,6 +51,7 @@ struct bstring {
 };
 
 extern void fetch_saveimagepath (TCHAR*, int, int);
+extern void fetch_datapath (TCHAR *out, int size);
 #define uaerand() rand()
 
 #endif //UAE_UAE_H

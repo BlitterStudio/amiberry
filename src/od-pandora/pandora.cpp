@@ -35,12 +35,13 @@
 #include "savestate.h"
 #include "traps.h"
 #include "bsdsocket.h"
+#include "blkdev.h"
 #include "native2amiga.h"
 #include "rtgmodes.h"
 #include "uaeresource.h"
 #include "rommgr.h"
+#include "akiko.h"
 #include <SDL.h>
-#include "gp2x.h"
 #include "pandora_rp9.h"
 
 /*
@@ -97,42 +98,25 @@ void dbg_list_threads(void)
 extern void signal_segv(int signum, siginfo_t* info, void*ptr);
 extern void gui_force_rtarea_hdchange(void);
 
-extern int doStylusRightClick;
-extern int mouseMoving;
-extern int justClicked;
-extern int fcounter;
+static int delayed_mousebutton = 0;
+static int doStylusRightClick;
 
-extern int keycode2amiga(SDL_keysym *prKeySym);
 extern int loadconfig_old(struct uae_prefs *p, const char *orgpath);
 extern void SetLastActiveConfig(const char *filename);
 
-/* Joystick */ 
-int JoystickButton[20];
-int JoystickQuit[2];
-
-/* Keyboard and mouse */
-int buttonstate[3];
-
 /* Keyboard */
-int uae4all_keystate[256];
-#ifdef PANDORA
-static int shiftWasPressed = 0;
-#endif
+int customControlMap[SDLK_LAST];
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
-int show_inputmode = 0;
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
 static int capslock = 0;
 #endif
-int sleep_resolution = 1000 / 1;
 
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
 static char rp9_path[MAX_DPATH];
 char last_loaded_config[MAX_DPATH] = { '\0' };
-
-static bool slow_mouse = false;
 
 static bool cpuSpeedChanged = false;
 static int lastCpuSpeed = 600;
@@ -146,6 +130,9 @@ void reinit_amiga(void)
 {
   write_log("reinit_amiga() called\n");
   DISK_free ();
+#ifdef CD32
+	akiko_free ();
+#endif
 #ifdef FILESYS
   filesys_cleanup ();
   hardfile_reset();
@@ -156,6 +143,7 @@ void reinit_amiga(void)
 #endif
   expansion_cleanup ();
 #endif
+	device_func_reset ();
   memory_cleanup ();
   
   /* At this point, there might run some threads from bsdsocket.*/
@@ -315,33 +303,12 @@ void target_default_options (struct uae_prefs *p, int type)
   p->pandora_cpu_speed = defaultCpuSpeed;
   p->pandora_hide_idle_led = 0;
   
-  p->pandora_joyConf = 0;
-  p->pandora_joyPort = 2;
   p->pandora_tapDelay = 10;
-  
-  p->pandora_customControls = 0;
-#ifdef RASPBERRY
-  p->pandora_custom_dpad = 1;
-#else
-  p->pandora_custom_dpad = 0;
-#endif
-  p->pandora_custom_up = 0;
-  p->pandora_custom_down = 0;
-  p->pandora_custom_left = 0;
-  p->pandora_custom_right = 0;
-  p->pandora_custom_A = 0;
-  p->pandora_custom_B = 0;
-  p->pandora_custom_X = 0;
-  p->pandora_custom_Y = 0;
-  p->pandora_custom_L = 0;
-  p->pandora_custom_R = 0;
+	p->pandora_customControls = 0;
 
-  p->pandora_button1 = GP2X_BUTTON_X;
-  p->pandora_button2 = GP2X_BUTTON_A;
-  p->pandora_autofireButton1 = GP2X_BUTTON_B;
-  p->pandora_jump = -1;
+	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 	
-  p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+	memset(customControlMap, 0, sizeof(customControlMap));
 }
 
 
@@ -349,27 +316,20 @@ void target_save_options (struct zfile *f, struct uae_prefs *p)
 {
   cfgfile_write (f, "pandora.cpu_speed", "%d", p->pandora_cpu_speed);
   cfgfile_write (f, "pandora.hide_idle_led", "%d", p->pandora_hide_idle_led);
-  cfgfile_write (f, "pandora.joy_conf", "%d", p->pandora_joyConf);
-  cfgfile_write (f, "pandora.joy_port", "%d", p->pandora_joyPort);
   cfgfile_write (f, "pandora.tap_delay", "%d", p->pandora_tapDelay);
   cfgfile_write (f, "pandora.custom_controls", "%d", p->pandora_customControls);
-  cfgfile_write (f, "pandora.custom_dpad", "%d", p->pandora_custom_dpad);
-  cfgfile_write (f, "pandora.custom_up", "%d", p->pandora_custom_up);
-  cfgfile_write (f, "pandora.custom_down", "%d", p->pandora_custom_down);
-  cfgfile_write (f, "pandora.custom_left", "%d", p->pandora_custom_left);
-  cfgfile_write (f, "pandora.custom_right", "%d", p->pandora_custom_right);
-  cfgfile_write (f, "pandora.custom_a", "%d", p->pandora_custom_A);
-  cfgfile_write (f, "pandora.custom_b", "%d", p->pandora_custom_B);
-  cfgfile_write (f, "pandora.custom_x", "%d", p->pandora_custom_X);
-  cfgfile_write (f, "pandora.custom_y", "%d", p->pandora_custom_Y);
-  cfgfile_write (f, "pandora.custom_l", "%d", p->pandora_custom_L);
-  cfgfile_write (f, "pandora.custom_r", "%d", p->pandora_custom_R);
+  cfgfile_write (f, "pandora.custom_up", "%d", customControlMap[SDLK_UP]);
+  cfgfile_write (f, "pandora.custom_down", "%d", customControlMap[SDLK_DOWN]);
+  cfgfile_write (f, "pandora.custom_left", "%d", customControlMap[SDLK_LEFT]);
+  cfgfile_write (f, "pandora.custom_right", "%d", customControlMap[SDLK_RIGHT]);
+  cfgfile_write (f, "pandora.custom_a", "%d", customControlMap[SDLK_HOME]);
+  cfgfile_write (f, "pandora.custom_b", "%d", customControlMap[SDLK_END]);
+  cfgfile_write (f, "pandora.custom_x", "%d", customControlMap[SDLK_PAGEDOWN]);
+  cfgfile_write (f, "pandora.custom_y", "%d", customControlMap[SDLK_PAGEUP]);
+  cfgfile_write (f, "pandora.custom_l", "%d", customControlMap[SDLK_RSHIFT]);
+  cfgfile_write (f, "pandora.custom_r", "%d", customControlMap[SDLK_RCTRL]);
   cfgfile_write (f, "pandora.move_x", "%d", p->pandora_horizontal_offset);
   cfgfile_write (f, "pandora.move_y", "%d", p->pandora_vertical_offset);
-  cfgfile_write (f, "pandora.button1", "%d", p->pandora_button1);
-  cfgfile_write (f, "pandora.button2", "%d", p->pandora_button2);
-  cfgfile_write (f, "pandora.autofire_button", "%d", p->pandora_autofireButton1);
-  cfgfile_write (f, "pandora.jump", "%d", p->pandora_jump);
 }
 
 
@@ -382,28 +342,28 @@ int target_parse_option (struct uae_prefs *p, const char *option, const char *va
 {
   int result = (cfgfile_intval (option, value, "cpu_speed", &p->pandora_cpu_speed, 1)
     || cfgfile_intval (option, value, "hide_idle_led", &p->pandora_hide_idle_led, 1)
-    || cfgfile_intval (option, value, "joy_conf", &p->pandora_joyConf, 1)
-    || cfgfile_intval (option, value, "joy_port", &p->pandora_joyPort, 1)
     || cfgfile_intval (option, value, "tap_delay", &p->pandora_tapDelay, 1)
     || cfgfile_intval (option, value, "custom_controls", &p->pandora_customControls, 1)
-    || cfgfile_intval (option, value, "custom_dpad", &p->pandora_custom_dpad, 1)
-    || cfgfile_intval (option, value, "custom_up", &p->pandora_custom_up, 1)
-    || cfgfile_intval (option, value, "custom_down", &p->pandora_custom_down, 1)
-    || cfgfile_intval (option, value, "custom_left", &p->pandora_custom_left, 1)
-    || cfgfile_intval (option, value, "custom_right", &p->pandora_custom_right, 1)
-    || cfgfile_intval (option, value, "custom_a", &p->pandora_custom_A, 1)
-    || cfgfile_intval (option, value, "custom_b", &p->pandora_custom_B, 1)
-    || cfgfile_intval (option, value, "custom_x", &p->pandora_custom_X, 1)
-    || cfgfile_intval (option, value, "custom_y", &p->pandora_custom_Y, 1)
-    || cfgfile_intval (option, value, "custom_l", &p->pandora_custom_L, 1)
-    || cfgfile_intval (option, value, "custom_r", &p->pandora_custom_R, 1)
+    || cfgfile_intval (option, value, "custom_up", &customControlMap[SDLK_UP], 1)
+    || cfgfile_intval (option, value, "custom_down", &customControlMap[SDLK_DOWN], 1)
+    || cfgfile_intval (option, value, "custom_left", &customControlMap[SDLK_LEFT], 1)
+    || cfgfile_intval (option, value, "custom_right", &customControlMap[SDLK_RIGHT], 1)
+    || cfgfile_intval (option, value, "custom_a", &customControlMap[SDLK_HOME], 1)
+    || cfgfile_intval (option, value, "custom_b", &customControlMap[SDLK_END], 1)
+    || cfgfile_intval (option, value, "custom_x", &customControlMap[SDLK_PAGEDOWN], 1)
+    || cfgfile_intval (option, value, "custom_y", &customControlMap[SDLK_PAGEUP], 1)
+    || cfgfile_intval (option, value, "custom_l", &customControlMap[SDLK_RSHIFT], 1)
+    || cfgfile_intval (option, value, "custom_r", &customControlMap[SDLK_RCTRL], 1)
     || cfgfile_intval (option, value, "move_x", &p->pandora_horizontal_offset, 1)
     || cfgfile_intval (option, value, "move_y", &p->pandora_vertical_offset, 1)
-    || cfgfile_intval (option, value, "button1", &p->pandora_button1, 1)
-    || cfgfile_intval (option, value, "button2", &p->pandora_button2, 1)
-    || cfgfile_intval (option, value, "autofire_button", &p->pandora_autofireButton1, 1)
-    || cfgfile_intval (option, value, "jump", &p->pandora_jump, 1)
     );
+}
+
+
+void fetch_datapath (char *out, int size)
+{
+  strncpy(out, start_path_data, size);
+  strncat(out, "/", size);
 }
 
 
@@ -463,7 +423,11 @@ int target_cfgfile_load (struct uae_prefs *p, const char *filename, int type, in
   int i;
   int result = 0;
 
+  if(emulating && changed_prefs.cdslots[0].inuse)
+    gui_force_rtarea_hdchange();
+
   discard_prefs(p, type);
+  default_prefs(p, 0);
   
 	char *ptr = strstr(filename, ".rp9");
   if(ptr > 0)
@@ -471,10 +435,7 @@ int target_cfgfile_load (struct uae_prefs *p, const char *filename, int type, in
     // Load rp9 config
     result = rp9_parse_file(p, filename);
     if(result)
-    {
-    	set_joyConf(p);
       extractFileName(filename, last_loaded_config);
-    }
   }
   else 
 	{
@@ -485,10 +446,7 @@ int target_cfgfile_load (struct uae_prefs *p, const char *filename, int type, in
       result = cfgfile_load(p, filename, &type, 0, 1);
     }
     if(result)
-    {
-    	set_joyConf(p);
       extractFileName(filename, last_loaded_config);
-    }
     else 
       result = loadconfig_old(p, filename);
   }
@@ -504,10 +462,11 @@ int target_cfgfile_load (struct uae_prefs *p, const char *filename, int type, in
         AddFileToDiskList(p->floppyslots[i].df, 1);
     }
 
-    inputdevice_updateconfig (p);
-
-    SetLastActiveConfig(filename);
+    if(!isdefault)
+      inputdevice_updateconfig (p);
   
+    SetLastActiveConfig(filename);
+
     if(count_HDs(p) > 0) // When loading a config with HDs, always do a hardreset
       gui_force_rtarea_hdchange();
   }
@@ -652,6 +611,14 @@ void saveAdfDir(void)
     fputs(buffer, f);
   }
 
+  snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
+  fputs(buffer, f);
+  for(i=0; i<lstMRUCDList.size(); ++i)
+  {
+    snprintf(buffer, MAX_DPATH, "CDfile=%s\n", lstMRUCDList[i].c_str());
+    fputs(buffer, f);
+  }
+
 	fclose(f);
 	return;
 }
@@ -721,6 +688,22 @@ void loadAdfDir(void)
           lstMRUDiskList.push_back(disk);
         }
       }
+
+      lstMRUCDList.clear();
+      int numCD = 0;
+      char cd[MAX_PATH];
+      fscanf(f1, "MRUCDList=%d\n", &numCD);
+      for(i=0; i<numCD; ++i)
+      {
+        fscanf(f1, "CDfile=");
+        get_string(f1, cd, sizeof(cd));
+        FILE *f = fopen(cd, "rb");
+        if(f != NULL)
+        {
+          fclose(f);
+          lstMRUCDList.push_back(cd);
+        }
+      }
 	  }
 		fclose(f1);
 	}
@@ -729,11 +712,8 @@ void loadAdfDir(void)
 
 void setCpuSpeed()
 {
+#ifdef PANDORA_SPECIFIC
   char speedCmd[128];
-
-#ifndef PANDORA_SPECIFIC
-  return;
-#endif
 
   currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed;
 
@@ -751,7 +731,12 @@ void setCpuSpeed()
 		else
 			system("sudo /usr/pandora/scripts/op_lcdrate.sh 50");
 	}
+#else
+  return;
+#endif
 }
+
+
 int getDefaultCpuSpeed(void)
 {
 #ifdef PANDORA_SPECIFIC
@@ -777,7 +762,7 @@ int getDefaultCpuSpeed(void)
   }
   return speed;
 #else
-  return;
+  return 0;
 #endif
 }
 
@@ -790,7 +775,6 @@ void resetCpuSpeed(void)
     lastCpuSpeed = defaultCpuSpeed - 10;
     currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed = defaultCpuSpeed;
     setCpuSpeed();
-    printf("CPU speed reset to %d\n", defaultCpuSpeed);
   }
 #else
   return;
@@ -849,7 +833,8 @@ int main (int argc, char *argv[])
 
   alloc_AmigaMem();
   RescanROMs();
-  
+
+  keyboard_settrans();  
   real_main (argc, argv);
   
   ClearAvailableROMList();
@@ -857,6 +842,7 @@ int main (int argc, char *argv[])
   free_keyring();
   free_AmigaMem();
   lstMRUDiskList.clear();
+  lstMRUCDList.clear();
   rp9_cleanup();
   
   logging_cleanup();
@@ -868,289 +854,181 @@ int main (int argc, char *argv[])
 }
 
 
-void keyboard_init(void)
+int handle_msgpump (void)
 {
-  int i;
-  
-  for (i = 256; i--;)
-		uae4all_keystate[i] = 0;
-  shiftWasPressed = 0;
-}
-
-
-void handle_events (void)
-{
+	int got = 0;
   SDL_Event rEvent;
-  int iAmigaKeyCode;
-  int i, j;
-  int iIsHotKey = 0;
-
-  /* Handle GUI events */
-  gui_handle_events ();
-#ifdef PANDORA_SPECIFIC
-	if (currprefs.pandora_custom_dpad == 1)
-    handle_joymouse();
-  else if(currprefs.input_tablet > TABLET_OFF) {
-    int x, y;
-    SDL_GetMouseState(&x, &y);
-	  setmousestate(0, 0, x, 1);
-	  setmousestate(0, 1, y, 1);
+  int keycode;
+  int modifier;
+  
+  if(delayed_mousebutton) {
+    --delayed_mousebutton;
+    if(delayed_mousebutton == 0)
+      setmousebuttonstate (0, 0, 1);
   }
-#endif
-    
-  while (SDL_PollEvent(&rEvent))
-  {
+  
+	while (SDL_PollEvent(&rEvent)) {
+		got = 1;
+		
 		switch (rEvent.type)
 		{
   		case SDL_QUIT:
   			uae_quit();
   			break;
-
-  		case SDL_KEYDOWN:
-  			if(rEvent.key.keysym.sym==SDLK_PAGEUP)
-  				slow_mouse=true;
-#ifdef PANDORA_SPECIFIC
-  			if(currprefs.pandora_custom_dpad == 1) // dPad as mouse, why these emulation of key presses?
-  			{
-  				if(rEvent.key.keysym.sym==SDLK_RSHIFT)
-  				{
-  					uae4all_keystate[AK_LALT] = 1;
-  					record_key(AK_LALT << 1);
-  				}
-  				if(rEvent.key.keysym.sym==SDLK_RCTRL || rEvent.key.keysym.sym==SDLK_END || rEvent.key.keysym.sym==SDLK_HOME)
-  				{
-  					uae4all_keystate[AK_RALT] = 1;
-  					record_key(AK_RALT << 1);
-  				}
-  				if(rEvent.key.keysym.sym==SDLK_PAGEDOWN)
-  				{
-  					uae4all_keystate[AK_DN] = 1;
-  					record_key(AK_DN << 1);
-  				}
-  			}
-#endif
-  			if (rEvent.key.keysym.sym==currprefs.key_for_input_switching)
-  			{
-					// state moves thus:
-					// joystick mode
-					// mouse mode (with mouse buttons on L and R)
-					// remapping mode (with whatever's been supplied)
-					// back to start of state
-
-					currprefs.pandora_custom_dpad++;
-#ifdef RASPBERRY
-					if(currprefs.pandora_custom_dpad > 1)
-#else
-					if(currprefs.pandora_custom_dpad > 2)
-#endif
-					  currprefs.pandora_custom_dpad = 0;
-          changed_prefs.pandora_custom_dpad = currprefs.pandora_custom_dpad;
-            
-  				show_inputmode = 1;
-  			}
-
-				if (rEvent.key.keysym.sym==SDLK_RSHIFT || rEvent.key.keysym.sym==SDLK_RCTRL)
-					doStylusRightClick = 1;
-#ifdef PANDORA_SPECIFIC
-  			if (rEvent.key.keysym.sym!=SDLK_UP && rEvent.key.keysym.sym!=SDLK_DOWN && rEvent.key.keysym.sym!=SDLK_LEFT &&
-  				rEvent.key.keysym.sym!=SDLK_RIGHT && rEvent.key.keysym.sym!=SDLK_PAGEUP && rEvent.key.keysym.sym!=SDLK_PAGEDOWN &&
-  				rEvent.key.keysym.sym!=SDLK_HOME && rEvent.key.keysym.sym!=SDLK_END && rEvent.key.keysym.sym!=SDLK_LALT &&
-  				rEvent.key.keysym.sym!=SDLK_LCTRL && rEvent.key.keysym.sym!=SDLK_RSHIFT && rEvent.key.keysym.sym!=SDLK_RCTRL)
-#endif
-  			{
-  				iAmigaKeyCode = keycode2amiga(&(rEvent.key.keysym));
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-				if (iAmigaKeyCode == AK_CAPSLOCK && uae4all_keystate[AK_CAPSLOCK] == 1) {iAmigaKeyCode = -1; capslock = 1;}
-#endif
-  				if (iAmigaKeyCode >= 0)
-  				{
-#ifdef PANDORA
-  				  if(iAmigaKeyCode & SIMULATE_SHIFT)
-  			    {
-              // We need to simulate shift
-              iAmigaKeyCode = iAmigaKeyCode & 0x1ff;
-              shiftWasPressed = uae4all_keystate[AK_LSH];
-              if(!shiftWasPressed)
-              {
-                uae4all_keystate[AK_LSH] = 1;
-                record_key(AK_LSH << 1);
-              }
-  			    }
-  				  if(iAmigaKeyCode & SIMULATE_RELEASED_SHIFT)
-  			    {
-              // We need to simulate released shift
-              iAmigaKeyCode = iAmigaKeyCode & 0x1ff;
-              shiftWasPressed = uae4all_keystate[AK_LSH];
-              if(shiftWasPressed)
-              {
-                uae4all_keystate[AK_LSH] = 0;
-                record_key((AK_LSH << 1) | 1);
-              }
-  			    }
-#endif
-  					if (!uae4all_keystate[iAmigaKeyCode])
-  					{
-  						uae4all_keystate[iAmigaKeyCode] = 1;
-  						record_key(iAmigaKeyCode << 1);
-  					}
-  				}
-  			}
-  			break;
-
-		case SDL_KEYUP:
-  			if(rEvent.key.keysym.sym==SDLK_PAGEUP)
-  				slow_mouse = false;
-#ifdef PANDORA_SPECIFIC
-  			if(currprefs.pandora_custom_dpad == 1) // dPad as mouse, why these emulation of key presses?
-  			{
-  				if(rEvent.key.keysym.sym==SDLK_RSHIFT)
-  				{
-  					uae4all_keystate[AK_LALT] = 0;
-  					record_key((AK_LALT << 1) | 1);
-  				}
-  				if(rEvent.key.keysym.sym==SDLK_RCTRL || rEvent.key.keysym.sym==SDLK_END || rEvent.key.keysym.sym==SDLK_HOME)
-  				{
-  					uae4all_keystate[AK_RALT] = 0;
-  					record_key((AK_RALT << 1) | 1);
-  				}
-  				if(rEvent.key.keysym.sym==SDLK_PAGEDOWN)
-  				{
-  					uae4all_keystate[AK_DN] = 0;
-  					record_key((AK_DN << 1) | 1);
-  				}
-  			}
-#endif
-				if (rEvent.key.keysym.sym==SDLK_RSHIFT || rEvent.key.keysym.sym==SDLK_RCTRL)
-			  {
-					doStylusRightClick = 0;
-  				mouseMoving = 0;
-  				justClicked = 0;
-  				fcounter = 0;
-  				buttonstate[2] = 0;
-				}
-
-  			if (rEvent.key.keysym.sym==currprefs.key_for_input_switching)
-  			{
-  				show_inputmode = 0;
-  			}
-#ifdef PANDORA_SPECIFIC
-  			if (rEvent.key.keysym.sym!=SDLK_UP && rEvent.key.keysym.sym!=SDLK_DOWN && rEvent.key.keysym.sym!=SDLK_LEFT &&
-  				rEvent.key.keysym.sym!=SDLK_RIGHT && rEvent.key.keysym.sym!=SDLK_PAGEUP && rEvent.key.keysym.sym!=SDLK_PAGEDOWN &&
-  				rEvent.key.keysym.sym!=SDLK_HOME && rEvent.key.keysym.sym!=SDLK_END && rEvent.key.keysym.sym!=SDLK_LALT &&
-  				rEvent.key.keysym.sym!=SDLK_LCTRL && rEvent.key.keysym.sym!=SDLK_RSHIFT && rEvent.key.keysym.sym!=SDLK_RCTRL)
-#endif
-  			{
-  				iAmigaKeyCode = keycode2amiga(&(rEvent.key.keysym));
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-				if (iAmigaKeyCode == AK_CAPSLOCK) if (capslock==0) iAmigaKeyCode = -1; else capslock = 0;
-#endif
-  				if (iAmigaKeyCode >= 0)
-  				{
-#ifdef PANDORA
-  				  if(iAmigaKeyCode & SIMULATE_SHIFT)
-  			    {
-              // We needed to simulate shift
-              iAmigaKeyCode = iAmigaKeyCode & 0x1ff;
-              if(!shiftWasPressed)
-              {
-                uae4all_keystate[AK_LSH] = 0;
-                record_key((AK_LSH << 1) | 1);
-                shiftWasPressed = 0;
-              }
-  			    }
-  				  if(iAmigaKeyCode & SIMULATE_RELEASED_SHIFT)
-  			    {
-              // We needed to simulate released shift
-              iAmigaKeyCode = iAmigaKeyCode & 0x1ff;
-              if(shiftWasPressed)
-              {
-                uae4all_keystate[AK_LSH] = 1;
-                record_key(AK_LSH << 1);
-                shiftWasPressed = 0;
-              }
-  			    }
-#endif
-  					uae4all_keystate[iAmigaKeyCode] = 0;
-  					record_key((iAmigaKeyCode << 1) | 1);
-  				}
-  			}
-  			break;
-
-  		case SDL_MOUSEBUTTONDOWN:
-    		if (currprefs.pandora_custom_dpad < 2)
-    			buttonstate[(rEvent.button.button-1)%3] = 1;
-  			break;
-
-  		case SDL_MOUSEBUTTONUP:
-    		if (currprefs.pandora_custom_dpad < 2)
-    			buttonstate[(rEvent.button.button-1)%3] = 0;
-  			break;
   			
+  		case SDL_KEYDOWN:
+
+  		  if(rEvent.key.keysym.sym == currprefs.key_for_menu)
+  		    inputdevice_add_inputcode (AKS_ENTERGUI, 1);
+  		  switch(rEvent.key.keysym.sym)
+  		  {
+
+				  case SDLK_LSHIFT: // Shift key
+				  inputdevice_do_keyboard(AK_LSH, 1);
+				  break;
+            
+				  case SDLK_RSHIFT: // Left shoulder button
+				  case SDLK_RCTRL:  // Right shoulder button
+  					if(currprefs.input_tablet > TABLET_OFF) {
+  					  // Holding left or right shoulder button -> stylus does right mousebutton
+  					  doStylusRightClick = 1;
+            }
+            // Fall through...
+            
+  				default:
+  				  if(currprefs.pandora_customControls) {
+  				    keycode = customControlMap[rEvent.key.keysym.sym];
+  				    if(keycode < 0) {
+  				      // Simulate mouse or joystick
+  				      SimulateMouseOrJoy(keycode, 1);
+  				      break;
+  				    }
+  				    else if(keycode > 0) {
+  				      // Send mapped key press
+  				      inputdevice_do_keyboard(keycode, 1);
+  				      break;
+  				    }
+  				  }
+  				  else
+  				    
+  				  modifier = rEvent.key.keysym.mod;
+  				  keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
+  				  if(keycode)
+  				  {
+				      if(modifier == KMOD_SHIFT)
+  				      inputdevice_do_keyboard(AK_LSH, 1);
+  				    else
+  				      inputdevice_do_keyboard(AK_LSH, 0);
+				      inputdevice_do_keyboard(keycode, 1);
+  				  } else {
+				      inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+				    }
+  				  break;
+				}
+        break;
+        
+  	  case SDL_KEYUP:
+  	    switch(rEvent.key.keysym.sym)
+  	    {
+
+				  case SDLK_LSHIFT: // Shift key
+            inputdevice_do_keyboard(AK_LSH, 0);
+            break;
+            
+				  case SDLK_RSHIFT: // Left shoulder button
+				  case SDLK_RCTRL:  // Right shoulder button
+  					if(currprefs.input_tablet > TABLET_OFF) {
+  					  // Release left or right shoulder button -> stylus does left mousebutton
+    					doStylusRightClick = 0;
+            }
+            // Fall through...
+  				
+  				default:
+  				  if(currprefs.pandora_customControls) {
+  				    keycode = customControlMap[rEvent.key.keysym.sym];
+  				    if(keycode < 0) {
+  				      // Simulate mouse or joystick
+  				      SimulateMouseOrJoy(keycode, 0);
+  				      break;
+  				    }
+  				    else if(keycode > 0) {
+  				      // Send mapped key release
+  				      inputdevice_do_keyboard(keycode, 0);
+  				      break;
+  				    }
+  				  }
+
+  				  modifier = rEvent.key.keysym.mod;
+  				  keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
+  				  if(keycode)
+  				  {
+				      inputdevice_do_keyboard(keycode, 0);
+				      if(modifier == KMOD_SHIFT)
+  				      inputdevice_do_keyboard(AK_LSH, 0);
+            } else {
+				      inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+				    }
+  				  break;
+  	    }
+  	    break;
+  	    
+  	  case SDL_MOUSEBUTTONDOWN:
+        if(currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE) {
+    	    if(rEvent.button.button == SDL_BUTTON_LEFT) {
+    	      if(currprefs.input_tablet > TABLET_OFF && !doStylusRightClick) {
+    	        // Delay mousebutton, we need new position first...
+    	        delayed_mousebutton = currprefs.pandora_tapDelay << 1;
+    	      } else {
+      	      setmousebuttonstate (0, doStylusRightClick, 1);
+      	    }
+    	    }
+    	    else if(rEvent.button.button == SDL_BUTTON_RIGHT)
+    	      setmousebuttonstate (0, 1, 1);
+        }
+  	    break;
+
+  	  case SDL_MOUSEBUTTONUP:
+        if(currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE) {
+    	    if(rEvent.button.button == SDL_BUTTON_LEFT) {
+  	        setmousebuttonstate (0, doStylusRightClick, 0);
+          }
+    	    else if(rEvent.button.button == SDL_BUTTON_RIGHT)
+    	      setmousebuttonstate (0, 1, 0);
+        }
+  	    break;
+  	    
   		case SDL_MOUSEMOTION:
   		  if(currprefs.input_tablet == TABLET_OFF) {
-			    int x, y;
-  		    int mouseScale = slow_mouse ? 1 : currprefs.input_joymouse_multiplier / 2;
-          x = rEvent.motion.xrel;
-  				y = rEvent.motion.yrel;
+          if(currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE) {
+  			    int x, y;
+    		    int mouseScale = currprefs.input_joymouse_multiplier / 2;
+            x = rEvent.motion.xrel;
+    				y = rEvent.motion.yrel;
 #ifdef PANDORA_SPECIFIC
-  				if(rEvent.motion.x == 0 && x > -4)
-  					x = -4;
-  				if(rEvent.motion.y == 0 && y > -4)
-  					y = -4;
-  				if(rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
-  					x = 4;
-  				if(rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
-  					y = 4;
+    				if(rEvent.motion.x == 0 && x > -4)
+    					x = -4;
+    				if(rEvent.motion.y == 0 && y > -4)
+    					y = -4;
+    				if(rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
+    					x = 4;
+    				if(rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
+    					y = 4;
 #endif
-				  setmousestate(0, 0, x * mouseScale, 0);
-      	  setmousestate(0, 1, y * mouseScale, 0);
-  		  }
-  		  break;
-  		  
-		 case SDL_JOYBUTTONDOWN:  /* Handle Joystick Button Presses */
-			// Handle custom only for first joystick
-			if (rEvent.jbutton.which != 0)
-				break;
-			if (rEvent.jbutton.button == 8) JoystickQuit[0] = 1;  //Next if statements are for buttons 8 & 9 together to quit emulator
-			if (rEvent.jbutton.button == 9) JoystickQuit[1] = 1;
-			if (JoystickQuit[0] && JoystickQuit[1])
-			{
-				JoystickQuit[0] = 0;
-				JoystickQuit[1] = 0;
-				uae_quit();
-				break;
-			}
-			if (rEvent.jbutton.button > 5 && currprefs.pandora_custom_dpad < 3) break;  //Ignore buttons num above 5 if Custom DPad is not on special
-			if ((rEvent.jbutton.button == 0 || rEvent.jbutton.button == 1) && !currprefs.pandora_customControls) break; //Ignore buttons 0 & 1 if custom controls are not active to stop double triggering
-			JoystickButton[rEvent.jbutton.button] = 1;      
-			break;
-		
-		 case SDL_JOYBUTTONUP:  /* Handle Joystick Button Releases */
-			// Handle custom only for first joystick
-			if (rEvent.jbutton.which != 0)
-				break;
-			if (rEvent.jbutton.button == 8) JoystickQuit[0] = 0;
-			if (rEvent.jbutton.button == 9) JoystickQuit[1] = 0;
-			if (rEvent.jbutton.button > 5 && currprefs.pandora_custom_dpad < 3) break; //Ignore buttons num above 5 if Custom DPad is not on special
-			if ((rEvent.jbutton.button == 0 || rEvent.jbutton.button == 1) && !currprefs.pandora_customControls) break; //Ignore buttons 0 & 1 if custom controls are not active to stop double triggering
-			JoystickButton[rEvent.jbutton.button] = 0;
-			break;
-		
-		 if (currprefs.pandora_custom_dpad == 2 )
-		 {
-			case SDL_JOYHATMOTION:
-				// Handle custom only for first joystick
-				if (rEvent.jbutton.which != 0)
-					break;
-				if (rEvent.jhat.value & SDL_HAT_UP) JoystickButton[6] = 1; else JoystickButton[6] = 0;
-				if (rEvent.jhat.value & SDL_HAT_DOWN) JoystickButton[7] = 1; else JoystickButton[7] = 0;
-				if (rEvent.jhat.value & SDL_HAT_LEFT) JoystickButton[8] = 1; else JoystickButton[8] = 0;
-				if (rEvent.jhat.value & SDL_HAT_RIGHT) JoystickButton[9] = 1; else JoystickButton[9] = 0;
-				break;
-		 }  		  
-  		  
+  				  setmousestate(0, 0, x * mouseScale, 0);
+        	  setmousestate(0, 1, y * mouseScale, 0);
+          }
+        }
+        break;
 		}
-  }
+	}
+	return got;
+}
+
+
+void handle_events (void)
+{
+  /* Handle GUI events */
+  gui_handle_events ();
 }
 
 

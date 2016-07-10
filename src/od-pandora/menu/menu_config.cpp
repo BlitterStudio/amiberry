@@ -10,16 +10,15 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
-#include "od-pandora/gp2x.h"
 #include "uae.h"
 #include "disk.h"
-#include "../inputmode.h"
+#include "SDL.h"
+
+extern int customControlMap[SDLK_LAST];
 
 static int kickstart;
 
 static int presetModeId = 2;
-
-int saveMenu_n_savestate = 0;
 
 
 static void SetPresetMode(int mode, struct uae_prefs *p)
@@ -457,8 +456,6 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f,"gp2xclock=%d\n", &dummy);
 		int joybuffer = 0;
 		fscanf(f,"joyconf=%d\n",&joybuffer);
-		p->pandora_joyConf = (joybuffer & 0x0f);
-		p->pandora_joyPort = ((joybuffer >> 4) & 0x0f);
 		fscanf(f,"autofireRate=%d\n",&p->input_autofire_framecnt);
 		fscanf(f,"autofire=%d\n", &dummy);
 		fscanf(f,"stylusOffset=%d\n",&dummy);
@@ -486,17 +483,17 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f,"cutLeft=%d\n", &dummy);
 		fscanf(f,"cutRight=%d\n", &dummy);
 		fscanf(f,"customControls=%d\n",&p->pandora_customControls);
-		fscanf(f,"custom_dpad=%d\n",&p->pandora_custom_dpad);
-		fscanf(f,"custom_up=%d\n",&p->pandora_custom_up);
-		fscanf(f,"custom_down=%d\n",&p->pandora_custom_down);
-		fscanf(f,"custom_left=%d\n",&p->pandora_custom_left);
-		fscanf(f,"custom_right=%d\n",&p->pandora_custom_right);
-		fscanf(f,"custom_A=%d\n",&p->pandora_custom_A);
-		fscanf(f,"custom_B=%d\n",&p->pandora_custom_B);
-		fscanf(f,"custom_X=%d\n",&p->pandora_custom_X);
-		fscanf(f,"custom_Y=%d\n",&p->pandora_custom_Y);
-		fscanf(f,"custom_L=%d\n",&p->pandora_custom_L);
-		fscanf(f,"custom_R=%d\n",&p->pandora_custom_R);
+		fscanf(f,"custom_dpad=%d\n",&dummy);
+		fscanf(f,"custom_up=%d\n",&customControlMap[SDLK_UP]);
+		fscanf(f,"custom_down=%d\n",&customControlMap[SDLK_DOWN]);
+		fscanf(f,"custom_left=%d\n",&customControlMap[SDLK_LEFT]);
+		fscanf(f,"custom_right=%d\n",&customControlMap[SDLK_RIGHT]);
+		fscanf(f,"custom_A=%d\n",&customControlMap[SDLK_HOME]);
+		fscanf(f,"custom_B=%d\n",&customControlMap[SDLK_END]);
+		fscanf(f,"custom_X=%d\n",&customControlMap[SDLK_PAGEDOWN]);
+		fscanf(f,"custom_Y=%d\n",&customControlMap[SDLK_PAGEUP]);
+		fscanf(f,"custom_L=%d\n",&customControlMap[SDLK_RSHIFT]);
+		fscanf(f,"custom_R=%d\n",&customControlMap[SDLK_RCTRL]);
 		fscanf(f,"cpu=%d\n", &cpu_level);
 		if(cpu_level > 0) // M68000
 		  // Was old format
@@ -661,7 +658,6 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	SetPresetMode(presetModeId, p);
 
   CheckKickstart(p);
-	set_joyConf(p);
 
 	return 1;
 }

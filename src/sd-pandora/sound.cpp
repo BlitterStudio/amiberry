@@ -23,7 +23,7 @@
 #include "custom.h"
 #include "audio.h"
 #include "gensound.h"
-#include "sounddep/sound.h"
+#include "sd-pandora/sound.h"
 #include "savestate.h"
 
 
@@ -31,6 +31,14 @@ uae_u16 sndbuffer[4][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
 uae_u16 *sndbufpt = sndbuffer[0];
 uae_u16 *render_sndbuff = sndbuffer[0];
 uae_u16 *finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN*2;
+
+uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * 2];
+uae_u16 *cdbufpt = cdaudio_buffer[0];
+uae_u16 *render_cdbuff = cdaudio_buffer[0];
+uae_u16 *finish_cdbuff = cdaudio_buffer[0] + CDAUDIO_BUFFER_LEN * 2;
+bool cdaudio_active = false;
+static int cdwrcnt = 0;
+static int cdrdcnt = 0;
 
 static int have_sound = 0;
 static int lastfreq;
@@ -59,6 +67,7 @@ static int sound_thread_active = 0, sound_thread_exit = 0;
 static sem_t sound_sem;
 static sem_t sound_out_sem;
 static int output_cnt = 0;
+static int wrcnt = 0;
 
 static void *sound_thread(void *unused)
 {
@@ -81,16 +90,40 @@ static void *sound_thread(void *unused)
     cnt = output_cnt;
     sem_post(&sound_out_sem);
     
-		if(currprefs.sound_stereo)
-		  write(sounddev, sndbuffer[cnt&3], SNDBUFFER_LEN*2);
+		if(currprefs.sound_stereo) {
+		  if(cdaudio_active && currprefs.sound_freq == 44100 && cdrdcnt < cdwrcnt) {
+		    for(int i=0; i<SNDBUFFER_LEN * 2; ++i)
+		      sndbuffer[cnt&3][i] += cdaudio_buffer[cdrdcnt & (CDAUDIO_BUFFERS - 1)][i];
+		    cdrdcnt++;
+		  }
+		  write(sounddev, sndbuffer[cnt&3], SNDBUFFER_LEN * 2);
+		}
 		else
 		  write(sounddev, sndbuffer[cnt&3], SNDBUFFER_LEN);
 	}
 
+  cdrdcnt = cdwrcnt;
   sound_thread_active = 0;
   sem_post(&sound_out_sem);
 	return NULL;
 }
+
+
+static void init_soundbuffer_usage(void)
+{
+  sndbufpt = sndbuffer[0];
+  render_sndbuff = sndbuffer[0];
+  finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN * 2;
+  output_cnt = 0;
+  wrcnt = 0;
+  
+  cdbufpt = cdaudio_buffer[0];
+  render_cdbuff = cdaudio_buffer[0];
+  finish_cdbuff = cdaudio_buffer[0] + CDAUDIO_BUFFER_LEN * 2;
+  cdrdcnt = 0;
+  cdwrcnt = 0;
+}
+
 
 static int pandora_start_sound(int rate, int bits, int stereo)
 {
@@ -102,9 +135,8 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 		// init sem, start sound thread
 		pthread_t thr;
 
-    sndbufpt = sndbuffer[0];
-    render_sndbuff = sndbuffer[0];
-    finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN*2;
+    init_soundbuffer_usage();
+    
     s_oldrate = 0;
     s_oldbits = 0;
     s_oldstereo = 0;
@@ -173,8 +205,6 @@ void pandora_stop_sound(void)
 }
 
 
-static int wrcnt = 0;
-
 void finish_sound_buffer (void)
 {
   output_cnt = wrcnt;
@@ -190,6 +220,7 @@ void finish_sound_buffer (void)
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN/2;	  
 }
 
+
 void restart_sound_buffer(void)
 {
 	sndbufpt = render_sndbuff = sndbuffer[wrcnt&3];
@@ -197,6 +228,27 @@ void restart_sound_buffer(void)
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN;
 	else
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN/2;	  
+
+  cdbufpt = render_cdbuff = cdaudio_buffer[cdwrcnt & (CDAUDIO_BUFFERS - 1)];
+  finish_cdbuff = cdbufpt + CDAUDIO_BUFFER_LEN * 2;
+}
+
+
+void finish_cdaudio_buffer (void)
+{
+	cdwrcnt++;
+	cdbufpt = render_cdbuff = cdaudio_buffer[cdwrcnt & (CDAUDIO_BUFFERS - 1)];
+  finish_cdbuff = cdbufpt + CDAUDIO_BUFFER_LEN;
+  audio_activate();
+}
+
+
+bool cdaudio_catchup(void)
+{
+  while((cdwrcnt > cdrdcnt + CDAUDIO_BUFFERS - 10) && (sound_thread_active != 0) && (quit_program == 0)) {
+    sleep_millis(10);
+  }
+  return (sound_thread_active != 0);
 }
 
 
@@ -258,7 +310,10 @@ void reset_sound (void)
   if (!have_sound)
   	return;
 
-  memset(sndbuffer, 0, 2 * 4 * (SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS);
+  init_soundbuffer_usage();
+
+  clear_sound_buffers();
+  clear_cdaudio_buffers();
 }
 
 void sound_volume (int dir)

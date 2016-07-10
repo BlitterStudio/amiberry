@@ -332,7 +332,7 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
       {
         if(strcmp((const char *) attr, "hdf") == 0)
         {
-          // Build-in hdf required
+          // Built-in hdf required
           xmlChar *content = xmlNodeGetContent(curr_node);
           if(content != NULL)
           {

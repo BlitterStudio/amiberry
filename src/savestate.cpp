@@ -456,6 +456,10 @@ void restore_state (const TCHAR *filename)
 	    end = restore_cia (1, chunk);
 		else if (!_tcscmp (name, _T("CHIP")))
 	    end = restore_custom (chunk);
+		else if (!_tcscmp (name, _T("CINP")))
+			end = restore_input (chunk);
+		else if (!_tcscmp (name, _T("CHPX")))
+			end = restore_custom_extra (chunk);
   	else if (!_tcscmp (name, _T("AUD0")))
 	    end = restore_audio (0, chunk);
 		else if (!_tcscmp (name, _T("AUD1")))
@@ -504,6 +508,12 @@ void restore_state (const TCHAR *filename)
 		else if (!_tcscmp (name, _T("FSYC")))
 	    end = restore_filesys_common (chunk);
 #endif
+#ifdef CD32
+		else if (!_tcscmp (name, _T("CD32")))
+			end = restore_akiko (chunk);
+#endif
+		else if (!_tcsncmp (name, _T("CDU"), 3))
+			end = restore_cd (name[3] - '0', chunk);
 	  else {
 	    end = chunk + len;
 			write_log (_T("unknown chunk '%s' size %d bytes\n"), name, len);
@@ -646,6 +656,10 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	save_chunk (f, dst, len, _T("CHIP"), 0);
   xfree (dst);
 
+	dst = save_custom_extra (&len, 0);
+	save_chunk (f, dst, len, _T("CHPX"), 0);
+	xfree (dst);
+
   dst = save_blitter_new (&len, 0);
 	save_chunk (f, dst, len, _T("BLTX"), 0);
   xfree (dst);
@@ -654,6 +668,10 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 		save_chunk (f, dst, len, _T("BLIT"), 0);
 	  xfree (dst);
   }
+
+	dst = save_input (&len, 0);
+	save_chunk (f, dst, len, _T("CINP"), 0);
+	xfree (dst);
 
   dst = save_custom_agacolors (&len, 0);
 	save_chunk (f, dst, len, _T("AGAC"), 0);
@@ -706,6 +724,11 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
   	xfree (dst);
   } while ((dst = save_rom (0, &len, 0)));
 
+#ifdef CD32
+	dst = save_akiko (&len, NULL);
+	save_chunk (f, dst, len, _T("CD32"), 0);
+	xfree (dst);
+#endif
 #ifdef FILESYS
   dst = save_filesys_common (&len);
   if (dst) {
@@ -719,6 +742,14 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
     }
   }
 #endif
+
+	for (i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
+		dst = save_cd (i, &len);
+		if (dst) {
+			_stprintf (name, _T("CDU%d"), i);
+			save_chunk (f, dst, len, name, 0);
+		}
+	}
 
   zfile_fwrite (endhunk, 1, 8, f);
 

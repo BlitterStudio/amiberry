@@ -21,6 +21,8 @@ extern uae_u16 *finish_sndbuff;
 extern int sndbufsize;
 extern void finish_sound_buffer (void);
 extern void restart_sound_buffer (void);
+extern void finish_cdaudio_buffer (void);
+extern bool cdaudio_catchup(void);
 extern int init_sound(void);
 extern void close_sound (void);
 extern int setup_sound (void);
@@ -48,3 +50,21 @@ STATIC_INLINE void clear_sound_buffers (void)
 
 #define FILTER_SOUND_TYPE_A500 0
 #define FILTER_SOUND_TYPE_A1200 1
+
+
+#define CDAUDIO_BUFFERS 32
+#define CDAUDIO_BUFFER_LEN 2048
+extern uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * 2];
+extern uae_u16 *cdbufpt;
+extern uae_u16 *render_cdbuff;
+extern uae_u16 *finish_cdbuff;
+extern bool cdaudio_active;
+
+#define check_cdaudio_buffers() { if (cdbufpt >= finish_cdbuff) finish_cdaudio_buffer (); }
+
+STATIC_INLINE void clear_cdaudio_buffers (void)
+{
+    memset (cdaudio_buffer, 0, CDAUDIO_BUFFERS * (CDAUDIO_BUFFER_LEN + 32) * 2);
+}
+
+#define PUT_CDAUDIO_WORD_STEREO(l,r) do { *((uae_u32 *)cdbufpt) = (r << 16) | (l & 0xffff); cdbufpt = cdbufpt + 2; } while (0)

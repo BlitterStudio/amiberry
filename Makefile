@@ -39,7 +39,7 @@ PANDORA=1
 SDL_CFLAGS = `sdl-config --cflags`
 
 DEFS +=  `xml2-config --cflags`
-DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
+DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY  -DARMV6T2 -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
 DEFS += -DWITH_INGAME_WARNING
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 DEFS += -DUSE_SDL
@@ -70,14 +70,21 @@ ASFLAGS += $(CPU_FLAGS)
 
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
+
+# 	src/kb-sdl/keyboard.o \
+
 OBJS =	\
+	src/akiko.o \
 	src/aros.rom.o \
 	src/audio.o \
 	src/autoconf.o \
 	src/blitfunc.o \
 	src/blittable.o \
 	src/blitter.o \
+	src/blkdev.o \
+	src/blkdev_cdimage.o \
 	src/bsdsocket.o \
+	src/cdrom.o \
 	src/cfgfile.o \
 	src/cia.o \
 	src/crc32.o \
@@ -115,7 +122,7 @@ OBJS =	\
 	src/archivers/7z/7zBuf.o \
 	src/archivers/7z/7zCrc.o \
 	src/archivers/7z/7zStream.o \
-  src/archivers/7z/Bcj2.o \
+	src/archivers/7z/Bcj2.o \
 	src/archivers/7z/Bra.o \
 	src/archivers/7z/Bra86.o \
 	src/archivers/7z/LzmaDec.o \
@@ -146,14 +153,14 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/md-pandora/support.o \
 	src/od-pandora/bsdsocket_host.o \
+	src/od-pandora/cda_play.o \
 	src/od-pandora/fsdb_host.o \
 	src/od-pandora/hardfile_pandora.o \
-	src/od-pandora/joystick.o \
-	src/kb-sdl/keyboard.o \
-	src/od-pandora/inputmode.o \
+	src/od-pandora/keyboard.o \
 	src/od-pandora/writelog.o \
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \
+	src/od-pandora/pandora_input.o \
 	src/od-pandora/pandora_gui.o \
 	src/od-pandora/pandora_rp9.o \
 	src/od-pandora/pandora_mem.o \

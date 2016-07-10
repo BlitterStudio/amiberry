@@ -78,6 +78,7 @@ extern void __clear_cache (char*, char*);
 
 #define REG_WORK1 R2_INDEX
 #define REG_WORK2 R3_INDEX
+#define REG_WORK3 R12_INDEX
 
 //#define REG_DATAPTR R10_INDEX
 
@@ -102,12 +103,11 @@ uae_u8 call_saved[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 0,1,1,1};
    - Special registers (such like the stack pointer) should not be "preserved"
      by pushing, even though they are "saved" across function calls
 */
-static const uae_u8 need_to_preserve[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 1,0,0,0};
+static const uae_u8 need_to_preserve[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 0,0,0,0};
 static const uae_u32 PRESERVE_MASK = ((1<<R4_INDEX)|(1<<R5_INDEX)|(1<<R6_INDEX)|(1<<R7_INDEX)|(1<<R8_INDEX)|(1<<R9_INDEX)
-		|(1<<R10_INDEX)|(1<<R11_INDEX)|(1<<R12_INDEX));
+		|(1<<R10_INDEX)|(1<<R11_INDEX));
 
 #include "codegen_arm.h"
-
 
 static inline void UNSIGNED8_IMM_2_REG(W4 r, IMM v) {
 	MOV_ri8(r, (uae_u8) v);
@@ -122,13 +122,22 @@ static inline void SIGNED8_IMM_2_REG(W4 r, IMM v) {
 }
 
 static inline void UNSIGNED16_IMM_2_REG(W4 r, IMM v) {
+#ifdef ARMV6T2
+  MOVW_ri16(r, v);
+#else
 	MOV_ri8(r, (uae_u8) v);
 	ORR_rri8RORi(r, r, (uae_u8)(v >> 8), 24);
+#endif
 }
 
 static inline void SIGNED16_IMM_2_REG(W4 r, IMM v) {
+#ifdef ARMV6T2
+  MOVW_ri16(r, v);
+  SXTH_rr(r, r);
+#else
   uae_s32 offs = data_long_offs((uae_s32)(uae_s16) v);
   LDR_rRI(r, RPC_INDEX, offs);
+#endif
 }
 
 static inline void UNSIGNED8_REG_2_REG(W4 d, RR4 s) {
@@ -163,11 +172,17 @@ LENDFUNC(WRITE,NONE,2,raw_add_l,(RW4 d, RR4 s))
 
 LOWFUNC(WRITE,NONE,2,raw_add_l_ri,(RW4 d, IMM i))
 {
-  if(i >= 0 && i < 256) {
+  if(CHECK32(i)) {
     ADD_rri(d, d, i);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, i);
+    if(i >> 16)
+      MOVT_ri16(REG_WORK1, i >> 16);
+#else
     uae_s32 offs = data_long_offs(i);
   	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
   	ADD_rrr(d, d, REG_WORK1);
   }
 }
@@ -175,9 +190,19 @@ LENDFUNC(WRITE,NONE,2,raw_add_l_ri,(RW4 d, IMM i))
 
 LOWFUNC(NONE,NONE,3,raw_lea_l_brr,(W4 d, RR4 s, IMM offset))
 {
-  uae_s32 offs = data_long_offs(offset);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr     r2, [pc, #offs]
-	ADD_rrr(d, s, REG_WORK1);         	  // add     r7, r6, r2
+  if(CHECK32(offset)) {
+    ADD_rri(d, s, offset);
+  } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, offset);
+    if(offset >> 16)
+      MOVT_ri16(REG_WORK1, offset >> 16);
+#else
+    uae_s32 offs = data_long_offs(offset);
+  	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+  	ADD_rrr(d, s, REG_WORK1);
+  }
 }
 LENDFUNC(NONE,NONE,3,raw_lea_l_brr,(W4 d, RR4 s, IMM offset))
 
@@ -216,19 +241,35 @@ LENDFUNC(NONE,NONE,4,raw_lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IMM factor))
 
 LOWFUNC(NONE,NONE,2,raw_mov_b_ri,(W1 d, IMM s))
 {
-	BIC_rri(d, d, 0xff);      	// bic	%[d], %[d], #0xff
-	ORR_rri(d, d, (s & 0xff)); 	// orr	%[d], %[d], #%[s]
+	BIC_rri(d, d, 0xff);
+	ORR_rri(d, d, (s & 0xff));
 }
 LENDFUNC(NONE,NONE,2,raw_mov_b_ri,(W1 d, IMM s))
 
 LOWFUNC(NONE,NONE,2,raw_mov_b_rr,(W1 d, RR1 s))
 {
-  BFI_rrii(d, s, 0, 7);             // bfi  %[d], %[s], 0, 7
+  BFI_rrii(d, s, 0, 7);
 }
 LENDFUNC(NONE,NONE,2,raw_mov_b_rr,(W1 d, RR1 s))
 
 LOWFUNC(NONE,WRITE,2,raw_mov_l_mi,(MEMW d, IMM s))
 {
+#ifdef ARMV6T2
+  if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+    uae_s32 idx = d - (uae_u32) &regs;
+    STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  } else {
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+  	STR_rR(REG_WORK2, REG_WORK1);
+  }    
+#else
   if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
     uae_s32 offs = data_long_offs(s);
     LDR_rRI(REG_WORK2, RPC_INDEX, offs);
@@ -245,13 +286,22 @@ LOWFUNC(NONE,WRITE,2,raw_mov_l_mi,(MEMW d, IMM s))
   
   	STR_rR(REG_WORK2, REG_WORK1);      	  // str    r3, [r2]
   }
+#endif
 }
 LENDFUNC(NONE,WRITE,2,raw_mov_l_mi,(MEMW d, IMM s))
 
 LOWFUNC(NONE,NONE,2,raw_mov_w_ri,(W2 d, IMM s))
 {
-  uae_s32 offs = data_word_offs(s);
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+  if(CHECK32(s)) {
+    MOV_ri(REG_WORK2, s);
+  } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK2, s);
+#else
+    uae_s32 offs = data_word_offs(s);
+  	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
+  }
 
   PKHBT_rrr(d, REG_WORK2, d);
 }
@@ -263,9 +313,14 @@ LOWFUNC(NONE,WRITE,2,raw_mov_l_mr,(IMM d, RR4 s))
     uae_s32 idx = d - (uae_u32) &regs;
     STR_rRI(s, R_REGSTRUCT, idx);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+#else
     uae_s32 offs = data_long_offs(d);
-  	LDR_rRI(REG_WORK1, RPC_INDEX, offs); 	// ldr     r2, [pc, #offs]
-  	STR_rR(s, REG_WORK1);             	  // str     r3, [r2]
+  	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+  	STR_rR(s, REG_WORK1);
   }
 }
 LENDFUNC(NONE,WRITE,2,raw_mov_l_mr,(IMM d, RR4 s))
@@ -284,12 +339,17 @@ LENDFUNC(WRITE,NONE,2,raw_shll_l_ri,(RW4 r, IMM i))
 
 LOWFUNC(WRITE,NONE,2,raw_sub_l_ri,(RW4 d, IMM i))
 {
-  if(i >= 0 && i<256) {
+  if(CHECK32(i)) {
     SUB_rri(d, d, i);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, i);
+    if(i >> 16)
+      MOVT_ri16(REG_WORK1, i >> 16);
+#else
     uae_s32 offs = data_long_offs(i);
 	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
-
+#endif
 	  SUB_rrr(d, d, REG_WORK1);
   }
 }
@@ -305,25 +365,17 @@ LOWFUNC(WRITE,NONE,2,raw_sub_w_ri,(RW2 d, IMM i))
 	SUBS_rri(REG_WORK2, REG_WORK2, (i & 0xff) << 16);
   PKHTB_rrrASRi(d, d, REG_WORK2, 16);
 
-	MRS_CPSR(REG_WORK1);                       	// mrs	r2, CPSR
-	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);	// eor	r2, r2, #0x20000000
-	MSR_CPSR_r(REG_WORK1);                     	// msr	CPSR_fc, r2
+	MRS_CPSR(REG_WORK1);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
 }
 LENDFUNC(WRITE,NONE,2,raw_sub_w_ri,(RW2 d, IMM i))
-
-LOWFUNC(WRITE,NONE,2,raw_test_eq_w_rr,(RR2 d, RR2 s))
-{
-  // Only EQ/NE relevant for caller -> compare without handle carry
-	LSL_rri(REG_WORK2, d, 16);
-	TST_rrLSLi(REG_WORK2, s, 16);
-}
-LENDFUNC(WRITE,NONE,2,raw_test_eq_w_rr,(RR2 d, RR2 s))
 
 
 static inline void raw_dec_sp(int off)
 {
 	if (off) {
-    if(off >= 0 && off < 256) {
+    if(CHECK32(off)) {
       SUB_rri(RSP_INDEX, RSP_INDEX, off);
     } else {
   		LDR_rRI(REG_WORK1, RPC_INDEX, 4);
@@ -338,7 +390,7 @@ static inline void raw_dec_sp(int off)
 static inline void raw_inc_sp(int off)
 {
 	if (off) {
-    if(off >= 0 && off < 256) {
+    if(CHECK32(off)) {
       ADD_rri(RSP_INDEX, RSP_INDEX, off);
     } else {
   		LDR_rRI(REG_WORK1, RPC_INDEX, 4);
@@ -381,13 +433,13 @@ static inline void raw_flags_init(void) {
 static inline void raw_flags_to_reg(int r)
 {
 	MRS_CPSR(r);
-	STR_rRI(r, R_REGSTRUCT, 16 * 4);
+	STR_rRI(r, R_REGSTRUCT, 16 * 4); // Flags are next to 8 Dregs and 8 Aregs in struct regstruct
 	raw_flags_evicted(r);
 }
 
 static inline void raw_reg_to_flags(int r)
 {
-	MSR_CPSR_r(r);
+	MSR_CPSRf_r(r);
 }
 
 static inline void raw_load_flagreg(uae_u32 t, uae_u32 r)
@@ -410,11 +462,11 @@ static inline void raw_fflags_into_flags(int r)
 static inline void raw_fp_init(void)
 {
 #ifdef USE_JIT_FPU
-    int i;
+  int i;
 
-    for (i=0;i<N_FREGS;i++)
-	live.spos[i]=-2;
-    live.tos=-1;  /* Stack is empty */
+  for (i=0;i<N_FREGS;i++)
+  	live.spos[i]=-2;
+  live.tos=-1;  /* Stack is empty */
 #endif
 }
 
@@ -422,19 +474,15 @@ static inline void raw_fp_init(void)
 static inline void raw_fp_cleanup_drop(void)
 {
 #ifdef USE_JIT_FPU
-D(panicbug("raw_fp_cleanup_drop"));
+  D(panicbug("raw_fp_cleanup_drop"));
 
-    while (live.tos>=1) {
-//	emit_byte(0xde);
-//	emit_byte(0xd9);
-	live.tos-=2;
-    }
-    while (live.tos>=0) {
-//	emit_byte(0xdd);
-//	emit_byte(0xd8);
-	live.tos--;
-    }
-    raw_fp_init();
+  while (live.tos>=1) {
+  	live.tos-=2;
+  }
+  while (live.tos>=0) {
+	  live.tos--;
+  }
+  raw_fp_init();
 #endif
 }
 
@@ -504,31 +552,51 @@ LENDFUNC(WRITE,NONE,2,raw_SUB_l_rri,(RW4 d, RR4 s, IMM i))
 
 LOWFUNC(WRITE,NONE,2,raw_LDR_l_ri,(RW4 d, IMM i))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(d, i);
+  if(i >> 16)
+    MOVT_ri16(d, i >> 16);
+#else
   uae_s32 offs = data_long_offs(i);
 	LDR_rRI(d, RPC_INDEX, offs);
+#endif
 }
 LENDFUNC(WRITE,NONE,2,raw_LDR_l_ri,(RW4 d, IMM i))
 
 //
 // compuemu_support used raw calls
 //
+LOWFUNC(WRITE,NONE,2,compemu_raw_MERGE_rr,(RW4 d, RR4 s))
+{
+	PKHBT_rrr(d, d, s);
+}
+LENDFUNC(WRITE,NONE,2,compemu_raw_MERGE_rr,(RW4 d, RR4 s))
+
 LOWFUNC(WRITE,RMW,2,compemu_raw_add_l_mi,(IMM d, IMM s))
 {
-  data_check_end(8, 24);
-  uae_s32 target = data_long(d, 24);
-  uae_s32 offs = get_data_offset(target);
-  
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);         		// ldr	r2, [pc, #offs]	; d
-	LDR_rR(REG_WORK2, REG_WORK1);             			// ldr	r3, [r2]
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK1, d);
+  MOVT_ri16(REG_WORK1, d >> 16);
+  LDR_rR(REG_WORK2, REG_WORK1);
+
+  MOVW_ri16(REG_WORK3, s);
+  if(s >> 16)
+    MOVT_ri16(REG_WORK3, s >> 16);
+  ADD_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+
+  STR_rR(REG_WORK2, REG_WORK1);  
+#else
+  uae_s32 offs = data_long_offs(d);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+	LDR_rR(REG_WORK2, REG_WORK1);
 
   offs = data_long_offs(s);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);         		// ldr	r2, [pc, #offs]	; s
+	LDR_rRI(REG_WORK3, RPC_INDEX, offs);
 
-	ADD_rrr(REG_WORK2, REG_WORK2, REG_WORK1); 			// adds	r3, r3, r2
+	ADD_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
 
-	offs = get_data_offset(target);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);          	// ldr	r2, [pc, #offs]	; d
-	STR_rR(REG_WORK2, REG_WORK1);              			// str	r3, [r2]
+	STR_rR(REG_WORK2, REG_WORK1);
+#endif
 }
 LENDFUNC(WRITE,RMW,2,compemu_raw_add_l_mi,(IMM d, IMM s))
 
@@ -539,16 +607,26 @@ LOWFUNC(WRITE,NONE,2,compemu_raw_and_TAGMASK,(RW4 d))
 }
 LENDFUNC(WRITE,NONE,2,compemu_raw_and_TAGMASK,(RW4 d))
 
-LOWFUNC(NONE,NONE,1,compemu_raw_bswap_32,(RW4 r))
-{
-	REV_rr(r,r);								// rev 	   %[r],%[r]
-}
-LENDFUNC(NONE,NONE,1,compemu_raw_bswap_32,(RW4 r))
-
 LOWFUNC(WRITE,READ,2,compemu_raw_cmp_l_mi,(MEMR d, IMM s))
 {
   clobber_flags();
   
+ #ifdef ARMV6T2
+  if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+    uae_s32 idx = d - (uae_u32) & regs;
+    LDR_rRI(REG_WORK1, R_REGSTRUCT, idx);
+  } else {
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+	  LDR_rR(REG_WORK1, REG_WORK1);
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+  }
+#else
   if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
     uae_s32 offs = data_long_offs(s);
     LDR_rRI(REG_WORK2, RPC_INDEX, offs);
@@ -563,36 +641,29 @@ LOWFUNC(WRITE,READ,2,compemu_raw_cmp_l_mi,(MEMR d, IMM s))
 	  offs = data_long_offs(s);
 	  LDR_rRI(REG_WORK2, RPC_INDEX, offs);
   }
+#endif
+
 	CMP_rr(REG_WORK1, REG_WORK2);
 }
 LENDFUNC(WRITE,READ,2,compemu_raw_cmp_l_mi,(MEMR d, IMM s))
 
 LOWFUNC(NONE,NONE,3,compemu_raw_lea_l_brr,(W4 d, RR4 s, IMM offset))
 {
-  if(offset >= 0 && offset < 256) {
+  if(CHECK32(offset)) {
     ADD_rri(d, s, offset);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, offset);
+    if(offset >> 16)
+      MOVT_ri16(REG_WORK1, offset >> 16);
+#else
     uae_s32 offs = data_long_offs(offset);
   	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
   	ADD_rrr(d, s, REG_WORK1);
   }
 }
 LENDFUNC(NONE,NONE,3,compemu_raw_lea_l_brr,(W4 d, RR4 s, IMM offset))
-
-LOWFUNC(NONE,NONE,4,compemu_raw_lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IMM factor))
-{
-	int shft;
-	switch(factor) {
-  	case 1: shft=0; break;
-  	case 2: shft=1; break;
-  	case 4: shft=2; break;
-  	case 8: shft=3; break;
-  	default: abort();
-	}
-
-	ADD_rrrLSLi(d, s, index, shft);
-}
-LENDFUNC(NONE,NONE,4,compemu_raw_lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IMM factor))
 
 LOWFUNC(NONE,WRITE,2,compemu_raw_mov_b_mr,(IMM d, RR1 s))
 {
@@ -600,8 +671,13 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_b_mr,(IMM d, RR1 s))
     uae_s32 idx = d - (uae_u32) & regs;
     STRB_rRI(s, R_REGSTRUCT, idx);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+#else
     uae_s32 offs = data_long_offs(d);
 	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 	  STRB_rR(s, REG_WORK1);
   }
 }
@@ -609,6 +685,22 @@ LENDFUNC(NONE,WRITE,2,compemu_raw_mov_b_mr,(IMM d, RR1 s))
 
 LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMM s))
 {
+#ifdef ARMV6T2
+  if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+    uae_s32 idx = d - (uae_u32) & regs;
+    STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  } else {
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+	  STR_rR(REG_WORK2, REG_WORK1);
+  }
+#else
   if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
     uae_s32 offs = data_long_offs(s);
     LDR_rRI(REG_WORK2, RPC_INDEX, offs);
@@ -622,6 +714,7 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMM s))
 	  LDR_rRI(REG_WORK2, RPC_INDEX, offs);
 	  STR_rR(REG_WORK2, REG_WORK1);
   }
+#endif
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMM s))
 
@@ -631,8 +724,13 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(IMM d, RR4 s))
     uae_s32 idx = d - (uae_u32) & regs;
     STR_rRI(s, R_REGSTRUCT, idx);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+#else
     uae_s32 offs = data_long_offs(d);
 	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 	  STR_rR(s, REG_WORK1);
   }
 }
@@ -640,8 +738,14 @@ LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(IMM d, RR4 s))
 
 LOWFUNC(NONE,NONE,2,compemu_raw_mov_l_ri,(W4 d, IMM s))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(d, s);
+  if(s >> 16)
+    MOVT_ri16(d, s >> 16);
+#else
   uae_s32 offs = data_long_offs(s);
 	LDR_rRI(d, RPC_INDEX, offs);
+#endif
 }
 LENDFUNC(NONE,NONE,2,compemu_raw_mov_l_ri,(W4 d, IMM s))
 
@@ -651,8 +755,13 @@ LOWFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
     uae_s32 idx = s - (uae_u32) & regs;
     LDR_rRI(d, R_REGSTRUCT, idx);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, s);
+    MOVT_ri16(REG_WORK1, s >> 16);
+#else
     uae_s32 offs = data_long_offs(s);
 	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 	  LDR_rR(d, REG_WORK1);
   }
 }
@@ -670,8 +779,13 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_w_mr,(IMM d, RR2 s))
     uae_s32 idx = d - (uae_u32) & regs;
     STRH_rRI(s, R_REGSTRUCT, idx);
   } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+#else
     uae_s32 offs = data_long_offs(d);
 	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 	  STRH_rR(s, REG_WORK1);
   }
 }
@@ -681,15 +795,20 @@ LOWFUNC(WRITE,RMW,2,compemu_raw_sub_l_mi,(MEMRW d, IMM s))
 {
   clobber_flags();
 
-  if(s >= 0 && s < 254) {
+  if(CHECK32(s)) {
     if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
       uae_s32 idx = d - (uae_u32) & regs;
       LDR_rRI(REG_WORK2, R_REGSTRUCT, idx);
       SUBS_rri(REG_WORK2, REG_WORK2, s);
       STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
     } else {
+#ifdef ARMV6T2
+      MOVW_ri16(REG_WORK1, d);
+      MOVT_ri16(REG_WORK1, d >> 16);
+#else
     	uae_s32 offs = data_long_offs(d);
     	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
       LDR_rR(REG_WORK2, REG_WORK1);
       SUBS_rri(REG_WORK2, REG_WORK2, s);
       STR_rR(REG_WORK2, REG_WORK1);
@@ -699,25 +818,36 @@ LOWFUNC(WRITE,RMW,2,compemu_raw_sub_l_mi,(MEMRW d, IMM s))
       uae_s32 idx = d - (uae_u32) & regs;
   	  LDR_rRI(REG_WORK2, R_REGSTRUCT, idx);
   
+#ifdef ARMV6T2
+      MOVW_ri16(REG_WORK1, s);
+      if(s >> 16)
+        MOVT_ri16(REG_WORK1, s >> 16);
+#else
   	  uae_s32 offs = data_long_offs(s);
   	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+
   	  SUBS_rrr(REG_WORK2, REG_WORK2, REG_WORK1);
-  
   	  STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
     } else {
-      data_check_end(8, 24);
-      uae_s32 target = data_long(d, 24);
-      uae_s32 offs = get_data_offset(target);
+#ifdef ARMV6T2
+      MOVW_ri16(REG_WORK1, d);
+      MOVT_ri16(REG_WORK1, d >> 16);
+  	  LDR_rR(REG_WORK2, REG_WORK1);
+  
+      MOVW_ri16(REG_WORK3, s);
+      if(s >> 16)
+        MOVT_ri16(REG_WORK3, s >> 16);
+#else
+      uae_s32 offs = data_long_offs(d);
   	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
   	  LDR_rR(REG_WORK2, REG_WORK1);
   
   	  offs = data_long_offs(s);
-  	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+  	  LDR_rRI(REG_WORK3, RPC_INDEX, offs);
+#endif
   
-  	  SUBS_rrr(REG_WORK2, REG_WORK2, REG_WORK1);
-  
-  	  offs = get_data_offset(target);
-  	  LDR_rRI(REG_WORK1, RPC_INDEX, offs); 
+  	  SUBS_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
   	  STR_rR(REG_WORK2, REG_WORK1);
     }
   }
@@ -731,16 +861,15 @@ LOWFUNC(WRITE,NONE,2,compemu_raw_test_l_rr,(RR4 d, RR4 s))
 }
 LENDFUNC(WRITE,NONE,2,compemu_raw_test_l_rr,(RR4 d, RR4 s))
 
-LOWFUNC(NONE,NONE,2,compemu_raw_zero_extend_16_rr,(W4 d, RR2 s))
-{
-	UXTH_rr(d, s);
-}
-LENDFUNC(NONE,NONE,2,compemu_raw_zero_extend_16_rr,(W4 d, RR2 s))
-
 static inline void compemu_raw_call(uae_u32 t)
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK1, t);
+  MOVT_ri16(REG_WORK1, t >> 16);
+#else
   uae_s32 offs = data_long_offs(t);
 	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 	PUSH(RLR_INDEX);
 	BLX_r(REG_WORK1);
 	POP(RLR_INDEX);
@@ -758,26 +887,23 @@ static inline void compemu_raw_jcc_l_oponly(int cc)
 	switch (cc) {
 	case 9: // LS
 		BEQ_i(0);										// beq <dojmp>
-		BCC_i(2);										// bcc <jp>
+		BCC_i(1);										// bcc <jp>
 
 		//<dojmp>:
-		LDR_rR(REG_WORK1, RPC_INDEX); 	        		// ldr	r2, [pc]	; <value>
-		BX_r(REG_WORK1);								// bx r2
+		LDR_rRI(RPC_INDEX, RPC_INDEX, -4); 	// ldr	pc, [pc]	; <value>
 		break;
 
 	case 8: // HI
-		BEQ_i(3);										// beq <jp>
-		BCS_i(2);										// bcs <jp>
+		BEQ_i(2);										// beq <jp>
+		BCS_i(1);										// bcs <jp>
 
 		//<dojmp>:
-		LDR_rR(REG_WORK1, RPC_INDEX);  			       	// ldr	r2, [pc]	; <value>
-		BX_r(REG_WORK1);								// bx r2
+		LDR_rRI(RPC_INDEX, RPC_INDEX, -4);  	// ldr	pc, [pc]	; <value>
 		break;
 
 	default:
-		CC_LDR_rRI(cc, REG_WORK1, RPC_INDEX, 4); 		// ldrlt	r2, [pc, #4]	; <value>
-		CC_BX_r(cc, REG_WORK1);							// bxlt 	r2
-		B_i(0);                                         // b		<jp>
+    CC_B_i(cc^1, 1);
+    LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
 		break;
 	}
   // emit of target will be done by caller
@@ -785,14 +911,19 @@ static inline void compemu_raw_jcc_l_oponly(int cc)
 
 static inline void compemu_raw_jl(uae_u32 t)
 {
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK1, t);
+  MOVT_ri16(REG_WORK1, t >> 16);
+  CC_BX_r(NATIVE_CC_LT, REG_WORK1);
+#else
   uae_s32 offs = data_long_offs(t);
 	CC_LDR_rRI(NATIVE_CC_LT, RPC_INDEX, RPC_INDEX, offs);
+#endif
 }
 
 static inline void compemu_raw_jmp(uae_u32 t)
 {
-	LDR_rR(REG_WORK1, RPC_INDEX);
-	BX_r(REG_WORK1);
+  LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
 	emit_long(t);
 }
 
@@ -819,21 +950,19 @@ static inline void compemu_raw_jmp_r(RR4 r)
 
 static inline void compemu_raw_jnz(uae_u32 t)
 {
+#ifdef ARMV6T2
+  BEQ_i(1);
+  LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
+  emit_long(t);
+#else
   uae_s32 offs = data_long_offs(t);
-	CC_LDR_rRI(NATIVE_CC_NE, RPC_INDEX, RPC_INDEX, offs); 		// ldrne   pc, [pc, offs]
+	CC_LDR_rRI(NATIVE_CC_NE, RPC_INDEX, RPC_INDEX, offs);
+#endif
 }
 
 static inline void compemu_raw_jz_b_oponly(void)
 {
-	BNE_i(2);									// bne jp
-	LDRSB_rRI(REG_WORK1, RPC_INDEX, 3);			// ldrsb	r2,[pc,#3]
-	ADD_rrr(RPC_INDEX, RPC_INDEX, REG_WORK1); 	// add		pc,pc,r2
-
-	emit_byte(0);
-	emit_byte(0);
-	emit_byte(0);
-
-	// <jp:>
+  BEQ_i(0);   // Real distance set by caller
 }
 
 static inline void compemu_raw_branch(IMM d)
@@ -846,8 +975,13 @@ static inline void compemu_raw_branch(IMM d)
 
 LOWFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMM s))
 {
+#ifdef ARMV6T2
+  MOVW_ri16(R_REGSTRUCT, s);
+  MOVT_ri16(R_REGSTRUCT, s >> 16);
+#else
   uae_s32 offs = data_long_offs(s);
 	LDR_rRI(R_REGSTRUCT, RPC_INDEX, offs);
+#endif
 }
 LENDFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMM s))
 
@@ -860,25 +994,31 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IMM cycles))
   // countdown -= scaled_cycles(totcycles);
   uae_s32 offs = (uae_u32)&countdown - (uae_u32)&regs;
 	LDR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-	if(cycles >= 0 && cycles < 256) {
+  if(CHECK32(cycles)) {
 	  SUBS_rri(REG_WORK1, REG_WORK1, cycles);
 	} else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK2, cycles);
+    if(cycles >> 16)
+      MOVT_ri16(REG_WORK2, cycles >> 16);
+#else
   	int offs2 = data_long_offs(cycles);
   	LDR_rRI(REG_WORK2, RPC_INDEX, offs2);
+#endif
   	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
   }
 	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-	CC_B_i(NATIVE_CC_MI, 3);
+
+	CC_B_i(NATIVE_CC_MI, 2);
 
 	BFC_rii(rr_pc, 16, 31); // apply TAGMASK
-	offs = data_long_offs((uintptr)cache_tags);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
-	LDR_rRR_LSLi(REG_WORK1, REG_WORK1, rr_pc, 2);
-	BX_r(REG_WORK1);
+  LDR_rRI(REG_WORK1, RPC_INDEX, 4); // <cache_tags>
+	LDR_rRR_LSLi(RPC_INDEX, REG_WORK1, rr_pc, 2);
 
-	offs = data_long_offs((uintptr)popall_do_nothing);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
-	BX_r(REG_WORK1);
+  LDR_rRI(RPC_INDEX, RPC_INDEX, 0); // <popall_do_nothing>
+
+	emit_long((uintptr)cache_tags);
+	emit_long((uintptr)popall_do_nothing);
 }
 LENDFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IMM cycles))
 
@@ -890,26 +1030,30 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_isconst,(IMM cycles, IMM v))
   // countdown -= scaled_cycles(totcycles);
   uae_s32 offs = (uae_u32)&countdown - (uae_u32)&regs;
 	LDR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-	if(cycles >= 0 && cycles < 256) {
+  if(CHECK32(cycles)) {
 	  SUBS_rri(REG_WORK1, REG_WORK1, cycles);
 	} else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK2, cycles);
+    if(cycles >> 16)
+      MOVT_ri16(REG_WORK2, cycles >> 16);
+#else
   	int offs2 = data_long_offs(cycles);
   	LDR_rRI(REG_WORK2, RPC_INDEX, offs2);
+#endif
   	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
   }
 	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-  CC_B_i(NATIVE_CC_MI, 1);
 
-  LDR_rRI(REG_WORK1, RPC_INDEX, 16); // get target
-  BX_r(REG_WORK1);
+  CC_LDR_rRI(NATIVE_CC_MI^1, RPC_INDEX, RPC_INDEX, 16); // <target>
   
-  offs = data_long_offs(v);
-  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+  LDR_rRI(REG_WORK1, RPC_INDEX, 4); // <v>
   offs = (uae_u32)&regs.pc_p - (uae_u32)&regs;
   STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-	offs = data_long_offs((uintptr)popall_do_nothing);
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
-	BX_r(REG_WORK1);
+  LDR_rRI(RPC_INDEX, RPC_INDEX, 0); // <popall_do_nothing>
+
+	emit_long(v);
+	emit_long((uintptr)popall_do_nothing);
   
   // <target emitted by caller>
 }
