@@ -33,6 +33,20 @@ void keyboard_settrans (void);
 int translate_pandora_keys(int symbol, int *modifier);
 void SimulateMouseOrJoy(int code, int keypressed);
 
+#define REMAP_MOUSEBUTTON_LEFT    -1
+#define REMAP_MOUSEBUTTON_RIGHT   -2
+#define REMAP_JOYBUTTON_ONE       -3
+#define REMAP_JOYBUTTON_TWO       -4
+#define REMAP_JOY_UP              -5
+#define REMAP_JOY_DOWN            -6
+#define REMAP_JOY_LEFT            -7
+#define REMAP_JOY_RIGHT           -8
+#define REMAP_CD32_GREEN          -9
+#define REMAP_CD32_YELLOW         -10
+#define REMAP_CD32_PLAY           -11
+#define REMAP_CD32_FFW            -12
+#define REMAP_CD32_RWD            -13
+
 void reinit_amiga(void);
 int count_HDs(struct uae_prefs *p);
 extern void gui_force_rtarea_hdchange(void);

@@ -427,7 +427,7 @@ static void gui_to_prefs (void)
 static void after_leave_gui(void)
 {
   // Check if we have to set or clear autofire
-  int new_af = (changed_prefs.input_autofire_framecnt == 0) ? 0 : 1;
+  int new_af = (changed_prefs.input_autofire_linecnt == 0) ? 0 : 1;
   int update = 0;
   int num;
   

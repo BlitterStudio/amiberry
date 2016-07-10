@@ -22,10 +22,13 @@
 #include "fsdb.h"
 #include "td-sdl/thread.h"
 #include "scsidev.h"
-//#include "mp3decoder.h"
+#include "mp3decoder.h"
 #include "od-pandora/cda_play.h"
 #include "memory.h"
 #include "uae.h"
+
+#define FLAC__NO_DLL
+#include <FLAC/stream_decoder.h>
 
 #define scsi_log write_log
 
@@ -117,6 +120,93 @@ static struct cdtoc *findtoc (struct cdunit *cdu, int *sectorp)
 		}
 	}
 	return NULL;
+}
+
+// WOHOO, library that supports virtual file access functions. Perfect!
+static void flac_metadata_callback (const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
+{
+	struct cdtoc *t = (struct cdtoc*)client_data;
+	if (t->data)
+		return;
+	if(metadata->type == FLAC__METADATA_TYPE_STREAMINFO) {
+		t->filesize = metadata->data.stream_info.total_samples * (metadata->data.stream_info.bits_per_sample / 8) * metadata->data.stream_info.channels;
+	}
+}
+static void flac_error_callback (const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
+{
+	return;
+}
+static FLAC__StreamDecoderWriteStatus flac_write_callback (const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 * const buffer[], void *client_data)
+{
+	struct cdtoc *t = (struct cdtoc*)client_data;
+	uae_u16 *p = (uae_u16*)(t->data + t->writeoffset);
+	int size = 4;
+	for (int i = 0; i < frame->header.blocksize && t->writeoffset < t->filesize - size; i++, t->writeoffset += size) {
+		*p++ = (FLAC__int16)buffer[0][i];
+		*p++ = (FLAC__int16)buffer[1][i];
+	}
+	return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
+}
+static FLAC__StreamDecoderReadStatus file_read_callback (const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data)
+{
+	struct cdtoc *t = (struct cdtoc*)client_data;
+	if (zfile_ftell (t->handle) >= zfile_size (t->handle))
+		return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
+	return zfile_fread (buffer, *bytes, 1, t->handle) ? FLAC__STREAM_DECODER_READ_STATUS_CONTINUE : FLAC__STREAM_DECODER_READ_STATUS_ABORT;
+}
+static FLAC__StreamDecoderSeekStatus file_seek_callback (const FLAC__StreamDecoder *decoder, FLAC__uint64 absolute_byte_offset, void *client_data)
+{
+	struct cdtoc *t = (struct cdtoc*)client_data;
+	zfile_fseek (t->handle, absolute_byte_offset, SEEK_SET);
+	return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
+}
+static FLAC__StreamDecoderTellStatus file_tell_callback (const FLAC__StreamDecoder *decoder, FLAC__uint64 *absolute_byte_offset, void *client_data)
+{
+	struct cdtoc *t = (struct cdtoc*)client_data;
+	*absolute_byte_offset = zfile_ftell (t->handle);
+	return FLAC__STREAM_DECODER_TELL_STATUS_OK;
+}
+static FLAC__StreamDecoderLengthStatus file_len_callback (const FLAC__StreamDecoder *decoder, FLAC__uint64 *stream_length, void *client_data)
+{
+	struct cdtoc *t = (struct cdtoc*)client_data;
+	*stream_length = zfile_size (t->handle);
+	return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
+}
+static FLAC__bool file_eof_callback (const FLAC__StreamDecoder *decoder, void *client_data)
+{
+	struct cdtoc *t = (struct cdtoc*)client_data;
+	return zfile_ftell (t->handle) >= zfile_size (t->handle);
+}
+
+static void flac_get_size (struct cdtoc *t)
+{
+	FLAC__StreamDecoder *decoder = FLAC__stream_decoder_new ();
+	if (decoder) {
+		FLAC__stream_decoder_set_md5_checking (decoder, false);
+		int init_status = FLAC__stream_decoder_init_stream (decoder,
+			&file_read_callback, &file_seek_callback, &file_tell_callback,
+			&file_len_callback, &file_eof_callback,
+			&flac_write_callback, &flac_metadata_callback, &flac_error_callback, t);
+		FLAC__stream_decoder_process_until_end_of_metadata (decoder);
+		FLAC__stream_decoder_delete (decoder);
+	}
+}
+static uae_u8 *flac_get_data (struct cdtoc *t)
+{
+	write_log (_T("FLAC: unpacking '%s'..\n"), zfile_getname (t->handle));
+	t->writeoffset = 0;
+	FLAC__StreamDecoder *decoder = FLAC__stream_decoder_new ();
+	if (decoder) {
+		FLAC__stream_decoder_set_md5_checking (decoder, false);
+		int init_status = FLAC__stream_decoder_init_stream (decoder,
+			&file_read_callback, &file_seek_callback, &file_tell_callback,
+			&file_len_callback, &file_eof_callback,
+			&flac_write_callback, &flac_metadata_callback, &flac_error_callback, t);
+		FLAC__stream_decoder_process_until_end_of_stream (decoder);
+		FLAC__stream_decoder_delete (decoder);
+		write_log (_T("FLAC: %s unpacked\n"), zfile_getname (t->handle));
+	}
+	return t->data;
 }
 
 static void sub_to_interleaved (const uae_u8 *s, uae_u8 *d)
@@ -216,7 +306,7 @@ static int setstate (struct cdunit *cdu, int state)
 static void *cdda_unpack_func (void *v)
 {
 	cdimage_unpack_thread = 1;
-//	mp3decoder *mp3dec = NULL;
+	mp3decoder *mp3dec = NULL;
 
 	for (;;) {
 		uae_u32 cduidx = read_comm_pipe_u32_blocking (&unpack_pipe);
@@ -237,22 +327,22 @@ static void *cdda_unpack_func (void *v)
 				cdimage_unpack_active = 1;
 				if (t->data) {
 					if (t->enctype == AUDENC_MP3) {
-//						if (!mp3dec) {
-//							try {
-//								mp3dec = new mp3decoder();
-//							} catch (exception) { };
-//						}
-//						if (mp3dec)
-//							t->data = mp3dec->get (t->handle, t->data, t->filesize);
+						if (!mp3dec) {
+							try {
+								mp3dec = new mp3decoder();
+							} catch (std::exception) { };
+						}
+						if (mp3dec)
+							t->data = mp3dec->get (t->handle, t->data, t->filesize);
 					} else if (t->enctype == AUDENC_FLAC) {
-//						flac_get_data (t);
+						flac_get_data (t);
 					}
 				}
 			}
 		}
 		cdimage_unpack_active = 2;
 	}
-//	delete mp3dec;
+	delete mp3dec;
 	cdimage_unpack_thread = -1;
 	return 0;
 }
@@ -1129,7 +1219,7 @@ static int parsecue (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
 	TCHAR *fname, *fnametype;
 	audenc fnametypeid;
 	int ctrl;
-//	mp3decoder *mp3dec = NULL;
+	mp3decoder *mp3dec = NULL;
 
 	fname = NULL;
 	fnametype = NULL;
@@ -1319,21 +1409,21 @@ static int parsecue (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
 						}
 						t->enctype = fnametypeid;
 					} else if (fnametypeid == AUDENC_MP3 && t->handle) {
-//						if (!mp3dec) {
-//							try {
-//								mp3dec = new mp3decoder();
-//							} catch (exception) { }
-//						}
-//						if (mp3dec) {
-//							t->offset = 0;
-//							t->filesize = mp3dec->getsize (t->handle);
-//							if (t->filesize)
-//								t->enctype = fnametypeid;
-//						}
+						if (!mp3dec) {
+							try {
+								mp3dec = new mp3decoder();
+							} catch (std::exception) { }
+						}
+						if (mp3dec) {
+							t->offset = 0;
+							t->filesize = mp3dec->getsize (t->handle);
+							if (t->filesize)
+								t->enctype = fnametypeid;
+						}
 					} else if (fnametypeid == AUDENC_FLAC && t->handle) {
-//						flac_get_size (t);
-//						if (t->filesize)
-//							t->enctype = fnametypeid;
+						flac_get_size (t);
+						if (t->filesize)
+							t->enctype = fnametypeid;
 					}
 				}
 			}
@@ -1350,7 +1440,7 @@ static int parsecue (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
 
 	xfree (fname);
 
-//	delete mp3dec;
+	delete mp3dec;
 
 	return cdu->tracks;
 }

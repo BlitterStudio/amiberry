@@ -248,7 +248,13 @@ LENDFUNC(NONE,NONE,2,raw_mov_b_ri,(W1 d, IMM s))
 
 LOWFUNC(NONE,NONE,2,raw_mov_b_rr,(W1 d, RR1 s))
 {
+#ifdef ARMV6T2
   BFI_rrii(d, s, 0, 7);
+#else
+	AND_rri(REG_WORK1, s, 0xff);
+	BIC_rri(d, d, 0xff);
+	ORR_rrr(d, d, REG_WORK1);
+#endif
 }
 LENDFUNC(NONE,NONE,2,raw_mov_b_rr,(W1 d, RR1 s))
 
@@ -603,7 +609,12 @@ LENDFUNC(WRITE,RMW,2,compemu_raw_add_l_mi,(IMM d, IMM s))
 LOWFUNC(WRITE,NONE,2,compemu_raw_and_TAGMASK,(RW4 d))
 {
   // TAGMASK is 0x0000ffff
+#ifdef ARMV6T2
   BFC_rii(d, 16, 31);
+#else
+	BIC_rri(d, d, 0x00ff0000);
+	BIC_rri(d, d, 0xff000000);
+#endif
 }
 LENDFUNC(WRITE,NONE,2,compemu_raw_and_TAGMASK,(RW4 d))
 
@@ -1009,9 +1020,14 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IMM cycles))
   }
 	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
 
+#ifdef ARMV6T2
 	CC_B_i(NATIVE_CC_MI, 2);
-
 	BFC_rii(rr_pc, 16, 31); // apply TAGMASK
+#else
+	CC_B_i(NATIVE_CC_MI, 3);
+	BIC_rri(rr_pc, rr_pc, 0x00ff0000);
+	BIC_rri(rr_pc, rr_pc, 0xff000000);
+#endif
   LDR_rRI(REG_WORK1, RPC_INDEX, 4); // <cache_tags>
 	LDR_rRR_LSLi(RPC_INDEX, REG_WORK1, rr_pc, 2);
 

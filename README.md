@@ -35,6 +35,8 @@ How to compile on Raspbian Jessie:
       sudo apt-get install libsdl-ttf2.0-dev
       sudo apt-get install libsdl-gfx1.2-dev
       sudo apt-get install libxml2-dev
+      sudo apt-get install libflac-dev
+      sudo apt-get install libmpg123-dev
 
    Then for Raspberry Pi 2:  
 

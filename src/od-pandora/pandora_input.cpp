@@ -8,8 +8,7 @@
 
 static int joyXviaCustom = 0;
 static int joyYviaCustom = 0;
-static int joyBut1viaCustom = 0;
-static int joyBut2viaCustom = 0;
+static int joyButXviaCustom[7] = { 0, 0, 0, 0, 0, 0, 0};
 static int mouseBut1viaCustom = 0;
 static int mouseBut2viaCustom = 0;
 
@@ -371,12 +370,14 @@ static void read_joystick (void)
       if(!joyYviaCustom)
         setjoystickstate (0, 1, axis, 32767);
     }
-    if(!joyBut1viaCustom)
+    if(!joyButXviaCustom[0])
       setjoybuttonstate (0, 0, keystate[SDLK_PAGEDOWN]);
-    if(!joyBut2viaCustom)
+    if(!joyButXviaCustom[1])
       setjoybuttonstate (0, 1, keystate[SDLK_END]);
-    setjoybuttonstate (0, 2, keystate[SDLK_HOME]);
-    setjoybuttonstate (0, 3, keystate[SDLK_PAGEUP]);
+    if(!joyButXviaCustom[2])
+      setjoybuttonstate (0, 2, keystate[SDLK_HOME]);
+    if(!joyButXviaCustom[3])
+      setjoybuttonstate (0, 3, keystate[SDLK_PAGEUP]);
 
     int cd32_start = 0, cd32_ffw = 0, cd32_rwd = 0;
     if(keystate[SDLK_LALT]) { // Pandora Start button
@@ -387,9 +388,12 @@ static void read_joystick (void)
       else
         cd32_start = 1;
     }
-    setjoybuttonstate (0, 6, cd32_start);
-    setjoybuttonstate (0, 5, cd32_ffw);
-    setjoybuttonstate (0, 4, cd32_rwd);
+    if(!joyButXviaCustom[6])
+      setjoybuttonstate (0, 6, cd32_start);
+    if(!joyButXviaCustom[5])
+      setjoybuttonstate (0, 5, cd32_ffw);
+    if(!joyButXviaCustom[4])
+      setjoybuttonstate (0, 4, cd32_rwd);
   }
 }
 
@@ -441,46 +445,71 @@ int input_get_default_joystick_analog (struct uae_input_device *uid, int num, in
 void SimulateMouseOrJoy(int code, int keypressed)
 {
   switch(code) {
-    case -1: // left mousebutton
+    case REMAP_MOUSEBUTTON_LEFT:
       mouseBut1viaCustom = keypressed;
       setmousebuttonstate (0, 0, keypressed);
       setmousebuttonstate (1, 0, keypressed);
       break;
       
-    case -2: // right mousebutton
+    case REMAP_MOUSEBUTTON_RIGHT:
       mouseBut2viaCustom = keypressed;
       setmousebuttonstate (0, 1, keypressed);
       setmousebuttonstate (1, 1, keypressed);
       break;
       
-    case -3: // joystick button 1
-      joyBut1viaCustom = keypressed;
+    case REMAP_JOYBUTTON_ONE:
+      joyButXviaCustom[0] = keypressed;
       setjoybuttonstate (0, 0, keypressed);
       break;
       
-    case -4: // joystick button 2
-      joyBut2viaCustom = keypressed;
+    case REMAP_JOYBUTTON_TWO:
+      joyButXviaCustom[1] = keypressed;
       setjoybuttonstate (0, 1, keypressed);
       break;
       
-    case -5: // joystick up
+    case REMAP_JOY_UP:
       joyYviaCustom = keypressed;
       setjoystickstate (0, 1, keypressed ? -32767 : 0, 32767);
       break;
       
-    case -6: // joystick down
+    case REMAP_JOY_DOWN:
       joyYviaCustom = keypressed;
       setjoystickstate (0, 1, keypressed ? 32767 : 0, 32767);
       break;
       
-    case -7: // joystick left
+    case REMAP_JOY_LEFT:
       joyXviaCustom = keypressed;
       setjoystickstate (0, 0, keypressed ? -32767 : 0, 32767);
       break;
       
-    case -8: // joystick right
+    case REMAP_JOY_RIGHT:
       joyXviaCustom = keypressed;
       setjoystickstate (0, 0, keypressed ? 32767 : 0, 32767);
+      break;
+
+    case REMAP_CD32_GREEN:
+      joyButXviaCustom[2] = keypressed;
+      setjoybuttonstate (0, 2, keypressed);
+      break;
+
+    case REMAP_CD32_YELLOW:
+      joyButXviaCustom[3] = keypressed;
+      setjoybuttonstate (0, 3, keypressed);
+      break;
+
+    case REMAP_CD32_PLAY:
+      joyButXviaCustom[6] = keypressed;
+      setjoybuttonstate (0, 6, keypressed);
+      break;
+
+    case REMAP_CD32_FFW:
+      joyButXviaCustom[5] = keypressed;
+      setjoybuttonstate (0, 5, keypressed);
+      break;
+
+    case REMAP_CD32_RWD:
+      joyButXviaCustom[4] = keypressed;
+      setjoybuttonstate (0, 4, keypressed);
       break;
   }  
 }

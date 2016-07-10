@@ -1311,6 +1311,14 @@ enum {
 #define CC_SADD16_rrr(cc,Rd,Rn,Rm)    _W(((cc) << 28) | (0x61 << 20) | (Rn << 16) | (Rd << 12) | (0xf1 << 4) | (Rm))
 #define SADD16_rrr(Rd,Rn,Rm)					CC_SADD16_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
+#define CC_SXTAB_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6a << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
+#define SXTAB_rrr(Rd,Rn,Rm)             CC_SXTAB_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+
+#define CC_SXTAH_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6b << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
+#define SXTAH_rrr(Rd,Rn,Rm)             CC_SXTAH_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+
+// ARMv6T2
+#ifdef ARMV6T2
 #define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
 #define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
 
@@ -1320,18 +1328,12 @@ enum {
 #define CC_UBFX_rrii(cc,Rd,Rn,lsb,width)   _W(((cc) << 28) | (0x3f << 21) | ((width-1) << 16) | (Rd << 12) | ((lsb) << 7) | (0x5 << 4) | (Rn))
 #define UBFX_rrii(Rd,Rn,lsb,width)         CC_UBFX_rrii(NATIVE_CC_AL,Rd,Rn,lsb,width)
 
-#define CC_SXTAB_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6a << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
-#define SXTAB_rrr(Rd,Rn,Rm)             CC_SXTAB_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
-
-#define CC_SXTAH_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6b << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
-#define SXTAH_rrr(Rd,Rn,Rm)             CC_SXTAH_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
-
-// ARMv6T2
 #define CC_MOVW_ri16(cc,Rd,i)                _W(((cc) << 28) | (0x30 << 20) | (((i >> 12) & 0xf) << 16) | (Rd << 12) | (i & 0x0fff))
 #define MOVW_ri16(Rd,i)					             CC_MOVW_ri16(NATIVE_CC_AL,Rd,i)
 
 #define CC_MOVT_ri16(cc,Rd,i)                _W(((cc) << 28) | (0x34 << 20) | (((i >> 12) & 0xf) << 16) | (Rd << 12) | (i & 0x0fff))
 #define MOVT_ri16(Rd,i)					             CC_MOVT_ri16(NATIVE_CC_AL,Rd,i)
+#endif
 
 // Floatingpoint
 

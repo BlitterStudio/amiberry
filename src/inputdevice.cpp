@@ -508,7 +508,7 @@ void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
 	cfgfile_write (f, _T("input.analog_joystick_multiplier"), _T("%d"), p->input_analog_joystick_mult);
 	cfgfile_write (f, _T("input.analog_joystick_offset"), _T("%d"), p->input_analog_joystick_offset);
 	cfgfile_write (f, _T("input.mouse_speed"), _T("%d"), p->input_mouse_speed);
-  cfgfile_write (f, _T("input.autofire"), _T("%d"), p->input_autofire_framecnt);
+	cfgfile_write (f, _T("input.autofire_speed"), _T("%d"), p->input_autofire_linecnt);
 	cfgfile_dwrite_str (f, _T("input.keyboard_type"), kbtypes[p->input_keyboard_type]);
 	for (id = 0; id < MAX_INPUT_SETTINGS; id++) {
 		TCHAR tmp[MAX_DPATH];
@@ -792,7 +792,9 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 	if (!strcasecmp (p, _T("mouse_speed")))
 		pr->input_mouse_speed = _tstol (value);
   if (!strcasecmp (p, _T("autofire")))
-	  pr->input_autofire_framecnt = _tstol (value);
+	  pr->input_autofire_linecnt = _tstol (value) * 312;
+	if (!strcasecmp (p, _T("autofire_speed")))
+		pr->input_autofire_linecnt = _tstol (value);
 	if (!strcasecmp (p, _T("analog_joystick_multiplier")))
 		pr->input_analog_joystick_mult = _tstol (value);
 	if (!strcasecmp (p, _T("analog_joystick_offset")))
@@ -1849,12 +1851,12 @@ static int handle_input_event (int nr, int state, int max, int autofire, bool ca
 	if (autofire) {
 #ifdef INPUTDEVICE_SIMPLE
 		if (state)
-			queue_input_event (nr, state, max, currprefs.input_autofire_framecnt * 312);
+			queue_input_event (nr, state, max, currprefs.input_autofire_linecnt);
 		else
 			queue_input_event (nr, -1, 0, 0);
 #else
 		if (state)
-			queue_input_event (nr, NULL, state, max, currprefs.input_autofire_framecnt * 312, 1);
+			queue_input_event (nr, NULL, state, max, currprefs.input_autofire_linecnt, 1);
 		else
 			queue_input_event (nr, NULL, -1, 0, 0, 1);
 #endif
@@ -2042,7 +2044,7 @@ static void inputdevice_checkconfig (void)
 		currprefs.input_joymouse_deadzone != changed_prefs.input_joymouse_deadzone ||
 		currprefs.input_joystick_deadzone != changed_prefs.input_joystick_deadzone ||
 		currprefs.input_joymouse_speed != changed_prefs.input_joymouse_speed ||
-		currprefs.input_autofire_framecnt != changed_prefs.input_autofire_framecnt ||
+		currprefs.input_autofire_linecnt != changed_prefs.input_autofire_linecnt ||
 		currprefs.input_mouse_speed != changed_prefs.input_mouse_speed) {
 
 			currprefs.input_selected_setting = changed_prefs.input_selected_setting;
@@ -2050,7 +2052,7 @@ static void inputdevice_checkconfig (void)
 			currprefs.input_joymouse_deadzone = changed_prefs.input_joymouse_deadzone;
 			currprefs.input_joystick_deadzone = changed_prefs.input_joystick_deadzone;
 			currprefs.input_joymouse_speed = changed_prefs.input_joymouse_speed;
-			currprefs.input_autofire_framecnt = changed_prefs.input_autofire_framecnt;
+			currprefs.input_autofire_linecnt = changed_prefs.input_autofire_linecnt;
 			currprefs.input_mouse_speed = changed_prefs.input_mouse_speed;
 
 			inputdevice_updateconfig (&currprefs);
@@ -2300,9 +2302,9 @@ static void process_custom_event (struct uae_input_device *id, int offset, int s
 
 	if (autofire)
 #ifdef INPUTDEVICE_SIMPLE
-		queue_input_event (-1, 1, 1, currprefs.input_autofire_framecnt * 312);
+		queue_input_event (-1, 1, 1, currprefs.input_autofire_linecnt);
 #else
-		queue_input_event (-1, NULL, 1, 1, currprefs.input_autofire_framecnt * 312, 1);
+		queue_input_event (-1, NULL, 1, 1, currprefs.input_autofire_linecnt, 1);
 #endif
 	if (state) {
 		id->flags[offset][slotoffset] &= ~ID_FLAG_CUSTOMEVENT_TOGGLED;
@@ -3813,7 +3815,7 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_analog_joystick_mult = 15;
 	p->input_analog_joystick_offset = -1;
 	p->input_mouse_speed = 100;
-  p->input_autofire_framecnt = 8;
+  p->input_autofire_linecnt = 8 * 312;
 	p->input_keyboard_type = 0;
 	keyboard_default = keyboard_default_table[p->input_keyboard_type];
 	inputdevice_default_kb_all (p);
@@ -4359,7 +4361,7 @@ void inputdevice_copyconfig (const struct uae_prefs *src, struct uae_prefs *dst)
 	dst->input_joystick_deadzone = src->input_joystick_deadzone;
 	dst->input_joymouse_speed = src->input_joymouse_speed;
 	dst->input_mouse_speed = src->input_mouse_speed;
-  dst->input_autofire_framecnt = src->input_autofire_framecnt;
+  dst->input_autofire_linecnt = src->input_autofire_linecnt;
   dst->input_tablet = src->input_tablet;
   
   dst->pandora_tapDelay = src->pandora_tapDelay;

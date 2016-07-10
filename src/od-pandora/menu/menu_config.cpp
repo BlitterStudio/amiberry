@@ -456,7 +456,8 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f,"gp2xclock=%d\n", &dummy);
 		int joybuffer = 0;
 		fscanf(f,"joyconf=%d\n",&joybuffer);
-		fscanf(f,"autofireRate=%d\n",&p->input_autofire_framecnt);
+		fscanf(f,"autofireRate=%d\n",&p->input_autofire_linecnt);
+		p->input_autofire_linecnt = p->input_autofire_linecnt * 312;
 		fscanf(f,"autofire=%d\n", &dummy);
 		fscanf(f,"stylusOffset=%d\n",&dummy);
 		fscanf(f,"tapDelay=%d\n",&p->pandora_tapDelay);

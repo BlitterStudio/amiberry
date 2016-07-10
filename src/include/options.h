@@ -212,7 +212,7 @@ struct uae_prefs {
 	int input_joymouse_speed;
 	int input_analog_joystick_mult;
 	int input_analog_joystick_offset;
-  int input_autofire_framecnt;
+	int input_autofire_linecnt;
 	int input_mouse_speed;
   int input_tablet;
 	int input_keyboard_type;

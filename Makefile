@@ -59,7 +59,8 @@ MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/
 MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -Wno-unused -Wno-format  -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
-LDFLAGS +=  -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
+LDFLAGS += -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123
+LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
 
 ifndef DEBUG
 MORE_CFLAGS += -O3 -fomit-frame-pointer
@@ -159,6 +160,7 @@ OBJS =	\
 	src/od-pandora/fsdb_host.o \
 	src/od-pandora/hardfile_pandora.o \
 	src/od-pandora/keyboard.o \
+	src/od-pandora/mp3decoder.o \
 	src/od-pandora/writelog.o \
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \

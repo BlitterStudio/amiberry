@@ -57,12 +57,22 @@ const uae_u32 ARM_CCR_MAP[] = { 0, ARM_C_FLAG, // 1 C
     unlock2(x);                     \
   }
 
+#ifdef ARMV6T2
 #define DUPLICACTE_CARRY_FROM_REG(r)  \
   if (needed_flags & FLAG_X) {        \
     int x = writereg(FLAGX, 4);       \
   	UBFX_rrii(x, r, 29, 1);           \
     unlock2(x);                       \
   }
+#else
+#define DUPLICACTE_CARRY_FROM_REG(r)  \
+  if (needed_flags & FLAG_X) {        \
+    int x = writereg(FLAGX, 4);       \
+  	LSR_rri(x, r, 29);                \
+  	AND_rri(x, x, 1);                 \
+    unlock2(x);                       \
+  }
+#endif
 
 /*
  * ADD
@@ -357,13 +367,23 @@ MIDFUNC(3,jff_ADDX_b,(W4 d, RR1 s, RR1 v))
 	MSR_CPSRf_r(REG_WORK1);
 
 	MVN_ri(REG_WORK1, 0);
+#ifdef ARMV6T2
 	BFI_rrii(REG_WORK1, s, 24, 31);
+#else
+	BIC_rri(REG_WORK1, REG_WORK1, 0xff000000);
+	ORR_rrrLSLi(REG_WORK1, REG_WORK1, s, 24);
+#endif
   ADCS_rrrLSLi(d, REG_WORK1, v, 24);
 	ASR_rri(d, d, 24);
 
 	MRS_CPSR(REG_WORK1);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -388,13 +408,24 @@ MIDFUNC(3,jff_ADDX_w,(W4 d, RR2 s, RR2 v))
 	MSR_CPSRf_r(REG_WORK1);
 
 	MVN_ri(REG_WORK1, 0);
+#ifdef ARMV6T2
 	BFI_rrii(REG_WORK1, s, 16, 31);
+#else
+	BIC_rri(REG_WORK1, REG_WORK1, 0xff000000);
+	BIC_rri(REG_WORK1, REG_WORK1, 0x00ff0000);
+	ORR_rrrLSLi(REG_WORK1, REG_WORK1, s, 16);
+#endif
   ADCS_rrrLSLi(d, REG_WORK1, v, 16);
 	ASR_rri(d, d, 16);
 
 	MRS_CPSR(REG_WORK1);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -422,7 +453,12 @@ MIDFUNC(3,jff_ADDX_l,(W4 d, RR4 s, RR4 v))
 
 	MRS_CPSR(REG_WORK1);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -1144,8 +1180,15 @@ MIDFUNC(2,jff_BCHG_b_imm,(RW4 d, IMM s))
 	uae_u32 v = (1 << s);
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(d, d, v);
+#ifdef ARMV6T2
   UBFX_rrii(REG_WORK2, d, s, 1);
   BFI_rrii(REG_WORK1, REG_WORK2, 30, 30);
+#else
+	LSR_rri(REG_WORK2, d, 29);
+	AND_rri(REG_WORK2, REG_WORK2, 1);
+  BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
+  ORR_rrrLSLi(REG_WORK1, REG_WORK1, REG_WORK2, 30);
+#endif
   MSR_CPSRf_r(REG_WORK1);
   
 	unlock2(d);
@@ -1159,8 +1202,15 @@ MIDFUNC(2,jff_BCHG_l_imm,(RW4 d, IMM s))
 	uae_u32 v = (1 << s);
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(d, d, v);
+#ifdef ARMV6T2
   UBFX_rrii(REG_WORK2, d, s, 1);
   BFI_rrii(REG_WORK1, REG_WORK2, 30, 30);
+#else
+	LSR_rri(REG_WORK2, d, 29);
+	AND_rri(REG_WORK2, REG_WORK2, 1);
+  BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
+  ORR_rrrLSLi(REG_WORK1, REG_WORK1, REG_WORK2, 30);
+#endif
   MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(d);
@@ -3278,7 +3328,12 @@ MIDFUNC(2,jff_NEGX_b,(W4 d, RR1 s))
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -3307,7 +3362,12 @@ MIDFUNC(2,jff_NEGX_w,(W4 d, RR2 s))
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -3335,7 +3395,12 @@ MIDFUNC(2,jff_NEGX_l,(W4 d, RR4 s))
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -3602,7 +3667,13 @@ MIDFUNC(3,jff_ROL_b_imm,(W4 d, RR4 s, IMM i))
       TST_rr(d, d);     
 
 		MRS_CPSR(REG_WORK2);
+#ifdef ARMV6T2
 		BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+#else
+		TST_ri(d, 1);
+		CC_ORR_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+		CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+#endif
 		MSR_CPSRf_r(REG_WORK2);
 	} else {
 		TST_rr(d, d);
@@ -3627,7 +3698,13 @@ MIDFUNC(3,jff_ROL_w_imm,(W4 d, RR4 s, IMM i))
       TST_rr(d, d);
       
 		MRS_CPSR(REG_WORK2);
+#ifdef ARMV6T2
 		BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+#else
+		TST_ri(d, 1);
+		CC_ORR_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+		CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+#endif
 		MSR_CPSRf_r(REG_WORK2);
 	} else {
 		TST_rr(d, d);
@@ -3651,7 +3728,13 @@ MIDFUNC(3,jff_ROL_l_imm,(W4 d, RR4 s, IMM i))
       MOVS_rr(d, s);
 
 		MRS_CPSR(REG_WORK2);
+#ifdef ARMV6T2
 		BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+#else
+		TST_ri(d, 1);
+		CC_ORR_rri(NATIVE_CC_NE, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+		CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+#endif
 		MSR_CPSRf_r(REG_WORK2);
 	} else {
 		MOVS_rr(d, s);
@@ -3750,7 +3833,13 @@ MIDFUNC(3,jff_ROL_b,(W4 d, RR4 s, RR4 i))
 	RORS_rrr(d, d, REG_WORK1);
 
 	MRS_CPSR(REG_WORK2);
+#ifdef ARMV6T2
 	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+#else
+	TST_ri(d, 1);
+	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
+	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+#endif
 	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
@@ -3778,7 +3867,13 @@ MIDFUNC(3,jff_ROL_w,(W4 d, RR4 s, RR4 i))
 	RORS_rrr(d, d, REG_WORK1);
 
 	MRS_CPSR(REG_WORK2);
+#ifdef ARMV6T2
 	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+#else
+	TST_ri(d, 1);
+	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
+	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+#endif
 	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
@@ -3805,7 +3900,13 @@ MIDFUNC(3,jff_ROL_l,(W4 d, RR4 s, RR4 i))
 	RORS_rrr(d, s, REG_WORK1);
 
 	MRS_CPSR(REG_WORK2);
+#ifdef ARMV6T2
 	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+#else
+	TST_ri(d, 1);
+	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
+	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+#endif
 	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
@@ -3850,7 +3951,13 @@ MIDFUNC(2,jff_ROLW,(W4 d, RR4 s))
 	RORS_rri(d, d, (32 - 1));
 
 	MRS_CPSR(REG_WORK2);
+#ifdef ARMV6T2
 	BFI_rrii(REG_WORK2, d, 29, 29); // Handle C flag
+#else
+	TST_ri(d, 1);
+	ORR_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG);
+	CC_BIC_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, ARM_C_FLAG);
+#endif
 	MSR_CPSRf_r(REG_WORK2);
 
 	unlock2(d);
@@ -4821,7 +4928,12 @@ MIDFUNC(3,jff_SUBX_b,(W4 d, RR1 s, RR1 v))
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -4853,7 +4965,12 @@ MIDFUNC(3,jff_SUBX_w,(W4 d, RR2 s, RR2 v))
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
@@ -4883,7 +5000,12 @@ MIDFUNC(3,jff_SUBX_l,(W4 d, RR4 s, RR4 v))
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	AND_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+#ifdef ARMV6T2
 	UBFX_rrii(x, REG_WORK1, 29, 1); // Duplicate carry
+#else
+	LSR_rri(x, REG_WORK1, 29);
+	AND_rri(x, x, 1);
+#endif
 	MSR_CPSRf_r(REG_WORK1);
 
 	unlock2(x);
