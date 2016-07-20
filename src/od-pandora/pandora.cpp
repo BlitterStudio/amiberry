@@ -834,7 +834,7 @@ int main (int argc, char *argv[])
   alloc_AmigaMem();
   RescanROMs();
 
-  keyboard_settrans();  
+  //keyboard_settrans();
   real_main (argc, argv);
   
   ClearAvailableROMList();
@@ -921,7 +921,11 @@ int handle_msgpump (void)
   				      inputdevice_do_keyboard(AK_LSH, 0);
 				      inputdevice_do_keyboard(keycode, 1);
   				  } else {
+#ifdef RASPBERRY
+				      inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+#else
 				      inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+#endif
 				    }
   				  break;
 				}
@@ -966,7 +970,11 @@ int handle_msgpump (void)
 				      if(modifier == KMOD_SHIFT)
   				      inputdevice_do_keyboard(AK_LSH, 0);
             } else {
+#ifdef RASPBERRY
+				      inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+#else
 				      inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+#endif
 				    }
   				  break;
   	    }

@@ -51,7 +51,6 @@ static int cdrdcnt = 0;
 
 #ifdef NO_SOUND
 
-
 void finish_sound_buffer (void) {  }
 
 int setup_sound (void) { sound_available = 0; return 0; }
@@ -145,7 +144,7 @@ static void sound_thread_mixer(void *ud, Uint8 *stream, int len)
       //if((cnt%SOUND_BUFFERS_COUNT) == (wrcnt%SOUND_BUFFERS_COUNT))
 	//printf("Error: Both consumer and writer use same buffer\n");
 
-	cdrdcnt = cdwrcnt;
+	//cdrdcnt = cdwrcnt;
 	cnt++;
 #ifdef SOUND_USE_SEMAPHORES
 	sem_post(&callback_sem);
@@ -277,7 +276,7 @@ void finish_cdaudio_buffer (void)
 {
 	cdwrcnt++;
 	cdbufpt = render_cdbuff = cdaudio_buffer[cdwrcnt & (CDAUDIO_BUFFERS - 1)];
-  finish_cdbuff = cdbufpt + CDAUDIO_BUFFER_LEN;
+  finish_cdbuff = cdbufpt + CDAUDIO_BUFFER_LEN * 2;
   audio_activate();
 }
 

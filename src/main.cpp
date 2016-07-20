@@ -515,6 +515,8 @@ static int real_main2 (int argc, TCHAR **argv)
   SDL_Init (SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE);
 #endif
 #endif
+ 
+  keyboard_settrans();
 
   if (restart_config[0]) {
 	  default_prefs (&currprefs, 0);
