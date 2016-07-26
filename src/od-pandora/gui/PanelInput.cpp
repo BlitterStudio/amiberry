@@ -287,7 +287,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
   lblPort0->setSize(100, LABEL_HEIGHT);
   lblPort0->setAlignment(gcn::Graphics::RIGHT);
 	cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
-  cboPort0->setSize(160, DROPDOWN_HEIGHT);
+  cboPort0->setSize(435, DROPDOWN_HEIGHT);
   cboPort0->setBaseColor(gui_baseCol);
   cboPort0->setId("cboPort0");
   cboPort0->addActionListener(inputActionListener);
@@ -296,7 +296,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
   lblPort1->setSize(100, LABEL_HEIGHT);
   lblPort1->setAlignment(gcn::Graphics::RIGHT);
 	cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
-  cboPort1->setSize(160, DROPDOWN_HEIGHT);
+  cboPort1->setSize(435, DROPDOWN_HEIGHT);
   cboPort1->setBaseColor(gui_baseCol);
   cboPort1->setId("cboPort1");
   cboPort1->addActionListener(inputActionListener);
@@ -444,8 +444,10 @@ void InitPanelInput(const struct _ConfigCategory& category)
   posY += cboPort0->getHeight() + DISTANCE_NEXT_Y;
   category.panel->add(lblPort1, DISTANCE_BORDER, posY);
   category.panel->add(cboPort1, DISTANCE_BORDER + lblPort1->getWidth() + 8, posY);
-  category.panel->add(lblAutofire, 300, posY);
-  category.panel->add(cboAutofire, 300 + lblAutofire->getWidth() + 8, posY);
+
+  posY += cboPort1->getHeight() + DISTANCE_NEXT_Y;
+  category.panel->add(lblAutofire, DISTANCE_BORDER, posY);
+  category.panel->add(cboAutofire, DISTANCE_BORDER + lblAutofire->getWidth() + 8, posY);
   posY += cboAutofire->getHeight() + DISTANCE_NEXT_Y;
 
   category.panel->add(lblMouseSpeed, DISTANCE_BORDER, posY);
