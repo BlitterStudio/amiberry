@@ -82,6 +82,12 @@ class StringListModel : public gcn::ListModel
       return values.size();
     }
 
+    int AddElement(const char * Elem)
+    {
+      values.push_back(Elem);
+      return 0;
+    }
+
     std::string getElementAt(int i)
     {
       if(i < 0 || i >= values.size())
@@ -167,6 +173,9 @@ class InputActionListener : public gcn::ActionListener
           case 2: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK; break;
           case 3: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK_CD32; break;
           case 4: changed_prefs.jports[0].id = -1;            changed_prefs.jports[0].mode = JSEM_MODE_DEFAULT; break;
+          default:changed_prefs.jports[0].id = JSEM_JOYS + cboPort0->getSelected() - 4;
+                  changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK;
+                  break;
         }
         inputdevice_updateconfig(&changed_prefs);
       }
@@ -179,6 +188,9 @@ class InputActionListener : public gcn::ActionListener
           case 2: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK; break;
           case 3: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK_CD32; break;
           case 4: changed_prefs.jports[1].id = -1;            changed_prefs.jports[1].mode = JSEM_MODE_DEFAULT; break;
+          default:changed_prefs.jports[1].id = JSEM_JOYS + cboPort1->getSelected() - 4;
+                  changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
+                  break;
         }
         inputdevice_updateconfig(&changed_prefs);
       }
@@ -260,6 +272,16 @@ static InputActionListener* inputActionListener;
 void InitPanelInput(const struct _ConfigCategory& category)
 {
   inputActionListener = new InputActionListener();
+
+  if (ctrlPortList.getNumberOfElements() < (4 + inputdevice_get_device_total (IDTYPE_JOYSTICK)))
+  {
+    int i;
+    for(i=0; i<(inputdevice_get_device_total (IDTYPE_JOYSTICK) - 1); i++)
+    {
+       ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_JOYSTICK,i + 1));
+    }
+  }
+
 
   lblPort0 = new gcn::Label("Port0:");
   lblPort0->setSize(100, LABEL_HEIGHT);
@@ -536,8 +558,11 @@ void RefreshPanelInput(void)
       else
         cboPort0->setSelected(3);
       break;
-    default:
+    case -1:
       cboPort0->setSelected(4); 
+      break;
+    default:
+      cboPort0->setSelected(changed_prefs.jports[0].id-JSEM_JOYS + 4); 
       break;
   }
   
@@ -555,8 +580,11 @@ void RefreshPanelInput(void)
       else
         cboPort1->setSelected(3); 
       break;
-    default:
+    case -1:
       cboPort1->setSelected(4); 
+      break;
+    default:
+      cboPort1->setSelected(changed_prefs.jports[1].id-JSEM_JOYS + 4); 
       break;
   } 
 

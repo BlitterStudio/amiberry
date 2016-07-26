@@ -215,6 +215,9 @@ extern void inputdevice_tablet_strobe (void);
 
 extern int input_getqualifiers (void);
 
+extern int inputdevice_get_device_total (int type);
+extern TCHAR *inputdevice_get_device_name (int type, int devnum);
+
 #define JSEM_MODE_DEFAULT 0
 #define JSEM_MODE_MOUSE 1
 #define JSEM_MODE_JOYSTICK 2

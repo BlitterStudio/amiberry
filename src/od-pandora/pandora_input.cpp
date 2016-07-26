@@ -255,12 +255,11 @@ int input_get_default_keyboard (int num)
 #define FIRST_JOY_AXIS	0
 #define FIRST_JOY_BUTTON	MAX_JOY_AXES
 
-#define MAX_JOYSTICK    4
-
 
 static int nr_joysticks = 0;
-static char JoystickName[MAX_JOYSTICK][40];
-static SDL_Joystick* Joysticktable[MAX_JOYSTICK];
+static char JoystickName[MAX_INPUT_DEVICES][40];
+
+static SDL_Joystick* Joysticktable[MAX_INPUT_DEVICES];
 
 
 static int get_joystick_num (void)
@@ -271,13 +270,13 @@ static int get_joystick_num (void)
 
 static int init_joystick (void)
 {
-  //This function is called many times... let's only do treatment one time...
-  if (nr_joysticks != 0)
+  //This function is called too many times... we can filter if number of joy is good...
+  if (nr_joysticks == SDL_NumJoysticks ())
     return 1;
 
   nr_joysticks = SDL_NumJoysticks ();
-  if (nr_joysticks > 4)
-    nr_joysticks = 4;
+  if (nr_joysticks > MAX_INPUT_DEVICES)
+    nr_joysticks = MAX_INPUT_DEVICES;
   for (int cpt; cpt < nr_joysticks; cpt++)
   {
     Joysticktable[cpt] = SDL_JoystickOpen (cpt);
@@ -317,8 +316,24 @@ static TCHAR *get_joystick_friendlyname (int joy)
 
 static TCHAR *get_joystick_uniquename (int joy)
 {
-  return "JOY0";
+  if (joy == 0)
+    return "JOY0";
+  if (joy == 1)
+    return "JOY1";
+  if (joy == 2)
+    return "JOY2";
+  if (joy == 3)
+    return "JOY3";
+  if (joy == 4)
+    return "JOY4";
+  if (joy == 5)
+    return "JOY5";
+  if (joy == 6)
+    return "JOY6";
+
+  return "JOY7";
 }
+
 
 static int get_joystick_widget_num (int joy)
 {
@@ -345,7 +360,7 @@ static int get_joystick_widget_type (int joy, int num, TCHAR *name, uae_u32 *cod
 	    switch(num)
 	    {
 	      case FIRST_JOY_BUTTON:
-          sprintf (name, "Button X/CD32 red");
+	        sprintf (name, "Button X/CD32 red");
 	        break;
 	      case FIRST_JOY_BUTTON + 1:
 	        sprintf (name, "Button B/CD32 blue");
@@ -390,10 +405,15 @@ static int get_joystick_flags (int num)
 
 static void read_joystick (void)
 {
-  if(currprefs.jports[0].id == JSEM_JOYS || currprefs.jports[1].id == JSEM_JOYS) {
+
+  for (int joyid = 0; joyid < MAX_JPORTS ; joyid ++)
+  // First handle fake joystick from pandora...
+  if(currprefs.jports[joyid].id == JSEM_JOYS)
+  {
   	Uint8 *keystate = SDL_GetKeyState(NULL);
     
-    if(!keystate[SDLK_RCTRL]) { // Right shoulder + dPad -> cursor keys
+    if(!keystate[SDLK_RCTRL])
+    { // Right shoulder + dPad -> cursor keys
       int axis = (keystate[SDLK_LEFT] ? -32767 : (keystate[SDLK_RIGHT] ? 32767 : 0));
       if(!joyXviaCustom)
         setjoystickstate (0, 0, axis, 32767);
@@ -426,35 +446,39 @@ static void read_joystick (void)
     if(!joyButXviaCustom[4])
       setjoybuttonstate (0, 4, cd32_rwd);
   }
+  else if (jsem_isjoy(joyid,&currprefs) != -1)
+    {
+      // Now we handle real SDL joystick...
+      int hostjoyid = currprefs.jports[joyid].id - JSEM_JOYS -1;
+      int hat = SDL_JoystickGetHat(Joysticktable[hostjoyid],0);
+      int val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], 0);
 
-  // Raspberry: Temporary read SDL Joystick here...
-  for (int cpt = 0; cpt < nr_joysticks; cpt++)
-  {
-    int hat = SDL_JoystickGetHat(Joysticktable[cpt],0);
-    int val = SDL_JoystickGetAxis(Joysticktable[cpt], 0);
-    if (hat & SDL_HAT_RIGHT)
-      setjoystickstate (cpt, 0, 32767, 32767);
-    else 
-    if (hat & SDL_HAT_LEFT)
-      setjoystickstate (cpt, 0, -32767, 32767);
-    else
-      setjoystickstate (cpt, 0, val, 32767);
-    val = SDL_JoystickGetAxis(Joysticktable[cpt], 1);
-    if (hat & SDL_HAT_UP)
-       setjoystickstate (cpt, 1, -32767, 32767);
-    else
-    if (hat & SDL_HAT_DOWN) 
-       setjoystickstate (cpt, 1, 32767, 32767);
-    else
-       setjoystickstate (cpt, 1, val, 32767);
+      if (hat & SDL_HAT_RIGHT)
+        setjoystickstate (hostjoyid + 1, 0, 32767, 32767);
+      else 
+      if (hat & SDL_HAT_LEFT)
+        setjoystickstate (hostjoyid + 1, 0, -32767, 32767);
+      else
+        setjoystickstate (hostjoyid + 1, 0, val, 32767);
+      val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], 1);
+      if (hat & SDL_HAT_UP)
+         setjoystickstate (hostjoyid + 1, 1, -32767, 32767);
+      else
+      if (hat & SDL_HAT_DOWN) 
+         setjoystickstate (hostjoyid + 1, 1, 32767, 32767);
+      else
+         setjoystickstate (hostjoyid + 1, 1, val, 32767);
 
-    if (SDL_JoystickGetButton(Joysticktable[cpt], 0) & 1)
-      setjoybuttonstate (cpt, 0, 1 );
-    if (SDL_JoystickGetButton(Joysticktable[cpt], 1) & 1)
-      setjoybuttonstate (cpt, 1, 1 );
+      setjoybuttonstate (hostjoyid + 1, 0, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 0) & 1) );
+      setjoybuttonstate (hostjoyid + 1, 1, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 1) & 1) );
+      setjoybuttonstate (hostjoyid + 1, 2, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 2) & 1) );
+      setjoybuttonstate (hostjoyid + 1, 3, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 3) & 1) );
 
-  }
-
+      // cd32 start, ffw, rwd
+      setjoybuttonstate (hostjoyid + 1, 4, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 4) & 1) );
+      setjoybuttonstate (hostjoyid + 1, 5, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 5) & 1) );
+      setjoybuttonstate (hostjoyid + 1, 6, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 6) & 1) );
+    }
 }
 
 struct inputdevice_functions inputdevicefunc_joystick = {
