@@ -141,8 +141,8 @@ static void sound_thread_mixer(void *ud, Uint8 *stream, int len)
 	else
 	  	memcpy(stream, sndbuffer[cnt%SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN, len));
 
-      //if((cnt%SOUND_BUFFERS_COUNT) == (wrcnt%SOUND_BUFFERS_COUNT))
-	//printf("Error: Both consumer and writer use same buffer\n");
+      if((cnt%SOUND_BUFFERS_COUNT) == (wrcnt%SOUND_BUFFERS_COUNT))
+	printf("Error: Both consumer and writer use same buffer\n");
 
 	//cdrdcnt = cdwrcnt;
 	cnt++;
@@ -181,7 +181,7 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 		init_soundbuffer_usage();
 		printf("starting sound thread..\n");
 		ret = sem_init(&sound_sem, 0, 0);
-		sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 1);
+		sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 2);
 		if (ret != 0) printf("sem_init() failed: %i, errno=%i\n", ret, errno);
 	}
 
