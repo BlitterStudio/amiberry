@@ -456,7 +456,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
   cfgfile_dwrite_str (f, _T("absolute_mouse"), abspointers[p->input_tablet]);
 
   cfgfile_write (f, _T("key_for_menu"), _T("%d"), p->key_for_menu);
-  cfgfile_write (f, _T("key_for_input_switching"), _T("%d"), p->key_for_input_switching);
 
   cfgfile_write (f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
   cfgfile_write (f, _T("gfx_width"), _T("%d"), p->gfx_size.width);
@@ -883,8 +882,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
     return 1;
 
 
-    if (cfgfile_intval (option, value, "key_for_menu", &p->key_for_menu, 1)
-          || cfgfile_intval (option, value, "key_for_input_switching", &p->key_for_input_switching, 1));
+  if (cfgfile_intval (option, value, "key_for_menu", &p->key_for_menu, 1))
     return 1;
 
 
@@ -2076,7 +2074,6 @@ void default_prefs (struct uae_prefs *p, int type)
   p->input_tablet = TABLET_OFF;
 
   p->key_for_menu = SDLK_F12;
-  p->key_for_input_switching = SDLK_F11;
 
   inputdevice_default_prefs (p);
 

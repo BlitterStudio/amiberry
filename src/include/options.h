@@ -197,10 +197,7 @@ struct uae_prefs {
   int pandora_tapDelay;
   int pandora_customControls;
 
-
   int key_for_menu;
-  int key_for_input_switching;
-
 
   /* input */
 
