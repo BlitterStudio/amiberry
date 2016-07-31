@@ -180,6 +180,7 @@ static void open_screen(struct uae_prefs *p)
   {
     const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
     printf("DispmanX: Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+    // For debug, in order to avoid full screen.
     Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
     //Dummy_prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
   }
@@ -252,10 +253,10 @@ static void open_screen(struct uae_prefs *p)
   }
 
   // For debug, in order to avoid full screen.
-  //vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2),
-  //                     (dispmanxdinfo.height /2) ,
-  //                     (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/2,
-  //                     (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/2);
+  //vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2.7),
+  //                     0 ,
+  //                     (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/1.5,
+  //                     (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/1.5);
 
 
   if (DispManXElementpresent == 0)

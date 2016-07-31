@@ -34,7 +34,6 @@ int produce_sound=0;
 int changed_produce_sound=0;
 
 #define SOUND_USE_SEMAPHORES
-#define SOUND_BUFFERS_COUNT 4
 uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
 unsigned n_callback_sndbuff, n_render_sndbuff;
 uae_u16 *sndbufpt = sndbuffer[0];
@@ -132,17 +131,15 @@ static void sound_thread_mixer(void *ud, Uint8 *stream, int len)
 			if(cdaudio_active && currprefs.sound_freq == 44100 && cdrdcnt < cdwrcnt)
 			{
 				for(int i=0; i<SNDBUFFER_LEN * 2; ++i)
-				sndbuffer[cnt&3][i] += cdaudio_buffer[cdrdcnt & (CDAUDIO_BUFFERS - 1)][i];
+				sndbuffer[cnt % SOUND_BUFFERS_COUNT][i] += cdaudio_buffer[cdrdcnt & (CDAUDIO_BUFFERS - 1)][i];
 				cdrdcnt++;
 			}
 
 			memcpy(stream, sndbuffer[cnt%SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN*4, len));
 		}
 	else
-	  	memcpy(stream, sndbuffer[cnt%SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN, len));
+	  	memcpy(stream, sndbuffer[cnt%SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN * 2, len));
 
-      if((cnt%SOUND_BUFFERS_COUNT) == (wrcnt%SOUND_BUFFERS_COUNT))
-	printf("Error: Both consumer and writer use same buffer\n");
 
 	//cdrdcnt = cdwrcnt;
 	cnt++;
@@ -181,7 +178,7 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 		init_soundbuffer_usage();
 		printf("starting sound thread..\n");
 		ret = sem_init(&sound_sem, 0, 0);
-		sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 2);
+		sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 1);
 		if (ret != 0) printf("sem_init() failed: %i, errno=%i\n", ret, errno);
 	}
 
@@ -230,28 +227,21 @@ void finish_sound_buffer (void)
 #endif
 
 	//printf("Sound finish %i\n", wrcnt);
-#if 0
-	if(currprefs.sound_stereo)
-	write(sounddev, sndbuffer[0], SNDBUFFER_LEN*2);
-	else
-	write(sounddev, sndbuffer[0], SNDBUFFER_LEN);  
-	sndbufpt = render_sndbuff = sndbuffer[0];
-#else
 
 
 	wrcnt++;
 	sndbufpt = render_sndbuff = sndbuffer[wrcnt%SOUND_BUFFERS_COUNT];
-#ifdef SOUND_USE_SEMAPHORES
-	sem_post(&sound_sem);
-	sem_wait(&callback_sem);
-#endif
-	//__android_log_print(ANDROID_LOG_INFO, "UAE4ALL2","Sound buffer write cnt %d buf %d\n", wrcnt, wrcnt%SOUND_BUFFERS_COUNT);
-#endif
+
 
 	if(currprefs.sound_stereo)
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN * 2;
 	else
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN;
+
+#ifdef SOUND_USE_SEMAPHORES
+	sem_post(&sound_sem);
+	sem_wait(&callback_sem);
+#endif
 
 #ifdef DEBUG_SOUND
 	dbg(" sound.c : ! finish_sound_buffer");
@@ -261,7 +251,7 @@ void finish_sound_buffer (void)
 
 void restart_sound_buffer(void)
 {
-	sndbufpt = render_sndbuff = sndbuffer[wrcnt&3];
+	sndbufpt = render_sndbuff = sndbuffer[wrcnt % SOUND_BUFFERS_COUNT];
 	if(currprefs.sound_stereo)
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN * 2;
 	else
@@ -435,7 +425,7 @@ void reset_sound (void)
   if (!have_sound)
   	return;
 
-  init_soundbuffer_usage();
+  //init_soundbuffer_usage();
 
   clear_sound_buffers();
   clear_cdaudio_buffers();
