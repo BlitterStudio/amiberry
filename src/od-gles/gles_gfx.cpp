@@ -10,7 +10,6 @@
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
-#include "od-pandora/inputmode.h"
 #include "savestate.h"
 #include "picasso96.h"
 
@@ -251,11 +250,6 @@ void flush_screen ()
 {
     //SDL_UnlockSurface (prSDLScreen);
 
-    if (show_inputmode)
-    {
-        inputmode_redraw();	
-    }
-
 
     if (savestate_state == STATE_DOSAVE)
     {
@@ -409,8 +403,8 @@ int graphics_init (void)
 	if (!init_colors ())
 		return 0;
 
-	buttonstate[0] = buttonstate[1] = buttonstate[2] = 0;
-	keyboard_init();
+	//buttonstate[0] = buttonstate[1] = buttonstate[2] = 0;
+	//keyboard_init();
   
 	return 1;
 }

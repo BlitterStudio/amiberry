@@ -22,7 +22,7 @@ else ifeq ($(PLATFORM),generic-sdl)
 else ifeq ($(PLATFORM),gles)
 	# For Raspberry Pi uncomment the two below lines
 	#LDFLAGS += -lbcm_host
-	#CPU_FLAGS="-mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard"
+	#CPU_FLAGS= -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2
 	HAVE_GLES_DISPLAY = 1
 	HAVE_NEON = 1
