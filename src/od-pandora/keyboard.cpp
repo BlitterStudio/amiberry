@@ -15,6 +15,8 @@
 #include <SDL.h>
 
 
+char keyboard_type = 0;
+
 static struct uae_input_device_kbr_default keytrans_amiga_x11[] = {
 
 	{  9 ,   INPUTEVENT_KEY_ESC},
@@ -346,14 +348,17 @@ void keyboard_settrans (void)
   if (strcmp(vid_drv_name, "x11") == 0)
   {
     printf("Will use keycode from x11 mapping.\n");
+    keyboard_type = KEYCODE_X11;
     inputdevice_setkeytranslation (keytrans_x11, kbmaps);
   } else  if (strcmp(vid_drv_name, "fbcon") == 0)
   {
     printf("Will use keycode from fbcon mapping.\n");
+    keyboard_type = KEYCODE_FBCON;
     inputdevice_setkeytranslation (keytrans_fbcon, kbmaps);
   } else
   {
     printf("Unknown keycode to use, will use keysym\n");
+    keyboard_type = KEYCODE_UNK;
     inputdevice_setkeytranslation (keytrans, kbmaps);
   }
 }

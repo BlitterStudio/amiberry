@@ -17,7 +17,9 @@ else ifeq ($(PLATFORM),rpi1)
 	HAVE_DISPMANX = 1
 	DEFS += -DRASPBERRY
 else ifeq ($(PLATFORM),generic-sdl)
-	MORE_CFLAGS += -DARMV6T2 
+	# On Raspberry Pi uncomment below line or remove ARMV6T2 define.
+	#CPU_FLAGS= -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	MORE_CFLAGS += -DARMV6T2
 	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),gles)
 	# For Raspberry Pi uncomment the two below lines
