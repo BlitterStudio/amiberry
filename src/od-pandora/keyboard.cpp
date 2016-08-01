@@ -125,9 +125,10 @@ static struct uae_input_device_kbr_default keytrans_amiga_x11[] = {
 	{ 116,  INPUTEVENT_KEY_CURSOR_DOWN},
 	{ 114,  INPUTEVENT_KEY_CURSOR_RIGHT},
 
-	{  133,  INPUTEVENT_KEY_AMIGA_LEFT},  // Left amiga mapped to left Windows
+	{  133,  INPUTEVENT_KEY_AMIGA_LEFT},   // Left amiga mapped to left Windows
 	{  134,  INPUTEVENT_KEY_AMIGA_RIGHT},  // Right amiga mapped to right windows key.
-	{  135,  INPUTEVENT_KEY_AMIGA_RIGHT}  // Right amiga mapped to Menu key.
+	{  135,  INPUTEVENT_KEY_AMIGA_RIGHT},  // Right amiga mapped to Menu key.
+	{ -1, 0 }
   };
 
 
@@ -243,9 +244,10 @@ static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] = {
 	{ 114 -8,  INPUTEVENT_KEY_CURSOR_RIGHT},
 
 
-	{  133 -8 ,  INPUTEVENT_KEY_AMIGA_LEFT},  // Left amiga mapped to left Windows
+	{  133 -8 ,  INPUTEVENT_KEY_AMIGA_LEFT},   // Left amiga mapped to left Windows
 	{  134 -8 ,  INPUTEVENT_KEY_AMIGA_RIGHT},  // Right amiga mapped to right windows key.
-	{  135 -8 ,  INPUTEVENT_KEY_AMIGA_RIGHT}  // Right amiga mapped to Menu key.
+	{  135 -8 ,  INPUTEVENT_KEY_AMIGA_RIGHT},  // Right amiga mapped to Menu key.
+	{ -1, 0 }
   };
 
 
