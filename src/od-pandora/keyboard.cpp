@@ -47,7 +47,7 @@ static struct uae_input_device_kbr_default keytrans_amiga_x11[] = {
 	{  19,  INPUTEVENT_KEY_0},
 	{  20,  INPUTEVENT_KEY_SUB},
 	{  21,  INPUTEVENT_KEY_EQUALS},
-	{  22,  INPUTEVENT_KEY_BACKSLASH},
+	{  22,  INPUTEVENT_KEY_BACKSPACE},
 
 	{  23,  INPUTEVENT_KEY_TAB},
 	{  24,  INPUTEVENT_KEY_Q},
@@ -165,7 +165,7 @@ static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] = {
 	{  19 -8 ,  INPUTEVENT_KEY_0},
 	{  20 -8 ,  INPUTEVENT_KEY_SUB},
 	{  21 -8 ,  INPUTEVENT_KEY_EQUALS},
-	{  22 -8 ,  INPUTEVENT_KEY_BACKSLASH},
+	{  22 -8 ,  INPUTEVENT_KEY_BACKSPACE},
 
 	{  23 -8 ,  INPUTEVENT_KEY_TAB},
 	{  24 -8 ,  INPUTEVENT_KEY_Q},
