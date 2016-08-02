@@ -172,15 +172,22 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 	unsigned int bsize;
 	static int audioOpened = 0;
 
-	if (!sound_thread_active)
-	{
-		// init sem, start sound thread
-		init_soundbuffer_usage();
-		printf("starting sound thread..\n");
-		ret = sem_init(&sound_sem, 0, 0);
-		sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 1);
-		if (ret != 0) printf("sem_init() failed: %i, errno=%i\n", ret, errno);
-	}
+
+	// if no settings change, we don't need to do anything
+	if (rate == s_oldrate && s_oldbits == bits && s_oldstereo == stereo && audioOpened) 
+	  return 0;
+
+	if (audioOpened)
+	  pandora_stop_sound();
+
+
+	// init sem, start sound thread
+	init_soundbuffer_usage();
+	printf("starting sound thread..\n");
+	ret = sem_init(&sound_sem, 0, 0);
+	sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 1);
+	if (ret != 0) printf("sem_init() failed: %i, errno=%i\n", ret, errno);
+
 
 	SDL_AudioSpec as;
 	memset(&as, 0, sizeof(as));
@@ -191,7 +198,9 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 	as.channels = (stereo ? 2 : 1);
 	as.samples = SNDBUFFER_LEN;
 	as.callback = sound_thread_mixer;
-	SDL_OpenAudio(&as, NULL);
+
+	if (SDL_OpenAudio(&as, NULL))
+	  printf("Error when opening SDL audio !\n");
 	audioOpened = 1;
 
 	s_oldrate = rate; 
@@ -214,9 +223,13 @@ void pandora_stop_sound(void)
 		printf("stopping sound thread..\n");
 		sound_thread_exit = 1;
 		sem_post(&sound_sem);
-		//usleep(100*1000);
+		usleep(100*1000);
+		sem_destroy(&sound_sem);
+		sem_destroy(&callback_sem);
 	}
+	sound_thread_exit = 0;
 	SDL_PauseAudio (1);
+	SDL_CloseAudio();
 }
 
 void finish_sound_buffer (void)
