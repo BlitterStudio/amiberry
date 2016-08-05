@@ -1859,14 +1859,15 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 	const TCHAR arg_required[] = _T("0123rKpImWSAJwNCZUFcblOdHRv");
 
   if (_tcschr (arg_required, c) && ! arg) {
-		write_log (_T("Missing argument for option `-%c'!\n"), c);
-	  return 0;
+		printf (_T("Missing argument for option -%c\n"), c);
+	  return -1;
   }
 
   u->option = xmalloc (TCHAR, 2);
   u->option[0] = c;
   u->option[1] = 0;
-  u->value = my_strdup(arg);
+  if (arg)
+    u->value = my_strdup(arg);
   u->next = p->all_lines;
   p->all_lines = u;
 
@@ -1921,7 +1922,8 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 	    break;
 
     default:
-		  write_log (_T("Unknown option `-%c'!\n"), c);
+	    printf (_T("Unknown option -%c\n"), c);
+	    return -1;
 	    break;
   }
   return !! _tcschr (arg_required, c);

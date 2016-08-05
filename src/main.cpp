@@ -357,6 +357,34 @@ static TCHAR *parsetextpath (const TCHAR *s)
 	return s3;
 }
 
+void  print_usage()
+{
+   printf("\nUsage:\n");
+   printf(" -f <file>                  Load a configuration file.\n");
+   printf(" -config=<file>             Load a configuration file.\n");
+   printf(" -statefile=<file>          Load a save state file.\n");
+   printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
+   printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
+   printf("\nAdditional options:\n");
+   printf(" -0 <filename>              Set adf for drive 0.\n");
+   printf(" -1 <filename>              Set adf for drive 1.\n");
+   printf(" -2 <filename>              Set adf for drive 2.\n");
+   printf(" -3 <filename>              Set adf for drive 3.\n");
+   printf(" -r <filename>              Set kickstart rom file.\n");
+   printf(" -G                         Start directly into emulation.\n");
+   printf(" -c <value>                 Size of chip memory (in number of 512 KBytes chunks).\n");
+   printf(" -F <value>                 Size of fast memory (in number of 1024 KBytes chunks).\n");
+   printf("\nNote:\n");
+   printf("Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used.\n");
+   printf("File names should be with absolute path.\n");
+   printf("\nExample:\n");
+   printf("uae4arm -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
+   printf("It will load A400.uae configuration with the save state named game.\n");
+   printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
+   exit(1);
+}
+
+
 static void parse_cmdline (int argc, TCHAR **argv)
 {
   int i;
@@ -391,13 +419,21 @@ static void parse_cmdline (int argc, TCHAR **argv)
 	    else
 		    cfgfile_parse_line (&currprefs, argv[++i], 0);
 	  } else {
-	    if (argv[i][0] == '-' && argv[i][1] != '\0') {
+	    if (argv[i][0] == '-' && argv[i][1] != '\0' && argv[i][2] == '\0') {
+		    int ret;
 		    const TCHAR *arg = argv[i] + 2;
 		    int extra_arg = *arg == '\0';
 		    if (extra_arg)
 		      arg = i + 1 < argc ? argv[i + 1] : 0;
-		    if (parse_cmdline_option (&currprefs, argv[i][1], arg) && extra_arg)
+		    ret = parse_cmdline_option (&currprefs, argv[i][1], arg);
+		    if (ret == -1)
+		      print_usage();
+		    if (ret && extra_arg)
 		      i++;
+	    } else
+	    {
+	      printf("Unknown option %s\n",argv[i]);
+	      print_usage();
 	    }
 	  }
   }
