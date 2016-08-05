@@ -589,6 +589,10 @@ void gui_handle_events (void)
 	int triggerL = keystate[SDLK_RSHIFT];
 	int triggerR = keystate[SDLK_RCTRL];
 
+
+	if(keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] ||keystate[SDLK_MENU]))
+		uae_reset(0);
+
 	// L + R
 	if(triggerL && triggerR)
 	{
