@@ -38,9 +38,13 @@ How to compile on Raspbian Jessie:
       sudo apt-get install libflac-dev
       sudo apt-get install libmpg123-dev
 
-   Then for Raspberry Pi 2:  
+   Then for Raspberry Pi 3:  
 
       make
+
+   For Raspberry Pi 2:
+
+      make PLATFORM=rpi2
 
    Or for Raspberry Pi 1:  
 
