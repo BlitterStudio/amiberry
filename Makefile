@@ -1,8 +1,16 @@
 ifeq ($(PLATFORM),)
-	PLATFORM = rpi2
+	PLATFORM = rpi3
 endif
 
-ifeq ($(PLATFORM),rpi2)
+ifeq ($(PLATFORM),rpi3)
+	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
+	LDFLAGS += -lbcm_host
+	DEFS += -DRASPBERRY
+	HAVE_NEON = 1
+	HAVE_DISPMANX = 1
+	USE_PICASSO96 = 1
+else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
 	LDFLAGS += -lbcm_host
