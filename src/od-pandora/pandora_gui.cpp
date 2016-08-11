@@ -33,6 +33,10 @@
 #include <SDL.h>
 #include "td-sdl/thread.h"
 
+#ifdef RASPBERRY
+ #include <linux/kd.h>
+ #include <sys/ioctl.h>
+#endif RASPBERRY
 
 int emulating = 0;
 
@@ -731,6 +735,21 @@ void gui_disk_image_change (int unitnum, const char *name, bool writeprotected)
 
 void gui_led (int led, int on)
 {
+#ifdef RASPBERRY
+  static unsigned long kb_led_status;
+
+    ioctl(NULL, KDGETLED, &kb_led_status);
+    switch(led)
+    {
+     case LED_DF0:
+         if(on) kb_led_status |= LED_SCR;  else kb_led_status &= ~LED_SCR;
+          break;
+     case LED_HD:
+          if(on) kb_led_status |= LED_NUM; else kb_led_status &= ~LED_NUM;
+          break;
+    }
+    ioctl(NULL, KDSETLED, kb_led_status);
+#endif
 }
 
 void gui_flicker_led (int led, int unitnum, int status)
@@ -745,7 +764,14 @@ void gui_flicker_led (int led, int unitnum, int status)
       
     case LED_POWER:
       break;
-
+	  
+	case LED_DF0:
+    case LED_DF1:
+    case LED_DF2:
+    case LED_DF3:
+	gui_led(LED_DF0,1);
+      break;
+	  
     case LED_HD:
       if (status == 0) {
   	    hd_resetcounter--;
@@ -754,8 +780,11 @@ void gui_flicker_led (int led, int unitnum, int status)
       }
       gui_data.hd = status;
       hd_resetcounter = 2;
+	  gui_led(LED_HD,1);
       break;
   }
+  gui_led(LED_HD,0);
+  gui_led(LED_DF0,0);
 }
 
 
