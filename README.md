@@ -1,5 +1,9 @@
 # uae4arm-rpi
 Port of uae4arm on Raspberry Pi
+Changes in forked version:
+- New target platform: Pi 3
+- Optimizations for Pi 3 added
+- Pi 3 is now the default target if no Platform is specified
 
 v0.5:  
 Merge of latest TomB version for Pandora.  
