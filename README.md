@@ -35,13 +35,7 @@ How to compile on Raspbian Jessie:
 
    Install following packages:
 
-      sudo apt-get install libsdl1.2-dev
-      sudo apt-get install libguichan-dev
-      sudo apt-get install libsdl-ttf2.0-dev
-      sudo apt-get install libsdl-gfx1.2-dev
-      sudo apt-get install libxml2-dev
-      sudo apt-get install libflac-dev
-      sudo apt-get install libmpg123-dev
+      sudo apt-get install libsdl-dev libguichan-dev libsdl-ttf2.0-dev libsdl-gfx1.2-dev libxml2-dev libflac-dev libmpg123-dev
 
    Then for Raspberry Pi 3:  
 
@@ -51,11 +45,13 @@ How to compile on Raspbian Jessie:
 
       make PLATFORM=rpi2
 
-   Or for Raspberry Pi 1:  
+   For Raspberry Pi 1:  
 
       make PLATFORM=rpi1
+   
+   For Generic SDL:  
 
-
+      make PLATFORM=generic-sdl
 
 How to compile on Raspbian Whezzy:  
 
