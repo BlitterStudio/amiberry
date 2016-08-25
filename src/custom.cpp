@@ -40,6 +40,8 @@
 
 #define nocustom() (picasso_on)
 
+extern int screen_is_picasso;
+
 static uae_u16 last_custom_value1;
 
 /* Events */
@@ -2209,6 +2211,9 @@ void compute_vsynctime (void)
 {
   if (currprefs.chipset_refreshrate) {
   	vblank_hz = currprefs.chipset_refreshrate;
+  }
+  if (screen_is_picasso) {
+	beamcon0 = new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
   }
 	vsynctimebase = syncbase / vblank_hz;
   if (currprefs.produce_sound > 1)

@@ -48,6 +48,10 @@ bool cdaudio_active = false;
 static int cdwrcnt = 0;
 static int cdrdcnt = 0;
 
+
+extern int screen_is_picasso;
+
+
 #ifdef NO_SOUND
 
 void finish_sound_buffer (void) {  }
@@ -94,8 +98,14 @@ void update_sound (int freq, int lof)
   	freq = lastfreq;
   lastfreq = freq;
 
-	if (lof < 0) {
-		lines += 0.5;
+  if (currprefs.ntscmode || screen_is_picasso) {
+        hpos += 0.5;
+        lines += 0.5;
+  } else {
+    if (lof < 0)
+          lines += 0.5;
+    else if(lof > 0)
+          lines += 1.0;
   }
 
   evtime = hpos * lines * freq * CYCLE_UNIT / (float)currprefs.sound_freq;
