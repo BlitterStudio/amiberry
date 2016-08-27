@@ -49,12 +49,12 @@ all: $(PROG)
 
 PANDORA=1
 
-SDL_CFLAGS = `sdl-config --cflags`
+SDL_CFLAGS = -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
 
-DEFS +=  `xml2-config --cflags`
+DEFS +=  -I/usr/include/libxml2
 DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
 DEFS += -DWITH_INGAME_WARNING
-DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
+DEFS += -DROM_PATH_PREFIX=\"./kickstarts\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./savestates/\"
 DEFS += -DUSE_SDL
 
 ifeq ($(USE_PICASSO96), 1)
@@ -66,8 +66,7 @@ ifeq ($(HAVE_NEON), 1)
 endif
 
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-
-MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -Wno-unused -Wno-format  -DGCCCONSTFUNC="__attribute__((const))"
+MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/td-sdl -Isrc/include -Wno-unused -Wno-format  -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
 LDFLAGS += -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123
@@ -81,11 +80,7 @@ MORE_CFLAGS += -ggdb
 endif
 
 ASFLAGS += $(CPU_FLAGS)
-
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
-
-
-# 	src/kb-sdl/keyboard.o \
 
 OBJS =	\
 	src/akiko.o \
@@ -252,8 +247,8 @@ OBJS += src/jit/compstbl.o
 OBJS += src/jit/compemu_fpp.o
 OBJS += src/jit/compemu_support.o
 
-src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
+src/od-pandora/neon_helper.o: src/od-pandora/neon_helper.s
+	$(CXX) $(CPU_FLAGS) -Wall -o src/od-pandora/neon_helper.o -c src/od-pandora/neon_helper.s
 
 $(PROG): $(OBJS)
 	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
