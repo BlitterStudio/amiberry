@@ -195,9 +195,12 @@ void adjust_idletime(unsigned long ms_waited)
   }
 
   if(currprefs.m68k_speed < 0) {
+#ifdef PANDORA_SPECIFIC
     if(ms_waited < 500 && speedup_timelimit > -10000)
       speedup_timelimit -= 500;
-    else if(ms_waited > 1400 && speedup_timelimit < -1000)
+    else
+#endif
+if(ms_waited > 1400 && speedup_timelimit < -1000)
       speedup_timelimit += 500;
   }
 }
