@@ -30,9 +30,10 @@ SDL_Surface *prSDLScreen = NULL;
 SDL_Surface *Dummy_prSDLScreen = NULL;
 static SDL_Surface *current_screenshot = NULL;
 /* Possible screen modes (x and y resolutions) */
-#define MAX_SCREEN_MODES 6
-static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 800, 1024, 1152, 1280 };
-static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 600,  768,  864,  960 };
+
+#define MAX_SCREEN_MODES 10
+static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1920 };
+static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540,  768,  720,  800, 1080 };
 
 static int red_bits, green_bits, blue_bits;
 static int red_shift, green_shift, blue_shift;
