@@ -585,7 +585,7 @@ static int real_main2 (int argc, TCHAR **argv)
   printf("Uae4arm v0.5 for Raspberry Pi by Chips\n");
   SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
 #else
-#ifdef PANDORA
+#ifdef PANDORA_SPECIFIC
   SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else 
 #ifdef USE_SDL
