@@ -581,18 +581,15 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-#ifdef RASPBERRY
   printf("Uae4arm v0.5 for Raspberry Pi by Chips\n");
-  SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
-#else
 #ifdef PANDORA_SPECIFIC
   SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else 
 #ifdef USE_SDL
-  SDL_Init (SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE);
+  SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
 #endif
 #endif
-#endif
+
  
   keyboard_settrans();
 
