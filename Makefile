@@ -54,7 +54,7 @@ SDL_CFLAGS = -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
 DEFS +=  -I/usr/include/libxml2
 DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DGP2X -DPANDORA -DSIX_AXIS_WORKAROUND
 DEFS += -DWITH_INGAME_WARNING
-DEFS += -DROM_PATH_PREFIX=\"./kickstarts\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./savestates/\"
+DEFS += -DROM_PATH_PREFIX=\"./kickstarts/\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./savestates/\"
 DEFS += -DUSE_SDL
 
 ifeq ($(USE_PICASSO96), 1)
