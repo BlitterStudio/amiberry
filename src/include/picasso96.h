@@ -590,10 +590,11 @@ extern struct picasso96_state_struct picasso96_state;
 extern void picasso_enablescreen (int on);
 extern void picasso_refresh (void);
 extern void init_hz_p96 (void);
-static __inline__ void picasso_handle_hsync (void)
+STATIC_INLINE void picasso_handle_hsync (void)
 {
 }
 extern void picasso_handle_vsync (void);
+extern void picasso_trigger_vblank (void);
 extern void picasso_reset (void);
 extern int picasso_palette (void);
 
@@ -632,7 +633,8 @@ extern int p96hsync_counter;
 #define CARD_PORTSIRQ (CARD_VBLANKIRQ + 22)
 #define CARD_IRQFLAG (CARD_PORTSIRQ + 22)
 #define CARD_IRQPTR (CARD_IRQFLAG + 4)
-#define CARD_IRQCODE (CARD_IRQPTR + 4)
+#define CARD_IRQEXECBASE (CARD_IRQPTR + 4)
+#define CARD_IRQCODE (CARD_IRQEXECBASE + 4)
 #define CARD_END (CARD_IRQCODE + 11 * 2)
 #define CARD_SIZEOF CARD_END
 

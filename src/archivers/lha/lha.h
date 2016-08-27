@@ -166,7 +166,7 @@ EXTERN int      unpackable;
 EXTERN unsigned long origsize, compsize;
 EXTERN unsigned short dicbit;
 EXTERN unsigned short maxmatch;
-EXTERN unsigned long count;
+EXTERN unsigned long lhcount;
 EXTERN unsigned long loc;			/* short -> long .. Changed N.Watazaki */
 EXTERN unsigned char *text;
 EXTERN int		prev_char;

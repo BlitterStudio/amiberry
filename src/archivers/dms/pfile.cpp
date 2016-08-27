@@ -547,8 +547,11 @@ static void printbandiz(UCHAR *m, USHORT len){
 	i=j=m;
 	while (i<m+len) {
 		if (*i == 10) {
+			TCHAR *u;
 			*i=0;
-			write_log(_T("%s\n"),j);
+			u = au ((char*)j);
+			write_log (_T("%s\n"),u);
+			xfree (u);
 			j=i+1;
 		}
 		i++;

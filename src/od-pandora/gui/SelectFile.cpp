@@ -350,6 +350,7 @@ static void SelectFileLoop(void)
     // Now we let the Gui object draw itself.
     uae_gui->draw();
     // Finally we update the screen.
+    wait_for_vsync();
     SDL_Flip(gui_screen);
     
     if(!dialogCreated)

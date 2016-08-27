@@ -6,7 +6,7 @@
 
 STATIC_INLINE uae_u32 merge_words(uae_u32 val, uae_u32 val2)
 {
-  __asm__ __volatile__ (
+  __asm__ (
 			"pkhbt   %[o], %[o], %[d], lsl #16 \n\t"
       : [o] "+r" (val) : [d] "r" (val2) );
   return val;
@@ -14,7 +14,7 @@ STATIC_INLINE uae_u32 merge_words(uae_u32 val, uae_u32 val2)
 
 STATIC_INLINE uae_u32 double_word(uae_u32 val)
 {
-  __asm__ __volatile__ (
+  __asm__ (
 			"pkhbt   %[o], %[o], %[o], lsl #16 \n\t"
       : [o] "+r" (val) );
   return val;

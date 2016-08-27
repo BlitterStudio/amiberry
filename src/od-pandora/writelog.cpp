@@ -58,5 +58,5 @@ void jit_abort (const TCHAR *format,...)
     if (!happened)
 	gui_message ("JIT: Serious error:\n%s", buffer);
     happened = 1;
-    uae_reset (1);
+    uae_reset (1, 0);
 }

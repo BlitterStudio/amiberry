@@ -12,7 +12,6 @@
 #include "options.h"
 #include "uae.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 

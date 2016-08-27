@@ -13,6 +13,7 @@
 #include "config.h"
 
 #include "fsdb.h"
+#include "uae.h"
 
 /* these are deadly (but I think allowed on the Amiga): */
 #define NUM_EVILCHARS 7
@@ -21,10 +22,18 @@ static TCHAR evilchars[NUM_EVILCHARS] = { '\\', '*', '?', '\"', '<', '>', '|' };
 static int fsdb_name_invalid_2 (const TCHAR *n, int dir)
 {
   int i;
+	int l = _tcslen (n);
 
   /* the reserved fsdb filename */
   if (_tcscmp (n, FSDB_FILE) == 0)
   	return -1;
+
+	if (dir) {
+		if (n[0] == '.' && l == 1)
+			return -1;
+		if (n[0] == '.' && n[1] == '.' && l == 2)
+			return -1;
+	}
 
   /* these characters are *never* allowed */
   for (i = 0; i < NUM_EVILCHARS; i++) {
@@ -32,26 +41,31 @@ static int fsdb_name_invalid_2 (const TCHAR *n, int dir)
       return 1;
   }
 
-  if (n[0] != '.')
-  	return 0;
-  if (n[1] == '\0')
-  	return 1;
-  return n[1] == '.' && n[2] == '\0';
+	return 0; /* the filename passed all checks, now it should be ok */
 }
 
 int fsdb_name_invalid (const TCHAR *n)
 {
-        int v = fsdb_name_invalid_2 (n, 0);
-        if (v <= 0)
-                return v;
-        write_log (_T("FILESYS: '%s' illegal filename\n"), n);
-        return v;
+  int v = fsdb_name_invalid_2 (n, 0);
+  if (v <= 0)
+    return v;
+  write_log (_T("FILESYS: '%s' illegal filename\n"), n);
+  return v;
 }
 
-int fsdb_exists (char *nname)
+int fsdb_name_invalid_dir (const TCHAR *n)
 {
-    struct stat statbuf;
-    return (stat (nname, &statbuf) != -1);
+	int v = fsdb_name_invalid_2 (n, 1);
+	if (v <= 0)
+		return v;
+	write_log (_T("FILESYS: '%s' illegal filename\n"), n);
+	return v;
+}
+
+int fsdb_exists (const char *nname)
+{
+  struct stat statbuf;
+  return (stat (nname, &statbuf) != -1);
 }
 
 /* For an a_inode we have newly created based on a filename we found on the
@@ -166,11 +180,7 @@ char *fsdb_create_unique_nname (a_inode *base, const char *suggestion)
 	/* tmpnam isn't reentrant and I don't really want to hack configure
 	 * right now to see whether tmpnam_r is available...  */
 	for (i = 0; i < 8; i++) {
-#ifdef WIN32
-	    tmp[i] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[rand () % 63];
-#else
-	    tmp[i] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[random () % 63];
-#endif
+    tmp[i] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[uaerand () % 63];
 	}
     }
 }

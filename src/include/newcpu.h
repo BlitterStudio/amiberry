@@ -57,7 +57,7 @@ struct cputbl {
 };
 
 #ifdef JIT
-typedef unsigned long REGPARAM3 compop_func (uae_u32) REGPARAM;
+typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 
 struct comptbl {
   compop_func *handler;
@@ -66,7 +66,10 @@ struct comptbl {
 };
 #endif
 
-extern unsigned long REGPARAM3 op_illg (uae_u32, struct regstruct &regs) REGPARAM;
+#define op_illg(op) _op_illg(op, regs)
+extern uae_u32 REGPARAM3 _op_illg (uae_u32, struct regstruct &regs) REGPARAM;
+#define op_unimpl() _op_unimpl(regs)
+extern void REGPARAM3 _op_unimpl (struct regstruct &regs) REGPARAM;
 
 typedef uae_u8 flagtype;
 
@@ -130,7 +133,7 @@ struct regstruct
   uae_u32 panic_pc, panic_addr;
   signed long pissoff;
 };
-extern unsigned long int nextevent, is_syncline, currcycle;
+extern unsigned long nextevent, is_syncline, currcycle;
 
 extern struct regstruct regs;
 
@@ -143,13 +146,15 @@ STATIC_INLINE uae_u32 munge24(uae_u32 x)
 
 extern int cpu_cycles;
 
-STATIC_INLINE void set_special (struct regstruct &regs, uae_u32 x)
+#define set_special(x) _set_special(regs, x)
+STATIC_INLINE void _set_special (struct regstruct &regs, uae_u32 x)
 {
 	regs.spcflags |= x;
   cycles_do_special(regs);
 }
 
-STATIC_INLINE void unset_special (struct regstruct &regs, uae_u32 x)
+#define unset_special(x) _unset_special(regs, x)
+STATIC_INLINE void _unset_special (struct regstruct &regs, uae_u32 x)
 {
 	regs.spcflags &= ~x;
 }
@@ -157,29 +162,27 @@ STATIC_INLINE void unset_special (struct regstruct &regs, uae_u32 x)
 #define m68k_dreg(r,num) ((r).regs[(num)])
 #define m68k_areg(r,num) (((r).regs + 8)[(num)])
 
-STATIC_INLINE void m68k_setpc (struct regstruct &regs, uaecptr newpc)
+#define m68k_setpc(newpc) _m68k_setpc(regs, newpc)
+STATIC_INLINE void _m68k_setpc (struct regstruct &regs, uaecptr newpc)
 {
   regs.pc_p = regs.pc_oldp = get_real_address (newpc);
   regs.instruction_pc = regs.pc = newpc;
 }
 
-STATIC_INLINE uaecptr m68k_getpc (struct regstruct &regs)
+#define m68k_getpc() _m68k_getpc(regs)
+STATIC_INLINE uaecptr _m68k_getpc (struct regstruct &regs)
 {
 	return (uaecptr)(regs.pc + ((uae_u8*)regs.pc_p - (uae_u8*)regs.pc_oldp));
 }
-#define M68K_GETPC m68k_getpc(regs)
+#define M68K_GETPC _m68k_getpc(regs)
 
 #define m68k_incpc(o) ((regs).pc_p += (o))
 
-STATIC_INLINE uaecptr m68k_getpci (struct regstruct &regs)
-{
-	return regs.pc;
-}
-
-STATIC_INLINE void m68k_do_rts (struct regstruct &regs)
+#define m68k_do_rts() _m68k_do_rts(regs)
+STATIC_INLINE void _m68k_do_rts (struct regstruct &regs)
 {
   uae_u32 newpc = get_long (m68k_areg (regs, 7));
-  m68k_setpc (regs, newpc);
+  m68k_setpc (newpc);
   m68k_areg(regs, 7) += 4;
 }
 
@@ -193,6 +196,7 @@ STATIC_INLINE void m68k_do_bsr (struct regstruct &regs, uaecptr oldpc, uae_s32 o
 #define get_ibyte(o) do_get_mem_byte((uae_u8 *)((regs).pc_p + (o) + 1))
 #define get_iword(o) do_get_mem_word((uae_u16 *)((regs).pc_p + (o)))
 #define get_ilong(o) do_get_mem_long((uae_u32 *)((regs).pc_p + (o)))
+
 #define get_iword2(regs,o) do_get_mem_word((uae_u16 *)((regs).pc_p + (o)))
 
 /* These are only used by the 68020/68881 code, and therefore don't
@@ -210,13 +214,21 @@ STATIC_INLINE uae_u32 next_ilong (struct regstruct &regs)
   return r;
 }
 
-extern uae_u32 (*x_next_iword)(struct regstruct &regs);
-extern uae_u32 (*x_next_ilong)(struct regstruct &regs);
+#define x_get_word get_word
+#define x_get_long get_long
+#define x_put_byte put_byte
+#define x_put_word put_word
+#define x_put_long put_long
+#define x_next_iword() next_iword(regs)
+#define x_next_ilong() next_ilong(regs)
 
 extern void m68k_setstopped (void);
 extern void m68k_resumestopped (void);
 
-extern uae_u32 REGPARAM3 get_disp_ea_020 (struct regstruct &regs, uae_u32 base, uae_u32 dp) REGPARAM;
+#define x_get_disp_ea_020(base,dp) _get_disp_ea_020(regs, base, dp)
+#define get_disp_ea_020(base,dp) _get_disp_ea_020(regs, base, dp)
+extern uae_u32 REGPARAM3 _get_disp_ea_020 (struct regstruct &regs, uae_u32 base, uae_u32 dp) REGPARAM;
+
 extern uae_u32 REGPARAM3 get_bitfield (uae_u32 src, uae_u32 bdata[2], uae_s32 offset, int width) REGPARAM;
 extern void REGPARAM3 put_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, uae_s32 offset, int width) REGPARAM;
 
@@ -224,8 +236,10 @@ extern int get_cpu_model(void);
 
 extern void REGPARAM3 MakeSR (struct regstruct &regs) REGPARAM;
 extern void REGPARAM3 MakeFromSR (struct regstruct &regs) REGPARAM;
-extern void REGPARAM3 Exception (int, struct regstruct &regs) REGPARAM;
+#define Exception(nr) _Exception(nr, regs)
+extern void REGPARAM3 _Exception (int, struct regstruct &regs) REGPARAM;
 extern void doint (void);
+extern void dump_counts (void);
 extern int m68k_move2c (int, uae_u32 *);
 extern int m68k_movec2 (int, uae_u32 *);
 extern void m68k_divl (uae_u32, uae_u32, uae_u16);
@@ -235,22 +249,7 @@ extern void m68k_go (int);
 extern void m68k_reset (int);
 extern int getDivu68kCycles(uae_u32 dividend, uae_u16 divisor);
 extern int getDivs68kCycles(uae_s32 dividend, uae_s16 divisor);
-
-STATIC_INLINE int bitset_count(uae_u32 data)
-{
-  unsigned int const MASK1  = 0x55555555;
-  unsigned int const MASK2  = 0x33333333;
-  unsigned int const MASK4  = 0x0f0f0f0f;
-  unsigned int const MASK6 = 0x0000003f;
-
-  unsigned int const w = (data & MASK1) + ((data >> 1) & MASK1);
-  unsigned int const x = (w & MASK2) + ((w >> 2) & MASK2);
-  unsigned int const y = ((x + (x >> 4)) & MASK4);
-  unsigned int const z = (y + (y >> 8));
-  unsigned int const c = (z + (z >> 16)) & MASK6;
-
-  return c;
-}
+extern void protect_roms (bool);
 
 STATIC_INLINE int bitset_count16(uae_u16 data)
 {
@@ -281,6 +280,7 @@ extern void fpu_reset (void);
 
 extern void exception3 (uae_u32 opcode, uaecptr addr);
 extern void exception3i (uae_u32 opcode, uaecptr addr);
+extern void exception3 (uae_u32 opcode, uaecptr addr, int w, int i, uaecptr pc);
 extern void exception2 (uaecptr addr);
 extern void cpureset (void);
 
@@ -298,8 +298,7 @@ extern const struct cputbl op_smalltbl_3_ff[];
 extern const struct cputbl op_smalltbl_4_ff[];
 /* 68000 */
 extern const struct cputbl op_smalltbl_5_ff[];
-/* 68000 slow but compatible.  */
-extern const struct cputbl op_smalltbl_11_ff[];
+extern const struct cputbl op_smalltbl_11_ff[]; // prefetch
 
 extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC ("cpufunctbl");
 

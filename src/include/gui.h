@@ -12,7 +12,6 @@ extern void gui_exit (void);
 extern void gui_led (int, int);
 extern void gui_handle_events (void);
 extern void gui_filename (int, const TCHAR *);
-extern void gui_fps (int fps);
 extern void gui_flicker_led (int, int, int);
 extern void gui_disk_image_change (int, const TCHAR *, bool writeprotected);
 extern unsigned int gui_ledstate;
@@ -47,15 +46,16 @@ struct gui_info
     bool drive_writing[4];  /* drive is writing */
     bool drive_disabled[4];	/* drive is disabled */
     bool powerled;          /* state of power led */
-    uae_u8 drive_side;				/* floppy side */
-    uae_u8 hd;			          /* harddrive */
-    uae_u8 cd;			          /* CD */
+    uae_s8 drive_side;				/* floppy side */
+    uae_s8 hd;			          /* harddrive */
+    uae_s8 cd;			          /* CD */
     int fps;
     int sndbuf, sndbuf_status;
     TCHAR df[4][256];		    /* inserted image */
     uae_u32 crc32[4];		    /* crc32 of image */
 };
 #define NUM_LEDS (LED_MAX)
+#define VISIBLE_LEDS 6
 
 extern struct gui_info gui_data;
 

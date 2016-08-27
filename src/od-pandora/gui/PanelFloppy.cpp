@@ -15,7 +15,6 @@
 #include "disk.h"
 #include "uae.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 
@@ -324,7 +323,7 @@ class CreateDiskActionListener : public gcn::ActionListener
           extractFileName(tmp, diskname);
           removeFileExtension(diskname);
           diskname[31] = '\0';
-          disk_creatediskfile(tmp, 0, DRV_35_DD, diskname, false, false);
+          disk_creatediskfile(tmp, 0, DRV_35_DD, diskname, false, false, NULL);
     	    AddFileToDiskList(tmp, 1);
     	    extractPath(tmp, currentDir);
         }
@@ -341,7 +340,7 @@ class CreateDiskActionListener : public gcn::ActionListener
           extractFileName(tmp, diskname);
           removeFileExtension(diskname);
           diskname[31] = '\0';
-          disk_creatediskfile(tmp, 0, DRV_35_HD, diskname, false, false);
+          disk_creatediskfile(tmp, 0, DRV_35_HD, diskname, false, false, NULL);
     	    AddFileToDiskList(tmp, 1);
     	    extractPath(tmp, currentDir);
         }

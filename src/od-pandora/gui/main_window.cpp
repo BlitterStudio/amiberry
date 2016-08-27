@@ -10,7 +10,6 @@
 #include "options.h"
 #include "uae.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 #include "memory.h"
 #include "autoconf.h"
@@ -204,7 +203,7 @@ namespace sdl
               //------------------------------------------------
               // First start of emulator -> reset Amiga
               //------------------------------------------------
-              uae_reset(0);
+              uae_reset(0,1);
               gui_running = false;
             }
            } else
@@ -228,7 +227,7 @@ namespace sdl
               //-------------------------------------------------
               // Reset Amiga
               //-------------------------------------------------
-              uae_reset(1);
+              uae_reset(1,1);
               gui_running = false;
               break;
 
@@ -278,6 +277,7 @@ namespace sdl
       // Now we let the Gui object draw itself.
       uae_gui->draw();
       // Finally we update the screen.
+      wait_for_vsync();
       SDL_Flip(gui_screen);
       
       if(refreshFuncAfterDraw != NULL)
@@ -312,7 +312,7 @@ namespace widgets
           //-------------------------------------------------
           // Reset Amiga via click on Reset-button
           //-------------------------------------------------
-    			uae_reset(1);
+    			uae_reset(1, 1);
     			gui_running = false;
         }
   			else if(actionEvent.getSource() == cmdRestart)
@@ -346,7 +346,7 @@ namespace widgets
             //------------------------------------------------
             // First start of emulator -> reset Amiga
             //------------------------------------------------
-      			uae_reset(0);
+      			uae_reset(0, 1);
       			gui_running = false;
           }
         }
@@ -592,7 +592,7 @@ void run_gui(void)
     std::cout << "Unknown exception" << std::endl;
     uae_quit();
   }
-  if(quit_program > 1 || quit_program < -1)
+  if(quit_program > UAE_QUIT || quit_program < -UAE_QUIT)
   {
   	//--------------------------------------------------
     // Prepare everything for Reset of Amiga
@@ -600,6 +600,6 @@ void run_gui(void)
 		currprefs.nr_floppies = changed_prefs.nr_floppies;
 		
 		if(gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
-	    quit_program = -3; // Hardreset required...
+	    quit_program = -UAE_RESET_HARD; // Hardreset required...
   }
 }

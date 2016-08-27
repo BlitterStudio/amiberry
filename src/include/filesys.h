@@ -41,6 +41,20 @@ struct hardfiledata {
     TCHAR *emptyname;
 };
 
+struct hd_hardfiledata {
+    struct hardfiledata hfd;
+    int bootpri;
+    uae_u64 size;
+    int cyls;
+    int heads;
+    int secspertrack;
+    int cyls_def;
+    int secspertrack_def;
+    int heads_def;
+    TCHAR *path;
+    int ansi_version;
+};
+
 #define HD_CONTROLLER_UAE 0
 #define HD_CONTROLLER_IDE0 1
 #define HD_CONTROLLER_IDE1 2
@@ -77,7 +91,16 @@ extern int hdf_write (struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 extern int get_native_path(uae_u32 lock, TCHAR *out);
 extern void hardfile_do_disk_change (struct uaedev_config_info *uci, int insert);
 
+void hdf_hd_close(struct hd_hardfiledata *hfd);
+int hdf_hd_open(struct hd_hardfiledata *hfd, const TCHAR *path, int blocksize, int readonly,
+		       const TCHAR *devname, int cyls, int sectors, int surfaces, int reserved,
+		       int bootpri, const TCHAR *filesys,
+			   int pcyls, int pheads, int psectors);
+
 extern int hdf_open_target (struct hardfiledata *hfd, const TCHAR *name);
 extern void hdf_close_target (struct hardfiledata *hfd);
 extern int hdf_read_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len);
 extern int hdf_write_target (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len);
+extern void getchsgeometry (uae_u64 size, int *pcyl, int *phead, int *psectorspertrack);
+extern void getchsgeometry_hdf (struct hardfiledata *hfd, uae_u64 size, int *pcyl, int *phead, int *psectorspertrack);
+extern void getchspgeometry (uae_u64 total, int *pcyl, int *phead, int *psectorspertrack, bool idegeometry);

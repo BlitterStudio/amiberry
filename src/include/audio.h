@@ -37,6 +37,12 @@ extern int audio_activate(void);
 
 enum {
     SND_MONO, SND_STEREO, SND_4CH_CLONEDSTEREO, SND_4CH, SND_6CH_CLONEDSTEREO, SND_6CH, SND_NONE };
+STATIC_INLINE int get_audio_ismono (int stereomode)
+{
+    if (stereomode == 0)
+	return 1;
+    return 0;
+}
 
 #define SOUND_MAX_DELAY_BUFFER 1024
 #define SOUND_MAX_LOG_DELAY 10

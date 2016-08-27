@@ -9,7 +9,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
-#include "target.h"
 #include "gui_handling.h"
 
 typedef struct
@@ -79,11 +78,12 @@ static NavigationMap navMap[] =
 // PanelChipset
   { "OCS",            "Chipset",        "BlitNormal",     "CollFull",       "ECS Agnus" },
   { "ECS Agnus",      "Chipset",        "Immediate",      "OCS",            "Full ECS" },
-  { "Full ECS",       "Chipset",        "Immediate",      "ECS Agnus",      "AGA" },
+  { "Full ECS",       "Chipset",        "BlitWait",       "ECS Agnus",      "AGA" },
   { "AGA",            "Chipset",        "Chipset",        "Full ECS",       "NTSC" },
   { "NTSC",           "Chipset",        "Chipset",        "AGA",            "CollNone" },
   { "BlitNormal",     "OCS",            "Fast copper",    "CollFull",       "Immediate" },
-  { "Immediate",      "ECS Agnus",      "Fast copper",    "BlitNormal",     "CollNone" },
+  { "Immediate",      "ECS Agnus",      "Fast copper",    "BlitNormal",     "BlitWait" },
+  { "BlitWait",       "Full ECS",       "Fast copper",    "Immediate",      "CollNone" },
   { "Fast copper",    "BlitNormal",     "Chipset",        "CollFull",       "CollNone" },
   { "CollNone",       "Chipset",        "Chipset",        "NTSC",           "Sprites only" },
   { "Sprites only",   "Chipset",        "Chipset",        "CollNone",       "CollPlay" },

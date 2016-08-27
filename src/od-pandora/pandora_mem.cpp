@@ -8,14 +8,18 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
+#include "akiko.h"
 #include <sys/mman.h>
 #include <SDL.h>
+
+extern uae_u8 *extendedkickmemory2;
 
 
 uae_u8* natmem_offset = 0;
 uae_u32 natmem_size;
 static uae_u64 totalAmigaMemSize;
 #define MAXAMIGAMEM 0x6000000 // 64 MB (16 MB for standard Amiga stuff, 16 MG RTG, 64 MB Z3 fast)
+uae_u32 max_z3fastmem;
 
 /* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
 #define BARRIER 32
@@ -60,7 +64,7 @@ void alloc_AmigaMem(void)
     abort();
 	}
   additional_mem = (uae_u8*) mmap(natmem_offset + 0x10000000, ADDITIONAL_MEMSIZE + BARRIER,
-    PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
   if(additional_mem != MAP_FAILED)
   {
     // Allocation successful -> we can use natmem_offset for entire memory access
@@ -188,4 +192,30 @@ uae_u8 *mapped_malloc (size_t s, const char *file)
 
 void mapped_free (uae_u8 *p)
 {
+}
+
+
+void protect_roms (bool protect)
+{
+/*
+  If this code is enabled, we can't switch back from JIT to nonJIT emulation...
+  
+	if (protect) {
+		// protect only if JIT enabled, always allow unprotect
+		if (!currprefs.cachesize)
+			return;
+	}
+
+  // Protect all regions, which contains ROM
+  if(extendedkickmemory != NULL)
+    mprotect(extendedkickmemory, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+  if(extendedkickmemory2 != NULL)
+    mprotect(extendedkickmemory2, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+  if(kickmemory != NULL)
+    mprotect(kickmemory, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+  if(rtarea != NULL)
+    mprotect(rtarea, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+  if(filesysory != NULL)
+    mprotect(filesysory, 0x10000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+*/
 }

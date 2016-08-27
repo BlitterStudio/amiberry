@@ -165,7 +165,7 @@ void REGPARAM2 m68k_handle_trap (unsigned int trap_num)
     		m68k_dreg (regs, 0) = retval;
 
 	    if (implicit_rts) {
-    		m68k_do_rts (regs);
+    		m68k_do_rts ();
     		fill_prefetch ();
 	    }
     }
@@ -179,11 +179,18 @@ void REGPARAM2 m68k_handle_trap (unsigned int trap_num)
  * Implementation of extended traps
  */
 
+struct TrapCPUContext
+{
+	uae_u32 regs[16];
+	uae_u32 pc;
+	int intmask;
+};
+
 struct TrapContext
 {
   /* Trap's working copy of 68k state. This is what the trap handler should
   *  access to get arguments from 68k space. */
-  struct regstruct  regs;
+	//struct regstruct regs;
 
   /* Trap handler function that gets called on the trap context */
   TrapHandler       trap_handler;
@@ -193,7 +200,8 @@ struct TrapContext
   uae_u32           trap_retval;
 
   /* Copy of 68k state at trap entry. */
-  struct regstruct  saved_regs;
+	//struct regstruct saved_regs;
+	struct TrapCPUContext saved_regs;
 
   /* Thread which effects the trap context. */
   uae_thread_id     thread;
@@ -208,6 +216,19 @@ struct TrapContext
   /* And this gets set to the return value of the 68k call. */
   uae_u32           call68k_retval;
 };
+
+static void copytocpucontext(struct TrapCPUContext *cpu)
+{
+	memcpy (cpu->regs, regs.regs, sizeof (regs.regs));
+	cpu->intmask = regs.intmask;
+	cpu->pc = m68k_getpc ();
+}
+static void copyfromcpucontext(struct TrapCPUContext *cpu, uae_u32 pc)
+{
+	memcpy (regs.regs, cpu->regs, sizeof (regs.regs));
+	regs.intmask = cpu->intmask;
+	m68k_setpc (pc);
+}
 
 
 /* 68k addresses which invoke the corresponding traps. */
@@ -244,19 +265,16 @@ static void *trap_thread (void *arg)
   /* Enter critical section - only one trap at a time, please! */
   uae_sem_wait (&trap_mutex);
 
-  // In WinUAE, ccrflags are not part of regs-struct, so don't restore
-  // these flags here. Keep the current flags...
-  struct flag_struct currflags = regs.ccrflags;
-  regs = context->saved_regs;
-  regs.ccrflags = currflags;
+	//regs = context->saved_regs;
+	/* Set PC to address of the exit handler, so that it will be called
+	* when the 68k context resumes. */
+	copyfromcpucontext (&context->saved_regs, exit_trap_trapaddr);
   /* Don't allow an interrupt and thus potentially another
    * trap to be invoked while we hold the above mutex.
    * This is probably just being paranoid. */
   regs.intmask = 7;
 
-  /* Set PC to address of the exit handler, so that it will be called
-   * when the 68k context resumes. */
-  m68k_setpc (regs, exit_trap_trapaddr);
+	//m68k_setpc (exit_trap_trapaddr);
   current_context = context;
 
   /* Switch back to 68k context */
@@ -283,7 +301,8 @@ static void trap_HandleExtendedTrap (TrapHandler handler_func, int has_retval)
 	  context->trap_handler    = handler_func;
 	  context->trap_has_retval = has_retval;
 
-	  context->saved_regs = regs;
+		//context->saved_regs = regs;
+		copytocpucontext (&context->saved_regs);
 
 	  /* Start thread to handle new trap context. */
 	  uae_start_thread_fast (trap_thread, (void *)context, &context->thread);
@@ -322,7 +341,7 @@ static uae_u32 trap_Call68k (TrapContext *context, uaecptr func_addr)
 
   /* Set PC to address of 68k call trap, so that it will be
    * executed when emulator context resumes. */
-  m68k_setpc (regs, m68k_call_trapaddr);
+  m68k_setpc (m68k_call_trapaddr);
   fill_prefetch ();
 
   /* Switch to emulator context. */
@@ -341,7 +360,7 @@ static uae_u32 trap_Call68k (TrapContext *context, uaecptr func_addr)
 /*
  * Handles the emulator's side of a 68k call (from an extended trap)
  */
-static uae_u32 REGPARAM3 m68k_call_handler (TrapContext *dummy_ctx)
+static uae_u32 REGPARAM2 m68k_call_handler (TrapContext *dummy_ctx)
 {
   TrapContext *context = current_context;
 
@@ -363,7 +382,7 @@ static uae_u32 REGPARAM3 m68k_call_handler (TrapContext *dummy_ctx)
   m68k_areg (regs, 7) = sp;
 
   /* Set PC to address of 68k function to call. */
-  m68k_setpc (regs, context->call68k_func_addr);
+  m68k_setpc (context->call68k_func_addr);
   fill_prefetch ();
 
   /* End critical section: allow other traps run. */
@@ -379,7 +398,7 @@ static uae_u32 REGPARAM3 m68k_call_handler (TrapContext *dummy_ctx)
 /*
  * Handles the return from a 68k call at the emulator's side.
  */
-static uae_u32 REGPARAM3 m68k_return_handler (TrapContext *dummy_ctx)
+static uae_u32 REGPARAM2 m68k_return_handler (TrapContext *dummy_ctx)
 {
   TrapContext *context;
   uae_u32 sp;
@@ -413,7 +432,7 @@ static uae_u32 REGPARAM3 m68k_return_handler (TrapContext *dummy_ctx)
  * Handles completion of an extended trap and passes
  * return value from trap function to 68k space.
  */
-static uae_u32 REGPARAM3 exit_trap_handler (TrapContext *dummy_ctx)
+static uae_u32 REGPARAM2 exit_trap_handler (TrapContext *dummy_ctx)
 {
   TrapContext *context = current_context;
 
@@ -421,11 +440,8 @@ static uae_u32 REGPARAM3 exit_trap_handler (TrapContext *dummy_ctx)
   uae_wait_thread (context->thread);
 
   /* Restore 68k state saved at trap entry. */
-  // In WinUAE, ccrflags are not part of regs-struct, so don't restore
-  // these flags here. Keep the current flags...
-  struct flag_struct currflags = regs.ccrflags;
-  regs = context->saved_regs;
-  regs.ccrflags = currflags;
+	//regs = context->saved_regs;
+	copyfromcpucontext (&context->saved_regs, context->saved_regs.pc);
   
   /* If trap is supposed to return a value, then store
    * return value in D0. */

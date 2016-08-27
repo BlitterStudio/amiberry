@@ -407,28 +407,28 @@ int decode(struct interfacing *lhinterface)
 	decode_set.decode_start();
 	dicsiz1 = dicsiz - 1;
 	offset = (lhinterface->method == LARC_METHOD_NUM) ? 0x100 - 2 : 0x100 - 3;
-	count = 0;
+	lhcount = 0;
 	loc = 0;
-	while (count < origsize) {
+	while (lhcount < origsize) {
 		c = decode_set.decode_c();
 		if (c <= UCHAR_MAX) {
 #ifdef DEBUG
-		  fprintf(fout, "%u C %02X\n", count, c);
+		  fprintf(fout, "%u C %02X\n", lhcount, c);
 #endif
 			dtext[loc++] = c;
 			if (loc == dicsiz) {
 				fwrite_crc(dtext, dicsiz, outfile);
 				loc = 0;
 			}
-			count++;
+			lhcount++;
 		}
 		else {
 			j = c - offset;
 			i = (loc - decode_set.decode_p() - 1) & dicsiz1;
 #ifdef DEBUG
-			fprintf(fout, "%u M %u %u ", count, (loc-1-i) & dicsiz1, j);
+			fprintf(fout, "%u M %u %u ", lhcount, (loc-1-i) & dicsiz1, j);
 #endif
-			count += j;
+			lhcount += j;
 			for (k = 0; k < j; k++) {
 				c = dtext[(i + k) & dicsiz1];
 

@@ -22,6 +22,7 @@ extern uae_u16 *finish_sndbuff;
 extern int sndbufsize;
 extern void finish_sound_buffer (void);
 extern void restart_sound_buffer (void);
+extern void pause_sound_buffer (void);
 extern void finish_cdaudio_buffer (void);
 extern bool cdaudio_catchup(void);
 extern int init_sound(void);
@@ -32,6 +33,10 @@ extern void pause_sound (void);
 extern void reset_sound (void);
 extern void sound_volume (int);
 
+STATIC_INLINE void set_sound_buffers (void)
+{
+}
+
 #define check_sound_buffers() { if (sndbufpt >= finish_sndbuff) finish_sound_buffer (); }
 
 STATIC_INLINE void clear_sound_buffers (void)
@@ -39,11 +44,14 @@ STATIC_INLINE void clear_sound_buffers (void)
     memset (sndbuffer, 0, 4 * (SNDBUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS);
 }
 
+#define PUT_SOUND_WORD_MONO(x) put_sound_word_mono_func(x)
+
 #define PUT_SOUND_WORD(b) do { *sndbufpt = b; sndbufpt = sndbufpt + 1; } while (0)
 #define PUT_SOUND_WORD_STEREO(l,r) do { *((uae_u32 *)sndbufpt) = (r << 16) | (l & 0xffff); sndbufpt = sndbufpt + 2; } while (0)
 
 #define DEFAULT_SOUND_BITS 16
 #define DEFAULT_SOUND_FREQ 44100
+#define HAVE_STEREO_SUPPORT
 
 #define FILTER_SOUND_OFF 0
 #define FILTER_SOUND_EMUL 1

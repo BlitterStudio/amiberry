@@ -2,6 +2,9 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "fsdb.h"
+#include "zfile.h"
+#include <sys/types.h>
+#include <sys/stat.h>
 
 
 int dos_errno(void)
@@ -33,4 +36,70 @@ int dos_errno(void)
 	write_log(("Unimplemented error %s\n", strerror(e)));
 	return ERROR_NOT_IMPLEMENTED;
     }
+}
+
+
+bool my_stat (const TCHAR *name, struct mystat *statbuf)
+{
+  struct stat64 st;
+  
+  if(stat64(name, &st) == -1) {
+    write_log("my_stat: stat on file %s failed\n", name);
+    return false;
+  }
+  
+  statbuf->size = st.st_size;
+  statbuf->mode = 0;
+  if (st.st_mode & S_IRUSR) {
+    statbuf->mode |= FILEFLAG_READ;
+  }
+  if (st.st_mode & S_IWUSR) {
+    statbuf->mode |= FILEFLAG_WRITE;
+  }
+  statbuf->mtime.tv_sec = st.st_mtime;
+  statbuf->mtime.tv_usec = 0;
+
+  return true;
+}
+
+
+bool my_chmod (const TCHAR *name, uae_u32 mode)
+{
+  // return result of mystat so invalid file will return false
+  struct mystat ms;
+  return my_stat(name, &ms);
+}
+
+
+bool my_utime (const TCHAR *name, struct mytimeval *tv)
+{
+  struct mytimeval mtv;
+  struct timeval times[2];
+  
+  if(tv == NULL) {
+    struct timeval time;
+    struct timezone tz;
+    
+    gettimeofday(&time, &tz);
+    mtv.tv_sec = time.tv_sec + tz.tz_minuteswest;
+    mtv.tv_usec = time.tv_usec;
+  } else {
+    mtv.tv_sec = tv->tv_sec;
+    mtv.tv_usec = tv->tv_usec;
+  }
+
+  times[0].tv_sec = mtv.tv_sec;
+  times[0].tv_usec = mtv.tv_usec;
+  times[1].tv_sec = mtv.tv_sec;
+  times[1].tv_usec = mtv.tv_usec;
+  if(utimes(name, times) == 0)
+    return true;
+  
+  return false;
+}
+
+// Get local time in secs, starting from 01.01.1970
+uae_u32 getlocaltime (void)
+{
+  return time(NULL); // ToDo: convert UTC to local time...
 }

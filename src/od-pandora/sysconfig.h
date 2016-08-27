@@ -77,7 +77,7 @@
 #define HAVE_GETMNTENT 1
 
 /* Define if your struct stat has st_blocks.  */
-#define HAVE_ST_BLOCKS
+/* #undef HAVE_ST_BLOCKS */
 
 /* Define if utime(file, NULL) sets file's timestamp to the present.  */
 #define HAVE_UTIME_NULL 1
@@ -446,6 +446,14 @@
 #define strcmpi(x,y) strcasecmp(x,y)
 #define stricmp(x,y) strcasecmp(x,y)
 
+#define A_ZIP
+//#define A_RAR
+#define A_7Z
+#define A_LHA
+#define A_LZX
+#define A_DMS
+#define A_WRP
+
 #ifndef MAX_PATH
 #define MAX_PATH 256
 #endif
@@ -466,6 +474,10 @@ typedef unsigned char boolean;
 #define FALSE 0
 #define TRUE 1
 
+#ifndef USHORT
+#define USHORT unsigned short
+#endif
+
 #define Sleep(x) usleep(x*1000)
 
 /* Some defines to make it easier to compare files with WinUAE */
@@ -475,6 +487,7 @@ typedef unsigned char boolean;
 #define _tcsftime(w,x,y,z)  strftime(w,x,y,z)
 #define _timezone           timezone
 #define _daylight           daylight
+#define _ftime(x)           ftime(x)
 #define _tfopen(x,y)        fopen(x,y)
 #define _ftelli64(x)        ftello64(x)
 #define _fseeki64(x,y,z)    fseeko64(x,y,z)
@@ -497,10 +510,15 @@ typedef unsigned char boolean;
 #define _totlower(x)        tolower(x)
 #define _istupper(x)        isupper(x)
 #define _istspace(x)        isspace(x)
+#define _istdigit(x)        isdigit(x)
 #define _tstoi(x)           atoi(x)
 #define _tstol(x)           atol(x)
+#define _tstof(x)           atof(x)
 #define _tcstol(x,y,z)      strtol(x,y,z)
 #define _tcstod(x,y)        strtod(x,y)
 #define _stprintf           sprintf
 #define _vstprintf(x,y,z)   vsprintf(x,y,z)
 #define _vsntprintf(w,x,y,z)  vsnprintf(w,x,y,z)
+#define _strtoui64(x,y,z)   strtoll(x,y,z)
+#define _istalnum(x)        isalnum(x)
+#define _tcsspn(x,y)		    strspn(x,y)

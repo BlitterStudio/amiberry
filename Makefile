@@ -39,7 +39,12 @@ PROG   = $(NAME)
 
 all: $(PROG)
 
+#DEBUG=1
+#TRACER=1
+
 PANDORA=1
+#GEN_PROFILE=1
+#USE_PROFILE=1
 
 SDL_CFLAGS = `sdl-config --cflags`
 
@@ -62,14 +67,19 @@ MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/
 MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/gp2x -Isrc/threaddep -Isrc/menu -Isrc/include -Isrc/gp2x/menu -Wno-unused -Wno-format  -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
-LDFLAGS += -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123
+LDFLAGS += -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
 LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
 
 ifndef DEBUG
-MORE_CFLAGS += -O3 -fomit-frame-pointer
+MORE_CFLAGS += -Ofast -fomit-frame-pointer
 MORE_CFLAGS += -finline -fno-builtin
 else
-MORE_CFLAGS += -ggdb
+MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
+
+ifdef TRACER
+TRACE_CFLAGS = -DTRACER -finstrument-functions -Wall -rdynamic
+endif
+
 endif
 
 ASFLAGS += $(CPU_FLAGS)
@@ -77,7 +87,13 @@ ASFLAGS += $(CPU_FLAGS)
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
 
-# 	src/kb-sdl/keyboard.o \
+ifdef GEN_PROFILE
+MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs
+endif
+ifdef USE_PROFILE
+MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt -funroll-loops -fpeel-loops -ftracer -ftree-loop-distribute-patterns
+endif
+
 
 OBJS =	\
 	src/akiko.o \
@@ -90,6 +106,7 @@ OBJS =	\
 	src/blkdev.o \
 	src/blkdev_cdimage.o \
 	src/bsdsocket.o \
+	src/calc.o \
 	src/cdrom.o \
 	src/cfgfile.o \
 	src/cia.o \
@@ -114,6 +131,7 @@ OBJS =	\
 	src/native2amiga.o \
 	src/rommgr.o \
 	src/savestate.o \
+	src/statusline.o \
 	src/traps.o \
 	src/uaelib.o \
 	src/uaeresource.o \
@@ -160,6 +178,7 @@ OBJS =	\
 	src/md-pandora/support.o \
 	src/od-pandora/bsdsocket_host.o \
 	src/od-pandora/cda_play.o \
+	src/od-pandora/charset.o \
 	src/od-pandora/fsdb_host.o \
 	src/od-pandora/hardfile_pandora.o \
 	src/od-pandora/keyboard.o \
@@ -246,6 +265,9 @@ OBJS += src/jit/compemu_support.o
 
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
+
+src/trace.o: src/trace.c
+	$(CC) $(MORE_CFLAGS) -c src/trace.c -o src/trace.o
 
 $(PROG): $(OBJS)
 	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)

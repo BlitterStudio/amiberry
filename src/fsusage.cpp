@@ -17,12 +17,10 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/statfs.h>
-#include <SDL.h>
 
 #include "fsusage.h"
 
@@ -50,11 +48,7 @@ static long adjust_blocks(long blocks, int fromsize, int tosize)
    Return the actual number of bytes read, zero for EOF, or negative
    for an error.  */
 
-int
-safe_read
-      (int desc,
-      TCHAR *ptr,
-      int len)
+int safe_read (int desc, TCHAR *ptr, int len)
 {
   int n_chars;
 
@@ -81,11 +75,8 @@ safe_read
    Return 0 if successful, -1 if not.  When returning -1, ensure that
    ERRNO is either a system error value, or zero if DISK is NULL
    on a system that requires a non-NULL value.  */
-int
-get_fs_usage
-	(const TCHAR *path,
-	const TCHAR *disk,
-	struct fs_usage *fsp)
+#ifndef WINDOWS
+int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 {
 #ifdef STAT_STATFS3_OSF1
 # define CONVERT_BLOCKS(B) adjust_blocks ((B), fsd.f_fsize, 512)
@@ -231,3 +222,4 @@ get_fs_usage
 
   return 0;
 }
+#endif

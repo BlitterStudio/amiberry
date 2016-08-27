@@ -634,14 +634,14 @@ int load_keyring (struct uae_prefs *p, const TCHAR *path)
   	tmp[0] = 0;
   	switch (cnt)
   	{
-  	case 0:
-  	  if (path)
+		case 0:
+			if (path)
       {
-  	    _tcscpy (tmp, path);
+				_tcscpy (tmp, path);
   	    _tcscat (tmp, _T("rom.key"));
   	  }
-    	break;
-  	case 1:
+			break;
+		case 1:
 	    if (p) {
     		_tcscpy (tmp, p->path_rom);
     		_tcscat (tmp, _T("rom.key"));
@@ -839,7 +839,9 @@ int decode_rom (uae_u8 *mem, int size, int mode, int real_size)
 {
   if (mode == 1) {
 	  if (!decode_cloanto_rom_do (mem, size, real_size)) {
+#ifndef SINGLEFILE
     	notify_user (NUMSG_NOROMKEY);
+#endif
     	return 0;
     }
     return 1;
@@ -1277,7 +1279,9 @@ void kickstart_fix_checksum (uae_u8 *mem, int size)
 int kickstart_checksum (uae_u8 *mem, int size)
 {
   if (!kickstart_checksum_do (mem, size)) {
+#ifndef	SINGLEFILE
     notify_user (NUMSG_KSROMCRCERROR);
+#endif
     return 0;
   }
   return 1;

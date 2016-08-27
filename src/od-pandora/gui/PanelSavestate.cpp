@@ -20,7 +20,6 @@
 #include "uae.h"
 #include "gui.h"
 #include "savestate.h"
-#include "target.h"
 #include "gui_handling.h"
 
 
@@ -240,7 +239,7 @@ void RefreshPanelSavestate(void)
 		}
   }
   
-  bool enabled = nr_units () == 0;
+  bool enabled = 1; // nr_units () == 0;
   optState0->setEnabled(enabled);
   optState1->setEnabled(enabled);
   optState2->setEnabled(enabled);

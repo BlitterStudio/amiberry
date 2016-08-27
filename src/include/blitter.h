@@ -25,8 +25,7 @@ extern uae_u16 bltsize;
 extern uae_u16 bltcon0,bltcon1;
 extern uae_u32 bltapt,bltbpt,bltcpt,bltdpt;
 
-extern long blit_firstline_cycles;
-
+extern void maybe_blit2 (int);
 extern void reset_blit (int);
 extern int blitnasty (void);
 extern void blitter_handler (void);
@@ -43,15 +42,11 @@ STATIC_INLINE void maybe_blit (int hack)
   if (savestate_state)
   	return;
 
-  if (hack && get_cycles() < blit_firstline_cycles)
-  	return;
-
-  blitter_handler ();
+  maybe_blit2(hack);
 }
 
-
 extern void blitter_check_start (void);
-typedef void blitter_func(uaecptr, uaecptr, uaecptr, uaecptr, struct bltinfo *_GCCRES_);
+typedef void blitter_func(uaecptr, uaecptr, uaecptr, uaecptr, struct bltinfo *);
 
 #define BLITTER_MAX_WORDS 2048
 

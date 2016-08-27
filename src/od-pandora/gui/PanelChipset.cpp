@@ -15,7 +15,6 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
-#include "target.h"
 #include "gui_handling.h"
 
 
@@ -28,6 +27,7 @@ static gcn::UaeCheckBox* chkNTSC;
 static gcn::Window *grpBlitter;
 static gcn::UaeRadioButton* optBlitNormal;
 static gcn::UaeRadioButton* optBlitImmed;
+static gcn::UaeRadioButton* optBlitWait;
 static gcn::Window *grpCopper;
 static gcn::UaeCheckBox* chkFastCopper;
 static gcn::Window *grpCollisionLevel;
@@ -92,6 +92,7 @@ class BlitterButtonActionListener : public gcn::ActionListener
     void action(const gcn::ActionEvent& actionEvent)
     {
       changed_prefs.immediate_blits = optBlitImmed->isSelected();
+      changed_prefs.waiting_blits = optBlitWait->isSelected();
     }
 };
 static BlitterButtonActionListener* blitterButtonActionListener;
@@ -157,12 +158,17 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	optBlitImmed = new gcn::UaeRadioButton("Immediate", "radiocblittergroup");
 	optBlitImmed->addActionListener(blitterButtonActionListener);
 
+	optBlitWait = new gcn::UaeRadioButton("Wait for blit.", "radiocblittergroup");
+	optBlitWait->setId("BlitWait");
+	optBlitWait->addActionListener(blitterButtonActionListener);
+
 	grpBlitter = new gcn::Window("Blitter");
 	grpBlitter->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	grpBlitter->add(optBlitNormal, 5, 10);
 	grpBlitter->add(optBlitImmed, 5, 40);
+	grpBlitter->add(optBlitWait, 5, 70);
 	grpBlitter->setMovable(false);
-	grpBlitter->setSize(120, 85);
+	grpBlitter->setSize(120, 115);
   grpBlitter->setBaseColor(gui_baseCol);
   
   category.panel->add(grpBlitter);
@@ -227,6 +233,7 @@ void ExitPanelChipset(void)
 
   delete optBlitNormal;
   delete optBlitImmed;
+  delete optBlitWait;
   delete grpBlitter;
   delete blitterButtonActionListener;
   
@@ -258,6 +265,8 @@ void RefreshPanelChipset(void)
   
   if(changed_prefs.immediate_blits)
     optBlitImmed->setSelected(true);
+  else if(changed_prefs.waiting_blits)
+    optBlitWait->setSelected(true);
   else
     optBlitNormal->setSelected(true);
   

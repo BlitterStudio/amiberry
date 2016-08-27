@@ -63,7 +63,7 @@ enum {
   ARM_REG_CPSR = 16
 };
 
-static inline void unknown_instruction(uae_u32 instr) 
+STATIC_INLINE void unknown_instruction(uae_u32 instr) 
 {
 	panicbug("Unknown instruction %08x!\n", instr);
   SDL_Quit();
@@ -76,7 +76,8 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 	unsigned int *pc = (unsigned int *)pregs[ARM_REG_PC];
 
 	panicbug("IP: %p [%08x] %p\n", pc, pc[0], addr);
-	if (pc == 0) return false;
+	if (pc == 0) 
+	  return false;
 
 	if (in_handler > 0) 
 	{
@@ -111,26 +112,28 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 					style = SIGNED;
 				  	transfer_size = SIZE_BYTE;
 	  				break;
-				}
+			}
 			break;
-  		case 2:
-  		case 3: // Single Data Transfer (LDR, STR)
+		case 2:
+		case 3: // Single Data Transfer (LDR, STR)
 			style = UNSIGNED;
 			// Determine transfer size (B bit)
 			if (((opcode >> 22) & 1) == 1)
-	  			transfer_size = SIZE_BYTE;
+  			transfer_size = SIZE_BYTE;
 			else
-	  			transfer_size = SIZE_INT;
+  			transfer_size = SIZE_INT;
 			break;
-  		default:
+		default:
 			panicbug("FIXME: support load/store mutliple?\n");
+      in_handler--;
       return false;
-  	}
+	}
 
-  	// Check for invalid transfer size (SWP instruction?)
-  	if (transfer_size == SIZE_UNKNOWN) {
-  		panicbug("Invalid transfer size\n");
-      return false;
+	// Check for invalid transfer size (SWP instruction?)
+	if (transfer_size == SIZE_UNKNOWN) {
+		panicbug("Invalid transfer size\n");
+    in_handler--;
+    return false;
 	}
 
 	// Determine transfer type (L bit)
@@ -142,15 +145,15 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
   int rd = (opcode >> 12) & 0xf;
 #if DEBUG
   static const char * reg_names[] = {
-	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
-	"r8", "r9", "sl", "fp", "ip", "sp", "lr", "pc"
+  	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
+  	"r8", "r9", "sl", "fp", "ip", "sp", "lr", "pc"
   };
   panicbug("%s %s register %s\n",
-		 transfer_size == SIZE_BYTE ? "byte" :
-		 transfer_size == SIZE_WORD ? "word" :
-		 transfer_size == SIZE_INT ? "long" : "unknown",
-		 transfer_type == TYPE_LOAD ? "load to" : "store from",
-		 reg_names[rd]);
+		transfer_size == SIZE_BYTE ? "byte" :
+		transfer_size == SIZE_WORD ? "word" :
+		transfer_size == SIZE_INT ? "long" : "unknown",
+		transfer_type == TYPE_LOAD ? "load to" : "store from",
+		reg_names[rd]);
   panicbug("\n");
 //  for (int i = 0; i < 16; i++) {
 //  	panicbug("%s : %p", reg_names[i], pregs[i]);
@@ -201,6 +204,7 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 
 buserr:
   panicbug("Amiga bus error\n");
+  in_handler--;
 
 //  BUS_ERROR(addr);
 	return false;
@@ -219,6 +223,10 @@ void signal_segv(int signum, siginfo_t* info, void*ptr)
   ucontext_t *ucontext = (ucontext_t*)ptr;
 	Dl_info dlinfo;
 
+#ifdef TRACER
+	trace_end();
+#endif
+
   void **bp = 0;
   void *ip = 0;
 
@@ -233,6 +241,7 @@ void signal_segv(int signum, siginfo_t* info, void*ptr)
     printf("Illegal Instruction!\n");
   else
     printf("Segmentation Fault!\n");
+
   printf("info.si_signo = %d\n", signum);
   printf("info.si_errno = %d\n", info->si_errno);
 //  printf("info.si_code = %d (%s)\n", info->si_code, si_codes[info->si_code]);
@@ -262,34 +271,58 @@ void signal_segv(int signum, siginfo_t* info, void*ptr)
   printf("Err Code = 0x%08x\n", ucontext->uc_mcontext.error_code);
   printf("Old Mask = 0x%08x\n", ucontext->uc_mcontext.oldmask);
 
-  dump_compiler((uae_u32*)ucontext->uc_mcontext.arm_pc);
-  
-//	printf("Stack trace:\n");
-//  ip = (void*)ucontext->uc_mcontext.arm_r10;
-//  bp = (void**)ucontext->uc_mcontext.arm_r10;
-//  while(bp && ip) {
-//    if (!dladdr(ip, &dlinfo)) {
-//      printf("IP out of range\n");
-//      break;
-//    }
-//    const char *symname = dlinfo.dli_sname;
-//	  printf("% 2d: %p <%s + 0x%08x> (%s)\n", ++f, ip, symname,
-//      (unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-//	  if(dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
-//      break;
-//    ip = bp[1];
-//    bp = (void**)bp[0];
-//  }
-//
-//	printf("Stack trace (non-dedicated):\n");
-//  char **strings;
-//  void *bt[20];
-//  int sz = backtrace(bt, 20);
-//  strings = backtrace_symbols(bt, sz);
-//  for(i = 0; i < sz; ++i)
-//    printf("%s\n", strings[i]);
-//	printf("End of stack trace.\n");
+//  dump_compiler((uae_u32*)ucontext->uc_mcontext.arm_pc);
 
+  void *getaddr = (void *)ucontext->uc_mcontext.arm_lr;
+  if(dladdr(getaddr, &dlinfo))
+	  printf("LR - 0x%08X: <%s> (%s)\n", getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
+  else
+    printf("LR - 0x%08X: symbol not found\n", getaddr);
+
+//	printf("Stack trace:\n");
+
+/*
+  #define MAX_BACKTRACE 10
+  
+  void *array[MAX_BACKTRACE];
+  int size = backtrace(array, MAX_BACKTRACE);
+  for(int i=0; i<size; ++i)
+  {
+    if (dladdr(array[i], &dlinfo)) {
+      const char *symname = dlinfo.dli_sname;
+  	  printf("%p <%s + 0x%08x> (%s)\n", array[i], symname,
+        (unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+    }
+  }
+*/
+
+/*
+  ip = (void*)ucontext->uc_mcontext.arm_r10;
+  bp = (void**)ucontext->uc_mcontext.arm_r10;
+  while(bp && ip) {
+    if (!dladdr(ip, &dlinfo)) {
+      printf("IP out of range\n");
+      break;
+    }
+    const char *symname = dlinfo.dli_sname;
+	  printf("% 2d: %p <%s + 0x%08x> (%s)\n", ++f, ip, symname,
+      (unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+	  if(dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
+      break;
+    ip = bp[1];
+    bp = (void**)bp[0];
+  }
+
+	printf("Stack trace (non-dedicated):\n");
+  char **strings;
+  void *bt[20];
+  int sz = backtrace(bt, 20);
+  strings = backtrace_symbols(bt, sz);
+  for(i = 0; i < sz; ++i)
+    printf("%s\n", strings[i]);
+	printf("End of stack trace.\n");
+*/
+  
   SDL_Quit();
-  abort();
+  exit(1);
 }

@@ -15,6 +15,7 @@
   * Copyright 1996, 1997 Bernd Schmidt
   */
 
+using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -145,23 +146,6 @@ struct utimbuf
 };
 #endif
 
-#if defined(WARPUP)
-#include "devices/timer.h"
-#include "osdep/posixemu.h"
-#define REGPARAM
-#define REGPARAM2
-#define RETSIGTYPE
-#define USE_ZFILE
-#define strcasecmp stricmp
-#define memcpy q_memcpy
-#define memset q_memset
-#define strdup my_strdup
-#define random rand
-#define creat(x,y) open("T:creat",O_CREAT|O_RDWR|O_TRUNC,777)
-extern void* q_memset(void*,int,size_t);
-extern void* q_memcpy(void*,const void*,size_t);
-#endif
-
 #ifdef __DOS__
 #include <pc.h>
 #include <io.h>
@@ -237,6 +221,18 @@ typedef uae_u32 uaecptr;
 extern TCHAR *my_strdup (const TCHAR*s);
 #endif
 
+extern TCHAR *my_strdup_ansi (const char*);
+extern TCHAR *au (const char*);
+extern char *ua (const TCHAR*);
+extern TCHAR *au_fs (const char*);
+extern char *ua_fs (const TCHAR*, int);
+extern char *ua_copy (char *dst, int maxlen, const TCHAR *src);
+extern TCHAR *au_copy (TCHAR *dst, int maxlen, const char *src);
+extern char *ua_fs_copy (char *dst, int maxlen, const TCHAR *src, int defchar);
+extern TCHAR *au_fs_copy (TCHAR *dst, int maxlen, const char *src);
+extern char *uutf8 (const TCHAR *s);
+extern TCHAR *utf8u (const char *s);
+
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
 #ifdef __GNUC__
@@ -267,10 +263,6 @@ extern TCHAR *my_strdup (const TCHAR*s);
 #undef DONT_HAVE_REAL_POSIX /* define if open+delete doesn't do what it should */
 #undef DONT_HAVE_STDIO
 #undef DONT_HAVE_MALLOC
-
-#if defined(WARPUP)
-#define DONT_HAVE_POSIX
-#endif
 
 #if defined PANDORA
 
@@ -376,8 +368,6 @@ extern void mallocemu_free (void *ptr);
 #define ASM_SYM_FOR_FUNC(a)
 #endif
 
-#include "target.h"
-
 #ifdef UAE_CONSOLE
 #undef write_log
 #define write_log write_log_standard
@@ -418,6 +408,8 @@ extern void gui_message (const TCHAR *,...);
 #endif
 #endif
 
+#include "target.h"
+
 /* Every Amiga hardware clock cycle takes this many "virtual" cycles.  This
    used to be hardcoded as 1, but using higher values allows us to time some
    stuff more precisely.
@@ -446,11 +438,11 @@ extern void gui_message (const TCHAR *,...);
 
 #ifdef ARMV6_ASSEMBLY
 
-static inline uae_u32 do_byteswap_32(uae_u32 v) {__asm__ (
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {__asm__ (
 						"rev %0, %0"
                                                 : "=r" (v) : "0" (v) ); return v;}
 
-static inline uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
   						"revsh %0, %0\n\t"
               "uxth %0, %0"
                                                 : "=r" (v) : "0" (v) ); return v;}

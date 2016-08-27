@@ -16,7 +16,8 @@
 #include "newcpu.h"
 #include "events.h"
 
-frame_time_t vsynctimebase, vsyncmintime;
+frame_time_t vsyncmintime;
+int vsynctimebase;
 
 void events_schedule (void)
 {
@@ -44,7 +45,7 @@ void do_cycles_cpu_fastest (unsigned long cycles_to_add)
   if (is_syncline && eventtab[ev_hsync].evtime - currcycle <= cycles_to_add) {
 	  int rpt = read_processor_time ();
 	  int v = rpt - vsyncmintime;
-	  if (v > (int)syncbase || v < -((int)syncbase))
+	  if (v > syncbase || v < -syncbase)
 	    vsyncmintime = rpt;
   	if (v < speedup_timelimit) {
 	    regs.pissoff = pissoff_value;

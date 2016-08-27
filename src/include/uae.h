@@ -14,23 +14,30 @@ extern void do_leave_program (void);
 extern void start_program (void);
 extern void leave_program (void);
 extern void real_main (int, TCHAR **);
+extern void virtualdevice_init (void);
 extern void usage (void);
 extern void sleep_millis (int ms);
 extern void sleep_millis_main (int ms);
 extern void sleep_millis_busy (int ms);
 
+#define UAE_QUIT 1
+#define UAE_RESET 2
+#define UAE_RESET_KEYBOARD 3
+#define UAE_RESET_HARD 4
 
-extern void uae_reset (int);
+extern void uae_reset (int, int);
 extern void uae_quit (void);
-extern void uae_restart (int, TCHAR*);
+extern void uae_restart (int, const TCHAR*);
 extern void reset_all_systems (void);
 extern void target_reset (void);
 extern void target_run (void);
 extern void target_quit (void);
+extern void target_restart (void);
 extern void stripslashes (TCHAR *p);
 extern void fixtrailing (TCHAR *p);
 extern void getpathpart (TCHAR *outpath, int size, const TCHAR *inpath);
 extern void getfilepart (TCHAR *out, int size, const TCHAR *path);
+extern uae_u32 getlocaltime (void);
 
 extern int quit_program;
 

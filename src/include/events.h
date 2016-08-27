@@ -14,9 +14,9 @@
 
 #include "md-pandora/rpt.h"
 
-extern frame_time_t vsynctimebase, vsyncmintime;
+extern frame_time_t vsyncmintime;
+extern int vsynctimebase, syncbase;
 extern void reset_frame_rate_hack (void);
-extern frame_time_t syncbase;
 extern int speedup_timelimit;
 
 extern void compute_vsynctime (void);

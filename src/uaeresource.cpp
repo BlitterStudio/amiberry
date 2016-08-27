@@ -24,11 +24,14 @@ static uae_u32 REGPARAM2 res_getfunc (TrapContext *ctx)
   uaecptr funcname = m68k_areg (regs, 0);
   uae_char tmp[256];
 	uae_u32 p;
+	TCHAR *s;
 
   if (funcname == 0)
   	return 0;
   strcpyah_safe (tmp, funcname, sizeof tmp);
-  p = find_trap (tmp);
+	s = au (tmp);
+	p = find_trap (s);
+	xfree (s);
   return p;
 }
 

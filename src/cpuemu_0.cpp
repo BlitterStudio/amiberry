@@ -117,7 +117,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0030_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src |= dst;
 	CLEAR_CZNV ();
@@ -263,7 +263,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0070_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 	src |= dst;
 	CLEAR_CZNV ();
@@ -308,7 +308,7 @@ return 16 * CYCLE_UNIT / 2;
 /* ORSR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_007c_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	MakeSR (regs);
 {	uae_s16 src = get_iword (2);
 	regs.sr |= src;
@@ -415,7 +415,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00b0_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	src |= dst;
 	CLEAR_CZNV ();
@@ -471,7 +471,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00d0_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s8)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }
@@ -491,7 +491,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00e8_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s8)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -506,13 +506,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_00f0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = (uae_s32)(uae_s8)get_byte (dsta); upper = (uae_s32)(uae_s8)get_byte (dsta + 1);
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s8)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
   }
 }
@@ -530,7 +530,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00f8_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s8)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -549,7 +549,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00f9_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s8)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 16 * CYCLE_UNIT / 2;
 	}
 }
@@ -563,14 +563,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_00fa_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = (uae_s32)(uae_s8)get_byte (dsta); upper = (uae_s32)(uae_s8)get_byte (dsta + 1);
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s8)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -586,14 +586,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_00fb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = (uae_s32)(uae_s8)get_byte (dsta); upper = (uae_s32)(uae_s8)get_byte (dsta + 1);
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s8)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }
@@ -695,7 +695,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0130_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -737,7 +737,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_013a_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 2;
+	dsta = m68k_getpc () + 2;
 	dsta += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
@@ -755,8 +755,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_013b_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -881,7 +881,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0170_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	dst ^= (1 << src);
@@ -1028,7 +1028,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -1177,7 +1177,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01f0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -1310,7 +1310,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0230_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= dst;
 	CLEAR_CZNV ();
@@ -1456,7 +1456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0270_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 	src &= dst;
 	CLEAR_CZNV ();
@@ -1501,7 +1501,7 @@ return 16 * CYCLE_UNIT / 2;
 /* ANDSR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_027c_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	MakeSR (regs);
 {	uae_s16 src = get_iword (2);
 	regs.sr &= src;
@@ -1608,7 +1608,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02b0_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	src &= dst;
 	CLEAR_CZNV ();
@@ -1664,7 +1664,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02d0_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s16)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }
@@ -1684,7 +1684,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02e8_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s16)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -1699,13 +1699,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_02f0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = (uae_s32)(uae_s16)get_word (dsta); upper = (uae_s32)(uae_s16)get_word (dsta + 2);
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s16)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }
@@ -1723,7 +1723,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02f8_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s16)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -1742,7 +1742,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02f9_0)(uae_u32 opcode, struct regstruct &regs)
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s16)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 16 * CYCLE_UNIT / 2;
 	}
 }
@@ -1756,14 +1756,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_02fa_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = (uae_s32)(uae_s16)get_word (dsta); upper = (uae_s32)(uae_s16)get_word (dsta + 2);
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s16)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -1779,14 +1779,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_02fb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = (uae_s32)(uae_s16)get_word (dsta); upper = (uae_s32)(uae_s16)get_word (dsta + 2);
 	if ((extra & 0x8000) == 0) reg = (uae_s32)(uae_s16)reg;
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
   }
 }
@@ -1910,7 +1910,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0430_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -2084,7 +2084,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0470_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -2264,7 +2264,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04b0_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -2334,7 +2334,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04d0_0)(uae_u32 opcode, struct regstruct &regs)
 	lower = get_long (dsta); upper = get_long (dsta + 4);
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }
@@ -2353,7 +2353,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04e8_0)(uae_u32 opcode, struct regstruct &regs)
 	lower = get_long (dsta); upper = get_long (dsta + 4);
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -2368,12 +2368,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_04f0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = get_long (dsta); upper = get_long (dsta + 4);
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }
@@ -2390,7 +2390,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04f8_0)(uae_u32 opcode, struct regstruct &regs)
 	lower = get_long (dsta); upper = get_long (dsta + 4);
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -2408,7 +2408,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04f9_0)(uae_u32 opcode, struct regstruct &regs)
 	lower = get_long (dsta); upper = get_long (dsta + 4);
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 16 * CYCLE_UNIT / 2;
 	}
 }
@@ -2422,13 +2422,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_04fa_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = get_long (dsta); upper = get_long (dsta + 4);
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }
@@ -2444,13 +2444,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_04fb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 	{uae_s32 upper,lower,reg = regs.regs[(extra >> 12) & 15];
 	lower = get_long (dsta); upper = get_long (dsta + 4);
 	SET_ZFLG (upper == reg || lower == reg);
 	SET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);
-	if ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);
+	if ((extra & 0x800) && GET_CFLG ()) { Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }
@@ -2574,7 +2574,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0630_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) + ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -2748,7 +2748,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0670_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) + ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -2928,7 +2928,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06b0_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) + ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -2992,7 +2992,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06c0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3001,7 +3001,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06c8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3010,7 +3010,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06d0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3019,7 +3019,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06e8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3028,7 +3028,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06f0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3036,7 +3036,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06f0_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_06f8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3044,7 +3044,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06f8_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_06f9_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3052,7 +3052,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06f9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_06fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3060,7 +3060,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06fa_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_06fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -3141,7 +3141,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0830_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -3180,7 +3180,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_083a_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
@@ -3197,8 +3197,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_083b_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -3303,7 +3303,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0870_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	dst ^= (1 << src);
@@ -3429,7 +3429,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -3555,7 +3555,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08f0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= 7;
 	SET_ZFLG (1 ^ ((dst >> src) & 1));
@@ -3686,7 +3686,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a30_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src ^= dst;
 	CLEAR_CZNV ();
@@ -3832,7 +3832,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a70_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 	src ^= dst;
 	CLEAR_CZNV ();
@@ -3877,7 +3877,7 @@ return 16 * CYCLE_UNIT / 2;
 /* EORSR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_0a7c_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	MakeSR (regs);
 {	uae_s16 src = get_iword (2);
 	regs.sr ^= src;
@@ -3984,7 +3984,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ab0_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	src ^= dst;
 	CLEAR_CZNV ();
@@ -4046,13 +4046,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ad0_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u8)(m68k_dreg (regs, rc))) > ((uae_u8)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_byte (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_byte (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xff) | (dst & 0xff);
-}}}}}}}}	m68k_incpc (4);
-return 16 * CYCLE_UNIT / 2;
+}}}}}}}}return 16 * CYCLE_UNIT / 2;
 }
 
 /* CAS.B #<data>.W,(An)+ */
@@ -4074,13 +4074,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ad8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u8)(m68k_dreg (regs, rc))) > ((uae_u8)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_byte (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_byte (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xff) | (dst & 0xff);
-}}}}}}}}	m68k_incpc (4);
-return 18 * CYCLE_UNIT / 2;
+}}}}}}}}return 18 * CYCLE_UNIT / 2;
 }
 
 /* CAS.B #<data>.W,-(An) */
@@ -4102,13 +4102,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ae0_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u8)(m68k_dreg (regs, rc))) > ((uae_u8)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_byte (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_byte (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xff) | (dst & 0xff);
-}}}}}}}}	m68k_incpc (4);
-return 19 * CYCLE_UNIT / 2;
+}}}}}}}}return 19 * CYCLE_UNIT / 2;
 }
 
 #endif
@@ -4132,13 +4132,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ae8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u8)(m68k_dreg (regs, rc))) > ((uae_u8)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (6);
 	if (GET_ZFLG ()){
 		put_byte (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_byte (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xff) | (dst & 0xff);
-}}}}}}}}	m68k_incpc (6);
-return 26 * CYCLE_UNIT / 2;
+}}}}}}}}return 26 * CYCLE_UNIT / 2;
 }
 
 /* CAS.B #<data>.W,(d8,An,Xn) */
@@ -4148,7 +4148,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0af0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {	int ru = (src >> 6) & 7;
 	int rc = src & 7;
@@ -4185,13 +4185,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0af8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u8)(m68k_dreg (regs, rc))) > ((uae_u8)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (6);
 	if (GET_ZFLG ()){
 		put_byte (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_byte (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xff) | (dst & 0xff);
-}}}}}}}}	m68k_incpc (6);
-return 18 * CYCLE_UNIT / 2;
+}}}}}}}}return 18 * CYCLE_UNIT / 2;
 }
 
 /* CAS.B #<data>.W,(xxx).L */
@@ -4211,13 +4211,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0af9_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u8)(m68k_dreg (regs, rc))) > ((uae_u8)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (8);
 	if (GET_ZFLG ()){
 		put_byte (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_byte (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xff) | (dst & 0xff);
-}}}}}}}}	m68k_incpc (8);
-return 19 * CYCLE_UNIT / 2;
+}}}}}}}}return 19 * CYCLE_UNIT / 2;
 }
 
 /* CMP.B #<data>.B,Dn */
@@ -4327,7 +4327,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c30_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -4384,7 +4384,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c3a_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
@@ -4407,8 +4407,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c3b_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -4528,7 +4528,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c70_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -4585,7 +4585,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c7a_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
@@ -4608,8 +4608,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c7b_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -4735,7 +4735,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cb0_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -4795,7 +4795,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cba_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src;
 	src = get_ilong (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 6;
+	dsta = m68k_getpc () + 6;
 	dsta += (uae_s32)(uae_s16)get_iword (6);
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -4819,8 +4819,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cbb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (6);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -4851,13 +4851,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cd0_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u16)(m68k_dreg (regs, rc))) > ((uae_u16)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_word (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_word (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xffff) | (dst & 0xffff);
-}}}}}}}}	m68k_incpc (4);
-return 16 * CYCLE_UNIT / 2;
+}}}}}}}}return 16 * CYCLE_UNIT / 2;
 }
 
 /* CAS.W #<data>.W,(An)+ */
@@ -4879,13 +4879,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cd8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u16)(m68k_dreg (regs, rc))) > ((uae_u16)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_word (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_word (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xffff) | (dst & 0xffff);
-}}}}}}}}	m68k_incpc (4);
-return 18 * CYCLE_UNIT / 2;
+}}}}}}}}return 18 * CYCLE_UNIT / 2;
 }
 
 /* CAS.W #<data>.W,-(An) */
@@ -4907,13 +4907,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ce0_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u16)(m68k_dreg (regs, rc))) > ((uae_u16)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_word (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_word (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xffff) | (dst & 0xffff);
-}}}}}}}}	m68k_incpc (4);
-return 19 * CYCLE_UNIT / 2;
+}}}}}}}}return 19 * CYCLE_UNIT / 2;
 }
 
 /* CAS.W #<data>.W,(d16,An) */
@@ -4934,13 +4934,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ce8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u16)(m68k_dreg (regs, rc))) > ((uae_u16)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (6);
 	if (GET_ZFLG ()){
 		put_word (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_word (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xffff) | (dst & 0xffff);
-}}}}}}}}	m68k_incpc (6);
-return 26 * CYCLE_UNIT / 2;
+}}}}}}}}return 26 * CYCLE_UNIT / 2;
 }
 
 /* CAS.W #<data>.W,(d8,An,Xn) */
@@ -4950,7 +4950,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cf0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {	int ru = (src >> 6) & 7;
 	int rc = src & 7;
@@ -4987,13 +4987,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cf8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u16)(m68k_dreg (regs, rc))) > ((uae_u16)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (6);
 	if (GET_ZFLG ()){
 		put_word (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_word (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xffff) | (dst & 0xffff);
-}}}}}}}}	m68k_incpc (6);
-return 18 * CYCLE_UNIT / 2;
+}}}}}}}}return 18 * CYCLE_UNIT / 2;
 }
 
 /* CAS.W #<data>.W,(xxx).L */
@@ -5013,13 +5013,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cf9_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u16)(m68k_dreg (regs, rc))) > ((uae_u16)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (8);
 	if (GET_ZFLG ()){
 		put_word (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_word (dsta, dst);
 		m68k_dreg(regs, rc) = (m68k_dreg(regs, rc) & ~0xffff) | (dst & 0xffff);
-}}}}}}}}	m68k_incpc (8);
-return 19 * CYCLE_UNIT / 2;
+}}}}}}}}return 19 * CYCLE_UNIT / 2;
 }
 
 /* CAS2.W #<data>.L */
@@ -5063,7 +5063,7 @@ return 25 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e10_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5086,7 +5086,7 @@ return 10 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e18_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5111,7 +5111,7 @@ return 12 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e20_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5136,7 +5136,7 @@ return 12 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e28_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5159,17 +5159,17 @@ return 20 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e30_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	put_byte (dsta,src);
 }}}else{{	uaecptr srca;
 	m68k_incpc (4);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 	if (extra & 0x8000) {
 	m68k_areg (regs, (extra >> 12) & 7) = (uae_s32)(uae_s8)src;
@@ -5182,7 +5182,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0e30_0)(uae_u32 opcode, struct regstruct &regs)
 /* MOVES.B #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0e38_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5204,7 +5204,7 @@ return 12 * CYCLE_UNIT / 2;
 /* MOVES.B #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0e39_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5227,7 +5227,7 @@ return 13 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e50_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5250,7 +5250,7 @@ return 10 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e58_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5275,7 +5275,7 @@ return 12 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e60_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5300,7 +5300,7 @@ return 12 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e68_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5323,17 +5323,17 @@ return 20 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e70_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	put_word (dsta,src);
 }}}else{{	uaecptr srca;
 	m68k_incpc (4);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 	if (extra & 0x8000) {
 	m68k_areg (regs, (extra >> 12) & 7) = (uae_s32)(uae_s16)src;
@@ -5346,7 +5346,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0e70_0)(uae_u32 opcode, struct regstruct &regs)
 /* MOVES.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0e78_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5368,7 +5368,7 @@ return 12 * CYCLE_UNIT / 2;
 /* MOVES.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0e79_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5391,7 +5391,7 @@ return 13 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e90_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5414,7 +5414,7 @@ return 10 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0e98_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5439,7 +5439,7 @@ return 12 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0ea0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5464,7 +5464,7 @@ return 12 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0ea8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5487,17 +5487,17 @@ return 20 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_0eb0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	put_long (dsta,src);
 }}}else{{	uaecptr srca;
 	m68k_incpc (4);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 	if (extra & 0x8000) {
 	m68k_areg (regs, (extra >> 12) & 7) = src;
@@ -5510,7 +5510,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0eb0_0)(uae_u32 opcode, struct regstruct &regs)
 /* MOVES.L #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0eb8_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5532,7 +5532,7 @@ return 12 * CYCLE_UNIT / 2;
 /* MOVES.L #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0eb9_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 extra = get_iword (2);
 	if (extra & 0x800)
 {	uae_u32 src = regs.regs[(extra >> 12) & 15];
@@ -5569,13 +5569,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ed0_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u32)(m68k_dreg (regs, rc))) > ((uae_u32)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_long (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_long (dsta, dst);
 		m68k_dreg(regs, rc) = dst;
-}}}}}}}}	m68k_incpc (4);
-return 16 * CYCLE_UNIT / 2;
+}}}}}}}}return 16 * CYCLE_UNIT / 2;
 }
 
 /* CAS.L #<data>.W,(An)+ */
@@ -5597,13 +5597,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ed8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u32)(m68k_dreg (regs, rc))) > ((uae_u32)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_long (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_long (dsta, dst);
 		m68k_dreg(regs, rc) = dst;
-}}}}}}}}	m68k_incpc (4);
-return 18 * CYCLE_UNIT / 2;
+}}}}}}}}return 18 * CYCLE_UNIT / 2;
 }
 
 /* CAS.L #<data>.W,-(An) */
@@ -5625,13 +5625,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ee0_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u32)(m68k_dreg (regs, rc))) > ((uae_u32)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (4);
 	if (GET_ZFLG ()){
 		put_long (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_long (dsta, dst);
 		m68k_dreg(regs, rc) = dst;
-}}}}}}}}	m68k_incpc (4);
-return 19 * CYCLE_UNIT / 2;
+}}}}}}}}return 19 * CYCLE_UNIT / 2;
 }
 
 /* CAS.L #<data>.W,(d16,An) */
@@ -5652,13 +5652,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ee8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u32)(m68k_dreg (regs, rc))) > ((uae_u32)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (6);
 	if (GET_ZFLG ()){
 		put_long (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_long (dsta, dst);
 		m68k_dreg(regs, rc) = dst;
-}}}}}}}}	m68k_incpc (6);
-return 26 * CYCLE_UNIT / 2;
+}}}}}}}}return 26 * CYCLE_UNIT / 2;
 }
 
 /* CAS.L #<data>.W,(d8,An,Xn) */
@@ -5668,7 +5668,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ef0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {	int ru = (src >> 6) & 7;
 	int rc = src & 7;
@@ -5705,13 +5705,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ef8_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u32)(m68k_dreg (regs, rc))) > ((uae_u32)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (6);
 	if (GET_ZFLG ()){
 		put_long (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_long (dsta, dst);
 		m68k_dreg(regs, rc) = dst;
-}}}}}}}}	m68k_incpc (6);
-return 18 * CYCLE_UNIT / 2;
+}}}}}}}}return 18 * CYCLE_UNIT / 2;
 }
 
 /* CAS.L #<data>.W,(xxx).L */
@@ -5731,13 +5731,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ef9_0)(uae_u32 opcode, struct regstruct &regs)
 	SET_VFLG ((flgs != flgo) && (flgn != flgo));
 	SET_CFLG (((uae_u32)(m68k_dreg (regs, rc))) > ((uae_u32)(dst)));
 	SET_NFLG (flgn != 0);
+	m68k_incpc (8);
 	if (GET_ZFLG ()){
 		put_long (dsta, (m68k_dreg (regs, ru)));
 	}else{
 		put_long (dsta, dst);
 		m68k_dreg(regs, rc) = dst;
-}}}}}}}}	m68k_incpc (8);
-return 19 * CYCLE_UNIT / 2;
+}}}}}}}}return 19 * CYCLE_UNIT / 2;
 }
 
 /* CAS2.L #<data>.L */
@@ -5864,7 +5864,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
@@ -5908,7 +5908,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_103a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	CLEAR_CZNV ();
@@ -5926,8 +5926,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_103b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
@@ -6046,7 +6046,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -6096,7 +6096,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
@@ -6116,8 +6116,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_10bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -6245,7 +6245,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -6298,7 +6298,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
@@ -6319,8 +6319,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_10fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -6450,7 +6450,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1130_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) - areg_byteinc[dstreg];
@@ -6503,7 +6503,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_113a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
@@ -6524,8 +6524,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_113b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) - areg_byteinc[dstreg];
@@ -6650,7 +6650,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1170_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) + (uae_s32)(uae_s16)get_iword (0);
@@ -6701,7 +6701,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_117a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
@@ -6721,8 +6721,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_117b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) + (uae_s32)(uae_s16)get_iword (0);
@@ -6757,7 +6757,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1180_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6775,7 +6775,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1190_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6794,7 +6794,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1198_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, srcreg) += areg_byteinc[srcreg];
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6813,7 +6813,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11a0_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, srcreg) = srca;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6831,7 +6831,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11a8_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6846,10 +6846,10 @@ uae_u32 REGPARAM2 CPUFUNC(op_11b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6866,7 +6866,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11b8_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6883,7 +6883,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11b9_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6896,12 +6896,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_11ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6916,11 +6916,11 @@ uae_u32 REGPARAM2 CPUFUNC(op_11bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -6935,7 +6935,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11bc_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = get_ibyte (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
 	SET_NFLG   (((uae_s8)(src)) < 0);
@@ -7034,7 +7034,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = (uae_s32)(uae_s16)get_iword (0);
@@ -7082,7 +7082,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11f9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_11fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
@@ -7101,8 +7101,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_11fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = (uae_s32)(uae_s16)get_iword (0);
@@ -7219,7 +7219,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = get_ilong (0);
@@ -7267,7 +7267,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13f9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_13fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
@@ -7286,8 +7286,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_13fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uaecptr dsta;
 	dsta = get_ilong (0);
@@ -7414,7 +7414,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
@@ -7458,7 +7458,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_203a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	CLEAR_CZNV ();
@@ -7476,8 +7476,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_203b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
@@ -7583,7 +7583,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	m68k_areg (regs, dstreg) = (src);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -7618,7 +7618,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_207a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	m68k_areg (regs, dstreg) = (src);
@@ -7633,8 +7633,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_207b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	m68k_areg (regs, dstreg) = (src);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -7764,7 +7764,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -7814,7 +7814,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
@@ -7834,8 +7834,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_20bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -7981,7 +7981,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -8034,7 +8034,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
@@ -8055,8 +8055,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_20fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -8204,7 +8204,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2130_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) - 4;
@@ -8257,7 +8257,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_213a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
@@ -8278,8 +8278,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_213b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) - 4;
@@ -8421,7 +8421,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2170_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) + (uae_s32)(uae_s16)get_iword (0);
@@ -8472,7 +8472,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_217a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
@@ -8492,8 +8492,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_217b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) + (uae_s32)(uae_s16)get_iword (0);
@@ -8529,7 +8529,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2180_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8545,7 +8545,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2188_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src = m68k_areg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8553,9 +8553,6 @@ uae_u32 REGPARAM2 CPUFUNC(op_2188_0)(uae_u32 opcode, struct regstruct &regs)
 }}}}return 9 * CYCLE_UNIT / 2;
 }
 
-#endif
-
-#ifdef PART_3
 /* MOVE.L (An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_2190_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -8566,7 +8563,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2190_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8574,6 +8571,9 @@ uae_u32 REGPARAM2 CPUFUNC(op_2190_0)(uae_u32 opcode, struct regstruct &regs)
 }}}}}return 11 * CYCLE_UNIT / 2;
 }
 
+#endif
+
+#ifdef PART_3
 /* MOVE.L (An)+,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_2198_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -8585,7 +8585,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2198_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, srcreg) += 4;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8604,7 +8604,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21a0_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, srcreg) = srca;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8622,7 +8622,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21a8_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8637,10 +8637,10 @@ uae_u32 REGPARAM2 CPUFUNC(op_21b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8657,7 +8657,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21b8_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8674,7 +8674,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21b9_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8687,12 +8687,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_21ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8707,11 +8707,11 @@ uae_u32 REGPARAM2 CPUFUNC(op_21bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8727,7 +8727,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21bc_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
 	SET_NFLG   (((uae_s32)(src)) < 0);
@@ -8841,7 +8841,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = (uae_s32)(uae_s16)get_iword (0);
@@ -8889,7 +8889,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21f9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_21fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
@@ -8908,8 +8908,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_21fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = (uae_s32)(uae_s16)get_iword (0);
@@ -9042,7 +9042,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = get_ilong (0);
@@ -9090,7 +9090,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23f9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_23fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
@@ -9109,8 +9109,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_23fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uaecptr dsta;
 	dsta = get_ilong (0);
@@ -9238,7 +9238,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
@@ -9282,7 +9282,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_303a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	CLEAR_CZNV ();
@@ -9300,8 +9300,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_303b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
@@ -9412,7 +9412,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	src = (uae_s32)(uae_s16)src;
 	m68k_areg (regs, dstreg) = (uae_s32)(uae_s16)(src);
@@ -9450,7 +9450,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_307a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	src = (uae_s32)(uae_s16)src;
@@ -9466,8 +9466,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_307b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	src = (uae_s32)(uae_s16)src;
 	m68k_areg (regs, dstreg) = (uae_s32)(uae_s16)(src);
@@ -9598,7 +9598,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -9648,7 +9648,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
@@ -9668,8 +9668,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_30bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -9814,7 +9814,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -9867,7 +9867,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
@@ -9888,8 +9888,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_30fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg);
@@ -10036,7 +10036,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3130_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) - 2;
@@ -10089,7 +10089,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_313a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
@@ -10110,8 +10110,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_313b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) - 2;
@@ -10252,7 +10252,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3170_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) + (uae_s32)(uae_s16)get_iword (0);
@@ -10303,7 +10303,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_317a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
@@ -10323,8 +10323,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_317b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, dstreg) + (uae_s32)(uae_s16)get_iword (0);
@@ -10359,7 +10359,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3180_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10375,7 +10375,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3188_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = m68k_areg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10393,7 +10393,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3190_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10412,7 +10412,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3198_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, srcreg) += 2;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10431,7 +10431,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31a0_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, srcreg) = srca;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10449,7 +10449,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31a8_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10464,10 +10464,10 @@ uae_u32 REGPARAM2 CPUFUNC(op_31b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10484,7 +10484,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31b8_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10501,7 +10501,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31b9_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	m68k_incpc (6);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10514,12 +10514,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_31ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10534,11 +10534,11 @@ uae_u32 REGPARAM2 CPUFUNC(op_31bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10553,7 +10553,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31bc_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
 	SET_NFLG   (((uae_s16)(src)) < 0);
@@ -10667,7 +10667,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = (uae_s32)(uae_s16)get_iword (0);
@@ -10715,7 +10715,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31f9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_31fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
@@ -10734,8 +10734,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_31fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = (uae_s32)(uae_s16)get_iword (0);
@@ -10867,7 +10867,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = get_ilong (0);
@@ -10915,7 +10915,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33f9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_33fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
@@ -10934,8 +10934,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_33fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uaecptr dsta;
 	dsta = get_ilong (0);
@@ -11072,7 +11072,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_u32 newv = 0 - src - (GET_XFLG () ? 1 : 0);
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -11238,7 +11238,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_u32 newv = 0 - src - (GET_XFLG () ? 1 : 0);
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -11404,7 +11404,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_u32 newv = 0 - src - (GET_XFLG () ? 1 : 0);
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -11463,7 +11463,7 @@ return 15 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_40c0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	MakeSR (regs);
 	m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | ((regs.sr) & 0xffff);
 }}}	m68k_incpc (2);
@@ -11474,7 +11474,7 @@ return 5 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_40d0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg);
 	MakeSR (regs);
@@ -11487,7 +11487,7 @@ return 9 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_40d8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg);
 	m68k_areg (regs, srcreg) += 2;
@@ -11501,7 +11501,7 @@ return 9 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_40e0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg) - 2;
 	m68k_areg (regs, srcreg) = srca;
@@ -11515,7 +11515,7 @@ return 9 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_40e8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg) + (uae_s32)(uae_s16)get_iword (2);
 	MakeSR (regs);
@@ -11528,10 +11528,10 @@ return 10 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_40f0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 	MakeSR (regs);
 	put_word (srca,regs.sr);
 }}}}return 12 * CYCLE_UNIT / 2;
@@ -11540,7 +11540,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40f0_0)(uae_u32 opcode, struct regstruct &regs)
 /* MVSR2.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_40f8_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_iword (2);
 	MakeSR (regs);
@@ -11552,7 +11552,7 @@ return 10 * CYCLE_UNIT / 2;
 /* MVSR2.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_40f9_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = get_ilong (2);
 	MakeSR (regs);
@@ -11571,12 +11571,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4100_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 6 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }}}return 8 * CYCLE_UNIT / 2;
@@ -11594,12 +11594,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4110_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 10 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }}}}return 12 * CYCLE_UNIT / 2;
@@ -11618,12 +11618,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4118_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 10 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }}}}return 12 * CYCLE_UNIT / 2;
@@ -11642,12 +11642,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4120_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 11 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 13 * CYCLE_UNIT / 2;
 	}
 }}}}return 13 * CYCLE_UNIT / 2;
@@ -11665,12 +11665,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4128_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (4);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 }}}}return 14 * CYCLE_UNIT / 2;
@@ -11683,17 +11683,17 @@ uae_u32 REGPARAM2 CPUFUNC(op_4130_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 16 * CYCLE_UNIT / 2;
 	}
 }}}}}return 16 * CYCLE_UNIT / 2;
@@ -11710,12 +11710,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4138_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (4);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 }}}}return 14 * CYCLE_UNIT / 2;
@@ -11732,12 +11732,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4139_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (6);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 13 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 15 * CYCLE_UNIT / 2;
 	}
 }}}}return 15 * CYCLE_UNIT / 2;
@@ -11748,19 +11748,19 @@ uae_u32 REGPARAM2 CPUFUNC(op_413a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	m68k_incpc (4);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 }}}}return 14 * CYCLE_UNIT / 2;
@@ -11773,18 +11773,18 @@ uae_u32 REGPARAM2 CPUFUNC(op_413b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 16 * CYCLE_UNIT / 2;
 	}
 }}}}}return 16 * CYCLE_UNIT / 2;
@@ -11800,12 +11800,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_413c_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (6);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 11 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 13 * CYCLE_UNIT / 2;
 	}
 }}}return 13 * CYCLE_UNIT / 2;
@@ -11821,12 +11821,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4180_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 6 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 8 * CYCLE_UNIT / 2;
 	}
 }}}return 8 * CYCLE_UNIT / 2;
@@ -11844,12 +11844,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4190_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 10 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }}}}return 12 * CYCLE_UNIT / 2;
@@ -11868,12 +11868,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4198_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 10 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 }}}}return 12 * CYCLE_UNIT / 2;
@@ -11892,12 +11892,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_41a0_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (2);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 11 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 13 * CYCLE_UNIT / 2;
 	}
 }}}}return 13 * CYCLE_UNIT / 2;
@@ -11915,12 +11915,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_41a8_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (4);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 }}}}return 14 * CYCLE_UNIT / 2;
@@ -11933,17 +11933,17 @@ uae_u32 REGPARAM2 CPUFUNC(op_41b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 16 * CYCLE_UNIT / 2;
 	}
 }}}}}return 16 * CYCLE_UNIT / 2;
@@ -11960,12 +11960,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_41b8_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (4);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 }}}}return 14 * CYCLE_UNIT / 2;
@@ -11982,12 +11982,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_41b9_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (6);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 13 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 15 * CYCLE_UNIT / 2;
 	}
 }}}}return 15 * CYCLE_UNIT / 2;
@@ -11998,19 +11998,19 @@ uae_u32 REGPARAM2 CPUFUNC(op_41ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 	m68k_incpc (4);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 }}}}return 14 * CYCLE_UNIT / 2;
@@ -12023,18 +12023,18 @@ uae_u32 REGPARAM2 CPUFUNC(op_41bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 14 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 16 * CYCLE_UNIT / 2;
 	}
 }}}}}return 16 * CYCLE_UNIT / 2;
@@ -12049,12 +12049,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_41bc_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_incpc (4);
 	if (dst > src) {
 		SET_NFLG (0);
-		Exception (6, regs);
+		Exception (6);
 		return 9 * CYCLE_UNIT / 2;
 	}
 	if ((uae_s32)dst < 0) {
 		SET_NFLG (1);
-		Exception (6, regs);
+		Exception (6);
 		return 11 * CYCLE_UNIT / 2;
 	}
 }}}return 11 * CYCLE_UNIT / 2;
@@ -12091,7 +12091,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	m68k_areg (regs, dstreg) = (srca);
 }}}}return 8 * CYCLE_UNIT / 2;
 }
@@ -12123,7 +12123,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	m68k_areg (regs, dstreg) = (srca);
 }}}	m68k_incpc (4);
@@ -12137,8 +12137,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_41fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	m68k_areg (regs, dstreg) = (srca);
 }}}}return 8 * CYCLE_UNIT / 2;
 }
@@ -12219,7 +12219,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4230_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(0)) == 0);
 	SET_NFLG   (((uae_s8)(0)) < 0);
@@ -12329,7 +12329,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4270_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(0)) == 0);
 	SET_NFLG   (((uae_s16)(0)) < 0);
@@ -12439,7 +12439,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(0)) == 0);
 	SET_NFLG   (((uae_s32)(0)) < 0);
@@ -12539,7 +12539,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 	MakeSR (regs);
 	put_word (srca,regs.sr & 0xff);
 }}}return 12 * CYCLE_UNIT / 2;
@@ -12556,9 +12556,6 @@ uae_u32 REGPARAM2 CPUFUNC(op_42f8_0)(uae_u32 opcode, struct regstruct &regs)
 return 10 * CYCLE_UNIT / 2;
 }
 
-#endif
-
-#ifdef PART_4
 /* MVSR2.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_42f9_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -12570,6 +12567,9 @@ uae_u32 REGPARAM2 CPUFUNC(op_42f9_0)(uae_u32 opcode, struct regstruct &regs)
 return 12 * CYCLE_UNIT / 2;
 }
 
+#endif
+
+#ifdef PART_4
 /* NEG.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4400_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -12681,7 +12681,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4430_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {{uae_u32 dst = ((uae_u8)(0)) - ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -12847,7 +12847,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4470_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {{uae_u32 dst = ((uae_u16)(0)) - ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -13013,7 +13013,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {{uae_u32 dst = ((uae_u32)(0)) - ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -13149,7 +13149,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 	MakeSR (regs);
 	regs.sr &= 0xFF00;
@@ -13190,7 +13190,7 @@ return 12 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_44fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 	MakeSR (regs);
@@ -13207,8 +13207,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_44fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 	MakeSR (regs);
 	regs.sr &= 0xFF00;
@@ -13315,7 +13315,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4630_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_u32 dst = ~src;
 	CLEAR_CZNV ();
@@ -13441,7 +13441,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4670_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_u32 dst = ~src;
 	CLEAR_CZNV ();
@@ -13567,7 +13567,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_u32 dst = ~src;
 	CLEAR_CZNV ();
@@ -13611,7 +13611,7 @@ return 13 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_46c0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 	regs.sr = src;
 	MakeFromSR (regs);
@@ -13623,7 +13623,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_46d0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg);
 {	uae_s16 src = get_word (srca);
@@ -13637,7 +13637,7 @@ return 15 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_46d8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg);
 {	uae_s16 src = get_word (srca);
@@ -13652,7 +13652,7 @@ return 15 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_46e0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg) - 2;
 {	uae_s16 src = get_word (srca);
@@ -13667,7 +13667,7 @@ return 16 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_46e8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg) + (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
@@ -13681,10 +13681,10 @@ return 17 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_46f0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 	regs.sr = src;
 	MakeFromSR (regs);
@@ -13694,7 +13694,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46f0_0)(uae_u32 opcode, struct regstruct &regs)
 /* MV2SR.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_46f8_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
@@ -13707,7 +13707,7 @@ return 17 * CYCLE_UNIT / 2;
 /* MV2SR.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_46f9_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
 	srca = get_ilong (2);
 {	uae_s16 src = get_word (srca);
@@ -13720,9 +13720,9 @@ return 18 * CYCLE_UNIT / 2;
 /* MV2SR.W (d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_46fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 	regs.sr = src;
@@ -13734,12 +13734,12 @@ return 17 * CYCLE_UNIT / 2;
 /* MV2SR.W (d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_46fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 	regs.sr = src;
 	MakeFromSR (regs);
@@ -13749,7 +13749,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46fb_0)(uae_u32 opcode, struct regstruct &regs)
 /* MV2SR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_46fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 src = get_iword (2);
 	regs.sr = src;
 	MakeFromSR (regs);
@@ -13895,7 +13895,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4830_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_u16 newv_lo = - (src & 0xF) - (GET_XFLG () ? 1 : 0);
 	uae_u16 newv_hi = - (src & 0xF0);
@@ -13975,7 +13975,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4848_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
 {	m68k_incpc (2);
-	op_illg (opcode, regs);
+	op_illg (opcode);
 }return 4 * CYCLE_UNIT / 2;
 }
 
@@ -14013,7 +14013,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4870_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, 7) - 4;
 	m68k_areg (regs, 7) = dsta;
@@ -14051,7 +14051,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_487a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, 7) - 4;
@@ -14067,8 +14067,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_487b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uaecptr dsta;
 	dsta = m68k_areg (regs, 7) - 4;
 	m68k_areg (regs, 7) = dsta;
@@ -14176,7 +14176,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48b0_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_u16 mask = get_iword (2);
 {	uaecptr srca;
 	m68k_incpc (4);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
 		put_word (srca, m68k_dreg (regs, movem_index1[dmask]));
@@ -14341,7 +14341,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48f0_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_u16 mask = get_iword (2);
 {	uaecptr srca;
 	m68k_incpc (4);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
 		put_long (srca, m68k_dreg (regs, movem_index1[dmask]));
@@ -14496,7 +14496,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a30_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
@@ -14534,7 +14534,7 @@ return 10 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_4a3a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 	CLEAR_CZNV ();
@@ -14550,8 +14550,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a3b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
@@ -14658,7 +14658,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a70_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
@@ -14696,7 +14696,7 @@ return 10 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_4a7a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 	CLEAR_CZNV ();
@@ -14712,8 +14712,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a7b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s16)(src)) == 0);
@@ -14820,7 +14820,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ab0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
@@ -14858,7 +14858,7 @@ return 10 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_4aba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 	CLEAR_CZNV ();
@@ -14874,8 +14874,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_4abb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s32)(src)) == 0);
@@ -14981,7 +14981,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4af0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 	CLEAR_CZNV ();
 	SET_ZFLG   (((uae_s8)(src)) == 0);
@@ -15093,7 +15093,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c30_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	m68k_mull(opcode, dst, extra);
 }}}}}return 55 * CYCLE_UNIT / 2;
@@ -15129,7 +15129,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c3a_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_s32 dst = get_long (dsta);
 	m68k_incpc (6);
@@ -15145,8 +15145,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c3b_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	m68k_mull(opcode, dst, extra);
 }}}}}return 55 * CYCLE_UNIT / 2;
@@ -15173,7 +15173,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c40_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	m68k_incpc (4);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15192,7 +15192,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c50_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 dst = get_long (dsta);
 	m68k_incpc (4);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15212,7 +15212,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c58_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, dstreg) += 4;
 	m68k_incpc (4);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15232,7 +15232,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c60_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, dstreg) = dsta;
 	m68k_incpc (4);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15251,7 +15251,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c68_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 dst = get_long (dsta);
 	m68k_incpc (6);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15267,10 +15267,10 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c70_0)(uae_u32 opcode, struct regstruct &regs)
   if (extra & 0x800) cyc = 12 * CYCLE_UNIT / 2;
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15288,7 +15288,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c78_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 dst = get_long (dsta);
 	m68k_incpc (6);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15306,7 +15306,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c79_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s32 dst = get_long (dsta);
 	m68k_incpc (8);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15321,12 +15321,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c7a_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
   if (extra & 0x800) cyc = 12 * CYCLE_UNIT / 2;
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_s32 dst = get_long (dsta);
 	m68k_incpc (6);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15343,11 +15343,11 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c7b_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15364,7 +15364,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c7c_0)(uae_u32 opcode, struct regstruct &regs)
 	dst = get_ilong (4);
 	m68k_incpc (8);
   if (dst == 0) {
-  	Exception (5, regs);
+  	Exception (5);
 	  return 4 * CYCLE_UNIT / 2;
   }
 	m68k_divl(opcode, dst, extra);
@@ -15456,7 +15456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cb0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 {	uaecptr srca;
 	m68k_incpc (4);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	while (dmask) {
 		m68k_dreg (regs, movem_index1[dmask]) = (uae_s32)(uae_s16)get_word (srca);
 		srca += 2;
@@ -15528,7 +15528,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cba_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_u16 mask = get_iword (2);
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 {	uaecptr srca;
-	srca = m68k_getpc (regs) + 4;
+	srca = m68k_getpc () + 4;
 	srca += (uae_s32)(uae_s16)get_iword (4);
 {	while (dmask) {
 		m68k_dreg (regs, movem_index1[dmask]) = (uae_s32)(uae_s16)get_word (srca);
@@ -15556,8 +15556,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cbb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	while (dmask) {
 		m68k_dreg (regs, movem_index1[dmask]) = (uae_s32)(uae_s16)get_word (srca);
 		srca += 2;
@@ -15658,7 +15658,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cf0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 {	uaecptr srca;
 	m68k_incpc (4);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	while (dmask) {
 		m68k_dreg (regs, movem_index1[dmask]) = get_long (srca);
 		srca += 4;
@@ -15730,7 +15730,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cfa_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_u16 mask = get_iword (2);
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 {	uaecptr srca;
-	srca = m68k_getpc (regs) + 4;
+	srca = m68k_getpc () + 4;
 	srca += (uae_s32)(uae_s16)get_iword (4);
 {	while (dmask) {
 		m68k_dreg (regs, movem_index1[dmask]) = get_long (srca);
@@ -15758,8 +15758,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cfb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	while (dmask) {
 		m68k_dreg (regs, movem_index1[dmask]) = get_long (srca);
 		srca += 4;
@@ -15781,7 +15781,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e40_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 15);
 {{	uae_u32 src = srcreg;
 	m68k_incpc (2);
-	Exception (src + 32, regs);
+	Exception (src + 32);
 }}return 27 * CYCLE_UNIT / 2;
 }
 
@@ -15820,7 +15820,7 @@ return 7 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_4e60_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s32 src = m68k_areg (regs, srcreg);
 	regs.usp = src;
 }}}	m68k_incpc (2);
@@ -15831,7 +15831,7 @@ return 3 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_4e68_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	m68k_areg (regs, srcreg) = (regs.usp);
 }}}	m68k_incpc (2);
 return 3 * CYCLE_UNIT / 2;
@@ -15840,7 +15840,7 @@ return 3 * CYCLE_UNIT / 2;
 /* RESET.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e70_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	cpureset ();
 	m68k_incpc (2);
 }}return 519 * CYCLE_UNIT / 2;
@@ -15856,7 +15856,7 @@ return 3 * CYCLE_UNIT / 2;
 /* STOP.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e72_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 src = get_iword (2);
 	regs.sr = src;
 	MakeFromSR (regs);
@@ -15868,7 +15868,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e72_0)(uae_u32 opcode, struct regstruct &regs)
 /* RTE.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e73_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	uae_u16 newsr; uae_u32 newpc;
 	for (;;) {
 		uaecptr a = m68k_areg (regs, 7);
@@ -15886,7 +15886,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_0)(uae_u32 opcode, struct regstruct &regs)
 		else if (frame == 0x9) { m68k_areg (regs, 7) += offset + 12; break; }
 		else if (frame == 0xa) { m68k_areg (regs, 7) += offset + 24; break; }
 		else if (frame == 0xb) { m68k_areg (regs, 7) += offset + 84; break; }
-		else { m68k_areg (regs, 7) += offset; Exception (14, regs); return 4 * CYCLE_UNIT / 2; }
+		else { m68k_areg (regs, 7) += offset; Exception (14); return 4 * CYCLE_UNIT / 2; }
 		regs.sr = newsr;
 	MakeFromSR(regs);
 }
@@ -15896,7 +15896,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_0)(uae_u32 opcode, struct regstruct &regs)
 		exception3i (0x4E73, newpc);
 		return 4 * CYCLE_UNIT / 2;
   }
-	m68k_setpc (regs, newpc);
+	m68k_setpc (newpc);
 }}return 24 * CYCLE_UNIT / 2;
 }
 
@@ -15913,18 +15913,18 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e74_0)(uae_u32 opcode, struct regstruct &regs)
 		exception3i (0x4E74, pc);
 		return 4 * CYCLE_UNIT / 2;
 	}
-		m68k_setpc (regs, pc);
+		m68k_setpc (pc);
 }}}}return 12 * CYCLE_UNIT / 2;
 }
 
 /* RTS.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e75_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	uaecptr pc = m68k_getpc (regs);
-	m68k_do_rts (regs);
-	if (m68k_getpc (regs) & 1) {
-	  uaecptr faultpc = m68k_getpc (regs);
-	  m68k_setpc (regs, pc);
+{	uaecptr pc = m68k_getpc ();
+	m68k_do_rts ();
+	if (m68k_getpc () & 1) {
+	  uaecptr faultpc = m68k_getpc ();
+	  m68k_setpc (pc);
 	  exception3i (0x4E75, faultpc);
 		return 8 * CYCLE_UNIT / 2;
 	}
@@ -15936,7 +15936,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e76_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {	m68k_incpc (2);
 	if (GET_VFLG ()) {
-		Exception (7, regs);
+		Exception (7);
 		return 4 * CYCLE_UNIT / 2;
 	}
 }return 5 * CYCLE_UNIT / 2;
@@ -15945,7 +15945,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e76_0)(uae_u32 opcode, struct regstruct &regs)
 /* RTR.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e77_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{ uaecptr oldpc = m68k_getpc (regs);
+{ uaecptr oldpc = m68k_getpc ();
 	MakeSR (regs);
 {	uaecptr sra;
 	sra = m68k_areg (regs, 7);
@@ -15957,11 +15957,11 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e77_0)(uae_u32 opcode, struct regstruct &regs)
 	m68k_areg (regs, 7) += 4;
 	regs.sr &= 0xFF00; sr &= 0xFF;
 	regs.sr |= sr;
-	m68k_setpc (regs, pc);
+	m68k_setpc (pc);
 	MakeFromSR (regs);
-	if (m68k_getpc (regs) & 1) {
-	  uaecptr faultpc = m68k_getpc (regs);
-	  m68k_setpc (regs, oldpc);
+	if (m68k_getpc () & 1) {
+	  uaecptr faultpc = m68k_getpc ();
+	  m68k_setpc (oldpc);
 	  exception3i (0x4E77, faultpc);
 		return 8 * CYCLE_UNIT / 2;
 	}
@@ -15971,7 +15971,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e77_0)(uae_u32 opcode, struct regstruct &regs)
 /* MOVEC2.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e7a_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 src = get_iword (2);
 {	int regno = (src >> 12) & 15;
 	uae_u32 *regp = regs.regs + regno;
@@ -15984,7 +15984,7 @@ return 7 * CYCLE_UNIT / 2;
 /* MOVE2C.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e7b_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {{	uae_s16 src = get_iword (2);
 {	int regno = (src >> 12) & 15;
 	uae_u32 *regp = regs.regs + regno;
@@ -16000,12 +16000,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e90_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg);
-{	uaecptr oldpc = m68k_getpc (regs) + 2;
+{	uaecptr oldpc = m68k_getpc () + 2;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 	m68k_areg (regs, 7) -= 4;
 	put_long (m68k_areg (regs, 7), oldpc);
 }}}return 13 * CYCLE_UNIT / 2;
@@ -16017,12 +16017,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ea8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg) + (uae_s32)(uae_s16)get_iword (2);
-{	uaecptr oldpc = m68k_getpc (regs) + 4;
+{	uaecptr oldpc = m68k_getpc () + 4;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 	m68k_areg (regs, 7) -= 4;
 	put_long (m68k_areg (regs, 7), oldpc);
 }}}return 15 * CYCLE_UNIT / 2;
@@ -16034,13 +16034,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
-{	uaecptr oldpc = m68k_getpc (regs) + 0;
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
+{	uaecptr oldpc = m68k_getpc () + 0;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 	m68k_areg (regs, 7) -= 4;
 	put_long (m68k_areg (regs, 7), oldpc);
 }}}}return 17 * CYCLE_UNIT / 2;
@@ -16051,12 +16051,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_iword (2);
-{	uaecptr oldpc = m68k_getpc (regs) + 4;
+{	uaecptr oldpc = m68k_getpc () + 4;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 	m68k_areg (regs, 7) -= 4;
 	put_long (m68k_areg (regs, 7), oldpc);
 }}}return 13 * CYCLE_UNIT / 2;
@@ -16067,12 +16067,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb9_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
 	srca = get_ilong (2);
-{	uaecptr oldpc = m68k_getpc (regs) + 6;
+{	uaecptr oldpc = m68k_getpc () + 6;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 12 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 	m68k_areg (regs, 7) -= 4;
 	put_long (m68k_areg (regs, 7), oldpc);
 }}}return 13 * CYCLE_UNIT / 2;
@@ -16082,14 +16082,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_4eba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
-{	uaecptr oldpc = m68k_getpc (regs) + 4;
+{	uaecptr oldpc = m68k_getpc () + 4;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 	m68k_areg (regs, 7) -= 4;
 	put_long (m68k_areg (regs, 7), oldpc);
 }}}return 15 * CYCLE_UNIT / 2;
@@ -16101,14 +16101,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ebb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
-{	uaecptr oldpc = m68k_getpc (regs) + 0;
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
+{	uaecptr oldpc = m68k_getpc () + 0;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 	m68k_areg (regs, 7) -= 4;
 	put_long (m68k_areg (regs, 7), oldpc);
 }}}}return 17 * CYCLE_UNIT / 2;
@@ -16124,7 +16124,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ed0_0)(uae_u32 opcode, struct regstruct &regs)
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 }}return 9 * CYCLE_UNIT / 2;
 }
 
@@ -16138,7 +16138,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ee8_0)(uae_u32 opcode, struct regstruct &regs)
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 }}return 11 * CYCLE_UNIT / 2;
 }
 
@@ -16148,12 +16148,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 }}}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -16166,7 +16166,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef8_0)(uae_u32 opcode, struct regstruct &regs)
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 }}return 9 * CYCLE_UNIT / 2;
 }
 
@@ -16179,7 +16179,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef9_0)(uae_u32 opcode, struct regstruct &regs)
 		exception3i (opcode, srca);
 		return 12 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 }}return 9 * CYCLE_UNIT / 2;
 }
 
@@ -16187,13 +16187,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef9_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_4efa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 }}return 11 * CYCLE_UNIT / 2;
 }
 
@@ -16203,13 +16203,13 @@ uae_u32 REGPARAM2 CPUFUNC(op_4efb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (regs, srca);
+	m68k_setpc (srca);
 }}}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -16336,7 +16336,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5030_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) + ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -16531,7 +16531,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5070_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) + ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -16624,9 +16624,6 @@ uae_u32 REGPARAM2 CPUFUNC(op_5088_0)(uae_u32 opcode, struct regstruct &regs)
 return 3 * CYCLE_UNIT / 2;
 }
 
-#endif
-
-#ifdef PART_5
 /* ADDQ.L #<data>,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5090_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -16674,6 +16671,9 @@ uae_u32 REGPARAM2 CPUFUNC(op_5098_0)(uae_u32 opcode, struct regstruct &regs)
 return 10 * CYCLE_UNIT / 2;
 }
 
+#endif
+
+#ifdef PART_5
 /* ADDQ.L #<data>,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_50a0_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -16729,7 +16729,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) + ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -16804,20 +16804,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_50c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 0)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -16877,7 +16877,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 0) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -16909,7 +16909,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_50fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 0)) { Exception (7, regs); goto l_950; }
+	if (cctrue (regs.ccrflags, 0)) { Exception (7); goto l_950; }
 }}	m68k_incpc (4);
 l_950: ;
 return 10 * CYCLE_UNIT / 2;
@@ -16920,7 +16920,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 0)) { Exception (7, regs); goto l_951; }
+	if (cctrue (regs.ccrflags, 0)) { Exception (7); goto l_951; }
 }}	m68k_incpc (6);
 l_951: ;
 return 10 * CYCLE_UNIT / 2;
@@ -16929,7 +16929,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 0)) { Exception (7, regs); goto l_952; }
+{	if (cctrue (regs.ccrflags, 0)) { Exception (7); goto l_952; }
 }	m68k_incpc (2);
 l_952: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17058,7 +17058,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5130_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -17253,7 +17253,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5170_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -17448,7 +17448,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -17523,20 +17523,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_51c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 1)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -17596,7 +17596,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 1) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -17628,7 +17628,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_51fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 1)) { Exception (7, regs); goto l_988; }
+	if (cctrue (regs.ccrflags, 1)) { Exception (7); goto l_988; }
 }}	m68k_incpc (4);
 l_988: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17639,7 +17639,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 1)) { Exception (7, regs); goto l_989; }
+	if (cctrue (regs.ccrflags, 1)) { Exception (7); goto l_989; }
 }}	m68k_incpc (6);
 l_989: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17648,7 +17648,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 1)) { Exception (7, regs); goto l_990; }
+{	if (cctrue (regs.ccrflags, 1)) { Exception (7); goto l_990; }
 }	m68k_incpc (2);
 l_990: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17670,20 +17670,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_52c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 2)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -17743,7 +17743,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 2) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -17775,7 +17775,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_52fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 2)) { Exception (7, regs); goto l_1000; }
+	if (cctrue (regs.ccrflags, 2)) { Exception (7); goto l_1000; }
 }}	m68k_incpc (4);
 l_1000: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17786,7 +17786,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 2)) { Exception (7, regs); goto l_1001; }
+	if (cctrue (regs.ccrflags, 2)) { Exception (7); goto l_1001; }
 }}	m68k_incpc (6);
 l_1001: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17795,7 +17795,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 2)) { Exception (7, regs); goto l_1002; }
+{	if (cctrue (regs.ccrflags, 2)) { Exception (7); goto l_1002; }
 }	m68k_incpc (2);
 l_1002: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17817,20 +17817,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_53c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 3)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -17890,7 +17890,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 3) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -17922,7 +17922,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_53fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 3)) { Exception (7, regs); goto l_1012; }
+	if (cctrue (regs.ccrflags, 3)) { Exception (7); goto l_1012; }
 }}	m68k_incpc (4);
 l_1012: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17933,7 +17933,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 3)) { Exception (7, regs); goto l_1013; }
+	if (cctrue (regs.ccrflags, 3)) { Exception (7); goto l_1013; }
 }}	m68k_incpc (6);
 l_1013: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17942,7 +17942,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 3)) { Exception (7, regs); goto l_1014; }
+{	if (cctrue (regs.ccrflags, 3)) { Exception (7); goto l_1014; }
 }	m68k_incpc (2);
 l_1014: ;
 return 10 * CYCLE_UNIT / 2;
@@ -17964,20 +17964,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_54c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 4)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18037,7 +18037,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 4) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -18069,7 +18069,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_54fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 4)) { Exception (7, regs); goto l_1024; }
+	if (cctrue (regs.ccrflags, 4)) { Exception (7); goto l_1024; }
 }}	m68k_incpc (4);
 l_1024: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18080,7 +18080,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 4)) { Exception (7, regs); goto l_1025; }
+	if (cctrue (regs.ccrflags, 4)) { Exception (7); goto l_1025; }
 }}	m68k_incpc (6);
 l_1025: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18089,7 +18089,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 4)) { Exception (7, regs); goto l_1026; }
+{	if (cctrue (regs.ccrflags, 4)) { Exception (7); goto l_1026; }
 }	m68k_incpc (2);
 l_1026: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18111,20 +18111,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_55c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 5)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18184,7 +18184,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 5) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -18216,7 +18216,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_55fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 5)) { Exception (7, regs); goto l_1036; }
+	if (cctrue (regs.ccrflags, 5)) { Exception (7); goto l_1036; }
 }}	m68k_incpc (4);
 l_1036: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18227,7 +18227,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 5)) { Exception (7, regs); goto l_1037; }
+	if (cctrue (regs.ccrflags, 5)) { Exception (7); goto l_1037; }
 }}	m68k_incpc (6);
 l_1037: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18236,7 +18236,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 5)) { Exception (7, regs); goto l_1038; }
+{	if (cctrue (regs.ccrflags, 5)) { Exception (7); goto l_1038; }
 }	m68k_incpc (2);
 l_1038: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18258,20 +18258,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_56c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 6)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18331,7 +18331,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 6) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -18363,7 +18363,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_56fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 6)) { Exception (7, regs); goto l_1048; }
+	if (cctrue (regs.ccrflags, 6)) { Exception (7); goto l_1048; }
 }}	m68k_incpc (4);
 l_1048: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18374,7 +18374,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 6)) { Exception (7, regs); goto l_1049; }
+	if (cctrue (regs.ccrflags, 6)) { Exception (7); goto l_1049; }
 }}	m68k_incpc (6);
 l_1049: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18383,7 +18383,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 6)) { Exception (7, regs); goto l_1050; }
+{	if (cctrue (regs.ccrflags, 6)) { Exception (7); goto l_1050; }
 }	m68k_incpc (2);
 l_1050: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18405,20 +18405,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_57c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 7)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18478,7 +18478,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 7) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -18510,7 +18510,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_57fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 7)) { Exception (7, regs); goto l_1060; }
+	if (cctrue (regs.ccrflags, 7)) { Exception (7); goto l_1060; }
 }}	m68k_incpc (4);
 l_1060: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18521,7 +18521,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 7)) { Exception (7, regs); goto l_1061; }
+	if (cctrue (regs.ccrflags, 7)) { Exception (7); goto l_1061; }
 }}	m68k_incpc (6);
 l_1061: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18530,7 +18530,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 7)) { Exception (7, regs); goto l_1062; }
+{	if (cctrue (regs.ccrflags, 7)) { Exception (7); goto l_1062; }
 }	m68k_incpc (2);
 l_1062: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18552,20 +18552,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_58c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 8)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18625,7 +18625,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 8) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -18657,7 +18657,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_58fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 8)) { Exception (7, regs); goto l_1072; }
+	if (cctrue (regs.ccrflags, 8)) { Exception (7); goto l_1072; }
 }}	m68k_incpc (4);
 l_1072: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18668,7 +18668,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 8)) { Exception (7, regs); goto l_1073; }
+	if (cctrue (regs.ccrflags, 8)) { Exception (7); goto l_1073; }
 }}	m68k_incpc (6);
 l_1073: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18677,7 +18677,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 8)) { Exception (7, regs); goto l_1074; }
+{	if (cctrue (regs.ccrflags, 8)) { Exception (7); goto l_1074; }
 }	m68k_incpc (2);
 l_1074: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18699,20 +18699,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_59c8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 9)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18772,7 +18772,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 9) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -18804,7 +18804,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_59fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 9)) { Exception (7, regs); goto l_1084; }
+	if (cctrue (regs.ccrflags, 9)) { Exception (7); goto l_1084; }
 }}	m68k_incpc (4);
 l_1084: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18815,7 +18815,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59fb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 9)) { Exception (7, regs); goto l_1085; }
+	if (cctrue (regs.ccrflags, 9)) { Exception (7); goto l_1085; }
 }}	m68k_incpc (6);
 l_1085: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18824,7 +18824,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59fc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 9)) { Exception (7, regs); goto l_1086; }
+{	if (cctrue (regs.ccrflags, 9)) { Exception (7); goto l_1086; }
 }	m68k_incpc (2);
 l_1086: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18846,20 +18846,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ac8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 10)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18919,7 +18919,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5af0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 10) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -18951,7 +18951,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_5afa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 10)) { Exception (7, regs); goto l_1096; }
+	if (cctrue (regs.ccrflags, 10)) { Exception (7); goto l_1096; }
 }}	m68k_incpc (4);
 l_1096: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18962,7 +18962,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5afb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 10)) { Exception (7, regs); goto l_1097; }
+	if (cctrue (regs.ccrflags, 10)) { Exception (7); goto l_1097; }
 }}	m68k_incpc (6);
 l_1097: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18971,7 +18971,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5afc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 10)) { Exception (7, regs); goto l_1098; }
+{	if (cctrue (regs.ccrflags, 10)) { Exception (7); goto l_1098; }
 }	m68k_incpc (2);
 l_1098: ;
 return 10 * CYCLE_UNIT / 2;
@@ -18993,20 +18993,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bc8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 11)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19066,7 +19066,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bf0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 11) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -19098,7 +19098,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_5bfa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 11)) { Exception (7, regs); goto l_1108; }
+	if (cctrue (regs.ccrflags, 11)) { Exception (7); goto l_1108; }
 }}	m68k_incpc (4);
 l_1108: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19109,7 +19109,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bfb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 11)) { Exception (7, regs); goto l_1109; }
+	if (cctrue (regs.ccrflags, 11)) { Exception (7); goto l_1109; }
 }}	m68k_incpc (6);
 l_1109: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19118,7 +19118,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bfc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 11)) { Exception (7, regs); goto l_1110; }
+{	if (cctrue (regs.ccrflags, 11)) { Exception (7); goto l_1110; }
 }	m68k_incpc (2);
 l_1110: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19140,20 +19140,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cc8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 12)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19213,7 +19213,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cf0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 12) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -19245,7 +19245,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_5cfa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 12)) { Exception (7, regs); goto l_1120; }
+	if (cctrue (regs.ccrflags, 12)) { Exception (7); goto l_1120; }
 }}	m68k_incpc (4);
 l_1120: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19256,7 +19256,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cfb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 12)) { Exception (7, regs); goto l_1121; }
+	if (cctrue (regs.ccrflags, 12)) { Exception (7); goto l_1121; }
 }}	m68k_incpc (6);
 l_1121: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19265,7 +19265,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cfc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 12)) { Exception (7, regs); goto l_1122; }
+{	if (cctrue (regs.ccrflags, 12)) { Exception (7); goto l_1122; }
 }	m68k_incpc (2);
 l_1122: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19287,20 +19287,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dc8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 13)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19360,7 +19360,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5df0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 13) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -19392,7 +19392,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_5dfa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 13)) { Exception (7, regs); goto l_1132; }
+	if (cctrue (regs.ccrflags, 13)) { Exception (7); goto l_1132; }
 }}	m68k_incpc (4);
 l_1132: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19403,7 +19403,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dfb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 13)) { Exception (7, regs); goto l_1133; }
+	if (cctrue (regs.ccrflags, 13)) { Exception (7); goto l_1133; }
 }}	m68k_incpc (6);
 l_1133: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19412,7 +19412,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dfc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 13)) { Exception (7, regs); goto l_1134; }
+{	if (cctrue (regs.ccrflags, 13)) { Exception (7); goto l_1134; }
 }	m68k_incpc (2);
 l_1134: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19434,20 +19434,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ec8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 14)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19507,7 +19507,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ef0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 14) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -19539,7 +19539,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_5efa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 14)) { Exception (7, regs); goto l_1144; }
+	if (cctrue (regs.ccrflags, 14)) { Exception (7); goto l_1144; }
 }}	m68k_incpc (4);
 l_1144: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19550,7 +19550,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5efb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 14)) { Exception (7, regs); goto l_1145; }
+	if (cctrue (regs.ccrflags, 14)) { Exception (7); goto l_1145; }
 }}	m68k_incpc (6);
 l_1145: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19559,7 +19559,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5efc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 14)) { Exception (7, regs); goto l_1146; }
+{	if (cctrue (regs.ccrflags, 14)) { Exception (7); goto l_1146; }
 }	m68k_incpc (2);
 l_1146: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19581,20 +19581,20 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fc8_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uae_s16 offs = get_iword (2);
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	if (!cctrue (regs.ccrflags, 15)) {
 	m68k_incpc ((uae_s32)offs + 2);
 			m68k_dreg (regs, srcreg) = (m68k_dreg (regs, srcreg) & ~0xffff) | (((src - 1)) & 0xffff);
 		if (src) {
 			if (offs & 1) {
-				exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)offs + 2);
+				exception3i (opcode, m68k_getpc () + 2 + (uae_s32)offs + 2);
 		return 10 * CYCLE_UNIT / 2;
 			}
 			return 7 * CYCLE_UNIT / 2;
 		}
 	} else {
 	}
-	m68k_setpc (regs, oldpc + 4);
+	m68k_setpc (oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19654,7 +19654,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ff0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {{	int val = cctrue (regs.ccrflags, 15) ? 0xff : 0;
 	put_byte (srca,val);
 }}}}}return 11 * CYCLE_UNIT / 2;
@@ -19686,7 +19686,7 @@ return 11 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_5ffa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s16 dummy = get_iword (2);
-	if (cctrue (regs.ccrflags, 15)) { Exception (7, regs); goto l_1156; }
+	if (cctrue (regs.ccrflags, 15)) { Exception (7); goto l_1156; }
 }}	m68k_incpc (4);
 l_1156: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19697,7 +19697,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ffb_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {{	uae_s32 dummy;
 	dummy = get_ilong (2);
-	if (cctrue (regs.ccrflags, 15)) { Exception (7, regs); goto l_1157; }
+	if (cctrue (regs.ccrflags, 15)) { Exception (7); goto l_1157; }
 }}	m68k_incpc (6);
 l_1157: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19706,7 +19706,7 @@ return 10 * CYCLE_UNIT / 2;
 /* TRAPcc.L  (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ffc_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{	if (cctrue (regs.ccrflags, 15)) { Exception (7, regs); goto l_1158; }
+{	if (cctrue (regs.ccrflags, 15)) { Exception (7); goto l_1158; }
 }	m68k_incpc (2);
 l_1158: ;
 return 10 * CYCLE_UNIT / 2;
@@ -19718,7 +19718,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6000_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 0)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 10 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19735,7 +19735,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6001_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 0)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 6 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19752,7 +19752,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_60ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 0)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 14 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19769,10 +19769,10 @@ uae_u32 REGPARAM2 CPUFUNC(op_6100_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_s16 src = get_iword (2);
 	s = (uae_s32)src + 2;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + s);
+		exception3 (opcode, m68k_getpc () + s, 0, 1, m68k_getpc () + s);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_do_bsr (regs, m68k_getpc (regs) + 4, s);
+	m68k_do_bsr (regs, m68k_getpc () + 4, s);
 }}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -19784,10 +19784,10 @@ uae_u32 REGPARAM2 CPUFUNC(op_6101_0)(uae_u32 opcode, struct regstruct &regs)
 {	uae_u32 src = srcreg;
 	s = (uae_s32)src + 2;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + s);
+		exception3 (opcode, m68k_getpc () + s, 0, 1, m68k_getpc () + s);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_do_bsr (regs, m68k_getpc (regs) + 2, s);
+	m68k_do_bsr (regs, m68k_getpc () + 2, s);
 }}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -19799,10 +19799,10 @@ uae_u32 REGPARAM2 CPUFUNC(op_61ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	s = (uae_s32)src + 2;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + s);
+		exception3 (opcode, m68k_getpc () + s, 0, 1, m68k_getpc () + s);
 		return 12 * CYCLE_UNIT / 2;
 	}
-	m68k_do_bsr (regs, m68k_getpc (regs) + 6, s);
+	m68k_do_bsr (regs, m68k_getpc () + 6, s);
 }}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -19812,7 +19812,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6200_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 2)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19829,7 +19829,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6201_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 2)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19839,9 +19839,6 @@ didnt_jump:;
 }}return 5 * CYCLE_UNIT / 2;
 }
 
-#endif
-
-#ifdef PART_6
 /* Bcc.L #<data>.L (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_62ff_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -19849,7 +19846,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_62ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 2)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19865,7 +19862,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6300_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 3)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19882,7 +19879,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6301_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 3)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19892,6 +19889,9 @@ didnt_jump:;
 }}return 5 * CYCLE_UNIT / 2;
 }
 
+#endif
+
+#ifdef PART_6
 /* Bcc.L #<data>.L (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_63ff_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -19899,7 +19899,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_63ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 3)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19915,7 +19915,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6400_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 4)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19932,7 +19932,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6401_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 4)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19949,7 +19949,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_64ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 4)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19965,7 +19965,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6500_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 5)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19982,7 +19982,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6501_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 5)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -19999,7 +19999,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_65ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 5)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20015,7 +20015,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6600_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 6)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20032,7 +20032,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6601_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 6)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20049,7 +20049,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_66ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 6)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20065,7 +20065,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6700_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 7)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20082,7 +20082,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6701_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 7)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20099,7 +20099,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_67ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 7)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20115,7 +20115,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6800_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 8)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20132,7 +20132,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6801_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 8)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20149,7 +20149,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_68ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 8)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20165,7 +20165,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6900_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 9)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20182,7 +20182,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6901_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 9)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20199,7 +20199,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_69ff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 9)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20215,7 +20215,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6a00_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 10)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20232,7 +20232,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6a01_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 10)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20249,7 +20249,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6aff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 10)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20265,7 +20265,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6b00_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 11)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20282,7 +20282,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6b01_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 11)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20299,7 +20299,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6bff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 11)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20315,7 +20315,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6c00_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 12)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20332,7 +20332,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6c01_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 12)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20349,7 +20349,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6cff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 12)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20365,7 +20365,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6d00_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 13)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20382,7 +20382,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6d01_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 13)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20399,7 +20399,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6dff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 13)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20415,7 +20415,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6e00_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 14)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20432,7 +20432,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6e01_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 14)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20449,7 +20449,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6eff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 14)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20465,7 +20465,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6f00_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = get_iword (2);
 	if (!cctrue (regs.ccrflags, 15)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20482,7 +20482,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6f01_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_u32 src = srcreg;
 	if (!cctrue (regs.ccrflags, 15)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20499,7 +20499,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6fff_0)(uae_u32 opcode, struct regstruct &regs)
 	src = get_ilong (2);
 	if (!cctrue (regs.ccrflags, 15)) goto didnt_jump;
 	if (src & 1) {
-		exception3i (opcode, m68k_getpc (regs) + 2 + (uae_s32)src);
+		exception3i (opcode, m68k_getpc () + 2 + (uae_s32)src);
 		return 7 * CYCLE_UNIT / 2;
 	}
 	m68k_incpc ((uae_s32)src + 2);
@@ -20620,7 +20620,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 	src |= dst;
@@ -20670,7 +20670,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_803a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
@@ -20690,8 +20690,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_803b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 	src |= dst;
@@ -20814,7 +20814,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 	src |= dst;
@@ -20864,7 +20864,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_807a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
@@ -20884,8 +20884,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_807b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 	src |= dst;
@@ -21008,7 +21008,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	src |= dst;
@@ -21058,7 +21058,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
@@ -21078,8 +21078,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_80bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	src |= dst;
@@ -21118,7 +21118,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80c0_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 4 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21152,7 +21152,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80d0_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21187,7 +21187,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80d8_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21222,7 +21222,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80e0_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 10 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21256,7 +21256,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80e8_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 12 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21283,7 +21283,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	CLEAR_CZNV ();
@@ -21291,7 +21291,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80f0_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (0);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21323,7 +21323,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80f8_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 12 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21356,7 +21356,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80f9_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (6);
-		Exception (5, regs);
+		Exception (5);
 		return 16 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21381,7 +21381,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
@@ -21390,7 +21390,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fa_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 12 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21417,8 +21417,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	CLEAR_CZNV ();
@@ -21426,7 +21426,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fb_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (0);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21456,7 +21456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fc_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		if (dst < 0) SET_NFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	} else {
 		uae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;
@@ -21608,7 +21608,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8130_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src |= dst;
 	CLEAR_CZNV ();
@@ -21761,7 +21761,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8170_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 	src |= dst;
 	CLEAR_CZNV ();
@@ -21915,7 +21915,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	src |= dst;
 	CLEAR_CZNV ();
@@ -21970,7 +21970,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81c0_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 4 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22009,7 +22009,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81d0_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22049,7 +22049,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81d8_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22089,7 +22089,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81e0_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (2);
-		Exception (5, regs);
+		Exception (5);
 		return 10 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22128,7 +22128,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81e8_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22161,14 +22161,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_81f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	if (src == 0) {
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (0);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22205,7 +22205,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81f8_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22243,7 +22243,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81f9_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (6);
-		Exception (5, regs);
+		Exception (5);
 		return 16 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22274,7 +22274,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
@@ -22282,7 +22282,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81fa_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 12 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22315,15 +22315,15 @@ uae_u32 REGPARAM2 CPUFUNC(op_81fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	if (src == 0) {
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (0);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22358,7 +22358,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81fc_0)(uae_u32 opcode, struct regstruct &regs)
 		SET_VFLG (1);
 		SET_ZFLG (1);
 	m68k_incpc (4);
-		Exception (5, regs);
+		Exception (5);
 		return 8 * CYCLE_UNIT / 2;
 	}
 	CLEAR_CZNV ();
@@ -22506,7 +22506,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
@@ -22571,7 +22571,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_903a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
@@ -22596,8 +22596,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_903b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
@@ -22776,7 +22776,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
@@ -22841,7 +22841,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_907a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
@@ -22866,8 +22866,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_907b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
@@ -23046,7 +23046,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -23111,7 +23111,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
@@ -23136,8 +23136,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_90bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -23269,7 +23269,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst - src;
@@ -23310,7 +23310,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
@@ -23327,8 +23327,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_90fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst - src;
@@ -23498,7 +23498,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9130_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -23707,7 +23707,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9170_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -23916,7 +23916,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -24070,7 +24070,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst - src;
@@ -24111,7 +24111,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
@@ -24128,8 +24128,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_91fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst - src;
@@ -24262,7 +24262,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
@@ -24321,7 +24321,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b03a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
@@ -24344,8 +24344,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_b03b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u8)(dst)) - ((uae_u8)(src));
@@ -24508,7 +24508,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
@@ -24567,7 +24567,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b07a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
@@ -24590,8 +24590,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_b07b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u16)(dst)) - ((uae_u16)(src));
@@ -24661,9 +24661,6 @@ uae_u32 REGPARAM2 CPUFUNC(op_b088_0)(uae_u32 opcode, struct regstruct &regs)
 return 3 * CYCLE_UNIT / 2;
 }
 
-#endif
-
-#ifdef PART_7
 /* CMP.L (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b090_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -24729,6 +24726,9 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0a0_0)(uae_u32 opcode, struct regstruct &regs)
 return 8 * CYCLE_UNIT / 2;
 }
 
+#endif
+
+#ifdef PART_7
 /* CMP.L (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0a8_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -24757,7 +24757,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -24816,7 +24816,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
@@ -24839,8 +24839,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -25004,7 +25004,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -25063,7 +25063,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
@@ -25086,8 +25086,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -25242,7 +25242,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b130_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src ^= dst;
 	CLEAR_CZNV ();
@@ -25409,7 +25409,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b170_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 	src ^= dst;
 	CLEAR_CZNV ();
@@ -25576,7 +25576,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	src ^= dst;
 	CLEAR_CZNV ();
@@ -25751,7 +25751,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -25810,7 +25810,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
@@ -25833,8 +25833,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) - ((uae_u32)(src));
@@ -25964,7 +25964,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 	src &= dst;
@@ -26014,7 +26014,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c03a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
@@ -26034,8 +26034,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_c03b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 	src &= dst;
@@ -26158,7 +26158,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 	src &= dst;
@@ -26208,7 +26208,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c07a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
@@ -26228,8 +26228,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_c07b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 	src &= dst;
@@ -26352,7 +26352,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	src &= dst;
@@ -26402,7 +26402,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
@@ -26422,8 +26422,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 	src &= dst;
@@ -26547,7 +26547,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {	uae_u32 newv = (uae_u32)(uae_u16)dst * (uae_u32)(uae_u16)src;
@@ -26597,7 +26597,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
@@ -26617,8 +26617,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {	uae_u32 newv = (uae_u32)(uae_u16)dst * (uae_u32)(uae_u16)src;
@@ -26778,7 +26778,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c130_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 	src &= dst;
 	CLEAR_CZNV ();
@@ -26930,7 +26930,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c170_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 	src &= dst;
 	CLEAR_CZNV ();
@@ -27069,7 +27069,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 	src &= dst;
 	CLEAR_CZNV ();
@@ -27210,7 +27210,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {	uae_u32 newv = (uae_s32)(uae_s16)dst * (uae_s32)(uae_s16)src;
@@ -27260,7 +27260,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
@@ -27280,8 +27280,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {	uae_u32 newv = (uae_s32)(uae_s16)dst * (uae_s32)(uae_s16)src;
@@ -27429,7 +27429,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d030_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u8)(dst)) + ((uae_u8)(src));
@@ -27494,7 +27494,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d03a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
@@ -27519,8 +27519,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_d03b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_s8 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u8)(dst)) + ((uae_u8)(src));
@@ -27699,7 +27699,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d070_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u16)(dst)) + ((uae_u16)(src));
@@ -27764,7 +27764,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d07a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
@@ -27789,8 +27789,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_d07b_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s16 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u16)(dst)) + ((uae_u16)(src));
@@ -27969,7 +27969,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0b0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) + ((uae_u32)(src));
@@ -28034,7 +28034,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0ba_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
@@ -28059,8 +28059,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0bb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_dreg (regs, dstreg);
 {{uae_u32 newv = ((uae_u32)(dst)) + ((uae_u32)(src));
@@ -28192,7 +28192,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst + src;
@@ -28233,7 +28233,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
@@ -28250,8 +28250,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s16 src = get_word (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst + src;
@@ -28421,7 +28421,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d130_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s8 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s8 dst = get_byte (dsta);
 {{uae_u32 newv = ((uae_u8)(dst)) + ((uae_u8)(src));
 {	int flgs = ((uae_s8)(src)) < 0;
@@ -28630,7 +28630,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d170_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s16 dst = get_word (dsta);
 {{uae_u32 newv = ((uae_u16)(dst)) + ((uae_u16)(src));
 {	int flgs = ((uae_s16)(src)) < 0;
@@ -28839,7 +28839,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1b0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s32 src = m68k_dreg (regs, srcreg);
 {	uaecptr dsta;
 	m68k_incpc (2);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_s32 dst = get_long (dsta);
 {{uae_u32 newv = ((uae_u32)(dst)) + ((uae_u32)(src));
 {	int flgs = ((uae_s32)(src)) < 0;
@@ -28993,7 +28993,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst + src;
@@ -29034,7 +29034,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1fa_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 dstreg = (opcode >> 9) & 7;
 {{	uaecptr srca;
-	srca = m68k_getpc (regs) + 2;
+	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_iword (2);
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
@@ -29051,8 +29051,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1fb_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uaecptr tmppc;
 	uaecptr srca;
 	m68k_incpc (2);
-{	tmppc = m68k_getpc (regs);
-	srca = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	srca = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_s32 src = get_long (srca);
 {	uae_s32 dst = m68k_areg (regs, dstreg);
 {	uae_u32 newv = dst + src;
@@ -29215,9 +29215,6 @@ uae_u32 REGPARAM2 CPUFUNC(op_e020_0)(uae_u32 opcode, struct regstruct &regs)
 return 6 * CYCLE_UNIT / 2;
 }
 
-#endif
-
-#ifdef PART_8
 /* LSR.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e028_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -29334,6 +29331,9 @@ uae_u32 REGPARAM2 CPUFUNC(op_e040_0)(uae_u32 opcode, struct regstruct &regs)
 return 6 * CYCLE_UNIT / 2;
 }
 
+#endif
+
+#ifdef PART_8
 /* LSRQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e048_0)(uae_u32 opcode, struct regstruct &regs)
 {
@@ -29849,7 +29849,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u32 val = (uae_u16)data;
 	uae_u32 sign = 0x8000 & val;
@@ -30682,7 +30682,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u32 val = (uae_u16)data;
 	uae_u32 sign = 0x8000 & val;
@@ -30831,7 +30831,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u32 val = (uae_u16)data;
 	uae_u32 carry = val & 1;
@@ -30971,7 +30971,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u16 val = data;
 	uae_u32 carry = val & 0x8000;
@@ -31115,7 +31115,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u16 val = data;
 	uae_u32 carry = val & 1;
@@ -31262,7 +31262,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u16 val = data;
 	uae_u32 carry = val & 0x8000;
@@ -31405,7 +31405,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u16 val = data;
 	uae_u32 carry = val & 1;
@@ -31545,7 +31545,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7f0_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr dataa;
 	m68k_incpc (2);
-{	dataa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	dataa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s16 data = get_word (dataa);
 {	uae_u16 val = data;
 	uae_u32 carry = val & 0x8000;
@@ -31663,7 +31663,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e8f0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -31720,7 +31720,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e8fa_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
@@ -31743,8 +31743,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_e8fb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -31826,7 +31826,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e9f0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -31886,7 +31886,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e9fa_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
@@ -31910,8 +31910,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_e9fb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -31998,7 +31998,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_eaf0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32124,7 +32124,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_ebf0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32184,7 +32184,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_ebfa_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
@@ -32208,8 +32208,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_ebfb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32296,7 +32296,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_ecf0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32431,7 +32431,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_edf0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32500,7 +32500,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_edfa_0)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 dstreg = 2;
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
-	dsta = m68k_getpc (regs) + 4;
+	dsta = m68k_getpc () + 4;
 	dsta += (uae_s32)(uae_s16)get_iword (4);
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
@@ -32527,8 +32527,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_edfb_0)(uae_u32 opcode, struct regstruct &regs)
 {	uaecptr tmppc;
 	uaecptr dsta;
 	m68k_incpc (4);
-{	tmppc = m68k_getpc (regs);
-	dsta = get_disp_ea_020 (regs, tmppc, next_iword (regs));
+{	tmppc = m68k_getpc ();
+	dsta = get_disp_ea_020 (tmppc, next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32618,7 +32618,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_eef0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32757,7 +32757,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_eff0_0)(uae_u32 opcode, struct regstruct &regs)
 {{	uae_s16 extra = get_iword (2);
 {	uaecptr dsta;
 	m68k_incpc (4);
-{	dsta = get_disp_ea_020 (regs, m68k_areg (regs, dstreg), next_iword (regs));
+{	dsta = get_disp_ea_020 (m68k_areg (regs, dstreg), next_iword (regs));
 {	uae_u32 bdata[2];
 	uae_s32 offset = extra & 0x800 ? m68k_dreg(regs, (extra >> 6) & 7) : (extra >> 6) & 0x1f;
 	int width = (((extra & 0x20 ? m68k_dreg(regs, extra & 7) : extra) -1) & 0x1f) +1;
@@ -32823,12 +32823,38 @@ uae_u32 REGPARAM2 CPUFUNC(op_eff9_0)(uae_u32 opcode, struct regstruct &regs)
 return 21 * CYCLE_UNIT / 2;
 }
 
+/* MMUOP030.L Dn,#<data>.W */
+uae_u32 REGPARAM2 CPUFUNC(op_f000_0)(uae_u32 opcode, struct regstruct &regs)
+{
+	uae_u32 srcreg = (opcode & 7);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
+	uae_u16 extra = get_iword (2);
+	m68k_incpc (4);
+	uae_u16 extraa = 0;
+	mmu_op30 (pc, opcode, regs, extra, extraa);
+}}return 4 * CYCLE_UNIT / 2;
+}
+
+/* MMUOP030.L An,#<data>.W */
+uae_u32 REGPARAM2 CPUFUNC(op_f008_0)(uae_u32 opcode, struct regstruct &regs)
+{
+	uae_u32 srcreg = (opcode & 7);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
+	uae_u16 extra = get_iword (2);
+	m68k_incpc (4);
+	uae_u16 extraa = 0;
+	mmu_op30 (pc, opcode, regs, extra, extraa);
+}}return 4 * CYCLE_UNIT / 2;
+}
+
 /* MMUOP030.L (An),#<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_f010_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
-{	uaecptr pc = m68k_getpc (regs);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 	m68k_incpc (4);
 {	uaecptr extraa;
@@ -32837,12 +32863,42 @@ uae_u32 REGPARAM2 CPUFUNC(op_f010_0)(uae_u32 opcode, struct regstruct &regs)
 }}}return 4 * CYCLE_UNIT / 2;
 }
 
+/* MMUOP030.L (An)+,#<data>.W */
+uae_u32 REGPARAM2 CPUFUNC(op_f018_0)(uae_u32 opcode, struct regstruct &regs)
+{
+	uae_u32 srcreg = (opcode & 7);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
+	uae_u16 extra = get_iword (2);
+	m68k_incpc (4);
+{	uaecptr extraa;
+	extraa = m68k_areg (regs, srcreg);
+	m68k_areg (regs, srcreg) += 4;
+	mmu_op30 (pc, opcode, regs, extra, extraa);
+}}}return 4 * CYCLE_UNIT / 2;
+}
+
+/* MMUOP030.L -(An),#<data>.W */
+uae_u32 REGPARAM2 CPUFUNC(op_f020_0)(uae_u32 opcode, struct regstruct &regs)
+{
+	uae_u32 srcreg = (opcode & 7);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
+	uae_u16 extra = get_iword (2);
+	m68k_incpc (4);
+{	uaecptr extraa;
+	extraa = m68k_areg (regs, srcreg) - 4;
+	m68k_areg (regs, srcreg) = extraa;
+	mmu_op30 (pc, opcode, regs, extra, extraa);
+}}}return 6 * CYCLE_UNIT / 2;
+}
+
 /* MMUOP030.L (d16,An),#<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_f028_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
-{	uaecptr pc = m68k_getpc (regs);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 	m68k_incpc (4);
 {	uaecptr extraa;
@@ -32856,12 +32912,12 @@ uae_u32 REGPARAM2 CPUFUNC(op_f028_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f030_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
-{	uaecptr pc = m68k_getpc (regs);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 	m68k_incpc (4);
 {	uaecptr extraa;
-{	extraa = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	extraa = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 	mmu_op30 (pc, opcode, regs, extra, extraa);
 }}}}return 8 * CYCLE_UNIT / 2;
 }
@@ -32869,8 +32925,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_f030_0)(uae_u32 opcode, struct regstruct &regs)
 /* MMUOP030.L (xxx).W,#<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_f038_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
-{	uaecptr pc = m68k_getpc (regs);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 	m68k_incpc (4);
 {	uaecptr extraa;
@@ -32883,8 +32939,8 @@ uae_u32 REGPARAM2 CPUFUNC(op_f038_0)(uae_u32 opcode, struct regstruct &regs)
 /* MMUOP030.L (xxx).L,#<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_f039_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
-{	uaecptr pc = m68k_getpc (regs);
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
+{	uaecptr pc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 	m68k_incpc (4);
 {	uaecptr extraa;
@@ -33188,7 +33244,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f27a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {
 #ifdef FPUEMU
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 {	uae_s16 dummy = get_iword (4);
 	m68k_incpc (6);
@@ -33203,7 +33259,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f27b_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {
 #ifdef FPUEMU
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 {	uae_s32 dummy;
 	dummy = get_ilong (4);
@@ -33219,7 +33275,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f27c_0)(uae_u32 opcode, struct regstruct &regs)
 {
 {
 #ifdef FPUEMU
-	uaecptr oldpc = m68k_getpc (regs);
+	uaecptr oldpc = m68k_getpc ();
 	uae_u16 extra = get_iword (2);
 	m68k_incpc (4);
 	fpuop_trapcc (opcode, regs, oldpc, extra);
@@ -33235,7 +33291,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f280_0)(uae_u32 opcode, struct regstruct &regs)
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
-{	uaecptr pc = m68k_getpc (regs);
+{	uaecptr pc = m68k_getpc ();
 {	uae_s16 extra = get_iword (0);
 	m68k_incpc (2);
 	fpuop_bcc (opcode, regs, pc,extra);
@@ -33251,7 +33307,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f2c0_0)(uae_u32 opcode, struct regstruct &regs)
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
-{	uaecptr pc = m68k_getpc (regs);
+{	uaecptr pc = m68k_getpc ();
 {	uae_s32 extra;
 	extra = get_ilong (0);
 	m68k_incpc (4);
@@ -33265,7 +33321,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f2c0_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f310_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33279,7 +33335,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f310_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f320_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33293,7 +33349,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f320_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f328_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33307,7 +33363,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f328_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f330_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33320,7 +33376,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f330_0)(uae_u32 opcode, struct regstruct &regs)
 /* FSAVE.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_f338_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33333,7 +33389,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f338_0)(uae_u32 opcode, struct regstruct &regs)
 /* FSAVE.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_f339_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33347,7 +33403,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f339_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f350_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33361,7 +33417,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f350_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f358_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33375,7 +33431,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f358_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f368_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33389,7 +33445,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f368_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f370_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33402,7 +33458,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f370_0)(uae_u32 opcode, struct regstruct &regs)
 /* FRESTORE.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_f378_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33415,7 +33471,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f378_0)(uae_u32 opcode, struct regstruct &regs)
 /* FRESTORE.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_f379_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33428,7 +33484,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f379_0)(uae_u32 opcode, struct regstruct &regs)
 /* FRESTORE.L (d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_f37a_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33441,7 +33497,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f37a_0)(uae_u32 opcode, struct regstruct &regs)
 /* FRESTORE.L (d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_f37b_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {
 #ifdef FPUEMU
 	m68k_incpc (2);
@@ -33456,7 +33512,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f408_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33468,7 +33524,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f410_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33479,7 +33535,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f418_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33490,7 +33546,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f419_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33501,7 +33557,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f41a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33512,7 +33568,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f41b_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33523,7 +33579,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f41c_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33534,7 +33590,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f41d_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33545,7 +33601,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f41e_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33556,7 +33612,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f41f_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33568,7 +33624,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f428_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33580,7 +33636,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f430_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
 	uae_u32 dstreg = opcode & 7;
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33591,7 +33647,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f438_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33602,7 +33658,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f439_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33613,7 +33669,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f43a_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33624,7 +33680,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f43b_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33635,7 +33691,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f43c_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33646,7 +33702,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f43d_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33657,7 +33713,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f43e_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33668,7 +33724,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f43f_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = ((opcode >> 6) & 3);
-{if (!regs.s) { Exception(8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	if (opcode & 0x80)
 		flush_icache(m68k_areg (regs, opcode & 3), (opcode >> 6) & 3);
 }}	m68k_incpc (2);
@@ -33679,7 +33735,7 @@ return 4 * CYCLE_UNIT / 2;
 uae_u32 REGPARAM2 CPUFUNC(op_f500_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33689,7 +33745,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f500_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f508_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33699,7 +33755,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f508_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f510_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33709,7 +33765,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f510_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f518_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33719,7 +33775,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f518_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f548_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33729,7 +33785,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f548_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f568_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33739,7 +33795,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f568_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f588_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33749,7 +33805,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_f588_0)(uae_u32 opcode, struct regstruct &regs)
 uae_u32 REGPARAM2 CPUFUNC(op_f5c8_0)(uae_u32 opcode, struct regstruct &regs)
 {
 	uae_u32 srcreg = (opcode & 7);
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	m68k_incpc (2);
 	mmu_op (opcode, regs, 0);
 }}return 12 * CYCLE_UNIT / 2;
@@ -33876,12 +33932,12 @@ return 8 * CYCLE_UNIT / 2;
 /* LPSTOP.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_f800_0)(uae_u32 opcode, struct regstruct &regs)
 {
-{if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+{if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 {	uae_u16 sw = get_iword (2);
 	uae_u16 sr;
-	if (sw != (0x100|0x80|0x40)) { Exception (4, regs); return 4 * CYCLE_UNIT / 2; }
+	if (sw != (0x100|0x80|0x40)) { Exception (4); return 4 * CYCLE_UNIT / 2; }
 	sr = get_iword (4);
-	if (!(sr & 0x8000)) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }
+	if (!(sr & 0x8000)) { Exception (8); return 4 * CYCLE_UNIT / 2; }
 	regs.sr = sr;
 	MakeFromSR (regs);
 	m68k_setstopped();
@@ -34080,7 +34136,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4830_2)(uae_u32 opcode, struct regstruct &regs)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	m68k_incpc (2);
-{	srca = get_disp_ea_020 (regs, m68k_areg (regs, srcreg), next_iword (regs));
+{	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), next_iword (regs));
 {	uae_s8 src = get_byte (srca);
 {	uae_u16 newv_lo = - (src & 0xF) - (GET_XFLG () ? 1 : 0);
 	uae_u16 newv_hi = - (src & 0xF0);

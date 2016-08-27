@@ -271,6 +271,10 @@ void finish_sound_buffer (void)
 #endif
 }
 
+void pause_sound_buffer (void)
+{
+	reset_sound ();
+}
 
 void restart_sound_buffer(void)
 {

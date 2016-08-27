@@ -15,7 +15,6 @@
 #include "rommgr.h"
 #include "uae.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 static gcn::Label *lblMainROM;

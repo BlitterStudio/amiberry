@@ -53,10 +53,16 @@ void update_sound (int freq, int lof)
   	freq = lastfreq;
   lastfreq = freq;
 
-	if (lof < 0) {
+	if (currprefs.ntscmode) {
+		hpos += 0.5;
 		lines += 0.5;
+	} else {
+  	if (lof < 0)
+  		lines += 0.5;
+    else if(lof > 0)
+      lines += 1.0;
   }
-
+  
   evtime = hpos * lines * freq * CYCLE_UNIT / (float)currprefs.sound_freq;
 	scaled_sample_evtime = (int)evtime;
 }
@@ -218,6 +224,12 @@ void finish_sound_buffer (void)
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN;
 	else
 	  finish_sndbuff = sndbufpt + SNDBUFFER_LEN/2;	  
+}
+
+
+void pause_sound_buffer (void)
+{
+	reset_sound ();
 }
 
 

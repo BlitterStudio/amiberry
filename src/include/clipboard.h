@@ -1,5 +1,5 @@
 
-extern void amiga_clipboard_want_data (void);
+extern int amiga_clipboard_want_data (void);
 extern void amiga_clipboard_got_data (uaecptr data, uae_u32 size, uae_u32 actual);
 extern void amiga_clipboard_die (void);
 extern void amiga_clipboard_init (void);

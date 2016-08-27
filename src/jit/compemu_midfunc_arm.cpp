@@ -463,7 +463,7 @@ MENDFUNC(2,arm_SUB_l_ri8,(RW4 d, IMM i))
 
 
 // Other
-static inline void flush_cpu_icache(void *start, void *stop)
+STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
 {
 	register void *_beg __asm ("a1") = start;
 	register void *_end __asm ("a2") = stop;
@@ -480,11 +480,11 @@ static inline void flush_cpu_icache(void *start, void *stop)
 	#endif
 }
 
-static inline void write_jmp_target(uae_u32* jmpaddr, cpuop_func* a) {
+STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, cpuop_func* a) {
 	*(jmpaddr) = (uae_u32)a;
     flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
 }
 
-static inline void emit_jmp_target(uae_u32 a) {
+STATIC_INLINE void emit_jmp_target(uae_u32 a) {
 	emit_long((uae_u32)a);
 }

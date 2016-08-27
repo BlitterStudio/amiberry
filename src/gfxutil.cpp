@@ -29,7 +29,7 @@ unsigned int doMask (int p, int bits, int shift)
   /* p is a value from 0 to 15 (Amiga color value)
    * scale to 0..255, shift to align msb with mask, and apply mask */
 
-  unsigned long val = p * 0x11111111UL;
+  uae_u32 val = p * 0x11111111UL;
   if (!bits) 
     return 0;
   val >>= (32 - bits);

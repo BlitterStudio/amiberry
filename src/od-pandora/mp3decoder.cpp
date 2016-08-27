@@ -1,7 +1,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "target.h"
 #include "zfile.h"
 #include "mp3decoder.h"
 #include "cda_play.h"

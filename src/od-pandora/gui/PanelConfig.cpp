@@ -12,7 +12,6 @@
 #include "uae.h"
 #include "blkdev.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 
@@ -213,9 +212,9 @@ class ConfigsListActionListener : public gcn::ActionListener
         DisableResume();
         RefreshAllPanels();
   			if(emulating)
-  			  uae_reset(1);
+  			  uae_reset(1, 1);
   			else
-  			  uae_reset(0);
+  			  uae_reset(0, 1);
   			gui_running = false;
       }
       else
