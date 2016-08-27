@@ -120,7 +120,7 @@ static struct uae_input_device_kbr_default keytrans_amiga_x11[] = {
 	{  104, INPUTEVENT_KEY_ENTER},   // The ENT from keypad..
 
 	{  90,  INPUTEVENT_KEY_NP_0},
-	{  91,  INPUTEVENT_KEY_PERIOD},
+	{  91,  INPUTEVENT_KEY_NP_PERIOD},
 
 	{ 111,  INPUTEVENT_KEY_CURSOR_UP},
 	{ 113,  INPUTEVENT_KEY_CURSOR_LEFT},
