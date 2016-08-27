@@ -3,7 +3,7 @@ ifeq ($(PLATFORM),)
 endif
 
 ifeq ($(PLATFORM),rpi3)
-	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -funsafe-math-optimizations
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
 	LDFLAGS += -lbcm_host
 	DEFS += -DRASPBERRY
@@ -11,7 +11,7 @@ ifeq ($(PLATFORM),rpi3)
 	HAVE_DISPMANX = 1
 	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi2)
-	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
 	LDFLAGS += -lbcm_host
 	DEFS += -DRASPBERRY
