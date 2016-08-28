@@ -103,17 +103,19 @@ uae_u8 call_saved[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 0,1,1,1};
    - Special registers (such like the stack pointer) should not be "preserved"
      by pushing, even though they are "saved" across function calls
 */
-static const uae_u8 need_to_preserve[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 0,0,0,0};
+/* Without save and restore R12, we sometimes get seg faults when entering gui...
+   Don't understand why. */
+static const uae_u8 need_to_preserve[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 1,0,0,0};
 static const uae_u32 PRESERVE_MASK = ((1<<R4_INDEX)|(1<<R5_INDEX)|(1<<R6_INDEX)|(1<<R7_INDEX)|(1<<R8_INDEX)|(1<<R9_INDEX)
-		|(1<<R10_INDEX)|(1<<R11_INDEX));
+		|(1<<R10_INDEX)|(1<<R11_INDEX)|(1<<R12_INDEX));
 
 #include "codegen_arm.h"
 
-static inline void UNSIGNED8_IMM_2_REG(W4 r, IMM v) {
+STATIC_INLINE void UNSIGNED8_IMM_2_REG(W4 r, IMM v) {
 	MOV_ri8(r, (uae_u8) v);
 }
 
-static inline void SIGNED8_IMM_2_REG(W4 r, IMM v) {
+STATIC_INLINE void SIGNED8_IMM_2_REG(W4 r, IMM v) {
 	if (v & 0x80) {
 		MVN_ri8(r, (uae_u8) ~v);
 	} else {
@@ -121,7 +123,7 @@ static inline void SIGNED8_IMM_2_REG(W4 r, IMM v) {
 	}
 }
 
-static inline void UNSIGNED16_IMM_2_REG(W4 r, IMM v) {
+STATIC_INLINE void UNSIGNED16_IMM_2_REG(W4 r, IMM v) {
 #ifdef ARMV6T2
   MOVW_ri16(r, v);
 #else
@@ -130,7 +132,7 @@ static inline void UNSIGNED16_IMM_2_REG(W4 r, IMM v) {
 #endif
 }
 
-static inline void SIGNED16_IMM_2_REG(W4 r, IMM v) {
+STATIC_INLINE void SIGNED16_IMM_2_REG(W4 r, IMM v) {
 #ifdef ARMV6T2
   MOVW_ri16(r, v);
   SXTH_rr(r, r);
@@ -140,19 +142,19 @@ static inline void SIGNED16_IMM_2_REG(W4 r, IMM v) {
 #endif
 }
 
-static inline void UNSIGNED8_REG_2_REG(W4 d, RR4 s) {
+STATIC_INLINE void UNSIGNED8_REG_2_REG(W4 d, RR4 s) {
 	UXTB_rr(d, s);
 }
 
-static inline void SIGNED8_REG_2_REG(W4 d, RR4 s) {
+STATIC_INLINE void SIGNED8_REG_2_REG(W4 d, RR4 s) {
 	SXTB_rr(d, s);
 }
 
-static inline void UNSIGNED16_REG_2_REG(W4 d, RR4 s) {
+STATIC_INLINE void UNSIGNED16_REG_2_REG(W4 d, RR4 s) {
 	UXTH_rr(d, s);
 }
 
-static inline void SIGNED16_REG_2_REG(W4 d, RR4 s) {
+STATIC_INLINE void SIGNED16_REG_2_REG(W4 d, RR4 s) {
 	SXTH_rr(d, s);
 }
 
@@ -378,7 +380,7 @@ LOWFUNC(WRITE,NONE,2,raw_sub_w_ri,(RW2 d, IMM i))
 LENDFUNC(WRITE,NONE,2,raw_sub_w_ri,(RW2 d, IMM i))
 
 
-static inline void raw_dec_sp(int off)
+STATIC_INLINE void raw_dec_sp(int off)
 {
 	if (off) {
     if(CHECK32(off)) {
@@ -393,7 +395,7 @@ static inline void raw_dec_sp(int off)
 	}
 }
 
-static inline void raw_inc_sp(int off)
+STATIC_INLINE void raw_inc_sp(int off)
 {
 	if (off) {
     if(CHECK32(off)) {
@@ -408,20 +410,20 @@ static inline void raw_inc_sp(int off)
 	}
 }
 
-static inline void raw_push_regs_to_preserve(void) {
+STATIC_INLINE void raw_push_regs_to_preserve(void) {
 	PUSH_REGS(PRESERVE_MASK);
 }
 
-static inline void raw_pop_preserved_regs(void) {
+STATIC_INLINE void raw_pop_preserved_regs(void) {
 	POP_REGS(PRESERVE_MASK);
 }
 
-static inline void raw_load_flagx(uae_u32 t, uae_u32 r)
+STATIC_INLINE void raw_load_flagx(uae_u32 t, uae_u32 r)
 {
   LDR_rRI(t, R_REGSTRUCT, 17 * 4); // X flag are next to 8 Dregs, 8 Aregs and CPSR in struct regstruct
 }
 
-static inline void raw_flags_evicted(int r)
+STATIC_INLINE void raw_flags_evicted(int r)
 {
   live.state[FLAGTMP].status = INMEM;
   live.state[FLAGTMP].realreg = -1;
@@ -433,22 +435,22 @@ static inline void raw_flags_evicted(int r)
   live.nat[r].nholds = 0;
 }
 
-static inline void raw_flags_init(void) {
+STATIC_INLINE void raw_flags_init(void) {
 }
 
-static inline void raw_flags_to_reg(int r)
+STATIC_INLINE void raw_flags_to_reg(int r)
 {
 	MRS_CPSR(r);
 	STR_rRI(r, R_REGSTRUCT, 16 * 4); // Flags are next to 8 Dregs and 8 Aregs in struct regstruct
 	raw_flags_evicted(r);
 }
 
-static inline void raw_reg_to_flags(int r)
+STATIC_INLINE void raw_reg_to_flags(int r)
 {
 	MSR_CPSRf_r(r);
 }
 
-static inline void raw_load_flagreg(uae_u32 t, uae_u32 r)
+STATIC_INLINE void raw_load_flagreg(uae_u32 t, uae_u32 r)
 {
 	LDR_rRI(t, R_REGSTRUCT, 16 * 4); // Flags are next to 8 Dregs and 8 Aregs in struct regstruct
 }
@@ -460,12 +462,12 @@ static inline void raw_load_flagreg(uae_u32 t, uae_u32 r)
 #define FLAG_NREG1 -1
 #define FLAG_NREG3 -1
 
-static inline void raw_fflags_into_flags(int r)
+STATIC_INLINE void raw_fflags_into_flags(int r)
 {
 	jit_unimplemented("raw_fflags_into_flags %x", r);
 }
 
-static inline void raw_fp_init(void)
+STATIC_INLINE void raw_fp_init(void)
 {
 #ifdef USE_JIT_FPU
   int i;
@@ -477,7 +479,7 @@ static inline void raw_fp_init(void)
 }
 
 // Verify
-static inline void raw_fp_cleanup_drop(void)
+STATIC_INLINE void raw_fp_cleanup_drop(void)
 {
 #ifdef USE_JIT_FPU
   D(panicbug("raw_fp_cleanup_drop"));
@@ -516,13 +518,13 @@ LOWFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 }
 LENDFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 
-static inline void raw_emit_nop_filler(int nbytes)
+STATIC_INLINE void raw_emit_nop_filler(int nbytes)
 {
 	nbytes >>= 2;
 	while(nbytes--) { NOP(); }
 }
 
-static inline void raw_emit_nop(void)
+STATIC_INLINE void raw_emit_nop(void)
 {
   NOP();
 }
@@ -872,7 +874,7 @@ LOWFUNC(WRITE,NONE,2,compemu_raw_test_l_rr,(RR4 d, RR4 s))
 }
 LENDFUNC(WRITE,NONE,2,compemu_raw_test_l_rr,(RR4 d, RR4 s))
 
-static inline void compemu_raw_call(uae_u32 t)
+STATIC_INLINE void compemu_raw_call(uae_u32 t)
 {
 #ifdef ARMV6T2
   MOVW_ri16(REG_WORK1, t);
@@ -886,14 +888,14 @@ static inline void compemu_raw_call(uae_u32 t)
 	POP(RLR_INDEX);
 }
 
-static inline void compemu_raw_call_r(RR4 r)
+STATIC_INLINE void compemu_raw_call_r(RR4 r)
 {
 	PUSH(RLR_INDEX);
 	BLX_r(r);
 	POP(RLR_INDEX);
 }
 
-static inline void compemu_raw_jcc_l_oponly(int cc)
+STATIC_INLINE void compemu_raw_jcc_l_oponly(int cc)
 {
 	switch (cc) {
 	case 9: // LS
@@ -920,7 +922,7 @@ static inline void compemu_raw_jcc_l_oponly(int cc)
   // emit of target will be done by caller
 }
 
-static inline void compemu_raw_jl(uae_u32 t)
+STATIC_INLINE void compemu_raw_jl(uae_u32 t)
 {
 #ifdef ARMV6T2
   MOVW_ri16(REG_WORK1, t);
@@ -932,13 +934,13 @@ static inline void compemu_raw_jl(uae_u32 t)
 #endif
 }
 
-static inline void compemu_raw_jmp(uae_u32 t)
+STATIC_INLINE void compemu_raw_jmp(uae_u32 t)
 {
   LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
 	emit_long(t);
 }
 
-static inline void compemu_raw_jmp_m_indexed(uae_u32 base, uae_u32 r, uae_u32 m)
+STATIC_INLINE void compemu_raw_jmp_m_indexed(uae_u32 base, uae_u32 r, uae_u32 m)
 {
 	int shft;
 	switch(m) {
@@ -954,12 +956,12 @@ static inline void compemu_raw_jmp_m_indexed(uae_u32 base, uae_u32 r, uae_u32 m)
 	emit_long(base);
 }
 
-static inline void compemu_raw_jmp_r(RR4 r)
+STATIC_INLINE void compemu_raw_jmp_r(RR4 r)
 {
 	BX_r(r);
 }
 
-static inline void compemu_raw_jnz(uae_u32 t)
+STATIC_INLINE void compemu_raw_jnz(uae_u32 t)
 {
 #ifdef ARMV6T2
   BEQ_i(1);
@@ -971,12 +973,12 @@ static inline void compemu_raw_jnz(uae_u32 t)
 #endif
 }
 
-static inline void compemu_raw_jz_b_oponly(void)
+STATIC_INLINE void compemu_raw_jz_b_oponly(void)
 {
   BEQ_i(0);   // Real distance set by caller
 }
 
-static inline void compemu_raw_branch(IMM d)
+STATIC_INLINE void compemu_raw_branch(IMM d)
 {
 	B_i((d >> 2) - 1);
 }

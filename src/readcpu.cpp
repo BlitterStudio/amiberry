@@ -163,28 +163,6 @@ struct mnemolookup lookuptab[] = {
 
 struct instr *table68k;
 
-static int specialcase (uae_u16 opcode, int cpu_lev)
-{
-	int mode = (opcode >> 3) & 7;
-	int reg = opcode & 7;
-
-	if (cpu_lev >= 2)
-		return cpu_lev;
-	/* TST.W A0, TST.L A0, TST.x (d16,PC) and TST.x (d8,PC,Xn) are 68020+ only */
-	if ((opcode & 0xff00) == 0x4a00) {
-		if (mode == 7 && (reg == 4 || reg == 2 || reg == 3))
-			return 2;
-		if (mode == 1) /* Ax */
-			return 2;
-	}
-	/* CMPI.W #x,(d16,PC) and CMPI.W #x,(d8,PC,Xn) are 68020+ only */
-	if ((opcode & 0xff00) == 0x0c00) {
-		if (mode == 7 && (reg == 2 || reg == 3))
-			return 2;
-	}
-	return cpu_lev;
-}
-
 static amodes mode_from_str (const TCHAR *str)
 {
 	if (_tcsncmp (str, _T("Dreg"), 4) == 0) return Dreg;
@@ -786,7 +764,8 @@ endofline:
 		table68k[opc].duse = usedst;
 		table68k[opc].stype = srctype;
 		table68k[opc].plev = id.plevel;
-		table68k[opc].clev = specialcase(opc, id.cpulevel);
+		table68k[opc].clev = id.cpulevel;
+		table68k[opc].unimpclev = id.unimpcpulevel;
 
 #if 0
 		for (i = 0; i < 5; i++) {

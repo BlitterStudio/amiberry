@@ -6,6 +6,8 @@
   * Copyright 1997 Bernd Schmidt
   */
 
+#include <SDL.h>
+
 #define TARGET_NAME "pandora"
 
 #define NO_MAIN_IN_MAIN_C
@@ -17,10 +19,14 @@ extern int emulating;
 extern int z3_start_adr;
 extern int rtg_start_adr;
 
+extern int currVSyncRate;
+
 void run_gui(void);
 void InGameMessage(const char *msg);
+void wait_for_vsync(void);
 
 void saveAdfDir(void);
+bool SetVSyncRate(int hz);
 void setCpuSpeed(void);
 void resetCpuSpeed(void);
 void update_display(struct uae_prefs *);
@@ -51,3 +57,48 @@ void reinit_amiga(void);
 int count_HDs(struct uae_prefs *p);
 extern void gui_force_rtarea_hdchange(void);
 extern bool hardfile_testrdb (const TCHAR *filename);
+
+#ifdef __cplusplus
+  extern "C" {
+#endif
+  void trace_begin (void);
+  void trace_end (void);
+#ifdef __cplusplus
+  }
+#endif
+
+
+STATIC_INLINE size_t uae_tcslcpy(TCHAR *dst, const TCHAR *src, size_t size)
+{
+	if (size == 0) {
+		return 0;
+	}
+	size_t src_len = _tcslen(src);
+	size_t cpy_len = src_len;
+	if (cpy_len >= size) {
+		cpy_len = size - 1;
+	}
+	memcpy(dst, src, cpy_len * sizeof(TCHAR));
+	dst[cpy_len] = _T('\0');
+	return src_len;
+}
+
+STATIC_INLINE size_t uae_strlcpy(char *dst, const char *src, size_t size)
+{
+	if (size == 0) {
+		return 0;
+	}
+	size_t src_len = strlen(src);
+	size_t cpy_len = src_len;
+	if (cpy_len >= size) {
+		cpy_len = size - 1;
+	}
+	memcpy(dst, src, cpy_len);
+	dst[cpy_len] = '\0';
+	return src_len;
+}
+
+STATIC_INLINE int max(int x, int y)
+{
+    return x > y ? x : y;
+}

@@ -76,6 +76,7 @@ struct instr_def {
     uae_u8 bitpos[16];
     unsigned int mask;
     int cpulevel;
+	int unimpcpulevel;
     int plevel;
     struct {
 	unsigned int flaguse:3;
@@ -107,9 +108,10 @@ extern struct instr {
     unsigned int suse:1;
     unsigned int duse:1;
     unsigned int unused1:1;
-    unsigned int clev:3;
-    unsigned int cflow:3;
+    unsigned int clev:3, unimpclev:3;
     unsigned int unused2:2;
+    unsigned int cflow:3;
+    unsigned int unused3:5;
 } *table68k;
 
 extern void read_table68k (void);

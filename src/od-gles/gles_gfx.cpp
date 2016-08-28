@@ -245,6 +245,10 @@ void unlockscr (void)
     //SDL_UnlockSurface(prSDLScreen);
 }
 
+void wait_for_vsync(void)
+{
+  // Temporary
+}
 
 void flush_screen ()
 {
@@ -391,7 +395,7 @@ int GetSurfacePixelFormat(void)
 }
 
 
-int graphics_init (void)
+int graphics_init (bool mousecapture)
 {
 	int i,j;
 
@@ -525,6 +529,70 @@ static int save_thumb(char *path)
 	return ret;
 }
 
+bool vsync_switchmode (int hz)
+{
+	int changed_height = changed_prefs.gfx_size.height;
+	
+	if (hz >= 55)
+		hz = 60;
+	else
+		hz = 50;
+
+  if(hz == 50 && currVSyncRate == 60)
+  {
+    // Switch from NTSC -> PAL
+    switch(changed_height) {
+      case 200: changed_height = 240; break;
+      case 216: changed_height = 262; break;
+      case 240: changed_height = 270; break;
+      case 256: changed_height = 270; break;
+      case 262: changed_height = 270; break;
+      case 270: changed_height = 270; break;
+    }
+  }
+  else if(hz == 60 && currVSyncRate == 50)
+  {
+    // Switch from PAL -> NTSC
+    switch(changed_height) {
+      case 200: changed_height = 200; break;
+      case 216: changed_height = 200; break;
+      case 240: changed_height = 200; break;
+      case 256: changed_height = 216; break;
+      case 262: changed_height = 216; break;
+      case 270: changed_height = 240; break;
+    }
+  }
+
+  if(changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
+    return true;
+  
+  changed_prefs.gfx_size.height = changed_height;
+
+  return true;
+}
+
+bool target_graphics_buffer_update (void)
+{
+  bool rate_changed = 0;
+  //bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+  
+  if(currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+  {
+    update_display(&changed_prefs);
+    rate_changed = true;
+  }
+
+  if(rate_changed)
+  {
+    black_screen_now();
+    fpscounter_reset();
+    time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
+  }
+
+  return true;
+}
+
+
 
 #ifdef PICASSO96
 
@@ -650,6 +718,7 @@ void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgb
     picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
   }
 }
+
 
 void gfx_set_picasso_state (int on)
 {

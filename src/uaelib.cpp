@@ -41,13 +41,13 @@ static uae_u32 emulib_GetVersion (void)
  */
 static uae_u32 emulib_HardReset (void)
 {
-  uae_reset(0);
+	uae_reset(1, 1);
   return 0;
 }
 
 static uae_u32 emulib_Reset (void)
 {
-  uae_reset(0);
+	uae_reset(0, 0);
   return 0;
 }
 
@@ -68,7 +68,9 @@ static uae_u32 emulib_EnableSound (uae_u32 val)
  */
 static uae_u32 emulib_EnableJoystick (uae_u32 val)
 {
-  return 0;
+	currprefs.jports[0].id = val & 255;
+	currprefs.jports[1].id = (val >> 8) & 255;
+	return 1;
 }
 
 /*
@@ -111,7 +113,7 @@ static uae_u32 REGPARAM2 emulib_ChgCMemSize (uae_u32 memsize)
   m68k_dreg (regs, 0) = 0;
 
   changed_prefs.chipmem_size = memsize;
-  uae_reset(0);
+	uae_reset(1, 1);
   return 1;
 }
 
@@ -129,7 +131,7 @@ static uae_u32 REGPARAM2 emulib_ChgSMemSize (uae_u32 memsize)
 
   m68k_dreg (regs, 0) = 0;
   changed_prefs.bogomem_size = memsize;
-  uae_reset (0);
+	uae_reset (1, 1);
   return 1;
 }
 
@@ -146,7 +148,7 @@ static uae_u32 REGPARAM2 emulib_ChgFMemSize (uae_u32 memsize)
   }
   m68k_dreg (regs, 0) = 0;
   changed_prefs.fastmem_size = memsize;
-  uae_reset (0);
+	uae_reset (1, 1);
   return 0;
 }
 
@@ -157,6 +159,7 @@ static uae_u32 emulib_InsertDisk (uaecptr name, uae_u32 drive)
 {
   int i = 0;
   char real_name[256];
+	TCHAR *s;
 
   if (drive > 3)
   	return 0;
@@ -167,7 +170,9 @@ static uae_u32 emulib_InsertDisk (uaecptr name, uae_u32 drive)
   if (i == 255)
   	return 0; /* ENAMETOOLONG */
 
-  _tcscpy (changed_prefs.floppyslots[drive].df, real_name);
+	s = au (real_name);
+	_tcscpy (changed_prefs.floppyslots[drive].df, s);
+	xfree (s);
 
   return 1;
 }
@@ -187,7 +192,7 @@ static uae_u32 emulib_ExitEmu (void)
  */
 static uae_u32 emulib_GetUaeConfig (uaecptr place)
 {
-  int i;
+	int i, j;
 
   put_long (place, version);
   put_long (place + 4, allocated_chipmem);
@@ -195,7 +200,7 @@ static uae_u32 emulib_GetUaeConfig (uaecptr place)
   put_long (place + 12, allocated_fastmem);
   put_long (place + 16, currprefs.gfx_framerate);
   put_long (place + 20, currprefs.produce_sound);
-  put_long (place + 24, 0);
+  put_long (place + 24, currprefs.jports[0].id | (currprefs.jports[1].id << 8));
   put_long (place + 28, 0);
   if (disk_empty (0))
   	put_byte (place + 32, 0);
@@ -214,11 +219,11 @@ static uae_u32 emulib_GetUaeConfig (uaecptr place)
   else
   	put_byte (place + 35, 1);
 
-  for (i = 0; i < 256; i++) {
-  	put_byte ((place + 36 + i), currprefs.floppyslots[0].df[i]);
-  	put_byte ((place + 36 + i + 256), currprefs.floppyslots[1].df[i]);
-  	put_byte ((place + 36 + i + 512), currprefs.floppyslots[2].df[i]);
-  	put_byte ((place + 36 + i + 768), currprefs.floppyslots[3].df[i]);
+	for (j = 0; j < 4; j++) {
+		char *s = ua (currprefs.floppyslots[j].df);
+		for (i = 0; i < 256; i++)
+			put_byte (place + 36 + i + j * 256, s[i]);
+		xfree (s);
   }
   return 1;
 }
@@ -309,6 +314,7 @@ static uae_u32 emulib_Minimize (void)
 static int native_dos_op (uae_u32 mode, uae_u32 p1, uae_u32 p2, uae_u32 p3)
 {
   TCHAR tmp[MAX_DPATH];
+	char *s;
   int v, i;
 
   if (mode)
@@ -319,16 +325,18 @@ static int native_dos_op (uae_u32 mode, uae_u32 p1, uae_u32 p2, uae_u32 p3)
   v = get_native_path (p1, tmp);
   if (v)
   	return v;
-  for (i = 0; i <= strlen(tmp) && i < p3 - 1; i++) {
-    put_byte (p2 + i, tmp[i]);
+	s = ua (tmp);
+	for (i = 0; i <= strlen (s) && i < p3 - 1; i++) {
+		put_byte (p2 + i, s[i]);
     put_byte (p2 + i + 1, 0);
   }
+	xfree (s);
   return 0;
 }
 
 extern uae_u32 picasso_demux (uae_u32 arg, TrapContext *context);
 
-STATIC_INLINE uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *context)
+static uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *context)
 {
 #define ARG0 (get_long (m68k_areg (regs, 7) + 4))
 #define ARG1 (get_long (m68k_areg (regs, 7) + 8))
@@ -367,9 +375,10 @@ STATIC_INLINE uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *context)
 
   case 70: return 0; /* RESERVED. Something uses this.. */
 
-  case 80: return 0xffffffff;
-  case 81: return 0;
-  case 82: return 0;
+  case 80: 
+    return 0xffffffff;
+  case 81: return cfgfile_uaelib (ARG1, ARG2, ARG3, ARG4);
+  case 82: return cfgfile_uaelib_modify (ARG1, ARG2, ARG3, ARG4, ARG5);
   case 83: return 0;
 #ifdef DEBUGGER
   case 84: return mmu_init (ARG1, ARG2, ARG3);
@@ -377,7 +386,9 @@ STATIC_INLINE uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *context)
   case 85: return native_dos_op (ARG1, ARG2, ARG3, ARG4);
   case 86:
  	  if (valid_address(ARG1, 1)) {
- 	    write_log(_T("DBG: %s\n"), get_real_address(ARG1));
+			TCHAR *s = au ((char*)get_real_address (ARG1));
+			write_log (_T("DBG: %s\n"), s);
+			xfree (s);
  	    return 1;
     } 
     return 0;

@@ -8,6 +8,11 @@
 
 #define RTAREA_DEFAULT 0xf00000
 #define RTAREA_BACKUP  0xef0000
+#define RTAREA_SIZE 0x10000
+#define RTAREA_TRAPS 0x2000
+#define RTAREA_RTG 0x3000
+#define RTAREA_FSBOARD 0xFFEC
+#define RTAREA_INT 0xFFEB
 
 extern uae_u32 addr (int);
 extern void db (uae_u8);
@@ -87,6 +92,6 @@ extern void expansion_init (void);
 extern void expansion_cleanup (void);
 extern void expansion_clear (void);
 
-extern void uaegfx_install_code (void);
+extern void uaegfx_install_code (uaecptr);
 
 extern uae_u32 emulib_target_getcpurate (uae_u32, uae_u32*);

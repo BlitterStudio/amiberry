@@ -8,7 +8,7 @@
   */
 
 #define UAEMAJOR 2
-#define UAEMINOR 4
+#define UAEMINOR 5
 #define UAESUBREV 1
 
 extern long int version;
@@ -40,7 +40,7 @@ struct uae_input_device {
 	TCHAR *configname;
 	uae_s16 eventid[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
 	TCHAR *custom[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
-	uae_u32 flags[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
+	uae_u64 flags[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
 	uae_s8 port[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
 	uae_s16 extra[MAX_INPUT_DEVICE_EVENTS];
 	uae_s8 enabled;
@@ -99,12 +99,15 @@ struct uaedev_config_info {
   bool autoboot;
   bool donotmount;
   TCHAR filesys[MAX_DPATH];
+	int cyls; // zero if detected from size
   int surfaces;
   int sectors;
   int reserved;
   int blocksize;
   int configoffset;
   int controller;
+	// zero if default
+	int pcyls, pheads, psecs;
 };
 
 struct uae_prefs {
@@ -143,6 +146,7 @@ struct uae_prefs {
 #endif 
 
   bool immediate_blits;
+	int waiting_blits;
   unsigned int chipset_mask;
   bool ntscmode;
   int chipset_refreshrate;
@@ -152,6 +156,7 @@ struct uae_prefs {
   int floppy_speed;
   int floppy_write_length;
   bool tod_hack;
+	int filesys_limit;
 
 	bool cs_cd32cd;
 	bool cs_cd32c2p;
@@ -237,9 +242,10 @@ extern void cfgfile_target_write_str (struct zfile *f, const TCHAR *option, cons
 extern void cfgfile_target_dwrite_str (struct zfile *f, const TCHAR *option, const TCHAR *value);
 
 extern struct uaedev_config_info *add_filesys_config (struct uae_prefs *p, int index,
-			TCHAR *devname, TCHAR *volname, TCHAR *rootdir, bool readonly,
-			int secspertrack, int surfaces, int reserved,
-			int blocksize, int bootpri, TCHAR *filesysdir, int hdc, int flags);
+	const TCHAR *devname, const TCHAR *volname, const TCHAR *rootdir, bool readonly,
+	int cyls, int secspertrack, int surfaces, int reserved,
+	int blocksize, int bootpri, const TCHAR *filesysdir, int hdc, int flags,
+	int pcyls, int pheads, int psecs);
 
 extern void default_prefs (struct uae_prefs *, int);
 extern void discard_prefs (struct uae_prefs *, int);
@@ -271,6 +277,9 @@ extern int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int);
 extern void cfgfile_parse_line (struct uae_prefs *p, TCHAR *, int);
 extern int cfgfile_parse_option (struct uae_prefs *p, TCHAR *option, TCHAR *value, int);
 extern int cfgfile_get_description (const TCHAR *filename, TCHAR *description);
+extern uae_u32 cfgfile_uaelib (int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
+extern uae_u32 cfgfile_uaelib_modify (uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
+extern uae_u32 cfgfile_modify (uae_u32 index, TCHAR *parms, uae_u32 size, TCHAR *out, uae_u32 outsize);
 extern void cfgfile_addcfgparam (TCHAR *);
 extern int cfgfile_configuration_change(int);
 extern void fixup_prefs_dimensions (struct uae_prefs *prefs);
@@ -280,6 +289,7 @@ extern void fixup_cpu (struct uae_prefs *prefs);
 extern void check_prefs_changed_custom (void);
 extern void check_prefs_changed_cpu (void);
 extern void check_prefs_changed_audio (void);
+extern void check_prefs_changed_cd (void);
 extern int check_prefs_changed_gfx (void);
 
 extern struct uae_prefs currprefs, changed_prefs;

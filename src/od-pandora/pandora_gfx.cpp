@@ -23,9 +23,21 @@
 #include <android/log.h>
 #endif
 
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+
+#ifndef OMAPFB_WAITFORVSYNC
+#define OMAPFB_WAITFORVSYNC _IOW('F', 0x20, unsigned int)
+#endif
+#ifndef OMAPFB_WAITFORVSYNC_FRAME
+#define OMAPFB_WAITFORVSYNC_FRAME _IOWR('O', 70, unsigned int)
+#endif
+
 
 /* SDL variable for output of emulation */
 SDL_Surface *prSDLScreen = NULL;
+static int fbdev = -1;
+static unsigned int current_vsync_frame = 0;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 6
@@ -58,7 +70,6 @@ int delay_savestate_frame = 0;
 #endif
 
 
-static unsigned long previous_synctime = 0;
 static unsigned long next_synctime = 0;
 
 
@@ -137,6 +148,11 @@ void graphics_subshutdown (void)
     SDL_FreeSurface(prSDLScreen);
     prSDLScreen = NULL;
   }
+  if(fbdev != -1)
+  {
+    close(fbdev);
+    fbdev = -1;
+  }
 }
 
 
@@ -186,6 +202,9 @@ static void open_screen(struct uae_prefs *p)
   	setenv("SDL_OMAP_LAYER_SIZE", layersize, 1);
 #endif
   }
+#ifndef WIN32
+	setenv("SDL_OMAP_VSYNC", "0", 1);
+#endif
 
 #ifdef ANDROIDSDL
 	update_onscreen();
@@ -214,6 +233,17 @@ static void open_screen(struct uae_prefs *p)
   {
     InitAmigaVidMode(p);
     init_row_map();
+  }
+  
+  current_vsync_frame = 0;
+  fbdev = open("/dev/fb0", O_RDWR);
+  if(fbdev != -1)
+  {
+    // Check if we have vsync with frame counter...
+    current_vsync_frame = 0;
+    ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
+    if(current_vsync_frame != 0)
+      current_vsync_frame += 2;
   }
 }
 
@@ -260,6 +290,8 @@ int check_prefs_changed_gfx (void)
 	  init_hz_full ();
 	  changed = 1;
   }
+
+	currprefs.filesys_limit = changed_prefs.filesys_limit;
   
   return changed;
 }
@@ -277,6 +309,17 @@ void unlockscr (void)
   SDL_UnlockSurface(prSDLScreen);
 }
 
+
+void wait_for_vsync(void)
+{
+  if(fbdev != -1)
+  {
+    unsigned int dummy;
+    ioctl(fbdev, OMAPFB_WAITFORVSYNC, &dummy);
+  }
+}
+
+
 void flush_screen ()
 {
 	if (savestate_state == STATE_DOSAVE)
@@ -291,26 +334,47 @@ void flush_screen ()
     }
   }
 
-  unsigned long start = read_processor_time();
-  if(start < next_synctime && next_synctime - start > time_per_frame - 1000)
-    usleep((next_synctime - start) - 750);
-
 #ifdef WITH_LOGGING
   RefreshLiveInfo();
 #endif
-  
-  SDL_Flip(prSDLScreen);
+
+  unsigned long start = read_processor_time();
+  if(current_vsync_frame == 0) 
+  {
+    // Old style for vsync and idle time calc
+    if(start < next_synctime && next_synctime - start > time_per_frame - 1000)
+      usleep((next_synctime - start) - 750);
+    ioctl(fbdev, OMAPFB_WAITFORVSYNC, &current_vsync_frame);
+  } 
+  else 
+    {
+    // New style for vsync and idle time calc
+    int wait_till = current_vsync_frame;
+    do 
+    {
+      ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
+    } while (wait_till >= current_vsync_frame);
+    
+    if(wait_till + 1 != current_vsync_frame) 
+    {
+      // We missed a vsync...
+      next_synctime = 0;
+    }
+    current_vsync_frame += currprefs.gfx_framerate;
+  }
+    
   last_synctime = read_processor_time();
+  SDL_Flip(prSDLScreen);
 
   if(!screen_is_picasso)
   	gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
-  
-  if(last_synctime - next_synctime > time_per_frame - 1000 || next_synctime < start)
+
+  if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
     adjust_idletime(0);
   else
     adjust_idletime(next_synctime - start);
   
-  if(last_synctime - next_synctime > time_per_frame - 5000)
+  if (last_synctime - next_synctime > time_per_frame - 5000)
     next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
   else
     next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
@@ -425,7 +489,7 @@ int GetSurfacePixelFormat(void)
 }
 
 
-int graphics_init (void)
+int graphics_init (bool mousecapture)
 {
 	graphics_subinit ();
 
@@ -670,7 +734,72 @@ void picasso_InitResolutions (void)
   modesList();
   DisplayModes = Displays[0].DisplayModes;
 }
+#endif
 
+bool vsync_switchmode (int hz)
+{
+	int changed_height = changed_prefs.gfx_size.height;
+	
+	if (hz >= 55)
+		hz = 60;
+	else
+		hz = 50;
+
+  if(hz == 50 && currVSyncRate == 60)
+  {
+    // Switch from NTSC -> PAL
+    switch(changed_height) {
+      case 200: changed_height = 240; break;
+      case 216: changed_height = 262; break;
+      case 240: changed_height = 270; break;
+      case 256: changed_height = 270; break;
+      case 262: changed_height = 270; break;
+      case 270: changed_height = 270; break;
+    }
+  }
+  else if(hz == 60 && currVSyncRate == 50)
+  {
+    // Switch from PAL -> NTSC
+    switch(changed_height) {
+      case 200: changed_height = 200; break;
+      case 216: changed_height = 200; break;
+      case 240: changed_height = 200; break;
+      case 256: changed_height = 216; break;
+      case 262: changed_height = 216; break;
+      case 270: changed_height = 240; break;
+    }
+  }
+
+  if(changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
+    return true;
+  
+  changed_prefs.gfx_size.height = changed_height;
+
+  return true;
+}
+
+
+bool target_graphics_buffer_update (void)
+{
+  bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+  
+  if(currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+  {
+    update_display(&changed_prefs);
+    rate_changed = true;
+  }
+
+	if(rate_changed)
+  {
+  	black_screen_now();
+    fpscounter_reset();
+    time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
+  }
+
+  return true;
+}
+
+#ifdef PICASSO96
 void gfx_set_picasso_state (int on)
 {
 	if (on == screen_is_picasso)

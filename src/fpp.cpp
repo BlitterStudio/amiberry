@@ -17,8 +17,8 @@
 
 #include "options.h"
 #include "memory.h"
-#include "newcpu.h"
 #include "custom.h"
+#include "newcpu.h"
 #include "ersatz.h"
 #include "md-pandora/md-fpp.h"
 #include "savestate.h"
@@ -28,7 +28,7 @@
 
 STATIC_INLINE int isinrom (void)
 {
-  return (munge24 (m68k_getpc (regs)) & 0xFFF80000) == 0xF80000;
+  return (munge24 (m68k_getpc ()) & 0xFFF80000) == 0xF80000;
 }
 
 static uae_u32 xhex_pi[]    ={0x2168c235, 0xc90fdaa2, 0x4000};
@@ -127,7 +127,7 @@ static void fpu_op_illg (uae_u32 opcode, struct regstruct &regs, int pcoffset)
 	|| (currprefs.cpu_model == 68040 && currprefs.fpu_model == 0)) {
   	/* 68040 unimplemented/68060 FPU disabled exception.
   	 * Line F exception with different stack frame.. */
-  	uaecptr newpc = m68k_getpc(regs);
+  	uaecptr newpc = m68k_getpc();
   	uaecptr oldpc = newpc - pcoffset;
   	regs.t0 = regs.t1 = 0;
   	MakeSR(regs);
@@ -137,33 +137,33 @@ static void fpu_op_illg (uae_u32 opcode, struct regstruct &regs, int pcoffset)
   	}
 	  regs.s = 1;
     m68k_areg(regs, 7) -= 4;
-    put_long (m68k_areg(regs, 7), oldpc);
+    x_put_long (m68k_areg(regs, 7), oldpc);
     m68k_areg(regs, 7) -= 4;
-    put_long (m68k_areg(regs, 7), oldpc);
+    x_put_long (m68k_areg(regs, 7), oldpc);
 	  m68k_areg(regs, 7) -= 2;
-	  put_word (m68k_areg(regs, 7), 0x4000 + 11 * 4);
+	  x_put_word (m68k_areg(regs, 7), 0x4000 + 11 * 4);
     m68k_areg(regs, 7) -= 4;
-    put_long (m68k_areg(regs, 7), newpc);
+    x_put_long (m68k_areg(regs, 7), newpc);
 	  m68k_areg(regs, 7) -= 2;
-	  put_word (m68k_areg(regs, 7), regs.sr);
+	  x_put_word (m68k_areg(regs, 7), regs.sr);
     write_log(_T("68040/060 FPU disabled exception PC=%x\n"), newpc);
-	  newpc = get_long (regs.vbr + 11 * 4);
-	  m68k_setpc(regs, newpc);
+	  newpc = x_get_long (regs.vbr + 11 * 4);
+	  m68k_setpc(newpc);
 #ifdef JIT
-	  set_special(regs, SPCFLAG_END_COMPILE);
+	  set_special(SPCFLAG_END_COMPILE);
 #endif
    	return;
   }
-  op_illg (opcode, regs);
+  op_illg (opcode);
 }
 
-STATIC_INLINE int fault_if_no_fpu (uae_u32 opcode, struct regstruct &regs, int pcoffset)
+STATIC_INLINE bool fault_if_no_fpu (uae_u32 opcode, struct regstruct &regs, int pcoffset)
 {
   if ((regs.pcr & 2) || currprefs.fpu_model <= 0) {
   	fpu_op_illg (opcode, regs, pcoffset);
-  	return 1;
+  	return true;
   }
-  return 0;
+  return false;
 }
 
 static int get_fpu_version(void)
@@ -184,7 +184,7 @@ static int get_fpu_version(void)
 
 #define fp_round_to_minus_infinity(x) fp_floor(x)
 #define fp_round_to_plus_infinity(x) fp_ceil(x)
-#define fp_round_to_zero(x) ((int)(x))
+#define fp_round_to_zero(x)	((x) >= 0.0 ? floor(x) : ceil(x))
 #define fp_round_to_nearest(x) ((int)((x) + 0.5))
 
 STATIC_INLINE tointtype toint(fptype src, fptype minval, fptype maxval)
@@ -216,6 +216,10 @@ STATIC_INLINE tointtype toint(fptype src, fptype minval, fptype maxval)
   }
 #endif
 }
+
+#ifndef HAVE_ISINF
+extern int isinf (double x);
+#endif
 
 uae_u32 get_fpsr (void)
 {
@@ -394,31 +398,31 @@ STATIC_INLINE int get_fp_value (uae_u32 opcode, uae_u16 extra, fptype *src)
   	ad = m68k_areg (regs, reg);
   	break;
   case 5:
-  	ad = m68k_areg (regs, reg) + (uae_s32) (uae_s16) x_next_iword (regs);
+  	ad = m68k_areg (regs, reg) + (uae_s32) (uae_s16) x_next_iword ();
   	break;
   case 6:
-  	ad = get_disp_ea_020 (regs, m68k_areg (regs, reg), x_next_iword (regs));
+  	ad = x_get_disp_ea_020 (m68k_areg (regs, reg), x_next_iword ());
   	break;
   case 7:
   	switch (reg) {
   	case 0:
-	    ad = (uae_s32) (uae_s16) x_next_iword (regs);
+	    ad = (uae_s32) (uae_s16) x_next_iword ();
 	    break;
   	case 1:
-	    ad = x_next_ilong (regs);
+	    ad = x_next_ilong ();
 	    break;
   	case 2:
-	    ad = m68k_getpc (regs);
-	    ad += (uae_s32) (uae_s16) x_next_iword (regs);
+	    ad = m68k_getpc ();
+	    ad += (uae_s32) (uae_s16) x_next_iword ();
 	    break;
   	case 3:
-	    tmppc = m68k_getpc (regs);
-	    tmp = x_next_iword (regs);
-	    ad = get_disp_ea_020 (regs, tmppc, tmp);
+	    tmppc = m68k_getpc ();
+	    tmp = x_next_iword ();
+	    ad = x_get_disp_ea_020 (tmppc, tmp);
 	    break;
   	case 4:
-	    ad = m68k_getpc (regs);
-	    m68k_setpc (regs, ad + sz2[size]);
+	    ad = m68k_getpc ();
+	    m68k_setpc (ad + sz2[size]);
 	    if (size == 6)
     		ad++;
 	    break;
@@ -428,39 +432,39 @@ STATIC_INLINE int get_fp_value (uae_u32 opcode, uae_u16 extra, fptype *src)
   }
   switch (size) {
   case 0:
-  	*src = (fptype) (uae_s32) get_long (ad);
+  	*src = (fptype) (uae_s32) x_get_long (ad);
   	break;
   case 1:
-  	*src = to_single (get_long (ad));
+  	*src = to_single (x_get_long (ad));
   	break;
   case 2:{
     uae_u32 wrd1, wrd2, wrd3;
-    wrd1 = get_long (ad);
+    wrd1 = x_get_long (ad);
     ad += 4;
-    wrd2 = get_long (ad);
+    wrd2 = x_get_long (ad);
     ad += 4;
-    wrd3 = get_long (ad);
+    wrd3 = x_get_long (ad);
     *src = to_exten (wrd1, wrd2, wrd3);
   	}
   	break;
   case 3:{
     uae_u32 wrd1, wrd2, wrd3;
-    wrd1 = get_long (ad);
+    wrd1 = x_get_long (ad);
     ad += 4;
-    wrd2 = get_long (ad);
+    wrd2 = x_get_long (ad);
     ad += 4;
-    wrd3 = get_long (ad);
+    wrd3 = x_get_long (ad);
     *src = to_pack (wrd1, wrd2, wrd3);
   	}
   	break;
   case 4:
-  	*src = (fptype) (uae_s16) get_word (ad);
+  	*src = (fptype) (uae_s16) x_get_word (ad);
   	break;
   case 5:{
     uae_u32 wrd1, wrd2;
-    wrd1 = get_long (ad);
+    wrd1 = x_get_long (ad);
     ad += 4;
-    wrd2 = get_long (ad);
+    wrd2 = x_get_long (ad);
     *src = to_double (wrd1, wrd2);
   	}
   	break;
@@ -529,31 +533,31 @@ STATIC_INLINE int put_fp_value (struct regstruct &regs, fptype value, uae_u32 op
 	  ad = m68k_areg (regs, reg);
 	  break;
   case 5:
-	  ad = m68k_areg (regs, reg) + (uae_s32) (uae_s16) x_next_iword (regs);
+	  ad = m68k_areg (regs, reg) + (uae_s32) (uae_s16) x_next_iword ();
 	  break;
   case 6:
-	  ad = get_disp_ea_020 (regs, m68k_areg (regs, reg), x_next_iword (regs));
+	  ad = x_get_disp_ea_020 (m68k_areg (regs, reg), x_next_iword ());
 	  break;
   case 7:
 	  switch (reg) {
 	  case 0:
-	    ad = (uae_s32) (uae_s16) x_next_iword (regs);
+	    ad = (uae_s32) (uae_s16) x_next_iword ();
 	    break;
 	  case 1:
-	    ad = x_next_ilong (regs);
+	    ad = x_next_ilong ();
 	    break;
 	  case 2:
-	    ad = m68k_getpc (regs);
-	    ad += (uae_s32) (uae_s16) x_next_iword (regs);
+	    ad = m68k_getpc ();
+	    ad += (uae_s32) (uae_s16) x_next_iword ();
 	    break;
 	  case 3:
-	    tmppc = m68k_getpc (regs);
-	    tmp = x_next_iword (regs);
-	    ad = get_disp_ea_020 (regs, tmppc, tmp);
+	    tmppc = m68k_getpc ();
+	    tmp = x_next_iword ();
+	    ad = x_get_disp_ea_020 (tmppc, tmp);
 	    break;
 	  case 4:
-	    ad = m68k_getpc (regs);
-	    m68k_setpc (regs, ad + sz2[size]);
+	    ad = m68k_getpc ();
+	    m68k_setpc (ad + sz2[size]);
 	    break;
 	  default:
 	    return 0;
@@ -561,46 +565,46 @@ STATIC_INLINE int put_fp_value (struct regstruct &regs, fptype value, uae_u32 op
   }
   switch (size) {
   case 0:
-	  put_long (ad, (uae_u32)toint(value, -2147483648.0, 2147483647.0));
+	  x_put_long (ad, (uae_u32)toint(value, -2147483648.0, 2147483647.0));
 	  break;
   case 1:
-	  put_long (ad, from_single (value));
+	  x_put_long (ad, from_single (value));
 	  break;
   case 2:
 	  {
 	    uae_u32 wrd1, wrd2, wrd3;
 	    from_exten (value, &wrd1, &wrd2, &wrd3);
-	    put_long (ad, wrd1);
+	    x_put_long (ad, wrd1);
 	    ad += 4;
-	    put_long (ad, wrd2);
+	    x_put_long (ad, wrd2);
 	    ad += 4;
-	    put_long (ad, wrd3);
+	    x_put_long (ad, wrd3);
 	  }
 	  break;
   case 3:
 	  {
 	    uae_u32 wrd1, wrd2, wrd3;
 	    from_pack (value, &wrd1, &wrd2, &wrd3);
-	    put_long (ad, wrd1);
+	    x_put_long (ad, wrd1);
 	    ad += 4;
-	    put_long (ad, wrd2);
+	    x_put_long (ad, wrd2);
 	    ad += 4;
-	    put_long (ad, wrd3);
+	    x_put_long (ad, wrd3);
 	  }
 	  break;
   case 4:
-	  put_word (ad, (uae_s16) toint(value, -32768.0, 32767.0));
+	  x_put_word (ad, (uae_s16) toint(value, -32768.0, 32767.0));
 	  break;
   case 5:{
     uae_u32 wrd1, wrd2;
     from_double (value, &wrd1, &wrd2);
-    put_long (ad, wrd1);
+    x_put_long (ad, wrd1);
     ad += 4;
-    put_long (ad, wrd2);
+    x_put_long (ad, wrd2);
 	  }
 	  break;
   case 6:
-	  put_byte (ad, (uae_s8)toint(value, -128.0, 127.0));
+	  x_put_byte (ad, (uae_s8)toint(value, -128.0, 127.0));
 	  break;
   default:
 	  return 0;
@@ -631,27 +635,27 @@ STATIC_INLINE int get_fp_ad (uae_u32 opcode, uae_u32 * ad)
   	*ad = m68k_areg (regs, reg);
   	break;
   case 5:
-  	*ad = m68k_areg (regs, reg) + (uae_s32) (uae_s16) x_next_iword (regs);
+  	*ad = m68k_areg (regs, reg) + (uae_s32) (uae_s16) x_next_iword ();
   	break;
   case 6:
-  	*ad = get_disp_ea_020 (regs, m68k_areg (regs, reg), x_next_iword (regs));
+  	*ad = x_get_disp_ea_020 (m68k_areg (regs, reg), x_next_iword ());
   	break;
   case 7:
   	switch (reg) {
   	case 0:
-	    *ad = (uae_s32) (uae_s16) x_next_iword (regs);
+	    *ad = (uae_s32) (uae_s16) x_next_iword ();
 	    break;
   	case 1:
-	    *ad = x_next_ilong (regs);
+	    *ad = x_next_ilong ();
 	    break;
   	case 2:
-	    *ad = m68k_getpc (regs);
-	    *ad += (uae_s32) (uae_s16) x_next_iword (regs);
+	    *ad = m68k_getpc ();
+	    *ad += (uae_s32) (uae_s16) x_next_iword ();
 	    break;
   	case 3:
-	    tmppc = m68k_getpc (regs);
-	    tmp = x_next_iword (regs);
-	    *ad = get_disp_ea_020 (regs, tmppc, tmp);
+	    tmppc = m68k_getpc ();
+	    tmp = x_next_iword ();
+	    *ad = x_get_disp_ea_020 (tmppc, tmp);
 	    break;
   	default:
 	    return 0;
@@ -744,18 +748,19 @@ STATIC_INLINE int fpp_cond (int condition)
 
 void fpuop_dbcc (uae_u32 opcode, struct regstruct &regs, uae_u16 extra)
 {
-  uaecptr pc = (uae_u32) m68k_getpc (regs);
+  uaecptr pc = (uae_u32) m68k_getpc ();
   uae_s32 disp;
   int cc;
 
 #if DEBUG_FPP
   if (!isinrom ())
-  	write_log (_T("fdbcc_opp at %08lx\n"), m68k_getpc (regs));
+  	write_log (_T("fdbcc_opp at %08lx\n"), m68k_getpc ());
 #endif
   if (fault_if_no_fpu (opcode, regs, 4))
   	return;
 
-  disp = (uae_s32) (uae_s16) x_next_iword (regs);
+	regs.fpiar = m68k_getpc () - 4;
+  disp = (uae_s32) (uae_s16) x_next_iword ();
   cc = fpp_cond (extra & 0x3f);
   if (cc == -1) {
   	fpu_op_illg (opcode, regs, 4);
@@ -765,7 +770,7 @@ void fpuop_dbcc (uae_u32 opcode, struct regstruct &regs, uae_u16 extra)
   	m68k_dreg (regs, reg) = ((m68k_dreg (regs, reg) & 0xffff0000)
 	    | (((m68k_dreg (regs, reg) & 0xffff) - 1) & 0xffff));
   	if ((m68k_dreg (regs, reg) & 0xffff) != 0xffff)
-	    m68k_setpc (regs, pc + disp);
+	    m68k_setpc (pc + disp);
   }
 }
 
@@ -776,11 +781,12 @@ void fpuop_scc (uae_u32 opcode, struct regstruct &regs, uae_u16 extra)
 
 #if DEBUG_FPP
   if (!isinrom ())
-  	write_log (_T("fscc_opp at %08lx\n"), m68k_getpc (regs));
+  	write_log (_T("fscc_opp at %08lx\n"), m68k_getpc ());
 #endif
   if (fault_if_no_fpu (opcode, regs, 4))
   	return;
 
+	regs.fpiar = m68k_getpc () - 4;
   cc = fpp_cond (extra & 0x3f);
   if (cc == -1) {
 	  fpu_op_illg (opcode, regs, 4);
@@ -788,50 +794,54 @@ void fpuop_scc (uae_u32 opcode, struct regstruct &regs, uae_u16 extra)
   	m68k_dreg (regs, opcode & 7) = (m68k_dreg (regs, opcode & 7) & ~0xff) | (cc ? 0xff : 0x00);
   } else {
   	if (get_fp_ad (opcode, &ad) == 0) {
-	    m68k_setpc (regs, m68k_getpc (regs) - 4);
-	    op_illg (opcode, regs);
+	    m68k_setpc (m68k_getpc () - 4);
+	    op_illg (opcode);
   	} else
-      put_byte (ad, cc ? 0xff : 0x00);
+      x_put_byte (ad, cc ? 0xff : 0x00);
   }
 }
 
 void fpuop_trapcc (uae_u32 opcode, struct regstruct &regs, uaecptr oldpc, uae_u16 extra)
 {
   int cc;
+	uaecptr pc = m68k_getpc ();
 
 #if DEBUG_FPP
   if (!isinrom ())
-  	write_log (_T("ftrapcc_opp at %08lx\n"), m68k_getpc (regs));
+  	write_log (_T("ftrapcc_opp at %08lx\n"), m68k_getpc ());
 #endif
-  if (fault_if_no_fpu (opcode, regs, m68k_getpc(regs) - oldpc))
+  if (fault_if_no_fpu (opcode, regs, pc - oldpc))
   	return;
 
+	regs.fpiar = oldpc;
   cc = fpp_cond (extra & 0x3f);
   if (cc == -1) {
-  	fpu_op_illg (opcode, regs, m68k_getpc(regs) - oldpc);
+  	fpu_op_illg (opcode, regs, pc - oldpc);
   }
   if (cc)
-  	Exception (7, regs);
+  	Exception (7);
 }
 
-void fpuop_bcc (uae_u32 opcode, struct regstruct &regs, uaecptr pc, uae_u32 extra)
+void fpuop_bcc (uae_u32 opcode, struct regstruct &regs, uaecptr oldpc, uae_u32 extra)
 {
   int cc;
+	uaecptr pc = m68k_getpc ();
 
 #if DEBUG_FPP
   if (!isinrom ())
-  	write_log (_T("fbcc_opp at %08lx\n"), m68k_getpc (regs));
+  	write_log (_T("fbcc_opp at %08lx\n"), m68k_getpc ());
 #endif
-  if (fault_if_no_fpu (opcode, regs, m68k_getpc(regs) - pc))
+  if (fault_if_no_fpu (opcode, regs, pc - oldpc))
   	return;
 
+	regs.fpiar = oldpc;
   cc = fpp_cond (opcode & 0x3f);
   if (cc == -1) {
-  	fpu_op_illg (opcode, regs, m68k_getpc(regs) - pc);
+  	fpu_op_illg (opcode, regs, pc - oldpc);
   } else if (cc) {
   	if ((opcode & 0x40) == 0)
 	    extra = (uae_s32) (uae_s16) extra;
-  	m68k_setpc (regs, pc + extra);
+  	m68k_setpc (oldpc + extra);
   }
 }
 
@@ -840,11 +850,12 @@ void fpuop_save (uae_u32 opcode, struct regstruct &regs)
   uae_u32 ad;
   int incr = (opcode & 0x38) == 0x20 ? -1 : 1;
   int fpu_version = get_fpu_version();
+	uaecptr pc = m68k_getpc () - 2;
   int i;
 
 #if DEBUG_FPP
   if (!isinrom ())
-  	write_log (_T("fsave_opp at %08lx\n"), m68k_getpc (regs));
+  	write_log (_T("fsave_opp at %08lx\n"), m68k_getpc ());
 #endif
   if (fault_if_no_fpu (opcode, regs, 2))
   	return;
@@ -854,51 +865,56 @@ void fpuop_save (uae_u32 opcode, struct regstruct &regs)
   	return;
   }
 
+//	if (regs.fpcr == 0 && regs.fpsr == 0 && regs.fpiar == 0 &&
+//		regs.fp[0] == 
+
+	regs.fpiar = pc;
+
   if (currprefs.fpu_model == 68060) {
   	/* 12 byte 68060 IDLE frame.  */
   	if (incr < 0) {
 	    ad -= 4;
-	    put_long (ad, 0x00000000);
+	    x_put_long (ad, 0x00000000);
 	    ad -= 4;
-	    put_long (ad, 0x00000000);
+	    x_put_long (ad, 0x00000000);
 	    ad -= 4;
-	    put_long (ad, 0x00006000);
+	    x_put_long (ad, 0x00006000);
   	} else {
-	    put_long (ad, 0x00006000);
+	    x_put_long (ad, 0x00006000);
 	    ad += 4;
-	    put_long (ad, 0x00000000);
+	    x_put_long (ad, 0x00000000);
 	    ad += 4;
-	    put_long (ad, 0x00000000);
+	    x_put_long (ad, 0x00000000);
 	    ad += 4;
   	}
   } else if (currprefs.fpu_model == 68040) {
   	/* 4 byte 68040 IDLE frame.  */
   	if (incr < 0) {
 	    ad -= 4;
-	    put_long (ad, fpu_version << 24);
+	    x_put_long (ad, fpu_version << 24);
   	} else {
-	    put_long (ad, fpu_version << 24);
+	    x_put_long (ad, fpu_version << 24);
 	    ad += 4;
   	}
   } else { /* 68881/68882 */
   	int idle_size = currprefs.fpu_model == 68882 ? 0x38 : 0x18;
   	if (incr < 0) {
 	    ad -= 4;
-	    put_long (ad, 0x70000000);
+	    x_put_long (ad, 0x70000000);
 	    for (i = 0; i < (idle_size - 1) / 4; i++) {
     		ad -= 4;
-    		put_long (ad, 0x00000000);
+    		x_put_long (ad, 0x00000000);
 	    }
 	    ad -= 4;
-	    put_long (ad, (fpu_version << 24) | (idle_size << 16));
+	    x_put_long (ad, (fpu_version << 24) | (idle_size << 16));
   	} else {
-	    put_long (ad, (fpu_version << 24) | (idle_size << 16));
+	    x_put_long (ad, (fpu_version << 24) | (idle_size << 16));
 	    ad += 4;
 	    for (i = 0; i < (idle_size - 1) / 4; i++) {
-    		put_long (ad, 0x00000000);
+    		x_put_long (ad, 0x00000000);
     		ad += 4;
       }
-	    put_long (ad, 0x70000000);
+	    x_put_long (ad, 0x70000000);
 	    ad += 4;
   	}
   }
@@ -910,13 +926,14 @@ void fpuop_save (uae_u32 opcode, struct regstruct &regs)
 
 void fpuop_restore (uae_u32 opcode, struct regstruct &regs)
 {
+	uaecptr pc = m68k_getpc () - 2;
   uae_u32 ad;
   uae_u32 d;
   int incr = (opcode & 0x38) == 0x20 ? -1 : 1;
 
 #if DEBUG_FPP
   if (!isinrom ())
-  	write_log (_T("frestore_opp at %08lx\n"), m68k_getpc (regs));
+  	write_log (_T("frestore_opp at %08lx\n"), m68k_getpc ());
 #endif
   if (fault_if_no_fpu (opcode, regs, 2))
   	return;
@@ -925,14 +942,17 @@ void fpuop_restore (uae_u32 opcode, struct regstruct &regs)
   	fpu_op_illg (opcode, regs, 2);
   	return;
   }
+
+	regs.fpiar = pc;
+
   if (currprefs.fpu_model == 68060) {
   	/* all 68060 FPU frames are 12 bytes */
   	if (incr < 0) {
 	    ad -= 4;
-	    d = get_long (ad);
+	    d = x_get_long (ad);
 	    ad -= 8;
   	} else {
-	    d = get_long (ad);
+	    d = x_get_long (ad);
 	    ad += 4;
 	    ad += 8;
   	}
@@ -942,7 +962,7 @@ void fpuop_restore (uae_u32 opcode, struct regstruct &regs)
   	if (incr < 0) {
 	    /* @@@ This may be wrong.  */
 	    ad -= 4;
-	    d = get_long (ad);
+	    d = x_get_long (ad);
 	    if ((d & 0xff000000) != 0) { /* Not a NULL frame? */
     		if ((d & 0x00ff0000) == 0) { /* IDLE */
     		} else if ((d & 0x00ff0000) == 0x00300000) { /* UNIMP */
@@ -952,7 +972,7 @@ void fpuop_restore (uae_u32 opcode, struct regstruct &regs)
 		    }
 	    }
   	} else {
-	    d = get_long (ad);
+	    d = x_get_long (ad);
 	    ad += 4;
 	    if ((d & 0xff000000) != 0) { /* Not a NULL frame? */
 	    	if ((d & 0x00ff0000) == 0) { /* IDLE */
@@ -966,7 +986,7 @@ void fpuop_restore (uae_u32 opcode, struct regstruct &regs)
   } else { /* 68881/68882 */
   	if (incr < 0) {
 	    ad -= 4;
-	    d = get_long (ad);
+	    d = x_get_long (ad);
 	    if ((d & 0xff000000) != 0) {
     		if ((d & 0x00ff0000) == 0x00180000)
   		    ad -= 6 * 4;
@@ -976,7 +996,7 @@ void fpuop_restore (uae_u32 opcode, struct regstruct &regs)
   		    ad -= 45 * 4;
 	    }
   	} else {
-	    d = get_long (ad);
+	    d = x_get_long (ad);
 	    ad += 4;
 	    if ((d & 0xff000000) != 0) {
     		if ((d & 0x00ff0000) == 0x00180000)
@@ -1003,10 +1023,11 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 {
   int reg;
   fptype src;
+	uaecptr pc = m68k_getpc () - 4;
 
 #if DEBUG_FPP
   if (!isinrom ())
-  	write_log (_T("FPP %04lx %04x at %08lx\n"), opcode & 0xffff, extra, m68k_getpc (regs) - 4);
+  	write_log (_T("FPP %04lx %04x at %08lx\n"), opcode & 0xffff, extra, pc);
 #endif
   if (fault_if_no_fpu (opcode, regs, 4))
   	return;
@@ -1014,8 +1035,8 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
   switch ((extra >> 13) & 0x7) {
     case 3:
     	if (put_fp_value (regs, regs.fp[(extra >> 7) & 7], opcode, extra) == 0) {
-	      m68k_setpc (regs, m68k_getpc (regs) - 4);
-	      op_illg (opcode, regs);
+	      m68k_setpc (pc);
+	      op_illg (opcode);
 	    }
 	    return;
     case 4:
@@ -1059,13 +1080,13 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
     	} else if ((opcode & 0x3f) == 0x3c) {
 	      if ((extra & 0x2000) == 0) {
 		      if (extra & 0x1000) {
-		        regs.fpcr = x_next_ilong (regs);
+		        regs.fpcr = x_next_ilong ();
 		        native_set_fpucw (regs.fpcr);
 		      }
 		      if (extra & 0x0800)
-		        set_fpsr (x_next_ilong (regs));
+		        set_fpsr (x_next_ilong ());
 		      if (extra & 0x0400)
-		      regs.fpiar = x_next_ilong (regs);
+		      regs.fpiar = x_next_ilong ();
 	      }
 	    } else if (extra & 0x2000) {
 	      /* FMOVEM FPP->memory */
@@ -1073,8 +1094,8 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 	      int incr = 0;
 
   	    if (get_fp_ad (opcode, &ad) == 0) {
-	      	m68k_setpc (regs, m68k_getpc (regs) - 4);
-		      op_illg (opcode, regs);
+	      	m68k_setpc (pc);
+		      op_illg (opcode);
 		      return;
 	      }
 	      if ((opcode & 0x38) == 0x20) {
@@ -1087,15 +1108,15 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 	      }
 	      ad -= incr;
 	      if (extra & 0x1000) {
-		      put_long (ad, regs.fpcr & 0xffff);
+		      x_put_long (ad, regs.fpcr & 0xffff);
 		      ad += 4;
 	      }
 	      if (extra & 0x0800) {
-		      put_long (ad, get_fpsr());
+		      x_put_long (ad, get_fpsr());
 		      ad += 4;
 	      }
 	      if (extra & 0x0400) {
-		      put_long (ad, regs.fpiar);
+		      x_put_long (ad, regs.fpiar);
 		      ad += 4;
 	      }
 	      ad -= incr;
@@ -1109,8 +1130,8 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 	      int incr = 0;
 
 	      if (get_fp_ad (opcode, &ad) == 0) {
-		      m68k_setpc (regs, m68k_getpc (regs) - 4);
-		      op_illg (opcode, regs);
+		      m68k_setpc (pc);
+		      op_illg (opcode);
 		      return;
 	      }
 	      if((opcode & 0x38) == 0x20) {
@@ -1123,16 +1144,16 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 		      ad = ad - incr;
 	      }
 	      if (extra & 0x1000) {
-		      regs.fpcr = get_long (ad);
+		      regs.fpcr = x_get_long (ad);
 		      native_set_fpucw(regs.fpcr);
 		      ad += 4;
 	      }
 	      if (extra & 0x0800) {
-		      set_fpsr(get_long (ad));
+		      set_fpsr(x_get_long (ad));
 		      ad += 4;
 	      }
 	      if (extra & 0x0400) {
-		      regs.fpiar = get_long (ad);
+		      regs.fpiar = x_get_long (ad);
 		      ad += 4;
 	      }
 	      if ((opcode & 0x38) == 0x18)
@@ -1149,8 +1170,8 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 	      if (extra & 0x2000) {
 	        /* FMOVEM FPP->memory */
 	        if (get_fp_ad (opcode, &ad) == 0) {
-		        m68k_setpc (regs, m68k_getpc (regs) - 4);
-		        op_illg (opcode, regs);
+		        m68k_setpc (pc);
+		        op_illg (opcode);
 		        return;
 	        }
 	        switch ((extra >> 11) & 3) {
@@ -1177,11 +1198,11 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 		          if (list & 0x80) {
 			          from_exten (regs.fp[reg], &wrd1, &wrd2, &wrd3);
 		            ad -= 4;
-		            put_long (ad, wrd3);
+		            x_put_long (ad, wrd3);
 		            ad -= 4;
-		            put_long (ad, wrd2);
+		            x_put_long (ad, wrd2);
 		            ad -= 4;
-		            put_long (ad, wrd1);
+		            x_put_long (ad, wrd1);
 		          }
 		          list <<= 1;
 		        }
@@ -1190,11 +1211,11 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 		          uae_u32 wrd1, wrd2, wrd3;
 		          if (list & 0x80) {
 			          from_exten (regs.fp[reg], &wrd1, &wrd2, &wrd3);
-        		    put_long (ad, wrd1);
+        		    x_put_long (ad, wrd1);
         		    ad += 4;
-        		    put_long (ad, wrd2);
+        		    x_put_long (ad, wrd2);
         		    ad += 4;
-        		    put_long (ad, wrd3);
+        		    x_put_long (ad, wrd3);
         		    ad += 4;
         		  }
 		          list <<= 1;
@@ -1207,8 +1228,8 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 	      } else {
 	        /* FMOVEM memory->FPP */
 	        if (get_fp_ad (opcode, &ad) == 0) {
-        		m68k_setpc (regs, m68k_getpc (regs) - 4);
-        		op_illg (opcode, regs);
+        		m68k_setpc (pc);
+        		op_illg (opcode);
         		return;
     	    }
 	        switch ((extra >> 11) & 3) {
@@ -1234,11 +1255,11 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 		          uae_u32 wrd1, wrd2, wrd3;
 		          if (list & 0x80) {
         		    ad -= 4;
-        		    wrd3 = get_long (ad);
+        		    wrd3 = x_get_long (ad);
         		    ad -= 4;
-        		    wrd2 = get_long (ad);
+        		    wrd2 = x_get_long (ad);
         		    ad -= 4;
-        		    wrd1 = get_long (ad);
+        		    wrd1 = x_get_long (ad);
           			regs.fp[reg] = to_exten(wrd1, wrd2, wrd3);
 		          }
 		          list <<= 1;
@@ -1247,11 +1268,11 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
         		for (reg = 0; reg <= 7; reg++) {
 		          uae_u32 wrd1, wrd2, wrd3;
 		          if (list & 0x80) {
-        		    wrd1 = get_long (ad);
+        		    wrd1 = x_get_long (ad);
         		    ad += 4;
-        		    wrd2 = get_long (ad);
+        		    wrd2 = x_get_long (ad);
         		    ad += 4;
-        		    wrd3 = get_long (ad);
+        		    wrd3 = x_get_long (ad);
         		    ad += 4;
           			regs.fp[reg] = to_exten(wrd1, wrd2, wrd3);
 		          }
@@ -1337,19 +1358,23 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
         		regs.fp[reg] = *fp_1e4096;
         		break;
     	    default:
-		        m68k_setpc (regs, m68k_getpc (regs) - 4);
-		        op_illg (opcode, regs);
+		        m68k_setpc (pc);
+		        op_illg (opcode);
 		        return;
 	      }
 	      MAKE_FPSR (regs.fp[reg]);
 	      return;
 	    }
 	    if (get_fp_value (opcode, extra, &src) == 0) {
-	      m68k_setpc (regs, m68k_getpc (regs) - 4);
-	      op_illg (opcode, regs);
+	      m68k_setpc (pc);
+	      op_illg (opcode);
 	      return;
 	    }
+
+			regs.fpiar =  pc;
+
     	switch (extra & 0x7f) {
+
     	case 0x00: /* FMOVE */
     	case 0x40: /* Explicit rounding. This is just a quick fix. */
     	case 0x44: /* Same for all other cases that have three choices */
@@ -1574,15 +1599,15 @@ static void fpuop_arithmetic2 (uae_u32 opcode, struct regstruct &regs, uae_u16 e
 	      MAKE_FPSR (src);
 	      return;
 	    default:
-	      m68k_setpc (regs, m68k_getpc (regs) - 4);
-	      op_illg (opcode, regs);
+	      m68k_setpc (pc);
+	      op_illg (opcode);
 	      return;
 	  }
 	  MAKE_FPSR (regs.fp[reg]);
 	  return;
   }
-  m68k_setpc (regs, m68k_getpc (regs) - 4);
-  op_illg (opcode, regs);
+  m68k_setpc (pc);
+  op_illg (opcode);
 }
 
 void fpuop_arithmetic (uae_u32 opcode, struct regstruct &regs, uae_u16 extra)

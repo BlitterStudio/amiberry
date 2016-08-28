@@ -19,10 +19,16 @@
 #define CSMASK_AGA 4
 #define CSMASK_MASK (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA)
 
+#define CHIPSET_CLOCK_PAL  3546895
+#define CHIPSET_CLOCK_NTSC 3579545
+
+extern void set_speedup_values(void);
 extern int custom_init (void);
 extern void custom_prepare (void);
-extern void custom_reset (int hardreset);
+extern void custom_reset (bool hardreset, bool keyboardreset);
 extern int intlev (void);
+
+extern void do_copper (void);
 
 extern void notice_new_xcolors (void);
 extern void init_row_map (void);
@@ -31,7 +37,6 @@ extern void init_custom (void);
 
 extern bool picasso_requested_on;
 extern bool picasso_on;
-extern void set_picasso_hack_rate (int hz);
 
 extern unsigned long int hsync_counter;
 
@@ -40,21 +45,15 @@ extern uae_u16 intreq;
 
 extern int vpos;
 
-extern void update_copper (int until_hpos);
-
-STATIC_INLINE void do_copper (void)
+STATIC_INLINE int dmaen (unsigned int dmamask)
 {
-    int hpos = current_hpos ();
-    update_copper (hpos);
+	return (dmamask & dmacon) && (dmacon & 0x200);
 }
-
-#define dmaen(DMAMASK) (int)((DMAMASK & dmacon) && (dmacon & 0x200))
 
 #define SPCFLAG_STOP 2
 #define SPCFLAG_COPPER 4
 #define SPCFLAG_INT 8
 #define SPCFLAG_BRK 16
-#define SPCFLAG_EXTRA_CYCLES 32
 #define SPCFLAG_TRACE 64
 #define SPCFLAG_DOTRACE 128
 #define SPCFLAG_DOINT 256 /* arg, JIT fails without this.. */
@@ -63,14 +62,20 @@ STATIC_INLINE void do_copper (void)
 #define SPCFLAG_ACTION_REPLAY 2048
 #define SPCFLAG_TRAP 4096 /* enforcer-hack */
 #define SPCFLAG_MODE_CHANGE 8192
+#ifdef JIT
 #define SPCFLAG_END_COMPILE 16384
+#endif
 
 extern uae_u16 adkcon;
 
 extern void INTREQ (uae_u16);
 extern void INTREQ_0 (uae_u16);
 extern void INTREQ_f (uae_u16);
-#define send_interrupt(num) (INTREQ_0(0x8000 | (1 << num)))
+STATIC_INLINE void send_interrupt (int num)
+{
+	INTREQ_0 (0x8000 | (1 << num));
+}
+
 STATIC_INLINE uae_u16 INTREQR (void)
 {
   return intreq;

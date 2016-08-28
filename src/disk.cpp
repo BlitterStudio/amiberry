@@ -31,7 +31,7 @@
 #include "cia.h"
 #include "debug.h"
 #include "crc32.h"
-#include "inputdevice.h"
+#include "fsdb.h"
 
 static int longwritemode = 0;
 
@@ -884,7 +884,7 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
   	zfile_fseek (drv->diskfile, 0, SEEK_SET);
   }
 
-  if (strncmp ((char *) buffer, "UAE-1ADF", 8) == 0) {
+  if (strncmp ((char*) buffer, "UAE-1ADF", 8) == 0) {
 
   	read_header_ext2 (drv->diskfile, drv->trackdata, &drv->num_tracks, &drv->ddhd);
   	drv->filetype = ADF_EXT2;
@@ -1065,13 +1065,16 @@ static void rand_shifter (drive *drv)
 
 static void set_steplimit (drive *drv)
 {
+	// emulate step limit only if cycle-exact or approximate CPU speed
+	if (currprefs.m68k_speed != 0)
+		return;
   drv->steplimit = 10;
   drv->steplimitcycle = get_cycles ();
 }
 
 static int drive_empty (drive * drv)
 {
-  return drv->diskfile == 0;
+  return drv->diskfile == 0 && drv->dskchange_time >= 0;
 }
 
 static void drive_step (drive * drv, int step_direction)
@@ -1095,6 +1098,8 @@ static void drive_step (drive * drv, int step_direction)
     if (drv->cyl < maxtrack + 3) {
 	    drv->cyl++;
     }
+		if (drv->cyl >= maxtrack)
+			write_log (_T("program tried to step over track %d\n"), maxtrack);
   }
   rand_shifter (drv);
 }
@@ -1546,6 +1551,26 @@ static uae_u32 getmfmlong (uae_u16 *mbuf, int shift)
   return ((getmfmword (mbuf, shift) << 16) | getmfmword (mbuf + 1, shift)) & MFMMASK;
 }
 
+#if MFM_VALIDATOR
+static void check_valid_mfm (uae_u16 *mbuf, int words, int sector)
+{
+	int prevbit = 0;
+	for (int i = 0; i < words * 8; i++) {
+		int wordoffset = i / 8;
+		uae_u16 w = mbuf[wordoffset];
+		uae_u16 wp = mbuf[wordoffset - 1];
+		int bitoffset = (7 - (i & 7)) * 2;
+		int clockbit = w & (1 << (bitoffset + 1));
+		int databit = w & (1 << (bitoffset + 0));
+
+		if ((clockbit && databit) || (clockbit && !databit && prevbit) || (!clockbit && !databit && !prevbit)) {
+			write_log (L"illegal mfm sector %d data %04x %04x, bit %d:%d\n", sector, wp, w, wordoffset, bitoffset);
+		}
+		prevbit = databit;
+	}
+}
+#endif
+
 static int decode_buffer (uae_u16 *mbuf, int cyl, int drvsec, int ddhd, int filetype, int *drvsecp, int *sectable, int checkmode)
 {
   int i, secwritten = 0;
@@ -1591,6 +1616,9 @@ static int decode_buffer (uae_u16 *mbuf, int cyl, int drvsec, int ddhd, int file
 	      return 2;
       continue;
 	  }
+#if MFM_VALIDATOR
+		check_valid_mfm (mbuf - 4, 544 - 4 + 1, trackoffs);
+#endif
   	chksum = odd ^ even;
   	for (i = 0; i < 4; i++) {
 	    odd = getmfmlong (mbuf, shift);
@@ -1610,11 +1638,13 @@ static int decode_buffer (uae_u16 *mbuf, int cyl, int drvsec, int ddhd, int file
 	  even = getmfmlong (mbuf + 2, shift);
 	  mbuf += 4;
 	  if (((odd << 1) | even) != chksum) {
+			write_log (_T("Disk decode: checksum error on sector %d header\n"), trackoffs);
       if (filetype == ADF_EXT2)
 	      return 3;
       continue;
 	  }
     if (((id & 0x00ff0000) >> 16) != cyl * 2 + side) {
+			write_log (_T("Disk decode: mismatched track (%d <> %d) on sector %d header\n"), (id & 0x00ff0000) >> 16, cyl * 2 + side, trackoffs);
       if (filetype == ADF_EXT2)
 	      return 3;
       continue;
@@ -1636,6 +1666,7 @@ static int decode_buffer (uae_u16 *mbuf, int cyl, int drvsec, int ddhd, int file
 	    chksum ^= odd ^ even;
   	}
 	  if (chksum) {
+			write_log (_T("Disk decode: sector %d, data checksum error\n"), trackoffs);
 	    if (filetype == ADF_EXT2)
 		    return 4;
 	    continue;
@@ -1689,7 +1720,11 @@ static int drive_write_pcdos (drive *drv)
   secbuf[3] = 0xfb;
 
   while (secwritten < drvsec) {
+		int mfmcount;
+
+		mfmcount = 0;
   	while (getmfmword (mbuf, shift) != 0x4489) {
+			mfmcount++;
 	    if (mbuf >= mend)
     		return 1;
 	    shift++;
@@ -1697,12 +1732,20 @@ static int drive_write_pcdos (drive *drv)
 		    shift = 0;
 		    mbuf++;
 	    }
+			if (sector >= 0 && mfmcount / 16 >= 43)
+				sector = -1;
   	}
+
+		mfmcount = 0;
   	while (getmfmword (mbuf, shift) == 0x4489) {
+			mfmcount++;
 	    if (mbuf >= mend)
     		return 1;
 	    mbuf++;
   	}
+		if (mfmcount < 3) // ignore if less than 3 sync markers
+			continue;
+
 	  mark = mfmdecode(&mbuf, shift);
 	  if (mark == 0xfe) {
 	    uae_u8 tmp[8];
@@ -1716,13 +1759,20 @@ static int drive_write_pcdos (drive *drv)
 
 	    tmp[0] = 0xa1; tmp[1] = 0xa1; tmp[2] = 0xa1; tmp[3] = mark;
 	    tmp[4] = cyl; tmp[5] = head; tmp[6] = sector; tmp[7] = size;
+
+			// skip 28 bytes
+			for (i = 0; i < 28; i++)
+				mfmdecode (&mbuf, shift);
+
 	    if (get_crc16(tmp, 8) != crc || cyl != drv->cyl || head != side || size != 2 || sector < 1 || sector > drv->num_secs) {
+				write_log (_T("PCDOS: track %d, corrupted sector header\n"), drv->cyl * 2 + side);
     		return 1;
 	    }
 	    sector--;
 	    continue;
 	  }
-	  if (mark != 0xfb) {
+	  if (mark != 0xfb && mark != 0xfa) {
+			write_log (_T("PCDOS: track %d: unknown address mark %02X\n"), drv->cyl * 2 + side, mark);
 	    continue;
 	  }
 	  if (sector < 0)
@@ -1731,14 +1781,20 @@ static int drive_write_pcdos (drive *drv)
 	    secbuf[i + 4] = mfmdecode(&mbuf, shift);
 	  crc = (mfmdecode(&mbuf, shift) << 8) | mfmdecode(&mbuf, shift);
 	  if (get_crc16(secbuf, 3 + 1 + 512) != crc) {
+			write_log (_T("PCDOS: track %d, sector %d data checksum error\n"),
+				drv->cyl * 2 + side, sector + 1);
 	    continue;
 	  }
 	  sectable[sector] = 1;
 	  secwritten++;
 	  zfile_fseek (drv->diskfile, drv->trackdata[drv->cyl * 2 + side].offs + sector * 512, SEEK_SET);
 	  zfile_fwrite (secbuf + 4, sizeof (uae_u8), 512, drv->diskfile);
+		write_log (_T("PCDOS: track %d sector %d written\n"), drv->cyl * 2 + side, sector + 1);
 	  sector = -1;
   }
+	if (secwritten != drv->num_secs)
+		write_log (_T("PCDOS: track %d, %d corrupted sectors ignored\n"),
+		drv->cyl * 2 + side, drv->num_secs - secwritten);
   return 0;
 }
 
@@ -1769,6 +1825,7 @@ static int drive_write_ext2 (uae_u16 *bigmfmbuf, struct zfile *diskfile, trackid
 
   len = (tracklen + 7) / 8;
   if (len > ti->len) {
+		write_log (_T("disk raw write: image file's track %d is too small (%d < %d)!\n"), ti->track, ti->len, len);
   	len = ti->len;
   }
   diskfile_update (diskfile, ti, tracklen, TRACK_RAW);
@@ -1787,7 +1844,6 @@ static void drive_write_data (drive * drv)
 {
   int ret = -1;
 	int tr = drv->cyl * 2 + side;
-  static int warned;
 
   if (drive_writeprotected (drv) || drv->trackdata[tr].type == TRACK_NONE) {
     /* read original track back because we didn't really write anything */
@@ -1801,6 +1857,7 @@ static void drive_write_data (drive * drv)
   switch (drv->filetype) {
   case ADF_NORMAL:
   	if (drive_write_adf_amigados (drv)) {
+      static int warned;
 	    if (!warned)
     		notify_user (NUMSG_NEEDEXT2);
 	    warned = 1;
@@ -1811,16 +1868,19 @@ static void drive_write_data (drive * drv)
   case ADF_EXT2:
   	if (!longwritemode)
 	    ret = drive_write_adf_amigados (drv);
-	    if (ret) {
-//	      drive_write_ext2 (drv->bigmfmbuf, drv->diskfile, &drv->trackdata[drv->cyl * 2 + side],
-//		      longwritemode ? dsklength2 * 8 : drv->tracklen);
-	    }
-	    return;
-   case ADF_IPF:
-    	break;
-    case ADF_PCDOS:
-	    ret = drive_write_pcdos (drv);
-	    break;
+    if (ret) {
+		  write_log (_T("not an amigados track %d (error %d), writing as raw track\n"), drv->cyl * 2 + side, ret);
+		  drive_write_ext2 (drv->bigmfmbuf, drv->diskfile, &drv->trackdata[drv->cyl * 2 + side],
+			  longwritemode ? dsklength2 * 8 : drv->tracklen);
+    }
+    return;
+  case ADF_IPF:
+   	break;
+  case ADF_PCDOS:
+	  ret = drive_write_pcdos (drv);
+		if (ret)
+			write_log (_T("not a PC formatted track %d (error %d)\n"), drv->cyl * 2 + side, ret);
+	  break;
   }
   drv->tracktiming[0] = 0;
 }
@@ -1861,13 +1921,10 @@ static void floppy_get_rootblock (uae_u8 *dst, int block, const TCHAR *disk_name
 	dst[12+3] = 0x48;
 	dst[312] = dst[313] = dst[314] = dst[315] = (uae_u8)0xff;
 	dst[316+2] = (block + 1) >> 8; dst[316+3] = (block + 1) & 255;
-  if(disk_name && _tcslen (disk_name) > 0) {
-	  dst[432] = strlen (disk_name);
-	  strcpy ((char*)dst + 433, disk_name);
-  } else {
-	  dst[432] = strlen ("empty");
-	  strcpy ((char*)dst + 433, "empty");
-  }
+	char *s = ua ((disk_name && _tcslen (disk_name) > 0) ? disk_name : _T("empty"));
+	dst[432] = strlen (s);
+	strcpy ((char*)dst + 433, s);
+	xfree (s);
 	dst[508 + 3] = 1;
 	disk_date (dst + 420);
 	memcpy (dst + 472, dst + 420, 3 * 4);
@@ -1884,13 +1941,15 @@ static void floppy_get_rootblock (uae_u8 *dst, int block, const TCHAR *disk_name
 
 /* type: 0=regular, 1=ext2adf */
 /* adftype: 0=DD,1=HD,2=DD PC,3=HD PC,4=525SD */
-void disk_creatediskfile (const TCHAR *name, int type, drive_type adftype, const TCHAR *disk_name, bool ffs, bool bootable)
+bool disk_creatediskfile (const TCHAR *name, int type, drive_type adftype, const TCHAR *disk_name, bool ffs, bool bootable, struct zfile *copyfrom)
 {
 	int size = 32768;
   struct zfile *f;
   int i, l, file_size, tracks, track_len, sectors;
 	uae_u8 *chunk = NULL;
 	int ddhd = 1;
+	bool ok = false;
+	uae_u64 pos;
 
   if (type == 1)
   	tracks = 2 * 83;
@@ -1912,6 +1971,11 @@ void disk_creatediskfile (const TCHAR *name, int type, drive_type adftype, const
     tracks /= 2;
   }
 
+	if (copyfrom) {
+		pos = zfile_ftell (copyfrom);
+		zfile_fseek (copyfrom, 0, SEEK_SET);
+	}
+
 	f = zfile_fopen (name, _T("wb"), 0);
   chunk = xmalloc (uae_u8, size);
   if (f && chunk) {
@@ -1931,11 +1995,12 @@ void disk_creatediskfile (const TCHAR *name, int type, drive_type adftype, const
     		}
     		zfile_fwrite (chunk, cylsize, 1, f);
       }
+			ok = true;
 	  } else {
 			uae_u8 root[4];
 			uae_u8 rawtrack[3 * 4], dostrack[3 * 4];
       l = track_len;
-			zfile_fwrite ((char *)"UAE-1ADF", 8, 1, f);
+			zfile_fwrite ("UAE-1ADF", 8, 1, f);
 			root[0] = 0; root[1] = 0; /* flags (reserved) */
 			root[2] = 0; root[3] = tracks; /* number of tracks */
 			zfile_fwrite (root, 4, 1, f);
@@ -1950,26 +2015,34 @@ void disk_creatediskfile (const TCHAR *name, int type, drive_type adftype, const
 			for (i = 0; i < tracks; i++) {
 				uae_u8 tmp[3 * 4];
 				memcpy (tmp, rawtrack, sizeof rawtrack);
-				if (dodos)
+				if (dodos || copyfrom)
 					memcpy (tmp, dostrack, sizeof dostrack);
 				zfile_fwrite (tmp, sizeof tmp, 1, f);
 			}
 			for (i = 0; i < tracks; i++) {
 				memset (chunk, 0, size);
-				if (dodos) {
-					if (i == 0)
-						floppy_get_bootblock (chunk, ffs, bootable);
-					else if (i == 80)
-						floppy_get_rootblock (chunk, 80 * 11 * ddhd, disk_name, adftype);
+				if (copyfrom) {
+					zfile_fread (chunk, 11 * ddhd, 512, copyfrom);
+				} else {
+				  if (dodos) {
+					  if (i == 0)
+						  floppy_get_bootblock (chunk, ffs, bootable);
+					  else if (i == 80)
+						  floppy_get_rootblock (chunk, 80 * 11 * ddhd, disk_name, adftype);
+				  }
 				}
         zfile_fwrite (chunk, l, 1, f);
 			}
+			ok = true;
   	}
   }
   xfree (chunk);
   zfile_fclose (f);
+	if (copyfrom)
+		zfile_fseek (copyfrom, pos, SEEK_SET);
   if (f)
   	DISK_history_add (name, -1, HISTORY_FLOPPY, TRUE);
+	return ok;
 }
 
 int disk_getwriteprotect (struct uae_prefs *p, const TCHAR *name)
@@ -1981,17 +2054,17 @@ int disk_getwriteprotect (struct uae_prefs *p, const TCHAR *name)
 
 static void diskfile_readonly (const TCHAR *name, bool readonly)
 {
-  struct stat st;
+	struct mystat st;
   int mode, oldmode;
     
-  if (stat (name, &st))
+	if (!my_stat (name, &st))
   	return;
-  oldmode = mode = st.st_mode;
+	oldmode = mode = st.mode;
   mode &= ~FILEFLAG_WRITE;
   if (!readonly) 
     mode |= FILEFLAG_WRITE;
   if (mode != oldmode)
-  	chmod (name, mode);
+		my_chmod (name, mode);
 }
 
 static void setdskchangetime(drive *drv, int dsktime)
@@ -2034,7 +2107,7 @@ int disk_setwriteprotect (struct uae_prefs *p, int num, const TCHAR *name, bool 
   name2 = DISK_get_saveimagepath (name);
 
   if (needwritefile && zf2 == 0)
-  	disk_creatediskfile (name2, 1, drvtype, NULL, false, false);
+		disk_creatediskfile (name2, 1, drvtype, NULL, false, false, NULL);
   zfile_fclose (zf2);
   if (writeprotected && iswritefileempty (p, name)) {
   	for (i = 0; i < MAX_FLOPPY_DRIVES; i++) {
@@ -2185,7 +2258,7 @@ void DISK_vsync (void)
     		drv->dskready = true;
   	}
   	/* delay until new disk image is inserted */
-  	if (drv->dskchange_time) {
+		if (drv->dskchange_time > 0) {
 	    drv->dskchange_time--;
 	    if (drv->dskchange_time == 0) {
     		drive_insert (drv, &currprefs, i, drv->newname, false);
@@ -2210,7 +2283,7 @@ static TCHAR *tobin (uae_u8 v)
 	return buf;
 }
 
-STATIC_INLINE void fetch_DISK_select(uae_u8 data)
+static void fetch_DISK_select(uae_u8 data)
 {
 	selected = (data >> 3) & 15;
 	side = 1 - ((data >> 2) & 1);
@@ -2275,7 +2348,7 @@ void DISK_select (uae_u8 data)
 			      drive_motor (drv, 1);
   		    }
         }
-				if (dr == 0)
+				if (/*!currprefs.cs_df0idhw &&*/ dr == 0)
 		      drv->idbit = 0;
       }
     }
@@ -2302,7 +2375,7 @@ uae_u8 DISK_status (void)
 		        st &= ~0x20;
         }
 	    } else {
-				if (dr > 0) {
+				if (/*currprefs.cs_df0idhw ||*/ dr > 0) {
 		      /* report drive ID */
 		      if (drv->idbit && currprefs.floppyslots[dr].dfxtype != DRV_35_DD_ESCOM)
 		        st &= ~0x20;
@@ -2312,7 +2385,7 @@ uae_u8 DISK_status (void)
 		      	st &= ~0x20;
 		    }
 		    /* dskrdy needs some cycles after switching the motor off.. (Pro Tennis Tour) */
-				if (dr == 0 && drv->motordelay)
+				if (/*!currprefs.cs_df0idhw &&*/ dr == 0 && drv->motordelay)
 		      st &= ~0x20;
 	    }
 	    if (drive_track0 (drv))
@@ -2421,7 +2494,7 @@ static void disk_doupdate_write (drive * drv, int floppybits)
 				// fast disk modes, fill the fifo instantly
 				if (currprefs.floppy_speed > 100 && !fifo_inuse[0] && !fifo_inuse[1] && !fifo_inuse[2]) {
 					while (!fifo_inuse[2]) {
-						uae_u16 w = CHIPMEM_AGNUS_WGET_CUSTOM (dskpt);
+						uae_u16 w = chipmem_wget_indirect (dskpt);
 						DSKDAT (w);
 						dskpt += 2;
 					}
@@ -2559,7 +2632,7 @@ static int doreaddma (void)
 			if (currprefs.floppy_speed > 100 && fifo_inuse[0] && fifo_inuse[1] && fifo_inuse[2]) {
 				while (fifo_inuse[0]) {
 					uae_u16 w = DSKDATR ();
-					CHIPMEM_AGNUS_WPUT_CUSTOM (dskpt, w);
+					chipmem_wput_indirect (dskpt, w);
 					dskpt += 2;
 				}
 			}
@@ -2788,6 +2861,7 @@ void DSKLEN (uae_u16 v, int hpos)
 		if (dskdmaen != DSKDMA_OFF) {
       /* Megalomania and Knightmare does this */
       if (dskdmaen == DSKDMA_WRITE) {
+				write_log (_T("warning: Disk write DMA aborted, %d words left PC=%x\n"), dsklength, M68K_GETPC);
 	      // did program write something that needs to be stored to file?
         for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 	        drive *drv2 = &floppy[dr];
@@ -2832,6 +2906,8 @@ void DSKLEN (uae_u16 v, int hpos)
       break;
   }
   if (dr == 4) {
+		write_log (_T("disk %s DMA started, drvmask=%x motormask=%x PC=%08x\n"),
+			dskdmaen == DSKDMA_WRITE ? _T("write") : _T("read"), selected ^ 15, motormask, M68K_GETPC);
     noselected = 1;
   }
 
@@ -2883,7 +2959,7 @@ void DSKLEN (uae_u16 v, int hpos)
 		        return;
 	      }
 	      while (dsklength-- > 0) {
-	        CHIPMEM_AGNUS_WPUT_CUSTOM (dskpt, drv->bigmfmbuf[pos >> 4]);
+	        chipmem_wput_indirect (dskpt, drv->bigmfmbuf[pos >> 4]);
 	        dskpt += 2;
 	        pos += 16;
 	        pos %= drv->tracklen;
@@ -2895,7 +2971,7 @@ void DSKLEN (uae_u16 v, int hpos)
 			} else if (dskdmaen == DSKDMA_WRITE) { /* TURBO write */
 
 		    for (i = 0; i < dsklength; i++) {
-          uae_u16 w = CHIPMEM_AGNUS_WGET_CUSTOM (dskpt + i * 2);
+          uae_u16 w = chipmem_wget_indirect (dskpt + i * 2);
 		      drv->bigmfmbuf[pos >> 4] = w;
 		      pos += 16;
 		      pos %= drv->tracklen;
@@ -2908,9 +2984,9 @@ void DSKLEN (uae_u16 v, int hpos)
 	  if (!done && noselected) {
 	    while (dsklength-- > 0) {
 		    if (dskdmaen == DSKDMA_WRITE) {
-		        uae_u16 w = CHIPMEM_AGNUS_WGET_CUSTOM (dskpt);
+		        uae_u16 w = chipmem_wget_indirect (dskpt);
     		} else {
-	        CHIPMEM_AGNUS_WPUT_CUSTOM (dskpt, 0);
+	        chipmem_wput_indirect (dskpt, 0);
 		    }
 	      dskpt += 2;
 	    }
@@ -2954,6 +3030,7 @@ STATIC_INLINE bool iswrite (void)
 void DSKDAT (uae_u16 v)
 {
 	if (fifo_inuse[2]) {
+		write_log (_T("DSKDAT: FIFO overflow!\n"));
 		return;
 	}
 	fifo_inuse[2] = fifo_inuse[1];
@@ -2976,6 +3053,7 @@ uae_u16 DSKDATR (void)
 		}
 	}
 	if (i < 0) {
+		write_log (_T("DSKDATR: FIFO underflow!\n"));
 	} else 	if (dskdmaen > 0 && dskdmaen < 3 && dsklength <= 0 && disk_fifostatus () < 0) {
 		disk_dmafinished ();
 	}
@@ -3044,6 +3122,8 @@ void DISK_init (void)
 	  if (!drive_insert (drv, &currprefs, dr, currprefs.floppyslots[dr].df, false))
 	    disk_eject (dr);
   }
+	if (disk_empty (0))
+		write_log (_T("No disk in drive 0.\n"));
 }
 
 void DISK_reset (void)
@@ -3207,7 +3287,7 @@ uae_u8 *restore_disk(int num,uae_u8 *src)
    	disabled |= 1 << num;
   	if (changed_prefs.nr_floppies > num)
 	    changed_prefs.nr_floppies = num;
-  	changed_prefs.floppyslots[num].dfxtype = (drive_type) -1;
+  	changed_prefs.floppyslots[num].dfxtype = -1;
   } else {
  		drv->motoroff = (state & 1) ? 0 : 1;
 		drv->idbit = (state & 4) ? 1 : 0;
@@ -3257,6 +3337,8 @@ uae_u8 *restore_disk(int num,uae_u8 *src)
     	    drive_insert (floppy + num, &currprefs, num, changed_prefs.floppyslots[num].df, false);
     	    if (drive_empty (floppy + num))
 						drv->dskchange = true;
+				} else {
+					drv->dskchange_time = -1;
         }
       }
 	  }

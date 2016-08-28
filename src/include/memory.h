@@ -132,7 +132,8 @@ extern void memory_init (void);
 extern void memory_cleanup (void);
 extern void map_banks (addrbank *bank, int first, int count, int realsize);
 extern void map_overlay (int chip);
-extern void memory_hardreset (void);
+extern void memory_hardreset (int);
+extern void memory_clear (void);
 extern void free_fastmemory (void);
 
 #define longget(addr) (call_mem_get_func(get_mem_bank(addr).lget, addr))
@@ -168,19 +169,6 @@ STATIC_INLINE uae_u32 get_wordi(uaecptr addr)
     return wordgeti(addr);
 }
 
-STATIC_INLINE void put_long(uaecptr addr, uae_u32 l)
-{
-    longput(addr, l);
-}
-STATIC_INLINE void put_word(uaecptr addr, uae_u32 w)
-{
-    wordput(addr, w);
-}
-STATIC_INLINE void put_byte(uaecptr addr, uae_u32 b)
-{
-    byteput(addr, b);
-}
-
 /*
  * Read a host pointer from addr
  */
@@ -210,6 +198,19 @@ STATIC_INLINE void *get_pointer (uaecptr addr)
 #  error "Unknown or unsupported pointer size."
 # endif
 #endif
+
+STATIC_INLINE void put_long(uaecptr addr, uae_u32 l)
+{
+    longput(addr, l);
+}
+STATIC_INLINE void put_word(uaecptr addr, uae_u32 w)
+{
+    wordput(addr, w);
+}
+STATIC_INLINE void put_byte(uaecptr addr, uae_u32 b)
+{
+    byteput(addr, b);
+}
 
 /*
  * Store host pointer v at addr
@@ -257,17 +258,15 @@ extern uae_u32 chipmem_mask, chipmem_full_mask, kickmem_mask;
 extern uae_u8 *kickmemory;
 extern addrbank dummy_bank;
 
-static __inline__ uae_u16 CHIPMEM_AGNUS_WGET_CUSTOM (uae_u32 PT) {
+STATIC_INLINE uae_u32 chipmem_lget_indirect(uae_u32 PT) {
+  return do_get_mem_long((uae_u32 *)&chipmemory[PT & chipmem_full_mask]);
+}
+STATIC_INLINE uae_u32 chipmem_wget_indirect (uae_u32 PT) {
   return do_get_mem_word((uae_u16 *)&chipmemory[PT & chipmem_full_mask]);
 }
+#define chipmem_wput_indirect  chipmem_agnus_wput
+extern void REGPARAM2 chipmem_agnus_wput (uaecptr addr, uae_u32 w);
 
-static __inline void CHIPMEM_AGNUS_WPUT_CUSTOM (uae_u32 PT, uae_u16 DA) {
-  do_put_mem_word((uae_u16 *)&chipmemory[PT & chipmem_full_mask], DA);
-}
-
-static __inline__ uae_u32 CHIPMEM_LGET_CUSTOM(uae_u32 PT) {
-  return do_get_mem_long((uae_u32 *)&chipmemory[PT & chipmem_mask]);
-}
 
 extern uae_u8 *mapped_malloc (size_t, const TCHAR*);
 extern void mapped_free (uae_u8 *);
@@ -282,27 +281,5 @@ extern void memcpyah (uae_u8 *dst, uaecptr src, int size);
 
 extern uae_s32 getz2size (struct uae_prefs *p);
 extern uae_u32 getz2endaddr (void);
-
-#if defined(ARMV6_ASSEMBLY)
-
-extern "C" {
-	void *arm_memset(void *s, int c, size_t n);
-	void *arm_memcpy(void *dest, const void *src, size_t n);
-}
-
-/* 4-byte alignment */
-//#define UAE4ALL_ALIGN __attribute__ ((__aligned__ (4)))
-#define UAE4ALL_ALIGN __attribute__ ((__aligned__ (16)))
-#define uae4all_memclr(p,l) arm_memset(p,0,l)
-#define uae4all_memcpy arm_memcpy
-
-#else
-
-/* 4-byte alignment */
-#define UAE4ALL_ALIGN __attribute__ ((__aligned__ (4)))
-#define uae4all_memcpy memcpy
-#define uae4all_memclr(p,l) memset(p, 0, l)
-
-#endif
 
 #endif

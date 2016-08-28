@@ -442,7 +442,7 @@ static void after_leave_gui(void)
     }
   }
   if(update)
-    inputdevice_updateconfig(&changed_prefs);
+    inputdevice_updateconfig(NULL, &changed_prefs);
 
   inputdevice_copyconfig (&changed_prefs, &currprefs);
   inputdevice_config_change_test();
@@ -464,7 +464,7 @@ int gui_init (void)
   gui_to_prefs();
   if(quit_program < 0)
     quit_program = -quit_program;
-  if(quit_program == 1)
+  if(quit_program == UAE_QUIT)
     ret = -2; // Quit without start of emulator
 
 	setCpuSpeed();
@@ -595,7 +595,7 @@ void gui_handle_events (void)
 
 
 	if(keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] ||keystate[SDLK_MENU]))
-		uae_reset(0);
+		uae_reset(0,1);
 
 	// L + R
 	if(triggerL && triggerR)

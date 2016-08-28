@@ -15,8 +15,8 @@
 #include "td-sdl/thread.h"
 #include "options.h"
 #include "memory.h"
-#include "newcpu.h"
 #include "custom.h"
+#include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "native2amiga.h"
@@ -112,21 +112,21 @@ void uae_NotificationHack(uaecptr port, uaecptr nr)
 
 void uae_NewList(uaecptr list)
 {
-  put_long (list, list + 4);
-  put_long (list + 4, 0);
-  put_long (list + 8, list);
+  x_put_long (list, list + 4);
+  x_put_long (list + 4, 0);
+  x_put_long (list + 8, list);
 }
 
-uaecptr uae_AllocMem (TrapContext *context, uae_u32 size, uae_u32 flags)
+uaecptr uae_AllocMem (TrapContext *context, uae_u32 size, uae_u32 flags, uaecptr sysbase)
 {
   m68k_dreg (regs, 0) = size;
   m68k_dreg (regs, 1) = flags;
-  return CallLib (context, get_long (4), -198); /* AllocMem */
+	return CallLib (context, sysbase, -198); /* AllocMem */
 }
 
-void uae_FreeMem (TrapContext *context, uaecptr memory, uae_u32 size)
+void uae_FreeMem (TrapContext *context, uaecptr memory, uae_u32 size, uaecptr sysbase)
 {
   m68k_dreg (regs, 0) = size;
   m68k_areg (regs, 1) = memory;
-  CallLib (context, get_long (4), -0xD2); /* FreeMem */
+	CallLib (context, sysbase, -0xD2); /* FreeMem */
 }

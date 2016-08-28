@@ -9,16 +9,12 @@
 #ifndef MACCESS_UAE_H
 #define MACCESS_UAE_H
 
-#define likely(x)       __builtin_expect((x),1)
-#define unlikely(x)     __builtin_expect((x),0)
-
-
 #ifdef ARMV6_ASSEMBLY
 
 STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
 {
   uae_u16 v;
-   __asm__ __volatile__ (
+   __asm__ (
 						"ldrh %[v], [%[a]] \n\t"
 						"rev16 %[v], %[v] \n\t"
            : [v] "=r" (v) : [a] "r" (a) ); 
@@ -39,7 +35,7 @@ STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *_GCCRES_ a)
 STATIC_INLINE uae_u32 do_get_mem_long(uae_u32 *a) 
 {
   uae_u32 v;
-   __asm__ __volatile__ (
+   __asm__ (
 						"ldr %[v], [%[a]] \n\t"
 						"rev %[v], %[v] \n\t"
            : [v] "=r" (v) : [a] "r" (a) ); 
@@ -63,7 +59,7 @@ STATIC_INLINE uae_u8 do_get_mem_byte(uae_u8 *_GCCRES_ a)
 #ifdef ARMV6_ASSEMBLY
 STATIC_INLINE void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
 {
-   __asm__ __volatile__ (
+   __asm__ (
 						"rev16 r2, %[v] \n\t"
 						"strh r2, [%[a]] \n\t"
            : : [v] "r" (v), [a] "r" (a) : "r2", "memory" ); 
@@ -81,7 +77,7 @@ STATIC_INLINE void do_put_mem_word(uae_u16 *_GCCRES_ a, uae_u16 v)
 #ifdef ARMV6_ASSEMBLY
 STATIC_INLINE void do_put_mem_long(uae_u32 *_GCCRES_ a, uae_u32 v)
 {
-   __asm__ __volatile__ (
+   __asm__ (
 						"rev r2, %[v] \n\t"
 						"str r2, [%[a]] \n\t"
            : : [v] "r" (v), [a] "r" (a) : "r2", "memory" ); 

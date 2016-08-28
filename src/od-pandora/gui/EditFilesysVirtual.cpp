@@ -16,7 +16,6 @@
 #include "autoconf.h"
 #include "filesys.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 
@@ -250,6 +249,7 @@ static void EditFilesysVirtualLoop(void)
     // Now we let the Gui object draw itself.
     uae_gui->draw();
     // Finally we update the screen.
+    wait_for_vsync();
     SDL_Flip(gui_screen);
   }  
 }
@@ -303,7 +303,7 @@ bool EditFilesysVirtual(int unit_no)
     
     uci = add_filesys_config(&changed_prefs, unit_no, (char *) txtDevice->getText().c_str(), 
       (char *) txtVolume->getText().c_str(), (char *) txtPath->getText().c_str(), 
-      !chkReadWrite->isSelected(), 0, 0, 0, 0, bp, 0, 0, 0);
+      !chkReadWrite->isSelected(), 0, 0, 0, 0, 0, bp, 0, 0, 0, 0, 0, 0);
     if (uci)
     	filesys_media_change (uci->rootdir, 1, uci);
   }

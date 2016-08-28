@@ -156,7 +156,7 @@ static uae_u8 mfmdecode (uae_u16 **mfmp, int shift)
 	return out;
 }
 
-static int drive_write_adf_pc (uae_u16 *mbuf, uae_u16 *mend, uae_u8 *writebuffer, uae_u8 *writebuffer_ok, int track, int *outsize)
+static int drive_write_adf_pc (uae_u16 *mbuf, uae_u16 *mend, uae_u8 *writebuffer, uae_u8 *writebuffer_ok, int track, int *outsecs)
 {
 	int sectors, shift, sector, i;
 	uae_u8 mark;
@@ -171,16 +171,15 @@ static int drive_write_adf_pc (uae_u16 *mbuf, uae_u16 *mend, uae_u8 *writebuffer
 	sector = -1;
 	shift = 0;
 	mend -= (4 + 16 + 8 + 512);
-	mfmcount = 0;
 	for (;;) {
+		*outsecs = sectors;
 
-		*outsize = sectors * 512;
+		mfmcount = 0;
 		while (getmfmword (mbuf, shift) != 0x4489) {
+			mfmcount++;
 			if (mbuf >= mend) {
-				if (sectors >= 7) {
-					*outsize = sectors * 512;
+				if (sectors >= 1)
 					return 0;
-				}
 				write_log (_T("* track %d, unexpected end of data\n"), track);
 				return 1;
 			}
@@ -189,20 +188,21 @@ static int drive_write_adf_pc (uae_u16 *mbuf, uae_u16 *mend, uae_u8 *writebuffer
 				shift = 0;
 				mbuf++;
 			}
+			if (sector >= 0 && mfmcount / 16 >= 43)
+				sector = -1;
 		}
-		mfmcount++;
+		mfmcount = 0;
 		while (getmfmword (mbuf, shift) == 0x4489) {
 			mfmcount++;
 			if (mbuf >= mend) {
-				if (sectors >= 7) {
-					*outsize = sectors * 512;
+				if (sectors >= 1)
 					return 0;
-				}
 				return 1;
 			}
 			mbuf++;
 		}
-		mfmcount = 0;
+		if (mfmcount < 3) // ignore if less than 3 sync markers
+			continue;
 		mark = mfmdecode (&mbuf, shift);
 		if (mark == 0xfe) {
 			uae_u8 tmp[8];
@@ -216,6 +216,11 @@ static int drive_write_adf_pc (uae_u16 *mbuf, uae_u16 *mend, uae_u8 *writebuffer
 
 			tmp[0] = 0xa1; tmp[1] = 0xa1; tmp[2] = 0xa1; tmp[3] = mark;
 			tmp[4] = cyl; tmp[5] = head; tmp[6] = sector; tmp[7] = size;
+
+			// skip 28 bytes
+			for (i = 0; i < 28; i++)
+				mfmdecode (&mbuf, shift);
+
 			if (get_crc16 (tmp, 8) != crc || cyl != track / 2 || head != (track & 1) || size != 2 || sector < 1 || sector > 20) {
 				write_log (_T("PCDOS: track %d, corrupted sector header\n"), track);
 				continue;
@@ -223,34 +228,36 @@ static int drive_write_adf_pc (uae_u16 *mbuf, uae_u16 *mend, uae_u8 *writebuffer
 			sector--;
 			continue;
 		}
-		if (mark != 0xfb) {
+		if (mark != 0xfb && mark != 0xfa) {
 			write_log (_T("PCDOS: track %d: unknown address mark %02X\n"), track, mark);
 			continue;
 		}
-		if (sector < 0)
+		if (sector < 0) {
+			write_log (_T("PCDOS: track %d: data mark without header\n"), track);
 			continue;
+		}
 		for (i = 0; i < 512; i++)
 			secbuf[i + 4] = mfmdecode (&mbuf, shift);
-		sectors++;
-		memcpy (writebuffer + sector * 512, secbuf + 4, 512);
-		sector = 0;
 		crc = (mfmdecode (&mbuf, shift) << 8) | mfmdecode (&mbuf, shift);
 		if (get_crc16 (secbuf, 3 + 1 + 512) != crc) {
 			write_log (_T("PCDOS: track %d, sector %d data checksum error\n"),
 				track, sector + 1);
 			continue;
 		}
-
+		memcpy (writebuffer + sector * 512, secbuf + 4, 512);
+		sectors++;
+		sector = -1;
 	}
 
 }
 
 int ispctrack(uae_u16 *amigamfmbuffer, uae_u8 *mfmdata, int len, uae_u8 *writebuffer, uae_u8 *writebuffer_ok, int track, int *outsize)
 {
-	int i;
+	int i, outsecs;
 	for (i = 0; i < len / 2; i++)
 		amigamfmbuffer[i] = mfmdata[i * 2 + 1] | (mfmdata[i * 2 + 0] << 8);
-	i = drive_write_adf_pc (amigamfmbuffer, amigamfmbuffer + len / 2, writebuffer, writebuffer_ok, track, outsize);
+	i = drive_write_adf_pc (amigamfmbuffer, amigamfmbuffer + len / 2, writebuffer, writebuffer_ok, track, &outsecs);
+	*outsize = outsecs * 512;
 	if (*outsize < 9 * 512)
 		*outsize = 9 * 512;
 	return i ? -1 : 0;

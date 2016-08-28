@@ -783,7 +783,7 @@ static void setpc (const char *format, ...)
 	if (using_mmu)
 		printf ("\tm68k_setpci (regs, %s);\n", buffer);
 	else
-		printf ("\tm68k_setpc (regs, %s);\n", buffer);
+		printf ("\tm68k_setpc (%s);\n", buffer);
 }
 
 static void incpc (const char *format, ...)
@@ -2763,7 +2763,7 @@ static void resetvars (void)
 	dstblrmw = NULL;
 	dstwlrmw = NULL;
 	dstllrmw = NULL;
-	getpc = "m68k_getpc (regs)";
+	getpc = "m68k_getpc ()";
 
 	if (using_indirect > 0) {
 		// tracer
@@ -3018,7 +3018,7 @@ static void resetvars (void)
 		dstw = "put_word";
 		srcb = "get_byte";
 		dstb = "put_byte";
-		getpc = "m68k_getpc (regs)";
+		getpc = "m68k_getpc ()";
 	} else {
 		// generic + direct
 		prefetch_long = "get_ilong";
@@ -3087,13 +3087,13 @@ static void gen_opcode (unsigned int opcode)
 
 		/* fall through */
 	case 2: /* priviledged */
-		printf ("if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }\n");
+		printf ("if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }\n");
 		start_brace ();
 		break;
 	case 3: /* privileged if size == word */
 		if (curi->size == sz_byte)
 			break;
-		printf ("if (!regs.s) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }\n");
+		printf ("if (!regs.s) { Exception (8); return 4 * CYCLE_UNIT / 2; }\n");
 		start_brace ();
 		break;
 	}
@@ -3742,7 +3742,7 @@ static void gen_opcode (unsigned int opcode)
 		genamode (curi, curi->smode, "srcreg", curi->size, "src", 1, 0, 0);
 		gen_set_fault_pc ();
 		sync_m68k_pc ();
-		printf ("\tException (src + 32, regs);\n");
+		printf ("\tException (src + 32);\n");
 		did_prefetch = 1;
 		clear_m68k_offset();
     if (using_ce || using_prefetch)
@@ -3791,9 +3791,9 @@ static void gen_opcode (unsigned int opcode)
 	case i_LPSTOP: /* 68060 */
 		printf ("\tuae_u16 sw = %s (2);\n", srcwi);
 		printf ("\tuae_u16 sr;\n");
-		printf ("\tif (sw != (0x100|0x80|0x40)) { Exception (4, regs); return 4 * CYCLE_UNIT / 2; }\n");
+		printf ("\tif (sw != (0x100|0x80|0x40)) { Exception (4); return 4 * CYCLE_UNIT / 2; }\n");
 		printf ("\tsr = %s (4);\n", srcwi);
-		printf ("\tif (!(sr & 0x8000)) { Exception (8, regs); return 4 * CYCLE_UNIT / 2; }\n");
+		printf ("\tif (!(sr & 0x8000)) { Exception (8); return 4 * CYCLE_UNIT / 2; }\n");
 		printf ("\tregs.sr = sr;\n");
 		makefromsr ();
 		printf ("\tm68k_setstopped();\n");
@@ -3880,7 +3880,7 @@ static void gen_opcode (unsigned int opcode)
 				printf ("\t\telse if (frame == 0xa) { m68k_areg (regs, 7) += offset + 24; break; }\n");
 				printf ("\t\telse if (frame == 0xb) { m68k_areg (regs, 7) += offset + 84; break; }\n");
 			}
-		    printf ("\t\telse { m68k_areg (regs, 7) += offset; Exception (14, regs); return 4 * CYCLE_UNIT / 2; }\n");
+		    printf ("\t\telse { m68k_areg (regs, 7) += offset; Exception (14); return 4 * CYCLE_UNIT / 2; }\n");
 		    printf ("\t\tregs.sr = newsr;\n");
 			makefromsr ();
 			printf ("}\n");
@@ -3977,7 +3977,7 @@ static void gen_opcode (unsigned int opcode)
 		} else if (using_prefetch_020) {
 			printf ("\tm68k_do_rtsi ();\n");
 		} else {
-			printf ("\tm68k_do_rts (regs);\n");
+			printf ("\tm68k_do_rts ();\n");
 		}
 	    printf ("\tif (%s & 1) {\n", getpc);
 		printf ("\t\tuaecptr faultpc = %s;\n", getpc);
@@ -3994,7 +3994,7 @@ static void gen_opcode (unsigned int opcode)
 		sync_m68k_pc ();
 		fill_prefetch_next ();
 		printf ("\tif (GET_VFLG ()) {\n");
-		printf ("\t\tException (7, regs);\n");
+		printf ("\t\tException (7);\n");
 		printf ("\t\treturn 4 * CYCLE_UNIT / 2;\n");
 		printf ("\t}\n");
 		break;
@@ -4100,7 +4100,7 @@ static void gen_opcode (unsigned int opcode)
 		printf ("\ts = (uae_s32)src + 2;\n");
 		if (using_exception_3) {
 			printf ("\tif (src & 1) {\n");
-			printf ("\t\texception3i (opcode, m68k_getpc (regs) + s);\n");
+			printf ("\t\texception3 (opcode, m68k_getpc () + s, 0, 1, m68k_getpc () + s);\n");
 			returncycles_exception ("", (count_read + 1 + count_write) * 4 + count_cycles);
 			printf ("\t}\n");
 		}
@@ -4296,7 +4296,7 @@ bccl_not68020:
 			printf("\t\tif (dst < 0) SET_NFLG (1);\n");
 		}
 		incpc ("%d", m68k_pc_offset);
-		printf ("\t\tException (5, regs);\n");
+		printf ("\t\tException (5);\n");
 		returncycles_exception ("", (count_read + 1 + count_write) * 4 + count_cycles);
 		printf ("\t} else {\n");
 		printf ("\t\tuae_u32 newv = (uae_u32)dst / (uae_u32)(uae_u16)src;\n");
@@ -4344,7 +4344,7 @@ bccl_not68020:
 			printf("\t\tSET_ZFLG (1);\n");
 		}
 		incpc ("%d", m68k_pc_offset);
-		printf ("\t\tException (5, regs);\n");
+		printf ("\t\tException (5);\n");
 		returncycles_exception ("", (count_read + 1 + count_write) * 4 + count_cycles);
 		printf ("\t}\n");
 		printf ("\tCLEAR_CZNV ();\n");
@@ -4442,13 +4442,13 @@ bccl_not68020:
 		addcycles000 (4);
 		printf ("\tif (dst > src) {\n");
 		printf ("\t\tSET_NFLG (0);\n");
-		printf ("\t\tException (6, regs);\n");
+		printf ("\t\tException (6);\n");
 		returncycles_exception ("", (count_read + 1 + count_write) * 4 + count_cycles);
 		printf ("\t}\n");
 		addcycles000 (2);
 		printf ("\tif ((uae_s32)dst < 0) {\n");
 		printf ("\t\tSET_NFLG (1);\n");
-		printf ("\t\tException (6, regs);\n");
+		printf ("\t\tException (6);\n");
 		returncycles_exception ("", (count_read + 1 + count_write) * 4 + count_cycles);
 		printf ("\t}\n");
 		fill_prefetch_next ();
@@ -4475,7 +4475,7 @@ bccl_not68020:
 		}
 		printf ("\tSET_ZFLG (upper == reg || lower == reg);\n");
 		printf ("\tSET_CFLG_ALWAYS (lower <= upper ? reg < lower || reg > upper : reg > upper || reg < lower);\n");
-		printf ("\tif ((extra & 0x800) && GET_CFLG ()) { Exception (6, regs);\n");
+		printf ("\tif ((extra & 0x800) && GET_CFLG ()) { Exception (6);\n");
 		returncycles_exception ("", (count_read + 1 + count_write) * 4 + count_cycles);
 		printf("\t}\n}\n");
 		break;
@@ -4938,7 +4938,7 @@ bccl_not68020:
 			genamode (curi, curi->smode, "srcreg", curi->size, "src", 1, 0, GF_LRMW);
 			genamode (curi, curi->dmode, "dstreg", curi->size, "dst", 1, 0, GF_LRMW);
 			//if (cpu_level == 5 && curi->size > 0) {
-			//	printf ("\tif ((dsta & %d) && currprefs.int_no_unimplemented && get_cpu_model () == 68060) {\n", curi->size == 1 ? 1 : 3);
+			//	printf ("\tif ((dsta & %d) && currprefs.cpu_compatible && get_cpu_model () == 68060) {\n", curi->size == 1 ? 1 : 3);
 			//	if (curi->dmode == Aipi || curi->dmode == Apdi)
 			//		printf ("\t\tm68k_areg (regs, dstreg) %c= %d;\n", curi->dmode == Aipi ? '-' : '+', 1 << curi->size);
 			//	sync_m68k_pc_noreset ();
@@ -4952,7 +4952,7 @@ bccl_not68020:
 			printf ("\tint ru = (src >> 6) & 7;\n");
 			printf ("\tint rc = src & 7;\n");
 			genflags (flag_cmp, curi->size, "newv", "m68k_dreg (regs, rc)", "dst");
-			gen_set_fault_pc ();
+			sync_m68k_pc ();
 			printf ("\tif (GET_ZFLG ())");
 			old_brace_level = n_braces;
 			start_brace ();
@@ -5059,24 +5059,24 @@ bccl_not68020:
 		break;
 	case i_BKPT:		/* only needed for hardware emulators */
 		sync_m68k_pc ();
-		printf ("\top_illg (opcode, regs);\n");
+		printf ("\top_illg (opcode);\n");
 		did_prefetch = -1;
 		break;
 	case i_CALLM:		/* not present in 68030 */
 		sync_m68k_pc ();
-		printf ("\top_illg (opcode, regs);\n");
+		printf ("\top_illg (opcode);\n");
 		did_prefetch = -1;
 		break;
 	case i_RTM:		/* not present in 68030 */
 		sync_m68k_pc ();
-		printf ("\top_illg (opcode, regs);\n");
+		printf ("\top_illg (opcode);\n");
 		did_prefetch = -1;
 		break;
 	case i_TRAPcc:
 		if (curi->smode != am_unknown && curi->smode != am_illg)
 			genamode (curi, curi->smode, "srcreg", curi->size, "dummy", 1, 0, 0);
 		fill_prefetch_0 ();
-		printf ("\tif (cctrue (regs.ccrflags, %d)) { Exception (7, regs); goto %s; }\n", curi->cc, endlabelstr);
+		printf ("\tif (cctrue (regs.ccrflags, %d)) { Exception (7); goto %s; }\n", curi->cc, endlabelstr);
 		need_endlabel = 1;
 		break;
 	case i_DIVL:
@@ -5085,7 +5085,7 @@ bccl_not68020:
 		genamode (curi, curi->dmode, "dstreg", curi->size, "dst", 1, 0, 0);
 		sync_m68k_pc ();
     printf ("\tif (dst == 0) {\n");
-    printf ("\t\tException (5, regs);\n");
+    printf ("\t\tException (5);\n");
 	  printf ("\t\treturn 4 * CYCLE_UNIT / 2;\n");
     printf ("\t}\n");
 		printf ("\tm68k_divl(opcode, dst, extra);\n");

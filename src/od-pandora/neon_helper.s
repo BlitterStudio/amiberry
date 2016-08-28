@@ -758,8 +758,6 @@ NEON_doline_n8_exit:
   ldmia     sp!, {r4-r8, pc}
 
 
-.data
-
 .align 8
 
 Lookup_doline_n1:

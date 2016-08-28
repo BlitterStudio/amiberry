@@ -10,7 +10,6 @@
 #include "options.h"
 #include "uae.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 
@@ -92,6 +91,7 @@ void InGameMessage(const char *msg)
   cmdDone->requestFocus();
   
   msg_done = 0;
+  bool drawn = false;
   while(!msg_done)
   {
     //-------------------------------------------------

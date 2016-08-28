@@ -361,9 +361,9 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
               sprintf(dhx, "DH%d", add_HDF_DHnum);
               ++add_HDF_DHnum;
               if(hardfile_testrdb (target_file))                        
-                uci = add_filesys_config(p, -1, dhx, 0, target_file, readonly, 0, 0, 0, 512, 127, 0, 0, 0);
+                uci = add_filesys_config(p, -1, dhx, 0, target_file, readonly, 0, 0, 0, 0, 512, 127, 0, 0, 0, 0, 0, 0);
               else
-                uci = add_filesys_config(p, -1, dhx, 0, target_file, readonly, 32, 1, 2, 512, 127, 0, 0, 0);
+                uci = add_filesys_config(p, -1, dhx, 0, target_file, readonly, 0, 32, 1, 2, 512, 127, 0, 0, 0, 0, 0, 0);
               if (uci)
                 hardfile_do_disk_change (uci, 1);
               gui_force_rtarea_hdchange();
@@ -460,9 +460,9 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
                         sprintf(dhx, "DH%d", add_HDF_DHnum);
                         ++add_HDF_DHnum;
                         if(hardfile_testrdb (target_file))                        
-                          uci = add_filesys_config(p, -1, dhx, 0, target_file, 0, 0, 0, 0, 512, 0, 0, 0, 0);
+                          uci = add_filesys_config(p, -1, dhx, 0, target_file, 0, 0, 0, 0, 0, 512, 0, 0, 0, 0, 0, 0, 0);
                         else
-                          uci = add_filesys_config(p, -1, dhx, 0, target_file, 0, 32, 1, 2, 512, 0, 0, 0, 0);
+                          uci = add_filesys_config(p, -1, dhx, 0, target_file, 0, 0, 32, 1, 2, 512, 0, 0, 0, 0, 0, 0, 0);
                         if (uci)
     	                    hardfile_do_disk_change (uci, 1);
     	                  gui_force_rtarea_hdchange();

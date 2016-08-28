@@ -21,8 +21,8 @@
  * function has to be setup with deftrap2() and
  * TRAPFLAG_EXTRA_STACK and stack magic is required.
  */
-uaecptr uae_AllocMem (TrapContext *context, uae_u32 size, uae_u32 flags);
-void uae_FreeMem (TrapContext *context, uaecptr memory, uae_u32 size);
+uaecptr uae_AllocMem (TrapContext *context, uae_u32 size, uae_u32 flags, uaecptr sysbase);
+void uae_FreeMem (TrapContext *context, uaecptr memory, uae_u32 size, uaecptr sysbase);
 
 
 /*

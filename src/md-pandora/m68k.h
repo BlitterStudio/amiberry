@@ -151,7 +151,7 @@ struct flag_struct {
 
 #define COPY_CARRY()      (regs.ccrflags.x = ((regs.ccrflags.nzcv >> 29) & 1))
 
-static inline int cctrue(struct flag_struct &flags, int cc)
+STATIC_INLINE int cctrue(struct flag_struct &flags, int cc)
 {
     unsigned int nzcv = flags.nzcv;
     switch(cc){
@@ -216,7 +216,7 @@ struct flag_struct {
 
 #define COPY_CARRY() (regs.ccrflags.x = regs.ccrflags.c)
 
-static inline int cctrue(struct flag_struct &flags, const int cc)
+STATIC_INLINE int cctrue(struct flag_struct &flags, const int cc)
 {
     switch(cc){
      case 0: return 1;                       /* T */

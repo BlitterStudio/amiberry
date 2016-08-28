@@ -15,13 +15,12 @@
  * invisible anyway due to hardware DDF limits. */
 #define DISPLAY_LEFT_SHIFT 0x38
 
-#define PIXEL_XPOS(HPOS) ((((HPOS)<<1) - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) )
+#define PIXEL_XPOS(HPOS) (((HPOS)*2 - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) )
 
 #define max_diwlastword   (PIXEL_XPOS(0x1d4>> 1))
 
 #define lores_shift 0
 extern bool aga_mode;
-extern bool ham_drawn;
 
 STATIC_INLINE int coord_hw_to_window_x (int x)
 {
@@ -57,6 +56,7 @@ struct color_entry {
   uae_u16 color_regs_ecs[32];
   xcolnr acolors[256];
   uae_u32 color_regs_aga[256];
+	bool borderblank;
 };
 
 /* convert 24 bit AGA Amiga RGB to native color */
@@ -68,7 +68,7 @@ struct color_entry {
 STATIC_INLINE uae_u16 CONVERT_RGB(uae_u32 c)
 {
   uae_u16 ret;
-  __asm__ __volatile__ (
+  __asm__ (
 			"ubfx    r1, %[c], #19, #5 \n\t"
 			"ubfx    r2, %[c], #10, #6 \n\t"
 			"ubfx    %[v], %[c], #3, #5 \n\t"
@@ -88,7 +88,7 @@ STATIC_INLINE xcolnr getxcolor (int c)
 }
 
 /* functions for reading, writing, copying and comparing struct color_entry */
-STATIC_INLINE int color_reg_get (struct color_entry *_GCCRES_ ce, int c)
+STATIC_INLINE int color_reg_get (struct color_entry *ce, int c)
 {
 	if (aga_mode)
 		return ce->color_regs_aga[c];
@@ -96,7 +96,7 @@ STATIC_INLINE int color_reg_get (struct color_entry *_GCCRES_ ce, int c)
 		return ce->color_regs_ecs[c];
 }
 
-STATIC_INLINE void color_reg_set (struct color_entry *_GCCRES_ ce, int c, int v)
+STATIC_INLINE void color_reg_set (struct color_entry *ce, int c, int v)
 {
 	if (aga_mode)
 		ce->color_regs_aga[c] = v;
@@ -105,15 +105,15 @@ STATIC_INLINE void color_reg_set (struct color_entry *_GCCRES_ ce, int c, int v)
 }
 
 /* ugly copy hack, is there better solution? */
-STATIC_INLINE void color_reg_cpy (struct color_entry *_GCCRES_ dst, struct color_entry *_GCCRES_ src)
+STATIC_INLINE void color_reg_cpy (struct color_entry *dst, struct color_entry *src)
 {
+	dst->borderblank = src->borderblank;
   if (aga_mode)
   	/* copy acolors and color_regs_aga */
   	memcpy (dst->acolors, src->acolors, sizeof(struct color_entry) - sizeof(uae_u16) * 32);
   else
   	/* copy first 32 acolors and color_regs_ecs */
-  	memcpy(dst->color_regs_ecs, src->color_regs_ecs,
-  		sizeof(uae_u16) * 32 + sizeof(xcolnr) * 32);
+  	memcpy(dst->color_regs_ecs, src->color_regs_ecs, sizeof(uae_u16) * 32 + sizeof(xcolnr) * 32);
 }
 
 /*
@@ -125,6 +125,7 @@ STATIC_INLINE void color_reg_cpy (struct color_entry *_GCCRES_ dst, struct color
  * but a list of structures containing information on how to draw the line.
  */
 
+#define COLOR_CHANGE_BRDBLANK 0x80000000
 struct color_change {
   int linepos;
   int regno;
@@ -156,13 +157,13 @@ extern union sps_union spixstate;
 extern uae_u16 spixels[MAX_SPR_PIXELS];
 
 /* Way too much... */
-#define MAX_REG_CHANGE ((MAXVPOS + 1) * 2 * MAXHPOS)
-
-extern struct color_change *curr_color_changes;
+#define MAX_REG_CHANGE ((MAXVPOS + 1) * MAXHPOS)
 
 extern struct color_entry curr_color_tables[(MAXVPOS + 2) * 2];
 
 extern struct sprite_entry *curr_sprite_entries;
+extern struct color_change *curr_color_changes;
+extern struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
 
 /* struct decision contains things we save across drawing frames for
  * comparison (smart update stuff). */
@@ -190,7 +191,6 @@ struct draw_info {
 };
 
 extern struct decision line_decisions[2 * (MAXVPOS + 2) + 1];
-extern struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
 
 extern uae_u8 line_data[(MAXVPOS + 2) * 2][MAX_PLANES * MAX_WORDS_PER_LINE * 2];
 

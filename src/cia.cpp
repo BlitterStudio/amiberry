@@ -22,9 +22,12 @@
 #include "gui.h"
 #include "savestate.h"
 #include "inputdevice.h"
+#include "zfile.h"
 #include "akiko.h"
 #include "audio.h"
 #include "keyboard.h"
+#include "uae.h"
+#include "autoconf.h"
 
 #define TOD_HACK
 
@@ -51,7 +54,8 @@ static unsigned long ciaata_passed, ciaatb_passed, ciabta_passed, ciabtb_passed;
 
 static unsigned long ciaatod, ciabtod, ciaatol, ciabtol, ciaaalarm, ciabalarm;
 static int ciaatlatch, ciabtlatch;
-static bool oldled, oldovl, oldcd32mute;
+static bool oldovl, oldcd32mute;
+static bool led;
 
 static unsigned int ciabpra;
 
@@ -63,7 +67,7 @@ static int div10;
 static int kbstate, kblostsynccnt;
 static uae_u8 kbcode;
 
-static __inline__ void setclr (unsigned int *_GCCRES_ p, unsigned int val)
+static void setclr (unsigned int *p, unsigned int val)
 {
   if (val & 0x80) {
   	*p |= val & 0x7F;
@@ -72,7 +76,7 @@ static __inline__ void setclr (unsigned int *_GCCRES_ p, unsigned int val)
   }
 }
 
-static void ICRA(uae_u32 data)
+STATIC_INLINE void ICRA(uae_u32 data)
 {
 	if (ciaaimask & ciaaicr) {
 		ciaaicr |= 0x80;
@@ -80,7 +84,7 @@ static void ICRA(uae_u32 data)
 	}
 	ciaaicr_reg |= ciaaicr;
 }
-static void ICRB(uae_u32 data)
+STATIC_INLINE void ICRB(uae_u32 data)
 {
 	if (ciabimask & ciabicr) {
 		ciabicr |= 0x80;
@@ -89,14 +93,14 @@ static void ICRB(uae_u32 data)
 	ciabicr_reg |= ciabicr;
 }
 
-static void RethinkICRA (void)
+STATIC_INLINE void RethinkICRA (void)
 {
   if (ciaaicr) {
     ICRA (0x0008);
   }
 }
 
-static void RethinkICRB (void)
+STATIC_INLINE void RethinkICRB (void)
 {
   if (ciabicr) {
 	  ICRB (0x2000);
@@ -401,7 +405,7 @@ static void tod_hack_reset (void)
 }
 #endif
 
-STATIC_INLINE void setcode (uae_u8 keycode)
+static void setcode (uae_u8 keycode)
 {
   kbcode = ~((keycode << 1) | (keycode >> 7));
 }
@@ -500,8 +504,8 @@ static void bfe001_change (void)
 
   v |= ~ciaadra; /* output is high when pin's direction is input */
   led2 = (v & 2) ? 0 : 1;
-  if (led2 != oldled) {
-    oldled = led2;
+  if (led2 != led) {
+    led = led2;
     gui_data.powerled = led2;
     led_filter_audio();
   }
@@ -609,10 +613,10 @@ static uae_u8 ReadCIAB (unsigned int addr)
 
   switch (reg) {
   case 0:
+		tmp = 0;
 #ifdef INPUTDEVICE_SIMPLE
 		tmp = ((ciabpra & ciabdra) | (ciabdra ^ 0xff)) & 0x7;
 #else
-		tmp = 0;
 		tmp |= handle_parport_joystick (1, ciabpra, ciabdra);
 #endif
 		return tmp;
@@ -920,6 +924,11 @@ static void WriteCIAB (uae_u16 addr,uae_u8 val)
   }
 }
 
+void cia_set_overlay (bool overlay)
+{
+	oldovl = overlay;
+}
+
 void CIA_reset (void)
 {
 #ifdef TOD_HACK
@@ -928,11 +937,10 @@ void CIA_reset (void)
   	tod_hack_reset ();
 #endif
   kblostsynccnt = 0;
-  oldovl = 1;
 	oldcd32mute = 1;
-  oldled = true;
 
   if (!savestate_state) {
+		oldovl = true;
     kbstate = 0;
     ciaatlatch = ciabtlatch = 0;
     ciaapra = 0;  ciaadra = 0;
@@ -952,10 +960,12 @@ void CIA_reset (void)
   }
 	map_overlay (0);
   if (savestate_state) {
+		if (!(currprefs.chipset_mask & CSMASK_AGA)) {
+			oldovl = true;
+		}
     bfe001_change ();
 		if (currprefs.chipset_mask & CSMASK_AGA) {
-			map_overlay (1);
-			oldovl = false;
+			map_overlay (oldovl ? 0 : 1);
 		}
   }
 #ifdef CD32
@@ -990,7 +1000,6 @@ static void cia_wait_pre (void)
 	if (currprefs.cachesize)
 		return;
 
-#ifndef CUSTOM_SIMPLE
   int div = (get_cycles () - eventtab[ev_cia].oldcycles) % DIV10;
   int cycles;
 
@@ -1005,7 +1014,6 @@ static void cia_wait_pre (void)
 	if (cycles) {
   	do_cycles (cycles);
   }
-#endif
 }
 
 static void cia_wait_post (uae_u32 value)
@@ -1013,20 +1021,21 @@ static void cia_wait_post (uae_u32 value)
 	if (currprefs.cachesize) {
 		do_cycles (8 * CYCLE_UNIT / 2);
 	} else {
-    do_cycles (6 * CYCLE_UNIT / 2);
+		int c = 6 * CYCLE_UNIT / 2;
+		do_cycles (c);
   }
 }
 
 static uae_u32 REGPARAM2 cia_bget (uaecptr addr)
 {
   int r = (addr & 0xf00) >> 8;
-  uae_u8 v;
+	uae_u8 v = 0xff;
 
 #ifdef JIT
   special_mem |= S_READ;
 #endif
+
   cia_wait_pre ();
-  v = 0xff;
   switch ((addr >> 12) & 3) {
   case 0:
 	  v = (addr & 1) ? ReadCIAA (r) : ReadCIAB (r);
@@ -1050,13 +1059,13 @@ static uae_u32 REGPARAM2 cia_bget (uaecptr addr)
 static uae_u32 REGPARAM2 cia_wget (uaecptr addr)
 {
   int r = (addr & 0xf00) >> 8;
-  uae_u16 v;
+	uae_u16 v = 0xffff;
 
 #ifdef JIT
   special_mem |= S_READ;
 #endif
+
   cia_wait_pre ();
-  v = 0xffff;
   switch ((addr >> 12) & 3)
   {
   case 0:
@@ -1106,6 +1115,7 @@ static void REGPARAM2 cia_bput (uaecptr addr, uae_u32 value)
 #ifdef JIT
   special_mem |= S_WRITE;
 #endif
+
   cia_wait_pre ();
   if ((addr & 0x2000) == 0)
   	WriteCIAB (r, value);
@@ -1122,6 +1132,7 @@ static void REGPARAM2 cia_wput (uaecptr addr, uae_u32 value)
 #ifdef JIT
   special_mem |= S_WRITE;
 #endif
+
   cia_wait_pre ();
   if ((addr & 0x2000) == 0)
   	WriteCIAB (r, value >> 8);
@@ -1156,6 +1167,38 @@ static unsigned int clock_control_d;
 static unsigned int clock_control_e;
 static unsigned int clock_control_f;
 
+static uae_u8 getclockreg (int addr, struct tm *ct)
+{
+	uae_u8 v = 0;
+
+  switch (addr) {
+    case 0x0: v = ct->tm_sec % 10; break;
+    case 0x1: v = ct->tm_sec / 10; break;
+    case 0x2: v = ct->tm_min % 10; break;
+    case 0x3: v = ct->tm_min / 10; break;
+    case 0x4: v = ct->tm_hour % 10; break;
+    case 0x5: 
+			if (clock_control_f & 4) {
+				v = ct->tm_hour / 10; // 24h
+			} else {
+				v = (ct->tm_hour % 12) / 10; // 12h
+				v |= ct->tm_hour >= 12 ? 4 : 0; // AM/PM bit
+			}
+      break;
+    case 0x6: v = ct->tm_mday % 10; break;
+    case 0x7: v = ct->tm_mday / 10; break;
+    case 0x8: v = (ct->tm_mon + 1) % 10; break;
+    case 0x9: v = (ct->tm_mon + 1) / 10; break;
+    case 0xA: v = ct->tm_year % 10; break;
+    case 0xB: v = (ct->tm_year / 10) & 0x0f; break;
+    case 0xC: v = ct->tm_wday; break;
+    case 0xD: v = clock_control_d; break;
+    case 0xE: v = clock_control_e; break;
+    case 0xF: v = clock_control_f; break;
+  }
+	return v;
+}
+
 void rtc_hardreset(void)
 {
 	clock_bank.name = _T("Battery backed up clock (MSM6242B)");
@@ -1178,13 +1221,13 @@ static uae_u32 REGPARAM2 clock_bget (uaecptr addr)
 {
   time_t t;
   struct tm *ct;
+	uae_u8 v = 0;
 
 #ifdef JIT
   special_mem |= S_READ;
 #endif
   addr &= 0x3f;
   if ((addr & 3) == 2 || (addr & 3) == 0) {
-   	int v = 0;
 	  if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible)
 	    v = regs.irc >> 8;
 	  return v;
@@ -1192,25 +1235,7 @@ static uae_u32 REGPARAM2 clock_bget (uaecptr addr)
   t = time(0);
   ct = localtime (&t);
   addr >>= 2;
-  switch (addr) {
-    case 0x0: return ct->tm_sec % 10;
-    case 0x1: return ct->tm_sec / 10;
-    case 0x2: return ct->tm_min % 10;
-    case 0x3: return ct->tm_min / 10;
-    case 0x4: return ct->tm_hour % 10;
-    case 0x5: return ct->tm_hour / 10;
-    case 0x6: return ct->tm_mday % 10;
-    case 0x7: return ct->tm_mday / 10;
-    case 0x8: return (ct->tm_mon + 1) % 10;
-    case 0x9: return (ct->tm_mon + 1) / 10;
-    case 0xA: return ct->tm_year % 10;
-    case 0xB: return ct->tm_year / 10;
-    case 0xC: return ct->tm_wday;
-    case 0xD: return clock_control_d;
-    case 0xE: return clock_control_e;
-    case 0xF: return clock_control_f;
-  }
-  return 0;
+	return getclockreg (addr, ct);
 }
 
 static void REGPARAM2 clock_lput (uaecptr addr, uae_u32 value)
@@ -1252,6 +1277,13 @@ static void save_cia_prepare (void)
 	CIA_update_check ();
 	CIA_calctimers ();
 	compute_passed_time ();
+}
+
+void restore_cia_start (void)
+{
+	/* Fixes very old statefiles without keyboard state */
+	kbstate = 3;
+	kblostsynccnt = 0;
 }
 
 void restore_cia_finish (void)
@@ -1432,10 +1464,12 @@ uae_u8 *restore_keyboard (uae_u8 *src)
 	restore_u8 ();
 	restore_u8 ();
 	restore_u8 ();
-	if (!(v & 1))
-		kbstate = 3;
 	kbcode = restore_u8 ();
 	kblostsynccnt = restore_u16 ();
+	if (!(v & 1)) {
+		kbstate = 3;
+		kblostsynccnt = 0;
+	}
   return src;
 }
 

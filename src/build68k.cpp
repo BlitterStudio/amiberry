@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 #endif
     getnextch();
     while (nextch != EOF) {
-	int cpulevel, plevel, sduse;
+	int cpulevel, uncpulevel, plevel, sduse;
 	int i;
 
 	char patbits[16];
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
 	}
 	(void) patbits;
 
-	while (isspace(nextch) || nextch == ':') /* Get CPU and privilege level */
+	while (isspace(nextch) || nextch == ':') /* Get CPU level, unimplemented level, and privilege level */
 	    getnextch();
 
 	switch (nextch) {
@@ -166,6 +166,19 @@ int main(int argc, char **argv)
 	 case '5': cpulevel = 5; break;
 	 case '6': cpulevel = 6; break;
 	 case '7': cpulevel = 7; break;
+	 default: abort();
+	}
+	getnextch();
+
+	switch (nextch) {
+	 case '0': uncpulevel = 0; break;
+	 case '1': uncpulevel = 1; break;
+	 case '2': uncpulevel = 2; break;
+	 case '3': uncpulevel = 3; break;
+	 case '4': uncpulevel = 4; break;
+	 case '5': uncpulevel = 5; break;
+	 case '6': uncpulevel = 6; break;
+	 case '7': uncpulevel = 7; break;
 	 default: abort();
 	}
 	getnextch();
@@ -291,7 +304,7 @@ int main(int argc, char **argv)
 		if (j < 15)
 		    printf(",");
 	    }
-	    printf ("},0x%04X,%d,%d,{", bitmask, cpulevel, plevel);
+	    printf ("},0x%04X,%d,%d,%d,{", bitmask, cpulevel, uncpulevel, plevel);
 	    for(i = 0; i < 5; i++) {
 		printf("{%d,%d}%s", flaguse[i], flagset[i], i == 4 ? "" : ",");
 	    }

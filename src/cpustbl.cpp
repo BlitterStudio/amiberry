@@ -1802,7 +1802,11 @@ const struct cputbl CPUFUNC(op_smalltbl_0)[] = {
 { CPUFUNC(op_eff0_0), 61424 }, /* BFINS */
 { CPUFUNC(op_eff8_0), 61432 }, /* BFINS */
 { CPUFUNC(op_eff9_0), 61433 }, /* BFINS */
+{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP030 */
+{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP030 */
 { CPUFUNC(op_f010_0), 61456 }, /* MMUOP030 */
+{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP030 */
+{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP030 */
 { CPUFUNC(op_f028_0), 61480 }, /* MMUOP030 */
 { CPUFUNC(op_f030_0), 61488 }, /* MMUOP030 */
 { CPUFUNC(op_f038_0), 61496 }, /* MMUOP030 */
@@ -3672,7 +3676,11 @@ const struct cputbl CPUFUNC(op_smalltbl_1)[] = {
 { CPUFUNC(op_eff0_0), 61424 }, /* BFINS */
 { CPUFUNC(op_eff8_0), 61432 }, /* BFINS */
 { CPUFUNC(op_eff9_0), 61433 }, /* BFINS */
+{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP030 */
+{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP030 */
 { CPUFUNC(op_f010_0), 61456 }, /* MMUOP030 */
+{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP030 */
+{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP030 */
 { CPUFUNC(op_f028_0), 61480 }, /* MMUOP030 */
 { CPUFUNC(op_f030_0), 61488 }, /* MMUOP030 */
 { CPUFUNC(op_f038_0), 61496 }, /* MMUOP030 */
@@ -5538,7 +5546,11 @@ const struct cputbl CPUFUNC(op_smalltbl_2)[] = {
 { CPUFUNC(op_eff0_0), 61424 }, /* BFINS */
 { CPUFUNC(op_eff8_0), 61432 }, /* BFINS */
 { CPUFUNC(op_eff9_0), 61433 }, /* BFINS */
+{ CPUFUNC(op_f000_0), 61440 }, /* MMUOP030 */
+{ CPUFUNC(op_f008_0), 61448 }, /* MMUOP030 */
 { CPUFUNC(op_f010_0), 61456 }, /* MMUOP030 */
+{ CPUFUNC(op_f018_0), 61464 }, /* MMUOP030 */
+{ CPUFUNC(op_f020_0), 61472 }, /* MMUOP030 */
 { CPUFUNC(op_f028_0), 61480 }, /* MMUOP030 */
 { CPUFUNC(op_f030_0), 61488 }, /* MMUOP030 */
 { CPUFUNC(op_f038_0), 61496 }, /* MMUOP030 */
@@ -8133,6 +8145,7 @@ const struct cputbl CPUFUNC(op_smalltbl_4)[] = {
 { CPUFUNC(op_4a30_4), 18992 }, /* TST */
 { CPUFUNC(op_4a38_4), 19000 }, /* TST */
 { CPUFUNC(op_4a39_4), 19001 }, /* TST */
+{ CPUFUNC(op_4a3c_4), 19004 }, /* TST */
 { CPUFUNC(op_4a40_4), 19008 }, /* TST */
 { CPUFUNC(op_4a50_4), 19024 }, /* TST */
 { CPUFUNC(op_4a58_4), 19032 }, /* TST */
@@ -8141,6 +8154,7 @@ const struct cputbl CPUFUNC(op_smalltbl_4)[] = {
 { CPUFUNC(op_4a70_4), 19056 }, /* TST */
 { CPUFUNC(op_4a78_4), 19064 }, /* TST */
 { CPUFUNC(op_4a79_4), 19065 }, /* TST */
+{ CPUFUNC(op_4a7c_4), 19068 }, /* TST */
 { CPUFUNC(op_4a80_4), 19072 }, /* TST */
 { CPUFUNC(op_4a90_4), 19088 }, /* TST */
 { CPUFUNC(op_4a98_4), 19096 }, /* TST */
@@ -8149,6 +8163,7 @@ const struct cputbl CPUFUNC(op_smalltbl_4)[] = {
 { CPUFUNC(op_4ab0_4), 19120 }, /* TST */
 { CPUFUNC(op_4ab8_4), 19128 }, /* TST */
 { CPUFUNC(op_4ab9_4), 19129 }, /* TST */
+{ CPUFUNC(op_4abc_4), 19132 }, /* TST */
 { CPUFUNC(op_4ac0_4), 19136 }, /* TAS */
 { CPUFUNC(op_4ad0_4), 19152 }, /* TAS */
 { CPUFUNC(op_4ad8_4), 19160 }, /* TAS */
@@ -9680,6 +9695,7 @@ const struct cputbl CPUFUNC(op_smalltbl_5)[] = {
 { CPUFUNC(op_4a30_4), 18992 }, /* TST */
 { CPUFUNC(op_4a38_4), 19000 }, /* TST */
 { CPUFUNC(op_4a39_4), 19001 }, /* TST */
+{ CPUFUNC(op_4a3c_4), 19004 }, /* TST */
 { CPUFUNC(op_4a40_4), 19008 }, /* TST */
 { CPUFUNC(op_4a50_4), 19024 }, /* TST */
 { CPUFUNC(op_4a58_4), 19032 }, /* TST */
@@ -9688,6 +9704,7 @@ const struct cputbl CPUFUNC(op_smalltbl_5)[] = {
 { CPUFUNC(op_4a70_4), 19056 }, /* TST */
 { CPUFUNC(op_4a78_4), 19064 }, /* TST */
 { CPUFUNC(op_4a79_4), 19065 }, /* TST */
+{ CPUFUNC(op_4a7c_4), 19068 }, /* TST */
 { CPUFUNC(op_4a80_4), 19072 }, /* TST */
 { CPUFUNC(op_4a90_4), 19088 }, /* TST */
 { CPUFUNC(op_4a98_4), 19096 }, /* TST */
@@ -9696,6 +9713,7 @@ const struct cputbl CPUFUNC(op_smalltbl_5)[] = {
 { CPUFUNC(op_4ab0_4), 19120 }, /* TST */
 { CPUFUNC(op_4ab8_4), 19128 }, /* TST */
 { CPUFUNC(op_4ab9_4), 19129 }, /* TST */
+{ CPUFUNC(op_4abc_4), 19132 }, /* TST */
 { CPUFUNC(op_4ac0_4), 19136 }, /* TAS */
 { CPUFUNC(op_4ad0_4), 19152 }, /* TAS */
 { CPUFUNC(op_4ad8_4), 19160 }, /* TAS */
@@ -11226,6 +11244,7 @@ const struct cputbl CPUFUNC(op_smalltbl_11)[] = {
 { CPUFUNC(op_4a30_11), 18992 }, /* TST */
 { CPUFUNC(op_4a38_11), 19000 }, /* TST */
 { CPUFUNC(op_4a39_11), 19001 }, /* TST */
+{ CPUFUNC(op_4a3c_11), 19004 }, /* TST */
 { CPUFUNC(op_4a40_11), 19008 }, /* TST */
 { CPUFUNC(op_4a50_11), 19024 }, /* TST */
 { CPUFUNC(op_4a58_11), 19032 }, /* TST */
@@ -11234,6 +11253,7 @@ const struct cputbl CPUFUNC(op_smalltbl_11)[] = {
 { CPUFUNC(op_4a70_11), 19056 }, /* TST */
 { CPUFUNC(op_4a78_11), 19064 }, /* TST */
 { CPUFUNC(op_4a79_11), 19065 }, /* TST */
+{ CPUFUNC(op_4a7c_11), 19068 }, /* TST */
 { CPUFUNC(op_4a80_11), 19072 }, /* TST */
 { CPUFUNC(op_4a90_11), 19088 }, /* TST */
 { CPUFUNC(op_4a98_11), 19096 }, /* TST */
@@ -11242,6 +11262,7 @@ const struct cputbl CPUFUNC(op_smalltbl_11)[] = {
 { CPUFUNC(op_4ab0_11), 19120 }, /* TST */
 { CPUFUNC(op_4ab8_11), 19128 }, /* TST */
 { CPUFUNC(op_4ab9_11), 19129 }, /* TST */
+{ CPUFUNC(op_4abc_11), 19132 }, /* TST */
 { CPUFUNC(op_4ac0_11), 19136 }, /* TAS */
 { CPUFUNC(op_4ad0_11), 19152 }, /* TAS */
 { CPUFUNC(op_4ad8_11), 19160 }, /* TAS */

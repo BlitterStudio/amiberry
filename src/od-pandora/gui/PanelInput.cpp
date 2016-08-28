@@ -16,7 +16,6 @@
 #include "autoconf.h"
 #include "filesys.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 #include "keyboard.h"
 #include "inputdevice.h"
@@ -177,7 +176,7 @@ class InputActionListener : public gcn::ActionListener
                   changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK;
                   break;
         }
-        inputdevice_updateconfig(&changed_prefs);
+        inputdevice_updateconfig(NULL, &changed_prefs);
       }
       
       else if (actionEvent.getSource() == cboPort1) {
@@ -192,7 +191,7 @@ class InputActionListener : public gcn::ActionListener
                   changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
                   break;
         }
-        inputdevice_updateconfig(&changed_prefs);
+        inputdevice_updateconfig(NULL, &changed_prefs);
       }
       
       else if (actionEvent.getSource() == cboAutofire)

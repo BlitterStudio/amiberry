@@ -30,6 +30,7 @@
 #define IDTYPE_JOYSTICK 0
 #define IDTYPE_MOUSE 1
 #define IDTYPE_KEYBOARD 2
+#define IDTYPE_MAX 3
 
 struct inputdevice_functions {
     int (*init)(void);
@@ -52,7 +53,7 @@ extern struct inputdevice_functions inputdevicefunc_keyboard;
 struct uae_input_device_default_node
 {
 	int evt;
-	int flags;
+	uae_u64 flags;
 };
 
 struct uae_input_device_kbr_default {
@@ -69,7 +70,7 @@ struct inputevent {
 	int data;
 };
 
-#define MAX_INPUT_QUALIFIERS (8+4)
+#define MAX_INPUT_QUALIFIERS (8 + 5)
 
 /* event flags */
 #define ID_FLAG_AUTOFIRE 1
@@ -80,26 +81,24 @@ struct inputevent {
 
 #define ID_FLAG_GAMEPORTSCUSTOM_MASK (ID_FLAG_GAMEPORTSCUSTOM1 | ID_FLAG_GAMEPORTSCUSTOM2)
 #define ID_FLAG_AUTOFIRE_MASK (ID_FLAG_TOGGLE | ID_FLAG_INVERTTOGGLE | ID_FLAG_AUTOFIRE)
-#define ID_FLAG_CANRELEASE 0x2000
-#define ID_FLAG_TOGGLED 0x4000
-#define ID_FLAG_CUSTOMEVENT_TOGGLED 0x8000
-#define ID_FLAG_QUALIFIER1 0x00010000
-#define ID_FLAG_QUALIFIER2 0x00020000
-#define ID_FLAG_QUALIFIER3 0x00040000
-#define ID_FLAG_QUALIFIER4 0x00080000
-#define ID_FLAG_QUALIFIER5 0x00100000
-#define ID_FLAG_QUALIFIER6 0x00200000
-#define ID_FLAG_QUALIFIER7 0x00400000
-#define ID_FLAG_QUALIFIER8 0x00800000
-#define ID_FLAG_QUALIFIER_SPECIAL 0x01000000
-#define ID_FLAG_QUALIFIER_SHIFT 0x02000000
-#define ID_FLAG_QUALIFIER_CONTROL 0x04000000
-#define ID_FLAG_QUALIFIER_ALT 0x08000000
-#define ID_FLAG_QUALIFIER_MASK 0x0fff0000
 
-#define ID_FLAG_SAVE_MASK_CONFIG 0xff
-#define ID_FLAG_SAVE_MASK_QUALIFIERS ID_FLAG_QUALIFIER_MASK
-#define ID_FLAG_SAVE_MASK_FULL (ID_FLAG_SAVE_MASK_CONFIG | ID_FLAG_SAVE_MASK_QUALIFIERS)
+#define ID_FLAG_QUALIFIER1          0x000000100000000
+#define ID_FLAG_QUALIFIER1_R        0x000000200000000
+#define ID_FLAG_QUALIFIER2          0x000000400000000
+#define ID_FLAG_QUALIFIER3          0x000001000000000
+#define ID_FLAG_QUALIFIER4          0x000004000000000
+#define ID_FLAG_QUALIFIER5          0x000010000000000
+#define ID_FLAG_QUALIFIER6          0x000040000000000
+#define ID_FLAG_QUALIFIER7          0x000100000000000
+#define ID_FLAG_QUALIFIER8          0x000400000000000
+#define ID_FLAG_QUALIFIER_SPECIAL   0x001000000000000
+#define ID_FLAG_QUALIFIER_SPECIAL_R 0x002000000000000
+#define ID_FLAG_QUALIFIER_SHIFT     0x004000000000000
+#define ID_FLAG_QUALIFIER_CONTROL   0x010000000000000
+#define ID_FLAG_QUALIFIER_ALT       0x040000000000000
+#define ID_FLAG_QUALIFIER_WIN       0x100000000000000
+#define ID_FLAG_QUALIFIER_MASK      0xfffffff00000000
+#define ID_FLAG_QUALIFIER_MASK_R    0xaaaaaaa00000000
 
 #define IDEV_WIDGET_NONE 0
 #define IDEV_WIDGET_BUTTON 1
@@ -113,35 +112,49 @@ struct inputevent {
 #define IDEV_MAPPED_INVERTTOGGLE 8
 #define IDEV_MAPPED_GAMEPORTSCUSTOM1 16
 #define IDEV_MAPPED_GAMEPORTSCUSTOM2 32
-#define IDEV_MAPPED_QUALIFIER1 0x00010000
-#define IDEV_MAPPED_QUALIFIER2 0x00020000
-#define IDEV_MAPPED_QUALIFIER3 0x00040000
-#define IDEV_MAPPED_QUALIFIER4 0x00080000
-#define IDEV_MAPPED_QUALIFIER5 0x00100000
-#define IDEV_MAPPED_QUALIFIER6 0x00200000
-#define IDEV_MAPPED_QUALIFIER7 0x00400000
-#define IDEV_MAPPED_QUALIFIER8 0x00800000
-#define IDEV_MAPPED_QUALIFIER_SPECIAL 0x01000000
-#define IDEV_MAPPED_QUALIFIER_SHIFT 0x02000000
-#define IDEV_MAPPED_QUALIFIER_CONTROL 0x04000000
-#define IDEV_MAPPED_QUALIFIER_ALT 0x08000000
-#define IDEV_MAPPED_QUALIFIER_MASK 0x0fff0000
+#define IDEV_MAPPED_QUALIFIER1          0x000000100000000
+#define IDEV_MAPPED_QUALIFIER2          0x000000400000000
+#define IDEV_MAPPED_QUALIFIER3          0x000001000000000
+#define IDEV_MAPPED_QUALIFIER4          0x000004000000000
+#define IDEV_MAPPED_QUALIFIER5          0x000010000000000
+#define IDEV_MAPPED_QUALIFIER6          0x000040000000000
+#define IDEV_MAPPED_QUALIFIER7          0x000100000000000
+#define IDEV_MAPPED_QUALIFIER8          0x000400000000000
+#define IDEV_MAPPED_QUALIFIER_SPECIAL   0x001000000000000
+#define IDEV_MAPPED_QUALIFIER_SHIFT     0x004000000000000
+#define IDEV_MAPPED_QUALIFIER_CONTROL   0x010000000000000
+#define IDEV_MAPPED_QUALIFIER_ALT       0x040000000000000
+#define IDEV_MAPPED_QUALIFIER_WIN       0x100000000000000
+#define IDEV_MAPPED_QUALIFIER_MASK      0xfffffff00000000
 
 #define ID_BUTTON_OFFSET 0
 #define ID_BUTTON_TOTAL 32
 #define ID_AXIS_OFFSET 32
 #define ID_AXIS_TOTAL 32
 
-extern int inputdevice_set_mapping (int devnum, int num, const TCHAR *name, TCHAR *custom, int flags, int port, int sub);
-extern int inputdevice_get_mapping (int devnum, int num, int *pflags, int *port, TCHAR *name, TCHAR *custom, int sub);
+extern int inputdevice_iterate (int devnum, int num, TCHAR *name, int *af);
+extern bool inputdevice_set_gameports_mapping (struct uae_prefs *prefs, int devnum, int num, int evtnum, uae_u64 flags, int port);
+extern int inputdevice_set_mapping (int devnum, int num, const TCHAR *name, TCHAR *custom, uae_u64 flags, int port, int sub);
+extern int inputdevice_get_mapping (int devnum, int num, uae_u64 *pflags, int *port, TCHAR *name, TCHAR *custom, int sub);
 extern void inputdevice_copyconfig (const struct uae_prefs *src, struct uae_prefs *dst);
+extern void inputdevice_copy_single_config (struct uae_prefs *p, int src, int dst, int devnum, int selectedwidget);
+extern void inputdevice_swap_ports (struct uae_prefs *p, int devnum);
+extern void inputdevice_swap_compa_ports (struct uae_prefs *p, int portswap);
+extern void inputdevice_config_change (void);
 extern int inputdevice_config_change_test (void);
+extern int inputdevice_get_device_index (int devnum);
+extern TCHAR *inputdevice_get_device_name (int type, int devnum);
+extern TCHAR *inputdevice_get_device_name2 (int devnum);
+extern TCHAR *inputdevice_get_device_unique_name (int type, int devnum);
+extern int inputdevice_get_device_status (int devnum);
+extern void inputdevice_set_device_status (int devnum, int enabled);
+extern int inputdevice_get_device_total (int type);
 extern int inputdevice_get_widget_num (int devnum);
 extern int inputdevice_get_widget_type (int devnum, int num, TCHAR *name);
 
-extern int input_get_default_mouse (struct uae_input_device *uid, int num, int port, int af);
-extern int input_get_default_joystick (struct uae_input_device *uid, int num, int port, int af, int mode);
-extern int input_get_default_joystick_analog (struct uae_input_device *uid, int num, int port, int af);
+extern int input_get_default_mouse (struct uae_input_device *uid, int num, int port, int af, bool gp);
+extern int input_get_default_joystick (struct uae_input_device *uid, int num, int port, int af, int mode, bool gp);
+extern int input_get_default_joystick_analog (struct uae_input_device *uid, int num, int port, int af, bool gp);
 extern int input_get_default_keyboard (int num);
 
 #define DEFEVENT(A, B, C, D, E, F) INPUTEVENT_ ## A,
@@ -157,7 +170,7 @@ extern uae_u8 handle_parport_joystick (int port, uae_u8 pra, uae_u8 dra);
 extern uae_u8 handle_joystick_buttons (uae_u8, uae_u8);
 
 extern int inputdevice_is_tablet (void);
-extern void input_mousehack_status (int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset);
+extern int input_mousehack_status (int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset);
 extern void input_mousehack_mouseoffset (uaecptr pointerprefs);
 
 extern void setmousebuttonstateall (int mouse, uae_u32 buttonbits, uae_u32 buttonmask);
@@ -169,16 +182,21 @@ extern int getjoystickstate (int mouse);
 void setmousestate (int mouse, int axis, int data, int isabs);
 
 extern int getmousestate (int mouse);
-extern void inputdevice_updateconfig (struct uae_prefs *prefs);
-extern void inputdevice_updateconfig_internal (struct uae_prefs *prefs);
+extern void inputdevice_updateconfig (const struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
+extern void inputdevice_updateconfig_internal (const struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
 
 extern int inputdevice_translatekeycode (int keyboard, int scancode, int state);
 extern void inputdevice_checkqualifierkeycode (int keyboard, int scancode, int state);
 extern void inputdevice_setkeytranslation (struct uae_input_device_kbr_default **trans, int **kbmaps);
 extern void inputdevice_do_keyboard (int code, int state);
 extern int inputdevice_iskeymapped (int keyboard, int scancode);
+extern int inputdevice_get_compatibility_input (struct uae_prefs*, int, int*, int**, int**);
 extern struct inputevent *inputdevice_get_eventinfo (int evt);
 extern bool inputdevice_get_eventname (const struct inputevent *ie, TCHAR *out);
+extern void inputdevice_compa_prepare_custom (struct uae_prefs *prefs, int index, int mode);
+extern void inputdevice_compa_clear (struct uae_prefs *prefs, int index);
+extern int intputdevice_compa_get_eventtype (int evt, int **axistable);
+extern void inputdevice_sparecopy (struct uae_input_device *uid, int num, int sub);
 
 extern uae_u16 potgo_value;
 extern uae_u16 POTGOR (void);
@@ -213,7 +231,9 @@ extern void inputdevice_handle_inputcode (void);
 
 extern void inputdevice_tablet_strobe (void);
 
-extern int input_getqualifiers (void);
+extern uae_u64 input_getqualifiers (void);
+
+extern void setsystime (void);
 
 extern int inputdevice_get_device_total (int type);
 extern TCHAR *inputdevice_get_device_name (int type, int devnum);
@@ -245,3 +265,5 @@ extern TCHAR *inputdevice_get_device_name (int type, int devnum);
 extern int jsem_isjoy (int port, const struct uae_prefs *p);
 extern int jsem_ismouse (int port, const struct uae_prefs *p);
 extern int jsem_iskbdjoy (int port, const struct uae_prefs *p);
+
+extern int inputdevice_uaelib (const TCHAR *, const TCHAR *);

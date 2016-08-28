@@ -17,7 +17,6 @@
 #include "filesys.h"
 #include "blkdev.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 

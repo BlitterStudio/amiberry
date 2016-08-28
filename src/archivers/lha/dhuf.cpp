@@ -295,7 +295,7 @@ decode_p_dyn(void)
 	int             c;
 	short           buf, cnt;
 
-	while (count > nextcount) {
+	while (lhcount > nextcount) {
 		make_new_node(nextcount / 64);
 		if ((nextcount += 64) >= nn)
 			nextcount = 0xffffffff;

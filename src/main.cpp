@@ -16,8 +16,8 @@
 #include "audio.h"
 #include "sd-pandora/sound.h"
 #include "memory.h"
-#include "newcpu.h"
 #include "custom.h"
+#include "newcpu.h"
 #include "disk.h"
 #include "debug.h"
 #include "xwin.h"
@@ -142,6 +142,9 @@ void fixup_cpu(struct uae_prefs *p)
   	    p->fpu_model = 68060;
     	break;
   }
+
+	if (p->immediate_blits && p->waiting_blits)
+		p->waiting_blits = 0;
 }
 
 
@@ -272,12 +275,23 @@ void fixup_prefs (struct uae_prefs *p)
 #if !defined (JIT)
 	p->cachesize = 0;
 #endif
+#ifdef CPU_68000_ONLY
+	p->cpu_model = 68000;
+	p->fpu_model = 0;
+#endif
+#ifndef AGA
+	p->chipset_mask &= ~CSMASK_AGA;
+#endif
+#ifndef AUTOCONFIG
+	p->z3fastmem_size = 0;
+	p->fastmem_size = 0;
+	p->rtgmem_size = 0;
+#endif
 #if !defined (BSDSOCKET)
 	p->socket_emu = 0;
 #endif
 
 	blkdev_fix_prefs (p);
-
   target_fixup_options (p);
 }
 
@@ -286,24 +300,26 @@ static int restart_program;
 static TCHAR restart_config[MAX_DPATH];
 static int default_config;
 
-void uae_reset (int hardreset)
+void uae_reset (int hardreset, int keyboardreset)
 {
   if (quit_program == 0) {
-	  quit_program = -2;
+		quit_program = -UAE_RESET;
+		if (keyboardreset)
+			quit_program = -UAE_RESET_KEYBOARD;
 	  if (hardreset)
-	    quit_program = -3;
+			quit_program = -UAE_RESET_HARD;
   }
 }
 
 void uae_quit (void)
 {
-  if (quit_program != -1)
-  	quit_program = -1;
+  if (quit_program != -UAE_QUIT)
+  	quit_program = -UAE_QUIT;
   target_quit ();
 }
 
 /* 0 = normal, 1 = nogui, -1 = disable nogui */
-void uae_restart (int opengui, TCHAR *cfgfile)
+void uae_restart (int opengui, const TCHAR *cfgfile)
 {
   uae_quit ();
   restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
@@ -311,6 +327,7 @@ void uae_restart (int opengui, TCHAR *cfgfile)
 	default_config = 0;
   if (cfgfile)
   	_tcscpy (restart_config, cfgfile);
+	target_restart ();
 }
 
 static void parse_cmdline_2 (int argc, TCHAR **argv)
@@ -488,12 +505,12 @@ void reset_all_systems (void)
  */
 void do_start_program (void)
 {
-  if (quit_program == -1)
+	if (quit_program == -UAE_QUIT)
   	return;
   /* Do a reset on startup. Whether this is elegant is debatable. */
-  inputdevice_updateconfig (&currprefs);
+	inputdevice_updateconfig (&changed_prefs, &currprefs);
   if (quit_program >= 0)
-	  quit_program = 2;
+	  quit_program = UAE_RESET;
 	m68k_go (1);
 }
 
@@ -506,6 +523,7 @@ void do_leave_program (void)
   inputdevice_close ();
   DISK_free ();
   close_sound ();
+	dump_counts ();
 #ifdef CD32
 	akiko_free ();
 #endif
@@ -539,20 +557,39 @@ void leave_program (void)
     do_leave_program ();
 }
 
+void virtualdevice_init (void)
+{
+#ifdef AUTOCONFIG
+	rtarea_setup ();
+#endif
+#ifdef FILESYS
+	rtarea_init ();
+	uaeres_install ();
+	hardfile_install ();
+#endif
+#ifdef AUTOCONFIG
+	expansion_init ();
+	emulib_install ();
+#endif
+#ifdef FILESYS
+	filesys_install ();
+#endif
+#if defined (BSDSOCKET)
+	bsdlib_install ();
+#endif
+}
+
 static int real_main2 (int argc, TCHAR **argv)
 {
-#ifdef RASPBERRY
   printf("Uae4arm v0.5 for Raspberry Pi by Chips\n");
-  SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
-#else
-#ifdef PANDORA
+#ifdef PANDORA_SPECIFIC
   SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else 
 #ifdef USE_SDL
-  SDL_Init (SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE);
+  SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
 #endif
 #endif
-#endif
+
  
   keyboard_settrans();
 
@@ -608,36 +645,26 @@ static int real_main2 (int argc, TCHAR **argv)
 
 
 
+	memset (&gui_data, 0, sizeof gui_data);
+	gui_data.cd = -1;
+	gui_data.hd = -1;
+
+#ifdef PICASSO96
+	picasso_reset ();
+#endif
+
   fixup_prefs (&currprefs);
   changed_prefs = currprefs;
 	target_run ();
   /* force sound settings change */
   currprefs.produce_sound = 0;
 
-#ifdef AUTOCONFIG
-  rtarea_setup ();
-#endif
-#ifdef FILESYS
-  rtarea_init ();
-  uaeres_install ();
-  hardfile_install();
-#endif
   keybuf_init (); /* Must come after init_joystick */
 
-#ifdef AUTOCONFIG
-  expansion_init ();
-#endif
-#ifdef FILESYS
-  filesys_install (); 
-#endif
-  memory_init ();
+	memory_hardreset (2);
   memory_reset ();
 
 #ifdef AUTOCONFIG
-#if defined (BSDSOCKET)
-	bsdlib_install ();
-#endif
-  emulib_install ();
   native2amiga_install ();
 #endif
 
@@ -649,7 +676,7 @@ static int real_main2 (int argc, TCHAR **argv)
 
   gui_update ();
 
-  if (graphics_init ()) {
+  if (graphics_init (true)) {
 
     if(!init_audio ()) {
   	  if (sound_available && currprefs.produce_sound > 1) {
@@ -685,4 +712,9 @@ int main (int argc, TCHAR **argv)
     real_main (argc, argv);
     return 0;
 }
+#endif
+
+#ifdef SINGLEFILE
+uae_u8 singlefile_config[50000] = { "_CONFIG_STARTS_HERE" };
+uae_u8 singlefile_data[1500000] = { "_DATA_STARTS_HERE" };
 #endif

@@ -614,10 +614,10 @@ static void copyProtoent (TrapContext *context, SB, const struct protoent *p)
 	    size += strlen (p->p_aliases[numaliases++]) + 5;
 
   if (sb->protoent) {
-	  uae_FreeMem (context, sb->protoent, sb->protoentsize);
+	  uae_FreeMem (context, sb->protoent, sb->protoentsize, sb->sysbase);
   }
 
-  sb->protoent = uae_AllocMem (context, size, 0);
+  sb->protoent = uae_AllocMem (context, size, 0, sb->sysbase);
 
   if (!sb->protoent) {
 		write_log ("BSDSOCK: WARNING - copyProtoent() ran out of Amiga memory (couldn't allocate %d bytes)\n", size);
@@ -1359,10 +1359,10 @@ void host_getservbynameport (TrapContext *context, SB, uae_u32 name, uae_u32 pro
 	    size += strlen (s->s_aliases[numaliases++]) + 5;
 
   if (sb->servent) {
-		uae_FreeMem (context, sb->servent, sb->serventsize);
+		uae_FreeMem (context, sb->servent, sb->serventsize, sb->sysbase);
   }
 
-  sb->servent = uae_AllocMem (context, size, 0);
+  sb->servent = uae_AllocMem (context, size, 0, sb->sysbase);
 
   if (!sb->servent) {
 		write_log ("BSDSOCK: WARNING - getservby%s() ran out of Amiga memory (couldn't allocate %d bytes)\n",type ? "port" : "name", size);
@@ -1408,7 +1408,7 @@ int host_sbinit (TrapContext *context, SB)
   }
 
   /* Alloc hostent buffer */
-  sb->hostent = uae_AllocMem (context, 1024, 0);
+  sb->hostent = uae_AllocMem (context, 1024, 0, sb->sysbase);
   sb->hostentsize = 1024;
 
   /* @@@ The thread should be PTHREAD_CREATE_DETACHED */

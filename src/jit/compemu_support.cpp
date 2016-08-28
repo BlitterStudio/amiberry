@@ -606,20 +606,20 @@ static HardBlockAllocator<blockinfo> BlockInfoAllocator;
 static HardBlockAllocator<checksum_info> ChecksumInfoAllocator;
 #endif
 
-static inline checksum_info *alloc_checksum_info(void)
+STATIC_INLINE checksum_info *alloc_checksum_info(void)
 {
 	checksum_info *csi = ChecksumInfoAllocator.acquire();
 	csi->next = NULL;
 	return csi;
 }
 
-static inline void free_checksum_info(checksum_info *csi)
+STATIC_INLINE void free_checksum_info(checksum_info *csi)
 {
 	csi->next = NULL;
 	ChecksumInfoAllocator.release(csi);
 }
 
-static inline void free_checksum_info_chain(checksum_info *csi)
+STATIC_INLINE void free_checksum_info_chain(checksum_info *csi)
 {
 	while (csi != NULL) {
 		checksum_info *csi2 = csi->next;
@@ -628,7 +628,7 @@ static inline void free_checksum_info_chain(checksum_info *csi)
 	}
 }
 
-static inline blockinfo *alloc_blockinfo(void)
+STATIC_INLINE blockinfo *alloc_blockinfo(void)
 {
 	blockinfo *bi = BlockInfoAllocator.acquire();
 #if USE_CHECKSUM_INFO
@@ -637,7 +637,7 @@ static inline blockinfo *alloc_blockinfo(void)
 	return bi;
 }
 
-static inline void free_blockinfo(blockinfo *bi)
+STATIC_INLINE void free_blockinfo(blockinfo *bi)
 {
 #if USE_CHECKSUM_INFO
 	free_checksum_info_chain(bi->csi);
@@ -736,7 +736,7 @@ static uae_u32 data_buffers_used = 0;
 
 static uae_s32 data_natmem_pos = 0;
 
-static inline void compemu_raw_branch(IMM d);
+STATIC_INLINE void compemu_raw_branch(IMM d);
 
 STATIC_INLINE void data_check_end(uae_s32 n, uae_s32 codesize)
 {
@@ -2746,7 +2746,7 @@ void compemu_reset(void)
 }
 
 // OPCODE is in big endian format, use cft_map() beforehand, if needed.
-static inline void reset_compop(int opcode)
+STATIC_INLINE void reset_compop(int opcode)
 {
 	compfunctbl[opcode] = NULL;
 	nfcompfunctbl[opcode] = NULL;
@@ -2771,7 +2771,7 @@ void build_comp(void)
   for (opcode = 0; opcode < 65536; opcode++) {
 		reset_compop(opcode);
 #ifdef NOFLAGS_SUPPORT
-		nfcpufunctbl[opcode] = op_illg;
+		nfcpufunctbl[opcode] = _op_illg;
 #endif
 	  prop[opcode].use_flags = 0x1f;
 	  prop[opcode].set_flags = 0x1f;
@@ -2920,7 +2920,7 @@ static void flush_icache_hard(uaecptr ptr, int n)
 #endif
 
   current_compile_p = compiled_code;
-  set_special(regs, 0); /* To get out of compiled code */
+  set_special(0); /* To get out of compiled code */
 }
 
 
@@ -2970,7 +2970,7 @@ STATIC_INLINE void flush_icache_lazy(uaecptr ptr, int n)
 
 int failure;
 
-static inline unsigned int get_opcode_cft_map(unsigned int f)
+STATIC_INLINE unsigned int get_opcode_cft_map(unsigned int f)
 {
 	return ((f >> 8) & 255) | ((f & 255) << 8);
 }

@@ -48,11 +48,11 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "memory.h"
 #include "zfile.h"
 #include "autoconf.h"
-#include "memory.h"
-#include "newcpu.h"
 #include "custom.h"
+#include "newcpu.h"
 #include "savestate.h"
 #include "uae.h"
 #include "gui.h"
@@ -77,6 +77,14 @@ static void state_incompatible_warn(void)
 
 #ifdef BSDSOCKET
 	if (currprefs.socket_emu)
+		dowarn = 1;
+#endif
+#ifdef SCSIEMU
+	if (currprefs.scsi)
+		dowarn = 1;
+#endif
+#ifdef CATWEASEL
+	if (currprefs.catweasel)
 		dowarn = 1;
 #endif
 #ifdef FILESYS
@@ -126,10 +134,13 @@ void save_u8_func (uae_u8 **dstp, uae_u8 v)
 void save_string_func (uae_u8 **dstp, const TCHAR *from)
 {
   uae_u8 *dst = *dstp;
-  while(from && *from)
-  	*dst++ = *from++;
+	char *s, *s2;
+	s2 = s = uutf8 (from);
+	while (s && *s)
+		*dst++ = *s++;
   *dst++ = 0;
   *dstp = dst;
+	xfree (s2);
 }
 void save_path_func (uae_u8 **dstp, const TCHAR *from, int type)
 {
@@ -175,6 +186,7 @@ TCHAR *restore_string_func (uae_u8 **dstp)
   uae_u8 v;
   uae_u8 *dst = *dstp;
   char *top, *to;
+	TCHAR *s;
   len = strlen((char *)dst) + 1;
   top = to = xmalloc (char, len);
   do {
@@ -182,7 +194,9 @@ TCHAR *restore_string_func (uae_u8 **dstp)
   	*top++ = v;
   } while(v);
   *dstp = dst;
-  return to; 
+	s = utf8u (to);
+	xfree (to);
+	return s;
 }
 TCHAR *restore_path_func (uae_u8 **dstp, int type)
 {
@@ -198,6 +212,7 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, TCHAR *name,
   uae_u32 flags;
   size_t pos;
   size_t chunklen, len2;
+	char *s;
 
   if (!chunk)
   	return;
@@ -207,7 +222,9 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, TCHAR *name,
   	return;
   }
   /* chunk name */
-  zfile_fwrite (name, 1, 4, f);
+	s = ua (name);
+	zfile_fwrite (s, 1, 4, f);
+	xfree (s);
   pos = zfile_ftell (f);
   /* chunk size */
   dst = &tmp[0];
@@ -261,8 +278,9 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, size_t *len, size_t 
 
   *totallen = 0;
   /* chunk name */
-  zfile_fread (name, 1, 4, f);
-  name[4] = 0;
+	zfile_fread (tmp, 1, 4, f);
+	tmp[4] = 0;
+	au_copy (name, 5, (char*)tmp);
   /* chunk size */
   zfile_fread (tmp, 1, 4, f);
   src = tmp;
@@ -298,7 +316,9 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, size_t *len, size_t 
 		&& _tcscmp (name, _T("ZCRM")) != 0
   	&& _tcscmp (name, _T("PRAM")) != 0
   	&& _tcscmp (name, _T("A3K1")) != 0
-  	&& _tcscmp (name, _T("A3K2")) != 0)
+		&& _tcscmp (name, _T("A3K2")) != 0
+		&& _tcscmp (name, _T("BORO")) != 0
+	)
   {
   	/* extra bytes at the end needed to handle old statefiles that now have new fields */
 	  mem = xcalloc (uae_u8, *totallen + 100); 
@@ -390,6 +410,7 @@ void restore_state (const TCHAR *filename)
   savestate_file = f;
   restore_header (chunk);
   xfree (chunk);
+	restore_cia_start ();
   changed_prefs.bogomem_size = 0;
   changed_prefs.chipmem_size = 0;
   changed_prefs.fastmem_size = 0;
@@ -546,6 +567,7 @@ void savestate_restore_finish (void)
   restore_cpu_finish();
 	restore_audio_finish ();
 	restore_disk_finish ();
+	restore_akiko_finish ();
 #ifdef PICASSO96
 	restore_p96_finish ();
 #endif
@@ -729,6 +751,7 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	save_chunk (f, dst, len, _T("CD32"), 0);
 	xfree (dst);
 #endif
+
 #ifdef FILESYS
   dst = save_filesys_common (&len);
   if (dst) {
@@ -774,13 +797,6 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 	f = zfile_fopen (filename, _T("w+b"), 0);
   if (!f)
   	return 0;
-  if (savestate_specialdump) {
-    size_t pos;
-    pos = zfile_ftell(f);
-    save_rams (f, -1);
-    zfile_fclose (f);
-    return 1;
-  }
 	int v = save_state_internal (f, description, comp, true);
 	if (v)
     write_log (_T("Save of '%s' complete\n"), filename);

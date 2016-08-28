@@ -16,7 +16,6 @@
 #include "autoconf.h"
 #include "filesys.h"
 #include "gui.h"
-#include "target.h"
 #include "gui_handling.h"
 
 
@@ -249,6 +248,7 @@ static void CreateFilesysHardfileLoop(void)
     // Now we let the Gui object draw itself.
     uae_gui->draw();
     // Finally we update the screen.
+    wait_for_vsync();
     SDL_Flip(gui_screen);
   }  
 }
@@ -301,8 +301,8 @@ bool CreateFilesysHardfile(void)
     
     uci = add_filesys_config(&changed_prefs, -1, (char *) txtDevice->getText().c_str(), 
       0, (char *) txtPath->getText().c_str(), 0, 
-      32, (size / 1024) + 1, 2, 512, 
-      bp, 0, 0, 0);
+      0, 32, (size / 1024) + 1, 2, 512, 
+      bp, 0, 0, 0, 0, 0, 0);
     if (uci)
     	hardfile_do_disk_change (uci, 1);
   }

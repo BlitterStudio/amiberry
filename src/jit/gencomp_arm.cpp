@@ -270,7 +270,7 @@ finish_braces(void)
 		close_brace();
 }
 
-static inline void gen_update_next_handler(void) 
+static __inline__ void gen_update_next_handler(void) 
 {
 	return; /* Can anything clever be done here? */
 }
@@ -3021,11 +3021,11 @@ generate_one_opcode(int rp, int noflags)
 			if (noflags) {
 				fprintf(stblfile,	"{ op_%lx_%d_comp_nf, 0x%08x, %ld }, /* %s */\n",	opcode, postfix, flags, opcode, name);
 				fprintf(headerfile, "extern compop_func op_%lx_%d_comp_nf;\n", opcode, postfix);
-				printf("unsigned long REGPARAM2 op_%lx_%d_comp_nf(uae_u32 opcode) /* %s */\n{\n",	opcode, postfix, name);
+				printf("uae_u32 REGPARAM2 op_%lx_%d_comp_nf(uae_u32 opcode) /* %s */\n{\n",	opcode, postfix, name);
 			} else {
 				fprintf(stblfile,	"{ op_%lx_%d_comp_ff, 0x%08x, %ld }, /* %s */\n",	opcode, postfix, flags, opcode, name);
 				fprintf(headerfile, "extern compop_func op_%lx_%d_comp_ff;\n",	opcode, postfix);
-				printf("unsigned long REGPARAM2 op_%lx_%d_comp_ff(uae_u32 opcode) /* %s */\n{\n",	opcode, postfix, name);
+				printf("uae_u32 REGPARAM2 op_%lx_%d_comp_ff(uae_u32 opcode) /* %s */\n{\n",	opcode, postfix, name);
 			}
 			com_flush();
 		}

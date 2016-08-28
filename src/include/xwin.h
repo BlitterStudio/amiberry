@@ -15,11 +15,12 @@ typedef int (*allocfunc_type)(int, int, int, xcolnr *);
 extern xcolnr xcolors[4096];
 
 extern int graphics_setup (void);
-extern int graphics_init (void);
+extern int graphics_init (bool);
 extern void graphics_leave (void);
 extern void handle_events (void);
 extern int handle_msgpump (void);
 extern void setup_brkhandler (void);
+extern bool vsync_switchmode (int);
 STATIC_INLINE int isvsync_chipset (void)
 {
 	if (picasso_on)
@@ -34,10 +35,11 @@ STATIC_INLINE int isvsync_rtg (void)
 	return 1;
 }
 
-extern void flush_screen ();
+extern void flush_screen (void);
 
 extern int lockscr (void);
 extern void unlockscr (void);
+extern bool target_graphics_buffer_update (void);
 
 extern void screenshot (int);
 

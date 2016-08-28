@@ -4,9 +4,8 @@
 #define SCSI_UNIT_DISABLED -1
 #define SCSI_UNIT_DEFAULT 0
 #define SCSI_UNIT_IMAGE 1
-//#define SCSI_UNIT_IOCTL 2
-//#define SCSI_UNIT_SPTI 3
-//#define SCSI_UNIT_ASPI 4
+#define SCSI_UNIT_IOCTL 2
+#define SCSI_UNIT_SPTI 3
 
 //#define device_debug write_log
 #define device_debug
@@ -45,6 +44,7 @@ struct cd_toc_head
 {
 	int first_track, first_track_offset;
 	int last_track, last_track_offset;
+	int firstaddress; // LSN
 	int lastaddress; // LSN
 	int tracks;
 	int points;
@@ -103,7 +103,7 @@ typedef int (*open_bus_func)(int flags);
 typedef void (*close_bus_func)(void);
 typedef int (*open_device_func)(int, const TCHAR*, int);
 typedef void (*close_device_func)(int);
-typedef struct device_info* (*info_device_func)(int, struct device_info*, int);
+typedef struct device_info* (*info_device_func)(int, struct device_info*, int, int);
 typedef uae_u8* (*execscsicmd_out_func)(int, uae_u8*, int);
 typedef uae_u8* (*execscsicmd_in_func)(int, uae_u8*, int, int*);
 typedef int (*execscsicmd_direct_func)(int, struct amigascsi*);
@@ -152,8 +152,6 @@ struct device_functions {
 
 };
 
-//extern struct device_functions *device_func[MAX_TOTAL_SCSI_DEVICES];
-
 extern int device_func_init(int flags);
 extern void device_func_reset(void);
 extern int sys_command_open (int unitnum);
@@ -175,6 +173,10 @@ extern int sys_command_write (int unitnum, uae_u8 *data, int block, int size);
 extern int sys_command_scsi_direct_native (int unitnum, struct amigascsi *as);
 extern int sys_command_scsi_direct (int unitnum, uaecptr request);
 extern int sys_command_ismedia (int unitnum, int quick);
+extern struct device_info *sys_command_info_session (int unitnum, struct device_info *di, int, int);
+
+extern void scsi_atapi_fixup_pre (uae_u8 *scsi_cmd, int *len, uae_u8 **data, int *datalen, int *parm);
+extern void scsi_atapi_fixup_post (uae_u8 *scsi_cmd, int len, uae_u8 *olddata, uae_u8 *data, int *datalen, int parm);
 
 extern void scsi_log_before (uae_u8 *cdb, int cdblen, uae_u8 *data, int datalen);
 extern void scsi_log_after (uae_u8 *data, int datalen, uae_u8 *sense, int senselen);
@@ -201,5 +203,3 @@ extern void blkdev_cd_change (int unitnum, const TCHAR *name);
 
 extern void blkdev_entergui (void);
 extern void blkdev_exitgui (void);
-
-bool filesys_do_disk_change (int, bool);
