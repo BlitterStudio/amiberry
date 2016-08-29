@@ -478,6 +478,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 #ifdef RASPBERRY
   cfgfile_write (f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
   cfgfile_write (f, _T("gfx_fullscreen_ratio"), _T("%d"), p->gfx_fullscreen_ratio);
+  cfgfile_write (f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
+  cfgfile_write (f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
+  cfgfile_write (f, _T("kbd_led_cap"), _T("%d"), p->kbd_led_cap);
 #endif
 
   cfgfile_write_bool (f, _T("immediate_blits"), p->immediate_blits);
@@ -878,6 +881,12 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
     if (cfgfile_intval (option, value, "gfx_fullscreen_ratio", &p->gfx_fullscreen_ratio, 1))
 	    return 1;   
+   if (cfgfile_intval (option, value, "kbd_led_num", &p->kbd_led_num, 1))
+            return 1;
+    if (cfgfile_intval (option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
+            return 1;
+    if (cfgfile_intval (option, value, "kbd_led_cap", &p->kbd_led_cap, 1))
+            return 1;
 #endif
 
 	if (cfgfile_string (option, value, _T("config_info"), p->info, sizeof p->info / sizeof (TCHAR))
@@ -2573,6 +2582,9 @@ void default_prefs (struct uae_prefs *p, int type)
 #ifdef RASPBERRY
   p->gfx_correct_aspect = 1;
   p->gfx_fullscreen_ratio = 100;
+  p->kbd_led_num = -1; // No status on numlock
+  p->kbd_led_scr = -1; // No status on scrollock
+  p->kbd_led_cap = -1; // No status on capslock
 #endif
   p->immediate_blits = 0;
 	p->waiting_blits = 0;

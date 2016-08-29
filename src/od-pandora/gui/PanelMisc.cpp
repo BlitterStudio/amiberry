@@ -29,6 +29,42 @@ static gcn::Slider* sldPandoraSpeed;
 #endif
 static gcn::UaeCheckBox* chkBSDSocket;
 
+#ifdef RASPBERRY
+class StringListModel : public gcn::ListModel
+{
+  private:
+    std::vector<std::string> values;
+  public:
+    StringListModel(const char *entries[], int count)
+    {
+      for(int i=0; i<count; ++i)
+      values.push_back(entries[i]);
+    }
+
+    int getNumberOfElements()
+    {
+      return values.size();
+    }
+
+    std::string getElementAt(int i)
+    {
+      if(i < 0 || i >= values.size())
+        return "---";
+      return values[i];
+    }
+};
+
+
+static gcn::Label *lblNumLock;
+static gcn::UaeDropDown* cboKBDLed_num;
+static gcn::Label *lblScrLock;
+static gcn::UaeDropDown* cboKBDLed_scr;
+static gcn::Label *lblCapLock;
+static gcn::UaeDropDown* cboKBDLed_cap;
+
+const char *listValues[] = { "", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD" };
+StringListModel KBDLedList(listValues, 8);
+#endif
 
 class MiscActionListener : public gcn::ActionListener
 {
@@ -59,6 +95,30 @@ class MiscActionListener : public gcn::ActionListener
           RefreshPanelMisc();
         }
       }
+#endif
+
+#ifdef RASPBERRY
+     else if (actionEvent.getSource() == cboKBDLed_num)
+     {
+       if (cboKBDLed_num->getSelected() == 0) changed_prefs.kbd_led_num = -1; // Nothing
+       if (cboKBDLed_num->getSelected() == 7) changed_prefs.kbd_led_num = 5;  // HD
+       if (cboKBDLed_num->getSelected() == 6) changed_prefs.kbd_led_num = -2; // Any DFs
+       if (cboKBDLed_num->getSelected() >= 1 && cboKBDLed_num->getSelected() <= 4) changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1; // Specific DF#
+     }
+     else if (actionEvent.getSource() == cboKBDLed_cap)
+     {
+       if (cboKBDLed_cap->getSelected() == 0) changed_prefs.kbd_led_cap = -1;
+       if (cboKBDLed_cap->getSelected() == 7) changed_prefs.kbd_led_cap = 5;
+       if (cboKBDLed_cap->getSelected() == 6) changed_prefs.kbd_led_cap = -2;
+       if (cboKBDLed_cap->getSelected() >= 1 && cboKBDLed_cap->getSelected() <= 4) changed_prefs.kbd_led_cap = cboKBDLed_cap->getSelected() - 1;
+     }
+     else if (actionEvent.getSource() == cboKBDLed_scr)
+     {
+       if (cboKBDLed_scr->getSelected() == 0) changed_prefs.kbd_led_scr = -1;
+       if (cboKBDLed_scr->getSelected() == 7) changed_prefs.kbd_led_scr = 5;
+       if (cboKBDLed_scr->getSelected() == 6) changed_prefs.kbd_led_scr = -2;
+       if (cboKBDLed_scr->getSelected() >= 1 && cboKBDLed_scr->getSelected() <= 4) changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected() - 1;
+     }
 #endif
     }
 };
@@ -114,8 +174,48 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 #endif
   category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
   posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
-  
-  RefreshPanelMisc();
+
+#ifdef RASPBERRY
+  lblNumLock = new gcn::Label("NumLock LED");
+  lblNumLock->setSize(150, LABEL_HEIGHT);
+  lblNumLock->setAlignment(gcn::Graphics::LEFT);
+  cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
+  cboKBDLed_num->setSize(150, DROPDOWN_HEIGHT);
+  cboKBDLed_num->setBaseColor(gui_baseCol);
+  cboKBDLed_num->setId("numlock");
+  cboKBDLed_num->addActionListener(miscActionListener);
+
+  lblCapLock = new gcn::Label("CapsLock LED");
+  lblCapLock->setSize(150, LABEL_HEIGHT);
+  lblCapLock->setAlignment(gcn::Graphics::LEFT);
+  cboKBDLed_cap = new gcn::UaeDropDown(&KBDLedList);
+  cboKBDLed_cap->setSize(150, DROPDOWN_HEIGHT);
+  cboKBDLed_cap->setBaseColor(gui_baseCol);
+  cboKBDLed_cap->setId("capslock");
+  cboKBDLed_cap->addActionListener(miscActionListener);
+
+  lblScrLock = new gcn::Label("ScrollLock LED");
+  lblScrLock->setSize(150, LABEL_HEIGHT);
+  lblScrLock->setAlignment(gcn::Graphics::LEFT);
+  cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
+  cboKBDLed_scr->setSize(150, DROPDOWN_HEIGHT);
+  cboKBDLed_scr->setBaseColor(gui_baseCol);
+  cboKBDLed_scr->setId("scrolllock");
+  cboKBDLed_scr->addActionListener(miscActionListener);
+
+  category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
+//  category.panel->add(lblCapLock, lblNumLock->getX() + lblNumLock->getWidth() + DISTANCE_NEXT_X, posY);
+  category.panel->add(lblScrLock, lblCapLock->getX() + lblCapLock->getWidth() + DISTANCE_NEXT_X, posY);
+  posY += lblNumLock->getHeight() + 4;
+
+  category.panel->add(cboKBDLed_num, DISTANCE_BORDER, posY);
+//  category.panel->add(cboKBDLed_cap, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
+  category.panel->add(cboKBDLed_scr, cboKBDLed_cap->getX() + cboKBDLed_cap->getWidth() + DISTANCE_NEXT_X, posY);
+
+  posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
+#endif  
+ 
+RefreshPanelMisc();
 }
 
 
@@ -130,6 +230,15 @@ void ExitPanelMisc(void)
   delete lblPandoraSpeedInfo;
 #endif
   delete chkBSDSocket;
+
+#ifdef RASPBERRY
+  delete lblCapLock;
+  delete lblScrLock;
+  delete lblNumLock;
+  delete cboKBDLed_num;
+  delete cboKBDLed_cap;
+  delete cboKBDLed_scr;
+#endif
   delete miscActionListener;
 }
 
@@ -148,4 +257,18 @@ void RefreshPanelMisc(void)
 #endif
   
   chkBSDSocket->setSelected(changed_prefs.socket_emu);
+#ifdef RASPBERRY
+  if (changed_prefs.kbd_led_num == -1) cboKBDLed_num->setSelected(0);
+  if (changed_prefs.kbd_led_num == -2) cboKBDLed_num->setSelected(6);
+  if (changed_prefs.kbd_led_num == 5) cboKBDLed_num->setSelected(7);
+  if (changed_prefs.kbd_led_num >= 1 && changed_prefs.kbd_led_num <= 4) cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
+  if (changed_prefs.kbd_led_cap == -1) cboKBDLed_cap->setSelected(0);
+  if (changed_prefs.kbd_led_cap == -2) cboKBDLed_cap->setSelected(6);
+  if (changed_prefs.kbd_led_cap == 5) cboKBDLed_cap->setSelected(7);
+  if (changed_prefs.kbd_led_cap >= 1 && changed_prefs.kbd_led_cap <= 4) cboKBDLed_cap->setSelected(changed_prefs.kbd_led_cap + 1);
+  if (changed_prefs.kbd_led_scr == -1) cboKBDLed_scr->setSelected(0);
+  if (changed_prefs.kbd_led_scr == -2) cboKBDLed_scr->setSelected(6);
+  if (changed_prefs.kbd_led_scr == 5) cboKBDLed_scr->setSelected(7);
+  if (changed_prefs.kbd_led_scr >= 1 && changed_prefs.kbd_led_scr <= 4) cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
+#endif
 }

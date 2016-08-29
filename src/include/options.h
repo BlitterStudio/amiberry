@@ -143,6 +143,9 @@ struct uae_prefs {
 #ifdef RASPBERRY
   int gfx_correct_aspect;
   int gfx_fullscreen_ratio;
+  int kbd_led_num;
+  int kbd_led_scr;
+  int kbd_led_cap;
 #endif 
 
   bool immediate_blits;
