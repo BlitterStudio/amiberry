@@ -15,12 +15,18 @@
 
 #include <png.h>
 #include <SDL.h>
-#include <SDL_image.h>
-#include <SDL_gfxPrimitives.h>
+#include <SDL/SDL_image.h>
+#ifndef ANDROID
+#include <SDL/SDL_gfxPrimitives.h>
+#endif
 #include <SDL/SDL_ttf.h>
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include <android/log.h>
+#endif
+
+#ifdef ANDROIDSDL
+#include <SDL_screenkeyboard.h>
 #endif
 
 #include <linux/fb.h>
@@ -33,16 +39,16 @@
 #define OMAPFB_WAITFORVSYNC_FRAME _IOWR('O', 70, unsigned int)
 #endif
 
-
 /* SDL variable for output of emulation */
 SDL_Surface *prSDLScreen = NULL;
 static int fbdev = -1;
 static unsigned int current_vsync_frame = 0;
 
 /* Possible screen modes (x and y resolutions) */
-#define MAX_SCREEN_MODES 6
-static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 800, 1024, 1152, 1280 };
-static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 480,  768,  864,  960 };
+
+#define MAX_SCREEN_MODES 11
+static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1024, 1280, 1280, 1920 };
+static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540,  768,  600,  720,  800, 1080 };
 
 static int red_bits, green_bits, blue_bits;
 static int red_shift, green_shift, blue_shift;
@@ -362,9 +368,10 @@ void flush_screen ()
     }
     current_vsync_frame += currprefs.gfx_framerate;
   }
-    
-  last_synctime = read_processor_time();
+  
+// Android swapped SDL_Flip & last_synctime for fixing performance
   SDL_Flip(prSDLScreen);
+  last_synctime = read_processor_time();
 
   if(!screen_is_picasso)
   	gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
@@ -734,7 +741,7 @@ void picasso_InitResolutions (void)
   modesList();
   DisplayModes = Displays[0].DisplayModes;
 }
-#endif
+
 
 bool vsync_switchmode (int hz)
 {
@@ -799,7 +806,7 @@ bool target_graphics_buffer_update (void)
   return true;
 }
 
-#ifdef PICASSO96
+
 void gfx_set_picasso_state (int on)
 {
 	if (on == screen_is_picasso)

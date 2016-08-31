@@ -1,12 +1,12 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Screen drawing functions
-  *
-  * Copyright 1995-2000 Bernd Schmidt
-  * Copyright 1995 Alessandro Bissacco
-  * Copyright 2000-2008 Toni Wilen
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Screen drawing functions
+ *
+ * Copyright 1995-2000 Bernd Schmidt
+ * Copyright 1995 Alessandro Bissacco
+ * Copyright 2000-2008 Toni Wilen
+ */
 
 
 /* There are a couple of concepts of "coordinates" in this file.
@@ -49,11 +49,11 @@
 
 extern int sprite_buffer_res;
 
-static void lores_reset (void)
+static void lores_reset(void)
 {
-  sprite_buffer_res = (currprefs.chipset_mask & CSMASK_AGA) ? RES_SUPERHIRES : RES_LORES;
-  if (sprite_buffer_res > currprefs.gfx_resolution)
-  	sprite_buffer_res = currprefs.gfx_resolution;
+	sprite_buffer_res = (currprefs.chipset_mask & CSMASK_AGA) ? RES_SUPERHIRES : RES_LORES;
+	if (sprite_buffer_res > currprefs.gfx_resolution)
+		sprite_buffer_res = currprefs.gfx_resolution;
 }
 
 bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */

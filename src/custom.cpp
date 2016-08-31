@@ -1,4 +1,4 @@
- /*
+/*
   * UAE - The Un*x Amiga Emulator
   *
   * Custom chip emulation
@@ -18,7 +18,7 @@
 #include "gensound.h"
 #include "audio.h"
 #include "sd-pandora/sound.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cia.h"

@@ -1,20 +1,20 @@
- /* 
-  * UAE - The Un*x Amiga Emulator
-  *
-  * AutoConfig (tm) Expansions (ZorroII/III)
-  *
-  * Copyright 1996,1997 Stefan Reinauer <stepan@linux.de>
-  * Copyright 1997 Brian King <Brian_King@Mitel.com>
-  *   - added gfxcard code
-  *
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * AutoConfig (tm) Expansions (ZorroII/III)
+ *
+ * Copyright 1996,1997 Stefan Reinauer <stepan@linux.de>
+ * Copyright 1997 Brian King <Brian_King@Mitel.com>
+ *   - added gfxcard code
+ *
+ */
 
 #include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "uae.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "rommgr.h"
 #include "autoconf.h"
 #include "newcpu.h"

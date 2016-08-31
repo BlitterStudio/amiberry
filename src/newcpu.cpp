@@ -2,7 +2,7 @@
  * newcpu.cpp - CPU emulation
  *
  * Copyright (c) 2010 ARAnyM dev team (see AUTHORS)
- * 
+ *
  *
  * Inspired by Christian Bauer's Basilisk II
  *
@@ -23,20 +23,20 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * MC68000 emulation
-  *
-  * (c) 1995 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * MC68000 emulation
+ *
+ * (c) 1995 Bernd Schmidt
+ */
 
 #include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "uae.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cpu_prefetch.h"
@@ -56,7 +56,10 @@
 #else
 /* Need to have these somewhere */
 static void build_comp(void) {}
-bool check_prefs_changed_comp (void) { return false; }
+bool check_prefs_changed_comp(void)
+{
+	return false;
+}
 #endif
 
 /* Opcode of faulting instruction */
@@ -71,8 +74,8 @@ static int last_writeaccess_for_exception_3;
 static int last_instructionaccess_for_exception_3;
 int cpu_cycles;
 
-const int areg_byteinc[] = { 1,1,1,1,1,1,1,2 };
-const int imm8_table[] = { 8,1,2,3,4,5,6,7 };
+const int areg_byteinc[] = { 1, 1, 1, 1, 1, 1, 1, 2 };
+const int imm8_table[] = { 8, 1, 2, 3, 4, 5, 6, 7 };
 
 int movem_index1[256];
 int movem_index2[256];
@@ -94,14 +97,14 @@ static uae_u16 mmusr_030;
 static unsigned long int instrcount[65536];
 static uae_u16 opcodenums[65536];
 
-static int compfn (const void *el1, const void *el2)
+static int compfn(const void *el1, const void *el2)
 {
 	return instrcount[*(const uae_u16 *)el1] < instrcount[*(const uae_u16 *)el2];
 }
 
-static TCHAR *icountfilename (void)
+static TCHAR *icountfilename(void)
 {
-	TCHAR *name = getenv ("INSNCOUNT");
+	TCHAR *name = getenv("INSNCOUNT");
 	if (name)
 		return name;
 	return COUNT_INSTRS == 2 ? "frequent.68k" : "insncount";

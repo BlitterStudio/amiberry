@@ -11,7 +11,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
@@ -33,49 +33,54 @@ static gcn::Label* lblSlowsize;
 static gcn::Slider* sldSlowmem;
 static gcn::Label* lblFastmem;
 static gcn::Label* lblFastsize;
-static gcn::Slider* sldFastmem;  
+static gcn::Slider* sldFastmem;
 static gcn::Label* lblZ3mem;
 static gcn::Label* lblZ3size;
-static gcn::Slider* sldZ3mem;  
+static gcn::Slider* sldZ3mem;
 static gcn::Label* lblGfxmem;
 static gcn::Label* lblGfxsize;
-static gcn::Slider* sldGfxmem;  
+static gcn::Slider* sldGfxmem;
 
 
 class MemorySliderActionListener : public gcn::ActionListener
 {
-  public:
-    void action(const gcn::ActionEvent& actionEvent)
-    {
- 	    if (actionEvent.getSource() == sldChipmem) {
-    		changed_prefs.chipmem_size = ChipMem_values[(int)(sldChipmem->getValue())];
-      	if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem_size > 0))
-      		changed_prefs.fastmem_size = 0;
-			}
-			
- 	    if (actionEvent.getSource() == sldSlowmem) {
-      	changed_prefs.bogomem_size = SlowMem_values[(int)(sldSlowmem->getValue())];
-      }
-      
-	    if (actionEvent.getSource() == sldFastmem) {
-     		changed_prefs.fastmem_size = FastMem_values[(int)(sldFastmem->getValue())];
-	      if (changed_prefs.fastmem_size > 0 && changed_prefs.chipmem_size > 0x200000)
-	        changed_prefs.chipmem_size = 0x200000;
-  		}	
+public:
+	void action(const gcn::ActionEvent& actionEvent)
+	{
+		if (actionEvent.getSource() == sldChipmem)
+		{
+			changed_prefs.chipmem_size = ChipMem_values[(int)(sldChipmem->getValue())];
+			if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem_size > 0))
+				changed_prefs.fastmem_size = 0;
+		}
 
-	    if (actionEvent.getSource() == sldZ3mem) {
-     		changed_prefs.z3fastmem_size = FastMem_values[(int)(sldZ3mem->getValue())];
-	      if (changed_prefs.z3fastmem_size > max_z3fastmem)
-	        changed_prefs.z3fastmem_size = max_z3fastmem;
-  		}	
+		if (actionEvent.getSource() == sldSlowmem)
+		{
+			changed_prefs.bogomem_size = SlowMem_values[(int)(sldSlowmem->getValue())];
+		}
 
-	    if (actionEvent.getSource() == sldGfxmem) {
-     		changed_prefs.rtgmem_size = FastMem_values[(int)(sldGfxmem->getValue())];
-     		changed_prefs.rtgmem_type = 1;
-  		}	
+		if (actionEvent.getSource() == sldFastmem)
+		{
+			changed_prefs.fastmem_size = FastMem_values[(int)(sldFastmem->getValue())];
+			if (changed_prefs.fastmem_size > 0 && changed_prefs.chipmem_size > 0x200000)
+				changed_prefs.chipmem_size = 0x200000;
+		}
 
-  		RefreshPanelRAM();
-    }
+		if (actionEvent.getSource() == sldZ3mem)
+		{
+			changed_prefs.z3fastmem_size = FastMem_values[(int)(sldZ3mem->getValue())];
+			if (changed_prefs.z3fastmem_size > max_z3fastmem)
+				changed_prefs.z3fastmem_size = max_z3fastmem;
+		}
+
+		if (actionEvent.getSource() == sldGfxmem)
+		{
+			changed_prefs.rtgmem_size = FastMem_values[(int)(sldGfxmem->getValue())];
+			changed_prefs.rtgmem_type = 1;
+		}
+
+		RefreshPanelRAM();
+	}
 };
 static MemorySliderActionListener* memorySliderActionListener;
 
@@ -83,7 +88,7 @@ static MemorySliderActionListener* memorySliderActionListener;
 void InitPanelRAM(const struct _ConfigCategory& category)
 {
 	memorySliderActionListener = new MemorySliderActionListener();
-  
+
 	lblChipmem = new gcn::Label("Chip:");
 	sldChipmem = new gcn::Slider(0, 4);
 	sldChipmem->setSize(110, SLIDER_HEIGHT);
@@ -147,7 +152,7 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	grpRAM->add(sldSlowmem, 70, posY);
 	grpRAM->add(lblSlowsize, 70 + sldSlowmem->getWidth() + 12, posY);
 	posY += sldSlowmem->getHeight() + DISTANCE_NEXT_Y;
-	 
+
 	grpRAM->add(lblFastmem, 8, posY);
 	grpRAM->add(sldFastmem, 70, posY);
 	grpRAM->add(lblFastsize, 70 + sldFastmem->getWidth() + 12, posY);
@@ -166,88 +171,88 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	grpRAM->setMovable(false);
 	grpRAM->setSize(250, posY + DISTANCE_BORDER);
 	grpRAM->setBaseColor(gui_baseCol);
-  
+
 	category.panel->add(grpRAM);
-  
+
 	RefreshPanelRAM();
 }
 
 
 void ExitPanelRAM(void)
 {
-  delete lblChipmem;
-  delete sldChipmem;
-  delete lblChipsize;
-  delete lblSlowmem;
-  delete sldSlowmem;
-  delete lblSlowsize;
-  delete lblFastmem;
-  delete sldFastmem;
-  delete lblFastsize;
-  delete lblZ3mem;
-  delete sldZ3mem;
-  delete lblZ3size;
-  delete lblGfxmem;
-  delete sldGfxmem;
-  delete lblGfxsize;
-  delete grpRAM;
-  delete memorySliderActionListener;
+	delete lblChipmem;
+	delete sldChipmem;
+	delete lblChipsize;
+	delete lblSlowmem;
+	delete sldSlowmem;
+	delete lblSlowsize;
+	delete lblFastmem;
+	delete sldFastmem;
+	delete lblFastsize;
+	delete lblZ3mem;
+	delete sldZ3mem;
+	delete lblZ3size;
+	delete lblGfxmem;
+	delete sldGfxmem;
+	delete lblGfxsize;
+	delete grpRAM;
+	delete memorySliderActionListener;
 }
 
 
 void RefreshPanelRAM(void)
 {
-  int i;
-  
-  for(i=0; i<5; ++i)
-  {
-    if(changed_prefs.chipmem_size == ChipMem_values[i])
-    {
-      sldChipmem->setValue(i);
-      lblChipsize->setCaption(ChipMem_list[i]);
-      break;
-    }
-  }
+	int i;
 
-  for(i=0; i<5; ++i)
-  {
-    if(changed_prefs.bogomem_size == SlowMem_values[i])
-    {
-      sldSlowmem->setValue(i);
-      lblSlowsize->setCaption(SlowMem_list[i]);
-      break;
-    }
-  }
+	for (i = 0; i < 5; ++i)
+	{
+		if (changed_prefs.chipmem_size == ChipMem_values[i])
+		{
+			sldChipmem->setValue(i);
+			lblChipsize->setCaption(ChipMem_list[i]);
+			break;
+		}
+	}
 
-  for(i=0; i<5; ++i)
-  {
-    if(changed_prefs.fastmem_size == FastMem_values[i])
-    {
-      sldFastmem->setValue(i);
-      lblFastsize->setCaption(FastMem_list[i]);
-      break;
-    }
-  }
+	for (i = 0; i < 5; ++i)
+	{
+		if (changed_prefs.bogomem_size == SlowMem_values[i])
+		{
+			sldSlowmem->setValue(i);
+			lblSlowsize->setCaption(SlowMem_list[i]);
+			break;
+		}
+	}
 
-  for(i=0; i<9; ++i)
-  {
-    if(changed_prefs.z3fastmem_size == FastMem_values[i])
-    {
-      sldZ3mem->setValue(i);
-      lblZ3size->setCaption(FastMem_list[i]);
-      break;
-    }
-  }
-  sldZ3mem->setEnabled(!changed_prefs.address_space_24);
+	for (i = 0; i < 5; ++i)
+	{
+		if (changed_prefs.fastmem_size == FastMem_values[i])
+		{
+			sldFastmem->setValue(i);
+			lblFastsize->setCaption(FastMem_list[i]);
+			break;
+		}
+	}
 
-  for(i=0; i<6; ++i)
-  {
-    if(changed_prefs.rtgmem_size == FastMem_values[i])
-    {
-      sldGfxmem->setValue(i);
-      lblGfxsize->setCaption(FastMem_list[i]);
-      break;
-    }
-  }
-  sldGfxmem->setEnabled(!changed_prefs.address_space_24);
+	for (i = 0; i < 9; ++i)
+	{
+		if (changed_prefs.z3fastmem_size == FastMem_values[i])
+		{
+			sldZ3mem->setValue(i);
+			lblZ3size->setCaption(FastMem_list[i]);
+			break;
+		}
+	}
+	sldZ3mem->setEnabled(!changed_prefs.address_space_24);
+
+	for (i = 0; i < 6; ++i)
+	{
+		if (changed_prefs.rtgmem_size == FastMem_values[i])
+		{
+			sldGfxmem->setValue(i);
+			lblGfxsize->setCaption(FastMem_list[i]);
+			break;
+		}
+	}
+	sldGfxmem->setEnabled(!changed_prefs.address_space_24);
 }
