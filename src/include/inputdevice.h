@@ -1,11 +1,11 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Joystick, mouse and keyboard emulation prototypes and definitions
-  *
-  * Copyright 1995 Bernd Schmidt
-  * Copyright 2001-2002 Toni Wilen
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Joystick, mouse and keyboard emulation prototypes and definitions
+ *
+ * Copyright 1995 Bernd Schmidt
+ * Copyright 2001-2002 Toni Wilen
+ */
 
 #define DIR_LEFT_BIT 0
 #define DIR_RIGHT_BIT 1
@@ -32,7 +32,8 @@
 #define IDTYPE_KEYBOARD 2
 #define IDTYPE_MAX 3
 
-struct inputdevice_functions {
+struct inputdevice_functions
+{
     int (*init)(void);
     void (*close)(void);
     int (*acquire)(int,int);
@@ -52,22 +53,24 @@ extern struct inputdevice_functions inputdevicefunc_keyboard;
 
 struct uae_input_device_default_node
 {
-	int evt;
-	uae_u64 flags;
+    int evt;
+    uae_u64 flags;
 };
 
-struct uae_input_device_kbr_default {
+struct uae_input_device_kbr_default
+{
     int scancode;
     struct uae_input_device_default_node node[MAX_INPUT_SUB_EVENT];
 };
 
-struct inputevent {
-	const TCHAR *confname;
-	const TCHAR *name;
-	int allow_mask;
-	int type;
-	int unit;
-	int data;
+struct inputevent
+{
+    const TCHAR *confname;
+    const TCHAR *name;
+    int allow_mask;
+    int type;
+    int unit;
+    int data;
 };
 
 #define MAX_INPUT_QUALIFIERS (8 + 5)
@@ -158,10 +161,11 @@ extern int input_get_default_joystick_analog (struct uae_input_device *uid, int 
 extern int input_get_default_keyboard (int num);
 
 #define DEFEVENT(A, B, C, D, E, F) INPUTEVENT_ ## A,
-enum inputevents {
-INPUTEVENT_ZERO,
+enum inputevents
+{
+    INPUTEVENT_ZERO,
 #include "inputevents.def"
-INPUTEVENT_END
+    INPUTEVENT_END
 };
 #undef DEFEVENT
 

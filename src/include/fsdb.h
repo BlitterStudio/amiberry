@@ -1,11 +1,11 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Library of functions to make emulated filesystem as independent as
-  * possible of the host filesystem's capabilities.
-  *
-  * Copyright 1999 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Library of functions to make emulated filesystem as independent as
+ * possible of the host filesystem's capabilities.
+ *
+ * Copyright 1999 Bernd Schmidt
+ */
 
 #ifndef FSDB_FILE
 #define FSDB_FILE _T("_UAEFSDB.___")
@@ -53,7 +53,8 @@
 #define A_FIBF_DELETE  (1<<0)
 
 /* AmigaOS "keys" */
-typedef struct a_inode_struct {
+typedef struct a_inode_struct
+{
     /* Circular list of recycleable a_inodes.  */
     struct a_inode_struct *next, *prev;
     /* This a_inode's relatives in the directory structure.  */
@@ -92,7 +93,7 @@ typedef struct a_inode_struct {
     unsigned int volflags;
     /* not equaling unit.mountcount -> not in this volume */
     unsigned int mountcount;
-  	uae_u64 uniq_external;
+    uae_u64 uniq_external;
 } a_inode;
 
 extern TCHAR *nname_begin (TCHAR *);
@@ -111,7 +112,7 @@ extern int fsdb_exists (const TCHAR *nname);
 
 STATIC_INLINE int same_aname (const TCHAR *an1, const TCHAR *an2)
 {
-  return strcasecmp (an1, an2) == 0;
+    return strcasecmp (an1, an2) == 0;
 }
 
 /* Filesystem-dependent functions.  */

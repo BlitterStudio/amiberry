@@ -16,14 +16,15 @@
 #define SLIDER_HEIGHT 18
 #define TITLEBAR_HEIGHT 24
 
-typedef struct _ConfigCategory {
-  const char *category;
-  const char *imagepath;
-  gcn::SelectorEntry *selector;
-  gcn::Container *panel;
-  void (*InitFunc) (const struct _ConfigCategory& category);
-  void (*ExitFunc) (void);
-  void (*RefreshFunc) (void);
+typedef struct _ConfigCategory
+{
+    const char *category;
+    const char *imagepath;
+    gcn::SelectorEntry *selector;
+    gcn::Container *panel;
+    void (*InitFunc) (const struct _ConfigCategory& category);
+    void (*ExitFunc) (void);
+    void (*RefreshFunc) (void);
 } ConfigCategory;
 
 extern bool gui_running;
@@ -42,11 +43,12 @@ extern char last_loaded_config[MAX_DPATH];
 #define BUILDINID_A1200 2
 #define BUILDINID_CD32  3
 
-typedef struct {
-  char Name[MAX_DPATH];
-  char FullPath[MAX_DPATH];
-  char Description[MAX_DPATH];
-  int BuildInID;
+typedef struct
+{
+    char Name[MAX_DPATH];
+    char FullPath[MAX_DPATH];
+    char Description[MAX_DPATH];
+    int BuildInID;
 } ConfigFileInfo;
 extern std::vector<ConfigFileInfo*> ConfigFilesList;
 
@@ -115,7 +117,7 @@ bool HandleNavigation(int direction);
 extern void CreateDefaultDevicename(char *name);
 extern bool DevicenameExists(const char *name);
 extern int tweakbootpri (int bp, int ab, int dnm);
-  
+
 extern char *screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;

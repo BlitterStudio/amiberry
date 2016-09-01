@@ -1,12 +1,13 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Blitter emulation
-  *
-  * (c) 1995 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Blitter emulation
+ *
+ * (c) 1995 Bernd Schmidt
+ */
 
-struct bltinfo {
+struct bltinfo
+{
     int blitzero;
     int blitashift,blitbshift,blitdownashift,blitdownbshift;
     uae_u16 bltadat, bltbdat, bltcdat,bltddat;
@@ -15,7 +16,8 @@ struct bltinfo {
     int bltamod,bltbmod,bltcmod,bltdmod;
 };
 
-extern enum blitter_states {
+extern enum blitter_states
+{
     BLT_done, BLT_init, BLT_read, BLT_work, BLT_write, BLT_next
 } bltstate;
 
@@ -36,13 +38,13 @@ extern void blitter_slowdown (int, int, int, int);
 
 STATIC_INLINE void maybe_blit (int hack)
 {
-  if (bltstate == BLT_done)
-  	return;
+    if (bltstate == BLT_done)
+        return;
 
-  if (savestate_state)
-  	return;
+    if (savestate_state)
+        return;
 
-  maybe_blit2(hack);
+    maybe_blit2(hack);
 }
 
 extern void blitter_check_start (void);

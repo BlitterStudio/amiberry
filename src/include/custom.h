@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * custom chip support
-  *
-  * (c) 1995 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * custom chip support
+ *
+ * (c) 1995 Bernd Schmidt
+ */
 
 #include "md-pandora/rpt.h"
 
@@ -47,7 +47,7 @@ extern int vpos;
 
 STATIC_INLINE int dmaen (unsigned int dmamask)
 {
-	return (dmamask & dmacon) && (dmacon & 0x200);
+    return (dmamask & dmacon) && (dmacon & 0x200);
 }
 
 #define SPCFLAG_STOP 2
@@ -73,12 +73,12 @@ extern void INTREQ_0 (uae_u16);
 extern void INTREQ_f (uae_u16);
 STATIC_INLINE void send_interrupt (int num)
 {
-	INTREQ_0 (0x8000 | (1 << num));
+    INTREQ_0 (0x8000 | (1 << num));
 }
 
 STATIC_INLINE uae_u16 INTREQR (void)
 {
-  return intreq;
+    return intreq;
 }
 
 /* maximums for statically allocated tables */
@@ -134,24 +134,24 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)
 {
-  return ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
+    return ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 STATIC_INLINE int GET_RES_AGNUS (uae_u16 con0)
 {
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-		con0 &= ~0x40; // no SUPERHIRES
-  return ((con0) & 0x8000) ? RES_HIRES : ((con0) & 0x40) ? RES_SUPERHIRES : RES_LORES;
+    if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+        con0 &= ~0x40; // no SUPERHIRES
+    return ((con0) & 0x8000) ? RES_HIRES : ((con0) & 0x40) ? RES_SUPERHIRES : RES_LORES;
 }
 /* get sprite width from FMODE */
 #define GET_SPRITEWIDTH(FMODE) ((((FMODE) >> 2) & 3) == 3 ? 64 : (((FMODE) >> 2) & 3) == 0 ? 16 : 32)
 /* Compute the number of bitplanes from a value written to BPLCON0  */
 STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 {
-  if ((bplcon0 & 0x0010) && (bplcon0 & 0x7000))
-  	return 0; // >8 planes = 0 planes
-  if (bplcon0 & 0x0010)
-  	return 8; // AGA 8-planes bit
-  return (bplcon0 >> 12) & 7; // normal planes bits
+    if ((bplcon0 & 0x0010) && (bplcon0 & 0x7000))
+        return 0; // >8 planes = 0 planes
+    if (bplcon0 & 0x0010)
+        return 8; // AGA 8-planes bit
+    return (bplcon0 >> 12) & 7; // normal planes bits
 }
 
 extern void fpscounter_reset (void);

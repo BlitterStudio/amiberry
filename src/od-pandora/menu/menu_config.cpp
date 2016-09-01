@@ -7,7 +7,7 @@
 #include "options.h"
 #include "gui.h"
 #include "sd-pandora/sound.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "uae.h"

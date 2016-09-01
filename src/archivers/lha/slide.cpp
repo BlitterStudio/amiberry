@@ -32,48 +32,58 @@ static unsigned int *prev;
 unsigned char *too_flag;
 
 #if 0
-static struct encode_option encode_define[2] = {
+static struct encode_option encode_define[2] =
+{
 #if 1 || defined(__STDC__) || defined(AIX)
-	/* lh1 */
-	{(void (*) ()) output_dyn,
-		(void (*) ()) encode_start_fix,
-	(void (*) ()) encode_end_dyn},
-	/* lh4, 5,6 */
-	{(void (*) ()) output_st1,
-		(void (*) ()) encode_start_st1,
-	(void (*) ()) encode_end_st1}
+    /* lh1 */
+    {
+        (void (*) ()) output_dyn,
+        (void (*) ()) encode_start_fix,
+        (void (*) ()) encode_end_dyn
+    },
+    /* lh4, 5,6 */
+    {
+        (void (*) ()) output_st1,
+        (void (*) ()) encode_start_st1,
+        (void (*) ()) encode_end_st1
+    }
 #else
-	/* lh1 */
-	{(int (*) ()) output_dyn,
-		(int (*) ()) encode_start_fix,
-	(int (*) ()) encode_end_dyn},
-	/* lh4, 5,6 */
-	{(int (*) ()) output_st1,
-		(int (*) ()) encode_start_st1,
-	(int (*) ()) encode_end_st1}
+    /* lh1 */
+    {
+        (int (*) ()) output_dyn,
+        (int (*) ()) encode_start_fix,
+        (int (*) ()) encode_end_dyn
+    },
+    /* lh4, 5,6 */
+    {
+        (int (*) ()) output_st1,
+        (int (*) ()) encode_start_st1,
+        (int (*) ()) encode_end_st1
+    }
 #endif
 };
 #endif
 
-static struct decode_option decode_define[] = {
-	/* lh1 */
-	{decode_c_dyn, decode_p_st0, decode_start_fix},
-	/* lh2 */
-	{decode_c_dyn, decode_p_dyn, decode_start_dyn},
-	/* lh3 */
-	{decode_c_st0, decode_p_st0, decode_start_st0},
-	/* lh4 */
-	{decode_c_st1, decode_p_st1, decode_start_st1},
-	/* lh5 */
-	{decode_c_st1, decode_p_st1, decode_start_st1},
-	/* lh6 */
-	{decode_c_st1, decode_p_st1, decode_start_st1},
-	/* lh7 */
-	{decode_c_st1, decode_p_st1, decode_start_st1},
-	/* lzs */
-	{decode_c_lzs, decode_p_lzs, decode_start_lzs},
-	/* lz5 */
-	{decode_c_lz5, decode_p_lz5, decode_start_lz5}
+static struct decode_option decode_define[] =
+{
+    /* lh1 */
+    {decode_c_dyn, decode_p_st0, decode_start_fix},
+    /* lh2 */
+    {decode_c_dyn, decode_p_dyn, decode_start_dyn},
+    /* lh3 */
+    {decode_c_st0, decode_p_st0, decode_start_st0},
+    /* lh4 */
+    {decode_c_st1, decode_p_st1, decode_start_st1},
+    /* lh5 */
+    {decode_c_st1, decode_p_st1, decode_start_st1},
+    /* lh6 */
+    {decode_c_st1, decode_p_st1, decode_start_st1},
+    /* lh7 */
+    {decode_c_st1, decode_p_st1, decode_start_st1},
+    /* lzs */
+    {decode_c_lzs, decode_p_lzs, decode_start_lzs},
+    /* lz5 */
+    {decode_c_lz5, decode_p_lz5, decode_start_lz5}
 };
 
 static struct encode_option encode_set;
@@ -114,39 +124,42 @@ static unsigned int remainder;
 /* ------------------------------------------------------------------------ */
 int
 encode_alloc(method)
-	int             method;
+int             method;
 {
-	if (method == LZHUFF1_METHOD_NUM) {	/* Changed N.Watazaki */
-		encode_set = encode_define[0];
-		maxmatch = 60;
-		dicbit = 12;   /* 12 Changed N.Watazaki */
-	} else { /* method LH4(12),LH5(13),LH6(15) */
-		encode_set = encode_define[1];
-		maxmatch = MAXMATCH;
-		if (method == LZHUFF7_METHOD_NUM)
-			dicbit = MAX_DICBIT; /* 16 bits */
-		else if (method == LZHUFF6_METHOD_NUM)
-			dicbit = MAX_DICBIT-1;		/* 15 bits */
-		else /* LH5  LH4 is not used */
-			dicbit = MAX_DICBIT - 3;	/* 13 bits */
-	}
+    if (method == LZHUFF1_METHOD_NUM)  	/* Changed N.Watazaki */
+    {
+        encode_set = encode_define[0];
+        maxmatch = 60;
+        dicbit = 12;   /* 12 Changed N.Watazaki */
+    }
+    else     /* method LH4(12),LH5(13),LH6(15) */
+    {
+        encode_set = encode_define[1];
+        maxmatch = MAXMATCH;
+        if (method == LZHUFF7_METHOD_NUM)
+            dicbit = MAX_DICBIT; /* 16 bits */
+        else if (method == LZHUFF6_METHOD_NUM)
+            dicbit = MAX_DICBIT-1;		/* 15 bits */
+        else /* LH5  LH4 is not used */
+            dicbit = MAX_DICBIT - 3;	/* 13 bits */
+    }
 
-	dicsiz = (((unsigned long)1) << dicbit);
-	txtsiz = dicsiz*2+maxmatch;
+    dicsiz = (((unsigned long)1) << dicbit);
+    txtsiz = dicsiz*2+maxmatch;
 
-	if (hash) return method;
+    if (hash) return method;
 
-	if (alloc_buf() == NULL) exit(207); /* I don't know this 207. */
+    if (alloc_buf() == NULL) exit(207); /* I don't know this 207. */
 
-	hash = (unsigned int*)malloc(HSHSIZ * sizeof(unsigned int));
-	prev = (unsigned int*)malloc(DICSIZ * sizeof(unsigned int));
-	text = (unsigned char*)malloc(TXTSIZ);
-	too_flag = (unsigned char*)malloc(HSHSIZ);
+    hash = (unsigned int*)malloc(HSHSIZ * sizeof(unsigned int));
+    prev = (unsigned int*)malloc(DICSIZ * sizeof(unsigned int));
+    text = (unsigned char*)malloc(TXTSIZ);
+    too_flag = (unsigned char*)malloc(HSHSIZ);
 
-	if (hash == NULL || prev == NULL || text == NULL || too_flag == NULL)
-		exit(207);
+    if (hash == NULL || prev == NULL || text == NULL || too_flag == NULL)
+        exit(207);
 
-	return method;
+    return method;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -154,54 +167,60 @@ encode_alloc(method)
 
 static void init_slide()
 {
-	unsigned int i;
+    unsigned int i;
 
-	for (i = 0; i < HSHSIZ; i++) {
-		hash[i] = NIL;
-		too_flag[i] = 0;
-	}
-	/*
-	for (i = 0; i < DICSIZ; i++) {
-	    prev[i] = NIL;
-	}
-	*/
+    for (i = 0; i < HSHSIZ; i++)
+    {
+        hash[i] = NIL;
+        too_flag[i] = 0;
+    }
+    /*
+    for (i = 0; i < DICSIZ; i++) {
+        prev[i] = NIL;
+    }
+    */
 }
 
 /* 辞書を DICSIZ 分 前にずらす */
 
 static void update()
 {
-	unsigned int i, j;
-	unsigned int k;
-	long n;
+    unsigned int i, j;
+    unsigned int k;
+    long n;
 
 #if 0
-	memmove(&text[0], &text[dicsiz], (unsigned)(txtsiz - dicsiz));
+    memmove(&text[0], &text[dicsiz], (unsigned)(txtsiz - dicsiz));
 #else
-	{
-		int m;
-		i = 0; j = dicsiz; m = txtsiz-dicsiz;
-		while (m-- > 0) {
-			text[i++] = text[j++];
-		}
-	}
+    {
+        int m;
+        i = 0;
+        j = dicsiz;
+        m = txtsiz-dicsiz;
+        while (m-- > 0)
+        {
+            text[i++] = text[j++];
+        }
+    }
 #endif
-	n = fread_crc(&text[(unsigned)(txtsiz - dicsiz)],
-				   (unsigned)dicsiz, infile);
+    n = fread_crc(&text[(unsigned)(txtsiz - dicsiz)],
+                  (unsigned)dicsiz, infile);
 
-	remainder += n;
-	encoded_origsize += n;
+    remainder += n;
+    encoded_origsize += n;
 
-	pos -= dicsiz;
-	for (i = 0; i < HSHSIZ; i++) {
-		j = hash[i];
-		hash[i] = (j > dicsiz) ? j - dicsiz : NIL;
-		too_flag[i] = 0;
-	}
-	for (i = 0; i < dicsiz; i++) {
-		j = prev[i];
-		prev[i] = (j > dicsiz) ? j - dicsiz : NIL;
-	}
+    pos -= dicsiz;
+    for (i = 0; i < HSHSIZ; i++)
+    {
+        j = hash[i];
+        hash[i] = (j > dicsiz) ? j - dicsiz : NIL;
+        too_flag[i] = 0;
+    }
+    for (i = 0; i < dicsiz; i++)
+    {
+        j = prev[i];
+        prev[i] = (j > dicsiz) ? j - dicsiz : NIL;
+    }
 }
 
 
@@ -209,8 +228,8 @@ static void update()
 
 static void insert()
 {
-	prev[pos & (dicsiz - 1)] = hash[hval];
-	hash[hval] = pos;
+    prev[pos & (dicsiz - 1)] = hash[hval];
+    hash[hval] = pos;
 }
 
 
@@ -218,61 +237,70 @@ static void insert()
 
 static void match_insert()
 {
-	unsigned int scan_pos, scan_end, len;
-	unsigned char *a, *b;
-	unsigned int chain, off, h, max;
+    unsigned int scan_pos, scan_end, len;
+    unsigned char *a, *b;
+    unsigned int chain, off, h, max;
 
-	max = maxmatch; /* MAXMATCH; */
-	if (matchlen < THRESHOLD - 1) matchlen = THRESHOLD - 1;
-	matchpos = pos;
+    max = maxmatch; /* MAXMATCH; */
+    if (matchlen < THRESHOLD - 1) matchlen = THRESHOLD - 1;
+    matchpos = pos;
 
-	off = 0;
-	for (h = hval; too_flag[h] && off < maxmatch - THRESHOLD; ) {
-		h = ((h << 5) ^ text[pos + (++off) + 2]) & (unsigned)(HSHSIZ - 1);
-	}
-	if (off == maxmatch - THRESHOLD) off = 0;
-	for (;;) {
-		chain = 0;
-		scan_pos = hash[h];
-		scan_end = (pos > dicsiz) ? pos + off - dicsiz : off;
-		while (scan_pos > scan_end) {
-			chain++;
+    off = 0;
+    for (h = hval; too_flag[h] && off < maxmatch - THRESHOLD; )
+    {
+        h = ((h << 5) ^ text[pos + (++off) + 2]) & (unsigned)(HSHSIZ - 1);
+    }
+    if (off == maxmatch - THRESHOLD) off = 0;
+    for (;;)
+    {
+        chain = 0;
+        scan_pos = hash[h];
+        scan_end = (pos > dicsiz) ? pos + off - dicsiz : off;
+        while (scan_pos > scan_end)
+        {
+            chain++;
 
-			if (text[scan_pos + matchlen - off] == text[pos + matchlen]) {
-				{
-					a = text + scan_pos - off;  b = text + pos;
-					for (len = 0; len < max && *a++ == *b++; len++);
-				}
+            if (text[scan_pos + matchlen - off] == text[pos + matchlen])
+            {
+                {
+                    a = text + scan_pos - off;
+                    b = text + pos;
+                    for (len = 0; len < max && *a++ == *b++; len++);
+                }
 
-				if (len > matchlen) {
-					matchpos = scan_pos - off;
-					if ((matchlen = len) == max) {
-						break;
-					}
+                if (len > matchlen)
+                {
+                    matchpos = scan_pos - off;
+                    if ((matchlen = len) == max)
+                    {
+                        break;
+                    }
 #ifdef DEBUG
-					if (noslide) {
-					  if (matchpos < dicsiz) {
-						printf("matchpos=%u scan_pos=%u dicsiz=%u\n"
-							   ,matchpos, scan_pos, dicsiz);
-					  }
-					}
+                    if (noslide)
+                    {
+                        if (matchpos < dicsiz)
+                        {
+                            printf("matchpos=%u scan_pos=%u dicsiz=%u\n"
+                                   ,matchpos, scan_pos, dicsiz);
+                        }
+                    }
 #endif
-				}
-			}
-			scan_pos = prev[scan_pos & (dicsiz - 1)];
-		}
+                }
+            }
+            scan_pos = prev[scan_pos & (dicsiz - 1)];
+        }
 
-		if (chain >= LIMIT)
-			too_flag[h] = 1;
+        if (chain >= LIMIT)
+            too_flag[h] = 1;
 
-		if (matchlen > off + 2 || off == 0)
-			break;
-		max = off + 2;
-		off = 0;
-		h = hval;
-	}
-	prev[pos & (dicsiz - 1)] = hash[hval];
-	hash[hval] = pos;
+        if (matchlen > off + 2 || off == 0)
+            break;
+        max = off + 2;
+        off = 0;
+        h = hval;
+    }
+    prev[pos & (dicsiz - 1)] = hash[hval];
+    hash[hval] = pos;
 }
 
 
@@ -280,98 +308,108 @@ static void match_insert()
 
 static void get_next()
 {
-	remainder--;
-	if (++pos >= txtsiz - maxmatch) {
-		update();
+    remainder--;
+    if (++pos >= txtsiz - maxmatch)
+    {
+        update();
 #ifdef DEBUG
-		noslide = 0;
+        noslide = 0;
 #endif
-	}
-	hval = ((hval << 5) ^ text[pos + 2]) & (unsigned)(HSHSIZ - 1);
+    }
+    hval = ((hval << 5) ^ text[pos + 2]) & (unsigned)(HSHSIZ - 1);
 }
 
 void encode(lhinterface)
 struct interfacing *lhinterface;
 {
-	int lastmatchlen;
-	unsigned int lastmatchoffset;
+    int lastmatchlen;
+    unsigned int lastmatchoffset;
 
 #ifdef DEBUG
-	unsigned int addr;
+    unsigned int addr;
 
-	addr = 0;
+    addr = 0;
 
-	fout = fopen("en", "wt");
-	if (fout == NULL) exit(1);
+    fout = fopen("en", "wt");
+    if (fout == NULL) exit(1);
 #endif
-	infile = lhinterface->infile;
-	outfile = lhinterface->outfile;
-	origsize = lhinterface->original;
-	compsize = count = 0L;
-	crc = unpackable = 0;
+    infile = lhinterface->infile;
+    outfile = lhinterface->outfile;
+    origsize = lhinterface->original;
+    compsize = count = 0L;
+    crc = unpackable = 0;
 
-	/* encode_alloc(); */ /* allocate_memory(); */
-	init_slide();
+    /* encode_alloc(); */ /* allocate_memory(); */
+    init_slide();
 
-	encode_set.encode_start();
-	memset(&text[0], ' ', (long)TXTSIZ);
+    encode_set.encode_start();
+    memset(&text[0], ' ', (long)TXTSIZ);
 
-	remainder = fread_crc(&text[dicsiz], txtsiz-dicsiz, infile);
-	encoded_origsize = remainder;
-	matchlen = THRESHOLD - 1;
+    remainder = fread_crc(&text[dicsiz], txtsiz-dicsiz, infile);
+    encoded_origsize = remainder;
+    matchlen = THRESHOLD - 1;
 
-	pos = dicsiz;
+    pos = dicsiz;
 
-	if (matchlen > remainder) matchlen = remainder;
-	hval = ((((text[dicsiz] << 5) ^ text[dicsiz + 1]) << 5)
-		^ text[dicsiz + 2]) & (unsigned)(HSHSIZ - 1);
+    if (matchlen > remainder) matchlen = remainder;
+    hval = ((((text[dicsiz] << 5) ^ text[dicsiz + 1]) << 5)
+            ^ text[dicsiz + 2]) & (unsigned)(HSHSIZ - 1);
 
-	insert();
-	while (remainder > 0 && ! unpackable) {
-		lastmatchlen = matchlen;  lastmatchoffset = pos - matchpos - 1;
-		--matchlen;
-		get_next();  match_insert();
-		if (matchlen > remainder) matchlen = remainder;
-		if (matchlen > lastmatchlen || lastmatchlen < THRESHOLD) {
-			encode_set.output(text[pos - 1], 0);
+    insert();
+    while (remainder > 0 && ! unpackable)
+    {
+        lastmatchlen = matchlen;
+        lastmatchoffset = pos - matchpos - 1;
+        --matchlen;
+        get_next();
+        match_insert();
+        if (matchlen > remainder) matchlen = remainder;
+        if (matchlen > lastmatchlen || lastmatchlen < THRESHOLD)
+        {
+            encode_set.output(text[pos - 1], 0);
 #ifdef DEBUG
-			fprintf(fout, "%u C %02X\n", addr, text[pos-1]);
-			addr++;
+            fprintf(fout, "%u C %02X\n", addr, text[pos-1]);
+            addr++;
 #endif
-			count++;
-		} else {
-			encode_set.output(lastmatchlen + (UCHAR_MAX + 1 - THRESHOLD),
-			   (lastmatchoffset) & (dicsiz-1) );
-			--lastmatchlen;
+            count++;
+        }
+        else
+        {
+            encode_set.output(lastmatchlen + (UCHAR_MAX + 1 - THRESHOLD),
+                              (lastmatchoffset) & (dicsiz-1) );
+            --lastmatchlen;
 
 #ifdef DEBUG
-			fprintf(fout, "%u M %u %u ", addr,
-					lastmatchoffset & (dicsiz-1), lastmatchlen+1);
-			addr += lastmatchlen +1 ;
+            fprintf(fout, "%u M %u %u ", addr,
+                    lastmatchoffset & (dicsiz-1), lastmatchlen+1);
+            addr += lastmatchlen +1 ;
 
-			{
-			  int t,cc;
-			for (t=0; t<lastmatchlen+1; t++) {
-			  cc = text[(pos-(lastmatchoffset)) & (dicsiz-1)];
-			  fprintf(fout, "%02X ", cc);
-			}
-			fprintf(fout, "\n");
-			}
+            {
+                int t,cc;
+                for (t=0; t<lastmatchlen+1; t++)
+                {
+                    cc = text[(pos-(lastmatchoffset)) & (dicsiz-1)];
+                    fprintf(fout, "%02X ", cc);
+                }
+                fprintf(fout, "\n");
+            }
 #endif
-			while (--lastmatchlen > 0) {
-				get_next();  insert();
-				count++;
-			}
-			get_next();
-			matchlen = THRESHOLD - 1;
-			match_insert();
-			if (matchlen > remainder) matchlen = remainder;
-		}
-	}
-	encode_set.encode_end();
+            while (--lastmatchlen > 0)
+            {
+                get_next();
+                insert();
+                count++;
+            }
+            get_next();
+            matchlen = THRESHOLD - 1;
+            match_insert();
+            if (matchlen > remainder) matchlen = remainder;
+        }
+    }
+    encode_set.encode_end();
 
-	interface->packed = compsize;
-	interface->original = encoded_origsize;
+    interface->packed = compsize;
+    interface->original = encoded_origsize;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -380,77 +418,84 @@ struct interfacing *lhinterface;
 
 int decode(struct interfacing *lhinterface)
 {
-	unsigned int i, j, k, c;
-	unsigned int dicsiz1, offset;
-	unsigned char *dtext;
+    unsigned int i, j, k, c;
+    unsigned int dicsiz1, offset;
+    unsigned char *dtext;
 
 
 #ifdef DEBUG
-	fout = fopen("de", "wt");
-	if (fout == NULL) exit(1);
+    fout = fopen("de", "wt");
+    if (fout == NULL) exit(1);
 #endif
 
-	infile = lhinterface->infile;
-	outfile = lhinterface->outfile;
-	dicbit = lhinterface->dicbit;
-	origsize = lhinterface->original;
-	compsize = lhinterface->packed;
-	decode_set = decode_define[lhinterface->method - 1];
+    infile = lhinterface->infile;
+    outfile = lhinterface->outfile;
+    dicbit = lhinterface->dicbit;
+    origsize = lhinterface->original;
+    compsize = lhinterface->packed;
+    decode_set = decode_define[lhinterface->method - 1];
 
-	crc = 0;
-	prev_char = -1;
-	dicsiz = 1L << dicbit;
-	dtext = (unsigned char *) malloc(dicsiz);
-	if (dtext == NULL)
-	    return 0;
-	for (i=0; i<dicsiz; i++) dtext[i] = 0x20;
-	decode_set.decode_start();
-	dicsiz1 = dicsiz - 1;
-	offset = (lhinterface->method == LARC_METHOD_NUM) ? 0x100 - 2 : 0x100 - 3;
-	lhcount = 0;
-	loc = 0;
-	while (lhcount < origsize) {
-		c = decode_set.decode_c();
-		if (c <= UCHAR_MAX) {
+    crc = 0;
+    prev_char = -1;
+    dicsiz = 1L << dicbit;
+    dtext = (unsigned char *) malloc(dicsiz);
+    if (dtext == NULL)
+        return 0;
+    for (i=0; i<dicsiz; i++) dtext[i] = 0x20;
+    decode_set.decode_start();
+    dicsiz1 = dicsiz - 1;
+    offset = (lhinterface->method == LARC_METHOD_NUM) ? 0x100 - 2 : 0x100 - 3;
+    lhcount = 0;
+    loc = 0;
+    while (lhcount < origsize)
+    {
+        c = decode_set.decode_c();
+        if (c <= UCHAR_MAX)
+        {
 #ifdef DEBUG
-		  fprintf(fout, "%u C %02X\n", lhcount, c);
+            fprintf(fout, "%u C %02X\n", lhcount, c);
 #endif
-			dtext[loc++] = c;
-			if (loc == dicsiz) {
-				fwrite_crc(dtext, dicsiz, outfile);
-				loc = 0;
-			}
-			lhcount++;
-		}
-		else {
-			j = c - offset;
-			i = (loc - decode_set.decode_p() - 1) & dicsiz1;
+            dtext[loc++] = c;
+            if (loc == dicsiz)
+            {
+                fwrite_crc(dtext, dicsiz, outfile);
+                loc = 0;
+            }
+            lhcount++;
+        }
+        else
+        {
+            j = c - offset;
+            i = (loc - decode_set.decode_p() - 1) & dicsiz1;
 #ifdef DEBUG
-			fprintf(fout, "%u M %u %u ", lhcount, (loc-1-i) & dicsiz1, j);
+            fprintf(fout, "%u M %u %u ", lhcount, (loc-1-i) & dicsiz1, j);
 #endif
-			lhcount += j;
-			for (k = 0; k < j; k++) {
-				c = dtext[(i + k) & dicsiz1];
+            lhcount += j;
+            for (k = 0; k < j; k++)
+            {
+                c = dtext[(i + k) & dicsiz1];
 
 #ifdef DEBUG
-				fprintf(fout, "%02X ", c & 0xff);
+                fprintf(fout, "%02X ", c & 0xff);
 #endif
-				dtext[loc++] = c;
-				if (loc == dicsiz) {
-					fwrite_crc(dtext, dicsiz, outfile);
-					loc = 0;
-				}
-			}
+                dtext[loc++] = c;
+                if (loc == dicsiz)
+                {
+                    fwrite_crc(dtext, dicsiz, outfile);
+                    loc = 0;
+                }
+            }
 #ifdef DEBUG
-			fprintf(fout, "\n");
+            fprintf(fout, "\n");
 #endif
-		}
-	}
-	if (loc != 0) {
-		fwrite_crc(dtext, loc, outfile);
-	}
+        }
+    }
+    if (loc != 0)
+    {
+        fwrite_crc(dtext, loc, outfile);
+    }
 
-	free(dtext);
+    free(dtext);
     return 1;
 }
 

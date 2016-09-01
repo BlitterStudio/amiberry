@@ -112,8 +112,8 @@ using namespace std;
 #define S_ISDIR(val) (S_IFDIR & val)
 struct utimbuf
 {
-	time_t actime;
-	time_t modtime;
+    time_t actime;
+    time_t modtime;
 };
 #endif
 
@@ -141,8 +141,8 @@ struct utimbuf
 #define utime(file,time) 0
 struct utimbuf
 {
-	time_t actime;
-	time_t modtime;
+    time_t actime;
+    time_t modtime;
 };
 #endif
 
@@ -173,7 +173,7 @@ typedef char uae_char;
 
 typedef struct
 {
-	uae_u8 RGB[3];
+    uae_u8 RGB[3];
 } RGB;
 
 #if SIZEOF_SHORT == 2
@@ -443,19 +443,19 @@ extern void gui_message(const TCHAR *, ...);
 
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v)
 {
-	__asm__(
-	    "rev %0, %0"
-	    : "=r" (v) : "0" (v));
-	return v;
+    __asm__(
+        "rev %0, %0"
+        : "=r" (v) : "0" (v));
+    return v;
 }
 
 STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v)
 {
-	__asm__(
-	    "revsh %0, %0\n\t"
-	    "uxth %0, %0"
-	    : "=r" (v) : "0" (v));
-	return v;
+    __asm__(
+        "revsh %0, %0\n\t"
+        "uxth %0, %0"
+        : "=r" (v) : "0" (v));
+    return v;
 }
 
 #endif

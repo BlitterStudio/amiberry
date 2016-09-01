@@ -1,12 +1,13 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Unix file system handler for AmigaDOS
-  *
-  * Copyright 1997 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Unix file system handler for AmigaDOS
+ *
+ * Copyright 1997 Bernd Schmidt
+ */
 
-struct hardfiledata {
+struct hardfiledata
+{
     uae_u64 virtsize; // virtual size
     uae_u64 physsize; // physical size (dynamic disk)
     uae_u64 offset;
@@ -41,7 +42,8 @@ struct hardfiledata {
     TCHAR *emptyname;
 };
 
-struct hd_hardfiledata {
+struct hd_hardfiledata
+{
     struct hardfiledata hfd;
     int bootpri;
     uae_u64 size;
@@ -93,9 +95,9 @@ extern void hardfile_do_disk_change (struct uaedev_config_info *uci, int insert)
 
 void hdf_hd_close(struct hd_hardfiledata *hfd);
 int hdf_hd_open(struct hd_hardfiledata *hfd, const TCHAR *path, int blocksize, int readonly,
-		       const TCHAR *devname, int cyls, int sectors, int surfaces, int reserved,
-		       int bootpri, const TCHAR *filesys,
-			   int pcyls, int pheads, int psectors);
+                const TCHAR *devname, int cyls, int sectors, int surfaces, int reserved,
+                int bootpri, const TCHAR *filesys,
+                int pcyls, int pheads, int psectors);
 
 extern int hdf_open_target (struct hardfiledata *hfd, const TCHAR *name);
 extern void hdf_close_target (struct hardfiledata *hfd);

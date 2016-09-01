@@ -13,20 +13,20 @@
 
 namespace gcn
 {
-  class GCN_CORE_DECLSPEC UaeRadioButton : public RadioButton
-  {
-    public:
-      UaeRadioButton();
+class GCN_CORE_DECLSPEC UaeRadioButton : public RadioButton
+{
+public:
+    UaeRadioButton();
 
-      UaeRadioButton(const std::string &caption,
-                  const std::string &group,
-                  bool selected = false);
+    UaeRadioButton(const std::string &caption,
+                   const std::string &group,
+                   bool selected = false);
 
-      virtual ~UaeRadioButton();
+    virtual ~UaeRadioButton();
 
-      virtual void draw(Graphics* graphics);
+    virtual void draw(Graphics* graphics);
 
-  };
+};
 }
 
 

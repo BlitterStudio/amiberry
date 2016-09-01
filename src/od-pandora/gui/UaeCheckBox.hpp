@@ -13,22 +13,22 @@
 
 namespace gcn
 {
-  class GCN_CORE_DECLSPEC UaeCheckBox : public CheckBox
-  {
-    public:
-      UaeCheckBox();
+class GCN_CORE_DECLSPEC UaeCheckBox : public CheckBox
+{
+public:
+    UaeCheckBox();
 
-      UaeCheckBox(const std::string &caption,
-                  bool selected = false);
+    UaeCheckBox(const std::string &caption,
+                bool selected = false);
 
-      virtual ~UaeCheckBox();
+    virtual ~UaeCheckBox();
 
-      virtual void draw(Graphics* graphics);
+    virtual void draw(Graphics* graphics);
 
-    protected:
-        virtual void drawBox(Graphics *graphics);
+protected:
+    virtual void drawBox(Graphics *graphics);
 
-  };
+};
 }
 
 

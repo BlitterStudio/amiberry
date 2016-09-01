@@ -28,32 +28,35 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_ALL_EXT (ROMTYPE_EXTCD32 | ROMTYPE_EXTCDTV)
 #define ROMTYPE_ALL_CART (ROMTYPE_AR | ROMTYPE_HRTMON | ROMTYPE_NORDIC | ROMTYPE_XPOWER | ROMTYPE_CD32CART)
 
-struct romheader {
-  TCHAR *name;
-  int id;
+struct romheader
+{
+    TCHAR *name;
+    int id;
 };
 
-struct romdata {
-  TCHAR *name;
-  int ver, rev;
-  int subver, subrev;
-  TCHAR *model;
-  uae_u32 size;
-  int id;
-  int cpu;
-  int cloanto;
-  int type;
-  int group;
-  int title;
-  TCHAR *partnumber;
-  uae_u32 crc32;
-  uae_u32 sha1[5];
-  TCHAR *configname;
+struct romdata
+{
+    TCHAR *name;
+    int ver, rev;
+    int subver, subrev;
+    TCHAR *model;
+    uae_u32 size;
+    int id;
+    int cpu;
+    int cloanto;
+    int type;
+    int group;
+    int title;
+    TCHAR *partnumber;
+    uae_u32 crc32;
+    uae_u32 sha1[5];
+    TCHAR *configname;
 };
 
-struct romlist {
-  TCHAR *path;
-  struct romdata *rd;
+struct romlist
+{
+    TCHAR *path;
+    struct romdata *rd;
 };
 
 extern struct romdata *getromdatabypath (const TCHAR *path);

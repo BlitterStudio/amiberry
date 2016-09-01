@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Interface to the Tcl/Tk GUI
-  *
-  * Copyright 1996 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Interface to the Tcl/Tk GUI
+ *
+ * Copyright 1996 Bernd Schmidt
+ */
 
 extern int gui_init (void);
 extern int gui_update (void);
@@ -76,10 +76,11 @@ extern void ClearAvailableROMList(void);
 
 #include <vector>
 #include <string>
-typedef struct {
-  char Name[MAX_PATH];
-  char Path[MAX_PATH];
-  int ROMType;
+typedef struct
+{
+    char Name[MAX_PATH];
+    char Path[MAX_PATH];
+    int ROMType;
 } AvailableROM;
 extern std::vector<AvailableROM*> lstAvailableROMs;
 
@@ -98,7 +99,8 @@ extern const int amigaheight_values[AMIGAHEIGHT_COUNT];
 
 void notify_user (int msg);
 int translate_message (int msg, TCHAR *out);
-typedef enum {
+typedef enum
+{
     NUMSG_NEEDEXT2, NUMSG_NOROM, NUMSG_NOROMKEY,
     NUMSG_KSROMCRCERROR, NUMSG_KSROMREADERROR, NUMSG_NOEXTROM,
     NUMSG_MODRIP_NOTFOUND, NUMSG_MODRIP_FINISHED, NUMSG_MODRIP_SAVE,

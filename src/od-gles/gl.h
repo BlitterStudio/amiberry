@@ -15,11 +15,11 @@ extern void *gl_es_surface;
 
 static __inline int gl_init(void *display, void *window, int *quirks)
 {
-  return -1;
+    return -1;
 }
 static __inline int gl_flip(const void *fb, int w, int h)
 {
-  return -1;
+    return -1;
 }
 static __inline void gl_finish(void)
 {

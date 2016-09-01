@@ -1,5 +1,6 @@
 /* Types for RGBFormat used */
-typedef enum {
+typedef enum
+{
     RGBFB_NONE,		/* no valid RGB format (should not happen) */
     RGBFB_CLUT,		/* palette mode, set colors when opening screen using
 			   tags or use SetRGB32/LoadRGB32(...) */

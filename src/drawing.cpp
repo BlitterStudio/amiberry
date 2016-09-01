@@ -34,7 +34,7 @@
 #include "options.h"
 #include "td-sdl/thread.h"
 #include "uae.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "xwin.h"
@@ -239,7 +239,7 @@ int coord_native_to_amiga_x (int x)
 
 int coord_native_to_amiga_y (int y)
 {
-  return native2amiga_line_map[y];  
+  return native2amiga_line_map[y];
 }
 
 STATIC_INLINE int res_shift_from_window (int x)
@@ -430,7 +430,7 @@ static void pfield_init_linetoscr (void)
 	ddf_left <<= bplres;
 	pixels_offset = MAX_PIXELS_PER_LINE - ddf_left;
 	src_pixel = MAX_PIXELS_PER_LINE + res_shift_from_window (playfield_start - native_ddf_left);
-   
+
 	if (dip_for_drawing->nr_sprites == 0)
 		return;
 	/* Must clear parts of apixels.  */
@@ -548,7 +548,7 @@ static void init_ham_decoding (void)
 
   ham_decode_pixel = ham_src_pixel;
 	ham_lastcolor = colors_for_drawing.acolors[0];
-	
+
 	if (!bplham) {
 		if (unpainted_amiga > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel + unpainted_amiga - 1];
@@ -561,7 +561,7 @@ static void init_ham_decoding (void)
 		if (bplplanecnt >= 7) { /* AGA mode HAM8 */
 			while (unpainted_amiga-- > 0) {
 				int pv = pixdata.apixels[ham_decode_pixel++] ^ bplxor;
-				switch (pv & 0x3) 
+				switch (pv & 0x3)
         {
 					case 0x0: ham_lastcolor = colors_for_drawing.acolors[pv >> 2]; break;
 #ifdef ARMV6T2
@@ -578,7 +578,7 @@ static void init_ham_decoding (void)
 		} else { /* AGA mode HAM6 */
 			while (unpainted_amiga-- > 0) {
 				int pv = pixdata.apixels[ham_decode_pixel++] ^ bplxor;
-				switch (pv & 0x30) 
+				switch (pv & 0x30)
         {
 					case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
 #ifdef ARMV6T2
@@ -597,7 +597,7 @@ static void init_ham_decoding (void)
 		/* OCS/ECS mode HAM6 */
 		while (unpainted_amiga-- > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel++];
-			switch (pv & 0x30) 
+			switch (pv & 0x30)
       {
 				case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
 #ifdef ARMV6T2
@@ -617,7 +617,7 @@ static void init_ham_decoding (void)
 static void decode_ham (int pix, int stoppos)
 {
 	int todraw_amiga = res_shift_from_window (stoppos - pix);
-	
+
 	if (!bplham) {
 		while (todraw_amiga-- > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel];
@@ -625,14 +625,14 @@ static void decode_ham (int pix, int stoppos)
 				ham_lastcolor = colors_for_drawing.acolors[pv ^ bplxor];
 			else
 				ham_lastcolor = colors_for_drawing.acolors[pv];
-			
+
 			ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
 		}
 	} else if (currprefs.chipset_mask & CSMASK_AGA) {
 		if (bplplanecnt >= 7) { /* AGA mode HAM8 */
 			while (todraw_amiga-- > 0) {
 				int pv = pixdata.apixels[ham_decode_pixel] ^ bplxor;
-				switch (pv & 0x3) 
+				switch (pv & 0x3)
         {
 					case 0x0: ham_lastcolor = colors_for_drawing.acolors[pv >> 2]; break;
 #ifdef ARMV6T2
@@ -650,7 +650,7 @@ static void decode_ham (int pix, int stoppos)
 		} else { /* AGA mode HAM6 */
 			while (todraw_amiga-- > 0) {
 				int pv = pixdata.apixels[ham_decode_pixel] ^ bplxor;
-				switch (pv & 0x30) 
+				switch (pv & 0x30)
         {
 					case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
 #ifdef ARMV6T2
@@ -670,7 +670,7 @@ static void decode_ham (int pix, int stoppos)
 		/* OCS/ECS mode HAM6 */
 		while (todraw_amiga-- > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel];
-			switch (pv & 0x30) 
+			switch (pv & 0x30)
       {
 				case 0x00: ham_lastcolor = colors_for_drawing.acolors[pv]; break;
 #ifdef ARMV6T2
@@ -698,10 +698,10 @@ static void gen_pfield_tables (void)
 
 		dblpf_2nd1[i] = plane1 == 0 ? (plane2 == 0 ? 0 : 2) : 1;
 		dblpf_2nd2[i] = plane2 == 0 ? (plane1 == 0 ? 0 : 1) : 2;
-		
+
 		dblpf_ind1_aga[i] = plane1 == 0 ? plane2 : plane1;
 		dblpf_ind2_aga[i] = plane2 == 0 ? plane1 : plane2;
-		
+
 		dblpf_ms1[i] = plane1 == 0 ? (plane2 == 0 ? 16 : 8) : 0;
 		dblpf_ms2[i] = plane2 == 0 ? (plane1 == 0 ? 16 : 0) : 8;
 		if (plane2 > 0)
@@ -719,7 +719,7 @@ static void gen_pfield_tables (void)
 
   for(i=0; i<65536; ++i)
   {
-    sprite_col_nat[i] = 
+    sprite_col_nat[i] =
       (i & 0x0003) ? ((i >> 0) & 3) + 0 :
       (i & 0x000C) ? ((i >> 2) & 3) + 0 :
       (i & 0x0030) ? ((i >> 4) & 3) + 4 :
@@ -733,9 +733,9 @@ static void gen_pfield_tables (void)
       (i & 0x00F0) ? ((i >> 4) & 0x000F) :
       (i & 0x0F00) ? ((i >> 8) & 0x000F) :
       (i & 0xF000) ? ((i >> 12) & 0x000F) : 0;
-    sprite_bit[i] = 
-      (i & 0x0003) ? 0x01 : 
-      (i & 0x000C) ? 0x02 : 
+    sprite_bit[i] =
+      (i & 0x0003) ? 0x01 :
+      (i & 0x000C) ? 0x02 :
       (i & 0x0030) ? 0x04 :
       (i & 0x00C0) ? 0x08 :
       (i & 0x0300) ? 0x10 :
@@ -1160,13 +1160,13 @@ STATIC_INLINE void draw_sprites_aga_ham (struct sprite_entry *e, const int doubl
           else
             col = sprite_col_nat[v] + sbasecol[1];
         }
-  
+
   			col = colors_for_drawing.acolors[col ^ bplxor];
   			ham_linebuf[window_pos] = col;
   			if (doubling)
   				ham_linebuf[window_pos + 1] = col;
   		}
-    }	 
+    }
 		window_pos += 1 << doubling;
 	}
 }
@@ -1214,13 +1214,13 @@ STATIC_INLINE void draw_sprites_aga_dp (struct sprite_entry *e, const int doubli
           else
             col = sprite_col_nat[v] + sbasecol[1];
         }
-  
+
   		  spritepixels[window_pos] = col;
   			if (doubling)
   				spritepixels[window_pos + 1] = col;
   		}
     }
-    	 
+
 		window_pos += 1 << doubling;
 	}
 
@@ -1262,14 +1262,14 @@ STATIC_INLINE void draw_sprites_aga_sp (struct sprite_entry *e, const int doubli
           else
             col = sprite_col_nat[v] + sbasecol[1];
         }
-  
+
   			col ^= bplxor;
   			if (doubling)
   				pixdata.apixels_w[window_pos >> 1] = col | (col << 8);
   			else
   				pixdata.apixels[window_pos] = col;
   		}
-    }	 
+    }
 		window_pos += 1 << doubling;
 	}
 }
@@ -1320,7 +1320,7 @@ static draw_sprites_func draw_sprites_aga_ham_hi[2]={
 static draw_sprites_func draw_sprites_aga_ham_shi[2]={
 	draw_sprites_aga_ham_shi_nat, draw_sprites_aga_ham_shi_at };
 
-static __inline__ void decide_draw_sprites(void) 
+static __inline__ void decide_draw_sprites(void)
 {
   if (currprefs.chipset_mask & CSMASK_AGA)
   {
@@ -1376,14 +1376,14 @@ static __inline__ void decide_draw_sprites(void)
     if (bplres == RES_LORES)
   		if (bpldualpf)
   			draw_sprites_punt=draw_sprites_dp_lo;
-      else if(dp_for_drawing->ham_seen)  		
+      else if(dp_for_drawing->ham_seen)
   			draw_sprites_punt=draw_sprites_ham_lo;
   		else
   			draw_sprites_punt=draw_sprites_sp_lo;
   	else
   		if (bpldualpf)
   			draw_sprites_punt=draw_sprites_dp_hi;
-      else if(dp_for_drawing->ham_seen)  		
+      else if(dp_for_drawing->ham_seen)
   			draw_sprites_punt=draw_sprites_ham_hi;
       else
   			draw_sprites_punt=draw_sprites_sp_hi;
@@ -1621,7 +1621,7 @@ static void pfield_doline (int lineno)
 {
   int wordcount = dp_for_drawing->plflinelen;
   uae_u32 *data = pixdata.apixels_l + MAX_PIXELS_PER_LINE / 4;
-  
+
 #ifdef USE_ARMNEON
   pfield_doline_n[bplplanecnt](data, wordcount, lineno);
 #else
@@ -1654,7 +1654,7 @@ __attribute__((optimize("O2"))) void init_row_map (void)
 {
   int i, j;
 
-  j = 0;  
+  j = 0;
   for (i = gfxvidinfo.outheight; i < MAX_VIDHEIGHT + 1; i++)
     row_map[i] = row_tmp;
   for (i = 0; i < gfxvidinfo.outheight; i++, j += gfxvidinfo.rowbytes)
@@ -1816,8 +1816,8 @@ STATIC_INLINE void do_color_changes (line_draw_func worker_border, line_draw_fun
 			  (*worker_border) (lastpos, endpos);
 	  }
 	  return;
-  } 
-  
+  }
+
   for (i = dip_for_drawing->first_color_change; i <= dip_for_drawing->last_color_change; i++) {
 	  int nextpos, nextpos_in_range;
 	  if (i == dip_for_drawing->last_color_change)
@@ -1875,7 +1875,7 @@ static void pfield_draw_line (int lineno, int gfx_ypos)
 	int border = 0;
 	if (dp_for_drawing->plfleft < 0)
 		border = 1;
-   
+
   xlinebuffer = row_map[gfx_ypos];
 	xlinebuffer -= linetoscr_x_adjust_bytes;
 
@@ -1885,7 +1885,7 @@ static void pfield_draw_line (int lineno, int gfx_ypos)
     pfield_doline (lineno);
 
     adjust_drawing_colors (dp_for_drawing->ctable, dp_for_drawing->ham_seen || bplehb);
-   
+
     /* The problem is that we must call decode_ham() BEFORE we do the
       sprites. */
     if (dp_for_drawing->ham_seen) {
@@ -1900,7 +1900,7 @@ static void pfield_draw_line (int lineno, int gfx_ypos)
       }
       bplham = dp_for_drawing->ham_at_start;
     }
-      
+
 		if (dip_for_drawing->nr_sprites) {
 			int i;
 			decide_draw_sprites();
@@ -1909,7 +1909,7 @@ static void pfield_draw_line (int lineno, int gfx_ypos)
       	draw_sprites_punt[e->has_attached](e);
 			}
 		}
-   
+
   	do_color_changes (pfield_do_fill_line, pfield_do_linetoscr);
 	} else {
 		int dosprites = 0;
@@ -1954,7 +1954,7 @@ static void center_image (void)
 {
 	int deltaToBorder;
   deltaToBorder = (gfxvidinfo.outwidth >> currprefs.gfx_resolution) - 320;
-	  
+
 	visible_left_border = 73 - (deltaToBorder >> 1);
 	visible_right_border = 393 + (deltaToBorder >> 1);
 
@@ -2110,7 +2110,7 @@ void reset_drawing (void)
   lores_reset ();
 
   linestate_first_undecided = 0;
-  
+
   init_aspect_maps ();
 
   init_row_map();

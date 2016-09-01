@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Standard write_log that writes to the console
-  *
-  * Copyright 2001 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Standard write_log that writes to the console
+ *
+ * Copyright 2001 Bernd Schmidt
+ */
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "uae.h"
@@ -28,18 +28,19 @@ void console_out (const TCHAR *format,...)
 
 void write_log (const TCHAR *format,...)
 {
-  int count;
-  int numwritten;
-  TCHAR buffer[WRITE_LOG_BUF_SIZE];
+    int count;
+    int numwritten;
+    TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
-  va_list parms;
-  va_start (parms, format);
-  count = vsnprintf( buffer, WRITE_LOG_BUF_SIZE-1, format, parms );
-  if( debugfile ) {
-	  fprintf( debugfile, buffer );
-	  fflush (debugfile);
-  }
-  va_end (parms);
+    va_list parms;
+    va_start (parms, format);
+    count = vsnprintf( buffer, WRITE_LOG_BUF_SIZE-1, format, parms );
+    if( debugfile )
+    {
+        fprintf( debugfile, buffer );
+        fflush (debugfile);
+    }
+    va_end (parms);
 }
 
 #endif
@@ -56,7 +57,7 @@ void jit_abort (const TCHAR *format,...)
     write_log (buffer);
     va_end (parms);
     if (!happened)
-	gui_message ("JIT: Serious error:\n%s", buffer);
+        gui_message ("JIT: Serious error:\n%s", buffer);
     happened = 1;
     uae_reset (1, 0);
 }

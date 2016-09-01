@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Interface to the graphics system (X, SVGAlib)
-  *
-  * Copyright 1995-1997 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Interface to the graphics system (X, SVGAlib)
+ *
+ * Copyright 1995-1997 Bernd Schmidt
+ */
 
 #include "md-pandora/rpt.h"
 
@@ -23,16 +23,16 @@ extern void setup_brkhandler (void);
 extern bool vsync_switchmode (int);
 STATIC_INLINE int isvsync_chipset (void)
 {
-	if (picasso_on)
-		return 0;
-	return 1;
+    if (picasso_on)
+        return 0;
+    return 1;
 }
 
 STATIC_INLINE int isvsync_rtg (void)
 {
-	if (!picasso_on)
-		return 0;
-	return 1;
+    if (!picasso_on)
+        return 0;
+    return 1;
 }
 
 extern void flush_screen (void);
@@ -52,11 +52,11 @@ extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs
 
 struct vidbuf_description
 {
-  uae_u8 *bufmem;
-  int rowbytes; /* Bytes per row in the memory pointed at by bufmem. */
-  int pixbytes; /* Bytes per pixel. */
-  int outwidth;
-  int outheight;
+    uae_u8 *bufmem;
+    int rowbytes; /* Bytes per row in the memory pointed at by bufmem. */
+    int pixbytes; /* Bytes per pixel. */
+    int outwidth;
+    int outheight;
 };
 
 extern struct vidbuf_description gfxvidinfo;

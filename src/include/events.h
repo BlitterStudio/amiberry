@@ -1,16 +1,16 @@
 #ifndef EVENTS_H
 #define EVENTS_H
 
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Events
-  * These are best for low-frequency events. Having too many of them,
-  * or using them for events that occur too frequently, can cause massive
-  * slowdown.
-  *
-  * Copyright 1995-1998 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Events
+ * These are best for low-frequency events. Having too many of them,
+ * or using them for events that occur too frequently, can cause massive
+ * slowdown.
+ *
+ * Copyright 1995-1998 Bernd Schmidt
+ */
 
 #include "md-pandora/rpt.h"
 
@@ -49,13 +49,15 @@ struct ev2
     evfunc2 handler;
 };
 
-enum {
-    ev_copper, 
+enum
+{
+    ev_copper,
     ev_cia, ev_audio, ev_blitter, ev_dmal, ev_misc, ev_hsync,
     ev_max
 };
 
-enum {
+enum
+{
     ev2_disk, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
     ev2_max
 };
@@ -69,64 +71,66 @@ extern struct ev2 eventtab2[ev2_max];
 STATIC_INLINE void cycles_do_special (struct regstruct &regs)
 {
 #ifdef JIT
-	if (currprefs.cachesize) {
-		if (regs.pissoff >= 0)
-			regs.pissoff = -1;
-	} else 
+    if (currprefs.cachesize)
+    {
+        if (regs.pissoff >= 0)
+            regs.pissoff = -1;
+    }
+    else
 #endif
-  {
-		regs.pissoff = 0;
-	}
+    {
+        regs.pissoff = 0;
+    }
 }
 
 STATIC_INLINE unsigned long int get_cycles (void)
 {
-  return currcycle;
+    return currcycle;
 }
 
 STATIC_INLINE void set_cycles (unsigned long int x)
 {
-  currcycle = x;
-	eventtab[ev_hsync].oldcycles = x;
+    currcycle = x;
+    eventtab[ev_hsync].oldcycles = x;
 }
 
 STATIC_INLINE int current_hpos (void)
 {
-  return (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
+    return (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
 }
 
 STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 {
-	signed long c = get_cycles ();
-	return (signed long)endcycles - c > 0;
+    signed long c = get_cycles ();
+    return (signed long)endcycles - c > 0;
 }
 
 extern void MISC_handler(void);
 
 STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
 {
-	eventtab2[no].active = true;
-  eventtab2[no].evtime = (t * CYCLE_UNIT) + get_cycles();
-  eventtab2[no].data = data;
-  MISC_handler();
+    eventtab2[no].active = true;
+    eventtab2[no].evtime = (t * CYCLE_UNIT) + get_cycles();
+    eventtab2[no].data = data;
+    MISC_handler();
 }
 
 STATIC_INLINE void event2_remevent (int no)
 {
-	eventtab2[no].active = 0;
+    eventtab2[no].active = 0;
 }
 
 STATIC_INLINE void event_newevent (int no, evt t)
 {
-  evt ct = get_cycles();
-	eventtab[no].active = true;
-  eventtab[no].evtime = ct + t * CYCLE_UNIT;
-  events_schedule();
+    evt ct = get_cycles();
+    eventtab[no].active = true;
+    eventtab[no].evtime = ct + t * CYCLE_UNIT;
+    events_schedule();
 }
 
 STATIC_INLINE void event_remevent (int no)
 {
-	eventtab[no].active = 0;
+    eventtab[no].active = 0;
 }
 
 #endif

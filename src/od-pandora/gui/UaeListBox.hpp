@@ -13,17 +13,17 @@
 
 namespace gcn
 {
-  class GCN_CORE_DECLSPEC UaeListBox : public ListBox
-  {
-    public:
-      UaeListBox();
+class GCN_CORE_DECLSPEC UaeListBox : public ListBox
+{
+public:
+    UaeListBox();
 
-      UaeListBox(ListModel *listModel);
+    UaeListBox(ListModel *listModel);
 
-      virtual ~UaeListBox();
+    virtual ~UaeListBox();
 
-      virtual void draw(Graphics* graphics);
-  };
+    virtual void draw(Graphics* graphics);
+};
 }
 
 

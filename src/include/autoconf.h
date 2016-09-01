@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Autoconfig device support
-  *
-  * (c) 1996 Ed Hanway
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Autoconfig device support
+ *
+ * (c) 1996 Ed Hanway
+ */
 
 #define RTAREA_DEFAULT 0xf00000
 #define RTAREA_BACKUP  0xef0000

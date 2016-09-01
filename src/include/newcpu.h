@@ -2,7 +2,7 @@
  * newcpu.h - CPU emulation
  *
  * Copyright (c) 2009 ARAnyM dev team (see AUTHORS)
- * 
+ *
  * Inspired by Christian Bauer's Basilisk II
  *
  * This file is part of the ARAnyM project which builds a new and powerful
@@ -22,13 +22,13 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * MC68000 emulation
-  *
-  * Copyright 1995 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * MC68000 emulation
+ *
+ * Copyright 1995 Bernd Schmidt
+ */
 
 #include "readcpu.h"
 #include "md-pandora/m68k.h"
@@ -51,7 +51,8 @@ struct regstruct;
 typedef uae_u32 REGPARAM3 cpuop_func (uae_u32, struct regstruct &regs) REGPARAM;
 typedef void REGPARAM3 cpuop_func_ce (uae_u32, struct regstruct &regs) REGPARAM;
 
-struct cputbl {
+struct cputbl
+{
     cpuop_func *handler;
     uae_u16 opcode;
 };
@@ -59,10 +60,11 @@ struct cputbl {
 #ifdef JIT
 typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 
-struct comptbl {
-  compop_func *handler;
-	uae_u32		specific;
-  uae_u32 opcode;
+struct comptbl
+{
+    compop_func *handler;
+    uae_u32		specific;
+    uae_u32 opcode;
 };
 #endif
 
@@ -90,48 +92,48 @@ typedef double fptype;
 
 struct regstruct
 {
-  uae_u32 regs[16];
-  struct flag_struct ccrflags;
+    uae_u32 regs[16];
+    struct flag_struct ccrflags;
 
-  uae_u32 pc;
-  uae_u8 *pc_p;
-  uae_u8 *pc_oldp;
-  uae_u32 instruction_pc;
-  
-  uae_u16 irc, ir;
-  uae_u32 spcflags;
+    uae_u32 pc;
+    uae_u8 *pc_p;
+    uae_u8 *pc_oldp;
+    uae_u32 instruction_pc;
 
-  uaecptr usp, isp, msp;
-  uae_u16 sr;
-  flagtype t1;
-  flagtype t0;
-  flagtype s;
-  flagtype m;
-  flagtype x;
-  flagtype stopped;
-  int intmask;
+    uae_u16 irc, ir;
+    uae_u32 spcflags;
 
-  uae_u32 vbr,sfc,dfc;
+    uaecptr usp, isp, msp;
+    uae_u16 sr;
+    flagtype t1;
+    flagtype t0;
+    flagtype s;
+    flagtype m;
+    flagtype x;
+    flagtype stopped;
+    int intmask;
+
+    uae_u32 vbr,sfc,dfc;
 
 #ifdef FPUEMU
-  fptype fp[8];
-  fptype fp_result;
+    fptype fp[8];
+    fptype fp_result;
 
-  uae_u32 fpcr,fpsr, fpiar;
-  uae_u32 fpsr_highbyte;
+    uae_u32 fpcr,fpsr, fpiar;
+    uae_u32 fpsr_highbyte;
 #endif
 #ifndef CPUEMU_68000_ONLY
-  uae_u32 cacr, caar;
-  uae_u32 itt0, itt1, dtt0, dtt1;
-  uae_u32 tcr, mmusr, urp, srp, buscr;
+    uae_u32 cacr, caar;
+    uae_u32 itt0, itt1, dtt0, dtt1;
+    uae_u32 tcr, mmusr, urp, srp, buscr;
 #endif
 
-  uae_u32 pcr;
-  uae_u32 address_space_mask;
+    uae_u32 pcr;
+    uae_u32 address_space_mask;
 
-  uae_u8 panic;
-  uae_u32 panic_pc, panic_addr;
-  signed long pissoff;
+    uae_u8 panic;
+    uae_u32 panic_pc, panic_addr;
+    signed long pissoff;
 };
 extern unsigned long nextevent, is_syncline, currcycle;
 
@@ -149,14 +151,14 @@ extern int cpu_cycles;
 #define set_special(x) _set_special(regs, x)
 STATIC_INLINE void _set_special (struct regstruct &regs, uae_u32 x)
 {
-	regs.spcflags |= x;
-  cycles_do_special(regs);
+    regs.spcflags |= x;
+    cycles_do_special(regs);
 }
 
 #define unset_special(x) _unset_special(regs, x)
 STATIC_INLINE void _unset_special (struct regstruct &regs, uae_u32 x)
 {
-	regs.spcflags &= ~x;
+    regs.spcflags &= ~x;
 }
 
 #define m68k_dreg(r,num) ((r).regs[(num)])
@@ -165,14 +167,14 @@ STATIC_INLINE void _unset_special (struct regstruct &regs, uae_u32 x)
 #define m68k_setpc(newpc) _m68k_setpc(regs, newpc)
 STATIC_INLINE void _m68k_setpc (struct regstruct &regs, uaecptr newpc)
 {
-  regs.pc_p = regs.pc_oldp = get_real_address (newpc);
-  regs.instruction_pc = regs.pc = newpc;
+    regs.pc_p = regs.pc_oldp = get_real_address (newpc);
+    regs.instruction_pc = regs.pc = newpc;
 }
 
 #define m68k_getpc() _m68k_getpc(regs)
 STATIC_INLINE uaecptr _m68k_getpc (struct regstruct &regs)
 {
-	return (uaecptr)(regs.pc + ((uae_u8*)regs.pc_p - (uae_u8*)regs.pc_oldp));
+    return (uaecptr)(regs.pc + ((uae_u8*)regs.pc_p - (uae_u8*)regs.pc_oldp));
 }
 #define M68K_GETPC _m68k_getpc(regs)
 
@@ -181,16 +183,16 @@ STATIC_INLINE uaecptr _m68k_getpc (struct regstruct &regs)
 #define m68k_do_rts() _m68k_do_rts(regs)
 STATIC_INLINE void _m68k_do_rts (struct regstruct &regs)
 {
-  uae_u32 newpc = get_long (m68k_areg (regs, 7));
-  m68k_setpc (newpc);
-  m68k_areg(regs, 7) += 4;
+    uae_u32 newpc = get_long (m68k_areg (regs, 7));
+    m68k_setpc (newpc);
+    m68k_areg(regs, 7) += 4;
 }
 
 STATIC_INLINE void m68k_do_bsr (struct regstruct &regs, uaecptr oldpc, uae_s32 offset)
 {
-  m68k_areg(regs, 7) -= 4;
-  put_long(m68k_areg(regs, 7), oldpc);
-  m68k_incpc (offset);
+    m68k_areg(regs, 7) -= 4;
+    put_long(m68k_areg(regs, 7), oldpc);
+    m68k_incpc (offset);
 }
 
 #define get_ibyte(o) do_get_mem_byte((uae_u8 *)((regs).pc_p + (o) + 1))
@@ -203,15 +205,15 @@ STATIC_INLINE void m68k_do_bsr (struct regstruct &regs, uaecptr oldpc, uae_s32 o
  * need to handle prefetch.  */
 STATIC_INLINE uae_u32 next_iword (struct regstruct &regs)
 {
-  uae_u32 r = get_iword (0);
-  m68k_incpc (2);
-  return r;
+    uae_u32 r = get_iword (0);
+    m68k_incpc (2);
+    return r;
 }
 STATIC_INLINE uae_u32 next_ilong (struct regstruct &regs)
 {
-  uae_u32 r = get_ilong (0);
-  m68k_incpc (4);
-  return r;
+    uae_u32 r = get_ilong (0);
+    m68k_incpc (4);
+    return r;
 }
 
 #define x_get_word get_word
@@ -253,17 +255,17 @@ extern void protect_roms (bool);
 
 STATIC_INLINE int bitset_count16(uae_u16 data)
 {
-  unsigned int const MASK1  = 0x5555;
-  unsigned int const MASK2  = 0x3333;
-  unsigned int const MASK4  = 0x0f0f;
-  unsigned int const MASK6  = 0x003f;
+    unsigned int const MASK1  = 0x5555;
+    unsigned int const MASK2  = 0x3333;
+    unsigned int const MASK4  = 0x0f0f;
+    unsigned int const MASK6  = 0x003f;
 
-  unsigned int const w = (data & MASK1) + ((data >> 1) & MASK1);
-  unsigned int const x = (w & MASK2) + ((w >> 2) & MASK2);
-  unsigned int const y = ((x + (x >> 4)) & MASK4);
-  unsigned int const z = (y + (y >> 8)) & MASK6;
+    unsigned int const w = (data & MASK1) + ((data >> 1) & MASK1);
+    unsigned int const x = (w & MASK2) + ((w >> 2) & MASK2);
+    unsigned int const y = ((x + (x >> 4)) & MASK4);
+    unsigned int const z = (y + (y >> 8)) & MASK6;
 
-  return z;
+    return z;
 }
 
 extern void mmu_op (uae_u32, struct regstruct &regs, uae_u32);

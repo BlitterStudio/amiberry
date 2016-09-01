@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * memory management
-  *
-  * Copyright 1995 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * memory management
+ *
+ * Copyright 1995 Bernd Schmidt
+ */
 
 #ifndef UAE_MEMORY_H
 #define UAE_MEMORY_H
@@ -63,29 +63,30 @@ extern int uae_boot_rom_size;
 extern uaecptr rtarea_base;
 
 enum { ABFLAG_UNK = 0, ABFLAG_RAM = 1, ABFLAG_ROM = 2, ABFLAG_ROMIN = 4, ABFLAG_IO = 8, ABFLAG_NONE = 16, ABFLAG_SAFE = 32 };
-typedef struct {
-  /* These ones should be self-explanatory... */
-  mem_get_func lget, wget, bget;
-  mem_put_func lput, wput, bput;
-  /* Use xlateaddr to translate an Amiga address to a uae_u8 * that can
-   * be used to address memory without calling the wget/wput functions.
-   * This doesn't work for all memory banks, so this function may call
-   * abort(). */
-  xlate_func xlateaddr;
-  /* To prevent calls to abort(), use check before calling xlateaddr.
-   * It checks not only that the memory bank can do xlateaddr, but also
-   * that the pointer points to an area of at least the specified size.
-   * This is used for example to translate bitplane pointers in custom.c */
-  check_func check;
-  /* For those banks that refer to real memory, we can save the whole trouble
-     of going through function calls, and instead simply grab the memory
-     ourselves. This holds the memory address where the start of memory is
-     for this particular bank. */
-  uae_u8 *baseaddr;
-  const TCHAR *name;
-  /* for instruction opcode/operand fetches */
-  mem_get_func lgeti, wgeti;
-  int flags;
+typedef struct
+{
+    /* These ones should be self-explanatory... */
+    mem_get_func lget, wget, bget;
+    mem_put_func lput, wput, bput;
+    /* Use xlateaddr to translate an Amiga address to a uae_u8 * that can
+     * be used to address memory without calling the wget/wput functions.
+     * This doesn't work for all memory banks, so this function may call
+     * abort(). */
+    xlate_func xlateaddr;
+    /* To prevent calls to abort(), use check before calling xlateaddr.
+     * It checks not only that the memory bank can do xlateaddr, but also
+     * that the pointer points to an area of at least the specified size.
+     * This is used for example to translate bitplane pointers in custom.c */
+    check_func check;
+    /* For those banks that refer to real memory, we can save the whole trouble
+       of going through function calls, and instead simply grab the memory
+       ourselves. This holds the memory address where the start of memory is
+       for this particular bank. */
+    uae_u8 *baseaddr;
+    const TCHAR *name;
+    /* for instruction opcode/operand fetches */
+    mem_get_func lgeti, wgeti;
+    int flags;
 } addrbank;
 
 extern uae_u8 *filesysory;
@@ -147,17 +148,17 @@ extern void free_fastmemory (void);
 
 STATIC_INLINE uae_u32 get_long(uaecptr addr)
 {
-  return longget(addr);
+    return longget(addr);
 }
 
 STATIC_INLINE uae_u32 get_word(uaecptr addr)
 {
-  return wordget(addr);
+    return wordget(addr);
 }
 
 STATIC_INLINE uae_u32 get_byte(uaecptr addr)
 {
-  return byteget(addr);
+    return byteget(addr);
 }
 
 STATIC_INLINE uae_u32 get_longi(uaecptr addr)
@@ -179,17 +180,19 @@ STATIC_INLINE uae_u32 get_wordi(uaecptr addr)
 STATIC_INLINE void *get_pointer (uaecptr addr)
 {
     const unsigned int n = SIZEOF_VOID_P / 4;
-    union {
-	void    *ptr;
-	uae_u32  longs[SIZEOF_VOID_P / 4];
+    union
+    {
+        void    *ptr;
+        uae_u32  longs[SIZEOF_VOID_P / 4];
     } p;
     unsigned int i;
 
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < n; i++)
+    {
 #ifdef WORDS_BIGENDIAN
-	p.longs[i]     = get_long (addr + i * 4);
+        p.longs[i]     = get_long (addr + i * 4);
 #else
-	p.longs[n - 1 - i] = get_long (addr + i * 4);
+        p.longs[n - 1 - i] = get_long (addr + i * 4);
 #endif
     }
     return p.ptr;
@@ -222,19 +225,21 @@ STATIC_INLINE void put_byte(uaecptr addr, uae_u32 b)
 STATIC_INLINE void put_pointer (uaecptr addr, void *v)
 {
     const unsigned int n = SIZEOF_VOID_P / 4;
-    union {
-	void    *ptr;
-	uae_u32  longs[SIZEOF_VOID_P / 4];
+    union
+    {
+        void    *ptr;
+        uae_u32  longs[SIZEOF_VOID_P / 4];
     } p;
     unsigned int i;
 
     p.ptr = v;
 
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < n; i++)
+    {
 #ifdef WORDS_BIGENDIAN
-	put_long (addr + i * 4, p.longs[i]);
+        put_long (addr + i * 4, p.longs[i]);
 #else
-	put_long (addr + i * 4, p.longs[n - 1 - i]);
+        put_long (addr + i * 4, p.longs[n - 1 - i]);
 #endif
     }
 }
@@ -258,11 +263,13 @@ extern uae_u32 chipmem_mask, chipmem_full_mask, kickmem_mask;
 extern uae_u8 *kickmemory;
 extern addrbank dummy_bank;
 
-STATIC_INLINE uae_u32 chipmem_lget_indirect(uae_u32 PT) {
-  return do_get_mem_long((uae_u32 *)&chipmemory[PT & chipmem_full_mask]);
+STATIC_INLINE uae_u32 chipmem_lget_indirect(uae_u32 PT)
+{
+    return do_get_mem_long((uae_u32 *)&chipmemory[PT & chipmem_full_mask]);
 }
-STATIC_INLINE uae_u32 chipmem_wget_indirect (uae_u32 PT) {
-  return do_get_mem_word((uae_u16 *)&chipmemory[PT & chipmem_full_mask]);
+STATIC_INLINE uae_u32 chipmem_wget_indirect (uae_u32 PT)
+{
+    return do_get_mem_word((uae_u16 *)&chipmemory[PT & chipmem_full_mask]);
 }
 #define chipmem_wput_indirect  chipmem_agnus_wput
 extern void REGPARAM2 chipmem_agnus_wput (uaecptr addr, uae_u32 w);

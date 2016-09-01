@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Prototypes for main.c
-  *
-  * Copyright 1996 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Prototypes for main.c
+ *
+ * Copyright 1996 Bernd Schmidt
+ */
 
 #ifndef UAE_UAE_H
 #define UAE_UAE_H
@@ -52,7 +52,8 @@ extern TCHAR start_path_data[256];
  *   -1: line that is selectable, but has no keyboard shortcut
  *    0: Menu title
  */
-struct bstring {
+struct bstring
+{
     const TCHAR *data;
     int val;
 };

@@ -1,17 +1,17 @@
- /* 
-  * UAE - The Un*x Amiga Emulator
-  * 
-  * User configuration options
-  *
-  * Copyright 1995 - 1998 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * User configuration options
+ *
+ * Copyright 1995 - 1998 Bernd Schmidt
+ */
 
 /*
  * Please note: Many things are configurable with command line parameters,
- * and you can put anything you can pass on the command line into a 
+ * and you can put anything you can pass on the command line into a
  * configuration file ~/.uaerc. Please read the documentation for more
  * information.
- * 
+ *
  * NOTE NOTE NOTE
  * Whenever you change something in this file, you have to "make clean"
  * afterwards.
@@ -28,10 +28,10 @@
  * well for hardware bangers like games and demos, in fact it will be much
  * slower. It can also be slower for some applications and/or benchmarks.
  * It needs a lot of tuning. Please let me know your results with this.
- * The second define, RELY_ON_LOADSEG_DETECTION, decides how the compiler 
+ * The second define, RELY_ON_LOADSEG_DETECTION, decides how the compiler
  * tries to detect self-modifying code. If it is not set, the first bytes
  * of every compiled routine are used as checksum before executing the
- * routine. If it is set, the UAE filesystem will perform some checks to 
+ * routine. If it is set, the UAE filesystem will perform some checks to
  * detect whether an executable is being loaded. This is less reliable
  * (it won't work if you don't use the harddisk emulation, so don't try to
  * use floppies or even the RAM disk), but much faster.
