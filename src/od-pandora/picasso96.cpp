@@ -94,7 +94,7 @@ static struct PicassoResolution *newmodes = NULL;
 
 static int picasso_convert, host_mode;
 
-// These are the maximum resolutions... They are filled in by GetSupportedResolutions() 
+// These are the maximum resolutions... They are filled in by GetSupportedResolutions()
 // have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
 // data here. */
 static struct ScreenResolution planar = { 320, 240 };
@@ -187,12 +187,11 @@ STATIC_INLINE void endianswap(uae_u32 *vp, int bpp)
 	switch (bpp)
 	{
 	case 2:
-		*vp = (v >> 8 & 0x00ff) | (v << 8) & 0xffff;
+		*vp = (((v >> 8) & 0x00ff) | (v << 8)) & 0xffff;
 		break;
 	case 4:
-		*vp = (v >> 24 & 0x000000ff) | (v >> 8 & 0x0000ff00) | (v << 8 & 0x00ff0000) | (v << 24 & 0xff000000);
+		*vp = ((v >> 24) & 0x000000ff) | ((v >> 8) & 0x0000ff00) | ((v << 8) & 0x00ff0000) | ((v << 24) & 0xff000000);
 		break;
-	default: break;
 	}
 }
 
@@ -367,8 +366,8 @@ static uae_u8 GetBytesPerPixel(uae_u32 RGBfmt)
 	case RGBFB_B5G6R5PC:
 	case RGBFB_B5G5R5PC:
 		return 2;
-	default: return 0;
 	}
+	return 0;
 }
 
 /*
@@ -535,12 +534,11 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri,
 	case 4:
 		for (lines = 0; lines < Height; lines++, dst += bpr)
 		{
-			uae_u32 *p = reinterpret_cast<uae_u32*>(dst);
+			uae_u32 *p = (uae_u32*)dst;
 			for (cols = 0; cols < Width; cols++)
 				*p++ = Pen;
 		}
 		break;
-	default: break;
 	}
 }
 
@@ -717,8 +715,6 @@ static int getconvert(int rgbformat, int pixbytes)
 		else if (d == 4)
 			v = RGBFB_R8G8B8A8_32;
 		break;
-	default: 
-		return v;
 	}
 	return v;
 }
@@ -978,7 +974,7 @@ void picasso_refresh(void)
 */
 static int do_blitrect_frame_buffer(struct RenderInfo *ri,
 	struct
-                                     RenderInfo *dstri,
+	RenderInfo *dstri,
 	unsigned long srcx,
 	unsigned long srcy,
 	unsigned long dstx,
@@ -1031,10 +1027,10 @@ static int do_blitrect_frame_buffer(struct RenderInfo *ri,
 			return 1;
 
 		}
-		else if (Bpp == 4)
+		if (Bpp == 4)
 		{
 
-		            /* 32-bit optimized */
+			/* 32-bit optimized */
 			switch (opcode)
 			{
 			case BLIT_FALSE:
@@ -1087,7 +1083,7 @@ static int do_blitrect_frame_buffer(struct RenderInfo *ri,
 		else if (Bpp == 3)
 		{
 
-		            /* 24-bit (not very) optimized */
+			/* 24-bit (not very) optimized */
 			switch (opcode)
 			{
 			case BLIT_FALSE:
@@ -1141,7 +1137,7 @@ static int do_blitrect_frame_buffer(struct RenderInfo *ri,
 		else if (Bpp == 2)
 		{
 
-		            /* 16-bit optimized */
+			/* 16-bit optimized */
 			switch (opcode)
 			{
 			case BLIT_FALSE:
@@ -1195,7 +1191,7 @@ static int do_blitrect_frame_buffer(struct RenderInfo *ri,
 		else if (Bpp == 1)
 		{
 
-		            /* 8-bit optimized */
+			/* 8-bit optimized */
 			switch (opcode)
 			{
 			case BLIT_FALSE:
@@ -1431,68 +1427,186 @@ static struct modeids mi[] =
 {
     /* "original" modes */
 
-   320, 200, 0,
-   320, 240, 1,
-   640, 400, 2,
-   640, 480, 3,
-   800, 600, 4,
-  1024, 768, 5,
-  1152, 864, 6,
-  1280,1024, 7,
-  1600,1280, 8,
-   320, 256, 9,
-   640, 512,10,
+	320,
+	200,
+	0,
+	320,
+	240,
+	1,
+	640,
+	400,
+	2,
+	640,
+	480,
+	3,
+	800,
+	600,
+	4,
+	1024,
+	768,
+	5,
+	1152,
+	864,
+	6,
+	1280,
+	 1024,
+	7,
+	1600,
+	 1280,
+	8,
+	320,
+	256,
+	9,
+	640,
+	512, 
+	10,
 
 	    /* new modes */
 
-   704, 480, 129,
-   704, 576, 130,
-   720, 480, 131,
-   720, 576, 132,
-   768, 483, 133,
-   768, 576, 134,
-   800, 480, 135,
-   848, 480, 136,
-   854, 480, 137,
-   948, 576, 138,
-  1024, 576, 139,
-  1152, 768, 140,
-  1152, 864, 141,
-  1280, 720, 142,
-  1280, 768, 143,
-  1280, 800, 144,
-  1280, 854, 145,
-  1280, 960, 146,
-  1366, 768, 147,
-  1440, 900, 148,
-  1440, 960, 149,
-  1600,1200, 150,
-  1680,1050, 151,
-  1920,1080, 152,
-  1920,1200, 153,
-  2048,1152, 154,
-  2048,1536, 155,
-  2560,1600, 156,
-  2560,2048, 157,
-   400, 300, 158,
-   512, 384, 159,
-   640, 432, 160,
-  1360, 768, 161,
-  1360,1024, 162,
-  1400,1050, 163,
-  1792,1344, 164,
-  1800,1440, 165,
-  1856,1392, 166,
-  1920,1440, 167,
-   480, 360, 168,
-   640, 350, 169,
-  1600, 900, 170,
-   960, 600, 171,
-  1088, 612, 172,
-  1152, 648, 173,
-  1776,1000, 174,
-  2560,1440, 175,
-  -1,-1,0
+	704,
+	480,
+	129,
+	704,
+	576,
+	130,
+	720,
+	480,
+	131,
+	720,
+	576,
+	132,
+	768,
+	483,
+	133,
+	768,
+	576,
+	134,
+	800,
+	480,
+	135,
+	848,
+	480,
+	136,
+	854,
+	480,
+	137,
+	948,
+	576,
+	138,
+	1024,
+	576,
+	139,
+	1152,
+	768,
+	140,
+	1152,
+	864,
+	141,
+	1280,
+	720,
+	142,
+	1280,
+	768,
+	143,
+	1280,
+	800,
+	144,
+	1280,
+	854,
+	145,
+	1280,
+	960,
+	146,
+	1366,
+	768,
+	147,
+	1440,
+	900,
+	148,
+	1440,
+	960,
+	149,
+	1600,
+	 1200,
+	150,
+	1680,
+	 1050,
+	151,
+	1920,
+	 1080,
+	152,
+	1920,
+	 1200,
+	153,
+	2048,
+	 1152,
+	154,
+	2048,
+	 1536,
+	155,
+	2560, 
+	1600,
+	156,
+	2560, 
+	2048,
+	157,
+	400,
+	300,
+	158,
+	512,
+	384,
+	159,
+	640,
+	432,
+	160,
+	1360,
+	768,
+	161,
+	1360, 
+	1024,
+	162,
+	1400,
+	 1050,
+	163,
+	1792,
+	 1344,
+	164,
+	1800, 
+	1440,
+	165,
+	1856, 
+	1392,
+	166,
+	1920, 
+	1440,
+	167,
+	480,
+	360,
+	168,
+	640,
+	350,
+	169,
+	1600,
+	900,
+	170,
+	960,
+	600,
+	171,
+	1088,
+	612,
+	172,
+	1152,
+	648,
+	173,
+	1776,
+	 1000,
+	174,
+	2560,
+	 1440,
+	175,
+	-1,
+	 -1,
+	 0
 };
 
 static int AssignModeID(int w, int h, int *unkcnt)
@@ -2203,7 +2317,7 @@ FillRect:
 * d5:	UBYTE Mask
 * d7:	uae_u32 RGBFormat
 ***********************************************************/
-static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
+__attribute__((optimize("O2"))) static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 {
 	uaecptr renderinfo = m68k_areg(regs, 1);
 	uae_u32 X = uae_u16(m68k_dreg(regs, 0));
@@ -2261,7 +2375,7 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 						for (cols = 0; cols < Width; cols++)
 						{
 							uae_u32 tmpval = do_get_mem_byte(p + cols) & Mask;
-							do_put_mem_byte(p + cols, (uae_u8)(Pen | tmpval));
+							do_put_mem_byte(p + cols, uae_u8(Pen | tmpval));
 						}
 					}
 				}
@@ -2467,10 +2581,10 @@ STATIC_INLINE void PixelWrite(uae_u8 *mem, int bits, uae_u32 fgpen, int Bpp, uae
 	case 1:
 		if (mask != 0xFF)
 			fgpen = (fgpen & mask) | (mem[bits] & ~mask);
-		mem[bits] = uae_u8(fgpen);
+		mem[bits] = (uae_u8)fgpen;
 		break;
 	case 2:
-		reinterpret_cast<uae_u16 *>(mem)[bits] = uae_u16(fgpen);
+		((uae_u16 *)mem)[bits] = (uae_u16)fgpen;
 		break;
 	case 3:
 		mem[bits * 3 + 0] = fgpen >> 0;
@@ -2478,7 +2592,7 @@ STATIC_INLINE void PixelWrite(uae_u8 *mem, int bits, uae_u32 fgpen, int Bpp, uae
 		mem[bits * 3 + 2] = fgpen >> 16;
 		break;
 	case 4:
-		reinterpret_cast<uae_u32 *>(mem)[bits] = fgpen;
+		((uae_u32 *)mem)[bits] = fgpen;
 		break;
 	}
 }
@@ -2568,7 +2682,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 			for (rows = 0; rows < H; rows++, uae_mem += ri.BytesPerRow)
 			{
 				unsigned long prow = (rows + pattern.YOffset) & ysize_mask;
-				unsigned int d = do_get_mem_word(reinterpret_cast<uae_u16 *>(pattern.Memory) + prow);
+				unsigned int d = do_get_mem_word(((uae_u16 *)pattern.Memory) + prow);
 				uae_u8 *uae_mem2 = uae_mem;
 				unsigned long cols;
 
@@ -2628,19 +2742,19 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 										break;
 									case 2:
 										{
-											uae_u16 *addr = reinterpret_cast<uae_u16 *>(uae_mem2);
+											uae_u16 *addr = (uae_u16 *)uae_mem2;
 											addr[bits] ^= 0xffff;
 										}
 										break;
 									case 3:
 										{
-											uae_u32 *addr = reinterpret_cast<uae_u32 *>(uae_mem2 + bits * 3);
+											uae_u32 *addr = (uae_u32 *)(uae_mem2 + bits * 3);
 											do_put_mem_long(addr, do_get_mem_long(addr) ^ 0x00ffffff);
 										}
 										break;
 									case 4:
 										{
-											uae_u32 *addr = reinterpret_cast<uae_u32 *>(uae_mem2);
+											uae_u32 *addr = (uae_u32 *)uae_mem2;
 											addr[bits] ^= 0xffffffff;
 										}
 										break;
@@ -2923,12 +3037,12 @@ static void PlanarToChunky(struct RenderInfo *ri,
 			if (tmp > 0)
 			{
 				msk <<= tmp;
-				b = do_get_mem_long(reinterpret_cast<uae_u32 *>(image + cols + 4));
+				b = do_get_mem_long((uae_u32 *)(image + cols + 4));
 				if (tmp < 4)
 					b &= 0xFFFFFFFF >> (32 - tmp * 8);
 				else if (tmp > 4)
 				{
-					a = do_get_mem_long(reinterpret_cast<uae_u32 *>(image + cols));
+					a = do_get_mem_long((uae_u32 *)(image + cols));
 					a &= 0xFFFFFFFF >> (64 - tmp * 8);
 				}
 			}
@@ -2941,15 +3055,15 @@ static void PlanarToChunky(struct RenderInfo *ri,
 					data = 0xFF;
 				else
 				{
-					data = uae_u8(do_get_mem_word(reinterpret_cast<uae_u16 *>(PLANAR[k])) >> (8 - bitoffset));
+					data = (uae_u8)(do_get_mem_word((uae_u16 *) PLANAR[k]) >> (8 - bitoffset));
 					PLANAR[k]++;
 				}
 				data &= msk;
 				a |= p2ctab[data][0] << k;
 				b |= p2ctab[data][1] << k;
 			}
-			do_put_mem_long(reinterpret_cast<uae_u32 *>(image + cols), a);
-			do_put_mem_long(reinterpret_cast<uae_u32 *>(image + cols + 4), b);
+			do_put_mem_long((uae_u32 *)(image + cols), a);
+			do_put_mem_long((uae_u32 *)(image + cols + 4), b);
 		}
 		for (j = 0; j < Depth; j++)
 		{
@@ -3071,7 +3185,7 @@ static void PlanarToDirect(struct RenderInfo *ri,
 			switch (bpp)
 			{
 			case 2:
-				reinterpret_cast<uae_u16 *>(image2)[0] = uae_u16(cim->Colors[v]);
+				((uae_u16 *)image2)[0] = (uae_u16)(cim->Colors[v]);
 				image2 += 2;
 				break;
 			case 3:
@@ -3081,7 +3195,7 @@ static void PlanarToDirect(struct RenderInfo *ri,
 				image2 += 3;
 				break;
 			case 4:
-				reinterpret_cast<uae_u32 *>(image2)[0] = cim->Colors[v];
+				((uae_u32 *)image2)[0] = cim->Colors[v];
 				image2 += 4;
 				break;
 			}
@@ -3237,7 +3351,7 @@ static uae_u32 REGPARAM2 gfxmem_lgetx(uaecptr addr)
 
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = reinterpret_cast<uae_u32 *>(gfxmemory + addr);
+	m = (uae_u32 *)(gfxmemory + addr);
 	return do_get_mem_long(m);
 }
 
@@ -3246,7 +3360,7 @@ static uae_u32 REGPARAM2 gfxmem_wgetx(uaecptr addr)
 	uae_u16 *m;
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = reinterpret_cast<uae_u16 *>(gfxmemory + addr);
+	m = (uae_u16 *)(gfxmemory + addr);
 	return do_get_mem_word(m);
 }
 
@@ -3262,7 +3376,7 @@ static void REGPARAM2 gfxmem_lputx(uaecptr addr, uae_u32 l)
 	uae_u32 *m;
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = reinterpret_cast<uae_u32 *>(gfxmemory + addr);
+	m = (uae_u32 *)(gfxmemory + addr);
 	do_put_mem_long(m, l);
 }
 
@@ -3271,7 +3385,7 @@ static void REGPARAM2 gfxmem_wputx(uaecptr addr, uae_u32 w)
 	uae_u16 *m;
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = reinterpret_cast<uae_u16 *>(gfxmemory + addr);
+	m = (uae_u16 *)(gfxmemory + addr);
 	do_put_mem_word(m, (uae_u16)w);
 }
 
@@ -3868,7 +3982,7 @@ uae_u8 *save_p96(int *len, uae_u8 *dstptr)
 		dstbak = dst = xmalloc(uae_u8, 1000);
 	save_u32(2);
 	save_u32((picasso_on ? 1 : 0) | (set_gc_called ? 2 : 0) | (set_panning_called ? 4 : 0) |
-	          (interrupt_enabled ? 32 : 0) | 64);
+	         (interrupt_enabled ? 32 : 0) | 64);
 	save_u32(currprefs.rtgmem_size);
 	save_u32(picasso96_state.Address);
 	save_u32(picasso96_state.RGBFormat);

@@ -57,6 +57,7 @@ static void lores_reset(void)
 }
 
 bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
+bool ham_drawn = false;
 
 #ifdef PANDORA
 #define OFFSET_Y_ADJUST 15
@@ -1650,7 +1651,7 @@ static void pfield_doline (int lineno)
 }
 
 
-__attribute__((optimize("O2"))) void init_row_map (void)
+void init_row_map (void)
 {
   int i, j;
 

@@ -7,7 +7,7 @@
 
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "newcpu.h"
 #include "custom.h"
 

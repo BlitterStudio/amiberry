@@ -1688,8 +1688,7 @@ static void m68k_run_1 (void)
   for (;;) {
   	uae_u16 opcode = r.ir;
 
-#if defined (CPU_arm) & defined(USE_ARMNEON)
-    // Well not really since pli is ArmV7...
+#ifdef CPU_arm
     /* Load ARM code for next opcode into L2 cache during execute of do_cycles() */
     __asm__ volatile ("pli [%[radr]]\n\t" \
       : : [radr] "r" (cpufunctbl[opcode]) : );

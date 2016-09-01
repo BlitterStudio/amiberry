@@ -48,8 +48,10 @@ static int frh_count = 0;
 #define LAST_SPEEDUP_LINE 30
 #define SPEEDUP_CYCLES_JIT 2800
 #define SPEEDUP_CYCLES_NONJIT 600
-#define SPEEDUP_TIMELIMIT_JIT -1500
+#define SPEEDUP_CYCLES_HAM 1000
+#define SPEEDUP_TIMELIMIT_JIT -1200
 #define SPEEDUP_TIMELIMIT_NONJIT -2000
+#define SPEEDUP_TIMELIMIT_HAM -4000
 int pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
 
@@ -4288,12 +4290,26 @@ static void vsync_handler_post (void)
   if (currprefs.cachesize) {
     vsyncmintime = last_synctime;
     frh_count = 0;
+    if(ham_drawn) {
+      pissoff_value = SPEEDUP_CYCLES_HAM * CYCLE_UNIT;
+      speedup_timelimit = SPEEDUP_TIMELIMIT_HAM;
+    } else {
+      pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
+      speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+    }
   }
   else
 #endif
   {
     vsyncmintime = last_synctime + vsynctimebase * (maxvpos_nom - LAST_SPEEDUP_LINE) / maxvpos_nom;
+    pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
+    if(ham_drawn) {
+      speedup_timelimit = SPEEDUP_TIMELIMIT_HAM;
+    } else {
+      speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+    }
   }
+  ham_drawn = false;
   
 	if ((beamcon0 & (0x20 | 0x80)) != (new_beamcon0 & (0x20 | 0x80)) || (vpos_count > 0 && abs (vpos_count - vpos_count_diff) > 1) || lof_changed) {
 		init_hz ();

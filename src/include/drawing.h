@@ -22,6 +22,7 @@
 
 #define lores_shift 0
 extern bool aga_mode;
+extern bool ham_drawn;
 
 STATIC_INLINE int coord_hw_to_window_x(int x)
 {
@@ -62,8 +63,7 @@ struct color_entry
 };
 
 /* convert 24 bit AGA Amiga RGB to native color */
-//#ifndef PANDORA
-#if !defined(PANDORA) || !defined(USE_ARMNEON)  // Well not really since ubfx is arm6t2...
+#ifndef PANDORA
 #define CONVERT_RGB(c) \
     ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
 #else

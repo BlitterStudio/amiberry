@@ -574,8 +574,8 @@ void gui_display(int shortcut)
 	run_gui();
 	gui_to_prefs();
 	setCpuSpeed();
-//	if(quit_program)
-//		screen_is_picasso = 0;
+	if(quit_program)
+		screen_is_picasso = 0;
 
 	update_display(&changed_prefs);
 
