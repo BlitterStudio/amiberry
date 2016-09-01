@@ -3,7 +3,7 @@ ifeq ($(PLATFORM),)
 endif
 
 ifeq ($(PLATFORM),rpi3)
-	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -funsafe-math-optimizations
+	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
 	LDFLAGS += -lbcm_host
 	DEFS += -DRASPBERRY
@@ -11,7 +11,7 @@ ifeq ($(PLATFORM),rpi3)
 	HAVE_DISPMANX = 1
 	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi2)
-	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -funsafe-math-optimizations
+	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
 	LDFLAGS += -lbcm_host
 	DEFS += -DRASPBERRY
@@ -81,8 +81,8 @@ MORE_CFLAGS += -mstructure-size-boundary=32
 MORE_CFLAGS += -falign-functions=32
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe -fomit-frame-pointer -fsingle-precision-constant
-MORE_CFLAGS += -fipa-pta -fgcse-las -fexceptions -fpermissive
+MORE_CFLAGS += -Ofast -pipe -fsingle-precision-constant
+MORE_CFLAGS += -fexceptions -fpermissive
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 
