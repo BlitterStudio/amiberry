@@ -534,7 +534,7 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri,
 	case 4:
 		for (lines = 0; lines < Height; lines++, dst += bpr)
 		{
-			uae_u32 *p = (uae_u32*)dst;
+			uae_u32 *p = reinterpret_cast<uae_u32*>(dst);
 			for (cols = 0; cols < Width; cols++)
 				*p++ = Pen;
 		}
@@ -2237,9 +2237,9 @@ static void do_xor8(uae_u8 *p, int w, uae_u32 v)
 	}
 	while (w >= 2 * 4)
 	{
-		*((uae_u32*)p) ^= v;
+		*reinterpret_cast<uae_u32*>(p) ^= v;
 		p += 4;
-		*((uae_u32*)p) ^= v;
+		*reinterpret_cast<uae_u32*>(p) ^= v;
 		p += 4;
 		w -= 2 * 4;
 	}
@@ -2516,13 +2516,13 @@ BlitRect:
 static uae_u32 REGPARAM2 picasso_BlitRect(TrapContext *ctx)
 {
 	uaecptr renderinfo   = m68k_areg(regs, 1);
-	unsigned long srcx   = (uae_u16)m68k_dreg(regs, 0);
-	unsigned long srcy   = (uae_u16)m68k_dreg(regs, 1);
-	unsigned long dstx   = (uae_u16)m68k_dreg(regs, 2);
-	unsigned long dsty   = (uae_u16)m68k_dreg(regs, 3);
-	unsigned long width  = (uae_u16)m68k_dreg(regs, 4);
-	unsigned long height = (uae_u16)m68k_dreg(regs, 5);
-	uae_u8  Mask         = (uae_u8) m68k_dreg(regs, 6);
+	unsigned long srcx   = uae_u16(m68k_dreg(regs, 0));
+	unsigned long srcy   = uae_u16(m68k_dreg(regs, 1));
+	unsigned long dstx   = uae_u16(m68k_dreg(regs, 2));
+	unsigned long dsty   = uae_u16(m68k_dreg(regs, 3));
+	unsigned long width  = uae_u16(m68k_dreg(regs, 4));
+	unsigned long height = uae_u16(m68k_dreg(regs, 5));
+	uae_u8  Mask         = uae_u8(m68k_dreg(regs, 6));
 	uae_u32 result = 0;
 
 	if (NOBLITTER_BLIT)
@@ -2581,10 +2581,10 @@ STATIC_INLINE void PixelWrite(uae_u8 *mem, int bits, uae_u32 fgpen, int Bpp, uae
 	case 1:
 		if (mask != 0xFF)
 			fgpen = (fgpen & mask) | (mem[bits] & ~mask);
-		mem[bits] = (uae_u8)fgpen;
+		mem[bits] = uae_u8(fgpen);
 		break;
 	case 2:
-		((uae_u16 *)mem)[bits] = (uae_u16)fgpen;
+		reinterpret_cast<uae_u16 *>(mem)[bits] = uae_u16(fgpen);
 		break;
 	case 3:
 		mem[bits * 3 + 0] = fgpen >> 0;
@@ -2592,7 +2592,7 @@ STATIC_INLINE void PixelWrite(uae_u8 *mem, int bits, uae_u32 fgpen, int Bpp, uae
 		mem[bits * 3 + 2] = fgpen >> 16;
 		break;
 	case 4:
-		((uae_u32 *)mem)[bits] = fgpen;
+		reinterpret_cast<uae_u32 *>(mem)[bits] = fgpen;
 		break;
 	}
 }
@@ -2682,7 +2682,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 			for (rows = 0; rows < H; rows++, uae_mem += ri.BytesPerRow)
 			{
 				unsigned long prow = (rows + pattern.YOffset) & ysize_mask;
-				unsigned int d = do_get_mem_word(((uae_u16 *)pattern.Memory) + prow);
+				unsigned int d = do_get_mem_word(reinterpret_cast<uae_u16 *>(pattern.Memory) + prow);
 				uae_u8 *uae_mem2 = uae_mem;
 				unsigned long cols;
 
@@ -2742,19 +2742,19 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 										break;
 									case 2:
 										{
-											uae_u16 *addr = (uae_u16 *)uae_mem2;
+											uae_u16 *addr = reinterpret_cast<uae_u16 *>(uae_mem2);
 											addr[bits] ^= 0xffff;
 										}
 										break;
 									case 3:
 										{
-											uae_u32 *addr = (uae_u32 *)(uae_mem2 + bits * 3);
+											uae_u32 *addr = reinterpret_cast<uae_u32 *>(uae_mem2 + bits * 3);
 											do_put_mem_long(addr, do_get_mem_long(addr) ^ 0x00ffffff);
 										}
 										break;
 									case 4:
 										{
-											uae_u32 *addr = (uae_u32 *)uae_mem2;
+											uae_u32 *addr = reinterpret_cast<uae_u32 *>(uae_mem2);
 											addr[bits] ^= 0xffffffff;
 										}
 										break;
@@ -2926,19 +2926,19 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 										break;
 									case 2:
 										{
-											uae_u16 *addr = (uae_u16 *)uae_mem2;
+											uae_u16 *addr = reinterpret_cast<uae_u16 *>(uae_mem2);
 											addr[bits] ^= 0xffff;
 										}
 										break;
 									case 3:
 										{
-											uae_u32 *addr = (uae_u32 *)(uae_mem2 + bits * 3);
+											uae_u32 *addr = reinterpret_cast<uae_u32 *>(uae_mem2 + bits * 3);
 											do_put_mem_long(addr, do_get_mem_long(addr) ^ 0x00FFFFFF);
 										}
 										break;
 									case 4:
 										{
-											uae_u32 *addr = (uae_u32 *)uae_mem2;
+											uae_u32 *addr = reinterpret_cast<uae_u32 *>(uae_mem2);
 											addr[bits] ^= 0xffffffff;
 										}
 										break;
@@ -3037,12 +3037,12 @@ static void PlanarToChunky(struct RenderInfo *ri,
 			if (tmp > 0)
 			{
 				msk <<= tmp;
-				b = do_get_mem_long((uae_u32 *)(image + cols + 4));
+				b = do_get_mem_long(reinterpret_cast<uae_u32 *>(image + cols + 4));
 				if (tmp < 4)
 					b &= 0xFFFFFFFF >> (32 - tmp * 8);
 				else if (tmp > 4)
 				{
-					a = do_get_mem_long((uae_u32 *)(image + cols));
+					a = do_get_mem_long(reinterpret_cast<uae_u32 *>(image + cols));
 					a &= 0xFFFFFFFF >> (64 - tmp * 8);
 				}
 			}
@@ -3055,15 +3055,15 @@ static void PlanarToChunky(struct RenderInfo *ri,
 					data = 0xFF;
 				else
 				{
-					data = (uae_u8)(do_get_mem_word((uae_u16 *) PLANAR[k]) >> (8 - bitoffset));
+					data = uae_u8(do_get_mem_word(reinterpret_cast<uae_u16 *>(PLANAR[k])) >> (8 - bitoffset));
 					PLANAR[k]++;
 				}
 				data &= msk;
 				a |= p2ctab[data][0] << k;
 				b |= p2ctab[data][1] << k;
 			}
-			do_put_mem_long((uae_u32 *)(image + cols), a);
-			do_put_mem_long((uae_u32 *)(image + cols + 4), b);
+			do_put_mem_long(reinterpret_cast<uae_u32 *>(image + cols), a);
+			do_put_mem_long(reinterpret_cast<uae_u32 *>(image + cols + 4), b);
 		}
 		for (j = 0; j < Depth; j++)
 		{
@@ -3097,12 +3097,12 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Chunky(TrapContext *ctx)
 {
 	uaecptr bm = m68k_areg(regs, 1);
 	uaecptr ri = m68k_areg(regs, 2);
-	unsigned long srcx = (uae_u16) m68k_dreg(regs, 0);
-	unsigned long srcy = (uae_u16) m68k_dreg(regs, 1);
-	unsigned long dstx = (uae_u16) m68k_dreg(regs, 2);
-	unsigned long dsty = (uae_u16) m68k_dreg(regs, 3);
-	unsigned long width = (uae_u16) m68k_dreg(regs, 4);
-	unsigned long height = (uae_u16) m68k_dreg(regs, 5);
+	unsigned long srcx = uae_u16(m68k_dreg(regs, 0));
+	unsigned long srcy = uae_u16(m68k_dreg(regs, 1));
+	unsigned long dstx = uae_u16(m68k_dreg(regs, 2));
+	unsigned long dsty = uae_u16(m68k_dreg(regs, 3));
+	unsigned long width = uae_u16(m68k_dreg(regs, 4));
+	unsigned long height = uae_u16(m68k_dreg(regs, 5));
 	uae_u8 minterm = m68k_dreg(regs, 6) & 0xFF;
 	uae_u8 mask = m68k_dreg(regs, 7) & 0xFF;
 	struct RenderInfo local_ri;
@@ -3185,7 +3185,7 @@ static void PlanarToDirect(struct RenderInfo *ri,
 			switch (bpp)
 			{
 			case 2:
-				((uae_u16 *)image2)[0] = (uae_u16)(cim->Colors[v]);
+				reinterpret_cast<uae_u16 *>(image2)[0] = uae_u16(cim->Colors[v]);
 				image2 += 2;
 				break;
 			case 3:
@@ -3195,7 +3195,7 @@ static void PlanarToDirect(struct RenderInfo *ri,
 				image2 += 3;
 				break;
 			case 4:
-				((uae_u32 *)image2)[0] = cim->Colors[v];
+				reinterpret_cast<uae_u32 *>(image2)[0] = cim->Colors[v];
 				image2 += 4;
 				break;
 			}
@@ -3351,7 +3351,7 @@ static uae_u32 REGPARAM2 gfxmem_lgetx(uaecptr addr)
 
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = (uae_u32 *)(gfxmemory + addr);
+	m = reinterpret_cast<uae_u32 *>(gfxmemory + addr);
 	return do_get_mem_long(m);
 }
 
@@ -3360,7 +3360,7 @@ static uae_u32 REGPARAM2 gfxmem_wgetx(uaecptr addr)
 	uae_u16 *m;
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = (uae_u16 *)(gfxmemory + addr);
+	m = reinterpret_cast<uae_u16 *>(gfxmemory + addr);
 	return do_get_mem_word(m);
 }
 
@@ -3376,7 +3376,7 @@ static void REGPARAM2 gfxmem_lputx(uaecptr addr, uae_u32 l)
 	uae_u32 *m;
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = (uae_u32 *)(gfxmemory + addr);
+	m = reinterpret_cast<uae_u32 *>(gfxmemory + addr);
 	do_put_mem_long(m, l);
 }
 
@@ -3385,7 +3385,7 @@ static void REGPARAM2 gfxmem_wputx(uaecptr addr, uae_u32 w)
 	uae_u16 *m;
 	addr -= gfxmem_start & gfxmem_mask;
 	addr &= gfxmem_mask;
-	m = (uae_u16 *)(gfxmemory + addr);
+	m = reinterpret_cast<uae_u16 *>(gfxmemory + addr);
 	do_put_mem_word(m, (uae_u16)w);
 }
 
