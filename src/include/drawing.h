@@ -63,7 +63,8 @@ struct color_entry
 };
 
 /* convert 24 bit AGA Amiga RGB to native color */
-#ifndef PANDORA
+//#ifndef PANDORA
+#if !defined(PANDORA) || !defined(ARMV6T2)
 #define CONVERT_RGB(c) \
     ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
 #else

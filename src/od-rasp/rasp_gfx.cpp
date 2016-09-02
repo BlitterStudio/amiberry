@@ -65,9 +65,7 @@ int DispManXElementpresent = 0;
 static unsigned long previous_synctime = 0;
 static unsigned long next_synctime = 0;
 
-
 uae_sem_t vsync_wait_sem;
-
 
 DISPMANX_DISPLAY_HANDLE_T   dispmanxdisplay;
 DISPMANX_MODEINFO_T         dispmanxdinfo;
@@ -91,7 +89,6 @@ void vsync_callback(unsigned int a, void* b)
     uae_sem_post (&vsync_wait_sem);
 }
 
-
 int graphics_setup (void)
 {
 #ifdef PICASSO96
@@ -101,7 +98,6 @@ int graphics_setup (void)
     bcm_host_init();
     return 1;
 }
-
 
 void InitAmigaVidMode(struct uae_prefs *p)
 {
@@ -132,7 +128,6 @@ void graphics_dispmanshutdown (void)
     }
 }
 
-
 void graphics_subshutdown (void)
 {
     if (dispmanxresource_amigafb_1 != 0)
@@ -141,10 +136,6 @@ void graphics_subshutdown (void)
     //SDL_FreeSurface(prSDLScreen);
     //prSDLScreen = NULL;
 }
-
-
-
-
 
 static void open_screen(struct uae_prefs *p)
 {
@@ -672,8 +663,96 @@ static int save_thumb(char *path)
 }
 
 
-#ifdef PICASSO96
+bool vsync_switchmode(int hz)
+{
+	int changed_height = changed_prefs.gfx_size.height;
 
+	if (hz >= 55)
+		hz = 60;
+	else
+		hz = 50;
+
+	if (hz == 50 && currVSyncRate == 60)
+	{
+	    // Switch from NTSC -> PAL
+		switch (changed_height)
+		{
+		case 200:
+			changed_height = 240;
+			break;
+		case 216:
+			changed_height = 262;
+			break;
+		case 240:
+			changed_height = 270;
+			break;
+		case 256:
+			changed_height = 270;
+			break;
+		case 262:
+			changed_height = 270;
+			break;
+		case 270:
+			changed_height = 270;
+			break;
+		}
+	}
+	else if (hz == 60 && currVSyncRate == 50)
+	{
+	    // Switch from PAL -> NTSC
+		switch (changed_height)
+		{
+		case 200:
+			changed_height = 200;
+			break;
+		case 216:
+			changed_height = 200;
+			break;
+		case 240:
+			changed_height = 200;
+			break;
+		case 256:
+			changed_height = 216;
+			break;
+		case 262:
+			changed_height = 216;
+			break;
+		case 270:
+			changed_height = 240;
+			break;
+		}
+	}
+
+	if (changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
+		return true;
+
+	changed_prefs.gfx_size.height = changed_height;
+
+	return true;
+}
+
+bool target_graphics_buffer_update(void)
+{
+	bool rate_changed = 0;
+	//bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+
+	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+	{
+		update_display(&changed_prefs);
+		rate_changed = true;
+	}
+
+	if (rate_changed)
+	{
+		black_screen_now();
+		fpscounter_reset();
+		time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
+	}
+
+	return true;
+}
+
+#ifdef PICASSO96
 
 int picasso_palette (void)
 {
@@ -685,7 +764,8 @@ int picasso_palette (void)
         int r = picasso96_state.CLUT[i].Red;
         int g = picasso96_state.CLUT[i].Green;
         int b = picasso96_state.CLUT[i].Blue;
-        uae_u32 v = CONVERT_RGB(r << 16 | g << 8 | b);
+	    int value = (r << 16 | g << 8 | b);
+        uae_u32 v = CONVERT_RGB(value);
         if (v !=  picasso_vidinfo.clut[i])
         {
             picasso_vidinfo.clut[i] = v;
@@ -800,96 +880,6 @@ void picasso_InitResolutions (void)
     modesList();
     DisplayModes = Displays[0].DisplayModes;
 }
-
-bool vsync_switchmode (int hz)
-{
-    int changed_height = changed_prefs.gfx_size.height;
-
-    if (hz >= 55)
-        hz = 60;
-    else
-        hz = 50;
-
-    if(hz == 50 && currVSyncRate == 60)
-    {
-        // Switch from NTSC -> PAL
-        switch(changed_height)
-        {
-        case 200:
-            changed_height = 240;
-            break;
-        case 216:
-            changed_height = 262;
-            break;
-        case 240:
-            changed_height = 270;
-            break;
-        case 256:
-            changed_height = 270;
-            break;
-        case 262:
-            changed_height = 270;
-            break;
-        case 270:
-            changed_height = 270;
-            break;
-        }
-    }
-    else if(hz == 60 && currVSyncRate == 50)
-    {
-        // Switch from PAL -> NTSC
-        switch(changed_height)
-        {
-        case 200:
-            changed_height = 200;
-            break;
-        case 216:
-            changed_height = 200;
-            break;
-        case 240:
-            changed_height = 200;
-            break;
-        case 256:
-            changed_height = 216;
-            break;
-        case 262:
-            changed_height = 216;
-            break;
-        case 270:
-            changed_height = 240;
-            break;
-        }
-    }
-
-    if(changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
-        return true;
-
-    changed_prefs.gfx_size.height = changed_height;
-
-    return true;
-}
-
-bool target_graphics_buffer_update (void)
-{
-    bool rate_changed = 0;
-    //bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
-
-    if(currprefs.gfx_size.height != changed_prefs.gfx_size.height)
-    {
-        update_display(&changed_prefs);
-        rate_changed = true;
-    }
-
-    if(rate_changed)
-    {
-        black_screen_now();
-        fpscounter_reset();
-        time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
-    }
-
-    return true;
-}
-
 
 void gfx_set_picasso_state (int on)
 {

@@ -2270,7 +2270,7 @@ static void init_hz (bool fullinit)
 {
 	int isntsc;
 	int omaxvpos = maxvpos;
-  int hzc = 0;
+    int hzc = 0;
 
 	if (fullinit)
 		vpos_count = 0;

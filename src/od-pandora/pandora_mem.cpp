@@ -173,7 +173,7 @@ uae_u8 *mapped_malloc (size_t s, const char *file)
 
     if(!strcmp(file, "z3"))
         return natmem_offset + z3_start_adr; //z3fastmem_start;
-
+#ifdef PICASSO96
     if(!strcmp(file, "z3_gfx"))
     {
         p96ram_start = rtg_start_adr;
@@ -185,6 +185,7 @@ uae_u8 *mapped_malloc (size_t s, const char *file)
         p96ram_start = getz2rtgaddr();
         return natmem_offset + p96ram_start;
     }
+#endif
     if(!strcmp(file, "rtarea"))
         return natmem_offset + rtarea_base;
 

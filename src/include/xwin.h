@@ -6,6 +6,7 @@
  * Copyright 1995-1997 Bernd Schmidt
  */
 
+#pragma once
 #include "md-pandora/rpt.h"
 
 typedef uae_u32 xcolnr;

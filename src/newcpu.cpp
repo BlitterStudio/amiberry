@@ -1688,7 +1688,7 @@ static void m68k_run_1 (void)
   for (;;) {
   	uae_u16 opcode = r.ir;
 
-#ifdef CPU_arm
+#if defined  CPU_arm & defined(ARMV6T2)
     /* Load ARM code for next opcode into L2 cache during execute of do_cycles() */
     __asm__ volatile ("pli [%[radr]]\n\t" \
       : : [radr] "r" (cpufunctbl[opcode]) : );
@@ -1800,8 +1800,7 @@ static void m68k_run_2 (void)
 		r.instruction_pc = m68k_getpc ();
 	  uae_u16 opcode = get_iword2 (r, 0);
     
-#if defined (CPU_arm) & defined(USE_ARMNEON)
-    // Well not really since pli is ArmV7...
+#if defined (CPU_arm) & defined(ARMV6T2)
     /* Load ARM code for next opcode into L2 cache during execute of do_cycles() */
     __asm__ volatile ("pli [%[radr]]\n\t" \
        : : [radr] "r" (cpufunctbl[opcode]) : );
