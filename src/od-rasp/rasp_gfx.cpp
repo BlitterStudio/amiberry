@@ -281,7 +281,6 @@ static void open_screen(struct uae_prefs *p)
     //framecnt = 1; // Don't draw frame before reset done
 }
 
-
 void update_display(struct uae_prefs *p)
 {
     open_screen(p);
@@ -290,7 +289,6 @@ void update_display(struct uae_prefs *p)
 
     framecnt = 1; // Don't draw frame before reset done
 }
-
 
 int check_prefs_changed_gfx (void)
 {
@@ -345,7 +343,6 @@ void wait_for_vsync(void)
 {
     // Temporary
 }
-
 
 void flush_screen ()
 {
@@ -420,13 +417,11 @@ void flush_screen ()
 
 }
 
-
 void black_screen_now(void)
 {
     SDL_FillRect(Dummy_prSDLScreen,NULL,0);
     SDL_Flip(Dummy_prSDLScreen);
 }
-
 
 static void graphics_subinit (void)
 {
@@ -455,7 +450,6 @@ STATIC_INLINE int bitsInMask (unsigned long mask)
     return n;
 }
 
-
 STATIC_INLINE int maskShift (unsigned long mask)
 {
     /* determine how far mask is shifted */
@@ -467,7 +461,6 @@ STATIC_INLINE int maskShift (unsigned long mask)
     }
     return n;
 }
-
 
 static int init_colors (void)
 {
@@ -489,7 +482,6 @@ static int init_colors (void)
 
     return 1;
 }
-
 
 /*
  * Find the colour depth of the display
@@ -525,7 +517,6 @@ int GetSurfacePixelFormat(void)
             : RGBFB_NONE);
 }
 
-
 int graphics_init(bool mousecapture)
 {
     int i,j;
@@ -551,7 +542,6 @@ void graphics_leave (void)
     bcm_host_deinit();
     SDL_VideoQuit();
 }
-
 
 #define  systemRedShift      (prSDLScreen->format->Rshift)
 #define  systemGreenShift    (prSDLScreen->format->Gshift)
@@ -632,7 +622,6 @@ static int save_png(SDL_Surface* surface, char *path)
     return 1;
 }
 
-
 static void CreateScreenshot(void)
 {
     int w, h;
@@ -649,7 +638,6 @@ static void CreateScreenshot(void)
                          prSDLScreen->format->Rmask, prSDLScreen->format->Gmask, prSDLScreen->format->Bmask, prSDLScreen->format->Amask);
 }
 
-
 static int save_thumb(char *path)
 {
     int ret = 0;
@@ -662,94 +650,93 @@ static int save_thumb(char *path)
     return ret;
 }
 
-
 bool vsync_switchmode(int hz)
 {
-	int changed_height = changed_prefs.gfx_size.height;
+    int changed_height = changed_prefs.gfx_size.height;
 
-	if (hz >= 55)
-		hz = 60;
-	else
-		hz = 50;
+    if (hz >= 55)
+        hz = 60;
+    else
+        hz = 50;
 
-	if (hz == 50 && currVSyncRate == 60)
-	{
-	    // Switch from NTSC -> PAL
-		switch (changed_height)
-		{
-		case 200:
-			changed_height = 240;
-			break;
-		case 216:
-			changed_height = 262;
-			break;
-		case 240:
-			changed_height = 270;
-			break;
-		case 256:
-			changed_height = 270;
-			break;
-		case 262:
-			changed_height = 270;
-			break;
-		case 270:
-			changed_height = 270;
-			break;
-		}
-	}
-	else if (hz == 60 && currVSyncRate == 50)
-	{
-	    // Switch from PAL -> NTSC
-		switch (changed_height)
-		{
-		case 200:
-			changed_height = 200;
-			break;
-		case 216:
-			changed_height = 200;
-			break;
-		case 240:
-			changed_height = 200;
-			break;
-		case 256:
-			changed_height = 216;
-			break;
-		case 262:
-			changed_height = 216;
-			break;
-		case 270:
-			changed_height = 240;
-			break;
-		}
-	}
+    if (hz == 50 && currVSyncRate == 60)
+    {
+        // Switch from NTSC -> PAL
+        switch (changed_height)
+        {
+        case 200:
+            changed_height = 240;
+            break;
+        case 216:
+            changed_height = 262;
+            break;
+        case 240:
+            changed_height = 270;
+            break;
+        case 256:
+            changed_height = 270;
+            break;
+        case 262:
+            changed_height = 270;
+            break;
+        case 270:
+            changed_height = 270;
+            break;
+        }
+    }
+    else if (hz == 60 && currVSyncRate == 50)
+    {
+        // Switch from PAL -> NTSC
+        switch (changed_height)
+        {
+        case 200:
+            changed_height = 200;
+            break;
+        case 216:
+            changed_height = 200;
+            break;
+        case 240:
+            changed_height = 200;
+            break;
+        case 256:
+            changed_height = 216;
+            break;
+        case 262:
+            changed_height = 216;
+            break;
+        case 270:
+            changed_height = 240;
+            break;
+        }
+    }
 
-	if (changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
-		return true;
+    if (changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
+        return true;
 
-	changed_prefs.gfx_size.height = changed_height;
+    changed_prefs.gfx_size.height = changed_height;
 
-	return true;
+    return true;
 }
 
 bool target_graphics_buffer_update(void)
 {
-	bool rate_changed = 0;
-	//bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+    bool rate_changed = 0;
+    //bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
 
-	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
-	{
-		update_display(&changed_prefs);
-		rate_changed = true;
-	}
+    if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+    {
+        update_display(&changed_prefs);
+        rate_changed = true;
+    }
 
-	if (rate_changed)
-	{
-		black_screen_now();
-		fpscounter_reset();
-		time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
-	}
+    if (rate_changed)
+    {
+        black_screen_now();
+        fpscounter_reset();
+        time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
+    }
 
-	return true;
+    return true;
 }
 
 #ifdef PICASSO96
@@ -764,7 +751,7 @@ int picasso_palette (void)
         int r = picasso96_state.CLUT[i].Red;
         int g = picasso96_state.CLUT[i].Green;
         int b = picasso96_state.CLUT[i].Blue;
-	    int value = (r << 16 | g << 8 | b);
+        int value = (r << 16 | g << 8 | b);
         uae_u32 v = CONVERT_RGB(value);
         if (v !=  picasso_vidinfo.clut[i])
         {
