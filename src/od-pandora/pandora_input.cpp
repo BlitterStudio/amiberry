@@ -257,6 +257,8 @@ int input_get_default_keyboard (int num)
 static int nr_joysticks = 0;
 static char JoystickName[MAX_INPUT_DEVICES][80];
 
+static char IsPS3Controller[MAX_INPUT_DEVICES];
+
 static SDL_Joystick* Joysticktable[MAX_INPUT_DEVICES];
 
 
@@ -281,6 +283,14 @@ static int init_joystick (void)
     strncpy(JoystickName[cpt],SDL_JoystickName(cpt),80);
     printf("Joystick %i : %s\n",cpt,JoystickName[cpt]);
     printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(Joysticktable[cpt]),SDL_JoystickNumAxes(Joysticktable[cpt]),SDL_JoystickNumHats(Joysticktable[cpt]));
+
+    if (strcmp(JoystickName[cpt],"Sony PLAYSTATION(R)3 Controller") == 0)
+    {
+      printf("    Found a dualshock controller: Activating workaround.\n");
+      IsPS3Controller[cpt] = 1;
+    }
+    else
+      IsPS3Controller[cpt] = 0;
   }
 
   return 1;
@@ -476,6 +486,25 @@ static void read_joystick (void)
       setjoybuttonstate (hostjoyid + 1, 4, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 4) & 1) );
       setjoybuttonstate (hostjoyid + 1, 5, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 5) & 1) );
       setjoybuttonstate (hostjoyid + 1, 6, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 6) & 1) );
+
+      if (IsPS3Controller[hostjoyid])
+      {
+        setjoybuttonstate (hostjoyid + 1, 0, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 13) & 1) );
+        setjoybuttonstate (hostjoyid + 1, 1, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 14) & 1) );
+
+        // Simulate a top with button 4
+        if ( SDL_JoystickGetButton(Joysticktable[hostjoyid], 4))
+           setjoystickstate (hostjoyid + 1, 1, -32767, 32767);
+        // Simulate a right with button 5
+        if ( SDL_JoystickGetButton(Joysticktable[hostjoyid], 5))
+           setjoystickstate (hostjoyid + 1, 0, 32767, 32767);
+        // Simulate a bottom with button 6
+        if ( SDL_JoystickGetButton(Joysticktable[hostjoyid], 6))
+           setjoystickstate (hostjoyid + 1, 1, 32767, 32767);
+        // Simulate a left with button 7
+        if ( SDL_JoystickGetButton(Joysticktable[hostjoyid], 7))
+           setjoystickstate (hostjoyid + 1, 0, -32767, 32767);
+      }
     }
 }
 
