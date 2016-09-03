@@ -6,6 +6,7 @@
 - Code formatting and cleanup
 - Merged improvements from Android port
 - Configuration GUI now opens screen with only required width/height for the GUI, instead of taking whatever resolution you had on screen. This makes it faster and it also looks better on screen.
+- Pi Zero / Pi 1 version now has full Picasso96 support.
 
 # uae4arm-rpi
 Port of uae4arm on Raspberry Pi
