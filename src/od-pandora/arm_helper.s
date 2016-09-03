@@ -31,13 +31,15 @@ copy_screen_8bit_loop_2:
   ldr       r4, [r1], #4
   and       r5, r4, #255
   ldr       r6, [r3, r5, lsl #2]
-  ubfx      r5, r4, #8, #8
+  lsr r5, r4, #8
+  and r5, r5, #255
   strh      r6, [r0], #2
   ldr       r6, [r3, r5, lsl #2]
-  ubfx      r5, r4, #16, #8
+  lsr r5, r4, #16
+  and r5, r5, #255
   strh      r6, [r0], #2
   ldr       r6, [r3, r5, lsl #2]
-  ubfx      r5, r4, #24, #8
+  lsr r5, r4, #24
   strh      r6, [r0], #2
   ldr       r6, [r3, r5, lsl #2]
   subs      lr, lr, #4
@@ -62,7 +64,7 @@ copy_screen_16bit_swap_arm:
 ldr r3, [r1], #4
 rev16 r3, r3
 str r3, [r0], #4
-subs r2, r2, #2
+subs r2, r2, #4
 bne copy_screen_16bit_swap_arm
 bx lr
 
@@ -81,13 +83,15 @@ copy_screen_32bit_to_16bit_arm:
 stmdb sp!, {r4-r6, lr}
 copy_screen_32bit_to_16bit_arm_loop:
 ldr r3, [r1], #4
-ubfx r4, r3, #27, #5
-ubfx r5, r3, #18, #6
-ubfx r6, r3, #11, #5
+rev r3, r3
+lsr r4, r3, #27
+lsr r5, r3, #18
+and r5, r5, #63
+lsr r6, r3, #11
+and r6, r6, #31
 orr r6, r6, r5, lsl #5
 orr r6, r6, r4, lsl #11
 strh r6, [r0], #2
-subs r2, r2, #1
+subs r2, r2, #4
 bne copy_screen_32bit_to_16bit_arm_loop
 ldmia sp!, {r4-r6, pc}
-
