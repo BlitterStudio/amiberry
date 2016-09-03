@@ -6,13 +6,12 @@
  * (c) 1995 Bernd Schmidt
  */
 
+#pragma once
 #define KEYCODE_UNK    0
 #define KEYCODE_X11    1
 #define KEYCODE_FBCON  2
 
 extern char keyboard_type;
-
-
 extern void  init_keyboard(void);
 
 /* First, two dummies */

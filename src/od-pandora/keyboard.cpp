@@ -14,12 +14,10 @@
 #include "gui.h"
 #include <SDL.h>
 
-
 char keyboard_type = 0;
 
 static struct uae_input_device_kbr_default keytrans_amiga_x11[] =
 {
-
     {  9,   INPUTEVENT_KEY_ESC},
     {  67,   INPUTEVENT_KEY_F1},
     {  68,   INPUTEVENT_KEY_F2},
@@ -134,11 +132,8 @@ static struct uae_input_device_kbr_default keytrans_amiga_x11[] =
     { -1, 0 }
 };
 
-
-
 static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] =
 {
-
     {  9  -8,   INPUTEVENT_KEY_ESC},
     {  67 -8,   INPUTEVENT_KEY_F1},
     {  68 -8,   INPUTEVENT_KEY_F2},
@@ -254,10 +249,8 @@ static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] =
     { -1, 0 }
 };
 
-
 static struct uae_input_device_kbr_default keytrans_amiga[] =
 {
-
     { SDLK_a, INPUTEVENT_KEY_A },
     { SDLK_b, INPUTEVENT_KEY_B },
     { SDLK_c, INPUTEVENT_KEY_C },
@@ -325,14 +318,12 @@ static struct uae_input_device_kbr_default *keytrans[] =
     keytrans_amiga
 };
 
-
 static struct uae_input_device_kbr_default *keytrans_x11[] =
 {
     keytrans_amiga_x11,
     keytrans_amiga_x11,
     keytrans_amiga_x11
 };
-
 
 static struct uae_input_device_kbr_default *keytrans_fbcon[] =
 {
@@ -345,7 +336,6 @@ static int kb_none[] = { -1 };
 static int *kbmaps[] = { kb_none, kb_none, kb_none, kb_none, kb_none,
                          kb_none, kb_none, kb_none, kb_none, kb_none
                        };
-
 
 void keyboard_settrans (void)
 {
@@ -371,7 +361,6 @@ void keyboard_settrans (void)
         inputdevice_setkeytranslation (keytrans, kbmaps);
     }
 }
-
 
 int translate_pandora_keys(int symbol, int *modifier)
 {

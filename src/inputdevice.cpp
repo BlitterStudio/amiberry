@@ -347,12 +347,12 @@ static bool write_slot (TCHAR *p, struct uae_input_device *uid, int i, int j)
     uae_u64 flags = uid->flags[i][j];
     if (uid->custom[i][j] && _tcslen (uid->custom[i][j]) > 0)
     {
-        _stprintf (p, _T("'%s'.%d"), uid->custom[i][j], flags & ID_FLAG_SAVE_MASK_CONFIG);
+        _stprintf (p, _T("'%s'.%llu"), uid->custom[i][j], flags & ID_FLAG_SAVE_MASK_CONFIG);
         ok = true;
     }
     else if (uid->eventid[i][j] > 0)
     {
-        _stprintf (p, _T("%s.%d"), events[uid->eventid[i][j]].confname, flags & ID_FLAG_SAVE_MASK_CONFIG);
+        _stprintf (p, _T("%s.%llu"), events[uid->eventid[i][j]].confname, flags & ID_FLAG_SAVE_MASK_CONFIG);
         ok = true;
     }
     else

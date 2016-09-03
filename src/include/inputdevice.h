@@ -7,6 +7,7 @@
  * Copyright 2001-2002 Toni Wilen
  */
 
+#pragma once
 #define DIR_LEFT_BIT 0
 #define DIR_RIGHT_BIT 1
 #define DIR_UP_BIT 2
