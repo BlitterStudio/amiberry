@@ -4,7 +4,7 @@
 
 .global copy_screen_8bit
 .global copy_screen_16bit_swap
-.global copy_screen_32bit_to_16bit_neon
+.global copy_screen_32bit_to_16bit
 
 .text
 
@@ -88,7 +88,7 @@ copy_screen_16bit_swap:
 @ r1: uae_u8   *src - Format (bytes) in memory rgba
 @ r2: int      bytes
 @
-@ void copy_screen_32bit_to_16bit_neon(uae_u8 *dst, uae_u8 *src, int bytes);
+@ void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
 @
 @----------------------------------------------------------------
 copy_screen_32bit_to_16bit_neon:

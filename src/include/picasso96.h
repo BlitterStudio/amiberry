@@ -658,7 +658,7 @@ extern "C" {
 #endif
 void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
 void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
-void copy_screen_32bit_to_16bit_neon(uae_u8 *dst, uae_u8 *src, int bytes);
+void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
 #ifdef __cplusplus
 }
 #endif

@@ -3316,7 +3316,7 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
         copy_screen_8bit(dst, src, pixels, picasso_vidinfo.clut);
     }
     else
-        copy_screen_32bit_to_16bit_neon(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
+        copy_screen_32bit_to_16bit(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
 }
 
 static void flushpixels(void)

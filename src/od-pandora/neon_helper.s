@@ -4,7 +4,7 @@
 
 .global copy_screen_8bit
 .global copy_screen_16bit_swap
-.global copy_screen_32bit_to_16bit_neon
+.global copy_screen_32bit_to_16bit
 .global ARM_doline_n1
 .global NEON_doline_n2
 .global NEON_doline_n3
@@ -88,16 +88,16 @@ copy_screen_16bit_swap:
 
 
 @----------------------------------------------------------------
-@ copy_screen_32bit_to_16bit_neon
+@ copy_screen_32bit_to_16bit
 @
 @ r0: uae_u8   *dst - Format (bits): rrrr rggg gggb bbbb
 @ r1: uae_u8   *src - Format (bytes) in memory rgba
 @ r2: int      bytes
 @
-@ void copy_screen_32bit_to_16bit_neon(uae_u8 *dst, uae_u8 *src, int bytes);
+@ void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
 @
 @----------------------------------------------------------------
-copy_screen_32bit_to_16bit_neon:
+copy_screen_32bit_to_16bit:
   pld       [r1, #192]
   vld4.8    {d18-d21}, [r1]!
   vld4.8    {d22-d25}, [r1]!
@@ -111,7 +111,7 @@ copy_screen_32bit_to_16bit_neon:
   subs      r2, r2, #64      @ processd 4 (bytes per pixel) * 16 (pixel)
   vst2.8    {d16-d17}, [r0]!
   vst2.8    {d18-d19}, [r0]!
-  bne       copy_screen_32bit_to_16bit_neon
+  bne       copy_screen_32bit_to_16bit
   bx        lr
 
 
