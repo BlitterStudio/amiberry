@@ -623,7 +623,7 @@ void gui_handle_events(void)
 		else if (keystate[SDLK_DOWN])
 			moveVertical(-1);
 
-			        //1
+		//1
 		else if (keystate[SDLK_1])
 		{
 			changed_prefs.gfx_size.height = amigaheight_values[0];
@@ -716,31 +716,6 @@ void gui_handle_events(void)
 			else
 				changed_prefs.gfx_size.width = currprefs.gfx_size.width * 2;
 			update_display(&changed_prefs);
-		}
-	}
-
-	else if (triggerL)
-	{
-		if (keystate[SDLK_c])
-			currprefs.pandora_customControls = !currprefs.pandora_customControls;
-
-		else if (keystate[SDLK_d])
-			changed_prefs.leds_on_screen = !currprefs.leds_on_screen;
-
-		else if (keystate[SDLK_f])
-			changed_prefs.gfx_framerate ? changed_prefs.gfx_framerate = 0 : changed_prefs.gfx_framerate = 1;
-
-		else if (keystate[SDLK_s])
-			savestate_state = STATE_DOSAVE;
-
-		else if (keystate[SDLK_l])
-		{
-			FILE *f = fopen(savestate_fname, "rb");
-			if (f)
-			{
-				fclose(f);
-				savestate_state = STATE_DORESTORE;
-			}
 		}
 	}
 }
