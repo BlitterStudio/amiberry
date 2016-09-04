@@ -43,57 +43,6 @@
 #include <SDL.h>
 #include "pandora_rp9.h"
 
-/*
-#define DBG_MAX_THREADS 128
-uae_thread_id running_threads[DBG_MAX_THREADS];
-char running_threads_name[DBG_MAX_THREADS][64];
-
-void dbg_add_thread(uae_thread_id id, const char *name)
-{
-  int i;
-  for(i=0; i<DBG_MAX_THREADS; ++i)
-  {
-    if(running_threads[i] == 0)
-    {
-      running_threads[i] = id;
-      if(name != NULL)
-        strncpy(running_threads_name[i], name, 64);
-      else
-        strncpy(running_threads_name[i], "<empty>", 64);
-      write_log("dbg_add_thread: id = %d, name = %s, pos = %d\n", id, running_threads_name[i], i);
-      return;
-    }
-  }
-  write_log("dbg_add_thread: no more free entries\n");
-}
-
-void dbg_rem_thread(uae_thread_id id)
-{
-  int i;
-  for(i=0; i<DBG_MAX_THREADS; ++i)
-  {
-    if(running_threads[i] == id)
-    {
-      write_log("dbg_rem_thread: id = %d, name = %s, pos = %d\n", id, running_threads_name[i], i);
-      running_threads[i] = 0;
-      return;
-    }
-  }
-}
-
-void dbg_list_threads(void)
-{
-  int i;
-  for(i=0; i<DBG_MAX_THREADS; ++i)
-  {
-    if(running_threads[i] != 0)
-    {
-      write_log("dbg_list_threads: id = %d, name = %s, pos = %d\n", running_threads[i], running_threads_name[i], i);
-    }
-  }
-}
-*/
-
 extern void signal_segv(int signum, siginfo_t* info, void*ptr);
 extern void gui_force_rtarea_hdchange(void);
 
@@ -124,9 +73,7 @@ static bool cpuSpeedChanged = false;
 static int lastCpuSpeed = 600;
 int defaultCpuSpeed = 600;
 
-
 extern "C" int main( int argc, char *argv[] );
-
 
 void reinit_amiga(void)
 {
