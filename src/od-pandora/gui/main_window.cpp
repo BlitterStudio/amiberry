@@ -127,13 +127,13 @@ void gui_init()
     //-------------------------------------------------
     // Create new screen for GUI
     //-------------------------------------------------
-//#if defined (RASPBERRY)
-//    const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
-//    printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
-//    gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE);
-//#else
+#if defined (RASPBERRY)
+    const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
+    printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+    gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE);
+#else
     gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
-//#endif
+#endif
     SDL_EnableUNICODE(1);
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
     SDL_ShowCursor(SDL_ENABLE);

@@ -574,8 +574,8 @@ void gui_display(int shortcut)
 	run_gui();
 	gui_to_prefs();
 	setCpuSpeed();
-	if(quit_program)
-		screen_is_picasso = 0;
+	/*if(quit_program)
+		screen_is_picasso = 0;*/
 
 	update_display(&changed_prefs);
 
@@ -604,120 +604,120 @@ void moveVertical(int value)
 
 void gui_handle_events(void)
 {
-	int i;
+	//int i;
 
 	Uint8 *keystate = SDL_GetKeyState(NULL);
-	int triggerL = keystate[SDLK_RSHIFT];
-	int triggerR = keystate[SDLK_RCTRL];
+	/*int triggerL = keystate[SDLK_RSHIFT];
+	int triggerR = keystate[SDLK_RCTRL];*/
 
 	if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
 		uae_reset(0, 1);
 
 		    // L + R
-	if (triggerL && triggerR)
-	{
-	    //up
-		if (keystate[SDLK_UP])
-			moveVertical(1);
-		//down
-		else if (keystate[SDLK_DOWN])
-			moveVertical(-1);
+	//if (triggerL && triggerR)
+	//{
+	//    //up
+	//	if (keystate[SDLK_UP])
+	//		moveVertical(1);
+	//	//down
+	//	else if (keystate[SDLK_DOWN])
+	//		moveVertical(-1);
 
-		//1
-		else if (keystate[SDLK_1])
-		{
-			changed_prefs.gfx_size.height = amigaheight_values[0];
-			update_display(&changed_prefs);
-		}
-		//2
-		else if (keystate[SDLK_2])
-		{
-			changed_prefs.gfx_size.height = amigaheight_values[1];
-			update_display(&changed_prefs);
-		}
-		//3
-		else if (keystate[SDLK_3])
-		{
-			changed_prefs.gfx_size.height = amigaheight_values[2];
-			update_display(&changed_prefs);
-		}
-		//4
-		else if (keystate[SDLK_4])
-		{
-			changed_prefs.gfx_size.height = amigaheight_values[3];
-			update_display(&changed_prefs);
-		}
-		//5
-		else if (keystate[SDLK_5])
-		{
-			changed_prefs.gfx_size.height = amigaheight_values[4];
-			update_display(&changed_prefs);
-		}
-		//6
-		else if (keystate[SDLK_6])
-		{
-			changed_prefs.gfx_size.height = amigaheight_values[5];
-			update_display(&changed_prefs);
-		}
-		//9
-		else if (keystate[SDLK_9])
-		{
-			for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
-			{
-				if (currprefs.gfx_size.height == amigaheight_values[i])
-				{
-					if (i > 0)
-						changed_prefs.gfx_size.height = amigaheight_values[i - 1];
-					else
-						changed_prefs.gfx_size.height = amigaheight_values[AMIGAHEIGHT_COUNT - 1];
-					break;
-				}
-			}
-			update_display(&changed_prefs);
-		}
-		//0
-		else if (keystate[SDLK_0])
-		{
-			for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
-			{
-				if (currprefs.gfx_size.height == amigaheight_values[i])
-				{
-					if (i < AMIGAHEIGHT_COUNT - 1)
-						changed_prefs.gfx_size.height = amigaheight_values[i + 1];
-					else
-						changed_prefs.gfx_size.height = amigaheight_values[0];
-					break;
-				}
-			}
-			update_display(&changed_prefs);
-		}
-		else if (keystate[SDLK_w])
-		{
-		    // Change width
-			for (i = 0; i < AMIGAWIDTH_COUNT; ++i)
-			{
-				if (currprefs.gfx_size.width == amigawidth_values[i])
-				{
-					if (i < AMIGAWIDTH_COUNT - 1)
-						changed_prefs.gfx_size.width = amigawidth_values[i + 1];
-					else
-						changed_prefs.gfx_size.width = amigawidth_values[0];
-					break;
-				}
-			}
-			update_display(&changed_prefs);
-		}
-		// r
-		else if (keystate[SDLK_r])
-		{
-		    // Change resolution (lores/hires)
-			if (currprefs.gfx_size.width > 600)
-				changed_prefs.gfx_size.width = currprefs.gfx_size.width / 2;
-			else
-				changed_prefs.gfx_size.width = currprefs.gfx_size.width * 2;
-			update_display(&changed_prefs);
-		}
-	}
+	//	//1
+	//	else if (keystate[SDLK_1])
+	//	{
+	//		changed_prefs.gfx_size.height = amigaheight_values[0];
+	//		update_display(&changed_prefs);
+	//	}
+	//	//2
+	//	else if (keystate[SDLK_2])
+	//	{
+	//		changed_prefs.gfx_size.height = amigaheight_values[1];
+	//		update_display(&changed_prefs);
+	//	}
+	//	//3
+	//	else if (keystate[SDLK_3])
+	//	{
+	//		changed_prefs.gfx_size.height = amigaheight_values[2];
+	//		update_display(&changed_prefs);
+	//	}
+	//	//4
+	//	else if (keystate[SDLK_4])
+	//	{
+	//		changed_prefs.gfx_size.height = amigaheight_values[3];
+	//		update_display(&changed_prefs);
+	//	}
+	//	//5
+	//	else if (keystate[SDLK_5])
+	//	{
+	//		changed_prefs.gfx_size.height = amigaheight_values[4];
+	//		update_display(&changed_prefs);
+	//	}
+	//	//6
+	//	else if (keystate[SDLK_6])
+	//	{
+	//		changed_prefs.gfx_size.height = amigaheight_values[5];
+	//		update_display(&changed_prefs);
+	//	}
+	//	//9
+	//	else if (keystate[SDLK_9])
+	//	{
+	//		for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
+	//		{
+	//			if (currprefs.gfx_size.height == amigaheight_values[i])
+	//			{
+	//				if (i > 0)
+	//					changed_prefs.gfx_size.height = amigaheight_values[i - 1];
+	//				else
+	//					changed_prefs.gfx_size.height = amigaheight_values[AMIGAHEIGHT_COUNT - 1];
+	//				break;
+	//			}
+	//		}
+	//		update_display(&changed_prefs);
+	//	}
+	//	//0
+	//	else if (keystate[SDLK_0])
+	//	{
+	//		for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
+	//		{
+	//			if (currprefs.gfx_size.height == amigaheight_values[i])
+	//			{
+	//				if (i < AMIGAHEIGHT_COUNT - 1)
+	//					changed_prefs.gfx_size.height = amigaheight_values[i + 1];
+	//				else
+	//					changed_prefs.gfx_size.height = amigaheight_values[0];
+	//				break;
+	//			}
+	//		}
+	//		update_display(&changed_prefs);
+	//	}
+		//else if (keystate[SDLK_w])
+		//{
+		//    // Change width
+		//	for (i = 0; i < AMIGAWIDTH_COUNT; ++i)
+		//	{
+		//		if (currprefs.gfx_size.width == amigawidth_values[i])
+		//		{
+		//			if (i < AMIGAWIDTH_COUNT - 1)
+		//				changed_prefs.gfx_size.width = amigawidth_values[i + 1];
+		//			else
+		//				changed_prefs.gfx_size.width = amigawidth_values[0];
+		//			break;
+		//		}
+		//	}
+		//	update_display(&changed_prefs);
+		//}
+		//// r
+		//else if (keystate[SDLK_r])
+		//{
+		//    // Change resolution (lores/hires)
+		//	if (currprefs.gfx_size.width > 600)
+		//		changed_prefs.gfx_size.width = currprefs.gfx_size.width / 2;
+		//	else
+		//		changed_prefs.gfx_size.width = currprefs.gfx_size.width * 2;
+		//	update_display(&changed_prefs);
+		//}
+	//}
 }
 
 void gui_disk_image_change(int unitnum, const char *name, bool writeprotected)
