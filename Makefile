@@ -71,6 +71,8 @@ MORE_CFLAGS += -fuse-ld=gold -fdiagnostics-color=auto
 MORE_CFLAGS += -mstructure-size-boundary=32
 MORE_CFLAGS += -falign-functions=32
 
+TRACE_CFLAGS = 
+
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -pipe -fsingle-precision-constant
 MORE_CFLAGS += -fexceptions -fpermissive
@@ -222,6 +224,10 @@ ifdef PANDORA
 OBJS += src/od-pandora/gui/sdltruetypefont.o
 endif
 
+ifdef DEBUG
+OBJS += src/trace.o
+endif
+
 ifeq ($(HAVE_DISPMANX), 1)
 OBJS += src/od-rasp/rasp_gfx.o
 endif
@@ -263,7 +269,7 @@ src/od-pandora/arm_helper.o: src/od-pandora/arm_helper.s
 	$(CXX) $(CPU_FLAGS) -faling-functions=32 -Wall -o src/od-pandora/arm_helper.o -c src/od-pandora/arm_helper.s
 
 src/trace.o: src/trace.c
-	$(CC) $(MORE_CFLAGS) -c src/trace.c -o src/trace.o
+	$(CC) $(MORE_CFLAGS) -std=c11 -c src/trace.c -o src/trace.o
 
 .cpp.o:
 	$(CXX) $(MY_CFLAGS) $(TRACE_CFLAGS) -c $< -o $@
@@ -271,12 +277,12 @@ src/trace.o: src/trace.c
 .cpp.s:
 	$(CXX) $(MY_CFLAGS) -S -c $< -o $@
 
-$(PROG): $(OBJS) src/trace.o
+$(PROG): $(OBJS)
 ifndef DEBUG
 	$(CXX) $(MY_CFLAGS) -o $(PROG) $(OBJS) $(MY_LDFLAGS)
 	$(STRIP) $(PROG)
 else
-	$(CXX) $(MY_CFLAGS) -o $(PROG) $(OBJS) src/trace.o $(MY_LDFLAGS)
+	$(CXX) $(MY_CFLAGS) -o $(PROG) $(OBJS) $(MY_LDFLAGS)
 endif
 
 ASMS = \
