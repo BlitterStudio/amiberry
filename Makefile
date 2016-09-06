@@ -90,7 +90,7 @@ ifdef USE_PROFILE
 MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt -funroll-loops -fpeel-loops -ftracer -ftree-loop-distribute-patterns
 endif
 
-MY_CFLAGS  = $(MORE_CFLAGS) $(DEFAULT_CFLAGS)
+MY_CFLAGS  = $(CPU_FLAGS) $(MORE_CFLAGS) $(DEFAULT_CFLAGS)
 
 OBJS =	\
 	src/akiko.o \
