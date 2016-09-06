@@ -4,23 +4,20 @@ endif
 
 ifeq ($(PLATFORM),rpi3)
 	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
-	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
+	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
 	LDFLAGS += -lbcm_host
-	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
 else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
+	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
 	LDFLAGS += -lbcm_host
-	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
-	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
+	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 	LDFLAGS += -lbcm_host
-	DEFS += -DRASPBERRY
 	HAVE_DISPMANX = 1
 else ifeq ($(PLATFORM),generic-sdl)
 	# On Raspberry Pi uncomment below line or remove ARMV6T2 define.
@@ -50,7 +47,7 @@ all: $(PROG)
 
 PANDORA=1
 #GEN_PROFILE=1
-USE_PROFILE=1
+#USE_PROFILE=1
 
 DEFAULT_CFLAGS = $(CFLAGS) -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
 
