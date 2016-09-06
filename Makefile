@@ -6,7 +6,7 @@ ifeq ($(PLATFORM),rpi3)
 	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
 	LDFLAGS += -lbcm_host
-	DEFS += -DRASPBERRY 
+	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
 else ifeq ($(PLATFORM),rpi2)
@@ -330,7 +330,6 @@ ASMS = \
 	src/jit/compemu_support.s
 
 genasm: $(ASMS)
-
 
 clean:
 	$(RM) $(PROG) $(OBJS) $(ASMS)
