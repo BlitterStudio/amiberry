@@ -6,10 +6,9 @@ ifeq ($(PLATFORM),rpi3)
 	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
 	LDFLAGS += -lbcm_host
-	DEFS += -DRASPBERRY
+	DEFS += -DRASPBERRY 
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
-	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
@@ -17,7 +16,6 @@ else ifeq ($(PLATFORM),rpi2)
 	DEFS += -DRASPBERRY
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
-	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
@@ -65,10 +63,6 @@ MORE_CFLAGS += -DGP2X -DPANDORA -DARMV6_ASSEMBLY -DWITH_INGAME_WARNING
 MORE_CFLAGS += -DCPU_arm -DUSE_SDL
 MORE_CFLAGS += -DROM_PATH_PREFIX=\"./kickstarts/\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./savestates/\"
 
-ifeq ($(USE_PICASSO96), 1)
-	MORE_CFLAGS += -DPICASSO96
-endif
-
 ifeq ($(HAVE_NEON), 1)
 	MORE_CFLAGS += -DUSE_ARMNEON
 endif
@@ -90,13 +84,6 @@ ifdef TRACER
 TRACE_CFLAGS = -DTRACER -finstrument-functions -Wall -rdynamic
 endif
 
-endif
-
-ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs
-endif
-ifdef USE_PROFILE
-MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt -funroll-loops -fpeel-loops -ftracer -ftree-loop-distribute-patterns
 endif
 
 ifdef GEN_PROFILE
@@ -203,6 +190,7 @@ OBJS =	\
 	src/od-pandora/pandora_gui.o \
 	src/od-pandora/pandora_rp9.o \
 	src/od-pandora/pandora_mem.o \
+	src/od-pandora/picasso96.o \
 	src/od-pandora/sigsegv_handler.o \
 	src/od-pandora/menu/menu_config.o \
 	src/sd-sdl/sound_sdl_new.o \
@@ -253,12 +241,10 @@ MORE_CFLAGS += -DHAVE_GLES
 MY_LDFLAGS += -lEGL -lGLESv1_CM
 endif
 
-ifeq ($(USE_PICASSO96), 1)
-OBJS += src/od-pandora/picasso96.o
-endif
-
 ifeq ($(HAVE_NEON), 1)
 OBJS += src/od-pandora/neon_helper.o
+else
+OBJS += src/od-pandora/arm_helper.o
 endif
 
 OBJS += src/newcpu.o
@@ -275,6 +261,9 @@ OBJS += src/jit/compemu_support.o
 
 src/od-pandora/neon_helper.o: src/od-pandora/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -falign-functions=32 -Wall -o src/od-pandora/neon_helper.o -c src/od-pandora/neon_helper.s
+
+src/od-pandora/arm_helper.o: src/od-pandora/arm_helper.s
+	$(CXX) $(CPU_FLAGS) -faling-functions=32 -Wall -o src/od-pandora/arm_helper.o -c src/od-pandora/arm_helper.s
 
 src/trace.o: src/trace.c
 	$(CC) $(MORE_CFLAGS) -c src/trace.c -o src/trace.o
