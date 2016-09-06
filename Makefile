@@ -67,7 +67,8 @@ endif
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
 MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/td-sdl -Isrc/include 
 MORE_CFLAGS += -Wno-unused -Wno-format -Wno-write-strings -Wno-multichar
-MORE_CFLAGS += -fuse-ld=gold -fdiagnostics-color=auto
+#MORE_CFLAGS += -fuse-ld=gold
+MORE_CFLAGS += -fdiagnostics-color=auto
 MORE_CFLAGS += -mstructure-size-boundary=32
 MORE_CFLAGS += -falign-functions=32
 
