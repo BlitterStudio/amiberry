@@ -41,8 +41,8 @@ struct inputdevice_functions
     void (*unacquire)(int);
     void (*read)(void);
     int (*get_num)(void);
-    const TCHAR* (*get_friendlyname)(int);
-    const TCHAR* (*get_uniquename)(int);
+    TCHAR* (*get_friendlyname)(int);
+    TCHAR* (*get_uniquename)(int);
     int (*get_widget_num)(int);
     int (*get_widget_type)(int,int,TCHAR*,uae_u32*);
     int (*get_widget_first)(int,int);

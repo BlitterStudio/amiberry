@@ -287,7 +287,7 @@ static bool write_config_head (struct zfile *f, int idnum, int devnum, TCHAR *na
             return false;
     }
 
-    TCHAR *s = NULL;
+    const TCHAR *s = NULL;
     if (id->name)
         s = id->name;
     else if (devnum < idf->get_num ())
@@ -1119,7 +1119,7 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
                 int flags2 = 0;
                 if (p[-1] == '.')
                     flags2 = getnum (&p) & ID_FLAG_SAVE_MASK_CONFIG;
-                if (p[-1] == '.' && (p[0] >= 'A' && p[0] <= 'Z') || (p[0] >= 'a' && p[0] <= 'z'))
+                if (p[-1] == '.' && ((p[0] >= 'A' && p[0] <= 'Z') || (p[0] >= 'a' && p[0] <= 'z')))
                     flags |= getqual (&p);
                 TCHAR *custom2 = NULL;
                 struct inputevent *ie2 = readevent (p2, &custom2);
@@ -2471,7 +2471,7 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
     int ismouse = 0;
     int newport = 0;
     int flags = 0;
-    TCHAR *name = NULL;
+    const TCHAR *name = NULL;
     int otherbuttonpressed = 0;
 
     if (num >= 4)
@@ -4333,8 +4333,8 @@ static void matchdevices (struct inputdevice_functions *inf, struct uae_input_de
 
     for (i = 0; i < inf->get_num (); i++)
     {
-        TCHAR *aname1 = inf->get_friendlyname (i);
-        TCHAR *aname2 = inf->get_uniquename (i);
+        const TCHAR *aname1 = inf->get_friendlyname (i);
+        const TCHAR *aname2 = inf->get_uniquename (i);
         int match = -1;
         for (j = 0; j < MAX_INPUT_DEVICES; j++)
         {
@@ -5808,8 +5808,8 @@ int inputdevice_joyport_config (struct uae_prefs *p, const TCHAR *value, int por
             idf = &idev[type];
             for (i = 0; i < idf->get_num (); i++)
             {
-                TCHAR *name1 = idf->get_friendlyname (i);
-                TCHAR *name2 = idf->get_uniquename (i);
+                const TCHAR *name1 = idf->get_friendlyname (i);
+                const TCHAR *name2 = idf->get_uniquename (i);
                 if ((name1 && !_tcscmp (name1, value)) || (name2 && !_tcscmp (name2, value)))
                 {
                     p->jports[portnum].id = idnum + i;
