@@ -630,6 +630,26 @@ bool target_graphics_buffer_update (void)
 
 #ifdef PICASSO96
 
+int picasso_palette(void)
+{
+	int i, changed;
+
+	changed = 0;
+	for (i = 0; i < 256; i++)
+	{
+		int r = picasso96_state.CLUT[i].Red;
+		int g = picasso96_state.CLUT[i].Green;
+		int b = picasso96_state.CLUT[i].Blue;
+		int value = (r << 16 | g << 8 | b);
+		uae_u32 v = CONVERT_RGB(value);
+		if (v !=  picasso_vidinfo.clut[i])
+		{
+			picasso_vidinfo.clut[i] = v;
+			changed = 1;
+		}
+	}
+	return changed;
+}
 
 static int resolution_compare (const void *a, const void *b)
 {
@@ -703,7 +723,7 @@ void picasso_InitResolutions (void)
     Displays[0].name2 = my_strdup("Display");
 
     md1 = Displays;
-    DisplayModes = md1->DisplayModes = (struct PicassoResolution*) xmalloc (sizeof (struct PicassoResolution) * MAX_PICASSO_MODES);
+	DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
     for (i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++)
     {
         for(bitdepth = 16; bitdepth <= 32; bitdepth += 16)

@@ -21,14 +21,14 @@ else ifeq ($(PLATFORM),rpi1)
 	HAVE_DISPMANX = 1
 else ifeq ($(PLATFORM),generic-sdl)
 	# On Raspberry Pi uncomment below line or remove ARMV6T2 define.
-	#CPU_FLAGS= -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-	MORE_CFLAGS += -DARMV6T2
+	CPU_FLAGS= -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	MORE_CFLAGS += -DARMV6T2 -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),gles)
 	# For Raspberry Pi uncomment the two below lines
-	#LDFLAGS += -lbcm_host
-	#CPU_FLAGS= -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-	MORE_CFLAGS += -DARMV6T2
+	LDFLAGS += -lbcm_host
+	CPU_FLAGS= -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	MORE_CFLAGS += -DARMV6T2 -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 	HAVE_GLES_DISPLAY = 1
 	HAVE_NEON = 1
 endif
@@ -231,6 +231,7 @@ endif
 
 ifeq ($(HAVE_DISPMANX), 1)
 OBJS += src/od-rasp/rasp_gfx.o
+MORE_CFLAGS += -DHAVE_DISPMANX
 endif
 
 ifeq ($(HAVE_SDL_DISPLAY), 1)

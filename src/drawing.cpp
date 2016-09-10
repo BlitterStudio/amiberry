@@ -2064,7 +2064,7 @@ void vsync_handle_check (void)
   check_prefs_changed_cpu ();
 }
 
-#ifdef RASPBERRY
+#ifdef HAVE_DISPMANX
 int wait_for_vsync_dispmanx = 1;
 extern uae_sem_t vsync_wait_sem;
 #endif
@@ -2073,11 +2073,11 @@ void vsync_handle_redraw (void)
 {
 	if (framecnt == 0)
 	{
-		#ifdef RASPBERRY
+#ifdef HAVE_DISPMANX
 		if (wait_for_vsync_dispmanx == 1)
 			uae_sem_wait (&vsync_wait_sem);
 		wait_for_vsync_dispmanx = 1;
-		#endif
+#endif
 		finish_drawing_frame ();
 	}
 
