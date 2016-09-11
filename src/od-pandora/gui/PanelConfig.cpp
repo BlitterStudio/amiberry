@@ -218,11 +218,11 @@ public:
             strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_PATH);
             DisableResume();
             RefreshAllPanels();
-            if(emulating)
-                uae_reset(1, 1);
-            else
-                uae_reset(0, 1);
-            gui_running = false;
+//            if(emulating)
+//                uae_reset(1, 1);
+//            else
+//                uae_reset(0, 1);
+//            gui_running = false;
         }
         else
         {

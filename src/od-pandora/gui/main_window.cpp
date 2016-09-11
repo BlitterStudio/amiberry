@@ -130,7 +130,7 @@ void gui_init()
 #if defined (RASPBERRY)
     const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
     printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
-    gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE);
+	gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE);
 #else
     gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
 #endif
@@ -227,7 +227,7 @@ void gui_run()
                         break;
 
                     case SDLK_ESCAPE:
-                    case SDLK_RCTRL:
+//                    case SDLK_RCTRL:
                         //-------------------------------------------------
                         // Reset Amiga
                         //-------------------------------------------------
