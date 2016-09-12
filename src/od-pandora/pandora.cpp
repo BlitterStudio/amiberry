@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <asm/sigcontext.h>
@@ -57,12 +58,19 @@ int customControlMap[SDLK_LAST];
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
+
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
 #include <linux/kd.h>
 #include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 unsigned long kbd_led_status;
 char kbd_flags;
 #endif
+
+int fd; /* File descriptor for console (/dev/tty/) */
 
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
@@ -780,7 +788,14 @@ uae_u32 emulib_target_getcpurate (uae_u32 v, uae_u32 *low)
 int main (int argc, char *argv[])
 {
     struct sigaction action;
-
+	if ((fd = open("/dev/tty", O_NOCTTY)) == -1)
+	{
+		printf("Error getting /dev/tty, got %d\n", fd);
+//		return fd;
+	}
+	close(fd);
+//	printf("Debug: Got /dev/tty as %d\n", fd);
+	
     defaultCpuSpeed = getDefaultCpuSpeed();
 
     // Get startup path
@@ -810,24 +825,25 @@ int main (int argc, char *argv[])
 
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
     // set capslock state based upon current "real" state
-    ioctl(0, KDGKBLED, &kbd_flags);
-    ioctl(0, KDGETLED, &kbd_led_status);
+	ioctl(fd, KDGKBLED, &kbd_flags);
+	ioctl(fd, KDGETLED, &kbd_led_status);
     if ((kbd_flags & 07) & LED_CAP)
     {
         // record capslock pressed
+//	    printf("Caps lock was pressed");
         kbd_led_status |= LED_CAP;
         inputdevice_do_keyboard(AK_CAPSLOCK, 1);
     }
     else
     {
         // record capslock as not pressed
+//	    printf("Caps lock was NOT pressed");
         kbd_led_status &= ~LED_CAP;
         inputdevice_do_keyboard(AK_CAPSLOCK, 0);
     }
-    ioctl(0, KDSETLED, kbd_led_status);
+	ioctl(fd, KDSETLED, kbd_led_status);
 #endif
 
-    //keyboard_settrans();
     real_main (argc, argv);
 
     ClearAvailableROMList();
@@ -853,6 +869,7 @@ int handle_msgpump (void)
     SDL_Event rEvent;
     int keycode;
     int modifier;
+	int fd; /* File descriptor for console (/dev/tty/) */
 
     if(delayed_mousebutton)
     {
@@ -931,9 +948,9 @@ int handle_msgpump (void)
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
                 if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
                 {
-                    ioctl(0, KDGETLED, &kbd_led_status);
+	                ioctl(fd, KDGETLED, &kbd_led_status);
                     kbd_led_status |= LED_CAP;
-                    ioctl(0, KDSETLED, kbd_led_status);
+	                ioctl(fd, KDSETLED, kbd_led_status);
                 }
 #endif
                 break;
@@ -993,9 +1010,9 @@ int handle_msgpump (void)
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
                 if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
                 {
-                    ioctl(0, KDGETLED, &kbd_led_status);
+	                ioctl(fd, KDGETLED, &kbd_led_status);
                     kbd_led_status &= ~LED_CAP;
-                    ioctl(0, KDSETLED, kbd_led_status);
+	                ioctl(fd, KDSETLED, kbd_led_status);
                 }
 #endif
                 break;

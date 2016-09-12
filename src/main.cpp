@@ -623,7 +623,7 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-    printf("Amiberry v2.0 build 2016-09-11\n");
+    printf("Amiberry v2.0 build 2016-09-12\n");
 #ifdef PANDORA_SPECIFIC
     SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else
@@ -695,6 +695,7 @@ static int real_main2 (int argc, TCHAR **argv)
     memset (&gui_data, 0, sizeof gui_data);
     gui_data.cd = -1;
     gui_data.hd = -1;
+//	gui_data.powerled = 1;
 
 #ifdef PICASSO96
     picasso_reset ();
@@ -733,7 +734,6 @@ static int real_main2 (int argc, TCHAR **argv)
             }
             currprefs.produce_sound = 0;
         }
-	    gui_flicker_led(LED_POWER, 0, 1);
         start_program ();
     }
     return 0;

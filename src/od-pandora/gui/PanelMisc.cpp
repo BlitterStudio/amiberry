@@ -100,27 +100,9 @@ public:
 #ifdef RASPBERRY
         else if (actionEvent.getSource() == cboKBDLed_num)
 	        changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
-	        
-//            if (cboKBDLed_num->getSelected() == 0) changed_prefs.kbd_led_num = -1; // Nothing
-//            if (cboKBDLed_num->getSelected() == 7) changed_prefs.kbd_led_num = 5;  // HD
-//            if (cboKBDLed_num->getSelected() == 6) changed_prefs.kbd_led_num = -2; // Any DFs
-//            if (cboKBDLed_num->getSelected() >= 1 && cboKBDLed_num->getSelected() <= 4) changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1; // Specific DF#
 
-//        else if (actionEvent.getSource() == cboKBDLed_cap)
-//        {
-//            if (cboKBDLed_cap->getSelected() == 0) changed_prefs.kbd_led_cap = -1;
-//            if (cboKBDLed_cap->getSelected() == 7) changed_prefs.kbd_led_cap = 5;
-//            if (cboKBDLed_cap->getSelected() == 6) changed_prefs.kbd_led_cap = -2;
-//            if (cboKBDLed_cap->getSelected() >= 1 && cboKBDLed_cap->getSelected() <= 4) changed_prefs.kbd_led_cap = cboKBDLed_cap->getSelected() - 1;
-//        }
         else if (actionEvent.getSource() == cboKBDLed_scr)
 			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
-
-//            if (cboKBDLed_scr->getSelected() == 0) changed_prefs.kbd_led_scr = -1;
-//            if (cboKBDLed_scr->getSelected() == 7) changed_prefs.kbd_led_scr = 5;
-//            if (cboKBDLed_scr->getSelected() == 6) changed_prefs.kbd_led_scr = -2;
-//            if (cboKBDLed_scr->getSelected() >= 1 && cboKBDLed_scr->getSelected() <= 4) changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected() - 1;
-
 #endif
     }
 };
@@ -262,20 +244,5 @@ void RefreshPanelMisc(void)
 #ifdef RASPBERRY
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
-	
-//    if (changed_prefs.kbd_led_num == -1) cboKBDLed_num->setSelected(0);
-//    if (changed_prefs.kbd_led_num == -2) cboKBDLed_num->setSelected(6);
-//    if (changed_prefs.kbd_led_num == 5) cboKBDLed_num->setSelected(7);
-//    if (changed_prefs.kbd_led_num >= 1 && changed_prefs.kbd_led_num <= 4) cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
-	
-//    if (changed_prefs.kbd_led_cap == -1) cboKBDLed_cap->setSelected(0);
-//    if (changed_prefs.kbd_led_cap == -2) cboKBDLed_cap->setSelected(6);
-//    if (changed_prefs.kbd_led_cap == 5) cboKBDLed_cap->setSelected(7);
-//    if (changed_prefs.kbd_led_cap >= 1 && changed_prefs.kbd_led_cap <= 4) cboKBDLed_cap->setSelected(changed_prefs.kbd_led_cap + 1);
-	
-//    if (changed_prefs.kbd_led_scr == -1) cboKBDLed_scr->setSelected(0);
-//    if (changed_prefs.kbd_led_scr == -2) cboKBDLed_scr->setSelected(6);
-//    if (changed_prefs.kbd_led_scr == 5) cboKBDLed_scr->setSelected(7);
-//    if (changed_prefs.kbd_led_scr >= 1 && changed_prefs.kbd_led_scr <= 4) cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
 #endif
 }
