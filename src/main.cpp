@@ -632,7 +632,6 @@ static int real_main2 (int argc, TCHAR **argv)
 #endif
 #endif
 
-
     keyboard_settrans();
 
     if (restart_config[0])
@@ -693,8 +692,6 @@ static int real_main2 (int argc, TCHAR **argv)
         update_display(&currprefs);
     }
 
-
-
     memset (&gui_data, 0, sizeof gui_data);
     gui_data.cd = -1;
     gui_data.hd = -1;
@@ -728,7 +725,6 @@ static int real_main2 (int argc, TCHAR **argv)
 
     if (graphics_init (true))
     {
-
         if(!init_audio ())
         {
             if (sound_available && currprefs.produce_sound > 1)
@@ -737,6 +733,7 @@ static int real_main2 (int argc, TCHAR **argv)
             }
             currprefs.produce_sound = 0;
         }
+	    gui_flicker_led(LED_POWER, 0, 1);
         start_program ();
     }
     return 0;

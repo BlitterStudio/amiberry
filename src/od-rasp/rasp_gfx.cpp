@@ -139,12 +139,10 @@ void graphics_subshutdown (void)
 
 static void open_screen(struct uae_prefs *p)
 {
-
     VC_DISPMANX_ALPHA_T alpha = { (DISPMANX_FLAGS_ALPHA_T ) (DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
                                   255, /*alpha 0->255*/
                                   0
                                 };
-
 
     uint32_t     vc_image_ptr;
     int          width;
@@ -164,7 +162,6 @@ static void open_screen(struct uae_prefs *p)
         height = p->gfx_size.height;
     }
 
-
     //if(prSDLScreen != NULL)
     //{
     //  SDL_FreeSurface(prSDLScreen);
@@ -176,7 +173,7 @@ static void open_screen(struct uae_prefs *p)
         const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
         printf("DispmanX: Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
         // For debug, in order to avoid full screen.
-        Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
+        Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
         //Dummy_prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
     }
 
@@ -205,7 +202,7 @@ static void open_screen(struct uae_prefs *p)
         printf("Emulation resolution: Width %i Height: %i\n",width,height);
         currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
         currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
-        prSDLScreen = SDL_CreateRGBSurface(SDL_SWSURFACE,width,height,16,
+        prSDLScreen = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 16,
                                            Dummy_prSDLScreen->format->Rmask,
                                            Dummy_prSDLScreen->format->Gmask,
                                            Dummy_prSDLScreen->format->Bmask,
@@ -524,7 +521,6 @@ int graphics_init(bool mousecapture)
     uae_sem_init (&vsync_wait_sem, 0, 1);
 
     graphics_subinit ();
-
 
     if (!init_colors ())
         return 0;

@@ -192,7 +192,6 @@ static int pandora_start_sound(int rate, int bits, int stereo)
     unsigned int bsize;
     static int audioOpened = 0;
 
-
     // if no settings change, we don't need to do anything
     if (rate == s_oldrate && s_oldbits == bits && s_oldstereo == stereo && audioOpened)
         return 0;
@@ -200,14 +199,12 @@ static int pandora_start_sound(int rate, int bits, int stereo)
     if (audioOpened)
         pandora_stop_sound();
 
-
     // init sem, start sound thread
     init_soundbuffer_usage();
     printf("starting sound thread..\n");
     ret = sem_init(&sound_sem, 0, 0);
     sem_init(&callback_sem, 0, SOUND_BUFFERS_COUNT - 1);
     if (ret != 0) printf("sem_init() failed: %i, errno=%i\n", ret, errno);
-
 
     SDL_AudioSpec as;
     memset(&as, 0, sizeof(as));
@@ -345,7 +342,6 @@ static int open_sound (void)
     // Android does not like opening sound device several times
     if (pandora_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
         return 0;
-
 
     have_sound = 1;
     sound_available = 1;
