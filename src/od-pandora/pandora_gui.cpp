@@ -37,6 +37,7 @@
 #include <linux/kd.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -46,7 +47,6 @@
 int emulating = 0;
 
 extern int screen_is_picasso;
-extern int fd; /* File descriptor for console (/dev/tty/) */
 
 struct gui_msg
 {
@@ -629,8 +629,7 @@ void gui_led(int led, int on)
 	if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
 	if (currprefs.kbd_led_scr != changed_prefs.kbd_led_scr) currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
 
-//	printf("Debug: About to get KB LED status, using fd: %d\n", fd);
-	ioctl(fd, KDGETLED, &kbd_led_status);
+	ioctl(0, KDGETLED, &kbd_led_status);
 
 	// Handle floppy led status
 	if (led == LED_DF0 || led == LED_DF1 || led == LED_DF2 || led == LED_DF3)
@@ -660,8 +659,7 @@ void gui_led(int led, int on)
 			else kbd_led_status &= ~LED_SCR;
 		}
 	}
-//	printf("Debug: About to set KB LED status, using fd: %d\n", fd);
-	ioctl(fd, KDSETLED, kbd_led_status);
+	ioctl(0, KDSETLED, kbd_led_status);
 #endif
 }
 
