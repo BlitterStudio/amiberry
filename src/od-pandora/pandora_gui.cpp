@@ -36,12 +36,6 @@
 #ifdef RASPBERRY
 #include <linux/kd.h>
 #include <sys/ioctl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #endif //RASPBERRY
 
 int emulating = 0;

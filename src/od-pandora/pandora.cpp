@@ -62,9 +62,6 @@ char currentDir[MAX_DPATH];
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
 #include <linux/kd.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 unsigned long kbd_led_status;
 char kbd_flags;
 #endif
@@ -832,6 +829,9 @@ int main (int argc, char *argv[])
 #endif
 
 	real_main (argc, argv);
+	
+	// restore keyboard LEDs to normal state
+	ioctl(0, KDSETLED, 0xFF);
 	
     ClearAvailableROMList();
     romlist_clear();
