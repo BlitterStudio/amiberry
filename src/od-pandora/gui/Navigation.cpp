@@ -153,17 +153,17 @@ static NavigationMap navMap[] =
 
 #ifndef RASPBERRY
 // PanelDisplay
-    { "sldWidth",       "Display",               "",               "Frameskip",      "sldHeight" },
-    { "sldHeight",      "Display",               "",               "sldWidth",       "sldVertPos" },
-    { "sldVertPos",     "Display",               "",               "sldHeight",      "Frameskip" },
-    { "Frameskip",      "Display",        "Display",        "sldVertPos",     "sldWidth" },
+  { "sldWidth",       "",               "",               "Frameskip",      "sldHeight" },
+  { "sldHeight",      "",               "",               "sldWidth",       "sldVertPos" },
+  { "sldVertPos",     "",               "",               "sldHeight",      "Frameskip" },
+  { "Frameskip",      "Display",        "Display",        "sldVertPos",     "sldWidth" },
 #else
 // PanelDisplay
     { "sldWidth",       "",               "",               "Frameskip",      "sldHeight" },
     { "sldHeight",      "",               "",               "sldWidth",       "sldVertPos" },
     { "sldVertPos",     "",               "",               "sldHeight",      "FSRatio" },
-    { "FSRatio",     "",               "",               "sldVertPos",      "4by3Ratio" },
-    { "4by3Ratio",     "Display",        "Display",               "FSRatio",      "Frameskip" },
+    { "FSRatio",        "",               "",               "sldVertPos",     "4by3Ratio" },
+    { "4by3Ratio",     "Display",        "Display",           "FSRatio",      "Frameskip" },
     { "Frameskip",      "Display",        "Display",        "4by3Ratio",     "sldWidth" },
 #endif
 
