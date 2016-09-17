@@ -57,10 +57,10 @@ gcn::SDLImageLoader* gui_imageLoader;
 namespace widgets
 {
 // Main buttons
-gcn::Button* cmdQuit;
-gcn::Button* cmdReset;
-gcn::Button* cmdRestart;
-gcn::Button* cmdStart;
+	gcn::Button* cmdQuit;
+	gcn::Button* cmdReset;
+	gcn::Button* cmdRestart;
+	gcn::Button* cmdStart;
 }
 
 
@@ -113,275 +113,275 @@ void RegisterRefreshFunc(void (*func)(void))
 
 namespace sdl
 {
-void gui_init()
-{
-    //-------------------------------------------------
-    // Set layer for GUI screen
-    //-------------------------------------------------
-    char tmp[20];
-    snprintf(tmp, 20, "%dx%d", GUI_WIDTH, GUI_HEIGHT);
-    setenv("SDL_OMAP_LAYER_SIZE", tmp, 1);
-    snprintf(tmp, 20, "0,0,0,0");
-    setenv("SDL_OMAP_BORDER_CUT", tmp, 1);
+	void gui_init()
+	{
+		//-------------------------------------------------
+		// Set layer for GUI screen
+		//-------------------------------------------------
+		char tmp[20];
+		snprintf(tmp, 20, "%dx%d", GUI_WIDTH, GUI_HEIGHT);
+		setenv("SDL_OMAP_LAYER_SIZE", tmp, 1);
+		snprintf(tmp, 20, "0,0,0,0");
+		setenv("SDL_OMAP_BORDER_CUT", tmp, 1);
 
-    //-------------------------------------------------
-    // Create new screen for GUI
-    //-------------------------------------------------
-#if defined (RASPBERRY)
-    const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
-    printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
-	gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE);
-#else
-    gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
-#endif
-    SDL_EnableUNICODE(1);
-    SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-    SDL_ShowCursor(SDL_ENABLE);
+		//-------------------------------------------------
+		// Create new screen for GUI
+		//-------------------------------------------------
+	#if defined (RASPBERRY)
+		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
+		printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+		gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE);
+	#else
+		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
+	#endif
+		SDL_EnableUNICODE(1);
+		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+		SDL_ShowCursor(SDL_ENABLE);
 
-    //-------------------------------------------------
-    // Create helpers for guichan
-    //-------------------------------------------------
-    gui_imageLoader = new gcn::SDLImageLoader();
-    gcn::Image::setImageLoader(gui_imageLoader);
-    gui_graphics = new gcn::SDLGraphics();
-    gui_graphics->setTarget(gui_screen);
-    gui_input = new gcn::SDLInput();
-    uae_gui = new gcn::Gui();
-    uae_gui->setGraphics(gui_graphics);
-    uae_gui->setInput(gui_input);
-}
+		//-------------------------------------------------
+		// Create helpers for guichan
+		//-------------------------------------------------
+		gui_imageLoader = new gcn::SDLImageLoader();
+		gcn::Image::setImageLoader(gui_imageLoader);
+		gui_graphics = new gcn::SDLGraphics();
+		gui_graphics->setTarget(gui_screen);
+		gui_input = new gcn::SDLInput();
+		uae_gui = new gcn::Gui();
+		uae_gui->setGraphics(gui_graphics);
+		uae_gui->setInput(gui_input);
+	}
 
-void gui_halt()
-{
-    delete uae_gui;
-    delete gui_imageLoader;
-    delete gui_input;
-    delete gui_graphics;
+	void gui_halt()
+	{
+		delete uae_gui;
+		delete gui_imageLoader;
+		delete gui_input;
+		delete gui_graphics;
 
-    SDL_FreeSurface(gui_screen);
-    gui_screen = NULL;
-}
+		SDL_FreeSurface(gui_screen);
+		gui_screen = NULL;
+	}
 
-void gui_run()
-{
-    //-------------------------------------------------
-    // The main loop
-    //-------------------------------------------------
-    while(gui_running)
-    {
-        //-------------------------------------------------
-        // Check user input
-        //-------------------------------------------------
-        SDL_Event event;
-        while(SDL_PollEvent(&event))
-        {
-            if (event.type == SDL_QUIT)
-            {
-                //-------------------------------------------------
-                // Quit entire program via SQL-Quit
-                //-------------------------------------------------
-                uae_quit();
-                gui_running = false;
-                break;
-            }
+	void gui_run()
+	{
+		//-------------------------------------------------
+		// The main loop
+		//-------------------------------------------------
+		while(gui_running)
+		{
+			//-------------------------------------------------
+			// Check user input
+			//-------------------------------------------------
+			SDL_Event event;
+			while(SDL_PollEvent(&event))
+			{
+				if (event.type == SDL_QUIT)
+				{
+					//-------------------------------------------------
+					// Quit entire program via SQL-Quit
+					//-------------------------------------------------
+					uae_quit();
+					gui_running = false;
+					break;
+				}
 
-            else if (event.type == SDL_KEYDOWN)
-            {
-                gcn::FocusHandler* focusHdl;
-                gcn::Widget* activeWidget;
+				else if (event.type == SDL_KEYDOWN)
+				{
+					gcn::FocusHandler* focusHdl;
+					gcn::Widget* activeWidget;
 
 
-                if (event.key.keysym.sym == currprefs.key_for_menu)
-                {
-                    if(emulating && widgets::cmdStart->isEnabled())
-                    {
-                        //------------------------------------------------
-                        // Continue emulation
-                        //------------------------------------------------
-                        gui_running = false;
-                    }
-                    else
-                    {
-                        //------------------------------------------------
-                        // First start of emulator -> reset Amiga
-                        //------------------------------------------------
-                        uae_reset(0,1);
-                        gui_running = false;
-                    }
-                }
-                else
-                    switch(event.key.keysym.sym)
-                    {
-                    case SDLK_q:
-                        //-------------------------------------------------
-                        // Quit entire program via Q on keyboard
-                        //-------------------------------------------------
-                        focusHdl = gui_top->_getFocusHandler();
-                        activeWidget = focusHdl->getFocused();
-                        if(dynamic_cast<gcn::TextField*>(activeWidget) == NULL)
-                        {
-                            // ...but only if we are not in a Textfield...
-                            uae_quit();
-                            gui_running = false;
-                        }
-                        break;
+					if (event.key.keysym.sym == currprefs.key_for_menu)
+					{
+						if(emulating && widgets::cmdStart->isEnabled())
+						{
+							//------------------------------------------------
+							// Continue emulation
+							//------------------------------------------------
+							gui_running = false;
+						}
+						else
+						{
+							//------------------------------------------------
+							// First start of emulator -> reset Amiga
+							//------------------------------------------------
+							uae_reset(0,1);
+							gui_running = false;
+						}
+					}
+					else
+						switch(event.key.keysym.sym)
+						{
+						case SDLK_q:
+							//-------------------------------------------------
+							// Quit entire program via Q on keyboard
+							//-------------------------------------------------
+							focusHdl = gui_top->_getFocusHandler();
+							activeWidget = focusHdl->getFocused();
+							if(dynamic_cast<gcn::TextField*>(activeWidget) == NULL)
+							{
+								// ...but only if we are not in a Textfield...
+								uae_quit();
+								gui_running = false;
+							}
+							break;
 
-                    case SDLK_ESCAPE:
-//                    case SDLK_RCTRL:
-                        //-------------------------------------------------
-                        // Reset Amiga
-                        //-------------------------------------------------
-                        uae_reset(1,1);
-                        gui_running = false;
-                        break;
+						case SDLK_ESCAPE:
+	//                    case SDLK_RCTRL:
+							//-------------------------------------------------
+							// Reset Amiga
+							//-------------------------------------------------
+							uae_reset(1,1);
+							gui_running = false;
+							break;
 
-                    case SDLK_PAGEDOWN:
-                    case SDLK_HOME:
-                        //------------------------------------------------
-                        // Simulate press of enter when 'X' pressed
-                        //------------------------------------------------
-                        event.key.keysym.sym = SDLK_RETURN;
-                        gui_input->pushInput(event); // Fire key down
-                        event.type = SDL_KEYUP;  // and the key up
-                        break;
+						case SDLK_PAGEDOWN:
+						case SDLK_HOME:
+							//------------------------------------------------
+							// Simulate press of enter when 'X' pressed
+							//------------------------------------------------
+							event.key.keysym.sym = SDLK_RETURN;
+							gui_input->pushInput(event); // Fire key down
+							event.type = SDL_KEYUP;  // and the key up
+							break;
 
-                    case SDLK_UP:
-                        if(HandleNavigation(DIRECTION_UP))
-                            continue; // Don't change value when enter ComboBox -> don't send event to control
-                        break;
+						case SDLK_UP:
+							if(HandleNavigation(DIRECTION_UP))
+								continue; // Don't change value when enter ComboBox -> don't send event to control
+							break;
 
-                    case SDLK_DOWN:
-                        if(HandleNavigation(DIRECTION_DOWN))
-                            continue; // Don't change value when enter ComboBox -> don't send event to control
-                        break;
+						case SDLK_DOWN:
+							if(HandleNavigation(DIRECTION_DOWN))
+								continue; // Don't change value when enter ComboBox -> don't send event to control
+							break;
 
-                    case SDLK_LEFT:
-                        if(HandleNavigation(DIRECTION_LEFT))
-                            continue; // Don't change value when enter Slider -> don't send event to control
-                        break;
+						case SDLK_LEFT:
+							if(HandleNavigation(DIRECTION_LEFT))
+								continue; // Don't change value when enter Slider -> don't send event to control
+							break;
 
-                    case SDLK_RIGHT:
-                        if(HandleNavigation(DIRECTION_RIGHT))
-                            continue; // Don't change value when enter Slider -> don't send event to control
-                        break;
-                    }
-            }
+						case SDLK_RIGHT:
+							if(HandleNavigation(DIRECTION_RIGHT))
+								continue; // Don't change value when enter Slider -> don't send event to control
+							break;
+						}
+				}
 
-            //-------------------------------------------------
-            // Send event to guichan-controls
-            //-------------------------------------------------
-            gui_input->pushInput(event);
-        }
+				//-------------------------------------------------
+				// Send event to guichan-controls
+				//-------------------------------------------------
+				gui_input->pushInput(event);
+			}
 
-        if(gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
-            DisableResume();
+			if(gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
+				DisableResume();
 
-        // Now we let the Gui object perform its logic.
-        uae_gui->logic();
-        // Now we let the Gui object draw itself.
-        uae_gui->draw();
-        // Finally we update the screen.
-        wait_for_vsync();
-        SDL_Flip(gui_screen);
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
+			// Finally we update the screen.
+			wait_for_vsync();
+			SDL_Flip(gui_screen);
 
-        if(refreshFuncAfterDraw != NULL)
-        {
-            void (*currFunc)(void) = refreshFuncAfterDraw;
-            refreshFuncAfterDraw = NULL;
-            currFunc();
-        }
-    }
-}
+			if(refreshFuncAfterDraw != NULL)
+			{
+				void (*currFunc)(void) = refreshFuncAfterDraw;
+				refreshFuncAfterDraw = NULL;
+				currFunc();
+			}
+		}
+	}
 
 }
 
 
 namespace widgets
 {
-class MainButtonActionListener : public gcn::ActionListener
-{
-public:
-    void action(const gcn::ActionEvent& actionEvent)
-    {
-        if (actionEvent.getSource() == cmdQuit)
-        {
-            //-------------------------------------------------
-            // Quit entire program via click on Quit-button
-            //-------------------------------------------------
-            uae_quit();
-            gui_running = false;
-        }
-        else if(actionEvent.getSource() == cmdReset)
-        {
-            //-------------------------------------------------
-            // Reset Amiga via click on Reset-button
-            //-------------------------------------------------
-            uae_reset(1, 1);
-            gui_running = false;
-        }
-        else if(actionEvent.getSource() == cmdRestart)
-        {
-            //-------------------------------------------------
-            // Restart emulator
-            //-------------------------------------------------
-            char tmp[MAX_PATH];
-            fetch_configurationpath (tmp, sizeof (tmp));
-            if(strlen(last_loaded_config) > 0)
-                strcat (tmp, last_loaded_config);
-            else
-            {
-                strcat (tmp, OPTIONSFILENAME);
-                strcat (tmp, ".uae");
-            }
-            uae_restart(0, tmp);
-            gui_running = false;
-        }
-        else if(actionEvent.getSource() == cmdStart)
-        {
-            if(emulating && widgets::cmdStart->isEnabled())
-            {
-                //------------------------------------------------
-                // Continue emulation
-                //------------------------------------------------
-                gui_running = false;
-            }
-            else
-            {
-                //------------------------------------------------
-                // First start of emulator -> reset Amiga
-                //------------------------------------------------
-                uae_reset(0, 1);
-                gui_running = false;
-            }
-        }
-    }
-};
-MainButtonActionListener* mainButtonActionListener;
+	class MainButtonActionListener : public gcn::ActionListener
+	{
+	public:
+		void action(const gcn::ActionEvent& actionEvent)
+		{
+			if (actionEvent.getSource() == cmdQuit)
+			{
+				//-------------------------------------------------
+				// Quit entire program via click on Quit-button
+				//-------------------------------------------------
+				uae_quit();
+				gui_running = false;
+			}
+			else if(actionEvent.getSource() == cmdReset)
+			{
+				//-------------------------------------------------
+				// Reset Amiga via click on Reset-button
+				//-------------------------------------------------
+				uae_reset(1, 1);
+				gui_running = false;
+			}
+			else if(actionEvent.getSource() == cmdRestart)
+			{
+				//-------------------------------------------------
+				// Restart emulator
+				//-------------------------------------------------
+				char tmp[MAX_PATH];
+				fetch_configurationpath (tmp, sizeof (tmp));
+				if(strlen(last_loaded_config) > 0)
+					strcat (tmp, last_loaded_config);
+				else
+				{
+					strcat (tmp, OPTIONSFILENAME);
+					strcat (tmp, ".uae");
+				}
+				uae_restart(0, tmp);
+				gui_running = false;
+			}
+			else if(actionEvent.getSource() == cmdStart)
+			{
+				if(emulating && widgets::cmdStart->isEnabled())
+				{
+					//------------------------------------------------
+					// Continue emulation
+					//------------------------------------------------
+					gui_running = false;
+				}
+				else
+				{
+					//------------------------------------------------
+					// First start of emulator -> reset Amiga
+					//------------------------------------------------
+					uae_reset(0, 1);
+					gui_running = false;
+				}
+			}
+		}
+	};
+	MainButtonActionListener* mainButtonActionListener;
 
 
-class PanelFocusListener : public gcn::FocusListener
-{
-public:
-    void focusGained(const gcn::Event& event)
-    {
-        int i;
-        for(i=0; categories[i].category != NULL; ++i)
-        {
-            if(event.getSource() == categories[i].selector)
-            {
-                categories[i].selector->setActive(true);
-                categories[i].panel->setVisible(true);
-                last_active_panel = i;
-            }
-            else
-            {
-                categories[i].selector->setActive(false);
-                categories[i].panel->setVisible(false);
-            }
-        }
-    }
-};
-PanelFocusListener* panelFocusListener;
+	class PanelFocusListener : public gcn::FocusListener
+	{
+	public:
+		void focusGained(const gcn::Event& event)
+		{
+			int i;
+			for(i=0; categories[i].category != NULL; ++i)
+			{
+				if(event.getSource() == categories[i].selector)
+				{
+					categories[i].selector->setActive(true);
+					categories[i].panel->setVisible(true);
+					last_active_panel = i;
+				}
+				else
+				{
+					categories[i].selector->setActive(false);
+					categories[i].panel->setVisible(false);
+				}
+			}
+		}
+	};
+	PanelFocusListener* panelFocusListener;
 
 
 void gui_init()
