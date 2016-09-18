@@ -2,12 +2,12 @@
 - New target platform: Pi 3
 - Optimizations for Pi 3 added
 - Pi 3 is now the default target if no Platform is specified
-- Added fixes for keyboard LEDs (works with Keyrah adapters now)
+- Added support for custom functions assignable to keyboard LEDs (e.g. HD activity)
 - Code formatting and cleanup
-- Merged improvements from Android port
 - Pi Zero / Pi 1 version now has full Picasso96 support.
-- Removed Pandora specific shortcuts (RShift + s caused a crash for example)
-- Loading the Configuration file now respects the input settings 
+- Removed Pandora specific keyboard shortcuts which caused crashes
+- Loading the Configuration file now respects the input settings
+- Fixed bugs and crashes in GUI keyboard navigation
 
 # uae4arm-rpi
 Port of uae4arm on Raspberry Pi
