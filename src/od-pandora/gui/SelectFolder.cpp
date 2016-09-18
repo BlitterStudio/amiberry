@@ -253,7 +253,7 @@ static void SelectFolderLoop(void)
 		uae_gui->draw();
 		// Finally we update the screen.
 		wait_for_vsync();
-		SDL_Flip(gui_screen);
+//		SDL_Flip(gui_screen);
 	}
 }
 

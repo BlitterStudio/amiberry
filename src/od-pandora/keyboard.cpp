@@ -13,6 +13,7 @@
 #include "keybuf.h"
 #include "gui.h"
 #include <SDL.h>
+#include <SDL_video.h>
 
 char keyboard_type = 0;
 
@@ -289,16 +290,16 @@ static struct uae_input_device_kbr_default keytrans_amiga[] =
     { SDLK_8, INPUTEVENT_KEY_8 },
     { SDLK_9, INPUTEVENT_KEY_9 },
 
-    { SDLK_KP0, INPUTEVENT_KEY_NP_0 },
-	{ SDLK_KP1, INPUTEVENT_KEY_NP_1 },
-	{ SDLK_KP2, INPUTEVENT_KEY_NP_2 },
-	{ SDLK_KP3, INPUTEVENT_KEY_NP_3 },
-	{ SDLK_KP4, INPUTEVENT_KEY_NP_4 },
-	{ SDLK_KP5, INPUTEVENT_KEY_NP_5 },
-	{ SDLK_KP6, INPUTEVENT_KEY_NP_6 },
-	{ SDLK_KP7, INPUTEVENT_KEY_NP_7 },
-	{ SDLK_KP8, INPUTEVENT_KEY_NP_8 },
-	{ SDLK_KP9, INPUTEVENT_KEY_NP_9 },
+    { SDLK_KP_0, INPUTEVENT_KEY_NP_0 },
+	{ SDLK_KP_1, INPUTEVENT_KEY_NP_1 },
+	{ SDLK_KP_2, INPUTEVENT_KEY_NP_2 },
+	{ SDLK_KP_3, INPUTEVENT_KEY_NP_3 },
+	{ SDLK_KP_4, INPUTEVENT_KEY_NP_4 },
+	{ SDLK_KP_5, INPUTEVENT_KEY_NP_5 },
+	{ SDLK_KP_6, INPUTEVENT_KEY_NP_6 },
+	{ SDLK_KP_7, INPUTEVENT_KEY_NP_7 },
+	{ SDLK_KP_8, INPUTEVENT_KEY_NP_8 },
+	{ SDLK_KP_9, INPUTEVENT_KEY_NP_9 },
 	{ SDLK_KP_DIVIDE, INPUTEVENT_KEY_NP_DIV },
 	{ SDLK_KP_MULTIPLY, INPUTEVENT_KEY_NP_MUL },
 	{ SDLK_KP_MINUS, INPUTEVENT_KEY_NP_SUB },
@@ -378,16 +379,14 @@ static int *kbmaps[] = { kb_none, kb_none, kb_none, kb_none, kb_none,
 
 void keyboard_settrans (void)
 {
-    char vid_drv_name[32];
-    // get display type...
-    SDL_VideoDriverName(vid_drv_name, sizeof(vid_drv_name));
+    const char* vid_drv_name = SDL_GetCurrentVideoDriver();
     if (strcmp(vid_drv_name, "x11") == 0)
     {
         printf("Will use keycode from x11 mapping.\n");
         keyboard_type = KEYCODE_X11;
         inputdevice_setkeytranslation (keytrans_x11, kbmaps);
     }
-    else  if (strcmp(vid_drv_name, "fbcon") == 0)
+    else if (strcmp(vid_drv_name, "fbcon") == 0)
     {
         printf("Will use keycode from fbcon mapping.\n");
         keyboard_type = KEYCODE_FBCON;

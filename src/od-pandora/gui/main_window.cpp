@@ -127,15 +127,7 @@ namespace sdl
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
-	#if defined (RASPBERRY)
-		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
-		printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
-		gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE);
-	#else
-		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
-	#endif
-		SDL_EnableUNICODE(1);
-		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		SDL_ShowCursor(SDL_ENABLE);
 
 		//-------------------------------------------------
@@ -282,7 +274,7 @@ namespace sdl
 			uae_gui->draw();
 			// Finally we update the screen.
 			wait_for_vsync();
-			SDL_Flip(gui_screen);
+//			SDL_Flip(gui_screen);
 
 			if(refreshFuncAfterDraw != NULL)
 			{

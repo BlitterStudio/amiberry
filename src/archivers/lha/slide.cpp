@@ -118,7 +118,7 @@ static unsigned int hval;
 static int matchlen;
 static unsigned int matchpos;
 static unsigned int pos;
-static unsigned int remainder;
+//static unsigned int remainder;
 
 #if 0
 /* ------------------------------------------------------------------------ */

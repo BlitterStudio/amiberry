@@ -40,7 +40,7 @@ STATIC_INLINE void uae_set_thread_priority (uae_thread_id *id, int pri)
 
 STATIC_INLINE int uae_start_thread (const TCHAR *name, void *(*f) (void *), void *arg, uae_thread_id *foo)
 {
-    uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, arg);
+    uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, "StartThread", arg);
     if(foo != NULL)
         *foo = id;
 //  dbg_add_thread(id, name);
@@ -49,7 +49,7 @@ STATIC_INLINE int uae_start_thread (const TCHAR *name, void *(*f) (void *), void
 
 STATIC_INLINE int uae_start_thread_fast (void *(*f) (void *), void *arg, uae_thread_id *foo)
 {
-    uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, arg);
+    uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, "StartThreadFast", arg);
     if(foo != NULL)
         *foo = id;
 //  dbg_add_thread(id, "<fast>");

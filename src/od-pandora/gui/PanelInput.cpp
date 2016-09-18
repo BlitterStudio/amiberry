@@ -267,38 +267,38 @@ public:
             changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
         }
 #endif
-        else if (actionEvent.getSource() == chkCustomCtrl)
-            changed_prefs.pandora_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
-
-        else if (actionEvent.getSource() == cboA)
-            customControlMap[SDLK_HOME] = amigaKey[cboA->getSelected()];
-
-        else if (actionEvent.getSource() == cboB)
-            customControlMap[SDLK_END] = amigaKey[cboB->getSelected()];
-
-        else if (actionEvent.getSource() == cboX)
-            customControlMap[SDLK_PAGEDOWN] = amigaKey[cboX->getSelected()];
-
-        else if (actionEvent.getSource() == cboY)
-            customControlMap[SDLK_PAGEUP] = amigaKey[cboY->getSelected()];
-
-        else if (actionEvent.getSource() == cboL)
-            customControlMap[SDLK_RSHIFT] = amigaKey[cboL->getSelected()];
-
-        else if (actionEvent.getSource() == cboR)
-            customControlMap[SDLK_RCTRL] = amigaKey[cboR->getSelected()];
-
-        else if (actionEvent.getSource() == cboUp)
-            customControlMap[SDLK_UP] = amigaKey[cboUp->getSelected()];
-
-        else if (actionEvent.getSource() == cboDown)
-            customControlMap[SDLK_DOWN] = amigaKey[cboDown->getSelected()];
-
-        else if (actionEvent.getSource() == cboLeft)
-            customControlMap[SDLK_LEFT] = amigaKey[cboLeft->getSelected()];
-
-        else if (actionEvent.getSource() == cboRight)
-            customControlMap[SDLK_RIGHT] = amigaKey[cboRight->getSelected()];
+//        else if (actionEvent.getSource() == chkCustomCtrl)
+//            changed_prefs.pandora_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
+//
+//        else if (actionEvent.getSource() == cboA)
+//            customControlMap[SDLK_HOME] = amigaKey[cboA->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboB)
+//            customControlMap[SDLK_END] = amigaKey[cboB->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboX)
+//            customControlMap[SDLK_PAGEDOWN] = amigaKey[cboX->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboY)
+//            customControlMap[SDLK_PAGEUP] = amigaKey[cboY->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboL)
+//            customControlMap[SDLK_RSHIFT] = amigaKey[cboL->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboR)
+//            customControlMap[SDLK_RCTRL] = amigaKey[cboR->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboUp)
+//            customControlMap[SDLK_UP] = amigaKey[cboUp->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboDown)
+//            customControlMap[SDLK_DOWN] = amigaKey[cboDown->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboLeft)
+//            customControlMap[SDLK_LEFT] = amigaKey[cboLeft->getSelected()];
+//
+//        else if (actionEvent.getSource() == cboRight)
+//            customControlMap[SDLK_RIGHT] = amigaKey[cboRight->getSelected()];
 
         else if (actionEvent.getSource() == KeyForMenu)
             changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()] ;
@@ -659,17 +659,17 @@ void RefreshPanelInput(void)
 
     chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 #endif
-    chkCustomCtrl->setSelected(changed_prefs.pandora_customControls);
-    cboA->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_HOME]));
-    cboB->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_END]));
-    cboX->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEDOWN]));
-    cboY->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEUP]));
-    cboL->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RSHIFT]));
-    cboR->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RCTRL]));
-    cboUp->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_UP]));
-    cboDown->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_DOWN]));
-    cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_LEFT]));
-    cboRight->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RIGHT]));
+//    chkCustomCtrl->setSelected(changed_prefs.pandora_customControls);
+//    cboA->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_HOME]));
+//    cboB->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_END]));
+//    cboX->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEDOWN]));
+//    cboY->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEUP]));
+//    cboL->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RSHIFT]));
+//    cboR->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RCTRL]));
+//    cboUp->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_UP]));
+//    cboDown->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_DOWN]));
+//    cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_LEFT]));
+//    cboRight->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RIGHT]));
 
     for(i=0; i<4; ++i)
     {
