@@ -294,13 +294,18 @@ bool HandleNavigation(int direction)
                         if(searchFor.length() > 0)
                         {
                             focusTarget = gui_top->findWidgetById(searchFor);
-                            if(focusTarget != NULL)
-                            {
-                                if(focusTarget->isEnabled())
-                                    bFoundEnabled = true;
-                                else
-                                    activeName = searchFor;
-                            }
+	                        if (focusTarget != NULL)
+	                        {
+		                        if (focusTarget->isEnabled())
+			                        bFoundEnabled = true;
+		                        else
+			                        activeName = searchFor;
+	                        }
+	                        else
+	                        {
+		                        bFoundEnabled = true;
+		                        break;
+	                        }
                         }
                         break;
                     }
