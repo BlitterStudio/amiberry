@@ -16,6 +16,7 @@
 #include <png.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <assert.h>
 //#include <SDL_gfxPrimitives.h>
 #ifdef ANDROIDSDL
 #include <android/log.h>
@@ -41,6 +42,7 @@ struct PicassoResolution *DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
 
 int screen_is_picasso = 0;
+int result = 0;
 
 static int curr_layer_width = 0;
 
@@ -68,9 +70,10 @@ uae_sem_t vsync_wait_sem;
 
 DISPMANX_DISPLAY_HANDLE_T   display;
 DISPMANX_MODEINFO_T         info;
-DISPMANX_RESOURCE_HANDLE_T  resource_amigafb_1;
-DISPMANX_RESOURCE_HANDLE_T  resource_amigafb_2;
+DISPMANX_RESOURCE_HANDLE_T  bgResource;
+DISPMANX_RESOURCE_HANDLE_T  resource;
 DISPMANX_ELEMENT_HANDLE_T   element;
+DISPMANX_ELEMENT_HANDLE_T	bgElement;
 DISPMANX_UPDATE_HANDLE_T    update;
 VC_IMAGE_TYPE_T type = VC_IMAGE_RGBA32;
 VC_RECT_T       src_rect;
@@ -117,15 +120,23 @@ void graphics_dispmanshutdown (void)
     if (DispManXElementpresent == 1)
     {
         DispManXElementpresent = 0;
-        update = vc_dispmanx_update_start( 10 );
-        vc_dispmanx_element_remove(update, element);
-        vc_dispmanx_update_submit_sync(update);
+        update = vc_dispmanx_update_start(0);
+	    assert(update != 0);
+        result = vc_dispmanx_element_remove(update, element);
+	    assert(result == 0);
+	    result = vc_dispmanx_update_submit_sync(update);
+	    assert(result == 0);
+	    
+	    result = vc_dispmanx_resource_delete(resource);
+	    assert(result == 0);
+	    result = vc_dispmanx_resource_delete(bgResource);
+	    assert(result == 0);
     }
 }
 
 void graphics_subshutdown (void)
 {
-    if (resource_amigafb_1 != 0)
+	if (bgResource != 0)
         graphics_dispmanshutdown();
 
 	SDL_FreeSurface(screenSurface);
@@ -134,6 +145,7 @@ void graphics_subshutdown (void)
 
 static void open_screen(struct uae_prefs *p)
 {
+	uint32_t displayNumber = 0;
     VC_DISPMANX_ALPHA_T alpha = { (DISPMANX_FLAGS_ALPHA_T ) (DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
                                   255, /*alpha 0->255*/
                                   0
@@ -160,7 +172,7 @@ static void open_screen(struct uae_prefs *p)
 	SDL_ShowCursor(SDL_DISABLE);
 
     // check if resolution hasn't changed in menu, otherwise free the resources so that they will be re-generated with new resolution.
-    if ((resource_amigafb_1 != 0) &&
+	if ((bgResource != 0) &&
             ((blit_rect.width != width) || (blit_rect.height != height) || (currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect) ||
              (currprefs.gfx_fullscreen_ratio != changed_prefs.gfx_fullscreen_ratio)))
     {
@@ -171,27 +183,34 @@ static void open_screen(struct uae_prefs *p)
             screenSurface = 0;
         }
         graphics_dispmanshutdown();
-        vc_dispmanx_resource_delete( resource_amigafb_1 );
-        vc_dispmanx_resource_delete( resource_amigafb_2 );
-        resource_amigafb_1 = 0;
-        resource_amigafb_2 = 0;
+	    bgResource = 0;
+	    resource = 0;
     }
 
-    if (resource_amigafb_1 == 0)
+	if (bgResource == 0)
     {
         printf("Emulation resolution: Width %i Height: %i\n", width, height);
         currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
         currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
         screenSurface = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
 
-        display = vc_dispmanx_display_open(0);
-        vc_dispmanx_display_get_info(display, &info);
+	    display = vc_dispmanx_display_open(displayNumber);
+	    assert(display != 0);
+	    result = vc_dispmanx_display_get_info(display, &info);
+	    assert(result == 0);
 
-	    resource_amigafb_1 = vc_dispmanx_resource_create(type, width, height, &vc_image_ptr);
-	    resource_amigafb_2 = vc_dispmanx_resource_create(type, width, height, &vc_image_ptr);
-        vc_dispmanx_rect_set( &blit_rect, 0, 0, width, height);
-	    vc_dispmanx_resource_write_data(resource_amigafb_1, type, sizeof(width), screenSurface->pixels, &blit_rect);
-        vc_dispmanx_rect_set( &src_rect, 0, 0, width << 16, height << 16);
+	    bgResource = vc_dispmanx_resource_create(type, width, height, &vc_image_ptr);
+	    assert(bgResource != 0);
+	    resource = vc_dispmanx_resource_create(type, width, height, &vc_image_ptr);
+	    assert(resource != 0);
+	    
+//        vc_dispmanx_rect_set( &blit_rect, 0, 0, width, height);
+	    vc_dispmanx_rect_set(&dst_rect, 0, 0, width, height);
+//	    vc_dispmanx_resource_write_data(bgResource, type, sizeof(width), screenSurface->pixels, &blit_rect);
+	    uint32_t background = 0;
+	    result = vc_dispmanx_resource_write_data(bgResource, type, sizeof(background), &background, &dst_rect);
+	    assert(result == 0);
+//        vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
 
     }
     // 16/9 to 4/3 ratio adaptation.
@@ -200,7 +219,7 @@ static void open_screen(struct uae_prefs *p)
         // Fullscreen.
         int scaled_width = info.width * currprefs.gfx_fullscreen_ratio/100;
         int scaled_height = info.height * currprefs.gfx_fullscreen_ratio/100;
-        vc_dispmanx_rect_set( &dst_rect, (info.width - scaled_width)/2,
+        vc_dispmanx_rect_set(&dst_rect, (info.width - scaled_width)/2,
                               (info.height - scaled_height)/2,
                               scaled_width,
                               scaled_height );
@@ -210,7 +229,7 @@ static void open_screen(struct uae_prefs *p)
         // 4/3 shrink.
         int scaled_width = info.width * currprefs.gfx_fullscreen_ratio/100;
         int scaled_height = info.height * currprefs.gfx_fullscreen_ratio/100;
-        vc_dispmanx_rect_set( &dst_rect, (info.width - scaled_width/16*12)/2,
+        vc_dispmanx_rect_set(&dst_rect, (info.width - scaled_width/16*12)/2,
                               (info.height - scaled_height)/2,
                               scaled_width/16*12,
                               scaled_height );
@@ -222,23 +241,47 @@ static void open_screen(struct uae_prefs *p)
     //                     (info.width - (info.width * 6)/100 )/1.5,
     //                     (info.height - (info.height * 7)/100 )/1.5);
 
-
+	result = vc_dispmanx_resource_write_data(resource,
+		type,
+		16 * sizeof(uint32_t),
+		screenSurface->pixels,
+		&dst_rect);
+	assert(result == 0);
+	
     if (DispManXElementpresent == 0)
     {
         DispManXElementpresent = 1;
-        update = vc_dispmanx_update_start( 10 );
-        element = vc_dispmanx_element_add(update,
-                          display,
-                          1,               // layer
-                          &dst_rect,
-                          resource_amigafb_1,
-                          &src_rect,
-                          DISPMANX_PROTECTION_NONE,
-                          &alpha,
-                          NULL,             // clamp
-                          DISPMANX_NO_ROTATE );
+        update = vc_dispmanx_update_start(0);
+	    assert(update != 0);
+	    
+	    bgElement = vc_dispmanx_element_add(update,
+		    display,
+		    1, // layer
+		    &dst_rect,
+		    bgResource,
+		    &src_rect,
+		    DISPMANX_PROTECTION_NONE,
+		    &alpha,
+		    NULL, // clamp
+		    DISPMANX_NO_ROTATE);
+	    assert(bgElement != 0);
+	    
+	    vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
+	    
+	    element = vc_dispmanx_element_add(update,
+		    display,
+		    2, // layer
+		    &dst_rect,
+		    resource,
+		    &src_rect,
+		    DISPMANX_PROTECTION_NONE,
+		    &alpha,
+		    NULL, // clamp
+		    DISPMANX_NO_ROTATE);
+	    assert(element != 0);
 
-	    vc_dispmanx_update_submit_sync(update);
+	    result = vc_dispmanx_update_submit_sync(update);
+	    assert(result == 0);
     }
 
     if(screenSurface != NULL)
@@ -330,13 +373,13 @@ void flush_screen ()
     if (current_resource_amigafb == 1)
     {
         current_resource_amigafb = 0;
-        vc_dispmanx_resource_write_data(resource_amigafb_1,
+	    vc_dispmanx_resource_write_data(bgResource,
                                           type,
                                           sizeof(gfxvidinfo.outwidth),
                                           gfxvidinfo.bufmem,
                                           &blit_rect );
         update = vc_dispmanx_update_start( 10 );
-        vc_dispmanx_element_change_source(update, element, resource_amigafb_1);
+	    vc_dispmanx_element_change_source(update, element, bgResource);
 
 //        vc_dispmanx_update_submit(update, vsync_callback, NULL);
         vc_dispmanx_update_submit_sync(update);
@@ -344,13 +387,13 @@ void flush_screen ()
     else
     {
         current_resource_amigafb = 1;
-        vc_dispmanx_resource_write_data(resource_amigafb_2,
+	    vc_dispmanx_resource_write_data(resource,
                                           type,
                                           sizeof(gfxvidinfo.outwidth),
                                           gfxvidinfo.bufmem,
                                           &blit_rect );
         update = vc_dispmanx_update_start( 10 );
-        vc_dispmanx_element_change_source(update, element, resource_amigafb_2);
+	    vc_dispmanx_element_change_source(update, element, resource);
 	    vc_dispmanx_update_submit_sync(update);
 //        vc_dispmanx_update_submit(update, vsync_callback,NULL);
     }
