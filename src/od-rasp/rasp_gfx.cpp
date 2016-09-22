@@ -23,7 +23,7 @@
 #endif
 #include "td-sdl/thread.h"
 #include "bcm_host.h"
-
+#include "rasp_gfx.h"
 
 /* SDL surface variable for output of emulation */
 SDL_Surface *screenSurface = NULL;
@@ -62,6 +62,8 @@ int fcounter = 0;
 int doStylusRightClick = 0;
 
 int DispManXElementpresent = 0;
+int width;
+int height;
 
 static unsigned long previous_synctime = 0;
 static unsigned long next_synctime = 0;
@@ -79,6 +81,11 @@ VC_IMAGE_TYPE_T type = VC_IMAGE_RGBA32;
 VC_RECT_T       src_rect;
 VC_RECT_T       dst_rect;
 VC_RECT_T       blit_rect;
+VC_DISPMANX_ALPHA_T alpha = {
+	(DISPMANX_FLAGS_ALPHA_T)(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
+	255, /*alpha 0->255*/
+	0
+};
 
 unsigned char current_resource_amigafb = 0;
 
@@ -146,14 +153,7 @@ void graphics_subshutdown (void)
 static void open_screen(struct uae_prefs *p)
 {
 	uint32_t displayNumber = 0;
-    VC_DISPMANX_ALPHA_T alpha = { (DISPMANX_FLAGS_ALPHA_T ) (DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
-                                  255, /*alpha 0->255*/
-                                  0
-                                };
-
-    uint32_t     vc_image_ptr;
-    int          width;
-    int          height;
+    uint32_t vc_image_ptr;
 
 #ifdef PICASSO96
     if (screen_is_picasso)
@@ -291,12 +291,43 @@ static void open_screen(struct uae_prefs *p)
     }
 }
 
+void refresh_display(SDL_Surface* surface)
+{
+	//Write our Surface pixels to Dispmanx Resource
+	vc_dispmanx_rect_set(&dst_rect, 0, 0, width, height);
+	result = vc_dispmanx_resource_write_data(resource,
+		type,
+		16 * sizeof(uint32_t),
+		surface->pixels,
+		&dst_rect);
+	assert(result == 0);
+			
+	//Start update
+	update = vc_dispmanx_update_start(0);
+	assert(update != 0);
+			
+	// Add element
+	element = vc_dispmanx_element_add(update,
+		display,
+		1, // layer
+		&dst_rect,
+		resource,
+		&src_rect,
+		DISPMANX_PROTECTION_NONE,
+		&alpha,
+		NULL, // clamp
+		DISPMANX_NO_ROTATE);
+	assert(element != 0);
+			
+	//Update Display
+	result = vc_dispmanx_update_submit_sync(update);
+	assert(result == 0);
+}
+
 void update_display(struct uae_prefs *p)
 {
     open_screen(p);
-
     SDL_ShowCursor(SDL_DISABLE);
-
     framecnt = 1; // Don't draw frame before reset done
 }
 
@@ -417,9 +448,7 @@ void flush_screen ()
 void black_screen_now(void)
 {
 	SDL_FillRect(screenSurface, NULL, 0);
-	
-//    SDL_FillRect(Dummy_prSDLScreen,NULL,0);
-//    SDL_Flip(Dummy_prSDLScreen);
+	refresh_display(screenSurface);
 }
 
 static void graphics_subinit (void)

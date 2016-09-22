@@ -1,7 +1,7 @@
-#include <guichan.hpp>
+#include <guisan.hpp>
 #include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -17,7 +17,7 @@
 #include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
-
+#include "rasp_gfx.h"
 
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202
@@ -254,8 +254,7 @@ static void EditFilesysVirtualLoop(void)
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		wait_for_vsync();
-//		SDL_Flip(gui_screen);
+		refresh_display(gui_screen);
 	}
 }
 

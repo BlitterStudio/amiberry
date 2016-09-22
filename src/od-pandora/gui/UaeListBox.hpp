@@ -3,12 +3,12 @@
 
 #include <list>
 
-#include "guichan/keylistener.hpp"
-#include "guichan/listmodel.hpp"
-#include "guichan/mouselistener.hpp"
-#include "guichan/platform.hpp"
-#include "guichan/widget.hpp"
-#include "guichan/widgets/listbox.hpp"
+#include "guisan/keylistener.hpp"
+#include "guisan/listmodel.hpp"
+#include "guisan/mouselistener.hpp"
+#include "guisan/platform.hpp"
+#include "guisan/widget.hpp"
+#include "guisan/widgets/listbox.hpp"
 
 
 namespace gcn

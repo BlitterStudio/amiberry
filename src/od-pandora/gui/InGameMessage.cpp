@@ -1,7 +1,7 @@
-#include <guichan.hpp>
+#include <guisan.hpp>
 #include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -11,7 +11,7 @@
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
-
+#include "rasp_gfx.h"
 
 extern SDL_Surface *screenSurface;
 extern void flush_screen();
@@ -33,7 +33,7 @@ void InGameMessage(const char *msg)
 	gcn::Gui* msg_gui;
 	gcn::SDLGraphics* msg_graphics;
 	gcn::SDLInput* msg_input;
-	gcn::contrib::SDLTrueTypeFont* msg_font;
+	gcn::SDLTrueTypeFont* msg_font;
 	gcn::Color msg_baseCol;
 
 	gcn::Container* msg_top;
@@ -61,7 +61,7 @@ void InGameMessage(const char *msg)
 	msg_gui->setTop(msg_top);
 
 	TTF_Init();
-	msg_font = new gcn::contrib::SDLTrueTypeFont("data/FreeSans.ttf", 10);
+	msg_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 10);
 	gcn::Widget::setGlobalFont(msg_font);
 
 	doneActionListener = new DoneActionListener();
@@ -124,7 +124,7 @@ void InGameMessage(const char *msg)
 		msg_gui->draw();
 		// Finally we update the screen.
 		if (!drawn)
-//			SDL_Flip(screenSurface);
+			refresh_display(screenSurface);
 		drawn = true;
 	}
 

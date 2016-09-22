@@ -1,10 +1,10 @@
 #include <algorithm>
-#include <guichan.hpp>
+#include <guisan.hpp>
 #include <iostream>
 #include <sstream>
 #include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -12,7 +12,7 @@
 #include "config.h"
 #include "uae.h"
 #include "gui_handling.h"
-
+#include "rasp_gfx.h"
 
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
@@ -152,7 +152,7 @@ static void InitSelectFolder(const char *title)
 	lstFolders->addActionListener(listBoxActionListener);
 
 	scrAreaFolders = new gcn::ScrollArea(lstFolders);
-	scrAreaFolders->setFrameSize(1);
+	scrAreaFolders->setBorderSize(1);
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
 	scrAreaFolders->setScrollbarWidth(20);
@@ -252,8 +252,7 @@ static void SelectFolderLoop(void)
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		wait_for_vsync();
-//		SDL_Flip(gui_screen);
+		refresh_display(gui_screen);
 	}
 }
 

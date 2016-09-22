@@ -1,8 +1,8 @@
-#include <guichan.hpp>
+#include <guisan.hpp>
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_image.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"

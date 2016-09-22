@@ -1,7 +1,9 @@
-#include <guichan.hpp>
+#include <iostream>
 #include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include "SDL.h"
+#include <guisan.hpp>
+#include <guisan/sdl.hpp>
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -14,9 +16,13 @@
 #include "include/memory.h"
 #include "autoconf.h"
 
+#include "od-rasp/rasp_gfx.h"
+
+/*
+ * Common stuff we need
+ */
 bool gui_running = false;
 static int last_active_panel = 1;
-
 
 ConfigCategory categories[] =
 {
@@ -40,19 +46,30 @@ enum { PANEL_PATHS, PANEL_CONFIGURATIONS, PANEL_CPU, PANEL_CHIPSET, PANEL_ROM, P
        NUM_PANELS
      };
 
+/*
+ * SDL Stuff we need
+ */
+SDL_Surface* gui_screen;
+SDL_Event event;
 
+/*
+ * Guisan SDL stuff we need
+ */
+gcn::SDLInput* gui_input;
+gcn::SDLGraphics* gui_graphics;
+gcn::SDLImageLoader* gui_imageLoader;
+gcn::SDLTrueTypeFont* gui_font;
+
+/*
+ * Guisan stuff we need
+ */
 gcn::Gui* uae_gui;
+gcn::Container* gui_top;
+gcn::Container* selectors;
 gcn::Color gui_baseCol;
 gcn::Color gui_baseColLabel;
 gcn::Color colSelectorInactive;
 gcn::Color colSelectorActive;
-gcn::Container* gui_top;
-gcn::Container* selectors;
-gcn::contrib::SDLTrueTypeFont* gui_font;
-SDL_Surface* gui_screen;
-gcn::SDLGraphics* gui_graphics;
-gcn::SDLInput* gui_input;
-gcn::SDLImageLoader* gui_imageLoader;
 
 namespace widgets
 {
@@ -63,17 +80,6 @@ namespace widgets
 	gcn::Button* cmdStart;
 }
 
-
-/* Flag for changes in rtarea:
-  Bit 0: any HD in config?
-  Bit 1: force because add/remove HD was clicked
-  Bit 2: socket_emu on
-  Bit 3: mousehack on
-  Bit 4: rtgmem on
-  Bit 5: chipmem larger than 2MB
-
-  gui_rtarea_flags_onenter is set before GUI is shown, bit 1 may change during GUI display.
-*/
 static int gui_rtarea_flags_onenter;
 
 static int gui_create_rtarea_flag(struct uae_prefs *p)
@@ -134,10 +140,16 @@ namespace sdl
 		// Create helpers for guichan
 		//-------------------------------------------------
 		gui_imageLoader = new gcn::SDLImageLoader();
+		// The ImageLoader in use is static and must be set to be
+		// able to load images
 		gcn::Image::setImageLoader(gui_imageLoader);
 		gui_graphics = new gcn::SDLGraphics();
+		// Set the target for the graphics object to be the screen.
+		// In other words, we will draw to the screen.
+		// Note, any surface will do, it doesn't have to be the screen.
 		gui_graphics->setTarget(gui_screen);
 		gui_input = new gcn::SDLInput();
+		
 		uae_gui = new gcn::Gui();
 		uae_gui->setGraphics(gui_graphics);
 		uae_gui->setInput(gui_input);
@@ -154,6 +166,101 @@ namespace sdl
 		gui_screen = NULL;
 	}
 
+	void checkInput()
+	{
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_KEYDOWN)
+			{
+				gcn::FocusHandler* focusHdl;
+				gcn::Widget* activeWidget;
+				
+				if (event.key.keysym.sym == currprefs.key_for_menu)
+				{
+					if (emulating && widgets::cmdStart->isEnabled())
+					{
+						//------------------------------------------------
+						// Continue emulation
+						//------------------------------------------------
+						gui_running = false;
+					}
+					else
+					{
+						//------------------------------------------------
+						// First start of emulator -> reset Amiga
+						//------------------------------------------------
+						uae_reset(0, 1);
+						gui_running = false;
+					}
+				}
+				else
+					switch (event.key.keysym.sym)
+					{
+					case SDLK_q:
+						//-------------------------------------------------
+						// Quit entire program via Q on keyboard
+						//-------------------------------------------------
+						focusHdl = gui_top->_getFocusHandler();
+						activeWidget = focusHdl->getFocused();
+						if (dynamic_cast<gcn::TextField*>(activeWidget) == NULL)
+						{
+							// ...but only if we are not in a Textfield...
+							uae_quit();
+							gui_running = false;
+						}
+						break;
+
+					case SDLK_ESCAPE:
+						uae_reset(1, 1);
+						gui_running = false;
+						break;
+
+					case SDLK_PAGEDOWN:
+					case SDLK_HOME:
+						//------------------------------------------------
+						// Simulate press of enter when 'X' pressed
+						//------------------------------------------------
+						event.key.keysym.sym = SDLK_RETURN;
+						gui_input->pushInput(event); // Fire key down
+						event.type = SDL_KEYUP;  // and the key up
+						break;
+
+					case SDLK_UP:
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter ComboBox -> don't send event to control
+						break;
+
+					case SDLK_DOWN:
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter ComboBox -> don't send event to control
+						break;
+
+					case SDLK_LEFT:
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						break;
+
+					case SDLK_RIGHT:
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						break;
+					}
+			}
+			else if (event.type == SDL_QUIT)
+			{
+				//-------------------------------------------------
+				// Quit entire program via SQL-Quit
+				//-------------------------------------------------
+				uae_quit();
+				gui_running = false;
+			}
+			//-------------------------------------------------
+			// Send event to guichan-controls
+			//-------------------------------------------------
+			gui_input->pushInput(event);
+		}
+	}
+
 	void gui_run()
 	{
 		//-------------------------------------------------
@@ -161,110 +268,9 @@ namespace sdl
 		//-------------------------------------------------
 		while(gui_running)
 		{
-			//-------------------------------------------------
-			// Check user input
-			//-------------------------------------------------
-			SDL_Event event;
-			while(SDL_PollEvent(&event))
-			{
-				if (event.type == SDL_QUIT)
-				{
-					//-------------------------------------------------
-					// Quit entire program via SQL-Quit
-					//-------------------------------------------------
-					uae_quit();
-					gui_running = false;
-					break;
-				}
-
-				else if (event.type == SDL_KEYDOWN)
-				{
-					gcn::FocusHandler* focusHdl;
-					gcn::Widget* activeWidget;
-
-
-					if (event.key.keysym.sym == currprefs.key_for_menu)
-					{
-						if(emulating && widgets::cmdStart->isEnabled())
-						{
-							//------------------------------------------------
-							// Continue emulation
-							//------------------------------------------------
-							gui_running = false;
-						}
-						else
-						{
-							//------------------------------------------------
-							// First start of emulator -> reset Amiga
-							//------------------------------------------------
-							uae_reset(0,1);
-							gui_running = false;
-						}
-					}
-					else
-						switch(event.key.keysym.sym)
-						{
-						case SDLK_q:
-							//-------------------------------------------------
-							// Quit entire program via Q on keyboard
-							//-------------------------------------------------
-							focusHdl = gui_top->_getFocusHandler();
-							activeWidget = focusHdl->getFocused();
-							if(dynamic_cast<gcn::TextField*>(activeWidget) == NULL)
-							{
-								// ...but only if we are not in a Textfield...
-								uae_quit();
-								gui_running = false;
-							}
-							break;
-
-						case SDLK_ESCAPE:
-	//                    case SDLK_RCTRL:
-							//-------------------------------------------------
-							// Reset Amiga
-							//-------------------------------------------------
-							uae_reset(1,1);
-							gui_running = false;
-							break;
-
-						case SDLK_PAGEDOWN:
-						case SDLK_HOME:
-							//------------------------------------------------
-							// Simulate press of enter when 'X' pressed
-							//------------------------------------------------
-							event.key.keysym.sym = SDLK_RETURN;
-							gui_input->pushInput(event); // Fire key down
-							event.type = SDL_KEYUP;  // and the key up
-							break;
-
-						case SDLK_UP:
-							if(HandleNavigation(DIRECTION_UP))
-								continue; // Don't change value when enter ComboBox -> don't send event to control
-							break;
-
-						case SDLK_DOWN:
-							if(HandleNavigation(DIRECTION_DOWN))
-								continue; // Don't change value when enter ComboBox -> don't send event to control
-							break;
-
-						case SDLK_LEFT:
-							if(HandleNavigation(DIRECTION_LEFT))
-								continue; // Don't change value when enter Slider -> don't send event to control
-							break;
-
-						case SDLK_RIGHT:
-							if(HandleNavigation(DIRECTION_RIGHT))
-								continue; // Don't change value when enter Slider -> don't send event to control
-							break;
-						}
-				}
-
-				//-------------------------------------------------
-				// Send event to guichan-controls
-				//-------------------------------------------------
-				gui_input->pushInput(event);
-			}
-
+			// Poll input
+			checkInput();
+			
 			if(gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 				DisableResume();
 
@@ -273,15 +279,8 @@ namespace sdl
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
 			// Finally we update the screen.
-			wait_for_vsync();
-//			SDL_Flip(gui_screen);
-
-			if(refreshFuncAfterDraw != NULL)
-			{
-				void (*currFunc)(void) = refreshFuncAfterDraw;
-				refreshFuncAfterDraw = NULL;
-				currFunc();
-			}
+//			SDL_UpdateWindowSurface(&gui_screen);
+			refresh_display(gui_screen);
 		}
 	}
 
@@ -411,7 +410,7 @@ void gui_init()
     // Initialize fonts
     //-------------------------------------------------
     TTF_Init();
-    gui_font = new gcn::contrib::SDLTrueTypeFont("data/FreeSans.ttf", 14);
+    gui_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 14);
     gcn::Widget::setGlobalFont(gui_font);
 
     //--------------------------------------------------
@@ -452,7 +451,7 @@ void gui_init()
     selectors = new gcn::Container();
     selectors->setSize(150, workAreaHeight - 2);
     selectors->setBaseColor(colSelectorInactive);
-    selectors->setFrameSize(1);
+	selectors->setBorderSize(1);
     int panelStartX = DISTANCE_BORDER + selectors->getWidth() + 2 + 11;
 
     panelFocusListener = new PanelFocusListener();
@@ -468,7 +467,7 @@ void gui_init()
         categories[i].panel->setId(categories[i].category);
         categories[i].panel->setSize(GUI_WIDTH - panelStartX - DISTANCE_BORDER - 1, workAreaHeight - 2);
         categories[i].panel->setBaseColor(gui_baseCol);
-        categories[i].panel->setFrameSize(1);
+        categories[i].panel->setBorderSize(1);
         categories[i].panel->setVisible(false);
     }
 

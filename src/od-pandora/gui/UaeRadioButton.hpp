@@ -4,11 +4,11 @@
 #include <map>
 #include <string>
 
-#include "guichan/keylistener.hpp"
-#include "guichan/mouselistener.hpp"
-#include "guichan/platform.hpp"
-#include "guichan/widget.hpp"
-#include "guichan/widgets/radiobutton.hpp"
+#include "guisan/keylistener.hpp"
+#include "guisan/mouselistener.hpp"
+#include "guisan/platform.hpp"
+#include "guisan/widget.hpp"
+#include "guisan/widgets/radiobutton.hpp"
 
 
 namespace gcn
