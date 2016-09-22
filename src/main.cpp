@@ -623,7 +623,11 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
+<<<<<<< HEAD
     printf("Amiberry v2.1 build 2016-09-18.1\n");
+=======
+    printf("Amiberry v2.0 build 2016-09-19.1\n");
+>>>>>>> refs/remotes/origin/master
 #ifdef PANDORA_SPECIFIC
     SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else

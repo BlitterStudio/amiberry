@@ -204,7 +204,9 @@ static NavigationMap navMap[] =
     { "StatusLine",     "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "HideIdle" },
     { "HideIdle",       "Miscellaneous",  "Miscellaneous",  "StatusLine",     "ShowGUI" },
     { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "HideIdle",      "BSDSocket" },
-    { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",      "Status Line" },
+    { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",       "numlock" },
+	{ "numlock",		"Miscellaneous",	"scrolllock",	"",					""},
+	{ "scrolllock",		"numlock",			"",				"",					""},
 
 // PanelSavestate
     { "State0",         "Savestates",     "Savestates",     "LoadState",      "State1" },
@@ -292,13 +294,18 @@ bool HandleNavigation(int direction)
                         if(searchFor.length() > 0)
                         {
                             focusTarget = gui_top->findWidgetById(searchFor);
-                            if(focusTarget != NULL)
-                            {
-                                if(focusTarget->isEnabled())
-                                    bFoundEnabled = true;
-                                else
-                                    activeName = searchFor;
-                            }
+	                        if (focusTarget != NULL)
+	                        {
+		                        if (focusTarget->isEnabled())
+			                        bFoundEnabled = true;
+		                        else
+			                        activeName = searchFor;
+	                        }
+	                        else
+	                        {
+		                        bFoundEnabled = true;
+		                        break;
+	                        }
                         }
                         break;
                     }
