@@ -4,6 +4,7 @@
 - Pi 3 is now the default target if no Platform is specified
 - Added support for custom functions assignable to keyboard LEDs (e.g. HD activity)
 - Code formatting and cleanup
+- FullHD (1080p) resolution supported in Picasso96 mode.
 - Pi Zero / Pi 1 version now has full Picasso96 support.
 - Removed Pandora specific keyboard shortcuts which caused crashes
 - Loading the Configuration file now respects the input settings
