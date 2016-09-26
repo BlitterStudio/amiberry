@@ -1,5 +1,5 @@
 #include <guisan.hpp>
-#include <SDL/SDL_ttf.h>
+#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
@@ -150,7 +150,7 @@ static int amigaKey[] =
     AK_F2,         AK_F3,    AK_F4,      AK_F5,    AK_F6,        AK_F7,        AK_F8,          AK_F9,        /* 101 - 108 */
     AK_F10,        0
 }; /*  109 - 110 */
-extern int customControlMap[SDLK_LAST];
+//extern int customControlMap[SDLK_LAST];
 
 static int GetAmigaKeyIndex(int key)
 {

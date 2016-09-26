@@ -2,7 +2,7 @@
 #include <guisan.hpp>
 #include <iostream>
 #include <sstream>
-#include <SDL/SDL_ttf.h>
+#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
@@ -231,28 +231,25 @@ static void SelectFolderLoop(void)
 						continue;
 					}
 					break;
-
-				case SDLK_PAGEDOWN:
-				case SDLK_HOME:
-					event.key.keysym.sym = SDLK_RETURN;
-					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP;  // and the key up
-					break;
 				}
 			}
 
-			            //-------------------------------------------------
-			            // Send event to guichan-controls
-			            //-------------------------------------------------
+			//-------------------------------------------------
+			// Send event to guichan-controls
+			//-------------------------------------------------
 			gui_input->pushInput(event);
 		}
 
-		        // Now we let the Gui object perform its logic.
+		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
-		// Finally we update the screen.
-		refresh_display(gui_screen);
+		// Update the texture from the surface
+		SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
+		// Copy the texture on the renderer
+		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		// Update the window surface (show the renderer)
+		SDL_RenderPresent(renderer);
 	}
 }
 

@@ -42,7 +42,7 @@
 #endif
 
 #ifdef USE_SDL
-#include "SDL.h"
+#include <SDL.h>
 #endif
 long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 

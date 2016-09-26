@@ -1,5 +1,5 @@
 #include <guisan.hpp>
-#include <SDL/SDL_ttf.h>
+#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
@@ -112,9 +112,9 @@ void InGameMessage(const char *msg)
 				}
 			}
 
-			            //-------------------------------------------------
-			            // Send event to guichan-controls
-			            //-------------------------------------------------
+			//-------------------------------------------------
+			// Send event to guichan-controls
+			//-------------------------------------------------
 			msg_input->pushInput(event);
 		}
 
@@ -124,7 +124,14 @@ void InGameMessage(const char *msg)
 		msg_gui->draw();
 		// Finally we update the screen.
 		if (!drawn)
-			refresh_display(screenSurface);
+		{
+			// Update the texture from the surface
+			SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
+			// Copy the texture on the renderer
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			// Update the window surface (show the renderer)
+			SDL_RenderPresent(renderer);
+		}			
 		drawn = true;
 	}
 

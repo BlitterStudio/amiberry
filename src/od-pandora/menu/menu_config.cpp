@@ -12,7 +12,7 @@
 #include "custom.h"
 #include "uae.h"
 #include "disk.h"
-#include "SDL.h"
+#include <SDL.h>
 
 //extern int customControlMap[SDLK_LAST];
 
