@@ -12,7 +12,7 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-extern SDL_Surface *screenSurface;
+extern SDL_Surface *amigaSurface;
 extern void flush_screen();
 
 static int msg_done = 0;
@@ -44,7 +44,7 @@ void InGameMessage(const char *msg)
 	int msgHeight = 100;
 
 	msg_graphics = new gcn::SDLGraphics();
-	msg_graphics->setTarget(screenSurface);
+	msg_graphics->setTarget(amigaSurface);
 	msg_input = new gcn::SDLInput();
 	msg_gui = new gcn::Gui();
 	msg_gui->setGraphics(msg_graphics);
@@ -55,7 +55,7 @@ void InGameMessage(const char *msg)
 	msg_baseCol.b = 208;
 
 	msg_top = new gcn::Container();
-	msg_top->setDimension(gcn::Rectangle((screenSurface->w - msgWidth) / 2, (screenSurface->h - msgHeight) / 2, msgWidth, msgHeight));
+	msg_top->setDimension(gcn::Rectangle((amigaSurface->w - msgWidth) / 2, (amigaSurface->h - msgHeight) / 2, msgWidth, msgHeight));
 	msg_top->setBaseColor(msg_baseCol);
 	msg_gui->setTop(msg_top);
 
@@ -103,8 +103,6 @@ void InGameMessage(const char *msg)
 			{
 				switch (event.key.keysym.sym)
 				{
-				case SDLK_PAGEDOWN:
-				case SDLK_HOME:
 				case SDLK_RETURN:
 					msg_done = 1;
 					break;
@@ -117,7 +115,7 @@ void InGameMessage(const char *msg)
 			msg_input->pushInput(event);
 		}
 
-		        // Now we let the Gui object perform its logic.
+		// Now we let the Gui object perform its logic.
 		msg_gui->logic();
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();

@@ -18,7 +18,7 @@
 #include "savestate.h"
 #include "statusline.h"
 
-extern SDL_Surface *screenSurface;
+extern SDL_Surface *amigaSurface;
 extern int idletime_percent;
 
 /*
@@ -71,7 +71,7 @@ void draw_status_line_single (uae_u8 *buf, int y, int totalwidth)
         x += TD_WIDTH;
 
     if(picasso_on)
-        memset (buf + (x - 4) * 2, 0, (screenSurface->w - x + 4) * 2);
+		memset (buf + (x - 4) * 2, 0, (amigaSurface->w - x + 4) * 2);
     else
         memset (buf + (x - 4) * gfxvidinfo.pixbytes, 0, (gfxvidinfo.outwidth - x + 4) * gfxvidinfo.pixbytes);
 
