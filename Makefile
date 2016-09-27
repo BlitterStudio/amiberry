@@ -5,20 +5,17 @@ endif
 ifeq ($(PLATFORM),rpi3)
 	CPU_FLAGS += -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
-	LDFLAGS += -lbcm_host
 	HAVE_NEON = 1
-	HAVE_DISPMANX = 1
+	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
-	LDFLAGS += -lbcm_host
 	HAVE_NEON = 1
-	HAVE_DISPMANX = 1
+	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
 	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
-	LDFLAGS += -lbcm_host
-	HAVE_DISPMANX = 1
+	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),generic-sdl)
 	# On Raspberry Pi uncomment below line or remove ARMV6T2 define.
 	CPU_FLAGS= -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
@@ -26,7 +23,6 @@ else ifeq ($(PLATFORM),generic-sdl)
 	HAVE_SDL_DISPLAY = 1
 else ifeq ($(PLATFORM),gles)
 	# For Raspberry Pi uncomment the two below lines
-	LDFLAGS += -lbcm_host
 	CPU_FLAGS= -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2 -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 	HAVE_GLES_DISPLAY = 1
@@ -49,11 +45,11 @@ PANDORA=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
 
-DEFAULT_CFLAGS = $(CFLAGS) -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
+DEFAULT_CFLAGS = $(CFLAGS) -I/usr/include/SDL2 -D_REENTRANT
 
 MY_LDFLAGS = $(LDFLAGS)
-MY_LDFLAGS += -lSDL -lpthread -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
-MY_LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
+MY_LDFLAGS += -lSDL2 -lpthread -lz -lSDL2_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
+MY_LDFLAGS += -lSDL2_ttf -lguisan -L/usr/local/lib -Lsrc/guisan 
 
 MORE_CFLAGS += -I/usr/include/libxml2
 MORE_CFLAGS += -DGP2X -DPANDORA -DARMV6_ASSEMBLY -DWITH_INGAME_WARNING
@@ -75,7 +71,7 @@ MORE_CFLAGS += -falign-functions=32
 TRACE_CFLAGS = 
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe -fsingle-precision-constant
+MORE_CFLAGS += -Ofast -pipe
 MORE_CFLAGS += -fexceptions -fpermissive
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
