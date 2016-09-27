@@ -420,7 +420,7 @@ void  print_usage()
     printf("File names should be with absolute path.\n");
     printf("\nExample:\n");
     printf("uae4arm -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
-    printf("It will load A500.uae configuration with the save state named game.\n");
+    printf("It will load A400.uae configuration with the save state named game.\n");
     printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
     exit(1);
 }
@@ -623,13 +623,14 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-    printf("Amiberry v2.0 build 2016-09-27.1\n");
-
-	//Initialize SDL
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
-	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-	}
+    printf("Amiberry v2.0 build 2016-09-19.1\n");
+#ifdef PANDORA_SPECIFIC
+    SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
+#else
+#ifdef USE_SDL
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+#endif
+#endif
 
     keyboard_settrans();
 
