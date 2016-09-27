@@ -16,7 +16,6 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-
 static const char *ChipMem_list[] = { "512 K", "1 MB", "2 MB", "4 MB", "8 MB" };
 static const int ChipMem_values[] = { 0x080000, 0x100000, 0x200000, 0x400000, 0x800000 };
 static const char *SlowMem_list[] = { "None", "512 K", "1 MB", "1.5 MB", "1.8 MB" };

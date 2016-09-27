@@ -19,7 +19,6 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-
 enum { COL_DEVICE, COL_VOLUME, COL_PATH, COL_READWRITE, COL_SIZE, COL_BOOTPRI, COL_COUNT };
 
 static const char *column_caption[] =

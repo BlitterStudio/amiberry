@@ -18,7 +18,6 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-
 static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;

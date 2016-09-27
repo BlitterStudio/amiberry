@@ -14,7 +14,6 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-
 static gcn::Window *grpCPU;
 static gcn::UaeRadioButton* optCPU68000;
 static gcn::UaeRadioButton* optCPU68010;

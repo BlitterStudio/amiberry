@@ -22,7 +22,6 @@
 #include "savestate.h"
 #include "gui_handling.h"
 
-
 int currentStateNum = 0;
 
 static gcn::Window *grpNumber;

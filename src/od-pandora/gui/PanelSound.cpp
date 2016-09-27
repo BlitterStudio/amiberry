@@ -19,7 +19,6 @@
 #include "gui_handling.h"
 #include "sd-pandora/sound.h"
 
-
 static gcn::Window *grpSound;
 static gcn::UaeRadioButton* optSoundDisabled;
 static gcn::UaeRadioButton* optSoundDisabledEmu;

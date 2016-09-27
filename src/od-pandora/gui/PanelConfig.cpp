@@ -14,7 +14,6 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-
 static char last_active_config[MAX_PATH] = { '\0' };
 static int ensureVisible = -1;
 

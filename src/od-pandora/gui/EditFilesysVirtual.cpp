@@ -17,7 +17,6 @@
 #include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "rasp_gfx.h"
 
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202

@@ -20,7 +20,6 @@
 #include "keyboard.h"
 #include "inputdevice.h"
 
-
 static const char *mousespeed_list[] = { ".25", ".5", "1x", "2x", "4x" };
 static const int mousespeed_values[] = { 2, 5, 10, 20, 40 };
 

@@ -11,7 +11,6 @@
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "rasp_gfx.h"
 
 extern SDL_Surface *screenSurface;
 extern void flush_screen();

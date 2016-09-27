@@ -19,8 +19,6 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-#include "rasp_gfx.h"
-
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 202
 
