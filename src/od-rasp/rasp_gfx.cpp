@@ -23,7 +23,6 @@
 #endif
 #include "td-sdl/thread.h"
 #include "bcm_host.h"
-#include "rasp_gfx.h"
 
 /* SDL surface variable for output of emulation */
 SDL_Surface *screenSurface = NULL;
