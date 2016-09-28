@@ -1,4 +1,6 @@
 # Changes in forked version
+
+[![Join the chat at https://gitter.im/uae4arm-rpi/Lobby](https://badges.gitter.im/uae4arm-rpi/Lobby.svg)](https://gitter.im/uae4arm-rpi/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 - New target platform: Pi 3
 - Optimizations for Pi 3 added
 - Pi 3 is now the default target if no Platform is specified
