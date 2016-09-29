@@ -15,6 +15,7 @@
 #include "gui_handling.h"
 #include "include/memory.h"
 #include "autoconf.h"
+#include "pandora_gfx.h"
 
 /*
  * Common stuff we need

@@ -11,8 +11,9 @@
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
+#include "pandora_gfx.h"
 
-extern SDL_Surface *amigaSurface;
+//extern SDL_Surface *amigaSurface;
 extern void flush_screen();
 
 static int msg_done = 0;

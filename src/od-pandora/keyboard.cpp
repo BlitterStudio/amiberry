@@ -379,25 +379,25 @@ static int *kbmaps[] = { kb_none, kb_none, kb_none, kb_none, kb_none,
 
 void keyboard_settrans (void)
 {
-    const char* vid_drv_name = SDL_GetCurrentVideoDriver();
-    if (strcmp(vid_drv_name, "x11") == 0)
-    {
-        printf("Will use keycode from x11 mapping.\n");
-        keyboard_type = KEYCODE_X11;
-        inputdevice_setkeytranslation (keytrans_x11, kbmaps);
-    }
-    else if (strcmp(vid_drv_name, "fbcon") == 0)
-    {
-        printf("Will use keycode from fbcon mapping.\n");
-        keyboard_type = KEYCODE_FBCON;
-        inputdevice_setkeytranslation (keytrans_fbcon, kbmaps);
-    }
-    else
-    {
-        printf("Unknown keycode to use, will use keysym\n");
+//    const char* vid_drv_name = SDL_GetCurrentVideoDriver();
+//    if (strcmp(vid_drv_name, "x11") == 0)
+//    {
+//        printf("Will use keycode from x11 mapping.\n");
+//        keyboard_type = KEYCODE_X11;
+//        inputdevice_setkeytranslation (keytrans_x11, kbmaps);
+//    }
+//    else if (strcmp(vid_drv_name, "fbcon") == 0)
+//    {
+//        printf("Will use keycode from fbcon mapping.\n");
+//        keyboard_type = KEYCODE_FBCON;
+//        inputdevice_setkeytranslation (keytrans_fbcon, kbmaps);
+//    }
+//    else
+//    {
+//        printf("Unknown keycode to use, will use keysym\n");
         keyboard_type = KEYCODE_UNK;
         inputdevice_setkeytranslation (keytrans, kbmaps);
-    }
+//    }
 }
 
 int translate_pandora_keys(int symbol, int *modifier)

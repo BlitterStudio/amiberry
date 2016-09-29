@@ -12,6 +12,7 @@
 #include "inputdevice.h"
 #include "savestate.h"
 #include "picasso96.h"
+#include "pandora_gfx.h"
 
 #include <png.h>
 #include <SDL.h>
@@ -41,9 +42,9 @@
 //#endif
 
 /* SDL variable for output of emulation */
-SDL_Window* amigaWindow = NULL;
-SDL_Renderer* amigaRenderer = NULL;
-SDL_Texture *amigaTexture = NULL;
+//SDL_Window* amigaWindow = NULL;
+//SDL_Renderer* amigaRenderer = NULL;
+//SDL_Texture *amigaTexture = NULL;
 SDL_Surface *amigaSurface = NULL;
 
 //static int fbdev = -1;
@@ -74,12 +75,12 @@ static void CreateScreenshot(void);
 static int save_thumb(char *path);
 int delay_savestate_frame = 0;
 
-#define VIDEO_FLAGS_INIT SDL_SWSURFACE|SDL_FULLSCREEN
-#ifdef ANDROIDSDL
-#define VIDEO_FLAGS VIDEO_FLAGS_INIT
-#else
-#define VIDEO_FLAGS VIDEO_FLAGS_INIT | SDL_DOUBLEBUF
-#endif
+//#define VIDEO_FLAGS_INIT SDL_SWSURFACE|SDL_FULLSCREEN
+//#ifdef ANDROIDSDL
+//#define VIDEO_FLAGS VIDEO_FLAGS_INIT
+//#else
+//#define VIDEO_FLAGS VIDEO_FLAGS_INIT | SDL_DOUBLEBUF
+//#endif
 
 
 static unsigned long next_synctime = 0;
@@ -161,10 +162,10 @@ void graphics_subshutdown (void)
 	    amigaSurface = NULL;
     }
 
-	if (amigaTexture != NULL)
+	if (texture != NULL)
 	{
-		SDL_DestroyTexture(amigaTexture);
-		amigaTexture = NULL;
+		SDL_DestroyTexture(texture);
+		texture = NULL;
 	}
 }
 
@@ -200,26 +201,26 @@ void check_error_sdl(bool check, const char* message)
 
 static void open_screen(struct uae_prefs *p)
 {
-	// Initialize SDL Window
-	if (amigaWindow == nullptr)
-	{
-		amigaWindow = SDL_CreateWindow("Amiga Screen", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(amigaWindow == nullptr, "Unable to create window");
-	}
-
-	// Initialize SDL Renderer for the window
-	if (amigaRenderer == nullptr)
-	{
-		amigaRenderer = SDL_CreateRenderer(amigaWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(amigaRenderer == nullptr, "Unable to create a renderer");
-	}
-	
     graphics_subshutdown();
 
 #ifdef ANDROIDSDL
     update_onscreen();
 #endif
 
+	// Initialize SDL Window
+//	if (amigaWindow == nullptr)
+//	{
+//		amigaWindow = SDL_CreateWindow("Amiga Screen", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
+//		check_error_sdl(amigaWindow == nullptr, "Unable to create window");
+//	}
+
+	// Initialize SDL Renderer for the window
+//	if (amigaRenderer == nullptr)
+//	{
+//		amigaRenderer = SDL_CreateRenderer(amigaWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+//		check_error_sdl(amigaRenderer == nullptr, "Unable to create a renderer");
+//	}
+	
     if(!screen_is_picasso)
     {
 	    if (amigaSurface == NULL || amigaSurface->w != p->gfx_size.width || amigaSurface->h != p->gfx_size.height)
@@ -227,40 +228,59 @@ static void open_screen(struct uae_prefs *p)
 		    amigaSurface = SDL_CreateRGBSurface(0, p->gfx_size.width, p->gfx_size.height, 32, 0, 0, 0, 0);
 		    check_error_sdl(amigaSurface == nullptr, "Unable to create a surface");
 		    
+		    // make the scaled rendering look smoother.
+		    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		    SDL_RenderSetLogicalSize(renderer, p->gfx_size.width, p->gfx_size.height);
+		    
 		    // Initialize SDL Texture for the renderer
-		    if (amigaTexture == nullptr)
+		    if (texture == nullptr)
 		    {
-			    amigaTexture = SDL_CreateTexture(amigaRenderer,
+			    texture = SDL_CreateTexture(renderer,
 				    SDL_PIXELFORMAT_ARGB8888,
 				    SDL_TEXTUREACCESS_STREAMING,
 				    p->gfx_size.width,
 				    p->gfx_size.height);
-			    check_error_sdl(amigaTexture == nullptr, "Unable to create texture");
+			    check_error_sdl(texture == nullptr, "Unable to create texture");
 		    }
 	    }		    
     }
     else
     {
-	    amigaSurface = SDL_CreateRGBSurface(0, picasso_vidinfo.width, picasso_vidinfo.height, 32, 0, 0, 0, 0);
-	    check_error_sdl(amigaSurface == nullptr, "Unable to create a surface");
-	    
-	    // Initialize SDL Texture for the renderer
-	    if (amigaTexture == nullptr)
+	    if (amigaSurface == NULL || amigaSurface->w != picasso_vidinfo.width || amigaSurface->h != picasso_vidinfo.height)
 	    {
-		    amigaTexture = SDL_CreateTexture(amigaRenderer,
-			    SDL_PIXELFORMAT_ARGB8888,
-			    SDL_TEXTUREACCESS_STREAMING,
-			    picasso_vidinfo.width,
-			    picasso_vidinfo.height);
-		    check_error_sdl(amigaTexture == nullptr, "Unable to create texture");
-	    }
+		    amigaSurface = SDL_CreateRGBSurface(0, picasso_vidinfo.width, picasso_vidinfo.height, 32, 0, 0, 0, 0);
+		    check_error_sdl(amigaSurface == nullptr, "Unable to create a surface");
+	    
+		    // make the scaled rendering look smoother.
+		    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  
+		    SDL_RenderSetLogicalSize(renderer, picasso_vidinfo.width, picasso_vidinfo.height);
+	    
+		    // Initialize SDL Texture for the renderer
+		    if (texture == nullptr)
+		    {
+			    texture = SDL_CreateTexture(renderer,
+				    SDL_PIXELFORMAT_ARGB8888,
+				    SDL_TEXTUREACCESS_STREAMING,
+				    picasso_vidinfo.width,
+				    picasso_vidinfo.height);
+			    check_error_sdl(texture == nullptr, "Unable to create texture");
+		    }
+	    } 
     }
+	
 	if (amigaSurface != NULL)
     {
         InitAmigaVidMode(p);
         init_row_map();
     }
 
+	// Update the texture from the surface
+	SDL_UpdateTexture(texture, NULL, amigaSurface->pixels, amigaSurface->pitch);
+	// Copy the texture on the renderer
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
+	// Update the window surface (show the renderer)
+	SDL_RenderPresent(renderer);
+	
 //    current_vsync_frame = 0;
 //    fbdev = open("/dev/fb0", O_RDWR);
 //    if(fbdev != -1)
@@ -362,7 +382,7 @@ void flush_screen ()
     RefreshLiveInfo();
 #endif
 
-//    unsigned long start = read_processor_time();
+    unsigned long start = read_processor_time();
 //    if(current_vsync_frame == 0)
 //    {
 //        // Old style for vsync and idle time calc
@@ -390,27 +410,28 @@ void flush_screen ()
 
 // Android swapped SDL_Flip & last_synctime for fixing performance
 //    SDL_Flip(prSDLScreen);
-//    last_synctime = read_processor_time();
 
 	// Update the texture from the surface
-	SDL_UpdateTexture(amigaTexture, NULL, amigaSurface->pixels, amigaSurface->pitch);
+	SDL_UpdateTexture(texture, NULL, amigaSurface->pixels, amigaSurface->pitch);
 	// Copy the texture on the renderer
-	SDL_RenderCopy(amigaRenderer, amigaTexture, NULL, NULL);
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
-	SDL_RenderPresent(amigaRenderer);
+	SDL_RenderPresent(renderer);
+	
+	last_synctime = read_processor_time();
 	
     if(!screen_is_picasso)
 		gfxvidinfo.bufmem = (uae_u8 *)amigaSurface->pixels;
 
-//    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
-//        adjust_idletime(0);
-//    else
-//        adjust_idletime(next_synctime - start);
-//
-//    if (last_synctime - next_synctime > time_per_frame - 5000)
-//        next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
-//    else
-//        next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
+        adjust_idletime(0);
+    else
+        adjust_idletime(next_synctime - start);
+
+    if (last_synctime - next_synctime > time_per_frame - 5000)
+        next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+    else
+        next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 
     init_row_map();
 }
@@ -422,25 +443,34 @@ void black_screen_now(void)
 //    SDL_Flip(prSDLScreen);
 	
 	// Update the texture from the surface
-	SDL_UpdateTexture(amigaTexture, NULL, amigaSurface->pixels, amigaSurface->pitch);
+	SDL_UpdateTexture(texture, NULL, amigaSurface->pixels, amigaSurface->pitch);
 	// Copy the texture on the renderer
-	SDL_RenderCopy(amigaRenderer, amigaTexture, NULL, NULL);
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
-	SDL_RenderPresent(amigaRenderer);
+	SDL_RenderPresent(renderer);
 }
 
 
 static void graphics_subinit (void)
 {
-	// Update the texture from the surface
-	SDL_UpdateTexture(amigaTexture, NULL, amigaSurface->pixels, amigaSurface->pitch);
-	// Copy the texture on the renderer
-	SDL_RenderCopy(amigaRenderer, amigaTexture, NULL, NULL);
-	// Update the window surface (show the renderer)
-	SDL_RenderPresent(amigaRenderer);
-    SDL_ShowCursor(SDL_DISABLE);
-
-    InitAmigaVidMode(&currprefs);
+	if (amigaSurface == NULL)
+	{
+		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
+		return;
+	}
+	else
+	{
+		// Update the texture from the surface
+		SDL_UpdateTexture(texture, NULL, amigaSurface->pixels, amigaSurface->pitch);
+		// Copy the texture on the renderer
+		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		// Update the window surface (show the renderer)
+		SDL_RenderPresent(renderer);
+		
+		SDL_ShowCursor(SDL_DISABLE);
+		InitAmigaVidMode(&currprefs);
+	}
+    
 }
 
 STATIC_INLINE int bitsInMask (unsigned long mask)
@@ -540,8 +570,8 @@ int graphics_init (bool mousecapture)
 void graphics_leave (void)
 {
     graphics_subshutdown ();
-	SDL_DestroyRenderer(amigaRenderer);
-	SDL_DestroyWindow(amigaWindow);
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(sdlWindow);
     SDL_VideoQuit();
 }
 
@@ -909,7 +939,7 @@ void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgb
     {
         open_screen(&currprefs);
 	    picasso_vidinfo.rowbytes = amigaSurface->pitch;
-	    picasso_vidinfo.rgbformat = RGBFB_R8G8B8;
+	    picasso_vidinfo.rgbformat = RGBFB_R8G8B8A8;
     }
 }
 

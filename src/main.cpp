@@ -623,7 +623,7 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-    printf("Amiberry v2.0 build 2016-09-27.1\n");
+    printf("Amiberry v2.0 build 2016-09-28.1\n");
 
 	//Initialize SDL
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)

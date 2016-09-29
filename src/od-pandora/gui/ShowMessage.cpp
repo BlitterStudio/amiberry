@@ -12,6 +12,7 @@
 #include "config.h"
 #include "gui.h"
 #include "gui_handling.h"
+#include "pandora_gfx.h"
 
 #define DIALOG_WIDTH 340
 #define DIALOG_HEIGHT 140

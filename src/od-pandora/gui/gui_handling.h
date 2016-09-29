@@ -35,9 +35,6 @@ extern gcn::Color gui_baseCol;
 extern gcn::SDLInput* gui_input;
 
 extern SDL_Surface* gui_screen;
-extern SDL_Window* sdlWindow;
-extern SDL_Renderer* renderer;
-extern SDL_Texture *texture;
 
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
