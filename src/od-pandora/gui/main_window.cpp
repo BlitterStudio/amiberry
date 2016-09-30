@@ -48,9 +48,6 @@ enum { PANEL_PATHS, PANEL_CONFIGURATIONS, PANEL_CPU, PANEL_CHIPSET, PANEL_ROM, P
 /*
  * SDL Stuff we need
  */
-SDL_Window* sdlWindow;
-SDL_Renderer* renderer;
-SDL_Texture *texture;
 SDL_Surface* gui_screen;
 SDL_Event event;
 
@@ -121,41 +118,11 @@ void RegisterRefreshFunc(void (*func)(void))
 
 namespace sdl
 {
-	// In case of error, print the error code and close the application
-	void check_error_sdl(bool check, const char* message) {
-		if (check) {
-			std::cout << message << " " << SDL_GetError() << std::endl;
-			SDL_Quit();
-			std::exit(-1);
-		}
-	}
-	
 	void gui_init()
 	{
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
-		sdlWindow = SDL_CreateWindow("Amiberry v2",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			0,
-			0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
-		
-		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
-	
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
-		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
-		
-		texture = SDL_CreateTexture(renderer,
-			SDL_PIXELFORMAT_ARGB8888,
-			SDL_TEXTUREACCESS_STREAMING,
-			GUI_WIDTH,
-			GUI_HEIGHT);
-		check_error_sdl(texture == nullptr, "Unable to create texture");
-		
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create a surface");
 		
@@ -188,9 +155,6 @@ namespace sdl
 		delete gui_graphics;
 
 		SDL_FreeSurface(gui_screen);
-		SDL_DestroyTexture(texture);
-		SDL_DestroyRenderer(renderer);
-		SDL_DestroyWindow(sdlWindow);
 		gui_screen = NULL;
 	}
 

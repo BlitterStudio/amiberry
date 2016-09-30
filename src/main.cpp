@@ -43,6 +43,12 @@
 
 #ifdef USE_SDL
 #include <SDL.h>
+#include <iostream>
+//#include "gui_handling.h"
+#include "pandora_gfx.h"
+SDL_Window* sdlWindow;
+SDL_Renderer* renderer;
+SDL_Texture *texture;
 #endif
 long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
@@ -621,6 +627,15 @@ void virtualdevice_init (void)
 #endif
 }
 
+// In case of error, print the error code and close the application
+void check_error_sdl(bool check, const char* message) {
+	if (check) {
+		std::cout << message << " " << SDL_GetError() << std::endl;
+		SDL_Quit();
+		std::exit(-1);
+	}
+}
+
 static int real_main2 (int argc, TCHAR **argv)
 {
     printf("Amiberry v2.0 build 2016-09-28.1\n");
@@ -631,6 +646,27 @@ static int real_main2 (int argc, TCHAR **argv)
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 	}
 
+	sdlWindow = SDL_CreateWindow("Amiberry v2",
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		0,
+		0,
+		SDL_WINDOW_FULLSCREEN_DESKTOP);
+	check_error_sdl(sdlWindow == nullptr, "Unable to create window");
+		
+	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+	
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
+	SDL_RenderSetLogicalSize(renderer, 800, 480);
+		
+	texture = SDL_CreateTexture(renderer,
+		SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING,
+		800,
+		480);
+	check_error_sdl(texture == nullptr, "Unable to create texture");
+	
     keyboard_settrans();
 
     if (restart_config[0])

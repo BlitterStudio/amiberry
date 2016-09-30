@@ -162,11 +162,11 @@ void graphics_subshutdown (void)
 	    amigaSurface = NULL;
     }
 
-	if (texture != NULL)
-	{
-		SDL_DestroyTexture(texture);
-		texture = NULL;
-	}
+//	if (texture != NULL)
+//	{
+//		SDL_DestroyTexture(texture);
+//		texture = NULL;
+//	}
 }
 
 //
@@ -188,17 +188,6 @@ void graphics_subshutdown (void)
 //    p->gfx_size_fs.width = pandWidth;
 //}
 
-// In case of error, print the error code and close the application
-void check_error_sdl(bool check, const char* message) 
-{
-	if (check) 
-	{
-		std::cout << message << " " << SDL_GetError() << std::endl;
-		SDL_Quit();
-		std::exit(-1);
-	}
-}
-
 static void open_screen(struct uae_prefs *p)
 {
     graphics_subshutdown();
@@ -207,20 +196,6 @@ static void open_screen(struct uae_prefs *p)
     update_onscreen();
 #endif
 
-	// Initialize SDL Window
-//	if (amigaWindow == nullptr)
-//	{
-//		amigaWindow = SDL_CreateWindow("Amiga Screen", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
-//		check_error_sdl(amigaWindow == nullptr, "Unable to create window");
-//	}
-
-	// Initialize SDL Renderer for the window
-//	if (amigaRenderer == nullptr)
-//	{
-//		amigaRenderer = SDL_CreateRenderer(amigaWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-//		check_error_sdl(amigaRenderer == nullptr, "Unable to create a renderer");
-//	}
-	
     if(!screen_is_picasso)
     {
 	    if (amigaSurface == NULL || amigaSurface->w != p->gfx_size.width || amigaSurface->h != p->gfx_size.height)
@@ -233,7 +208,7 @@ static void open_screen(struct uae_prefs *p)
 		    SDL_RenderSetLogicalSize(renderer, p->gfx_size.width, p->gfx_size.height);
 		    
 		    // Initialize SDL Texture for the renderer
-		    if (texture == nullptr)
+//		    if (texture == nullptr)
 		    {
 			    texture = SDL_CreateTexture(renderer,
 				    SDL_PIXELFORMAT_ARGB8888,
@@ -256,7 +231,7 @@ static void open_screen(struct uae_prefs *p)
 		    SDL_RenderSetLogicalSize(renderer, picasso_vidinfo.width, picasso_vidinfo.height);
 	    
 		    // Initialize SDL Texture for the renderer
-		    if (texture == nullptr)
+//		    if (texture == nullptr)
 		    {
 			    texture = SDL_CreateTexture(renderer,
 				    SDL_PIXELFORMAT_ARGB8888,
