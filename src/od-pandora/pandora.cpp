@@ -809,29 +809,8 @@ int main (int argc, char *argv[])
     alloc_AmigaMem();
     RescanROMs();
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-    // set capslock state based upon current "real" state
-	ioctl(0, KDGKBLED, &kbd_flags);
-	ioctl(0, KDGETLED, &kbd_led_status);
-    if ((kbd_flags & 07) & LED_CAP)
-    {
-        // record capslock pressed
-        kbd_led_status |= LED_CAP;
-        inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-    }
-    else
-    {
-        // record capslock as not pressed
-        kbd_led_status &= ~LED_CAP;
-        inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-    }
-	ioctl(0, KDSETLED, kbd_led_status);
-#endif
 
 	real_main (argc, argv);
-	
-	// restore keyboard LEDs to normal state
-	ioctl(0, KDSETLED, 0xFF);
 	
     ClearAvailableROMList();
     romlist_clear();
@@ -880,6 +859,27 @@ int handle_msgpump (void)
                 inputdevice_add_inputcode (AKS_ENTERGUI, 1);
             switch(rEvent.key.keysym.sym)
             {
+ 		#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+		case SDLK_CAPSLOCK: // capslock
+		     // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
+                     ioctl(0, KDGKBLED, &kbd_flags);
+                     ioctl(0, KDGETLED, &kbd_led_status);
+                     if ((kbd_flags & 07) & LED_CAP)
+                     {
+                        // On, so turn off
+                        kbd_led_status &= ~LED_CAP;
+                        kbd_flags &= ~LED_CAP;
+                        inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+                     } else {
+                               // Off, so turn on
+                               kbd_led_status |= LED_CAP;
+                               kbd_flags |= LED_CAP;
+                               inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+                            }
+                     ioctl(0, KDSETLED, kbd_led_status);
+                     ioctl(0, KDSKBLED, kbd_flags);
+                     break;
+                 #endif
 
             case SDLK_LSHIFT: // Shift key
                 inputdevice_do_keyboard(AK_LSH, 1);
@@ -931,14 +931,6 @@ int handle_msgpump (void)
                         inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
 
                 }
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-                if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
-                {
-	                ioctl(0, KDGETLED, &kbd_led_status);
-                    kbd_led_status |= LED_CAP;
-	                ioctl(0, KDSETLED, kbd_led_status);
-                }
-#endif
                 break;
             }
             break;
@@ -946,6 +938,27 @@ int handle_msgpump (void)
         case SDL_KEYUP:
             switch(rEvent.key.keysym.sym)
             {
+                #ifdef CAPSLOCK_DEBIAN_WORKAROUND
+                case SDLK_CAPSLOCK: // capslock
+                     // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
+                     ioctl(0, KDGKBLED, &kbd_flags);
+                     ioctl(0, KDGETLED, &kbd_led_status);
+                     if ((kbd_flags & 07) & LED_CAP)
+                     {
+                        // On, so turn off
+                        kbd_led_status &= ~LED_CAP;
+                        kbd_flags &= ~LED_CAP;
+                        inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+                     } else {
+                               // Off, so turn on
+                               kbd_led_status |= LED_CAP;
+                               kbd_flags |= LED_CAP;
+                               inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+                            }
+                     ioctl(0, KDSETLED, kbd_led_status);
+                     ioctl(0, KDSKBLED, kbd_flags);
+                     break;
+                 #endif
 
             case SDLK_LSHIFT: // Shift key
                 inputdevice_do_keyboard(AK_LSH, 0);
@@ -993,14 +1006,6 @@ int handle_msgpump (void)
                     else
                         inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
                 }
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-                if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
-                {
-	                ioctl(0, KDGETLED, &kbd_led_status);
-                    kbd_led_status &= ~LED_CAP;
-	                ioctl(0, KDSETLED, kbd_led_status);
-                }
-#endif
                 break;
             }
             break;
