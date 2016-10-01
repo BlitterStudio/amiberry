@@ -614,92 +614,60 @@ void gui_disk_image_change(int unitnum, const char *name, bool writeprotected)
 {
 }
 
-void gui_led(int led, int on)
+void gui_led (int led, int on)
 {
 #ifdef RASPBERRY
-	unsigned long kbd_led_status;
-
-	// Check current prefs/ update if changed
-	if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
-	if (currprefs.kbd_led_scr != changed_prefs.kbd_led_scr) currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
-
-	ioctl(0, KDGETLED, &kbd_led_status);
-
-	// Handle floppy led status
-	if (led == LED_DF0 || led == LED_DF1 || led == LED_DF2 || led == LED_DF3)
-	{
-		if (currprefs.kbd_led_num == led || currprefs.kbd_led_num == LED_DFs)
-		{
-			if (on) kbd_led_status |= LED_NUM;
-			else kbd_led_status &= ~LED_NUM;
-		}
-		if (currprefs.kbd_led_scr == led || currprefs.kbd_led_scr == LED_DFs)
-		{
-			if (on) kbd_led_status |= LED_SCR;
-			else kbd_led_status &= ~LED_SCR;
-		}
-	}
-	else
-	// Handle power, hd/cd led status
-	{
-		if (currprefs.kbd_led_num == led)
-		{
-			if (on) kbd_led_status |= LED_NUM;
-			else kbd_led_status &= ~LED_NUM;
-		}
-		if (currprefs.kbd_led_scr == led)
-		{
-			if (on) kbd_led_status |= LED_SCR;
-			else kbd_led_status &= ~LED_SCR;
-		}
-	}
-	ioctl(0, KDSETLED, kbd_led_status);
+   #define LED_ALL   -1         // Define for all LEDs
+   
+   unsigned long kbd_led_status;
+   
+   // Check current prefs/ update if changed
+   if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
+   if (currprefs.kbd_led_scr != changed_prefs.kbd_led_scr) currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
+   if (currprefs.kbd_led_cap != changed_prefs.kbd_led_cap) currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
+   
+   ioctl(0, KDGETLED, &kbd_led_status);
+   
+   // Handle floppy led status
+   if (led == LED_DF0 || led == LED_DF1 || led == LED_DF2 || led == LED_DF3)
+   { 
+     if (currprefs.kbd_led_num == led || currprefs.kbd_led_num == LED_DFs)
+     {  
+        if (on) kbd_led_status |= LED_NUM; else kbd_led_status &= ~LED_NUM;
+     }
+     if (currprefs.kbd_led_scr == led || currprefs.kbd_led_scr == LED_DFs)
+     {  
+        if (on) kbd_led_status |= LED_SCR; else kbd_led_status &= ~LED_SCR;
+     }
+   }
+   
+   // Handle power, hd/cd led status
+   if (led == LED_POWER || led == LED_HD || led == LED_CD)
+   { 
+     if (currprefs.kbd_led_num == led)
+     {   
+         if (on) kbd_led_status |= LED_NUM; else kbd_led_status &= ~LED_NUM;
+     }
+     if (currprefs.kbd_led_scr == led)
+     {   
+         if (on) kbd_led_status |= LED_SCR; else kbd_led_status &= ~LED_SCR;
+     }
+   }
+  
+  // Handle all LEDs off
+  if (led == LED_ALL) {
+     kbd_led_status &= ~LED_NUM;
+     kbd_led_status &= ~LED_SCR;
+  }
+  ioctl(0, KDSETLED, kbd_led_status);
 #endif
 }
 
-void gui_flicker_led(int led, int unitnum, int status)
+void gui_flicker_led (int led, int unitnum, int status)
 {
-	static int hd_resetcounter;
-
-	switch (led)
-	{
-	case -1: // Reset HD and CD
-		gui_data.hd = 0;
-		break;
-
-	case LED_POWER:
-		if (status == 0)
-			gui_led(LED_POWER, 0);
-		else
-			gui_led(LED_POWER, 1);
-		break;
-	
-	case LED_CD:
-		if (status == 0)
-			gui_led(LED_CD, 0);
-		else
-			gui_led(LED_CD, 1);
-		break;
-		
-	case LED_HD:
-		if (status == 0)
-		{
-			hd_resetcounter--;
-			if (hd_resetcounter > 0)
-				return;
 #ifdef RASPBERRY
-			// HD LED off
-			gui_led(LED_HD, 0);
+   gui_led(led, status);
 #endif
-		}
-#ifdef RASPBERRY
-		// HD LED on
-		else gui_led(LED_HD, 1);
-#endif
-		gui_data.hd = status;
-		hd_resetcounter = 2;
-		break;
-	}
 }
 
 
