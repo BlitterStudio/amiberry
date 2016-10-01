@@ -639,7 +639,7 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-    printf("Amiberry v2.0 build 2016-09-19.1\n");
+    printf("Amiberry v2.0 build 2016-10-01.1\n");
 #ifdef PANDORA_SPECIFIC
     SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else
