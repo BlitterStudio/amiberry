@@ -809,8 +809,29 @@ int main (int argc, char *argv[])
     alloc_AmigaMem();
     RescanROMs();
 
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+    // set capslock state based upon current "real" state
+	ioctl(0, KDGKBLED, &kbd_flags);
+	ioctl(0, KDGETLED, &kbd_led_status);
+    if ((kbd_flags & 07) & LED_CAP)
+    {
+        // record capslock pressed
+        kbd_led_status |= LED_CAP;
+        inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+    }
+    else
+    {
+        // record capslock as not pressed
+        kbd_led_status &= ~LED_CAP;
+        inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+    }
+	ioctl(0, KDSETLED, kbd_led_status);
+#endif
 
 	real_main (argc, argv);
+	
+	// restore keyboard LEDs to normal state
+	ioctl(0, KDSETLED, 0xFF);
 	
     ClearAvailableROMList();
     romlist_clear();

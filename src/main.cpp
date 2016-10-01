@@ -44,6 +44,12 @@
 #ifdef USE_SDL
 #include "SDL.h"
 #endif
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+  #include <linux/kd.h>
+  #include <sys/ioctl.h>
+  #include "keyboard.h"
+#endif
+
 long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -591,6 +597,16 @@ void do_leave_program (void)
 
 void start_program (void)
 {
+  #ifdef CAPSLOCK_DEBIAN_WORKAROUND
+    char kbd_flags;
+    // set capslock state based upon current "real" state
+    ioctl(0, KDGKBLED, &kbd_flags);
+    if ((kbd_flags & 07) & LED_CAP)
+    {
+       // record capslock pressed
+       inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+    }
+  #endif
     do_start_program ();
 }
 
