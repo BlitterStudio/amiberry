@@ -4,6 +4,7 @@
 
 /* #define DRIVESOUND */
 /* #define GFXFILTER */
+//#define USE_SOFT_LONG_DOUBLE
 
 /* #define DEBUGGER */
 #define FILESYS /* filesys emulation */
@@ -474,9 +475,7 @@ typedef unsigned char boolean;
 #define FALSE 0
 #define TRUE 1
 
-#ifndef USHORT
-#define USHORT unsigned short
-#endif
+typedef unsigned short USHORT;
 
 #define Sleep(x) usleep(x*1000)
 
@@ -513,6 +512,7 @@ typedef unsigned char boolean;
 #define _istdigit(x)        isdigit(x)
 #define _tstoi(x)           atoi(x)
 #define _tstol(x)           atol(x)
+#define _tstoi64(x)         atoll(x)
 #define _tstof(x)           atof(x)
 #define _tcstol(x,y,z)      strtol(x,y,z)
 #define _tcstod(x,y)        strtod(x,y)
