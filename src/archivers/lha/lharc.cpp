@@ -80,50 +80,50 @@ int             archive_file_gid;
 static void
 init_variable()		/* Added N.Watazaki */
 {
-    /* options */
-    quiet			= FALSE;
-    text_mode		= FALSE;
-    verbose			= FALSE;
-    noexec			= FALSE;	/* debugging option */
-    force			= FALSE;
-    prof			= FALSE;
+/* options */
+	quiet			= FALSE;
+	text_mode		= FALSE;
+	verbose			= FALSE;
+	noexec			= FALSE;	/* debugging option */
+	force			= FALSE;
+	prof			= FALSE;
 #ifndef SUPPORT_LH7
-    compress_method = LZHUFF5_METHOD_NUM;
+	compress_method = LZHUFF5_METHOD_NUM;
 #endif
 #ifdef SUPPORT_LH7
-    compress_method = LZHUFF7_METHOD_NUM;
+	compress_method = LZHUFF7_METHOD_NUM;
 #endif
 
-    header_level	= HEADER_LEVEL1;
-    quiet_mode		= 0;
+	header_level	= HEADER_LEVEL1;
+	quiet_mode		= 0;
 
 #ifdef EUC
-    euc_mode		= FALSE;
+	euc_mode		= FALSE;
 #endif
 
-    /* view command flags */
-    verbose_listing = FALSE;
+/* view command flags */
+	verbose_listing = FALSE;
 
-    /* extract command flags */
-    output_to_stdout = FALSE;
+/* extract command flags */
+	output_to_stdout = FALSE;
 
-    /* append command flags */
-    new_archive			= FALSE;
-    update_if_newer		= FALSE;
-    delete_after_append = FALSE;
-    generic_format		= FALSE;
+/* append command flags */
+	new_archive			= FALSE;
+	update_if_newer		= FALSE;
+	delete_after_append = FALSE;
+	generic_format		= FALSE;
 
-    remove_temporary_at_error 				= FALSE;
-    recover_archive_when_interrupt			= FALSE;
-    remove_extracting_file_when_interrupt	= FALSE;
-    get_filename_from_stdin					= FALSE;
-    ignore_directory						= FALSE;
-    verify_mode								= FALSE;
+	remove_temporary_at_error 				= FALSE;
+	recover_archive_when_interrupt			= FALSE;
+	remove_extracting_file_when_interrupt	= FALSE;
+	get_filename_from_stdin					= FALSE;
+	ignore_directory						= FALSE;
+	verify_mode								= FALSE;
 
-    noconvertcase							= FALSE;
+	noconvertcase							= FALSE;
 
-    extract_directory = NULL;
-    xfilec = 257;
+	extract_directory = NULL;
+	xfilec = 257;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -131,41 +131,38 @@ init_variable()		/* Added N.Watazaki */
 /* ------------------------------------------------------------------------ */
 static int sort_by_ascii(char **a, char **b)
 {
-    register char  *p, *q;
-    register int    c1, c2;
+	register char  *p, *q;
+	register int    c1, c2;
 
-    p = *a, q = *b;
-    if (generic_format)
-    {
-        do
-        {
-            c1 = *(unsigned char *) p++;
-            c2 = *(unsigned char *) q++;
-            if (!c1 || !c2)
-                break;
-            if (islower(c1))
-                c1 = toupper(c1);
-            if (islower(c2))
-                c2 = toupper(c2);
-        }
-        while (c1 == c2);
-        return c1 - c2;
-    }
-    else
-    {
-        while (*p == *q && *p != '\0')
-            p++, q++;
-        return *(unsigned char *) p - *(unsigned char *) q;
-    }
+	p = *a, q = *b;
+	if (generic_format) {
+		do {
+			c1 = *(unsigned char *) p++;
+			c2 = *(unsigned char *) q++;
+			if (!c1 || !c2)
+				break;
+			if (islower(c1))
+				c1 = toupper(c1);
+			if (islower(c2))
+				c2 = toupper(c2);
+		}
+		while (c1 == c2);
+		return c1 - c2;
+	}
+	else {
+		while (*p == *q && *p != '\0')
+			p++, q++;
+		return *(unsigned char *) p - *(unsigned char *) q;
+	}
 }
 
 /* ------------------------------------------------------------------------ */
 char *xxrealloc(char *old, int size)
 {
-    char           *p = (char *) xrealloc(char, old, size);
-    if (!p)
-        fatal_error(_T("Not enough memory"));
-    return p;
+	char           *p = (char *) xrealloc(char, old, size);
+	if (!p)
+		fatal_error(_T("Not enough memory"));
+	return p;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -189,51 +186,49 @@ char *xxrealloc(char *old, int size)
 /* ------------------------------------------------------------------------ */
 void init_sp(struct string_pool *sp)
 {
-    sp->size = 1024 - 8;	/* any ( >=0 ) */
-    sp->used = 0;
-    sp->n = 0;
-    sp->buffer = (char *) xmalloc(char, sp->size);
+	sp->size = 1024 - 8;	/* any ( >=0 ) */
+	sp->used = 0;
+	sp->n = 0;
+	sp->buffer = (char *) xmalloc(char, sp->size);
 }
 
 /* ------------------------------------------------------------------------ */
 void add_sp(struct string_pool *sp, char *name, int len)
 {
-    while (sp->used + len > sp->size)
-    {
-        sp->size *= 2;
-        sp->buffer = (char *) xxrealloc(sp->buffer, sp->size * sizeof(char));
-    }
-    bcopy(name, sp->buffer + sp->used, len);
-    sp->used += len;
-    sp->n++;
+	while (sp->used + len > sp->size) {
+		sp->size *= 2;
+		sp->buffer = (char *) xxrealloc(sp->buffer, sp->size * sizeof(char));
+	}
+	bcopy(name, sp->buffer + sp->used, len);
+	sp->used += len;
+	sp->n++;
 }
 
 /* ------------------------------------------------------------------------ */
 void finish_sp(struct string_pool *sp, int *v_count, char ***v_vector)
 {
-    int             i;
-    register char  *p;
-    char          **v;
+	int             i;
+	register char  *p;
+	char          **v;
 
-    v = (char **) xmalloc(char*, sp->n + 1);
-    *v++ = sp->buffer;
-    *v_vector = v;
-    *v_count = sp->n;
-    p = sp->buffer;
-    for (i = sp->n; i; i--)
-    {
-        *v++ = p;
-        if (i - 1)
-            p += strlen(p) + 1;
-    }
+	v = (char **) xmalloc(char*, sp->n + 1);
+	*v++ = sp->buffer;
+	*v_vector = v;
+	*v_count = sp->n;
+	p = sp->buffer;
+	for (i = sp->n; i; i--) {
+		*v++ = p;
+		if (i - 1)
+			p += strlen(p) + 1;
+	}
 }
 
 /* ------------------------------------------------------------------------ */
 void free_sp(char **vector)
 {
-    vector--;
-    free(*vector);		/* free string pool */
-    free(vector);
+	vector--;
+	free(*vector);		/* free string pool */
+	free(vector);
 }
 
 
@@ -242,9 +237,9 @@ void free_sp(char **vector)
 /* ------------------------------------------------------------------------ */
 static boolean include_path_p(char *path, char *name)
 {
-    char           *n = name;
-    while (*path)
-        if (*path++ != *n++)
-            return (path[-1] == '/' && *n == '\0');
-    return (*n == '/' || (n != name && path[-1] == '/' && n[-1] == '/'));
+	char           *n = name;
+	while (*path)
+		if (*path++ != *n++)
+			return (path[-1] == '/' && *n == '\0');
+	return (*n == '/' || (n != name && path[-1] == '/' && n[-1] == '/'));
 }

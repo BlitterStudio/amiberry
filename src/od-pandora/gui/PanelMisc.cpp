@@ -68,7 +68,7 @@ StringListModel KBDLedList(listValues, 9);
 
 class MiscActionListener : public gcn::ActionListener
 {
-public:
+  public:
     void action(const gcn::ActionEvent& actionEvent)
     {
         if (actionEvent.getSource() == chkStatusLine)
@@ -111,19 +111,19 @@ MiscActionListener* miscActionListener;
 
 void InitPanelMisc(const struct _ConfigCategory& category)
 {
-    miscActionListener = new MiscActionListener();
+  miscActionListener = new MiscActionListener();
 
-    chkStatusLine = new gcn::UaeCheckBox("Status Line");
-    chkStatusLine->setId("StatusLine");
-    chkStatusLine->addActionListener(miscActionListener);
+	chkStatusLine = new gcn::UaeCheckBox("Status Line");
+	chkStatusLine->setId("StatusLine");
+  chkStatusLine->addActionListener(miscActionListener);
 
-    chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
-    chkHideIdleLed->setId("HideIdle");
-    chkHideIdleLed->addActionListener(miscActionListener);
+	chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
+	chkHideIdleLed->setId("HideIdle");
+  chkHideIdleLed->addActionListener(miscActionListener);
 
-    chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
-    chkShowGUI->setId("ShowGUI");
-    chkShowGUI->addActionListener(miscActionListener);
+	chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
+	chkShowGUI->setId("ShowGUI");
+  chkShowGUI->addActionListener(miscActionListener);
 
 #ifdef PANDORA_SPECIFIC
     lblPandoraSpeed = new gcn::Label("Pandora Speed:");

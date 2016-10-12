@@ -2,7 +2,7 @@
  * compiler/compemu.h - Public interface and definitions
  *
  * Copyright (c) 2001-2004 Milan Jurik of ARAnyM dev team (see AUTHORS)
- *
+ * 
  * Inspired by Christian Bauer's Basilisk II
  *
  * This file is part of the ARAnyM project which builds a new and powerful
@@ -45,15 +45,13 @@ extern uae_u32 start_pc;
 
 struct blockinfo_t;
 
-typedef struct
-{
-    uae_u16* location;
-    uae_u8  cycles;
-    uae_u8  specmem;
+typedef struct {
+  uae_u16* location;
+  uae_u8  cycles;
+  uae_u8  specmem;
 } cpu_history;
 
-typedef union
-{
+typedef union {
     cpuop_func* handler;
     struct blockinfo_t* bi;
 } cacheline;
@@ -166,42 +164,39 @@ extern void* pushall_call_handler;
 #define UNDEF 4
 #define ISCONST 5
 
-typedef struct
-{
-    uae_u32* mem;
-    uae_u32 val;
-    uae_u8 status;
-    uae_s8 realreg; /* gb-- realreg can hold -1 */
-    uae_u8 realind; /* The index in the holds[] array */
-    uae_u8 validsize;
-    uae_u8 dirtysize;
+typedef struct {
+  uae_u32* mem;
+  uae_u32 val;
+  uae_u8 status;
+  uae_s8 realreg; /* gb-- realreg can hold -1 */
+  uae_u8 realind; /* The index in the holds[] array */
+  uae_u8 validsize;
+  uae_u8 dirtysize;
 } reg_status;
 
 #ifdef USE_JIT_FPU
-typedef struct
-{
-    uae_u32* mem;
-    double val;
-    uae_u8 status;
-    uae_s8 realreg; /* gb-- realreg can hold -1 */
-    uae_u8 realind;
-    uae_u8 needflush;
+typedef struct {
+  uae_u32* mem;
+  double val;
+  uae_u8 status;
+  uae_s8 realreg; /* gb-- realreg can hold -1 */
+  uae_u8 realind;
+  uae_u8 needflush;
 } freg_status;
 #endif
 
-typedef struct
-{
+typedef struct {
     uae_u8 use_flags;
     uae_u8 set_flags;
     uae_u8 is_addx;
-    uae_u8 cflow;
+	  uae_u8 cflow;
 } op_properties;
 
 extern op_properties prop[65536];
 
 STATIC_INLINE int end_block(uae_u16 opcode)
 {
-    return (prop[opcode].cflow & fl_end_block);
+	return (prop[opcode].cflow & fl_end_block);
 }
 
 #define PC_P 16
@@ -226,21 +221,19 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 #define FS2 10
 #define FS3 11
 
-typedef struct
-{
-    uae_u32 touched;
-    uae_s8 holds[VREGS];
-    uae_u8 nholds;
-    uae_u8 locked;
+typedef struct {
+  uae_u32 touched;
+  uae_s8 holds[VREGS];
+  uae_u8 nholds;
+  uae_u8 locked;
 } n_status;
 
 #ifdef USE_JIT_FPU
-typedef struct
-{
-    uae_u32 touched;
-    uae_s8 holds[VFREGS];
-    uae_u8 nholds;
-    uae_u8 locked;
+typedef struct {
+  uae_u32 touched;
+  uae_s8 holds[VFREGS];
+  uae_u8 nholds;
+  uae_u8 locked;
 } fn_status;
 #endif
 
@@ -254,8 +247,7 @@ typedef struct
 #define NF_TOMEM     1
 #define NF_HANDLER   2
 
-typedef struct
-{
+typedef struct {
     /* Integer part */
     reg_status state[VREGS];
     n_status   nat[N_REGS];
@@ -269,11 +261,10 @@ typedef struct
 #endif
 } bigstate;
 
-typedef struct
-{
+typedef struct {
     /* Integer part */
-    uae_s8 virt[VREGS];
-    uae_s8 nat[N_REGS];
+  uae_s8 virt[VREGS];
+  uae_s8 nat[N_REGS];
 } smallstate;
 
 extern int touchcnt;
@@ -343,24 +334,21 @@ extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
 
 struct blockinfo_t;
 
-typedef struct dep_t
-{
-    uae_u32*            jmp_off;
-    struct blockinfo_t* target;
-    struct blockinfo_t* source;
-    struct dep_t**      prev_p;
-    struct dep_t*       next;
+typedef struct dep_t {
+  uae_u32*            jmp_off;
+  struct blockinfo_t* target;
+  struct blockinfo_t* source;
+  struct dep_t**      prev_p;
+  struct dep_t*       next;
 } dependency;
 
-typedef struct checksum_info_t
-{
-    uae_u8 *start_p;
-    uae_u32 length;
-    struct checksum_info_t *next;
+typedef struct checksum_info_t {
+  uae_u8 *start_p;
+  uae_u32 length;
+  struct checksum_info_t *next;
 } checksum_info;
 
-typedef struct blockinfo_t
-{
+typedef struct blockinfo_t {
     uae_s32 count;
     cpuop_func* direct_handler_to_use;
     cpuop_func* handler_to_use;
@@ -398,8 +386,8 @@ typedef struct blockinfo_t
     smallstate  env;
 
 #ifdef JIT_DEBUG
-    /* (gb) size of the compiled block (direct handler) */
-    uae_u32 direct_handler_size;
+	/* (gb) size of the compiled block (direct handler) */
+	uae_u32 direct_handler_size;
 #endif
 } blockinfo;
 

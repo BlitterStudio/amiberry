@@ -1,14 +1,14 @@
-/*
- * E-UAE - The portable Amiga Emulator
- *
- * Support for traps
- *
- * Copyright Richard Drummond 2005
- *
- * Based on code:
- * Copyright 1995, 1996 Bernd Schmidt
- * Copyright 1996 Ed Hanway
- */
+ /*
+  * E-UAE - The portable Amiga Emulator
+  *
+  * Support for traps
+  *
+  * Copyright Richard Drummond 2005
+  *
+  * Based on code:
+  * Copyright 1995, 1996 Bernd Schmidt
+  * Copyright 1996 Ed Hanway
+  */
 
 #ifndef TRAPS_H
 #define TRAPS_H

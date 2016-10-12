@@ -1,11 +1,12 @@
-ENUMDECL
-{
-    Dreg, Areg, Aind, Aipi, Apdi, Ad16, Ad8r,
-    absw, absl, PC16, PC8r, imm, imm0, imm1, imm2, immi, am_unknown, am_illg
+#ifndef READCPU_H
+#define READCPU_H
+
+ENUMDECL {
+  Dreg, Areg, Aind, Aipi, Apdi, Ad16, Ad8r,
+  absw, absl, PC16, PC8r, imm, imm0, imm1, imm2, immi, am_unknown, am_illg
 } ENUMNAME (amodes);
 
-ENUMDECL
-{
+ENUMDECL {
     i_ILLG,
 
     i_OR, i_AND, i_EOR, i_ORSR, i_ANDSR, i_EORSR,
@@ -32,11 +33,11 @@ ENUMDECL
     i_CINVL, i_CINVP, i_CINVA, i_CPUSHL, i_CPUSHP, i_CPUSHA, i_MOVE16,
     i_MMUOP030, i_PFLUSHN, i_PFLUSH, i_PFLUSHAN, i_PFLUSHA,
     i_PLPAR, i_PLPAW, i_PTESTR, i_PTESTW,
-    i_LPSTOP
+    i_LPSTOP,
+	MAX_OPCODE_FAMILY
 } ENUMNAME (instrmnem);
 
-struct mnemolookup
-{
+struct mnemolookup {
     instrmnem mnemo;
     const TCHAR *name;
     const TCHAR *friendlyname;
@@ -44,24 +45,20 @@ struct mnemolookup
 
 extern struct mnemolookup lookuptab[];
 
-ENUMDECL
-{
+ENUMDECL {
     sz_byte, sz_word, sz_long
 } ENUMNAME (wordsizes);
 
-ENUMDECL
-{
+ENUMDECL {
     fa_set, fa_unset, fa_zero, fa_one, fa_dontcare, fa_unknown, fa_isjmp,
     fa_isbranch
 } ENUMNAME (flagaffect);
 
-ENUMDECL
-{
+ENUMDECL {
     fu_used, fu_unused, fu_maybecc, fu_unknown, fu_isjmp
 } ENUMNAME (flaguse);
 
-ENUMDECL
-{
+ENUMDECL {
     fl_normal		= 0,
     fl_branch		= 1,
     fl_jump		= 2,
@@ -72,36 +69,34 @@ ENUMDECL
     fl_end_block	= 3
 } ENUMNAME (cflow_t);
 
-ENUMDECL
-{
+ENUMDECL {
     bit0, bit1, bitc, bitC, bitf, biti, bitI, bitj, bitJ, bitk, bitK,
     bits, bitS, bitd, bitD, bitr, bitR, bitz, bitE, bitp, lastbit
 } ENUMNAME (bitvals);
 
-struct instr_def
-{
+struct instr_def {
     unsigned int bits;
     int n_variable;
     uae_u8 bitpos[16];
     unsigned int mask;
     int cpulevel;
-    int unimpcpulevel;
+	int unimpcpulevel;
     int plevel;
-    struct
-    {
-        unsigned int flaguse:3;
-        unsigned int flagset:3;
+    struct {
+	unsigned int flaguse:3;
+	unsigned int flagset:3;
     } flaginfo[5];
     unsigned char cflow;
     uae_u8 sduse;
     const TCHAR *opcstr;
+	// 68020/030 timing
+	int head, tail, clocks, fetchmode;
 };
 
 extern struct instr_def defs68k[];
 extern int n_defs68k;
 
-extern struct instr
-{
+extern struct instr {
     long int handler;
     unsigned char dreg;
     unsigned char sreg;
@@ -113,16 +108,16 @@ extern struct instr
     unsigned int cc:4;
     unsigned int plev:2;
     unsigned int size:2;
+		unsigned int unsized:1;
     unsigned int smode:5;
     unsigned int stype:3;
     unsigned int dmode:5;
     unsigned int suse:1;
     unsigned int duse:1;
-    unsigned int unused1:1;
     unsigned int clev:3, unimpclev:3;
-    unsigned int unused2:2;
     unsigned int cflow:3;
-    unsigned int unused3:5;
+    unsigned int unused3:7;
+	char head, tail, clocks, fetchmode;
 } *table68k;
 
 extern void read_table68k (void);
@@ -130,3 +125,4 @@ extern void do_merges (void);
 extern int get_no_mismatches (void);
 extern int nr_cpuop_funcs;
 
+#endif /* READCPU_H */

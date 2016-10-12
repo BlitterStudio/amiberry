@@ -32,15 +32,14 @@ extern struct PicassoResolution *DisplayModes;
 
 typedef struct _RECT
 {
-    uae_s32 left;
-    uae_s32 top;
-    uae_s32 right;
-    uae_s32 bottom;
+  uae_s32 left;
+  uae_s32 top;
+  uae_s32 right;
+  uae_s32 bottom;
 } RECT;
 
 #define MAX_DISPLAYS 4
-struct MultiDisplay
-{
+struct MultiDisplay {
     int primary, disabled, gdi;
     char *name;
     char *name2;
@@ -59,70 +58,67 @@ extern void picasso_InitResolutions (void);
 /************************************************************************/
 /* Types for BoardType Identification
  */
-typedef enum
-{
-    BT_NoBoard,
-    BT_oMniBus,
-    BT_Graffity,
-    BT_CyberVision,
-    BT_Domino,
-    BT_Merlin,
-    BT_PicassoII,
-    BT_Piccolo,
-    BT_RetinaBLT,
-    BT_Spectrum,
-    BT_PicassoIV,
-    BT_PiccoloSD64,
-    BT_A2410,
-    BT_Pixel64,
-    BT_uaegfx,
-    BT_CVision3D,
-    BT_Altais,
-    BT_Prototype1,
-    BT_Prototype2,
-    BT_Prototype3,
-    BT_Prototype4,
-    BT_Prototype5,
-    BT_MaxBoardTypes
+typedef enum {
+	BT_NoBoard,
+	BT_oMniBus,
+	BT_Graffity,
+	BT_CyberVision,
+	BT_Domino,
+	BT_Merlin,
+	BT_PicassoII,
+	BT_Piccolo,
+	BT_RetinaBLT,
+	BT_Spectrum,
+	BT_PicassoIV,
+	BT_PiccoloSD64,
+	BT_A2410,
+	BT_Pixel64,
+	BT_uaegfx,
+	BT_CVision3D,
+	BT_Altais,
+	BT_Prototype1,
+	BT_Prototype2,
+	BT_Prototype3,
+	BT_Prototype4,
+	BT_Prototype5,
+	BT_MaxBoardTypes
 } BTYPE;
 
 /************************************************************************/
 /* Types for PaletteChipType Identification
  */
-typedef enum
-{
-    PCT_Unknown,
-    PCT_S11483,			// Sierra S11483: HiColor 15 bit, oMniBus, Domino
-    PCT_S15025,			// Sierra S15025: TrueColor 32 bit, oMniBus
-    PCT_CirrusGD542x,		// Cirrus GD542x internal: TrueColor 24 bit
-    PCT_Domino,			// is in fact a Sierra S11483
-    PCT_BT482,			// BrookTree BT482: TrueColor 32 bit, Merlin
-    PCT_Music,			// Music MU9C4910: TrueColor 24 bit, oMniBus
-    PCT_ICS5300,			// ICS 5300: ...., Retina BLT Z3
-    PCT_CirrusGD5446,		// Cirrus GD5446 internal: TrueColor 24 bit
-    PCT_CirrusGD5434,		// Cirrus GD5434 internal: TrueColor 32 bit
-    PCT_S3Trio64,			// S3 Trio64 internal: TrueColor 32 bit
-    PCT_A2410_xxx,			// A2410 DAC, *type unknown*
-    PCT_S3ViRGE,			// S3 ViRGE internal: TrueColor 32 bit
-    PCT_MaxPaletteChipTypes
+typedef enum {
+	PCT_Unknown,
+	PCT_S11483,			// Sierra S11483: HiColor 15 bit, oMniBus, Domino
+	PCT_S15025,			// Sierra S15025: TrueColor 32 bit, oMniBus
+	PCT_CirrusGD542x,		// Cirrus GD542x internal: TrueColor 24 bit
+	PCT_Domino,			// is in fact a Sierra S11483
+	PCT_BT482,			// BrookTree BT482: TrueColor 32 bit, Merlin
+	PCT_Music,			// Music MU9C4910: TrueColor 24 bit, oMniBus
+	PCT_ICS5300,			// ICS 5300: ...., Retina BLT Z3
+	PCT_CirrusGD5446,		// Cirrus GD5446 internal: TrueColor 24 bit
+	PCT_CirrusGD5434,		// Cirrus GD5434 internal: TrueColor 32 bit
+	PCT_S3Trio64,			// S3 Trio64 internal: TrueColor 32 bit
+	PCT_A2410_xxx,			// A2410 DAC, *type unknown*
+	PCT_S3ViRGE,			// S3 ViRGE internal: TrueColor 32 bit
+	PCT_MaxPaletteChipTypes
 } PCTYPE;
 
 /************************************************************************/
 /* Types for GraphicsControllerType Identification
  */
-typedef enum
-{
-    GCT_Unknown,
-    GCT_ET4000,
-    GCT_ETW32,
-    GCT_CirrusGD542x,
-    GCT_NCR77C32BLT,
-    GCT_CirrusGD5446,
-    GCT_CirrusGD5434,
-    GCT_S3Trio64,
-    GCT_TI34010,
-    GCT_S3ViRGE,
-    GCT_MaxGraphicsControllerTypes
+typedef enum {
+	GCT_Unknown,
+	GCT_ET4000,
+	GCT_ETW32,	
+	GCT_CirrusGD542x,
+	GCT_NCR77C32BLT,	
+	GCT_CirrusGD5446,
+	GCT_CirrusGD5434,
+	GCT_S3Trio64,
+	GCT_TI34010,
+	GCT_S3ViRGE,
+	GCT_MaxGraphicsControllerTypes
 } GCTYPE;
 
 #define JAM1 0
@@ -132,8 +128,7 @@ typedef enum
 
 /************************************************************************/
 
-enum
-{
+enum {
     PLANAR,
     CHUNKY,
     HICOLOR,
@@ -143,22 +138,19 @@ enum
 };
 
 /************************************************************************/
-struct MyCLUTEntry
-{
+struct MyCLUTEntry {
     uae_u8 Red;
     uae_u8 Green;
     uae_u8 Blue;
     uae_u8 Pad;
 };
 
-struct ColorIndexMapping
-{
+struct ColorIndexMapping {
     uae_u32 ColorMask;
     uae_u32 Colors[256];
 };
 
-struct CLUTEntry
-{
+struct CLUTEntry {
     uae_u8 Red;
     uae_u8 Green;
     uae_u8 Blue;
@@ -187,8 +179,7 @@ struct BitMap
 #define SETTINGSNAMEMAXCHARS		30
 #define BOARDNAMEMAXCHARS		30
 
-struct Settings
-{
+struct Settings {
     uae_u32					BoardType;
     /* a value discribing assignment to nth board local to boardtype
      * to be used for reassignment when boards are added or removed.  */
@@ -215,8 +206,7 @@ struct Settings
 #define PSSO_LibResolution_BoardInfo (52 + MAXMODES*4)
 #define PSSO_LibResolution_sizeof (60 + MAXMODES*4)
 
-struct LibResolution
-{
+struct LibResolution {
     char P96ID[6];
     char Name[MAXRESOLUTIONNAMELENGTH];
     uae_u32 DisplayID;
@@ -262,8 +252,7 @@ struct LibResolution
 #define PSSO_RenderInfo_RGBFormat 8
 #define PSSO_RenderInfo_sizeof 12
 
-struct RenderInfo
-{
+struct RenderInfo {
     uae_u8 *Memory;
     uae_s16 BytesPerRow;
     uae_s16 pad;
@@ -279,8 +268,7 @@ struct RenderInfo
 #define PSSO_Pattern_Size 16
 #define PSSO_Pattern_DrawMode 17
 #define PSSO_Pattern_sizeof 18
-struct Pattern
-{
+struct Pattern {
     uae_u8 *Memory;
     uae_u16 XOffset, YOffset;
     uae_u32 FgPen, BgPen;
@@ -296,8 +284,7 @@ struct Pattern
 #define PSSO_Template_BgPen 12
 #define PSSO_Template_sizeof 16
 
-struct Template
-{
+struct Template {
     uae_u8 *Memory;
     uae_s16 BytesPerRow;
     uae_u8 XOffset;
@@ -324,19 +311,18 @@ struct Template
 #define PSSO_Line_Xorigin 32
 #define PSSO_Line_Yorigin 34
 
-struct Line
-{
-    uae_u16			X, Y;
-    uae_u16			Length;
-    uae_s16			dX, dY;
-    uae_s16			sDelta, lDelta, twoSDminusLD;
-    uae_u16			LinePtrn;
-    uae_u16			PatternShift;
-    uae_u32			FgPen, BgPen;
-    uae_u16			Horizontal;
-    uae_u8			DrawMode;
-    uae_s8			pad;
-    uae_u16			Xorigin, Yorigin;
+struct Line {
+	uae_u16			X, Y;
+	uae_u16			Length;
+	uae_s16			dX, dY;
+	uae_s16			sDelta, lDelta, twoSDminusLD;
+	uae_u16			LinePtrn;
+	uae_u16			PatternShift;
+	uae_u32			FgPen, BgPen;
+	uae_u16			Horizontal;
+	uae_u8			DrawMode;
+	uae_s8			pad;
+	uae_u16			Xorigin, Yorigin;
 };
 
 #define PSSO_BitMapExtra_BoardNode	  0
@@ -594,9 +580,6 @@ struct picasso96_state_struct
 
 extern void InitPicasso96 (void);
 
-extern uae_u32 gfxmem_mask;
-extern uae_u8 *gfxmemory;
-
 extern int uaegfx_card_found;
 
 extern struct picasso96_state_struct picasso96_state;
@@ -614,8 +597,7 @@ extern int picasso_palette (void);
 
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
-struct picasso_vidbuf_description
-{
+struct picasso_vidbuf_description {
     int width, height, depth;
     int rowbytes, pixbytes;
     int extra_mem; /* nonzero if there's a second buffer that must be updated */
@@ -654,13 +636,15 @@ extern int p96hsync_counter;
 #define CARD_SIZEOF CARD_END
 
 #ifdef __cplusplus
-extern "C" {
+  extern "C" {
 #endif
-void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
-void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
-void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
+  void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_16bit_swap_arm(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_32bit_to_16bit_neon(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_32bit_to_16bit_arm(uae_u8 *dst, uae_u8 *src, int bytes);
 #ifdef __cplusplus
-}
+  }
 #endif
 
 #endif

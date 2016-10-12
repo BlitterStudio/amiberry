@@ -1,10 +1,10 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Mac keycodes
- *
- * (c) 1996 Ernesto Corvi
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Mac keycodes
+  *
+  * (c) 1996 Ernesto Corvi
+  */
 
 #define kUpArrowKeyMap				0x7E	/* key map offset for up arrow */
 #define kDownArrowKeyMap			0x7D	/* key map offset for down arrow */

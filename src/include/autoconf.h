@@ -1,10 +1,10 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Autoconfig device support
- *
- * (c) 1996 Ed Hanway
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Autoconfig device support
+  *
+  * (c) 1996 Ed Hanway
+  */
 
 #define RTAREA_DEFAULT 0xf00000
 #define RTAREA_BACKUP  0xef0000
@@ -52,10 +52,11 @@ extern uaecptr need_uae_boot_rom (void);
 
 struct mountedinfo
 {
-    uae_u64 size;
-    bool ismounted;
-    bool ismedia;
-    int nrcyls;
+  uae_s64 size;
+  bool ismounted;
+  bool ismedia;
+  int nrcyls;
+	TCHAR rootdir[MAX_DPATH];
 };
 
 extern int add_filesys_unitconfig (struct uae_prefs *p, int index, TCHAR *error);
@@ -65,9 +66,9 @@ extern int move_filesys_unitconfig (struct uae_prefs *p, int nr, int to);
 extern TCHAR *validatedevicename (TCHAR *s);
 extern TCHAR *validatevolumename (TCHAR *s);
 
-int filesys_insert (int nr, TCHAR *volume, const TCHAR *rootdir, bool readonly, int flags);
+int filesys_insert (int nr, const TCHAR *volume, const TCHAR *rootdir, bool readonly, int flags);
 int filesys_eject (int nr);
-int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_config_info *uci);
+int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_config_data *uci);
 
 extern TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, const TCHAR *def);
 extern int target_get_volume_name (struct uaedev_mount_info *mtinf, const TCHAR *volumepath, TCHAR *volumename, int size, bool inserted, bool fullcheck);

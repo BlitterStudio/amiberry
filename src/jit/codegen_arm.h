@@ -2,7 +2,7 @@
  * compiler/codegen_arm.h - IA-32 and AMD64 code generator
  *
  * Copyright (c) 2013 Jens Heitmann of ARAnyM dev team (see AUTHORS)
- *
+ * 
  * Inspired by Christian Bauer's Basilisk II
  *
  * This file is part of the ARAnyM project which builds a new and powerful
@@ -174,31 +174,29 @@
 
 /* Branch instructions */
 #ifndef __ANDROID__
-enum
-{
-    _B, _BL, _BLX, _BX, _BXJ
+enum {
+	_B, _BL, _BLX, _BX, _BXJ
 };
 #endif
 
 /* Data processing instructions */
-enum
-{
-    _AND = 0,
-    _EOR,
-    _SUB,
-    _RSB,
-    _ADD,
-    _ADC,
-    _SBC,
-    _RSC,
-    _TST,
-    _TEQ,
-    _CMP,
-    _CMN,
-    _ORR,
-    _MOV,
-    _BIC,
-    _MVN
+enum {
+	_AND = 0,
+	_EOR,
+	_SUB,
+	_RSB,
+	_ADD,
+	_ADC,
+	_SBC,
+	_RSC,
+	_TST,
+	_TEQ,
+	_CMP,
+	_CMN,
+	_ORR,
+	_MOV,
+	_BIC,
+	_MVN
 };
 
 /* Single instruction Multiple Data (SIMD) instructions */

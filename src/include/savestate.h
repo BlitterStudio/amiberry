@@ -1,10 +1,10 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Save/restore emulator state
- *
- * (c) 1999-2001 Toni Wilen
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Save/restore emulator state
+  *
+  * (c) 1999-2001 Toni Wilen
+  */
 
 
 /* functions to save byte,word or long word
@@ -164,5 +164,5 @@ extern struct zfile *savestate_file;
 
 STATIC_INLINE bool isrestore (void)
 {
-    return savestate_state == STATE_RESTORE;
+	return savestate_state == STATE_RESTORE;
 }

@@ -1,11 +1,11 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Prototypes for general sound related functions
- * This use to be called sound.h, but that causes confusion
- *
- * Copyright 1997 Bernd Schmidt
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Prototypes for general sound related functions
+  * This use to be called sound.h, but that causes confusion
+  *
+  * Copyright 1997 Bernd Schmidt
+  */
 
 extern int sound_available;
 

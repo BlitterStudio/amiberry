@@ -1,11 +1,11 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Library of functions to make emulated filesystem as independent as
- * possible of the host filesystem's capabilities.
- *
- * Copyright 1999 Bernd Schmidt
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Library of functions to make emulated filesystem as independent as
+  * possible of the host filesystem's capabilities.
+  *
+  * Copyright 1999 Bernd Schmidt
+  */
 
 #ifndef FSDB_FILE
 #define FSDB_FILE _T("_UAEFSDB.___")
@@ -18,6 +18,7 @@
 /* AmigaOS errors */
 #define ERROR_NO_FREE_STORE		103
 #define ERROR_BAD_NUMBER			115
+#define ERROR_LINE_TOO_LONG			120
 #define ERROR_OBJECT_IN_USE		202
 #define ERROR_OBJECT_EXISTS		203
 #define ERROR_DIR_NOT_FOUND		204
@@ -37,6 +38,7 @@
 #define ERROR_NOT_A_DOS_DISK		225
 #define ERROR_NO_DISK			226
 #define ERROR_NO_MORE_ENTRIES		232
+#define ERROR_IS_SOFT_LINK			233
 #define ERROR_NOT_IMPLEMENTED		236
 #define ERROR_RECORD_NOT_LOCKED		240
 #define ERROR_LOCK_COLLISION		241
@@ -53,8 +55,7 @@
 #define A_FIBF_DELETE  (1<<0)
 
 /* AmigaOS "keys" */
-typedef struct a_inode_struct
-{
+typedef struct a_inode_struct {
     /* Circular list of recycleable a_inodes.  */
     struct a_inode_struct *next, *prev;
     /* This a_inode's relatives in the directory structure.  */
@@ -79,6 +80,7 @@ typedef struct a_inode_struct
     int shlock;
     long db_offset;
     unsigned int dir:1;
+    unsigned int softlink:2;
     unsigned int elock:1;
     /* Nonzero if this came from an entry in our database.  */
     unsigned int has_dbentry:1;
@@ -93,7 +95,7 @@ typedef struct a_inode_struct
     unsigned int volflags;
     /* not equaling unit.mountcount -> not in this volume */
     unsigned int mountcount;
-    uae_u64 uniq_external;
+  	uae_u64 uniq_external;
 } a_inode;
 
 extern TCHAR *nname_begin (TCHAR *);
@@ -112,7 +114,7 @@ extern int fsdb_exists (const TCHAR *nname);
 
 STATIC_INLINE int same_aname (const TCHAR *an1, const TCHAR *an2)
 {
-    return strcasecmp (an1, an2) == 0;
+  return strcasecmp (an1, an2) == 0;
 }
 
 /* Filesystem-dependent functions.  */

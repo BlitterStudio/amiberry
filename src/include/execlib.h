@@ -1,10 +1,10 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Miscellaneous bits for exec emulation
- *
- * Copyright 1996 Bernd Schmidt
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Miscellaneous bits for exec emulation
+  *
+  * Copyright 1996 Bernd Schmidt
+  */
 
 #define CMD_INVALID 0
 #define CMD_RESET   1

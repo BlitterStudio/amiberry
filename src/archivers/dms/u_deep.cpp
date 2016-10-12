@@ -41,195 +41,167 @@ int dms_init_deep_tabs=1;
 static USHORT freq[T + 1]; /* frequency table */
 
 static USHORT prnt[T + N_CHAR]; /* pointers to parent nodes, except for the */
-/* elements [T..T + N_CHAR - 1] which are used to get */
-/* the positions of leaves corresponding to the codes. */
+				/* elements [T..T + N_CHAR - 1] which are used to get */
+				/* the positions of leaves corresponding to the codes. */
 
 static USHORT son[T];   /* pointers to child nodes (son[], son[] + 1) */
 
 
 
-void Init_DEEP_Tabs(void)
-{
-    USHORT i, j;
+void Init_DEEP_Tabs(void){
+	USHORT i, j;
 
-    for (i = 0; i < N_CHAR; i++)
-    {
-        freq[i] = 1;
-        son[i] = (USHORT)(i + T);
-        prnt[i + T] = i;
-    }
-    i = 0;
-    j = N_CHAR;
-    while (j <= R)
-    {
-        freq[j] = (USHORT) (freq[i] + freq[i + 1]);
-        son[j] = i;
-        prnt[i] = prnt[i + 1] = j;
-        i += 2;
-        j++;
-    }
-    freq[T] = 0xffff;
-    prnt[R] = 0;
+	for (i = 0; i < N_CHAR; i++) {
+		freq[i] = 1;
+		son[i] = (USHORT)(i + T);
+		prnt[i + T] = i;
+	}
+	i = 0; j = N_CHAR;
+	while (j <= R) {
+		freq[j] = (USHORT) (freq[i] + freq[i + 1]);
+		son[j] = i;
+		prnt[i] = prnt[i + 1] = j;
+		i += 2; j++;
+	}
+	freq[T] = 0xffff;
+	prnt[R] = 0;
 
-    dms_init_deep_tabs = 0;
+	dms_init_deep_tabs = 0;
 }
 
 
 
-USHORT Unpack_DEEP(UCHAR *in, UCHAR *out, USHORT origsize)
-{
-    USHORT i, j, c;
-    UCHAR *outend;
+USHORT Unpack_DEEP(UCHAR *in, UCHAR *out, USHORT origsize){
+	USHORT i, j, c;
+	UCHAR *outend;
 
-    initbitbuf(in);
+	initbitbuf(in);
 
-    if (dms_init_deep_tabs) Init_DEEP_Tabs();
+	if (dms_init_deep_tabs) Init_DEEP_Tabs();
 
-    outend = out+origsize;
-    while (out < outend)
-    {
-        c = DecodeChar();
-        if (c < 256)
-        {
-            *out++ = dms_text[dms_deep_text_loc++ & DBITMASK] = (UCHAR)c;
-        }
-        else
-        {
-            j = (USHORT) (c - 255 + THRESHOLD);
-            i = (USHORT) (dms_deep_text_loc - DecodePosition() - 1);
-            while (j--) *out++ = dms_text[dms_deep_text_loc++ & DBITMASK] = dms_text[i++ & DBITMASK];
-        }
-    }
+	outend = out+origsize;
+	while (out < outend) {
+		c = DecodeChar();
+		if (c < 256) {
+			*out++ = dms_text[dms_deep_text_loc++ & DBITMASK] = (UCHAR)c;
+		} else {
+			j = (USHORT) (c - 255 + THRESHOLD);
+			i = (USHORT) (dms_deep_text_loc - DecodePosition() - 1);
+			while (j--) *out++ = dms_text[dms_deep_text_loc++ & DBITMASK] = dms_text[i++ & DBITMASK];
+		}
+	}
 
-    dms_deep_text_loc = (USHORT)((dms_deep_text_loc+60) & DBITMASK);
+	dms_deep_text_loc = (USHORT)((dms_deep_text_loc+60) & DBITMASK);
 
-    return 0;
+	return 0;
 }
 
 
 
-INLINE USHORT DecodeChar(void)
-{
-    USHORT c;
+INLINE USHORT DecodeChar(void){
+	USHORT c;
 
-    c = son[R];
+	c = son[R];
 
-    /* travel from root to leaf, */
-    /* choosing the smaller child node (son[]) if the read bit is 0, */
-    /* the bigger (son[]+1} if 1 */
-    while (c < T)
-    {
-        c = son[c + GETBITS(1)];
-        DROPBITS(1);
-    }
-    c -= T;
-    update(c);
-    return c;
+	/* travel from root to leaf, */
+	/* choosing the smaller child node (son[]) if the read bit is 0, */
+	/* the bigger (son[]+1} if 1 */
+	while (c < T) {
+		c = son[c + GETBITS(1)];
+		DROPBITS(1);
+	}
+	c -= T;
+	update(c);
+	return c;
 }
 
 
 
-INLINE USHORT DecodePosition(void)
-{
-    USHORT i, j, c;
+INLINE USHORT DecodePosition(void){
+	USHORT i, j, c;
 
-    i = GETBITS(8);
-    DROPBITS(8);
-    c = (USHORT) (d_code[i] << 8);
-    j = d_len[i];
-    i = (USHORT) (((i << j) | GETBITS(j)) & 0xff);
-    DROPBITS(j);
+	i = GETBITS(8);  DROPBITS(8);
+	c = (USHORT) (d_code[i] << 8);
+	j = d_len[i];
+	i = (USHORT) (((i << j) | GETBITS(j)) & 0xff);  DROPBITS(j);
 
-    return (USHORT) (c | i) ;
+	return (USHORT) (c | i) ;
 }
 
 
 
 /* reconstruction of tree */
 
-static void reconst(void)
-{
-    USHORT i, j, k, f, l;
+static void reconst(void){
+	USHORT i, j, k, f, l;
 
-    /* collect leaf nodes in the first half of the table */
-    /* and replace the freq by (freq + 1) / 2. */
-    j = 0;
-    for (i = 0; i < T; i++)
-    {
-        if (son[i] >= T)
-        {
-            freq[j] = (USHORT) ((freq[i] + 1) / 2);
-            son[j] = son[i];
-            j++;
-        }
-    }
-    /* begin constructing tree by connecting sons */
-    for (i = 0, j = N_CHAR; j < T; i += 2, j++)
-    {
-        k = (USHORT) (i + 1);
-        f = freq[j] = (USHORT) (freq[i] + freq[k]);
-        for (k = (USHORT)(j - 1); f < freq[k]; k--);
-        k++;
-        l = (USHORT)((j - k) * 2);
-        memmove(&freq[k + 1], &freq[k], (size_t)l);
-        freq[k] = f;
-        memmove(&son[k + 1], &son[k], (size_t)l);
-        son[k] = i;
-    }
-    /* connect prnt */
-    for (i = 0; i < T; i++)
-    {
-        if ((k = son[i]) >= T)
-        {
-            prnt[k] = i;
-        }
-        else
-        {
-            prnt[k] = prnt[k + 1] = i;
-        }
-    }
+	/* collect leaf nodes in the first half of the table */
+	/* and replace the freq by (freq + 1) / 2. */
+	j = 0;
+	for (i = 0; i < T; i++) {
+		if (son[i] >= T) {
+			freq[j] = (USHORT) ((freq[i] + 1) / 2);
+			son[j] = son[i];
+			j++;
+		}
+	}
+	/* begin constructing tree by connecting sons */
+	for (i = 0, j = N_CHAR; j < T; i += 2, j++) {
+		k = (USHORT) (i + 1);
+		f = freq[j] = (USHORT) (freq[i] + freq[k]);
+		for (k = (USHORT)(j - 1); f < freq[k]; k--);
+		k++;
+		l = (USHORT)((j - k) * 2);
+		memmove(&freq[k + 1], &freq[k], (size_t)l);
+		freq[k] = f;
+		memmove(&son[k + 1], &son[k], (size_t)l);
+		son[k] = i;
+	}
+	/* connect prnt */
+	for (i = 0; i < T; i++) {
+		if ((k = son[i]) >= T) {
+			prnt[k] = i;
+		} else {
+			prnt[k] = prnt[k + 1] = i;
+		}
+	}
 }
 
 
 
 /* increment frequency of given code by one, and update tree */
 
-INLINE void update(USHORT c)
-{
-    USHORT i, j, k, l;
+INLINE void update(USHORT c){
+	USHORT i, j, k, l;
 
-    if (freq[R] == MAX_FREQ)
-    {
-        reconst();
-    }
-    c = prnt[c + T];
-    do
-    {
-        k = ++freq[c];
+	if (freq[R] == MAX_FREQ) {
+		reconst();
+	}
+	c = prnt[c + T];
+	do {
+		k = ++freq[c];
 
-        /* if the order is disturbed, exchange nodes */
-        if (k > freq[l = (USHORT)(c + 1)])
-        {
-            while (k > freq[++l]);
-            l--;
-            freq[c] = freq[l];
-            freq[l] = k;
+		/* if the order is disturbed, exchange nodes */
+		if (k > freq[l = (USHORT)(c + 1)]) {
+			while (k > freq[++l]);
+			l--;
+			freq[c] = freq[l];
+			freq[l] = k;
 
-            i = son[c];
-            prnt[i] = l;
-            if (i < T) prnt[i + 1] = l;
+			i = son[c];
+			prnt[i] = l;
+			if (i < T) prnt[i + 1] = l;
 
-            j = son[l];
-            son[l] = i;
+			j = son[l];
+			son[l] = i;
 
-            prnt[j] = c;
-            if (j < T) prnt[j + 1] = c;
-            son[c] = j;
+			prnt[j] = c;
+			if (j < T) prnt[j + 1] = c;
+			son[c] = j;
 
-            c = l;
-        }
-    }
-    while ((c = prnt[c]) != 0);   /* repeat up to root */
+			c = l;
+		}
+	} while ((c = prnt[c]) != 0); /* repeat up to root */
 }
 
 

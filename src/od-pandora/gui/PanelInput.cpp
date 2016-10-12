@@ -67,13 +67,13 @@ static gcn::UaeDropDown* KeyForMenu;
 
 class StringListModel : public gcn::ListModel
 {
-private:
+  private:
     std::vector<std::string> values;
-public:
+  public:
     StringListModel(const char *entries[], int count)
     {
-        for(int i=0; i<count; ++i)
-            values.push_back(entries[i]);
+      for(int i=0; i<count; ++i)
+      values.push_back(entries[i]);
     }
 
     int getNumberOfElements()
@@ -132,48 +132,43 @@ const char *mappingValues[] =
     "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "NULL"
 };
 StringListModel mappingList(mappingValues, 110);
-static int amigaKey[] =
-{
-    REMAP_CD32_RWD,  REMAP_CD32_FFW, REMAP_CD32_PLAY, REMAP_CD32_YELLOW, REMAP_CD32_GREEN,
-    REMAP_JOY_RIGHT, REMAP_JOY_LEFT, REMAP_JOY_DOWN,  REMAP_JOY_UP,      REMAP_JOYBUTTON_TWO, REMAP_JOYBUTTON_ONE, REMAP_MOUSEBUTTON_RIGHT, REMAP_MOUSEBUTTON_LEFT,
-    0,             AK_UP,    AK_DN,      AK_LF,    AK_RT,        AK_NP0,       AK_NP1,         AK_NP2,       /*  13 -  20 */
-    AK_NP3,        AK_NP4,   AK_NP5,     AK_NP6,   AK_NP7,       AK_NP8,       AK_NP9,         AK_ENT,       /*  21 -  28 */
-    AK_NPDIV,      AK_NPMUL, AK_NPSUB,   AK_NPADD, AK_NPDEL,     AK_NPLPAREN,  AK_NPRPAREN,    AK_SPC,       /*  29 -  36 */
-    AK_BS,         AK_TAB,   AK_RET,     AK_ESC,   AK_DEL,       AK_LSH,       AK_RSH,         AK_CAPSLOCK,  /*  37 -  44 */
-    AK_CTRL,       AK_LALT,  AK_RALT,    AK_LAMI,  AK_RAMI,      AK_HELP,      AK_LBRACKET,    AK_RBRACKET,  /*  45 -  52 */
-    AK_SEMICOLON,  AK_COMMA, AK_PERIOD,  AK_SLASH, AK_BACKSLASH, AK_QUOTE,     AK_NUMBERSIGN,  AK_LTGT,      /*  53 -  60 */
-    AK_BACKQUOTE,  AK_MINUS, AK_EQUAL,   AK_A,     AK_B,         AK_C,         AK_D,           AK_E,         /*  61 -  68 */
-    AK_F,          AK_G,     AK_H,       AK_I,     AK_J,         AK_K,         AK_L,           AK_M,         /*  69 -  76 */
-    AK_N,          AK_O,     AK_P,       AK_Q,     AK_R,         AK_S,         AK_T,           AK_U,         /*  77 -  84 */
-    AK_V,          AK_W,     AK_X,       AK_Y,     AK_Z,         AK_1,         AK_2,           AK_3,         /*  85 -  92 */
-    AK_4,          AK_5,     AK_6,       AK_7,     AK_8,         AK_9,         AK_0,           AK_F1,        /*  93 - 100 */
-    AK_F2,         AK_F3,    AK_F4,      AK_F5,    AK_F6,        AK_F7,        AK_F8,          AK_F9,        /* 101 - 108 */
-    AK_F10,        0
-}; /*  109 - 110 */
+static int amigaKey[] = 
+ { REMAP_CD32_RWD,  REMAP_CD32_FFW, REMAP_CD32_PLAY, REMAP_CD32_YELLOW, REMAP_CD32_GREEN,
+   REMAP_JOY_RIGHT, REMAP_JOY_LEFT, REMAP_JOY_DOWN,  REMAP_JOY_UP,      REMAP_JOYBUTTON_TWO, REMAP_JOYBUTTON_ONE, REMAP_MOUSEBUTTON_RIGHT, REMAP_MOUSEBUTTON_LEFT,
+   0,             AK_UP,    AK_DN,      AK_LF,    AK_RT,        AK_NP0,       AK_NP1,         AK_NP2,       /*  13 -  20 */
+   AK_NP3,        AK_NP4,   AK_NP5,     AK_NP6,   AK_NP7,       AK_NP8,       AK_NP9,         AK_ENT,       /*  21 -  28 */
+   AK_NPDIV,      AK_NPMUL, AK_NPSUB,   AK_NPADD, AK_NPDEL,     AK_NPLPAREN,  AK_NPRPAREN,    AK_SPC,       /*  29 -  36 */
+   AK_BS,         AK_TAB,   AK_RET,     AK_ESC,   AK_DEL,       AK_LSH,       AK_RSH,         AK_CAPSLOCK,  /*  37 -  44 */
+   AK_CTRL,       AK_LALT,  AK_RALT,    AK_LAMI,  AK_RAMI,      AK_HELP,      AK_LBRACKET,    AK_RBRACKET,  /*  45 -  52 */
+   AK_SEMICOLON,  AK_COMMA, AK_PERIOD,  AK_SLASH, AK_BACKSLASH, AK_QUOTE,     AK_NUMBERSIGN,  AK_LTGT,      /*  53 -  60 */
+   AK_BACKQUOTE,  AK_MINUS, AK_EQUAL,   AK_A,     AK_B,         AK_C,         AK_D,           AK_E,         /*  61 -  68 */
+   AK_F,          AK_G,     AK_H,       AK_I,     AK_J,         AK_K,         AK_L,           AK_M,         /*  69 -  76 */
+   AK_N,          AK_O,     AK_P,       AK_Q,     AK_R,         AK_S,         AK_T,           AK_U,         /*  77 -  84 */
+   AK_V,          AK_W,     AK_X,       AK_Y,     AK_Z,         AK_1,         AK_2,           AK_3,         /*  85 -  92 */
+   AK_4,          AK_5,     AK_6,       AK_7,     AK_8,         AK_9,         AK_0,           AK_F1,        /*  93 - 100 */
+   AK_F2,         AK_F3,    AK_F4,      AK_F5,    AK_F6,        AK_F7,        AK_F8,          AK_F9,        /* 101 - 108 */
+   AK_F10,        0 }; /*  109 - 110 */
 extern int customControlMap[SDLK_LAST];
 
 static int GetAmigaKeyIndex(int key)
 {
-    for(int i=0; i < 110; ++i)
-    {
-        if(amigaKey[i] == key)
-            return i;
-    }
-    return 13; // Default: no key
+  for(int i=0; i < 110; ++i) {
+    if(amigaKey[i] == key)
+      return i;
+  }
+  return 13; // Default: no key
 }
 
 
 class InputActionListener : public gcn::ActionListener
 {
-public:
+  public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-        if (actionEvent.getSource() == cboPort0)
-        {
-            // Handle new device in port 0
-            switch(cboPort0->getSelected())
-            {
-            case 0:
+      if (actionEvent.getSource() == cboPort0) {
+        // Handle new device in port 0
+        switch(cboPort0->getSelected()) {
+          case 0:
                 changed_prefs.jports[0].id = JSEM_MICE;
                 changed_prefs.jports[0].mode = JSEM_MODE_MOUSE;
                 break;
@@ -310,7 +305,7 @@ static InputActionListener* inputActionListener;
 
 void InitPanelInput(const struct _ConfigCategory& category)
 {
-    inputActionListener = new InputActionListener();
+  inputActionListener = new InputActionListener();
 
     if (ctrlPortList.getNumberOfElements() < (4 + inputdevice_get_device_total (IDTYPE_JOYSTICK)))
     {
@@ -326,7 +321,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
     lblPort0->setSize(100, LABEL_HEIGHT);
     lblPort0->setAlignment(gcn::Graphics::RIGHT);
     cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
-    cboPort0->setSize(435, DROPDOWN_HEIGHT);
+    cboPort0->setSize(160, DROPDOWN_HEIGHT);
     cboPort0->setBaseColor(gui_baseCol);
     cboPort0->setId("cboPort0");
     cboPort0->addActionListener(inputActionListener);
@@ -335,7 +330,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
     lblPort1->setSize(100, LABEL_HEIGHT);
     lblPort1->setAlignment(gcn::Graphics::RIGHT);
     cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
-    cboPort1->setSize(435, DROPDOWN_HEIGHT);
+    cboPort1->setSize(160, DROPDOWN_HEIGHT);
     cboPort1->setBaseColor(gui_baseCol);
     cboPort1->setId("cboPort1");
     cboPort1->addActionListener(inputActionListener);
@@ -537,63 +532,62 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 void ExitPanelInput(void)
 {
-    delete lblPort0;
-    delete cboPort0;
-    delete lblPort1;
-    delete cboPort1;
+  delete lblPort0;
+  delete cboPort0;
+  delete lblPort1;
+  delete cboPort1;
 
-    delete lblAutofire;
-    delete cboAutofire;
-    delete lblMouseSpeed;
-    delete sldMouseSpeed;
-    delete lblMouseSpeedInfo;
+  delete lblAutofire;
+  delete cboAutofire;
+  delete lblMouseSpeed;
+  delete sldMouseSpeed;
+  delete lblMouseSpeedInfo;
 #ifndef RASPBERRY
-    delete lblTapDelay;
-    delete cboTapDelay;
-    delete chkMouseHack;
+  delete lblTapDelay;
+  delete cboTapDelay;
+  delete chkMouseHack;
 #endif
-    delete chkCustomCtrl;
-    delete lblA;
-    delete cboA;
-    delete lblB;
-    delete cboB;
-    delete lblX;
-    delete cboX;
-    delete lblY;
-    delete cboY;
-    delete lblL;
-    delete cboL;
-    delete lblR;
-    delete cboR;
-    delete lblUp;
-    delete cboUp;
-    delete lblDown;
-    delete cboDown;
-    delete lblLeft;
-    delete cboLeft;
-    delete lblRight;
-    delete cboRight;
+  delete chkCustomCtrl;
+  delete lblA;
+  delete cboA;
+  delete lblB;
+  delete cboB;
+  delete lblX;
+  delete cboX;
+  delete lblY;
+  delete cboY;
+  delete lblL;
+  delete cboL;
+  delete lblR;
+  delete cboR;
+  delete lblUp;
+  delete cboUp;
+  delete lblDown;
+  delete cboDown;
+  delete lblLeft;
+  delete cboLeft;
+  delete lblRight;
+  delete cboRight;
 
-    delete lblKeyForMenu;
-    delete KeyForMenu;
+  delete lblKeyForMenu;
+  delete KeyForMenu;
 
-    delete inputActionListener;
+  delete inputActionListener;
 }
 
 
 void RefreshPanelInput(void)
 {
-    int i;
+  int i;
 
-    // Set current device in port 0
-    switch(changed_prefs.jports[0].id)
-    {
+  // Set current device in port 0
+  switch(changed_prefs.jports[0].id) {
     case JSEM_MICE:
-        cboPort0->setSelected(0);
-        break;
-    case JSEM_MICE + 1:
-        cboPort0->setSelected(1);
-        break;
+      cboPort0->setSelected(0); 
+      break;
+    case JSEM_MICE + 1: 
+      cboPort0->setSelected(1); 
+      break;
     case JSEM_JOYS:
         if(changed_prefs.jports[0].mode != JSEM_MODE_JOYSTICK_CD32)
             cboPort0->setSelected(2);
@@ -631,24 +625,24 @@ void RefreshPanelInput(void)
         break;
     }
 
-    if (changed_prefs.input_autofire_linecnt == 0)
-        cboAutofire->setSelected(0);
-    else if (changed_prefs.input_autofire_linecnt > 10 * 312)
-        cboAutofire->setSelected(1);
-    else if (changed_prefs.input_autofire_linecnt > 6 * 312)
-        cboAutofire->setSelected(2);
-    else
-        cboAutofire->setSelected(3);
+	if (changed_prefs.input_autofire_linecnt == 0)
+	  cboAutofire->setSelected(0);
+	else if (changed_prefs.input_autofire_linecnt > 10 * 312)
+    cboAutofire->setSelected(1);
+  else if (changed_prefs.input_autofire_linecnt > 6 * 312)
+    cboAutofire->setSelected(2);
+  else
+    cboAutofire->setSelected(3);
 
-    for(i=0; i<5; ++i)
+  for(i=0; i<5; ++i)
+  {
+    if(changed_prefs.input_joymouse_multiplier == mousespeed_values[i])
     {
-        if(changed_prefs.input_joymouse_multiplier == mousespeed_values[i])
-        {
-            sldMouseSpeed->setValue(i);
-            lblMouseSpeedInfo->setCaption(mousespeed_list[i]);
-            break;
-        }
+      sldMouseSpeed->setValue(i);
+      lblMouseSpeedInfo->setCaption(mousespeed_list[i]);
+      break;
     }
+  }
 #ifndef RASPBERRY
     if (changed_prefs.pandora_tapDelay == 10)
         cboTapDelay->setSelected(0);
@@ -659,17 +653,17 @@ void RefreshPanelInput(void)
 
     chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 #endif
-    chkCustomCtrl->setSelected(changed_prefs.pandora_customControls);
-    cboA->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_HOME]));
-    cboB->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_END]));
-    cboX->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEDOWN]));
-    cboY->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEUP]));
-    cboL->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RSHIFT]));
-    cboR->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RCTRL]));
-    cboUp->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_UP]));
-    cboDown->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_DOWN]));
-    cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_LEFT]));
-    cboRight->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RIGHT]));
+  chkCustomCtrl->setSelected(changed_prefs.pandora_customControls);
+  cboA->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_HOME]));
+  cboB->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_END]));
+  cboX->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEDOWN]));
+  cboY->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_PAGEUP]));
+  cboL->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RSHIFT]));
+  cboR->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RCTRL]));
+  cboUp->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_UP]));
+  cboDown->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_DOWN]));
+  cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_LEFT]));
+  cboRight->setSelected(GetAmigaKeyIndex(customControlMap[SDLK_RIGHT]));
 
     for(i=0; i<4; ++i)
     {

@@ -7,7 +7,7 @@
 #include "7zItem.h"
 
 SRes SzDecode(const UInt64 *packSizes, const CSzFolder *folder,
-              ILookInStream *stream, UInt64 startPos,
-              Byte *outBuffer, size_t outSize, ISzAlloc *allocMain);
+    ILookInStream *stream, UInt64 startPos,
+    Byte *outBuffer, size_t outSize, ISzAlloc *allocMain);
 
 #endif

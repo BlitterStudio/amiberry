@@ -31,71 +31,66 @@
 
 #include "lha_macro.h"
 
-struct encode_option
-{
+struct encode_option {
 #if 1 || defined(__STDC__) || defined(AIX)
-    void            (*output) ();
-    void            (*encode_start) ();
-    void            (*encode_end) ();
+	void            (*output) ();
+	void            (*encode_start) ();
+	void            (*encode_end) ();
 #else
-    int             (*output) ();
-    int             (*encode_start) ();
-    int             (*encode_end) ();
+	int             (*output) ();
+	int             (*encode_start) ();
+	int             (*encode_end) ();
 #endif
 };
 
-struct decode_option
-{
-    unsigned short  (*decode_c) ();
-    unsigned short  (*decode_p) ();
+struct decode_option {
+	unsigned short  (*decode_c) ();
+	unsigned short  (*decode_p) ();
 #if 1 || defined(__STDC__) || defined(AIX)
-    void            (*decode_start) ();
+	void            (*decode_start) ();
 #else
-    int             (*decode_start) ();
+	int             (*decode_start) ();
 #endif
 };
 
 /* ------------------------------------------------------------------------ */
 /*	LHa File Type Definition												*/
 /* ------------------------------------------------------------------------ */
-struct string_pool
-{
-    int             used;
-    int             size;
-    int             n;
-    char           *buffer;
+struct string_pool {
+	int             used;
+	int             size;
+	int             n;
+	char           *buffer;
 };
 
-typedef struct LzHeader
-{
-    unsigned char   header_size;
-    char            method[METHOD_TYPE_STRAGE];
-    long            packed_size;
-    long            original_size;
-    long            last_modified_stamp;
-    unsigned char   attribute;
-    unsigned char   header_level;
-    char            name[256];
-    unsigned short  crc;
-    boolean         has_crc;
-    unsigned char   extend_type;
-    unsigned char   minor_version;
+typedef struct LzHeader {
+	unsigned char   header_size;
+	char            method[METHOD_TYPE_STRAGE];
+	long            packed_size;
+	long            original_size;
+	long            last_modified_stamp;
+	unsigned char   attribute;
+	unsigned char   header_level;
+	char            name[256];
+	unsigned short  crc;
+	boolean         has_crc;
+	unsigned char   extend_type;
+	unsigned char   minor_version;
 
-    /* extend_type == EXTEND_UNIX  and convert from other type. */
-    time_t          unix_last_modified_stamp;
-    unsigned short  unix_mode;
-    unsigned short  unix_uid;
-    unsigned short  unix_gid;
+	/* extend_type == EXTEND_UNIX  and convert from other type. */
+	time_t          unix_last_modified_stamp;
+	unsigned short  unix_mode;
+	unsigned short  unix_uid;
+	unsigned short  unix_gid;
 }  LzHeader;
 
-struct interfacing
-{
-    struct zfile		*infile;
-    struct zfile		*outfile;
-    unsigned long   original;
-    unsigned long   packed;
-    int             dicbit;
-    int             method;
+struct interfacing {
+	struct zfile		*infile;
+	struct zfile		*outfile;
+	unsigned long   original;
+	unsigned long   packed;
+	int             dicbit;
+	int             method;
 };
 
 

@@ -1,14 +1,14 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Call (some) Amiga Exec functions outside the main UAE thread
- * and without stack magic.
- *
- * Copyright 1999 Patrick Ohly
- *
- * Uses the EXTER interrupt that is setup in filesys.c
- * and some of it needs thread support.
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Call (some) Amiga Exec functions outside the main UAE thread
+  * and without stack magic.
+  *
+  * Copyright 1999 Patrick Ohly
+  *
+  * Uses the EXTER interrupt that is setup in filesys.c
+  * and some of it needs thread support.
+  */
 
 #include "native2amiga_api.h"
 

@@ -171,10 +171,7 @@ typedef unsigned char uae_u8;
 typedef signed char uae_s8;
 typedef char uae_char;
 
-typedef struct
-{
-    uae_u8 RGB[3];
-} RGB;
+typedef struct { uae_u8 RGB[3]; } RGB;
 
 #if SIZEOF_SHORT == 2
 typedef unsigned short uae_u16;
@@ -221,20 +218,22 @@ typedef uae_u32 uaecptr;
 #ifdef HAVE_STRDUP
 #define my_strdup strdup
 #else
-extern TCHAR *my_strdup(const TCHAR*s);
+extern TCHAR *my_strdup (const TCHAR*s);
 #endif
 
-extern TCHAR *my_strdup_ansi(const char*);
-extern TCHAR *au(const char*);
-extern char *ua(const TCHAR*);
-extern TCHAR *au_fs(const char*);
-extern char *ua_fs(const TCHAR*, int);
-extern char *ua_copy(char *dst, int maxlen, const TCHAR *src);
-extern TCHAR *au_copy(TCHAR *dst, int maxlen, const char *src);
-extern char *ua_fs_copy(char *dst, int maxlen, const TCHAR *src, int defchar);
-extern TCHAR *au_fs_copy(TCHAR *dst, int maxlen, const char *src);
-extern char *uutf8(const TCHAR *s);
-extern TCHAR *utf8u(const char *s);
+extern TCHAR *my_strdup_ansi (const char*);
+extern void my_trim (TCHAR*);
+extern TCHAR *my_strdup_trim (const TCHAR*);
+extern TCHAR *au (const char*);
+extern char *ua (const TCHAR*);
+extern TCHAR *au_fs (const char*);
+extern char *ua_fs (const TCHAR*, int);
+extern char *ua_copy (char *dst, int maxlen, const TCHAR *src);
+extern TCHAR *au_copy (TCHAR *dst, int maxlen, const char *src);
+extern char *ua_fs_copy (char *dst, int maxlen, const TCHAR *src, int defchar);
+extern TCHAR *au_fs_copy (TCHAR *dst, int maxlen, const char *src);
+extern char *uutf8 (const TCHAR *s);
+extern TCHAR *utf8u (const char *s);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
@@ -280,7 +279,7 @@ extern TCHAR *utf8u(const char *s);
 #define FILEFLAG_PURE    0x40
 
 #define REGPARAM2
-#define REGPARAM3
+#define REGPARAM3 
 #define REGPARAM
 
 #define abort() \
@@ -295,63 +294,63 @@ extern TCHAR *utf8u(const char *s);
 #ifdef DONT_HAVE_POSIX
 
 #define access posixemu_access
-extern int posixemu_access(const TCHAR *, int);
+extern int posixemu_access (const TCHAR *, int);
 #define open posixemu_open
-extern int posixemu_open(const TCHAR *, int, int);
+extern int posixemu_open (const TCHAR *, int, int);
 #define close posixemu_close
-extern void posixemu_close(int);
+extern void posixemu_close (int);
 #define read posixemu_read
-extern int posixemu_read(int, TCHAR *, int);
+extern int posixemu_read (int, TCHAR *, int);
 #define write posixemu_write
-extern int posixemu_write(int, const TCHAR *, int);
+extern int posixemu_write (int, const TCHAR *, int);
 #undef lseek
 #define lseek posixemu_seek
-extern int posixemu_seek(int, int, int);
+extern int posixemu_seek (int, int, int);
 #define stat(a,b) posixemu_stat ((a), (b))
-extern int posixemu_stat(const TCHAR *, STAT *);
+extern int posixemu_stat (const TCHAR *, STAT *);
 #define mkdir posixemu_mkdir
-extern int mkdir(const TCHAR *, int);
+extern int mkdir (const TCHAR *, int);
 #define rmdir posixemu_rmdir
-extern int posixemu_rmdir(const TCHAR *);
+extern int posixemu_rmdir (const TCHAR *);
 #define unlink posixemu_unlink
-extern int posixemu_unlink(const TCHAR *);
+extern int posixemu_unlink (const TCHAR *);
 #define truncate posixemu_truncate
-extern int posixemu_truncate(const TCHAR *, long int);
+extern int posixemu_truncate (const TCHAR *, long int);
 #define rename posixemu_rename
-extern int posixemu_rename(const TCHAR *, const TCHAR *);
+extern int posixemu_rename (const TCHAR *, const TCHAR *);
 #define chmod posixemu_chmod
-extern int posixemu_chmod(const TCHAR *, int);
+extern int posixemu_chmod (const TCHAR *, int);
 #define tmpnam posixemu_tmpnam
-extern void posixemu_tmpnam(TCHAR *);
+extern void posixemu_tmpnam (TCHAR *);
 #define utime posixemu_utime
-extern int posixemu_utime(const TCHAR *, struct utimbuf *);
+extern int posixemu_utime (const TCHAR *, struct utimbuf *);
 #define opendir posixemu_opendir
-extern DIR * posixemu_opendir(const TCHAR *);
+extern DIR * posixemu_opendir (const TCHAR *);
 #define readdir posixemu_readdir
-extern struct dirent* readdir(DIR *);
+extern struct dirent* readdir (DIR *);
 #define closedir posixemu_closedir
-extern void closedir(DIR *);
+extern void closedir (DIR *);
 
 /* This isn't the best place for this, but it fits reasonably well. The logic
  * is that you probably don't have POSIX errnos if you don't have the above
  * functions. */
-extern long dos_errno(void);
+extern long dos_errno (void);
 
 #endif
 
 #ifdef DONT_HAVE_STDIO
 
-extern FILE *stdioemu_fopen(const TCHAR *, const TCHAR *);
+extern FILE *stdioemu_fopen (const TCHAR *, const TCHAR *);
 #define fopen(a,b) stdioemu_fopen(a, b)
-extern int stdioemu_fseek(FILE *, int, int);
+extern int stdioemu_fseek (FILE *, int, int);
 #define fseek(a,b,c) stdioemu_fseek(a, b, c)
-extern int stdioemu_fread(TCHAR *, int, int, FILE *);
+extern int stdioemu_fread (TCHAR *, int, int, FILE *);
 #define fread(a,b,c,d) stdioemu_fread(a, b, c, d)
-extern int stdioemu_fwrite(const TCHAR *, int, int, FILE *);
+extern int stdioemu_fwrite (const TCHAR *, int, int, FILE *);
 #define fwrite(a,b,c,d) stdioemu_fwrite(a, b, c, d)
-extern int stdioemu_ftell(FILE *);
+extern int stdioemu_ftell (FILE *);
 #define ftell(a) stdioemu_ftell(a)
-extern int stdioemu_fclose(FILE *);
+extern int stdioemu_fclose (FILE *);
 #define fclose(a) stdioemu_fclose(a)
 
 #endif
@@ -359,9 +358,9 @@ extern int stdioemu_fclose(FILE *);
 #ifdef DONT_HAVE_MALLOC
 
 #define malloc(a) mallocemu_malloc(a)
-extern void *mallocemu_malloc(int size);
+extern void *mallocemu_malloc (int size);
 #define free(a) mallocemu_free(a)
-extern void mallocemu_free(void *ptr);
+extern void mallocemu_free (void *ptr);
 
 #endif
 
@@ -381,11 +380,11 @@ extern void mallocemu_free(void *ptr);
 #define write_log(FORMATO, RESTO...)
 #define write_log_standard(FORMATO, RESTO...)
 #else
-extern void write_log(const TCHAR *format, ...);
+extern void write_log (const TCHAR *format,...);
 extern FILE *debugfile;
 #endif
-extern void console_out(const TCHAR *, ...);
-extern void gui_message(const TCHAR *, ...);
+extern void console_out (const TCHAR *, ...);
+extern void gui_message (const TCHAR *,...);
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -441,22 +440,14 @@ extern void gui_message(const TCHAR *, ...);
 
 #ifdef ARMV6_ASSEMBLY
 
-STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v)
-{
-    __asm__(
-        "rev %0, %0"
-        : "=r" (v) : "0" (v));
-    return v;
-}
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {__asm__ (
+						"rev %0, %0"
+                                                : "=r" (v) : "0" (v) ); return v;}
 
-STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v)
-{
-    __asm__(
-        "revsh %0, %0\n\t"
-        "uxth %0, %0"
-        : "=r" (v) : "0" (v));
-    return v;
-}
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {__asm__ (
+  						"revsh %0, %0\n\t"
+              "uxth %0, %0"
+                                                : "=r" (v) : "0" (v) ); return v;}
 
 #endif
 
@@ -472,9 +463,9 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v)
 #define xrealloc(T, TP, N) realloc(TP, sizeof (T) * (N))
 
 #if 0
-extern void *xmalloc(size_t);
-extern void *xcalloc(size_t, size_t);
-extern void xfree(const void*);
+extern void *xmalloc (size_t);
+extern void *xcalloc (size_t, size_t);
+extern void xfree (const void*);
 #endif
 
 #else

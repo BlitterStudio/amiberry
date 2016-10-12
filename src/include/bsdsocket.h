@@ -1,17 +1,17 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * bsdsocket.library emulation
- *
- * Copyright 1997,98 Mathias Ortmann
- *
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * bsdsocket.library emulation
+  *
+  * Copyright 1997,98 Mathias Ortmann
+  *
+  */
 
 #define BSD_TRACING_ENABLED 0
 
 extern int log_bsd;
 
-#define ISBSDTRACE (log_bsd || BSD_TRACING_ENABLED)
+#define ISBSDTRACE (log_bsd || BSD_TRACING_ENABLED) 
 #define BSDTRACE(x) do { if (ISBSDTRACE) { write_log x; } } while(0)
 
 extern int init_socket_layer (void);
@@ -33,13 +33,12 @@ extern void deinit_socket_layer (void);
 #endif
 
 /* allocated and maintained on a per-task basis */
-struct socketbase
-{
+struct socketbase {
     struct socketbase *next;
     struct socketbase *nextsig;	/* queue for tasks to signal */
 
     uaecptr sysbase;
-    int dosignal;		/* signal flag */
+	int dosignal;		/* signal flag */
     uae_u32 ownertask;		/* task that opened the library */
     int signal;			/* signal allocated for that task */
     int sb_errno, sb_herrno;	/* errno and herrno variables */
@@ -60,11 +59,11 @@ struct socketbase
     uae_u32 eintrsigs;		/* EINTR sigmask */
     int eintr;			/* interrupted by eintrsigs? */
     int eventindex;		/* current socket looked at by GetSocketEvents() to prevent starvation */
-    uae_u32 logstat;
-    uae_u32 logptr;
-    uae_u32 logmask;
-    uae_u32 logfacility;
-    uaecptr fdcallback;
+	uae_u32 logstat;
+	uae_u32 logptr;
+	uae_u32 logmask;
+	uae_u32 logfacility;
+	uaecptr fdcallback;
 
     unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
     /* host-specific fields below */
@@ -97,8 +96,7 @@ struct socketbase
 
 #define LIBRARY_SIZEOF 36
 
-struct UAEBSDBase
-{
+struct UAEBSDBase {
     uae_u8 dummy[LIBRARY_SIZEOF];
     struct socketbase *sb;
     uae_u8 scratchbuf[SCRATCHBUFSIZE];
@@ -151,7 +149,7 @@ extern void locksigqueue (void);
 extern void unlocksigqueue (void);
 
 extern BOOL checksd(TrapContext*, SB, int sd);
-extern void setsd(TrapContext*, SB, int, SOCKET_TYPE);
+extern void setsd(TrapContext*, SB, int , SOCKET_TYPE);
 extern int getsd (TrapContext*, SB, SOCKET_TYPE);
 extern SOCKET_TYPE getsock (SB, int);
 extern void releasesock (TrapContext*, SB, int);
