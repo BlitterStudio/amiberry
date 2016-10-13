@@ -15,3 +15,5 @@ kickstarts/*.rom
 *.npd
 *.npa01
 *.dep
+*.log
+src/vs2015/amiberry/Debug/amiberry-rpi3
