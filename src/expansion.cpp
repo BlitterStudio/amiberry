@@ -126,6 +126,7 @@ uaecptr ROM_hardfile_resname, ROM_hardfile_resid;
 uaecptr ROM_hardfile_init;
 bool uae_boot_rom;
 int uae_boot_rom_size; /* size = code size only */
+static bool chipdone;
 
 /* ********************************************************** */
 
@@ -293,6 +294,10 @@ static uae_u32 REGPARAM2 expamem_bget (uaecptr addr)
 #ifdef JIT
   special_mem |= S_READ;
 #endif
+	if (!chipdone) {
+		chipdone = true;
+		addextrachip (get_long (4));
+	}
   addr &= 0xFFFF;
   b = expamem[addr];
   return b;
