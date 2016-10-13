@@ -157,7 +157,7 @@ OBJS =	\
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/md-pandora/support.o \
-	src/od-pandora/neon_helper.o
+	src/od-pandora/neon_helper.o \
 	src/od-pandora/bsdsocket_host.o \
 	src/od-pandora/cda_play.o \
 	src/od-pandora/charset.o \
