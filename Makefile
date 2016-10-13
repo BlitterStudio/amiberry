@@ -103,6 +103,7 @@ OBJS =	\
 	src/fsdb.o \
 	src/fsdb_unix.o \
 	src/fsusage.o \
+	src/gfxboard.o \
 	src/gfxutil.o \
 	src/hardfile.o \
 	src/inputdevice.o \
@@ -165,6 +166,7 @@ OBJS =	\
 	src/od-pandora/hardfile_pandora.o \
 	src/od-pandora/keyboard.o \
 	src/od-pandora/mp3decoder.o \
+	src/osdep/picasso96.o \
 	src/od-pandora/writelog.o \
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \
@@ -172,7 +174,6 @@ OBJS =	\
 	src/od-pandora/pandora_gui.o \
 	src/od-pandora/pandora_rp9.o \
 	src/od-pandora/pandora_mem.o \
-	src/od-pandora/picasso96.o \
 	src/od-pandora/sigsegv_handler.o \
 	src/od-pandora/menu/menu_config.o \
 	src/sd-pandora/sound.o \
