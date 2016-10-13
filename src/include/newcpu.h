@@ -34,7 +34,7 @@
 #define _NEWCPU_H
 
 #include "readcpu.h"
-#include "md-pandora/m68k.h"
+#include "machdep/m68k.h"
 
 extern const int areg_byteinc[];
 extern const int imm8_table[];

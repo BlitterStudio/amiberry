@@ -1,0 +1,337 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B8D99244-73EC-4C4A-AD15-8C2816FAB294}</ProjectGuid>
+    <ProjectName>amiberry-rpi3</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <NMakeIncludeSearchPath>../..;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;c:\sysgcc\raspberry\arm-linux-gnueabihf\include\c++\4.9;c:\sysgcc\raspberry\arm-linux-gnueabihf\include\c++\4.9\backward;c:\sysgcc\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;c:\sysgcc\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include-fixed;c:\sysgcc\raspberry\arm-linux-gnueabihf\include;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include;../../archivers/7z;../../archivers/7z/Archive/7z;../../archivers/dms;../../archivers/lha;../../archivers/wrp;../../archivers/zip;../../include;../../jit;../../machdep;../../osdep;../../osdep/gui;../../sounddep;../../threaddep;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeForcedIncludes>$(ProjectDir)\gcc_Debug.h;$(VISUALGDB_DIR)\gcc_compat.h;$(NMakeForcedIncludes)</NMakeForcedIncludes>
+    <NMakeBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /build "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /clean "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /rebuild "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)amiberry-Debug.vgdbsettings</NMakeOutput>
+    <IncludePath />
+    <ReferencePath />
+    <LibraryPath />
+    <NMakePreprocessorDefinitions>__VisualGDB_CFG_Debug;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <NMakeIncludeSearchPath>../..;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;c:\sysgcc\raspberry\arm-linux-gnueabihf\include\c++\4.9;c:\sysgcc\raspberry\arm-linux-gnueabihf\include\c++\4.9\backward;c:\sysgcc\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;c:\sysgcc\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include-fixed;c:\sysgcc\raspberry\arm-linux-gnueabihf\include;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;c:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\usr\include;../../archivers/7z;../../archivers/7z/Archive/7z;../../archivers/dms;../../archivers/lha;../../archivers/wrp;../../archivers/zip;../../include;../../jit;../../machdep;../../osdep;../../osdep/gui;../../sounddep;../../threaddep;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeForcedIncludes>$(ProjectDir)\gcc_Release.h;$(VISUALGDB_DIR)\gcc_compat.h;$(NMakeForcedIncludes)</NMakeForcedIncludes>
+    <NMakeBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /build "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /clean "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /rebuild "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)amiberry-Release.vgdbsettings</NMakeOutput>
+    <IncludePath />
+    <ReferencePath />
+    <LibraryPath />
+    <NMakePreprocessorDefinitions>__VisualGDB_CFG_Release;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="..\..\filesys.asm" />
+    <None Include="..\..\inputevents.def" />
+    <None Include="..\..\osdep\neon_helper.s" />
+    <None Include="..\..\table68k" />
+    <None Include="amiberry-Debug.vgdbsettings" />
+    <None Include="amiberry-Release.vgdbsettings" />
+    <None Include="debug.mak" />
+    <None Include="Makefile" />
+    <None Include="release.mak" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\akiko.cpp" />
+    <ClCompile Include="..\..\archivers\7z\7zBuf.cpp" />
+    <ClCompile Include="..\..\archivers\7z\7zCrc.cpp" />
+    <ClCompile Include="..\..\archivers\7z\7zStream.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Archive\7z\7zAlloc.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Archive\7z\7zDecode.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Archive\7z\7zExtract.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Archive\7z\7zHeader.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Archive\7z\7zIn.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Archive\7z\7zItem.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Bcj2.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Bra.cpp" />
+    <ClCompile Include="..\..\archivers\7z\Bra86.cpp" />
+    <ClCompile Include="..\..\archivers\7z\LzmaDec.cpp" />
+    <ClCompile Include="..\..\archivers\dms\crc_csum.cpp" />
+    <ClCompile Include="..\..\archivers\dms\getbits.cpp" />
+    <ClCompile Include="..\..\archivers\dms\maketbl.cpp" />
+    <ClCompile Include="..\..\archivers\dms\pfile.cpp" />
+    <ClCompile Include="..\..\archivers\dms\tables.cpp" />
+    <ClCompile Include="..\..\archivers\dms\u_deep.cpp" />
+    <ClCompile Include="..\..\archivers\dms\u_heavy.cpp" />
+    <ClCompile Include="..\..\archivers\dms\u_init.cpp" />
+    <ClCompile Include="..\..\archivers\dms\u_medium.cpp" />
+    <ClCompile Include="..\..\archivers\dms\u_quick.cpp" />
+    <ClCompile Include="..\..\archivers\dms\u_rle.cpp" />
+    <ClCompile Include="..\..\archivers\lha\crcio.cpp" />
+    <ClCompile Include="..\..\archivers\lha\dhuf.cpp" />
+    <ClCompile Include="..\..\archivers\lha\header.cpp" />
+    <ClCompile Include="..\..\archivers\lha\huf.cpp" />
+    <ClCompile Include="..\..\archivers\lha\larc.cpp" />
+    <ClCompile Include="..\..\archivers\lha\lhamaketbl.cpp" />
+    <ClCompile Include="..\..\archivers\lha\lharc.cpp" />
+    <ClCompile Include="..\..\archivers\lha\shuf.cpp" />
+    <ClCompile Include="..\..\archivers\lha\slide.cpp" />
+    <ClCompile Include="..\..\archivers\lha\uae_lha.cpp" />
+    <ClCompile Include="..\..\archivers\lha\util.cpp" />
+    <ClCompile Include="..\..\archivers\lzx\unlzx.cpp" />
+    <ClCompile Include="..\..\archivers\wrp\warp.cpp" />
+    <ClCompile Include="..\..\archivers\zip\unzip.cpp" />
+    <ClCompile Include="..\..\aros.rom.cpp" />
+    <ClCompile Include="..\..\audio.cpp" />
+    <ClCompile Include="..\..\autoconf.cpp" />
+    <ClCompile Include="..\..\blitfunc.cpp" />
+    <ClCompile Include="..\..\blittable.cpp" />
+    <ClCompile Include="..\..\blitter.cpp" />
+    <ClCompile Include="..\..\blkdev.cpp" />
+    <ClCompile Include="..\..\blkdev_cdimage.cpp" />
+    <ClCompile Include="..\..\bsdsocket.cpp" />
+    <ClCompile Include="..\..\calc.cpp" />
+    <ClCompile Include="..\..\cdrom.cpp" />
+    <ClCompile Include="..\..\cfgfile.cpp" />
+    <ClCompile Include="..\..\cia.cpp" />
+    <ClCompile Include="..\..\cpudefs.cpp" />
+    <ClCompile Include="..\..\cpuemu_0.cpp" />
+    <ClCompile Include="..\..\cpuemu_11.cpp" />
+    <ClCompile Include="..\..\cpuemu_4.cpp" />
+    <ClCompile Include="..\..\cpustbl.cpp" />
+    <ClCompile Include="..\..\crc32.cpp" />
+    <ClCompile Include="..\..\custom.cpp" />
+    <ClCompile Include="..\..\disk.cpp" />
+    <ClCompile Include="..\..\diskutil.cpp" />
+    <ClCompile Include="..\..\drawing.cpp" />
+    <ClCompile Include="..\..\events.cpp" />
+    <ClCompile Include="..\..\expansion.cpp" />
+    <ClCompile Include="..\..\filesys.cpp" />
+    <ClCompile Include="..\..\fpp.cpp" />
+    <ClCompile Include="..\..\fsdb.cpp" />
+    <ClCompile Include="..\..\fsdb_unix.cpp" />
+    <ClCompile Include="..\..\fsusage.cpp" />
+    <ClCompile Include="..\..\gfxboard.cpp" />
+    <ClCompile Include="..\..\gfxutil.cpp" />
+    <ClCompile Include="..\..\hardfile.cpp" />
+    <ClCompile Include="..\..\inputdevice.cpp" />
+    <ClCompile Include="..\..\jit\compemu.cpp" />
+    <ClCompile Include="..\..\jit\compemu_fpp.cpp" />
+    <ClCompile Include="..\..\jit\compemu_support.cpp" />
+    <ClCompile Include="..\..\jit\compstbl.cpp" />
+    <ClCompile Include="..\..\keybuf.cpp" />
+    <ClCompile Include="..\..\machdep\support.cpp" />
+    <ClCompile Include="..\..\main.cpp" />
+    <ClCompile Include="..\..\memory.cpp" />
+    <ClCompile Include="..\..\native2amiga.cpp" />
+    <ClCompile Include="..\..\newcpu.cpp" />
+    <ClCompile Include="..\..\newcpu_common.cpp" />
+    <ClCompile Include="..\..\osdep\bsdsocket_host.cpp" />
+    <ClCompile Include="..\..\osdep\cda_play.cpp" />
+    <ClCompile Include="..\..\osdep\charset.cpp" />
+    <ClCompile Include="..\..\osdep\fsdb_host.cpp" />
+    <ClCompile Include="..\..\osdep\gui\CreateFilesysHardfile.cpp" />
+    <ClCompile Include="..\..\osdep\gui\EditFilesysHardfile.cpp" />
+    <ClCompile Include="..\..\osdep\gui\EditFilesysVirtual.cpp" />
+    <ClCompile Include="..\..\osdep\gui\InGameMessage.cpp" />
+    <ClCompile Include="..\..\osdep\gui\main_window.cpp" />
+    <ClCompile Include="..\..\osdep\gui\Navigation.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelChipset.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelConfig.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelCPU.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelDisplay.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelFloppy.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelHD.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelInput.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelMisc.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelPaths.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelRAM.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelROM.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelSavestate.cpp" />
+    <ClCompile Include="..\..\osdep\gui\PanelSound.cpp" />
+    <ClCompile Include="..\..\osdep\gui\sdltruetypefont.cpp" />
+    <ClCompile Include="..\..\osdep\gui\SelectFile.cpp" />
+    <ClCompile Include="..\..\osdep\gui\SelectFolder.cpp" />
+    <ClCompile Include="..\..\osdep\gui\SelectorEntry.cpp" />
+    <ClCompile Include="..\..\osdep\gui\ShowMessage.cpp" />
+    <ClCompile Include="..\..\osdep\gui\UaeCheckBox.cpp" />
+    <ClCompile Include="..\..\osdep\gui\UaeDropDown.cpp" />
+    <ClCompile Include="..\..\osdep\gui\UaeListBox.cpp" />
+    <ClCompile Include="..\..\osdep\gui\UaeRadioButton.cpp" />
+    <ClCompile Include="..\..\osdep\hardfile_pandora.cpp" />
+    <ClCompile Include="..\..\osdep\keyboard.cpp" />
+    <ClCompile Include="..\..\osdep\menu\menu_config.cpp" />
+    <ClCompile Include="..\..\osdep\mp3decoder.cpp" />
+    <ClCompile Include="..\..\osdep\pandora.cpp" />
+    <ClCompile Include="..\..\osdep\pandora_filesys.cpp" />
+    <ClCompile Include="..\..\osdep\pandora_gui.cpp" />
+    <ClCompile Include="..\..\osdep\pandora_input.cpp" />
+    <ClCompile Include="..\..\osdep\pandora_mem.cpp" />
+    <ClCompile Include="..\..\osdep\pandora_rp9.cpp" />
+    <ClCompile Include="..\..\osdep\picasso96.cpp" />
+    <ClCompile Include="..\..\osdep\rasp_gfx.cpp" />
+    <ClCompile Include="..\..\osdep\sigsegv_handler.cpp" />
+    <ClCompile Include="..\..\osdep\writelog.cpp" />
+    <ClCompile Include="..\..\readcpu.cpp" />
+    <ClCompile Include="..\..\rommgr.cpp" />
+    <ClCompile Include="..\..\savestate.cpp" />
+    <ClCompile Include="..\..\sounddep\sound.cpp" />
+    <ClCompile Include="..\..\statusline.cpp" />
+    <ClCompile Include="..\..\traps.cpp" />
+    <ClCompile Include="..\..\uaelib.cpp" />
+    <ClCompile Include="..\..\uaeresource.cpp" />
+    <ClCompile Include="..\..\zfile.cpp" />
+    <ClCompile Include="..\..\zfile_archive.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\archivers\7z\7zBuf.h" />
+    <ClInclude Include="..\..\archivers\7z\7zCrc.h" />
+    <ClInclude Include="..\..\archivers\7z\7zVersion.h" />
+    <ClInclude Include="..\..\archivers\7z\Archive\7z\7zAlloc.h" />
+    <ClInclude Include="..\..\archivers\7z\Archive\7z\7zDecode.h" />
+    <ClInclude Include="..\..\archivers\7z\Archive\7z\7zExtract.h" />
+    <ClInclude Include="..\..\archivers\7z\Archive\7z\7zHeader.h" />
+    <ClInclude Include="..\..\archivers\7z\Archive\7z\7zIn.h" />
+    <ClInclude Include="..\..\archivers\7z\Archive\7z\7zItem.h" />
+    <ClInclude Include="..\..\archivers\7z\Bcj2.h" />
+    <ClInclude Include="..\..\archivers\7z\Bra.h" />
+    <ClInclude Include="..\..\archivers\7z\CpuArch.h" />
+    <ClInclude Include="..\..\archivers\7z\LzmaDec.h" />
+    <ClInclude Include="..\..\archivers\7z\Types.h" />
+    <ClInclude Include="..\..\archivers\dms\cdata.h" />
+    <ClInclude Include="..\..\archivers\dms\crc_csum.h" />
+    <ClInclude Include="..\..\archivers\dms\getbits.h" />
+    <ClInclude Include="..\..\archivers\dms\maketbl.h" />
+    <ClInclude Include="..\..\archivers\dms\pfile.h" />
+    <ClInclude Include="..\..\archivers\dms\tables.h" />
+    <ClInclude Include="..\..\archivers\dms\u_deep.h" />
+    <ClInclude Include="..\..\archivers\dms\u_heavy.h" />
+    <ClInclude Include="..\..\archivers\dms\u_init.h" />
+    <ClInclude Include="..\..\archivers\dms\u_medium.h" />
+    <ClInclude Include="..\..\archivers\dms\u_quick.h" />
+    <ClInclude Include="..\..\archivers\dms\u_rle.h" />
+    <ClInclude Include="..\..\archivers\lha\lha.h" />
+    <ClInclude Include="..\..\archivers\lha\lha_macro.h" />
+    <ClInclude Include="..\..\archivers\wrp\warp.h" />
+    <ClInclude Include="..\..\archivers\zip\unzip.h" />
+    <ClInclude Include="..\..\include\akiko.h" />
+    <ClInclude Include="..\..\include\audio.h" />
+    <ClInclude Include="..\..\include\autoconf.h" />
+    <ClInclude Include="..\..\include\blit.h" />
+    <ClInclude Include="..\..\include\blitfunc.h" />
+    <ClInclude Include="..\..\include\blitter.h" />
+    <ClInclude Include="..\..\include\blkdev.h" />
+    <ClInclude Include="..\..\include\bsdsocket.h" />
+    <ClInclude Include="..\..\include\calc.h" />
+    <ClInclude Include="..\..\include\cia.h" />
+    <ClInclude Include="..\..\include\clipboard.h" />
+    <ClInclude Include="..\..\include\commpipe.h" />
+    <ClInclude Include="..\..\include\cputbl.h" />
+    <ClInclude Include="..\..\include\cpu_prefetch.h" />
+    <ClInclude Include="..\..\include\crc32.h" />
+    <ClInclude Include="..\..\include\custom.h" />
+    <ClInclude Include="..\..\include\debug.h" />
+    <ClInclude Include="..\..\include\disk.h" />
+    <ClInclude Include="..\..\include\diskutil.h" />
+    <ClInclude Include="..\..\include\drawing.h" />
+    <ClInclude Include="..\..\include\ersatz.h" />
+    <ClInclude Include="..\..\include\events.h" />
+    <ClInclude Include="..\..\include\execio.h" />
+    <ClInclude Include="..\..\include\execlib.h" />
+    <ClInclude Include="..\..\include\filesys.h" />
+    <ClInclude Include="..\..\include\flags_arm.h" />
+    <ClInclude Include="..\..\include\fpp-ieee-be.h" />
+    <ClInclude Include="..\..\include\fpp-unknown.h" />
+    <ClInclude Include="..\..\include\fsdb.h" />
+    <ClInclude Include="..\..\include\fsusage.h" />
+    <ClInclude Include="..\..\include\genblitter.h" />
+    <ClInclude Include="..\..\include\gensound.h" />
+    <ClInclude Include="..\..\include\gfxboard.h" />
+    <ClInclude Include="..\..\include\gui.h" />
+    <ClInclude Include="..\..\include\inputdevice.h" />
+    <ClInclude Include="..\..\include\keyboard.h" />
+    <ClInclude Include="..\..\include\keybuf.h" />
+    <ClInclude Include="..\..\include\mackbd.h" />
+    <ClInclude Include="..\..\include\memory.h" />
+    <ClInclude Include="..\..\include\native2amiga.h" />
+    <ClInclude Include="..\..\include\native2amiga_api.h" />
+    <ClInclude Include="..\..\include\newcpu.h" />
+    <ClInclude Include="..\..\include\options.h" />
+    <ClInclude Include="..\..\include\osemu.h" />
+    <ClInclude Include="..\..\include\picasso96.h" />
+    <ClInclude Include="..\..\include\readcpu.h" />
+    <ClInclude Include="..\..\include\rommgr.h" />
+    <ClInclude Include="..\..\include\rtgmodes.h" />
+    <ClInclude Include="..\..\include\savestate.h" />
+    <ClInclude Include="..\..\include\scsi.h" />
+    <ClInclude Include="..\..\include\scsidev.h" />
+    <ClInclude Include="..\..\include\statusline.h" />
+    <ClInclude Include="..\..\include\sysdeps.h" />
+    <ClInclude Include="..\..\include\traps.h" />
+    <ClInclude Include="..\..\include\uae.h" />
+    <ClInclude Include="..\..\include\uaeresource.h" />
+    <ClInclude Include="..\..\include\xwin.h" />
+    <ClInclude Include="..\..\include\zarchive.h" />
+    <ClInclude Include="..\..\include\zfile.h" />
+    <ClInclude Include="..\..\jit\codegen_arm.h" />
+    <ClInclude Include="..\..\jit\compemu.h" />
+    <ClInclude Include="..\..\jit\compemu_midfunc_arm.h" />
+    <ClInclude Include="..\..\jit\compemu_midfunc_arm2.h" />
+    <ClInclude Include="..\..\jit\comptbl.h" />
+    <ClInclude Include="..\..\machdep\m68k.h" />
+    <ClInclude Include="..\..\machdep\maccess.h" />
+    <ClInclude Include="..\..\machdep\md-fpp.h" />
+    <ClInclude Include="..\..\machdep\rpt.h" />
+    <ClInclude Include="..\..\osdep\cda_play.h" />
+    <ClInclude Include="..\..\osdep\config.h" />
+    <ClInclude Include="..\..\osdep\gui\gui_handling.h" />
+    <ClInclude Include="..\..\osdep\gui\sdltruetypefont.hpp" />
+    <ClInclude Include="..\..\osdep\gui\SelectorEntry.hpp" />
+    <ClInclude Include="..\..\osdep\gui\UaeCheckBox.hpp" />
+    <ClInclude Include="..\..\osdep\gui\UaeDropDown.hpp" />
+    <ClInclude Include="..\..\osdep\gui\UaeListBox.hpp" />
+    <ClInclude Include="..\..\osdep\gui\UaeRadioButton.hpp" />
+    <ClInclude Include="..\..\osdep\mp3decoder.h" />
+    <ClInclude Include="..\..\osdep\pandora_rp9.h" />
+    <ClInclude Include="..\..\osdep\sysconfig.h" />
+    <ClInclude Include="..\..\osdep\target.h" />
+    <ClInclude Include="..\..\sounddep\sound.h" />
+    <ClInclude Include="..\..\threaddep\thread.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

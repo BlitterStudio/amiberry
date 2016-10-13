@@ -45,7 +45,7 @@ MORE_CFLAGS += -I/usr/include/libxml2
 MORE_CFLAGS += -DPANDORA -DARMV6_ASSEMBLY -DWITH_INGAME_WARNING
 MORE_CFLAGS += -DCPU_arm -DUSE_SDL
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/td-sdl -Isrc/include 
+MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/td-sdl -Isrc/include 
 MORE_CFLAGS += -Wno-unused -Wno-format -Wno-write-strings -Wno-multichar
 #MORE_CFLAGS += -fuse-ld=gold
 MORE_CFLAGS += -fdiagnostics-color=auto
@@ -157,55 +157,55 @@ OBJS =	\
 	src/archivers/lzx/unlzx.o \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
-	src/md-pandora/support.o \
-	src/od-pandora/neon_helper.o \
-	src/od-pandora/bsdsocket_host.o \
-	src/od-pandora/cda_play.o \
-	src/od-pandora/charset.o \
-	src/od-pandora/fsdb_host.o \
-	src/od-pandora/hardfile_pandora.o \
-	src/od-pandora/keyboard.o \
-	src/od-pandora/mp3decoder.o \
-	src/od-pandora/picasso96.o \
-	src/od-pandora/writelog.o \
-	src/od-pandora/pandora.o \
-	src/od-pandora/pandora_filesys.o \
-	src/od-pandora/pandora_input.o \
-	src/od-pandora/pandora_gui.o \
-	src/od-pandora/pandora_rp9.o \
-	src/od-pandora/pandora_mem.o \
-	src/od-pandora/sigsegv_handler.o \
-	src/od-pandora/menu/menu_config.o \
-	src/sd-pandora/sound.o \
-	src/od-pandora/gui/UaeRadioButton.o \
-	src/od-pandora/gui/UaeDropDown.o \
-	src/od-pandora/gui/UaeCheckBox.o \
-	src/od-pandora/gui/UaeListBox.o \
-	src/od-pandora/gui/InGameMessage.o \
-	src/od-pandora/gui/SelectorEntry.o \
-	src/od-pandora/gui/ShowMessage.o \
-	src/od-pandora/gui/SelectFolder.o \
-	src/od-pandora/gui/SelectFile.o \
-	src/od-pandora/gui/CreateFilesysHardfile.o \
-	src/od-pandora/gui/EditFilesysVirtual.o \
-	src/od-pandora/gui/EditFilesysHardfile.o \
-	src/od-pandora/gui/PanelPaths.o \
-	src/od-pandora/gui/PanelConfig.o \
-	src/od-pandora/gui/PanelCPU.o \
-	src/od-pandora/gui/PanelChipset.o \
-	src/od-pandora/gui/PanelROM.o \
-	src/od-pandora/gui/PanelRAM.o \
-	src/od-pandora/gui/PanelFloppy.o \
-	src/od-pandora/gui/PanelHD.o \
-	src/od-pandora/gui/PanelDisplay.o \
-	src/od-pandora/gui/PanelSound.o \
-	src/od-pandora/gui/PanelInput.o \
-	src/od-pandora/gui/PanelMisc.o \
-	src/od-pandora/gui/PanelSavestate.o \
-	src/od-pandora/gui/main_window.o \
-	src/od-pandora/gui/Navigation.o
+	src/machdep/support.o \
+	src/osdep/neon_helper.o \
+	src/osdep/bsdsocket_host.o \
+	src/osdep/cda_play.o \
+	src/osdep/charset.o \
+	src/osdep/fsdb_host.o \
+	src/osdep/hardfile_pandora.o \
+	src/osdep/keyboard.o \
+	src/osdep/mp3decoder.o \
+	src/osdep/picasso96.o \
+	src/osdep/writelog.o \
+	src/osdep/pandora.o \
+	src/osdep/pandora_filesys.o \
+	src/osdep/pandora_input.o \
+	src/osdep/pandora_gui.o \
+	src/osdep/pandora_rp9.o \
+	src/osdep/pandora_mem.o \
+	src/osdep/sigsegv_handler.o \
+	src/osdep/menu/menu_config.o \
+	src/sounddep/sound.o \
+	src/osdep/gui/UaeRadioButton.o \
+	src/osdep/gui/UaeDropDown.o \
+	src/osdep/gui/UaeCheckBox.o \
+	src/osdep/gui/UaeListBox.o \
+	src/osdep/gui/InGameMessage.o \
+	src/osdep/gui/SelectorEntry.o \
+	src/osdep/gui/ShowMessage.o \
+	src/osdep/gui/SelectFolder.o \
+	src/osdep/gui/SelectFile.o \
+	src/osdep/gui/CreateFilesysHardfile.o \
+	src/osdep/gui/EditFilesysVirtual.o \
+	src/osdep/gui/EditFilesysHardfile.o \
+	src/osdep/gui/PanelPaths.o \
+	src/osdep/gui/PanelConfig.o \
+	src/osdep/gui/PanelCPU.o \
+	src/osdep/gui/PanelChipset.o \
+	src/osdep/gui/PanelROM.o \
+	src/osdep/gui/PanelRAM.o \
+	src/osdep/gui/PanelFloppy.o \
+	src/osdep/gui/PanelHD.o \
+	src/osdep/gui/PanelDisplay.o \
+	src/osdep/gui/PanelSound.o \
+	src/osdep/gui/PanelInput.o \
+	src/osdep/gui/PanelMisc.o \
+	src/osdep/gui/PanelSavestate.o \
+	src/osdep/gui/main_window.o \
+	src/osdep/gui/Navigation.o
 ifdef PANDORA
-OBJS += src/od-pandora/gui/sdltruetypefont.o
+OBJS += src/osdep/gui/sdltruetypefont.o
 endif
 
 ifdef DEBUG
@@ -213,12 +213,12 @@ OBJS += src/trace.o
 endif
 
 ifeq ($(HAVE_DISPMANX), 1)
-OBJS += src/od-rasp/rasp_gfx.o
+OBJS += src/osdep/rasp_gfx.o
 MORE_CFLAGS += -DHAVE_DISPMANX
 endif
 
 ifeq ($(HAVE_SDL_DISPLAY), 1)
-OBJS += src/od-pandora/pandora_gfx.o
+OBJS += src/osdep/pandora_gfx.o
 endif
 
 OBJS += src/newcpu.o
@@ -234,8 +234,8 @@ OBJS += src/jit/compstbl.o
 OBJS += src/jit/compemu_fpp.o
 OBJS += src/jit/compemu_support.o
 
-src/od-pandora/neon_helper.o: src/od-pandora/neon_helper.s
-	$(CXX) $(CPU_FLAGS) -falign-functions=32 -Wall -o src/od-pandora/neon_helper.o -c src/od-pandora/neon_helper.s
+src/osdep/neon_helper.o: src/osdep/neon_helper.s
+	$(CXX) $(CPU_FLAGS) -falign-functions=32 -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 
 src/trace.o: src/trace.c
 	$(CC) $(MORE_CFLAGS) -std=c11 -c src/trace.c -o src/trace.o
@@ -282,13 +282,13 @@ ASMS = \
 	src/uaeresource.s \
 	src/zfile.s \
 	src/zfile_archive.s \
-	src/md-pandora/support.s \
-	src/od-pandora/picasso96.s \
-	src/od-pandora/pandora.s \
-	src/od-pandora/pandora_gfx.s \
-	src/od-pandora/pandora_mem.s \
-	src/od-pandora/sigsegv_handler.s \
-	src/sd-pandora/sound.s \
+	src/machdep/support.s \
+	src/osdep/picasso96.s \
+	src/osdep/pandora.s \
+	src/osdep/pandora_gfx.s \
+	src/osdep/pandora_mem.s \
+	src/osdep/sigsegv_handler.s \
+	src/sounddep/sound.s \
 	src/newcpu.s \
 	src/newcpu_common.s \
 	src/readcpu.s \

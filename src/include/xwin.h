@@ -7,7 +7,7 @@
   */
 
 #pragma once
-#include "md-pandora/rpt.h"
+#include "machdep/rpt.h"
 
 typedef uae_u32 xcolnr;
 

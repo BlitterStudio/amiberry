@@ -2,3 +2,16 @@
 conf/*.uae
 conf/*.conf
 kickstarts/*.rom
+*.lck
+*.000
+*.001
+*.suo
+*.opendb
+*.db
+*.npa00
+*.ast
+*.psf
+*.rdb
+*.npd
+*.npa01
+*.dep

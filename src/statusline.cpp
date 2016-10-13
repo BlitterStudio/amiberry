@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #include "options.h"
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 #include "uae.h"
 #include "include/memory.h"
 #include "newcpu.h"

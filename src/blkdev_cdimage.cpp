@@ -21,7 +21,7 @@
 #include "zfile.h"
 #include "gui.h"
 #include "fsdb.h"
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 #include "scsidev.h"
 #include "mp3decoder.h"
 #include "cda_play.h"

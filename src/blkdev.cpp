@@ -16,7 +16,7 @@
 #include "scsidev.h"
 #include "savestate.h"
 #include "crc32.h"
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 #include "execio.h"
 #include "zfile.h"
 #include "scsi.h"

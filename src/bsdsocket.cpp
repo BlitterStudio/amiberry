@@ -20,7 +20,7 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 #include "bsdsocket.h"
 #include "native2amiga.h"
 
