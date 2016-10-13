@@ -166,7 +166,7 @@ OBJS =	\
 	src/od-pandora/hardfile_pandora.o \
 	src/od-pandora/keyboard.o \
 	src/od-pandora/mp3decoder.o \
-	src/osdep/picasso96.o \
+	src/od-pandora/picasso96.o \
 	src/od-pandora/writelog.o \
 	src/od-pandora/pandora.o \
 	src/od-pandora/pandora_filesys.o \
