@@ -1,22 +1,19 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "amiberry", "amiberry.vcxproj", "{B8D99244-73EC-4C4A-AD15-8C2816FAB294}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "amiberry-rpi3", "amiberry.vcxproj", "{B8D99244-73EC-4C4A-AD15-8C2816FAB294}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x86 = Debug|x86
-		Release|x86 = Release|x86
+		Debug|ARM = Debug|ARM
+		Release|ARM = Release|ARM
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Debug|x64.ActiveCfg = Debug|Win32
-		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Debug|x86.ActiveCfg = Debug|Win32
-		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Debug|x86.Build.0 = Debug|Win32
-		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Release|x64.ActiveCfg = Release|Win32
-		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Release|x86.ActiveCfg = Release|Win32
-		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Release|x86.Build.0 = Release|Win32
+		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Debug|ARM.ActiveCfg = Debug|Win32
+		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Debug|ARM.Build.0 = Debug|Win32
+		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Release|ARM.ActiveCfg = Release|Win32
+		{B8D99244-73EC-4C4A-AD15-8C2816FAB294}.Release|ARM.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
