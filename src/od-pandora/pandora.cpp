@@ -440,7 +440,7 @@ int target_cfgfile_load (struct uae_prefs *p, const char *filename, int type, in
   discard_prefs(p, type);
   default_prefs(p, 0);
   
-	char *ptr = strstr(filename, ".rp9");
+  const char *ptr = strstr(filename, ".rp9");
   if(ptr > 0)
   {
     // Load rp9 config
