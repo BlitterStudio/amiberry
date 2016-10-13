@@ -175,7 +175,7 @@ OBJS =	\
 	src/od-pandora/picasso96.o \
 	src/od-pandora/sigsegv_handler.o \
 	src/od-pandora/menu/menu_config.o \
-	src/sd-sdl/sound_sdl_new.o \
+	src/sd-pandora/sound.o \
 	src/od-pandora/gui/UaeRadioButton.o \
 	src/od-pandora/gui/UaeDropDown.o \
 	src/od-pandora/gui/UaeCheckBox.o \
@@ -287,7 +287,7 @@ ASMS = \
 	src/od-pandora/pandora_gfx.s \
 	src/od-pandora/pandora_mem.s \
 	src/od-pandora/sigsegv_handler.s \
-	src/sd-sdl/sound_sdl_new.s \
+	src/sd-pandora/sound.s \
 	src/newcpu.s \
 	src/newcpu_common.s \
 	src/readcpu.s \
