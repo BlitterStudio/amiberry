@@ -4,33 +4,19 @@ endif
 
 ifeq ($(PLATFORM),rpi3)
 	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
+	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 -DUSE_ARMNEON
 	LDFLAGS += -lbcm_host
-	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
 else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
-	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
+	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 -DUSE_ARMNEON
 	LDFLAGS += -lbcm_host
-	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
 	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 	LDFLAGS += -lbcm_host
 	HAVE_DISPMANX = 1
-else ifeq ($(PLATFORM),generic-sdl)
-	# On Raspberry Pi uncomment below line or remove ARMV6T2 define.
-	CPU_FLAGS= -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
-	HAVE_SDL_DISPLAY = 1
-else ifeq ($(PLATFORM),gles)
-	# For Raspberry Pi uncomment the two below lines
-	CPU_FLAGS= -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2
-	LDFLAGS += -lbcm_host
-	HAVE_GLES_DISPLAY = 1
-	HAVE_NEON = 1
 endif
 
 NAME   = uae4arm
@@ -49,25 +35,19 @@ PANDORA=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
 
-DEFAULT_CFLAGS = $(CFLAGS) -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
+DEFAULT_CFLAGS = $(CFLAGS) `sdl-config --cflags`
 
 MY_LDFLAGS = $(LDFLAGS)
 MY_LDFLAGS += -lSDL -lpthread -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
 MY_LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
 
 MORE_CFLAGS += -I/usr/include/libxml2
-MORE_CFLAGS += -DGP2X -DPANDORA -DARMV6_ASSEMBLY -DWITH_INGAME_WARNING
+MORE_CFLAGS += -DPANDORA -DARMV6_ASSEMBLY -DWITH_INGAME_WARNING
 MORE_CFLAGS += -DCPU_arm -DUSE_SDL
-MORE_CFLAGS += -DROM_PATH_PREFIX=\"./kickstarts/\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./savestates/\"
-
-ifeq ($(HAVE_NEON), 1)
-	MORE_CFLAGS += -DUSE_ARMNEON
-endif
-
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
 MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/td-sdl -Isrc/include 
 MORE_CFLAGS += -Wno-unused -Wno-format -Wno-write-strings -Wno-multichar
-#MORE_CFLAGS += -fuse-ld=gold
+MORE_CFLAGS += -fuse-ld=gold
 MORE_CFLAGS += -fdiagnostics-color=auto
 MORE_CFLAGS += -mstructure-size-boundary=32
 MORE_CFLAGS += -falign-functions=32
@@ -75,8 +55,9 @@ MORE_CFLAGS += -falign-functions=32
 TRACE_CFLAGS = 
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe -fsingle-precision-constant
-MORE_CFLAGS += -fexceptions -fpermissive
+MORE_CFLAGS += -Ofast -pipe
+MORE_CFLAGS += -fweb -frename-registers
+MORE_CFLAGS += -fipa-pta -fgcse-las -funroll-loops -ftracer -funswitch-loops
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 
@@ -87,10 +68,10 @@ endif
 endif
 
 ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs
+MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs -fvpt
 endif
 ifdef USE_PROFILE
-MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt -funroll-loops -fpeel-loops -ftracer -ftree-loop-distribute-patterns
+MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
 endif
 
 MY_CFLAGS  = $(CPU_FLAGS) $(MORE_CFLAGS) $(DEFAULT_CFLAGS)
@@ -176,6 +157,7 @@ OBJS =	\
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/md-pandora/support.o \
+	src/od-pandora/neon_helper.o
 	src/od-pandora/bsdsocket_host.o \
 	src/od-pandora/cda_play.o \
 	src/od-pandora/charset.o \
@@ -238,21 +220,8 @@ ifeq ($(HAVE_SDL_DISPLAY), 1)
 OBJS += src/od-pandora/pandora_gfx.o
 endif
 
-ifeq ($(HAVE_GLES_DISPLAY), 1)
-OBJS += src/od-gles/gl.o
-OBJS += src/od-gles/gl_platform.o
-OBJS += src/od-gles/gles_gfx.o
-MORE_CFLAGS += -DHAVE_GLES
-MY_LDFLAGS += -lEGL -lGLESv1_CM
-endif
-
-ifeq ($(HAVE_NEON), 1)
-OBJS += src/od-pandora/neon_helper.o
-else
-OBJS += src/od-pandora/arm_helper.o
-endif
-
 OBJS += src/newcpu.o
+OBJS += src/newcpu_common.o
 OBJS += src/readcpu.o
 OBJS += src/cpudefs.o
 OBJS += src/cpustbl.o
@@ -266,9 +235,6 @@ OBJS += src/jit/compemu_support.o
 
 src/od-pandora/neon_helper.o: src/od-pandora/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -falign-functions=32 -Wall -o src/od-pandora/neon_helper.o -c src/od-pandora/neon_helper.s
-
-src/od-pandora/arm_helper.o: src/od-pandora/arm_helper.s
-	$(CXX) $(CPU_FLAGS) -faling-functions=32 -Wall -o src/od-pandora/arm_helper.o -c src/od-pandora/arm_helper.s
 
 src/trace.o: src/trace.c
 	$(CC) $(MORE_CFLAGS) -std=c11 -c src/trace.c -o src/trace.o
@@ -323,6 +289,7 @@ ASMS = \
 	src/od-pandora/sigsegv_handler.s \
 	src/sd-sdl/sound_sdl_new.s \
 	src/newcpu.s \
+	src/newcpu_common.s \
 	src/readcpu.s \
 	src/cpudefs.s \
 	src/cpustbl.s \
