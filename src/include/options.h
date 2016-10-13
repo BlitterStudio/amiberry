@@ -148,7 +148,7 @@ struct uae_prefs {
   TCHAR info[256];
   int config_version;
 
-	bool socket_emu;
+  bool socket_emu;
 
   bool start_gui;
 
@@ -160,7 +160,7 @@ struct uae_prefs {
   int sound_interpol;
   int sound_filter;
   int sound_filter_type;
-	int sound_volume_cd;
+  int sound_volume_cd;
 
   int cachesize;
   int optcount[10];
@@ -171,6 +171,7 @@ struct uae_prefs {
     int kbd_led_num;
     int kbd_led_scr;
     int kbd_led_cap;
+	int key_for_menu;
 #endif
 
   int gfx_framerate;
@@ -180,7 +181,7 @@ struct uae_prefs {
   int gfx_resolution;
  
   bool immediate_blits;
-	int waiting_blits;
+  int waiting_blits;
   unsigned int chipset_mask;
   bool ntscmode;
   int chipset_refreshrate;
@@ -190,17 +191,17 @@ struct uae_prefs {
   int floppy_speed;
   int floppy_write_length;
   bool tod_hack;
-	int filesys_limit;
-	int filesys_max_name;
+  int filesys_limit;
+  int filesys_max_name;
 
-	bool cs_cd32cd;
-	bool cs_cd32c2p;
-	bool cs_cd32nvram;
+  bool cs_cd32cd;
+  bool cs_cd32c2p;
+  bool cs_cd32nvram;
 
   TCHAR romfile[MAX_DPATH];
   TCHAR romextfile[MAX_DPATH];
-	TCHAR flashfile[MAX_DPATH];
-	struct cdslot cdslots[MAX_TOTAL_SCSI_DEVICES];
+  TCHAR flashfile[MAX_DPATH];
+  struct cdslot cdslots[MAX_TOTAL_SCSI_DEVICES];
 
   TCHAR path_floppy[256];
   TCHAR path_hardfile[256];
