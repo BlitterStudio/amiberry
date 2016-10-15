@@ -1,8 +1,7 @@
-#include <guisan.hpp>
-#include <SDL.h>
-#include <SDL_ttf.h>
-#include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"

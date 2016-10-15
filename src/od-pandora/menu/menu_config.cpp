@@ -12,9 +12,9 @@
 #include "custom.h"
 #include "uae.h"
 #include "disk.h"
-#include <SDL.h>
+#include "SDL.h"
 
-//extern int customControlMap[SDLK_LAST];
+extern int customControlMap[SDLK_LAST];
 
 static int kickstart;
 
@@ -486,16 +486,16 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f, "cutRight=%d\n", &dummy);
 		fscanf(f, "customControls=%d\n", &p->pandora_customControls);
 		fscanf(f, "custom_dpad=%d\n", &dummy);
-//		fscanf(f, "custom_up=%d\n", &customControlMap[SDLK_UP]);
-//		fscanf(f, "custom_down=%d\n", &customControlMap[SDLK_DOWN]);
-//		fscanf(f, "custom_left=%d\n", &customControlMap[SDLK_LEFT]);
-//		fscanf(f, "custom_right=%d\n", &customControlMap[SDLK_RIGHT]);
-//		fscanf(f, "custom_A=%d\n", &customControlMap[SDLK_HOME]);
-//		fscanf(f, "custom_B=%d\n", &customControlMap[SDLK_END]);
-//		fscanf(f, "custom_X=%d\n", &customControlMap[SDLK_PAGEDOWN]);
-//		fscanf(f, "custom_Y=%d\n", &customControlMap[SDLK_PAGEUP]);
-//		fscanf(f, "custom_L=%d\n", &customControlMap[SDLK_RSHIFT]);
-//		fscanf(f, "custom_R=%d\n", &customControlMap[SDLK_RCTRL]);
+		fscanf(f, "custom_up=%d\n", &customControlMap[SDLK_UP]);
+		fscanf(f, "custom_down=%d\n", &customControlMap[SDLK_DOWN]);
+		fscanf(f, "custom_left=%d\n", &customControlMap[SDLK_LEFT]);
+		fscanf(f, "custom_right=%d\n", &customControlMap[SDLK_RIGHT]);
+		fscanf(f, "custom_A=%d\n", &customControlMap[SDLK_HOME]);
+		fscanf(f, "custom_B=%d\n", &customControlMap[SDLK_END]);
+		fscanf(f, "custom_X=%d\n", &customControlMap[SDLK_PAGEDOWN]);
+		fscanf(f, "custom_Y=%d\n", &customControlMap[SDLK_PAGEUP]);
+		fscanf(f, "custom_L=%d\n", &customControlMap[SDLK_RSHIFT]);
+		fscanf(f, "custom_R=%d\n", &customControlMap[SDLK_RCTRL]);
 		fscanf(f, "cpu=%d\n", &cpu_level);
 		if (cpu_level > 0) // M68000
 		    // Was old format

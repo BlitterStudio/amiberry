@@ -1,13 +1,13 @@
 #include "UaeListBox.hpp"
-#include "guisan/widgets/listbox.hpp"
+#include "guichan/widgets/listbox.hpp"
 
-#include "guisan/basiccontainer.hpp"
-#include "guisan/font.hpp"
-#include "guisan/graphics.hpp"
-#include "guisan/key.hpp"
-#include "guisan/listmodel.hpp"
-#include "guisan/mouseinput.hpp"
-#include "guisan/selectionlistener.hpp"
+#include "guichan/basiccontainer.hpp"
+#include "guichan/font.hpp"
+#include "guichan/graphics.hpp"
+#include "guichan/key.hpp"
+#include "guichan/listmodel.hpp"
+#include "guichan/mouseinput.hpp"
+#include "guichan/selectionlistener.hpp"
 
 
 namespace gcn
@@ -43,7 +43,7 @@ void UaeListBox::draw(Graphics* graphics)
     // Check the current clip area so we don't draw unnecessary items
     // that are not visible.
     const ClipRectangle currentClipArea = graphics->getCurrentClipArea();
-    int rowHeight = getHeight();
+    int rowHeight = getRowHeight();
 
     // Calculate the number of rows to draw by checking the clip area.
     // The addition of two makes covers a partial visible row at the top

@@ -33,7 +33,6 @@ extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;
 extern gcn::Color gui_baseCol;
 extern gcn::SDLInput* gui_input;
-
 extern SDL_Surface* gui_screen;
 
 extern char currentDir[MAX_DPATH];

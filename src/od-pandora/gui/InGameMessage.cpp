@@ -1,7 +1,7 @@
-#include <guisan.hpp>
-#include <SDL_ttf.h>
-#include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -11,9 +11,9 @@
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
 
-//extern SDL_Surface *amigaSurface;
+
+extern SDL_Surface *prSDLScreen;
 extern void flush_screen();
 
 static int msg_done = 0;
@@ -33,7 +33,7 @@ void InGameMessage(const char *msg)
 	gcn::Gui* msg_gui;
 	gcn::SDLGraphics* msg_graphics;
 	gcn::SDLInput* msg_input;
-	gcn::SDLTrueTypeFont* msg_font;
+	gcn::contrib::SDLTrueTypeFont* msg_font;
 	gcn::Color msg_baseCol;
 
 	gcn::Container* msg_top;
@@ -45,7 +45,7 @@ void InGameMessage(const char *msg)
 	int msgHeight = 100;
 
 	msg_graphics = new gcn::SDLGraphics();
-	msg_graphics->setTarget(amigaSurface);
+	msg_graphics->setTarget(prSDLScreen);
 	msg_input = new gcn::SDLInput();
 	msg_gui = new gcn::Gui();
 	msg_gui->setGraphics(msg_graphics);
@@ -56,12 +56,12 @@ void InGameMessage(const char *msg)
 	msg_baseCol.b = 208;
 
 	msg_top = new gcn::Container();
-	msg_top->setDimension(gcn::Rectangle((amigaSurface->w - msgWidth) / 2, (amigaSurface->h - msgHeight) / 2, msgWidth, msgHeight));
+	msg_top->setDimension(gcn::Rectangle((prSDLScreen->w - msgWidth) / 2, (prSDLScreen->h - msgHeight) / 2, msgWidth, msgHeight));
 	msg_top->setBaseColor(msg_baseCol);
 	msg_gui->setTop(msg_top);
 
 	TTF_Init();
-	msg_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 10);
+	msg_font = new gcn::contrib::SDLTrueTypeFont("data/FreeSans.ttf", 10);
 	gcn::Widget::setGlobalFont(msg_font);
 
 	doneActionListener = new DoneActionListener();
@@ -104,32 +104,27 @@ void InGameMessage(const char *msg)
 			{
 				switch (event.key.keysym.sym)
 				{
+				case SDLK_PAGEDOWN:
+				case SDLK_HOME:
 				case SDLK_RETURN:
 					msg_done = 1;
 					break;
 				}
 			}
 
-			//-------------------------------------------------
-			// Send event to guichan-controls
-			//-------------------------------------------------
+			            //-------------------------------------------------
+			            // Send event to guichan-controls
+			            //-------------------------------------------------
 			msg_input->pushInput(event);
 		}
 
-		// Now we let the Gui object perform its logic.
+		        // Now we let the Gui object perform its logic.
 		msg_gui->logic();
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 		// Finally we update the screen.
 		if (!drawn)
-		{
-			// Update the texture from the surface
-			SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
-			// Copy the texture on the renderer
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
-			// Update the window surface (show the renderer)
-			SDL_RenderPresent(renderer);
-		}			
+			SDL_Flip(prSDLScreen);
 		drawn = true;
 	}
 

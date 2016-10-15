@@ -604,9 +604,9 @@ void moveVertical(int value)
 
 void gui_handle_events(void)
 {
-	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+	Uint8 *keystate = SDL_GetKeyState(NULL);
 
-	if (keystate[SDLK_LCTRL] && keystate[SDLK_LGUI] && (keystate[SDLK_RGUI] || keystate[SDLK_MENU]))
+	if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
 		uae_reset(0, 1);
 }
 

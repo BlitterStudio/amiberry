@@ -42,14 +42,14 @@
 #endif
 
 #ifdef USE_SDL
-#include <SDL.h>
-#include <iostream>
-//#include "gui_handling.h"
-#include "pandora_gfx.h"
-SDL_Window* sdlWindow;
-SDL_Renderer* renderer;
-SDL_Texture *texture;
+#include "SDL.h"
 #endif
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+  #include <linux/kd.h>
+  #include <sys/ioctl.h>
+  #include "keyboard.h"
+#endif
+
 long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -426,7 +426,7 @@ void  print_usage()
     printf("File names should be with absolute path.\n");
     printf("\nExample:\n");
     printf("uae4arm -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
-    printf("It will load A500.uae configuration with the save state named game.\n");
+    printf("It will load A400.uae configuration with the save state named game.\n");
     printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
     exit(1);
 }
@@ -597,6 +597,16 @@ void do_leave_program (void)
 
 void start_program (void)
 {
+  #ifdef CAPSLOCK_DEBIAN_WORKAROUND
+    char kbd_flags;
+    // set capslock state based upon current "real" state
+    ioctl(0, KDGKBLED, &kbd_flags);
+    if ((kbd_flags & 07) & LED_CAP)
+    {
+       // record capslock pressed
+       inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+    }
+  #endif
     do_start_program ();
 }
 
@@ -627,46 +637,17 @@ void virtualdevice_init (void)
 #endif
 }
 
-// In case of error, print the error code and close the application
-void check_error_sdl(bool check, const char* message) {
-	if (check) {
-		std::cout << message << " " << SDL_GetError() << std::endl;
-		SDL_Quit();
-		std::exit(-1);
-	}
-}
-
 static int real_main2 (int argc, TCHAR **argv)
 {
     printf("Amiberry v2.0 build 2016-10-01.1\n");
+#ifdef PANDORA_SPECIFIC
+    SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
+#else
+#ifdef USE_SDL
+    SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+#endif
+#endif
 
-	//Initialize SDL
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
-	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-	}
-
-	sdlWindow = SDL_CreateWindow("Amiberry v2",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		0,
-		0,
-		SDL_WINDOW_FULLSCREEN_DESKTOP);
-	check_error_sdl(sdlWindow == nullptr, "Unable to create window");
-		
-	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
-	
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
-	SDL_RenderSetLogicalSize(renderer, 800, 480);
-		
-	texture = SDL_CreateTexture(renderer,
-		SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING,
-		800,
-		480);
-	check_error_sdl(texture == nullptr, "Unable to create texture");
-	
     keyboard_settrans();
 
     if (restart_config[0])

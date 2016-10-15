@@ -1,7 +1,7 @@
-#include <guisan.hpp>
-#include <SDL_ttf.h>
-#include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -18,6 +18,7 @@
 #include "custom.h"
 #include "gui_handling.h"
 #include "sd-pandora/sound.h"
+
 
 static gcn::Window *grpSound;
 static gcn::UaeRadioButton* optSoundDisabled;

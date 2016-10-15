@@ -1,7 +1,7 @@
-#include <guisan.hpp>
-#include <SDL_ttf.h>
-#include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeListBox.hpp"
 
@@ -13,6 +13,7 @@
 #include "blkdev.h"
 #include "gui.h"
 #include "gui_handling.h"
+
 
 static char last_active_config[MAX_PATH] = { '\0' };
 static int ensureVisible = -1;
@@ -313,7 +314,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
     lstConfigs->addActionListener(configsListActionListener);
 
     scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
-    scrAreaConfigs->setBorderSize(1);
+    scrAreaConfigs->setFrameSize(1);
     scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
     scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
     scrAreaConfigs->setScrollbarWidth(20);

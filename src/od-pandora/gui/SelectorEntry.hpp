@@ -3,10 +3,10 @@
 
 #include <list>
 
-#include "guisan/basiccontainer.hpp"
-#include "guisan/graphics.hpp"
-#include "guisan/platform.hpp"
-#include "guisan/widgetlistener.hpp"
+#include "guichan/basiccontainer.hpp"
+#include "guichan/graphics.hpp"
+#include "guichan/platform.hpp"
+#include "guichan/widgetlistener.hpp"
 
 
 namespace gcn

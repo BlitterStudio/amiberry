@@ -1,7 +1,7 @@
-#include <guisan.hpp>
-#include <SDL_ttf.h>
-#include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -18,6 +18,7 @@
 #include "blkdev.h"
 #include "gui.h"
 #include "gui_handling.h"
+
 
 enum { COL_DEVICE, COL_VOLUME, COL_PATH, COL_READWRITE, COL_SIZE, COL_BOOTPRI, COL_COUNT };
 
@@ -328,7 +329,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
         listEntry[row] = new gcn::Container();
         listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, TEXTFIELD_HEIGHT + 4);
         listEntry[row]->setBaseColor(gui_baseCol);
-        listEntry[row]->setBorderSize(0);
+        listEntry[row]->setFrameSize(0);
 
         listCmdProps[row] = new gcn::Button("...");
         listCmdProps[row]->setBaseColor(gui_baseCol);

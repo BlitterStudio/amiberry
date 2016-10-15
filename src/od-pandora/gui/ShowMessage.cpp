@@ -1,10 +1,10 @@
 #include <algorithm>
-#include <guisan.hpp>
+#include <guichan.hpp>
 #include <iostream>
 #include <sstream>
-#include <SDL_ttf.h>
-#include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -12,7 +12,7 @@
 #include "config.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
+
 
 #define DIALOG_WIDTH 340
 #define DIALOG_HEIGHT 140
@@ -122,6 +122,13 @@ static void ShowMessageLoop(void)
                     continue;
                 }
                 break;
+
+                case SDLK_PAGEDOWN:
+                case SDLK_HOME:
+                    event.key.keysym.sym = SDLK_RETURN;
+                    gui_input->pushInput(event); // Fire key down
+                    event.type = SDL_KEYUP;  // and the key up
+                    break;
                 }
             }
 
@@ -135,12 +142,9 @@ static void ShowMessageLoop(void)
         uae_gui->logic();
         // Now we let the Gui object draw itself.
         uae_gui->draw();
-        // Update the texture from the surface
-	    SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
-	    // Copy the texture on the renderer
-	    SDL_RenderCopy(renderer, texture, NULL, NULL);
-	    // Update the window surface (show the renderer)
-	    SDL_RenderPresent(renderer);
+        // Finally we update the screen.
+        wait_for_vsync();
+        SDL_Flip(gui_screen);
     }
 }
 
