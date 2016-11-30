@@ -256,7 +256,6 @@ static void CreateFilesysHardfileLoop(void)
 
 bool CreateFilesysHardfile(void)
 {
-    struct uaedev_config_info *uci;
     std::string strroot;
     char tmp[32];
     char zero = 0;
@@ -299,12 +298,21 @@ bool CreateFilesysHardfile(void)
         fwrite(&zero, 1, 1, newFile);
         fclose(newFile);
 
-        uci = add_filesys_config(&changed_prefs, -1, (char *) txtDevice->getText().c_str(),
-                                 0, (char *) txtPath->getText().c_str(), 0,
-                                 0, 32, (size / 1024) + 1, 2, 512,
-                                 bp, 0, 0, 0, 0, 0, 0);
-        if (uci)
-            hardfile_do_disk_change (uci, 1);
+		struct uaedev_config_data *uci;
+  	struct uaedev_config_info ci;
+
+    uci_set_defaults(&ci, false);
+    strcpy(ci.devname, (char *) txtDevice->getText().c_str());
+    strcpy(ci.rootdir, (char *) txtPath->getText().c_str());
+    ci.type = UAEDEV_HDF;
+    ci.surfaces = (size / 1024) + 1;
+    ci.bootpri = bp;
+    
+    uci = add_filesys_config(&changed_prefs, -1, &ci);
+    if (uci) {
+  		struct hardfiledata *hfd = get_hardfile_data (uci->configoffset);
+      hardfile_media_change (hfd, &ci, true, false);
+    }
     }
 
     return dialogResult;

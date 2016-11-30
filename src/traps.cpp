@@ -15,8 +15,8 @@
 
 #include "options.h"
 #include "include/memory.h"
-#include "newcpu.h"
 #include "custom.h"
+#include "newcpu.h"
 #include "td-sdl/thread.h"
 #include "autoconf.h"
 #include "traps.h"

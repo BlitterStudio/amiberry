@@ -1,4 +1,7 @@
 
+#ifndef BLKDEV_H
+#define BLKDEV_H
+
 #define DEVICE_SCSI_BUFSIZE (65536 - 1024)
 
 #define SCSI_UNIT_DISABLED -1
@@ -31,24 +34,24 @@
 #define MAX_TOC_ENTRIES 103
 struct cd_toc
 {
-    uae_u8 adr, control;
-    uae_u8 tno;
-    uae_u8 point;
-    uae_u8 track;
-    int address; // LSN
-    int paddress; // LSN
-    uae_u8 zero;
-    uae_u8 crc[2];
+	uae_u8 adr, control;
+	uae_u8 tno;
+	uae_u8 point;
+	uae_u8 track;
+	int address; // LSN
+	int paddress; // LSN
+	uae_u8 zero;
+	uae_u8 crc[2];
 };
 struct cd_toc_head
 {
-    int first_track, first_track_offset;
-    int last_track, last_track_offset;
-    int firstaddress; // LSN
-    int lastaddress; // LSN
-    int tracks;
-    int points;
-    struct cd_toc toc[MAX_TOC_ENTRIES];
+	int first_track, first_track_offset;
+	int last_track, last_track_offset;
+	int firstaddress; // LSN
+	int lastaddress; // LSN
+	int tracks;
+	int points;
+	struct cd_toc toc[MAX_TOC_ENTRIES];
 };
 
 #define SUB_ENTRY_SIZE 12
@@ -62,9 +65,8 @@ struct cd_toc_head
 #define AUDIO_STATUS_PLAY_ERROR     0x14
 #define AUDIO_STATUS_NO_STATUS      0x15
 
-struct device_info
-{
-    bool open;
+struct device_info {
+	bool open;
     int type;
     int media_inserted;
     int removable;
@@ -76,12 +78,12 @@ struct device_info
     int bus, target, lun;
     int unitnum;
     TCHAR label[MAX_DPATH];
-    TCHAR mediapath[MAX_DPATH];
-    TCHAR vendorid[10];
-    TCHAR productid[18];
-    TCHAR revision[6];
-    TCHAR *backend;
-    struct cd_toc_head toc;
+	TCHAR mediapath[MAX_DPATH];
+	TCHAR vendorid[10];
+	TCHAR productid[18];
+	TCHAR revision[6];
+	TCHAR *backend;
+	struct cd_toc_head toc;
 };
 
 struct amigascsi
@@ -125,32 +127,31 @@ typedef int (*isatapi_func)(int);
 typedef int (*ismedia_func)(int, int);
 typedef int (*scsiemu_func)(int, uae_u8*);
 
-struct device_functions
-{
-    const TCHAR *name;
-    open_bus_func openbus;
-    close_bus_func closebus;
-    open_device_func opendev;
-    close_device_func closedev;
-    info_device_func info;
-    execscsicmd_out_func exec_out;
-    execscsicmd_in_func exec_in;
-    execscsicmd_direct_func exec_direct;
+struct device_functions {
+	const TCHAR *name;
+	open_bus_func openbus;
+	close_bus_func closebus;
+	open_device_func opendev;
+	close_device_func closedev;
+	info_device_func info;
+	execscsicmd_out_func exec_out;
+	execscsicmd_in_func exec_in;
+	execscsicmd_direct_func exec_direct;
 
-    pause_func pause;
-    stop_func stop;
-    play_func play;
-    volume_func volume;
-    qcode_func qcode;
-    toc_func toc;
-    read_func read;
-    rawread_func rawread;
-    write_func write;
+	pause_func pause;
+	stop_func stop;
+	play_func play;
+	volume_func volume;
+	qcode_func qcode;
+	toc_func toc;
+	read_func read;
+	rawread_func rawread;
+	write_func write;
 
-    isatapi_func isatapi;
-    ismedia_func ismedia;
+	isatapi_func isatapi;
+	ismedia_func ismedia;
 
-    scsiemu_func scsiemu;
+	scsiemu_func scsiemu;
 
 };
 
@@ -172,16 +173,20 @@ extern int sys_command_cd_rawread (int unitnum, uae_u8 *data, int sector, int si
 extern int sys_command_cd_rawread (int unitnum, uae_u8 *data, int sector, int size, int sectorsize, uae_u8 scsicmd9, uae_u8 subs);
 extern int sys_command_read (int unitnum, uae_u8 *data, int block, int size);
 extern int sys_command_write (int unitnum, uae_u8 *data, int block, int size);
-extern int sys_command_scsi_direct_native (int unitnum, struct amigascsi *as);
-extern int sys_command_scsi_direct (int unitnum, uaecptr request);
+extern int sys_command_scsi_direct_native (int unitnum, int type, struct amigascsi *as);
+extern int sys_command_scsi_direct (int unitnum, int type, uaecptr request);
 extern int sys_command_ismedia (int unitnum, int quick);
 extern struct device_info *sys_command_info_session (int unitnum, struct device_info *di, int, int);
+extern bool blkdev_get_info (struct uae_prefs *p, int unitnum, struct device_info *di);
 
 extern void scsi_atapi_fixup_pre (uae_u8 *scsi_cmd, int *len, uae_u8 **data, int *datalen, int *parm);
 extern void scsi_atapi_fixup_post (uae_u8 *scsi_cmd, int len, uae_u8 *olddata, uae_u8 *data, int *datalen, int parm);
 
 extern void scsi_log_before (uae_u8 *cdb, int cdblen, uae_u8 *data, int datalen);
 extern void scsi_log_after (uae_u8 *data, int datalen, uae_u8 *sense, int senselen);
+
+extern int scsi_cd_emulate (int unitnum, uae_u8 *cmdbuf, int scsi_cmd_len,
+	uae_u8 *scsi_data, int *data_len, uae_u8 *r, int *reply_len, uae_u8 *s, int *sense_len, bool atapi);
 
 extern void blkdev_vsync (void);
 
@@ -205,3 +210,5 @@ extern void blkdev_cd_change (int unitnum, const TCHAR *name);
 
 extern void blkdev_entergui (void);
 extern void blkdev_exitgui (void);
+
+#endif /* BLKDEV_H */

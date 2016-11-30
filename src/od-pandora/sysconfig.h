@@ -4,6 +4,7 @@
 
 /* #define DRIVESOUND */
 /* #define GFXFILTER */
+//#define USE_SOFT_LONG_DOUBLE
 
 /* #define DEBUGGER */
 #define FILESYS /* filesys emulation */
@@ -30,8 +31,8 @@
 #define CPUEMU_11 /* 68000+prefetch emulation */
 /* #define CPUEMU_12 */ /* cycle-exact cpu&blitter */
 /* #define ACTION_REPLAY */ /* Action Replay 1/2/3 support */
-#define PICASSO96 /* Picasso96 display card emulation */
-#define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
+/* #define PICASSO96 */ /* Picasso96 display card emulation */
+/* #define UAEGFX_INTERNAL */ /* built-in libs:picasso96/uaegfx.card */
 #define BSDSOCKET /* bsdsocket.library emulation */
 /* #define CAPS */ /* CAPS-image support */
 /* #define FDI2RAW */ /* FDI 1.0 and 2.x image support */
@@ -474,9 +475,7 @@ typedef unsigned char boolean;
 #define FALSE 0
 #define TRUE 1
 
-#ifndef USHORT
-#define USHORT unsigned short
-#endif
+typedef unsigned short USHORT;
 
 #define Sleep(x) usleep(x*1000)
 
@@ -513,6 +512,7 @@ typedef unsigned char boolean;
 #define _istdigit(x)        isdigit(x)
 #define _tstoi(x)           atoi(x)
 #define _tstol(x)           atol(x)
+#define _tstoi64(x)         atoll(x)
 #define _tstof(x)           atof(x)
 #define _tcstol(x,y,z)      strtol(x,y,z)
 #define _tcstod(x,y)        strtod(x,y)

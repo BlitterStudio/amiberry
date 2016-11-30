@@ -8,17 +8,20 @@ ifeq ($(PLATFORM),rpi3)
 	LDFLAGS += -lbcm_host
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
+	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND -DARMV6T2 
 	LDFLAGS += -lbcm_host
 	HAVE_NEON = 1
 	HAVE_DISPMANX = 1
+	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard
 	MORE_CFLAGS += -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 	LDFLAGS += -lbcm_host
 	HAVE_DISPMANX = 1
+	USE_PICASSO96 = 1
 else ifeq ($(PLATFORM),generic-sdl)
 	# On Raspberry Pi uncomment below line or remove ARMV6T2 define.
 	CPU_FLAGS= -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard
@@ -49,34 +52,33 @@ PANDORA=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
 
-DEFAULT_CFLAGS = $(CFLAGS) -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
+SDL_CFLAGS = `sdl-config --cflags`
 
-MY_LDFLAGS = $(LDFLAGS)
-MY_LDFLAGS += -lSDL -lpthread -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
-MY_LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
+DEFS +=  `xml2-config --cflags`
+DEFS += -DCPU_arm -DARM_ASSEMBLY -DARMV6_ASSEMBLY -DPANDORA
+DEFS += -DWITH_INGAME_WARNING
+DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
+DEFS += -DUSE_SDL
 
-MORE_CFLAGS += -I/usr/include/libxml2
-MORE_CFLAGS += -DGP2X -DPANDORA -DARMV6_ASSEMBLY -DWITH_INGAME_WARNING
-MORE_CFLAGS += -DCPU_arm -DUSE_SDL
-MORE_CFLAGS += -DROM_PATH_PREFIX=\"./kickstarts/\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./savestates/\"
+ifeq ($(USE_PICASSO96), 1)
+	DEFS += -DPICASSO96
+endif
 
 ifeq ($(HAVE_NEON), 1)
-	MORE_CFLAGS += -DUSE_ARMNEON
+	DEFS += -DUSE_ARMNEON
 endif
 
 MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/td-sdl -Isrc/include 
-MORE_CFLAGS += -Wno-unused -Wno-format -Wno-write-strings -Wno-multichar
-#MORE_CFLAGS += -fuse-ld=gold
-MORE_CFLAGS += -fdiagnostics-color=auto
-MORE_CFLAGS += -mstructure-size-boundary=32
-MORE_CFLAGS += -falign-functions=32
+MORE_CFLAGS += -Isrc -Isrc/od-pandora -Isrc/threaddep -Isrc/menu -Isrc/include 
+MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
+MORE_CFLAGS += -fexceptions -fpermissive
 
-TRACE_CFLAGS = 
+LDFLAGS += -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
+LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -L/opt/vc/lib 
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe -fsingle-precision-constant
-MORE_CFLAGS += -fexceptions -fpermissive
+MORE_CFLAGS += -Ofast -fomit-frame-pointer
+MORE_CFLAGS += -finline -fno-builtin
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 
@@ -86,14 +88,16 @@ endif
 
 endif
 
+ASFLAGS += $(CPU_FLAGS)
+
+CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
+
 ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs
+MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs -fvpt
 endif
 ifdef USE_PROFILE
-MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt -funroll-loops -fpeel-loops -ftracer -ftree-loop-distribute-patterns
+MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
 endif
-
-MY_CFLAGS  = $(CPU_FLAGS) $(MORE_CFLAGS) $(DEFAULT_CFLAGS)
 
 OBJS =	\
 	src/akiko.o \
@@ -122,6 +126,7 @@ OBJS =	\
 	src/fsdb.o \
 	src/fsdb_unix.o \
 	src/fsusage.o \
+	src/gfxboard.o \
 	src/gfxutil.o \
 	src/hardfile.o \
 	src/inputdevice.o \
@@ -190,7 +195,6 @@ OBJS =	\
 	src/od-pandora/pandora_gui.o \
 	src/od-pandora/pandora_rp9.o \
 	src/od-pandora/pandora_mem.o \
-	src/od-pandora/picasso96.o \
 	src/od-pandora/sigsegv_handler.o \
 	src/od-pandora/menu/menu_config.o \
 	src/sd-sdl/sound_sdl_new.o \
@@ -221,17 +225,9 @@ OBJS =	\
 	src/od-pandora/gui/PanelSavestate.o \
 	src/od-pandora/gui/main_window.o \
 	src/od-pandora/gui/Navigation.o
-ifdef PANDORA
-OBJS += src/od-pandora/gui/sdltruetypefont.o
-endif
-
-ifdef DEBUG
-OBJS += src/trace.o
-endif
-
+	
 ifeq ($(HAVE_DISPMANX), 1)
 OBJS += src/od-rasp/rasp_gfx.o
-MORE_CFLAGS += -DHAVE_DISPMANX
 endif
 
 ifeq ($(HAVE_SDL_DISPLAY), 1)
@@ -243,7 +239,15 @@ OBJS += src/od-gles/gl.o
 OBJS += src/od-gles/gl_platform.o
 OBJS += src/od-gles/gles_gfx.o
 MORE_CFLAGS += -DHAVE_GLES
-MY_LDFLAGS += -lEGL -lGLESv1_CM
+LDFLAGS += -ldl -lEGL -lGLESv1_CM
+endif
+
+ifdef PANDORA
+OBJS += src/od-pandora/gui/sdltruetypefont.o
+endif
+
+ifeq ($(USE_PICASSO96), 1)
+	OBJS += src/od-pandora/picasso96.o
 endif
 
 ifeq ($(HAVE_NEON), 1)
@@ -253,6 +257,7 @@ OBJS += src/od-pandora/arm_helper.o
 endif
 
 OBJS += src/newcpu.o
+OBJS += src/newcpu_common.o
 OBJS += src/readcpu.o
 OBJS += src/cpudefs.o
 OBJS += src/cpustbl.o
@@ -265,79 +270,19 @@ OBJS += src/jit/compemu_fpp.o
 OBJS += src/jit/compemu_support.o
 
 src/od-pandora/neon_helper.o: src/od-pandora/neon_helper.s
-	$(CXX) $(CPU_FLAGS) -falign-functions=32 -Wall -o src/od-pandora/neon_helper.o -c src/od-pandora/neon_helper.s
+	$(CXX) $(CPU_FLAGS) -Wall -o src/od-pandora/neon_helper.o -c src/od-pandora/neon_helper.s
 
 src/od-pandora/arm_helper.o: src/od-pandora/arm_helper.s
-	$(CXX) $(CPU_FLAGS) -faling-functions=32 -Wall -o src/od-pandora/arm_helper.o -c src/od-pandora/arm_helper.s
+	$(CXX) $(CPU_FLAGS) -Wall -o src/od-pandora/arm_helper.o -c src/od-pandora/arm_helper.s
 
 src/trace.o: src/trace.c
-	$(CC) $(MORE_CFLAGS) -std=c11 -c src/trace.c -o src/trace.o
-
-.cpp.o:
-	$(CXX) $(MY_CFLAGS) $(TRACE_CFLAGS) -c $< -o $@
-
-.cpp.s:
-	$(CXX) $(MY_CFLAGS) -S -c $< -o $@
+	$(CC) $(MORE_CFLAGS) -c src/trace.c -o src/trace.o
 
 $(PROG): $(OBJS)
+	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG
-	$(CXX) $(MY_CFLAGS) -o $(PROG) $(OBJS) $(MY_LDFLAGS)
 	$(STRIP) $(PROG)
-else
-	$(CXX) $(MY_CFLAGS) -o $(PROG) $(OBJS) $(MY_LDFLAGS)
 endif
 
-ASMS = \
-	src/audio.s \
-	src/autoconf.s \
-	src/blitfunc.s \
-	src/blitter.s \
-	src/cia.s \
-	src/custom.s \
-	src/disk.s \
-	src/drawing.s \
-	src/events.s \
-	src/expansion.s \
-	src/filesys.s \
-	src/fpp.s \
-	src/fsdb.s \
-	src/fsdb_unix.s \
-	src/fsusage.s \
-	src/gfxutil.s \
-	src/hardfile.s \
-	src/inputdevice.s \
-	src/keybuf.s \
-	src/main.s \
-	src/memory.s \
-	src/native2amiga.s \
-	src/traps.s \
-	src/uaelib.s \
-	src/uaeresource.s \
-	src/zfile.s \
-	src/zfile_archive.s \
-	src/md-pandora/support.s \
-	src/od-pandora/picasso96.s \
-	src/od-pandora/pandora.s \
-	src/od-pandora/pandora_gfx.s \
-	src/od-pandora/pandora_mem.s \
-	src/od-pandora/sigsegv_handler.s \
-	src/sd-sdl/sound_sdl_new.s \
-	src/newcpu.s \
-	src/readcpu.s \
-	src/cpudefs.s \
-	src/cpustbl.s \
-	src/cpuemu_0.s \
-	src/cpuemu_4.s \
-	src/cpuemu_11.s \
-	src/jit/compemu.s \
-	src/jit/compemu_fpp.s \
-	src/jit/compstbl.s \
-	src/jit/compemu_support.s
-
-genasm: $(ASMS)
-
 clean:
-	$(RM) $(PROG) $(OBJS) $(ASMS)
-
-delasm:
-	$(RM) $(ASMS)
+	$(RM) $(PROG) $(OBJS)

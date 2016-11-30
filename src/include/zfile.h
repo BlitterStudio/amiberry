@@ -1,10 +1,10 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * routines to handle compressed file automatically
- *
- * (c) 1996 Samuel Devulder
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * routines to handle compressed file automatically
+  *
+  * (c) 1996 Samuel Devulder
+  */
 struct zfile;
 struct zvolume;
 struct zdirectory;
@@ -15,21 +15,19 @@ struct zdirectory;
 
 struct fs_dirhandle
 {
-    int fstype;
-    union
-    {
-        struct zdirectory *zd;
-        struct my_opendir_s *od;
-    };
+	int fstype;
+	union {
+		struct zdirectory *zd;
+		struct my_opendir_s *od;
+	};
 };
 struct fs_filehandle
 {
-    int fstype;
-    union
-    {
-        struct zfile *zf;
-        struct my_openfile_s *of;
-    };
+	int fstype;
+	union {
+		struct zfile *zf;
+		struct my_openfile_s *of;
+	};
 };
 
 typedef int (*zfile_callback)(struct zfile*, void*);
@@ -121,6 +119,7 @@ extern struct zdirectory *zfile_opendir_archive (const TCHAR *path, int flags);
 extern void zfile_closedir_archive(struct zdirectory*);
 extern int zfile_readdir_archive(struct zdirectory *, TCHAR*);
 extern int zfile_readdir_archive (struct zdirectory *, TCHAR*, bool fullpath);
+extern struct zfile *zfile_readdir_archive_open (struct zdirectory *zd, const TCHAR *mode);
 extern void zfile_resetdir_archive (struct zdirectory *);
 extern int zfile_fill_file_attrs_archive(const TCHAR *path, int *isdir, int *flags, TCHAR **comment);
 extern uae_s64 zfile_lseek_archive (struct zfile *d, uae_s64 offset, int whence);
@@ -133,15 +132,15 @@ extern bool zfile_needwrite (struct zfile*);
 
 struct mytimeval
 {
-    uae_s64 tv_sec;
-    uae_s32 tv_usec;
+	uae_s64 tv_sec;
+	uae_s32 tv_usec;
 };
 
 struct mystat
 {
-    uae_s64 size;
-    uae_u32 mode;
-    struct mytimeval mtime;
+	uae_s64 size;
+	uae_u32 mode;
+	struct mytimeval mtime;
 };
 extern void timeval_to_amiga (struct mytimeval *tv, int* days, int* mins, int* ticks);
 extern void amiga_to_timeval (struct mytimeval *tv, int days, int mins, int ticks);

@@ -621,6 +621,67 @@ static int save_thumb(char *path)
     return ret;
 }
 
+bool vsync_switchmode (int hz)
+{
+	int changed_height = changed_prefs.gfx_size.height;
+	
+	if (hz >= 55)
+		hz = 60;
+	else
+		hz = 50;
+
+  if(hz == 50 && currVSyncRate == 60)
+  {
+    // Switch from NTSC -> PAL
+    switch(changed_height) {
+      case 200: changed_height = 240; break;
+      case 216: changed_height = 262; break;
+      case 240: changed_height = 270; break;
+      case 256: changed_height = 270; break;
+      case 262: changed_height = 270; break;
+      case 270: changed_height = 270; break;
+    }
+  }
+  else if(hz == 60 && currVSyncRate == 50)
+  {
+    // Switch from PAL -> NTSC
+    switch(changed_height) {
+      case 200: changed_height = 200; break;
+      case 216: changed_height = 200; break;
+      case 240: changed_height = 200; break;
+      case 256: changed_height = 216; break;
+      case 262: changed_height = 216; break;
+      case 270: changed_height = 240; break;
+    }
+  }
+
+  if(changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
+    return true;
+  
+  changed_prefs.gfx_size.height = changed_height;
+
+  return true;
+}
+
+bool target_graphics_buffer_update (void)
+{
+  bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+  
+  if(currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+  {
+    update_display(&changed_prefs);
+    rate_changed = true;
+  }
+
+	if(rate_changed)
+  {
+  	black_screen_now();
+    fpscounter_reset();
+    time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
+  }
+
+  return true;
+}
 
 #ifdef PICASSO96
 
@@ -712,7 +773,7 @@ void picasso_InitResolutions (void)
     Displays[0].rect.left = 0;
     Displays[0].rect.top = 0;
     Displays[0].rect.right = 800;
-    Displays[0].rect.bottom = 640;
+    Displays[0].rect.bottom = 480;
     sprintf (tmp, "%s (%d*%d)", "Display", Displays[0].rect.right, Displays[0].rect.bottom);
     Displays[0].name = my_strdup(tmp);
     Displays[0].name2 = my_strdup("Display");
@@ -750,98 +811,9 @@ void picasso_InitResolutions (void)
     modesList();
     DisplayModes = Displays[0].DisplayModes;
 }
+#endif
 
-
-bool vsync_switchmode (int hz)
-{
-    int changed_height = changed_prefs.gfx_size.height;
-
-    if (hz >= 55)
-        hz = 60;
-    else
-        hz = 50;
-
-    if(hz == 50 && currVSyncRate == 60)
-    {
-        // Switch from NTSC -> PAL
-        switch(changed_height)
-        {
-        case 200:
-            changed_height = 240;
-            break;
-        case 216:
-            changed_height = 262;
-            break;
-        case 240:
-            changed_height = 270;
-            break;
-        case 256:
-            changed_height = 270;
-            break;
-        case 262:
-            changed_height = 270;
-            break;
-        case 270:
-            changed_height = 270;
-            break;
-        }
-    }
-    else if(hz == 60 && currVSyncRate == 50)
-    {
-        // Switch from PAL -> NTSC
-        switch(changed_height)
-        {
-        case 200:
-            changed_height = 200;
-            break;
-        case 216:
-            changed_height = 200;
-            break;
-        case 240:
-            changed_height = 200;
-            break;
-        case 256:
-            changed_height = 216;
-            break;
-        case 262:
-            changed_height = 216;
-            break;
-        case 270:
-            changed_height = 240;
-            break;
-        }
-    }
-
-    if(changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
-        return true;
-
-    changed_prefs.gfx_size.height = changed_height;
-
-    return true;
-}
-
-
-bool target_graphics_buffer_update (void)
-{
-    bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
-
-    if(currprefs.gfx_size.height != changed_prefs.gfx_size.height)
-    {
-        update_display(&changed_prefs);
-        rate_changed = true;
-    }
-
-    if(rate_changed)
-    {
-        black_screen_now();
-        fpscounter_reset();
-        time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
-    }
-
-    return true;
-}
-
-
+#ifdef PICASSO96
 void gfx_set_picasso_state (int on)
 {
     if (on == screen_is_picasso)

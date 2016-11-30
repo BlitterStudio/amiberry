@@ -23,44 +23,43 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_BYTESWAP    0x100000
 #define ROMTYPE_CD32	    0x200000
 #define ROMTYPE_SCRAMBLED   0x400000
+#define ROMTYPE_NONE		0x800000
 
 #define ROMTYPE_ALL_KICK (ROMTYPE_KICK | ROMTYPE_KICKCD32 | ROMTYPE_CD32)
 #define ROMTYPE_ALL_EXT (ROMTYPE_EXTCD32 | ROMTYPE_EXTCDTV)
 #define ROMTYPE_ALL_CART (ROMTYPE_AR | ROMTYPE_HRTMON | ROMTYPE_NORDIC | ROMTYPE_XPOWER | ROMTYPE_CD32CART)
 
-struct romheader
-{
-    TCHAR *name;
-    int id;
+struct romheader {
+  TCHAR *name;
+  int id;
 };
 
-struct romdata
-{
-    TCHAR *name;
-    int ver, rev;
-    int subver, subrev;
-    TCHAR *model;
-    uae_u32 size;
-    int id;
-    int cpu;
-    int cloanto;
-    int type;
-    int group;
-    int title;
-    TCHAR *partnumber;
-    uae_u32 crc32;
-    uae_u32 sha1[5];
-    TCHAR *configname;
+struct romdata {
+  TCHAR *name;
+  int ver, rev;
+  int subver, subrev;
+  TCHAR *model;
+  uae_u32 size;
+  int id;
+  int cpu;
+  int cloanto;
+  int type;
+  int group;
+  int title;
+  TCHAR *partnumber;
+  uae_u32 crc32;
+  uae_u32 sha1[5];
+  TCHAR *configname;
 };
 
-struct romlist
-{
-    TCHAR *path;
-    struct romdata *rd;
+struct romlist {
+  TCHAR *path;
+  struct romdata *rd;
 };
 
 extern struct romdata *getromdatabypath (const TCHAR *path);
 extern struct romdata *getromdatabycrc (uae_u32 crc32);
+extern struct romdata *getromdatabycrc (uae_u32 crc32, bool);
 extern struct romdata *getromdatabydata (uae_u8 *rom, int size);
 extern struct romdata *getromdatabyid (int id);
 extern struct romdata *getromdatabyidgroup (int id, int group, int subitem);
@@ -76,7 +75,7 @@ extern struct romlist *getromlistbyromdata(const struct romdata *rd);
 extern void romlist_add (const TCHAR *path, struct romdata *rd);
 extern TCHAR *romlist_get (const struct romdata *rd);
 extern void romlist_clear (void);
-extern struct zfile *read_rom (struct romdata **rd);
+extern struct zfile *read_rom (struct romdata *rd);
 extern struct zfile *read_rom_name (const TCHAR *filename);
 
 extern int load_keyring (struct uae_prefs *p, const TCHAR *path);

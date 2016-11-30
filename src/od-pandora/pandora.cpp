@@ -75,6 +75,9 @@ static bool cpuSpeedChanged = false;
 static int lastCpuSpeed = 600;
 int defaultCpuSpeed = 600;
 
+int max_uae_width;
+int max_uae_height;
+
 extern "C" int main( int argc, char *argv[] );
 
 void reinit_amiga(void)
@@ -141,12 +144,12 @@ void reinit_amiga(void)
 }
 
 
-void sleep_millis (int ms)
+void sleep_millis_main (int ms)
 {
     usleep(ms * 1000);
 }
 
-void sleep_millis_busy (int ms)
+void sleep_millis (int ms)
 {
     usleep(ms * 1000);
 }
@@ -240,7 +243,6 @@ void target_quit (void)
 void target_fixup_options (struct uae_prefs *p)
 {
     p->rtgmem_type = 1;
-    gfxmem_start = rtg_start_adr;
     if (p->z3fastmem_start != z3_start_adr)
         p->z3fastmem_start = z3_start_adr;
 
@@ -782,6 +784,9 @@ uae_u32 emulib_target_getcpurate (uae_u32 v, uae_u32 *low)
 int main (int argc, char *argv[])
 {
     struct sigaction action;	
+	max_uae_width = 768;
+	max_uae_height = 270;
+	
     defaultCpuSpeed = getDefaultCpuSpeed();
 
     // Get startup path
@@ -829,10 +834,12 @@ int main (int argc, char *argv[])
 #endif
 
 	real_main (argc, argv);
-	
+
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND	
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
-	
+#endif
+
     ClearAvailableROMList();
     romlist_clear();
     free_keyring();
@@ -856,7 +863,9 @@ int handle_msgpump (void)
     SDL_Event rEvent;
     int keycode;
     int modifier;
-
+	int handled = 0;
+	int i;
+	
     if(delayed_mousebutton)
     {
         --delayed_mousebutton;
@@ -1090,13 +1099,6 @@ int handle_msgpump (void)
         }
     }
     return got;
-}
-
-
-void handle_events (void)
-{
-    /* Handle GUI events */
-    gui_handle_events ();
 }
 
 

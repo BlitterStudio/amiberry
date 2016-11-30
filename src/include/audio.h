@@ -30,10 +30,11 @@ extern void update_audio (void);
 extern void audio_evhandler (void);
 extern void audio_hsync (void);
 extern void audio_update_adkmasks (void);
-extern void update_sound (int freq, int longframe);
+extern void update_sound (float clk);
 extern void led_filter_audio (void);
 extern void set_audio(void);
 extern int audio_activate(void);
+extern void audio_deactivate(void);
 
 enum
 {

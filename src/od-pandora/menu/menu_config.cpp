@@ -333,19 +333,19 @@ int create_configfilename(char *dest, char *basename, int fromDir)
 		int len = strlen(p) + 1;
 		char filename[len];
 		strcpy(filename, p);
-		char *pch = &filename[len];
+		char *pch = &filename[MAX_DPATH];
 		while (pch != filename && *pch != '.')
 			pch--;
 		if (pch)
 		{
 			*pch = '\0';
-			snprintf(dest, 300, "%s/conf/%s.uae", start_path_data, filename);
+			snprintf(dest, MAX_DPATH, "%s/conf/%s.uae", start_path_data, filename);
 			return 1;
 		}
 	}
 	else
 	{
-		snprintf(dest, 300, "%s/conf/%s.uae", start_path_data, p);
+		snprintf(dest, MAX_DPATH, "%s/conf/%s.uae", start_path_data, p);
 		return 1;
 	}
 

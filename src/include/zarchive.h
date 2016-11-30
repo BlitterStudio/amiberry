@@ -3,19 +3,18 @@ typedef uae_s64 (*ZFILEREAD)(void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILEWRITE)(const void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILESEEK)(struct zfile*, uae_s64, int);
 
-struct zfile
-{
+struct zfile {
     TCHAR *name;
     TCHAR *zipname;
     TCHAR *mode;
     FILE *f; // real file handle if physical file
     uae_u8 *data; // unpacked data
     int dataseek; // use seek position even if real file
-    struct zfile *archiveparent; // set if parent is archive and this has not yet been unpacked (datasize < size)
-    int archiveid;
+	struct zfile *archiveparent; // set if parent is archive and this has not yet been unpacked (datasize < size)
+	int archiveid;
     uae_s64 size; // real size
-    uae_s64 datasize; // available size (not yet unpacked completely?)
-    uae_s64 allocsize; // memory allocated before realloc() needed again
+	uae_s64 datasize; // available size (not yet unpacked completely?)
+	uae_s64 allocsize; // memory allocated before realloc() needed again
     uae_s64 seek; // seek position
     int deleteafterclose;
     int textmode;
@@ -34,8 +33,7 @@ struct zfile
 #define ZNODE_FILE 0
 #define ZNODE_DIR 1
 #define ZNODE_VDIR -1
-struct znode
-{
+struct znode {
     int type;
     struct znode *sibling;
     struct znode *child;
@@ -83,7 +81,7 @@ struct zarchive_info
     uae_s64 size;
     int flags;
     TCHAR *comment;
-    struct mytimeval tv;
+	struct mytimeval tv;
 };
 
 #define ArchiveFormat7Zip '7z  '
@@ -118,7 +116,6 @@ extern struct zvolume *archive_directory_lha(struct zfile *zf);
 extern struct zfile *archive_access_lha (struct znode *zn);
 extern struct zvolume *archive_directory_zip(struct zfile *zf);
 extern struct zvolume *archive_directory_7z (struct zfile *z);
-extern struct zfile *archive_access_7z (struct znode *zn);
 extern struct zvolume *archive_directory_rar (struct zfile *z);
 extern struct zfile *archive_access_rar (struct znode *zn);
 extern struct zvolume *archive_directory_lzx (struct zfile *in_file);

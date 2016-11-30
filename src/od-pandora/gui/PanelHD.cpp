@@ -59,14 +59,14 @@ static gcn::Slider* sldCDVol;
 static int GetHDType(int index)
 {
     int type;
-    struct uaedev_config_info *uci;
+    struct uaedev_config_data *uci;
     struct mountedinfo mi;
 
     type = get_filesys_unitconfig(&changed_prefs, index, &mi);
     if (type < 0)
     {
         uci = &changed_prefs.mountconfig[index];
-        type = uci->ishdf ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
+        type = (uci->ci.type == UAEDEV_DIR) ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
     }
     return type;
 }
@@ -517,95 +517,103 @@ static void AdjustDropDownControls(void)
 
 void RefreshPanelHD(void)
 {
-    int row, col;
-    char tmp[32];
-    struct mountedinfo mi;
-    struct uaedev_config_info *uci;
-    int nosize = 0, type;
+  int row, col;
+  char tmp[32];
+  struct mountedinfo mi;
+  struct uaedev_config_data *uci;
+  struct uaedev_config_info *ci;
+  int nosize = 0, type;
+  
+  AdjustDropDownControls();
 
-    AdjustDropDownControls();
-
-    for(row=0; row<MAX_HD_DEVICES; ++row)
+  for(row=0; row<MAX_HD_DEVICES; ++row)
+  {
+    if(row < changed_prefs.mountitems)
     {
-        uci = &changed_prefs.mountconfig[row];
-        if(uci->devname && uci->devname[0])
-        {
-            type = get_filesys_unitconfig(&changed_prefs, row, &mi);
-            if (type < 0)
-            {
-                type = uci->ishdf ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
-                nosize = 1;
-            }
-
-            if(type == FILESYS_VIRTUAL)
-            {
-                listCells[row][COL_DEVICE]->setText(uci->devname);
-                listCells[row][COL_VOLUME]->setText(uci->volname);
-                listCells[row][COL_PATH]->setText(uci->rootdir);
-                if(uci->readonly)
-                    listCells[row][COL_READWRITE]->setText("no");
-                else
-                    listCells[row][COL_READWRITE]->setText("yes");
-                listCells[row][COL_SIZE]->setText("n/a");
-                snprintf(tmp, 32, "%d", uci->bootpri);
-                listCells[row][COL_BOOTPRI]->setText(tmp);
-            }
-            else
-            {
-                listCells[row][COL_DEVICE]->setText(uci->devname);
-                listCells[row][COL_VOLUME]->setText("n/a");
-                listCells[row][COL_PATH]->setText(uci->rootdir);
-                if(uci->readonly)
-                    listCells[row][COL_READWRITE]->setText("no");
-                else
-                    listCells[row][COL_READWRITE]->setText("yes");
-                if (mi.size >= 1024 * 1024 * 1024)
-                    snprintf (tmp, 32, "%.1fG", ((double)(uae_u32)(mi.size / (1024 * 1024))) / 1024.0);
-                else
-                    snprintf (tmp, 32, "%.1fM", ((double)(uae_u32)(mi.size / (1024))) / 1024.0);
-                listCells[row][COL_SIZE]->setText(tmp);
-                snprintf(tmp, 32, "%d", uci->bootpri);
-                listCells[row][COL_BOOTPRI]->setText(tmp);
-            }
-            listCmdProps[row]->setEnabled(true);
-            listCmdDelete[row]->setEnabled(true);
-        }
+      uci = &changed_prefs.mountconfig[row];
+      ci = &uci->ci;
+      type = get_filesys_unitconfig(&changed_prefs, row, &mi);
+	    if (type < 0) {
+    		type = (uci->ci.type == UAEDEV_DIR) ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
+    		nosize = 1;
+	    }
+			if (mi.size < 0)
+				nosize = 1;
+      
+      if(type == FILESYS_VIRTUAL)
+      {
+        listCells[row][COL_DEVICE]->setText(ci->devname);
+        listCells[row][COL_VOLUME]->setText(ci->volname);
+        listCells[row][COL_PATH]->setText(ci->rootdir);
+        if(ci->readonly)
+          listCells[row][COL_READWRITE]->setText("no");
         else
-        {
-            // Empty slot
-            for(col=0; col<COL_COUNT; ++col)
-                listCells[row][col]->setText("");
-            listCmdProps[row]->setEnabled(false);
-            listCmdDelete[row]->setEnabled(false);
-        }
+          listCells[row][COL_READWRITE]->setText("yes");
+        listCells[row][COL_SIZE]->setText("n/a");
+        snprintf(tmp, 32, "%d", ci->bootpri);
+        listCells[row][COL_BOOTPRI]->setText(tmp);
+      }
+      else
+      {
+        listCells[row][COL_DEVICE]->setText(ci->devname);
+        listCells[row][COL_VOLUME]->setText("n/a");
+        listCells[row][COL_PATH]->setText(ci->rootdir);
+        if(ci->readonly)
+          listCells[row][COL_READWRITE]->setText("no");
+        else
+          listCells[row][COL_READWRITE]->setText("yes");
+  	    if (nosize)
+  	      snprintf (tmp, 32, "n/a");
+  	    else if (mi.size >= 1024 * 1024 * 1024)
+	        snprintf (tmp, 32, "%.1fG", ((double)(uae_u32)(mi.size / (1024 * 1024))) / 1024.0);
+  	    else
+	        snprintf (tmp, 32, "%.1fM", ((double)(uae_u32)(mi.size / (1024))) / 1024.0);
+        listCells[row][COL_SIZE]->setText(tmp);
+        snprintf(tmp, 32, "%d", ci->bootpri);
+        listCells[row][COL_BOOTPRI]->setText(tmp);
+      }
+      listCmdProps[row]->setEnabled(true);
+      listCmdDelete[row]->setEnabled(true);
     }
-
-    chkCD->setSelected(changed_prefs.cdslots[0].inuse);
-    cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
-    cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
-    cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
-    sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
-
-    sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
-    snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);
-    lblCDVolInfo->setCaption(tmp);
+    else
+    {
+      // Empty slot
+      for(col=0; col<COL_COUNT; ++col)
+        listCells[row][col]->setText("");
+      listCmdProps[row]->setEnabled(false);
+      listCmdDelete[row]->setEnabled(false);
+    }
+  }
+  
+  chkCD->setSelected(changed_prefs.cdslots[0].inuse);
+  cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
+  cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
+  cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
+  sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
+  
+  sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
+  snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);
+  lblCDVolInfo->setCaption(tmp);
 }
 
 
 int count_HDs(struct uae_prefs *p)
 {
-    int row;
-    struct uaedev_config_info *uci;
-    int cnt = 0;
-
-    for(row=0; row<MAX_HD_DEVICES; ++row)
+/*
+  int row;
+  struct uaedev_config_info *uci;
+  int cnt = 0;
+  
+  for(row=0; row<MAX_HD_DEVICES; ++row)
+  {
+    uci = &p->mountconfig[row];
+    if(uci->devname && uci->devname[0])
     {
-        uci = &p->mountconfig[row];
-        if(uci->devname && uci->devname[0])
-        {
-            ++cnt;
-        }
+      ++cnt;
     }
+  }
 
-    return cnt;
+  return cnt;
+*/
+  return p->mountitems;
 }

@@ -4,8 +4,6 @@
    Read unzip.h for more info
 */
 
-#define ZLIB_WINAPI
-
 #include "sysconfig.h"
 #include "sysdeps.h"
 
