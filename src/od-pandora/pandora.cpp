@@ -62,7 +62,7 @@ char currentDir[MAX_DPATH];
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
 #include <linux/kd.h>
 #include <sys/ioctl.h>
-unsigned long kbd_led_status;
+unsigned char kbd_led_status;
 char kbd_flags;
 #endif
 

@@ -613,7 +613,7 @@ void gui_led (int led, int on)
 #ifdef RASPBERRY
    #define LED_ALL   -1         // Define for all LEDs
    
-   unsigned long kbd_led_status;
+   unsigned char kbd_led_status;
    
    // Check current prefs/ update if changed
    if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
