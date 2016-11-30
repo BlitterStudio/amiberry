@@ -285,7 +285,8 @@ static int init_joystick (void)
     printf("Joystick %i : %s\n",cpt,JoystickName[cpt]);
     printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(Joysticktable[cpt]),SDL_JoystickNumAxes(Joysticktable[cpt]),SDL_JoystickNumHats(Joysticktable[cpt]));
 
-    if (strcmp(JoystickName[cpt],"Sony PLAYSTATION(R)3 Controller") == 0)
+    if (strcmp(JoystickName[cpt],"Sony PLAYSTATION(R)3 Controller") == 0 ||
+		strcmp(JoystickName[cpt],"PLAYSTATION(R)3 Controller") == 0)
     {
       printf("    Found a dualshock controller: Activating workaround.\n");
       IsPS3Controller[cpt] = 1;
