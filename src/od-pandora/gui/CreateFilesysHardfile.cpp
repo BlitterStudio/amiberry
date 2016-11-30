@@ -204,32 +204,32 @@ static void CreateFilesysHardfileLoop(void)
             {
                 switch(event.key.keysym.sym)
                 {
-                case SDLK_ESCAPE:
+                case VK_ESCAPE:
                     dialogFinished = true;
                     break;
 
-                case SDLK_UP:
+                case VK_UP:
                     if(HandleNavigation(DIRECTION_UP))
                         continue; // Don't change value when enter ComboBox -> don't send event to control
                     break;
 
-                case SDLK_DOWN:
+                case VK_DOWN:
                     if(HandleNavigation(DIRECTION_DOWN))
                         continue; // Don't change value when enter ComboBox -> don't send event to control
                     break;
 
-                case SDLK_LEFT:
+                case VK_LEFT:
                     if(HandleNavigation(DIRECTION_LEFT))
                         continue; // Don't change value when enter Slider -> don't send event to control
                     break;
 
-                case SDLK_RIGHT:
+                case VK_RIGHT:
                     if(HandleNavigation(DIRECTION_RIGHT))
                         continue; // Don't change value when enter Slider -> don't send event to control
                     break;
 
-                case SDLK_PAGEDOWN:
-                case SDLK_HOME:
+                case VK_X:
+                case VK_A:
                     event.key.keysym.sym = SDLK_RETURN;
                     gui_input->pushInput(event); // Fire key down
                     event.type = SDL_KEYUP;  // and the key up

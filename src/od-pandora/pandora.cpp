@@ -271,16 +271,16 @@ void target_save_options (struct zfile *f, struct uae_prefs *p)
     cfgfile_write (f, "pandora.hide_idle_led", "%d", p->pandora_hide_idle_led);
     cfgfile_write (f, "pandora.tap_delay", "%d", p->pandora_tapDelay);
     cfgfile_write (f, "pandora.custom_controls", "%d", p->pandora_customControls);
-    cfgfile_write (f, "pandora.custom_up", "%d", customControlMap[SDLK_UP]);
-    cfgfile_write (f, "pandora.custom_down", "%d", customControlMap[SDLK_DOWN]);
-    cfgfile_write (f, "pandora.custom_left", "%d", customControlMap[SDLK_LEFT]);
-    cfgfile_write (f, "pandora.custom_right", "%d", customControlMap[SDLK_RIGHT]);
-    cfgfile_write (f, "pandora.custom_a", "%d", customControlMap[SDLK_HOME]);
-    cfgfile_write (f, "pandora.custom_b", "%d", customControlMap[SDLK_END]);
-    cfgfile_write (f, "pandora.custom_x", "%d", customControlMap[SDLK_PAGEDOWN]);
-    cfgfile_write (f, "pandora.custom_y", "%d", customControlMap[SDLK_PAGEUP]);
-    cfgfile_write (f, "pandora.custom_l", "%d", customControlMap[SDLK_RSHIFT]);
-    cfgfile_write (f, "pandora.custom_r", "%d", customControlMap[SDLK_RCTRL]);
+    cfgfile_write (f, "pandora.custom_up", "%d", customControlMap[VK_UP]);
+    cfgfile_write (f, "pandora.custom_down", "%d", customControlMap[VK_DOWN]);
+    cfgfile_write (f, "pandora.custom_left", "%d", customControlMap[VK_LEFT]);
+    cfgfile_write (f, "pandora.custom_right", "%d", customControlMap[VK_RIGHT]);
+    cfgfile_write (f, "pandora.custom_a", "%d", customControlMap[VK_A]);
+    cfgfile_write (f, "pandora.custom_b", "%d", customControlMap[VK_B]);
+    cfgfile_write (f, "pandora.custom_x", "%d", customControlMap[VK_X]);
+    cfgfile_write (f, "pandora.custom_y", "%d", customControlMap[VK_Y]);
+    cfgfile_write (f, "pandora.custom_l", "%d", customControlMap[VK_L]);
+    cfgfile_write (f, "pandora.custom_r", "%d", customControlMap[VK_R]);
     cfgfile_write (f, "pandora.move_x", "%d", p->pandora_horizontal_offset);
     cfgfile_write (f, "pandora.move_y", "%d", p->pandora_vertical_offset);
 }
@@ -302,16 +302,16 @@ int target_parse_option (struct uae_prefs *p, const char *option, const char *va
                   || cfgfile_intval (option, value, "hide_idle_led", &p->pandora_hide_idle_led, 1)
                   || cfgfile_intval (option, value, "tap_delay", &p->pandora_tapDelay, 1)
                   || cfgfile_intval (option, value, "custom_controls", &p->pandora_customControls, 1)
-                  || cfgfile_intval (option, value, "custom_up", &customControlMap[SDLK_UP], 1)
-                  || cfgfile_intval (option, value, "custom_down", &customControlMap[SDLK_DOWN], 1)
-                  || cfgfile_intval (option, value, "custom_left", &customControlMap[SDLK_LEFT], 1)
-                  || cfgfile_intval (option, value, "custom_right", &customControlMap[SDLK_RIGHT], 1)
-                  || cfgfile_intval (option, value, "custom_a", &customControlMap[SDLK_HOME], 1)
-                  || cfgfile_intval (option, value, "custom_b", &customControlMap[SDLK_END], 1)
-                  || cfgfile_intval (option, value, "custom_x", &customControlMap[SDLK_PAGEDOWN], 1)
-                  || cfgfile_intval (option, value, "custom_y", &customControlMap[SDLK_PAGEUP], 1)
-                  || cfgfile_intval (option, value, "custom_l", &customControlMap[SDLK_RSHIFT], 1)
-                  || cfgfile_intval (option, value, "custom_r", &customControlMap[SDLK_RCTRL], 1)
+                  || cfgfile_intval (option, value, "custom_up", &customControlMap[VK_UP], 1)
+                  || cfgfile_intval (option, value, "custom_down", &customControlMap[VK_DOWN], 1)
+                  || cfgfile_intval (option, value, "custom_left", &customControlMap[VK_LEFT], 1)
+                  || cfgfile_intval (option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
+                  || cfgfile_intval (option, value, "custom_a", &customControlMap[VK_A], 1)
+                  || cfgfile_intval (option, value, "custom_b", &customControlMap[VK_B], 1)
+                  || cfgfile_intval (option, value, "custom_x", &customControlMap[VK_X], 1)
+                  || cfgfile_intval (option, value, "custom_y", &customControlMap[VK_Y], 1)
+                  || cfgfile_intval (option, value, "custom_l", &customControlMap[VK_L], 1)
+                  || cfgfile_intval (option, value, "custom_r", &customControlMap[VK_R], 1)
                   || cfgfile_intval (option, value, "move_x", &p->pandora_horizontal_offset, 1)
                   || cfgfile_intval (option, value, "move_y", &p->pandora_vertical_offset, 1)
                  );
@@ -906,8 +906,8 @@ int handle_msgpump (void)
                 inputdevice_do_keyboard(AK_LSH, 1);
                 break;
 
-            case SDLK_RSHIFT: // Left shoulder button
-            case SDLK_RCTRL:  // Right shoulder button
+            case VK_L: // Left shoulder button
+            case VK_R:  // Right shoulder button
                 if(currprefs.input_tablet > TABLET_OFF)
                 {
                     // Holding left or right shoulder button -> stylus does right mousebutton
@@ -985,8 +985,8 @@ int handle_msgpump (void)
                 inputdevice_do_keyboard(AK_LSH, 0);
                 break;
 
-            case SDLK_RSHIFT: // Left shoulder button
-            case SDLK_RCTRL:  // Right shoulder button
+            case VK_L: // Left shoulder button
+            case VK_R:  // Right shoulder button
                 if(currprefs.input_tablet > TABLET_OFF)
                 {
                     // Release left or right shoulder button -> stylus does left mousebutton

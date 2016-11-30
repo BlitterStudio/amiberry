@@ -226,8 +226,8 @@ namespace sdl
 							}
 							break;
 
-						case SDLK_ESCAPE:
-	//                    case SDLK_RCTRL:
+						case VK_ESCAPE:
+	                    case VK_R:
 							//-------------------------------------------------
 							// Reset Amiga
 							//-------------------------------------------------
@@ -235,8 +235,8 @@ namespace sdl
 							gui_running = false;
 							break;
 
-						case SDLK_PAGEDOWN:
-						case SDLK_HOME:
+						case VK_X:
+						case VK_A:
 							//------------------------------------------------
 							// Simulate press of enter when 'X' pressed
 							//------------------------------------------------
@@ -245,22 +245,22 @@ namespace sdl
 							event.type = SDL_KEYUP;  // and the key up
 							break;
 
-						case SDLK_UP:
+						case VK_UP:
 							if(HandleNavigation(DIRECTION_UP))
 								continue; // Don't change value when enter ComboBox -> don't send event to control
 							break;
 
-						case SDLK_DOWN:
+						case VK_DOWN:
 							if(HandleNavigation(DIRECTION_DOWN))
 								continue; // Don't change value when enter ComboBox -> don't send event to control
 							break;
 
-						case SDLK_LEFT:
+						case VK_LEFT:
 							if(HandleNavigation(DIRECTION_LEFT))
 								continue; // Don't change value when enter Slider -> don't send event to control
 							break;
 
-						case SDLK_RIGHT:
+						case VK_RIGHT:
 							if(HandleNavigation(DIRECTION_RIGHT))
 								continue; // Don't change value when enter Slider -> don't send event to control
 							break;

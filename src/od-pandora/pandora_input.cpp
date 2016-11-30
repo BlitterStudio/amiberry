@@ -1,5 +1,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
 #include "options.h"
 #include "keyboard.h"
 #include "inputdevice.h"
@@ -118,19 +119,19 @@ static void read_mouse(void)
         Uint8 *keystate = SDL_GetKeyState(NULL);
         int mouseScale = currprefs.input_joymouse_multiplier / 4;
 
-        if (keystate[SDLK_LEFT])
+        if (keystate[VK_LEFT])
             setmousestate(1, 0, -mouseScale, 0);
-        if (keystate[SDLK_RIGHT])
+        if (keystate[VK_RIGHT])
             setmousestate(1, 0, mouseScale, 0);
-        if (keystate[SDLK_UP])
+        if (keystate[VK_UP])
             setmousestate(1, 1, -mouseScale, 0);
-        if (keystate[SDLK_DOWN])
+        if (keystate[VK_DOWN])
             setmousestate(1, 1, mouseScale, 0);
 
         if (!mouseBut1viaCustom)
-            setmousebuttonstate(1, 0, keystate[SDLK_HOME]); // A button -> left mouse
+            setmousebuttonstate(1, 0, keystate[VK_A]); // A button -> left mouse
         if (!mouseBut2viaCustom)
-            setmousebuttonstate(1, 1, keystate[SDLK_END]); // B button -> right mouse
+            setmousebuttonstate(1, 1, keystate[VK_B]); // B button -> right mouse
     }
 
     // Nubs as mouse handled in handle_msgpump()
@@ -446,31 +447,31 @@ static void read_joystick(void)
         {
             Uint8 *keystate = SDL_GetKeyState(NULL);
 
-            if (!keystate[SDLK_RCTRL])
+            if (!keystate[VK_R])
             {
                 // Right shoulder + dPad -> cursor keys
-                int axis = (keystate[SDLK_LEFT] ? -32767 : (keystate[SDLK_RIGHT] ? 32767 : 0));
+                int axis = (keystate[VK_LEFT] ? -32767 : (keystate[VK_RIGHT] ? 32767 : 0));
                 if (!joyXviaCustom)
                     setjoystickstate(0, 0, axis, 32767);
-                axis = (keystate[SDLK_UP] ? -32767 : (keystate[SDLK_DOWN] ? 32767 : 0));
+                axis = (keystate[VK_UP] ? -32767 : (keystate[VK_DOWN] ? 32767 : 0));
                 if (!joyYviaCustom)
                     setjoystickstate(0, 1, axis, 32767);
             }
             if (!joyButXviaCustom[0])
-                setjoybuttonstate(0, 0, keystate[SDLK_PAGEDOWN]);
+                setjoybuttonstate(0, 0, keystate[VK_X]);
             if (!joyButXviaCustom[1])
-                setjoybuttonstate(0, 1, keystate[SDLK_END]);
+                setjoybuttonstate(0, 1, keystate[VK_B]);
             if (!joyButXviaCustom[2])
-                setjoybuttonstate(0, 2, keystate[SDLK_HOME]);
+                setjoybuttonstate(0, 2, keystate[VK_A]);
             if (!joyButXviaCustom[3])
-                setjoybuttonstate(0, 3, keystate[SDLK_PAGEUP]);
+                setjoybuttonstate(0, 3, keystate[VK_Y]);
 
             int cd32_start = 0, cd32_ffw = 0, cd32_rwd = 0;
             if (keystate[SDLK_LALT])   // Pandora Start button
             {
-                if (keystate[SDLK_RSHIFT])  // Left shoulder
+                if (keystate[VK_L])  // Left shoulder
                     cd32_rwd = 1;
-                else if (keystate[SDLK_RCTRL]) // Right shoulder
+                else if (keystate[VK_R]) // Right shoulder
                     cd32_ffw = 1;
                 else
                     cd32_start = 1;

@@ -200,11 +200,11 @@ static void SelectFolderLoop(void)
 			{
 				switch (event.key.keysym.sym)
 				{
-				case SDLK_ESCAPE:
+				case VK_ESCAPE:
 					dialogFinished = true;
 					break;
 
-				case SDLK_LEFT:
+				case VK_LEFT:
 					{
 						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
 						gcn::Widget* activeWidget = focusHdl->getFocused();
@@ -218,7 +218,7 @@ static void SelectFolderLoop(void)
 					}
 					break;
 
-				case SDLK_RIGHT:
+				case VK_RIGHT:
 					{
 						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
 						gcn::Widget* activeWidget = focusHdl->getFocused();
@@ -232,8 +232,8 @@ static void SelectFolderLoop(void)
 					}
 					break;
 
-				case SDLK_PAGEDOWN:
-				case SDLK_HOME:
+				case VK_X:
+				case VK_A:
 					event.key.keysym.sym = SDLK_RETURN;
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP;  // and the key up

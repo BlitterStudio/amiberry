@@ -104,8 +104,8 @@ void InGameMessage(const char *msg)
 			{
 				switch (event.key.keysym.sym)
 				{
-				case SDLK_PAGEDOWN:
-				case SDLK_HOME:
+				case VK_X:
+				case VK_A:
 				case SDLK_RETURN:
 					msg_done = 1;
 					break;
