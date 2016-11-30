@@ -177,6 +177,10 @@ int idletime_percent = 0;
 #define IDLETIME_FRAMES 20
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 
+// Temporary define
+#define OFFSET_FREE_CPU_CYCLES 1500
+#define STEP_CYCLES             250
+
 void adjust_idletime(unsigned long ms_waited)
 {
   idletime_frames++;
@@ -194,13 +198,11 @@ void adjust_idletime(unsigned long ms_waited)
   }
 
   if(currprefs.m68k_speed < 0) {
-#ifdef PANDORA_SPECIFIC
-    if(ms_waited < 500 && speedup_timelimit > -10000)
-      speedup_timelimit -= 500;
+    if(ms_waited < (500 + OFFSET_FREE_CPU_CYCLES) && speedup_timelimit > -10000)
+      speedup_timelimit -= STEP_CYCLES;
     else
-#endif
-if(ms_waited > 1400 && speedup_timelimit < -1000)
-      speedup_timelimit += 500;
+if(ms_waited > (1400 + OFFSET_FREE_CPU_CYCLES) && speedup_timelimit < -1000)
+      speedup_timelimit += STEP_CYCLES;
   }
 }
 
@@ -2059,24 +2061,13 @@ void vsync_handle_check (void)
   check_picasso ();
 }
 
-#ifdef RASPBERRY
-int wait_for_vsync_dispmanx = 1;
-extern uae_sem_t vsync_wait_sem;
-#endif
 
 void vsync_handle_redraw (void)
 {
 	if (framecnt == 0)
 	{
-		#ifdef RASPBERRY
-		if (wait_for_vsync_dispmanx == 1)
-			uae_sem_wait (&vsync_wait_sem);
-		wait_for_vsync_dispmanx = 1;
-		#endif
 		finish_drawing_frame ();
 	}
-
-
 
 	if (quit_program < 0) {
 		quit_program = -quit_program;

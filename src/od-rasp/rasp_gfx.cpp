@@ -397,10 +397,12 @@ void flush_screen ()
 
         vc_dispmanx_update_submit(dispmanxupdate,vsync_callback,NULL);
     }
-
+	
+	uae_sem_wait (&vsync_wait_sem);
+	
     last_synctime = read_processor_time();
 
-    if(last_synctime - next_synctime > time_per_frame - 1000 || next_synctime < start)
+    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
         adjust_idletime(0);
     else
         adjust_idletime(next_synctime - start);
@@ -518,7 +520,7 @@ int graphics_init(bool mousecapture)
 {
     int i,j;
 
-    uae_sem_init (&vsync_wait_sem, 0, 1);
+    uae_sem_init (&vsync_wait_sem, 0, 0);
 
     graphics_subinit ();
 
