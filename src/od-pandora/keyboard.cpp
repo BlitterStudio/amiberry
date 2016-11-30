@@ -125,6 +125,9 @@ static struct uae_input_device_kbr_default keytrans_amiga_x11[] =
     { 113,  INPUTEVENT_KEY_CURSOR_LEFT},
     { 116,  INPUTEVENT_KEY_CURSOR_DOWN},
     { 114,  INPUTEVENT_KEY_CURSOR_RIGHT},
+	
+	{ 115, INPUTEVENT_KEY_HELP}, // Help mapped to End key
+	{ 119, INPUTEVENT_KEY_DEL},
 
     {  133,  INPUTEVENT_KEY_AMIGA_LEFT},   // Left amiga mapped to left Windows
     {  134,  INPUTEVENT_KEY_AMIGA_RIGHT},  // Right amiga mapped to right windows key.
@@ -242,6 +245,8 @@ static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] =
     { 116 -8,  INPUTEVENT_KEY_CURSOR_DOWN},
     { 114 -8,  INPUTEVENT_KEY_CURSOR_RIGHT},
 
+	{ 115, -8, INPUTEVENT_KEY_HELP}, // Help mapped to End key
+	{ 119, -8, INPUTEVENT_KEY_DEL},
 
     {  133 -8,  INPUTEVENT_KEY_AMIGA_LEFT},    // Left amiga mapped to left Windows
     {  134 -8,  INPUTEVENT_KEY_AMIGA_RIGHT},   // Right amiga mapped to right windows key.
