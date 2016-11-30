@@ -3258,7 +3258,11 @@ void default_prefs (struct uae_prefs *p, int type)
   p->chipset_refreshrate = 50;
   p->collision_level = 2;
   p->leds_on_screen = 0;
+#ifdef PANDORA_SPECIFIC
   p->fast_copper = 1;
+#else
+	p->fast_copper = 0;
+#endif
   p->tod_hack = 1;
 
 	p->cs_cd32c2p = p->cs_cd32cd = p->cs_cd32nvram = false;
