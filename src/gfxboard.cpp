@@ -12,11 +12,7 @@
 
 #include "options.h"
 #include "uae.h"
-<<<<<<< HEAD
 #include "include/memory.h"
-=======
-#include "memory.h"
->>>>>>> origin/master
 #include "debug.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -33,8 +29,5 @@ bool gfxboard_is_z3 (int type)
 	if (type == GFXBOARD_UAE_Z3)
 		return true;
 	return false;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/master
+
