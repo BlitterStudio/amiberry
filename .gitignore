@@ -18,3 +18,5 @@ kickstarts/*.rom
 *.001
 *.opendb
 *.npa01
+*.idx
+*.dat

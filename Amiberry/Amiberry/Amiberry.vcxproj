@@ -132,7 +132,6 @@
     <ClCompile Include="..\..\src\fsdb.cpp" />
     <ClCompile Include="..\..\src\fsdb_unix.cpp" />
     <ClCompile Include="..\..\src\fsusage.cpp" />
-    <ClCompile Include="..\..\src\genblitter.cpp" />
     <ClCompile Include="..\..\src\gfxboard.cpp" />
     <ClCompile Include="..\..\src\gfxutil.cpp" />
     <ClCompile Include="..\..\src\hardfile.cpp" />

@@ -228,9 +228,6 @@
     <ClCompile Include="..\..\src\fsusage.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\genblitter.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\gfxboard.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
