@@ -725,6 +725,9 @@ static void set_kbr_default (struct uae_prefs *p, int index, int devnum, struct 
 	uae_u32 scancode;
 
 	if (!trans)
+#ifdef DEBUG	
+		printf("DEBUG: trans was false, returning...\n");
+#endif
 		return;
 	for (j = 0; j < MAX_INPUT_DEVICES; j++) {
 		if (devnum >= 0 && devnum != j)
@@ -739,6 +742,9 @@ static void set_kbr_default (struct uae_prefs *p, int index, int devnum, struct 
 			for (i = 0; i < id->get_widget_num (j); i++) {
 				id->get_widget_type (j, i, 0, &scancode);
 				kbr->extra[i] = scancode;
+#ifdef DEBUG	
+				printf("DEBUG: Calling set_kbr_default_event...\n");
+#endif
 				set_kbr_default_event (kbr, trans, i);
 			}
 		}
@@ -751,6 +757,9 @@ static void inputdevice_default_kb (struct uae_prefs *p, int num)
 		if (p->jports[0].id != JPORT_CUSTOM || p->jports[1].id != JPORT_CUSTOM)
 			reset_inputdevice_slot (p, num);
 	}
+#ifdef DEBUG	
+	printf("DEBUG: Running set_kbr_default...\n");
+#endif
 	set_kbr_default (p, num, -1, keyboard_default);
 }
 static void inputdevice_default_kb_all (struct uae_prefs *p)
@@ -4578,6 +4587,9 @@ void inputdevice_devicechange (struct uae_prefs *prefs)
 // set default prefs to all input configuration settings
 void inputdevice_default_prefs (struct uae_prefs *p)
 {
+#ifdef DEBUG	
+	printf("DEBUG: Running inputdevice_init...\n");
+#endif
 	inputdevice_init ();
 
 	p->input_selected_setting = GAMEPORT_INPUT_SETTINGS;
@@ -4595,6 +4607,9 @@ void inputdevice_default_prefs (struct uae_prefs *p)
   p->input_autofire_linecnt = 8 * 312;
 	p->input_keyboard_type = 0;
 	keyboard_default = keyboard_default_table[p->input_keyboard_type];
+#ifdef DEBUG	
+	printf("DEBUG: Running inputdevice_default_kb_all...\n");
+#endif
 	inputdevice_default_kb_all (p);
 }
 

@@ -622,24 +622,39 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-  printf("Uae4arm v0.5 for Raspberry Pi by Chips\n");
+  printf("Uae4arm v0.5 for Raspberry Pi by Dimitris (MiDWaN) Panokostas\n");
 #ifdef PANDORA_SPECIFIC
   SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else 
 #ifdef USE_SDL
-  SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+	if (SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
+	{
+		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+		abort();
+	};
 #endif
 #endif
 
- 
-  keyboard_settrans();
+#ifdef DEBUG	
+	printf("DEBUG: setting keyboard mapping...\n");
+#endif
+	keyboard_settrans();
 
   if (restart_config[0]) {
+#ifdef DEBUG	
+	  printf("DEBUG: setting default prefs...\n");
+#endif
 	  default_prefs (&currprefs, 0);
 	  fixup_prefs (&currprefs);
   }
 
+#ifdef DEBUG	
+	printf("DEBUG: Checking graphics_setup()...\n");
+#endif
   if (! graphics_setup ()) {
+#ifdef DEBUG	
+	  printf("DEBUG: graphics_setup() failed...\n");
+#endif
 	  abort();
   }
 
@@ -648,7 +663,13 @@ static int real_main2 (int argc, TCHAR **argv)
   else
   	currprefs = changed_prefs;
 
+#ifdef DEBUG	
+	printf("DEBUG: Checking machdep_init()...\n");
+#endif
   if (!machdep_init ()) {
+#ifdef DEBUG	
+	  printf("DEBUG: machdep_init() failed...\n");
+#endif 
 	  restart_program = 0;
 	  return -1;
   }
@@ -669,6 +690,9 @@ static int real_main2 (int argc, TCHAR **argv)
 	  no_gui = 0;
   restart_program = 0;
   if (! no_gui) {
+#ifdef DEBUG
+	  printf("DEBUG: Attempting to initialize GUI...\n");
+#endif
 	  int err = gui_init ();
 	  currprefs = changed_prefs;
 	  if (err == -1) {

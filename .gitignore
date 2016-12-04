@@ -21,3 +21,4 @@ kickstarts/*.rom
 *.idx
 *.dat
 Amiberry/VisualGDB/Debug/Amiberry
+Amiberry/VisualGDB/Release/Amiberry

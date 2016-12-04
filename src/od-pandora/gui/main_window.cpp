@@ -130,7 +130,7 @@ namespace sdl
 	#if defined (RASPBERRY)
 		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
 		printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
-		gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+		gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
 	#else
 		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
 	#endif
