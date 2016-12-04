@@ -3188,9 +3188,6 @@ void default_prefs (struct uae_prefs *p, int type)
 	int roms[] = { 6, 7, 8, 9, 10, 14, 5, 4, 3, 2, 1, -1 };
   TCHAR zero = 0;
   struct zfile *f;
-#ifdef DEBUG	
-	printf("DEBUG: Running reset_inputdevice_config...\n");
-#endif
 	reset_inputdevice_config (p);
   memset (p, 0, sizeof (struct uae_prefs));
   _tcscpy (p->description, _T("UAE default configuration"));
@@ -3265,7 +3262,7 @@ void default_prefs (struct uae_prefs *p, int type)
 #else
 	p->fast_copper = 0;
 #endif
-  p->tod_hack = 1;
+	p->tod_hack = 1;
 
 	p->cs_cd32c2p = p->cs_cd32cd = p->cs_cd32nvram = false;
 
@@ -3274,9 +3271,6 @@ void default_prefs (struct uae_prefs *p, int type)
   _tcscpy (p->floppyslots[2].df, _T(""));
   _tcscpy (p->floppyslots[3].df, _T(""));
 
-#ifdef DEBUG	
-	printf("DEBUG: Running configure_rom...\n");
-#endif
   configure_rom (p, roms, 0);
 
   _tcscpy (p->romextfile, _T(""));
@@ -3319,21 +3313,9 @@ void default_prefs (struct uae_prefs *p, int type)
 
   p->key_for_menu = SDLK_F12;
 
-#ifdef DEBUG	
-	printf("DEBUG: Running inputdevice_default_prefs...\n");
-#endif
-  inputdevice_default_prefs (p);
-#ifdef DEBUG	
-	printf("DEBUG: Running blkdev_default_prefs...\n");
-#endif
+	inputdevice_default_prefs (p);
 	blkdev_default_prefs (p);
-#ifdef DEBUG	
-	printf("DEBUG: Running target_default_options...\n");
-#endif
-  target_default_options (p, type);
-#ifdef DEBUG	
-	printf("DEBUG: Running zfile_fclose...\n");
-#endif
+	target_default_options (p, type);
 	zfile_fclose (default_file);
 	default_file = NULL;
 	f = zfile_fopen_empty (NULL, _T("configstore"));

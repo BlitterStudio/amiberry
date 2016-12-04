@@ -635,26 +635,14 @@ static int real_main2 (int argc, TCHAR **argv)
 #endif
 #endif
 
-#ifdef DEBUG	
-	printf("DEBUG: setting keyboard mapping...\n");
-#endif
 	keyboard_settrans();
 
   if (restart_config[0]) {
-#ifdef DEBUG	
-	  printf("DEBUG: setting default prefs...\n");
-#endif
 	  default_prefs (&currprefs, 0);
 	  fixup_prefs (&currprefs);
   }
 
-#ifdef DEBUG	
-	printf("DEBUG: Checking graphics_setup()...\n");
-#endif
   if (! graphics_setup ()) {
-#ifdef DEBUG	
-	  printf("DEBUG: graphics_setup() failed...\n");
-#endif
 	  abort();
   }
 
@@ -663,13 +651,7 @@ static int real_main2 (int argc, TCHAR **argv)
   else
   	currprefs = changed_prefs;
 
-#ifdef DEBUG	
-	printf("DEBUG: Checking machdep_init()...\n");
-#endif
   if (!machdep_init ()) {
-#ifdef DEBUG	
-	  printf("DEBUG: machdep_init() failed...\n");
-#endif 
 	  restart_program = 0;
 	  return -1;
   }
@@ -690,9 +672,6 @@ static int real_main2 (int argc, TCHAR **argv)
 	  no_gui = 0;
   restart_program = 0;
   if (! no_gui) {
-#ifdef DEBUG
-	  printf("DEBUG: Attempting to initialize GUI...\n");
-#endif
 	  int err = gui_init ();
 	  currprefs = changed_prefs;
 	  if (err == -1) {
@@ -707,8 +686,6 @@ static int real_main2 (int argc, TCHAR **argv)
   	setCpuSpeed();
     update_display(&currprefs);
   }
-
-
 
 	memset (&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;

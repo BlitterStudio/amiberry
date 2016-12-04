@@ -171,7 +171,9 @@ static void open_screen(struct uae_prefs *p)
     if(Dummy_prSDLScreen == NULL )
     {
         const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
-        printf("DispmanX: Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+#ifdef DEBUG
+	    printf("DispmanX: Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
+#endif
         // For debug, in order to avoid full screen.
         Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
         //Dummy_prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
@@ -184,7 +186,9 @@ static void open_screen(struct uae_prefs *p)
             ((blit_rect.width != width) || (blit_rect.height != height) || (currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect) ||
              (currprefs.gfx_fullscreen_ratio != changed_prefs.gfx_fullscreen_ratio)))
     {
+#ifdef DEBUG
         printf("Emulation resolution change detected.\n");
+#endif
         if(prSDLScreen != NULL )
         {
             SDL_FreeSurface(prSDLScreen);
@@ -199,7 +203,9 @@ static void open_screen(struct uae_prefs *p)
 
     if (dispmanxresource_amigafb_1 == 0)
     {
+#ifdef DEBUG
         printf("Emulation resolution: Width %i Height: %i\n",width,height);
+#endif
         currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
         currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
         prSDLScreen = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 16,
