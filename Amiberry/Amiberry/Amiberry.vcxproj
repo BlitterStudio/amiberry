@@ -186,7 +186,6 @@
     <ClCompile Include="..\..\src\od-pandora\neon_helper.s" />
     <ClCompile Include="..\..\src\od-pandora\pandora.cpp" />
     <ClCompile Include="..\..\src\od-pandora\pandora_filesys.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\pandora_gfx.cpp" />
     <ClCompile Include="..\..\src\od-pandora\pandora_gui.cpp" />
     <ClCompile Include="..\..\src\od-pandora\pandora_input.cpp" />
     <ClCompile Include="..\..\src\od-pandora\pandora_mem.cpp" />

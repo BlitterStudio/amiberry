@@ -321,9 +321,6 @@
     <ClCompile Include="..\..\src\od-pandora\pandora_filesys.cpp">
       <Filter>Source files\od-pandora</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora_gfx.cpp">
-      <Filter>Source files\od-pandora</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\od-pandora\pandora_gui.cpp">
       <Filter>Source files\od-pandora</Filter>
     </ClCompile>
