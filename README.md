@@ -5,11 +5,12 @@
 - Pi 3 is now the default target if no Platform is specified
 - Added support for custom functions assignable to keyboard LEDs (e.g. HD activity)
 - Code formatting and cleanup
-- FullHD (1080p) resolution supported in Picasso96 mode.
-- Pi Zero / Pi 1 version now has full Picasso96 support.
+- FullHD (1080p) resolution supported in Picasso96 mode on all Pi models
+- Pi Zero / Pi 1 version now has full Picasso96 support (up to 1080p 24bit)
 - Removed Pandora specific keyboard shortcuts which caused crashes
 - Loading the Configuration file now respects the input settings
 - Fixed bugs and crashes in GUI keyboard navigation
+- Added Visual Studio solution (requires VisualGDB), so we can compile and debug from Windows PC
 
 # uae4arm-rpi
 Port of uae4arm on Raspberry Pi
