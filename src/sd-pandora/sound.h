@@ -41,7 +41,7 @@ STATIC_INLINE void set_sound_buffers (void)
 
 STATIC_INLINE void clear_sound_buffers (void)
 {
-    memset (sndbuffer, 0, 4 * (SNDBUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS);
+    memset (sndbuffer, 0, sizeof(sndbuffer));
 }
 
 #define PUT_SOUND_WORD_MONO(x) put_sound_word_mono_func(x)
