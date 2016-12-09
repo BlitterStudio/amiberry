@@ -25,7 +25,7 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "md-pandora/md-fpp.h"
+#include "machdep/md-fpp.h"
 #include "savestate.h"
 #include "cpu_prefetch.h"
 

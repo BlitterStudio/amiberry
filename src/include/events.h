@@ -12,7 +12,7 @@
   * Copyright 1995-1998 Bernd Schmidt
   */
 
-#include "md-pandora/rpt.h"
+#include "machdep/rpt.h"
 
 extern frame_time_t vsyncmintime;
 extern int vsynctimebase, syncbase;

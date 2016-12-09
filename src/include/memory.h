@@ -39,7 +39,7 @@ typedef int (REGPARAM3 *check_func)(uaecptr, uae_u32) REGPARAM;
 extern uae_u32 max_z3fastmem;
 
 #undef DIRECT_MEMFUNCS_SUCCESSFUL
-#include "md-pandora/maccess.h"
+#include "machdep/maccess.h"
 
 #define chipmem_start_addr 0x00000000
 #define bogomem_start_addr 0x00C00000

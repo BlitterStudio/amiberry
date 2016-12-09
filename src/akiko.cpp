@@ -21,7 +21,7 @@
 #include "savestate.h"
 #include "blkdev.h"
 #include "zfile.h"
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 #include "akiko.h"
 #include "gui.h"
 #include "crc32.h"
