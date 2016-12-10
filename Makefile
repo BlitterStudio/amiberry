@@ -3,13 +3,13 @@ ifeq ($(PLATFORM),)
 endif
 
 ifeq ($(PLATFORM),rpi3)
-	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	CPU_FLAGS += -std=gnu++14 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
 else ifeq ($(PLATFORM),rpi2)
-	CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
+	CPU_FLAGS += -std=gnu++14 -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
 else ifeq ($(PLATFORM),rpi1)
-	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+	CPU_FLAGS += -std=gnu++14 -march=armv6zk -mfpu=vfp -mfloat-abi=hard
 endif
 
 NAME   = uae4arm
@@ -28,7 +28,7 @@ PANDORA=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
 
-SDL_CFLAGS = `sdl2-config --cflags`
+SDL_CFLAGS = `sdl2-config --cflags --libs`
 
 DEFS +=  `xml2-config --cflags`
 DEFS += -DCPU_arm -DARMV6_ASSEMBLY -DPANDORA -DPICASSO96
@@ -36,13 +36,12 @@ DEFS += -DWITH_INGAME_WARNING -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 DEFS += -DUSE_SDL
 
-MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include
 MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
-LDFLAGS += -lSDL2 -lpthread -lm -lz -lSDL2_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
-LDFLAGS += -lSDL2_ttf -lguisan -lbcm_host -L/opt/vc/lib -L/usr/local/lib -Lsrc/guisan
+LDFLAGS += -lpthread -lm -lz -lSDL2_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
+LDFLAGS += -lSDL2_ttf -lguisan -lbcm_host -L/opt/vc/lib -Lsrc/guisan
 
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -fomit-frame-pointer
@@ -195,7 +194,7 @@ OBJS =	\
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o
 	
-OBJS += src/osdep/gui/sdltruetypefont.o
+OBJS += src/include/guisan/sdl/sdltruetypefont.o
 OBJS += src/osdep/picasso96.o
 OBJS += src/osdep/neon_helper.o
 

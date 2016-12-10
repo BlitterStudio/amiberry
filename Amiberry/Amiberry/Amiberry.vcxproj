@@ -44,8 +44,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -53,13 +53,14 @@
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
+      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
     </ClCompile>
@@ -68,13 +69,14 @@
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
+      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -83,13 +85,14 @@
       <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
+      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;PICASSO96;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;PICASSO96;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv6zk -mfpu=vfp -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -98,6 +101,7 @@
       <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
+      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

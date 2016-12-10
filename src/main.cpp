@@ -636,14 +636,12 @@ void check_error_sdl(bool check, const char* message) {
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-  printf("Uae4arm v0.5 for Raspberry Pi by Dimitris (MiDWaN) Panokostas\n");
-#ifdef USE_SDL
+	printf("Uae4arm-SDL2 for Raspberry Pi by Dimitris (MiDWaN) Panokostas\n");
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	};
-#endif
 
 	sdlWindow = SDL_CreateWindow("Amiberry v2",
 		SDL_WINDOWPOS_UNDEFINED,
