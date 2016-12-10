@@ -54,7 +54,7 @@ extern int loadconfig_old(struct uae_prefs *p, const char *orgpath);
 extern void SetLastActiveConfig(const char *filename);
 
 /* Keyboard */
-int customControlMap[SDLK_LAST];
+//int customControlMap[SDLK_LAST];
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
@@ -263,7 +263,7 @@ void target_default_options (struct uae_prefs *p, int type)
 
     p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
-    memset(customControlMap, 0, sizeof(customControlMap));
+//    memset(customControlMap, 0, sizeof(customControlMap));
 }
 
 
@@ -273,16 +273,16 @@ void target_save_options (struct zfile *f, struct uae_prefs *p)
     cfgfile_write (f, "pandora.hide_idle_led", "%d", p->pandora_hide_idle_led);
     cfgfile_write (f, "pandora.tap_delay", "%d", p->pandora_tapDelay);
     cfgfile_write (f, "pandora.custom_controls", "%d", p->pandora_customControls);
-    cfgfile_write (f, "pandora.custom_up", "%d", customControlMap[VK_UP]);
-    cfgfile_write (f, "pandora.custom_down", "%d", customControlMap[VK_DOWN]);
-    cfgfile_write (f, "pandora.custom_left", "%d", customControlMap[VK_LEFT]);
-    cfgfile_write (f, "pandora.custom_right", "%d", customControlMap[VK_RIGHT]);
-    cfgfile_write (f, "pandora.custom_a", "%d", customControlMap[VK_A]);
-    cfgfile_write (f, "pandora.custom_b", "%d", customControlMap[VK_B]);
-    cfgfile_write (f, "pandora.custom_x", "%d", customControlMap[VK_X]);
-    cfgfile_write (f, "pandora.custom_y", "%d", customControlMap[VK_Y]);
-    cfgfile_write (f, "pandora.custom_l", "%d", customControlMap[VK_L]);
-    cfgfile_write (f, "pandora.custom_r", "%d", customControlMap[VK_R]);
+//    cfgfile_write (f, "pandora.custom_up", "%d", customControlMap[VK_UP]);
+//    cfgfile_write (f, "pandora.custom_down", "%d", customControlMap[VK_DOWN]);
+//    cfgfile_write (f, "pandora.custom_left", "%d", customControlMap[VK_LEFT]);
+//    cfgfile_write (f, "pandora.custom_right", "%d", customControlMap[VK_RIGHT]);
+//    cfgfile_write (f, "pandora.custom_a", "%d", customControlMap[VK_A]);
+//    cfgfile_write (f, "pandora.custom_b", "%d", customControlMap[VK_B]);
+//    cfgfile_write (f, "pandora.custom_x", "%d", customControlMap[VK_X]);
+//    cfgfile_write (f, "pandora.custom_y", "%d", customControlMap[VK_Y]);
+//    cfgfile_write (f, "pandora.custom_l", "%d", customControlMap[VK_L]);
+//    cfgfile_write (f, "pandora.custom_r", "%d", customControlMap[VK_R]);
     cfgfile_write (f, "pandora.move_x", "%d", p->pandora_horizontal_offset);
     cfgfile_write (f, "pandora.move_y", "%d", p->pandora_vertical_offset);
 }
@@ -304,16 +304,16 @@ int target_parse_option (struct uae_prefs *p, const char *option, const char *va
                   || cfgfile_intval (option, value, "hide_idle_led", &p->pandora_hide_idle_led, 1)
                   || cfgfile_intval (option, value, "tap_delay", &p->pandora_tapDelay, 1)
                   || cfgfile_intval (option, value, "custom_controls", &p->pandora_customControls, 1)
-                  || cfgfile_intval (option, value, "custom_up", &customControlMap[VK_UP], 1)
-                  || cfgfile_intval (option, value, "custom_down", &customControlMap[VK_DOWN], 1)
-                  || cfgfile_intval (option, value, "custom_left", &customControlMap[VK_LEFT], 1)
-                  || cfgfile_intval (option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
-                  || cfgfile_intval (option, value, "custom_a", &customControlMap[VK_A], 1)
-                  || cfgfile_intval (option, value, "custom_b", &customControlMap[VK_B], 1)
-                  || cfgfile_intval (option, value, "custom_x", &customControlMap[VK_X], 1)
-                  || cfgfile_intval (option, value, "custom_y", &customControlMap[VK_Y], 1)
-                  || cfgfile_intval (option, value, "custom_l", &customControlMap[VK_L], 1)
-                  || cfgfile_intval (option, value, "custom_r", &customControlMap[VK_R], 1)
+//                  || cfgfile_intval (option, value, "custom_up", &customControlMap[VK_UP], 1)
+//                  || cfgfile_intval (option, value, "custom_down", &customControlMap[VK_DOWN], 1)
+//                  || cfgfile_intval (option, value, "custom_left", &customControlMap[VK_LEFT], 1)
+//                  || cfgfile_intval (option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
+//                  || cfgfile_intval (option, value, "custom_a", &customControlMap[VK_A], 1)
+//                  || cfgfile_intval (option, value, "custom_b", &customControlMap[VK_B], 1)
+//                  || cfgfile_intval (option, value, "custom_x", &customControlMap[VK_X], 1)
+//                  || cfgfile_intval (option, value, "custom_y", &customControlMap[VK_Y], 1)
+//                  || cfgfile_intval (option, value, "custom_l", &customControlMap[VK_L], 1)
+//                  || cfgfile_intval (option, value, "custom_r", &customControlMap[VK_R], 1)
                   || cfgfile_intval (option, value, "move_x", &p->pandora_horizontal_offset, 1)
                   || cfgfile_intval (option, value, "move_y", &p->pandora_vertical_offset, 1)
                  );
@@ -925,23 +925,23 @@ int handle_msgpump (void)
             // Fall through...
 
             default:
-                if(currprefs.pandora_customControls)
-                {
-                    keycode = customControlMap[rEvent.key.keysym.sym];
-                    if(keycode < 0)
-                    {
-                        // Simulate mouse or joystick
-                        SimulateMouseOrJoy(keycode, 1);
-                        break;
-                    }
-                    else if(keycode > 0)
-                    {
-                        // Send mapped key press
-                        inputdevice_do_keyboard(keycode, 1);
-                        break;
-                    }
-                }
-                else
+//                if(currprefs.pandora_customControls)
+//                {
+//                    keycode = customControlMap[rEvent.key.keysym.sym];
+//                    if(keycode < 0)
+//                    {
+//                        // Simulate mouse or joystick
+//                        SimulateMouseOrJoy(keycode, 1);
+//                        break;
+//                    }
+//                    else if(keycode > 0)
+//                    {
+//                        // Send mapped key press
+//                        inputdevice_do_keyboard(keycode, 1);
+//                        break;
+//                    }
+//                }
+//                else
 
                     modifier = rEvent.key.keysym.mod;
                 keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
@@ -1004,22 +1004,22 @@ int handle_msgpump (void)
             // Fall through...
 
             default:
-                if(currprefs.pandora_customControls)
-                {
-                    keycode = customControlMap[rEvent.key.keysym.sym];
-                    if(keycode < 0)
-                    {
-                        // Simulate mouse or joystick
-                        SimulateMouseOrJoy(keycode, 0);
-                        break;
-                    }
-                    else if(keycode > 0)
-                    {
-                        // Send mapped key release
-                        inputdevice_do_keyboard(keycode, 0);
-                        break;
-                    }
-                }
+//                if(currprefs.pandora_customControls)
+//                {
+//                    keycode = customControlMap[rEvent.key.keysym.sym];
+//                    if(keycode < 0)
+//                    {
+//                        // Simulate mouse or joystick
+//                        SimulateMouseOrJoy(keycode, 0);
+//                        break;
+//                    }
+//                    else if(keycode > 0)
+//                    {
+//                        // Send mapped key release
+//                        inputdevice_do_keyboard(keycode, 0);
+//                        break;
+//                    }
+//                }
 
                 modifier = rEvent.key.keysym.mod;
                 keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);

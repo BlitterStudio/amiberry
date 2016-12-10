@@ -109,7 +109,8 @@ static void read_mouse (void)
   
   if(currprefs.jports[0].id == JSEM_MICE + 1 || currprefs.jports[1].id == JSEM_MICE + 1) {
     // dPad is mouse
-  	Uint8 *keystate = SDL_GetKeyState(NULL);
+//  	Uint8 *keystate = SDL_GetKeyState(NULL);
+	  const Uint8 *keystate = SDL_GetKeyboardState(NULL);
     int mouseScale = currprefs.input_joymouse_multiplier / 4;
     
     if(keystate[VK_LEFT])
@@ -281,7 +282,8 @@ static int init_joystick (void)
   for (int cpt; cpt < nr_joysticks; cpt++)
   {
     Joysticktable[cpt] = SDL_JoystickOpen (cpt);
-    strncpy(JoystickName[cpt],SDL_JoystickName(cpt),80);
+//    strncpy(JoystickName[cpt],SDL_JoystickName(cpt),80);
+	  strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), 80);
     printf("Joystick %i : %s\n",cpt,JoystickName[cpt]);
     printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(Joysticktable[cpt]),SDL_JoystickNumAxes(Joysticktable[cpt]),SDL_JoystickNumHats(Joysticktable[cpt]));
 
@@ -420,7 +422,8 @@ static void read_joystick (void)
   // First handle fake joystick from pandora...
   if(currprefs.jports[joyid].id == JSEM_JOYS)
   {
-  	Uint8 *keystate = SDL_GetKeyState(NULL);
+//  	Uint8 *keystate = SDL_GetKeyState(NULL);
+	  const Uint8 *keystate = SDL_GetKeyboardState(NULL);
     
     if(!keystate[VK_R])
     { // Right shoulder + dPad -> cursor keys
