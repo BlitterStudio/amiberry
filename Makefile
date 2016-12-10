@@ -40,7 +40,7 @@ MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include
 MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
-LDFLAGS += -lpthread -lm -lz -lSDL2_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
+LDFLAGS += -lSDL2 -lpthread -lm -lz -lSDL2_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
 LDFLAGS += -lSDL2_ttf -lguisan -lbcm_host -L/opt/vc/lib -Lsrc/guisan
 
 ifndef DEBUG
