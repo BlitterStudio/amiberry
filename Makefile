@@ -194,7 +194,6 @@ OBJS =	\
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o
 	
-OBJS += src/include/guisan/sdl/sdltruetypefont.o
 OBJS += src/osdep/picasso96.o
 OBJS += src/osdep/neon_helper.o
 
