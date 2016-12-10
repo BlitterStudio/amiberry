@@ -1,7 +1,7 @@
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -11,7 +11,7 @@
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
-
+#include "pandora_gfx.h"
 
 extern SDL_Surface *prSDLScreen;
 extern void flush_screen();
@@ -33,7 +33,7 @@ void InGameMessage(const char *msg)
 	gcn::Gui* msg_gui;
 	gcn::SDLGraphics* msg_graphics;
 	gcn::SDLInput* msg_input;
-	gcn::contrib::SDLTrueTypeFont* msg_font;
+	gcn::SDLTrueTypeFont* msg_font;
 	gcn::Color msg_baseCol;
 
 	gcn::Container* msg_top;
@@ -61,7 +61,7 @@ void InGameMessage(const char *msg)
 	msg_gui->setTop(msg_top);
 
 	TTF_Init();
-	msg_font = new gcn::contrib::SDLTrueTypeFont("data/FreeSans.ttf", 10);
+	msg_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 10);
 	gcn::Widget::setGlobalFont(msg_font);
 
 	doneActionListener = new DoneActionListener();
@@ -113,7 +113,7 @@ void InGameMessage(const char *msg)
 			}
 
 			            //-------------------------------------------------
-			            // Send event to guichan-controls
+			            // Send event to guisan-controls
 			            //-------------------------------------------------
 			msg_input->pushInput(event);
 		}
@@ -124,7 +124,15 @@ void InGameMessage(const char *msg)
 		msg_gui->draw();
 		// Finally we update the screen.
 		if (!drawn)
-			SDL_Flip(prSDLScreen);
+//			SDL_Flip(prSDLScreen);
+		{
+		// Update the texture from the surface
+			SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
+			// Copy the texture on the renderer
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			// Update the window surface (show the renderer)
+			SDL_RenderPresent(renderer);
+		}		
 		drawn = true;
 	}
 

@@ -1,7 +1,7 @@
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -17,10 +17,12 @@
 #include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
-
+#include "pandora_gfx.h"
 
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202
+
+extern std::string volName;
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -48,11 +50,14 @@ class FilesysVirtualActionListener : public gcn::ActionListener
     {
       if(actionEvent.getSource() == cmdPath)
       {
-        char tmp[MAX_PATH];
+		char tmp[MAX_PATH];
         strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
         wndEditFilesysVirtual->releaseModalFocus();
-        if(SelectFolder("Select folder", tmp))
-          txtPath->setText(tmp);
+	      if (SelectFolder("Select folder", tmp))
+	      {
+		      txtPath->setText(tmp);
+		      txtVolume->setText(volName);
+	      }
         wndEditFilesysVirtual->requestModalFocus();
         cmdPath->requestFocus();
       }
@@ -239,7 +244,7 @@ static void EditFilesysVirtualLoop(void)
       }
 
       //-------------------------------------------------
-      // Send event to guichan-controls
+      // Send event to guisan-controls
       //-------------------------------------------------
       gui_input->pushInput(event);
     }
@@ -249,8 +254,15 @@ static void EditFilesysVirtualLoop(void)
     // Now we let the Gui object draw itself.
     uae_gui->draw();
     // Finally we update the screen.
-    wait_for_vsync();
-    SDL_Flip(gui_screen);
+//    wait_for_vsync();
+//    SDL_Flip(gui_screen);
+	  
+	  // Update the texture from the surface
+	  SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
+	  // Copy the texture on the renderer
+	  SDL_RenderCopy(renderer, texture, NULL, NULL);
+	  // Update the window surface (show the renderer)
+	  SDL_RenderPresent(renderer);
   }  
 }
 

@@ -1,7 +1,7 @@
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -17,7 +17,7 @@
 #include "newcpu.h"
 #include "custom.h"
 #include "gui_handling.h"
-#include "sd-pandora/sound.h"
+#include "sounddep/sound.h"
 
 
 static gcn::Window *grpSound;

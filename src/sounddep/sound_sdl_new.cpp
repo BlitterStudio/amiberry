@@ -21,7 +21,7 @@
 #include "custom.h"
 #include "audio.h"
 #include "gensound.h"
-#include "sd-pandora/sound.h"
+#include "sounddep/sound.h"
 #include <SDL.h>
 
 #ifdef ANDROIDSDL

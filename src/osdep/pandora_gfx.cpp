@@ -12,14 +12,15 @@
 #include "inputdevice.h"
 #include "savestate.h"
 #include "picasso96.h"
+#include "pandora_gfx.h"
 
 #include <png.h>
 #include <SDL.h>
-#include <SDL/SDL_image.h>
-#ifndef ANDROID
-#include <SDL/SDL_gfxPrimitives.h>
-#endif
-#include <SDL/SDL_ttf.h>
+#include <SDL_image.h>
+//#ifndef ANDROID
+//#include <SDL/SDL_gfxPrimitives.h>
+//#endif
+#include <SDL_ttf.h>
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -193,9 +194,7 @@ static void open_screen(struct uae_prefs *p)
         CalcPandoraWidth(p);
 
         snprintf(layersize, 20, "%dx480", p->gfx_size_fs.width);
-#ifndef WIN32
         setenv("SDL_OMAP_LAYER_SIZE", layersize, 1);
-#endif
     }
     else
     {
@@ -203,13 +202,9 @@ static void open_screen(struct uae_prefs *p)
             snprintf(layersize, 20, "%dx480", picasso_vidinfo.width);
         else
             snprintf(layersize, 20, "%dx%d", picasso_vidinfo.width, picasso_vidinfo.height);
-#ifndef WIN32
         setenv("SDL_OMAP_LAYER_SIZE", layersize, 1);
-#endif
     }
-#ifndef WIN32
     setenv("SDL_OMAP_VSYNC", "0", 1);
-#endif
 
 #ifdef ANDROIDSDL
     update_onscreen();
@@ -219,18 +214,49 @@ static void open_screen(struct uae_prefs *p)
     {
         if(prSDLScreen == NULL || prSDLScreen->w != p->gfx_size.width || prSDLScreen->h != p->gfx_size.height)
         {
-#if defined(PANDORA) && !defined(WIN32)
-            prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
-#elif defined(PANDORA) && defined(WIN32)
-            prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_SWSURFACE|SDL_DOUBLEBUF);
-#else
-            prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN);
-#endif
+//            prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
+	        prSDLScreen = SDL_CreateRGBSurface(0, p->gfx_size.width, p->gfx_size.height, 32, 0, 0, 0, 0);
+	        check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
+		    
+		    // make the scaled rendering look smoother.
+	        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	        SDL_RenderSetLogicalSize(renderer, p->gfx_size.width, p->gfx_size.height);
+		    
+	        // Initialize SDL Texture for the renderer
+	        //		    if (texture == nullptr)
+	        {
+		        texture = SDL_CreateTexture(renderer,
+			        SDL_PIXELFORMAT_ARGB8888,
+			        SDL_TEXTUREACCESS_STREAMING,
+			        p->gfx_size.width,
+			        p->gfx_size.height);
+		        check_error_sdl(texture == nullptr, "Unable to create texture");
+	        }
         }
     }
     else
     {
-        prSDLScreen = SDL_SetVideoMode(picasso_vidinfo.width, picasso_vidinfo.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
+//        prSDLScreen = SDL_SetVideoMode(picasso_vidinfo.width, picasso_vidinfo.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
+	    if (prSDLScreen == NULL || prSDLScreen->w != picasso_vidinfo.width || prSDLScreen->h != picasso_vidinfo.height)
+	    {
+		    prSDLScreen = SDL_CreateRGBSurface(0, picasso_vidinfo.width, picasso_vidinfo.height, 32, 0, 0, 0, 0);
+		    check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
+	    
+		    // make the scaled rendering look smoother.
+		    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  
+		    SDL_RenderSetLogicalSize(renderer, picasso_vidinfo.width, picasso_vidinfo.height);
+	    
+		    // Initialize SDL Texture for the renderer
+//		    if (texture == nullptr)
+		    {
+			    texture = SDL_CreateTexture(renderer,
+				    SDL_PIXELFORMAT_ARGB8888,
+				    SDL_TEXTUREACCESS_STREAMING,
+				    picasso_vidinfo.width,
+				    picasso_vidinfo.height);
+			    check_error_sdl(texture == nullptr, "Unable to create texture");
+		    }
+	    }
     }
     if(prSDLScreen != NULL)
     {
@@ -238,25 +264,30 @@ static void open_screen(struct uae_prefs *p)
         init_row_map();
     }
 
-    current_vsync_frame = 0;
-    fbdev = open("/dev/fb0", O_RDWR);
-    if(fbdev != -1)
-    {
-        // Check if we have vsync with frame counter...
-        current_vsync_frame = 0;
-        ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
-        if(current_vsync_frame != 0)
-            current_vsync_frame += 2;
-    }
+	// Update the texture from the surface
+	SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
+	// Copy the texture on the renderer
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
+	// Update the window surface (show the renderer)
+	SDL_RenderPresent(renderer);
+	
+//    current_vsync_frame = 0;
+//    fbdev = open("/dev/fb0", O_RDWR);
+//    if(fbdev != -1)
+//    {
+//        // Check if we have vsync with frame counter...
+//        current_vsync_frame = 0;
+//        ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
+//        if(current_vsync_frame != 0)
+//            current_vsync_frame += 2;
+//    }
 }
 
 
 void update_display(struct uae_prefs *p)
 {
     open_screen(p);
-
     SDL_ShowCursor(SDL_DISABLE);
-
     framecnt = 1; // Don't draw frame before reset done
 }
 
@@ -315,11 +346,11 @@ void unlockscr (void)
 
 void wait_for_vsync(void)
 {
-    if(fbdev != -1)
-    {
-        unsigned int dummy;
-        ioctl(fbdev, OMAPFB_WAITFORVSYNC, &dummy);
-    }
+//    if(fbdev != -1)
+//    {
+//        unsigned int dummy;
+//        ioctl(fbdev, OMAPFB_WAITFORVSYNC, &dummy);
+//    }
 }
 
 
@@ -368,7 +399,15 @@ void flush_screen ()
     }
 
 // Android swapped SDL_Flip & last_synctime for fixing performance
-    SDL_Flip(prSDLScreen);
+//    SDL_Flip(prSDLScreen);
+	
+	// Update the texture from the surface
+	SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
+	// Copy the texture on the renderer
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
+	// Update the window surface (show the renderer)
+	SDL_RenderPresent(renderer);
+	
     last_synctime = read_processor_time();
 
     if(!screen_is_picasso)
@@ -391,7 +430,13 @@ void flush_screen ()
 void black_screen_now(void)
 {
     SDL_FillRect(prSDLScreen,NULL,0);
-    SDL_Flip(prSDLScreen);
+//    SDL_Flip(prSDLScreen);
+	// Update the texture from the surface
+	SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
+	// Copy the texture on the renderer
+	SDL_RenderCopy(renderer, texture, NULL, NULL);
+	// Update the window surface (show the renderer)
+	SDL_RenderPresent(renderer);
 }
 
 
@@ -404,7 +449,14 @@ static void graphics_subinit (void)
     }
     else
     {
-        SDL_Flip(prSDLScreen);
+//        SDL_Flip(prSDLScreen);
+	    // Update the texture from the surface
+	    SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
+	    // Copy the texture on the renderer
+	    SDL_RenderCopy(renderer, texture, NULL, NULL);
+	    // Update the window surface (show the renderer)
+	    SDL_RenderPresent(renderer);
+	    
         SDL_ShowCursor(SDL_DISABLE);
 
         InitAmigaVidMode(&currprefs);
@@ -464,19 +516,22 @@ static int init_colors (void)
  */
 static int get_display_depth (void)
 {
-    const SDL_VideoInfo *vid_info;
-    int depth = 0;
+//    const SDL_VideoInfo *vid_info;
+	
+//    int depth = 0;
+	int depth = 32;
 
-    if ((vid_info = SDL_GetVideoInfo()))
-    {
-        depth = vid_info->vfmt->BitsPerPixel;
+//    if ((vid_info = SDL_GetVideoInfo()))
+//    {
+//        depth = vid_info->vfmt->BitsPerPixel;
 
         /* Don't trust the answer if it's 16 bits; the display
          * could actually be 15 bits deep. We'll count the bits
          * ourselves */
-        if (depth == 16)
-            depth = bitsInMask (vid_info->vfmt->Rmask) + bitsInMask (vid_info->vfmt->Gmask) + bitsInMask (vid_info->vfmt->Bmask);
-    }
+//        if (depth == 16)
+//            depth = bitsInMask (vid_info->vfmt->Rmask) + bitsInMask (vid_info->vfmt->Gmask) + bitsInMask (vid_info->vfmt->Bmask);
+//    }
+	
     return depth;
 }
 
@@ -508,6 +563,10 @@ int graphics_init (bool mousecapture)
 void graphics_leave (void)
 {
     graphics_subshutdown ();
+	
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(sdlWindow);
+	
     SDL_VideoQuit();
 }
 
@@ -789,9 +848,9 @@ void picasso_InitResolutions (void)
             int rgbFormat = (bitdepth == 8 ? RGBFB_CLUT : (bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8));
             int pixelFormat = 1 << rgbFormat;
             pixelFormat |= RGBFF_CHUNKY;
-
-            if (SDL_VideoModeOK (x_size_table[i], y_size_table[i], 16, SDL_SWSURFACE))
-            {
+//
+//            if (SDL_VideoModeOK (x_size_table[i], y_size_table[i], 16, SDL_SWSURFACE))
+//            {
                 DisplayModes[count].res.width = x_size_table[i];
                 DisplayModes[count].res.height = y_size_table[i];
                 DisplayModes[count].depth = bit_unit >> 3;
@@ -803,7 +862,7 @@ void picasso_InitResolutions (void)
                         DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
 
                 count++;
-            }
+//            }
         }
     }
     DisplayModes[count].depth = -1;

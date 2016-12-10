@@ -1,7 +1,7 @@
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
+#include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeListBox.hpp"
 
@@ -314,7 +314,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
     lstConfigs->addActionListener(configsListActionListener);
 
     scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
-    scrAreaConfigs->setFrameSize(1);
+	scrAreaConfigs->setBorderSize(1);
     scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
     scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
     scrAreaConfigs->setScrollbarWidth(20);

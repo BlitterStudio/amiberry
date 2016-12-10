@@ -110,6 +110,18 @@
     <Filter Include="Source files\osdep\menu">
       <UniqueIdentifier>{08cd7b24-548b-44cc-b832-e5c7a01f2527}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header files\include\guisan">
+      <UniqueIdentifier>{b83a0650-3eed-42d1-8fd3-4789521ddc13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\include\guisan\sdl">
+      <UniqueIdentifier>{caf30d50-f226-4af8-bd90-ea073cdee161}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\include\guisan\opengl">
+      <UniqueIdentifier>{0b788fcf-c590-4559-a0eb-a04d50ced350}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\include\guisan\widgets">
+      <UniqueIdentifier>{f5513d0a-8eab-40b4-b652-48202c4289c1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Amiberry-Debug.vgdbsettings">
@@ -281,12 +293,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\zfile_archive.cpp">
       <Filter>Source files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\sd-sdl\sound_sdl_new.cpp">
-      <Filter>Source files\sounddep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\md-pandora\support.cpp">
-      <Filter>Source files\machdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\jit\compemu.cpp">
       <Filter>Source files\jit</Filter>
@@ -522,9 +528,6 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelSound.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\gui\sdltruetypefont.cpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
@@ -554,6 +557,12 @@
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\neon_helper.s">
       <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\machdep\support.cpp">
+      <Filter>Source files\machdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\sounddep\sound_sdl_new.cpp">
+      <Filter>Source files\sounddep</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -789,63 +798,6 @@
     <ClInclude Include="..\..\src\include\zfile.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\td-sdl\thread.h">
-      <Filter>Header files\threaddep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\sd-pandora\sound.h">
-      <Filter>Header files\sounddep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\cda_play.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\config.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\mp3decoder.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\pandora_rp9.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\sysconfig.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\target.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\gui_handling.h">
-      <Filter>Header files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\sdltruetypefont.hpp">
-      <Filter>Header files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\SelectorEntry.hpp">
-      <Filter>Header files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeCheckBox.hpp">
-      <Filter>Header files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeDropDown.hpp">
-      <Filter>Header files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeListBox.hpp">
-      <Filter>Header files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeRadioButton.hpp">
-      <Filter>Header files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\m68k.h">
-      <Filter>Header files\machdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\maccess.h">
-      <Filter>Header files\machdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\md-fpp.h">
-      <Filter>Header files\machdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\rpt.h">
-      <Filter>Header files\machdep</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\jit\codegen_arm.h">
       <Filter>Header files\jit</Filter>
     </ClInclude>
@@ -950,6 +902,255 @@
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\zip\unzip.h">
       <Filter>Header files\archivers\zip</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan.hpp">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\actionevent.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\actionlistener.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\basiccontainer.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\cliprectangle.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\color.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\deathlistener.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\defaultfont.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\event.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\exception.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\focushandler.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\focuslistener.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\font.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\genericinput.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\glut.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\graphics.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\gui.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\image.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\imagefont.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\imageloader.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\input.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\inputevent.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\key.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\keyevent.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\keyinput.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\keylistener.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\listmodel.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\mouseevent.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\mouseinput.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\mouselistener.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\opengl.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\platform.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\rectangle.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\sdl.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\selectionevent.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\selectionlistener.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widget.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgetlistener.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\x.hpp">
+      <Filter>Header files\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\opengl\openglgraphics.hpp">
+      <Filter>Header files\include\guisan\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\opengl\openglimage.hpp">
+      <Filter>Header files\include\guisan\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\opengl\openglsdlimageloader.hpp">
+      <Filter>Header files\include\guisan\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\sdl\sdlgraphics.hpp">
+      <Filter>Header files\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\sdl\sdlimage.hpp">
+      <Filter>Header files\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\sdl\sdlimageloader.hpp">
+      <Filter>Header files\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\sdl\sdlinput.hpp">
+      <Filter>Header files\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\sdl\sdlpixel.hpp">
+      <Filter>Header files\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\sdl\sdltruetypefont.hpp">
+      <Filter>Header files\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\button.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\checkbox.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\container.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\dropdown.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\icon.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\imagebutton.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\label.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\listbox.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\radiobutton.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\scrollarea.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\slider.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\tab.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\tabbedarea.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\textbox.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\textfield.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\guisan\widgets\window.hpp">
+      <Filter>Header files\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\gui\gui_handling.h">
+      <Filter>Header files\osdep\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp">
+      <Filter>Header files\osdep\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\gui\UaeCheckBox.hpp">
+      <Filter>Header files\osdep\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\gui\UaeDropDown.hpp">
+      <Filter>Header files\osdep\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp">
+      <Filter>Header files\osdep\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp">
+      <Filter>Header files\osdep\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\cda_play.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\config.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\mp3decoder.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\pandora_gfx.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\pandora_rp9.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\sysconfig.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\target.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\sounddep\sound.h">
+      <Filter>Header files\sounddep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\threaddep\thread.h">
+      <Filter>Header files\threaddep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\machdep\m68k.h">
+      <Filter>Header files\machdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\machdep\maccess.h">
+      <Filter>Header files\machdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\machdep\md-fpp.h">
+      <Filter>Header files\machdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\machdep\rpt.h">
+      <Filter>Header files\machdep</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

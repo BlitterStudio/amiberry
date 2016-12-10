@@ -2,8 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include <guichan.hpp>
-#include <guichan/sdl.hpp>
+#include <guisan.hpp>
+#include <guisan/sdl.hpp>
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
@@ -12,7 +12,7 @@
 #include "keybuf.h"
 #include "zfile.h"
 #include "gui.h"
-#include "od-pandora/gui/SelectorEntry.hpp"
+#include "osdep/gui/SelectorEntry.hpp"
 #include "gui/gui_handling.h"
 #include "memory.h"
 #include "rommgr.h"
@@ -21,7 +21,7 @@
 #include "inputdevice.h"
 #include "xwin.h"
 #include "drawing.h"
-#include "sd-pandora/sound.h"
+#include "sounddep/sound.h"
 #include "audio.h"
 #include "keybuf.h"
 #include "keyboard.h"
@@ -31,7 +31,7 @@
 #include "autoconf.h"
 #include "blkdev.h"
 #include <SDL.h>
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 
 #ifdef RASPBERRY
  #include <linux/kd.h>
@@ -591,18 +591,21 @@ extern char keyboard_type;
 
 void gui_handle_events (void)
 {
-	Uint8 *keystate = SDL_GetKeyState(NULL);
-
+//	Uint8 *keystate = SDL_GetKeyState(NULL);
+	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+	
 	// Strangely in FBCON left window is seen as left alt ??
-	if (keyboard_type == 2) // KEYCODE_FBCON
-	{
-		if(keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] ||keystate[SDLK_MENU]))
-			uae_reset(0,1);
-	} else
-	{
-		if(keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] ||keystate[SDLK_MENU]))
-			uae_reset(0,1);
-	}
+//	if (keyboard_type == 2) // KEYCODE_FBCON
+//	{
+//		if(keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] ||keystate[SDLK_MENU]))
+//			uae_reset(0,1);
+//	} else
+//	{
+//		if(keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] ||keystate[SDLK_MENU]))
+//			uae_reset(0,1);
+//	}
+	if (keystate[SDLK_LCTRL] && keystate[SDLK_LGUI] && (keystate[SDLK_RGUI] || keystate[SDLK_MENU]))
+		uae_reset(0, 1);
 }
 
 void gui_disk_image_change (int unitnum, const char *name, bool writeprotected)

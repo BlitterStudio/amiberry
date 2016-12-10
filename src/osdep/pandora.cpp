@@ -21,7 +21,7 @@
 #include "autoconf.h"
 #include "uae.h"
 #include "options.h"
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 #include "gui.h"
 #include "include/memory.h"
 #include "newcpu.h"

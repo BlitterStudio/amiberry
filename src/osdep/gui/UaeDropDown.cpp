@@ -1,10 +1,10 @@
 #include "UaeDropDown.hpp"
-#include "guichan/widgets/dropdown.hpp"
+#include "guisan/widgets/dropdown.hpp"
 
-#include "guichan/font.hpp"
-#include "guichan/graphics.hpp"
-#include "guichan/key.hpp"
-#include "guichan/mouseinput.hpp"
+#include "guisan/font.hpp"
+#include "guisan/graphics.hpp"
+#include "guisan/key.hpp"
+#include "guisan/mouseinput.hpp"
 
 
 namespace gcn
@@ -40,13 +40,13 @@ void UaeDropDown::keyPressed(KeyEvent& keyEvent)
     {
         setSelected(getSelected() - 1);
         keyEvent.consume();
-        distributeActionEvent();
+	    distributeValueChangedEvent();
     }
     else if (key.getValue() == Key::DOWN)
     {
         setSelected(getSelected() + 1);
         keyEvent.consume();
-        distributeActionEvent();
+	    distributeValueChangedEvent();
     }
 }
 
