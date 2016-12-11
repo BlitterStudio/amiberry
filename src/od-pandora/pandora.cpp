@@ -766,7 +766,7 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 	*low = 0;
 	if (v == 1)
 	{
-		*low = 1e + 9; /* We have nano seconds */
+		*low = 1e+9; /* We have nano seconds */
 		return 0;
 	}
 	else if (v == 2)
