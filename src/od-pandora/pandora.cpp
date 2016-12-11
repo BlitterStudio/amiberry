@@ -883,33 +883,37 @@ int handle_msgpump (void)
             uae_quit();
             break;
 
+        case SDL_JOYBUTTONDOWN:
+	        if (currprefs.key_for_menu == SDL_JOYBUTTONDOWN && rEvent.jbutton.button == 1)
+		        inputdevice_add_inputcode (AKS_ENTERGUI, 1);
+	        break;
+	        
         case SDL_KEYDOWN:
-
             if(rEvent.key.keysym.sym == currprefs.key_for_menu)
                 inputdevice_add_inputcode (AKS_ENTERGUI, 1);
             switch(rEvent.key.keysym.sym)
             {
- 		#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-		case SDLK_CAPSLOCK: // capslock
-		     // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-                     ioctl(0, KDGKBLED, &kbd_flags);
-                     ioctl(0, KDGETLED, &kbd_led_status);
-                     if ((kbd_flags & 07) & LED_CAP)
-                     {
-                        // On, so turn off
-                        kbd_led_status &= ~LED_CAP;
-                        kbd_flags &= ~LED_CAP;
-                        inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-                     } else {
-                               // Off, so turn on
-                               kbd_led_status |= LED_CAP;
-                               kbd_flags |= LED_CAP;
-                               inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-                            }
-                     ioctl(0, KDSETLED, kbd_led_status);
-                     ioctl(0, KDSKBLED, kbd_flags);
-                     break;
-                 #endif
+ 			#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+			case SDLK_CAPSLOCK: // capslock
+				 // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
+						 ioctl(0, KDGKBLED, &kbd_flags);
+						 ioctl(0, KDGETLED, &kbd_led_status);
+						 if ((kbd_flags & 07) & LED_CAP)
+						 {
+							// On, so turn off
+							kbd_led_status &= ~LED_CAP;
+							kbd_flags &= ~LED_CAP;
+							inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+						 } else {
+								   // Off, so turn on
+								   kbd_led_status |= LED_CAP;
+								   kbd_flags |= LED_CAP;
+								   inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+								}
+						 ioctl(0, KDSETLED, kbd_led_status);
+						 ioctl(0, KDSKBLED, kbd_flags);
+						 break;
+			#endif
 
             case SDLK_LSHIFT: // Shift key
                 inputdevice_do_keyboard(AK_LSH, 1);

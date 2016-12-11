@@ -106,10 +106,10 @@ const char *tapDelayValues[] = { "Normal", "Short", "None" };
 StringListModel tapDelayList(tapDelayValues, 3);
 #endif
 
-static const int ControlKey_SDLKeyValues[] = { SDLK_F11, SDLK_F12, SDLK_LALT, SDLK_LCTRL };
+static const int ControlKey_SDLKeyValues[] = { SDLK_F11, SDLK_F12, SDL_JOYBUTTONDOWN };
 
-const char *ControlKeyValues[] = { "F11", "F12", "LeftAlt", "LeftCtrl" };
-StringListModel ControlKeyList(ControlKeyValues, 4);
+const char *ControlKeyValues[] = { "F11", "F12", "JoyButton1" };
+StringListModel ControlKeyList(ControlKeyValues, 3);
 
 const char *mappingValues[] =
 {

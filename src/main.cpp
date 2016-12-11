@@ -622,7 +622,7 @@ void virtualdevice_init (void)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-  printf("Uae4arm v0.5 for Raspberry Pi by Dimitris (MiDWaN) Panokostas\n");
+  printf("Uae4arm-Amiberry optimized edition for Raspberry Pi by Dimitris (MiDWaN) Panokostas\n");
 #ifdef PANDORA_SPECIFIC
   SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else 
