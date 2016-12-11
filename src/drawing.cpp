@@ -181,8 +181,15 @@ unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsec
 #define OFFSET_FREE_CPU_CYCLES 1500
 #define STEP_CYCLES             250
 
-void adjust_idletime(unsigned long ms_waited)
+void adjust_idletime(long ms_waited)
 {
+	if (ms_waited == -1)
+	{
+		// Frame miss...
+		idletime_percent = 0;
+		ms_waited = 0;
+	}
+	
   idletime_frames++;
   idletime_time += ms_waited;
   if(idletime_frames >= IDLETIME_FRAMES)
