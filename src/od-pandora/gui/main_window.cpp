@@ -61,6 +61,7 @@ namespace widgets
 	gcn::Button* cmdReset;
 	gcn::Button* cmdRestart;
 	gcn::Button* cmdStart;
+	gcn::Button* cmdShutdown;
 }
 
 
@@ -305,7 +306,16 @@ namespace widgets
 	public:
 		void action(const gcn::ActionEvent& actionEvent)
 		{
-			if (actionEvent.getSource() == cmdQuit)
+			if (actionEvent.getSource() == cmdShutdown)
+			{
+				// ------------------------------------------------
+				// Shutdown the host (power off)
+				// ------------------------------------------------
+				uae_quit();
+				gui_running = false;
+				host_shutdown();
+			}
+			else if (actionEvent.getSource() == cmdQuit)
 			{
 				//-------------------------------------------------
 				// Quit entire program via click on Quit-button
@@ -435,6 +445,12 @@ void gui_init()
     cmdQuit->setId("Quit");
     cmdQuit->addActionListener(mainButtonActionListener);
 
+	cmdShutdown = new gcn::Button("Shutdown");
+	cmdShutdown->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+	cmdShutdown->setBaseColor(gui_baseCol);
+	cmdShutdown->setId("Shutdown");
+	cmdShutdown->addActionListener(mainButtonActionListener);
+	
     cmdReset = new gcn::Button("Reset");
     cmdReset->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
     cmdReset->setBaseColor(gui_baseCol);
@@ -496,7 +512,7 @@ void gui_init()
     //--------------------------------------------------
     gui_top->add(cmdReset, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
     gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
-//    gui_top->add(cmdRestart, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+    gui_top->add(cmdShutdown, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
     gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
     gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
@@ -529,6 +545,7 @@ void gui_halt()
     delete selectors;
 
     delete cmdQuit;
+	delete cmdShutdown;
     delete cmdReset;
     delete cmdRestart;
     delete cmdStart;

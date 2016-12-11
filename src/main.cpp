@@ -349,6 +349,11 @@ void uae_quit (void)
   target_quit ();
 }
 
+void host_shutdown(void)
+{
+	system("sudo poweroff");
+}
+
 /* 0 = normal, 1 = nogui, -1 = disable nogui */
 void uae_restart (int opengui, const TCHAR *cfgfile)
 {

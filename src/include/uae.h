@@ -25,6 +25,7 @@ extern void sleep_millis_main (int ms);
 
 extern void uae_reset (int, int);
 extern void uae_quit (void);
+extern void host_shutdown(void);
 extern void uae_restart (int, const TCHAR*);
 extern void reset_all_systems (void);
 extern void target_reset (void);
