@@ -45,12 +45,12 @@
 #endif
 
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
-  #include <linux/kd.h>
-  #include <sys/ioctl.h>
-  #include "keyboard.h"
+#include <linux/kd.h>
+#include <sys/ioctl.h>
+#include "keyboard.h"
 #endif
 
-long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
+long int version = 256 * 65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs; 
 
@@ -62,244 +62,244 @@ struct gui_info gui_data;
 
 TCHAR optionsfile[256];
 
-void my_trim (TCHAR *s)
+void my_trim(TCHAR *s)
 {
 	int len;
-	while (_tcslen (s) > 0 && _tcscspn (s, _T("\t \r\n")) == 0)
-		memmove (s, s + 1, (_tcslen (s + 1) + 1) * sizeof (TCHAR));
-	len = _tcslen (s);
-	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
+	while (_tcslen(s) > 0 && _tcscspn(s, _T("\t \r\n")) == 0)
+		memmove(s, s + 1, (_tcslen(s + 1) + 1) * sizeof(TCHAR));
+	len = _tcslen(s);
+	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		s[--len] = '\0';
 }
 
-TCHAR *my_strdup_trim (const TCHAR *s)
+TCHAR *my_strdup_trim(const TCHAR *s)
 {
 	TCHAR *out;
 	int len;
 
-	while (_tcscspn (s, _T("\t \r\n")) == 0)
+	while (_tcscspn(s, _T("\t \r\n")) == 0)
 		s++;
-	len = _tcslen (s);
-	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
+	len = _tcslen(s);
+	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		len--;
-	out = xmalloc (TCHAR, len + 1);
-	memcpy (out, s, len * sizeof (TCHAR));
+	out = xmalloc(TCHAR, len + 1);
+	memcpy(out, s, len * sizeof(TCHAR));
 	out[len] = 0;
 	return out;
 }
 
-void discard_prefs (struct uae_prefs *p, int type)
+void discard_prefs(struct uae_prefs *p, int type)
 {
-  struct strlist **ps = &p->all_lines;
-  while (*ps) {
-	  struct strlist *s = *ps;
-	  *ps = s->next;
-	  xfree (s->value);
-	  xfree (s->option);
-	  xfree (s);
-  }
+	struct strlist **ps = &p->all_lines;
+	while (*ps) {
+		struct strlist *s = *ps;
+		*ps = s->next;
+		xfree(s->value);
+		xfree(s->option);
+		xfree(s);
+	}
 #ifdef FILESYS
-  filesys_cleanup ();
-  p->mountitems = 0;
+	filesys_cleanup();
+	p->mountitems = 0;
 #endif
 }
 
-static void fixup_prefs_dim2 (struct wh *wh)
+static void fixup_prefs_dim2(struct wh *wh)
 {
 	if (wh->width < 320) {
-		error_log (_T("Width (%d) must be at least 320."), wh->width);
+		error_log(_T("Width (%d) must be at least 320."), wh->width);
 		wh->width = 320;
 	}
 	if (wh->height < 200) {
-		error_log (_T("Height (%d) must be at least 200."), wh->height);
+		error_log(_T("Height (%d) must be at least 200."), wh->height);
 		wh->height = 200;
 	}
 	if (wh->width > max_uae_width) {
-		error_log (_T("Width (%d) max is %d."), wh->width, max_uae_width);
+		error_log(_T("Width (%d) max is %d."), wh->width, max_uae_width);
 		wh->width = max_uae_width;
-  }
+	}
 	if (wh->height > max_uae_height) {
-		error_log (_T("Height (%d) max is %d."), wh->height, max_uae_height);
+		error_log(_T("Height (%d) max is %d."), wh->height, max_uae_height);
 		wh->height = max_uae_height;
 	}
 }
 
-void fixup_prefs_dimensions (struct uae_prefs *prefs)
+void fixup_prefs_dimensions(struct uae_prefs *prefs)
 {
-  fixup_prefs_dim2(&prefs->gfx_size_fs);
-  fixup_prefs_dim2(&prefs->gfx_size_win);
+	fixup_prefs_dim2(&prefs->gfx_size_fs);
+	fixup_prefs_dim2(&prefs->gfx_size_win);
 }
 
 void fixup_cpu(struct uae_prefs *p)
 {
 	if (p->cpu_model >= 68030 && p->address_space_24) {
-		error_log (_T("24-bit address space is not supported in 68030/040/060 configurations."));
+		error_log(_T("24-bit address space is not supported in 68030/040/060 configurations."));
 		p->address_space_24 = 0;
 	}
 	if (p->cpu_model < 68020 && p->fpu_model && (p->cpu_compatible)) {
-		error_log (_T("FPU is not supported in 68000/010 configurations."));
+		error_log(_T("FPU is not supported in 68000/010 configurations."));
 		p->fpu_model = 0;
 	}
 
-  switch(p->cpu_model)
-  {
-    case 68000:
-    	p->address_space_24 = 1;
-      break;
-  	case 68010:
-    	p->address_space_24 = 1;
-    	break;
-  	case 68020:
-    	break;
-  	case 68030:
-    	break;
-  	case 68040:
-    	if (p->fpu_model)
-  	    p->fpu_model = 68040;
-    	break;
-  }
+	switch (p->cpu_model)
+	{
+	case 68000:
+		p->address_space_24 = 1;
+		break;
+	case 68010:
+		p->address_space_24 = 1;
+		break;
+	case 68020:
+		break;
+	case 68030:
+		break;
+	case 68040:
+		if (p->fpu_model)
+			p->fpu_model = 68040;
+		break;
+	}
 
 	if (p->cpu_model >= 68040 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
 	if (p->immediate_blits && p->waiting_blits) {
-		error_log (_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
+		error_log(_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
 		p->waiting_blits = 0;
-  }
+	}
 }
 
 
-void fixup_prefs (struct uae_prefs *p)
+void fixup_prefs(struct uae_prefs *p)
 {
-  int err = 0;
+	int err = 0;
 
-  fixup_cpu(p);
+	fixup_cpu(p);
 
-  if (((p->chipmem_size & (p->chipmem_size - 1)) != 0 && p->chipmem_size != 0x180000)
-	|| p->chipmem_size < 0x20000
-	|| p->chipmem_size > 0x800000)
-  {
-		error_log (_T("Unsupported chipmem size %d (0x%x)."), p->chipmem_size, p->chipmem_size);
-	  p->chipmem_size = 0x200000;
-	  err = 1;
-  }
+	if (((p->chipmem_size & (p->chipmem_size - 1)) != 0 && p->chipmem_size != 0x180000)
+	  || p->chipmem_size < 0x20000
+	  || p->chipmem_size > 0x800000)
+	{
+		error_log(_T("Unsupported chipmem size %d (0x%x)."), p->chipmem_size, p->chipmem_size);
+		p->chipmem_size = 0x200000;
+		err = 1;
+	}
 
-  if ((p->fastmem_size & (p->fastmem_size - 1)) != 0
-	|| (p->fastmem_size != 0 && (p->fastmem_size < 0x100000 || p->fastmem_size > 0x800000)))
-  {
-		error_log (_T("Unsupported fastmem size %d (0x%x)."), p->fastmem_size, p->fastmem_size);
+	if ((p->fastmem_size & (p->fastmem_size - 1)) != 0
+	  || (p->fastmem_size != 0 && (p->fastmem_size < 0x100000 || p->fastmem_size > 0x800000)))
+	{
+		error_log(_T("Unsupported fastmem size %d (0x%x)."), p->fastmem_size, p->fastmem_size);
 		p->fastmem_size = 0;
-	  err = 1;
-  }
+		err = 1;
+	}
 	if (p->rtgmem_size > 0x1000000 && p->rtgmem_type == GFXBOARD_UAE_Z3) {
-		error_log (_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), p->rtgmem_size, p->rtgmem_size, 0x1000000, 0x1000000);
+		error_log(_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), p->rtgmem_size, p->rtgmem_size, 0x1000000, 0x1000000);
 		p->rtgmem_size = 0x1000000;
 		err = 1;
 	}
-  if ((p->rtgmem_size & (p->rtgmem_size - 1)) != 0 || (p->rtgmem_size != 0 && (p->rtgmem_size < 0x100000))) {
-	  error_log (_T("Unsupported graphics card memory size %d (0x%x)."), p->rtgmem_size, p->rtgmem_size);
+	if ((p->rtgmem_size & (p->rtgmem_size - 1)) != 0 || (p->rtgmem_size != 0 && (p->rtgmem_size < 0x100000))) {
+		error_log(_T("Unsupported graphics card memory size %d (0x%x)."), p->rtgmem_size, p->rtgmem_size);
 		if (p->rtgmem_size > 0x1000000)
 			p->rtgmem_size = 0x1000000;
 		else
-	    p->rtgmem_size = 0;
-	  err = 1;
-  }
+			p->rtgmem_size = 0;
+		err = 1;
+	}
   
-  if (p->z3fastmem_size > max_z3fastmem) {
-		error_log (_T("Zorro III fastmem size %d (0x%x) larger than max reserved %d (0x%x)."), p->z3fastmem_size, p->z3fastmem_size, max_z3fastmem, max_z3fastmem);
+	if (p->z3fastmem_size > max_z3fastmem) {
+		error_log(_T("Zorro III fastmem size %d (0x%x) larger than max reserved %d (0x%x)."), p->z3fastmem_size, p->z3fastmem_size, max_z3fastmem, max_z3fastmem);
 		p->z3fastmem_size = max_z3fastmem;
 		err = 1;
-  }
-  if ((p->z3fastmem_size & (p->z3fastmem_size - 1)) != 0 || (p->z3fastmem_size != 0 && p->z3fastmem_size < 0x100000))
-  {
-		error_log (_T("Unsupported Zorro III fastmem size %d (0x%x)."), p->z3fastmem_size, p->z3fastmem_size);
-    p->z3fastmem_size = 0;
-	  err = 1;
-  }
+	}
+	if ((p->z3fastmem_size & (p->z3fastmem_size - 1)) != 0 || (p->z3fastmem_size != 0 && p->z3fastmem_size < 0x100000))
+	{
+		error_log(_T("Unsupported Zorro III fastmem size %d (0x%x)."), p->z3fastmem_size, p->z3fastmem_size);
+		p->z3fastmem_size = 0;
+		err = 1;
+	}
 
-  p->z3fastmem_start &= ~0xffff;
+	p->z3fastmem_start &= ~0xffff;
 	if (p->z3fastmem_start < 0x1000000)
 		p->z3fastmem_start = 0x1000000;
     
-  if (p->address_space_24 && (p->z3fastmem_size != 0)) {
-  	p->z3fastmem_size = 0;
-  	error_log (_T("Can't use a Z3 graphics card or 32-bit memory when using a 24 bit address space."));
-  }
-
-  if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
-		error_log (_T("Unsupported bogomem size %d (0x%x)"), p->bogomem_size, p->bogomem_size);
-	  p->bogomem_size = 0;
-	  err = 1;
-  }
-
-  if (p->bogomem_size > 0x180000 && ((p->chipset_mask & CSMASK_AGA) || p->cpu_model >= 68020)) {
-	  p->bogomem_size = 0x180000;
-		error_log (_T("Possible Gayle bogomem conflict fixed."));
-  }
-  if (p->chipmem_size > 0x200000 && p->fastmem_size != 0) {
-		error_log (_T("You can't use fastmem and more than 2MB chip at the same time."));
-	  p->fastmem_size = 0;
-	  err = 1;
-  }
-
-	if (p->address_space_24 && p->rtgmem_size && p->rtgmem_type == GFXBOARD_UAE_Z3) {
-		error_log (_T("Z3 RTG and 24bit address space are not compatible."));
-		p->rtgmem_type = GFXBOARD_UAE_Z2;
-  }
-	if (p->rtgmem_type == GFXBOARD_UAE_Z2 && (p->chipmem_size > 2 * 1024 * 1024 || getz2size (p) > 8 * 1024 * 1024 || getz2size (p) < 0)) {
-		p->rtgmem_size = 0;
-		error_log (_T("Too large Z2 RTG memory size."));
+	if (p->address_space_24 && (p->z3fastmem_size != 0)) {
+		p->z3fastmem_size = 0;
+		error_log(_T("Can't use a Z3 graphics card or 32-bit memory when using a 24 bit address space."));
 	}
 
-  if (p->produce_sound < 0 || p->produce_sound > 3) {
-		error_log (_T("Bad value for -S parameter: enable value must be within 0..3."));
-	  p->produce_sound = 0;
-	  err = 1;
-  }
-  if (p->cachesize < 0 || p->cachesize > 16384) {
-		error_log (_T("Bad value for cachesize parameter: value must be within 0..16384."));
-	  p->cachesize = 0;
-	  err = 1;
-  }
-  if (p->z3fastmem_size && (p->address_space_24 || p->cpu_model < 68020)) {
-		error_log (_T("Z3 fast memory can't be used with a 68000/68010 emulation. Turning off Z3 fast memory."));
-	  p->z3fastmem_size = 0;
-	  err = 1;
-  }
-  if (p->rtgmem_size > 0 && p->rtgmem_type == GFXBOARD_UAE_Z3 && (p->cpu_model < 68020 || p->address_space_24)) {
-		error_log (_T("UAEGFX RTG can't be used with a 68000/68010 or 68EC020 emulation. Turning off RTG."));
-	  p->rtgmem_size = 0;
-	  err = 1;
-  }
+	if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
+		error_log(_T("Unsupported bogomem size %d (0x%x)"), p->bogomem_size, p->bogomem_size);
+		p->bogomem_size = 0;
+		err = 1;
+	}
+
+	if (p->bogomem_size > 0x180000 && ((p->chipset_mask & CSMASK_AGA) || p->cpu_model >= 68020)) {
+		p->bogomem_size = 0x180000;
+		error_log(_T("Possible Gayle bogomem conflict fixed."));
+	}
+	if (p->chipmem_size > 0x200000 && p->fastmem_size != 0) {
+		error_log(_T("You can't use fastmem and more than 2MB chip at the same time."));
+		p->fastmem_size = 0;
+		err = 1;
+	}
+
+	if (p->address_space_24 && p->rtgmem_size && p->rtgmem_type == GFXBOARD_UAE_Z3) {
+		error_log(_T("Z3 RTG and 24bit address space are not compatible."));
+		p->rtgmem_type = GFXBOARD_UAE_Z2;
+	}
+	if (p->rtgmem_type == GFXBOARD_UAE_Z2 && (p->chipmem_size > 2 * 1024 * 1024 || getz2size(p) > 8 * 1024 * 1024 || getz2size(p) < 0)) {
+		p->rtgmem_size = 0;
+		error_log(_T("Too large Z2 RTG memory size."));
+	}
+
+	if (p->produce_sound < 0 || p->produce_sound > 3) {
+		error_log(_T("Bad value for -S parameter: enable value must be within 0..3."));
+		p->produce_sound = 0;
+		err = 1;
+	}
+	if (p->cachesize < 0 || p->cachesize > 16384) {
+		error_log(_T("Bad value for cachesize parameter: value must be within 0..16384."));
+		p->cachesize = 0;
+		err = 1;
+	}
+	if (p->z3fastmem_size && (p->address_space_24 || p->cpu_model < 68020)) {
+		error_log(_T("Z3 fast memory can't be used with a 68000/68010 emulation. Turning off Z3 fast memory."));
+		p->z3fastmem_size = 0;
+		err = 1;
+	}
+	if (p->rtgmem_size > 0 && p->rtgmem_type == GFXBOARD_UAE_Z3 && (p->cpu_model < 68020 || p->address_space_24)) {
+		error_log(_T("UAEGFX RTG can't be used with a 68000/68010 or 68EC020 emulation. Turning off RTG."));
+		p->rtgmem_size = 0;
+		err = 1;
+	}
 #if !defined (BSDSOCKET)
 	if (p->socket_emu) {
-		write_log (_T("Compile-time option of BSDSOCKET_SUPPORTED was not enabled.  You can't use bsd-socket emulation.\n"));
+		write_log(_T("Compile-time option of BSDSOCKET_SUPPORTED was not enabled.  You can't use bsd-socket emulation.\n"));
 		p->socket_emu = 0;
 		err = 1;
 	}
 #endif
 
-  if (p->nr_floppies < 0 || p->nr_floppies > 4) {
-		error_log (_T("Invalid number of floppies.  Using 2."));
+	if (p->nr_floppies < 0 || p->nr_floppies > 4) {
+		error_log(_T("Invalid number of floppies.  Using 2."));
 		p->nr_floppies = 2;
-	  p->floppyslots[0].dfxtype = 0;
-	  p->floppyslots[1].dfxtype = 0;
+		p->floppyslots[0].dfxtype = 0;
+		p->floppyslots[1].dfxtype = 0;
 		p->floppyslots[2].dfxtype = -1;
 		p->floppyslots[3].dfxtype = -1;
-	  err = 1;
-  }
+		err = 1;
+	}
 
-  if (p->floppy_speed > 0 && p->floppy_speed < 10) {
-		error_log (_T("Invalid floppy speed."));
-  	p->floppy_speed = 100;
-  }
-  if (p->collision_level < 0 || p->collision_level > 3) {
-		error_log (_T("Invalid collision support level.  Using 1."));
-	  p->collision_level = 1;
-	  err = 1;
-  }
+	if (p->floppy_speed > 0 && p->floppy_speed < 10) {
+		error_log(_T("Invalid floppy speed."));
+		p->floppy_speed = 100;
+	}
+	if (p->collision_level < 0 || p->collision_level > 3) {
+		error_log(_T("Invalid collision support level.  Using 1."));
+		p->collision_level = 1;
+		err = 1;
+	}
 
-  fixup_prefs_dimensions (p);
+	fixup_prefs_dimensions(p);
 
 #if !defined (JIT)
 	p->cachesize = 0;
@@ -320,8 +320,8 @@ void fixup_prefs (struct uae_prefs *p)
 	p->socket_emu = 0;
 #endif
 
-	blkdev_fix_prefs (p);
-  target_fixup_options (p);
+	blkdev_fix_prefs(p);
+	target_fixup_options(p);
 }
 
 int quit_program = 0;
@@ -329,24 +329,24 @@ static int restart_program;
 static TCHAR restart_config[MAX_DPATH];
 static int default_config;
 
-void uae_reset (int hardreset, int keyboardreset)
+void uae_reset(int hardreset, int keyboardreset)
 {
-  if (quit_program == 0) {
+	if (quit_program == 0) {
 		quit_program = -UAE_RESET;
 		if (keyboardreset)
 			quit_program = -UAE_RESET_KEYBOARD;
-	  if (hardreset)
+		if (hardreset)
 			quit_program = -UAE_RESET_HARD;
-  }
+	}
 }
 
-void uae_quit (void)
+void uae_quit(void)
 {
-  if (quit_program != -UAE_QUIT) {
-  	quit_program = -UAE_QUIT;
+	if (quit_program != -UAE_QUIT) {
+		quit_program = -UAE_QUIT;
 		regs.spcflags |= SPCFLAG_MODE_CHANGE;
-  }
-  target_quit ();
+	}
+	target_quit();
 }
 
 void host_shutdown(void)
@@ -355,179 +355,188 @@ void host_shutdown(void)
 }
 
 /* 0 = normal, 1 = nogui, -1 = disable nogui */
-void uae_restart (int opengui, const TCHAR *cfgfile)
+void uae_restart(int opengui, const TCHAR *cfgfile)
 {
-  uae_quit ();
-  restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
-  restart_config[0] = 0;
+	uae_quit();
+	restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
+	restart_config[0] = 0;
 	default_config = 0;
-  if (cfgfile)
-  	_tcscpy (restart_config, cfgfile);
-	target_restart ();
+	if (cfgfile)
+		_tcscpy(restart_config, cfgfile);
+	target_restart();
 }
 
-static void parse_cmdline_2 (int argc, TCHAR **argv)
+static void parse_cmdline_2(int argc, TCHAR **argv)
 {
-  int i;
+	int i;
 
-  cfgfile_addcfgparam (0);
-  for (i = 1; i < argc; i++) {
-		if (_tcsncmp (argv[i], _T("-cfgparam="), 10) == 0) {
-      cfgfile_addcfgparam (argv[i] + 10);
-		} else if (_tcscmp (argv[i], _T("-cfgparam")) == 0) {
-      if (i + 1 == argc)
-				write_log (_T("Missing argument for '-cfgparam' option.\n"));
-      else
-	      cfgfile_addcfgparam (argv[++i]);
-    }
-  }
+	cfgfile_addcfgparam(0);
+	for (i = 1; i < argc; i++) {
+		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
+			cfgfile_addcfgparam(argv[i] + 10);
+		}
+		else if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
+			if (i + 1 == argc)
+				write_log(_T("Missing argument for '-cfgparam' option.\n"));
+			else
+				cfgfile_addcfgparam(argv[++i]);
+		}
+	}
 }
 
 
-static TCHAR *parsetext (const TCHAR *s)
+static TCHAR *parsetext(const TCHAR *s)
 {
-  if (*s == '"' || *s == '\'') {
-  	TCHAR *d;
-  	TCHAR c = *s++;
-  	int i;
-  	d = my_strdup (s);
-  	for (i = 0; i < _tcslen (d); i++) {
-	    if (d[i] == c) {
-    		d[i] = 0;
-    		break;
-	    }
-  	}
-  	return d;
-  } else {
-  	return my_strdup (s);
-  }
+	if (*s == '"' || *s == '\'') {
+		TCHAR *d;
+		TCHAR c = *s++;
+		int i;
+		d = my_strdup(s);
+		for (i = 0; i < _tcslen(d); i++) {
+			if (d[i] == c) {
+				d[i] = 0;
+				break;
+			}
+		}
+		return d;
+	}
+	else {
+		return my_strdup(s);
+	}
 }
-static TCHAR *parsetextpath (const TCHAR *s)
+static TCHAR *parsetextpath(const TCHAR *s)
 {
-	TCHAR *s2 = parsetext (s);
-	TCHAR *s3 = target_expand_environment (s2);
-	xfree (s2);
+	TCHAR *s2 = parsetext(s);
+	TCHAR *s3 = target_expand_environment(s2);
+	xfree(s2);
 	return s3;
 }
 
 void  print_usage()
 {
-   printf("\nUsage:\n");
-   printf(" -f <file>                  Load a configuration file.\n");
-   printf(" -config=<file>             Load a configuration file.\n");
-   printf(" -statefile=<file>          Load a save state file.\n");
-   printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
-   printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
-   printf("\nAdditional options:\n");
-   printf(" -0 <filename>              Set adf for drive 0.\n");
-   printf(" -1 <filename>              Set adf for drive 1.\n");
-   printf(" -2 <filename>              Set adf for drive 2.\n");
-   printf(" -3 <filename>              Set adf for drive 3.\n");
-   printf(" -r <filename>              Set kickstart rom file.\n");
-   printf(" -G                         Start directly into emulation.\n");
-   printf(" -c <value>                 Size of chip memory (in number of 512 KBytes chunks).\n");
-   printf(" -F <value>                 Size of fast memory (in number of 1024 KBytes chunks).\n");
-   printf("\nNote:\n");
-   printf("Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used.\n");
-   printf("File names should be with absolute path.\n");
-   printf("\nExample:\n");
-   printf("uae4arm -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
-   printf("It will load A400.uae configuration with the save state named game.\n");
-   printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
-   exit(1);
+	printf("\nUsage:\n");
+	printf(" -f <file>                  Load a configuration file.\n");
+	printf(" -config=<file>             Load a configuration file.\n");
+	printf(" -statefile=<file>          Load a save state file.\n");
+	printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
+	printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
+	printf("\nAdditional options:\n");
+	printf(" -0 <filename>              Set adf for drive 0.\n");
+	printf(" -1 <filename>              Set adf for drive 1.\n");
+	printf(" -2 <filename>              Set adf for drive 2.\n");
+	printf(" -3 <filename>              Set adf for drive 3.\n");
+	printf(" -r <filename>              Set kickstart rom file.\n");
+	printf(" -G                         Start directly into emulation.\n");
+	printf(" -c <value>                 Size of chip memory (in number of 512 KBytes chunks).\n");
+	printf(" -F <value>                 Size of fast memory (in number of 1024 KBytes chunks).\n");
+	printf("\nNote:\n");
+	printf("Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used.\n");
+	printf("File names should be with absolute path.\n");
+	printf("\nExample:\n");
+	printf("uae4arm -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
+	printf("It will load A400.uae configuration with the save state named game.\n");
+	printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
+	exit(1);
 }
 
 
-static void parse_cmdline (int argc, TCHAR **argv)
+static void parse_cmdline(int argc, TCHAR **argv)
 {
-  int i;
+	int i;
 
-  for (i = 1; i < argc; i++) {
-	  if (_tcscmp (argv[i], _T("-cfgparam")) == 0) {
-	    if (i + 1 < argc)
-		    i++;
-		} else if (_tcsncmp (argv[i], _T("-config="), 8) == 0) {
-	    TCHAR *txt = parsetextpath (argv[i] + 8);
-	    currprefs.mountitems = 0;
-	    target_cfgfile_load (&currprefs, txt, -1, 0);
-	    xfree (txt);
-		} else if (_tcsncmp (argv[i], _T("-statefile="), 11) == 0) {
-	    TCHAR *txt = parsetextpath (argv[i] + 11);
-	    savestate_state = STATE_DORESTORE;
-	    _tcscpy (savestate_fname, txt);
-	    xfree (txt);
-		} else if (_tcscmp (argv[i], _T("-f")) == 0) {
+	for (i = 1; i < argc; i++) {
+		if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
+			if (i + 1 < argc)
+				i++;
+		}
+		else if (_tcsncmp(argv[i], _T("-config="), 8) == 0) {
+			TCHAR *txt = parsetextpath(argv[i] + 8);
+			currprefs.mountitems = 0;
+			target_cfgfile_load(&currprefs, txt, -1, 0);
+			xfree(txt);
+		}
+		else if (_tcsncmp(argv[i], _T("-statefile="), 11) == 0) {
+			TCHAR *txt = parsetextpath(argv[i] + 11);
+			savestate_state = STATE_DORESTORE;
+			_tcscpy(savestate_fname, txt);
+			xfree(txt);
+		}
+		else if (_tcscmp(argv[i], _T("-f")) == 0) {
 	  /* Check for new-style "-f xxx" argument, where xxx is config-file */
-	    if (i + 1 == argc) {
-				write_log (_T("Missing argument for '-f' option.\n"));
-	    } else {
-				TCHAR *txt = parsetextpath (argv[++i]);
-        currprefs.mountitems = 0;
-		    target_cfgfile_load (&currprefs, txt, -1, 0);
-				xfree (txt);
-	    }
-		} else if (_tcscmp (argv[i], _T("-s")) == 0) {
-	    if (i + 1 == argc)
-				write_log (_T("Missing argument for '-s' option.\n"));
-	    else
-		    cfgfile_parse_line (&currprefs, argv[++i], 0);
-	  } else {
-	    if (argv[i][0] == '-' && argv[i][1] != '\0' && argv[i][2] == '\0') {
-		    int ret;
-		    const TCHAR *arg = argv[i] + 2;
-		    int extra_arg = *arg == '\0';
-		    if (extra_arg)
-		      arg = i + 1 < argc ? argv[i + 1] : 0;
-		    ret = parse_cmdline_option (&currprefs, argv[i][1], arg);
-		    if (ret == -1)
-		      print_usage();
-		    if (ret && extra_arg)
-		      i++;
-	    } else
-	    {
-	      printf("Unknown option %s\n",argv[i]);
-	      print_usage();
-	    }
-	  }
-  }
+			if (i + 1 == argc) {
+				write_log(_T("Missing argument for '-f' option.\n"));
+			}
+			else {
+				TCHAR *txt = parsetextpath(argv[++i]);
+				currprefs.mountitems = 0;
+				target_cfgfile_load(&currprefs, txt, -1, 0);
+				xfree(txt);
+			}
+		}
+		else if (_tcscmp(argv[i], _T("-s")) == 0) {
+			if (i + 1 == argc)
+				write_log(_T("Missing argument for '-s' option.\n"));
+			else
+				cfgfile_parse_line(&currprefs, argv[++i], 0);
+		}
+		else {
+			if (argv[i][0] == '-' && argv[i][1] != '\0' && argv[i][2] == '\0') {
+				int ret;
+				const TCHAR *arg = argv[i] + 2;
+				int extra_arg = *arg == '\0';
+				if (extra_arg)
+					arg = i + 1 < argc ? argv[i + 1] : 0;
+				ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
+				if (ret == -1)
+					print_usage();
+				if (ret && extra_arg)
+					i++;
+			}
+			else
+			{
+				printf("Unknown option %s\n", argv[i]);
+				print_usage();
+			}
+		}
+	}
 }
 
-static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
+static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 {
-	_tcscpy (optionsfile, _T(""));
+	_tcscpy(optionsfile, _T(""));
 
-  parse_cmdline_2 (argc, argv);
+	parse_cmdline_2(argc, argv);
 
-	_tcscat (optionsfile, restart_config);
+	_tcscat(optionsfile, restart_config);
 
-  if (! target_cfgfile_load (&currprefs, optionsfile, 0, default_config)) {
-  	write_log (_T("failed to load config '%s'\n"), optionsfile);
-  }
-  fixup_prefs (&currprefs);
+	if (!target_cfgfile_load(&currprefs, optionsfile, 0, default_config)) {
+		write_log(_T("failed to load config '%s'\n"), optionsfile);
+	}
+	fixup_prefs(&currprefs);
 
-  parse_cmdline (argc, argv);
+	parse_cmdline(argc, argv);
 }
 
-void reset_all_systems (void)
+void reset_all_systems(void)
 {
-  init_eventtab ();
+	init_eventtab();
 
 #ifdef PICASSO96
-  picasso_reset ();
+	picasso_reset();
 #endif
 #ifdef FILESYS
-  filesys_prepare_reset ();
-  filesys_reset ();
+	filesys_prepare_reset();
+	filesys_reset();
 #endif
-  memory_reset ();
+	memory_reset();
 #if defined (BSDSOCKET)
-	bsdlib_reset ();
+	bsdlib_reset();
 #endif
 #ifdef FILESYS
-  filesys_start_threads ();
-  hardfile_reset ();
+	filesys_start_threads();
+	hardfile_reset();
 #endif
-  native2amiga_reset ();
+	native2amiga_reset();
 }
 
 /* Okay, this stuff looks strange, but it is here to encourage people who
@@ -539,226 +548,228 @@ void reset_all_systems (void)
  * of start_program() and leave_program() if you need to do anything special.
  * Add #ifdefs around these as appropriate.
  */
-void do_start_program (void)
+void do_start_program(void)
 {
 	if (quit_program == -UAE_QUIT)
-  	return;
-  /* Do a reset on startup. Whether this is elegant is debatable. */
-	inputdevice_updateconfig (&changed_prefs, &currprefs);
-  if (quit_program >= 0)
-	  quit_program = UAE_RESET;
-	m68k_go (1);
+		return;
+	  /* Do a reset on startup. Whether this is elegant is debatable. */
+	inputdevice_updateconfig(&changed_prefs, &currprefs);
+	if (quit_program >= 0)
+		quit_program = UAE_RESET;
+	m68k_go(1);
 }
 
-void do_leave_program (void)
+void do_leave_program(void)
 {
 #ifdef JIT
-  compiler_exit();
+	compiler_exit();
 #endif
-  graphics_leave ();
-  inputdevice_close ();
-  DISK_free ();
-  close_sound ();
-	dump_counts ();
+	graphics_leave();
+	inputdevice_close();
+	DISK_free();
+	close_sound();
+	dump_counts();
 #ifdef CD32
-	akiko_free ();
+	akiko_free();
 #endif
- 	gui_exit ();
+	gui_exit();
 #ifdef USE_SDL
-  SDL_Quit ();
+	SDL_Quit();
 #endif
-  hardfile_reset();
+	hardfile_reset();
 #ifdef AUTOCONFIG
-  expansion_cleanup ();
+	expansion_cleanup();
 #endif
 #ifdef FILESYS
-  filesys_cleanup ();
+	filesys_cleanup();
 #endif
 #ifdef BSDSOCKET
-  bsdlib_reset ();
+	bsdlib_reset();
 #endif
-	device_func_reset ();
-  memory_cleanup ();
-  cfgfile_addcfgparam (0);
-  machdep_free ();
+	device_func_reset();
+	memory_cleanup();
+	cfgfile_addcfgparam(0);
+	machdep_free();
 }
 
-void start_program (void)
+void start_program(void)
 {
-  #ifdef CAPSLOCK_DEBIAN_WORKAROUND
-    char kbd_flags;
-    // set capslock state based upon current "real" state
-    ioctl(0, KDGKBLED, &kbd_flags);
-    if ((kbd_flags & 07) & LED_CAP)
-    {
-       // record capslock pressed
-       inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-    }
-  #endif
-    do_start_program ();
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+	char kbd_flags;
+	// set capslock state based upon current "real" state
+	ioctl(0, KDGKBLED, &kbd_flags);
+	if ((kbd_flags & 07) & LED_CAP)
+	{
+	   // record capslock pressed
+		inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+	}
+#endif
+	do_start_program();
 }
 
-void leave_program (void)
+void leave_program(void)
 {
-    do_leave_program ();
+	do_leave_program();
 }
 
-void virtualdevice_init (void)
+void virtualdevice_init(void)
 {
 #ifdef AUTOCONFIG
-	rtarea_setup ();
+	rtarea_setup();
 #endif
 #ifdef FILESYS
-	rtarea_init ();
-	uaeres_install ();
-	hardfile_install ();
+	rtarea_init();
+	uaeres_install();
+	hardfile_install();
 #endif
 #ifdef AUTOCONFIG
-	expansion_init ();
-	emulib_install ();
+	expansion_init();
+	emulib_install();
 #endif
 #ifdef FILESYS
-	filesys_install ();
+	filesys_install();
 #endif
 #if defined (BSDSOCKET)
-	bsdlib_install ();
+	bsdlib_install();
 #endif
 }
 
-static int real_main2 (int argc, TCHAR **argv)
+static int real_main2(int argc, TCHAR **argv)
 {
-  printf("Uae4arm-Amiberry optimized edition for Raspberry Pi by Dimitris (MiDWaN) Panokostas\n");
+	printf("Uae4arm-Amiberry optimized edition for Raspberry Pi by Dimitris (MiDWaN) Panokostas\n");
 #ifdef PANDORA_SPECIFIC
-  SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
 #else 
 #ifdef USE_SDL
 	if (SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
-	};
+	}
+	;
 #endif
 #endif
 
 	keyboard_settrans();
 
-  if (restart_config[0]) {
-	  default_prefs (&currprefs, 0);
-	  fixup_prefs (&currprefs);
-  }
+	if (restart_config[0]) {
+		default_prefs(&currprefs, 0);
+		fixup_prefs(&currprefs);
+	}
 
-  if (! graphics_setup ()) {
-	  abort();
-  }
+	if (!graphics_setup()) {
+		abort();
+	}
 
-  if (restart_config[0])
-	  parse_cmdline_and_init_file (argc, argv);
-  else
-  	currprefs = changed_prefs;
+	if (restart_config[0])
+		parse_cmdline_and_init_file(argc, argv);
+	else
+		currprefs = changed_prefs;
 
-  if (!machdep_init ()) {
-	  restart_program = 0;
-	  return -1;
-  }
+	if (!machdep_init()) {
+		restart_program = 0;
+		return -1;
+	}
 
-  if (! setup_sound ()) {
-		write_log (_T("Sound driver unavailable: Sound output disabled\n"));
-  	currprefs.produce_sound = 0;
-  }
+	if (!setup_sound()) {
+		write_log(_T("Sound driver unavailable: Sound output disabled\n"));
+		currprefs.produce_sound = 0;
+	}
 
-  inputdevice_init();
+	inputdevice_init();
 
-  changed_prefs = currprefs;
+	changed_prefs = currprefs;
 
-  no_gui = ! currprefs.start_gui;
-  if (restart_program == 2)
-  	no_gui = 1;
-  else if (restart_program == 3)
-	  no_gui = 0;
-  restart_program = 0;
-  if (! no_gui) {
-	  int err = gui_init ();
-	  currprefs = changed_prefs;
-	  if (err == -1) {
-			write_log (_T("Failed to initialize the GUI\n"));
-      return -1;
-	  } else if (err == -2) {
-      return 1;
-	  }
-  }
-  else
-  {
-  	setCpuSpeed();
-    update_display(&currprefs);
-  }
+	no_gui = !currprefs.start_gui;
+	if (restart_program == 2)
+		no_gui = 1;
+	else if (restart_program == 3)
+		no_gui = 0;
+	restart_program = 0;
+	if (!no_gui) {
+		int err = gui_init();
+		currprefs = changed_prefs;
+		if (err == -1) {
+			write_log(_T("Failed to initialize the GUI\n"));
+			return -1;
+		}
+		else if (err == -2) {
+			return 1;
+		}
+	}
+	else
+	{
+		setCpuSpeed();
+		update_display(&currprefs);
+	}
 
-	memset (&gui_data, 0, sizeof gui_data);
+	memset(&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
 	gui_data.hd = -1;
 
 #ifdef PICASSO96
-	picasso_reset ();
+	picasso_reset();
 #endif
 
-  fixup_prefs (&currprefs);
-  changed_prefs = currprefs;
-	target_run ();
+	fixup_prefs(&currprefs);
+	changed_prefs = currprefs;
+	target_run();
   /* force sound settings change */
-  currprefs.produce_sound = 0;
+	currprefs.produce_sound = 0;
 
-  keybuf_init (); /* Must come after init_joystick */
+	keybuf_init(); /* Must come after init_joystick */
 
-	memory_hardreset (2);
-  memory_reset ();
+	memory_hardreset(2);
+	memory_reset();
 
 #ifdef AUTOCONFIG
-  native2amiga_install ();
+	native2amiga_install();
 #endif
 
-  custom_init (); /* Must come after memory_init */
-  DISK_init ();
+	custom_init(); /* Must come after memory_init */
+	DISK_init();
 
-  reset_frame_rate_hack ();
-  init_m68k(); /* must come after reset_frame_rate_hack (); */
+	reset_frame_rate_hack();
+	init_m68k(); /* must come after reset_frame_rate_hack (); */
 
-  gui_update ();
+	gui_update();
 
-  if (graphics_init (true)) {
+	if (graphics_init(true)) {
 
-    if(!init_audio ()) {
-  	  if (sound_available && currprefs.produce_sound > 1) {
-				write_log (_T("Sound driver unavailable: Sound output disabled\n"));
-	    }
-		  currprefs.produce_sound = 0;
-    }
+		if (!init_audio()) {
+			if (sound_available && currprefs.produce_sound > 1) {
+				write_log(_T("Sound driver unavailable: Sound output disabled\n"));
+			}
+			currprefs.produce_sound = 0;
+		}
 		gui_flicker_led(LED_POWER, 0, 1);
-		start_program ();
+		start_program();
 	}
-  return 0;
+	return 0;
 }
 
-void real_main (int argc, TCHAR **argv)
+void real_main(int argc, TCHAR **argv)
 {
-  restart_program = 1;
-  fetch_configurationpath (restart_config, sizeof (restart_config) / sizeof (TCHAR));
-  _tcscat (restart_config, OPTIONSFILENAME);
-  _tcscat (restart_config, ".uae");
+	restart_program = 1;
+	fetch_configurationpath(restart_config, sizeof(restart_config) / sizeof(TCHAR));
+	_tcscat(restart_config, OPTIONSFILENAME);
+	_tcscat(restart_config, ".uae");
 	default_config = 1;
 
-  while (restart_program) {
-	  changed_prefs = currprefs;
-	  real_main2 (argc, argv);
-    leave_program ();
-	  quit_program = 0;
-  }
-  zfile_exit ();
+	while (restart_program) {
+		changed_prefs = currprefs;
+		real_main2(argc, argv);
+		leave_program();
+		quit_program = 0;
+	}
+	zfile_exit();
 }
 
 #ifndef NO_MAIN_IN_MAIN_C
-int main (int argc, TCHAR **argv)
+int main(int argc, TCHAR **argv)
 {
-    real_main (argc, argv);
-    return 0;
+	real_main(argc, argv);
+	return 0;
 }
 #endif
 

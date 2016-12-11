@@ -891,6 +891,7 @@ int handle_msgpump(void)
 		case SDL_KEYDOWN:
 			if (rEvent.key.keysym.sym == currprefs.key_for_menu)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+			
 			switch (rEvent.key.keysym.sym)
 			{
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
@@ -905,8 +906,9 @@ int handle_msgpump(void)
 					kbd_flags &= ~LED_CAP;
 					inputdevice_do_keyboard(AK_CAPSLOCK, 0);
 				}
-				else {
-						  // Off, so turn on
+				else 
+				{
+					// Off, so turn on
 					kbd_led_status |= LED_CAP;
 					kbd_flags |= LED_CAP;
 					inputdevice_do_keyboard(AK_CAPSLOCK, 1);
@@ -947,8 +949,8 @@ int handle_msgpump(void)
 					}
 				}
 				else
-
 					modifier = rEvent.key.keysym.mod;
+				
 				keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
 				if (keycode)
 				{
@@ -956,6 +958,7 @@ int handle_msgpump(void)
 						inputdevice_do_keyboard(AK_LSH, 1);
 					else
 						inputdevice_do_keyboard(AK_LSH, 0);
+					
 					inputdevice_do_keyboard(keycode, 1);
 				}
 				else
@@ -964,7 +967,6 @@ int handle_msgpump(void)
 						inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
 					else
 						inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
-
 				}
 				break;
 			}
