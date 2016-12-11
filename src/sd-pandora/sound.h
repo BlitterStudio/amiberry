@@ -61,8 +61,8 @@ STATIC_INLINE void clear_sound_buffers (void)
 #define FILTER_SOUND_TYPE_A1200 1
 
 
-#define CDAUDIO_BUFFERS 32
-#define CDAUDIO_BUFFER_LEN 2048
+#define CDAUDIO_BUFFERS 64
+#define CDAUDIO_BUFFER_LEN 256
 extern uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * 2];
 extern uae_u16 *cdbufpt;
 extern uae_u16 *render_cdbuff;
@@ -73,7 +73,7 @@ extern bool cdaudio_active;
 
 STATIC_INLINE void clear_cdaudio_buffers (void)
 {
-    memset (cdaudio_buffer, 0, CDAUDIO_BUFFERS * (CDAUDIO_BUFFER_LEN + 32) * 2);
+    memset (cdaudio_buffer, 0, sizeof(cdaudio_buffer));
 }
 
 #define PUT_CDAUDIO_WORD_STEREO(l,r) do { *((uae_u32 *)cdbufpt) = (r << 16) | (l & 0xffff); cdbufpt = cdbufpt + 2; } while (0)
