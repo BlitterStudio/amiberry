@@ -5382,6 +5382,11 @@ void inputdevice_copyconfig (const struct uae_prefs *src, struct uae_prefs *dst)
   dst->pandora_tapDelay = src->pandora_tapDelay;
   dst->pandora_customControls = src->pandora_customControls;
   
+  dst->key_for_menu = src->key_for_menu;
+  dst->key_for_quit = src->key_for_quit;
+  dst->button_for_menu = src->button_for_menu;
+  dst->button_for_quit = src->button_for_quit;
+
 	copyjport (src, dst, 0);
 	copyjport (src, dst, 1);
 	copyjport (src, dst, 2);

@@ -884,13 +884,17 @@ int handle_msgpump(void)
 			break;
 
 		case SDL_JOYBUTTONDOWN:
-			if (currprefs.key_for_menu == SDL_JOYBUTTONDOWN && rEvent.jbutton.button == 1)
+			if (rEvent.jbutton.button == currprefs.button_for_menu)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+			if (rEvent.jbutton.button == currprefs.button_for_quit)
+				inputdevice_add_inputcode(AKS_QUIT, 1);
 			break;
 	        
 		case SDL_KEYDOWN:
 			if (rEvent.key.keysym.sym == currprefs.key_for_menu)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+			if (rEvent.key.keysym.sym == currprefs.key_for_quit)
+				inputdevice_add_inputcode(AKS_QUIT, 1);
 			
 			switch (rEvent.key.keysym.sym)
 			{

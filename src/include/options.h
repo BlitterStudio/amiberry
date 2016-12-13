@@ -240,6 +240,9 @@ struct uae_prefs {
   int pandora_customControls;
 
   int key_for_menu;
+  int key_for_quit;
+  int button_for_menu;
+  int button_for_quit;
 
   /* input */
 
