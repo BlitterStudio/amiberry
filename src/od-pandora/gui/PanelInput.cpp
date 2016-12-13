@@ -116,11 +116,11 @@ static const int ControlKey_SDLKeyValues[] = { 0, SDLK_F11, SDLK_F12 };
 
 const char *ControlKeyValues[] = { "------------------", "F11", "F12" };
 StringListModel ControlKeyList(ControlKeyValues, 3);
-int ControlKey_SDLKeyValues_Length = sizeof(ControlKey_SDLKeyValues) / sizeof(int);
 
 static int GetControlKeyIndex(int key)
 {
-	for (int i = 0; i < (ControlKey_SDLKeyValues_Length + 1); ++i)
+	int ControlKey_SDLKeyValues_Length = sizeof(ControlKey_SDLKeyValues) / sizeof(int);
+    for (int i = 0; i < (ControlKey_SDLKeyValues_Length + 1); ++i)
 	{
 		if (ControlKey_SDLKeyValues[i] == key)
 			return i;
@@ -132,11 +132,11 @@ static const int ControlButton_SDLButtonValues[] = { -1, 0, 1, 2, 3 };
 
 const char *ControlButtonValues[] = { "------------------", "JoyButton0", "JoyButton1", "JoyButton2", "JoyButton3" };
 StringListModel ControlButtonList(ControlButtonValues, 5);
-int ControlButton_SDLButtonValues_Length = sizeof(ControlButton_SDLButtonValues) / sizeof(int);
 
 static int GetControlButtonIndex(int button)
 {
-	for (int i = 0; i < (ControlKey_SDLKeyValues_Length + 1); ++i)
+	int ControlButton_SDLButtonValues_Length = sizeof(ControlButton_SDLButtonValues) / sizeof(int);
+    for (int i = 0; i < (ControlButton_SDLButtonValues_Length + 1); ++i)
 	{
 		if (ControlButton_SDLButtonValues[i] == button)
 			return i;
@@ -510,40 +510,40 @@ void InitPanelInput(const struct _ConfigCategory& category)
     cboRight->setId("cboRight");
     cboRight->addActionListener(inputActionListener);
 
-    lblKeyForMenu = new gcn::Label("Key for Menu:");
+    lblKeyForMenu = new gcn::Label("Menu Key:");
     lblKeyForMenu->setSize(100, LABEL_HEIGHT);
     lblKeyForMenu->setAlignment(gcn::Graphics::RIGHT);
     KeyForMenu = new gcn::UaeDropDown(&ControlKeyList);
     KeyForMenu->setSize(150, DROPDOWN_HEIGHT);
     KeyForMenu->setBaseColor(gui_baseCol);
-    KeyForMenu->setId("CKeyMenu");
+    KeyForMenu->setId("KeyForMenu");
     KeyForMenu->addActionListener(inputActionListener);
 
-    lblKeyForQuit = new gcn::Label("Key for Quit:");
+    lblKeyForQuit = new gcn::Label("Quit Key:");
 	lblKeyForQuit->setSize(100, LABEL_HEIGHT);
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
 	KeyForQuit = new gcn::UaeDropDown(&ControlKeyList);
 	KeyForQuit->setSize(150, DROPDOWN_HEIGHT);
 	KeyForQuit->setBaseColor(gui_baseCol);
-	KeyForQuit->setId("CKeyMenu");
+	KeyForQuit->setId("KeyForQuit");
 	KeyForQuit->addActionListener(inputActionListener);
 
-    lblButtonForMenu= new gcn::Label("Button for Menu:");
+    lblButtonForMenu= new gcn::Label("Menu Button:");
 	lblButtonForMenu->setSize(100, LABEL_HEIGHT);
 	lblButtonForMenu->setAlignment(gcn::Graphics::RIGHT);
 	ButtonForMenu = new gcn::UaeDropDown(&ControlButtonList);
 	ButtonForMenu->setSize(150, DROPDOWN_HEIGHT);
 	ButtonForMenu->setBaseColor(gui_baseCol);
-	ButtonForMenu->setId("CKeyMenu");
+	ButtonForMenu->setId("ButtonForMenu");
 	ButtonForMenu->addActionListener(inputActionListener);
 
-	lblButtonForQuit = new gcn::Label("Button for Quit:");
+	lblButtonForQuit = new gcn::Label("Quit Button:");
 	lblButtonForQuit->setSize(100, LABEL_HEIGHT);
 	lblButtonForQuit->setAlignment(gcn::Graphics::RIGHT);
 	ButtonForQuit = new gcn::UaeDropDown(&ControlButtonList);
 	ButtonForQuit->setSize(150, DROPDOWN_HEIGHT);
 	ButtonForQuit->setBaseColor(gui_baseCol);
-	ButtonForQuit->setId("CKeyMenu");
+	ButtonForQuit->setId("ButtonForQuit");
 	ButtonForQuit->addActionListener(inputActionListener);
 
     int posY = DISTANCE_BORDER;
@@ -603,7 +603,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
     posY += KeyForMenu->getHeight() + 4;
 
     category.panel->add(lblButtonForMenu, DISTANCE_BORDER, posY);
-	category.panel->add(ButtonForMenu, DISTANCE_BORDER + lblButtonForQuit->getWidth() + 8, posY);
+	category.panel->add(ButtonForMenu, DISTANCE_BORDER + lblButtonForMenu->getWidth() + 8, posY);
     category.panel->add(lblButtonForQuit, 300, posY);
 	category.panel->add(ButtonForQuit, 300 + lblButtonForQuit->getWidth() + 8, posY);
 
