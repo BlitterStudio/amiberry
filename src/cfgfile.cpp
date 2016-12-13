@@ -737,6 +737,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
   cfgfile_dwrite_str (f, _T("absolute_mouse"), abspointers[p->input_tablet]);
 
   cfgfile_write (f, _T("key_for_menu"), _T("%d"), p->key_for_menu);
+	cfgfile_write (f, _T("key_for_quit"), _T("%d"), p->key_for_quit);
+  cfgfile_write (f, _T("button_for_menu"), _T("%d"), p->button_for_menu);
+	cfgfile_write (f, _T("button_for_quit"), _T("%d"), p->button_for_quit);
 
   cfgfile_write (f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
   write_resolution (f, _T("gfx_width"), _T("gfx_height"), &p->gfx_size); /* compatibility with old versions */
@@ -1275,11 +1278,18 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	  || cfgfile_strval (option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
     return 1;
 
-
-  if (cfgfile_intval (option, value, "key_for_menu", &p->key_for_menu, 1))
+  
+	if (cfgfile_intval (option, value, "key_for_menu", &p->key_for_menu, 1))
     return 1;
 
+	if (cfgfile_intval (option, value, "key_for_quit", &p->key_for_quit, 1))
+    return 1;
 
+	if (cfgfile_intval (option, value, "button_for_menu", &p->button_for_menu, 1))
+    return 1;
+
+	if (cfgfile_intval (option, value, "button_for_quit", &p->button_for_quit, 1))
+    return 1;
 	
 	if (_tcscmp (option, _T("gfx_width_windowed")) == 0) {
 		if (!_tcscmp (value, _T("native"))) {
@@ -3312,6 +3322,9 @@ void default_prefs (struct uae_prefs *p, int type)
   p->input_tablet = TABLET_OFF;
 
   p->key_for_menu = SDLK_F12;
+	p->key_for_quit = 0;
+	p->button_for_menu = -1;
+	p->button_for_quit = -1;
 
 	inputdevice_default_prefs (p);
 	blkdev_default_prefs (p);
