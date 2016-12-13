@@ -11,6 +11,8 @@
 - Loading the Configuration file now respects the input settings
 - Fixed bugs and crashes in GUI keyboard navigation
 - Added Visual Studio solution (requires VisualGDB), so we can compile and debug from Windows PC
+- Added Shutdown button, to power off the computer
+- Added mapping for game controller button to 1) Enter GUI and 2) Quit the emulator
 
 # uae4arm-rpi
 Port of uae4arm on Raspberry Pi
