@@ -10,9 +10,9 @@
       <Transport>None</Transport>
     </BuildHost>
     <DeploymentHost>
-      <HostName>192.168.1.155</HostName>
+      <HostName>172.16.2.42</HostName>
       <Transport>SSH</Transport>
-      <UserName>root</UserName>
+      <UserName>pi</UserName>
     </DeploymentHost>
     <MainSourceTransferCommand>
       <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
