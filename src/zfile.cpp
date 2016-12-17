@@ -240,7 +240,7 @@ void zfile_fclose (struct zfile *f)
   	pl->next = nxt;
 }
 
-static void removeext (TCHAR *s, TCHAR *ext)
+static void removeext (TCHAR *s, const char *ext)
 {
 	if (_tcslen (s) < _tcslen (ext))
 		return;
@@ -259,7 +259,7 @@ static bool checkwrite (struct zfile *zf, int *retcode)
 }
 
 static uae_u8 exeheader[]={0x00,0x00,0x03,0xf3,0x00,0x00,0x00,0x00};
-static TCHAR *diskimages[] = { _T("adf"), _T("adz"), _T("ipf"), _T("scp"), _T("fdi"), _T("dms"), _T("wrp"), _T("dsq"), 0 };
+static const char *diskimages[] = { _T("adf"), _T("adz"), _T("ipf"), _T("scp"), _T("fdi"), _T("dms"), _T("wrp"), _T("dsq"), 0 };
 
 int zfile_gettype (struct zfile *z)
 {

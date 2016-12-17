@@ -269,7 +269,7 @@ static void out_config (struct zfile *f, int id, int num, const TCHAR *s1, const
 
 static bool write_config_head (struct zfile *f, int idnum, int devnum, const TCHAR *name, struct uae_input_device *id,  struct inputdevice_functions *idf)
 {
-	TCHAR *s = NULL;
+	const char *s = NULL;
 	TCHAR tmp2[CONFIG_BLEN];
 
 	if (idnum == GAMEPORT_INPUT_SETTINGS) {
@@ -2503,7 +2503,7 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 	int ismouse = 0;
 	int newport = 0;
 	int flags = 0;
-	TCHAR *name = NULL;
+	const char *name = NULL;
 	int otherbuttonpressed = 0;
 	int acc = input_acquired;
 
@@ -2562,7 +2562,7 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 						supermouse = i;
 				}
 				if (supermouse >= 0 && nummouse == 1) {
-					TCHAR *oldname = name;
+					const char *oldname = name;
 					name = idev[IDTYPE_MOUSE].get_uniquename (supermouse);
 					issupermouse = true;
 				}
@@ -4289,8 +4289,8 @@ static void matchdevices (struct inputdevice_functions *inf, struct uae_input_de
 	int i, j;
 
 	for (i = 0; i < inf->get_num (); i++) {
-		TCHAR *aname1 = inf->get_friendlyname (i);
-		TCHAR *aname2 = inf->get_uniquename (i);
+		const char *aname1 = inf->get_friendlyname (i);
+		const char *aname2 = inf->get_uniquename (i);
 		int match = -1;
 		for (j = 0; j < MAX_INPUT_DEVICES; j++) {
 			if (aname2 && uid[j].configname) {
@@ -5112,17 +5112,17 @@ int inputdevice_get_device_total (int type)
 	return idev[type].get_num ();
 }
 /* returns the name of device */
-TCHAR *inputdevice_get_device_name (int type, int devnum)
+const char *inputdevice_get_device_name (int type, int devnum)
 {
 	return idev[type].get_friendlyname (devnum);
 }
 /* returns the name of device */
-TCHAR *inputdevice_get_device_name2 (int devnum)
+const char *inputdevice_get_device_name2 (int devnum)
 {
 	return getidf (devnum)->get_friendlyname (inputdevice_get_device_index (devnum));
 }
 /* returns machine readable name of device */
-TCHAR *inputdevice_get_device_unique_name (int type, int devnum)
+const char *inputdevice_get_device_unique_name (int type, int devnum)
 {
 	return idev[type].get_uniquename (devnum);
 }
@@ -5980,7 +5980,7 @@ int inputdevice_joyport_config (struct uae_prefs *p, const TCHAR *value, int por
 				}
 				idf = &idev[type];
 				for (i = 0; i < idf->get_num (); i++) {
-					TCHAR *name2 = idf->get_uniquename (i);
+					const char *name2 = idf->get_uniquename(i);
 					if (name2 && !_tcscmp (name2, value)) {
 						if (validate)
 							inputdevice_inserted (p, portnum, idnum + i, type);
@@ -5991,7 +5991,7 @@ int inputdevice_joyport_config (struct uae_prefs *p, const TCHAR *value, int por
 					}
 				}
 				for (i = 0; i < idf->get_num (); i++) {
-					TCHAR *name1 = idf->get_friendlyname (i);
+					const char *name1 = idf->get_friendlyname(i);
 					if (name1 && !_tcscmp (name1, value)) {
 						if (validate)
 							inputdevice_inserted (p, portnum, idnum + i, type);

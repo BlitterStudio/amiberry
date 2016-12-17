@@ -3166,7 +3166,7 @@ static void move_exkeys (Unit *unit, a_inode *from, a_inode *to)
 static bool get_statinfo(Unit *unit, a_inode *aino, struct mystat *statbuf)
 {
 	bool ok = true;
-	memset (statbuf, 0, sizeof statbuf);
+	memset (statbuf, 0, sizeof &statbuf);
 	/* No error checks - this had better work. */
 	if (unit->volflags & MYVOLUMEINFO_ARCHIVE)
 		ok = zfile_stat_archive (aino->nname, statbuf) != 0;
@@ -3183,7 +3183,7 @@ static void
   int i, n, entrytype, blocksize;
 	uae_s64 numblocks;
   int fsdb_can = fsdb_cando (unit);
-	TCHAR *xs;
+	const char *xs;
 	char *x, *x2;
 
 	if (!get_statinfo(unit, aino, &statbuf)) {
@@ -3498,7 +3498,8 @@ static int exalldo (uaecptr exalldata, uae_u32 exalldatasize, uae_u32 type, uaec
   int i;
   int size, size2;
   int entrytype;
-	TCHAR *xs = NULL, *commentx = NULL;
+	TCHAR *xs = NULL;
+	const char *commentx = NULL;
   uae_u32 flags = 15;
 	int days, mins, ticks;
 	struct mystat statbuf;
@@ -6228,7 +6229,7 @@ static uae_u32 rl (uae_u8 *p)
 	return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | (p[3]);
 }
 
-int rdb_checksum (uae_char *id, uae_u8 *p, int block)
+int rdb_checksum (const char *id, uae_u8 *p, int block)
 {
 	uae_u32 sum = 0;
 	int i, blocksize;

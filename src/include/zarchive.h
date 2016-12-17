@@ -71,16 +71,16 @@ struct zvolume
     unsigned int id;
     uae_s64 archivesize;
     unsigned int method;
-    TCHAR *volumename;
+    const char *volumename;
     int zfdmask;
 };
 
 struct zarchive_info
 {
-    TCHAR *name;
+    const char *name;
     uae_s64 size;
     int flags;
-    TCHAR *comment;
+    const char *comment;
 	struct mytimeval tv;
 };
 

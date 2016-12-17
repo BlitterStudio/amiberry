@@ -9,7 +9,7 @@
 #include "zarchive.h"
 
 
-static char *methods[] =
+static const char *methods[] =
 {
     LZHUFF0_METHOD, LZHUFF1_METHOD, LZHUFF2_METHOD, LZHUFF3_METHOD,
     LZHUFF4_METHOD, LZHUFF5_METHOD, LZHUFF6_METHOD, LZHUFF7_METHOD,
@@ -71,8 +71,8 @@ struct zvolume *archive_directory_lha(struct zfile *zf)
             zn->packedsize = hdr.packed_size;
             zn->method = method;
         }
-        xfree (zai.name);
-        xfree (zai.comment);
+        xfree ((char*)zai.name);
+        xfree ((char*)zai.comment);
         zfile_fseek(zf, hdr.packed_size, SEEK_CUR);
 
     }

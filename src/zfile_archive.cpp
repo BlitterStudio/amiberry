@@ -322,7 +322,7 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 				if (zn)
 					zn->offset = zfile_ftell (z);
 			}
-			xfree (zai.name);
+			xfree ((char*)zai.name);
 		}
 		zfile_fseek (z, (size + 511) & ~511, SEEK_CUR);
 	}
@@ -1020,7 +1020,7 @@ static struct znode *addfile (struct zvolume *zv, struct zfile *zf, const TCHAR 
     zn->f = z;
   else
     zfile_fclose(z);
-  xfree (zai.name);
+  xfree ((char*)zai.name);
   return zn;
 }
 
@@ -1328,7 +1328,7 @@ static void recursesfs (struct znode *zn, int root, TCHAR *name, int sfs2)
     		znnew->offset = block;
     		znnew->offset2 = p - adf->block;
 	    }
-	    xfree (zai.comment);
+	    xfree ((char*)zai.comment);
 	    xfree (fname);
 	    p += i + align;
   	}
@@ -1902,7 +1902,7 @@ static int getcluster (struct zfile *z, int cluster, int fatstart, int fatbits)
 	return fat;
 }
 
-static void fatdirectory (struct zfile *z, struct zvolume *zv, TCHAR *name, int startblock, int entries, int sectorspercluster, int fatstart, int dataregion, int fatbits)
+static void fatdirectory (struct zfile *z, struct zvolume *zv, const char *name, int startblock, int entries, int sectorspercluster, int fatstart, int dataregion, int fatbits)
 {
 	struct zarchive_info zai;
 	struct znode *znnew;

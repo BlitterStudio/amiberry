@@ -78,7 +78,7 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 {
     unsigned int *pc = (unsigned int *)pregs[ARM_REG_PC];
 
-    panicbug("IP: %p [%08x] %p\n", pc, pc[0], addr);
+    panicbug("IP: %p [%08x] %u\n", pc, pc[0], addr);
     if (pc == 0)
         return false;
 
@@ -214,7 +214,7 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
     }
 
     pregs[ARM_REG_PC] += 4;
-    panicbug("processed: %p \n", pregs[ARM_REG_PC]);
+    panicbug("processed: %lu \n", pregs[ARM_REG_PC]);
 
     in_handler--;
 
@@ -267,27 +267,27 @@ void signal_segv(int signum, siginfo_t* info, void*ptr)
     printf("info.si_addr = %p\n", info->si_addr);
     if(signum == 4)
         printf("       value = 0x%08x\n", *((uae_u32*)(info->si_addr)));
-    printf("reg[%02d] = 0x%08x\n",0, ucontext->uc_mcontext.arm_r0);
-    printf("reg[%02d] = 0x%08x\n",1, ucontext->uc_mcontext.arm_r1);
-    printf("reg[%02d] = 0x%08x\n",2, ucontext->uc_mcontext.arm_r2);
-    printf("reg[%02d] = 0x%08x\n",3, ucontext->uc_mcontext.arm_r3);
-    printf("reg[%02d] = 0x%08x\n",4, ucontext->uc_mcontext.arm_r4);
-    printf("reg[%02d] = 0x%08x\n",5, ucontext->uc_mcontext.arm_r5);
-    printf("reg[%02d] = 0x%08x\n",6, ucontext->uc_mcontext.arm_r6);
-    printf("reg[%02d] = 0x%08x\n",7, ucontext->uc_mcontext.arm_r7);
-    printf("reg[%02d] = 0x%08x\n",8, ucontext->uc_mcontext.arm_r8);
-    printf("reg[%02d] = 0x%08x\n",9, ucontext->uc_mcontext.arm_r9);
-    printf("reg[%02d] = 0x%08x\n",10, ucontext->uc_mcontext.arm_r10);
-    printf("FP = 0x%08x\n", ucontext->uc_mcontext.arm_fp);
-    printf("IP = 0x%08x\n", ucontext->uc_mcontext.arm_ip);
-    printf("SP = 0x%08x\n", ucontext->uc_mcontext.arm_sp);
-    printf("LR = 0x%08x\n", ucontext->uc_mcontext.arm_lr);
-    printf("PC = 0x%08x\n", ucontext->uc_mcontext.arm_pc);
-    printf("CPSR = 0x%08x\n", ucontext->uc_mcontext.arm_cpsr);
-    printf("Fault Address = 0x%08x\n", ucontext->uc_mcontext.fault_address);
-    printf("Trap no = 0x%08x\n", ucontext->uc_mcontext.trap_no);
-    printf("Err Code = 0x%08x\n", ucontext->uc_mcontext.error_code);
-    printf("Old Mask = 0x%08x\n", ucontext->uc_mcontext.oldmask);
+    printf("reg[%02d] = 0x%08lx\n",0, ucontext->uc_mcontext.arm_r0);
+    printf("reg[%02d] = 0x%08lx\n",1, ucontext->uc_mcontext.arm_r1);
+    printf("reg[%02d] = 0x%08lx\n",2, ucontext->uc_mcontext.arm_r2);
+    printf("reg[%02d] = 0x%08lx\n",3, ucontext->uc_mcontext.arm_r3);
+    printf("reg[%02d] = 0x%08lx\n",4, ucontext->uc_mcontext.arm_r4);
+    printf("reg[%02d] = 0x%08lx\n",5, ucontext->uc_mcontext.arm_r5);
+    printf("reg[%02d] = 0x%08lx\n",6, ucontext->uc_mcontext.arm_r6);
+    printf("reg[%02d] = 0x%08lx\n",7, ucontext->uc_mcontext.arm_r7);
+    printf("reg[%02d] = 0x%08lx\n",8, ucontext->uc_mcontext.arm_r8);
+    printf("reg[%02d] = 0x%08lx\n",9, ucontext->uc_mcontext.arm_r9);
+    printf("reg[%02d] = 0x%08lx\n",10, ucontext->uc_mcontext.arm_r10);
+    printf("FP = 0x%08lx\n", ucontext->uc_mcontext.arm_fp);
+    printf("IP = 0x%08lx\n", ucontext->uc_mcontext.arm_ip);
+    printf("SP = 0x%08lx\n", ucontext->uc_mcontext.arm_sp);
+    printf("LR = 0x%08lx\n", ucontext->uc_mcontext.arm_lr);
+    printf("PC = 0x%08lx\n", ucontext->uc_mcontext.arm_pc);
+    printf("CPSR = 0x%08lx\n", ucontext->uc_mcontext.arm_cpsr);
+    printf("Fault Address = 0x%08lx\n", ucontext->uc_mcontext.fault_address);
+    printf("Trap no = 0x%08lx\n", ucontext->uc_mcontext.trap_no);
+    printf("Err Code = 0x%08lx\n", ucontext->uc_mcontext.error_code);
+    printf("Old Mask = 0x%08lx\n", ucontext->uc_mcontext.oldmask);
 
 //  dump_compiler((uae_u32*)ucontext->uc_mcontext.arm_pc);
 

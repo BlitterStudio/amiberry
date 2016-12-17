@@ -898,7 +898,7 @@ static void mmu_op30fake_pmove(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr
   int preg = (next >> 10) & 31;
   int rw = (next >> 9) & 1;
   int fd = (next >> 8) & 1;
-  TCHAR *reg = NULL;
+  const char *reg = NULL;
   int siz;
 
 	// Dn, An, (An)+, -(An), abs and indirect

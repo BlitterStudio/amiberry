@@ -244,7 +244,7 @@ TCHAR *restore_path_func (uae_u8 **dstp, int type)
 
 /* read and write IFF-style hunks */
 
-static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, TCHAR *name, int compress)
+static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, const char *name, int compress)
 {
   uae_u8 tmp[8], *dst;
   uae_u8 zero[4]= { 0, 0, 0, 0 };

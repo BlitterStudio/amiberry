@@ -129,7 +129,7 @@ void ClearAvailableROMList(void)
 	}
 }
 
-static void addrom(struct romdata *rd, char *path)
+static void addrom(struct romdata *rd, const char *path)
 {
 	AvailableROM *tmp;
 	char tmpName[MAX_DPATH];

@@ -283,7 +283,7 @@ static void createbootblock (uae_u8 *sector, int bootable)
         memcpy (sector, bootblock_ofs, sizeof bootblock_ofs);
 }
 
-static void createrootblock (uae_u8 *sector, char *disk_name)
+static void createrootblock (uae_u8 *sector, const char *disk_name)
 {
     memset (sector, 0, FS_FLOPPY_BLOCKSIZE);
     sector[0+3] = 2;
@@ -447,10 +447,10 @@ static int createimagefromexe (struct zfile *src, struct zfile *dst)
     int blocks, extensionblocks;
     int totalblocks;
     int fblock1, dblock1;
-    char *fname1 = "runme.exe";
-    TCHAR *fname1b = _T("runme.adf");
-    char *fname2 = "startup-sequence";
-    char *dirname1 = "s";
+    const char *fname1 = "runme.exe";
+    const char *fname1b = _T("runme.adf");
+    const char *fname2 = "startup-sequence";
+    const char *dirname1 = "s";
     struct zfile *ss;
 
     memset (bitmap, 0, sizeof bitmap);
@@ -511,7 +511,7 @@ static int get_floppy_speed2 (drive *drv)
     return m;
 }
 
-static TCHAR *drive_id_name (drive *drv)
+static const char *drive_id_name (drive *drv)
 {
     switch (drv->drive_id)
     {
