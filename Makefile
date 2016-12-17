@@ -197,8 +197,13 @@ OBJS =	\
 OBJS += src/od-rasp/rasp_gfx.o
 OBJS += src/od-pandora/gui/sdltruetypefont.o
 OBJS += src/od-pandora/picasso96.o
-OBJS += src/od-pandora/neon_helper.o
 
+ifdef USE_ARMNEON
+	OBJS += src/od-pandora/neon_helper.o
+else
+	OBJS += src/od-pandora/arm_helper.o
+endif
+	
 OBJS += src/newcpu.o
 OBJS += src/newcpu_common.o
 OBJS += src/readcpu.o
@@ -215,6 +220,10 @@ OBJS += src/jit/compemu_support.o
 src/od-pandora/neon_helper.o: src/od-pandora/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -Wall -o src/od-pandora/neon_helper.o -c src/od-pandora/neon_helper.s
 
+src/od-pandora/arm_helper.o: src/od-pandora/arm_helper.s
+	$(CXX) $(CPU_FLAGS) -Wall -o src/od-pandora/arm_helper.o -c src/od-pandora/arm_helper.s
+
+	
 src/trace.o: src/trace.c
 	$(CC) $(MORE_CFLAGS) -c src/trace.c -o src/trace.o
 
