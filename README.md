@@ -57,28 +57,6 @@ How to compile on Raspbian Jessie:
 
       make PLATFORM=rpi2
 
-   For Raspberry Pi 1:  
+   For Raspberry Pi 1/Zero:  
 
       make PLATFORM=rpi1
-   
-   For Generic SDL:  
-
-      make PLATFORM=generic-sdl
-
-How to compile on Raspbian Whezzy:  
-
-   You need to install same packages as Jessie (see above)
-   and a more updated gcc (otherwise alter Makefile).
-   In order to do this enter the following in command line:  
-
-      sudo apt-get install g++-4.8
-
-
-   Then for Raspberry Pi 2:  
-
-      make CXX=g++-4.8
-
-   Or for Raspberry Pi 1:  
-
-      make PLATFORM=rpi1 CXX=g++-4.8
-
