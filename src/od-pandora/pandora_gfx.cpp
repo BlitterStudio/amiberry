@@ -77,7 +77,7 @@ int delay_savestate_frame = 0;
 #endif
 
 
-static unsigned long next_synctime = 0;
+static long next_synctime = 0;
 
 
 int graphics_setup (void)
