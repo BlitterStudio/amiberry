@@ -198,10 +198,10 @@ OBJS += src/od-rasp/rasp_gfx.o
 OBJS += src/od-pandora/gui/sdltruetypefont.o
 OBJS += src/od-pandora/picasso96.o
 
-ifdef USE_ARMNEON
-	OBJS += src/od-pandora/neon_helper.o
-else
+ifeq ($(PLATFORM),rpi1)
 	OBJS += src/od-pandora/arm_helper.o
+else
+	OBJS += src/od-pandora/neon_helper.o
 endif
 	
 OBJS += src/newcpu.o
