@@ -12,37 +12,36 @@
 #define DEFAULT_SOUND_CHANNELS 1
 #endif
 
-// These numbers mean SOUND PRODUCER BLOCK count and length
-#define SOUND_BUFFERS_COUNT 32
-#define SNDBUFFER_LEN 256
+#define SOUND_BUFFERS_COUNT 4
+#define SNDBUFFER_LEN 2048
 
-extern uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
+extern uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN + 32)*DEFAULT_SOUND_CHANNELS];
 extern uae_u16 *sndbufpt;
 extern uae_u16 *render_sndbuff;
 extern uae_u16 *finish_sndbuff;
 extern int sndbufsize;
-extern void finish_sound_buffer (void);
-extern void restart_sound_buffer (void);
-extern void pause_sound_buffer (void);
-extern void finish_cdaudio_buffer (void);
+extern void finish_sound_buffer(void);
+extern void restart_sound_buffer(void);
+extern void pause_sound_buffer(void);
+extern void finish_cdaudio_buffer(void);
 extern bool cdaudio_catchup(void);
 extern int init_sound(void);
-extern void close_sound (void);
-extern int setup_sound (void);
-extern void resume_sound (void);
-extern void pause_sound (void);
-extern void reset_sound (void);
-extern void sound_volume (int);
+extern void close_sound(void);
+extern int setup_sound(void);
+extern void resume_sound(void);
+extern void pause_sound(void);
+extern void reset_sound(void);
+extern void sound_volume(int);
 
-STATIC_INLINE void set_sound_buffers (void)
+STATIC_INLINE void set_sound_buffers(void)
 {
 }
 
 #define check_sound_buffers() { if (sndbufpt >= finish_sndbuff) finish_sound_buffer (); }
 
-STATIC_INLINE void clear_sound_buffers (void)
+STATIC_INLINE void clear_sound_buffers(void)
 {
-    memset (sndbuffer, 0, sizeof(sndbuffer));
+	memset(sndbuffer, 0, sizeof(sndbuffer));
 }
 
 #define PUT_SOUND_WORD_MONO(x) put_sound_word_mono_func(x)
@@ -72,9 +71,11 @@ extern bool cdaudio_active;
 
 #define check_cdaudio_buffers() { if (cdbufpt >= finish_cdbuff) finish_cdaudio_buffer (); }
 
-STATIC_INLINE void clear_cdaudio_buffers (void)
+STATIC_INLINE void clear_cdaudio_buffers(void)
 {
-    memset (cdaudio_buffer, 0, sizeof(cdaudio_buffer));
+	memset(cdaudio_buffer,
+		0,
+		sizeof(cdaudio_buffer));
 }
 
 #define PUT_CDAUDIO_WORD_STEREO(l,r) do { *((uae_u32 *)cdbufpt) = (r << 16) | (l & 0xffff); cdbufpt = cdbufpt + 2; } while (0)
