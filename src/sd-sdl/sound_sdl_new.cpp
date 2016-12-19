@@ -32,12 +32,12 @@ uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN + 32)*DEFAULT_SOUND_CHANNE
 unsigned n_callback_sndbuff, n_render_sndbuff;
 uae_u16 *sndbufpt = sndbuffer[0];
 uae_u16 *render_sndbuff = sndbuffer[0];
-uae_u16 *finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN * 2;
+uae_u16 *finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN * DEFAULT_SOUND_CHANNELS;
 
-uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * 2];
+uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS];
 uae_u16 *cdbufpt = cdaudio_buffer[0];
 uae_u16 *render_cdbuff = cdaudio_buffer[0];
-uae_u16 *finish_cdbuff = cdaudio_buffer[0] + CDAUDIO_BUFFER_LEN * 2;
+uae_u16 *finish_cdbuff = cdaudio_buffer[0] + CDAUDIO_BUFFER_LEN * DEFAULT_SOUND_CHANNELS;
 bool cdaudio_active = false;
 static int cdwrcnt = 0;
 static int cdrdcnt = 0;
