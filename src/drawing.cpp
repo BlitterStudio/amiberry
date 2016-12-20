@@ -2154,8 +2154,6 @@ void vsync_handle_redraw(void)
 
 	if (framecnt == 0)
 		init_drawing_frame();
-
-	gui_flicker_led(-1, 0, 0);
 }
 
 void hsync_record_line_state(int lineno)

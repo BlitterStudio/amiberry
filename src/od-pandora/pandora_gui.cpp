@@ -594,9 +594,6 @@ void gui_disk_image_change(int unitnum, const char *name, bool writeprotected)
 
 void gui_led(int led, int on)
 {
-#ifdef RASPBERRY
-#define LED_ALL   -1         // Define for all LEDs
-   
 	unsigned char kbd_led_status;
    
 	// Check current prefs/ update if changed
@@ -636,16 +633,10 @@ void gui_led(int led, int on)
 		}
 	}
   
-   // Handle all LEDs off
-	if (led == LED_ALL) {
-		kbd_led_status &= ~LED_NUM;
-		kbd_led_status &= ~LED_SCR;
-	}
 	ioctl(0, KDSETLED, kbd_led_status);
-#endif
 }
 
-void gui_flicker_led(int led, int unitnum, int status)
+void gui_flicker_led(int led, int status)
 {
 #ifdef RASPBERRY
 	gui_led(led, status);

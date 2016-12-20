@@ -700,7 +700,7 @@ int hdf_write (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
 
 static uae_u64 cmd_readx (struct hardfiledata *hfd, uae_u8 *dataptr, uae_u64 offset, uae_u64 len)
 {
-	gui_flicker_led (LED_HD, hfd->unitnum, 1);
+	gui_flicker_led (LED_HD, 1);
 	return hdf_read (hfd, dataptr, offset, len);
 }
 static uae_u64 cmd_read (struct hardfiledata *hfd, uaecptr dataptr, uae_u64 offset, uae_u64 len)
@@ -712,7 +712,7 @@ static uae_u64 cmd_read (struct hardfiledata *hfd, uaecptr dataptr, uae_u64 offs
 }
 static uae_u64 cmd_writex (struct hardfiledata *hfd, uae_u8 *dataptr, uae_u64 offset, uae_u64 len)
 {
-	gui_flicker_led (LED_HD, hfd->unitnum, 2);
+	gui_flicker_led (LED_HD, 1);
 	return hdf_write (hfd, dataptr, offset, len);
 }
 
