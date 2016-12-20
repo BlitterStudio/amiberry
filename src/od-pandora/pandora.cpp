@@ -884,17 +884,21 @@ int handle_msgpump(void)
 			break;
 
 		case SDL_JOYBUTTONDOWN:
-			if (rEvent.jbutton.button == currprefs.button_for_menu)
+			if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			if (rEvent.jbutton.button == currprefs.button_for_quit)
+			if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
 				inputdevice_add_inputcode(AKS_QUIT, 1);
 			break;
 	        
 		case SDL_KEYDOWN:
-			if (rEvent.key.keysym.sym == currprefs.key_for_menu)
+			if (currprefs.key_for_menu != 0 && rEvent.key.keysym.sym == currprefs.key_for_menu)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			if (rEvent.key.keysym.sym == currprefs.key_for_quit)
+			if (currprefs.key_for_quit != 0 && rEvent.key.keysym.sym == currprefs.key_for_quit)
 				inputdevice_add_inputcode(AKS_QUIT, 1);
+			
+			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
+			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
+				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
 			
 			switch (rEvent.key.keysym.sym)
 			{
