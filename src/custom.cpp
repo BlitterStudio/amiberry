@@ -4500,7 +4500,6 @@ static void fpscounter (void)
 // vsync functions that are not hardware timing related
 static void vsync_handler_pre (void)
 {
-	handle_events ();
 	
 #ifdef PICASSO96
 	if (currprefs.rtgmem_size)

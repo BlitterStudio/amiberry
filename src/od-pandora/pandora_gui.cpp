@@ -588,26 +588,6 @@ void moveVertical(int value)
 		changed_prefs.pandora_vertical_offset = 16;
 }
 
-
-extern char keyboard_type;
-
-void gui_handle_events(void)
-{
-	Uint8 *keystate = SDL_GetKeyState(NULL);
-
-	// Strangely in FBCON left window is seen as left alt ??
-	if (keyboard_type == 2) // KEYCODE_FBCON
-	{
-		if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-			uae_reset(0, 1);
-	}
-	else
-	{
-		if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-			uae_reset(0, 1);
-	}
-}
-
 void gui_disk_image_change(int unitnum, const char *name, bool writeprotected)
 {
 }

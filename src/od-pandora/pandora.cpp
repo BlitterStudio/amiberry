@@ -856,6 +856,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+extern char keyboard_type;
 
 int handle_msgpump(void)
 {
@@ -876,7 +877,8 @@ int handle_msgpump(void)
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
-
+		Uint8 *keystate = SDL_GetKeyState(NULL);
+		
 		switch (rEvent.type)
 		{
 		case SDL_QUIT:
@@ -899,6 +901,24 @@ int handle_msgpump(void)
 			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
 			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
 				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
+			
+			// Strangely in FBCON left window is seen as left alt ??
+			if (keyboard_type == 2) // KEYCODE_FBCON
+			{
+				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
+			}
+			else
+			{
+				if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
+			}
 			
 			switch (rEvent.key.keysym.sym)
 			{
