@@ -981,6 +981,10 @@ int handle_msgpump(void)
 			break;
 
 		case SDL_KEYUP:
+			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
+			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
+				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
+			
 			switch (rEvent.key.keysym.sym)
 			{
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
