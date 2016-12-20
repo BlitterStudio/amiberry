@@ -1,3 +1,6 @@
+# Binary package dependencies
+libsdl1.2debian libsdl-image1.2 libsdl-gfx1.2-5 libsdl-ttf2.0-0 libmpg123-0 libguichan-sdl-0.8.1-1 libxml2 pulseaudio
+
 # Changes in forked version
 
 - New target platform: Pi 3
