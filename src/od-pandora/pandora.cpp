@@ -1001,35 +1001,8 @@ int handle_msgpump(void)
 			break;
 
 		case SDL_KEYUP:
-			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
-			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
-				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
-			
 			switch (rEvent.key.keysym.sym)
 			{
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-			case SDLK_CAPSLOCK: // capslock
-			     // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-				ioctl(0, KDGKBLED, &kbd_flags);
-				ioctl(0, KDGETLED, &kbd_led_status);
-				if ((kbd_flags & 07) & LED_CAP)
-				{
-				   // On, so turn off
-					kbd_led_status &= ~LED_CAP;
-					kbd_flags &= ~LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-				}
-				else {
-				          // Off, so turn on
-					kbd_led_status |= LED_CAP;
-					kbd_flags |= LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-				}
-				ioctl(0, KDSETLED, kbd_led_status);
-				ioctl(0, KDSKBLED, kbd_flags);
-				break;
-#endif
-
 			case SDLK_LSHIFT: // Shift key
 				inputdevice_do_keyboard(AK_LSH, 0);
 				break;
