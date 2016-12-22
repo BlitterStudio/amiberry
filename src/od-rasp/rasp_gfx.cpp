@@ -122,15 +122,16 @@ void InitAmigaVidMode(struct uae_prefs *p)
 	gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
 	gfxvidinfo.outwidth = p->gfx_size.width;
 	gfxvidinfo.outheight = p->gfx_size.height;
-#ifdef PICASSO96
+	gfxvidinfo.rowbytes = prSDLScreen->pitch;
+//#ifdef PICASSO96
 	if (screen_is_picasso)
 	{
 		gfxvidinfo.outwidth  = picasso_vidinfo.width;
-		//gfxvidinfo.outheight = picasso_vidinfo.height;
+		gfxvidinfo.outheight = picasso_vidinfo.height;
 	}
-#endif
-	  //gfxvidinfo.rowbytes = prSDLScreen->pitch;
-	gfxvidinfo.rowbytes = blit_rect.width * 2;
+//#endif
+	
+//	gfxvidinfo.rowbytes = blit_rect.width * 2;
 }
 
 void graphics_dispmanshutdown(void)
@@ -144,64 +145,43 @@ void graphics_dispmanshutdown(void)
 	}
 }
 
-
 void graphics_subshutdown(void)
 {
 	if (dispmanxresource_amigafb_1 != 0)
 		graphics_dispmanshutdown();
-	  // Dunno if below lines are usefull for Rpi...
-	  //SDL_FreeSurface(prSDLScreen);
-	  //prSDLScreen = NULL;
 }
-
-
-
-
 
 static void open_screen(struct uae_prefs *p)
 {
-
 	VC_DISPMANX_ALPHA_T alpha = {
 		(DISPMANX_FLAGS_ALPHA_T)(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS), 
 		255, /*alpha 0->255*/
 		0
 	};
 
-
 	uint32_t     vc_image_ptr;
 	int          width;
 	int          height;
-
-#ifdef PICASSO96
+	
 	if (screen_is_picasso)
 	{
 		width  = picasso_vidinfo.width;
 		height = picasso_vidinfo.height;
 	}
 	else
-#endif
 	{
 		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 		width  = p->gfx_size.width;
 		height = p->gfx_size.height;
 	}
 
-
-	  //if(prSDLScreen != NULL)
-	  //{
-	  //  SDL_FreeSurface(prSDLScreen);
-	  //  prSDLScreen = NULL;
-	  //} 
-
 	if (Dummy_prSDLScreen == NULL)
 	{
 		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo();
 #ifdef DEBUG
 		printf("DispmanX: Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);	  
-#endif // DEBUG
-		// For debug, in order to avoid full screen.
-		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
-		//Dummy_prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
+#endif // DEBUG		
+		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
 	}
 
 	SDL_ShowCursor(SDL_DISABLE);
@@ -280,20 +260,13 @@ static void open_screen(struct uae_prefs *p)
 			scaled_height);
 	}
 
-	  // For debug, in order to avoid full screen.
-	  //vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width /2.7),
-	  //                     0 ,
-	  //                     (dispmanxdinfo.width - (dispmanxdinfo.width * 6)/100 )/1.5,
-	  //                     (dispmanxdinfo.height - (dispmanxdinfo.height * 7)/100 )/1.5);
-
-
 	if (DispManXElementpresent == 0)
 	{
 		DispManXElementpresent = 1;
-		dispmanxupdate = vc_dispmanx_update_start(10);
+		dispmanxupdate = vc_dispmanx_update_start(0);
 		dispmanxelement = vc_dispmanx_element_add( dispmanxupdate,
 			dispmanxdisplay,
-			2000,               // layer
+			2,               // layer
 			&dst_rect,
 			dispmanxresource_amigafb_1,
 			&src_rect,
@@ -382,8 +355,6 @@ void wait_for_vsync(void)
 
 void flush_screen()
 {
-    //SDL_UnlockSurface (prSDLScreen);
-
 	if (savestate_state == STATE_DOSAVE)
 	{
 		if (delay_savestate_frame > 0)
@@ -395,11 +366,6 @@ void flush_screen()
 			savestate_state = 0;
 		}
 	}
-
-	  //start = read_processor_time();
-	  //if(start < next_synctime && next_synctime - start > time_per_frame - 1000)
-	  //  usleep((next_synctime - start) - 1000);
-	  //SDL_Flip(prSDLScreen);
 
 	if (need_wait_dispmanx_semaphore == 1)
 	{
@@ -417,7 +383,7 @@ void flush_screen()
 			gfxvidinfo.outwidth * 2,
 			gfxvidinfo.bufmem,
 			&blit_rect);
-		dispmanxupdate = vc_dispmanx_update_start(10);
+		dispmanxupdate = vc_dispmanx_update_start(0);
 		vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_1);
 
 		vc_dispmanx_update_submit(dispmanxupdate, vsync_callback, NULL);
@@ -791,7 +757,7 @@ void picasso_InitResolutions(void)
 			int pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
       
-			//if (SDL_VideoModeOK (x_size_table[i], y_size_table[i], 16, SDL_SWSURFACE))
+			if (SDL_VideoModeOK (x_size_table[i], y_size_table[i], 16, SDL_SWSURFACE))
 			{
 				DisplayModes[count].res.width = x_size_table[i];
 				DisplayModes[count].res.height = y_size_table[i];
@@ -862,8 +828,8 @@ bool vsync_switchmode(int hz)
 
 bool target_graphics_buffer_update(void)
 {
-	bool rate_changed = 0;
-	//bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+//	bool rate_changed = 0;
+	bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
   
 	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
 	{
@@ -891,7 +857,7 @@ void gfx_set_picasso_state(int on)
 
 	screen_is_picasso = on;
 	open_screen(&currprefs);
-	picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+	picasso_vidinfo.rowbytes = prSDLScreen->pitch;
 }
 
 void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
