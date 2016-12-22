@@ -398,7 +398,7 @@ void flush_screen()
 			gfxvidinfo.outwidth * 2,
 			gfxvidinfo.bufmem,
 			&blit_rect);
-		dispmanxupdate = vc_dispmanx_update_start(10);
+		dispmanxupdate = vc_dispmanx_update_start(0);
 		vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_2);
 
 		vc_dispmanx_update_submit(dispmanxupdate, vsync_callback, NULL);
@@ -414,7 +414,7 @@ void black_screen_now(void)
 {
 	SDL_FillRect(prSDLScreen, NULL, 0);
 	SDL_Flip(prSDLScreen);
-	flush_screen();
+//	flush_screen();
 }
 
 
@@ -427,8 +427,8 @@ static void graphics_subinit(void)
 	}
 	else
 	{
+		SDL_Flip(prSDLScreen);
 		SDL_ShowCursor(SDL_DISABLE);
-
 		InitAmigaVidMode(&currprefs);
 	}
 }
@@ -492,9 +492,9 @@ static int get_display_depth(void)
 	if ((vid_info = SDL_GetVideoInfo())) {
 		depth = vid_info->vfmt->BitsPerPixel;
 
-			  /* Don't trust the answer if it's 16 bits; the display
-			   * could actually be 15 bits deep. We'll count the bits
-			   * ourselves */
+		/* Don't trust the answer if it's 16 bits; the display
+		* could actually be 15 bits deep. We'll count the bits
+		* ourselves */
 		if (depth == 16)
 			depth = bitsInMask(vid_info->vfmt->Rmask) + bitsInMask(vid_info->vfmt->Gmask) + bitsInMask(vid_info->vfmt->Bmask);
 	}
@@ -517,18 +517,12 @@ int GetSurfacePixelFormat(void)
 
 int graphics_init(bool mousecapture)
 {
-	int i, j;
-
 	uae_sem_init(&vsync_wait_sem, 0, 0);
 
 	graphics_subinit();
 
-
 	if (!init_colors())
 		return 0;
-
-	//buttonstate[0] = buttonstate[1] = buttonstate[2] = 0;
-	//keyboard_init();
   
 	return 1;
 }
