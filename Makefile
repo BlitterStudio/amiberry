@@ -10,6 +10,10 @@ else ifeq ($(PLATFORM),rpi2)
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+else ifeq ($(PLATFORM),gles)
+	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DHAVE_GLES
+	LDFLAGS += -lEGL -lGLESv1_CM
 endif
 
 NAME   = uae4arm
@@ -193,8 +197,16 @@ OBJS =	\
 	src/od-pandora/gui/PanelSavestate.o \
 	src/od-pandora/gui/main_window.o \
 	src/od-pandora/gui/Navigation.o
-	
-OBJS += src/od-rasp/rasp_gfx.o
+
+ifeq ($(PLATFORM),gles)
+	OBJS += src/od-gles/gl.o
+	OBJS += src/od-gles/shader_stuff.o
+	OBJS += src/od-gles/gl_platform.o
+	OBJS += src/od-gles/gles_gfx.o
+else	
+	OBJS += src/od-rasp/rasp_gfx.o
+endif
+
 OBJS += src/od-pandora/gui/sdltruetypefont.o
 OBJS += src/od-pandora/picasso96.o
 
