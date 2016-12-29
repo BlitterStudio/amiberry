@@ -86,9 +86,14 @@ STATIC_INLINE uae_u16 INTREQR (void)
 }
 
 /* maximums for statically allocated tables */
-
+#ifdef UAE_MINI
+/* absolute minimums for basic A500/A1200-emulation */
 #define MAXHPOS 227
-#define MAXVPOS 314
+#define MAXVPOS 312
+#else
+#define MAXHPOS 256
+#define MAXVPOS 592
+#endif
 
 /* PAL/NTSC values */
 
@@ -130,7 +135,11 @@ extern int vblank_hz;
 /* 100 words give you 1600 horizontal pixels. Should be more than enough for
  * superhires. Don't forget to update the definition in genp2c.c as well.
  * needs to be larger for superhires support */
+#ifdef CUSTOM_SIMPLE
+#define MAX_WORDS_PER_LINE 50
+#else
 #define MAX_WORDS_PER_LINE 100
+#endif
 
 /* AGA mode color lookup tables */
 extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
@@ -143,12 +152,14 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)
 {
-  return ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
+	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
+		con0 &= ~0x40; // SUPERHIRES
+	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 STATIC_INLINE int GET_RES_AGNUS (uae_u16 con0)
 {
   if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-		con0 &= ~0x40; // no SUPERHIRES
+		con0 &= ~0x40; // SUPERHIRES
   return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 /* get sprite width from FMODE */
