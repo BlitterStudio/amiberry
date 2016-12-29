@@ -181,7 +181,8 @@ static void open_screen(struct uae_prefs *p)
 #ifdef DEBUG
 		printf("DispmanX: Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);	  
 #endif // DEBUG		
-		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
+//		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
+		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 	}
 
 	SDL_ShowCursor(SDL_DISABLE);
@@ -822,8 +823,8 @@ bool vsync_switchmode(int hz)
 
 bool target_graphics_buffer_update(void)
 {
-//	bool rate_changed = 0;
-	bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+	bool rate_changed = 0;
+//	bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
   
 	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
 	{
