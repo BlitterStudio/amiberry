@@ -185,7 +185,6 @@ static void open_screen(struct uae_prefs *p)
 		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 	}
 
-	SDL_ShowCursor(SDL_DISABLE);
 
 	  // check if resolution hasn't change in menu. otherwise free the resources so that they will be re-generated with new resolution.
 	if ((dispmanxresource_amigafb_1 != 0) && 
@@ -229,7 +228,6 @@ static void open_screen(struct uae_prefs *p)
 		dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 		dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 		vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
-		vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_1,
 			VC_IMAGE_RGB565,
 			width *2,
 			prSDLScreen->pixels,

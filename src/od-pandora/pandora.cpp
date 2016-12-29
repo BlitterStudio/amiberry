@@ -784,8 +784,8 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 int main(int argc, char *argv[])
 {
 	struct sigaction action;	
-	max_uae_width = 768;
-	max_uae_height = 270;
+	max_uae_width = 1920;
+	max_uae_height = 1080;
 	
 	defaultCpuSpeed = getDefaultCpuSpeed();
 

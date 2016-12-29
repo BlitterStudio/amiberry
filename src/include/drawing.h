@@ -135,8 +135,11 @@ struct color_change {
 };
 
 /* 440 rather than 880, since sprites are always lores.  */
+#ifdef UAE_MINI
 #define MAX_PIXELS_PER_LINE 880
-#define MAX_VIDHEIGHT 270
+#else
+#define MAX_PIXELS_PER_LINE 1760
+#endif
 
 /* No divisors for MAX_PIXELS_PER_LINE; we support AGA and may one day
    want to use SHRES sprites.  */
@@ -156,10 +159,10 @@ union sps_union {
 };
 
 extern union sps_union spixstate;
-extern uae_u16 spixels[MAX_SPR_PIXELS];
+extern uae_u16 spixels[MAX_SPR_PIXELS * 2];
 
 /* Way too much... */
-#define MAX_REG_CHANGE ((MAXVPOS + 1) * MAXHPOS)
+#define MAX_REG_CHANGE ((MAXVPOS + 1) * 2 * MAXHPOS)
 
 extern struct color_entry curr_color_tables[(MAXVPOS + 2) * 2];
 

@@ -116,7 +116,7 @@ static union pixdata_u {
 	uae_u32 apixels_l[MAX_PIXELS_PER_LINE * 2 / sizeof(uae_u32)];
 } pixdata;
 
-uae_u16 spixels[MAX_SPR_PIXELS];
+uae_u16 spixels[2 * MAX_SPR_PIXELS];
 
 /* Eight bits for every pixel.  */
 union sps_union spixstate;
@@ -126,7 +126,7 @@ static uae_u16 ham_linebuf[MAX_PIXELS_PER_LINE * 2];
 static uae_u8 *xlinebuffer;
 
 static int *native2amiga_line_map;
-static uae_u8 *row_map[MAX_VIDHEIGHT + 1];
+static uae_u8 **row_map;
 static uae_u8 row_tmp[MAX_PIXELS_PER_LINE * 32 / 8];
 
 /* line_draw_funcs: pfield_do_linetoscr, pfield_do_fill_line, decode_ham */
@@ -1726,12 +1726,28 @@ static void pfield_doline(int lineno)
 
 void init_row_map(void)
 {
+	static uae_u8 *oldbufmem;
+	static int oldheight, oldpitch;
+	static bool oldgenlock;
 	int i, j;
 
-	j = 0;  
-	for (i = gfxvidinfo.outheight; i < MAX_VIDHEIGHT + 1; i++)
+	if (gfxvidinfo.outheight > max_uae_height) {
+		write_log(_T("Resolution too high, aborting\n"));
+		abort();
+	}
+	if (!row_map) {
+		row_map = xmalloc(uae_u8*, max_uae_height + 1);
+	}
+	
+	if (oldbufmem && oldbufmem == gfxvidinfo.bufmem &&
+		oldheight == gfxvidinfo.outheight &&
+		oldpitch == gfxvidinfo.rowbytes)
+		return;
+
+	j = oldheight == 0 ? max_uae_height : oldheight;
+	for (i = gfxvidinfo.outheight; i < max_uae_height + 1 && i < j + 1; i++)
 		row_map[i] = row_tmp;
-	for (i = 0; i < gfxvidinfo.outheight; i++, j += gfxvidinfo.rowbytes)
+	for (i = 0, j = 0; i < gfxvidinfo.outheight; i++, j += gfxvidinfo.rowbytes)
 		row_map[i] = gfxvidinfo.bufmem + j;
 }
 
