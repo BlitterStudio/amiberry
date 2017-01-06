@@ -1,0 +1,930 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{f7b1878b-1e90-4e7f-af6e-5bfbe0472379}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{500bf09f-2912-4a9b-99aa-45ca70a08d82}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{f092da83-7fa0-4b6f-839e-b2fa5474affd}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="VisualGDB settings">
+      <UniqueIdentifier>{d4a7a442-40aa-47ca-962c-43f387907b11}</UniqueIdentifier>
+      <Extensions>*.vgdbsettings</Extensions>
+    </Filter>
+    <Filter Include="Source files\sd-sdl">
+      <UniqueIdentifier>{17a34860-a02d-420b-b3ab-0f1db47cacb3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\od-gles">
+      <UniqueIdentifier>{49446657-502d-4761-a17c-a7a3b8ba5151}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\od-gles">
+      <UniqueIdentifier>{b3b89d16-6020-44a0-9a26-c95b9bf085ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\od-pandora">
+      <UniqueIdentifier>{8ad93770-58f5-41c3-bcb2-5ce63a5d0f10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\td-sdl">
+      <UniqueIdentifier>{936406c8-6881-47ea-af4b-dcfaab0c44c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\sd-pandora">
+      <UniqueIdentifier>{ac9827c0-2c36-4238-b3e3-4ef8e03a37d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\od-pandora">
+      <UniqueIdentifier>{79b9a1ab-9dbf-4862-8fad-b1f794787428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\od-pandora\gui">
+      <UniqueIdentifier>{c37d5944-1218-485d-b017-466f3b499ca2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\md-pandora">
+      <UniqueIdentifier>{9919a66e-283d-48c6-93f4-1d679849175c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\jit">
+      <UniqueIdentifier>{7087c72a-65f3-47b2-9503-fb3dd54cee68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\include">
+      <UniqueIdentifier>{279ae879-655b-423b-8f77-2072a8bea3c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers">
+      <UniqueIdentifier>{53cbba1d-5bbc-4bcb-bea9-9fb79173ff23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\7z">
+      <UniqueIdentifier>{ad1b8055-4cae-4662-93b2-94458518ff2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\7z\Archive">
+      <UniqueIdentifier>{ce4546be-2038-4107-a17f-d00050875d38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\7z\Archive\7z">
+      <UniqueIdentifier>{73862ad1-34b9-4143-9d71-cce93b99f154}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\dms">
+      <UniqueIdentifier>{7baf6f27-c7c2-4665-8490-b47a7e964a26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\lha">
+      <UniqueIdentifier>{56b4de99-e470-4fcd-81c9-91d796c97b0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\wrp">
+      <UniqueIdentifier>{da74b537-689c-48d8-b29c-888d9e726dfe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\zip">
+      <UniqueIdentifier>{42b853e5-f34f-4d40-8b88-e60974fb012c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\od-pandora\gui">
+      <UniqueIdentifier>{aa0398c7-efb1-475e-bba9-fe99057d4c89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\od-pandora\menu">
+      <UniqueIdentifier>{d2a13290-1ea8-4356-9193-811d8c57dc27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\md-pandora">
+      <UniqueIdentifier>{471328d7-3386-4188-b818-b34529bd114f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\jit">
+      <UniqueIdentifier>{4a2180c8-6990-49c5-b535-b075c7e0b005}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers">
+      <UniqueIdentifier>{ced2ce79-31b5-48b9-9842-d089717def57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\7z">
+      <UniqueIdentifier>{6e336d18-7787-4211-9892-5432f6bc948f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\dms">
+      <UniqueIdentifier>{7fbca5f1-5418-490c-914d-251adbcd6ea5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\lha">
+      <UniqueIdentifier>{536fe3ed-8fd5-4e24-ae56-ba88d618fa62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\lzx">
+      <UniqueIdentifier>{1e3a52a0-7328-4533-b95f-37e3093d9193}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\wrp">
+      <UniqueIdentifier>{e61172a9-1dcc-4fed-ba95-7803b8d8096c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\zip">
+      <UniqueIdentifier>{1c9d7046-1d3f-43b0-8c65-b7761c437735}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\7z\Archive">
+      <UniqueIdentifier>{f90f25c8-8245-46c8-8523-dfee38f0ca0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\7z\Archive\7z">
+      <UniqueIdentifier>{c980c564-8d4f-4bc1-8736-a4b08745765c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Amiberry-gles-Debug.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="Amiberry-gles-Release.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="..\..\src\filesys.asm">
+      <Filter>Source files</Filter>
+    </None>
+    <None Include="..\..\src\inputevents.def">
+      <Filter>Source files</Filter>
+    </None>
+    <None Include="..\..\src\table68k">
+      <Filter>Source files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\akiko.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\aros.rom.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\audio.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\autoconf.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\blitfunc.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\blitops.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\blittable.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\blitter.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\blkdev.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\blkdev_cdimage.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\bsdsocket.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\calc.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cdrom.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cfgfile.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cia.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpudefs.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpuemu_0.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpuemu_4.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpuemu_11.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpustbl.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\crc32.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\custom.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\disk.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\diskutil.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\drawing.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\events.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\expansion.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\filesys.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fpp.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fsdb.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fsdb_unix.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fsusage.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxboard.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxutil.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\hardfile.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\inputdevice.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\keybuf.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\main.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\memory.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\native2amiga.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\newcpu.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\newcpu_common.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\p96_blit.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\readcpu.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\rommgr.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\savestate.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\sinctable.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\statusline.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\traps.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\uaelib.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\uaeresource.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\zfile.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\zfile_archive.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\sd-sdl\sound_sdl_new.cpp">
+      <Filter>Source files\sd-sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-gles\gl.cpp">
+      <Filter>Source files\od-gles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-gles\gl_platform.cpp">
+      <Filter>Source files\od-gles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-gles\gles_gfx.cpp">
+      <Filter>Source files\od-gles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-gles\shader_stuff.cpp">
+      <Filter>Source files\od-gles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\neon_helper.s">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\bsdsocket_host.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\cda_play.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\charset.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\fsdb_host.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\hardfile_pandora.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\keyboard.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\mp3decoder.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\pandora.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\pandora_filesys.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\pandora_gfx.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\pandora_gui.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\pandora_input.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\pandora_mem.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\pandora_rp9.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\picasso96.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\sigsegv_handler.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\writelog.cpp">
+      <Filter>Source files\od-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\CreateFilesysHardfile.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\EditFilesysHardfile.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\EditFilesysVirtual.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\InGameMessage.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\main_window.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\Navigation.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelChipset.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelConfig.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelCPU.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelDisplay.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelFloppy.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelHD.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelInput.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelMisc.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelPaths.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelRAM.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelROM.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelSavestate.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\PanelSound.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\sdltruetypefont.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\SelectFile.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\SelectFolder.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\SelectorEntry.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\ShowMessage.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\UaeCheckBox.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\UaeDropDown.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\UaeListBox.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\gui\UaeRadioButton.cpp">
+      <Filter>Source files\od-pandora\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\od-pandora\menu\menu_config.cpp">
+      <Filter>Source files\od-pandora\menu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\md-pandora\support.cpp">
+      <Filter>Source files\md-pandora</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\jit\compemu.cpp">
+      <Filter>Source files\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\jit\compemu_fpp.cpp">
+      <Filter>Source files\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\jit\compemu_support.cpp">
+      <Filter>Source files\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\jit\compstbl.cpp">
+      <Filter>Source files\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\zip\unzip.cpp">
+      <Filter>Source files\archivers\zip</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\wrp\warp.cpp">
+      <Filter>Source files\archivers\wrp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lzx\unlzx.cpp">
+      <Filter>Source files\archivers\lzx</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\crcio.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\dhuf.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\header.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\huf.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\larc.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\lhamaketbl.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\lharc.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\shuf.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\slide.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\uae_lha.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\lha\util.cpp">
+      <Filter>Source files\archivers\lha</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\crc_csum.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\getbits.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\maketbl.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\pfile.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\tables.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\u_deep.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\u_heavy.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\u_init.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\u_medium.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\u_quick.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\dms\u_rle.cpp">
+      <Filter>Source files\archivers\dms</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zBuf.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zCrc.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zStream.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Bcj2.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Bra.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Bra86.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zAlloc.cpp">
+      <Filter>Source files\archivers\7z\Archive\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zDecode.cpp">
+      <Filter>Source files\archivers\7z\Archive\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zExtract.cpp">
+      <Filter>Source files\archivers\7z\Archive\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zHeader.cpp">
+      <Filter>Source files\archivers\7z\Archive\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zIn.cpp">
+      <Filter>Source files\archivers\7z\Archive\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zItem.cpp">
+      <Filter>Source files\archivers\7z\Archive\7z</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\od-gles\gl.h">
+      <Filter>Header files\od-gles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-gles\gl_platform.h">
+      <Filter>Header files\od-gles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-gles\shader_stuff.h">
+      <Filter>Header files\od-gles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\td-sdl\thread.h">
+      <Filter>Header files\td-sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\sd-pandora\sound.h">
+      <Filter>Header files\sd-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\cda_play.h">
+      <Filter>Header files\od-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\config.h">
+      <Filter>Header files\od-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\mp3decoder.h">
+      <Filter>Header files\od-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\pandora_rp9.h">
+      <Filter>Header files\od-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\sysconfig.h">
+      <Filter>Header files\od-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\target.h">
+      <Filter>Header files\od-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\gui\gui_handling.h">
+      <Filter>Header files\od-pandora\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\gui\sdltruetypefont.hpp">
+      <Filter>Header files\od-pandora\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\gui\SelectorEntry.hpp">
+      <Filter>Header files\od-pandora\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\gui\UaeCheckBox.hpp">
+      <Filter>Header files\od-pandora\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\gui\UaeDropDown.hpp">
+      <Filter>Header files\od-pandora\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\gui\UaeListBox.hpp">
+      <Filter>Header files\od-pandora\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\od-pandora\gui\UaeRadioButton.hpp">
+      <Filter>Header files\od-pandora\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\md-pandora\m68k.h">
+      <Filter>Header files\md-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\md-pandora\maccess.h">
+      <Filter>Header files\md-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\md-pandora\md-fpp.h">
+      <Filter>Header files\md-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\md-pandora\rpt.h">
+      <Filter>Header files\md-pandora</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\codegen_arm.h">
+      <Filter>Header files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\compemu.h">
+      <Filter>Header files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm.h">
+      <Filter>Header files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm2.h">
+      <Filter>Header files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\comptbl.h">
+      <Filter>Header files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\akiko.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\audio.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\autoconf.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blit.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blitfunc.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blitter.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blkdev.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\bsdsocket.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\calc.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cia.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\clipboard.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\commpipe.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cpu_prefetch.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cputbl.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\crc32.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\custom.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\debug.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\disk.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\diskutil.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\drawing.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\ersatz.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\events.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\execio.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\execlib.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\filesys.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\flags_arm.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\fpp-ieee-be.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\fpp-unknown.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\fsdb.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\fsusage.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\genblitter.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\gensound.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\gfxboard.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\gui.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\inputdevice.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\keyboard.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\keybuf.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\mackbd.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\memory.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\native2amiga.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\native2amiga_api.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\newcpu.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\options.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\osemu.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\picasso96.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\readcpu.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\rommgr.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\rtgmodes.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\savestate.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\scsi.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\scsidev.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\statusline.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\sysdeps.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\traps.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uaeresource.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\xwin.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\zarchive.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\zfile.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zBuf.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zCrc.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zVersion.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Bcj2.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Bra.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\CpuArch.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\LzmaDec.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Types.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zAlloc.h">
+      <Filter>Header files\archivers\7z\Archive\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zDecode.h">
+      <Filter>Header files\archivers\7z\Archive\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zExtract.h">
+      <Filter>Header files\archivers\7z\Archive\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zHeader.h">
+      <Filter>Header files\archivers\7z\Archive\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zIn.h">
+      <Filter>Header files\archivers\7z\Archive\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zItem.h">
+      <Filter>Header files\archivers\7z\Archive\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\cdata.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\crc_csum.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\getbits.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\maketbl.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\pfile.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\tables.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\u_deep.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\u_heavy.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\u_init.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\u_medium.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\u_quick.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\dms\u_rle.h">
+      <Filter>Header files\archivers\dms</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\lha\lha.h">
+      <Filter>Header files\archivers\lha</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\lha\lha_macro.h">
+      <Filter>Header files\archivers\lha</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\wrp\warp.h">
+      <Filter>Header files\archivers\wrp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\zip\unzip.h">
+      <Filter>Header files\archivers\zip</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

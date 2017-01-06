@@ -4,7 +4,7 @@
 #include <math.h>
 
 #include <EGL/egl.h>
-#include <GLES/gl.h>
+#include <GLES2/gl2.h>
 
 #include "gl_platform.h"
 #include "gl.h"
@@ -84,8 +84,12 @@ int gl_init(void *display, void *window, int *quirks)
    
    static const EGLint context_attributes[] = 
    {
-      EGL_CONTEXT_CLIENT_VERSION, 2,
-      EGL_NONE
+#ifdef SHADER_SUPPORT
+		EGL_CONTEXT_CLIENT_VERSION, 2,
+#else
+		EGL_CONTEXT_CLIENT_VERSION, 1,
+#endif
+		EGL_NONE
    };
 	
 
@@ -131,7 +135,6 @@ int gl_init(void *display, void *window, int *quirks)
 		goto out;
 	}
 
-//	ectxt = eglCreateContext(edpy, ecfg, EGL_NO_CONTEXT, NULL);
 	ectxt = eglCreateContext(edpy, ecfg, EGL_NO_CONTEXT, context_attributes);
 	if (ectxt == EGL_NO_CONTEXT) {
 		printf("Unable to create EGL context (%x)\n",
@@ -140,8 +143,9 @@ int gl_init(void *display, void *window, int *quirks)
 	}
 
 	eglMakeCurrent(edpy, esfc, esfc, ectxt);
-
-	//glEnable(GL_TEXTURE_2D); // for old fixed-function pipeline
+#ifndef SHADER_SUPPORT
+	glEnable(GL_TEXTURE_2D); // for old fixed-function pipeline
+#endif
 	//if (gl_have_error("glEnable(GL_TEXTURE_2D)")) goto out;
 
 	glGenTextures(1, &texture_name);
@@ -176,10 +180,11 @@ int gl_init(void *display, void *window, int *quirks)
 	retval = 0;
 
 	int shader_stuff_result;
+#ifdef SHADER_SUPPORT
 	shader_stuff_result = shader_stuff_init();
 	shader_stuff_result = shader_stuff_reload_shaders();
 	shader_stuff_result = shader_stuff_set_data(vertex_coords, texture_coords, texture_name);
-
+#endif
 out:
 	free(tmp_texture_mem);
 	return retval;
@@ -191,6 +196,7 @@ int gl_flip(const void *fb, int w, int h)
 {
 	static int old_w, old_h;
 
+#ifdef SHADER_SUPPORT
 	if (framecount % 60 == 0)
 	{
 //		printf("gl_flip() w: %d, h: %d\n", w, h);
@@ -204,6 +210,7 @@ int gl_flip(const void *fb, int w, int h)
 			
 		 }
 	}
+#endif
 
 	framecount++;
 	float floattime = (framecount * 0.04f);
@@ -245,14 +252,16 @@ int gl_flip(const void *fb, int w, int h)
 			return -1;
 	} // if (fb != NULL)
 
-	// glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
-	// if (gl_have_error("glVertexPointer")) return -1;
-
-	// glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
-	// if (gl_have_error("glTexCoordPointer")) return -1;
-
+#ifdef SHADER_SUPPORT
 	shader_stuff_frame(framecount, w, h, 800, 480); // TODO! hard-coded output size
 	if (gl_have_error("use program")) return -1;
+#else
+	glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
+	if (gl_have_error("glVertexPointer")) return -1;
+
+	glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
+	if (gl_have_error("glTexCoordPointer")) return -1;
+#endif
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 //	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);

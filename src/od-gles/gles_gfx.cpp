@@ -637,15 +637,15 @@ static void modesList (void)
 
     i = 0;
     while (DisplayModes[i].depth >= 0) {
-	write_log ("%d: %s (", i, DisplayModes[i].name);
+	write_log("%d: %s (", i, DisplayModes[i].name);
 	j = 0;
 	while (DisplayModes[i].refresh[j] > 0) {
 	    if (j > 0)
-		write_log (",");
-	    write_log ("%d", DisplayModes[i].refresh[j]);
+		write_log(",");
+	    write_log("%d", DisplayModes[i].refresh[j]);
 	    j++;
 	}
-	write_log (")\n");
+	write_log(")\n");
 	i++;
     }
 }
@@ -668,7 +668,7 @@ void picasso_InitResolutions (void)
   Displays[0].name2 = my_strdup("Display");
 
   md1 = Displays;
-  DisplayModes = md1->DisplayModes = (struct PicassoResolution*) xmalloc (sizeof (struct PicassoResolution) * MAX_PICASSO_MODES);
+  DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
   for (i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++) {
     for(bitdepth = 16; bitdepth <= 32; bitdepth += 16) {
       int bit_unit = (bitdepth + 1) & 0xF8;

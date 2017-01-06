@@ -4,7 +4,7 @@
 
 #include <math.h>
 
-#include <EGL/egl.h>
+#include <GLES2/gl2.h>
 
 #include "shader_stuff.h"
 
@@ -39,8 +39,9 @@ typedef struct STATE_T
     EGLDisplay display;
     EGLSurface surface;
     EGLContext context;
-
+#ifdef VCOS_VERSION
     EGL_DISPMANX_WINDOW_T nativewindow;
+#endif
     UserData *user_data;
     void (*draw_func) (struct STATE_T* );
 } STATE_T;

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <EGL/egl.h>
-#include <GLES/gl.h>
+#include <GLES2/gl2.h>
 
 #include "gl.h"
 #include "gl_platform.h"

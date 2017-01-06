@@ -13,6 +13,8 @@ else ifeq ($(PLATFORM),rpi1)
 else ifeq ($(PLATFORM),gles)
 	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DHAVE_GLES
+	# uncomment below to enable Shader support - might be slow on some systems
+	#MORE_CFLAGS += -DSHADER_SUPPORT
 	LDFLAGS += -lEGL -lGLESv1_CM
 endif
 

@@ -150,7 +150,8 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 		// init sem, start sound thread
 #ifdef DEBUG
 		printf("starting sound thread..\n");
-#endif		init_soundbuffer_usage();
+#endif
+		init_soundbuffer_usage();
 		ret = sem_init(&sound_sem, 0, 0);
 		sem_init(&sound_out_sem, 0, 0);
 		if (ret != 0) printf("sem_init() failed: %i, errno=%i\n", ret, errno);
@@ -194,17 +195,28 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 // this is meant to be called only once on exit
 void pandora_stop_sound(void)
 {
+	int   valuesem;
 	if (sound_thread_exit)
 		printf("don't call pandora_stop_sound more than once!\n");
+	SDL_PauseAudio (1);
 	if (sound_thread_active)
 	{
 #ifdef DEBUG
 		printf("stopping sound thread..\n");
 #endif
 		sound_thread_exit = 1;
-		sem_post(&sound_sem);
+		sem_getvalue(&sound_sem,&valuesem);
+		while (valuesem == 0)
+		{
+			sem_post(&sound_sem);
+			usleep(200*1000);
+			sem_getvalue(&sound_sem,&valuesem);
+		}
 	}
-	SDL_PauseAudio(1);
+	sound_thread_exit = 0;
+	SDL_CloseAudio();
+	sem_destroy(&sound_sem);
+	sem_destroy(&sound_out_sem);
 }
 
 void finish_sound_buffer(void)

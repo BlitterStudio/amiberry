@@ -24,3 +24,4 @@ Amiberry/VisualGDB/Debug/Amiberry
 Amiberry/VisualGDB/Release/Amiberry
 *.sqlite
 Amiberry/VisualGDB/Release-rpi2/Amiberry
+*.ipch
