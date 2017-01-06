@@ -182,7 +182,8 @@ static void open_screen(struct uae_prefs *p)
 		printf("DispmanX: Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);	  
 #endif // DEBUG		
 //		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
-		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+//		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+		Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 	}
 
 
@@ -228,6 +229,7 @@ static void open_screen(struct uae_prefs *p)
 		dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 		dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 		vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
+		vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_1,
 			VC_IMAGE_RGB565,
 			width *2,
 			prSDLScreen->pixels,
