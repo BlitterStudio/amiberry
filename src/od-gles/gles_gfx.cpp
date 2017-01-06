@@ -150,7 +150,7 @@ static void open_screen(struct uae_prefs *p)
     const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
     printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
     //Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w,videoInfo->current_h,16,SDL_SWSURFACE |SDL_FULLSCREEN);
-    Dummy_prSDLScreen = SDL_SetVideoMode(800,480,16,SDL_SWSURFACE );
+	  Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE);
   }
 
   SDL_ShowCursor(SDL_DISABLE);

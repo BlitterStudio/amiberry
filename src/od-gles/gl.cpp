@@ -22,24 +22,34 @@ void *gl_es_surface;
 
 
 static float vertex_coords[] = {
-	-1.0f,  1.0f,  0.0f, // 0    0  1
-	 1.0f,  1.0f,  0.0f, // 1  ^
-	-1.0f, -1.0f,  0.0f, // 2  | 2  3
-	 1.0f, -1.0f,  0.0f, // 3  +-->
+	-1.0f, 1.0f, 0.0f, // 0    0  1
+	1.0f, 1.0f, 0.0f, // 1  ^
+	-1.0f,
+	-1.0f, 0.0f, // 2  | 2  3
+	1.0f,
+	-1.0f, 0.0f, // 3  +-->
 };
 
 static float orig_texture_coords[] = {
-	-0.5f, -0.5f, 
-	0.5f, -0.5f, 
-	-0.5f, 0.5f, 
-	0.5f, 0.5f, 
+	-0.5f,
+	-0.5f, 
+	0.5f,
+	-0.5f, 
+	-0.5f,
+	0.5f, 
+	0.5f,
+	0.5f, 
 };
 
 static float texture_coords[] = {
-	0.0f, 0.0f, // we flip this:
-	1.0f, 0.0f, // v^
-	0.0f, 1.0f, //  |  u
-	1.0f, 1.0f, //  +-->
+	0.0f,
+	0.0f, // we flip this:
+	1.0f,
+	0.0f, // v^
+	0.0f,
+	1.0f, //  |  u
+	1.0f,
+	1.0f, //  +-->
 };
 
 
@@ -72,28 +82,35 @@ int gl_init(void *display, void *window, int *quirks)
 	int retval = -1;
 	int ret;
 	
-   static const EGLint config_attributes[] =
-   {
-      EGL_RED_SIZE, 8,
-      EGL_GREEN_SIZE, 8,
-      EGL_BLUE_SIZE, 8,
-      EGL_ALPHA_SIZE, 8,
-      EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-      EGL_NONE
-   };
+	static const EGLint config_attributes[] =
+	{
+		EGL_RED_SIZE,
+		8,
+		EGL_GREEN_SIZE,
+		8,
+		EGL_BLUE_SIZE,
+		8,
+		EGL_ALPHA_SIZE,
+		8,
+		EGL_SURFACE_TYPE,
+		EGL_WINDOW_BIT,
+		EGL_NONE
+	};
    
-   static const EGLint context_attributes[] = 
-   {
+	static const EGLint context_attributes[] = 
+	{
 #ifdef SHADER_SUPPORT
-		EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_CONTEXT_CLIENT_VERSION,
+		2,
 #else
-		EGL_CONTEXT_CLIENT_VERSION, 1,
+		EGL_CONTEXT_CLIENT_VERSION,
+		1,
 #endif
 		EGL_NONE
-   };
+	};
 	
 
-	// gl_platform_init() does Raspi-specific stuff like bcm_host_init()
+	 	// gl_platform_init() does Raspi-specific stuff like bcm_host_init()
 	ret = gl_platform_init(&display, &window, quirks);
 	if (ret != 0) {
 		printf("gl_platform_init failed with %d\n", ret);
@@ -127,8 +144,10 @@ int gl_init(void *display, void *window, int *quirks)
 		goto out;
 	}
 
-	esfc = eglCreateWindowSurface(edpy, ecfg,
-		(EGLNativeWindowType)window, NULL);
+	esfc = eglCreateWindowSurface(edpy,
+		ecfg,
+		(EGLNativeWindowType)window,
+		NULL);
 	if (esfc == EGL_NO_SURFACE) {
 		printf("Unable to create EGL surface (%x)\n",
 			eglGetError());
@@ -156,8 +175,15 @@ int gl_init(void *display, void *window, int *quirks)
 	glBindTexture(GL_TEXTURE_2D, texture_name);
 	if (gl_have_error("glBindTexture")) goto out;
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 512, 0, GL_RGB,
-		GL_UNSIGNED_SHORT_5_6_5, tmp_texture_mem);
+	glTexImage2D(GL_TEXTURE_2D,
+		0,
+		GL_RGB,
+		1024,
+		512,
+		0,
+		GL_RGB,
+		GL_UNSIGNED_SHORT_5_6_5,
+		tmp_texture_mem);
 	if (gl_have_error("glTexImage2D")) goto out;
 
 	// no mipmaps
@@ -205,10 +231,10 @@ int gl_flip(const void *fb, int w, int h)
 	if (framecount % 30 == 0)
 	{
 		if (shader_stuff_shader_needs_reload()) {
-			 shader_stuff_reload_shaders();
-			 // shader_stuff_set_data(vertex_coords, texture_coords, texture_name);
+			shader_stuff_reload_shaders();
+			// shader_stuff_set_data(vertex_coords, texture_coords, texture_name);
 			
-		 }
+		}
 	}
 #endif
 
@@ -219,10 +245,10 @@ int gl_flip(const void *fb, int w, int h)
 		if (w != old_w || h != old_h) {
 			float f_w = (float)w / 1024.0f;
 			float f_h = (float)h / 512.0f;
-			texture_coords[1*2 + 0] = f_w;
-			texture_coords[2*2 + 1] = f_h;
-			texture_coords[3*2 + 0] = f_w;
-			texture_coords[3*2 + 1] = f_h;
+			texture_coords[1 * 2 + 0] = f_w;
+			texture_coords[2 * 2 + 1] = f_h;
+			texture_coords[3 * 2 + 0] = f_w;
+			texture_coords[3 * 2 + 1] = f_h;
 			old_w = w;
 			old_h = h;
 		} 
@@ -246,8 +272,15 @@ int gl_flip(const void *fb, int w, int h)
 		}
 */
 
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
-			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, fb);
+		glTexSubImage2D(GL_TEXTURE_2D,
+			0,
+			0,
+			0,
+			w,
+			h,
+			GL_RGB,
+			GL_UNSIGNED_SHORT_5_6_5,
+			fb);
 		if (gl_have_error("glTexSubImage2D"))
 			return -1;
 	} // if (fb != NULL)
