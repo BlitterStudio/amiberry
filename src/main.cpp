@@ -434,7 +434,7 @@ void  print_usage()
 	printf("File names should be with absolute path.\n");
 	printf("\nExample:\n");
 	printf("uae4arm -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
-	printf("It will load A400.uae configuration with the save state named game.\n");
+	printf("It will load A500.uae configuration with the save state named game.\n");
 	printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
 	exit(1);
 }
