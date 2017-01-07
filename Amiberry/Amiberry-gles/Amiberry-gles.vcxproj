@@ -30,7 +30,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/od-pandora;../../src/td-sdl;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";HAVE_GLES;SHADER_SUPPORT;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -44,7 +44,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/od-pandora;../../src/td-sdl;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";HAVE_GLES;SHADER_SUPPORT;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
@@ -145,7 +145,7 @@
     <ClCompile Include="..\..\src\jit\compstbl.cpp" />
     <ClCompile Include="..\..\src\keybuf.cpp" />
     <ClCompile Include="..\..\src\main.cpp" />
-    <ClCompile Include="..\..\src\md-pandora\support.cpp" />
+    <ClCompile Include="..\..\src\machdep\support.cpp" />
     <ClCompile Include="..\..\src\memory.cpp" />
     <ClCompile Include="..\..\src\native2amiga.cpp" />
     <ClCompile Include="..\..\src\newcpu.cpp" />
@@ -154,58 +154,58 @@
     <ClCompile Include="..\..\src\od-gles\gles_gfx.cpp" />
     <ClCompile Include="..\..\src\od-gles\gl_platform.cpp" />
     <ClCompile Include="..\..\src\od-gles\shader_stuff.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\bsdsocket_host.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\cda_play.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\charset.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\fsdb_host.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\CreateFilesysHardfile.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\EditFilesysHardfile.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\EditFilesysVirtual.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\InGameMessage.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\main_window.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\Navigation.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelChipset.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelConfig.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelCPU.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelDisplay.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelFloppy.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelHD.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelInput.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelMisc.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelPaths.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelRAM.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelROM.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelSavestate.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelSound.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\sdltruetypefont.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\SelectFile.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\SelectFolder.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\SelectorEntry.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\ShowMessage.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeCheckBox.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeDropDown.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeListBox.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeRadioButton.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\hardfile_pandora.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\keyboard.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\menu\menu_config.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\mp3decoder.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\neon_helper.s" />
-    <ClCompile Include="..\..\src\od-pandora\pandora.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\pandora_filesys.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\pandora_gfx.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\pandora_gui.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\pandora_input.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\pandora_mem.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\pandora_rp9.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\picasso96.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\sigsegv_handler.cpp" />
-    <ClCompile Include="..\..\src\od-pandora\writelog.cpp" />
+    <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
+    <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
+    <ClCompile Include="..\..\src\osdep\charset.cpp" />
+    <ClCompile Include="..\..\src\osdep\fsdb_host.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\CreateFilesysHardfile.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\EditFilesysHardfile.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\EditFilesysVirtual.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\InGameMessage.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\main_window.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\Navigation.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelChipset.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelConfig.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelCPU.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelDisplay.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelFloppy.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelHD.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelSavestate.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelSound.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\sdltruetypefont.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\SelectFolder.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\SelectorEntry.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeCheckBox.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp" />
+    <ClCompile Include="..\..\src\osdep\hardfile_pandora.cpp" />
+    <ClCompile Include="..\..\src\osdep\keyboard.cpp" />
+    <ClCompile Include="..\..\src\osdep\menu\menu_config.cpp" />
+    <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
+    <ClCompile Include="..\..\src\osdep\neon_helper.s" />
+    <ClCompile Include="..\..\src\osdep\pandora.cpp" />
+    <ClCompile Include="..\..\src\osdep\pandora_filesys.cpp" />
+    <ClCompile Include="..\..\src\osdep\pandora_gfx.cpp" />
+    <ClCompile Include="..\..\src\osdep\pandora_gui.cpp" />
+    <ClCompile Include="..\..\src\osdep\pandora_input.cpp" />
+    <ClCompile Include="..\..\src\osdep\pandora_mem.cpp" />
+    <ClCompile Include="..\..\src\osdep\pandora_rp9.cpp" />
+    <ClCompile Include="..\..\src\osdep\picasso96.cpp" />
+    <ClCompile Include="..\..\src\osdep\sigsegv_handler.cpp" />
+    <ClCompile Include="..\..\src\osdep\writelog.cpp" />
     <ClCompile Include="..\..\src\p96_blit.cpp" />
     <ClCompile Include="..\..\src\readcpu.cpp" />
     <ClCompile Include="..\..\src\rommgr.cpp" />
     <ClCompile Include="..\..\src\savestate.cpp" />
-    <ClCompile Include="..\..\src\sd-sdl\sound_sdl_new.cpp" />
+    <ClCompile Include="..\..\src\sounddep\sound_sdl_new.cpp" />
     <ClCompile Include="..\..\src\sinctable.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
@@ -309,28 +309,28 @@
     <ClInclude Include="..\..\src\jit\compemu_midfunc_arm.h" />
     <ClInclude Include="..\..\src\jit\compemu_midfunc_arm2.h" />
     <ClInclude Include="..\..\src\jit\comptbl.h" />
-    <ClInclude Include="..\..\src\md-pandora\m68k.h" />
-    <ClInclude Include="..\..\src\md-pandora\maccess.h" />
-    <ClInclude Include="..\..\src\md-pandora\md-fpp.h" />
-    <ClInclude Include="..\..\src\md-pandora\rpt.h" />
+    <ClInclude Include="..\..\src\machdep\m68k.h" />
+    <ClInclude Include="..\..\src\machdep\maccess.h" />
+    <ClInclude Include="..\..\src\machdep\md-fpp.h" />
+    <ClInclude Include="..\..\src\machdep\rpt.h" />
     <ClInclude Include="..\..\src\od-gles\gl.h" />
     <ClInclude Include="..\..\src\od-gles\gl_platform.h" />
     <ClInclude Include="..\..\src\od-gles\shader_stuff.h" />
-    <ClInclude Include="..\..\src\od-pandora\cda_play.h" />
-    <ClInclude Include="..\..\src\od-pandora\config.h" />
-    <ClInclude Include="..\..\src\od-pandora\gui\gui_handling.h" />
-    <ClInclude Include="..\..\src\od-pandora\gui\sdltruetypefont.hpp" />
-    <ClInclude Include="..\..\src\od-pandora\gui\SelectorEntry.hpp" />
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeCheckBox.hpp" />
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeDropDown.hpp" />
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeListBox.hpp" />
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeRadioButton.hpp" />
-    <ClInclude Include="..\..\src\od-pandora\mp3decoder.h" />
-    <ClInclude Include="..\..\src\od-pandora\pandora_rp9.h" />
-    <ClInclude Include="..\..\src\od-pandora\sysconfig.h" />
-    <ClInclude Include="..\..\src\od-pandora\target.h" />
-    <ClInclude Include="..\..\src\sd-pandora\sound.h" />
-    <ClInclude Include="..\..\src\td-sdl\thread.h" />
+    <ClInclude Include="..\..\src\osdep\cda_play.h" />
+    <ClInclude Include="..\..\src\osdep\config.h" />
+    <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />
+    <ClInclude Include="..\..\src\osdep\gui\sdltruetypefont.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeCheckBox.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeDropDown.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp" />
+    <ClInclude Include="..\..\src\osdep\mp3decoder.h" />
+    <ClInclude Include="..\..\src\osdep\pandora_rp9.h" />
+    <ClInclude Include="..\..\src\osdep\sysconfig.h" />
+    <ClInclude Include="..\..\src\osdep\target.h" />
+    <ClInclude Include="..\..\src\sounddep\sound.h" />
+    <ClInclude Include="..\..\src\threaddep\thread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

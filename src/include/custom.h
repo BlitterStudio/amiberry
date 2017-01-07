@@ -9,7 +9,7 @@
 #ifndef UAE_CUSTOM_H
 #define UAE_CUSTOM_H
 
-#include "md-pandora/rpt.h"
+#include "machdep/rpt.h"
 
 /* These are the masks that are ORed together in the chipset_mask option.
  * If CSMASK_AGA is set, the ECS bits are guaranteed to be set as well.  */
