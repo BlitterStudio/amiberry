@@ -1,21 +1,22 @@
 # Amiga emulator for Raspberry Pi
 
-# History of this fork
-
-- New target platform: Pi 3
-- Optimizations for Pi 3 added
-- Pi 3 is now the default target if no Platform is specified
-- Added support for custom functions assignable to keyboard LEDs (e.g. HD activity)
-- Code formatting and cleanup
-- FullHD (1080p) resolution supported in Picasso96 mode on all Pi models
-- Pi Zero / Pi 1 version now has full Picasso96 support (up to 1080p 24bit)
-- Removed Pandora specific keyboard shortcuts which caused crashes
-- Loading the Configuration file now respects the input settings
-- Fixed bugs and crashes in GUI keyboard navigation
-- Added Visual Studio solution (requires VisualGDB), so we can compile and debug from Windows PC
-- Added Shutdown button, to power off the computer
-- Added mapping option for game controller button to a) Enter GUI and b) Quit the emulator
+# History of this fork (newest first)
+- Renamed folder structure according to the WinUAE standard
+- The emulator now changes screen resolution on the host dynamically instead of always scaling to the native one (improves performance a lot)
 - Added mapping option for keyboard key to Quit the emulator directly
+- Added mapping option for game controller button to a) Enter GUI and b) Quit the emulator
+- Added Shutdown button, to power off the (host) computer
+- Added Visual Studio solution (requires VisualGDB), so we can compile and debug from Windows PC
+- Fixed bugs and crashes in GUI keyboard navigation
+- Loading the Configuration file now respects the input settings
+- Removed Pandora specific keyboard shortcuts which caused crashes
+- Pi Zero / Pi 1 version now has full Picasso96 support (up to 1080p 24bit)
+- FullHD (1080p) resolution supported in Picasso96 mode on all Pi models
+- Code formatting and cleanup
+- Added support for custom functions assignable to keyboard LEDs (e.g. HD activity)
+- Pi 3 is now the default target if no Platform is specified
+- Optimizations for Pi 3 added
+- New target platform: Pi 3
 
 Binary package dependencies (install these if you only want to run the binary): 
 
