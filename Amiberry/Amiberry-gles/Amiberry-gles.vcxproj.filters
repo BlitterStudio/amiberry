@@ -17,32 +17,11 @@
       <UniqueIdentifier>{d4a7a442-40aa-47ca-962c-43f387907b11}</UniqueIdentifier>
       <Extensions>*.vgdbsettings</Extensions>
     </Filter>
-    <Filter Include="Source files\sd-sdl">
-      <UniqueIdentifier>{17a34860-a02d-420b-b3ab-0f1db47cacb3}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source files\od-gles">
       <UniqueIdentifier>{49446657-502d-4761-a17c-a7a3b8ba5151}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\od-gles">
       <UniqueIdentifier>{b3b89d16-6020-44a0-9a26-c95b9bf085ca}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\od-pandora">
-      <UniqueIdentifier>{8ad93770-58f5-41c3-bcb2-5ce63a5d0f10}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\td-sdl">
-      <UniqueIdentifier>{936406c8-6881-47ea-af4b-dcfaab0c44c0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\sd-pandora">
-      <UniqueIdentifier>{ac9827c0-2c36-4238-b3e3-4ef8e03a37d8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\od-pandora">
-      <UniqueIdentifier>{79b9a1ab-9dbf-4862-8fad-b1f794787428}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\od-pandora\gui">
-      <UniqueIdentifier>{c37d5944-1218-485d-b017-466f3b499ca2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\md-pandora">
-      <UniqueIdentifier>{9919a66e-283d-48c6-93f4-1d679849175c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\jit">
       <UniqueIdentifier>{7087c72a-65f3-47b2-9503-fb3dd54cee68}</UniqueIdentifier>
@@ -74,15 +53,6 @@
     <Filter Include="Header files\archivers\zip">
       <UniqueIdentifier>{42b853e5-f34f-4d40-8b88-e60974fb012c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source files\od-pandora\gui">
-      <UniqueIdentifier>{aa0398c7-efb1-475e-bba9-fe99057d4c89}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\od-pandora\menu">
-      <UniqueIdentifier>{d2a13290-1ea8-4356-9193-811d8c57dc27}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\md-pandora">
-      <UniqueIdentifier>{471328d7-3386-4188-b818-b34529bd114f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source files\jit">
       <UniqueIdentifier>{4a2180c8-6990-49c5-b535-b075c7e0b005}</UniqueIdentifier>
     </Filter>
@@ -112,6 +82,36 @@
     </Filter>
     <Filter Include="Source files\archivers\7z\Archive\7z">
       <UniqueIdentifier>{c980c564-8d4f-4bc1-8736-a4b08745765c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\machdep">
+      <UniqueIdentifier>{9919a66e-283d-48c6-93f4-1d679849175c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\osdep">
+      <UniqueIdentifier>{79b9a1ab-9dbf-4862-8fad-b1f794787428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\osdep\gui">
+      <UniqueIdentifier>{c37d5944-1218-485d-b017-466f3b499ca2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\sounddep">
+      <UniqueIdentifier>{ac9827c0-2c36-4238-b3e3-4ef8e03a37d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\threaddep">
+      <UniqueIdentifier>{936406c8-6881-47ea-af4b-dcfaab0c44c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\machdep">
+      <UniqueIdentifier>{471328d7-3386-4188-b818-b34529bd114f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\osdep">
+      <UniqueIdentifier>{8ad93770-58f5-41c3-bcb2-5ce63a5d0f10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\osdep\gui">
+      <UniqueIdentifier>{aa0398c7-efb1-475e-bba9-fe99057d4c89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\osdep\menu">
+      <UniqueIdentifier>{d2a13290-1ea8-4356-9193-811d8c57dc27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\sounddep">
+      <UniqueIdentifier>{17a34860-a02d-420b-b3ab-0f1db47cacb3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -291,8 +291,8 @@
     <ClCompile Include="..\..\src\zfile_archive.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\sd-sdl\sound_sdl_new.cpp">
-      <Filter>Source files\sd-sdl</Filter>
+    <ClCompile Include="..\..\src\sounddep\sound_sdl_new.cpp">
+      <Filter>Source files\sounddep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\od-gles\gl.cpp">
       <Filter>Source files\od-gles</Filter>
@@ -306,149 +306,149 @@
     <ClCompile Include="..\..\src\od-gles\shader_stuff.cpp">
       <Filter>Source files\od-gles</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\neon_helper.s">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\neon_helper.s">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\bsdsocket_host.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\cda_play.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\cda_play.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\charset.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\charset.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\fsdb_host.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\fsdb_host.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\hardfile_pandora.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\hardfile_pandora.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\keyboard.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\keyboard.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\mp3decoder.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\mp3decoder.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\pandora.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora_filesys.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\pandora_filesys.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora_gfx.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\pandora_gfx.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora_gui.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\pandora_gui.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora_input.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\pandora_input.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora_mem.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\pandora_mem.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\pandora_rp9.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\pandora_rp9.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\picasso96.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\picasso96.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\sigsegv_handler.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\sigsegv_handler.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\writelog.cpp">
-      <Filter>Source files\od-pandora</Filter>
+    <ClCompile Include="..\..\src\osdep\writelog.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\CreateFilesysHardfile.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\CreateFilesysHardfile.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\EditFilesysHardfile.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\EditFilesysHardfile.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\EditFilesysVirtual.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\EditFilesysVirtual.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\InGameMessage.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\InGameMessage.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\main_window.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\main_window.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\Navigation.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\Navigation.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelChipset.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelChipset.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelConfig.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelConfig.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelCPU.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelCPU.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelDisplay.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelDisplay.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelFloppy.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelFloppy.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelHD.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelHD.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelInput.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelMisc.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelPaths.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelRAM.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelROM.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelSavestate.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelSavestate.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\PanelSound.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\PanelSound.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\sdltruetypefont.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\sdltruetypefont.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\SelectFile.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\SelectFolder.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\SelectFolder.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\SelectorEntry.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\SelectorEntry.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\ShowMessage.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeCheckBox.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\UaeCheckBox.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeDropDown.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeListBox.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\gui\UaeRadioButton.cpp">
-      <Filter>Source files\od-pandora\gui</Filter>
+    <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp">
+      <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\od-pandora\menu\menu_config.cpp">
-      <Filter>Source files\od-pandora\menu</Filter>
+    <ClCompile Include="..\..\src\osdep\menu\menu_config.cpp">
+      <Filter>Source files\osdep\menu</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\md-pandora\support.cpp">
-      <Filter>Source files\md-pandora</Filter>
+    <ClCompile Include="..\..\src\machdep\support.cpp">
+      <Filter>Source files\machdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\jit\compemu.cpp">
       <Filter>Source files\jit</Filter>
@@ -587,62 +587,62 @@
     <ClInclude Include="..\..\src\od-gles\shader_stuff.h">
       <Filter>Header files\od-gles</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\td-sdl\thread.h">
-      <Filter>Header files\td-sdl</Filter>
+    <ClInclude Include="..\..\src\threaddep\thread.h">
+      <Filter>Header files\threaddep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\sd-pandora\sound.h">
-      <Filter>Header files\sd-pandora</Filter>
+    <ClInclude Include="..\..\src\sounddep\sound.h">
+      <Filter>Header files\sounddep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\cda_play.h">
-      <Filter>Header files\od-pandora</Filter>
+    <ClInclude Include="..\..\src\osdep\cda_play.h">
+      <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\config.h">
-      <Filter>Header files\od-pandora</Filter>
+    <ClInclude Include="..\..\src\osdep\config.h">
+      <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\mp3decoder.h">
-      <Filter>Header files\od-pandora</Filter>
+    <ClInclude Include="..\..\src\osdep\mp3decoder.h">
+      <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\pandora_rp9.h">
-      <Filter>Header files\od-pandora</Filter>
+    <ClInclude Include="..\..\src\osdep\pandora_rp9.h">
+      <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\sysconfig.h">
-      <Filter>Header files\od-pandora</Filter>
+    <ClInclude Include="..\..\src\osdep\sysconfig.h">
+      <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\target.h">
-      <Filter>Header files\od-pandora</Filter>
+    <ClInclude Include="..\..\src\osdep\target.h">
+      <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\gui_handling.h">
-      <Filter>Header files\od-pandora\gui</Filter>
+    <ClInclude Include="..\..\src\osdep\gui\gui_handling.h">
+      <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\sdltruetypefont.hpp">
-      <Filter>Header files\od-pandora\gui</Filter>
+    <ClInclude Include="..\..\src\osdep\gui\sdltruetypefont.hpp">
+      <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\SelectorEntry.hpp">
-      <Filter>Header files\od-pandora\gui</Filter>
+    <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp">
+      <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeCheckBox.hpp">
-      <Filter>Header files\od-pandora\gui</Filter>
+    <ClInclude Include="..\..\src\osdep\gui\UaeCheckBox.hpp">
+      <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeDropDown.hpp">
-      <Filter>Header files\od-pandora\gui</Filter>
+    <ClInclude Include="..\..\src\osdep\gui\UaeDropDown.hpp">
+      <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeListBox.hpp">
-      <Filter>Header files\od-pandora\gui</Filter>
+    <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp">
+      <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\od-pandora\gui\UaeRadioButton.hpp">
-      <Filter>Header files\od-pandora\gui</Filter>
+    <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp">
+      <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\m68k.h">
-      <Filter>Header files\md-pandora</Filter>
+    <ClInclude Include="..\..\src\machdep\m68k.h">
+      <Filter>Header files\machdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\maccess.h">
-      <Filter>Header files\md-pandora</Filter>
+    <ClInclude Include="..\..\src\machdep\maccess.h">
+      <Filter>Header files\machdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\md-fpp.h">
-      <Filter>Header files\md-pandora</Filter>
+    <ClInclude Include="..\..\src\machdep\md-fpp.h">
+      <Filter>Header files\machdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\md-pandora\rpt.h">
-      <Filter>Header files\md-pandora</Filter>
+    <ClInclude Include="..\..\src\machdep\rpt.h">
+      <Filter>Header files\machdep</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\jit\codegen_arm.h">
       <Filter>Header files\jit</Filter>

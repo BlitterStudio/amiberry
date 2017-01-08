@@ -12,7 +12,7 @@
 #include "keybuf.h"
 #include "zfile.h"
 #include "gui.h"
-#include "od-pandora/gui/SelectorEntry.hpp"
+#include "osdep/gui/SelectorEntry.hpp"
 #include "gui/gui_handling.h"
 #include "memory.h"
 #include "rommgr.h"
@@ -21,7 +21,7 @@
 #include "inputdevice.h"
 #include "xwin.h"
 #include "drawing.h"
-#include "sd-pandora/sound.h"
+#include "sounddep/sound.h"
 #include "audio.h"
 #include "keybuf.h"
 #include "keyboard.h"
@@ -31,7 +31,7 @@
 #include "autoconf.h"
 #include "blkdev.h"
 #include <SDL.h>
-#include "td-sdl/thread.h"
+#include "threaddep/thread.h"
 
 #ifdef RASPBERRY
 #include <linux/kd.h>

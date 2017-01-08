@@ -1,4 +1,4 @@
-#include "od-pandora/gui/SelectorEntry.hpp"
+#include "osdep/gui/SelectorEntry.hpp"
 
 #include "guichan/widgets/container.hpp"
 #include "guichan/widgets/icon.hpp"

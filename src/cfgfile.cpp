@@ -3715,7 +3715,7 @@ uae_u32 cfgfile_uaelib(int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen)
 	return 0;
 }
 
-#include "sd-pandora/sound.h"
+#include "sounddep/sound.h"
 
 void default_prefs(struct uae_prefs *p, int type)
 {

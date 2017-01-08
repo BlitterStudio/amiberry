@@ -2,7 +2,7 @@
 #include "sysdeps.h"
 
 #include "cda_play.h"
-#include "sd-pandora/sound.h"
+#include "sounddep/sound.h"
 #include "uae.h"
 
 
