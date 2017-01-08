@@ -553,7 +553,7 @@
       <Filter>Source files\archivers\zip</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\rasp_gfx.cpp">
-      <Filter>Source files</Filter>
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\rasp_gfx.cpp">
       <Filter>Source files\osdep</Filter>
