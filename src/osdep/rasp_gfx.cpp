@@ -130,8 +130,6 @@ void InitAmigaVidMode(struct uae_prefs *p)
 		gfxvidinfo.outheight = picasso_vidinfo.height;
 	}
 //#endif
-	
-//	gfxvidinfo.rowbytes = blit_rect.width * 2;
 }
 
 void graphics_dispmanshutdown(void)
@@ -139,7 +137,7 @@ void graphics_dispmanshutdown(void)
 	if (DispManXElementpresent == 1)
 	{
 		DispManXElementpresent = 0;
-		dispmanxupdate = vc_dispmanx_update_start(10);
+		dispmanxupdate = vc_dispmanx_update_start(0);
 		vc_dispmanx_element_remove(dispmanxupdate, dispmanxelement);
 		vc_dispmanx_update_submit_sync(dispmanxupdate);
 	}
@@ -182,12 +180,10 @@ static void open_screen(struct uae_prefs *p)
 		printf("DispmanX: Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);	  
 #endif // DEBUG		
 //		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
-//		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 		Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 	}
 
-
-	  // check if resolution hasn't change in menu. otherwise free the resources so that they will be re-generated with new resolution.
+	  // check if resolution hasn't changed in menu. Otherwise free the resources so that they will be re-generated with new resolution.
 	if ((dispmanxresource_amigafb_1 != 0) && 
 	   ((blit_rect.width != width) || (blit_rect.height != height) || (currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect) ||
 	   (currprefs.gfx_fullscreen_ratio != changed_prefs.gfx_fullscreen_ratio)))
@@ -229,7 +225,7 @@ static void open_screen(struct uae_prefs *p)
 		dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 		dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 		vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
-		vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_1,
+		vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
 			VC_IMAGE_RGB565,
 			width *2,
 			prSDLScreen->pixels,
@@ -277,7 +273,6 @@ static void open_screen(struct uae_prefs *p)
 			DISPMANX_NO_ROTATE);
 
 		vc_dispmanx_update_submit(dispmanxupdate, NULL, NULL);
-		//dispmanxupdate = vc_dispmanx_update_start( 10 );
 	}
 
 	if (prSDLScreen != NULL)
