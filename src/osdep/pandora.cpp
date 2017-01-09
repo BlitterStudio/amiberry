@@ -849,9 +849,6 @@ int main(int argc, char *argv[])
 	rp9_cleanup();
 
 	logging_cleanup();
-	
-//  printf("Threads at exit:\n");
-//  dbg_list_threads();
 
 	return 0;
 }

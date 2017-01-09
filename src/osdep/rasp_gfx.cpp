@@ -175,10 +175,6 @@ static void open_screen(struct uae_prefs *p)
 
 	if (Dummy_prSDLScreen == NULL)
 	{
-		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo();
-#ifdef DEBUG
-		printf("DispmanX: Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);	  
-#endif // DEBUG		
 //		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
 		Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 	}
