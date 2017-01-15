@@ -27,3 +27,4 @@ Amiberry/VisualGDB/Release-rpi2/Amiberry
 *.ipch
 *.db-shm
 *.db-wal
+*.TMP

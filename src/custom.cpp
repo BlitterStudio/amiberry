@@ -4592,12 +4592,12 @@ static void vsync_handler_post (void)
 //	}
 	if (picasso_on)
 	{
-		init_hz();
+		vpos_count = (int) maxvpos * vblank_hz / 60;
 		vtotal = vpos_count;
 	}		
 #endif
 	
-	if ((beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200)) != (new_beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200))) {
+	if ((beamcon0 & (0x20 | 0x80)) != (new_beamcon0 & (0x20 | 0x80))) {
 		init_hz();
 	}
 	else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change < 4) {

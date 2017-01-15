@@ -123,13 +123,13 @@ void InitAmigaVidMode(struct uae_prefs *p)
 	gfxvidinfo.outwidth = p->gfx_size.width;
 	gfxvidinfo.outheight = p->gfx_size.height;
 	gfxvidinfo.rowbytes = prSDLScreen->pitch;
-//#ifdef PICASSO96
+#ifdef PICASSO96
 	if (screen_is_picasso)
 	{
 		gfxvidinfo.outwidth  = picasso_vidinfo.width;
 		gfxvidinfo.outheight = picasso_vidinfo.height;
 	}
-//#endif
+#endif
 }
 
 void graphics_dispmanshutdown(void)
@@ -161,18 +161,28 @@ static void open_screen(struct uae_prefs *p)
 	int          width;
 	int          height;
 	
+#ifdef PICASSO96
 	if (screen_is_picasso)
 	{
 		width  = picasso_vidinfo.width;
 		height = picasso_vidinfo.height;
 	}
 	else
+#endif
 	{
 		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 		width  = p->gfx_size.width;
 		height = p->gfx_size.height;
 	}
 
+	if (Dummy_prSDLScreen)
+	{ // y.f. 2016-10-13 : free the previous screen surface every time, 
+	  // so we can have fullscreen while running and windowed while in config window.
+	 // Apparently, something somewhere is resetting the screen.
+		SDL_FreeSurface(Dummy_prSDLScreen);
+		Dummy_prSDLScreen = NULL;
+	}
+	
 	if (Dummy_prSDLScreen == NULL)
 	{
 //		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
@@ -406,7 +416,7 @@ void black_screen_now(void)
 {
 	SDL_FillRect(prSDLScreen, NULL, 0);
 	SDL_Flip(prSDLScreen);
-//	flush_screen();
+	flush_screen();
 }
 
 
@@ -419,7 +429,6 @@ static void graphics_subinit(void)
 	}
 	else
 	{
-		SDL_Flip(prSDLScreen);
 		SDL_ShowCursor(SDL_DISABLE);
 		InitAmigaVidMode(&currprefs);
 	}
