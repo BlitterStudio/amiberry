@@ -2434,41 +2434,42 @@ static void init_hz (bool fullinit)
 {
 	int isntsc;
 	int omaxvpos = maxvpos;
-  int hzc = 0;
+	int hzc = 0;
 
 	if (fullinit)
 		vpos_count = 0;
 
 	vpos_count_diff = vpos_count;
 
-  if ((beamcon0 & 0xA0) != (new_beamcon0 & 0xA0))
-  	hzc = 1;
-  if (beamcon0 != new_beamcon0) {
+	if ((beamcon0 & 0xA0) != (new_beamcon0 & 0xA0))
+		hzc = 1;
+	if (beamcon0 != new_beamcon0) {
 		vpos_count_diff = vpos_count = 0;
-  }
+	}
 	beamcon0 = new_beamcon0;
 	isntsc = (beamcon0 & 0x20) ? 0 : 1;
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-	  isntsc = currprefs.ntscmode ? 1 : 0;
-  if (!isntsc) {
-	  maxvpos = MAXVPOS_PAL;
-	  maxhpos = MAXHPOS_PAL;
-	  minfirstline = VBLANK_ENDLINE_PAL;
-    vblank_hz = VBLANK_HZ_PAL;
-    sprite_vblank_endline = VBLANK_SPRITE_PAL;
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+		isntsc = currprefs.ntscmode ? 1 : 0;
+	if (!isntsc) {
+		maxvpos = MAXVPOS_PAL;
+		maxhpos = MAXHPOS_PAL;
+		minfirstline = VBLANK_ENDLINE_PAL;
+		vblank_hz = VBLANK_HZ_PAL;
+		sprite_vblank_endline = VBLANK_SPRITE_PAL;
 		equ_vblank_endline = EQU_ENDLINE_PAL;
 		equ_vblank_toggle = true;
-  } else {
-	  maxvpos = MAXVPOS_NTSC;
-	  maxhpos = MAXHPOS_NTSC;
-	  minfirstline = VBLANK_ENDLINE_NTSC;
-    vblank_hz = VBLANK_HZ_NTSC;
-    sprite_vblank_endline = VBLANK_SPRITE_NTSC;
+	}
+	else {
+		maxvpos = MAXVPOS_NTSC;
+		maxhpos = MAXHPOS_NTSC;
+		minfirstline = VBLANK_ENDLINE_NTSC;
+		vblank_hz = VBLANK_HZ_NTSC;
+		sprite_vblank_endline = VBLANK_SPRITE_NTSC;
 		equ_vblank_endline = EQU_ENDLINE_NTSC;
 		equ_vblank_toggle = false;
-  }
+	}
 	// long/short field refresh rate adjustment
-	vblank_hz = vblank_hz * (maxvpos * 2 + 1) / ((maxvpos + lof_current) * 2);
+//	vblank_hz = vblank_hz * (maxvpos * 2 + 1) / ((maxvpos + lof_current) * 2);
 
 	maxvpos_nom = maxvpos;
 	maxvpos_display = maxvpos;
@@ -2477,53 +2478,65 @@ static void init_hz (bool fullinit)
 		// (someone poked VPOSW)
 		if (vpos_count < 10)
 			vpos_count = 10;
-		float new_hz = (isntsc ? 15734.0 : 15625.0) / (float)vpos_count;
-		vblank_hz = (int)(new_hz + 0.5);
+		vblank_hz = (isntsc ? 15734.0 : 15625.0) / vpos_count;
+//		vblank_hz_nom = vblank_hz_shf = vblank_hz_lof = vblank_hz_lace = vblank_hz;
 		maxvpos_nom = vpos_count - (lof_current ? 1 : 0);
 		if ((maxvpos_nom >= 256 && maxvpos_nom <= 313) || (beamcon0 & 0x80)) {
 			maxvpos_display = maxvpos_nom;
-		} else if (maxvpos_nom < 256) {
+		}
+		else if (maxvpos_nom < 256) {
 			maxvpos_display = 255;
-		} else {
+		}
+		else {
 			maxvpos_display = 313;
 		}
-		reset_drawing ();
-	} else if (vpos_count == 0) {
+		reset_drawing();
+	}
+	else if (vpos_count == 0) {
 		// mode reset
 		vpos_count = maxvpos;
 		vpos_count_diff = maxvpos;
 	}
 
-  if (beamcon0 & 0x80) {
-		// programmable scanrates (ECS Agnus)
-	  if (vtotal >= MAXVPOS)
-	    vtotal = MAXVPOS - 1;
-	  maxvpos = vtotal + 1;
-	  if (htotal >= MAXHPOS)
-	    htotal = MAXHPOS - 1;
-	  maxhpos = htotal + 1;
-	  float new_hz = 227.0 * 312.0 * 50.0 / (float)(maxvpos * maxhpos);
-	  vblank_hz = (int)(new_hz + 0.5);
-		minfirstline = vsstop > vbstop ? vsstop : vbstop;
-		if (minfirstline > maxvpos / 2) 
-			minfirstline = vsstop > vbstop ? vbstop : vsstop;
-	  if (minfirstline < 2)
-	      minfirstline = 2;
-	  if (minfirstline >= maxvpos)
-	      minfirstline = maxvpos - 1;
-	  sprite_vblank_endline = minfirstline - 2;
+	if (beamcon0 & 0x80) {
+		  // programmable scanrates (ECS Agnus)
+		if (vtotal >= MAXVPOS)
+			vtotal = MAXVPOS - 1;
+		maxvpos = vtotal + 1;
+		if (htotal >= MAXHPOS)
+			htotal = MAXHPOS - 1;
+		maxhpos = htotal + 1;
+		vblank_hz = 227.0 * 312.0 * 50.0 / (maxvpos * maxhpos);
+		
+		if ((beamcon0 & 0x1000) && (beamcon0 & 0x0200)) { // VARVBEN + VARVSYEN
+			minfirstline = vsstop > vbstop ? vsstop : vbstop;
+			if (minfirstline > maxvpos / 2) 
+				minfirstline = vsstop > vbstop ? vbstop : vsstop;
+		}
+		else if (beamcon0 & 0x0200) {
+			minfirstline = vsstop;
+			if (minfirstline > maxvpos / 2) 
+				minfirstline = 0;
+		}
+		else if (beamcon0 & 0x1000) {
+			minfirstline = vbstop;
+			if (minfirstline > maxvpos / 2) 
+				minfirstline = 0;
+		}
+		
+		if (minfirstline < 2)
+			minfirstline = 2;
+		if (minfirstline >= maxvpos)
+			minfirstline = maxvpos - 1;
+
+		sprite_vblank_endline = minfirstline - 2;
 		maxvpos_nom = maxvpos;
 		maxvpos_display = maxvpos;
 		equ_vblank_endline = -1;
 		vpos_count = maxvpos_nom;
 		vpos_count_diff = maxvpos_nom;
-	  hzc = 1;
-#ifdef WITH_INGAME_WARNING
-    char _info[64];
-    sprintf(_info, "Programmend HZ: %d", vblank_hz);
-    InGameMessage(_info);
-#endif
-  }
+		hzc = 1;
+	}
 	if (maxvpos_nom >= MAXVPOS)
 		maxvpos_nom = MAXVPOS;
 	if (maxvpos_display >= MAXVPOS)
@@ -2531,20 +2544,20 @@ static void init_hz (bool fullinit)
 	if (maxvpos != omaxvpos)
 		hzc = 1;
   /* limit to sane values */
-  if (vblank_hz < 10)
-	  vblank_hz = 10;
-  if (vblank_hz > 300)
-	  vblank_hz = 300;
-  eventtab[ev_hsync].oldcycles = get_cycles ();
-  eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
-  events_schedule ();
-  if (hzc) {
-    reset_drawing ();
-  }
+	if (vblank_hz < 10)
+		vblank_hz = 10;
+	if (vblank_hz > 300)
+		vblank_hz = 300;
+	eventtab[ev_hsync].oldcycles = get_cycles();
+	eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
+	events_schedule();
+	if (hzc) {
+		reset_drawing();
+	}
 	maxvpos_total = (currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? (MAXVPOS_LINES_ECS - 1) : (MAXVPOS_LINES_OCS - 1);
 	if (maxvpos_total > MAXVPOS)
 		maxvpos_total = MAXVPOS;
-
+	
   compute_framesync ();
 
 #ifdef PICASSO96
@@ -3017,34 +3030,34 @@ void INTREQ (uae_u16 data)
 
 static void ADKCON (int hpos, uae_u16 v)
 {
-  if (currprefs.produce_sound > 0)
-    update_audio ();
-  DISK_update (hpos);
-	DISK_update_adkcon (hpos, v);
-  setclr (&adkcon,v);
-  audio_update_adkmasks ();
+	if (currprefs.produce_sound > 0)
+		update_audio();
+	DISK_update(hpos);
+	DISK_update_adkcon(hpos, v);
+	setclr(&adkcon, v);
+	audio_update_adkmasks();
 }
 
 static void BEAMCON0 (uae_u16 v)
 {
-  if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
-  	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
-  	  v &= 0x20;
-    new_beamcon0 = v;
-  }
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
+		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
+			v &= 0x20;
+		new_beamcon0 = v;
+	}
 }
 
-STATIC_INLINE void varsync (void)
+static void varsync(void)
 {
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-	  return;
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+		return;
 #ifdef PICASSO96
-  if (picasso_on) {
-    return;
+	if (picasso_on) {
+		return;
 	}
 #endif
-  if (!(beamcon0 & 0x80))
-	  return;
+	if (!(beamcon0 & 0x80))
+		return;
 	vpos_count = 0;
 }
 
@@ -4562,29 +4575,43 @@ static void vsync_handler_post (void)
 	}
 	
 #ifdef JIT
-  if (currprefs.cachesize) {
-    vsyncmintime = last_synctime;
-    frh_count = 0;
-  }
-  else
+	if (currprefs.cachesize) {
+		vsyncmintime = last_synctime;
+		frh_count = 0;
+	}
+	else
 #endif
-  {
-    vsyncmintime = last_synctime + vsynctimebase * (maxvpos_display - LAST_SPEEDUP_LINE) / maxvpos_display;
-  }
+	{
+		vsyncmintime = last_synctime + vsynctimebase * (maxvpos_display - LAST_SPEEDUP_LINE) / maxvpos_display;
+	}
   
-	if ((beamcon0 & (0x20 | 0x80)) != (new_beamcon0 & (0x20 | 0x80))) {
-		init_hz ();
-  } else if (vpos_count > 0 && abs (vpos_count - vpos_count_diff) > 1 && vposw_change < 4) {
-		init_hz ();
-	} else if (lof_changed) {
-		compute_framesync ();
-  }
+#ifdef PICASSO96
+//	if (p96refresh_active) {
+//		vpos_count = p96refresh_active;
+//		vtotal = vpos_count;
+//	}
+	if (picasso_on)
+	{
+		init_hz();
+		vtotal = vpos_count;
+	}		
+#endif
+	
+	if ((beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200)) != (new_beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200))) {
+		init_hz();
+	}
+	else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change < 4) {
+		init_hz();
+	}
+	else if (lof_changed) {
+		compute_framesync();
+	}
 
 	lof_changed = 0;
 	vposw_change = 0;
 
-  eventtab[ev_copper].active = 0;
-  COPJMP (1, 1);
+	eventtab[ev_copper].active = 0;
+	COPJMP(1, 1);
 		
 	init_hardware_frame ();
 }
