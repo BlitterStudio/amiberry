@@ -4586,15 +4586,14 @@ static void vsync_handler_post (void)
 	}
   
 #ifdef PICASSO96
-//	if (p96refresh_active) {
-//		vpos_count = p96refresh_active;
-//		vtotal = vpos_count;
-//	}
 	if (picasso_on)
 	{
-		vpos_count = (int) maxvpos * vblank_hz / 60;
-		vtotal = vpos_count;
-	}		
+		int p96refresh_active = (int) maxvpos * vblank_hz / (m68k_dreg(regs, 1) * 2);
+		if (p96refresh_active) {
+			vpos_count = p96refresh_active;
+			vtotal = vpos_count;
+		}	
+	}	
 #endif
 	
 	if ((beamcon0 & (0x20 | 0x80)) != (new_beamcon0 & (0x20 | 0x80))) {
