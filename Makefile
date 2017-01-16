@@ -18,7 +18,7 @@ else ifeq ($(PLATFORM),gles)
 	LDFLAGS += -lEGL -lGLESv1_CM
 endif
 
-NAME   = uae4arm
+NAME   = amiberry
 RM     = rm -f
 CXX    = g++
 STRIP  = strip
