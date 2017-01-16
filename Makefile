@@ -67,7 +67,7 @@ ASFLAGS += $(CPU_FLAGS)
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
 ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs -fvpt
+MORE_CFLAGS += -fprofile-generate=/home/pi/projects/amiberry -fprofile-arcs -fvpt
 endif
 ifdef USE_PROFILE
 MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
