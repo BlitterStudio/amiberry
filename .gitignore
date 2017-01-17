@@ -22,3 +22,5 @@ kickstarts/*.rom
 *.dat
 Amiberry/VisualGDB/Debug/Amiberry
 Amiberry/VisualGDB/Release/Amiberry
+*.ipch
+*.TMP
