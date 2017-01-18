@@ -1,6 +1,8 @@
 # Amiga emulator for Raspberry Pi
 
-# History of this fork (newest first)
+# History (newest first)
+- Added Visual Studio solution using VC++ for Linux
+- Fixed bugs related to video and audio glitches
 - Renamed folder structure according to the WinUAE standard
 - The emulator now changes screen resolution on the host dynamically instead of always scaling to the native one (improves performance a lot)
 - Added mapping option for keyboard key to Quit the emulator directly
