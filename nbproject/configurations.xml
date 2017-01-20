@@ -1,0 +1,4054 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="100">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df root="." name="0">
+      <df name="src">
+        <df name="archivers">
+          <df name="7z">
+            <df name="Archive">
+              <df name="7z">
+                <in>7zAlloc.cpp</in>
+                <in>7zAlloc.h</in>
+                <in>7zDecode.cpp</in>
+                <in>7zDecode.h</in>
+                <in>7zExtract.cpp</in>
+                <in>7zExtract.h</in>
+                <in>7zHeader.cpp</in>
+                <in>7zHeader.h</in>
+                <in>7zIn.cpp</in>
+                <in>7zIn.h</in>
+                <in>7zItem.cpp</in>
+                <in>7zItem.h</in>
+              </df>
+            </df>
+            <in>7zBuf.cpp</in>
+            <in>7zBuf.h</in>
+            <in>7zCrc.cpp</in>
+            <in>7zCrc.h</in>
+            <in>7zStream.cpp</in>
+            <in>7zVersion.h</in>
+            <in>Bcj2.cpp</in>
+            <in>Bcj2.h</in>
+            <in>Bra.cpp</in>
+            <in>Bra.h</in>
+            <in>Bra86.cpp</in>
+            <in>CpuArch.h</in>
+            <in>LzmaDec.cpp</in>
+            <in>LzmaDec.h</in>
+            <in>Types.h</in>
+          </df>
+          <df name="dms">
+            <in>cdata.h</in>
+            <in>crc_csum.cpp</in>
+            <in>crc_csum.h</in>
+            <in>getbits.cpp</in>
+            <in>getbits.h</in>
+            <in>maketbl.cpp</in>
+            <in>maketbl.h</in>
+            <in>pfile.cpp</in>
+            <in>pfile.h</in>
+            <in>tables.cpp</in>
+            <in>tables.h</in>
+            <in>u_deep.cpp</in>
+            <in>u_deep.h</in>
+            <in>u_heavy.cpp</in>
+            <in>u_heavy.h</in>
+            <in>u_init.cpp</in>
+            <in>u_init.h</in>
+            <in>u_medium.cpp</in>
+            <in>u_medium.h</in>
+            <in>u_quick.cpp</in>
+            <in>u_quick.h</in>
+            <in>u_rle.cpp</in>
+            <in>u_rle.h</in>
+          </df>
+          <df name="lha">
+            <in>crcio.cpp</in>
+            <in>dhuf.cpp</in>
+            <in>header.cpp</in>
+            <in>huf.cpp</in>
+            <in>larc.cpp</in>
+            <in>lha.h</in>
+            <in>lha_macro.h</in>
+            <in>lhamaketbl.cpp</in>
+            <in>lharc.cpp</in>
+            <in>shuf.cpp</in>
+            <in>slide.cpp</in>
+            <in>uae_lha.cpp</in>
+            <in>util.cpp</in>
+          </df>
+          <df name="lzx">
+            <in>unlzx.cpp</in>
+          </df>
+          <df name="wrp">
+            <in>warp.cpp</in>
+            <in>warp.h</in>
+          </df>
+          <df name="zip">
+            <in>unzip.cpp</in>
+            <in>unzip.h</in>
+          </df>
+        </df>
+        <df name="include">
+          <in>akiko.h</in>
+          <in>audio.h</in>
+          <in>autoconf.h</in>
+          <in>blit.h</in>
+          <in>blitfunc.h</in>
+          <in>blitter.h</in>
+          <in>blkdev.h</in>
+          <in>bsdsocket.h</in>
+          <in>calc.h</in>
+          <in>cia.h</in>
+          <in>clipboard.h</in>
+          <in>commpipe.h</in>
+          <in>cpu_prefetch.h</in>
+          <in>cputbl.h</in>
+          <in>crc32.h</in>
+          <in>custom.h</in>
+          <in>debug.h</in>
+          <in>disk.h</in>
+          <in>diskutil.h</in>
+          <in>drawing.h</in>
+          <in>ersatz.h</in>
+          <in>events.h</in>
+          <in>execio.h</in>
+          <in>execlib.h</in>
+          <in>filesys.h</in>
+          <in>flags_arm.h</in>
+          <in>fpp-ieee-be.h</in>
+          <in>fpp-unknown.h</in>
+          <in>fsdb.h</in>
+          <in>fsusage.h</in>
+          <in>genblitter.h</in>
+          <in>gensound.h</in>
+          <in>gfxboard.h</in>
+          <in>gui.h</in>
+          <in>inputdevice.h</in>
+          <in>keyboard.h</in>
+          <in>keybuf.h</in>
+          <in>mackbd.h</in>
+          <in>memory.h</in>
+          <in>native2amiga.h</in>
+          <in>native2amiga_api.h</in>
+          <in>newcpu.h</in>
+          <in>options.h</in>
+          <in>osemu.h</in>
+          <in>picasso96.h</in>
+          <in>readcpu.h</in>
+          <in>rommgr.h</in>
+          <in>rtgmodes.h</in>
+          <in>savestate.h</in>
+          <in>scsi.h</in>
+          <in>scsidev.h</in>
+          <in>statusline.h</in>
+          <in>sysdeps.h</in>
+          <in>traps.h</in>
+          <in>uae.h</in>
+          <in>uaeresource.h</in>
+          <in>xwin.h</in>
+          <in>zarchive.h</in>
+          <in>zfile.h</in>
+        </df>
+        <df name="jit">
+          <in>codegen_arm.cpp</in>
+          <in>codegen_arm.h</in>
+          <in>compemu.cpp</in>
+          <in>compemu.h</in>
+          <in>compemu_fpp.cpp</in>
+          <in>compemu_midfunc_arm.cpp</in>
+          <in>compemu_midfunc_arm.h</in>
+          <in>compemu_midfunc_arm2.cpp</in>
+          <in>compemu_midfunc_arm2.h</in>
+          <in>compemu_support.cpp</in>
+          <in>compstbl.cpp</in>
+          <in>comptbl.h</in>
+          <in>gencomp_arm.cpp</in>
+        </df>
+        <df name="machdep">
+          <in>m68k.h</in>
+          <in>maccess.h</in>
+          <in>md-fpp.h</in>
+          <in>rpt.h</in>
+          <in>support.cpp</in>
+        </df>
+        <df name="od-gles">
+          <in>gl.cpp</in>
+          <in>gl.h</in>
+          <in>gl_platform.cpp</in>
+          <in>gl_platform.h</in>
+          <in>gles_gfx.cpp</in>
+          <in>shader_stuff.cpp</in>
+          <in>shader_stuff.h</in>
+        </df>
+        <df name="osdep">
+          <df name="gui">
+            <in>CreateFilesysHardfile.cpp</in>
+            <in>EditFilesysHardfile.cpp</in>
+            <in>EditFilesysVirtual.cpp</in>
+            <in>InGameMessage.cpp</in>
+            <in>Navigation.cpp</in>
+            <in>PanelCPU.cpp</in>
+            <in>PanelChipset.cpp</in>
+            <in>PanelConfig.cpp</in>
+            <in>PanelDisplay.cpp</in>
+            <in>PanelFloppy.cpp</in>
+            <in>PanelHD.cpp</in>
+            <in>PanelInput.cpp</in>
+            <in>PanelMisc.cpp</in>
+            <in>PanelPaths.cpp</in>
+            <in>PanelRAM.cpp</in>
+            <in>PanelROM.cpp</in>
+            <in>PanelSavestate.cpp</in>
+            <in>PanelSound.cpp</in>
+            <in>SelectFile.cpp</in>
+            <in>SelectFolder.cpp</in>
+            <in>SelectorEntry.cpp</in>
+            <in>SelectorEntry.hpp</in>
+            <in>ShowMessage.cpp</in>
+            <in>UaeCheckBox.cpp</in>
+            <in>UaeCheckBox.hpp</in>
+            <in>UaeDropDown.cpp</in>
+            <in>UaeDropDown.hpp</in>
+            <in>UaeListBox.cpp</in>
+            <in>UaeListBox.hpp</in>
+            <in>UaeRadioButton.cpp</in>
+            <in>UaeRadioButton.hpp</in>
+            <in>gui_handling.h</in>
+            <in>main_window.cpp</in>
+            <in>sdltruetypefont.cpp</in>
+            <in>sdltruetypefont.hpp</in>
+          </df>
+          <df name="menu">
+            <in>menu_config.cpp</in>
+          </df>
+          <in>arm_helper.s</in>
+          <in>bsdsocket_host.cpp</in>
+          <in>cda_play.cpp</in>
+          <in>cda_play.h</in>
+          <in>charset.cpp</in>
+          <in>config.h</in>
+          <in>fsdb_host.cpp</in>
+          <in>hardfile_pandora.cpp</in>
+          <in>keyboard.cpp</in>
+          <in>mp3decoder.cpp</in>
+          <in>mp3decoder.h</in>
+          <in>neon_helper.s</in>
+          <in>pandora.cpp</in>
+          <in>pandora_filesys.cpp</in>
+          <in>pandora_gfx.cpp</in>
+          <in>pandora_gui.cpp</in>
+          <in>pandora_input.cpp</in>
+          <in>pandora_mem.cpp</in>
+          <in>pandora_rp9.cpp</in>
+          <in>pandora_rp9.h</in>
+          <in>picasso96.cpp</in>
+          <in>rasp_gfx.cpp</in>
+          <in>sigsegv_handler.cpp</in>
+          <in>sysconfig.h</in>
+          <in>target.h</in>
+          <in>writelog.cpp</in>
+        </df>
+        <df name="sounddep">
+          <in>sound.cpp</in>
+          <in>sound.h</in>
+          <in>sound_sdl_new.cpp</in>
+        </df>
+        <df name="threaddep">
+          <in>thread.h</in>
+        </df>
+        <in>akiko.cpp</in>
+        <in>aros.rom.cpp</in>
+        <in>audio.cpp</in>
+        <in>autoconf.cpp</in>
+        <in>blitfunc.cpp</in>
+        <in>blitops.cpp</in>
+        <in>blittable.cpp</in>
+        <in>blitter.cpp</in>
+        <in>blkdev.cpp</in>
+        <in>blkdev_cdimage.cpp</in>
+        <in>bsdsocket.cpp</in>
+        <in>build68k.cpp</in>
+        <in>calc.cpp</in>
+        <in>cdrom.cpp</in>
+        <in>cfgfile.cpp</in>
+        <in>cia.cpp</in>
+        <in>cpudefs.cpp</in>
+        <in>cpuemu_0.cpp</in>
+        <in>cpuemu_11.cpp</in>
+        <in>cpuemu_4.cpp</in>
+        <in>cpustbl.cpp</in>
+        <in>crc32.cpp</in>
+        <in>custom.cpp</in>
+        <in>disk.cpp</in>
+        <in>diskutil.cpp</in>
+        <in>drawing.cpp</in>
+        <in>events.cpp</in>
+        <in>expansion.cpp</in>
+        <in>filesys.asm</in>
+        <in>filesys.cpp</in>
+        <in>filesys_bootrom.cpp</in>
+        <in>fpp.cpp</in>
+        <in>fsdb.cpp</in>
+        <in>fsdb_unix.cpp</in>
+        <in>fsusage.cpp</in>
+        <in>genblitter.cpp</in>
+        <in>gencpu.cpp</in>
+        <in>gfxboard.cpp</in>
+        <in>gfxutil.cpp</in>
+        <in>hardfile.cpp</in>
+        <in>inputdevice.cpp</in>
+        <in>keybuf.cpp</in>
+        <in>linetoscr.c</in>
+        <in>main.cpp</in>
+        <in>memory.cpp</in>
+        <in>native2amiga.cpp</in>
+        <in>newcpu.cpp</in>
+        <in>newcpu_common.cpp</in>
+        <in>p96_blit.cpp</in>
+        <in>readcpu.cpp</in>
+        <in>rommgr.cpp</in>
+        <in>savestate.cpp</in>
+        <in>sinctable.cpp</in>
+        <in>statusline.cpp</in>
+        <in>trace.c</in>
+        <in>traps.cpp</in>
+        <in>uaelib.cpp</in>
+        <in>uaeresource.cpp</in>
+        <in>zfile.cpp</in>
+        <in>zfile_archive.cpp</in>
+      </df>
+    </df>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+      <itemPath>nbproject/private/launcher.properties</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>.</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Pi2_Debug" type="0">
+      <toolsSet>
+        <compilerSet>GNU|GNU</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <flagsDictionary>
+        <element flagsID="0" commonFlags="-march=armv7-a"/>
+      </flagsDictionary>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile DEBUG=1 PLATFORM=rpi2</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean DEBUG=1 PLATFORM=rpi2</cleanCommand>
+          <executablePath>amiberry</executablePath>
+          <cTool>
+            <incDir>
+              <pElem>src</pElem>
+            </incDir>
+          </cTool>
+        </makeTool>
+        <preBuild>
+          <preBuildCommandWorkingDir>.</preBuildCommandWorkingDir>
+          <preBuildCommand></preBuildCommand>
+        </preBuild>
+      </makefileType>
+      <folder path="0/src/archivers">
+        <ccTool>
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
+      <folder path="0/src/machdep">
+        <ccTool>
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
+      <folder path="0/src/od-gles">
+        <ccTool>
+          <incDir>
+            <pElem>src/od-gles</pElem>
+          </incDir>
+        </ccTool>
+      </folder>
+      <folder path="0/src/osdep/gui">
+        <ccTool>
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
+      <folder path="0/src/osdep/menu">
+        <ccTool>
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
+      <item path="src/akiko.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/7zBuf.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/7zCrc.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/7zStream.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zAlloc.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zDecode.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zExtract.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zHeader.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zIn.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zItem.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Bcj2.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Bra.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/Bra86.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/7z/LzmaDec.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/crc_csum.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/getbits.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/maketbl.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/pfile.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/tables.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/u_deep.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/u_heavy.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/u_init.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/u_medium.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/u_quick.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/dms/u_rle.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/crcio.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/dhuf.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/header.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/huf.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/larc.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/lhamaketbl.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/lharc.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/shuf.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/slide.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/uae_lha.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lha/util.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/lzx/unlzx.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/wrp/warp.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/archivers/zip/unzip.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/aros.rom.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/audio.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/autoconf.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/blitfunc.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/blitops.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/blittable.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/blitter.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/blkdev.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/blkdev_cdimage.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/bsdsocket.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/build68k.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/calc.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cdrom.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cfgfile.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cia.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cpudefs.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cpuemu_0.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cpuemu_11.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cpuemu_4.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/cpustbl.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/crc32.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/custom.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/disk.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/diskutil.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/drawing.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/events.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/expansion.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/filesys.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/filesys_bootrom.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/fpp.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/fsdb.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/fsdb_unix.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/fsusage.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/genblitter.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/gencpu.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/gfxboard.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/gfxutil.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/hardfile.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/inputdevice.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/jit/codegen_arm.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src/jit</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/jit/compemu.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/jit/compemu_fpp.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/jit/compemu_midfunc_arm.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src/jit</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/jit/compemu_midfunc_arm2.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src/jit</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/jit/compemu_support.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/jit/compstbl.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/jit/gencomp_arm.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src/jit</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/keybuf.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/linetoscr.c" ex="false" tool="0" flavor2="9">
+      </item>
+      <item path="src/machdep/support.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/main.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/memory.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/native2amiga.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/newcpu.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/newcpu_common.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/od-gles/gl.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/gl_platform.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/gles_gfx.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/shader_stuff.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/bsdsocket_host.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/cda_play.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/charset.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/fsdb_host.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/CreateFilesysHardfile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/EditFilesysHardfile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/EditFilesysVirtual.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/InGameMessage.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/Navigation.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelCPU.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelChipset.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelConfig.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelDisplay.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelFloppy.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelHD.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelInput.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelMisc.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelPaths.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelRAM.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelROM.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelSavestate.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/PanelSound.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/SelectFile.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/SelectFolder.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/SelectorEntry.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/ShowMessage.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/UaeCheckBox.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/UaeDropDown.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/UaeListBox.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/UaeRadioButton.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/main_window.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/gui/sdltruetypefont.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/hardfile_pandora.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/keyboard.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/menu/menu_config.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+        </ccTool>
+      </item>
+      <item path="src/osdep/mp3decoder.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/pandora.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/pandora_filesys.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/pandora_gfx.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src/osdep</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/osdep/pandora_gui.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/pandora_input.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/pandora_mem.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/pandora_rp9.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/picasso96.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/rasp_gfx.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/sigsegv_handler.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/osdep/writelog.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/p96_blit.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/readcpu.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/rommgr.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/savestate.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/sinctable.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/sounddep/sound.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool>
+          <incDir>
+            <pElem>src/sounddep</pElem>
+          </incDir>
+        </ccTool>
+      </item>
+      <item path="src/sounddep/sound_sdl_new.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/statusline.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/trace.c" ex="false" tool="0" flavor2="9">
+      </item>
+      <item path="src/traps.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/uaelib.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/uaeresource.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/zfile.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+      <item path="src/zfile_archive.cpp" ex="false" tool="1" flavor2="9">
+        <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem></pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>ARMV6T2</Elem>
+            <Elem>ARMV6_ASSEMBLY</Elem>
+            <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
+            <Elem>CPU_arm</Elem>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>DEBUG</Elem>
+            <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>RASPBERRY</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>USE_ARMNEON</Elem>
+            <Elem>USE_SDL</Elem>
+            <Elem>WITH_INGAME_WARNING</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
+        </ccTool>
+      </item>
+    </conf>
+    <conf name="Pi2_Release" type="0">
+      <toolsSet>
+        <compilerSet>GNU|GNU</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile DEBUG=1 PLATFORM=rpi2</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean DEBUG=1 PLATFORM=rpi2</cleanCommand>
+          <executablePath></executablePath>
+        </makeTool>
+        <preBuild>
+          <preBuildCommandWorkingDir>.</preBuildCommandWorkingDir>
+          <preBuildCommand></preBuildCommand>
+        </preBuild>
+      </makefileType>
+      <item path="src/akiko.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/7zBuf.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/7zBuf.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/7zCrc.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/7zCrc.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/7zStream.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/7zVersion.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zAlloc.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zAlloc.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zDecode.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zDecode.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zExtract.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zExtract.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zHeader.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zHeader.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zIn.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zIn.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zItem.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Archive/7z/7zItem.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Bcj2.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Bcj2.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Bra.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/Bra.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Bra86.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/CpuArch.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/LzmaDec.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/7z/LzmaDec.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/7z/Types.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/cdata.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/crc_csum.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/crc_csum.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/getbits.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/getbits.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/maketbl.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/maketbl.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/pfile.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/pfile.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/tables.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/tables.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/u_deep.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/u_deep.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/u_heavy.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/u_heavy.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/u_init.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/u_init.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/u_medium.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/u_medium.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/u_quick.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/u_quick.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/dms/u_rle.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/dms/u_rle.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/lha/crcio.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/dhuf.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/header.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/huf.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/larc.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/lha.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/lha/lha_macro.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/lha/lhamaketbl.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/lharc.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/shuf.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/slide.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/uae_lha.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lha/util.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/lzx/unlzx.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/wrp/warp.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/wrp/warp.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/archivers/zip/unzip.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/archivers/zip/unzip.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/aros.rom.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/audio.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/autoconf.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/blitfunc.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/blitops.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/blittable.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/blitter.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/blkdev.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/blkdev_cdimage.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/bsdsocket.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/build68k.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/calc.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cdrom.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cfgfile.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cia.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cpudefs.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cpuemu_0.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cpuemu_11.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cpuemu_4.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/cpustbl.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/crc32.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/custom.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/disk.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/diskutil.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/drawing.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/events.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/expansion.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/filesys.asm" ex="false" tool="4" flavor2="0">
+      </item>
+      <item path="src/filesys.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/filesys_bootrom.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/fpp.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/fsdb.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/fsdb_unix.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/fsusage.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/genblitter.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/gencpu.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/gfxboard.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/gfxutil.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/hardfile.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/include/akiko.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/audio.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/autoconf.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/blit.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/blitfunc.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/blitter.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/blkdev.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/bsdsocket.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/calc.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/cia.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/clipboard.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/commpipe.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/cpu_prefetch.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/cputbl.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/crc32.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/custom.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/debug.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/disk.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/diskutil.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/drawing.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/ersatz.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/events.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/execio.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/execlib.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/filesys.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/flags_arm.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/fpp-ieee-be.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/fpp-unknown.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/fsdb.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/fsusage.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/genblitter.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/gensound.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/gfxboard.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/gui.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/inputdevice.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/keyboard.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/keybuf.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/mackbd.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/memory.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/native2amiga.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/native2amiga_api.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/newcpu.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/options.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/osemu.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/picasso96.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/readcpu.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/rommgr.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/rtgmodes.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/savestate.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/scsi.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/scsidev.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/statusline.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/sysdeps.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/traps.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/uae.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/uaeresource.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/xwin.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/zarchive.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/include/zfile.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/inputdevice.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/codegen_arm.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/codegen_arm.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/jit/compemu.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/compemu.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/jit/compemu_fpp.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/compemu_midfunc_arm.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/compemu_midfunc_arm.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/jit/compemu_midfunc_arm2.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/compemu_midfunc_arm2.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/jit/compemu_support.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/compstbl.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/jit/comptbl.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/jit/gencomp_arm.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/keybuf.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/linetoscr.c" ex="false" tool="0" flavor2="9">
+      </item>
+      <item path="src/machdep/m68k.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/machdep/maccess.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/machdep/md-fpp.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/machdep/rpt.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/machdep/support.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/main.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/memory.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/native2amiga.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/newcpu.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/newcpu_common.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/gl.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/gl.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/od-gles/gl_platform.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/gl_platform.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/od-gles/gles_gfx.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/shader_stuff.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/od-gles/shader_stuff.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/arm_helper.s" ex="false" tool="4" flavor2="0">
+      </item>
+      <item path="src/osdep/bsdsocket_host.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/cda_play.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/cda_play.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/charset.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/config.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/fsdb_host.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/CreateFilesysHardfile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/osdep/gui/EditFilesysHardfile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/osdep/gui/EditFilesysVirtual.cpp"
+            ex="false"
+            tool="1"
+            flavor2="9">
+      </item>
+      <item path="src/osdep/gui/InGameMessage.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/Navigation.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelCPU.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelChipset.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelConfig.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelDisplay.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelFloppy.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelHD.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelInput.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelMisc.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelPaths.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelRAM.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelROM.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelSavestate.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/PanelSound.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/SelectFile.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/SelectFolder.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/SelectorEntry.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/SelectorEntry.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/gui/ShowMessage.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/UaeCheckBox.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/UaeCheckBox.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/gui/UaeDropDown.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/UaeDropDown.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/gui/UaeListBox.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/UaeListBox.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/gui/UaeRadioButton.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/UaeRadioButton.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/gui/gui_handling.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/gui/main_window.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/sdltruetypefont.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/gui/sdltruetypefont.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/hardfile_pandora.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/keyboard.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/menu/menu_config.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/mp3decoder.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/mp3decoder.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/neon_helper.s" ex="false" tool="4" flavor2="0">
+      </item>
+      <item path="src/osdep/pandora.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/pandora_filesys.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/pandora_gfx.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/pandora_gui.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/pandora_input.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/pandora_mem.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/pandora_rp9.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/pandora_rp9.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/picasso96.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/rasp_gfx.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/sigsegv_handler.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/osdep/sysconfig.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/target.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/osdep/writelog.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/p96_blit.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/readcpu.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/rommgr.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/savestate.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/sinctable.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/sounddep/sound.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/sounddep/sound.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/sounddep/sound_sdl_new.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/statusline.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/threaddep/thread.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/trace.c" ex="false" tool="0" flavor2="9">
+      </item>
+      <item path="src/traps.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/uaelib.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/uaeresource.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/zfile.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+      <item path="src/zfile_archive.cpp" ex="false" tool="1" flavor2="9">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>
