@@ -451,29 +451,27 @@ static void after_leave_gui(void)
 
 int gui_init (void)
 {
-  int ret = 0;
-  
-	emulating=0;
+	int ret = 0;
+	emulating = 0;
 
-  if(lstAvailableROMs.size() == 0)
-    RescanROMs();
+	if (lstAvailableROMs.size() == 0)
+		RescanROMs();
 
-  graphics_subshutdown();
-  prefs_to_gui();
-  run_gui();
-  gui_to_prefs();
-  if(quit_program < 0)
-    quit_program = -quit_program;
-  if(quit_program == UAE_QUIT)
-    ret = -2; // Quit without start of emulator
+	prefs_to_gui();
+	run_gui();
+	gui_to_prefs();
+	if (quit_program < 0)
+		quit_program = -quit_program;
+	if (quit_program == UAE_QUIT)
+		ret = -2; // Quit without start of emulator
 
 	setCpuSpeed();
-  update_display(&changed_prefs);
+	update_display(&changed_prefs);
 
-  after_leave_gui();
+	after_leave_gui();
     
-	emulating=1;
-  return ret;
+	emulating = 1;
+	return ret;
 }
 
 void gui_exit(void)

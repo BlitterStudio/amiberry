@@ -121,6 +121,10 @@ void graphics_subshutdown (void)
 	    SDL_FreeSurface(screen);
 	    screen = NULL;
     }
+	if (texture != NULL)
+	{
+		SDL_DestroyTexture(texture);
+	}
 }
 
 static void open_screen(struct uae_prefs *p)
@@ -148,7 +152,7 @@ static void open_screen(struct uae_prefs *p)
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 		    
 	SDL_RenderSetLogicalSize(renderer, width, height);
-		    
+
 	// Initialize SDL Texture for the renderer
 	texture = SDL_CreateTexture(renderer,
 		SDL_PIXELFORMAT_RGB565,
@@ -159,6 +163,7 @@ static void open_screen(struct uae_prefs *p)
 
 	// Update the texture from the surface
 	SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
+	SDL_RenderClear(renderer);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
@@ -307,8 +312,9 @@ void flush_screen ()
 
 void black_screen_now(void)
 {
-	SDL_FillRect(screen, NULL, 0);
-	flush_screen();
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderClear(renderer);
+	SDL_RenderPresent(renderer);
 }
 
 static void graphics_subinit (void)
