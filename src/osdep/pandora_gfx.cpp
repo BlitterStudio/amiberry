@@ -17,10 +17,6 @@
 #include <png.h>
 #include "SDL.h"
 #include "SDL_image.h"
-//#ifndef ANDROID
-//#include <SDL/SDL_gfxPrimitives.h>
-//#endif
-#include "SDL_ttf.h"
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -30,26 +26,13 @@
 #include <SDL_screenkeyboard.h>
 #endif
 
-#include <linux/fb.h>
-#include <sys/ioctl.h>
-
-#ifndef OMAPFB_WAITFORVSYNC
-#define OMAPFB_WAITFORVSYNC _IOW('F', 0x20, unsigned int)
-#endif
-#ifndef OMAPFB_WAITFORVSYNC_FRAME
-#define OMAPFB_WAITFORVSYNC_FRAME _IOWR('O', 70, unsigned int)
-#endif
-
 /* SDL variable for output of emulation */
 SDL_Surface *prSDLScreen = NULL;
-static int fbdev = -1;
-static unsigned int current_vsync_frame = 0;
 
 /* Possible screen modes (x and y resolutions) */
-
 #define MAX_SCREEN_MODES 11
-static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1024, 1280, 1280, 1920 };
-static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540,  768,  600,  720,  800, 1080 };
+static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1680, 1920 };
+static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 1050, 1080 };
 
 static int red_bits, green_bits, blue_bits;
 static int red_shift, green_shift, blue_shift;
@@ -70,16 +53,7 @@ static void CreateScreenshot(void);
 static int save_thumb(char *path);
 int delay_savestate_frame = 0;
 
-#define VIDEO_FLAGS_INIT SDL_SWSURFACE|SDL_FULLSCREEN
-#ifdef ANDROIDSDL
-#define VIDEO_FLAGS VIDEO_FLAGS_INIT
-#else
-#define VIDEO_FLAGS VIDEO_FLAGS_INIT | SDL_DOUBLEBUF
-#endif
-
-
 static unsigned long next_synctime = 0;
-
 
 int graphics_setup (void)
 {
@@ -89,7 +63,6 @@ int graphics_setup (void)
 #endif
     return 1;
 }
-
 
 #ifdef WITH_LOGGING
 
@@ -137,7 +110,6 @@ void RefreshLiveInfo()
 
 #endif
 
-
 void InitAmigaVidMode(struct uae_prefs *p)
 {
     /* Initialize structure for Amiga video modes */
@@ -146,6 +118,13 @@ void InitAmigaVidMode(struct uae_prefs *p)
     gfxvidinfo.outwidth = p->gfx_size.width;
     gfxvidinfo.outheight = p->gfx_size.height;
     gfxvidinfo.rowbytes = prSDLScreen->pitch;
+#ifdef PICASSO96
+	if (screen_is_picasso)
+	{
+		gfxvidinfo.outwidth  = picasso_vidinfo.width;
+		gfxvidinfo.outheight = picasso_vidinfo.height;
+	}
+#endif
 }
 
 
@@ -156,108 +135,55 @@ void graphics_subshutdown (void)
         SDL_FreeSurface(prSDLScreen);
         prSDLScreen = NULL;
     }
-    if(fbdev != -1)
-    {
-        close(fbdev);
-        fbdev = -1;
-    }
 }
-
-
-static void CalcPandoraWidth(struct uae_prefs *p)
-{
-    int amigaWidth = p->gfx_size.width;
-    int amigaHeight = p->gfx_size.height;
-    int pandHeight = 480;
-
-    p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
-    if(amigaWidth > 600)
-        amigaWidth = amigaWidth / 2; // Hires selected, but we calc in lores
-    int pandWidth = (amigaWidth * pandHeight) / amigaHeight;
-    pandWidth = pandWidth & (~1);
-    if((pandWidth * amigaHeight) / pandHeight < amigaWidth)
-        pandWidth += 2;
-    if(pandWidth > 800)
-        pandWidth = 800;
-    p->gfx_size_fs.width = pandWidth;
-}
-
 
 static void open_screen(struct uae_prefs *p)
 {
-    char layersize[20];
-
     graphics_subshutdown();
 
-    if(!screen_is_picasso)
-    {
-        CalcPandoraWidth(p);
-
-        snprintf(layersize, 20, "%dx480", p->gfx_size_fs.width);
-        setenv("SDL_OMAP_LAYER_SIZE", layersize, 1);
-    }
-    else
-    {
-        if(picasso_vidinfo.height < 480)
-            snprintf(layersize, 20, "%dx480", picasso_vidinfo.width);
-        else
-            snprintf(layersize, 20, "%dx%d", picasso_vidinfo.width, picasso_vidinfo.height);
-        setenv("SDL_OMAP_LAYER_SIZE", layersize, 1);
-    }
-    setenv("SDL_OMAP_VSYNC", "0", 1);
+	int          width;
+	int          height;
+	
+#ifdef PICASSO96
+	if (screen_is_picasso)
+	{
+		width  = picasso_vidinfo.width;
+		height = picasso_vidinfo.height;
+	}
+	else
+#endif
+	{
+		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
+		width  = p->gfx_size.width;
+		height = p->gfx_size.height;
+	}
 
 #ifdef ANDROIDSDL
     update_onscreen();
 #endif
 
-    if(!screen_is_picasso)
+	if (prSDLScreen == NULL || prSDLScreen->w != width || prSDLScreen->h != height)
     {
-        if(prSDLScreen == NULL || prSDLScreen->w != p->gfx_size.width || prSDLScreen->h != p->gfx_size.height)
-        {
-//            prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
-	        prSDLScreen = SDL_CreateRGBSurface(0, p->gfx_size.width, p->gfx_size.height, 16, 0, 0, 0, 0);
-	        check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
+//      prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
+	    prSDLScreen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
+	    check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
 		    
-		    // make the scaled rendering look smoother.
-	        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	        SDL_RenderSetLogicalSize(renderer, p->gfx_size.width, p->gfx_size.height);
+		// make the scaled rendering look smoother.
+	    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	    SDL_RenderSetLogicalSize(renderer, width, height);
 		    
-	        // Initialize SDL Texture for the renderer
-	        //		    if (texture == nullptr)
-	        {
-		        texture = SDL_CreateTexture(renderer,
-			        SDL_PIXELFORMAT_RGB565,
-			        SDL_TEXTUREACCESS_STREAMING,
-			        p->gfx_size.width,
-			        p->gfx_size.height);
-		        check_error_sdl(texture == nullptr, "Unable to create texture");
-	        }
-        }
-    }
-    else
-    {
-//        prSDLScreen = SDL_SetVideoMode(picasso_vidinfo.width, picasso_vidinfo.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
-	    if (prSDLScreen == NULL || prSDLScreen->w != picasso_vidinfo.width || prSDLScreen->h != picasso_vidinfo.height)
+	    // Initialize SDL Texture for the renderer
+	    //		    if (texture == nullptr)
 	    {
-		    prSDLScreen = SDL_CreateRGBSurface(0, picasso_vidinfo.width, picasso_vidinfo.height, 16, 0, 0, 0, 0);
-		    check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
-	    
-		    // make the scaled rendering look smoother.
-		    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  
-		    SDL_RenderSetLogicalSize(renderer, picasso_vidinfo.width, picasso_vidinfo.height);
-	    
-		    // Initialize SDL Texture for the renderer
-//		    if (texture == nullptr)
-		    {
-			    texture = SDL_CreateTexture(renderer,
-				    SDL_PIXELFORMAT_RGB565,
-				    SDL_TEXTUREACCESS_STREAMING,
-				    picasso_vidinfo.width,
-				    picasso_vidinfo.height);
-			    check_error_sdl(texture == nullptr, "Unable to create texture");
-		    }
+		    texture = SDL_CreateTexture(renderer,
+			    SDL_PIXELFORMAT_RGB565,
+			    SDL_TEXTUREACCESS_STREAMING,
+			    width,
+			    height);
+		    check_error_sdl(texture == nullptr, "Unable to create texture");
 	    }
     }
+    
     if(prSDLScreen != NULL)
     {
         InitAmigaVidMode(p);
@@ -270,17 +196,6 @@ static void open_screen(struct uae_prefs *p)
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
-	
-//    current_vsync_frame = 0;
-//    fbdev = open("/dev/fb0", O_RDWR);
-//    if(fbdev != -1)
-//    {
-//        // Check if we have vsync with frame counter...
-//        current_vsync_frame = 0;
-//        ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
-//        if(current_vsync_frame != 0)
-//            current_vsync_frame += 2;
-//    }
 }
 
 
@@ -346,11 +261,7 @@ void unlockscr (void)
 
 void wait_for_vsync(void)
 {
-//    if(fbdev != -1)
-//    {
-//        unsigned int dummy;
-//        ioctl(fbdev, OMAPFB_WAITFORVSYNC, &dummy);
-//    }
+
 }
 
 
@@ -372,31 +283,31 @@ void flush_screen ()
     RefreshLiveInfo();
 #endif
 
-    unsigned long start = read_processor_time();
-    if(current_vsync_frame == 0)
-    {
-        // Old style for vsync and idle time calc
-        if(start < next_synctime && next_synctime - start > time_per_frame - 1000)
-            usleep((next_synctime - start) - 750);
-        ioctl(fbdev, OMAPFB_WAITFORVSYNC, &current_vsync_frame);
-    }
-    else
-    {
-        // New style for vsync and idle time calc
-        int wait_till = current_vsync_frame;
-        do
-        {
-            ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
-        }
-        while (wait_till >= current_vsync_frame);
-
-        if(wait_till + 1 != current_vsync_frame)
-        {
-            // We missed a vsync...
-            next_synctime = 0;
-        }
-        current_vsync_frame += currprefs.gfx_framerate;
-    }
+//    unsigned long start = read_processor_time();
+//    if(current_vsync_frame == 0)
+//    {
+//        // Old style for vsync and idle time calc
+//        if(start < next_synctime && next_synctime - start > time_per_frame - 1000)
+//            usleep((next_synctime - start) - 750);
+//        ioctl(fbdev, OMAPFB_WAITFORVSYNC, &current_vsync_frame);
+//    }
+//    else
+//    {
+//        // New style for vsync and idle time calc
+//        int wait_till = current_vsync_frame;
+//        do
+//        {
+//            ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
+//        }
+//        while (wait_till >= current_vsync_frame);
+//
+//        if(wait_till + 1 != current_vsync_frame)
+//        {
+//            // We missed a vsync...
+//            next_synctime = 0;
+//        }
+//        current_vsync_frame += currprefs.gfx_framerate;
+//    }
 
 // Android swapped SDL_Flip & last_synctime for fixing performance
 //    SDL_Flip(prSDLScreen);
@@ -413,15 +324,15 @@ void flush_screen ()
     if(!screen_is_picasso)
         gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
 
-    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
-        adjust_idletime(0);
-    else
-        adjust_idletime(next_synctime - start);
-
-    if (last_synctime - next_synctime > time_per_frame - 5000)
-        next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
-    else
-        next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+//    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
+//        adjust_idletime(0);
+//    else
+//        adjust_idletime(next_synctime - start);
+//
+//    if (last_synctime - next_synctime > time_per_frame - 5000)
+//        next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+//    else
+//        next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 
     init_row_map();
 }
@@ -430,13 +341,7 @@ void flush_screen ()
 void black_screen_now(void)
 {
     SDL_FillRect(prSDLScreen,NULL,0);
-//    SDL_Flip(prSDLScreen);
-	// Update the texture from the surface
-	SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
-	// Copy the texture on the renderer
-	SDL_RenderCopy(renderer, texture, NULL, NULL);
-	// Update the window surface (show the renderer)
-	SDL_RenderPresent(renderer);
+	flush_screen();
 }
 
 
@@ -724,22 +629,23 @@ bool vsync_switchmode (int hz)
 
 bool target_graphics_buffer_update (void)
 {
-  bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
+	bool rate_changed = 0;
+//  bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
   
-  if(currprefs.gfx_size.height != changed_prefs.gfx_size.height)
-  {
-    update_display(&changed_prefs);
-    rate_changed = true;
-  }
+	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+	{
+		update_display(&changed_prefs);
+		rate_changed = true;
+	}
 
-	if(rate_changed)
-  {
-  	black_screen_now();
-    fpscounter_reset();
-    time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
-  }
+	if (rate_changed)
+	{
+		black_screen_now();
+		fpscounter_reset();
+		time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
+	}
 
-  return true;
+	return true;
 }
 
 #ifdef PICASSO96
