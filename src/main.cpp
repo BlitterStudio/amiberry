@@ -641,7 +641,8 @@ static int real_main2 (int argc, TCHAR **argv)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
-	};
+	}
+	;
 
 	sdlWindow = SDL_CreateWindow("Amiberry v2",
 		SDL_WINDOWPOS_UNDEFINED,
@@ -666,57 +667,57 @@ static int real_main2 (int argc, TCHAR **argv)
 	
 	keyboard_settrans();
 
-  if (restart_config[0]) {
-	  default_prefs (&currprefs, 0);
-	  fixup_prefs (&currprefs);
-  }
+	if (restart_config[0]) {
+		default_prefs(&currprefs, 0);
+		fixup_prefs(&currprefs);
+	}
 
-  if (! graphics_setup ()) {
-	  abort();
-  }
+	if (!graphics_setup()) {
+		abort();
+	}
 
-  if (restart_config[0])
-	  parse_cmdline_and_init_file (argc, argv);
-  else
-  	currprefs = changed_prefs;
+	if (restart_config[0])
+		parse_cmdline_and_init_file(argc, argv);
+	else
+		currprefs = changed_prefs;
 
-  if (!machdep_init ()) {
-	  restart_program = 0;
-	  return -1;
-  }
+	if (!machdep_init()) {
+		restart_program = 0;
+		return -1;
+	}
 
-  if (! setup_sound ()) {
-		write_log (_T("Sound driver unavailable: Sound output disabled\n"));
-  	currprefs.produce_sound = 0;
-  }
+	if (!setup_sound()) {
+		write_log(_T("Sound driver unavailable: Sound output disabled\n"));
+		currprefs.produce_sound = 0;
+	}
 
-  inputdevice_init();
+	inputdevice_init();
 
-  changed_prefs = currprefs;
+	changed_prefs = currprefs;
 
-  no_gui = ! currprefs.start_gui;
-  if (restart_program == 2)
-  	no_gui = 1;
-  else if (restart_program == 3)
-	  no_gui = 0;
-  restart_program = 0;
-  if (! no_gui) {
-	  int err = gui_init ();
-	  currprefs = changed_prefs;
-	  if (err == -1) {
-			write_log (_T("Failed to initialize the GUI\n"));
-      return -1;
-	  } else if (err == -2) {
-      return 1;
-	  }
-  }
-  else
-  {
-  	setCpuSpeed();
-    update_display(&currprefs);
-  }
+	no_gui = !currprefs.start_gui;
+	if (restart_program == 2)
+		no_gui = 1;
+	else if (restart_program == 3)
+		no_gui = 0;
+	restart_program = 0;
+	if (!no_gui) {
+		int err = gui_init();
+		currprefs = changed_prefs;
+		if (err == -1) {
+			write_log(_T("Failed to initialize the GUI\n"));
+			return -1;
+		}
+		else if (err == -2) {
+			return 1;
+		}
+	}
+	else
+	{
+		update_display(&currprefs);
+	}
 
-	memset (&gui_data, 0, sizeof gui_data);
+	memset(&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
 	gui_data.hd = -1;
 
@@ -724,41 +725,41 @@ static int real_main2 (int argc, TCHAR **argv)
 	picasso_reset ();
 #endif
 
-  fixup_prefs (&currprefs);
-  changed_prefs = currprefs;
-	target_run ();
+	fixup_prefs(&currprefs);
+	changed_prefs = currprefs;
+	target_run();
   /* force sound settings change */
-  currprefs.produce_sound = 0;
+	currprefs.produce_sound = 0;
 
-  keybuf_init (); /* Must come after init_joystick */
+	keybuf_init(); /* Must come after init_joystick */
 
-	memory_hardreset (2);
-  memory_reset ();
+	memory_hardreset(2);
+	memory_reset();
 
 #ifdef AUTOCONFIG
-  native2amiga_install ();
+	native2amiga_install();
 #endif
 
-  custom_init (); /* Must come after memory_init */
-  DISK_init ();
+	custom_init(); /* Must come after memory_init */
+	DISK_init();
 
-  reset_frame_rate_hack ();
-  init_m68k(); /* must come after reset_frame_rate_hack (); */
+	reset_frame_rate_hack();
+	init_m68k(); /* must come after reset_frame_rate_hack (); */
 
-  gui_update ();
+	gui_update();
 
-  if (graphics_init (true)) {
+	if (graphics_init(true)) {
 
-    if(!init_audio ()) {
-  	  if (sound_available && currprefs.produce_sound > 1) {
-				write_log (_T("Sound driver unavailable: Sound output disabled\n"));
-	    }
-		  currprefs.produce_sound = 0;
-    }
+		if (!init_audio()) {
+			if (sound_available && currprefs.produce_sound > 1) {
+				write_log(_T("Sound driver unavailable: Sound output disabled\n"));
+			}
+			currprefs.produce_sound = 0;
+		}
 		gui_flicker_led(LED_POWER, 0, 1);
-		start_program ();
+		start_program();
 	}
-  return 0;
+	return 0;
 }
 
 void real_main (int argc, TCHAR **argv)

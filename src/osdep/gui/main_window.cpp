@@ -128,44 +128,6 @@ void RegisterRefreshFunc(void (*func)(void))
 namespace sdl
 {
 	void gui_init()
-//	{
-//		//-------------------------------------------------
-//		// Set layer for GUI screen
-//		//-------------------------------------------------
-//		char tmp[20];
-//		snprintf(tmp, 20, "%dx%d", GUI_WIDTH, GUI_HEIGHT);
-//		setenv("SDL_OMAP_LAYER_SIZE", tmp, 1);
-//		snprintf(tmp, 20, "0,0,0,0");
-//		setenv("SDL_OMAP_BORDER_CUT", tmp, 1);
-//
-//		//-------------------------------------------------
-//		// Create new screen for GUI
-//		//-------------------------------------------------
-//	#if defined (RASPBERRY)
-//		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo ();
-//#ifdef DEBUG
-//		printf("Current resolution: %d x %d %d bpp\n",videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel);
-//#endif
-//		gui_screen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
-//	#else
-//		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE);
-//	#endif
-//		SDL_EnableUNICODE(1);
-//		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-//		SDL_ShowCursor(SDL_ENABLE);
-//
-//		//-------------------------------------------------
-//		// Create helpers for guisan
-//		//-------------------------------------------------
-//		gui_imageLoader = new gcn::SDLImageLoader();
-//		gcn::Image::setImageLoader(gui_imageLoader);
-//		gui_graphics = new gcn::SDLGraphics();
-//		gui_graphics->setTarget(gui_screen);
-//		gui_input = new gcn::SDLInput();
-//		uae_gui = new gcn::Gui();
-//		uae_gui->setGraphics(gui_graphics);
-//		uae_gui->setInput(gui_input);
-//	}
 	{
 		//-------------------------------------------------
 		// Create new screen for GUI
@@ -308,8 +270,6 @@ namespace sdl
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
 			// Finally we update the screen.
-//			wait_for_vsync();
-//			SDL_Flip(gui_screen);
 			
 			// Update the texture from the surface
 			SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
@@ -528,7 +488,6 @@ void gui_init()
     //--------------------------------------------------
     gui_top->add(cmdReset, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
     gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
-//    gui_top->add(cmdRestart, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
     gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
     gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);

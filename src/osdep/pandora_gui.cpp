@@ -465,7 +465,7 @@ int gui_init (void)
 	if (quit_program == UAE_QUIT)
 		ret = -2; // Quit without start of emulator
 
-	setCpuSpeed();
+//	setCpuSpeed();
 	update_display(&changed_prefs);
 
 	after_leave_gui();
@@ -476,7 +476,7 @@ int gui_init (void)
 
 void gui_exit(void)
 {
-	resetCpuSpeed();
+//	resetCpuSpeed();
 	sync();
 	pandora_stop_sound();
 	saveAdfDir();
@@ -544,34 +544,30 @@ void gui_display (int shortcut)
 {
 	if (quit_program != 0)
 		return;
-	emulating=1;
+	emulating = 1;
 	pause_sound();
-  blkdev_entergui();
+	blkdev_entergui();
 
-  if(lstAvailableROMs.size() == 0)
-    RescanROMs();
-  graphics_subshutdown();
-  prefs_to_gui();
-  run_gui();
-  gui_to_prefs();
-	setCpuSpeed();
-//	if(quit_program)
-//		screen_is_picasso = 0;
-
-  update_display(&changed_prefs);
+	if (lstAvailableROMs.size() == 0)
+		RescanROMs();
+	graphics_subshutdown();
+	prefs_to_gui();
+	run_gui();
+	gui_to_prefs();
+	update_display(&changed_prefs);
 
 	/* Clear menu garbage at the bottom of the screen */
 	black_screen_now();
 	reset_sound();
 	resume_sound();
-  blkdev_exitgui();
+	blkdev_exitgui();
 
-  after_leave_gui();
+	after_leave_gui();
 
-  gui_update ();
+	gui_update();
 
-  gui_purge_events();
-  fpscounter_reset();
+	gui_purge_events();
+	fpscounter_reset();
 }
 
   
@@ -589,7 +585,6 @@ extern char keyboard_type;
 
 void gui_handle_events (void)
 {
-//	Uint8 *keystate = SDL_GetKeyState(NULL);
 	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
 
 	if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_MENU]))

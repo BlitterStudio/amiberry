@@ -71,10 +71,6 @@ static char rom_path[MAX_DPATH];
 static char rp9_path[MAX_DPATH];
 char last_loaded_config[MAX_DPATH] = { '\0' };
 
-static bool cpuSpeedChanged = false;
-static int lastCpuSpeed = 600;
-int defaultCpuSpeed = 600;
-
 int max_uae_width;
 int max_uae_height;
 
@@ -255,7 +251,6 @@ void target_default_options (struct uae_prefs *p, int type)
 {
     p->pandora_horizontal_offset = 0;
     p->pandora_vertical_offset = 0;
-    p->pandora_cpu_speed = defaultCpuSpeed;
     p->pandora_hide_idle_led = 0;
 
     p->pandora_tapDelay = 10;
@@ -685,78 +680,6 @@ bool SetVSyncRate(int hz)
     return false;
 }
 
-void setCpuSpeed()
-{
-#ifdef PANDORA_SPECIFIC
-    char speedCmd[128];
-
-    currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed;
-
-    if(currprefs.pandora_cpu_speed != lastCpuSpeed)
-    {
-        snprintf((char*)speedCmd, 128, "unset DISPLAY; echo y | sudo -n /usr/pandora/scripts/op_cpuspeed.sh %d", currprefs.pandora_cpu_speed);
-        system(speedCmd);
-        lastCpuSpeed = currprefs.pandora_cpu_speed;
-        cpuSpeedChanged = true;
-    }
-    if(changed_prefs.ntscmode != currprefs.ntscmode)
-    {
-        if(changed_prefs.ntscmode)
-            SetVSyncRate(60);
-        else
-            SetVSyncRate(50);
-    }
-#else
-    return;
-#endif
-}
-
-
-int getDefaultCpuSpeed(void)
-{
-#ifdef PANDORA_SPECIFIC
-    int speed = 600;
-    FILE* f = fopen ("/etc/pandora/conf/cpu.conf", "rt");
-    if(f)
-    {
-        char line[128];
-        for(int i=0; i<6; ++i)
-        {
-            fscanf(f, "%s\n", &line);
-            if(strncmp(line, "default:", 8) == 0)
-            {
-                int value = 0;
-                sscanf(line, "default:%d", &value);
-                if(value > 500 && value < 1200)
-                {
-                    speed = value;
-                }
-            }
-        }
-        fclose(f);
-    }
-    return speed;
-#else
-    return 0;
-#endif
-}
-
-
-void resetCpuSpeed(void)
-{
-#ifdef PANDORA_SPECIFIC
-    if(cpuSpeedChanged)
-    {
-        lastCpuSpeed = defaultCpuSpeed - 10;
-        currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed = defaultCpuSpeed;
-        setCpuSpeed();
-    }
-#else
-    return;
-#endif
-}
-
-
 void target_reset (void)
 {
 }
@@ -787,8 +710,6 @@ int main (int argc, char *argv[])
 	max_uae_width = 768;
 	max_uae_height = 270;
 	
-    defaultCpuSpeed = getDefaultCpuSpeed();
-
     // Get startup path
     getcwd(start_path_data, MAX_DPATH);
     loadAdfDir();
@@ -850,9 +771,6 @@ int main (int argc, char *argv[])
 
     logging_cleanup();
 	
-//  printf("Threads at exit:\n");
-//  dbg_list_threads();
-
     return 0;
 }
 

@@ -273,31 +273,30 @@ static int get_joystick_num (void)
 static int init_joystick (void)
 {
   //This function is called too many times... we can filter if number of joy is good...
-  if (nr_joysticks == SDL_NumJoysticks ())
-    return 1;
+	if (nr_joysticks == SDL_NumJoysticks())
+		return 1;
 
-  nr_joysticks = SDL_NumJoysticks ();
-  if (nr_joysticks > MAX_INPUT_DEVICES)
-    nr_joysticks = MAX_INPUT_DEVICES;
-  for (int cpt; cpt < nr_joysticks; cpt++)
-  {
-    Joysticktable[cpt] = SDL_JoystickOpen (cpt);
-//    strncpy(JoystickName[cpt],SDL_JoystickName(cpt),80);
-	  strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), 80);
-    printf("Joystick %i : %s\n",cpt,JoystickName[cpt]);
-    printf("    Buttons: %i Axis: %i Hats: %i\n",SDL_JoystickNumButtons(Joysticktable[cpt]),SDL_JoystickNumAxes(Joysticktable[cpt]),SDL_JoystickNumHats(Joysticktable[cpt]));
+	nr_joysticks = SDL_NumJoysticks();
+	if (nr_joysticks > MAX_INPUT_DEVICES)
+		nr_joysticks = MAX_INPUT_DEVICES;
+	for (int cpt; cpt < nr_joysticks; cpt++)
+	{
+		Joysticktable[cpt] = SDL_JoystickOpen(cpt);
+		strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), 80);
+		printf("Joystick %i : %s\n", cpt, JoystickName[cpt]);
+		printf("    Buttons: %i Axis: %i Hats: %i\n", SDL_JoystickNumButtons(Joysticktable[cpt]), SDL_JoystickNumAxes(Joysticktable[cpt]), SDL_JoystickNumHats(Joysticktable[cpt]));
 
-    if (strcmp(JoystickName[cpt],"Sony PLAYSTATION(R)3 Controller") == 0 ||
-		strcmp(JoystickName[cpt],"PLAYSTATION(R)3 Controller") == 0)
-    {
-      printf("    Found a dualshock controller: Activating workaround.\n");
-      IsPS3Controller[cpt] = 1;
-    }
-    else
-      IsPS3Controller[cpt] = 0;
-  }
+		if (strcmp(JoystickName[cpt], "Sony PLAYSTATION(R)3 Controller") == 0 ||
+			strcmp(JoystickName[cpt], "PLAYSTATION(R)3 Controller") == 0)
+		{
+			printf("    Found a dualshock controller: Activating workaround.\n");
+			IsPS3Controller[cpt] = 1;
+		}
+		else
+			IsPS3Controller[cpt] = 0;
+	}
 
-  return 1;
+	return 1;
 }
 
 static void close_joystick (void)
@@ -422,7 +421,6 @@ static void read_joystick (void)
   // First handle fake joystick from pandora...
   if(currprefs.jports[joyid].id == JSEM_JOYS)
   {
-////  	Uint8 *keystate = SDL_GetKeyState(NULL);
 //	  const Uint8 *keystate = SDL_GetKeyboardState(NULL);
 //    
 //    if(!keystate[VK_R])

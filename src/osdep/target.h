@@ -27,8 +27,8 @@ void wait_for_vsync(void);
 
 void saveAdfDir(void);
 bool SetVSyncRate(int hz);
-void setCpuSpeed(void);
-void resetCpuSpeed(void);
+//void setCpuSpeed(void);
+//void resetCpuSpeed(void);
 void update_display(struct uae_prefs *);
 void black_screen_now(void);
 void graphics_subshutdown (void);
