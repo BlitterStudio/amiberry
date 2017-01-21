@@ -94,9 +94,9 @@ static struct PicassoResolution *newmodes = NULL;
 
 static int picasso_convert, host_mode;
 
-/* These are the maximum resolutions... They are filled in by GetSupportedResolutions() */
-/* have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
-/* data here. */
+/* These are the maximum resolutions... They are filled in by GetSupportedResolutions()
+ have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
+ data here. */
 static struct ScreenResolution planar = { 320, 240 };
 static struct ScreenResolution chunky = { 640, 480 };
 static struct ScreenResolution hicolour = { 640, 480 };
@@ -1973,64 +1973,67 @@ FillRect:
 * d5:	UBYTE Mask
 * d7:	uae_u32 RGBFormat
 ***********************************************************/
-__attribute__((optimize("O2"))) static uae_u32 REGPARAM2 picasso_FillRect (TrapContext *ctx)
+//__attribute__((optimize("O2"))) is needed otherwise this crashes with O3!
+__attribute__((optimize("O2"))) static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 {
-  uaecptr renderinfo = m68k_areg (regs, 1);
-  uae_u32 X = (uae_u16)m68k_dreg (regs, 0);
-  uae_u32 Y = (uae_u16)m68k_dreg (regs, 1);
-  uae_u32 Width = (uae_u16)m68k_dreg (regs, 2);
-  uae_u32 Height = (uae_u16)m68k_dreg (regs, 3);
-  uae_u32 Pen = m68k_dreg (regs, 4);
-  uae_u8 Mask = (uae_u8)m68k_dreg (regs, 5);
-  RGBFTYPE RGBFormat = (RGBFTYPE) m68k_dreg (regs, 7);
-  uae_u8 *oldstart;
-  int Bpp;
-  struct RenderInfo ri;
-  uae_u32 result = 0;
+	uaecptr renderinfo = m68k_areg(regs, 1);
+	uae_u32 X = (uae_u16)m68k_dreg(regs, 0);
+	uae_u32 Y = (uae_u16)m68k_dreg(regs, 1);
+	uae_u32 Width = (uae_u16)m68k_dreg(regs, 2);
+	uae_u32 Height = (uae_u16)m68k_dreg(regs, 3);
+	uae_u32 Pen = m68k_dreg(regs, 4);
+	uae_u8 Mask = (uae_u8)m68k_dreg(regs, 5);
+	RGBFTYPE RGBFormat = (RGBFTYPE) m68k_dreg(regs, 7);
+	uae_u8 *oldstart;
+	int Bpp;
+	struct RenderInfo ri;
+	uae_u32 result = 0;
 
-  if (NOBLITTER)
-  	return 0;
-  if (CopyRenderInfoStructureA2U (renderinfo, &ri) && Y != 0xFFFF) {
-    Bpp = GetBytesPerPixel (RGBFormat);
+	if (NOBLITTER)
+		return 0;
+	if (CopyRenderInfoStructureA2U(renderinfo, &ri) && Y != 0xFFFF) {
+		Bpp = GetBytesPerPixel(RGBFormat);
 
 		P96TRACE((_T("FillRect(%d, %d, %d, %d) Pen 0x%x BPP %d BPR %d Mask 0x%x\n"),
 	    X, Y, Width, Height, Pen, Bpp, ri.BytesPerRow, Mask));
 
-	  if (Bpp > 1)
-	    Mask = 0xFF;
+		if (Bpp > 1)
+			Mask = 0xFF;
 
-	  if (Mask == 0xFF) {
+		if (Mask == 0xFF) {
 
-	    /* Do the fill-rect in the frame-buffer */
-	    do_fillrect_frame_buffer (&ri, X, Y, Width, Height, Pen, Bpp);
-	    result = 1;
+			    /* Do the fill-rect in the frame-buffer */
+			do_fillrect_frame_buffer(&ri, X, Y, Width, Height, Pen, Bpp);
+			result = 1;
 
-  	} else {
+		}
+		else {
         
-	    /* We get here only if Mask != 0xFF */
-	    if (Bpp != 1) {
-		    write_log (_T("WARNING - FillRect() has unhandled mask 0x%x with Bpp %d. Using fall-back routine.\n"), Mask, Bpp);
-	    } else {
-		    Pen &= Mask;
-		    Mask = ~Mask;
-		    oldstart = ri.Memory + Y * ri.BytesPerRow + X * Bpp;
-		    {
-  		    uae_u8 *start = oldstart;
-  		    uae_u8 *end = start + Height * ri.BytesPerRow;
-  		    for (; start != end; start += ri.BytesPerRow) {
-      			uae_u8 *p = start;
-      			unsigned long cols;
-      			for (cols = 0; cols < Width; cols++) {
-    			    uae_u32 tmpval = do_get_mem_byte (p + cols) & Mask;
-     			    do_put_mem_byte (p + cols, (uae_u8)(Pen | tmpval));
-      			}
-  		    }
-  		  }
-  		  result = 1;
-  	  }
-  	}
-  }
-  return result;
+			/* We get here only if Mask != 0xFF */
+			if (Bpp != 1) {
+				write_log(_T("WARNING - FillRect() has unhandled mask 0x%x with Bpp %d. Using fall-back routine.\n"), Mask, Bpp);
+			}
+			else {
+				Pen &= Mask;
+				Mask = ~Mask;
+				oldstart = ri.Memory + Y * ri.BytesPerRow + X * Bpp;
+				{
+					uae_u8 *start = oldstart;
+					uae_u8 *end = start + Height * ri.BytesPerRow;
+					for (; start != end; start += ri.BytesPerRow) {
+						uae_u8 *p = start;
+						unsigned long cols;
+						for (cols = 0; cols < Width; cols++) {
+							uae_u32 tmpval = do_get_mem_byte(p + cols) & Mask;
+							do_put_mem_byte(p + cols, (uae_u8)(Pen | tmpval));
+						}
+					}
+				}
+				result = 1;
+			}
+		}
+	}
+	return result;
 }
 
 /*
