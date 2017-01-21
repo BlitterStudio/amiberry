@@ -4,7 +4,7 @@
 #include "uae.h"
 #include "options.h"
 #include "gui.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "xwin.h"
@@ -18,16 +18,8 @@
 #include "SDL.h"
 #include "SDL_image.h"
 
-#ifdef ANDROID
-#include <android/log.h>
-#endif
-
-#ifdef ANDROIDSDL
-#include <SDL_screenkeyboard.h>
-#endif
-
 /* SDL variable for output of emulation */
-SDL_Surface *prSDLScreen = NULL;
+SDL_Surface *screen = NULL;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 11
@@ -114,10 +106,10 @@ void InitAmigaVidMode(struct uae_prefs *p)
 {
     /* Initialize structure for Amiga video modes */
     gfxvidinfo.pixbytes = 2;
-    gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
+	gfxvidinfo.bufmem = (uae_u8 *)screen->pixels;
     gfxvidinfo.outwidth = p->gfx_size.width;
     gfxvidinfo.outheight = p->gfx_size.height;
-    gfxvidinfo.rowbytes = prSDLScreen->pitch;
+	gfxvidinfo.rowbytes = screen->pitch;
 #ifdef PICASSO96
 	if (screen_is_picasso)
 	{
@@ -130,17 +122,15 @@ void InitAmigaVidMode(struct uae_prefs *p)
 
 void graphics_subshutdown (void)
 {
-    if(prSDLScreen != NULL)
+	if (screen != NULL)
     {
-        SDL_FreeSurface(prSDLScreen);
-        prSDLScreen = NULL;
+	    SDL_FreeSurface(screen);
+	    screen = NULL;
     }
 }
 
 static void open_screen(struct uae_prefs *p)
 {
-    graphics_subshutdown();
-
 	int          width;
 	int          height;
 	
@@ -162,36 +152,35 @@ static void open_screen(struct uae_prefs *p)
     update_onscreen();
 #endif
 
-	if (prSDLScreen == NULL || prSDLScreen->w != width || prSDLScreen->h != height)
+	if (screen == NULL || screen->w != width || screen->h != height)
     {
-//      prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
-	    prSDLScreen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
-	    check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
+	    graphics_subshutdown();
+	    screen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
+	    check_error_sdl(screen == nullptr, "Unable to create a surface");
 		    
 		// make the scaled rendering look smoother.
 	    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	    SDL_RenderSetLogicalSize(renderer, width, height);
 		    
 	    // Initialize SDL Texture for the renderer
-	    //		    if (texture == nullptr)
-	    {
-		    texture = SDL_CreateTexture(renderer,
-			    SDL_PIXELFORMAT_RGB565,
-			    SDL_TEXTUREACCESS_STREAMING,
-			    width,
-			    height);
-		    check_error_sdl(texture == nullptr, "Unable to create texture");
-	    }
+		texture = SDL_CreateTexture(renderer,
+			SDL_PIXELFORMAT_RGB565,
+			SDL_TEXTUREACCESS_STREAMING,
+			width,
+			height);
+		check_error_sdl(texture == nullptr, "Unable to create texture");
     }
     
-    if(prSDLScreen != NULL)
+	if (screen != NULL)
     {
         InitAmigaVidMode(p);
         init_row_map();
     }
-
+	
 	// Update the texture from the surface
-	SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
+	SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
+	// Wipe out the existing video framebuffer
+//	SDL_RenderClear(renderer);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
@@ -248,14 +237,14 @@ int check_prefs_changed_gfx (void)
 
 int lockscr (void)
 {
-    SDL_LockSurface(prSDLScreen);
+	SDL_LockSurface(screen);
     return 1;
 }
 
 
 void unlockscr (void)
 {
-    SDL_UnlockSurface(prSDLScreen);
+	SDL_UnlockSurface(screen);
 }
 
 
@@ -309,11 +298,10 @@ void flush_screen ()
 //        current_vsync_frame += currprefs.gfx_framerate;
 //    }
 
-// Android swapped SDL_Flip & last_synctime for fixing performance
-//    SDL_Flip(prSDLScreen);
-	
 	// Update the texture from the surface
-	SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
+	SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
+	// Wipe out the existing video framebuffer
+//	SDL_RenderClear(renderer);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
@@ -322,7 +310,7 @@ void flush_screen ()
     last_synctime = read_processor_time();
 
     if(!screen_is_picasso)
-        gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
+		gfxvidinfo.bufmem = (uae_u8 *)screen->pixels;
 
 //    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
 //        adjust_idletime(0);
@@ -340,23 +328,24 @@ void flush_screen ()
 
 void black_screen_now(void)
 {
-    SDL_FillRect(prSDLScreen,NULL,0);
+	SDL_FillRect(screen, NULL, 0);
 	flush_screen();
 }
 
 
 static void graphics_subinit (void)
 {
-    if (prSDLScreen == NULL)
+	if (screen == NULL)
     {
         fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
         return;
     }
     else
     {
-//        SDL_Flip(prSDLScreen);
 	    // Update the texture from the surface
-	    SDL_UpdateTexture(texture, NULL, prSDLScreen->pixels, prSDLScreen->pitch);
+	    SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
+	    // Wipe out the existing video framebuffer
+//	    SDL_RenderClear(renderer);
 	    // Copy the texture on the renderer
 	    SDL_RenderCopy(renderer, texture, NULL, NULL);
 	    // Update the window surface (show the renderer)
@@ -401,12 +390,12 @@ static int init_colors (void)
     int red_shift, green_shift, blue_shift;
 
     /* Truecolor: */
-    red_bits = bitsInMask(prSDLScreen->format->Rmask);
-    green_bits = bitsInMask(prSDLScreen->format->Gmask);
-    blue_bits = bitsInMask(prSDLScreen->format->Bmask);
-    red_shift = maskShift(prSDLScreen->format->Rmask);
-    green_shift = maskShift(prSDLScreen->format->Gmask);
-    blue_shift = maskShift(prSDLScreen->format->Bmask);
+	red_bits = bitsInMask(screen->format->Rmask);
+	green_bits = bitsInMask(screen->format->Gmask);
+	blue_bits = bitsInMask(screen->format->Bmask);
+	red_shift = maskShift(screen->format->Rmask);
+	green_shift = maskShift(screen->format->Gmask);
+	blue_shift = maskShift(screen->format->Bmask);
     alloc_colors64k (red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, 0);
     notice_new_xcolors();
     for (i = 0; i < 4096; i++)
@@ -476,12 +465,12 @@ void graphics_leave (void)
 }
 
 
-#define  systemRedShift      (prSDLScreen->format->Rshift)
-#define  systemGreenShift    (prSDLScreen->format->Gshift)
-#define  systemBlueShift     (prSDLScreen->format->Bshift)
-#define  systemRedMask       (prSDLScreen->format->Rmask)
-#define  systemGreenMask     (prSDLScreen->format->Gmask)
-#define  systemBlueMask      (prSDLScreen->format->Bmask)
+#define  systemRedShift      (screen->format->Rshift)
+#define  systemGreenShift    (screen->format->Gshift)
+#define  systemBlueShift     (screen->format->Bshift)
+#define  systemRedMask       (screen->format->Rmask)
+#define  systemGreenMask     (screen->format->Gmask)
+#define  systemBlueMask      (screen->format->Bmask)
 
 static int save_png(SDL_Surface* surface, char *path)
 {
@@ -566,10 +555,17 @@ static void CreateScreenshot(void)
         current_screenshot = NULL;
     }
 
-    w=prSDLScreen->w;
-    h=prSDLScreen->h;
-    current_screenshot = SDL_CreateRGBSurfaceFrom(prSDLScreen->pixels, w, h, prSDLScreen->format->BitsPerPixel, prSDLScreen->pitch,
-                         prSDLScreen->format->Rmask, prSDLScreen->format->Gmask, prSDLScreen->format->Bmask, prSDLScreen->format->Amask);
+	w = screen->w;
+	h = screen->h;
+	current_screenshot = SDL_CreateRGBSurfaceFrom(screen->pixels,
+		w,
+		h,
+		screen->format->BitsPerPixel,
+		screen->pitch,
+		screen->format->Rmask,
+		screen->format->Gmask,
+		screen->format->Bmask,
+		screen->format->Amask);
 }
 
 
@@ -630,8 +626,7 @@ bool vsync_switchmode (int hz)
 bool target_graphics_buffer_update (void)
 {
 	bool rate_changed = 0;
-//  bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
-  
+
 	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
 	{
 		update_display(&changed_prefs);
@@ -649,7 +644,6 @@ bool target_graphics_buffer_update (void)
 }
 
 #ifdef PICASSO96
-
 
 int picasso_palette (void)
 {
@@ -786,7 +780,7 @@ void gfx_set_picasso_state (int on)
 
     screen_is_picasso = on;
     open_screen(&currprefs);
-    picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+	picasso_vidinfo.rowbytes = screen->pitch;
 }
 
 void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
@@ -808,21 +802,21 @@ void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgb
     if (screen_is_picasso)
     {
         open_screen(&currprefs);
-        picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+	    picasso_vidinfo.rowbytes = screen->pitch;
         picasso_vidinfo.rgbformat = RGBFB_R5G6B5;
     }
 }
 
 uae_u8 *gfx_lock_picasso (void)
 {
-    SDL_LockSurface(prSDLScreen);
-    picasso_vidinfo.rowbytes = prSDLScreen->pitch;
-    return (uae_u8 *)prSDLScreen->pixels;
+	SDL_LockSurface(screen);
+	picasso_vidinfo.rowbytes = screen->pitch;
+	return (uae_u8 *)screen->pixels;
 }
 
 void gfx_unlock_picasso (void)
 {
-    SDL_UnlockSurface(prSDLScreen);
+	SDL_UnlockSurface(screen);
 }
 
 #endif // PICASSO96

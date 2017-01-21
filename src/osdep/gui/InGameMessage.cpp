@@ -13,7 +13,7 @@
 #include "gui_handling.h"
 #include "pandora_gfx.h"
 
-extern SDL_Surface *prSDLScreen;
+extern SDL_Surface *screen;
 extern void flush_screen();
 
 static int msg_done = 0;
@@ -45,7 +45,7 @@ void InGameMessage(const char *msg)
 	int msgHeight = 100;
 
 	msg_graphics = new gcn::SDLGraphics();
-	msg_graphics->setTarget(prSDLScreen);
+	msg_graphics->setTarget(screen);
 	msg_input = new gcn::SDLInput();
 	msg_gui = new gcn::Gui();
 	msg_gui->setGraphics(msg_graphics);
@@ -56,7 +56,7 @@ void InGameMessage(const char *msg)
 	msg_baseCol.b = 208;
 
 	msg_top = new gcn::Container();
-	msg_top->setDimension(gcn::Rectangle((prSDLScreen->w - msgWidth) / 2, (prSDLScreen->h - msgHeight) / 2, msgWidth, msgHeight));
+	msg_top->setDimension(gcn::Rectangle((screen->w - msgWidth) / 2, (screen->h - msgHeight) / 2, msgWidth, msgHeight));
 	msg_top->setBaseColor(msg_baseCol);
 	msg_gui->setTop(msg_top);
 

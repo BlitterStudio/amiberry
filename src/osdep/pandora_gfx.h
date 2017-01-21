@@ -4,7 +4,7 @@
 extern SDL_Window* sdlWindow;
 extern SDL_Renderer* renderer;
 extern SDL_Texture *texture;
-extern SDL_Surface *prSDLScreen;
+extern SDL_Surface *screen;
 
 extern void check_error_sdl(bool check, const char* message);
 #endif
