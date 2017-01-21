@@ -215,7 +215,7 @@ static void open_screen(struct uae_prefs *p)
         if(prSDLScreen == NULL || prSDLScreen->w != p->gfx_size.width || prSDLScreen->h != p->gfx_size.height)
         {
 //            prSDLScreen = SDL_SetVideoMode(p->gfx_size.width, p->gfx_size.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
-	        prSDLScreen = SDL_CreateRGBSurface(0, p->gfx_size.width, p->gfx_size.height, 32, 0, 0, 0, 0);
+	        prSDLScreen = SDL_CreateRGBSurface(0, p->gfx_size.width, p->gfx_size.height, 16, 0, 0, 0, 0);
 	        check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
 		    
 		    // make the scaled rendering look smoother.
@@ -239,7 +239,7 @@ static void open_screen(struct uae_prefs *p)
 //        prSDLScreen = SDL_SetVideoMode(picasso_vidinfo.width, picasso_vidinfo.height, 16, SDL_HWSURFACE|SDL_FULLSCREEN|SDL_DOUBLEBUF);
 	    if (prSDLScreen == NULL || prSDLScreen->w != picasso_vidinfo.width || prSDLScreen->h != picasso_vidinfo.height)
 	    {
-		    prSDLScreen = SDL_CreateRGBSurface(0, picasso_vidinfo.width, picasso_vidinfo.height, 32, 0, 0, 0, 0);
+		    prSDLScreen = SDL_CreateRGBSurface(0, picasso_vidinfo.width, picasso_vidinfo.height, 16, 0, 0, 0, 0);
 		    check_error_sdl(prSDLScreen == nullptr, "Unable to create a surface");
 	    
 		    // make the scaled rendering look smoother.

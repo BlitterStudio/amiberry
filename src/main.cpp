@@ -658,7 +658,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	SDL_RenderSetLogicalSize(renderer, 800, 480);
 		
 	texture = SDL_CreateTexture(renderer,
-		SDL_PIXELFORMAT_ARGB8888,
+		SDL_PIXELFORMAT_RGB565,
 		SDL_TEXTUREACCESS_STREAMING,
 		800,
 		480);
