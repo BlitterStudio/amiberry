@@ -226,7 +226,7 @@ static void open_screen(struct uae_prefs *p)
 	        //		    if (texture == nullptr)
 	        {
 		        texture = SDL_CreateTexture(renderer,
-			        SDL_PIXELFORMAT_ARGB8888,
+			        SDL_PIXELFORMAT_RGB565,
 			        SDL_TEXTUREACCESS_STREAMING,
 			        p->gfx_size.width,
 			        p->gfx_size.height);
@@ -250,7 +250,7 @@ static void open_screen(struct uae_prefs *p)
 //		    if (texture == nullptr)
 		    {
 			    texture = SDL_CreateTexture(renderer,
-				    SDL_PIXELFORMAT_ARGB8888,
+				    SDL_PIXELFORMAT_RGB565,
 				    SDL_TEXTUREACCESS_STREAMING,
 				    picasso_vidinfo.width,
 				    picasso_vidinfo.height);
@@ -519,7 +519,7 @@ static int get_display_depth (void)
 //    const SDL_VideoInfo *vid_info;
 	
 //    int depth = 0;
-	int depth = 32;
+	int depth = 16;
 
 //    if ((vid_info = SDL_GetVideoInfo()))
 //    {
