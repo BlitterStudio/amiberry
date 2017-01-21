@@ -70,8 +70,6 @@ bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
    coordinates have a lower resolution (i.e. we're shrinking the image).  */
 static int res_shift;
 
-extern SDL_Surface *prSDLScreen;
-
 /* Lookup tables for dual playfields.  The dblpf_*1 versions are for the case
    that playfield 1 has the priority, dbplpf_*2 are used if playfield 2 has
    priority.  If we need an array for non-dual playfield mode, it has no number.  */
@@ -1662,13 +1660,30 @@ static void pfield_doline (int lineno)
 
 void init_row_map (void)
 {
-  int i, j;
+	static uae_u8 *oldbufmem;
+	static int oldheight, oldpitch;
+	int i, j;
 
-  j = 0;  
-  for (i = gfxvidinfo.outheight; i < MAX_VIDHEIGHT + 1; i++)
-    row_map[i] = row_tmp;
-  for (i = 0; i < gfxvidinfo.outheight; i++, j += gfxvidinfo.rowbytes)
+//	if (gfxvidinfo.outheight > MAX_VIDHEIGHT)
+//	{
+//		write_log(_T("Resolution too hight, aborting\n"));
+//		abort();
+//	}
+	
+	if (oldbufmem && oldbufmem == gfxvidinfo.bufmem &&
+		oldheight == gfxvidinfo.outheight &&
+		oldpitch == gfxvidinfo.rowbytes)
+		return;
+	
+	j = oldheight == 0 ? MAX_VIDHEIGHT : oldheight;  
+	for (i = gfxvidinfo.outheight; i < MAX_VIDHEIGHT + 1 && i < j + 1; i++)
+		row_map[i] = row_tmp;
+	for (i = 0, j=0; i < gfxvidinfo.outheight; i++, j += gfxvidinfo.rowbytes)
 		row_map[i] = gfxvidinfo.bufmem + j;
+	
+	oldbufmem = gfxvidinfo.bufmem;
+	oldheight = gfxvidinfo.outheight;
+	oldpitch = gfxvidinfo.rowbytes;
 }
 
 static void init_aspect_maps (void)
