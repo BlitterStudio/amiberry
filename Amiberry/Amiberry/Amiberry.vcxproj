@@ -49,7 +49,7 @@
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
@@ -83,7 +83,7 @@
       <InlineFunctions>true</InlineFunctions>
     </ClCompile>
     <Link>
-      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
@@ -101,7 +101,7 @@
       <InlineFunctions>true</InlineFunctions>
     </ClCompile>
     <Link>
-      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
