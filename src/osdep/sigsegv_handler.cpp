@@ -37,7 +37,7 @@
 #include <signal.h>
 #include <dlfcn.h>
 #include <execinfo.h>
-#include <SDL.h>
+#include "SDL.h"
 
 #define DEBUG 0
 #include "debug.h"

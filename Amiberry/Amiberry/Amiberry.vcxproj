@@ -51,7 +51,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
       <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
     </Link>
@@ -66,9 +66,9 @@
       <InlineFunctions>true</InlineFunctions>
     </ClCompile>
     <Link>
-      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>../../src/guisan;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
       <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
     </Link>
@@ -85,7 +85,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
       <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
@@ -103,7 +103,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
       <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>

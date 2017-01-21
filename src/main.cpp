@@ -41,7 +41,7 @@
 #include "jit/compemu.h"
 #endif
 #ifdef USE_SDL
-#include <SDL.h>
+#include "SDL.h"
 #include <iostream>
 #include "pandora_gfx.h"
 SDL_Window* sdlWindow;

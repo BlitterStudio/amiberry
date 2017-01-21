@@ -44,7 +44,7 @@
 #include "custom.h"
 #include "comptbl.h"
 #include "compemu.h"
-#include <SDL.h>
+#include "SDL.h"
 
 #define DEBUG 0
 #include "debug.h"

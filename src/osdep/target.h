@@ -6,7 +6,7 @@
   * Copyright 1997 Bernd Schmidt
   */
 
-#include <SDL.h>
+#include "SDL.h"
 
 #define TARGET_NAME "pandora"
 

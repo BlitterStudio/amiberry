@@ -15,12 +15,12 @@
 #include "pandora_gfx.h"
 
 #include <png.h>
-#include <SDL.h>
-#include <SDL_image.h>
+#include "SDL.h"
+#include "SDL_image.h"
 //#ifndef ANDROID
 //#include <SDL/SDL_gfxPrimitives.h>
 //#endif
-#include <SDL_ttf.h>
+#include "SDL_ttf.h"
 
 #ifdef ANDROID
 #include <android/log.h>

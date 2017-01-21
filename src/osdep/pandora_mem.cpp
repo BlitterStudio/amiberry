@@ -10,7 +10,7 @@
 #include "custom.h"
 #include "akiko.h"
 #include <sys/mman.h>
-#include <SDL.h>
+#include "SDL.h"
 
 
 uae_u8* natmem_offset = 0;

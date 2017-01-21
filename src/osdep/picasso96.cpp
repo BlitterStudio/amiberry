@@ -57,7 +57,7 @@
 #include "native2amiga.h"
 
 #include "picasso96.h"
-#include <SDL.h>
+#include "SDL.h"
 
 #define NOBLITTER 0
 #define NOBLITTER_BLIT 0

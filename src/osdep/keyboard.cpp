@@ -12,7 +12,7 @@
 #include "keyboard.h"
 #include "keybuf.h"
 #include "gui.h"
-#include <SDL.h>
+#include "SDL.h"
 
 char keyboard_type = 0;
 

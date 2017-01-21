@@ -41,7 +41,8 @@ MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
 LDFLAGS += -lSDL2 -lpthread -lm -lz -lSDL2_image -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
-LDFLAGS += -lSDL2_ttf -lguisan -lbcm_host -L/opt/vc/lib -Lsrc/guisan
+LDFLAGS += -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan
+LDFLAGS += -Wl,-gc-sections,-rpath,/usr/local/lib
 
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -fomit-frame-pointer

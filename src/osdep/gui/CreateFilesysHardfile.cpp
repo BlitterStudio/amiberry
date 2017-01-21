@@ -1,5 +1,5 @@
 #include <guisan.hpp>
-#include <SDL.h>
+#include "SDL.h"
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "guisan/sdl/sdltruetypefont.hpp"

@@ -4,7 +4,7 @@
 #include "options.h"
 #include "keyboard.h"
 #include "inputdevice.h"
-#include <SDL.h>
+#include "SDL.h"
 
 
 static int joyXviaCustom = 0;

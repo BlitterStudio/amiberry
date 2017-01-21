@@ -30,7 +30,7 @@
 #include "filesys.h"
 #include "autoconf.h"
 #include "blkdev.h"
-#include <SDL.h>
+#include "SDL.h"
 #include "threaddep/thread.h"
 
 #ifdef RASPBERRY

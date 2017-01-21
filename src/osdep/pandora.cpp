@@ -41,7 +41,7 @@
 #include "uaeresource.h"
 #include "rommgr.h"
 #include "akiko.h"
-#include <SDL.h>
+#include "SDL.h"
 #include "pandora_rp9.h"
 
 extern void signal_segv(int signum, siginfo_t* info, void*ptr);

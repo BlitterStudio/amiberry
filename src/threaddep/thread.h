@@ -6,7 +6,7 @@
  * Copyright 1997, 2001 Bernd Schmidt
  */
 
-#include <SDL.h>
+#include "SDL.h"
 #include <SDL_thread.h>
 
 /* Sempahores. We use POSIX semaphores; if you are porting this to a machine

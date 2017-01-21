@@ -22,7 +22,7 @@
 #include "audio.h"
 #include "gensound.h"
 #include "sounddep/sound.h"
-#include <SDL.h>
+#include "SDL.h"
 
 #ifdef ANDROIDSDL
 #include <android/log.h>
