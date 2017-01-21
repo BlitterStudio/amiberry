@@ -885,7 +885,7 @@ int handle_msgpump (void)
 
         case SDL_KEYDOWN:
 
-            if(rEvent.key.keysym.sym == currprefs.key_for_menu)
+            if(rEvent.key.keysym.scancode == SDL_SCANCODE_F12) //currprefs.key_for_menu)
                 inputdevice_add_inputcode (AKS_ENTERGUI, 1);
             switch(rEvent.key.keysym.sym)
             {
