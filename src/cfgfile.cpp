@@ -3311,7 +3311,7 @@ void default_prefs (struct uae_prefs *p, int type)
 
   p->input_tablet = TABLET_OFF;
 
-  p->key_for_menu = SDLK_F12;
+  p->key_for_menu = SDL_SCANCODE_F12;
 
 	inputdevice_default_prefs (p);
 	blkdev_default_prefs (p);
