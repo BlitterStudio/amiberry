@@ -26,9 +26,6 @@ SDL_Surface *screen = NULL;
 static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1680, 1920 };
 static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 1050, 1080 };
 
-static int red_bits, green_bits, blue_bits;
-static int red_shift, green_shift, blue_shift;
-
 struct PicassoResolution *DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
 
@@ -44,8 +41,6 @@ FILE *screenshot_file=NULL;
 static void CreateScreenshot(void);
 static int save_thumb(char *path);
 int delay_savestate_frame = 0;
-
-static unsigned long next_synctime = 0;
 
 int graphics_setup (void)
 {
@@ -119,7 +114,6 @@ void InitAmigaVidMode(struct uae_prefs *p)
 #endif
 }
 
-
 void graphics_subshutdown (void)
 {
 	if (screen != NULL)
@@ -131,8 +125,8 @@ void graphics_subshutdown (void)
 
 static void open_screen(struct uae_prefs *p)
 {
-	int          width;
-	int          height;
+	int width;
+	int height;
 	
 #ifdef PICASSO96
 	if (screen_is_picasso)
@@ -148,45 +142,36 @@ static void open_screen(struct uae_prefs *p)
 		height = p->gfx_size.height;
 	}
 
-#ifdef ANDROIDSDL
-    update_onscreen();
-#endif
-
-	if (screen == NULL || screen->w != width || screen->h != height)
-    {
-	    graphics_subshutdown();
-	    screen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
-	    check_error_sdl(screen == nullptr, "Unable to create a surface");
-		    
-		// make the scaled rendering look smoother.
-	    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	    SDL_RenderSetLogicalSize(renderer, width, height);
-		    
-	    // Initialize SDL Texture for the renderer
-		texture = SDL_CreateTexture(renderer,
-			SDL_PIXELFORMAT_RGB565,
-			SDL_TEXTUREACCESS_STREAMING,
-			width,
-			height);
-		check_error_sdl(texture == nullptr, "Unable to create texture");
-    }
-    
-	if (screen != NULL)
-    {
-        InitAmigaVidMode(p);
-        init_row_map();
-    }
+	graphics_subshutdown();
 	
+	screen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
+	check_error_sdl(screen == nullptr, "Unable to create a surface");
+		    
+	// make the scaled rendering look smoother.
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	SDL_RenderSetLogicalSize(renderer, width, height);
+		    
+	// Initialize SDL Texture for the renderer
+	texture = SDL_CreateTexture(renderer,
+		SDL_PIXELFORMAT_RGB565,
+		SDL_TEXTUREACCESS_STREAMING,
+		width,
+		height);
+	check_error_sdl(texture == nullptr, "Unable to create texture");
+
 	// Update the texture from the surface
 	SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
-	// Wipe out the existing video framebuffer
-//	SDL_RenderClear(renderer);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
+	
+	if (screen != NULL)
+	{
+		InitAmigaVidMode(p);
+		init_row_map();
+	}
 }
-
 
 void update_display(struct uae_prefs *p)
 {
@@ -194,7 +179,6 @@ void update_display(struct uae_prefs *p)
     SDL_ShowCursor(SDL_DISABLE);
     framecnt = 1; // Don't draw frame before reset done
 }
-
 
 int check_prefs_changed_gfx (void)
 {
@@ -300,17 +284,15 @@ void flush_screen ()
 
 	// Update the texture from the surface
 	SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
-	// Wipe out the existing video framebuffer
-//	SDL_RenderClear(renderer);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
 	
-    last_synctime = read_processor_time();
+//    last_synctime = read_processor_time();
 
-    if(!screen_is_picasso)
-		gfxvidinfo.bufmem = (uae_u8 *)screen->pixels;
+//    if(!screen_is_picasso)
+//		gfxvidinfo.bufmem = (uae_u8 *)screen->pixels;
 
 //    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
 //        adjust_idletime(0);
@@ -325,13 +307,11 @@ void flush_screen ()
     init_row_map();
 }
 
-
 void black_screen_now(void)
 {
 	SDL_FillRect(screen, NULL, 0);
 	flush_screen();
 }
-
 
 static void graphics_subinit (void)
 {
@@ -342,17 +322,7 @@ static void graphics_subinit (void)
     }
     else
     {
-	    // Update the texture from the surface
-	    SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
-	    // Wipe out the existing video framebuffer
-//	    SDL_RenderClear(renderer);
-	    // Copy the texture on the renderer
-	    SDL_RenderCopy(renderer, texture, NULL, NULL);
-	    // Update the window surface (show the renderer)
-	    SDL_RenderPresent(renderer);
-	    
         SDL_ShowCursor(SDL_DISABLE);
-
         InitAmigaVidMode(&currprefs);
     }
 }
@@ -369,7 +339,6 @@ STATIC_INLINE int bitsInMask (unsigned long mask)
     return n;
 }
 
-
 STATIC_INLINE int maskShift (unsigned long mask)
 {
     /* determine how far mask is shifted */
@@ -381,7 +350,6 @@ STATIC_INLINE int maskShift (unsigned long mask)
     }
     return n;
 }
-
 
 static int init_colors (void)
 {
@@ -403,7 +371,6 @@ static int init_colors (void)
 
     return 1;
 }
-
 
 /*
  * Find the colour depth of the display
@@ -429,7 +396,6 @@ static int get_display_depth (void)
     return depth;
 }
 
-
 int GetSurfacePixelFormat(void)
 {
     int depth = get_display_depth();
@@ -442,7 +408,6 @@ int GetSurfacePixelFormat(void)
             : unit == 32 ? RGBFB_R8G8B8A8
             : RGBFB_NONE);
 }
-
 
 int graphics_init (bool mousecapture)
 {
@@ -463,7 +428,6 @@ void graphics_leave (void)
 	
     SDL_VideoQuit();
 }
-
 
 #define  systemRedShift      (screen->format->Rshift)
 #define  systemGreenShift    (screen->format->Gshift)
@@ -544,7 +508,6 @@ static int save_png(SDL_Surface* surface, char *path)
     return 1;
 }
 
-
 static void CreateScreenshot(void)
 {
     int w, h;
@@ -567,7 +530,6 @@ static void CreateScreenshot(void)
 		screen->format->Bmask,
 		screen->format->Amask);
 }
-
 
 static int save_thumb(char *path)
 {
@@ -649,20 +611,19 @@ int picasso_palette (void)
 {
     int i, changed;
 
-    changed = 0;
-    for (i = 0; i < 256; i++)
-    {
-        int r = picasso96_state.CLUT[i].Red;
-        int g = picasso96_state.CLUT[i].Green;
-        int b = picasso96_state.CLUT[i].Blue;
-        uae_u32 v = CONVERT_RGB(r << 16 | g << 8 | b);
-        if (v !=  picasso_vidinfo.clut[i])
-        {
-            picasso_vidinfo.clut[i] = v;
-            changed = 1;
-        }
-    }
-    return changed;
+	changed = 0;
+	for (i = 0; i < 256; i++) {
+		int r = picasso96_state.CLUT[i].Red;
+		int g = picasso96_state.CLUT[i].Green;
+		int b = picasso96_state.CLUT[i].Blue;
+		int value = (r << 16 | g << 8 | b);
+		uae_u32 v = CONVERT_RGB(value);
+		if (v !=  picasso_vidinfo.clut[i]) {
+			picasso_vidinfo.clut[i] = v;
+			changed = 1;
+		} 
+	}
+	return changed;
 }
 
 static int resolution_compare (const void *a, const void *b)
