@@ -147,8 +147,6 @@ static void open_screen(struct uae_prefs *p)
 	screen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 		    
-	// make the scaled rendering look smoother.
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	SDL_RenderSetLogicalSize(renderer, width, height);
 		    
 	// Initialize SDL Texture for the renderer
