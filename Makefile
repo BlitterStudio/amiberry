@@ -10,12 +10,6 @@ else ifeq ($(PLATFORM),rpi2)
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
-else ifeq ($(PLATFORM),gles)
-	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DHAVE_GLES
-	# uncomment below to enable Shader support - might be slow on some systems
-	#MORE_CFLAGS += -DSHADER_SUPPORT
-	LDFLAGS += -lEGL -lGLESv1_CM
 endif
 
 NAME   = amiberry
@@ -51,8 +45,7 @@ LDFLAGS += -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123
 LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -fomit-frame-pointer
-MORE_CFLAGS += -finline -fno-builtin
+MORE_CFLAGS += -Ofast
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 
@@ -200,14 +193,7 @@ OBJS =	\
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o
 
-ifeq ($(PLATFORM),gles)
-	OBJS += src/od-gles/gl.o
-	OBJS += src/od-gles/shader_stuff.o
-	OBJS += src/od-gles/gl_platform.o
-	OBJS += src/od-gles/gles_gfx.o
-else	
-	OBJS += src/osdep/rasp_gfx.o
-endif
+OBJS += src/osdep/rasp_gfx.o
 
 OBJS += src/osdep/gui/sdltruetypefont.o
 OBJS += src/osdep/picasso96.o
