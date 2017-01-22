@@ -12,7 +12,7 @@ else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -std=gnu++14 -march=armv6zk -mfpu=vfp -mfloat-abi=hard
 endif
 
-NAME   = uae4arm
+NAME   = amiberry-sdl2
 RM     = rm -f
 CXX    = g++
 STRIP  = strip
@@ -45,8 +45,7 @@ LDFLAGS += -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan
 LDFLAGS += -Wl,-gc-sections,-rpath,/usr/local/lib
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -fomit-frame-pointer
-MORE_CFLAGS += -finline -fno-builtin
+MORE_CFLAGS += -Ofast 
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 

@@ -22,8 +22,9 @@ kickstarts/*.rom
 *.dat
 Amiberry/VisualGDB/Debug/Amiberry
 Amiberry/VisualGDB/Release/Amiberry
+*.sqlite
+Amiberry/VisualGDB/Release-rpi2/Amiberry
 *.ipch
+*.db-shm
+*.db-wal
 *.TMP
-VisualGDB/VisualGDB/Release/Amiberry
-VisualGDB/VisualGDB/Debug/Amiberry
-*.npa00-a6b8830a
