@@ -45,7 +45,7 @@ LDFLAGS += -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan
 LDFLAGS += -Wl,-gc-sections,-rpath,/usr/local/lib
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast 
+MORE_CFLAGS += -Ofast -pipe -fsingle-precision-constant -fweb
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 
