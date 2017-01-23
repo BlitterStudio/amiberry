@@ -44,7 +44,7 @@
 
 extern int screen_is_picasso;
 
-unsigned long last_synctime = 0;
+long last_synctime = 0;
 static int frh_count = 0;
 #define LAST_SPEEDUP_LINE 30
 #define SPEEDUP_CYCLES_JIT 2800
@@ -2468,7 +2468,7 @@ static void init_hz (bool fullinit)
 		equ_vblank_endline = EQU_ENDLINE_NTSC;
 		equ_vblank_toggle = false;
 	}
-	  // long/short field refresh rate adjustment
+	// long/short field refresh rate adjustment
 //	vblank_hz = vblank_hz * (maxvpos * 2 + 1) / ((maxvpos + lof_current) * 2);
 
 	maxvpos_nom = maxvpos;
@@ -2479,6 +2479,7 @@ static void init_hz (bool fullinit)
 		if (vpos_count < 10)
 			vpos_count = 10;
 		vblank_hz = (isntsc ? 15734.0 : 15625.0) / vpos_count;
+//		vblank_hz_nom = vblank_hz_shf = vblank_hz_lof = vblank_hz_lace = vblank_hz;
 		maxvpos_nom = vpos_count - (lof_current ? 1 : 0);
 		if ((maxvpos_nom >= 256 && maxvpos_nom <= 313) || (beamcon0 & 0x80)) {
 			maxvpos_display = maxvpos_nom;
@@ -2527,7 +2528,7 @@ static void init_hz (bool fullinit)
 			minfirstline = 2;
 		if (minfirstline >= maxvpos)
 			minfirstline = maxvpos - 1;
-		
+
 		sprite_vblank_endline = minfirstline - 2;
 		maxvpos_nom = maxvpos;
 		maxvpos_display = maxvpos;
@@ -2556,13 +2557,13 @@ static void init_hz (bool fullinit)
 	maxvpos_total = (currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? (MAXVPOS_LINES_ECS - 1) : (MAXVPOS_LINES_OCS - 1);
 	if (maxvpos_total > MAXVPOS)
 		maxvpos_total = MAXVPOS;
-
-	compute_framesync();
+	
+  compute_framesync ();
 
 #ifdef PICASSO96
-	init_hz_p96();
+  init_hz_p96 ();
 #endif
-	inputdevice_tablet_strobe();
+  inputdevice_tablet_strobe ();
 
 	if (fullinit)
 		vpos_count_diff = maxvpos_nom;
@@ -3029,34 +3030,34 @@ void INTREQ (uae_u16 data)
 
 static void ADKCON (int hpos, uae_u16 v)
 {
-  if (currprefs.produce_sound > 0)
-    update_audio ();
-  DISK_update (hpos);
-	DISK_update_adkcon (hpos, v);
-  setclr (&adkcon,v);
-  audio_update_adkmasks ();
+	if (currprefs.produce_sound > 0)
+		update_audio();
+	DISK_update(hpos);
+	DISK_update_adkcon(hpos, v);
+	setclr(&adkcon, v);
+	audio_update_adkmasks();
 }
 
 static void BEAMCON0 (uae_u16 v)
 {
-  if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
-  	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
-  	  v &= 0x20;
-    new_beamcon0 = v;
-  }
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
+		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
+			v &= 0x20;
+		new_beamcon0 = v;
+	}
 }
 
-STATIC_INLINE void varsync (void)
+static void varsync(void)
 {
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-	  return;
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+		return;
 #ifdef PICASSO96
-  if (picasso_on) {
-    return;
+	if (picasso_on) {
+		return;
 	}
 #endif
-  if (!(beamcon0 & 0x80))
-	  return;
+	if (!(beamcon0 & 0x80))
+		return;
 	vpos_count = 0;
 }
 
@@ -4512,7 +4513,7 @@ static void fpscounter (void)
 // vsync functions that are not hardware timing related
 static void vsync_handler_pre (void)
 {
-	handle_events ();
+//	handle_events ();
 	
 #ifdef PICASSO96
 	if (currprefs.rtgmem_size)
@@ -4545,7 +4546,7 @@ static void vsync_handler_pre (void)
 // emulated hardware vsync
 static void vsync_handler_post (void)
 {
-	DISK_vsync();
+	DISK_vsync ();
 
 	if (bplcon0 & 4) {
 		lof_store = lof_store ? 0 : 1;
@@ -4569,8 +4570,7 @@ static void vsync_handler_post (void)
 				lof_changed = 0;
 		}
 		lof_changing = 0;
-	}
-	else {
+	} else {
 		lof_changed_previous_field = 0;
 		lof_lace = false;
 	}
@@ -4585,14 +4585,18 @@ static void vsync_handler_post (void)
 	{
 		vsyncmintime = last_synctime + vsynctimebase * (maxvpos_display - LAST_SPEEDUP_LINE) / maxvpos_display;
 	}
-
+  
 #ifdef PICASSO96
 	if (picasso_on)
 	{
-		vpos_count = (int) maxvpos * vblank_hz / 60;
-		vtotal = vpos_count;
-	}
-#endif
+		int p96refresh_active = (int) maxvpos * vblank_hz / (m68k_dreg(regs, 1) * 2);
+		if (p96refresh_active) {
+			vpos_count = p96refresh_active;
+			vtotal = vpos_count;
+		}	
+	}	
+#endif
+	
 	if ((beamcon0 & (0x20 | 0x80)) != (new_beamcon0 & (0x20 | 0x80))) {
 		init_hz();
 	}
@@ -4609,7 +4613,7 @@ static void vsync_handler_post (void)
 	eventtab[ev_copper].active = 0;
 	COPJMP(1, 1);
 		
-	init_hardware_frame();
+	init_hardware_frame ();
 }
 
 #ifdef JIT
