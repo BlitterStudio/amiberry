@@ -21,25 +21,28 @@
 - New target platform: Pi 3
 
 To get full screen SDL2 support from the console on the Raspberry Pi, you will have to compile SDL2 from source. First you will need to get all the necessary tools:
+
       sudo apt-get update && sudo apt-get upgrade
       sudo apt-get install build-essential libfreeimage-dev libopenal-dev libpango1.0-dev libsndfile-dev libudev-dev libasound2-dev libjpeg8-dev libtiff5-dev libwebp-dev automake
 
 Then download the SDL2 source tarball (currently on v2.0.5):
+
       cd ~ 
       wget https://www.libsdl.org/release/SDL2-2.0.5.tar.gz 
       tar zxvf SDL2-2.0.5.tar.gz 
       cd SDL2-2.0.5 && mkdir build && cd build
 
 Next, configure SDL2 to use only the OpenGL ES backend directly from the console:
+
       ../configure --disable-pulseaudio --disable-esd --disable-video-mir --disable-video-wayland --disable-video-x11 --disable-video-opengl
 
 Finally, compile and install SDL2:
+
       make -j 4 && sudo make install
 
 With SDL2 installed, you can proceed to install Amiberry as follows:
-How to compile on Raspbian Jessie:
 
-   Install following packages:
+   Install the following packages:
 
       sudo apt-get install libsdl2-ttf-dev libxml2-dev libflac-dev libmpg123-dev
 
