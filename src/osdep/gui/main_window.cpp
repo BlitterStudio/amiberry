@@ -12,7 +12,7 @@
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "pandora_gfx.h"
 
@@ -47,6 +47,7 @@ enum { PANEL_PATHS, PANEL_CONFIGURATIONS, PANEL_CPU, PANEL_CHIPSET, PANEL_ROM, P
  * SDL Stuff we need
  */
 SDL_Surface* gui_screen;
+SDL_Texture* gui_texture;
 SDL_Event event;
 
 /*
@@ -132,8 +133,18 @@ namespace sdl
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
+		
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create a surface");
+		
+		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
+		
+		gui_texture = SDL_CreateTexture(renderer,
+			SDL_PIXELFORMAT_RGB565,
+			SDL_TEXTUREACCESS_STREAMING,
+			GUI_WIDTH,
+			GUI_HEIGHT);
+		check_error_sdl(gui_texture == nullptr, "Unable to create texture");
 		
 		SDL_ShowCursor(SDL_ENABLE);
 
@@ -164,6 +175,7 @@ namespace sdl
 		delete gui_graphics;
 
 		SDL_FreeSurface(gui_screen);
+		SDL_DestroyTexture(gui_texture);
 		gui_screen = NULL;
 	}
 
@@ -272,9 +284,9 @@ namespace sdl
 			// Finally we update the screen.
 			
 			// Update the texture from the surface
-			SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
+			SDL_UpdateTexture(gui_texture, NULL, gui_screen->pixels, gui_screen->pitch);
 			// Copy the texture on the renderer
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_RenderCopy(renderer, gui_texture, NULL, NULL);
 			// Update the window surface (show the renderer)
 			SDL_RenderPresent(renderer);
 
@@ -404,8 +416,8 @@ void gui_init()
     // Create container for main page
     //-------------------------------------------------
     gui_top = new gcn::Container();
-    //gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
-    gui_top->setDimension(gcn::Rectangle((gui_screen->w - GUI_WIDTH) / 2, (gui_screen->h - GUI_HEIGHT) / 2, GUI_WIDTH, GUI_HEIGHT));
+    gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
+//    gui_top->setDimension(gcn::Rectangle((gui_screen->w - GUI_WIDTH) / 2, (gui_screen->h - GUI_HEIGHT) / 2, GUI_WIDTH, GUI_HEIGHT));
     gui_top->setBaseColor(gui_baseCol);
     uae_gui->setTop(gui_top);
 
