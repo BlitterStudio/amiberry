@@ -20,13 +20,10 @@ kickstarts/*.rom
 *.npa01
 *.idx
 *.dat
-Amiberry/VisualGDB/Debug/Amiberry
-Amiberry/VisualGDB/Release/Amiberry
+VisualGDB/VisualGDB/Debug/Amiberry
+VisualGDB/VisualGDB/Release/Amiberry
 *.sqlite
-Amiberry/VisualGDB/Release-rpi2/Amiberry
 *.ipch
 *.db-shm
 *.db-wal
 *.TMP
-VisualGDB/VisualGDB/Debug/Amiberry
-VisualGDB/VisualGDB/Release/Amiberry
