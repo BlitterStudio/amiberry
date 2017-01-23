@@ -143,8 +143,6 @@ static void ShowMessageLoop(void)
         // Now we let the Gui object draw itself.
         uae_gui->draw();
         // Finally we update the screen.
-//        wait_for_vsync();
-//        SDL_Flip(gui_screen);
 	    
 	    // Update the texture from the surface
 	    SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
