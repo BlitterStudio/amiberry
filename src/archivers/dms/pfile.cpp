@@ -54,7 +54,7 @@ static void log_error(int track)
     write_log (_T("DMS: Ignored error on track %d!\n"), track);
 }
 
-static void addextra(TCHAR *name, struct zfile **extra, uae_u8 *p, int size)
+static void addextra(char const *name, struct zfile **extra, uae_u8 *p, int size)
 {
     int i;
     struct zfile *zf = NULL;
@@ -606,5 +606,4 @@ static void printbandiz(UCHAR *m, USHORT len)
         i++;
     }
 }
-
 

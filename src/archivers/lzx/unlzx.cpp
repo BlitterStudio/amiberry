@@ -830,8 +830,8 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 	  zai.size = unpack_size;
 	  zn = zvolume_addfile_abs(zv, &zai);
 	  zn->offset2 = merge_size;
-	  xfree (zai.name);
-	  xfree (zai.comment);
+	  xfree ((char*)zai.name);
+	  xfree ((char*)zai.comment);
 
 	  total_pack += pack_size;
 	  total_unpack += unpack_size;
