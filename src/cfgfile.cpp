@@ -29,7 +29,7 @@
 #include "blkdev.h"
 #include "calc.h"
 #include "gfxboard.h"
-#include "SDL_keysym.h"
+//#include "SDL_keysym.h"
 
 static int config_newfilesystem;
 static struct strlist *temp_lines;

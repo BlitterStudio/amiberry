@@ -656,7 +656,6 @@ static int real_main2 (int argc, TCHAR **argv)
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
-	;
 
 	sdlWindow = SDL_CreateWindow("Amiberry v2",
 		SDL_WINDOWPOS_UNDEFINED,

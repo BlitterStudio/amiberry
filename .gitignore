@@ -28,3 +28,5 @@ Amiberry/VisualGDB/Release-rpi2/Amiberry
 *.db-shm
 *.db-wal
 *.TMP
+VisualGDB/VisualGDB/Debug/Amiberry
+VisualGDB/VisualGDB/Release/Amiberry

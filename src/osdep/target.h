@@ -19,24 +19,19 @@ extern int emulating;
 extern int z3_start_adr;
 extern int rtg_start_adr;
 
-extern int currVSyncRate;
-
 void run_gui(void);
 void InGameMessage(const char *msg);
 void wait_for_vsync(void);
 
 void saveAdfDir(void);
-bool SetVSyncRate(int hz);
-//void setCpuSpeed(void);
-//void resetCpuSpeed(void);
 void update_display(struct uae_prefs *);
 void black_screen_now(void);
-void graphics_subshutdown (void);
+void graphics_subshutdown(void);
 void moveVertical(int value);
 
 void pandora_stop_sound(void);
 
-void keyboard_settrans (void);
+void keyboard_settrans(void);
 int translate_pandora_keys(int symbol, int *modifier);
 void SimulateMouseOrJoy(int code, int keypressed);
 
@@ -60,15 +55,15 @@ extern void alloc_AmigaMem(void);
 void reinit_amiga(void);
 int count_HDs(struct uae_prefs *p);
 extern void gui_force_rtarea_hdchange(void);
-extern bool hardfile_testrdb (const TCHAR *filename);
+extern bool hardfile_testrdb(const TCHAR *filename);
 
 #ifdef __cplusplus
-  extern "C" {
+extern "C" {
 #endif
-  void trace_begin (void);
-  void trace_end (void);
+	void trace_begin(void);
+	void trace_end(void);
 #ifdef __cplusplus
-  }
+}
 #endif
 
 
@@ -104,5 +99,5 @@ STATIC_INLINE size_t uae_strlcpy(char *dst, const char *src, size_t size)
 
 STATIC_INLINE int max(int x, int y)
 {
-    return x > y ? x : y;
+	return x > y ? x : y;
 }
