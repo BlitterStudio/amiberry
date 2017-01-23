@@ -189,12 +189,12 @@
     <ClCompile Include="..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\src\osdep\pandora.cpp" />
     <ClCompile Include="..\src\osdep\pandora_filesys.cpp" />
+    <ClCompile Include="..\src\osdep\pandora_gfx.cpp" />
     <ClCompile Include="..\src\osdep\pandora_gui.cpp" />
     <ClCompile Include="..\src\osdep\pandora_input.cpp" />
     <ClCompile Include="..\src\osdep\pandora_mem.cpp" />
     <ClCompile Include="..\src\osdep\pandora_rp9.cpp" />
     <ClCompile Include="..\src\osdep\picasso96.cpp" />
-    <ClCompile Include="..\src\osdep\rasp_gfx.cpp" />
     <ClCompile Include="..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\src\osdep\writelog.cpp" />
     <ClCompile Include="..\src\p96_blit.cpp" />

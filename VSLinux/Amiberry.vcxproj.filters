@@ -108,9 +108,6 @@
     <ClCompile Include="..\src\osdep\picasso96.cpp">
       <Filter>osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\osdep\rasp_gfx.cpp">
-      <Filter>osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\osdep\sigsegv_handler.cpp">
       <Filter>osdep</Filter>
     </ClCompile>
@@ -318,10 +315,75 @@
     <ClCompile Include="..\src\archivers\7z\Archive\7z\7zItem.cpp">
       <Filter>archivers\7z\Archive\7z</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\akiko.cpp" />
+    <ClCompile Include="..\src\aros.rom.cpp" />
+    <ClCompile Include="..\src\audio.cpp" />
+    <ClCompile Include="..\src\autoconf.cpp" />
+    <ClCompile Include="..\src\blitfunc.cpp" />
+    <ClCompile Include="..\src\blitops.cpp" />
+    <ClCompile Include="..\src\blittable.cpp" />
+    <ClCompile Include="..\src\blitter.cpp" />
+    <ClCompile Include="..\src\blkdev.cpp" />
+    <ClCompile Include="..\src\blkdev_cdimage.cpp" />
+    <ClCompile Include="..\src\bsdsocket.cpp" />
+    <ClCompile Include="..\src\build68k.cpp" />
+    <ClCompile Include="..\src\calc.cpp" />
+    <ClCompile Include="..\src\cdrom.cpp" />
+    <ClCompile Include="..\src\cfgfile.cpp" />
+    <ClCompile Include="..\src\cia.cpp" />
+    <ClCompile Include="..\src\cpudefs.cpp" />
+    <ClCompile Include="..\src\cpuemu_0.cpp" />
+    <ClCompile Include="..\src\cpuemu_11.cpp" />
+    <ClCompile Include="..\src\cpuemu_4.cpp" />
+    <ClCompile Include="..\src\cpustbl.cpp" />
+    <ClCompile Include="..\src\crc32.cpp" />
+    <ClCompile Include="..\src\custom.cpp" />
+    <ClCompile Include="..\src\disk.cpp" />
+    <ClCompile Include="..\src\diskutil.cpp" />
+    <ClCompile Include="..\src\drawing.cpp" />
+    <ClCompile Include="..\src\events.cpp" />
+    <ClCompile Include="..\src\expansion.cpp" />
+    <ClCompile Include="..\src\filesys.cpp" />
+    <ClCompile Include="..\src\filesys_bootrom.cpp" />
+    <ClCompile Include="..\src\fpp.cpp" />
+    <ClCompile Include="..\src\fsdb.cpp" />
+    <ClCompile Include="..\src\fsdb_unix.cpp" />
+    <ClCompile Include="..\src\fsusage.cpp" />
+    <ClCompile Include="..\src\genblitter.cpp" />
+    <ClCompile Include="..\src\gencpu.cpp" />
+    <ClCompile Include="..\src\gfxboard.cpp" />
+    <ClCompile Include="..\src\gfxutil.cpp" />
+    <ClCompile Include="..\src\hardfile.cpp" />
+    <ClCompile Include="..\src\inputdevice.cpp" />
+    <ClCompile Include="..\src\keybuf.cpp" />
+    <ClCompile Include="..\src\linetoscr.c" />
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\memory.cpp" />
+    <ClCompile Include="..\src\native2amiga.cpp" />
+    <ClCompile Include="..\src\newcpu.cpp" />
+    <ClCompile Include="..\src\newcpu_common.cpp" />
+    <ClCompile Include="..\src\p96_blit.cpp" />
+    <ClCompile Include="..\src\readcpu.cpp" />
+    <ClCompile Include="..\src\rommgr.cpp" />
+    <ClCompile Include="..\src\savestate.cpp" />
+    <ClCompile Include="..\src\sinctable.cpp" />
+    <ClCompile Include="..\src\statusline.cpp" />
+    <ClCompile Include="..\src\trace.c" />
+    <ClCompile Include="..\src\traps.cpp" />
+    <ClCompile Include="..\src\uaelib.cpp" />
+    <ClCompile Include="..\src\uaeresource.cpp" />
+    <ClCompile Include="..\src\zfile.cpp" />
+    <ClCompile Include="..\src\zfile_archive.cpp" />
+    <ClCompile Include="..\src\osdep\pandora_gfx.cpp">
+      <Filter>osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\osdep\neon_helper.s">
       <Filter>osdep</Filter>
     </None>
+    <None Include="..\src\filesys.asm" />
+    <None Include="..\src\inputevents.def" />
+    <None Include="..\src\table68k" />
   </ItemGroup>
 </Project>
