@@ -794,6 +794,7 @@ int handle_msgpump (void)
     while (SDL_PollEvent(&rEvent))
     {
         got = 1;
+		const Uint8 *keystate = SDL_GetKeyboardState(NULL);
 
         switch (rEvent.type)
         {
@@ -801,33 +802,56 @@ int handle_msgpump (void)
             uae_quit();
             break;
 
+		case SDL_JOYBUTTONDOWN:
+			if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+			if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
+				inputdevice_add_inputcode(AKS_QUIT, 1);
+			break;
+			
         case SDL_KEYDOWN:
-
-            if(rEvent.key.keysym.scancode == SDL_SCANCODE_F12) //currprefs.key_for_menu)
-                inputdevice_add_inputcode (AKS_ENTERGUI, 1);
+            // Menu button or key pressed
+			if (currprefs.key_for_menu != 0 && rEvent.key.keysym.sym == currprefs.key_for_menu)
+			{
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+				break;
+			}
+			if (currprefs.key_for_quit != 0 && rEvent.key.keysym.sym == currprefs.key_for_quit)
+			{
+				inputdevice_add_inputcode(AKS_QUIT, 1);
+				break;
+			}
+			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_MENU]))
+			{
+				uae_reset(0, 1);
+				break;
+			}
+		
             switch(rEvent.key.keysym.sym)
             {
- 		#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 		case SDLK_CAPSLOCK: // capslock
 		     // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-                     ioctl(0, KDGKBLED, &kbd_flags);
-                     ioctl(0, KDGETLED, &kbd_led_status);
-                     if ((kbd_flags & 07) & LED_CAP)
-                     {
-                        // On, so turn off
-                        kbd_led_status &= ~LED_CAP;
-                        kbd_flags &= ~LED_CAP;
-                        inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-                     } else {
-                               // Off, so turn on
-                               kbd_led_status |= LED_CAP;
-                               kbd_flags |= LED_CAP;
-                               inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-                            }
-                     ioctl(0, KDSETLED, kbd_led_status);
-                     ioctl(0, KDSKBLED, kbd_flags);
-                     break;
-                 #endif
+				ioctl(0, KDGKBLED, &kbd_flags);
+				ioctl(0, KDGETLED, &kbd_led_status);
+				if ((kbd_flags & 07) & LED_CAP)
+				{
+				   // On, so turn off
+					kbd_led_status &= ~LED_CAP;
+					kbd_flags &= ~LED_CAP;
+					inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+				}
+				else 
+				{
+					// Off, so turn on
+					kbd_led_status |= LED_CAP;
+					kbd_flags |= LED_CAP;
+					inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+				}
+				ioctl(0, KDSETLED, kbd_led_status);
+				ioctl(0, KDSKBLED, kbd_flags);
+				break;
+#endif
 
             case SDLK_LSHIFT: // Shift key
                 inputdevice_do_keyboard(AK_LSH, 1);
@@ -843,25 +867,25 @@ int handle_msgpump (void)
             // Fall through...
 
             default:
-//                if(currprefs.pandora_customControls)
-//                {
-//                    keycode = customControlMap[rEvent.key.keysym.sym];
-//                    if(keycode < 0)
-//                    {
-//                        // Simulate mouse or joystick
-//                        SimulateMouseOrJoy(keycode, 1);
-//                        break;
-//                    }
-//                    else if(keycode > 0)
-//                    {
-//                        // Send mapped key press
-//                        inputdevice_do_keyboard(keycode, 1);
-//                        break;
-//                    }
-//                }
-//                else
-
-                    modifier = rEvent.key.keysym.mod;
+				if (currprefs.pandora_customControls)
+				{
+					keycode = customControlMap[rEvent.key.keysym.sym];
+					if (keycode < 0)
+					{
+					    // Simulate mouse or joystick
+						SimulateMouseOrJoy(keycode, 1);
+						break;
+					}
+					else if (keycode > 0)
+					{
+					    // Send mapped key press
+						inputdevice_do_keyboard(keycode, 1);
+						break;
+					}
+				}
+				else
+					modifier = rEvent.key.keysym.mod;
+				
                 keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
                 if(keycode)
                 {
@@ -869,6 +893,7 @@ int handle_msgpump (void)
                         inputdevice_do_keyboard(AK_LSH, 1);
                     else
                         inputdevice_do_keyboard(AK_LSH, 0);
+					
                     inputdevice_do_keyboard(keycode, 1);
                 }
                 else
@@ -877,7 +902,6 @@ int handle_msgpump (void)
                         inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
                     else
                         inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
-
                 }
                 break;
             }
@@ -886,28 +910,6 @@ int handle_msgpump (void)
         case SDL_KEYUP:
             switch(rEvent.key.keysym.sym)
             {
-                #ifdef CAPSLOCK_DEBIAN_WORKAROUND
-                case SDLK_CAPSLOCK: // capslock
-                     // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-                     ioctl(0, KDGKBLED, &kbd_flags);
-                     ioctl(0, KDGETLED, &kbd_led_status);
-                     if ((kbd_flags & 07) & LED_CAP)
-                     {
-                        // On, so turn off
-                        kbd_led_status &= ~LED_CAP;
-                        kbd_flags &= ~LED_CAP;
-                        inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-                     } else {
-                               // Off, so turn on
-                               kbd_led_status |= LED_CAP;
-                               kbd_flags |= LED_CAP;
-                               inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-                            }
-                     ioctl(0, KDSETLED, kbd_led_status);
-                     ioctl(0, KDSKBLED, kbd_flags);
-                     break;
-                 #endif
-
             case SDLK_LSHIFT: // Shift key
                 inputdevice_do_keyboard(AK_LSH, 0);
                 break;
@@ -922,22 +924,22 @@ int handle_msgpump (void)
             // Fall through...
 
             default:
-//                if(currprefs.pandora_customControls)
-//                {
-//                    keycode = customControlMap[rEvent.key.keysym.sym];
-//                    if(keycode < 0)
-//                    {
-//                        // Simulate mouse or joystick
-//                        SimulateMouseOrJoy(keycode, 0);
-//                        break;
-//                    }
-//                    else if(keycode > 0)
-//                    {
-//                        // Send mapped key release
-//                        inputdevice_do_keyboard(keycode, 0);
-//                        break;
-//                    }
-//                }
+				if (currprefs.pandora_customControls)
+				{
+					keycode = customControlMap[rEvent.key.keysym.sym];
+					if (keycode < 0)
+					{
+					    // Simulate mouse or joystick
+						SimulateMouseOrJoy(keycode, 0);
+						break;
+					}
+					else if (keycode > 0)
+					{
+					    // Send mapped key release
+						inputdevice_do_keyboard(keycode, 0);
+						break;
+					}
+				}
 
                 modifier = rEvent.key.keysym.mod;
                 keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
