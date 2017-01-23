@@ -148,52 +148,54 @@ struct romscandata {
     int keysize;
 };
 
-static struct romdata *scan_single_rom_2 (struct zfile *f)
+static struct romdata *scan_single_rom_2(struct zfile *f)
 {
-  uae_u8 buffer[20] = { 0 };
-  uae_u8 *rombuf;
-  int cl = 0, size;
-  struct romdata *rd = 0;
+	uae_u8 buffer[20] = { 0 };
+	uae_u8 *rombuf;
+	int cl = 0, size;
+	struct romdata *rd = 0;
 
-  zfile_fseek (f, 0, SEEK_END);
-  size = zfile_ftell (f);
-  zfile_fseek (f, 0, SEEK_SET);
-  if (size > 524288 * 2) /* don't skip KICK disks or 1M ROMs */
-  	return 0;
-  zfile_fread (buffer, 1, 11, f);
-  if (!memcmp (buffer, "KICK", 4)) {
-	  zfile_fseek (f, 512, SEEK_SET);
-	  if (size > 262144)
-	    size = 262144;
-  } else if (!memcmp (buffer, "AMIROMTYPE1", 11)) {
-  	cl = 1;
-	  size -= 11;
-  } else {
-	  zfile_fseek (f, 0, SEEK_SET);
-  }
-  rombuf = xcalloc (uae_u8, size);
-  if (!rombuf)
-  	return 0;
-  zfile_fread (rombuf, 1, size, f);
-  if (cl > 0) {
-  	decode_cloanto_rom_do (rombuf, size, size);
-	  cl = 0;
-  }
-  if (!cl) {
-  	rd = getromdatabydata (rombuf, size);
-  	if (!rd && (size & 65535) == 0) {
-	    /* check byteswap */
-	    int i;
-	    for (i = 0; i < size; i+=2) {
-    		uae_u8 b = rombuf[i];
-    		rombuf[i] = rombuf[i + 1];
-    		rombuf[i + 1] = b;
- 	    }
- 	    rd = getromdatabydata (rombuf, size);
-  	}
-  }
-  free (rombuf);
-  return rd;
+	zfile_fseek(f, 0, SEEK_END);
+	size = zfile_ftell(f);
+	zfile_fseek(f, 0, SEEK_SET);
+	if (size > 524288 * 2) /* don't skip KICK disks or 1M ROMs */
+		return 0;
+	zfile_fread(buffer, 1, 11, f);
+	if (!memcmp(buffer, "KICK", 4)) {
+		zfile_fseek(f, 512, SEEK_SET);
+		if (size > 262144)
+			size = 262144;
+	}
+	else if (!memcmp(buffer, "AMIROMTYPE1", 11)) {
+		cl = 1;
+		size -= 11;
+	}
+	else {
+		zfile_fseek(f, 0, SEEK_SET);
+	}
+	rombuf = xcalloc(uae_u8, size);
+	if (!rombuf)
+		return 0;
+	zfile_fread(rombuf, 1, size, f);
+	if (cl > 0) {
+		decode_cloanto_rom_do(rombuf, size, size);
+		cl = 0;
+	}
+	if (!cl) {
+		rd = getromdatabydata(rombuf, size);
+		if (!rd && (size & 65535) == 0) {
+			/* check byteswap */
+			int i;
+			for (i = 0; i < size; i += 2) {
+				uae_u8 b = rombuf[i];
+				rombuf[i] = rombuf[i + 1];
+				rombuf[i + 1] = b;
+			}
+			rd = getromdatabydata(rombuf, size);
+		}
+	}
+	free(rombuf);
+	return rd;
 }
 
 static struct romdata *scan_single_rom (char *path)
@@ -465,7 +467,6 @@ int gui_init (void)
 	if (quit_program == UAE_QUIT)
 		ret = -2; // Quit without start of emulator
 
-//	setCpuSpeed();
 	update_display(&changed_prefs);
 
 	after_leave_gui();
@@ -476,7 +477,6 @@ int gui_init (void)
 
 void gui_exit(void)
 {
-//	resetCpuSpeed();
 	sync();
 	pandora_stop_sound();
 	saveAdfDir();
@@ -580,25 +580,13 @@ void moveVertical(int value)
 		changed_prefs.pandora_vertical_offset = 16;
 }
 
-
-extern char keyboard_type;
-
-void gui_handle_events (void)
-{
-	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
-
-	if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_MENU]))
-		uae_reset(0, 1);
-}
-
 void gui_disk_image_change (int unitnum, const char *name, bool writeprotected)
 {
 }
 
 void gui_led (int led, int on)
 {
-#ifdef RASPBERRY
-   #define LED_ALL   -1         // Define for all LEDs
+#define LED_ALL   -1         // Define for all LEDs
    
    unsigned char kbd_led_status;
    
@@ -614,11 +602,13 @@ void gui_led (int led, int on)
    { 
      if (currprefs.kbd_led_num == led || currprefs.kbd_led_num == LED_DFs)
      {  
-        if (on) kbd_led_status |= LED_NUM; else kbd_led_status &= ~LED_NUM;
+        if (on) kbd_led_status |= LED_NUM; 
+		else kbd_led_status &= ~LED_NUM;
      }
      if (currprefs.kbd_led_scr == led || currprefs.kbd_led_scr == LED_DFs)
      {  
-        if (on) kbd_led_status |= LED_SCR; else kbd_led_status &= ~LED_SCR;
+        if (on) kbd_led_status |= LED_SCR; 
+		else kbd_led_status &= ~LED_SCR;
      }
    }
    
@@ -627,11 +617,13 @@ void gui_led (int led, int on)
    { 
      if (currprefs.kbd_led_num == led)
      {   
-         if (on) kbd_led_status |= LED_NUM; else kbd_led_status &= ~LED_NUM;
+         if (on) kbd_led_status |= LED_NUM; 
+		 else kbd_led_status &= ~LED_NUM;
      }
      if (currprefs.kbd_led_scr == led)
      {   
-         if (on) kbd_led_status |= LED_SCR; else kbd_led_status &= ~LED_SCR;
+         if (on) kbd_led_status |= LED_SCR; 
+		 else kbd_led_status &= ~LED_SCR;
      }
    }
   
@@ -641,7 +633,6 @@ void gui_led (int led, int on)
      kbd_led_status &= ~LED_SCR;
   }
   ioctl(0, KDSETLED, kbd_led_status);
-#endif
 }
 
 void gui_flicker_led (int led, int unitnum, int status)
@@ -729,24 +720,24 @@ void FilterFiles(std::vector<std::string> *files, const char *filter[])
 
 bool DevicenameExists(const char *name)
 {
-  int i;
-  struct uaedev_config_data *uci;
-  struct uaedev_config_info *ci;
+	int i;
+	struct uaedev_config_data *uci;
+	struct uaedev_config_info *ci;
   
-  for(i=0; i<MAX_HD_DEVICES; ++i)
-  {
-    uci = &changed_prefs.mountconfig[i];
-    ci = &uci->ci;
+	for (i = 0; i < MAX_HD_DEVICES; ++i)
+	{
+		uci = &changed_prefs.mountconfig[i];
+		ci = &uci->ci;
     
-    if(ci->devname && ci->devname[0])
-    {
-      if(!strcmp(ci->devname, name))
-        return true;
-      if(ci->volname != 0 && !strcmp(ci->volname, name))
-        return true;
-    }
-  }
-  return false;
+		if (ci->devname && ci->devname[0])
+		{
+			if (!strcmp(ci->devname, name))
+				return true;
+			if (ci->volname != 0 && !strcmp(ci->volname, name))
+				return true;
+		}
+	}
+	return false;
 }
 
 
