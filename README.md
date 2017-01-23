@@ -1,6 +1,7 @@
 # Amiga emulator for Raspberry Pi
 
 # History (newest first)
+- Added NetBeans project
 - Added Visual Studio solution using VC++ for Linux
 - Fixed bugs related to video and audio glitches
 - Renamed folder structure according to the WinUAE standard
