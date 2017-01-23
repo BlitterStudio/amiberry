@@ -132,7 +132,7 @@ static bool chipdone;
 
 static void (*card_init[MAX_EXPANSION_BOARDS]) (void);
 static void (*card_map[MAX_EXPANSION_BOARDS]) (void);
-static TCHAR *card_name[MAX_EXPANSION_BOARDS];
+static const char *card_name[MAX_EXPANSION_BOARDS];
 
 static int ecard, cardno;
 

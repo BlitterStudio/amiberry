@@ -14,7 +14,7 @@
   *
   * Copyright 1996, 1997 Bernd Schmidt
   */
-
+#include <string>
 using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
@@ -497,3 +497,5 @@ extern void xfree (const void*);
 #define xfree(T) free(T)
 
 #endif
+
+#define DBLEQU(f, i) (abs ((f) - (i)) < 0.000001)

@@ -30,15 +30,15 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_ALL_CART (ROMTYPE_AR | ROMTYPE_HRTMON | ROMTYPE_NORDIC | ROMTYPE_XPOWER | ROMTYPE_CD32CART)
 
 struct romheader {
-  TCHAR *name;
+  const char *name;
   int id;
 };
 
 struct romdata {
-  TCHAR *name;
+  const char *name;
   int ver, rev;
   int subver, subrev;
-  TCHAR *model;
+  const char *model;
   uae_u32 size;
   int id;
   int cpu;
@@ -46,10 +46,10 @@ struct romdata {
   int type;
   int group;
   int title;
-  TCHAR *partnumber;
+  const char *partnumber;
   uae_u32 crc32;
   uae_u32 sha1[5];
-  TCHAR *configname;
+  const char *configname;
 };
 
 struct romlist {
@@ -92,4 +92,3 @@ extern void addkeyfile (const TCHAR *path);
 extern int romlist_count (void);
 extern struct romlist *romlist_getit (void);
 extern int configure_rom (struct uae_prefs *p, const int *rom, int msg);
-

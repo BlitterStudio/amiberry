@@ -420,7 +420,7 @@ addrbank extendedkickmem2_bank = {
 };
 
 
-static uae_char *kickstring = "exec.library";
+static const char *kickstring = "exec.library";
 static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksum, int noalias)
 {
   uae_char buffer[20];
@@ -550,7 +550,7 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 static int patch_residents (uae_u8 *kickmemory, int size)
 {
   int i, j, patched = 0;
-  uae_char *residents[] = { "NCR scsi.device", "scsi.device", "carddisk.device", "card.resource", 0 };
+	const char *residents[] = { "NCR scsi.device", "scsi.device", "carddisk.device", "card.resource", 0 };
   // "scsi.device", "carddisk.device", "card.resource" };
   uaecptr base = size == ROM_SIZE_512 ? 0xf80000 : 0xfc0000;
 

@@ -23,7 +23,7 @@ extern void compute_vsynctime (void);
 extern void init_eventtab (void);
 extern void events_schedule (void);
 
-extern unsigned long last_synctime;
+extern long last_synctime;
 typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 

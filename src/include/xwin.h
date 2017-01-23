@@ -18,13 +18,6 @@ extern int graphics_setup (void);
 extern int graphics_init (bool);
 extern void graphics_leave (void);
 
-extern void gui_handle_events (void);
-STATIC_INLINE void handle_events (void)
-{
-  // Still needed for keyboard reset. Need to move this in keyboard management (events RESET do exist).
-  gui_handle_events ();
-}
-
 extern int handle_msgpump (void);
 extern void setup_brkhandler (void);
 extern bool vsync_switchmode (int);
