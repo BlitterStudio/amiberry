@@ -807,7 +807,7 @@ int handle_msgpump (void)
 			
         case SDL_KEYDOWN:
             // Menu button or key pressed
-			if (currprefs.key_for_menu != 0 && rEvent.key.keysym.sym == currprefs.key_for_menu)
+			if (currprefs.key_for_menu != 0 && rEvent.key.keysym.scancode == SDL_SCANCODE_F12) //currprefs.key_for_menu)
 			{
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 				break;
@@ -850,6 +850,7 @@ int handle_msgpump (void)
 #endif
 
             case SDL_SCANCODE_LSHIFT: // Shift key
+            case SDL_SCANCODE_RSHIFT:
                 inputdevice_do_keyboard(AK_LSH, 1);
                 break;
 
@@ -863,23 +864,23 @@ int handle_msgpump (void)
             // Fall through...
 
             default:
-				if (currprefs.pandora_customControls)
-				{
-//					keycode = customControlMap[rEvent.key.keysym.sym];
-					if (keycode < 0)
-					{
-					    // Simulate mouse or joystick
-						SimulateMouseOrJoy(keycode, 1);
-						break;
-					}
-					else if (keycode > 0)
-					{
-					    // Send mapped key press
-						inputdevice_do_keyboard(keycode, 1);
-						break;
-					}
-				}
-				else
+//				if (currprefs.pandora_customControls)
+//				{
+////					keycode = customControlMap[rEvent.key.keysym.sym];
+//					if (keycode < 0)
+//					{
+//					    // Simulate mouse or joystick
+//						SimulateMouseOrJoy(keycode, 1);
+//						break;
+//					}
+//					else if (keycode > 0)
+//					{
+//					    // Send mapped key press
+//						inputdevice_do_keyboard(keycode, 1);
+//						break;
+//					}
+//				}
+//				else
 					modifier = rEvent.key.keysym.mod;
 				
 //                keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
@@ -894,9 +895,9 @@ int handle_msgpump (void)
 //                }
 //                else
 //                {
-//                    if (keyboard_type == KEYCODE_UNK)
-//                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
-//                    else
+                    if (keyboard_type == KEYCODE_UNK)
+                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+                    else
                         inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
 //                }
                 break;
@@ -907,6 +908,7 @@ int handle_msgpump (void)
             switch(rEvent.key.keysym.scancode)
             {
             case SDL_SCANCODE_LSHIFT: // Shift key
+            case SDL_SCANCODE_RSHIFT:
                 inputdevice_do_keyboard(AK_LSH, 0);
                 break;
 
@@ -920,38 +922,38 @@ int handle_msgpump (void)
             // Fall through...
 
             default:
-				if (currprefs.pandora_customControls)
-				{
-//					keycode = customControlMap[rEvent.key.keysym.sym];
-					if (keycode < 0)
-					{
-					    // Simulate mouse or joystick
-						SimulateMouseOrJoy(keycode, 0);
-						break;
-					}
-					else if (keycode > 0)
-					{
-					    // Send mapped key release
-						inputdevice_do_keyboard(keycode, 0);
-						break;
-					}
-				}
+//				if (currprefs.pandora_customControls)
+//				{
+////					keycode = customControlMap[rEvent.key.keysym.sym];
+//					if (keycode < 0)
+//					{
+//					    // Simulate mouse or joystick
+//						SimulateMouseOrJoy(keycode, 0);
+//						break;
+//					}
+//					else if (keycode > 0)
+//					{
+//					    // Send mapped key release
+//						inputdevice_do_keyboard(keycode, 0);
+//						break;
+//					}
+//				}
 
                 modifier = rEvent.key.keysym.mod;
-                keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
-                if(keycode)
-                {
-                    inputdevice_do_keyboard(keycode, 0);
-                    if(modifier == KMOD_SHIFT)
-                        inputdevice_do_keyboard(AK_LSH, 0);
-                }
-                else
-                {
-//                    if (keyboard_type == KEYCODE_UNK)
-//                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
-//                    else
+//                keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
+//                if(keycode)
+//                {
+//                    inputdevice_do_keyboard(keycode, 0);
+//                    if(modifier == KMOD_SHIFT)
+//                        inputdevice_do_keyboard(AK_LSH, 0);
+//                }
+//                else
+//                {
+                    if (keyboard_type == KEYCODE_UNK)
+                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+                    else
                         inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
-                }
+//                }
                 break;
             }
             break;
@@ -997,16 +999,16 @@ int handle_msgpump (void)
                     int mouseScale = currprefs.input_joymouse_multiplier / 2;
                     x = rEvent.motion.xrel;
                     y = rEvent.motion.yrel;
-#ifdef PANDORA_SPECIFIC
-                    if(rEvent.motion.x == 0 && x > -4)
-                        x = -4;
-                    if(rEvent.motion.y == 0 && y > -4)
-                        y = -4;
-                    if(rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
-                        x = 4;
-                    if(rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
-                        y = 4;
-#endif
+//#ifdef PANDORA_SPECIFIC
+//                    if(rEvent.motion.x == 0 && x > -4)
+//                        x = -4;
+//                    if(rEvent.motion.y == 0 && y > -4)
+//                        y = -4;
+//                    if(rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
+//                        x = 4;
+//                    if(rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
+//                        y = 4;
+//#endif
                     setmousestate(0, 0, x * mouseScale, 0);
                     setmousestate(0, 1, y * mouseScale, 0);
                 }
