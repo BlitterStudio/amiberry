@@ -1,3 +1,5 @@
+Amiga emulator for the Raspberry Pi
+=================================
 # History (newest first)
 - Ported to SDL2
 - Added NetBeans project
