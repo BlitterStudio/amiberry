@@ -436,35 +436,35 @@ static void read_joystick(void)
 	// First handle fake joystick from pandora...
 		if (currprefs.jports[joyid].id == JSEM_JOYS)
 		{
-//			const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+			const Uint8 *keystate = SDL_GetKeyboardState(NULL);
     
-//			if (!keystate[VK_R])
-//			{ // Right shoulder + dPad -> cursor keys
-//				int axis = (keystate[VK_LEFT] ? -32767 : (keystate[VK_RIGHT] ? 32767 : 0));
-//				if (!joyXviaCustom)
-//					setjoystickstate(0, 0, axis, 32767);
-//				axis = (keystate[VK_UP] ? -32767 : (keystate[VK_DOWN] ? 32767 : 0));
-//				if (!joyYviaCustom)
-//					setjoystickstate(0, 1, axis, 32767);
-//			}
-//			if (!joyButXviaCustom[0])
-//				setjoybuttonstate(0, 0, keystate[VK_X]);
-//			if (!joyButXviaCustom[1])
-//				setjoybuttonstate(0, 1, keystate[VK_B]);
-//			if (!joyButXviaCustom[2])
-//				setjoybuttonstate(0, 2, keystate[VK_A]);
-//			if (!joyButXviaCustom[3])
-//				setjoybuttonstate(0, 3, keystate[VK_Y]);
+			if (!keystate[VK_R])
+			{ // Right shoulder + dPad -> cursor keys
+				int axis = (keystate[VK_LEFT] ? -32767 : (keystate[VK_RIGHT] ? 32767 : 0));
+				if (!joyXviaCustom)
+					setjoystickstate(0, 0, axis, 32767);
+				axis = (keystate[VK_UP] ? -32767 : (keystate[VK_DOWN] ? 32767 : 0));
+				if (!joyYviaCustom)
+					setjoystickstate(0, 1, axis, 32767);
+			}
+			if (!joyButXviaCustom[0])
+				setjoybuttonstate(0, 0, keystate[VK_X]);
+			if (!joyButXviaCustom[1])
+				setjoybuttonstate(0, 1, keystate[VK_B]);
+			if (!joyButXviaCustom[2])
+				setjoybuttonstate(0, 2, keystate[VK_A]);
+			if (!joyButXviaCustom[3])
+				setjoybuttonstate(0, 3, keystate[VK_Y]);
 
 			int cd32_start = 0, cd32_ffw = 0, cd32_rwd = 0;
-//			if (keystate[SDLK_LALT]) { // Pandora Start button
-//				if (keystate[VK_L])  // Left shoulder
-//					cd32_rwd = 1;
-//				else if (keystate[VK_R]) // Right shoulder
-//					cd32_ffw = 1;
-//				else
-//					cd32_start = 1;
-//			}
+			if (keystate[SDL_SCANCODE_LALT]) { // Pandora Start button
+				if (keystate[VK_L])  // Left shoulder
+					cd32_rwd = 1;
+				else if (keystate[VK_R]) // Right shoulder
+					cd32_ffw = 1;
+				else
+					cd32_start = 1;
+			}
 			if (!joyButXviaCustom[6])
 				setjoybuttonstate(0, 6, cd32_start);
 			if (!joyButXviaCustom[5])

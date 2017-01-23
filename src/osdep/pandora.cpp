@@ -823,10 +823,10 @@ int handle_msgpump (void)
 				break;
 			}
 		
-            switch(rEvent.key.keysym.sym)
+            switch(rEvent.key.keysym.scancode)
             {
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
-		case SDLK_CAPSLOCK: // capslock
+		case SDL_SCANCODE_CAPSLOCK: // capslock
 		     // Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 				ioctl(0, KDGKBLED, &kbd_flags);
 				ioctl(0, KDGETLED, &kbd_led_status);
@@ -849,17 +849,17 @@ int handle_msgpump (void)
 				break;
 #endif
 
-            case SDLK_LSHIFT: // Shift key
+            case SDL_SCANCODE_LSHIFT: // Shift key
                 inputdevice_do_keyboard(AK_LSH, 1);
                 break;
 
-            case VK_L: // Left shoulder button
-            case VK_R:  // Right shoulder button
-                if(currprefs.input_tablet > TABLET_OFF)
-                {
-                    // Holding left or right shoulder button -> stylus does right mousebutton
-                    doStylusRightClick = 1;
-                }
+//            case VK_L: // Left shoulder button
+//            case VK_R:  // Right shoulder button
+//                if(currprefs.input_tablet > TABLET_OFF)
+//                {
+//                    // Holding left or right shoulder button -> stylus does right mousebutton
+//                    doStylusRightClick = 1;
+//                }
             // Fall through...
 
             default:
@@ -882,41 +882,41 @@ int handle_msgpump (void)
 				else
 					modifier = rEvent.key.keysym.mod;
 				
-                keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
-                if(keycode)
-                {
-                    if(modifier == KMOD_SHIFT)
-                        inputdevice_do_keyboard(AK_LSH, 1);
-                    else
-                        inputdevice_do_keyboard(AK_LSH, 0);
-					
-                    inputdevice_do_keyboard(keycode, 1);
-                }
-                else
-                {
-                    if (keyboard_type == KEYCODE_UNK)
-                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
-                    else
+//                keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
+//                if(keycode)
+//                {
+//                    if(modifier == KMOD_SHIFT)
+//                        inputdevice_do_keyboard(AK_LSH, 1);
+//                    else
+//                        inputdevice_do_keyboard(AK_LSH, 0);
+//					
+//                    inputdevice_do_keyboard(keycode, 1);
+//                }
+//                else
+//                {
+//                    if (keyboard_type == KEYCODE_UNK)
+//                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+//                    else
                         inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
-                }
+//                }
                 break;
             }
             break;
 
         case SDL_KEYUP:
-            switch(rEvent.key.keysym.sym)
+            switch(rEvent.key.keysym.scancode)
             {
-            case SDLK_LSHIFT: // Shift key
+            case SDL_SCANCODE_LSHIFT: // Shift key
                 inputdevice_do_keyboard(AK_LSH, 0);
                 break;
 
-            case VK_L: // Left shoulder button
-            case VK_R:  // Right shoulder button
-                if(currprefs.input_tablet > TABLET_OFF)
-                {
-                    // Release left or right shoulder button -> stylus does left mousebutton
-                    doStylusRightClick = 0;
-                }
+//            case VK_L: // Left shoulder button
+//            case VK_R:  // Right shoulder button
+//                if(currprefs.input_tablet > TABLET_OFF)
+//                {
+//                    // Release left or right shoulder button -> stylus does left mousebutton
+//                    doStylusRightClick = 0;
+//                }
             // Fall through...
 
             default:
@@ -947,9 +947,9 @@ int handle_msgpump (void)
                 }
                 else
                 {
-                    if (keyboard_type == KEYCODE_UNK)
-                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
-                    else
+//                    if (keyboard_type == KEYCODE_UNK)
+//                        inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+//                    else
                         inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
                 }
                 break;
