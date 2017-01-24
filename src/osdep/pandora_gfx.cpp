@@ -16,7 +16,6 @@
 
 #include <png.h>
 #include "SDL.h"
-#include "SDL_image.h"
 
 /* SDL variable for output of emulation */
 SDL_Surface *screen = NULL;
