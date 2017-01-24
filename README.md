@@ -38,15 +38,35 @@ Next, configure SDL2 to use only the OpenGL ES backend directly from the console
 
       ../configure --disable-pulseaudio --disable-esd --disable-video-mir --disable-video-wayland --disable-video-x11 --disable-video-opengl
 
-Finally, compile and install SDL2:
+Compile and install SDL2:
 
       make -j 4 && sudo make install
+
+Next, we need SDL2_image (currently v2.0.1):
+
+      cd ~ 
+      wget http://www.libsdl.org/projects/SDL_image/release/SDL2_image-2.0.1.tar.gz
+      tar zxvf SDL2_image-2.0.1.tar.gz 
+      cd SDL2_image-2.0.1 && mkdir build && cd build 
+      ../configure 
+      make -j 4 
+      sudo make install 
+
+And finally, SDL2_ttf (currently v2.0.14):
+
+      cd ~
+      wget https://libsdl.org/projects/SDL_ttf/SDL2_ttf-2.0.14.tar.gz
+      tar zxvf SDL2_ttf-2.0.14.tar.gz
+      cd SDL2_ttf-2.0.14 && mkdir build && cd build
+      ../configure
+      make -j 4
+      sudo make install
 
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
 Install the following packages:
 
-      sudo apt-get install libsdl2-image-dev libsdl2-ttf-dev libxml2-dev libflac-dev libmpg123-dev
+      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev
 
 Clone this repo:
       
