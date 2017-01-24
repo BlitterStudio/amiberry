@@ -46,17 +46,17 @@ With SDL2 installed, you can proceed to install Amiberry as follows:
 
    Install the following packages:
 
-      sudo apt-get install libsdl2-ttf-dev libxml2-dev libflac-dev libmpg123-dev
+            sudo apt-get install libsdl2-image-dev libsdl2-ttf-dev libxml2-dev libflac-dev libmpg123-dev
 
    Then for Raspberry Pi 3:  
 
-      make
+            make
 
    For Raspberry Pi 2:
 
-      make PLATFORM=rpi2
+            make PLATFORM=rpi2
 
    For Raspberry Pi 1:  
 
-      make PLATFORM=rpi1
+            make PLATFORM=rpi1
 
