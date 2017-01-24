@@ -764,7 +764,11 @@ void picasso_refresh (void)
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_32
+#ifdef RASPBERRY
+#define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
+#else
 #define BLT_FUNC(s,d) *d = 0xffffffff
+#endif
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_SWAP_32
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
@@ -815,7 +819,11 @@ void picasso_refresh (void)
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_24
+#ifdef RASPBERRY
+#define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
+#else
 #define BLT_FUNC(s,d) *d = 0xffffffff
+#endif
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_SWAP_24
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
@@ -866,7 +874,11 @@ void picasso_refresh (void)
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_16
+#ifdef RASPBERRY
+#define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
+#else
 #define BLT_FUNC(s,d) *d = 0xffffffff
+#endif
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_SWAP_16
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
@@ -917,7 +929,11 @@ void picasso_refresh (void)
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_8
+#ifdef RASPBERRY
+#define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
+#else
 #define BLT_FUNC(s,d) *d = 0xffffffff
+#endif
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_SWAP_8
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
