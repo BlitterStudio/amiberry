@@ -14,6 +14,7 @@ endif
 
 NAME   = amiberry-sdl2
 RM     = rm -f
+CC     = gcc
 CXX    = g++
 STRIP  = strip
 
@@ -216,7 +217,7 @@ src/trace.o: src/trace.c
 	$(CC) $(MORE_CFLAGS) -c src/trace.c -o src/trace.o
 
 $(PROG): $(OBJS)
-	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
