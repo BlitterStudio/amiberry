@@ -55,7 +55,7 @@ Next, we need SDL2_image (currently v2.0.1):
 And finally, SDL2_ttf (currently v2.0.14):
 
       cd ~
-      wget https://libsdl.org/projects/SDL_ttf/SDL2_ttf-2.0.14.tar.gz
+      wget https://libsdl.org/projects/SDL_ttf/release/SDL2_ttf-2.0.14.tar.gz
       tar zxvf SDL2_ttf-2.0.14.tar.gz
       cd SDL2_ttf-2.0.14 && mkdir build && cd build
       ../configure
