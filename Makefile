@@ -3,13 +3,13 @@ ifeq ($(PLATFORM),)
 endif
 
 ifeq ($(PLATFORM),rpi3)
-	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	CPU_FLAGS += -std=gnu++14 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
 else ifeq ($(PLATFORM),rpi2)
-	CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
+	CPU_FLAGS += -std=gnu++14 -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
 else ifeq ($(PLATFORM),rpi1)
-	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+	CPU_FLAGS += -std=gnu++14 -march=armv6zk -mfpu=vfp -mfloat-abi=hard
 endif
 
 NAME   = amiberry-sdl2
@@ -41,7 +41,7 @@ MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
 LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
-LDFLAGS += -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan
+LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan
 
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -pipe -fweb
