@@ -2,8 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include <guichan.hpp>
-#include <guichan/sdl.hpp>
+#include <guisan.hpp>
+#include <guisan/sdl.hpp>
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
