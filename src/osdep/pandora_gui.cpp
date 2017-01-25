@@ -558,8 +558,6 @@ void gui_display(int shortcut)
 
 	update_display(&changed_prefs);
 
-	/* Clear menu garbage at the bottom of the screen */
-	black_screen_now();
 	reset_sound();
 	resume_sound();
 	blkdev_exitgui();

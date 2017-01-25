@@ -309,12 +309,12 @@ void flush_screen ()
     init_row_map();
 }
 
-void black_screen_now(void)
-{
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-	SDL_RenderClear(renderer);
-	SDL_RenderPresent(renderer);
-}
+//void black_screen_now(void)
+//{
+//	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+//	SDL_RenderClear(renderer);
+//	SDL_RenderPresent(renderer);
+//}
 
 static void graphics_subinit (void)
 {
@@ -600,7 +600,6 @@ bool target_graphics_buffer_update (void)
 
 	if (rate_changed)
 	{
-		black_screen_now();
 		fpscounter_reset();
 		time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
 	}
