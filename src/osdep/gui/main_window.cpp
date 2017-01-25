@@ -134,13 +134,13 @@ namespace sdl
 		// Create new screen for GUI
 		//-------------------------------------------------
 		
-		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create a surface");
 		
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 		
 		gui_texture = SDL_CreateTexture(renderer,
-			SDL_PIXELFORMAT_RGB565,
+			SDL_PIXELFORMAT_ARGB8888,
 			SDL_TEXTUREACCESS_STREAMING,
 			GUI_WIDTH,
 			GUI_HEIGHT);

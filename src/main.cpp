@@ -669,15 +669,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 	
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
-	SDL_RenderSetLogicalSize(renderer, 800, 480);
-		
-	texture = SDL_CreateTexture(renderer,
-		SDL_PIXELFORMAT_RGB565,
-		SDL_TEXTUREACCESS_STREAMING,
-		800,
-		480);
-	check_error_sdl(texture == nullptr, "Unable to create texture");
-	
+
 	keyboard_settrans();
 
 	if (restart_config[0]) {
