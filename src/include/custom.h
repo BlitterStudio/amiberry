@@ -115,10 +115,13 @@ STATIC_INLINE uae_u16 INTREQR (void)
 #define EQU_ENDLINE_PAL 8
 #define EQU_ENDLINE_NTSC 10
 
-extern int maxhpos;
+extern int maxhpos, maxhpos_short;
 extern int maxvpos, maxvpos_nom, maxvpos_display;
-extern int minfirstline;
-extern int vblank_hz;
+extern int hsyncstartpos, hsyncendpos;
+extern int minfirstline, vblank_endline, numscrlines;
+extern double vblank_hz, fake_vblank_hz;
+extern int vblank_skip, doublescan;
+extern bool programmedmode;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002

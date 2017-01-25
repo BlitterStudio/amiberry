@@ -71,7 +71,7 @@ void pause_sound(void) {}
 
 void resume_sound(void) {}
 
-void update_sound(float) {}
+void update_sound(double) {}
 
 void reset_sound(void) {}
 
@@ -91,12 +91,12 @@ void restart_sound_buffer(void) {}
 static int have_sound = 0;
 static int lastfreq;
 
-void update_sound(float clk)
+void update_sound(double clk)
 {
 	float evtime;
   
 	evtime = clk * CYCLE_UNIT / (float)currprefs.sound_freq;
-	scaled_sample_evtime = (int)evtime;
+	scaled_sample_evtime = evtime;
 }
 
 static int s_oldrate = 0, s_oldbits = 0, s_oldstereo = 0;

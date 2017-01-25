@@ -10,9 +10,12 @@
 
 typedef uae_u32 xcolnr;
 
-typedef int (*allocfunc_type)(int, int, int, xcolnr *);
+typedef int(*allocfunc_type)(int, int, int, xcolnr *);
 
 extern xcolnr xcolors[4096];
+extern xcolnr xcolors_16[4096];
+extern xcolnr xcolors_32[4096];
+extern uae_u32 p96_rgbx16[65536];
 
 extern int graphics_setup (void);
 extern int graphics_init (bool);
@@ -21,21 +24,10 @@ extern void graphics_leave (void);
 extern int handle_msgpump (void);
 extern void setup_brkhandler (void);
 extern bool vsync_switchmode (int);
-STATIC_INLINE int isvsync_chipset (void)
-{
-	if (picasso_on)
-		return 0;
-	return 1;
-}
-
-STATIC_INLINE int isvsync_rtg (void)
-{
-	if (!picasso_on)
-		return 0;
-	return 1;
-}
-
 extern void flush_screen (void);
+extern int isvsync_chipset(void);
+extern int isvsync_rtg(void);
+extern int isvsync(void);
 
 extern int lockscr (void);
 extern void unlockscr (void);
@@ -49,6 +41,7 @@ extern unsigned int doMask (int p, int bits, int shift);
 extern unsigned int doMask256 (int p, int bits, int shift);
 extern void alloc_colors64k (int, int, int, int, int, int, int);
 extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt);
+extern double getvsyncrate(double hz, int *mult);
 
 extern int max_uae_width, max_uae_height;
 

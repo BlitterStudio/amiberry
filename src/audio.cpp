@@ -88,10 +88,10 @@ int sound_available = 0;
 void(*sample_handler)(void);
 static void(*sample_prehandler)(unsigned long best_evtime);
 
-unsigned long scaled_sample_evtime;
+float scaled_sample_evtime;
 
 static unsigned long last_cycles;
-static unsigned long next_sample_evtime;
+static float next_sample_evtime;
 
 typedef uae_s8 sample8_t;
 #define DO_CHANNEL_1(v, c) do { (v) *= audio_channel[c].vol; } while (0)

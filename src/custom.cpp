@@ -10,6 +10,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+
 #include <ctype.h>
 #include <assert.h>
 
@@ -40,7 +41,12 @@
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
 
-#define nocustom() (picasso_on)
+STATIC_INLINE bool nocustom(void)
+{
+	if (picasso_on)
+		return true;
+	return false;
+}
 
 extern int screen_is_picasso;
 
@@ -93,6 +99,7 @@ static uae_u32 last_custom_value1;
 static uae_u32 cop1lc,cop2lc,copcon;
  
 int maxhpos = MAXHPOS_PAL;
+int maxhpos_short = MAXHPOS_PAL;
 int maxvpos = MAXVPOS_PAL;
 int maxvpos_nom = MAXVPOS_PAL; // nominal value (same as maxvpos but "faked" maxvpos in fake 60hz modes)
 int maxvpos_display = MAXVPOS_PAL; // value used for display size
@@ -100,7 +107,8 @@ static int maxvpos_total = 511;
 int minfirstline = VBLANK_ENDLINE_PAL;
 static int equ_vblank_endline = EQU_ENDLINE_PAL;
 static bool equ_vblank_toggle = true;
-int vblank_hz = VBLANK_HZ_PAL;
+double vblank_hz = VBLANK_HZ_PAL, fake_vblank_hz, vblank_hz_stored, vblank_hz_nom;
+static int vblank_hz_mult, vblank_hz_state;
 int syncbase;
 static int fmode;
 static uae_u16 beamcon0;
@@ -650,6 +658,18 @@ STATIC_INLINE void update_denise (int hpos)
 	}
 }
 
+static int islinetoggle(void)
+{
+	int linetoggle = 0;
+	if (!(beamcon0 & 0x0800) && !(beamcon0 & 0x0020) && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
+	}
+	else if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS) && currprefs.ntscmode) {
+		linetoggle = 1; // hardwired NTSC Agnus
+	}
+	return linetoggle;
+}
+
 /* Expand bplcon0/bplcon1 into the toscr_xxx variables.  */
 STATIC_INLINE void compute_toscr_delay_1 (int bplcon1)
 {
@@ -680,44 +700,44 @@ static bool shres_warned = false;
 #endif
 
 /* set currently active Agnus bitplane DMA sequence */
-static void setup_fmodes (int hpos)
+static void setup_fmodes(int hpos)
 {
-  switch (fmode & 3) 
-  {
- 	case 0:
- 		fetchmode = 0;
- 		delaymask = 15; // (16 << fetchmode) - 1;
- 		break;
- 	case 1:
- 	case 2:
- 		fetchmode = 1;
- 		delaymask = 31; // (16 << fetchmode) - 1;
- 		break;
- 	case 3:
- 		fetchmode = 2;
- 		delaymask = 63; // (16 << fetchmode) - 1;
- 		break;
-  }
-  bplcon0_res = GET_RES_AGNUS (bplcon0);
-	if(bplcon0_res == RES_SUPERHIRES) {
+	switch (fmode & 3) 
+	{
+	case 0:
+		fetchmode = 0;
+		delaymask = 15; // (16 << fetchmode) - 1;
+		break;
+	case 1:
+	case 2:
+		fetchmode = 1;
+		delaymask = 31; // (16 << fetchmode) - 1;
+		break;
+	case 3:
+		fetchmode = 2;
+		delaymask = 63; // (16 << fetchmode) - 1;
+		break;
+	}
+	bplcon0_res = GET_RES_AGNUS(bplcon0);
+	if (bplcon0_res == RES_SUPERHIRES) {
 #ifdef WITH_INGAME_WARNING
-    if(!shres_warned) {
-      InGameMessage("Superhires resolution requested.\nNot supported in UAE4ARM.");
-      shres_warned = true;
-    }
+		if (!shres_warned) {
+			InGameMessage("Superhires resolution requested.\nNot supported in UAE4ARM.");
+			shres_warned = true;
+		}
 #endif
-    bplcon0_res == RES_LORES;
-  }
-  bplcon0_planes = GET_PLANES (bplcon0);
-  bplcon0_planes_limit = GET_PLANES_LIMIT ();
-  fetchunit = fetchunits[fetchmode * 4 + bplcon0_res];
-  fetchunit_mask = fetchunit - 1;
-  int fetchstart_shift = fetchstarts[fetchmode * 4 + bplcon0_res];
-  fetchstart = 1 << fetchstart_shift;
-  fetchstart_mask = fetchstart - 1;
-  int fm_maxplane_shift = fm_maxplanes[fetchmode * 4 + bplcon0_res];
-  fm_maxplane = 1 << fm_maxplane_shift;
-  fetch_modulo_cycle = fetchunit - fetchstart;
+		bplcon0_res == RES_LORES;
+	}
+	bplcon0_planes = GET_PLANES(bplcon0);
+	bplcon0_planes_limit = GET_PLANES_LIMIT();
+	fetchunit = fetchunits[fetchmode * 4 + bplcon0_res];
+	fetchunit_mask = fetchunit - 1;
+	int fetchstart_shift = fetchstarts[fetchmode * 4 + bplcon0_res];
+	fetchstart = 1 << fetchstart_shift;
+	fetchstart_mask = fetchstart - 1;
+	int fm_maxplane_shift = fm_maxplanes[fetchmode * 4 + bplcon0_res];
+	fm_maxplane = 1 << fm_maxplane_shift;
+	fetch_modulo_cycle = fetchunit - fetchstart;
 
 	if (thisline_decision.plfleft < 0) {
 		thisline_decision.bplres = bplcon0_res;
@@ -725,8 +745,8 @@ static void setup_fmodes (int hpos)
 		thisline_decision.nr_planes = bplcon0_planes;
 	}
 
-  curr_diagram = cycle_diagram_table[fetchmode][bplcon0_res][bplcon0_planes_limit];
-	estimate_last_fetch_cycle (hpos);
+	curr_diagram = cycle_diagram_table[fetchmode][bplcon0_res][bplcon0_planes_limit];
+	estimate_last_fetch_cycle(hpos);
 	bpldmasetuphpos = -1;
 	bpldmasetupphase = 0;
 	line_cyclebased = vpos;
@@ -2374,29 +2394,53 @@ static void reset_decisions (void)
   thisline_decision.bplcon4 = bplcon4;
 }
 
+int vsynctimebase_orig;
+
 void compute_vsynctime (void)
 {
-	vblank_hz = currprefs.chipset_refreshrate;
-
-	vsynctimebase = (int)(syncbase / vblank_hz);
-  if (screen_is_picasso) {
-	beamcon0 = new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
-  }
-
-  if (currprefs.produce_sound > 1) {
-		float svpos = maxvpos_nom;
-		float shpos = maxhpos;
-		if (currprefs.ntscmode) {
+	fake_vblank_hz = 0;
+	vblank_hz_mult = 0;
+	vblank_hz_state = 1;
+	if (fabs(currprefs.chipset_refreshrate) > 0.1) {
+		vblank_hz = currprefs.chipset_refreshrate;
+		if (isvsync_chipset()) {
+			int mult = 0;
+			if (getvsyncrate(vblank_hz, &mult) != vblank_hz) {
+				vblank_hz = getvsyncrate(vblank_hz, &vblank_hz_mult);
+				if (vblank_hz_mult > 0)
+					vblank_hz_state = 0;
+			}
+		}
+	}
+	if (!fake_vblank_hz)
+		fake_vblank_hz = vblank_hz;
+//	if (currprefs.turbo_emulation)
+//		vsynctimebase = vsynctimebase_orig = 1;
+//	else
+		vsynctimebase = vsynctimebase_orig = (int)(syncbase / fake_vblank_hz);
+#if 0
+	if (!picasso_on) {
+		updatedisplayarea();
+	}
+#endif
+	if (currprefs.produce_sound > 1) {
+		double svpos = maxvpos_nom;
+		double shpos = maxhpos_short;
+		if (islinetoggle()) {
 			shpos += 0.5;
 		}
+//		if (interlace_seen) {
 		if ((bplcon0 & 4)) {
 			svpos += 0.5;
-		} else if (lof_current) {
+		}
+		else if (lof_current) {
 			svpos += 1.0;
 		}
-		float clk = svpos * shpos * vblank_hz;
-		update_sound (clk);
-  }
+		double clk = svpos * shpos * fake_vblank_hz;
+		//write_log (_T("SNDRATE %.1f*%.1f*%.6f=%.6f\n"), svpos, shpos, fake_vblank_hz, clk);
+		update_sound(clk);
+	}
+	
 }
 
 int current_maxvpos (void)
@@ -2409,7 +2453,7 @@ static void compute_framesync (void)
   int v;
 
 	if (!picasso_on && !picasso_requested_on) {
-	  if (abs (vblank_hz - 50) < 1 || abs (vblank_hz - 60) < 1) {
+	  if (fabs (vblank_hz - 50) < 1 || fabs (vblank_hz - 60) < 1) {
 		  vsync_switchmode (vblank_hz);
 	  }
     v = (vblank_hz >= 55) ? 60 : 50;
@@ -2468,8 +2512,6 @@ static void init_hz (bool fullinit)
 		equ_vblank_endline = EQU_ENDLINE_NTSC;
 		equ_vblank_toggle = false;
 	}
-	// long/short field refresh rate adjustment
-//	vblank_hz = vblank_hz * (maxvpos * 2 + 1) / ((maxvpos + lof_current) * 2);
 
 	maxvpos_nom = maxvpos;
 	maxvpos_display = maxvpos;
@@ -2548,6 +2590,7 @@ static void init_hz (bool fullinit)
 		vblank_hz = 10;
 	if (vblank_hz > 300)
 		vblank_hz = 300;
+	maxhpos_short = maxhpos;
 	eventtab[ev_hsync].oldcycles = get_cycles();
 	eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
 	events_schedule();

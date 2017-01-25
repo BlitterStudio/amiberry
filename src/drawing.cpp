@@ -2210,3 +2210,25 @@ void drawing_init(void)
 
 	reset_drawing();
 }
+
+int isvsync_chipset(void)
+{
+	if (picasso_on)
+		return 0;
+	return 1;
+}
+
+int isvsync_rtg(void)
+{
+	if (!picasso_on)
+		return 0;
+	return 1;
+}
+
+int isvsync(void)
+{
+	if (picasso_on)
+		return isvsync_rtg();
+	else
+		return isvsync_chipset();
+}

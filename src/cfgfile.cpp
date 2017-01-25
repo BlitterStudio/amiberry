@@ -2344,7 +2344,7 @@ static int cfgfile_parse_hardware(struct uae_prefs *p, const TCHAR *option, TCHA
 		return 1;
 
 	if (cfgfile_intval(option, value, _T("cachesize"), &p->cachesize, 1)
-		|| cfgfile_intval(option, value, _T("chipset_refreshrate"), &p->chipset_refreshrate, 1)
+		|| cfgfile_doubleval (option, value, _T("chipset_refreshrate"), &p->chipset_refreshrate)
 		|| cfgfile_intval(option, value, _T("fastmem_size"), &p->fastmem_size, 0x100000)
 		|| cfgfile_intval(option, value, _T("z3mem_size"), &p->z3fastmem_size, 0x100000)
 		|| cfgfile_intval(option, value, _T("z3mem_start"), &p->z3fastmem_start, 1)
