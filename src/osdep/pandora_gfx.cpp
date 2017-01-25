@@ -309,13 +309,6 @@ void flush_screen ()
     init_row_map();
 }
 
-//void black_screen_now(void)
-//{
-//	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-//	SDL_RenderClear(renderer);
-//	SDL_RenderPresent(renderer);
-//}
-
 static void graphics_subinit (void)
 {
 	if (screen == NULL)

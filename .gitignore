@@ -27,3 +27,5 @@ VisualGDB/VisualGDB/Release/Amiberry
 *.db-shm
 *.db-wal
 *.TMP
+VisualGDB/VisualGDB/Release/Amiberry-sdl2
+*.npa00-cfdc2249
