@@ -76,13 +76,13 @@ Clone this repo:
       
 Then for Raspberry Pi 3:  
 
-      make -j 4
+      make all
 
 For Raspberry Pi 2:
 
-      make PLATFORM=rpi2 -j 4
+      make all PLATFORM=rpi2
 
 For Raspberry Pi 1:  
 
-      make PLATFORM=rpi1
+      make all PLATFORM=rpi1
 
