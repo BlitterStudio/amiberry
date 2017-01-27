@@ -110,17 +110,23 @@
     <Filter Include="Source files\osdep\menu">
       <UniqueIdentifier>{08cd7b24-548b-44cc-b832-e5c7a01f2527}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header files\include\guisan">
-      <UniqueIdentifier>{b83a0650-3eed-42d1-8fd3-4789521ddc13}</UniqueIdentifier>
+    <Filter Include="Header files\guisan">
+      <UniqueIdentifier>{d9ec068c-6c88-41d0-ada4-8f8d0eeb19c8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header files\include\guisan\sdl">
-      <UniqueIdentifier>{caf30d50-f226-4af8-bd90-ea073cdee161}</UniqueIdentifier>
+    <Filter Include="Header files\guisan\include">
+      <UniqueIdentifier>{b16e1112-7204-4080-992c-e83c4f5b2592}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header files\include\guisan\opengl">
-      <UniqueIdentifier>{0b788fcf-c590-4559-a0eb-a04d50ced350}</UniqueIdentifier>
+    <Filter Include="Header files\guisan\include\guisan">
+      <UniqueIdentifier>{0c2b4d95-4f37-4e75-a304-b8d6a0d7d3f3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header files\include\guisan\widgets">
-      <UniqueIdentifier>{f5513d0a-8eab-40b4-b652-48202c4289c1}</UniqueIdentifier>
+    <Filter Include="Header files\guisan\include\guisan\opengl">
+      <UniqueIdentifier>{1176b760-b125-4e7d-bd37-7aec93330512}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\guisan\include\guisan\sdl">
+      <UniqueIdentifier>{5394e4e5-17ef-47da-a9ea-bef9408e98ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\guisan\include\guisan\widgets">
+      <UniqueIdentifier>{ff1e28c4-c8b4-4eb3-aded-bf08ed9cb8a4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -903,198 +909,6 @@
     <ClInclude Include="..\..\src\archivers\zip\unzip.h">
       <Filter>Header files\archivers\zip</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan.hpp">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\actionevent.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\actionlistener.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\basiccontainer.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\cliprectangle.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\color.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\deathlistener.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\defaultfont.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\event.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\exception.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\focushandler.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\focuslistener.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\font.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\genericinput.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\glut.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\graphics.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\gui.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\image.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\imagefont.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\imageloader.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\input.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\inputevent.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\key.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\keyevent.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\keyinput.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\keylistener.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\listmodel.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\mouseevent.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\mouseinput.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\mouselistener.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\opengl.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\platform.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\rectangle.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\sdl.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\selectionevent.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\selectionlistener.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widget.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgetlistener.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\x.hpp">
-      <Filter>Header files\include\guisan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\opengl\openglgraphics.hpp">
-      <Filter>Header files\include\guisan\opengl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\opengl\openglimage.hpp">
-      <Filter>Header files\include\guisan\opengl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\opengl\openglsdlimageloader.hpp">
-      <Filter>Header files\include\guisan\opengl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlgraphics.hpp">
-      <Filter>Header files\include\guisan\sdl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlimage.hpp">
-      <Filter>Header files\include\guisan\sdl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlimageloader.hpp">
-      <Filter>Header files\include\guisan\sdl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlinput.hpp">
-      <Filter>Header files\include\guisan\sdl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlpixel.hpp">
-      <Filter>Header files\include\guisan\sdl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdltruetypefont.hpp">
-      <Filter>Header files\include\guisan\sdl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\button.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\checkbox.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\container.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\dropdown.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\icon.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\imagebutton.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\label.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\listbox.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\radiobutton.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\scrollarea.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\slider.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\tab.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\tabbedarea.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\textbox.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\textfield.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\guisan\widgets\window.hpp">
-      <Filter>Header files\include\guisan\widgets</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\osdep\gui\gui_handling.h">
       <Filter>Header files\osdep\gui</Filter>
     </ClInclude>
@@ -1151,6 +965,198 @@
     </ClInclude>
     <ClInclude Include="..\..\src\machdep\rpt.h">
       <Filter>Header files\machdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan.hpp">
+      <Filter>Header files\guisan\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\actionevent.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\actionlistener.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\basiccontainer.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\cliprectangle.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\color.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\deathlistener.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\defaultfont.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\event.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\exception.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\focushandler.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\focuslistener.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\font.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\genericinput.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\glut.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\graphics.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\gui.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\image.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\imagefont.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\imageloader.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\input.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\inputevent.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\key.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\keyevent.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\keyinput.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\keylistener.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\listmodel.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\mouseevent.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\mouseinput.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\mouselistener.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\platform.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\rectangle.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\selectionevent.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\selectionlistener.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widget.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgetlistener.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\x.hpp">
+      <Filter>Header files\guisan\include\guisan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglgraphics.hpp">
+      <Filter>Header files\guisan\include\guisan\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglimage.hpp">
+      <Filter>Header files\guisan\include\guisan\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglsdlimageloader.hpp">
+      <Filter>Header files\guisan\include\guisan\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlgraphics.hpp">
+      <Filter>Header files\guisan\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlimage.hpp">
+      <Filter>Header files\guisan\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlimageloader.hpp">
+      <Filter>Header files\guisan\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlinput.hpp">
+      <Filter>Header files\guisan\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlpixel.hpp">
+      <Filter>Header files\guisan\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdltruetypefont.hpp">
+      <Filter>Header files\guisan\include\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\button.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\checkbox.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\container.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\dropdown.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\icon.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\imagebutton.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\label.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\listbox.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\radiobutton.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\scrollarea.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\slider.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\tab.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\tabbedarea.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\textbox.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\textfield.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\window.hpp">
+      <Filter>Header files\guisan\include\guisan\widgets</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

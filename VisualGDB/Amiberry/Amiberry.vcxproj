@@ -46,13 +46,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -pipe %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
       <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
@@ -61,7 +61,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -pipe -fweb %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
@@ -69,7 +69,7 @@
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>../../src/guisan;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
       <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
@@ -78,7 +78,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -pipe -fweb %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
@@ -86,7 +86,7 @@
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
@@ -96,7 +96,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/local/include;=/usr/local/include/SDL2;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;PICASSO96;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv6zk -mfpu=vfp -mfloat-abi=hard -pipe -fweb %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
@@ -104,7 +104,7 @@
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;m;z;SDL2_image;png;rt;xml2;FLAC;mpg123;dl;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
@@ -347,6 +347,70 @@
     <ClInclude Include="..\..\src\archivers\lha\lha_macro.h" />
     <ClInclude Include="..\..\src\archivers\wrp\warp.h" />
     <ClInclude Include="..\..\src\archivers\zip\unzip.h" />
+    <ClInclude Include="..\..\src\guisan\include\guisan.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\actionevent.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\actionlistener.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\basiccontainer.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\cliprectangle.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\color.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\deathlistener.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\defaultfont.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\event.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\exception.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\focushandler.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\focuslistener.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\font.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\genericinput.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\glut.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\graphics.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\gui.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\image.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\imagefont.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\imageloader.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\input.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\inputevent.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\key.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\keyevent.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\keyinput.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\keylistener.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\listmodel.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\mouseevent.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\mouseinput.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\mouselistener.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglgraphics.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglimage.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglsdlimageloader.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\platform.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\rectangle.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlgraphics.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlimage.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlimageloader.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlinput.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlpixel.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdltruetypefont.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\selectionevent.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\selectionlistener.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widget.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgetlistener.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\button.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\checkbox.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\container.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\dropdown.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\icon.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\imagebutton.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\label.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\listbox.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\radiobutton.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\scrollarea.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\slider.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\tab.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\tabbedarea.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\textbox.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\textfield.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\window.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\x.hpp" />
     <ClInclude Include="..\..\src\include\akiko.h" />
     <ClInclude Include="..\..\src\include\audio.h" />
     <ClInclude Include="..\..\src\include\autoconf.h" />
@@ -381,70 +445,6 @@
     <ClInclude Include="..\..\src\include\gensound.h" />
     <ClInclude Include="..\..\src\include\gfxboard.h" />
     <ClInclude Include="..\..\src\include\gui.h" />
-    <ClInclude Include="..\..\src\include\guisan.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\actionevent.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\actionlistener.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\basiccontainer.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\cliprectangle.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\color.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\deathlistener.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\defaultfont.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\event.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\exception.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\focushandler.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\focuslistener.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\font.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\genericinput.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\glut.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\graphics.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\gui.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\image.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\imagefont.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\imageloader.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\input.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\inputevent.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\key.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\keyevent.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\keyinput.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\keylistener.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\listmodel.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\mouseevent.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\mouseinput.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\mouselistener.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\opengl.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\opengl\openglgraphics.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\opengl\openglimage.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\opengl\openglsdlimageloader.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\platform.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\rectangle.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\sdl.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlgraphics.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlimage.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlimageloader.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlinput.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdlpixel.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\sdl\sdltruetypefont.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\selectionevent.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\selectionlistener.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widget.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgetlistener.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\button.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\checkbox.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\container.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\dropdown.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\icon.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\imagebutton.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\label.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\listbox.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\radiobutton.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\scrollarea.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\slider.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\tab.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\tabbedarea.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\textbox.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\textfield.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\widgets\window.hpp" />
-    <ClInclude Include="..\..\src\include\guisan\x.hpp" />
     <ClInclude Include="..\..\src\include\inputdevice.h" />
     <ClInclude Include="..\..\src\include\keyboard.h" />
     <ClInclude Include="..\..\src\include\keybuf.h" />
