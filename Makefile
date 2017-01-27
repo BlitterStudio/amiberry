@@ -12,15 +12,18 @@ else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -std=gnu++14 -march=armv6zk -mfpu=vfp -mfloat-abi=hard
 endif
 
-NAME   = amiberry-sdl2
-RM     = rm -f
-CC     = gcc
+NAME  = amiberry-sdl2
+RM      = rm -f
+CC      = gcc
 CXX    = g++
 STRIP  = strip
 
 PROG   = $(NAME)
 
-all: $(PROG)
+all: guisan $(PROG)
+
+guisan:
+	cd src/guisan && make all && cd ../..
 
 #DEBUG=1
 #TRACER=1
@@ -37,12 +40,12 @@ DEFS += -DWITH_INGAME_WARNING -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 DEFS += -DUSE_SDL
 
-MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include
+MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include
 MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 
 LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
-LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan
+LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan/lib
 
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -pipe
@@ -60,7 +63,7 @@ ASFLAGS += $(CPU_FLAGS)
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
 ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=/media/MAINSD/pandora/test -fprofile-arcs -fvpt
+MORE_CFLAGS += -fprofile-generate=./test -fprofile-arcs -fvpt
 endif
 ifdef USE_PROFILE
 MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
