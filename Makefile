@@ -46,7 +46,7 @@ LDFLAGS += -lSDL -lpthread -lm -lz -lSDL_image -lpng -lrt -lxml2 -lFLAC -lmpg123
 LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan -lbcm_host -L/opt/vc/lib 
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe -fweb
+MORE_CFLAGS += -Ofast -pipe
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 
