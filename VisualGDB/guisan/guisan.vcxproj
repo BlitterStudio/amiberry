@@ -25,11 +25,13 @@
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>..\..\src\guisan\lib</OutDir>
+    <TargetName>libguisan</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>..\..\src\guisan\lib</OutDir>
+    <TargetName>libguisan</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>

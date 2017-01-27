@@ -31,6 +31,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
+    <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
@@ -38,10 +39,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)-sdl2-rpi2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
+    <TargetName>$(ProjectName)-sdl2-rpi1</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
