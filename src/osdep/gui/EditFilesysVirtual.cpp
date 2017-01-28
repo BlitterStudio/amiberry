@@ -254,13 +254,11 @@ static void EditFilesysVirtualLoop(void)
     // Now we let the Gui object draw itself.
     uae_gui->draw();
     // Finally we update the screen.
-//    wait_for_vsync();
-//    SDL_Flip(gui_screen);
 	  
 	  // Update the texture from the surface
-	  SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
+	  SDL_UpdateTexture(gui_texture, NULL, gui_screen->pixels, gui_screen->pitch);
 	  // Copy the texture on the renderer
-	  SDL_RenderCopy(renderer, texture, NULL, NULL);
+	  SDL_RenderCopy(renderer, gui_texture, NULL, NULL);
 	  // Update the window surface (show the renderer)
 	  SDL_RenderPresent(renderer);
   }  
