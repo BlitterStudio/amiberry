@@ -321,6 +321,8 @@ void InitPanelHD(const struct _ConfigCategory& category)
     addHardfileActionListener = new AddHardfileActionListener();
     createHardfileActionListener = new CreateHardfileActionListener();
 
+	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	
     for(col=0; col<COL_COUNT; ++col)
         lblList[col] = new gcn::Label(column_caption[col]);
 
@@ -348,7 +350,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
         for(col=0; col<COL_COUNT; ++col)
         {
             listCells[row][col] = new gcn::TextField();
-            listCells[row][col]->setSize(COLUMN_SIZE[col] - 8, TEXTFIELD_HEIGHT);
+	        listCells[row][col]->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
             listCells[row][col]->setEnabled(false);
             listCells[row][col]->setBackgroundColor(gui_baseCol);
         }

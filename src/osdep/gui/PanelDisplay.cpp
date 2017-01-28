@@ -163,16 +163,16 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
     int posY = 10;
     grpAmigaScreen->add(lblAmigaWidth, 0, posY);
-    grpAmigaScreen->add(sldAmigaWidth, 160, posY);
-    grpAmigaScreen->add(lblAmigaWidthInfo, 160 + sldAmigaWidth->getWidth() + 12, posY);
+    grpAmigaScreen->add(sldAmigaWidth, 20, posY);
+    grpAmigaScreen->add(lblAmigaWidthInfo, 20 + sldAmigaWidth->getWidth() + 12, posY);
     posY += sldAmigaWidth->getHeight() + DISTANCE_NEXT_Y;
     grpAmigaScreen->add(lblAmigaHeight, 0, posY);
-    grpAmigaScreen->add(sldAmigaHeight, 160, posY);
-    grpAmigaScreen->add(lblAmigaHeightInfo, 160 + sldAmigaHeight->getWidth() + 12, posY);
+    grpAmigaScreen->add(sldAmigaHeight, 20, posY);
+    grpAmigaScreen->add(lblAmigaHeightInfo, 20 + sldAmigaHeight->getWidth() + 12, posY);
     posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
     grpAmigaScreen->add(lblVertPos, 0, posY);
-    grpAmigaScreen->add(sldVertPos, 160, posY);
-    grpAmigaScreen->add(lblVertPosInfo, 160 + sldVertPos->getWidth() + 12, posY);
+    grpAmigaScreen->add(sldVertPos, 20, posY);
+    grpAmigaScreen->add(lblVertPosInfo, 20 + sldVertPos->getWidth() + 12, posY);
     posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
 
 //#ifdef RASPBERRY
@@ -182,9 +182,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 //    posY += sldFSRatio->getHeight() + DISTANCE_NEXT_Y;
 //#endif
 
-
     grpAmigaScreen->setMovable(false);
-    grpAmigaScreen->setSize(460, posY + DISTANCE_BORDER);
+    grpAmigaScreen->setSize(260, posY + DISTANCE_BORDER);
     grpAmigaScreen->setBaseColor(gui_baseCol);
 
     category.panel->add(grpAmigaScreen);

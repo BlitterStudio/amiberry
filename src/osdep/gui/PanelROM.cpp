@@ -163,6 +163,8 @@ static ROMButtonActionListener* romButtonActionListener;
 
 void InitPanelROM(const struct _ConfigCategory& category)
 {
+	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	
     mainROMActionListener = new MainROMActionListener();
     extROMActionListener = new ExtROMActionListener();
     romButtonActionListener = new ROMButtonActionListener();
@@ -170,9 +172,9 @@ void InitPanelROM(const struct _ConfigCategory& category)
     extROMList = new ROMListModel(ROMTYPE_EXTCDTV | ROMTYPE_EXTCD32);
 
     lblMainROM = new gcn::Label("Main ROM File:");
-    lblMainROM->setSize(200, LABEL_HEIGHT);
+    lblMainROM->setSize(120, LABEL_HEIGHT);
     cboMainROM = new gcn::UaeDropDown(mainROMList);
-    cboMainROM->setSize(400, DROPDOWN_HEIGHT);
+	cboMainROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
     cboMainROM->setBaseColor(gui_baseCol);
     cboMainROM->setId("cboMainROM");
     cboMainROM->addActionListener(mainROMActionListener);
@@ -183,9 +185,9 @@ void InitPanelROM(const struct _ConfigCategory& category)
     cmdMainROM->addActionListener(romButtonActionListener);
 
     lblExtROM = new gcn::Label("Extended ROM File:");
-    lblExtROM->setSize(200, LABEL_HEIGHT);
+    lblExtROM->setSize(120, LABEL_HEIGHT);
     cboExtROM = new gcn::UaeDropDown(extROMList);
-    cboExtROM->setSize(400, DROPDOWN_HEIGHT);
+	cboExtROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
     cboExtROM->setBaseColor(gui_baseCol);
     cboExtROM->setId("cboExtROM");
     cboExtROM->addActionListener(extROMActionListener);

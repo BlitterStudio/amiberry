@@ -129,7 +129,7 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 
     wndScreenshot = new gcn::Window("State screen");
     wndScreenshot->setMovable(false);
-    wndScreenshot->setSize(400, 300);
+    wndScreenshot->setSize(300, 300);
     wndScreenshot->setBaseColor(gui_baseCol);
 
     cmdLoadState = new gcn::Button("Load State");
@@ -145,7 +145,7 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
     cmdSaveState->addActionListener(savestateActionListener);
 
     lblWarningHDDon = new gcn::Label("State saves do not support harddrive emulation.");
-    lblWarningHDDon->setSize(360, LABEL_HEIGHT);
+    lblWarningHDDon->setSize(320, LABEL_HEIGHT);
 
     category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
     category.panel->add(wndScreenshot, DISTANCE_BORDER + 100, DISTANCE_BORDER);
