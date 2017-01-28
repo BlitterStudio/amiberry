@@ -61,9 +61,6 @@ static gcn::Label *lblLeft;
 static gcn::UaeDropDown* cboLeft;
 static gcn::Label *lblRight;
 static gcn::UaeDropDown* cboRight;
-static gcn::Label *lblKeyForMenu;
-static gcn::UaeDropDown* KeyForMenu;
-
 
 class StringListModel : public gcn::ListModel
 {
@@ -105,11 +102,6 @@ StringListModel autofireList(autofireValues, 4);
 const char *tapDelayValues[] = { "Normal", "Short", "None" };
 StringListModel tapDelayList(tapDelayValues, 3);
 #endif
-
-static const int ControlKey_SDLKeyValues[] = { SDLK_F11, SDLK_F12, SDLK_LALT, SDLK_LCTRL };
-
-const char *ControlKeyValues[] = { "F11", "F12", "LeftAlt", "LeftCtrl" };
-StringListModel ControlKeyList(ControlKeyValues, 4);
 
 const char *mappingValues[] =
 {
@@ -300,10 +292,6 @@ public:
 //
 //        else if (actionEvent.getSource() == cboRight)
 //            customControlMap[VK_RIGHT] = amigaKey[cboRight->getSelected()];
-
-        else if (actionEvent.getSource() == KeyForMenu)
-            changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()] ;
-
     }
 };
 static InputActionListener* inputActionListener;
@@ -469,15 +457,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
     cboRight->setId("cboRight");
     cboRight->addActionListener(inputActionListener);
 
-    lblKeyForMenu = new gcn::Label("Key for Menu:");
-    lblKeyForMenu->setSize(100, LABEL_HEIGHT);
-    lblKeyForMenu->setAlignment(gcn::Graphics::RIGHT);
-    KeyForMenu = new gcn::UaeDropDown(&ControlKeyList);
-    KeyForMenu->setSize(150, DROPDOWN_HEIGHT);
-    KeyForMenu->setBaseColor(gui_baseCol);
-    KeyForMenu->setId("CKeyMenu");
-    KeyForMenu->addActionListener(inputActionListener);
-
     int posY = DISTANCE_BORDER;
     category.panel->add(lblPort0, DISTANCE_BORDER, posY);
     category.panel->add(cboPort0, DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
@@ -528,10 +507,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
     category.panel->add(cboRight, 220 + lblRight->getWidth() + 8, posY);
     posY += cboLeft->getHeight() + DISTANCE_NEXT_Y;
 
-    category.panel->add(lblKeyForMenu, DISTANCE_BORDER, posY);
-	category.panel->add(KeyForMenu, DISTANCE_BORDER + lblKeyForMenu->getWidth() + 8, posY);
-    posY += KeyForMenu->getHeight() + 4;
-
     RefreshPanelInput();
 }
 
@@ -574,9 +549,6 @@ void ExitPanelInput(void)
     delete cboLeft;
     delete lblRight;
     delete cboRight;
-
-    delete lblKeyForMenu;
-    delete KeyForMenu;
 
     delete inputActionListener;
 }
@@ -673,12 +645,4 @@ void RefreshPanelInput(void)
 //    cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[VK_LEFT]));
 //    cboRight->setSelected(GetAmigaKeyIndex(customControlMap[VK_RIGHT]));
 
-    for(i=0; i<4; ++i)
-    {
-        if(changed_prefs.key_for_menu == ControlKey_SDLKeyValues[i])
-        {
-            KeyForMenu->setSelected(i);
-            break;
-        }
-    }
 }
