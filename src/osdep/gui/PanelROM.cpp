@@ -11,7 +11,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "rommgr.h"
 #include "uae.h"
 #include "gui.h"

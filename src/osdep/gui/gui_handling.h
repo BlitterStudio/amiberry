@@ -1,8 +1,10 @@
 #ifndef _GUI_HANDLING_H
 #define _GUI_HANDLING_H
 
-#define GUI_WIDTH  800
+#define GUI_WIDTH  640
 #define GUI_HEIGHT 480
+#define MIN_GUI_WIDTH 320
+#define MIN_GUI_HEIGHT 240
 #define DISTANCE_BORDER 15
 #define DISTANCE_NEXT_X 15
 #define DISTANCE_NEXT_Y 15

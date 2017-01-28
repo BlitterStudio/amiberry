@@ -71,11 +71,12 @@ gcn::Color colSelectorActive;
 
 namespace widgets
 {
-// Main buttons
+	// Main buttons
 	gcn::Button* cmdQuit;
 	gcn::Button* cmdReset;
 	gcn::Button* cmdRestart;
 	gcn::Button* cmdStart;
+	gcn::Button* cmdShutdown;
 }
 
 
@@ -223,27 +224,41 @@ namespace sdl
 						}
 						break;
 
-					case SDLK_ESCAPE:
+					case VK_ESCAPE:
+					case VK_R:
+						//-------------------------------------------------
+						// Reset Amiga
+						//-------------------------------------------------
 						uae_reset(1, 1);
 						gui_running = false;
 						break;
 
-					case SDLK_UP:
+					case VK_X:
+					case VK_A:
+						//------------------------------------------------
+						// Simulate press of enter when 'X' pressed
+						//------------------------------------------------
+						event.key.keysym.sym = SDLK_RETURN;
+						gui_input->pushInput(event); // Fire key down
+						event.type = SDL_KEYUP;  // and the key up
+						break;
+						
+					case VK_UP:
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter ComboBox -> don't send event to control
 						break;
 
-					case SDLK_DOWN:
+					case VK_DOWN:
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter ComboBox -> don't send event to control
 						break;
 
-					case SDLK_LEFT:
+					case VK_LEFT:
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						break;
 
-					case SDLK_RIGHT:
+					case VK_RIGHT:
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						break;
@@ -309,6 +324,16 @@ namespace widgets
 	public:
 		void action(const gcn::ActionEvent& actionEvent)
 		{
+			if (actionEvent.getSource() == cmdShutdown)
+			{
+				// ------------------------------------------------
+				// Shutdown the host (power off)
+				// ------------------------------------------------
+				uae_quit();
+				gui_running = false;
+				host_shutdown();
+			}
+			
 			if (actionEvent.getSource() == cmdQuit)
 			{
 				//-------------------------------------------------
@@ -439,6 +464,12 @@ void gui_init()
     cmdQuit->setId("Quit");
     cmdQuit->addActionListener(mainButtonActionListener);
 
+	cmdShutdown = new gcn::Button("Shutdown");
+	cmdShutdown->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+	cmdShutdown->setBaseColor(gui_baseCol);
+	cmdShutdown->setId("Shutdown");
+	cmdShutdown->addActionListener(mainButtonActionListener);
+	
     cmdReset = new gcn::Button("Reset");
     cmdReset->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
     cmdReset->setBaseColor(gui_baseCol);
@@ -500,7 +531,8 @@ void gui_init()
     //--------------------------------------------------
     gui_top->add(cmdReset, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
     gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
-    gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+	gui_top->add(cmdShutdown, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+	gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
     gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
     for(i=0, yPos=0; categories[i].category != NULL; ++i, yPos += 24)
@@ -532,6 +564,7 @@ void gui_halt()
     delete selectors;
 
     delete cmdQuit;
+	delete cmdShutdown;
     delete cmdReset;
     delete cmdRestart;
     delete cmdStart;
