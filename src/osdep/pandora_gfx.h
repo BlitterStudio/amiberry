@@ -3,8 +3,8 @@
 
 extern SDL_Window* sdlWindow;
 extern SDL_Renderer* renderer;
-extern SDL_Texture *texture;
-extern SDL_Surface *screen;
+extern SDL_Texture* texture;
+extern SDL_Surface* screen;
 
 extern SDL_Surface* gui_screen;
 extern SDL_Texture* gui_texture;
