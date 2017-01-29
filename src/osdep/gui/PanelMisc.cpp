@@ -23,53 +23,53 @@ static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;
 static gcn::UaeCheckBox* chkBSDSocket;
-static gcn::Label *lblKeyForMenu;
+static gcn::Label* lblKeyForMenu;
 static gcn::UaeDropDown* KeyForMenu;
-static gcn::Label *lblButtonForMenu;
+static gcn::Label* lblButtonForMenu;
 static gcn::UaeDropDown* ButtonForMenu;
-static gcn::Label *lblKeyForQuit;
+static gcn::Label* lblKeyForQuit;
 static gcn::UaeDropDown* KeyForQuit;
-static gcn::Label *lblButtonForQuit;
+static gcn::Label* lblButtonForQuit;
 static gcn::UaeDropDown* ButtonForQuit;
 
 #ifdef RASPBERRY
 class StringListModel : public gcn::ListModel
 {
 private:
-    std::vector<std::string> values;
+	std::vector<std::string> values;
 public:
-    StringListModel(const char *entries[], int count)
-    {
-        for(int i=0; i<count; ++i)
-            values.push_back(entries[i]);
-    }
+	StringListModel(const char* entries[], int count)
+	{
+		for (int i = 0; i < count; ++i)
+			values.push_back(entries[i]);
+	}
 
-    int getNumberOfElements()
-    {
-        return values.size();
-    }
+	int getNumberOfElements()
+	{
+		return values.size();
+	}
 
-    std::string getElementAt(int i)
-    {
-        if(i < 0 || i >= values.size())
-            return "---";
-        return values[i];
-    }
+	std::string getElementAt(int i)
+	{
+		if (i < 0 || i >= values.size())
+			return "---";
+		return values[i];
+	}
 };
 
 
-static gcn::Label *lblNumLock;
+static gcn::Label* lblNumLock;
 static gcn::UaeDropDown* cboKBDLed_num;
-static gcn::Label *lblScrLock;
+static gcn::Label* lblScrLock;
 static gcn::UaeDropDown* cboKBDLed_scr;
 
-const char *listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD" };
+const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD"};
 StringListModel KBDLedList(listValues, 9);
 #endif
 
-static const int ControlKey_SDLKeyValues[] = { 0, SDLK_F11, SDLK_F12 };
+static const int ControlKey_SDLKeyValues[] = {0, SDL_SCANCODE_F11, SDL_SCANCODE_F12};
 
-const char *ControlKeyValues[] = { "------------------", "F11", "F12" };
+const char* ControlKeyValues[] = {"------------------", "F11", "F12"};
 StringListModel ControlKeyList(ControlKeyValues, 3);
 
 static int GetControlKeyIndex(int key)
@@ -83,9 +83,9 @@ static int GetControlKeyIndex(int key)
 	return 0; // Default: no key
 }
 
-static const int ControlButton_SDLButtonValues[] = { -1, 0, 1, 2, 3 };
+static const int ControlButton_SDLButtonValues[] = {-1, 0, 1, 2, 3};
 
-const char *ControlButtonValues[] = { "------------------", "JoyButton0", "JoyButton1", "JoyButton2", "JoyButton3" };
+const char* ControlButtonValues[] = {"------------------", "JoyButton0", "JoyButton1", "JoyButton2", "JoyButton3"};
 StringListModel ControlButtonList(ControlButtonValues, 5);
 
 static int GetControlButtonIndex(int button)
@@ -102,41 +102,42 @@ static int GetControlButtonIndex(int button)
 class MiscActionListener : public gcn::ActionListener
 {
 public:
-    void action(const gcn::ActionEvent& actionEvent)
-    {
-        if (actionEvent.getSource() == chkStatusLine)
-            changed_prefs.leds_on_screen = chkStatusLine->isSelected();
+	void action(const gcn::ActionEvent& actionEvent)
+	{
+		if (actionEvent.getSource() == chkStatusLine)
+			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
 
-        else if (actionEvent.getSource() == chkHideIdleLed)
-            changed_prefs.pandora_hide_idle_led = chkHideIdleLed->isSelected();
+		else if (actionEvent.getSource() == chkHideIdleLed)
+			changed_prefs.pandora_hide_idle_led = chkHideIdleLed->isSelected();
 
-        else if (actionEvent.getSource() == chkShowGUI)
-            changed_prefs.start_gui = chkShowGUI->isSelected();
+		else if (actionEvent.getSource() == chkShowGUI)
+			changed_prefs.start_gui = chkShowGUI->isSelected();
 
-        else if (actionEvent.getSource() == chkBSDSocket)
-            changed_prefs.socket_emu = chkBSDSocket->isSelected();
+		else if (actionEvent.getSource() == chkBSDSocket)
+			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
-	    else if (actionEvent.getSource() == KeyForMenu)
-		    changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()];
-        
-	    else if (actionEvent.getSource() == KeyForQuit)
-		    changed_prefs.key_for_quit = ControlKey_SDLKeyValues[KeyForQuit->getSelected()];
+		else if (actionEvent.getSource() == KeyForMenu)
+			changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()];
 
-	    else if (actionEvent.getSource() == ButtonForMenu)
-		    changed_prefs.button_for_menu = ControlButton_SDLButtonValues[ButtonForMenu->getSelected()];
-        
-	    else if (actionEvent.getSource() == ButtonForQuit)
-		    changed_prefs.button_for_quit = ControlButton_SDLButtonValues[ButtonForQuit->getSelected()];
+		else if (actionEvent.getSource() == KeyForQuit)
+			changed_prefs.key_for_quit = ControlKey_SDLKeyValues[KeyForQuit->getSelected()];
+
+		else if (actionEvent.getSource() == ButtonForMenu)
+			changed_prefs.button_for_menu = ControlButton_SDLButtonValues[ButtonForMenu->getSelected()];
+
+		else if (actionEvent.getSource() == ButtonForQuit)
+			changed_prefs.button_for_quit = ControlButton_SDLButtonValues[ButtonForQuit->getSelected()];
 
 #ifdef RASPBERRY
-        else if (actionEvent.getSource() == cboKBDLed_num)
-	        changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
+		else if (actionEvent.getSource() == cboKBDLed_num)
+			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
 
-        else if (actionEvent.getSource() == cboKBDLed_scr)
+		else if (actionEvent.getSource() == cboKBDLed_scr)
 			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
 #endif
-    }
+	}
 };
+
 MiscActionListener* miscActionListener;
 
 
@@ -221,32 +222,32 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkHideIdleLed->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
-	
+
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
 	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);
-	
+
 	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
-		
+
 	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblKeyForMenu, DISTANCE_BORDER, posY);
 	category.panel->add(KeyForMenu, DISTANCE_BORDER + lblKeyForMenu->getWidth() + 8, posY);
-	
+
 	category.panel->add(lblKeyForQuit, KeyForMenu->getX() + KeyForMenu->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(KeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
-	
+
 	posY += KeyForMenu->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblButtonForMenu, DISTANCE_BORDER, posY);
 	category.panel->add(ButtonForMenu, DISTANCE_BORDER + lblButtonForMenu->getWidth() + 8, posY);
-	
+
 	category.panel->add(lblButtonForQuit, ButtonForMenu->getX() + ButtonForMenu->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(ButtonForQuit, lblButtonForQuit->getX() + lblButtonForQuit->getWidth() + 8, posY);
-	
+
 	RefreshPanelMisc();
 }
 
@@ -276,7 +277,7 @@ void ExitPanelMisc(void)
 
 void RefreshPanelMisc(void)
 {
-    char tmp[20];
+	char tmp[20];
 
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
 	chkHideIdleLed->setSelected(changed_prefs.pandora_hide_idle_led);
