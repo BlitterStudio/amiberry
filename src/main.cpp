@@ -15,7 +15,7 @@
 #include "gensound.h"
 #include "audio.h"
 #include "sounddep/sound.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "disk.h"
@@ -37,6 +37,7 @@
 #include "blkdev.h"
 #include "uaeresource.h"
 #include "gfxboard.h"
+
 #ifdef JIT
 #include "jit/compemu.h"
 #endif

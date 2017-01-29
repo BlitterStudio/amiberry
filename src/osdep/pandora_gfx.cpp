@@ -18,7 +18,7 @@
 #include "SDL.h"
 
 /* SDL variable for output of emulation */
-SDL_Surface *screen = NULL;
+SDL_Surface *screen = nullptr;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 11
@@ -30,13 +30,13 @@ struct MultiDisplay Displays[MAX_DISPLAYS];
 
 int screen_is_picasso = 0;
 
-static SDL_Surface *current_screenshot = NULL;
+static SDL_Surface *current_screenshot = nullptr;
 static char screenshot_filename_default[255]=
 {
     '/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'p', 'n', 'g', '\0'
 };
 char *screenshot_filename=(char *)&screenshot_filename_default[0];
-FILE *screenshot_file=NULL;
+FILE *screenshot_file= nullptr;
 static void CreateScreenshot(void);
 static int save_thumb(char *path);
 int delay_savestate_frame = 0;
@@ -136,6 +136,7 @@ static void open_screen(struct uae_prefs *p)
 	{
 		width  = picasso_vidinfo.width;
 		height = picasso_vidinfo.height;
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
 	}
 	else
 #endif
@@ -395,7 +396,7 @@ static int get_display_depth (void)
 int GetSurfacePixelFormat(void)
 {
     int depth = get_display_depth();
-    int unit = (depth + 1) & 0xF8;
+    int unit = depth + 1 & 0xF8;
 
     return (unit == 8 ? RGBFB_CHUNKY
             : depth == 15 && unit == 16 ? RGBFB_R5G5B5
@@ -635,6 +636,7 @@ static int resolution_compare (const void *a, const void *b)
         return 1;
     return ma->depth - mb->depth;
 }
+
 static void sortmodes (void)
 {
     int	i = 0, idx = -1;
@@ -742,9 +744,9 @@ void gfx_set_picasso_state (int on)
 void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
 {
     depth >>= 3;
-    if( ((unsigned)picasso_vidinfo.width == w ) &&
-            ( (unsigned)picasso_vidinfo.height == h ) &&
-            ( (unsigned)picasso_vidinfo.depth == depth ) &&
+    if( (unsigned(picasso_vidinfo.width) == w ) &&
+            ( unsigned(picasso_vidinfo.height) == h ) &&
+            ( unsigned(picasso_vidinfo.depth) == depth ) &&
             ( picasso_vidinfo.selected_rgbformat == rgbfmt) )
         return;
 

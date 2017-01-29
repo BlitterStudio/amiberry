@@ -13,7 +13,6 @@
 #include "gui.h"
 #include "gui_handling.h"
 #include "memory.h"
-#include "autoconf.h"
 #include "pandora_gfx.h"
 
 bool gui_running = false;
@@ -114,14 +113,14 @@ static int gui_create_rtarea_flag(struct uae_prefs *p)
     return flag;
 }
 
-void gui_force_rtarea_hdchange(void)
+void gui_force_rtarea_hdchange()
 {
     gui_rtarea_flags_onenter |= 2;
 }
 
-static void (*refreshFuncAfterDraw)(void) = NULL;
+static void (*refreshFuncAfterDraw)() = nullptr;
 
-void RegisterRefreshFunc(void (*func)(void))
+void RegisterRefreshFunc(void (*func)())
 {
     refreshFuncAfterDraw = func;
 }
@@ -177,7 +176,7 @@ namespace sdl
 
 		SDL_FreeSurface(gui_screen);
 		SDL_DestroyTexture(gui_texture);
-		gui_screen = NULL;
+		gui_screen = nullptr;
 	}
 
 	void checkInput()
@@ -216,7 +215,7 @@ namespace sdl
 						//-------------------------------------------------
 						focusHdl = gui_top->_getFocusHandler();
 						activeWidget = focusHdl->getFocused();
-						if (dynamic_cast<gcn::TextField*>(activeWidget) == NULL)
+						if (dynamic_cast<gcn::TextField*>(activeWidget) == nullptr)
 						{
 							// ...but only if we are not in a Textfield...
 							uae_quit();
@@ -299,16 +298,16 @@ namespace sdl
 			// Finally we update the screen.
 			
 			// Update the texture from the surface
-			SDL_UpdateTexture(gui_texture, NULL, gui_screen->pixels, gui_screen->pitch);
+			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 			// Copy the texture on the renderer
-			SDL_RenderCopy(renderer, gui_texture, NULL, NULL);
+			SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 			// Update the window surface (show the renderer)
 			SDL_RenderPresent(renderer);
 
-			if(refreshFuncAfterDraw != NULL)
+			if(refreshFuncAfterDraw != nullptr)
 			{
 				void (*currFunc)(void) = refreshFuncAfterDraw;
-				refreshFuncAfterDraw = NULL;
+				refreshFuncAfterDraw = nullptr;
 				currFunc();
 			}
 		}
@@ -396,7 +395,7 @@ namespace widgets
 		void focusGained(const gcn::Event& event)
 		{
 			int i;
-			for(i=0; categories[i].category != NULL; ++i)
+			for(i=0; categories[i].category != nullptr; ++i)
 			{
 				if(event.getSource() == categories[i].selector)
 				{
@@ -501,7 +500,7 @@ void gui_init()
     int panelStartX = DISTANCE_BORDER + selectors->getWidth() + 2 + 11;
 
     panelFocusListener = new PanelFocusListener();
-    for(i=0; categories[i].category != NULL; ++i)
+    for(i=0; categories[i].category != nullptr; ++i)
     {
         categories[i].selector = new gcn::SelectorEntry(categories[i].category, categories[i].imagepath);
         categories[i].selector->setActiveColor(colSelectorActive);
@@ -520,9 +519,9 @@ void gui_init()
     //--------------------------------------------------
     // Initialize panels
     //--------------------------------------------------
-    for(i=0; categories[i].category != NULL; ++i)
+    for(i=0; categories[i].category != nullptr; ++i)
     {
-        if(categories[i].InitFunc != NULL)
+        if(categories[i].InitFunc != nullptr)
             (*categories[i].InitFunc) (categories[i]);
     }
 
@@ -535,7 +534,7 @@ void gui_init()
 	gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
     gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
-    for(i=0, yPos=0; categories[i].category != NULL; ++i, yPos += 24)
+    for(i=0, yPos=0; categories[i].category != nullptr; ++i, yPos += 24)
     {
         selectors->add(categories[i].selector,  0,  yPos);
         gui_top->add(categories[i].panel, panelStartX, DISTANCE_BORDER + 1);
@@ -552,13 +551,13 @@ void gui_halt()
 {
     int i;
 
-    for(i=0; categories[i].category != NULL; ++i)
+    for(i=0; categories[i].category != nullptr; ++i)
     {
-        if(categories[i].ExitFunc != NULL)
+        if(categories[i].ExitFunc != nullptr)
             (*categories[i].ExitFunc) ();
     }
 
-    for(i=0; categories[i].category != NULL; ++i)
+    for(i=0; categories[i].category != nullptr; ++i)
         delete categories[i].selector;
     delete panelFocusListener;
     delete selectors;
@@ -577,19 +576,19 @@ void gui_halt()
 }
 
 
-void RefreshAllPanels(void)
+void RefreshAllPanels()
 {
     int i;
 
-    for(i=0; categories[i].category != NULL; ++i)
+    for(i=0; categories[i].category != nullptr; ++i)
     {
-        if(categories[i].RefreshFunc != NULL)
+        if(categories[i].RefreshFunc != nullptr)
             (*categories[i].RefreshFunc) ();
     }
 }
 
 
-void DisableResume(void)
+void DisableResume()
 {
     if(emulating)
     {
@@ -603,7 +602,7 @@ void DisableResume(void)
 }
 
 
-void run_gui(void)
+void run_gui()
 {
     gui_running = true;
     gui_rtarea_flags_onenter = gui_create_rtarea_flag(&currprefs);
@@ -619,19 +618,19 @@ void run_gui(void)
     // Catch all guisan exceptions.
     catch (gcn::Exception e)
     {
-        std::cout << e.getMessage() << std::endl;
+        cout << e.getMessage() << endl;
         uae_quit();
     }
     // Catch all Std exceptions.
-    catch (std::exception e)
+    catch (exception e)
     {
-        std::cout << "Std exception: " << e.what() << std::endl;
+        cout << "Std exception: " << e.what() << endl;
         uae_quit();
     }
     // Catch all unknown exceptions.
     catch (...)
     {
-        std::cout << "Unknown exception" << std::endl;
+        cout << "Unknown exception" << endl;
         uae_quit();
     }
     if(quit_program > UAE_QUIT || quit_program < -UAE_QUIT)
