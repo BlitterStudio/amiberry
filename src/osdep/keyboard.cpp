@@ -353,7 +353,7 @@ static int *kbmaps[] = { kb_none, kb_none, kb_none, kb_none, kb_none,
                          kb_none, kb_none, kb_none, kb_none, kb_none
                        };
 
-void keyboard_settrans (void)
+void keyboard_settrans ()
 {
 //    char vid_drv_name[32];
 //    // get display type...

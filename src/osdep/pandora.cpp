@@ -388,7 +388,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	{
 		for (i = 0; i < p->nr_floppies; ++i)
 		{
-			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, NULL, NULL, NULL))
+			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
 			disk_insert(i, p->floppyslots[i].df);
 			if (strlen(p->floppyslots[i].df) > 0)
@@ -396,7 +396,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		}
 
 		if (!isdefault)
-			inputdevice_updateconfig(NULL, p);
+			inputdevice_updateconfig(nullptr, p);
 
 		SetLastActiveConfig(filename);
 
@@ -411,7 +411,7 @@ int check_configfile(char* file)
 {
 	char tmp[MAX_PATH];
 
-	FILE * f = fopen(file, "rt");
+	FILE* f = fopen(file, "rt");
 	if (f)
 	{
 		fclose(f);
@@ -464,47 +464,47 @@ void removeFileExtension(char* filename)
 	*p = '\0';
 }
 
-void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector<std::string>* files)
+void ReadDirectory(const char* path, vector<string>* dirs, vector<string>* files)
 {
 	DIR* dir;
 	struct dirent* dent;
 
-	if (dirs != NULL)
+	if (dirs != nullptr)
 		dirs->clear();
-	if (files != NULL)
+	if (files != nullptr)
 		files->clear();
 
 	dir = opendir(path);
-	if (dir != NULL)
+	if (dir != nullptr)
 	{
-		while ((dent = readdir(dir)) != NULL)
+		while ((dent = readdir(dir)) != nullptr)
 		{
 			if (dent->d_type == DT_DIR)
 			{
-				if (dirs != NULL)
+				if (dirs != nullptr)
 					dirs->push_back(dent->d_name);
 			}
-			else if (files != NULL)
+			else if (files != nullptr)
 				files->push_back(dent->d_name);
 		}
-		if (dirs != NULL && dirs->size() > 0 && (*dirs)[0] == ".")
+		if (dirs != nullptr && dirs->size() > 0 && (*dirs)[0] == ".")
 			dirs->erase(dirs->begin());
 		closedir(dir);
 	}
 
-	if (dirs != NULL)
+	if (dirs != nullptr)
 		std::sort(dirs->begin(), dirs->end());
-	if (files != NULL)
+	if (files != nullptr)
 		std::sort(files->begin(), files->end());
 }
 
-void saveAdfDir(void)
+void saveAdfDir()
 {
 	char path[MAX_DPATH];
 	int i;
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
-	FILE * f = fopen(path, "w");
+	FILE* f = fopen(path, "w");
 	if (!f)
 		return;
 
@@ -547,7 +547,6 @@ void saveAdfDir(void)
 	}
 
 	fclose(f);
-	return;
 }
 
 void get_string(FILE* f, char* dst, int size)
@@ -561,7 +560,7 @@ void get_string(FILE* f, char* dst, int size)
 	strncpy(dst, buffer, size);
 }
 
-void loadAdfDir(void)
+void loadAdfDir()
 {
 	char path[MAX_DPATH];
 	int i;
@@ -572,7 +571,7 @@ void loadAdfDir(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
-	FILE * f1 = fopen(path, "rt");
+	FILE* f1 = fopen(path, "rt");
 	if (f1)
 	{
 		fscanf(f1, "path=");
@@ -661,7 +660,8 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 		*low = 1e+9; /* We have nano seconds */
 		return 0;
 	}
-	else if (v == 2)
+	
+	if (v == 2)
 	{
 		int64_t time;
 		struct timespec ts;
@@ -690,12 +690,12 @@ int main(int argc, char* argv[])
 	memset(&action, 0, sizeof(action));
 	action.sa_sigaction = signal_segv;
 	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGSEGV, &action, NULL) < 0)
+	if (sigaction(SIGSEGV, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGSEGV).\n");
 		abort();
 	}
-	if (sigaction(SIGILL, &action, NULL) < 0)
+	if (sigaction(SIGILL, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGILL).\n");
 		abort();
@@ -762,7 +762,7 @@ int handle_msgpump()
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
-		const Uint8* keystate = SDL_GetKeyboardState(NULL);
+		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
 
 		switch (rEvent.type)
 		{
@@ -1015,16 +1015,7 @@ int handle_msgpump()
 					int mouseScale = currprefs.input_joymouse_multiplier / 2;
 					x = rEvent.motion.xrel;
 					y = rEvent.motion.yrel;
-					//#ifdef PANDORA_SPECIFIC
-					//                    if(rEvent.motion.x == 0 && x > -4)
-					//                        x = -4;
-					//                    if(rEvent.motion.y == 0 && y > -4)
-					//                        y = -4;
-					//                    if(rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
-					//                        x = 4;
-					//                    if(rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
-					//                        y = 4;
-					//#endif
+
 					setmousestate(0, 0, x * mouseScale, 0);
 					setmousestate(0, 1, y * mouseScale, 0);
 				}

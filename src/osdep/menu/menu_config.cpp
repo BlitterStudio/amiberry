@@ -21,7 +21,7 @@ static int kickstart;
 static int presetModeId = 2;
 
 
-static void SetPresetMode(int mode, struct uae_prefs *p)
+static void SetPresetMode(int mode, struct uae_prefs* p)
 {
 	presetModeId = mode;
 
@@ -303,7 +303,7 @@ static void SetPresetMode(int mode, struct uae_prefs *p)
 }
 
 
-static void SetDefaultMenuSettings(struct uae_prefs *p)
+static void SetDefaultMenuSettings(struct uae_prefs* p)
 {
 	kickstart = 1;
 
@@ -311,7 +311,7 @@ static void SetDefaultMenuSettings(struct uae_prefs *p)
 }
 
 
-static void replace(char * str, char replace, char toreplace)
+static void replace(char* str, char replace, char toreplace)
 {
 	while (*str)
 	{
@@ -321,9 +321,9 @@ static void replace(char * str, char replace, char toreplace)
 }
 
 
-int create_configfilename(char *dest, char *basename, int fromDir)
+int create_configfilename(char* dest, char* basename, int fromDir)
 {
-	char *p;
+	char* p;
 	p = basename + strlen(basename) - 1;
 	while (*p != '/')
 		p--;
@@ -333,7 +333,7 @@ int create_configfilename(char *dest, char *basename, int fromDir)
 		int len = strlen(p) + 1;
 		char filename[len];
 		strcpy(filename, p);
-		char *pch = &filename[MAX_DPATH];
+		char* pch = &filename[MAX_DPATH];
 		while (pch != filename && *pch != '.')
 			pch--;
 		if (pch)
@@ -353,39 +353,39 @@ int create_configfilename(char *dest, char *basename, int fromDir)
 }
 
 
-const char *kickstarts_rom_names[] = { "kick12.rom\0", "kick13.rom\0", "kick20.rom\0", "kick31.rom\0", "aros-amiga-m68k-rom.bin\0" };
-const char *extended_rom_names[] = { "\0", "\0", "\0", "\0", "aros-amiga-m68k-ext.bin\0" };
-const char *kickstarts_names[] = { "KS ROM v1.2\0", "KS ROM v1.3\0", "KS ROM v2.05\0", "KS ROM v3.1\0", "\0" };
+const char* kickstarts_rom_names[] = {"kick12.rom\0", "kick13.rom\0", "kick20.rom\0", "kick31.rom\0", "aros-amiga-m68k-rom.bin\0"};
+const char* extended_rom_names[] = {"\0", "\0", "\0", "\0", "aros-amiga-m68k-ext.bin\0"};
+const char* kickstarts_names[] = {"KS ROM v1.2\0", "KS ROM v1.3\0", "KS ROM v2.05\0", "KS ROM v3.1\0", "\0"};
 #ifdef ANDROID
 const char *af_kickstarts_rom_names[] = { "amiga-os-120.rom\0", "amiga-os-130.rom\0", "amiga-os-204.rom\0", "amiga-os-310-a1200.rom\0" };
 #endif
 
-static bool CheckKickstart(struct uae_prefs *p)
+static bool CheckKickstart(struct uae_prefs* p)
 {
 	char kickpath[MAX_DPATH];
 	int i;
 
-	    // Search via filename
+	// Search via filename
 	fetch_rompath(kickpath, MAX_DPATH);
 	strncat(kickpath, kickstarts_rom_names[kickstart], MAX_DPATH);
 	for (i = 0; i < lstAvailableROMs.size(); ++i)
 	{
 		if (!strcasecmp(lstAvailableROMs[i]->Path, kickpath))
 		{
-		    // Found it
+			// Found it
 			strncpy(p->romfile, kickpath, sizeof(p->romfile));
 			return true;
 		}
 	}
 
-	    // Search via name
+	// Search via name
 	if (strlen(kickstarts_names[kickstart]) > 0)
 	{
 		for (i = 0; i < lstAvailableROMs.size(); ++i)
 		{
 			if (!strncasecmp(lstAvailableROMs[i]->Name, kickstarts_names[kickstart], strlen(kickstarts_names[kickstart])))
 			{
-			    // Found it
+				// Found it
 				strncpy(p->romfile, lstAvailableROMs[i]->Path, sizeof(p->romfile));
 				return true;
 			}
@@ -397,20 +397,20 @@ static bool CheckKickstart(struct uae_prefs *p)
 
 
 // In this procedure, we use changed_prefs
-int loadconfig_old(struct uae_prefs *p, const char *orgpath)
+int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 {
 	char path[MAX_PATH];
 	int cpu_level;
 
 	strcpy(path, orgpath);
-	char *ptr = strstr(path, ".uae");
-	if (ptr > 0)
+	char* ptr = strstr(path, ".uae");
+	if (ptr > nullptr)
 	{
 		*(ptr + 1) = '\0';
 		strcat(path, "conf");
 	}
 
-	FILE *f = fopen(path, "rt");
+	FILE* f = fopen(path, "rt");
 	if (!f)
 	{
 		write_log("No config file %s!\n", path);
@@ -418,7 +418,7 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 	}
 	else
 	{
-	    // Set everthing to default and clear HD settings
+		// Set everthing to default and clear HD settings
 		default_prefs(p, 0);
 		SetDefaultMenuSettings(p);
 
@@ -435,7 +435,7 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f, "mousemultiplier=%d\n", &p->input_joymouse_multiplier);
 		p->input_joymouse_multiplier *= 10;
 #if defined(PANDORA) || defined(ANDROIDSDL)
-		fscanf(f, "systemclock=%d\n", &dummy);    // mainMenu_throttle never changes -> removed
+		fscanf(f, "systemclock=%d\n", &dummy); // mainMenu_throttle never changes -> removed
 		fscanf(f, "syncthreshold=%d\n", &dummy); // timeslice_mode never changes -> removed
 #else
 		fscanf(f, "systemclock=%d\n", &mainMenu_throttle);
@@ -486,19 +486,19 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f, "cutRight=%d\n", &dummy);
 		fscanf(f, "customControls=%d\n", &p->pandora_customControls);
 		fscanf(f, "custom_dpad=%d\n", &dummy);
-//		fscanf(f, "custom_up=%d\n", &customControlMap[VK_UP]);
-//		fscanf(f, "custom_down=%d\n", &customControlMap[VK_DOWN]);
-//		fscanf(f, "custom_left=%d\n", &customControlMap[VK_LEFT]);
-//		fscanf(f, "custom_right=%d\n", &customControlMap[VK_RIGHT]);
-//		fscanf(f, "custom_A=%d\n", &customControlMap[VK_A]);
-//		fscanf(f, "custom_B=%d\n", &customControlMap[VK_B]);
-//		fscanf(f, "custom_X=%d\n", &customControlMap[VK_X]);
-//		fscanf(f, "custom_Y=%d\n", &customControlMap[VK_Y]);
-//		fscanf(f, "custom_L=%d\n", &customControlMap[VK_L]);
-//		fscanf(f, "custom_R=%d\n", &customControlMap[VK_R]);
+		//		fscanf(f, "custom_up=%d\n", &customControlMap[VK_UP]);
+		//		fscanf(f, "custom_down=%d\n", &customControlMap[VK_DOWN]);
+		//		fscanf(f, "custom_left=%d\n", &customControlMap[VK_LEFT]);
+		//		fscanf(f, "custom_right=%d\n", &customControlMap[VK_RIGHT]);
+		//		fscanf(f, "custom_A=%d\n", &customControlMap[VK_A]);
+		//		fscanf(f, "custom_B=%d\n", &customControlMap[VK_B]);
+		//		fscanf(f, "custom_X=%d\n", &customControlMap[VK_X]);
+		//		fscanf(f, "custom_Y=%d\n", &customControlMap[VK_Y]);
+		//		fscanf(f, "custom_L=%d\n", &customControlMap[VK_L]);
+		//		fscanf(f, "custom_R=%d\n", &customControlMap[VK_R]);
 		fscanf(f, "cpu=%d\n", &cpu_level);
 		if (cpu_level > 0) // M68000
-		    // Was old format
+		// Was old format
 			cpu_level = 2; // M68020
 		fscanf(f, "chipset=%d\n", &p->chipset_mask);
 		p->immediate_blits = (p->chipset_mask & 0x100) == 0x100;
@@ -517,15 +517,15 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 		fscanf(f, "cpu=%d\n", &p->m68k_speed);
 		if (p->m68k_speed < 0)
 		{
-		    // New version of this option
+			// New version of this option
 			p->m68k_speed = -p->m68k_speed;
 		}
 		else
 		{
-		    // Old version (500 5T 1200 12T 12T2)
+			// Old version (500 5T 1200 12T 12T2)
 			if (p->m68k_speed >= 2)
 			{
-			    // 1200: set to 68020 with 14 MHz
+				// 1200: set to 68020 with 14 MHz
 				cpu_level = 2; // M68020
 				p->m68k_speed--;
 				if (p->m68k_speed > 2)
@@ -617,17 +617,17 @@ int loadconfig_old(struct uae_prefs *p, const char *orgpath)
 
 		fscanf(f, "chipmemory=%d\n", &p->chipmem_size);
 		if (p->chipmem_size < 10)
-		    // Was saved in old format
+		// Was saved in old format
 			p->chipmem_size = 0x80000 << p->chipmem_size;
 		fscanf(f, "slowmemory=%d\n", &p->bogomem_size);
 		if (p->bogomem_size > 0 && p->bogomem_size < 10)
-		    // Was saved in old format
+		// Was saved in old format
 			p->bogomem_size =
-			    (p->bogomem_size <= 2) ? 0x080000 << p->bogomem_size :
-			    (p->bogomem_size == 3) ? 0x180000 : 0x1c0000;
+				(p->bogomem_size <= 2) ? 0x080000 << p->bogomem_size :
+					(p->bogomem_size == 3) ? 0x180000 : 0x1c0000;
 		fscanf(f, "fastmemory=%d\n", &p->fastmem_size);
 		if (p->fastmem_size > 0 && p->fastmem_size < 10)
-		    // Was saved in old format
+		// Was saved in old format
 			p->fastmem_size = 0x080000 << p->fastmem_size;
 
 		fclose(f);
