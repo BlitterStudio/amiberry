@@ -1,4 +1,4 @@
- /*
+/*
   * UAE - The Un*x Amiga Emulator
   *
   * custom chip support
@@ -26,18 +26,18 @@
 #define MAXVPOS_LINES_OCS 512
 #define HPOS_SHIFT 3
 
-extern void set_speedup_values(void);
-extern int custom_init (void);
-extern void custom_prepare (void);
-extern void custom_reset (bool hardreset, bool keyboardreset);
-extern int intlev (void);
+extern void set_speedup_values();
+extern int custom_init();
+extern void custom_prepare();
+extern void custom_reset(bool hardreset, bool keyboardreset);
+extern int intlev();
 
-extern void do_copper (void);
+extern void do_copper();
 
-extern void notice_new_xcolors (void);
-extern void init_row_map (void);
-extern void init_hz_full (void);
-extern void init_custom (void);
+extern void notice_new_xcolors();
+extern void init_row_map();
+extern void init_hz_full();
+extern void init_custom();
 
 extern bool picasso_requested_on;
 extern bool picasso_on;
@@ -49,7 +49,7 @@ extern uae_u16 intreq;
 
 extern int vpos;
 
-STATIC_INLINE int dmaen (unsigned int dmamask)
+STATIC_INLINE int dmaen(unsigned int dmamask)
 {
 	return (dmamask & dmacon) && (dmacon & 0x200);
 }
@@ -72,17 +72,17 @@ STATIC_INLINE int dmaen (unsigned int dmamask)
 
 extern uae_u16 adkcon;
 
-extern void INTREQ (uae_u16);
-extern bool INTREQ_0 (uae_u16);
-extern void INTREQ_f (uae_u16);
-STATIC_INLINE void send_interrupt (int num)
+extern void INTREQ(uae_u16);
+extern bool INTREQ_0(uae_u16);
+extern void INTREQ_f(uae_u16);
+STATIC_INLINE void send_interrupt(int num)
 {
-	INTREQ_0 (0x8000 | (1 << num));
+	INTREQ_0(0x8000 | (1 << num));
 }
 
-STATIC_INLINE uae_u16 INTREQR (void)
+STATIC_INLINE uae_u16 INTREQR()
 {
-  return intreq;
+	return intreq;
 }
 
 /* maximums for statically allocated tables */
@@ -153,32 +153,34 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 #define RES_MAX 2
 
 /* get resolution from bplcon0 */
-STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)
+STATIC_INLINE int GET_RES_DENISE(uae_u16 con0)
 {
 	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		con0 &= ~0x40; // SUPERHIRES
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
-STATIC_INLINE int GET_RES_AGNUS (uae_u16 con0)
+
+STATIC_INLINE int GET_RES_AGNUS(uae_u16 con0)
 {
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		con0 &= ~0x40; // SUPERHIRES
-  return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
+	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
+
 /* get sprite width from FMODE */
 #define GET_SPRITEWIDTH(FMODE) ((((FMODE) >> 2) & 3) == 3 ? 64 : (((FMODE) >> 2) & 3) == 0 ? 16 : 32)
 /* Compute the number of bitplanes from a value written to BPLCON0  */
 STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 {
-  if ((bplcon0 & 0x0010) && (bplcon0 & 0x7000))
-  	return 0; // >8 planes = 0 planes
-  if (bplcon0 & 0x0010)
-  	return 8; // AGA 8-planes bit
-  return (bplcon0 >> 12) & 7; // normal planes bits
+	if ((bplcon0 & 0x0010) && (bplcon0 & 0x7000))
+		return 0; // >8 planes = 0 planes
+	if (bplcon0 & 0x0010)
+		return 8; // AGA 8-planes bit
+	return (bplcon0 >> 12) & 7; // normal planes bits
 }
 
-extern void fpscounter_reset (void);
+extern void fpscounter_reset();
 
-extern int current_maxvpos (void);
+extern int current_maxvpos();
 
 #endif /* CUSTOM_H */

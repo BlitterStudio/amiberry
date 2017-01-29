@@ -16,15 +16,15 @@
 
 extern frame_time_t vsyncmintime;
 extern int vsynctimebase, syncbase;
-extern void reset_frame_rate_hack (void);
+extern void reset_frame_rate_hack ();
 extern int speedup_timelimit;
 
-extern void compute_vsynctime (void);
-extern void init_eventtab (void);
-extern void events_schedule (void);
+extern void compute_vsynctime ();
+extern void init_eventtab ();
+extern void events_schedule ();
 
 extern long last_synctime;
-typedef void (*evfunc)(void);
+typedef void (*evfunc)();
 typedef void (*evfunc2)(uae_u32);
 
 typedef void (*do_cycles_func)(unsigned long);
@@ -66,7 +66,7 @@ extern int pissoff_value;
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
 
-STATIC_INLINE void cycles_do_special (void)
+STATIC_INLINE void cycles_do_special ()
 {
 #ifdef JIT
 	if (currprefs.cachesize) {
@@ -79,7 +79,7 @@ STATIC_INLINE void cycles_do_special (void)
 	}
 }
 
-STATIC_INLINE unsigned long int get_cycles (void)
+STATIC_INLINE unsigned long int get_cycles ()
 {
   return currcycle;
 }
@@ -90,13 +90,13 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 	eventtab[ev_hsync].oldcycles = x;
 }
 
-STATIC_INLINE int current_hpos_safe (void)
+STATIC_INLINE int current_hpos_safe ()
 {
   int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
 	return hp;
 }
 
-STATIC_INLINE int current_hpos (void)
+STATIC_INLINE int current_hpos ()
 {
   int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
 	return hp;
@@ -105,10 +105,10 @@ STATIC_INLINE int current_hpos (void)
 STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 {
 	signed long c = get_cycles ();
-	return (signed long)endcycles - c > 0;
+	return static_cast<signed long>(endcycles) - c > 0;
 }
 
-extern void MISC_handler(void);
+extern void MISC_handler();
 
 STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
 {
@@ -120,7 +120,7 @@ STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
 
 STATIC_INLINE void event2_remevent (int no)
 {
-	eventtab2[no].active = 0;
+	eventtab2[no].active = false;
 }
 
 STATIC_INLINE void event_newevent (int no, evt t)
@@ -133,7 +133,7 @@ STATIC_INLINE void event_newevent (int no, evt t)
 
 STATIC_INLINE void event_remevent (int no)
 {
-	eventtab[no].active = 0;
+	eventtab[no].active = false;
 }
 
 #endif

@@ -37,7 +37,7 @@ static const int COLUMN_SIZE[] =
 };
 
 static const char *cdfile_filter[] = { ".cue", ".ccd", ".iso", "\0" };
-static void AdjustDropDownControls(void);
+static void AdjustDropDownControls();
 
 static gcn::Label* lblList[COL_COUNT];
 static gcn::Container* listEntry[MAX_HD_DEVICES];
@@ -458,7 +458,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 }
 
 
-void ExitPanelHD(void)
+void ExitPanelHD()
 {
     int row, col;
 
@@ -499,7 +499,7 @@ void ExitPanelHD(void)
 }
 
 
-static void AdjustDropDownControls(void)
+static void AdjustDropDownControls()
 {
     int i;
 
@@ -517,7 +517,7 @@ static void AdjustDropDownControls(void)
     }
 }
 
-void RefreshPanelHD(void)
+void RefreshPanelHD()
 {
   int row, col;
   char tmp[32];
@@ -567,9 +567,9 @@ void RefreshPanelHD(void)
   	    if (nosize)
   	      snprintf (tmp, 32, "n/a");
   	    else if (mi.size >= 1024 * 1024 * 1024)
-	        snprintf (tmp, 32, "%.1fG", ((double)(uae_u32)(mi.size / (1024 * 1024))) / 1024.0);
+	        snprintf (tmp, 32, "%.1fG", double(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
   	    else
-	        snprintf (tmp, 32, "%.1fM", ((double)(uae_u32)(mi.size / (1024))) / 1024.0);
+	        snprintf (tmp, 32, "%.1fM", double(uae_u32(mi.size / (1024))) / 1024.0);
         listCells[row][COL_SIZE]->setText(tmp);
         snprintf(tmp, 32, "%d", ci->bootpri);
         listCells[row][COL_BOOTPRI]->setText(tmp);
@@ -601,21 +601,5 @@ void RefreshPanelHD(void)
 
 int count_HDs(struct uae_prefs *p)
 {
-/*
-  int row;
-  struct uaedev_config_info *uci;
-  int cnt = 0;
-  
-  for(row=0; row<MAX_HD_DEVICES; ++row)
-  {
-    uci = &p->mountconfig[row];
-    if(uci->devname && uci->devname[0])
-    {
-      ++cnt;
-    }
-  }
-
-  return cnt;
-*/
   return p->mountitems;
 }
