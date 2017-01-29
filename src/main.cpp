@@ -14,12 +14,10 @@
 #include "uae.h"
 #include "gensound.h"
 #include "audio.h"
-#include "sounddep/sound.h"
 #include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "disk.h"
-#include "debug.h"
 #include "xwin.h"
 #include "inputdevice.h"
 #include "keybuf.h"
@@ -33,7 +31,6 @@
 #include "native2amiga.h"
 #include "akiko.h"
 #include "savestate.h"
-#include "filesys.h"
 #include "blkdev.h"
 #include "uaeresource.h"
 #include "gfxboard.h"
@@ -60,9 +57,9 @@ long int version = 256 * 65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs; 
 
-bool no_gui = 0;
-bool cloanto_rom = 0;
-bool kickstart_rom = 1;
+bool no_gui = false;
+bool cloanto_rom = false;
+bool kickstart_rom = true;
 
 struct gui_info gui_data;
 
@@ -140,7 +137,7 @@ void fixup_cpu(struct uae_prefs *p)
 {
 	if (p->cpu_model >= 68030 && p->address_space_24) {
 		error_log(_T("24-bit address space is not supported in 68030/040/060 configurations."));
-		p->address_space_24 = 0;
+		p->address_space_24 = false;
 	}
 	if (p->cpu_model < 68020 && p->fpu_model && (p->cpu_compatible)) {
 		error_log(_T("FPU is not supported in 68000/010 configurations."));
@@ -150,10 +147,10 @@ void fixup_cpu(struct uae_prefs *p)
 	switch (p->cpu_model)
 	{
 	case 68000:
-		p->address_space_24 = 1;
+		p->address_space_24 = true;
 		break;
 	case 68010:
-		p->address_space_24 = 1;
+		p->address_space_24 = true;
 		break;
 	case 68020:
 		break;
@@ -346,7 +343,7 @@ void uae_reset(int hardreset, int keyboardreset)
 	}
 }
 
-void uae_quit(void)
+void uae_quit()
 {
 	if (quit_program != -UAE_QUIT) {
 		quit_program = -UAE_QUIT;
@@ -355,7 +352,7 @@ void uae_quit(void)
 	target_quit();
 }
 
-void host_shutdown(void)
+void host_shutdown()
 {
 	system("sudo poweroff");
 }
@@ -376,7 +373,7 @@ static void parse_cmdline_2(int argc, TCHAR **argv)
 {
 	int i;
 
-	cfgfile_addcfgparam(0);
+	cfgfile_addcfgparam(nullptr);
 	for (i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
@@ -523,7 +520,7 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 	parse_cmdline(argc, argv);
 }
 
-void reset_all_systems(void)
+void reset_all_systems()
 {
 	init_eventtab();
 
@@ -554,7 +551,7 @@ void reset_all_systems(void)
  * of start_program() and leave_program() if you need to do anything special.
  * Add #ifdefs around these as appropriate.
  */
-void do_start_program(void)
+void do_start_program()
 {
 	if (quit_program == -UAE_QUIT)
 		return;
@@ -565,7 +562,7 @@ void do_start_program(void)
 	m68k_go(1);
 }
 
-void do_leave_program(void)
+void do_leave_program()
 {
 #ifdef JIT
 	compiler_exit();
@@ -594,11 +591,11 @@ void do_leave_program(void)
 #endif
 	device_func_reset();
 	memory_cleanup();
-	cfgfile_addcfgparam(0);
+	cfgfile_addcfgparam(nullptr);
 	machdep_free();
 }
 
-void start_program(void)
+void start_program()
 {
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	char kbd_flags;
@@ -613,12 +610,12 @@ void start_program(void)
 	do_start_program();
 }
 
-void leave_program(void)
+void leave_program()
 {
 	do_leave_program();
 }
 
-void virtualdevice_init(void)
+void virtualdevice_init()
 {
 #ifdef AUTOCONFIG
 	rtarea_setup();
@@ -703,9 +700,9 @@ static int real_main2 (int argc, TCHAR **argv)
 
 	no_gui = !currprefs.start_gui;
 	if (restart_program == 2)
-		no_gui = 1;
+		no_gui = true;
 	else if (restart_program == 3)
-		no_gui = 0;
+		no_gui = false;
 	restart_program = 0;
 	if (!no_gui) {
 		int err = gui_init();
