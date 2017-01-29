@@ -47,7 +47,7 @@
 #include "config.h"
 #include "options.h"
 #include "threaddep/thread.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "xwin.h"
@@ -207,7 +207,7 @@ static void DumpModeInfoStructure(uaecptr amigamodeinfoptr)
 	write_log (_T("  Node.ln_Pred  = 0x%x\n"), get_long (amigamodeinfoptr + 4));
 	write_log (_T("  Node.ln_Type  = 0x%x\n"), get_byte (amigamodeinfoptr + 8));
 	write_log (_T("  Node.ln_Pri   = %d\n"), get_byte (amigamodeinfoptr + 9));
-	/*write_log (_T("  Node.ln_Name  = %s\n"), uaememptr->Node.ln_Name); */
+/*write_log (_T("  Node.ln_Name  = %s\n"), uaememptr->Node.ln_Name); */
 	write_log (_T("  OpenCount     = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_OpenCount));
 	write_log (_T("  Active        = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_Active));
 	write_log (_T("  Width         = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_Width));
@@ -1029,7 +1029,7 @@ static int do_blitrect_frame_buffer(struct RenderInfo* ri, struct
 			}
 			return 1;
 		}
-		
+
 		if (Bpp == 4)
 		{
 			/* 32-bit optimized */
@@ -3607,7 +3607,7 @@ uae_u32 picasso_demux(uae_u32 arg, TrapContext* ctx)
 	case 30: return picasso_BlitPattern(ctx);
 	case 31: return picasso_InvertRect(ctx);
 	case 32: return picasso_BlitPlanar2Direct(ctx);
-	//case 34: return picasso_WaitVerticalSync (ctx);
+		//case 34: return picasso_WaitVerticalSync (ctx);
 	case 35: return gfxmem_bank.allocated ? 1 : 0;
 	case 36: return picasso_SetSprite(ctx);
 	case 37: return picasso_SetSpritePosition(ctx);
