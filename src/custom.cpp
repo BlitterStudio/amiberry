@@ -248,24 +248,31 @@ static int copper_enabled_thisline;
  * Statistics
  */
 
-static unsigned long lastframetime = 0;
-static unsigned long frametime = 0, timeframes = 0;
+unsigned long int frametime = 0, lastframetime = 0, timeframes = 0;
 unsigned long hsync_counter = 0;
 
 /* Recording of custom chip register changes.  */
-struct sprite_entry* curr_sprite_entries = nullptr;
-struct color_change* curr_color_changes = nullptr;
+static int current_change_set;
+static struct sprite_entry sprite_entries[2][MAX_SPR_PIXELS / 16];
+static struct color_change color_changes[2][MAX_REG_CHANGE];
 
 struct decision line_decisions[2 * (MAXVPOS + 2) + 1];
-struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
+static struct draw_info line_drawinfo[2][2 * (MAXVPOS + 2) + 1];
 #define COLOR_TABLE_SIZE (MAXVPOS + 2) * 2
-struct color_entry curr_color_tables[COLOR_TABLE_SIZE];
+static struct color_entry color_tables[2][COLOR_TABLE_SIZE];
 
 static int next_sprite_entry = 0;
+static int prev_next_sprite_entry;
 static int next_sprite_forced = 1;
+
+struct sprite_entry *curr_sprite_entries, *prev_sprite_entries;
+struct color_change *curr_color_changes, *prev_color_changes;
+struct draw_info *curr_drawinfo, *prev_drawinfo;
+struct color_entry *curr_color_tables, *prev_color_tables;
 
 static int next_color_change;
 static int next_color_entry, remembered_color_entry;
+static int color_src_match, color_dest_match, color_compare_result;
 
 static struct decision thisline_decision;
 static int fetch_cycle, fetch_modulo_cycle;
@@ -407,6 +414,31 @@ static void remember_ctable()
 		remembered_color_entry = next_color_entry++;
 	}
 	thisline_decision.ctable = remembered_color_entry;
+	if (color_src_match < 0 || color_dest_match != remembered_color_entry
+		|| line_decisions[next_lineno].ctable != color_src_match)
+	{
+		/* The remembered comparison didn't help us - need to compare again. */
+		int oldctable = line_decisions[next_lineno].ctable;
+		int changed = 0;
+
+		if (oldctable < 0) {
+			changed = 1;
+			color_src_match = color_dest_match = -1;
+		}
+		else {
+			color_compare_result = color_reg_cmp(&prev_color_tables[oldctable], &current_colors) != 0;
+			if (color_compare_result)
+				changed = 1;
+			color_src_match = oldctable;
+			color_dest_match = remembered_color_entry;
+		}
+//		thisline_changed |= changed;
+	}
+	else {
+		/* We know the result of the comparison */
+//		if (color_compare_result)
+//			thisline_changed = 1;
+	}
 }
 
 STATIC_INLINE int get_equ_vblank_endline()
@@ -2018,10 +2050,10 @@ static bool isbrdblank(int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 {
 	bool brdblank;
 	brdblank = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && (bplcon0 & 1) && (bplcon3 & 0x20);
-	if (hpos >= 0 && current_colors.borderblank != brdblank)
+	if (hpos >= 0 && current_colors.extra != brdblank)
 	{
-		record_color_change(hpos, 0, COLOR_CHANGE_BRDBLANK | (brdblank ? 1 : 0) | (current_colors.bordersprite ? 2 : 0));
-		current_colors.borderblank = brdblank;
+		record_color_change(hpos, 0, COLOR_CHANGE_BRDBLANK | (brdblank ? 1 : 0) | (current_colors.extra ? 2 : 0));
+		current_colors.extra = brdblank;
 		remembered_color_entry = -1;
 	}
 	return brdblank;
@@ -2032,15 +2064,15 @@ static bool issprbrd(int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 {
 	bool brdsprt;
 	brdsprt = (aga_mode) && (bplcon0 & 1) && (bplcon3 & 0x02);
-	if (hpos >= 0 && current_colors.bordersprite != brdsprt)
+	if (hpos >= 0 && current_colors.extra != brdsprt)
 	{
-		record_color_change(hpos, 0, COLOR_CHANGE_BRDBLANK | (current_colors.borderblank ? 1 : 0) | (brdsprt ? 2 : 0));
-		current_colors.bordersprite = brdsprt;
+		record_color_change(hpos, 0, COLOR_CHANGE_BRDBLANK | (current_colors.extra ? 1 : 0) | (brdsprt ? 2 : 0));
+		current_colors.extra = brdsprt;
 		remembered_color_entry = -1;
-		if (brdsprt && !current_colors.borderblank)
+		if (brdsprt && !current_colors.extra)
 			thisline_decision.bordersprite_seen = true;
 	}
-	return brdsprt && !current_colors.borderblank;
+	return brdsprt && !current_colors.extra;
 }
 
 static void record_register_change(int hpos, int regno, uae_u16 value)
@@ -4979,19 +5011,34 @@ static void init_hardware_frame()
 void init_hardware_for_drawing_frame()
 {
 	/* Avoid this code in the first frame after a customreset.  */
-	if (next_sprite_entry > 0)
-	{
-		int npixels = curr_sprite_entries[next_sprite_entry].first_pixel;
-		memset(spixels, 0, npixels * sizeof *spixels);
-		memset(spixstate.bytes, 0, npixels * sizeof *spixstate.bytes);
+	if (prev_sprite_entries) {
+		int first_pixel = prev_sprite_entries[0].first_pixel;
+		int npixels = prev_sprite_entries[prev_next_sprite_entry].first_pixel - first_pixel;
+		memset(spixels + first_pixel, 0, npixels * sizeof *spixels);
+		memset(spixstate.bytes + first_pixel, 0, npixels * sizeof *spixstate.bytes);
 	}
+	prev_next_sprite_entry = next_sprite_entry;
 
 	next_color_change = 0;
 	next_sprite_entry = 0;
 	next_color_entry = 0;
 	remembered_color_entry = -1;
 
-	curr_sprite_entries[0].first_pixel = 0;
+	prev_sprite_entries = sprite_entries[current_change_set];
+	curr_sprite_entries = sprite_entries[current_change_set ^ 1];
+	prev_color_changes = color_changes[current_change_set];
+	curr_color_changes = color_changes[current_change_set ^ 1];
+	prev_color_tables = color_tables[current_change_set];
+	curr_color_tables = color_tables[current_change_set ^ 1];
+
+	prev_drawinfo = line_drawinfo[current_change_set];
+	curr_drawinfo = line_drawinfo[current_change_set ^ 1];
+	current_change_set ^= 1;
+
+	color_src_match = color_dest_match = -1;
+
+	/* Use both halves of the array in alternating fashion.  */
+	curr_sprite_entries[0].first_pixel = current_change_set * MAX_SPR_PIXELS;
 	next_sprite_forced = 1;
 }
 
@@ -5644,10 +5691,13 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	inputdevice_reset();
 	timehack_alive = 0;
 
-	curr_sprite_entries[0].first_pixel = 0;
-	curr_sprite_entries[1].first_pixel = 0;
-	next_sprite_entry = 0;
-	memset(spixels, 0, sizeof spixels);
+	curr_sprite_entries = 0;
+	prev_sprite_entries = 0;
+	sprite_entries[0][0].first_pixel = 0;
+	sprite_entries[1][0].first_pixel = MAX_SPR_PIXELS;
+	sprite_entries[0][1].first_pixel = 0;
+	sprite_entries[1][1].first_pixel = MAX_SPR_PIXELS;
+	memset(spixels, 0, 2 * MAX_SPR_PIXELS * sizeof *spixels);
 	memset(&spixstate, 0, sizeof spixstate);
 
 	cop_state.state = COP_stop;
@@ -6580,7 +6630,7 @@ uae_u8* restore_custom(uae_u8* src)
 	fmode = RW; /* 1FC FMODE */
 	last_custom_value1 = RW; /* 1FE ? */
 
-	current_colors.borderblank = isbrdblank(-1, bplcon0, bplcon3);
+	current_colors.extra = isbrdblank(-1, bplcon0, bplcon3);
 	DISK_restore_custom(dskpt, dsklen, dskbytr);
 
 	FMODE(0, fmode);

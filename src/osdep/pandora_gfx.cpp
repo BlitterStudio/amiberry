@@ -101,16 +101,9 @@ void InitAmigaVidMode(struct uae_prefs* p)
 	/* Initialize structure for Amiga video modes */
 	gfxvidinfo.pixbytes = 2;
 	gfxvidinfo.bufmem = static_cast<uae_u8 *>(screen->pixels);
-	gfxvidinfo.outwidth = p->gfx_size.width;
-	gfxvidinfo.outheight = p->gfx_size.height;
+	gfxvidinfo.outwidth = screen->w ? screen->w : 320; //p->gfx_size.width;
+	gfxvidinfo.outheight = screen->h ? screen->h : 240; //p->gfx_size.height;
 	gfxvidinfo.rowbytes = screen->pitch;
-#ifdef PICASSO96
-	if (screen_is_picasso)
-	{
-		gfxvidinfo.outwidth = picasso_vidinfo.width;
-		gfxvidinfo.outheight = picasso_vidinfo.height;
-	}
-#endif
 }
 
 void graphics_subshutdown()
