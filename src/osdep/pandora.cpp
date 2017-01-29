@@ -822,8 +822,30 @@ int handle_msgpump()
 #endif
 
 			case SDL_SCANCODE_LSHIFT: // Shift key
+				inputdevice_do_keyboard(AK_RSH, 1);
+				break;
 			case SDL_SCANCODE_RSHIFT:
 				inputdevice_do_keyboard(AK_LSH, 1);
+				break;
+
+			case SDL_SCANCODE_RGUI:
+			case SDL_SCANCODE_MENU:
+				inputdevice_do_keyboard(AK_RAMI, 1);
+				break;
+			case SDL_SCANCODE_LGUI:
+				inputdevice_do_keyboard(AK_LAMI, 1);
+				break;
+
+			case SDL_SCANCODE_LALT:
+				inputdevice_do_keyboard(AK_LALT, 1);
+				break;
+			case SDL_SCANCODE_RALT:
+				inputdevice_do_keyboard(AK_RALT, 1);
+				break;
+
+			case SDL_SCANCODE_LCTRL:
+			case SDL_SCANCODE_RCTRL:
+				inputdevice_do_keyboard(AK_CTRL, 1);
 				break;
 
 				//            case VK_L: // Left shoulder button
@@ -880,8 +902,30 @@ int handle_msgpump()
 			switch (rEvent.key.keysym.scancode)
 			{
 			case SDL_SCANCODE_LSHIFT: // Shift key
+				inputdevice_do_keyboard(AK_RSH, 0);
+				break;
 			case SDL_SCANCODE_RSHIFT:
 				inputdevice_do_keyboard(AK_LSH, 0);
+				break;
+
+			case SDL_SCANCODE_RGUI:
+			case SDL_SCANCODE_MENU:
+				inputdevice_do_keyboard(AK_RAMI, 0);
+				break;
+			case SDL_SCANCODE_LGUI:
+				inputdevice_do_keyboard(AK_LAMI, 0);
+				break;
+
+			case SDL_SCANCODE_LALT:
+				inputdevice_do_keyboard(AK_LALT, 0);
+				break;
+			case SDL_SCANCODE_RALT:
+				inputdevice_do_keyboard(AK_RALT, 0);
+				break;
+
+			case SDL_SCANCODE_LCTRL:
+			case SDL_SCANCODE_RCTRL:
+				inputdevice_do_keyboard(AK_CTRL, 0);
 				break;
 
 				//            case VK_L: // Left shoulder button
