@@ -60,6 +60,7 @@
  * Virtual Key for (A) button
  * default: HOME (278)
  */
+#pragma once
 #define VK_A SDL_SCANCODE_HOME
 
 /*

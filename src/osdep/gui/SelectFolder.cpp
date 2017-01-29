@@ -22,12 +22,12 @@ static bool dialogResult = false;
 static bool dialogFinished = false;
 static char workingDir[MAX_PATH];
 
-static gcn::Window *wndSelectFolder;
+static gcn::Window* wndSelectFolder;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
 static gcn::ListBox* lstFolders;
 static gcn::ScrollArea* scrAreaFolders;
-static gcn::TextField *txtCurrent;
+static gcn::TextField* txtCurrent;
 
 
 class ButtonActionListener : public gcn::ActionListener
@@ -42,15 +42,16 @@ public:
 		dialogFinished = true;
 	}
 };
+
 static ButtonActionListener* buttonActionListener;
 
 
 class DirListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs;
+	vector<string> dirs;
 
 public:
-	DirListModel(const char * path)
+	DirListModel(const char* path)
 	{
 		changeDir(path);
 	}
@@ -67,23 +68,24 @@ public:
 		return dirs[i];
 	}
 
-	void changeDir(const char *path)
+	void changeDir(const char* path)
 	{
-		ReadDirectory(path, &dirs, NULL);
+		ReadDirectory(path, &dirs, nullptr);
 		if (dirs.size() == 0)
 			dirs.push_back("..");
 	}
 };
+
 static DirListModel dirList(".");
 
 
-static void checkfoldername(char *current)
+static void checkfoldername(char* current)
 {
-	char *ptr;
+	char* ptr;
 	char actualpath[PATH_MAX];
-	DIR *dir;
+	DIR* dir;
 
-	if (dir = opendir(current))
+	if ((dir = opendir(current)))
 	{
 		dirList = current;
 		ptr = realpath(current, actualpath);
@@ -112,10 +114,11 @@ public:
 		checkfoldername(foldername);
 	}
 };
+
 static ListBoxActionListener* listBoxActionListener;
 
 
-static void InitSelectFolder(const char *title)
+static void InitSelectFolder(const char* title)
 {
 	wndSelectFolder = new gcn::Window("Load");
 	wndSelectFolder->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -171,7 +174,7 @@ static void InitSelectFolder(const char *title)
 }
 
 
-static void ExitSelectFolder(void)
+static void ExitSelectFolder()
 {
 	wndSelectFolder->releaseModalFocus();
 	gui_top->remove(wndSelectFolder);
@@ -189,7 +192,7 @@ static void ExitSelectFolder(void)
 }
 
 
-static void SelectFolderLoop(void)
+static void SelectFolderLoop()
 {
 	while (!dialogFinished)
 	{
@@ -214,7 +217,6 @@ static void SelectFolderLoop(void)
 							cmdOK->requestFocus();
 						else if (activeWidget == cmdOK)
 							lstFolders->requestFocus();
-						continue;
 					}
 					break;
 
@@ -228,7 +230,6 @@ static void SelectFolderLoop(void)
 							lstFolders->requestFocus();
 						else if (activeWidget == cmdOK)
 							cmdCancel->requestFocus();
-						continue;
 					}
 					break;
 
@@ -236,7 +237,7 @@ static void SelectFolderLoop(void)
 				case VK_A:
 					event.key.keysym.sym = SDLK_RETURN;
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP;  // and the key up
+					event.type = SDL_KEYUP; // and the key up
 					break;
 				}
 			}
@@ -252,18 +253,18 @@ static void SelectFolderLoop(void)
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-//		
+
 		// Update the texture from the surface
-		SDL_UpdateTexture(gui_texture, NULL, gui_screen->pixels, gui_screen->pitch);
+		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 		// Copy the texture on the renderer
-		SDL_RenderCopy(renderer, gui_texture, NULL, NULL);
+		SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 		// Update the window surface (show the renderer)
 		SDL_RenderPresent(renderer);
 	}
 }
 
 
-bool SelectFolder(const char *title, char *value)
+bool SelectFolder(const char* title, char* value)
 {
 	dialogResult = false;
 	dialogFinished = false;

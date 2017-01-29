@@ -27,27 +27,27 @@ static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool createNew = false;
 static char workingDir[MAX_PATH];
-static const char **filefilter;
+static const char** filefilter;
 static bool dialogCreated = false;
 static int selectedOnStart = -1;
 
-static gcn::Window *wndSelectFile;
+static gcn::Window* wndSelectFile;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
 static gcn::ListBox* lstFiles;
 static gcn::ScrollArea* scrAreaFiles;
-static gcn::TextField *txtCurrent;
-static gcn::Label *lblFilename;
-static gcn::TextField *txtFilename;
+static gcn::TextField* txtCurrent;
+static gcn::Label* lblFilename;
+static gcn::TextField* txtFilename;
 
 
 class SelectFileListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs;
-	std::vector<std::string> files;
+	vector<string> dirs;
+	vector<string> files;
 
 public:
-	SelectFileListModel(const char * path)
+	SelectFileListModel(const char* path)
 	{
 		changeDir(path);
 	}
@@ -57,7 +57,7 @@ public:
 		return dirs.size() + files.size();
 	}
 
-	std::string getElementAt(int i)
+	string getElementAt(int i)
 	{
 		if (i >= dirs.size() + files.size() || i < 0)
 			return "---";
@@ -66,7 +66,7 @@ public:
 		return files[i - dirs.size()];
 	}
 
-	void changeDir(const char *path)
+	void changeDir(const char* path)
 	{
 		ReadDirectory(path, &dirs, &files);
 		if (dirs.size() == 0)
@@ -79,7 +79,8 @@ public:
 		return (i < dirs.size());
 	}
 };
-static SelectFileListModel *fileList;
+
+static SelectFileListModel* fileList;
 
 
 class FileButtonActionListener : public gcn::ActionListener
@@ -99,7 +100,7 @@ public:
 				strcpy(tmp, workingDir);
 				strcat(tmp, "/");
 				strcat(tmp, txtFilename->getText().c_str());
-				if (strstr(tmp, filefilter[0]) == NULL)
+				if (strstr(tmp, filefilter[0]) == nullptr)
 					strcat(tmp, filefilter[0]);
 				if (my_existsfile(tmp) == 1)
 					return; // File already exists
@@ -118,16 +119,17 @@ public:
 		dialogFinished = true;
 	}
 };
+
 static FileButtonActionListener* fileButtonActionListener;
 
 
-static void checkfoldername(char *current)
+static void checkfoldername(char* current)
 {
-	char *ptr;
+	char* ptr;
 	char actualpath[MAX_PATH];
-	DIR *dir;
+	DIR* dir;
 
-	if (dir = opendir(current))
+	if ((dir = opendir(current)))
 	{
 		fileList->changeDir(current);
 		ptr = realpath(current, actualpath);
@@ -139,7 +141,7 @@ static void checkfoldername(char *current)
 	txtCurrent->setText(workingDir);
 }
 
-static void checkfilename(char *current)
+static void checkfilename(char* current)
 {
 	char actfile[MAX_PATH];
 	extractFileName(current, actfile);
@@ -177,10 +179,11 @@ public:
 		}
 	}
 };
+
 static SelectFileActionListener* selectFileActionListener;
 
 
-static void InitSelectFile(const char *title)
+static void InitSelectFile(const char* title)
 {
 	wndSelectFile = new gcn::Window("Load");
 	wndSelectFile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -253,7 +256,7 @@ static void InitSelectFile(const char *title)
 }
 
 
-static void ExitSelectFile(void)
+static void ExitSelectFile()
 {
 	wndSelectFile->releaseModalFocus();
 	gui_top->remove(wndSelectFile);
@@ -277,7 +280,7 @@ static void ExitSelectFile(void)
 }
 
 
-static void SelectFileLoop(void)
+static void SelectFileLoop()
 {
 	while (!dialogFinished)
 	{
@@ -307,7 +310,6 @@ static void SelectFileLoop(void)
 								lstFiles->requestFocus();
 						else if (activeWidget == txtFilename)
 							lstFiles->requestFocus();
-						continue;
 					}
 					break;
 
@@ -326,7 +328,6 @@ static void SelectFileLoop(void)
 							lstFiles->requestFocus();
 						else if (activeWidget == cmdOK)
 							cmdCancel->requestFocus();
-						continue;
 					}
 					break;
 
@@ -334,7 +335,7 @@ static void SelectFileLoop(void)
 				case VK_A:
 					event.key.keysym.sym = SDLK_RETURN;
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP;  // and the key up
+					event.type = SDL_KEYUP; // and the key up
 					break;
 				}
 			}
@@ -350,11 +351,11 @@ static void SelectFileLoop(void)
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		
+
 		// Update the texture from the surface
-		SDL_UpdateTexture(gui_texture, NULL, gui_screen->pixels, gui_screen->pitch);
+		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 		// Copy the texture on the renderer
-		SDL_RenderCopy(renderer, gui_texture, NULL, NULL);
+		SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 		// Update the window surface (show the renderer)
 		SDL_RenderPresent(renderer);
 
@@ -371,7 +372,7 @@ static void SelectFileLoop(void)
 static int Already_init = 0;
 #endif
 
-bool SelectFile(const char *title, char *value, const char *filter[], bool create)
+bool SelectFile(const char* title, char* value, const char* filter[], bool create)
 {
 	dialogResult = false;
 	dialogFinished = false;
