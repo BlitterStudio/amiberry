@@ -112,13 +112,13 @@ void InGameMessage(const char *msg)
 				}
 			}
 
-			            //-------------------------------------------------
-			            // Send event to guisan-controls
-			            //-------------------------------------------------
+			//-------------------------------------------------
+			// Send event to guisan-controls
+			//-------------------------------------------------
 			msg_input->pushInput(event);
 		}
 
-		        // Now we let the Gui object perform its logic.
+		// Now we let the Gui object perform its logic.
 		msg_gui->logic();
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
@@ -127,9 +127,9 @@ void InGameMessage(const char *msg)
 //			SDL_Flip(prSDLScreen);
 		{
 		// Update the texture from the surface
-			SDL_UpdateTexture(texture, NULL, gui_screen->pixels, gui_screen->pitch);
+			SDL_UpdateTexture(gui_texture, NULL, gui_screen->pixels, gui_screen->pitch);
 			// Copy the texture on the renderer
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_RenderCopy(renderer, gui_texture, NULL, NULL);
 			// Update the window surface (show the renderer)
 			SDL_RenderPresent(renderer);
 		}		
