@@ -31,9 +31,9 @@ SDL_Surface *Dummy_prSDLScreen = NULL;
 static SDL_Surface *current_screenshot = NULL;
 /* Possible screen modes (x and y resolutions) */
 
-#define MAX_SCREEN_MODES 11
-static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1680, 1920 };
-static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 1050, 1080 };
+#define MAX_SCREEN_MODES 13
+static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1360, 1366, 1680, 1920 };
+static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 768, 768, 1050, 1080 };
 
 struct PicassoResolution *DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
