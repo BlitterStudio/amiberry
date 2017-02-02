@@ -355,33 +355,8 @@ static int *kbmaps[] = { kb_none, kb_none, kb_none, kb_none, kb_none,
 
 void keyboard_settrans ()
 {
-//    char vid_drv_name[32];
-//    // get display type...
-//    SDL_VideoDriverName(vid_drv_name, sizeof(vid_drv_name));
-//    if (strcmp(vid_drv_name, "x11") == 0)
-//    {
-//#ifdef DEBUG
-//        printf("Will use keycode from x11 mapping.\n");
-//#endif
-//        keyboard_type = KEYCODE_X11;
-//        inputdevice_setkeytranslation (keytrans_x11, kbmaps);
-//    }
-//    else  if (strcmp(vid_drv_name, "fbcon") == 0)
-//    {
-//#ifdef DEBUG
-//        printf("Will use keycode from fbcon mapping.\n");
-//#endif
-//        keyboard_type = KEYCODE_FBCON;
-//        inputdevice_setkeytranslation (keytrans_fbcon, kbmaps);
-//    }
-//    else
-//    {
-//#ifdef DEBUG
-//        printf("Unknown keycode to use, will use keysym\n");
-//#endif
-        keyboard_type = KEYCODE_UNK;
-        inputdevice_setkeytranslation (keytrans, kbmaps);
-//    }
+    keyboard_type = KEYCODE_UNK;
+    inputdevice_setkeytranslation (keytrans, kbmaps);
 }
 
 int translate_pandora_keys(int symbol, int *modifier)

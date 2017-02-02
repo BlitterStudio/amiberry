@@ -848,15 +848,6 @@ int handle_msgpump()
 				inputdevice_do_keyboard(AK_CTRL, 1);
 				break;
 
-				//            case VK_L: // Left shoulder button
-				//            case VK_R:  // Right shoulder button
-				//                if(currprefs.input_tablet > TABLET_OFF)
-				//                {
-				//                    // Holding left or right shoulder button -> stylus does right mousebutton
-				//                    doStylusRightClick = 1;
-				//                }
-				// Fall through...
-
 			default:
 				//				if (currprefs.pandora_customControls)
 				//				{
@@ -889,10 +880,7 @@ int handle_msgpump()
 				//                }
 				//                else
 				//                {
-				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
-				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
 				//                }
 				break;
 			}
@@ -928,15 +916,6 @@ int handle_msgpump()
 				inputdevice_do_keyboard(AK_CTRL, 0);
 				break;
 
-				//            case VK_L: // Left shoulder button
-				//            case VK_R:  // Right shoulder button
-				//                if(currprefs.input_tablet > TABLET_OFF)
-				//                {
-				//                    // Release left or right shoulder button -> stylus does left mousebutton
-				//                    doStylusRightClick = 0;
-				//                }
-				// Fall through...
-
 			default:
 				//				if (currprefs.pandora_customControls)
 				//				{
@@ -965,10 +944,7 @@ int handle_msgpump()
 				//                }
 				//                else
 				//                {
-				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
-				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
 				//                }
 				break;
 			}

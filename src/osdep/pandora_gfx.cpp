@@ -50,59 +50,13 @@ int graphics_setup(void)
 	return 1;
 }
 
-#ifdef WITH_LOGGING
-
-SDL_Surface *liveInfo = NULL;
-TTF_Font *liveFont = NULL;
-int liveInfoCounter = 0;
-void ShowLiveInfo(char *msg)
-{
-    if(liveFont == NULL)
-    {
-        TTF_Init();
-        liveFont = TTF_OpenFont("data/FreeSans.ttf", 12);
-    }
-    if(liveInfo != NULL)
-        SDL_FreeSurface(liveInfo);
-    SDL_Color col;
-    col.r = 0xbf;
-    col.g = 0xbf;
-    col.b = 0xbf;
-    liveInfo = TTF_RenderText_Solid(liveFont, msg, col);
-    liveInfoCounter = 50 * 5;
-}
-
-void RefreshLiveInfo()
-{
-    if(liveInfoCounter > 0)
-    {
-        SDL_Rect dst, src;
-
-        dst.x = 0;
-        dst.y = 2;
-        src.w = liveInfo->w;
-        src.h = liveInfo->h;
-        src.x = 0;
-        src.y = 0;
-        SDL_BlitSurface(liveInfo, &src, prSDLScreen, &dst);
-        liveInfoCounter--;
-        if(liveInfoCounter == 0)
-        {
-            SDL_FreeSurface(liveInfo);
-            liveInfo = NULL;
-        }
-    }
-}
-
-#endif
-
 void InitAmigaVidMode(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
 	gfxvidinfo.pixbytes = 2;
 	gfxvidinfo.bufmem = static_cast<uae_u8 *>(screen->pixels);
 	gfxvidinfo.outwidth = screen->w ? screen->w : 320; //p->gfx_size.width;
-	gfxvidinfo.outheight = screen->h ? screen->h : 240; //p->gfx_size.height;
+	gfxvidinfo.outheight = screen->h ? screen->h : 256; //p->gfx_size.height;
 	gfxvidinfo.rowbytes = screen->pitch;
 }
 
@@ -137,6 +91,7 @@ static void open_screen(struct uae_prefs* p)
 		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 		width = p->gfx_size.width;
 		height = p->gfx_size.height;
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 	}
 
 	graphics_subshutdown();
@@ -251,53 +206,12 @@ void flush_screen()
     RefreshLiveInfo();
 #endif
 
-	//    unsigned long start = read_processor_time();
-	//    if(current_vsync_frame == 0)
-	//    {
-	//        // Old style for vsync and idle time calc
-	//        if(start < next_synctime && next_synctime - start > time_per_frame - 1000)
-	//            usleep((next_synctime - start) - 750);
-	//        ioctl(fbdev, OMAPFB_WAITFORVSYNC, &current_vsync_frame);
-	//    }
-	//    else
-	//    {
-	//        // New style for vsync and idle time calc
-	//        int wait_till = current_vsync_frame;
-	//        do
-	//        {
-	//            ioctl(fbdev, OMAPFB_WAITFORVSYNC_FRAME, &current_vsync_frame);
-	//        }
-	//        while (wait_till >= current_vsync_frame);
-	//
-	//        if(wait_till + 1 != current_vsync_frame)
-	//        {
-	//            // We missed a vsync...
-	//            next_synctime = 0;
-	//        }
-	//        current_vsync_frame += currprefs.gfx_framerate;
-	//    }
-
 	// Update the texture from the surface
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
-
-	//    last_synctime = read_processor_time();
-
-	//    if(!screen_is_picasso)
-	//		gfxvidinfo.bufmem = (uae_u8 *)screen->pixels;
-
-	//    if(last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - 1000 || next_synctime < start)
-	//        adjust_idletime(0);
-	//    else
-	//        adjust_idletime(next_synctime - start);
-	//
-	//    if (last_synctime - next_synctime > time_per_frame - 5000)
-	//        next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
-	//    else
-	//        next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 
 	init_row_map();
 }

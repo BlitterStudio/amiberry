@@ -139,7 +139,6 @@ void RegisterRefreshFunc(void (*func)())
 	refreshFuncAfterDraw = func;
 }
 
-
 namespace sdl
 {
 	void gui_init()
@@ -147,6 +146,8 @@ namespace sdl
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
+
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother (linear scaling).
 
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create a surface");

@@ -666,8 +666,6 @@ static int real_main2 (int argc, TCHAR **argv)
 	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 	
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
-
 	keyboard_settrans();
 
 	if (restart_config[0]) {

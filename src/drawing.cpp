@@ -34,7 +34,7 @@
 #include "options.h"
 #include "threaddep/thread.h"
 #include "uae.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "xwin.h"
@@ -334,7 +334,7 @@ static void pfield_do_linetoscr_0_AGA(int start, int stop)
 
 STATIC_INLINE xcolnr getbgc(bool blank)
 {
-	return (blank || colors_for_drawing.borderblank) ? 0 : colors_for_drawing.acolors[0];
+	return (blank || colors_for_drawing.extra) ? 0 : colors_for_drawing.acolors[0];
 }
 
 static void pfield_do_fill_line_0_640(int start, int stop)
@@ -403,7 +403,7 @@ static void pfield_init_linetoscr()
 	if (playfield_end > visible_right_border)
 		playfield_end = visible_right_border;
 
-	if (dp_for_drawing->bordersprite_seen && !colors_for_drawing.borderblank && dip_for_drawing->nr_sprites)
+	if (dp_for_drawing->bordersprite_seen && !colors_for_drawing.extra && dip_for_drawing->nr_sprites)
 	{
 		int min = visible_right_border, max = visible_left_border, i;
 		for (i = 0; i < dip_for_drawing->nr_sprites; i++)
@@ -2006,8 +2006,7 @@ static void adjust_drawing_colors(int ctable, int need_full)
 			memcpy(colors_for_drawing.acolors,
 			       curr_color_tables[ctable].acolors,
 			       sizeof colors_for_drawing.acolors);
-			colors_for_drawing.borderblank = curr_color_tables[ctable].borderblank;
-			colors_for_drawing.bordersprite = curr_color_tables[ctable].bordersprite;
+			colors_for_drawing.extra = curr_color_tables[ctable].extra;
 			color_match_type = color_match_acolors;
 		}
 		drawing_color_matches = ctable;
@@ -2072,8 +2071,8 @@ STATIC_INLINE void do_color_changes(line_draw_func worker_border, line_draw_func
 			{
 				if (regno == 0 && (value & COLOR_CHANGE_BRDBLANK))
 				{
-					colors_for_drawing.borderblank = (value & 1) != 0;
-					colors_for_drawing.bordersprite = (value & 3) == 2;
+					colors_for_drawing.extra = (value & 1) != 0;
+					colors_for_drawing.extra = (value & 3) == 2;
 				}
 				else
 				{
@@ -2147,7 +2146,7 @@ static void pfield_draw_line(int lineno, int gfx_ypos)
 		adjust_drawing_colors(dp_for_drawing->ctable, 0);
 
 		/* this makes things complex.. */
-		if (dp_for_drawing->bordersprite_seen && !colors_for_drawing.borderblank && dip_for_drawing->nr_sprites)
+		if (dp_for_drawing->bordersprite_seen && !colors_for_drawing.extra && dip_for_drawing->nr_sprites)
 		{
 			dosprites = true;
 			pfield_expand_dp_bplcon();
