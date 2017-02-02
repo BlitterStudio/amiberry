@@ -1866,6 +1866,10 @@ void init_row_map()
 		row_map[i] = row_tmp;
 	for (i = 0 , j = 0; i < gfxvidinfo.outheight; i++ , j += gfxvidinfo.rowbytes)
 		row_map[i] = gfxvidinfo.bufmem + j;
+	
+	oldbufmem = gfxvidinfo.bufmem;
+	oldheight = gfxvidinfo.outheight;
+	oldpitch = gfxvidinfo.rowbytes;
 }
 
 static void init_aspect_maps()

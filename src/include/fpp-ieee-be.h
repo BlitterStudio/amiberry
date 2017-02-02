@@ -9,6 +9,9 @@
  * Copyright 1999 Sam Jordan
  */
 
+#pragma once
+#include "sysdeps.h"
+
 STATIC_INLINE double to_single (uae_u32 value)
 {
     union

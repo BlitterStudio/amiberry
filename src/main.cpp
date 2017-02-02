@@ -640,9 +640,9 @@ void virtualdevice_init()
 // In case of error, print the error code and close the application
 void check_error_sdl(bool check, const char* message) {
 	if (check) {
-		std::cout << message << " " << SDL_GetError() << std::endl;
+		cout << message << " " << SDL_GetError() << endl;
 		SDL_Quit();
-		std::exit(-1);
+		exit(-1);
 	}
 }
 
