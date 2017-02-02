@@ -695,7 +695,6 @@ static int real_main2 (int argc, TCHAR **argv)
 	inputdevice_init();
 
 	changed_prefs = currprefs;
-
 	no_gui = !currprefs.start_gui;
 	if (restart_program == 2)
 		no_gui = true;

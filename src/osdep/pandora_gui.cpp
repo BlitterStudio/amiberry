@@ -30,6 +30,7 @@
 int emulating = 0;
 
 extern int screen_is_picasso;
+struct uae_prefs workprefs;
 
 struct gui_msg
 {
@@ -56,10 +57,10 @@ struct gui_msg gui_msglist[] = {
 	{-1, ""}
 };
 
-std::vector<ConfigFileInfo*> ConfigFilesList;
-std::vector<AvailableROM*> lstAvailableROMs;
-std::vector<std::string> lstMRUDiskList;
-std::vector<std::string> lstMRUCDList;
+vector<ConfigFileInfo*> ConfigFilesList;
+vector<AvailableROM*> lstAvailableROMs;
+vector<string> lstMRUDiskList;
+vector<string> lstMRUCDList;
 
 
 void AddFileToDiskList(const char* file, int moveToTop)
@@ -268,7 +269,7 @@ static void scan_rom(char* path)
 
 void RescanROMs()
 {
-	std::vector<std::string> files;
+	vector<string> files;
 	char path[MAX_DPATH];
 
 	romlist_clear();
@@ -416,11 +417,12 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 }
 
 
-static void prefs_to_gui()
+static void prefs_to_gui(struct uae_prefs *p)
 {
+	workprefs = *p;
 	/* filesys hack */
-	changed_prefs.mountitems = currprefs.mountitems;
-	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	workprefs.mountitems = currprefs.mountitems;
+	memcpy(&workprefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 }
 
 
@@ -429,6 +431,7 @@ static void gui_to_prefs()
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	fixup_prefs(&changed_prefs);
 }
 
 
@@ -457,14 +460,13 @@ static void after_leave_gui()
 
 int gui_init()
 {
-	int ret = 0;
-
 	emulating = 0;
+	int ret = 0;
 
 	if (lstAvailableROMs.size() == 0)
 		RescanROMs();
 
-	prefs_to_gui();
+	prefs_to_gui(&changed_prefs);
 	run_gui();
 	gui_to_prefs();
 	if (quit_program < 0)
@@ -475,7 +477,6 @@ int gui_init()
 	update_display(&changed_prefs);
 
 	after_leave_gui();
-
 	emulating = 1;
 	return ret;
 }
@@ -550,13 +551,14 @@ void gui_display(int shortcut)
 	if (quit_program != 0)
 		return;
 	emulating = 1;
+
 	pause_sound();
 	blkdev_entergui();
 
 	if (lstAvailableROMs.size() == 0)
 		RescanROMs();
 
-	prefs_to_gui();
+	prefs_to_gui(&changed_prefs);
 	run_gui();
 	gui_to_prefs();
 
@@ -574,15 +576,6 @@ void gui_display(int shortcut)
 	fpscounter_reset();
 }
 
-
-void moveVertical(int value)
-{
-	changed_prefs.pandora_vertical_offset += value;
-	if (changed_prefs.pandora_vertical_offset < -16)
-		changed_prefs.pandora_vertical_offset = -16;
-	else if (changed_prefs.pandora_vertical_offset > 16)
-		changed_prefs.pandora_vertical_offset = 16;
-}
 
 void gui_disk_image_change(int unitnum, const char* name, bool writeprotected)
 {
@@ -634,9 +627,7 @@ void gui_led(int led, int on)
 
 void gui_flicker_led(int led, int status)
 {
-#ifdef RASPBERRY
 	gui_led(led, status);
-#endif
 }
 
 

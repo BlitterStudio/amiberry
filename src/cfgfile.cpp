@@ -17,7 +17,7 @@
 #include "custom.h"
 #include "inputdevice.h"
 #include "savestate.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "rommgr.h"
 #include "gui.h"
 #include "newcpu.h"
@@ -4057,8 +4057,9 @@ void default_prefs(struct uae_prefs* p, int type)
 	int roms[] = {6, 7, 8, 9, 10, 14, 5, 4, 3, 2, 1, -1};
 	TCHAR zero = 0;
 	struct zfile* f;
+
 	reset_inputdevice_config(p);
-	memset(p, 0, sizeof(struct uae_prefs));
+	memset(p, 0, sizeof(*p));
 	_tcscpy(p->description, _T("UAE default configuration"));
 
 	p->start_gui = true;
@@ -4103,28 +4104,20 @@ void default_prefs(struct uae_prefs* p, int type)
 	p->optcount[4] = 0;
 	p->optcount[5] = 0;
 
-	p->gfx_framerate = 0;
+	p->gfx_framerate = 1;
 	p->gfx_size_fs.width = 640;
 	p->gfx_size_fs.height = 480;
-	p->gfx_size_win.width = 320;
-	p->gfx_size_win.height = 240;
+	p->gfx_size_win.width = 720;
+	p->gfx_size_win.height = 568;
 
-#ifdef RASPBERRY
-	p->gfx_size.width = 640;
-	p->gfx_size.height = 262;
-#else
 	p->gfx_size.width = 320;
-	p->gfx_size.height = 240;
-#endif
+	p->gfx_size.height = 256;
 
-	p->gfx_resolution = RES_LORES;
+	p->gfx_resolution = RES_HIRES;
 
 #ifdef RASPBERRY
-	//	p->gfx_correct_aspect = 1;
-	//	p->gfx_fullscreen_ratio = 100;
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
-	//	p->kbd_led_cap = -1; // No status on capslock
 #endif
 
 	p->immediate_blits = 0;
