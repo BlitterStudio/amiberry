@@ -28,3 +28,6 @@ Amiberry/VisualGDB/Release-rpi2/Amiberry
 *.db-shm
 *.db-wal
 *.TMP
+VSLinux/obj/ARM/Debug/Amiberry.tlog/unsuccessfulbuild
+*.lastbuildstate
+*.tlog
