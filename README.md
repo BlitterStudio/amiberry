@@ -21,6 +21,7 @@
 - Pi 3 is now the default target if no Platform is specified
 - Optimizations for Pi 3 added
 - New target platform: Pi 3
+- Forked from Uae4Arm-rpi project
 
 Binary package dependencies (install these if you only want to run the binary): 
 
