@@ -2,6 +2,7 @@ Amiga emulator for the Raspberry Pi
 =================================
 # History (newest first)
 - Ported to SDL2
+- Added new Picasso resolutions
 - Added NetBeans project
 - Added Visual Studio solution using VC++ for Linux
 - Fixed bugs related to video and audio glitches
