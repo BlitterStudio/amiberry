@@ -1,6 +1,7 @@
 # Amiga emulator for Raspberry Pi
 
 # History (newest first)
+- Added more Picasso resolutions
 - Added NetBeans project
 - Added Visual Studio solution using VC++ for Linux
 - Fixed bugs related to video and audio glitches
@@ -23,7 +24,7 @@
 
 Binary package dependencies (install these if you only want to run the binary): 
 
-      sudo apt-get install libsdl1.2debian libsdl-image1.2 libsdl-gfx1.2-5 libsdl-ttf2.0-0 libmpg123-0 libguichan-sdl-0.8.1-1 libxml2 pulseaudio
+      sudo apt-get install libsdl1.2debian libsdl-image1.2 libsdl-gfx1.2-5 libsdl-ttf2.0-0 libmpg123-0 libguichan-sdl-0.8.1-1 libxml2
 
 How to compile from source (on Raspbian Jessie):
 
@@ -42,30 +43,3 @@ How to compile from source (on Raspbian Jessie):
    For Raspberry Pi 1/Zero:  
 
       make PLATFORM=rpi1
-      
-# uae4arm-rpi (Chips) history
-Port of uae4arm on Raspberry Pi
-
-v0.5:  
-Merge of latest TomB version for Pandora.  
-Picasso fully working.  
-Keyboard management improved.  
-Add deadzone for joystick.  
-
-v0.4:  
-Merge of latest TomB version for Pandora.  
-Keep position between file selection   
-Joystick management improved.  
-
-v0.3:  
-Rework of dispmanX management (huge picasso improvement).  
-Add 4/3 shrink for 16/9 screen.  
-Alt key can now be used to switch between mouse and 2nd joystick.  
-
-v0.2:  
-Merge latest TomB improvements from Pandora version (Zorro3 memory, picasso...).  
-
-v0.1:  
-Use dispmanX for fast scaling and double buffering.  
-Enable hat usage on joystick.  
-Add Sony 6axis joystick workaround.  
