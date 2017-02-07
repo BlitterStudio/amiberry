@@ -1,5 +1,9 @@
 Amiga emulator for the Raspberry Pi
 =================================
+Warning: this branch is still Work In Progress - some things may not be finished yet! :)
+If you're looking for the latest "stable" version, please use the master branch for now.
+Once this branch is complete, it will be merged back to the master and replace it.
+
 # History (newest first)
 - Ported to SDL2
 - Added new Picasso resolutions
