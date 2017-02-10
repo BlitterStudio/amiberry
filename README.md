@@ -44,7 +44,7 @@ Then download the SDL2 source tarball (currently on v2.0.5):
 
 Next, configure SDL2 to disable OpenGL, in order to be able to open screens directly from the console using OpenGL ES2 instead:
 
-      ../configure --disable-pulseaudio --disable-video-opengl
+      ../configure --disable-pulseaudio --disable-esd --disable-video-x11 --disable-video-opengl
 
 Compile and install SDL2:
 
