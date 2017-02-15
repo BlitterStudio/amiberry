@@ -33,3 +33,10 @@ VisualGDB/VisualGDB/Release/Amiberry-sdl2
 *.npa00-f5145647
 VisualGDB/VisualGDB/Debug/Amiberry-sdl2
 *.npa00-25509379
+VisualGDB/VisualGDB/Debug/build68k
+VisualGDB/VisualGDB/Debug/genblitter
+VisualGDB/VisualGDB/Release/genlinetoscr
+VisualGDB/VisualGDB/Release/build68k
+VisualGDB/VisualGDB/Release/genblitter
+VisualGDB/VisualGDB/Release/gencomp
+VisualGDB/VisualGDB/Release/gencpu
