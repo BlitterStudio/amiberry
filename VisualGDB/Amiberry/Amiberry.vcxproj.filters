@@ -136,15 +136,6 @@
     <None Include="Amiberry-Release.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
     </None>
-    <None Include="..\..\src\filesys.asm">
-      <Filter>Source files</Filter>
-    </None>
-    <None Include="..\..\src\inputevents.def">
-      <Filter>Source files</Filter>
-    </None>
-    <None Include="..\..\src\table68k">
-      <Filter>Source files</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp">
