@@ -27,9 +27,6 @@ static gcn::Slider* sldAmigaWidth;
 static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
-static gcn::Label* lblVertPos;
-static gcn::Label* lblVertPosInfo;
-static gcn::Slider* sldVertPos;
 static gcn::UaeCheckBox* chkFrameskip;
 
 class AmigaScreenActionListener : public gcn::ActionListener
@@ -50,14 +47,6 @@ public:
 			if (changed_prefs.gfx_size.height != amigaheight_values[(int)(sldAmigaHeight->getValue())])
 			{
 				changed_prefs.gfx_size.height = amigaheight_values[(int)(sldAmigaHeight->getValue())];
-				RefreshPanelDisplay();
-			}
-		}
-		else if (actionEvent.getSource() == sldVertPos)
-		{
-			if (changed_prefs.pandora_vertical_offset != (int)(sldVertPos->getValue()))
-			{
-				changed_prefs.pandora_vertical_offset = (int)(sldVertPos->getValue());
 				RefreshPanelDisplay();
 			}
 		}
@@ -99,18 +88,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
-	lblVertPos = new gcn::Label("Vert. offset:");
-	lblVertPos->setSize(150, LABEL_HEIGHT);
-	lblVertPos->setAlignment(gcn::Graphics::RIGHT);
-	sldVertPos = new gcn::Slider(-16, 16);
-	sldVertPos->setSize(160, SLIDER_HEIGHT);
-	sldVertPos->setBaseColor(gui_baseCol);
-	sldVertPos->setMarkerLength(20);
-	sldVertPos->setStepLength(1);
-	sldVertPos->setId("sldVertPos");
-	sldVertPos->addActionListener(amigaScreenActionListener);
-	lblVertPosInfo = new gcn::Label("000");
-
 	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
@@ -126,10 +103,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->add(sldAmigaHeight, 20, posY);
 	grpAmigaScreen->add(lblAmigaHeightInfo, 20 + sldAmigaHeight->getWidth() + 12, posY);
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
-	grpAmigaScreen->add(lblVertPos, 0, posY);
-	grpAmigaScreen->add(sldVertPos, 20, posY);
-	grpAmigaScreen->add(lblVertPosInfo, 20 + sldVertPos->getWidth() + 12, posY);
-	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
 	grpAmigaScreen->setSize(260, posY + DISTANCE_BORDER);
@@ -150,9 +123,6 @@ void ExitPanelDisplay()
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete lblAmigaHeightInfo;
-	delete lblVertPos;
-	delete sldVertPos;
-	delete lblVertPosInfo;
 	delete grpAmigaScreen;
 	delete chkFrameskip;
 	delete amigaScreenActionListener;
@@ -185,10 +155,6 @@ void RefreshPanelDisplay()
 			break;
 		}
 	}
-
-	sldVertPos->setValue(changed_prefs.pandora_vertical_offset);
-	snprintf(tmp, 32, "%d", changed_prefs.pandora_vertical_offset);
-	lblVertPosInfo->setCaption(tmp);
 
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate);
 }
