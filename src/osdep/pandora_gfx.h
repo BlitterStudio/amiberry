@@ -9,5 +9,7 @@ extern SDL_Surface* screen;
 extern SDL_Surface* gui_screen;
 extern SDL_Texture* gui_texture;
 
+extern SDL_DisplayMode sdlMode;
+
 extern void check_error_sdl(bool check, const char* message);
 #endif

@@ -44,7 +44,8 @@
 #include "pandora_gfx.h"
 SDL_Window* sdlWindow;
 SDL_Renderer* renderer;
-SDL_Texture *texture;
+SDL_Texture* texture;
+SDL_DisplayMode sdlMode;
 #endif
 
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
@@ -667,6 +668,11 @@ static int real_main2 (int argc, TCHAR **argv)
 		
 	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+	
+	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
+	{
+		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
+	}
 	
 	keyboard_settrans();
 

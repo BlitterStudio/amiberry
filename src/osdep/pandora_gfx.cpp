@@ -73,6 +73,14 @@ void graphics_subshutdown()
 	}
 }
 
+// Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
+// Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
+bool isModeAspectRatioExact(SDL_DisplayMode* mode)
+{
+	//TODO: for now, this is hardcoded to false which will cause Linear scaling to be used
+	return false;
+}
+
 static void open_screen(struct uae_prefs* p)
 {
 	int width;
@@ -91,7 +99,10 @@ static void open_screen(struct uae_prefs* p)
 		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 		width = p->gfx_size.width;
 		height = p->gfx_size.height;
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		if (isModeAspectRatioExact(&sdlMode))
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		else
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
 	graphics_subshutdown();
