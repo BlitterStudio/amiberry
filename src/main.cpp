@@ -648,10 +648,12 @@ void check_error_sdl(bool check, const char* message) {
 
 static int real_main2 (int argc, TCHAR **argv)
 {
+	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
 	printf("Amiberry-SDL2 by Dimitris (MiDWaN) Panokostas\n");
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
 
