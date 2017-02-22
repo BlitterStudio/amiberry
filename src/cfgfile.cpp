@@ -4111,7 +4111,7 @@ void default_prefs(struct uae_prefs* p, int type)
 	p->gfx_size_win.width = 720;
 	p->gfx_size_win.height = 568;
 
-	p->gfx_size.width = 320;
+	p->gfx_size.width = 640;
 	p->gfx_size.height = 256;
 
 	p->gfx_resolution = RES_HIRES;

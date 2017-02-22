@@ -55,7 +55,7 @@ void InitAmigaVidMode(struct uae_prefs* p)
 	/* Initialize structure for Amiga video modes */
 	gfxvidinfo.pixbytes = 2;
 	gfxvidinfo.bufmem = static_cast<uae_u8 *>(screen->pixels);
-	gfxvidinfo.outwidth = screen->w ? screen->w : 320; //p->gfx_size.width;
+	gfxvidinfo.outwidth = screen->w ? screen->w : 640; //p->gfx_size.width;
 	gfxvidinfo.outheight = screen->h ? screen->h : 256; //p->gfx_size.height;
 	gfxvidinfo.rowbytes = screen->pitch;
 }
@@ -95,11 +95,11 @@ static void open_screen(struct uae_prefs* p)
 	}
 
 	graphics_subshutdown();
-
+	
 	screen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
-	SDL_RenderSetLogicalSize(renderer, width, height);
+	SDL_RenderSetLogicalSize(renderer, width, height*2);
 
 	// Initialize SDL Texture for the renderer
 	texture = SDL_CreateTexture(renderer,
