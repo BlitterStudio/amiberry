@@ -81,6 +81,17 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode)
 	return false;
 }
 
+static void updateScreen()
+{
+	// Update the texture from the surface
+	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+	SDL_RenderClear(renderer);
+	// Copy the texture on the renderer
+	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+	// Update the window surface (show the renderer)
+	SDL_RenderPresent(renderer);
+}
+
 static void open_screen(struct uae_prefs* p)
 {
 	int width;
@@ -110,7 +121,10 @@ static void open_screen(struct uae_prefs* p)
 	screen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
-	SDL_RenderSetLogicalSize(renderer, width, height*2);
+	if (screen_is_picasso)
+		SDL_RenderSetLogicalSize(renderer, width, height);
+	else
+		SDL_RenderSetLogicalSize(renderer, width, height*2);
 
 	// Initialize SDL Texture for the renderer
 	texture = SDL_CreateTexture(renderer,
@@ -120,13 +134,7 @@ static void open_screen(struct uae_prefs* p)
 	                            height);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
 
-	// Update the texture from the surface
-	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
-	SDL_RenderClear(renderer);
-	// Copy the texture on the renderer
-	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-	// Update the window surface (show the renderer)
-	SDL_RenderPresent(renderer);
+	updateScreen();
 
 	if (screen != nullptr)
 	{
@@ -213,17 +221,7 @@ void flush_screen()
 		}
 	}
 
-#ifdef WITH_LOGGING
-    RefreshLiveInfo();
-#endif
-
-	// Update the texture from the surface
-	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
-	// Copy the texture on the renderer
-	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-	// Update the window surface (show the renderer)
-	SDL_RenderPresent(renderer);
-
+	updateScreen();
 	init_row_map();
 }
 
