@@ -114,9 +114,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="..\..\src\filesys.asm" />
-    <None Include="..\..\src\inputevents.def" />
-    <None Include="..\..\src\table68k" />
     <None Include="Amiberry-Debug.vgdbsettings" />
     <None Include="Amiberry-Release.vgdbsettings" />
   </ItemGroup>

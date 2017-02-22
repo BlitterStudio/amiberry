@@ -1,13 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# Explicitly declare text files you want to always be normalized and converted
-# to native line endings on checkout.
-*.c text
-*.h text
-*.cpp text
-*.hpp text
-
 # Declare files that will always have CRLF line endings on checkout.
 *.sln text eol=crlf
 

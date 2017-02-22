@@ -499,6 +499,7 @@ static void read_joystick()
 			else
 				setjoystickstate(hostjoyid + 1, 1, val, 32767);
 
+			// cd32 red, blue, green, yellow
 			setjoybuttonstate(hostjoyid + 1, 0, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 0) & 1));
 			setjoybuttonstate(hostjoyid + 1, 1, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 1) & 1));
 			setjoybuttonstate(hostjoyid + 1, 2, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 2) & 1));
@@ -511,9 +512,21 @@ static void read_joystick()
 
 			if (IsPS3Controller[hostjoyid])
 			{
-				setjoybuttonstate(hostjoyid + 1, 0, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 13) & 1));
-				setjoybuttonstate(hostjoyid + 1, 1, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 14) & 1));
+				// cd32 red, blue, green, yellow
+				setjoybuttonstate(hostjoyid + 1, 0, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 14) & 1)); // south
+				setjoybuttonstate(hostjoyid + 1, 1, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 13) & 1)); // east
+				setjoybuttonstate(hostjoyid + 1, 2, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 15) & 1)); // west
+				setjoybuttonstate(hostjoyid + 1, 3, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 12) & 1)); // north
+ 
+				// cd32  rwd, ffw, start
+				setjoybuttonstate(hostjoyid + 1, 4, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 10) & 1)); // left shoulder
+				setjoybuttonstate(hostjoyid + 1, 5, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 11) & 1)); // right shoulder
+				setjoybuttonstate(hostjoyid + 1, 6, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 3) & 1));  // start
 
+				// mouse left and 'space'
+				setjoybuttonstate(hostjoyid + 1, 7, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 8) & 1)); // left trigger
+				setjoybuttonstate(hostjoyid + 1, 8, (SDL_JoystickGetButton(Joysticktable[hostjoyid], 9) & 1)); // right trigger
+                                
 				// Simulate a top with button 4
 				if (SDL_JoystickGetButton(Joysticktable[hostjoyid], 4))
 					setjoystickstate(hostjoyid + 1, 1, -32767, 32767);
@@ -562,12 +575,17 @@ int input_get_default_joystick(struct uae_input_device* uid, int num, int port, 
 	if (mode == JSEM_MODE_JOYSTICK_CD32)
 	{
 		setid_af(uid, num, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED, af, gp);
-		setid(uid, num, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE, gp);
+		//setid(uid, num, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE, gp);
+		setid(uid, num, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON, gp);
 		setid(uid, num, ID_BUTTON_OFFSET + 2, 0, port, port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN, gp);
 		setid(uid, num, ID_BUTTON_OFFSET + 3, 0, port, port ? INPUTEVENT_JOY2_CD32_YELLOW : INPUTEVENT_JOY1_CD32_YELLOW, gp);
 		setid(uid, num, ID_BUTTON_OFFSET + 4, 0, port, port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD, gp);
 		setid(uid, num, ID_BUTTON_OFFSET + 5, 0, port, port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW, gp);
 		setid(uid, num, ID_BUTTON_OFFSET + 6, 0, port, port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY, gp);
+	
+		// mouse left and 'space' events (Not real but very useful?)
+		setid(uid, num, ID_BUTTON_OFFSET + 7, 0, port, port ? INPUTEVENT_JOY1_FIRE_BUTTON : INPUTEVENT_JOY2_FIRE_BUTTON, gp);
+		setid(uid, num, ID_BUTTON_OFFSET + 8, 0, port, port ? INPUTEVENT_KEY_SPACE : INPUTEVENT_KEY_SPACE, gp);
 	}
 	if (num == 0)
 	{
