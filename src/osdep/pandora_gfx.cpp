@@ -21,9 +21,9 @@
 SDL_Surface* screen = nullptr;
 
 /* Possible screen modes (x and y resolutions) */
-#define MAX_SCREEN_MODES 13
-static int x_size_table[MAX_SCREEN_MODES] = {640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1360, 1366, 1680, 1920};
-static int y_size_table[MAX_SCREEN_MODES] = {400, 480, 400, 480, 600, 540, 768, 720, 800, 768, 768, 1050, 1080};
+#define MAX_SCREEN_MODES 14
+static int x_size_table[MAX_SCREEN_MODES] = {640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1280, 1360, 1366, 1680, 1920};
+static int y_size_table[MAX_SCREEN_MODES] = {400, 480, 400, 480, 600, 540, 768, 720, 800, 1024, 768, 768, 1050, 1080};
 
 struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
@@ -75,9 +75,10 @@ void graphics_subshutdown()
 
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
-bool isModeAspectRatioExact(SDL_DisplayMode* mode)
+bool isModeAspectRatioExact(SDL_DisplayMode* mode, int width, int height)
 {
-	//TODO: for now, this is hardcoded to false which will cause Linear scaling to be used
+	if (mode->w % width == 0 && mode->h % height == 0)
+		return true;
 	return false;
 }
 
@@ -110,7 +111,7 @@ static void open_screen(struct uae_prefs* p)
 		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 		width = p->gfx_size.width;
 		height = p->gfx_size.height;
-		if (isModeAspectRatioExact(&sdlMode))
+		if (isModeAspectRatioExact(&sdlMode, width, height))
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 		else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
