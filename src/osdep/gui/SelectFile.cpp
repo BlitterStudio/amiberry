@@ -352,7 +352,7 @@ static void SelectFileLoop()
 		uae_gui->draw();
 		// Finally we update the screen.
 
-		UpdateScreen();
+		UpdateGuiScreen();
 
 		if (!dialogCreated)
 		{

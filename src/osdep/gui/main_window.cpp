@@ -139,7 +139,7 @@ void RegisterRefreshFunc(void (*func)())
 	refreshFuncAfterDraw = func;
 }
 
-void UpdateScreen()
+void UpdateGuiScreen()
 {
 	// Update the texture from the surface
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
@@ -319,7 +319,7 @@ namespace sdl
 			uae_gui->draw();
 			// Finally we update the screen.
 
-			UpdateScreen();
+			UpdateGuiScreen();
 
 			if (refreshFuncAfterDraw != nullptr)
 			{

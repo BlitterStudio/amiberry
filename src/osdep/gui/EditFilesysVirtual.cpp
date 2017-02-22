@@ -201,62 +201,62 @@ static void ExitEditFilesysVirtual(void)
 
 static void EditFilesysVirtualLoop(void)
 {
-  while(!dialogFinished)
-  {
-    SDL_Event event;
-    while(SDL_PollEvent(&event))
-    {
-      if (event.type == SDL_KEYDOWN)
-      {
-        switch(event.key.keysym.sym)
-        {
-          case VK_ESCAPE:
-            dialogFinished = true;
-            break;
-            
-          case VK_UP:
-            if(HandleNavigation(DIRECTION_UP))
-              continue; // Don't change value when enter ComboBox -> don't send event to control
-            break;
-            
-          case VK_DOWN:
-            if(HandleNavigation(DIRECTION_DOWN))
-              continue; // Don't change value when enter ComboBox -> don't send event to control
-            break;
+	while (!dialogFinished)
+	{
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_KEYDOWN)
+			{
+				switch (event.key.keysym.sym)
+				{
+				case VK_ESCAPE:
+					dialogFinished = true;
+					break;
 
-          case VK_LEFT:
-            if(HandleNavigation(DIRECTION_LEFT))
-              continue; // Don't change value when enter Slider -> don't send event to control
-            break;
-            
-          case VK_RIGHT:
-            if(HandleNavigation(DIRECTION_RIGHT))
-              continue; // Don't change value when enter Slider -> don't send event to control
-            break;
+				case VK_UP:
+					if (HandleNavigation(DIRECTION_UP))
+						continue; // Don't change value when enter ComboBox -> don't send event to control
+					break;
 
-          case VK_X:
-          case VK_A:
-            event.key.keysym.sym = SDLK_RETURN;
-            gui_input->pushInput(event); // Fire key down
-            event.type = SDL_KEYUP;  // and the key up
-            break;
-        }
-      }
+				case VK_DOWN:
+					if (HandleNavigation(DIRECTION_DOWN))
+						continue; // Don't change value when enter ComboBox -> don't send event to control
+					break;
 
-      //-------------------------------------------------
-      // Send event to guisan-controls
-      //-------------------------------------------------
-      gui_input->pushInput(event);
-    }
+				case VK_LEFT:
+					if (HandleNavigation(DIRECTION_LEFT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					break;
 
-    // Now we let the Gui object perform its logic.
-    uae_gui->logic();
-    // Now we let the Gui object draw itself.
-    uae_gui->draw();
-    // Finally we update the screen.
-	  
-	  UpdateScreen();
-  }  
+				case VK_RIGHT:
+					if (HandleNavigation(DIRECTION_RIGHT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					break;
+
+				case VK_X:
+				case VK_A:
+					event.key.keysym.sym = SDLK_RETURN;
+					gui_input->pushInput(event); // Fire key down
+					event.type = SDL_KEYUP;  // and the key up
+					break;
+				}
+			}
+
+			//-------------------------------------------------
+			// Send event to guisan-controls
+			//-------------------------------------------------
+			gui_input->pushInput(event);
+		}
+
+		// Now we let the Gui object perform its logic.
+		uae_gui->logic();
+		// Now we let the Gui object draw itself.
+		uae_gui->draw();
+		// Finally we update the screen.
+
+		UpdateGuiScreen();
+	}
 }
 
 

@@ -316,7 +316,7 @@ static void EditFilesysHardfileLoop()
 		uae_gui->draw();
 		// Finally we update the screen.
 
-		UpdateScreen();
+		UpdateGuiScreen();
 	}
 }
 

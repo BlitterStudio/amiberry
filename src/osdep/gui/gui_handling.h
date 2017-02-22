@@ -124,6 +124,6 @@ extern char *screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;
 
-extern void UpdateScreen();
+extern void UpdateGuiScreen();
 
 #endif // _GUI_HANDLING_H

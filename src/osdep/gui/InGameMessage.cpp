@@ -125,7 +125,7 @@ void InGameMessage(const char *msg)
 		// Finally we update the screen.
 		if (!drawn)
 		{
-			UpdateScreen();
+			UpdateGuiScreen();
 		}		
 		drawn = true;
 	}
