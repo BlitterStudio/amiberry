@@ -144,12 +144,7 @@ static void ShowMessageLoop()
 		uae_gui->draw();
 		// Finally we update the screen.
 
-		// Update the texture from the surface
-		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-		// Copy the texture on the renderer
-		SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
-		// Update the window surface (show the renderer)
-		SDL_RenderPresent(renderer);
+		UpdateScreen();
 	}
 }
 

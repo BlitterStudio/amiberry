@@ -139,6 +139,16 @@ void RegisterRefreshFunc(void (*func)())
 	refreshFuncAfterDraw = func;
 }
 
+void UpdateScreen()
+{
+	// Update the texture from the surface
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+	// Copy the texture on the renderer
+	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
+	// Update the window surface (show the renderer)
+	SDL_RenderPresent(renderer);
+}
+
 namespace sdl
 {
 	void gui_init()
@@ -146,19 +156,16 @@ namespace sdl
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
-
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother (linear scaling).
+		
+		// make the scaled rendering look smoother (linear scaling).
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  
 
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create a surface");
 
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
-
-		gui_texture = SDL_CreateTexture(renderer,
-		                                SDL_PIXELFORMAT_ARGB8888,
-		                                SDL_TEXTUREACCESS_STREAMING,
-		                                GUI_WIDTH,
-		                                GUI_HEIGHT);
+		
+		gui_texture = SDL_CreateTextureFromSurface(renderer, gui_screen);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture");
 
 		SDL_ShowCursor(SDL_ENABLE);
@@ -312,12 +319,7 @@ namespace sdl
 			uae_gui->draw();
 			// Finally we update the screen.
 
-			// Update the texture from the surface
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-			// Copy the texture on the renderer
-			SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
-			// Update the window surface (show the renderer)
-			SDL_RenderPresent(renderer);
+			UpdateScreen();
 
 			if (refreshFuncAfterDraw != nullptr)
 			{

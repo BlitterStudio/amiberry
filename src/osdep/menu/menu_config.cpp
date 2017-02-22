@@ -356,9 +356,6 @@ int create_configfilename(char* dest, char* basename, int fromDir)
 const char* kickstarts_rom_names[] = {"kick12.rom\0", "kick13.rom\0", "kick20.rom\0", "kick31.rom\0", "aros-amiga-m68k-rom.bin\0"};
 const char* extended_rom_names[] = {"\0", "\0", "\0", "\0", "aros-amiga-m68k-ext.bin\0"};
 const char* kickstarts_names[] = {"KS ROM v1.2\0", "KS ROM v1.3\0", "KS ROM v2.05\0", "KS ROM v3.1\0", "\0"};
-#ifdef ANDROID
-const char *af_kickstarts_rom_names[] = { "amiga-os-120.rom\0", "amiga-os-130.rom\0", "amiga-os-204.rom\0", "amiga-os-310-a1200.rom\0" };
-#endif
 
 static bool CheckKickstart(struct uae_prefs* p)
 {
