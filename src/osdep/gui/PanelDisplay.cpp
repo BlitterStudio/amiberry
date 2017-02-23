@@ -28,25 +28,29 @@ static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
 static gcn::UaeCheckBox* chkFrameskip;
+static gcn::Window* grpScalingMethod;
+static gcn::UaeRadioButton* optAuto;
+static gcn::UaeRadioButton* optNearest;
+static gcn::UaeRadioButton* optLinear;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
-			if (changed_prefs.gfx_size.width != amigawidth_values[(int)(sldAmigaWidth->getValue())])
+			if (changed_prefs.gfx_size.width != amigawidth_values[int(sldAmigaWidth->getValue())])
 			{
-				changed_prefs.gfx_size.width = amigawidth_values[(int)(sldAmigaWidth->getValue())];
+				changed_prefs.gfx_size.width = amigawidth_values[int(sldAmigaWidth->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
-			if (changed_prefs.gfx_size.height != amigaheight_values[(int)(sldAmigaHeight->getValue())])
+			if (changed_prefs.gfx_size.height != amigaheight_values[int(sldAmigaHeight->getValue())])
 			{
-				changed_prefs.gfx_size.height = amigaheight_values[(int)(sldAmigaHeight->getValue())];
+				changed_prefs.gfx_size.height = amigaheight_values[int(sldAmigaHeight->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
@@ -59,6 +63,21 @@ public:
 
 AmigaScreenActionListener* amigaScreenActionListener;
 
+class ScalingMethodActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == optAuto)
+			changed_prefs.scaling_method = -1;
+		else if (actionEvent.getSource() == optNearest)
+			changed_prefs.scaling_method = 0;
+		else if (actionEvent.getSource() == optLinear)
+			changed_prefs.scaling_method = 1;
+	}
+};
+
+static ScalingMethodActionListener* scalingMethodActionListener;
 
 void InitPanelDisplay(const struct _ConfigCategory& category)
 {
@@ -111,6 +130,28 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	category.panel->add(grpAmigaScreen);
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y);
 
+	scalingMethodActionListener = new ScalingMethodActionListener();
+	
+	optAuto = new gcn::UaeRadioButton("Auto", "radioscalingmethodgroup");
+	optAuto->addActionListener(scalingMethodActionListener);
+
+	optNearest = new gcn::UaeRadioButton("Nearest Neighbor (pixelated)", "radioscalingmethodgroup");
+	optNearest->addActionListener(scalingMethodActionListener);
+
+	optLinear = new gcn::UaeRadioButton("Linear (smooth)", "radioscalingmethodgroup");
+	optLinear->addActionListener(scalingMethodActionListener);
+
+	grpScalingMethod = new gcn::Window("Scaling method");
+	grpScalingMethod->setPosition(DISTANCE_BORDER, DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y);
+	grpScalingMethod->add(optAuto, 5, 10);
+	grpScalingMethod->add(optNearest, 5, 40);
+	grpScalingMethod->add(optLinear, 5, 70);
+	grpScalingMethod->setMovable(false);
+	grpScalingMethod->setSize(260, optLinear->getY() + optLinear->getHeight() + 30);
+	grpScalingMethod->setBaseColor(gui_baseCol);
+
+	category.panel->add(grpScalingMethod);
+
 	RefreshPanelDisplay();
 }
 
@@ -126,6 +167,12 @@ void ExitPanelDisplay()
 	delete grpAmigaScreen;
 	delete chkFrameskip;
 	delete amigaScreenActionListener;
+
+	delete optAuto;
+	delete optNearest;
+	delete optLinear;
+	delete grpScalingMethod;
+	delete scalingMethodActionListener;
 }
 
 
@@ -157,4 +204,11 @@ void RefreshPanelDisplay()
 	}
 
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate);
+
+	if (changed_prefs.scaling_method == -1)
+		optAuto->setSelected(true);
+	else if (changed_prefs.scaling_method == 0)
+		optNearest->setSelected(true);
+	else if (changed_prefs.scaling_method == 1)
+		optLinear->setSelected(true);
 }

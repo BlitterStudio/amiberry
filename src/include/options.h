@@ -179,6 +179,7 @@ struct uae_prefs {
   int kbd_led_num;
   int kbd_led_scr;
   int kbd_led_cap;
+  int scaling_method;
 #endif 
 
   bool immediate_blits;
