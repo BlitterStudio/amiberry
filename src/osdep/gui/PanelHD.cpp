@@ -37,7 +37,7 @@ static const char* column_caption[] =
 static const int COLUMN_SIZE[] =
 {
 	50, // Device
-	50, // Volume
+	60, // Volume
 	160, // Path
 	40, // R/W
 	50, // Size
@@ -74,7 +74,7 @@ static int GetHDType(int index)
 	if (type < 0)
 	{
 		uci = &changed_prefs.mountconfig[index];
-		type = (uci->ci.type == UAEDEV_DIR) ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
+		type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
 	}
 	return type;
 }
@@ -87,12 +87,12 @@ public:
 	{
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return lstMRUCDList.size();
 	}
 
-	std::string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= lstMRUCDList.size())
 			return "---";
@@ -106,7 +106,7 @@ static CDfileListModel cdfileList;
 class HDRemoveActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		for (int i = 0; i < MAX_HD_DEVICES; ++i)
 		{
@@ -128,7 +128,7 @@ static HDRemoveActionListener* hdRemoveActionListener;
 class HDEditActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		for (int i = 0; i < MAX_HD_DEVICES; ++i)
 		{
@@ -158,7 +158,7 @@ static HDEditActionListener* hdEditActionListener;
 class AddVirtualHDActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (EditFilesysVirtual(-1))
 			gui_force_rtarea_hdchange();
@@ -173,7 +173,7 @@ AddVirtualHDActionListener* addVirtualHDActionListener;
 class AddHardfileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (EditFilesysHardfile(-1))
 			gui_force_rtarea_hdchange();
@@ -188,7 +188,7 @@ AddHardfileActionListener* addHardfileActionListener;
 class CreateHardfileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (CreateFilesysHardfile())
 			gui_force_rtarea_hdchange();
@@ -203,7 +203,7 @@ CreateHardfileActionListener* createHardfileActionListener;
 class CDCheckActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (changed_prefs.cdslots[0].inuse)
 		{
@@ -225,7 +225,7 @@ CDCheckActionListener* cdCheckActionListener;
 class CDButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdCDEject)
 		{
@@ -269,7 +269,7 @@ CDButtonActionListener* cdButtonActionListener;
 class GenericActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == sldCDVol)
 		{
@@ -291,7 +291,7 @@ static bool bIgnoreListChange = false;
 class CDFileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		//---------------------------------------
 		// CD image from list selected
@@ -523,7 +523,7 @@ static void AdjustDropDownControls()
 	int i;
 
 	cboCDFile->clearSelected();
-	if ((changed_prefs.cdslots[0].inuse) && strlen(changed_prefs.cdslots[0].name) > 0)
+	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
 		for (i = 0; i < lstMRUCDList.size(); ++i)
 		{
