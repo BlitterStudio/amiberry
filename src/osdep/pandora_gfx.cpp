@@ -111,9 +111,17 @@ static void open_screen(struct uae_prefs* p)
 		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 		width = p->gfx_size.width;
 		height = p->gfx_size.height;
-		if (isModeAspectRatioExact(&sdlMode, width, height))
+		
+		if (p->scaling_method == -1)
+		{
+			if (isModeAspectRatioExact(&sdlMode, width, height))
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			else
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		}
+		else if (p->scaling_method == 0)
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		else
+		else if (p->scaling_method == 1)
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
