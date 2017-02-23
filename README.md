@@ -5,6 +5,8 @@ If you're looking for the latest "stable" version, please use the master branch 
 Once this branch is complete, it will be merged back to the master and replace it.
 
 # History (newest first)
+- Added an option for choosing Scaling Method (for non-Picasso modes): Auto, Nearest Neighbor (pixelated) or Linear (smooth). Auto will automatically choose between the other two modes on the fly, depending on the Amiga resolution requested and if the native monitor resolution can display it as an exact multiple or not. This vastly improves the sharpness of the resulting image.
+- Improved image centering (for non-Picasso modes)
 - Ported to SDL2
 - Added new Picasso resolutions
 - Added NetBeans project
