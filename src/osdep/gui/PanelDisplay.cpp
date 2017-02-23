@@ -107,13 +107,10 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
-	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
-	chkFrameskip->addActionListener(amigaScreenActionListener);
-
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 
-	int posY = 10;
+	int posY = DISTANCE_BORDER;
 	grpAmigaScreen->add(lblAmigaWidth, 0, posY);
 	grpAmigaScreen->add(sldAmigaWidth, 20, posY);
 	grpAmigaScreen->add(lblAmigaWidthInfo, 20 + sldAmigaWidth->getWidth() + 12, posY);
@@ -121,14 +118,20 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->add(lblAmigaHeight, 0, posY);
 	grpAmigaScreen->add(sldAmigaHeight, 20, posY);
 	grpAmigaScreen->add(lblAmigaHeightInfo, 20 + sldAmigaHeight->getWidth() + 12, posY);
-	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
+	posY += DISTANCE_BORDER + sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(260, posY + DISTANCE_BORDER);
+	grpAmigaScreen->setSize(240, posY);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpAmigaScreen);
-	category.panel->add(chkFrameskip, DISTANCE_BORDER, DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y);
+	posY += DISTANCE_BORDER + DISTANCE_NEXT_Y;
+
+	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
+	chkFrameskip->addActionListener(amigaScreenActionListener);
+
+	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
+	posY += DISTANCE_BORDER + chkFrameskip->getHeight() + DISTANCE_NEXT_Y;
 
 	scalingMethodActionListener = new ScalingMethodActionListener();
 	
@@ -142,12 +145,12 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	optLinear->addActionListener(scalingMethodActionListener);
 
 	grpScalingMethod = new gcn::Window("Scaling method");
-	grpScalingMethod->setPosition(DISTANCE_BORDER, DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y);
+	grpScalingMethod->setPosition(DISTANCE_BORDER, posY);
 	grpScalingMethod->add(optAuto, 5, 10);
 	grpScalingMethod->add(optNearest, 5, 40);
 	grpScalingMethod->add(optLinear, 5, 70);
 	grpScalingMethod->setMovable(false);
-	grpScalingMethod->setSize(260, optLinear->getY() + optLinear->getHeight() + 30);
+	grpScalingMethod->setSize(240, optLinear->getY() + optLinear->getHeight() + 30);
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
