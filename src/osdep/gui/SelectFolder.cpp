@@ -254,7 +254,7 @@ static void SelectFolderLoop()
 		uae_gui->draw();
 		// Finally we update the screen.
 
-		UpdateScreen();
+		UpdateGuiScreen();
 	}
 }
 
