@@ -271,7 +271,7 @@ class DriveSpeedSliderActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		changed_prefs.floppy_speed = drivespeedvalues[(int)sldDriveSpeed->getValue()];
+		changed_prefs.floppy_speed = drivespeedvalues[int(sldDriveSpeed->getValue())];
 		RefreshPanelFloppy();
 	}
 };
@@ -384,7 +384,6 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 
 		chkDFxWriteProtect[i] = new gcn::UaeCheckBox("Write-protected");
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
-		//chkDFxWriteProtect[i]->setEnabled(false);
 
 		cmdDFxInfo[i] = new gcn::Button("?");
 		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
