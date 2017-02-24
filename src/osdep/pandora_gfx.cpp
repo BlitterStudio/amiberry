@@ -82,7 +82,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, int width, int height)
 	return false;
 }
 
-static void updateScreen()
+void updateScreen()
 {
 	// Update the texture from the surface
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
