@@ -337,20 +337,20 @@ STATIC_INLINE xcolnr getbgc(bool blank)
 
 static void pfield_do_fill_line_0_640(int start, int stop)
 {
-	register uae_u16* b = &(reinterpret_cast<uae_u16 *>(xlinebuffer)[start << 1]);
-	register xcolnr col = getbgc(false);
-	register int i;
-	register int max = (stop - start) << 1;
+	uae_u16* b = &(reinterpret_cast<uae_u16 *>(xlinebuffer)[start << 1]);
+	xcolnr col = getbgc(false);
+	int i;
+	int max = (stop - start) << 1;
 	for (i = 0; i < max; i++ , b++)
 		*b = col;
 }
 
 static void pfield_do_fill_line_0(int start, int stop)
 {
-	register uae_u16* b = &(reinterpret_cast<uae_u16 *>(xlinebuffer)[start]);
-	register xcolnr col = getbgc(false);
-	register int i;
-	register int max = (stop - start);
+	uae_u16* b = &(reinterpret_cast<uae_u16 *>(xlinebuffer)[start]);
+	xcolnr col = getbgc(false);
+	int i;
+	int max = (stop - start);
 	for (i = 0; i < max; i++ , b++)
 		*b = col;
 }
