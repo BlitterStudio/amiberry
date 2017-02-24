@@ -138,7 +138,7 @@ public:
                     //---------------------------------------
                     // Write-protect changed
                     //---------------------------------------
-                    // ToDo: set write protect for floppy
+                    disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, chkDFxWriteProtect[i]->isSelected());
                 }
             }
         }
@@ -381,7 +381,6 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 
         chkDFxWriteProtect[i] = new gcn::UaeCheckBox("Write-protected");
         chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
-        chkDFxWriteProtect[i]->setEnabled(false);
 
         cmdDFxInfo[i] = new gcn::Button("?");
         cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
