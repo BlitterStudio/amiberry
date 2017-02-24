@@ -636,7 +636,7 @@ void virtualdevice_init(void)
 
 static int real_main2(int argc, TCHAR **argv)
 {
-	printf("Amiberry build 2017-01-08, by Dimitris (MiDWaN) Panokostas and Olly Aigner\n");
+	printf("Amiberry v2.1.1, by Dimitris (MiDWaN) Panokostas and Olly Aigner\n");
 	printf("Based on previous work by Chips and TomB (Pandora)\n");
 #ifdef USE_SDL
 	if (SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
