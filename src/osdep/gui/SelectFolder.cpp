@@ -12,7 +12,6 @@
 #include "config.h"
 #include "uae.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
 
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
@@ -33,7 +32,7 @@ static gcn::TextField* txtCurrent;
 class ButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdOK)
 		{
@@ -56,12 +55,12 @@ public:
 		changeDir(path);
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return dirs.size();
 	}
 
-	std::string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i >= dirs.size() || i < 0)
 			return "---";
@@ -101,7 +100,7 @@ static void checkfoldername(char* current)
 class ListBoxActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		int selected_item;
 		char foldername[256] = "";

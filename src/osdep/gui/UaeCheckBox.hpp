@@ -4,8 +4,6 @@
 #include <map>
 #include <string>
 
-#include "guisan/keylistener.hpp"
-#include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
 #include "guisan/widget.hpp"
 #include "guisan/widgets/checkbox.hpp"
@@ -13,22 +11,21 @@
 
 namespace gcn
 {
-class GCN_CORE_DECLSPEC UaeCheckBox : public CheckBox
-{
-public:
-    UaeCheckBox();
+	class GCN_CORE_DECLSPEC UaeCheckBox : public CheckBox
+	{
+	public:
+		UaeCheckBox();
 
-    UaeCheckBox(const std::string &caption,
-                bool selected = false);
+		UaeCheckBox(const std::string& caption,
+		            bool selected = false);
 
-    virtual ~UaeCheckBox();
+		virtual ~UaeCheckBox();
 
-    virtual void draw(Graphics* graphics);
+		void draw(Graphics* graphics) override;
 
-protected:
-    virtual void drawBox(Graphics *graphics);
-
-};
+	protected:
+		void drawBox(Graphics* graphics) override;
+	};
 }
 
 

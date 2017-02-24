@@ -9,12 +9,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
-#include "autoconf.h"
-#include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
 #include "keyboard.h"
@@ -72,7 +67,7 @@ public:
 			values.push_back(entries[i]);
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return values.size();
 	}
@@ -83,7 +78,7 @@ public:
 		return 0;
 	}
 
-	std::string getElementAt(int i)
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= values.size())
 			return "---";
@@ -158,7 +153,7 @@ static int GetAmigaKeyIndex(int key)
 class InputActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cboPort0)
 		{
@@ -190,7 +185,7 @@ public:
 				changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK;
 				break;
 			}
-			inputdevice_updateconfig(NULL, &changed_prefs);
+			inputdevice_updateconfig(nullptr, &changed_prefs);
 		}
 
 		else if (actionEvent.getSource() == cboPort1)
@@ -223,7 +218,7 @@ public:
 				changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
 				break;
 			}
-			inputdevice_updateconfig(NULL, &changed_prefs);
+			inputdevice_updateconfig(nullptr, &changed_prefs);
 		}
 
 		else if (actionEvent.getSource() == cboAutofire)

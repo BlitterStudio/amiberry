@@ -1,10 +1,6 @@
 #include "UaeCheckBox.hpp"
 #include "guisan/widgets/checkbox.hpp"
-
-#include "guisan/font.hpp"
 #include "guisan/graphics.hpp"
-#include "guisan/key.hpp"
-#include "guisan/mouseinput.hpp"
 
 
 namespace gcn

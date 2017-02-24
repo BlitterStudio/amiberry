@@ -3,9 +3,7 @@
 
 #include <list>
 
-#include "guisan/keylistener.hpp"
 #include "guisan/listmodel.hpp"
-#include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
 #include "guisan/widget.hpp"
 #include "guisan/widgets/listbox.hpp"
@@ -13,17 +11,17 @@
 
 namespace gcn
 {
-class GCN_CORE_DECLSPEC UaeListBox : public ListBox
-{
-public:
-    UaeListBox();
+	class GCN_CORE_DECLSPEC UaeListBox : public ListBox
+	{
+	public:
+		UaeListBox();
 
-    UaeListBox(ListModel *listModel);
+		UaeListBox(ListModel* listModel);
 
-    virtual ~UaeListBox();
+		virtual ~UaeListBox();
 
-    virtual void draw(Graphics* graphics);
-};
+		void draw(Graphics* graphics) override;
+	};
 }
 
 

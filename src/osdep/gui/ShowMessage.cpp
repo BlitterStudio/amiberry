@@ -12,7 +12,6 @@
 #include "config.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
 
 #define DIALOG_WIDTH 340
 #define DIALOG_HEIGHT 140
@@ -30,7 +29,7 @@ static gcn::Label* lblText2;
 class ShowMessageActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdOK)
 			dialogResult = true;

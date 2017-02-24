@@ -11,16 +11,13 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "memory.h"
-#include "uae.h"
 #include "autoconf.h"
 #include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
 
 #define DIALOG_WIDTH 520
-#define DIALOG_HEIGHT 202
+#define DIALOG_HEIGHT 270
 
 static const char* harddisk_filter[] = {".hdf", "\0"};
 
@@ -71,7 +68,7 @@ static void check_rdb(const TCHAR* filename)
 class FilesysHardfileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
@@ -140,7 +137,7 @@ static void InitEditFilesysHardfile()
 	lblDevice->setSize(100, LABEL_HEIGHT);
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
-	txtDevice->setSize(80, TEXTFIELD_HEIGHT);
+	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
 	txtDevice->setId("hdfDev");
 
 	chkReadWrite = new gcn::UaeCheckBox("Read/Write", true);
@@ -188,7 +185,7 @@ static void InitEditFilesysHardfile()
 	lblPath->setSize(100, LABEL_HEIGHT);
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
-	txtPath->setSize(438, TEXTFIELD_HEIGHT);
+	txtPath->setSize(338, TEXTFIELD_HEIGHT);
 	txtPath->setEnabled(false);
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -197,26 +194,40 @@ static void InitEditFilesysHardfile()
 	cmdPath->addActionListener(filesysHardfileActionListener);
 
 	int posY = DISTANCE_BORDER;
+	int posX = DISTANCE_BORDER;
+
 	wndEditFilesysHardfile->add(lblDevice, DISTANCE_BORDER, posY);
-	wndEditFilesysHardfile->add(txtDevice, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
-	wndEditFilesysHardfile->add(chkReadWrite, 235, posY + 1);
-	wndEditFilesysHardfile->add(chkAutoboot, 360, posY + 1);
-	wndEditFilesysHardfile->add(lblBootPri, 460, posY);
-	wndEditFilesysHardfile->add(txtBootPri, 460 + lblBootPri->getWidth() + 8, posY);
+	posX += lblDevice->getWidth() + 8;
+
+	wndEditFilesysHardfile->add(txtDevice, posX, posY);
+	posX += txtDevice->getWidth() + DISTANCE_BORDER * 2;
+
+	wndEditFilesysHardfile->add(chkReadWrite, posX, posY + 1);
 	posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
+
+	wndEditFilesysHardfile->add(chkAutoboot, chkReadWrite->getX(), posY + 1);
+	posX += chkAutoboot->getWidth() + DISTANCE_BORDER;
+
+	wndEditFilesysHardfile->add(lblBootPri, posX, posY);
+	wndEditFilesysHardfile->add(txtBootPri, posX + lblBootPri->getWidth() + 8, posY);
+	posY += txtBootPri->getHeight() + DISTANCE_NEXT_Y;
+
 	wndEditFilesysHardfile->add(lblPath, DISTANCE_BORDER, posY);
 	wndEditFilesysHardfile->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);
 	wndEditFilesysHardfile->add(cmdPath, wndEditFilesysHardfile->getWidth() - DISTANCE_BORDER - SMALL_BUTTON_WIDTH, posY);
 	posY += txtPath->getHeight() + DISTANCE_NEXT_Y;
+
 	wndEditFilesysHardfile->add(lblSurfaces, DISTANCE_BORDER, posY);
 	wndEditFilesysHardfile->add(txtSurfaces, DISTANCE_BORDER + lblSurfaces->getWidth() + 8, posY);
-	wndEditFilesysHardfile->add(lblReserved, 240, posY);
-	wndEditFilesysHardfile->add(txtReserved, 240 + lblReserved->getWidth() + 8, posY);
+	wndEditFilesysHardfile->add(lblReserved, txtSurfaces->getX() + txtSurfaces->getWidth() + DISTANCE_BORDER, posY);
+	wndEditFilesysHardfile->add(txtReserved, lblReserved->getX() + lblReserved->getWidth() + 8, posY);
 	posY += txtSurfaces->getHeight() + DISTANCE_NEXT_Y;
+
 	wndEditFilesysHardfile->add(lblSectors, DISTANCE_BORDER, posY);
 	wndEditFilesysHardfile->add(txtSectors, DISTANCE_BORDER + lblSectors->getWidth() + 8, posY);
-	wndEditFilesysHardfile->add(lblBlocksize, 240, posY);
-	wndEditFilesysHardfile->add(txtBlocksize, 240 + lblBlocksize->getWidth() + 8, posY);
+
+	wndEditFilesysHardfile->add(lblBlocksize, txtSectors->getX() + txtSectors->getWidth() + DISTANCE_BORDER, posY);
+	wndEditFilesysHardfile->add(txtBlocksize, lblBlocksize->getX() + lblBlocksize->getWidth() + 8, posY);
 	posY += txtSectors->getHeight() + DISTANCE_NEXT_Y;
 
 	wndEditFilesysHardfile->add(cmdOK);

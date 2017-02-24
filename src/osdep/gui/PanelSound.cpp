@@ -9,13 +9,8 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "uae.h"
 #include "gui.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "custom.h"
 #include "gui_handling.h"
 #include "sounddep/sound.h"
 
@@ -58,12 +53,12 @@ public:
 		freq.push_back("44100");
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return freq.size();
 	}
 
-	string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= freq.size())
 			return "---";
@@ -88,12 +83,12 @@ public:
 		entry.push_back("Crux");
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return entry.size();
 	}
 
-	string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= entry.size())
 			return "---";
@@ -118,12 +113,12 @@ public:
 		entry.push_back("Always on (A1200)");
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return entry.size();
 	}
 
-	string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= entry.size())
 			return "---";
@@ -137,7 +132,7 @@ static FilterListModel filterTypeList;
 class SoundActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optSoundDisabled)
 			changed_prefs.produce_sound = 0;

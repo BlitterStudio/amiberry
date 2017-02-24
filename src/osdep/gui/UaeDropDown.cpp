@@ -1,11 +1,6 @@
 #include "UaeDropDown.hpp"
 #include "guisan/widgets/dropdown.hpp"
-
-#include "guisan/font.hpp"
-#include "guisan/graphics.hpp"
 #include "guisan/key.hpp"
-#include "guisan/mouseinput.hpp"
-
 
 namespace gcn
 {
@@ -50,12 +45,12 @@ namespace gcn
 		}
 	}
 
-	void UaeDropDown::clearSelected(void)
+	void UaeDropDown::clearSelected()
 	{
 		mListBox->setSelected(-1);
 	}
 
-	bool UaeDropDown::isDroppedDown(void)
+	bool UaeDropDown::isDroppedDown()
 	{
 		return mDroppedDown;
 	}

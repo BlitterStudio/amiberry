@@ -6,8 +6,6 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
-#include "options.h"
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
@@ -24,7 +22,7 @@ static gcn::Button* cmdRescanROMs;
 class FolderButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		char tmp[MAX_PATH];
 
@@ -58,7 +56,7 @@ static FolderButtonActionListener* folderButtonActionListener;
 class RescanROMsButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		RescanROMs();
 		RefreshPanelROM();
@@ -122,7 +120,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 }
 
 
-void ExitPanelPaths(void)
+void ExitPanelPaths()
 {
 	delete lblSystemROMs;
 	delete txtSystemROMs;
@@ -139,7 +137,7 @@ void ExitPanelPaths(void)
 }
 
 
-void RefreshPanelPaths(void)
+void RefreshPanelPaths()
 {
 	char tmp[MAX_PATH];
 

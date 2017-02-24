@@ -9,10 +9,8 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
 #include "include/memory.h"
-#include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -45,37 +43,37 @@ static gcn::Slider* sldGfxmem;
 class MemorySliderActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == sldChipmem)
 		{
-			changed_prefs.chipmem_size = ChipMem_values[(int)(sldChipmem->getValue())];
+			changed_prefs.chipmem_size = ChipMem_values[int(sldChipmem->getValue())];
 			if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem_size > 0))
 				changed_prefs.fastmem_size = 0;
 		}
 
 		if (actionEvent.getSource() == sldSlowmem)
 		{
-			changed_prefs.bogomem_size = SlowMem_values[(int)(sldSlowmem->getValue())];
+			changed_prefs.bogomem_size = SlowMem_values[int(sldSlowmem->getValue())];
 		}
 
 		if (actionEvent.getSource() == sldFastmem)
 		{
-			changed_prefs.fastmem_size = FastMem_values[(int)(sldFastmem->getValue())];
+			changed_prefs.fastmem_size = FastMem_values[int(sldFastmem->getValue())];
 			if (changed_prefs.fastmem_size > 0 && changed_prefs.chipmem_size > 0x200000)
 				changed_prefs.chipmem_size = 0x200000;
 		}
 
 		if (actionEvent.getSource() == sldZ3mem)
 		{
-			changed_prefs.z3fastmem_size = FastMem_values[(int)(sldZ3mem->getValue())];
+			changed_prefs.z3fastmem_size = FastMem_values[int(sldZ3mem->getValue())];
 			if (changed_prefs.z3fastmem_size > max_z3fastmem)
 				changed_prefs.z3fastmem_size = max_z3fastmem;
 		}
 
 		if (actionEvent.getSource() == sldGfxmem)
 		{
-			changed_prefs.rtgmem_size = FastMem_values[(int)(sldGfxmem->getValue())];
+			changed_prefs.rtgmem_size = FastMem_values[int(sldGfxmem->getValue())];
 			changed_prefs.rtgmem_type = 1;
 		}
 
@@ -179,7 +177,7 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 }
 
 
-void ExitPanelRAM(void)
+void ExitPanelRAM()
 {
 	delete lblChipmem;
 	delete sldChipmem;

@@ -13,10 +13,11 @@
 #define SMALL_BUTTON_WIDTH 30
 #define SMALL_BUTTON_HEIGHT 22
 #define LABEL_HEIGHT 20
-#define TEXTFIELD_HEIGHT 24
+#define TEXTFIELD_HEIGHT 22
 #define DROPDOWN_HEIGHT 22
 #define SLIDER_HEIGHT 18
 #define TITLEBAR_HEIGHT 24
+#include "guisan/sdl/sdlinput.hpp"
 
 typedef struct _ConfigCategory
 {

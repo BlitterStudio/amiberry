@@ -156,15 +156,15 @@ namespace sdl
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
-		
+
 		// make the scaled rendering look smoother (linear scaling).
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create a surface");
 
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
-		
+
 		gui_texture = SDL_CreateTextureFromSurface(renderer, gui_screen);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture");
 

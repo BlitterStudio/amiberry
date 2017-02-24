@@ -9,12 +9,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
-#include "autoconf.h"
-#include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -35,8 +30,7 @@ static gcn::UaeDropDown* ButtonForQuit;
 #ifdef RASPBERRY
 class StringListModel : public gcn::ListModel
 {
-private:
-	std::vector<std::string> values;
+	vector<string> values;
 public:
 	StringListModel(const char* entries[], int count)
 	{
@@ -44,12 +38,12 @@ public:
 			values.push_back(entries[i]);
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return values.size();
 	}
 
-	std::string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= values.size())
 			return "---";
@@ -102,7 +96,7 @@ static int GetControlButtonIndex(int button)
 class MiscActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == chkStatusLine)
 			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
@@ -251,7 +245,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	RefreshPanelMisc();
 }
 
-void ExitPanelMisc(void)
+void ExitPanelMisc()
 {
 	delete chkStatusLine;
 	delete chkHideIdleLed;
@@ -275,7 +269,7 @@ void ExitPanelMisc(void)
 	delete ButtonForQuit;
 }
 
-void RefreshPanelMisc(void)
+void RefreshPanelMisc()
 {
 	char tmp[20];
 

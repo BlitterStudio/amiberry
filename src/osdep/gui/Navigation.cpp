@@ -1,5 +1,4 @@
 #include <guisan.hpp>
-#include <guisan/sdl.hpp>
 #include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
@@ -7,7 +6,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
+
 #include "gui_handling.h"
 
 typedef struct
@@ -254,12 +253,12 @@ bool HandleNavigation(int direction)
 
 		if (activeWidget != nullptr && activeWidget->getId().length() > 0)
 		{
-			std::string activeName = activeWidget->getId();
+			string activeName = activeWidget->getId();
 			bool bFoundEnabled = false;
 
 			while (!bFoundEnabled)
 			{
-				std::string searchFor = "";
+				string searchFor = "";
 
 				for (int i = 0; navMap[i].activeWidget != "END"; ++i)
 				{
@@ -317,5 +316,5 @@ bool HandleNavigation(int direction)
 
 	if (focusTarget != nullptr)
 		focusTarget->requestFocus();
-	return (focusTarget != nullptr);
+	return focusTarget != nullptr;
 }

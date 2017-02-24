@@ -38,7 +38,7 @@ static const int COLUMN_SIZE[] =
 {
 	50, // Device
 	60, // Volume
-	160, // Path
+	220, // Path
 	40, // R/W
 	50, // Size
 	40 // Bootpri

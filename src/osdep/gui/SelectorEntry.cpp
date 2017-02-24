@@ -75,7 +75,7 @@ namespace gcn
 	}
 
 
-	bool SelectorEntry::getActive(void)
+	bool SelectorEntry::getActive()
 	{
 		return active;
 	}

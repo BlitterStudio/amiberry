@@ -8,11 +8,8 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "uae.h"
 #include "gui.h"
-#include "include/memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "gui_handling.h"
@@ -40,7 +37,7 @@ static gcn::UaeRadioButton* optCollFull;
 class ChipsetButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optOCS)
 			changed_prefs.chipset_mask = 0;
@@ -59,7 +56,7 @@ static ChipsetButtonActionListener* chipsetButtonActionListener;
 class NTSCButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (chkNTSC->isSelected())
 		{
@@ -80,7 +77,7 @@ static NTSCButtonActionListener* ntscButtonActionListener;
 class FastCopperActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		changed_prefs.fast_copper = chkFastCopper->isSelected();
 	}
@@ -92,7 +89,7 @@ static FastCopperActionListener* fastCopperActionListener;
 class BlitterButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		changed_prefs.immediate_blits = optBlitImmed->isSelected();
 		changed_prefs.waiting_blits = optBlitWait->isSelected();
@@ -105,7 +102,7 @@ static BlitterButtonActionListener* blitterButtonActionListener;
 class CollisionButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optCollNone)
 			changed_prefs.collision_level = 0;

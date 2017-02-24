@@ -8,9 +8,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -38,7 +36,7 @@ static gcn::UaeRadioButton* optFastest;
 class CPUButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optCPU68000)
 		{
@@ -88,7 +86,7 @@ static CPUButtonActionListener* cpuButtonActionListener;
 class FPUButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optFPUnone)
 		{
@@ -117,7 +115,7 @@ static FPUButtonActionListener* fpuButtonActionListener;
 class CPUSpeedButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == opt7Mhz)
 			changed_prefs.m68k_speed = M68K_SPEED_7MHZ_CYCLES;
@@ -136,7 +134,7 @@ static CPUSpeedButtonActionListener* cpuSpeedButtonActionListener;
 class CPU24BitActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		changed_prefs.address_space_24 = chk24Bit->isSelected();
 		RefreshPanelCPU();
@@ -148,7 +146,7 @@ static CPU24BitActionListener* cpu24BitActionListener;
 class CPUCompActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (chkCPUCompatible->isSelected())
 		{
@@ -169,7 +167,7 @@ static CPUCompActionListener* cpuCompActionListener;
 class JITActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (chkJIT->isSelected())
 		{

@@ -9,11 +9,8 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "memory.h"
 #include "rommgr.h"
-#include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -23,6 +20,7 @@ static gcn::Button* cmdMainROM;
 static gcn::Label* lblExtROM;
 static gcn::UaeDropDown* cboExtROM;
 static gcn::Button* cmdExtROM;
+
 //static gcn::UaeCheckBox* chkMapROM;
 
 class ROMListModel : public gcn::ListModel
@@ -37,12 +35,12 @@ public:
 		ROMType = romtype;
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return roms.size();
 	}
 
-	std::string getElementAt(int i)
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= roms.size())
 			return "---";
@@ -88,7 +86,7 @@ static ROMListModel* extROMList;
 class MainROMActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		AvailableROM* rom = mainROMList->getROMat(cboMainROM->getSelected());
 		if (rom != nullptr)
@@ -102,7 +100,7 @@ static MainROMActionListener* mainROMActionListener;
 class ExtROMActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		AvailableROM* rom = extROMList->getROMat(cboExtROM->getSelected());
 		if (rom != nullptr)
@@ -118,7 +116,7 @@ static ExtROMActionListener* extROMActionListener;
 class ROMButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		char tmp[MAX_PATH];
 		const char* filter[] = {".rom", "\0"};
@@ -199,8 +197,8 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdExtROM->setBaseColor(gui_baseCol);
 	cmdExtROM->addActionListener(romButtonActionListener);
 
-//	chkMapROM = new gcn::UaeCheckBox("MapROM emulation", true);
-//	chkMapROM->setEnabled(false);
+	//	chkMapROM = new gcn::UaeCheckBox("MapROM emulation", true);
+	//	chkMapROM->setEnabled(false);
 
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
@@ -216,7 +214,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	posY += cboExtROM->getHeight() + DISTANCE_NEXT_Y;
 
 	//  category.panel->add(chkMapROM, DISTANCE_BORDER, posY);
-//	posY += chkMapROM->getHeight() + DISTANCE_NEXT_Y;
+	//	posY += chkMapROM->getHeight() + DISTANCE_NEXT_Y;
 
 	RefreshPanelROM();
 }
@@ -237,7 +235,7 @@ void ExitPanelROM()
 	delete extROMActionListener;
 
 	delete romButtonActionListener;
-//	delete chkMapROM;
+	//	delete chkMapROM;
 }
 
 
@@ -249,5 +247,5 @@ void RefreshPanelROM()
 	idx = extROMList->InitROMList(changed_prefs.romextfile);
 	cboExtROM->setSelected(idx);
 
-//	chkMapROM->setSelected(false);
+	//	chkMapROM->setSelected(false);
 }

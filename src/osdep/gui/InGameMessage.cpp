@@ -7,9 +7,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
-#include "options.h"
-#include "uae.h"
-#include "gui.h"
 #include "gui_handling.h"
 #include "pandora_gfx.h"
 
@@ -20,7 +17,7 @@ static int msg_done = 0;
 class DoneActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		msg_done = 1;
 	}

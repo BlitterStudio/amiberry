@@ -14,7 +14,6 @@
 #include "fsdb.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
 
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
@@ -52,12 +51,12 @@ public:
 		changeDir(path);
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return dirs.size() + files.size();
 	}
 
-	string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i >= dirs.size() + files.size() || i < 0)
 			return "---";
@@ -74,7 +73,7 @@ public:
 		FilterFiles(&files, filefilter);
 	}
 
-	bool isDir(int i)
+	bool isDir(int i) const
 	{
 		return (i < dirs.size());
 	}
@@ -86,7 +85,7 @@ static SelectFileListModel* fileList;
 class FileButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdOK)
 		{
@@ -160,7 +159,7 @@ static void checkfilename(char* current)
 class SelectFileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		int selected_item;
 		char foldername[256] = "";

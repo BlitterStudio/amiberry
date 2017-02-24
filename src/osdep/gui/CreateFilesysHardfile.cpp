@@ -1,6 +1,5 @@
 #include <guisan.hpp>
 #include "SDL.h"
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "guisan/sdl/sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
@@ -12,15 +11,11 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
-#include "autoconf.h"
 #include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
 
-#define DIALOG_WIDTH 620
+#define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202
 
 static const char* harddisk_filter[] = {".hdf", "\0"};
@@ -47,7 +42,7 @@ static gcn::TextField* txtSize;
 class CreateFilesysHardfileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
@@ -139,7 +134,7 @@ static void InitCreateFilesysHardfile()
 	lblPath->setSize(100, LABEL_HEIGHT);
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
-	txtPath->setSize(438, TEXTFIELD_HEIGHT);
+	txtPath->setSize(338, TEXTFIELD_HEIGHT);
 	txtPath->setEnabled(false);
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -148,18 +143,28 @@ static void InitCreateFilesysHardfile()
 	cmdPath->addActionListener(createFilesysHardfileActionListener);
 
 	int posY = DISTANCE_BORDER;
+	int posX = DISTANCE_BORDER;
+
 	wndCreateFilesysHardfile->add(lblDevice, DISTANCE_BORDER, posY);
-	wndCreateFilesysHardfile->add(txtDevice, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
-	wndCreateFilesysHardfile->add(chkAutoboot, 235, posY + 1);
-	wndCreateFilesysHardfile->add(lblBootPri, 335, posY);
-	wndCreateFilesysHardfile->add(txtBootPri, 335 + lblBootPri->getWidth() + 8, posY);
+	posX += lblDevice->getWidth() + 8;
+
+	wndCreateFilesysHardfile->add(txtDevice, posX, posY);
+	posX += txtDevice->getWidth() + DISTANCE_BORDER * 2;
+
+	wndCreateFilesysHardfile->add(chkAutoboot, posX, posY + 1);
+	posX += chkAutoboot->getWidth() + DISTANCE_BORDER;
+
+	wndCreateFilesysHardfile->add(lblBootPri, posX, posY);
+	wndCreateFilesysHardfile->add(txtBootPri, posX + lblBootPri->getWidth() + 8, posY);
 	posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
+
 	wndCreateFilesysHardfile->add(lblPath, DISTANCE_BORDER, posY);
 	wndCreateFilesysHardfile->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);
 	wndCreateFilesysHardfile->add(cmdPath, wndCreateFilesysHardfile->getWidth() - DISTANCE_BORDER - SMALL_BUTTON_WIDTH, posY);
 	posY += txtPath->getHeight() + DISTANCE_NEXT_Y;
-	wndCreateFilesysHardfile->add(lblSize, DISTANCE_BORDER, posY);
-	wndCreateFilesysHardfile->add(txtSize, DISTANCE_BORDER + lblSize->getWidth() + 8, posY);
+
+	wndCreateFilesysHardfile->add(lblSize, lblDevice->getX(), posY);
+	wndCreateFilesysHardfile->add(txtSize, txtDevice->getX(), posY);
 
 	wndCreateFilesysHardfile->add(cmdOK);
 	wndCreateFilesysHardfile->add(cmdCancel);
@@ -258,7 +263,7 @@ static void CreateFilesysHardfileLoop()
 
 bool CreateFilesysHardfile(void)
 {
-	std::string strroot;
+	string strroot;
 	char tmp[32];
 	char zero = 0;
 
@@ -290,7 +295,7 @@ bool CreateFilesysHardfile(void)
 		int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
-		FILE * newFile = fopen(txtPath->getText().c_str(), "wb");
+		FILE* newFile = fopen(txtPath->getText().c_str(), "wb");
 		if (!newFile)
 		{
 			ShowMessage("Create Hardfile", "Unable to create new file.", "", "Ok", "");

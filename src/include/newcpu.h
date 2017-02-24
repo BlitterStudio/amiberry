@@ -35,6 +35,7 @@
 
 #include "readcpu.h"
 #include "machdep/m68k.h"
+#include "memory.h"
 
 extern const int areg_byteinc[];
 extern const int imm8_table[];

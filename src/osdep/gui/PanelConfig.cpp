@@ -7,10 +7,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "uae.h"
-#include "blkdev.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -84,12 +81,12 @@ public:
 	{
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return configs.size();
 	}
 
-	string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i >= configs.size() || i < 0)
 			return "---";
@@ -120,7 +117,7 @@ static ConfigsListModel* configsList;
 class ConfigButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		int i;
 		if (actionEvent.getSource() == cmdLoad)
@@ -201,7 +198,7 @@ static ConfigButtonActionListener* configButtonActionListener;
 class ConfigsListActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		int selected_item;
 		selected_item = lstConfigs->getSelected();

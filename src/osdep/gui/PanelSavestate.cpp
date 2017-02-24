@@ -9,15 +9,6 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
-#include "options.h"
-#include "autoconf.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "custom.h"
-#include "xwin.h"
-#include "drawing.h"
-#include "uae.h"
 #include "gui.h"
 #include "savestate.h"
 #include "gui_handling.h"
@@ -41,7 +32,7 @@ static gcn::Label* lblWarningHDDon;
 class SavestateActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optState0)
 			currentStateNum = 0;
@@ -167,12 +158,12 @@ void ExitPanelSavestate()
 	delete optState3;
 	delete grpNumber;
 
-	if (imgSavestate != 0)
+	if (imgSavestate != nullptr)
 		delete imgSavestate;
-	imgSavestate = 0;
-	if (icoSavestate != 0)
+	imgSavestate = nullptr;
+	if (icoSavestate != nullptr)
 		delete icoSavestate;
-	icoSavestate = 0;
+	icoSavestate = nullptr;
 	delete wndScreenshot;
 
 	delete cmdLoadState;
@@ -189,12 +180,12 @@ void RefreshPanelSavestate()
 	{
 		wndScreenshot->remove(icoSavestate);
 		delete icoSavestate;
-		icoSavestate = 0;
+		icoSavestate = nullptr;
 	}
-	if (imgSavestate != 0)
+	if (imgSavestate != nullptr)
 	{
 		delete imgSavestate;
-		imgSavestate = 0;
+		imgSavestate = nullptr;
 	}
 
 	switch (currentStateNum)
@@ -222,7 +213,7 @@ void RefreshPanelSavestate()
 			fclose(f);
 			gcn::Rectangle rect = wndScreenshot->getChildrenArea();
 			SDL_Surface* loadedImage = IMG_Load(screenshot_filename);
-			if (loadedImage != NULL)
+			if (loadedImage != nullptr)
 			{
 				SDL_Rect source = {0, 0, 0, 0};
 				SDL_Rect target = {0, 0, 0, 0};

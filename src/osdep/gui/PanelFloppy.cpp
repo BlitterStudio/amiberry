@@ -9,11 +9,8 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
 #include "disk.h"
-#include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -55,12 +52,12 @@ public:
 		types.push_back("3.5'' ESCOM");
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return types.size();
 	}
 
-	string getElementAt(int i)
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= types.size())
 			return "---";
@@ -77,12 +74,12 @@ public:
 	{
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return lstMRUDiskList.size();
 	}
 
-	std::string getElementAt(int i)
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= lstMRUDiskList.size())
 			return "---";
@@ -96,7 +93,7 @@ static DiskfileListModel diskfileList;
 class DriveTypeActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		//---------------------------------------
 		// New drive type selected
@@ -115,7 +112,7 @@ static DriveTypeActionListener* driveTypeActionListener;
 class DFxCheckActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == chkLoadConfig)
 			bLoadConfigForDisk = chkLoadConfig->isSelected();
@@ -152,7 +149,7 @@ static DFxCheckActionListener* dfxCheckActionListener;
 class DFxButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		for (int i = 0; i < 4; ++i)
 		{
@@ -217,7 +214,7 @@ static bool bIgnoreListChange = false;
 class DiskFileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		for (int i = 0; i < 4; ++i)
 		{
@@ -272,7 +269,7 @@ static DiskFileActionListener* diskFileActionListener;
 class DriveSpeedSliderActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		changed_prefs.floppy_speed = drivespeedvalues[(int)sldDriveSpeed->getValue()];
 		RefreshPanelFloppy();
@@ -285,7 +282,7 @@ static DriveSpeedSliderActionListener* driveSpeedSliderActionListener;
 class SaveForDiskActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		//---------------------------------------
 		// Save configuration for current disk
@@ -315,7 +312,7 @@ static SaveForDiskActionListener* saveForDiskActionListener;
 class CreateDiskActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdCreateDDDisk)
 		{

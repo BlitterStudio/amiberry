@@ -1,14 +1,9 @@
 #include "UaeListBox.hpp"
 #include "guisan/widgets/listbox.hpp"
-
 #include "guisan/basiccontainer.hpp"
 #include "guisan/font.hpp"
 #include "guisan/graphics.hpp"
-#include "guisan/key.hpp"
 #include "guisan/listmodel.hpp"
-#include "guisan/mouseinput.hpp"
-#include "guisan/selectionlistener.hpp"
-
 
 namespace gcn
 {
@@ -31,7 +26,7 @@ namespace gcn
 		graphics->setColor(getBackgroundColor());
 		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
-		if (mListModel == NULL)
+		if (mListModel == nullptr)
 		{
 			return;
 		}
