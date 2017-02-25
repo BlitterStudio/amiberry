@@ -83,3 +83,10 @@ char *ua_fs_copy (char *dst, int maxlen, const TCHAR *src, int defchar)
     strncpy(dst, src, maxlen);
     return dst;
 }
+
+void to_lower(TCHAR* s, int len)
+{
+	int i;
+	for (i = 0; i < len; i++)
+		s[i] = tolower(s[i]);
+}

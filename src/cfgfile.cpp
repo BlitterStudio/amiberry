@@ -4396,6 +4396,26 @@ int bip_a2000(struct uae_prefs* p, int rom)
 	return configure_rom(p, roms, 0);
 }
 
+void set_config_changed(void)
+{
+	config_changed = 1;
+}
+
+void config_check_vsync(void)
+{
+	if (config_changed) {
+#ifdef WITH_LUA
+		if (config_changed == 1) {
+			createconfigstore(&currprefs);
+			uae_lua_run_handler("on_uae_config_changed");
+		}
+#endif
+		config_changed++;
+		if (config_changed >= 3)
+			config_changed = 0;
+	}
+}
+
 bool is_error_log(void)
 {
 	return error_lines != NULL;

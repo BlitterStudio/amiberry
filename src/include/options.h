@@ -266,6 +266,10 @@ struct uae_prefs {
 
 };
 
+extern int config_changed;
+extern void config_check_vsync(void);
+extern void set_config_changed(void);
+
 /* Contains the filename of .uaerc */
 extern void cfgfile_write (struct zfile *, const TCHAR *option, const TCHAR *format,...);
 extern void cfgfile_dwrite (struct zfile *, const TCHAR *option, const TCHAR *format,...);

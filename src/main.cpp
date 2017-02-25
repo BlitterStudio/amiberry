@@ -57,6 +57,7 @@ SDL_DisplayMode sdlMode;
 long int version = 256 * 65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs; 
+int config_changed;
 
 bool no_gui = false;
 bool cloanto_rom = false;

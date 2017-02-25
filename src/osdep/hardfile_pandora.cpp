@@ -106,7 +106,9 @@ int hdf_open_target(struct hardfiledata* hfd, const TCHAR* pname)
 	int i;
 	struct uae_driveinfo *udi = nullptr, tmpudi;
 	TCHAR* name = my_strdup(pname);
-	
+	int zmode = 0;
+	TCHAR* ext;
+
 	hfd->flags = 0;
 	hfd->drive_empty = 0;
 	hdf_close(hfd);
@@ -122,9 +124,8 @@ int hdf_open_target(struct hardfiledata* hfd, const TCHAR* pname)
 	hfd->handle = xcalloc (struct hardfilehandle, 1);
 	hfd->handle->f = nullptr;
 	hfd_log(_T("hfd attempting to open: '%s'\n"), name);
-
-	int zmode = 0;
-	TCHAR* ext = _tcsrchr (name, '.');
+	
+	ext = _tcsrchr (name, '.');
 	if (ext != nullptr)
 	{
 		ext++;

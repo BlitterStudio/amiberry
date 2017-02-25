@@ -12,6 +12,8 @@
   * Copyright 1995-1998 Bernd Schmidt
   */
 
+#undef EVENT_DEBUG
+
 #include "machdep/rpt.h"
 
 extern frame_time_t vsyncmintime;
@@ -62,9 +64,16 @@ enum {
 
 extern int pissoff_value;
 #define countdown (regs.pissoff)
+//TODO: check and implement this
+//#define do_cycles do_cycles_slow
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
+
+extern volatile bool vblank_found_chipset;
+extern volatile bool vblank_found_rtg;
+extern int hpos_offset;
+extern int maxhpos;
 
 STATIC_INLINE void cycles_do_special ()
 {
@@ -77,6 +86,11 @@ STATIC_INLINE void cycles_do_special ()
   {
 		regs.pissoff = 0;
 	}
+}
+
+STATIC_INLINE void do_extra_cycles(unsigned long cycles_to_add)
+{
+	regs.pissoff -= cycles_to_add;
 }
 
 STATIC_INLINE unsigned long int get_cycles ()
