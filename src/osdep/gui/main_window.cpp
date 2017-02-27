@@ -13,7 +13,7 @@
 #include "gui.h"
 #include "gui_handling.h"
 #include "memory.h"
-#include "pandora_gfx.h"
+#include "amiberry_gfx.h"
 
 bool gui_running = false;
 static int last_active_panel = 1;

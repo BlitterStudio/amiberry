@@ -21,7 +21,7 @@ extern void cache_free (uae_u8*, int);
 #define S_READ 1
 #define S_WRITE 2
 
-#ifdef PANDORA
+#ifdef AMIBERRY
 extern uae_u8* natmem_offset;
 #endif
 

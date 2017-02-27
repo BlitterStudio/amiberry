@@ -1,7 +1,7 @@
 /*
  * UAE - The Un*x Amiga Emulator
  *
- * Pandora interface
+ * Amiberry interface
  *
  */
 
@@ -39,7 +39,7 @@
 #include "rommgr.h"
 #include "akiko.h"
 #include "SDL.h"
-#include "pandora_rp9.h"
+#include "amiberry_rp9.h"
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void gui_force_rtarea_hdchange();
@@ -239,36 +239,24 @@ void target_fixup_options(struct uae_prefs* p)
 
 void target_default_options(struct uae_prefs* p, int type)
 {
-	p->pandora_horizontal_offset = 0;
-	p->pandora_vertical_offset = 0;
-	p->pandora_hide_idle_led = 0;
-
-	p->pandora_tapDelay = 10;
-	p->pandora_customControls = 0;
-
+	p->amiberry_customControls = 0;
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
-
 	//    memset(customControlMap, 0, sizeof(customControlMap));
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	cfgfile_write(f, "pandora.cpu_speed", "%d", p->pandora_cpu_speed);
-	cfgfile_write(f, "pandora.hide_idle_led", "%d", p->pandora_hide_idle_led);
-	cfgfile_write(f, "pandora.tap_delay", "%d", p->pandora_tapDelay);
-	cfgfile_write(f, "pandora.custom_controls", "%d", p->pandora_customControls);
-	//	cfgfile_write(f, "pandora.custom_up", "%d", customControlMap[VK_UP]);
-	//	cfgfile_write(f, "pandora.custom_down", "%d", customControlMap[VK_DOWN]);
-	//	cfgfile_write(f, "pandora.custom_left", "%d", customControlMap[VK_LEFT]);
-	//	cfgfile_write(f, "pandora.custom_right", "%d", customControlMap[VK_RIGHT]);
-	//	cfgfile_write(f, "pandora.custom_a", "%d", customControlMap[VK_A]);
-	//	cfgfile_write(f, "pandora.custom_b", "%d", customControlMap[VK_B]);
-	//	cfgfile_write(f, "pandora.custom_x", "%d", customControlMap[VK_X]);
-	//	cfgfile_write(f, "pandora.custom_y", "%d", customControlMap[VK_Y]);
-	//	cfgfile_write(f, "pandora.custom_l", "%d", customControlMap[VK_L]);
-	//	cfgfile_write(f, "pandora.custom_r", "%d", customControlMap[VK_R]);
-	cfgfile_write(f, "pandora.move_x", "%d", p->pandora_horizontal_offset);
-	cfgfile_write(f, "pandora.move_y", "%d", p->pandora_vertical_offset);
+	cfgfile_write(f, "amiberry.custom_controls", "%d", p->amiberry_customControls);
+	//	cfgfile_write(f, "amiberry.custom_up", "%d", customControlMap[VK_UP]);
+	//	cfgfile_write(f, "amiberry.custom_down", "%d", customControlMap[VK_DOWN]);
+	//	cfgfile_write(f, "amiberry.custom_left", "%d", customControlMap[VK_LEFT]);
+	//	cfgfile_write(f, "amiberry.custom_right", "%d", customControlMap[VK_RIGHT]);
+	//	cfgfile_write(f, "amiberry.custom_a", "%d", customControlMap[VK_A]);
+	//	cfgfile_write(f, "amiberry.custom_b", "%d", customControlMap[VK_B]);
+	//	cfgfile_write(f, "amiberry.custom_x", "%d", customControlMap[VK_X]);
+	//	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Y]);
+	//	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_L]);
+	//	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_R]);
 }
 
 void target_restart()
@@ -282,10 +270,7 @@ TCHAR* target_expand_environment(const TCHAR* path)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
-	int result = (cfgfile_intval(option, value, "cpu_speed", &p->pandora_cpu_speed, 1)
-		|| cfgfile_intval(option, value, "hide_idle_led", &p->pandora_hide_idle_led, 1)
-		|| cfgfile_intval(option, value, "tap_delay", &p->pandora_tapDelay, 1)
-		|| cfgfile_intval(option, value, "custom_controls", &p->pandora_customControls, 1)
+	int result = (cfgfile_intval(option, value, "custom_controls", &p->amiberry_customControls, 1)
 		//	              || cfgfile_intval(option, value, "custom_up", &customControlMap[VK_UP], 1)
 		//	              || cfgfile_intval(option, value, "custom_down", &customControlMap[VK_DOWN], 1)
 		//	              || cfgfile_intval(option, value, "custom_left", &customControlMap[VK_LEFT], 1)
@@ -296,8 +281,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		//	              || cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Y], 1)
 		//	              || cfgfile_intval(option, value, "custom_l", &customControlMap[VK_L], 1)
 		//	              || cfgfile_intval(option, value, "custom_r", &customControlMap[VK_R], 1)
-		|| cfgfile_intval(option, value, "move_x", &p->pandora_horizontal_offset, 1)
-		|| cfgfile_intval(option, value, "move_y", &p->pandora_vertical_offset, 1)
 	);
 	return result;
 }
@@ -633,21 +616,6 @@ void loadAdfDir()
 	}
 }
 
-//int currVSyncRate = 0;
-//bool SetVSyncRate(int hz)
-//{
-//    char cmd[64];
-//
-//    if(currVSyncRate != hz)
-//    {
-//        snprintf((char*)cmd, 64, "sudo /usr/pandora/scripts/op_lcdrate.sh %d", hz);
-//        system(cmd);
-//        currVSyncRate = hz;
-//        return true;
-//    }
-//    return false;
-//}
-
 void target_reset()
 {
 }
@@ -849,7 +817,7 @@ int handle_msgpump()
 				break;
 
 			default:
-				//				if (currprefs.pandora_customControls)
+				//				if (currprefs.amiberry_customControls)
 				//				{
 				////					keycode = customControlMap[rEvent.key.keysym.sym];
 				//					if (keycode < 0)
@@ -868,7 +836,7 @@ int handle_msgpump()
 				//				else
 				modifier = rEvent.key.keysym.mod;
 
-				//                keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
+				//                keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
 				//                if(keycode)
 				//                {
 				//                    if(modifier == KMOD_SHIFT)
@@ -917,7 +885,7 @@ int handle_msgpump()
 				break;
 
 			default:
-				//				if (currprefs.pandora_customControls)
+				//				if (currprefs.amiberry_customControls)
 				//				{
 				////					keycode = customControlMap[rEvent.key.keysym.sym];
 				//					if (keycode < 0)
@@ -935,7 +903,7 @@ int handle_msgpump()
 				//				}
 
 				modifier = rEvent.key.keysym.mod;
-				//                keycode = translate_pandora_keys(rEvent.key.keysym.sym, &modifier);
+				//                keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
 				//                if(keycode)
 				//                {
 				//                    inputdevice_do_keyboard(keycode, 0);
@@ -958,7 +926,7 @@ int handle_msgpump()
 					if (currprefs.input_tablet > TABLET_OFF && !doStylusRightClick)
 					{
 						// Delay mousebutton, we need new position first...
-						delayed_mousebutton = currprefs.pandora_tapDelay << 1;
+						//delayed_mousebutton = currprefs.amiberry_tapDelay << 1;
 					}
 					else
 					{

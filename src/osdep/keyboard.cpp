@@ -149,7 +149,7 @@ void keyboard_settrans ()
     inputdevice_setkeytranslation (keytrans, kbmaps);
 }
 
-int translate_pandora_keys(int symbol, int *modifier)
+int translate_amiberry_keys(int symbol, int *modifier)
 {
     switch(symbol)
     {

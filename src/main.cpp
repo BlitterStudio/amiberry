@@ -41,7 +41,7 @@
 #ifdef USE_SDL
 #include "SDL.h"
 #include <iostream>
-#include "pandora_gfx.h"
+#include "amiberry_gfx.h"
 SDL_Window* sdlWindow;
 SDL_Renderer* renderer;
 SDL_Texture* texture;

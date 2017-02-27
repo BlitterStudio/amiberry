@@ -63,7 +63,7 @@ int setup_sound(void) { sound_available = 0; return 0; }
 
 void close_sound(void) {}
 
-void pandora_stop_sound(void) {}
+void amiberry_stop_sound(void) {}
 
 int init_sound(void) { return 0; }
 
@@ -186,7 +186,7 @@ static void init_soundbuffer_usage(void)
 }
 
 
-static int pandora_start_sound(int rate, int bits, int stereo)
+static int amiberry_start_sound(int rate, int bits, int stereo)
 {
 	int frag = 0, buffers, ret;
 	unsigned int bsize;
@@ -198,7 +198,7 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 		return 0;
 
 	if (audioOpened)
-		pandora_stop_sound();
+		amiberry_stop_sound();
 
 
 			// init sem, start sound thread
@@ -235,12 +235,12 @@ static int pandora_start_sound(int rate, int bits, int stereo)
 
 
 // this is meant to be called only once on exit
-void pandora_stop_sound(void)
+void amiberry_stop_sound(void)
 {
 
 	int   valuesem;
 	if (sound_thread_exit)
-		printf("don't call pandora_stop_sound more than once!\n");
+		printf("don't call amiberry_stop_sound more than once!\n");
 	SDL_PauseAudio(1);
 	if (sound_thread_active)
 	{
@@ -337,7 +337,7 @@ int setup_sound(void)
 #endif
 
 	     // Android does not like opening sound device several times
-	if (pandora_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
+	if (amiberry_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
 		return 0;
 
 	sound_available = 1;
@@ -355,7 +355,7 @@ static int open_sound(void)
 #endif
 
 		// Android does not like opening sound device several times
-	if (pandora_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
+	if (amiberry_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
 		return 0;
 
 
@@ -385,7 +385,7 @@ void close_sound(void)
 		    // testing shows that reopenning sound device is not a good idea (causes random sound driver crashes)
 		    // we will close it on real exit instead
 #ifdef RASPBERRY
-		        //pandora_stop_sound();
+		        //amiberry_stop_sound();
 #endif
 	have_sound = 0;
 

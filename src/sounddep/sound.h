@@ -6,11 +6,8 @@
   * Copyright 1997 Bernd Schmidt
   */
 
-#if defined(PANDORA) || defined(ANDROIDSDL)
+#pragma once
 #define DEFAULT_SOUND_CHANNELS 2
-#else
-#define DEFAULT_SOUND_CHANNELS 1
-#endif
 
 #define SOUND_BUFFERS_COUNT 4
 #define SNDBUFFER_LEN 2048

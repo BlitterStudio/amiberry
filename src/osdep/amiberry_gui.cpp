@@ -484,7 +484,7 @@ int gui_init()
 void gui_exit()
 {
 	sync();
-	pandora_stop_sound();
+	amiberry_stop_sound();
 	saveAdfDir();
 	ClearConfigFileList();
 	ClearAvailableROMList();

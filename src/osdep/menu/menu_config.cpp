@@ -458,9 +458,8 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		p->input_autofire_linecnt = p->input_autofire_linecnt * 312;
 		fscanf(f, "autofire=%d\n", &dummy);
 		fscanf(f, "stylusOffset=%d\n", &dummy);
-		fscanf(f, "tapDelay=%d\n", &p->pandora_tapDelay);
 		fscanf(f, "scanlines=%d\n", &dummy);
-#if defined(PANDORA) || defined(ANDROIDSDL)
+#if defined(AMIBERRY) || defined(ANDROIDSDL)
 		fscanf(f, "ham=%d\n", &dummy);
 #else
 		fscanf(f, "ham=%d\n", &mainMenu_ham);
@@ -473,15 +472,12 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 			p->chipset_refreshrate = 60;
 		else
 			p->chipset_refreshrate = 50;
-		fscanf(f, "mainMenu_cpuSpeed=%d\n", &p->pandora_cpu_speed);
 		fscanf(f, "presetModeId=%d\n", &presetModeId);
-		fscanf(f, "moveX=%d\n", &p->pandora_horizontal_offset);
-		fscanf(f, "moveY=%d\n", &p->pandora_vertical_offset);
 		fscanf(f, "displayedLines=%d\n", &p->gfx_size.height);
 		fscanf(f, "screenWidth=%d\n", &p->gfx_size_fs.width);
 		fscanf(f, "cutLeft=%d\n", &dummy);
 		fscanf(f, "cutRight=%d\n", &dummy);
-		fscanf(f, "customControls=%d\n", &p->pandora_customControls);
+		fscanf(f, "customControls=%d\n", &p->amiberry_customControls);
 		fscanf(f, "custom_dpad=%d\n", &dummy);
 		//		fscanf(f, "custom_up=%d\n", &customControlMap[VK_UP]);
 		//		fscanf(f, "custom_down=%d\n", &customControlMap[VK_DOWN]);

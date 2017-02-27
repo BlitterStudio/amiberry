@@ -1,14 +1,15 @@
  /*
   * UAE - The Un*x Amiga Emulator
   *
-  * Target specific stuff, Pandora version
+  * Target specific stuff, Amiberry version
   *
   * Copyright 1997 Bernd Schmidt
   */
 
+#pragma once
 #include "SDL.h"
 
-#define TARGET_NAME "pandora"
+#define TARGET_NAME "Amiberry"
 
 #define NO_MAIN_IN_MAIN_C
 
@@ -28,10 +29,10 @@ void update_display(struct uae_prefs *);
 void graphics_subshutdown(void);
 void moveVertical(int value);
 
-void pandora_stop_sound(void);
+void amiberry_stop_sound(void);
 
 void keyboard_settrans(void);
-int translate_pandora_keys(int symbol, int *modifier);
+int translate_amiberry_keys(int symbol, int *modifier);
 void SimulateMouseOrJoy(int code, int keypressed);
 
 #define REMAP_MOUSEBUTTON_LEFT    -1

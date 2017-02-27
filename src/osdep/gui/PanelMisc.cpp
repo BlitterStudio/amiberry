@@ -101,9 +101,6 @@ public:
 		if (actionEvent.getSource() == chkStatusLine)
 			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
 
-		else if (actionEvent.getSource() == chkHideIdleLed)
-			changed_prefs.pandora_hide_idle_led = chkHideIdleLed->isSelected();
-
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
 
@@ -274,7 +271,6 @@ void RefreshPanelMisc()
 	char tmp[20];
 
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
-	chkHideIdleLed->setSelected(changed_prefs.pandora_hide_idle_led);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);

@@ -238,24 +238,9 @@ public:
 			changed_prefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
 			RefreshPanelInput();
 		}
-#ifndef RASPBERRY
-        else if (actionEvent.getSource() == cboTapDelay)
-        {
-            if(cboTapDelay->getSelected() == 0)
-                changed_prefs.pandora_tapDelay = 10;
-            else if (cboTapDelay->getSelected() == 1)
-                changed_prefs.pandora_tapDelay = 5;
-            else
-                changed_prefs.pandora_tapDelay = 2;
-        }
 
-        else if (actionEvent.getSource() == chkMouseHack)
-        {
-            changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
-        }
-#endif
 		else if (actionEvent.getSource() == chkCustomCtrl)
-			changed_prefs.pandora_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
+			changed_prefs.amiberry_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
 
 		//TODO: Implement this in SDL2
 		//        else if (actionEvent.getSource() == cboA)
@@ -618,17 +603,8 @@ void RefreshPanelInput()
 			break;
 		}
 	}
-#ifndef RASPBERRY
-    if (changed_prefs.pandora_tapDelay == 10)
-        cboTapDelay->setSelected(0);
-    else if (changed_prefs.pandora_tapDelay == 5)
-        cboTapDelay->setSelected(1);
-    else
-        cboTapDelay->setSelected(2);
 
-    chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
-#endif
-	chkCustomCtrl->setSelected(changed_prefs.pandora_customControls);
+	chkCustomCtrl->setSelected(changed_prefs.amiberry_customControls);
 	//TODO: Implement this in SDL2
 	//    cboA->setSelected(GetAmigaKeyIndex(customControlMap[VK_A]));
 	//    cboB->setSelected(GetAmigaKeyIndex(customControlMap[VK_B]));

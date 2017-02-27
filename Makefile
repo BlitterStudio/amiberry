@@ -35,7 +35,7 @@ PANDORA=1
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 
 DEFS +=  `xml2-config --cflags`
-DEFS += -DCPU_arm -DARMV6_ASSEMBLY -DPANDORA -DPICASSO96
+DEFS += -DCPU_arm -DARMV6_ASSEMBLY -DAMIBERRY -DPICASSO96
 DEFS += -DWITH_INGAME_WARNING -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 DEFS += -DUSE_SDL
@@ -155,17 +155,17 @@ OBJS =	\
 	src/osdep/cda_play.o \
 	src/osdep/charset.o \
 	src/osdep/fsdb_host.o \
-	src/osdep/hardfile_pandora.o \
+	src/osdep/hardfile_amiberry.o \
 	src/osdep/keyboard.o \
 	src/osdep/mp3decoder.o \
 	src/osdep/writelog.o \
-	src/osdep/pandora.o \
-	src/osdep/pandora_filesys.o \
-	src/osdep/pandora_input.o \
-	src/osdep/pandora_gfx.o \
-	src/osdep/pandora_gui.o \
-	src/osdep/pandora_rp9.o \
-	src/osdep/pandora_mem.o \
+	src/osdep/amiberry.o \
+	src/osdep/amiberry_filesys.o \
+	src/osdep/amiberry_input.o \
+	src/osdep/amiberry_gfx.o \
+	src/osdep/amiberry_gui.o \
+	src/osdep/amiberry_rp9.o \
+	src/osdep/amiberry_mem.o \
 	src/osdep/sigsegv_handler.o \
 	src/osdep/menu/menu_config.o \
 	src/sounddep/sound_sdl_new.o \

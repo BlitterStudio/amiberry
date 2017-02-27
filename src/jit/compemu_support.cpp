@@ -170,7 +170,7 @@ static blockinfo* hold_bi[MAX_HOLD_BI];
 static blockinfo* active;
 static blockinfo* dormant;
 
-#ifdef PANDORA
+#ifdef AMIBERRY
 
 void cache_free (uae_u8 *cache, int size)
 {
@@ -187,7 +187,7 @@ uae_u8 *cache_alloc (int size)
   }
   else
     memset(cache, 0, size);
-  return (uae_u8 *) cache;
+  return static_cast<uae_u8 *>(cache);
 }
 
 #endif

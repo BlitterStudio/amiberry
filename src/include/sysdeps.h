@@ -267,7 +267,7 @@ extern void to_lower(TCHAR *s, int len);
 #undef DONT_HAVE_STDIO
 #undef DONT_HAVE_MALLOC
 
-#if defined PANDORA
+#if defined AMIBERRY
 
 #include <ctype.h>
 

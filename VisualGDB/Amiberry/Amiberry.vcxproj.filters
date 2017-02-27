@@ -429,34 +429,10 @@
     <ClCompile Include="..\..\src\osdep\fsdb_host.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\hardfile_pandora.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\keyboard.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora_filesys.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora_gfx.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora_gui.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora_input.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora_mem.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora_rp9.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\picasso96.cpp">
@@ -560,6 +536,30 @@
     </ClCompile>
     <ClCompile Include="..\..\src\sounddep\sound_sdl_new.cpp">
       <Filter>Source files\sounddep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_gfx.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_gui.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_input.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_mem.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_rp9.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_filesys.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\hardfile_amiberry.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -927,12 +927,6 @@
     <ClInclude Include="..\..\src\osdep\mp3decoder.h">
       <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\osdep\pandora_gfx.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\osdep\pandora_rp9.h">
-      <Filter>Header files\osdep</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\osdep\sysconfig.h">
       <Filter>Header files\osdep</Filter>
     </ClInclude>
@@ -1148,6 +1142,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\window.hpp">
       <Filter>Header files\guisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\amiberry_gfx.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\amiberry_rp9.h">
+      <Filter>Header files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

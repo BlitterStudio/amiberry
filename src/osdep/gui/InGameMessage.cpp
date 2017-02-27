@@ -8,7 +8,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "gui_handling.h"
-#include "pandora_gfx.h"
+#include "amiberry_gfx.h"
 
 extern SDL_Surface *screen;
 extern void flush_screen();
