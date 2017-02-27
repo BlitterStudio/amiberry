@@ -14,6 +14,7 @@
 #include "gui_handling.h"
 #include "keyboard.h"
 #include "inputdevice.h"
+#include "config.h"
 
 
 static const char* mousespeed_list[] = {".25", ".5", "1x", "2x", "4x"};
@@ -29,11 +30,6 @@ static gcn::UaeDropDown* cboAutofire;
 static gcn::Label* lblMouseSpeed;
 static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
-#ifndef RASPBERRY
-static gcn::Label *lblTapDelay;
-static gcn::UaeDropDown* cboTapDelay;
-static gcn::UaeCheckBox* chkMouseHack;
-#endif
 
 static gcn::UaeCheckBox* chkCustomCtrl;
 static gcn::Label* lblA;
@@ -92,11 +88,6 @@ StringListModel ctrlPortList(inputport_list, 5);
 const char* autofireValues[] = {"Off", "Slow", "Medium", "Fast"};
 StringListModel autofireList(autofireValues, 4);
 
-#ifndef RASPBERRY
-const char *tapDelayValues[] = { "Normal", "Short", "None" };
-StringListModel tapDelayList(tapDelayValues, 3);
-#endif
-
 const char* mappingValues[] =
 {
 	"CD32 rwd", "CD32 ffw", "CD32 play", "CD32 yellow", "CD32 green",
@@ -138,6 +129,7 @@ static int amigaKey[] =
 }; /*  109 - 110 */
 
 //extern int customControlMap[SDLK_LAST];
+extern map<int, int> customControlMap;
 
 static int GetAmigaKeyIndex(int key)
 {
@@ -242,36 +234,35 @@ public:
 		else if (actionEvent.getSource() == chkCustomCtrl)
 			changed_prefs.amiberry_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
 
-		//TODO: Implement this in SDL2
-		//        else if (actionEvent.getSource() == cboA)
-		//            customControlMap[VK_A] = amigaKey[cboA->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboB)
-		//            customControlMap[VK_B] = amigaKey[cboB->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboX)
-		//            customControlMap[VK_X] = amigaKey[cboX->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboY)
-		//            customControlMap[VK_Y] = amigaKey[cboY->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboL)
-		//            customControlMap[VK_L] = amigaKey[cboL->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboR)
-		//            customControlMap[VK_R] = amigaKey[cboR->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboUp)
-		//            customControlMap[VK_UP] = amigaKey[cboUp->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboDown)
-		//            customControlMap[VK_DOWN] = amigaKey[cboDown->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboLeft)
-		//            customControlMap[VK_LEFT] = amigaKey[cboLeft->getSelected()];
-		//
-		//        else if (actionEvent.getSource() == cboRight)
-		//            customControlMap[VK_RIGHT] = amigaKey[cboRight->getSelected()];
+		    else if (actionEvent.getSource() == cboA)
+		        customControlMap[VK_A] = amigaKey[cboA->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboB)
+		        customControlMap[VK_B] = amigaKey[cboB->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboX)
+		        customControlMap[VK_X] = amigaKey[cboX->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboY)
+		        customControlMap[VK_Y] = amigaKey[cboY->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboL)
+		        customControlMap[VK_L] = amigaKey[cboL->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboR)
+		        customControlMap[VK_R] = amigaKey[cboR->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboUp)
+		        customControlMap[VK_UP] = amigaKey[cboUp->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboDown)
+		        customControlMap[VK_DOWN] = amigaKey[cboDown->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboLeft)
+		        customControlMap[VK_LEFT] = amigaKey[cboLeft->getSelected()];
+		
+		    else if (actionEvent.getSource() == cboRight)
+		        customControlMap[VK_RIGHT] = amigaKey[cboRight->getSelected()];
 	}
 };
 
@@ -330,20 +321,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->setId("MouseSpeed");
 	sldMouseSpeed->addActionListener(inputActionListener);
 	lblMouseSpeedInfo = new gcn::Label(".25");
-#ifndef RASPBERRY
-    lblTapDelay = new gcn::Label("Tap Delay:");
-    lblTapDelay->setSize(100, LABEL_HEIGHT);
-    lblTapDelay->setAlignment(gcn::Graphics::RIGHT);
-    cboTapDelay = new gcn::UaeDropDown(&tapDelayList);
-    cboTapDelay->setSize(80, DROPDOWN_HEIGHT);
-    cboTapDelay->setBaseColor(gui_baseCol);
-    cboTapDelay->setId("cboTapDelay");
-    cboTapDelay->addActionListener(inputActionListener);
 
-    chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
-    chkMouseHack->setId("MouseHack");
-    chkMouseHack->addActionListener(inputActionListener);
-#endif
 	chkCustomCtrl = new gcn::UaeCheckBox("Custom Control");
 	chkCustomCtrl->setId("CustomCtrl");
 	chkCustomCtrl->addActionListener(inputActionListener);
@@ -454,12 +432,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(sldMouseSpeed, DISTANCE_BORDER + lblMouseSpeed->getWidth() + 8, posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 12, posY);
 	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
-#ifndef RASPBERRY
-    category.panel->add(chkMouseHack, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
-    category.panel->add(lblTapDelay, 300, posY);
-    category.panel->add(cboTapDelay, 300 + lblTapDelay->getWidth() + 8, posY);
-    posY += cboTapDelay->getHeight() + DISTANCE_NEXT_Y;
-#endif
+
 	category.panel->add(chkCustomCtrl, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
 	posY += chkCustomCtrl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblA, DISTANCE_BORDER, posY);
@@ -504,11 +477,7 @@ void ExitPanelInput()
 	delete lblMouseSpeed;
 	delete sldMouseSpeed;
 	delete lblMouseSpeedInfo;
-#ifndef RASPBERRY
-    delete lblTapDelay;
-    delete cboTapDelay;
-    delete chkMouseHack;
-#endif
+
 	delete chkCustomCtrl;
 	delete lblA;
 	delete cboA;
@@ -605,15 +574,15 @@ void RefreshPanelInput()
 	}
 
 	chkCustomCtrl->setSelected(changed_prefs.amiberry_customControls);
-	//TODO: Implement this in SDL2
-	//    cboA->setSelected(GetAmigaKeyIndex(customControlMap[VK_A]));
-	//    cboB->setSelected(GetAmigaKeyIndex(customControlMap[VK_B]));
-	//    cboX->setSelected(GetAmigaKeyIndex(customControlMap[VK_X]));
-	//    cboY->setSelected(GetAmigaKeyIndex(customControlMap[VK_Y]));
-	//    cboL->setSelected(GetAmigaKeyIndex(customControlMap[VK_L]));
-	//    cboR->setSelected(GetAmigaKeyIndex(customControlMap[VK_R]));
-	//    cboUp->setSelected(GetAmigaKeyIndex(customControlMap[VK_UP]));
-	//    cboDown->setSelected(GetAmigaKeyIndex(customControlMap[VK_DOWN]));
-	//    cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[VK_LEFT]));
-	//    cboRight->setSelected(GetAmigaKeyIndex(customControlMap[VK_RIGHT]));
+
+    cboA->setSelected(GetAmigaKeyIndex(customControlMap[VK_A]));
+    cboB->setSelected(GetAmigaKeyIndex(customControlMap[VK_B]));
+    cboX->setSelected(GetAmigaKeyIndex(customControlMap[VK_X]));
+    cboY->setSelected(GetAmigaKeyIndex(customControlMap[VK_Y]));
+    cboL->setSelected(GetAmigaKeyIndex(customControlMap[VK_L]));
+    cboR->setSelected(GetAmigaKeyIndex(customControlMap[VK_R]));
+    cboUp->setSelected(GetAmigaKeyIndex(customControlMap[VK_UP]));
+    cboDown->setSelected(GetAmigaKeyIndex(customControlMap[VK_DOWN]));
+    cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[VK_LEFT]));
+    cboRight->setSelected(GetAmigaKeyIndex(customControlMap[VK_RIGHT]));
 }

@@ -40,6 +40,7 @@
 #include "akiko.h"
 #include "SDL.h"
 #include "amiberry_rp9.h"
+#include <map>
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void gui_force_rtarea_hdchange();
@@ -52,6 +53,7 @@ extern void SetLastActiveConfig(const char* filename);
 
 /* Keyboard */
 //int customControlMap[SDLK_LAST];
+map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map  
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
@@ -241,22 +243,21 @@ void target_default_options(struct uae_prefs* p, int type)
 {
 	p->amiberry_customControls = 0;
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
-	//    memset(customControlMap, 0, sizeof(customControlMap));
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
 	cfgfile_write(f, "amiberry.custom_controls", "%d", p->amiberry_customControls);
-	//	cfgfile_write(f, "amiberry.custom_up", "%d", customControlMap[VK_UP]);
-	//	cfgfile_write(f, "amiberry.custom_down", "%d", customControlMap[VK_DOWN]);
-	//	cfgfile_write(f, "amiberry.custom_left", "%d", customControlMap[VK_LEFT]);
-	//	cfgfile_write(f, "amiberry.custom_right", "%d", customControlMap[VK_RIGHT]);
-	//	cfgfile_write(f, "amiberry.custom_a", "%d", customControlMap[VK_A]);
-	//	cfgfile_write(f, "amiberry.custom_b", "%d", customControlMap[VK_B]);
-	//	cfgfile_write(f, "amiberry.custom_x", "%d", customControlMap[VK_X]);
-	//	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Y]);
-	//	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_L]);
-	//	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_R]);
+	cfgfile_write(f, "amiberry.custom_up", "%d", customControlMap[VK_UP]);
+	cfgfile_write(f, "amiberry.custom_down", "%d", customControlMap[VK_DOWN]);
+	cfgfile_write(f, "amiberry.custom_left", "%d", customControlMap[VK_LEFT]);
+	cfgfile_write(f, "amiberry.custom_right", "%d", customControlMap[VK_RIGHT]);
+	cfgfile_write(f, "amiberry.custom_a", "%d", customControlMap[VK_A]);
+	cfgfile_write(f, "amiberry.custom_b", "%d", customControlMap[VK_B]);
+	cfgfile_write(f, "amiberry.custom_x", "%d", customControlMap[VK_X]);
+	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Y]);
+	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_L]);
+	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_R]);
 }
 
 void target_restart()
@@ -271,16 +272,16 @@ TCHAR* target_expand_environment(const TCHAR* path)
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
 	int result = (cfgfile_intval(option, value, "custom_controls", &p->amiberry_customControls, 1)
-		//	              || cfgfile_intval(option, value, "custom_up", &customControlMap[VK_UP], 1)
-		//	              || cfgfile_intval(option, value, "custom_down", &customControlMap[VK_DOWN], 1)
-		//	              || cfgfile_intval(option, value, "custom_left", &customControlMap[VK_LEFT], 1)
-		//	              || cfgfile_intval(option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
-		//	              || cfgfile_intval(option, value, "custom_a", &customControlMap[VK_A], 1)
-		//	              || cfgfile_intval(option, value, "custom_b", &customControlMap[VK_B], 1)
-		//	              || cfgfile_intval(option, value, "custom_x", &customControlMap[VK_X], 1)
-		//	              || cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Y], 1)
-		//	              || cfgfile_intval(option, value, "custom_l", &customControlMap[VK_L], 1)
-		//	              || cfgfile_intval(option, value, "custom_r", &customControlMap[VK_R], 1)
+			    || cfgfile_intval(option, value, "custom_up", &customControlMap[VK_UP], 1)
+			    || cfgfile_intval(option, value, "custom_down", &customControlMap[VK_DOWN], 1)
+			    || cfgfile_intval(option, value, "custom_left", &customControlMap[VK_LEFT], 1)
+			    || cfgfile_intval(option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
+			    || cfgfile_intval(option, value, "custom_a", &customControlMap[VK_A], 1)
+			    || cfgfile_intval(option, value, "custom_b", &customControlMap[VK_B], 1)
+			    || cfgfile_intval(option, value, "custom_x", &customControlMap[VK_X], 1)
+			    || cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Y], 1)
+			    || cfgfile_intval(option, value, "custom_l", &customControlMap[VK_L], 1)
+			    || cfgfile_intval(option, value, "custom_r", &customControlMap[VK_R], 1)
 	);
 	return result;
 }
@@ -788,12 +789,14 @@ int handle_msgpump()
 				ioctl(0, KDSKBLED, kbd_flags);
 				break;
 #endif
-
+			case SDL_SCANCODE_ESCAPE:
+				inputdevice_do_keyboard(AK_ESC, 1);
+				break;
 			case SDL_SCANCODE_LSHIFT: // Shift key
-				inputdevice_do_keyboard(AK_RSH, 1);
+				inputdevice_do_keyboard(AK_LSH, 1);
 				break;
 			case SDL_SCANCODE_RSHIFT:
-				inputdevice_do_keyboard(AK_LSH, 1);
+				inputdevice_do_keyboard(AK_RSH, 1);
 				break;
 
 			case SDL_SCANCODE_RGUI:
@@ -817,39 +820,39 @@ int handle_msgpump()
 				break;
 
 			default:
-				//				if (currprefs.amiberry_customControls)
-				//				{
-				////					keycode = customControlMap[rEvent.key.keysym.sym];
-				//					if (keycode < 0)
-				//					{
-				//					    // Simulate mouse or joystick
-				//						SimulateMouseOrJoy(keycode, 1);
-				//						break;
-				//					}
-				//					else if (keycode > 0)
-				//					{
-				//					    // Send mapped key press
-				//						inputdevice_do_keyboard(keycode, 1);
-				//						break;
-				//					}
-				//				}
-				//				else
+				if (currprefs.amiberry_customControls)
+				{
+					keycode = customControlMap[rEvent.key.keysym.sym];
+					if (keycode < 0)
+					{
+						// Simulate mouse or joystick
+						SimulateMouseOrJoy(keycode, 1);
+						break;
+					}
+					else if (keycode > 0)
+					{
+						// Send mapped key press
+						inputdevice_do_keyboard(keycode, 1);
+						break;
+					}
+				}
+				else
 				modifier = rEvent.key.keysym.mod;
 
-				//                keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
-				//                if(keycode)
-				//                {
-				//                    if(modifier == KMOD_SHIFT)
-				//                        inputdevice_do_keyboard(AK_LSH, 1);
-				//                    else
-				//                        inputdevice_do_keyboard(AK_LSH, 0);
-				//					
-				//                    inputdevice_do_keyboard(keycode, 1);
-				//                }
-				//                else
-				//                {
-				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
-				//                }
+				keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
+				if(keycode)
+				{
+				    if(modifier == KMOD_SHIFT)
+				        inputdevice_do_keyboard(AK_LSH, 1);
+				    else
+				        inputdevice_do_keyboard(AK_LSH, 0);
+									
+				    inputdevice_do_keyboard(keycode, 1);
+				}
+				else
+				{
+					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+				}
 				break;
 			}
 			break;
@@ -857,11 +860,14 @@ int handle_msgpump()
 		case SDL_KEYUP:
 			switch (rEvent.key.keysym.scancode)
 			{
+			case SDL_SCANCODE_ESCAPE:
+				inputdevice_do_keyboard(AK_ESC, 0);
+				break;
 			case SDL_SCANCODE_LSHIFT: // Shift key
-				inputdevice_do_keyboard(AK_RSH, 0);
+				inputdevice_do_keyboard(AK_LSH, 0);
 				break;
 			case SDL_SCANCODE_RSHIFT:
-				inputdevice_do_keyboard(AK_LSH, 0);
+				inputdevice_do_keyboard(AK_RSH, 0);
 				break;
 
 			case SDL_SCANCODE_RGUI:
@@ -885,35 +891,35 @@ int handle_msgpump()
 				break;
 
 			default:
-				//				if (currprefs.amiberry_customControls)
-				//				{
-				////					keycode = customControlMap[rEvent.key.keysym.sym];
-				//					if (keycode < 0)
-				//					{
-				//					    // Simulate mouse or joystick
-				//						SimulateMouseOrJoy(keycode, 0);
-				//						break;
-				//					}
-				//					else if (keycode > 0)
-				//					{
-				//					    // Send mapped key release
-				//						inputdevice_do_keyboard(keycode, 0);
-				//						break;
-				//					}
-				//				}
+				if (currprefs.amiberry_customControls)
+				{
+					keycode = customControlMap[rEvent.key.keysym.sym];
+					if (keycode < 0)
+					{
+						// Simulate mouse or joystick
+						SimulateMouseOrJoy(keycode, 0);
+						break;
+					}
+					else if (keycode > 0)
+					{
+						// Send mapped key release
+						inputdevice_do_keyboard(keycode, 0);
+						break;
+					}
+				}
 
 				modifier = rEvent.key.keysym.mod;
-				//                keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
-				//                if(keycode)
-				//                {
-				//                    inputdevice_do_keyboard(keycode, 0);
-				//                    if(modifier == KMOD_SHIFT)
-				//                        inputdevice_do_keyboard(AK_LSH, 0);
-				//                }
-				//                else
-				//                {
-				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
-				//                }
+				keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
+				if(keycode)
+				{
+				    inputdevice_do_keyboard(keycode, 0);
+				    if(modifier == KMOD_SHIFT)
+				        inputdevice_do_keyboard(AK_LSH, 0);
+				}
+				else
+				{
+					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+				}
 				break;
 			}
 			break;
@@ -923,15 +929,7 @@ int handle_msgpump()
 			{
 				if (rEvent.button.button == SDL_BUTTON_LEFT)
 				{
-					if (currprefs.input_tablet > TABLET_OFF && !doStylusRightClick)
-					{
-						// Delay mousebutton, we need new position first...
-						//delayed_mousebutton = currprefs.amiberry_tapDelay << 1;
-					}
-					else
-					{
-						setmousebuttonstate(0, doStylusRightClick, 1);
-					}
+					setmousebuttonstate(0, doStylusRightClick, 1);
 				}
 				else if (rEvent.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 1);

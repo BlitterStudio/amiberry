@@ -20,18 +20,17 @@ extern int emulating;
 extern int z3_start_adr;
 extern int rtg_start_adr;
 
-void run_gui(void);
+void run_gui();
 void InGameMessage(const char *msg);
-void wait_for_vsync(void);
+void wait_for_vsync();
 
-void saveAdfDir(void);
+void saveAdfDir();
 void update_display(struct uae_prefs *);
-void graphics_subshutdown(void);
-void moveVertical(int value);
+void graphics_subshutdown();
 
-void amiberry_stop_sound(void);
+void amiberry_stop_sound();
 
-void keyboard_settrans(void);
+void keyboard_settrans();
 int translate_amiberry_keys(int symbol, int *modifier);
 void SimulateMouseOrJoy(int code, int keypressed);
 
@@ -49,12 +48,12 @@ void SimulateMouseOrJoy(int code, int keypressed);
 #define REMAP_CD32_FFW            -12
 #define REMAP_CD32_RWD            -13
 
-extern void free_AmigaMem(void);
-extern void alloc_AmigaMem(void);
+extern void free_AmigaMem();
+extern void alloc_AmigaMem();
 
-void reinit_amiga(void);
+void reinit_amiga();
 int count_HDs(struct uae_prefs *p);
-extern void gui_force_rtarea_hdchange(void);
+extern void gui_force_rtarea_hdchange();
 extern bool hardfile_testrdb(const TCHAR *filename);
 
 #ifdef __cplusplus

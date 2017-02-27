@@ -2,12 +2,6 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "uae.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "custom.h"
-#include "xwin.h"
-#include "drawing.h"
 #include "inputdevice.h"
 #include "keyboard.h"
 #include "keybuf.h"
@@ -154,64 +148,20 @@ int translate_amiberry_keys(int symbol, int *modifier)
     switch(symbol)
     {
     case VK_UP:
-        if(*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-        {
-            *modifier = KMOD_NONE;
-            return AK_UP;
-        }
-        break;
+		*modifier = KMOD_NONE;
+        return AK_UP;
 
     case VK_DOWN:
-        if(*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-        {
-            *modifier = KMOD_NONE;
-            return AK_DN;
-        }
-        break;
+        *modifier = KMOD_NONE;
+        return AK_DN;
 
     case VK_LEFT:
-        if(*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-        {
-            *modifier = KMOD_NONE;
-            return AK_LF;
-        }
-        break;
+        *modifier = KMOD_NONE;
+        return AK_LF;
 
     case VK_RIGHT:
-        if(*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-        {
-            *modifier = KMOD_NONE;
-            return AK_RT;
-        }
-        break;
-
-    case VK_A:
-        if(*modifier == KMOD_RCTRL)   // Right shoulder + button A -> CTRL
-        {
-            *modifier = KMOD_NONE;
-            return AK_CTRL;
-        }
-        break;
-
-    case VK_B:
-        if(*modifier == KMOD_RCTRL)   // Right shoulder + button B -> left ALT
-        {
-            *modifier = KMOD_NONE;
-            return AK_LALT;
-        }
-        break;
-
-    case VK_X:
-        if(*modifier == KMOD_RCTRL)   // Right shoulder + button X -> HELP
-        {
-            *modifier = KMOD_NONE;
-            return AK_HELP;
-        }
-        break;
-
-    case VK_Y: // button Y -> Space
         *modifier = KMOD_NONE;
-        return AK_SPC;
+        return AK_RT;
 
     case SDLK_F1:
         *modifier = KMOD_NONE;

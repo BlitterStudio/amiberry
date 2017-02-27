@@ -13,8 +13,10 @@
 #include "uae.h"
 #include "disk.h"
 #include "SDL.h"
+#include <map>
 
 //extern int customControlMap[SDLK_LAST];
+extern map<int, int> customControlMap;
 
 static int kickstart;
 
@@ -479,16 +481,16 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		fscanf(f, "cutRight=%d\n", &dummy);
 		fscanf(f, "customControls=%d\n", &p->amiberry_customControls);
 		fscanf(f, "custom_dpad=%d\n", &dummy);
-		//		fscanf(f, "custom_up=%d\n", &customControlMap[VK_UP]);
-		//		fscanf(f, "custom_down=%d\n", &customControlMap[VK_DOWN]);
-		//		fscanf(f, "custom_left=%d\n", &customControlMap[VK_LEFT]);
-		//		fscanf(f, "custom_right=%d\n", &customControlMap[VK_RIGHT]);
-		//		fscanf(f, "custom_A=%d\n", &customControlMap[VK_A]);
-		//		fscanf(f, "custom_B=%d\n", &customControlMap[VK_B]);
-		//		fscanf(f, "custom_X=%d\n", &customControlMap[VK_X]);
-		//		fscanf(f, "custom_Y=%d\n", &customControlMap[VK_Y]);
-		//		fscanf(f, "custom_L=%d\n", &customControlMap[VK_L]);
-		//		fscanf(f, "custom_R=%d\n", &customControlMap[VK_R]);
+		fscanf(f, "custom_up=%d\n", &customControlMap[VK_UP]);
+		fscanf(f, "custom_down=%d\n", &customControlMap[VK_DOWN]);
+		fscanf(f, "custom_left=%d\n", &customControlMap[VK_LEFT]);
+		fscanf(f, "custom_right=%d\n", &customControlMap[VK_RIGHT]);
+		fscanf(f, "custom_A=%d\n", &customControlMap[VK_A]);
+		fscanf(f, "custom_B=%d\n", &customControlMap[VK_B]);
+		fscanf(f, "custom_X=%d\n", &customControlMap[VK_X]);
+		fscanf(f, "custom_Y=%d\n", &customControlMap[VK_Y]);
+		fscanf(f, "custom_L=%d\n", &customControlMap[VK_L]);
+		fscanf(f, "custom_R=%d\n", &customControlMap[VK_R]);
 		fscanf(f, "cpu=%d\n", &cpu_level);
 		if (cpu_level > 0) // M68000
 		// Was old format
