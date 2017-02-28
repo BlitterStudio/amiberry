@@ -25,8 +25,6 @@ static gcn::Window* grpBlitter;
 static gcn::UaeRadioButton* optBlitNormal;
 static gcn::UaeRadioButton* optBlitImmed;
 static gcn::UaeRadioButton* optBlitWait;
-static gcn::Window* grpCopper;
-static gcn::UaeCheckBox* chkFastCopper;
 static gcn::Window* grpCollisionLevel;
 static gcn::UaeRadioButton* optCollNone;
 static gcn::UaeRadioButton* optCollSprites;
@@ -72,18 +70,6 @@ public:
 };
 
 static NTSCButtonActionListener* ntscButtonActionListener;
-
-
-class FastCopperActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		changed_prefs.fast_copper = chkFastCopper->isSelected();
-	}
-};
-
-static FastCopperActionListener* fastCopperActionListener;
 
 
 class BlitterButtonActionListener : public gcn::ActionListener
@@ -175,20 +161,6 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 
 	category.panel->add(grpBlitter);
 
-	fastCopperActionListener = new FastCopperActionListener();
-
-	chkFastCopper = new gcn::UaeCheckBox("Fast copper");
-	chkFastCopper->addActionListener(fastCopperActionListener);
-
-	grpCopper = new gcn::Window("Copper");
-	grpCopper->setPosition(grpBlitter->getX() + grpBlitter->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	grpCopper->add(chkFastCopper, 5, 10);
-	grpCopper->setMovable(false);
-	grpCopper->setSize(120, 55);
-	grpCopper->setBaseColor(gui_baseCol);
-
-	category.panel->add(grpCopper);
-
 	collisionButtonActionListener = new CollisionButtonActionListener();
 
 	optCollNone = new gcn::UaeRadioButton("None", "radioccollisiongroup");
@@ -239,10 +211,6 @@ void ExitPanelChipset()
 	delete grpBlitter;
 	delete blitterButtonActionListener;
 
-	delete chkFastCopper;
-	delete grpCopper;
-	delete fastCopperActionListener;
-
 	delete optCollNone;
 	delete optCollSprites;
 	delete optCollPlayfield;
@@ -272,9 +240,7 @@ void RefreshPanelChipset()
 	else
 		optBlitNormal->setSelected(true);
 
-	chkFastCopper->setSelected(changed_prefs.fast_copper);
-
-	if (changed_prefs.collision_level == 0)
+		if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);
 	else if (changed_prefs.collision_level == 1)
 		optCollSprites->setSelected(true);

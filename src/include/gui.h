@@ -48,17 +48,20 @@ struct gui_info
 	bool drive_writing[4];  /* drive is writing */
 	bool drive_disabled[4];	/* drive is disabled */
 	bool powerled;          /* state of power led */
+	uae_u8 powerled_brightness;	/* 0 to 255 */
 	uae_s8 drive_side;				/* floppy side */
 	uae_s8 hd;			          /* harddrive */
 	uae_s8 cd;			          /* CD */
+	uae_s8 md;					/* CD32 or CDTV internal storage */
 	bool cpu_halted;
-	int fps;
+	int fps, idle;
+	int fps_color;
 	int sndbuf, sndbuf_status;
 	TCHAR df[4][256];		    /* inserted image */
 	uae_u32 crc32[4];		    /* crc32 of image */
 };
 #define NUM_LEDS (LED_MAX)
-#define VISIBLE_LEDS 6
+#define VISIBLE_LEDS (LED_MAX - 1)
 
 extern struct gui_info gui_data;
 
@@ -66,7 +69,7 @@ extern void fetch_configurationpath(char *out, int size);
 extern void set_configurationpath(char *newpath);
 extern void set_rompath(char *newpath);
 extern void fetch_rp9path(char *out, int size);
-extern void fetch_savestatepath(char *out, int size);
+extern void fetch_statefilepath(char *out, int size);
 extern void fetch_screenshotpath(char *out, int size);
 
 extern void extractFileName(const char * str, char *buffer);

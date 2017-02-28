@@ -31,7 +31,7 @@ void graphics_subshutdown();
 void amiberry_stop_sound();
 
 void keyboard_settrans();
-int translate_amiberry_keys(int symbol, int *modifier);
+void translate_amiberry_keys(int, int);
 void SimulateMouseOrJoy(int code, int keypressed);
 
 #define REMAP_MOUSEBUTTON_LEFT    -1

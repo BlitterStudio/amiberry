@@ -235,7 +235,7 @@
     <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp" />
     <ClCompile Include="..\..\src\osdep\hardfile_amiberry.cpp" />
-    <ClCompile Include="..\..\src\osdep\keyboard.cpp" />
+    <ClCompile Include="..\..\src\osdep\keyboard_amiberry.cpp" />
     <ClCompile Include="..\..\src\osdep\menu\menu_config.cpp" />
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\..\src\osdep\neon_helper.s" />

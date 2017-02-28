@@ -371,7 +371,7 @@ void ReadConfigFileList()
 		strcat(tmp->FullPath, files[i].c_str());
 		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
-		cfgfile_get_description(tmp->FullPath, tmp->Description);
+		cfgfile_get_description(tmp->FullPath, tmp->Description, nullptr, nullptr, nullptr);
 		tmp->BuildInID = BUILDINID_NONE;
 		ConfigFilesList.push_back(tmp);
 	}
@@ -511,7 +511,7 @@ int gui_update()
 {
 	char tmp[MAX_PATH];
 
-	fetch_savestatepath(savestate_fname, MAX_DPATH);
+	fetch_statefilepath(savestate_fname, MAX_DPATH);
 	fetch_screenshotpath(screenshot_filename, MAX_DPATH);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)

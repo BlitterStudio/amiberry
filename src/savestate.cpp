@@ -211,8 +211,9 @@ TCHAR* restore_string_func(uae_u8** dstp)
 
 TCHAR* restore_path_func(uae_u8** dstp, int type)
 {
-	TCHAR* newpath;
-	TCHAR* s;
+	TCHAR *newpath;
+	TCHAR *s;
+	TCHAR *out = NULL;
 	TCHAR tmp[MAX_DPATH], tmp2[MAX_DPATH];
 
 	s = restore_string_func(dstp);
@@ -222,28 +223,27 @@ TCHAR* restore_path_func(uae_u8** dstp, int type)
 		return s;
 	if (type == SAVESTATE_PATH_HD)
 		return s;
-	getfilepart(tmp, sizeof tmp / sizeof (TCHAR), s);
-	if (zfile_exists(tmp))
-	{
-		xfree (s);
+	getfilepart(tmp, sizeof tmp / sizeof(TCHAR), s);
+	if (zfile_exists(tmp)) {
+		xfree(s);
 		return my_strdup(tmp);
 	}
 
-	newpath = nullptr;
-	if (type == SAVESTATE_PATH_FLOPPY)
-		newpath = currprefs.path_floppy;
-	else if (type == SAVESTATE_PATH_VDIR || type == SAVESTATE_PATH_HDF)
-		newpath = currprefs.path_hardfile;
-	else if (type == SAVESTATE_PATH_CD)
-		newpath = currprefs.path_cd;
-	if (newpath != nullptr && newpath[0] != 0)
-	{
-		_tcscpy (tmp2, newpath);
+	for (int i = 0; i < MAX_PATHS; i++) {
+		newpath = NULL;
+		if (type == SAVESTATE_PATH_FLOPPY)
+			newpath = currprefs.path_floppy.path[i];
+		else if (type == SAVESTATE_PATH_VDIR || type == SAVESTATE_PATH_HDF)
+			newpath = currprefs.path_hardfile.path[i];
+		else if (type == SAVESTATE_PATH_CD)
+			newpath = currprefs.path_cd.path[i];
+		if (newpath == NULL || newpath[0] == 0)
+			break;
+		_tcscpy(tmp2, newpath);
 		fixtrailing(tmp2);
-		_tcscat (tmp2, tmp);
-		if (zfile_exists(tmp2))
-		{
-			xfree (s);
+		_tcscat(tmp2, tmp);
+		if (zfile_exists(tmp2)) {
+			xfree(s);
 			return my_strdup(tmp2);
 		}
 	}

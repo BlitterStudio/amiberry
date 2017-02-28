@@ -58,12 +58,10 @@ map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests s
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 #include <linux/kd.h>
 #include <sys/ioctl.h>
 unsigned char kbd_led_status;
 char kbd_flags;
-#endif
 
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
@@ -236,6 +234,10 @@ void target_fixup_options(struct uae_prefs* p)
 		p->z3fastmem_start = z3_start_adr;
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+	if (p->gfx_size.width == 0)
+		p->gfx_size.width = 640;
+	if (p->gfx_size.height == 0)
+		p->gfx_size.height == 256;
 	p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 }
 
@@ -323,7 +325,7 @@ void fetch_rp9path(char* out, int size)
 	strncpy(out, rp9_path, size);
 }
 
-void fetch_savestatepath(char* out, int size)
+void fetch_statefilepath(char* out, int size)
 {
 	strncpy(out, start_path_data, size);
 	strncat(out, "/savestates/", size);
@@ -672,6 +674,7 @@ int main(int argc, char* argv[])
 
 	alloc_AmigaMem();
 	RescanROMs();
+	keyboard_settrans();
 
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	// set capslock state based upon current "real" state
@@ -718,8 +721,7 @@ int handle_msgpump()
 	SDL_Event rEvent;
 	int keycode;
 	int modifier;
-	int handled = 0;
-	int i;
+	int i, num;
 
 	if (delayed_mousebutton)
 	{
@@ -747,18 +749,8 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
-			// Menu button or key pressed
-			if (currprefs.key_for_menu != 0 && rEvent.key.keysym.scancode == currprefs.key_for_menu)
-			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-				break;
-			}
-			if (currprefs.key_for_quit != 0 && rEvent.key.keysym.sym == currprefs.key_for_quit)
-			{
-				inputdevice_add_inputcode(AKS_QUIT, 1);
-				break;
-			}
-			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_MENU]))
+
+			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 			{
 				uae_reset(0, 1);
 				break;
@@ -766,8 +758,19 @@ int handle_msgpump()
 
 			switch (rEvent.key.keysym.scancode)
 			{
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
+			case SDL_SCANCODE_NUMLOCKCLEAR:
+				if (currprefs.keyboard_leds[KBLED_NUMLOCKB] > 0)
+				{
+					//oldleds ^= KBLED_NUMLOCKM;
+					//ch = true;
+				}
+				break;
 			case SDL_SCANCODE_CAPSLOCK: // capslock
+				if (currprefs.keyboard_leds[KBLED_CAPSLOCKB] > 0)
+				{
+					//oldleds ^= KBLED_CAPSLOCKM;
+					//ch = true;
+				}
 				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 				ioctl(0, KDGKBLED, &kbd_flags);
 				ioctl(0, KDGETLED, &kbd_led_status);
@@ -788,35 +791,13 @@ int handle_msgpump()
 				ioctl(0, KDSETLED, kbd_led_status);
 				ioctl(0, KDSKBLED, kbd_flags);
 				break;
-#endif
-			case SDL_SCANCODE_ESCAPE:
-				inputdevice_do_keyboard(AK_ESC, 1);
-				break;
-			case SDL_SCANCODE_LSHIFT: // Shift key
-				inputdevice_do_keyboard(AK_LSH, 1);
-				break;
-			case SDL_SCANCODE_RSHIFT:
-				inputdevice_do_keyboard(AK_RSH, 1);
-				break;
 
-			case SDL_SCANCODE_RGUI:
-			case SDL_SCANCODE_MENU:
-				inputdevice_do_keyboard(AK_RAMI, 1);
-				break;
-			case SDL_SCANCODE_LGUI:
-				inputdevice_do_keyboard(AK_LAMI, 1);
-				break;
-
-			case SDL_SCANCODE_LALT:
-				inputdevice_do_keyboard(AK_LALT, 1);
-				break;
-			case SDL_SCANCODE_RALT:
-				inputdevice_do_keyboard(AK_RALT, 1);
-				break;
-
-			case SDL_SCANCODE_LCTRL:
-			case SDL_SCANCODE_RCTRL:
-				inputdevice_do_keyboard(AK_CTRL, 1);
+			case SDL_SCANCODE_SCROLLLOCK:
+				if (currprefs.keyboard_leds[KBLED_SCROLLLOCKB] > 0)
+				{
+					//oldleds ^= KBLED_SCROLLLOCKM;
+					//ch = true;
+				}
 				break;
 
 			default:
@@ -836,23 +817,7 @@ int handle_msgpump()
 						break;
 					}
 				}
-				else
-				modifier = rEvent.key.keysym.mod;
-
-				keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
-				if(keycode)
-				{
-				    if(modifier == KMOD_SHIFT)
-				        inputdevice_do_keyboard(AK_LSH, 1);
-				    else
-				        inputdevice_do_keyboard(AK_LSH, 0);
-									
-				    inputdevice_do_keyboard(keycode, 1);
-				}
-				else
-				{
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
-				}
+				translate_amiberry_keys(rEvent.key.keysym.sym, 1);
 				break;
 			}
 			break;
@@ -860,36 +825,6 @@ int handle_msgpump()
 		case SDL_KEYUP:
 			switch (rEvent.key.keysym.scancode)
 			{
-			case SDL_SCANCODE_ESCAPE:
-				inputdevice_do_keyboard(AK_ESC, 0);
-				break;
-			case SDL_SCANCODE_LSHIFT: // Shift key
-				inputdevice_do_keyboard(AK_LSH, 0);
-				break;
-			case SDL_SCANCODE_RSHIFT:
-				inputdevice_do_keyboard(AK_RSH, 0);
-				break;
-
-			case SDL_SCANCODE_RGUI:
-			case SDL_SCANCODE_MENU:
-				inputdevice_do_keyboard(AK_RAMI, 0);
-				break;
-			case SDL_SCANCODE_LGUI:
-				inputdevice_do_keyboard(AK_LAMI, 0);
-				break;
-
-			case SDL_SCANCODE_LALT:
-				inputdevice_do_keyboard(AK_LALT, 0);
-				break;
-			case SDL_SCANCODE_RALT:
-				inputdevice_do_keyboard(AK_RALT, 0);
-				break;
-
-			case SDL_SCANCODE_LCTRL:
-			case SDL_SCANCODE_RCTRL:
-				inputdevice_do_keyboard(AK_CTRL, 0);
-				break;
-
 			default:
 				if (currprefs.amiberry_customControls)
 				{
@@ -908,18 +843,7 @@ int handle_msgpump()
 					}
 				}
 
-				modifier = rEvent.key.keysym.mod;
-				keycode = translate_amiberry_keys(rEvent.key.keysym.sym, &modifier);
-				if(keycode)
-				{
-				    inputdevice_do_keyboard(keycode, 0);
-				    if(modifier == KMOD_SHIFT)
-				        inputdevice_do_keyboard(AK_LSH, 0);
-				}
-				else
-				{
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
-				}
+				translate_amiberry_keys(rEvent.key.keysym.sym, 0);
 				break;
 			}
 			break;

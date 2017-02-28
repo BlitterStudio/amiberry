@@ -429,9 +429,6 @@
     <ClCompile Include="..\..\src\osdep\fsdb_host.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\keyboard.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
@@ -559,6 +556,9 @@
       <Filter>Source files\osdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\hardfile_amiberry.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\keyboard_amiberry.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
   </ItemGroup>

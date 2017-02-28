@@ -108,9 +108,9 @@ static void open_screen(struct uae_prefs* p)
 	else
 #endif
 	{
-		p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
-		width = p->gfx_size.width;
-		height = p->gfx_size.height;
+		p->gfx_resolution = p->gfx_size.width ? (p->gfx_size.width > 600 ? 1 : 0) : 1;
+		width = p->gfx_size.width ? p->gfx_size.width : 640;
+		height = p->gfx_size.height ? p->gfx_size.height : 256;
 		
 		if (p->scaling_method == -1)
 		{
@@ -286,6 +286,20 @@ static int init_colors()
 		xcolors[i] = xcolors[i] * 0x00010001;
 
 	return 1;
+}
+
+int target_get_display(const TCHAR *name)
+{
+	return 0;
+}
+
+const TCHAR *target_get_display_name(int num, bool friendlyname)
+{
+	if (num <= 0)
+		return NULL;
+	if (friendlyname)
+		return "Raspberry Pi display";
+	return "0";
 }
 
 /*

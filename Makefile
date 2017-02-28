@@ -156,7 +156,7 @@ OBJS =	\
 	src/osdep/charset.o \
 	src/osdep/fsdb_host.o \
 	src/osdep/hardfile_amiberry.o \
-	src/osdep/keyboard.o \
+	src/osdep/keyboard_amiberry.o \
 	src/osdep/mp3decoder.o \
 	src/osdep/writelog.o \
 	src/osdep/amiberry.o \

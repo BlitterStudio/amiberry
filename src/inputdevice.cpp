@@ -2092,6 +2092,10 @@ void inputdevice_hsync(void)
 	static int cnt;
 	cap_check();
 
+#ifdef CATWEASEL
+	catweasel_hsync();
+#endif
+
 	for (int i = 0; i < INPUT_QUEUE_SIZE; i++)
 	{
 		struct input_queue_struct* iq = &input_queue[i];
@@ -2304,7 +2308,7 @@ void inputdevice_do_keyboard(int code, int state)
 	{
 		uae_u8 key = code | (state ? 0x00 : 0x80);
 		keybuf[key & 0x7f] = (key & 0x80) ? 0 : 1;
-		if (record_key((uae_u8)((key << 1) | (key >> 7))))
+		if (record_key(uae_u8((key << 1) | (key >> 7))))
 		{
 		}
 		return;
@@ -5121,6 +5125,29 @@ int inputdevice_iskeymapped(int keyboard, int scancode)
 	return scancodeused[keyboard][scancode];
 }
 
+int inputdevice_synccapslock(int oldcaps, int *capstable)
+{
+	struct uae_input_device *na = &keyboards[0];
+	int j, i;
+
+	if (!keyboards)
+		return -1;
+	for (j = 0; na->extra[j]; j++) {
+		if (na->extra[j] == INPUTEVENT_KEY_CAPS_LOCK) {
+			for (i = 0; capstable[i]; i += 2) {
+				if (na->extra[j] == capstable[i]) {
+					if (oldcaps != capstable[i + 1]) {
+						oldcaps = capstable[i + 1];
+						inputdevice_translatekeycode(0, capstable[i], oldcaps ? -1 : 0);
+					}
+					return i;
+				}
+			}
+		}
+	}
+	return -1;
+}
+
 static void rqualifiers(uae_u64 flags, bool release)
 {
 	uae_u64 mask = ID_FLAG_QUALIFIER1 << 1;
@@ -5238,6 +5265,23 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 					continue;
 				}
 
+				// if evt == caps and scan == caps: sync with native caps led
+				if (evt == INPUTEVENT_KEY_CAPS_LOCK) {
+					int v;
+					if (state < 0)
+						state = 1;
+					v = target_checkcapslock(scancode, &state);
+					if (v < 0)
+						continue;
+#ifndef INPUTDEVICE_SIMPLE
+					if (v > 0)
+						toggle = 0;
+#endif
+				}
+				else if (state < 0) {
+					// it was caps lock resync, ignore, not mapped to caps
+					continue;
+				}
 #ifndef INPUTDEVICE_SIMPLE
 				if (!state) {
 					didcustom |= process_custom_event (na, j, state, qualmask, autofire, k);

@@ -52,15 +52,15 @@ void load_buildin_config(int id)
 	switch (id)
 	{
 	case BUILDINID_A500:
-		bip_a500(&changed_prefs, -1);
+		built_in_prefs(&changed_prefs, 0, 1, 0, 0);
 		break;
 
 	case BUILDINID_A1200:
-		bip_a1200(&changed_prefs, -1);
+		built_in_prefs(&changed_prefs, 4, 0, 0, 0);
 		break;
 
 	case BUILDINID_CD32:
-		bip_cd32(&changed_prefs, -1);
+		built_in_prefs(&changed_prefs, 8, 0, 0, 0);
 		break;
 	}
 }

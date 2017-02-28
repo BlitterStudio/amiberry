@@ -4377,15 +4377,6 @@ static void update_copper(int until_hpos)
 		return;
 	}
 
-	if (currprefs.fast_copper)
-	{
-		if (eventtab[ev_copper].active)
-		{
-			eventtab[ev_copper].active = false;
-			return;
-		}
-	}
-
 	if (cop_state.state == COP_wait && vp < cop_state.vcmp)
 	{
 		eventtab[ev_copper].active = false;
@@ -4605,22 +4596,6 @@ static void update_copper(int until_hpos)
 				if (vp == cop_state.vcmp && hp < cop_state.hcmp)
 				{
 					/* Position not reached yet.  */
-					if (currprefs.fast_copper)
-					{
-						if ((cop_state.i2 & 0xFE) == 0xFE)
-						{
-							int wait_finish = cop_state.hcmp - 2;
-							/* This will leave c_hpos untouched if it's equal to wait_finish.  */
-							if (wait_finish < c_hpos)
-								return;
-							else if (wait_finish <= until_hpos)
-							{
-								c_hpos = wait_finish;
-							}
-							else
-								c_hpos = until_hpos;
-						}
-					}
 					break;
 				}
 
@@ -4672,14 +4647,6 @@ out:
 	cop_state.hpos = c_hpos;
 	last_copper_hpos = until_hpos;
 
-	if (currprefs.fast_copper)
-	{
-		/* The test against maxhpos also prevents us from calling predict_copper
-		   when we are being called from hsync_handler, which would not only be
-		   stupid, but actively harmful.  */
-		if ((regs.spcflags & SPCFLAG_COPPER) && (c_hpos + 8 < maxhpos))
-			predict_copper();
-	}
 }
 
 static void compute_spcflag_copper(int hpos)
@@ -4716,14 +4683,7 @@ static void compute_spcflag_copper(int hpos)
 
 	copper_enabled_thisline = 1;
 
-	if (currprefs.fast_copper)
-	{
-		predict_copper();
-		if (! eventtab[ev_copper].active)
-			set_special(SPCFLAG_COPPER);
-	}
-	else
-		set_special(SPCFLAG_COPPER);
+	set_special(SPCFLAG_COPPER);
 }
 
 static void copper_handler()
@@ -6912,7 +6872,6 @@ void check_prefs_changed_custom()
 	currprefs.immediate_blits = changed_prefs.immediate_blits;
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
 	currprefs.collision_level = changed_prefs.collision_level;
-	currprefs.fast_copper = changed_prefs.fast_copper;
 	currprefs.cs_cd32cd = changed_prefs.cs_cd32cd;
 	currprefs.cs_cd32c2p = changed_prefs.cs_cd32c2p;
 	currprefs.cs_cd32nvram = changed_prefs.cs_cd32nvram;

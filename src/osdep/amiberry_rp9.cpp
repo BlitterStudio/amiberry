@@ -22,7 +22,7 @@
 #define MAX_MANIFEST_ENTRY 256
 
 static char rp9tmp_path[MAX_DPATH];
-static std::vector<std::string> lstTmpRP9Files;
+static vector<string> lstTmpRP9Files;
 static int add_HDF_DHnum = 0;
 static bool clip_no_hires = false;
 
@@ -89,50 +89,44 @@ static void set_default_system(struct uae_prefs *p, const char *system, int rom)
   default_prefs(p, 0);
   del_tmpFiles();
   
-  if(strcmp(system, "a-500") == 0)
-    bip_a500(p, rom);
-  else if(strcmp(system, "a-500plus") == 0)
-    bip_a500plus(p, rom);
-  else if(strcmp(system, "a-1200") == 0)
-    bip_a1200(p, rom);
-  else if(strcmp(system, "a-2000") == 0)
-    bip_a2000(p, rom);
-  else if(strcmp(system, "a-4000") == 0)
-    bip_a4000(p, rom);
+  if (strcmp(system, "a-500") == 0)
+	  built_in_prefs(p, 0, 1, 0, rom);
+  else if (strcmp(system, "a-1200") == 0)
+	  built_in_prefs(p, 0, 1, 0, rom);
 }
 
 
 static void parse_compatibility(struct uae_prefs *p, xmlNode *node)
 {
   for(xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) {
-    if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("compatibility")) == 0) {
+    if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("compatibility")) == 0) {
       xmlChar *content = xmlNodeGetContent(curr_node);
       if(content != NULL) {
-        if(strcmp((const char *) content, "flexible-blitter-immediate") == 0)
+        if(strcmp(reinterpret_cast<const char *>(content), "flexible-blitter-immediate") == 0)
           p->immediate_blits = 1;
-        else if(strcmp((const char *) content, "turbo-floppy") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "turbo-floppy") == 0)
           p->floppy_speed = 400;
-        else if(strcmp((const char *) content, "flexible-sprite-collisions-spritesplayfield") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "flexible-sprite-collisions-spritesplayfield") == 0)
           p->collision_level = 2;
-        else if(strcmp((const char *) content, "flexible-sprite-collisions-spritesonly") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "flexible-sprite-collisions-spritesonly") == 0)
           p->collision_level = 1;
-        else if(strcmp((const char *) content, "flexible-sound") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "flexible-sound") == 0)
           p->produce_sound = 2;
-        else if(strcmp((const char *) content, "flexible-maxhorizontal-nohires") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "flexible-maxhorizontal-nohires") == 0)
           clip_no_hires = true;
-        else if(strcmp((const char *) content, "jit") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "jit") == 0)
         {
           p->cachesize = 8192;
-          p->address_space_24 = 0;
+          p->address_space_24 = false;
         }
-        else if(strcmp((const char *) content, "flexible-cpu-cycles") == 0)
-          p->cpu_compatible = 0;
-        else if(strcmp((const char *) content, "flexible-maxhorizontal-nosuperhires") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "flexible-cpu-cycles") == 0)
+          p->cpu_compatible = false;
+        else if(strcmp(reinterpret_cast<const char *>(content), "flexible-maxhorizontal-nosuperhires") == 0)
           ; /* nothing to change */
-        else if(strcmp((const char *) content, "flexible-maxvertical-nointerlace") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "flexible-maxvertical-nointerlace") == 0)
           ; /* nothing to change */
         else
-          printf("rp9: unknown compatibility: %s\n", content);
+          printf("rp9: unknown compatibility: %p\n", content);
         xmlFree(content);
       }      
     }
@@ -143,18 +137,18 @@ static void parse_compatibility(struct uae_prefs *p, xmlNode *node)
 static void parse_ram(struct uae_prefs *p, xmlNode *node)
 {
   for(xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) {
-    if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("ram")) == 0) {
+    if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("ram")) == 0) {
       xmlChar *content = xmlNodeGetContent(curr_node);
       if(content != NULL) {
-        xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *) _T("type"));
+        xmlChar *attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
         if(attr != NULL) 
         {
-          int size = atoi((const char *)content);
-          if(strcmp((const char *) attr, "fast") == 0)
+          int size = atoi(reinterpret_cast<const char *>(content));
+          if(strcmp(reinterpret_cast<const char *>(attr), "fast") == 0)
             p->fastmem_size = size;
-          else if(strcmp((const char *) attr, "z3") == 0)
+          else if(strcmp(reinterpret_cast<const char *>(attr), "z3") == 0)
             p->z3fastmem_size = size;
-          else if(strcmp((const char *) attr, "chip") == 0)
+          else if(strcmp(reinterpret_cast<const char *>(attr), "chip") == 0)
             p->chipmem_size = size;
           xmlFree(attr);
         }
@@ -172,24 +166,24 @@ static void parse_clip(struct uae_prefs *p, xmlNode *node)
   
   for(xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) 
   {
-    if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("clip")) == 0) 
+    if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("clip")) == 0) 
     {
-      xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *) _T("left"));
+      xmlChar *attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("left"));
       if(attr != NULL)
       {
-        left = atoi((const char *)attr);
+        left = atoi(reinterpret_cast<const char *>(attr));
         xmlFree(attr);
       }
-      attr = xmlGetProp(curr_node, (const xmlChar *) _T("top"));
+      attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("top"));
       if(attr != NULL)
       {
-        top = atoi((const char *)attr) / 2;
+        top = atoi(reinterpret_cast<const char *>(attr)) / 2;
         xmlFree(attr);
       }
-      attr = xmlGetProp(curr_node, (const xmlChar *) _T("width"));
+      attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("width"));
       if(attr != NULL)
       {
-        width = atoi((const char *)attr);
+        width = atoi(reinterpret_cast<const char *>(attr));
         if(p->chipset_mask & CSMASK_AGA && clip_no_hires == false)
           width = width / 2; // Use Hires in AGA mode
         else
@@ -208,10 +202,10 @@ static void parse_clip(struct uae_prefs *p, xmlNode *node)
           p->gfx_size.width = 768;
         xmlFree(attr);
       }
-      attr = xmlGetProp(curr_node, (const xmlChar *) _T("height"));
+      attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("height"));
       if(attr != NULL)
       {
-        height = atoi((const char *)attr) / 2;
+        height = atoi(reinterpret_cast<const char *>(attr)) / 2;
         if(height <= 200)
           p->gfx_size.height = 200;
         else if(height <= 216)
@@ -236,30 +230,30 @@ static void parse_peripheral(struct uae_prefs *p, xmlNode *node)
 {
   for(xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) 
   {
-    if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("peripheral")) == 0) 
+    if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("peripheral")) == 0) 
     {
       xmlChar *content = xmlNodeGetContent(curr_node);
       if(content != NULL)
       {
-        if(strcmp((const char *)content, "floppy") == 0) 
+        if(strcmp(reinterpret_cast<const char *>(content), "floppy") == 0) 
         {
           int type = DRV_35_DD;
           int unit = -1;
           
-          xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *) _T("type"));
+          xmlChar *attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
           if(attr != NULL) 
           {
-            if(strcmp((const char *) attr, "dd") == 0)
+            if(strcmp(reinterpret_cast<const char *>(attr), "dd") == 0)
               type = DRV_35_DD;
             else
               type = DRV_35_HD;
             xmlFree(attr);
           }
           
-          attr = xmlGetProp(curr_node, (const xmlChar *) _T("unit"));
+          attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("unit"));
           if(attr != NULL) 
           {
-            unit = atoi((const char *) attr);
+            unit = atoi(reinterpret_cast<const char *>(attr));
             xmlFree(attr);
           }
           
@@ -270,46 +264,46 @@ static void parse_peripheral(struct uae_prefs *p, xmlNode *node)
             p->floppyslots[unit].dfxtype = type;
           }
         }
-        else if(strcmp((const char *)content, "a-501") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "a-501") == 0)
           p->bogomem_size = 0x00080000;
-        else if(strcmp((const char *)content, "cpu") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "cpu") == 0)
         {
-          xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *) _T("type"));
+          xmlChar *attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
           if(attr != NULL) 
           {
-            p->cpu_model = atoi((const char *) attr);
+            p->cpu_model = atoi(reinterpret_cast<const char *>(attr));
             if(p->cpu_model > 68020)
               p->address_space_24 = 0;
             if(p->cpu_model == 68040)
               p->fpu_model = 68040;
             xmlFree(attr);
           }
-          attr = xmlGetProp(curr_node, (const xmlChar *) _T("speed"));
+          attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("speed"));
           if(attr != NULL) 
           {
-            if(strcmp((const char *) attr, "max") == 0)
+            if(strcmp(reinterpret_cast<const char *>(attr), "max") == 0)
               p->m68k_speed = -1;
             xmlFree(attr);
           }
         }
-        else if(strcmp((const char *)content, "fpu") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "fpu") == 0)
         {
-          xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *) _T("type"));
+          xmlChar *attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
           if(attr != NULL) 
           {
-            if(strcmp((const char *) attr, "68881") == 0)
+            if(strcmp(reinterpret_cast<const char *>(attr), "68881") == 0)
               p->fpu_model = 68881;
-            else if(strcmp((const char *) attr, "68882") == 0)
+            else if(strcmp(reinterpret_cast<const char *>(attr), "68882") == 0)
               p->fpu_model = 68882;
             xmlFree(attr);
           }
         }
-        else if(strcmp((const char *)content, "jit") == 0)
+        else if(strcmp(reinterpret_cast<const char *>(content), "jit") == 0)
         {
-          xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *) _T("memory"));
+          xmlChar *attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("memory"));
           if(attr != NULL) 
           {
-            p->cachesize = atoi((const char *) attr) / 1024;
+            p->cachesize = atoi(reinterpret_cast<const char *>(attr)) / 1024;
             xmlFree(attr);
           }
         }

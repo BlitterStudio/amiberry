@@ -7,13 +7,6 @@
   */
 
 #pragma once
-#define KEYCODE_UNK    0
-#define KEYCODE_X11    1
-#define KEYCODE_FBCON  2
-
-extern char keyboard_type;
-extern void  init_keyboard();
-
 /* First, two dummies */
 #define AK_mousestuff 0x100
 #define AK_inhibit 0x101
@@ -126,6 +119,7 @@ extern void  init_keyboard();
 #define AK_BACKQUOTE 0x00
 #define AK_MINUS 0x0B
 #define AK_EQUAL 0x0C
+
 #define AK_RESETWARNING 0x78
 #define AK_INIT_POWERUP 0xfd
 #define AK_TERM_POWERUP 0xfe
@@ -180,3 +174,5 @@ enum aks { AKS_ENTERGUI = 0x200, AKS_SCREENSHOT_FILE, AKS_SCREENSHOT_CLIPBOARD, 
 };
 
 #define AKS_FIRST AKS_ENTERGUI
+
+extern int target_checkcapslock(int, int *);
