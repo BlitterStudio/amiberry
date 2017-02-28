@@ -920,6 +920,16 @@ int handle_msgpump()
 				}
 			}
 			break;
+
+		case SDL_MOUSEWHEEL:
+			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+			{
+				int valY = rEvent.wheel.y;
+				int valX = rEvent.wheel.x;
+				setmousestate(0, 2, valY, 0);
+				setmousestate(0, 3, valX, 0);
+			}
+			break;
 		}
 	}
 	return got;
