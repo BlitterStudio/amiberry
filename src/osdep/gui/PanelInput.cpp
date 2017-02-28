@@ -82,7 +82,7 @@ public:
 	}
 };
 
-static const char* inputport_list[] = {"Nubs as mouse", "dPad as mouse", "dPad as joystick", "dPad as CD32 contr.", "none"};
+static const char* inputport_list[] = {"Mouse", "Arrow keys as mouse", "Arrow keys as joystick", "Arrow keys as CD32 contr.", "none"};
 StringListModel ctrlPortList(inputport_list, 5);
 
 const char* autofireValues[] = {"Off", "Slow", "Medium", "Fast"};
@@ -235,22 +235,22 @@ public:
 			changed_prefs.amiberry_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
 
 		    else if (actionEvent.getSource() == cboA)
-		        customControlMap[VK_A] = amigaKey[cboA->getSelected()];
+		        customControlMap[VK_Green] = amigaKey[cboA->getSelected()];
 		
 		    else if (actionEvent.getSource() == cboB)
-		        customControlMap[VK_B] = amigaKey[cboB->getSelected()];
+		        customControlMap[VK_Blue] = amigaKey[cboB->getSelected()];
 		
 		    else if (actionEvent.getSource() == cboX)
-		        customControlMap[VK_X] = amigaKey[cboX->getSelected()];
+		        customControlMap[VK_Red] = amigaKey[cboX->getSelected()];
 		
 		    else if (actionEvent.getSource() == cboY)
-		        customControlMap[VK_Y] = amigaKey[cboY->getSelected()];
+		        customControlMap[VK_Yellow] = amigaKey[cboY->getSelected()];
 		
 		    else if (actionEvent.getSource() == cboL)
-		        customControlMap[VK_L] = amigaKey[cboL->getSelected()];
+		        customControlMap[VK_LShoulder] = amigaKey[cboL->getSelected()];
 		
 		    else if (actionEvent.getSource() == cboR)
-		        customControlMap[VK_R] = amigaKey[cboR->getSelected()];
+		        customControlMap[VK_RShoulder] = amigaKey[cboR->getSelected()];
 		
 		    else if (actionEvent.getSource() == cboUp)
 		        customControlMap[VK_UP] = amigaKey[cboUp->getSelected()];
@@ -575,12 +575,12 @@ void RefreshPanelInput()
 
 	chkCustomCtrl->setSelected(changed_prefs.amiberry_customControls);
 
-    cboA->setSelected(GetAmigaKeyIndex(customControlMap[VK_A]));
-    cboB->setSelected(GetAmigaKeyIndex(customControlMap[VK_B]));
-    cboX->setSelected(GetAmigaKeyIndex(customControlMap[VK_X]));
-    cboY->setSelected(GetAmigaKeyIndex(customControlMap[VK_Y]));
-    cboL->setSelected(GetAmigaKeyIndex(customControlMap[VK_L]));
-    cboR->setSelected(GetAmigaKeyIndex(customControlMap[VK_R]));
+    cboA->setSelected(GetAmigaKeyIndex(customControlMap[VK_Green]));
+    cboB->setSelected(GetAmigaKeyIndex(customControlMap[VK_Blue]));
+    cboX->setSelected(GetAmigaKeyIndex(customControlMap[VK_Red]));
+    cboY->setSelected(GetAmigaKeyIndex(customControlMap[VK_Yellow]));
+    cboL->setSelected(GetAmigaKeyIndex(customControlMap[VK_LShoulder]));
+    cboR->setSelected(GetAmigaKeyIndex(customControlMap[VK_RShoulder]));
     cboUp->setSelected(GetAmigaKeyIndex(customControlMap[VK_UP]));
     cboDown->setSelected(GetAmigaKeyIndex(customControlMap[VK_DOWN]));
     cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[VK_LEFT]));

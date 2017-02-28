@@ -41,6 +41,7 @@
 #include "SDL.h"
 #include "amiberry_rp9.h"
 #include <map>
+#include "scsidev.h"
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void gui_force_rtarea_hdchange();
@@ -245,21 +246,38 @@ void target_default_options(struct uae_prefs* p, int type)
 {
 	p->amiberry_customControls = 0;
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+
+	p->kbd_led_num = -1; // No status on numlock
+	p->kbd_led_scr = -1; // No status on scrollock
+	p->scaling_method = -1; //Default is Auto
+	p->key_for_menu = SDLK_F12;
+	p->key_for_quit = 0;
+	p->button_for_menu = -1;
+	p->button_for_quit = -1;
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
+	cfgfile_write(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
+	cfgfile_write(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
+	cfgfile_write(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
+	cfgfile_write(f, _T("scaling_method"), _T("%d"), p->scaling_method);
+	cfgfile_write(f, _T("key_for_menu"), _T("%d"), p->key_for_menu);
+	cfgfile_write(f, _T("key_for_quit"), _T("%d"), p->key_for_quit);
+	cfgfile_write(f, _T("button_for_menu"), _T("%d"), p->button_for_menu);
+	cfgfile_write(f, _T("button_for_quit"), _T("%d"), p->button_for_quit);
+
 	cfgfile_write(f, "amiberry.custom_controls", "%d", p->amiberry_customControls);
 	cfgfile_write(f, "amiberry.custom_up", "%d", customControlMap[VK_UP]);
 	cfgfile_write(f, "amiberry.custom_down", "%d", customControlMap[VK_DOWN]);
 	cfgfile_write(f, "amiberry.custom_left", "%d", customControlMap[VK_LEFT]);
 	cfgfile_write(f, "amiberry.custom_right", "%d", customControlMap[VK_RIGHT]);
-	cfgfile_write(f, "amiberry.custom_a", "%d", customControlMap[VK_A]);
-	cfgfile_write(f, "amiberry.custom_b", "%d", customControlMap[VK_B]);
-	cfgfile_write(f, "amiberry.custom_x", "%d", customControlMap[VK_X]);
-	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Y]);
-	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_L]);
-	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_R]);
+	cfgfile_write(f, "amiberry.custom_a", "%d", customControlMap[VK_Green]);
+	cfgfile_write(f, "amiberry.custom_b", "%d", customControlMap[VK_Blue]);
+	cfgfile_write(f, "amiberry.custom_x", "%d", customControlMap[VK_Red]);
+	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Yellow]);
+	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_LShoulder]);
+	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_RShoulder]);
 }
 
 void target_restart()
@@ -268,23 +286,42 @@ void target_restart()
 
 TCHAR* target_expand_environment(const TCHAR* path)
 {
+	if (!path)
+		return nullptr;
 	return strdup(path);
 }
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
-	int result = (cfgfile_intval(option, value, "custom_controls", &p->amiberry_customControls, 1)
-			    || cfgfile_intval(option, value, "custom_up", &customControlMap[VK_UP], 1)
-			    || cfgfile_intval(option, value, "custom_down", &customControlMap[VK_DOWN], 1)
-			    || cfgfile_intval(option, value, "custom_left", &customControlMap[VK_LEFT], 1)
-			    || cfgfile_intval(option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
-			    || cfgfile_intval(option, value, "custom_a", &customControlMap[VK_A], 1)
-			    || cfgfile_intval(option, value, "custom_b", &customControlMap[VK_B], 1)
-			    || cfgfile_intval(option, value, "custom_x", &customControlMap[VK_X], 1)
-			    || cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Y], 1)
-			    || cfgfile_intval(option, value, "custom_l", &customControlMap[VK_L], 1)
-			    || cfgfile_intval(option, value, "custom_r", &customControlMap[VK_R], 1)
-	);
+
+	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "key_for_menu", &p->key_for_menu, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "key_for_quit", &p->key_for_quit, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "button_for_menu", &p->button_for_menu, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
+		return 1;
+
+	int result = cfgfile_intval(option, value, "custom_controls", &p->amiberry_customControls, 1)
+		|| cfgfile_intval(option, value, "custom_up", &customControlMap[VK_UP], 1)
+		|| cfgfile_intval(option, value, "custom_down", &customControlMap[VK_DOWN], 1)
+		|| cfgfile_intval(option, value, "custom_left", &customControlMap[VK_LEFT], 1)
+		|| cfgfile_intval(option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
+		|| cfgfile_intval(option, value, "custom_a", &customControlMap[VK_Green], 1)
+		|| cfgfile_intval(option, value, "custom_b", &customControlMap[VK_Blue], 1)
+		|| cfgfile_intval(option, value, "custom_x", &customControlMap[VK_Red], 1)
+		|| cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Yellow], 1)
+		|| cfgfile_intval(option, value, "custom_l", &customControlMap[VK_LShoulder], 1)
+		|| cfgfile_intval(option, value, "custom_r", &customControlMap[VK_RShoulder], 1);
 	return result;
 }
 
@@ -749,23 +786,22 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
-
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 			{
 				uae_reset(0, 1);
 				break;
 			}
 
-			switch (rEvent.key.keysym.scancode)
+			switch (rEvent.key.keysym.sym)
 			{
-			case SDL_SCANCODE_NUMLOCKCLEAR:
+			case SDLK_NUMLOCKCLEAR:
 				if (currprefs.keyboard_leds[KBLED_NUMLOCKB] > 0)
 				{
 					//oldleds ^= KBLED_NUMLOCKM;
 					//ch = true;
 				}
 				break;
-			case SDL_SCANCODE_CAPSLOCK: // capslock
+			case SDLK_CAPSLOCK: // capslock
 				if (currprefs.keyboard_leds[KBLED_CAPSLOCKB] > 0)
 				{
 					//oldleds ^= KBLED_CAPSLOCKM;
@@ -792,7 +828,7 @@ int handle_msgpump()
 				ioctl(0, KDSKBLED, kbd_flags);
 				break;
 
-			case SDL_SCANCODE_SCROLLLOCK:
+			case SDLK_SCROLLLOCK:
 				if (currprefs.keyboard_leds[KBLED_SCROLLLOCKB] > 0)
 				{
 					//oldleds ^= KBLED_SCROLLLOCKM;
@@ -810,7 +846,7 @@ int handle_msgpump()
 						SimulateMouseOrJoy(keycode, 1);
 						break;
 					}
-					else if (keycode > 0)
+					if (keycode > 0)
 					{
 						// Send mapped key press
 						inputdevice_do_keyboard(keycode, 1);
@@ -823,9 +859,6 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYUP:
-			switch (rEvent.key.keysym.scancode)
-			{
-			default:
 				if (currprefs.amiberry_customControls)
 				{
 					keycode = customControlMap[rEvent.key.keysym.sym];
@@ -835,7 +868,7 @@ int handle_msgpump()
 						SimulateMouseOrJoy(keycode, 0);
 						break;
 					}
-					else if (keycode > 0)
+					if (keycode > 0)
 					{
 						// Send mapped key release
 						inputdevice_do_keyboard(keycode, 0);
@@ -845,8 +878,6 @@ int handle_msgpump()
 
 				translate_amiberry_keys(rEvent.key.keysym.sym, 0);
 				break;
-			}
-			break;
 
 		case SDL_MOUSEBUTTONDOWN:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)

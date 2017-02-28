@@ -288,7 +288,7 @@ static void SelectFileLoop()
 		{
 			if (event.type == SDL_KEYDOWN)
 			{
-				switch (event.key.keysym.sym)
+				switch (event.key.keysym.scancode)
 				{
 				case VK_ESCAPE:
 					dialogFinished = true;
@@ -330,11 +330,13 @@ static void SelectFileLoop()
 					}
 					break;
 
-				case VK_X:
-				case VK_A:
-					event.key.keysym.sym = SDLK_RETURN;
+				case VK_Red:
+				case VK_Green:
+					event.key.keysym.scancode = SDL_SCANCODE_RETURN;
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
+					break;
+				default: 
 					break;
 				}
 			}

@@ -1191,17 +1191,6 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write_str(f, _T("gfx_api"), filterapi[p->gfx_api]);
 	cfgfile_dwrite(f, _T("gfx_horizontal_tweak"), _T("%d"), p->gfx_extrawidth);
 
-#ifdef AMIBERRY
-	cfgfile_write(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
-	cfgfile_write(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
-	cfgfile_write(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
-	cfgfile_write(f, _T("scaling_method"), _T("%d"), p->scaling_method);
-	cfgfile_write(f, _T("key_for_menu"), _T("%d"), p->key_for_menu);
-	cfgfile_write(f, _T("key_for_quit"), _T("%d"), p->key_for_quit);
-	cfgfile_write(f, _T("button_for_menu"), _T("%d"), p->button_for_menu);
-	cfgfile_write(f, _T("button_for_quit"), _T("%d"), p->button_for_quit);
-#endif
-
 	cfgfile_write_bool(f, _T("immediate_blits"), p->immediate_blits);
 	cfgfile_dwrite_str(f, _T("waiting_blits"), waitblits[p->waiting_blits]);
 	cfgfile_write_bool(f, _T("ntsc"), p->ntscmode);
@@ -2320,26 +2309,6 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 		return 1;
 	}
-
-#ifdef AMIBERRY
-	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "key_for_menu", &p->key_for_menu, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "key_for_quit", &p->key_for_quit, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_menu", &p->button_for_menu, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
-		return 1;
-#endif
-
 
 	if (cfgfile_string(option, value, _T("config_version"), tmpbuf, sizeof(tmpbuf) / sizeof(TCHAR))) {
 		TCHAR *tmpp2;
@@ -5010,16 +4979,6 @@ void default_prefs(struct uae_prefs *p, int type)
 	p->tablet_library = false;
 	p->input_magic_mouse = 0;
 	p->input_magic_mouse_cursor = 0;
-
-#ifdef AMIBERRY
-	p->kbd_led_num = -1; // No status on numlock
-	p->kbd_led_scr = -1; // No status on scrollock
-	p->scaling_method = -1; //Default is Auto
-	p->key_for_menu = SDLK_F12;
-	p->key_for_quit = 0;
-	p->button_for_menu = -1;
-	p->button_for_quit = -1;
-#endif
 
 	inputdevice_default_prefs(p);
 

@@ -229,9 +229,9 @@ namespace sdl
 					}
 				}
 				else
-					switch (event.key.keysym.sym)
+					switch (event.key.keysym.scancode)
 					{
-					case SDLK_q:
+					case SDL_SCANCODE_Q:
 						//-------------------------------------------------
 						// Quit entire program via Q on keyboard
 						//-------------------------------------------------
@@ -246,20 +246,15 @@ namespace sdl
 						break;
 
 					case VK_ESCAPE:
-					case VK_R:
-						//-------------------------------------------------
-						// Reset Amiga
-						//-------------------------------------------------
-						uae_reset(1, 1);
 						gui_running = false;
 						break;
 
-					case VK_X:
-					case VK_A:
+					case VK_Red:
+					case VK_Green:
 						//------------------------------------------------
 						// Simulate press of enter when 'X' pressed
 						//------------------------------------------------
-						event.key.keysym.sym = SDLK_RETURN;
+						event.key.keysym.scancode = SDL_SCANCODE_RETURN;
 						gui_input->pushInput(event); // Fire key down
 						event.type = SDL_KEYUP; // and the key up
 						break;
@@ -282,6 +277,8 @@ namespace sdl
 					case VK_RIGHT:
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
+						break;
+					default: 
 						break;
 					}
 			}

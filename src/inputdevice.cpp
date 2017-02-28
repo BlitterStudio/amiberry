@@ -6490,9 +6490,9 @@ void setmousestate(int mouse, int axis, int data, int isabs)
 		if (currprefs.input_tablet == TABLET_MOUSEHACK && mousehack_alive())
 			return;
 	}
-	v = (int)d;
+	v = int(d);
 	fract[mouse][axis] += d - v;
-	diff = (int)fract[mouse][axis];
+	diff = int(fract[mouse][axis]);
 	v += diff;
 	fract[mouse][axis] -= diff;
 	for (i = 0; i < MAX_INPUT_SUB_EVENT; i++)

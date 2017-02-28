@@ -101,8 +101,8 @@ void InGameMessage(const char *msg)
 			{
 				switch (event.key.keysym.sym)
 				{
-				case VK_X:
-				case VK_A:
+				case VK_Red:
+				case VK_Green:
 				case SDLK_RETURN:
 					msg_done = 1;
 					break;

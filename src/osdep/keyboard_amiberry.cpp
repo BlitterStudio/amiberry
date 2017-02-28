@@ -470,16 +470,16 @@ void translate_amiberry_keys(int scancode, int newstate)
 	int translatedScancode = scancode;
 	switch (scancode)
 	{
-	case VK_UP:
+	case SDLK_UP:
 		translatedScancode = AK_UP;
 		break;
-	case VK_DOWN:
+	case SDLK_DOWN:
 		translatedScancode = AK_DN;
 		break;
-	case VK_LEFT:
+	case SDLK_LEFT:
 		translatedScancode = AK_LF;
 		break;
-	case VK_RIGHT:
+	case SDLK_RIGHT:
 		translatedScancode = AK_RT;
 		break;
 	case SDLK_F1:
