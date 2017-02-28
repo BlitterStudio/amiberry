@@ -491,7 +491,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		fscanf(f, "custom_Y=%d\n", &customControlMap[VK_Yellow]);
 		fscanf(f, "custom_L=%d\n", &customControlMap[VK_LShoulder]);
 		fscanf(f, "custom_R=%d\n", &customControlMap[VK_RShoulder]);
-		fscanf(f, "custom_start=%d\n", &customControlMap[VK_Start]);
+		fscanf(f, "custom_start=%d\n", &customControlMap[VK_Play]);
 		fscanf(f, "cpu=%d\n", &cpu_level);
 		if (cpu_level > 0) // M68000
 		// Was old format

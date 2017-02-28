@@ -37,11 +37,11 @@ int produce_sound = 0;
 int changed_produce_sound = 0;
 
 // #define SOUND_USE_SEMAPHORES
-uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN + 32)*DEFAULT_SOUND_CHANNELS];
+uae_u16 paula_sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN + 32)*DEFAULT_SOUND_CHANNELS];
 unsigned n_callback_sndbuff, n_render_sndbuff;
-uae_u16 *sndbufpt = sndbuffer[0];
-uae_u16 *render_sndbuff = sndbuffer[0];
-uae_u16 *finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN * 2;
+uae_u16 *paula_sndbufpt = paula_sndbuffer[0];
+uae_u16 *render_sndbuff = paula_sndbuffer[0];
+uae_u16 *finish_sndbuff = paula_sndbuffer[0] + SNDBUFFER_LEN * 2;
 
 uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * 2];
 uae_u16 *cdbufpt = cdaudio_buffer[0];
@@ -119,13 +119,13 @@ static void sound_copy_produced_block(void *ud, Uint8 *stream, int len)
 		if (cdaudio_active && currprefs.sound_freq == 44100 && cdrdcnt < cdwrcnt)
 		{
 			for (int i = 0; i < SNDBUFFER_LEN * 2; ++i)
-				sndbuffer[rdcnt % SOUND_BUFFERS_COUNT][i] += cdaudio_buffer[cdrdcnt & (CDAUDIO_BUFFERS - 1)][i];
+				paula_sndbuffer[rdcnt % SOUND_BUFFERS_COUNT][i] += cdaudio_buffer[cdrdcnt & (CDAUDIO_BUFFERS - 1)][i];
 		}
 	
-		memcpy(stream, sndbuffer[rdcnt % SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN * 4, len));
+		memcpy(stream, paula_sndbuffer[rdcnt % SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN * 4, len));
 	}
 	else
-		memcpy(stream, sndbuffer[rdcnt % SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN * 2, len));
+		memcpy(stream, paula_sndbuffer[rdcnt % SOUND_BUFFERS_COUNT], MIN(SNDBUFFER_LEN * 2, len));
 
 
 			//cdrdcnt = cdwrcnt;
@@ -171,9 +171,9 @@ static void sound_thread_mixer(void *ud, Uint8 *stream, int len)
 
 static void init_soundbuffer_usage(void)
 {
-	sndbufpt = sndbuffer[0];
-	render_sndbuff = sndbuffer[0];
-	finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN * 2;
+	paula_sndbufpt = paula_sndbuffer[0];
+	render_sndbuff = paula_sndbuffer[0];
+	finish_sndbuff = paula_sndbuffer[0] + SNDBUFFER_LEN * 2;
 	//output_cnt = 0;
 	rdcnt = 0;
 	wrcnt = 0;
@@ -273,13 +273,13 @@ void finish_sound_buffer(void)
 
 	// "GET NEXT PRODUCER BUFFER FOR WRITING"
 	wrcnt++;
-	sndbufpt = render_sndbuff = sndbuffer[wrcnt % SOUND_BUFFERS_COUNT];
+	paula_sndbufpt = render_sndbuff = paula_sndbuffer[wrcnt % SOUND_BUFFERS_COUNT];
 
 
 	if (currprefs.sound_stereo)
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN * 2;
+		finish_sndbuff = paula_sndbufpt + SNDBUFFER_LEN * 2;
 	else
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN;
+		finish_sndbuff = paula_sndbufpt + SNDBUFFER_LEN;
 
 #ifdef SOUND_USE_SEMAPHORES
 	sem_post(&sound_sem);
@@ -301,11 +301,11 @@ void pause_sound_buffer(void)
 
 void restart_sound_buffer(void)
 {
-	sndbufpt = render_sndbuff = sndbuffer[wrcnt % SOUND_BUFFERS_COUNT];
+	paula_sndbufpt = render_sndbuff = paula_sndbuffer[wrcnt % SOUND_BUFFERS_COUNT];
 	if (currprefs.sound_stereo)
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN * 2;
+		finish_sndbuff = paula_sndbufpt + SNDBUFFER_LEN * 2;
 	else
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN;
+		finish_sndbuff = paula_sndbufpt + SNDBUFFER_LEN;
 
 	cdbufpt = render_cdbuff = cdaudio_buffer[cdwrcnt & (CDAUDIO_BUFFERS - 1)];
 	finish_cdbuff = cdbufpt + CDAUDIO_BUFFER_LEN * 2;

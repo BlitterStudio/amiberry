@@ -47,7 +47,7 @@
  * Virtual Key for CD32 Start button
  * default: Pause/Break
  */
-#define VK_Start SDL_SCANCODE_PAUSE
+#define VK_Play SDL_SCANCODE_RETURN
 
 /*
  * Virtual Key for (up) button

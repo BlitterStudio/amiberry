@@ -170,30 +170,31 @@ struct inputevent {
 #define AM_KK (AM_KEY|AM_JOY_BUT|AM_MOUSE_BUT)
 #define AM_KT (AM_K|AM_SETTOGGLE)
 
-extern int inputdevice_iterate (int devnum, int num, TCHAR *name, int *af);
-extern bool inputdevice_set_gameports_mapping (struct uae_prefs *prefs, int devnum, int num, int evtnum, uae_u64 flags, int port, int input_selected_setting);
-extern int inputdevice_set_mapping (int devnum, int num, const TCHAR *name, TCHAR *custom, uae_u64 flags, int port, int sub);
-extern int inputdevice_get_mapping (int devnum, int num, uae_u64 *pflags, int *port, TCHAR *name, TCHAR *custom, int sub);
-extern void inputdevice_copyconfig (const struct uae_prefs *src, struct uae_prefs *dst);
-extern void inputdevice_copy_single_config (struct uae_prefs *p, int src, int dst, int devnum, int selectedwidget);
-extern void inputdevice_swap_ports (struct uae_prefs *p, int devnum);
-extern void inputdevice_swap_compa_ports (struct uae_prefs *p, int portswap);
-extern void inputdevice_config_change (void);
-extern int inputdevice_config_change_test (void);
-extern int inputdevice_get_device_index (int devnum);
-extern const char *inputdevice_get_device_name(int type, int devnum);
-extern const char *inputdevice_get_device_name2(int devnum);
-extern const char *inputdevice_get_device_unique_name(int type, int devnum);
-extern int inputdevice_get_device_status (int devnum);
-extern void inputdevice_set_device_status (int devnum, int enabled);
-extern int inputdevice_get_device_total (int type);
-extern int inputdevice_get_widget_num (int devnum);
-extern int inputdevice_get_widget_type (int devnum, int num, TCHAR *name);
+extern int inputdevice_iterate(int devnum, int num, TCHAR *name, int *af);
+extern bool inputdevice_set_gameports_mapping(struct uae_prefs *prefs, int devnum, int num, int evtnum, uae_u64 flags, int port, int input_selected_setting);
+extern int inputdevice_set_mapping(int devnum, int num, const TCHAR *name, TCHAR *custom, uae_u64 flags, int port, int sub);
+extern int inputdevice_get_mapping(int devnum, int num, uae_u64 *pflags, int *port, TCHAR *name, TCHAR *custom, int sub);
+extern void inputdevice_copyconfig(const struct uae_prefs *src, struct uae_prefs *dst);
+extern void inputdevice_copy_single_config(struct uae_prefs *p, int src, int dst, int devnum, int selectedwidget);
+extern void inputdevice_swap_ports(struct uae_prefs *p, int devnum);
+extern void inputdevice_swap_compa_ports(struct uae_prefs *p, int portswap);
+extern void inputdevice_config_change(void);
+extern int inputdevice_config_change_test(void);
+extern int inputdevice_get_device_index(int devnum);
+extern const char* inputdevice_get_device_name(int type, int devnum);
+extern const char* inputdevice_get_device_name2(int devnum);
+extern const char* inputdevice_get_device_unique_name(int type, int devnum);
+extern int inputdevice_get_device_status(int devnum);
+extern void inputdevice_set_device_status(int devnum, int enabled);
+extern int inputdevice_get_device_total(int type);
+extern int inputdevice_get_widget_num(int devnum);
+extern int inputdevice_get_widget_type(int devnum, int num, TCHAR *name);
 
-extern int input_get_default_mouse (struct uae_input_device *uid, int num, int port, int af, bool gp, bool wheel, bool joymouseswap);
-extern int input_get_default_joystick (struct uae_input_device *uid, int num, int port, int af, int mode, bool gp, bool joymouseswap);
-extern int input_get_default_joystick_analog (struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap);
-extern int input_get_default_keyboard (int num);
+extern int input_get_default_mouse(struct uae_input_device *uid, int num, int port, int af, bool gp, bool wheel, bool joymouseswap);
+extern int input_get_default_lightpen(struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap);
+extern int input_get_default_joystick(struct uae_input_device *uid, int num, int port, int af, int mode, bool gp, bool joymouseswap);
+extern int input_get_default_joystick_analog(struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap);
+extern int input_get_default_keyboard(int num);
 
 #define DEFEVENT(A, B, C, D, E, F) INPUTEVENT_ ## A,
 enum inputevents {
@@ -207,29 +208,36 @@ extern void handle_cd32_joystick_cia (uae_u8, uae_u8);
 extern uae_u8 handle_parport_joystick (int port, uae_u8 pra, uae_u8 dra);
 extern uae_u8 handle_joystick_buttons (uae_u8, uae_u8);
 
+#define MAGICMOUSE_BOTH 0
+#define MAGICMOUSE_NATIVE_ONLY 1
+#define MAGICMOUSE_HOST_ONLY 2
+
+extern int magicmouse_alive(void);
+extern int is_tablet(void);
+extern int inputdevice_is_tablet(void);
 extern int inputdevice_is_tablet (void);
 extern int input_mousehack_status (int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset);
 extern void input_mousehack_mouseoffset (uaecptr pointerprefs);
+extern int mousehack_alive(void);
+extern void setmouseactive(int);
+extern bool ismouseactive(void);
 
-extern void setmousebuttonstateall (int mouse, uae_u32 buttonbits, uae_u32 buttonmask);
-extern void setjoybuttonstateall (int joy, uae_u32 buttonbits, uae_u32 buttonmask);
-extern void setjoybuttonstate (int joy, int button, int state);
-extern void setmousebuttonstate (int mouse, int button, int state);
-extern void setjoystickstate (int joy, int axle, int state, int max);
-extern int getjoystickstate (int mouse);
-void setmousestate (int mouse, int axis, int data, int isabs);
-
-extern int getmousestate (int mouse);
-extern void inputdevice_updateconfig (const struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
-extern void inputdevice_updateconfig_internal (const struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
-#ifndef INPUTDEVICE_SIMPLE
+extern void setmousebuttonstateall(int mouse, uae_u32 buttonbits, uae_u32 buttonmask);
+extern void setjoybuttonstateall(int joy, uae_u32 buttonbits, uae_u32 buttonmask);
+extern void setjoybuttonstate(int joy, int button, int state);
+extern void setmousebuttonstate(int mouse, int button, int state);
+extern void setjoystickstate(int joy, int axle, int state, int max);
+extern int getjoystickstate(int mouse);
+void setmousestate(int mouse, int axis, int data, int isabs);
+extern int getmousestate(int mouse);
+extern void inputdevice_updateconfig(const struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
+extern void inputdevice_updateconfig_internal(const struct uae_prefs *srcprefs, struct uae_prefs *dstprefs);
 extern void inputdevice_devicechange (struct uae_prefs *prefs);
 
 #define INTERNALEVENT_CPURESET 0
 #define INTERNALEVENT_KBRESET 1
 
 extern void send_internalevent (int eventid);
-#endif
 
 extern int inputdevice_translatekeycode (int keyboard, int scancode, int state);
 extern void inputdevice_checkqualifierkeycode (int keyboard, int scancode, int state);
@@ -276,17 +284,23 @@ extern void inputdevice_default_prefs (struct uae_prefs *p);
 extern void inputdevice_acquire (int allmode);
 extern void inputdevice_unacquire (void);
 
+extern void indicator_leds(int num, int state);
+
+extern void warpmode(int mode);
+extern void pausemode(int mode);
+
 extern void inputdevice_add_inputcode (int code, int state);
 extern void inputdevice_handle_inputcode (void);
 
-extern void inputdevice_tablet_strobe (void);
+extern void inputdevice_tablet(int x, int y, int z,
+	int pressure, uae_u32 buttonbits, int inproximity,
+	int ax, int ay, int az);
+extern void inputdevice_tablet_info(int maxx, int maxy, int maxz, int maxax, int maxay, int maxaz, int xres, int yres);
+extern void inputdevice_tablet_strobe(void);
 
 extern uae_u64 input_getqualifiers (void);
 
 extern void setsystime (void);
-
-extern int inputdevice_get_device_total (int type);
-extern const char *inputdevice_get_device_name(int type, int devnum);
 
 #define JSEM_MODE_DEFAULT 0
 #define JSEM_MODE_WHEELMOUSE 1

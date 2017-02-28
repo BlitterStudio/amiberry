@@ -53,7 +53,7 @@ static gcn::UaeDropDown* cboLeft;
 static gcn::Label* lblRight;
 static gcn::UaeDropDown* cboRight;
 static gcn::Label* lblStart;
-static gcn::UaeDropDown* cboStart;
+static gcn::UaeDropDown* cboPlay;
 
 class StringListModel : public gcn::ListModel
 {
@@ -266,8 +266,8 @@ public:
 		    else if (actionEvent.getSource() == cboRight)
 		        customControlMap[VK_RIGHT] = amigaKey[cboRight->getSelected()];
 
-			else if (actionEvent.getSource() == cboStart)
-				customControlMap[VK_Start] = amigaKey[cboStart->getSelected()];
+			else if (actionEvent.getSource() == cboPlay)
+				customControlMap[VK_Play] = amigaKey[cboPlay->getSelected()];
 	}
 };
 
@@ -421,14 +421,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboRight->setId("cboRight");
 	cboRight->addActionListener(inputActionListener);
 
-	lblStart = new gcn::Label("Start:");
+	lblStart = new gcn::Label("Play:");
 	lblStart->setSize(80, LABEL_HEIGHT);
 	lblStart->setAlignment(gcn::Graphics::RIGHT);
-	cboStart = new gcn::UaeDropDown(&mappingList);
-	cboStart->setSize(150, DROPDOWN_HEIGHT);
-	cboStart->setBaseColor(gui_baseCol);
-	cboStart->setId("cboStart");
-	cboStart->addActionListener(inputActionListener);
+	cboPlay = new gcn::UaeDropDown(&mappingList);
+	cboPlay->setSize(150, DROPDOWN_HEIGHT);
+	cboPlay->setBaseColor(gui_baseCol);
+	cboPlay->setId("cboPlay");
+	cboPlay->addActionListener(inputActionListener);
 
 	int posY = DISTANCE_BORDER;
 	int posColumn2;
@@ -479,7 +479,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(cboRight, posColumn2 + lblRight->getWidth() + 8, posY);
 	posY += cboLeft->getHeight() + 4;
 	category.panel->add(lblStart, DISTANCE_BORDER, posY);
-	category.panel->add(cboStart, DISTANCE_BORDER + lblStart->getWidth() + 8, posY);
+	category.panel->add(cboPlay, DISTANCE_BORDER + lblStart->getWidth() + 8, posY);
 
 	RefreshPanelInput();
 }
@@ -519,7 +519,7 @@ void ExitPanelInput()
 	delete cboLeft;
 	delete lblRight;
 	delete cboRight;
-	delete cboStart;
+	delete cboPlay;
 
 	delete inputActionListener;
 }
@@ -606,5 +606,5 @@ void RefreshPanelInput()
     cboDown->setSelected(GetAmigaKeyIndex(customControlMap[VK_DOWN]));
     cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[VK_LEFT]));
     cboRight->setSelected(GetAmigaKeyIndex(customControlMap[VK_RIGHT]));
-	cboStart->setSelected(GetAmigaKeyIndex(customControlMap[VK_Start]));
+	cboPlay->setSelected(GetAmigaKeyIndex(customControlMap[VK_Play]));
 }

@@ -457,7 +457,7 @@ static void read_joystick()
 				setjoybuttonstate(0, 3, keystate[VK_Yellow]);
 
 			if (!joyButXviaCustom[6])
-				setjoybuttonstate(0, 6, keystate[VK_Start]);
+				setjoybuttonstate(0, 6, keystate[VK_Play]);
 			if (!joyButXviaCustom[5])
 				setjoybuttonstate(0, 5, keystate[VK_RShoulder]);
 			if (!joyButXviaCustom[4])

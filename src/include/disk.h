@@ -48,6 +48,8 @@ extern TCHAR *DISK_history_get (int idx, int type);
 int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di);
 extern TCHAR *DISK_get_saveimagepath (const TCHAR *name);
 extern void DISK_reinsert (int num);
+extern int disk_prevnext(int drive, int dir);
+extern int disk_prevnext_name(TCHAR *img, int dir);
 
 extern void DSKLEN (uae_u16 v, int hpos);
 extern uae_u16 DSKBYTR (int hpos);

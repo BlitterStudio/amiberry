@@ -12,11 +12,11 @@
 #define SOUND_BUFFERS_COUNT 4
 #define SNDBUFFER_LEN 2048
 
-extern uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
-extern uae_u16 *sndbufpt;
+extern uae_u16 paula_sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
+extern uae_u16 *paula_sndbufpt;
 extern uae_u16 *render_sndbuff;
 extern uae_u16 *finish_sndbuff;
-extern int sndbufsize;
+extern int paula_sndbufsize;
 extern void finish_sound_buffer (void);
 extern void restart_sound_buffer (void);
 extern void pause_sound_buffer (void);
@@ -28,23 +28,26 @@ extern int setup_sound (void);
 extern void resume_sound (void);
 extern void pause_sound (void);
 extern void reset_sound (void);
+extern void sound_mute(int);
 extern void sound_volume (int);
+extern void set_volume(int, int);
+extern void master_sound_volume(int);
 
 STATIC_INLINE void set_sound_buffers (void)
 {
 }
 
-#define check_sound_buffers() { if (sndbufpt >= finish_sndbuff) finish_sound_buffer (); }
+#define check_sound_buffers() { if (paula_sndbufpt >= finish_sndbuff) finish_sound_buffer (); }
 
 STATIC_INLINE void clear_sound_buffers (void)
 {
-    memset (sndbuffer, 0, sizeof(sndbuffer));
+    memset (paula_sndbuffer, 0, sizeof(paula_sndbuffer));
 }
 
 #define PUT_SOUND_WORD_MONO(x) put_sound_word_mono_func(x)
 
-#define PUT_SOUND_WORD(b) do { *sndbufpt = b; sndbufpt = sndbufpt + 1; } while (0)
-#define PUT_SOUND_WORD_STEREO(l,r) do { *((uae_u32 *)sndbufpt) = (r << 16) | (l & 0xffff); sndbufpt = sndbufpt + 2; } while (0)
+#define PUT_SOUND_WORD(b) do { *paula_sndbufpt = b; paula_sndbufpt = paula_sndbufpt + 1; } while (0)
+#define PUT_SOUND_WORD_STEREO(l,r) do { *((uae_u32 *)paula_sndbufpt) = (r << 16) | (l & 0xffff); paula_sndbufpt = paula_sndbufpt + 2; } while (0)
 
 #define PUT_SOUND_WORD_LEFT(b) do { if (currprefs.sound_filter) b = filter (b, &sound_filter_state[0]); PUT_SOUND_WORD(b); } while (0)
 #define PUT_SOUND_WORD_RIGHT(b) do { if (currprefs.sound_filter) b = filter (b, &sound_filter_state[1]); PUT_SOUND_WORD(b); } while (0)

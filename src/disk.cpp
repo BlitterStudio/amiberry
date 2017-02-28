@@ -2740,6 +2740,7 @@ int disk_setwriteprotect(struct uae_prefs* p, int num, const TCHAR* name, bool w
 
 void disk_eject(int num)
 {
+	set_config_changed();
 	gui_filename(num, _T(""));
 	drive_eject(floppy + num);
 	*currprefs.floppyslots[num].df = *changed_prefs.floppyslots[num].df = 0;
