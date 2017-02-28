@@ -44,6 +44,12 @@
 #define VK_RShoulder SDL_SCANCODE_RCTRL
 
 /*
+ * Virtual Key for CD32 Start button
+ * default: Pause/Break
+ */
+#define VK_Start SDL_SCANCODE_PAUSE
+
+/*
  * Virtual Key for (up) button
  * default: UP (273)
  */

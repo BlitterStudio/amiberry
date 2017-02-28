@@ -278,6 +278,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Yellow]);
 	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_LShoulder]);
 	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_RShoulder]);
+	cfgfile_write(f, "amiberry.custom_start", "%d", customControlMap[VK_Start]);
 }
 
 void target_restart()
@@ -321,7 +322,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		|| cfgfile_intval(option, value, "custom_x", &customControlMap[VK_Red], 1)
 		|| cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Yellow], 1)
 		|| cfgfile_intval(option, value, "custom_l", &customControlMap[VK_LShoulder], 1)
-		|| cfgfile_intval(option, value, "custom_r", &customControlMap[VK_RShoulder], 1);
+		|| cfgfile_intval(option, value, "custom_r", &customControlMap[VK_RShoulder], 1)
+		|| cfgfile_intval(option, value, "custom_start", &customControlMap[VK_Start], 1);
 	return result;
 }
 

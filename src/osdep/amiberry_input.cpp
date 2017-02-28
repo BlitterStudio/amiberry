@@ -456,10 +456,8 @@ static void read_joystick()
 			if (!joyButXviaCustom[3])
 				setjoybuttonstate(0, 3, keystate[VK_Yellow]);
 
-			int cd32_start = 0;
-
 			if (!joyButXviaCustom[6])
-				setjoybuttonstate(0, 6, cd32_start);
+				setjoybuttonstate(0, 6, keystate[VK_Start]);
 			if (!joyButXviaCustom[5])
 				setjoybuttonstate(0, 5, keystate[VK_RShoulder]);
 			if (!joyButXviaCustom[4])
@@ -563,8 +561,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int num, int port, 
 	if (mode == JSEM_MODE_JOYSTICK_CD32)
 	{
 		setid_af(uid, num, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED, af, gp);
-		//setid(uid, num, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE, gp);
-		setid(uid, num, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON, gp);
+		setid(uid, num, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE, gp);		
 		setid(uid, num, ID_BUTTON_OFFSET + 2, 0, port, port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN, gp);
 		setid(uid, num, ID_BUTTON_OFFSET + 3, 0, port, port ? INPUTEVENT_JOY2_CD32_YELLOW : INPUTEVENT_JOY1_CD32_YELLOW, gp);
 		setid(uid, num, ID_BUTTON_OFFSET + 4, 0, port, port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD, gp);

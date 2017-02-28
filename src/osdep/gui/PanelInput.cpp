@@ -52,6 +52,8 @@ static gcn::Label* lblLeft;
 static gcn::UaeDropDown* cboLeft;
 static gcn::Label* lblRight;
 static gcn::UaeDropDown* cboRight;
+static gcn::Label* lblStart;
+static gcn::UaeDropDown* cboStart;
 
 class StringListModel : public gcn::ListModel
 {
@@ -263,6 +265,9 @@ public:
 		
 		    else if (actionEvent.getSource() == cboRight)
 		        customControlMap[VK_RIGHT] = amigaKey[cboRight->getSelected()];
+
+			else if (actionEvent.getSource() == cboStart)
+				customControlMap[VK_Start] = amigaKey[cboStart->getSelected()];
 	}
 };
 
@@ -326,8 +331,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	chkCustomCtrl->setId("CustomCtrl");
 	chkCustomCtrl->addActionListener(inputActionListener);
 
-	lblA = new gcn::Label("<A>:");
-	lblA->setSize(50, LABEL_HEIGHT);
+	lblA = new gcn::Label("Green:");
+	lblA->setSize(80, LABEL_HEIGHT);
 	lblA->setAlignment(gcn::Graphics::RIGHT);
 	cboA = new gcn::UaeDropDown(&mappingList);
 	cboA->setSize(150, DROPDOWN_HEIGHT);
@@ -335,8 +340,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboA->setId("cboA");
 	cboA->addActionListener(inputActionListener);
 
-	lblB = new gcn::Label("<B>:");
-	lblB->setSize(50, LABEL_HEIGHT);
+	lblB = new gcn::Label("Blue:");
+	lblB->setSize(80, LABEL_HEIGHT);
 	lblB->setAlignment(gcn::Graphics::RIGHT);
 	cboB = new gcn::UaeDropDown(&mappingList);
 	cboB->setSize(150, DROPDOWN_HEIGHT);
@@ -344,8 +349,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboB->setId("cboB");
 	cboB->addActionListener(inputActionListener);
 
-	lblX = new gcn::Label("<X>:");
-	lblX->setSize(50, LABEL_HEIGHT);
+	lblX = new gcn::Label("Red:");
+	lblX->setSize(80, LABEL_HEIGHT);
 	lblX->setAlignment(gcn::Graphics::RIGHT);
 	cboX = new gcn::UaeDropDown(&mappingList);
 	cboX->setSize(150, DROPDOWN_HEIGHT);
@@ -353,8 +358,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboX->setId("cboX");
 	cboX->addActionListener(inputActionListener);
 
-	lblY = new gcn::Label("<Y>:");
-	lblY->setSize(50, LABEL_HEIGHT);
+	lblY = new gcn::Label("Yellow:");
+	lblY->setSize(80, LABEL_HEIGHT);
 	lblY->setAlignment(gcn::Graphics::RIGHT);
 	cboY = new gcn::UaeDropDown(&mappingList);
 	cboY->setSize(150, DROPDOWN_HEIGHT);
@@ -362,8 +367,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboY->setId("cboY");
 	cboY->addActionListener(inputActionListener);
 
-	lblL = new gcn::Label("<L>:");
-	lblL->setSize(50, LABEL_HEIGHT);
+	lblL = new gcn::Label("LShoulder:");
+	lblL->setSize(80, LABEL_HEIGHT);
 	lblL->setAlignment(gcn::Graphics::RIGHT);
 	cboL = new gcn::UaeDropDown(&mappingList);
 	cboL->setSize(150, DROPDOWN_HEIGHT);
@@ -371,8 +376,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboL->setId("cboL");
 	cboL->addActionListener(inputActionListener);
 
-	lblR = new gcn::Label("<R>:");
-	lblR->setSize(50, LABEL_HEIGHT);
+	lblR = new gcn::Label("RShoulder:");
+	lblR->setSize(80, LABEL_HEIGHT);
 	lblR->setAlignment(gcn::Graphics::RIGHT);
 	cboR = new gcn::UaeDropDown(&mappingList);
 	cboR->setSize(150, DROPDOWN_HEIGHT);
@@ -381,7 +386,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboR->addActionListener(inputActionListener);
 
 	lblUp = new gcn::Label("Up:");
-	lblUp->setSize(50, LABEL_HEIGHT);
+	lblUp->setSize(80, LABEL_HEIGHT);
 	lblUp->setAlignment(gcn::Graphics::RIGHT);
 	cboUp = new gcn::UaeDropDown(&mappingList);
 	cboUp->setSize(150, DROPDOWN_HEIGHT);
@@ -390,7 +395,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboUp->addActionListener(inputActionListener);
 
 	lblDown = new gcn::Label("Down:");
-	lblDown->setSize(50, LABEL_HEIGHT);
+	lblDown->setSize(80, LABEL_HEIGHT);
 	lblDown->setAlignment(gcn::Graphics::RIGHT);
 	cboDown = new gcn::UaeDropDown(&mappingList);
 	cboDown->setSize(150, DROPDOWN_HEIGHT);
@@ -399,7 +404,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboDown->addActionListener(inputActionListener);
 
 	lblLeft = new gcn::Label("Left:");
-	lblLeft->setSize(50, LABEL_HEIGHT);
+	lblLeft->setSize(80, LABEL_HEIGHT);
 	lblLeft->setAlignment(gcn::Graphics::RIGHT);
 	cboLeft = new gcn::UaeDropDown(&mappingList);
 	cboLeft->setSize(150, DROPDOWN_HEIGHT);
@@ -408,7 +413,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboLeft->addActionListener(inputActionListener);
 
 	lblRight = new gcn::Label("Right:");
-	lblRight->setSize(50, LABEL_HEIGHT);
+	lblRight->setSize(80, LABEL_HEIGHT);
 	lblRight->setAlignment(gcn::Graphics::RIGHT);
 	cboRight = new gcn::UaeDropDown(&mappingList);
 	cboRight->setSize(150, DROPDOWN_HEIGHT);
@@ -416,7 +421,17 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboRight->setId("cboRight");
 	cboRight->addActionListener(inputActionListener);
 
+	lblStart = new gcn::Label("Start:");
+	lblStart->setSize(80, LABEL_HEIGHT);
+	lblStart->setAlignment(gcn::Graphics::RIGHT);
+	cboStart = new gcn::UaeDropDown(&mappingList);
+	cboStart->setSize(150, DROPDOWN_HEIGHT);
+	cboStart->setBaseColor(gui_baseCol);
+	cboStart->setId("cboStart");
+	cboStart->addActionListener(inputActionListener);
+
 	int posY = DISTANCE_BORDER;
+	int posColumn2;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
 	category.panel->add(cboPort0, DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
 	posY += cboPort0->getHeight() + DISTANCE_NEXT_Y;
@@ -437,29 +452,34 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	posY += chkCustomCtrl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblA, DISTANCE_BORDER, posY);
 	category.panel->add(cboA, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
-	category.panel->add(lblB, 220, posY);
-	category.panel->add(cboB, 220 + lblB->getWidth() + 8, posY);
+	
+	posColumn2 = cboA->getX() + cboA->getWidth() + 12;
+
+	category.panel->add(lblB, posColumn2, posY);
+	category.panel->add(cboB, posColumn2 + lblB->getWidth() + 8, posY);
 	posY += cboA->getHeight() + 4;
 	category.panel->add(lblX, DISTANCE_BORDER, posY);
 	category.panel->add(cboX, DISTANCE_BORDER + lblX->getWidth() + 8, posY);
-	category.panel->add(lblY, 220, posY);
-	category.panel->add(cboY, 220 + lblY->getWidth() + 8, posY);
+	category.panel->add(lblY, posColumn2, posY);
+	category.panel->add(cboY, posColumn2 + lblY->getWidth() + 8, posY);
 	posY += cboX->getHeight() + 4;
 	category.panel->add(lblL, DISTANCE_BORDER, posY);
 	category.panel->add(cboL, DISTANCE_BORDER + lblL->getWidth() + 8, posY);
-	category.panel->add(lblR, 220, posY);
-	category.panel->add(cboR, 220 + lblR->getWidth() + 8, posY);
+	category.panel->add(lblR, posColumn2, posY);
+	category.panel->add(cboR, posColumn2 + lblR->getWidth() + 8, posY);
 	posY += cboL->getHeight() + 4;
 	category.panel->add(lblUp, DISTANCE_BORDER, posY);
 	category.panel->add(cboUp, DISTANCE_BORDER + lblUp->getWidth() + 8, posY);
-	category.panel->add(lblDown, 220, posY);
-	category.panel->add(cboDown, 220 + lblDown->getWidth() + 8, posY);
+	category.panel->add(lblDown, posColumn2, posY);
+	category.panel->add(cboDown, posColumn2 + lblDown->getWidth() + 8, posY);
 	posY += cboUp->getHeight() + 4;
 	category.panel->add(lblLeft, DISTANCE_BORDER, posY);
 	category.panel->add(cboLeft, DISTANCE_BORDER + lblLeft->getWidth() + 8, posY);
-	category.panel->add(lblRight, 220, posY);
-	category.panel->add(cboRight, 220 + lblRight->getWidth() + 8, posY);
-	posY += cboLeft->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblRight, posColumn2, posY);
+	category.panel->add(cboRight, posColumn2 + lblRight->getWidth() + 8, posY);
+	posY += cboLeft->getHeight() + 4;
+	category.panel->add(lblStart, DISTANCE_BORDER, posY);
+	category.panel->add(cboStart, DISTANCE_BORDER + lblStart->getWidth() + 8, posY);
 
 	RefreshPanelInput();
 }
@@ -499,6 +519,7 @@ void ExitPanelInput()
 	delete cboLeft;
 	delete lblRight;
 	delete cboRight;
+	delete cboStart;
 
 	delete inputActionListener;
 }
@@ -585,4 +606,5 @@ void RefreshPanelInput()
     cboDown->setSelected(GetAmigaKeyIndex(customControlMap[VK_DOWN]));
     cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[VK_LEFT]));
     cboRight->setSelected(GetAmigaKeyIndex(customControlMap[VK_RIGHT]));
+	cboStart->setSelected(GetAmigaKeyIndex(customControlMap[VK_Start]));
 }
