@@ -885,12 +885,10 @@ int handle_msgpump()
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
 				if (rEvent.button.button == SDL_BUTTON_LEFT)
-				{
-					setmousebuttonstate(0, doStylusRightClick, 1);
-				}
-				else if (rEvent.button.button == SDL_BUTTON_RIGHT)
+					setmousebuttonstate(0, 0, 1);
+				if (rEvent.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 1);
-				else if (rEvent.button.button == SDL_BUTTON_MIDDLE)
+				if (rEvent.button.button == SDL_BUTTON_MIDDLE)
 					setmousebuttonstate(0, 2, 1);
 			}
 			break;
@@ -899,12 +897,10 @@ int handle_msgpump()
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
 				if (rEvent.button.button == SDL_BUTTON_LEFT)
-				{
-					setmousebuttonstate(0, doStylusRightClick, 0);
-				}
-				else if (rEvent.button.button == SDL_BUTTON_RIGHT)
+					setmousebuttonstate(0, 0, 0);
+				if (rEvent.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 0);
-				else if (rEvent.button.button == SDL_BUTTON_MIDDLE)
+				if (rEvent.button.button == SDL_BUTTON_MIDDLE)
 					setmousebuttonstate(0, 2, 0);
 			}
 			break;

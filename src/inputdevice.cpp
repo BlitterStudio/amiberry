@@ -3840,15 +3840,13 @@ static void setbuttonstateall(struct uae_input_device* id, struct uae_input_devi
 	uae_u64 qualmask[MAX_INPUT_SUB_EVENT];
 	bool qualonly;
 
-	if (!id->enabled)
-	{
+	if (!id->enabled) {
 		frame_time_t t = read_processor_time();
-		if (buttonstate)
-		{
+
+		if (buttonstate) {
 			switchdevice_timeout = t;
 		}
-		else
-		{
+		else {
 			int port = button;
 			if (t - switchdevice_timeout >= syncbase) // 1s
 				port ^= 1;
@@ -3863,14 +3861,11 @@ static void setbuttonstateall(struct uae_input_device* id, struct uae_input_devi
 
 	bool didcustom = false;
 
-	for (i = 0; i < MAX_INPUT_SUB_EVENT; i++)
-	{
+	for (i = 0; i < MAX_INPUT_SUB_EVENT; i++) {
 		int sub = sublevdir[buttonstate == 0 ? 1 : 0][i];
-		uae_u64* flagsp = &id->flags[ID_BUTTON_OFFSET + button][sub];
+		uae_u64 *flagsp = &id->flags[ID_BUTTON_OFFSET + button][sub];
 		int evt = id->eventid[ID_BUTTON_OFFSET + button][sub];
-#ifndef INPUTDEVICE_SIMPLE
 		TCHAR *custom = id->custom[ID_BUTTON_OFFSET + button][sub];
-#endif
 		uae_u64 flags = flagsp[0];
 		int autofire = (flags & ID_FLAG_AUTOFIRE) ? 1 : 0;
 		int toggle = (flags & ID_FLAG_TOGGLE) ? 1 : 0;
@@ -3880,20 +3875,16 @@ static void setbuttonstateall(struct uae_input_device* id, struct uae_input_devi
 		int setval = (flags & ID_FLAG_SET_ONOFF_VAL) ? SET_ONOFF_ON_VALUE : SET_ONOFF_OFF_VALUE;
 		int state;
 
-		if (buttonstate < 0)
-		{
+		if (buttonstate < 0) {
 			state = buttonstate;
 		}
-		else if (invert)
-		{
+		else if (invert) {
 			state = buttonstate ? 0 : 1;
 		}
-		else
-		{
+		else {
 			state = buttonstate;
 		}
-		if (setmode)
-		{
+		if (setmode) {
 			if (state)
 				state = setval;
 		}
@@ -3903,7 +3894,6 @@ static void setbuttonstateall(struct uae_input_device* id, struct uae_input_devi
 			didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
 		}
 #endif
-
 		setqualifiers(evt, state > 0);
 
 		if (qualonly)
@@ -3911,50 +3901,50 @@ static void setbuttonstateall(struct uae_input_device* id, struct uae_input_devi
 
 #ifndef INPUTDEVICE_SIMPLE
 		if (state < 0) {
-			if (!checkqualifiers (evt, flags, qualmask, NULL))
+			if (!checkqualifiers(evt, flags, qualmask, NULL))
 				continue;
-			handle_input_event (evt, 1, 1, 0, true, false);
-			didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, state, qualmask, 0, i);
-		} else if (inverttoggle) {
-		/* pressed = firebutton, not pressed = autofire */
+			handle_input_event(evt, 1, 1, 0, true, false);
+			didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, state, qualmask, 0, i);
+		}
+		else if (inverttoggle) {
+			/* pressed = firebutton, not pressed = autofire */
 			if (state) {
-				queue_input_event (evt, NULL, -1, 0, 0, 1);
-				handle_input_event (evt, 1, 1, 0, true, false);
-			} else {
-				handle_input_event (evt, 1, 1, autofire, true, false);
+				queue_input_event(evt, NULL, -1, 0, 0, 1);
+				handle_input_event(evt, 1, 1, 0, true, false);
 			}
-			didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
-		} else if (toggle) {
+			else {
+				handle_input_event(evt, 1, 1, autofire, true, false);
+			}
+			didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
+		}
+		else if (toggle) {
 			if (!state)
 				continue;
 			if (omask & mask)
 				continue;
-			if (!checkqualifiers (evt, flags, qualmask, NULL))
+			if (!checkqualifiers(evt, flags, qualmask, NULL))
 				continue;
 			*flagsp ^= ID_FLAG_TOGGLED;
 			int toggled = (*flagsp & ID_FLAG_TOGGLED) ? 1 : 0;
-			handle_input_event (evt, toggled, 1, autofire, true, false);
-			didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, toggled, qualmask, autofire, i);
-		} else {
-#endif
-		if (!checkqualifiers(evt, flags, qualmask, NULL))
-		{
-			if (!state && !(flags & ID_FLAG_CANRELEASE))
-			{
-				if (!invert)
-					continue;
-			}
-			else if (state)
-			{
-				continue;
-			}
+			handle_input_event(evt, toggled, 1, autofire, true, false);
+			didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, toggled, qualmask, autofire, i);
 		}
-		if (!state)
-			*flagsp &= ~ID_FLAG_CANRELEASE;
-		else
-			*flagsp |= ID_FLAG_CANRELEASE;
-		if ((omask ^ nmask) & mask)
-		{
+		else {
+#endif
+			if (!checkqualifiers(evt, flags, qualmask, NULL)) {
+				if (!state && !(flags & ID_FLAG_CANRELEASE)) {
+					if (!invert)
+						continue;
+		}
+				else if (state) {
+					continue;
+				}
+	}
+			if (!state)
+				*flagsp &= ~ID_FLAG_CANRELEASE;
+			else
+				*flagsp |= ID_FLAG_CANRELEASE;
+			if ((omask ^ nmask) & mask) {
 #ifdef INPUTDEVICE_SIMPLE
 			handle_input_event(evt, state, 1, autofire);
 #else
@@ -3975,8 +3965,7 @@ static void setbuttonstateall(struct uae_input_device* id, struct uae_input_devi
 		queue_input_event (-1, NULL, -1, 0, 0, 1);
 #endif
 
-	if (id2 && ((omask ^ nmask) & mask))
-	{
+	if (id2 && ((omask ^ nmask) & mask)) {
 		if (buttonstate)
 			id2->buttonmask |= mask;
 		else
@@ -6985,26 +6974,26 @@ void setjoybuttonstateall (int joy, uae_u32 buttonbits, uae_u32 buttonmask)
 
 	for (i = 0; i < ID_BUTTON_TOTAL; i++) {
 		if (buttonmask & (1 << i))
-			setbuttonstateall (&joysticks[joy], &joysticks2[joy], i, (buttonbits & (1 << i)) ? 1 : 0);
+			setbuttonstateall(&joysticks[joy], &joysticks2[joy], i, (buttonbits & (1 << i)) ? 1 : 0);
 		else if (buttonbits & (1 << i))
-			setbuttonstateall (&joysticks[joy], &joysticks2[joy], i, -1);
+			setbuttonstateall(&joysticks[joy], &joysticks2[joy], i, -1);
 	}
 }
 /* mouse buttons (just like joystick buttons)
 */
-void setmousebuttonstateall (int mouse, uae_u32 buttonbits, uae_u32 buttonmask)
+void setmousebuttonstateall(int mouse, uae_u32 buttonbits, uae_u32 buttonmask)
 {
 	int i;
 	uae_u32 obuttonmask = mice2[mouse].buttonmask;
 
 	for (i = 0; i < ID_BUTTON_TOTAL; i++) {
 		if (buttonmask & (1 << i))
-			setbuttonstateall (&mice[mouse], &mice2[mouse], i, (buttonbits & (1 << i)) ? 1 : 0);
+			setbuttonstateall(&mice[mouse], &mice2[mouse], i, (buttonbits & (1 << i)) ? 1 : 0);
 		else if (buttonbits & (1 << i))
-			setbuttonstateall (&mice[mouse], &mice2[mouse], i, -1);
+			setbuttonstateall(&mice[mouse], &mice2[mouse], i, -1);
 	}
 	if (obuttonmask != mice2[mouse].buttonmask)
-		mousehack_helper (mice2[mouse].buttonmask);
+		mousehack_helper(mice2[mouse].buttonmask);
 }
 
 void setmousebuttonstate(int mouse, int button, int state)
