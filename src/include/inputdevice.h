@@ -31,12 +31,8 @@
 #define IDTYPE_JOYSTICK 0
 #define IDTYPE_MOUSE 1
 #define IDTYPE_KEYBOARD 2
-#ifndef INPUTDEVICE_SIMPLE
 #define IDTYPE_INTERNALEVENT 3
 #define IDTYPE_MAX 4
-#else
-#define IDTYPE_MAX 3
-#endif
 
 struct inputdevice_functions {
     int (*init)(void);
@@ -55,6 +51,7 @@ struct inputdevice_functions {
 extern struct inputdevice_functions inputdevicefunc_joystick;
 extern struct inputdevice_functions inputdevicefunc_mouse;
 extern struct inputdevice_functions inputdevicefunc_keyboard;
+extern int pause_emulation;
 
 struct uae_input_device_default_node
 {
