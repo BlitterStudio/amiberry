@@ -985,9 +985,15 @@ static int real_main2 (int argc, TCHAR **argv)
 {
 	printf("Amiberry-SDL2 by Dimitris (MiDWaN) Panokostas\n");
 
-	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
-	
+	SDL_bool hintSet;
+	hintSet = SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
+	if (hintSet != SDL_TRUE)
+		SDL_Log("SDL could not grab the keyboard");
+
+	hintSet = SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
+	if (hintSet != SDL_TRUE)
+		SDL_Log("SDL could not set OpenGLES 2 as the Render driver");
+
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());

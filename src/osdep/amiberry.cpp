@@ -46,14 +46,10 @@
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void gui_force_rtarea_hdchange();
 
-static int delayed_mousebutton = 0;
-static int doStylusRightClick;
-
 extern int loadconfig_old(struct uae_prefs* p, const char* orgpath);
 extern void SetLastActiveConfig(const char* filename);
 
 /* Keyboard */
-//int customControlMap[SDLK_LAST];
 map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map  
 
 char start_path_data[MAX_DPATH];
@@ -278,7 +274,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Yellow]);
 	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_LShoulder]);
 	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_RShoulder]);
-	cfgfile_write(f, "amiberry.custom_start", "%d", customControlMap[VK_Play]);
+	cfgfile_write(f, "amiberry.custom_play", "%d", customControlMap[VK_Play]);
 }
 
 void target_restart()
@@ -323,7 +319,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		|| cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Yellow], 1)
 		|| cfgfile_intval(option, value, "custom_l", &customControlMap[VK_LShoulder], 1)
 		|| cfgfile_intval(option, value, "custom_r", &customControlMap[VK_RShoulder], 1)
-		|| cfgfile_intval(option, value, "custom_start", &customControlMap[VK_Play], 1);
+		|| cfgfile_intval(option, value, "custom_play", &customControlMap[VK_Play], 1);
 	return result;
 }
 
@@ -761,13 +757,6 @@ int handle_msgpump()
 	int keycode;
 	int modifier;
 	int i, num;
-
-	if (delayed_mousebutton)
-	{
-		--delayed_mousebutton;
-		if (delayed_mousebutton == 0)
-			setmousebuttonstate(0, 0, 1);
-	}
 
 	while (SDL_PollEvent(&rEvent))
 	{
