@@ -44,8 +44,6 @@ STATIC_INLINE void clear_sound_buffers (void)
     memset (paula_sndbuffer, 0, sizeof(paula_sndbuffer));
 }
 
-#define PUT_SOUND_WORD_MONO(x) put_sound_word_mono_func(x)
-
 #define PUT_SOUND_WORD(b) do { *paula_sndbufpt = b; paula_sndbufpt = paula_sndbufpt + 1; } while (0)
 #define PUT_SOUND_WORD_STEREO(l,r) do { *((uae_u32 *)paula_sndbufpt) = (r << 16) | (l & 0xffff); paula_sndbufpt = paula_sndbufpt + 2; } while (0)
 
