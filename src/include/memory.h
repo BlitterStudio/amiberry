@@ -218,6 +218,7 @@ extern void free_fastmemory (void);
 #define longget(addr) (call_mem_get_func(get_mem_bank(addr).lget, addr))
 #define wordget(addr) (call_mem_get_func(get_mem_bank(addr).wget, addr))
 #define byteget(addr) (call_mem_get_func(get_mem_bank(addr).bget, addr))
+#define longgeti(addr) (call_mem_get_func(get_mem_bank(addr).lgeti, addr))
 #define wordgeti(addr) (call_mem_get_func(get_mem_bank(addr).wgeti, addr))
 #define longput(addr,l) (call_mem_put_func(get_mem_bank(addr).lput, addr, l))
 #define wordput(addr,w) (call_mem_put_func(get_mem_bank(addr).wput, addr, w))
@@ -236,6 +237,11 @@ STATIC_INLINE uae_u32 get_word(uaecptr addr)
 STATIC_INLINE uae_u32 get_byte(uaecptr addr)
 {
   return byteget(addr);
+}
+
+STATIC_INLINE uae_u32 get_longi(uaecptr addr)
+{
+	return longgeti(addr);
 }
 
 STATIC_INLINE uae_u32 get_wordi(uaecptr addr)
