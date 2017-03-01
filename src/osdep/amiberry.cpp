@@ -49,6 +49,8 @@ extern void gui_force_rtarea_hdchange();
 extern int loadconfig_old(struct uae_prefs* p, const char* orgpath);
 extern void SetLastActiveConfig(const char* filename);
 
+int pause_emulation;
+
 /* Keyboard */
 map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map  
 
