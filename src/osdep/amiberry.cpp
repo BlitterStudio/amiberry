@@ -715,7 +715,7 @@ int main(int argc, char* argv[])
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
 	ioctl(0, KDGETLED, &kbd_led_status);
-	if ((kbd_flags & 07) & LED_CAP)
+	if (kbd_flags & 07 & LED_CAP)
 	{
 		// record capslock pressed
 		kbd_led_status |= LED_CAP;
@@ -755,8 +755,6 @@ int handle_msgpump()
 	int got = 0;
 	SDL_Event rEvent;
 	int keycode;
-	int modifier;
-	int i, num;
 
 	while (SDL_PollEvent(&rEvent))
 	{

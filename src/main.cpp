@@ -985,22 +985,13 @@ static int real_main2 (int argc, TCHAR **argv)
 {
 	printf("Amiberry-SDL2 by Dimitris (MiDWaN) Panokostas\n");
 
-	SDL_bool hintSet;
-	hintSet = SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
-	if (hintSet != SDL_TRUE)
-		SDL_Log("SDL could not grab the keyboard");
-
-	hintSet = SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
-	if (hintSet != SDL_TRUE)
-		SDL_Log("SDL could not set OpenGLES 2 as the Render driver");
-
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
 
-	sdlWindow = SDL_CreateWindow("Amiberry v2",
+	sdlWindow = SDL_CreateWindow("Amiberry-SDL2 v2",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		0,
@@ -1010,12 +1001,15 @@ static int real_main2 (int argc, TCHAR **argv)
 		
 	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
-	
+
 	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
 	{
 		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
 	}
 	
+	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
+		SDL_Log("SDL could not grab the keyboard");
+
 	set_config_changed();
 	if (restart_config[0]) {
 		default_prefs(&currprefs, 0);
