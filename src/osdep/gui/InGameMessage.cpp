@@ -10,123 +10,39 @@
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
 
-extern SDL_Surface *screen;
-extern void flush_screen();
+extern SDL_Surface* screen;
 
-static int msg_done = 0;
+int msg_done = 0;
+gcn::Gui* msg_gui;
+gcn::SDLGraphics* msg_graphics;
+gcn::SDLInput* msg_input;
+gcn::SDLTrueTypeFont* msg_font;
+SDL_Event msg_event;
+
+gcn::Color msg_baseCol;
+gcn::Container* msg_top;
+gcn::Window* wndMsg;
+gcn::Button* cmdDone;
+gcn::TextBox* txtMsg;
+
+int msgWidth = 260;
+int msgHeight = 110;
+int borderSize = 6;
+
 class DoneActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		msg_done = 1;
+		if (actionEvent.getSource() == cmdDone)
+			msg_done = 1;
 	}
 };
-static DoneActionListener* doneActionListener;
 
+DoneActionListener* doneActionListener;
 
-void InGameMessage(const char *msg)
+void gui_halt()
 {
-	gcn::Gui* msg_gui;
-	gcn::SDLGraphics* msg_graphics;
-	gcn::SDLInput* msg_input;
-	gcn::SDLTrueTypeFont* msg_font;
-	gcn::Color msg_baseCol;
-
-	gcn::Container* msg_top;
-	gcn::Window *wndMsg;
-	gcn::Button* cmdDone;
-	gcn::TextBox* txtMsg;
-
-	int msgWidth = 260;
-	int msgHeight = 100;
-
-	msg_graphics = new gcn::SDLGraphics();
-	msg_graphics->setTarget(screen);
-	msg_input = new gcn::SDLInput();
-	msg_gui = new gcn::Gui();
-	msg_gui->setGraphics(msg_graphics);
-	msg_gui->setInput(msg_input);
-
-	msg_baseCol.r = 192;
-	msg_baseCol.g = 192;
-	msg_baseCol.b = 208;
-
-	msg_top = new gcn::Container();
-	msg_top->setDimension(gcn::Rectangle((screen->w - msgWidth) / 2, (screen->h - msgHeight) / 2, msgWidth, msgHeight));
-	msg_top->setBaseColor(msg_baseCol);
-	msg_gui->setTop(msg_top);
-
-	TTF_Init();
-	msg_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 10);
-	gcn::Widget::setGlobalFont(msg_font);
-
-	doneActionListener = new DoneActionListener();
-
-	wndMsg = new gcn::Window("Load");
-	wndMsg->setSize(msgWidth, msgHeight);
-	wndMsg->setPosition(0, 0);
-	wndMsg->setBaseColor(msg_baseCol + 0x202020);
-	wndMsg->setCaption("Information");
-	wndMsg->setTitleBarHeight(12);
-
-	cmdDone = new gcn::Button("Ok");
-	cmdDone->setSize(40, 20);
-	cmdDone->setBaseColor(msg_baseCol + 0x202020);
-	cmdDone->addActionListener(doneActionListener);
-
-	txtMsg = new gcn::TextBox(msg);
-	txtMsg->setEnabled(false);
-	txtMsg->setPosition(6, 6);
-	txtMsg->setSize(wndMsg->getWidth() - 16, 46);
-	txtMsg->setOpaque(false);
-
-	wndMsg->add(txtMsg, 6, 6);
-	wndMsg->add(cmdDone, (wndMsg->getWidth() - cmdDone->getWidth()) / 2, wndMsg->getHeight() - 38);
-
-	msg_top->add(wndMsg);
-	cmdDone->requestFocus();
-
-	msg_done = 0;
-	bool drawn = false;
-	while (!msg_done)
-	{
-	    //-------------------------------------------------
-	    // Check user input
-	    //-------------------------------------------------
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			if (event.type == SDL_KEYDOWN)
-			{
-				switch (event.key.keysym.sym)
-				{
-				case VK_Red:
-				case VK_Green:
-				case SDLK_RETURN:
-					msg_done = 1;
-					break;
-				}
-			}
-
-			//-------------------------------------------------
-			// Send event to guisan-controls
-			//-------------------------------------------------
-			msg_input->pushInput(event);
-		}
-
-		// Now we let the Gui object perform its logic.
-		msg_gui->logic();
-		// Now we let the Gui object draw itself.
-		msg_gui->draw();
-		// Finally we update the screen.
-		if (!drawn)
-		{
-			updateScreen();
-		}		
-		drawn = true;
-	}
-
 	msg_top->remove(wndMsg);
 
 	delete txtMsg;
@@ -140,4 +56,108 @@ void InGameMessage(const char *msg)
 	delete msg_gui;
 	delete msg_input;
 	delete msg_graphics;
+}
+
+void checkInput()
+{
+	//-------------------------------------------------
+	// Check user input
+	//-------------------------------------------------	
+	while (SDL_PollEvent(&msg_event))
+	{
+		if (msg_event.type == SDL_KEYDOWN)
+		{
+			switch (msg_event.key.keysym.sym)
+			{
+			case VK_Red:
+			case VK_Green:
+			case SDLK_RETURN:
+				msg_done = 1;
+				break;
+			default: 
+				break;
+			}
+		}
+
+		//-------------------------------------------------
+		// Send event to guisan-controls
+		//-------------------------------------------------
+		msg_input->pushInput(msg_event);
+	}
+}
+
+void gui_init(const char* msg)
+{
+	msg_graphics = new gcn::SDLGraphics();
+	msg_graphics->setTarget(screen);
+	msg_input = new gcn::SDLInput();
+	msg_gui = new gcn::Gui();
+	msg_gui->setGraphics(msg_graphics);
+	msg_gui->setInput(msg_input);
+
+	msg_baseCol.r = 192;
+	msg_baseCol.g = 192;
+	msg_baseCol.b = 208;
+
+	msg_top = new gcn::Container();
+	msg_top->setDimension(gcn::Rectangle((screen->w - msgWidth + borderSize * 4) / 2, (screen->h - msgHeight + borderSize * 4) / 4, msgWidth + (borderSize * 2), msgHeight + (borderSize * 2) + BUTTON_HEIGHT));
+	msg_top->setBaseColor(msg_baseCol);
+	msg_gui->setTop(msg_top);
+
+	TTF_Init();
+	msg_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 14);
+	gcn::Widget::setGlobalFont(msg_font);
+
+	doneActionListener = new DoneActionListener();
+
+	wndMsg = new gcn::Window("Load");
+	wndMsg->setSize(msgWidth + (borderSize * 2), msgHeight + (borderSize * 2) + BUTTON_HEIGHT);
+	wndMsg->setPosition(0, 0);
+	wndMsg->setBaseColor(msg_baseCol + 0x202020);
+	wndMsg->setCaption("Information");
+	wndMsg->setTitleBarHeight(12);
+
+	cmdDone = new gcn::Button("Ok");
+	cmdDone->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+	cmdDone->setBaseColor(msg_baseCol + 0x202020);
+	cmdDone->setId("Done");
+	cmdDone->addActionListener(doneActionListener);
+
+	txtMsg = new gcn::TextBox(msg);
+	txtMsg->setPosition(0, 0);
+	txtMsg->setSize(msgWidth, msgHeight);
+
+	wndMsg->add(txtMsg, borderSize, borderSize);
+	wndMsg->add(cmdDone, (wndMsg->getWidth() - cmdDone->getWidth()) / 2, wndMsg->getHeight() - (borderSize * 2) - BUTTON_HEIGHT);
+
+	msg_top->add(wndMsg);
+	cmdDone->requestFocus();
+}
+
+void InGameMessage(const char* msg)
+{
+	gui_init(msg);
+
+	msg_done = 0;
+	bool drawn = false;
+	while (!msg_done)
+	{
+		// Poll input
+		checkInput();
+
+		// Now we let the Gui object perform its logic.
+		msg_gui->logic();
+		// Now we let the Gui object draw itself.
+		msg_gui->draw();
+		// Finally we update the screen.
+		if (!drawn)
+		{
+			SDL_ShowCursor(SDL_ENABLE);
+			updatedisplayarea();
+		}
+		drawn = true;
+	}
+
+	gui_halt();
+	SDL_ShowCursor(SDL_DISABLE);
 }
