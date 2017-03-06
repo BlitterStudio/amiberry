@@ -164,7 +164,6 @@ static void checkrtglibrary()
 			{
 				TCHAR msg[2000];
 				sprintf(msg, _T("installed rtg.library: %d.%d, required: %d.%d\n"), ver, rev, UAE_RTG_LIBRARY_VERSION, UAE_RTG_LIBRARY_REVISION);
-				write_log(msg);
 				gui_message(msg);
 			}
 			else

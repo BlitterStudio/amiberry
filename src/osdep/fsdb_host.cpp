@@ -45,7 +45,7 @@ int dos_errno(void)
 #endif
 
     default:
-        write_log(("Unimplemented error %s\n", strerror(e)));
+        //write_log(("Unimplemented error %s\n", strerror(e)));
         return ERROR_NOT_IMPLEMENTED;
     }
 }
