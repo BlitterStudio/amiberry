@@ -10,4 +10,4 @@ extern SDL_Texture* gui_texture;
 extern SDL_DisplayMode sdlMode;
 
 extern void check_error_sdl(bool check, const char* message);
-extern void updateScreen();
+extern void updatedisplayarea();

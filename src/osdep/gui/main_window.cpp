@@ -61,7 +61,7 @@ enum
  */
 SDL_Surface* gui_screen;
 SDL_Texture* gui_texture;
-SDL_Event event;
+SDL_Event gui_event;
 
 /*
  * Guisan SDL stuff we need
@@ -183,7 +183,6 @@ namespace sdl
 		// Note, any surface will do, it doesn't have to be the screen.
 		gui_graphics->setTarget(gui_screen);
 		gui_input = new gcn::SDLInput();
-
 		uae_gui = new gcn::Gui();
 		uae_gui->setGraphics(gui_graphics);
 		uae_gui->setInput(gui_input);
@@ -203,14 +202,14 @@ namespace sdl
 
 	void checkInput()
 	{
-		while (SDL_PollEvent(&event))
+		while (SDL_PollEvent(&gui_event))
 		{
-			if (event.type == SDL_KEYDOWN)
+			if (gui_event.type == SDL_KEYDOWN)
 			{
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
 
-				if (event.key.keysym.sym == currprefs.key_for_menu)
+				if (gui_event.key.keysym.sym == currprefs.key_for_menu)
 				{
 					if (emulating && widgets::cmdStart->isEnabled())
 					{
@@ -229,7 +228,7 @@ namespace sdl
 					}
 				}
 				else
-					switch (event.key.keysym.scancode)
+					switch (gui_event.key.keysym.scancode)
 					{
 					case SDL_SCANCODE_Q:
 						//-------------------------------------------------
@@ -254,9 +253,9 @@ namespace sdl
 						//------------------------------------------------
 						// Simulate press of enter when 'X' pressed
 						//------------------------------------------------
-						event.key.keysym.scancode = SDL_SCANCODE_RETURN;
-						gui_input->pushInput(event); // Fire key down
-						event.type = SDL_KEYUP; // and the key up
+						gui_event.key.keysym.scancode = SDL_SCANCODE_RETURN;
+						gui_input->pushInput(gui_event); // Fire key down
+						gui_event.type = SDL_KEYUP; // and the key up
 						break;
 
 					case VK_UP:
@@ -282,7 +281,7 @@ namespace sdl
 						break;
 					}
 			}
-			else if (event.type == SDL_QUIT)
+			else if (gui_event.type == SDL_QUIT)
 			{
 				//-------------------------------------------------
 				// Quit entire program via SQL-Quit
@@ -293,7 +292,7 @@ namespace sdl
 			//-------------------------------------------------
 			// Send event to guichan-controls
 			//-------------------------------------------------
-			gui_input->pushInput(event);
+			gui_input->pushInput(gui_event);
 		}
 	}
 
@@ -334,7 +333,7 @@ namespace widgets
 	class MainButtonActionListener : public gcn::ActionListener
 	{
 	public:
-		void action(const gcn::ActionEvent& actionEvent)
+		void action(const gcn::ActionEvent& actionEvent) override
 		{
 			if (actionEvent.getSource() == cmdShutdown)
 			{
@@ -406,7 +405,7 @@ namespace widgets
 	class PanelFocusListener : public gcn::FocusListener
 	{
 	public:
-		void focusGained(const gcn::Event& event)
+		void focusGained(const gcn::Event& event) override
 		{
 			int i;
 			for (i = 0; categories[i].category != nullptr; ++i)
@@ -456,7 +455,6 @@ namespace widgets
 		//-------------------------------------------------
 		gui_top = new gcn::Container();
 		gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
-		//    gui_top->setDimension(gcn::Rectangle((gui_screen->w - GUI_WIDTH) / 2, (gui_screen->h - GUI_HEIGHT) / 2, GUI_WIDTH, GUI_HEIGHT));
 		gui_top->setBaseColor(gui_baseCol);
 		uae_gui->setTop(gui_top);
 

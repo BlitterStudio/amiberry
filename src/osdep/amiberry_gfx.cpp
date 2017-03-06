@@ -82,7 +82,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, int width, int height)
 	return false;
 }
 
-void updateScreen()
+void updatedisplayarea()
 {
 	// Update the texture from the surface
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
@@ -143,7 +143,7 @@ static void open_screen(struct uae_prefs* p)
 	                            height);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
 
-	updateScreen();
+	updatedisplayarea();
 
 	if (screen != nullptr)
 	{
@@ -226,7 +226,7 @@ void flush_screen()
 		}
 	}
 
-	updateScreen();
+	updatedisplayarea();
 	init_row_map();
 }
 
