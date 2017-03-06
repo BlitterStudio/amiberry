@@ -144,6 +144,8 @@ struct flag_struct
     uae_u32 x;
 };
 
+extern struct flag_struct regflags;
+
 #define FLAGVAL_Q       0x08000000
 #define FLAGVAL_V       0x10000000
 #define FLAGVAL_C       0x20000000
