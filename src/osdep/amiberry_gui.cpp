@@ -625,7 +625,7 @@ void gui_led(int led, int on)
 	ioctl(0, KDSETLED, kbd_led_status);
 }
 
-void gui_flicker_led(int led, int status)
+void gui_flicker_led(int led, int unitnum, int status)
 {
 	gui_led(led, status);
 }
