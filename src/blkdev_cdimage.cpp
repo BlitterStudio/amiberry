@@ -556,7 +556,7 @@ static void *cdda_play_func(void *v)
 			int sector, cnt;
 			int dofinish = 0;
 
-			gui_flicker_led(LED_CD, LED_CD_AUDIO);
+			gui_flicker_led(LED_CD, cdu->di.unitnum - 1, LED_CD_AUDIO);
 
 			memset(cda->buffers[bufnum], 0, num_sectors * 2352);
 

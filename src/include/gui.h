@@ -10,13 +10,21 @@ extern int gui_init(void);
 extern int gui_update(void);
 extern void gui_exit(void);
 extern void gui_led(int, int);
+extern void gui_handle_events(void);
 extern void gui_filename(int, const TCHAR *);
-extern void gui_flicker_led(int, int);
+extern void gui_fps(int fps, int idle, int color);
+extern void gui_changesettings(void);
+extern void gui_lock(void);
+extern void gui_unlock(void);
+extern void gui_flicker_led(int, int, int);
 extern void gui_disk_image_change(int, const TCHAR *, bool writeprotected);
 extern unsigned int gui_ledstate;
 extern void gui_display(int shortcut);
 
-extern bool no_gui;
+extern void gui_gameport_button_change(int port, int button, int onoff);
+extern void gui_gameport_axis_change(int port, int axis, int state, int max);
+
+extern bool no_gui, quit_to_gui;
 
 #define HDLED_OFF		0
 #define HDLED_READ		1
