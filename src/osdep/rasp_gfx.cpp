@@ -186,7 +186,7 @@ static void open_screen(struct uae_prefs *p)
 	if (Dummy_prSDLScreen == NULL)
 	{
 //		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
-		Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+		Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_HWSURFACE | SDL_FULLSCREEN);
 	}
 
 	  // check if resolution hasn't changed in menu. Otherwise free the resources so that they will be re-generated with new resolution.
@@ -216,7 +216,7 @@ static void open_screen(struct uae_prefs *p)
 #endif //DEBUG
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
-		prSDLScreen = SDL_CreateRGBSurface(SDL_SWSURFACE,
+		prSDLScreen = SDL_CreateRGBSurface(SDL_HWSURFACE,
 			width,
 			height,
 			16,
@@ -752,8 +752,8 @@ void picasso_InitResolutions(void)
 			int pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
       
-			if (SDL_VideoModeOK (x_size_table[i], y_size_table[i], 16, SDL_SWSURFACE))
-			{
+			//if (SDL_VideoModeOK (x_size_table[i], y_size_table[i], 16, SDL_HWSURFACE))
+			//{
 				DisplayModes[count].res.width = x_size_table[i];
 				DisplayModes[count].res.height = y_size_table[i];
 				DisplayModes[count].depth = bit_unit >> 3;
@@ -768,7 +768,7 @@ void picasso_InitResolutions(void)
 					DisplayModes[count].depth * 8);
   
 				count++;
-			}
+			//}
 		}
 	}
 	DisplayModes[count].depth = -1;
