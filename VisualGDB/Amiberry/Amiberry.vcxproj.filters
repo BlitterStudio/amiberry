@@ -41,18 +41,6 @@
     <Filter Include="Source files\archivers\7z">
       <UniqueIdentifier>{4e7f85db-d3e3-4b65-b969-a7b829bc3281}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header files\archivers\7z\Archive">
-      <UniqueIdentifier>{b1a09498-1e4a-40d4-a986-9e09ad865690}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\archivers\7z\Archive\7z">
-      <UniqueIdentifier>{dcfa291d-f91e-4f23-a259-791df4811cc0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\archivers\7z\Archive">
-      <UniqueIdentifier>{7944e92f-3c23-4f86-842a-aa199a00dd35}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\archivers\7z\Archive\7z">
-      <UniqueIdentifier>{ad85bf25-c171-40d2-ae9d-997bd5237bab}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header files\archivers\dms">
       <UniqueIdentifier>{a44fad77-d044-486d-8a84-3f2f17c6bb49}</UniqueIdentifier>
     </Filter>
@@ -459,24 +447,6 @@
     <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zAlloc.cpp">
-      <Filter>Source files\archivers\7z\Archive\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zDecode.cpp">
-      <Filter>Source files\archivers\7z\Archive\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zExtract.cpp">
-      <Filter>Source files\archivers\7z\Archive\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zHeader.cpp">
-      <Filter>Source files\archivers\7z\Archive\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zIn.cpp">
-      <Filter>Source files\archivers\7z\Archive\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zItem.cpp">
-      <Filter>Source files\archivers\7z\Archive\7z</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\archivers\dms\crc_csum.cpp">
       <Filter>Source files\archivers\dms</Filter>
     </ClCompile>
@@ -557,6 +527,24 @@
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\rasp_gfx.cpp">
       <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zDecode.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zExtract.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zHeader.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zIn.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zItem.cpp">
+      <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -888,24 +876,6 @@
     <ClInclude Include="..\..\src\archivers\7z\Types.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zAlloc.h">
-      <Filter>Header files\archivers\7z\Archive\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zDecode.h">
-      <Filter>Header files\archivers\7z\Archive\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zExtract.h">
-      <Filter>Header files\archivers\7z\Archive\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zHeader.h">
-      <Filter>Header files\archivers\7z\Archive\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zIn.h">
-      <Filter>Header files\archivers\7z\Archive\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zItem.h">
-      <Filter>Header files\archivers\7z\Archive\7z</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\archivers\dms\cdata.h">
       <Filter>Header files\archivers\dms</Filter>
     </ClInclude>
@@ -953,6 +923,24 @@
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\zip\unzip.h">
       <Filter>Header files\archivers\zip</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zAlloc.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zDecode.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zExtract.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zHeader.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zIn.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\7zItem.h">
+      <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
