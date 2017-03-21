@@ -573,12 +573,12 @@ void hdf_close(struct hardfiledata *hfd)
 	hfd->vhd_sectormap = NULL;
 }
 
-int hdf_dup(struct hardfiledata *dhfd, const struct hardfiledata *shfd)
-{
-	return hdf_dup_target(dhfd, shfd);
-}
+//int hdf_dup(struct hardfiledata *dhfd, const struct hardfiledata *shfd)
+//{
+//	return hdf_dup_target(dhfd, shfd);
+//}
 
-extern int get_guid_target(uae_u8 *out);
+//extern int get_guid_target(uae_u8 *out);
 
 static uae_u64 vhd_read(struct hardfiledata *hfd, void *v, uae_u64 offset, uae_u64 len)
 {
@@ -795,7 +795,7 @@ int vhd_create(const TCHAR *name, uae_u64 size, uae_u32 dostype)
 	b[0x3b] = tracksec;
 	// disk type
 	b[0x3c + 3] = HFD_VHD_DYNAMIC;
-	get_guid_target(b + 0x44);
+	//get_guid_target(b + 0x44);
 	crc = vhd_checksum(b, -1);
 	b[0x40] = crc >> 24;
 	b[0x41] = crc >> 16;
