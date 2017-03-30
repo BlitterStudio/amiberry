@@ -97,12 +97,12 @@ OBJS =	\
 	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \
-	src/archivers/7z/Archive/7z/7zAlloc.o \
-	src/archivers/7z/Archive/7z/7zDecode.o \
-	src/archivers/7z/Archive/7z/7zExtract.o \
-	src/archivers/7z/Archive/7z/7zHeader.o \
-	src/archivers/7z/Archive/7z/7zIn.o \
-	src/archivers/7z/Archive/7z/7zItem.o \
+	src/archivers/7z/7zAlloc.o \
+	src/archivers/7z/7zDecode.o \
+	src/archivers/7z/7zExtract.o \
+	src/archivers/7z/7zHeader.o \
+	src/archivers/7z/7zIn.o \
+	src/archivers/7z/7zItem.o \
 	src/archivers/7z/7zBuf.o \
 	src/archivers/7z/7zCrc.o \
 	src/archivers/7z/7zStream.o \

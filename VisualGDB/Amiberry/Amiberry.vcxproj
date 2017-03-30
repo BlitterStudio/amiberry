@@ -119,15 +119,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zBuf.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zCrc.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zDecode.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zExtract.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zHeader.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zIn.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zItem.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zStream.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zAlloc.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zDecode.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zExtract.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zHeader.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zIn.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\Archive\7z\7zItem.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Bcj2.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Bra.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Bra86.cpp" />
@@ -316,15 +316,15 @@
     </Font>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\archivers\7z\7zAlloc.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zBuf.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zCrc.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zDecode.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zExtract.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zHeader.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zIn.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zItem.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zVersion.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zAlloc.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zDecode.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zExtract.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zHeader.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zIn.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Archive\7z\7zItem.h" />
     <ClInclude Include="..\..\src\archivers\7z\Bcj2.h" />
     <ClInclude Include="..\..\src\archivers\7z\Bra.h" />
     <ClInclude Include="..\..\src\archivers\7z\CpuArch.h" />
