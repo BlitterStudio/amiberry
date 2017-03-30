@@ -5,6 +5,7 @@ If you're looking for the latest "stable" version, please use the master branch 
 Once this branch is complete, it will be merged back to the master and replace it.
 
 # History (newest first)
+- Added GPerfTools for profiling and optimized malloc functions (note: this adds 2 extra dependencies, check below)
 - Added an option for choosing Scaling Method (for non-Picasso modes): Auto, Nearest Neighbor (pixelated) or Linear (smooth). Auto will automatically choose between the other two modes on the fly, depending on the Amiga resolution requested and if the native monitor resolution can display it as an exact multiple or not. This vastly improves the sharpness of the resulting image.
 - Improved image centering (for non-Picasso modes)
 - Ported to SDL2
@@ -46,7 +47,7 @@ Then download the SDL2 source tarball (currently on v2.0.5):
 
 Next, configure SDL2 to disable OpenGL, in order to be able to open screens directly from the console using OpenGL ES2 instead:
 
-      ../configure --disable-pulseaudio --disable-esd --disable-video-x11 --disable-video-opengl
+      ../configure --disable-pulseaudio --disable-esd --disable-video-opengl
 
 Compile and install SDL2:
 
@@ -71,22 +72,12 @@ Next, SDL2_ttf (currently v2.0.14):
       ../configure
       make -j 4
       sudo make install
-
-Finally, SDL2_mixer (currently v2.0.1):
-
-      cd ~
-      wget https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.tar.gz
-      tar zxvf SDL2_mixer-2.0.1.tar.gz
-      cd SDL2_mixer-2.0.1 && mkdir build && cd build
-      ../configure
-      make -j 4
-      sudo make install
-      
+  
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
 Install the following packages:
 
-      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev
+      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev google-perftools libgoogle-perftools-dev
 
 Clone this repo:
       
