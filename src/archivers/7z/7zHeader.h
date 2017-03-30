@@ -4,7 +4,7 @@
 #ifndef __7Z_HEADER_H
 #define __7Z_HEADER_H
 
-#include "../../Types.h"
+#include "Types.h"
 
 #define k7zSignatureSize 6
 extern Byte k7zSignature[k7zSignatureSize];

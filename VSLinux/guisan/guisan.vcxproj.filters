@@ -36,6 +36,7 @@
     <None Include="..\..\src\guisan\lib\.keep">
       <Filter>lib</Filter>
     </None>
+    <None Include="..\..\src\guisan\Makefile" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\guisan\include\guisan.hpp">

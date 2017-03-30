@@ -7,7 +7,7 @@ SOURCE	= $(foreach dir,$(DIRS),$(wildcard $(dir)/*.cpp))
 OBJS    = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCE)))
 
 INCLUDE	=-I./include `sdl2-config --cflags --libs`
-CFLAGS  = -g -w -O3  $(INCLUDE)
+CFLAGS  =-g -w -O3  $(INCLUDE)
 CXXFLAGS= $(CFLAGS)
   
   
