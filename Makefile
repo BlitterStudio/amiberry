@@ -26,11 +26,7 @@ guisan:
 	cd src/guisan && make all && cd ../..
 
 #DEBUG=1
-#TRACER=1
-
 PANDORA=1
-#GEN_PROFILE=1
-#USE_PROFILE=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 
@@ -43,8 +39,9 @@ DEFS += -DUSE_SDL
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include
 MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
+MORE_CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 
-LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
+LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lprofiler -ltcmalloc
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan/lib
 
 ifndef DEBUG
