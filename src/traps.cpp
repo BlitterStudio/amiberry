@@ -74,6 +74,7 @@ struct Trap
 static struct Trap traps[MAX_TRAPS];
 static unsigned int trap_count = 1;
 
+volatile uae_atomic hwtrap_waiting;
 
 static const int trace_traps = 0;
 
@@ -523,3 +524,4 @@ void init_extended_traps()
 	trap_mutex = nullptr;
 	uae_sem_init(&trap_mutex, 0, 1);
 }
+

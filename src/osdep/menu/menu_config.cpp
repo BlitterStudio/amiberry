@@ -416,7 +416,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		return 0;
 	}
 	// Set everthing to default and clear HD settings
-	default_prefs(p, 0);
+	default_prefs(p, true, 0);
 	SetDefaultMenuSettings(p);
 
 	char filebuffer[256];
@@ -618,10 +618,10 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		p->bogomem_size =
 			(p->bogomem_size <= 2) ? 0x080000 << p->bogomem_size :
 				(p->bogomem_size == 3) ? 0x180000 : 0x1c0000;
-	fscanf(f, "fastmemory=%d\n", &p->fastmem_size);
-	if (p->fastmem_size > 0 && p->fastmem_size < 10)
+	fscanf(f, "fastmemory=%d\n", &p->fastmem[0].size);
+	if (p->fastmem[0].size > 0 && p->fastmem[0].size < 10)
 	// Was saved in old format
-		p->fastmem_size = 0x080000 << p->fastmem_size;
+		p->fastmem[0].size = 0x080000 << p->fastmem[0].size;
 
 	fclose(f);
 

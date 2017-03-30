@@ -12,7 +12,7 @@
 #include <sys/mman.h>
 #include "SDL.h"
 
-
+extern addrbank gfxmem_bank;
 uae_u8* natmem_offset = nullptr;
 uae_u32 natmem_size;
 static uae_u64 totalAmigaMemSize;
@@ -139,8 +139,8 @@ void alloc_AmigaMem()
 static uae_u32 getz2rtgaddr()
 {
 	uae_u32 start;
-	start = currprefs.fastmem_size;
-	while (start & (currprefs.rtgmem_size - 1) && start < 4 * 1024 * 1024)
+	start = currprefs.fastmem[0].size;
+	while (start & (currprefs.rtgboards[0].rtgmem_size - 1) && start < 4 * 1024 * 1024)
 		start += 1024 * 1024;
 	return start + 2 * 1024 * 1024;
 }

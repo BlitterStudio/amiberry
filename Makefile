@@ -25,12 +25,8 @@ all: guisan $(PROG)
 guisan:
 	cd src/guisan && make all && cd ../..
 
-#DEBUG=1
-#TRACER=1
-
+DEBUG=1
 PANDORA=1
-#GEN_PROFILE=1
-#USE_PROFILE=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 
@@ -42,32 +38,21 @@ DEFS += -DUSE_SDL
 
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include
 MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
-MORE_CFLAGS += -fexceptions -fpermissive
+MORE_CFLAGS += -fexceptions -fpermissive 
+MORE_CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 
-LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
+LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lprofiler -ltcmalloc
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan/lib
 
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -pipe
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
-
-ifdef TRACER
-TRACE_CFLAGS = -DTRACER -finstrument-functions -Wall -rdynamic
-endif
-
 endif
 
 ASFLAGS += $(CPU_FLAGS)
 
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
-
-ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=./test -fprofile-arcs -fvpt
-endif
-ifdef USE_PROFILE
-MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
-endif
 
 OBJS =	\
 	src/akiko.o \
@@ -215,9 +200,6 @@ OBJS += src/jit/compemu_support.o
 
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
-
-src/trace.o: src/trace.c
-	$(CC) $(MORE_CFLAGS) -c src/trace.c -o src/trace.o
 
 $(PROG): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)

@@ -7,9 +7,10 @@
   */
 
 #pragma once
-#include "SDL.h"
 
-#define TARGET_NAME "Amiberry"
+#define TARGET_NAME _T("Amiberry")
+#define TARGET_PROVIDES_DEFAULT_PREFS
+#define TARGET_NO_DITHER
 
 #define NO_MAIN_IN_MAIN_C
 
@@ -56,17 +57,8 @@ int count_HDs(struct uae_prefs *p);
 extern void gui_force_rtarea_hdchange();
 extern bool hardfile_testrdb(const TCHAR *filename);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-	void trace_begin(void);
-	void trace_end(void);
-#ifdef __cplusplus
-}
-#endif
 
-
-STATIC_INLINE size_t uae_tcslcpy(TCHAR *dst, const TCHAR *src, size_t size)
+static size_t uae_tcslcpy(TCHAR *dst, const TCHAR *src, size_t size)
 {
 	if (size == 0) {
 		return 0;
@@ -81,7 +73,7 @@ STATIC_INLINE size_t uae_tcslcpy(TCHAR *dst, const TCHAR *src, size_t size)
 	return src_len;
 }
 
-STATIC_INLINE size_t uae_strlcpy(char *dst, const char *src, size_t size)
+static size_t uae_strlcpy(char *dst, const char *src, size_t size)
 {
 	if (size == 0) {
 		return 0;
@@ -96,7 +88,7 @@ STATIC_INLINE size_t uae_strlcpy(char *dst, const char *src, size_t size)
 	return src_len;
 }
 
-STATIC_INLINE int max(int x, int y)
+static int max(int x, int y)
 {
 	return x > y ? x : y;
 }

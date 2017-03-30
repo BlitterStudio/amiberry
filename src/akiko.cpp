@@ -15,7 +15,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "newcpu.h"
 #include "events.h"
 #include "savestate.h"
@@ -398,21 +398,22 @@ static uae_u32 akiko_c2p_read(int offset)
 */
 
 #define CDINTERRUPT_SUBCODE		0x80000000
-#define CDINTERRUPT_DRIVEXMIT	0x40000000 /* not used by ROM */
-#define CDINTERRUPT_DRIVERECV	0x20000000 /* not used by ROM */
+#define CDINTERRUPT_DRIVEXMIT	0x40000000 /* not used by ROM. PIO mode. */
+#define CDINTERRUPT_DRIVERECV	0x20000000 /* not used by ROM. PIO mode. */
 #define CDINTERRUPT_RXDMADONE	0x10000000
 #define CDINTERRUPT_TXDMADONE	0x08000000
 #define CDINTERRUPT_PBX			0x04000000
 #define CDINTERRUPT_OVERFLOW	0x02000000
 
-#define CDFLAG_SUBCODE			0x80000000
-#define CDFLAG_TXD				0x40000000
-#define CDFLAG_RXD				0x20000000
-#define CDFLAG_CAS				0x10000000
-#define CDFLAG_PBX				0x08000000
-#define CDFLAG_ENABLE			0x04000000
-#define CDFLAG_RAW				0x02000000
-#define CDFLAG_MSB				0x01000000
+#define CDFLAG_SUBCODE			0x80000000 // 31
+#define CDFLAG_TXD				0x40000000 // 30
+#define CDFLAG_RXD				0x20000000 // 29
+#define CDFLAG_CAS				0x10000000 // 28
+#define CDFLAG_PBX				0x08000000 // 27
+#define CDFLAG_ENABLE			0x04000000 // 26
+#define CDFLAG_RAW				0x02000000 // 25
+#define CDFLAG_MSB				0x01000000 // 24 
+#define CDFLAG_NTSC				0x00800000 // 23
 
 #define CDS_ERROR 0x80
 #define CDS_PLAYING 0x08
@@ -1673,6 +1674,11 @@ static uae_u32 REGPARAM2 akiko_lget(uaecptr addr)
 	return v;
 }
 
+bool akiko_ntscmode(void)
+{
+	return (cdrom_flags & CDFLAG_NTSC) != 0;
+}
+
 static void akiko_bput2(uaecptr addr, uae_u32 v, int msg)
 {
 	uae_u32 tmp;
@@ -1789,32 +1795,34 @@ static void akiko_bput2(uaecptr addr, uae_u32 v, int msg)
 
 static void REGPARAM2 akiko_bput(uaecptr addr, uae_u32 v)
 {
-#ifdef JIT
-	special_mem |= S_WRITE;
-#endif
+	addr &= 0xffff;
+	if (addr >= 0x8000)
+		return;
 	akiko_bput2(addr, v, 1);
 }
 
 static void REGPARAM2 akiko_wput(uaecptr addr, uae_u32 v)
 {
-#ifdef JIT
-	special_mem |= S_WRITE;
-#endif
 	addr &= 0xfff;
-	if ((addr < 0x30 && AKIKO_DEBUG_IO))
-		write_log(_T("akiko_wput %08X: %08X=%04X\n"), M68K_GETPC, addr, v & 0xffff);
+	if (addr >= 0x8000)
+		return;
+	if ((addr < 0x30 && AKIKO_DEBUG_IO)) {
+		//if (log_cd32 > 1)
+		//	write_log(_T("akiko_wput %08X: %08X=%04X\n"), M68K_GETPC, addr, v & 0xffff);
+	}
 	akiko_bput2(addr + 1, v & 0xff, 0);
 	akiko_bput2(addr + 0, v >> 8, 0);
 }
 
 static void REGPARAM2 akiko_lput(uaecptr addr, uae_u32 v)
 {
-#ifdef JIT
-	special_mem |= S_WRITE;
-#endif
 	addr &= 0xffff;
-	if (addr < 0x30 && AKIKO_DEBUG_IO)
-		write_log(_T("akiko_lput %08X: %08X=%08X\n"), M68K_GETPC, addr, v);
+	if (addr >= 0x8000)
+		return;
+	if (addr < 0x30 && AKIKO_DEBUG_IO) {
+		//if (log_cd32 > 1)
+		//	write_log(_T("akiko_lput %08X: %08X=%08X\n"), M68K_GETPC, addr, v);
+	}
 	akiko_bput2(addr + 3, (v >> 0) & 0xff, 0);
 	akiko_bput2(addr + 2, (v >> 8) & 0xff, 0);
 	akiko_bput2(addr + 1, (v >> 16) & 0xff, 0);
@@ -1822,19 +1830,11 @@ static void REGPARAM2 akiko_lput(uaecptr addr, uae_u32 v)
 }
 
 addrbank akiko_bank = {
-	akiko_lget,
-	akiko_wget,
-	akiko_bget,
-	akiko_lput,
-	akiko_wput,
-	akiko_bput,
-	default_xlate,
-	default_check,
-	NULL,
-	_T("Akiko"),
-	dummy_lgeti,
-	dummy_wgeti,
-	ABFLAG_IO
+	akiko_lget, akiko_wget, akiko_bget,
+	akiko_lput, akiko_wput, akiko_bput,
+	default_xlate, default_check, NULL, NULL, _T("Akiko"),
+	dummy_lgeti, dummy_wgeti,
+	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
 
 static const uae_u8 patchdata[] = { 0x0c, 0x82, 0x00, 0x00, 0x03, 0xe8, 0x64, 0x00, 0x00, 0x46 };

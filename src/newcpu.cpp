@@ -50,6 +50,7 @@
 #include "cia.h"
 #include "inputdevice.h"
 #include "audio.h"
+#include <gperftools/profiler.h>
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>
@@ -58,6 +59,8 @@
 static void build_comp(void) {}
 bool check_prefs_changed_comp (void) { return false; }
 #endif
+/* For faster JIT cycles handling */
+uae_s32 pissoff = 0;
 
 /* Opcode of faulting instruction */
 static uae_u16 last_op_for_exception_3;
@@ -85,10 +88,14 @@ cpuop_func *cpufunctbl[65536];
 extern uae_u32 get_fpsr(void);
 
 #define COUNT_INSTRS 0
+#define MC68060_PCR   0x04300000
+#define MC68EC060_PCR 0x04310000
 
 static uae_u64 fake_srp_030, fake_crp_030;
 static uae_u32 fake_tt0_030, fake_tt1_030, fake_tc_030;
 static uae_u16 fake_mmusr_030;
+
+int cpu_last_stop_vpos, cpu_stopped_lines;
 
 #if COUNT_INSTRS
 static unsigned long int instrcount[65536];
@@ -348,28 +355,17 @@ STATIC_INLINE unsigned long adjust_cycles(unsigned long cycles)
     return res;
 }
 
-
-void check_prefs_changed_adr24 (void)
-{
-  if(currprefs.address_space_24 != changed_prefs.address_space_24)
-  {
-    currprefs.address_space_24 = changed_prefs.address_space_24;
-    
-    if (currprefs.address_space_24) {
-    	regs.address_space_mask = 0x00ffffff;
-    	fixup_prefs(&changed_prefs);
-    } else {
-    	regs.address_space_mask = 0xffffffff;
-    }
-  }
-}
-
 static void prefs_changed_cpu (void)
 {
-  fixup_cpu (&changed_prefs);
-  currprefs.cpu_model = changed_prefs.cpu_model;
-  currprefs.fpu_model = changed_prefs.fpu_model;
-  currprefs.cpu_compatible = changed_prefs.cpu_compatible;
+	fixup_cpu(&changed_prefs);
+	currprefs.cpu_model = changed_prefs.cpu_model;
+	currprefs.fpu_model = changed_prefs.fpu_model;
+	currprefs.mmu_model = changed_prefs.mmu_model;
+	currprefs.cpu_compatible = changed_prefs.cpu_compatible;
+	currprefs.cpu_cycle_exact = changed_prefs.cpu_cycle_exact;
+	currprefs.int_no_unimplemented = changed_prefs.int_no_unimplemented;
+	currprefs.fpu_no_unimplemented = changed_prefs.fpu_no_unimplemented;
+	currprefs.blitter_cycle_exact = changed_prefs.blitter_cycle_exact;
 }
 
 static int check_prefs_changed_cpu2(void)
@@ -377,28 +373,65 @@ static int check_prefs_changed_cpu2(void)
 	int changed = 0;
 
 #ifdef JIT
-  changed = check_prefs_changed_comp () ? 1 : 0;
+	changed = check_prefs_changed_comp() ? 1 : 0;
 #endif
-  if (changed
-	|| currprefs.cpu_model != changed_prefs.cpu_model
-	|| currprefs.fpu_model != changed_prefs.fpu_model
-	|| currprefs.cpu_compatible != changed_prefs.cpu_compatible) {
-			cpu_prefs_changed_flag |= 1;
-
-  }
-  if (changed 
-    || currprefs.m68k_speed != changed_prefs.m68k_speed) {
-			cpu_prefs_changed_flag |= 2;
-  }
+	if (changed
+		|| currprefs.cpu_model != changed_prefs.cpu_model
+		|| currprefs.fpu_model != changed_prefs.fpu_model
+		|| currprefs.mmu_model != changed_prefs.mmu_model
+		|| currprefs.int_no_unimplemented != changed_prefs.int_no_unimplemented
+		|| currprefs.fpu_no_unimplemented != changed_prefs.fpu_no_unimplemented
+		|| currprefs.cpu_compatible != changed_prefs.cpu_compatible
+		|| currprefs.cpu_cycle_exact != changed_prefs.cpu_cycle_exact) {
+		cpu_prefs_changed_flag |= 1;
+	}
+	if (changed
+		|| currprefs.m68k_speed != changed_prefs.m68k_speed
+		|| currprefs.m68k_speed_throttle != changed_prefs.m68k_speed_throttle
+		|| currprefs.cpu_clock_multiplier != changed_prefs.cpu_clock_multiplier
+		|| currprefs.cpu_frequency != changed_prefs.cpu_frequency) {
+		cpu_prefs_changed_flag |= 2;
+	}
 	return cpu_prefs_changed_flag;
 }
 
 void check_prefs_changed_cpu(void)
 {
+	if (!config_changed)
+		return;
+
+	if (currprefs.cpu_idle != changed_prefs.cpu_idle) {
+		currprefs.cpu_idle = changed_prefs.cpu_idle;
+	}
 	if (check_prefs_changed_cpu2()) {
-  	set_special (SPCFLAG_MODE_CHANGE);
-		reset_frame_rate_hack ();
-		set_speedup_values();
+		set_special(SPCFLAG_MODE_CHANGE);
+		reset_frame_rate_hack();
+	}
+}
+
+#define LAST_SPEEDUP_LINE 30
+#define SPEEDUP_CYCLES_JIT 2800
+#define SPEEDUP_CYCLES_NONJIT 600
+#define SPEEDUP_TIMELIMIT_JIT -1500
+#define SPEEDUP_TIMELIMIT_NONJIT -2000
+//int pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
+int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+
+void set_speedup_values(void)
+{
+	if (currprefs.m68k_speed < 0) {
+		if (currprefs.cachesize) {
+			pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
+			speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+		}
+		else {
+			pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
+			speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+		}
+	}
+	else {
+		pissoff_value = 0;
+		speedup_timelimit = 0;
 	}
 }
 
@@ -433,8 +466,6 @@ void init_m68k (void)
 #endif
 }
 
-unsigned long nextevent, is_syncline, currcycle;
-
 struct regstruct regs;
 
 int get_cpu_model(void)
@@ -447,9 +478,9 @@ STATIC_INLINE int in_rom (uaecptr pc)
   return (munge24 (pc) & 0xFFF80000) == 0xF80000;
 }
 
-STATIC_INLINE int in_rtarea (uaecptr pc)
+STATIC_INLINE int in_rtarea(uaecptr pc)
 {
-  return (munge24 (pc) & 0xFFFF0000) == rtarea_base && uae_boot_rom;
+	return (munge24(pc) & 0xFFFF0000) == rtarea_base && uae_boot_rom_type;
 }
 
 void REGPARAM2 MakeSR (void)
@@ -767,7 +798,7 @@ static void m68k_reset (bool hardreset)
 {
 	uae_u32 v;
 
-  regs.pissoff = 0;
+  pissoff = 0;
   cpu_cycles = 0;
   
   regs.spcflags = 0;
@@ -1065,7 +1096,7 @@ static void do_trace (void)
   		&& cctrue (regs.ccrflags, (opcode >> 8) & 0xf))
 	    || ((opcode & 0xf0f0) == 0x5050 /* DBcc */
   		&& !cctrue (regs.ccrflags, (opcode >> 8) & 0xf)
-  		&& (uae_s16)m68k_dreg (regs, opcode & 7) != 0))
+  		&& uae_s16(m68k_dreg (regs, opcode & 7)) != 0))
   	{
 	    unset_special (SPCFLAG_TRACE);
 	    set_special (SPCFLAG_DOTRACE);
@@ -1268,7 +1299,7 @@ typedef void compiled_handler(void);
 static void m68k_run_jit (void)
 {
   for (;;) {
-  	((compiled_handler*)(pushall_call_handler))();
+	  ((compiled_handler*)pushall_call_handler)();
   	/* Whenever we return from that, we should check spcflags */
   	if (uae_int_requested) {
 	    INTREQ_f (0x8008);
@@ -1343,82 +1374,90 @@ static void exception2_handle (uaecptr addr, uaecptr fault)
   Exception (2);
 }
 
-void m68k_go (int may_quit)
+void m68k_go(int may_quit)
 {
-  int hardboot = 1;
+	int hardboot = 1;
 	int startup = 1;
 
-  if (in_m68k_go || !may_quit) {
-		write_log (_T("Bug! m68k_go is not reentrant.\n"));
-	  abort ();
-  }
+	if (in_m68k_go || !may_quit) {
+		write_log(_T("Bug! m68k_go is not reentrant.\n"));
+		abort();
+	}
 
-  reset_frame_rate_hack ();
-  update_68k_cycles ();
+	reset_frame_rate_hack();
+	update_68k_cycles();
+	start_cycles = 0;
 
 	cpu_prefs_changed_flag = 0;
-  in_m68k_go++;
-  for (;;) {
-  	void (*run_func)(void);
+	in_m68k_go++;
+#ifdef DEBUG
+	ProfilerStart("amiberry-sdl2.prof");
+#endif
+	for (;;) {
+		void(*run_func)(void);
 
-  	if (quit_program > 0) {
-	    int hardreset = (quit_program == UAE_RESET_HARD ? 1 : 0) | hardboot;
+		if (quit_program > 0) {
+			int hardreset = (quit_program == UAE_RESET_HARD ? 1 : 0) | hardboot;
 			bool kbreset = quit_program == UAE_RESET_KEYBOARD;
 			if (quit_program == UAE_QUIT)
-    		break;
-	    if(quit_program == UAE_RESET_HARD)
-	      reinit_amiga();
+				break;
+			if (quit_program == UAE_RESET_HARD)
+				reinit_amiga();
 			int restored = 0;
 
 			hsync_counter = 0;
-	    quit_program = 0;
-	    hardboot = 0;
+			vsync_counter = 0;
+			quit_program = 0;
+			hardboot = 0;
+
 #ifdef SAVESTATE
 			if (savestate_state == STATE_DORESTORE)
 				savestate_state = STATE_RESTORE;
-	    if (savestate_state == STATE_RESTORE)
-		    restore_state (savestate_fname);
+			if (savestate_state == STATE_RESTORE)
+				restore_state(savestate_fname);
 #endif
-			set_cycles (0);
-      check_prefs_changed_adr24();
-	    custom_reset (hardreset != 0, kbreset);
-			m68k_reset (hardreset != 0);
-	    if (hardreset) {
-				memory_clear ();
-				write_log (_T("hardreset, memory cleared\n"));
-	    }
+			//prefs_changed_cpu();
+			//build_cpufunctbl();
+			//set_x_funcs(); //TODO
+			set_cycles(start_cycles);
+			custom_reset(hardreset != 0, kbreset);
+			m68k_reset(hardreset != 0);
+			if (hardreset) {
+				memory_clear();
+				write_log(_T("hardreset, memory cleared\n"));
+			}
 #ifdef SAVESTATE
-	    /* We may have been restoring state, but we're done now.  */
-	    if (isrestore ()) {
-		    savestate_restore_finish ();
+			/* We may have been restoring state, but we're done now.  */
+			if (isrestore()) {
+				savestate_restore_finish();
 				startup = 1;
 				restored = 1;
-	    }
+			}
 #endif
-	    if (currprefs.produce_sound == 0)
-		    eventtab[ev_audio].active = 0;
-			m68k_setpc_normal (regs.pc);
-			check_prefs_changed_audio ();
+			if (currprefs.produce_sound == 0)
+				eventtab[ev_audio].active = 0;
+			m68k_setpc_normal(regs.pc);
+			check_prefs_changed_audio();
 
 			if (!restored || hsync_counter == 0)
-				savestate_check ();
-	  }
+				savestate_check();
+		}
 
-	  if (regs.panic) {
-	    regs.panic = 0;
-	    /* program jumped to non-existing memory and cpu was >= 68020 */
-			get_real_address (regs.isp); /* stack in no one's land? -> halt */
-	    if (regs.isp & 1)
+		if (regs.panic) {
+			regs.panic = 0;
+			/* program jumped to non-existing memory and cpu was >= 68020 */
+			get_real_address(regs.isp); /* stack in no one's land? -> halt */
+			if (regs.isp & 1)
 				regs.panic = 5;
-	    if (!regs.panic)
-		    exception2_handle (regs.panic_pc, regs.panic_addr);
-	    if (regs.panic) {
+			if (!regs.panic)
+				exception2_handle(regs.panic_pc, regs.panic_addr);
+			if (regs.panic) {
 				int id = regs.panic;
-		    /* system is very badly confused */
-		    regs.panic = 0;
-				cpu_halt (id);
-	    }
-  	}
+				/* system is very badly confused */
+				regs.panic = 0;
+				cpu_halt(id);
+			}
+		}
 
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			if (cpu_prefs_changed_flag & 1) {
@@ -1427,7 +1466,7 @@ void m68k_go (int may_quit)
 				build_cpufunctbl();
 				m68k_setpc_normal(pc);
 				fill_prefetch();
-      }
+			}
 			if (cpu_prefs_changed_flag & 2) {
 				fixup_cpu(&changed_prefs);
 				currprefs.m68k_speed = changed_prefs.m68k_speed;
@@ -1436,27 +1475,30 @@ void m68k_go (int may_quit)
 			cpu_prefs_changed_flag = 0;
 		}
 
-	  if (startup) {
-		  custom_prepare ();
-			protect_roms (true);
+		if (startup) {
+			custom_prepare();
+			protect_roms(true);
 		}
-	  startup = 0;
+		startup = 0;
 		if (regs.halted) {
-			cpu_halt (regs.halted);
+			cpu_halt(regs.halted);
 			continue;
 		}
-    run_func = 
-      currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
+		run_func =
+			currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
 #ifdef JIT
-      currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
+			currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
 #endif
-      m68k_run_2;
+			m68k_run_2;
 		unset_special(SPCFLAG_MODE_CHANGE);
 		unset_special(SPCFLAG_BRK);
-	  run_func ();
-  }
-	protect_roms (false);
-  in_m68k_go--;
+		run_func();
+	}
+#ifdef DEBUG
+	ProfilerStop();
+#endif
+	protect_roms(false);
+	in_m68k_go--;
 }
 
 #ifdef SAVESTATE
@@ -1520,6 +1562,9 @@ uae_u8 *restore_cpu (uae_u8 *src)
   	regs.srp = restore_u32();
   }
   if (flags & 0x80000000) {
+	  regs.chipset_latch_rw = restore_u32();
+	  regs.chipset_latch_read = restore_u32();
+	  regs.chipset_latch_write = restore_u32();
   	int khz = restore_u32();
   	restore_u32();
   	if (khz > 0 && khz < 800000)
@@ -1650,6 +1695,9 @@ uae_u8 *save_cpu (int *len, uae_u8 *dstptr)
   	if (currprefs.cpu_model >= 68020)
 	    khz *= 2;
   }
+  save_u32(regs.chipset_latch_rw);
+  save_u32(regs.chipset_latch_read);
+  save_u32(regs.chipset_latch_write);
   save_u32 (khz); // clock rate in KHz: -1 = fastest possible 
   save_u32 (0); // spare
   *len = dst - dstbak;
@@ -1756,8 +1804,10 @@ void m68k_setstopped (void)
 	regs.stopped = 1;
 	/* A traced STOP instruction drops through immediately without
 	actually stopping.  */
-	if ((regs.spcflags & SPCFLAG_DOTRACE) == 0)
-		set_special (SPCFLAG_STOP);
+	if ((regs.spcflags & SPCFLAG_DOTRACE) == 0) {
+		set_special(SPCFLAG_STOP);
+		cpu_last_stop_vpos = vpos;
+	}
 	else
 		m68k_resumestopped ();
 }
@@ -1769,6 +1819,8 @@ void m68k_resumestopped (void)
 	regs.stopped = 0;
 	fill_prefetch ();
 	unset_special (SPCFLAG_STOP);
+	cpu_stopped_lines += vpos - cpu_last_stop_vpos;
+	cpu_last_stop_vpos = vpos;
 }
 
 void fill_prefetch (void)

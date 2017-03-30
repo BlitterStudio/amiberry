@@ -10,9 +10,10 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
-#define UAEMAJOR 2
-#define UAEMINOR 8
+#define UAEMAJOR 3
+#define UAEMINOR 4
 #define UAESUBREV 1
+#include "traps.h"
 
 extern long int version;
 
@@ -59,22 +60,29 @@ struct uae_input_device
 	uae_s8 enabled;
 };
 
+#define MAX_JPORTS_CUSTOM 6
 #define MAX_JPORTS 4
 #define NORMAL_JPORTS 2
 #define MAX_JPORTNAME 128
-
-struct jport
-{
+struct jport_custom {
+	TCHAR custom[MAX_DPATH];
+};
+struct inputdevconfig {
+	TCHAR name[MAX_JPORTNAME];
+	TCHAR configname[MAX_JPORTNAME];
+	TCHAR shortid[16];
+};
+struct jport {
 	int id;
 	int mode; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
 	int autofire;
-	TCHAR name[MAX_JPORTNAME];
-	TCHAR configname[MAX_JPORTNAME];
+	struct inputdevconfig idc;
 	bool nokeyboardoverride;
 };
 
+#define JPORT_UNPLUGGED -2
 #define JPORT_NONE -1
-#define JPORT_CUSTOM -2
+
 #define JPORT_AF_NORMAL 1
 #define JPORT_AF_TOGGLE 2
 #define JPORT_AF_ALWAYS 3
@@ -86,9 +94,17 @@ struct jport
 #define MAX_SPARE_DRIVES 20
 #define MAX_CUSTOM_MEMORY_ADDRS 2
 
+#define CONFIG_TYPE_ALL -1
+#define CONFIG_TYPE_DEFAULT 0
 #define CONFIG_TYPE_HARDWARE 1
 #define CONFIG_TYPE_HOST 2
+#define CONFIG_TYPE_NORESET 4
 #define CONFIG_BLEN 2560
+
+#define MOUSEUNTRAP_NONE 0
+#define MOUSEUNTRAP_MIDDLEBUTTON 1
+#define MOUSEUNTRAP_MAGIC 2
+#define MOUSEUNTRAP_BOTH 3
 
 #define TABLET_OFF 0
 #define TABLET_MOUSEHACK 1
@@ -110,9 +126,9 @@ struct cdslot
 	TCHAR name[MAX_DPATH];
 	bool inuse;
 	bool delayed;
+	bool temporary;
 	int type;
 };
-
 struct floppyslot
 {
 	TCHAR df[MAX_DPATH];
@@ -136,18 +152,33 @@ struct wh {
 #define UAEDEV_CD 2
 #define UAEDEV_TAPE 3
 
+#define HD_LEVEL_SCSI_1 0
+#define HD_LEVEL_SCSI_2 1
+#define HD_LEVEL_SASI 2
+#define HD_LEVEL_SASI_ENHANCED 2
+#define HD_LEVEL_SASI_CHS 3
+
+#define HD_LEVEL_ATA_1 0
+#define HD_LEVEL_ATA_2 1
+#define HD_LEVEL_ATA_2S 2
+
 #define BOOTPRI_NOAUTOBOOT -128
 #define BOOTPRI_NOAUTOMOUNT -129
 #define ISAUTOBOOT(ci) ((ci)->bootpri > BOOTPRI_NOAUTOBOOT)
 #define ISAUTOMOUNT(ci) ((ci)->bootpri > BOOTPRI_NOAUTOMOUNT)
-
-struct uaedev_config_info
+#define MAX_UAEDEV_BADBLOCKS 8
+struct uaedev_badblock
 {
+	uae_u32 first;
+	uae_u32 last;
+};
+struct uaedev_config_info {
 	int type;
 	TCHAR devname[MAX_DPATH];
 	TCHAR volname[MAX_DPATH];
 	TCHAR rootdir[MAX_DPATH];
 	bool readonly;
+	bool lock;
 	int bootpri;
 	TCHAR filesys[MAX_DPATH];
 	int lowcyl;
@@ -157,8 +188,13 @@ struct uaedev_config_info
 	int sectors;
 	int reserved;
 	int blocksize;
-	int controller;
-	// zero if default
+	int controller_type;
+	int controller_type_unit;
+	int controller_unit;
+	int controller_media_type; // 1 = CF IDE, 0 = normal
+	int unit_feature_level;
+	int unit_special_flags;
+	bool physical_geometry; // if false: use defaults
 	int pcyls, pheads, psecs;
 	int flags;
 	int buffers;
@@ -173,6 +209,9 @@ struct uaedev_config_info
 	int sectorsperblock;
 	int forceload;
 	int device_emu_unit;
+	bool inject_icons;
+	int badblock_num;
+	struct uaedev_badblock badblocks[MAX_UAEDEV_BADBLOCKS];
 };
 
 struct uaedev_config_data
@@ -183,8 +222,8 @@ struct uaedev_config_data
 };
 
 enum {
-	CP_GENERIC = 1, CP_CDTV, CP_CD32, CP_A500, CP_A500P, CP_A600, CP_A1000,
-	CP_A1200, CP_A2000, CP_A3000, CP_A3000T, CP_A4000, CP_A4000T
+	CP_GENERIC = 1, CP_CDTV, CP_CDTVCR, CP_CD32, CP_A500, CP_A500P, CP_A600, CP_A1000,
+	CP_A1200, CP_A2000, CP_A3000, CP_A3000T, CP_A4000, CP_A4000T, CP_VELVET
 };
 
 #define IDE_A600A1200 1
@@ -204,11 +243,22 @@ enum {
 #define AUTOSCALE_MANUAL 7 // use gfx_xcenter_pos and gfx_ycenter_pos
 #define AUTOSCALE_INTEGER 8
 #define AUTOSCALE_INTEGER_AUTOSCALE 9
+#define AUTOSCALE_SEPARATOR 10
+#define AUTOSCALE_OVERSCAN_BLANK 11
 
 #define MONITOREMU_NONE 0
 #define MONITOREMU_AUTO 1
 #define MONITOREMU_A2024 2
 #define MONITOREMU_GRAFFITI 3
+#define MONITOREMU_HAM_E 4
+#define MONITOREMU_HAM_E_PLUS 5
+#define MONITOREMU_VIDEODAC18 6
+#define MONITOREMU_AVIDEO12 7
+#define MONITOREMU_AVIDEO24 8
+#define MONITOREMU_FIRECRACKER24 9
+#define MONITOREMU_DCTV 10
+#define MONITOREMU_OPALVISION 11
+#define MONITOREMU_COLORBURST 12
 
 #define MAX_FILTERSHADERS 4
 
@@ -219,18 +269,24 @@ enum {
 
 struct chipset_refresh
 {
+	bool inuse;
 	int index;
 	bool locked;
 	bool rtg;
+	bool exit;
+	bool defaultdata;
 	int horiz;
 	int vert;
 	int lace;
+	int resolution;
+	int resolution_pct;
 	int ntsc;
 	int vsync;
 	int framelength;
 	double rate;
 	TCHAR label[16];
 	TCHAR commands[256];
+	TCHAR filterprofile[64];
 };
 
 #define APMODE_NATIVE 0
@@ -279,6 +335,62 @@ struct gfx_filterdata
 	int gfx_filter_keep_autoscale_aspect;
 };
 
+#define MAX_DUPLICATE_EXPANSION_BOARDS 4
+#define MAX_EXPANSION_BOARDS 20
+struct boardromconfig;
+struct romconfig
+{
+	TCHAR romfile[MAX_DPATH];
+	TCHAR romident[256];
+	uae_u32 board_ram_size;
+	bool autoboot_disabled;
+	int device_id;
+	int device_settings;
+	int subtype;
+	void *unitdata;
+	TCHAR configtext[256];
+	struct boardromconfig *back;
+};
+#define MAX_BOARD_ROMS 2
+struct boardromconfig
+{
+	int device_type;
+	int device_num;
+	int device_order;
+	struct romconfig roms[MAX_BOARD_ROMS];
+};
+#define MAX_RTG_BOARDS 4
+struct rtgboardconfig
+{
+	int rtg_index;
+	int rtgmem_type;
+	uae_u32 rtgmem_size;
+	int device_order;
+};
+#define MAX_RAM_BOARDS 4
+struct ramboard
+{
+	uae_u32 size;
+	uae_u16 manufacturer;
+	uae_u8 product;
+	uae_u8 autoconfig[16];
+	bool autoconfig_inuse;
+	bool manual_config;
+	bool no_reset_unmap;
+	int device_order;
+	uae_u32 start_address;
+	uae_u32 end_address;
+	uae_u32 write_address;
+};
+struct expansion_params
+{
+	int device_order;
+};
+
+#define Z3MAPPING_AUTO 0
+#define Z3MAPPING_UAE 1
+#define Z3MAPPING_REAL 2
+
 struct uae_prefs
 {
 	struct strlist* all_lines;
@@ -288,6 +400,7 @@ struct uae_prefs
 	int config_version;
 	TCHAR config_hardware_path[MAX_DPATH];
 	TCHAR config_host_path[MAX_DPATH];
+	TCHAR config_all_path[MAX_DPATH];
 	TCHAR config_window_title[256];
 
 	bool illegal_mem;
@@ -296,6 +409,7 @@ struct uae_prefs
 	bool serial_hwctsrts;
 	bool serial_direct;
 	int serial_stopbits;
+	int serial_crlf;
 	bool parallel_demand;
 	int parallel_matrix_emulation;
 	bool parallel_postscript_emulation;
@@ -317,11 +431,16 @@ struct uae_prefs
 	int sound_interpol;
 	int sound_filter;
 	int sound_filter_type;
-	int sound_volume;
+	int sound_volume_master;
+	int sound_volume_paula;
 	int sound_volume_cd;
+	int sound_volume_board;
+	int sound_volume_midi;
+	int sound_volume_genlock;
 	bool sound_stereo_swap_paula;
 	bool sound_stereo_swap_ahi;
 	bool sound_auto;
+	bool sound_cdaudio;
 
 	int sampler_freq;
 	int sampler_buffer;
@@ -333,18 +452,12 @@ struct uae_prefs
 	int comptrustnaddr;
 	bool compnf;
 	bool compfpu;
-	bool comp_midopt;
-	bool comp_lowopt;
-	bool fpu_strict;
-
 	bool comp_hardflush;
 	bool comp_constjump;
-	bool comp_oldsegv;
-
 	int cachesize;
-	int optcount[10];
+	bool fpu_strict;
 
-	bool avoid_cmov;
+	bool fpu_softfloat;
 
 	int gfx_framerate, gfx_autoframerate;
 	struct wh gfx_size_win;
@@ -366,12 +479,15 @@ struct uae_prefs
 	int gfx_xcenter_pos, gfx_ycenter_pos;
 	int gfx_xcenter_size, gfx_ycenter_size;
 	int gfx_max_horizontal, gfx_max_vertical;
-	int gfx_saturation, gfx_luminance, gfx_contrast, gfx_gamma;
+	int gfx_saturation, gfx_luminance, gfx_contrast, gfx_gamma, gfx_gamma_ch[3];
 	bool gfx_blackerthanblack;
+	int gfx_threebitcolors;
 	int gfx_api;
 	int color_mode;
 	int gfx_extrawidth;
 	bool lightboost_strobo;
+	int lightboost_strobo_ratio;
+	bool gfx_grayscale;
 
 	struct gfx_filterdata gf[2];
 
@@ -381,8 +497,16 @@ struct uae_prefs
 	bool immediate_blits;
 	int waiting_blits;
 	unsigned int chipset_mask;
+	bool keyboard_connected;
 	bool ntscmode;
 	bool genlock;
+	int genlock_image;
+	int genlock_mix;
+	int genlock_scale;
+	int genlock_aspect;
+	bool genlock_alpha;
+	TCHAR genlock_image_file[MAX_DPATH];
+	TCHAR genlock_video_file[MAX_DPATH];
 	int monitoremu;
 	double chipset_refreshrate;
 	struct chipset_refresh cr[MAX_CHIPSET_REFRESH + 2];
@@ -398,23 +522,34 @@ struct uae_prefs
 	bool uaeserial;
 	int catweasel;
 	int cpu_idle;
+	int ppc_cpu_idle;
 	bool cpu_cycle_exact;
 	int cpu_clock_multiplier;
 	int cpu_frequency;
 	bool blitter_cycle_exact;
+	bool cpu_memory_cycle_exact;
 	int floppy_speed;
 	int floppy_write_length;
 	int floppy_random_bits_min;
 	int floppy_random_bits_max;
 	int floppy_auto_ext2;
+	int cd_speed;
 	bool tod_hack;
 	uae_u32 maprom;
+	int boot_rom;
 	bool rom_readwrite;
 	int turbo_emulation;
+	int turbo_emulation_limit;
 	bool headless;
 	int filesys_limit;
 	int filesys_max_name;
 	int filesys_max_file_size;
+	bool filesys_inject_icons;
+	TCHAR filesys_inject_icons_tool[MAX_DPATH];
+	TCHAR filesys_inject_icons_project[MAX_DPATH];
+	TCHAR filesys_inject_icons_drawer[MAX_DPATH];
+	int uaescsidevmode;
+	bool reset_delay;
 
 	int cs_compatible;
 	int cs_ciaatod;
@@ -427,6 +562,8 @@ struct uae_prefs
 	bool cs_cd32cd;
 	bool cs_cd32c2p;
 	bool cs_cd32nvram;
+	bool cs_cd32fmv;
+	int cs_cd32nvram_size;
 	bool cs_cdtvcd;
 	bool cs_cdtvram;
 	int cs_cdtvcard;
@@ -439,6 +576,7 @@ struct uae_prefs
 	int cs_deniserev;
 	int cs_mbdmac;
 	bool cs_cdtvscsi;
+	bool cs_cdtvcr;
 	bool cs_df0idhw;
 	bool cs_slowmemisfast;
 	bool cs_resetwarning;
@@ -446,7 +584,14 @@ struct uae_prefs
 	bool cs_dipagnus;
 	bool cs_agnusbltbusybug;
 	bool cs_ciatodbug;
+	bool cs_z3autoconfig;
+	bool cs_1mchipjumper;
+	bool cs_cia6526;
+	bool cs_bytecustomwritebug;
+	bool cs_color_burst;
 	int cs_hacks;
+
+	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
 	TCHAR romfile[MAX_DPATH];
 	TCHAR romident[256];
@@ -454,12 +599,6 @@ struct uae_prefs
 	uae_u32 romextfile2addr;
 	TCHAR romextfile2[MAX_DPATH];
 	TCHAR romextident[256];
-	TCHAR a2091romfile[MAX_DPATH];
-	TCHAR a2091romident[256];
-	bool a2091;
-	TCHAR a4091romfile[MAX_DPATH];
-	TCHAR a4091romident[256];
-	bool a4091;
 	TCHAR flashfile[MAX_DPATH];
 	TCHAR rtcfile[MAX_DPATH];
 	TCHAR cartfile[MAX_DPATH];
@@ -468,13 +607,16 @@ struct uae_prefs
 	TCHAR pci_devices[256];
 	TCHAR prtname[256];
 	TCHAR sername[256];
-	TCHAR amaxromfile[MAX_DPATH];
 	TCHAR a2065name[MAX_DPATH];
+	TCHAR ne2000pciname[MAX_DPATH];
+	TCHAR ne2000pcmcianame[MAX_DPATH];
+	TCHAR picassoivromfile[MAX_DPATH];
 	struct cdslot cdslots[MAX_TOTAL_SCSI_DEVICES];
 	TCHAR quitstatefile[MAX_DPATH];
 	TCHAR statefile[MAX_DPATH];
 	TCHAR inprecfile[MAX_DPATH];
 	bool inprec_autoplay;
+	bool refresh_indicator;
 
 	struct multipath path_floppy;
 	struct multipath path_hardfile;
@@ -483,35 +625,48 @@ struct uae_prefs
 
 	int m68k_speed;
 	double m68k_speed_throttle;
+	double x86_speed_throttle;
 	int cpu_model;
 	int mmu_model;
 	int cpu060_revision;
 	int fpu_model;
 	int fpu_revision;
+	int ppc_mode;
+	TCHAR ppc_model[32];
 	bool cpu_compatible;
+	bool cpu_thread;
 	bool int_no_unimplemented;
 	bool fpu_no_unimplemented;
 	bool address_space_24;
 	bool picasso96_nocustom;
 	int picasso96_modeflags;
+	int cpu_model_fallback;
 
-	uae_u32 z3fastmem_size, z3fastmem2_size;
-	uae_u32 z3fastmem_start;
+	uae_u32 z3autoconfig_start;
+	struct ramboard z3fastmem[MAX_RAM_BOARDS];
+	struct ramboard fastmem[MAX_RAM_BOARDS];
 	uae_u32 z3chipmem_size;
 	uae_u32 z3chipmem_start;
-	uae_u32 fastmem_size, fastmem2_size;
-	bool fastmem_autoconfig;
 	uae_u32 chipmem_size;
 	uae_u32 bogomem_size;
 	uae_u32 mbresmem_low_size;
 	uae_u32 mbresmem_high_size;
-	uae_u32 rtgmem_size;
+	uae_u32 mem25bit_size;
+	int cpuboard_type;
+	int cpuboard_subtype;
+	int cpuboard_settings;
+	uae_u32 cpuboardmem1_size;
+	uae_u32 cpuboardmem2_size;
+	int ppc_implementation;
 	bool rtg_hardwareinterrupt;
 	bool rtg_hardwaresprite;
-	int rtgmem_type;
 	bool rtg_more_compatible;
+	struct rtgboardconfig rtgboards[MAX_RTG_BOARDS];
 	uae_u32 custom_memory_addrs[MAX_CUSTOM_MEMORY_ADDRS];
 	uae_u32 custom_memory_sizes[MAX_CUSTOM_MEMORY_ADDRS];
+	uae_u32 custom_memory_mask[MAX_CUSTOM_MEMORY_ADDRS];
+	int uaeboard;
+	int uaeboard_order;
 
 	bool kickshifter;
 	bool filesys_no_uaefsdb;
@@ -521,7 +676,12 @@ struct uae_prefs
 	bool clipboard_sharing;
 	bool native_code;
 	bool uae_hide_autoconfig;
-	bool jit_direct_compatible_memory;
+	int z3_mapping_mode;
+	bool autoconfig_custom_sort;
+	bool obs_sound_toccata;
+	bool obs_sound_toccata_mixer;
+	bool obs_sound_es1370;
+	bool obs_sound_fm801;
 
 	int mountitems;
 	struct uaedev_config_data mountconfig[MOUNT_CONFIG_SIZE];
@@ -529,8 +689,10 @@ struct uae_prefs
 	int nr_floppies;
 	struct floppyslot floppyslots[4];
 	bool floppy_read_only;
+	bool harddrive_read_only;
 	TCHAR dfxlist[MAX_SPARE_DRIVES][MAX_DPATH];
-	int dfxclickvolume;
+	int dfxclickvolume_disk[4];
+	int dfxclickvolume_empty[4];
 	int dfxclickchannelmask;
 
 	TCHAR luafiles[MAX_LUA_STATES][MAX_DPATH];
@@ -551,10 +713,17 @@ struct uae_prefs
 #endif
 
 	int statecapturerate, statecapturebuffersize;
+	int aviout_width, aviout_height, aviout_xoffset, aviout_yoffset;
+	int screenshot_width, screenshot_height, screenshot_xoffset, screenshot_yoffset;
+	int screenshot_min_width, screenshot_min_height;
+	int screenshot_max_width, screenshot_max_height;
+	int screenshot_output_width, screenshot_output_height;
+	int screenshot_xmult, screenshot_ymult;
 
 	/* input */
 
 	struct jport jports[MAX_JPORTS];
+	struct jport_custom jports_custom[MAX_JPORTS_CUSTOM];
 	int input_selected_setting;
 	int input_joymouse_multiplier;
 	int input_joymouse_deadzone;
@@ -566,9 +735,10 @@ struct uae_prefs
 	int input_mouse_speed;
 	int input_tablet;
 	bool tablet_library;
-	bool input_magic_mouse;
+	int input_mouse_untrap;
 	int input_magic_mouse_cursor;
 	int input_keyboard_type;
+	int input_autoswitch;
 	struct uae_input_device joystick_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device mouse_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device keyboard_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
@@ -576,6 +746,7 @@ struct uae_prefs
 	TCHAR input_config_name[GAMEPORT_INPUT_SETTINGS][256];
 	int dongle;
 	int input_contact_bounce;
+	int input_device_match_mask;
 };
 
 extern int config_changed;
@@ -610,7 +781,7 @@ extern void error_log(const TCHAR*, ...);
 extern TCHAR *get_error_log(void);
 extern bool is_error_log(void);
 
-extern void default_prefs(struct uae_prefs *, int);
+extern void default_prefs(struct uae_prefs *, bool, int);
 extern void discard_prefs(struct uae_prefs *, int);
 
 int parse_cmdline_option(struct uae_prefs *, TCHAR, const TCHAR*);
@@ -635,21 +806,23 @@ extern int cfgfile_load(struct uae_prefs *p, const TCHAR *filename, int *type, i
 extern int cfgfile_save(struct uae_prefs *p, const TCHAR *filename, int);
 extern void cfgfile_parse_line(struct uae_prefs *p, TCHAR *, int);
 extern void cfgfile_parse_lines(struct uae_prefs *p, const TCHAR *, int);
-extern int cfgfile_parse_option(struct uae_prefs *p, TCHAR *option, TCHAR *value, int);
+extern int cfgfile_parse_option(struct uae_prefs *p, const TCHAR *option, TCHAR *value, int);
 extern int cfgfile_get_description(const TCHAR *filename, TCHAR *description, TCHAR *hostlink, TCHAR *hardwarelink, int *type);
 extern void cfgfile_show_usage(void);
 extern int cfgfile_searchconfig(const TCHAR *in, int index, TCHAR *out, int outsize);
-extern uae_u32 cfgfile_uaelib(int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
-extern uae_u32 cfgfile_uaelib_modify(uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
-extern uae_u32 cfgfile_modify(uae_u32 index, TCHAR *parms, uae_u32 size, TCHAR *out, uae_u32 outsize);
+extern uae_u32 cfgfile_uaelib(TrapContext *ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
+extern uae_u32 cfgfile_uaelib_modify(TrapContext *ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
+extern uae_u32 cfgfile_modify(uae_u32 index, const TCHAR *parms, uae_u32 size, TCHAR *out, uae_u32 outsize);
 extern void cfgfile_addcfgparam(TCHAR *);
 extern int built_in_prefs(struct uae_prefs *p, int model, int config, int compa, int romcheck);
 extern int built_in_chipset_prefs(struct uae_prefs *p);
 extern int cmdlineparser(const TCHAR *s, TCHAR *outp[], int max);
 extern int cfgfile_configuration_change(int);
 extern void fixup_prefs_dimensions(struct uae_prefs *prefs);
-extern void fixup_prefs(struct uae_prefs *prefs);
+extern void fixup_prefs(struct uae_prefs *prefs, bool userconfig);
 extern void fixup_cpu(struct uae_prefs *prefs);
+extern void cfgfile_compatibility_romtype(struct uae_prefs *p);
+extern void cfgfile_compatibility_rtg(struct uae_prefs *p);
 
 extern void check_prefs_changed_custom(void);
 extern void check_prefs_changed_cpu(void);

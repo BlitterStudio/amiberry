@@ -35,7 +35,8 @@
 
 #include "readcpu.h"
 #include "machdep/m68k.h"
-#include "memory.h"
+#include "include/memory.h"
+#include "events.h"
 
 extern const int areg_byteinc[];
 extern const int imm8_table[];
@@ -54,17 +55,25 @@ typedef uae_u32 REGPARAM3 cpuop_func (uae_u32) REGPARAM;
 typedef void REGPARAM3 cpuop_func_ce (uae_u32) REGPARAM;
 
 struct cputbl {
-    cpuop_func *handler;
-    uae_u16 opcode;
+	cpuop_func *handler;
+	uae_u16 opcode;
 };
 
 #ifdef JIT
+#define MAX_JIT_CACHE 16384
 typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 
+#define COMP_OPCODE_ISJUMP      0x0001
+#define COMP_OPCODE_LONG_OPCODE 0x0002
+#define COMP_OPCODE_CMOV        0x0004
+#define COMP_OPCODE_ISADDX      0x0008
+#define COMP_OPCODE_ISCJUMP     0x0010
+#define COMP_OPCODE_USES_FPU    0x0020
+
 struct comptbl {
-  compop_func *handler;
+	compop_func *handler;
 	uae_u32	specific;
-  uae_u32 opcode;
+	uae_u32 opcode;
 };
 #endif
 
@@ -104,8 +113,12 @@ struct regstruct
   uae_u8 *pc_oldp;
   uae_u32 instruction_pc;
   
-	uae_u16 irc, ir;
-  uae_u32 spcflags;
+  uae_u16 irc, ir, db;
+  volatile uae_atomic spcflags;
+  uae_u32 last_prefetch;
+  uae_u32 chipset_latch_rw;
+  uae_u32 chipset_latch_read;
+  uae_u32 chipset_latch_write;
 
   uaecptr usp, isp, msp;
   uae_u16 sr;
@@ -115,8 +128,10 @@ struct regstruct
   flagtype m;
   flagtype x;
   flagtype stopped;
-	int halted;
+  int halted;
+  int exception;
   int intmask;
+  int ipl, ipl_pin;
 
   uae_u32 vbr,sfc,dfc;
 
@@ -143,10 +158,7 @@ struct regstruct
 
   uae_u8 panic;
   uae_u32 panic_pc, panic_addr;
-  signed long pissoff;
 };
-
-extern unsigned long nextevent, is_syncline, currcycle;
 
 extern struct regstruct regs;
 
@@ -160,10 +172,14 @@ STATIC_INLINE uae_u32 munge24(uae_u32 x)
 extern int cpu_cycles;
 extern bool m68k_pc_indirect;
 
-STATIC_INLINE void set_special (uae_u32 x)
+STATIC_INLINE void set_special_exter(uae_u32 x)
 {
 	regs.spcflags |= x;
-  cycles_do_special();
+}
+STATIC_INLINE void set_special(uae_u32 x)
+{
+	regs.spcflags |= x;
+	cycles_do_special();
 }
 
 STATIC_INLINE void unset_special (uae_u32 x)

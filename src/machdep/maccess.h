@@ -44,15 +44,13 @@ STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *a)
 #else
 STATIC_INLINE uae_u16 do_get_mem_word(uae_u16 *a)
 {
-    uae_u8 *b = (uae_u8 *)a;
-    return (*b << 8) | (*(b+1));
+	uae_u8 *b = (uae_u8 *)a;
+
+	return (*b << 8) | (*(b + 1));
 }
 #endif
 
-STATIC_INLINE uae_u8 do_get_mem_byte(uae_u8 *a)
-{
-    return *a;
-}
+#define do_get_mem_byte(a) ((uae_u32)*(uae_u8 *)(a))
 
 #ifdef ARMV6_ASSEMBLY
 STATIC_INLINE void do_put_mem_long(uae_u32 *a, uae_u32 v)
@@ -65,12 +63,12 @@ STATIC_INLINE void do_put_mem_long(uae_u32 *a, uae_u32 v)
 #else
 STATIC_INLINE void do_put_mem_long(uae_u32 *a, uae_u32 v)
 {
-    uae_u8 *b = (uae_u8 *)a;
+	uae_u8 *b = (uae_u8 *)a;
 
-    *b = v >> 24;
-    *(b+1) = v >> 16;
-    *(b+2) = v >> 8;
-    *(b+3) = v;
+	*b = v >> 24;
+	*(b + 1) = v >> 16;
+	*(b + 2) = v >> 8;
+	*(b + 3) = v;
 }
 #endif
 
@@ -88,7 +86,7 @@ STATIC_INLINE void do_put_mem_word(uae_u16 *a, uae_u16 v)
 	uae_u8 *b = (uae_u8 *)a;
 
 	*b = v >> 8;
-	*(b + 1) = v;
+	*(b + 1) = (uae_u8)v;
 }
 #endif
 

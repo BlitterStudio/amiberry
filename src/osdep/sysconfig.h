@@ -1,4 +1,9 @@
 
+#pragma once
+#pragma warning (disable : 4761)
+#pragma warning (disable : 4996)
+#pragma warning (disable : 4018)
+
 #define SUPPORT_THREADS
 #define MAX_DPATH 256
 
@@ -60,6 +65,8 @@
 #if !defined(AHI)
 #undef ENFORCER
 #endif
+
+typedef long uae_atomic;
 
 /* src/sysconfig.h.  Generated automatically by configure.  */
 /* src/sysconfig.h.in.  Generated automatically from configure.in by autoheader.  */

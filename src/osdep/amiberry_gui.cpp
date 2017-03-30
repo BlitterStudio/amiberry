@@ -431,7 +431,7 @@ static void gui_to_prefs()
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
-	fixup_prefs(&changed_prefs);
+	fixup_prefs(&changed_prefs, true);
 }
 
 
@@ -621,7 +621,6 @@ void gui_led(int led, int on)
 			else kbd_led_status &= ~LED_SCR;
 		}
 	}
-
 	ioctl(0, KDSETLED, kbd_led_status);
 }
 

@@ -11,3 +11,4 @@ extern SDL_DisplayMode sdlMode;
 
 extern void check_error_sdl(bool check, const char* message);
 extern void updatedisplayarea();
+void DX_Fill(int dstx, int dsty, int width, int height, uae_u32 color);

@@ -117,6 +117,16 @@ const int tune_nop_fillers = 1;	  // Tune no-op fillers for architecture
 static int setzflg_uses_bsf	= 0;	// setzflg virtual instruction can use native BSF instruction correctly?
 static int align_loops = 0;	      // Align the start of loops
 static int align_jumps = 0;	      // Align the start of jumps
+static int		optcount[10] = {
+#ifdef UAE
+	4,		// How often a block has to be executed before it is translated
+#else
+	10,		// How often a block has to be executed before it is translated
+#endif
+	0,		// How often to use naive translation
+	0, 0, 0, 0,
+	-1, -1, -1, -1
+};
 
 op_properties prop[65536];
 
@@ -211,7 +221,7 @@ extern const struct cputbl op_smalltbl_4_nf[];
 extern const struct cputbl op_smalltbl_5_nf[];
 #endif
 
-static void flush_icache_hard(uaecptr ptr, int n);
+//static void flush_icache_hard(uaecptr ptr, int n);
 static void flush_icache_lazy(uaecptr ptr, int n);
 static void flush_icache_none(uaecptr ptr, int n);
 void (*flush_icache)(uaecptr ptr, int n) = flush_icache_none;
@@ -232,9 +242,9 @@ static void prepare_for_call_2(void);
 static void align_target(uae_u32 a);
 #endif
 
-STATIC_INLINE void flush_cpu_icache(void *from, void *to);
-STATIC_INLINE void write_jmp_target(uae_u32 *jmpaddr, cpuop_func* a);
-STATIC_INLINE void emit_jmp_target(uae_u32 a);
+static void inline flush_cpu_icache(void *from, void *to);
+static void inline write_jmp_target(uae_u32 *jmpaddr, cpuop_func* a);
+static void inline emit_jmp_target(uae_u32 a);
 
 uae_u32 m68k_pc_offset;
 
@@ -401,24 +411,23 @@ STATIC_INLINE void set_dhtu(blockinfo* bi, cpuop_func* dh)
   }
 }
 
-STATIC_INLINE void invalidate_block(blockinfo* bi)
+static inline void invalidate_block(blockinfo* bi)
 {
-  int i;
+	int i;
 
-  bi->optlevel = 0;
-  bi->count = currprefs.optcount[0]-1;
-  bi->handler = NULL;
-  bi->handler_to_use = (cpuop_func *)popall_execute_normal;
-  bi->direct_handler = NULL;
-  set_dhtu(bi, bi->direct_pen);
-  bi->needed_flags = 0xff;
-
+	bi->optlevel = 0;
+	bi->count = optcount[0] - 1;
+	bi->handler = NULL;
+	bi->handler_to_use = (cpuop_func*)popall_execute_normal;
+	bi->direct_handler = NULL;
+	set_dhtu(bi, bi->direct_pen);
+	bi->needed_flags = 0xff;
 	bi->status = BI_INVALID;
-  for (i=0; i<2; i++) {
-	  bi->dep[i].jmp_off = NULL;
-	  bi->dep[i].target = NULL;
-  }
-  remove_deps(bi);
+	for (i = 0; i<2; i++) {
+		bi->dep[i].jmp_off = NULL;
+		bi->dep[i].target = NULL;
+	}
+	remove_deps(bi);
 }
 
 STATIC_INLINE void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uae_u32 target)
@@ -688,7 +697,7 @@ STATIC_INLINE void emit_byte(uae_u8 x)
 
 STATIC_INLINE void emit_long(uae_u32 x)
 {
-  *((uae_u32*)target) = x;
+  *reinterpret_cast<uae_u32*>(target) = x;
   target += 4;
 }
 
@@ -2632,11 +2641,11 @@ STATIC_INLINE void create_popalls(void)
   pushall_call_handler = get_target();
   raw_push_regs_to_preserve();
   raw_dec_sp(stack_space);
-  compemu_raw_init_r_regstruct((uintptr)&regs);
+  compemu_raw_init_r_regstruct(uintptr(&regs));
   r = REG_PC_TMP;
-  compemu_raw_mov_l_rm(r,(uintptr)&regs.pc_p);
+  compemu_raw_mov_l_rm(r,uintptr(&regs.pc_p));
   compemu_raw_and_TAGMASK(r);
-  compemu_raw_jmp_m_indexed((uintptr)cache_tags, r, SIZEOF_VOID_P);
+  compemu_raw_jmp_m_indexed(uintptr(cache_tags), r, SIZEOF_VOID_P);
 
   /* now the exit points */
 #ifndef ALIGN_NOT_NEEDED
@@ -2645,7 +2654,7 @@ STATIC_INLINE void create_popalls(void)
   popall_do_nothing = get_target();
   raw_inc_sp(stack_space);
   raw_pop_preserved_regs();
-  compemu_raw_jmp((uintptr)do_nothing);
+  compemu_raw_jmp(uintptr(do_nothing));
 
 #ifndef ALIGN_NOT_NEEDED
   align_target(align_jumps);
@@ -2653,7 +2662,7 @@ STATIC_INLINE void create_popalls(void)
   popall_execute_normal = get_target();
   raw_inc_sp(stack_space);
   raw_pop_preserved_regs();
-  compemu_raw_jmp((uintptr)execute_normal);
+  compemu_raw_jmp(uintptr(execute_normal));
 
 #ifndef ALIGN_NOT_NEEDED
   align_target(align_jumps);
@@ -2661,7 +2670,7 @@ STATIC_INLINE void create_popalls(void)
   popall_cache_miss = get_target();
   raw_inc_sp(stack_space);
   raw_pop_preserved_regs();
-  compemu_raw_jmp((uintptr)cache_miss);
+  compemu_raw_jmp(uintptr(cache_miss));
 
 #ifndef ALIGN_NOT_NEEDED
   align_target(align_jumps);
@@ -2885,7 +2894,7 @@ static void flush_icache_none(uaecptr ptr, int n)
 	/* Nothing to do.  */
 }
 
-static void flush_icache_hard(uaecptr ptr, int n)
+void flush_icache_hard(uaecptr ptr, int n)
 {
   blockinfo* bi, *dbi;
 
@@ -3064,10 +3073,10 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 	    }
   	}	
 	  if (bi->count == -1) {
-	    optlev++;
-	    while (!currprefs.optcount[optlev])
-	    	optlev++;
-	    bi->count = currprefs.optcount[optlev] - 1;
+		  optlev++;
+		  while (!optcount[optlev])
+			  optlev++;
+		  bi->count = optcount[optlev] - 1;
 	  }
 	  current_block_pc_p = (uintptr)pc_hist[0].location;
 

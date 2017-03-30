@@ -350,8 +350,8 @@ static void create_virtual_rdb(struct hardfiledata *hfd)
 	pl(part, 6, -1);
 	pl(part, 7, -1);
 	pl(part, 8, 0); // devflags
-	part[9 * 4] = _tcslen(hfd->device_name);
-	ua_copy((char*)part + 9 * 4 + 1, -1, hfd->device_name);
+	part[9 * 4] = _tcslen(hfd->ci.devname);
+	ua_copy((char*)part + 9 * 4 + 1, 30, hfd->ci.devname);
 
 	denv = part + 128;
 	pl(denv, 0, 80);
@@ -573,12 +573,12 @@ void hdf_close(struct hardfiledata *hfd)
 	hfd->vhd_sectormap = NULL;
 }
 
-int hdf_dup(struct hardfiledata *dhfd, const struct hardfiledata *shfd)
-{
-	return hdf_dup_target(dhfd, shfd);
-}
+//int hdf_dup(struct hardfiledata *dhfd, const struct hardfiledata *shfd)
+//{
+//	return hdf_dup_target(dhfd, shfd);
+//}
 
-extern int get_guid_target(uae_u8 *out);
+//extern int get_guid_target(uae_u8 *out);
 
 static uae_u64 vhd_read(struct hardfiledata *hfd, void *v, uae_u64 offset, uae_u64 len)
 {
@@ -795,7 +795,7 @@ int vhd_create(const TCHAR *name, uae_u64 size, uae_u32 dostype)
 	b[0x3b] = tracksec;
 	// disk type
 	b[0x3c + 3] = HFD_VHD_DYNAMIC;
-	get_guid_target(b + 0x44);
+	//get_guid_target(b + 0x44);
 	crc = vhd_checksum(b, -1);
 	b[0x40] = crc >> 24;
 	b[0x41] = crc >> 16;
@@ -1604,12 +1604,13 @@ void hardfile_do_disk_change(struct uaedev_config_data *uci, bool insert)
 	int fsid = uci->configoffset;
 	struct hardfiledata *hfd;
 
-	if (uci->ci.controller == HD_CONTROLLER_PCMCIA_SRAM) {
-		//gayle_modify_pcmcia_sram_unit(uci->ci.rootdir, uci->ci.readonly, insert); //TODO
-		return;
-	}
-	else if (uci->ci.controller == HD_CONTROLLER_PCMCIA_IDE) {
-		//gayle_modify_pcmcia_ide_unit(uci->ci.rootdir, uci->ci.readonly, insert); //TODO
+	if (uci->ci.controller_type == HD_CONTROLLER_TYPE_PCMCIA) {
+		if (uci->ci.controller_type_unit == 0) {
+			//gayle_modify_pcmcia_sram_unit(&uci->ci, insert);
+		}
+		else {
+			//gayle_modify_pcmcia_ide_unit(&uci->ci, insert);
+		}
 		return;
 	}
 	hfd = get_hardfile_data(fsid);

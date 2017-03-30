@@ -31,3 +31,11 @@ bool gfxboard_is_z3 (int type)
 	return false;
 }
 
+const TCHAR *gfxboard_get_configname(int type)
+{
+	if (type == GFXBOARD_UAE_Z2)
+		return _T("ZorroII");
+	if (type == GFXBOARD_UAE_Z3)
+		return _T("ZorroIII");
+	//return boards[type - GFXBOARD_HARDWARE].configname;
+}

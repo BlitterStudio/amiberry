@@ -24,8 +24,7 @@ struct hdf_cache
 	time_t lastaccess;
 };
 
-struct hardfiledata
-{
+struct hardfiledata {
 	uae_u64 virtsize; // virtual size
 	uae_u64 physsize; // physical size (dynamic disk)
 	uae_u64 offset;
@@ -40,7 +39,6 @@ struct hardfiledata
 	TCHAR vendor_id[8 + 1];
 	TCHAR product_id[16 + 1];
 	TCHAR product_rev[4 + 1];
-	TCHAR device_name[256];
 	/* geometry from possible RDSK block */
 	int rdbcylinders;
 	int rdbsectors;
@@ -64,7 +62,7 @@ struct hardfiledata
 	void *chd_handle;
 
 	int drive_empty;
-	TCHAR* emptyname;
+	TCHAR *emptyname;
 
 	struct hdf_cache bcache[MAX_HDF_CACHE_BLOCKS];
 	uae_u8 scsi_sense[MAX_SCSI_SENSE];
@@ -72,13 +70,13 @@ struct hardfiledata
 	struct uaedev_config_info delayedci;
 	int reinsertdelay;
 	bool isreinsert;
+	bool unit_stopped;
 };
 
 #define HFD_FLAGS_REALDRIVE 1
 #define HFD_FLAGS_REALDRIVEPARTITION 2
 
-struct hd_hardfiledata
-{
+struct hd_hardfiledata {
 	struct hardfiledata hfd;
 	uae_u64 size;
 	int cyls;
@@ -90,20 +88,21 @@ struct hd_hardfiledata
 	int ansi_version;
 };
 
-#define HD_CONTROLLER_UAE 0
-#define HD_CONTROLLER_IDE0 1
-#define HD_CONTROLLER_IDE1 2
-#define HD_CONTROLLER_IDE2 3
-#define HD_CONTROLLER_IDE3 4
-#define HD_CONTROLLER_SCSI0 5
-#define HD_CONTROLLER_SCSI1 6
-#define HD_CONTROLLER_SCSI2 7
-#define HD_CONTROLLER_SCSI3 8
-#define HD_CONTROLLER_SCSI4 9
-#define HD_CONTROLLER_SCSI5 10
-#define HD_CONTROLLER_SCSI6 11
-#define HD_CONTROLLER_PCMCIA_SRAM 12
-#define HD_CONTROLLER_PCMCIA_IDE 13
+#define HD_CONTROLLER_EXPANSION_MAX 120
+#define HD_CONTROLLER_NEXT_UNIT 300
+
+#define HD_CONTROLLER_TYPE_UAE 0
+#define HD_CONTROLLER_TYPE_IDE_AUTO (HD_CONTROLLER_TYPE_UAE + 1)
+#define HD_CONTROLLER_TYPE_IDE_FIRST (HD_CONTROLLER_TYPE_IDE_AUTO)
+#define HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST (HD_CONTROLLER_TYPE_IDE_FIRST + 1)
+#define HD_CONTROLLER_TYPE_IDE_LAST (HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST + HD_CONTROLLER_EXPANSION_MAX - 1)
+
+#define HD_CONTROLLER_TYPE_SCSI_AUTO (HD_CONTROLLER_TYPE_IDE_LAST + 1)
+#define HD_CONTROLLER_TYPE_SCSI_FIRST (HD_CONTROLLER_TYPE_SCSI_AUTO)
+#define HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST (HD_CONTROLLER_TYPE_SCSI_FIRST + 1)
+#define HD_CONTROLLER_TYPE_SCSI_LAST (HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST + HD_CONTROLLER_EXPANSION_MAX - 1)
+
+#define HD_CONTROLLER_TYPE_PCMCIA (HD_CONTROLLER_TYPE_SCSI_LAST + 1)
 
 #define FILESYS_VIRTUAL 0
 #define FILESYS_HARDFILE 1

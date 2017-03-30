@@ -22,15 +22,42 @@ using namespace std;
 #include <assert.h>
 #include <limits.h>
 
-#ifdef _GCCRES_
-#undef _GCCRES_
+#ifndef UAE
+#define UAE
 #endif
 
-#ifdef UAE4ALL_NO_USE_RESTRICT
-#define _GCCRES_
+#if defined(__x86_64__) || defined(_M_AMD64)
+#define CPU_x86_64 1
+#define CPU_64_BIT 1
+#elif defined(__i386__) || defined(_M_IX86)
+#define CPU_i386 1
+#elif defined(__arm__) || defined(_M_ARM)
+#define CPU_arm 1
+#elif defined(__powerpc__) || defined(_M_PPC)
+#define CPU_powerpc 1
 #else
-#define _GCCRES_ __restrict__
+#error unrecognized CPU type
 #endif
+
+//#ifdef _WIN32
+/* Parameters are passed in ECX, EDX for both x86 and x86-64 (RCX, RDX).
+* For x86-64, __fastcall is the default, so it isn't really required. */
+//#define JITCALL __fastcall
+//#elif defined(CPU_x86_64)
+///* Parameters are passed in RDI, RSI by default (System V AMD64 ABI). */
+//#define JITCALL
+//#elif defined(HAVE_FUNC_ATTRIBUTE_REGPARM)
+///* Parameters are passed in EAX, EDX on x86 with regparm(2). */
+//#define JITCALL __attribute__((regparm(2)))
+///* This was originally regparm(3), but as far as I can see only two register
+//* params are supported by the JIT code. It probably just worked anyway
+//* if all functions used max two arguments. */
+//#elif !defined(JIT)
+//#define JITCALL
+//#endif
+#define REGPARAM
+#define REGPARAM2
+#define REGPARAM3
 
 #ifndef __STDC__
 #error "Your compiler is not ANSI. Get a real one."
@@ -115,15 +142,6 @@ struct utimbuf
 	time_t actime;
 	time_t modtime;
 };
-#endif
-
-#if defined(__GNUC__) && defined(AMIGA)
-/* gcc on the amiga need that __attribute((regparm)) must */
-/* be defined in function prototypes as well as in        */
-/* function definitions !                                 */
-#define REGPARAM2 REGPARAM
-#else /* not(GCC & AMIGA) */
-#define REGPARAM2
 #endif
 
 /* sam: some definitions so that SAS/C can compile UAE */
@@ -215,6 +233,12 @@ typedef uae_u32 uaecptr;
 #define UVAL64(a) (a ## ul)
 #endif
 
+void atomic_and(volatile uae_atomic *p, uae_u32 v);
+void atomic_or(volatile uae_atomic *p, uae_u32 v);
+uae_atomic atomic_inc(volatile uae_atomic *p);
+uae_atomic atomic_dec(volatile uae_atomic *p);
+uae_u32 atomic_bit_test_and_reset(volatile uae_atomic *p, uae_u32 v);
+
 #ifdef HAVE_STRDUP
 #define my_strdup strdup
 #else
@@ -226,6 +250,8 @@ extern void my_trim(TCHAR*);
 extern TCHAR *my_strdup_trim(const TCHAR*);
 extern TCHAR *au(const char*);
 extern char *ua(const TCHAR*);
+extern TCHAR *aucp(const char *s, unsigned int cp);
+extern char *uacp(const TCHAR *s, unsigned int cp);
 extern TCHAR *au_fs(const char*);
 extern char *ua_fs(const TCHAR*, int);
 extern char *ua_copy(char *dst, int maxlen, const TCHAR *src);
@@ -234,7 +260,9 @@ extern char *ua_fs_copy(char *dst, int maxlen, const TCHAR *src, int defchar);
 extern TCHAR *au_fs_copy(TCHAR *dst, int maxlen, const char *src);
 extern char *uutf8(const TCHAR *s);
 extern TCHAR *utf8u(const char *s);
+extern void unicode_init(void);
 extern void to_lower(TCHAR *s, int len);
+extern void to_upper(TCHAR *s, int len);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
@@ -267,8 +295,8 @@ extern void to_lower(TCHAR *s, int len);
 #undef DONT_HAVE_STDIO
 #undef DONT_HAVE_MALLOC
 
-#if defined AMIBERRY
-
+#ifdef AMIBERRY
+#include <SDL.h>
 #include <ctype.h>
 
 #define FILEFLAG_DIR     0x1
@@ -278,17 +306,6 @@ extern void to_lower(TCHAR *s, int len);
 #define FILEFLAG_EXECUTE 0x10
 #define FILEFLAG_SCRIPT  0x20
 #define FILEFLAG_PURE    0x40
-
-#define REGPARAM2
-#define REGPARAM3 
-#define REGPARAM
-
-#define abort() \
-  do { \
-    printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
-    SDL_Quit(); \
-    (abort) (); \
-} while (0)
 
 #endif
 
@@ -371,6 +388,8 @@ extern void mallocemu_free(void *ptr);
 #define ASM_SYM_FOR_FUNC(a)
 #endif
 
+#include "target.h"
+
 #ifdef UAE_CONSOLE
 #undef write_log
 #define write_log write_log_standard
@@ -392,11 +411,7 @@ extern void gui_message(const TCHAR *, ...);
 
 #ifndef STATIC_INLINE
 #if __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
-#ifdef RASPBERRY
-#define STATIC_INLINE static __inline__
-#else
 #define STATIC_INLINE static __inline__ __attribute__ ((always_inline))
-#endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
 #elif _MSC_VER
@@ -409,8 +424,6 @@ extern void gui_message(const TCHAR *, ...);
 #define NORETURN
 #endif
 #endif
-
-#include "target.h"
 
 /* Every Amiga hardware clock cycle takes this many "virtual" cycles.  This
    used to be hardcoded as 1, but using higher values allows us to time some
@@ -499,3 +512,9 @@ extern void xfree(const void*);
 #endif
 
 #define DBLEQU(f, i) (abs ((f) - (i)) < 0.000001)
+
+#ifdef HAVE_VAR_ATTRIBUTE_UNUSED
+#define NOWARN_UNUSED(x) __attribute__((unused)) x
+#else
+#define NOWARN_UNUSED(x) x
+#endif

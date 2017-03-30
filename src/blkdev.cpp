@@ -10,7 +10,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 
 #include "blkdev.h"
 #include "scsidev.h"
@@ -133,24 +133,24 @@ int isdatatrack(struct cd_toc_head *th, int block)
 
 static int cdscsidevicetype[MAX_TOTAL_SCSI_DEVICES];
 
-#ifdef _WIN32
-
-#include "od-win32/win32.h"
-
-extern struct device_functions devicefunc_win32_spti;
-extern struct device_functions devicefunc_win32_ioctl;
-
-#endif
+//#ifdef _WIN32
+//
+//#include "od-win32/win32.h"
+//
+//extern struct device_functions devicefunc_win32_spti;
+//extern struct device_functions devicefunc_win32_ioctl;
+//
+//#endif
 
 extern struct device_functions devicefunc_cdimage;
 
 static struct device_functions *devicetable[] = {
 	NULL,
 	&devicefunc_cdimage,
-#ifdef _WIN32
-	&devicefunc_win32_ioctl,
-	&devicefunc_win32_spti,
-#endif
+//#ifdef _WIN32
+//	&devicefunc_win32_ioctl,
+//	&devicefunc_win32_spti,
+//#endif
 	NULL
 };
 static int driver_installed[6];

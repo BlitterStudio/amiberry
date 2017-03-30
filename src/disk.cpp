@@ -1477,6 +1477,11 @@ void DISK_motordelay_func(uae_u32 v)
 	floppy[v].motordelay = 0;
 }
 
+static void motordelay_func(uae_u32 v)
+{
+	floppy[v].motordelay = 0;
+}
+
 static void drive_motor(drive* drv, bool off)
 {
 	if (drv->motoroff && !off)
@@ -1498,9 +1503,7 @@ static void drive_motor(drive* drv, bool off)
 		if (currprefs.cpu_model <= 68010 && currprefs.m68k_speed == 0)
 		{
 			drv->motordelay = 1;
-			event2_newevent(ev2_disk_motor0 + (drv - floppy), 30, drv - floppy);
-			//TODO: enable when event2_newevent2 is implemented, replace the above
-			//event2_newevent2(30, drv - floppy, motordelay_func);
+			event2_newevent2(30, drv - floppy, motordelay_func);
 		}
 	}
 	drv->motoroff = off;

@@ -125,7 +125,7 @@ extern uae_u8 *save_input (int *len, uae_u8 *dstptr);
 
 extern void restore_cram (int, size_t);
 extern void restore_bram (int, size_t);
-extern void restore_fram (int, size_t);
+extern void restore_fram(int, size_t, int);
 extern void restore_zram (int, size_t, int);
 extern void restore_bootrom (int, size_t);
 extern void restore_pram (int, size_t);
@@ -133,7 +133,7 @@ extern void restore_ram (size_t, uae_u8*);
 
 extern uae_u8 *save_cram(int *);
 extern uae_u8 *save_bram(int *);
-extern uae_u8 *save_fram(int *);
+extern uae_u8 *save_fram(int *, int);
 extern uae_u8 *save_zram(int *, int);
 extern uae_u8 *save_bootrom(int *);
 extern uae_u8 *save_pram(int *);

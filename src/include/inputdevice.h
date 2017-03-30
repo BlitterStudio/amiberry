@@ -310,18 +310,17 @@ extern void setsystime (void);
 #define JSEM_MODE_LIGHTPEN 8
 
 #define JSEM_KBDLAYOUT 0
+#define JSEM_CUSTOM 10
 #define JSEM_JOYS 100
 #define JSEM_MICE 200
 #define JSEM_END 300
-#define JSEM_XARCADE1LAYOUT (JSEM_KBDLAYOUT + 3)
-#define JSEM_XARCADE2LAYOUT (JSEM_KBDLAYOUT + 4)
 #define JSEM_DECODEVAL(port,p) ((p)->jports[port].id)
 #define JSEM_ISNUMPAD(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT)
 #define JSEM_ISCURSOR(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 1)
 #define JSEM_ISSOMEWHEREELSE(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 2)
-#define JSEM_ISXARCADE1(port,p) (jsem_iskbdjoy(port,p) == JSEM_XARCADE1LAYOUT)
-#define JSEM_ISXARCADE2(port,p) (jsem_iskbdjoy(port,p) == JSEM_XARCADE2LAYOUT)
-#define JSEM_LASTKBD 5
+#define JSEM_ISCUSTOM(port,p) ((p)->jports[port].id >= JSEM_CUSTOM && (p)->jports[port].id < JSEM_CUSTOM + MAX_JPORTS_CUSTOM)
+#define JSEM_GETCUSTOMIDX(port,p) ((p)->jports[port].id - JSEM_CUSTOM)
+#define JSEM_LASTKBD 3
 #define JSEM_ISANYKBD(port,p) (jsem_iskbdjoy(port,p) >= JSEM_KBDLAYOUT && jsem_iskbdjoy(port,p) < JSEM_KBDLAYOUT + JSEM_LASTKBD)
 
 extern int jsem_isjoy (int port, const struct uae_prefs *p);

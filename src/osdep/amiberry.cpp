@@ -43,6 +43,8 @@
 #include <map>
 #include "scsidev.h"
 
+int pissoff_value = 15000 * CYCLE_UNIT;
+
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void gui_force_rtarea_hdchange();
 
@@ -228,9 +230,9 @@ void target_quit()
 
 void target_fixup_options(struct uae_prefs* p)
 {
-	p->rtgmem_type = 1;
-	if (p->z3fastmem_start != z3_start_adr)
-		p->z3fastmem_start = z3_start_adr;
+	p->rtgboards[0].rtgmem_type = 1;
+	if (p->z3fastmem[0].start_address != z3_start_adr)
+		p->z3fastmem[0].start_address = z3_start_adr;
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 	if (p->gfx_size.width == 0)
@@ -383,7 +385,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		gui_force_rtarea_hdchange();
 
 	discard_prefs(p, type);
-	default_prefs(p, 0);
+	default_prefs(p, true, 0);
 
 	const char* ptr = strstr(filename, ".rp9");
 	if (ptr > nullptr)
@@ -792,6 +794,7 @@ int handle_msgpump()
 					//ch = true;
 				}
 				break;
+
 			case SDLK_CAPSLOCK: // capslock
 				if (currprefs.keyboard_leds[KBLED_CAPSLOCKB] > 0)
 				{

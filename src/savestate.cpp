@@ -461,7 +461,7 @@ void restore_state(const TCHAR* filename)
 	TCHAR name[5];
 	size_t len, totallen;
 	size_t filepos, filesize;
-	int z3num;
+	int z3num, z2num;
 
 	chunk = 0;
 	f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
@@ -485,9 +485,9 @@ void restore_state(const TCHAR* filename)
 	restore_cia_start();
 	changed_prefs.bogomem_size = 0;
 	changed_prefs.chipmem_size = 0;
-	changed_prefs.fastmem_size = 0;
-	changed_prefs.z3fastmem_size = 0;
-	z3num = 0;
+	changed_prefs.fastmem[0].size = 0;
+	changed_prefs.z3fastmem[0].size = 0;
+	z2num = z3num = 0;
 	for (;;)
 	{
 		name[0] = 0;
@@ -510,7 +510,7 @@ void restore_state(const TCHAR* filename)
 		}
 		else if (!_tcscmp (name, _T("FRAM")))
 		{
-			restore_fram(totallen, filepos);
+			restore_fram(totallen, filepos, z2num++);
 			continue;
 		}
 		else if (!_tcscmp (name, _T("ZRAM")))
@@ -663,7 +663,7 @@ void savestate_restore_finish()
 #endif
 	restore_cia_finish();
 	savestate_state = 0;
-	init_hz_full();
+	init_hz_normal();
 	audio_activate();
 }
 
@@ -695,9 +695,15 @@ static void save_rams(struct zfile* f, int comp)
 	dst = save_bram(&len);
 	save_chunk(f, dst, len, _T("BRAM"), comp);
 #ifdef AUTOCONFIG
-	dst = save_fram(&len);
-	save_chunk(f, dst, len, _T("FRAM"), comp);
-	dst = save_zram(&len, 0);
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		dst = save_fram(&len, i);
+		save_chunk(f, dst, len, _T("FRAM"), comp);
+	}
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		dst = save_zram(&len, i);
+		save_chunk(f, dst, len, _T("ZRAM"), comp);
+	}
+	dst = save_zram(&len, -1);
 	save_chunk(f, dst, len, _T("ZRAM"), comp);
 	dst = save_bootrom(&len);
 	save_chunk(f, dst, len, _T("BORO"), comp);

@@ -43,16 +43,16 @@ public:
 			changed_prefs.cpu_model = 68000;
 			changed_prefs.fpu_model = 0;
 			changed_prefs.address_space_24 = true;
-			changed_prefs.z3fastmem_size = 0;
-			changed_prefs.rtgmem_size = 0;
+			changed_prefs.z3fastmem[0].size = 0;
+			changed_prefs.rtgboards[0].rtgmem_size = 0;
 		}
 		else if (actionEvent.getSource() == optCPU68010)
 		{
 			changed_prefs.cpu_model = 68010;
 			changed_prefs.fpu_model = 0;
 			changed_prefs.address_space_24 = true;
-			changed_prefs.z3fastmem_size = 0;
-			changed_prefs.rtgmem_size = 0;
+			changed_prefs.z3fastmem[0].size = 0;
+			changed_prefs.rtgboards[0].rtgmem_size = 0;
 		}
 		else if (actionEvent.getSource() == optCPU68020)
 		{

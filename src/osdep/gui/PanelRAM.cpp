@@ -48,8 +48,8 @@ public:
 		if (actionEvent.getSource() == sldChipmem)
 		{
 			changed_prefs.chipmem_size = ChipMem_values[int(sldChipmem->getValue())];
-			if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem_size > 0))
-				changed_prefs.fastmem_size = 0;
+			if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem[0].size > 0))
+				changed_prefs.fastmem[0].size = 0;
 		}
 
 		if (actionEvent.getSource() == sldSlowmem)
@@ -59,22 +59,22 @@ public:
 
 		if (actionEvent.getSource() == sldFastmem)
 		{
-			changed_prefs.fastmem_size = FastMem_values[int(sldFastmem->getValue())];
-			if (changed_prefs.fastmem_size > 0 && changed_prefs.chipmem_size > 0x200000)
+			changed_prefs.fastmem[0].size = FastMem_values[int(sldFastmem->getValue())];
+			if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem_size > 0x200000)
 				changed_prefs.chipmem_size = 0x200000;
 		}
 
 		if (actionEvent.getSource() == sldZ3mem)
 		{
-			changed_prefs.z3fastmem_size = FastMem_values[int(sldZ3mem->getValue())];
-			if (changed_prefs.z3fastmem_size > max_z3fastmem)
-				changed_prefs.z3fastmem_size = max_z3fastmem;
+			changed_prefs.z3fastmem[0].size = FastMem_values[int(sldZ3mem->getValue())];
+			if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
+				changed_prefs.z3fastmem[0].size = max_z3fastmem;
 		}
 
 		if (actionEvent.getSource() == sldGfxmem)
 		{
-			changed_prefs.rtgmem_size = FastMem_values[int(sldGfxmem->getValue())];
-			changed_prefs.rtgmem_type = 1;
+			changed_prefs.rtgboards[0].rtgmem_size = FastMem_values[int(sldGfxmem->getValue())];
+			changed_prefs.rtgboards[0].rtgmem_type = 1;
 		}
 
 		RefreshPanelRAM();
@@ -225,7 +225,7 @@ void RefreshPanelRAM()
 
 	for (i = 0; i < 5; ++i)
 	{
-		if (changed_prefs.fastmem_size == FastMem_values[i])
+		if (changed_prefs.fastmem[0].size == FastMem_values[i])
 		{
 			sldFastmem->setValue(i);
 			lblFastsize->setCaption(FastMem_list[i]);
@@ -235,7 +235,7 @@ void RefreshPanelRAM()
 
 	for (i = 0; i < 9; ++i)
 	{
-		if (changed_prefs.z3fastmem_size == FastMem_values[i])
+		if (changed_prefs.z3fastmem[0].size == FastMem_values[i])
 		{
 			sldZ3mem->setValue(i);
 			lblZ3size->setCaption(FastMem_list[i]);
@@ -246,7 +246,7 @@ void RefreshPanelRAM()
 
 	for (i = 0; i < 6; ++i)
 	{
-		if (changed_prefs.rtgmem_size == FastMem_values[i])
+		if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
 		{
 			sldGfxmem->setValue(i);
 			lblGfxsize->setCaption(FastMem_list[i]);

@@ -48,7 +48,7 @@ void load_buildin_config(int id)
 	if (changed_prefs.cdslots[0].inuse)
 		gui_force_rtarea_hdchange();
 	discard_prefs(&changed_prefs, 0);
-	default_prefs(&changed_prefs, 0);
+	default_prefs(&changed_prefs, true, 0);
 	switch (id)
 	{
 	case BUILDINID_A500:
