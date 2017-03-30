@@ -42,3 +42,4 @@ VisualGDB/VisualGDB/Release/genblitter
 VisualGDB/VisualGDB/Release/genlinetoscr
 VisualGDB/VisualGDB/Release/gencpu
 VisualGDB/VisualGDB/Release/gencomp
+*.tlog
