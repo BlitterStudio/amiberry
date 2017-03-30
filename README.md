@@ -1,10 +1,10 @@
 Amiga emulator for the Raspberry Pi
 =================================
-Warning: this branch is still Work In Progress - it requires a few extra steps to build and some things may not be finished yet! :)
-If you're looking for the latest "stable" version, please use the master branch for now.
-Once this branch is complete, it will be merged back to the master and replace it.
+WARNING: Experimental, unstable, development branch.
+Stuff here will most probably break at some places. Don't bother reporting bugs!
 
 # History (newest first)
+- Updated drawing, custom, events and a few other parts from WinUAE 3.4.1
 - Added GPerfTools for profiling and optimized malloc functions (note: this adds 2 extra dependencies, check below)
 - Added an option for choosing Scaling Method (for non-Picasso modes): Auto, Nearest Neighbor (pixelated) or Linear (smooth). Auto will automatically choose between the other two modes on the fly, depending on the Amiga resolution requested and if the native monitor resolution can display it as an exact multiple or not. This vastly improves the sharpness of the resulting image.
 - Improved image centering (for non-Picasso modes)
