@@ -1,8 +1,8 @@
 /* 7zIn.c -- 7z Input functions
 2008-12-31 : Igor Pavlov : Public domain */
 
-#include "../../7zCrc.h"
-#include "../../CpuArch.h"
+#include "7zCrc.h"
+#include "CpuArch.h"
 
 #include "7zDecode.h"
 #include "7zIn.h"

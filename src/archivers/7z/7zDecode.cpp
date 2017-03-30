@@ -3,9 +3,9 @@
 
 #include <string.h>
 
-#include "../../Bcj2.h"
-#include "../../Bra.h"
-#include "../../LzmaDec.h"
+#include "Bcj2.h"
+#include "Bra.h"
+#include "LzmaDec.h"
 #include "7zDecode.h"
 
 #define k_Copy 0

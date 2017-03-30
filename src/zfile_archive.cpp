@@ -492,9 +492,9 @@ static struct zfile *archive_unpack_zip (struct zfile *zf)
 
 #include "archivers/7z/Types.h"
 #include "archivers/7z/7zCrc.h"
-#include "archivers/7z/Archive/7z/7zIn.h"
-#include "archivers/7z/Archive/7z/7zExtract.h"
-#include "archivers/7z/Archive/7z/7zAlloc.h"
+#include "archivers/7z/7zIn.h"
+#include "archivers/7z/7zExtract.h"
+#include "archivers/7z/7zAlloc.h"
 
 static ISzAlloc allocImp;
 static ISzAlloc allocTempImp;
