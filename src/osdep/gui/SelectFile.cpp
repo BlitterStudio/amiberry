@@ -18,7 +18,7 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
-#if defined(RASPBERRY) || defined(ANDROID)
+#if defined(AMIBERRY) || defined(ANDROID)
 #define FILE_SELECT_KEEP_POSITION
 #endif
 

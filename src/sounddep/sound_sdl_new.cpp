@@ -384,7 +384,7 @@ void close_sound(void)
 
 		    // testing shows that reopenning sound device is not a good idea (causes random sound driver crashes)
 		    // we will close it on real exit instead
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 		        //amiberry_stop_sound();
 #endif
 	have_sound = 0;

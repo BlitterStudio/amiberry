@@ -31,6 +31,7 @@
   * Copyright 2004-2005 Richard Drummond
   */
 
+#pragma once
 #if (defined(CPU_i386) && defined(X86_ASSEMBLY)) || (defined(CPU_x86_64) && defined(X86_64_ASSEMBLY))
 
 /*

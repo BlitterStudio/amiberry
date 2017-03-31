@@ -395,7 +395,6 @@
     <ClCompile Include="..\src\sinctable.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\src\sounddep\sound_sdl_new.cpp" />
     <ClCompile Include="..\src\statusline.cpp">
       <DeploymentContent>false</DeploymentContent>
@@ -531,7 +530,22 @@
     <ClInclude Include="..\src\sounddep\sound.h" />
     <ClInclude Include="..\src\threaddep\thread.h" />
   </ItemGroup>
-  <ItemDefinitionGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry/amiberry-sdl2 ~/projects/amiberry</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <RemotePostBuildEvent>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry-sdl2/amiberry-sdl2 ~/projects/amiberry</Command>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>

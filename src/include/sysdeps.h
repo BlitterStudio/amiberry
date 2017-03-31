@@ -392,7 +392,7 @@ extern void gui_message(const TCHAR *, ...);
 
 #ifndef STATIC_INLINE
 #if __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 #define STATIC_INLINE static __inline__
 #else
 #define STATIC_INLINE static __inline__ __attribute__ ((always_inline))

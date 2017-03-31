@@ -600,9 +600,6 @@
     <ClCompile Include="..\src\osdep\menu\menu_config.cpp">
       <Filter>src\osdep\menu</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\sounddep\sound.cpp">
-      <Filter>src\sounddep</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sounddep\sound_sdl_new.cpp">
       <Filter>src\sounddep</Filter>
     </ClCompile>

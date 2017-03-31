@@ -27,7 +27,6 @@ static gcn::UaeDropDown* KeyForQuit;
 static gcn::Label* lblButtonForQuit;
 static gcn::UaeDropDown* ButtonForQuit;
 
-#ifdef RASPBERRY
 class StringListModel : public gcn::ListModel
 {
 	vector<string> values;
@@ -59,7 +58,6 @@ static gcn::UaeDropDown* cboKBDLed_scr;
 
 const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD"};
 StringListModel KBDLedList(listValues, 9);
-#endif
 
 static const int ControlKey_SDLKeyValues[] = {0, SDL_SCANCODE_F11, SDL_SCANCODE_F12};
 
@@ -119,13 +117,11 @@ public:
 		else if (actionEvent.getSource() == ButtonForQuit)
 			changed_prefs.button_for_quit = ControlButton_SDLButtonValues[ButtonForQuit->getSelected()];
 
-#ifdef RASPBERRY
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
 
 		else if (actionEvent.getSource() == cboKBDLed_scr)
 			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
-#endif
 	}
 };
 
@@ -249,12 +245,11 @@ void ExitPanelMisc()
 	delete chkShowGUI;
 	delete chkBSDSocket;
 
-#ifdef RASPBERRY
 	delete lblScrLock;
 	delete lblNumLock;
 	delete cboKBDLed_num;
 	delete cboKBDLed_scr;
-#endif
+
 	delete miscActionListener;
 	delete lblKeyForMenu;
 	delete KeyForMenu;
@@ -272,12 +267,10 @@ void RefreshPanelMisc()
 
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
-
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
-#ifdef RASPBERRY
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
-#endif
+
 	KeyForMenu->setSelected(GetControlKeyIndex(changed_prefs.key_for_menu));
 	KeyForQuit->setSelected(GetControlKeyIndex(changed_prefs.key_for_quit));
 	ButtonForMenu->setSelected(GetControlButtonIndex(changed_prefs.button_for_menu));
