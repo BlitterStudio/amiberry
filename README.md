@@ -30,28 +30,14 @@ Once this branch is complete, it will be merged back to the master and replace i
 - Optimizations for Pi 3 added
 - New target platform: Pi 3
 
-# Compiling from source
-To get full screen SDL2 support from the console on the Raspberry Pi, you will have to compile SDL2 from source. That is because the OpenGL driver is on higher priority than the OpenGL ES2 one on the Pi, and the OpenGL driver requires X11. If you don't mind that and you want to run the emulator under X11 only, then you can skip this step and install SDL2 from the package manager instead. Otherwise, you can just copy paste the following commands in your terminal. 
+# Compiling SDL2
+Luckily, the RetroPie project has a handy script that takes care of downloading, compiling and installing SDL2 for us. This currently only handles SDL2, so we still need SDL2_ttf and SDL2_image (see below).
 
-First you will need to get all the necessary tools and requirements for SDL2:
+Run these to clone the RetroPie-Setup repo, then run the relevant script:
 
-      sudo apt-get update && sudo apt-get upgrade
-      sudo apt-get install build-essential libfreeimage-dev libopenal-dev libpango1.0-dev libsndfile-dev libudev-dev libasound2-dev libtiff5-dev libwebp-dev automake libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev
-
-Then download the SDL2 source tarball (currently on v2.0.5):
-
-      cd ~ 
-      wget https://www.libsdl.org/release/SDL2-2.0.5.tar.gz 
-      tar zxvf SDL2-2.0.5.tar.gz 
-      cd SDL2-2.0.5 && mkdir build && cd build
-
-Next, configure SDL2 to disable OpenGL, in order to be able to open screens directly from the console using OpenGL ES2 instead:
-
-      ../configure --disable-pulseaudio --disable-esd --disable-video-opengl
-
-Compile and install SDL2:
-
-      make -j 4 && sudo make install
+      git clone https://github.com/RetroPie/RetroPie-Setup
+      cd RetroPie-Setup
+      sudo ./retropie_packages.sh sdl2
 
 Next, we need SDL2_image (currently v2.0.1):
 
