@@ -258,9 +258,6 @@
     <ClCompile Include="..\src\gencpu.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\genlinetoscr.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\gfxboard.cpp">
       <Filter>src</Filter>
     </ClCompile>

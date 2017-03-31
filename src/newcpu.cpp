@@ -50,6 +50,7 @@
 #include "cia.h"
 #include "inputdevice.h"
 #include "audio.h"
+#include <gperftools/profiler.h>
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>
@@ -1345,6 +1346,10 @@ static void exception2_handle (uaecptr addr, uaecptr fault)
 
 void m68k_go (int may_quit)
 {
+#ifdef DEBUG
+	ProfilerStart("amiberry-sdl2.prof");
+#endif
+
   int hardboot = 1;
 	int startup = 1;
 
@@ -1457,6 +1462,9 @@ void m68k_go (int may_quit)
   }
 	protect_roms (false);
   in_m68k_go--;
+#ifdef DEBUG
+  ProfilerStop();
+#endif
 }
 
 #ifdef SAVESTATE

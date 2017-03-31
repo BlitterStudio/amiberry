@@ -280,7 +280,7 @@ static int src_pixel, ham_src_pixel;
 /* How many pixels in window coordinates which are to the left of the left border.  */
 static int unpainted;
 
-#include "linetoscr.c"
+#include "linetoscr.cpp"
 
 static void pfield_do_linetoscr_0_640(int start, int stop)
 {
