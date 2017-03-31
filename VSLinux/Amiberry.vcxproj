@@ -56,6 +56,12 @@
     <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>D:\midwa\Projects\GitHub\amiberry\src\guisan\include;D:\midwa\Projects\GitHub\amiberry\src\threaddep;D:\midwa\Projects\GitHub\amiberry\src\osdep;D:\midwa\Projects\GitHub\amiberry\src;D:\midwa\Projects\GitHub\amiberry\src\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <NMakeIncludeSearchPath>D:\midwa\Projects\GitHub\amiberry\src\guisan\include;D:\midwa\Projects\GitHub\amiberry\src\threaddep;D:\midwa\Projects\GitHub\amiberry\src\osdep;D:\midwa\Projects\GitHub\amiberry\src;D:\midwa\Projects\GitHub\amiberry\src\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
+  </PropertyGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
       <DeploymentContent>true</DeploymentContent>
