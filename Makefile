@@ -12,7 +12,7 @@ else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -std=gnu++14 -march=armv6zk -mfpu=vfp -mfloat-abi=hard
 endif
 
-NAME  = amiberry-sdl2
+NAME  = amiberry-sdl2-dev
 RM      = rm -f
 CC      = gcc
 CXX    = g++

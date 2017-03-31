@@ -536,7 +536,16 @@
     <ClInclude Include="..\src\sounddep\sound.h" />
     <ClInclude Include="..\src\threaddep\thread.h" />
   </ItemGroup>
-  <ItemDefinitionGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry-dev/amiberry-sdl2-dev ~/projects/amiberry</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry-dev/amiberry-sdl2-dev ~/projects/amiberry</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>
