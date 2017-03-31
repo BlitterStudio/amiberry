@@ -44,3 +44,4 @@ VisualGDB/VisualGDB/Release/gencpu
 VisualGDB/VisualGDB/Release/gencomp
 *.tlog
 VSLinux/obj/ARM/Debug/amiberry-sdl2-dev
+VisualGDB/VisualGDB/Debug/Amiberry-sdl2-dev

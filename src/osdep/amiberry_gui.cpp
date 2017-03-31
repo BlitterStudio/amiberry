@@ -22,7 +22,7 @@
 #include "blkdev.h"
 #include <SDL.h>
 
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 #include <linux/kd.h>
 #include <sys/ioctl.h>
 #endif

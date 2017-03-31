@@ -423,7 +423,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	int dummy;
 
 	fscanf(f, "kickstart=%d\n", &kickstart);
-#if defined(RASPBERRY) || defined(ANDROIDSDL)
+#if defined(AMIBERRY) || defined(ANDROIDSDL)
 	fscanf(f, "scaling=%d\n", &dummy);
 #else
 		fscanf(f, "scaling=%d\n", &mainMenu_enableHWscaling);
@@ -431,7 +431,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	fscanf(f, "showstatus=%d\n", &p->leds_on_screen);
 	fscanf(f, "mousemultiplier=%d\n", &p->input_joymouse_multiplier);
 	p->input_joymouse_multiplier *= 10;
-#if defined(RASPBERRY) || defined(ANDROIDSDL)
+#if defined(AMIBERRY) || defined(ANDROIDSDL)
 	fscanf(f, "systemclock=%d\n", &dummy); // mainMenu_throttle never changes -> removed
 	fscanf(f, "syncthreshold=%d\n", &dummy); // timeslice_mode never changes -> removed
 #else

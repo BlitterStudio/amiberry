@@ -26,13 +26,12 @@ guisan:
 	cd src/guisan && make all && cd ../..
 
 DEBUG=1
-PANDORA=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 
-DEFS +=  `xml2-config --cflags`
-DEFS += -DCPU_arm -DARMV6_ASSEMBLY -DAMIBERRY -DPICASSO96
-DEFS += -DWITH_INGAME_WARNING -DRASPBERRY -DCAPSLOCK_DEBIAN_WORKAROUND
+DEFS += `xml2-config --cflags`
+DEFS += -DARMV6_ASSEMBLY -DAMIBERRY
+DEFS += -DCAPSLOCK_DEBIAN_WORKAROUND
 DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
 DEFS += -DUSE_SDL
 

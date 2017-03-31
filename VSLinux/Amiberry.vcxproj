@@ -400,7 +400,6 @@
     <ClCompile Include="..\src\sinctable.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\src\sounddep\sound_sdl_new.cpp" />
     <ClCompile Include="..\src\statusline.cpp">
       <DeploymentContent>false</DeploymentContent>

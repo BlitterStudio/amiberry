@@ -30,15 +30,6 @@
  *   programs started from a Picasso workbench.
  */
 
-/*
- * Note: This is the Pandora specific version of Picasso96:
- *        - only 16 bit color mode is available (R5G6B5) in hardware
- *        - we simulate R8G8B8A8 on Amiga side and use Neon-code to convert to R5G6B5
- *        - we have no hardware sprite for mouse pointer
- *       I removed some code which handled unsupported modes and formats to make code
- *       easier to read.
- */
-
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -888,7 +879,7 @@ void picasso_handle_vsync()
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_32
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
@@ -943,7 +934,7 @@ void picasso_handle_vsync()
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_24
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
@@ -998,7 +989,7 @@ void picasso_handle_vsync()
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_16
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
@@ -1053,7 +1044,7 @@ void picasso_handle_vsync()
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_8
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
