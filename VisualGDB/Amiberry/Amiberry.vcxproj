@@ -55,9 +55,8 @@
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;profiler;tcmalloc;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
-      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
@@ -72,9 +71,10 @@
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;profiler;tcmalloc;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
-      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
+      <ExtraRPATH>
+      </ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
@@ -89,10 +89,11 @@
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;profiler;tcmalloc;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
-      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
+      <ExtraRPATH>
+      </ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
@@ -107,10 +108,11 @@
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections,-rpath,/usr/local/lib;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;profiler;tcmalloc;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
-      <ExtraRPATH>=/usr/local/lib;%(ExtraRPATH)</ExtraRPATH>
+      <ExtraRPATH>
+      </ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
