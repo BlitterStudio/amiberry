@@ -39,26 +39,10 @@ Run these to clone the RetroPie-Setup repo, then run the relevant script:
       cd RetroPie-Setup
       sudo ./retropie_packages.sh sdl2
 
-Next, we need SDL2_image (currently v2.0.1):
+Next, we need SDL2_image and SDL2_ttf:
 
-      cd ~ 
-      wget https://www.libsdl.org/projects/SDL_image/release/SDL2_image-2.0.1.tar.gz
-      tar zxvf SDL2_image-2.0.1.tar.gz 
-      cd SDL2_image-2.0.1 && mkdir build && cd build 
-      ../configure 
-      make -j 4 
-      sudo make install 
+      sudo apt-get install libsdl2-image-dev libsdl2-ttf-dev 
 
-Next, SDL2_ttf (currently v2.0.14):
-
-      cd ~
-      wget https://libsdl.org/projects/SDL_ttf/release/SDL2_ttf-2.0.14.tar.gz
-      tar zxvf SDL2_ttf-2.0.14.tar.gz
-      cd SDL2_ttf-2.0.14 && mkdir build && cd build
-      ../configure
-      make -j 4
-      sudo make install
-  
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
 Install the following packages:
