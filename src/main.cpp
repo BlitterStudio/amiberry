@@ -54,10 +54,6 @@ SDL_DisplayMode sdlMode;
 #include <sys/ioctl.h>
 #include "keyboard.h"
 
-#ifdef DEBUG
-#include "gperftools/profiler.h"
-#endif
-
 long int version = 256 * 65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs; 
