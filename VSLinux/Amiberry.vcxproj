@@ -51,9 +51,18 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-dev; make</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-dev; make clean; make</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-dev; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>D:\midwa\Projects\GitHub\amiberry\src\guisan\include;D:\midwa\Projects\GitHub\amiberry\src\include;D:\midwa\Projects\GitHub\amiberry\src\threaddep;D:\midwa\Projects\GitHub\amiberry\src\osdep;D:\midwa\Projects\GitHub\amiberry\src;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-dev; make</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-dev; make clean; make</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-dev; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>D:\midwa\Projects\GitHub\amiberry\src\guisan\include;D:\midwa\Projects\GitHub\amiberry\src\include;D:\midwa\Projects\GitHub\amiberry\src\threaddep;D:\midwa\Projects\GitHub\amiberry\src\osdep;D:\midwa\Projects\GitHub\amiberry\src;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
   </PropertyGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
