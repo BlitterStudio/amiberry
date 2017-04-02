@@ -131,6 +131,7 @@ static void open_screen(struct uae_prefs* p)
 	{
 		width = picasso_vidinfo.width;
 		height = picasso_vidinfo.height;
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
 	}
 	else
 #endif
