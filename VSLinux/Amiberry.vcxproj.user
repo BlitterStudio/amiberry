@@ -4,14 +4,14 @@
     <RemoteDebuggerCommand>~/projects/amiberry/amiberry-sdl2</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
-    <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteDebuggingMode>gdb</RemoteDebuggingMode>
+    <PreLaunchCommand>
+    </PreLaunchCommand>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemoteDebuggerCommand>~/projects/amiberry/amiberry-sdl2</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
-    <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteDebuggingMode>gdb</RemoteDebuggingMode>
+    <PreLaunchCommand>
+    </PreLaunchCommand>
   </PropertyGroup>
 </Project>

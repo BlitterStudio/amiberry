@@ -53,7 +53,7 @@ int graphics_setup(void)
 void InitAmigaVidMode(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
-	gfxvidinfo.pixbytes = 2;
+	gfxvidinfo.pixbytes = screen->format->BytesPerPixel;
 	gfxvidinfo.bufmem = static_cast<uae_u8 *>(screen->pixels);
 	gfxvidinfo.outwidth = screen->w ? screen->w : 640; //p->gfx_size.width;
 	gfxvidinfo.outheight = screen->h ? screen->h : 256; //p->gfx_size.height;
@@ -71,6 +71,33 @@ void graphics_subshutdown()
 	{
 		SDL_DestroyTexture(texture);
 	}
+}
+
+void Create_SDL_Surface(int width, int height, int depth)
+{
+	screen = SDL_CreateRGBSurface(0, width, height, depth, 0, 0, 0, 0);
+	check_error_sdl(screen == nullptr, "Unable to create a surface");
+}
+
+void Create_SDL_Texture(int width, int height, int depth)
+{
+	if (depth == 16) {
+		// Initialize SDL Texture for the renderer
+		texture = SDL_CreateTexture(renderer,
+			SDL_PIXELFORMAT_RGB565, // 16-bit
+			SDL_TEXTUREACCESS_STREAMING,
+			width,
+			height);
+	}
+	else if (depth == 32)
+	{
+		texture = SDL_CreateTexture(renderer,
+			SDL_PIXELFORMAT_BGRA32, // 32-bit
+			SDL_TEXTUREACCESS_STREAMING,
+			width,
+			height);
+	}
+	check_error_sdl(texture == nullptr, "Unable to create texture");
 }
 
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
@@ -97,13 +124,13 @@ static void open_screen(struct uae_prefs* p)
 {
 	int width;
 	int height;
+	int depth = 16;
 
 #ifdef PICASSO96
 	if (screen_is_picasso)
 	{
 		width = picasso_vidinfo.width;
 		height = picasso_vidinfo.height;
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // make the scaled rendering look smoother.
 	}
 	else
 #endif
@@ -127,21 +154,14 @@ static void open_screen(struct uae_prefs* p)
 
 	graphics_subshutdown();
 	
-	screen = SDL_CreateRGBSurface(0, width, height, 16, 0, 0, 0, 0);
-	check_error_sdl(screen == nullptr, "Unable to create a surface");
+	Create_SDL_Surface(width, height, depth);
 
 	if (screen_is_picasso)
 		SDL_RenderSetLogicalSize(renderer, width, height);
 	else
 		SDL_RenderSetLogicalSize(renderer, width, height*2);
 
-	// Initialize SDL Texture for the renderer
-	texture = SDL_CreateTexture(renderer,
-	                            SDL_PIXELFORMAT_RGB565,
-	                            SDL_TEXTUREACCESS_STREAMING,
-	                            width,
-	                            height);
-	check_error_sdl(texture == nullptr, "Unable to create texture");
+	Create_SDL_Texture(width, height, depth);
 
 	updatedisplayarea();
 
@@ -307,22 +327,7 @@ const TCHAR *target_get_display_name(int num, bool friendlyname)
  */
 static int get_display_depth()
 {
-	//    const SDL_VideoInfo *vid_info;
-
-	//    int depth = 0;
-	int depth = 16;
-
-	//    if ((vid_info = SDL_GetVideoInfo()))
-	//    {
-	//        depth = vid_info->vfmt->BitsPerPixel;
-
-	/* Don't trust the answer if it's 16 bits; the display
-	 * could actually be 15 bits deep. We'll count the bits
-	 * ourselves */
-	//        if (depth == 16)
-	//            depth = bitsInMask (vid_info->vfmt->Rmask) + bitsInMask (vid_info->vfmt->Gmask) + bitsInMask (vid_info->vfmt->Bmask);
-	//    }
-
+	int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
 	return depth;
 }
 
@@ -641,9 +646,7 @@ void picasso_InitResolutions()
 			int rgbFormat = (bitdepth == 8 ? RGBFB_CLUT : (bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8));
 			int pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
-			//
-			//            if (SDL_VideoModeOK (x_size_table[i], y_size_table[i], 16, SDL_SWSURFACE))
-			//            {
+
 			DisplayModes[count].res.width = x_size_table[i];
 			DisplayModes[count].res.height = y_size_table[i];
 			DisplayModes[count].depth = bit_unit >> 3;
@@ -655,7 +658,6 @@ void picasso_InitResolutions()
 			        DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
 
 			count++;
-			//            }
 		}
 	}
 	DisplayModes[count].depth = -1;
@@ -688,15 +690,15 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	picasso_vidinfo.selected_rgbformat = rgbfmt;
 	picasso_vidinfo.width = w;
 	picasso_vidinfo.height = h;
-	picasso_vidinfo.depth = 2; // Native depth
+	picasso_vidinfo.depth = screen->format->BytesPerPixel; // Native depth
 	picasso_vidinfo.extra_mem = 1;
 
-	picasso_vidinfo.pixbytes = 2; // Native bytes
+	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel; // Native bytes
 	if (screen_is_picasso)
 	{
 		open_screen(&currprefs);
 		picasso_vidinfo.rowbytes = screen->pitch;
-		picasso_vidinfo.rgbformat = RGBFB_R5G6B5;
+		picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
 	}
 }
 

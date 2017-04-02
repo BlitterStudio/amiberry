@@ -2697,11 +2697,7 @@ void compute_vsynctime()
 	//		vsynctimebase = vsynctimebase_orig = 1;
 	//	else
 	vsynctimebase = vsynctimebase_orig = int(syncbase / fake_vblank_hz);
-#if 0
-	if (!picasso_on) {
-		updatedisplayarea();
-	}
-#endif
+
 	if (currprefs.produce_sound > 1)
 	{
 		double svpos = maxvpos_nom;
@@ -2720,7 +2716,7 @@ void compute_vsynctime()
 			svpos += 1.0;
 		}
 		double clk = svpos * shpos * fake_vblank_hz;
-		//write_log (_T("SNDRATE %.1f*%.1f*%.6f=%.6f\n"), svpos, shpos, fake_vblank_hz, clk);
+
 		update_sound(clk);
 	}
 }

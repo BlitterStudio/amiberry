@@ -544,7 +544,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-sdl2/amiberry-sdl2 ~/projects/amiberry</Command>
+      <Command>cp ~/projects/Amiberry/amiberry-sdl2 ~/projects/amiberry</Command>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
