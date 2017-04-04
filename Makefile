@@ -44,7 +44,7 @@ LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lprofiler -
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan/lib
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe
+MORE_CFLAGS += -Ofast -pipe -Wno-write-strings 
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
 

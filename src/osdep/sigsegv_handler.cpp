@@ -39,7 +39,6 @@
 #include <execinfo.h>
 #include "SDL.h"
 
-#define DEBUG 0
 #include "debug.h"
 
 
@@ -78,8 +77,8 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
 {
     unsigned int *pc = (unsigned int *)pregs[ARM_REG_PC];
 
-    panicbug("IP: %p [%08x] %p\n", pc, pc[0], addr);
-    if (pc == 0)
+    panicbug("IP: %p [%08x] %u\n", pc, pc[0], addr);
+    if (pc == nullptr)
         return false;
 
     if (in_handler > 0)
@@ -149,26 +148,6 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
         transfer_type = TYPE_STORE;
 
     int rd = (opcode >> 12) & 0xf;
-#if DEBUG
-    static const char * reg_names[] =
-    {
-        "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
-        "r8", "r9", "sl", "fp", "ip", "sp", "lr", "pc"
-    };
-    panicbug("%s %s register %s\n",
-             transfer_size == SIZE_BYTE ? "byte" :
-             transfer_size == SIZE_WORD ? "word" :
-             transfer_size == SIZE_INT ? "long" : "unknown",
-             transfer_type == TYPE_LOAD ? "load to" : "store from",
-             reg_names[rd]);
-    panicbug("\n");
-//  for (int i = 0; i < 16; i++) {
-//  	panicbug("%s : %p", reg_names[i], pregs[i]);
-//  }
-#endif
-
-//  if ((addr < 0x00f00000) || (addr > 0x00ffffff))
-//    goto buserr;
 
     if (transfer_type == TYPE_LOAD)
     {
@@ -176,12 +155,12 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
         {
         case SIZE_BYTE:
         {
-            pregs[rd] = style == SIGNED ? (uae_s8)get_byte(addr) : (uae_u8)get_byte(addr);
+            pregs[rd] = style == SIGNED ? uae_s8(get_byte(addr)) : uae_u8(get_byte(addr));
             break;
         }
         case SIZE_WORD:
         {
-            pregs[rd] = do_byteswap_16(style == SIGNED ? (uae_s16)get_word(addr) : (uae_u16)get_word(addr));
+            pregs[rd] = do_byteswap_16(style == SIGNED ? uae_s16(get_word(addr)) : uae_u16(get_word(addr)));
             break;
         }
         case SIZE_INT:
@@ -214,18 +193,11 @@ static bool handle_arm_instruction(unsigned long *pregs, uintptr addr)
     }
 
     pregs[ARM_REG_PC] += 4;
-    panicbug("processed: %p \n", pregs[ARM_REG_PC]);
+    panicbug("processed: %lu \n", pregs[ARM_REG_PC]);
 
     in_handler--;
 
     return true;
-
-buserr:
-    panicbug("Amiga bus error\n");
-    in_handler--;
-
-//  BUS_ERROR(addr);
-    return false;
 }
 
 
@@ -250,8 +222,8 @@ void signal_segv(int signum, siginfo_t* info, void*ptr)
 
     mcontext_t *context = &(ucontext->uc_mcontext);
     unsigned long *regs = &context->arm_r0;
-    uintptr addr = (uintptr)info->si_addr;
-    addr = (uae_u32) addr - (uae_u32) natmem_offset;
+    uintptr addr = uintptr(info->si_addr);
+    addr = uae_u32(addr) - uae_u32(natmem_offset);
     if (handle_arm_instruction(regs, addr))
         return;
 
@@ -289,57 +261,11 @@ void signal_segv(int signum, siginfo_t* info, void*ptr)
     printf("Err Code = 0x%08x\n", ucontext->uc_mcontext.error_code);
     printf("Old Mask = 0x%08x\n", ucontext->uc_mcontext.oldmask);
 
-//  dump_compiler((uae_u32*)ucontext->uc_mcontext.arm_pc);
-
     void *getaddr = (void *)ucontext->uc_mcontext.arm_lr;
     if(dladdr(getaddr, &dlinfo))
-        printf("LR - 0x%08X: <%s> (%s)\n", getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
+        printf("LR - 0x%08p: <%s> (%s)\n", getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
     else
-        printf("LR - 0x%08X: symbol not found\n", getaddr);
-
-//	printf("Stack trace:\n");
-
-    /*
-      #define MAX_BACKTRACE 10
-
-      void *array[MAX_BACKTRACE];
-      int size = backtrace(array, MAX_BACKTRACE);
-      for(int i=0; i<size; ++i)
-      {
-        if (dladdr(array[i], &dlinfo)) {
-          const char *symname = dlinfo.dli_sname;
-      	  printf("%p <%s + 0x%08x> (%s)\n", array[i], symname,
-            (unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-        }
-      }
-    */
-
-    /*
-      ip = (void*)ucontext->uc_mcontext.arm_r10;
-      bp = (void**)ucontext->uc_mcontext.arm_r10;
-      while(bp && ip) {
-        if (!dladdr(ip, &dlinfo)) {
-          printf("IP out of range\n");
-          break;
-        }
-        const char *symname = dlinfo.dli_sname;
-    	  printf("% 2d: %p <%s + 0x%08x> (%s)\n", ++f, ip, symname,
-          (unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-    	  if(dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
-          break;
-        ip = bp[1];
-        bp = (void**)bp[0];
-      }
-
-    	printf("Stack trace (non-dedicated):\n");
-      char **strings;
-      void *bt[20];
-      int sz = backtrace(bt, 20);
-      strings = backtrace_symbols(bt, sz);
-      for(i = 0; i < sz; ++i)
-        printf("%s\n", strings[i]);
-    	printf("End of stack trace.\n");
-    */
+        printf("LR - 0x%08p: symbol not found\n", getaddr);
 
     SDL_Quit();
     exit(1);

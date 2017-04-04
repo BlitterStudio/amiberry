@@ -9,10 +9,10 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#include "win32.h"
-#endif
+//#ifdef _WIN32
+//#include <windows.h>
+//#include "win32.h"
+//#endif
 
 #include "options.h"
 #include "zfile.h"
@@ -30,18 +30,19 @@
 
 static time_t fromdostime(uae_u32 dd)
 {
-  struct tm tm;
-  time_t t;
-  memset(&tm, 0, sizeof tm);
-  tm.tm_hour = (dd >> 11) & 0x1f;
-  tm.tm_min  = (dd >> 5) & 0x3f;
-  tm.tm_sec  = ((dd >> 0) & 0x1f) * 2;
-  tm.tm_year = ((dd >> 25) & 0x7f) + 80;
-  tm.tm_mon  = ((dd >> 21) & 0x0f) - 1;
-  tm.tm_mday = (dd >> 16) & 0x1f;
-  t = mktime(&tm);
-  t -= _timezone;
-  return t;
+	struct tm tm;
+	time_t t;
+
+	memset(&tm, 0, sizeof tm);
+	tm.tm_hour = (dd >> 11) & 0x1f;
+	tm.tm_min = (dd >> 5) & 0x3f;
+	tm.tm_sec = ((dd >> 0) & 0x1f) * 2;
+	tm.tm_year = ((dd >> 25) & 0x7f) + 80;
+	tm.tm_mon = ((dd >> 21) & 0x0f) - 1;
+	tm.tm_mday = (dd >> 16) & 0x1f;
+	t = mktime(&tm);
+	t -= _timezone;
+	return t;
 }
 
 static struct zvolume *getzvolume (struct znode *parent, struct zfile *zf, unsigned int id)
@@ -1366,7 +1367,7 @@ struct zvolume *archive_directory_adf (struct znode *parent, struct zfile *z)
   	goto fail;
   adf->dostype = gl (adf, 0);
 
-  if ((adf->dostype & 0xffffff00) == 'DOS\0') {
+  if ((adf->dostype & 0xffffff00) == MCC('D', 'O', 'S', '\0')) {
   	int bs = adf->blocksize;
     int res;
 
@@ -1418,7 +1419,7 @@ struct zvolume *archive_directory_adf (struct znode *parent, struct zfile *z)
   	name[0] = 0;
   	recurseadf (&zv->root, adf->rootblock, name);
 
-  } else if ((adf->dostype & 0xffffff00) == 'SFS\0') {
+  } else if ((adf->dostype & 0xffffff00) == MCC('S', 'F', 'S', '\0')) {
 
   	uae_u16 version, sfs2;
 
@@ -1431,14 +1432,14 @@ struct zvolume *archive_directory_adf (struct znode *parent, struct zfile *z)
     		adf->rootblock = gl (adf, 104);
     		if (!adf_read_block (adf, adf->rootblock))
   		    break;
-    		if (gl (adf, 0) != 'OBJC')
+    		if (gl (adf, 0) != MCC('O', 'B', 'J', 'C'))
   		    break;
     		if (sfs_checksum (adf->block, adf->blocksize, sfs2))
   		    break;
     		adf->rootblock = gl (adf, 40);
     		if (!adf_read_block (adf, adf->rootblock))
   		    break;
-    		if (gl (adf, 0) != 'OBJC')
+    		if (gl (adf, 0) != MCC('O', 'B', 'J', 'C'))
   		    break;
     		if (sfs_checksum (adf->block, adf->blocksize, sfs2))
   		    break;
@@ -1549,7 +1550,7 @@ static struct zfile *archive_access_adf (struct znode *zn)
   if (!z)
   	return NULL;
 
-  if ((adf->dostype & 0xffffff00) == 'DOS\0') {
+  if ((adf->dostype & 0xffffff00) == MCC('D', 'O', 'S', '\0')) {
 
   	ffs = adf->dostype & 1;
   	root = zn->offset;
@@ -1575,7 +1576,7 @@ static struct zfile *archive_access_adf (struct znode *zn)
     		break;
 	    root = gl (adf, bs - 2 * 4);
   	}
-  } else if ((adf->dostype & 0xffffff00) == 'SFS\0') {
+  } else if ((adf->dostype & 0xffffff00) == MCC('S', 'F', 'S', '\0')) {
 
   	struct sfsblock *sfsblocks;
   	int sfsblockcnt, sfsmaxblockcnt, i;

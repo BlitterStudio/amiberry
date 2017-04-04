@@ -45,15 +45,7 @@
 #include "comptbl.h"
 #include "compemu.h"
 #include "SDL.h"
-
-#define DEBUG 0
 #include "debug.h"
-
-#if DEBUG
-#define PROFILE_COMPILE_TIME		1
-#define PROFILE_UNTRANSLATED_INSNS	1
-#define bug printf
-#endif
 
 #ifdef JIT_DEBUG
 #undef abort
@@ -63,26 +55,6 @@
   SDL_Quit();  \
 	exit(EXIT_FAILURE); \
 } while (0)
-#endif
-
-#ifdef PROFILE_COMPILE_TIME
-#include <time.h>
-static uae_u32 compile_count	= 0;
-static clock_t compile_time		= 0;
-static clock_t emul_start_time	= 0;
-static clock_t emul_end_time	= 0;
-#endif
-
-#ifdef PROFILE_UNTRANSLATED_INSNS
-static int untranslated_top_ten = 30;
-static uae_u32 raw_cputbl_count[65536] = { 0, };
-static uae_u16 opcode_nums[65536];
-
-
-static int untranslated_compfn(const void *e1, const void *e2)
-{
-	return raw_cputbl_count[*(const uae_u16 *)e1] < raw_cputbl_count[*(const uae_u16 *)e2];
-}
 #endif
 
 #define NATMEM_OFFSETX (uae_u32)natmem_offset

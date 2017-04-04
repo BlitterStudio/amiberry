@@ -753,7 +753,7 @@ static void write_filesys_config(struct uae_prefs *p, struct zfile *f)
 {
 	int i;
 	TCHAR tmp[MAX_DPATH], tmp2[MAX_DPATH], tmp3[MAX_DPATH];
-	TCHAR *hdcontrollers[] = { _T("uae"),
+	char const *hdcontrollers[] = { _T("uae"),
 		_T("ide0"), _T("ide1"), _T("ide2"), _T("ide3"),
 		_T("scsi0"), _T("scsi1"), _T("scsi2"), _T("scsi3"), _T("scsi4"), _T("scsi5"), _T("scsi6"),
 		_T("scsram"), _T("scide") }; /* scsram = smart card sram = pcmcia sram card */
