@@ -62,6 +62,7 @@ SDL_Surface* gui_screen;
 SDL_Texture* gui_texture;
 SDL_Event gui_event;
 SDL_Cursor* cursor;
+SDL_Surface *cursorSurface;
 
 /*
  * Guisan SDL stuff we need
@@ -156,8 +157,15 @@ namespace sdl
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
-
-		SDL_Surface *cursorSurface = SDL_LoadBMP("data/cursor.bmp");
+		if (sdlMode.w > 1280)
+		{
+			// High resolution detected, we'll use a double-size cursor
+			cursorSurface = SDL_LoadBMP("data/cursor-x2.bmp");
+		}
+		else
+		{
+			cursorSurface = SDL_LoadBMP("data/cursor.bmp");
+		}
 		if (cursorSurface)
 		{
 			cursor = SDL_CreateColorCursor(cursorSurface, 0, 0);

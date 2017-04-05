@@ -131,6 +131,9 @@
     <Image Include="..\data\cursor.bmp">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\cursor-x2.bmp">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\FreeSans.ttf">

@@ -602,6 +602,9 @@
     <Image Include="..\..\data\cursor.bmp">
       <Filter>Resource files\data</Filter>
     </Image>
+    <Image Include="..\..\data\cursor-x2.bmp">
+      <Filter>Resource files\data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\..\data\FreeSans.ttf">

@@ -88,6 +88,7 @@
     <Image Include="..\data\cpu.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="..\data\cursor-x2.bmp" />
     <Image Include="..\data\cursor.bmp">
       <DeploymentContent>true</DeploymentContent>
     </Image>
