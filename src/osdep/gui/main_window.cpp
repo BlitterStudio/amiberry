@@ -12,7 +12,6 @@
 #include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "memory.h"
 #include "amiberry_gfx.h"
 
 bool gui_running = false;
@@ -62,6 +61,7 @@ enum
 SDL_Surface* gui_screen;
 SDL_Texture* gui_texture;
 SDL_Event gui_event;
+SDL_Cursor* cursor;
 
 /*
  * Guisan SDL stuff we need
@@ -157,6 +157,13 @@ namespace sdl
 		// Create new screen for GUI
 		//-------------------------------------------------
 
+		SDL_Surface *cursorSurface = SDL_LoadBMP("data/cursor.bmp");
+		if (cursorSurface)
+		{
+			cursor = SDL_CreateColorCursor(cursorSurface, 0, 0);
+			SDL_SetCursor(cursor);
+		}
+
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
@@ -194,9 +201,12 @@ namespace sdl
 		delete gui_imageLoader;
 		delete gui_input;
 		delete gui_graphics;
-
+		
 		SDL_FreeSurface(gui_screen);
 		SDL_DestroyTexture(gui_texture);
+		if (cursor) {
+			SDL_FreeCursor(cursor);
+		}
 		gui_screen = nullptr;
 	}
 
@@ -462,7 +472,7 @@ namespace widgets
 		// Initialize fonts
 		//-------------------------------------------------
 		TTF_Init();
-		gui_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 14);
+		gui_font = new gcn::SDLTrueTypeFont("data/Topaznew.ttf", 14);
 		gcn::Widget::setGlobalFont(gui_font);
 
 		//--------------------------------------------------

@@ -128,9 +128,15 @@
     <Image Include="..\data\sound.ico">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\cursor.bmp">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\FreeSans.ttf">
+      <Filter>data</Filter>
+    </Font>
+    <Font Include="..\data\Topaznew.ttf">
       <Filter>data</Filter>
     </Font>
   </ItemGroup>
