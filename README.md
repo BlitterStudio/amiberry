@@ -31,7 +31,7 @@ Once this branch is complete, it will be merged back to the master and replace i
 - New target platform: Pi 3
 
 # Compiling SDL2
-Luckily, the RetroPie project has a handy script that takes care of downloading, compiling and installing SDL2 for us. This currently only handles SDL2, so we still need SDL2_ttf and SDL2_image (see below).
+Unfortunately we need to compile SDL2 from source on the Raspberry Pi, to get support for launching full screen applications from the console. Luckily, the RetroPie project has a handy script that takes care of downloading, compiling and installing SDL2 for us. This currently only handles SDL2, so we still need SDL2_ttf and SDL2_image (see below).
 
 Run these to clone the RetroPie-Setup repo, then run the relevant script:
 
@@ -47,7 +47,7 @@ With SDL2 installed, you can proceed to install Amiberry as follows:
 
 Install the following packages:
 
-      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev google-perftools libgoogle-perftools-dev
+      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev libpng-dev google-perftools libgoogle-perftools-dev
 
 Clone this repo:
       
