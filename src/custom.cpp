@@ -41,12 +41,7 @@
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
 
-STATIC_INLINE bool nocustom()
-{
-	if (picasso_on)
-		return true;
-	return false;
-}
+#define nocustom() (picasso_on)
 
 extern int screen_is_picasso;
 

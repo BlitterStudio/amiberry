@@ -50,13 +50,12 @@
 #define VERTICAL_OFFSET 18;
 
 extern int sprite_buffer_res;
-int lores_factor;
 
 static void lores_reset()
 {
-	lores_factor = currprefs.gfx_resolution ? 2 : 1;
-
-	sprite_buffer_res = currprefs.gfx_resolution;
+	sprite_buffer_res = (aga_mode) ? RES_SUPERHIRES : RES_LORES;
+	if (sprite_buffer_res > currprefs.gfx_resolution)
+		sprite_buffer_res = currprefs.gfx_resolution;
 }
 
 bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
@@ -337,21 +336,21 @@ STATIC_INLINE xcolnr getbgc(bool blank)
 
 static void pfield_do_fill_line_0_640(int start, int stop)
 {
-	uae_u16* b = &(reinterpret_cast<uae_u16 *>(xlinebuffer)[start << 1]);
-	xcolnr col = getbgc(false);
-	int i;
-	int max = (stop - start) << 1;
-	for (i = 0; i < max; i++ , b++)
+	register uae_u16 *b = &(((uae_u16 *)xlinebuffer)[start << 1]);
+	register xcolnr col = getbgc(false);
+	register int i;
+	register int max = (stop - start) << 1;
+	for (i = 0; i < max; i++, b++)
 		*b = col;
 }
 
 static void pfield_do_fill_line_0(int start, int stop)
 {
-	uae_u16* b = &(reinterpret_cast<uae_u16 *>(xlinebuffer)[start]);
-	xcolnr col = getbgc(false);
-	int i;
-	int max = (stop - start);
-	for (i = 0; i < max; i++ , b++)
+	register uae_u16 *b = &(((uae_u16 *)xlinebuffer)[start]);
+	register xcolnr col = getbgc(false);
+	register int i;
+	register int max = (stop - start);
+	for (i = 0; i < max; i++, b++)
 		*b = col;
 }
 
@@ -478,9 +477,9 @@ STATIC_INLINE void fill_line()
 
 	nints = gfxvidinfo.outwidth >> 1;
 	if (gfxvidinfo.outwidth > 600)
-		start = reinterpret_cast<int *>(static_cast<uae_u8*>(xlinebuffer) + (visible_left_border << 2));
+		start = (int *)(((uae_u8*)xlinebuffer) + (visible_left_border << 2));
 	else
-		start = reinterpret_cast<int *>(static_cast<uae_u8*>(xlinebuffer) + (visible_left_border << 1));
+		start = (int *)(((uae_u8*)xlinebuffer) + (visible_left_border << 1));
 
 	val = getbgc(false);
 	val |= val << 16;
@@ -1607,16 +1606,11 @@ static void pfield_doline_n5(uae_u32* pixels, int wordcount, int lineno)
 	while (wordcount-- > 0)
 	{
 		uae_u32 b0, b1, b2, b3, b4, b5, b6, b7;
-		b3 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[4]));
-		real_bplpt[4] += 4;
-		b4 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[3]));
-		real_bplpt[3] += 4;
-		b5 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[2]));
-		real_bplpt[2] += 4;
-		b6 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[1]));
-		real_bplpt[1] += 4;
-		b7 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[0]));
-		real_bplpt[0] += 4;
+		b3 = GETLONG((uae_u32 *)real_bplpt[4]); real_bplpt[4] += 4;
+		b4 = GETLONG((uae_u32 *)real_bplpt[3]); real_bplpt[3] += 4;
+		b5 = GETLONG((uae_u32 *)real_bplpt[2]); real_bplpt[2] += 4;
+		b6 = GETLONG((uae_u32 *)real_bplpt[1]); real_bplpt[1] += 4;
+		b7 = GETLONG((uae_u32 *)real_bplpt[0]); real_bplpt[0] += 4;
 
 		MERGE_0(b2, b3, 0x55555555, 1);
 		MERGE(b4, b5, 0x55555555, 1);
@@ -1667,20 +1661,13 @@ static void pfield_doline_n7(uae_u32* pixels, int wordcount, int lineno)
 	while (wordcount-- > 0)
 	{
 		uae_u32 b0, b1, b2, b3, b4, b5, b6, b7;
-		b1 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[6]));
-		real_bplpt[6] += 4;
-		b2 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[5]));
-		real_bplpt[5] += 4;
-		b3 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[4]));
-		real_bplpt[4] += 4;
-		b4 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[3]));
-		real_bplpt[3] += 4;
-		b5 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[2]));
-		real_bplpt[2] += 4;
-		b6 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[1]));
-		real_bplpt[1] += 4;
-		b7 = GETLONG(reinterpret_cast<uae_u32 *>(real_bplpt[0]));
-		real_bplpt[0] += 4;
+		b1 = GETLONG((uae_u32 *)real_bplpt[6]); real_bplpt[6] += 4;
+		b2 = GETLONG((uae_u32 *)real_bplpt[5]); real_bplpt[5] += 4;
+		b3 = GETLONG((uae_u32 *)real_bplpt[4]); real_bplpt[4] += 4;
+		b4 = GETLONG((uae_u32 *)real_bplpt[3]); real_bplpt[3] += 4;
+		b5 = GETLONG((uae_u32 *)real_bplpt[2]); real_bplpt[2] += 4;
+		b6 = GETLONG((uae_u32 *)real_bplpt[1]); real_bplpt[1] += 4;
+		b7 = GETLONG((uae_u32 *)real_bplpt[0]); real_bplpt[0] += 4;
 
 		MERGE_0(b0, b1, 0x55555555, 1);
 		MERGE(b2, b3, 0x55555555, 1);
@@ -1861,10 +1848,6 @@ void init_row_map()
 		row_map[i] = row_tmp;
 	for (i = 0 , j = 0; i < gfxvidinfo.outheight; i++ , j += gfxvidinfo.rowbytes)
 		row_map[i] = gfxvidinfo.bufmem + j;
-	
-	oldbufmem = gfxvidinfo.bufmem;
-	oldheight = gfxvidinfo.outheight;
-	oldpitch = gfxvidinfo.rowbytes;
 }
 
 static void init_aspect_maps()
@@ -1879,39 +1862,17 @@ static void init_aspect_maps()
 
 	if (native2amiga_line_map)
 		xfree(native2amiga_line_map);
-	if (amiga2aspect_line_map)
-		xfree(amiga2aspect_line_map);
 
-	/* At least for this array the +1 is necessary. */
-	amiga2aspect_line_map = xmalloc(int, (MAXVPOS + 1) * 2 + 1);
 	native2amiga_line_map = xmalloc(int, h);
 
-	maxl = MAXVPOS + 1;
-	min_ypos_for_screen = minfirstline;
-	max_drawn_amiga_line = -1;
-	for (i = 0; i < maxl; i++) {
-		int v = i - min_ypos_for_screen;
-		if (v >= h && max_drawn_amiga_line < 0)
-			max_drawn_amiga_line = v;
-		if (i < min_ypos_for_screen || v >= h)
-			v = -1;
-		amiga2aspect_line_map[i] = v;
-	}
-
-	if (max_drawn_amiga_line < 0)
-		max_drawn_amiga_line = maxl - min_ypos_for_screen;
-	if (max_drawn_amiga_line > gfxvidinfo.outheight)
-		max_drawn_amiga_line = gfxvidinfo.outheight;
+	maxl = (MAXVPOS + 1);
 
 	for (i = 0; i < h; i++)
 		native2amiga_line_map[i] = -1;
 
-	for (i = maxl - 1; i >= min_ypos_for_screen; i--)
-	{
+	for (i = maxl - 1; i >= minfirstline; i--) {
 		int j;
-		if (amiga2aspect_line_map[i] == -1)
-			continue;
-		for (j = amiga2aspect_line_map[i]; j < h && native2amiga_line_map[j] == -1; j++)
+		for (j = i - minfirstline; j < h && native2amiga_line_map[j] == -1; j++)
 			native2amiga_line_map[j] = i;
 	}
 }
@@ -2258,17 +2219,11 @@ static void draw_frame2()
 {
 	int i;
 
-	for (i = 0; i < max_ypos_thisframe; i++)
-	{
-		int i1 = i + min_ypos_for_screen;
+	for (i = 0; i < max_ypos_thisframe && i < gfxvidinfo.outheight; i++) {
 		int line = i + thisframe_y_adjust_real;
-		int where2 = amiga2aspect_line_map[i1];
-
-		if (where2 >= gfxvidinfo.outheight)
+		if (line >= linestate_first_undecided)
 			break;
-		if (where2 < 0)
-			continue;
-		pfield_draw_line(line, where2);
+		pfield_draw_line(line, i);
 	}
 }
 
