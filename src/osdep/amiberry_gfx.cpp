@@ -271,7 +271,9 @@ static void graphics_subinit()
 {
 	if (screen == nullptr)
 	{
-		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
+		open_screen(&currprefs);
+		if (screen == nullptr)
+			fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
 	}
 	else
 	{
