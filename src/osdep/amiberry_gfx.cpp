@@ -132,6 +132,7 @@ static void open_screen(struct uae_prefs* p)
 	{
 		width = picasso_vidinfo.width;
 		height = picasso_vidinfo.height;
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
 	}
 	else
 #endif
@@ -139,19 +140,19 @@ static void open_screen(struct uae_prefs* p)
 		p->gfx_resolution = p->gfx_size.width ? (p->gfx_size.width > 600 ? 1 : 0) : 1;
 		width = p->gfx_size.width ? p->gfx_size.width : AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
 		height = p->gfx_size.height ? p->gfx_size.height : AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution;
-	}
 
-	if (p->scaling_method == -1)
-	{
-		if (isModeAspectRatioExact(&sdlMode, width, height))
+		if (p->scaling_method == -1)
+		{
+			if (isModeAspectRatioExact(&sdlMode, width, height))
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			else
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		}
+		else if (p->scaling_method == 0)
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		else
+		else if (p->scaling_method == 1)
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
-	else if (p->scaling_method == 0)
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-	else if (p->scaling_method == 1)
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	graphics_subshutdown();
 

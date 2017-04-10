@@ -3996,7 +3996,7 @@ static uaecptr uaegfx_card_install(TrapContext* ctx, uae_u32 extrasize)
 	uaecptr exec = get_long(4);
 
 	if (uaegfx_old || !gfxmem_bank.start)
-		return NULL;
+		return 0;
 
 	uaegfx_resid = ds(_T("UAE Graphics Card 3.3"));
 	uaegfx_vblankname = ds(_T("UAE Graphics Card VBLANK"));

@@ -1,4 +1,5 @@
 #pragma once
+#include "SDL.h"
 extern SDL_Window* sdlWindow;
 extern SDL_Renderer* renderer;
 extern SDL_Texture* texture;
