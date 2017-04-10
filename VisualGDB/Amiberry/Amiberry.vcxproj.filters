@@ -599,9 +599,15 @@
     <Image Include="..\..\data\sound.ico">
       <Filter>Resource files\data</Filter>
     </Image>
+    <Image Include="..\..\data\cursor.bmp">
+      <Filter>Resource files\data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\..\data\FreeSans.ttf">
+      <Filter>Resource files\data</Filter>
+    </Font>
+    <Font Include="..\..\data\Topaznew.ttf">
       <Filter>Resource files\data</Filter>
     </Font>
   </ItemGroup>

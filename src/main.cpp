@@ -1079,6 +1079,8 @@ static int real_main2 (int argc, TCHAR **argv)
 	
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
 		SDL_Log("SDL could not grab the keyboard");
+	
+	SDL_ShowCursor(SDL_DISABLE);
 
 	set_config_changed();
 	if (restart_config[0]) {

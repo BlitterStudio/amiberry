@@ -272,6 +272,9 @@
     <Image Include="..\..\data\cpu.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="..\..\data\cursor.bmp">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
     <Image Include="..\..\data\delete.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
@@ -314,6 +317,9 @@
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\..\data\FreeSans.ttf">
+      <DeploymentContent>true</DeploymentContent>
+    </Font>
+    <Font Include="..\..\data\Topaznew.ttf">
       <DeploymentContent>true</DeploymentContent>
     </Font>
   </ItemGroup>
