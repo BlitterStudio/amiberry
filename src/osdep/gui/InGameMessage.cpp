@@ -95,9 +95,9 @@ void gui_init(const char* msg)
 	msg_gui->setGraphics(msg_graphics);
 	msg_gui->setInput(msg_input);
 
-	msg_baseCol.r = 192;
-	msg_baseCol.g = 192;
-	msg_baseCol.b = 208;
+	msg_baseCol.r = 160;
+	msg_baseCol.g = 160;
+	msg_baseCol.b = 160;
 
 	msg_top = new gcn::Container();
 	msg_top->setDimension(gcn::Rectangle((screen->w - msgWidth + borderSize * 4) / 2, (screen->h - msgHeight + borderSize * 4) / 4, msgWidth + (borderSize * 2), msgHeight + (borderSize * 2) + BUTTON_HEIGHT));
@@ -105,7 +105,7 @@ void gui_init(const char* msg)
 	msg_gui->setTop(msg_top);
 
 	TTF_Init();
-	msg_font = new gcn::SDLTrueTypeFont("data/FreeSans.ttf", 14);
+	msg_font = new gcn::SDLTrueTypeFont("data/Topaznew.ttf", 14);
 	gcn::Widget::setGlobalFont(msg_font);
 
 	doneActionListener = new DoneActionListener();

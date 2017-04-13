@@ -27,7 +27,7 @@ ConfigCategory categories[] =
 	{"ROM", "data/chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM},
 	{"RAM", "data/chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM},
 	{"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy},
-	{"Hard drives / CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD},
+	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD},
 	{"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay},
 	{"Sound", "data/sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound},
 	{"Input", "data/joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput},
@@ -454,19 +454,15 @@ namespace widgets
 		//-------------------------------------------------
 		// Define base colors
 		//-------------------------------------------------
-		gui_baseCol.r = 192;
-		gui_baseCol.g = 192;
-		gui_baseCol.b = 208;
-		gui_baseColLabel.r = gui_baseCol.r;
-		gui_baseColLabel.g = gui_baseCol.g;
-		gui_baseColLabel.b = gui_baseCol.b;
-		gui_baseColLabel.a = 192;
-		colSelectorInactive.r = 255;
-		colSelectorInactive.g = 255;
-		colSelectorInactive.b = 255;
-		colSelectorActive.r = 192;
-		colSelectorActive.g = 192;
-		colSelectorActive.b = 255;
+		gui_baseCol.r = 170;
+		gui_baseCol.g = 170;
+		gui_baseCol.b = 170;
+		colSelectorInactive.r = 170;
+		colSelectorInactive.g = 170;
+		colSelectorInactive.b = 170;
+		colSelectorActive.r = 103;
+		colSelectorActive.g = 136;
+		colSelectorActive.b = 187;
 
 		//-------------------------------------------------
 		// Create container for main page

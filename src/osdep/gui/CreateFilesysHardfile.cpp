@@ -86,7 +86,7 @@ static void InitCreateFilesysHardfile()
 	wndCreateFilesysHardfile = new gcn::Window("Create");
 	wndCreateFilesysHardfile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndCreateFilesysHardfile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndCreateFilesysHardfile->setBaseColor(gui_baseCol + 0x202020);
+	wndCreateFilesysHardfile->setBaseColor(gui_baseCol);
 	wndCreateFilesysHardfile->setCaption("Create hardfile");
 	wndCreateFilesysHardfile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -95,14 +95,14 @@ static void InitCreateFilesysHardfile()
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol + 0x202020);
+	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->setId("createHdfOK");
 	cmdOK->addActionListener(createFilesysHardfileActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol + 0x202020);
+	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->setId("createHdfCancel");
 	cmdCancel->addActionListener(createFilesysHardfileActionListener);
 
@@ -138,7 +138,7 @@ static void InitCreateFilesysHardfile()
 	txtPath->setEnabled(false);
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdPath->setBaseColor(gui_baseCol + 0x202020);
+	cmdPath->setBaseColor(gui_baseCol);
 	cmdPath->setId("createHdfPath");
 	cmdPath->addActionListener(createFilesysHardfileActionListener);
 

@@ -315,6 +315,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
 	scrAreaConfigs->setScrollbarWidth(20);
 	scrAreaConfigs->setBaseColor(gui_baseCol);
+	scrAreaConfigs->setBackgroundColor(gui_baseCol);
 	category.panel->add(scrAreaConfigs);
 
 	if (strlen(last_active_config) == 0)

@@ -7,6 +7,9 @@
 
 namespace gcn
 {
+	Color colSelectorInactive;
+	Color colSelectorActive;
+
 	UaeListBox::UaeListBox()
 		: ListBox()
 	{
@@ -23,7 +26,7 @@ namespace gcn
 
 	void UaeListBox::draw(Graphics* graphics)
 	{
-		graphics->setColor(getBackgroundColor());
+		graphics->setColor(getBaseColor());
 		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
 		if (mListModel == nullptr)
@@ -65,6 +68,13 @@ namespace gcn
 			startRow = 0;
 		}
 
+		colSelectorInactive.r = 170;
+		colSelectorInactive.g = 170;
+		colSelectorInactive.b = 170;
+		colSelectorActive.r = 103;
+		colSelectorActive.g = 136;
+		colSelectorActive.b = 187;
+
 		int i;
 		// The y coordinate where we start to draw the text is
 		// simply the y coordinate multiplied with the font height.
@@ -74,9 +84,9 @@ namespace gcn
 			if (i == mSelected)
 			{
 				if (isFocused())
-					graphics->setColor(getSelectionColor());
+					graphics->setColor(colSelectorActive);
 				else
-					graphics->setColor(0xd0d0d0);
+					graphics->setColor(colSelectorInactive);
 				graphics->fillRectangle(Rectangle(0, y, getWidth(), rowHeight));
 				graphics->setColor(getForegroundColor());
 			}

@@ -187,7 +187,7 @@ static void InitSelectFile(const char* title)
 	wndSelectFile = new gcn::Window("Load");
 	wndSelectFile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndSelectFile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndSelectFile->setBaseColor(gui_baseCol + 0x202020);
+	wndSelectFile->setBaseColor(gui_baseCol);
 	wndSelectFile->setCaption(title);
 	wndSelectFile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -196,13 +196,13 @@ static void InitSelectFile(const char* title)
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol + 0x202020);
+	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->addActionListener(fileButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol + 0x202020);
+	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->addActionListener(fileButtonActionListener);
 
 	txtCurrent = new gcn::TextField();
@@ -224,7 +224,7 @@ static void InitSelectFile(const char* title)
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
 	scrAreaFiles->setScrollbarWidth(20);
-	scrAreaFiles->setBaseColor(gui_baseCol + 0x202020);
+	scrAreaFiles->setBaseColor(gui_baseCol);
 
 	if (createNew)
 	{

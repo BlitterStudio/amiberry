@@ -59,7 +59,7 @@ public:
 			changed_prefs.cpu_model = 68020;
 			if (changed_prefs.fpu_model == 68040)
 				changed_prefs.fpu_model = 68881;
-			changed_prefs.cpu_compatible = 0;
+			changed_prefs.cpu_compatible = false;
 		}
 		else if (actionEvent.getSource() == optCPU68030)
 		{
@@ -67,14 +67,14 @@ public:
 			if (changed_prefs.fpu_model == 68040)
 				changed_prefs.fpu_model = 68881;
 			changed_prefs.address_space_24 = false;
-			changed_prefs.cpu_compatible = 0;
+			changed_prefs.cpu_compatible = false;
 		}
 		else if (actionEvent.getSource() == optCPU68040)
 		{
 			changed_prefs.cpu_model = 68040;
 			changed_prefs.fpu_model = 68040;
 			changed_prefs.address_space_24 = false;
-			changed_prefs.cpu_compatible = 0;
+			changed_prefs.cpu_compatible = false;
 		}
 		RefreshPanelCPU();
 		RefreshPanelRAM();
@@ -150,7 +150,7 @@ public:
 	{
 		if (chkCPUCompatible->isSelected())
 		{
-			changed_prefs.cpu_compatible = 1;
+			changed_prefs.cpu_compatible = true;
 			changed_prefs.cachesize = 0;
 		}
 		else

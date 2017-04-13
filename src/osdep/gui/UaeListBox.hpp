@@ -16,7 +16,7 @@ namespace gcn
 	public:
 		UaeListBox();
 
-		UaeListBox(ListModel* listModel);
+		explicit UaeListBox(ListModel* listModel);
 
 		virtual ~UaeListBox();
 

@@ -45,7 +45,7 @@ static void InitShowMessage()
 	wndShowMessage = new gcn::Window("Message");
 	wndShowMessage->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndShowMessage->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndShowMessage->setBaseColor(gui_baseCol + 0x202020);
+	wndShowMessage->setBaseColor(gui_baseCol);
 	wndShowMessage->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	showMessageActionListener = new ShowMessageActionListener();
@@ -58,13 +58,13 @@ static void InitShowMessage()
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol + 0x202020);
+	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->addActionListener(showMessageActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol + 0x202020);
+	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->addActionListener(showMessageActionListener);
 
 	wndShowMessage->add(lblText1, DISTANCE_BORDER, DISTANCE_BORDER);
