@@ -20,298 +20,10 @@ extern map<int, int> customControlMap;
 
 static int kickstart;
 
-static int presetModeId = 2;
-
-
-static void SetPresetMode(int mode, struct uae_prefs* p)
-{
-	presetModeId = mode;
-
-	switch (mode)
-	{
-	case 0:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 768;
-		break;
-
-	case 1:
-		p->gfx_size.height = 216;
-		p->gfx_size_fs.width = 716;
-		break;
-
-	case 2:
-		p->gfx_size.height = 240;
-		p->gfx_size_fs.width = 640;
-		break;
-
-	case 3:
-		p->gfx_size.height = 256;
-		p->gfx_size_fs.width = 600;
-		break;
-
-	case 4:
-		p->gfx_size.height = 262;
-		p->gfx_size_fs.width = 588;
-		break;
-
-	case 5:
-		p->gfx_size.height = 270;
-		p->gfx_size_fs.width = 570;
-		break;
-
-	case 6:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 640;
-		break;
-
-	case 7:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 10:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 768;
-		break;
-
-	case 11:
-		p->gfx_size.height = 216;
-		p->gfx_size_fs.width = 716;
-		break;
-
-	case 12:
-		p->gfx_size.height = 240;
-		p->gfx_size_fs.width = 640;
-		break;
-
-	case 13:
-		p->gfx_size.height = 256;
-		p->gfx_size_fs.width = 600;
-		break;
-
-	case 14:
-		p->gfx_size.height = 262;
-		p->gfx_size_fs.width = 588;
-		break;
-
-	case 15:
-		p->gfx_size.height = 270;
-		p->gfx_size_fs.width = 570;
-		break;
-
-	case 16:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 640;
-		break;
-
-	case 17:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 20:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 21:
-		p->gfx_size.height = 216;
-		p->gfx_size_fs.width = 784;
-		break;
-
-	case 22:
-		p->gfx_size.height = 240;
-		p->gfx_size_fs.width = 704;
-		break;
-
-	case 23:
-		p->gfx_size.height = 256;
-		p->gfx_size_fs.width = 660;
-		break;
-
-	case 24:
-		p->gfx_size.height = 262;
-		p->gfx_size_fs.width = 640;
-		break;
-
-	case 25:
-		p->gfx_size.height = 270;
-		p->gfx_size_fs.width = 624;
-		break;
-
-	case 26:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 704;
-		break;
-
-	case 27:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 30:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 31:
-		p->gfx_size.height = 216;
-		p->gfx_size_fs.width = 784;
-		break;
-
-	case 32:
-		p->gfx_size.height = 240;
-		p->gfx_size_fs.width = 704;
-		break;
-
-	case 33:
-		p->gfx_size.height = 256;
-		p->gfx_size_fs.width = 660;
-		break;
-
-	case 34:
-		p->gfx_size.height = 262;
-		p->gfx_size_fs.width = 640;
-		break;
-
-	case 35:
-		p->gfx_size.height = 270;
-		p->gfx_size_fs.width = 624;
-		break;
-
-	case 36:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 704;
-		break;
-
-	case 37:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 40:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 41:
-		p->gfx_size.height = 216;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 42:
-		p->gfx_size.height = 240;
-		p->gfx_size_fs.width = 768;
-		break;
-
-	case 43:
-		p->gfx_size.height = 256;
-		p->gfx_size_fs.width = 720;
-		break;
-
-	case 44:
-		p->gfx_size.height = 262;
-		p->gfx_size_fs.width = 704;
-		break;
-
-	case 45:
-		p->gfx_size.height = 270;
-		p->gfx_size_fs.width = 684;
-		break;
-
-	case 46:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 47:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 50:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 51:
-		p->gfx_size.height = 216;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 52:
-		p->gfx_size.height = 240;
-		p->gfx_size_fs.width = 768;
-		break;
-
-	case 53:
-		p->gfx_size.height = 256;
-		p->gfx_size_fs.width = 720;
-		break;
-
-	case 54:
-		p->gfx_size.height = 262;
-		p->gfx_size_fs.width = 704;
-		break;
-
-	case 55:
-		p->gfx_size.height = 270;
-		p->gfx_size_fs.width = 684;
-		break;
-
-	case 56:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	case 57:
-		p->gfx_size.height = 200;
-		p->gfx_size_fs.width = 800;
-		break;
-
-	default:
-		p->gfx_size.height = 240;
-		p->gfx_size_fs.width = 640;
-		presetModeId = 2;
-		break;
-	}
-
-	switch (presetModeId / 10)
-	{
-	case 0:
-		p->gfx_size.width = 320;
-		break;
-
-	case 1:
-		p->gfx_size.width = 640;
-		break;
-
-	case 2:
-		p->gfx_size.width = 352;
-		break;
-
-	case 3:
-		p->gfx_size.width = 704;
-		break;
-
-	case 4:
-		p->gfx_size.width = 384;
-		break;
-
-	case 5:
-		p->gfx_size.width = 768;
-		break;
-	}
-}
-
-
 static void SetDefaultMenuSettings(struct uae_prefs* p)
 {
 	kickstart = 1;
-
-	SetPresetMode(2, p);
 }
-
 
 static void replace(char* str, char replace, char toreplace)
 {
@@ -321,7 +33,6 @@ static void replace(char* str, char replace, char toreplace)
 		str++;
 	}
 }
-
 
 int create_configfilename(char* dest, char* basename, int fromDir)
 {
@@ -353,7 +64,6 @@ int create_configfilename(char* dest, char* basename, int fromDir)
 
 	return 0;
 }
-
 
 const char* kickstarts_rom_names[] = {"kick12.rom\0", "kick13.rom\0", "kick20.rom\0", "kick31.rom\0", "aros-amiga-m68k-rom.bin\0"};
 const char* extended_rom_names[] = {"\0", "\0", "\0", "\0", "aros-amiga-m68k-ext.bin\0"};
@@ -471,7 +181,6 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		p->chipset_refreshrate = 60;
 	else
 		p->chipset_refreshrate = 50;
-	fscanf(f, "presetModeId=%d\n", &presetModeId);
 	fscanf(f, "displayedLines=%d\n", &p->gfx_size.height);
 	fscanf(f, "screenWidth=%d\n", &p->gfx_size_fs.width);
 	fscanf(f, "cutLeft=%d\n", &dummy);
@@ -530,7 +239,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	if (p->m68k_speed == 2)
 		p->m68k_speed = M68K_SPEED_25MHZ_CYCLES;
 	p->cachesize = 0;
-	p->cpu_compatible = 0;
+	p->cpu_compatible = false;
 	switch (cpu_level)
 	{
 	case 0:
@@ -561,7 +270,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	disk_eject(3);
 	fscanf(f, "df0=%s\n", &filebuffer);
 	replace(filebuffer, ' ', '|');
-	if (DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+	if (DISK_validate_filename(p, filebuffer, 0, nullptr, nullptr, nullptr))
 		strcpy(p->floppyslots[0].df, filebuffer);
 	else
 		p->floppyslots[0].df[0] = 0;
@@ -571,7 +280,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		memset(filebuffer, 0, 256);
 		fscanf(f, "df1=%s\n", &filebuffer);
 		replace(filebuffer, ' ', '|');
-		if (DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+		if (DISK_validate_filename(p, filebuffer, 0, nullptr, nullptr, nullptr))
 			strcpy(p->floppyslots[1].df, filebuffer);
 		else
 			p->floppyslots[1].df[0] = 0;
@@ -582,7 +291,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		memset(filebuffer, 0, 256);
 		fscanf(f, "df2=%s\n", &filebuffer);
 		replace(filebuffer, ' ', '|');
-		if (DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+		if (DISK_validate_filename(p, filebuffer, 0, nullptr, nullptr, nullptr))
 			strcpy(p->floppyslots[2].df, filebuffer);
 		else
 			p->floppyslots[2].df[0] = 0;
@@ -593,7 +302,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		memset(filebuffer, 0, 256);
 		fscanf(f, "df3=%s\n", &filebuffer);
 		replace(filebuffer, ' ', '|');
-		if (DISK_validate_filename(p, filebuffer, 0, NULL, NULL, NULL))
+		if (DISK_validate_filename(p, filebuffer, 0, nullptr, nullptr, nullptr))
 			strcpy(p->floppyslots[3].df, filebuffer);
 		else
 			p->floppyslots[3].df[0] = 0;
@@ -624,8 +333,6 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		p->fastmem_size = 0x080000 << p->fastmem_size;
 
 	fclose(f);
-
-	SetPresetMode(presetModeId, p);
 
 	CheckKickstart(p);
 
