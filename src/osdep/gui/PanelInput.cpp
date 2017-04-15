@@ -278,15 +278,15 @@ void InitPanelInput(const struct _ConfigCategory& category)
 {
 	inputActionListener = new InputActionListener();
 
-	if (ctrlPortList.getNumberOfElements() < (4 + inputdevice_get_device_total(IDTYPE_JOYSTICK)))
+	if (ctrlPortList.getNumberOfElements() < 4 + inputdevice_get_device_total(IDTYPE_JOYSTICK))
 	{
 		int i;
-		for (i = 0; i < (inputdevice_get_device_total(IDTYPE_JOYSTICK) - 1); i++)
+		for (i = 0; i < inputdevice_get_device_total(IDTYPE_JOYSTICK) - 1; i++)
 		{
 			ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_JOYSTICK, i + 1));
 		}
 	}
-	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - (DISTANCE_NEXT_X * 2);
+	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X * 2;
 
 	lblPort0 = new gcn::Label("Port0:");
 	lblPort0->setSize(50, LABEL_HEIGHT);
@@ -294,6 +294,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort0->setSize(textFieldWidth, DROPDOWN_HEIGHT);
 	cboPort0->setBaseColor(gui_baseCol);
+	cboPort0->setBackgroundColor(colTextboxBackground);
 	cboPort0->setId("cboPort0");
 	cboPort0->addActionListener(inputActionListener);
 
@@ -303,6 +304,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort1->setSize(textFieldWidth, DROPDOWN_HEIGHT);
 	cboPort1->setBaseColor(gui_baseCol);
+	cboPort1->setBackgroundColor(colTextboxBackground);
 	cboPort1->setId("cboPort1");
 	cboPort1->addActionListener(inputActionListener);
 
@@ -310,8 +312,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblAutofire->setSize(100, LABEL_HEIGHT);
 	lblAutofire->setAlignment(gcn::Graphics::RIGHT);
 	cboAutofire = new gcn::UaeDropDown(&autofireList);
-	cboAutofire->setSize(80, DROPDOWN_HEIGHT);
 	cboAutofire->setBaseColor(gui_baseCol);
+	cboAutofire->setBackgroundColor(colTextboxBackground);
 	cboAutofire->setId("cboAutofire");
 	cboAutofire->addActionListener(inputActionListener);
 
@@ -335,8 +337,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblA->setSize(80, LABEL_HEIGHT);
 	lblA->setAlignment(gcn::Graphics::RIGHT);
 	cboA = new gcn::UaeDropDown(&mappingList);
-	cboA->setSize(150, DROPDOWN_HEIGHT);
+	//cboA->setSize(150, DROPDOWN_HEIGHT);
 	cboA->setBaseColor(gui_baseCol);
+	cboA->setBackgroundColor(colTextboxBackground);
 	cboA->setId("cboA");
 	cboA->addActionListener(inputActionListener);
 
@@ -344,8 +347,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblB->setSize(80, LABEL_HEIGHT);
 	lblB->setAlignment(gcn::Graphics::RIGHT);
 	cboB = new gcn::UaeDropDown(&mappingList);
-	cboB->setSize(150, DROPDOWN_HEIGHT);
+	//cboB->setSize(150, DROPDOWN_HEIGHT);
 	cboB->setBaseColor(gui_baseCol);
+	cboB->setBackgroundColor(colTextboxBackground);
 	cboB->setId("cboB");
 	cboB->addActionListener(inputActionListener);
 
@@ -353,8 +357,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblX->setSize(80, LABEL_HEIGHT);
 	lblX->setAlignment(gcn::Graphics::RIGHT);
 	cboX = new gcn::UaeDropDown(&mappingList);
-	cboX->setSize(150, DROPDOWN_HEIGHT);
+	//cboX->setSize(150, DROPDOWN_HEIGHT);
 	cboX->setBaseColor(gui_baseCol);
+	cboX->setBackgroundColor(colTextboxBackground);
 	cboX->setId("cboX");
 	cboX->addActionListener(inputActionListener);
 
@@ -362,8 +367,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblY->setSize(80, LABEL_HEIGHT);
 	lblY->setAlignment(gcn::Graphics::RIGHT);
 	cboY = new gcn::UaeDropDown(&mappingList);
-	cboY->setSize(150, DROPDOWN_HEIGHT);
+	//cboY->setSize(150, DROPDOWN_HEIGHT);
 	cboY->setBaseColor(gui_baseCol);
+	cboY->setBackgroundColor(colTextboxBackground);
 	cboY->setId("cboY");
 	cboY->addActionListener(inputActionListener);
 
@@ -371,8 +377,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblL->setSize(80, LABEL_HEIGHT);
 	lblL->setAlignment(gcn::Graphics::RIGHT);
 	cboL = new gcn::UaeDropDown(&mappingList);
-	cboL->setSize(150, DROPDOWN_HEIGHT);
+	//cboL->setSize(150, DROPDOWN_HEIGHT);
 	cboL->setBaseColor(gui_baseCol);
+	cboL->setBackgroundColor(colTextboxBackground);
 	cboL->setId("cboL");
 	cboL->addActionListener(inputActionListener);
 
@@ -380,8 +387,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblR->setSize(80, LABEL_HEIGHT);
 	lblR->setAlignment(gcn::Graphics::RIGHT);
 	cboR = new gcn::UaeDropDown(&mappingList);
-	cboR->setSize(150, DROPDOWN_HEIGHT);
+	//cboR->setSize(150, DROPDOWN_HEIGHT);
 	cboR->setBaseColor(gui_baseCol);
+	cboR->setBackgroundColor(colTextboxBackground);
 	cboR->setId("cboR");
 	cboR->addActionListener(inputActionListener);
 
@@ -389,8 +397,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblUp->setSize(80, LABEL_HEIGHT);
 	lblUp->setAlignment(gcn::Graphics::RIGHT);
 	cboUp = new gcn::UaeDropDown(&mappingList);
-	cboUp->setSize(150, DROPDOWN_HEIGHT);
+	//cboUp->setSize(150, DROPDOWN_HEIGHT);
 	cboUp->setBaseColor(gui_baseCol);
+	cboUp->setBackgroundColor(colTextboxBackground);
 	cboUp->setId("cboUp");
 	cboUp->addActionListener(inputActionListener);
 
@@ -398,8 +407,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblDown->setSize(80, LABEL_HEIGHT);
 	lblDown->setAlignment(gcn::Graphics::RIGHT);
 	cboDown = new gcn::UaeDropDown(&mappingList);
-	cboDown->setSize(150, DROPDOWN_HEIGHT);
+	//cboDown->setSize(150, DROPDOWN_HEIGHT);
 	cboDown->setBaseColor(gui_baseCol);
+	cboDown->setBackgroundColor(colTextboxBackground);
 	cboDown->setId("cboDown");
 	cboDown->addActionListener(inputActionListener);
 
@@ -407,8 +417,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblLeft->setSize(80, LABEL_HEIGHT);
 	lblLeft->setAlignment(gcn::Graphics::RIGHT);
 	cboLeft = new gcn::UaeDropDown(&mappingList);
-	cboLeft->setSize(150, DROPDOWN_HEIGHT);
+	//cboLeft->setSize(150, DROPDOWN_HEIGHT);
 	cboLeft->setBaseColor(gui_baseCol);
+	cboLeft->setBackgroundColor(colTextboxBackground);
 	cboLeft->setId("cboLeft");
 	cboLeft->addActionListener(inputActionListener);
 
@@ -416,8 +427,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblRight->setSize(80, LABEL_HEIGHT);
 	lblRight->setAlignment(gcn::Graphics::RIGHT);
 	cboRight = new gcn::UaeDropDown(&mappingList);
-	cboRight->setSize(150, DROPDOWN_HEIGHT);
+	//cboRight->setSize(150, DROPDOWN_HEIGHT);
 	cboRight->setBaseColor(gui_baseCol);
+	cboRight->setBackgroundColor(colTextboxBackground);
 	cboRight->setId("cboRight");
 	cboRight->addActionListener(inputActionListener);
 
@@ -425,8 +437,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblStart->setSize(80, LABEL_HEIGHT);
 	lblStart->setAlignment(gcn::Graphics::RIGHT);
 	cboPlay = new gcn::UaeDropDown(&mappingList);
-	cboPlay->setSize(150, DROPDOWN_HEIGHT);
+	//cboPlay->setSize(150, DROPDOWN_HEIGHT);
 	cboPlay->setBaseColor(gui_baseCol);
+	cboPlay->setBackgroundColor(colTextboxBackground);
 	cboPlay->setId("cboPlay");
 	cboPlay->addActionListener(inputActionListener);
 
@@ -446,7 +459,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(lblMouseSpeed, DISTANCE_BORDER, posY);
 	category.panel->add(sldMouseSpeed, DISTANCE_BORDER + lblMouseSpeed->getWidth() + 8, posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 12, posY);
-	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
+	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y *2;
 
 	category.panel->add(chkCustomCtrl, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
 	posY += chkCustomCtrl->getHeight() + DISTANCE_NEXT_Y;
@@ -457,27 +470,27 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	category.panel->add(lblB, posColumn2, posY);
 	category.panel->add(cboB, posColumn2 + lblB->getWidth() + 8, posY);
-	posY += cboA->getHeight() + 4;
+	posY += cboA->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblX, DISTANCE_BORDER, posY);
 	category.panel->add(cboX, DISTANCE_BORDER + lblX->getWidth() + 8, posY);
 	category.panel->add(lblY, posColumn2, posY);
 	category.panel->add(cboY, posColumn2 + lblY->getWidth() + 8, posY);
-	posY += cboX->getHeight() + 4;
+	posY += cboX->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblL, DISTANCE_BORDER, posY);
 	category.panel->add(cboL, DISTANCE_BORDER + lblL->getWidth() + 8, posY);
 	category.panel->add(lblR, posColumn2, posY);
 	category.panel->add(cboR, posColumn2 + lblR->getWidth() + 8, posY);
-	posY += cboL->getHeight() + 4;
+	posY += cboL->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblUp, DISTANCE_BORDER, posY);
 	category.panel->add(cboUp, DISTANCE_BORDER + lblUp->getWidth() + 8, posY);
 	category.panel->add(lblDown, posColumn2, posY);
 	category.panel->add(cboDown, posColumn2 + lblDown->getWidth() + 8, posY);
-	posY += cboUp->getHeight() + 4;
+	posY += cboUp->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblLeft, DISTANCE_BORDER, posY);
 	category.panel->add(cboLeft, DISTANCE_BORDER + lblLeft->getWidth() + 8, posY);
 	category.panel->add(lblRight, posColumn2, posY);
 	category.panel->add(cboRight, posColumn2 + lblRight->getWidth() + 8, posY);
-	posY += cboLeft->getHeight() + 4;
+	posY += cboLeft->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblStart, DISTANCE_BORDER, posY);
 	category.panel->add(cboPlay, DISTANCE_BORDER + lblStart->getWidth() + 8, posY);
 

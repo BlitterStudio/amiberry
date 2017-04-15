@@ -36,8 +36,8 @@ static const char* column_caption[] =
 };
 static const int COLUMN_SIZE[] =
 {
-	50, // Device
-	60, // Volume
+	55, // Device
+	65, // Volume
 	220, // Path
 	40, // R/W
 	50, // Size
@@ -369,27 +369,27 @@ void InitPanelHD(const struct _ConfigCategory& category)
 		for (col = 0; col < COL_COUNT; ++col)
 		{
 			listCells[row][col] = new gcn::TextField();
-			listCells[row][col]->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+			listCells[row][col]->setSize(COLUMN_SIZE[col], TEXTFIELD_HEIGHT);
 			listCells[row][col]->setEnabled(false);
-			listCells[row][col]->setBackgroundColor(gui_baseCol);
+			listCells[row][col]->setBackgroundColor(colTextboxBackground);
 		}
 	}
 
 	cmdAddDirectory = new gcn::Button("Add Directory");
 	cmdAddDirectory->setBaseColor(gui_baseCol);
-	cmdAddDirectory->setSize(BUTTON_WIDTH + 20, BUTTON_HEIGHT);
+	cmdAddDirectory->setSize(BUTTON_WIDTH + 24, BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
 	cmdAddDirectory->addActionListener(addVirtualHDActionListener);
 
 	cmdAddHardfile = new gcn::Button("Add Hardfile");
 	cmdAddHardfile->setBaseColor(gui_baseCol);
-	cmdAddHardfile->setSize(BUTTON_WIDTH + 20, BUTTON_HEIGHT);
+	cmdAddHardfile->setSize(BUTTON_WIDTH + 24, BUTTON_HEIGHT);
 	cmdAddHardfile->setId("cmdAddHDF");
 	cmdAddHardfile->addActionListener(addHardfileActionListener);
 
 	cmdCreateHardfile = new gcn::Button("Create Hardfile");
 	cmdCreateHardfile->setBaseColor(gui_baseCol);
-	cmdCreateHardfile->setSize(BUTTON_WIDTH + 20, BUTTON_HEIGHT);
+	cmdCreateHardfile->setSize(BUTTON_WIDTH + 24, BUTTON_HEIGHT);
 	cmdCreateHardfile->setId("cmdCreateHDF");
 	cmdCreateHardfile->addActionListener(createHardfileActionListener);
 
@@ -416,6 +416,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cboCDFile = new gcn::UaeDropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
 	cboCDFile->setBaseColor(gui_baseCol);
+	cboCDFile->setBackgroundColor(colTextboxBackground);
 	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
 
@@ -589,7 +590,7 @@ void RefreshPanelHD()
 				else if (mi.size >= 1024 * 1024 * 1024)
 					snprintf(tmp, 32, "%.1fG", double(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
 				else
-					snprintf(tmp, 32, "%.1fM", double(uae_u32(mi.size / (1024))) / 1024.0);
+					snprintf(tmp, 32, "%.1fM", double(uae_u32(mi.size / 1024)) / 1024.0);
 				listCells[row][COL_SIZE]->setText(tmp);
 				snprintf(tmp, 32, "%d", ci->bootpri);
 				listCells[row][COL_BOOTPRI]->setText(tmp);

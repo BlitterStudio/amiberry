@@ -261,6 +261,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboFrequency = new gcn::UaeDropDown(&frequencyTypeList);
 	cboFrequency->setSize(160, DROPDOWN_HEIGHT);
 	cboFrequency->setBaseColor(gui_baseCol);
+	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
 	cboFrequency->addActionListener(soundActionListener);
 
@@ -283,6 +284,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboInterpolation = new gcn::UaeDropDown(&interpolationTypeList);
 	cboInterpolation->setSize(160, DROPDOWN_HEIGHT);
 	cboInterpolation->setBaseColor(gui_baseCol);
+	cboInterpolation->setBackgroundColor(colTextboxBackground);
 	cboInterpolation->setId("cboInterpol");
 	cboInterpolation->addActionListener(soundActionListener);
 
@@ -292,6 +294,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboFilter = new gcn::UaeDropDown(&filterTypeList);
 	cboFilter->setSize(160, DROPDOWN_HEIGHT);
 	cboFilter->setBaseColor(gui_baseCol);
+	cboFilter->setBackgroundColor(colTextboxBackground);
 	cboFilter->setId("cboFilter");
 	cboFilter->addActionListener(soundActionListener);
 

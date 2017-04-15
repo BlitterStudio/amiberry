@@ -359,6 +359,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	int posX;
 	int posY = DISTANCE_BORDER;
 	int i;
+	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 
 	dfxCheckActionListener = new DFxCheckActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
@@ -377,7 +378,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 
 		cboDFxType[i] = new gcn::UaeDropDown(&driveTypeList);
 		cboDFxType[i]->setSize(106, DROPDOWN_HEIGHT);
-		cboDFxType[i]->setBaseColor(gui_baseCol);
+		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboType%d", i);
 		cboDFxType[i]->setId(tmp);
 		cboDFxType[i]->addActionListener(driveTypeActionListener);
@@ -405,8 +406,9 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
 
 		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
-		cboDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
+		cboDFxFile[i]->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
+		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboDisk%d", i);
 		cboDFxFile[i]->setId(tmp);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
@@ -451,19 +453,19 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	{
 		posX = DISTANCE_BORDER;
 		category.panel->add(chkDFx[i], posX, posY);
-		posX += 100;
+		posX += 80;
 		category.panel->add(cboDFxType[i], posX, posY);
 		posX += cboDFxType[i]->getWidth() + 2 * DISTANCE_NEXT_X;
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
 		posX += chkDFxWriteProtect[i]->getWidth() + 4 * DISTANCE_NEXT_X;
-		//	  category.panel->add(cmdDFxInfo[i], posX, posY);
+		//category.panel->add(cmdDFxInfo[i], posX, posY); //TODO disabled?
 		posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
-		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxSelect[i], posX, posY);
-		posY += chkDFx[i]->getHeight() + 8;
+		posX = DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X;
+		posY += cboDFxType[i]->getHeight() + 8;
 
 		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
+		category.panel->add(cmdDFxSelect[i], posX, posY);
 		if (i == 0)
 		{
 			posY += cboDFxFile[i]->getHeight() + 8;
@@ -529,7 +531,7 @@ static void AdjustDropDownControls()
 	{
 		cboDFxFile[i]->clearSelected();
 
-		if ((changed_prefs.floppyslots[i].dfxtype != DRV_NONE) && strlen(changed_prefs.floppyslots[i].df) > 0)
+		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
 			for (j = 0; j < lstMRUDiskList.size(); ++j)
 			{

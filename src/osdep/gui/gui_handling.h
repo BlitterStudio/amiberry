@@ -12,22 +12,22 @@
 #define BUTTON_HEIGHT 30
 #define SMALL_BUTTON_WIDTH 30
 #define SMALL_BUTTON_HEIGHT 22
-#define LABEL_HEIGHT 20
-#define TEXTFIELD_HEIGHT 22
-#define DROPDOWN_HEIGHT 22
+#define LABEL_HEIGHT 15
+#define TEXTFIELD_HEIGHT 16
+#define DROPDOWN_HEIGHT 15
 #define SLIDER_HEIGHT 18
 #define TITLEBAR_HEIGHT 24
 #include "guisan/sdl/sdlinput.hpp"
 
 typedef struct _ConfigCategory
 {
-    const char *category;
-    const char *imagepath;
-    gcn::SelectorEntry *selector;
-    gcn::Container *panel;
-    void (*InitFunc) (const struct _ConfigCategory& category);
-    void (*ExitFunc) (void);
-    void (*RefreshFunc) (void);
+	const char* category;
+	const char* imagepath;
+	gcn::SelectorEntry* selector;
+	gcn::Container* panel;
+	void (*InitFunc)(const struct _ConfigCategory& category);
+	void (*ExitFunc)(void);
+	void (*RefreshFunc)(void);
 } ConfigCategory;
 
 extern bool gui_running;
@@ -35,6 +35,7 @@ extern ConfigCategory categories[];
 extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;
 extern gcn::Color gui_baseCol;
+extern gcn::Color colTextboxBackground;
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 
@@ -48,12 +49,13 @@ extern char last_loaded_config[MAX_DPATH];
 
 typedef struct
 {
-    char Name[MAX_DPATH];
-    char FullPath[MAX_DPATH];
-    char Description[MAX_DPATH];
-    int BuildInID;
+	char Name[MAX_DPATH];
+	char FullPath[MAX_DPATH];
+	char Description[MAX_DPATH];
+	int BuildInID;
 } ConfigFileInfo;
-extern std::vector<ConfigFileInfo*> ConfigFilesList;
+
+extern vector<ConfigFileInfo*> ConfigFilesList;
 
 void InitPanelPaths(const struct _ConfigCategory& category);
 void ExitPanelPaths(void);
@@ -100,28 +102,36 @@ void RegisterRefreshFunc(void (*func)(void));
 
 void DisableResume(void);
 
-bool ShowMessage(const char *title, const char *line1, const char *line2, const char *button1, const char *button2);
-bool SelectFolder(const char *title, char *value);
-bool SelectFile(const char *title, char *value, const char *filter[], bool create = false);
+bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2);
+bool SelectFolder(const char* title, char* value);
+bool SelectFile(const char* title, char* value, const char* filter[], bool create = false);
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
 bool CreateFilesysHardfile(void);
 
-bool LoadConfigByName(const char *name);
-ConfigFileInfo* SearchConfigInList(const char *name);
+bool LoadConfigByName(const char* name);
+ConfigFileInfo* SearchConfigInList(const char* name);
 
-extern void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector<std::string> *files);
-extern void FilterFiles(std::vector<std::string> *files, const char *filter[]);
+extern void ReadDirectory(const char* path, vector<string>* dirs, vector<string>* files);
+extern void FilterFiles(vector<string>* files, const char* filter[]);
 
-enum { DIRECTION_NONE, DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT };
+enum
+{
+	DIRECTION_NONE,
+	DIRECTION_UP,
+	DIRECTION_DOWN,
+	DIRECTION_LEFT,
+	DIRECTION_RIGHT
+};
+
 bool HandleNavigation(int direction);
 
 #define MAX_HD_DEVICES 5
-extern void CreateDefaultDevicename(char *name);
-extern bool DevicenameExists(const char *name);
-extern int tweakbootpri (int bp, int ab, int dnm);
+extern void CreateDefaultDevicename(char* name);
+extern bool DevicenameExists(const char* name);
+extern int tweakbootpri(int bp, int ab, int dnm);
 
-extern char *screenshot_filename;
+extern char* screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;
 

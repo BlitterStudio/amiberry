@@ -18,7 +18,6 @@ static gcn::TextField* txtConfigPath;
 static gcn::Button* cmdConfigPath;
 static gcn::Button* cmdRescanROMs;
 
-
 class FolderButtonActionListener : public gcn::ActionListener
 {
 public:
@@ -73,10 +72,10 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	folderButtonActionListener = new FolderButtonActionListener();
 
 	lblSystemROMs = new gcn::Label("System ROMs:");
-	lblSystemROMs->setSize(120, LABEL_HEIGHT);
 	txtSystemROMs = new gcn::TextField();
-	txtSystemROMs->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
-	txtSystemROMs->setEnabled(false);
+	txtSystemROMs->setSize(textFieldWidth, txtSystemROMs->getHeight());
+	txtSystemROMs->setBackgroundColor(colTextboxBackground);
+
 	cmdSystemROMs = new gcn::Button("...");
 	cmdSystemROMs->setId("SystemROMs");
 	cmdSystemROMs->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -84,10 +83,10 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdSystemROMs->addActionListener(folderButtonActionListener);
 
 	lblConfigPath = new gcn::Label("Configuration files:");
-	lblConfigPath->setSize(120, LABEL_HEIGHT);
 	txtConfigPath = new gcn::TextField();
-	txtConfigPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
-	txtConfigPath->setEnabled(false);
+	txtConfigPath->setSize(textFieldWidth, txtConfigPath->getHeight());
+	txtConfigPath->setBackgroundColor(colTextboxBackground);
+
 	cmdConfigPath = new gcn::Button("...");
 	cmdConfigPath->setId("ConfigPath");
 	cmdConfigPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -95,13 +94,13 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdConfigPath->addActionListener(folderButtonActionListener);
 
 	category.panel->add(lblSystemROMs, DISTANCE_BORDER, yPos);
-	yPos += lblSystemROMs->getHeight();
+	yPos += lblSystemROMs->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(txtSystemROMs, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdSystemROMs, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
-	yPos += txtSystemROMs->getHeight() + DISTANCE_NEXT_Y;
+	yPos += txtSystemROMs->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblConfigPath, DISTANCE_BORDER, yPos);
-	yPos += lblConfigPath->getHeight();
+	yPos += lblConfigPath->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(txtConfigPath, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdConfigPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
 	yPos += txtConfigPath->getHeight() + DISTANCE_NEXT_Y;
@@ -109,7 +108,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	rescanROMsButtonActionListener = new RescanROMsButtonActionListener();
 
 	cmdRescanROMs = new gcn::Button("Rescan ROMs");
-	cmdRescanROMs->setSize(120, BUTTON_HEIGHT);
+	cmdRescanROMs->setSize(cmdRescanROMs->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdRescanROMs->setBaseColor(gui_baseCol);
 	cmdRescanROMs->setId("RescanROMs");
 	cmdRescanROMs->addActionListener(rescanROMsButtonActionListener);

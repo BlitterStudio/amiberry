@@ -66,8 +66,8 @@ StringListModel ControlKeyList(ControlKeyValues, 3);
 
 static int GetControlKeyIndex(int key)
 {
-	int ControlKey_SDLKeyValues_Length = sizeof(ControlKey_SDLKeyValues) / sizeof(int);
-	for (int i = 0; i < (ControlKey_SDLKeyValues_Length + 1); ++i)
+	int ControlKey_SDLKeyValues_Length = sizeof ControlKey_SDLKeyValues / sizeof(int);
+	for (int i = 0; i < ControlKey_SDLKeyValues_Length + 1; ++i)
 	{
 		if (ControlKey_SDLKeyValues[i] == key)
 			return i;
@@ -152,8 +152,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblNumLock->setSize(85, LABEL_HEIGHT);
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
-	cboKBDLed_num->setSize(100, DROPDOWN_HEIGHT);
 	cboKBDLed_num->setBaseColor(gui_baseCol);
+	cboKBDLed_num->setBackgroundColor(colTextboxBackground);
 	cboKBDLed_num->setId("numlock");
 	cboKBDLed_num->addActionListener(miscActionListener);
 
@@ -161,8 +161,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblScrLock->setSize(85, LABEL_HEIGHT);
 	lblScrLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
-	cboKBDLed_scr->setSize(100, DROPDOWN_HEIGHT);
 	cboKBDLed_scr->setBaseColor(gui_baseCol);
+	cboKBDLed_scr->setBackgroundColor(colTextboxBackground);
 	cboKBDLed_scr->setId("scrolllock");
 	cboKBDLed_scr->addActionListener(miscActionListener);
 
@@ -170,8 +170,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyForMenu->setSize(85, LABEL_HEIGHT);
 	lblKeyForMenu->setAlignment(gcn::Graphics::RIGHT);
 	KeyForMenu = new gcn::UaeDropDown(&ControlKeyList);
-	KeyForMenu->setSize(100, DROPDOWN_HEIGHT);
 	KeyForMenu->setBaseColor(gui_baseCol);
+	KeyForMenu->setBackgroundColor(colTextboxBackground);
 	KeyForMenu->setId("KeyForMenu");
 	KeyForMenu->addActionListener(miscActionListener);
 
@@ -179,8 +179,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyForQuit->setSize(85, LABEL_HEIGHT);
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
 	KeyForQuit = new gcn::UaeDropDown(&ControlKeyList);
-	KeyForQuit->setSize(100, DROPDOWN_HEIGHT);
 	KeyForQuit->setBaseColor(gui_baseCol);
+	KeyForQuit->setBackgroundColor(colTextboxBackground);
 	KeyForQuit->setId("KeyForQuit");
 	KeyForQuit->addActionListener(miscActionListener);
 
@@ -188,8 +188,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblButtonForMenu->setSize(85, LABEL_HEIGHT);
 	lblButtonForMenu->setAlignment(gcn::Graphics::RIGHT);
 	ButtonForMenu = new gcn::UaeDropDown(&ControlButtonList);
-	ButtonForMenu->setSize(100, DROPDOWN_HEIGHT);
 	ButtonForMenu->setBaseColor(gui_baseCol);
+	ButtonForMenu->setBackgroundColor(colTextboxBackground);
 	ButtonForMenu->setId("ButtonForMenu");
 	ButtonForMenu->addActionListener(miscActionListener);
 
@@ -197,8 +197,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblButtonForQuit->setSize(85, LABEL_HEIGHT);
 	lblButtonForQuit->setAlignment(gcn::Graphics::RIGHT);
 	ButtonForQuit = new gcn::UaeDropDown(&ControlButtonList);
-	ButtonForQuit->setSize(100, DROPDOWN_HEIGHT);
 	ButtonForQuit->setBaseColor(gui_baseCol);
+	ButtonForQuit->setBackgroundColor(colTextboxBackground);
 	ButtonForQuit->setId("ButtonForQuit");
 	ButtonForQuit->addActionListener(miscActionListener);
 
@@ -211,7 +211,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
-	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
+	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
 	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);

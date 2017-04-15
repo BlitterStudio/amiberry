@@ -79,7 +79,7 @@ gcn::Gui* uae_gui;
 gcn::Container* gui_top;
 gcn::Container* selectors;
 gcn::Color gui_baseCol;
-gcn::Color gui_baseColLabel;
+gcn::Color colTextboxBackground;
 gcn::Color colSelectorInactive;
 gcn::Color colSelectorActive;
 
@@ -454,15 +454,10 @@ namespace widgets
 		//-------------------------------------------------
 		// Define base colors
 		//-------------------------------------------------
-		gui_baseCol.r = 170;
-		gui_baseCol.g = 170;
-		gui_baseCol.b = 170;
-		colSelectorInactive.r = 170;
-		colSelectorInactive.g = 170;
-		colSelectorInactive.b = 170;
-		colSelectorActive.r = 103;
-		colSelectorActive.g = 136;
-		colSelectorActive.b = 187;
+		gui_baseCol = gcn::Color(170, 170, 170);
+		colSelectorInactive = gcn::Color(170, 170, 170);
+		colSelectorActive = gcn::Color(103, 136, 187);
+		colTextboxBackground = gcn::Color(220, 220, 220);
 
 		//-------------------------------------------------
 		// Create container for main page

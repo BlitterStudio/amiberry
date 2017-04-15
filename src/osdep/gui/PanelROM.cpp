@@ -21,8 +21,6 @@ static gcn::Label* lblExtROM;
 static gcn::UaeDropDown* cboExtROM;
 static gcn::Button* cmdExtROM;
 
-//static gcn::UaeCheckBox* chkMapROM;
-
 class ROMListModel : public gcn::ListModel
 {
 	vector<string> roms;
@@ -176,6 +174,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cboMainROM = new gcn::UaeDropDown(mainROMList);
 	cboMainROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
 	cboMainROM->setBaseColor(gui_baseCol);
+	cboMainROM->setBackgroundColor(colTextboxBackground);
 	cboMainROM->setId("cboMainROM");
 	cboMainROM->addActionListener(mainROMActionListener);
 	cmdMainROM = new gcn::Button("...");
@@ -189,6 +188,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cboExtROM = new gcn::UaeDropDown(extROMList);
 	cboExtROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
 	cboExtROM->setBaseColor(gui_baseCol);
+	cboExtROM->setBackgroundColor(colTextboxBackground);
 	cboExtROM->setId("cboExtROM");
 	cboExtROM->addActionListener(extROMActionListener);
 	cmdExtROM = new gcn::Button("...");
@@ -196,9 +196,6 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdExtROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdExtROM->setBaseColor(gui_baseCol);
 	cmdExtROM->addActionListener(romButtonActionListener);
-
-	//	chkMapROM = new gcn::UaeCheckBox("MapROM emulation", true);
-	//	chkMapROM->setEnabled(false);
 
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
@@ -212,9 +209,6 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	category.panel->add(cboExtROM, DISTANCE_BORDER, posY);
 	category.panel->add(cmdExtROM, DISTANCE_BORDER + cboExtROM->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboExtROM->getHeight() + DISTANCE_NEXT_Y;
-
-	//  category.panel->add(chkMapROM, DISTANCE_BORDER, posY);
-	//	posY += chkMapROM->getHeight() + DISTANCE_NEXT_Y;
 
 	RefreshPanelROM();
 }
@@ -246,6 +240,4 @@ void RefreshPanelROM()
 
 	idx = extROMList->InitROMList(changed_prefs.romextfile);
 	cboExtROM->setSelected(idx);
-
-	//	chkMapROM->setSelected(false);
 }

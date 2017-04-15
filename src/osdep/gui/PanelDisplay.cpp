@@ -55,12 +55,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	int posY = DISTANCE_BORDER;
 
-	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
-	chkFrameskip->addActionListener(amigaScreenActionListener);
-
-	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
-	posY += DISTANCE_BORDER + chkFrameskip->getHeight() + DISTANCE_NEXT_Y;
-
 	scalingMethodActionListener = new ScalingMethodActionListener();
 
 	optAuto = new gcn::UaeRadioButton("Auto", "radioscalingmethodgroup");
@@ -82,6 +76,13 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
+
+	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
+
+	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
+	chkFrameskip->addActionListener(amigaScreenActionListener);
+
+	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
 
 	RefreshPanelDisplay();
 }

@@ -272,30 +272,25 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	buttonX += BUTTON_WIDTH + DISTANCE_NEXT_X;
 	category.panel->add(cmdSave, buttonX, buttonY);
 	buttonX += BUTTON_WIDTH + 3 * DISTANCE_NEXT_X;
-	//  category.panel->add(cmdLoadFrom, buttonX, buttonY);
 	buttonX += BUTTON_WIDTH + DISTANCE_NEXT_X;
-	//  category.panel->add(cmdSaveAs, buttonX, buttonY);
 	buttonX = category.panel->getWidth() - DISTANCE_BORDER - BUTTON_WIDTH;
 	category.panel->add(cmdDelete, buttonX, buttonY);
 
 	lblName = new gcn::Label("Name:");
-	lblName->setSize(90, LABEL_HEIGHT);
+	lblName->setSize(lblName->getWidth(), lblName->getHeight());
 	lblName->setAlignment(gcn::Graphics::RIGHT);
 	txtName = new gcn::TextField();
-	txtName->setSize(300, TEXTFIELD_HEIGHT);
+	txtName->setSize(300, txtName->getHeight());
 	txtName->setId("ConfigName");
+	txtName->setBackgroundColor(colTextboxBackground);
 
 	lblDesc = new gcn::Label("Description:");
-	lblDesc->setSize(90, LABEL_HEIGHT);
+	lblDesc->setSize(lblDesc->getWidth(), lblDesc->getHeight());
 	lblDesc->setAlignment(gcn::Graphics::RIGHT);
 	txtDesc = new gcn::TextField();
-	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
+	txtDesc->setSize(300, txtDesc->getHeight());
 	txtDesc->setId("ConfigDesc");
-
-	category.panel->add(lblName, DISTANCE_BORDER, 2 + buttonY - DISTANCE_NEXT_Y - 2 * TEXTFIELD_HEIGHT - 10);
-	category.panel->add(txtName, DISTANCE_BORDER + lblName->getWidth() + 8, buttonY - DISTANCE_NEXT_Y - 2 * TEXTFIELD_HEIGHT - 10);
-	category.panel->add(lblDesc, DISTANCE_BORDER, 2 + buttonY - DISTANCE_NEXT_Y - TEXTFIELD_HEIGHT);
-	category.panel->add(txtDesc, DISTANCE_BORDER + lblName->getWidth() + 8, buttonY - DISTANCE_NEXT_Y - TEXTFIELD_HEIGHT);
+	txtDesc->setBackgroundColor(colTextboxBackground);
 
 	ReadConfigFileList();
 	configsList = new ConfigsListModel();
@@ -304,7 +299,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 
 	lstConfigs = new gcn::UaeListBox(configsList);
 	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 232);
-	lstConfigs->setBaseColor(gui_baseCol);
+	lstConfigs->setBackgroundColor(colTextboxBackground);
 	lstConfigs->setWrappingEnabled(true);
 	lstConfigs->setId("ConfigList");
 	lstConfigs->addActionListener(configsListActionListener);
@@ -314,9 +309,13 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
 	scrAreaConfigs->setScrollbarWidth(20);
-	scrAreaConfigs->setBaseColor(gui_baseCol);
-	scrAreaConfigs->setBackgroundColor(gui_baseCol);
+	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
 	category.panel->add(scrAreaConfigs);
+
+	category.panel->add(lblName, DISTANCE_BORDER, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(lblDesc, DISTANCE_BORDER, lblName->getY() + lblName->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 	if (strlen(last_active_config) == 0)
 		strncpy(last_active_config, OPTIONSFILENAME, MAX_PATH);
