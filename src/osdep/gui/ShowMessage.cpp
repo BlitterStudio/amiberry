@@ -18,6 +18,7 @@
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
+static SDL_Keycode dialogButtonPressed;
 
 static gcn::Window* wndShowMessage;
 static gcn::Button* cmdOK;
@@ -94,6 +95,44 @@ static void ExitShowMessage()
 	delete wndShowMessage;
 }
 
+static void ShowMessageWaitButtonLoop()
+{
+	while (!dialogFinished)
+	{
+		//const Uint8 *keys = SDL_GetKeyboardState(nullptr);
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_KEYDOWN)
+			{
+				switch (event.key.keysym.scancode)
+				{
+				case VK_ESCAPE:
+					dialogFinished = true;
+					break;
+
+				default:
+					dialogButtonPressed = event.key.keysym.sym;
+					dialogFinished = true;
+					break;
+				}
+			}
+
+			//-------------------------------------------------
+			// Send event to guisan-controls
+			//-------------------------------------------------
+			gui_input->pushInput(event);
+		}
+
+		// Now we let the Gui object perform its logic.
+		uae_gui->logic();
+		// Now we let the Gui object draw itself.
+		uae_gui->draw();
+		// Finally we update the screen.
+
+		UpdateGuiScreen();
+	}
+}
 
 static void ShowMessageLoop()
 {
@@ -124,6 +163,7 @@ static void ShowMessageLoop()
 
 				case VK_Red:
 				case VK_Green:
+				case SDL_SCANCODE_RETURN:
 					event.key.keysym.scancode = SDL_SCANCODE_RETURN;
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
@@ -171,4 +211,21 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	ExitShowMessage();
 
 	return dialogResult;
+}
+
+SDL_Keycode ShowMessage(const char* title, const char* line1, const char* button1)
+{
+	dialogResult = false;
+	dialogFinished = false;
+
+	InitShowMessage();
+	wndShowMessage->setCaption(title);
+	lblText1->setCaption(line1);
+	cmdOK->setVisible(false);
+	cmdCancel->setCaption(button1);
+
+	ShowMessageWaitButtonLoop();
+	ExitShowMessage();
+
+	return dialogButtonPressed;
 }
