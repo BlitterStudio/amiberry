@@ -6662,7 +6662,7 @@ void inputdevice_copyconfig(const struct uae_prefs* src, struct uae_prefs* dst)
 	dst->input_autofire_linecnt = src->input_autofire_linecnt;
 	dst->input_tablet = src->input_tablet;
 
-	dst->amiberry_customControls = src->amiberry_customControls;
+	dst->customControls = src->customControls;
 
 	dst->key_for_menu = src->key_for_menu;
 	dst->key_for_quit = src->key_for_quit;

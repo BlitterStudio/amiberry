@@ -31,6 +31,7 @@
 #include "statusline.h"
 #include "calc.h"
 #include "gfxboard.h"
+#include "config.h"
 
 static int config_newfilesystem;
 static struct strlist *temp_lines;
@@ -2454,6 +2455,49 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
+#ifdef AMIBERRY
+	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "key_for_menu", &p->key_for_menu, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "key_for_quit", &p->key_for_quit, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "button_for_menu", &p->button_for_menu, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
+		return 1;
+
+	if (cfgfile_yesno(option, value, "amiberry.custom_controls", &p->customControls, true))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_up", &p->custom_up, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_down", &p->custom_down, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_left", &p->custom_left, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_right", &p->custom_right, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_a", &p->custom_a, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_b", &p->custom_b, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_x", &p->custom_x, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_y", &p->custom_y, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_l", &p->custom_l, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_r", &p->custom_r, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "amiberry.custom_play", &p->custom_play, 1))
+		return 1;
+#endif
 	return 0;
 }
 
@@ -3799,6 +3843,7 @@ static int cfgfile_load_2(struct uae_prefs *p, const TCHAR *filename, bool real,
 		askedtype = *type;
 		*type = 0;
 	}
+
 	if (real) {
 		p->config_version = 0;
 		config_newfilesystem = 0;
@@ -3807,6 +3852,7 @@ static int cfgfile_load_2(struct uae_prefs *p, const TCHAR *filename, bool real,
 	}
 
 	fh = zfile_fopen(filename, _T("r"), ZFD_NORMAL);
+
 #ifndef	SINGLEFILE
 	if (!fh)
 		return 0;
@@ -3826,9 +3872,12 @@ static int cfgfile_load_2(struct uae_prefs *p, const TCHAR *filename, bool real,
 				p->all_lines = u;
 				continue;
 			}
+
 			if (!cfgfile_separate_linea(filename, linea, line1b, line2b))
 				continue;
+
 			type1 = type2 = 0;
+
 			if (cfgfile_yesno(line1b, line2b, _T("config_hardware"), &type1) ||
 				cfgfile_yesno(line1b, line2b, _T("config_host"), &type2)) {
 				if (type1 && type)
@@ -3837,9 +3886,11 @@ static int cfgfile_load_2(struct uae_prefs *p, const TCHAR *filename, bool real,
 					*type |= CONFIG_TYPE_HOST;
 				continue;
 			}
+
 			if (real) {
 				cfgfile_parse_separated_line(p, line1b, line2b, askedtype);
 			}
+
 			else {
 				cfgfile_string(line1b, line2b, _T("config_description"), p->description, sizeof p->description / sizeof(TCHAR));
 				cfgfile_path(line1b, line2b, _T("config_hardware_path"), p->config_hardware_path, sizeof p->config_hardware_path / sizeof(TCHAR));
@@ -3851,6 +3902,7 @@ static int cfgfile_load_2(struct uae_prefs *p, const TCHAR *filename, bool real,
 
 	if (type && *type == 0)
 		*type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+
 	zfile_fclose(fh);
 
 	if (!real)
@@ -3881,29 +3933,31 @@ int cfgfile_load(struct uae_prefs *p, const TCHAR *filename, int *type, int igno
 
 	if (recursive > 1)
 		return 0;
+
 	recursive++;
 	write_log(_T("load config '%s':%d\n"), filename, type ? *type : -1);
 	v = cfgfile_load_2(p, filename, 1, type);
+
 	if (!v) {
 		write_log(_T("load failed\n"));
 		goto end;
 	}
 	//if (userconfig)
 	//	target_addtorecent(filename, 0);
-	if (!ignorelink) {
-		if (p->config_hardware_path[0]) {
-			fetch_configurationpath(tmp, sizeof(tmp) / sizeof(TCHAR));
-			_tcsncat(tmp, p->config_hardware_path, sizeof(tmp) / sizeof(TCHAR));
-			type2 = CONFIG_TYPE_HARDWARE;
-			cfgfile_load(p, tmp, &type2, 1, 0);
-		}
-		if (p->config_host_path[0]) {
-			fetch_configurationpath(tmp, sizeof(tmp) / sizeof(TCHAR));
-			_tcsncat(tmp, p->config_host_path, sizeof(tmp) / sizeof(TCHAR));
-			type2 = CONFIG_TYPE_HOST;
-			cfgfile_load(p, tmp, &type2, 1, 0);
-		}
-	}
+	//if (!ignorelink) {
+	//	if (p->config_hardware_path[0]) {
+	//		fetch_configurationpath(tmp, sizeof(tmp) / sizeof(TCHAR));
+	//		_tcsncat(tmp, p->config_hardware_path, sizeof(tmp) / sizeof(TCHAR));
+	//		type2 = CONFIG_TYPE_HARDWARE;
+	//		cfgfile_load(p, tmp, &type2, 1, 0);
+	//	}
+	//	if (p->config_host_path[0]) {
+	//		fetch_configurationpath(tmp, sizeof(tmp) / sizeof(TCHAR));
+	//		_tcsncat(tmp, p->config_host_path, sizeof(tmp) / sizeof(TCHAR));
+	//		type2 = CONFIG_TYPE_HOST;
+	//		cfgfile_load(p, tmp, &type2, 1, 0);
+	//	}
+	//}
 end:
 	recursive--;
 	fixup_prefs(p);

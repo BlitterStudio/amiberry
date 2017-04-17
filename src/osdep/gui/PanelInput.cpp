@@ -76,7 +76,7 @@ public:
 		return 0;
 	}
 
-	std::string getElementAt(int i) override
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= values.size())
 			return "---";
@@ -129,9 +129,6 @@ static int amigaKey[] =
 	AK_F2, AK_F3, AK_F4, AK_F5, AK_F6, AK_F7, AK_F8, AK_F9, /* 101 - 108 */
 	AK_F10, 0
 }; /*  109 - 110 */
-
-//extern int customControlMap[SDLK_LAST];
-extern map<int, int> customControlMap;
 
 static int GetAmigaKeyIndex(int key)
 {
@@ -234,40 +231,40 @@ public:
 		}
 
 		else if (actionEvent.getSource() == chkCustomCtrl)
-			changed_prefs.amiberry_customControls = chkCustomCtrl->isSelected() ? 1 : 0;
+			changed_prefs.customControls = chkCustomCtrl->isSelected();
 
-		    else if (actionEvent.getSource() == cboA)
-		        customControlMap[VK_Green] = amigaKey[cboA->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboB)
-		        customControlMap[VK_Blue] = amigaKey[cboB->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboX)
-		        customControlMap[VK_Red] = amigaKey[cboX->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboY)
-		        customControlMap[VK_Yellow] = amigaKey[cboY->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboL)
-		        customControlMap[VK_LShoulder] = amigaKey[cboL->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboR)
-		        customControlMap[VK_RShoulder] = amigaKey[cboR->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboUp)
-		        customControlMap[VK_UP] = amigaKey[cboUp->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboDown)
-		        customControlMap[VK_DOWN] = amigaKey[cboDown->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboLeft)
-		        customControlMap[VK_LEFT] = amigaKey[cboLeft->getSelected()];
-		
-		    else if (actionEvent.getSource() == cboRight)
-		        customControlMap[VK_RIGHT] = amigaKey[cboRight->getSelected()];
+		else if (actionEvent.getSource() == cboA)
+			changed_prefs.custom_a = amigaKey[cboA->getSelected()];
 
-			else if (actionEvent.getSource() == cboPlay)
-				customControlMap[VK_Play] = amigaKey[cboPlay->getSelected()];
+		else if (actionEvent.getSource() == cboB)
+			changed_prefs.custom_b = amigaKey[cboB->getSelected()];
+
+		else if (actionEvent.getSource() == cboX)
+			changed_prefs.custom_x = amigaKey[cboX->getSelected()];
+
+		else if (actionEvent.getSource() == cboY)
+			changed_prefs.custom_y = amigaKey[cboY->getSelected()];
+
+		else if (actionEvent.getSource() == cboL)
+			changed_prefs.custom_l = amigaKey[cboL->getSelected()];
+
+		else if (actionEvent.getSource() == cboR)
+			changed_prefs.custom_r = amigaKey[cboR->getSelected()];
+
+		else if (actionEvent.getSource() == cboUp)
+			changed_prefs.custom_up = amigaKey[cboUp->getSelected()];
+
+		else if (actionEvent.getSource() == cboDown)
+			changed_prefs.custom_down = amigaKey[cboDown->getSelected()];
+
+		else if (actionEvent.getSource() == cboLeft)
+			changed_prefs.custom_left = amigaKey[cboLeft->getSelected()];
+
+		else if (actionEvent.getSource() == cboRight)
+			changed_prefs.custom_right = amigaKey[cboRight->getSelected()];
+
+		else if (actionEvent.getSource() == cboPlay)
+			changed_prefs.custom_play = amigaKey[cboPlay->getSelected()];
 	}
 };
 
@@ -459,13 +456,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(lblMouseSpeed, DISTANCE_BORDER, posY);
 	category.panel->add(sldMouseSpeed, DISTANCE_BORDER + lblMouseSpeed->getWidth() + 8, posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 12, posY);
-	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y *2;
+	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(chkCustomCtrl, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
 	posY += chkCustomCtrl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblA, DISTANCE_BORDER, posY);
 	category.panel->add(cboA, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
-	
+
 	posColumn2 = cboA->getX() + cboA->getWidth() + 12;
 
 	category.panel->add(lblB, posColumn2, posY);
@@ -607,17 +604,17 @@ void RefreshPanelInput()
 		}
 	}
 
-	chkCustomCtrl->setSelected(changed_prefs.amiberry_customControls);
+	chkCustomCtrl->setSelected(changed_prefs.customControls);
 
-    cboA->setSelected(GetAmigaKeyIndex(customControlMap[VK_Green]));
-    cboB->setSelected(GetAmigaKeyIndex(customControlMap[VK_Blue]));
-    cboX->setSelected(GetAmigaKeyIndex(customControlMap[VK_Red]));
-    cboY->setSelected(GetAmigaKeyIndex(customControlMap[VK_Yellow]));
-    cboL->setSelected(GetAmigaKeyIndex(customControlMap[VK_LShoulder]));
-    cboR->setSelected(GetAmigaKeyIndex(customControlMap[VK_RShoulder]));
-    cboUp->setSelected(GetAmigaKeyIndex(customControlMap[VK_UP]));
-    cboDown->setSelected(GetAmigaKeyIndex(customControlMap[VK_DOWN]));
-    cboLeft->setSelected(GetAmigaKeyIndex(customControlMap[VK_LEFT]));
-    cboRight->setSelected(GetAmigaKeyIndex(customControlMap[VK_RIGHT]));
-	cboPlay->setSelected(GetAmigaKeyIndex(customControlMap[VK_Play]));
+	cboA->setSelected(GetAmigaKeyIndex(changed_prefs.custom_a));
+	cboB->setSelected(GetAmigaKeyIndex(changed_prefs.custom_b));
+	cboX->setSelected(GetAmigaKeyIndex(changed_prefs.custom_x));
+	cboY->setSelected(GetAmigaKeyIndex(changed_prefs.custom_y));
+	cboL->setSelected(GetAmigaKeyIndex(changed_prefs.custom_l));
+	cboR->setSelected(GetAmigaKeyIndex(changed_prefs.custom_r));
+	cboUp->setSelected(GetAmigaKeyIndex(changed_prefs.custom_up));
+	cboDown->setSelected(GetAmigaKeyIndex(changed_prefs.custom_down));
+	cboLeft->setSelected(GetAmigaKeyIndex(changed_prefs.custom_left));
+	cboRight->setSelected(GetAmigaKeyIndex(changed_prefs.custom_right));
+	cboPlay->setSelected(GetAmigaKeyIndex(changed_prefs.custom_play));
 }

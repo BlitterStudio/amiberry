@@ -42,17 +42,17 @@ extern SDL_Surface* gui_screen;
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
-#define BUILDINID_NONE  0
-#define BUILDINID_A500  1
-#define BUILDINID_A1200 2
-#define BUILDINID_CD32  3
+#define BUILTINID_NONE  0
+#define BUILTINID_A500  1
+#define BUILTINID_A1200 2
+#define BUILTINID_CD32  3
 
 typedef struct
 {
 	char Name[MAX_DPATH];
 	char FullPath[MAX_DPATH];
 	char Description[MAX_DPATH];
-	int BuildInID;
+	int BuiltInID;
 } ConfigFileInfo;
 
 extern vector<ConfigFileInfo*> ConfigFilesList;

@@ -13,6 +13,7 @@
 #define UAEMAJOR 2
 #define UAEMINOR 8
 #define UAESUBREV 1
+#include <map>
 
 extern long int version;
 
@@ -543,7 +544,18 @@ struct uae_prefs
 	int kbd_led_scr;
 	int kbd_led_cap;
 	int scaling_method;
-	int amiberry_customControls;
+	bool customControls;
+	int custom_up;
+	int custom_down;
+	int custom_left;
+	int custom_right;
+	int custom_a;
+	int custom_b;
+	int custom_x;
+	int custom_y;
+	int custom_l;
+	int custom_r;
+	int custom_play;
 	int key_for_menu;
 	int key_for_quit;
 	int button_for_menu;

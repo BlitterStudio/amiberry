@@ -40,7 +40,6 @@
 #include "akiko.h"
 #include "SDL.h"
 #include "amiberry_rp9.h"
-#include <map>
 #include "scsidev.h"
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
@@ -52,7 +51,7 @@ extern void SetLastActiveConfig(const char* filename);
 int pause_emulation;
 
 /* Keyboard */
-map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map  
+map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map 
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
@@ -242,7 +241,19 @@ void target_fixup_options(struct uae_prefs* p)
 
 void target_default_options(struct uae_prefs* p, int type)
 {
-	p->amiberry_customControls = 0;
+	p->customControls = false;
+	p->custom_up = 0;
+	p->custom_down = 0;
+	p->custom_left = 0;
+	p->custom_right = 0;
+	p->custom_a = 0;
+	p->custom_b = 0;
+	p->custom_x = 0;
+	p->custom_y = 0;
+	p->custom_l = 0;
+	p->custom_r = 0;
+	p->custom_play = 0;
+
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
@@ -265,18 +276,18 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, _T("button_for_menu"), _T("%d"), p->button_for_menu);
 	cfgfile_write(f, _T("button_for_quit"), _T("%d"), p->button_for_quit);
 
-	cfgfile_write(f, "amiberry.custom_controls", "%d", p->amiberry_customControls);
-	cfgfile_write(f, "amiberry.custom_up", "%d", customControlMap[VK_UP]);
-	cfgfile_write(f, "amiberry.custom_down", "%d", customControlMap[VK_DOWN]);
-	cfgfile_write(f, "amiberry.custom_left", "%d", customControlMap[VK_LEFT]);
-	cfgfile_write(f, "amiberry.custom_right", "%d", customControlMap[VK_RIGHT]);
-	cfgfile_write(f, "amiberry.custom_a", "%d", customControlMap[VK_Green]);
-	cfgfile_write(f, "amiberry.custom_b", "%d", customControlMap[VK_Blue]);
-	cfgfile_write(f, "amiberry.custom_x", "%d", customControlMap[VK_Red]);
-	cfgfile_write(f, "amiberry.custom_y", "%d", customControlMap[VK_Yellow]);
-	cfgfile_write(f, "amiberry.custom_l", "%d", customControlMap[VK_LShoulder]);
-	cfgfile_write(f, "amiberry.custom_r", "%d", customControlMap[VK_RShoulder]);
-	cfgfile_write(f, "amiberry.custom_play", "%d", customControlMap[VK_Play]);
+	cfgfile_write_bool(f, "amiberry.custom_controls", p->customControls);
+	cfgfile_write(f, "amiberry.custom_up", "%d", p->custom_up);
+	cfgfile_write(f, "amiberry.custom_down", "%d", p->custom_down);
+	cfgfile_write(f, "amiberry.custom_left", "%d", p->custom_left);
+	cfgfile_write(f, "amiberry.custom_right", "%d", p->custom_right);
+	cfgfile_write(f, "amiberry.custom_a", "%d", p->custom_a);
+	cfgfile_write(f, "amiberry.custom_b", "%d", p->custom_b);
+	cfgfile_write(f, "amiberry.custom_x", "%d", p->custom_x);
+	cfgfile_write(f, "amiberry.custom_y", "%d", p->custom_y);
+	cfgfile_write(f, "amiberry.custom_l", "%d", p->custom_l);
+	cfgfile_write(f, "amiberry.custom_r", "%d", p->custom_r);
+	cfgfile_write(f, "amiberry.custom_play", "%d", p->custom_play);
 }
 
 void target_restart()
@@ -310,18 +321,18 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
 		return 1;
 
-	int result = cfgfile_intval(option, value, "custom_controls", &p->amiberry_customControls, 1)
-		|| cfgfile_intval(option, value, "custom_up", &customControlMap[VK_UP], 1)
-		|| cfgfile_intval(option, value, "custom_down", &customControlMap[VK_DOWN], 1)
-		|| cfgfile_intval(option, value, "custom_left", &customControlMap[VK_LEFT], 1)
-		|| cfgfile_intval(option, value, "custom_right", &customControlMap[VK_RIGHT], 1)
-		|| cfgfile_intval(option, value, "custom_a", &customControlMap[VK_Green], 1)
-		|| cfgfile_intval(option, value, "custom_b", &customControlMap[VK_Blue], 1)
-		|| cfgfile_intval(option, value, "custom_x", &customControlMap[VK_Red], 1)
-		|| cfgfile_intval(option, value, "custom_y", &customControlMap[VK_Yellow], 1)
-		|| cfgfile_intval(option, value, "custom_l", &customControlMap[VK_LShoulder], 1)
-		|| cfgfile_intval(option, value, "custom_r", &customControlMap[VK_RShoulder], 1)
-		|| cfgfile_intval(option, value, "custom_play", &customControlMap[VK_Play], 1);
+	int result = cfgfile_yesno(option, value, "amiberry.custom_controls", &p->customControls)
+		|| cfgfile_intval(option, value, "amiberry.custom_up", &p->custom_up, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_down", &p->custom_down, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_left", &p->custom_left, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_right", &p->custom_right, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_a", &p->custom_a, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_b", &p->custom_b, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_x", &p->custom_x, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_y", &p->custom_y, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_l", &p->custom_l, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_r", &p->custom_r, 1)
+		|| cfgfile_intval(option, value, "amiberry.custom_play", &p->custom_play, 1);
 	return result;
 }
 
@@ -752,11 +763,29 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+void PopulateCustomControlMap()
+{
+	customControlMap[VK_UP] = currprefs.custom_up;
+	customControlMap[VK_DOWN] = currprefs.custom_down;
+	customControlMap[VK_LEFT] = currprefs.custom_left;
+	customControlMap[VK_RIGHT] = currprefs.custom_right;
+	customControlMap[VK_Green] = currprefs.custom_a;
+	customControlMap[VK_Blue] = currprefs.custom_b;
+	customControlMap[VK_Red] = currprefs.custom_x;
+	customControlMap[VK_Yellow] = currprefs.custom_y;
+	customControlMap[VK_LShoulder] = currprefs.custom_l;
+	customControlMap[VK_RShoulder] = currprefs.custom_r;
+	customControlMap[VK_Play] = currprefs.custom_play;
+}
+
 int handle_msgpump()
 {
 	int got = 0;
 	SDL_Event rEvent;
 	int keycode;
+
+	if (currprefs.customControls)
+		PopulateCustomControlMap();
 
 	while (SDL_PollEvent(&rEvent))
 	{
@@ -828,7 +857,7 @@ int handle_msgpump()
 				break;
 
 			default:
-				if (currprefs.amiberry_customControls)
+				if (currprefs.customControls)
 				{
 					keycode = customControlMap[rEvent.key.keysym.sym];
 					if (keycode < 0)
@@ -850,7 +879,7 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYUP:
-				if (currprefs.amiberry_customControls)
+				if (currprefs.customControls)
 				{
 					keycode = customControlMap[rEvent.key.keysym.sym];
 					if (keycode < 0)

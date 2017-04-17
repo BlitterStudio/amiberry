@@ -18,14 +18,27 @@ static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;
 static gcn::UaeCheckBox* chkBSDSocket;
+
 static gcn::Label* lblKeyForMenu;
-static gcn::UaeDropDown* KeyForMenu;
+static gcn::TextField* txtKeyForMenu;
+static gcn::Button* cmdKeyForMenu;
+
 static gcn::Label* lblButtonForMenu;
-static gcn::UaeDropDown* ButtonForMenu;
+static gcn::TextField* txtButtonForMenu;
+static gcn::Button* cmdButtonForMenu;
+
 static gcn::Label* lblKeyForQuit;
-static gcn::UaeDropDown* KeyForQuit;
+static gcn::TextField* txtKeyForQuit;
+static gcn::Button* cmdKeyForQuit;
+
 static gcn::Label* lblButtonForQuit;
-static gcn::UaeDropDown* ButtonForQuit;
+static gcn::TextField* txtButtonForQuit;
+static gcn::Button* cmdButtonForQuit;
+
+static gcn::Label* lblNumLock;
+static gcn::UaeDropDown* cboKBDLed_num;
+static gcn::Label* lblScrLock;
+static gcn::UaeDropDown* cboKBDLed_scr;
 
 class StringListModel : public gcn::ListModel
 {
@@ -50,46 +63,8 @@ public:
 	}
 };
 
-
-static gcn::Label* lblNumLock;
-static gcn::UaeDropDown* cboKBDLed_num;
-static gcn::Label* lblScrLock;
-static gcn::UaeDropDown* cboKBDLed_scr;
-
 const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD"};
 StringListModel KBDLedList(listValues, 9);
-
-static const int ControlKey_SDLKeyValues[] = {0, SDL_SCANCODE_F11, SDL_SCANCODE_F12};
-
-const char* ControlKeyValues[] = {"------------------", "F11", "F12"};
-StringListModel ControlKeyList(ControlKeyValues, 3);
-
-static int GetControlKeyIndex(int key)
-{
-	int ControlKey_SDLKeyValues_Length = sizeof ControlKey_SDLKeyValues / sizeof(int);
-	for (int i = 0; i < ControlKey_SDLKeyValues_Length + 1; ++i)
-	{
-		if (ControlKey_SDLKeyValues[i] == key)
-			return i;
-	}
-	return 0; // Default: no key
-}
-
-static const int ControlButton_SDLButtonValues[] = {-1, 0, 1, 2, 3};
-
-const char* ControlButtonValues[] = {"------------------", "JoyButton0", "JoyButton1", "JoyButton2", "JoyButton3"};
-StringListModel ControlButtonList(ControlButtonValues, 5);
-
-static int GetControlButtonIndex(int button)
-{
-	int ControlButton_SDLButtonValues_Length = sizeof(ControlButton_SDLButtonValues) / sizeof(int);
-	for (int i = 0; i < (ControlButton_SDLButtonValues_Length + 1); ++i)
-	{
-		if (ControlButton_SDLButtonValues[i] == button)
-			return i;
-	}
-	return 0; // Default: no key
-}
 
 class MiscActionListener : public gcn::ActionListener
 {
@@ -105,17 +80,45 @@ public:
 		else if (actionEvent.getSource() == chkBSDSocket)
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
-		else if (actionEvent.getSource() == KeyForMenu)
-			changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()];
+		else if (actionEvent.getSource() == cmdKeyForMenu)
+		{
+			SDL_Keycode key = ShowMessageForKey("Press a key", "Press a key to map to Open the GUI", "Cancel");
+			if (key > 0)
+			{
+				txtKeyForMenu->setText(SDL_GetScancodeName(SDL_GetScancodeFromKey(key)));
+				changed_prefs.key_for_menu = key;
+			}
+		}
 
-		else if (actionEvent.getSource() == KeyForQuit)
-			changed_prefs.key_for_quit = ControlKey_SDLKeyValues[KeyForQuit->getSelected()];
+		else if (actionEvent.getSource() == cmdKeyForQuit)
+		{
+			SDL_Keycode key = ShowMessageForKey("Press a key", "Press a key to map to Quit the emulator", "Cancel");
+			if (key > 0)
+			{
+				txtKeyForQuit->setText(SDL_GetScancodeName(SDL_GetScancodeFromKey(key)));
+				changed_prefs.key_for_quit = key;
+			}
+		}
 
-		else if (actionEvent.getSource() == ButtonForMenu)
-			changed_prefs.button_for_menu = ControlButton_SDLButtonValues[ButtonForMenu->getSelected()];
+		else if (actionEvent.getSource() == cmdButtonForMenu)
+		{
+			Uint8 button = ShowMessageForButton("Press a button", "Press a button to map to Open the GUI", "Cancel");
+			if (button > 0)
+			{
+				txtKeyForQuit->setText(string(reinterpret_cast<char const*>(button)));
+				changed_prefs.button_for_menu = button;
+			}
+		}
 
-		else if (actionEvent.getSource() == ButtonForQuit)
-			changed_prefs.button_for_quit = ControlButton_SDLButtonValues[ButtonForQuit->getSelected()];
+		else if (actionEvent.getSource() == cmdButtonForQuit)
+		{
+			Uint8 button = ShowMessageForButton("Press a button", "Press a button to map to Quit the emulator", "Cancel");
+			if (button > 0)
+			{
+				txtKeyForQuit->setText(string(reinterpret_cast<char const*>(button)));
+				changed_prefs.button_for_quit = button;
+			}
+		}
 
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
@@ -169,38 +172,56 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyForMenu = new gcn::Label("Menu Key:");
 	lblKeyForMenu->setSize(85, LABEL_HEIGHT);
 	lblKeyForMenu->setAlignment(gcn::Graphics::RIGHT);
-	KeyForMenu = new gcn::UaeDropDown(&ControlKeyList);
-	KeyForMenu->setBaseColor(gui_baseCol);
-	KeyForMenu->setBackgroundColor(colTextboxBackground);
-	KeyForMenu->setId("KeyForMenu");
-	KeyForMenu->addActionListener(miscActionListener);
+	txtKeyForMenu = new gcn::TextField();
+	txtKeyForMenu->setEnabled(false);
+	txtKeyForMenu->setSize(85, txtKeyForMenu->getHeight());
+	txtKeyForMenu->setBackgroundColor(colTextboxBackground);
+	cmdKeyForMenu = new gcn::Button("...");
+	cmdKeyForMenu->setId("KeyForMenu");
+	cmdKeyForMenu->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyForMenu->setBaseColor(gui_baseCol);
+	cmdKeyForMenu->addActionListener(miscActionListener);
 
 	lblKeyForQuit = new gcn::Label("Quit Key:");
 	lblKeyForQuit->setSize(85, LABEL_HEIGHT);
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
-	KeyForQuit = new gcn::UaeDropDown(&ControlKeyList);
-	KeyForQuit->setBaseColor(gui_baseCol);
-	KeyForQuit->setBackgroundColor(colTextboxBackground);
-	KeyForQuit->setId("KeyForQuit");
-	KeyForQuit->addActionListener(miscActionListener);
+	txtKeyForQuit = new gcn::TextField();
+	txtKeyForQuit->setEnabled(false);
+	txtKeyForQuit->setSize(85, txtKeyForQuit->getHeight());
+	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
+	cmdKeyForQuit = new gcn::Button("...");
+	cmdKeyForQuit->setId("KeyForQuit");
+	cmdKeyForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyForQuit->setBaseColor(gui_baseCol);
+	cmdKeyForQuit->addActionListener(miscActionListener);
+
 
 	lblButtonForMenu = new gcn::Label("Menu Button:");
 	lblButtonForMenu->setSize(85, LABEL_HEIGHT);
 	lblButtonForMenu->setAlignment(gcn::Graphics::RIGHT);
-	ButtonForMenu = new gcn::UaeDropDown(&ControlButtonList);
-	ButtonForMenu->setBaseColor(gui_baseCol);
-	ButtonForMenu->setBackgroundColor(colTextboxBackground);
-	ButtonForMenu->setId("ButtonForMenu");
-	ButtonForMenu->addActionListener(miscActionListener);
+	txtButtonForMenu = new gcn::TextField();
+	txtButtonForMenu->setEnabled(false);
+	txtButtonForMenu->setSize(85, txtButtonForMenu->getHeight());
+	txtButtonForMenu->setBackgroundColor(colTextboxBackground);
+	cmdButtonForMenu = new gcn::Button("...");
+	cmdButtonForMenu->setId("ButtonForMenu");
+	cmdButtonForMenu->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdButtonForMenu->setBaseColor(gui_baseCol);
+	cmdButtonForMenu->addActionListener(miscActionListener);
 
 	lblButtonForQuit = new gcn::Label("Quit Button:");
 	lblButtonForQuit->setSize(85, LABEL_HEIGHT);
 	lblButtonForQuit->setAlignment(gcn::Graphics::RIGHT);
-	ButtonForQuit = new gcn::UaeDropDown(&ControlButtonList);
-	ButtonForQuit->setBaseColor(gui_baseCol);
-	ButtonForQuit->setBackgroundColor(colTextboxBackground);
-	ButtonForQuit->setId("ButtonForQuit");
-	ButtonForQuit->addActionListener(miscActionListener);
+	txtButtonForQuit = new gcn::TextField();
+	txtButtonForQuit->setBaseColor(gui_baseCol);
+	txtButtonForQuit->setEnabled(false);
+	txtButtonForQuit->setSize(85, txtButtonForQuit->getHeight());
+	txtButtonForQuit->setBackgroundColor(colTextboxBackground);
+	cmdButtonForQuit = new gcn::Button("...");
+	cmdButtonForQuit->setId("ButtonForQuit");
+	cmdButtonForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdButtonForQuit->setBaseColor(gui_baseCol);
+	cmdButtonForQuit->addActionListener(miscActionListener);
 
 	int posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
@@ -222,18 +243,22 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblKeyForMenu, DISTANCE_BORDER, posY);
-	category.panel->add(KeyForMenu, DISTANCE_BORDER + lblKeyForMenu->getWidth() + 8, posY);
+	category.panel->add(txtKeyForMenu, DISTANCE_BORDER + lblKeyForMenu->getWidth() + 8, posY);
+	category.panel->add(cmdKeyForMenu, txtKeyForMenu->getX() + txtKeyForMenu->getWidth() + DISTANCE_NEXT_X, posY);
 
-	category.panel->add(lblKeyForQuit, KeyForMenu->getX() + KeyForMenu->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(KeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
+	category.panel->add(lblKeyForQuit, cmdKeyForMenu->getX() + cmdKeyForMenu->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
+	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + DISTANCE_NEXT_X, posY);
 
-	posY += KeyForMenu->getHeight() + DISTANCE_NEXT_Y;
+	posY += txtKeyForMenu->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblButtonForMenu, DISTANCE_BORDER, posY);
-	category.panel->add(ButtonForMenu, DISTANCE_BORDER + lblButtonForMenu->getWidth() + 8, posY);
+	category.panel->add(txtButtonForMenu, DISTANCE_BORDER + lblButtonForMenu->getWidth() + 8, posY);
+	category.panel->add(cmdButtonForMenu, txtButtonForMenu->getX() + txtButtonForMenu->getWidth() + DISTANCE_NEXT_X, posY);
 
-	category.panel->add(lblButtonForQuit, ButtonForMenu->getX() + ButtonForMenu->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(ButtonForQuit, lblButtonForQuit->getX() + lblButtonForQuit->getWidth() + 8, posY);
+	category.panel->add(lblButtonForQuit, cmdButtonForMenu->getX() + cmdButtonForMenu->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(txtButtonForQuit, lblButtonForQuit->getX() + lblButtonForQuit->getWidth() + 8, posY);
+	category.panel->add(cmdButtonForQuit, txtButtonForQuit->getX() + txtButtonForQuit->getWidth() + DISTANCE_NEXT_X, posY);
 
 	RefreshPanelMisc();
 }
@@ -252,27 +277,32 @@ void ExitPanelMisc()
 
 	delete miscActionListener;
 	delete lblKeyForMenu;
-	delete KeyForMenu;
+	delete txtKeyForMenu;
+	
 	delete lblKeyForQuit;
-	delete KeyForQuit;
+	delete txtKeyForQuit;
+	delete cmdKeyForQuit;
+
 	delete lblButtonForMenu;
-	delete ButtonForMenu;
+	delete txtButtonForMenu;
+	delete cmdButtonForMenu;
+
 	delete lblButtonForQuit;
-	delete ButtonForQuit;
+	delete txtButtonForQuit;
+	delete cmdButtonForQuit;
 }
 
 void RefreshPanelMisc()
 {
-	char tmp[20];
-
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
 
-	KeyForMenu->setSelected(GetControlKeyIndex(changed_prefs.key_for_menu));
-	KeyForQuit->setSelected(GetControlKeyIndex(changed_prefs.key_for_quit));
-	ButtonForMenu->setSelected(GetControlButtonIndex(changed_prefs.button_for_menu));
-	ButtonForQuit->setSelected(GetControlButtonIndex(changed_prefs.button_for_quit));
+	txtKeyForMenu->setText(changed_prefs.key_for_menu > 0 ? SDL_GetScancodeName(SDL_GetScancodeFromKey(SDL_Keycode(changed_prefs.key_for_menu))) : "Click to map");
+	txtKeyForQuit->setText(changed_prefs.key_for_quit > 0 ? SDL_GetScancodeName(SDL_GetScancodeFromKey(SDL_Keycode(changed_prefs.key_for_quit))) : "Click to map");
+
+	txtButtonForMenu->setText(changed_prefs.button_for_menu > 0 ? SDL_GetScancodeName(SDL_GetScancodeFromKey(SDL_Keycode(changed_prefs.button_for_menu))) : "Click to map");
+	txtButtonForQuit->setText(changed_prefs.button_for_quit > 0 ? SDL_GetScancodeName(SDL_GetScancodeFromKey(SDL_Keycode(changed_prefs.button_for_quit))) : "Click to map");
 }

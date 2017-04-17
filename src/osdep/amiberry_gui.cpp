@@ -325,7 +325,7 @@ void ReadConfigFileList()
 	strcpy(buildin->FullPath, "");
 	strcpy(buildin->Name, "Amiga 500");
 	strcpy(buildin->Description, _T("Built-in, A500, OCS, 512KB"));
-	buildin->BuildInID = BUILDINID_A500;
+	buildin->BuiltInID = BUILTINID_A500;
 	ConfigFilesList.push_back(buildin);
 
 	// A1200
@@ -333,7 +333,7 @@ void ReadConfigFileList()
 	strcpy(buildin->FullPath, "");
 	strcpy(buildin->Name, "Amiga 1200");
 	strcpy(buildin->Description, _T("Built-in, A1200"));
-	buildin->BuildInID = BUILDINID_A1200;
+	buildin->BuiltInID = BUILTINID_A1200;
 	ConfigFilesList.push_back(buildin);
 
 	// CD32
@@ -341,7 +341,7 @@ void ReadConfigFileList()
 	strcpy(buildin->FullPath, "");
 	strcpy(buildin->Name, "CD32");
 	strcpy(buildin->Description, _T("Built-in"));
-	buildin->BuildInID = BUILDINID_CD32;
+	buildin->BuiltInID = BUILTINID_CD32;
 	ConfigFilesList.push_back(buildin);
 
 	// Read rp9 files
@@ -356,7 +356,7 @@ void ReadConfigFileList()
 		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
 		strcpy(tmp->Description, _T("rp9"));
-		tmp->BuildInID = BUILDINID_NONE;
+		tmp->BuiltInID = BUILTINID_NONE;
 		ConfigFilesList.push_back(tmp);
 	}
 
@@ -372,7 +372,7 @@ void ReadConfigFileList()
 		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
 		cfgfile_get_description(tmp->FullPath, tmp->Description, nullptr, nullptr, nullptr);
-		tmp->BuildInID = BUILDINID_NONE;
+		tmp->BuiltInID = BUILTINID_NONE;
 		ConfigFilesList.push_back(tmp);
 	}
 
@@ -389,7 +389,7 @@ void ReadConfigFileList()
 			strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
 			removeFileExtension(tmp->Name);
 			strcpy(tmp->Description, "Old style configuration file");
-			tmp->BuildInID = BUILDINID_NONE;
+			tmp->BuiltInID = BUILTINID_NONE;
 			for (int j = 0; j < ConfigFilesList.size(); ++j)
 			{
 				if (!strcmp(ConfigFilesList[j]->Name, tmp->Name))
@@ -417,7 +417,7 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 }
 
 
-static void prefs_to_gui(struct uae_prefs *p)
+static void prefs_to_gui(struct uae_prefs* p)
 {
 	workprefs = *p;
 	/* filesys hack */
@@ -438,7 +438,7 @@ static void gui_to_prefs()
 static void after_leave_gui()
 {
 	// Check if we have to set or clear autofire
-	int new_af = (changed_prefs.input_autofire_linecnt == 0) ? 0 : 1;
+	int new_af = changed_prefs.input_autofire_linecnt == 0 ? 0 : 1;
 	int update = 0;
 	int num;
 
@@ -493,16 +493,17 @@ void gui_exit()
 
 void gui_purge_events()
 {
-	int counter = 0;
+	// TODO Test if this is still needed in SDL2 or should be removed!
+	//int counter = 0;
 
-	SDL_Event event;
-	SDL_Delay(150);
-	// Strangely PS3 controller always send events, so we need a maximum number of event to purge.
-	while (SDL_PollEvent(&event) && counter < 50)
-	{
-		counter++;
-		SDL_Delay(10);
-	}
+	//SDL_Event event;
+	//SDL_Delay(150);
+	//// Strangely PS3 controller always send events, so we need a maximum number of event to purge.
+	//while (SDL_PollEvent(&event) && counter < 50)
+	//{
+	//	counter++;
+	//	SDL_Delay(10);
+	//}
 	keybuf_init();
 }
 
@@ -588,7 +589,7 @@ void gui_led(int led, int on)
 	// Check current prefs/ update if changed
 	if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
 	if (currprefs.kbd_led_scr != changed_prefs.kbd_led_scr) currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
-	if (currprefs.kbd_led_cap != changed_prefs.kbd_led_cap) currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
+	//if (currprefs.kbd_led_cap != changed_prefs.kbd_led_cap) currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
 
 	ioctl(0, KDGETLED, &kbd_led_status);
 
@@ -687,7 +688,7 @@ int translate_message(int msg, TCHAR* out)
 }
 
 
-void FilterFiles(std::vector<std::string>* files, const char* filter[])
+void FilterFiles(vector<string>* files, const char* filter[])
 {
 	for (int q = 0; q < files->size(); q++)
 	{

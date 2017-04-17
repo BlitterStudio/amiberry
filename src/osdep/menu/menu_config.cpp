@@ -13,10 +13,6 @@
 #include "uae.h"
 #include "disk.h"
 #include "SDL.h"
-#include <map>
-
-//extern int customControlMap[SDLK_LAST];
-extern map<int, int> customControlMap;
 
 static int kickstart;
 
@@ -183,21 +179,18 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 		p->chipset_refreshrate = 50;
 	fscanf(f, "displayedLines=%d\n", &p->gfx_size.height);
 	fscanf(f, "screenWidth=%d\n", &p->gfx_size_fs.width);
-	fscanf(f, "cutLeft=%d\n", &dummy);
-	fscanf(f, "cutRight=%d\n", &dummy);
-	fscanf(f, "customControls=%d\n", &p->amiberry_customControls);
-	fscanf(f, "custom_dpad=%d\n", &dummy);
-	fscanf(f, "custom_up=%d\n", &customControlMap[VK_UP]);
-	fscanf(f, "custom_down=%d\n", &customControlMap[VK_DOWN]);
-	fscanf(f, "custom_left=%d\n", &customControlMap[VK_LEFT]);
-	fscanf(f, "custom_right=%d\n", &customControlMap[VK_RIGHT]);
-	fscanf(f, "custom_A=%d\n", &customControlMap[VK_Green]);
-	fscanf(f, "custom_B=%d\n", &customControlMap[VK_Blue]);
-	fscanf(f, "custom_X=%d\n", &customControlMap[VK_Red]);
-	fscanf(f, "custom_Y=%d\n", &customControlMap[VK_Yellow]);
-	fscanf(f, "custom_L=%d\n", &customControlMap[VK_LShoulder]);
-	fscanf(f, "custom_R=%d\n", &customControlMap[VK_RShoulder]);
-	fscanf(f, "custom_play=%d\n", &customControlMap[VK_Play]);
+	fscanf(f, "amiberry.custom_controls=%d\n", &p->customControls);
+	fscanf(f, "amiberry.custom_up=%d\n", &p->custom_up);
+	fscanf(f, "amiberry.custom_down=%d\n", &p->custom_down);
+	fscanf(f, "amiberry.custom_left=%d\n", &p->custom_left);
+	fscanf(f, "amiberry.custom_right=%d\n", &p->custom_right);
+	fscanf(f, "amiberry.custom_a=%d\n", &p->custom_a);
+	fscanf(f, "amiberry.custom_b=%d\n", &p->custom_b);
+	fscanf(f, "amiberry.custom_x=%d\n", &p->custom_x);
+	fscanf(f, "amiberry.custom_y=%d\n", &p->custom_y);
+	fscanf(f, "amiberry.custom_l=%d\n", &p->custom_l);
+	fscanf(f, "amiberry.custom_r=%d\n", &p->custom_r);
+	fscanf(f, "amiberry.custom_play=%d\n", &p->custom_play);
 	fscanf(f, "cpu=%d\n", &cpu_level);
 	if (cpu_level > 0) // M68000
 	// Was old format

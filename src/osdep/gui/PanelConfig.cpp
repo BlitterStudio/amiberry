@@ -43,7 +43,7 @@ bool LoadConfigByName(const char* name)
 	return false;
 }
 
-void load_buildin_config(int id)
+void load_builtin_config(int id)
 {
 	if (changed_prefs.cdslots[0].inuse)
 		gui_force_rtarea_hdchange();
@@ -51,15 +51,15 @@ void load_buildin_config(int id)
 	default_prefs(&changed_prefs, 0);
 	switch (id)
 	{
-	case BUILDINID_A500:
+	case BUILTINID_A500:
 		built_in_prefs(&changed_prefs, 0, 1, 0, 0);
 		break;
 
-	case BUILDINID_A1200:
+	case BUILTINID_A1200:
 		built_in_prefs(&changed_prefs, 4, 0, 0, 0);
 		break;
 
-	case BUILDINID_CD32:
+	case BUILTINID_CD32:
 		built_in_prefs(&changed_prefs, 8, 0, 0, 0);
 		break;
 	}
@@ -128,9 +128,9 @@ public:
 			i = lstConfigs->getSelected();
 			if (i != -1)
 			{
-				if (ConfigFilesList[i]->BuildInID != BUILDINID_NONE)
+				if (ConfigFilesList[i]->BuiltInID != BUILTINID_NONE)
 				{
-					load_buildin_config(ConfigFilesList[i]->BuildInID);
+					load_builtin_config(ConfigFilesList[i]->BuiltInID);
 					strcpy(changed_prefs.description, ConfigFilesList[i]->Description);
 				}
 				else
@@ -171,7 +171,7 @@ public:
 			//-----------------------------------------------
 			char msg[256];
 			i = lstConfigs->getSelected();
-			if (i >= 0 && ConfigFilesList[i]->BuildInID == BUILDINID_NONE && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
+			if (i >= 0 && ConfigFilesList[i]->BuiltInID == BUILTINID_NONE && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
 			{
 				snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
 				if (ShowMessage("Delete Configuration", msg, "", "Yes", "No"))
@@ -207,9 +207,9 @@ public:
 			//-----------------------------------------------
 			// Selected same config again -> load and start it
 			//-----------------------------------------------
-			if (ConfigFilesList[selected_item]->BuildInID != BUILDINID_NONE)
+			if (ConfigFilesList[selected_item]->BuiltInID != BUILTINID_NONE)
 			{
-				load_buildin_config(ConfigFilesList[selected_item]->BuildInID);
+				load_builtin_config(ConfigFilesList[selected_item]->BuiltInID);
 				strcpy(changed_prefs.description, ConfigFilesList[selected_item]->Description);
 			}
 			else
