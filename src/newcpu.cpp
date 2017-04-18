@@ -50,7 +50,11 @@
 #include "cia.h"
 #include "inputdevice.h"
 #include "audio.h"
+
+#ifdef DEBUG
 #include <gperftools/profiler.h>
+#endif
+
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>

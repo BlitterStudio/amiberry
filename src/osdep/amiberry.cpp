@@ -508,8 +508,7 @@ void ReadDirectory(const char* path, vector<string>* dirs, vector<string>* files
 	if (files != nullptr)
 		files->clear();
 
-	dir = opendir(path);
-	if (dir != nullptr)
+	if ((dir = opendir(path)) != nullptr)
 	{
 		while ((dent = readdir(dir)) != nullptr)
 		{
@@ -527,9 +526,9 @@ void ReadDirectory(const char* path, vector<string>* dirs, vector<string>* files
 	}
 
 	if (dirs != nullptr)
-		std::sort(dirs->begin(), dirs->end());
+		sort(dirs->begin(), dirs->end());
 	if (files != nullptr)
-		std::sort(files->begin(), files->end());
+		sort(files->begin(), files->end());
 }
 
 void saveAdfDir()
