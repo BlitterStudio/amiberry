@@ -31,7 +31,7 @@ struct MultiDisplay Displays[MAX_DISPLAYS];
 int screen_is_picasso = 0;
 
 static SDL_Surface* current_screenshot = nullptr;
-static char screenshot_filename_default[255] =
+static char screenshot_filename_default[MAX_PATH] =
 {
 	'/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'p', 'n', 'g', '\0'
 };

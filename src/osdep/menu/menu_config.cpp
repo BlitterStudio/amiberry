@@ -125,7 +125,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	default_prefs(p, 0);
 	SetDefaultMenuSettings(p);
 
-	char filebuffer[256];
+	char filebuffer[MAX_PATH];
 	int dummy;
 
 	fscanf(f, "kickstart=%d\n", &kickstart);

@@ -103,7 +103,7 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		int selected_item;
-		char foldername[256] = "";
+		char foldername[MAX_PATH] = "";
 
 		selected_item = lstFolders->getSelected();
 		strcpy(foldername, workingDir);

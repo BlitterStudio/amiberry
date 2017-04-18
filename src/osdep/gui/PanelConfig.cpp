@@ -169,7 +169,7 @@ public:
 			//-----------------------------------------------
 			// Delete selected config
 			//-----------------------------------------------
-			char msg[256];
+			char msg[MAX_PATH];
 			i = lstConfigs->getSelected();
 			if (i >= 0 && ConfigFilesList[i]->BuiltInID == BUILTINID_NONE && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
 			{

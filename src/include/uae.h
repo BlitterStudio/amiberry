@@ -41,7 +41,7 @@ extern uae_u32 getlocaltime (void);
 
 extern int quit_program;
 
-extern TCHAR start_path_data[256];
+extern TCHAR start_path_data[MAX_DPATH];
 
 /* This structure is used to define menus. The val field can hold key
  * shortcuts, or one of these special codes:

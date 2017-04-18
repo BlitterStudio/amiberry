@@ -68,7 +68,7 @@ struct gui_info gui_data;
 
 TCHAR warning_buffer[256];
 
-TCHAR optionsfile[256];
+TCHAR optionsfile[MAX_PATH];
 
 static uae_u32 randseed;
 static int oldhcounter;
