@@ -299,7 +299,7 @@ public:
 			strncat(filename, diskname, MAX_DPATH);
 			strncat(filename, ".uae", MAX_DPATH);
 
-			snprintf(changed_prefs.description, 256, "Configuration for disk '%s'", diskname);
+			snprintf(changed_prefs.description, MAX_PATH, "Configuration for disk '%s'", diskname);
 			if (cfgfile_save(&changed_prefs, filename, 0))
 				RefreshPanelConfig();
 		}
