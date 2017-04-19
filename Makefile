@@ -40,14 +40,14 @@ MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
 MORE_CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 
-LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -ltcmalloc
+LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan/lib
 
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -pipe -Wno-write-strings 
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
-LDFLAGS += -lprofiler
+LDFLAGS += -lprofiler -ltcmalloc
 endif
 
 ASFLAGS += $(CPU_FLAGS)
