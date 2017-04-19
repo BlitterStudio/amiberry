@@ -289,15 +289,15 @@ public:
 		//---------------------------------------
 		if (strlen(changed_prefs.floppyslots[0].df) > 0)
 		{
-			char filename[MAX_DPATH];
-			char diskname[MAX_PATH];
+			char filename[MAX_PATH];
+			char diskname[MAX_DPATH];
 
 			extractFileName(changed_prefs.floppyslots[0].df, diskname);
 			removeFileExtension(diskname);
 
-			fetch_configurationpath(filename, MAX_DPATH);
+			fetch_configurationpath(filename, MAX_PATH);
 			strncat(filename, diskname, MAX_DPATH);
-			strncat(filename, ".uae", MAX_DPATH);
+			strncat(filename, ".uae", MAX_PATH);
 
 			snprintf(changed_prefs.description, 255, "Configuration for disk '%s'", diskname);
 			if (cfgfile_save(&changed_prefs, filename, 0))
