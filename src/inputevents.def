@@ -244,10 +244,8 @@ DEFEVENT(KEY_NP_MUL,_T("Numpad Multiply"),AM_K,0,0,AK_NPMUL)
 DEFEVENT(KEY_NP_DIV,_T("Numpad Divide"),AM_K,0,0,AK_NPDIV)
 DEFEVENT(KEY_NP_LPAREN,_T("Numpad Left Parenthesis"),AM_K,0,0,AK_NPLPAREN)
 DEFEVENT(KEY_NP_RPAREN,_T("Numpad Right Parenthesis"),AM_K,0,0,AK_NPRPAREN)
-
-/* Keys which don't exist on all Amiga keyboards */
-DEFEVENT(KEY_NUMBERSIGN,_T("Keycode 0x2b"),AM_K,0,0,AK_NUMBERSIGN)
-DEFEVENT(KEY_LTGT,_T("Keycode 0x30"),AM_K,0,0,AK_LTGT)
+DEFEVENT(KEY_2B,_T("Keycode 0x2b"),AM_K,0,0,0x2b)
+DEFEVENT(KEY_30,_T("Keycode 0x30"),AM_K,0,0,0x30)
 
 DEFEVENT(KEY_BACKQUOTE,_T("Back Quote"),AM_K,0,0,AK_BACKQUOTE)
 DEFEVENT(KEY_1,_T("1"),AM_K,0,0,AK_1)
