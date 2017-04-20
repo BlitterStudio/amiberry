@@ -8,6 +8,10 @@
 #include "gui.h"
 #include "SDL.h"
 
+#ifndef SDLK_NONUSBACKSLASH
+#define SDLK_NONUSBACKSLASH SDL_SCANCODE_TO_KEYCODE(SDL_SCANCODE_NONUSBACKSLASH)
+#endif
+
 char keyboard_type = 0;
 
 static struct uae_input_device_kbr_default keytrans_amiga[] = {
