@@ -318,7 +318,7 @@ namespace gcn
               value = Key::F10;
               break;
           case SDLK_F11:
-              println("HIT F11\n");
+              printf("HIT F11\n");
               value = Key::F11;
               break;
           case SDLK_F12:
