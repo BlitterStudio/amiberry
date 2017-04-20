@@ -6023,10 +6023,13 @@ static void sendmmcodes(int code, int newstate)
 // main keyboard press/release entry point
 int inputdevice_translatekeycode(int keyboard, int scancode, int state)
 {
-	if (inputdevice_translatekeycode_2(keyboard, scancode, state, false))
+	if (inputdevice_translatekeycode_2(keyboard, scancode, state, false)) {
+		printf("inputdevice_translatekeycode_2 was run\n");
 		return 1;
-	if (currprefs.mmkeyboard && scancode > 0)
+	} if (currprefs.mmkeyboard && scancode > 0) {
 		sendmmcodes(scancode, state);
+		printf("sendmmcodes was run\n");
+	}
 	return 0;
 }
 
