@@ -117,7 +117,8 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_SEMICOLON, INPUTEVENT_KEY_SEMICOLON },
 	{ SDLK_QUOTE, INPUTEVENT_KEY_SINGLEQUOTE },
 	{ SDLK_BACKQUOTE, INPUTEVENT_KEY_BACKQUOTE },
-	{ SDLK_BACKSLASH, INPUTEVENT_KEY_2B },
+	{ SDLK_BACKSLASH, INPUTEVENT_KEY_NUMBERSIGN },
+	{ SDLK_LESS, INPUTEVENT_KEY_LTGT },
 	{ SDLK_COMMA, INPUTEVENT_KEY_COMMA },
 	{ SDLK_PERIOD, INPUTEVENT_KEY_PERIOD },
 	{ SDLK_SLASH, INPUTEVENT_KEY_DIV },
@@ -236,11 +237,10 @@ void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 	Since it is a printable ASCII character, this is lifted to be scancode
 	60.
 
-	This is just a quick hack.
+	This is just a quick hack as a proof of concept.
 	*/
 	if ((scancode == 0)&&(scancode_raw == 100)) {
 		scancode = 60;
-		printf("LESS/GREATER PRESSED - new keycode is %d SDLK_LESS is %d", scancode, SDLK_LESS);
 	}
 	int code = 0;
 	int scancode_new;
