@@ -5851,6 +5851,7 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 	j = 0;
 	while (j < MAX_INPUT_DEVICE_EVENTS && na->extra[j] >= 0)
 	{
+		printf("j = %d na->extra[j] = %d ", j, na->extra[j]);
 		if (na->extra[j] == scancode)
 		{
 			bool qualonly;
@@ -5859,8 +5860,10 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 
 			if (qualonly)
 				qualifiercheckonly = true;
+		  printf("qualifiercheckonly = %b\n", qualifiercheckonly);
 			for (k = 0; k < MAX_INPUT_SUB_EVENT; k++)
 			{/* send key release events in reverse order */
+				printf("  k = %d\n", k);
 				uae_u64* flagsp = &na->flags[j][sublevdir[keystate == 0 ? 1 : 0][k]];
 				int evt = na->eventid[j][sublevdir[keystate == 0 ? 1 : 0][k]];
 				uae_u64 flags = *flagsp;
@@ -5886,6 +5889,7 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 					if (state)
 						state = setval;
 				}
+				printf("  state = %d\n", state);
 
 				setqualifiers(evt, state > 0);
 				if (qualifiercheckonly)
@@ -5921,10 +5925,12 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 				}
 #ifndef INPUTDEVICE_SIMPLE
 				if (!state) {
+					println("  custom event!\n");
 					didcustom |= process_custom_event (na, j, state, qualmask, autofire, k);
 				}
 
 				if (inverttoggle) {
+					println("  inverttogle!\n");
 					na->flags[j][sublevdir[state == 0 ? 1 : 0][k]] &= ~ID_FLAG_TOGGLED;
 					if (state) {
 						queue_input_event (evt, NULL, -1, 0, 0, 1);
@@ -5933,19 +5939,24 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 						handled |= handle_input_event (evt, 1, 1, autofire, true, false);
 					}
 					didcustom |= process_custom_event (na, j, state, qualmask, autofire, k);
+					printf("  handled = %d didcustom = %b\n", handled, didcustom);
 				} else if (toggle) {
+					println("  toggle!\n");
 					if (!state)
 						continue;
 					if (!checkqualifiers (evt, flags, qualmask, na->eventid[j]))
 						continue;
+					println("  continuing toggle\n");
 					*flagsp ^= ID_FLAG_TOGGLED;
 					toggled = (*flagsp & ID_FLAG_TOGGLED) ? 1 : 0;
 					handled |= handle_input_event (evt, toggled, 1, autofire, true, false);
 					if (k == 0) {
 						didcustom |= process_custom_event (na, j, state, qualmask, autofire, k);
 					}
+					printf("  handled = %d didcustom = %b\n", handled, didcustom);
 				} else {
 #endif
+          println("  neither toggle nor inverttoggle\n");
 				rqualifiers(flags, state ? true : false);
 				if (!checkqualifiers(evt, flags, qualmask, na->eventid[j]))
 				{
@@ -5960,6 +5971,7 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 					}
 				}
 
+        println("  continuing handling\n");
 				if (state)
 				{
 					if (!invert)
@@ -5980,6 +5992,7 @@ static int inputdevice_translatekeycode_2(int keyboard, int scancode, int keysta
 #ifndef INPUTDEVICE_SIMPLE
 				}
 #endif
+      printf("  handled = %d didcustom = %b\n", handled, didcustom);
 			}
 			if (!didcustom)
 #ifdef INPUTDEVICE_SIMPLE
