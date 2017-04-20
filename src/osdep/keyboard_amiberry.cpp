@@ -118,7 +118,6 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_QUOTE, INPUTEVENT_KEY_SINGLEQUOTE },
 	{ SDLK_BACKQUOTE, INPUTEVENT_KEY_BACKQUOTE },
 	{ SDLK_BACKSLASH, INPUTEVENT_KEY_2B },
-	{ SDLK_F11, INPUTEVENT_KEY_BACKSLASH },
 	{ SDLK_COMMA, INPUTEVENT_KEY_COMMA },
 	{ SDLK_PERIOD, INPUTEVENT_KEY_PERIOD },
 	{ SDLK_SLASH, INPUTEVENT_KEY_DIV },
@@ -228,6 +227,7 @@ static const int np[] = {
 
 void translate_amiberry_keys(int scancode, int newstate)
 {
+	printf("translate_amiberry_keys %d\n", scancode);
 	int code = 0;
 	int scancode_new;
 	bool amode = currprefs.input_keyboard_type == 0;
