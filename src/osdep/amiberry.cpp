@@ -805,7 +805,7 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
-		  printf("Key pressed %d %d\n", rEvent.key.keysym.scancode, rEvent.key.keysym.scancode_new);
+		  printf("Key pressed sc=%d sym=%d\n", rEvent.key.keysym.scancode, rEvent.key.keysym.sym);
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 			{
 				uae_reset(0, 1);
