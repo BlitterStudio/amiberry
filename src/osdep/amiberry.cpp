@@ -51,7 +51,7 @@ extern void SetLastActiveConfig(const char* filename);
 int pause_emulation;
 
 /* Keyboard */
-map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map 
+map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
@@ -678,7 +678,7 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 		*low = 1e+9; /* We have nano seconds */
 		return 0;
 	}
-	
+
 	if (v == 2)
 	{
 		int64_t time;
@@ -744,7 +744,7 @@ int main(int argc, char* argv[])
 
 	real_main(argc, argv);
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND 
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
 #endif
@@ -805,6 +805,7 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
+		  printf("Key pressed %d %d\n", rEvent.key.keysym.scancode, rEvent.key.keysym.scancode_new);
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 			{
 				uae_reset(0, 1);
