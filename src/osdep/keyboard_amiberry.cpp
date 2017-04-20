@@ -8,10 +8,6 @@
 #include "gui.h"
 #include "SDL.h"
 
-#ifndef SDLK_NONUSBACKSLASH
-#define SDLK_NONUSBACKSLASH SDL_SCANCODE_TO_KEYCODE(SDL_SCANCODE_NONUSBACKSLASH)
-#endif
-
 char keyboard_type = 0;
 
 static struct uae_input_device_kbr_default keytrans_amiga[] = {
@@ -122,7 +118,7 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_QUOTE, INPUTEVENT_KEY_SINGLEQUOTE },
 	{ SDLK_BACKQUOTE, INPUTEVENT_KEY_BACKQUOTE },
 	{ SDLK_BACKSLASH, INPUTEVENT_KEY_2B },
-	{ SDLK_NONUSBACKSLASH, INPUTEVENT_KEY_30 },
+	{ SDLK_F11, INPUTEVENT_KEY_BACKSLASH },
 	{ SDLK_COMMA, INPUTEVENT_KEY_COMMA },
 	{ SDLK_PERIOD, INPUTEVENT_KEY_PERIOD },
 	{ SDLK_SLASH, INPUTEVENT_KEY_DIV },
