@@ -117,7 +117,7 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_SEMICOLON, INPUTEVENT_KEY_SEMICOLON },
 	{ SDLK_QUOTE, INPUTEVENT_KEY_SINGLEQUOTE },
 	{ SDLK_BACKQUOTE, INPUTEVENT_KEY_BACKQUOTE },
-	{ SDLK_BACKSLASH, INPUTEVENT_KEY_BACKSLASH },
+	{ SDLK_BACKSLASH, INPUTEVENT_KEY_2B },
 	{ SDLK_COMMA, INPUTEVENT_KEY_COMMA },
 	{ SDLK_PERIOD, INPUTEVENT_KEY_PERIOD },
 	{ SDLK_SLASH, INPUTEVENT_KEY_DIV },
@@ -261,9 +261,7 @@ static struct uae_input_device_kbr_default keytrans_pc1[] = {
 };
 static struct uae_input_device_kbr_default *keytrans[] =
 {
-    keytrans_amiga,
-	keytrans_pc1,
-	keytrans_pc1
+    keytrans_amiga
 };
 
 static int kb_np[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, -1, SDLK_KP_0, SDLK_KP_5, -1, SDLK_KP_DECIMAL, -1, SDLK_KP_ENTER, -1, -1 };
