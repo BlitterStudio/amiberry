@@ -4,7 +4,10 @@ Warning: this branch is still Work In Progress - it requires a few extra steps t
 If you're looking for the latest "stable" version, please use the master branch for now.
 Once this branch is complete, it will be merged back to the master and replace it.
 
+Warning: this branch contains some dirty hacks!
+
 # History (newest first)
+- Changed the keyboard mapping so that on German keyboards characters like `#`, `<`, `>` can be input correctly. The backslash was moved to F11, the "real" `SDLK_BACKSLASH` produces Amiga key code `0x2B` which is the `#` (and when shifted, `^`), and a hack was added that converts the scancode of the `NONUSBACKSLASH` key (which is the less/greater key on German keyboards) to keycode 60 (ASCII code of the less-than sign), so `SDLK_LESS` can be mapped to key `0x30` which is less/greater on a German Amiga keyboard.
 - Added GPerfTools for profiling and optimized malloc functions (note: this adds 2 extra dependencies, check below)
 - Added an option for choosing Scaling Method (for non-Picasso modes): Auto, Nearest Neighbor (pixelated) or Linear (smooth). Auto will automatically choose between the other two modes on the fly, depending on the Amiga resolution requested and if the native monitor resolution can display it as an exact multiple or not. This vastly improves the sharpness of the resulting image.
 - Improved image centering (for non-Picasso modes)
@@ -41,7 +44,7 @@ Run these to clone the RetroPie-Setup repo, then run the relevant script:
 
 Next, we need SDL2_image and SDL2_ttf:
 
-      sudo apt-get install libsdl2-image-dev libsdl2-ttf-dev 
+      sudo apt-get install libsdl2-image-dev libsdl2-ttf-dev
 
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
@@ -50,11 +53,11 @@ Install the following packages:
       sudo apt-get install libxml2-dev libflac-dev libmpg123-dev libpng-dev google-perftools libgoogle-perftools-dev
 
 Clone this repo:
-      
+
       cd ~
       git clone https://github.com/midwan/amiberry -b sdl2 amiberry-sdl2
       cd amiberry-sdl2
-      
+
 Then for Raspberry Pi 3:  
 
       make all
@@ -66,4 +69,3 @@ For Raspberry Pi 2:
 For Raspberry Pi 1:  
 
       make all PLATFORM=rpi1
-
