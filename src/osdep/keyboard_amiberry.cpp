@@ -483,10 +483,13 @@ void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 		return;
 	}
 
-	if (translatedScancode != scancode)
+	if (translatedScancode != scancode) {
+		println("inputdevice_do_keyboard\n");
 		inputdevice_do_keyboard(translatedScancode, newstate);
-	else
+	} else {
+		println("inputdevice_translatekeycode\n");
 		inputdevice_translatekeycode(0, translatedScancode, newstate);
+	}
 }
 
 void keyboard_settrans()
