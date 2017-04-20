@@ -805,7 +805,6 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
-		  printf("Key pressed sc=%d sym=%d\n", rEvent.key.keysym.scancode, rEvent.key.keysym.sym);
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 			{
 				uae_reset(0, 1);
@@ -873,7 +872,7 @@ int handle_msgpump()
 						break;
 					}
 				}
-				translate_amiberry_keys(rEvent.key.keysym.sym, 1);
+				translate_amiberry_keys(rEvent.key.keysym.sym, 1, rEvent.key.keysym.scancode);
 				break;
 			}
 			break;
@@ -896,7 +895,7 @@ int handle_msgpump()
 					}
 				}
 
-				translate_amiberry_keys(rEvent.key.keysym.sym, 0);
+				translate_amiberry_keys(rEvent.key.keysym.sym, 0, rEvent.key.keysym.scancode);
 				break;
 
 		case SDL_MOUSEBUTTONDOWN:

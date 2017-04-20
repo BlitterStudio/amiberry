@@ -225,9 +225,23 @@ static const int np[] = {
 	SDLK_KP_3, 3, SDLK_KP_4, 4, SDLK_KP_5, 5, SDLK_KP_6, 6, SDLK_KP_7, 7,
 	SDLK_KP_8, 8, SDLK_KP_9, 9, -1 };
 
-void translate_amiberry_keys(int scancode, int newstate)
+void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 {
-	printf("translate_amiberry_keys %d\n", scancode);
+	/*
+	Some keys do not have a keycode in SDL. One of these keys is the
+	less / greater sign key on German keys. The "scancode" parameter
+	will be 0 here, that's why I introduced a new parameter scancode_raw
+	which holds the raw scancode of the key.
+	For the less/greater key, its raw scancode is 100.
+	Since it is a printable ASCII character, this is lifted to be scancode
+	60.
+
+	This is just a quick hack.
+	*/
+	if ((scancode == 0)&&(scancode_raw == 100)) {
+		scancode = 60;
+		printf("LESS/GREATER PRESSED - new keycode is %d SDLK_LESS is %d", scancode, SDLK_LESS);
+	}
 	int code = 0;
 	int scancode_new;
 	bool amode = currprefs.input_keyboard_type == 0;
