@@ -117,7 +117,15 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_SEMICOLON, INPUTEVENT_KEY_SEMICOLON },
 	{ SDLK_QUOTE, INPUTEVENT_KEY_SINGLEQUOTE },
 	{ SDLK_BACKQUOTE, INPUTEVENT_KEY_BACKQUOTE },
+	/* SDLK_BACKSLASH is the Backslash key on US PC keyboards and the Hash /
+	   apostroph key on German PC keyboards. This now yields Amiga keycode 2B,
+		 which is the hash key. The apostroph is produced with LALT-ä on a German
+		 Amiga keyboard. */
 	{ SDLK_BACKSLASH, INPUTEVENT_KEY_2B },
+	/* SDLK_LESS is not correctly wired in SDL, plus, there is no
+	   SDLK_NONUSBACKSLASH keycode, albeit the scancode for this extra key IS
+	   defined in SDL_scancodes.h. SDLK_LESS is produced manually in the
+		 translate_amiberry_keys function.*/
 	{ SDLK_LESS, INPUTEVENT_KEY_30 },
 	{ SDLK_COMMA, INPUTEVENT_KEY_COMMA },
 	{ SDLK_PERIOD, INPUTEVENT_KEY_PERIOD },
@@ -402,6 +410,12 @@ void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 	case SDLK_F10:
 		translatedScancode = AK_F10;
 		break;
+	/*
+	The Amiga has an extra backslash key which PC keyboards don't have.
+
+	Since the Amiga does not have F11, and F11 is currently unused, the Amiga
+	backslash key is moved to F11.
+	*/
 	case SDLK_F11:
 	  translatedScancode = AK_BACKSLASH;
 		break;
