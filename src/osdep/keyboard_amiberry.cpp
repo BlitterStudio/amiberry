@@ -402,6 +402,9 @@ void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 	case SDLK_F10:
 		translatedScancode = AK_F10;
 		break;
+	case SDLK_F11:
+	  translatedScancode = AK_BACKSLASH;
+		break;
 	case SDLK_LSHIFT:
 		translatedScancode = AK_LSH;
 		break;
