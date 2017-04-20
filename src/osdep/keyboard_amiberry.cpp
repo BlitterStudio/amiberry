@@ -485,10 +485,8 @@ void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 
 	if (translatedScancode != scancode)
 		inputdevice_do_keyboard(translatedScancode, newstate);
-	else {
-		int tccres = inputdevice_translatekeycode(0, translatedScancode, newstate);
-		printf("result of inputdevice_translatekeycode = %d\n", tccres);
-	}
+	else
+		inputdevice_translatekeycode(0, translatedScancode, newstate);
 }
 
 void keyboard_settrans()

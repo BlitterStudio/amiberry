@@ -229,7 +229,7 @@ namespace gcn
     int SDLInput::convertKeyCharacter(SDL_Event event)
     {
         SDL_Keysym keysym = event.key.keysym;
-        
+
         int value = 0;
         switch (keysym.sym)
         {
@@ -318,6 +318,7 @@ namespace gcn
               value = Key::F10;
               break;
           case SDLK_F11:
+              println("HIT F11\n");
               value = Key::F11;
               break;
           case SDLK_F12:
