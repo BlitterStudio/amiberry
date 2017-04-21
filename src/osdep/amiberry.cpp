@@ -702,7 +702,7 @@ int main(int argc, char* argv[])
 	loadAdfDir();
 	rp9_init();
 
-	snprintf(savestate_fname, MAX_PATH, "%s/saves/default.ads", start_path_data);
+	snprintf(savestate_fname, MAX_DPATH, "%s/saves/default.ads", start_path_data);
 	logging_init();
 
 	memset(&action, 0, sizeof(action));

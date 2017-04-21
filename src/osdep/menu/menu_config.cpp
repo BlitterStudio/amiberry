@@ -72,7 +72,7 @@ static bool CheckKickstart(struct uae_prefs* p)
 
 	// Search via filename
 	fetch_rompath(kickpath, MAX_DPATH);
-	strncat(kickpath, kickstarts_rom_names[kickstart], MAX_DPATH);
+	strncat(kickpath, kickstarts_rom_names[kickstart], 255);
 	for (i = 0; i < lstAvailableROMs.size(); ++i)
 	{
 		if (!strcasecmp(lstAvailableROMs[i]->Path, kickpath))

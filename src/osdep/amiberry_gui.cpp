@@ -282,8 +282,8 @@ void RescanROMs()
 	for (int i = 0; i < files.size(); ++i)
 	{
 		char tmppath[MAX_PATH];
-		strncpy(tmppath, path, MAX_PATH);
-		strncat(tmppath, files[i].c_str(), MAX_PATH);
+		strncpy(tmppath, path, MAX_DPATH);
+		strncat(tmppath, files[i].c_str(), MAX_DPATH);
 		scan_rom(tmppath);
 	}
 
@@ -510,7 +510,7 @@ void gui_purge_events()
 
 int gui_update()
 {
-	char tmp[MAX_PATH];
+	char tmp[MAX_DPATH];
 
 	fetch_statefilepath(savestate_fname, MAX_DPATH);
 	fetch_screenshotpath(screenshot_filename, MAX_DPATH);
@@ -518,7 +518,7 @@ int gui_update()
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
 	else
-		strncpy(tmp, last_loaded_config, MAX_PATH);
+		strncpy(tmp, last_loaded_config, MAX_DPATH);
 
 	strncat(savestate_fname, tmp, MAX_DPATH);
 	strncat(screenshot_filename, tmp, MAX_DPATH);

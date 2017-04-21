@@ -103,7 +103,7 @@ public:
 			if (strlen(ConfigFilesList[i]->Description) > 0)
 			{
 				strncat(tmp, " (", MAX_DPATH);
-				strncat(tmp, ConfigFilesList[i]->Description, MAX_DPATH);
+				strncat(tmp, ConfigFilesList[i]->Description, 255);
 				strncat(tmp, ")", MAX_DPATH);
 			}
 			configs.push_back(tmp);
@@ -151,9 +151,9 @@ public:
 			if (!txtName->getText().empty())
 			{
 				fetch_configurationpath(filename, MAX_DPATH);
-				strncat(filename, txtName->getText().c_str(), MAX_DPATH);
+				strncat(filename, txtName->getText().c_str(), 255);
 				strncat(filename, ".uae", MAX_DPATH);
-				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 256);
+				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 255);
 				if (cfgfile_save(&changed_prefs, filename, 0))
 					RefreshPanelConfig();
 			}
