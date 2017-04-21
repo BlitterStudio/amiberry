@@ -292,7 +292,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	}
 	if (p->nr_floppies > 3)
 	{
-		memset(filebuffer, 0, 256);
+		memset(filebuffer, 0, sizeof filebuffer);
 		fscanf(f, "df3=%s\n", &filebuffer);
 		replace(filebuffer, ' ', '|');
 		if (DISK_validate_filename(p, filebuffer, 0, nullptr, nullptr, nullptr))

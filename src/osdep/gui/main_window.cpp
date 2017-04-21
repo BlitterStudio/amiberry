@@ -384,8 +384,8 @@ namespace widgets
 				//-------------------------------------------------
 				// Restart emulator
 				//-------------------------------------------------
-				char tmp[MAX_PATH];
-				fetch_configurationpath(tmp, sizeof (tmp));
+				char tmp[MAX_DPATH];
+				fetch_configurationpath(tmp, sizeof tmp);
 				if (strlen(last_loaded_config) > 0)
 					strcat(tmp, last_loaded_config);
 				else

@@ -385,7 +385,7 @@ static void fixcharset (TCHAR *s)
 	char tmp[MAX_DPATH];
 	if (!s)
 		return;
-	ua_fs_copy (tmp, MAX_DPATH, s, '_');
+	ua_fs_copy (tmp, sizeof tmp, s, '_');
 	au_fs_copy (s, strlen (tmp) + 1, tmp);
 }
 

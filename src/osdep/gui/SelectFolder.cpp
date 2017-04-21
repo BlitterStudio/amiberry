@@ -270,7 +270,7 @@ bool SelectFolder(const char* title, char* value)
 	ExitSelectFolder();
 	if (dialogResult)
 	{
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, sizeof value);
 		if (value[strlen(value) - 1] != '/')
 			strcat(value, "/");
 	}

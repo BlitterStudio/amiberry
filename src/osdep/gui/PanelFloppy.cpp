@@ -174,15 +174,15 @@ public:
 				//---------------------------------------
 				// Select disk for drive
 				//---------------------------------------
-				char tmp[MAX_PATH];
+				char tmp[MAX_DPATH];
 
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_PATH);
+					strncpy(tmp, changed_prefs.floppyslots[i].df, sizeof changed_prefs.floppyslots[i].df);
 				else
-					strncpy(tmp, currentDir, MAX_PATH);
+					strncpy(tmp, currentDir, sizeof currentDir);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
-					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_PATH))
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp, sizeof changed_prefs.floppyslots[i].df))
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof changed_prefs.floppyslots[i].df);
 						disk_insert(i, tmp);
@@ -248,7 +248,7 @@ public:
 							if (i == 0 && chkLoadConfig->isSelected())
 							{
 								// Search for config of disk
-								char tmp[MAX_PATH];
+								char tmp[MAX_DPATH];
 
 								extractFileName(changed_prefs.floppyslots[i].df, tmp);
 								removeFileExtension(tmp);
@@ -289,17 +289,17 @@ public:
 		//---------------------------------------
 		if (strlen(changed_prefs.floppyslots[0].df) > 0)
 		{
-			char filename[MAX_PATH];
+			char filename[MAX_DPATH];
 			char diskname[MAX_DPATH];
 
 			extractFileName(changed_prefs.floppyslots[0].df, diskname);
 			removeFileExtension(diskname);
 
-			fetch_configurationpath(filename, MAX_PATH);
-			strncat(filename, diskname, MAX_DPATH);
-			strncat(filename, ".uae", MAX_PATH);
+			fetch_configurationpath(filename, sizeof filename);
+			strncat(filename, diskname, sizeof diskname);
+			strncat(filename, ".uae", sizeof filename);
 
-			snprintf(changed_prefs.description, 255, "Configuration for disk '%s'", diskname);
+			snprintf(changed_prefs.description, sizeof changed_prefs.description, "Configuration for disk '%s'", diskname);
 			if (cfgfile_save(&changed_prefs, filename, 0))
 				RefreshPanelConfig();
 		}
@@ -317,9 +317,9 @@ public:
 		if (actionEvent.getSource() == cmdCreateDDDisk)
 		{
 			// Create 3.5'' DD Disk
-			char tmp[MAX_PATH];
-			char diskname[MAX_PATH];
-			strncpy(tmp, currentDir, MAX_PATH);
+			char tmp[MAX_DPATH];
+			char diskname[MAX_DPATH];
+			strncpy(tmp, currentDir, sizeof tmp);
 			if (SelectFile("Create 3.5'' DD disk file", tmp, diskfile_filter, true))
 			{
 				extractFileName(tmp, diskname);
@@ -334,9 +334,9 @@ public:
 		else if (actionEvent.getSource() == cmdCreateHDDisk)
 		{
 			// Create 3.5'' HD Disk
-			char tmp[MAX_PATH];
-			char diskname[MAX_PATH];
-			strncpy(tmp, currentDir, MAX_PATH);
+			char tmp[MAX_DPATH];
+			char diskname[MAX_DPATH];
+			strncpy(tmp, currentDir, sizeof tmp);
 			if (SelectFile("Create 3.5'' HD disk file", tmp, diskfile_filter, true))
 			{
 				extractFileName(tmp, diskname);

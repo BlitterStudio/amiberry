@@ -11,7 +11,7 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-static char last_active_config[MAX_PATH] = {'\0'};
+static char last_active_config[MAX_DPATH] = {'\0'};
 static int ensureVisible = -1;
 
 static gcn::Button* cmdLoad;
@@ -35,7 +35,7 @@ bool LoadConfigByName(const char* name)
 		txtName->setText(config->Name);
 		txtDesc->setText(config->Description);
 		target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
-		strncpy(last_active_config, config->Name, MAX_PATH);
+		strncpy(last_active_config, config->Name, sizeof config->Name);
 		DisableResume();
 		RefreshAllPanels();
 	}
@@ -99,12 +99,12 @@ public:
 		for (int i = 0; i < ConfigFilesList.size(); ++i)
 		{
 			char tmp[MAX_DPATH];
-			strncpy(tmp, ConfigFilesList[i]->Name, MAX_DPATH);
+			strncpy(tmp, ConfigFilesList[i]->Name, sizeof tmp);
 			if (strlen(ConfigFilesList[i]->Description) > 0)
 			{
-				strncat(tmp, " (", MAX_DPATH);
+				strncat(tmp, " (", sizeof tmp);
 				strncat(tmp, ConfigFilesList[i]->Description, 255);
-				strncat(tmp, ")", MAX_DPATH);
+				strncat(tmp, ")", sizeof tmp);
 			}
 			configs.push_back(tmp);
 		}
@@ -137,7 +137,7 @@ public:
 				{
 					target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				}
-				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_PATH);
+				strncpy(last_active_config, ConfigFilesList[i]->Name, sizeof last_active_config);
 				DisableResume();
 				RefreshAllPanels();
 			}
@@ -150,9 +150,9 @@ public:
 			char filename[MAX_DPATH];
 			if (!txtName->getText().empty())
 			{
-				fetch_configurationpath(filename, MAX_DPATH);
+				fetch_configurationpath(filename, sizeof filename);
 				strncat(filename, txtName->getText().c_str(), 255);
-				strncat(filename, ".uae", MAX_DPATH);
+				strncat(filename, ".uae", sizeof filename);
 				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 255);
 				if (cfgfile_save(&changed_prefs, filename, 0))
 					RefreshPanelConfig();
@@ -169,11 +169,11 @@ public:
 			//-----------------------------------------------
 			// Delete selected config
 			//-----------------------------------------------
-			char msg[MAX_PATH];
+			char msg[MAX_DPATH];
 			i = lstConfigs->getSelected();
 			if (i >= 0 && ConfigFilesList[i]->BuiltInID == BUILTINID_NONE && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
 			{
-				snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
+				snprintf(msg, sizeof msg, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
 				if (ShowMessage("Delete Configuration", msg, "", "Yes", "No"))
 				{
 					remove(ConfigFilesList[i]->FullPath);
@@ -216,7 +216,7 @@ public:
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
 			}
-			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_PATH);
+			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, sizeof ConfigFilesList[selected_item]->Name);
 			DisableResume();
 			RefreshAllPanels();
 		}
@@ -318,7 +318,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 	if (strlen(last_active_config) == 0)
-		strncpy(last_active_config, OPTIONSFILENAME, MAX_PATH);
+		strncpy(last_active_config, OPTIONSFILENAME, MAX_DPATH);
 	txtName->setText(last_active_config);
 	txtDesc->setText(changed_prefs.description);
 	ensureVisible = -1;

@@ -240,13 +240,13 @@ public:
 			char tmp[MAX_DPATH];
 
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
-				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
+				strncpy(tmp, changed_prefs.cdslots[0].name, sizeof tmp);
 			else
-				strncpy(tmp, currentDir, MAX_DPATH);
+				strncpy(tmp, currentDir, sizeof tmp);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
-				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH))
+				if (strncmp(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name))
 				{
 					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
 					changed_prefs.cdslots[0].inuse = true;
