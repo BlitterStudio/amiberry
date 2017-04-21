@@ -38,7 +38,6 @@ DEFS += -DUSE_SDL
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include
 MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 MORE_CFLAGS += -fexceptions -fpermissive
-MORE_CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 
 LDFLAGS += -lpthread -lm -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan/lib
@@ -47,7 +46,9 @@ ifndef DEBUG
 MORE_CFLAGS += -Ofast -pipe -Wno-write-strings 
 else
 MORE_CFLAGS += -g -DDEBUG -Wl,--export-dynamic
-LDFLAGS += -lprofiler -ltcmalloc
+MORE_CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+LDFLAGS += -ltcmalloc -lprofiler
+
 endif
 
 ASFLAGS += $(CPU_FLAGS)
@@ -183,7 +184,12 @@ OBJS =	\
 	src/osdep/gui/Navigation.o
 	
 OBJS += src/osdep/picasso96.o
-OBJS += src/osdep/neon_helper.o
+
+ifeq ($(PLATFORM),rpi1)
+	OBJS += src/osdep/arm_helper.o
+else
+	OBJS += src/osdep/neon_helper.o
+endif
 
 OBJS += src/newcpu.o
 OBJS += src/newcpu_common.o
@@ -201,6 +207,9 @@ OBJS += src/jit/compemu_support.o
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
 	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 
+src/osdep/arm_helper.o: src/osdep/arm_helper.s
+	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
+	
 $(PROG): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG
