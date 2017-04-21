@@ -72,7 +72,7 @@ static bool CheckKickstart(struct uae_prefs* p)
 
 	// Search via filename
 	fetch_rompath(kickpath, MAX_DPATH);
-	strncat(kickpath, kickstarts_rom_names[kickstart], MAX_DPATH);
+	strncat(kickpath, kickstarts_rom_names[kickstart], 255);
 	for (i = 0; i < lstAvailableROMs.size(); ++i)
 	{
 		if (!strcasecmp(lstAvailableROMs[i]->Path, kickpath))
@@ -292,7 +292,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	}
 	if (p->nr_floppies > 3)
 	{
-		memset(filebuffer, 0, 256);
+		memset(filebuffer, 0, sizeof filebuffer);
 		fscanf(f, "df3=%s\n", &filebuffer);
 		replace(filebuffer, ' ', '|');
 		if (DISK_validate_filename(p, filebuffer, 0, nullptr, nullptr, nullptr))

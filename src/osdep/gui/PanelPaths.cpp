@@ -27,7 +27,7 @@ public:
 
 		if (actionEvent.getSource() == cmdSystemROMs)
 		{
-			fetch_rompath(tmp, MAX_PATH);
+			fetch_rompath(tmp, sizeof tmp);
 			if (SelectFolder("Folder for System ROMs", tmp))
 			{
 				set_rompath(tmp);
@@ -37,7 +37,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdConfigPath)
 		{
-			fetch_configurationpath(tmp, MAX_PATH);
+			fetch_configurationpath(tmp, sizeof tmp);
 			if (SelectFolder("Folder for configuration files", tmp))
 			{
 				set_configurationpath(tmp);
@@ -140,9 +140,9 @@ void RefreshPanelPaths()
 {
 	char tmp[MAX_PATH];
 
-	fetch_rompath(tmp, MAX_PATH);
+	fetch_rompath(tmp, sizeof tmp);
 	txtSystemROMs->setText(tmp);
 
-	fetch_configurationpath(tmp, MAX_PATH);
+	fetch_configurationpath(tmp, sizeof tmp);
 	txtConfigPath->setText(tmp);
 }

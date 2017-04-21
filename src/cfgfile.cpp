@@ -3968,7 +3968,7 @@ void cfgfile_backup(const TCHAR *path)
 {
 	TCHAR dpath[MAX_DPATH];
 
-	fetch_configurationpath(dpath, sizeof(dpath) / sizeof(TCHAR));
+	fetch_configurationpath(dpath, sizeof dpath / sizeof(TCHAR));
 	_tcscat(dpath, _T("configuration.backup"));
 	//bool hidden = my_isfilehidden(dpath);
 	my_unlink(dpath);

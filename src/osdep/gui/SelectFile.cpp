@@ -385,7 +385,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], bool creat
 	}
 	else
 	{
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, sizeof value);
 		gui_top->add(wndSelectFile);
 		wndSelectFile->setCaption(title);
 		wndSelectFile->requestModalFocus();
@@ -407,10 +407,10 @@ bool SelectFile(const char* title, char* value, const char* filter[], bool creat
 	ExitSelectFile();
 #endif
 	if (dialogResult)
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, sizeof value);
 #ifdef FILE_SELECT_KEEP_POSITION
 	else
-		strncpy(workingDir, value, MAX_PATH);
+		strncpy(workingDir, value, sizeof workingDir);
 #endif
 	return dialogResult;
 }

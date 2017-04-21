@@ -124,12 +124,12 @@ void ClearAvailableROMList()
 static void addrom(struct romdata* rd, const char* path)
 {
 	AvailableROM* tmp;
-	char tmpName[MAX_DPATH];
+	char tmpName[MAX_PATH];
 	tmp = new AvailableROM();
 	getromname(rd, tmpName);
-	strncpy(tmp->Name, tmpName, MAX_PATH);
+	strncpy(tmp->Name, tmpName, sizeof tmp->Name);
 	if (path != nullptr)
-		strncpy(tmp->Path, path, MAX_PATH);
+		strncpy(tmp->Path, path, sizeof tmp->Path);
 	tmp->ROMType = rd->type;
 	lstAvailableROMs.push_back(tmp);
 	romlist_add(path, rd);
@@ -270,20 +270,20 @@ static void scan_rom(char* path)
 void RescanROMs()
 {
 	vector<string> files;
-	char path[MAX_DPATH];
+	char path[MAX_PATH];
 
 	romlist_clear();
 
 	ClearAvailableROMList();
-	fetch_rompath(path, MAX_DPATH);
+	fetch_rompath(path, sizeof path);
 
 	load_keyring(&changed_prefs, path);
 	ReadDirectory(path, nullptr, &files);
 	for (int i = 0; i < files.size(); ++i)
 	{
 		char tmppath[MAX_PATH];
-		strncpy(tmppath, path, MAX_PATH);
-		strncat(tmppath, files[i].c_str(), MAX_PATH);
+		strncpy(tmppath, path, sizeof tmppath);
+		strncat(tmppath, files[i].c_str(), sizeof tmppath);
 		scan_rom(tmppath);
 	}
 
@@ -312,7 +312,7 @@ static void ClearConfigFileList()
 
 void ReadConfigFileList()
 {
-	char path[MAX_PATH];
+	char path[MAX_DPATH];
 	vector<string> files;
 	const char* filter_rp9[] = {".rp9", "\0"};
 	const char* filter_uae[] = {".uae", "\0"};
@@ -345,15 +345,15 @@ void ReadConfigFileList()
 	ConfigFilesList.push_back(buildin);
 
 	// Read rp9 files
-	fetch_rp9path(path, MAX_PATH);
+	fetch_rp9path(path, sizeof path);
 	ReadDirectory(path, nullptr, &files);
 	FilterFiles(&files, filter_rp9);
 	for (int i = 0; i < files.size(); ++i)
 	{
 		ConfigFileInfo* tmp = new ConfigFileInfo();
-		strncpy(tmp->FullPath, path, MAX_DPATH);
+		strncpy(tmp->FullPath, path, sizeof tmp->FullPath);
 		strcat(tmp->FullPath, files[i].c_str());
-		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
+		strncpy(tmp->Name, files[i].c_str(), sizeof tmp->Name);
 		removeFileExtension(tmp->Name);
 		strcpy(tmp->Description, _T("rp9"));
 		tmp->BuiltInID = BUILTINID_NONE;
@@ -361,15 +361,15 @@ void ReadConfigFileList()
 	}
 
 	// Read standard config files
-	fetch_configurationpath(path, MAX_PATH);
+	fetch_configurationpath(path, sizeof path);
 	ReadDirectory(path, nullptr, &files);
 	FilterFiles(&files, filter_uae);
 	for (int i = 0; i < files.size(); ++i)
 	{
 		ConfigFileInfo* tmp = new ConfigFileInfo();
-		strncpy(tmp->FullPath, path, MAX_DPATH);
+		strncpy(tmp->FullPath, path, sizeof tmp->FullPath);
 		strcat(tmp->FullPath, files[i].c_str());
-		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
+		strncpy(tmp->Name, files[i].c_str(), sizeof tmp->Name);
 		removeFileExtension(tmp->Name);
 		cfgfile_get_description(tmp->FullPath, tmp->Description, nullptr, nullptr, nullptr);
 		tmp->BuiltInID = BUILTINID_NONE;
@@ -384,9 +384,9 @@ void ReadConfigFileList()
 		if (strcmp(files[i].c_str(), "adfdir.conf"))
 		{
 			ConfigFileInfo* tmp = new ConfigFileInfo();
-			strncpy(tmp->FullPath, path, MAX_DPATH);
+			strncpy(tmp->FullPath, path, sizeof tmp->FullPath);
 			strcat(tmp->FullPath, files[i].c_str());
-			strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
+			strncpy(tmp->Name, files[i].c_str(), sizeof tmp->Name);
 			removeFileExtension(tmp->Name);
 			strcpy(tmp->Description, "Old style configuration file");
 			tmp->BuiltInID = BUILTINID_NONE;
@@ -410,7 +410,7 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 {
 	for (int i = 0; i < ConfigFilesList.size(); ++i)
 	{
-		if (!strncasecmp(ConfigFilesList[i]->Name, name, MAX_DPATH))
+		if (!strncasecmp(ConfigFilesList[i]->Name, name, sizeof ConfigFilesList[i]->Name))
 			return ConfigFilesList[i];
 	}
 	return nullptr;
@@ -510,17 +510,17 @@ void gui_purge_events()
 
 int gui_update()
 {
-	char tmp[MAX_PATH];
+	char tmp[MAX_DPATH];
 
-	fetch_statefilepath(savestate_fname, MAX_DPATH);
+	fetch_statefilepath(savestate_fname, sizeof savestate_fname);
 	fetch_screenshotpath(screenshot_filename, MAX_DPATH);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
 	else
-		strncpy(tmp, last_loaded_config, MAX_PATH);
+		strncpy(tmp, last_loaded_config, sizeof tmp);
 
-	strncat(savestate_fname, tmp, MAX_DPATH);
+	strncat(savestate_fname, tmp, sizeof savestate_fname);
 	strncat(screenshot_filename, tmp, MAX_DPATH);
 	removeFileExtension(savestate_fname);
 	removeFileExtension(screenshot_filename);

@@ -330,10 +330,10 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
           if(content != NULL)
           {
             char target_file[MAX_DPATH];
-            fetch_rp9path(target_file, MAX_DPATH);
-            strncat(target_file, "workbench-", MAX_DPATH);
-            strncat(target_file, (const char *)content, MAX_DPATH);
-            strncat(target_file, ".hdf", MAX_DPATH);
+            fetch_rp9path(target_file, sizeof target_file);
+            strncat(target_file, "workbench-", sizeof target_file);
+            strncat(target_file, (const char *)content, sizeof target_file);
+            strncat(target_file, ".hdf", sizeof target_file);
             FILE *f = fopen(target_file, "rb");
             if(f != NULL)
             {
@@ -420,7 +420,7 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
                     char target_file[MAX_DPATH];
                     if(!my_existsdir(rp9tmp_path))
                       my_mkdir(rp9tmp_path);
-                    snprintf(target_file, MAX_DPATH, "%s%s", rp9tmp_path, content);
+                    snprintf(target_file, sizeof target_file, "%s%s", rp9tmp_path, content);
                     FILE *f = fopen(target_file, "wb");
                     if(f != NULL)
                     {

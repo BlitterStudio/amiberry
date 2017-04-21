@@ -355,7 +355,7 @@ void fetch_configurationpath(char* out, int size)
 
 void set_configurationpath(char* newpath)
 {
-	strncpy(config_path, newpath, MAX_DPATH);
+	strncpy(config_path, newpath, sizeof config_path);
 }
 
 void fetch_rompath(char* out, int size)
@@ -365,7 +365,7 @@ void fetch_rompath(char* out, int size)
 
 void set_rompath(char* newpath)
 {
-	strncpy(rom_path, newpath, MAX_DPATH);
+	strncpy(rom_path, newpath, sizeof rom_path);
 }
 
 void fetch_rp9path(char* out, int size)
@@ -536,46 +536,46 @@ void saveAdfDir()
 	char path[MAX_DPATH];
 	int i;
 
-	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(path, sizeof path, "%s/conf/adfdir.conf", start_path_data);
 	FILE* f = fopen(path, "w");
 	if (!f)
 		return;
 
 	char buffer[MAX_DPATH];
-	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
+	snprintf(buffer, sizeof buffer, "path=%s\n", currentDir);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path);
+	snprintf(buffer, sizeof buffer, "config_path=%s\n", config_path);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
+	snprintf(buffer, sizeof buffer, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "ROMs=%d\n", lstAvailableROMs.size());
+	snprintf(buffer, sizeof buffer, "ROMs=%d\n", lstAvailableROMs.size());
 	fputs(buffer, f);
 	for (i = 0; i < lstAvailableROMs.size(); ++i)
 	{
-		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROMs[i]->Name);
+		snprintf(buffer, sizeof buffer, "ROMName=%s\n", lstAvailableROMs[i]->Name);
 		fputs(buffer, f);
-		snprintf(buffer, MAX_DPATH, "ROMPath=%s\n", lstAvailableROMs[i]->Path);
+		snprintf(buffer, sizeof buffer, "ROMPath=%s\n", lstAvailableROMs[i]->Path);
 		fputs(buffer, f);
-		snprintf(buffer, MAX_DPATH, "ROMType=%d\n", lstAvailableROMs[i]->ROMType);
+		snprintf(buffer, sizeof buffer, "ROMType=%d\n", lstAvailableROMs[i]->ROMType);
 		fputs(buffer, f);
 	}
 
-	snprintf(buffer, MAX_DPATH, "MRUDiskList=%d\n", lstMRUDiskList.size());
+	snprintf(buffer, sizeof buffer, "MRUDiskList=%d\n", lstMRUDiskList.size());
 	fputs(buffer, f);
 	for (i = 0; i < lstMRUDiskList.size(); ++i)
 	{
-		snprintf(buffer, MAX_DPATH, "Diskfile=%s\n", lstMRUDiskList[i].c_str());
+		snprintf(buffer, sizeof buffer, "Diskfile=%s\n", lstMRUDiskList[i].c_str());
 		fputs(buffer, f);
 	}
 
-	snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
+	snprintf(buffer, sizeof buffer, "MRUCDList=%d\n", lstMRUCDList.size());
 	fputs(buffer, f);
 	for (i = 0; i < lstMRUCDList.size(); ++i)
 	{
-		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", lstMRUCDList[i].c_str());
+		snprintf(buffer, sizeof buffer, "CDfile=%s\n", lstMRUCDList[i].c_str());
 		fputs(buffer, f);
 	}
 
@@ -585,7 +585,7 @@ void saveAdfDir()
 void get_string(FILE* f, char* dst, int size)
 {
 	char buffer[MAX_PATH];
-	fgets(buffer, MAX_PATH, f);
+	fgets(buffer, sizeof buffer, f);
 	int i = strlen(buffer);
 	while (i > 0 && (buffer[i - 1] == '\t' || buffer[i - 1] == ' '
 		|| buffer[i - 1] == '\r' || buffer[i - 1] == '\n'))
@@ -599,11 +599,11 @@ void loadAdfDir()
 	int i;
 
 	strcpy(currentDir, start_path_data);
-	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
-	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
-	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
+	snprintf(config_path, sizeof config_path, "%s/conf/", start_path_data);
+	snprintf(rom_path, sizeof rom_path, "%s/kickstarts/", start_path_data);
+	snprintf(rp9_path, sizeof rp9_path, "%s/rp9/", start_path_data);
 
-	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(path, sizeof path, "%s/conf/adfdir.conf", start_path_data);
 	FILE* f1 = fopen(path, "rt");
 	if (f1)
 	{
@@ -637,7 +637,7 @@ void loadAdfDir()
 			for (i = 0; i < numDisks; ++i)
 			{
 				fscanf(f1, "Diskfile=");
-				get_string(f1, disk, sizeof(disk));
+				get_string(f1, disk, sizeof disk);
 				FILE * f = fopen(disk, "rb");
 				if (f != NULL)
 				{
@@ -653,7 +653,7 @@ void loadAdfDir()
 			for (i = 0; i < numCD; ++i)
 			{
 				fscanf(f1, "CDfile=");
-				get_string(f1, cd, sizeof(cd));
+				get_string(f1, cd, sizeof cd);
 				FILE * f = fopen(cd, "rb");
 				if (f != NULL)
 				{
@@ -698,11 +698,11 @@ int main(int argc, char* argv[])
 	max_uae_height = 1080;
 
 	// Get startup path
-	getcwd(start_path_data, MAX_DPATH);
+	getcwd(start_path_data, sizeof start_path_data);
 	loadAdfDir();
 	rp9_init();
 
-	snprintf(savestate_fname, MAX_PATH, "%s/saves/default.ads", start_path_data);
+	snprintf(savestate_fname, sizeof savestate_fname, "%s/saves/default.ads", start_path_data);
 	logging_init();
 
 	memset(&action, 0, sizeof(action));
