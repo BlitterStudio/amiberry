@@ -71,7 +71,7 @@
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/lib/arm-linux-gnueabihf;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;tcmalloc;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
       <ExtraRPATH>
       </ExtraRPATH>
@@ -89,7 +89,7 @@
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/lib/arm-linux-gnueabihf;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;tcmalloc;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
       <ExtraRPATH>
@@ -108,7 +108,7 @@
     <Link>
       <AdditionalLinkerInputs>-Wl,-gc-sections;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/lib/arm-linux-gnueabihf;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;tcmalloc;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;m;z;png;rt;xml2;FLAC;mpg123;dl;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
       <ExtraRPATH>
