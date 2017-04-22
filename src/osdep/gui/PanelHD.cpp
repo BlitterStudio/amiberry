@@ -240,15 +240,15 @@ public:
 			char tmp[MAX_DPATH];
 
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
-				strncpy(tmp, changed_prefs.cdslots[0].name, sizeof tmp);
+				strcpy(tmp, changed_prefs.cdslots[0].name);
 			else
-				strncpy(tmp, currentDir, sizeof tmp);
+				strcpy(tmp, currentDir);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
 				if (strncmp(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name))
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
+					strcpy(changed_prefs.cdslots[0].name, tmp);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
@@ -309,7 +309,7 @@ public:
 			{
 				if (cdfileList.getElementAt(idx).compare(changed_prefs.cdslots[0].name))
 				{
-					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof changed_prefs.cdslots[0].name);
+					strcpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str());
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -557,7 +557,7 @@ void RefreshPanelHD()
 			type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
-				type = (uci->ci.type == UAEDEV_DIR) ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
+				type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
 				nosize = 1;
 			}
 			if (mi.size < 0)
@@ -573,7 +573,7 @@ void RefreshPanelHD()
 				else
 					listCells[row][COL_READWRITE]->setText("yes");
 				listCells[row][COL_SIZE]->setText("n/a");
-				snprintf(tmp, 32, "%d", ci->bootpri);
+				snprintf(tmp, sizeof tmp, "%d", ci->bootpri);
 				listCells[row][COL_BOOTPRI]->setText(tmp);
 			}
 			else
@@ -586,13 +586,13 @@ void RefreshPanelHD()
 				else
 					listCells[row][COL_READWRITE]->setText("yes");
 				if (nosize)
-					snprintf(tmp, 32, "n/a");
+					snprintf(tmp, sizeof tmp, "n/a");
 				else if (mi.size >= 1024 * 1024 * 1024)
-					snprintf(tmp, 32, "%.1fG", double(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
+					snprintf(tmp, sizeof tmp, "%.1fG", double(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
 				else
-					snprintf(tmp, 32, "%.1fM", double(uae_u32(mi.size / 1024)) / 1024.0);
+					snprintf(tmp, sizeof tmp, "%.1fM", double(uae_u32(mi.size / 1024)) / 1024.0);
 				listCells[row][COL_SIZE]->setText(tmp);
-				snprintf(tmp, 32, "%d", ci->bootpri);
+				snprintf(tmp, sizeof tmp, "%d", ci->bootpri);
 				listCells[row][COL_BOOTPRI]->setText(tmp);
 			}
 			listCmdProps[row]->setEnabled(true);
@@ -615,7 +615,7 @@ void RefreshPanelHD()
 	sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
 
 	sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
-	snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);
+	snprintf(tmp, sizeof tmp, "%d %%", 100 - changed_prefs.sound_volume_cd);
 	lblCDVolInfo->setCaption(tmp);
 }
 

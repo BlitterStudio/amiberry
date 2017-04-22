@@ -124,12 +124,12 @@ void ClearAvailableROMList()
 static void addrom(struct romdata* rd, const char* path)
 {
 	AvailableROM* tmp;
-	char tmpName[MAX_PATH];
+	char tmpName[MAX_DPATH];
 	tmp = new AvailableROM();
 	getromname(rd, tmpName);
-	strncpy(tmp->Name, tmpName, sizeof tmp->Name);
+	strcpy(tmp->Name, tmpName);
 	if (path != nullptr)
-		strncpy(tmp->Path, path, sizeof tmp->Path);
+		strcpy(tmp->Path, path);
 	tmp->ROMType = rd->type;
 	lstAvailableROMs.push_back(tmp);
 	romlist_add(path, rd);
@@ -270,7 +270,7 @@ static void scan_rom(char* path)
 void RescanROMs()
 {
 	vector<string> files;
-	char path[MAX_PATH];
+	char path[MAX_DPATH];
 
 	romlist_clear();
 
@@ -281,8 +281,8 @@ void RescanROMs()
 	ReadDirectory(path, nullptr, &files);
 	for (int i = 0; i < files.size(); ++i)
 	{
-		char tmppath[MAX_PATH];
-		strncpy(tmppath, path, sizeof tmppath);
+		char tmppath[MAX_DPATH];
+		strcpy(tmppath, path);
 		strncat(tmppath, files[i].c_str(), sizeof tmppath);
 		scan_rom(tmppath);
 	}
@@ -351,9 +351,9 @@ void ReadConfigFileList()
 	for (int i = 0; i < files.size(); ++i)
 	{
 		ConfigFileInfo* tmp = new ConfigFileInfo();
-		strncpy(tmp->FullPath, path, sizeof tmp->FullPath);
+		strcpy(tmp->FullPath, path);
 		strcat(tmp->FullPath, files[i].c_str());
-		strncpy(tmp->Name, files[i].c_str(), sizeof tmp->Name);
+		strcpy(tmp->Name, files[i].c_str());
 		removeFileExtension(tmp->Name);
 		strcpy(tmp->Description, _T("rp9"));
 		tmp->BuiltInID = BUILTINID_NONE;
@@ -367,9 +367,9 @@ void ReadConfigFileList()
 	for (int i = 0; i < files.size(); ++i)
 	{
 		ConfigFileInfo* tmp = new ConfigFileInfo();
-		strncpy(tmp->FullPath, path, sizeof tmp->FullPath);
+		strcpy(tmp->FullPath, path);
 		strcat(tmp->FullPath, files[i].c_str());
-		strncpy(tmp->Name, files[i].c_str(), sizeof tmp->Name);
+		strcpy(tmp->Name, files[i].c_str());
 		removeFileExtension(tmp->Name);
 		cfgfile_get_description(tmp->FullPath, tmp->Description, nullptr, nullptr, nullptr);
 		tmp->BuiltInID = BUILTINID_NONE;
@@ -384,9 +384,9 @@ void ReadConfigFileList()
 		if (strcmp(files[i].c_str(), "adfdir.conf"))
 		{
 			ConfigFileInfo* tmp = new ConfigFileInfo();
-			strncpy(tmp->FullPath, path, sizeof tmp->FullPath);
+			strcpy(tmp->FullPath, path);
 			strcat(tmp->FullPath, files[i].c_str());
-			strncpy(tmp->Name, files[i].c_str(), sizeof tmp->Name);
+			strcpy(tmp->Name, files[i].c_str());
 			removeFileExtension(tmp->Name);
 			strcpy(tmp->Description, "Old style configuration file");
 			tmp->BuiltInID = BUILTINID_NONE;
@@ -518,7 +518,7 @@ int gui_update()
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
 	else
-		strncpy(tmp, last_loaded_config, sizeof tmp);
+		strcpy(tmp, last_loaded_config);
 
 	strncat(savestate_fname, tmp, sizeof savestate_fname);
 	strncat(screenshot_filename, tmp, MAX_DPATH);

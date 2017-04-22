@@ -83,7 +83,7 @@ int my_readdir (struct my_opendir_s *mod, char* name)
     de = readdir((DIR *) mod->h);
     if(de == 0)
         return 0;
-	strncpy(name, de->d_name, sizeof de->d_name);
+	strcpy(name, de->d_name);
     return 1;
 }
 

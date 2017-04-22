@@ -172,7 +172,7 @@ public:
 			checkfoldername(foldername);
 		else if (!createNew)
 		{
-			strncpy(workingDir, foldername, sizeof(workingDir));
+			strcpy(workingDir, foldername);
 			dialogResult = true;
 			dialogFinished = true;
 		}
@@ -385,7 +385,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], bool creat
 	}
 	else
 	{
-		strncpy(value, workingDir, sizeof value);
+		strcpy(value, workingDir);
 		gui_top->add(wndSelectFile);
 		wndSelectFile->setCaption(title);
 		wndSelectFile->requestModalFocus();
@@ -407,10 +407,10 @@ bool SelectFile(const char* title, char* value, const char* filter[], bool creat
 	ExitSelectFile();
 #endif
 	if (dialogResult)
-		strncpy(value, workingDir, sizeof value);
+		strcpy(value, workingDir);
 #ifdef FILE_SELECT_KEEP_POSITION
 	else
-		strncpy(workingDir, value, sizeof workingDir);
+		strcpy(workingDir, value);
 #endif
 	return dialogResult;
 }

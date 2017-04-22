@@ -47,8 +47,8 @@ public:
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
-			char tmp[MAX_PATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
+			char tmp[MAX_DPATH];
+			strcpy(tmp, txtPath->getText().c_str());
 			wndEditFilesysVirtual->releaseModalFocus();
 			if (SelectFolder("Select folder", tmp))
 			{
@@ -299,7 +299,7 @@ bool EditFilesysVirtual(int unit_no)
 		txtPath->setText(strroot);
 		chkReadWrite->setSelected(!ci->readonly);
 		chkAutoboot->setSelected(ci->bootpri != BOOTPRI_NOAUTOBOOT);
-		snprintf(tmp, 32, "%d", ci->bootpri >= -127 ? ci->bootpri : -127);
+		snprintf(tmp, sizeof tmp, "%d", ci->bootpri >= -127 ? ci->bootpri : -127);
 		txtBootPri->setText(tmp);
 	}
 	else

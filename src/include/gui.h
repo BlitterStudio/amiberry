@@ -65,7 +65,7 @@ struct gui_info
 	int fps, idle;
 	int fps_color;
 	int sndbuf, sndbuf_status;
-	TCHAR df[4][MAX_PATH];		    /* inserted image */
+	TCHAR df[4][MAX_DPATH];		    /* inserted image */
 	uae_u32 crc32[4];		    /* crc32 of image */
 };
 #define NUM_LEDS (LED_MAX)
@@ -90,8 +90,8 @@ extern void ClearAvailableROMList(void);
 #include <vector>
 #include <string>
 typedef struct {
-	char Name[MAX_PATH];
-	char Path[MAX_PATH];
+	char Name[MAX_DPATH];
+	char Path[MAX_DPATH];
 	int ROMType;
 } AvailableROM;
 extern std::vector<AvailableROM*> lstAvailableROMs;

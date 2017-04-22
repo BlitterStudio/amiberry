@@ -2455,25 +2455,6 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
-#ifdef AMIBERRY
-	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "key_for_menu", &p->key_for_menu, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "key_for_quit", &p->key_for_quit, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_menu", &p->button_for_menu, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
-		return 1;
-
-#endif
 	return 0;
 }
 
