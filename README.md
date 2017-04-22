@@ -55,8 +55,8 @@ Install the following packages:
 Clone this repo:
 
       cd ~
-      git clone https://github.com/midwan/amiberry -b sdl2 amiberry-sdl2
-      cd amiberry-sdl2
+      git clone https://github.com/rabejens/amiberry -b sdl2-intlkbd amiberry-sdl2-intlkbd
+      cd amiberry-sdl2-intlkbd
 
 Then for Raspberry Pi 3:  
 
