@@ -9,7 +9,7 @@
 #pragma once
 #include "SDL.h"
 
-#define TARGET_NAME "Amiberry"
+#define TARGET_NAME "amiberry"
 
 #define NO_MAIN_IN_MAIN_C
 

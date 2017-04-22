@@ -2473,30 +2473,6 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
 		return 1;
 
-	if (cfgfile_yesno(option, value, "amiberry.custom_controls", &p->customControls, true))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_up", &p->custom_up, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_down", &p->custom_down, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_left", &p->custom_left, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_right", &p->custom_right, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_a", &p->custom_a, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_b", &p->custom_b, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_x", &p->custom_x, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_y", &p->custom_y, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_l", &p->custom_l, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_r", &p->custom_r, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "amiberry.custom_play", &p->custom_play, 1))
-		return 1;
 #endif
 	return 0;
 }
