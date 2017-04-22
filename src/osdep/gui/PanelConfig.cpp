@@ -35,7 +35,7 @@ bool LoadConfigByName(const char* name)
 		txtName->setText(config->Name);
 		txtDesc->setText(config->Description);
 		target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
-		strncpy(last_active_config, config->Name, sizeof config->Name);
+		strncpy(last_active_config, config->Name, sizeof last_active_config);
 		DisableResume();
 		RefreshAllPanels();
 	}
@@ -151,9 +151,9 @@ public:
 			if (!txtName->getText().empty())
 			{
 				fetch_configurationpath(filename, sizeof filename);
-				strncat(filename, txtName->getText().c_str(), 255);
+				strncat(filename, txtName->getText().c_str(), sizeof filename);
 				strncat(filename, ".uae", sizeof filename);
-				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 255);
+				strncpy(changed_prefs.description, txtDesc->getText().c_str(), sizeof changed_prefs.description);
 				if (cfgfile_save(&changed_prefs, filename, 0))
 					RefreshPanelConfig();
 			}
@@ -216,7 +216,7 @@ public:
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
 			}
-			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, sizeof ConfigFilesList[selected_item]->Name);
+			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, sizeof last_active_config);
 			DisableResume();
 			RefreshAllPanels();
 		}
