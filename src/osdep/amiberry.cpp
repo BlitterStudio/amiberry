@@ -259,10 +259,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 	p->scaling_method = -1; //Default is Auto
-	p->key_for_menu = SDLK_F12;
-	p->key_for_quit = 0;
-	p->button_for_menu = -1;
-	p->button_for_quit = -1;
+	_tcscpy(p->open_gui, "F12");
+	_tcscpy(p->quit_amiberry, "");
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
@@ -271,10 +269,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
 	cfgfile_write(f, _T("amiberry.scaling_method"), _T("%d"), p->scaling_method);
-	cfgfile_write(f, _T("amiberry.key_for_menu"), _T("%d"), p->key_for_menu);
-	cfgfile_write(f, _T("amiberry.key_for_quit"), _T("%d"), p->key_for_quit);
-	cfgfile_write(f, _T("amiberry.button_for_menu"), _T("%d"), p->button_for_menu);
-	cfgfile_write(f, _T("amiberry.button_for_quit"), _T("%d"), p->button_for_quit);
+	cfgfile_write_str(f, _T("amiberry.open_gui"), p->open_gui);
+	cfgfile_write_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 
 	cfgfile_write_bool(f, "amiberry.custom_controls", p->customControls);
 	cfgfile_write(f, "amiberry.custom_up", "%d", p->custom_up);
@@ -312,13 +308,9 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
 		return 1;
-	if (cfgfile_intval(option, value, "key_for_menu", &p->key_for_menu, 1))
+	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
 		return 1;
-	if (cfgfile_intval(option, value, "key_for_quit", &p->key_for_quit, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_menu", &p->button_for_menu, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
+	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
 		return 1;
 
 	if (cfgfile_yesno(option, value, "custom_controls", &p->customControls))
@@ -399,7 +391,6 @@ void fetch_screenshotpath(char* out, int size)
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
 {
-	int i;
 	int result = 0;
 
 	if (emulating && changed_prefs.cdslots[0].inuse)
@@ -432,7 +423,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 
 	if (result)
 	{
-		for (i = 0; i < p->nr_floppies; ++i)
+		for (int i = 0; i < p->nr_floppies; ++i)
 		{
 			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
@@ -651,7 +642,7 @@ void loadAdfDir()
 				fscanf(f1, "Diskfile=");
 				get_string(f1, disk, sizeof disk);
 				FILE * f = fopen(disk, "rb");
-				if (f != NULL)
+				if (f != nullptr)
 				{
 					fclose(f);
 					lstMRUDiskList.push_back(disk);
@@ -667,7 +658,7 @@ void loadAdfDir()
 				fscanf(f1, "CDfile=");
 				get_string(f1, cd, sizeof cd);
 				FILE * f = fopen(cd, "rb");
-				if (f != NULL)
+				if (f != nullptr)
 				{
 					fclose(f);
 					lstMRUCDList.push_back(cd);
@@ -693,10 +684,9 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 	
 	if (v == 2)
 	{
-		int64_t time;
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		time = (int64_t(ts.tv_sec) * 1000000000) + ts.tv_nsec;
+		int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 		*low = uae_u32(time & 0xffffffff);
 		return uae_u32(time >> 32);
 	}
@@ -809,12 +799,12 @@ int handle_msgpump()
 			uae_quit();
 			break;
 
-		case SDL_JOYBUTTONDOWN:
-			if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
-				inputdevice_add_inputcode(AKS_QUIT, 1);
-			break;
+		//case SDL_JOYBUTTONDOWN:
+		//	if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
+		//		inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+		//	if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
+		//		inputdevice_add_inputcode(AKS_QUIT, 1);
+		//	break;
 
 		case SDL_KEYDOWN:
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
@@ -939,10 +929,9 @@ int handle_msgpump()
 			{
 				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 				{
-					int x, y;
 					int mouseScale = currprefs.input_joymouse_multiplier / 2;
-					x = rEvent.motion.xrel;
-					y = rEvent.motion.yrel;
+					int x = rEvent.motion.xrel;
+					int y = rEvent.motion.yrel;
 
 					setmousestate(0, 0, x * mouseScale, 0);
 					setmousestate(0, 1, y * mouseScale, 0);

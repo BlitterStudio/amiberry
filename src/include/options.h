@@ -556,10 +556,8 @@ struct uae_prefs
 	int custom_l;
 	int custom_r;
 	int custom_play;
-	int key_for_menu;
-	int key_for_quit;
-	int button_for_menu;
-	int button_for_quit;
+	TCHAR open_gui[256];
+	TCHAR quit_amiberry[256];
 #endif
 
 	int statecapturerate, statecapturebuffersize;

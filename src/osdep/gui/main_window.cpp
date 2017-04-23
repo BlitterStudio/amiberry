@@ -227,7 +227,7 @@ namespace sdl
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
 
-				if (gui_event.key.keysym.sym == currprefs.key_for_menu)
+				if (gui_event.key.keysym.sym == SDL_GetKeyFromName(currprefs.open_gui))
 				{
 					if (emulating && widgets::cmdStart->isEnabled())
 					{

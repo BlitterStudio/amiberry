@@ -3004,7 +3004,7 @@ static int handle_input_event (int nr, int state, int max, int autofire, bool ca
 		return 0;
 
 	// ignore normal GUI event if forced gui key is in use
-	if (currprefs.key_for_menu >= 0 && nr == INPUTEVENT_SPC_ENTERGUI)
+	if (currprefs.open_gui != "" && nr == INPUTEVENT_SPC_ENTERGUI)
 		return 0;
 
 	ie = &events[nr];
@@ -6651,8 +6651,6 @@ int inputdevice_config_change_test()
 // copy configuration #src to configuration #dst
 void inputdevice_copyconfig(const struct uae_prefs* src, struct uae_prefs* dst)
 {
-	int i, j;
-
 	dst->input_selected_setting = src->input_selected_setting;
 	dst->input_joymouse_multiplier = src->input_joymouse_multiplier;
 	dst->input_joymouse_deadzone = src->input_joymouse_deadzone;
@@ -6663,20 +6661,29 @@ void inputdevice_copyconfig(const struct uae_prefs* src, struct uae_prefs* dst)
 	dst->input_tablet = src->input_tablet;
 
 	dst->customControls = src->customControls;
+	dst->custom_up = src->custom_up;
+	dst->custom_down = src->custom_down;
+	dst->custom_left = src->custom_left;
+	dst->custom_right = src->custom_right;
+	dst->custom_a = src->custom_a;
+	dst->custom_b = src->custom_b;
+	dst->custom_x = src->custom_x;
+	dst->custom_y = src->custom_y;
+	dst->custom_l = src->custom_l;
+	dst->custom_r = src->custom_r;
+	dst->custom_play = src->custom_play;
 
-	dst->key_for_menu = src->key_for_menu;
-	dst->key_for_quit = src->key_for_quit;
-	dst->button_for_menu = src->button_for_menu;
-	dst->button_for_quit = src->button_for_quit;
+	strcpy(dst->open_gui, src->open_gui);
+	strcpy(dst->quit_amiberry, src->quit_amiberry);
 
 	copyjport(src, dst, 0);
 	copyjport(src, dst, 1);
 	copyjport(src, dst, 2);
 	copyjport(src, dst, 3);
 
-	for (i = 0; i < MAX_INPUT_SETTINGS; i++)
+	for (int i = 0; i < MAX_INPUT_SETTINGS; i++)
 	{
-		for (j = 0; j < MAX_INPUT_DEVICES; j++)
+		for (int j = 0; j < MAX_INPUT_DEVICES; j++)
 		{
 			memcpy(&dst->joystick_settings[i][j], &src->joystick_settings[i][j], sizeof (struct uae_input_device));
 			memcpy(&dst->mouse_settings[i][j], &src->mouse_settings[i][j], sizeof (struct uae_input_device));
