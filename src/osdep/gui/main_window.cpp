@@ -425,8 +425,7 @@ namespace widgets
 	public:
 		void focusGained(const gcn::Event& event) override
 		{
-			int i;
-			for (i = 0; categories[i].category != nullptr; ++i)
+			for (int i = 0; categories[i].category != nullptr; ++i)
 			{
 				if (event.getSource() == categories[i].selector)
 				{
@@ -600,9 +599,7 @@ namespace widgets
 
 void RefreshAllPanels()
 {
-	int i;
-
-	for (i = 0; categories[i].category != nullptr; ++i)
+	for (int i = 0; categories[i].category != nullptr; ++i)
 	{
 		if (categories[i].RefreshFunc != nullptr)
 			(*categories[i].RefreshFunc)();

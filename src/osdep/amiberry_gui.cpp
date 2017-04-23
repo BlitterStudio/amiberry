@@ -123,9 +123,8 @@ void ClearAvailableROMList()
 
 static void addrom(struct romdata* rd, const char* path)
 {
-	AvailableROM* tmp;
 	char tmpName[MAX_DPATH];
-	tmp = new AvailableROM();
+	AvailableROM* tmp = new AvailableROM();
 	getromname(rd, tmpName);
 	strcpy(tmp->Name, tmpName);
 	if (path != nullptr)
@@ -144,7 +143,6 @@ struct romscandata
 static struct romdata* scan_single_rom_2(struct zfile* f)
 {
 	uae_u8 buffer[20] = {0};
-	uae_u8* rombuf;
 	int cl = 0, size;
 	struct romdata* rd = nullptr;
 
@@ -169,7 +167,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	{
 		zfile_fseek(f, 0, SEEK_SET);
 	}
-	rombuf = xcalloc(uae_u8, size);
+	uae_u8* rombuf = xcalloc(uae_u8, size);
 	if (!rombuf)
 		return nullptr;
 	zfile_fread(rombuf, 1, size, f);
@@ -183,9 +181,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 		rd = getromdatabydata(rombuf, size);
 		if (!rd && (size & 65535) == 0)
 		{
-			/* check byteswap */
-			int i;
-			for (i = 0; i < size; i += 2)
+			for (int i = 0; i < size; i += 2)
 			{
 				uae_u8 b = rombuf[i];
 				rombuf[i] = rombuf[i + 1];
@@ -200,15 +196,13 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 
 static struct romdata* scan_single_rom(char* path)
 {
-	struct zfile* z;
 	char tmp[MAX_DPATH];
-	struct romdata* rd;
 
 	strcpy(tmp, path);
-	rd = getromdatabypath(path);
+	struct romdata* rd = getromdatabypath(path);
 	if (rd && rd->crc32 == 0xffffffff)
 		return rd;
-	z = zfile_fopen(path, "rb", ZFD_NORMAL);
+	struct zfile* z = zfile_fopen(path, "rb", ZFD_NORMAL);
 	if (!z)
 		return nullptr;
 	return scan_single_rom_2(z);
@@ -240,11 +234,10 @@ static int isromext(char* path)
 static int scan_rom_2(struct zfile* f, void* dummy)
 {
 	char* path = zfile_getname(f);
-	struct romdata* rd;
 
 	if (!isromext(path))
 		return 0;
-	rd = scan_single_rom_2(f);
+	struct romdata* rd = scan_single_rom_2(f);
 	if (rd)
 		addrom(rd, path);
 	return 0;
@@ -252,14 +245,12 @@ static int scan_rom_2(struct zfile* f, void* dummy)
 
 static void scan_rom(char* path)
 {
-	struct romdata* rd;
-
 	if (!isromext(path))
 	{
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return;
 	}
-	rd = getarcadiarombyname(path);
+	struct romdata* rd = getarcadiarombyname(path);
 	if (rd)
 		addrom(rd, path);
 	else
@@ -440,9 +431,8 @@ static void after_leave_gui()
 	// Check if we have to set or clear autofire
 	int new_af = changed_prefs.input_autofire_linecnt == 0 ? 0 : 1;
 	int update = 0;
-	int num;
 
-	for (num = 0; num < 2; ++num)
+	for (int num = 0; num < 2; ++num)
 	{
 		if (changed_prefs.jports[num].id == JSEM_JOYS && changed_prefs.jports[num].autofire != new_af)
 		{
@@ -718,14 +708,10 @@ void FilterFiles(vector<string>* files, const char* filter[])
 
 bool DevicenameExists(const char* name)
 {
-	int i;
-	struct uaedev_config_data* uci;
-	struct uaedev_config_info* ci;
-
-	for (i = 0; i < MAX_HD_DEVICES; ++i)
+	for (int i = 0; i < MAX_HD_DEVICES; ++i)
 	{
-		uci = &changed_prefs.mountconfig[i];
-		ci = &uci->ci;
+		struct uaedev_config_data* uci = &changed_prefs.mountconfig[i];
+		struct uaedev_config_info* ci = &uci->ci;
 
 		if (ci->devname && ci->devname[0])
 		{
@@ -770,11 +756,10 @@ bool hardfile_testrdb(const TCHAR* filename)
 	bool isrdb = false;
 	struct zfile* f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
 	uae_u8 tmp[8];
-	int i;
 
 	if (!f)
 		return false;
-	for (i = 0; i < 16; i++)
+	for (int i = 0; i < 16; i++)
 	{
 		zfile_fseek(f, i * 512, SEEK_SET);
 		memset(tmp, 0, sizeof tmp);

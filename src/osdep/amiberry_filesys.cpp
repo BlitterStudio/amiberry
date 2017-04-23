@@ -54,12 +54,12 @@ struct my_opendir_s *my_opendir (const char* name)
 
     mod = xmalloc (struct my_opendir_s, 1);
     if (!mod)
-        return NULL;
+        return nullptr;
     mod->h = opendir(name);
-    if (mod->h == NULL)
+    if (mod->h == nullptr)
     {
         xfree (mod);
-        return NULL;
+        return nullptr;
     }
     return mod;
 }
@@ -68,20 +68,18 @@ struct my_opendir_s *my_opendir (const char* name)
 void my_closedir (struct my_opendir_s *mod)
 {
     if (mod)
-        closedir((DIR *) mod->h);
+        closedir(static_cast<DIR *>(mod->h));
     xfree (mod);
 }
 
 
 int my_readdir (struct my_opendir_s *mod, char* name)
 {
-    struct dirent *de;
-
-    if (!mod)
+	if (!mod)
         return 0;
 
-    de = readdir((DIR *) mod->h);
-    if(de == 0)
+    struct dirent *de = readdir(static_cast<DIR *>(mod->h));
+    if(de == nullptr)
         return 0;
 	strcpy(name, de->d_name);
     return 1;
@@ -97,35 +95,35 @@ struct my_openfile_s
 void my_close (struct my_openfile_s *mos)
 {
     if(mos)
-        close((int) mos->h);
+        close(int(mos->h));
     xfree (mos);
 }
 
 
 uae_s64 int my_lseek (struct my_openfile_s *mos, uae_s64 int offset, int pos)
 {
-    return lseek((int) mos->h, offset, pos);
+    return lseek(int(mos->h), offset, pos);
 }
 
 
 uae_s64 int my_fsize (struct my_openfile_s *mos)
 {
-    uae_s64 pos = lseek((int) mos->h, 0, SEEK_CUR);
-    uae_s64 size = lseek((int) mos->h, 0, SEEK_END);
-    lseek((int) mos->h, pos, SEEK_SET);
+    uae_s64 pos = lseek(int(mos->h), 0, SEEK_CUR);
+    uae_s64 size = lseek(int(mos->h), 0, SEEK_END);
+    lseek(int(mos->h), pos, SEEK_SET);
     return size;
 }
 
 
 unsigned int my_read (struct my_openfile_s *mos, void *b, unsigned int size)
 {
-    return read((int) mos->h, b, size);
+    return read(int(mos->h), b, size);
 }
 
 
 unsigned int my_write (struct my_openfile_s *mos, void *b, unsigned int size)
 {
-    return write((int) mos->h, b, size);
+    return write(int(mos->h), b, size);
 }
 
 
@@ -168,12 +166,12 @@ struct my_openfile_s *my_open (const TCHAR *name, int flags)
 
     mos = xmalloc (struct my_openfile_s, 1);
     if (!mos)
-        return NULL;
-    mos->h = (void *) open(name, flags);
+        return nullptr;
+    mos->h = reinterpret_cast<void *>(open(name, flags));
     if (!mos->h)
     {
         xfree (mos);
-        mos = NULL;
+        mos = nullptr;
     }
     return mos;
 }

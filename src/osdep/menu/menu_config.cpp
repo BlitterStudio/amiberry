@@ -2,12 +2,8 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
-#include "autoconf.h"
 #include "options.h"
 #include "gui.h"
-#include "sounddep/sound.h"
-#include "include/memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "uae.h"
@@ -32,8 +28,7 @@ static void replace(char* str, char replace, char toreplace)
 
 int create_configfilename(char* dest, char* basename, int fromDir)
 {
-	char* p;
-	p = basename + strlen(basename) - 1;
+	char* p = basename + strlen(basename) - 1;
 	while (*p != '/')
 		p--;
 	p++;

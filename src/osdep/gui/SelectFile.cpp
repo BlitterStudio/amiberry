@@ -89,8 +89,7 @@ public:
 	{
 		if (actionEvent.getSource() == cmdOK)
 		{
-			int selected_item;
-			selected_item = lstFiles->getSelected();
+			int selected_item = lstFiles->getSelected();
 			if (createNew)
 			{
 				char tmp[MAX_PATH];
@@ -124,14 +123,13 @@ static FileButtonActionListener* fileButtonActionListener;
 
 static void checkfoldername(char* current)
 {
-	char* ptr;
 	char actualpath[MAX_PATH];
 	DIR* dir;
 
 	if ((dir = opendir(current)))
 	{
 		fileList->changeDir(current);
-		ptr = realpath(current, actualpath);
+		char * ptr = realpath(current, actualpath);
 		strcpy(workingDir, ptr);
 		closedir(dir);
 	}
@@ -161,10 +159,9 @@ class SelectFileActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		int selected_item;
 		char foldername[MAX_PATH] = "";
 
-		selected_item = lstFiles->getSelected();
+		int selected_item = lstFiles->getSelected();
 		strcpy(foldername, workingDir);
 		strcat(foldername, "/");
 		strcat(foldername, fileList->getElementAt(selected_item).c_str());

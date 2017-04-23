@@ -175,7 +175,7 @@ static void ShowMessageLoop()
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;
-				default: 
+				default:
 					break;
 				}
 			}

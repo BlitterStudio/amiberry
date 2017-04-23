@@ -153,7 +153,7 @@ static void InitEditFilesysVirtual()
 	posX += lblDevice->getWidth() + 8;
 
 	wndEditFilesysVirtual->add(txtDevice, posX, posY);
-	posX += txtDevice->getWidth() + DISTANCE_BORDER*2;
+	posX += txtDevice->getWidth() + DISTANCE_BORDER * 2;
 
 	wndEditFilesysVirtual->add(chkReadWrite, posX, posY + 1);
 	posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
@@ -249,7 +249,7 @@ static void EditFilesysVirtualLoop()
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;
-				default: 
+				default:
 					break;
 				}
 			}
@@ -275,7 +275,7 @@ bool EditFilesysVirtual(int unit_no)
 {
 	struct mountedinfo mi;
 	struct uaedev_config_data* uci;
-	std::string strdevname, strvolname, strroot;
+	string strdevname, strvolname, strroot;
 	char tmp[32];
 
 	dialogResult = false;
@@ -285,10 +285,8 @@ bool EditFilesysVirtual(int unit_no)
 
 	if (unit_no >= 0)
 	{
-		struct uaedev_config_info* ci;
-
 		uci = &changed_prefs.mountconfig[unit_no];
-		ci = &uci->ci;
+		struct uaedev_config_info * ci = &uci->ci;
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		strdevname.assign(ci->devname);

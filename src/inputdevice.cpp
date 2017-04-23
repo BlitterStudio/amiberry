@@ -6661,17 +6661,17 @@ void inputdevice_copyconfig(const struct uae_prefs* src, struct uae_prefs* dst)
 	dst->input_tablet = src->input_tablet;
 
 	dst->customControls = src->customControls;
-	dst->custom_up = src->custom_up;
-	dst->custom_down = src->custom_down;
-	dst->custom_left = src->custom_left;
-	dst->custom_right = src->custom_right;
-	dst->custom_a = src->custom_a;
-	dst->custom_b = src->custom_b;
-	dst->custom_x = src->custom_x;
-	dst->custom_y = src->custom_y;
-	dst->custom_l = src->custom_l;
-	dst->custom_r = src->custom_r;
-	dst->custom_play = src->custom_play;
+	strcpy(dst->custom_up, src->custom_up);
+	strcpy(dst->custom_down, src->custom_down);
+	strcpy(dst->custom_left, src->custom_left);
+	strcpy(dst->custom_right, src->custom_right);
+	strcpy(dst->custom_a, src->custom_a);
+	strcpy(dst->custom_b, src->custom_b);
+	strcpy(dst->custom_x, src->custom_x);
+	strcpy(dst->custom_y, src->custom_y);
+	strcpy(dst->custom_l, src->custom_l);
+	strcpy(dst->custom_r, src->custom_r);
+	strcpy(dst->custom_play, src->custom_play);
 
 	strcpy(dst->open_gui, src->open_gui);
 	strcpy(dst->quit_amiberry, src->quit_amiberry);
