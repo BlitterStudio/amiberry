@@ -88,7 +88,7 @@ public:
 	{
 		AvailableROM* rom = mainROMList->getROMat(cboMainROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
+			strcpy(changed_prefs.romfile, rom->Path);
 	}
 };
 
@@ -102,9 +102,9 @@ public:
 	{
 		AvailableROM* rom = extROMList->getROMat(cboExtROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
+			strcpy(changed_prefs.romextfile, rom->Path);
 		else
-			strncpy(changed_prefs.romextfile, "", sizeof(changed_prefs.romextfile));
+			strcpy(changed_prefs.romextfile, "");
 	}
 };
 
@@ -116,39 +116,39 @@ class ROMButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char tmp[MAX_PATH];
+		char tmp[MAX_DPATH];
 		const char* filter[] = {".rom", "\0"};
 
 		if (actionEvent.getSource() == cmdMainROM)
 		{
-			strncpy(tmp, currentDir, sizeof tmp);
+			strcpy(tmp, currentDir);
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
 				AvailableROM* newrom;
 				newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strncpy(newrom->Path, tmp, sizeof newrom->Path);
+				strcpy(newrom->Path, tmp);
 				newrom->ROMType = ROMTYPE_KICK;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romfile, tmp, sizeof(changed_prefs.romfile));
+				strcpy(changed_prefs.romfile, tmp);
 				RefreshPanelROM();
 			}
 			cmdMainROM->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdExtROM)
 		{
-			strncpy(tmp, currentDir, sizeof tmp);
+			strcpy(tmp, currentDir);
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
 				AvailableROM* newrom;
 				newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strncpy(newrom->Path, tmp, sizeof newrom->Path);
+				strcpy(newrom->Path, tmp);
 				newrom->ROMType = ROMTYPE_EXTCDTV;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
+				strcpy(changed_prefs.romextfile, tmp);
 				RefreshPanelROM();
 			}
 			cmdExtROM->requestFocus();

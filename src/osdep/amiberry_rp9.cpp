@@ -431,22 +431,22 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
                         // Add floppy
                         if(priority < 2)
                         {
-                  	      strncpy(p->floppyslots[0].df, target_file, sizeof(p->floppyslots[0].df));
+                  	      strcpy(p->floppyslots[0].df, target_file);
                   	      disk_insert(0, p->floppyslots[0].df);
                   	    }
                   	    else if(priority == 2 && p->nr_floppies > 1)
                 	      {
-                  	      strncpy(p->floppyslots[1].df, target_file, sizeof(p->floppyslots[1].df));
+                  	      strcpy(p->floppyslots[1].df, target_file);
                   	      disk_insert(1, p->floppyslots[1].df);
                 	      }
                   	    else if(priority == 3 && p->nr_floppies > 2)
                 	      {
-                  	      strncpy(p->floppyslots[2].df, target_file, sizeof(p->floppyslots[2].df));
+                  	      strcpy(p->floppyslots[2].df, target_file);
                   	      disk_insert(2, p->floppyslots[2].df);
                 	      }
                   	    else if(priority == 4 && p->nr_floppies > 3)
                 	      {
-                  	      strncpy(p->floppyslots[3].df, target_file, sizeof(p->floppyslots[3].df));
+                  	      strcpy(p->floppyslots[3].df, target_file);
                   	      disk_insert(3, p->floppyslots[3].df);
                 	      }
                         AddFileToDiskList(target_file, 1);

@@ -48,13 +48,13 @@ int create_configfilename(char* dest, char* basename, int fromDir)
 		if (pch)
 		{
 			*pch = '\0';
-			snprintf(dest, MAX_DPATH, "%s/conf/%s.uae", start_path_data, filename);
+			snprintf(dest, sizeof dest, "%s/conf/%s.uae", start_path_data, filename);
 			return 1;
 		}
 	}
 	else
 	{
-		snprintf(dest, MAX_DPATH, "%s/conf/%s.uae", start_path_data, p);
+		snprintf(dest, sizeof dest, "%s/conf/%s.uae", start_path_data, p);
 		return 1;
 	}
 
@@ -78,7 +78,7 @@ static bool CheckKickstart(struct uae_prefs* p)
 		if (!strcasecmp(lstAvailableROMs[i]->Path, kickpath))
 		{
 			// Found it
-			strncpy(p->romfile, kickpath, sizeof(p->romfile));
+			strcpy(p->romfile, kickpath);
 			return true;
 		}
 	}
@@ -91,7 +91,7 @@ static bool CheckKickstart(struct uae_prefs* p)
 			if (!strncasecmp(lstAvailableROMs[i]->Name, kickstarts_names[kickstart], strlen(kickstarts_names[kickstart])))
 			{
 				// Found it
-				strncpy(p->romfile, lstAvailableROMs[i]->Path, sizeof(p->romfile));
+				strcpy(p->romfile, lstAvailableROMs[i]->Path);
 				return true;
 			}
 		}

@@ -46,8 +46,8 @@ public:
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
-			char tmp[MAX_PATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
+			char tmp[MAX_DPATH];
+			strcpy(tmp, txtPath->getText().c_str());
 			wndCreateFilesysHardfile->releaseModalFocus();
 			if (SelectFile("Create harddisk file", tmp, harddisk_filter, true))
 			{

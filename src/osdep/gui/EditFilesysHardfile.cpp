@@ -72,8 +72,8 @@ public:
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
-			char tmp[MAX_PATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
+			char tmp[MAX_DPATH];
+			strcpy(tmp, txtPath->getText().c_str());
 			wndEditFilesysHardfile->releaseModalFocus();
 			if (SelectFile("Select harddisk file", tmp, harddisk_filter))
 			{
@@ -362,15 +362,15 @@ bool EditFilesysHardfile(int unit_no)
 
 		chkReadWrite->setSelected(!ci->readonly);
 		chkAutoboot->setSelected(ci->bootpri != BOOTPRI_NOAUTOBOOT);
-		snprintf(tmp, 32, "%d", ci->bootpri >= -127 ? ci->bootpri : -127);
+		snprintf(tmp, sizeof tmp, "%d", ci->bootpri >= -127 ? ci->bootpri : -127);
 		txtBootPri->setText(tmp);
-		snprintf(tmp, 32, "%d", ci->surfaces);
+		snprintf(tmp, sizeof tmp, "%d", ci->surfaces);
 		txtSurfaces->setText(tmp);
-		snprintf(tmp, 32, "%d", ci->reserved);
+		snprintf(tmp, sizeof tmp, "%d", ci->reserved);
 		txtReserved->setText(tmp);
-		snprintf(tmp, 32, "%d", ci->sectors);
+		snprintf(tmp, sizeof tmp, "%d", ci->sectors);
 		txtSectors->setText(tmp);
-		snprintf(tmp, 32, "%d", ci->blocksize);
+		snprintf(tmp, sizeof tmp, "%d", ci->blocksize);
 		txtBlocksize->setText(tmp);
 
 		check_rdb(strroot.c_str());

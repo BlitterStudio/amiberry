@@ -177,14 +177,14 @@ public:
 				char tmp[MAX_DPATH];
 
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					strncpy(tmp, changed_prefs.floppyslots[i].df, sizeof changed_prefs.floppyslots[i].df);
+					strcpy(tmp, changed_prefs.floppyslots[i].df);
 				else
-					strncpy(tmp, currentDir, sizeof currentDir);
+					strcpy(tmp, currentDir);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp, sizeof changed_prefs.floppyslots[i].df))
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof changed_prefs.floppyslots[i].df);
+						strcpy(changed_prefs.floppyslots[i].df, tmp);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extractPath(tmp, currentDir);
@@ -237,7 +237,7 @@ public:
 					{
 						if (diskfileList.getElementAt(idx).compare(changed_prefs.floppyslots[i].df))
 						{
-							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), sizeof(changed_prefs.floppyslots[i].df));
+							strcpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str());
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
@@ -296,7 +296,7 @@ public:
 			removeFileExtension(diskname);
 
 			fetch_configurationpath(filename, sizeof filename);
-			strncat(filename, diskname, sizeof diskname);
+			strncat(filename, diskname, sizeof filename);
 			strncat(filename, ".uae", sizeof filename);
 
 			snprintf(changed_prefs.description, sizeof changed_prefs.description, "Configuration for disk '%s'", diskname);
@@ -319,7 +319,7 @@ public:
 			// Create 3.5'' DD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strncpy(tmp, currentDir, sizeof tmp);
+			strcpy(tmp, currentDir);
 			if (SelectFile("Create 3.5'' DD disk file", tmp, diskfile_filter, true))
 			{
 				extractFileName(tmp, diskname);
@@ -336,7 +336,7 @@ public:
 			// Create 3.5'' HD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strncpy(tmp, currentDir, sizeof tmp);
+			strcpy(tmp, currentDir);
 			if (SelectFile("Create 3.5'' HD disk file", tmp, diskfile_filter, true))
 			{
 				extractFileName(tmp, diskname);

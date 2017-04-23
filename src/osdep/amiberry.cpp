@@ -267,14 +267,14 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	cfgfile_write(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
-	cfgfile_write(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
-	cfgfile_write(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
-	cfgfile_write(f, _T("scaling_method"), _T("%d"), p->scaling_method);
-	cfgfile_write(f, _T("key_for_menu"), _T("%d"), p->key_for_menu);
-	cfgfile_write(f, _T("key_for_quit"), _T("%d"), p->key_for_quit);
-	cfgfile_write(f, _T("button_for_menu"), _T("%d"), p->button_for_menu);
-	cfgfile_write(f, _T("button_for_quit"), _T("%d"), p->button_for_quit);
+	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
+	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
+	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
+	cfgfile_write(f, _T("amiberry.scaling_method"), _T("%d"), p->scaling_method);
+	cfgfile_write(f, _T("amiberry.key_for_menu"), _T("%d"), p->key_for_menu);
+	cfgfile_write(f, _T("amiberry.key_for_quit"), _T("%d"), p->key_for_quit);
+	cfgfile_write(f, _T("amiberry.button_for_menu"), _T("%d"), p->button_for_menu);
+	cfgfile_write(f, _T("amiberry.button_for_quit"), _T("%d"), p->button_for_quit);
 
 	cfgfile_write_bool(f, "amiberry.custom_controls", p->customControls);
 	cfgfile_write(f, "amiberry.custom_up", "%d", p->custom_up);
@@ -321,19 +321,31 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
 		return 1;
 
-	int result = cfgfile_yesno(option, value, "amiberry.custom_controls", &p->customControls)
-		|| cfgfile_intval(option, value, "amiberry.custom_up", &p->custom_up, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_down", &p->custom_down, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_left", &p->custom_left, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_right", &p->custom_right, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_a", &p->custom_a, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_b", &p->custom_b, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_x", &p->custom_x, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_y", &p->custom_y, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_l", &p->custom_l, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_r", &p->custom_r, 1)
-		|| cfgfile_intval(option, value, "amiberry.custom_play", &p->custom_play, 1);
-	return result;
+	if (cfgfile_yesno(option, value, "custom_controls", &p->customControls))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_up", &p->custom_up, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_down", &p->custom_down, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_left", &p->custom_left, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_right", &p->custom_right, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_a", &p->custom_a, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_b", &p->custom_b, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_x", &p->custom_x, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_y", &p->custom_y, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_l", &p->custom_l, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_r", &p->custom_r, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "custom_play", &p->custom_play, 1))
+		return 1;
+	return 0;
 }
 
 void fetch_datapath(char* out, int size)
@@ -355,7 +367,7 @@ void fetch_configurationpath(char* out, int size)
 
 void set_configurationpath(char* newpath)
 {
-	strncpy(config_path, newpath, sizeof config_path);
+	strcpy(config_path, newpath);
 }
 
 void fetch_rompath(char* out, int size)
@@ -365,7 +377,7 @@ void fetch_rompath(char* out, int size)
 
 void set_rompath(char* newpath)
 {
-	strncpy(rom_path, newpath, sizeof rom_path);
+	strcpy(rom_path, newpath);
 }
 
 void fetch_rp9path(char* out, int size)
@@ -608,13 +620,13 @@ void loadAdfDir()
 	if (f1)
 	{
 		fscanf(f1, "path=");
-		get_string(f1, currentDir, sizeof(currentDir));
+		get_string(f1, currentDir, sizeof currentDir);
 		if (!feof(f1))
 		{
 			fscanf(f1, "config_path=");
-			get_string(f1, config_path, sizeof(config_path));
+			get_string(f1, config_path, sizeof config_path);
 			fscanf(f1, "rom_path=");
-			get_string(f1, rom_path, sizeof(rom_path));
+			get_string(f1, rom_path, sizeof rom_path);
 
 			int numROMs;
 			fscanf(f1, "ROMs=%d\n", &numROMs);
@@ -623,10 +635,10 @@ void loadAdfDir()
 				AvailableROM* tmp;
 				tmp = new AvailableROM();
 				fscanf(f1, "ROMName=");
-				get_string(f1, tmp->Name, sizeof(tmp->Name));
+				get_string(f1, tmp->Name, sizeof tmp->Name);
 				fscanf(f1, "ROMPath=");
-				get_string(f1, tmp->Path, sizeof(tmp->Path));
-				fscanf(f1, "ROMType=%d\n", &(tmp->ROMType));
+				get_string(f1, tmp->Path, sizeof tmp->Path);
+				fscanf(f1, "ROMType=%d\n", &tmp->ROMType);
 				lstAvailableROMs.push_back(tmp);
 			}
 
