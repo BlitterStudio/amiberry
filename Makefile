@@ -23,7 +23,7 @@ PROG   = $(NAME)
 all: guisan $(PROG)
 
 guisan:
-	cd src/guisan && make all && cd ../..
+	$(MAKE) -C src/guisan
 
 #DEBUG=1
 
