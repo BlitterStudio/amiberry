@@ -856,7 +856,7 @@ int handle_msgpump()
 			default:
 				if (currprefs.customControls)
 				{
-					keycode = customControlMap[rEvent.key.keysym.sym];
+					keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
 					if (keycode < 0)
 					{
 						// Simulate mouse or joystick
@@ -878,7 +878,7 @@ int handle_msgpump()
 		case SDL_KEYUP:
 			if (currprefs.customControls)
 			{
-				keycode = customControlMap[rEvent.key.keysym.sym];
+				keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
 				if (keycode < 0)
 				{
 					// Simulate mouse or joystick
