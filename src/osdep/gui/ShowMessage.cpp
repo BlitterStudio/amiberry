@@ -18,7 +18,7 @@
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
-static SDL_Keycode dialogKeyPressed;
+static const char* dialogControlPressed;
 static Uint8 dialogButtonPressed;
 
 static gcn::Window* wndShowMessage;
@@ -96,11 +96,10 @@ static void ExitShowMessage()
 	delete wndShowMessage;
 }
 
-static void ShowMessageWaitKeyLoop()
+static void ShowMessageWaitInputLoop()
 {
 	while (!dialogFinished)
 	{
-		//const Uint8 *keys = SDL_GetKeyboardState(nullptr);
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -113,49 +112,15 @@ static void ShowMessageWaitKeyLoop()
 					break;
 
 				default:
-					dialogKeyPressed = event.key.keysym.sym;
+					dialogControlPressed = SDL_GetKeyName(event.key.keysym.sym);
 					dialogFinished = true;
 					break;
 				}
 			}
 
-			//-------------------------------------------------
-			// Send event to guisan-controls
-			//-------------------------------------------------
-			gui_input->pushInput(event);
-		}
-
-		// Now we let the Gui object perform its logic.
-		uae_gui->logic();
-		// Now we let the Gui object draw itself.
-		uae_gui->draw();
-		// Finally we update the screen.
-
-		UpdateGuiScreen();
-	}
-}
-
-static void ShowMessageWaitButtonLoop()
-{
-	while (!dialogFinished)
-	{
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			if (event.type == SDL_KEYDOWN)
+			if (event.type == SDL_CONTROLLERBUTTONDOWN)
 			{
-				switch (event.key.keysym.scancode)
-				{
-				case VK_ESCAPE:
-					dialogFinished = true;
-					break;
-				default: ;
-				}
-			}
-
-			if (event.type == SDL_JOYBUTTONDOWN)
-			{
-				dialogButtonPressed = event.jbutton.button;
+				dialogControlPressed = SDL_GameControllerGetStringForButton(SDL_GameControllerButton(event.cbutton.button));
 				dialogFinished = true;
 				break;
 			}
@@ -210,7 +175,7 @@ static void ShowMessageLoop()
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;
-				default: 
+				default:
 					break;
 				}
 			}
@@ -255,7 +220,7 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	return dialogResult;
 }
 
-SDL_Keycode ShowMessageForKey(const char* title, const char* line1, const char* button1)
+const char* ShowMessageForInput(const char* title, const char* line1, const char* button1)
 {
 	dialogResult = false;
 	dialogFinished = false;
@@ -266,25 +231,8 @@ SDL_Keycode ShowMessageForKey(const char* title, const char* line1, const char* 
 	cmdOK->setVisible(false);
 	cmdCancel->setCaption(button1);
 
-	ShowMessageWaitKeyLoop();
+	ShowMessageWaitInputLoop();
 	ExitShowMessage();
 
-	return dialogKeyPressed;
-}
-
-Uint8 ShowMessageForButton(const char* title, const char* message, const char* button1)
-{
-	dialogResult = false;
-	dialogFinished = false;
-
-	InitShowMessage();
-	wndShowMessage->setCaption(title);
-	lblText1->setCaption(message);
-	cmdOK->setVisible(false);
-	cmdCancel->setCaption(button1);
-
-	ShowMessageWaitButtonLoop();
-	ExitShowMessage();
-
-	return dialogButtonPressed;
+	return dialogControlPressed;
 }

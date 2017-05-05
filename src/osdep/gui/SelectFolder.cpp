@@ -80,14 +80,13 @@ static DirListModel dirList(".");
 
 static void checkfoldername(char* current)
 {
-	char* ptr;
 	char actualpath[PATH_MAX];
 	DIR* dir;
 
 	if ((dir = opendir(current)))
 	{
 		dirList = current;
-		ptr = realpath(current, actualpath);
+		char * ptr = realpath(current, actualpath);
 		strcpy(workingDir, ptr);
 		closedir(dir);
 	}
@@ -102,10 +101,9 @@ class ListBoxActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		int selected_item;
 		char foldername[MAX_PATH] = "";
 
-		selected_item = lstFolders->getSelected();
+		int selected_item = lstFolders->getSelected();
 		strcpy(foldername, workingDir);
 		strcat(foldername, "/");
 		strcat(foldername, dirList.getElementAt(selected_item).c_str());

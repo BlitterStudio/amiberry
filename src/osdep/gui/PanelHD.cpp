@@ -66,14 +66,12 @@ static gcn::Slider* sldCDVol;
 
 static int GetHDType(int index)
 {
-	int type;
-	struct uaedev_config_data* uci;
 	struct mountedinfo mi;
 
-	type = get_filesys_unitconfig(&changed_prefs, index, &mi);
+	int type = get_filesys_unitconfig(&changed_prefs, index, &mi);
 	if (type < 0)
 	{
-		uci = &changed_prefs.mountconfig[index];
+		struct uaedev_config_data* uci = &changed_prefs.mountconfig[index];
 		type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
 	}
 	return type;
@@ -330,7 +328,6 @@ static CDFileActionListener* cdFileActionListener;
 void InitPanelHD(const struct _ConfigCategory& category)
 {
 	int row, col;
-	int posX;
 	int posY = DISTANCE_BORDER;
 	char tmp[20];
 
@@ -432,7 +429,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	sldCDVol->addActionListener(genericActionListener);
 	lblCDVolInfo = new gcn::Label("80 %");
 
-	posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
+	int posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
 	for (col = 0; col < COL_COUNT; ++col)
 	{
 		category.panel->add(lblList[col], posX, posY);
@@ -480,12 +477,12 @@ void InitPanelHD(const struct _ConfigCategory& category)
 
 void ExitPanelHD()
 {
-	int row, col;
+	int col;
 
 	for (col = 0; col < COL_COUNT; ++col)
 		delete lblList[col];
 
-	for (row = 0; row < MAX_HD_DEVICES; ++row)
+	for (int row = 0; row < MAX_HD_DEVICES; ++row)
 	{
 		delete listCmdProps[row];
 		delete listCmdDelete[row];
@@ -521,12 +518,10 @@ void ExitPanelHD()
 
 static void AdjustDropDownControls()
 {
-	int i;
-
 	cboCDFile->clearSelected();
 	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		for (i = 0; i < lstMRUCDList.size(); ++i)
+		for (int i = 0; i < lstMRUCDList.size(); ++i)
 		{
 			if (!lstMRUCDList[i].compare(changed_prefs.cdslots[0].name))
 			{
@@ -539,22 +534,19 @@ static void AdjustDropDownControls()
 
 void RefreshPanelHD()
 {
-	int row, col;
 	char tmp[32];
 	struct mountedinfo mi;
-	struct uaedev_config_data* uci;
-	struct uaedev_config_info* ci;
-	int nosize = 0, type;
+	int nosize = 0;
 
 	AdjustDropDownControls();
 
-	for (row = 0; row < MAX_HD_DEVICES; ++row)
+	for (int row = 0; row < MAX_HD_DEVICES; ++row)
 	{
 		if (row < changed_prefs.mountitems)
 		{
-			uci = &changed_prefs.mountconfig[row];
-			ci = &uci->ci;
-			type = get_filesys_unitconfig(&changed_prefs, row, &mi);
+			struct uaedev_config_data* uci = &changed_prefs.mountconfig[row];
+			struct uaedev_config_info* ci = &uci->ci;
+			int type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
 				type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
@@ -601,7 +593,7 @@ void RefreshPanelHD()
 		else
 		{
 			// Empty slot
-			for (col = 0; col < COL_COUNT; ++col)
+			for (int col = 0; col < COL_COUNT; ++col)
 				listCells[row][col]->setText("");
 			listCmdProps[row]->setEnabled(false);
 			listCmdDelete[row]->setEnabled(false);

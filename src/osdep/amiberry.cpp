@@ -51,7 +51,7 @@ extern void SetLastActiveConfig(const char* filename);
 int pause_emulation;
 
 /* Keyboard */
-map<int, int> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map
+map<int, TCHAR[256]> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map 
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
@@ -242,39 +242,34 @@ void target_fixup_options(struct uae_prefs* p)
 void target_default_options(struct uae_prefs* p, int type)
 {
 	p->customControls = false;
-	p->custom_up = 0;
-	p->custom_down = 0;
-	p->custom_left = 0;
-	p->custom_right = 0;
-	p->custom_a = 0;
-	p->custom_b = 0;
-	p->custom_x = 0;
-	p->custom_y = 0;
-	p->custom_l = 0;
-	p->custom_r = 0;
-	p->custom_play = 0;
+	_tcscpy(p->custom_up, "");
+	_tcscpy(p->custom_down, "");
+	_tcscpy(p->custom_left, "");
+	_tcscpy(p->custom_right, "");
+	_tcscpy(p->custom_a, "");
+	_tcscpy(p->custom_b, "");
+	_tcscpy(p->custom_x, "");
+	_tcscpy(p->custom_y, "");
+	_tcscpy(p->custom_l, "");
+	_tcscpy(p->custom_r, "");
+	_tcscpy(p->custom_play, "");
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 	p->scaling_method = -1; //Default is Auto
-	p->key_for_menu = SDLK_F12;
-	p->key_for_quit = 0;
-	p->button_for_menu = -1;
-	p->button_for_quit = -1;
+	_tcscpy(p->open_gui, "F12");
+	_tcscpy(p->quit_amiberry, "");
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
 	cfgfile_write(f, _T("amiberry.scaling_method"), _T("%d"), p->scaling_method);
-	cfgfile_write(f, _T("amiberry.key_for_menu"), _T("%d"), p->key_for_menu);
-	cfgfile_write(f, _T("amiberry.key_for_quit"), _T("%d"), p->key_for_quit);
-	cfgfile_write(f, _T("amiberry.button_for_menu"), _T("%d"), p->button_for_menu);
-	cfgfile_write(f, _T("amiberry.button_for_quit"), _T("%d"), p->button_for_quit);
+	cfgfile_write_str(f, _T("amiberry.open_gui"), p->open_gui);
+	cfgfile_write_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 
 	cfgfile_write_bool(f, "amiberry.custom_controls", p->customControls);
 	cfgfile_write(f, "amiberry.custom_up", "%d", p->custom_up);
@@ -303,47 +298,40 @@ TCHAR* target_expand_environment(const TCHAR* path)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
-
-	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
-		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
 		return 1;
-	if (cfgfile_intval(option, value, "key_for_menu", &p->key_for_menu, 1))
+	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
 		return 1;
-	if (cfgfile_intval(option, value, "key_for_quit", &p->key_for_quit, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_menu", &p->button_for_menu, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "button_for_quit", &p->button_for_quit, 1))
+	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
 		return 1;
 
 	if (cfgfile_yesno(option, value, "custom_controls", &p->customControls))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_up", &p->custom_up, 1))
+	if (cfgfile_string(option, value, "custom_up", p->custom_up, sizeof p->custom_up))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_down", &p->custom_down, 1))
+	if (cfgfile_string(option, value, "custom_down", p->custom_down, sizeof p->custom_down))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_left", &p->custom_left, 1))
+	if (cfgfile_string(option, value, "custom_left", p->custom_left, sizeof p->custom_left))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_right", &p->custom_right, 1))
+	if (cfgfile_string(option, value, "custom_right", p->custom_right, sizeof p->custom_right))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_a", &p->custom_a, 1))
+	if (cfgfile_string(option, value, "custom_a", p->custom_a, sizeof p->custom_a))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_b", &p->custom_b, 1))
+	if (cfgfile_string(option, value, "custom_b", p->custom_b, sizeof p->custom_b))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_x", &p->custom_x, 1))
+	if (cfgfile_string(option, value, "custom_x", p->custom_x, sizeof p->custom_x))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_y", &p->custom_y, 1))
+	if (cfgfile_string(option, value, "custom_y", p->custom_y, sizeof p->custom_y))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_l", &p->custom_l, 1))
+	if (cfgfile_string(option, value, "custom_l", p->custom_l, sizeof p->custom_l))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_r", &p->custom_r, 1))
+	if (cfgfile_string(option, value, "custom_r", p->custom_r, sizeof p->custom_r))
 		return 1;
-	if (cfgfile_intval(option, value, "custom_play", &p->custom_play, 1))
+	if (cfgfile_string(option, value, "custom_play", p->custom_play, sizeof p->custom_play))
 		return 1;
 	return 0;
 }
@@ -399,7 +387,6 @@ void fetch_screenshotpath(char* out, int size)
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
 {
-	int i;
 	int result = 0;
 
 	if (emulating && changed_prefs.cdslots[0].inuse)
@@ -432,7 +419,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 
 	if (result)
 	{
-		for (i = 0; i < p->nr_floppies; ++i)
+		for (int i = 0; i < p->nr_floppies; ++i)
 		{
 			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
@@ -650,8 +637,8 @@ void loadAdfDir()
 			{
 				fscanf(f1, "Diskfile=");
 				get_string(f1, disk, sizeof disk);
-				FILE * f = fopen(disk, "rb");
-				if (f != NULL)
+				FILE* f = fopen(disk, "rb");
+				if (f != nullptr)
 				{
 					fclose(f);
 					lstMRUDiskList.push_back(disk);
@@ -666,8 +653,8 @@ void loadAdfDir()
 			{
 				fscanf(f1, "CDfile=");
 				get_string(f1, cd, sizeof cd);
-				FILE * f = fopen(cd, "rb");
-				if (f != NULL)
+				FILE* f = fopen(cd, "rb");
+				if (f != nullptr)
 				{
 					fclose(f);
 					lstMRUCDList.push_back(cd);
@@ -693,10 +680,9 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 
 	if (v == 2)
 	{
-		int64_t time;
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		time = (int64_t(ts.tv_sec) * 1000000000) + ts.tv_nsec;
+		int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 		*low = uae_u32(time & 0xffffffff);
 		return uae_u32(time >> 32);
 	}
@@ -776,17 +762,17 @@ int main(int argc, char* argv[])
 
 void PopulateCustomControlMap()
 {
-	customControlMap[VK_UP] = currprefs.custom_up;
-	customControlMap[VK_DOWN] = currprefs.custom_down;
-	customControlMap[VK_LEFT] = currprefs.custom_left;
-	customControlMap[VK_RIGHT] = currprefs.custom_right;
-	customControlMap[VK_Green] = currprefs.custom_a;
-	customControlMap[VK_Blue] = currprefs.custom_b;
-	customControlMap[VK_Red] = currprefs.custom_x;
-	customControlMap[VK_Yellow] = currprefs.custom_y;
-	customControlMap[VK_LShoulder] = currprefs.custom_l;
-	customControlMap[VK_RShoulder] = currprefs.custom_r;
-	customControlMap[VK_Play] = currprefs.custom_play;
+	strcpy(customControlMap[VK_UP], currprefs.custom_up);
+	strcpy(customControlMap[VK_DOWN], currprefs.custom_down);
+	strcpy(customControlMap[VK_LEFT], currprefs.custom_left);
+	strcpy(customControlMap[VK_RIGHT], currprefs.custom_right);
+	strcpy(customControlMap[VK_Green], currprefs.custom_a);
+	strcpy(customControlMap[VK_Blue], currprefs.custom_b);
+	strcpy(customControlMap[VK_Red], currprefs.custom_x);
+	strcpy(customControlMap[VK_Yellow], currprefs.custom_y);
+	strcpy(customControlMap[VK_LShoulder], currprefs.custom_l);
+	strcpy(customControlMap[VK_RShoulder], currprefs.custom_r);
+	strcpy(customControlMap[VK_Play], currprefs.custom_play);
 }
 
 int handle_msgpump()
@@ -809,12 +795,12 @@ int handle_msgpump()
 			uae_quit();
 			break;
 
-		case SDL_JOYBUTTONDOWN:
-			if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
-				inputdevice_add_inputcode(AKS_QUIT, 1);
-			break;
+			//case SDL_JOYBUTTONDOWN:
+			//	if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
+			//		inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+			//	if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
+			//		inputdevice_add_inputcode(AKS_QUIT, 1);
+			//	break;
 
 		case SDL_KEYDOWN:
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
@@ -841,7 +827,7 @@ int handle_msgpump()
 				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 				ioctl(0, KDGKBLED, &kbd_flags);
 				ioctl(0, KDGETLED, &kbd_led_status);
-				if ((kbd_flags & 07) & LED_CAP)
+				if (kbd_flags & 07 & LED_CAP)
 				{
 					// On, so turn off
 					kbd_led_status &= ~LED_CAP;
@@ -870,7 +856,7 @@ int handle_msgpump()
 			default:
 				if (currprefs.customControls)
 				{
-					keycode = customControlMap[rEvent.key.keysym.sym];
+					keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
 					if (keycode < 0)
 					{
 						// Simulate mouse or joystick
@@ -890,22 +876,22 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYUP:
-				if (currprefs.customControls)
+			if (currprefs.customControls)
+			{
+				keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
+				if (keycode < 0)
 				{
-					keycode = customControlMap[rEvent.key.keysym.sym];
-					if (keycode < 0)
-					{
-						// Simulate mouse or joystick
-						SimulateMouseOrJoy(keycode, 0);
-						break;
-					}
-					if (keycode > 0)
-					{
-						// Send mapped key release
-						inputdevice_do_keyboard(keycode, 0);
-						break;
-					}
+					// Simulate mouse or joystick
+					SimulateMouseOrJoy(keycode, 0);
+					break;
 				}
+				if (keycode > 0)
+				{
+					// Send mapped key release
+					inputdevice_do_keyboard(keycode, 0);
+					break;
+				}
+			}
 
 				translate_amiberry_keys(rEvent.key.keysym.sym, 0, rEvent.key.keysym.scancode);
 				break;
@@ -939,10 +925,9 @@ int handle_msgpump()
 			{
 				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 				{
-					int x, y;
 					int mouseScale = currprefs.input_joymouse_multiplier / 2;
-					x = rEvent.motion.xrel;
-					y = rEvent.motion.yrel;
+					int x = rEvent.motion.xrel;
+					int y = rEvent.motion.yrel;
 
 					setmousestate(0, 0, x * mouseScale, 0);
 					setmousestate(0, 1, y * mouseScale, 0);

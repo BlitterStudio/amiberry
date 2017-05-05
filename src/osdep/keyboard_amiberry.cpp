@@ -251,22 +251,21 @@ void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 		scancode = 60;
 	}
 	int code = 0;
-	int scancode_new;
 	bool amode = currprefs.input_keyboard_type == 0;
 	bool special = false;
 	static int swapperdrive = 0;
 
-	scancode_new = scancode;
+	int scancode_new = scancode;
 
 	if (newstate) {
 		int defaultguikey = SDLK_F12;
-		if (currprefs.key_for_menu >= 0) {
-			if (scancode_new == defaultguikey && currprefs.key_for_menu != scancode_new) {
+		if (currprefs.open_gui != "") {
+			if (scancode_new == defaultguikey && SDL_GetKeyFromName(currprefs.open_gui) != scancode_new) {
 				scancode = 0;
 				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
 					inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			}
-			else if (scancode_new == currprefs.key_for_menu) {
+			else if (scancode_new == SDL_GetKeyFromName(currprefs.open_gui)) {
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 				scancode = 0;
 			}
@@ -275,7 +274,7 @@ void translate_amiberry_keys(int scancode, int newstate, int scancode_raw)
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			scancode = 0;
 		}
-		if (currprefs.key_for_quit != 0 && scancode_new == currprefs.key_for_quit)
+		if (currprefs.quit_amiberry != "" && scancode_new == SDL_GetKeyFromName(currprefs.quit_amiberry))
 		{
 			inputdevice_add_inputcode(AKS_QUIT, 1);
 			scancode = 0;

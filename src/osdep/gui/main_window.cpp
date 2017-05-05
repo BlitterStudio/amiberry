@@ -227,7 +227,7 @@ namespace sdl
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
 
-				if (gui_event.key.keysym.sym == currprefs.key_for_menu)
+				if (gui_event.key.keysym.sym == SDL_GetKeyFromName(currprefs.open_gui))
 				{
 					if (emulating && widgets::cmdStart->isEnabled())
 					{
@@ -425,8 +425,7 @@ namespace widgets
 	public:
 		void focusGained(const gcn::Event& event) override
 		{
-			int i;
-			for (i = 0; categories[i].category != nullptr; ++i)
+			for (int i = 0; categories[i].category != nullptr; ++i)
 			{
 				if (event.getSource() == categories[i].selector)
 				{
@@ -600,9 +599,7 @@ namespace widgets
 
 void RefreshAllPanels()
 {
-	int i;
-
-	for (i = 0; categories[i].category != nullptr; ++i)
+	for (int i = 0; categories[i].category != nullptr; ++i)
 	{
 		if (categories[i].RefreshFunc != nullptr)
 			(*categories[i].RefreshFunc)();

@@ -263,7 +263,7 @@ static void CreateFilesysHardfileLoop()
 }
 
 
-bool CreateFilesysHardfile(void)
+bool CreateFilesysHardfile()
 {
 	string strroot;
 	char tmp[32];
@@ -307,7 +307,6 @@ bool CreateFilesysHardfile(void)
 		fwrite(&zero, 1, 1, newFile);
 		fclose(newFile);
 
-		struct uaedev_config_data* uci;
 		struct uaedev_config_info ci;
 
 		uci_set_defaults(&ci, false);
@@ -317,7 +316,7 @@ bool CreateFilesysHardfile(void)
 		ci.surfaces = (size / 1024) + 1;
 		ci.bootpri = bp;
 
-		uci = add_filesys_config(&changed_prefs, -1, &ci);
+		struct uaedev_config_data * uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{
 			struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);

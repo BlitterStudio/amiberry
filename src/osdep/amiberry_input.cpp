@@ -546,10 +546,8 @@ struct inputdevice_functions inputdevicefunc_joystick = {
 
 int input_get_default_joystick(struct uae_input_device* uid, int num, int port, int af, int mode, bool gp, bool joymouseswap)
 {
-	int h, v;
-
-	h = port ? INPUTEVENT_JOY2_HORIZ : INPUTEVENT_JOY1_HORIZ;;
-	v = port ? INPUTEVENT_JOY2_VERT : INPUTEVENT_JOY1_VERT;
+	int h = port ? INPUTEVENT_JOY2_HORIZ : INPUTEVENT_JOY1_HORIZ;;
+	int v = port ? INPUTEVENT_JOY2_VERT : INPUTEVENT_JOY1_VERT;
 
 	setid(uid, num, ID_AXIS_OFFSET + 0, 0, port, h, gp);
 	setid(uid, num, ID_AXIS_OFFSET + 1, 0, port, v, gp);

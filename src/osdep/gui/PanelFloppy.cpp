@@ -79,7 +79,7 @@ public:
 		return lstMRUDiskList.size();
 	}
 
-	std::string getElementAt(int i) override
+	string getElementAt(int i) override
 	{
 		if (i < 0 || i >= lstMRUDiskList.size())
 			return "---";
@@ -523,17 +523,15 @@ void ExitPanelFloppy()
 
 static void AdjustDropDownControls()
 {
-	int i, j;
-
 	bIgnoreListChange = true;
 
-	for (i = 0; i < 4; ++i)
+	for (int i = 0; i < 4; ++i)
 	{
 		cboDFxFile[i]->clearSelected();
 
 		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
-			for (j = 0; j < lstMRUDiskList.size(); ++j)
+			for (int j = 0; j < lstMRUDiskList.size(); ++j)
 			{
 				if (!lstMRUDiskList[j].compare(changed_prefs.floppyslots[i].df))
 				{

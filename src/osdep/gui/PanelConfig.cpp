@@ -200,8 +200,7 @@ class ConfigsListActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		int selected_item;
-		selected_item = lstConfigs->getSelected();
+		int selected_item = lstConfigs->getSelected();
 		if (!txtName->getText().compare(ConfigFilesList[selected_item]->Name))
 		{
 			//-----------------------------------------------

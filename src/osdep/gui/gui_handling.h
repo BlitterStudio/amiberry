@@ -103,8 +103,7 @@ void RegisterRefreshFunc(void (*func)(void));
 void DisableResume(void);
 
 bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2);
-SDL_Keycode ShowMessageForKey(const char* title, const char* line1, const char* button1);
-Uint8 ShowMessageForButton(const char* title, const char* message, const char* button1);
+const char* ShowMessageForInput(const char* title, const char* line1, const char* button1);
 bool SelectFolder(const char* title, char* value);
 bool SelectFile(const char* title, char* value, const char* filter[], bool create = false);
 bool EditFilesysVirtual(int unit_no);
