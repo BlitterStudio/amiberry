@@ -1,3 +1,0 @@
-
-USHORT Unpack_RLE(UCHAR *, UCHAR *, USHORT);
-

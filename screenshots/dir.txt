@@ -1,1 +1,0 @@
-Screenshorts for saves states will be saved here.

@@ -1,1 +1,0 @@
-#define SCSI_DATA_BUFFER_SIZE (512 * 512)
