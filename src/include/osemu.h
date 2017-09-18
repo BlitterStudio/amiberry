@@ -1,10 +1,10 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * OS emulation prototypes
- *
- * Copyright 1996 Bernd Schmidt
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * OS emulation prototypes
+  *
+  * Copyright 1996 Bernd Schmidt
+  */
 
 STATIC_INLINE char *raddr(uaecptr p)
 {

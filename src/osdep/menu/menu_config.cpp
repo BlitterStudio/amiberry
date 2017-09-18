@@ -2,8 +2,12 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
+#include "autoconf.h"
 #include "options.h"
 #include "gui.h"
+#include "sounddep/sound.h"
+#include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "uae.h"
@@ -26,54 +30,58 @@ static void replace(char* str, char replace, char toreplace)
 	}
 }
 
-int create_configfilename(char* dest, char* basename, int fromDir)
+int create_configfilename(char *dest, char *basename, int fromDir)
 {
-	char* p = basename + strlen(basename) - 1;
+	char *p;
+	p = basename + strlen(basename) - 1;
 	while (*p != '/')
 		p--;
 	p++;
 	if (fromDir == 0)
 	{
 		int len = strlen(p) + 1;
-		char filename[len];
+		char filename[MAX_DPATH];
 		strcpy(filename, p);
-		char* pch = &filename[MAX_DPATH];
+		char *pch = &filename[len];
 		while (pch != filename && *pch != '.')
 			pch--;
 		if (pch)
 		{
 			*pch = '\0';
-			snprintf(dest, sizeof dest, "%s/conf/%s.uae", start_path_data, filename);
+			snprintf(dest, MAX_DPATH, "%s/conf/%s.uae", start_path_data, filename);
 			return 1;
 		}
 	}
 	else
 	{
-		snprintf(dest, sizeof dest, "%s/conf/%s.uae", start_path_data, p);
+		snprintf(dest, MAX_DPATH, "%s/conf/%s.uae", start_path_data, p);
 		return 1;
 	}
 
 	return 0;
 }
 
-const char* kickstarts_rom_names[] = {"kick12.rom\0", "kick13.rom\0", "kick20.rom\0", "kick31.rom\0", "aros-amiga-m68k-rom.bin\0"};
-const char* extended_rom_names[] = {"\0", "\0", "\0", "\0", "aros-amiga-m68k-ext.bin\0"};
-const char* kickstarts_names[] = {"KS ROM v1.2\0", "KS ROM v1.3\0", "KS ROM v2.05\0", "KS ROM v3.1\0", "\0"};
+const char *kickstarts_rom_names[] = { "kick12.rom\0", "kick13.rom\0", "kick20.rom\0", "kick31.rom\0", "aros-amiga-m68k-rom.bin\0" };
+const char *extended_rom_names[] = { "\0", "\0", "\0", "\0", "aros-amiga-m68k-ext.bin\0" };
+const char *kickstarts_names[] = { "KS ROM v1.2\0", "KS ROM v1.3\0", "KS ROM v2.05\0", "KS ROM v3.1\0", "\0" };
+#ifdef ANDROIDSDL
+const char *af_kickstarts_rom_names[] = { "amiga-os-120.rom\0", "amiga-os-130.rom\0", "amiga-os-204.rom\0", "amiga-os-310-a1200.rom\0" };
+#endif
 
-static bool CheckKickstart(struct uae_prefs* p)
+static bool CheckKickstart(struct uae_prefs *p)
 {
 	char kickpath[MAX_DPATH];
 	int i;
 
 	// Search via filename
 	fetch_rompath(kickpath, MAX_DPATH);
-	strncat(kickpath, kickstarts_rom_names[kickstart], 255);
-	for (i = 0; i < lstAvailableROMs.size(); ++i)
+	strncat(kickpath, kickstarts_rom_names[kickstart], MAX_DPATH);
+	for (i = 0; i<lstAvailableROMs.size(); ++i)
 	{
 		if (!strcasecmp(lstAvailableROMs[i]->Path, kickpath))
 		{
 			// Found it
-			strcpy(p->romfile, kickpath);
+			strncpy(p->romfile, kickpath, sizeof(p->romfile));
 			return true;
 		}
 	}
@@ -81,12 +89,12 @@ static bool CheckKickstart(struct uae_prefs* p)
 	// Search via name
 	if (strlen(kickstarts_names[kickstart]) > 0)
 	{
-		for (i = 0; i < lstAvailableROMs.size(); ++i)
+		for (i = 0; i<lstAvailableROMs.size(); ++i)
 		{
 			if (!strncasecmp(lstAvailableROMs[i]->Name, kickstarts_names[kickstart], strlen(kickstarts_names[kickstart])))
 			{
 				// Found it
-				strcpy(p->romfile, lstAvailableROMs[i]->Path);
+				strncpy(p->romfile, lstAvailableROMs[i]->Path, sizeof(p->romfile));
 				return true;
 			}
 		}

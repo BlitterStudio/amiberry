@@ -45,26 +45,34 @@
     <MainSourceDirectoryForLocalBuilds>$(ProjectDir)</MainSourceDirectoryForLocalBuilds>
   </Project>
   <Build xsi:type="com.visualgdb.build.msbuild">
+    <ToolchainID>
+      <ID>com.visualgdb.raspberry_pi</ID>
+      <Version>
+        <GCC>4.9.2</GCC>
+        <GDB>7.7.1</GDB>
+        <Revision>4</Revision>
+      </Version>
+    </ToolchainID>
     <Toolchain>
+      <UnixSystem>false</UnixSystem>
+      <AdditionalPathDirectories>
+        <string>C:\SysGCC\raspberry\bin</string>
+      </AdditionalPathDirectories>
+      <RequireCtrlBreak>false</RequireCtrlBreak>
+      <SourceDirMapping>
+        <Directories />
+        <PathStyle>MinGWUnixSlash</PathStyle>
+      </SourceDirMapping>
       <Name>Raspberry PI</Name>
       <UniqueID>com.visualgdb.raspberry_pi</UniqueID>
       <Location>C:\SysGCC\raspberry</Location>
-      <UnixSystem>false</UnixSystem>
       <GCC>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-gcc.exe</GCC>
       <GXX>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-g++.exe</GXX>
       <GDB>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-gdb.exe</GDB>
       <AR>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-ar.exe</AR>
       <OBJCOPY>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-objcopy.exe</OBJCOPY>
       <Make>C:\SysGCC\raspberry\bin\make.exe</Make>
-      <AdditionalPathDirectories>
-        <string>C:\SysGCC\raspberry\bin</string>
-      </AdditionalPathDirectories>
-      <RequireCmdExe>true</RequireCmdExe>
-      <RequireCtrlBreak>false</RequireCtrlBreak>
-      <SourceDirMapping>
-        <Directories />
-        <PathStyle>MinGWUnixSlash</PathStyle>
-      </SourceDirMapping>
+      <UseCygwinBash>false</UseCygwinBash>
     </Toolchain>
     <ProjectFile>Amiberry.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
@@ -72,6 +80,7 @@
       <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
+    <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>
   </Build>
   <Debug xsi:type="com.visualgdb.debug.remote">
     <AdditionalStartupCommands />
@@ -145,6 +154,7 @@
     <ExternalSourceFileList />
     <ExtraSettings>
       <HideErrorsInSystemHeaders>true</HideErrorsInSystemHeaders>
+      <SupportLightweightReferenceAnalysis>false</SupportLightweightReferenceAnalysis>
       <DiscoverySettings>
         <Mode>Enabled</Mode>
         <SearchInProjectDir>true</SearchInProjectDir>
@@ -154,6 +164,9 @@
         <IgnoredHeaders />
       </DiscoverySettings>
     </ExtraSettings>
+    <CodeAnalyzerSettings>
+      <Enabled>false</Enabled>
+    </CodeAnalyzerSettings>
   </CodeSense>
   <BuildContextDirectory>VisualGDB\VisualGDBCache</BuildContextDirectory>
 </VisualGDBProjectSettings2>

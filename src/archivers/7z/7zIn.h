@@ -9,15 +9,15 @@
 
 typedef struct
 {
-    CSzAr db;
+  CSzAr db;
+  
+  UInt64 startPosAfterHeader;
+  UInt64 dataPos;
 
-    UInt64 startPosAfterHeader;
-    UInt64 dataPos;
-
-    UInt32 *FolderStartPackStreamIndex;
-    UInt64 *PackStreamStartPositions;
-    UInt32 *FolderStartFileIndex;
-    UInt32 *FileIndexToFolderIndexMap;
+  UInt32 *FolderStartPackStreamIndex;
+  UInt64 *PackStreamStartPositions;
+  UInt32 *FolderStartFileIndex;
+  UInt32 *FileIndexToFolderIndexMap;
 } CSzArEx;
 
 void SzArEx_Init(CSzArEx *p);
@@ -37,5 +37,5 @@ SZ_ERROR_FAIL
 */
 
 SRes SzArEx_Open(CSzArEx *p, ILookInStream *inStream, ISzAlloc *allocMain, ISzAlloc *allocTemp);
-
+ 
 #endif

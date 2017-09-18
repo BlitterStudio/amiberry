@@ -1,39 +1,62 @@
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* Try to include the right system headers and get other system-specific
+* stuff right & other collected kludges.
+*
+* If you think about modifying this, think twice. Some systems rely on
+* the exact order of the #include statements. That's also the reason
+* why everything gets included unconditionally regardless of whether
+* it's actually needed by the .c file.
+*
+* Copyright 1996, 1997 Bernd Schmidt
+*/
 #ifndef UAE_SYSDEPS_H
 #define UAE_SYSDEPS_H
 
-/*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Try to include the right system headers and get other system-specific
-  * stuff right & other collected kludges.
-  *
-  * If you think about modifying this, think twice. Some systems rely on
-  * the exact order of the #include statements. That's also the reason
-  * why everything gets included unconditionally regardless of whether
-  * it's actually needed by the .c file.
-  *
-  * Copyright 1996, 1997 Bernd Schmidt
-  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#include "sysconfig.h"
+
+#ifndef UAE
+#define UAE
+#endif
+
+#ifdef __cplusplus
 #include <string>
 using namespace std;
+#else
+#include <string.h>
+#include <ctype.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
 
-#ifdef _GCCRES_
-#undef _GCCRES_
+#ifndef UAE
+#define UAE
 #endif
 
-#ifdef UAE4ALL_NO_USE_RESTRICT
-#define _GCCRES_
+#if defined(__x86_64__) || defined(_M_AMD64)
+#define CPU_x86_64 1
+#define CPU_64_BIT 1
+#elif defined(__i386__) || defined(_M_IX86)
+#define CPU_i386 1
+#elif defined(__arm__) || defined(_M_ARM)
+#define CPU_arm 1
+#elif defined(__powerpc__) || defined(_M_PPC)
+#define CPU_powerpc 1
 #else
-#define _GCCRES_ __restrict__
+#error unrecognized CPU type
 #endif
 
 #ifndef __STDC__
+#ifndef _MSC_VER
 #error "Your compiler is not ANSI. Get a real one."
+#endif
 #endif
 
 #include <stdarg.h>
@@ -101,10 +124,6 @@ using namespace std;
 #include <errno.h>
 #include <assert.h>
 
-#if EEXIST == ENOTEMPTY
-#define BROKEN_OS_PROBABLY_AIX
-#endif
-
 #ifdef __NeXT__
 #define S_IRUSR S_IREAD
 #define S_IWUSR S_IWRITE
@@ -115,55 +134,6 @@ struct utimbuf
 	time_t actime;
 	time_t modtime;
 };
-#endif
-
-#if defined(__GNUC__) && defined(AMIGA)
-/* gcc on the amiga need that __attribute((regparm)) must */
-/* be defined in function prototypes as well as in        */
-/* function definitions !                                 */
-#define REGPARAM2 REGPARAM
-#else /* not(GCC & AMIGA) */
-#define REGPARAM2
-#endif
-
-/* sam: some definitions so that SAS/C can compile UAE */
-#if defined(__SASC) && defined(AMIGA)
-#define REGPARAM2
-#define REGPARAM
-#define S_IRUSR S_IREAD
-#define S_IWUSR S_IWRITE
-#define S_IXUSR S_IEXECUTE
-#define S_ISDIR(val) (S_IFDIR & val)
-#define mkdir(x,y) mkdir(x)
-#define truncate(x,y) 0
-#define creat(x,y) open("T:creat",O_CREAT|O_TEMP|O_RDWR) /* sam: for zfile.c */
-#define strcasecmp stricmp
-#define utime(file,time) 0
-struct utimbuf
-{
-	time_t actime;
-	time_t modtime;
-};
-#endif
-
-#ifdef __DOS__
-#include <pc.h>
-#include <io.h>
-#endif
-
-/* Acorn specific stuff */
-#ifdef ACORN
-
-#define S_IRUSR S_IREAD
-#define S_IWUSR S_IWRITE
-#define S_IXUSR S_IEXEC
-
-#define strcasecmp stricmp
-
-#endif
-
-#ifndef L_tmpnam
-#define L_tmpnam 128 /* ought to be safe */
 #endif
 
 /* If char has more then 8 bits, good night. */
@@ -448,15 +418,15 @@ extern void gui_message(const TCHAR *, ...);
 # ifdef ARMV6_ASSEMBLY
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
 	__asm__(
-						"rev %0, %0"
-                                                : "=r" (v) : "0" (v)); return v;
+			"rev %0, %0"
+            : "=r" (v) : "0" (v)); return v;
 }
 
 STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 	__asm__(
-  						"revsh %0, %0\n\t"
-              "uxth %0, %0"
-                                                : "=r" (v) : "0" (v)); return v;
+  			"revsh %0, %0\n\t"
+            "uxth %0, %0"
+            : "=r" (v) : "0" (v)); return v;
 }
 #define bswap_16(x) do_byteswap_16(x)
 #define bswap_32(x) do_byteswap_32(x)
@@ -474,20 +444,12 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #endif
 #endif
 
-#endif
-
 #ifndef __cplusplus
 
 #define xmalloc(T, N) malloc(sizeof (T) * (N))
 #define xcalloc(T, N) calloc(sizeof (T), N)
 #define xfree(T) free(T)
 #define xrealloc(T, TP, N) realloc(TP, sizeof (T) * (N))
-
-#if 0
-extern void *xmalloc(size_t);
-extern void *xcalloc(size_t, size_t);
-extern void xfree(const void*);
-#endif
 
 #else
 
@@ -499,3 +461,11 @@ extern void xfree(const void*);
 #endif
 
 #define DBLEQU(f, i) (abs ((f) - (i)) < 0.000001)
+
+#ifdef HAVE_VAR_ATTRIBUTE_UNUSED
+#define NOWARN_UNUSED(x) __attribute__((unused)) x
+#else
+#define NOWARN_UNUSED(x) x
+#endif
+
+#endif /* UAE_SYSDEPS_H */

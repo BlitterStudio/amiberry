@@ -1,12 +1,12 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * a SCSI device
- *
- * (c) 1995 Bernd Schmidt (hardfile.c)
- * (c) 1999 Patrick Ohly
- * (c) 2001-2005 Toni Wilen
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * a SCSI device
+  *
+  * (c) 1995 Bernd Schmidt (hardfile.c)
+  * (c) 1999 Patrick Ohly
+  * (c) 2001-2005 Toni Wilen
+  */
 
 uaecptr scsidev_startup (uaecptr resaddr);
 void scsidev_install (void);
@@ -19,7 +19,7 @@ uae_u32 scsi_get_cd_drive_media_mask (void);
 
 extern int log_scsi;
 
-#ifdef _WIN32
+#ifdef _WIN32_
 #define UAESCSI_CDEMU 0
 #define UAESCSI_SPTI 1
 #define UAESCSI_SPTISCAN 2

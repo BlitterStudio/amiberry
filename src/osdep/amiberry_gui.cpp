@@ -15,12 +15,22 @@
 #include "gui/gui_handling.h"
 #include "memory.h"
 #include "rommgr.h"
+#include "newcpu.h"
 #include "custom.h"
 #include "inputdevice.h"
+#include "xwin.h"
+#include "drawing.h"
 #include "sounddep/sound.h"
+#include "audio.h"
+#include "keybuf.h"
+#include "keyboard.h"
+#include "disk.h"
 #include "savestate.h"
+#include "filesys.h"
+#include "autoconf.h"
 #include "blkdev.h"
 #include <SDL.h>
+#include "threaddep/thread.h"
 
 #ifdef AMIBERRY
 #include <linux/kd.h>
@@ -62,12 +72,11 @@ vector<AvailableROM*> lstAvailableROMs;
 vector<string> lstMRUDiskList;
 vector<string> lstMRUCDList;
 
-
-void AddFileToDiskList(const char* file, int moveToTop)
+void AddFileToDiskList(const char *file, int moveToTop)
 {
 	int i;
 
-	for (i = 0; i < lstMRUDiskList.size(); ++i)
+	for (i = 0; i<lstMRUDiskList.size(); ++i)
 	{
 		if (!strcasecmp(lstMRUDiskList[i].c_str(), file))
 		{
@@ -86,12 +95,11 @@ void AddFileToDiskList(const char* file, int moveToTop)
 		lstMRUDiskList.pop_back();
 }
 
-
-void AddFileToCDList(const char* file, int moveToTop)
+void AddFileToCDList(const char *file, int moveToTop)
 {
 	int i;
 
-	for (i = 0; i < lstMRUCDList.size(); ++i)
+	for (i = 0; i<lstMRUCDList.size(); ++i)
 	{
 		if (!strcasecmp(lstMRUCDList[i].c_str(), file))
 		{

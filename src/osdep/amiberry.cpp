@@ -6,52 +6,54 @@
  */
 
 #include <algorithm>
+#include <iostream>
 #include <vector>
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <asm/sigcontext.h>
 #include <signal.h>
+#include <dlfcn.h>
+#include <execinfo.h>
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
-#include "autoconf.h"
 #include "uae.h"
 #include "options.h"
 #include "threaddep/thread.h"
 #include "gui.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "custom.h"
-#include "xwin.h"
-#include "drawing.h"
+#include "memory.h"
 #include "inputdevice.h"
-#include "keybuf.h"
 #include "keyboard.h"
 #include "disk.h"
 #include "savestate.h"
-#include "traps.h"
-#include "bsdsocket.h"
-#include "blkdev.h"
-#include "native2amiga.h"
 #include "rtgmodes.h"
-#include "uaeresource.h"
 #include "rommgr.h"
-#include "akiko.h"
-#include "SDL.h"
+#include "zfile.h"
+#include "gfxboard.h"
+#include <SDL.h>
+#include <map>
 #include "amiberry_rp9.h"
-#include "scsidev.h"
 
-extern void signal_segv(int signum, siginfo_t* info, void* ptr);
-extern void gui_force_rtarea_hdchange();
+#ifdef WITH_LOGGING
+extern FILE *debugfile;
+#endif
 
-extern int loadconfig_old(struct uae_prefs* p, const char* orgpath);
-extern void SetLastActiveConfig(const char* filename);
+int quickstart_start = 1;
+int quickstart_model = 0;
+int quickstart_conf = 0;
 
-int pause_emulation;
+extern void signal_segv(int signum, siginfo_t* info, void*ptr);
+extern void signal_buserror(int signum, siginfo_t* info, void*ptr);
+extern void signal_term(int signum, siginfo_t* info, void*ptr);
+extern void gui_force_rtarea_hdchange(void);
+
+static int delayed_mousebutton = 0;
+static int doStylusRightClick;
+
+extern void SetLastActiveConfig(const char *filename);
 
 /* Keyboard */
-map<int, TCHAR[256]> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map 
+std::map<int, TCHAR[256]> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map 
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
@@ -64,127 +66,65 @@ char kbd_flags;
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
 static char rp9_path[MAX_DPATH];
-char last_loaded_config[MAX_DPATH] = {'\0'};
+char last_loaded_config[MAX_DPATH] = { '\0' };
+
+static bool cpuSpeedChanged = false;
+static int lastCpuSpeed = 600;
+int defaultCpuSpeed = 600;
 
 int max_uae_width;
 int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 
-void reinit_amiga()
-{
-	write_log("reinit_amiga() called\n");
-	DISK_free();
-#ifdef CD32
-	akiko_free();
-#endif
-#ifdef FILESYS
-	filesys_cleanup();
-	hardfile_reset();
-#endif
-#ifdef AUTOCONFIG
-#if defined (BSDSOCKET)
-	bsdlib_reset();
-#endif
-	expansion_cleanup();
-#endif
-	device_func_reset();
-	memory_cleanup();
-
-	currprefs = changed_prefs;
-	/* force sound settings change */
-	currprefs.produce_sound = 0;
-
-	framecnt = 1;
-#ifdef AUTOCONFIG
-	rtarea_setup();
-#endif
-#ifdef FILESYS
-	rtarea_init();
-	uaeres_install();
-	hardfile_install();
-#endif
-	keybuf_init();
-
-#ifdef AUTOCONFIG
-	expansion_init();
-#endif
-#ifdef FILESYS
-	filesys_install();
-#endif
-	memory_init();
-	memory_reset();
-
-#ifdef AUTOCONFIG
-#if defined (BSDSOCKET)
-	bsdlib_install();
-#endif
-	emulib_install();
-	native2amiga_install();
-#endif
-
-	custom_init(); /* Must come after memory_init */
-	DISK_init();
-
-	reset_frame_rate_hack();
-	init_m68k();
-}
-
-void sleep_millis_main(int ms)
-{
-	usleep(ms * 1000);
-}
-
 void sleep_millis(int ms)
 {
 	usleep(ms * 1000);
 }
 
-void logging_init()
+void logging_init(void)
 {
 #ifdef WITH_LOGGING
-    static int started;
-    static int first;
-    char debugfilename[MAX_DPATH];
+	static int started;
+	static int first;
+	char debugfilename[MAX_DPATH];
 
-    if (first > 1)
-    {
-        write_log ("***** RESTART *****\n");
-        return;
-    }
-    if (first == 1)
-    {
-        if (debugfile)
-            fclose (debugfile);
-        debugfile = 0;
-    }
+	if (first > 1) {
+		write_log("***** RESTART *****\n");
+		return;
+	}
+	if (first == 1) {
+		if (debugfile)
+			fclose(debugfile);
+		debugfile = 0;
+	}
 
-    sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
-    if(!debugfile)
-        debugfile = fopen(debugfilename, "wt");
+	sprintf(debugfilename, "%s/uae4arm_log.txt", start_path_data);
+	if (!debugfile)
+		debugfile = fopen(debugfilename, "wt");
 
-    first++;
-    write_log ( "Amiberry Logfile\n\n");
+	first++;
+	write_log("UAE4ARM Logfile\n\n");
 #endif
 }
 
-void logging_cleanup()
+void logging_cleanup(void)
 {
 #ifdef WITH_LOGGING
-    if(debugfile)
-        fclose(debugfile);
-    debugfile = 0;
+	if (debugfile)
+		fclose(debugfile);
+	debugfile = 0;
 #endif
 }
 
 
-void stripslashes(TCHAR* p)
+void stripslashes(TCHAR *p)
 {
-	while (_tcslen (p) > 0 && (p[_tcslen (p) - 1] == '\\' || p[_tcslen (p) - 1] == '/'))
-		p[_tcslen (p) - 1] = 0;
+	while (_tcslen(p) > 0 && (p[_tcslen(p) - 1] == '\\' || p[_tcslen(p) - 1] == '/'))
+		p[_tcslen(p) - 1] = 0;
 }
 
-void fixtrailing(TCHAR* p)
+void fixtrailing(TCHAR *p)
 {
 	if (_tcslen(p) == 0)
 		return;
@@ -193,43 +133,85 @@ void fixtrailing(TCHAR* p)
 	_tcscat(p, "/");
 }
 
-void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
+void getpathpart(TCHAR *outpath, int size, const TCHAR *inpath)
 {
-	_tcscpy (outpath, inpath);
-	TCHAR* p = _tcsrchr (outpath, '/');
+	_tcscpy(outpath, inpath);
+	TCHAR *p = _tcsrchr(outpath, '/');
 	if (p)
 		p[0] = 0;
 	fixtrailing(outpath);
 }
 
-void getfilepart(TCHAR* out, int size, const TCHAR* path)
+void getfilepart(TCHAR *out, int size, const TCHAR *path)
 {
 	out[0] = 0;
-	const TCHAR* p = _tcsrchr (path, '/');
+	const TCHAR *p = _tcsrchr(path, '/');
 	if (p)
-	_tcscpy (out, p + 1);
+		_tcscpy(out, p + 1);
 	else
-	_tcscpy (out, path);
+		_tcscpy(out, path);
 }
 
-uae_u8* target_load_keyfile(struct uae_prefs* p, const char* path, int* sizep, char* name)
+uae_u8 *target_load_keyfile(struct uae_prefs *p, const char *path, int *sizep, char *name)
 {
-	return nullptr;
+	return 0;
 }
 
-void target_run()
+void target_run(void)
+{
+	// Reset counter for access violations
+	init_max_signals();
+}
+
+void target_quit(void)
 {
 }
 
-void target_quit()
+static void fix_apmodes(struct uae_prefs *p)
 {
+	if (p->ntscmode)
+	{
+		p->gfx_apmode[0].gfx_refreshrate = 60;
+		p->gfx_apmode[1].gfx_refreshrate = 60;
+	}
+	else
+	{
+		p->gfx_apmode[0].gfx_refreshrate = 50;
+		p->gfx_apmode[1].gfx_refreshrate = 50;
+	}
+
+	p->gfx_apmode[0].gfx_vsync = 2;
+	p->gfx_apmode[1].gfx_vsync = 2;
+	p->gfx_apmode[0].gfx_vflip = -1;
+	p->gfx_apmode[1].gfx_vflip = -1;
+
+	fixup_prefs_dimensions(p);
 }
 
 void target_fixup_options(struct uae_prefs* p)
 {
-	p->rtgmem_type = 1;
-	if (p->z3fastmem_start != z3_start_adr)
-		p->z3fastmem_start = z3_start_adr;
+	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
+
+	if (z3base_adr == Z3BASE_REAL) {
+		// map Z3 memory at real address (0x40000000)
+		p->z3_mapping_mode = Z3MAPPING_REAL;
+		p->z3autoconfig_start = z3base_adr;
+	}
+	else {
+		// map Z3 memory at UAE address (0x10000000)
+		p->z3_mapping_mode = Z3MAPPING_UAE;
+		p->z3autoconfig_start = z3base_adr;
+	}
+
+	if (p->cs_cd32cd && p->cs_cd32nvram && (p->cs_compatible == CP_GENERIC || p->cs_compatible == 0)) {
+		// Old config without cs_compatible, but other cd32-flags
+		p->cs_compatible = CP_CD32;
+		built_in_chipset_prefs(p);
+	}
+
+	if (p->cs_cd32cd && p->cartfile[0]) {
+		p->cs_cd32fmv = true;
+	}
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 	if (p->gfx_size.width == 0)
@@ -237,6 +219,13 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->gfx_size.height == 0)
 		p->gfx_size.height == 256;
 	p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
+
+	if (p->cachesize > 0)
+		p->fpu_no_unimplemented = false;
+	else
+		p->fpu_no_unimplemented = true;
+
+	fix_apmodes(p);
 }
 
 void target_default_options(struct uae_prefs* p, int type)
@@ -261,6 +250,24 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->scaling_method = -1; //Default is Auto
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
+
+	p->cr[CHIPSET_REFRESH_PAL].locked = true;
+	p->cr[CHIPSET_REFRESH_PAL].vsync = 1;
+
+	p->cr[CHIPSET_REFRESH_NTSC].locked = true;
+	p->cr[CHIPSET_REFRESH_NTSC].vsync = 1;
+
+	p->cr[0].index = 0;
+	p->cr[0].horiz = -1;
+	p->cr[0].vert = -1;
+	p->cr[0].lace = -1;
+	p->cr[0].resolution = 0;
+	p->cr[0].vsync = -1;
+	p->cr[0].rate = 60.0;
+	p->cr[0].ntsc = 1;
+	p->cr[0].locked = true;
+	p->cr[0].rtg = true;
+	_tcscpy(p->cr[0].label, _T("RTG"));
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
@@ -285,15 +292,19 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, "amiberry.custom_play", "%d", p->custom_play);
 }
 
-void target_restart()
+void target_restart(void)
 {
+	emulating = 0;
+	gui_restart();
 }
 
-TCHAR* target_expand_environment(const TCHAR* path)
+TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
 {
-	if (!path)
-		return nullptr;
-	return strdup(path);
+	if (out == NULL) {
+		return strdup(path);
+	}
+	_tcscpy(out, path);
+	return out;
 }
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
@@ -336,50 +347,51 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	return 0;
 }
 
-void fetch_datapath(char* out, int size)
+void fetch_datapath(char *out, int size)
 {
 	strncpy(out, start_path_data, size);
 	strncat(out, "/", size);
 }
 
-void fetch_saveimagepath(char* out, int size, int dir)
+void fetch_saveimagepath(char *out, int size, int dir)
 {
 	strncpy(out, start_path_data, size);
 	strncat(out, "/savestates/", size);
 }
 
-void fetch_configurationpath(char* out, int size)
+void fetch_configurationpath(char *out, int size)
 {
 	strncpy(out, config_path, size);
 }
 
-void set_configurationpath(char* newpath)
+void set_configurationpath(char *newpath)
 {
-	strcpy(config_path, newpath);
+	strncpy(config_path, newpath, MAX_DPATH);
 }
 
-void fetch_rompath(char* out, int size)
+void fetch_rompath(char *out, int size)
 {
 	strncpy(out, rom_path, size);
 }
 
-void set_rompath(char* newpath)
+void set_rompath(char *newpath)
 {
-	strcpy(rom_path, newpath);
+	strncpy(rom_path, newpath, MAX_DPATH);
 }
 
-void fetch_rp9path(char* out, int size)
+
+void fetch_rp9path(char *out, int size)
 {
 	strncpy(out, rp9_path, size);
 }
 
-void fetch_statefilepath(char* out, int size)
+void fetch_savestatepath(char *out, int size)
 {
 	strncpy(out, start_path_data, size);
 	strncat(out, "/savestates/", size);
 }
 
-void fetch_screenshotpath(char* out, int size)
+void fetch_screenshotpath(char *out, int size)
 {
 	strncpy(out, start_path_data, size);
 	strncat(out, "/screenshots/", size);
@@ -387,16 +399,16 @@ void fetch_screenshotpath(char* out, int size)
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
 {
+	int i;
 	int result = 0;
 
-	if (emulating && changed_prefs.cdslots[0].inuse)
-		gui_force_rtarea_hdchange();
+	write_log(_T("target_cfgfile_load(): load file %s\n"), filename);
 
 	discard_prefs(p, type);
-	default_prefs(p, 0);
+	default_prefs(p, true, 0);
 
-	const char* ptr = strstr(filename, ".rp9");
-	if (ptr > nullptr)
+	char *ptr = strstr(const_cast<char *>(filename), ".rp9");
+	if (ptr > 0)
 	{
 		// Load rp9 config
 		result = rp9_parse_file(p, filename);
@@ -405,23 +417,21 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	}
 	else
 	{
-		ptr = strstr(filename, ".uae");
-		if (ptr > nullptr)
+		ptr = strstr((char *)filename, ".uae");
+		if (ptr > 0)
 		{
 			int type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
 			result = cfgfile_load(p, filename, &type, 0, 1);
 		}
 		if (result)
 			extractFileName(filename, last_loaded_config);
-		else
-			result = loadconfig_old(p, filename);
 	}
 
 	if (result)
 	{
-		for (int i = 0; i < p->nr_floppies; ++i)
+		for (i = 0; i < p->nr_floppies; ++i)
 		{
-			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
+			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, NULL, NULL, NULL))
 				p->floppyslots[i].df[0] = 0;
 			disk_insert(i, p->floppyslots[i].df);
 			if (strlen(p->floppyslots[i].df) > 0)
@@ -429,34 +439,33 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		}
 
 		if (!isdefault)
-			inputdevice_updateconfig(nullptr, p);
-
+			inputdevice_updateconfig(NULL, p);
+#ifdef WITH_LOGGING
+		p->leds_on_screen = true;
+#endif
 		SetLastActiveConfig(filename);
-
-		if (count_HDs(p) > 0) // When loading a config with HDs, always do a hardreset
-			gui_force_rtarea_hdchange();
 	}
 
 	return result;
 }
 
-int check_configfile(char* file)
+int check_configfile(char *file)
 {
 	char tmp[MAX_PATH];
 
-	FILE* f = fopen(file, "rt");
+	FILE *f = fopen(file, "rt");
 	if (f)
 	{
 		fclose(f);
 		return 1;
 	}
 
-	strcpy(tmp, file);
-	char* ptr = strstr(tmp, ".uae");
-	if (ptr > nullptr)
+	strncpy(tmp, file, MAX_PATH);
+	char *ptr = strstr(tmp, ".uae");
+	if (ptr > 0)
 	{
 		*(ptr + 1) = '\0';
-		strcat(tmp, "conf");
+		strncat(tmp, "conf", MAX_PATH);
 		f = fopen(tmp, "rt");
 		if (f)
 		{
@@ -464,31 +473,30 @@ int check_configfile(char* file)
 			return 2;
 		}
 	}
-
 	return 0;
 }
 
-void extractFileName(const char* str, char* buffer)
+void extractFileName(const char * str, char *buffer)
 {
-	const char* p = str + strlen(str) - 1;
+	const char *p = str + strlen(str) - 1;
 	while (*p != '/' && p > str)
 		p--;
 	p++;
-	strcpy(buffer, p);
+	strncpy(buffer, p, MAX_PATH);
 }
 
-void extractPath(char* str, char* buffer)
+void extractPath(char *str, char *buffer)
 {
-	strcpy(buffer, str);
-	char* p = buffer + strlen(buffer) - 1;
+	strncpy(buffer, str, MAX_PATH);
+	char *p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p > buffer)
 		p--;
 	p[1] = '\0';
 }
 
-void removeFileExtension(char* filename)
+void removeFileExtension(char *filename)
 {
-	char* p = filename + strlen(filename) - 1;
+	char *p = filename + strlen(filename) - 1;
 	while (p > filename && *p != '.')
 	{
 		*p = '\0';
@@ -497,94 +505,98 @@ void removeFileExtension(char* filename)
 	*p = '\0';
 }
 
-void ReadDirectory(const char* path, vector<string>* dirs, vector<string>* files)
+void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector<std::string> *files)
 {
-	DIR* dir;
-	struct dirent* dent;
+	DIR *dir;
+	struct dirent *dent;
 
-	if (dirs != nullptr)
+	if (dirs != NULL)
 		dirs->clear();
-	if (files != nullptr)
+	if (files != NULL)
 		files->clear();
 
-	if ((dir = opendir(path)) != nullptr)
+	dir = opendir(path);
+	if (dir != NULL)
 	{
-		while ((dent = readdir(dir)) != nullptr)
+		while ((dent = readdir(dir)) != NULL)
 		{
 			if (dent->d_type == DT_DIR)
 			{
-				if (dirs != nullptr)
+				if (dirs != NULL)
 					dirs->push_back(dent->d_name);
 			}
-			else if (files != nullptr)
+			else if (files != NULL)
 				files->push_back(dent->d_name);
 		}
-		if (dirs != nullptr && dirs->size() > 0 && (*dirs)[0] == ".")
+		if (dirs != NULL && dirs->size() > 0 && (*dirs)[0] == ".")
 			dirs->erase(dirs->begin());
 		closedir(dir);
 	}
 
-	if (dirs != nullptr)
-		sort(dirs->begin(), dirs->end());
-	if (files != nullptr)
-		sort(files->begin(), files->end());
+	if (dirs != NULL)
+		std::sort(dirs->begin(), dirs->end());
+	if (files != NULL)
+		std::sort(files->begin(), files->end());
 }
 
-void saveAdfDir()
+void saveAdfDir(void)
 {
 	char path[MAX_DPATH];
 	int i;
 
-	snprintf(path, sizeof path, "%s/conf/adfdir.conf", start_path_data);
-	FILE* f = fopen(path, "w");
+	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	FILE *f = fopen(path, "w");
 	if (!f)
 		return;
 
 	char buffer[MAX_DPATH];
-	snprintf(buffer, sizeof buffer, "path=%s\n", currentDir);
+	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
 
-	snprintf(buffer, sizeof buffer, "config_path=%s\n", config_path);
+	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path);
 	fputs(buffer, f);
 
-	snprintf(buffer, sizeof buffer, "rom_path=%s\n", rom_path);
+	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
-	snprintf(buffer, sizeof buffer, "ROMs=%d\n", lstAvailableROMs.size());
+	snprintf(buffer, MAX_DPATH, "ROMs=%d\n", lstAvailableROMs.size());
 	fputs(buffer, f);
-	for (i = 0; i < lstAvailableROMs.size(); ++i)
+	for (i = 0; i<lstAvailableROMs.size(); ++i)
 	{
-		snprintf(buffer, sizeof buffer, "ROMName=%s\n", lstAvailableROMs[i]->Name);
+		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROMs[i]->Name);
 		fputs(buffer, f);
-		snprintf(buffer, sizeof buffer, "ROMPath=%s\n", lstAvailableROMs[i]->Path);
+		snprintf(buffer, MAX_DPATH, "ROMPath=%s\n", lstAvailableROMs[i]->Path);
 		fputs(buffer, f);
-		snprintf(buffer, sizeof buffer, "ROMType=%d\n", lstAvailableROMs[i]->ROMType);
+		snprintf(buffer, MAX_DPATH, "ROMType=%d\n", lstAvailableROMs[i]->ROMType);
 		fputs(buffer, f);
 	}
 
-	snprintf(buffer, sizeof buffer, "MRUDiskList=%d\n", lstMRUDiskList.size());
+	snprintf(buffer, MAX_DPATH, "MRUDiskList=%d\n", lstMRUDiskList.size());
 	fputs(buffer, f);
-	for (i = 0; i < lstMRUDiskList.size(); ++i)
+	for (i = 0; i<lstMRUDiskList.size(); ++i)
 	{
-		snprintf(buffer, sizeof buffer, "Diskfile=%s\n", lstMRUDiskList[i].c_str());
+		snprintf(buffer, MAX_DPATH, "Diskfile=%s\n", lstMRUDiskList[i].c_str());
 		fputs(buffer, f);
 	}
 
-	snprintf(buffer, sizeof buffer, "MRUCDList=%d\n", lstMRUCDList.size());
+	snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
 	fputs(buffer, f);
-	for (i = 0; i < lstMRUCDList.size(); ++i)
+	for (i = 0; i<lstMRUCDList.size(); ++i)
 	{
-		snprintf(buffer, sizeof buffer, "CDfile=%s\n", lstMRUCDList[i].c_str());
+		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", lstMRUCDList[i].c_str());
 		fputs(buffer, f);
 	}
+
+	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
+	fputs(buffer, f);
 
 	fclose(f);
 }
 
-void get_string(FILE* f, char* dst, int size)
+void get_string(FILE *f, char *dst, int size)
 {
 	char buffer[MAX_PATH];
-	fgets(buffer, sizeof buffer, f);
+	fgets(buffer, MAX_PATH, f);
 	int i = strlen(buffer);
 	while (i > 0 && (buffer[i - 1] == '\t' || buffer[i - 1] == ' '
 		|| buffer[i - 1] == '\r' || buffer[i - 1] == '\n'))
@@ -592,99 +604,112 @@ void get_string(FILE* f, char* dst, int size)
 	strncpy(dst, buffer, size);
 }
 
-void loadAdfDir()
+static void trimwsa(char *s)
+{
+	/* Delete trailing whitespace.  */
+	int len = strlen(s);
+	while (len > 0 && strcspn(s + len - 1, "\t \r\n") == 0)
+		s[--len] = '\0';
+}
+
+void loadAdfDir(void)
 {
 	char path[MAX_DPATH];
 	int i;
 
-	strcpy(currentDir, start_path_data);
-	snprintf(config_path, sizeof config_path, "%s/conf/", start_path_data);
-	snprintf(rom_path, sizeof rom_path, "%s/kickstarts/", start_path_data);
-	snprintf(rp9_path, sizeof rp9_path, "%s/rp9/", start_path_data);
+	strncpy(currentDir, start_path_data, MAX_DPATH);
+	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
+	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
+	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
-	snprintf(path, sizeof path, "%s/conf/adfdir.conf", start_path_data);
-	FILE* f1 = fopen(path, "rt");
-	if (f1)
-	{
-		fscanf(f1, "path=");
-		get_string(f1, currentDir, sizeof currentDir);
-		if (!feof(f1))
-		{
-			fscanf(f1, "config_path=");
-			get_string(f1, config_path, sizeof config_path);
-			fscanf(f1, "rom_path=");
-			get_string(f1, rom_path, sizeof rom_path);
+	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	struct zfile *fh;
+	fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
+	if (fh) {
+		char linea[CONFIG_BLEN];
+		TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
+		int numROMs, numDisks, numCDs;
+		int romType = -1;
+		char romName[MAX_PATH] = { '\0' };
+		char romPath[MAX_PATH] = { '\0' };
+		char tmpFile[MAX_PATH];
 
-			int numROMs;
-			fscanf(f1, "ROMs=%d\n", &numROMs);
-			for (i = 0; i < numROMs; ++i)
-			{
-				AvailableROM* tmp;
-				tmp = new AvailableROM();
-				fscanf(f1, "ROMName=");
-				get_string(f1, tmp->Name, sizeof tmp->Name);
-				fscanf(f1, "ROMPath=");
-				get_string(f1, tmp->Path, sizeof tmp->Path);
-				fscanf(f1, "ROMType=%d\n", &tmp->ROMType);
-				lstAvailableROMs.push_back(tmp);
-			}
+		while (zfile_fgetsa(linea, sizeof(linea), fh) != 0) {
+			trimwsa(linea);
+			if (strlen(linea) > 0) {
+				if (!cfgfile_separate_linea(path, linea, option, value))
+					continue;
 
-			lstMRUDiskList.clear();
-			int numDisks = 0;
-			char disk[MAX_PATH];
-			fscanf(f1, "MRUDiskList=%d\n", &numDisks);
-			for (i = 0; i < numDisks; ++i)
-			{
-				fscanf(f1, "Diskfile=");
-				get_string(f1, disk, sizeof disk);
-				FILE* f = fopen(disk, "rb");
-				if (f != nullptr)
-				{
-					fclose(f);
-					lstMRUDiskList.push_back(disk);
+				if (cfgfile_string(option, value, "ROMName", romName, sizeof(romName))
+					|| cfgfile_string(option, value, "ROMPath", romPath, sizeof(romPath))
+					|| cfgfile_intval(option, value, "ROMType", &romType, 1)) {
+					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1) {
+						AvailableROM *tmp = new AvailableROM();
+						strncpy(tmp->Name, romName, sizeof(tmp->Name));
+						strncpy(tmp->Path, romPath, sizeof(tmp->Path));
+						tmp->ROMType = romType;
+						lstAvailableROMs.push_back(tmp);
+						strncpy(romName, "", sizeof(romName));
+						strncpy(romPath, "", sizeof(romPath));
+						romType = -1;
+					}
 				}
-			}
-
-			lstMRUCDList.clear();
-			int numCD = 0;
-			char cd[MAX_PATH];
-			fscanf(f1, "MRUCDList=%d\n", &numCD);
-			for (i = 0; i < numCD; ++i)
-			{
-				fscanf(f1, "CDfile=");
-				get_string(f1, cd, sizeof cd);
-				FILE* f = fopen(cd, "rb");
-				if (f != nullptr)
-				{
-					fclose(f);
-					lstMRUCDList.push_back(cd);
+				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof(tmpFile))) {
+					FILE *f = fopen(tmpFile, "rb");
+					if (f != NULL) {
+						fclose(f);
+						lstMRUDiskList.push_back(tmpFile);
+					}
+				}
+				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof(tmpFile))) {
+					FILE *f = fopen(tmpFile, "rb");
+					if (f != NULL) {
+						fclose(f);
+						lstMRUCDList.push_back(tmpFile);
+					}
+				}
+				else {
+					cfgfile_string(option, value, "path", currentDir, sizeof(currentDir));
+					cfgfile_string(option, value, "config_path", config_path, sizeof(config_path));
+					cfgfile_string(option, value, "rom_path", rom_path, sizeof(rom_path));
+					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
+					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
+					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
+					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
 				}
 			}
 		}
-		fclose(f1);
+		zfile_fclose(fh);
 	}
 }
 
-void target_reset()
+void target_addtorecent(const TCHAR *name, int t)
 {
 }
 
-uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
+
+void target_reset(void)
+{
+}
+
+bool target_can_autoswitchdevice(void)
+{
+	return true;
+}
+
+uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 {
 	*low = 0;
-	if (v == 1)
-	{
+	if (v == 1) {
 		*low = 1e+9; /* We have nano seconds */
 		return 0;
 	}
-
-	if (v == 2)
-	{
+	if (v == 2) {
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
-		*low = uae_u32(time & 0xffffffff);
-		return uae_u32(time >> 32);
+		*low = (uae_u32)(time & 0xffffffff);
+		return (uae_u32)(time >> 32);
 	}
 	return 0;
 }
@@ -696,7 +721,7 @@ int main(int argc, char* argv[])
 	max_uae_height = 1080;
 
 	// Get startup path
-	getcwd(start_path_data, sizeof start_path_data);
+	getcwd(start_path_data, MAX_DPATH);
 	loadAdfDir();
 	rp9_init();
 
@@ -714,6 +739,24 @@ int main(int argc, char* argv[])
 	if (sigaction(SIGILL, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGILL).\n");
+		abort();
+	}
+
+	memset(&action, 0, sizeof(action));
+	action.sa_sigaction = signal_buserror;
+	action.sa_flags = SA_SIGINFO;
+	if (sigaction(SIGBUS, &action, NULL) < 0)
+	{
+		printf("Failed to set signal handler (SIGBUS).\n");
+		abort();
+	}
+
+	memset(&action, 0, sizeof(action));
+	action.sa_sigaction = signal_term;
+	action.sa_flags = SA_SIGINFO;
+	if (sigaction(SIGTERM, &action, NULL) < 0)
+	{
+		printf("Failed to set signal handler (SIGTERM).\n");
 		abort();
 	}
 

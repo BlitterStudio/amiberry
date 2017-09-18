@@ -26,12 +26,16 @@
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>..\..\src\guisan\lib</OutDir>
     <TargetName>libguisan</TargetName>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>4.9.2/7.7.1/r4</ToolchainVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>..\..\src\guisan\lib</OutDir>
     <TargetName>libguisan</TargetName>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>4.9.2/7.7.1/r4</ToolchainVersion>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>

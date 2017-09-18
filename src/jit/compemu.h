@@ -2,7 +2,7 @@
  * compiler/compemu.h - Public interface and definitions
  *
  * Copyright (c) 2001-2004 Milan Jurik of ARAnyM dev team (see AUTHORS)
- *
+ * 
  * Inspired by Christian Bauer's Basilisk II
  *
  * This file is part of the ARAnyM project which builds a new and powerful
@@ -29,12 +29,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-typedef uae_u32 uintptr;
+#ifndef COMPEMU_H
+#define COMPEMU_H
 
-#define panicbug printf
+typedef uae_u32 uintptr;
 
 /* Flags for Bernie during development/debugging. Should go away eventually */
 #define DISTRUST_CONSISTENT_MEM 0
+/* Now that we do block chaining, and also have linked lists on each tag,
+   TAGMASK can be much smaller and still do its job. Saves several megs
+   of memory! */
 #define TAGMASK 0x0000ffff
 #define TAGSIZE (TAGMASK+1)
 #define MAXRUN 1024
@@ -45,15 +49,13 @@ extern uae_u32 start_pc;
 
 struct blockinfo_t;
 
-typedef struct
-{
-    uae_u16* location;
-    uae_u8  cycles;
-    uae_u8  specmem;
+typedef struct {
+  uae_u16* location;
+  uae_u8  cycles;
+  uae_u8  specmem;
 } cpu_history;
 
-typedef union
-{
+typedef union {
     cpuop_func* handler;
     struct blockinfo_t* bi;
 } cacheline;
@@ -75,8 +77,6 @@ typedef union
 #define USE_CHECKSUM_INFO 1
 #endif
 
-#define USE_ALIAS 1
-#define USE_F_ALIAS 1
 #define COMP_DEBUG 0
 
 #if COMP_DEBUG
@@ -131,7 +131,6 @@ typedef union
 
 /* Functions exposed to newcpu, or to what was moved from newcpu.c to
  * compemu_support.c */
-extern void compiler_init(void);
 extern void compiler_exit(void);
 extern void init_comp(void);
 extern void flush(int save_regs);
@@ -143,7 +142,8 @@ extern void set_cache_state(int enabled);
 extern int get_cache_state(void);
 extern uae_u32 get_jitted_size(void);
 #ifdef JIT
-extern void (*flush_icache)(uaecptr ptr, int n);
+extern void flush_icache(int n);
+extern void flush_icache_hard(int n);
 #endif
 extern void alloc_cache(void);
 extern void compile_block(cpu_history* pc_hist, int blocklen, int totcyles);
@@ -156,9 +156,6 @@ extern uae_u8* comp_pc_p;
 extern void* pushall_call_handler;
 
 #define VREGS 32
-#ifdef USE_JIT_FPU
-#define VFREGS 16
-#endif
 
 #define INMEM 1
 #define CLEAN 2
@@ -166,42 +163,28 @@ extern void* pushall_call_handler;
 #define UNDEF 4
 #define ISCONST 5
 
-typedef struct
-{
-    uae_u32* mem;
-    uae_u32 val;
-    uae_u8 status;
-    uae_s8 realreg; /* gb-- realreg can hold -1 */
-    uae_u8 realind; /* The index in the holds[] array */
-    uae_u8 validsize;
-    uae_u8 dirtysize;
+typedef struct {
+  uae_u32* mem;
+  uae_u32 val;
+  uae_u8 status;
+  uae_s8 realreg; /* gb-- realreg can hold -1 */
+  uae_u8 realind; /* The index in the holds[] array */
+  uae_u8 validsize;
+  uae_u8 dirtysize;
 } reg_status;
 
-#ifdef USE_JIT_FPU
-typedef struct
-{
-    uae_u32* mem;
-    double val;
-    uae_u8 status;
-    uae_s8 realreg; /* gb-- realreg can hold -1 */
-    uae_u8 realind;
-    uae_u8 needflush;
-} freg_status;
-#endif
-
-typedef struct
-{
+typedef struct {
     uae_u8 use_flags;
     uae_u8 set_flags;
     uae_u8 is_addx;
-    uae_u8 cflow;
+	  uae_u8 cflow;
 } op_properties;
 
 extern op_properties prop[65536];
 
 STATIC_INLINE int end_block(uae_u16 opcode)
 {
-    return (prop[opcode].cflow & fl_end_block);
+	return (prop[opcode].cflow & fl_end_block);
 }
 
 #define PC_P 16
@@ -226,23 +209,12 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 #define FS2 10
 #define FS3 11
 
-typedef struct
-{
-    uae_u32 touched;
-    uae_s8 holds[VREGS];
-    uae_u8 nholds;
-    uae_u8 locked;
+typedef struct {
+  uae_u32 touched;
+  uae_s8 holds[VREGS];
+  uae_u8 nholds;
+  uae_u8 locked;
 } n_status;
-
-#ifdef USE_JIT_FPU
-typedef struct
-{
-    uae_u32 touched;
-    uae_s8 holds[VFREGS];
-    uae_u8 nholds;
-    uae_u8 locked;
-} fn_status;
-#endif
 
 /* For flag handling */
 #define NADA 1
@@ -254,30 +226,22 @@ typedef struct
 #define NF_TOMEM     1
 #define NF_HANDLER   2
 
-typedef struct
-{
+typedef struct {
     /* Integer part */
     reg_status state[VREGS];
     n_status   nat[N_REGS];
     uae_u32 flags_on_stack;
     uae_u32 flags_in_flags;
     uae_u32 flags_are_important;
-#ifdef USE_JIT_FPU
-    /* FPU part */
-    freg_status fate[VFREGS];
-    fn_status   fat[N_FREGS];
-#endif
 } bigstate;
 
-typedef struct
-{
+typedef struct {
     /* Integer part */
-    uae_s8 virt[VREGS];
-    uae_s8 nat[N_REGS];
+  uae_s8 virt[VREGS];
+  uae_s8 nat[N_REGS];
 } smallstate;
 
 extern int touchcnt;
-
 
 #define IMM uae_s32
 #define RR1 uae_u32
@@ -310,7 +274,9 @@ extern int touchcnt;
 #if defined(CPU_arm)
 #include "compemu_midfunc_arm.h"
 #include "compemu_midfunc_arm2.h"
-#else
+#endif
+
+#if defined(CPU_i386) || defined(CPU_x86_64)
 #include "compemu_midfunc_x86.h"
 #endif
 
@@ -343,24 +309,21 @@ extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
 
 struct blockinfo_t;
 
-typedef struct dep_t
-{
-    uae_u32*            jmp_off;
-    struct blockinfo_t* target;
-    struct blockinfo_t* source;
-    struct dep_t**      prev_p;
-    struct dep_t*       next;
+typedef struct dep_t {
+  uae_u32*            jmp_off;
+  struct blockinfo_t* target;
+  struct blockinfo_t* source;
+  struct dep_t**      prev_p;
+  struct dep_t*       next;
 } dependency;
 
-typedef struct checksum_info_t
-{
-    uae_u8 *start_p;
-    uae_u32 length;
-    struct checksum_info_t *next;
+typedef struct checksum_info_t {
+  uae_u8 *start_p;
+  uae_u32 length;
+  struct checksum_info_t *next;
 } checksum_info;
 
-typedef struct blockinfo_t
-{
+typedef struct blockinfo_t {
     uae_s32 count;
     cpuop_func* direct_handler_to_use;
     cpuop_func* handler_to_use;
@@ -372,6 +335,7 @@ typedef struct blockinfo_t
     cpuop_func* direct_pen;
     cpuop_func* direct_pcc;
 
+    uae_u8* nexthandler;
     uae_u8* pc_p;
 
     uae_u32 c1;
@@ -396,11 +360,6 @@ typedef struct blockinfo_t
     dependency  dep[2];  /* Holds things we depend on */
     dependency* deplist; /* List of things that depend on this */
     smallstate  env;
-
-#ifdef JIT_DEBUG
-    /* (gb) size of the compiled block (direct handler) */
-    uae_u32 direct_handler_size;
-#endif
 } blockinfo;
 
 #define BI_INVALID 0
@@ -422,3 +381,9 @@ void comp_fbcc_opp (uae_u32 opcode);
 void comp_fsave_opp (uae_u32 opcode);
 void comp_frestore_opp (uae_u32 opcode);
 void comp_fpp_opp (uae_u32 opcode, uae_u16 extra);
+
+void jit_abort(const TCHAR *format,...);
+
+#define uae_p32(x) ((uae_u32)(x))
+
+#endif /* COMPEMU_H */

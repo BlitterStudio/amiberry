@@ -1,6 +1,3 @@
-#ifndef EVENTS_H
-#define EVENTS_H
-
  /*
   * UAE - The Un*x Amiga Emulator
   *
@@ -12,21 +9,25 @@
   * Copyright 1995-1998 Bernd Schmidt
   */
 
-#undef EVENT_DEBUG
+#ifndef UAE_EVENTS_H
+#define UAE_EVENTS_H
+
+#include "uae/types.h"
 
 #include "machdep/rpt.h"
 
-extern frame_time_t vsyncmintime;
+extern frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
 extern int vsynctimebase, syncbase;
-extern void reset_frame_rate_hack ();
+extern void reset_frame_rate_hack (void);
 extern int speedup_timelimit;
 
-extern void compute_vsynctime ();
-extern void init_eventtab ();
-extern void events_schedule ();
+extern void compute_vsynctime (void);
+extern void init_eventtab (void);
+extern void events_schedule (void);
 
-extern long last_synctime;
-typedef void (*evfunc)();
+extern unsigned long currcycle, nextevent;
+extern int is_syncline;
+typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 
 typedef void (*do_cycles_func)(unsigned long);
@@ -58,24 +59,17 @@ enum {
 };
 
 enum {
-    ev2_disk, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
+    ev2_disk, ev2_ciaa_tod, ev2_ciab_tod, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
     ev2_max
 };
 
 extern int pissoff_value;
 #define countdown (regs.pissoff)
-//TODO: check and implement this
-//#define do_cycles do_cycles_slow
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
 
-extern volatile bool vblank_found_chipset;
-extern volatile bool vblank_found_rtg;
-extern int hpos_offset;
-extern int maxhpos;
-
-STATIC_INLINE void cycles_do_special ()
+STATIC_INLINE void cycles_do_special (void)
 {
 #ifdef JIT
 	if (currprefs.cachesize) {
@@ -88,12 +82,12 @@ STATIC_INLINE void cycles_do_special ()
 	}
 }
 
-STATIC_INLINE void do_extra_cycles(unsigned long cycles_to_add)
+STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
 {
 	regs.pissoff -= cycles_to_add;
 }
 
-STATIC_INLINE unsigned long int get_cycles ()
+STATIC_INLINE unsigned long int get_cycles (void)
 {
   return currcycle;
 }
@@ -104,13 +98,7 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 	eventtab[ev_hsync].oldcycles = x;
 }
 
-STATIC_INLINE int current_hpos_safe ()
-{
-  int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
-	return hp;
-}
-
-STATIC_INLINE int current_hpos ()
+STATIC_INLINE int current_hpos (void)
 {
   int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
 	return hp;
@@ -119,10 +107,10 @@ STATIC_INLINE int current_hpos ()
 STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 {
 	signed long c = get_cycles ();
-	return static_cast<signed long>(endcycles) - c > 0;
+	return (signed long)endcycles - c > 0;
 }
 
-extern void MISC_handler();
+extern void MISC_handler(void);
 
 STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
 {
@@ -134,7 +122,7 @@ STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
 
 STATIC_INLINE void event2_remevent (int no)
 {
-	eventtab2[no].active = false;
+	eventtab2[no].active = 0;
 }
 
 STATIC_INLINE void event_newevent (int no, evt t)
@@ -147,7 +135,7 @@ STATIC_INLINE void event_newevent (int no, evt t)
 
 STATIC_INLINE void event_remevent (int no)
 {
-	eventtab[no].active = false;
+	eventtab[no].active = 0;
 }
 
-#endif
+#endif /* UAE_EVENTS_H */

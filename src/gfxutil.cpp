@@ -13,37 +13,16 @@
 #include "rtgmodes.h"
 #include "xwin.h"
 
-double getvsyncrate(double hz, int *mult)
-{
-//	struct apmode *ap = picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
-
-	if (hz < 0)
-		return 0;
-	if (hz > 85) {
-		*mult = -1;
-		return hz / 2;
-	}
-	if (hz < 35 && hz > 0) {
-//		if (ap->gfx_interlaced)
-//			*mult = 0;
-//		else
-			*mult = 1;
-		return hz * 2;
-	}
-	*mult = 0;
-	return hz;
-}
-
-#define	RED 0
+#define	RED 	0
 #define	GRN	1
 #define	BLU	2
 
 unsigned int doMask (int p, int bits, int shift)
 {
-  /* p is a value from 0 to 15 (Amiga color value)
-   * scale to 0..255, shift to align msb with mask, and apply mask */
+  /* scale to 0..255, shift to align msb with mask, and apply mask */
+  uae_u32 val;
 
-  uae_u32 val = p * 0x11111111UL;
+	val = p << 24;
   if (!bits) 
     return 0;
   val >>= (32 - bits);
@@ -70,6 +49,7 @@ unsigned int doMask256 (int p, int bits, int shift)
 static unsigned int doColor(int i, int bits, int shift)
 {
   int shift2;
+
   if(bits >= 8) 
     shift2 = 0; 
   else 
@@ -84,19 +64,51 @@ static uae_u32 lowbits (int v, int shift, int lsize)
   return v;
 }
 
+#ifndef ARMV6_ASSEMBLY
+void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap,
+	uae_u32 *rc, uae_u32 *gc, uae_u32 *bc)
+{
+	int bpp = rw + gw + bw;
+	int i;
+	for(i = 0; i < 256; i++) {
+		rc[i] = doColor (i, rw, rs);
+		gc[i] = doColor (i, gw, gs);
+		bc[i] = doColor (i, bw, bs);
+		if (byte_swap) {
+			if (bpp <= 16) {
+				rc[i] = bswap_16 (rc[i]);
+				gc[i] = bswap_16 (gc[i]);
+				bc[i] = bswap_16 (bc[i]);
+			} else {
+				rc[i] = bswap_32 (rc[i]);
+				gc[i] = bswap_32 (gc[i]);
+				bc[i] = bswap_32 (bc[i]);
+			}
+		}
+		if (bpp <= 16) {
+			/* Fill upper 16 bits of each colour value with
+			* a copy of the colour. */
+			rc[i] = rc[i] * 0x00010001;
+			gc[i] = gc[i] * 0x00010001;
+			bc[i] = bc[i] * 0x00010001;
+		}
+	}
+}
+#endif
+
 void alloc_colors64k (int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap)
 {
 	int i;
 	for (i = 0; i < 4096; i++) {
-		int r = i >> 8;
-		int g = (i >> 4) & 0xf;
-		int b = i & 0xf;
+		int r = ((i >> 8) << 4) | (i >> 8);
+		int g = (((i >> 4) & 0xf) << 4) | ((i >> 4) & 0x0f);
+		int b = ((i & 0xf) << 4) | (i & 0x0f);
 		xcolors[i] = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs);
+		/* Fill upper 16 bits of each colour value
+		* with a copy of the colour. */
+		xcolors[i] = xcolors[i] * 0x00010001;
 	}
-	/* create AGA color tables */
-	for(i=0; i<256; i++) {
-		xredcolors[i] = doColor(i, rw, rs);
-		xgreencolors[i] = doColor(i, gw, gs);
-		xbluecolors[i] = doColor(i, bw, bs);
-	}
+#ifndef ARMV6_ASSEMBLY
+	alloc_colors_rgb (rw, gw, bw, rs, gs, bs, byte_swap, xredcolors, xgreencolors, xbluecolors);
+#endif
 }
