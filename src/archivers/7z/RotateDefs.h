@@ -4,7 +4,7 @@
 #ifndef __ROTATE_DEFS_H
 #define __ROTATE_DEFS_H
 
-#ifdef _MSC_VER
+#ifdef _MSC_VER_
 
 #include <stdlib.h>
 #define rotlFixed(x, n) _rotl((x), (n))

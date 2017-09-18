@@ -731,22 +731,13 @@
     <Image Include="..\..\data\file.ico">
       <Filter>Resource files\data</Filter>
     </Image>
-    <Image Include="..\..\data\joystick.bmp">
-      <Filter>Resource files\data</Filter>
-    </Image>
     <Image Include="..\..\data\joystick.ico">
       <Filter>Resource files\data</Filter>
     </Image>
     <Image Include="..\..\data\misc.ico">
       <Filter>Resource files\data</Filter>
     </Image>
-    <Image Include="..\..\data\mouse.bmp">
-      <Filter>Resource files\data</Filter>
-    </Image>
     <Image Include="..\..\data\paths.ico">
-      <Filter>Resource files\data</Filter>
-    </Image>
-    <Image Include="..\..\data\remapping.bmp">
       <Filter>Resource files\data</Filter>
     </Image>
     <Image Include="..\..\data\savestate.png">
@@ -769,9 +760,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\..\data\FreeSans.ttf">
-      <Filter>Resource files\data</Filter>
-    </Font>
     <Font Include="..\..\data\Topaznew.ttf">
       <Filter>Resource files\data</Filter>
     </Font>
@@ -1439,6 +1427,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\mp2\kjmp2.h">
       <Filter>Header files\archivers\mp2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\ar.h">
+      <Filter>Header files\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

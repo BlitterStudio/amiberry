@@ -54,7 +54,7 @@ using namespace std;
 #endif
 
 #ifndef __STDC__
-#ifndef _MSC_VER
+#ifndef _MSC_VER_
 #error "Your compiler is not ANSI. Get a real one."
 #endif
 #endif
@@ -369,7 +369,7 @@ extern void gui_message(const TCHAR *, ...);
 #endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
-#elif _MSC_VER
+#elif _MSC_VER_
 #define STATIC_INLINE static __forceinline
 #define NOINLINE __declspec(noinline)
 #define NORETURN __declspec(noreturn)

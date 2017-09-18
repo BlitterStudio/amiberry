@@ -1,7 +1,7 @@
 /* 7zExtract.c -- Extracting from 7z archive
 2008-11-23 : Igor Pavlov : Public domain */
 
-#include "../../7zCrc.h"
+#include "7zCrc.h"
 #include "7zDecode.h"
 #include "7zExtract.h"
 

@@ -344,25 +344,16 @@
     <Image Include="..\..\data\file.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="..\..\data\joystick.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
     <Image Include="..\..\data\joystick.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
     <Image Include="..\..\data\misc.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="..\..\data\mouse.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
     <Image Include="..\..\data\paths.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
     <Image Include="..\..\data\quickstart.ico" />
-    <Image Include="..\..\data\remapping.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
     <Image Include="..\..\data\savestate.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
@@ -374,9 +365,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\..\data\FreeSans.ttf">
-      <DeploymentContent>true</DeploymentContent>
-    </Font>
     <Font Include="..\..\data\Topaznew.ttf">
       <DeploymentContent>true</DeploymentContent>
     </Font>
@@ -499,6 +487,7 @@
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\window.hpp" />
     <ClInclude Include="..\..\src\guisan\include\guisan\x.hpp" />
     <ClInclude Include="..\..\src\include\akiko.h" />
+    <ClInclude Include="..\..\src\include\ar.h" />
     <ClInclude Include="..\..\src\include\audio.h" />
     <ClInclude Include="..\..\src\include\autoconf.h" />
     <ClInclude Include="..\..\src\include\blit.h" />

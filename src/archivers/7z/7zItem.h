@@ -4,7 +4,7 @@
 #ifndef __7Z_ITEM_H
 #define __7Z_ITEM_H
 
-#include "../../7zBuf.h"
+#include "7zBuf.h"
 
 typedef struct
 {

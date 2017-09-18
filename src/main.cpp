@@ -158,10 +158,8 @@ void fixup_cpu(struct uae_prefs *p)
 	switch (p->cpu_model)
 	{
 	case 68000:
-		p->address_space_24 = true;
 		break;
 	case 68010:
-		p->address_space_24 = true;
 		break;
 	case 68020:
 		break;
@@ -171,52 +169,20 @@ void fixup_cpu(struct uae_prefs *p)
 		if (p->fpu_model)
 			p->fpu_model = 68040;
 		break;
-	case 68060:
-		if (p->fpu_model)
-			p->fpu_model = 68060;
-		break;
 	}
 
-	if (p->cpu_model < 68020 && p->cachesize) {
-		p->cachesize = 0;
-		error_log(_T("JIT requires 68020 or better CPU."));
-	}
-
-	if (p->cpu_model >= 68040 && p->cachesize && p->cpu_compatible)
+	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
-	if (p->cpu_model >= 68040 && p->cpu_cycle_exact) {
-		p->cpu_cycle_exact = false;
-		error_log(_T("68040/060 cycle-exact is not supported."));
+	if (p->cachesize && (p->fpu_no_unimplemented)) {
+		error_log(_T("JIT is not compatible with unimplemented FPU instruction emulation."));
+		p->fpu_no_unimplemented = false;
 	}
 
-	if ((p->cpu_model < 68030 || p->cachesize) && p->mmu_model) {
-		error_log(_T("MMU emulation requires 68030/040/060 and it is not JIT compatible."));
-		p->mmu_model = 0;
-	}
-
-	if (p->cachesize && p->cpu_cycle_exact) {
-		error_log(_T("JIT and cycle-exact can't be enabled simultaneously."));
-		p->cachesize = 0;
-	}
-	if (p->cachesize && (p->fpu_no_unimplemented || p->int_no_unimplemented)) {
-		error_log(_T("JIT is not compatible with unimplemented CPU/FPU instruction emulation."));
-		p->fpu_no_unimplemented = p->int_no_unimplemented = false;
-	}
-
-	if (p->cpu_cycle_exact && p->m68k_speed < 0)
-		p->m68k_speed = 0;
-
-	if (p->immediate_blits && p->blitter_cycle_exact) {
-		error_log(_T("Cycle-exact and immediate blitter can't be enabled simultaneously.\n"));
-		p->immediate_blits = false;
-	}
 	if (p->immediate_blits && p->waiting_blits) {
 		error_log(_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
 		p->waiting_blits = 0;
 	}
-	if (p->cpu_cycle_exact)
-		p->cpu_compatible = true;
 }
 
 
@@ -483,41 +449,6 @@ static void parse_cmdline_2(int argc, TCHAR **argv)
 				cfgfile_addcfgparam(argv[++i]);
 		}
 	}
-}
-
-static int diskswapper_cb(struct zfile *f, void *vrsd)
-{
-	int *num = static_cast<int*>(vrsd);
-	if (*num >= MAX_SPARE_DRIVES)
-		return 1;
-	if (zfile_gettype(f) == ZFILE_DISKIMAGE) {
-		_tcsncpy(currprefs.dfxlist[*num], zfile_getname(f), 255);
-		(*num)++;
-	}
-	return 0;
-}
-
-static void parse_diskswapper(const TCHAR *s)
-{
-	TCHAR *tmp = my_strdup(s);
-	TCHAR *delim = _T(",");
-	TCHAR *p1, *p2;
-	int num = 0;
-
-	p1 = tmp;
-	for (;;) {
-		p2 = strtok(p1, delim);
-		if (!p2)
-			break;
-		p1 = nullptr;
-		if (num >= MAX_SPARE_DRIVES)
-			break;
-		if (!zfile_zopen(p2, diskswapper_cb, &num)) {
-			_tcsncpy(currprefs.dfxlist[num], p2, 255);
-			num++;
-		}
-	}
-	free(tmp);
 }
 
 static TCHAR *parsetext(const TCHAR *s)
@@ -793,7 +724,6 @@ static int real_main2 (int argc, TCHAR **argv)
 	memset(&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
 	gui_data.hd = -1;
-	gui_data.md = -1;
 
 	if (!init_shm()) {
 		if (currprefs.start_gui)

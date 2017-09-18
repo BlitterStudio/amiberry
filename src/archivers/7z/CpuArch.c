@@ -5,14 +5,14 @@
 
 #ifdef MY_CPU_X86_OR_AMD64
 
-#if (defined(_MSC_VER) && !defined(MY_CPU_AMD64)) || defined(__GNUC__)
+#if (defined(_MSC_VER_) && !defined(MY_CPU_AMD64)) || defined(__GNUC__)
 #define USE_ASM
 #endif
 
 #if defined(USE_ASM) && !defined(MY_CPU_AMD64)
 static UInt32 CheckFlag(UInt32 flag)
 {
-  #ifdef _MSC_VER
+  #ifdef _MSC_VER_
   __asm pushfd;
   __asm pop EAX;
   __asm mov EDX, EAX;
@@ -52,7 +52,7 @@ static void MyCPUID(UInt32 function, UInt32 *a, UInt32 *b, UInt32 *c, UInt32 *d)
 {
   #ifdef USE_ASM
 
-  #ifdef _MSC_VER
+  #ifdef _MSC_VER_
 
   UInt32 a2, b2, c2, d2;
   __asm xor EBX, EBX;

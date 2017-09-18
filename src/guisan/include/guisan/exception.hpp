@@ -62,8 +62,8 @@
 #include "guisan/platform.hpp"
 
 
-#ifdef _MSC_VER
-#if _MSC_VER <= 1200
+#ifdef _MSC_VER_
+#if _MSC_VER_ <= 1200
 #define __FUNCTION__ "?"
 #endif
 #endif
