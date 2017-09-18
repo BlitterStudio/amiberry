@@ -5,6 +5,7 @@
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
+#include "UaeDropDown.hpp"
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -14,13 +15,14 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-
 static gcn::Window* grpChipset;
 static gcn::UaeRadioButton* optOCS;
 static gcn::UaeRadioButton* optECSAgnus;
 static gcn::UaeRadioButton* optECS;
 static gcn::UaeRadioButton* optAGA;
 static gcn::UaeCheckBox* chkNTSC;
+static gcn::Label *lblChipset;
+static gcn::UaeDropDown* cboChipset;
 static gcn::Window* grpBlitter;
 static gcn::UaeRadioButton* optBlitNormal;
 static gcn::UaeRadioButton* optBlitImmed;
@@ -31,6 +33,68 @@ static gcn::UaeRadioButton* optCollSprites;
 static gcn::UaeRadioButton* optCollPlayfield;
 static gcn::UaeRadioButton* optCollFull;
 
+struct chipset {
+	int compatible;
+	char name[32];
+};
+static struct chipset chipsets[] = {
+	{ CP_GENERIC, "Generic" },
+	{ CP_CD32,    "CD32" },
+	{ CP_A500,    "A500" },
+	{ CP_A500P,   "A500+" },
+	{ CP_A600,    "A600" },
+	{ CP_A1200,   "A1200" },
+	{ CP_A2000,   "A2000" },
+	{ CP_A4000,   "A4000" },
+	{ -1, "" }
+};
+
+static const int numChipsets = 8;
+
+class ChipsetListModel : public gcn::ListModel
+{
+public:
+	ChipsetListModel()
+	{
+	}
+
+	int getNumberOfElements() override
+	{
+		return numChipsets;
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= numChipsets)
+			return "---";
+		return chipsets[i].name;
+	}
+};
+static ChipsetListModel chipsetList;
+static bool bIgnoreListChange = true;
+
+
+class ChipsetActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (!bIgnoreListChange) {
+			if (actionEvent.getSource() == cboChipset) {
+				//---------------------------------------
+				// Chipset selected
+				//---------------------------------------
+				int cs = chipsets[cboChipset->getSelected()].compatible;
+				if (changed_prefs.cs_compatible != cs) {
+					changed_prefs.cs_compatible = cs;
+					built_in_chipset_prefs(&changed_prefs);
+					RefreshPanelChipset();
+				}
+			}
+		}
+	}
+};
+static ChipsetActionListener* chipsetActionListener;
 
 class ChipsetButtonActionListener : public gcn::ActionListener
 {
@@ -106,6 +170,7 @@ static CollisionButtonActionListener* collisionButtonActionListener;
 
 void InitPanelChipset(const struct _ConfigCategory& category)
 {
+	chipsetActionListener = new ChipsetActionListener();
 	chipsetButtonActionListener = new ChipsetButtonActionListener();
 	ntscButtonActionListener = new NTSCButtonActionListener();
 
@@ -124,6 +189,15 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	chkNTSC = new gcn::UaeCheckBox("NTSC");
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
+	lblChipset = new gcn::Label("Extra:");
+	lblChipset->setSize(40, LABEL_HEIGHT);
+	lblChipset->setAlignment(gcn::Graphics::RIGHT);
+	cboChipset = new gcn::UaeDropDown(&chipsetList);
+	cboChipset->setSize(75, DROPDOWN_HEIGHT);
+	cboChipset->setBaseColor(gui_baseCol);
+	cboChipset->setId("ChipsetExtra");
+	cboChipset->addActionListener(chipsetActionListener);
+
 	grpChipset = new gcn::Window("Chipset");
 	grpChipset->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpChipset->add(optOCS, 5, 10);
@@ -131,6 +205,9 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpChipset->add(optECS, 5, 70);
 	grpChipset->add(optAGA, 5, 100);
 	grpChipset->add(chkNTSC, 5, 140);
+	grpChipset->add(lblChipset, 115, 10);
+	grpChipset->add(cboChipset, 115 + lblChipset->getWidth() + 8, 10);
+
 	grpChipset->setMovable(false);
 	grpChipset->setSize(120, 185);
 	grpChipset->setBaseColor(gui_baseCol);
@@ -201,9 +278,12 @@ void ExitPanelChipset()
 	delete optECS;
 	delete optAGA;
 	delete chkNTSC;
+	delete lblChipset;
+	delete cboChipset;
 	delete grpChipset;
 	delete chipsetButtonActionListener;
 	delete ntscButtonActionListener;
+	delete chipsetActionListener;
 
 	delete optBlitNormal;
 	delete optBlitImmed;
@@ -222,6 +302,17 @@ void ExitPanelChipset()
 
 void RefreshPanelChipset()
 {
+	bIgnoreListChange = true;
+	int idx = 0;
+	for (int i = 0; i<numChipsets; ++i) {
+		if (chipsets[i].compatible == changed_prefs.cs_compatible) {
+			idx = i;
+			break;
+		}
+	}
+	cboChipset->setSelected(idx);
+	bIgnoreListChange = false;
+
 	if (changed_prefs.chipset_mask == 0)
 		optOCS->setSelected(true);
 	else if (changed_prefs.chipset_mask == CSMASK_ECS_AGNUS)
@@ -240,7 +331,7 @@ void RefreshPanelChipset()
 	else
 		optBlitNormal->setSelected(true);
 
-		if (changed_prefs.collision_level == 0)
+	if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);
 	else if (changed_prefs.collision_level == 1)
 		optCollSprites->setSelected(true);
@@ -248,4 +339,24 @@ void RefreshPanelChipset()
 		optCollPlayfield->setSelected(true);
 	else
 		optCollFull->setSelected(true);
+}
+
+bool HelpPanelChipset(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games, select \"Full ECS\". Some older");
+	helptext.push_back("Amiga games requires \"OCS\" or \"ECS Agnus\". You have to play with these options if a game won't work as");
+	helptext.push_back("expected. By selecting an entry in \"Extra\", all internal chipset settings will become the required values for the specified");
+	helptext.push_back("Amiga model.");
+	helptext.push_back("For some games, you have to activate \"NTSC\" (60 Hz instead of 50 Hz) for correct timing.");
+	helptext.push_back("");
+	helptext.push_back("When you see some graphic issues in a game, try \"Immediate\" or \"Wait for blit.\" for blitter and/or disable");
+	helptext.push_back("\"Fast copper\".");
+	helptext.push_back("");
+	helptext.push_back("\"Fast copper\" uses a prediction algorithm instead of checking the copper state on a more regular basis. This may");
+	helptext.push_back("cause issues but brings a big performance improvement. The option was removed in WinUAE in an early state,");
+	helptext.push_back("but for most games, it works fine and the better performance is helpful for low powered devices.");
+	helptext.push_back("");
+	helptext.push_back("For \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine for nearly all games.");
+	return true;
 }

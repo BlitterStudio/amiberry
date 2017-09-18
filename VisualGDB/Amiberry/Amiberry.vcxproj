@@ -275,6 +275,7 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelSavestate.cpp" />
@@ -282,6 +283,7 @@
     <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectFolder.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectorEntry.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeCheckBox.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp" />

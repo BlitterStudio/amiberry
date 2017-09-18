@@ -20,6 +20,11 @@ static gcn::Button* cmdMainROM;
 static gcn::Label* lblExtROM;
 static gcn::UaeDropDown* cboExtROM;
 static gcn::Button* cmdExtROM;
+#ifdef ACTION_REPLAY
+static gcn::Label *lblCartROM;
+static gcn::UaeDropDown* cboCartROM;
+static gcn::Button *cmdCartROM;
+#endif
 
 class ROMListModel : public gcn::ListModel
 {
@@ -57,12 +62,14 @@ public:
 		roms.clear();
 		idxToAvailableROMs.clear();
 
+		int currIdx = -1;
 		if (ROMType & (ROMTYPE_EXTCDTV | ROMTYPE_EXTCD32))
 		{
 			roms.push_back("");
 			idxToAvailableROMs.push_back(-1);
+			currIdx = 0;
 		}
-		int currIdx = -1;
+		
 		for (int i = 0; i < lstAvailableROMs.size(); ++i)
 		{
 			if (lstAvailableROMs[i]->ROMType & ROMType)
@@ -79,7 +86,9 @@ public:
 
 static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
-
+#ifdef ACTION_REPLAY
+static ROMListModel *cartROMList;
+#endif
 
 class MainROMActionListener : public gcn::ActionListener
 {
@@ -110,6 +119,21 @@ public:
 
 static ExtROMActionListener* extROMActionListener;
 
+#ifdef ACTION_REPLAY
+class CartROMActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		AvailableROM* rom = cartROMList->getROMat(cboCartROM->getSelected());
+		if (rom != nullptr)
+			strcpy(changed_prefs.cartfile, rom->Path);
+		else
+			strcpy(changed_prefs.cartfile, "");
+	}
+};
+static CartROMActionListener* cartROMActionListener;
+#endif
 
 class ROMButtonActionListener : public gcn::ActionListener
 {
@@ -124,8 +148,7 @@ public:
 			strcpy(tmp, currentDir);
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
-				AvailableROM* newrom;
-				newrom = new AvailableROM();
+				AvailableROM * newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
 				strcpy(newrom->Path, tmp);
@@ -141,8 +164,7 @@ public:
 			strcpy(tmp, currentDir);
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
-				AvailableROM* newrom;
-				newrom = new AvailableROM();
+				AvailableROM * newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
 				strcpy(newrom->Path, tmp);
@@ -153,6 +175,24 @@ public:
 			}
 			cmdExtROM->requestFocus();
 		}
+#ifdef ACTION_REPLAY
+		else if (actionEvent.getSource() == cmdCartROM)
+		{
+			strncpy(tmp, currentDir, MAX_PATH);
+			if (SelectFile("Select Cartridge ROM", tmp, filter))
+			{
+				AvailableROM *newrom = new AvailableROM();
+				extractFileName(tmp, newrom->Name);
+				removeFileExtension(newrom->Name);
+				strcpy(newrom->Path, tmp);
+				newrom->ROMType = ROMTYPE_CD32CART;
+				lstAvailableROMs.push_back(newrom);
+				strcpy(changed_prefs.romextfile, tmp);
+				RefreshPanelROM();
+			}
+			cmdCartROM->requestFocus();
+		}
+#endif
 	}
 };
 
@@ -165,9 +205,15 @@ void InitPanelROM(const struct _ConfigCategory& category)
 
 	mainROMActionListener = new MainROMActionListener();
 	extROMActionListener = new ExtROMActionListener();
+#ifdef ACTION_REPLAY
+	cartROMActionListener = new CartROMActionListener();
+#endif
 	romButtonActionListener = new ROMButtonActionListener();
 	mainROMList = new ROMListModel(ROMTYPE_KICK | ROMTYPE_KICKCD32);
 	extROMList = new ROMListModel(ROMTYPE_EXTCDTV | ROMTYPE_EXTCD32);
+#ifdef ACTION_REPLAY
+	cartROMList = new ROMListModel(ROMTYPE_ALL_CART);
+#endif
 
 	lblMainROM = new gcn::Label("Main ROM File:");
 	lblMainROM->setSize(120, LABEL_HEIGHT);
@@ -197,6 +243,21 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdExtROM->setBaseColor(gui_baseCol);
 	cmdExtROM->addActionListener(romButtonActionListener);
 
+#ifdef ACTION_REPLAY
+	lblCartROM = new gcn::Label("Cardridge ROM File:");
+	lblCartROM->setSize(200, LABEL_HEIGHT);
+	cboCartROM = new gcn::UaeDropDown(cartROMList);
+	cboCartROM->setSize(400, DROPDOWN_HEIGHT);
+	cboCartROM->setBaseColor(gui_baseCol);
+	cboCartROM->setId("cboCartROM");
+	cboCartROM->addActionListener(cartROMActionListener);
+	cmdCartROM = new gcn::Button("...");
+	cmdCartROM->setId("CartROM");
+	cmdCartROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdCartROM->setBaseColor(gui_baseCol);
+	cmdCartROM->addActionListener(romButtonActionListener);
+#endif
+
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
 	posY += lblMainROM->getHeight() + 4;
@@ -209,6 +270,14 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	category.panel->add(cboExtROM, DISTANCE_BORDER, posY);
 	category.panel->add(cmdExtROM, DISTANCE_BORDER + cboExtROM->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboExtROM->getHeight() + DISTANCE_NEXT_Y;
+
+#ifdef ACTION_REPLAY
+	category.panel->add(lblCartROM, DISTANCE_BORDER, posY);
+	posY += lblCartROM->getHeight() + 4;
+	category.panel->add(cboCartROM, DISTANCE_BORDER, posY);
+	category.panel->add(cmdCartROM, DISTANCE_BORDER + cboCartROM->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += cboCartROM->getHeight() + DISTANCE_NEXT_Y;
+#endif
 
 	RefreshPanelROM();
 }
@@ -228,6 +297,14 @@ void ExitPanelROM()
 	delete extROMList;
 	delete extROMActionListener;
 
+#ifdef ACTION_REPLAY
+	delete lblCartROM;
+	delete cboCartROM;
+	delete cmdCartROM;
+	delete cartROMList;
+	delete cartROMActionListener;
+#endif
+
 	delete romButtonActionListener;
 	//	delete chkMapROM;
 }
@@ -240,4 +317,21 @@ void RefreshPanelROM()
 
 	idx = extROMList->InitROMList(changed_prefs.romextfile);
 	cboExtROM->setSelected(idx);
+
+#ifdef ACTION_REPLAY
+	idx = cartROMList->InitROMList(changed_prefs.cartfile);
+	cboCartROM->setSelected(idx);
+#endif
+}
+
+bool HelpPanelROM(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("Select the required kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
+	helptext.push_back("");
+	helptext.push_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
+	helptext.push_back("");
+	helptext.push_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video playback in CD32.");
+	helptext.push_back("There are also some Action Replay and Freezer cards and the built in HRTMon available.");
+	return true;
 }

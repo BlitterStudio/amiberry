@@ -55,6 +55,7 @@ static gcn::ImageButton* listCmdDelete[MAX_HD_DEVICES];
 static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
 static gcn::Button* cmdCreateHardfile;
+static gcn::UaeCheckBox* chkHDReadOnly;
 static gcn::UaeCheckBox* chkCD;
 static gcn::UaeDropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
@@ -258,6 +259,7 @@ public:
 			cmdCDSelect->requestFocus();
 		}
 		RefreshPanelHD();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -271,12 +273,15 @@ public:
 	{
 		if (actionEvent.getSource() == sldCDVol)
 		{
-			int newvol = 100 - int(sldCDVol->getValue());
+			int newvol = 100 - (int)sldCDVol->getValue();
 			if (changed_prefs.sound_volume_cd != newvol)
 			{
 				changed_prefs.sound_volume_cd = newvol;
 				RefreshPanelHD();
 			}
+		}
+		else if (actionEvent.getSource() == chkHDReadOnly) {
+			changed_prefs.harddrive_read_only = chkHDReadOnly->isSelected();
 		}
 	}
 };
@@ -395,6 +400,10 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cdFileActionListener = new CDFileActionListener();
 	genericActionListener = new GenericActionListener();
 
+	chkHDReadOnly = new gcn::UaeCheckBox("Master harddrive write protection");
+	chkHDReadOnly->setId("chkHDRO");
+	chkHDReadOnly->addActionListener(genericActionListener);
+
 	chkCD = new gcn::UaeCheckBox("CD drive");
 	chkCD->addActionListener(cdCheckActionListener);
 
@@ -459,6 +468,9 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	category.panel->add(cmdCreateHardfile, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
 
 	posY += cmdAddDirectory->getHeight() + 2 * DISTANCE_NEXT_Y;
+	category.panel->add(chkHDReadOnly, DISTANCE_BORDER, posY);
+
+	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y + 4;
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
 	category.panel->add(cmdCDEject, category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelect, category.panel->getWidth() - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
@@ -494,6 +506,7 @@ void ExitPanelHD()
 	delete cmdAddDirectory;
 	delete cmdAddHardfile;
 	delete cmdCreateHardfile;
+	delete chkHDReadOnly;
 
 	delete chkCD;
 	delete cmdCDEject;
@@ -600,6 +613,8 @@ void RefreshPanelHD()
 		}
 	}
 
+	chkHDReadOnly->setSelected(changed_prefs.harddrive_read_only);
+
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
@@ -615,4 +630,22 @@ void RefreshPanelHD()
 int count_HDs(struct uae_prefs* p)
 {
 	return p->mountitems;
+}
+
+bool HelpPanelHD(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("Use \"Add Directory\" to add a folder or \"Add Hardfile\" to add a HDF file as a hard disk. To edit the settings of a");
+	helptext.push_back("HDD, click on \"...\" left to the entry in the list. With the red cross, you can delete an entry.");
+	helptext.push_back("");
+	helptext.push_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB. For large files, it will take some time");
+	helptext.push_back("to create the new hard disk. You have to format the new HDD in the Amiga via the Workbench.");
+	helptext.push_back("");
+	helptext.push_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
+	helptext.push_back("");
+	helptext.push_back("Activate \"CD drive\" to emulate CD for CD32. Use \"Eject\" to remove current CD and click on \"...\" to open a dialog");
+	helptext.push_back("to select the iso/cue file for CD emulation.");
+	helptext.push_back("");
+	helptext.push_back("In current version, WAV, MP3 and FLAC is supported for audio tracks.");
+	return true;
 }

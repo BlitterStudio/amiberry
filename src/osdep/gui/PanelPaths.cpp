@@ -146,3 +146,14 @@ void RefreshPanelPaths()
 	fetch_configurationpath(tmp, sizeof tmp);
 	txtConfigPath->setText(tmp);
 }
+
+bool HelpPanelPaths(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("Specify the location of your kickstart roms and the folder where the configuration files should be stored.");
+	helptext.push_back("Use the \"...\" button to open a dialog to choose the folder.");
+	helptext.push_back("");
+	helptext.push_back("After changing the location of the kickstart roms, click on \"Rescan ROMS\" to refresh the list of the available");
+	helptext.push_back("ROMs.");
+	return true;
+}

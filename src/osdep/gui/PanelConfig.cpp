@@ -10,6 +10,7 @@
 #include "options.h"
 #include "gui.h"
 #include "gui_handling.h"
+#include "uae.h"
 
 static char last_active_config[MAX_DPATH] = {'\0'};
 static int ensureVisible = -1;
@@ -41,28 +42,6 @@ bool LoadConfigByName(const char* name)
 	}
 
 	return false;
-}
-
-void load_builtin_config(int id)
-{
-	if (changed_prefs.cdslots[0].inuse)
-		gui_force_rtarea_hdchange();
-	discard_prefs(&changed_prefs, 0);
-	default_prefs(&changed_prefs, 0);
-	switch (id)
-	{
-	case BUILTINID_A500:
-		built_in_prefs(&changed_prefs, 0, 1, 0, 0);
-		break;
-
-	case BUILTINID_A1200:
-		built_in_prefs(&changed_prefs, 4, 0, 0, 0);
-		break;
-
-	case BUILTINID_CD32:
-		built_in_prefs(&changed_prefs, 8, 0, 0, 0);
-		break;
-	}
 }
 
 void SetLastActiveConfig(const char* filename)
@@ -126,18 +105,12 @@ public:
 			// Load selected configuration
 			//-----------------------------------------------
 			i = lstConfigs->getSelected();
-			if (i != -1)
-			{
-				if (ConfigFilesList[i]->BuiltInID != BUILTINID_NONE)
-				{
-					load_builtin_config(ConfigFilesList[i]->BuiltInID);
-					strcpy(changed_prefs.description, ConfigFilesList[i]->Description);
-				}
-				else
-				{
-					target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
-				}
-				strcpy(last_active_config, ConfigFilesList[i]->Name);
+			if (emulating) {
+				uae_restart(-1, ConfigFilesList[i]->FullPath);
+			}
+			else {
+				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
+				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_PATH);
 				DisableResume();
 				RefreshAllPanels();
 			}
@@ -171,9 +144,9 @@ public:
 			//-----------------------------------------------
 			char msg[MAX_DPATH];
 			i = lstConfigs->getSelected();
-			if (i >= 0 && ConfigFilesList[i]->BuiltInID == BUILTINID_NONE && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
+			if (i >= 0 && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
 			{
-				snprintf(msg, sizeof msg, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
+				snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
 				if (ShowMessage("Delete Configuration", msg, "", "Yes", "No"))
 				{
 					remove(ConfigFilesList[i]->FullPath);
@@ -206,18 +179,17 @@ public:
 			//-----------------------------------------------
 			// Selected same config again -> load and start it
 			//-----------------------------------------------
-			if (ConfigFilesList[selected_item]->BuiltInID != BUILTINID_NONE)
-			{
-				load_builtin_config(ConfigFilesList[selected_item]->BuiltInID);
-				strcpy(changed_prefs.description, ConfigFilesList[selected_item]->Description);
+			if (emulating) {
+				uae_restart(0, ConfigFilesList[selected_item]->FullPath);
 			}
-			else
-			{
+			else {
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
+				strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_PATH);
+				DisableResume();
+				RefreshAllPanels();
+				uae_reset(0, 1);
 			}
-			strcpy(last_active_config, ConfigFilesList[selected_item]->Name);
-			DisableResume();
-			RefreshAllPanels();
+			gui_running = false;
 		}
 		else
 		{
@@ -374,4 +346,17 @@ void RefreshPanelConfig()
 			}
 		}
 	}
+}
+
+bool HelpPanelConfig(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("To load a configuration, select the entry in the list and then click on \"Load\". If you doubleclick on an entry");
+	helptext.push_back("in the list, the emulation starts with this configuration.");
+	helptext.push_back("");
+	helptext.push_back("If you want to create a new configuration, setup all options, enter a new name in \"Name\", provide a short");
+	helptext.push_back("description and then click on \"Save\".");
+	helptext.push_back("");
+	helptext.push_back("\"Delete\" will delete the selected configuration.");
+	return true;
 }

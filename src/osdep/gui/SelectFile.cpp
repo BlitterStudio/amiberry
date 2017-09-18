@@ -278,6 +278,8 @@ static void ExitSelectFile()
 
 static void SelectFileLoop()
 {
+	FocusBugWorkaround(wndSelectFile);
+
 	while (!dialogFinished)
 	{
 		SDL_Event event;

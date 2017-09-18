@@ -756,6 +756,12 @@
     <ClCompile Include="..\src\archivers\mp2\kjmp2.cpp">
       <Filter>src\archivers\mp2</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelQuickstart.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\ShowHelp.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zAlloc.h">

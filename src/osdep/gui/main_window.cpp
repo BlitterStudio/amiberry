@@ -13,68 +13,68 @@
 #include "gui.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
+#include "autoconf.h"
 
 bool gui_running = false;
-static int last_active_panel = 1;
+static int last_active_panel = 2;
+
+#define MAX_STARTUP_TITLE 64
+#define MAX_STARTUP_MESSAGE 256
+static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
+static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
 
-ConfigCategory categories[] =
+void target_startup_msg(TCHAR* title, TCHAR* msg)
 {
-	{"Paths", "data/paths.ico", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths},
-	{"Configurations", "data/file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig},
-	{"CPU and FPU", "data/cpu.ico", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU},
-	{"Chipset", "data/cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset},
-	{"ROM", "data/chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM},
-	{"RAM", "data/chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM},
-	{"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy},
-	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD},
-	{"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay},
-	{"Sound", "data/sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound},
-	{"Input", "data/joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput},
-	{"Miscellaneous", "data/misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc},
-	{"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate},
-	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
+	_tcsncpy(startup_title, title, MAX_STARTUP_TITLE);
+	_tcsncpy(startup_message, msg, MAX_STARTUP_MESSAGE);
+}
+
+ConfigCategory categories[] = {
+	{ "Paths",            "data/paths.ico", nullptr, nullptr, InitPanelPaths,     ExitPanelPaths,     RefreshPanelPaths,      HelpPanelPaths },
+	{ "Quickstart",       "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart,  ExitPanelQuickstart,  RefreshPanelQuickstart, HelpPanelQuickstart },
+	{ "Configurations",   "data/file.ico", nullptr, nullptr, InitPanelConfig,    ExitPanelConfig,    RefreshPanelConfig,     HelpPanelConfig },
+	{ "CPU and FPU",      "data/cpu.ico", nullptr, nullptr, InitPanelCPU,       ExitPanelCPU,       RefreshPanelCPU,        HelpPanelCPU },
+	{ "Chipset",          "data/cpu.ico", nullptr, nullptr, InitPanelChipset,   ExitPanelChipset,   RefreshPanelChipset,    HelpPanelChipset },
+	{ "ROM",              "data/chip.ico", nullptr, nullptr, InitPanelROM,       ExitPanelROM,       RefreshPanelROM,        HelpPanelROM },
+	{ "RAM",              "data/chip.ico", nullptr, nullptr, InitPanelRAM,       ExitPanelRAM,       RefreshPanelRAM,        HelpPanelRAM },
+	{ "Floppy drives",    "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy,    ExitPanelFloppy,    RefreshPanelFloppy,     HelpPanelFloppy },
+	{ "Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD,        ExitPanelHD,        RefreshPanelHD,         HelpPanelHD },
+	{ "Display",          "data/screen.ico", nullptr, nullptr, InitPanelDisplay,   ExitPanelDisplay,   RefreshPanelDisplay,    HelpPanelDisplay },
+	{ "Sound",            "data/sound.ico", nullptr, nullptr, InitPanelSound,     ExitPanelSound,     RefreshPanelSound,      HelpPanelSound },
+	{ "Input",            "data/joystick.ico", nullptr, nullptr, InitPanelInput,     ExitPanelInput,     RefreshPanelInput,      HelpPanelInput },
+	{ "Miscellaneous",    "data/misc.ico", nullptr, nullptr, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
+	{ "Savestates",       "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
+	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
 };
 
-enum
-{
-	PANEL_PATHS,
-	PANEL_CONFIGURATIONS,
-	PANEL_CPU,
-	PANEL_CHIPSET,
-	PANEL_ROM,
-	PANEL_RAM,
-	PANEL_FLOPPY,
-	PANEL_HD,
-	PANEL_DISPLAY,
-	PANEL_SOUND,
-	PANEL_INPUT,
-	PANEL_MISC,
-	PANEL_SAVESTATES,
+enum {
+	PANEL_PATHS, PANEL_QUICKSTART, PANEL_CONFIGURATIONS, PANEL_CPU, PANEL_CHIPSET, PANEL_ROM, PANEL_RAM,
+	PANEL_FLOPPY, PANEL_HD, PANEL_DISPLAY, PANEL_SOUND, PANEL_INPUT, PANEL_MISC, PANEL_SAVESTATES,
 	NUM_PANELS
 };
 
 
 /*
- * SDL Stuff we need
- */
+* SDL Stuff we need
+*/
 SDL_Surface* gui_screen;
 SDL_Texture* gui_texture;
 SDL_Event gui_event;
 SDL_Cursor* cursor;
-SDL_Surface *cursorSurface;
+SDL_Surface* cursorSurface;
 
 /*
- * Guisan SDL stuff we need
- */
+* Guisan SDL stuff we need
+*/
 gcn::SDLInput* gui_input;
 gcn::SDLGraphics* gui_graphics;
 gcn::SDLImageLoader* gui_imageLoader;
 gcn::SDLTrueTypeFont* gui_font;
 
 /*
- * Guisan stuff we need
- */
+* Guisan stuff we need
+*/
 gcn::Gui* uae_gui;
 gcn::Container* gui_top;
 gcn::Container* selectors;
@@ -91,18 +91,19 @@ namespace widgets
 	gcn::Button* cmdRestart;
 	gcn::Button* cmdStart;
 	gcn::Button* cmdShutdown;
+	gcn::Button* cmdHelp;
 }
 
 
 /* Flag for changes in rtarea:
-  Bit 0: any HD in config?
-  Bit 1: force because add/remove HD was clicked
-  Bit 2: socket_emu on
-  Bit 3: mousehack on
-  Bit 4: rtgmem on
-  Bit 5: chipmem larger than 2MB
+Bit 0: any HD in config?
+Bit 1: force because add/remove HD was clicked
+Bit 2: socket_emu on
+Bit 3: mousehack on
+Bit 4: rtgmem on
+Bit 5: chipmem larger than 2MB
 
-  gui_rtarea_flags_onenter is set before GUI is shown, bit 1 may change during GUI display.
+gui_rtarea_flags_onenter is set before GUI is shown, bit 1 may change during GUI display.
 */
 static int gui_rtarea_flags_onenter;
 
@@ -119,7 +120,7 @@ static int gui_create_rtarea_flag(struct uae_prefs* p)
 	if (p->input_tablet > 0)
 		flag |= 8;
 
-	if (p->rtgmem_size)
+	if (p->rtgboards[0].rtgmem_size)
 		flag |= 16;
 
 	if (p->chipmem_size > 2 * 1024 * 1024)
@@ -133,11 +134,45 @@ void gui_force_rtarea_hdchange()
 	gui_rtarea_flags_onenter |= 2;
 }
 
+void gui_restart()
+{
+	gui_running = false;
+}
+
 static void (*refreshFuncAfterDraw)() = nullptr;
 
 void RegisterRefreshFunc(void (*func)())
 {
 	refreshFuncAfterDraw = func;
+}
+
+void FocusBugWorkaround(gcn::Window *wnd)
+{
+	// When modal dialog opens via mouse, the dialog will not
+	// have the focus unless there is a mouse click. We simulate the click...
+	SDL_Event event;
+	event.type = SDL_MOUSEBUTTONDOWN;
+	event.button.button = SDL_BUTTON_LEFT;
+	event.button.state = SDL_PRESSED;
+	event.button.x = wnd->getX() + 2;
+	event.button.y = wnd->getY() + 2;
+	gui_input->pushInput(event);
+	event.type = SDL_MOUSEBUTTONUP;
+	gui_input->pushInput(event);
+}
+
+static void ShowHelpRequested()
+{
+	std::vector<std::string> helptext;
+	if (categories[last_active_panel].HelpFunc != nullptr && categories[last_active_panel].HelpFunc(helptext))
+	{
+		//------------------------------------------------
+		// Show help for current panel
+		//------------------------------------------------
+		char title[128];
+		snprintf(title, 128, "Help for %s", categories[last_active_panel].category);
+		ShowHelp(title, helptext);
+	}
 }
 
 void UpdateGuiScreen()
@@ -209,10 +244,11 @@ namespace sdl
 		delete gui_imageLoader;
 		delete gui_input;
 		delete gui_graphics;
-		
+
 		SDL_FreeSurface(gui_screen);
 		SDL_DestroyTexture(gui_texture);
-		if (cursor) {
+		if (cursor)
+		{
 			SDL_FreeCursor(cursor);
 		}
 		gui_screen = nullptr;
@@ -295,7 +331,7 @@ namespace sdl
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						break;
-					default: 
+					default:
 						break;
 					}
 			}
@@ -510,6 +546,12 @@ namespace widgets
 		cmdStart->setId("Start");
 		cmdStart->addActionListener(mainButtonActionListener);
 
+		cmdHelp = new gcn::Button("Help");
+		cmdHelp->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+		cmdHelp->setBaseColor(gui_baseCol);
+		cmdHelp->setId("Help");
+		cmdHelp->addActionListener(mainButtonActionListener);
+
 		//--------------------------------------------------
 		// Create selector entries
 		//--------------------------------------------------
@@ -552,6 +594,7 @@ namespace widgets
 		gui_top->add(cmdReset, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 		gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 		gui_top->add(cmdShutdown, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+		gui_top->add(cmdHelp, DISTANCE_BORDER + 3 * BUTTON_WIDTH + 3 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 		gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
 		gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
@@ -564,7 +607,10 @@ namespace widgets
 		//--------------------------------------------------
 		// Activate last active panel
 		//--------------------------------------------------
+		if (!emulating && quickstart_start)
+			last_active_panel = 1;
 		categories[last_active_panel].selector->requestFocus();
+		cmdHelp->setVisible(categories[last_active_panel].HelpFunc != nullptr);
 	}
 
 
@@ -588,6 +634,7 @@ namespace widgets
 		delete cmdReset;
 		delete cmdRestart;
 		delete cmdStart;
+		delete cmdHelp;
 
 		delete mainButtonActionListener;
 
@@ -626,40 +673,59 @@ void run_gui()
 	gui_running = true;
 	gui_rtarea_flags_onenter = gui_create_rtarea_flag(&currprefs);
 
+	expansion_generate_autoconfig_info(&changed_prefs);
+
 	try
 	{
 		sdl::gui_init();
 		widgets::gui_init();
+		if (_tcslen(startup_message) > 0) {
+			ShowMessage(startup_title, startup_message, _T(""), _T("Ok"), _T(""));
+			_tcscpy(startup_title, _T(""));
+			_tcscpy(startup_message, _T(""));
+			widgets::cmdStart->requestFocus();
+		}
 		sdl::gui_run();
 		widgets::gui_halt();
 		sdl::gui_halt();
 	}
+	
 	// Catch all guisan exceptions.
 	catch (gcn::Exception e)
 	{
 		cout << e.getMessage() << endl;
 		uae_quit();
 	}
+
 	// Catch all Std exceptions.
 	catch (exception e)
 	{
 		cout << "Std exception: " << e.what() << endl;
 		uae_quit();
 	}
+	
 	// Catch all unknown exceptions.
 	catch (...)
 	{
 		cout << "Unknown exception" << endl;
 		uae_quit();
 	}
+	
+	expansion_generate_autoconfig_info(&changed_prefs);
+	cfgfile_compatibility_romtype(&changed_prefs);
+
 	if (quit_program > UAE_QUIT || quit_program < -UAE_QUIT)
 	{
 		//--------------------------------------------------
 		// Prepare everything for Reset of Amiga
 		//--------------------------------------------------
 		currprefs.nr_floppies = changed_prefs.nr_floppies;
+		screen_is_picasso = 0;
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 			quit_program = -UAE_RESET_HARD; // Hardreset required...
 	}
+
+	// Reset counter for access violations
+	init_max_signals();
 }

@@ -18,6 +18,7 @@ static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;
 static gcn::UaeCheckBox* chkBSDSocket;
+static gcn::UaeCheckBox* chkMasterWP;
 
 static gcn::Label* lblOpenGUI;
 static gcn::TextField* txtOpenGUI;
@@ -72,6 +73,12 @@ public:
 		else if (actionEvent.getSource() == chkBSDSocket)
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
+		else if (actionEvent.getSource() == chkMasterWP) {
+			changed_prefs.floppy_read_only = chkMasterWP->isSelected();
+			RefreshPanelQuickstart();
+			RefreshPanelFloppy();
+		}
+
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
 			const char* key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
@@ -122,6 +129,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
 	chkBSDSocket->setId("BSDSocket");
 	chkBSDSocket->addActionListener(miscActionListener);
+
+	chkMasterWP = new gcn::UaeCheckBox("Master floppy write protection");
+	chkMasterWP->setId("MasterWP");
+	chkMasterWP->addActionListener(miscActionListener);
 
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setSize(85, LABEL_HEIGHT);
@@ -203,6 +214,7 @@ void ExitPanelMisc()
 	delete chkHideIdleLed;
 	delete chkShowGUI;
 	delete chkBSDSocket;
+	delete chkMasterWP;
 
 	delete lblScrLock;
 	delete lblNumLock;
@@ -223,9 +235,29 @@ void RefreshPanelMisc()
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
+	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
+
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
 
 	txtOpenGUI->setText(changed_prefs.open_gui != "" ? changed_prefs.open_gui : "Click to map");
 	txtKeyForQuit->setText(changed_prefs.quit_amiberry != "" ? changed_prefs.quit_amiberry : "Click to map");
+}
+
+bool HelpPanelMisc(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("\"Status Line\" shows/hides the status line indicator. The first value in the status line");
+	helptext.push_back("shows the idle time of the CPU in %, the second value is the current frame rate.");
+	helptext.push_back("When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and");
+	helptext.push_back("write (red) access to the HDD. The next values are showing the track number for each disk");
+	helptext.push_back("drive and indicates disk access.");
+	helptext.push_back("");
+	helptext.push_back("When you deactivate the option \"Show GUI on startup\" and use this configuration by specifying it with the");
+	helptext.push_back("command line parameter \"-config=<file>\", the emulation starts directly without showing the GUI.");
+	helptext.push_back("");
+	helptext.push_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
+	helptext.push_back("");
+	helptext.push_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
+	return true;
 }

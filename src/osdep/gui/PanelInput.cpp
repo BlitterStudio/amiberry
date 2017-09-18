@@ -754,3 +754,16 @@ void RefreshPanelInput()
 	txtRight->setText(changed_prefs.custom_right);
 	txtPlay->setText(changed_prefs.custom_play);
 }
+
+bool HelpPanelInput(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("You can select the control type for both ports and the rate for autofire.");
+	helptext.push_back("");
+	helptext.push_back("Set the emulated mouse speed to .25x, .5x, 1x, 2x and 4x to slow down or speed up the mouse.");
+	helptext.push_back("");
+	helptext.push_back("When you activate \"Custom Control\", you can define which Amiga key should be emulated by pressing one of the");
+	helptext.push_back("ABXY- or D-pad buttons. Useful to setup controls for pinball games. During emulation, you can switch between");
+	helptext.push_back("regular buttons and custom settings by pressing left shoulder button and 'c'.");
+	return true;
+}

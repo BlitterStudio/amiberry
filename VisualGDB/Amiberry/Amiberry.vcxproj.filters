@@ -708,6 +708,12 @@
     <ClCompile Include="..\..\src\archivers\mp2\kjmp2.cpp">
       <Filter>Source files\archivers\mp2</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\data\35floppy.ico">

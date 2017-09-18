@@ -24,6 +24,7 @@ extern void sleep_millis (int ms);
 
 extern void uae_reset (int, int);
 extern void uae_quit (void);
+extern void host_shutdown();
 extern void uae_restart (int, const TCHAR*);
 extern void target_reset (void);
 extern void target_addtorecent (const TCHAR*, int);

@@ -112,3 +112,16 @@ void RefreshPanelDisplay()
 	else if (changed_prefs.scaling_method == 1)
 		optLinear->setSelected(true);
 }
+
+bool HelpPanelDisplay(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("Select the scaling method for the Amiga screen. The default option \"Auto\", will try to find the best looking");
+	helptext.push_back("scaling method depending on your monitor's resolution. \"Nearest Neighbor\" will give you a more pixelated");
+	helptext.push_back("and crisp image, but it may come with some distortion if your resolution is not an exact multiple.");
+	helptext.push_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
+	helptext.push_back("");
+	helptext.push_back("When you activate \"Frameskip\", only every second frame is drawn. This will improve performance and some");
+	helptext.push_back("more games are playable.");
+	return true;
+}

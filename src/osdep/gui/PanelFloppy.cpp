@@ -30,13 +30,13 @@ static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
-static const char* diskfile_filter[] = {".adf", ".adz", ".zip", ".gz", ".dms", "\0"};
+static const char *diskfile_filter[] = { ".adf", ".adz", ".fdi", ".zip", ".dms", ".gz", ".xz", "\0" };
 static const char* drivespeedlist[] = {"100% (compatible)", "200%", "400%", "800%"};
 static const int drivespeedvalues[] = {100, 200, 400, 800};
 
 static void AdjustDropDownControls();
 static bool bLoadConfigForDisk = false;
-
+static bool bIgnoreListChange = false;
 
 class DriveTypeListModel : public gcn::ListModel
 {
@@ -104,6 +104,7 @@ public:
 				changed_prefs.floppyslots[i].dfxtype = cboDFxType[i]->getSelected() - 1;
 		}
 		RefreshPanelFloppy();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -136,10 +137,17 @@ public:
 					// Write-protect changed
 					//---------------------------------------
 					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, chkDFxWriteProtect[i]->isSelected());
+					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->isSelected()) {
+						// Failed to change write protection -> maybe filesystem doesn't support this
+						chkDFxWriteProtect[i]->setSelected(!chkDFxWriteProtect[i]->isSelected());
+						ShowMessage("Set/Clear write protect", "Failed to change write permission.", "Maybe underlying filesystem doesn't support this.", "Ok", "");
+					}
+					DISK_reinsert(i);
 				}
 			}
 		}
 		RefreshPanelFloppy();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -159,6 +167,7 @@ public:
 				// Show info about current disk-image
 				//---------------------------------------
 				if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0); // ToDo: Show info dialog
+				//ToDo: Show info dialog
 			}
 			else if (actionEvent.getSource() == cmdDFxEject[i])
 			{
@@ -203,13 +212,12 @@ public:
 			}
 		}
 		RefreshPanelFloppy();
+		RefreshPanelQuickstart();
 	}
 };
 
 static DFxButtonActionListener* dfxButtonActionListener;
 
-
-static bool bIgnoreListChange = false;
 
 class DiskFileActionListener : public gcn::ActionListener
 {
@@ -260,6 +268,7 @@ public:
 			}
 		}
 		RefreshPanelFloppy();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -325,7 +334,7 @@ public:
 				extractFileName(tmp, diskname);
 				removeFileExtension(diskname);
 				diskname[31] = '\0';
-				disk_creatediskfile(tmp, 0, DRV_35_DD, diskname, false, false, nullptr);
+				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_DD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
 				extractPath(tmp, currentDir);
 			}
@@ -342,7 +351,7 @@ public:
 				extractFileName(tmp, diskname);
 				removeFileExtension(diskname);
 				diskname[31] = '\0';
-				disk_creatediskfile(tmp, 0, DRV_35_HD, diskname, false, false, nullptr);
+				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_HD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
 				extractPath(tmp, currentDir);
 			}
@@ -563,6 +572,7 @@ void RefreshPanelFloppy()
 		chkDFx[i]->setEnabled(prevAvailable);
 		cboDFxType[i]->setEnabled(prevAvailable);
 
+		chkDFxWriteProtect[i]->setEnabled(driveEnabled && !changed_prefs.floppy_read_only);
 		cmdDFxInfo[i]->setEnabled(driveEnabled);
 		cmdDFxEject[i]->setEnabled(driveEnabled);
 		cmdDFxSelect[i]->setEnabled(driveEnabled);
@@ -584,4 +594,24 @@ void RefreshPanelFloppy()
 			break;
 		}
 	}
+}
+
+bool HelpPanelFloppy(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("You can enable/disable each drive by clicking the checkbox next to DFx or select the drive type in the dropdown");
+	helptext.push_back("control. \"3.5'' DD\" is the right choise for nearly all ADF and ADZ files.");
+	helptext.push_back("The option \"Write-protected\" indicates if the emulator can write to the ADF. Changing the write protection of the");
+	helptext.push_back("disk file may fail because of missing rights on the host filesystem.");
+	helptext.push_back("The button \"...\" opens a dialog to select the required disk file. With the dropdown control, you can select one of");
+	helptext.push_back("the disks you recently used.");
+	helptext.push_back("");
+	helptext.push_back("You can reduce the loading time for lot of games by increasing the floppy drive emulation speed. A few games");
+	helptext.push_back("will not load with higher drive speed and you have to select 100%.");
+	helptext.push_back("");
+	helptext.push_back("\"Save config for disk\" will create a new configuration file with the name of the disk in DF0. This configuration will");
+	helptext.push_back("be loaded each time you select the disk and have the option \"Load config with same name as disk\" enabled.");
+	helptext.push_back("");
+	helptext.push_back("With the buttons \"Create 3.5'' DD disk\" and \"Create 3.5'' HD disk\" you can create a new and empty disk.");
+	return true;
 }

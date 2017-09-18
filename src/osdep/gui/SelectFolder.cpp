@@ -191,6 +191,8 @@ static void ExitSelectFolder()
 
 static void SelectFolderLoop()
 {
+	FocusBugWorkaround(wndSelectFolder);
+
 	while (!dialogFinished)
 	{
 		SDL_Event event;

@@ -15,7 +15,7 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-#define DIALOG_WIDTH 520
+#define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 202
 
 static const char* harddisk_filter[] = {".hdf", "\0"};

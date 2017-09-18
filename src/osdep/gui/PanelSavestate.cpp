@@ -241,3 +241,12 @@ void RefreshPanelSavestate()
 	cmdSaveState->setEnabled(enabled);
 	lblWarningHDDon->setVisible(!enabled);
 }
+
+bool HelpPanelSavestate(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.push_back("Savestates are stored with the name of the disk in drive DF0 attached with the selected number.");
+	helptext.push_back("");
+	helptext.push_back("Note: Savestates will not work with HDDs.");
+	return true;
+}

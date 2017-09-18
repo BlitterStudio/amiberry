@@ -98,6 +98,8 @@ static void ExitShowMessage()
 
 static void ShowMessageWaitInputLoop()
 {
+	FocusBugWorkaround(wndShowMessage);
+
 	while (!dialogFinished)
 	{
 		SDL_Event event;
@@ -143,6 +145,8 @@ static void ShowMessageWaitInputLoop()
 
 static void ShowMessageLoop()
 {
+	FocusBugWorkaround(wndShowMessage);
+
 	while (!dialogFinished)
 	{
 		SDL_Event event;
@@ -214,6 +218,7 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 		cmdCancel->setVisible(false);
 		cmdOK->setPosition(cmdCancel->getX(), cmdCancel->getY());
 	}
+	cmdOK->setEnabled(true);
 	ShowMessageLoop();
 	ExitShowMessage();
 
