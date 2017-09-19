@@ -2,7 +2,7 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -221,7 +221,7 @@ namespace sdl
 		SDL_ShowCursor(SDL_ENABLE);
 
 		//-------------------------------------------------
-		// Create helpers for guichan
+		// Create helpers for guisan
 		//-------------------------------------------------
 		gui_imageLoader = new gcn::SDLImageLoader();
 		// The ImageLoader in use is static and must be set to be
@@ -678,6 +678,9 @@ void run_gui()
 	try
 	{
 		sdl::gui_init();
+#ifdef DEBUG
+		printf("Calling widgets::gui_init\n");
+#endif
 		widgets::gui_init();
 		if (_tcslen(startup_message) > 0) {
 			ShowMessage(startup_title, startup_message, _T(""), _T("Ok"), _T(""));

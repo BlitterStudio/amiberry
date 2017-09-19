@@ -55,9 +55,6 @@
     <Filter Include="src\osdep\gui">
       <UniqueIdentifier>{b25f6ac8-afcb-45b8-a0fc-f0bc1c88fba1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\osdep\menu">
-      <UniqueIdentifier>{32996091-d9d9-437f-8338-e15198404b91}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\sounddep">
       <UniqueIdentifier>{767f436f-8275-4c9f-abf9-a880ba80c1f2}</UniqueIdentifier>
     </Filter>
@@ -333,28 +330,10 @@
     <ClCompile Include="..\src\zfile_archive.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\7z\7zAlloc.cpp">
-      <Filter>src\archivers\7z</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\archivers\7z\7zBuf.cpp">
       <Filter>src\archivers\7z</Filter>
     </ClCompile>
     <ClCompile Include="..\src\archivers\7z\7zCrc.cpp">
-      <Filter>src\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\archivers\7z\7zDecode.cpp">
-      <Filter>src\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\archivers\7z\7zExtract.cpp">
-      <Filter>src\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\archivers\7z\7zHeader.cpp">
-      <Filter>src\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\archivers\7z\7zIn.cpp">
-      <Filter>src\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\archivers\7z\7zItem.cpp">
       <Filter>src\archivers\7z</Filter>
     </ClCompile>
     <ClCompile Include="..\src\archivers\7z\7zStream.cpp">
@@ -606,9 +585,6 @@
     <ClCompile Include="..\src\osdep\gui\UaeRadioButton.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\osdep\menu\menu_config.cpp">
-      <Filter>src\osdep\menu</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sounddep\sound.cpp">
       <Filter>src\sounddep</Filter>
     </ClCompile>
@@ -762,30 +738,15 @@
     <ClCompile Include="..\src\osdep\gui\ShowHelp.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\7zIn.cpp">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\archivers\7z\7zAlloc.h">
-      <Filter>src\archivers\7z</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
       <Filter>src\archivers\7z</Filter>
     </ClInclude>
     <ClInclude Include="..\src\archivers\7z\7zCrc.h">
-      <Filter>src\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\archivers\7z\7zDecode.h">
-      <Filter>src\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\archivers\7z\7zExtract.h">
-      <Filter>src\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\archivers\7z\7zHeader.h">
-      <Filter>src\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\archivers\7z\7zIn.h">
-      <Filter>src\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\archivers\7z\7zItem.h">
       <Filter>src\archivers\7z</Filter>
     </ClInclude>
     <ClInclude Include="..\src\archivers\7z\7zVersion.h">

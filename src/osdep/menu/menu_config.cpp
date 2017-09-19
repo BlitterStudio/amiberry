@@ -12,7 +12,7 @@
 #include "custom.h"
 #include "uae.h"
 #include "disk.h"
-#include "SDL.h"
+#include <SDL.h>
 
 static int kickstart;
 
@@ -181,7 +181,7 @@ int loadconfig_old(struct uae_prefs* p, const char* orgpath)
 	else
 		p->chipset_refreshrate = 50;
 	fscanf(f, "displayedLines=%d\n", &p->gfx_size.height);
-	fscanf(f, "screenWidth=%d\n", &p->gfx_size_fs.width);
+	fscanf(f, "screenWidth=%d\n", &p->gfx_size.width);
 	fscanf(f, "amiberry.custom_controls=%d\n", &p->customControls);
 	fscanf(f, "amiberry.custom_up=%d\n", &p->custom_up);
 	fscanf(f, "amiberry.custom_down=%d\n", &p->custom_down);

@@ -21,7 +21,7 @@
 #include "options.h"
 #include "threaddep/thread.h"
 #include "gui.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "inputdevice.h"
 #include "keyboard.h"
 #include "disk.h"
@@ -366,7 +366,7 @@ void fetch_configurationpath(char *out, int size)
 
 void set_configurationpath(char *newpath)
 {
-	strncpy(config_path, newpath, MAX_DPATH);
+	strcpy(config_path, newpath);
 }
 
 void fetch_rompath(char *out, int size)
@@ -376,7 +376,7 @@ void fetch_rompath(char *out, int size)
 
 void set_rompath(char *newpath)
 {
-	strncpy(rom_path, newpath, MAX_DPATH);
+	strcpy(rom_path, newpath);
 }
 
 
@@ -460,12 +460,12 @@ int check_configfile(char *file)
 		return 1;
 	}
 
-	strncpy(tmp, file, MAX_PATH);
+	strcpy(tmp, file);
 	char *ptr = strstr(tmp, ".uae");
 	if (ptr > 0)
 	{
 		*(ptr + 1) = '\0';
-		strncat(tmp, "conf", MAX_PATH);
+		strcat(tmp, "conf");
 		f = fopen(tmp, "rt");
 		if (f)
 		{
@@ -482,12 +482,12 @@ void extractFileName(const char * str, char *buffer)
 	while (*p != '/' && p > str)
 		p--;
 	p++;
-	strncpy(buffer, p, MAX_PATH);
+	strcpy(buffer, p);
 }
 
 void extractPath(char *str, char *buffer)
 {
-	strncpy(buffer, str, MAX_PATH);
+	strcpy(buffer, str);
 	char *p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p > buffer)
 		p--;
@@ -854,19 +854,7 @@ int handle_msgpump()
 
 			switch (rEvent.key.keysym.sym)
 			{
-			case SDLK_NUMLOCKCLEAR:
-				if (currprefs.keyboard_leds[KBLED_NUMLOCKB] > 0)
-				{
-					//oldleds ^= KBLED_NUMLOCKM;
-					//ch = true;
-				}
-				break;
 			case SDLK_CAPSLOCK: // capslock
-				if (currprefs.keyboard_leds[KBLED_CAPSLOCKB] > 0)
-				{
-					//oldleds ^= KBLED_CAPSLOCKM;
-					//ch = true;
-				}
 				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 				ioctl(0, KDGKBLED, &kbd_flags);
 				ioctl(0, KDGETLED, &kbd_led_status);
@@ -887,15 +875,6 @@ int handle_msgpump()
 				ioctl(0, KDSETLED, kbd_led_status);
 				ioctl(0, KDSKBLED, kbd_flags);
 				break;
-
-			case SDLK_SCROLLLOCK:
-				if (currprefs.keyboard_leds[KBLED_SCROLLLOCKB] > 0)
-				{
-					//oldleds ^= KBLED_SCROLLLOCKM;
-					//ch = true;
-				}
-				break;
-
 			default:
 				if (currprefs.customControls)
 				{

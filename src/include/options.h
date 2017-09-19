@@ -22,13 +22,6 @@ typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, 
 
 extern long int version;
 
-#define MAX_PATHS 8
-
-struct multipath
-{
-	TCHAR path[MAX_PATHS][PATH_MAX];
-};
-
 struct strlist {
 	struct strlist *next;
 	TCHAR *option, *value;
@@ -364,10 +357,10 @@ struct uae_prefs
 	int cart_internal;
 	struct cdslot cdslots[MAX_TOTAL_SCSI_DEVICES];
 
-	struct multipath path_floppy;
-	struct multipath path_hardfile;
-	struct multipath path_rom;
-	struct multipath path_cd;
+	TCHAR path_floppy[MAX_DPATH];
+	TCHAR path_hardfile[MAX_DPATH];
+	TCHAR path_rom[MAX_DPATH];
+	TCHAR path_cd[MAX_DPATH];
 
 	int m68k_speed;
 	int cpu_model;

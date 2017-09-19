@@ -36,18 +36,14 @@ unsigned long target_lastsynctime(void);
 extern int screen_is_picasso;
 
 void saveAdfDir(void);
-bool SetVSyncRate(int hz);
-void setCpuSpeed(void);
-void resetCpuSpeed(void);
 void update_display(struct uae_prefs *);
 void black_screen_now(void);
 void graphics_subshutdown(void);
-void moveVertical(int value);
 
 void amiberry_stop_sound();
 
 void keyboard_settrans();
-void translate_amiberry_keys(int symbol, int *modifier);
+void translate_amiberry_keys(int symbol, int newstate);
 void SimulateMouseOrJoy(int code, int keypressed);
 
 #define REMAP_MOUSEBUTTON_LEFT    -1

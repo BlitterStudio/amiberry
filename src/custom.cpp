@@ -20,7 +20,7 @@
 #include "gensound.h"
 #include "audio.h"
 #include "sounddep/sound.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cia.h"
@@ -34,7 +34,7 @@
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"
-#include "ar.h"
+#include "include/ar.h"
 #include "akiko.h"
 #include "devices.h"
 
@@ -90,9 +90,6 @@ static int cia_hsync;
 
 #define LOF_TOGGLES_NEEDED 3
 static int lof_togglecnt_lace, lof_togglecnt_nlace;
-
-static uae_u32 sprtaba[256], sprtabb[256];
-static uae_u32 sprite_ab_merge[256];
 
 /* Stupid genlock-detection prevention hack.
 * We should stop calling vsync_handler() and

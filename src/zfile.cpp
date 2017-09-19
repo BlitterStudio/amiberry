@@ -789,9 +789,9 @@ static struct zfile *wrp(struct zfile *z, int *retcode)
 #endif
 
 #ifdef A_7Z
-#include "7z/Xz.h"
-#include "7z/LzmaDec.h"
-#include "7z/7zCrc.h"
+#include "archivers/7z/Xz.h"
+#include "archivers/7z/LzmaDec.h"
+#include "archivers/7z/7zCrc.h"
 
 static void *SzAlloc(void *p, size_t size)
 {

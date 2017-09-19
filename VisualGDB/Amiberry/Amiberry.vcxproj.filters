@@ -95,9 +95,6 @@
     <Filter Include="Source files\osdep\gui">
       <UniqueIdentifier>{c55a2e76-0018-4e65-9d5c-199499145eef}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source files\osdep\menu">
-      <UniqueIdentifier>{08cd7b24-548b-44cc-b832-e5c7a01f2527}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header files\guisan">
       <UniqueIdentifier>{d9ec068c-6c88-41d0-ada4-8f8d0eeb19c8}</UniqueIdentifier>
     </Filter>
@@ -486,9 +483,6 @@
     <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\menu\menu_config.cpp">
-      <Filter>Source files\osdep\menu</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\neon_helper.s">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
@@ -522,28 +516,10 @@
     <ClCompile Include="..\..\src\osdep\keyboard_amiberry.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\archivers\7z\7zBuf.cpp">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\archivers\7z\7zCrc.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zDecode.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zExtract.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zHeader.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zIn.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zItem.cpp">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\archivers\7z\7zStream.cpp">
@@ -713,6 +689,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp">
       <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zIn.cpp">
+      <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1260,28 +1239,10 @@
     <ClInclude Include="..\..\src\osdep\amiberry_rp9.h">
       <Filter>Header files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zAlloc.h">
-      <Filter>Header files\archivers\7z</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\archivers\7z\7zBuf.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\7z\7zCrc.h">
-      <Filter>Header files\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zDecode.h">
-      <Filter>Header files\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zExtract.h">
-      <Filter>Header files\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zHeader.h">
-      <Filter>Header files\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zIn.h">
-      <Filter>Header files\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zItem.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\7z\7zVersion.h">

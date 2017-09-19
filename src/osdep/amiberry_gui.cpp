@@ -13,7 +13,7 @@
 #include "gui.h"
 #include "osdep/gui/SelectorEntry.hpp"
 #include "gui/gui_handling.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "rommgr.h"
 #include "newcpu.h"
 #include "custom.h"
@@ -251,18 +251,13 @@ static int scan_rom_2(struct zfile* f, void* dummy)
 	return 0;
 }
 
-static void scan_rom(char* path)
+static void scan_rom(char *path)
 {
-	if (!isromext(path))
-	{
+	if (!isromext(path)) {
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return;
 	}
-	struct romdata* rd = getarcadiarombyname(path);
-	if (rd)
-		addrom(rd, path);
-	else
-		zfile_zopen(path, scan_rom_2, nullptr);
+	zfile_zopen(path, scan_rom_2, 0);
 }
 
 
@@ -287,13 +282,15 @@ void RescanROMs()
 	}
 
 	int id = 1;
-	for (;;)
-	{
-		struct romdata* rd = getromdatabyid(id);
+	for (;;) {
+		struct romdata *rd = getromdatabyid(id);
 		if (!rd)
 			break;
 		if (rd->crc32 == 0xffffffff && strncmp(rd->model, "AROS", 4) == 0)
 			addrom(rd, ":AROS");
+		if (rd->crc32 == 0xffffffff && rd->id == 63) {
+			addrom(rd, ":HRTMon");
+		}
 		id++;
 	}
 }
@@ -309,99 +306,43 @@ static void ClearConfigFileList()
 }
 
 
-void ReadConfigFileList()
+void ReadConfigFileList(void)
 {
-	char path[MAX_DPATH];
-	vector<string> files;
-	const char* filter_rp9[] = {".rp9", "\0"};
-	const char* filter_uae[] = {".uae", "\0"};
-	const char* filter_conf[] = {".conf", "\0"};
+	char path[MAX_PATH];
+	std::vector<std::string> files;
+	const char *filter_rp9[] = { ".rp9", "\0" };
+	const char *filter_uae[] = { ".uae", "\0" };
 
 	ClearConfigFileList();
 
-	// Add built-in configs: A500
-	ConfigFileInfo* buildin = new ConfigFileInfo();
-	strcpy(buildin->FullPath, "");
-	strcpy(buildin->Name, "Amiga 500");
-	strcpy(buildin->Description, _T("Built-in, A500, OCS, 512KB"));
-	buildin->BuiltInID = BUILTINID_A500;
-	ConfigFilesList.push_back(buildin);
-
-	// A1200
-	buildin = new ConfigFileInfo();
-	strcpy(buildin->FullPath, "");
-	strcpy(buildin->Name, "Amiga 1200");
-	strcpy(buildin->Description, _T("Built-in, A1200"));
-	buildin->BuiltInID = BUILTINID_A1200;
-	ConfigFilesList.push_back(buildin);
-
-	// CD32
-	buildin = new ConfigFileInfo();
-	strcpy(buildin->FullPath, "");
-	strcpy(buildin->Name, "CD32");
-	strcpy(buildin->Description, _T("Built-in"));
-	buildin->BuiltInID = BUILTINID_CD32;
-	ConfigFilesList.push_back(buildin);
-
 	// Read rp9 files
-	fetch_rp9path(path, sizeof path);
-	ReadDirectory(path, nullptr, &files);
+	fetch_rp9path(path, MAX_PATH);
+	ReadDirectory(path, NULL, &files);
 	FilterFiles(&files, filter_rp9);
-	for (int i = 0; i < files.size(); ++i)
+	for (int i = 0; i<files.size(); ++i)
 	{
-		ConfigFileInfo* tmp = new ConfigFileInfo();
-		strcpy(tmp->FullPath, path);
-		strcat(tmp->FullPath, files[i].c_str());
-		strcpy(tmp->Name, files[i].c_str());
+		ConfigFileInfo *tmp = new ConfigFileInfo();
+		strncpy(tmp->FullPath, path, MAX_DPATH);
+		strncat(tmp->FullPath, files[i].c_str(), MAX_DPATH);
+		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
-		strcpy(tmp->Description, _T("rp9"));
-		tmp->BuiltInID = BUILTINID_NONE;
+		strncpy(tmp->Description, _T("rp9"), MAX_PATH);
 		ConfigFilesList.push_back(tmp);
 	}
 
 	// Read standard config files
-	fetch_configurationpath(path, sizeof path);
-	ReadDirectory(path, nullptr, &files);
+	fetch_configurationpath(path, MAX_PATH);
+	ReadDirectory(path, NULL, &files);
 	FilterFiles(&files, filter_uae);
-	for (int i = 0; i < files.size(); ++i)
+	for (int i = 0; i<files.size(); ++i)
 	{
-		ConfigFileInfo* tmp = new ConfigFileInfo();
-		strcpy(tmp->FullPath, path);
-		strcat(tmp->FullPath, files[i].c_str());
-		strcpy(tmp->Name, files[i].c_str());
+		ConfigFileInfo *tmp = new ConfigFileInfo();
+		strncpy(tmp->FullPath, path, MAX_DPATH);
+		strncat(tmp->FullPath, files[i].c_str(), MAX_DPATH);
+		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
-		cfgfile_get_description(tmp->FullPath, tmp->Description, nullptr, nullptr, nullptr);
-		tmp->BuiltInID = BUILTINID_NONE;
+		cfgfile_get_description(tmp->FullPath, tmp->Description);
 		ConfigFilesList.push_back(tmp);
-	}
-
-	// Read also old style configs
-	ReadDirectory(path, nullptr, &files);
-	FilterFiles(&files, filter_conf);
-	for (int i = 0; i < files.size(); ++i)
-	{
-		if (strcmp(files[i].c_str(), "adfdir.conf"))
-		{
-			ConfigFileInfo* tmp = new ConfigFileInfo();
-			strcpy(tmp->FullPath, path);
-			strcat(tmp->FullPath, files[i].c_str());
-			strcpy(tmp->Name, files[i].c_str());
-			removeFileExtension(tmp->Name);
-			strcpy(tmp->Description, "Old style configuration file");
-			tmp->BuiltInID = BUILTINID_NONE;
-			for (int j = 0; j < ConfigFilesList.size(); ++j)
-			{
-				if (!strcmp(ConfigFilesList[j]->Name, tmp->Name))
-				{
-					// Config in new style already in list
-					delete tmp;
-					tmp = nullptr;
-					break;
-				}
-			}
-			if (tmp != nullptr)
-				ConfigFilesList.push_back(tmp);
-		}
 	}
 }
 
@@ -416,21 +357,20 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 }
 
 
-static void prefs_to_gui(struct uae_prefs* p)
+static void prefs_to_gui()
 {
-	workprefs = *p;
 	/* filesys hack */
-	workprefs.mountitems = currprefs.mountitems;
-	memcpy(&workprefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	changed_prefs.mountitems = currprefs.mountitems;
+	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 }
 
 
-static void gui_to_prefs()
+static void gui_to_prefs(void)
 {
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
-	fixup_prefs(&changed_prefs);
+	fixup_prefs(&changed_prefs, true);
 }
 
 
@@ -464,7 +404,7 @@ int gui_init()
 	if (lstAvailableROMs.size() == 0)
 		RescanROMs();
 
-	prefs_to_gui(&changed_prefs);
+	prefs_to_gui();
 	run_gui();
 	gui_to_prefs();
 	if (quit_program < 0)
@@ -491,17 +431,6 @@ void gui_exit()
 
 void gui_purge_events()
 {
-	// TODO Test if this is still needed in SDL2 or should be removed!
-	//int counter = 0;
-
-	//SDL_Event event;
-	//SDL_Delay(150);
-	//// Strangely PS3 controller always send events, so we need a maximum number of event to purge.
-	//while (SDL_PollEvent(&event) && counter < 50)
-	//{
-	//	counter++;
-	//	SDL_Delay(10);
-	//}
 	keybuf_init();
 }
 
@@ -510,7 +439,7 @@ int gui_update()
 {
 	char tmp[MAX_DPATH];
 
-	fetch_statefilepath(savestate_fname, sizeof savestate_fname);
+	fetch_savestatepath(savestate_fname, sizeof savestate_fname);
 	fetch_screenshotpath(screenshot_filename, MAX_DPATH);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
@@ -519,7 +448,7 @@ int gui_update()
 		strcpy(tmp, last_loaded_config);
 
 	strncat(savestate_fname, tmp, sizeof savestate_fname);
-	strncat(screenshot_filename, tmp, MAX_DPATH);
+	strncat(screenshot_filename, tmp, sizeof screenshot_filename);
 	removeFileExtension(savestate_fname);
 	removeFileExtension(screenshot_filename);
 
@@ -557,10 +486,13 @@ void gui_display(int shortcut)
 	if (lstAvailableROMs.size() == 0)
 		RescanROMs();
 
-	prefs_to_gui(&changed_prefs);
+	prefs_to_gui();
 	run_gui();
 	gui_to_prefs();
 
+	if (quit_program)
+		screen_is_picasso = 0;
+	
 	update_display(&changed_prefs);
 
 	reset_sound();
@@ -575,10 +507,6 @@ void gui_display(int shortcut)
 	fpscounter_reset();
 }
 
-
-void gui_disk_image_change(int unitnum, const char* name, bool writeprotected)
-{
-}
 
 void gui_led(int led, int on)
 {
@@ -629,16 +557,6 @@ void gui_flicker_led(int led, int unitnum, int status)
 	gui_led(led, status);
 }
 
-void gui_fps(int fps, int idle, int color)
-{
-	gui_data.fps = fps;
-	gui_data.idle = idle;
-	gui_data.fps_color = color;
-	gui_led(LED_FPS, 0);
-	gui_led(LED_CPU, 0);
-	gui_led(LED_SND, (gui_data.sndbuf_status > 1 || gui_data.sndbuf_status < 0) ? 0 : 1);
-}
-
 void gui_filename(int num, const char* name)
 {
 }
@@ -669,6 +587,28 @@ void notify_user(int msg)
 	}
 }
 
+void notify_user_parms(int msg, const TCHAR *parms, ...)
+{
+	TCHAR msgtxt[MAX_DPATH];
+	TCHAR tmp[MAX_DPATH];
+	int c = 0;
+	va_list parms2;
+
+	int i = 0;
+	while (gui_msglist[i].num >= 0)
+	{
+		if (gui_msglist[i].num == msg)
+		{
+			strncpy(tmp, gui_msglist[i].msg, MAX_DPATH);
+			va_start(parms2, parms);
+			_vsntprintf(msgtxt, sizeof msgtxt / sizeof(TCHAR), tmp, parms2);
+			gui_message(msgtxt);
+			va_end(parms2);
+			break;
+		}
+		++i;
+	}
+}
 
 int translate_message(int msg, TCHAR* out)
 {

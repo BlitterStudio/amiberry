@@ -63,17 +63,15 @@ TCHAR optionsfile[256];
 
 void my_trim(TCHAR *s)
 {
-	int len;
 	while (_tcslen(s) > 0 && _tcscspn(s, _T("\t \r\n")) == 0)
 		memmove(s, s + 1, (_tcslen(s + 1) + 1) * sizeof(TCHAR));
-	len = _tcslen(s);
+	int len = _tcslen(s);
 	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		s[--len] = '\0';
 }
 
 TCHAR *my_strdup_trim(const TCHAR *s)
 {
-	TCHAR *out;
 	int len;
 
 	if (s[0] == 0)
@@ -83,7 +81,7 @@ TCHAR *my_strdup_trim(const TCHAR *s)
 	len = _tcslen(s);
 	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		len--;
-	out = xmalloc(TCHAR, len + 1);
+	TCHAR *out = xmalloc(TCHAR, len + 1);
 	memcpy(out, s, len * sizeof(TCHAR));
 	out[len] = 0;
 	return out;
@@ -435,10 +433,8 @@ void uae_restart(int opengui, const TCHAR *cfgfile)
 
 static void parse_cmdline_2(int argc, TCHAR **argv)
 {
-	int i;
-
 	cfgfile_addcfgparam(0);
-	for (i = 1; i < argc; i++) {
+	for (int i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
 		}
@@ -466,9 +462,7 @@ static TCHAR *parsetext(const TCHAR *s)
 		}
 		return d;
 	}
-	else {
-		return my_strdup(s);
-	}
+	return my_strdup(s);
 }
 static TCHAR *parsetextpath(const TCHAR *s)
 {
@@ -480,7 +474,6 @@ static TCHAR *parsetextpath(const TCHAR *s)
 
 static void parse_cmdline(int argc, TCHAR **argv)
 {
-	int i;
 	static bool started;
 	bool firstconfig = true;
 	bool loaded = false;
@@ -490,7 +483,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 		return;
 	started = true;
 
-	for (i = 1; i < argc; i++) {
+	for (int i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
 			if (i + 1 < argc)
 				i++;
@@ -639,10 +632,8 @@ void check_error_sdl(bool check, const char* message) {
 	}
 }
 
-static int real_main2 (int argc, TCHAR **argv)
+static void initialize_sdl2()
 {
-	printf("Amiberry-SDL2 by Dimitris (MiDWaN) Panokostas\n");
-
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -650,11 +641,11 @@ static int real_main2 (int argc, TCHAR **argv)
 	}
 
 	sdlWindow = SDL_CreateWindow("Amiberry-SDL2 v2",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		0,
-		0,
-		SDL_WINDOW_FULLSCREEN_DESKTOP);
+	                             SDL_WINDOWPOS_UNDEFINED,
+	                             SDL_WINDOWPOS_UNDEFINED,
+	                             0,
+	                             0,
+	                             SDL_WINDOW_FULLSCREEN_DESKTOP);
 	check_error_sdl(sdlWindow == nullptr, "Unable to create window");
 		
 	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -669,6 +660,13 @@ static int real_main2 (int argc, TCHAR **argv)
 		SDL_Log("SDL could not grab the keyboard");
 	
 	SDL_ShowCursor(SDL_DISABLE);
+}
+
+static int real_main2 (int argc, TCHAR **argv)
+{
+	printf("Amiberry-SDL2 by Dimitris (MiDWaN) Panokostas\n");
+
+	initialize_sdl2();
 
 	set_config_changed();
 	if (restart_config[0]) {
@@ -699,9 +697,9 @@ static int real_main2 (int argc, TCHAR **argv)
 	changed_prefs = currprefs;
 	no_gui = !currprefs.start_gui;
 	if (restart_program == 2)
-		no_gui = 1;
+		no_gui = true;
 	else if (restart_program == 3)
-		no_gui = 0;
+		no_gui = false;
 	restart_program = 0;
 	if (!no_gui) {
 		int err = gui_init();
@@ -711,23 +709,21 @@ static int real_main2 (int argc, TCHAR **argv)
 			write_log(_T("Failed to initialize the GUI\n"));
 			return -1;
 		}
-		else if (err == -2) {
+		if (err == -2) {
 			return 1;
 		}
 	}
 	else
 	{
-		setCpuSpeed();
 		update_display(&currprefs);
 	}
-
 	memset(&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
 	gui_data.hd = -1;
 
 	if (!init_shm()) {
 		if (currprefs.start_gui)
-			uae_restart(-1, NULL);
+			uae_restart(-1, nullptr);
 		return 0;
 	}
 #ifdef PICASSO96
@@ -774,7 +770,7 @@ void real_main(int argc, TCHAR **argv)
 {
 	restart_program = 1;
 
-	fetch_configurationpath(restart_config, sizeof(restart_config) / sizeof(TCHAR));
+	fetch_configurationpath(restart_config, sizeof restart_config / sizeof(TCHAR));
 	_tcscat(restart_config, OPTIONSFILENAME);
 	_tcscat(restart_config, ".uae");
 	default_config = 1;

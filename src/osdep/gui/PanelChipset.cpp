@@ -9,8 +9,11 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
 #include "options.h"
+#include "uae.h"
 #include "gui.h"
+#include "include/memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "gui_handling.h"

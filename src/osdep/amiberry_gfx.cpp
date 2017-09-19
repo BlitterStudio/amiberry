@@ -275,6 +275,18 @@ void show_screen(int mode)
 	//init_row_map();
 }
 
+unsigned long target_lastsynctime(void)
+{
+	return last_synctime;
+}
+
+bool show_screen_maybe(bool show)
+{
+	if (show)
+		show_screen(0);
+	return false;
+}
+
 static void graphics_subinit()
 {
 	if (screen == nullptr)
@@ -339,7 +351,7 @@ int target_get_display(const TCHAR *name)
 const TCHAR *target_get_display_name(int num, bool friendlyname)
 {
 	if (num <= 0)
-		return NULL;
+		return nullptr;
 	if (friendlyname)
 		return "Raspberry Pi display";
 	return "0";
@@ -562,18 +574,15 @@ bool target_graphics_buffer_update()
 
 #ifdef PICASSO96
 
-int picasso_palette()
+int picasso_palette(struct MyCLUTEntry *CLUT)
 {
 	int changed = 0;
-	for (int i = 0; i < 256; i++)
-	{
-		int r = picasso96_state.CLUT[i].Red;
-		int g = picasso96_state.CLUT[i].Green;
-		int b = picasso96_state.CLUT[i].Blue;
-		int value = (r << 16 | g << 8 | b);
-		uae_u32 v = CONVERT_RGB(value);
-		if (v != picasso_vidinfo.clut[i])
-		{
+	for (int i = 0; i < 256; i++) {
+		int r = CLUT[i].Red;
+		int g = CLUT[i].Green;
+		int b = CLUT[i].Blue;
+		uae_u32 v = CONVERT_RGB(r << 16 | g << 8 | b);
+		if (v != picasso_vidinfo.clut[i]) {
 			picasso_vidinfo.clut[i] = v;
 			changed = 1;
 		}

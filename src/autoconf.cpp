@@ -12,7 +12,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "autoconf.h"
@@ -33,7 +33,7 @@ DECLARE_MEMORY_FUNCTIONS(rtarea);
 addrbank rtarea_bank = {
 	rtarea_lget, rtarea_wget, rtarea_bget,
 	rtarea_lput, rtarea_wput, rtarea_bput,
-	rtarea_xlate, rtarea_check, NULL, _T("rtarea"), _T("UAE Boot ROM"),
+	rtarea_xlate, rtarea_check, nullptr, _T("rtarea"), _T("UAE Boot ROM"),
 	rtarea_lget, rtarea_wget,
 	ABFLAG_ROMIN, S_READ, S_WRITE
 };
@@ -123,7 +123,7 @@ static void REGPARAM2 rtarea_wput(uaecptr addr, uae_u32 value)
 	uaecptr addr2 = addr - RTAREA_TRAP_STATUS;
 
 	rtarea_bank.baseaddr[addr + 0] = value >> 8;
-	rtarea_bank.baseaddr[addr + 1] = (uae_u8)value;
+	rtarea_bank.baseaddr[addr + 1] = uae_u8(value);
 }
 
 static void REGPARAM2 rtarea_lput(uaecptr addr, uae_u32 value)
@@ -161,7 +161,7 @@ static int rt_straddr;
 
 uae_u32 addr(int ptr)
 {
-	return (uae_u32)ptr + rtarea_base;
+	return uae_u32(ptr) + rtarea_base;
 }
 
 void db(uae_u8 data)
@@ -171,8 +171,8 @@ void db(uae_u8 data)
 
 void dw(uae_u16 data)
 {
-	rtarea_bank.baseaddr[rt_addr++] = (uae_u8)(data >> 8);
-	rtarea_bank.baseaddr[rt_addr++] = (uae_u8)data;
+	rtarea_bank.baseaddr[rt_addr++] = uae_u8(data >> 8);
+	rtarea_bank.baseaddr[rt_addr++] = uae_u8(data);
 }
 
 void dl(uae_u32 data)
@@ -195,13 +195,11 @@ uae_u8 dbg(uaecptr addr)
 
 uae_u32 ds_ansi(const uae_char *str)
 {
-	int len;
-
 	if (!str)
 		return addr(rt_straddr);
-	len = strlen(str) + 1;
+	int len = strlen(str) + 1;
 	rt_straddr -= len;
-	strcpy((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
+	strcpy(reinterpret_cast<uae_char*>(rtarea_bank.baseaddr) + rt_straddr, str);
 	return addr(rt_straddr);
 }
 
@@ -215,14 +213,12 @@ uae_u32 ds(const TCHAR *str)
 
 uae_u32 ds_bstr_ansi(const uae_char *str)
 {
-	int len;
-
-	len = strlen(str) + 2;
+	int len = strlen(str) + 2;
 	rt_straddr -= len;
 	while (rt_straddr & 3)
 		rt_straddr--;
 	rtarea_bank.baseaddr[rt_straddr] = len - 2;
-	strcpy((uae_char*)rtarea_bank.baseaddr + rt_straddr + 1, str);
+	strcpy(reinterpret_cast<uae_char*>(rtarea_bank.baseaddr) + rt_straddr + 1, str);
 	return addr(rt_straddr) >> 2;
 }
 
@@ -276,7 +272,7 @@ void rtarea_init_mem(void)
 	if (!mapped_malloc(&rtarea_bank)) {
 		write_log(_T("virtual memory exhausted (rtarea)!\n"));
 		target_startup_msg(_T("Internal error"), _T("Virtual memory exhausted (rtarea)."));
-		uae_restart(1, NULL);
+		uae_restart(1, nullptr);
 		return;
 	}
 }
@@ -288,7 +284,6 @@ void rtarea_free(void)
 
 void rtarea_init(void)
 {
-	uae_u32 a;
 	TCHAR uaever[100];
 
 	rt_straddr = 0xFF00 - 2;
@@ -315,7 +310,7 @@ void rtarea_init(void)
 
 	deftrap(NULL); /* Generic emulator trap */
 
-	a = here();
+	uae_u32 a = here();
 	/* Dummy trap - removing this breaks the filesys emulation. */
 	org(rtarea_base + 0xFF00);
 	calltrap(deftrap2(nullfunc, TRAPFLAG_NO_RETVAL, _T("")));
@@ -334,7 +329,7 @@ void rtarea_init(void)
 	if (uae_boot_rom_size >= RTAREA_TRAPS) {
 		write_log(_T("RTAREA_TRAPS needs to be increased!"));
 		target_startup_msg(_T("Internal error"), _T("RTAREA_TRAPS needs to be increased."));
-		uae_restart(1, NULL);
+		uae_restart(1, nullptr);
 		return;
 	}
 

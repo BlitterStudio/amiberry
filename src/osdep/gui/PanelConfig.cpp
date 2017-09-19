@@ -336,7 +336,7 @@ void RefreshPanelConfig()
 	{
 		for (int i = 0; i < ConfigFilesList.size(); ++i)
 		{
-			if (!strcmp(ConfigFilesList[i]->Name, txtName->getText().c_str()))
+			if (!_tcscmp(ConfigFilesList[i]->Name, txtName->getText().c_str()))
 			{
 				// Select current entry
 				lstConfigs->setSelected(i);

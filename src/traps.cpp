@@ -14,7 +14,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "threaddep/thread.h"
@@ -105,30 +105,25 @@ unsigned int define_trap(TrapHandler handler_func, int flags, const TCHAR *name)
 	if (trap_count == MAX_TRAPS) {
 		write_log(_T("Ran out of emulator traps\n"));
 		target_startup_msg(_T("Internal error"), _T("Ran out of emulator traps."));
-		uae_restart(1, NULL);
+		uae_restart(1, nullptr);
 		return -1;
 	}
-	else {
-		int i;
-		unsigned int trap_num;
-		struct Trap *trap;
-		uaecptr addr = here();
+	uaecptr addr = here();
 
-		for (i = 0; i < trap_count; i++) {
-			if (addr == traps[i].addr)
-				return i;
-		}
-
-		trap_num = trap_count++;
-		trap = &traps[trap_num];
-
-		trap->handler = handler_func;
-		trap->flags = flags;
-		trap->name = name;
-		trap->addr = addr;
-
-		return trap_num;
+	for (int i = 0; i < trap_count; i++) {
+		if (addr == traps[i].addr)
+			return i;
 	}
+
+	unsigned int trap_num = trap_count++;
+	struct Trap *trap = &traps[trap_num];
+
+	trap->handler = handler_func;
+	trap->flags = flags;
+	trap->name = name;
+	trap->addr = addr;
+
+	return trap_num;
 }
 
 
@@ -157,7 +152,7 @@ void REGPARAM2 m68k_handle_trap(unsigned int trap_num)
 		}
 		else {
 			/* Handle simple trap */
-			retval = (trap->handler) (NULL);
+			retval = (trap->handler) (nullptr);
 
 			if (has_retval)
 				m68k_dreg(regs, 0) = retval;
@@ -237,7 +232,7 @@ static uaecptr m68k_return_trapaddr;
 static uaecptr exit_trap_trapaddr;
 
 /* For IPC between main thread and trap context */
-static uae_sem_t trap_mutex = 0;
+static uae_sem_t trap_mutex = nullptr;
 static TrapContext *current_context;
 
 
@@ -283,7 +278,7 @@ static void *trap_thread(void *arg)
 	/* Good bye, cruel world... */
 
 	/* dummy return value */
-	return 0;
+	return nullptr;
 }
 
 /*
@@ -466,11 +461,10 @@ static uae_u32 REGPARAM2 exit_trap_handler(TrapContext *dummy_ctx)
 */
 uae_u32 CallLib(TrapContext *ctx, uaecptr base, uae_s16 offset)
 {
-	uae_u32 retval;
 	uaecptr olda6 = trap_get_areg(ctx, 6);
 
 	trap_set_areg(ctx, 6, base);
-	retval = trap_Call68k(ctx, base + offset);
+	uae_u32 retval = trap_Call68k(ctx, base + offset);
 	trap_set_areg(ctx, 6, olda6);
 
 	return retval;
@@ -507,9 +501,9 @@ void init_extended_traps(void)
 	exit_trap_trapaddr = here();
 	calltrap(deftrap2(exit_trap_handler, TRAPFLAG_NO_RETVAL, _T("exit_trap")));
 
-	if (trap_mutex != 0)
+	if (trap_mutex != nullptr)
 		uae_sem_destroy(&trap_mutex);
-	trap_mutex = 0;
+	trap_mutex = nullptr;
 	uae_sem_init(&trap_mutex, 0, 1);
 }
 
@@ -549,7 +543,6 @@ uae_u32 trap_call_lib(TrapContext *ctx, uaecptr base, uae_s16 offset)
 }
 uae_u32 trap_call_func(TrapContext *ctx, uaecptr func)
 {
-	uae_u32 v;
 	uae_u32 storedregs[16];
 	bool storedregsused[16];
 	for (int i = 0; i < 16; i++) {
@@ -563,7 +556,7 @@ uae_u32 trap_call_func(TrapContext *ctx, uaecptr func)
 		}
 		ctx->calllib_reg_inuse[i] = 0;
 	}
-	v = CallFunc(ctx, func);
+	uae_u32 v = CallFunc(ctx, func);
 	for (int i = 0; i < 16; i++) {
 		if (storedregsused[i]) {
 			regs.regs[i] = storedregs[i];
@@ -598,7 +591,7 @@ void trap_put_quad(TrapContext *ctx, uaecptr addr, uae_u64 v)
 {
 	uae_u8 out[8];
 	put_long_host(out + 0, v >> 32);
-	put_long_host(out + 4, (uae_u32)(v >> 0));
+	put_long_host(out + 4, uae_u32(v >> 0));
 	trap_put_bytes(ctx, out, addr, 8);
 }
 void trap_put_long(TrapContext *ctx, uaecptr addr, uae_u32 v)

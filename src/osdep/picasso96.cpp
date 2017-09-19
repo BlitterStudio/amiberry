@@ -52,7 +52,7 @@
 #include "config.h"
 #include "options.h"
 #include "threaddep/thread.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "xwin.h"
@@ -3181,8 +3181,6 @@ addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 * Also put it in reset_drawing() for safe-keeping.  */
 void InitPicasso96(void)
 {
-	int i;
-
 	gfxmem_banks[0] = &gfxmem_bank;
 
 	//fastscreen
@@ -3190,7 +3188,7 @@ void InitPicasso96(void)
 	//fastscreen
 	memset(&picasso96_state_uaegfx, 0, sizeof(struct picasso96_state_struct));
 
-	for (i = 0; i < 256; i++) {
+	for (int i = 0; i < 256; i++) {
 		p2ctab[i][0] = (((i & 128) ? 0x01000000 : 0)
 			| ((i & 64) ? 0x010000 : 0)
 			| ((i & 32) ? 0x0100 : 0)
