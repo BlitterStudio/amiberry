@@ -20,7 +20,7 @@
 /* SDL variable for output of emulation */
 SDL_Surface* screen = nullptr;
 
-static unsigned int current_vsync_frame = 0;
+//static unsigned int current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static unsigned long last_synctime;
 static unsigned long next_synctime = 0;
@@ -60,8 +60,8 @@ void InitAmigaVidMode(struct uae_prefs* p)
 	/* Initialize structure for Amiga video modes */
 	gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
 	gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8 *>(screen->pixels);
-	gfxvidinfo.drawbuffer.outwidth = screen->w ? screen->w : 640; //p->gfx_size.width;
-	gfxvidinfo.drawbuffer.outheight = screen->h ? screen->h : 256; //p->gfx_size.height;
+	gfxvidinfo.drawbuffer.outwidth = p->gfx_size.width;
+	gfxvidinfo.drawbuffer.outheight = p->gfx_size.height;
 	gfxvidinfo.drawbuffer.rowbytes = screen->pitch;
 }
 
@@ -226,7 +226,7 @@ int lockscr()
 {
 	if(SDL_LockSurface(screen)== -1)
 		return 0;
-	init_row_map();
+	//init_row_map();
 	return 1;
 }
 
@@ -261,18 +261,21 @@ bool render_screen(bool immediate)
 
 void show_screen(int mode)
 {
-	unsigned long start = read_processor_time();
+	//unsigned long start = read_processor_time();
 
 	last_synctime = read_processor_time();
 
 	updatedisplayarea();
 
-	idletime += last_synctime - start;
+	//idletime += last_synctime - start;
+
+	if (!screen_is_picasso)
+		gfxvidinfo.drawbuffer.bufmem = (uae_u8 *)screen->pixels;
+
 	if (last_synctime - next_synctime > time_per_frame - 5000)
 		next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 	else
 		next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
-	//init_row_map();
 }
 
 unsigned long target_lastsynctime(void)

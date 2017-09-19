@@ -678,9 +678,6 @@ void run_gui()
 	try
 	{
 		sdl::gui_init();
-#ifdef DEBUG
-		printf("Calling widgets::gui_init\n");
-#endif
 		widgets::gui_init();
 		if (_tcslen(startup_message) > 0) {
 			ShowMessage(startup_title, startup_message, _T(""), _T("Ok"), _T(""));

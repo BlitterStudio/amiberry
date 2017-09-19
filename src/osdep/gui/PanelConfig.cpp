@@ -105,15 +105,15 @@ public:
 			// Load selected configuration
 			//-----------------------------------------------
 			i = lstConfigs->getSelected();
-			if (emulating) {
-				uae_restart(-1, ConfigFilesList[i]->FullPath);
-			}
-			else {
+			//if (emulating) {
+			//	uae_restart(-1, ConfigFilesList[i]->FullPath);
+			//}
+			//else {
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_PATH);
 				DisableResume();
 				RefreshAllPanels();
-			}
+			//}
 		}
 		else if (actionEvent.getSource() == cmdSave)
 		{

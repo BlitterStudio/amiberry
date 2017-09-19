@@ -140,10 +140,8 @@ static uae_u16 ham_linebuf[MAX_PIXELS_PER_LINE * 2];
 
 static uae_u8 *xlinebuffer;
 
-#define MAX_VIDHEIGHT 270
-
 static int *native2amiga_line_map;
-static uae_u8 *row_map[MAX_VIDHEIGHT + 1];
+static uae_u8** row_map;
 static uae_u8 row_tmp[MAX_PIXELS_PER_LINE * 32 / 8];
 
 /* line_draw_funcs: pfield_do_linetoscr, pfield_do_fill_line, decode_ham */
@@ -1857,13 +1855,28 @@ static void pfield_doline(int lineno)
 
 void init_row_map(void)
 {
+	static uae_u8* oldbufmem;
+	static int oldheight, oldpitch;
 	int i, j;
 
-	for (i = gfxvidinfo.drawbuffer.outheight; i < MAX_VIDHEIGHT + 1; i++)
-		row_map[i] = row_tmp;
-	for (i = 0, j = 0; i < gfxvidinfo.drawbuffer.outheight; i++, j += gfxvidinfo.drawbuffer.rowbytes) {
-		row_map[i] = gfxvidinfo.drawbuffer.bufmem + j;
+	if (gfxvidinfo.drawbuffer.outheight > max_uae_height)
+	{
+		write_log(_T("Resolution too high, aborting\n"));
+		abort();
 	}
+	if (!row_map)
+		row_map = xmalloc(uae_u8*, max_uae_height + 1);
+
+	if (oldbufmem && oldbufmem == gfxvidinfo.drawbuffer.bufmem &&
+		oldheight == gfxvidinfo.drawbuffer.outheight &&
+		oldpitch == gfxvidinfo.drawbuffer.rowbytes)
+		return;
+
+	j = oldheight == 0 ? max_uae_height : oldheight;
+	for (i = gfxvidinfo.drawbuffer.outheight; i < max_uae_height + 1 && i < j + 1; i++)
+		row_map[i] = row_tmp;
+	for (i = 0, j = 0; i < gfxvidinfo.drawbuffer.outheight; i++, j += gfxvidinfo.drawbuffer.rowbytes)
+		row_map[i] = gfxvidinfo.drawbuffer.bufmem + j;
 }
 
 static void init_aspect_maps()
@@ -2186,8 +2199,7 @@ static void pfield_draw_line(int lineno, int gfx_ypos)
 
 static void center_image(void)
 {
-	int deltaToBorder;
-	deltaToBorder = (gfxvidinfo.drawbuffer.outwidth >> currprefs.gfx_resolution) - 320;
+	int deltaToBorder = (gfxvidinfo.drawbuffer.outwidth >> currprefs.gfx_resolution) - 320;
 
 	visible_left_border = 73 - (deltaToBorder >> 1);
 	visible_right_border = 393 + (deltaToBorder >> 1);
@@ -2216,10 +2228,8 @@ static void init_drawing_frame(void)
 
 static void draw_status_line(int line, int statusy)
 {
-	uae_u8 *buf;
-
 	xlinebuffer = row_map[line];
-	buf = xlinebuffer;
+	uae_u8 *buf = xlinebuffer;
 	draw_status_line_single(buf, statusy, gfxvidinfo.drawbuffer.outwidth);
 }
 

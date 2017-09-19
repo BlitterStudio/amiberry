@@ -4468,7 +4468,6 @@ uae_u32 cfgfile_uaelib(TrapContext *ctx, int mode, uae_u32 name, uae_u32 dst, ua
 
 void default_prefs(struct uae_prefs *p, bool reset, int type)
 {
-	int i;
 	int roms[] = { 6, 7, 8, 9, 10, 14, 5, 4, 3, 2, 1, -1 };
 	TCHAR zero = 0;
 
@@ -4482,7 +4481,7 @@ void default_prefs(struct uae_prefs *p, bool reset, int type)
 	p->z3_mapping_mode = Z3MAPPING_AUTO;
 
 	p->mountitems = 0;
-	for (i = 0; i < MOUNT_CONFIG_SIZE; i++) {
+	for (int i = 0; i < MOUNT_CONFIG_SIZE; i++) {
 		p->mountconfig[i].configoffset = -1;
 		p->mountconfig[i].unitnum = -1;
 	}
@@ -4514,9 +4513,9 @@ void default_prefs(struct uae_prefs *p, bool reset, int type)
 	p->cachesize = 0;
 
 	p->gfx_framerate = 0;
-	p->gfx_size.width = 320;
+	p->gfx_size.width = 640;
 	p->gfx_size.height = 256;
-	p->gfx_resolution = RES_LORES;
+	p->gfx_resolution = RES_HIRES;
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;

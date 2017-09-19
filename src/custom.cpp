@@ -5138,11 +5138,10 @@ static bool framewait(void)
 
 		curr_time = read_processor_time();
 
-		int max;
 		int adjust = 0;
-		if ((int)curr_time - (int)vsyncwaittime > 0 && (int)curr_time - (int)vsyncwaittime < vstb / 2)
+		if (int(curr_time) - int(vsyncwaittime) > 0 && int(curr_time) - int(vsyncwaittime) < vstb / 2)
 			adjust += curr_time - vsyncwaittime;
-		max = (int)(vstb * (1000.0) / 1000.0 - adjust);
+		int max = int(vstb * (1000.0) / 1000.0 - adjust);
 		vsyncwaittime = curr_time + vstb - adjust;
 		vsyncmintime = curr_time;
 
@@ -5251,11 +5250,10 @@ static void vsync_handler_pre(void)
 #endif
 
 	if (!vsync_rendered) {
-		frame_time_t start, end;
-		start = read_processor_time();
+		frame_time_t start = read_processor_time();
 		vsync_handle_redraw();
 		vsync_rendered = true;
-		end = read_processor_time();
+		frame_time_t end = read_processor_time();
 		frameskiptime += end - start;
 	}
 
