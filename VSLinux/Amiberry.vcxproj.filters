@@ -101,22 +101,13 @@
     <Image Include="..\data\file.ico">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\joystick.bmp">
-      <Filter>data</Filter>
-    </Image>
     <Image Include="..\data\joystick.ico">
       <Filter>data</Filter>
     </Image>
     <Image Include="..\data\misc.ico">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\mouse.bmp">
-      <Filter>data</Filter>
-    </Image>
     <Image Include="..\data\paths.ico">
-      <Filter>data</Filter>
-    </Image>
-    <Image Include="..\data\remapping.bmp">
       <Filter>data</Filter>
     </Image>
     <Image Include="..\data\savestate.png">
@@ -569,15 +560,13 @@
     <None Include="..\src\inputevents.def">
       <Filter>src</Filter>
     </None>
-    <None Include="..\src\table68k">
-      <Filter>src</Filter>
-    </None>
     <None Include="..\src\osdep\arm_helper.s">
       <Filter>src\osdep</Filter>
     </None>
     <None Include="..\src\osdep\neon_helper.s">
       <Filter>src\osdep</Filter>
     </None>
+    <None Include="..\Makefile" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\threaddep\thread.h">

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
       <Configuration>Debug</Configuration>
@@ -9,23 +9,45 @@
       <Configuration>Release</Configuration>
       <Platform>ARM</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x86">
-      <Configuration>Debug</Configuration>
-      <Platform>x86</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x86">
-      <Configuration>Release</Configuration>
-      <Platform>x86</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
   </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{fdb65b17-494a-4248-9f05-b527d4ea15df}</ProjectGuid>
+    <Keyword>Linux</Keyword>
+    <RootNamespace>Amiberry</RootNamespace>
+    <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
+    <ApplicationType>Linux</ApplicationType>
+    <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
+    <TargetLinuxPlatform>Generic</TargetLinuxPlatform>
+    <LinuxProjectType>{2238F9CD-F817-4ECC-BD14-2524D2669B35}</LinuxProjectType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src\threaddep;..\src\osdep;..\src\include;..\src;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src\threaddep;..\src\osdep;..\src\include;..\src;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>CPU_arm;ARMV6_ASSEMBLY;PANDORA;PICASSO96;WITH_INGAME_WARNING;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL;ARMV6T2;USE_ARMNEON;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
       <DeploymentContent>true</DeploymentContent>
@@ -62,22 +84,13 @@
     <Image Include="..\data\file.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="..\data\joystick.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
     <Image Include="..\data\joystick.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
     <Image Include="..\data\misc.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="..\data\mouse.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
     <Image Include="..\data\paths.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\remapping.bmp">
       <DeploymentContent>true</DeploymentContent>
     </Image>
     <Image Include="..\data\savestate.png">
@@ -94,6 +107,11 @@
     <Font Include="..\data\FreeSans.ttf">
       <DeploymentContent>true</DeploymentContent>
     </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Makefile">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\akiko.cpp" />
@@ -240,11 +258,7 @@
     <ClCompile Include="..\src\zfile_archive.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\filesys.asm" />
-    <None Include="..\src\inputevents.def" />
     <None Include="..\src\osdep\arm_helper.s" />
-    <None Include="..\src\osdep\neon_helper.s" />
-    <None Include="..\src\table68k" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zAlloc.h" />
@@ -361,82 +375,21 @@
     <ClInclude Include="..\src\sounddep\sound.h" />
     <ClInclude Include="..\src\threaddep\thread.h" />
   </ItemGroup>
-  <PropertyGroup Label="Globals">
-    <ProjectGuid>{fdb65b17-494a-4248-9f05-b527d4ea15df}</ProjectGuid>
-    <Keyword>Linux</Keyword>
-    <RootNamespace>Amiberry</RootNamespace>
-    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
-    <ApplicationType>Linux</ApplicationType>
-    <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
-    <TargetLinuxPlatform>Generic</TargetLinuxPlatform>
-    <LinuxProjectType>{2238F9CD-F817-4ECC-BD14-2524D2669B35}</LinuxProjectType>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <ConfigurationType>Makefile</ConfigurationType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings" />
-  <ImportGroup Label="Shared" />
-  <ImportGroup Label="PropertySheets" />
-  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <IncludePath>..\src\threaddep;..\src\osdep;..\src\include;..\src;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\lib;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\lib\arm-linux-gnueabihf;$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <LibraryPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\lib;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\lib\arm-linux-gnueabihf;$(LibraryPath)</LibraryPath>
-    <IncludePath>..\src\threaddep;..\src\osdep;..\src\include;..\src;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</IncludePath>
-  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>src/include;src/threaddep;src/osdep;src;/opt/vc/include/interface/vcos/pthreads;/opt/vc/include/interface/vmcs_host/linux;/opt/vc/include;/usr/include/libxml2;/usr/include/SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>CPU_arm;ARMV6_ASSEMBLY;PANDORA;PICASSO96;WITH_INGAME_WARNING;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";USE_SDL;ARMV6T2;USE_ARMNEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <AdditionalLibraryDirectories>/opt/vc/lib;/usr/lib/arm-linux/gnueabihf;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LibraryDependencies>SDL;pthread;m;z;SDL_image;png;rt;xml2;FLAC;mpg123;dl;SDL_ttf;guichan_sdl;guichan;bcm_host</LibraryDependencies>
-    </Link>
-    <RemotePreLinkEvent>
-      <Command>$(RemoteCCompileToolExe) -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -Wall -o $(RemoteProjectDir)/obj/$(Platform)/$(Configuration)/neon_helper.o -c $(RemoteProjectDir)/osdep/neon_helper.s</Command>
-      <Message>Compile NEON_Helper</Message>
-    </RemotePreLinkEvent>
-    <PreLinkEvent>
-      <Command>
-      </Command>
-    </PreLinkEvent>
-    <PreLinkEvent>
-      <Message>
-      </Message>
-    </PreLinkEvent>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-      <AdditionalSourcesToCopyMapping>$(SolutionDir)..\src\filesys_bootrom.cpp:=$(RemoteProjectDir)/filesys_bootrom.cpp;$(SolutionDir)..\src\linetoscr.c:=$(RemoteProjectDir)/linetoscr.c;$(SolutionDir)..\src\p96_blit.cpp:=$(RemoteProjectDir)/p96_blit.cpp;$(SolutionDir)..\src\sinctable.cpp:=$(RemoteProjectDir)/sinctable.cpp;%(AdditionalSourcesToCopyMapping)</AdditionalSourcesToCopyMapping>
-    </PreBuildEvent>
-    <RemotePreBuildEvent>
-      <Command>
-      </Command>
-      <Message>
-      </Message>
-    </RemotePreBuildEvent>
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry/amiberry-sdl1 ~/projects/amiberry</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <RemotePostBuildEvent>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry/amiberry-sdl1 ~/projects/amiberry</Command>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
