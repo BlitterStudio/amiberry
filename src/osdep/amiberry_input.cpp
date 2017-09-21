@@ -287,7 +287,7 @@ static int init_joystick()
 	for (int cpt = 0; cpt < nr_joysticks; cpt++)
 	{
 		Joysticktable[cpt] = SDL_JoystickOpen(cpt);
-		strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), 80);
+		strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), sizeof JoystickName[cpt] - 1);
 		//printf("Joystick %i : %s\n", cpt, JoystickName[cpt]);
 		//printf("    Buttons: %i Axis: %i Hats: %i\n", SDL_JoystickNumButtons(Joysticktable[cpt]), SDL_JoystickNumAxes(Joysticktable[cpt]), SDL_JoystickNumHats(Joysticktable[cpt]));
 
