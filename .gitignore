@@ -31,3 +31,6 @@ Amiberry/VisualGDB/Release-rpi2/Amiberry
 VSLinux/obj/ARM/Debug/Amiberry.tlog/unsuccessfulbuild
 *.lastbuildstate
 *.tlog
+src/guisan/lib/libguisan.a
+VisualGDB/VisualGDB/Debug/Amiberry-sdl2
+VSLinux/obj/ARM/Debug/amiberry-sdl2

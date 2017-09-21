@@ -374,6 +374,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -396,8 +397,12 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <IncludePath>..\src\threaddep;..\src\osdep;..\src\include;..\src;C:\sysroot\opt\vc\include\interface\vcos\pthreads;C:\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\sysroot\opt\vc\include;C:\sysroot\usr\include\SDL;C:\sysroot\usr\include\libxml2;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\sysroot\opt\vc\lib;C:\sysroot\usr\lib\arm-linux-gnueabihf;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\src\threaddep;..\src\osdep;..\src\include;..\src;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\lib;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\lib\arm-linux-gnueabihf;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <LibraryPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\lib;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\lib\arm-linux-gnueabihf;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\src\threaddep;..\src\osdep;..\src\include;..\src;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>

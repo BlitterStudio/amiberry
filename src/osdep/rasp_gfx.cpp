@@ -233,7 +233,7 @@ static void open_screen(struct uae_prefs *p)
 		vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
 		vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
 			VC_IMAGE_RGB565,
-			width *2,
+			prSDLScreen->pitch,
 			prSDLScreen->pixels,
 			&blit_rect);
 		vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
@@ -382,7 +382,7 @@ void flush_screen()
 		current_resource_amigafb = 0;
 		vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_1,
 			VC_IMAGE_RGB565,
-			gfxvidinfo.outwidth * 2,
+			gfxvidinfo.rowbytes,
 			gfxvidinfo.bufmem,
 			&blit_rect);
 		dispmanxupdate = vc_dispmanx_update_start(0);
@@ -397,7 +397,7 @@ void flush_screen()
 		current_resource_amigafb = 1;
 		vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_2,
 			VC_IMAGE_RGB565,
-			gfxvidinfo.outwidth * 2,
+			gfxvidinfo.rowbytes,
 			gfxvidinfo.bufmem,
 			&blit_rect);
 		dispmanxupdate = vc_dispmanx_update_start(0);
