@@ -712,12 +712,17 @@ struct zfile *archive_access_lzx (struct znode *zn)
     }
     /* pre-cache all files we just decompressed */
     for (;;) {
-		if (znfirst->size && !znfirst->f) {
+		if (!znfirst->f) {
 			dstf = zfile_fopen_empty (zf, znfirst->name, znfirst->size);
-			zfile_fwrite(dbuf + znfirst->offset2, znfirst->size, 1, dstf);
+			if (znfirst->size) {
+			  zfile_fwrite(dbuf + znfirst->offset2, znfirst->size, 1, dstf);
+			}
 			znfirst->f = dstf;
 			if (znfirst == zn)
 			newzf = zfile_dup (dstf);
+		} else {
+			if (znfirst == zn)
+				newzf = zfile_dup(znfirst->f);
 		}
 		if (znfirst == znlast)
 			break;
@@ -828,10 +833,13 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 	  tm.tm_mday = day;
 	  zai.tv.tv_sec = mktime(&tm);
 	  zai.size = unpack_size;
+
 	  zn = zvolume_addfile_abs(zv, &zai);
-	  zn->offset2 = merge_size;
-	  xfree ((char*)zai.name);
-	  xfree ((char*)zai.comment);
+	  if (zn) {
+	    zn->offset2 = merge_size;
+	  }
+	  xfree (zai.name);
+	  xfree (zai.comment);
 
 	  total_pack += pack_size;
 	  total_unpack += unpack_size;
@@ -841,8 +849,10 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 	  if(pack_size) /* seek past the packed data */
 	  {
 	   merge_size = 0;
-	   zn->offset = zfile_ftell(in_file);
-	   zn->packedsize = pack_size;
+	   if (zn) {
+	    zn->offset = zfile_ftell(in_file);
+	    zn->packedsize = pack_size;
+	   }
 	   if(!zfile_fseek(in_file, pack_size, SEEK_CUR))
 	   {
 	    abort = 0; /* continue */

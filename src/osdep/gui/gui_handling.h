@@ -16,15 +16,15 @@
 #define SLIDER_HEIGHT 18
 #define TITLEBAR_HEIGHT 24
 
-typedef struct _ConfigCategory
-{
-    const char *category;
-    const char *imagepath;
-    gcn::SelectorEntry *selector;
-    gcn::Container *panel;
-    void (*InitFunc) (const struct _ConfigCategory& category);
-    void (*ExitFunc) (void);
-    void (*RefreshFunc) (void);
+typedef struct _ConfigCategory {
+  const char *category;
+  const char *imagepath;
+  gcn::SelectorEntry *selector;
+  gcn::Container *panel;
+  void (*InitFunc) (const struct _ConfigCategory& category);
+  void (*ExitFunc) (void);
+  void (*RefreshFunc) (void);
+  bool (*HelpFunc) (std::vector<std::string>&);
 } ConfigCategory;
 
 extern bool gui_running;
@@ -38,62 +38,91 @@ extern SDL_Surface* gui_screen;
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
-#define BUILDINID_NONE  0
-#define BUILDINID_A500  1
-#define BUILDINID_A1200 2
-#define BUILDINID_CD32  3
+extern int quickstart_start;
+extern int quickstart_model;
+extern int quickstart_conf;
 
-typedef struct
-{
-    char Name[MAX_DPATH];
-    char FullPath[MAX_DPATH];
-    char Description[MAX_DPATH];
-    int BuildInID;
+typedef struct {
+  char Name[MAX_DPATH];
+  char FullPath[MAX_DPATH];
+  char Description[MAX_DPATH];
 } ConfigFileInfo;
 extern std::vector<ConfigFileInfo*> ConfigFilesList;
 
 void InitPanelPaths(const struct _ConfigCategory& category);
 void ExitPanelPaths(void);
 void RefreshPanelPaths(void);
+bool HelpPanelPaths(std::vector<std::string> &helptext);
+  
+void InitPanelQuickstart(const struct _ConfigCategory& category);
+void ExitPanelQuickstart(void);
+void RefreshPanelQuickstart(void);
+bool HelpPanelQuickstart(std::vector<std::string> &helptext);
+  
 void InitPanelConfig(const struct _ConfigCategory& category);
 void ExitPanelConfig(void);
 void RefreshPanelConfig(void);
+bool HelpPanelConfig(std::vector<std::string> &helptext);
+  
 void InitPanelCPU(const struct _ConfigCategory& category);
 void ExitPanelCPU(void);
 void RefreshPanelCPU(void);
+bool HelpPanelCPU(std::vector<std::string> &helptext);
+  
 void InitPanelChipset(const struct _ConfigCategory& category);
 void ExitPanelChipset(void);
 void RefreshPanelChipset(void);
+bool HelpPanelChipset(std::vector<std::string> &helptext);
+  
 void InitPanelROM(const struct _ConfigCategory& category);
 void ExitPanelROM(void);
 void RefreshPanelROM(void);
+bool HelpPanelROM(std::vector<std::string> &helptext);
+  
 void InitPanelRAM(const struct _ConfigCategory& category);
 void ExitPanelRAM(void);
 void RefreshPanelRAM(void);
+bool HelpPanelRAM(std::vector<std::string> &helptext);
+  
 void InitPanelFloppy(const struct _ConfigCategory& category);
 void ExitPanelFloppy(void);
 void RefreshPanelFloppy(void);
+bool HelpPanelFloppy(std::vector<std::string> &helptext);
+  
 void InitPanelHD(const struct _ConfigCategory& category);
 void ExitPanelHD(void);
 void RefreshPanelHD(void);
+bool HelpPanelHD(std::vector<std::string> &helptext);
+  
 void InitPanelDisplay(const struct _ConfigCategory& category);
 void ExitPanelDisplay(void);
 void RefreshPanelDisplay(void);
+bool HelpPanelDisplay(std::vector<std::string> &helptext);
+  
 void InitPanelSound(const struct _ConfigCategory& category);
 void ExitPanelSound(void);
 void RefreshPanelSound(void);
+bool HelpPanelSound(std::vector<std::string> &helptext);
+
 void InitPanelInput(const struct _ConfigCategory& category);
 void ExitPanelInput(void);
 void RefreshPanelInput(void);
+bool HelpPanelInput(std::vector<std::string> &helptext);
+  
 void InitPanelMisc(const struct _ConfigCategory& category);
 void ExitPanelMisc(void);
 void RefreshPanelMisc(void);
+bool HelpPanelMisc(std::vector<std::string> &helptext);
+  
 void InitPanelSavestate(const struct _ConfigCategory& category);
 void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);
-
+bool HelpPanelSavestate(std::vector<std::string> &helptext);
+  
 void RefreshAllPanels(void);
 void RegisterRefreshFunc(void (*func)(void));
+
+void FocusBugWorkaround(gcn::Window *wnd);
 
 void DisableResume(void);
 
@@ -103,7 +132,8 @@ bool SelectFile(const char *title, char *value, const char *filter[], bool creat
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
 bool CreateFilesysHardfile(void);
-
+void ShowHelp(const char *title, const std::vector<std::string>& text);
+  
 bool LoadConfigByName(const char *name);
 ConfigFileInfo* SearchConfigInList(const char *name);
 
@@ -117,7 +147,7 @@ bool HandleNavigation(int direction);
 extern void CreateDefaultDevicename(char *name);
 extern bool DevicenameExists(const char *name);
 extern int tweakbootpri (int bp, int ab, int dnm);
-
+  
 extern char *screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;

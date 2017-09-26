@@ -92,11 +92,23 @@
     <Filter Include="Source files\osdep\gui">
       <UniqueIdentifier>{8d2e90b3-4227-4898-b701-b3d43547a46e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source files\osdep\menu">
-      <UniqueIdentifier>{f4dc4c59-aa7a-4cce-88bb-d743d6918cb4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source files\sounddep">
       <UniqueIdentifier>{7a9672f6-c9a7-458e-b273-0b24b0a19c11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\archivers\mp2">
+      <UniqueIdentifier>{c72ce1e8-94f3-4329-8212-e39513c6ddc3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\archivers\mp2">
+      <UniqueIdentifier>{7b364cc4-d3a4-4057-a41a-6496296dd517}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\include\uae">
+      <UniqueIdentifier>{54c800f7-13e7-4d83-ae78-a7bccf5f6f59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\softfloat">
+      <UniqueIdentifier>{1bbcc4e3-b23d-4f8e-b69d-3d063f798490}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\softfloat">
+      <UniqueIdentifier>{067f2212-0ec2-4880-8cac-6209af70ec02}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -306,9 +318,6 @@
     <ClCompile Include="..\..\src\osdep\pandora_gui.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\pandora_input.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\pandora_mem.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
@@ -360,9 +369,6 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelHD.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
@@ -407,9 +413,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp">
       <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\menu\menu_config.cpp">
-      <Filter>Source files\osdep\menu</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\machdep\support.cpp">
       <Filter>Source files\machdep</Filter>
@@ -528,22 +531,130 @@
     <ClCompile Include="..\..\src\osdep\rasp_gfx.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zDecode.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zExtract.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zHeader.cpp">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\archivers\7z\7zIn.cpp">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\7zItem.cpp">
+    <ClCompile Include="..\..\src\ar.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zBuf2.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zCrcOpt.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zDec.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zFile.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\LzmaLib.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Sha256.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\XzCrc64.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\XzDec.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\XzIn.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Lzma2Dec.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Xz.cpp">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\mp2\kjmp2.cpp">
+      <Filter>Source files\archivers\mp2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cd32_fmv.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpuemu_40.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpuemu_44.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\def_icons.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\devices.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fdi2raw.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\flashrom.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fpp_native.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fpp_softfloat.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gayle.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\hrtmon.rom.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ide.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\raspi_input.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\rtc.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\scsi.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\softfloat\softfloat.cpp">
+      <Filter>Source files\softfloat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\softfloat\softfloat_decimal.cpp">
+      <Filter>Source files\softfloat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\softfloat\softfloat_fpsp.cpp">
+      <Filter>Source files\softfloat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\BraIA64.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Delta.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\CpuArch.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\Alloc.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\jit\compemu_prefs.cpp">
+      <Filter>Source files\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
   </ItemGroup>
@@ -612,12 +723,6 @@
     <ClInclude Include="..\..\src\include\autoconf.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\blit.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\blitfunc.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\blitter.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
@@ -633,25 +738,16 @@
     <ClInclude Include="..\..\src\include\cia.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\clipboard.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\commpipe.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\cpu_prefetch.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\cputbl.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\crc32.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\custom.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\debug.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\disk.h">
@@ -661,9 +757,6 @@
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\drawing.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\ersatz.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\events.h">
@@ -679,12 +772,6 @@
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\flags_arm.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\fpp-ieee-be.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\fpp-unknown.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\fsdb.h">
@@ -732,12 +819,6 @@
     <ClInclude Include="..\..\src\include\options.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\osemu.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\picasso96.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\readcpu.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
@@ -751,9 +832,6 @@
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\scsi.h">
-      <Filter>Header files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\scsidev.h">
       <Filter>Header files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\statusline.h">
@@ -831,9 +909,6 @@
     <ClInclude Include="..\..\src\machdep\maccess.h">
       <Filter>Header files\machdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\machdep\md-fpp.h">
-      <Filter>Header files\machdep</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\machdep\rpt.h">
       <Filter>Header files\machdep</Filter>
     </ClInclude>
@@ -865,9 +940,6 @@
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\7z\Bra.h">
-      <Filter>Header files\archivers\7z</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\CpuArch.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\7z\LzmaDec.h">
@@ -927,20 +999,128 @@
     <ClInclude Include="..\..\src\archivers\7z\7zAlloc.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zDecode.h">
+    <ClInclude Include="..\..\src\archivers\7z\7z.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zExtract.h">
+    <ClInclude Include="..\..\src\archivers\7z\7zFile.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zHeader.h">
+    <ClInclude Include="..\..\src\archivers\7z\Alloc.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zIn.h">
+    <ClInclude Include="..\..\src\archivers\7z\Delta.h">
       <Filter>Header files\archivers\7z</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\archivers\7z\7zItem.h">
+    <ClInclude Include="..\..\src\archivers\7z\LzHash.h">
       <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Lzma2Dec.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Lzma86.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\LzmaLib.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\RotateDefs.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Sha256.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\Xz.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\XzCrc64.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\mp2\kjmp2.h">
+      <Filter>Header files\archivers\mp2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\ar.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cd32_fmv.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cpummu.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\devices.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\fdi2raw.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\flashrom.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\fpp.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\gayle.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\ide.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\mmu_common.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\rtc.h">
+      <Filter>Header files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\attributes.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\cdrom.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\io.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\likely.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\mman.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\string.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\types.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\vm.h">
+      <Filter>Header files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\picasso96.h">
+      <Filter>Header files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\softfloat\softfloat.h">
+      <Filter>Header files\softfloat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\softfloat\softfloat_fpsp_tables.h">
+      <Filter>Header files\softfloat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\softfloat\softfloat-macros.h">
+      <Filter>Header files\softfloat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\softfloat\softfloat-specialize.h">
+      <Filter>Header files\softfloat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\CpuArch.h">
+      <Filter>Header files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\blit.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\blitfunc.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\cputbl.h">
+      <Filter>Header files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

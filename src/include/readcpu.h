@@ -1,5 +1,7 @@
-#ifndef READCPU_H
-#define READCPU_H
+#ifndef UAE_READCPU_H
+#define UAE_READCPU_H
+
+#include "uae/types.h"
 
 ENUMDECL {
   Dreg, Areg, Aind, Aipi, Apdi, Ad16, Ad8r,
@@ -46,7 +48,7 @@ struct mnemolookup {
 extern struct mnemolookup lookuptab[];
 
 ENUMDECL {
-    sz_byte, sz_word, sz_long
+    sz_byte, sz_word, sz_long, sz_single, sz_double, sz_extended, sz_packed
 } ENUMNAME (wordsizes);
 
 ENUMDECL {
@@ -125,4 +127,4 @@ extern void do_merges (void);
 extern int get_no_mismatches (void);
 extern int nr_cpuop_funcs;
 
-#endif /* READCPU_H */
+#endif /* UAE_READCPU_H */

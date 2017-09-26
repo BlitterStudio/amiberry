@@ -1,6 +1,3 @@
-#ifndef EVENTS_H
-#define EVENTS_H
-
  /*
   * UAE - The Un*x Amiga Emulator
   *
@@ -12,9 +9,14 @@
   * Copyright 1995-1998 Bernd Schmidt
   */
 
+#ifndef UAE_EVENTS_H
+#define UAE_EVENTS_H
+
+#include "uae/types.h"
+
 #include "machdep/rpt.h"
 
-extern frame_time_t vsyncmintime;
+extern frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
 extern int vsynctimebase, syncbase;
 extern void reset_frame_rate_hack (void);
 extern int speedup_timelimit;
@@ -23,7 +25,8 @@ extern void compute_vsynctime (void);
 extern void init_eventtab (void);
 extern void events_schedule (void);
 
-extern long last_synctime;
+extern unsigned long currcycle, nextevent;
+extern int is_syncline;
 typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 
@@ -56,7 +59,7 @@ enum {
 };
 
 enum {
-    ev2_disk, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
+    ev2_disk, ev2_ciaa_tod, ev2_ciab_tod, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
     ev2_max
 };
 
@@ -79,6 +82,11 @@ STATIC_INLINE void cycles_do_special (void)
 	}
 }
 
+STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
+{
+	regs.pissoff -= cycles_to_add;
+}
+
 STATIC_INLINE unsigned long int get_cycles (void)
 {
   return currcycle;
@@ -88,12 +96,6 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 {
   currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
-}
-
-STATIC_INLINE int current_hpos_safe (void)
-{
-  int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
-	return hp;
 }
 
 STATIC_INLINE int current_hpos (void)
@@ -136,4 +138,4 @@ STATIC_INLINE void event_remevent (int no)
 	eventtab[no].active = 0;
 }
 
-#endif
+#endif /* UAE_EVENTS_H */

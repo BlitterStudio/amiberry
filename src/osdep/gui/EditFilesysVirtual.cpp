@@ -196,6 +196,8 @@ static void ExitEditFilesysVirtual(void)
 
 static void EditFilesysVirtualLoop(void)
 {
+  FocusBugWorkaround(wndEditFilesysVirtual);  
+
   while(!dialogFinished)
   {
     SDL_Event event;
@@ -306,9 +308,9 @@ bool EditFilesysVirtual(int unit_no)
     extractPath((char *) txtPath->getText().c_str(), currentDir);
     
     uci_set_defaults(&ci, true);
-    strcpy(ci.devname, (char *) txtDevice->getText().c_str());
-    strcpy(ci.volname, (char *) txtVolume->getText().c_str());
-    strcpy(ci.rootdir, (char *) txtPath->getText().c_str());
+    strncpy(ci.devname, (char *) txtDevice->getText().c_str(), MAX_DPATH);
+    strncpy(ci.volname, (char *) txtVolume->getText().c_str(), MAX_DPATH);
+    strncpy(ci.rootdir, (char *) txtPath->getText().c_str(), MAX_DPATH);
     ci.type = UAEDEV_DIR;
     ci.readonly = !chkReadWrite->isSelected();
     ci.bootpri = bp;

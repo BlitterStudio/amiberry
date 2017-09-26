@@ -23,77 +23,85 @@ static gcn::Button *cmdMainROM;
 static gcn::Label *lblExtROM;
 static gcn::UaeDropDown* cboExtROM;
 static gcn::Button *cmdExtROM;
-static gcn::UaeCheckBox* chkMapROM;
+#ifdef ACTION_REPLAY
+static gcn::Label *lblCartROM;
+static gcn::UaeDropDown* cboCartROM;
+static gcn::Button *cmdCartROM;
+#endif
 
 
 class ROMListModel : public gcn::ListModel
 {
-private:
+  private:
     std::vector<std::string> roms;
     std::vector<int> idxToAvailableROMs;
     int ROMType;
-
-public:
+    
+  public:
     ROMListModel(int romtype)
     {
-        ROMType = romtype;
+      ROMType = romtype;
     }
-
+    
     int getNumberOfElements()
     {
-        return roms.size();
+      return roms.size();
     }
 
     std::string getElementAt(int i)
     {
-        if(i < 0 || i >= roms.size())
-            return "---";
-        return roms[i];
+      if(i < 0 || i >= roms.size())
+        return "---";
+      return roms[i];
     }
-
+    
     AvailableROM* getROMat(int i)
     {
-        if(i >= 0 && i < idxToAvailableROMs.size())
-            return idxToAvailableROMs[i] < 0 ? NULL : lstAvailableROMs[idxToAvailableROMs[i]];
-        return NULL;
+      if(i >= 0 && i < idxToAvailableROMs.size())
+        return idxToAvailableROMs[i] < 0 ? NULL : lstAvailableROMs[idxToAvailableROMs[i]];
+      return NULL;
     }
-
+    
     int InitROMList(char *current)
     {
-        roms.clear();
-        idxToAvailableROMs.clear();
-
-        if(ROMType & (ROMTYPE_EXTCDTV | ROMTYPE_EXTCD32))
+      roms.clear();
+      idxToAvailableROMs.clear();
+      
+      int currIdx = -1;
+      if(ROMType & (ROMTYPE_ALL_EXT | ROMTYPE_ALL_CART))
+      {
+        roms.push_back(""); 
+        idxToAvailableROMs.push_back(-1);
+        currIdx = 0;
+      }
+      for(int i=0; i<lstAvailableROMs.size(); ++i)
+      {
+        if(lstAvailableROMs[i]->ROMType & ROMType)
         {
-            roms.push_back("");
-            idxToAvailableROMs.push_back(-1);
+          if(!strcasecmp(lstAvailableROMs[i]->Path, current))
+            currIdx = roms.size();
+          roms.push_back(lstAvailableROMs[i]->Name);
+          idxToAvailableROMs.push_back(i);
         }
-        int currIdx = -1;
-        for(int i=0; i<lstAvailableROMs.size(); ++i)
-        {
-            if(lstAvailableROMs[i]->ROMType & ROMType)
-            {
-                if(!strcasecmp(lstAvailableROMs[i]->Path, current))
-                    currIdx = roms.size();
-                roms.push_back(lstAvailableROMs[i]->Name);
-                idxToAvailableROMs.push_back(i);
-            }
-        }
-        return currIdx;
+      }
+      return currIdx;
     }
 };
 static ROMListModel *mainROMList;
 static ROMListModel *extROMList;
+#ifdef ACTION_REPLAY
+static ROMListModel *cartROMList;
+#endif
 
 
 class MainROMActionListener : public gcn::ActionListener
 {
-public:
+  public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-        AvailableROM* rom = mainROMList->getROMat(cboMainROM->getSelected());
-        if(rom != NULL)
-            strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
+      AvailableROM* rom = mainROMList->getROMat(cboMainROM->getSelected());
+      if(rom != NULL)
+        strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
     }
 };
 static MainROMActionListener* mainROMActionListener;
@@ -101,61 +109,96 @@ static MainROMActionListener* mainROMActionListener;
 
 class ExtROMActionListener : public gcn::ActionListener
 {
-public:
+  public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-        AvailableROM* rom = extROMList->getROMat(cboExtROM->getSelected());
-        if(rom != NULL)
-            strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
-        else
-            strncpy(changed_prefs.romextfile, "", sizeof(changed_prefs.romextfile));
+      AvailableROM* rom = extROMList->getROMat(cboExtROM->getSelected());
+      if(rom != NULL)
+        strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
+      else
+        strncpy(changed_prefs.romextfile, "", sizeof(changed_prefs.romextfile));
     }
 };
 static ExtROMActionListener* extROMActionListener;
 
 
-class ROMButtonActionListener : public gcn::ActionListener
+#ifdef ACTION_REPLAY
+class CartROMActionListener : public gcn::ActionListener
 {
-public:
+  public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-        char tmp[MAX_PATH];
-        const char *filter[] = { ".rom", "\0" };
+      AvailableROM* rom = cartROMList->getROMat(cboCartROM->getSelected());
+      if(rom != NULL)
+        strncpy(changed_prefs.cartfile, rom->Path, sizeof(changed_prefs.cartfile));
+      else
+        strncpy(changed_prefs.cartfile, "", sizeof(changed_prefs.cartfile));
+    }
+};
+static CartROMActionListener* cartROMActionListener;
+#endif
 
-        if (actionEvent.getSource() == cmdMainROM)
+class ROMButtonActionListener : public gcn::ActionListener
+{
+  public:
+    void action(const gcn::ActionEvent& actionEvent)
+    {
+      char tmp[MAX_PATH];
+      const char *filter[] = { ".rom", "\0" };
+      
+      if (actionEvent.getSource() == cmdMainROM)
+      {
+        strncpy(tmp, currentDir, MAX_PATH);
+        if(SelectFile("Select System ROM", tmp, filter))
         {
-            strncpy(tmp, currentDir, MAX_PATH);
-            if(SelectFile("Select System ROM", tmp, filter))
-            {
-                AvailableROM *newrom;
-                newrom = new AvailableROM();
-                extractFileName(tmp, newrom->Name);
-                removeFileExtension(newrom->Name);
-                strncpy(newrom->Path, tmp, MAX_PATH);
-                newrom->ROMType = ROMTYPE_KICK;
-                lstAvailableROMs.push_back(newrom);
-                strncpy(changed_prefs.romfile, tmp, sizeof(changed_prefs.romfile));
-                RefreshPanelROM();
-            }
-            cmdMainROM->requestFocus();
+          AvailableROM *newrom;
+          newrom = new AvailableROM();
+          extractFileName(tmp, newrom->Name);
+          removeFileExtension(newrom->Name);
+          strncpy(newrom->Path, tmp, MAX_PATH);
+          newrom->ROMType = ROMTYPE_KICK;
+          lstAvailableROMs.push_back(newrom);
+          strncpy(changed_prefs.romfile, tmp, sizeof(changed_prefs.romfile));
+          RefreshPanelROM();
         }
-        else if (actionEvent.getSource() == cmdExtROM)
+        cmdMainROM->requestFocus();
+      }
+      else if (actionEvent.getSource() == cmdExtROM)
+      {
+        strncpy(tmp, currentDir, MAX_PATH);
+        if(SelectFile("Select Extended ROM", tmp, filter))
         {
-            strncpy(tmp, currentDir, MAX_PATH);
-            if(SelectFile("Select Extended ROM", tmp, filter))
-            {
-                AvailableROM *newrom;
-                newrom = new AvailableROM();
-                extractFileName(tmp, newrom->Name);
-                removeFileExtension(newrom->Name);
-                strncpy(newrom->Path, tmp, MAX_PATH);
-                newrom->ROMType = ROMTYPE_EXTCDTV;
-                lstAvailableROMs.push_back(newrom);
-                strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
-                RefreshPanelROM();
-            }
-            cmdExtROM->requestFocus();
+          AvailableROM *newrom;
+          newrom = new AvailableROM();
+          extractFileName(tmp, newrom->Name);
+          removeFileExtension(newrom->Name);
+          strncpy(newrom->Path, tmp, MAX_PATH);
+          newrom->ROMType = ROMTYPE_EXTCDTV;
+          lstAvailableROMs.push_back(newrom);
+          strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
+          RefreshPanelROM();
         }
+        cmdExtROM->requestFocus();
+      }
+#ifdef ACTION_REPLAY
+      else if (actionEvent.getSource() == cmdCartROM)
+      {
+        strncpy(tmp, currentDir, MAX_PATH);
+        if(SelectFile("Select Cartridge ROM", tmp, filter))
+        {
+          AvailableROM *newrom;
+          newrom = new AvailableROM();
+          extractFileName(tmp, newrom->Name);
+          removeFileExtension(newrom->Name);
+          strncpy(newrom->Path, tmp, MAX_PATH);
+          newrom->ROMType = ROMTYPE_CD32CART;
+          lstAvailableROMs.push_back(newrom);
+          strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
+          RefreshPanelROM();
+        }
+        cmdCartROM->requestFocus();
+      }
+#endif
     }
 };
 static ROMButtonActionListener* romButtonActionListener;
@@ -163,87 +206,133 @@ static ROMButtonActionListener* romButtonActionListener;
 
 void InitPanelROM(const struct _ConfigCategory& category)
 {
-    mainROMActionListener = new MainROMActionListener();
-    extROMActionListener = new ExtROMActionListener();
-    romButtonActionListener = new ROMButtonActionListener();
-    mainROMList = new ROMListModel(ROMTYPE_KICK | ROMTYPE_KICKCD32);
-    extROMList = new ROMListModel(ROMTYPE_EXTCDTV | ROMTYPE_EXTCD32);
+  mainROMActionListener = new MainROMActionListener();
+  extROMActionListener = new ExtROMActionListener();
+#ifdef ACTION_REPLAY
+  cartROMActionListener = new CartROMActionListener();
+#endif
+  romButtonActionListener = new ROMButtonActionListener();
+  mainROMList = new ROMListModel(ROMTYPE_ALL_KICK);
+  extROMList = new ROMListModel(ROMTYPE_ALL_EXT);
+#ifdef ACTION_REPLAY
+  cartROMList = new ROMListModel(ROMTYPE_ALL_CART);
+#endif
+  
+  lblMainROM = new gcn::Label("Main ROM File:");
+  lblMainROM->setSize(200, LABEL_HEIGHT);
+	cboMainROM = new gcn::UaeDropDown(mainROMList);
+  cboMainROM->setSize(400, DROPDOWN_HEIGHT);
+  cboMainROM->setBaseColor(gui_baseCol);
+  cboMainROM->setId("cboMainROM");
+  cboMainROM->addActionListener(mainROMActionListener);
+  cmdMainROM = new gcn::Button("...");
+  cmdMainROM->setId("MainROM");
+  cmdMainROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+  cmdMainROM->setBaseColor(gui_baseCol);
+  cmdMainROM->addActionListener(romButtonActionListener);
 
-    lblMainROM = new gcn::Label("Main ROM File:");
-    lblMainROM->setSize(200, LABEL_HEIGHT);
-    cboMainROM = new gcn::UaeDropDown(mainROMList);
-    cboMainROM->setSize(400, DROPDOWN_HEIGHT);
-    cboMainROM->setBaseColor(gui_baseCol);
-    cboMainROM->setId("cboMainROM");
-    cboMainROM->addActionListener(mainROMActionListener);
-    cmdMainROM = new gcn::Button("...");
-    cmdMainROM->setId("MainROM");
-    cmdMainROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-    cmdMainROM->setBaseColor(gui_baseCol);
-    cmdMainROM->addActionListener(romButtonActionListener);
+  lblExtROM = new gcn::Label("Extended ROM File:");
+  lblExtROM->setSize(200, LABEL_HEIGHT);
+	cboExtROM = new gcn::UaeDropDown(extROMList);
+  cboExtROM->setSize(400, DROPDOWN_HEIGHT);
+  cboExtROM->setBaseColor(gui_baseCol);
+  cboExtROM->setId("cboExtROM");
+  cboExtROM->addActionListener(extROMActionListener);
+  cmdExtROM = new gcn::Button("...");
+  cmdExtROM->setId("ExtROM");
+  cmdExtROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+  cmdExtROM->setBaseColor(gui_baseCol);
+  cmdExtROM->addActionListener(romButtonActionListener);
 
-    lblExtROM = new gcn::Label("Extended ROM File:");
-    lblExtROM->setSize(200, LABEL_HEIGHT);
-    cboExtROM = new gcn::UaeDropDown(extROMList);
-    cboExtROM->setSize(400, DROPDOWN_HEIGHT);
-    cboExtROM->setBaseColor(gui_baseCol);
-    cboExtROM->setId("cboExtROM");
-    cboExtROM->addActionListener(extROMActionListener);
-    cmdExtROM = new gcn::Button("...");
-    cmdExtROM->setId("ExtROM");
-    cmdExtROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-    cmdExtROM->setBaseColor(gui_baseCol);
-    cmdExtROM->addActionListener(romButtonActionListener);
+#ifdef ACTION_REPLAY
+  lblCartROM = new gcn::Label("Cardridge ROM File:");
+  lblCartROM->setSize(200, LABEL_HEIGHT);
+	cboCartROM = new gcn::UaeDropDown(cartROMList);
+  cboCartROM->setSize(400, DROPDOWN_HEIGHT);
+  cboCartROM->setBaseColor(gui_baseCol);
+  cboCartROM->setId("cboCartROM");
+  cboCartROM->addActionListener(cartROMActionListener);
+  cmdCartROM = new gcn::Button("...");
+  cmdCartROM->setId("CartROM");
+  cmdCartROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+  cmdCartROM->setBaseColor(gui_baseCol);
+  cmdCartROM->addActionListener(romButtonActionListener);
+#endif
+  
+  int posY = DISTANCE_BORDER;
+  category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
+  posY += lblMainROM->getHeight() + 4;
+  category.panel->add(cboMainROM, DISTANCE_BORDER, posY);
+  category.panel->add(cmdMainROM, DISTANCE_BORDER + cboMainROM->getWidth() + DISTANCE_NEXT_X, posY);
+  posY += cboMainROM->getHeight() + DISTANCE_NEXT_Y;
 
-    chkMapROM = new gcn::UaeCheckBox("MapROM emulation", true);
-    chkMapROM->setEnabled(false);
-
-    int posY = DISTANCE_BORDER;
-    category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
-    posY += lblMainROM->getHeight() + 4;
-    category.panel->add(cboMainROM, DISTANCE_BORDER, posY);
-    category.panel->add(cmdMainROM, DISTANCE_BORDER + cboMainROM->getWidth() + DISTANCE_NEXT_X, posY);
-    posY += cboMainROM->getHeight() + DISTANCE_NEXT_Y;
-
-    category.panel->add(lblExtROM, DISTANCE_BORDER, posY);
-    posY += lblExtROM->getHeight() + 4;
-    category.panel->add(cboExtROM, DISTANCE_BORDER, posY);
-    category.panel->add(cmdExtROM, DISTANCE_BORDER + cboExtROM->getWidth() + DISTANCE_NEXT_X, posY);
-    posY += cboExtROM->getHeight() + DISTANCE_NEXT_Y;
-
-//  category.panel->add(chkMapROM, DISTANCE_BORDER, posY);
-    posY += chkMapROM->getHeight() + DISTANCE_NEXT_Y;
-
-    RefreshPanelROM();
+  category.panel->add(lblExtROM, DISTANCE_BORDER, posY);
+  posY += lblExtROM->getHeight() + 4;
+  category.panel->add(cboExtROM, DISTANCE_BORDER, posY);
+  category.panel->add(cmdExtROM, DISTANCE_BORDER + cboExtROM->getWidth() + DISTANCE_NEXT_X, posY);
+  posY += cboExtROM->getHeight() + DISTANCE_NEXT_Y;
+  
+#ifdef ACTION_REPLAY
+  category.panel->add(lblCartROM, DISTANCE_BORDER, posY);
+  posY += lblCartROM->getHeight() + 4;
+  category.panel->add(cboCartROM, DISTANCE_BORDER, posY);
+  category.panel->add(cmdCartROM, DISTANCE_BORDER + cboCartROM->getWidth() + DISTANCE_NEXT_X, posY);
+  posY += cboCartROM->getHeight() + DISTANCE_NEXT_Y;
+#endif
+  
+  RefreshPanelROM();
 }
 
 
 void ExitPanelROM(void)
 {
-    delete lblMainROM;
-    delete cboMainROM;
-    delete cmdMainROM;
-    delete mainROMList;
-    delete mainROMActionListener;
+  delete lblMainROM;
+  delete cboMainROM;
+  delete cmdMainROM;
+  delete mainROMList;
+  delete mainROMActionListener;
+  
+  delete lblExtROM;
+  delete cboExtROM;
+  delete cmdExtROM;
+  delete extROMList;
+  delete extROMActionListener;
 
-    delete lblExtROM;
-    delete cboExtROM;
-    delete cmdExtROM;
-    delete extROMList;
-    delete extROMActionListener;
-
-    delete romButtonActionListener;
-    delete chkMapROM;
+#ifdef ACTION_REPLAY
+  delete lblCartROM;
+  delete cboCartROM;
+  delete cmdCartROM;
+  delete cartROMList;
+  delete cartROMActionListener;
+#endif
+  
+  delete romButtonActionListener;
 }
 
 
 void RefreshPanelROM(void)
 {
-    int idx = mainROMList->InitROMList(changed_prefs.romfile);
-    cboMainROM->setSelected(idx);
+  int idx = mainROMList->InitROMList(changed_prefs.romfile);
+  cboMainROM->setSelected(idx);
+  
+  idx = extROMList->InitROMList(changed_prefs.romextfile);
+  cboExtROM->setSelected(idx);
+  
+#ifdef ACTION_REPLAY
+  idx = cartROMList->InitROMList(changed_prefs.cartfile);
+  cboCartROM->setSelected(idx);
+#endif
+}
 
-    idx = extROMList->InitROMList(changed_prefs.romextfile);
-    cboExtROM->setSelected(idx);
 
-    chkMapROM->setSelected(false);
+bool HelpPanelROM(std::vector<std::string> &helptext)
+{
+  helptext.clear();
+  helptext.push_back("Select the required kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
+  helptext.push_back("");
+  helptext.push_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
+  helptext.push_back("");
+  helptext.push_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video playback in CD32.");
+  helptext.push_back("There are also some Action Replay and Freezer cards and the built in HRTMon available.");
+  return true;
 }

@@ -1,3 +1,5 @@
+#ifndef PANDORAUAE_SYSCONFIG_H
+#define PANDORAUAE_SYSCONFIG_H
 
 #define SUPPORT_THREADS
 #define MAX_DPATH 256
@@ -5,12 +7,14 @@
 /* #define DRIVESOUND */
 /* #define GFXFILTER */
 //#define USE_SOFT_LONG_DOUBLE
+#define PACKAGE_STRING "UAE4ARM"
 
 /* #define DEBUGGER */
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
 #define JIT /* JIT compiler support */
+/* #define USE_JIT_FPU */
 /* #define NATMEM_OFFSET natmem_offset */
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 /* #define AHI */ /* AHI sound emulation */
@@ -20,22 +24,37 @@
 #define CD32 /* CD32 emulation */
 /* #define CDTV */ /* CDTV emulation */
 /* #define PARALLEL_PORT */ /* parallel port emulation */
+/* #define PARALLEL_DIRECT */ /* direct parallel port emulation */
 /* #define SERIAL_PORT */ /* serial port emulation */
+/* #define SERIAL_ENET */ /* serial port UDP transport */
 /* #define SCSIEMU */ /* uaescsi.device emulation */
 /* #define UAESERIAL */ /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
 /* #define FPU_UAE */
-/* #define MMUEMU Aranym 68040 MMU */
-/* #define FULLMMU Aranym 68040 MMU */
+/* #define WITH_SOFTFLOAT */
+/* #define MMUEMU */ /* Aranym 68040 MMU */
+/* #define FULLMMU */ /* Aranym 68040 MMU */
 #define CPUEMU_0 /* generic 680x0 emulation */
-#define CPUEMU_11 /* 68000+prefetch emulation */
-/* #define CPUEMU_12 */ /* cycle-exact cpu&blitter */
-/* #define ACTION_REPLAY */ /* Action Replay 1/2/3 support */
-/* #define PICASSO96 */ /* Picasso96 display card emulation */
-/* #define UAEGFX_INTERNAL */ /* built-in libs:picasso96/uaegfx.card */
+#define CPUEMU_11 /* 68000/68010 prefetch emulation */
+/* #define CPUEMU_13 */ /* 68000/68010 cycle-exact cpu&blitter */
+/* #define CPUEMU_20 */ /* 68020 prefetch */
+/* #define CPUEMU_21 */ /* 68020 "cycle-exact" + blitter */
+/* #define CPUEMU_22 */ /* 68030 prefetch */
+/* #define CPUEMU_23 */ /* 68030 "cycle-exact" + blitter */
+/* #define CPUEMU_24 */ /* 68060 "cycle-exact" + blitter */
+/* #define CPUEMU_25 */ /* 68040 "cycle-exact" + blitter */
+/* #define CPUEMU_31 */ /* Aranym 68040 MMU */
+/* #define CPUEMU_32 */ /* Previous 68030 MMU */
+/* #define CPUEMU_33 */ /* 68060 MMU */
+#define CPUEMU_40 /* generic 680x0 with JIT direct memory access */
+/* #define CPUEMU_50 */ /* generic 680x0 with indirect memory access */
+#define ACTION_REPLAY /* Action Replay 1/2/3 support */
+#define PICASSO96 /* Picasso96 display card emulation */
+#define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
 #define BSDSOCKET /* bsdsocket.library emulation */
 /* #define CAPS */ /* CAPS-image support */
-/* #define FDI2RAW */ /* FDI 1.0 and 2.x image support */
+/* #define SCP */ /* SuperCardPro */
+#define FDI2RAW /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
 /* #define PROWIZARD */ /* Pro-Wizard module ripper */
 /* #define ARCADIA */ /* Arcadia arcade system */
@@ -43,23 +62,58 @@
 /* #define LOGITECHLCD */ /* Logitech G15 LCD */
 #define SAVESTATE /* State file support */
 /* #define A2091 */ /* A590/A2091 SCSI */
-/* #define NCR */ /* A4000T/A4091 SCSI */
+/* #define A2065 */ /* A2065 Ethernet card */
+/* #define GFXBOARD */ /* Hardware graphics board */
+/* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */
+/* #define NCR9X */ /* 53C9X SCSI */
 /* #define SANA2 */ /* SANA2 network driver */
 /* #define AMAX */ /* A-Max ROM adapater emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
-
-/* #define INPUT_RECORDER */ /* Use input recoder */
+/* #define WITH_CHD */
+/* #define WITH_LUA */ /* lua scripting */
+/* #define WITH_UAENATIVE */
+/* #define WITH_SLIRP */
+/* #define WITH_BUILTIN_SLIRP */
+/* #define WITH_TABLETLIBRARY */
+/* #define WITH_UAENET_PCAP */
+/* #define WITH_PPC */
+/* #define WITH_QEMU_CPU */
+/* #define WITH_TOCCATA */
+/* #define WITH_PCI */
+/* #define WITH_X86 */
 
 /* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
 /* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
 /* #define ADDRESS_SPACE_24BIT */
 #define INPUTDEVICE_SIMPLE /* simplified inputdevice for faster emulation */
 
+/* #define WITH_SCSI_IOCTL */
+/* #define WITH_SCSI_SPTI */
+
+#define A_ZIP
+/* #define A_RAR */
+#define A_7Z
+#define A_LHA
+#define A_LZX
+#define A_DMS
+#define A_WRP
+
+#define UAE_RAND_MAX RAND_MAX
+
+#ifndef GFXFILTER
+#undef OPENGL
+#undef D3D
+#endif
+
+#include <stdint.h>
+
 #define SIZEOF_VOID_P 4
 
 #if !defined(AHI)
 #undef ENFORCER
 #endif
+
+typedef long uae_atomic;
 
 /* src/sysconfig.h.  Generated automatically by configure.  */
 /* src/sysconfig.h.in.  Generated automatically from configure.in by autoheader.  */
@@ -164,7 +218,7 @@
 
 /* Define if statfs takes 2 args and struct statfs has a field named f_bsize.
    [4.3BSD, SunOS 4, HP-UX, AIX PS/2]  */
-#define STAT_STATFS2_BSIZE 1
+/* #define STAT_STATFS2_BSIZE 1 */
 
 /* Define if statfs takes 2 args and struct statfs has a field named f_fsize.
    [4.4BSD, NetBSD]  */
@@ -178,7 +232,7 @@
 /* #undef STAT_STATFS4 */
 
 /* Define if there is a function named statvfs.  [SVR4]  */
-/* #undef STAT_STATVFS */
+#define STAT_STATVFS
 
 /* Define if the block counts reported by statfs may be truncated to 2GB
    and the correct values may be stored in the f_spare array.
@@ -270,9 +324,6 @@
 /* Define if you have the select function.  */
 #define HAVE_SELECT 1
 
-/* Define if you have the setitimer function.  */
-#define HAVE_SETITIMER 1
-
 /* Define if you have the sigaction function.  */
 #define HAVE_SIGACTION 1
 
@@ -302,9 +353,6 @@
 
 /* Define if you have the vsprintf function.  */
 #define HAVE_VSPRINTF 1
-
-/* Define if you have the <SDL/SDL.h> header file.  */
-/* #undef HAVE_SDL_SDL_H */
 
 /* Define if you have the <curses.h> header file.  */
 #define HAVE_CURSES_H 1
@@ -444,22 +492,27 @@
 #define FSDB_DIR_SEPARATOR '/'
 #define FSDB_DIR_SEPARATOR_S "/"
 
+/* Define to 1 if `S_un' is a member of `struct in_addr'. */
+/* #un#def HAVE_STRUCT_IN_ADDR_S_UN */
+
+#ifdef _GCCRES_
+#undef _GCCRES_
+#endif
+
+#ifdef UAE4ALL_NO_USE_RESTRICT
+#define _GCCRES_
+#else
+#define _GCCRES_ __restrict__
+#endif
+
+#define __cdecl
+
 #define strcmpi(x,y) strcasecmp(x,y)
 #define stricmp(x,y) strcasecmp(x,y)
-
-#define A_ZIP
-//#define A_RAR
-#define A_7Z
-#define A_LHA
-#define A_LZX
-#define A_DMS
-#define A_WRP
 
 #ifndef MAX_PATH
 #define MAX_PATH 256
 #endif
-
-#define WORDS_BIGENDIAN 1
 
 #define M68K_SPEED_7MHZ_CYCLES 0
 #define M68K_SPEED_14MHZ_CYCLES 1024
@@ -470,7 +523,6 @@ typedef long LPARAM;
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 
-typedef int BOOL;
 typedef unsigned char boolean;
 #define FALSE 0
 #define TRUE 1
@@ -480,45 +532,19 @@ typedef unsigned short USHORT;
 #define Sleep(x) usleep(x*1000)
 
 /* Some defines to make it easier to compare files with WinUAE */
+#include "uae/string.h"
+
+#ifndef UAE_TYPES_H
 #define _T(x)               x
-#define TCHAR               char
+typedef char TCHAR;
+#endif
 #define _tzset()            tzset()
-#define _tcsftime(w,x,y,z)  strftime(w,x,y,z)
 #define _timezone           timezone
 #define _daylight           daylight
 #define _ftime(x)           ftime(x)
-#define _tfopen(x,y)        fopen(x,y)
 #define _ftelli64(x)        ftello64(x)
 #define _fseeki64(x,y,z)    fseeko64(x,y,z)
-#define _stat64             stat64
 #define _wunlink(x)         unlink(x)
-#define _tcslen(x)          strlen(x)
-#define _tcscpy(x,y)        strcpy(x,y)
-#define _tcsncpy(x,y,z)     strncpy(x,y,z)
-#define _tcscat(x,y)        strcat(x,y)
-#define _tcsncat(x,y,z)     strncat(x,y,z)
-#define _tcscmp(x,y)        strcmp(x,y)
-#define _tcsicmp(x,y)       strcmpi(x,y)
-#define _tcsncmp(x,y,z)     strncmp(x,y,z)
-#define _tcsnicmp(x,y,z)    strncasecmp(x,y,z)
-#define _tcschr(x,y)        strchr(x,y)
-#define _tcsrchr(x,y)       strrchr(x,y)
-#define _tcsstr(x,y)        strstr(x,y)
-#define _tcscspn(x,y)       strcspn(x,y)
-#define _totupper(x)        toupper(x)
-#define _totlower(x)        tolower(x)
-#define _istupper(x)        isupper(x)
-#define _istspace(x)        isspace(x)
-#define _istdigit(x)        isdigit(x)
-#define _tstoi(x)           atoi(x)
-#define _tstol(x)           atol(x)
-#define _tstoi64(x)         atoll(x)
-#define _tstof(x)           atof(x)
-#define _tcstol(x,y,z)      strtol(x,y,z)
-#define _tcstod(x,y)        strtod(x,y)
-#define _stprintf           sprintf
-#define _vstprintf(x,y,z)   vsprintf(x,y,z)
-#define _vsntprintf(w,x,y,z)  vsnprintf(w,x,y,z)
-#define _strtoui64(x,y,z)   strtoll(x,y,z)
 #define _istalnum(x)        isalnum(x)
-#define _tcsspn(x,y)		    strspn(x,y)
+
+#endif /* PANDORAUAE_SYSCONFIG_H */

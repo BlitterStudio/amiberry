@@ -723,11 +723,6 @@ out2:
 
 		if (destmode == Areg && sz == sz_byte)
 			goto nomatch;
-#if 0
-		if (sz == sz_byte && (destmode == Aipi || destmode == Apdi)) {
-			dstgather = 0;
-		}
-#endif
 endofline:
 		/* now, we have a match */
 		if (table68k[opc].mnemo != i_ILLG)
@@ -779,13 +774,6 @@ endofline:
 		table68k[opc].clocks = id.clocks;
 		table68k[opc].fetchmode = id.fetchmode;
 
-#if 0
-		for (i = 0; i < 5; i++) {
-			table68k[opc].flaginfo[i].flagset = id.flaginfo[i].flagset;
-			table68k[opc].flaginfo[i].flaguse = id.flaginfo[i].flaguse;
-		}
-#endif
-
 	// Fix flags used information for Scc, Bcc, TRAPcc, DBcc instructions
 	if	(	table68k[opc].mnemo == i_Scc
 		||	table68k[opc].mnemo == i_Bcc
@@ -793,24 +781,24 @@ endofline:
 		||	table68k[opc].mnemo == i_TRAPcc
 		)	{
 		switch (table68k[opc].cc) {
-		  // CC mask:	XNZVC
-		  // 			     8421
-		  case 0: flags_used = 0x00; break;	/*  T */
-		  case 1: flags_used = 0x00; break;	/*  F */
-		  case 2: flags_used = 0x05; break;	/* HI */
-		  case 3: flags_used = 0x05; break;	/* LS */
-		  case 4: flags_used = 0x01; break;	/* CC */
-		  case 5: flags_used = 0x01; break;	/* CS */
-		  case 6: flags_used = 0x04; break;	/* NE */
-		  case 7: flags_used = 0x04; break;	/* EQ */
-		  case 8: flags_used = 0x02; break;	/* VC */
-		  case 9: flags_used = 0x02; break;	/* VS */
-		  case 10:flags_used = 0x08; break;	/* PL */
-		  case 11:flags_used = 0x08; break;	/* MI */
-		  case 12:flags_used = 0x0A; break;	/* GE */
-		  case 13:flags_used = 0x0A; break;	/* LT */
-		  case 14:flags_used = 0x0E; break;	/* GT */
-		  case 15:flags_used = 0x0E; break;	/* LE */
+		// CC mask:	XNZVC
+		// 			 8421
+		case 0: flags_used = 0x00; break;	/*  T */
+		case 1: flags_used = 0x00; break;	/*  F */
+		case 2: flags_used = 0x05; break;	/* HI */
+		case 3: flags_used = 0x05; break;	/* LS */
+		case 4: flags_used = 0x01; break;	/* CC */
+		case 5: flags_used = 0x01; break;	/* CS */
+		case 6: flags_used = 0x04; break;	/* NE */
+		case 7: flags_used = 0x04; break;	/* EQ */
+		case 8: flags_used = 0x02; break;	/* VC */
+		case 9: flags_used = 0x02; break;	/* VS */
+		case 10:flags_used = 0x08; break;	/* PL */
+		case 11:flags_used = 0x08; break;	/* MI */
+		case 12:flags_used = 0x0A; break;	/* GE */
+		case 13:flags_used = 0x0A; break;	/* LT */
+		case 14:flags_used = 0x0E; break;	/* GT */
+		case 15:flags_used = 0x0E; break;	/* LE */
 		}
 	}
 

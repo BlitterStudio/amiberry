@@ -1,7 +1,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
-#include "autoconf.h"
 #include "uae.h"
 #include "options.h"
 #include "gui.h"
@@ -11,6 +10,7 @@
 #include "newcpu.h"
 #include "custom.h"
 #include "filesys.h"
+#include "autoconf.h"
 #include "zfile.h"
 #include "archivers/zip/unzip.h"
 #include <libxml/tree.h>
@@ -86,7 +86,7 @@ static bool get_value(xmlNode *node, const char *key, char *value, int max_size)
 
 static void set_default_system(struct uae_prefs *p, const char *system, int rom)
 {
-  default_prefs(p, 0);
+  default_prefs(p, true, 0);
   del_tmpFiles();
   
   if(strcmp(system, "a-500") == 0)
@@ -97,8 +97,9 @@ static void set_default_system(struct uae_prefs *p, const char *system, int rom)
     bip_a1200(p, rom);
   else if(strcmp(system, "a-2000") == 0)
     bip_a2000(p, rom);
-  else if(strcmp(system, "a-4000") == 0)
+  else if(strcmp(system, "a-4000") == 0) {
     bip_a4000(p, rom);
+  }
 }
 
 
@@ -151,9 +152,9 @@ static void parse_ram(struct uae_prefs *p, xmlNode *node)
         {
           int size = atoi((const char *)content);
           if(strcmp((const char *) attr, "fast") == 0)
-            p->fastmem_size = size;
+            p->fastmem[0].size = size;
           else if(strcmp((const char *) attr, "z3") == 0)
-            p->z3fastmem_size = size;
+            p->z3fastmem[0].size = size;
           else if(strcmp((const char *) attr, "chip") == 0)
             p->chipmem_size = size;
           xmlFree(attr);
@@ -184,7 +185,7 @@ static void parse_clip(struct uae_prefs *p, xmlNode *node)
       if(attr != NULL)
       {
         top = atoi((const char *)attr) / 2;
-        p->pandora_vertical_offset = top - 41; // VBLANK_ENDLINE_PAL + OFFSET_Y_ADJUST
+        p->pandora_vertical_offset = top - 41 + OFFSET_Y_ADJUST;
         xmlFree(attr);
       }
       attr = xmlGetProp(curr_node, (const xmlChar *) _T("width"));
@@ -338,9 +339,9 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
           {
             char target_file[MAX_DPATH];
             fetch_rp9path(target_file, MAX_DPATH);
-            strncat(target_file, "workbench-", MAX_DPATH);
-            strncat(target_file, (const char *)content, MAX_DPATH);
-            strncat(target_file, ".hdf", MAX_DPATH);
+            strncat(target_file, "workbench-", MAX_DPATH - 1);
+            strncat(target_file, (const char *)content, MAX_DPATH - 1);
+            strncat(target_file, ".hdf", MAX_DPATH - 1);
             FILE *f = fopen(target_file, "rb");
             if(f != NULL)
             {
@@ -349,15 +350,18 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
               
               fclose(f);
 
-              if(hardfile_testrdb (target_file))                        
+              if(hardfile_testrdb (target_file)) {
+                ci.physical_geometry = true;                   
                 uci_set_defaults(&ci, true);
-              else
+              } else {
+                ci.physical_geometry = false;
                 uci_set_defaults(&ci, false);
-              
+              }
+                            
               ci.type = UAEDEV_HDF;
               sprintf(ci.devname, "DH%d", add_HDF_DHnum);
               ++add_HDF_DHnum;
-              strcpy(ci.rootdir, target_file);
+              strncpy(ci.rootdir, target_file, MAX_DPATH);
               
               xmlChar *ro = xmlGetProp(curr_node, (const xmlChar *) _T("readonly"));
               if(ro != NULL)
@@ -373,7 +377,6 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
             		struct hardfiledata *hfd = get_hardfile_data (uci->configoffset);
                 hardfile_media_change (hfd, &ci, true, false);
               }
-              gui_force_rtarea_hdchange();
             }
             xmlFree(content);
           }
@@ -464,15 +467,18 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
                         struct uaedev_config_data *uci;
                       	struct uaedev_config_info ci;
           
-                        if(hardfile_testrdb (target_file))                        
+                        if(hardfile_testrdb (target_file)) {
+                          ci.physical_geometry = true;                   
                           uci_set_defaults(&ci, true);
-                        else
+                        } else {
+                          ci.physical_geometry = false;
                           uci_set_defaults(&ci, false);
+                        }
                         
                         ci.type = UAEDEV_HDF;
                         sprintf(ci.devname, "DH%d", add_HDF_DHnum);
                         ++add_HDF_DHnum;
-                        strcpy(ci.rootdir, target_file);
+                        strncpy(ci.rootdir, target_file, MAX_DPATH);
                         
                         ci.bootpri = 0;
                         
@@ -481,8 +487,6 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
                       		struct hardfiledata *hfd = get_hardfile_data (uci->configoffset);
                           hardfile_media_change (hfd, &ci, true, false);
                         }
-
-    	                  gui_force_rtarea_hdchange();
                       }
                       lstTmpRP9Files.push_back(target_file);
                     }
@@ -593,7 +597,7 @@ bool rp9_parse_file(struct uae_prefs *p, const char *filename)
   
     	unzClose (uz);
     }
-    zfile_fclose(zf);  
+    zfile_fclose(zf);
   }
   
   return bResult;

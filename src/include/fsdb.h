@@ -7,6 +7,11 @@
   * Copyright 1999 Bernd Schmidt
   */
 
+#ifndef UAE_FSDB_H
+#define UAE_FSDB_H
+
+#include "uae/types.h"
+
 #ifndef FSDB_FILE
 #define FSDB_FILE _T("_UAEFSDB.___")
 #endif
@@ -54,48 +59,58 @@
 #define A_FIBF_EXECUTE (1<<1)
 #define A_FIBF_DELETE  (1<<0)
 
+struct virtualfilesysobject
+{
+	int dir;
+	TCHAR *comment;
+	uae_u32 amigaos_mode;
+	uae_u8 *data;
+	int size;
+};
+
 /* AmigaOS "keys" */
 typedef struct a_inode_struct {
-    /* Circular list of recycleable a_inodes.  */
-    struct a_inode_struct *next, *prev;
-    /* This a_inode's relatives in the directory structure.  */
-    struct a_inode_struct *parent;
-    struct a_inode_struct *child, *sibling;
-    /* AmigaOS name, and host OS name.  The host OS name is a full path, the
-     * AmigaOS name is relative to the parent.  */
-    TCHAR *aname;
-    TCHAR *nname;
-    /* AmigaOS file comment, or NULL if file has none.  */
-    TCHAR *comment;
-    /* AmigaOS protection bits.  */
-    int amigaos_mode;
-    /* Unique number for identification.  */
-    uae_u32 uniq;
-    /* For a directory that is being ExNext()ed, the number of child ainos
-       which must be kept locked in core.  */
-    unsigned long locked_children;
-    /* How many ExNext()s are going on in this directory?  */
-    unsigned long exnext_count;
-    /* AmigaOS locking bits.  */
-    int shlock;
-    long db_offset;
-    unsigned int dir:1;
-    unsigned int softlink:2;
-    unsigned int elock:1;
-    /* Nonzero if this came from an entry in our database.  */
-    unsigned int has_dbentry:1;
-    /* Nonzero if this will need an entry in our database.  */
-    unsigned int needs_dbentry:1;
-    /* This a_inode possibly needs writing back to the database.  */
-    unsigned int dirty:1;
-    /* If nonzero, this represents a deleted file; the corresponding
-     * entry in the database must be cleared.  */
-    unsigned int deleted:1;
-    /* target volume flag */
-    unsigned int volflags;
-    /* not equaling unit.mountcount -> not in this volume */
-    unsigned int mountcount;
-  	uae_u64 uniq_external;
+  /* Circular list of recycleable a_inodes.  */
+  struct a_inode_struct *next, *prev;
+  /* This a_inode's relatives in the directory structure.  */
+  struct a_inode_struct *parent;
+  struct a_inode_struct *child, *sibling;
+  /* AmigaOS name, and host OS name.  The host OS name is a full path, the
+   * AmigaOS name is relative to the parent.  */
+  TCHAR *aname;
+  TCHAR *nname;
+  /* AmigaOS file comment, or NULL if file has none.  */
+  TCHAR *comment;
+  /* AmigaOS protection bits.  */
+  int amigaos_mode;
+  /* Unique number for identification.  */
+  uae_u32 uniq;
+  /* For a directory that is being ExNext()ed, the number of child ainos
+     which must be kept locked in core.  */
+    unsigned int locked_children;
+  /* How many ExNext()s are going on in this directory?  */
+    unsigned int exnext_count;
+  /* AmigaOS locking bits.  */
+  int shlock;
+  long db_offset;
+  unsigned int dir:1;
+  unsigned int softlink:2;
+  unsigned int elock:1;
+  /* Nonzero if this came from an entry in our database.  */
+  unsigned int has_dbentry:1;
+  /* Nonzero if this will need an entry in our database.  */
+  unsigned int needs_dbentry:1;
+  /* This a_inode possibly needs writing back to the database.  */
+  unsigned int dirty:1;
+  /* If nonzero, this represents a deleted file; the corresponding
+   * entry in the database must be cleared.  */
+  unsigned int deleted:1;
+  /* target volume flag */
+  unsigned int volflags;
+  /* not equaling unit.mountcount -> not in this volume */
+  unsigned int mountcount;
+	uae_u64 uniq_external;
+	struct virtualfilesysobject *vfso;
 } a_inode;
 
 extern TCHAR *nname_begin (TCHAR *);
@@ -155,6 +170,8 @@ extern FILE *my_opentext (const TCHAR*);
 extern bool my_stat (const TCHAR *name, struct mystat *ms);
 extern bool my_utime (const TCHAR *name, struct mytimeval *tv);
 extern bool my_chmod (const TCHAR *name, uae_u32 mode);
+extern const TCHAR *my_getfilepart(const TCHAR *filename);
+extern bool my_issamepath(const TCHAR *path1, const TCHAR *path2);
 
 #define MYVOLUMEINFO_READONLY 1
 #define MYVOLUMEINFO_STREAMS 2
@@ -163,3 +180,5 @@ extern bool my_chmod (const TCHAR *name, uae_u32 mode);
 #define MYVOLUMEINFO_CDFS 16
 
 extern int my_getvolumeinfo (const TCHAR *root);
+
+#endif /* UAE_FSDB_H */

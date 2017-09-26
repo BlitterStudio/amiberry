@@ -304,10 +304,10 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_8, INPUTEVENT_KEY_8 },
 	{ SDLK_9, INPUTEVENT_KEY_9 },
 
-	{ SDLK_BACKSPACE, INPUTEVENT_KEY_BACKSPACE },
+  { SDLK_BACKSPACE, INPUTEVENT_KEY_BACKSPACE },
 	{ SDLK_TAB, INPUTEVENT_KEY_TAB },
 	{ SDLK_RETURN, INPUTEVENT_KEY_RETURN },
-	{ VK_ESCAPE, INPUTEVENT_KEY_ESC },
+	{ SDLK_ESCAPE, INPUTEVENT_KEY_ESC },
 	{ SDLK_SPACE, INPUTEVENT_KEY_SPACE },
 	{ SDLK_QUOTE, INPUTEVENT_KEY_SINGLEQUOTE },
 	{ SDLK_COMMA, INPUTEVENT_KEY_COMMA },
@@ -316,289 +316,254 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_SLASH, INPUTEVENT_KEY_DIV },
 
 	{ SDLK_SEMICOLON, INPUTEVENT_KEY_SEMICOLON },
-	{ SDLK_EQUALS, INPUTEVENT_KEY_EQUALS },
+  { SDLK_EQUALS, INPUTEVENT_KEY_EQUALS },
 	{ SDLK_LEFTBRACKET, INPUTEVENT_KEY_LEFTBRACKET },
 	{ SDLK_BACKSLASH, INPUTEVENT_KEY_BACKSLASH },
 	{ SDLK_RIGHTBRACKET, INPUTEVENT_KEY_RIGHTBRACKET },
-	{ SDLK_BACKQUOTE, INPUTEVENT_KEY_BACKQUOTE },
-	{ SDLK_DELETE, INPUTEVENT_KEY_DEL },
+  { SDLK_BACKQUOTE, INPUTEVENT_KEY_BACKQUOTE },
+  { SDLK_DELETE, INPUTEVENT_KEY_DEL },
 
-	{ -1, 0 }
+  { -1, 0 }
 };
 
-
-static struct uae_input_device_kbr_default *keytrans[] =
-{
+static struct uae_input_device_kbr_default *keytrans[] = {
 	keytrans_amiga,
 	keytrans_amiga,
 	keytrans_amiga
 };
 
-static struct uae_input_device_kbr_default *keytrans_x11[] =
-{
+static struct uae_input_device_kbr_default *keytrans_x11[] = {
 	keytrans_amiga_x11,
 	keytrans_amiga_x11,
 	keytrans_amiga_x11
 };
 
-static struct uae_input_device_kbr_default *keytrans_fbcon[] =
-{
+static struct uae_input_device_kbr_default *keytrans_fbcon[] = {
 	keytrans_amiga_fbcon,
 	keytrans_amiga_fbcon,
 	keytrans_amiga_fbcon
 };
 
 static int kb_none[] = { -1 };
-static int *kbmaps[] = {
-	kb_none,
-	kb_none,
-	kb_none,
-	kb_none,
-	kb_none,
-	kb_none,
-	kb_none,
-	kb_none,
-	kb_none,
-	kb_none
-};
+static int *kbmaps[] = { kb_none, kb_none, kb_none, kb_none, kb_none,
+        kb_none, kb_none, kb_none, kb_none, kb_none };
 
-void keyboard_settrans(void)
+
+void keyboard_settrans (void)
 {
 	char vid_drv_name[32];
 	// get display type...
 	SDL_VideoDriverName(vid_drv_name, sizeof(vid_drv_name));
 	if (strcmp(vid_drv_name, "x11") == 0)
 	{
-#ifdef DEBUG
-		printf("Will use keycode from x11 mapping.\n");
-#endif
 		keyboard_type = KEYCODE_X11;
 		inputdevice_setkeytranslation(keytrans_x11, kbmaps);
-	}
-	else  if (strcmp(vid_drv_name, "fbcon") == 0)
+	}	else  if (strcmp(vid_drv_name, "fbcon") == 0)
 	{
-#ifdef DEBUG
-		printf("Will use keycode from fbcon mapping.\n");
-#endif
 		keyboard_type = KEYCODE_FBCON;
 		inputdevice_setkeytranslation(keytrans_fbcon, kbmaps);
-	}
-	else
+	}	else
 	{
-#ifdef DEBUG
-		printf("Unknown keycode to use, will use keysym\n");
-#endif
 		keyboard_type = KEYCODE_UNK;
 		inputdevice_setkeytranslation(keytrans, kbmaps);
 	}
 }
 
+
 int translate_pandora_keys(int symbol, int *modifier)
 {
-#ifndef PANDORA_SPECIFIC
+#ifdef RASPBERRY
 	return 0;
 #endif
-	switch (symbol)
-	{
-	case VK_UP:
-		if (*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-		{
-			*modifier = KMOD_NONE;
-			return AK_UP;
-		}
-		break;
+  switch(symbol)
+  {
+    case SDLK_UP:
+      if(*modifier == KMOD_RCTRL) { // Right shoulder + dPad -> cursor keys
+        *modifier = KMOD_NONE;
+        return AK_UP;
+      }
+      break;
+      
+    case SDLK_DOWN:
+      if(*modifier == KMOD_RCTRL) { // Right shoulder + dPad -> cursor keys
+        *modifier = KMOD_NONE;
+        return AK_DN;
+      }
+      break;
 
-	case VK_DOWN:
-		if (*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-		{
-			*modifier = KMOD_NONE;
-			return AK_DN;
-		}
-		break;
+    case SDLK_LEFT:
+      if(*modifier == KMOD_RCTRL) { // Right shoulder + dPad -> cursor keys
+        *modifier = KMOD_NONE;
+        return AK_LF;
+      }
+      break;
 
-	case VK_LEFT:
-		if (*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-		{
-			*modifier = KMOD_NONE;
-			return AK_LF;
-		}
-		break;
+    case SDLK_RIGHT:
+      if(*modifier == KMOD_RCTRL) { // Right shoulder + dPad -> cursor keys
+        *modifier = KMOD_NONE;
+        return AK_RT;
+      }
+      break;
 
-	case VK_RIGHT:
-		if (*modifier == KMOD_RCTRL)   // Right shoulder + dPad -> cursor keys
-		{
-			*modifier = KMOD_NONE;
-			return AK_RT;
-		}
-		break;
+    case SDLK_HOME:
+      if(*modifier == KMOD_RCTRL) { // Right shoulder + button A -> CTRL
+        *modifier = KMOD_NONE;
+        return AK_CTRL;
+      }
+      break;
 
-	case VK_A:
-		if (*modifier == KMOD_RCTRL)   // Right shoulder + button A -> CTRL
-		{
-			*modifier = KMOD_NONE;
-			return AK_CTRL;
-		}
-		break;
+    case SDLK_END:
+      if(*modifier == KMOD_RCTRL) { // Right shoulder + button B -> left ALT
+        *modifier = KMOD_NONE;
+        return AK_LALT;
+      }
+      break;
 
-	case VK_B:
-		if (*modifier == KMOD_RCTRL)   // Right shoulder + button B -> left ALT
-		{
-			*modifier = KMOD_NONE;
-			return AK_LALT;
-		}
-		break;
+    case SDLK_PAGEDOWN:
+      if(*modifier == KMOD_RCTRL) { // Right shoulder + button X -> HELP
+        *modifier = KMOD_NONE;
+        return AK_HELP;
+      }
+      break;
 
-	case VK_X:
-		if (*modifier == KMOD_RCTRL)   // Right shoulder + button X -> HELP
-		{
-			*modifier = KMOD_NONE;
-			return AK_HELP;
-		}
-		break;
+    case SDLK_PAGEUP: // button Y -> Space
+      *modifier = KMOD_NONE;
+      return AK_SPC;
 
-	case VK_Y: // button Y -> Space
-		*modifier = KMOD_NONE;
-		return AK_SPC;
+    case SDLK_F1:
+      *modifier = KMOD_NONE;
+      return AK_F1;
+      
+    case SDLK_F2:
+      *modifier = KMOD_NONE;
+      return AK_F2;
+      
+    case SDLK_F3:
+      *modifier = KMOD_NONE;
+      return AK_F3;
+      
+    case SDLK_F4:
+      *modifier = KMOD_NONE;
+      return AK_F4;
+      
+    case SDLK_F5:
+      *modifier = KMOD_NONE;
+      return AK_F5;
+      
+    case SDLK_F6:
+      *modifier = KMOD_NONE;
+      return AK_F6;
+      
+    case SDLK_F7:
+      *modifier = KMOD_NONE;
+      return AK_F7;
+      
+    case SDLK_F8:
+      *modifier = KMOD_NONE;
+      return AK_F8;
+      
+    case SDLK_F9:
+      *modifier = KMOD_NONE;
+      return AK_F9;
+      
+    case SDLK_F10:
+      *modifier = KMOD_NONE;
+      return AK_F10;
+      
+    case SDLK_EXCLAIM:
+      *modifier = KMOD_SHIFT;
+      return AK_1;
 
-	case SDLK_F1:
-		*modifier = KMOD_NONE;
-		return AK_F1;
+    case SDLK_QUOTEDBL:
+      *modifier = KMOD_SHIFT;
+      return AK_QUOTE;
 
-	case SDLK_F2:
-		*modifier = KMOD_NONE;
-		return AK_F2;
+    case SDLK_HASH:
+      *modifier = KMOD_SHIFT;
+      return AK_3;
 
-	case SDLK_F3:
-		*modifier = KMOD_NONE;
-		return AK_F3;
+    case SDLK_DOLLAR:
+      *modifier = KMOD_SHIFT;
+      return AK_4;
 
-	case SDLK_F4:
-		*modifier = KMOD_NONE;
-		return AK_F4;
+    case SDLK_AMPERSAND:
+      *modifier = KMOD_SHIFT;
+      return AK_7;
 
-	case SDLK_F5:
-		*modifier = KMOD_NONE;
-		return AK_F5;
+    case SDLK_LEFTPAREN:
+      *modifier = KMOD_SHIFT;
+      return AK_9;
 
-	case SDLK_F6:
-		*modifier = KMOD_NONE;
-		return AK_F6;
+    case SDLK_RIGHTPAREN:
+      *modifier = KMOD_SHIFT;
+      return AK_0;
 
-	case SDLK_F7:
-		*modifier = KMOD_NONE;
-		return AK_F7;
+    case SDLK_ASTERISK:
+      *modifier = KMOD_SHIFT;
+      return AK_8;
 
-	case SDLK_F8:
-		*modifier = KMOD_NONE;
-		return AK_F8;
+    case SDLK_PLUS:
+      *modifier = KMOD_SHIFT;
+      return AK_EQUAL;
 
-	case SDLK_F9:
-		*modifier = KMOD_NONE;
-		return AK_F9;
+    case SDLK_COLON:
+      *modifier = KMOD_SHIFT;
+      return AK_SEMICOLON;
 
-	case SDLK_F10:
-		*modifier = KMOD_NONE;
-		return AK_F10;
+    case SDLK_QUESTION:
+      *modifier = KMOD_SHIFT;
+      return AK_SLASH;
 
-	case SDLK_EXCLAIM:
-		*modifier = KMOD_SHIFT;
-		return AK_1;
+    case SDLK_AT:
+      *modifier = KMOD_SHIFT;
+      return AK_2;
 
-	case SDLK_QUOTEDBL:
-		*modifier = KMOD_SHIFT;
-		return AK_QUOTE;
+    case SDLK_CARET:
+      *modifier = KMOD_SHIFT;
+      return AK_6;
 
-	case SDLK_HASH:
-		*modifier = KMOD_SHIFT;
-		return AK_3;
+    case SDLK_UNDERSCORE:
+      *modifier = KMOD_SHIFT;
+      return AK_MINUS;
+          
+    case 124: // code for '|'
+      *modifier = KMOD_SHIFT;
+      return AK_BACKSLASH;
 
-	case SDLK_DOLLAR:
-		*modifier = KMOD_SHIFT;
-		return AK_4;
+    case SDLK_2:
+      if(*modifier == KMOD_LSHIFT) { // '{'
+        *modifier = KMOD_SHIFT;
+        return AK_LBRACKET;
+      }
+      break;
+      
+    case SDLK_3:
+      if(*modifier == KMOD_LSHIFT) { // '}'
+        *modifier = KMOD_SHIFT;
+        return AK_RBRACKET;
+      }
+      break;
+      
+    case SDLK_4:
+      if(*modifier == KMOD_LSHIFT) { // '~'
+        *modifier = KMOD_SHIFT;
+        return AK_BACKQUOTE;
+      }
+      break;
 
-	case SDLK_AMPERSAND:
-		*modifier = KMOD_SHIFT;
-		return AK_7;
+    case SDLK_9:
+      if(*modifier == KMOD_LSHIFT) { // '['
+        *modifier = KMOD_NONE;
+        return AK_LBRACKET;
+      }
+      break;
 
-	case SDLK_LEFTPAREN:
-		*modifier = KMOD_SHIFT;
-		return AK_9;
-
-	case SDLK_RIGHTPAREN:
-		*modifier = KMOD_SHIFT;
-		return AK_0;
-
-	case SDLK_ASTERISK:
-		*modifier = KMOD_SHIFT;
-		return AK_8;
-
-	case SDLK_PLUS:
-		*modifier = KMOD_SHIFT;
-		return AK_EQUAL;
-
-	case SDLK_COLON:
-		*modifier = KMOD_SHIFT;
-		return AK_SEMICOLON;
-
-	case SDLK_QUESTION:
-		*modifier = KMOD_SHIFT;
-		return AK_SLASH;
-
-	case SDLK_AT:
-		*modifier = KMOD_SHIFT;
-		return AK_2;
-
-	case SDLK_CARET:
-		*modifier = KMOD_SHIFT;
-		return AK_6;
-
-	case SDLK_UNDERSCORE:
-		*modifier = KMOD_SHIFT;
-		return AK_MINUS;
-
-	case 124: // code for '|'
-		*modifier = KMOD_SHIFT;
-		return AK_BACKSLASH;
-
-	case SDLK_2:
-		if (*modifier == KMOD_LSHIFT)   // '{'
-		{
-			*modifier = KMOD_SHIFT;
-			return AK_LBRACKET;
-		}
-		break;
-
-	case SDLK_3:
-		if (*modifier == KMOD_LSHIFT)   // '}'
-		{
-			*modifier = KMOD_SHIFT;
-			return AK_RBRACKET;
-		}
-		break;
-
-	case SDLK_4:
-		if (*modifier == KMOD_LSHIFT)   // '~'
-		{
-			*modifier = KMOD_SHIFT;
-			return AK_BACKQUOTE;
-		}
-		break;
-
-	case SDLK_9:
-		if (*modifier == KMOD_LSHIFT)   // '['
-		{
-			*modifier = KMOD_NONE;
-			return AK_LBRACKET;
-		}
-		break;
-
-	case SDLK_0:
-		if (*modifier == KMOD_LSHIFT)   // ']'
-		{
-			*modifier = KMOD_NONE;
-			return AK_RBRACKET;
-		}
-		break;
-	}
-	return 0;
+    case SDLK_0:
+      if(*modifier == KMOD_LSHIFT) { // ']'
+        *modifier = KMOD_NONE;
+        return AK_RBRACKET;
+      }
+      break;
+  }
+  return 0;
 }

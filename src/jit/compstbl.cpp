@@ -6,7 +6,6 @@
 #include "newcpu.h"
 #include "custom.h"
 #include "comptbl.h"
-#include "debug.h"
 extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { op_0_0_comp_ff, 0x00000002, 0 }, /* OR */
 { op_10_0_comp_ff, 0x00000002, 16 }, /* OR */
@@ -821,6 +820,7 @@ extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { op_4a39_0_comp_ff, 0x00000002, 19001 }, /* TST */
 { op_4a3a_0_comp_ff, 0x00000002, 19002 }, /* TST */
 { op_4a3b_0_comp_ff, 0x00000002, 19003 }, /* TST */
+{ op_4a3c_0_comp_ff, 0x00000002, 19004 }, /* TST */
 { op_4a40_0_comp_ff, 0x00000000, 19008 }, /* TST */
 { op_4a48_0_comp_ff, 0x00000000, 19016 }, /* TST */
 { op_4a50_0_comp_ff, 0x00000000, 19024 }, /* TST */
@@ -832,6 +832,7 @@ extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { op_4a79_0_comp_ff, 0x00000002, 19065 }, /* TST */
 { op_4a7a_0_comp_ff, 0x00000002, 19066 }, /* TST */
 { op_4a7b_0_comp_ff, 0x00000002, 19067 }, /* TST */
+{ op_4a7c_0_comp_ff, 0x00000002, 19068 }, /* TST */
 { op_4a80_0_comp_ff, 0x00000000, 19072 }, /* TST */
 { op_4a88_0_comp_ff, 0x00000000, 19080 }, /* TST */
 { op_4a90_0_comp_ff, 0x00000000, 19088 }, /* TST */
@@ -843,6 +844,7 @@ extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { op_4ab9_0_comp_ff, 0x00000002, 19129 }, /* TST */
 { op_4aba_0_comp_ff, 0x00000002, 19130 }, /* TST */
 { op_4abb_0_comp_ff, 0x00000002, 19131 }, /* TST */
+{ op_4abc_0_comp_ff, 0x00000002, 19132 }, /* TST */
 { NULL, 0x00000000, 19136 }, /* TAS */
 { NULL, 0x00000000, 19152 }, /* TAS */
 { NULL, 0x00000000, 19160 }, /* TAS */
@@ -2690,6 +2692,7 @@ extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { op_4a39_0_comp_nf, 0x00000002, 19001 }, /* TST */
 { op_4a3a_0_comp_nf, 0x00000002, 19002 }, /* TST */
 { op_4a3b_0_comp_nf, 0x00000002, 19003 }, /* TST */
+{ op_4a3c_0_comp_nf, 0x00000002, 19004 }, /* TST */
 { op_4a40_0_comp_nf, 0x00000000, 19008 }, /* TST */
 { op_4a48_0_comp_nf, 0x00000000, 19016 }, /* TST */
 { op_4a50_0_comp_nf, 0x00000000, 19024 }, /* TST */
@@ -2701,6 +2704,7 @@ extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { op_4a79_0_comp_nf, 0x00000002, 19065 }, /* TST */
 { op_4a7a_0_comp_nf, 0x00000002, 19066 }, /* TST */
 { op_4a7b_0_comp_nf, 0x00000002, 19067 }, /* TST */
+{ op_4a7c_0_comp_nf, 0x00000002, 19068 }, /* TST */
 { op_4a80_0_comp_nf, 0x00000000, 19072 }, /* TST */
 { op_4a88_0_comp_nf, 0x00000000, 19080 }, /* TST */
 { op_4a90_0_comp_nf, 0x00000000, 19088 }, /* TST */
@@ -2712,6 +2716,7 @@ extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { op_4ab9_0_comp_nf, 0x00000002, 19129 }, /* TST */
 { op_4aba_0_comp_nf, 0x00000002, 19130 }, /* TST */
 { op_4abb_0_comp_nf, 0x00000002, 19131 }, /* TST */
+{ op_4abc_0_comp_nf, 0x00000002, 19132 }, /* TST */
 { NULL, 0x00000000, 19136 }, /* TAS */
 { NULL, 0x00000000, 19152 }, /* TAS */
 { NULL, 0x00000000, 19160 }, /* TAS */

@@ -1,6 +1,3 @@
-#ifndef UAE_SYSDEPS_H
-#define UAE_SYSDEPS_H
-
 /*
   * UAE - The Un*x Amiga Emulator
   *
@@ -14,26 +11,52 @@
   *
   * Copyright 1996, 1997 Bernd Schmidt
   */
+#ifndef UAE_SYSDEPS_H
+#define UAE_SYSDEPS_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#include "sysconfig.h"
+
+#ifndef UAE
+#define UAE
+#endif
+
+#ifdef __cplusplus
 #include <string>
 using namespace std;
+#else
+#include <string.h>
+#include <ctype.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
 
-#ifdef _GCCRES_
-#undef _GCCRES_
+#ifndef UAE
+#define UAE
 #endif
 
-#ifdef UAE4ALL_NO_USE_RESTRICT
-#define _GCCRES_
+#if defined(__x86_64__) || defined(_M_AMD64)
+#define CPU_x86_64 1
+#define CPU_64_BIT 1
+#elif defined(__i386__) || defined(_M_IX86)
+#define CPU_i386 1
+#elif defined(__arm__) || defined(_M_ARM)
+#define CPU_arm 1
+#elif defined(__powerpc__) || defined(_M_PPC)
+#define CPU_powerpc 1
 #else
-#define _GCCRES_ __restrict__
+#error unrecognized CPU type
 #endif
 
 #ifndef __STDC__
+#ifndef _MSC_VER_
 #error "Your compiler is not ANSI. Get a real one."
+#endif
 #endif
 
 #include <stdarg.h>
@@ -101,10 +124,6 @@ using namespace std;
 #include <errno.h>
 #include <assert.h>
 
-#if EEXIST == ENOTEMPTY
-#define BROKEN_OS_PROBABLY_AIX
-#endif
-
 #ifdef __NeXT__
 #define S_IRUSR S_IREAD
 #define S_IWUSR S_IWRITE
@@ -115,55 +134,6 @@ struct utimbuf
     time_t actime;
     time_t modtime;
 };
-#endif
-
-#if defined(__GNUC__) && defined(AMIGA)
-/* gcc on the amiga need that __attribute((regparm)) must */
-/* be defined in function prototypes as well as in        */
-/* function definitions !                                 */
-#define REGPARAM2 REGPARAM
-#else /* not(GCC & AMIGA) */
-#define REGPARAM2
-#endif
-
-/* sam: some definitions so that SAS/C can compile UAE */
-#if defined(__SASC) && defined(AMIGA)
-#define REGPARAM2
-#define REGPARAM
-#define S_IRUSR S_IREAD
-#define S_IWUSR S_IWRITE
-#define S_IXUSR S_IEXECUTE
-#define S_ISDIR(val) (S_IFDIR & val)
-#define mkdir(x,y) mkdir(x)
-#define truncate(x,y) 0
-#define creat(x,y) open("T:creat",O_CREAT|O_TEMP|O_RDWR) /* sam: for zfile.c */
-#define strcasecmp stricmp
-#define utime(file,time) 0
-struct utimbuf
-{
-    time_t actime;
-    time_t modtime;
-};
-#endif
-
-#ifdef __DOS__
-#include <pc.h>
-#include <io.h>
-#endif
-
-/* Acorn specific stuff */
-#ifdef ACORN
-
-#define S_IRUSR S_IREAD
-#define S_IWUSR S_IWRITE
-#define S_IXUSR S_IEXEC
-
-#define strcasecmp stricmp
-
-#endif
-
-#ifndef L_tmpnam
-#define L_tmpnam 128 /* ought to be safe */
 #endif
 
 /* If char has more then 8 bits, good night. */
@@ -216,7 +186,7 @@ typedef uae_u32 uaecptr;
 #endif
 
 #ifdef HAVE_STRDUP
-#define my_strdup strdup
+#define my_strdup _tcsdup
 #else
 extern TCHAR *my_strdup (const TCHAR*s);
 #endif
@@ -234,6 +204,8 @@ extern char *ua_fs_copy (char *dst, int maxlen, const TCHAR *src, int defchar);
 extern TCHAR *au_fs_copy (TCHAR *dst, int maxlen, const char *src);
 extern char *uutf8 (const TCHAR *s);
 extern TCHAR *utf8u (const char *s);
+extern void to_lower (TCHAR *s, int len);
+extern void to_upper (TCHAR *s, int len);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
@@ -266,7 +238,92 @@ extern TCHAR *utf8u (const char *s);
 #undef DONT_HAVE_STDIO
 #undef DONT_HAVE_MALLOC
 
-#if defined PANDORA
+#if defined(WARPUP)
+#define DONT_HAVE_POSIX
+#endif
+
+#if !defined(FSUAE) && defined _WIN32_
+
+//#ifdef FSUAE
+//#error _WIN32 should not be defined here
+//#endif
+#if defined __WATCOMC__
+
+#define O_NDELAY 0
+#include <direct.h>
+#define dirent direct
+#define mkdir(a,b) mkdir(a)
+#define strcasecmp stricmp
+
+#elif defined __MINGW32__
+
+#include <winsock.h>
+
+#define O_NDELAY 0
+
+#define FILEFLAG_DIR     0x1
+#define FILEFLAG_ARCHIVE 0x2
+#define FILEFLAG_WRITE   0x4
+#define FILEFLAG_READ    0x8
+#define FILEFLAG_EXECUTE 0x10
+#define FILEFLAG_SCRIPT  0x20
+#define FILEFLAG_PURE    0x40
+
+#define mkdir(a,b) mkdir(a)
+
+#elif defined _MSC_VER_
+
+#ifdef HAVE_GETTIMEOFDAY
+#include <winsock.h> // for 'struct timeval' definition
+extern void gettimeofday( struct timeval *tv, void *blah );
+#endif
+
+#define O_NDELAY 0
+
+#define FILEFLAG_DIR     0x1
+#define FILEFLAG_ARCHIVE 0x2
+#define FILEFLAG_WRITE   0x4
+#define FILEFLAG_READ    0x8
+#define FILEFLAG_EXECUTE 0x10
+#define FILEFLAG_SCRIPT  0x20
+#define FILEFLAG_PURE    0x40
+
+#include <io.h>
+#define O_BINARY _O_BINARY
+#define O_WRONLY _O_WRONLY
+#define O_RDONLY _O_RDONLY
+#define O_RDWR   _O_RDWR
+#define O_CREAT  _O_CREAT
+#define O_TRUNC  _O_TRUNC
+#define strcasecmp _tcsicmp 
+#define strncasecmp _tcsncicmp 
+#define W_OK 0x2
+#define R_OK 0x4
+#define STAT struct stat
+#define DIR struct DIR
+struct direct
+{
+    TCHAR d_name[1];
+};
+#include <sys/utime.h>
+#define utimbuf __utimbuf64
+#define USE_ZFILE
+
+#undef S_ISDIR
+#undef S_IWUSR
+#undef S_IRUSR
+#undef S_IXUSR
+#define S_ISDIR(a) (a&FILEFLAG_DIR)
+#define S_ISARC(a) (a&FILEFLAG_ARCHIVE)
+#define S_IWUSR FILEFLAG_WRITE
+#define S_IRUSR FILEFLAG_READ
+#define S_IXUSR FILEFLAG_EXECUTE
+
+#endif
+
+#endif /* _WIN32 */
+
+#if defined(PANDORA) || defined(RASPBERRY)
 
 #include <ctype.h>
 
@@ -282,14 +339,7 @@ extern TCHAR *utf8u (const char *s);
 #define REGPARAM3 
 #define REGPARAM
 
-#define abort() \
-  do { \
-    printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
-    SDL_Quit(); \
-    (abort) (); \
-} while (0)
-
-#endif
+#endif /* defined(PANDORA) || defined(RASPBERRY) */
 
 #ifdef DONT_HAVE_POSIX
 
@@ -370,20 +420,13 @@ extern void mallocemu_free (void *ptr);
 #define ASM_SYM_FOR_FUNC(a)
 #endif
 
-#ifdef UAE_CONSOLE
-#undef write_log
-#define write_log write_log_standard
-#endif
-
 #ifndef WITH_LOGGING
 #undef write_log
 #define write_log(FORMATO, RESTO...)
 #define write_log_standard(FORMATO, RESTO...)
 #else
-extern void write_log (const TCHAR *format,...);
-extern FILE *debugfile;
+extern void write_log (const TCHAR *,...);
 #endif
-extern void console_out (const TCHAR *, ...);
 extern void gui_message (const TCHAR *,...);
 
 #ifndef O_BINARY
@@ -391,7 +434,11 @@ extern void gui_message (const TCHAR *,...);
 #endif
 
 #ifndef STATIC_INLINE
-#if __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
+#ifdef DEBUG
+#define STATIC_INLINE static __attribute__ ((noinline))
+#define NOINLINE __attribute__ ((noinline))
+#define NORETURN
+#elif __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
 #ifdef RASPBERRY
 #define STATIC_INLINE static __inline__
 #else
@@ -399,7 +446,7 @@ extern void gui_message (const TCHAR *,...);
 #endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
-#elif _MSC_VER
+#elif _MSC_VER_
 #define STATIC_INLINE static __forceinline
 #define NOINLINE __declspec(noinline)
 #define NORETURN __declspec(noreturn)
@@ -438,6 +485,22 @@ extern void gui_message (const TCHAR *,...);
  * Byte-swapping functions
  */
 
+#ifdef ARMV6_ASSEMBLY
+
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
+  __asm__ (
+		"rev %0, %0"
+    : "=r" (v) : "0" (v) ); return v;
+}
+
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
+  __asm__ (
+    "revsh %0, %0\n\t"
+    "uxth %0, %0"
+    : "=r" (v) : "0" (v) ); return v;
+}
+#else
+
 /* Try to use system bswap_16/bswap_32 functions. */
 #if defined HAVE_BSWAP_16 && defined HAVE_BSWAP_32
 # include <byteswap.h>
@@ -445,22 +508,6 @@ extern void gui_message (const TCHAR *,...);
 #  include <byteswap.h>
 # endif
 #else
-# ifdef ARMV6_ASSEMBLY
-STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
-	__asm__(
-						"rev %0, %0"
-                                                : "=r" (v) : "0" (v)); return v;
-}
-
-STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
-	__asm__(
-  						"revsh %0, %0\n\t"
-              "uxth %0, %0"
-                                                : "=r" (v) : "0" (v)); return v;
-}
-#define bswap_16(x) do_byteswap_16(x)
-#define bswap_32(x) do_byteswap_32(x)
-# else
 /* Else, if using SDL, try SDL's endian functions. */
 # ifdef USE_SDL
 #  include <SDL_endian.h>
@@ -468,13 +515,12 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #  define bswap_32(x) SDL_Swap32(x)
 # else
 /* Otherwise, we'll roll our own. */
-#define bswap_16(x) (((x) >> 8) | (((x) & 0xFF) << 8))
-#define bswap_32(x) (((x) << 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) | ((x) >> 24))
+#  define bswap_16(x) (((x) >> 8) | (((x) & 0xFF) << 8))
+#  define bswap_32(x) (((x) << 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) | ((x) >> 24))
 # endif
 #endif
-#endif
 
-#endif
+#endif /* ARMV6_ASSEMBLY*/
 
 #ifndef __cplusplus
 
@@ -482,12 +528,6 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #define xcalloc(T, N) calloc(sizeof (T), N)
 #define xfree(T) free(T)
 #define xrealloc(T, TP, N) realloc(TP, sizeof (T) * (N))
-
-#if 0
-extern void *xmalloc (size_t);
-extern void *xcalloc (size_t, size_t);
-extern void xfree (const void*);
-#endif
 
 #else
 
@@ -499,3 +539,11 @@ extern void xfree (const void*);
 #endif
 
 #define DBLEQU(f, i) (abs ((f) - (i)) < 0.000001)
+
+#ifdef HAVE_VAR_ATTRIBUTE_UNUSED
+#define NOWARN_UNUSED(x) __attribute__((unused)) x
+#else
+#define NOWARN_UNUSED(x) x
+#endif
+
+#endif /* UAE_SYSDEPS_H */

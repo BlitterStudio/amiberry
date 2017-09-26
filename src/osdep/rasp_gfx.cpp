@@ -6,10 +6,10 @@
 #include "gui.h"
 #include "memory.h"
 #include "newcpu.h"
-#include "inputdevice.h"
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
+#include "inputdevice.h"
 #include "savestate.h"
 #include "picasso96.h"
 
@@ -17,6 +17,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_gfxPrimitives.h>
+#include <SDL_ttf.h>
 #ifdef ANDROIDSDL
 #include <android/log.h>
 #endif
@@ -26,11 +27,14 @@
 
 /* SDL surface variable for output of emulation */
 SDL_Surface *prSDLScreen = NULL;
+static unsigned int current_vsync_frame = 0;
+unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
+static unsigned long last_synctime;
+
 /* Dummy SDL variable for screen init */
 SDL_Surface *Dummy_prSDLScreen = NULL;
-static SDL_Surface *current_screenshot = NULL;
-/* Possible screen modes (x and y resolutions) */
 
+/* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 13
 static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1360, 1366, 1680, 1920 };
 static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 768, 768, 1050, 1080 };
@@ -40,23 +44,9 @@ struct MultiDisplay Displays[MAX_DISPLAYS];
 
 int screen_is_picasso = 0;
 
-static int curr_layer_width = 0;
-
+static SDL_Surface *current_screenshot = NULL;
 static char screenshot_filename_default[255] =  {
-	'/',
-	't',
-	'm',
-	'p',
-	'/',
-	'n',
-	'u',
-	'l',
-	'l',
-	'.',
-	'p',
-	'n',
-	'g',
-	'\0'
+	'/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'p', 'n', 'g', '\0'
 };
 char *screenshot_filename = (char *)&screenshot_filename_default[0];
 FILE *screenshot_file = NULL;
@@ -64,43 +54,26 @@ static void CreateScreenshot(void);
 static int save_thumb(char *path);
 int delay_savestate_frame = 0;
 
-int DispManXElementpresent = 0;
-
-static long next_synctime = 0;
-
-uae_sem_t vsync_wait_sem;
-
+static unsigned long next_synctime = 0;
 
 DISPMANX_DISPLAY_HANDLE_T   dispmanxdisplay;
 DISPMANX_MODEINFO_T         dispmanxdinfo;
-DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_1;
-DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_2;
+DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_1 = 0;
+DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_2 = 0;
 DISPMANX_ELEMENT_HANDLE_T   dispmanxelement;
 DISPMANX_UPDATE_HANDLE_T    dispmanxupdate;
 VC_RECT_T       src_rect;
 VC_RECT_T       dst_rect;
 VC_RECT_T       blit_rect;
 
-unsigned char current_resource_amigafb = 0;
-
-unsigned char need_wait_dispmanx_semaphore = 0;
-long start;
+static int DispManXElementpresent = 0;
+static unsigned char current_resource_amigafb = 0;
 
 
+static volatile uae_atomic vsync_counter = 0;
 void vsync_callback(unsigned int a, void* b)
 {
-  // Here we are synchronized with VSync
-  // next_synctime is what we were expected as sync time.
-	last_synctime = read_processor_time();
-	// Check if we miss a frame (with a margin of 1000 cycles)
-	if (last_synctime - next_synctime > time_per_frame * (1 + currprefs.gfx_framerate) - (long)1000)
-		adjust_idletime(-1);
-	else
-		adjust_idletime(last_synctime - start);
-	  // Update next synctime with current sync.
-	next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
-
-	uae_sem_post(&vsync_wait_sem);
+  atomic_inc(&vsync_counter);
 }
 
 
@@ -111,28 +84,76 @@ int graphics_setup(void)
 	InitPicasso96();
 #endif
 	bcm_host_init();
+	dispmanxdisplay = vc_dispmanx_display_open(0);
+  vc_dispmanx_vsync_callback(dispmanxdisplay, vsync_callback, NULL);
+	
 	return 1;
 }
 
 
+#ifdef WITH_LOGGING
+
+SDL_Surface *liveInfo = NULL;
+TTF_Font *liveFont = NULL;
+int liveInfoCounter = 0;
+void ShowLiveInfo(char *msg)
+{
+  if(liveFont == NULL)
+  {
+    TTF_Init();
+    liveFont = TTF_OpenFont("data/FreeSans.ttf", 12);
+  }
+  if(liveInfo != NULL) {
+    SDL_FreeSurface(liveInfo);
+    liveInfo = NULL;
+  }
+  SDL_Color col;
+  col.r = 0xbf;
+  col.g = 0xbf;
+  col.b = 0xbf;
+  liveInfo = TTF_RenderText_Solid(liveFont, msg, col);
+  liveInfoCounter = 50 * 5;
+}
+
+void RefreshLiveInfo()
+{
+  if(liveInfoCounter > 0)
+  {
+    SDL_Rect dst, src;
+    
+    dst.x = 0;
+    dst.y = 2;
+    src.w = liveInfo->w;
+    src.h = liveInfo->h;
+    src.x = 0;
+    src.y = 0;
+    if(liveInfo != NULL)
+      SDL_BlitSurface(liveInfo, &src, prSDLScreen, &dst);
+    liveInfoCounter--;
+    if(liveInfoCounter == 0)
+    {
+      if(liveInfo != NULL) {
+        SDL_FreeSurface(liveInfo);
+        liveInfo = NULL;
+      }
+    }
+  }
+}
+
+#endif
+
 void InitAmigaVidMode(struct uae_prefs *p)
 {
   /* Initialize structure for Amiga video modes */
-	gfxvidinfo.pixbytes = 2;
-	gfxvidinfo.bufmem = (uae_u8 *)prSDLScreen->pixels;
-	gfxvidinfo.outwidth = p->gfx_size.width;
-	gfxvidinfo.outheight = p->gfx_size.height;
-	gfxvidinfo.rowbytes = prSDLScreen->pitch;
-#ifdef PICASSO96
-	if (screen_is_picasso)
-	{
-		gfxvidinfo.outwidth  = picasso_vidinfo.width;
-		gfxvidinfo.outheight = picasso_vidinfo.height;
-	}
-#endif
+	gfxvidinfo.drawbuffer.pixbytes = 2;
+	gfxvidinfo.drawbuffer.bufmem = (uae_u8 *)prSDLScreen->pixels;
+	gfxvidinfo.drawbuffer.outwidth = p->gfx_size.width;
+	gfxvidinfo.drawbuffer.outheight = p->gfx_size.height;
+	gfxvidinfo.drawbuffer.rowbytes = prSDLScreen->pitch;
 }
 
-void graphics_dispmanshutdown(void)
+
+void graphics_subshutdown(void)
 {
 	if (DispManXElementpresent == 1)
 	{
@@ -141,13 +162,22 @@ void graphics_dispmanshutdown(void)
 		vc_dispmanx_element_remove(dispmanxupdate, dispmanxelement);
 		vc_dispmanx_update_submit_sync(dispmanxupdate);
 	}
+
+	if (dispmanxresource_amigafb_1 != 0) {
+		vc_dispmanx_resource_delete(dispmanxresource_amigafb_1);
+		dispmanxresource_amigafb_1 = 0;
+  }
+	if (dispmanxresource_amigafb_2 != 0) {
+		vc_dispmanx_resource_delete(dispmanxresource_amigafb_2);
+		dispmanxresource_amigafb_2 = 0;
+  }
+  
+  if(prSDLScreen != NULL) {
+    SDL_FreeSurface(prSDLScreen);
+    prSDLScreen = NULL;
+  }
 }
 
-void graphics_subshutdown(void)
-{
-	if (dispmanxresource_amigafb_1 != 0)
-		graphics_dispmanshutdown();
-}
 
 static void open_screen(struct uae_prefs *p)
 {
@@ -160,6 +190,10 @@ static void open_screen(struct uae_prefs *p)
 	uint32_t     vc_image_ptr;
 	int          width;
 	int          height;
+
+  graphics_subshutdown();
+  current_resource_amigafb = 0;
+  next_synctime = 0;
 	
 #ifdef PICASSO96
 	if (screen_is_picasso)
@@ -175,118 +209,71 @@ static void open_screen(struct uae_prefs *p)
 		height = p->gfx_size.height;
 	}
 
-	if (Dummy_prSDLScreen)
-	{ // y.f. 2016-10-13 : free the previous screen surface every time, 
+	if (Dummy_prSDLScreen != NULL)
+	{ 
+	  // y.f. 2016-10-13 : free the previous screen surface every time, 
 	  // so we can have fullscreen while running and windowed while in config window.
-	 // Apparently, something somewhere is resetting the screen.
+	  // Apparently, something somewhere is resetting the screen.
 		SDL_FreeSurface(Dummy_prSDLScreen);
 		Dummy_prSDLScreen = NULL;
 	}
 	
 	if (Dummy_prSDLScreen == NULL)
-	{
-//		Dummy_prSDLScreen = SDL_SetVideoMode(videoInfo->current_w, videoInfo->current_h, videoInfo->vfmt->BitsPerPixel, SDL_SWSURFACE | SDL_FULLSCREEN);
 		Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
-	}
 
-	  // check if resolution hasn't changed in menu. Otherwise free the resources so that they will be re-generated with new resolution.
-	if ((dispmanxresource_amigafb_1 != 0) && 
-	   ((blit_rect.width != width) || (blit_rect.height != height) || (currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect) ||
-	   (currprefs.gfx_fullscreen_ratio != changed_prefs.gfx_fullscreen_ratio)))
-	{
-#ifdef DEBUG
-		printf("Emulation resolution change detected.\n");
-#endif // DEBUG
-		if (prSDLScreen != NULL)
-		{
-			SDL_FreeSurface(prSDLScreen);
-			prSDLScreen = 0;
-		}
-		graphics_dispmanshutdown();
-		vc_dispmanx_resource_delete(dispmanxresource_amigafb_1);
-		vc_dispmanx_resource_delete(dispmanxresource_amigafb_2);
-		dispmanxresource_amigafb_1 = 0;
-		dispmanxresource_amigafb_2 = 0;
-	}
+	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
+	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
 
-	if (dispmanxresource_amigafb_1 == 0)
-	{
-#ifdef DEBUG
-		printf("Emulation resolution: Width %i Height: %i\n", width, height);
-#endif //DEBUG
-		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
-		currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
-		prSDLScreen = SDL_CreateRGBSurface(SDL_HWSURFACE,
-			width,
-			height,
-			16,
-			Dummy_prSDLScreen->format->Rmask,
-			Dummy_prSDLScreen->format->Gmask,
-			Dummy_prSDLScreen->format->Bmask,
-			Dummy_prSDLScreen->format->Amask);
+	prSDLScreen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, 16,
+		Dummy_prSDLScreen->format->Rmask,	Dummy_prSDLScreen->format->Gmask, Dummy_prSDLScreen->format->Bmask, Dummy_prSDLScreen->format->Amask);
 
-		dispmanxdisplay = vc_dispmanx_display_open(0);
-		vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
+	vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
-		dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
-		dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
-		vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
-		vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
-			VC_IMAGE_RGB565,
-			prSDLScreen->pitch,
-			prSDLScreen->pixels,
-			&blit_rect);
-		vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
+	dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
+	dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 
-	}
+	vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
+	vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGB565, prSDLScreen->pitch, prSDLScreen->pixels, &blit_rect);
+	vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
+
 	// 16/9 to 4/3 ratio adaptation.
 	if (currprefs.gfx_correct_aspect == 0)
 	{
 	  // Fullscreen.
 		int scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio / 100;
 		int scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio / 100;
-		vc_dispmanx_rect_set( &dst_rect,
-			(dispmanxdinfo.width - scaled_width)/2,
-			(dispmanxdinfo.height - scaled_height)/2,
-			scaled_width,
-			scaled_height);
+		vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width - scaled_width)/2, (dispmanxdinfo.height - scaled_height)/2,
+			scaled_width,	scaled_height);
 	}
 	else
 	{
 	  // 4/3 shrink.
 		int scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio / 100;
 		int scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio / 100;
-		vc_dispmanx_rect_set( &dst_rect,
-			(dispmanxdinfo.width - scaled_width / 16 * 12)/2,
-			(dispmanxdinfo.height - scaled_height)/2,
-			scaled_width/16*12,
-			scaled_height);
+		vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width - scaled_width / 16 * 12)/2, (dispmanxdinfo.height - scaled_height)/2,
+			scaled_width/16*12,	scaled_height);
 	}
 
 	if (DispManXElementpresent == 0)
 	{
 		DispManXElementpresent = 1;
 		dispmanxupdate = vc_dispmanx_update_start(0);
-		dispmanxelement = vc_dispmanx_element_add( dispmanxupdate,
-			dispmanxdisplay,
-			2,               // layer
-			&dst_rect,
-			dispmanxresource_amigafb_1,
-			&src_rect,
-			DISPMANX_PROTECTION_NONE,
-			&alpha,
+		dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay,	2,               // layer
+			&dst_rect, dispmanxresource_amigafb_1, &src_rect,	DISPMANX_PROTECTION_NONE,	&alpha,
 			NULL,             // clamp
 			DISPMANX_NO_ROTATE);
 
 		vc_dispmanx_update_submit(dispmanxupdate, NULL, NULL);
 	}
 
+  vsync_counter = 0;
+  current_vsync_frame = 2;
+
 	if (prSDLScreen != NULL)
 	{
 		InitAmigaVidMode(p);
 		init_row_map();
 	}    
-	//framecnt = 1; // Don't draw frame before reset done
 }
 
 
@@ -306,13 +293,11 @@ int check_prefs_changed_gfx(void)
   
 	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height ||
 	   currprefs.gfx_size.width != changed_prefs.gfx_size.width ||
-	   currprefs.gfx_size_fs.width != changed_prefs.gfx_size_fs.width ||
 	   currprefs.gfx_resolution != changed_prefs.gfx_resolution)
 	{
 		cfgfile_configuration_change(1);
 		currprefs.gfx_size.height = changed_prefs.gfx_size.height;
 		currprefs.gfx_size.width = changed_prefs.gfx_size.width;
-		currprefs.gfx_size_fs.width = changed_prefs.gfx_size_fs.width;
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
 		update_display(&currprefs);
 		changed = 1;
@@ -329,24 +314,32 @@ int check_prefs_changed_gfx(void)
 	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate) 
 	{
 		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
-		init_hz_full();
+		init_hz_normal();
 		changed = 1;
 	}
   
+	currprefs.filesys_limit = changed_prefs.filesys_limit;
+	currprefs.harddrive_read_only = changed_prefs.harddrive_read_only;
+  
+  if(changed)
+		init_custom ();
+
 	return changed;
 }
 
 
 int lockscr(void)
 {
-    //SDL_LockSurface(prSDLScreen);
+  if(SDL_LockSurface(prSDLScreen) == -1)
+    return 0;
+  init_row_map();
 	return 1;
 }
 
 
 void unlockscr(void)
 {
-    //SDL_UnlockSurface(prSDLScreen);
+  SDL_UnlockSurface(prSDLScreen);
 }
 
 void wait_for_vsync(void)
@@ -355,7 +348,7 @@ void wait_for_vsync(void)
 }
 
 
-void flush_screen()
+bool render_screen (bool immediate)
 {
 	if (savestate_state == STATE_DOSAVE)
 	{
@@ -369,54 +362,85 @@ void flush_screen()
 		}
 	}
 
-	if (need_wait_dispmanx_semaphore == 1)
-	{
-		need_wait_dispmanx_semaphore = 0;
-		start = read_processor_time();
-		uae_sem_wait(&vsync_wait_sem);
-	}
+#ifdef WITH_LOGGING
+  RefreshLiveInfo();
+#endif
+  
+	return true;
+}
 
+void show_screen(int mode)
+{
+  unsigned long start = read_processor_time();
+
+  int wait_till = current_vsync_frame;
+  do 
+  {
+    usleep(100);
+    current_vsync_frame = vsync_counter;
+  } while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
+  
+  if(wait_till + 1 != current_vsync_frame) 
+  {
+    // We missed a vsync...
+    next_synctime = 0;
+  }
+  current_vsync_frame += currprefs.gfx_framerate;
+
+  last_synctime = read_processor_time();
 
 	if (current_resource_amigafb == 1)
 	{
 		current_resource_amigafb = 0;
-		vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_1,
-			VC_IMAGE_RGB565,
-			gfxvidinfo.rowbytes,
-			gfxvidinfo.bufmem,
-			&blit_rect);
-		dispmanxupdate = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_1);
-
-		vc_dispmanx_update_submit(dispmanxupdate, vsync_callback, NULL);
-		//vc_dispmanx_update_submit_sync(dispmanxupdate);
-
+	  vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
+		  VC_IMAGE_RGB565,
+		  gfxvidinfo.drawbuffer.rowbytes,
+		  gfxvidinfo.drawbuffer.bufmem,
+		  &blit_rect);
+	  dispmanxupdate = vc_dispmanx_update_start(0);
+	  vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_1);
 	}
 	else
 	{
 		current_resource_amigafb = 1;
-		vc_dispmanx_resource_write_data(  dispmanxresource_amigafb_2,
+		vc_dispmanx_resource_write_data(dispmanxresource_amigafb_2,
 			VC_IMAGE_RGB565,
-			gfxvidinfo.rowbytes,
-			gfxvidinfo.bufmem,
+			gfxvidinfo.drawbuffer.rowbytes,
+			gfxvidinfo.drawbuffer.bufmem,
 			&blit_rect);
 		dispmanxupdate = vc_dispmanx_update_start(0);
 		vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_2);
-
-		vc_dispmanx_update_submit(dispmanxupdate, vsync_callback, NULL);
 	}
-	need_wait_dispmanx_semaphore = 1;
+  vc_dispmanx_update_submit(dispmanxupdate, NULL, NULL);
 
-	init_row_map();
+  idletime += last_synctime - start;
 
+  if (last_synctime - next_synctime > time_per_frame - 5000)
+    next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+  else
+    next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 }
 
 
+unsigned long target_lastsynctime(void)
+{
+  return last_synctime;
+}
+
+bool show_screen_maybe (bool show)
+{
+	if (show)
+		show_screen (0);
+	return false;
+}
+
 void black_screen_now(void)
 {
-	SDL_FillRect(prSDLScreen, NULL, 0);
-	SDL_Flip(prSDLScreen);
-	flush_screen();
+  if(prSDLScreen != NULL) {	
+    SDL_FillRect(prSDLScreen, NULL, 0);
+    render_screen(true);
+	  show_screen(0);
+  }
 }
 
 
@@ -462,7 +486,6 @@ STATIC_INLINE int maskShift(unsigned long mask)
 
 static int init_colors(void)
 {
-	int i;
 	int red_bits, green_bits, blue_bits;
 	int red_shift, green_shift, blue_shift;
 
@@ -475,8 +498,6 @@ static int init_colors(void)
 	blue_shift = maskShift(prSDLScreen->format->Bmask);
 	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, 0);
 	notice_new_xcolors();
-	for (i = 0; i < 4096; i++)
-		xcolors[i] = xcolors[i] * 0x00010001;
 
 	return 1;
 }
@@ -518,8 +539,6 @@ int GetSurfacePixelFormat(void)
 
 int graphics_init(bool mousecapture)
 {
-	uae_sem_init(&vsync_wait_sem, 0, 0);
-
 	graphics_subinit();
 
 	if (!init_colors())
@@ -531,7 +550,12 @@ int graphics_init(bool mousecapture)
 void graphics_leave(void)
 {
 	graphics_subshutdown();
-	SDL_FreeSurface(Dummy_prSDLScreen);
+	if (Dummy_prSDLScreen != NULL) {
+		SDL_FreeSurface(Dummy_prSDLScreen);
+		Dummy_prSDLScreen = NULL;
+	}
+  vc_dispmanx_vsync_callback(dispmanxdisplay, NULL, NULL);
+	vc_dispmanx_display_close(dispmanxdisplay);
 	bcm_host_deinit();
 	SDL_VideoQuit();
 }
@@ -625,17 +649,12 @@ static void CreateScreenshot(void)
 		current_screenshot = NULL;
 	}
 
-	w = prSDLScreen->w;
-	h = prSDLScreen->h;
-	current_screenshot = SDL_CreateRGBSurfaceFrom(prSDLScreen->pixels,
-		w,
-		h,
-		prSDLScreen->format->BitsPerPixel,
-		prSDLScreen->pitch,
-		prSDLScreen->format->Rmask,
-		prSDLScreen->format->Gmask,
-		prSDLScreen->format->Bmask,
-		prSDLScreen->format->Amask);
+  if(prSDLScreen != NULL) {
+  	w = prSDLScreen->w;
+  	h = prSDLScreen->h;
+  	current_screenshot = SDL_CreateRGBSurfaceFrom(prSDLScreen->pixels, w, h, prSDLScreen->format->BitsPerPixel,	prSDLScreen->pitch,
+  		prSDLScreen->format->Rmask, prSDLScreen->format->Gmask, prSDLScreen->format->Bmask, prSDLScreen->format->Amask);
+	}
 }
 
 
@@ -652,18 +671,86 @@ static int save_thumb(char *path)
 }
 
 
+bool vsync_switchmode(int hz)
+{
+	int changed_height = changed_prefs.gfx_size.height;
+	
+	if (hz >= 55)
+		hz = 60;
+	else
+		hz = 50;
+
+	if (hz == 50 && currVSyncRate == 60)
+	{
+	  // Switch from NTSC -> PAL
+		switch (changed_height) {
+		case 200: changed_height = 240; break;
+		case 216: changed_height = 262; break;
+		case 240: changed_height = 270; break;
+		case 256: changed_height = 270; break;
+		case 262: changed_height = 270; break;
+		case 270: changed_height = 270; break;
+		}
+	}
+	else if (hz == 60 && currVSyncRate == 50)
+	{
+	  // Switch from PAL -> NTSC
+		switch (changed_height) {
+		case 200: changed_height = 200; break;
+		case 216: changed_height = 200; break;
+		case 240: changed_height = 200; break;
+		case 256: changed_height = 216; break;
+		case 262: changed_height = 216; break;
+		case 270: changed_height = 240; break;
+		}
+	}
+
+  if(hz != currVSyncRate) 
+  {
+    SetVSyncRate(hz);
+  	black_screen_now();
+    fpscounter_reset();
+    time_per_frame = 1000 * 1000 / (hz);
+  }
+  
+  if(!picasso_on && !picasso_requested_on)
+  	changed_prefs.gfx_size.height = changed_height;
+
+	return true;
+}
+
+bool target_graphics_buffer_update(void)
+{
+	bool rate_changed = false;
+  
+	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+	{
+		update_display(&changed_prefs);
+		rate_changed = true;
+	}
+
+	if (rate_changed)
+	{
+		black_screen_now();
+		fpscounter_reset();
+		time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
+	}
+
+	return true;
+}
+
 #ifdef PICASSO96
 
 
-int picasso_palette(void)
+int picasso_palette(struct MyCLUTEntry *CLUT)
 {
 	int i, changed;
 
 	changed = 0;
 	for (i = 0; i < 256; i++) {
-		int r = picasso96_state.CLUT[i].Red;
-		int g = picasso96_state.CLUT[i].Green;
-		int b = picasso96_state.CLUT[i].Blue;
+    int r = CLUT[i].Red;
+    int g = CLUT[i].Green;
+    int b = CLUT[i].Blue;
 		int value = (r << 16 | g << 8 | b);
 		uae_u32 v = CONVERT_RGB(value);
 		if (v !=  picasso_vidinfo.clut[i]) {
@@ -761,11 +848,8 @@ void picasso_InitResolutions(void)
 				DisplayModes[count].refresh[1] = 60;
 				DisplayModes[count].refresh[2] = 0;
 				DisplayModes[count].colormodes = pixelFormat;
-				sprintf(DisplayModes[count].name,
-					"%dx%d, %d-bit",
-					DisplayModes[count].res.width,
-					DisplayModes[count].res.height,
-					DisplayModes[count].depth * 8);
+				sprintf(DisplayModes[count].name,	"%dx%d, %d-bit", 
+          DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
   
 				count++;
 			}
@@ -777,73 +861,6 @@ void picasso_InitResolutions(void)
 	DisplayModes = Displays[0].DisplayModes;
 }
 
-#endif
-
-bool vsync_switchmode(int hz)
-{
-	int changed_height = changed_prefs.gfx_size.height;
-	
-	if (hz >= 55)
-		hz = 60;
-	else
-		hz = 50;
-
-	if (hz == 50 && currVSyncRate == 60)
-	{
-	  // Switch from NTSC -> PAL
-		switch (changed_height) {
-		case 200: changed_height = 240; break;
-		case 216: changed_height = 262; break;
-		case 240: changed_height = 270; break;
-		case 256: changed_height = 270; break;
-		case 262: changed_height = 270; break;
-		case 270: changed_height = 270; break;
-		}
-	}
-	else if (hz == 60 && currVSyncRate == 50)
-	{
-	  // Switch from PAL -> NTSC
-		switch (changed_height) {
-		case 200: changed_height = 200; break;
-		case 216: changed_height = 200; break;
-		case 240: changed_height = 200; break;
-		case 256: changed_height = 216; break;
-		case 262: changed_height = 216; break;
-		case 270: changed_height = 240; break;
-		}
-	}
-
-	if (changed_height == currprefs.gfx_size.height && hz == currprefs.chipset_refreshrate)
-		return true;
-  
-	changed_prefs.gfx_size.height = changed_height;
-
-	return true;
-}
-
-bool target_graphics_buffer_update(void)
-{
-	bool rate_changed = 0;
-//	bool rate_changed = SetVSyncRate(currprefs.chipset_refreshrate);
-  
-	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
-	{
-		update_display(&changed_prefs);
-		rate_changed = true;
-	}
-
-	if (rate_changed)
-	{
-		black_screen_now();
-		fpscounter_reset();
-		time_per_frame = 1000 * 1000 / (currprefs.chipset_refreshrate);
-	}
-
-	return true;
-}
-
-#ifdef PICASSO96
-
 
 void gfx_set_picasso_state(int on)
 {
@@ -852,7 +869,8 @@ void gfx_set_picasso_state(int on)
 
 	screen_is_picasso = on;
 	open_screen(&currprefs);
-	picasso_vidinfo.rowbytes = prSDLScreen->pitch;
+  if(prSDLScreen != NULL)
+  	picasso_vidinfo.rowbytes = prSDLScreen->pitch;
 }
 
 void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
@@ -874,21 +892,29 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	if (screen_is_picasso)
 	{
 		open_screen(&currprefs);
-		picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
+  	if(prSDLScreen != NULL)
+  		picasso_vidinfo.rowbytes	= prSDLScreen->pitch;
 		picasso_vidinfo.rgbformat = RGBFB_R5G6B5;
 	}
 }
 
 uae_u8 *gfx_lock_picasso(void)
 {
-  // We lock the surface directly after create and flip
+  if(prSDLScreen == NULL || screen_is_picasso == 0)
+    return NULL;
+  SDL_LockSurface(prSDLScreen);
 	picasso_vidinfo.rowbytes = prSDLScreen->pitch;
 	return (uae_u8 *)prSDLScreen->pixels;
 }
 
-void gfx_unlock_picasso(void)
+void gfx_unlock_picasso(bool dorender)
 {
-  // We lock the surface directly after create and flip, so no unlock here
+  SDL_UnlockSurface(prSDLScreen);
+  if(dorender)
+  {
+    render_screen(true);
+    show_screen(0);
+  }
 }
 
 #endif // PICASSO96

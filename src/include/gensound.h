@@ -1,11 +1,14 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Prototypes for general sound related functions
- * This use to be called sound.h, but that causes confusion
- *
- * Copyright 1997 Bernd Schmidt
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Prototypes for general sound related functions
+  * This use to be called sound.h, but that causes confusion
+  *
+  * Copyright 1997 Bernd Schmidt
+  */
+
+#ifndef UAE_GENSOUND_H
+#define UAE_GENSOUND_H
 
 extern int sound_available;
 
@@ -24,3 +27,4 @@ extern void close_sound (void);
 extern void sample16_handler (void);
 extern void sample16s_handler (void);
 
+#endif /* UAE_GENSOUND_H */

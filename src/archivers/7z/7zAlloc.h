@@ -1,10 +1,10 @@
 /* 7zAlloc.h -- Allocation functions
-2008-10-04 : Igor Pavlov : Public domain */
+2010-10-29 : Igor Pavlov : Public domain */
 
 #ifndef __7Z_ALLOC_H
 #define __7Z_ALLOC_H
 
-#include <stddef.h>
+#include <stdlib.h>
 
 void *SzAlloc(void *p, size_t size);
 void SzFree(void *p, void *address);

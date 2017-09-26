@@ -85,7 +85,7 @@ copy_screen_16bit_swap:
   vstmia    r0!, {q8-q15}
   bne       copy_screen_16bit_swap
   bx        lr
-
+  
 
 @----------------------------------------------------------------
 @ copy_screen_32bit_to_16bit
@@ -113,7 +113,7 @@ copy_screen_32bit_to_16bit:
   vst2.8    {d18-d19}, [r0]!
   bne       copy_screen_32bit_to_16bit
   bx        lr
-
+  
 
 @----------------------------------------------------------------
 @ ARM_doline_n1

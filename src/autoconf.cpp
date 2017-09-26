@@ -17,6 +17,7 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
+#include "inputdevice.h"
 
 /* Commonly used autoconfig strings */
 
@@ -24,32 +25,25 @@ uaecptr EXPANSION_explibname, EXPANSION_doslibname, EXPANSION_uaeversion;
 uaecptr EXPANSION_uaedevname, EXPANSION_explibbase = 0;
 uaecptr EXPANSION_bootcode, EXPANSION_nullfunc;
 
-
 /* ROM tag area memory access */
 
-uae_u8 *rtarea = 0;
 uaecptr rtarea_base = RTAREA_DEFAULT;
 
-static uae_u32 REGPARAM3 rtarea_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 rtarea_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 rtarea_bget (uaecptr) REGPARAM;
-static void REGPARAM3 rtarea_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 rtarea_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 rtarea_bput (uaecptr, uae_u32) REGPARAM;
-static uae_u8 *REGPARAM3 rtarea_xlate (uaecptr) REGPARAM;
-static int REGPARAM3 rtarea_check (uaecptr addr, uae_u32 size) REGPARAM;
-
+DECLARE_MEMORY_FUNCTIONS(rtarea);
 addrbank rtarea_bank = {
   rtarea_lget, rtarea_wget, rtarea_bget,
   rtarea_lput, rtarea_wput, rtarea_bput,
-  rtarea_xlate, rtarea_check, NULL, _T("UAE Boot ROM"),
-  rtarea_lget, rtarea_wget, ABFLAG_ROMIN
+	rtarea_xlate, rtarea_check, NULL, _T("rtarea"), _T("UAE Boot ROM"),
+	rtarea_lget, rtarea_wget,
+	ABFLAG_ROMIN, S_READ, S_WRITE
 };
+
+#define RTAREA_WRITEOFFSET 0xfff0
 
 static uae_u8 *REGPARAM2 rtarea_xlate (uaecptr addr)
 {
   addr &= 0xFFFF;
-  return rtarea + addr;
+	return rtarea_bank.baseaddr + addr;
 }
 
 static int REGPARAM2 rtarea_check (uaecptr addr, uae_u32 size)
@@ -60,66 +54,100 @@ static int REGPARAM2 rtarea_check (uaecptr addr, uae_u32 size)
 
 static uae_u32 REGPARAM2 rtarea_lget (uaecptr addr)
 {
-#ifdef JIT
-  special_mem |= S_READ;
-#endif
   addr &= 0xFFFF;
-  return (uae_u32)(rtarea_wget (addr) << 16) + rtarea_wget (addr+2);
+	if (addr & 1)
+		return 0;
+	if (addr >= 0xfffd)
+		return 0;
+	return (rtarea_bank.baseaddr[addr + 0] << 24) | (rtarea_bank.baseaddr[addr + 1] << 16) |
+		(rtarea_bank.baseaddr[addr + 2] << 8) | (rtarea_bank.baseaddr[addr + 3] << 0);
 }
-
 static uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
 {
-#ifdef JIT
-  special_mem |= S_READ;
-#endif
   addr &= 0xFFFF;
-  return (rtarea[addr]<<8) + rtarea[addr+1];
-}
+	if (addr & 1)
+		return 0;
 
+	uaecptr addr2 = addr - RTAREA_TRAP_STATUS;
+
+	return (rtarea_bank.baseaddr[addr] << 8) + rtarea_bank.baseaddr[addr + 1];
+}
 static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 {
-#ifdef JIT
-  special_mem |= S_READ;
-#endif
   addr &= 0xFFFF;
-  return rtarea[addr];
+
+  if (addr == RTAREA_INTREQ + 0) {
+		rtarea_bank.baseaddr[addr] = atomic_bit_test_and_reset(&uae_int_requested, 0);
+		//write_log(rtarea_bank.baseaddr[addr] ? _T("+") : _T("-"));
+	} else if (addr == RTAREA_INTREQ + 1) {
+		rtarea_bank.baseaddr[addr] = false;
+	} else if (addr == RTAREA_INTREQ + 2) {
+			rtarea_bank.baseaddr[addr] = 0;
+	}	
+  return rtarea_bank.baseaddr[addr];
 }
 
-#define RTAREA_WRITEOFFSET 0xfff0
+static bool rtarea_write(uaecptr addr)
+{
+	if (addr >= RTAREA_WRITEOFFSET)
+		return true;
+	if (addr >= RTAREA_SYSBASE && addr < RTAREA_SYSBASE + 4)
+		return true;
+  return false;
+}
 
 static void REGPARAM2 rtarea_bput (uaecptr addr, uae_u32 value)
 {
-#ifdef JIT
-  special_mem |= S_WRITE;
-#endif
 	addr &= 0xffff;
-	if (addr < RTAREA_WRITEOFFSET)
+	if (!rtarea_write(addr))
 		return;
-	rtarea[addr] = value;
+	rtarea_bank.baseaddr[addr] = value;
+	if (addr == RTAREA_INTREQ + 3) {
+		mousehack_wakeup();
+	}
 }
 
 static void REGPARAM2 rtarea_wput (uaecptr addr, uae_u32 value)
 {
-#ifdef JIT
-  special_mem |= S_WRITE;
-#endif
 	addr &= 0xffff;
-	if (addr < RTAREA_WRITEOFFSET)
+	value &= 0xffff;
+
+	if (addr & 1)
 		return;
-	rtarea_bput (addr, value >> 8);
-	rtarea_bput (addr + 1, value & 0xff);
+
+	if (!rtarea_write(addr))
+		return;
+
+	uaecptr addr2 = addr - RTAREA_TRAP_STATUS;
+
+	rtarea_bank.baseaddr[addr + 0] = value >> 8;
+	rtarea_bank.baseaddr[addr + 1] = (uae_u8)value;
 }
 
 static void REGPARAM2 rtarea_lput (uaecptr addr, uae_u32 value)
 {
-#ifdef JIT
-  special_mem |= S_WRITE;
-#endif
 	addr &= 0xffff;
-	if (addr < RTAREA_WRITEOFFSET)
+	if (addr & 1)
 		return;
-	rtarea_wput (addr, value >> 16);
-	rtarea_wput (addr + 2, value & 0xffff);
+	if (addr >= 0xfffd)
+		return;
+	if (!rtarea_write(addr))
+		return;
+	rtarea_bank.baseaddr[addr + 0] = value >> 24;
+	rtarea_bank.baseaddr[addr + 1] = value >> 16;
+	rtarea_bank.baseaddr[addr + 2] = value >> 8;
+	rtarea_bank.baseaddr[addr + 3] = value >> 0;
+}
+
+void rtarea_reset(void)
+{
+	uae_u8 *p = rtarea_bank.baseaddr;
+	if (p) {
+		memset(p + RTAREA_TRAP_DATA, 0, RTAREA_TRAP_DATA_SLOT_SIZE * (RTAREA_TRAP_DATA_NUM + RTAREA_TRAP_DATA_SEND_NUM));
+		memset(p + RTAREA_TRAP_STATUS, 0, RTAREA_TRAP_STATUS_SIZE * (RTAREA_TRAP_DATA_NUM + RTAREA_TRAP_DATA_SEND_NUM));
+		memset(p + RTAREA_HEARTBEAT, 0, 0x10000 - RTAREA_HEARTBEAT);
+		memset(p + RTAREA_VARIABLES, 0, RTAREA_VARIABLES_SIZE);
+  }
 }
 
 /* some quick & dirty code to fill in the rt area and save me a lot of
@@ -136,27 +164,27 @@ uae_u32 addr (int ptr)
 
 void db (uae_u8 data)
 {
-	rtarea[rt_addr++] = data;
+	rtarea_bank.baseaddr[rt_addr++] = data;
 }
 
 void dw (uae_u16 data)
 {
-	rtarea[rt_addr++] = (uae_u8)(data >> 8);
-	rtarea[rt_addr++] = (uae_u8)data;
+	rtarea_bank.baseaddr[rt_addr++] = (uae_u8)(data >> 8);
+	rtarea_bank.baseaddr[rt_addr++] = (uae_u8)data;
 }
 
 void dl (uae_u32 data)
 {
-	rtarea[rt_addr++] = data >> 24;
-	rtarea[rt_addr++] = data >> 16;
-	rtarea[rt_addr++] = data >> 8;
-	rtarea[rt_addr++] = data;
+	rtarea_bank.baseaddr[rt_addr++] = data >> 24;
+	rtarea_bank.baseaddr[rt_addr++] = data >> 16;
+	rtarea_bank.baseaddr[rt_addr++] = data >> 8;
+	rtarea_bank.baseaddr[rt_addr++] = data;
 }
 
 uae_u8 dbg (uaecptr addr)
 {
   addr -= rtarea_base;
-  return rtarea[addr];
+	return rtarea_bank.baseaddr[addr];
 }
 
 /* store strings starting at the end of the rt area and working
@@ -171,7 +199,7 @@ uae_u32 ds_ansi (const uae_char *str)
   	return addr (rt_straddr);
   len = strlen (str) + 1;
   rt_straddr -= len;
-	strcpy ((uae_char*)rtarea + rt_straddr, str);
+	strcpy ((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
   return addr (rt_straddr);
 }
 
@@ -191,8 +219,8 @@ uae_u32 ds_bstr_ansi (const uae_char *str)
 	rt_straddr -= len;
 	while (rt_straddr & 3)
 		rt_straddr--;
-	rtarea[rt_straddr] = len - 2;
-	strcpy ((uae_char*)rtarea + rt_straddr + 1, str);
+	rtarea_bank.baseaddr[rt_straddr] = len - 2;
+	strcpy ((uae_char*)rtarea_bank.baseaddr + rt_straddr + 1, str);
 	return addr (rt_straddr) >> 2;
 }
 
@@ -218,37 +246,42 @@ void align (int b)
   rt_addr = (rt_addr + b - 1) & ~(b - 1);
 }
 
-static uae_u32 REGPARAM2 nullfunc(TrapContext *context)
+static uae_u32 REGPARAM2 nullfunc(TrapContext *ctx)
 {
   write_log (_T("Null function called\n"));
   return 0;
 }
 
-static uae_u32 REGPARAM2 getchipmemsize (TrapContext *context)
+static uae_u32 REGPARAM2 getchipmemsize (TrapContext *ctx)
 {
-	m68k_dreg (regs, 1) = 0;
-	m68k_areg (regs, 1) = 0;
-  return chipmem_bank.allocated;
+	trap_set_dreg(ctx, 1, 0);
+	trap_set_areg(ctx, 1, 0);
+  return chipmem_bank.allocated_size;
 }
 
-static uae_u32 REGPARAM2 uae_puts (TrapContext *context)
+static uae_u32 REGPARAM2 uae_puts (TrapContext *ctx)
 {
-  puts ((char *)get_real_address (m68k_areg (regs, 0)));
+	uae_char buf[MAX_DPATH];
+	trap_get_string(ctx, buf, trap_get_areg(ctx, 0), sizeof (uae_char));
+	write_log(_T("%s"), buf);
   return 0;
 }
 
 void rtarea_init_mem (void)
 {
-  if(rtarea != 0)
-    mapped_free(rtarea);
-
-  rtarea = mapped_malloc (RTAREA_SIZE, _T("rtarea"));
-  if (!rtarea) {
+	rtarea_bank.reserved_size = RTAREA_SIZE;
+	rtarea_bank.start = rtarea_base;
+	if (!mapped_malloc (&rtarea_bank)) {
   	write_log (_T("virtual memory exhausted (rtarea)!\n"));
-		abort ();
+    target_startup_msg(_T("Internal error"), _T("Virtual memory exhausted (rtarea)."));
+    uae_restart(1, NULL);
+    return;
   }
-  memset(rtarea, 0, RTAREA_SIZE);
-  rtarea_bank.baseaddr = rtarea;
+}
+
+void rtarea_free(void)
+{
+	mapped_free(&rtarea_bank);
 }
 
 void rtarea_init (void)
@@ -262,7 +295,7 @@ void rtarea_init (void)
   init_traps ();
 
   rtarea_init_mem ();
-  memset (rtarea, 0, RTAREA_SIZE);
+	memset (rtarea_bank.baseaddr, 0, RTAREA_SIZE);
 
   _stprintf (uaever, _T("uae-%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 
@@ -271,10 +304,14 @@ void rtarea_init (void)
   EXPANSION_doslibname = ds (_T("dos.library"));
   EXPANSION_uaedevname = ds (_T("uae.device"));
 
-  deftrap (NULL); /* Generic emulator trap */
+  dw (0);
+  dw (0);
 
-  dw (0);
-  dw (0);
+#ifdef FILESYS
+  filesys_install_code ();
+#endif
+
+  deftrap (NULL); /* Generic emulator trap */
 
   a = here();
   /* Dummy trap - removing this breaks the filesys emulation. */
@@ -283,6 +320,7 @@ void rtarea_init (void)
 
   org (rtarea_base + 0xFF80);
   calltrap (deftrapres (getchipmemsize, TRAPFLAG_DORET, _T("getchipmemsize")));
+	dw(RTS);
 
   org (rtarea_base + 0xFF10);
   calltrap (deftrapres (uae_puts, TRAPFLAG_NO_RETVAL, _T("uae_puts")));
@@ -290,14 +328,12 @@ void rtarea_init (void)
 
   org (a);
     
-#ifdef FILESYS
-  filesys_install_code ();
-#endif
-
 	uae_boot_rom_size = here () - rtarea_base;
 	if (uae_boot_rom_size >= RTAREA_TRAPS) {
 		write_log (_T("RTAREA_TRAPS needs to be increased!"));
-		abort ();
+    target_startup_msg(_T("Internal error"), _T("RTAREA_TRAPS needs to be increased."));
+    uae_restart(1, NULL);
+    return;
 	}
 
 #ifdef PICASSO96
@@ -308,17 +344,11 @@ void rtarea_init (void)
   init_extended_traps();
 }
 
-volatile int uae_int_requested = 0;
-
-void set_uae_int_flag (void)
-{
-	rtarea[RTAREA_INT] = uae_int_requested & 1;
-}
+volatile uae_atomic uae_int_requested = 0;
 
 void rtarea_setup(void)
 {
-  uae_int_requested = 0;
-  uaecptr base = need_uae_boot_rom ();
+  uaecptr base = need_uae_boot_rom (&currprefs);
   if (base) {
   	write_log (_T("RTAREA located at %08X\n"), base);
 	  rtarea_base = base;

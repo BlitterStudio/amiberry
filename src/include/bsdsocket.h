@@ -1,17 +1,20 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * bsdsocket.library emulation
- *
- * Copyright 1997,98 Mathias Ortmann
- *
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * bsdsocket.library emulation
+  *
+  * Copyright 1997,98 Mathias Ortmann
+  *
+  */
+
+#ifndef UAE_BSDSOCKET_H
+#define UAE_BSDSOCKET_H
+
+#include "uae/types.h"
 
 #define BSD_TRACING_ENABLED 0
 
-extern int log_bsd;
-
-#define ISBSDTRACE (log_bsd || BSD_TRACING_ENABLED)
+#define ISBSDTRACE (BSD_TRACING_ENABLED) 
 #define BSDTRACE(x) do { if (ISBSDTRACE) { write_log x; } } while(0)
 
 extern int init_socket_layer (void);
@@ -26,20 +29,19 @@ extern void deinit_socket_layer (void);
 
 #define MAXADDRLEN 256
 
-#ifdef _WIN32
+#ifdef _WIN32_
 #define SOCKET_TYPE SOCKET
 #else
 #define SOCKET_TYPE int
 #endif
 
 /* allocated and maintained on a per-task basis */
-struct socketbase
-{
+struct socketbase {
     struct socketbase *next;
     struct socketbase *nextsig;	/* queue for tasks to signal */
 
     uaecptr sysbase;
-    int dosignal;		/* signal flag */
+	int dosignal;		/* signal flag */
     uae_u32 ownertask;		/* task that opened the library */
     int signal;			/* signal allocated for that task */
     int sb_errno, sb_herrno;	/* errno and herrno variables */
@@ -60,15 +62,15 @@ struct socketbase
     uae_u32 eintrsigs;		/* EINTR sigmask */
     int eintr;			/* interrupted by eintrsigs? */
     int eventindex;		/* current socket looked at by GetSocketEvents() to prevent starvation */
-    uae_u32 logstat;
-    uae_u32 logptr;
-    uae_u32 logmask;
-    uae_u32 logfacility;
-    uaecptr fdcallback;
+	uae_u32 logstat;
+	uae_u32 logptr;
+	uae_u32 logmask;
+	uae_u32 logfacility;
+	uaecptr fdcallback;
 
     unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
     /* host-specific fields below */
-#ifdef _WIN32
+#ifdef _WIN32_
     SOCKET_TYPE sockAbort;	/* for aborting WinSock2 select() (damn Microsoft) */
     SOCKET_TYPE sockAsync;	/* for aborting WSBAsyncSelect() in window message handler */
     int needAbort;		/* abort flag */
@@ -97,8 +99,7 @@ struct socketbase
 
 #define LIBRARY_SIZEOF 36
 
-struct UAEBSDBase
-{
+struct UAEBSDBase {
     uae_u8 dummy[LIBRARY_SIZEOF];
     struct socketbase *sb;
     uae_u8 scratchbuf[SCRATCHBUFSIZE];
@@ -126,22 +127,22 @@ struct UAEBSDBase
 /* socket properties */
 #define SF_BLOCKING 0x80000000
 #define SF_BLOCKINGINPROGRESS 0x40000000
+#define SF_DGRAM 0x20000000
 /* STBC_FDCALLBACK */
 #define FDCB_FREE  0
 #define FDCB_ALLOC 1
 #define FDCB_CHECK 2
 
-uae_u32 addstr (uae_u32 * dst, const TCHAR *src);
-uae_u32 addstr_ansi (uae_u32 * dst, const uae_char *src);
-uae_u32 strncpyha (uae_u32 dst, const uae_char *src, int size);
-uae_u32 addmem (uae_u32 * dst, const uae_char *src, int len);
+uae_u32 addstr(TrapContext *ctx, uae_u32 * dst, const TCHAR *src);
+uae_u32 addstr_ansi(TrapContext *ctx, uae_u32 * dst, const uae_char *src);
+uae_u32 strncpyha(TrapContext *ctx, uae_u32 dst, const uae_char *src, int size);
+uae_u32 addmem(TrapContext *ctx, uae_u32 * dst, const uae_char *src, int len);
 
 #define SB struct socketbase *sb
 
-extern void bsdsocklib_seterrno (SB, int);
-extern void bsdsocklib_setherrno (SB, int);
+extern void bsdsocklib_seterrno(TrapContext*, SB, int);
+extern void bsdsocklib_setherrno(TrapContext*, SB, int);
 
-extern void sockmsg (unsigned int, WPARAM, LPARAM);
 extern void sockabort (SB);
 
 extern void addtosigqueue (SB, int);
@@ -150,10 +151,10 @@ extern void sigsockettasks (void);
 extern void locksigqueue (void);
 extern void unlocksigqueue (void);
 
-extern BOOL checksd(TrapContext*, SB, int sd);
-extern void setsd(TrapContext*, SB, int, SOCKET_TYPE);
+extern bool checksd(TrapContext*, SB, int sd);
+extern void setsd(TrapContext*, SB, int , SOCKET_TYPE);
 extern int getsd (TrapContext*, SB, SOCKET_TYPE);
-extern SOCKET_TYPE getsock (SB, int);
+extern SOCKET_TYPE getsock (TrapContext*, SB, int);
 extern void releasesock (TrapContext*, SB, int);
 
 extern void waitsig (TrapContext *context, SB);
@@ -169,15 +170,14 @@ extern int host_socket (TrapContext *, SB, int, int, int);
 extern uae_u32 host_bind (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
 extern uae_u32 host_listen (TrapContext *, SB, uae_u32, uae_u32);
 extern void host_accept (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
-extern void host_sendto (TrapContext *, SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);
-extern void host_recvfrom (TrapContext *, SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);
-extern uae_u32 host_shutdown (SB, uae_u32, uae_u32);
-extern void host_setsockopt (SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);
-extern uae_u32 host_getsockopt (SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);
-extern uae_u32 host_getsockname (SB, uae_u32, uae_u32, uae_u32);
-extern uae_u32 host_getpeername (SB, uae_u32, uae_u32, uae_u32);
+extern void host_sendto (TrapContext *, SB, uae_u32, uae_u32, uae_u8*, uae_u32, uae_u32, uae_u32, uae_u32);
+extern void host_recvfrom (TrapContext *, SB, uae_u32, uae_u32, uae_u8*, uae_u32, uae_u32, uae_u32, uae_u32);
+extern uae_u32 host_shutdown (TrapContext *,SB, uae_u32, uae_u32);
+extern void host_setsockopt (TrapContext *, SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);
+extern uae_u32 host_getsockopt (TrapContext *, SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);
+extern uae_u32 host_getsockname (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
+extern uae_u32 host_getpeername (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
 extern uae_u32 host_IoctlSocket (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
-extern uae_u32 host_shutdown (SB, uae_u32, uae_u32);
 extern int host_CloseSocket (TrapContext *, SB, int);
 extern void host_connect (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
 extern void host_WaitSelect (TrapContext *, SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);
@@ -186,8 +186,8 @@ extern uae_u32 host_getdtablesize (void);
 extern uae_u32 host_ObtainSocket (void);
 extern uae_u32 host_ReleaseSocket (void);
 extern uae_u32 host_ReleaseCopyOfSocket (void);
-extern uae_u32 host_Inet_NtoA (TrapContext *context, SB, uae_u32);
-extern uae_u32 host_inet_addr (uae_u32);
+extern uae_u32 host_Inet_NtoA(TrapContext *ctx, SB, uae_u32);
+extern uae_u32 host_inet_addr(TrapContext *ctx, uae_u32);
 extern uae_u32 host_Inet_LnaOf (void);
 extern uae_u32 host_Inet_NetOf (void);
 extern uae_u32 host_Inet_MakeAddr (void);
@@ -200,9 +200,15 @@ extern void host_getprotobyname (TrapContext *, SB, uae_u32);
 extern void host_getprotobynumber (TrapContext *, SB, uae_u32);
 extern uae_u32 host_vsyslog (void);
 extern uae_u32 host_Dup2Socket (void);
-extern uae_u32 host_gethostname (uae_u32, uae_u32);
+extern uae_u32 host_gethostname(TrapContext *ctx, uae_u32, uae_u32);
 extern uae_u32 callfdcallback (TrapContext *context, SB, uae_u32 fd, uae_u32 action);
 
-extern uaecptr bsdlib_startup (uaecptr);
+extern uaecptr bsdlib_startup (TrapContext*, uaecptr);
 extern void bsdlib_install (void);
 extern void bsdlib_reset (void);
+
+void bsdsock_fake_int_handler(void);
+
+extern int volatile bsd_int_requested;
+
+#endif /* UAE_BSDSOCKET_H */

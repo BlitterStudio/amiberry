@@ -1,60 +1,64 @@
+#ifndef UAE_ZARCHIVE_H
+#define UAE_ZARCHIVE_H
+
+#include "uae/types.h"
 
 typedef uae_s64 (*ZFILEREAD)(void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILEWRITE)(const void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILESEEK)(struct zfile*, uae_s64, int);
 
 struct zfile {
-    TCHAR *name;
-    TCHAR *zipname;
-    TCHAR *mode;
-    FILE *f; // real file handle if physical file
-    uae_u8 *data; // unpacked data
-    int dataseek; // use seek position even if real file
+  TCHAR *name;
+  TCHAR *zipname;
+  TCHAR *mode;
+  FILE *f; // real file handle if physical file
+  uae_u8 *data; // unpacked data
+  int dataseek; // use seek position even if real file
 	struct zfile *archiveparent; // set if parent is archive and this has not yet been unpacked (datasize < size)
 	int archiveid;
-    uae_s64 size; // real size
+  uae_s64 size; // real size
 	uae_s64 datasize; // available size (not yet unpacked completely?)
 	uae_s64 allocsize; // memory allocated before realloc() needed again
-    uae_s64 seek; // seek position
-    int deleteafterclose;
-    int textmode;
-    struct zfile *next;
-    int zfdmask;
-    struct zfile *parent;
-    uae_u64 offset; // byte offset from parent file
-    int opencnt;
-    ZFILEREAD zfileread;
-    ZFILEWRITE zfilewrite;
-    ZFILESEEK zfileseek;
-    void *userdata;
-    int useparent;
+  uae_s64 seek; // seek position
+  int deleteafterclose;
+  int textmode;
+  struct zfile *next;
+  int zfdmask;
+  struct zfile *parent;
+  uae_u64 offset; // byte offset from parent file
+  int opencnt;
+  ZFILEREAD zfileread;
+  ZFILEWRITE zfilewrite;
+  ZFILESEEK zfileseek;
+  void *userdata;
+  int useparent;
 };
 
 #define ZNODE_FILE 0
 #define ZNODE_DIR 1
 #define ZNODE_VDIR -1
 struct znode {
-    int type;
-    struct znode *sibling;
-    struct znode *child;
-    struct zvolume *vchild;
-    struct znode *parent;
-    struct zvolume *volume;
-    struct znode *next;
-    struct znode *prev;
-    struct znode *vfile; // points to real file when this node is virtual directory
-    TCHAR *name;
-    TCHAR *fullname;
-    uae_s64 size;
-    struct zfile *f;
-    TCHAR *comment;
-    int flags;
-    struct mytimeval mtime;
-    /* decompressor specific */
-    unsigned int offset;
-    unsigned int offset2;
-    unsigned int method;
-    unsigned int packedsize;
+  int type;
+  struct znode *sibling;
+  struct znode *child;
+  struct zvolume *vchild;
+  struct znode *parent;
+  struct zvolume *volume;
+  struct znode *next;
+  struct znode *prev;
+  struct znode *vfile; // points to real file when this node is virtual directory
+  TCHAR *name;
+  TCHAR *fullname;
+  uae_s64 size;
+  struct zfile *f;
+  TCHAR *comment;
+  int flags;
+  struct mytimeval mtime;
+  /* decompressor specific */
+  unsigned int offset;
+  unsigned int offset2;
+  unsigned int method;
+  unsigned int packedsize;
 };
 
 struct zvolume
@@ -67,36 +71,37 @@ struct zvolume
     struct znode *parentz;
     struct zvolume *parent;
     uae_s64 size;
-    unsigned int blocks;
     unsigned int id;
     uae_s64 archivesize;
     unsigned int method;
-    const char *volumename;
+    TCHAR *volumename;
     int zfdmask;
 };
 
 struct zarchive_info
 {
-    const char *name;
+    TCHAR *name;
     uae_s64 size;
     int flags;
-    const char *comment;
+    TCHAR *comment;
 	struct mytimeval tv;
 };
 
-#define ArchiveFormat7Zip '7z  '
-#define ArchiveFormatRAR 'rar '
-#define ArchiveFormatZIP 'zip '
-#define ArchiveFormatLHA 'lha '
-#define ArchiveFormatLZX 'lzx '
-#define ArchiveFormatPLAIN '----'
-#define ArchiveFormatDIR 'DIR '
-#define ArchiveFormatAA 'aa  ' // method only
-#define ArchiveFormatADF 'DOS '
-#define ArchiveFormatRDB 'RDSK'
-#define ArchiveFormatMBR 'MBR '
-#define ArchiveFormatFAT 'FAT '
-#define ArchiveFormatTAR 'tar '
+#define MCC(a,b,c,d) (((a)<<24) | ((b)<<16) | ((c)<<8) | (d))
+
+#define ArchiveFormat7Zip  MCC('7', 'z', ' ', ' ')
+#define ArchiveFormatRAR   MCC('r', 'a', 'r', ' ')
+#define ArchiveFormatZIP   MCC('z', 'i', 'p', ' ')
+#define ArchiveFormatLHA   MCC('l', 'h', 'a', ' ')
+#define ArchiveFormatLZX   MCC('l', 'z', 'x', ' ')
+#define ArchiveFormatPLAIN MCC('-', '-', '-', '-')
+#define ArchiveFormatDIR   MCC('D', 'I', 'R', ' ')
+#define ArchiveFormatAA    MCC('a', 'a', ' ', ' ') // method only
+#define ArchiveFormatADF   MCC('D', 'O', 'S', ' ')
+#define ArchiveFormatRDB   MCC('R', 'D', 'S', 'K')
+#define ArchiveFormatMBR   MCC('M', 'B', 'R', ' ')
+#define ArchiveFormatFAT   MCC('F', 'A', 'T', ' ')
+#define ArchiveFormatTAR   MCC('t', 'a', 'r', ' ')
 
 #define PEEK_BYTES 1024
 #define FILE_PEEK 1
@@ -140,3 +145,5 @@ extern struct zfile *archive_getzfile (struct znode *zn, unsigned int id, int fl
 extern struct zfile *archive_unpackzfile (struct zfile *zf);
 
 extern struct zfile *decompress_zfd (struct zfile*);
+
+#endif /* UAE_ZARCHIVE_H */

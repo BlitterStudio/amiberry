@@ -7,6 +7,9 @@
  *  Adaptation for ARAnyM/ARM, copyright 2001-2015
  *    Milan Jurik, Jens Heitmann
  * 
+ *  Adaptation for Basilisk II and improvements, copyright 2000-2005
+ *    Gwenole Beauchesne
+ *
  *  Basilisk II (C) 1997-2005 Christian Bauer
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -124,7 +127,6 @@
 //#define DISABLE_I_MOVE16
 
 #define DISABLE_I_DIVU // DIVU works, but we have to think about exceptions. No big performance enhancement.
-
 
 #define RETURN "return 0;"
 
@@ -2069,6 +2071,7 @@ gen_opcode(unsigned long int opcode) {
 
 	case i_SBCD:
     failure;
+	/* I don't think so! */
 		break;
 
 	case i_ADD:
@@ -2094,6 +2097,7 @@ gen_opcode(unsigned long int opcode) {
 
 	case i_ABCD:
     failure;
+	/* No BCD maths for me.... */
 		break;
 
 	case i_NEG:
@@ -2112,6 +2116,7 @@ gen_opcode(unsigned long int opcode) {
 
 	case i_NBCD:
     failure;
+	/* Nope! */
 		break;
 
 	case i_CLR:
@@ -2357,8 +2362,7 @@ gen_opcode(unsigned long int opcode) {
 		isjump;
 		genamode(curi->smode, "srcreg", curi->size, "src", 0, 0);
 		start_brace();
-		comprintf(
-				"\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
+		comprintf("\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
@@ -2387,12 +2391,10 @@ gen_opcode(unsigned long int opcode) {
 #ifdef DISABLE_I_BSR
     failure;
 #endif
-		is_const_jump
-		;
+		is_const_jump;
 		genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 		start_brace();
-		comprintf(
-				"\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
+		comprintf("\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
@@ -2427,8 +2429,7 @@ gen_opcode(unsigned long int opcode) {
 			comprintf("\tmake_flags_live();\n"); /* Load the flags */
 			isjump;
 		} else {
-			is_const_jump
-			;
+			is_const_jump;
 		}
 
 		switch (curi->cc) {
@@ -2857,7 +2858,6 @@ generate_includes(FILE * f)
 	fprintf(f, "#include \"newcpu.h\"\n");
 	fprintf (f, "#include \"custom.h\"\n");
 	fprintf(f, "#include \"comptbl.h\"\n");
-  fprintf(f, "#include \"debug.h\"\n");
 }
 
 static int postfix;
@@ -3124,16 +3124,11 @@ generate_one_opcode(int rp, int noflags)
 			fprintf(stblfile, "{ NULL, 0x%08x, %ld }, /* %s */\n", flags,	opcode, name);
 			com_discard();
 		} else {
+		  const char *tbl = noflags ? "nf" : "ff";
 			printf ("/* %s */\n", outopcode (opcode));
-			if (noflags) {
-				fprintf(stblfile,	"{ op_%lx_%d_comp_nf, 0x%08x, %ld }, /* %s */\n",	opcode, postfix, flags, opcode, name);
-				fprintf(headerfile, "extern compop_func op_%lx_%d_comp_nf;\n", opcode, postfix);
-				printf("uae_u32 REGPARAM2 op_%lx_%d_comp_nf(uae_u32 opcode)\n{\n",	opcode, postfix);
-			} else {
-				fprintf(stblfile,	"{ op_%lx_%d_comp_ff, 0x%08x, %ld }, /* %s */\n",	opcode, postfix, flags, opcode, name);
-				fprintf(headerfile, "extern compop_func op_%lx_%d_comp_ff;\n",	opcode, postfix);
-				printf("uae_u32 REGPARAM2 op_%lx_%d_comp_ff(uae_u32 opcode)\n{\n",	opcode, postfix);
-			}
+			fprintf(stblfile,	"{ op_%lx_%d_comp_%s, 0x%08x, %ld }, /* %s */\n",	opcode, postfix, tbl, flags, opcode, name);
+			fprintf(headerfile, "extern compop_func op_%lx_%d_comp_%s;\n", opcode, postfix, tbl);
+			printf("uae_u32 REGPARAM2 op_%lx_%d_comp_%s(uae_u32 opcode)\n{\n",	opcode, postfix, tbl);
 			com_flush();
 		}
 	}

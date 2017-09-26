@@ -22,12 +22,13 @@
 static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;
-#ifdef PANDORA_SPECIFIC
+#ifdef PANDORA
 static gcn::Label* lblPandoraSpeed;
 static gcn::Label* lblPandoraSpeedInfo;
 static gcn::Slider* sldPandoraSpeed;
 #endif
 static gcn::UaeCheckBox* chkBSDSocket;
+static gcn::UaeCheckBox* chkMasterWP;
 static gcn::Label *lblKeyForMenu;
 static gcn::UaeDropDown* KeyForMenu;
 static gcn::Label *lblButtonForMenu;
@@ -41,25 +42,25 @@ static gcn::UaeDropDown* ButtonForQuit;
 class StringListModel : public gcn::ListModel
 {
 private:
-    std::vector<std::string> values;
+  std::vector<std::string> values;
 public:
-    StringListModel(const char *entries[], int count)
-    {
-        for(int i=0; i<count; ++i)
-            values.push_back(entries[i]);
-    }
+  StringListModel(const char *entries[], int count)
+  {
+    for(int i=0; i<count; ++i)
+      values.push_back(entries[i]);
+  }
 
-    int getNumberOfElements()
-    {
-        return values.size();
-    }
+  int getNumberOfElements()
+  {
+    return values.size();
+  }
 
-    std::string getElementAt(int i)
-    {
-        if(i < 0 || i >= values.size())
-            return "---";
-        return values[i];
-    }
+  std::string getElementAt(int i)
+  {
+    if(i < 0 || i >= values.size())
+      return "---";
+    return values[i];
+  }
 };
 
 
@@ -70,14 +71,14 @@ static gcn::UaeDropDown* cboKBDLed_scr;
 static gcn::Label *lblCapLock;
 static gcn::UaeDropDown* cboKBDLed_cap;
 
-const char *listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD" };
-StringListModel KBDLedList(listValues, 9);
+static const char *listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD" };
+static StringListModel KBDLedList(listValues, 9);
 #endif
 
 static const int ControlKey_SDLKeyValues[] = { 0, SDLK_F11, SDLK_F12 };
 
-const char *ControlKeyValues[] = { "------------------", "F11", "F12" };
-StringListModel ControlKeyList(ControlKeyValues, 3);
+static const char *ControlKeyValues[] = { "------------------", "F11", "F12" };
+static StringListModel ControlKeyList(ControlKeyValues, 3);
 
 static int GetControlKeyIndex(int key)
 {
@@ -92,8 +93,8 @@ static int GetControlKeyIndex(int key)
 
 static const int ControlButton_SDLButtonValues[] = { -1, 0, 1, 2, 3 };
 
-const char *ControlButtonValues[] = { "------------------", "JoyButton0", "JoyButton1", "JoyButton2", "JoyButton3" };
-StringListModel ControlButtonList(ControlButtonValues, 5);
+static const char *ControlButtonValues[] = { "------------------", "JoyButton0", "JoyButton1", "JoyButton2", "JoyButton3" };
+static StringListModel ControlButtonList(ControlButtonValues, 5);
 
 static int GetControlButtonIndex(int button)
 {
@@ -108,20 +109,26 @@ static int GetControlButtonIndex(int button)
 
 class MiscActionListener : public gcn::ActionListener
 {
-public:
+  public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-        if (actionEvent.getSource() == chkStatusLine)
-            changed_prefs.leds_on_screen = chkStatusLine->isSelected();
+      if (actionEvent.getSource() == chkStatusLine)
+        changed_prefs.leds_on_screen = chkStatusLine->isSelected();
+      
+      else if (actionEvent.getSource() == chkHideIdleLed)
+        changed_prefs.pandora_hide_idle_led = chkHideIdleLed->isSelected();
 
-        else if (actionEvent.getSource() == chkHideIdleLed)
-            changed_prefs.pandora_hide_idle_led = chkHideIdleLed->isSelected();
+      else if (actionEvent.getSource() == chkShowGUI)
+        changed_prefs.start_gui = chkShowGUI->isSelected();
 
-        else if (actionEvent.getSource() == chkShowGUI)
-            changed_prefs.start_gui = chkShowGUI->isSelected();
-
-        else if (actionEvent.getSource() == chkBSDSocket)
-            changed_prefs.socket_emu = chkBSDSocket->isSelected();
+      else if (actionEvent.getSource() == chkBSDSocket)
+        changed_prefs.socket_emu = chkBSDSocket->isSelected();
+        
+      else if (actionEvent.getSource() == chkMasterWP) {
+        changed_prefs.floppy_read_only = chkMasterWP->isSelected();
+        RefreshPanelQuickstart();
+        RefreshPanelFloppy();
+      }
 
 	    else if (actionEvent.getSource() == KeyForMenu)
 		    changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()];
@@ -135,25 +142,25 @@ public:
 	    else if (actionEvent.getSource() == ButtonForQuit)
 		    changed_prefs.button_for_quit = ControlButton_SDLButtonValues[ButtonForQuit->getSelected()];
 
-#ifdef PANDORA_SPECIFIC
-        else if (actionEvent.getSource() == sldPandoraSpeed)
+#ifdef PANDORA
+      else if (actionEvent.getSource() == sldPandoraSpeed)
+      {
+        int newspeed = (int) sldPandoraSpeed->getValue();
+        newspeed = newspeed - (newspeed % 20);
+        if(changed_prefs.pandora_cpu_speed != newspeed)
         {
-            int newspeed = (int) sldPandoraSpeed->getValue();
-            newspeed = newspeed - (newspeed % 20);
-            if(changed_prefs.pandora_cpu_speed != newspeed)
-            {
-                changed_prefs.pandora_cpu_speed = newspeed;
-                RefreshPanelMisc();
-            }
+          changed_prefs.pandora_cpu_speed = newspeed;
+          RefreshPanelMisc();
         }
+      }
 #endif
 
 #ifdef RASPBERRY
-        else if (actionEvent.getSource() == cboKBDLed_num)
-	        changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
+      else if (actionEvent.getSource() == cboKBDLed_num)
+        changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
 
-        else if (actionEvent.getSource() == cboKBDLed_scr)
-			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
+      else if (actionEvent.getSource() == cboKBDLed_scr)
+  			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
 #endif
     }
 };
@@ -162,64 +169,68 @@ MiscActionListener* miscActionListener;
 
 void InitPanelMisc(const struct _ConfigCategory& category)
 {
-    miscActionListener = new MiscActionListener();
+  miscActionListener = new MiscActionListener();
 
-    chkStatusLine = new gcn::UaeCheckBox("Status Line");
-    chkStatusLine->setId("StatusLine");
-    chkStatusLine->addActionListener(miscActionListener);
+	chkStatusLine = new gcn::UaeCheckBox("Status Line");
+	chkStatusLine->setId("StatusLine");
+  chkStatusLine->addActionListener(miscActionListener);
 
-    chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
-    chkHideIdleLed->setId("HideIdle");
-    chkHideIdleLed->addActionListener(miscActionListener);
+	chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
+	chkHideIdleLed->setId("HideIdle");
+  chkHideIdleLed->addActionListener(miscActionListener);
 
-    chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
-    chkShowGUI->setId("ShowGUI");
-    chkShowGUI->addActionListener(miscActionListener);
+	chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
+	chkShowGUI->setId("ShowGUI");
+  chkShowGUI->addActionListener(miscActionListener);
 
-#ifdef PANDORA_SPECIFIC
-    lblPandoraSpeed = new gcn::Label("Pandora Speed:");
-    lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
-    lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
-    sldPandoraSpeed = new gcn::Slider(500, 1260);
-    sldPandoraSpeed->setSize(200, SLIDER_HEIGHT);
-    sldPandoraSpeed->setBaseColor(gui_baseCol);
-    sldPandoraSpeed->setMarkerLength(20);
-    sldPandoraSpeed->setStepLength(20);
-    sldPandoraSpeed->setId("PandSpeed");
-    sldPandoraSpeed->addActionListener(miscActionListener);
-    lblPandoraSpeedInfo = new gcn::Label("1000 MHz");
+#ifdef PANDORA
+	lblPandoraSpeed = new gcn::Label("Pandora Speed:");
+  lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
+  lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
+  sldPandoraSpeed = new gcn::Slider(500, 1260);
+  sldPandoraSpeed->setSize(200, SLIDER_HEIGHT);
+  sldPandoraSpeed->setBaseColor(gui_baseCol);
+	sldPandoraSpeed->setMarkerLength(20);
+	sldPandoraSpeed->setStepLength(20);
+	sldPandoraSpeed->setId("PandSpeed");
+  sldPandoraSpeed->addActionListener(miscActionListener);
+  lblPandoraSpeedInfo = new gcn::Label("1000 MHz");
 #endif
 
-    chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
-    chkBSDSocket->setId("BSDSocket");
-    chkBSDSocket->addActionListener(miscActionListener);
+	chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
+  chkBSDSocket->setId("BSDSocket");
+  chkBSDSocket->addActionListener(miscActionListener);
 
-    lblNumLock = new gcn::Label("NumLock LED:");
-    lblNumLock->setSize(100, LABEL_HEIGHT);
-    lblNumLock->setAlignment(gcn::Graphics::RIGHT);
-    cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
-    cboKBDLed_num->setSize(150, DROPDOWN_HEIGHT);
-    cboKBDLed_num->setBaseColor(gui_baseCol);
-    cboKBDLed_num->setId("numlock");
-    cboKBDLed_num->addActionListener(miscActionListener);
-//
-//    lblCapLock = new gcn::Label("CapsLock LED:");
-//    lblCapLock->setSize(100, LABEL_HEIGHT);
-//    lblCapLock->setAlignment(gcn::Graphics::RIGHT);
-//    cboKBDLed_cap = new gcn::UaeDropDown(&KBDLedList);
-//    cboKBDLed_cap->setSize(150, DROPDOWN_HEIGHT);
-//    cboKBDLed_cap->setBaseColor(gui_baseCol);
-//    cboKBDLed_cap->setId("capslock");
-//    cboKBDLed_cap->addActionListener(miscActionListener);
+	chkMasterWP = new gcn::UaeCheckBox("Master floppy write protection");
+  chkMasterWP->setId("MasterWP");
+  chkMasterWP->addActionListener(miscActionListener);
+  
+  lblNumLock = new gcn::Label("NumLock LED:");
+  lblNumLock->setSize(100, LABEL_HEIGHT);
+  lblNumLock->setAlignment(gcn::Graphics::RIGHT);
+  cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
+  cboKBDLed_num->setSize(150, DROPDOWN_HEIGHT);
+  cboKBDLed_num->setBaseColor(gui_baseCol);
+  cboKBDLed_num->setId("numlock");
+  cboKBDLed_num->addActionListener(miscActionListener);
 
-    lblScrLock = new gcn::Label("ScrollLock LED:");
-    lblScrLock->setSize(100, LABEL_HEIGHT);
-    lblScrLock->setAlignment(gcn::Graphics::RIGHT);
-    cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
-    cboKBDLed_scr->setSize(150, DROPDOWN_HEIGHT);
-    cboKBDLed_scr->setBaseColor(gui_baseCol);
-    cboKBDLed_scr->setId("scrolllock");
-    cboKBDLed_scr->addActionListener(miscActionListener);
+//  lblCapLock = new gcn::Label("CapsLock LED:");
+//  lblCapLock->setSize(100, LABEL_HEIGHT);
+//  lblCapLock->setAlignment(gcn::Graphics::RIGHT);
+//  cboKBDLed_cap = new gcn::UaeDropDown(&KBDLedList);
+//  cboKBDLed_cap->setSize(150, DROPDOWN_HEIGHT);
+//  cboKBDLed_cap->setBaseColor(gui_baseCol);
+//  cboKBDLed_cap->setId("capslock");
+//  cboKBDLed_cap->addActionListener(miscActionListener);
+
+  lblScrLock = new gcn::Label("ScrollLock LED:");
+  lblScrLock->setSize(100, LABEL_HEIGHT);
+  lblScrLock->setAlignment(gcn::Graphics::RIGHT);
+  cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
+  cboKBDLed_scr->setSize(150, DROPDOWN_HEIGHT);
+  cboKBDLed_scr->setBaseColor(gui_baseCol);
+  cboKBDLed_scr->setId("scrolllock");
+  cboKBDLed_scr->addActionListener(miscActionListener);
 
 	lblKeyForMenu = new gcn::Label("Menu Key:");
 	lblKeyForMenu->setSize(100, LABEL_HEIGHT);
@@ -258,24 +269,24 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	ButtonForQuit->addActionListener(miscActionListener);
 
 	int posY = DISTANCE_BORDER;
-	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
-	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkHideIdleLed, DISTANCE_BORDER, posY);
-	posY += chkHideIdleLed->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
-	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
-	
-#ifdef PANDORA_SPECIFIC
-	category.panel->add(lblPandoraSpeed, DISTANCE_BORDER, posY);
-	category.panel->add(sldPandoraSpeed, DISTANCE_BORDER + lblPandoraSpeed->getWidth() + 8, posY);
-	category.panel->add(lblPandoraSpeedInfo, sldPandoraSpeed->getX() + sldPandoraSpeed->getWidth() + 12, posY);
-	posY += sldPandoraSpeed->getHeight() + DISTANCE_NEXT_Y;
+  category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
+  posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
+  category.panel->add(chkHideIdleLed, DISTANCE_BORDER, posY);
+  posY += chkHideIdleLed->getHeight() + DISTANCE_NEXT_Y;
+  category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
+  posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
+#ifdef PANDORA
+  category.panel->add(lblPandoraSpeed, DISTANCE_BORDER, posY);
+  category.panel->add(sldPandoraSpeed, DISTANCE_BORDER + lblPandoraSpeed->getWidth() + 8, posY);
+  category.panel->add(lblPandoraSpeedInfo, sldPandoraSpeed->getX() + sldPandoraSpeed->getWidth() + 12, posY);
+  posY += sldPandoraSpeed->getHeight() + DISTANCE_NEXT_Y;
 #endif
-	
-	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
-	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
+  category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
+  posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
+  category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
+  posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
 
-    category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
+  category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
 	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);
 	
 //  category.panel->add(lblCapLock, lblNumLock->getX() + lblNumLock->getWidth() + DISTANCE_NEXT_X, posY);
@@ -284,7 +295,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
 		
-    posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
+  posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblKeyForMenu, DISTANCE_BORDER, posY);
 	category.panel->add(KeyForMenu, DISTANCE_BORDER + lblKeyForMenu->getWidth() + 8, posY);
@@ -299,32 +310,32 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	
 	category.panel->add(lblButtonForQuit, ButtonForMenu->getX() + ButtonForMenu->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(ButtonForQuit, lblButtonForQuit->getX() + lblButtonForQuit->getWidth() + 8, posY);
-	
-    RefreshPanelMisc();
+  
+  RefreshPanelMisc();
 }
 
 
 void ExitPanelMisc(void)
 {
-    delete chkStatusLine;
-    delete chkHideIdleLed;
-    delete chkShowGUI;
-#ifdef PANDORA_SPECIFIC
-    delete lblPandoraSpeed;
-    delete sldPandoraSpeed;
-    delete lblPandoraSpeedInfo;
+  delete chkStatusLine;
+  delete chkHideIdleLed;
+  delete chkShowGUI;
+#ifdef PANDORA
+  delete lblPandoraSpeed;
+  delete sldPandoraSpeed;
+  delete lblPandoraSpeedInfo;
 #endif
-    delete chkBSDSocket;
-
+  delete chkBSDSocket;
+  delete chkMasterWP;
 #ifdef RASPBERRY
-    delete lblCapLock;
-    delete lblScrLock;
-    delete lblNumLock;
-    delete cboKBDLed_num;
-    delete cboKBDLed_cap;
-    delete cboKBDLed_scr;
+  delete lblCapLock;
+  delete lblScrLock;
+  delete lblNumLock;
+  delete cboKBDLed_num;
+  delete cboKBDLed_cap;
+  delete cboKBDLed_scr;
 #endif
-    delete miscActionListener;
+  delete miscActionListener;
 	delete lblKeyForMenu;
 	delete KeyForMenu;
 	delete lblKeyForQuit;
@@ -338,18 +349,21 @@ void ExitPanelMisc(void)
 
 void RefreshPanelMisc(void)
 {
-    char tmp[20];
+  char tmp[20];
 
-    chkStatusLine->setSelected(changed_prefs.leds_on_screen);
-    chkHideIdleLed->setSelected(changed_prefs.pandora_hide_idle_led);
-    chkShowGUI->setSelected(changed_prefs.start_gui);
-#ifdef PANDORA_SPECIFIC
-    sldPandoraSpeed->setValue(changed_prefs.pandora_cpu_speed);
-    snprintf(tmp, 20, "%d MHz", changed_prefs.pandora_cpu_speed);
-    lblPandoraSpeedInfo->setCaption(tmp);
+  chkStatusLine->setSelected(changed_prefs.leds_on_screen);
+  chkHideIdleLed->setSelected(changed_prefs.pandora_hide_idle_led);
+  chkShowGUI->setSelected(changed_prefs.start_gui);
+
+#ifdef PANDORA
+  sldPandoraSpeed->setValue(changed_prefs.pandora_cpu_speed);
+  snprintf(tmp, 20, "%d MHz", changed_prefs.pandora_cpu_speed);
+  lblPandoraSpeedInfo->setCaption(tmp);
 #endif
+  
+  chkBSDSocket->setSelected(changed_prefs.socket_emu);
+  chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 
-    chkBSDSocket->setSelected(changed_prefs.socket_emu);
 #ifdef RASPBERRY
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
@@ -358,4 +372,26 @@ void RefreshPanelMisc(void)
 	KeyForQuit->setSelected(GetControlKeyIndex(changed_prefs.key_for_quit));
 	ButtonForMenu->setSelected(GetControlButtonIndex(changed_prefs.button_for_menu));
 	ButtonForQuit->setSelected(GetControlButtonIndex(changed_prefs.button_for_quit));
+}
+
+
+bool HelpPanelMisc(std::vector<std::string> &helptext)
+{
+  helptext.clear();
+  helptext.push_back("\"Status Line\" shows/hides the status line indicator. During emulation, you can show/hide this by pressing left");
+  helptext.push_back("shoulder and 'd'. The first value in the status line shows the idle time of the Pandora CPU in %, the second value");
+  helptext.push_back("is the current frame rate. When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and");
+  helptext.push_back("write (red) access to the HDD. The next values are showing the track number for each disk drive and indicates");
+  helptext.push_back("disk access.");
+  helptext.push_back("");
+  helptext.push_back("When you deactivate the option \"Show GUI on startup\" and use this configuration by specifying it with the");
+  helptext.push_back("command line parameter \"-config=<file>\", the emulation starts directly without showing the GUI.");
+  helptext.push_back("");
+  helptext.push_back("Set the speed for the Pandora CPU to overclock it for games which need more power. Be careful with this");
+  helptext.push_back("parameter.");
+  helptext.push_back("");
+  helptext.push_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
+  helptext.push_back("");
+  helptext.push_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
+  return true;
 }

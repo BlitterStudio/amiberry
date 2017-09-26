@@ -17,20 +17,23 @@
 #include "statusline.h"
 
 extern SDL_Surface *prSDLScreen;
-extern int idletime_percent;
 
 /*
  * Some code to put status information on the screen.
  */
 
-static const char *numbers = { /* ugly  0123456789CHD%+- */
-"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------"
-"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------"
-"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--"
-"+x+-+x+---+x+-+xxxxx++xxxxx++xxxxx++xxxxx++xxxxx+--++x+-+xxxxx++xxxxx++x+----+xxxx+-+x++x+----+x+--+xxx+--+xxx+-"
-"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--"
-"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------"
-"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------"
+#define HDLED_OFF		0
+#define HDLED_READ		1
+#define HDLED_WRITE		2
+
+static const char *numbers = { /* ugly  0123456789CHD%+-P */
+	"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------+++++++"
+	"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------+xxxxx+"
+	"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--+x---x+"
+	"+x+-+x+---+x+-+xxxxx++xxxxx++xxxxx++xxxxx++xxxxx+--++x+-+xxxxx++xxxxx++x+----+xxxx+-+x++x+----+x+--+xxx+--+xxx+-+xxxxx+"
+	"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--+x+++++"
+	"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------+x+----"
+	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----"
 };
 
 STATIC_INLINE void putpixel (uae_u8 *buf, int x, xcolnr c8)
@@ -69,7 +72,7 @@ void draw_status_line_single (uae_u8 *buf, int y, int totalwidth)
   if(picasso_on)
     memset (buf + (x - 4) * 2, 0, (prSDLScreen->w - x + 4) * 2);
   else
-    memset (buf + (x - 4) * gfxvidinfo.pixbytes, 0, (gfxvidinfo.outwidth - x + 4) * gfxvidinfo.pixbytes);
+    memset (buf + (x - 4) * gfxvidinfo.drawbuffer.pixbytes, 0, (gfxvidinfo.drawbuffer.outwidth - x + 4) * gfxvidinfo.drawbuffer.pixbytes);
 
 	for (led = (currprefs.pandora_hide_idle_led == 0) ? -2 : -1; led < (currprefs.nr_floppies+1); led++) {
 		int num1 = -1, num2 = -1, num3 = -1;
@@ -89,7 +92,9 @@ void draw_status_line_single (uae_u8 *buf, int y, int totalwidth)
 		    on_rgb = 0xc00;
 		} else if (led < -1) {
 			/* Idle time */
-			int track = idletime_percent;
+			int track = ((1000 - gui_data.idle) + 5) / 10;
+			if(track < 0)
+			  track = 0;
 			num1 = track / 100;
 			num2 = (track - num1 * 100) / 10;
 			num3 = track % 10;
@@ -98,7 +103,7 @@ void draw_status_line_single (uae_u8 *buf, int y, int totalwidth)
 			off_rgb = 0x666;
 		} else if (led < 0) {
 			/* Power */
-			int track = gui_data.fps;
+			int track = (gui_data.fps + 5) / 10;
 			num1 = track / 100;
 			num2 = (track - num1 * 100) / 10;
 			num3 = track % 10;
@@ -107,9 +112,9 @@ void draw_status_line_single (uae_u8 *buf, int y, int totalwidth)
 			off_rgb = 0x300;
 			if(gui_data.cpu_halted) {
 			  on = 1;
-			  num1 = -1;
-			  num2 = 11;
-			  num3 = gui_data.cpu_halted;
+				num1 = gui_data.cpu_halted >= 10 ? 11 : -1;
+				num2 = gui_data.cpu_halted >= 10 ? gui_data.cpu_halted / 10 : 11;
+				num3 = gui_data.cpu_halted % 10;
 			}
 		} else {
 			/* Hard disk */

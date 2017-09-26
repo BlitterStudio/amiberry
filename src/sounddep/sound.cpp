@@ -23,7 +23,7 @@
 #include "custom.h"
 #include "audio.h"
 #include "gensound.h"
-#include "sd-pandora/sound.h"
+#include "sounddep/sound.h"
 #include "savestate.h"
 
 
@@ -260,6 +260,8 @@ int setup_sound (void)
 
 static int open_sound (void)
 {
+  config_changed = 1;
+  
   if (pandora_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
 	    return 0;
 
@@ -276,6 +278,8 @@ static int open_sound (void)
 
 void close_sound (void)
 {
+  config_changed = 1;
+
   if (!have_sound)
 	  return;
 
@@ -314,4 +318,5 @@ void reset_sound (void)
 
 void sound_volume (int dir)
 {
+  config_changed = 1;
 }
