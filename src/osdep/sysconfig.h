@@ -30,7 +30,9 @@
 #define CD32 /* CD32 emulation */
 /* #define CDTV */ /* CDTV emulation */
 /* #define PARALLEL_PORT */ /* parallel port emulation */
+/* #define PARALLEL_DIRECT */ /* direct parallel port emulation */
 /* #define SERIAL_PORT */ /* serial port emulation */
+/* #define SERIAL_ENET */ /* serial port UDP transport */
 /* #define SCSIEMU */ /* uaescsi.device emulation */
 /* #define UAESERIAL */ /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
@@ -66,11 +68,26 @@
 /* #define LOGITECHLCD */ /* Logitech G15 LCD */
 #define SAVESTATE /* State file support */
 /* #define A2091 */ /* A590/A2091 SCSI */
-/* #define NCR */ /* A4000T/A4091 SCSI */
+/* #define A2065 */ /* A2065 Ethernet card */
+/* #define GFXBOARD */ /* Hardware graphics board */
+/* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */
+/* #define NCR9X */ /* 53C9X SCSI */
 /* #define SANA2 */ /* SANA2 network driver */
 /* #define AMAX */ /* A-Max ROM adapater emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
-/* #define INPUT_RECORDER */ /* Use input recoder */
+/* #define WITH_CHD */
+/* #define WITH_LUA */ /* lua scripting */
+/* #define WITH_UAENATIVE */
+/* #define WITH_SLIRP */
+/* #define WITH_BUILTIN_SLIRP */
+/* #define WITH_TABLETLIBRARY */
+/* #define WITH_UAENET_PCAP */
+/* #define WITH_PPC */
+/* #define WITH_QEMU_CPU */
+/* #define WITH_TOCCATA */
+/* #define WITH_PCI */
+/* #define WITH_X86 */
+
 /* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
 /* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
 /* #define ADDRESS_SPACE_24BIT */
@@ -93,6 +110,8 @@
 #undef OPENGL
 #undef D3D
 #endif
+
+#include <stdint.h>
 
 #define SIZEOF_VOID_P 4
 
@@ -205,7 +224,7 @@ typedef long uae_atomic;
 
 /* Define if statfs takes 2 args and struct statfs has a field named f_bsize.
    [4.3BSD, SunOS 4, HP-UX, AIX PS/2]  */
-//#define STAT_STATFS2_BSIZE 1
+/* #define STAT_STATFS2_BSIZE 1 */
 
 /* Define if statfs takes 2 args and struct statfs has a field named f_fsize.
    [4.4BSD, NetBSD]  */
@@ -219,7 +238,7 @@ typedef long uae_atomic;
 /* #undef STAT_STATFS4 */
 
 /* Define if there is a function named statvfs.  [SVR4]  */
- #define STAT_STATVFS 
+#define STAT_STATVFS
 
 /* Define if the block counts reported by statfs may be truncated to 2GB
    and the correct values may be stored in the f_spare array.
@@ -310,9 +329,6 @@ typedef long uae_atomic;
 
 /* Define if you have the select function.  */
 #define HAVE_SELECT 1
-
-/* Define if you have the setitimer function.  */
-#define HAVE_SETITIMER 1
 
 /* Define if you have the sigaction function.  */
 #define HAVE_SIGACTION 1
@@ -481,6 +497,9 @@ typedef long uae_atomic;
 
 #define FSDB_DIR_SEPARATOR '/'
 #define FSDB_DIR_SEPARATOR_S "/"
+
+/* Define to 1 if `S_un' is a member of `struct in_addr'. */
+/* #un#def HAVE_STRUCT_IN_ADDR_S_UN */
 
 #ifdef _GCCRES_
 #undef _GCCRES_

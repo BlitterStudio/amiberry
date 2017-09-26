@@ -67,6 +67,12 @@
 #define NOBLITTER_BLIT 0
 #define NOBLITTER_ALL 0
 
+#ifdef RASPBERRY
+static const int defaultHz = 50;
+#else
+static const int defaultHz = 60;
+#endif
+
 static int picasso96_BT = BT_uaegfx;
 static int picasso96_GCT = GCT_Unknown;
 static int picasso96_PCT = PCT_Unknown;
@@ -178,113 +184,110 @@ STATIC_INLINE void endianswap(uae_u32 *vp, int bpp)
 /*
 * Debugging dumps
 */
-static void DumpModeInfoStructure(uaecptr amigamodeinfoptr)
+static void DumpModeInfoStructure(TrapContext *ctx, uaecptr amigamodeinfoptr)
 {
 	write_log (_T("ModeInfo Structure Dump:\n"));
-	write_log (_T("  Node.ln_Succ  = 0x%x\n"), get_long (amigamodeinfoptr));
-	write_log (_T("  Node.ln_Pred  = 0x%x\n"), get_long (amigamodeinfoptr + 4));
-	write_log (_T("  Node.ln_Type  = 0x%x\n"), get_byte (amigamodeinfoptr + 8));
-	write_log (_T("  Node.ln_Pri   = %d\n"), get_byte (amigamodeinfoptr + 9));
-/*write_log (_T("  Node.ln_Name  = %s\n"), uaememptr->Node.ln_Name); */
-	write_log (_T("  OpenCount     = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_OpenCount));
-	write_log (_T("  Active        = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_Active));
-	write_log (_T("  Width         = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_Width));
-	write_log (_T("  Height        = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_Height));
-	write_log (_T("  Depth         = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_Depth));
-	write_log (_T("  Flags         = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_Flags));
-	write_log (_T("  HorTotal      = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_HorTotal));
-	write_log (_T("  HorBlankSize  = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_HorBlankSize));
-	write_log (_T("  HorSyncStart  = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_HorSyncStart));
-	write_log (_T("  HorSyncSize   = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_HorSyncSize));
-	write_log (_T("  HorSyncSkew   = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_HorSyncSkew));
-	write_log (_T("  HorEnableSkew = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_HorEnableSkew));
-	write_log (_T("  VerTotal      = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_VerTotal));
-	write_log (_T("  VerBlankSize  = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_VerBlankSize));
-	write_log (_T("  VerSyncStart  = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_VerSyncStart));
-	write_log (_T("  VerSyncSize   = %d\n"), get_word (amigamodeinfoptr + PSSO_ModeInfo_VerSyncSize));
-	write_log (_T("  Clock         = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_first_union));
-	write_log (_T("  ClockDivide   = %d\n"), get_byte (amigamodeinfoptr + PSSO_ModeInfo_second_union));
-	write_log (_T("  PixelClock    = %d\n"), get_long (amigamodeinfoptr + PSSO_ModeInfo_PixelClock));
+	write_log (_T("  Node.ln_Succ  = 0x%x\n"), trap_get_long(ctx, amigamodeinfoptr));
+	write_log (_T("  Node.ln_Pred  = 0x%x\n"), trap_get_long(ctx, amigamodeinfoptr + 4));
+	write_log (_T("  Node.ln_Type  = 0x%x\n"), trap_get_byte(ctx, amigamodeinfoptr + 8));
+	write_log (_T("  Node.ln_Pri   = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + 9));
+	/*write_log (_T("  Node.ln_Name  = %s\n"), uaememptr->Node.ln_Name); */
+	write_log (_T("  OpenCount     = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_OpenCount));
+	write_log (_T("  Active        = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_Active));
+	write_log (_T("  Width         = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_Width));
+	write_log (_T("  Height        = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_Height));
+	write_log (_T("  Depth         = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_Depth));
+	write_log (_T("  Flags         = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_Flags));
+	write_log (_T("  HorTotal      = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorTotal));
+	write_log (_T("  HorBlankSize  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorBlankSize));
+	write_log (_T("  HorSyncStart  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorSyncStart));
+	write_log (_T("  HorSyncSize   = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorSyncSize));
+	write_log (_T("  HorSyncSkew   = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorSyncSkew));
+	write_log (_T("  HorEnableSkew = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorEnableSkew));
+	write_log (_T("  VerTotal      = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerTotal));
+	write_log (_T("  VerBlankSize  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerBlankSize));
+	write_log (_T("  VerSyncStart  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerSyncStart));
+	write_log (_T("  VerSyncSize   = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerSyncSize));
+	write_log (_T("  Clock         = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_first_union));
+	write_log (_T("  ClockDivide   = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_second_union));
+	write_log (_T("  PixelClock    = %d\n"), trap_get_long(ctx, amigamodeinfoptr + PSSO_ModeInfo_PixelClock));
 }
 
-static void DumpLibResolutionStructure(uaecptr amigalibresptr)
+static void DumpLibResolutionStructure(TrapContext *ctx, uaecptr amigalibresptr)
 {
-	int i;
-	uaecptr amigamodeinfoptr;
-	struct LibResolution* uaememptr = (struct LibResolution *)get_mem_bank(amigalibresptr).xlateaddr(amigalibresptr);
+  int i;
+  uaecptr amigamodeinfoptr;
+  struct LibResolution *uaememptr = (struct LibResolution *)get_mem_bank(amigalibresptr).xlateaddr(amigalibresptr);
 
 	write_log (_T("LibResolution Structure Dump:\n"));
 
-	if (get_long(amigalibresptr + PSSO_LibResolution_DisplayID) == 0xFFFFFFFF)
-	{
+	if (trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_DisplayID) == 0xFFFFFFFF) {
 		write_log (_T("  Finished With LibResolutions...\n"));
-	}
-	else
-	{
+  } else {
 		write_log (_T("  Name      = %s\n"), uaememptr->P96ID);
-		write_log (_T("  DisplayID = 0x%x\n"), get_long (amigalibresptr + PSSO_LibResolution_DisplayID));
-		write_log (_T("  Width     = %d\n"), get_word (amigalibresptr + PSSO_LibResolution_Width));
-		write_log (_T("  Height    = %d\n"), get_word (amigalibresptr + PSSO_LibResolution_Height));
-		write_log (_T("  Flags     = %d\n"), get_word (amigalibresptr + PSSO_LibResolution_Flags));
-		for (i = 0; i < MAXMODES; i++)
-		{
-			amigamodeinfoptr = get_long(amigalibresptr + PSSO_LibResolution_Modes + i * 4);
+		write_log (_T("  DisplayID = 0x%x\n"), trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_DisplayID));
+		write_log (_T("  Width     = %d\n"), trap_get_word(ctx, amigalibresptr + PSSO_LibResolution_Width));
+		write_log (_T("  Height    = %d\n"), trap_get_word(ctx, amigalibresptr + PSSO_LibResolution_Height));
+		write_log (_T("  Flags     = %d\n"), trap_get_word(ctx, amigalibresptr + PSSO_LibResolution_Flags));
+  	for (i = 0; i < MAXMODES; i++) {
+			amigamodeinfoptr = trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_Modes + i*4);
 			write_log (_T("  ModeInfo[%d] = 0x%x\n"), i, amigamodeinfoptr);
-			if (amigamodeinfoptr)
-				DumpModeInfoStructure(amigamodeinfoptr);
-		}
-		write_log (_T("  BoardInfo = 0x%x\n"), get_long (amigalibresptr + PSSO_LibResolution_BoardInfo));
-	}
+	    if (amigamodeinfoptr)
+				DumpModeInfoStructure(ctx, amigamodeinfoptr);
+	  }
+		write_log (_T("  BoardInfo = 0x%x\n"), trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_BoardInfo));
+  }
 }
 
-static TCHAR binary_byte[9] = {0,0,0,0,0,0,0,0,0};
+static TCHAR binary_byte[9] = { 0,0,0,0,0,0,0,0,0 };
 
-static TCHAR* BuildBinaryString(uae_u8 value)
+static TCHAR *BuildBinaryString (uae_u8 value)
 {
-	int i;
-	for (i = 0; i < 8; i++)
-	{
-		binary_byte[i] = (value & (1 << (7 - i))) ? '#' : '.';
-	}
-	return binary_byte;
+  int i;
+  for (i = 0; i < 8; i++) {
+  	binary_byte[i] = (value & (1 << (7 - i))) ? '#' : '.';
+  }
+  return binary_byte;
 }
 
-static void DumpPattern(struct Pattern* patt)
+static void DumpPattern (struct Pattern *patt)
 {
-	uae_u8* mem;
-	int row, col;
-	for (row = 0; row < (1 << patt->Size); row++)
-	{
-		mem = patt->Memory + row * 2;
-		for (col = 0; col < 2; col++)
-		{
+  uae_u8 *mem;
+  int row, col;
+
+	if (!patt->Memory)
+		return;
+
+  for (row = 0; row < (1 << patt->Size); row++) {
+  	mem = patt->Memory + row * 2;
+  	for (col = 0; col < 2; col++) {
 			write_log (_T("%s "), BuildBinaryString (*mem++));
-		}
+  	}
 		write_log (_T("\n"));
-	}
+  }
 }
 
-static void DumpTemplate(struct Template* tmp, unsigned long w, unsigned long h)
+static void DumpTemplate (struct Template *tmp, unsigned long w, unsigned long h)
 {
-	uae_u8* mem = tmp->Memory;
-	unsigned int row, col, width;
-	width = (w + 7) >> 3;
+	uae_u8 *mem = tmp->Memory;
+  unsigned int row, col, width;
+
+	if (!mem)
+		return;
+  width = (w + 7) >> 3;
 	write_log (_T("xoffset = %d, bpr = %d\n"), tmp->XOffset, tmp->BytesPerRow);
-	for (row = 0; row < h; row++)
-	{
+  for (row = 0; row < h; row++) {
 		mem = tmp->Memory + row * tmp->BytesPerRow;
-		for (col = 0; col < width; col++)
-		{
+  	for (col = 0; col < width; col++) {
 			write_log (_T("%s "), BuildBinaryString (*mem++));
-		}
+  	}
 		write_log (_T("\n"));
-	}
+  }
 }
 
-static void DumpLine(struct Line* line)
+static void DumpLine(struct Line *line)
 {
-	if (line)
-	{
+  if (line) {
 		write_log (_T("Line->X = %d\n"), line->X);
 		write_log (_T("Line->Y = %d\n"), line->Y);
 		write_log (_T("Line->Length = %d\n"), line->Length);
@@ -301,51 +304,50 @@ static void DumpLine(struct Line* line)
 		write_log (_T("Line->DrawMode = %d\n"), line->DrawMode);
 		write_log (_T("Line->Xorigin = %d\n"), line->Xorigin);
 		write_log (_T("Line->Yorigin = %d\n"), line->Yorigin);
-	}
+  }
 }
 
-static void ShowSupportedResolutions(void)
+static void ShowSupportedResolutions (void)
 {
-	int i = 0;
+  int i = 0;
 
 	write_log (_T("-----------------\n"));
-	while (newmodes[i].depth >= 0)
-	{
+  while (newmodes[i].depth >= 0) {
 		write_log (_T("%s\n"), newmodes[i].name);
-		i++;
-	}
+    	i++;
+  }
 	write_log (_T("-----------------\n"));
 }
 
 #endif
 
-extern uae_u8* natmem_offset;
+extern uae_u8 *natmem_offset;
 
-static uae_u8 GetBytesPerPixel(uae_u32 RGBfmt)
+static uae_u8 GetBytesPerPixel (uae_u32 RGBfmt)
 {
-	switch (RGBfmt)
-	{
-	case RGBFB_CLUT:
-		return 1;
+  switch (RGBfmt) 
+  {
+  case RGBFB_CLUT:
+  	return 1;
 
-	case RGBFB_A8R8G8B8:
-	case RGBFB_A8B8G8R8:
-	case RGBFB_R8G8B8A8:
-	case RGBFB_B8G8R8A8:
-		return 4;
+  case RGBFB_A8R8G8B8:
+  case RGBFB_A8B8G8R8:
+  case RGBFB_R8G8B8A8:
+  case RGBFB_B8G8R8A8:
+  	return 4;
 
-	case RGBFB_B8G8R8:
-	case RGBFB_R8G8B8:
-		return 3;
+  case RGBFB_B8G8R8:
+  case RGBFB_R8G8B8:
+  	return 3;
 
-	case RGBFB_R5G5B5:
-	case RGBFB_R5G6B5:
-	case RGBFB_R5G6B5PC:
-	case RGBFB_R5G5B5PC:
-	case RGBFB_B5G6R5PC:
-	case RGBFB_B5G5R5PC:
-		return 2;
-	}
+  case RGBFB_R5G5B5:
+  case RGBFB_R5G6B5:
+  case RGBFB_R5G6B5PC:
+  case RGBFB_R5G5B5PC:
+  case RGBFB_B5G6R5PC:
+  case RGBFB_B5G5R5PC:
+  	return 2;
+  }
 	return 0;
 }
 
@@ -358,7 +360,7 @@ STATIC_INLINE bool validatecoords2(TrapContext *ctx, struct RenderInfo *ri, uae_
 	if (!Width || !Height)
 		return true;
 	if (ri) {
-		int bpp = GetBytesPerPixel(ri->RGBFormat);
+		int bpp = GetBytesPerPixel (ri->RGBFormat);
 		if (X * bpp >= ri->BytesPerRow)
 			return false;
 		uae_u32 X2 = X + Width;
@@ -376,7 +378,7 @@ static bool validatecoords(TrapContext *ctx, struct RenderInfo *ri, uae_u32 *X, 
 {
 	if (validatecoords2(ctx, ri, X, Y, Width, Height))
 		return true;
-	write_log(_T("RTG invalid region: %08X:%d:%d (%dx%d)-(%dx%d)\n"), ri->AMemory, ri->BytesPerRow, ri->RGBFormat, *X, *Y, *Width, *Height);
+	write_log (_T("RTG invalid region: %08X:%d:%d (%dx%d)-(%dx%d)\n"), ri->AMemory, ri->BytesPerRow, ri->RGBFormat, *X, *Y, *Width, *Height);
 	return false;
 }
 
@@ -389,22 +391,22 @@ static int CopyRenderInfoStructureA2U(TrapContext *ctx, uaecptr amigamemptr, str
 	if (trap_valid_address(ctx, amigamemptr, PSSO_RenderInfo_sizeof)) {
 		struct trapmd md[] =
 		{
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_RenderInfo_Memory } },
-			{ TRAPCMD_GET_WORD,{ amigamemptr + PSSO_RenderInfo_BytesPerRow } },
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_RenderInfo_RGBFormat } }
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_RenderInfo_Memory } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_RenderInfo_BytesPerRow } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_RenderInfo_RGBFormat } }
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		uaecptr memp = md[0].params[0];
 		ri->AMemory = memp;
-		ri->Memory = get_real_address(memp);
+  	ri->Memory = get_real_address (memp);
 		ri->BytesPerRow = md[1].params[0];
 		ri->RGBFormat = (RGBFTYPE)md[2].params[0];
 		// Can't really validate this better at this point, no height.
 		if (trap_valid_address(ctx, memp, ri->BytesPerRow))
-			return 1;
-	}
-	write_log(_T("ERROR - Invalid RenderInfo memory area...\n"));
-	return 0;
+  	  return 1;
+  }
+	write_log (_T("ERROR - Invalid RenderInfo memory area...\n"));
+  return 0;
 }
 
 static int CopyPatternStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struct Pattern *pattern)
@@ -412,17 +414,17 @@ static int CopyPatternStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struct
 	if (trap_valid_address(ctx, amigamemptr, PSSO_Pattern_sizeof)) {
 		struct trapmd md[] =
 		{
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_Pattern_Memory } },
-			{ TRAPCMD_GET_WORD,{ amigamemptr + PSSO_Pattern_XOffset } },
-			{ TRAPCMD_GET_WORD,{ amigamemptr + PSSO_Pattern_YOffset } },
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_Pattern_FgPen } },
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_Pattern_BgPen } },
-			{ TRAPCMD_GET_BYTE,{ amigamemptr + PSSO_Pattern_Size } },
-			{ TRAPCMD_GET_BYTE,{ amigamemptr + PSSO_Pattern_DrawMode } }
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Pattern_Memory } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_Pattern_XOffset } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_Pattern_YOffset } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Pattern_FgPen } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Pattern_BgPen } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Pattern_Size } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Pattern_DrawMode } }
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		uaecptr memp = md[0].params[0];
-		pattern->Memory = get_real_address(memp);
+  	pattern->Memory = get_real_address (memp);
 		pattern->AMemory = memp;
 		pattern->XOffset = md[1].params[0];
 		pattern->YOffset = md[2].params[0];
@@ -431,59 +433,59 @@ static int CopyPatternStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struct
 		pattern->Size = md[5].params[0];
 		pattern->DrawMode = md[6].params[0];
 		if (trap_valid_address(ctx, memp, 2))
-			return 1;
-	}
-	write_log(_T("ERROR - Invalid Pattern memory area...\n"));
-	return 0;
+  	  return 1;
+  }
+	write_log (_T("ERROR - Invalid Pattern memory area...\n"));
+  return 0;
 }
 
 static int CopyBitMapStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struct BitMap *bm)
 {
-	int i;
+  int i;
 
 	struct trapmd md[] =
 	{
-		{ TRAPCMD_GET_WORD,{ amigamemptr + PSSO_BitMap_BytesPerRow } },
-		{ TRAPCMD_GET_WORD,{ amigamemptr + PSSO_BitMap_Rows } },
-		{ TRAPCMD_GET_BYTE,{ amigamemptr + PSSO_BitMap_Flags } },
-		{ TRAPCMD_GET_BYTE,{ amigamemptr + PSSO_BitMap_Depth } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 0 } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 4 } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 8 } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 12 } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 16 } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 20 } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 24 } },
-		{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_BitMap_Planes + 28 } }
+		{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_BitMap_BytesPerRow } },
+		{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_BitMap_Rows } },
+		{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_BitMap_Flags } },
+		{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_BitMap_Depth } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 0 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 4 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 8 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 12 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 16 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 20 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 24 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 28} }
 	};
 	trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 	bm->BytesPerRow = md[0].params[0];
 	bm->Rows = md[1].params[0];
 	bm->Flags = md[2].params[0];
 	bm->Depth = md[3].params[0];
+  
+  /* ARGH - why is THIS happening? */
+  if( bm->Depth > 8 )
+  	bm->Depth = 8;
 
-	/* ARGH - why is THIS happening? */
-	if (bm->Depth > 8)
-		bm->Depth = 8;
-
-	for (i = 0; i < bm->Depth; i++) {
+  for (i = 0; i < bm->Depth; i++) {
 		uaecptr plane = md[4 + i].params[0];
-		switch (plane) {
-		case 0:
-			bm->Planes[i] = &all_zeros_bitmap;
-			break;
-		case 0xFFFFFFFF:
-			bm->Planes[i] = &all_ones_bitmap;
-			break;
-		default:
-			if (trap_valid_address(ctx, plane, bm->BytesPerRow * bm->Rows))
-				bm->Planes[i] = get_real_address(plane);
-			else
+  	switch (plane) {
+  	case 0:
+	    bm->Planes[i] = &all_zeros_bitmap;
+	    break;
+  	case 0xFFFFFFFF:
+	    bm->Planes[i] = &all_ones_bitmap;
+	    break;
+  	default:
+	    if (trap_valid_address(ctx, plane, bm->BytesPerRow * bm->Rows))
+    		bm->Planes[i] = get_real_address (plane);
+	    else
 				bm->Planes[i] = &all_zeros_bitmap;
-			break;
-		}
-	}
-	return 1;
+	    break;
+  	}
+  }
+  return 1;
 }
 
 static int CopyTemplateStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struct Template *tmpl)
@@ -491,27 +493,27 @@ static int CopyTemplateStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struc
 	if (trap_valid_address(ctx, amigamemptr, PSSO_Template_sizeof)) {
 		struct trapmd md[] =
 		{
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_Template_Memory } },
-			{ TRAPCMD_GET_WORD,{ amigamemptr + PSSO_Template_BytesPerRow } },
-			{ TRAPCMD_GET_BYTE,{ amigamemptr + PSSO_Template_XOffset } },
-			{ TRAPCMD_GET_BYTE,{ amigamemptr + PSSO_Template_DrawMode } },
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_Template_FgPen } },
-			{ TRAPCMD_GET_LONG,{ amigamemptr + PSSO_Template_BgPen } }
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Template_Memory } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_Template_BytesPerRow } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Template_XOffset } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Template_DrawMode } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Template_FgPen } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Template_BgPen } }
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 
 		uaecptr memp = md[0].params[0];
-		tmpl->Memory = get_real_address(memp);
+  	tmpl->Memory = get_real_address (memp);
 		tmpl->AMemory = memp;
 		tmpl->BytesPerRow = md[1].params[0];
 		tmpl->XOffset = md[2].params[0];
 		tmpl->DrawMode = md[3].params[0];
 		tmpl->FgPen = md[4].params[0];
 		tmpl->BgPen = md[5].params[0];
-		return 1;
-	}
-	write_log(_T("ERROR - Invalid Template memory area...\n"));
-	return 0;
+  	return 1;
+  }
+  write_log (_T("ERROR - Invalid Template memory area...\n"));
+  return 0;
 }
 
 /* list is Amiga address of list, in correct endian format for UAE
@@ -527,85 +529,85 @@ static void AmigaListAddTail(TrapContext *ctx, uaecptr l, uaecptr n)
 /*
 * Fill a rectangle in the screen.
  */
-static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Width, int Height, uae_u32 Pen, int Bpp)
+static void do_fillrect_frame_buffer (struct RenderInfo *ri, int X, int Y, int Width, int Height, uae_u32 Pen, int Bpp)
 {
-	int cols;
-	uae_u8 *dst;
-	int lines;
-	int bpr = ri->BytesPerRow;
+  int cols;
+  uae_u8 *dst;
+  int lines;
+  int bpr = ri->BytesPerRow;
 
-	dst = ri->Memory + X * Bpp + Y * ri->BytesPerRow;
-	endianswap(&Pen, Bpp);
-	switch (Bpp)
-	{
+  dst = ri->Memory + X * Bpp + Y * ri->BytesPerRow;
+  endianswap (&Pen, Bpp);
+  switch (Bpp)
+  {
 	case 1:
-		for (lines = 0; lines < Height; lines++, dst += bpr) {
-			memset(dst, Pen, Width);
-		}
-		break;
+    for (lines = 0; lines < Height; lines++, dst += bpr) {
+  		memset (dst, Pen, Width);
+    }
+  	break;
 	case 2:
-		Pen |= Pen << 16;
-		for (lines = 0; lines < Height; lines++, dst += bpr) {
-			uae_u16 *dst16 = (uae_u16 *)dst;
-			int tmpwidth = Width;
-			if ((uintptr_t)dst16 & 3) {
-				*dst16++ = (uae_u16)Pen;
-				tmpwidth--;
-			}
-			uae_u32 *p = (uae_u32*)dst16;
-			for (cols = 0; cols < tmpwidth >> 1; cols++)
-				*p++ = Pen;
-			if (tmpwidth & 1)
-				((uae_u16*)p)[0] = (uae_u16)Pen;
-		}
-		break;
+    Pen |= Pen << 16;
+    for (lines = 0; lines < Height; lines++, dst += bpr) {
+      uae_u16 *dst16 = (uae_u16 *)dst;
+      int tmpwidth = Width;
+      if((uintptr_t)dst16 & 3) {
+        *dst16++ = (uae_u16)Pen;
+        tmpwidth--;
+      }
+  		uae_u32 *p = (uae_u32*)dst16;
+  		for (cols = 0; cols < tmpwidth >> 1; cols++)
+		    *p++ = Pen;
+  		if (tmpwidth & 1)
+		    ((uae_u16*)p)[0] = (uae_u16)Pen;
+    }
+    break;
 	case 3:
-		for (lines = 0; lines < Height; lines++, dst += bpr) {
-			uae_u8 *p = (uae_u8*)dst;
-			for (cols = 0; cols < Width; cols++) {
-				*p++ = Pen >> 0;
-				*p++ = Pen >> 8;
-				*p++ = Pen >> 16;
-			}
-		}
-		break;
+    for (lines = 0; lines < Height; lines++, dst += bpr) {
+  		uae_u8 *p = (uae_u8*)dst;
+  		for (cols = 0; cols < Width; cols++) {
+		    *p++ = Pen >> 0;
+		    *p++ = Pen >> 8;
+		    *p++ = Pen >> 16;
+  		}
+    }
+  	break;
 	case 4:
-		for (lines = 0; lines < Height; lines++, dst += bpr) {
-			uae_u32 *p = (uae_u32*)dst;
-			for (cols = 0; cols < Width; cols++)
-				*p++ = Pen;
-		}
-		break;
-	}
+    for (lines = 0; lines < Height; lines++, dst += bpr) {
+  		uae_u32 *p = (uae_u32*)dst;
+  		for (cols = 0; cols < Width; cols++)
+		    *p++ = Pen;
+    }
+  	break;
+  }
 }
 
 static int p96_framecnt;
-static int doskip(void)
+static int doskip (void)
 {
-	if (p96_framecnt > currprefs.gfx_framerate)
-		p96_framecnt = 0;
-	return p96_framecnt > 0;
+  if (p96_framecnt > currprefs.gfx_framerate)
+  	p96_framecnt = 0;
+  return p96_framecnt > 0;
 }
 
-void picasso_trigger_vblank(void)
+void picasso_trigger_vblank (void)
 {
 	TrapContext *ctx = NULL;
-	if (!ABI_interrupt || !uaegfx_base || !interrupt_enabled)
-		return;
+  if (!ABI_interrupt || !uaegfx_base || !interrupt_enabled)
+  	return;
 	trap_put_long(ctx, uaegfx_base + CARD_IRQPTR, ABI_interrupt + PSSO_BoardInfo_SoftInterrupt);
 	trap_put_byte(ctx, uaegfx_base + CARD_IRQFLAG, 1);
 }
 
-static bool rtg_render(void)
+static bool rtg_render (void)
 {
 	bool flushed = false;
 
-	if (!doskip())
-		flushed = picasso_flushpixels(gfxmem_banks[0]->start + natmem_offset, picasso96_state.XYOffset - gfxmem_banks[0]->start);
+	if (!doskip ())
+		flushed = picasso_flushpixels (gfxmem_banks[0]->start + natmem_offset, picasso96_state.XYOffset - gfxmem_banks[0]->start);
 
 	return flushed;
 }
-static void rtg_clear(void)
+static void rtg_clear (void)
 {
 }
 
@@ -614,181 +616,180 @@ static int set_panning_called = 0;
 
 enum {
 
-	/* DEST = RGBFB_B8G8R8A8,32 */
-	RGBFB_A8R8G8B8_32 = 1,
-	RGBFB_A8B8G8R8_32,
-	RGBFB_R8G8B8A8_32,
-	RGBFB_B8G8R8A8_32,
-	RGBFB_R8G8B8_32,
-	RGBFB_B8G8R8_32,
-	RGBFB_R5G6B5PC_32,
-	RGBFB_R5G5B5PC_32,
-	RGBFB_R5G6B5_32,
-	RGBFB_R5G5B5_32,
-	RGBFB_B5G6R5PC_32,
-	RGBFB_B5G5R5PC_32,
-	RGBFB_CLUT_RGBFB_32,
+  /* DEST = RGBFB_B8G8R8A8,32 */
+  RGBFB_A8R8G8B8_32 = 1,
+  RGBFB_A8B8G8R8_32,
+  RGBFB_R8G8B8A8_32,
+  RGBFB_B8G8R8A8_32,
+  RGBFB_R8G8B8_32,
+  RGBFB_B8G8R8_32,
+  RGBFB_R5G6B5PC_32,
+  RGBFB_R5G5B5PC_32,
+  RGBFB_R5G6B5_32,
+  RGBFB_R5G5B5_32,
+  RGBFB_B5G6R5PC_32,
+  RGBFB_B5G5R5PC_32,
+  RGBFB_CLUT_RGBFB_32,
 
-	/* DEST = RGBFB_R5G6B5PC,16 */
-	RGBFB_A8R8G8B8_16,
-	RGBFB_A8B8G8R8_16,
-	RGBFB_R8G8B8A8_16,
-	RGBFB_B8G8R8A8_16,
-	RGBFB_R8G8B8_16,
-	RGBFB_B8G8R8_16,
-	RGBFB_R5G6B5PC_16,
-	RGBFB_R5G5B5PC_16,
-	RGBFB_R5G6B5_16,
-	RGBFB_R5G5B5_16,
-	RGBFB_B5G6R5PC_16,
-	RGBFB_B5G5R5PC_16,
-	RGBFB_CLUT_RGBFB_16,
+  /* DEST = RGBFB_R5G6B5PC,16 */
+  RGBFB_A8R8G8B8_16,
+  RGBFB_A8B8G8R8_16,
+  RGBFB_R8G8B8A8_16,
+  RGBFB_B8G8R8A8_16,
+  RGBFB_R8G8B8_16,
+  RGBFB_B8G8R8_16,
+  RGBFB_R5G6B5PC_16,
+  RGBFB_R5G5B5PC_16,
+  RGBFB_R5G6B5_16,
+  RGBFB_R5G5B5_16,
+  RGBFB_B5G6R5PC_16,
+  RGBFB_B5G5R5PC_16,
+  RGBFB_CLUT_RGBFB_16,
 
-	/* DEST = RGBFB_CLUT,8 */
-	RGBFB_CLUT_8
+  /* DEST = RGBFB_CLUT,8 */
+  RGBFB_CLUT_8
 };
 
-static int getconvert(int rgbformat, int pixbytes)
+static int getconvert (int rgbformat, int pixbytes)
 {
 	int v = 0;
 	int d = pixbytes;
 
 	switch (rgbformat)
-	{
+  {
 	case RGBFB_CLUT:
-		if (d == 1)
-			v = RGBFB_CLUT_8;
-		else if (d == 2)
-			v = RGBFB_CLUT_RGBFB_16;
-		else if (d == 4)
-			v = RGBFB_CLUT_RGBFB_32;
-		break;
+  	if (d == 1)
+	    v = RGBFB_CLUT_8;
+  	else if (d == 2)
+	    v = RGBFB_CLUT_RGBFB_16;
+  	else if (d == 4)
+	    v = RGBFB_CLUT_RGBFB_32;
+  	break;
 
 	case RGBFB_B5G6R5PC:
-		if (d == 2)
-			v = RGBFB_B5G6R5PC_16;
-		else if (d == 4)
-			v = RGBFB_B5G6R5PC_32;
-		break;
+  	if (d == 2)
+	    v = RGBFB_B5G6R5PC_16;
+  	else if (d == 4)
+	    v = RGBFB_B5G6R5PC_32;
+  	break;
 	case RGBFB_R5G6B5PC:
-		if (d == 2)
-			v = RGBFB_R5G6B5PC_16;
-		else if (d == 4)
-			v = RGBFB_R5G6B5PC_32;
-		break;
+  	if (d == 2)
+	    v = RGBFB_R5G6B5PC_16;
+  	else if (d == 4)
+	    v = RGBFB_R5G6B5PC_32;
+  	break;
 
 	case RGBFB_R5G5B5PC:
-		if (d == 4)
-			v = RGBFB_R5G5B5PC_32;
-		else if (d == 2)
-			v = RGBFB_R5G5B5PC_16;
-		break;
+  	if (d == 4)
+	    v = RGBFB_R5G5B5PC_32;
+  	else if (d == 2)
+	    v = RGBFB_R5G5B5PC_16;
+  	break;
 	case RGBFB_R5G6B5:
-		if (d == 4)
-			v = RGBFB_R5G6B5_32;
-		else
-			v = RGBFB_R5G6B5_16;
-		break;
+  	if (d == 4)
+	    v = RGBFB_R5G6B5_32;
+  	else
+	    v = RGBFB_R5G6B5_16;
+  	break;
 	case RGBFB_R5G5B5:
-		if (d == 4)
-			v = RGBFB_R5G5B5_32;
-		else
-			v = RGBFB_R5G5B5_16;
-		break;
+  	if (d == 4)
+	    v = RGBFB_R5G5B5_32;
+  	else
+	    v = RGBFB_R5G5B5_16;
+  	break;
 	case RGBFB_B5G5R5PC:
-		if (d == 4)
-			v = RGBFB_B5G5R5PC_32;
-		else
-			v = RGBFB_B5G5R5PC_16;
-		break;
+  	if (d == 4)
+	    v = RGBFB_B5G5R5PC_32;
+  	else
+	    v = RGBFB_B5G5R5PC_16;
+  	break;
 
 	case RGBFB_A8R8G8B8:
-		if (d == 2)
-			v = RGBFB_A8R8G8B8_16;
-		else if (d == 4)
-			v = RGBFB_A8R8G8B8_32;
-		break;
+  	if (d == 2)
+	    v = RGBFB_A8R8G8B8_16;
+  	else if (d == 4)
+	    v = RGBFB_A8R8G8B8_32;
+  	break;
 	case RGBFB_R8G8B8:
-		if (d == 2)
-			v = RGBFB_R8G8B8_16;
-		else if (d == 4)
-			v = RGBFB_R8G8B8_32;
-		break;
+  	if (d == 2)
+	    v = RGBFB_R8G8B8_16;
+  	else if (d == 4)
+	    v = RGBFB_R8G8B8_32;
+  	break;
 	case RGBFB_B8G8R8:
-		if (d == 2)
-			v = RGBFB_B8G8R8_16;
-		else if (d == 4)
-			v = RGBFB_B8G8R8_32;
-		break;
+  	if (d == 2)
+	    v = RGBFB_B8G8R8_16;
+  	else if (d == 4)
+	    v = RGBFB_B8G8R8_32;
+  	break;
 	case RGBFB_A8B8G8R8:
-		if (d == 2)
-			v = RGBFB_A8B8G8R8_16;
-		else if (d == 4)
-			v = RGBFB_A8B8G8R8_32;
-		break;
+  	if (d == 2)
+	    v = RGBFB_A8B8G8R8_16;
+  	else if (d == 4)
+	    v = RGBFB_A8B8G8R8_32;
+  	break;
 	case RGBFB_B8G8R8A8:
-		if (d == 2)
-			v = RGBFB_B8G8R8A8_16;
-		else if (d == 4)
-			v = RGBFB_B8G8R8A8_32;
-		break;
+  	if (d == 2)
+	    v = RGBFB_B8G8R8A8_16;
+  	else if (d == 4)
+	    v = RGBFB_B8G8R8A8_32;
+  	break;
 	case RGBFB_R8G8B8A8:
-		if (d == 2)
-			v = RGBFB_R8G8B8A8_16;
-		else if (d == 4)
-			v = RGBFB_R8G8B8A8_32;
-		break;
-	}
-	return v;
+  	if (d == 2)
+	    v = RGBFB_R8G8B8A8_16;
+  	else if (d == 4)
+	    v = RGBFB_R8G8B8A8_32;
+  	break;
+    }
+  return v;
 }
 
 static void setconvert(void)
 {
 	static int ohost_mode, orgbformat;
 
-	picasso_convert = getconvert(picasso96_state.RGBFormat, picasso_vidinfo.pixbytes);
-	host_mode = GetSurfacePixelFormat();
-	picasso_palette(picasso96_state.CLUT);
+	picasso_convert = getconvert (picasso96_state.RGBFormat, picasso_vidinfo.pixbytes);
+  host_mode = GetSurfacePixelFormat();
+	picasso_palette (picasso96_state.CLUT);
 	if (host_mode != ohost_mode || picasso96_state.RGBFormat != orgbformat) {
-		write_log(_T("RTG conversion: Depth=%d HostRGBF=%d P96RGBF=%d Mode=%d\n"),
-			picasso_vidinfo.pixbytes, host_mode, picasso96_state.RGBFormat, picasso_convert);
+    write_log (_T("RTG conversion: Depth=%d HostRGBF=%d P96RGBF=%d Mode=%d\n"), 
+      picasso_vidinfo.pixbytes, host_mode, picasso96_state.RGBFormat, picasso_convert);
 		ohost_mode = host_mode;
 		orgbformat = picasso96_state.RGBFormat;
 	}
 }
 
-bool picasso_is_active(void)
+bool picasso_is_active (void)
 {
 	return picasso_active;
 }
 
 /* Clear our screen, since we've got a new Picasso screen-mode, and refresh with the proper contents
-* This is called on several occasions:
-* 1. Amiga-->Picasso transition, via SetSwitch()
-* 2. Picasso-->Picasso transition, via SetPanning().
-* 3. whenever the graphics code notifies us that the screen contents have been lost.
-*/
-void picasso_refresh(void)
+ * This is called on several occasions:
+ * 1. Amiga-->Picasso transition, via SetSwitch()
+ * 2. Picasso-->Picasso transition, via SetPanning().
+ * 3. whenever the graphics code notifies us that the screen contents have been lost.
+ */
+void picasso_refresh (void)
 {
-	struct RenderInfo ri;
+  struct RenderInfo ri;
 
-	if (!picasso_on)
-		return;
-	setconvert();
+  if (!picasso_on)
+  	return;
+  setconvert ();
 	rtg_clear();
 
-	/* Make sure that the first time we show a Picasso video mode, we don't blit any crap.
-	* We can do this by checking if we have an Address yet.
-	*/
-	if (picasso96_state.Address) {
-		/* blit the stuff from our static frame-buffer to the gfx-card */
-		ri.Memory = gfxmem_bank.baseaddr + (picasso96_state.Address - gfxmem_bank.start);
-		ri.BytesPerRow = picasso96_state.BytesPerRow;
-		ri.RGBFormat = (RGBFTYPE)picasso96_state.RGBFormat;
-	}
-	else {
-		write_log(_T("ERROR - picasso_refresh() can't refresh!\n"));
-	}
+  /* Make sure that the first time we show a Picasso video mode, we don't blit any crap.
+   * We can do this by checking if we have an Address yet. 
+   */
+  if (picasso96_state.Address) {
+  	/* blit the stuff from our static frame-buffer to the gfx-card */
+  	ri.Memory = gfxmem_bank.baseaddr + (picasso96_state.Address - gfxmem_bank.start);
+  	ri.BytesPerRow = picasso96_state.BytesPerRow;
+  	ri.RGBFormat = (RGBFTYPE)picasso96_state.RGBFormat;
+  } else {
+  	write_log (_T("ERROR - picasso_refresh() can't refresh!\n"));
+  }
 }
 
 bool picasso_rendered = false;
@@ -800,7 +801,7 @@ void picasso_handle_vsync(void)
 		return;
 
 	if (!picasso_on) {
-		picasso_trigger_vblank();
+		picasso_trigger_vblank ();
 		return;
 	}
 
@@ -857,7 +858,7 @@ void picasso_handle_vsync(void)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_NOTSRC_32
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp" 
 #define BLT_NAME BLIT_ONLYSRC_32
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
 #include "p96_blit.cpp"
@@ -912,7 +913,7 @@ void picasso_handle_vsync(void)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_NOTSRC_24
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp" 
 #define BLT_NAME BLIT_ONLYSRC_24
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
 #include "p96_blit.cpp"
@@ -967,7 +968,7 @@ void picasso_handle_vsync(void)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_NOTSRC_16
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp" 
 #define BLT_NAME BLIT_ONLYSRC_16
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
 #include "p96_blit.cpp"
@@ -1022,7 +1023,7 @@ void picasso_handle_vsync(void)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_NOTSRC_8
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp" 
 #define BLT_NAME BLIT_ONLYSRC_8
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
 #include "p96_blit.cpp"
@@ -1069,143 +1070,137 @@ void picasso_handle_vsync(void)
 /*
 * Functions to perform an action on the frame-buffer
 */
-static int do_blitrect_frame_buffer(struct RenderInfo *ri, struct
-	RenderInfo *dstri, unsigned long srcx, unsigned long srcy,
-	unsigned long dstx, unsigned long dsty, unsigned long width, unsigned
-	long height, uae_u8 mask, BLIT_OPCODE opcode)
+static int do_blitrect_frame_buffer (struct RenderInfo *ri, struct
+  RenderInfo *dstri, unsigned long srcx, unsigned long srcy,
+	unsigned long dstx, unsigned long dsty, unsigned long width, unsigned 
+  long height, uae_u8 mask, BLIT_OPCODE opcode)
 {
-	uae_u8 *src, *dst;
-	uae_u8 Bpp = GetBytesPerPixel(ri->RGBFormat);
-	unsigned long total_width = width * Bpp;
+  uae_u8 *src, *dst;
+  uae_u8 Bpp = GetBytesPerPixel (ri->RGBFormat);
+  unsigned long total_width = width * Bpp;
 
-	src = ri->Memory + srcx*Bpp + srcy*ri->BytesPerRow;
-	dst = dstri->Memory + dstx*Bpp + dsty*dstri->BytesPerRow;
+  src = ri->Memory + srcx*Bpp + srcy*ri->BytesPerRow;
+  dst = dstri->Memory + dstx*Bpp + dsty*dstri->BytesPerRow;
 
-	if (mask != 0xFF && Bpp > 1) {
-		write_log(_T("WARNING - BlitRect() has mask 0x%x with Bpp %d.\n"), mask, Bpp);
-	}
+  if (mask != 0xFF && Bpp > 1) {
+		write_log (_T("WARNING - BlitRect() has mask 0x%x with Bpp %d.\n"), mask, Bpp);
+  }
 
-	P96TRACE((_T("(%dx%d)=(%dx%d)=(%dx%d)=%d\n"), srcx, srcy, dstx, dsty, width, height, opcode));
-	if (mask == 0xFF || Bpp > 1) {
+	P96TRACE ((_T("(%dx%d)=(%dx%d)=(%dx%d)=%d\n"), srcx, srcy, dstx, dsty, width, height, opcode));
+  if (mask == 0xFF || Bpp > 1) {
 
-		if (opcode == BLIT_SRC) {
-			/* handle normal case efficiently */
-			if (ri->Memory == dstri->Memory && dsty == srcy) {
-				unsigned long i;
-				for (i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
-					memmove(dst, src, total_width);
-			}
-			else if (dsty < srcy) {
-				unsigned long i;
-				for (i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
-					memcpy(dst, src, total_width);
-			}
-			else {
-				unsigned long i;
-				src += (height - 1) * ri->BytesPerRow;
-				dst += (height - 1) * dstri->BytesPerRow;
-				for (i = 0; i < height; i++, src -= ri->BytesPerRow, dst -= dstri->BytesPerRow)
-					memcpy(dst, src, total_width);
-			}
-			return 1;
+	  if(opcode == BLIT_SRC) {
+	    /* handle normal case efficiently */
+	    if (ri->Memory == dstri->Memory && dsty == srcy) {
+		    unsigned long i;
+		    for (i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
+		      memmove (dst, src, total_width);
+	    } else if (dsty < srcy) {
+		    unsigned long i;
+		    for (i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
+		      memcpy (dst, src, total_width);
+	    } else {
+		    unsigned long i;
+		    src += (height-1) * ri->BytesPerRow;
+		    dst += (height-1) * dstri->BytesPerRow;
+		    for (i = 0; i < height; i++, src -= ri->BytesPerRow, dst -= dstri->BytesPerRow)
+		    memcpy (dst, src, total_width);
+	    }
+	    return 1;
 
-		}
-		else {
+		} else {
 
 			if (Bpp == 4) {
 
-				/* 32-bit optimized */
-				switch (opcode)
-				{
-				case BLIT_FALSE: BLIT_FALSE_32(PARMS); break;
-				case BLIT_NOR: BLIT_NOR_32(PARMS); break;
-				case BLIT_ONLYDST: BLIT_ONLYDST_32(PARMS); break;
-				case BLIT_NOTSRC: BLIT_NOTSRC_32(PARMS); break;
-				case BLIT_ONLYSRC: BLIT_ONLYSRC_32(PARMS); break;
-				case BLIT_NOTDST: BLIT_NOTDST_32(PARMS); break;
-				case BLIT_EOR: BLIT_EOR_32(PARMS); break;
-				case BLIT_NAND: BLIT_NAND_32(PARMS); break;
-				case BLIT_AND: BLIT_AND_32(PARMS); break;
-				case BLIT_NEOR: BLIT_NEOR_32(PARMS); break;
-				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_32(PARMS); break;
-				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_32(PARMS); break;
-				case BLIT_OR: BLIT_OR_32(PARMS); break;
-				case BLIT_TRUE: BLIT_TRUE_32(PARMS); break;
-				case BLIT_SWAP: BLIT_SWAP_32(PARMS); break;
-				}
+        /* 32-bit optimized */
+        switch (opcode)
+        {
+        case BLIT_FALSE: BLIT_FALSE_32 (PARMS); break;
+        case BLIT_NOR: BLIT_NOR_32 (PARMS); break;
+        case BLIT_ONLYDST: BLIT_ONLYDST_32 (PARMS); break;
+        case BLIT_NOTSRC: BLIT_NOTSRC_32 (PARMS); break;
+        case BLIT_ONLYSRC: BLIT_ONLYSRC_32 (PARMS); break;
+        case BLIT_NOTDST: BLIT_NOTDST_32 (PARMS); break;
+        case BLIT_EOR: BLIT_EOR_32 (PARMS); break;
+        case BLIT_NAND: BLIT_NAND_32 (PARMS); break;
+        case BLIT_AND: BLIT_AND_32 (PARMS); break;
+        case BLIT_NEOR: BLIT_NEOR_32 (PARMS); break;
+        case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_32 (PARMS); break;
+        case BLIT_NOTONLYDST: BLIT_NOTONLYDST_32 (PARMS); break;
+        case BLIT_OR: BLIT_OR_32 (PARMS); break;
+        case BLIT_TRUE: BLIT_TRUE_32 (PARMS); break;
+			  case BLIT_SWAP: BLIT_SWAP_32 (PARMS); break;
+	      } 
+    	} else if (Bpp == 3) {
+
+	      /* 24-bit (not very) optimized */
+	      switch (opcode)
+	      {
+        case BLIT_FALSE: BLIT_FALSE_24 (PARMS); break;
+        case BLIT_NOR: BLIT_NOR_24 (PARMS); break;
+        case BLIT_ONLYDST: BLIT_ONLYDST_24 (PARMS); break;
+        case BLIT_NOTSRC: BLIT_NOTSRC_24 (PARMS); break;
+        case BLIT_ONLYSRC: BLIT_ONLYSRC_24 (PARMS); break;
+        case BLIT_NOTDST: BLIT_NOTDST_24 (PARMS); break;
+        case BLIT_EOR: BLIT_EOR_24 (PARMS); break;
+        case BLIT_NAND: BLIT_NAND_24 (PARMS); break;
+        case BLIT_AND: BLIT_AND_24 (PARMS); break;
+        case BLIT_NEOR: BLIT_NEOR_24 (PARMS); break;
+        case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_24 (PARMS); break;
+        case BLIT_NOTONLYDST: BLIT_NOTONLYDST_24 (PARMS); break;
+        case BLIT_OR: BLIT_OR_24 (PARMS); break;
+        case BLIT_TRUE: BLIT_TRUE_24 (PARMS); break;
+			  case BLIT_SWAP: BLIT_SWAP_24 (PARMS); break;
+	      }
+	
+    	} else if (Bpp == 2) {
+
+	      /* 16-bit optimized */
+	      switch (opcode)
+	      {
+        case BLIT_FALSE: BLIT_FALSE_16 (PARMS); break;
+        case BLIT_NOR: BLIT_NOR_16 (PARMS); break;
+        case BLIT_ONLYDST: BLIT_ONLYDST_16 (PARMS); break;
+        case BLIT_NOTSRC: BLIT_NOTSRC_16 (PARMS); break;
+        case BLIT_ONLYSRC: BLIT_ONLYSRC_16 (PARMS); break;
+        case BLIT_NOTDST: BLIT_NOTDST_16 (PARMS); break;
+        case BLIT_EOR: BLIT_EOR_16 (PARMS); break;
+        case BLIT_NAND: BLIT_NAND_16 (PARMS); break;
+        case BLIT_AND: BLIT_AND_16 (PARMS); break;
+        case BLIT_NEOR: BLIT_NEOR_16 (PARMS); break;
+        case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_16 (PARMS); break;
+        case BLIT_NOTONLYDST: BLIT_NOTONLYDST_16 (PARMS); break;
+        case BLIT_OR: BLIT_OR_16 (PARMS); break;
+        case BLIT_TRUE: BLIT_TRUE_16 (PARMS); break;
+			  case BLIT_SWAP: BLIT_SWAP_16 (PARMS); break;
+	      }
+
+    	} else if (Bpp == 1) {
+
+	      /* 8-bit optimized */
+	      switch (opcode)
+	      {
+        case BLIT_FALSE: BLIT_FALSE_8 (PARMS); break;
+        case BLIT_NOR: BLIT_NOR_8 (PARMS); break;
+        case BLIT_ONLYDST: BLIT_ONLYDST_8 (PARMS); break;
+        case BLIT_NOTSRC: BLIT_NOTSRC_8 (PARMS); break;
+        case BLIT_ONLYSRC: BLIT_ONLYSRC_8 (PARMS); break;
+        case BLIT_NOTDST: BLIT_NOTDST_8 (PARMS); break;
+        case BLIT_EOR: BLIT_EOR_8 (PARMS); break;
+        case BLIT_NAND: BLIT_NAND_8 (PARMS); break;
+        case BLIT_AND: BLIT_AND_8 (PARMS); break;
+        case BLIT_NEOR: BLIT_NEOR_8 (PARMS); break;
+        case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_8 (PARMS); break;
+        case BLIT_NOTONLYDST: BLIT_NOTONLYDST_8 (PARMS); break;
+        case BLIT_OR: BLIT_OR_8 (PARMS); break;
+        case BLIT_TRUE: BLIT_TRUE_8 (PARMS); break;
+			  case BLIT_SWAP: BLIT_SWAP_8 (PARMS); break;
+	      }
 			}
-			else if (Bpp == 3) {
-
-				/* 24-bit (not very) optimized */
-				switch (opcode)
-				{
-				case BLIT_FALSE: BLIT_FALSE_24(PARMS); break;
-				case BLIT_NOR: BLIT_NOR_24(PARMS); break;
-				case BLIT_ONLYDST: BLIT_ONLYDST_24(PARMS); break;
-				case BLIT_NOTSRC: BLIT_NOTSRC_24(PARMS); break;
-				case BLIT_ONLYSRC: BLIT_ONLYSRC_24(PARMS); break;
-				case BLIT_NOTDST: BLIT_NOTDST_24(PARMS); break;
-				case BLIT_EOR: BLIT_EOR_24(PARMS); break;
-				case BLIT_NAND: BLIT_NAND_24(PARMS); break;
-				case BLIT_AND: BLIT_AND_24(PARMS); break;
-				case BLIT_NEOR: BLIT_NEOR_24(PARMS); break;
-				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_24(PARMS); break;
-				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_24(PARMS); break;
-				case BLIT_OR: BLIT_OR_24(PARMS); break;
-				case BLIT_TRUE: BLIT_TRUE_24(PARMS); break;
-				case BLIT_SWAP: BLIT_SWAP_24(PARMS); break;
-				}
-
-			}
-			else if (Bpp == 2) {
-
-				/* 16-bit optimized */
-				switch (opcode)
-				{
-				case BLIT_FALSE: BLIT_FALSE_16(PARMS); break;
-				case BLIT_NOR: BLIT_NOR_16(PARMS); break;
-				case BLIT_ONLYDST: BLIT_ONLYDST_16(PARMS); break;
-				case BLIT_NOTSRC: BLIT_NOTSRC_16(PARMS); break;
-				case BLIT_ONLYSRC: BLIT_ONLYSRC_16(PARMS); break;
-				case BLIT_NOTDST: BLIT_NOTDST_16(PARMS); break;
-				case BLIT_EOR: BLIT_EOR_16(PARMS); break;
-				case BLIT_NAND: BLIT_NAND_16(PARMS); break;
-				case BLIT_AND: BLIT_AND_16(PARMS); break;
-				case BLIT_NEOR: BLIT_NEOR_16(PARMS); break;
-				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_16(PARMS); break;
-				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_16(PARMS); break;
-				case BLIT_OR: BLIT_OR_16(PARMS); break;
-				case BLIT_TRUE: BLIT_TRUE_16(PARMS); break;
-				case BLIT_SWAP: BLIT_SWAP_16(PARMS); break;
-				}
-
-			}
-			else if (Bpp == 1) {
-
-				/* 8-bit optimized */
-				switch (opcode)
-				{
-				case BLIT_FALSE: BLIT_FALSE_8(PARMS); break;
-				case BLIT_NOR: BLIT_NOR_8(PARMS); break;
-				case BLIT_ONLYDST: BLIT_ONLYDST_8(PARMS); break;
-				case BLIT_NOTSRC: BLIT_NOTSRC_8(PARMS); break;
-				case BLIT_ONLYSRC: BLIT_ONLYSRC_8(PARMS); break;
-				case BLIT_NOTDST: BLIT_NOTDST_8(PARMS); break;
-				case BLIT_EOR: BLIT_EOR_8(PARMS); break;
-				case BLIT_NAND: BLIT_NAND_8(PARMS); break;
-				case BLIT_AND: BLIT_AND_8(PARMS); break;
-				case BLIT_NEOR: BLIT_NEOR_8(PARMS); break;
-				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_8(PARMS); break;
-				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_8(PARMS); break;
-				case BLIT_OR: BLIT_OR_8(PARMS); break;
-				case BLIT_TRUE: BLIT_TRUE_8(PARMS); break;
-				case BLIT_SWAP: BLIT_SWAP_8(PARMS); break;
-				}
-			}
-		}
-		return 1;
-	}
-	return 0;
+  	}
+  	return 1;
+  }
+  return 0;
 }
 
 /*
@@ -1215,7 +1210,7 @@ Inputs: a0: struct BoardInfo *bi
 d7: RGBFTYPE RGBFormat
 
 */
-static uae_u32 REGPARAM2 picasso_SetSpritePosition(TrapContext *ctx)
+static uae_u32 REGPARAM2 picasso_SetSpritePosition (TrapContext *ctx)
 {
 	uaecptr bi = trap_get_areg(ctx, 0);
 	boardinfo = bi;
@@ -1235,7 +1230,7 @@ d7: RGBFTYPE RGBFormat
 
 This function changes one of the possible three colors of the hardware sprite.
 */
-static uae_u32 REGPARAM2 picasso_SetSpriteColor(TrapContext *ctx)
+static uae_u32 REGPARAM2 picasso_SetSpriteColor (TrapContext *ctx)
 {
 	uaecptr bi = trap_get_areg(ctx, 0);
 	boardinfo = bi;
@@ -1268,11 +1263,11 @@ planes for one image line respectively. You have to double each pixel horizontal
 used in this case already assume a zoomed sprite, only the sprite data is not zoomed yet. You will have to
 compensate for this when accounting for hotspot offsets and sprite dimensions.
 */
-static uae_u32 REGPARAM2 picasso_SetSpriteImage(TrapContext *ctx)
+static uae_u32 REGPARAM2 picasso_SetSpriteImage (TrapContext *ctx)
 {
 	uaecptr bi = trap_get_areg(ctx, 0);
 	boardinfo = bi;
-	return 0;
+  return 0;
 }
 
 /*
@@ -1284,7 +1279,7 @@ d7: RGBFTYPE RGBFormat
 
 This function activates or deactivates the hardware sprite.
 */
-static uae_u32 REGPARAM2 picasso_SetSprite(TrapContext *ctx)
+static uae_u32 REGPARAM2 picasso_SetSprite (TrapContext *ctx)
 {
 	return 0;
 }
@@ -1304,50 +1299,48 @@ static uae_u32 REGPARAM2 picasso_SetSprite(TrapContext *ctx)
  * BoardInfo struct supplied by the caller, the rtg.library, for example
  * the MemoryBase, MemorySize and RegisterBase fields.
  */
-static void picasso96_alloc2(TrapContext *ctx);
-static uae_u32 REGPARAM2 picasso_FindCard(TrapContext *ctx)
+static void picasso96_alloc2 (TrapContext *ctx);
+static uae_u32 REGPARAM2 picasso_FindCard (TrapContext *ctx)
 {
 	uaecptr AmigaBoardInfo = trap_get_areg(ctx, 0);
-	/* NOTES: See BoardInfo struct definition in Picasso96 dev info */
+  /* NOTES: See BoardInfo struct definition in Picasso96 dev info */
 	if (!uaegfx_active || !gfxmem_bank.start)
-		return 0;
+  	return 0;
 	if (uaegfx_base) {
 		trap_put_long(ctx, uaegfx_base + CARD_BOARDINFO, AmigaBoardInfo);
+	} else if (uaegfx_old) {
+		picasso96_alloc2 (ctx);
 	}
-	else if (uaegfx_old) {
-		picasso96_alloc2(ctx);
-	}
-	boardinfo = AmigaBoardInfo;
+  boardinfo = AmigaBoardInfo;
 
-	if (gfxmem_bank.allocated_size && !picasso96_state_uaegfx.CardFound) {
-		/* Fill in MemoryBase, MemorySize */
+  if (gfxmem_bank.allocated_size && !picasso96_state_uaegfx.CardFound) {
+  	/* Fill in MemoryBase, MemorySize */
 		trap_put_long(ctx, AmigaBoardInfo + PSSO_BoardInfo_MemoryBase, gfxmem_bank.start);
 		trap_put_long(ctx, AmigaBoardInfo + PSSO_BoardInfo_MemorySize, gfxmem_bank.allocated_size - reserved_gfxmem);
-		picasso96_state_uaegfx.CardFound = 1;	/* mark our "card" as being found */
-		return -1;
-	}
-	else
-		return 0;
+  	picasso96_state_uaegfx.CardFound = 1;	/* mark our "card" as being found */
+  	return -1;
+  } else
+  	return 0;
 }
 
 static void FillBoardInfo(TrapContext *ctx, uaecptr amigamemptr, struct LibResolution *res, int width, int height, int depth)
 {
-	switch (depth)
-	{
-	case 8:
-		res->Modes[CHUNKY] = amigamemptr;
-		break;
+  switch (depth) 
+  {
+  case 8:
+  	res->Modes[CHUNKY] = amigamemptr;
+  	break;
 	case 15:
 	case 16:
-		res->Modes[HICOLOR] = amigamemptr;
-		break;
+  	res->Modes[HICOLOR] = amigamemptr;
+  	break;
 	case 24:
-		res->Modes[TRUECOLOR] = amigamemptr;
-		break;
-	default:
-		res->Modes[TRUEALPHA] = amigamemptr;
-		break;
-	}
+  	res->Modes[TRUECOLOR] = amigamemptr;
+  	break;
+  default:
+  	res->Modes[TRUEALPHA] = amigamemptr;
+  	break;
+  }
 	trap_set_bytes(ctx, amigamemptr, 0, PSSO_ModeInfo_sizeof);
 
 	trap_put_word(ctx, amigamemptr + PSSO_ModeInfo_Width, width);
@@ -1370,32 +1363,30 @@ static void FillBoardInfo(TrapContext *ctx, uaecptr amigamemptr, struct LibResol
 	trap_put_byte(ctx, amigamemptr + PSSO_ModeInfo_second_union, 14);
 
 	trap_put_long(ctx, amigamemptr + PSSO_ModeInfo_PixelClock,
-		width * height * 60);
+    width * height * defaultHz);
 }
 
-struct modeids
-{
-	int width, height;
-	int id;
+struct modeids {
+  int width, height;
+  int id;
 };
-
 static struct modeids mi[] =
 {
-	/* "original" modes */
+  /* "original" modes */
 
-	320, 200, 0,
-	320, 240, 1,
-	640, 400, 2,
-	640, 480, 3,
-	800, 600, 4,
-	1024, 768, 5,
-	1152, 864, 6,
-	1280,1024, 7,
-	1600,1280, 8,
-	320, 256, 9,
-	640, 512,10,
+   320, 200, 0,
+   320, 240, 1,
+   640, 400, 2,
+   640, 480, 3,
+   800, 600, 4,
+  1024, 768, 5,
+  1152, 864, 6,
+  1280,1024, 7,
+  1600,1280, 8,
+   320, 256, 9,
+   640, 512,10,
 
-	/* new modes */
+  /* new modes */
 
 	704, 480, 129,
 	704, 576, 130,
@@ -2154,7 +2145,6 @@ FillRect:
 * d5:	UBYTE Mask
 * d7:	uae_u32 RGBFormat
 ***********************************************************/
-//__attribute__((optimize("O2"))) is needed otherwise this crashes with O3!
 static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 {
 	uaecptr renderinfo = trap_get_areg(ctx, 1);

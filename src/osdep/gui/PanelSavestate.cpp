@@ -2,14 +2,23 @@
 #include <SDL_ttf.h>
 #include <SDL_image.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
+#include "options.h"
+#include "include/memory.h"
+#include "newcpu.h"
+#include "custom.h"
+#include "xwin.h"
+#include "drawing.h"
+#include "uae.h"
 #include "gui.h"
+#include "autoconf.h"
 #include "savestate.h"
 #include "gui_handling.h"
 
@@ -76,7 +85,7 @@ public:
 				savestate_initsave(savestate_fname, 2, 0, false);
 				save_state(savestate_fname, "...");
 				savestate_state = STATE_DOSAVE; // Just to create the screenshot
-				delay_savestate_frame = 1;
+				delay_savestate_frame = 2;
 				gui_running = false;
 			}
 			else
@@ -224,6 +233,7 @@ void RefreshPanelSavestate()
 				target.h = rect.height;
 				SDL_SoftStretch(loadedImage, &source, scaled, &target);
 				SDL_FreeSurface(loadedImage);
+				loadedImage = nullptr;
 				imgSavestate = new gcn::SDLImage(scaled, true);
 				icoSavestate = new gcn::Icon(imgSavestate);
 				wndScreenshot->add(icoSavestate);

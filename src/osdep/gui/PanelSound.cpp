@@ -1,7 +1,7 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -9,8 +9,13 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
 #include "options.h"
+#include "uae.h"
 #include "gui.h"
+#include "include/memory.h"
+#include "newcpu.h"
+#include "custom.h"
 #include "gui_handling.h"
 #include "sounddep/sound.h"
 

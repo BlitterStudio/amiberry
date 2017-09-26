@@ -4,9 +4,9 @@
 #include <map>
 #include <string>
 
-#include "guisan/platform.hpp"
-#include "guisan/widget.hpp"
-#include "guisan/widgets/radiobutton.hpp"
+#include <guisan/platform.hpp>
+#include <guisan/widget.hpp>
+#include <guisan/widgets/radiobutton.hpp>
 
 
 namespace gcn

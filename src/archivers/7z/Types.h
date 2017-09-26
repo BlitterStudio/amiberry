@@ -168,7 +168,7 @@ typedef struct
 
 typedef struct
 {
-  SRes (*Look)(void *p, void **buf, size_t *size);
+  SRes (*Look)(void *p, const void **buf, size_t *size);
     /* if (input(*size) != 0 && output(*size) == 0) means end_of_stream.
        (output(*size) > input(*size)) is not allowed
        (output(*size) < input(*size)) is allowed */

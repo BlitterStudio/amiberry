@@ -106,18 +106,10 @@ STATIC_INLINE uae_u16 CONVERT_RGB_16(uae_u32 c)
   return ret;
 }
 #else
-/* warning: this is still ugly, but now works with either byte order */
-#ifdef WORDS_BIGENDIAN
-# define CONVERT_RGB(c) \
-	( xbluecolors[((uae_u8*)(&c))[3]] | xgreencolors[((uae_u8*)(&c))[2]] | xredcolors[((uae_u8*)(&c))[1]] )
-# define CONVERT_RGB_16(c) \
-	( xbluecolors[((uae_u8*)(&c))[3]] | xgreencolors[((uae_u8*)(&c))[2]] | xredcolors[((uae_u8*)(&c))[1]] )
-#else
 #define CONVERT_RGB(c) \
     ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
 #define CONVERT_RGB_16(c) \
     ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
-#endif
 #endif
 
 STATIC_INLINE xcolnr getxcolor (int c)
@@ -240,7 +232,6 @@ extern int coord_native_to_amiga_y (int);
 extern int coord_native_to_amiga_x (int);
 
 extern void hsync_record_line_state (int lineno);
-extern void partial_draw_frame(void);
 extern void halt_draw_frame(void);
 extern void vsync_handle_redraw (void);
 extern bool vsync_handle_check (void);

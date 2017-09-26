@@ -1,6 +1,6 @@
 #include "UaeCheckBox.hpp"
-#include "guisan/widgets/checkbox.hpp"
-#include "guisan/graphics.hpp"
+#include <guisan/widgets/checkbox.hpp>
+#include <guisan/graphics.hpp>
 
 
 namespace gcn

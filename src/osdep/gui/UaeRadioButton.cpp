@@ -1,6 +1,6 @@
 #include "UaeRadioButton.hpp"
-#include "guisan/widgets/radiobutton.hpp"
-#include "guisan/graphics.hpp"
+#include <guisan/widgets/radiobutton.hpp>
+#include <guisan/graphics.hpp>
 
 namespace gcn
 {

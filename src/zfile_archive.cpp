@@ -486,11 +486,11 @@ static struct zfile *archive_unpack_zip(struct zfile *zf)
 #ifdef A_7Z
 /* 7Z */
 
-#include "archivers/7z/7z.h"
-#include "archivers/7z/Alloc.h"
-#include "archivers/7z/7zFile.h"
-#include "archivers/7z/7zVersion.h"
-#include "archivers/7z/7zCrc.h"
+#include "7z/7z.h"
+#include "7z/Alloc.h"
+#include "7z/7zFile.h"
+#include "7z/7zVersion.h"
+#include "7z/7zCrc.h"
 
 static void *SzAlloc(void *p, size_t size)
 {

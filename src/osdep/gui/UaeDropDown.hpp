@@ -3,10 +3,10 @@
 
 #include <string>
 
-#include "guisan/keylistener.hpp"
-#include "guisan/platform.hpp"
-#include "guisan/widget.hpp"
-#include "guisan/widgets/dropdown.hpp"
+#include <guisan/keylistener.hpp>
+#include <guisan/platform.hpp>
+#include <guisan/widget.hpp>
+#include <guisan/widgets/dropdown.hpp>
 
 
 namespace gcn

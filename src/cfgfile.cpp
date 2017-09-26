@@ -28,7 +28,6 @@
 #include "fsdb.h"
 #include "disk.h"
 #include "blkdev.h"
-#include "statusline.h"
 #include "calc.h"
 #include "gfxboard.h"
 #include "native2amiga_api.h"
@@ -46,48 +45,27 @@ static int uaeconfig;
  * as a help text.  */
 struct cfg_lines
 {
-	const TCHAR *config_label, *config_help;
+  const TCHAR *config_label, *config_help;
 };
 
-static const TCHAR* guimode1[] = {_T("no"), _T("yes"), _T("nowait"), nullptr};
-static const TCHAR* guimode2[] = {_T("false"), _T("true"), _T("nowait"), nullptr};
-static const TCHAR* guimode3[] = {_T("0"), _T("1"), _T("nowait"), nullptr};
-static const TCHAR* csmode[] = {_T("ocs"), _T("ecs_agnus"), _T("ecs_denise"), _T("ecs"), _T("aga"), nullptr};
-static const TCHAR *linemode[] = {
-	_T("none"),
-	_T("double"), _T("scanlines"), _T("scanlines2p"), _T("scanlines3p"),
-	_T("double2"), _T("scanlines2"), _T("scanlines2p2"), _T("scanlines2p3"),
-	_T("double3"), _T("scanlines3"), _T("scanlines3p2"), _T("scanlines3p3"),
-	nullptr };
-static const TCHAR *speedmode[] = { _T("max"), _T("real"), nullptr };
-static const TCHAR *colormode1[] = { _T("8bit"), _T("15bit"), _T("16bit"), _T("8bit_dither"), _T("4bit_dither"), _T("32bit"), nullptr };
-static const TCHAR *colormode2[] = { _T("8"), _T("15"), _T("16"), _T("8d"), _T("4d"), _T("32"), nullptr };
-static const TCHAR *soundmode1[] = { _T("none"), _T("interrupts"), _T("normal"), _T("exact"), nullptr };
-static const TCHAR *soundmode2[] = { _T("none"), _T("interrupts"), _T("good"), _T("best"), nullptr };
-static const TCHAR *centermode1[] = { _T("none"), _T("simple"), _T("smart"), nullptr };
-static const TCHAR *centermode2[] = { _T("false"), _T("true"), _T("smart"), nullptr };
-static const TCHAR *stereomode[] = { _T("mono"), _T("stereo"), _T("clonedstereo"), _T("4ch"), _T("clonedstereo6ch"), _T("6ch"), _T("mixed"), nullptr };
-static const TCHAR *interpolmode[] = { _T("none"), _T("anti"), _T("sinc"), _T("rh"), _T("crux"), nullptr };
-static const TCHAR *collmode[] = { _T("none"), _T("sprites"), _T("playfields"), _T("full"), nullptr };
-static const TCHAR *compmode[] = { _T("direct"), _T("indirect"), _T("indirectKS"), _T("afterPic"), nullptr };
-static const TCHAR *flushmode[] = { _T("soft"), _T("hard"), nullptr };
-static const TCHAR *kbleds[] = { _T("none"), _T("POWER"), _T("DF0"), _T("DF1"), _T("DF2"), _T("DF3"), _T("HD"), _T("CD"), nullptr };
-static const TCHAR *onscreenleds[] = { _T("false"), _T("true"), _T("rtg"), _T("both"), nullptr };
-static const TCHAR *soundfiltermode1[] = { _T("off"), _T("emulated"), _T("on"), nullptr };
-static const TCHAR *soundfiltermode2[] = { _T("standard"), _T("enhanced"), nullptr };
-static const TCHAR *lorestype1[] = { _T("lores"), _T("hires"), _T("superhires"), nullptr };
-static const TCHAR *lorestype2[] = { _T("true"), _T("false"), nullptr };
-static const TCHAR *loresmode[] = { _T("normal"), _T("filtered"), nullptr };
-static const TCHAR *horizmode[] = { _T("vertical"), _T("lores"), _T("hires"), _T("superhires"), nullptr };
-static const TCHAR *vertmode[] = { _T("horizontal"), _T("single"), _T("double"), _T("quadruple"), nullptr };
-#ifdef GFXFILTER
-static const TCHAR *filtermode2[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), 0 };
-#endif
-static const TCHAR *cartsmode[] = { _T("none"), _T("hrtmon"), nullptr };
-static const TCHAR *idemode[] = { _T("none"), _T("a600/a1200"), _T("a4000"), nullptr };
-static const TCHAR *rtctype[] = { _T("none"), _T("MSM6242B"), _T("RP5C01A"), _T("MSM6242B_A2000"), nullptr };
-static const TCHAR *ciaatodmode[] = { _T("vblank"), _T("50hz"), _T("60hz"), nullptr };
-static const TCHAR *ksmirrortype[] = { _T("none"), _T("e0"), _T("a8+e0"), nullptr };
+static const TCHAR *guimode1[] = { _T("no"), _T("yes"), _T("nowait"), 0 };
+static const TCHAR *guimode2[] = { _T("false"), _T("true"), _T("nowait"), 0 };
+static const TCHAR *guimode3[] = { _T("0"), _T("1"), _T("nowait"), 0 };
+static const TCHAR *csmode[] = { _T("ocs"), _T("ecs_agnus"), _T("ecs_denise"), _T("ecs"), _T("aga"), 0 };
+static const TCHAR *speedmode[] = { _T("max"), _T("real"), 0 };
+static const TCHAR *soundmode1[] = { _T("none"), _T("interrupts"), _T("normal"), _T("exact"), 0 };
+static const TCHAR *soundmode2[] = { _T("none"), _T("interrupts"), _T("good"), _T("best"), 0 };
+static const TCHAR *stereomode[] = { _T("mono"), _T("stereo"), _T("clonedstereo"), _T("4ch"), _T("clonedstereo6ch"), _T("6ch"), _T("mixed"), 0 };
+static const TCHAR *interpolmode[] = { _T("none"), _T("anti"), _T("sinc"), _T("rh"), _T("crux"), 0 };
+static const TCHAR *collmode[] = { _T("none"), _T("sprites"), _T("playfields"), _T("full"), 0 };
+static const TCHAR *soundfiltermode1[] = { _T("off"), _T("emulated"), _T("on"), 0 };
+static const TCHAR *soundfiltermode2[] = { _T("standard"), _T("enhanced"), 0 };
+static const TCHAR *lorestype1[] = { _T("lores"), _T("hires"), _T("superhires"), 0 };
+static const TCHAR *lorestype2[] = { _T("true"), _T("false"), 0 };
+static const TCHAR *cartsmode[] = { _T("none"), _T("hrtmon"), 0 };
+static const TCHAR *idemode[] = { _T("none"), _T("a600/a1200"), _T("a4000"), 0 };
+static const TCHAR *rtctype[] = { _T("none"), _T("MSM6242B"), _T("RP5C01A"), _T("MSM6242B_A2000"), 0 };
+static const TCHAR *ciaatodmode[] = { _T("vblank"), _T("50hz"), _T("60hz"), 0 };
 static const TCHAR *cscompa[] = {
 	_T("-"), _T("Generic"), _T("CDTV"), _T("CDTV-CR"), _T("CD32"), _T("A500"), _T("A500+"), _T("A600"),
 	_T("A1000"), _T("A1200"), _T("A2000"), _T("A3000"), _T("A3000T"), _T("A4000"),
@@ -95,48 +73,15 @@ static const TCHAR *cscompa[] = {
 	nullptr
 };
 static const TCHAR *qsmodes[] = {
-	_T("A500"), _T("A500+"), _T("A600"), _T("A1200"), _T("A4000"), _T("CD32"), nullptr };
-/* 3-state boolean! */
-static const TCHAR *fullmodes[] = { _T("false"), _T("true"), /* "FILE_NOT_FOUND", */ _T("fullwindow"), nullptr };
-/* bleh for compatibility */
-static const TCHAR *scsimode[] = { _T("false"), _T("true"), _T("scsi"), nullptr };
-static const TCHAR *maxhoriz[] = { _T("lores"), _T("hires"), _T("superhires"), nullptr };
-static const TCHAR *maxvert[] = { _T("nointerlace"), _T("interlace"), nullptr };
-static const TCHAR *abspointers[] = { _T("none"), _T("mousehack"), _T("tablet"), nullptr };
-static const TCHAR *magiccursors[] = { _T("both"), _T("native"), _T("host"), nullptr };
-static const TCHAR *autoscale[] = { _T("none"), _T("auto"), _T("standard"), _T("max"), _T("scale"), _T("resize"), _T("center"), _T("manual"), _T("integer"), _T("integer_auto"), nullptr };
-static const TCHAR *autoscale_rtg[] = { _T("resize"), _T("scale"), _T("center"), _T("integer"), nullptr };
-static const TCHAR *joyportmodes[] = { _T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), _T("lightpen"), nullptr };
-static const TCHAR *joyaf[] = { _T("none"), _T("normal"), _T("toggle"), nullptr };
-static const TCHAR *epsonprinter[] = { _T("none"), _T("ascii"), _T("epson_matrix_9pin"), _T("epson_matrix_24pin"), _T("epson_matrix_48pin"), nullptr };
-static const TCHAR *aspects[] = { _T("none"), _T("vga"), _T("tv"), nullptr };
-static const TCHAR *vsyncmodes[] = { _T("false"), _T("true"), _T("autoswitch"), nullptr };
-static const TCHAR *vsyncmodes2[] = { _T("normal"), _T("busywait"), nullptr };
-static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), nullptr };
-static const TCHAR *dongles[] =
-{
-	_T("none"),
-	_T("robocop 3"), _T("leaderboard"), _T("b.a.t. ii"), _T("italy'90 soccer"), _T("dames grand maitre"),
-	_T("rugby coach"), _T("cricket captain"), _T("leviathan"),
-	nullptr
-};
-static const TCHAR *cdmodes[] = { _T("disabled"), _T(""), _T("image"), _T("ioctl"), _T("spti"), _T("aspi"), nullptr };
-static const TCHAR *cdconmodes[] = { _T(""), _T("uae"), _T("ide"), _T("scsi"), _T("cdtv"), _T("cd32"), nullptr };
-static const TCHAR *specialmonitors[] = { _T("none"), _T("autodetect"), _T("a2024"), _T("graffiti"), nullptr };
-static const TCHAR *rtgtype[] = {
-	_T("ZorroII"), _T("ZorroIII"),
-	_T("PicassoII"),
-	_T("PicassoII+"),
-	_T("Piccolo_Z2"), _T("Piccolo_Z3"),
-	_T("PiccoloSD64_Z2"), _T("PiccoloSD64_Z3"),
-	_T("Spectrum28/24_Z2"), _T("Spectrum28/24_Z3"),
-	_T("PicassoIV_Z2"), _T("PicassoIV_Z3"),
-	nullptr };
-static const TCHAR *waitblits[] = { _T("disabled"), _T("automatic"), _T("noidleonly"), _T("always"), nullptr };
-static const TCHAR *autoext2[] = { _T("disabled"), _T("copy"), _T("replace"), nullptr };
-static const TCHAR *leds[] = { _T("power"), _T("df0"), _T("df1"), _T("df2"), _T("df3"), _T("hd"), _T("cd"), _T("fps"), _T("cpu"), _T("snd"), _T("md"), nullptr };
-static int leds_order[] = { 3, 6, 7, 8, 9, 4, 5, 2, 1, 0, 9 };
-static const TCHAR *lacer[] = { _T("off"), _T("i"), _T("p"), nullptr };
+	_T("A500"), _T("A500+"), _T("A600"), _T("A1200"), _T("A4000"), _T("CD32"), NULL };
+static const TCHAR *abspointers[] = { _T("none"), _T("mousehack"), _T("tablet"), 0 };
+static const TCHAR *joyportmodes[] = { _T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), 0 };
+static const TCHAR *joyaf[] = { _T("none"), _T("normal"), _T("toggle"), _T("always"), 0 };
+static const TCHAR *vsyncmodes[] = { _T("adaptive"), _T("false"), _T("true"), _T("autoswitch"), 0 };
+static const TCHAR *cdmodes[] = { _T("disabled"), _T(""), _T("image"), _T("ioctl"), _T("spti"), _T("aspi"), 0 };
+static const TCHAR *cdconmodes[] = { _T(""), _T("uae"), _T("ide"), _T("scsi"), _T("cdtv"), _T("cd32"), 0 };
+static const TCHAR *waitblits[] = { _T("disabled"), _T("automatic"), _T("noidleonly"), _T("always"), 0 };
+static const TCHAR *autoext2[] = { _T("disabled"), _T("copy"), _T("replace"), 0 };
 
 struct hdcontrollerconfig
 {
@@ -246,15 +191,15 @@ static TCHAR *cfgfile_option_get(const TCHAR *s, const TCHAR *option)
 	return cfgfile_option_find_it(s, option, true);
 }
 
-static void trimwsa(char *s)
+static void trimwsa (char *s)
 {
-	/* Delete trailing whitespace.  */
-	int len = strlen(s);
-	while (len > 0 && strcspn(s + len - 1, "\t \r\n") == 0)
-		s[--len] = '\0';
+  /* Delete trailing whitespace.  */
+  int len = strlen (s);
+  while (len > 0 && strcspn (s + len - 1, "\t \r\n") == 0)
+    s[--len] = '\0';
 }
 
-static int match_string(const TCHAR *table[], const TCHAR *str)
+static int match_string (const TCHAR *table[], const TCHAR *str)
 {
 	for (int i = 0; table[i] != nullptr; i++)
 		if (_tcsicmp(table[i], str) == 0)
@@ -352,10 +297,10 @@ static TCHAR *cfgfile_escape_min(const TCHAR *s)
 	return my_strdup(s);
 }
 
-static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separator)
+static TCHAR *cfgfile_unescape (const TCHAR *s, const TCHAR **endpos, TCHAR separator)
 {
 	bool quoted = false;
-	TCHAR *s2 = xmalloc(TCHAR, _tcslen(s) + 1), c2;
+	TCHAR *s2 = xmalloc (TCHAR, _tcslen (s) + 1);
 	TCHAR *p = s2;
 	if (s[0] == '\"') {
 		s++;
@@ -374,31 +319,31 @@ static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separ
 		}
 		if (c == '\\') {
 			char v = 0;
+			TCHAR c2;
 			c = s[i + 1];
 			switch (c)
 			{
-			case 'X':
-			case 'x':
-				c2 = _totupper(s[i + 2]);
+				case 'X':
+				case 'x':
+				c2 = _totupper (s[i + 2]);
 				v = ((c2 >= 'A') ? c2 - 'A' : c2 - '0') << 4;
-				c2 = _totupper(s[i + 3]);
+				c2 = _totupper (s[i + 3]);
 				v |= (c2 >= 'A') ? c2 - 'A' : c2 - '0';
 				*p++ = c2;
 				i += 2;
 				break;
-			case 'r':
+				case 'r':
 				*p++ = '\r';
 				break;
-			case '\n':
+				case '\n':
 				*p++ = '\n';
 				break;
-			default:
+				default:
 				*p++ = c;
 				break;
 			}
 			i++;
-		}
-		else {
+		} else {
 			*p++ = c;
 		}
 	}
@@ -407,18 +352,17 @@ static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separ
 		*endpos = &s[i];
 	return s2;
 }
-
-static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos)
+static TCHAR *cfgfile_unescape (const TCHAR *s, const TCHAR **endpos)
 {
-	return cfgfile_unescape(s, endpos, 0);
+	return cfgfile_unescape (s, endpos, 0);
 }
 
-static TCHAR *getnextentry(const TCHAR **valuep, const TCHAR separator)
+static TCHAR *getnextentry (const TCHAR **valuep, const TCHAR separator)
 {
 	TCHAR *s;
 	const TCHAR *value = *valuep;
 	if (value[0] == '\"') {
-		s = cfgfile_unescape(value, valuep);
+		s = cfgfile_unescape (value, valuep);
 		value = *valuep;
 		if (*value != 0 && *value != separator) {
 			xfree(s);
@@ -1155,25 +1099,23 @@ void cfgfile_save_options(struct zfile *f, struct uae_prefs *p, int type)
 		}
 	}
 
-	cfgfile_write(f, _T("nr_floppies"), _T("%d"), p->nr_floppies);
-	cfgfile_dwrite_bool(f, _T("floppy_write_protect"), p->floppy_read_only);
-	cfgfile_write(f, _T("floppy_speed"), _T("%d"), p->floppy_speed);
-	cfgfile_write(f, _T("cd_speed"), _T("%d"), p->cd_speed);
+  cfgfile_write (f, _T("nr_floppies"), _T("%d"), p->nr_floppies);
+	cfgfile_dwrite_bool (f, _T("floppy_write_protect"), p->floppy_read_only);
+  cfgfile_write (f, _T("floppy_speed"), _T("%d"), p->floppy_speed);
+	cfgfile_write (f, _T("cd_speed"), _T("%d"), p->cd_speed);
 
-	cfgfile_write_str(f, _T("sound_output"), soundmode1[p->produce_sound]);
-	cfgfile_write_str(f, _T("sound_channels"), stereomode[p->sound_stereo]);
-	cfgfile_write(f, _T("sound_stereo_separation"), _T("%d"), p->sound_stereo_separation);
-	cfgfile_write(f, _T("sound_stereo_mixing_delay"), _T("%d"), p->sound_mixed_stereo_delay >= 0 ? p->sound_mixed_stereo_delay : 0);
-	cfgfile_write(f, _T("sound_max_buff"), _T("%d"), p->sound_maxbsiz);
-	cfgfile_write(f, _T("sound_frequency"), _T("%d"), p->sound_freq);
-	cfgfile_write_str(f, _T("sound_interpol"), interpolmode[p->sound_interpol]);
-	cfgfile_write_str(f, _T("sound_filter"), soundfiltermode1[p->sound_filter]);
-	cfgfile_write_str(f, _T("sound_filter_type"), soundfiltermode2[p->sound_filter_type]);
-	cfgfile_write(f, _T("sound_volume"), _T("%d"), p->sound_volume);
+  cfgfile_write_str (f, _T("sound_output"), soundmode1[p->produce_sound]);
+  cfgfile_write_str (f, _T("sound_channels"), stereomode[p->sound_stereo]);
+  cfgfile_write (f, _T("sound_stereo_separation"), _T("%d"), p->sound_stereo_separation);
+  cfgfile_write (f, _T("sound_stereo_mixing_delay"), _T("%d"), p->sound_mixed_stereo_delay >= 0 ? p->sound_mixed_stereo_delay : 0);
+  cfgfile_write (f, _T("sound_frequency"), _T("%d"), p->sound_freq);
+  cfgfile_write_str (f, _T("sound_interpol"), interpolmode[p->sound_interpol]);
+  cfgfile_write_str (f, _T("sound_filter"), soundfiltermode1[p->sound_filter]);
+  cfgfile_write_str (f, _T("sound_filter_type"), soundfiltermode2[p->sound_filter_type]);
 	if (p->sound_volume_cd >= 0)
-		cfgfile_write(f, _T("sound_volume_cd"), _T("%d"), p->sound_volume_cd);
+		cfgfile_write (f, _T("sound_volume_cd"), _T("%d"), p->sound_volume_cd);
 
-	cfgfile_write(f, _T("cachesize"), _T("%d"), p->cachesize);
+  cfgfile_write (f, _T("cachesize"), _T("%d"), p->cachesize);
 
 	for (i = 0; i < MAX_JPORTS; i++) {
 		struct jport *jp = &p->jports[i];
@@ -1226,59 +1168,61 @@ void cfgfile_save_options(struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_str(f, _T("uaeboard"), uaeboard[p->uaeboard]);
 	cfgfile_dwrite_str(f, _T("absolute_mouse"), abspointers[p->input_tablet]);
 
-	cfgfile_write(f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
-	write_resolution(f, _T("gfx_width"), _T("gfx_height"), &p->gfx_size); /* compatibility with old versions */
-	cfgfile_write(f, _T("gfx_refreshrate"), _T("%d"), p->gfx_apmode[0].gfx_refreshrate);
-	cfgfile_dwrite(f, _T("gfx_refreshrate_rtg"), _T("%d"), p->gfx_apmode[1].gfx_refreshrate);
+  cfgfile_write (f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
+  write_resolution (f, _T("gfx_width"), _T("gfx_height"), &p->gfx_size); /* compatibility with old versions */
+	cfgfile_write (f, _T("gfx_refreshrate"), _T("%d"), p->gfx_apmode[0].gfx_refreshrate);
+	cfgfile_dwrite (f, _T("gfx_refreshrate_rtg"), _T("%d"), p->gfx_apmode[1].gfx_refreshrate);
 
-	cfgfile_write_str(f, _T("gfx_vsync"), vsyncmodes[p->gfx_apmode[0].gfx_vsync]);
-	cfgfile_write_str(f, _T("gfx_vsync_picasso"), vsyncmodes[p->gfx_apmode[1].gfx_vsync]);
-	cfgfile_write_bool(f, _T("gfx_lores"), p->gfx_resolution == 0);
-	cfgfile_write_str(f, _T("gfx_resolution"), lorestype1[p->gfx_resolution]);
+	cfgfile_write_str (f, _T("gfx_vsync"), vsyncmodes[p->gfx_apmode[0].gfx_vsync + 1]);
+	cfgfile_write_str (f, _T("gfx_vsync_picasso"), vsyncmodes[p->gfx_apmode[1].gfx_vsync + 1]);
+  cfgfile_write_bool (f, _T("gfx_lores"), p->gfx_resolution == 0);
+  cfgfile_write_str (f, _T("gfx_resolution"), lorestype1[p->gfx_resolution]);
 
-	cfgfile_write_bool(f, _T("immediate_blits"), p->immediate_blits);
-	cfgfile_dwrite_str(f, _T("waiting_blits"), waitblits[p->waiting_blits]);
-	cfgfile_write_bool(f, _T("ntsc"), p->ntscmode);
+  cfgfile_write_bool (f, _T("immediate_blits"), p->immediate_blits);
+	cfgfile_dwrite_str (f, _T("waiting_blits"), waitblits[p->waiting_blits]);
+  cfgfile_write_bool (f, _T("fast_copper"), p->fast_copper);
+  cfgfile_write_bool (f, _T("ntsc"), p->ntscmode);
 
-	cfgfile_dwrite_bool(f, _T("show_leds"), !!(p->leds_on_screen & STATUSLINE_CHIPSET));
-	cfgfile_dwrite_bool(f, _T("show_leds_rtg"), !!(p->leds_on_screen & STATUSLINE_RTG));
-
-	if (p->chipset_mask & CSMASK_AGA)
-		cfgfile_write(f, _T("chipset"), _T("aga"));
-	else if ((p->chipset_mask & CSMASK_ECS_AGNUS) && (p->chipset_mask & CSMASK_ECS_DENISE))
-		cfgfile_write(f, _T("chipset"), _T("ecs"));
-	else if (p->chipset_mask & CSMASK_ECS_AGNUS)
-		cfgfile_write(f, _T("chipset"), _T("ecs_agnus"));
-	else if (p->chipset_mask & CSMASK_ECS_DENISE)
-		cfgfile_write(f, _T("chipset"), _T("ecs_denise"));
-	else
-		cfgfile_write(f, _T("chipset"), _T("ocs"));
+  cfgfile_dwrite_bool (f, _T("show_leds"), p->leds_on_screen);
+  if (p->chipset_mask & CSMASK_AGA)
+  	cfgfile_write (f, _T("chipset"), _T("aga"));
+  else if ((p->chipset_mask & CSMASK_ECS_AGNUS) && (p->chipset_mask & CSMASK_ECS_DENISE))
+  	cfgfile_write (f, _T("chipset"), _T("ecs"));
+  else if (p->chipset_mask & CSMASK_ECS_AGNUS)
+  	cfgfile_write (f, _T("chipset"), _T("ecs_agnus"));
+  else if (p->chipset_mask & CSMASK_ECS_DENISE)
+  	cfgfile_write (f, _T("chipset"), _T("ecs_denise"));
+  else
+  	cfgfile_write (f, _T("chipset"), _T("ocs"));
 	if (p->chipset_refreshrate > 0)
-		cfgfile_write(f, _T("chipset_refreshrate"), _T("%f"), p->chipset_refreshrate);
+		cfgfile_write (f, _T("chipset_refreshrate"), _T("%f"), p->chipset_refreshrate);
 
 	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
-		if (p->cr[i].rate <= 0)
-			continue;
 		struct chipset_refresh *cr = &p->cr[i];
+		if (!cr->inuse)
+			continue;
 		cr->index = i;
-		_stprintf(tmp, _T("%f"), cr->rate);
-		TCHAR *s = tmp + _tcslen(tmp);
+		if (cr->rate == 0)
+			_tcscpy(tmp, _T("0"));
+		else
+			_stprintf (tmp, _T("%f"), cr->rate);
+		TCHAR *s = tmp + _tcslen (tmp);
 		if (cr->label[0] > 0 && i < MAX_CHIPSET_REFRESH)
-			s += _stprintf(s, _T(",t=%s"), cr->label);
+			s += _stprintf (s, _T(",t=%s"), cr->label);
 		if (cr->horiz > 0)
-			s += _stprintf(s, _T(",h=%d"), cr->horiz);
+			s += _stprintf (s, _T(",h=%d"), cr->horiz);
 		if (cr->vert > 0)
-			s += _stprintf(s, _T(",v=%d"), cr->vert);
+			s += _stprintf (s, _T(",v=%d"), cr->vert);
 		if (cr->locked)
-			_tcscat(s, _T(",locked"));
+			_tcscat (s, _T(",locked"));
 		if (cr->ntsc > 0)
-			_tcscat(s, _T(",ntsc"));
+			_tcscat (s, _T(",ntsc"));
 		else if (cr->ntsc == 0)
-			_tcscat(s, _T(",pal"));
+			_tcscat (s, _T(",pal"));
 		if (cr->lace > 0)
-			_tcscat(s, _T(",lace"));
+			_tcscat (s, _T(",lace"));
 		else if (cr->lace == 0)
-			_tcscat(s, _T(",nlace"));
+			_tcscat (s, _T(",nlace"));
 		if ((cr->resolution & 7) != 7) {
 			if (cr->resolution & 1)
 				_tcscat(s, _T(",lores"));
@@ -1288,11 +1232,11 @@ void cfgfile_save_options(struct zfile *f, struct uae_prefs *p, int type)
 				_tcscat(s, _T(",shres"));
 		}
 		if (cr->vsync > 0)
-			_tcscat(s, _T(",vsync"));
+			_tcscat (s, _T(",vsync"));
 		else if (cr->vsync == 0)
-			_tcscat(s, _T(",nvsync"));
+			_tcscat (s, _T(",nvsync"));
 		if (cr->rtg)
-			_tcscat(s, _T(",rtg"));
+			_tcscat (s, _T(",rtg"));
 		if (cr->defaultdata)
 			_tcscat(s, _T(",default"));
 		if (i == CHIPSET_REFRESH_PAL)
@@ -1407,9 +1351,6 @@ void cfgfile_save_options(struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool(f, _T("fpu_softfloat"), p->fpu_softfloat);
 
 	cfgfile_write(f, _T("rtg_modes"), _T("0x%x"), p->picasso96_modeflags);
-
-	cfgfile_dwrite(f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
-	cfgfile_dwrite(f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
 
 	cfgfile_write_str(f, _T("kbd_lang"), (p->keyboard_lang == KBD_LANG_DE ? _T("de")
 		: p->keyboard_lang == KBD_LANG_DK ? _T("dk")
@@ -1883,7 +1824,6 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 					TCHAR *next2 = _tcschr(next, ':');
 					if (next2)
 						*next2++ = 0;
-					int tmpval = 0;
 					if (!_tcsicmp(next, _T("delay"))) {
 						p->cdslots[i].delayed = true;
 						next = next2;
@@ -1989,37 +1929,31 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
-	if (_tcscmp(option, _T("gfx_vsync")) == 0) {
-		if (cfgfile_strval(option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync, vsyncmodes, 0) >= 0)
+	if (_tcscmp (option, _T("gfx_vsync")) == 0) {
+		if (cfgfile_strval (option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync, vsyncmodes, 0) >= 0) {
+			p->gfx_apmode[APMODE_NATIVE].gfx_vsync--;
 			return 1;
-		return cfgfile_yesno(option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync);
+		}
+		return cfgfile_yesno (option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync);
 	}
-	if (_tcscmp(option, _T("gfx_vsync_picasso")) == 0) {
-		if (cfgfile_strval(option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync, vsyncmodes, 0) >= 0)
+	if (_tcscmp (option, _T("gfx_vsync_picasso")) == 0) {
+		if (cfgfile_strval (option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync, vsyncmodes, 0) >= 0) {
+			p->gfx_apmode[APMODE_RTG].gfx_vsync--;
 			return 1;
-		return cfgfile_yesno(option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync);
+		}
+		return cfgfile_yesno (option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync);
 	}
 
-	if (cfgfile_yesno(option, value, _T("show_leds"), &vb)) {
-		if (vb)
-			p->leds_on_screen |= STATUSLINE_CHIPSET;
-		else
-			p->leds_on_screen &= ~STATUSLINE_CHIPSET;
+  if(cfgfile_yesno (option, value, _T("show_leds"), &vb)) {
+    p->leds_on_screen = vb;
 		return 1;
-	}
-	if (cfgfile_yesno(option, value, _T("show_leds_rtg"), &vb)) {
-		if (vb)
-			p->leds_on_screen |= STATUSLINE_RTG;
-		else
-			p->leds_on_screen &= ~STATUSLINE_RTG;
-		return 1;
-	}
+  }
 
-	if (_tcscmp(option, _T("gfx_width")) == 0 || _tcscmp(option, _T("gfx_height")) == 0) {
-		cfgfile_intval(option, value, _T("gfx_width"), &p->gfx_size.width, 1);
-		cfgfile_intval(option, value, _T("gfx_height"), &p->gfx_size.height, 1);
-		return 1;
-	}
+  if (_tcscmp (option, _T("gfx_width")) == 0 || _tcscmp (option, _T("gfx_height")) == 0) {
+	  cfgfile_intval (option, value, _T("gfx_width"), &p->gfx_size.width, 1);
+	  cfgfile_intval (option, value, _T("gfx_height"), &p->gfx_size.height, 1);
+	  return 1;
+  }
 
 	if (_tcscmp(option, _T("joyportfriendlyname0")) == 0 || _tcscmp(option, _T("joyportfriendlyname1")) == 0) {
 		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportfriendlyname0")) == 0 ? 0 : 1, -1, 2);
@@ -3067,66 +3001,64 @@ static void addbcromtype(struct uae_prefs *p, int romtype, bool add, const TCHAR
 static int cfgfile_parse_hardware(struct uae_prefs *p, const TCHAR *option, TCHAR *value)
 {
 	int tmpval, dummyint, i;
-	bool tmpbool, dummybool;
-	TCHAR *section = nullptr;
 	TCHAR tmpbuf[CONFIG_BLEN];
 
-	if (cfgfile_yesno(option, value, _T("immediate_blits"), &p->immediate_blits)
+  if (cfgfile_yesno (option, value, _T("immediate_blits"), &p->immediate_blits)
+	  || cfgfile_yesno (option, value, _T("fast_copper"), &p->fast_copper)
 		|| cfgfile_yesno(option, value, _T("fpu_no_unimplemented"), &p->fpu_no_unimplemented)
-		|| cfgfile_yesno(option, value, _T("cd32cd"), &p->cs_cd32cd)
-		|| cfgfile_yesno(option, value, _T("cd32c2p"), &p->cs_cd32c2p)
-		|| cfgfile_yesno(option, value, _T("cd32nvram"), &p->cs_cd32nvram)
-		|| cfgfile_yesno(option, value, _T("pcmcia"), &p->cs_pcmcia)
+		|| cfgfile_yesno (option, value, _T("cd32cd"), &p->cs_cd32cd)
+		|| cfgfile_yesno (option, value, _T("cd32c2p"), &p->cs_cd32c2p)
+		|| cfgfile_yesno (option, value, _T("cd32nvram"), &p->cs_cd32nvram)
 		|| cfgfile_yesno(option, value, _T("cia_overlay"), &p->cs_ciaoverlay)
 		|| cfgfile_yesno(option, value, _T("ksmirror_e0"), &p->cs_ksmirror_e0)
 		|| cfgfile_yesno(option, value, _T("ksmirror_a8"), &p->cs_ksmirror_a8)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
 
-		|| cfgfile_yesno(option, value, _T("ntsc"), &p->ntscmode)
-		|| cfgfile_yesno(option, value, _T("cpu_compatible"), &p->cpu_compatible)
-		|| cfgfile_yesno(option, value, _T("cpu_24bit_addressing"), &p->address_space_24)
-		|| cfgfile_yesno(option, value, _T("fpu_strict"), &p->fpu_strict)
-		|| cfgfile_yesno(option, value, _T("fpu_softfloat"), &p->fpu_softfloat)
-		|| cfgfile_yesno(option, value, _T("floppy_write_protect"), &p->floppy_read_only)
+	  || cfgfile_yesno (option, value, _T("ntsc"), &p->ntscmode)
+	  || cfgfile_yesno (option, value, _T("cpu_compatible"), &p->cpu_compatible)
+	  || cfgfile_yesno (option, value, _T("cpu_24bit_addressing"), &p->address_space_24)
+		|| cfgfile_yesno (option, value, _T("fpu_strict"), &p->fpu_strict)
+		|| cfgfile_yesno (option, value, _T("fpu_softfloat"), &p->fpu_softfloat)
+		|| cfgfile_yesno (option, value, _T("floppy_write_protect"), &p->floppy_read_only)
 		|| cfgfile_yesno(option, value, _T("harddrive_write_protect"), &p->harddrive_read_only))
-		return 1;
+	  return 1;
 
-	if (cfgfile_intval(option, value, _T("cachesize"), &p->cachesize, 1)
-		|| cfgfile_intval(option, value, _T("cd32nvram_size"), &p->cs_cd32nvram_size, 1024)
-		|| cfgfile_intval(option, value, _T("fatgary"), &p->cs_fatgaryrev, 1)
-		|| cfgfile_intval(option, value, _T("ramsey"), &p->cs_ramseyrev, 1)
-		|| cfgfile_floatval(option, value, _T("chipset_refreshrate"), &p->chipset_refreshrate)
-		|| cfgfile_intval(option, value, _T("a3000mem_size"), &p->mbresmem_low_size, 0x100000)
-		|| cfgfile_intval(option, value, _T("mbresmem_size"), &p->mbresmem_high_size, 0x100000)
-		|| cfgfile_intval(option, value, _T("z3mem_start"), &p->z3autoconfig_start, 1)
-		|| cfgfile_intval(option, value, _T("bogomem_size"), &p->bogomem_size, 0x40000)
-		|| cfgfile_intval(option, value, _T("rtg_modes"), &p->picasso96_modeflags, 1)
-		|| cfgfile_intval(option, value, _T("floppy_speed"), &p->floppy_speed, 1)
-		|| cfgfile_intval(option, value, _T("cd_speed"), &p->cd_speed, 1)
-		|| cfgfile_intval(option, value, _T("floppy_write_length"), &p->floppy_write_length, 1)
-		|| cfgfile_intval(option, value, _T("nr_floppies"), &p->nr_floppies, 1)
-		|| cfgfile_intval(option, value, _T("floppy0type"), &p->floppyslots[0].dfxtype, 1)
-		|| cfgfile_intval(option, value, _T("floppy1type"), &p->floppyslots[1].dfxtype, 1)
-		|| cfgfile_intval(option, value, _T("floppy2type"), &p->floppyslots[2].dfxtype, 1)
-		|| cfgfile_intval(option, value, _T("floppy3type"), &p->floppyslots[3].dfxtype, 1))
-		return 1;
+  if (cfgfile_intval (option, value, _T("cachesize"), &p->cachesize, 1)
+		|| cfgfile_intval (option, value, _T("cd32nvram_size"), &p->cs_cd32nvram_size, 1024)
+		|| cfgfile_intval (option, value, _T("fatgary"), &p->cs_fatgaryrev, 1)
+		|| cfgfile_intval (option, value, _T("ramsey"), &p->cs_ramseyrev, 1)
+	  || cfgfile_floatval (option, value, _T("chipset_refreshrate"), &p->chipset_refreshrate)
+		|| cfgfile_intval (option, value, _T("a3000mem_size"), &p->mbresmem_low_size, 0x100000)
+		|| cfgfile_intval (option, value, _T("mbresmem_size"), &p->mbresmem_high_size, 0x100000)
+	  || cfgfile_intval (option, value, _T("z3mem_start"), &p->z3autoconfig_start, 1)
+	  || cfgfile_intval (option, value, _T("bogomem_size"), &p->bogomem_size, 0x40000)
+	  || cfgfile_intval (option, value, _T("rtg_modes"), &p->picasso96_modeflags, 1)
+	  || cfgfile_intval (option, value, _T("floppy_speed"), &p->floppy_speed, 1)
+		|| cfgfile_intval (option, value, _T("cd_speed"), &p->cd_speed, 1)
+	  || cfgfile_intval (option, value, _T("floppy_write_length"), &p->floppy_write_length, 1)
+	  || cfgfile_intval (option, value, _T("nr_floppies"), &p->nr_floppies, 1)
+	  || cfgfile_intval (option, value, _T("floppy0type"), &p->floppyslots[0].dfxtype, 1)
+	  || cfgfile_intval (option, value, _T("floppy1type"), &p->floppyslots[1].dfxtype, 1)
+	  || cfgfile_intval (option, value, _T("floppy2type"), &p->floppyslots[2].dfxtype, 1)
+	  || cfgfile_intval (option, value, _T("floppy3type"), &p->floppyslots[3].dfxtype, 1))
+	  return 1;
 
-	if (cfgfile_strval(option, value, _T("rtc"), &p->cs_rtc, rtctype, 0)
-		|| cfgfile_strval(option, value, _T("ciaatod"), &p->cs_ciaatod, ciaatodmode, 0)
-		|| cfgfile_strval(option, value, _T("collision_level"), &p->collision_level, collmode, 0)
-		|| cfgfile_strval(option, value, _T("waiting_blits"), &p->waiting_blits, waitblits, 0)
-		|| cfgfile_strval(option, value, _T("floppy_auto_extended_adf"), &p->floppy_auto_ext2, autoext2, 0)
-		|| cfgfile_strval(option, value, _T("z3mapping"), &p->z3_mapping_mode, z3mapping, 0)
+  if (cfgfile_strval (option, value, _T("rtc"), &p->cs_rtc, rtctype, 0)
+		|| cfgfile_strval (option, value, _T("ciaatod"), &p->cs_ciaatod, ciaatodmode, 0)
+    || cfgfile_strval (option, value, _T("collision_level"), &p->collision_level, collmode, 0)
+		|| cfgfile_strval (option, value, _T("waiting_blits"), &p->waiting_blits, waitblits, 0)
+		|| cfgfile_strval (option, value, _T("floppy_auto_extended_adf"), &p->floppy_auto_ext2, autoext2, 0)
+		|| cfgfile_strval (option, value,  _T("z3mapping"), &p->z3_mapping_mode, z3mapping, 0)
 		|| cfgfile_strval(option, value, _T("boot_rom_uae"), &p->boot_rom, uaebootrom, 0)
 		|| cfgfile_strval(option, value, _T("uaeboard"), &p->uaeboard, uaeboard, 0))
-		return 1;
+  	return 1;
 
-	if (cfgfile_path(option, value, _T("kickstart_rom_file"), p->romfile, sizeof p->romfile / sizeof(TCHAR))
-		|| cfgfile_path(option, value, _T("kickstart_ext_rom_file"), p->romextfile, sizeof p->romextfile / sizeof(TCHAR))
-		|| cfgfile_path(option, value, _T("flash_file"), p->flashfile, sizeof p->flashfile / sizeof(TCHAR))
-		|| cfgfile_path(option, value, _T("cart_file"), p->cartfile, sizeof p->cartfile / sizeof(TCHAR)))
-		return 1;
+  if (cfgfile_path (option, value, _T("kickstart_rom_file"), p->romfile, sizeof p->romfile / sizeof (TCHAR))
+	  || cfgfile_path (option, value, _T("kickstart_ext_rom_file"), p->romextfile, sizeof p->romextfile / sizeof (TCHAR))
+    || cfgfile_path (option, value, _T("flash_file"), p->flashfile, sizeof p->flashfile / sizeof (TCHAR))
+    || cfgfile_path (option, value, _T("cart_file"), p->cartfile, sizeof p->cartfile / sizeof (TCHAR)))
+	  return 1;
 
 	if (cfgfile_string(option, value, _T("uaeboard_options"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		TCHAR *s = cfgfile_option_get(value, _T("order"));
@@ -3461,6 +3393,7 @@ static void calcformula(struct uae_prefs *prefs, TCHAR *in)
 		else
 			_stprintf(in, _T("%d"), (int)val);
 		updatestore = true;
+		return;
 	}
 }
 
@@ -3468,10 +3401,6 @@ int cfgfile_parse_option(struct uae_prefs *p, const TCHAR *option, TCHAR *value,
 {
 	calcformula(p, value);
 
-	if (!_tcscmp(option, _T("debug"))) {
-		write_log(_T("CONFIG DEBUG: '%s'\n"), value);
-		return 1;
-	}
 	if (!_tcscmp(option, _T("config_hardware")))
 		return 1;
 	if (!_tcscmp(option, _T("config_host")))
@@ -3503,7 +3432,7 @@ static int isutf8ext(TCHAR *s)
 	return 0;
 }
 
-int cfgfile_separate_linea(const TCHAR *filename, char *line, TCHAR *line1b, TCHAR *line2b)
+int cfgfile_separate_linea (const TCHAR *filename, char *line, TCHAR *line1b, TCHAR *line2b)
 {
 	char *line1 = line;
 	line1 += strspn(line1, "\t \r\n");
@@ -3634,24 +3563,6 @@ static void cfgfile_parse_separated_line(struct uae_prefs *p, TCHAR *line1b, TCH
 			}
 		}
 	}
-}
-
-void cfgfile_parse_lines(struct uae_prefs *p, const TCHAR *lines, int type)
-{
-	TCHAR *buf = my_strdup(lines);
-	TCHAR *t = buf;
-	for (;;) {
-		if (_tcslen(t) == 0)
-			break;
-		TCHAR *t2 = _tcschr(t, '\n');
-		if (t2)
-			*t2 = 0;
-		cfgfile_parse_line(p, t, type);
-		if (!t2)
-			break;
-		t = t2 + 1;
-	}
-	xfree(buf);
 }
 
 void cfgfile_parse_line(struct uae_prefs *p, TCHAR *line, int type)
@@ -3818,19 +3729,6 @@ end:
 	recursive--;
 	fixup_prefs(p, userconfig != 0);
 	return v;
-}
-
-void cfgfile_backup(const TCHAR *path)
-{
-	TCHAR dpath[MAX_DPATH];
-
-	fetch_configurationpath(dpath, sizeof dpath / sizeof(TCHAR));
-	_tcscat(dpath, _T("configuration.backup"));
-	//bool hidden = my_isfilehidden(dpath);
-	my_unlink(dpath);
-	my_rename(path, dpath);
-	//if (hidden)
-	//	my_setfilehidden(dpath, hidden);
 }
 
 int cfgfile_save(struct uae_prefs *p, const TCHAR *filename, int type)
@@ -4486,10 +4384,6 @@ void default_prefs(struct uae_prefs *p, bool reset, int type)
 		p->mountconfig[i].unitnum = -1;
 	}
 
-	memset(&p->jports[0], 0, sizeof(struct jport));
-	memset(&p->jports[1], 0, sizeof(struct jport));
-	memset(&p->jports[2], 0, sizeof(struct jport));
-	memset(&p->jports[3], 0, sizeof(struct jport));
 	p->jports[0].id = -1;
 	p->jports[1].id = -1;
 	p->jports[2].id = -1;
@@ -4500,22 +4394,29 @@ void default_prefs(struct uae_prefs *p, bool reset, int type)
 	}
 	p->keyboard_lang = KBD_LANG_US;
 
-	p->produce_sound = 3;
-	p->sound_stereo = SND_STEREO;
-	p->sound_stereo_separation = 7;
-	p->sound_mixed_stereo_delay = 0;
-	p->sound_freq = DEFAULT_SOUND_FREQ;
-	p->sound_interpol = 1;
-	p->sound_filter = FILTER_SOUND_OFF;
-	p->sound_filter_type = 0;
+  p->produce_sound = 3;
+  p->sound_stereo = SND_STEREO;
+  p->sound_stereo_separation = 7;
+  p->sound_mixed_stereo_delay = 0;
+  p->sound_freq = DEFAULT_SOUND_FREQ;
+  p->sound_interpol = 0;
+  p->sound_filter = FILTER_SOUND_OFF;
+  p->sound_filter_type = 0;
 	p->sound_volume_cd = 20;
 
 	p->cachesize = 0;
 
-	p->gfx_framerate = 0;
+  p->gfx_framerate = 0;
+
+#ifdef RASPBERRY
 	p->gfx_size.width = 640;
 	p->gfx_size.height = 256;
 	p->gfx_resolution = RES_HIRES;
+#else
+  p->gfx_size.width = 320;
+  p->gfx_size.height = 240;
+  p->gfx_resolution = RES_LORES;
+#endif
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;
@@ -4523,6 +4424,11 @@ void default_prefs(struct uae_prefs *p, bool reset, int type)
 	p->collision_level = 2;
 	p->leds_on_screen = 0;
 	p->boot_rom = 0;
+#ifdef PANDORA
+  p->fast_copper = 1;
+#else
+	p->fast_copper = 0;
+#endif
 	p->cart_internal = 1;
 
 	p->cs_compatible = CP_GENERIC;
@@ -4540,10 +4446,10 @@ void default_prefs(struct uae_prefs *p, bool reset, int type)
 	p->cs_df0idhw = true;
 	p->cs_ciatodbug = false;
 
-	_tcscpy(p->floppyslots[0].df, _T("df0.adf"));
-	_tcscpy(p->floppyslots[1].df, _T("df1.adf"));
-	_tcscpy(p->floppyslots[2].df, _T("df2.adf"));
-	_tcscpy(p->floppyslots[3].df, _T("df3.adf"));
+  _tcscpy (p->floppyslots[0].df, _T(""));
+  _tcscpy (p->floppyslots[1].df, _T(""));
+  _tcscpy (p->floppyslots[2].df, _T(""));
+  _tcscpy (p->floppyslots[3].df, _T(""));
 
 	configure_rom(p, roms, 0);
 	_tcscpy(p->romextfile, _T(""));

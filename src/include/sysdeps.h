@@ -205,6 +205,7 @@ extern TCHAR *au_fs_copy(TCHAR *dst, int maxlen, const char *src);
 extern char *uutf8(const TCHAR *s);
 extern TCHAR *utf8u(const char *s);
 extern void to_lower(TCHAR *s, int len);
+extern void to_upper (TCHAR *s, int len);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
@@ -361,7 +362,11 @@ extern void gui_message(const TCHAR *, ...);
 #endif
 
 #ifndef STATIC_INLINE
-#if __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
+#ifdef DEBUG
+#define STATIC_INLINE static __attribute__ ((noinline))
+#define NOINLINE __attribute__ ((noinline))
+#define NORETURN
+#elif __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
 #ifdef AMIBERRY
 #define STATIC_INLINE static __inline__
 #else
@@ -408,14 +413,7 @@ extern void gui_message(const TCHAR *, ...);
  * Byte-swapping functions
  */
 
-/* Try to use system bswap_16/bswap_32 functions. */
-#if defined HAVE_BSWAP_16 && defined HAVE_BSWAP_32
-# include <byteswap.h>
-#  ifdef HAVE_BYTESWAP_H
-#  include <byteswap.h>
-# endif
-#else
-# ifdef ARMV6_ASSEMBLY
+#ifdef ARMV6_ASSEMBLY
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
 	__asm__(
 			"rev %0, %0"
@@ -430,6 +428,14 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 }
 #define bswap_16(x) do_byteswap_16(x)
 #define bswap_32(x) do_byteswap_32(x)
+#else
+
+/* Try to use system bswap_16/bswap_32 functions. */
+#if defined HAVE_BSWAP_16 && defined HAVE_BSWAP_32
+# include <byteswap.h>
+#  ifdef HAVE_BYTESWAP_H
+#  include <byteswap.h>
+# endif
 # else
 /* Else, if using SDL, try SDL's endian functions. */
 # ifdef USE_SDL

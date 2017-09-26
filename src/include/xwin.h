@@ -65,20 +65,6 @@ extern unsigned int doMask256(int p, int bits, int shift);
 extern void alloc_colors64k(int, int, int, int, int, int, int);
 extern void alloc_colors_picasso(int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt);
 
-/* The graphics code has a choice whether it wants to use a large buffer
-* for the whole display, or only a small buffer for a single line.
-* If you use a large buffer:
-*   - set bufmem to point at it
-*   - set linemem to 0
-*   - if memcpy within bufmem would be very slow, i.e. because bufmem is
-*     in graphics card memory, also set emergmem to point to a buffer
-*     that is large enough to hold a single line.
-*   - implement flush_line to be a no-op.
-* If you use a single line buffer:
-*   - set bufmem and emergmem to 0
-*   - set linemem to point at your buffer
-*   - implement flush_line to copy a single line to the screen
-*/
 struct vidbuffer
 {
 	uae_u8 *bufmem;

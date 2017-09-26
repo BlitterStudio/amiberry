@@ -1,7 +1,7 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -9,7 +9,12 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
 #include "options.h"
+#include "include/memory.h"
+#include "uae.h"
+#include "autoconf.h"
+#include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
 #include "keyboard.h"
@@ -28,7 +33,10 @@ static gcn::UaeDropDown* cboAutofire;
 static gcn::Label* lblMouseSpeed;
 static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
-
+static gcn::Label *lblTapDelay;
+static gcn::UaeDropDown* cboTapDelay;
+static gcn::UaeCheckBox* chkMouseHack;
+  
 static gcn::UaeCheckBox* chkCustomCtrl;
 static gcn::Label* lblA;
 static gcn::TextField* txtA;
@@ -76,7 +84,8 @@ static gcn::Button* cmdPlay;
 
 class StringListModel : public gcn::ListModel
 {
-	vector<string> values;
+  private:
+    std::vector<std::string> values;
 public:
 	StringListModel(const char* entries[], int count)
 	{
@@ -109,6 +118,8 @@ StringListModel ctrlPortList(inputport_list, 5);
 const char* autofireValues[] = {"Off", "Slow", "Medium", "Fast"};
 StringListModel autofireList(autofireValues, 4);
 
+const char *tapDelayValues[] = { "Normal", "Short", "None" };
+StringListModel tapDelayList(tapDelayValues, 3);
 const char* mappingValues[] =
 {
 	"CD32 rwd", "CD32 ffw", "CD32 play", "CD32 yellow", "CD32 green",
@@ -249,6 +260,20 @@ public:
 			RefreshPanelInput();
 		}
 
+	else if (actionEvent.getSource() == cboTapDelay)
+      {
+        if(cboTapDelay->getSelected() == 0)
+          changed_prefs.pandora_tapDelay = 10;
+        else if (cboTapDelay->getSelected() == 1)
+          changed_prefs.pandora_tapDelay = 5;
+        else
+          changed_prefs.pandora_tapDelay = 2;
+      }
+    	
+    	else if (actionEvent.getSource() == chkMouseHack)
+  	  {
+  	    changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
+  	  }
 		else if (actionEvent.getSource() == chkCustomCtrl)
 			changed_prefs.customControls = chkCustomCtrl->isSelected();
 
@@ -432,6 +457,18 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->addActionListener(inputActionListener);
 	lblMouseSpeedInfo = new gcn::Label(".25");
 
+	lblTapDelay = new gcn::Label("Tap Delay:");
+  	lblTapDelay->setSize(100, LABEL_HEIGHT);
+  	lblTapDelay->setAlignment(gcn::Graphics::RIGHT);
+	cboTapDelay = new gcn::UaeDropDown(&tapDelayList);
+  	cboTapDelay->setSize(80, DROPDOWN_HEIGHT);
+  	cboTapDelay->setBaseColor(gui_baseCol);
+  	cboTapDelay->setId("cboTapDelay");
+  	cboTapDelay->addActionListener(inputActionListener);
+  
+  	chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
+  	chkMouseHack->setId("MouseHack");
+  	chkMouseHack->addActionListener(inputActionListener);
 	chkCustomCtrl = new gcn::UaeCheckBox("Custom Control");
 	chkCustomCtrl->setId("CustomCtrl");
 	chkCustomCtrl->addActionListener(inputActionListener);
@@ -596,6 +633,11 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 12, posY);
 	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 
+  category.panel->add(chkMouseHack, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
+  category.panel->add(lblTapDelay, 300, posY);
+  category.panel->add(cboTapDelay, 300 + lblTapDelay->getWidth() + 8, posY);
+  posY += cboTapDelay->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(chkCustomCtrl, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
 	posY += chkCustomCtrl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblA, DISTANCE_BORDER, posY);
@@ -645,6 +687,9 @@ void ExitPanelInput()
 	delete lblMouseSpeed;
 	delete sldMouseSpeed;
 	delete lblMouseSpeedInfo;
+  	delete lblTapDelay;
+  	delete cboTapDelay;
+  	delete chkMouseHack;
 
 	delete chkCustomCtrl;
 	delete lblA;
@@ -740,6 +785,14 @@ void RefreshPanelInput()
 		}
 	}
 
+if (changed_prefs.pandora_tapDelay == 10)
+    cboTapDelay->setSelected(0);
+  else if (changed_prefs.pandora_tapDelay == 5)
+    cboTapDelay->setSelected(1);
+  else
+    cboTapDelay->setSelected(2);
+	chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
+
 	chkCustomCtrl->setSelected(changed_prefs.customControls);
 
 	txtA->setText(changed_prefs.custom_a);
@@ -762,6 +815,12 @@ bool HelpPanelInput(std::vector<std::string> &helptext)
 	helptext.push_back("");
 	helptext.push_back("Set the emulated mouse speed to .25x, .5x, 1x, 2x and 4x to slow down or speed up the mouse.");
 	helptext.push_back("");
+  	helptext.push_back("When \"Enable mousehack\" is activated, you can use the stylus to set the mouse pointer to the exact position.");
+  	helptext.push_back("This works very well on Workbench, but many games using there own mouse handling and will not profit from");
+  	helptext.push_back("this code.");
+  	helptext.push_back("");
+  	helptext.push_back("\"Tap Delay\" specifies the time between taping the screen and an emulated mouse button click.");
+  	helptext.push_back("");
 	helptext.push_back("When you activate \"Custom Control\", you can define which Amiga key should be emulated by pressing one of the");
 	helptext.push_back("ABXY- or D-pad buttons. Useful to setup controls for pinball games. During emulation, you can switch between");
 	helptext.push_back("regular buttons and custom settings by pressing left shoulder button and 'c'.");

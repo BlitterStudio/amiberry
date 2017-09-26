@@ -11,7 +11,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -24,7 +24,7 @@
 
 #include "cda_play.h"
 #include "archivers/mp2/kjmp2.h"
-#ifdef AMIBERRY
+#ifndef WIN32
 extern "C" {
 #include "mpeg2dec/mpeg2.h"
 #include "mpeg2dec/mpeg2convert.h"

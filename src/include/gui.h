@@ -42,7 +42,8 @@ extern bool no_gui;
 #define LED_CPU 10
 #define LED_SND 11
 #define LED_MD 12
-#define LED_MAX 13
+#define LED_NET 13
+#define LED_MAX 14
 
 struct gui_info
 {

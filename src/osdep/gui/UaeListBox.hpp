@@ -3,10 +3,10 @@
 
 #include <list>
 
-#include "guisan/listmodel.hpp"
-#include "guisan/platform.hpp"
-#include "guisan/widget.hpp"
-#include "guisan/widgets/listbox.hpp"
+#include <guisan/listmodel.hpp>
+#include <guisan/platform.hpp>
+#include <guisan/widget.hpp>
+#include <guisan/widgets/listbox.hpp>
 
 
 namespace gcn

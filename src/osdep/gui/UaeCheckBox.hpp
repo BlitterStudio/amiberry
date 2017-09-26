@@ -4,9 +4,9 @@
 #include <map>
 #include <string>
 
-#include "guisan/platform.hpp"
-#include "guisan/widget.hpp"
-#include "guisan/widgets/checkbox.hpp"
+#include <guisan/platform.hpp>
+#include <guisan/widget.hpp>
+#include <guisan/widgets/checkbox.hpp>
 
 
 namespace gcn

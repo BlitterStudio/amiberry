@@ -664,14 +664,6 @@ static int toscr_delay[2];
    we can do more work at once.  */
 static int toscr_nbits;
 
-/* undocumented bitplane delay hardware feature */
-static int delayoffset;
-
-STATIC_INLINE void compute_delay_offset()
-{
-	delayoffset = (16 << fetchmode) - (((plfstrt - HARD_DDF_START_REAL) & fetchstart_mask) << 1);
-}
-
 static void record_color_change2(int hpos, int regno, unsigned long value)
 {
 	int pos = hpos * 2;
@@ -718,20 +710,6 @@ STATIC_INLINE void update_denise(int hpos)
 	else {
 		toscr_nr_planes2 = toscr_nr_planes;
 	}
-}
-
-static int islinetoggle()
-{
-	int linetoggle = 0;
-	if (!(beamcon0 & 0x0800) && !(beamcon0 & 0x0020) && (currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-	{
-		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
-	}
-	else if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS) && currprefs.ntscmode)
-	{
-		linetoggle = 1; // hardwired NTSC Agnus
-	}
-	return linetoggle;
 }
 
 /* Expand bplcon0/bplcon1 into the toscr_xxx variables.  */
@@ -1843,11 +1821,6 @@ STATIC_INLINE void decide_fetch(int hpos)
 		maybe_check(hpos);
 		last_fetch_hpos = hpos;
 	}
-}
-
-STATIC_INLINE void decide_fetch_safe(int hpos)
-{
-	decide_fetch(hpos);
 }
 
 static void reset_bpl_vars(void)
@@ -4586,48 +4559,47 @@ static void update_copper(int until_hpos)
 			if (ch_comp & 1)
 				ch_comp = 0;
 
-			/* First handle possible blitter wait
-			* Must be before following free cycle check
-			*/
-			if ((cop_state.i2 & 0x8000) == 0) {
-				if (bltstate != BLT_done) {
-					/* We need to wait for the blitter.  */
-					cop_state.state = COP_bltwait;
-					copper_enabled_thisline = 0;
-					unset_special(SPCFLAG_COPPER);
-					goto out;
-				}
-			}
-
-			if (copper_cant_read(old_hpos))
-				continue;
-
-			hp = ch_comp & (cop_state.i2 & 0xFE);
-			if (vp == cop_state.vcmp && hp < cop_state.hcmp) {
-				/* Position not reached yet.  */
-				//if (currprefs.fast_copper) {
-				//	if ((cop_state.i2 & 0xFE) == 0xFE) {
-				//		int wait_finish = cop_state.hcmp - 2;
-				//		/* This will leave c_hpos untouched if it's equal to wait_finish.  */
-				//		if (wait_finish < c_hpos)
-				//			return;
-				//		else if (wait_finish <= until_hpos) {
-				//			c_hpos = wait_finish;
-				//		}
-				//		else
-				//			c_hpos = until_hpos;
-				//	}
-				//}
+				/* First handle possible blitter wait
+				 * Must be before following free cycle check
+				 */
+			    if ((cop_state.i2 & 0x8000) == 0) {
+				    if (bltstate != BLT_done) {
+					    /* We need to wait for the blitter.  */
+					    cop_state.state = COP_bltwait;
+					    copper_enabled_thisline = 0;
+					    unset_special (SPCFLAG_COPPER);
+					    goto out;
+				    }
+			    }
+				
+    	    if (copper_cant_read (old_hpos))
+        		continue;
+				
+				  hp = ch_comp & (cop_state.i2 & 0xFE);
+	        if (vp == cop_state.vcmp && hp < cop_state.hcmp) {
+					  /* Position not reached yet.  */
+            if(currprefs.fast_copper) {
+    					if ((cop_state.i2 & 0xFE) == 0xFE) {
+    						int wait_finish = cop_state.hcmp - 2;
+    						/* This will leave c_hpos untouched if it's equal to wait_finish.  */
+    						if (wait_finish < c_hpos)
+    							return;
+    						else if (wait_finish <= until_hpos) {
+    							c_hpos = wait_finish;
+    						} else
+    							c_hpos = until_hpos;
+    					}
+    				}
+					  break;
+				  }
+				
+				  cop_state.state = COP_read1;
+			  }
 				break;
-			}
-
-			cop_state.state = COP_read1;
-		}
-		break;
-
-		case COP_skip1:
-		{
-			unsigned int vcmp, hcmp, vp1, hp1;
+				
+	  case COP_skip1:
+	    {
+	      unsigned int vcmp, hcmp, vp1, hp1;
 
 			if (c_hpos >= (maxhpos & ~1) || (c_hpos & 1))
 				break;
@@ -4655,14 +4627,14 @@ static void update_copper(int until_hpos)
 out:
 	cop_state.hpos = c_hpos;
 	last_copper_hpos = until_hpos;
-
-	//if (currprefs.fast_copper) {
-	//	/* The test against maxhpos also prevents us from calling predict_copper
-	//	when we are being called from hsync_handler, which would not only be
-	//	stupid, but actively harmful.  */
-	//	if ((regs.spcflags & SPCFLAG_COPPER) && (c_hpos + 8 < maxhpos))
-	//		predict_copper();
-	//}
+	
+  if(currprefs.fast_copper) {
+    /* The test against maxhpos also prevents us from calling predict_copper
+       when we are being called from hsync_handler, which would not only be
+       stupid, but actively harmful.  */
+	  if ((regs.spcflags & SPCFLAG_COPPER) && (c_hpos + 8 < maxhpos))
+		  predict_copper ();
+  }
 }
 
 static void compute_spcflag_copper(int hpos)
@@ -4696,14 +4668,14 @@ static void compute_spcflag_copper(int hpos)
 		cop_state.state = COP_strobe_delay1;
 
 	copper_enabled_thisline = 1;
-
-	/*if (currprefs.fast_copper) {
-		predict_copper();
-		if (!eventtab[ev_copper].active)
-			set_special(SPCFLAG_COPPER);
+	
+  if(currprefs.fast_copper) {
+	  predict_copper ();
+	  if (! eventtab[ev_copper].active)
+	    set_special (SPCFLAG_COPPER);
 	}
-	else*/
-		set_special(SPCFLAG_COPPER);
+  else
+	  set_special (SPCFLAG_COPPER);
 }
 
 static void copper_handler(void)
@@ -5579,9 +5551,6 @@ static void hsync_handler_post(bool onvsync)
 	events_dmal_hsync();
 
 	if (currprefs.m68k_speed < 0) {
-		if (vpos > 0 && !(vpos & 0x3f))
-			partial_draw_frame();
-
 		if (is_last_line()) {
 			/* really last line, just run the cpu emulation until whole vsync time has been used */
 			vsyncmintime = vsyncmaxtime; /* emulate if still time left */
@@ -6945,7 +6914,8 @@ void check_prefs_changed_custom(void)
 		inputdevice_copyconfig(&changed_prefs, &currprefs);
 	currprefs.immediate_blits = changed_prefs.immediate_blits;
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
-	currprefs.collision_level = changed_prefs.collision_level;
+  currprefs.collision_level = changed_prefs.collision_level;
+  currprefs.fast_copper = changed_prefs.fast_copper;
 
 	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod;
 	currprefs.cs_rtc = changed_prefs.cs_rtc;

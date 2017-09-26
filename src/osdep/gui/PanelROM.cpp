@@ -1,7 +1,7 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -9,8 +9,11 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
 #include "options.h"
+#include "include/memory.h"
 #include "rommgr.h"
+#include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -63,7 +66,7 @@ public:
 		idxToAvailableROMs.clear();
 
 		int currIdx = -1;
-		if (ROMType & (ROMTYPE_EXTCDTV | ROMTYPE_EXTCD32))
+		if (ROMType & (ROMTYPE_ALL_EXT | ROMTYPE_ALL_CART))
 		{
 			roms.push_back("");
 			idxToAvailableROMs.push_back(-1);
@@ -209,8 +212,8 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cartROMActionListener = new CartROMActionListener();
 #endif
 	romButtonActionListener = new ROMButtonActionListener();
-	mainROMList = new ROMListModel(ROMTYPE_KICK | ROMTYPE_KICKCD32);
-	extROMList = new ROMListModel(ROMTYPE_EXTCDTV | ROMTYPE_EXTCD32);
+	mainROMList = new ROMListModel(ROMTYPE_ALL_KICK);
+	extROMList = new ROMListModel(ROMTYPE_ALL_EXT);
 #ifdef ACTION_REPLAY
 	cartROMList = new ROMListModel(ROMTYPE_ALL_CART);
 #endif
@@ -306,7 +309,6 @@ void ExitPanelROM()
 #endif
 
 	delete romButtonActionListener;
-	//	delete chkMapROM;
 }
 
 

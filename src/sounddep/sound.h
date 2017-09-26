@@ -6,15 +6,12 @@
   * Copyright 1997 Bernd Schmidt
   */
 
-#if defined(AMIBERRY) || defined(ANDROIDSDL)
 #define DEFAULT_SOUND_CHANNELS 2
-#else
-#define DEFAULT_SOUND_CHANNELS 1
-#endif
 
+#define SOUND_BUFFERS_COUNT 4
 #define SNDBUFFER_LEN 2048
 
-extern uae_u16 sndbuffer[4][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
+extern uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
 extern uae_u16 *sndbufpt;
 extern uae_u16 *render_sndbuff;
 extern uae_u16 *finish_sndbuff;
@@ -40,7 +37,7 @@ STATIC_INLINE void set_sound_buffers (void)
 
 STATIC_INLINE void clear_sound_buffers (void)
 {
-    memset (sndbuffer, 0, 4 * (SNDBUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS);
+	memset(sndbuffer, 0, sizeof(sndbuffer));
 }
 
 #define PUT_SOUND_WORD(b) do { *sndbufpt = b; sndbufpt = sndbufpt + 1; } while (0)
@@ -70,7 +67,7 @@ extern bool cdaudio_active;
 
 STATIC_INLINE void clear_cdaudio_buffers (void)
 {
-    memset (cdaudio_buffer, 0, CDAUDIO_BUFFERS * (CDAUDIO_BUFFER_LEN + 32) * 2);
+  memset (cdaudio_buffer, 0, sizeof(cdaudio_buffer));
 }
 
 #define PUT_CDAUDIO_WORD_STEREO(l,r) do { *((uae_u32 *)cdbufpt) = (r << 16) | (l & 0xffff); cdbufpt = cdbufpt + 2; } while (0)

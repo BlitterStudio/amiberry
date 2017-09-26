@@ -1,16 +1,18 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeListBox.hpp"
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
 #include "options.h"
+#include "uae.h"
+#include "blkdev.h"
 #include "gui.h"
 #include "gui_handling.h"
-#include "uae.h"
 
 static char last_active_config[MAX_DPATH] = {'\0'};
 static int ensureVisible = -1;
@@ -33,6 +35,9 @@ bool LoadConfigByName(const char* name)
 	ConfigFileInfo* config = SearchConfigInList(name);
 	if (config != nullptr)
 	{
+		if(emulating) {
+			uae_restart(-1, config->FullPath);
+		} else {
 		txtName->setText(config->Name);
 		txtDesc->setText(config->Description);
 		target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);

@@ -4,7 +4,7 @@
 #include <sstream>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -308,6 +308,7 @@ static void SelectFileLoop()
 								lstFiles->requestFocus();
 						else if (activeWidget == txtFilename)
 							lstFiles->requestFocus();
+					continue;
 					}
 					break;
 
@@ -326,6 +327,7 @@ static void SelectFileLoop()
 							lstFiles->requestFocus();
 						else if (activeWidget == cmdOK)
 							cmdCancel->requestFocus();
+					continue;
 					}
 					break;
 

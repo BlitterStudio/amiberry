@@ -1,6 +1,6 @@
 #include "UaeDropDown.hpp"
-#include "guisan/widgets/dropdown.hpp"
-#include "guisan/key.hpp"
+#include <guisan/widgets/dropdown.hpp>
+#include <guisan/key.hpp>
 
 namespace gcn
 {

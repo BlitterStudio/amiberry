@@ -97,7 +97,7 @@ namespace widgets
 
 /* Flag for changes in rtarea:
 Bit 0: any HD in config?
-Bit 1: force because add/remove HD was clicked
+Bit 1: force because add/remove HD was clicked or new config loaded
 Bit 2: socket_emu on
 Bit 3: mousehack on
 Bit 4: rtgmem on

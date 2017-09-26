@@ -1,7 +1,7 @@
 #include <guisan.hpp>
 #include <SDL/SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -11,7 +11,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "disk.h"
 #include "uae.h"
 #include "autoconf.h"
@@ -48,42 +48,42 @@ struct amigamodels {
 	char configs[8][128];
 };
 static struct amigamodels amodels[] = {
-	{ 4, "Amiga 500",{
-		"1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)",
-		"1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
-		"1.3 ROM, ECS Agnus, 1 MB Chip RAM",
-		"1.3 ROM, OCS Agnus, 512 KB Chip RAM",
-		"1.2 ROM, OCS Agnus, 512 KB Chip RAM",
-		"1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
-		"\0" } },
-		{ 4, "Amiga 500+",{
-			"Basic non-expanded configuration",
-			"2 MB Chip RAM expanded configuration",
-			"MB Fast RAM expanded configuration\n",
-			"\0" } },
-			{ 4, "Amiga 600",{
-				"Basic non-expanded configuration",
-				"2 MB Chip RAM expanded configuration",
-				"n MB Fast RAM expanded configuration",
-				"\0" } },
-				{ 4, "Amiga 1200",{
-					"Basic non-expanded configuration",
-					"4 MB Fast RAM expanded configuration",
-					"\0" } },
-					//	{ 2, "Amiga 3000", { 
-					//       "1.4 ROM, 2MB Chip + 8MB Fast",
-					//       "2.04 ROM, 2MB Chip + 8MB Fast",
-					//       "3.1 ROM, 2MB Chip + 8MB Fast",
-					//       "\0" } },
-					{ 1, "Amiga 4000",{
-						"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
-						"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
-						"\0" } },
-						{ 3, "CD32",{
-							"CD32",
-							"CD32 with Full Motion Video cartridge",
-							"\0" } },
-							{ -1 }
+	{ 4, "Amiga 500", { 
+	     "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", 
+	     "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
+	     "1.3 ROM, ECS Agnus, 1 MB Chip RAM",
+	     "1.3 ROM, OCS Agnus, 512 KB Chip RAM",
+	     "1.2 ROM, OCS Agnus, 512 KB Chip RAM",
+	     "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
+	     "\0" } },
+	{ 4, "Amiga 500+", { 
+	     "Basic non-expanded configuration",
+	     "2 MB Chip RAM expanded configuration",
+	     "MB Fast RAM expanded configuration\n",
+	     "\0" } },
+	{ 4, "Amiga 600", { 
+	     "Basic non-expanded configuration",
+	     "2 MB Chip RAM expanded configuration",
+	     "n MB Fast RAM expanded configuration",
+	     "\0" } },
+	{ 4, "Amiga 1200", {
+	      "Basic non-expanded configuration",
+	      "4 MB Fast RAM expanded configuration",
+	      "\0" } },
+//	{ 2, "Amiga 3000", { 
+//       "1.4 ROM, 2MB Chip + 8MB Fast",
+//       "2.04 ROM, 2MB Chip + 8MB Fast",
+//       "3.1 ROM, 2MB Chip + 8MB Fast",
+//       "\0" } },
+	{ 1, "Amiga 4000", {
+       "68030, 3.1 ROM, 2MB Chip + 8MB Fast",
+       "68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+       "\0" } },
+	{ 3, "CD32", { 
+	     "CD32", 
+	     "CD32 with Full Motion Video cartridge",
+	     "\0" } },
+	{ -1 }
 };
 
 static const int numModels = 6;

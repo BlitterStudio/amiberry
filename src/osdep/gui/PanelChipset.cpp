@@ -1,7 +1,7 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -30,6 +30,8 @@ static gcn::Window* grpBlitter;
 static gcn::UaeRadioButton* optBlitNormal;
 static gcn::UaeRadioButton* optBlitImmed;
 static gcn::UaeRadioButton* optBlitWait;
+static gcn::Window *grpCopper;
+static gcn::UaeCheckBox* chkFastCopper;
 static gcn::Window* grpCollisionLevel;
 static gcn::UaeRadioButton* optCollNone;
 static gcn::UaeRadioButton* optCollSprites;
@@ -133,10 +135,22 @@ public:
 			changed_prefs.ntscmode = false;
 			changed_prefs.chipset_refreshrate = 50;
 		}
+		RefreshPanelQuickstart();
 	}
 };
 
 static NTSCButtonActionListener* ntscButtonActionListener;
+
+
+class FastCopperActionListener : public gcn::ActionListener
+{
+  public:
+    void action(const gcn::ActionEvent& actionEvent)
+    {
+	    changed_prefs.fast_copper = chkFastCopper->isSelected();
+    }
+};
+static FastCopperActionListener* fastCopperActionListener;
 
 
 class BlitterButtonActionListener : public gcn::ActionListener
@@ -212,7 +226,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpChipset->add(cboChipset, 115 + lblChipset->getWidth() + 8, 10);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(120, 185);
+	grpChipset->setSize(255, 185);
 	grpChipset->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpChipset);
@@ -240,6 +254,20 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpBlitter->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpBlitter);
+
+	fastCopperActionListener = new FastCopperActionListener();
+
+	chkFastCopper = new gcn::UaeCheckBox("Fast copper");
+	chkFastCopper->addActionListener(fastCopperActionListener);
+
+	grpCopper = new gcn::Window("Copper");
+	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
+	grpCopper->add(chkFastCopper, 5, 10);
+	grpCopper->setMovable(false);
+	grpCopper->setSize(120, 55);
+	grpCopper->setBaseColor(gui_baseCol);
+
+	category.panel->add(grpCopper);
 
 	collisionButtonActionListener = new CollisionButtonActionListener();
 
@@ -294,6 +322,9 @@ void ExitPanelChipset()
 	delete grpBlitter;
 	delete blitterButtonActionListener;
 
+	delete chkFastCopper;
+	delete grpCopper;
+	delete fastCopperActionListener;
 	delete optCollNone;
 	delete optCollSprites;
 	delete optCollPlayfield;
@@ -333,6 +364,8 @@ void RefreshPanelChipset()
 		optBlitWait->setSelected(true);
 	else
 		optBlitNormal->setSelected(true);
+
+	chkFastCopper->setSelected(changed_prefs.fast_copper);
 
 	if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);

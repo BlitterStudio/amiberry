@@ -2,8 +2,6 @@
   * UAE - The Un*x Amiga Emulator
   *
   * Target specific stuff, Amiberry version
-  *
-  * Copyright 1997 Bernd Schmidt
   */
 
 #pragma once
@@ -36,14 +34,22 @@ unsigned long target_lastsynctime(void);
 extern int screen_is_picasso;
 
 void saveAdfDir(void);
+bool SetVSyncRate(int hz);
+void setCpuSpeed(void);
+void resetCpuSpeed(void);
 void update_display(struct uae_prefs *);
 void black_screen_now(void);
-void graphics_subshutdown(void);
+void graphics_subshutdown (void);
+void moveVertical(int value);
 
 void amiberry_stop_sound();
 
 void keyboard_settrans();
 void translate_amiberry_keys(int symbol, int newstate);
+#ifdef PANDORA
+int translate_pandora_keys(int symbol, int *modifier);
+#endif
+
 void SimulateMouseOrJoy(int code, int keypressed);
 
 #define REMAP_MOUSEBUTTON_LEFT    -1
@@ -62,6 +68,9 @@ void SimulateMouseOrJoy(int code, int keypressed);
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
+#ifdef WITH_LOGGING
+extern void ShowLiveInfo(char *msg);
+#endif
 
 extern void fetch_configurationpath(char *out, int size);
 extern void set_configurationpath(char *newpath);
@@ -103,6 +112,8 @@ int count_HDs(struct uae_prefs *p);
 extern void gui_force_rtarea_hdchange(void);
 extern void gui_restart(void);
 extern bool hardfile_testrdb(const char *filename);
+
+extern bool host_poweroff;
 
 #ifdef __cplusplus
 extern "C" {

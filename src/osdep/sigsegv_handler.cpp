@@ -50,7 +50,7 @@ extern void invalidate_block(blockinfo* bi);
 extern void raise_in_cl_list(blockinfo* bi);
 
 
-#define SHOW_DETAILS 0
+#define SHOW_DETAILS 2
 
 #ifdef WITH_LOGGING
 #define output_log  write_log

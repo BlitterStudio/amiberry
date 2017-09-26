@@ -41,6 +41,7 @@ extern FILE *debugfile;
 int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
+bool host_poweroff = false;
 
 extern void signal_segv(int signum, siginfo_t* info, void*ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void*ptr);
@@ -714,9 +715,17 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 	return 0;
 }
 
+static void target_shutdown(void)
+{
+	system("sudo poweroff");
+}
 int main(int argc, char* argv[])
 {
 	struct sigaction action;
+
+#ifdef AMIBERRY
+	printf("Amiberry-SDL2 v2.5b, by Dimitris (MiDWaN) Panokostas and TomB\n");
+#endif
 	max_uae_width = 1920;
 	max_uae_height = 1080;
 
@@ -762,7 +771,6 @@ int main(int argc, char* argv[])
 
 	alloc_AmigaMem();
 	RescanROMs();
-	keyboard_settrans();
 
 #ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	// set capslock state based upon current "real" state
@@ -800,6 +808,8 @@ int main(int argc, char* argv[])
 
 	logging_cleanup();
 
+	if(host_poweroff)
+	  target_shutdown();
 	return 0;
 }
 
@@ -823,6 +833,11 @@ int handle_msgpump()
 	int got = 0;
 	SDL_Event rEvent;
 	int keycode;
+	if(delayed_mousebutton) {
+    		--delayed_mousebutton;
+    		if(delayed_mousebutton == 0)
+      			setmousebuttonstate (0, 0, 1);
+  		}
 
 	if (currprefs.customControls)
 		PopulateCustomControlMap();

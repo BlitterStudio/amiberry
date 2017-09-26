@@ -1,7 +1,7 @@
 #include <guisan.hpp>
-#include "SDL.h"
+#include <SDL.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -11,6 +11,9 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
+#include "include/memory.h"
+#include "uae.h"
+#include "autoconf.h"
 #include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"

@@ -42,8 +42,6 @@ struct strlist {
 #define MAX_INPUT_SUB_EVENT_ALL 9
 #define SPARE_SUB_EVENT 8
 
-#define INTERNALEVENT_COUNT 1
-
 struct uae_input_device {
 	TCHAR *name;
 	TCHAR *configname;
@@ -290,11 +288,9 @@ struct uae_prefs
 	int sound_stereo_separation;
 	int sound_mixed_stereo_delay;
 	int sound_freq;
-	int sound_maxbsiz;
 	int sound_interpol;
 	int sound_filter;
 	int sound_filter_type;
-	int sound_volume;
 	int sound_volume_cd;
 
 	int cachesize;
@@ -416,7 +412,15 @@ struct uae_prefs
 	TCHAR quit_amiberry[256];
 #endif
 
-	int statecapturerate, statecapturebuffersize;
+#ifdef PANDORA
+int pandora_vertical_offset;
+  int pandora_cpu_speed;
+  int pandora_hide_idle_led;
+  
+  int pandora_tapDelay;
+  int pandora_customControls;
+#endif
+
 
 	/* input */
 

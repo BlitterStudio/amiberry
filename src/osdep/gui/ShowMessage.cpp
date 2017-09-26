@@ -4,7 +4,7 @@
 #include <sstream>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -169,6 +169,7 @@ static void ShowMessageLoop()
 							cmdOK->requestFocus();
 						else if (activeWidget == cmdOK)
 							cmdCancel->requestFocus();
+					continue;
 					}
 					break;
 

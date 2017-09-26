@@ -1,9 +1,9 @@
 #include "UaeListBox.hpp"
-#include "guisan/widgets/listbox.hpp"
-#include "guisan/basiccontainer.hpp"
-#include "guisan/font.hpp"
-#include "guisan/graphics.hpp"
-#include "guisan/listmodel.hpp"
+#include <guisan/widgets/listbox.hpp>
+#include <guisan/basiccontainer.hpp>
+#include <guisan/font.hpp>
+#include <guisan/graphics.hpp>
+#include <guisan/listmodel.hpp>
 
 namespace gcn
 {

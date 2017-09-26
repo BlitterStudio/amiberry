@@ -11,7 +11,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "cd32_fmv.h"
 #include "custom.h"
 #include "xwin.h"
@@ -47,7 +47,7 @@ void cd32_fmv_new_image(int w, int h, int d, uae_u8 *s)
 {
 	if (!mpeg_out_buffer)
 		mpeg_out_buffer = xmalloc(uae_u8, MAX_MPEG_WIDTH * MAX_MPEG_HEIGHT * MPEG_PIXBYTES_32);
-	if (s == nullptr || w > MAX_MPEG_WIDTH || h > MAX_MPEG_HEIGHT) {
+	if (s == NULL || w > MAX_MPEG_WIDTH || h > MAX_MPEG_HEIGHT) {
 		memset(mpeg_out_buffer, 0, MAX_MPEG_WIDTH * MAX_MPEG_HEIGHT * MPEG_PIXBYTES_32);
 		mpeg_width = MAX_MPEG_WIDTH;
 		mpeg_height = MAX_MPEG_HEIGHT;
@@ -72,11 +72,11 @@ static void genlock_32(struct vidbuffer *vbin, struct vidbuffer *vbout, int w, i
 	for (int hh = 0, sh = -voffset; hh < h; sh++, hh += mult) {
 		for (int h2 = 0; h2 < mult; h2++) {
 			uae_u8 *d8 = vbout->bufmem + vbout->rowbytes * (hh + h2 + voffset);
-			uae_u32 *d32 = reinterpret_cast<uae_u32*>(d8);
+			uae_u32 *d32 = (uae_u32*)d8;
 			uae_u8 *s8 = vbin->bufmem + vbin->rowbytes * (hh + h2 + voffset) ;
-			uae_u32 *srcp = nullptr;
+			uae_u32 *srcp = NULL;
 			if (sh >= 0 && sh < mpeg_height)
-				srcp = reinterpret_cast<uae_u32*>(mpeg_out_buffer + sh * mpeg_width * MPEG_PIXBYTES_32);
+				srcp = (uae_u32*)(mpeg_out_buffer + sh * mpeg_width * MPEG_PIXBYTES_32);
 			for (int ww = 0, sw = -hoffset; ww < w; sw++, ww += mult) {
 				uae_u32 sv = fmv_border_color;
 				if (sw >= 0 && sw < mpeg_width && srcp)
@@ -84,7 +84,7 @@ static void genlock_32(struct vidbuffer *vbin, struct vidbuffer *vbout, int w, i
 				for (int w2 = 0; w2 < mult; w2++) {
 					uae_u32 v;
 					if (s8[0] >= GENLOCK_VAL_32) {
-						v = *reinterpret_cast<uae_u32*>(s8);
+						v = *((uae_u32*)s8);
 					} else {
 						v = sv;
 					}
@@ -101,19 +101,19 @@ static void genlock_16(struct vidbuffer *vbin, struct vidbuffer *vbout, int w, i
 	for (int hh = 0, sh = -voffset; hh < h; sh++, hh += mult) {
 		for (int h2 = 0; h2 < mult; h2++) {
 			uae_u8 *d8 = vbout->bufmem + vbout->rowbytes * (hh + h2 + voffset);
-			uae_u16 *d16 = reinterpret_cast<uae_u16*>(d8);
+			uae_u16 *d16 = (uae_u16*)d8;
 			uae_u8 *s8 = vbin->bufmem + vbin->rowbytes * (hh + h2 + voffset) ;
-			uae_u16 *srcp = nullptr;
+			uae_u16 *srcp = NULL;
 			if (sh >= 0 && sh < mpeg_height)
-				srcp = reinterpret_cast<uae_u16*>(mpeg_out_buffer + sh * mpeg_width * MPEG_PIXBYTES_16);
+				srcp = (uae_u16*)(mpeg_out_buffer + sh * mpeg_width * MPEG_PIXBYTES_16);
 			for (int ww = 0, sw = -hoffset; ww < w; sw++, ww += mult) {
 				uae_u16 sv = fmv_border_color_16;
 				if (sw >= 0 && sw < mpeg_width && srcp)
 					sv = srcp[sw];
 				for (int w2 = 0; w2 < mult; w2++) {
 					uae_u32 v;
-					if ((reinterpret_cast<uae_u16*>(s8)[0] >> 11) >= GENLOCK_VAL_16) {
-						v = *reinterpret_cast<uae_u16*>(s8);
+					if ((((uae_u16*)s8)[0] >> 11) >= GENLOCK_VAL_16) {
+						v = *((uae_u16*)s8);
 					} else {
 						v = sv;
 					}
@@ -129,18 +129,18 @@ static void genlock_16_nomult(struct vidbuffer *vbin, struct vidbuffer *vbout, i
 {
 	for (int hh = 0, sh = -voffset; hh < h; sh++, hh++) {
 		uae_u8 *d8 = vbout->bufmem + vbout->rowbytes * (hh + voffset);
-		uae_u16 *d16 = reinterpret_cast<uae_u16*>(d8);
+		uae_u16 *d16 = (uae_u16*)d8;
 		uae_u8 *s8 = vbin->bufmem + vbin->rowbytes * (hh + voffset) ;
 		uae_u16 *srcp = NULL;
 		if (sh >= 0 && sh < mpeg_height)
-			srcp = reinterpret_cast<uae_u16*>(mpeg_out_buffer + sh * mpeg_width * MPEG_PIXBYTES_16);
+			srcp = (uae_u16*)(mpeg_out_buffer + sh * mpeg_width * MPEG_PIXBYTES_16);
 		for (int ww = 0, sw = -hoffset; ww < w; sw++, ww++) {
 			uae_u16 sv = fmv_border_color_16;
 			if (sw >= 0 && sw < mpeg_width && srcp)
 				sv = srcp[sw];
 			uae_u32 v;
-			if ((reinterpret_cast<uae_u16*>(s8)[0] >> 11) >= GENLOCK_VAL_16) {
-				v = *reinterpret_cast<uae_u16*>(s8);
+			if ((((uae_u16*)s8)[0] >> 11) >= GENLOCK_VAL_16) {
+				v = *((uae_u16*)s8);
 			} else {
 				v = sv;
 			}
@@ -152,6 +152,7 @@ static void genlock_16_nomult(struct vidbuffer *vbin, struct vidbuffer *vbout, i
 
 void cd32_fmv_genlock(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
+	int hoffset, voffset, mult;
 	int w = vbin->outwidth;
 	int h = vbin->outheight;
 	int d = vbin->pixbytes;
@@ -159,7 +160,7 @@ void cd32_fmv_genlock(struct vidbuffer *vbin, struct vidbuffer *vbout)
 	if (!mpeg_out_buffer)
 		return;
 
-	int mult = 1;
+	mult = 1;
 	for (;;) {
 		if (mult < 4 && mpeg_width * (mult << 1) <= w + 8 && mpeg_height * (mult << 1) <= h + 8) {
 			mult <<= 1;
@@ -169,8 +170,8 @@ void cd32_fmv_genlock(struct vidbuffer *vbin, struct vidbuffer *vbout)
 		}
 	}
 
-	int hoffset = (w / mult - mpeg_width) / 2;
-	int voffset = (h / mult - mpeg_height) / 2;
+	hoffset = (w / mult - mpeg_width) / 2;
+	voffset = (h / mult - mpeg_height) / 2;
 
 	if (hoffset < 0)
 		hoffset = 0;

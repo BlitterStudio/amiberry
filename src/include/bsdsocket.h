@@ -29,7 +29,7 @@ extern void deinit_socket_layer (void);
 
 #define MAXADDRLEN 256
 
-#ifdef _WIN32_
+#ifdef _WIN32
 #define SOCKET_TYPE SOCKET
 #else
 #define SOCKET_TYPE int
@@ -70,7 +70,7 @@ struct socketbase {
 
     unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
     /* host-specific fields below */
-#ifdef _WIN32_
+#ifdef _WIN32
     SOCKET_TYPE sockAbort;	/* for aborting WinSock2 select() (damn Microsoft) */
     SOCKET_TYPE sockAsync;	/* for aborting WSBAsyncSelect() in window message handler */
     int needAbort;		/* abort flag */

@@ -1,7 +1,7 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "guisan/sdl/sdltruetypefont.hpp"
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -9,8 +9,11 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "config.h"
 #include "options.h"
+#include "include/memory.h"
 #include "disk.h"
+#include "uae.h"
 #include "gui.h"
 #include "gui_handling.h"
 
@@ -40,7 +43,8 @@ static bool bIgnoreListChange = false;
 
 class DriveTypeListModel : public gcn::ListModel
 {
-	vector<string> types;
+private:
+    std::vector<std::string> types;
 
 public:
 	DriveTypeListModel()
@@ -245,7 +249,7 @@ public:
 					{
 						if (diskfileList.getElementAt(idx).compare(changed_prefs.floppyslots[i].df))
 						{
-							strcpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str());
+							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), sizeof(changed_prefs.floppyslots[i].df));
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
@@ -394,6 +398,8 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 
 		chkDFxWriteProtect[i] = new gcn::UaeCheckBox("Write-protected");
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
+		snprintf(tmp, 20, "chkWP%d", i);
+	  	chkDFxWriteProtect[i]->setId(tmp);
 
 		cmdDFxInfo[i] = new gcn::Button("?");
 		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);

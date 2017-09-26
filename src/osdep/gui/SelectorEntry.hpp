@@ -1,9 +1,9 @@
 #ifndef GCN_SELECTORENTRY_HPP
 #define GCN_SELECTORENTRY_HPP
 
-#include "guisan/basiccontainer.hpp"
-#include "guisan/platform.hpp"
-#include "guisan/widgetlistener.hpp"
+#include <guisan/basiccontainer.hpp>
+#include <guisan/platform.hpp>
+#include <guisan/widgetlistener.hpp>
 #include <string>
 
 namespace gcn
