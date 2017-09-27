@@ -47,7 +47,7 @@ With SDL2 installed, you can proceed to install Amiberry as follows:
 
 Install the following packages:
 
-      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev libpng-dev google-perftools libgoogle-perftools-dev
+      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
 
 Clone this repo:
       
