@@ -6,6 +6,7 @@
   * Copyright 1997 Bernd Schmidt
   */
 
+#pragma once
 #define DEFAULT_SOUND_CHANNELS 2
 
 #define SOUND_BUFFERS_COUNT 4

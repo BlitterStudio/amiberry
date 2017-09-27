@@ -107,10 +107,9 @@ unsigned int define_trap(TrapHandler handler_func, int flags, const TCHAR *name)
 		target_startup_msg(_T("Internal error"), _T("Ran out of emulator traps."));
 		uae_restart(1, nullptr);
 		return -1;
-	} else {
+	}
   	int i;
-  	unsigned int trap_num;
-  	struct Trap *trap;
+
 	uaecptr addr = here();
 
 	for (int i = 0; i < trap_count; i++) {

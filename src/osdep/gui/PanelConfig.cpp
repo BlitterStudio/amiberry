@@ -37,13 +37,15 @@ bool LoadConfigByName(const char* name)
 	{
 		if(emulating) {
 			uae_restart(-1, config->FullPath);
-		} else {
-		txtName->setText(config->Name);
-		txtDesc->setText(config->Description);
-		target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
-		strcpy(last_active_config, config->Name);
-		DisableResume();
-		RefreshAllPanels();
+		}
+		else {
+			txtName->setText(config->Name);
+			txtDesc->setText(config->Description);
+			target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
+			strcpy(last_active_config, config->Name);
+			DisableResume();
+			RefreshAllPanels();
+		}
 	}
 
 	return false;

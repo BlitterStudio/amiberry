@@ -33,8 +33,10 @@ static gcn::UaeDropDown* cboAutofire;
 static gcn::Label* lblMouseSpeed;
 static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
+#ifdef PANDORA
 static gcn::Label *lblTapDelay;
 static gcn::UaeDropDown* cboTapDelay;
+#endif
 static gcn::UaeCheckBox* chkMouseHack;
   
 static gcn::UaeCheckBox* chkCustomCtrl;
@@ -259,7 +261,7 @@ public:
 			changed_prefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
 			RefreshPanelInput();
 		}
-
+#ifdef PANDORA
 	else if (actionEvent.getSource() == cboTapDelay)
       {
         if(cboTapDelay->getSelected() == 0)
@@ -269,7 +271,7 @@ public:
         else
           changed_prefs.pandora_tapDelay = 2;
       }
-    	
+#endif	
     	else if (actionEvent.getSource() == chkMouseHack)
   	  {
   	    changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
@@ -457,6 +459,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->addActionListener(inputActionListener);
 	lblMouseSpeedInfo = new gcn::Label(".25");
 
+#ifdef PANDORA
 	lblTapDelay = new gcn::Label("Tap Delay:");
   	lblTapDelay->setSize(100, LABEL_HEIGHT);
   	lblTapDelay->setAlignment(gcn::Graphics::RIGHT);
@@ -465,7 +468,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
   	cboTapDelay->setBaseColor(gui_baseCol);
   	cboTapDelay->setId("cboTapDelay");
   	cboTapDelay->addActionListener(inputActionListener);
-  
+#endif
+
   	chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
   	chkMouseHack->setId("MouseHack");
   	chkMouseHack->addActionListener(inputActionListener);
@@ -634,10 +638,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 
   category.panel->add(chkMouseHack, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
+#ifdef PANDORA
   category.panel->add(lblTapDelay, 300, posY);
   category.panel->add(cboTapDelay, 300 + lblTapDelay->getWidth() + 8, posY);
   posY += cboTapDelay->getHeight() + DISTANCE_NEXT_Y;
-
+#else
+  posY += chkMouseHack->getHeight() + DISTANCE_NEXT_Y;
+#endif
 	category.panel->add(chkCustomCtrl, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
 	posY += chkCustomCtrl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblA, DISTANCE_BORDER, posY);
@@ -687,8 +694,10 @@ void ExitPanelInput()
 	delete lblMouseSpeed;
 	delete sldMouseSpeed;
 	delete lblMouseSpeedInfo;
+#ifdef PANDORA
   	delete lblTapDelay;
   	delete cboTapDelay;
+#endif
   	delete chkMouseHack;
 
 	delete chkCustomCtrl;
@@ -784,13 +793,14 @@ void RefreshPanelInput()
 			break;
 		}
 	}
-
+#ifdef PANDORA
 if (changed_prefs.pandora_tapDelay == 10)
     cboTapDelay->setSelected(0);
   else if (changed_prefs.pandora_tapDelay == 5)
     cboTapDelay->setSelected(1);
   else
     cboTapDelay->setSelected(2);
+#endif
 	chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 
 	chkCustomCtrl->setSelected(changed_prefs.customControls);

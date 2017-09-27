@@ -219,7 +219,7 @@ bool cdaudio_catchup(void)
 /* Try to determine whether sound is available.  This is only for GUI purposes.  */
 int setup_sound(void)
 {
-	if (pandora_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
+	if (amiberry_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
 		return 0;
 
 	sound_available = 1;

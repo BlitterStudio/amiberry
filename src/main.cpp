@@ -691,10 +691,8 @@ static void initialize_sdl2()
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-	printf("Amiberry-SDL2 by Dimitris (MiDWaN) Panokostas\n");
-
 	initialize_sdl2();
-
+	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0]) {
 		default_prefs(&currprefs, true, 0);

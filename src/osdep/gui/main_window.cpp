@@ -24,7 +24,7 @@ static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
 
-void target_startup_msg(TCHAR* title, TCHAR* msg)
+void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 {
 	_tcsncpy(startup_title, title, MAX_STARTUP_TITLE);
 	_tcsncpy(startup_message, msg, MAX_STARTUP_MESSAGE);

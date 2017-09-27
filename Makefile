@@ -4,12 +4,26 @@ endif
 
 ifeq ($(PLATFORM),rpi3)
 	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
+	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
+	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    PROFILER_PATH = /home/pi/projects/amiberry
 else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
-	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
+	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
+	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    PROFILER_PATH = /home/pi/projects/amiberry
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
+	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    PROFILER_PATH = /home/pi/projects/amiberry
+else ifeq ($(PLATFORM),Pandora)
+  CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
+  MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
+  PROFILER_PATH = /media/MAINSD/pandora/test
 endif
 
 NAME  = amiberry-sdl2
@@ -25,24 +39,22 @@ all: guisan $(PROG)
 guisan:
 	$(MAKE) -C src/guisan
 
-#DEBUG=1
+DEBUG=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 
 DEFS += `xml2-config --cflags`
-DEFS += -DARMV6_ASSEMBLY -DAMIBERRY -DCPU_arm
-DEFS += -DCAPSLOCK_DEBIAN_WORKAROUND
-#DEFS += -DROM_PATH_PREFIX=\"./\" -DDATA_PREFIX=\"./data/\" -DSAVE_PREFIX=\"./saves/\"
+DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
 DEFS += -DUSE_SDL
 
-MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include
+MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include -Isrc/archivers
 MORE_CFLAGS += -fdiagnostics-color=auto
 MORE_CFLAGS += -mstructure-size-boundary=32
 MORE_CFLAGS += -falign-functions=32
-MORE_CFLAGS += -std=gnu++14 -pipe
+MORE_CFLAGS += -std=gnu++14
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
-LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -L/opt/vc/lib -Lsrc/guisan/lib
+LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lsrc/guisan/lib
 
 ifndef DEBUG
 MORE_CFLAGS += -Ofast -pipe
@@ -50,8 +62,6 @@ MORE_CFLAGS += -fweb -frename-registers
 MORE_CFLAGS += -funroll-loops -ftracer -funswitch-loops
 else
 MORE_CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
-#MORE_CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
-#LDFLAGS += -ltcmalloc -lprofiler
 
 endif
 
@@ -167,8 +177,8 @@ OBJS =	\
 	src/osdep/cda_play.o \
 	src/osdep/charset.o \
 	src/osdep/fsdb_host.o \
-	src/osdep/hardfile_amiberry.o \
-	src/osdep/keyboard_amiberry.o \
+	src/osdep/amiberry_hardfile.o \
+	src/osdep/keyboard.o \
 	src/osdep/mp3decoder.o \
 	src/osdep/picasso96.o \
 	src/osdep/writelog.o \
@@ -211,11 +221,7 @@ OBJS =	\
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o
 	
-ifeq ($(PLATFORM),rpi1)
-	OBJS += src/osdep/arm_helper.o
-else
-	OBJS += src/osdep/neon_helper.o
-endif
+OBJS += src/osdep/neon_helper.o
 
 OBJS += src/newcpu.o
 OBJS += src/newcpu_common.o
@@ -233,11 +239,8 @@ OBJS += src/jit/compemu_fpp.o
 OBJS += src/jit/compemu_support.o
 
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(CXX) -falign-functions=32 $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
+	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 
-src/osdep/arm_helper.o: src/osdep/arm_helper.s
-	$(CXX) -falign-functions=32 $(CPU_FLAGS) -Wall -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
-	
 $(PROG): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG

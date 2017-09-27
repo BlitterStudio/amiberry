@@ -486,12 +486,6 @@
     <ClCompile Include="..\src\osdep\fsdb_host.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\osdep\hardfile_amiberry.cpp">
-      <Filter>src\osdep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\osdep\keyboard_amiberry.cpp">
-      <Filter>src\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\osdep\mp3decoder.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
@@ -741,6 +735,12 @@
     <ClCompile Include="..\src\archivers\7z\7zIn.cpp">
       <Filter>src\archivers\7z</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\keyboard.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_hardfile.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -845,9 +845,6 @@
     <ClInclude Include="..\src\include\cia.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\clipboard.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\commpipe.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -863,9 +860,6 @@
     <ClInclude Include="..\src\include\custom.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\debug.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\disk.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -873,9 +867,6 @@
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\drawing.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\ersatz.h">
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\events.h">
@@ -891,12 +882,6 @@
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\flags_arm.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\fpp-ieee-be.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\fpp-unknown.h">
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\fsdb.h">
@@ -944,12 +929,6 @@
     <ClInclude Include="..\src\include\options.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\osemu.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\picasso96.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\readcpu.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -963,9 +942,6 @@
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\scsi.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\scsidev.h">
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\statusline.h">
@@ -1011,9 +987,6 @@
       <Filter>src\machdep</Filter>
     </ClInclude>
     <ClInclude Include="..\src\machdep\maccess.h">
-      <Filter>src\machdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\machdep\md-fpp.h">
       <Filter>src\machdep</Filter>
     </ClInclude>
     <ClInclude Include="..\src\machdep\rpt.h">
@@ -1198,6 +1171,9 @@
     </ClInclude>
     <ClInclude Include="..\src\include\ar.h">
       <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\picasso96.h">
+      <Filter>src\osdep</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
