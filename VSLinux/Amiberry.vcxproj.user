@@ -8,8 +8,8 @@
     </PreLaunchCommand>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <RemoteDebuggerCommand>~/projects/amiberry/amiberry-sdl2</RemoteDebuggerCommand>
-    <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerCommand>projects/amiberry/amiberry-sdl2-dev</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>
     </PreLaunchCommand>

@@ -741,6 +741,9 @@
     <ClCompile Include="..\src\osdep\amiberry_hardfile.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\7zAlloc.cpp">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1174,6 +1177,9 @@
     </ClInclude>
     <ClInclude Include="..\src\osdep\picasso96.h">
       <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\7z\7zAlloc.h">
+      <Filter>src\archivers\7z</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
