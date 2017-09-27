@@ -25,13 +25,13 @@
 
 Binary package dependencies (install these if you only want to run the binary): 
 
-      sudo apt-get install libsdl1.2debian libsdl-image1.2 libsdl-gfx1.2-5 libsdl-ttf2.0-0 libmpg123-0 libguichan-sdl-0.8.1-1 libxml2
+      sudo apt-get install libsdl1.2debian libsdl-image1.2 libsdl-gfx1.2-5 libsdl-ttf2.0-0 libmpg123-0 libguichan-sdl-0.8.1-1 libxml2 mpeg2dec
 
 How to compile from source (on Raspbian Jessie):
 
    Install following packages:
 
-      sudo apt-get install libsdl-dev libguichan-dev libsdl-ttf2.0-dev libsdl-gfx1.2-dev libxml2-dev libflac-dev libmpg123-dev
+      sudo apt-get install libsdl-dev libguichan-dev libsdl-ttf2.0-dev libsdl-gfx1.2-dev libxml2-dev libflac-dev libmpg123-dev libmpeg2-4-dev
 
    Then for Raspberry Pi 3:  
 
