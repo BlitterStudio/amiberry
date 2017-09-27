@@ -38,7 +38,7 @@ struct uae_driveinfo {
 #define CACHE_SIZE 16384
 #define CACHE_FLUSH_TIME 5
 
-static TCHAR *hdz[] = { _T("hdz"), _T("zip"), NULL };
+static const TCHAR *hdz[] = { _T("hdz"), _T("zip"), NULL };
 
 int hdf_open_target (struct hardfiledata *hfd, const TCHAR *pname)
 {

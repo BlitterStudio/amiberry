@@ -31,7 +31,7 @@ extern void target_addtorecent (const TCHAR*, int);
 extern void target_run (void);
 extern void target_quit (void);
 extern void target_restart (void);
-extern void target_startup_msg(TCHAR *title, TCHAR *msg);
+extern void target_startup_msg(const TCHAR *title, const TCHAR *msg);
 extern void stripslashes (TCHAR *p);
 extern void fixtrailing (TCHAR *p);
 extern void getpathpart (TCHAR *outpath, int size, const TCHAR *inpath);

@@ -36,7 +36,7 @@ PROG   = $(NAME)
 
 all: $(PROG)
 
-#DEBUG=1
+DEBUG=1
 #TRACER=1
 
 #GEN_PROFILE=1

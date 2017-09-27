@@ -132,9 +132,6 @@
     </Font>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\akiko.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\aros.rom.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -558,9 +555,6 @@
     <ClCompile Include="..\src\archivers\7z\Delta.c">
       <Filter>src\archivers\7z</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\7z\LzFind.cpp">
-      <Filter>src\archivers\7z</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\archivers\7z\LzFindMt.c">
       <Filter>src\archivers\7z</Filter>
     </ClCompile>
@@ -660,9 +654,6 @@
     <ClCompile Include="..\src\osdep\gui\PanelQuickstart.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\osdep\gui\PanelInputRaspi.cpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\osdep\gui\ShowHelp.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
@@ -689,6 +680,42 @@
     </ClCompile>
     <ClCompile Include="..\src\archivers\7z\Alloc.c">
       <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\LzFind.cpp">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\Threads.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelInput.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\akiko.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sinctable.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\linetoscr.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\filesys_bootrom.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\p96_blit.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\codegen_arm.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\gencomp_arm.cpp">
+      <Filter>src\jit</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -788,12 +815,6 @@
     <ClInclude Include="..\src\include\autoconf.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\blit.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\blitfunc.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\blitter.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -813,9 +834,6 @@
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\cpu_prefetch.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\cputbl.h">
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\crc32.h">
@@ -1141,6 +1159,18 @@
     </ClInclude>
     <ClInclude Include="..\src\archivers\7z\Alloc.h">
       <Filter>src\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\7z\Threads.h">
+      <Filter>src\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\blit.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\blitfunc.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cputbl.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
