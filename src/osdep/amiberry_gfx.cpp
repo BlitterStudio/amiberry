@@ -270,7 +270,7 @@ void show_screen(int mode)
 	//idletime += last_synctime - start;
 
 	if (!screen_is_picasso)
-		gfxvidinfo.drawbuffer.bufmem = (uae_u8 *)screen->pixels;
+		gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8 *>(screen->pixels);
 
 	if (last_synctime - next_synctime > time_per_frame - 5000)
 		next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
