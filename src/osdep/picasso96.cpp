@@ -67,7 +67,7 @@
 #define NOBLITTER_BLIT 0
 #define NOBLITTER_ALL 0
 
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 static const int defaultHz = 50;
 #else
 static const int defaultHz = 60;

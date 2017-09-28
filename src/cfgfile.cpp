@@ -4408,7 +4408,7 @@ void default_prefs(struct uae_prefs *p, bool reset, int type)
 
   p->gfx_framerate = 0;
 
-#ifdef RASPBERRY
+#ifdef AMIBERRY
 	p->gfx_size.width = 640;
 	p->gfx_size.height = 256;
 	p->gfx_resolution = RES_HIRES;

@@ -2205,7 +2205,7 @@ static void center_image(void)
 	linetoscr_x_adjust_pixbytes = linetoscr_x_adjust_pixels * gfxvidinfo.drawbuffer.pixbytes;
 
 	thisframe_y_adjust_real = minfirstline;
-	max_ypos_thisframe = (maxvpos_display - minfirstline);
+	max_ypos_thisframe = maxvpos_display - minfirstline + 1;
 }
 
 static void init_drawing_frame(void)

@@ -39,7 +39,7 @@ all: guisan $(PROG)
 guisan:
 	$(MAKE) -C src/guisan
 
-DEBUG=1
+#DEBUG=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 
