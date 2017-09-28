@@ -117,7 +117,9 @@
     <Image Include="..\data\paths.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="..\data\quickstart.ico" />
+    <Image Include="..\data\quickstart.ico">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
     <Image Include="..\data\savestate.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
