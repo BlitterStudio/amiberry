@@ -14,7 +14,7 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-static char last_active_config[MAX_DPATH] = {'\0'};
+static char last_active_config[MAX_PATH] = {'\0'};
 static int ensureVisible = -1;
 
 static gcn::Button* cmdLoad;
@@ -30,19 +30,19 @@ static gcn::UaeListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
 
 
-bool LoadConfigByName(const char* name)
+bool LoadConfigByName(const char *name)
 {
 	ConfigFileInfo* config = SearchConfigInList(name);
-	if (config != nullptr)
+	if (config != NULL)
 	{
-		if(emulating) {
+		if (emulating) {
 			uae_restart(-1, config->FullPath);
 		}
 		else {
 			txtName->setText(config->Name);
 			txtDesc->setText(config->Description);
 			target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
-			strcpy(last_active_config, config->Name);
+			strncpy(last_active_config, config->Name, MAX_PATH);
 			DisableResume();
 			RefreshAllPanels();
 		}
@@ -79,18 +79,18 @@ public:
 		return configs[i];
 	}
 
-	void InitConfigsList()
+	void InitConfigsList(void)
 	{
 		configs.clear();
-		for (int i = 0; i < ConfigFilesList.size(); ++i)
+		for (int i = 0; i<ConfigFilesList.size(); ++i)
 		{
 			char tmp[MAX_DPATH];
-			strcpy(tmp, ConfigFilesList[i]->Name);
+			strncpy(tmp, ConfigFilesList[i]->Name, MAX_DPATH);
 			if (strlen(ConfigFilesList[i]->Description) > 0)
 			{
-				strncat(tmp, " (", sizeof tmp);
-				strncat(tmp, ConfigFilesList[i]->Description, 255);
-				strncat(tmp, ")", sizeof tmp);
+				strncat(tmp, " (", MAX_DPATH - 1);
+				strncat(tmp, ConfigFilesList[i]->Description, MAX_DPATH - 1);
+				strncat(tmp, ")", MAX_DPATH - 1);
 			}
 			configs.push_back(tmp);
 		}
@@ -112,15 +112,15 @@ public:
 			// Load selected configuration
 			//-----------------------------------------------
 			i = lstConfigs->getSelected();
-			//if (emulating) {
-			//	uae_restart(-1, ConfigFilesList[i]->FullPath);
-			//}
-			//else {
+			if (emulating) {
+				uae_restart(-1, ConfigFilesList[i]->FullPath);
+			}
+			else {
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_PATH);
 				DisableResume();
 				RefreshAllPanels();
-			//}
+			}
 		}
 		else if (actionEvent.getSource() == cmdSave)
 		{
@@ -130,10 +130,10 @@ public:
 			char filename[MAX_DPATH];
 			if (!txtName->getText().empty())
 			{
-				fetch_configurationpath(filename, sizeof filename);
-				strncat(filename, txtName->getText().c_str(), sizeof filename);
-				strncat(filename, ".uae", sizeof filename);
-				strncpy(changed_prefs.description, txtDesc->getText().c_str(), sizeof changed_prefs.description);
+				fetch_configurationpath(filename, MAX_DPATH);
+				strncat(filename, txtName->getText().c_str(), MAX_DPATH - 1);
+				strncat(filename, ".uae", MAX_DPATH);
+				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 256);
 				if (cfgfile_save(&changed_prefs, filename, 0))
 					RefreshPanelConfig();
 			}
@@ -149,7 +149,7 @@ public:
 			//-----------------------------------------------
 			// Delete selected config
 			//-----------------------------------------------
-			char msg[MAX_DPATH];
+			char msg[256];
 			i = lstConfigs->getSelected();
 			if (i >= 0 && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
 			{
@@ -296,7 +296,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 	if (strlen(last_active_config) == 0)
-		strncpy(last_active_config, OPTIONSFILENAME, MAX_DPATH);
+		strncpy(last_active_config, OPTIONSFILENAME, MAX_PATH);
 	txtName->setText(last_active_config);
 	txtDesc->setText(changed_prefs.description);
 	ensureVisible = -1;
