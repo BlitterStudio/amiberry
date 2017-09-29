@@ -185,16 +185,16 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 #ifdef PANDORA
 	lblPandoraSpeed = new gcn::Label("Pandora Speed:");
-  lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
-  lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
-  sldPandoraSpeed = new gcn::Slider(500, 1260);
-  sldPandoraSpeed->setSize(200, SLIDER_HEIGHT);
-  sldPandoraSpeed->setBaseColor(gui_baseCol);
+	lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
+	lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
+	sldPandoraSpeed = new gcn::Slider(500, 1260);
+	sldPandoraSpeed->setSize(200, SLIDER_HEIGHT);
+	sldPandoraSpeed->setBaseColor(gui_baseCol);
 	sldPandoraSpeed->setMarkerLength(20);
 	sldPandoraSpeed->setStepLength(20);
 	sldPandoraSpeed->setId("PandSpeed");
-  sldPandoraSpeed->addActionListener(miscActionListener);
-  lblPandoraSpeedInfo = new gcn::Label("1000 MHz");
+	sldPandoraSpeed->addActionListener(miscActionListener);
+	lblPandoraSpeedInfo = new gcn::Label("1000 MHz");
 #endif
 
 	chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
