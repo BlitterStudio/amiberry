@@ -938,7 +938,11 @@ void picasso_handle_vsync(void)
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_24
+#ifdef AMIBERRY
+#define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
+#else
 #define BLT_FUNC(s,d) *d = 0xffffffff
+#endif
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_SWAP_24
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
@@ -989,7 +993,11 @@ void picasso_handle_vsync(void)
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_16
+#ifdef AMIBERRY
+#define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
+#else
 #define BLT_FUNC(s,d) *d = 0xffffffff
+#endif
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_SWAP_16
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
@@ -1040,7 +1048,11 @@ void picasso_handle_vsync(void)
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_TRUE_8
+#ifdef AMIBERRY
+#define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
+#else
 #define BLT_FUNC(s,d) *d = 0xffffffff
+#endif
 #include "p96_blit.cpp"
 #define BLT_NAME BLIT_SWAP_8
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
