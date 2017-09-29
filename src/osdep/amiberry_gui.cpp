@@ -421,6 +421,9 @@ int gui_init()
 
 void gui_exit()
 {
+#ifdef PANDORA
+	resetCpuSpeed();
+#endif
 	sync();
 	amiberry_stop_sound();
 	saveAdfDir();
@@ -507,6 +510,14 @@ void gui_display(int shortcut)
 	fpscounter_reset();
 }
 
+void moveVertical(int value)
+{
+	changed_prefs.pandora_vertical_offset += value;
+	if(changed_prefs.pandora_vertical_offset < -16 + OFFSET_Y_ADJUST)
+		changed_prefs.pandora_vertical_offset = -16 + OFFSET_Y_ADJUST;
+	else if(changed_prefs.pandora_vertical_offset > 16 + OFFSET_Y_ADJUST)
+		changed_prefs.pandora_vertical_offset = 16 + OFFSET_Y_ADJUST;
+}
 
 void gui_led(int led, int on)
 {

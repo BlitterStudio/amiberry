@@ -185,6 +185,9 @@ static void parse_clip(struct uae_prefs *p, xmlNode *node)
 			if (attr != NULL)
 			{
 				top = atoi((const char *)attr) / 2;
+#ifdef PANDORA
+				p->pandora_vertical_offset = top - 41 + OFFSET_Y_ADJUST;
+#endif //PANDORA
 				xmlFree(attr);
 			}
 			attr = xmlGetProp(curr_node, (const xmlChar *)_T("width"));

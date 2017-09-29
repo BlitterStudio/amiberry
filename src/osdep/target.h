@@ -18,6 +18,8 @@ STATIC_INLINE FILE *uae_tfopen(const char *path, const char *mode)
 	return fopen(path, mode);
 }
 
+#define OFFSET_Y_ADJUST 15
+
 extern int emulating;
 
 extern uae_u8* natmem_offset;

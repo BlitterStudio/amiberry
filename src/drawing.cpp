@@ -1876,7 +1876,7 @@ void init_row_map(void)
 
 static void init_aspect_maps()
 {
-	int i, maxl, h;
+	int i, h;
 
 	h = gfxvidinfo.drawbuffer.outheight;
 
@@ -1889,15 +1889,18 @@ static void init_aspect_maps()
 
 	native2amiga_line_map = xmalloc(int, h);
 
-	maxl = (MAXVPOS + 1);
+	int maxl = (MAXVPOS + 1);
 
 	for (i = 0; i < h; i++)
 		native2amiga_line_map[i] = -1;
 
 	for (i = maxl - 1; i >= minfirstline; i--) {
-		int j;
-		for (j = i - minfirstline; j < h && native2amiga_line_map[j] == -1; j++)
+		for (int j = i - minfirstline; j < h && native2amiga_line_map[j] == -1; j++)
+#ifdef PANDORA
+			native2amiga_line_map[j] = i + currprefs.pandora_vertical_offset;
+#else
 			native2amiga_line_map[j] = i;
+#endif
 	}
 }
 
@@ -2204,7 +2207,11 @@ static void center_image(void)
 	linetoscr_x_adjust_pixels = visible_left_border;
 	linetoscr_x_adjust_pixbytes = linetoscr_x_adjust_pixels * gfxvidinfo.drawbuffer.pixbytes;
 
+#ifdef PANDORA
+	thisframe_y_adjust_real = minfirstline + currprefs.pandora_vertical_offset;
+#else
 	thisframe_y_adjust_real = minfirstline;
+#endif
 	max_ypos_thisframe = maxvpos_display - minfirstline + 1;
 }
 
