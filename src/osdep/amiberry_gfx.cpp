@@ -45,6 +45,8 @@ static void CreateScreenshot();
 static int save_thumb(char* path);
 int delay_savestate_frame = 0;
 
+static unsigned long next_synctime = 0;
+
 int graphics_setup(void)
 {
 #ifdef PICASSO96
@@ -273,8 +275,13 @@ void show_screen(int mode)
 
 	updatedisplayarea();
 
-	if (!screen_is_picasso)
-		gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8 *>(screen->pixels);
+	if (last_synctime - next_synctime > time_per_frame - 5000)
+		next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+	else
+		next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+
+	//if (!screen_is_picasso)
+	//	gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8 *>(screen->pixels);
 }
 
 unsigned long target_lastsynctime(void)
