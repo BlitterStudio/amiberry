@@ -40,14 +40,14 @@ static int get_mouse_num()
 	return 2;
 }
 
-static TCHAR* get_mouse_friendlyname(int mouse)
+static const TCHAR* get_mouse_friendlyname(int mouse)
 {
 	if (mouse == 0)
 		return "Mouse";
 	return "dPad as mouse";
 }
 
-static TCHAR* get_mouse_uniquename(int mouse)
+static const TCHAR* get_mouse_uniquename(int mouse)
 {
 	if (mouse == 0)
 		return "MOUSE0";
@@ -201,12 +201,12 @@ static int get_kb_num()
 	return 1;
 }
 
-static TCHAR* get_kb_friendlyname(int kb)
+static const TCHAR* get_kb_friendlyname(int kb)
 {
 	return strdup("Default Keyboard");
 }
 
-static TCHAR* get_kb_uniquename(int kb)
+static const TCHAR* get_kb_uniquename(int kb)
 {
 	return strdup("KEYBOARD0");
 }
@@ -325,14 +325,14 @@ static void unacquire_joystick(int num)
 {
 }
 
-static TCHAR* get_joystick_friendlyname(int joy)
+static const TCHAR* get_joystick_friendlyname(int joy)
 {
 	if (joy == 0)
 		return "Built-in joystick";
 	return JoystickName[joy - 1];
 }
 
-static TCHAR* get_joystick_uniquename(int joy)
+static const TCHAR* get_joystick_uniquename(int joy)
 {
 	if (joy == 0)
 		return "JOY0";
