@@ -1062,9 +1062,9 @@ int handle_msgpump()
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
 				if (rEvent.button.button == SDL_BUTTON_LEFT) {
-					if (currprefs.input_tablet > TABLET_OFF && !doStylusRightClick)
 #ifdef PANDORA
-					delayed_mousebutton = currprefs.pandora_tapDelay << 1;
+					if (currprefs.input_tablet > TABLET_OFF && !doStylusRightClick)
+						delayed_mousebutton = currprefs.pandora_tapDelay << 1;
 					else
 #endif //PANDORA
 					setmousebuttonstate(0, doStylusRightClick, 1);
