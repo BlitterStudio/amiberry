@@ -50,6 +50,8 @@
 #include "audio.h"
 #include "devices.h"
 
+#define VERTICAL_OFFSET 18;
+
 #define RENDER_SIGNAL_PARTIAL 1
 #define RENDER_SIGNAL_FRAME_DONE 2
 #define RENDER_SIGNAL_QUIT 3
@@ -2199,7 +2201,7 @@ static void center_image(void)
 #ifdef PANDORA
 	thisframe_y_adjust_real = minfirstline + currprefs.pandora_vertical_offset;
 #else
-	thisframe_y_adjust_real = minfirstline;
+	thisframe_y_adjust_real = minfirstline + VERTICAL_OFFSET;
 #endif
 	max_ypos_thisframe = maxvpos_display - minfirstline + 1;
 }
