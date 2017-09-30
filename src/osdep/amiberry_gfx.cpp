@@ -134,8 +134,8 @@ static void open_screen(struct uae_prefs* p)
 #ifdef PICASSO96
 	if (screen_is_picasso)
 	{
-		width = picasso_vidinfo.width;
-		height = picasso_vidinfo.height;
+		width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
+		height = picasso_vidinfo.height ? picasso_vidinfo.height : 256;
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
 	}
 	else
@@ -353,20 +353,6 @@ static int init_colors()
 		xcolors[i] = xcolors[i] * 0x00010001;
 
 	return 1;
-}
-
-int target_get_display(const TCHAR *name)
-{
-	return 0;
-}
-
-const TCHAR *target_get_display_name(int num, bool friendlyname)
-{
-	if (num <= 0)
-		return nullptr;
-	if (friendlyname)
-		return "Raspberry Pi display";
-	return "0";
 }
 
 /*
