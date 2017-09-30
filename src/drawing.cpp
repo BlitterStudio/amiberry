@@ -147,8 +147,10 @@ static uae_u16 ham_linebuf[MAX_PIXELS_PER_LINE * 2];
 
 static uae_u8 *xlinebuffer;
 
+#define MAX_VIDHEIGHT 270
+
 static int *native2amiga_line_map;
-static uae_u8** row_map;
+static uae_u8 *row_map[MAX_VIDHEIGHT + 1];
 static uae_u8 row_tmp[MAX_PIXELS_PER_LINE * 32 / 8];
 
 /* line_draw_funcs: pfield_do_linetoscr, pfield_do_fill_line, decode_ham */
@@ -1848,30 +1850,15 @@ static void pfield_doline(int lineno)
 #endif /* USE_ARMNEON */
 }
 
-void init_row_map(void)
+void init_row_map()
 {
-	static uae_u8* oldbufmem;
-	static int oldheight, oldpitch;
 	int i, j;
 
-	if (gfxvidinfo.drawbuffer.outheight > max_uae_height)
-	{
-		write_log(_T("Resolution too high, aborting\n"));
-		abort();
-	}
-	if (!row_map)
-		row_map = xmalloc(uae_u8*, max_uae_height + 1);
-
-	if (oldbufmem && oldbufmem == gfxvidinfo.drawbuffer.bufmem &&
-		oldheight == gfxvidinfo.drawbuffer.outheight &&
-		oldpitch == gfxvidinfo.drawbuffer.rowbytes)
-		return;
-
-	j = oldheight == 0 ? max_uae_height : oldheight;
-	for (i = gfxvidinfo.drawbuffer.outheight; i < max_uae_height + 1 && i < j + 1; i++)
+	for (i = gfxvidinfo.drawbuffer.outheight; i < MAX_VIDHEIGHT + 1; i++)
 		row_map[i] = row_tmp;
-	for (i = 0, j = 0; i < gfxvidinfo.drawbuffer.outheight; i++, j += gfxvidinfo.drawbuffer.rowbytes)
+	for (i = 0, j = 0; i < gfxvidinfo.drawbuffer.outheight; i++, j += gfxvidinfo.drawbuffer.rowbytes) {
 		row_map[i] = gfxvidinfo.drawbuffer.bufmem + j;
+	}
 }
 
 static void init_aspect_maps()
@@ -1906,6 +1893,8 @@ static void init_aspect_maps()
 
 /*
  * One drawing frame has been finished. Tell the graphics code about it.
+* Note that the actual flush_screen() call is a no-op for all reasonable
+* systems.
  */
 STATIC_INLINE void do_flush_screen()
 {

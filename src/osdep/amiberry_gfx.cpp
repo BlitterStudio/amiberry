@@ -23,7 +23,6 @@ SDL_Surface* screen = nullptr;
 //static unsigned int current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static unsigned long last_synctime;
-static unsigned long next_synctime = 0;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 14
@@ -270,21 +269,12 @@ bool render_screen(bool immediate)
 
 void show_screen(int mode)
 {
-	//unsigned long start = read_processor_time();
-
 	last_synctime = read_processor_time();
 
 	updatedisplayarea();
 
-	//idletime += last_synctime - start;
-
 	if (!screen_is_picasso)
 		gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8 *>(screen->pixels);
-
-	if (last_synctime - next_synctime > time_per_frame - 5000)
-		next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
-	else
-		next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 }
 
 unsigned long target_lastsynctime(void)
@@ -349,8 +339,6 @@ static int init_colors()
 	int blue_shift = maskShift(screen->format->Bmask);
 	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, 0);
 	notice_new_xcolors();
-	for (int i = 0; i < 4096; i++)
-		xcolors[i] = xcolors[i] * 0x00010001;
 
 	return 1;
 }
@@ -518,32 +506,38 @@ bool vsync_switchmode(int hz)
 	else
 		hz = 50;
 	
-//  if(hz == 50 && currVSyncRate == 60)
-//  {
-//    // Switch from NTSC -> PAL
-//    switch(changed_height) {
-//      case 200: changed_height = 240; break;
-//      case 216: changed_height = 262; break;
-//      case 240: changed_height = 270; break;
-//      case 256: changed_height = 270; break;
-//      case 262: changed_height = 270; break;
-//      case 270: changed_height = 270; break;
-//    }
-//  }
-//  else if(hz == 60 && currVSyncRate == 50)
-//  {
-//    // Switch from PAL -> NTSC
-//    switch(changed_height) {
-//      case 200: changed_height = 200; break;
-//      case 216: changed_height = 200; break;
-//      case 240: changed_height = 200; break;
-//      case 256: changed_height = 216; break;
-//      case 262: changed_height = 216; break;
-//      case 270: changed_height = 240; break;
-//    }
-//  }
-//
+	if (hz == 50 && currVSyncRate == 60)
+	{
+		// Switch from NTSC -> PAL
+		switch (changed_height) {
+		case 200: changed_height = 240; break;
+		case 216: changed_height = 262; break;
+		case 240: changed_height = 270; break;
+		case 256: changed_height = 270; break;
+		case 262: changed_height = 270; break;
+		case 270: changed_height = 270; break;
+		}
+	}
+	else if (hz == 60 && currVSyncRate == 50)
+	{
+		// Switch from PAL -> NTSC
+		switch (changed_height) {
+		case 200: changed_height = 200; break;
+		case 216: changed_height = 200; break;
+		case 240: changed_height = 200; break;
+		case 256: changed_height = 216; break;
+		case 262: changed_height = 216; break;
+		case 270: changed_height = 240; break;
+		}
+	}
  
+	if (hz != currVSyncRate)
+	{
+		SetVSyncRate(hz);
+		fpscounter_reset();
+		time_per_frame = 1000 * 1000 / (hz);
+	}
+
 	if (!picasso_on && !picasso_requested_on)
 		changed_prefs.gfx_size.height = changed_height;
 
@@ -704,10 +698,10 @@ void gfx_set_picasso_state(int on)
 void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
 {
 	depth >>= 3;
-	if ((unsigned(picasso_vidinfo.width) == w) &&
-		(unsigned(picasso_vidinfo.height) == h) &&
-		(unsigned(picasso_vidinfo.depth) == depth) &&
-		(picasso_vidinfo.selected_rgbformat == rgbfmt))
+	if (unsigned(picasso_vidinfo.width) == w &&
+		unsigned(picasso_vidinfo.height) == h &&
+		unsigned(picasso_vidinfo.depth) == depth &&
+		picasso_vidinfo.selected_rgbformat == rgbfmt)
 		return;
 
 	picasso_vidinfo.selected_rgbformat = rgbfmt;

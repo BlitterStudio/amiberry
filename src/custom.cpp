@@ -34,7 +34,7 @@
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"
-#include "include/ar.h"
+#include "ar.h"
 #include "akiko.h"
 #include "devices.h"
 
