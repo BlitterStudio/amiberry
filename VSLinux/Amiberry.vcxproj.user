@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <PreLaunchCommand>export DEBUG=1</PreLaunchCommand>
+    <PreLaunchCommand>
+    </PreLaunchCommand>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <RemoteDebuggerCommand>projects/amiberry/amiberry-sdl1-dev</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>projects/amiberry</RemoteDebuggerWorkingDirectory>
@@ -10,6 +11,7 @@
     <RemoteDebuggerCommand>projects/amiberry/amiberry-sdl1-dev</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
-    <PreLaunchCommand>export DEBUG=0</PreLaunchCommand>
+    <PreLaunchCommand>
+    </PreLaunchCommand>
   </PropertyGroup>
 </Project>

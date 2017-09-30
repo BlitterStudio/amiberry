@@ -38,7 +38,7 @@
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl1; make -j3</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl1; make clean; make -j3</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl1; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;C:\GitHub\amiberry\src;C:\GitHub\amiberry\src\include;C:\GitHub\amiberry\src\archivers;C:\GitHub\amiberry\src\osdep;C:\GitHub\amiberry\src\threaddep;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;..\src;..\src\include;..\src\archivers;..\src\osdep;..\src\threaddep;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;CPU_arm;ARMV6_ASSEMBLY;WITH_INGAME_WARNING;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL;ARMV6T2;USE_ARMNEON;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-sdl1</RemoteProjectDir>
   </PropertyGroup>
@@ -48,6 +48,7 @@
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl1; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;..\src;..\src\include;..\src\archivers;..\src\osdep;..\src\threaddep;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(IncludePath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>CPU_arm;ARMV6_ASSEMBLY;WITH_INGAME_WARNING;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL;ARMV6T2;USE_ARMNEON;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-sdl1</RemoteProjectDir>
   </PropertyGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -948,12 +949,24 @@
     <RemotePostBuildEvent>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
+    <RemotePreBuildEvent>
+      <Command>export DEBUG=1</Command>
+    </RemotePreBuildEvent>
+    <RemotePreBuildEvent>
+      <Message>Set DEBUG variable to TRUE</Message>
+    </RemotePreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemotePostBuildEvent>
       <Command>cp ~/projects/Amiberry-sdl1/amiberry ~/projects/amiberry/amiberry-sdl1-dev</Command>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
+    <RemotePreBuildEvent>
+      <Command>export DEBUG=0</Command>
+    </RemotePreBuildEvent>
+    <RemotePreBuildEvent>
+      <Message>Unset DEBUG variable</Message>
+    </RemotePreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
