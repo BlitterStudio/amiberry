@@ -7,19 +7,19 @@ ifeq ($(PLATFORM),rpi3)
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
 	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
-    PROFILER_PATH = /home/pi/projects/amiberry
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),rpi2)
 	CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
 	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
 	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
-    PROFILER_PATH = /home/pi/projects/amiberry
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),rpi1)
 	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
 	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
 	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
-    PROFILER_PATH = /home/pi/projects/amiberry
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),Pandora)
   CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
   MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
@@ -40,6 +40,8 @@ guisan:
 	$(MAKE) -C src/guisan
 
 #DEBUG=1
+#GEN_PROFILE=1
+#USE_PROFILE=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 
@@ -68,6 +70,13 @@ endif
 ASFLAGS += $(CPU_FLAGS)
 
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
+
+ifdef GEN_PROFILE
+MORE_CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
+endif
+ifdef USE_PROFILE
+MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
+endif
 
 OBJS =	\
 	src/akiko.o \
