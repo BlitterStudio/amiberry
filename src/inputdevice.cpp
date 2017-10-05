@@ -548,7 +548,7 @@ static void out_config (struct zfile *f, int id, int num, const TCHAR *s1, const
 
 static bool write_config_head (struct zfile *f, int idnum, int devnum, const TCHAR *name, struct uae_input_device *id,  struct inputdevice_functions *idf)
 {
-	TCHAR *s = NULL;
+	const TCHAR* s = NULL;
 	TCHAR tmp2[CONFIG_BLEN];
 
 	if (idnum == GAMEPORT_INPUT_SETTINGS) {
@@ -1136,8 +1136,8 @@ static int matchdevice(struct inputdevice_functions *inf, const TCHAR *confignam
 	for (int j = 0; j < 2; j++) {
 		bool fullmatch = j == 0;
 		for (int i = 0; i < inf->get_num(); i++) {
-			TCHAR *aname1 = inf->get_friendlyname(i);
-			TCHAR *aname2 = inf->get_uniquename(i);
+			const TCHAR* aname1 = inf->get_friendlyname(i);
+			const TCHAR* aname2 = inf->get_uniquename(i);
 			if (fullmatch && (!aname1 || !name))
 				continue;
 			if (aname2 && configname) {
@@ -1184,8 +1184,8 @@ static int matchdevice(struct inputdevice_functions *inf, const TCHAR *confignam
 			bool fullmatch = j == 0;
 			match = -1;
 			for (int i = 0; i < inf->get_num(); i++) {
-				TCHAR *aname1 = inf->get_friendlyname(i);
-				TCHAR *aname2 = inf->get_uniquename(i);
+				const TCHAR* aname1 = inf->get_friendlyname(i);
+				const TCHAR* aname2 = inf->get_uniquename(i);
 				if (aname2 && configname) {
 					const TCHAR *bname2 = configname;
 					bool matched = false;
@@ -1212,7 +1212,7 @@ static int matchdevice(struct inputdevice_functions *inf, const TCHAR *confignam
 	if (match < 0) {
 		// no match, try friendly names
 		for (int i = 0; i < inf->get_num(); i++) {
-			TCHAR *aname1 = inf->get_friendlyname(i);
+			const TCHAR* aname1 = inf->get_friendlyname(i);
 			if (aname1 && name) {
 				const TCHAR *bname1 = name;
 				if (aname1 && bname1 && !_tcscmp(aname1, bname1)) {
@@ -2928,7 +2928,7 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 	int newport = 0;
 	int newslot = -1;
 	int flags = 0;
-	TCHAR *name = NULL, *fname = NULL;
+	const TCHAR *name = NULL, *fname = NULL;
 	int otherbuttonpressed = 0;
 	int acc = input_acquired;
 
@@ -2993,7 +2993,7 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 						supermouse = i;
 				}
 				if (supermouse >= 0 && nummouse == 1) {
-					TCHAR *oldname = name;
+					const TCHAR* oldname = name;
 					name = idev[IDTYPE_MOUSE].get_uniquename (supermouse);
 					fname = idev[IDTYPE_MOUSE].get_friendlyname(supermouse);
 					issupermouse = true;
@@ -4463,8 +4463,8 @@ static void matchdevices (struct inputdevice_functions *inf, struct uae_input_de
 		bool fullmatch = l == 0;
 		int match = -1;
 		for (i = 0; i < inf->get_num (); i++) {
-			TCHAR *aname1 = inf->get_friendlyname (i);
-			TCHAR *aname2 = inf->get_uniquename (i);
+			const TCHAR* aname1 = inf->get_friendlyname(i);
+			const TCHAR* aname2 = inf->get_uniquename(i);
 			for (j = 0; j < MAX_INPUT_DEVICES; j++) {
 				if (aname2 && uid[j].configname) {
 					bool matched = false;
@@ -5226,17 +5226,17 @@ int inputdevice_get_device_total (int type)
 	return idev[type].get_num ();
 }
 /* returns the name of device */
-TCHAR *inputdevice_get_device_name (int type, int devnum)
+const TCHAR *inputdevice_get_device_name (int type, int devnum)
 {
 	return idev[type].get_friendlyname (devnum);
 }
 /* returns the name of device */
-TCHAR *inputdevice_get_device_name2 (int devnum)
+const TCHAR *inputdevice_get_device_name2 (int devnum)
 {
 	return getidf (devnum)->get_friendlyname (inputdevice_get_device_index (devnum));
 }
 /* returns machine readable name of device */
-TCHAR *inputdevice_get_device_unique_name (int type, int devnum)
+const TCHAR *inputdevice_get_device_unique_name (int type, int devnum)
 {
 	return idev[type].get_uniquename (devnum);
 }
@@ -6116,8 +6116,8 @@ int inputdevice_joyport_config (struct uae_prefs *p, const TCHAR *value1, const 
 				idf = &idev[dtype];
 				if (value1 && value2) {
 					for (int i = 0; i < idf->get_num(); i++) {
-						TCHAR *name1 = idf->get_friendlyname(i);
-						TCHAR *name2 = idf->get_uniquename(i);
+						const TCHAR* name1 = idf->get_friendlyname(i);
+						const TCHAR* name2 = idf->get_uniquename(i);
 						if (name2 && !_tcscmp(name2, value2) && name1 && !_tcscmp(name1, value1)) {
 							// config+friendlyname matched: don't bother to check for duplicates
 							matched = i;
@@ -6128,7 +6128,7 @@ int inputdevice_joyport_config (struct uae_prefs *p, const TCHAR *value1, const 
 				if (matched < 0 && value2) {
 					matched = -1;
 					for (int i = 0; i < idf->get_num (); i++) {
-						TCHAR *name2 = idf->get_uniquename (i);
+						const TCHAR* name2 = idf->get_uniquename(i);
 						if (name2 && !_tcscmp (name2, value2)) {
 							if (matched >= 0) {
 								matched = -2;
@@ -6142,7 +6142,7 @@ int inputdevice_joyport_config (struct uae_prefs *p, const TCHAR *value1, const 
 				if (matched < 0 && value1) {
 					matched = -1;
 					for (int i = 0; i < idf->get_num (); i++) {
-						TCHAR *name1 = idf->get_friendlyname (i);
+						const TCHAR* name1 = idf->get_friendlyname(i);
 						if (name1 && !_tcscmp (name1, value1)) {
 							if (matched >= 0) {
 								matched = -2;
