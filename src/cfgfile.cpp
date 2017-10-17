@@ -4818,8 +4818,10 @@ static int bip_cd32(struct uae_prefs *p, int config, int compa, int romcheck)
 	p->cdslots[0].inuse = true;
 	p->cdslots[0].type = SCSI_UNIT_IMAGE;
 
+#ifdef PANDORA	
 	p->gfx_size.width = 384;
 	p->gfx_size.height = 256;
+#endif
 
 	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
 
