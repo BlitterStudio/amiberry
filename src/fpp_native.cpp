@@ -18,7 +18,9 @@
 #include "sysdeps.h"
 
 #define USE_HOST_ROUNDING 1
+#ifdef PANDORA
 #define SOFTFLOAT_CONVERSIONS 1
+#endif
 
 #include "options.h"
 #include "memory.h"
