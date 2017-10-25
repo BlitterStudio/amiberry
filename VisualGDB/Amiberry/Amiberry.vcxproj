@@ -33,7 +33,7 @@
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
     <TargetName>$(ProjectName)-sdl2</TargetName>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>4.9.2/7.7.1/r4</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
@@ -56,7 +56,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>

@@ -31,6 +31,7 @@
       <IncludeSubdirectories>true</IncludeSubdirectories>
       <SelectedDirectories />
       <DeleteDisappearedFiles>false</DeleteDisappearedFiles>
+      <ApplyGlobalExclusionList>true</ApplyGlobalExclusionList>
     </MainSourceTransferCommand>
     <AllowChangingHostForMainCommands>false</AllowChangingHostForMainCommands>
     <SkipBuildIfNoSourceFilesChanged>false</SkipBuildIfNoSourceFilesChanged>
@@ -43,9 +44,9 @@
     <ToolchainID>
       <ID>com.visualgdb.raspberry_pi</ID>
       <Version>
-        <GCC>4.9.2</GCC>
-        <GDB>7.7.1</GDB>
-        <Revision>4</Revision>
+        <GCC>6.3.0</GCC>
+        <GDB>7.12</GDB>
+        <Revision>1</Revision>
       </Version>
     </ToolchainID>
     <Toolchain>
@@ -107,6 +108,7 @@
       <DisableSignals>false</DisableSignals>
       <EnableAsyncExecutionMode>false</EnableAsyncExecutionMode>
       <EnableNonStopMode>false</EnableNonStopMode>
+      <MaxBreakpointLimit>0</MaxBreakpointLimit>
     </AdditionalGDBSettings>
     <LaunchGDBSettings xsi:type="GDBLaunchParametersNewInstance">
       <GDBEnvironment>
