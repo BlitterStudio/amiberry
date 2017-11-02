@@ -24,6 +24,10 @@ else ifeq ($(PLATFORM),Pandora)
   CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
   MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
   PROFILER_PATH = /media/MAINSD/pandora/test
+else ifeq ($(PLATFORM),xu4)
+  CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+  MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON 
+  LDFLAGS += -llzma -lfreetype -logg
 endif
 
 NAME  = amiberry-sdl2
