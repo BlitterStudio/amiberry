@@ -247,7 +247,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdExtROM->addActionListener(romButtonActionListener);
 
 #ifdef ACTION_REPLAY
-	lblCartROM = new gcn::Label("Cardridge ROM File:");
+	lblCartROM = new gcn::Label("Cartridge ROM File:");
 	lblCartROM->setSize(200, LABEL_HEIGHT);
 	cboCartROM = new gcn::UaeDropDown(cartROMList);
 	cboCartROM->setSize(400, DROPDOWN_HEIGHT);
