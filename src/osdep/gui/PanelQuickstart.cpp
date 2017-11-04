@@ -59,12 +59,12 @@ static struct amigamodels amodels[] = {
 	{ 4, "Amiga 500+", { 
 	     "Basic non-expanded configuration",
 	     "2 MB Chip RAM expanded configuration",
-	     "MB Fast RAM expanded configuration\n",
+	     "4 MB Fast RAM expanded configuration\n",
 	     "\0" } },
 	{ 4, "Amiga 600", { 
 	     "Basic non-expanded configuration",
 	     "2 MB Chip RAM expanded configuration",
-	     "n MB Fast RAM expanded configuration",
+	     "4 MB Fast RAM expanded configuration",
 	     "\0" } },
 	{ 4, "Amiga 1200", {
 	      "Basic non-expanded configuration",
