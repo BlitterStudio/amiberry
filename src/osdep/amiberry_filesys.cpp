@@ -148,7 +148,20 @@ struct my_openfile_s *my_open (const TCHAR *name, int flags)
     mos = xmalloc (struct my_openfile_s, 1);
     if (!mos)
         return nullptr;
-    mos->h = reinterpret_cast<void *>(open(name, flags));
+    if(flags & O_CREAT)
+    {
+        write_log(_T("Creating new file:\n"));
+        write_log(name);
+        write_log('\n');
+        mos->h = reinterpret_cast<void *>(open(name, flags, 0660));
+    }
+    else
+    {
+        write_log(_T("Opening file:\n"));
+        write_log(name);
+        write_log('\n');
+        mos->h = reinterpret_cast<void *>(open(name, flags));
+    }
     if (!mos->h)
     {
         xfree (mos);
