@@ -152,14 +152,14 @@ struct my_openfile_s *my_open (const TCHAR *name, int flags)
     {
         write_log(_T("Creating new file:\n"));
         write_log(name);
-        write_log('\n');
+        write_log(_T("\n"));
         mos->h = reinterpret_cast<void *>(open(name, flags, 0660));
     }
     else
     {
         write_log(_T("Opening file:\n"));
         write_log(name);
-        write_log('\n');
+        write_log(_T("\n"));
         mos->h = reinterpret_cast<void *>(open(name, flags));
     }
     if (!mos->h)
