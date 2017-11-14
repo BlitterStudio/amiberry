@@ -28,6 +28,11 @@ else ifeq ($(PLATFORM),xu4)
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
     LDFLAGS += -llzma -lfreetype -logg
+    ifdef DEBUG
+	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+        MORE_CFLAGS += -fomit-frame-pointer
+    endif
 endif
 
 NAME  = amiberry-sdl2
