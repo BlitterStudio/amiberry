@@ -76,7 +76,7 @@ else
 endif
 
 ifdef WITH_LOGGING
-	MORE_CFLAGS += -DWITH_LOGGING
+    MORE_CFLAGS += -DWITH_LOGGING
 endif
 
 ASFLAGS += $(CPU_FLAGS)
@@ -84,10 +84,10 @@ ASFLAGS += $(CPU_FLAGS)
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
 ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
+    MORE_CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
 endif
 ifdef USE_PROFILE
-MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
+    MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
 endif
 
 OBJS =	\
