@@ -68,12 +68,15 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lsrc/guisan/lib
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe
-MORE_CFLAGS += -fweb -frename-registers
-MORE_CFLAGS += -funroll-loops -ftracer -funswitch-loops
+    MORE_CFLAGS += -Ofast -pipe
+    MORE_CFLAGS += -fweb -frename-registers
+    MORE_CFLAGS += -funroll-loops -ftracer -funswitch-loops
 else
-MORE_CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+    MORE_CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+endif
 
+ifdef WITH_LOGGING
+	MORE_CFLAGS += -DWITH_LOGGING
 endif
 
 ASFLAGS += $(CPU_FLAGS)

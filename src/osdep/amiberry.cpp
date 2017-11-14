@@ -100,12 +100,12 @@ void logging_init(void)
 		debugfile = 0;
 	}
 
-	sprintf(debugfilename, "%s/uae4arm_log.txt", start_path_data);
+	sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
 	if (!debugfile)
 		debugfile = fopen(debugfilename, "wt");
 
 	first++;
-	write_log("UAE4ARM Logfile\n\n");
+	write_log("AMIBERRY Logfile\n\n");
 #endif
 }
 
