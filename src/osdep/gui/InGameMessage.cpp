@@ -156,7 +156,7 @@ void InGameMessage(const char* msg)
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 		// Finally we update the screen.
-		if (!drawn)
+		if (!drawn && cursor != nullptr)
 		{
 			SDL_ShowCursor(SDL_ENABLE);
 			updatedisplayarea();

@@ -187,25 +187,46 @@ void UpdateGuiScreen()
 
 namespace sdl
 {
-	void gui_init()
+	// Sets the cursor image up
+	void setup_cursor() 
 	{
-		//-------------------------------------------------
-		// Create new screen for GUI
-		//-------------------------------------------------
+		// Detect resolution and load appropiate cursor image
 		if (sdlMode.w > 1280)
 		{
-			// High resolution detected, we'll use a double-size cursor
 			cursorSurface = SDL_LoadBMP("data/cursor-x2.bmp");
 		}
 		else
 		{
 			cursorSurface = SDL_LoadBMP("data/cursor.bmp");
 		}
-		if (cursorSurface)
+		
+		if (cursorSurface == nullptr)
 		{
-			cursor = SDL_CreateColorCursor(cursorSurface, 0, 0);
-			SDL_SetCursor(cursor);
+			// Load failed. Log error.
+			cout << "Could not load cursor bitmap: " << SDL_GetError() << endl;
+			return;
 		}
+
+		// Create new cursor with surface
+		cursor = SDL_CreateColorCursor(cursorSurface, 0, 0);
+		if (cursor == nullptr)
+		{
+			// Cursor creation failed. Log error and free surface
+			cout << "Could not create color cursor: " << SDL_GetError() << endl;
+			SDL_FreeSurface(cursorSurface);
+			cursorSurface = nullptr;
+			return;
+		}
+
+		SDL_SetCursor(cursor);
+	}
+
+	void gui_init()
+	{
+		//-------------------------------------------------
+		// Create new screen for GUI
+		//-------------------------------------------------
+		setup_cursor();
 
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -218,7 +239,10 @@ namespace sdl
 		gui_texture = SDL_CreateTextureFromSurface(renderer, gui_screen);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture");
 
-		SDL_ShowCursor(SDL_ENABLE);
+		if (cursor)
+		{
+			SDL_ShowCursor(SDL_ENABLE);
+		}
 
 		//-------------------------------------------------
 		// Create helpers for guisan
@@ -250,6 +274,12 @@ namespace sdl
 		if (cursor)
 		{
 			SDL_FreeCursor(cursor);
+			cursor = nullptr;
+		}
+		if (cursorSurface)
+		{
+			SDL_FreeSurface(cursorSurface);
+			cursorSurface = nullptr;
 		}
 		gui_screen = nullptr;
 	}

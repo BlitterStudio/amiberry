@@ -3,31 +3,36 @@ ifeq ($(PLATFORM),)
 endif
 
 ifeq ($(PLATFORM),rpi3)
-	CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
-	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
+    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),rpi2)
-	CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
-	MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
-	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
+    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),rpi1)
-	CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
-	MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
-	MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+    MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
+    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),Pandora)
-  CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
-  MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
-  PROFILER_PATH = /media/MAINSD/pandora/test
+    CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
+    PROFILER_PATH = /media/MAINSD/pandora/test
 else ifeq ($(PLATFORM),xu4)
-  CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-  MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON 
-  LDFLAGS += -llzma -lfreetype -logg
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
+    LDFLAGS += -llzma -lfreetype -logg
+    ifdef DEBUG
+	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+        MORE_CFLAGS += -fomit-frame-pointer
+    endif
 endif
 
 NAME  = amiberry-sdl2
@@ -63,12 +68,15 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lsrc/guisan/lib
 
 ifndef DEBUG
-MORE_CFLAGS += -Ofast -pipe
-MORE_CFLAGS += -fweb -frename-registers
-MORE_CFLAGS += -funroll-loops -ftracer -funswitch-loops
+    MORE_CFLAGS += -Ofast -pipe
+    MORE_CFLAGS += -fweb -frename-registers
+    MORE_CFLAGS += -funroll-loops -ftracer -funswitch-loops
 else
-MORE_CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+    MORE_CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+endif
 
+ifdef WITH_LOGGING
+    MORE_CFLAGS += -DWITH_LOGGING
 endif
 
 ASFLAGS += $(CPU_FLAGS)
@@ -76,10 +84,10 @@ ASFLAGS += $(CPU_FLAGS)
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
 ifdef GEN_PROFILE
-MORE_CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
+    MORE_CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
 endif
 ifdef USE_PROFILE
-MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
+    MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
 endif
 
 OBJS =	\
