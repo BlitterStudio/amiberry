@@ -1,16 +1,16 @@
 /*
-* UAE - The Un*x Amiga Emulator
-*
-* Try to include the right system headers and get other system-specific
-* stuff right & other collected kludges.
-*
-* If you think about modifying this, think twice. Some systems rely on
-* the exact order of the #include statements. That's also the reason
-* why everything gets included unconditionally regardless of whether
-* it's actually needed by the .c file.
-*
-* Copyright 1996, 1997 Bernd Schmidt
-*/
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Try to include the right system headers and get other system-specific
+  * stuff right & other collected kludges.
+  *
+  * If you think about modifying this, think twice. Some systems rely on
+  * the exact order of the #include statements. That's also the reason
+  * why everything gets included unconditionally regardless of whether
+  * it's actually needed by the .c file.
+  *
+  * Copyright 1996, 1997 Bernd Schmidt
+  */
 #ifndef UAE_SYSDEPS_H
 #define UAE_SYSDEPS_H
 
@@ -131,8 +131,8 @@ using namespace std;
 #define S_ISDIR(val) (S_IFDIR & val)
 struct utimbuf
 {
-	time_t actime;
-	time_t modtime;
+    time_t actime;
+    time_t modtime;
 };
 #endif
 
@@ -186,25 +186,25 @@ typedef uae_u32 uaecptr;
 #endif
 
 #ifdef HAVE_STRDUP
-#define my_strdup strdup
+#define my_strdup _tcsdup
 #else
-extern TCHAR *my_strdup(const TCHAR*s);
+extern TCHAR *my_strdup (const TCHAR*s);
 #endif
 
-extern TCHAR *my_strdup_ansi(const char*);
-extern void my_trim(TCHAR*);
-extern TCHAR *my_strdup_trim(const TCHAR*);
-extern TCHAR *au(const char*);
-extern char *ua(const TCHAR*);
-extern TCHAR *au_fs(const char*);
-extern char *ua_fs(const TCHAR*, int);
-extern char *ua_copy(char *dst, int maxlen, const TCHAR *src);
-extern TCHAR *au_copy(TCHAR *dst, int maxlen, const char *src);
-extern char *ua_fs_copy(char *dst, int maxlen, const TCHAR *src, int defchar);
-extern TCHAR *au_fs_copy(TCHAR *dst, int maxlen, const char *src);
-extern char *uutf8(const TCHAR *s);
-extern TCHAR *utf8u(const char *s);
-extern void to_lower(TCHAR *s, int len);
+extern TCHAR *my_strdup_ansi (const char*);
+extern void my_trim (TCHAR*);
+extern TCHAR *my_strdup_trim (const TCHAR*);
+extern TCHAR *au (const char*);
+extern char *ua (const TCHAR*);
+extern TCHAR *au_fs (const char*);
+extern char *ua_fs (const TCHAR*, int);
+extern char *ua_copy (char *dst, int maxlen, const TCHAR *src);
+extern TCHAR *au_copy (TCHAR *dst, int maxlen, const char *src);
+extern char *ua_fs_copy (char *dst, int maxlen, const TCHAR *src, int defchar);
+extern TCHAR *au_fs_copy (TCHAR *dst, int maxlen, const char *src);
+extern char *uutf8 (const TCHAR *s);
+extern TCHAR *utf8u (const char *s);
+extern void to_lower (TCHAR *s, int len);
 extern void to_upper (TCHAR *s, int len);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known

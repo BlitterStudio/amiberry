@@ -129,7 +129,7 @@ typedef struct {
 #define DRIVE_ID_35HD  0xAAAAAAAA
 #define DRIVE_ID_525SD 0x55555555 /* 40 track 5.25 drive , kickstart does not recognize this */
 
-typedef enum { ADF_NONE = -1, ADF_NORMAL, ADF_EXT1, ADF_EXT2, ADF_FDI, ADF_IPF, ADF_SCP, ADF_CATWEASEL, ADF_PCDOS, ADF_KICK, ADF_SKICK } drive_filetype;
+typedef enum { ADF_NONE = -1, ADF_NORMAL, ADF_EXT1, ADF_EXT2, ADF_FDI, ADF_SCP, ADF_PCDOS, ADF_KICK, ADF_SKICK } drive_filetype;
 typedef struct {
   struct zfile *diskfile;
   struct zfile *writediskfile;
@@ -507,11 +507,6 @@ static int createimagefromexe (struct zfile *src, struct zfile *dst)
   writeimageblock (dst, sector1, 0 * FS_FLOPPY_BLOCKSIZE);
 
   return 1;
-}
-
-static bool isfloppysound (drive *drv)
-{
-	return drv->useturbo == 0;
 }
 
 static int get_floppy_speed (void)
@@ -1701,7 +1696,7 @@ static void drive_fill_bigbuf (drive * drv, int force)
   trackid *ti = drv->trackdata + tr;
 	int rev = -1;
 
-  if (!drv->diskfile || tr >= drv->num_tracks) {
+	if ((!drv->diskfile) || tr >= drv->num_tracks) {
   	track_reset (drv);
   	return;
   }
@@ -2205,8 +2200,6 @@ static void drive_write_data (drive * drv)
 			  longwritemode ? dsklength2 * 8 : drv->tracklen);
     }
     return;
-  case ADF_IPF:
-   	break;
   case ADF_PCDOS:
 		ret = drive_write_pcdos (drv, drv->diskfile, 0);
 		if (ret < 0)

@@ -49,17 +49,6 @@
 /* ------------------------------------------------------------------------ */
 static int      cmd = CMD_UNKNOWN;
 
-/* 1996.8.13 t.okamoto */
-#if 0
-char          **cmd_filev;
-int             cmd_filec;
-
-char           *archive_name;
-char            expanded_archive_name[FILENAME_LENGTH];
-char            temporary_name[FILENAME_LENGTH];
-char            backup_archive_name[FILENAME_LENGTH];
-#endif
-
 /* static functions */
 static void     sort_files();
 static void		print_version();
@@ -68,14 +57,6 @@ char		    *extract_directory = NULL;
 char		  **xfilev;
 int             xfilec = 257;
 
-/* 1996.8.13 t.okamoto */
-#if 0
-char           *writting_filename;
-char           *reading_filename;
-
-int             archive_file_mode;
-int             archive_file_gid;
-#endif
 /* ------------------------------------------------------------------------ */
 static void
 init_variable()		/* Added N.Watazaki */

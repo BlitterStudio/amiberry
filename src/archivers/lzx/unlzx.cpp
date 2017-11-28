@@ -701,11 +701,6 @@ struct zfile *archive_access_lzx (struct znode *zn)
 				crc_calc (&d, pdest, d.decrunch_length);
 			} else {
 				write_log (_T("LZX corrupt compressed data %s\n"), zn->name);
-#if 0
-				struct zfile *x = zfile_fopen(_T("c:\\temp\\1.dat"),_T("wb"));
-				zfile_fwrite(dbuf,1,outsize, x);
-				zfile_fclose(x);
-#endif				
 				goto end;
 			}
 		}
@@ -715,11 +710,11 @@ struct zfile *archive_access_lzx (struct znode *zn)
 		if (!znfirst->f) {
 			dstf = zfile_fopen_empty (zf, znfirst->name, znfirst->size);
 			if (znfirst->size) {
-			  zfile_fwrite(dbuf + znfirst->offset2, znfirst->size, 1, dstf);
+				zfile_fwrite(dbuf + znfirst->offset2, znfirst->size, 1, dstf);
 			}
 			znfirst->f = dstf;
 			if (znfirst == zn)
-			newzf = zfile_dup (dstf);
+				newzf = zfile_dup (dstf);
 		} else {
 			if (znfirst == zn)
 				newzf = zfile_dup(znfirst->f);
@@ -836,7 +831,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 
 	  zn = zvolume_addfile_abs(zv, &zai);
 	  if (zn) {
-	    zn->offset2 = merge_size;
+		  zn->offset2 = merge_size;
 	  }
 	  xfree (zai.name);
 	  xfree (zai.comment);
@@ -850,8 +845,8 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 	  {
 	   merge_size = 0;
 	   if (zn) {
-	    zn->offset = zfile_ftell(in_file);
-	    zn->packedsize = pack_size;
+		   zn->offset = zfile_ftell(in_file);
+		   zn->packedsize = pack_size;
 	   }
 	   if(!zfile_fseek(in_file, pack_size, SEEK_CUR))
 	   {

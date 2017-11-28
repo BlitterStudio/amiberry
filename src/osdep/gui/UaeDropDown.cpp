@@ -55,6 +55,10 @@ namespace gcn
 		return mDroppedDown;
 	}
 
+bool UaeDropDown::getEnabled(void)
+{
+     return mEnabled;
+}
 	void UaeDropDown::setEnabled(bool enabled)
 	{
 		if (mEnabled != enabled)

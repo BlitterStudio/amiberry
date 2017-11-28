@@ -2045,12 +2045,10 @@ floatx80 floatx80_round32( floatx80 a, float_status *status )
     aExp = extractFloatx80Exp( a );
     aSign = extractFloatx80Sign( a );
     
-    if ( aExp == 0x7FFF ) {
-        if ( (uint64_t) ( aSig<<1 ) ) return propagateFloatx80NaNOneArg( a, status );
+    if ( aExp == 0x7FFF || aSig == 0 ) {
         return a;
     }
     if ( aExp == 0 ) {
-        if ( aSig == 0 ) return a;
         normalizeFloatx80Subnormal( aSig, &aExp, &aSig );
     }
     
@@ -2067,12 +2065,10 @@ floatx80 floatx80_round64( floatx80 a, float_status *status )
     aExp = extractFloatx80Exp( a );
     aSign = extractFloatx80Sign( a );
     
-    if ( aExp == 0x7FFF ) {
-        if ( (uint64_t) ( aSig<<1 ) ) return propagateFloatx80NaNOneArg( a, status );
+    if ( aExp == 0x7FFF || aSig == 0 ) {
         return a;
     }
     if ( aExp == 0 ) {
-        if ( aSig == 0 ) return a;
         normalizeFloatx80Subnormal( aSig, &aExp, &aSig );
     }
     

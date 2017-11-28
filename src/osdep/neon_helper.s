@@ -87,7 +87,7 @@ copy_screen_16bit_swap:
   vstmia    r0!, {q8-q15}
   bne       copy_screen_16bit_swap
   bx        lr
-
+  
 
 @ Note: this one isn't optimized...
 copy_screen_16bit_swap_arm:
@@ -125,7 +125,7 @@ copy_screen_32bit_to_16bit_neon:
   vst2.8    {d18-d19}, [r0]!
   bne       copy_screen_32bit_to_16bit_neon
   bx        lr
-
+  
 
 @ Note: this one isn't optimized...
 copy_screen_32bit_to_16bit_arm:

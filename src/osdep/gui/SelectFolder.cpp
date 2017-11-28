@@ -13,6 +13,13 @@
 #include "uae.h"
 #include "gui_handling.h"
 
+#include "options.h"
+#include "inputdevice.h"
+
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
+
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
@@ -21,6 +28,8 @@ static bool dialogResult = false;
 static bool dialogFinished = false;
 static char workingDir[MAX_PATH];
 
+static SDL_Joystick *GUIjoy;
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static gcn::Window* wndSelectFolder;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
@@ -87,11 +96,11 @@ static void checkfoldername(char* current)
 	{
 		dirList = current;
 		char * ptr = realpath(current, actualpath);
-		strcpy(workingDir, ptr);
+		strncpy(workingDir, ptr, MAX_PATH);
 		closedir(dir);
 	}
 	else
-		strcpy(workingDir, start_path_data);
+		strncpy(workingDir, start_path_data, MAX_PATH);
 	txtCurrent->setText(workingDir);
 }
 
@@ -104,9 +113,9 @@ public:
 		char foldername[MAX_PATH] = "";
 
 		int selected_item = lstFolders->getSelected();
-		strcpy(foldername, workingDir);
-		strcat(foldername, "/");
-		strcat(foldername, dirList.getElementAt(selected_item).c_str());
+		strncpy(foldername, workingDir, MAX_PATH - 1);
+		strncat(foldername, "/", MAX_PATH - 1);
+		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_PATH - 1);
 		volName = dirList.getElementAt(selected_item).c_str();
 		checkfoldername(foldername);
 	}
@@ -188,7 +197,28 @@ static void ExitSelectFolder()
 	delete wndSelectFolder;
 }
 
+static void navigate_right(void)
+{ gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+  gcn::Widget* activeWidget = focusHdl->getFocused();
+  if(activeWidget == lstFolders)
+    cmdOK->requestFocus();
+  else if(activeWidget == cmdCancel)
+    lstFolders->requestFocus();
+  else if(activeWidget == cmdOK)
+    cmdCancel->requestFocus();
+  }  
 
+static void navigate_left(void)
+    {
+      gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+      gcn::Widget* activeWidget = focusHdl->getFocused();
+      if(activeWidget == lstFolders)
+        cmdCancel->requestFocus();
+      else if(activeWidget == cmdCancel)
+        cmdOK->requestFocus();
+      else if(activeWidget == cmdOK)
+        lstFolders->requestFocus();
+    }
 static void SelectFolderLoop()
 {
 	FocusBugWorkaround(wndSelectFolder);
@@ -242,11 +272,59 @@ static void SelectFolderLoop()
 					break;
 				}
 			}
+else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+      {
+          int hat = SDL_JoystickGetHat(GUIjoy, 0);
+          
+            if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))
+            {PushFakeKey(SDLK_RETURN);
+             break;}
+            
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
+                    SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))
+            {dialogFinished = true;
+             break;}
+
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
+                { gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+                  gcn::Widget* activeWidget = focusHdl->getFocused();
+                  if(activeWidget == lstFolders)
+                    cmdCancel->requestFocus();
+                  else if(activeWidget == cmdCancel)
+                    cmdOK->requestFocus();
+                  else if(activeWidget == cmdOK)
+                    lstFolders->requestFocus(); 
+                  continue;}
+               
+                          
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
+                { gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+                  gcn::Widget* activeWidget = focusHdl->getFocused();
+                  if(activeWidget == lstFolders)
+                    cmdOK->requestFocus();
+                  else if(activeWidget == cmdCancel)
+                    lstFolders->requestFocus();
+                  else if(activeWidget == cmdOK)
+                    cmdCancel->requestFocus(); 
+                  continue;} 
+                     
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
+                {PushFakeKey(SDLK_UP);
+                 break;}
+            
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
+                {PushFakeKey(SDLK_DOWN);
+                 break;}            
+      }
 
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-			gui_input->pushInput(event);
+#ifdef ANDROIDSDL
+        androidsdl_event(event, gui_input);
+#else
+        gui_input->pushInput(event);
+#endif
 		}
 
 		// Now we let the Gui object perform its logic.
@@ -270,9 +348,9 @@ bool SelectFolder(const char* title, char* value)
 	ExitSelectFolder();
 	if (dialogResult)
 	{
-		strcpy(value, workingDir);
+		strncpy(value, workingDir, MAX_PATH);
 		if (value[strlen(value) - 1] != '/')
-			strcat(value, "/");
+			strncat(value, "/", MAX_PATH);
 	}
 	return dialogResult;
 }

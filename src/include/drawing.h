@@ -12,7 +12,7 @@
 #define MAX_PLANES 8
 
 /* According to the HRM, pixel data spends a couple of cycles somewhere in the chips
-   before it appears on-screen.  */
+before it appears on-screen. (TW: display emulation now does this automatically)  */
 #define DIW_DDF_OFFSET 1
 /* this many cycles starting from hpos=0 are visible on right border */
 #define HBLANK_OFFSET 9
@@ -27,6 +27,14 @@
 
 extern int lores_shift, interlace_seen;
 extern bool aga_mode;
+
+STATIC_INLINE int shres_coord_hw_to_window_x (int x)
+{
+	x -= DISPLAY_LEFT_SHIFT << 2;
+	x <<= lores_shift;
+	x >>= 2;
+	return x;
+}
 
 STATIC_INLINE int coord_hw_to_window_x (int x)
 {
@@ -182,11 +190,12 @@ struct sprite_entry
 };
 
 union sps_union {
-  uae_u8 bytes[MAX_SPR_PIXELS];
-  uae_u32 words[MAX_SPR_PIXELS / 4];
+	uae_u8 bytes[2 * MAX_SPR_PIXELS];
+	uae_u32 words[2 * MAX_SPR_PIXELS / 4];
 };
 extern union sps_union spixstate;
-extern uae_u16 spixels[MAX_SPR_PIXELS];
+
+extern uae_u16 spixels[MAX_SPR_PIXELS * 2];
 
 /* Way too much... */
 #define MAX_REG_CHANGE ((MAXVPOS + 1) * MAXHPOS)
@@ -213,6 +222,7 @@ struct decision {
   bool ham_seen;
   bool ham_at_start;
 	bool bordersprite_seen;
+	bool xor_seen;
 };
 
 /* Anything related to changes in hw registers during the DDF for one

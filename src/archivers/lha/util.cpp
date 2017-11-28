@@ -69,33 +69,6 @@ strdup(buf)
 #endif
 
 /*
- * memmove( char *dst , char *src , size_t cnt )
- */
-
-/* ------------------------------------------------------------------------ */
-#if 0 && defined(NOBSTRING) && !defined(__STDC__)
-void           *
-memmove(dst, src, cnt)
-	register char  *dst, *src;
-	register int    cnt;
-{
-	if (dst == src)
-		return dst;
-	if (src > dst) {
-		while (--cnt >= 0)
-			*dst++ = *src++;
-	}
-	else {
-		dst += cnt;
-		src += cnt;
-		while (--cnt >= 0)
-			*--dst = *--src;
-	}
-	return dst;
-}
-#endif
-
-/*
  * rename - change the name of file 91.11.02 by Tomohiro Ishikawa
  * (ishikawa@gaia.cow.melco.CO.JP) 92.01.20 little modified (added #ifdef) by
  * Masaru Oki 92.01.28 added mkdir() and rmdir() by Tomohiro Ishikawa

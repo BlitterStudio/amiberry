@@ -117,6 +117,13 @@ void ExitPanelInput(void);
 void RefreshPanelInput(void);
 bool HelpPanelInput(std::vector<std::string> &helptext);
 
+#ifndef PANDORA
+void InitPanelCustom(const struct _ConfigCategory& category);
+void ExitPanelCustom(void);
+void RefreshPanelCustom(void);
+bool HelpPanelCustom(std::vector<std::string> &helptext);
+#endif
+
 void InitPanelMisc(const struct _ConfigCategory& category);
 void ExitPanelMisc(void);
 void RefreshPanelMisc(void);
@@ -127,6 +134,13 @@ void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);
 bool HelpPanelSavestate(std::vector<std::string> &helptext);
 
+#ifdef ANDROIDSDL
+void InitPanelOnScreen(const struct _ConfigCategory& category);
+void ExitPanelOnScreen(void);
+void RefreshPanelOnScreen(void);
+bool HelpPanelOnScreen(std::vector<std::string> &helptext);
+#endif
+  
 void RefreshAllPanels(void);
 void RegisterRefreshFunc(void(*func)(void));
 
@@ -159,6 +173,7 @@ enum
 };
 
 bool HandleNavigation(int direction);
+void PushFakeKey(SDLKey inKey);
 
 #define MAX_HD_DEVICES 5
 extern void CreateDefaultDevicename(char* name);

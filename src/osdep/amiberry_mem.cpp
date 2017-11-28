@@ -14,17 +14,18 @@
 #include <sys/mman.h>
 #include <SDL.h>
 
-uae_u8* natmem_offset = nullptr;
-uae_u32 natmem_size;
+
+uae_u8* natmem_offset = 0;
+static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
 
 /* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
 #define BARRIER 32
 
-static uae_u8* additional_mem = (uae_u8*)MAP_FAILED;
+static uae_u8* additional_mem = (uae_u8*) MAP_FAILED;
 #define ADDITIONAL_MEMSIZE (128 + 16) * 1024 * 1024
 
-static uae_u8* a3000_mem = (uae_u8*)MAP_FAILED;
+static uae_u8* a3000_mem = (uae_u8*) MAP_FAILED;
 static int a3000_totalsize = 0;
 #define A3000MEM_START 0x08000000
 
@@ -37,22 +38,26 @@ int z3base_adr = 0;
 
 void free_AmigaMem(void)
 {
-	if (natmem_offset != 0)
-	{
-		free(natmem_offset);
-		natmem_offset = 0;
-	}
-	if (additional_mem != MAP_FAILED)
-	{
-		munmap(additional_mem, ADDITIONAL_MEMSIZE + BARRIER);
-		additional_mem = (uae_u8*)MAP_FAILED;
-	}
-	if (a3000_mem != MAP_FAILED)
-	{
-		munmap(a3000_mem, a3000_totalsize);
-		a3000_mem = (uae_u8*)MAP_FAILED;
-		a3000_totalsize = 0;
-	}
+  if(natmem_offset != 0)
+  {
+#ifdef AMIBERRY
+    munmap(natmem_offset, natmem_size + BARRIER);
+#else
+    free(natmem_offset);
+#endif
+    natmem_offset = 0;
+  }
+  if(additional_mem != MAP_FAILED)
+  {
+    munmap(additional_mem, ADDITIONAL_MEMSIZE + BARRIER);
+    additional_mem = (uae_u8*) MAP_FAILED;
+  }
+  if(a3000_mem != MAP_FAILED)
+  {
+    munmap(a3000_mem, a3000_totalsize);
+    a3000_mem = (uae_u8*) MAP_FAILED;
+    a3000_totalsize = 0;
+  }
 }
 
 
@@ -65,53 +70,66 @@ void alloc_AmigaMem(void)
 	free_AmigaMem();
 	set_expamem_z3_hack_mode(Z3MAPPING_AUTO);
 
-	// First attempt: allocate 16 MB for all memory in 24-bit area 
-	// and additional mem for Z3 and RTG at correct offset
-	natmem_size = 16 * 1024 * 1024;
-	natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
-	max_z3fastmem = ADDITIONAL_MEMSIZE - (16 * 1024 * 1024);
+  // First attempt: allocate 16 MB for all memory in 24-bit area 
+  // and additional mem for Z3 and RTG at correct offset
+  natmem_size = 16 * 1024 * 1024;
+#ifdef AMIBERRY
+  // address returned by valloc() too high for later mmap() calls. Use mmap() also for first area.
+  natmem_offset = (uae_u8*) mmap((void *)0x20000000, natmem_size + BARRIER,
+    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+#else
+  natmem_offset = (uae_u8*)valloc (natmem_size + BARRIER);
+#endif
+  max_z3fastmem = ADDITIONAL_MEMSIZE - (16 * 1024 * 1024);
 	if (!natmem_offset) {
 		write_log("Can't allocate 16M of virtual address space!?\n");
 		abort();
 	}
-	additional_mem = (uae_u8*)mmap(natmem_offset + Z3BASE_REAL, ADDITIONAL_MEMSIZE + BARRIER,
-		PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-	if (additional_mem != MAP_FAILED)
-	{
-		// Allocation successful -> we can use natmem_offset for entire memory access at real address
-		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
-		z3base_adr = Z3BASE_REAL;
-		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at real address (0x%08x - 0x%08x)\n",
-			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
-		set_expamem_z3_hack_mode(Z3MAPPING_REAL);
-		return;
-	}
+// FIXME This part of code caused crash on Android devices
+#ifndef ANDROID
+  additional_mem = (uae_u8*) mmap(natmem_offset + Z3BASE_REAL, ADDITIONAL_MEMSIZE + BARRIER,
+    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+  if(additional_mem != MAP_FAILED)
+  {
+    // Allocation successful -> we can use natmem_offset for entire memory access at real address
+    changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
+    z3base_adr = Z3BASE_REAL;
+    write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at real address (0x%08x - 0x%08x)\n", 
+      natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+    set_expamem_z3_hack_mode(Z3MAPPING_REAL);
+    return;
+  }
 
-	additional_mem = (uae_u8*)mmap(natmem_offset + Z3BASE_UAE, ADDITIONAL_MEMSIZE + BARRIER,
-		PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-	if (additional_mem != MAP_FAILED)
-	{
-		// Allocation successful -> we can use natmem_offset for entire memory access at fake address
-		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
-		z3base_adr = Z3BASE_UAE;
-		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n",
-			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
-		set_expamem_z3_hack_mode(Z3MAPPING_UAE);
-		return;
-	}
-	free(natmem_offset);
-
-	// Next attempt: allocate huge memory block for entire area
-	natmem_size = ADDITIONAL_MEMSIZE + 256 * 1024 * 1024;
-	natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
-	if (natmem_offset)
-	{
-		// Allocation successful
-		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
-		z3base_adr = Z3BASE_UAE;
-		write_log("Allocated %d MB for entire memory\n", natmem_size / (1024 * 1024));
-		return;
-	}
+  additional_mem = (uae_u8*) mmap(natmem_offset + Z3BASE_UAE, ADDITIONAL_MEMSIZE + BARRIER,
+    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+  if(additional_mem != MAP_FAILED)
+  {
+    // Allocation successful -> we can use natmem_offset for entire memory access at fake address
+    changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
+    z3base_adr = Z3BASE_UAE;
+    write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n", 
+      natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+    set_expamem_z3_hack_mode(Z3MAPPING_UAE);
+    return;
+  }
+#endif
+#ifdef AMIBERRY
+  munmap(natmem_offset, natmem_size + BARRIER);
+#else
+  free(natmem_offset);
+#endif
+  
+  // Next attempt: allocate huge memory block for entire area
+  natmem_size = ADDITIONAL_MEMSIZE + 256 * 1024 * 1024;
+  natmem_offset = (uae_u8*)valloc (natmem_size + BARRIER);
+  if(natmem_offset)
+  {
+    // Allocation successful
+    changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
+    z3base_adr = Z3BASE_UAE;
+    write_log("Allocated %d MB for entire memory\n", natmem_size / (1024 * 1024));
+    return;
+  }
 
 	// No mem for Z3 or RTG at all
 	natmem_size = 16 * 1024 * 1024;

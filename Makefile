@@ -33,9 +33,16 @@ else ifeq ($(PLATFORM),xu4)
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
+
+else ifeq ($(PLATFORM),android)
+	CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
+	DEFS += -DANDROIDSDL
+	ANDROID = 1
+	HAVE_NEON = 1
+	HAVE_SDL_DISPLAY = 1
 endif
 
-NAME  = amiberry-sdl2
+NAME  = amiberry-sdl2-dev
 RM      = rm -f
 CC     ?= gcc
 CXX    ?= g++
@@ -79,7 +86,7 @@ ifdef WITH_LOGGING
     MORE_CFLAGS += -DWITH_LOGGING
 endif
 
-ASFLAGS += $(CPU_FLAGS)
+ASFLAGS += $(CPU_FLAGS) -falign-functions=32
 
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
@@ -87,7 +94,7 @@ ifdef GEN_PROFILE
     MORE_CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
 endif
 ifdef USE_PROFILE
-    MORE_CFLAGS += -fprofile-use -fbranch-probabilities -fvpt
+    MORE_CFLAGS += -fprofile-use -fprofile-correction -fbranch-probabilities -fvpt
 endif
 
 OBJS =	\
@@ -150,6 +157,7 @@ OBJS =	\
 	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \
+	src/archivers/7z/7zAlloc.o \
 	src/archivers/7z/7zBuf.o \
 	src/archivers/7z/7zCrc.o \
 	src/archivers/7z/7zCrcOpt.o \
@@ -230,17 +238,24 @@ OBJS =	\
 	src/osdep/gui/PanelConfig.o \
 	src/osdep/gui/PanelCPU.o \
 	src/osdep/gui/PanelChipset.o \
+	src/osdep/gui/PanelCustom.o \
 	src/osdep/gui/PanelROM.o \
 	src/osdep/gui/PanelRAM.o \
 	src/osdep/gui/PanelFloppy.o \
 	src/osdep/gui/PanelHD.o \
+	src/osdep/gui/PanelInput.o \
 	src/osdep/gui/PanelDisplay.o \
 	src/osdep/gui/PanelSound.o \
-	src/osdep/gui/PanelInput.o \
 	src/osdep/gui/PanelMisc.o \
 	src/osdep/gui/PanelSavestate.o \
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o
+ifeq ($(ANDROID), 1)
+OBJS += src/osdep/gui/androidsdl_event.o
+OBJS += src/osdep/gui/PanelOnScreen.o
+OBJS += src/osdep/pandora_gfx.o
+endif
+
 	
 OBJS += src/osdep/neon_helper.o
 

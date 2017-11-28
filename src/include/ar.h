@@ -66,7 +66,7 @@ extern int hrtmon_load (void);
 extern void hrtmon_map_banks (void);
 
 /*extern uae_u8 *hrtmemory;*/
-extern uae_u32 hrtmem_start, hrtmem_size, hrtmem2_start, hrtmem3_start;
+extern uae_u32 hrtmem_start, hrtmem_size;
 
 extern uae_u8 ar_custom[2*256], ar_ciaa[16], ar_ciab[16];
 

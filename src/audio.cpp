@@ -1073,7 +1073,6 @@ void audio_reset (void)
 
 	last_cycles = get_cycles ();
   next_sample_evtime = scaled_sample_evtime;
-
   schedule_audio ();
   events_schedule ();
 }

@@ -45,8 +45,6 @@
 #include "compemu.h"
 #include <SDL.h>
 
-#include "compemu_prefs.cpp"
-
 #define DEBUG 0
 
 #if DEBUG
@@ -168,7 +166,7 @@ static blockinfo* hold_bi[MAX_HOLD_BI];
 blockinfo* active;
 blockinfo* dormant;
 
-#ifndef WIN32
+#if !defined (WIN32) || !defined(ANDROID)
 #include <sys/mman.h>
 
 void cache_free (uae_u8 *cache, int size)
@@ -404,7 +402,6 @@ void invalidate_block(blockinfo* bi)
   bi->direct_handler = NULL;
   set_dhtu(bi, bi->direct_pen);
   bi->needed_flags = 0xff;
-
 	bi->status = BI_INVALID;
   for (i=0; i<2; i++) {
 	  bi->dep[i].jmp_off = NULL;
@@ -497,7 +494,7 @@ STATIC_INLINE blockinfo* get_blockinfo_addr_new(void* addr, int setstate)
 
 static void prepare_block(blockinfo* bi);
 
-/* Managment of blockinfos.
+/* Management of blockinfos.
 
    A blockinfo struct is allocated whenever a new block has to be
    compiled. If the list of free blockinfos is empty, we allocate a new
@@ -641,9 +638,30 @@ STATIC_INLINE void alloc_blockinfos(void)
   	if (hold_bi[i])
 	    return;
   	bi=hold_bi[i]=alloc_blockinfo();
-
   	prepare_block(bi);
   }
+}
+
+bool check_prefs_changed_comp(bool checkonly)
+{
+	bool changed = 0;
+
+	if (currprefs.fpu_strict != changed_prefs.fpu_strict ||
+		currprefs.cachesize != changed_prefs.cachesize)
+		changed = 1;
+
+	if (checkonly)
+		return changed;
+
+	currprefs.fpu_strict = changed_prefs.fpu_strict;
+
+	if (currprefs.cachesize != changed_prefs.cachesize) {
+		currprefs.cachesize = changed_prefs.cachesize;
+		alloc_cache();
+		changed = 1;
+	}
+
+	return changed;
 }
 
 /********************************************************************

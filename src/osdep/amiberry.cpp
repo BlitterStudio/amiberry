@@ -13,7 +13,9 @@
 #include <asm/sigcontext.h>
 #include <signal.h>
 #include <dlfcn.h>
+#ifndef ANDROID
 #include <execinfo.h>
+#endif
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
@@ -43,15 +45,15 @@ int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
 
-extern void signal_segv(int signum, siginfo_t* info, void*ptr);
-extern void signal_buserror(int signum, siginfo_t* info, void*ptr);
-extern void signal_term(int signum, siginfo_t* info, void*ptr);
+extern void signal_segv(int signum, siginfo_t* info, void* ptr);
+extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
+extern void signal_term(int signum, siginfo_t* info, void* ptr);
 extern void gui_force_rtarea_hdchange(void);
 
 static int delayed_mousebutton = 0;
 static int doStylusRightClick;
 
-extern void SetLastActiveConfig(const char *filename);
+extern void SetLastActiveConfig(const char* filename);
 
 /* Keyboard */
 std::map<int, TCHAR[256]> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map 
@@ -67,7 +69,10 @@ char kbd_flags;
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
 static char rp9_path[MAX_DPATH];
-char last_loaded_config[MAX_DPATH] = { '\0' };
+static char controllers_path[MAX_DPATH];
+static char retroarch_file[MAX_DPATH];
+
+char last_loaded_config[MAX_DPATH] = {'\0'};
 
 static bool cpuSpeedChanged = false;
 static int lastCpuSpeed = 600;
@@ -76,29 +81,32 @@ int defaultCpuSpeed = 600;
 int max_uae_width;
 int max_uae_height;
 
+
 extern "C" int main(int argc, char* argv[]);
+
 
 void sleep_millis(int ms)
 {
 	usleep(ms * 1000);
 }
 
+
 void logging_init(void)
 {
 #ifdef WITH_LOGGING
-	static int started;
-	static int first;
-	char debugfilename[MAX_DPATH];
+  static int started;
+  static int first;
+  char debugfilename[MAX_DPATH];
 
-	if (first > 1) {
-		write_log("***** RESTART *****\n");
-		return;
-	}
-	if (first == 1) {
-		if (debugfile)
-			fclose(debugfile);
-		debugfile = 0;
-	}
+  if (first > 1) {
+  	write_log ("***** RESTART *****\n");
+	  return;
+  }
+  if (first == 1) {
+  	if (debugfile)
+	    fclose (debugfile);
+    debugfile = 0;
+  }
 
 	sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
 	if (!debugfile)
@@ -237,6 +245,13 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->pandora_hide_idle_led = 0;
 	p->pandora_tapDelay = 10;
 #endif //PANDORA
+
+#ifdef PANDORA
+	p->fast_copper = 1;
+#else
+	p->fast_copper = 0;
+#endif
+
 	p->customControls = false;
 	_tcscpy(p->custom_up, "");
 	_tcscpy(p->custom_down, "");
@@ -257,6 +272,43 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->scaling_method = -1; //Default is Auto
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
+
+	p->amiberry_use_retroarch_quit = true;
+	p->amiberry_use_retroarch_menu = true;
+	p->amiberry_use_retroarch_reset = false;
+
+#ifdef ANDROIDSDL
+	p->onScreen = 1;
+	p->onScreen_textinput = 1;
+	p->onScreen_dpad = 1;
+	p->onScreen_button1 = 1;
+	p->onScreen_button2 = 1;
+	p->onScreen_button3 = 1;
+	p->onScreen_button4 = 1;
+	p->onScreen_button5 = 0;
+	p->onScreen_button6 = 0;
+	p->custom_position = 0;
+	p->pos_x_textinput = 0;
+	p->pos_y_textinput = 0;
+	p->pos_x_dpad = 4;
+	p->pos_y_dpad = 215;
+	p->pos_x_button1 = 430;
+	p->pos_y_button1 = 286;
+	p->pos_x_button2 = 378;
+	p->pos_y_button2 = 286;
+	p->pos_x_button3 = 430;
+	p->pos_y_button3 = 214;
+	p->pos_x_button4 = 378;
+	p->pos_y_button4 = 214;
+	p->pos_x_button5 = 430;
+	p->pos_y_button5 = 142;
+	p->pos_x_button6 = 378;
+	p->pos_y_button6 = 142;
+	p->extfilter = 1;
+	p->quickSwitch = 0;
+	p->floatingJoystick = 0;
+	p->disableMenuVKeyb = 0;
+#endif
 
 	p->cr[CHIPSET_REFRESH_PAL].locked = true;
 	p->cr[CHIPSET_REFRESH_PAL].vsync = 1;
@@ -291,6 +343,10 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_str(f, _T("amiberry.open_gui"), p->open_gui);
 	cfgfile_write_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 
+	cfgfile_write_bool(f, _T("amiberry_use_retroarch_quit"), p->amiberry_use_retroarch_quit);
+	cfgfile_write_bool(f, _T("amiberry_use_retroarch_menu"), p->amiberry_use_retroarch_menu);
+	cfgfile_write_bool(f, _T("amiberry_use_retroarch_reset"), p->amiberry_use_retroarch_reset);
+
 	cfgfile_write_bool(f, "amiberry.custom_controls", p->customControls);
 	cfgfile_write(f, "amiberry.custom_up", "%d", p->custom_up);
 	cfgfile_write(f, "amiberry.custom_down", "%d", p->custom_down);
@@ -303,6 +359,36 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, "amiberry.custom_l", "%d", p->custom_l);
 	cfgfile_write(f, "amiberry.custom_r", "%d", p->custom_r);
 	cfgfile_write(f, "amiberry.custom_play", "%d", p->custom_play);
+#ifdef ANDROIDSDL
+  cfgfile_write (f, "pandora.onscreen", "%d", p->onScreen);
+  cfgfile_write (f, "pandora.onscreen_textinput", "%d", p->onScreen_textinput);
+  cfgfile_write (f, "pandora.onscreen_dpad", "%d", p->onScreen_dpad);
+  cfgfile_write (f, "pandora.onscreen_button1", "%d", p->onScreen_button1);
+  cfgfile_write (f, "pandora.onscreen_button2", "%d", p->onScreen_button2);
+  cfgfile_write (f, "pandora.onscreen_button3", "%d", p->onScreen_button3);
+  cfgfile_write (f, "pandora.onscreen_button4", "%d", p->onScreen_button4);
+  cfgfile_write (f, "pandora.onscreen_button5", "%d", p->onScreen_button5);
+  cfgfile_write (f, "pandora.onscreen_button6", "%d", p->onScreen_button6);
+  cfgfile_write (f, "pandora.custom_position", "%d", p->custom_position);
+  cfgfile_write (f, "pandora.pos_x_textinput", "%d", p->pos_x_textinput);
+  cfgfile_write (f, "pandora.pos_y_textinput", "%d", p->pos_y_textinput);
+  cfgfile_write (f, "pandora.pos_x_dpad", "%d", p->pos_x_dpad);
+  cfgfile_write (f, "pandora.pos_y_dpad", "%d", p->pos_y_dpad);
+  cfgfile_write (f, "pandora.pos_x_button1", "%d", p->pos_x_button1);
+  cfgfile_write (f, "pandora.pos_y_button1", "%d", p->pos_y_button1);
+  cfgfile_write (f, "pandora.pos_x_button2", "%d", p->pos_x_button2);
+  cfgfile_write (f, "pandora.pos_y_button2", "%d", p->pos_y_button2);
+  cfgfile_write (f, "pandora.pos_x_button3", "%d", p->pos_x_button3);
+  cfgfile_write (f, "pandora.pos_y_button3", "%d", p->pos_y_button3);
+  cfgfile_write (f, "pandora.pos_x_button4", "%d", p->pos_x_button4);
+  cfgfile_write (f, "pandora.pos_y_button4", "%d", p->pos_y_button4);
+  cfgfile_write (f, "pandora.pos_x_button5", "%d", p->pos_x_button5);
+  cfgfile_write (f, "pandora.pos_y_button5", "%d", p->pos_y_button5);
+  cfgfile_write (f, "pandora.pos_x_button6", "%d", p->pos_x_button6);
+  cfgfile_write (f, "pandora.pos_y_button6", "%d", p->pos_y_button6);
+  cfgfile_write (f, "pandora.floating_joystick", "%d", p->floatingJoystick);
+  cfgfile_write (f, "pandora.disable_menu_vkeyb", "%d", p->disableMenuVKeyb);
+#endif
 }
 
 void target_restart(void)
@@ -334,6 +420,46 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 #endif //PANDORA
+#ifdef ANDROIDSDL
+    || cfgfile_intval (option, value, "onscreen", &p->onScreen, 1)
+    || cfgfile_intval (option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
+    || cfgfile_intval (option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
+    || cfgfile_intval (option, value, "onscreen_button1", &p->onScreen_button1, 1)
+    || cfgfile_intval (option, value, "onscreen_button2", &p->onScreen_button2, 1)
+    || cfgfile_intval (option, value, "onscreen_button3", &p->onScreen_button3, 1)
+    || cfgfile_intval (option, value, "onscreen_button4", &p->onScreen_button4, 1)
+    || cfgfile_intval (option, value, "onscreen_button5", &p->onScreen_button5, 1)
+    || cfgfile_intval (option, value, "onscreen_button6", &p->onScreen_button6, 1)
+    || cfgfile_intval (option, value, "custom_position", &p->custom_position, 1)
+    || cfgfile_intval (option, value, "pos_x_textinput", &p->pos_x_textinput, 1)
+    || cfgfile_intval (option, value, "pos_y_textinput", &p->pos_y_textinput, 1)
+    || cfgfile_intval (option, value, "pos_x_dpad", &p->pos_x_dpad, 1)
+    || cfgfile_intval (option, value, "pos_y_dpad", &p->pos_y_dpad, 1)
+    || cfgfile_intval (option, value, "pos_x_button1", &p->pos_x_button1, 1)
+    || cfgfile_intval (option, value, "pos_y_button1", &p->pos_y_button1, 1)
+    || cfgfile_intval (option, value, "pos_x_button2", &p->pos_x_button2, 1)
+    || cfgfile_intval (option, value, "pos_y_button2", &p->pos_y_button2, 1)
+    || cfgfile_intval (option, value, "pos_x_button3", &p->pos_x_button3, 1)
+    || cfgfile_intval (option, value, "pos_y_button3", &p->pos_y_button3, 1)
+    || cfgfile_intval (option, value, "pos_x_button4", &p->pos_x_button4, 1)
+    || cfgfile_intval (option, value, "pos_y_button4", &p->pos_y_button4, 1)
+    || cfgfile_intval (option, value, "pos_x_button5", &p->pos_x_button5, 1)
+    || cfgfile_intval (option, value, "pos_y_button5", &p->pos_y_button5, 1)
+    || cfgfile_intval (option, value, "pos_x_button6", &p->pos_x_button6, 1)
+    || cfgfile_intval (option, value, "pos_y_button6", &p->pos_y_button6, 1)
+    || cfgfile_intval (option, value, "floating_joystick", &p->floatingJoystick, 1)
+    || cfgfile_intval (option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
+#endif
+
+	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_quit"), &p->amiberry_use_retroarch_quit))
+		return 1;
+
+	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_menu"), &p->amiberry_use_retroarch_menu))
+		return 1;
+
+	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_reset"), &p->amiberry_use_retroarch_reset))
+		return 1;
+
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
@@ -394,7 +520,28 @@ void set_configurationpath(char *newpath)
 	strcpy(config_path, newpath);
 }
 
-void fetch_rompath(char *out, int size)
+void fetch_controllerspath(char* out, int size)
+{
+	strncpy(out, controllers_path, size);
+}
+
+void set_controllerspath(char* newpath)
+{
+	strncpy(controllers_path, newpath, MAX_DPATH);
+}
+
+void fetch_retroarchfile(char* out, int size)
+{
+	strncpy(out, retroarch_file, size);
+}
+
+void set_retroarchfile(char* newpath)
+{
+	strncpy(retroarch_file, newpath, MAX_DPATH);
+}
+
+
+void fetch_rompath(char* out, int size)
 {
 	strncpy(out, rom_path, size);
 }
@@ -432,8 +579,8 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	discard_prefs(p, type);
 	default_prefs(p, true, 0);
 
-	char *ptr = strstr(const_cast<char *>(filename), ".rp9");
-	if (ptr > 0)
+	const char* ptr = strstr((char *)filename, ".rp9");
+	if (ptr > nullptr)
 	{
 		// Load rp9 config
 		result = rp9_parse_file(p, filename);
@@ -581,6 +728,12 @@ void saveAdfDir(void)
 	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "controllers_path=%s\n", controllers_path);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file);
+	fputs(buffer, f);
+
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
@@ -641,10 +794,28 @@ void loadAdfDir(void)
 {
 	char path[MAX_DPATH];
 	int i;
-
+#ifdef ANDROID
+	strncpy(currentDir, getenv("SDCARD"), MAX_DPATH);
+#else
 	strncpy(currentDir, start_path_data, MAX_DPATH);
+#endif
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
+	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
+	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
+
+#ifdef ANDROID
+    char afepath[MAX_DPATH];
+    snprintf(afepath, MAX_DPATH, "%s/Android/data/com.cloanto.amigaforever.essentials/files/rom/", getenv("SDCARD"));
+    DIR *afedir = opendir(afepath);
+    if (afedir) {
+        snprintf(rom_path, MAX_DPATH, "%s", afepath);
+        closedir(afedir);
+    }
+	else
+        snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
+#else
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
+#endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
@@ -696,6 +867,8 @@ void loadAdfDir(void)
 				else {
 					cfgfile_string(option, value, "path", currentDir, sizeof(currentDir));
 					cfgfile_string(option, value, "config_path", config_path, sizeof(config_path));
+					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof(controllers_path));
+					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof(retroarch_file));
 					cfgfile_string(option, value, "rom_path", rom_path, sizeof(rom_path));
 					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
@@ -833,10 +1006,12 @@ int main(int argc, char* argv[])
 	struct sigaction action;
 
 #ifdef AMIBERRY
-	printf("Amiberry-SDL2 v2.5b, by Dimitris (MiDWaN) Panokostas and TomB\n");
+	printf("Amiberry-SDL2 v2.55, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
 #endif
 	max_uae_width = 1920;
 	max_uae_height = 1080;
+
+	defaultCpuSpeed = getDefaultCpuSpeed();
 
 	// Get startup path
 	getcwd(start_path_data, MAX_DPATH);

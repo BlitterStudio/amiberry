@@ -92,62 +92,6 @@ getbits(unsigned char n)
 	fillbuf(n);
 	return x;
 }
-#if 0
-/* ------------------------------------------------------------------------ */
-void
-putcode(n, x)			/* Write rightmost n bits of x */
-	unsigned char   n;
-	unsigned short  x;
-{
-	while (n >= bitcount) {
-		n -= bitcount;
-		subbitbuf += x >> (USHRT_BIT - bitcount);
-		x <<= bitcount;
-		if (compsize < origsize) {
-			if (fwrite(&subbitbuf, 1, 1, outfile) == 0) {
-				/* fileerror(WTERR, outfile); */
-			    fatal_error("Write error in crcio.c(putcode)\n");
-				/* exit(errno); */
-			}
-			compsize++;
-		}
-		else
-			unpackable = 1;
-		subbitbuf = 0;
-		bitcount = CHAR_BIT;
-	}
-	subbitbuf += x >> (USHRT_BIT - bitcount);
-	bitcount -= n;
-}
-
-/* ------------------------------------------------------------------------ */
-void
-putbits(n, x)			/* Write rightmost n bits of x */
-	unsigned char   n;
-	unsigned short  x;
-{
-	x <<= USHRT_BIT - n;
-	while (n >= bitcount) {
-		n -= bitcount;
-		subbitbuf += x >> (USHRT_BIT - bitcount);
-		x <<= bitcount;
-		if (compsize < origsize) {
-			if (fwrite(&subbitbuf, 1, 1, outfile) == 0) {
-				/* fileerror(WTERR, outfile); */
-			    fatal_error("Write error in crcio.c(putbits)\n");
-				/* exit(errno); */
-			}
-			compsize++;
-		}
-		else
-			unpackable = 1;
-		subbitbuf = 0;
-		bitcount = CHAR_BIT;
-	}
-	subbitbuf += x >> (USHRT_BIT - bitcount);
-	bitcount -= n;
-}
-#endif
 /* ------------------------------------------------------------------------ */
 int
 fread_crc(unsigned char *p, int n, struct zfile *fp)

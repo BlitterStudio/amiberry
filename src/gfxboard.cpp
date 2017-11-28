@@ -11,7 +11,6 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
 #include "gfxboard.h"
 
 const TCHAR *gfxboard_get_name(int type)

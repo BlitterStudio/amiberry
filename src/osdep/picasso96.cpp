@@ -38,7 +38,7 @@
  *       I removed some code which handled unsupported modes and formats to make code
  *       easier to read.
  */
-
+ 
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -114,14 +114,14 @@ static struct PicassoResolution* newmodes = nullptr;
 
 static int picasso_convert, host_mode;
 
-/* These are the maximum resolutions... They are filled in by GetSupportedResolutions()
- have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
- data here. */
-static struct ScreenResolution planar = {320, 240};
-static struct ScreenResolution chunky = {640, 480};
-static struct ScreenResolution hicolour = {640, 480};
-static struct ScreenResolution truecolour = {640, 480};
-static struct ScreenResolution alphacolour = {640, 480};
+/* These are the maximum resolutions... They are filled in by GetSupportedResolutions() */
+/* have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
+/* data here. */
+static struct ScreenResolution planar = { 320, 240 };
+static struct ScreenResolution chunky = { 640, 480 };
+static struct ScreenResolution hicolour = { 640, 480 };
+static struct ScreenResolution truecolour = { 640, 480 };
+static struct ScreenResolution alphacolour = { 640, 480 };
 
 static uaecptr boardinfo, ABI_interrupt;
 static int interrupt_enabled;

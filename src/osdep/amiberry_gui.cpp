@@ -49,28 +49,30 @@ struct gui_msg
 };
 
 struct gui_msg gui_msglist[] = {
-	{NUMSG_NEEDEXT2, "The software uses a non-standard floppy disk format. You may need to use a custom floppy disk image file instead of a standard one. This message will not appear again."},
-	{NUMSG_NOROM, "Could not load system ROM, trying system ROM replacement."},
-	{NUMSG_NOROMKEY, "Could not find system ROM key file."},
-	{NUMSG_KSROMCRCERROR, "System ROM checksum incorrect. The system ROM image file may be corrupt."},
-	{NUMSG_KSROMREADERROR, "Error while reading system ROM."},
-	{NUMSG_NOEXTROM, "No extended ROM found."},
-	{NUMSG_KS68EC020, "The selected system ROM requires a 68EC020 or later CPU."},
-	{NUMSG_KS68020, "The selected system ROM requires a 68020 or later CPU."},
-	{NUMSG_KS68030, "The selected system ROM requires a 68030 CPU."},
-	{NUMSG_STATEHD, "WARNING: Current configuration is not fully compatible with state saves."},
-	{NUMSG_KICKREP, "You need to have a floppy disk (image file) in DF0: to use the system ROM replacement."},
-	{NUMSG_KICKREPNO, "The floppy disk (image file) in DF0: is not compatible with the system ROM replacement functionality."},
-	{NUMSG_ROMNEED, "One of the following system ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs."},
-	{NUMSG_EXPROMNEED, "One of the following expansion boot ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs."},
+  { NUMSG_NEEDEXT2,       "The software uses a non-standard floppy disk format. You may need to use a custom floppy disk image file instead of a standard one. This message will not appear again." },
+  { NUMSG_NOROM,          "Could not load system ROM, trying system ROM replacement." },
+  { NUMSG_NOROMKEY,       "Could not find system ROM key file." },
+  { NUMSG_KSROMCRCERROR,  "System ROM checksum incorrect. The system ROM image file may be corrupt." },
+  { NUMSG_KSROMREADERROR, "Error while reading system ROM." },
+  { NUMSG_NOEXTROM,       "No extended ROM found." },
+  { NUMSG_KS68EC020,      "The selected system ROM requires a 68EC020 or later CPU." },
+  { NUMSG_KS68020,        "The selected system ROM requires a 68020 or later CPU." },
+  { NUMSG_KS68030,        "The selected system ROM requires a 68030 CPU." },
+  { NUMSG_STATEHD,        "WARNING: Current configuration is not fully compatible with state saves." },
+  { NUMSG_KICKREP,        "You need to have a floppy disk (image file) in DF0: to use the system ROM replacement." },
+  { NUMSG_KICKREPNO,      "The floppy disk (image file) in DF0: is not compatible with the system ROM replacement functionality." },
+  { NUMSG_ROMNEED,        "One of the following system ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
+  { NUMSG_EXPROMNEED,     "One of the following expansion boot ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
+  { NUMSG_NOMEMORY,       "Out of memory or too much Z3 autoconfig space configured." },
 
-	{-1, ""}
+  { -1, "" }
 };
 
-vector<ConfigFileInfo*> ConfigFilesList;
-vector<AvailableROM*> lstAvailableROMs;
-vector<string> lstMRUDiskList;
-vector<string> lstMRUCDList;
+std::vector<ConfigFileInfo*> ConfigFilesList;
+std::vector<AvailableROM*> lstAvailableROMs;
+std::vector<std::string> lstMRUDiskList;
+std::vector<std::string> lstMRUCDList;
+
 
 void AddFileToDiskList(const char *file, int moveToTop)
 {
@@ -492,7 +494,7 @@ void gui_display(int shortcut)
 	prefs_to_gui();
 	run_gui();
 	gui_to_prefs();
-
+	setCpuSpeed();
 	if (quit_program)
 		screen_is_picasso = 0;
 	

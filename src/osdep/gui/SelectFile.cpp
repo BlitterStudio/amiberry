@@ -15,12 +15,21 @@
 #include "gui.h"
 #include "gui_handling.h"
 
+#include "options.h"
+#include "inputdevice.h"
+
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
 #if defined(AMIBERRY) || defined(ANDROID)
 #define FILE_SELECT_KEEP_POSITION
 #endif
+
+static SDL_Joystick *GUIjoy;
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -95,22 +104,22 @@ public:
 				char tmp[MAX_PATH];
 				if (txtFilename->getText().length() <= 0)
 					return;
-				strcpy(tmp, workingDir);
-				strcat(tmp, "/");
-				strcat(tmp, txtFilename->getText().c_str());
+				strncpy(tmp, workingDir, MAX_PATH - 1);
+          			strncat(tmp, "/", MAX_PATH - 1);
+				strncat(tmp, txtFilename->getText().c_str(), MAX_PATH - 1);
 				if (strstr(tmp, filefilter[0]) == nullptr)
-					strcat(tmp, filefilter[0]);
+					strncat(tmp, filefilter[0], MAX_PATH - 1);
 				if (my_existsfile(tmp) == 1)
 					return; // File already exists
-				strcpy(workingDir, tmp);
+				strncpy(workingDir, tmp, MAX_PATH - 1);
 				dialogResult = true;
 			}
 			else
 			{
 				if (fileList->isDir(selected_item))
 					return; // Directory selected -> Ok not possible
-				strcat(workingDir, "/");
-				strcat(workingDir, fileList->getElementAt(selected_item).c_str());
+				strncat(workingDir, "/", MAX_PATH - 1);
+          			strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
 				dialogResult = true;
 			}
 		}
@@ -130,11 +139,11 @@ static void checkfoldername(char* current)
 	{
 		fileList->changeDir(current);
 		char * ptr = realpath(current, actualpath);
-		strcpy(workingDir, ptr);
+		strncpy(workingDir, ptr, MAX_PATH);
 		closedir(dir);
 	}
 	else
-		strcpy(workingDir, start_path_data);
+		strncpy(workingDir, start_path_data, MAX_PATH);
 	txtCurrent->setText(workingDir);
 }
 
@@ -162,14 +171,14 @@ public:
 		char foldername[MAX_PATH] = "";
 
 		int selected_item = lstFiles->getSelected();
-		strcpy(foldername, workingDir);
-		strcat(foldername, "/");
-		strcat(foldername, fileList->getElementAt(selected_item).c_str());
+		strncpy(foldername, workingDir, MAX_PATH);
+      		strncat(foldername, "/", MAX_PATH - 1);
+      		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
 		if (fileList->isDir(selected_item))
 			checkfoldername(foldername);
 		else if (!createNew)
 		{
-			strcpy(workingDir, foldername);
+			strncpy(workingDir, foldername, sizeof(workingDir));
 			dialogResult = true;
 			dialogFinished = true;
 		}
@@ -278,7 +287,9 @@ static void ExitSelectFile()
 
 static void SelectFileLoop()
 {
-	FocusBugWorkaround(wndSelectFile);
+//TODO: is this needed in guisan?
+	//FocusBugWorkaround(wndSelectFile);
+	GUIjoy = SDL_JoystickOpen(0); 
 
 	while (!dialogFinished)
 	{
@@ -341,11 +352,75 @@ static void SelectFileLoop()
 					break;
 				}
 			}
+	else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+      {
+        int hat = SDL_JoystickGetHat(GUIjoy, 0);
+        
+            if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))
+                {PushFakeKey(SDLK_RETURN);
+                 break;}
+            
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
+                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))
+                {dialogFinished = true;
+                 break;}
+        
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
+                {
+                  gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+                  gcn::Widget* activeWidget = focusHdl->getFocused();
+                  if(activeWidget == lstFiles)
+                    cmdCancel->requestFocus();
+                  else if(activeWidget == cmdCancel)
+                    cmdOK->requestFocus();
+                  else if(activeWidget == cmdOK)
+                    if(createNew)
+                      txtFilename->requestFocus();
+                    else
+                      lstFiles->requestFocus();
+                  else if(activeWidget == txtFilename)
+                    lstFiles->requestFocus();
+                  continue;
+                }
+               
+                          
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
+                {
+                  gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+                  gcn::Widget* activeWidget = focusHdl->getFocused();
+                  if(activeWidget == lstFiles)
+                    if(createNew)
+                      txtFilename->requestFocus();
+                    else
+                      cmdOK->requestFocus();
+                  else if(activeWidget == txtFilename)
+                    cmdOK->requestFocus();
+                  else if(activeWidget == cmdCancel)
+                    lstFiles->requestFocus();
+                  else if(activeWidget == cmdOK)
+                    cmdCancel->requestFocus();
+                  continue;
+                }
+                     
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
+                {PushFakeKey(SDLK_UP);
+                 break;}
+            
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
+                {PushFakeKey(SDLK_DOWN);
+                 break;}  
+        
+        
+       }
 
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-			gui_input->pushInput(event);
+#ifdef ANDROIDSDL
+        androidsdl_event(event, gui_input);
+#else
+        gui_input->pushInput(event);
+#endif
 		}
 
 		// Now we let the Gui object perform its logic.
@@ -386,7 +461,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], bool creat
 	}
 	else
 	{
-		strcpy(value, workingDir);
+		strncpy(value, workingDir, MAX_PATH);
 		gui_top->add(wndSelectFile);
 		wndSelectFile->setCaption(title);
 		wndSelectFile->requestModalFocus();
@@ -408,10 +483,10 @@ bool SelectFile(const char* title, char* value, const char* filter[], bool creat
 	ExitSelectFile();
 #endif
 	if (dialogResult)
-		strcpy(value, workingDir);
+		strncpy(value, workingDir, MAX_PATH);
 #ifdef FILE_SELECT_KEEP_POSITION
 	else
-		strcpy(workingDir, value);
+		strncpy(workingDir, value, MAX_PATH);
 #endif
 	return dialogResult;
 }

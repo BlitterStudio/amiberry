@@ -1367,10 +1367,6 @@ static uae_u8 *fdi_decompress (int pulses, uae_u8 *sizep, uae_u8 *src, int *dofr
 	return dst;
 }
 
-static void dumpstream(int track, uae_u8 *stream, int len)
-{
-}
-
 static int bitoffset;
 
 STATIC_INLINE void addbit (uae_u8 *p, int bit)
@@ -1690,7 +1686,6 @@ static int decode_lowlevel_track (FDI *fdi, int track, struct fdi_cache *cache)
 	p1 += 4;
 	len = 12;
 	avgp = (uae_u32*)fdi_decompress (pulses, p1 + 0, p1 + len, &avg_free);
-	dumpstream(track, (uae_u8*)avgp, pulses);
 	len += get_u24 (p1 + 0) & 0x3fffff;
 	if (!avgp)
 		return -1;

@@ -169,10 +169,11 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 	break;
 	}
 	if (data_len < 0) {
-		if (cmd_len == 6)
+		if (cmd_len == 6) {
 			sd->data_len = sd->cmd[4];
-		else
+		} else {
 			sd->data_len = (sd->cmd[7] << 8) | sd->cmd[8];
+		}
 	} else {
 		sd->data_len = data_len;
 	}

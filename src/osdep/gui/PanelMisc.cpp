@@ -18,6 +18,10 @@
 #include "gui.h"
 #include "gui_handling.h"
 
+static gcn::UaeCheckBox* chkRetroArchQuit;
+static gcn::UaeCheckBox* chkRetroArchMenu;
+static gcn::UaeCheckBox* chkRetroArchReset;
+//static gcn::UaeCheckBox* chkRetroArchSaveState;
 
 static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;

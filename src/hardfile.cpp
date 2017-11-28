@@ -849,16 +849,12 @@ int scsi_hd_emulate (struct hardfiledata *hfd, struct hd_hardfiledata *hdhfd, ua
 				r[0] = 0x7f;
 			} else {
 				r[0] = 0;
-				if (hfd->drive_empty) {
-					r[1] |= 0x80; // removable..
-					r[0] |= 0x20; // not present
-				}
 			}
 			r[2] = 2; /* supports SCSI-2 */
 			r[3] = 2; /* response data format */
 			r[4] = 32; /* additional length */
 			r[7] = 0;
-			scsi_len = lr = alen < 36 ? alen : 36;
+			lr = alen < 36 ? alen : 36;
 			if (hdhfd) {
 				r[2] = hdhfd->ansi_version;
 				r[3] = hdhfd->ansi_version >= 2 ? 2 : 0;
@@ -866,6 +862,11 @@ int scsi_hd_emulate (struct hardfiledata *hfd, struct hd_hardfiledata *hdhfd, ua
 			setdrivestring(hfd->vendor_id, r, 8, 8);
 			setdrivestring(hfd->product_id, r, 16, 16);
 			setdrivestring(hfd->product_rev, r, 32, 4);
+			if (lun == 0 && hfd->drive_empty) {
+				r[0] |= 0x20; // not present
+				r[1] |= 0x80; // removable..
+			}
+			scsi_len = lr;
 		}
 		goto scsi_done;
 	case 0x1b: /* START/STOP UNIT */
@@ -1002,7 +1003,7 @@ int scsi_hd_emulate (struct hardfiledata *hfd, struct hd_hardfiledata *hdhfd, ua
 			int pc = cmdbuf[2] >> 6;
 			int pcode = cmdbuf[2] & 0x3f;
 			int dbd = cmdbuf[1] & 8;
-			int cyl, cylsec, head, tracksec;
+			int cyl, head, tracksec;
 			int totalsize, bdsize, alen;
 
 			if (nodisk (hfd))
@@ -1011,8 +1012,8 @@ int scsi_hd_emulate (struct hardfiledata *hfd, struct hd_hardfiledata *hdhfd, ua
 				cyl = hdhfd->cyls;
 				head = hdhfd->heads;
 				tracksec = hdhfd->secspertrack;
-				cylsec = 0;
 			} else {
+				int cylsec;
 				getchsx (hfd, &cyl, &cylsec, &head, &tracksec);
 			}
 			//write_log (_T("MODE SENSE PC=%d CODE=%d DBD=%d\n"), pc, pcode, dbd);
@@ -1127,7 +1128,7 @@ int scsi_hd_emulate (struct hardfiledata *hfd, struct hd_hardfiledata *hdhfd, ua
 			int pmi = cmdbuf[8] & 1;
 			uae_u32 lba = (cmdbuf[2] << 24) | (cmdbuf[3] << 16) | (cmdbuf[4] << 8) | cmdbuf[5];
 			uae_u32 blocks;
-			int cyl, cylsec, head, tracksec;
+			int cyl, head, tracksec;
 			if (nodisk (hfd))
 				goto nodisk;
 			blocks = (uae_u32)(hfd->virtsize / hfd->ci.blocksize);
@@ -1135,8 +1136,8 @@ int scsi_hd_emulate (struct hardfiledata *hfd, struct hd_hardfiledata *hdhfd, ua
 				cyl = hdhfd->cyls;
 				head = hdhfd->heads;
 				tracksec = hdhfd->secspertrack;
-				cylsec = 0;
 			} else {
+				int cylsec;
 				getchsx (hfd, &cyl, &cylsec, &head, &tracksec);
 			}
 			if (pmi == 0 && lba != 0)

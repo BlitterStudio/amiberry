@@ -24,6 +24,7 @@
       <FileMasks>
         <string>*.cpp</string>
         <string>*.h</string>
+        <string>*.hpp</string>
         <string>*.c</string>
         <string>*.cc</string>
         <string>*.cxx</string>
@@ -78,6 +79,7 @@
     <ProjectFile>Amiberry.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
+      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>
@@ -121,7 +123,7 @@
     </LaunchGDBSettings>
     <GenerateCtrlBreakInsteadOfCtrlC>false</GenerateCtrlBreakInsteadOfCtrlC>
     <DeploymentTargetPath>/home/pi/projects/amiberry/$(TargetFileName)</DeploymentTargetPath>
-    <X11WindowMode>Local</X11WindowMode>
+    <X11WindowMode>Remote</X11WindowMode>
     <KeepConsoleAfterExit>false</KeepConsoleAfterExit>
     <RunGDBUnderSudo>false</RunGDBUnderSudo>
     <DeploymentMode>Auto</DeploymentMode>
@@ -170,4 +172,5 @@
     </CodeAnalyzerSettings>
   </CodeSense>
   <BuildContextDirectory>VisualGDB\VisualGDBCache</BuildContextDirectory>
+  <ProgramArgumentsSuggestions />
 </VisualGDBProjectSettings2>

@@ -230,37 +230,6 @@ make_new_node(int p)
 	update_p(p);
 }
 
-#if 0
-/* ------------------------------------------------------------------------ */
-static void
-encode_c_dyn(c)
-	unsigned int    c;
-{
-	unsigned int    bits;
-	int             p, d, cnt;
-
-	d = c - n1;
-	if (d >= 0) {
-		c = n1;
-	}
-	cnt = bits = 0;
-	p = s_node[c];
-	do {
-		bits >>= 1;
-		if (p & 1) {
-			bits |= 0x8000;
-		}
-		if (++cnt == 16) {
-			putcode(16, bits);
-			cnt = bits = 0;
-		}
-	} while ((p = parent[p]) != ROOT_C);
-	putcode(cnt, bits);
-	if (d >= 0)
-		putbits(8, d);
-	update_c(c);
-}
-#endif
 /* ------------------------------------------------------------------------ */
 unsigned short
 decode_c_dyn(void)
@@ -318,26 +287,6 @@ decode_p_dyn(void)
 
 	return (c << 6) + getbits(6);
 }
-#if 0
-/* ------------------------------------------------------------------------ */
-void
-output_dyn(code, pos)
-	unsigned int    code;
-	unsigned int    pos;
-{
-	encode_c_dyn(code);
-	if (code >= 0x100) {
-		encode_p_st0(pos);
-	}
-}
-
-/* ------------------------------------------------------------------------ */
-void
-encode_end_dyn( /* void */ )
-{
-	putcode(7, 0);
-}
-#endif
 /* Local Variables: */
 /* mode:c */
 /* tab-width:4 */

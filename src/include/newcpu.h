@@ -27,8 +27,6 @@ extern int fpp_movem_index2[256];
 extern int fpp_movem_next[256];
 #endif
 
-extern int bus_error_offset;
-
 typedef uae_u32 REGPARAM3 cpuop_func (uae_u32) REGPARAM;
 typedef void REGPARAM3 cpuop_func_ce (uae_u32) REGPARAM;
 
@@ -183,7 +181,6 @@ STATIC_INLINE void m68k_setpc (uaecptr newpc)
   regs.pc_p = regs.pc_oldp = get_real_address (newpc);
   regs.instruction_pc = regs.pc = newpc;
 }
-
 STATIC_INLINE uaecptr m68k_getpc (void)
 {
 	return (uaecptr)(regs.pc + ((uae_u8*)regs.pc_p - (uae_u8*)regs.pc_oldp));
@@ -218,14 +215,12 @@ STATIC_INLINE void m68k_do_bsr (uaecptr oldpc, uae_s32 offset)
   put_long(m68k_areg(regs, 7), oldpc);
   m68k_incpc (offset);
 }
-
 STATIC_INLINE void m68k_do_rts (void)
 {
   uae_u32 newpc = get_long (m68k_areg (regs, 7));
   m68k_setpc (newpc);
   m68k_areg(regs, 7) += 4;
 }
-
 
 /* indirect (regs.pc) access */
 
@@ -385,11 +380,9 @@ bool check_prefs_changed_comp (bool);
 
 extern int movec_illg (int regno);
 
-#define CPU_HALT_PPC_ONLY -1
 #define CPU_HALT_BUS_ERROR_DOUBLE_FAULT 1
 #define CPU_HALT_DOUBLE_FAULT 2
 #define CPU_HALT_OPCODE_FETCH_FROM_NON_EXISTING_ADDRESS 3
-#define CPU_HALT_ACCELERATOR_CPU_FALLBACK 4
 #define CPU_HALT_ALL_CPUS_STOPPED 5
 #define CPU_HALT_FAKE_DMA 6
 #define CPU_HALT_AUTOCONFIG_CONFLICT 7

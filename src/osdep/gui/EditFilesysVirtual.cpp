@@ -18,10 +18,19 @@
 #include "gui.h"
 #include "gui_handling.h"
 
+#include "inputdevice.h"
+
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
+
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202
 
-extern string volName;
+static SDL_Joystick *GUIjoy;
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
+
+extern std::string volName;
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -50,7 +59,7 @@ public:
 		if (actionEvent.getSource() == cmdPath)
 		{
 			char tmp[MAX_DPATH];
-			strcpy(tmp, txtPath->getText().c_str());
+			strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
 			wndEditFilesysVirtual->releaseModalFocus();
 			if (SelectFolder("Select folder", tmp))
 			{
@@ -212,6 +221,7 @@ static void ExitEditFilesysVirtual()
 
 static void EditFilesysVirtualLoop()
 {
+	GUIjoy = SDL_JoystickOpen(0);
 	while (!dialogFinished)
 	{
 		SDL_Event event;
@@ -255,12 +265,67 @@ static void EditFilesysVirtualLoop()
 					break;
 				}
 			}
+	else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+      {
+          gcn::FocusHandler* focusHdl;
+          gcn::Widget* activeWidget;                                          
 
-			//-------------------------------------------------
-			// Send event to guisan-controls
-			//-------------------------------------------------
-			gui_input->pushInput(event);
-		}
+          int hat = SDL_JoystickGetHat(GUIjoy, 0);
+
+          if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))  // dpad
+              {   
+
+                  if(HandleNavigation(DIRECTION_UP))
+                          continue; // Don't change value when enter Slider -> don't send event to control
+                  else
+                          {PushFakeKey(SDLK_UP);}
+                  break; 
+
+              } 
+          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))   // dpad
+              {
+                  if(HandleNavigation(DIRECTION_DOWN))
+                          continue; // Don't change value when enter Slider -> don't send event to control
+                  else
+                          {PushFakeKey(SDLK_DOWN);}
+                  break; 
+              }
+          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))  // dpad
+              {   
+                  if(HandleNavigation(DIRECTION_RIGHT))
+                          continue; // Don't change value when enter Slider -> don't send event to control
+                  else
+                          {PushFakeKey(SDLK_RIGHT);}
+                  break;      
+              } 
+          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))  // dpad
+              {
+                  if(HandleNavigation(DIRECTION_LEFT))
+                          continue; // Don't change value when enter Slider -> don't send event to control
+                  else
+                          {PushFakeKey(SDLK_LEFT);}
+                      break; 
+              }
+
+          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))   // need this to be X button
+              {	
+                  PushFakeKey(SDLK_RETURN);
+                  continue; }
+          
+          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
+                    SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))   // need this to be START button
+               { dialogFinished = true; 
+                 break;}              
+      }
+      //-------------------------------------------------
+      // Send event to guichan-controls
+      //-------------------------------------------------
+#ifdef ANDROIDSDL
+        androidsdl_event(event, gui_input);
+#else
+        gui_input->pushInput(event);
+#endif
+    }
 
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
@@ -322,9 +387,9 @@ bool EditFilesysVirtual(int unit_no)
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
 		uci_set_defaults(&ci, true);
-		strcpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()));
-		strcpy(ci.volname, const_cast<char *>(txtVolume->getText().c_str()));
-		strcpy(ci.rootdir, const_cast<char *>(txtPath->getText().c_str()));
+		strncpy(ci.devname, (char *) txtDevice->getText().c_str(), MAX_DPATH);
+    		strncpy(ci.volname, (char *) txtVolume->getText().c_str(), MAX_DPATH);
+    		strncpy(ci.rootdir, (char *) txtPath->getText().c_str(), MAX_DPATH);
 		ci.type = UAEDEV_DIR;
 		ci.readonly = !chkReadWrite->isSelected();
 		ci.bootpri = bp;

@@ -305,7 +305,7 @@ public:
 
 			if (idx < 0)
 			{
-				strcpy(changed_prefs.cdslots[0].name, "");
+				strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
 				AdjustDropDownControls();
 			}
 			else

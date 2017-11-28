@@ -33,7 +33,6 @@ static FILE *stblfile;
 
 static int using_prefetch, using_indirect;
 static int using_exception_3;
-static int using_waitstates;
 static int using_simple_cycles;
 static int cpu_level, cpu_generic;
 static int count_read, count_write, count_cycles, count_ncycles;
@@ -531,9 +530,6 @@ static void sync_m68k_pc_noreset (void)
 	m68k_pc_offset = m68k_pc_offset_old;
 }
 
-static void syncmovepc (int getv, int flags)
-{
-}
 
 static void next_level_000 (void)
 {
@@ -596,7 +592,6 @@ static void genamode2x (amodes mode, const char *reg, wordsizes size, const char
 			default:
 				term ();
 		}
-		syncmovepc (getv, flags);
 		return;
 	case Areg:
 		if (movem)
@@ -612,7 +607,6 @@ static void genamode2x (amodes mode, const char *reg, wordsizes size, const char
 			default:
 				term ();
 		}
-		syncmovepc (getv, flags);
 		return;
 	case Aind: // (An)
 		printf ("\tuaecptr %sa;\n", name);
@@ -739,40 +733,33 @@ static void genamode2x (amodes mode, const char *reg, wordsizes size, const char
 		default:
 			term ();
 		}
-		syncmovepc (getv, flags);
 		return;
 	case imm0:
 		if (getv != 1)
 			term ();
 		printf ("\tuae_s8 %s = %s;\n", name, gen_nextibyte (flags));
 		count_read_ea++;
-		syncmovepc (getv, flags);
 		return;
 	case imm1:
 		if (getv != 1)
 			term ();
 		printf ("\tuae_s16 %s = %s;\n", name, gen_nextiword (flags));
 		count_read_ea++;
-		syncmovepc (getv, flags);
 		return;
 	case imm2:
 		if (getv != 1)
 			term ();
 		gen_nextilong ("uae_s32", name, flags);
 		count_read_ea += 2;
-		syncmovepc (getv, flags);
 		return;
 	case immi:
 		if (getv != 1)
 			term ();
 		printf ("\tuae_u32 %s = %s;\n", name, reg);
-		syncmovepc (getv, flags);
 		return;
 	default:
 		term ();
 	}
-
-	syncmovepc (getv, flags);
 
 	/* We get here for all non-reg non-immediate addressing modes to
 	* actually fetch the value. */
@@ -796,11 +783,6 @@ static void genamode2x (amodes mode, const char *reg, wordsizes size, const char
 		returncycles_exception ("", (count_read + 1 + count_write) * 4 + count_cycles);
 		printf ("\t}\n");
 		start_brace ();
-	}
-
-	if ((using_prefetch) && getv != 0) {
-		if (exception_pc_offset)
-			printf("\tbus_error_offset = %d;\n", exception_pc_offset);
 	}
 
 	if (flags & GF_PREFETCH)
@@ -1049,7 +1031,8 @@ static void genmovemel_ce (uae_u16 opcode)
 	if (table68k[opcode].size == sz_long) {
 		printf ("\twhile (dmask) {\n");
 		if (using_prefetch) {
-			printf ("\t\tv = %s (srca) << 16; v |= %s (srca + 2);\n", srcw, srcw);
+		  printf ("\t\tv = %s (srca) << 16;\n", srcw);
+		  printf ("\t\tv |= %s (srca + 2);\n", srcw);
   	  printf ("\t\tm68k_dreg (regs, movem_index1[dmask]) = v;\n");
 		}	else
 	    printf ("\t\tm68k_dreg (regs, movem_index1[dmask]) = %s (srca);\n", srcl);
@@ -1059,7 +1042,8 @@ static void genmovemel_ce (uae_u16 opcode)
 		printf ("\t}\n");
 		printf ("\twhile (amask) {\n");
 		if (using_prefetch) {
-			printf ("\t\tv = %s (srca) << 16; v |= %s (srca + 2);\n", srcw, srcw);
+		  printf ("\t\tv = %s (srca) << 16;\n", srcw);
+		  printf ("\t\tv |= %s (srca + 2);\n", srcw);
 		  printf ("\t\tm68k_areg (regs, movem_index1[amask]) = v;\n");
 		} else 
 	    printf ("\t\tm68k_areg (regs, movem_index1[amask]) = %s (srca);\n", srcl);
@@ -1081,7 +1065,7 @@ static void genmovemel_ce (uae_u16 opcode)
 		addcycles000_nonce("\t\t", 4);
 		printf ("\t}\n");
 	}
-	//printf ("\t%s (srca);\n", srcw); // and final extra word fetch that goes nowhere..
+	printf ("\t%s (srca);\n", srcw); // and final extra word fetch that goes nowhere..
 	count_read++;
 	if (table68k[opcode].dmode == Aipi)
 		printf ("\tm68k_areg (regs, dstreg) = srca;\n");
@@ -1137,9 +1121,8 @@ static void genmovemle_ce (uae_u16 opcode)
 
 	printf ("\tuae_u16 mask = %s;\n", gen_nextiword (0));
 	genamode (NULL, table68k[opcode].dmode, "dstreg", table68k[opcode].size, "src", 2, 1, GF_AA | GF_MOVE);
-	if (table68k[opcode].dmode == Ad8r || table68k[opcode].dmode == PC8r) {
+	if (table68k[opcode].dmode == Ad8r || table68k[opcode].dmode == PC8r)
 		addcycles000 (2);
-	}
 	start_brace ();
 	if (table68k[opcode].size == sz_long) {
 		if (table68k[opcode].dmode == Apdi) {
@@ -1503,7 +1486,7 @@ static void shift_ce (amodes dmode, int size)
 {
 	if (isreg (dmode)) {
 		int c = size == sz_long ? 4 : 2;
-		addcycles000_nonces("\t", "2 * cnt");
+		addcycles000_nonces("\t", "2 * ccnt");
 		count_cycles += c;
 		count_ncycles++;
 	}
@@ -2324,7 +2307,9 @@ static void gen_opcode (unsigned int opcode)
 	    if (cpu_level >= 4) {
 				printf ("\t\telse if (frame == 0x3) { m68k_areg (regs, 7) += offset + 4; break; }\n");
 			}
-			printf ("\t\telse if (frame == 0x4) { m68k_areg (regs, 7) += offset + 8; break; }\n");
+   		if (cpu_level >= 4) {
+			  printf ("\t\telse if (frame == 0x4) { m68k_areg (regs, 7) += offset + 8; break; }\n");
+			}
 			if (cpu_level == 1) // 68010 only
 		    printf ("\t\telse if (frame == 0x8) { m68k_areg (regs, 7) += offset + 50; break; }\n");
 			if (cpu_level >= 4) {
@@ -2832,6 +2817,7 @@ bccl_not68020:
 		default: term ();
 		}
 		printf ("\tuae_u32 sign = (%s & val) >> %d;\n", cmask (curi->size), bit_size (curi->size) - 1);
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		printf ("\tif (cnt >= %d) {\n", bit_size (curi->size));
@@ -2869,6 +2855,7 @@ bccl_not68020:
 		case sz_long: printf ("\tuae_u32 val = data;\n"); break;
 		default: term ();
 		}
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		printf ("\tif (cnt >= %d) {\n", bit_size (curi->size));
@@ -2910,6 +2897,7 @@ bccl_not68020:
 		case sz_long: printf ("\tuae_u32 val = data;\n"); break;
 		default: term ();
 		}
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		printf ("\tif (cnt >= %d) {\n", bit_size (curi->size));
@@ -2944,6 +2932,7 @@ bccl_not68020:
 		case sz_long: printf ("\tuae_u32 val = data;\n"); break;
 		default: term ();
 		}
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		printf ("\tif (cnt >= %d) {\n", bit_size (curi->size));
@@ -2978,6 +2967,7 @@ bccl_not68020:
 		case sz_long: printf ("\tuae_u32 val = data;\n"); break;
 		default: term ();
 		}
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		if (source_is_imm1_8 (curi))
@@ -3010,6 +3000,7 @@ bccl_not68020:
 		case sz_long: printf ("\tuae_u32 val = data;\n"); break;
 		default: term ();
 		}
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		if (source_is_imm1_8 (curi))
@@ -3042,6 +3033,7 @@ bccl_not68020:
 		case sz_long: printf ("\tuae_u32 val = data;\n"); break;
 		default: term ();
 		}
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		if (source_is_imm1_8 (curi))
@@ -3077,6 +3069,7 @@ bccl_not68020:
 		case sz_long: printf ("\tuae_u32 val = data;\n"); break;
 		default: term ();
 		}
+		printf ("\tint ccnt = cnt & 63;\n");
 		printf ("\tcnt &= 63;\n");
 		printf ("\tCLEAR_CZNV ();\n");
 		if (source_is_imm1_8 (curi))
@@ -4141,7 +4134,6 @@ static void generate_cpu (int id, int mode)
 
 	using_exception_3 = 1;
 	using_prefetch = 0;
-	using_waitstates = 0;
 	using_simple_cycles = 0;
 	using_indirect = 0;
 	cpu_generic = false;
@@ -4210,7 +4202,7 @@ int main(int argc, char *argv[])
 	stblfile = fopen ("cpustbl.cpp", "wb");
 	generate_includes (stblfile, 0);
 
-	for (i = 0; i < 46; i++) {
+	for (i = 0; i <= 45; i++) {
 		if ((i >= 6 && i < 11) || (i > 12 && i < 40))
 			continue;
 		generate_stbl = 1;

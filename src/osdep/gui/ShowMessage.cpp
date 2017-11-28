@@ -13,11 +13,20 @@
 #include "gui.h"
 #include "gui_handling.h"
 
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
+
+#include "options.h"
+#include "inputdevice.h"
+
 #define DIALOG_WIDTH 340
 #define DIALOG_HEIGHT 140
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
+static SDL_Joystick *GUIjoy;
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static const char* dialogControlPressed;
 static Uint8 dialogButtonPressed;
 
@@ -41,6 +50,9 @@ public:
 
 static ShowMessageActionListener* showMessageActionListener;
 
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
 
 static void InitShowMessage()
 {
@@ -145,7 +157,9 @@ static void ShowMessageWaitInputLoop()
 
 static void ShowMessageLoop()
 {
-	FocusBugWorkaround(wndShowMessage);
+//TODO: Check if this is needed in guisan
+	//FocusBugWorkaround(wndShowMessage);
+	GUIjoy = SDL_JoystickOpen(0);
 
 	while (!dialogFinished)
 	{
@@ -184,11 +198,41 @@ static void ShowMessageLoop()
 					break;
 				}
 			}
+	else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+      {
+            int hat = SDL_JoystickGetHat(GUIjoy, 0);
+            
+            if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))
+                {PushFakeKey(SDLK_RETURN);
+                 break;}
+            
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
+                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))
+                {dialogFinished = true;
+                     break;}
+            
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left)  || 
+                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) ||
+                     (hat & SDL_HAT_LEFT) ||
+                     (hat & SDL_HAT_RIGHT) )
+            
+                 {gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+                  gcn::Widget* activeWidget = focusHdl->getFocused();
+                  if(activeWidget == cmdCancel)
+                    cmdOK->requestFocus();
+                  else if(activeWidget == cmdOK)
+                    cmdCancel->requestFocus();
+                  continue;}
+      }
 
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-			gui_input->pushInput(event);
+#ifdef ANDROIDSDL
+        androidsdl_event(event, gui_input);
+#else
+        gui_input->pushInput(event);
+#endif
 		}
 
 		// Now we let the Gui object perform its logic.

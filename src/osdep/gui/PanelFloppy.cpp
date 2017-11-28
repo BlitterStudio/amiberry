@@ -242,7 +242,7 @@ public:
 					if (idx < 0)
 					{
 						disk_eject(i);
-						strcpy(changed_prefs.floppyslots[i].df, "");
+						strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
 						AdjustDropDownControls();
 					}
 					else
@@ -309,8 +309,8 @@ public:
 			removeFileExtension(diskname);
 
 			fetch_configurationpath(filename, sizeof filename);
-			strncat(filename, diskname, sizeof filename);
-			strncat(filename, ".uae", sizeof filename);
+			strncat(filename, diskname, MAX_DPATH - 1);
+        		strncat(filename, ".uae", MAX_DPATH) - 1;
 
 			snprintf(changed_prefs.description, sizeof changed_prefs.description, "Configuration for disk '%s'", diskname);
 			if (cfgfile_save(&changed_prefs, filename, 0))
@@ -332,7 +332,7 @@ public:
 			// Create 3.5'' DD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strcpy(tmp, currentDir);
+			strncpy(tmp, currentDir, MAX_PATH);
 			if (SelectFile("Create 3.5'' DD disk file", tmp, diskfile_filter, true))
 			{
 				extractFileName(tmp, diskname);

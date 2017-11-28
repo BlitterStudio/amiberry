@@ -138,7 +138,6 @@ extern void expansion_init (void);
 extern void expansion_cleanup (void);
 extern void expansion_clear (void);
 extern uaecptr expansion_startaddress(struct uae_prefs*, uaecptr addr, uae_u32 size);
-extern uaecptr uaeboard_alloc_ram(uae_u32);
 extern uae_u8 *uaeboard_map_ram(uaecptr);
 extern void expansion_scan_autoconfig(struct uae_prefs*, bool);
 extern void expansion_generate_autoconfig_info(struct uae_prefs *p);

@@ -16,6 +16,15 @@
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
 
+#include "inputdevice.h"
+
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
+
+static SDL_Joystick *GUIjoy;
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
+
 extern SDL_Surface* screen;
 
 int msg_done = 0;
@@ -45,7 +54,7 @@ public:
 	}
 };
 
-DoneActionListener* doneActionListener;
+static DoneActionListener* doneActionListener;
 
 void gui_halt()
 {
@@ -69,6 +78,7 @@ void checkInput()
 	//-------------------------------------------------
 	// Check user input
 	//-------------------------------------------------	
+	GUIjoy = SDL_JoystickOpen(0); 
 	while (SDL_PollEvent(&msg_event))
 	{
 		if (msg_event.type == SDL_KEYDOWN)
@@ -84,11 +94,25 @@ void checkInput()
 				break;
 			}
 		}
+		else if (event.type == SDL_JOYBUTTONDOWN)   
+        { 
+        
+             if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button)  || 
+                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button) ||
+                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button)) 
+                
+                msg_done = 1;
+                break;       
+       }
 
 		//-------------------------------------------------
 		// Send event to guisan-controls
 		//-------------------------------------------------
-		msg_input->pushInput(msg_event);
+#ifdef ANDROIDSDL
+       androidsdl_event(event, msg_input);
+#else
+       msg_input->pushInput(event);
+#endif 
 	}
 }
 

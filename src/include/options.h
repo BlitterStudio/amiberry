@@ -1,4 +1,4 @@
-/*
+ /*
   * UAE - The Un*x Amiga Emulator
   *
   * Stuff
@@ -23,12 +23,12 @@ typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, 
 extern long int version;
 
 struct strlist {
-	struct strlist *next;
-	TCHAR *option, *value;
-	int unknown;
+  struct strlist *next;
+  TCHAR *option, *value;
+  int unknown;
 };
 
-#define MAX_TOTAL_SCSI_DEVICES 8
+#define MAX_TOTAL_SCSI_DEVICES 1
 
 /* maximum number native input devices supported (single type) */
 #define MAX_INPUT_DEVICES 8
@@ -53,22 +53,42 @@ struct uae_input_device {
 	uae_s8 enabled;
 };
 
+struct joypad_map_layout {
+	int south_action = 0;
+	int east_action = 0; 
+	int west_action = 0;
+ 	int north_action = 0;
+        int left_shoulder_action = 0;
+	int right_shoulder_action = 0;
+ 	int start_action = 0;
+        int select_action = 0;
+        int dpad_left_action = 0;
+	int dpad_right_action = 0;
+	int dpad_up_action = 0;
+	int dpad_down_action = 0;
+        int lstick_select_action = 0;
+	int rstick_select_action = 0; 
+};
+
 #define MAX_JPORTS 4
 #define NORMAL_JPORTS 2
 #define MAX_JPORTNAME 128
-
 struct inputdevconfig {
 	TCHAR name[MAX_JPORTNAME];
 	TCHAR configname[MAX_JPORTNAME];
 	TCHAR shortid[16];
 };
-
 struct jport {
 	int id;
 	int mode; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
 	int autofire;
+	int mousemap;
 	struct inputdevconfig idc;
 	bool nokeyboardoverride;
+        struct joypad_map_layout amiberry_custom_none;
+        struct joypad_map_layout amiberry_custom_hotkey;
+        struct joypad_map_layout amiberry_custom_left_trigger;
+        struct joypad_map_layout amiberry_custom_right_trigger;
 };
 
 #define JPORT_UNPLUGGED -2
@@ -107,7 +127,7 @@ struct floppyslot
 };
 
 struct wh {
-	int width, height;
+  int width, height;
 };
 
 #define MOUNT_CONFIG_SIZE 30
@@ -129,7 +149,6 @@ struct wh {
 #define BOOTPRI_NOAUTOMOUNT -129
 #define ISAUTOBOOT(ci) ((ci)->bootpri > BOOTPRI_NOAUTOBOOT)
 #define ISAUTOMOUNT(ci) ((ci)->bootpri > BOOTPRI_NOAUTOMOUNT)
-
 struct uaedev_config_info {
 	int type;
 	TCHAR devname[MAX_DPATH];
@@ -177,10 +196,8 @@ struct uaedev_config_data
 	int unitnum; // scsi unit number (if tape currently)
 };
 
-enum {
-	CP_GENERIC = 1, CP_CDTV, CP_CDTVCR, CP_CD32, CP_A500, CP_A500P, CP_A600, CP_A1000,
-	CP_A1200, CP_A2000, CP_A3000, CP_A3000T, CP_A4000, CP_A4000T, CP_VELVET
-};
+enum { CP_GENERIC = 1, CP_CD32, CP_A500, CP_A500P, CP_A600,
+	CP_A1200, CP_A2000, CP_A4000 };
 
 #define IDE_A600A1200 1
 #define IDE_A4000 2
@@ -189,7 +206,6 @@ enum {
 #define MAX_CHIPSET_REFRESH_TOTAL (MAX_CHIPSET_REFRESH + 2)
 #define CHIPSET_REFRESH_PAL (MAX_CHIPSET_REFRESH + 0)
 #define CHIPSET_REFRESH_NTSC (MAX_CHIPSET_REFRESH + 1)
-
 struct chipset_refresh
 {
 	bool inuse;
@@ -269,16 +285,13 @@ struct expansion_params
 #define Z3MAPPING_UAE 1
 #define Z3MAPPING_REAL 2
 
-struct uae_prefs
-{
-	struct strlist* all_lines;
+struct uae_prefs {
+	struct strlist *all_lines;
 
 	TCHAR description[256];
 	TCHAR info[256];
 	int config_version;
-
 	bool socket_emu;
-
 	bool start_gui;
 
 	KbdLang keyboard_lang;
@@ -436,6 +449,46 @@ int pandora_vertical_offset;
 	int input_mouse_speed;
 	int input_tablet;
 	int input_keyboard_type;
+        
+        bool amiberry_use_retroarch_quit;
+        bool amiberry_use_retroarch_menu;
+        bool amiberry_use_retroarch_reset;
+        bool amiberry_use_retroarch_statebuttons;
+
+    /* ANDROID */
+#ifdef ANDROIDSDL
+int onScreen;
+int onScreen_textinput;
+int onScreen_dpad;
+int onScreen_button1;
+int onScreen_button2;
+int onScreen_button3;
+int onScreen_button4;
+int onScreen_button5;
+int onScreen_button6;
+int custom_position;
+int pos_x_textinput;
+int pos_y_textinput;
+int pos_x_dpad;
+int pos_y_dpad;
+int pos_x_button1;
+int pos_y_button1;
+int pos_x_button2;
+int pos_y_button2;
+int pos_x_button3;
+int pos_y_button3;
+int pos_x_button4;
+int pos_y_button4;
+int pos_x_button5;
+int pos_y_button5;
+int pos_x_button6;
+int pos_y_button6;
+int extfilter;
+int quickSwitch;
+int floatingJoystick;
+int disableMenuVKeyb;
+#endif
+
 	struct uae_input_device joystick_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device mouse_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device keyboard_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
@@ -443,86 +496,105 @@ int pandora_vertical_offset;
 };
 
 extern int config_changed;
-extern void config_check_vsync(void);
-extern void set_config_changed(void);
+extern void config_check_vsync (void);
+extern void set_config_changed (void);
 
 /* Contains the filename of .uaerc */
-extern void cfgfile_write(struct zfile *, const TCHAR *option, const TCHAR *format, ...);
-extern void cfgfile_dwrite(struct zfile *, const TCHAR *option, const TCHAR *format, ...);
-extern void cfgfile_target_write(struct zfile *, const TCHAR *option, const TCHAR *format, ...);
-extern void cfgfile_target_dwrite(struct zfile *, const TCHAR *option, const TCHAR *format, ...);
+extern void cfgfile_write (struct zfile *, const TCHAR *option, const TCHAR *format,...);
+extern void cfgfile_dwrite (struct zfile *, const TCHAR *option, const TCHAR *format,...);
+extern void cfgfile_target_write (struct zfile *, const TCHAR *option, const TCHAR *format,...);
+extern void cfgfile_target_dwrite (struct zfile *, const TCHAR *option, const TCHAR *format,...);
 
-extern void cfgfile_write_bool(struct zfile *f, const TCHAR *option, bool b);
-extern void cfgfile_dwrite_bool(struct zfile *f, const  TCHAR *option, bool b);
-extern void cfgfile_target_write_bool(struct zfile *f, const TCHAR *option, bool b);
-extern void cfgfile_target_dwrite_bool(struct zfile *f, const TCHAR *option, bool b);
+extern void cfgfile_write_bool (struct zfile *f, const TCHAR *option, bool b);
+extern void cfgfile_dwrite_bool (struct zfile *f,const  TCHAR *option, bool b);
+extern void cfgfile_target_write_bool (struct zfile *f, const TCHAR *option, bool b);
+extern void cfgfile_target_dwrite_bool (struct zfile *f, const TCHAR *option, bool b);
 
-extern void cfgfile_write_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
-extern void cfgfile_dwrite_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
-extern void cfgfile_target_write_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
-extern void cfgfile_target_dwrite_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_write_str (struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_dwrite_str (struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_target_write_str (struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_target_dwrite_str (struct zfile *f, const TCHAR *option, const TCHAR *value);
 
-extern struct uaedev_config_data *add_filesys_config(struct uae_prefs *p, int index, struct uaedev_config_info*);
-extern bool get_hd_geometry(struct uaedev_config_info *);
-extern void uci_set_defaults(struct uaedev_config_info *uci, bool rdb);
+extern struct uaedev_config_data *add_filesys_config (struct uae_prefs *p, int index, struct uaedev_config_info*);
+extern bool get_hd_geometry (struct uaedev_config_info *);
+extern void uci_set_defaults (struct uaedev_config_info *uci, bool rdb);
 
-extern void error_log(const TCHAR*, ...);
-extern TCHAR *get_error_log(void);
-extern bool is_error_log(void);
+extern void error_log (const TCHAR*, ...);
+extern TCHAR *get_error_log (void);
+extern bool is_error_log (void);
 
-extern void default_prefs(struct uae_prefs *, bool, int);
-extern void discard_prefs(struct uae_prefs *, int);
-extern int bip_a500(struct uae_prefs *p, int rom);
-extern int bip_a500plus(struct uae_prefs *p, int rom);
-extern int bip_a1200(struct uae_prefs *p, int rom);
-extern int bip_a2000(struct uae_prefs *p, int rom);
-extern int bip_a4000(struct uae_prefs *p, int rom);
-extern int bip_cd32(struct uae_prefs *p, int rom);
+extern void default_prefs (struct uae_prefs *, bool, int);
+extern void discard_prefs (struct uae_prefs *, int);
+extern int bip_a500 (struct uae_prefs *p, int rom);
+extern int bip_a500plus (struct uae_prefs *p, int rom);
+extern int bip_a1200 (struct uae_prefs *p, int rom);
+extern int bip_a2000 (struct uae_prefs *p, int rom);
+extern int bip_a4000 (struct uae_prefs *p, int rom);
+extern int bip_cd32 (struct uae_prefs *p, int rom);
 
-int parse_cmdline_option(struct uae_prefs *, TCHAR, const TCHAR *);
+int parse_cmdline_option (struct uae_prefs *, TCHAR, const TCHAR *);
 
-extern int cfgfile_separate_linea(const TCHAR *filename, char *line, TCHAR *line1b, TCHAR *line2b);
-extern int cfgfile_yesno(const TCHAR *option, const TCHAR *value, const TCHAR *name, bool *location);
-extern int cfgfile_intval(const TCHAR *option, const TCHAR *value, const TCHAR *name, int *location, int scale);
-extern int cfgfile_strval(const TCHAR *option, const TCHAR *value, const TCHAR *name, int *location, const TCHAR *table[], int more);
-extern int cfgfile_string(const TCHAR *option, const TCHAR *value, const TCHAR *name, TCHAR *location, int maxsz);
-extern TCHAR *cfgfile_subst_path(const TCHAR *path, const TCHAR *subst, const TCHAR *file);
+extern int cfgfile_separate_linea (const TCHAR *filename, char *line, TCHAR *line1b, TCHAR *line2b);
+extern int cfgfile_yesno (const TCHAR *option, const TCHAR *value, const TCHAR *name, bool *location);
+extern int cfgfile_intval (const TCHAR *option, const TCHAR *value, const TCHAR *name, int *location, int scale);
+extern int cfgfile_strval (const TCHAR *option, const TCHAR *value, const TCHAR *name, int *location, const TCHAR *table[], int more);
+extern int cfgfile_string (const TCHAR *option, const TCHAR *value, const TCHAR *name, TCHAR *location, int maxsz);
+extern TCHAR *cfgfile_subst_path (const TCHAR *path, const TCHAR *subst, const TCHAR *file);
 
-extern TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen);
-extern int target_parse_option(struct uae_prefs *, const TCHAR *option, const TCHAR *value);
-extern void target_save_options(struct zfile*, struct uae_prefs *);
-extern void target_default_options(struct uae_prefs *, int type);
-extern void target_fixup_options(struct uae_prefs *);
-extern int target_cfgfile_load(struct uae_prefs *, const TCHAR *filename, int type, int isdefault);
-extern void cfgfile_save_options(struct zfile *f, struct uae_prefs *p, int type);
+extern TCHAR *target_expand_environment (const TCHAR *path, TCHAR *out, int maxlen);
+extern int target_parse_option (struct uae_prefs *, const TCHAR *option, const TCHAR *value);
+extern void target_save_options (struct zfile*, struct uae_prefs *);
+extern void target_default_options (struct uae_prefs *, int type);
+extern void target_fixup_options (struct uae_prefs *);
+extern int target_cfgfile_load (struct uae_prefs *, const TCHAR *filename, int type, int isdefault);
+extern void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type);
 
-extern int cfgfile_load(struct uae_prefs *p, const TCHAR *filename, int *type, int ignorelink, int userconfig);
-extern int cfgfile_save(struct uae_prefs *p, const TCHAR *filename, int);
-extern void cfgfile_parse_line(struct uae_prefs *p, TCHAR *, int);
-extern int cfgfile_parse_option(struct uae_prefs *p, const TCHAR *option, TCHAR *value, int);
-extern int cfgfile_get_description(const TCHAR *filename, TCHAR *description);
-extern uae_u32 cfgfile_uaelib(TrapContext *ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
-extern uae_u32 cfgfile_uaelib_modify(TrapContext *ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
-extern uae_u32 cfgfile_modify(uae_u32 index, const TCHAR *parms, uae_u32 size, TCHAR *out, uae_u32 outsize);
-extern void cfgfile_addcfgparam(TCHAR *);
-extern int built_in_prefs(struct uae_prefs *p, int model, int config, int compa, int romcheck);
-extern int built_in_chipset_prefs(struct uae_prefs *p);
+extern int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ignorelink, int userconfig);
+extern int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int);
+extern void cfgfile_parse_line (struct uae_prefs *p, TCHAR *, int);
+extern int cfgfile_parse_option (struct uae_prefs *p, const TCHAR *option, TCHAR *value, int);
+extern int cfgfile_get_description (const TCHAR *filename, TCHAR *description);
+extern uae_u32 cfgfile_uaelib (TrapContext *ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
+extern uae_u32 cfgfile_uaelib_modify (TrapContext *ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
+extern uae_u32 cfgfile_modify (uae_u32 index, const TCHAR *parms, uae_u32 size, TCHAR *out, uae_u32 outsize);
+extern void cfgfile_addcfgparam (TCHAR *);
+extern int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int romcheck);
+extern int built_in_chipset_prefs (struct uae_prefs *p);
 extern int cfgfile_configuration_change(int);
-extern void fixup_prefs_dimensions(struct uae_prefs *prefs);
-extern void fixup_prefs(struct uae_prefs *prefs, bool userconfig);
-extern void fixup_cpu(struct uae_prefs *prefs);
+extern void fixup_prefs_dimensions (struct uae_prefs *prefs);
+extern void fixup_prefs (struct uae_prefs *prefs, bool userconfig);
+extern void fixup_cpu (struct uae_prefs *prefs);
 extern void cfgfile_compatibility_romtype(struct uae_prefs *p);
 extern void cfgfile_compatibility_rtg(struct uae_prefs *p);
 
-extern void check_prefs_changed_custom(void);
-extern void check_prefs_changed_cpu(void);
-extern void check_prefs_changed_audio(void);
-extern void check_prefs_changed_cd(void);
-extern int check_prefs_changed_gfx(void);
+extern void check_prefs_changed_custom (void);
+extern void check_prefs_changed_cpu (void);
+extern void check_prefs_changed_audio (void);
+extern void check_prefs_changed_cd (void);
+extern int check_prefs_changed_gfx (void);
 
 extern struct uae_prefs currprefs, changed_prefs;
 
-extern int machdep_init(void);
-extern void machdep_free(void);
+extern int machdep_init (void);
+extern void machdep_free (void);
+
+
+
+
+struct amiberry_customised_layout {
+    
+    // create structures for each 'function' button
+    struct joypad_map_layout none;
+    struct joypad_map_layout select;
+    struct joypad_map_layout left_trigger;
+    struct joypad_map_layout right_trigger;
+    
+    };
+    
+extern const int RemapEventList[];
+extern const int RemapEventListSize;
+    
+extern void saveAdfDir(void);
+extern void import_joysticks(void);
 
 #endif /* UAE_OPTIONS_H */

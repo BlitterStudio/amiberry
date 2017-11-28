@@ -13,6 +13,16 @@
 #include "gui.h"
 #include "gui_handling.h"
 
+#include "options.h"
+#include "inputdevice.h"
+
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
+
+static SDL_Joystick *GUIjoy;
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
+
 
 #define DIALOG_WIDTH 760
 #define DIALOG_HEIGHT 420
@@ -122,7 +132,9 @@ static void ExitShowHelp(void)
 
 static void ShowHelpLoop(void)
 {
-	FocusBugWorkaround(wndShowHelp);
+//TODO: Check if this is needed in guisan?
+	//FocusBugWorkaround(wndShowHelp);
+	GUIjoy = SDL_JoystickOpen(0);
 
 	while (!dialogFinished)
 	{
@@ -148,11 +160,26 @@ static void ShowHelpLoop(void)
 					break;
 				}
 			}
+else if (event.type == SDL_JOYBUTTONDOWN)
+      {
+            if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))
+                {PushFakeKey(SDLK_RETURN);
+                 break;}
+
+            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
+                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))
+                {dialogFinished = true;
+                     break;}    
+      }
 
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-			gui_input->pushInput(event);
+#ifdef ANDROIDSDL
+        androidsdl_event(event, gui_input);
+#else
+        gui_input->pushInput(event);
+#endif
 		}
 
 		// Now we let the Gui object perform its logic.

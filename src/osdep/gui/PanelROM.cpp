@@ -100,7 +100,7 @@ public:
 	{
 		AvailableROM* rom = mainROMList->getROMat(cboMainROM->getSelected());
 		if (rom != nullptr)
-			strcpy(changed_prefs.romfile, rom->Path);
+			strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
 	}
 };
 
@@ -114,9 +114,9 @@ public:
 	{
 		AvailableROM* rom = extROMList->getROMat(cboExtROM->getSelected());
 		if (rom != nullptr)
-			strcpy(changed_prefs.romextfile, rom->Path);
+			strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
 		else
-			strcpy(changed_prefs.romextfile, "");
+			strncpy(changed_prefs.romextfile, "", sizeof(changed_prefs.romextfile));
 	}
 };
 
@@ -130,9 +130,9 @@ public:
 	{
 		AvailableROM* rom = cartROMList->getROMat(cboCartROM->getSelected());
 		if (rom != nullptr)
-			strcpy(changed_prefs.cartfile, rom->Path);
+			strncpy(changed_prefs.cartfile, rom->Path, sizeof(changed_prefs.cartfile));
 		else
-			strcpy(changed_prefs.cartfile, "");
+			strncpy(changed_prefs.cartfile, "", sizeof(changed_prefs.cartfile));
 	}
 };
 static CartROMActionListener* cartROMActionListener;
@@ -148,32 +148,32 @@ public:
 
 		if (actionEvent.getSource() == cmdMainROM)
 		{
-			strcpy(tmp, currentDir);
+			strncpy(tmp, currentDir, MAX_PATH);
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
 				AvailableROM * newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strcpy(newrom->Path, tmp);
+				strncpy(newrom->Path, tmp, MAX_PATH);
 				newrom->ROMType = ROMTYPE_KICK;
 				lstAvailableROMs.push_back(newrom);
-				strcpy(changed_prefs.romfile, tmp);
+				strncpy(changed_prefs.romfile, tmp, sizeof(changed_prefs.romfile));
 				RefreshPanelROM();
 			}
 			cmdMainROM->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdExtROM)
 		{
-			strcpy(tmp, currentDir);
+			strncpy(tmp, currentDir, MAX_PATH);
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
 				AvailableROM * newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strcpy(newrom->Path, tmp);
+				strncpy(newrom->Path, tmp, MAX_PATH);
 				newrom->ROMType = ROMTYPE_EXTCDTV;
 				lstAvailableROMs.push_back(newrom);
-				strcpy(changed_prefs.romextfile, tmp);
+				strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
 				RefreshPanelROM();
 			}
 			cmdExtROM->requestFocus();
@@ -187,10 +187,10 @@ public:
 				AvailableROM *newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strcpy(newrom->Path, tmp);
+				strncpy(newrom->Path, tmp, MAX_PATH);
 				newrom->ROMType = ROMTYPE_CD32CART;
 				lstAvailableROMs.push_back(newrom);
-				strcpy(changed_prefs.romextfile, tmp);
+				strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
 				RefreshPanelROM();
 			}
 			cmdCartROM->requestFocus();

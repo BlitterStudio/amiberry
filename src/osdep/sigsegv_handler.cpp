@@ -37,7 +37,13 @@
 #include <asm/sigcontext.h>
 #include <signal.h>
 #include <dlfcn.h>
+#ifndef ANDROID
 #include <execinfo.h>
+#else
+int backtrace(void**,int){ return 0; }
+char** backtrace_symbols(void* const*,int){return NULL; }
+void backtrace_symbols_fd(void* const*,int,int){} 
+#endif
 #include <SDL.h>
 
 extern uae_u8* current_compile_p;
@@ -48,7 +54,7 @@ extern blockinfo* active;
 extern blockinfo* dormant;
 extern void invalidate_block(blockinfo* bi);
 extern void raise_in_cl_list(blockinfo* bi);
-
+  
 
 #define SHOW_DETAILS 2
 

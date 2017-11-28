@@ -34,19 +34,6 @@ void decode_start_st0(void)
 #endif
 
 }
-#if 0
-/* ------------------------------------------------------------------------ */
-void
-encode_p_st0(j)
-	unsigned short  j;
-{
-	unsigned short  i;
-
-	i = j >> 6;
-	putcode(pt_len[i], pt_code[i]);
-	putbits(6, j & 0x3f);
-}
-#endif
 /* ------------------------------------------------------------------------ */
 static void ready_made(int method)
 {
@@ -70,19 +57,6 @@ static void ready_made(int method)
 	}
 }
 
-/* ------------------------------------------------------------------------ */
-#if 0
-void
-encode_start_fix( /*void*/ )
-{
-	n_max = 314;
-	maxmatch = 60;
-	np = 1 << (12 - 6);
-	init_putbits();
-	start_c_dyn();
-	ready_made(0);
-}
-#endif
 /* ------------------------------------------------------------------------ */
 static void read_tree_c(void)
 {				/* read tree from file */

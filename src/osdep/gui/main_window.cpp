@@ -15,6 +15,18 @@
 #include "amiberry_gfx.h"
 #include "autoconf.h"
 
+#include "inputdevice.h"
+
+#if defined(ANDROIDSDL)
+#include "androidsdl_event.h"
+#include <SDL_screenkeyboard.h>
+#include <SDL_android.h>
+#include <android/log.h>
+#endif
+
+static SDL_Joystick* GUIjoy;
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
+
 bool gui_running = false;
 static int last_active_panel = 2;
 
@@ -43,14 +55,38 @@ ConfigCategory categories[] = {
 	{ "Display",          "data/screen.ico", nullptr, nullptr, InitPanelDisplay,   ExitPanelDisplay,   RefreshPanelDisplay,    HelpPanelDisplay },
 	{ "Sound",            "data/sound.ico", nullptr, nullptr, InitPanelSound,     ExitPanelSound,     RefreshPanelSound,      HelpPanelSound },
 	{ "Input",            "data/joystick.ico", nullptr, nullptr, InitPanelInput,     ExitPanelInput,     RefreshPanelInput,      HelpPanelInput },
-	{ "Miscellaneous",    "data/misc.ico", nullptr, nullptr, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
-	{ "Savestates",       "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
-	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
-};
-
-enum {
-	PANEL_PATHS, PANEL_QUICKSTART, PANEL_CONFIGURATIONS, PANEL_CPU, PANEL_CHIPSET, PANEL_ROM, PANEL_RAM,
-	PANEL_FLOPPY, PANEL_HD, PANEL_DISPLAY, PANEL_SOUND, PANEL_INPUT, PANEL_MISC, PANEL_SAVESTATES,
+#ifndef PANDORA
+  { "Custom controls",  "data/controller.png",  NULL, NULL, InitPanelCustom,     ExitPanelCustom,     RefreshPanelCustom,      HelpPanelCustom },
+#endif
+  { "Miscellaneous",    "data/misc.ico",      NULL, NULL, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
+  { "Savestates",       "data/savestate.png", NULL, NULL, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
+#ifdef ANDROIDSDL  
+  { "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
+#endif
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+};     
+enum
+{
+	PANEL_PATHS,
+	PANEL_QUICKSTART,
+	PANEL_CONFIGURATIONS,
+	PANEL_CPU,
+	PANEL_CHIPSET,
+	PANEL_ROM,
+	PANEL_RAM,
+	PANEL_FLOPPY,
+	PANEL_HD,
+	PANEL_DISPLAY,
+	PANEL_SOUND,
+	PANEL_INPUT,
+#ifndef PANDORA
+        PANEL_CUSTOM, 
+#endif
+	PANEL_MISC,
+	PANEL_SAVESTATES,
+#ifdef ANDROIDSDL
+        PANEL_ONSCREEN, 
+#endif
 	NUM_PANELS
 };
 
@@ -90,20 +126,20 @@ namespace widgets
 	gcn::Button* cmdReset;
 	gcn::Button* cmdRestart;
 	gcn::Button* cmdStart;
-	gcn::Button* cmdShutdown;
 	gcn::Button* cmdHelp;
+	gcn::Button* cmdShutdown;
 }
 
 
 /* Flag for changes in rtarea:
-Bit 0: any HD in config?
-Bit 1: force because add/remove HD was clicked or new config loaded
-Bit 2: socket_emu on
-Bit 3: mousehack on
-Bit 4: rtgmem on
-Bit 5: chipmem larger than 2MB
-
-gui_rtarea_flags_onenter is set before GUI is shown, bit 1 may change during GUI display.
+  Bit 0: any HD in config?
+  Bit 1: force because add/remove HD was clicked or new config loaded
+  Bit 2: socket_emu on
+  Bit 3: mousehack on
+  Bit 4: rtgmem on
+  Bit 5: chipmem larger than 2MB
+  
+  gui_rtarea_flags_onenter is set before GUI is shown, bit 1 may change during GUI display.
 */
 static int gui_rtarea_flags_onenter;
 
@@ -129,24 +165,24 @@ static int gui_create_rtarea_flag(struct uae_prefs* p)
 	return flag;
 }
 
-void gui_force_rtarea_hdchange()
+void gui_force_rtarea_hdchange(void)
 {
 	gui_rtarea_flags_onenter |= 2;
 }
 
-void gui_restart()
+void gui_restart(void)
 {
 	gui_running = false;
 }
 
-static void (*refreshFuncAfterDraw)() = nullptr;
+static void (*refreshFuncAfterDraw)(void) = nullptr;
 
-void RegisterRefreshFunc(void (*func)())
+void RegisterRefreshFunc(void (*func)(void))
 {
 	refreshFuncAfterDraw = func;
 }
 
-void FocusBugWorkaround(gcn::Window *wnd)
+void FocusBugWorkaround(gcn::Window* wnd)
 {
 	// When modal dialog opens via mouse, the dialog will not
 	// have the focus unless there is a mouse click. We simulate the click...
@@ -361,6 +397,11 @@ namespace sdl
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						break;
+					case SDL_SCANCODE_F1:
+							ShowHelpRequested();
+							widgets::cmdHelp->requestFocus();
+							break;
+
 					default:
 						break;
 					}
@@ -374,9 +415,13 @@ namespace sdl
 				gui_running = false;
 			}
 			//-------------------------------------------------
-			// Send event to guichan-controls
+			// Send event to guisan-controls
 			//-------------------------------------------------
-			gui_input->pushInput(gui_event);
+			#ifdef ANDROIDSDL
+                        	androidsdl_event(event, gui_input);
+                        #else
+				gui_input->pushInput(gui_event);
+			#endif
 		}
 	}
 
@@ -407,6 +452,7 @@ namespace sdl
 				refreshFuncAfterDraw = nullptr;
 				currFunc();
 			}
+			SDL_JoystickClose(GUIjoy);
 		}
 	}
 }
@@ -453,13 +499,13 @@ namespace widgets
 				char tmp[MAX_DPATH];
 				fetch_configurationpath(tmp, sizeof tmp);
 				if (strlen(last_loaded_config) > 0)
-					strcat(tmp, last_loaded_config);
+					strncat(tmp, last_loaded_config, MAX_PATH - 1);
 				else
 				{
-					strcat(tmp, OPTIONSFILENAME);
-					strcat(tmp, ".uae");
+					strncat(tmp, OPTIONSFILENAME, MAX_PATH);
+					strncat(tmp, ".uae", MAX_PATH);
 				}
-				uae_restart(0, tmp);
+				uae_restart(-1, tmp);
 				gui_running = false;
 			}
 			else if (actionEvent.getSource() == cmdStart)
@@ -480,6 +526,11 @@ namespace widgets
 					gui_running = false;
 				}
 			}
+			else if (actionEvent.getSource() == cmdHelp)
+			{
+				ShowHelpRequested();
+				cmdHelp->requestFocus();
+			}
 		}
 	};
 
@@ -498,6 +549,7 @@ namespace widgets
 					categories[i].selector->setActive(true);
 					categories[i].panel->setVisible(true);
 					last_active_panel = i;
+					cmdHelp->setVisible(categories[last_active_panel].HelpFunc != nullptr);
 				}
 				else
 				{
@@ -700,6 +752,10 @@ void DisableResume()
 
 void run_gui()
 {
+#ifdef ANDROIDSDL
+  SDL_ANDROID_SetScreenKeyboardShown(0);
+  SDL_ANDROID_SetSystemMousePointerVisible(1);
+#endif
 	gui_running = true;
 	gui_rtarea_flags_onenter = gui_create_rtarea_flag(&currprefs);
 
@@ -718,6 +774,13 @@ void run_gui()
 		sdl::gui_run();
 		widgets::gui_halt();
 		sdl::gui_halt();
+	#ifdef ANDROIDSDL
+                if (currprefs.onScreen!=0)
+                {
+                   SDL_ANDROID_SetScreenKeyboardShown(1);
+                   SDL_ANDROID_SetSystemMousePointerVisible(0);
+                }
+            #endif 
 	}
 	
 	// Catch all guisan exceptions.

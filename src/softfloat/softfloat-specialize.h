@@ -375,7 +375,7 @@ static inline floatx80 propagateFloatx80NaNOneArg(floatx80 a, float_status *stat
 static inline flag floatx80_is_zero( floatx80 a )
 {
     
-    return ( ( a.high & 0x7FFF ) == 0 ) && ( a.low == 0 );
+    return ( ( a.high & 0x7FFF ) < 0x7FFF ) && ( a.low == 0 );
     
 }
 

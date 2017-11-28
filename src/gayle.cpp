@@ -201,8 +201,8 @@ void rethink_gayle (void)
 
 	if (currprefs.cs_ide != IDE_A600A1200 && !currprefs.cs_pcmcia)
 		return;
-	gayle_irq |= checkgayleideirq ();
-	gayle_irq |= checkpcmciaideirq ();
+	gayle_irq |= checkgayleideirq();
+	gayle_irq |= checkpcmciaideirq();
 	mask = gayle_int & gayle_irq;
 	if (mask & (GAYLE_IRQ_IDE | GAYLE_IRQ_WR))
 		lev2 = 1;
@@ -775,10 +775,10 @@ static uae_u8 *pcmcia_attrs;
 static int pcmcia_write_min, pcmcia_write_max;
 static uae_u16 pcmcia_idedata;
 
-void gayle_hsync (void)
+void gayle_hsync(void)
 {
 	if (ide_interrupt_hsync(idedrive[0]) || ide_interrupt_hsync(idedrive[2]) || ide_interrupt_hsync(idedrive[4]))
-		rethink_gayle ();
+		rethink_gayle();
 }
 
 static uaecptr from_gayle_pcmcmia(uaecptr addr)
@@ -924,8 +924,8 @@ static void gayle_attr_write (uaecptr addr, uae_u32 v)
 					}
 					ide_write_reg (ide, reg, v);
 				}
-			 }
-		 }
+		  }
+    }
 	}
 }
 
@@ -1158,7 +1158,7 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 	if (!pcmcia_sram->hfd.handle_valid)
 		reset = 1;
 	if (path != NULL)
-  	_tcscpy (pcmcia_sram->hfd.ci.rootdir, path);
+		_tcscpy (pcmcia_sram->hfd.ci.rootdir, path);
 	pcmcia_sram->hfd.ci.readonly = readonly != 0;
 	pcmcia_sram->hfd.ci.blocksize = 512;
 
@@ -1190,6 +1190,7 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 			pcmcia_card = 1;
 			initsramattr (pcmcia_common_size, readonly);
 		}
+
 	} else if (type == PCMCIA_IDE) {
 
 		if (reset && path) {	
@@ -1209,8 +1210,8 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 	}
 
 	if (pcmcia_card && !(gayle_cs & GAYLE_CS_DIS)) {
-		gayle_map_pcmcia ();
-		card_trigger (1);
+		gayle_map_pcmcia();
+		card_trigger(1);
 	}
 
 	pcmcia_write_min = -1;

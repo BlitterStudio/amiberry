@@ -44,6 +44,7 @@ bool cdaudio_active = false;
 static int cdwrcnt = 0;
 static int cdrdcnt = 0;
 
+
 static int have_sound = 0;
 
 void update_sound(float clk)

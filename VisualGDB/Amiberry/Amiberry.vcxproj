@@ -39,24 +39,24 @@
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
     <TargetName>$(ProjectName)-sdl2</TargetName>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>4.9.2/7.7.1/r4</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
     <TargetName>$(ProjectName)-sdl2-rpi2</TargetName>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>4.9.2/7.7.1/r4</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
     <Toolchain>C:\SysGCC\raspberry</Toolchain>
     <TargetName>$(ProjectName)-sdl2-rpi1</TargetName>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>4.9.2/7.7.1/r4</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -70,7 +70,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
@@ -88,7 +88,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
@@ -107,7 +107,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv6zk -mfpu=vfp -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
       <OmitFramePointer>true</OmitFramePointer>
@@ -130,6 +130,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp" />
     <ClCompile Include="..\..\src\ar.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zBuf.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zBuf2.c" />
     <ClCompile Include="..\..\src\archivers\7z\7zCrc.cpp" />
@@ -145,25 +146,14 @@
     <ClCompile Include="..\..\src\archivers\7z\BraIA64.c" />
     <ClCompile Include="..\..\src\archivers\7z\CpuArch.c" />
     <ClCompile Include="..\..\src\archivers\7z\Delta.c" />
-    <ClCompile Include="..\..\src\archivers\7z\LzFind.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\LzFindMt.c" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma2Dec.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\Lzma2Enc.c" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c" />
-    <ClCompile Include="..\..\src\archivers\7z\Lzma86Enc.c" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\LzmaEnc.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaLib.c" />
-    <ClCompile Include="..\..\src\archivers\7z\MtCoder.c" />
-    <ClCompile Include="..\..\src\archivers\7z\Ppmd7.c" />
-    <ClCompile Include="..\..\src\archivers\7z\Ppmd7Dec.c" />
-    <ClCompile Include="..\..\src\archivers\7z\Ppmd7Enc.c" />
     <ClCompile Include="..\..\src\archivers\7z\Sha256.c" />
-    <ClCompile Include="..\..\src\archivers\7z\Threads.c" />
     <ClCompile Include="..\..\src\archivers\7z\Xz.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\XzCrc64.c" />
     <ClCompile Include="..\..\src\archivers\7z\XzDec.c" />
-    <ClCompile Include="..\..\src\archivers\7z\XzEnc.c" />
     <ClCompile Include="..\..\src\archivers\7z\XzIn.c" />
     <ClCompile Include="..\..\src\archivers\dms\crc_csum.cpp" />
     <ClCompile Include="..\..\src\archivers\dms\getbits.cpp" />
@@ -241,16 +231,16 @@
     <ClCompile Include="..\..\src\inputdevice.cpp" />
     <ClCompile Include="..\..\src\jit\compemu.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_fpp.cpp" />
-    <ClCompile Include="..\..\src\jit\compemu_prefs.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\..\src\jit\compstbl.cpp" />
     <ClCompile Include="..\..\src\keybuf.cpp" />
-    <ClCompile Include="..\..\src\machdep\support.cpp" />
     <ClCompile Include="..\..\src\main.cpp" />
+    <ClCompile Include="..\..\src\machdep\support.cpp" />
     <ClCompile Include="..\..\src\memory.cpp" />
     <ClCompile Include="..\..\src\native2amiga.cpp" />
     <ClCompile Include="..\..\src\newcpu.cpp" />
     <ClCompile Include="..\..\src\newcpu_common.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_hardfile.cpp" />
     <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
     <ClCompile Include="..\..\src\osdep\charset.cpp" />
@@ -264,6 +254,7 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelChipset.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelConfig.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelCPU.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelCustom.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelDisplay.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelFloppy.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelHD.cpp" />
@@ -284,7 +275,6 @@
     <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp" />
-    <ClCompile Include="..\..\src\osdep\hardfile_amiberry.cpp" />
     <ClCompile Include="..\..\src\osdep\keyboard.cpp" />
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\..\src\osdep\neon_helper.s" />
@@ -321,6 +311,7 @@
     <Image Include="..\..\data\chip.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="..\..\data\controller.png" />
     <Image Include="..\..\data\cpu.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
@@ -367,6 +358,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\archivers\7z\7z.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zAlloc.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zBuf.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zCrc.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zFile.h" />
@@ -376,25 +368,16 @@
     <ClInclude Include="..\..\src\archivers\7z\Bra.h" />
     <ClInclude Include="..\..\src\archivers\7z\CpuArch.h" />
     <ClInclude Include="..\..\src\archivers\7z\Delta.h" />
-    <ClInclude Include="..\..\src\archivers\7z\LzFind.h" />
-    <ClInclude Include="..\..\src\archivers\7z\LzFindMt.h" />
     <ClInclude Include="..\..\src\archivers\7z\LzHash.h" />
     <ClInclude Include="..\..\src\archivers\7z\Lzma2Dec.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Lzma2Enc.h" />
     <ClInclude Include="..\..\src\archivers\7z\Lzma86.h" />
     <ClInclude Include="..\..\src\archivers\7z\LzmaDec.h" />
-    <ClInclude Include="..\..\src\archivers\7z\LzmaEnc.h" />
     <ClInclude Include="..\..\src\archivers\7z\LzmaLib.h" />
-    <ClInclude Include="..\..\src\archivers\7z\MtCoder.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Ppmd.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Ppmd7.h" />
     <ClInclude Include="..\..\src\archivers\7z\RotateDefs.h" />
     <ClInclude Include="..\..\src\archivers\7z\Sha256.h" />
-    <ClInclude Include="..\..\src\archivers\7z\Threads.h" />
     <ClInclude Include="..\..\src\archivers\7z\Types.h" />
     <ClInclude Include="..\..\src\archivers\7z\Xz.h" />
     <ClInclude Include="..\..\src\archivers\7z\XzCrc64.h" />
-    <ClInclude Include="..\..\src\archivers\7z\XzEnc.h" />
     <ClInclude Include="..\..\src\archivers\dms\cdata.h" />
     <ClInclude Include="..\..\src\archivers\dms\crc_csum.h" />
     <ClInclude Include="..\..\src\archivers\dms\getbits.h" />
@@ -480,8 +463,8 @@
     <ClInclude Include="..\..\src\include\ar.h" />
     <ClInclude Include="..\..\src\include\audio.h" />
     <ClInclude Include="..\..\src\include\autoconf.h" />
-    <ClInclude Include="..\..\src\include\blit.h" />
-    <ClInclude Include="..\..\src\include\blitfunc.h" />
+    <ClInclude Include="..\..\src\blit.h" />
+    <ClInclude Include="..\..\src\blitfunc.h" />
     <ClInclude Include="..\..\src\include\blitter.h" />
     <ClInclude Include="..\..\src\include\blkdev.h" />
     <ClInclude Include="..\..\src\include\bsdsocket.h" />
@@ -490,7 +473,7 @@
     <ClInclude Include="..\..\src\include\cia.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
-    <ClInclude Include="..\..\src\include\cputbl.h" />
+    <ClInclude Include="..\..\src\cputbl.h" />
     <ClInclude Include="..\..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\..\src\include\crc32.h" />
     <ClInclude Include="..\..\src\include\custom.h" />
@@ -565,6 +548,7 @@
     <ClInclude Include="..\..\src\osdep\mp3decoder.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
+    <ClInclude Include="..\..\src\osdep\picasso96.h" />
     <ClInclude Include="..\..\src\osdep\sysconfig.h" />
     <ClInclude Include="..\..\src\osdep\target.h" />
     <ClInclude Include="..\..\src\softfloat\softfloat-macros.h" />
@@ -573,9 +557,6 @@
     <ClInclude Include="..\..\src\softfloat\softfloat_fpsp_tables.h" />
     <ClInclude Include="..\..\src\sounddep\sound.h" />
     <ClInclude Include="..\..\src\threaddep\thread.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="..\..\src\archivers\7z\7zVersion.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

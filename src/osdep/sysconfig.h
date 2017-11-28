@@ -544,7 +544,37 @@ typedef char TCHAR;
 #define _timezone           timezone
 #define _daylight           daylight
 #define _ftime(x)           ftime(x)
+#ifdef ANDROID
+#define _ftelli64(x)        ftello(x)
+#define _fseeki64(x,y,z)    fseeko(x,y,z)
+#else
 #define _ftelli64(x)        ftello64(x)
 #define _fseeki64(x,y,z)    fseeko64(x,y,z)
+#endif
 #define _wunlink(x)         unlink(x)
 #define _istalnum(x)        isalnum(x)
+
+#ifdef ANDROID
+#define fmodl(x,y)          fmod(x,y)
+#define remainderl(x,y)     remainder(x,y)
+#define sinhl(x)            sinh(x)
+#define sqrtl(x)            sqrt(x)
+#define log1pl(x)           log1p(x)
+#define expm1l(x)           expm1(x)
+#define tanhl(x)            tanh(x)
+#define atanl(x)            atan(x)
+#define atanhl(x)           atanh(x)
+#define sinl(x)             sin(x)
+#define asinl(x)            asin(x)
+#define tanl(x)             tan(x)
+#define expl(x)             exp(x)
+#define powl(x,y)           pow(x,y)
+#define logl(x)             log(x)
+#define log10l(x)           log10(x)
+#define log2l(x)            (log(x)/log(2))
+#define lrintl(x)           lrint(x)
+#define rintl(x)            rint(x)
+#define coshl(x)            cosh(x)
+#define acosl(x)            acos(x)
+#define cosl(x)             cos(x)
+#endif

@@ -150,9 +150,14 @@ struct inputevent {
 #define SET_ONOFF_OFF_VALUE 0x7fffff00
 
 #define ID_BUTTON_OFFSET 0
-#define ID_BUTTON_TOTAL 32
-#define ID_AXIS_OFFSET 32
-#define ID_AXIS_TOTAL 32
+#define ID_BUTTON_TOTAL 128
+#define ID_AXIS_OFFSET 128
+#define ID_AXIS_TOTAL 64
+
+//#define ID_BUTTON_OFFSET 0
+//#define ID_BUTTON_TOTAL 32
+//#define ID_AXIS_OFFSET 32
+//#define ID_AXIS_TOTAL 32
 
 #define MAX_COMPA_INPUTLIST 30
 
@@ -310,5 +315,82 @@ extern int inputdevice_uaelib (const TCHAR *, const TCHAR *);
 extern int inputdevice_uaelib(const TCHAR *s, int parm, int max, bool autofire);
 
 extern bool target_can_autoswitchdevice(void);
+
+
+struct host_input_button {
+	int north_button;
+	int east_button; 
+	int south_button;
+	int west_button;
+	int dpad_left;
+	int dpad_right;
+	int dpad_up;
+	int dpad_down;
+	int select_button;
+	int start_button;
+
+	int left_shoulder;
+	int right_shoulder;
+	int left_trigger;
+	int right_trigger;
+        
+	int lstick_button;
+        int lstick_axis_y;
+        int lstick_axis_x;
+	int lstick_left;
+	int lstick_right;
+	int lstick_up;
+	int lstick_down;
+        
+	int rstick_button;
+        int rstick_axis_y;
+        int rstick_axis_x;
+	int rstick_left;
+	int rstick_right;
+	int rstick_up;
+	int rstick_down;
+        
+        int hotkey_button;
+        int quit_button;
+        int menu_button;
+        int reset_button;
+        int load_state_button;
+        int save_state_button;
+        
+        int number_of_hats;
+        int number_of_axis;    
+        
+        bool is_retroarch;
+};
+
+struct host_keyboard_button {
+
+	int north_button;
+	int east_button; 
+	int south_button;
+	int west_button;
+	int dpad_left;
+	int dpad_right;
+	int dpad_up;
+	int dpad_down;
+	int left_shoulder;
+	int right_shoulder;
+	int select_button;
+	int start_button;
+	int lstick_button;
+	int rstick_button;
+        
+        bool is_retroarch;     
+    
+};
+
+
+extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
+
+extern int multipler_maps[MAX_JPORTS];
+
+
+extern int find_in_array(const int arr[], int n, int key);
+
 
 #endif /* UAE_INPUTDEVICE_H */

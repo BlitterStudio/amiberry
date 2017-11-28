@@ -27,25 +27,37 @@ static NavigationMap navMap[] =
 	{ "Quickstart",       "qsNTSC",         "AModel",         "Paths",            "Configurations" },
 	{ "Configurations",   "ConfigList",     "ConfigList",     "Quickstart",       "CPU and FPU" },
 	{"CPU and FPU",	      "7 Mhz",          "68000",          "Configurations",   "Chipset"},
-	{"Chipset",           "BlitNormal",     "OCS",            "CPU and FPU",      "ROM"},
+	{ "Chipset",          "Fast copper",    "OCS",            "CPU and FPU",      "ROM" },
 	{"ROM", "MainROM", "cboMainROM", "Chipset", "RAM"},
 	{"RAM", "Chipmem", "Chipmem", "ROM", "Floppy drives"},
 	{"Floppy drives", "cmdSel0", "DF0:", "RAM", "Hard drives/CD"},
 	{"Hard drives/CD", "cmdCreateHDF", "cmdAddDir", "Floppy drives", "Display"},
 	{"Display", "Frameskip", "Frameskip", "Hard drives/CD", "Sound"},
-	{"Sound", "sndDisable", "sndDisable", "Display", "Input"},
-	{"Input", "cboPort0", "cboPort0", "Sound", "Miscellaneous"},
-	{"Miscellaneous", "StatusLine", "StatusLine", "Input", "Savestates"},
-	{"Savestates", "State0", "State0", "Miscellaneous", "Reset"},
-	{"Reset", "Start", "Quit", "Savestates", "Paths"},
-	{"Quit", "Reset", "Help", "Savestates", "Paths"},
-	{ "Help",             "Quit",           "Start",          "Savestates",       "Paths" },
-	{"Start", "Quit", "Reset", "Savestates", "Paths"},
+	{ "Sound",            "sndDisable",           "sndDisable",       "Display",          "Input" },
+  	{ "Input",            "cboPort0mode",         "cboPort0",         "Sound",            "Custom controls" },
+  	{ "Custom controls",  "Right Trigger",        "0: Mouse",         "Input",            "Miscellaneous" },
+  	{ "Miscellaneous",    "StatusLine",           "StatusLine",       "Custom controls",  "Savestates" },
+#ifdef ANDROIDSDL
+  { "Savestates",       "State0",         "State0",         "Miscellaneous",    "OnScreen" },
+  { "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Reset" },
+  { "Reset",            "Start",          "Quit",           "OnScreen",       "Paths" },
+  { "Quit",             "Reset",          "Help",           "OnScreen",       "Paths" },
+  { "Help",             "Quit",           "Start",          "OnScreen",       "Paths" },
+  { "Start",            "Help",           "Reset",          "OnScreen",       "Paths" },
+#else
+  { "Savestates",       "State0",         "State0",         "Miscellaneous",    "Reset" },
+  { "Reset",            "Start",          "Quit",           "Savestates",       "Paths" },
+  { "Quit",             "Reset",          "Help",          "Savestates",       "Paths" },
+  { "Help",             "Quit",           "Start",          "Savestates",       "Paths" },
+  { "Start",            "Help",           "Reset",          "Savestates",       "Paths" },
+#endif
 
 // PanelPaths
   { "SystemROMs",     "Paths",          "Paths",          "RescanROMs",     "ConfigPath" },
-  { "ConfigPath",     "Paths",          "Paths",          "SystemROMs",     "RescanROMs" },
-  { "RescanROMs",     "Paths",          "Paths",          "ConfigPath",     "SystemROMs" },
+  { "ConfigPath",     "Paths",          "Paths",          "SystemROMs",     "ControllersPath" },
+  { "ControllersPath","Paths",          "Paths",          "ConfigPath",     "RetroArchFile" },
+  { "RetroArchFile",  "Paths",          "Paths",          "ControllersPath","RescanROMs" },
+  { "RescanROMs",     "Paths",          "Paths",          "RetroArchFile",  "SystemROMs" },
 
 //  active            move left         move right        move up           move down
 // PanelQuickstart
@@ -99,19 +111,21 @@ static NavigationMap navMap[] =
   { "25 Mhz",         "68882",          "CPU and FPU",    "14 Mhz",         "Fastest" },
   { "Fastest",        "CPU internal",   "CPU and FPU",    "25 Mhz",         "7 Mhz" },
 
-	// PanelChipset
-	{"OCS", "Chipset", "BlitNormal", "CollFull", "ECS Agnus"},
-	{"ECS Agnus", "Chipset", "Immediate", "OCS", "Full ECS"},
-	{"Full ECS", "Chipset", "BlitWait", "ECS Agnus", "AGA"},
-	{"AGA", "Chipset", "Chipset", "Full ECS", "NTSC"},
-	{"NTSC", "Chipset", "Chipset", "AGA", "CollNone"},
-	{"BlitNormal", "OCS", "Chipset", "CollFull", "Immediate"},
-	{"Immediate", "ECS Agnus", "Chipset", "BlitNormal", "BlitWait"},
-	{"BlitWait", "Full ECS", "Chipset", "Immediate", "CollNone"},
-	{"CollNone", "Chipset", "Chipset", "NTSC", "Sprites only"},
-	{"Sprites only", "Chipset", "Chipset", "CollNone", "CollPlay"},
-	{"CollPlay", "Chipset", "Chipset", "Sprites only", "CollFull"},
-	{"CollFull", "Chipset", "Chipset", "CollPlay", "OCS"},
+// PanelChipset
+  { "OCS",            "Chipset",        "ChipsetExtra",   "CollFull",       "ECS Agnus" },
+  { "ECS Agnus",      "Chipset",        "Immediate",      "OCS",            "Full ECS" },
+  { "Full ECS",       "Chipset",        "BlitWait",       "ECS Agnus",      "AGA" },
+  { "AGA",            "Chipset",        "Fast copper",    "Full ECS",       "NTSC" },
+  { "NTSC",           "Chipset",        "Fast copper",    "AGA",            "CollNone" },
+  { "ChipsetExtra",   "OCS",            "BlitNormal",     "",               "" },
+  { "BlitNormal",     "ChipsetExtra",   "Chipset",        "Fast copper",    "Immediate" },
+  { "Immediate",      "ECS Agnus",      "Chipset",        "BlitNormal",     "BlitWait" },
+  { "BlitWait",       "Full ECS",       "Chipset",        "Immediate",      "Fast copper" },
+  { "Fast copper",    "NTSC",           "Chipset",        "BlitWait",       "BlitNormal" },
+  { "CollNone",       "Chipset",        "Chipset",        "NTSC",           "Sprites only" },
+  { "Sprites only",   "Chipset",        "Chipset",        "CollNone",       "CollPlay" },
+  { "CollPlay",       "Chipset",        "Chipset",        "Sprites only",   "CollFull" },
+  { "CollFull",       "Chipset",        "Chipset",        "CollPlay",       "OCS" },
 
 //  active            move left         move right        move up           move down
 // PanelROM
@@ -208,32 +222,106 @@ static NavigationMap navMap[] =
   
 //  active            move left           move right          move up           move down
 // PanelInput
-  { "cboPort0",       "Input",          "Input",          "cboLeft",        "cboPort1" },
-  { "cboPort1",       "Input",          "cboAutofire",    "cboPort0",       "MouseSpeed" },
-  { "cboAutofire",    "cboPort1",       "Input",          "cboPort0",       "cboTapDelay" },
-  { "MouseSpeed",     "",               "",               "cboPort1",       "MouseHack" },
-  { "MouseHack",      "Input",          "cboTapDelay",    "MouseSpeed",     "CustomCtrl" },
-  { "cboTapDelay",    "MouseHack",      "Input",          "cboAutofire",    "cboB" },
-  { "CustomCtrl",     "Input",          "Input",          "MouseHack",      "cboA" },
-  { "cboA",           "Input",          "cboB",           "CustomCtrl",     "cboX" },
-  { "cboB",           "cboA",           "Input",          "cboTapDelay",    "cboY" },
-  { "cboX",           "Input",          "cboY",           "cboA",           "cboL" },
-  { "cboY",           "cboX",           "Input",          "cboB",           "cboR" },
-  { "cboL",           "Input",          "cboR",           "cboX",           "cboUp" },
-  { "cboR",           "cboL",           "Input",          "cboY",           "cboDown" },
-  { "cboUp",          "Input",          "cboDown",        "cboL",           "cboLeft" },
-  { "cboDown",        "cboUp",          "Input",          "cboR",           "cboRight" },
-  { "cboLeft",        "Input",          "cboRight",       "cboUp",          "cboPort0" },
-  { "cboRight",       "cboLeft",        "Input",          "cboDown",        "cboPort0" },
+#ifdef RASPBERRY
+  { "cboPort0",         "Input",          "cboPort0mode",       "cboAutofire",      "cboPort1" },
+  { "cboPort0mode",     "cboPort0",       "Input",              "cboTapDelay",      "cboPort1mode" },
+  { "cboPort1",         "Input",          "cboPort1mode",       "cboPort0",         "cboPort2" },
+  { "cboPort1mode",     "cboPort1",       "Input",              "cboPort0mode",     "cboPort2" },
+  { "cboPort2",         "Input",          "cboPort2mode",       "cboPort1",         "cboPort3" },
+  { "cboPort3",         "Input",          "cboPort3mode",       "cboPort2",         "MouseSpeed" },
+  { "MouseSpeed",       "",               "",                   "cboPort3",         "MouseHack" },
+  { "MouseHack",        "Input",          "cboPort1mousemode",  "MouseSpeed",       "cboAutofire" },
+  { "cboPort0mousemode","MouseSpeed",     "Input",              "cboPort3",         "cboPort1mousemode"  },
+  { "cboPort1mousemode","MouseHack",      "Input",              "cboPort0mousemode","cboTapDelay"  },
+  { "cboAutofire",      "Input",          "cboTapDelay",        "MouseHack",        "cboPort0" },
+  { "cboTapDelay",      "cboAutofire",    "Input",              "cboPort1mousemode","cboPort0mode" },
+#else
+  { "cboPort0",         "Input",          "cboPort0mode",       "cboLeft",          "cboPort1" },
+  { "cboPort0mode",     "cboPort0",       "cboPort0mousemode",  "cboLeft",          "cboPort1mode" },  
+  { "cboPort1",         "Input",          "cboPort1mode",       "cboPort0",         "MouseSpeed" },
+  { "cboPort1mode",     "cboPort1",       "Input",              "cboPort0mode",     "MouseSpeed" },
+  { "cboAutofire",      "cboPort1",       "Input",              "cboPort1mousemode","cboTapDelay" },  
+  { "MouseSpeed",       "",               "",                   "cboPort1",         "MouseHack" },
+  { "MouseHack",        "Input",          "cboTapDelay",        "MouseSpeed",       "CustomCtrl" },
+  { "cboTapDelay",      "cboAutofire",      "Input",              "cboAutofire",      "cboB" },
+#endif
 
-	// PanelMisc
-	{"StatusLine", "Miscellaneous", "Miscellaneous", "MasterWP", "HideIdle"},
-	{"HideIdle", "Miscellaneous", "Miscellaneous", "StatusLine", "ShowGUI"},
-	{"ShowGUI", "Miscellaneous", "Miscellaneous", "HideIdle", "BSDSocket"},
-	{"BSDSocket", "Miscellaneous", "Miscellaneous", "ShowGUI", "MasterWP"},
-	{ "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "numlock" },
-	{"numlock", "Miscellaneous", "scrolllock", "", ""},
-	{"scrolllock", "numlock", "", "", ""},
+#ifdef PANDORA
+  { "CustomCtrl",       "Input",          "Input",              "MouseHack",        "cboA" },
+  { "cboA",             "Input",          "cboB",               "CustomCtrl",       "cboX" },
+  { "cboB",             "cboA",           "Input",              "cboTapDelay",      "cboY" },
+  { "cboX",             "Input",          "cboY",               "cboA",             "cboL" },
+  { "cboY",             "cboX",           "Input",              "cboB",             "cboR" },
+  { "cboL",             "Input",          "cboR",               "cboX",             "cboUp" },
+  { "cboR",             "cboL",           "Input",              "cboY",             "cboDown" },
+  { "cboUp",            "Input",          "cboDown",            "cboL",             "cboLeft" },
+  { "cboDown",          "cboUp",          "Input",              "cboR",             "cboRight" },
+  { "cboLeft",          "Input",          "cboRight",           "cboUp",            "cboPort0" },
+  { "cboRight",         "cboLeft",        "Input",              "cboDown",          "cboPort0mode" },
+
+#endif
+
+  
+#ifndef PANDORA
+  // PanelCustom
+  { "0: Mouse",         "Custom controls",  "1: Joystick",      "cboCustomAction13",     "None" },
+  { "1: Joystick",      "0: Mouse",         "2: Parallel 1",    "cboCustomAction13",     "HotKey" },
+  { "2: Parallel 1",    "1: Joystick",      "3: Parallel 2",    "cboCustomAction13",     "Left Trigger" },
+  { "3: Parallel 2",    "2: Parallel 1",    "Custom controls",  "cboCustomAction13",     "Right Trigger" },
+  
+  { "None",             "Custom controls",  "HotKey",           "0: Mouse",          "cboCustomAction0" },
+  { "HotKey",           "None",             "Left Trigger",     "1: Joystick",       "cboCustomAction0" },
+  { "Left Trigger",     "HotKey",           "Right Trigger",    "2: Parallel 1",     "cboCustomAction0" },
+  { "Right Trigger",    "Left Trigger",     "Custom controls",  "3: Parallel 2",     "cboCustomAction0" }, 
+ 
+  { "cboCustomAction0", "Custom controls",  "cboCustomAction7" , "None",              "cboCustomAction1" },
+  { "cboCustomAction1", "Custom controls",  "cboCustomAction8" , "cboCustomAction0",  "cboCustomAction2" },
+  { "cboCustomAction2", "Custom controls",  "cboCustomAction9" , "cboCustomAction1",  "cboCustomAction3" },
+  { "cboCustomAction3", "Custom controls",  "cboCustomAction10", "cboCustomAction2",  "cboCustomAction4" },
+  { "cboCustomAction4", "Custom controls",  "cboCustomAction11", "cboCustomAction3",  "cboCustomAction5" },
+  { "cboCustomAction5", "Custom controls",  "cboCustomAction12", "cboCustomAction4",  "cboCustomAction6" },
+  { "cboCustomAction6", "Custom controls",  "cboCustomAction13", "cboCustomAction5",  "cboCustomAction7" },
+  
+  { "cboCustomAction7",  "cboCustomAction0",  "Custom controls",  "cboCustomAction6",  "cboCustomAction8" },  
+  { "cboCustomAction8",  "cboCustomAction1",  "Custom controls" , "cboCustomAction7",  "cboCustomAction9" },
+  { "cboCustomAction9",  "cboCustomAction2",  "Custom controls" , "cboCustomAction8",  "cboCustomAction10" },
+  { "cboCustomAction10", "cboCustomAction3",  "Custom controls" , "cboCustomAction9",  "cboCustomAction11" },
+  { "cboCustomAction11", "cboCustomAction4",  "Custom controls", "cboCustomAction10",  "cboCustomAction12" },
+  { "cboCustomAction12", "cboCustomAction5",  "Custom controls", "cboCustomAction11",  "cboCustomAction13" },
+  { "cboCustomAction13", "cboCustomAction6",  "Custom controls", "cboCustomAction12",  "1: Joystick" },
+
+#endif
+// PanelMisc
+//  active            move left           move right          move up           move down
+
+#ifdef PANDORA
+  { "StatusLine",     "Miscellaneous",  "Miscellaneous",  "MasterWP",       "HideIdle" },
+  { "HideIdle",       "Miscellaneous",  "Miscellaneous",  "StatusLine",     "ShowGUI" },
+
+      { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "HideIdle",     "PandSpeed" },
+      { "PandSpeed",      "",               "",               "ShowGUI",      "BSDSocket" },
+      { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "PandSpeed",    "MasterWP" },
+      { "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",    "StatusLine" },
+      
+  { "KeyForMenu",     "Miscellaneous",	"KeyForQuit",     "MasterWP",	     "StatusLine" },
+  { "KeyForQuit",     "KeyForMenu",	"Miscellaneous",  "MasterWP",	     "StatusLine" },
+
+#else
+  { "StatusLine",     "Miscellaneous",  "RetroArchQuit",  "scrolllock",     "HideIdle" },
+  { "HideIdle",       "Miscellaneous",  "RetroArchMenu",  "StatusLine",     "ShowGUI" },
+  { "ShowGUI",        "Miscellaneous",  "RetroArchReset",  "HideIdle",      "BSDSocket" },
+  { "RetroArchQuit",  "StatusLine",     "Miscellaneous",  "KeyForQuit",     "RetroArchMenu" },
+  { "RetroArchMenu",  "HideIdle",       "Miscellaneous",  "RetroArchQuit",  "RetroArchReset" },
+  { "RetroArchReset", "ShowGUI",        "Miscellaneous",  "RetroArchMenu",  "BSDSocket" },
+
+  { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",        "numlock" },
+  { "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "numlock" },
+  { "numlock",        "Miscellaneous",	"scrolllock",	  "MasterWP",	     "KeyForMenu" },
+  { "scrolllock",     "numlock",	"Miscellaneous",  "MasterWP",	     "KeyForQuit" },
+  { "KeyForMenu",     "Miscellaneous",	"KeyForQuit",     "numlock",	     "StatusLine" },
+  { "KeyForQuit",     "KeyForMenu",	"Miscellaneous",  "scrolllock",	     "StatusLine" },
+
+#endif
 
 	// PanelSavestate
 	{"State0", "Savestates", "Savestates", "LoadState", "State1"},
@@ -243,6 +331,21 @@ static NavigationMap navMap[] =
 	{"LoadState", "Savestates", "SaveState", "State3", "State0"},
 	{"SaveState", "LoadState", "Savestates", "State3", "State0"},
 
+#ifdef ANDROIDSDL
+// PanelOnScreen
+  { "OnScrCtrl",      "OnScreen",       "OnScrButton3", "DisableMenuVKeyb", "OnScrTextInput" },
+  { "OnScrButton3",   "OnScrCtrl",      "OnScreen",     "CustomPos",     "OnScrButton4" },
+  { "OnScrTextInput", "OnScreen",       "OnScrButton4", "OnScrCtrl",      "OnScrDpad" },
+  { "OnScrButton4",   "OnScrTextInput", "OnScreen",     "OnScrButton3",   "OnScrButton5" },
+  { "OnScrDpad",      "OnScreen",       "OnScrButton5", "OnScrTextInput", "OnScrButton1" },
+  { "OnScrButton5",   "OnScrDpad",      "OnScreen",     "OnScrButton4",   "OnScrButton6" },
+  { "OnScrButton1",   "OnScreen",       "OnScrButton6", "OnScrDpad",      "OnScrButton2" },
+  { "OnScrButton6",   "OnScrButton1",   "OnScreen",     "OnScrButton5",   "CustomPos" },
+  { "OnScrButton2",   "OnScreen",       "CustomPos",    "OnScrButton1",   "FloatJoy" },
+  { "CustomPos",      "OnScrButton2",   "OnScreen",     "OnScrButton6",   "Reset" },
+  { "FloatJoy",       "OnScreen",       "CustomPos",    "OnScrButton2",   "DisableMenuVKeyb" },
+  { "DisableMenuVKeyb","OnScreen",       "CustomPos",    "FloatJoy",       "Reset" },
+#endif
 
 	//  active            move left         move right        move up           move down
 	// EditFilesysVirtual
@@ -326,7 +429,7 @@ bool HandleNavigation(int direction)
 							focusTarget = gui_top->findWidgetById(searchFor);
 							if (focusTarget != nullptr)
 							{
-								if (focusTarget->isEnabled())
+								if(focusTarget->isEnabled() && focusTarget->isVisible())
 									bFoundEnabled = true;
 								else
 									activeName = searchFor;
@@ -360,4 +463,14 @@ bool HandleNavigation(int direction)
 	if (focusTarget != nullptr)
 		focusTarget->requestFocus();
 	return focusTarget != nullptr;
+}
+
+void PushFakeKey(SDLKey inKey)
+{       SDL_Event nuevent;
+        
+        nuevent.type = SDL_KEYDOWN;  // and the key up
+        nuevent.key.keysym.sym = inKey;
+        gui_input->pushInput(nuevent); // Fire key down
+        nuevent.type = SDL_KEYUP;  // and the key up
+        gui_input->pushInput(nuevent); // Fire key down
 }

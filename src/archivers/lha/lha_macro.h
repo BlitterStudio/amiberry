@@ -283,10 +283,6 @@ typedef short   				node;
 /* huf.c */
 #define NP			(MAX_DICBIT + 1)
 #define NT			(USHRT_BIT + 3)
-#if 0
-#define PBIT		4		/* smallest integer such that (1 << PBIT) > * NP */
-#define TBIT 		5		/* smallest integer such that (1 << TBIT) > * NT */
-#endif
 
 #define PBIT		5		/* smallest integer such that (1 << PBIT) > * NP */
 #define TBIT 		5		/* smallest integer such that (1 << TBIT) > * NT */

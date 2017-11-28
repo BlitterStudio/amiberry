@@ -24,6 +24,8 @@ public:
 
 	void setEnabled(bool enabled);
 
+	bool getEnabled(void);
+
     void clearSelected(void);
 
     bool isDroppedDown(void);

@@ -146,13 +146,6 @@ EXTERN char     backup_archive_name[FILENAME_LENGTH];
 
 EXTERN char		*reading_filename, *writting_filename;
 
-/* 1996.8.13 t.okamoto */
-#if 0
-EXTERN boolean  remove_temporary_at_error;
-EXTERN boolean  recover_archive_when_interrupt;
-EXTERN boolean  remove_extracting_file_when_interrupt;
-#endif
-
 EXTERN int      archive_file_mode;
 EXTERN int      archive_file_gid;
 

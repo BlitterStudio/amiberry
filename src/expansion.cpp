@@ -957,24 +957,12 @@ addrbank uaeboard_bank = {
 };
 
 uae_u32 uaeboard_base; /* Determined by the OS */
-static uae_u32 uaeboard_ram_start;
 #define UAEBOARD_WRITEOFFSET 0x4000
 
 uae_u8 *uaeboard_map_ram(uaecptr p)
 {
 	p -= filesys_bank.start;
 	return filesys_bank.baseaddr + p;
-}
-
-uaecptr uaeboard_alloc_ram(uae_u32 size)
-{
-	uaecptr p;
-	size += 7;
-	size &= ~7;
-	p = uaeboard_ram_start + filesys_bank.start;
-	memset(filesys_bank.baseaddr + uaeboard_ram_start, 0, size);
-	uaeboard_ram_start += size;
-	return p;
 }
 
 static bool uaeboard_write(uaecptr addr)
@@ -1055,7 +1043,6 @@ static uae_u8 *REGPARAM2 uaeboard_xlate(uaecptr addr)
 static addrbank *expamem_map_uaeboard(struct autoconfig_info *aci)
 {
 	uaeboard_base = expamem_board_pointer;
-	uaeboard_ram_start = UAEBOARD_WRITEOFFSET;
 	uaeboard_bank.start = uaeboard_base;
 	map_banks_z2(&uaeboard_bank, uaeboard_base >> 16, 1);
 	return &uaeboard_bank;
@@ -1083,7 +1070,7 @@ static bool expamem_init_uaeboard(struct autoconfig_info *aci)
 	aci->set_params = set_params_filesys;
 
 	expamem_init_clear();
-	expamem_write(0x00, Z2_MEM_64KB | zorroII);
+	expamem_write(0x00, Z2_MEM_64KB | zorroII | (ks12));
 
 	expamem_write(0x08, no_shutup);
 
@@ -1177,7 +1164,7 @@ static bool fastmem_autoconfig(struct uae_prefs *p, struct autoconfig_info *aci,
 						   : allocated == 0x400000 ? Z3_SS_MEM_4MB
 						   : allocated == 0x800000 ? Z3_SS_MEM_8MB
 						   : Z3_SS_MEM_SAME);
-			struct ramboard *rb = &p->z3fastmem[boardnum];
+			rb = &p->z3fastmem[boardnum];
 			if (rb->autoconfig[0]) {
 				forceac = rb->autoconfig;
 			} else if (rb->manufacturer) {
@@ -1317,7 +1304,6 @@ static addrbank *expamem_map_filesys (struct autoconfig_info *aci)
 		return &filesys_bank;
 	mapped_malloc(&filesys_bank);
 	memcpy (filesys_bank.baseaddr, expamem, 0x3000);
-	uaeboard_ram_start = UAEBOARD_WRITEOFFSET;
 	map_banks_z2(&filesys_bank, filesys_bank.start >> 16, 1);
 	expamem_map_filesys_update();
 	return &filesys_bank;
@@ -1468,7 +1454,8 @@ static bool expamem_init_z3fastmem(struct autoconfig_info *aci)
 		code = Z3_MEM_16MB; /* Z3 physical board size is always at least 16M */
 
   expamem_init_clear();
-	fastmem_autoconfig(aci->prefs, aci, BOARD_AUTOCONFIG_Z3, add_memory | zorroIII | code, 1, size);
+	if (!fastmem_autoconfig(aci->prefs, aci, BOARD_AUTOCONFIG_Z3, add_memory | zorroIII | code, 1, size))
+		aci->zorro = -1;
 
 	memcpy(aci->autoconfig_raw, expamem, sizeof aci->autoconfig_raw);
 	aci->addrbankp = bank;
@@ -2462,7 +2449,6 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 	add_expansions(p, BOARD_AUTOCONFIG_Z3, NULL, 1);
 
 	add_expansions(p, BOARD_NONAUTOCONFIG_AFTER_Z3, NULL, 0);
-
 }
 
 void expansion_scan_autoconfig(struct uae_prefs *p, bool log)

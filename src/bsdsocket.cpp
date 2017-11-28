@@ -47,13 +47,13 @@ static struct sockd *sockdata;
 uae_u32 strncpyha(TrapContext *ctx, uae_u32 dst, const uae_char *src, int size)
 {
 	uae_u32 res = dst;
-  if (!addr_valid (_T("strncpyha"), dst, size))
-	  return res;
-  while (size--) {
-	  put_byte (dst++, *src);
-	  if (!*src++)
-		  return res;
-  }
+	if (!addr_valid(_T("strncpyha"), dst, size))
+		return res;
+	while (size--) {
+		put_byte (dst++, *src);
+		if (!*src++)
+			return res;
+	}
 	return res;
 }
 
@@ -61,9 +61,9 @@ uae_u32 addstr(TrapContext *ctx, uae_u32 * dst, const TCHAR *src)
 {
 	uae_u32 res = *dst;
 	int len;
-	char *s = ua (src);
-	len = strlen (s) + 1;
-	  strcpyha_safe (*dst, s);
+	char *s = ua(src);
+	len = strlen(s) + 1;
+	strcpyha_safe (*dst, s);
 	(*dst) += len;
 	xfree (s);
 	return res;
@@ -73,7 +73,7 @@ uae_u32 addstr_ansi(TrapContext *ctx, uae_u32 * dst, const uae_char *src)
 	uae_u32 res = *dst;
 	int len;
 	len = strlen (src) + 1;
-  strcpyha_safe (*dst, src);
+	strcpyha_safe (*dst, src);
 	(*dst) += len;
 	return res;
 }
@@ -84,7 +84,7 @@ uae_u32 addmem(TrapContext *ctx, uae_u32 * dst, const uae_char *src, int len)
 
 	if (!src)
 		return 0;
-  memcpyha_safe (*dst, (uae_u8*)src, len);
+	memcpyha_safe (*dst, (uae_u8*)src, len);
 	(*dst) += len;
 
 	return res;
@@ -105,8 +105,8 @@ static uae_u32 gettask (TrapContext *ctx)
 		uae_char name[256];
 		trap_get_string(ctx, name, trap_get_long(ctx, currtask + 10), sizeof name);
 		tskname = au(name);
-    BSDTRACE ((_T("[%s] "), tskname));
-    xfree (tskname);
+		BSDTRACE ((_T("[%s] "), tskname));
+		xfree (tskname);
 	}
 	return currtask;
 }
@@ -121,13 +121,13 @@ void bsdsocklib_seterrno (TrapContext *ctx, SB, int sb_errno)
 		switch (sb->errnosize) {
 		case 1:
 			trap_put_byte(ctx, sb->errnoptr, sb_errno);
-			break;
+		break;
 		case 2:
 			trap_put_word(ctx, sb->errnoptr, sb_errno);
-			break;
+		break;
 		case 4:
 			trap_put_long(ctx, sb->errnoptr, sb_errno);
-		  break;
+		break;
 		}
 	}
 }
@@ -140,13 +140,13 @@ void bsdsocklib_setherrno(TrapContext *ctx, SB, int sb_herrno)
 		switch (sb->herrnosize) {
 		case 1:
 			trap_put_byte(ctx, sb->herrnoptr, sb_herrno);
-			break;
+		break;
 		case 2:
 			trap_put_word(ctx, sb->herrnoptr, sb_herrno);
-			break;
+		break;
 		case 4:
 			trap_put_long(ctx, sb->herrnoptr, sb_herrno);
-		  break;
+		break;
 		}
 	}
 }
@@ -160,7 +160,7 @@ uae_u32 callfdcallback (TrapContext *ctx, SB, uae_u32 fd, uae_u32 action)
 	trap_call_add_dreg(ctx, 0, fd);
 	trap_call_add_dreg(ctx, 1, action);
 	v = trap_call_func(ctx, sb->fdcallback);
-	BSDTRACE((_T(" -> %d\n"), v));
+	BSDTRACE((_T("-> %d\n"), v));
 	return v;
 }
 
@@ -515,7 +515,7 @@ static uae_u32 REGPARAM2 bsdsocklib_Open (TrapContext *ctx)
 		trap_call_add_dreg(ctx, 1, 0);
 		result = trap_call_lib(ctx, sb->sysbase, -0x54); /* MakeLibrary */
 
-		put_pointer (result + offsetof (struct UAEBSDBase, sb), sb);
+		put_pointer(result + offsetof(struct UAEBSDBase, sb), sb);
 
 		BSDTRACE ((_T("%0x [%d]\n"), result, opencount));
 	} else
@@ -745,6 +745,7 @@ static int sockpoolindex (long id)
 	for (i = 0; i < SOCKPOOLSIZE; i++)
 		if (sockdata->sockpoolids[i] == id)
 			return i;
+
 	return -1;
 }
 
@@ -1262,7 +1263,7 @@ static uae_u32 sana2wiretextptrs[sizeof (sana2wire_errlist) / sizeof (*sana2wire
 static const uae_u32 number_sana2wire_error = sizeof (sana2wire_errlist) / sizeof (*sana2wire_errlist);
 
 
-static const TCHAR *io_errlist[] = 
+static const TCHAR *io_errlist[] =
 { 
   _T("Unknown error"),			/* 0 */
   _T("Device or unit failed to open"),	/* IOERR_OPENFAIL */
@@ -1588,7 +1589,7 @@ done:
 
 static uae_u32 REGPARAM2 bsdsocklib_GetSocketEvents(TrapContext *ctx)
 {
-#ifdef _WIN32
+#ifdef _WIN32_
 	struct socketbase *sb = get_socketbase(ctx);
 	int i;
 	int flags;

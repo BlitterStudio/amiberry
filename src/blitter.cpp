@@ -173,7 +173,6 @@ static int get_cycle_diagram_type (const int *diag)
 		return 0x82;
 	return 0xff;
 }
-
 static const int *set_cycle_diagram_type (uae_u8 diag)
 {
 	if (diag >= 0x00 && diag <= 0x0f)
@@ -264,19 +263,19 @@ static void blitter_dofast(void)
   uaecptr bltadatptr = 0, bltbdatptr = 0, bltcdatptr = 0, bltddatptr = 0;
   uae_u8 mt = bltcon0 & 0xFF;
 
-  blit_masktable[BLITTER_MAX_WORDS - 1] = blt_info.bltafwm;
-  blit_masktable[BLITTER_MAX_WORDS - blt_info.hblitsize] &= blt_info.bltalwm;
+	blit_masktable[0] = blt_info.bltafwm;
+	blit_masktable[blt_info.hblitsize - 1] &= blt_info.bltalwm;
 
   if (bltcon0 & 0x800) {
-	  bltadatptr = (uaecptr)get_real_address(bltapt);
+	  bltadatptr = (uaecptr)&chipmem_bank.baseaddr[bltapt & chipmem_full_mask];
 	  bltapt += (blt_info.hblitsize * 2 + blt_info.bltamod) * blt_info.vblitsize;
   }
   if (bltcon0 & 0x400) {
-	  bltbdatptr = (uaecptr)get_real_address(bltbpt);
+	  bltbdatptr = (uaecptr)&chipmem_bank.baseaddr[bltbpt & chipmem_full_mask];
 	  bltbpt += (blt_info.hblitsize * 2 + blt_info.bltbmod) * blt_info.vblitsize;
   }
   if (bltcon0 & 0x200) {
-	  bltcdatptr = (uaecptr)get_real_address(bltcpt);
+	  bltcdatptr = (uaecptr)&chipmem_bank.baseaddr[bltcpt & chipmem_full_mask];
 	  bltcpt += (blt_info.hblitsize * 2 + blt_info.bltcmod) * blt_info.vblitsize;
   }
   if (bltcon0 & 0x100) {
@@ -289,28 +288,28 @@ static void blitter_dofast(void)
 	} else {
 	  uae_u32 blitbhold = blt_info.bltbhold;
 	  uaecptr dstp = 0;
-	  uae_u32 *blit_masktable_p = blit_masktable + BLITTER_MAX_WORDS - blt_info.hblitsize;
 
-  	for (j = blt_info.vblitsize; j--;) {
+		for (j = 0; j < blt_info.vblitsize; j++) {
 	    blitfc = !!(bltcon1 & 0x4);
-	    for (i = blt_info.hblitsize; i--;) {
+			for (i = 0; i < blt_info.hblitsize; i++) {
 		    uae_u32 bltadat, blitahold;
 		    if (bltadatptr) {
 		      blt_info.bltadat = bltadat = do_get_mem_word ((uae_u16 *)bltadatptr);
 		      bltadatptr += 2;
     		} else
   		    bltadat = blt_info.bltadat;
-		    bltadat &= blit_masktable_p[i];
+		    bltadat &= blit_masktable[i];
 				blitahold = (((uae_u32)blt_info.bltaold << 16) | bltadat) >> blt_info.blitashift;
 				blt_info.bltaold = bltadat;
 
     		if (bltbdatptr) {
-		      uae_u16 bltbdat;
-		      blt_info.bltbdat = bltbdat = do_get_mem_word ((uae_u16 *)bltbdatptr);
+		      uae_u16 bltbdat = do_get_mem_word ((uae_u16 *)bltbdatptr);;
 		      bltbdatptr += 2;
 					blitbhold = (((uae_u32)blt_info.bltbold << 16) | bltbdat) >> blt_info.blitbshift;
 					blt_info.bltbold = bltbdat;
+					blt_info.bltbdat = bltbdat;
 		    }
+
     		if (bltcdatptr) {
 		      blt_info.bltcdat = do_get_mem_word ((uae_u16 *)bltcdatptr);
 		      bltcdatptr += 2;
@@ -346,8 +345,8 @@ static void blitter_dofast(void)
 	    chipmem_agnus_wput2 (dstp, blt_info.bltddat);
 	  blt_info.bltbhold = blitbhold;
   }
-  blit_masktable[BLITTER_MAX_WORDS - 1] = 0xFFFF;
-  blit_masktable[BLITTER_MAX_WORDS - blt_info.hblitsize] = 0xFFFF;
+	blit_masktable[0] = 0xFFFF;
+	blit_masktable[blt_info.hblitsize - 1] = 0xFFFF;
 
   bltstate = BLT_done;
 }
@@ -358,19 +357,19 @@ static void blitter_dofast_desc(void)
   uaecptr bltadatptr = 0, bltbdatptr = 0, bltcdatptr = 0, bltddatptr = 0;
   uae_u8 mt = bltcon0 & 0xFF;
 
-  blit_masktable[BLITTER_MAX_WORDS - 1] = blt_info.bltafwm;
-  blit_masktable[BLITTER_MAX_WORDS - blt_info.hblitsize] &= blt_info.bltalwm;
+	blit_masktable[0] = blt_info.bltafwm;
+	blit_masktable[blt_info.hblitsize - 1] &= blt_info.bltalwm;
 
   if (bltcon0 & 0x800) {
-	  bltadatptr = (uaecptr)get_real_address(bltapt);
+	  bltadatptr = (uaecptr)&chipmem_bank.baseaddr[bltapt & chipmem_full_mask];
 	  bltapt -= (blt_info.hblitsize * 2 + blt_info.bltamod) * blt_info.vblitsize;
   }
   if (bltcon0 & 0x400) {
-	  bltbdatptr = (uaecptr)get_real_address(bltbpt);
+	  bltbdatptr = (uaecptr)&chipmem_bank.baseaddr[bltbpt & chipmem_full_mask];
 	  bltbpt -= (blt_info.hblitsize * 2 + blt_info.bltbmod) * blt_info.vblitsize;
   }
   if (bltcon0 & 0x200) {
-	  bltcdatptr = (uaecptr)get_real_address(bltcpt);
+	  bltcdatptr = (uaecptr)&chipmem_bank.baseaddr[bltcpt & chipmem_full_mask];
 	  bltcpt -= (blt_info.hblitsize * 2 + blt_info.bltcmod) * blt_info.vblitsize;
   }
   if (bltcon0 & 0x100) {
@@ -382,27 +381,26 @@ static void blitter_dofast_desc(void)
 	} else {
 	  uae_u32 blitbhold = blt_info.bltbhold;
 	  uaecptr dstp = 0;
-	  uae_u32 *blit_masktable_p = blit_masktable + BLITTER_MAX_WORDS - blt_info.hblitsize;
 
-	  for (j = blt_info.vblitsize; j--;) {
+		for (j = 0; j < blt_info.vblitsize; j++) {
 			blitfc = !!(bltcon1 & 0x4);
-	    for (i = blt_info.hblitsize; i--;) {
+			for (i = 0; i < blt_info.hblitsize; i++) {
 				uae_u32 bltadat, blitahold;
 				if (bltadatptr) {
 		      bltadat = blt_info.bltadat = do_get_mem_word ((uae_u16 *)bltadatptr);
 					bltadatptr -= 2;
 				} else
 					bltadat = blt_info.bltadat;
-				bltadat &= blit_masktable_p[i];
+				bltadat &= blit_masktable[i];
 				blitahold = (((uae_u32)bltadat << 16) | blt_info.bltaold) >> blt_info.blitdownashift;
 				blt_info.bltaold = bltadat;
 
 				if (bltbdatptr) {
-		      uae_u16 bltbdat;
-		      blt_info.bltbdat = bltbdat = do_get_mem_word ((uae_u16 *)bltbdatptr);
+		      uae_u16 bltbdat = do_get_mem_word ((uae_u16 *)bltbdatptr);
 					  bltbdatptr -= 2;
 					blitbhold = (((uae_u32)bltbdat << 16) | blt_info.bltbold) >> blt_info.blitdownbshift;
 					blt_info.bltbold = bltbdat;
+					blt_info.bltbdat = bltbdat;
 				  }
 
 				  if (bltcdatptr) {
@@ -440,8 +438,8 @@ static void blitter_dofast_desc(void)
 	    chipmem_agnus_wput2 (dstp, blt_info.bltddat);
 		blt_info.bltbhold = blitbhold;
 	}
-  blit_masktable[BLITTER_MAX_WORDS - 1] = 0xFFFF;
-  blit_masktable[BLITTER_MAX_WORDS - blt_info.hblitsize] = 0xFFFF;
+	blit_masktable[0] = 0xFFFF;
+	blit_masktable[blt_info.hblitsize - 1] = 0xFFFF;
 
   bltstate = BLT_done;
 }
@@ -494,10 +492,11 @@ STATIC_INLINE void blitter_line_incy(void)
 static int blitter_line(void)
 {
 	uae_u16 blitahold = (blinea & blt_info.bltafwm) >> blinea_shift;
+	uae_u16 blitchold = blt_info.bltcdat;
 
 	blt_info.bltbhold = (blineb & 1) ? 0xFFFF : 0;
 	int blitlinepixel = !blitsing || (blitsing && !blitonedot);
-	blt_info.bltddat = blit_func (blitahold, blt_info.bltbhold, blt_info.bltcdat, bltcon0 & 0xFF);
+	blt_info.bltddat = blit_func (blitahold, blt_info.bltbhold, blitchold, bltcon0 & 0xFF);
 	blitonedot++;
 
 	if (bltcon0 & 0x800) {
@@ -707,9 +706,7 @@ void reset_blit (int bltcon)
 
 static bool waitingblits (void)
 {
-	bool waited = false;
 	while (bltstate != BLT_done && dmaen (DMA_BLITTER)) {
-		waited = true;
 		x_do_cycles (8 * CYCLE_UNIT);
 	}
 	if (bltstate == BLT_done)

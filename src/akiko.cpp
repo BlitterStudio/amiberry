@@ -634,12 +634,11 @@ static void cdrom_return_data (void)
 		put_byte (cmd_buf + cdcomrxinx, cdrom_last_rx);
 		cdcomrxinx++;
 		cdrom_receive_offset++;
-	  if (cdcomrxinx == cdcomrxcmp) {
-	    set_status (CDINTERRUPT_RXDMADONE);
+		if (cdcomrxinx == cdcomrxcmp) {
+			set_status(CDINTERRUPT_RXDMADONE);
 			break;
-	  }
+		}
 	}
-
 	if (cdrom_receive_offset == cdrom_receive_length) {
 		cdrom_receive_length = 0;
 		cdrom_receive_offset = 0;
@@ -801,11 +800,11 @@ static int cdrom_command_multi (void)
 		} else {
 			cdrom_toc_counter = -1;
 			cdrom_result_buffer[1] = 0x42; // play command starting?
-		  cdrom_playing = 1;
-		  if (!cd_play_audio (seekpos, endpos, 0)) {
-			  // play didn't start, report it in next status packet
-			  cdrom_audiotimeout = -3;
-		  }
+			cdrom_playing = 1;
+			if (!cd_play_audio (seekpos, endpos, 0)) {
+				// play didn't start, report it in next status packet
+				cdrom_audiotimeout = -3;
+			}
 		}
 	}
 	return 2;
@@ -890,7 +889,7 @@ static void cdrom_run_command (void)
 	if (!(cdrom_flags & CDFLAG_TXD))
 		return;
 	if (cdrom_flags & CDFLAG_ENABLE)
-			return;
+		return;
 	if (cdcomtxinx == cdcomtxcmp)
 		return;
 	if (cdrom_tx_dma_delay > 0)
@@ -903,7 +902,7 @@ static void cdrom_run_command (void)
 	cdcomtxinx++;
 
 	if (cdcomtxinx == cdcomtxcmp) {
-		set_status (CDINTERRUPT_TXDMADONE);
+		set_status(CDINTERRUPT_TXDMADONE);
 	}
 }
 
@@ -1074,7 +1073,7 @@ static void akiko_handler (bool framesync)
 		cdrom_audiotimeout--;
 	if (cdrom_audiotimeout == 1 && cdrom_can_return_data()) { // play start
 		if (!cdrom_playing)
-		  cdrom_playing = 1;
+			cdrom_playing = 1;
 		if (cdrom_playing == 1)
 			cdrom_start_return_data (cdrom_playend_notify (0));
 		cdrom_playing = 2;
@@ -1100,7 +1099,7 @@ static void akiko_handler (bool framesync)
 
 	/* one toc entry / frame */
 	if (cdrom_toc_counter >= 0 && !cdrom_command_active && framesync && cdrom_can_return_data()) {
-	  cdrom_start_return_data (cdrom_return_toc_entry ());
+		cdrom_start_return_data (cdrom_return_toc_entry ());
 	}
 }
 
@@ -1234,12 +1233,12 @@ static void *akiko_thread (void *null)
 						write_log (_T("CD32: CD missing but statefile was stored with CD inserted: faking media present\n"));
 					lastmediastate = 3;
 				} else {
-				  write_log (_T("CD32: media changed = %d\n"), media);
-				  lastmediastate = cdrom_disk = media;
-				  mediachanged = 1;
-				  cdaudiostop_do ();
-			  }
-		  }
+					write_log (_T("CD32: media changed = %d\n"), media);
+					lastmediastate = cdrom_disk = media;
+					mediachanged = 1;
+					cdaudiostop_do ();
+				}
+			}
 		}
 
 		uae_sem_wait (&akiko_sem);
@@ -1249,7 +1248,7 @@ static void *akiko_thread (void *null)
 				break;
 		}
 		if (sector >= 0 && is_valid_data_sector(sector) &&
-		(sector_buffer_sector_1 < 0 || sector < sector_buffer_sector_1 || sector >= sector_buffer_sector_1 + SECTOR_BUFFER_SIZE * 2 / 3 || i != SECTOR_BUFFER_SIZE)) {
+			(sector_buffer_sector_1 < 0 || sector < sector_buffer_sector_1 || sector >= sector_buffer_sector_1 + SECTOR_BUFFER_SIZE * 2 / 3 || i != SECTOR_BUFFER_SIZE)) {
 			int blocks;
 			memset (sector_buffer_info_2, 0, SECTOR_BUFFER_SIZE);
 			sector_buffer_sector_2 = sector;
@@ -1265,13 +1264,13 @@ static void *akiko_thread (void *null)
 				int ok = sys_command_cd_rawread (unitnum, sector_buffer_2, sector, blocks, 2352);
 				if (!ok) {
 					int offset = 0;
-				  while (offset < SECTOR_BUFFER_SIZE) {
-					  int ok = 0;
-							if (is_valid_data_sector(sector))
-						  ok = sys_command_cd_rawread (unitnum, sector_buffer_2 + offset * 2352, sector, 1, 2352);
-					  sector_buffer_info_2[offset] = ok ? 3 : 0;
-					  offset++;
-					  sector++;
+					while (offset < SECTOR_BUFFER_SIZE) {
+						int ok = 0;
+						if (is_valid_data_sector(sector))
+							ok = sys_command_cd_rawread (unitnum, sector_buffer_2 + offset * 2352, sector, 1, 2352);
+						sector_buffer_info_2[offset] = ok ? 3 : 0;
+						offset++;
+						sector++;
 					}
 				} else {
 					for (int i = 0; i < SECTOR_BUFFER_SIZE; i++)
@@ -1342,7 +1341,6 @@ static uae_u32 akiko_bget2 (uaecptr addr, int msg)
 		if (currprefs.cs_cd32nvram)
 			v =  akiko_nvram_read (addr - 0x30);
 		return v;
-
 		/* C2P */
 	case 0x38:
 	case 0x39:
@@ -1360,20 +1358,18 @@ static uae_u32 akiko_bget2 (uaecptr addr, int msg)
 	switch (addr)
 	{
 		/* CDROM control */
-	  case 0x04:
-	  case 0x05:
-	  case 0x06:
-	  case 0x07:
-		  v = akiko_get_long (cdrom_intreq, addr - 0x04);
-		  break;
-
-	  case 0x08:
-	  case 0x09:
-	  case 0x0a:
-	  case 0x0b:
-		  v = akiko_get_long (cdrom_intena, addr - 0x08);
-		  break;
-
+		case 0x04:
+		case 0x05:
+		case 0x06:
+		case 0x07:
+			v = akiko_get_long (cdrom_intreq, addr - 0x04);
+			break;
+		case 0x08:
+		case 0x09:
+		case 0x0a:
+		case 0x0b:
+			v = akiko_get_long(cdrom_intena, addr - 0x08);
+			break;
 		case 0x0c:
 		case 0x0d:
 		case 0x0e:
@@ -1384,42 +1380,41 @@ static uae_u32 akiko_bget2 (uaecptr addr, int msg)
 
 		// 0x18-0x1b are mirrored to 0x10, 0x14 and 0x1c
 		case 0x18:
-	  case 0x10:
-	  case 0x14:
+		case 0x10:
+		case 0x14:
 		case 0x1c:
-		  v = cdrom_subcodeoffset;
-		  break;
-	  case 0x19:
+			v = cdrom_subcodeoffset;
+			break;
+		case 0x19:
 		case 0x11:
 		case 0x15:
 		case 0x1d:
-		  v = cdcomtxinx;
-		  break;
-	  case 0x1a:
+			v = cdcomtxinx;
+			break;
+		case 0x1a:
 		case 0x12:
 		case 0x16:
 		case 0x1e:
-		  v = cdcomrxinx;
-		  break;
+			v = cdcomrxinx;
+			break;
 		case 0x1b:
 
 		case 0x13:
 		case 0x17:
-	  case 0x1f:
+		case 0x1f:
 			v = 0;
-		  break;
+			break;
 
-	  case 0x20:
-	  case 0x21:
-		  v = akiko_get_long (cdrom_pbx, addr - 0x20 + 2);
-		  break;
-
-	  case 0x24:
-	  case 0x25:
-	  case 0x26:
-	  case 0x27:
-		  v = akiko_get_long (cdrom_flags, addr - 0x24);
-		  break;
+		case 0x20:
+		case 0x21:
+			v = akiko_get_long (cdrom_pbx, addr - 0x20 + 2);
+			break;
+		case 0x24:
+		case 0x25:
+		case 0x26:
+		case 0x27:
+			v = akiko_get_long (cdrom_flags, addr - 0x24);
+			break;
 
 		case 0x28:
 			if (!(cdrom_flags & CDFLAG_RXD) && cdrom_receive_offset < cdrom_receive_length) {
@@ -1433,12 +1428,12 @@ static uae_u32 akiko_bget2 (uaecptr addr, int msg)
 				cdrom_intreq &= ~CDINTERRUPT_DRIVERECV;
 			}
 			v = cdrom_last_rx;
-			  break;
+			break;
 
-	  default:
-		  write_log (_T("akiko_bget: unknown address %08X PC=%08X\n"), addr, M68K_GETPC);
-		  v = 0;
-		  break;
+		default:
+			write_log (_T("akiko_bget: unknown address %08X PC=%08X\n"), addr, M68K_GETPC);
+			v = 0;
+			break;
 	}
 	akiko_internal ();
 	uae_sem_post (&akiko_sem);
@@ -1523,90 +1518,90 @@ static void akiko_bput2 (uaecptr addr, uae_u32 v, int msg)
 	uae_sem_wait (&akiko_sem);
 	switch (addr)
 	{
-	  case 0x08:
-	  case 0x09:
-	  case 0x0a:
-	  case 0x0b:
-		  akiko_put_long (&cdrom_intena, addr - 0x08, v);
-		  cdrom_intena &= 0xff000000;
-		  break;
-	  case 0x10:
-	  case 0x11:
-	  case 0x12:
-	  case 0x13:
-		  akiko_put_long (&cdrom_addressdata, addr - 0x10, v);
-		  cdrom_addressdata &= 0x00fff000;
-		  break;
-	  case 0x14:
-	  case 0x15:
-	  case 0x16:
-	  case 0x17:
-		  akiko_put_long (&cdrom_addressmisc, addr - 0x14, v);
-		  cdrom_addressmisc &= 0x00fffc00;
-		  subcode_address = cdrom_addressmisc | 0x100;
-		  cdrx_address = cdrom_addressmisc;
-		  cdtx_address = cdrom_addressmisc | 0x200;
-		  break;
-	  case 0x18:
-		  cdrom_intreq &= ~CDINTERRUPT_SUBCODE;
-		  break;
-	  case 0x1d:
-		  cdrom_intreq &= ~CDINTERRUPT_TXDMADONE;
-		  cdcomtxcmp = v;
-		  cdrom_tx_dma_delay = 3;
-		  break;
-	  case 0x1f:
-		  cdrom_intreq &= ~CDINTERRUPT_RXDMADONE;
-		  cdcomrxcmp = v;
-		  cdrom_rx_dma_delay = 3;
-		  break;
-	  case 0x20:
-	  case 0x21:
-		  tmp = cdrom_pbx;
-		  akiko_put_long (&cdrom_pbx, addr - 0x20 + 2, v);
-		  cdrom_pbx |= tmp;
-		  cdrom_pbx &= 0xffff;
-		  // cdrom_pbx stays zeroed if disabled.
-		  if (!(cdrom_flags & CDFLAG_PBX))
-			  cdrom_pbx = 0x0000;
-		  cdrom_intreq &= ~CDINTERRUPT_PBX;
-		  break;
-	  case 0x24:
-	  case 0x25:
-	  case 0x26:
-	  case 0x27:
-		  tmp = cdrom_flags;
-		  akiko_put_long (&cdrom_flags, addr - 0x24, v);
-		  if ((cdrom_flags & CDFLAG_ENABLE) && !(tmp & CDFLAG_ENABLE)) {
-			    cdrom_sector_counter = 0;
-			  cdrom_intreq &= ~CDINTERRUPT_OVERFLOW;
-		  }
-		  if (!(cdrom_flags & CDFLAG_PBX)) {
-			  cdrom_pbx = 0x0000;
-		  }
-		  if ((cdrom_flags & CDFLAG_SUBCODE) && !(tmp & CDFLAG_SUBCODE)) {
-			  uae_sem_wait (&sub_sem);
-			  memset (subcodebufferinuse, 0, sizeof subcodebufferinuse);
-			  subcodebufferoffset = subcodebufferoffsetw = 0;
-			  uae_sem_post (&sub_sem);
-		  }
-		  cdrom_flags &= 0xff800000;
-		  break;
-	  case 0x28:
-		  if (!(cdrom_flags & CDFLAG_TXD)) {
-			  cdrom_intreq &= ~CDINTERRUPT_DRIVEXMIT;
-			  if (can_send_command()) {
-				  cdrom_add_command_byte(v);
-				  if (can_send_command()) {
-					  set_status(CDINTERRUPT_DRIVEXMIT);
-				  }
-			  }
-		  }
-			  break;
+	case 0x08:
+	case 0x09:
+	case 0x0a:
+	case 0x0b:
+		akiko_put_long (&cdrom_intena, addr - 0x08, v);
+		cdrom_intena &= 0xff000000;
+		break;
+	case 0x10:
+	case 0x11:
+	case 0x12:
+	case 0x13:
+		akiko_put_long (&cdrom_addressdata, addr - 0x10, v);
+		cdrom_addressdata &= 0x00fff000;
+		break;
+	case 0x14:
+	case 0x15:
+	case 0x16:
+	case 0x17:
+		akiko_put_long (&cdrom_addressmisc, addr - 0x14, v);
+		cdrom_addressmisc &= 0x00fffc00;
+		subcode_address = cdrom_addressmisc | 0x100;
+		cdrx_address = cdrom_addressmisc;
+		cdtx_address = cdrom_addressmisc | 0x200;
+		break;
+	case 0x18:
+		cdrom_intreq &= ~CDINTERRUPT_SUBCODE;
+		break;
+	case 0x1d:
+		cdrom_intreq &= ~CDINTERRUPT_TXDMADONE;
+		cdcomtxcmp = v;
+		cdrom_tx_dma_delay = 3;
+		break;
+	case 0x1f:
+		cdrom_intreq &= ~CDINTERRUPT_RXDMADONE;
+		cdcomrxcmp = v;
+		cdrom_rx_dma_delay = 3;
+		break;
+	case 0x20:
+	case 0x21:
+		tmp = cdrom_pbx;
+		akiko_put_long (&cdrom_pbx, addr - 0x20 + 2, v);
+		cdrom_pbx |= tmp;
+		cdrom_pbx &= 0xffff;
+		// cdrom_pbx stays zeroed if disabled.
+		if (!(cdrom_flags & CDFLAG_PBX))
+			cdrom_pbx = 0x0000;
+		cdrom_intreq &= ~CDINTERRUPT_PBX;
+		break;
+	case 0x24:
+	case 0x25:
+	case 0x26:
+	case 0x27:
+		tmp = cdrom_flags;
+		akiko_put_long (&cdrom_flags, addr - 0x24, v);
+		if ((cdrom_flags & CDFLAG_ENABLE) && !(tmp & CDFLAG_ENABLE)) {
+			cdrom_sector_counter = 0;
+			cdrom_intreq &= ~CDINTERRUPT_OVERFLOW;
+		}
+		if (!(cdrom_flags & CDFLAG_PBX)) {
+			cdrom_pbx = 0x0000;
+		}
+		if ((cdrom_flags & CDFLAG_SUBCODE) && !(tmp & CDFLAG_SUBCODE)) {
+			uae_sem_wait (&sub_sem);
+			memset (subcodebufferinuse, 0, sizeof subcodebufferinuse);
+			subcodebufferoffset = subcodebufferoffsetw = 0;
+			uae_sem_post (&sub_sem);
+		}
+		cdrom_flags &= 0xff800000;
+		break;
+	case 0x28:
+		if (!(cdrom_flags & CDFLAG_TXD)) {
+			cdrom_intreq &= ~CDINTERRUPT_DRIVEXMIT;
+			if (can_send_command()) {
+				cdrom_add_command_byte(v);
+				if (can_send_command()) {
+					set_status(CDINTERRUPT_DRIVEXMIT);
+				}
+			}
+		}
+		break;
 
-	  default:
-		  write_log (_T("akiko_bput: unknown address %08X=%02X PC=%08X\n"), addr, v & 0xff, M68K_GETPC);
-		  break;
+	default:
+		write_log (_T("akiko_bput: unknown address %08X=%02X PC=%08X\n"), addr, v & 0xff, M68K_GETPC);
+		break;
 	}
 	akiko_internal ();
 	uae_sem_post (&akiko_sem);
@@ -1660,21 +1655,21 @@ static void patchrom (void)
 	if (currprefs.cpu_model > 68020 || currprefs.cachesize || currprefs.m68k_speed != 0) {
 		uae_u8 *p = extendedkickmem_bank.baseaddr;
 		if (p) {
-		  for (i = 0; i < 524288 - sizeof (patchdata); i++) {
-			  if (!memcmp (p + i, patchdata, sizeof(patchdata))) {
-				  protect_roms (false);
-				  p[i + 6] = 0x4e;
-				  p[i + 7] = 0x71;
-				  p[i + 8] = 0x4e;
-				  p[i + 9] = 0x71;
-				  protect_roms (true);
+			for (i = 0; i < 524288 - sizeof (patchdata); i++) {
+				if (!memcmp (p + i, patchdata, sizeof(patchdata))) {
+					protect_roms (false);
+					p[i + 6] = 0x4e;
+					p[i + 7] = 0x71;
+					p[i + 8] = 0x4e;
+					p[i + 9] = 0x71;
+					protect_roms (true);
 					write_log (_T("CD32: extended rom delay loop patched at 0x%08x\n"), i + 6 + 0xe00000);
-				  return;
-			  }
-		  }
+					return;
+				}
+			}
 			write_log (_T("CD32: couldn't patch extended rom\n"));
-	  }
-  }
+		}
+	}
 }
 
 static void akiko_cdrom_free (void)

@@ -68,8 +68,6 @@ static uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
 	if (addr & 1)
 		return 0;
 
-	uaecptr addr2 = addr - RTAREA_TRAP_STATUS;
-
 	return (rtarea_bank.baseaddr[addr] << 8) + rtarea_bank.baseaddr[addr + 1];
 }
 static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
@@ -80,7 +78,7 @@ static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 		rtarea_bank.baseaddr[addr] = atomic_bit_test_and_reset(&uae_int_requested, 0);
 		//write_log(rtarea_bank.baseaddr[addr] ? _T("+") : _T("-"));
 	} else if (addr == RTAREA_INTREQ + 1) {
-		rtarea_bank.baseaddr[addr] = false;
+		rtarea_bank.baseaddr[addr] = 0;
 	} else if (addr == RTAREA_INTREQ + 2) {
 			rtarea_bank.baseaddr[addr] = 0;
 	}	
@@ -117,8 +115,6 @@ static void REGPARAM2 rtarea_wput (uaecptr addr, uae_u32 value)
 
 	if (!rtarea_write(addr))
 		return;
-
-	uaecptr addr2 = addr - RTAREA_TRAP_STATUS;
 
 	rtarea_bank.baseaddr[addr + 0] = value >> 8;
 	rtarea_bank.baseaddr[addr + 1] = (uae_u8)value;

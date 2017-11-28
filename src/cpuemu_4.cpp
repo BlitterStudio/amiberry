@@ -12843,6 +12843,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c90_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -12868,6 +12869,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c98_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 	m68k_areg (regs, dstreg) = srca;
 }}}	m68k_incpc (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
@@ -12894,6 +12896,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ca8_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -12919,6 +12922,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cb0_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -12943,6 +12947,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cb8_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -12967,6 +12972,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cb9_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (8);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -12993,6 +12999,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cba_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13020,6 +13027,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cbb_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 4 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13045,6 +13053,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cd0_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13070,6 +13079,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cd8_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 	m68k_areg (regs, dstreg) = srca;
 }}}	m68k_incpc (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
@@ -13096,6 +13106,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ce8_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13121,6 +13132,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cf0_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13145,6 +13157,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cf8_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13169,6 +13182,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cf9_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (8);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13195,6 +13209,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cfa_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13222,6 +13237,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cfb_4)(uae_u32 opcode)
 		amask = movem_next[amask];
 		count_cycles += 8 * CYCLE_UNIT / 2;
 	}
+	get_word (srca);
 }}}	m68k_incpc (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 }
@@ -13332,7 +13348,6 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_4)(uae_u32 opcode)
 		if (frame == 0x0) { m68k_areg (regs, 7) += offset; break; }
 		else if (frame == 0x1) { m68k_areg (regs, 7) += offset; }
 		else if (frame == 0x2) { m68k_areg (regs, 7) += offset + 4; break; }
-		else if (frame == 0x4) { m68k_areg (regs, 7) += offset + 8; break; }
 		else if (frame == 0x8) { m68k_areg (regs, 7) += offset + 50; break; }
 		else { m68k_areg (regs, 7) += offset; Exception_cpu(14); return 4 * CYCLE_UNIT / 2; }
 		regs.sr = newsr;
@@ -26033,6 +26048,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e000_4)(uae_u32 opcode)
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
 	uae_u32 sign = (0x80 & val) >> 7;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -26049,7 +26065,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e000_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26064,6 +26080,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e008_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -26078,7 +26095,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e008_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26093,6 +26110,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e010_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	cnt--;
@@ -26110,7 +26128,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e010_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26125,6 +26143,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e018_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	uae_u32 hival;
@@ -26137,7 +26156,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e018_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26153,6 +26172,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e020_4)(uae_u32 opcode)
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
 	uae_u32 sign = (0x80 & val) >> 7;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -26169,7 +26189,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e020_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26184,6 +26204,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e028_4)(uae_u32 opcode)
 {{	uae_s8 cnt = m68k_dreg (regs, srcreg);
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -26198,7 +26219,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e028_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26213,6 +26234,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e030_4)(uae_u32 opcode)
 {{	uae_s8 cnt = m68k_dreg (regs, srcreg);
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 36) cnt -= 36;
@@ -26234,7 +26256,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e030_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26249,6 +26271,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e038_4)(uae_u32 opcode)
 {{	uae_s8 cnt = m68k_dreg (regs, srcreg);
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt > 0) {	uae_u32 hival;
@@ -26261,7 +26284,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e038_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26277,6 +26300,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e040_4)(uae_u32 opcode)
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
 	uae_u32 sign = (0x8000 & val) >> 15;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -26293,7 +26317,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e040_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26311,6 +26335,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e048_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -26325,7 +26350,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e048_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26340,6 +26365,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e050_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	cnt--;
@@ -26357,7 +26383,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e050_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26372,6 +26398,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e058_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	uae_u32 hival;
@@ -26384,7 +26411,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e058_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26400,6 +26427,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e060_4)(uae_u32 opcode)
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
 	uae_u32 sign = (0x8000 & val) >> 15;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -26416,7 +26444,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e060_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26431,6 +26459,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e068_4)(uae_u32 opcode)
 {{	uae_s16 cnt = m68k_dreg (regs, srcreg);
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -26445,7 +26474,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e068_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26460,6 +26489,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e070_4)(uae_u32 opcode)
 {{	uae_s16 cnt = m68k_dreg (regs, srcreg);
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 34) cnt -= 34;
@@ -26480,7 +26510,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e070_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26495,6 +26525,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e078_4)(uae_u32 opcode)
 {{	uae_s16 cnt = m68k_dreg (regs, srcreg);
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt > 0) {	uae_u32 hival;
@@ -26507,7 +26538,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e078_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26523,6 +26554,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e080_4)(uae_u32 opcode)
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
 	uae_u32 sign = (0x80000000 & val) >> 31;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -26539,7 +26571,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e080_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26554,6 +26586,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e088_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -26568,7 +26601,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e088_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26583,6 +26616,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e090_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	cnt--;
@@ -26600,7 +26634,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e090_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26615,6 +26649,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e098_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	uae_u32 hival;
@@ -26627,7 +26662,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e098_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26643,6 +26678,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0a0_4)(uae_u32 opcode)
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
 	uae_u32 sign = (0x80000000 & val) >> 31;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -26659,7 +26695,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0a0_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26674,6 +26710,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0a8_4)(uae_u32 opcode)
 {{	uae_s32 cnt = m68k_dreg (regs, srcreg);
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -26688,7 +26725,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0a8_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26703,6 +26740,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0b0_4)(uae_u32 opcode)
 {{	uae_s32 cnt = m68k_dreg (regs, srcreg);
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 33) cnt -= 33;
@@ -26722,7 +26760,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0b0_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26737,6 +26775,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0b8_4)(uae_u32 opcode)
 {{	uae_s32 cnt = m68k_dreg (regs, srcreg);
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt > 0) {	uae_u32 hival;
@@ -26749,7 +26788,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0b8_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -26911,6 +26950,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e100_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -26929,7 +26969,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e100_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26944,6 +26984,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e108_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -26959,7 +27000,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e108_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -26974,6 +27015,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e110_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	cnt--;
@@ -26988,7 +27030,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e110_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27003,6 +27045,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e118_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	uae_u32 loval;
@@ -27015,7 +27058,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e118_4)(uae_u32 opcode)
 }
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27030,6 +27073,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e120_4)(uae_u32 opcode)
 {{	uae_s8 cnt = m68k_dreg (regs, srcreg);
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -27048,7 +27092,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e120_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27063,6 +27107,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e128_4)(uae_u32 opcode)
 {{	uae_s8 cnt = m68k_dreg (regs, srcreg);
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 8) {
@@ -27078,7 +27123,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e128_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27093,6 +27138,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e130_4)(uae_u32 opcode)
 {{	uae_s8 cnt = m68k_dreg (regs, srcreg);
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 36) cnt -= 36;
@@ -27111,7 +27157,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e130_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27126,6 +27172,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e138_4)(uae_u32 opcode)
 {{	uae_s8 cnt = m68k_dreg (regs, srcreg);
 {	uae_s8 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u8)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt > 0) {
@@ -27139,7 +27186,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e138_4)(uae_u32 opcode)
 }
 	SET_ZFLG (((uae_s8)(val)) == 0);
 	SET_NFLG (((uae_s8)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xff) | ((val) & 0xff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27154,6 +27201,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e140_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -27172,7 +27220,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e140_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27187,6 +27235,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e148_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -27202,7 +27251,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e148_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27217,6 +27266,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e150_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	cnt--;
@@ -27231,7 +27281,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e150_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27246,6 +27296,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e158_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	uae_u32 loval;
@@ -27258,7 +27309,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e158_4)(uae_u32 opcode)
 }
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27273,6 +27324,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e160_4)(uae_u32 opcode)
 {{	uae_s16 cnt = m68k_dreg (regs, srcreg);
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -27291,7 +27343,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e160_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27306,6 +27358,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e168_4)(uae_u32 opcode)
 {{	uae_s16 cnt = m68k_dreg (regs, srcreg);
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 16) {
@@ -27321,7 +27374,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e168_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27336,6 +27389,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e170_4)(uae_u32 opcode)
 {{	uae_s16 cnt = m68k_dreg (regs, srcreg);
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 34) cnt -= 34;
@@ -27353,7 +27407,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e170_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27368,6 +27422,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e178_4)(uae_u32 opcode)
 {{	uae_s16 cnt = m68k_dreg (regs, srcreg);
 {	uae_s16 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = (uae_u16)data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt > 0) {
@@ -27381,7 +27436,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e178_4)(uae_u32 opcode)
 }
 	SET_ZFLG (((uae_s16)(val)) == 0);
 	SET_NFLG (((uae_s16)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (m68k_dreg (regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 }}}}	m68k_incpc (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
@@ -27396,6 +27451,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e180_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -27414,7 +27470,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e180_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -27429,6 +27485,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e188_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -27444,7 +27501,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e188_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -27459,6 +27516,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e190_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	cnt--;
@@ -27473,7 +27531,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e190_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -27488,6 +27546,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e198_4)(uae_u32 opcode)
 {{	uae_u32 cnt = srcreg;
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 {	uae_u32 loval;
@@ -27500,7 +27559,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e198_4)(uae_u32 opcode)
 }
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -27515,6 +27574,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1a0_4)(uae_u32 opcode)
 {{	uae_s32 cnt = m68k_dreg (regs, srcreg);
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -27533,7 +27593,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1a0_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -27548,6 +27608,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1a8_4)(uae_u32 opcode)
 {{	uae_s32 cnt = m68k_dreg (regs, srcreg);
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 32) {
@@ -27563,7 +27624,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1a8_4)(uae_u32 opcode)
 	}
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -27578,6 +27639,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1b0_4)(uae_u32 opcode)
 {{	uae_s32 cnt = m68k_dreg (regs, srcreg);
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt >= 33) cnt -= 33;
@@ -27594,7 +27656,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1b0_4)(uae_u32 opcode)
 	SET_CFLG (GET_XFLG ());
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
@@ -27609,6 +27671,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1b8_4)(uae_u32 opcode)
 {{	uae_s32 cnt = m68k_dreg (regs, srcreg);
 {	uae_s32 data = m68k_dreg (regs, dstreg);
 {	uae_u32 val = data;
+	int ccnt = cnt & 63;
 	cnt &= 63;
 	CLEAR_CZNV ();
 	if (cnt > 0) {
@@ -27622,7 +27685,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1b8_4)(uae_u32 opcode)
 }
 	SET_ZFLG (((uae_s32)(val)) == 0);
 	SET_NFLG (((uae_s32)(val)) < 0);
-	count_cycles += (2 * cnt) * CYCLE_UNIT / 2;
+	count_cycles += (2 * ccnt) * CYCLE_UNIT / 2;
 	m68k_dreg (regs, dstreg) = (val);
 }}}}	m68k_incpc (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;

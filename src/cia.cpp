@@ -404,12 +404,10 @@ STATIC_INLINE void ciab_checkalarm (bool inc, bool irq)
 	// modes. Real hardware value written to ciabtod by KS is always
 	// at least 1 or larger due to bus cycle delays when reading
 	// old value.
-#if 1
 	if ((munge24 (m68k_getpc ()) & 0xFFF80000) != 0xF80000) {
 		if (ciabtod == 0 && ciabalarm == 0)
 			return;
 	}
-#endif
   if (checkalarm (ciabtod, ciabalarm, inc)) {
 		if (irq) {
       ciabicr |= 4;
@@ -615,7 +613,7 @@ static uae_u8 ReadCIAA (unsigned int addr)
 	  return v;
 	}
   case 1:
-#ifdef INPUTDEVICE_SIMPLE
+#if defined(INPUTDEVICE_SIMPLE) && !defined(RASPBERRY) 
     tmp = (ciaaprb & ciaadrb) | (ciaadrb ^ 0xff);
 #else
 		tmp = handle_parport_joystick (0, ciaaprb, ciaadrb);
@@ -693,7 +691,7 @@ static uae_u8 ReadCIAB (unsigned int addr)
   switch (reg) {
   case 0:
 		tmp = 0;
-#ifdef INPUTDEVICE_SIMPLE
+#if defined(INPUTDEVICE_SIMPLE) && !defined(AMIBERRY) 
 		tmp = ((ciabpra & ciabdra) | (ciabdra ^ 0xff)) & 0x7;
 #else
 		tmp |= handle_parport_joystick (1, ciabpra, ciabdra);
