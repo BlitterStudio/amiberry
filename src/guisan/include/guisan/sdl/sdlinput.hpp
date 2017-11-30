@@ -59,7 +59,7 @@
 
 #include <queue>
 
-#include "SDL2/SDL.h"
+#include "SDL.h"
 
 #include "guisan/input.hpp"
 #include "guisan/keyinput.hpp"

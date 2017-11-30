@@ -39,20 +39,20 @@ STATIC_INLINE void uae_end_thread (uae_thread_id *tid)
 {
 }
 
-STATIC_INLINE int uae_start_thread (const TCHAR *name, void *(*f) (void *), void *arg, uae_thread_id *foo)
+STATIC_INLINE uae_thread_id uae_start_thread(const TCHAR* name, void*(*f)(void*), void* arg, uae_thread_id* foo)
 {
   uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, "StartThread", arg);
   if(foo != NULL)
     *foo = id;
-  return (int)id;
+  return id;
 }
 
-STATIC_INLINE int uae_start_thread_fast (void *(*f) (void *), void *arg, uae_thread_id *foo)
+STATIC_INLINE uae_thread_id uae_start_thread_fast(void*(*f)(void*), void* arg, uae_thread_id* foo)
 {
   uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, "StartThreadFast", arg);
   if(foo != NULL)
     *foo = id;
-  return (int)id;
+  return id;
 }
 
 STATIC_INLINE void uae_wait_thread (uae_thread_id thread)

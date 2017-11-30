@@ -2029,7 +2029,7 @@ void JOYTEST (uae_u16 v)
 	mouse_frame_y[1] = mouse_y[1];
 }
 
-#if !defined(INPUTDEVICE_SIMPLE) || defined(RASPBERRY)
+#if !defined(INPUTDEVICE_SIMPLE) || defined(AMIBERRY)
 static uae_u8 parconvert (uae_u8 v, int jd, int shift)
 {
 	if (jd & DIR_UP)
@@ -5557,10 +5557,8 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	dst->input_joymouse_speed = src->input_joymouse_speed;
 	dst->input_mouse_speed = src->input_mouse_speed;
         dst->input_autofire_linecnt = src->input_autofire_linecnt;
-        dst->key_for_menu = src->key_for_menu;
-        dst->key_for_quit = src->key_for_quit;
-      //dst->button_for_menu = src->button_for_menu;
-      //dst->button_for_quit = src->button_for_quit;
+        strcpy(dst->open_gui,src->open_gui);
+		strcpy(dst->quit_amiberry,src->quit_amiberry);
         dst->amiberry_use_retroarch_quit = src->amiberry_use_retroarch_quit;
         dst->amiberry_use_retroarch_menu = src->amiberry_use_retroarch_menu;
         dst->amiberry_use_retroarch_reset = src->amiberry_use_retroarch_reset;

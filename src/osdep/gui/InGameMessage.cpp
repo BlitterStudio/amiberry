@@ -94,7 +94,7 @@ void checkInput()
 				break;
 			}
 		}
-		else if (event.type == SDL_JOYBUTTONDOWN)   
+		else if (msg_event.type == SDL_JOYBUTTONDOWN)
         { 
         
              if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button)  || 
@@ -111,7 +111,7 @@ void checkInput()
 #ifdef ANDROIDSDL
        androidsdl_event(event, msg_input);
 #else
-       msg_input->pushInput(event);
+       msg_input->pushInput(msg_event);
 #endif 
 	}
 }

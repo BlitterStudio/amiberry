@@ -1,7 +1,7 @@
-#include <guichan.hpp>
+#include <guisan.hpp>
 #include <SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
+#include <guisan/sdl.hpp>
+#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -38,7 +38,7 @@ static gcn::Label* lblCustomAction[14];
 static gcn::UaeDropDown* cboCustomAction[14];
 
 static gcn::Label* lblPortInput;
-static gcn::TextField *txtPortInput;
+static gcn::TextField* txtPortInput;
 static gcn::Label* lblRetroarch;
 
 static int SelectedPort = 1;
@@ -518,7 +518,7 @@ void RefreshPanelCustom(void)
         
         if (changed_prefs.jports[SelectedPort].id > JSEM_JOYS && changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
         {       hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS - 1;
-                strncpy(tmp, SDL_JoystickName(hostjoyid), 255);   
+                strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
                 
                 for (int n=0 ; n < 14 ; ++n)
                 {   

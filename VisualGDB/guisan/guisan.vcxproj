@@ -40,7 +40,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>..\..\src\guisan\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/local/include;=/usr/local/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src\guisan\include;C:/SysGCC/raspberry/arm-linux-gnueabihf/include/c++/6.3.0/include;C:/SysGCC/raspberry/arm-linux-gnueabihf/include/c++/6.3.0;C:/SysGCC/raspberry/arm-linux-gnueabihf/include;=/usr/include;=/usr/include/SDL2;=/usr/local/include;=/usr/local/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -53,7 +53,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>..\..\src\guisan\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;=/usr/local/include;=/usr/local/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src\guisan\include;C:/SysGCC/raspberry/arm-linux-gnueabihf/include/c++/6.3.0/include;C:/SysGCC/raspberry/arm-linux-gnueabihf/include/c++/6.3.0;C:/SysGCC/raspberry/arm-linux-gnueabihf/include;=/usr/include;=/usr/include/SDL2;=/usr/local/include;=/usr/local/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>

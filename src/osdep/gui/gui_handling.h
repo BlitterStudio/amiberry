@@ -173,7 +173,7 @@ enum
 };
 
 bool HandleNavigation(int direction);
-void PushFakeKey(SDLKey inKey);
+void PushFakeKey(SDL_Keycode inKey);
 
 #define MAX_HD_DEVICES 5
 extern void CreateDefaultDevicename(char* name);

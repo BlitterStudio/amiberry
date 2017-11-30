@@ -613,7 +613,7 @@ static uae_u8 ReadCIAA (unsigned int addr)
 	  return v;
 	}
   case 1:
-#if defined(INPUTDEVICE_SIMPLE) && !defined(RASPBERRY) 
+#if defined(INPUTDEVICE_SIMPLE) && !defined(AMIBERRY) 
     tmp = (ciaaprb & ciaadrb) | (ciaadrb ^ 0xff);
 #else
 		tmp = handle_parport_joystick (0, ciaaprb, ciaadrb);

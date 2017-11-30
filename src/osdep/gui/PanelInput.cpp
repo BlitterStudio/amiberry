@@ -343,7 +343,7 @@ public:
 			RefreshPanelInput();
 		}
 
-#ifdef RASPBERRY 
+#ifdef AMIBERRY 
 			// mousemap drop-down change
 		else if (actionEvent.getSource() == cboPort0mousemode)
 		{
@@ -374,7 +374,7 @@ public:
 			changed_prefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
 			RefreshPanelInput();
 		}
-
+#ifdef PANDORA
 	else if (actionEvent.getSource() == cboTapDelay)
       {
         if(cboTapDelay->getSelected() == 0)
@@ -384,7 +384,7 @@ public:
         else
           changed_prefs.pandora_tapDelay = 2;
       }
-
+#endif
     	else if (actionEvent.getSource() == chkMouseHack)
   	  {
 #ifdef ANDROIDSDL
@@ -919,7 +919,7 @@ void RefreshPanelInput()
 
 	// Set current device in port 0
 	int idx = 0;
-	for (i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[0].id == portListIDs[i])
 		{
@@ -931,7 +931,7 @@ void RefreshPanelInput()
 
 	// Set current device in port 1
 	idx = 0;
-	for (i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[1].id == portListIDs[i])
 		{
@@ -946,7 +946,7 @@ void RefreshPanelInput()
 
 	// Set current device in port 2
 	idx = 0;
-	for (i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[2].id == portListIDs[i])
 		{
@@ -958,7 +958,7 @@ void RefreshPanelInput()
 
 	// Set current device in port 3
 	idx = 0;
-	for (i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[3].id == portListIDs[i])
 		{
@@ -1033,14 +1033,14 @@ void RefreshPanelInput()
 			break;
 		}
 	}
-
+#ifdef PANDORA
 	if (changed_prefs.pandora_tapDelay == 10)
 		cboTapDelay->setSelected(0);
 	else if (changed_prefs.pandora_tapDelay == 5)
 		cboTapDelay->setSelected(1);
 	else
 		cboTapDelay->setSelected(2);
-
+#endif
 	chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 
 	chkCustomCtrl->setSelected(changed_prefs.customControls);

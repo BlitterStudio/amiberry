@@ -222,7 +222,7 @@ static NavigationMap navMap[] =
   
 //  active            move left           move right          move up           move down
 // PanelInput
-#ifdef RASPBERRY
+#ifdef AMIBERRY
   { "cboPort0",         "Input",          "cboPort0mode",       "cboAutofire",      "cboPort1" },
   { "cboPort0mode",     "cboPort0",       "Input",              "cboTapDelay",      "cboPort1mode" },
   { "cboPort1",         "Input",          "cboPort1mode",       "cboPort0",         "cboPort2" },
@@ -465,7 +465,7 @@ bool HandleNavigation(int direction)
 	return focusTarget != nullptr;
 }
 
-void PushFakeKey(SDLKey inKey)
+void PushFakeKey(SDL_Keycode inKey)
 {       SDL_Event nuevent;
         
         nuevent.type = SDL_KEYDOWN;  // and the key up

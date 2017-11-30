@@ -184,11 +184,11 @@ const int RemapKeyMapList[] = {
     SDLK_F7,       SDLK_F8,       SDLK_F9,       SDLK_F10,      SDLK_F11,      SDLK_F12,
     SDLK_0,        SDLK_1,        SDLK_2,        SDLK_3,        SDLK_4,        SDLK_5, 
     SDLK_6,        SDLK_7,        SDLK_8,        SDLK_9,        SDLK_PAGEUP,   SDLK_PAGEDOWN,
-    SDLK_KP0,      SDLK_KP1,      SDLK_KP2,      SDLK_KP3,      SDLK_KP4,  
-    SDLK_KP5,      SDLK_KP6,      SDLK_KP7,      SDLK_KP8,      SDLK_KP9,
-    SDLK_PERIOD,   SDLK_CAPSLOCK, SDLK_NUMLOCK,  SDLK_BACKSPACE, 
+    SDLK_KP_0,      SDLK_KP_1,      SDLK_KP_2,      SDLK_KP_3,      SDLK_KP_4,  
+    SDLK_KP_5,      SDLK_KP_6,      SDLK_KP_7,      SDLK_KP_8,      SDLK_KP_9,
+    SDLK_PERIOD,   SDLK_CAPSLOCK, SDLK_NUMLOCKCLEAR,  SDLK_BACKSPACE, 
     //              divide
-    SDLK_ASTERISK,  -1,           SDLK_PRINT,    SDLK_SCROLLOCK,
+    SDLK_ASTERISK,  -1,           SDLK_PRINTSCREEN,    SDLK_SCROLLLOCK,
     // tilde
     -1,             SDLK_BACKQUOTE,SDLK_PAUSE,    SDLK_QUOTE,    SDLK_COMMA, 
     SDLK_MINUS,     SDLK_SLASH,    SDLK_SEMICOLON,SDLK_EQUALS,  SDLK_LEFTPAREN,
@@ -687,8 +687,8 @@ static int init_joystick(void)
 
 		if (Joysticktable[cpt] != nullptr)
 		{
-			if (SDL_JoystickName(cpt) != nullptr)
-				strncpy(JoystickName[cpt], SDL_JoystickName(cpt), sizeof JoystickName[cpt] - 1);
+			if (SDL_JoystickNameForIndex(cpt) != nullptr)
+				strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), sizeof JoystickName[cpt] - 1);
 			else
 				sprintf(JoystickName[cpt], "Joystick%d", cpt);
     
@@ -923,7 +923,7 @@ static void read_joystick(void)
 			
                     int hostkeyid = currprefs.jports[joyid].id - JSEM_JOYS;
                     
-                        Uint8* keystate = SDL_GetKeyState(nullptr);
+                        const Uint8* keystate = SDL_GetKeyboardState(nullptr);
          
                         // cd32 red, blue, green, yellow
                         setjoybuttonstate(0,  0, keystate[host_keyboard_buttons[hostkeyid].south_button]); // b
