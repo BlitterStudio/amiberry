@@ -68,7 +68,7 @@
 #if defined(__APPLE__)
 #include <OpenGL/gl.h>
 #else
-#include <GL/gl.h>
+#include <SDL2/SDL_opengl.h>
 #endif
 
 #include "guisan/exception.hpp"
