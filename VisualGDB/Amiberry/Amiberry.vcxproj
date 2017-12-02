@@ -5,23 +5,20 @@
       <Configuration>Debug</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-rpi1|VisualGDB">
-      <Configuration>Release-rpi1</Configuration>
-      <Platform>VisualGDB</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-rpi2|VisualGDB">
-      <Configuration>Release-rpi2</Configuration>
-      <Platform>VisualGDB</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|VisualGDB">
       <Configuration>Release</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{D76BB09D-FF2A-4028-A065-421C430CD238}</ProjectGuid>
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{FDC6BF55-C4BC-44FB-85A9-3369784716E8}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -30,103 +27,43 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
-    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
-    <TargetName>$(ProjectName)-sdl2-rpi2</TargetName>
-    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
-    <TargetName>$(ProjectName)-sdl2-rpi1</TargetName>
-    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/lib/arm-linux-gnueabihf;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;z;png;rt;xml2;FLAC;mpg123;dl;guisan;mpeg2convert;mpeg2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>bcm_host;vchiq_arm;vcos;lzma;freetype;ogg;m;SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
-      <AdditionalLinkerInputs>-Wl,-gc-sections;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
-      <OmitFramePointer>true</OmitFramePointer>
-      <InlineFunctions>true</InlineFunctions>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalLinkerInputs>-Wl,-gc-sections;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/lib/arm-linux-gnueabihf;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;z;png;rt;xml2;FLAC;mpg123;dl;guisan;mpeg2convert;mpeg2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>=/opt/vc/lib;=/usr/local/lib;../../src/guisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>bcm_host;vchiq_arm;vcos;lzma;freetype;ogg;m;SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
-      <ExtraRPATH>
-      </ExtraRPATH>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
-    <ClCompile>
-      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
-      <OmitFramePointer>true</OmitFramePointer>
-      <InlineFunctions>true</InlineFunctions>
-    </ClCompile>
-    <Link>
-      <AdditionalLinkerInputs>-Wl,-gc-sections;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/lib/arm-linux-gnueabihf;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;z;png;rt;xml2;FLAC;mpg123;dl;guisan;mpeg2convert;mpeg2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
-      <LinkerScript>
-      </LinkerScript>
-      <ExtraRPATH>
-      </ExtraRPATH>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
-    <ClCompile>
-      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\4.9\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\4.9;C:\SysGCC\raspberry\arm-linux-gnueabihf\include;../../src;../../src/include;../../src/osdep;../../src/threaddep;../../src/guisan/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;=/opt/vc/include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;=/opt/vc/include/interface/vmcs_host/linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;=/opt/vc/include/interface/vcos/pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;=/usr/include;=/usr/local/include/SDL2;=/usr/include/SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;=/usr/include/libxml2;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6_ASSEMBLY;AMIBERRY;USE_SDL;CPU_arm;GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv6zk -mfpu=vfp -mfloat-abi=hard -pipe -Wno-write-strings %(AdditionalOptions)</AdditionalOptions>
-      <OmitFramePointer>true</OmitFramePointer>
-      <InlineFunctions>true</InlineFunctions>
-    </ClCompile>
-    <Link>
-      <AdditionalLinkerInputs>-Wl,-gc-sections;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>../../src/guisan/lib;=/opt/vc/lib;=/usr/lib/arm-linux-gnueabihf;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;SDL2_image;SDL2_ttf;pthread;z;png;rt;xml2;FLAC;mpg123;dl;guisan;mpeg2convert;mpeg2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
-      <LinkerScript>
-      </LinkerScript>
-      <ExtraRPATH>
-      </ExtraRPATH>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemGroup>
-    <None Include="Amiberry-Debug.vgdbsettings" />
-    <None Include="Amiberry-Release.vgdbsettings" />
-  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp" />
     <ClCompile Include="..\..\src\ar.cpp" />
@@ -144,10 +81,11 @@
     <ClCompile Include="..\..\src\archivers\7z\Bra.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Bra86.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\BraIA64.c" />
-    <ClCompile Include="..\..\src\archivers\7z\CpuArch.c" />
     <ClCompile Include="..\..\src\archivers\7z\Delta.c" />
+    <ClCompile Include="..\..\src\archivers\7z\LzFind.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma2Dec.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Lzma86Enc.c" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaLib.c" />
     <ClCompile Include="..\..\src\archivers\7z\Sha256.c" />
@@ -234,13 +172,20 @@
     <ClCompile Include="..\..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\..\src\jit\compstbl.cpp" />
     <ClCompile Include="..\..\src\keybuf.cpp" />
-    <ClCompile Include="..\..\src\main.cpp" />
     <ClCompile Include="..\..\src\machdep\support.cpp" />
+    <ClCompile Include="..\..\src\main.cpp" />
     <ClCompile Include="..\..\src\memory.cpp" />
     <ClCompile Include="..\..\src\native2amiga.cpp" />
     <ClCompile Include="..\..\src\newcpu.cpp" />
     <ClCompile Include="..\..\src\newcpu_common.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_filesys.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_gfx.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_gui.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_hardfile.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_input.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_mem.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_rp9.cpp" />
     <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
     <ClCompile Include="..\..\src\osdep\charset.cpp" />
@@ -278,13 +223,6 @@
     <ClCompile Include="..\..\src\osdep\keyboard.cpp" />
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\..\src\osdep\neon_helper.s" />
-    <ClCompile Include="..\..\src\osdep\amiberry.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_filesys.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_gfx.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_gui.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_input.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_mem.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_rp9.cpp" />
     <ClCompile Include="..\..\src\osdep\picasso96.cpp" />
     <ClCompile Include="..\..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\..\src\osdep\writelog.cpp" />
@@ -304,57 +242,14 @@
     <ClCompile Include="..\..\src\zfile.cpp" />
     <ClCompile Include="..\..\src\zfile_archive.cpp" />
   </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
   <ItemGroup>
-    <Image Include="..\..\data\35floppy.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\chip.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\controller.png" />
-    <Image Include="..\..\data\cpu.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\cursor-x2.bmp" />
-    <Image Include="..\..\data\cursor.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\delete.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\drive.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\expansion.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\file.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\joystick.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\misc.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\paths.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\quickstart.ico" />
-    <Image Include="..\..\data\savestate.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\screen.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\sound.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <Font Include="..\..\data\Topaznew.ttf">
-      <DeploymentContent>true</DeploymentContent>
-    </Font>
+    <None Include="..\..\src\filesys.asm" />
+    <None Include="..\..\src\inputevents.def" />
+    <None Include="Amiberry-Debug.vgdbsettings" />
+    <None Include="Amiberry-Release.vgdbsettings" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\archivers\7z\7z.h" />
@@ -366,8 +261,8 @@
     <ClInclude Include="..\..\src\archivers\7z\Alloc.h" />
     <ClInclude Include="..\..\src\archivers\7z\Bcj2.h" />
     <ClInclude Include="..\..\src\archivers\7z\Bra.h" />
-    <ClInclude Include="..\..\src\archivers\7z\CpuArch.h" />
     <ClInclude Include="..\..\src\archivers\7z\Delta.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzFind.h" />
     <ClInclude Include="..\..\src\archivers\7z\LzHash.h" />
     <ClInclude Include="..\..\src\archivers\7z\Lzma2Dec.h" />
     <ClInclude Include="..\..\src\archivers\7z\Lzma86.h" />
@@ -395,76 +290,13 @@
     <ClInclude Include="..\..\src\archivers\mp2\kjmp2.h" />
     <ClInclude Include="..\..\src\archivers\wrp\warp.h" />
     <ClInclude Include="..\..\src\archivers\zip\unzip.h" />
-    <ClInclude Include="..\..\src\guisan\include\guisan.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\actionevent.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\actionlistener.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\basiccontainer.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\cliprectangle.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\color.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\deathlistener.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\defaultfont.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\event.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\exception.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\focushandler.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\focuslistener.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\font.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\genericinput.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\glut.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\graphics.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\gui.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\image.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\imagefont.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\imageloader.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\input.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\inputevent.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\key.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\keyevent.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\keyinput.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\keylistener.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\listmodel.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\mouseevent.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\mouseinput.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\mouselistener.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\opengl.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglgraphics.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglimage.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\opengl\openglsdlimageloader.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\platform.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\rectangle.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\sdl.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlgraphics.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlimage.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlimageloader.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlinput.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdlpixel.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\sdl\sdltruetypefont.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\selectionevent.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\selectionlistener.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widget.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgetlistener.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\button.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\checkbox.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\container.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\dropdown.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\icon.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\imagebutton.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\label.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\listbox.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\radiobutton.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\scrollarea.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\slider.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\tab.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\tabbedarea.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\textbox.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\textfield.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\window.hpp" />
-    <ClInclude Include="..\..\src\guisan\include\guisan\x.hpp" />
+    <ClInclude Include="..\..\src\blit.h" />
+    <ClInclude Include="..\..\src\blitfunc.h" />
+    <ClInclude Include="..\..\src\cputbl.h" />
     <ClInclude Include="..\..\src\include\akiko.h" />
     <ClInclude Include="..\..\src\include\ar.h" />
     <ClInclude Include="..\..\src\include\audio.h" />
     <ClInclude Include="..\..\src\include\autoconf.h" />
-    <ClInclude Include="..\..\src\blit.h" />
-    <ClInclude Include="..\..\src\blitfunc.h" />
     <ClInclude Include="..\..\src\include\blitter.h" />
     <ClInclude Include="..\..\src\include\blkdev.h" />
     <ClInclude Include="..\..\src\include\bsdsocket.h" />
@@ -473,7 +305,6 @@
     <ClInclude Include="..\..\src\include\cia.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
-    <ClInclude Include="..\..\src\cputbl.h" />
     <ClInclude Include="..\..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\..\src\include\crc32.h" />
     <ClInclude Include="..\..\src\include\custom.h" />
@@ -529,14 +360,13 @@
     <ClInclude Include="..\..\src\include\xwin.h" />
     <ClInclude Include="..\..\src\include\zarchive.h" />
     <ClInclude Include="..\..\src\include\zfile.h" />
-    <ClInclude Include="..\..\src\jit\codegen_arm.h" />
     <ClInclude Include="..\..\src\jit\compemu.h" />
-    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm.h" />
-    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm2.h" />
     <ClInclude Include="..\..\src\jit\comptbl.h" />
     <ClInclude Include="..\..\src\machdep\m68k.h" />
     <ClInclude Include="..\..\src\machdep\maccess.h" />
     <ClInclude Include="..\..\src\machdep\rpt.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
     <ClInclude Include="..\..\src\osdep\cda_play.h" />
     <ClInclude Include="..\..\src\osdep\config.h" />
     <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />
@@ -546,8 +376,6 @@
     <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp" />
     <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp" />
     <ClInclude Include="..\..\src\osdep\mp3decoder.h" />
-    <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
-    <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
     <ClInclude Include="..\..\src\osdep\picasso96.h" />
     <ClInclude Include="..\..\src\osdep\sysconfig.h" />
     <ClInclude Include="..\..\src\osdep\target.h" />
@@ -558,7 +386,4 @@
     <ClInclude Include="..\..\src\sounddep\sound.h" />
     <ClInclude Include="..\..\src\threaddep\thread.h" />
   </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
 </Project>

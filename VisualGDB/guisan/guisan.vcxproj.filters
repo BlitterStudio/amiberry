@@ -2,41 +2,39 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{d4ebd7ff-6f2e-4ff8-b046-c753d27d3c2f}</UniqueIdentifier>
+      <UniqueIdentifier>{f5296e0a-029c-48df-8602-bfaa9a5323b4}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="Header files">
-      <UniqueIdentifier>{0956a70e-bf86-403f-9e9e-10951cda321d}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource files">
-      <UniqueIdentifier>{840173ef-c1d5-485c-bcaf-8d4f4824d924}</UniqueIdentifier>
+      <UniqueIdentifier>{67df271e-9feb-49e4-8a09-10136b22cf53}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="VisualGDB settings">
-      <UniqueIdentifier>{3d70737e-8ff3-4968-8327-5d8bd7ffd5eb}</UniqueIdentifier>
-      <Extensions>*.vgdbsettings</Extensions>
-    </Filter>
-    <Filter Include="Source files\sdl">
-      <UniqueIdentifier>{f418c9b3-c88b-4679-b87e-a1e52e71f6e0}</UniqueIdentifier>
+      <UniqueIdentifier>{bf2ced4b-3c31-47dd-ad52-ed2ce362c913}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\opengl">
-      <UniqueIdentifier>{a7d95d38-9b23-4c95-84b3-a8303673d745}</UniqueIdentifier>
+      <UniqueIdentifier>{c587368c-05e4-4112-8fa3-b67623d469ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\sdl">
+      <UniqueIdentifier>{fe50fca5-4072-4832-bee8-1839308324d2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\widgets">
-      <UniqueIdentifier>{c7cd0bf5-cfa1-4d0b-9977-91b7d06f5667}</UniqueIdentifier>
+      <UniqueIdentifier>{bbd41029-30e0-4bf9-9217-2c5f3d9d847e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{265d2c93-6729-4454-9205-d32234995971}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\guisan">
-      <UniqueIdentifier>{8224a787-776f-4b91-96fd-98e7790634b0}</UniqueIdentifier>
+      <UniqueIdentifier>{cf6c4dda-c8e0-4f50-8a65-a8fbd9796c62}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\guisan\opengl">
-      <UniqueIdentifier>{b353b818-60b1-467f-8552-b79eb3fa1abb}</UniqueIdentifier>
+      <UniqueIdentifier>{d8d6bb85-3423-4047-9b28-f08fc4969a77}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\guisan\sdl">
-      <UniqueIdentifier>{e7aa67b2-1246-40ff-811b-b411d45d8066}</UniqueIdentifier>
+      <UniqueIdentifier>{cc2572e2-eafa-4be7-afdf-10cb5b4f9d08}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\guisan\widgets">
-      <UniqueIdentifier>{b44d37f3-1099-4093-8e4f-a623ee709039}</UniqueIdentifier>
+      <UniqueIdentifier>{8925d54e-e927-41ea-8347-a90faa63124b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -120,6 +118,33 @@
     <ClCompile Include="..\..\src\guisan\src\widget.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\opengl\opengl.cpp">
+      <Filter>Source files\opengl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\opengl\openglgraphics.cpp">
+      <Filter>Source files\opengl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\opengl\openglimage.cpp">
+      <Filter>Source files\opengl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\sdl\sdl.cpp">
+      <Filter>Source files\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\sdl\sdlgraphics.cpp">
+      <Filter>Source files\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\sdl\sdlimage.cpp">
+      <Filter>Source files\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\sdl\sdlimageloader.cpp">
+      <Filter>Source files\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\sdl\sdlinput.cpp">
+      <Filter>Source files\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\sdl\sdltruetypefont.cpp">
+      <Filter>Source files\sdl</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\guisan\src\widgets\button.cpp">
       <Filter>Source files\widgets</Filter>
     </ClCompile>
@@ -167,33 +192,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\guisan\src\widgets\window.cpp">
       <Filter>Source files\widgets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\opengl\opengl.cpp">
-      <Filter>Source files\opengl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\opengl\openglgraphics.cpp">
-      <Filter>Source files\opengl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\opengl\openglimage.cpp">
-      <Filter>Source files\opengl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\sdl\sdl.cpp">
-      <Filter>Source files\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\sdl\sdlgraphics.cpp">
-      <Filter>Source files\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\sdl\sdlimage.cpp">
-      <Filter>Source files\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\sdl\sdlimageloader.cpp">
-      <Filter>Source files\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\sdl\sdlinput.cpp">
-      <Filter>Source files\sdl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\guisan\src\sdl\sdltruetypefont.cpp">
-      <Filter>Source files\sdl</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
