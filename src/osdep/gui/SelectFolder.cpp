@@ -221,7 +221,7 @@ static void navigate_left(void)
     }
 static void SelectFolderLoop()
 {
-	FocusBugWorkaround(wndSelectFolder);
+	//FocusBugWorkaround(wndSelectFolder);
 
 	while (!dialogFinished)
 	{

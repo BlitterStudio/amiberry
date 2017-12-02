@@ -110,7 +110,7 @@ static void ExitShowMessage()
 
 static void ShowMessageWaitInputLoop()
 {
-	FocusBugWorkaround(wndShowMessage);
+	//FocusBugWorkaround(wndShowMessage);
 
 	while (!dialogFinished)
 	{

@@ -182,20 +182,20 @@ void RegisterRefreshFunc(void (*func)(void))
 	refreshFuncAfterDraw = func;
 }
 
-void FocusBugWorkaround(gcn::Window* wnd)
-{
-	// When modal dialog opens via mouse, the dialog will not
-	// have the focus unless there is a mouse click. We simulate the click...
-	SDL_Event event;
-	event.type = SDL_MOUSEBUTTONDOWN;
-	event.button.button = SDL_BUTTON_LEFT;
-	event.button.state = SDL_PRESSED;
-	event.button.x = wnd->getX() + 2;
-	event.button.y = wnd->getY() + 2;
-	gui_input->pushInput(event);
-	event.type = SDL_MOUSEBUTTONUP;
-	gui_input->pushInput(event);
-}
+//void FocusBugWorkaround(gcn::Window* wnd)
+//{
+//	// When modal dialog opens via mouse, the dialog will not
+//	// have the focus unless there is a mouse click. We simulate the click...
+//	SDL_Event event;
+//	event.type = SDL_MOUSEBUTTONDOWN;
+//	event.button.button = SDL_BUTTON_LEFT;
+//	event.button.state = SDL_PRESSED;
+//	event.button.x = wnd->getX() + 2;
+//	event.button.y = wnd->getY() + 2;
+//	gui_input->pushInput(event);
+//	event.type = SDL_MOUSEBUTTONUP;
+//	gui_input->pushInput(event);
+//}
 
 static void ShowHelpRequested()
 {
@@ -418,8 +418,8 @@ namespace sdl
 			// Send event to guisan-controls
 			//-------------------------------------------------
 			#ifdef ANDROIDSDL
-                        	androidsdl_event(event, gui_input);
-                        #else
+               	androidsdl_event(event, gui_input);
+            #else
 				gui_input->pushInput(gui_event);
 			#endif
 		}
@@ -452,8 +452,8 @@ namespace sdl
 				refreshFuncAfterDraw = nullptr;
 				currFunc();
 			}
-			SDL_JoystickClose(GUIjoy);
 		}
+		SDL_JoystickClose(GUIjoy);
 	}
 }
 
