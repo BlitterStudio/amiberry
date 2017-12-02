@@ -199,7 +199,7 @@ void RegisterRefreshFunc(void (*func)(void))
 
 static void ShowHelpRequested()
 {
-	std::vector<std::string> helptext;
+	vector<string> helptext;
 	if (categories[last_active_panel].HelpFunc != nullptr && categories[last_active_panel].HelpFunc(helptext))
 	{
 		//------------------------------------------------
@@ -275,6 +275,12 @@ namespace sdl
 		gui_texture = SDL_CreateTextureFromSurface(renderer, gui_screen);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture");
 
+#ifdef ANDROIDSDL
+		// Enable Android multitouch
+		SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+		SDL_JoystickOpen(0);
+#endif
+
 		if (cursor)
 		{
 			SDL_ShowCursor(SDL_ENABLE);
@@ -306,7 +312,10 @@ namespace sdl
 		delete gui_graphics;
 
 		SDL_FreeSurface(gui_screen);
+
 		SDL_DestroyTexture(gui_texture);
+		gui_texture = nullptr;
+
 		if (cursor)
 		{
 			SDL_FreeCursor(cursor);
@@ -324,7 +333,96 @@ namespace sdl
 	{
 		while (SDL_PollEvent(&gui_event))
 		{
-			if (gui_event.type == SDL_KEYDOWN)
+			if (gui_event.type == SDL_QUIT)
+			{
+				//-------------------------------------------------
+				// Quit entire program via SQL-Quit
+				//-------------------------------------------------
+				uae_quit();
+				gui_running = false;
+				break;
+			}
+
+			// Horace's start at implementing Joystick control
+			if (gui_event.type == SDL_JOYBUTTONDOWN || gui_event.type == SDL_JOYHATMOTION)
+			{
+				gcn::FocusHandler* focusHdl;
+				gcn::Widget* activeWidget;
+
+				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_UP))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_UP);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_DOWN))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_DOWN);
+					break;
+				}
+
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
+				{
+					for (int z = 0; z<10; ++z)
+					{
+						PushFakeKey(SDLK_UP);
+					}
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].right_shoulder)) // dpad
+				{
+					for (int z = 0; z<10; ++z)
+					{
+						PushFakeKey(SDLK_DOWN);
+					}
+				}
+
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_RIGHT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_RIGHT);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_LEFT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_LEFT);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+				{
+					PushFakeKey(SDLK_RETURN);
+					continue;
+				}
+				
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].quit_button) &&
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
+				{
+					uae_quit();
+					gui_running = false;
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_trigger))
+				{
+					ShowHelpRequested();
+					widgets::cmdHelp->requestFocus();
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].menu_button)) // use the HOTKEY button
+				{
+					gui_running = false;
+				}
+			}
+
+			if (gui_event.type == SDL_KEYDOWN && gui_event.key.repeat == 0)
 			{
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
@@ -406,14 +504,7 @@ namespace sdl
 						break;
 					}
 			}
-			else if (gui_event.type == SDL_QUIT)
-			{
-				//-------------------------------------------------
-				// Quit entire program via SQL-Quit
-				//-------------------------------------------------
-				uae_quit();
-				gui_running = false;
-			}
+
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
@@ -427,6 +518,8 @@ namespace sdl
 
 	void gui_run()
 	{
+		GUIjoy = SDL_JoystickOpen(0);
+
 		//-------------------------------------------------
 		// The main loop
 		//-------------------------------------------------
@@ -442,8 +535,8 @@ namespace sdl
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-			// Finally we update the screen.
 
+			// Finally we update the screen.
 			UpdateGuiScreen();
 
 			if (refreshFuncAfterDraw != nullptr)
