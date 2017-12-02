@@ -20,6 +20,12 @@ else ifeq ($(PLATFORM),rpi1)
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+else ifeq ($(PLATFORM),pine64)
+    CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -D__arm__
+    LDFLAGS += -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm
+    CC = arm-linux-gnueabihf-gcc
+    CXX = arm-linux-gnueabihf-g++ 
 else ifeq ($(PLATFORM),Pandora)
     CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
@@ -67,7 +73,7 @@ DEFS += -DUSE_SDL
 
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include -Isrc/archivers
 MORE_CFLAGS += -fdiagnostics-color=auto
-MORE_CFLAGS += -mstructure-size-boundary=32
+#MORE_CFLAGS += -mstructure-size-boundary=32
 MORE_CFLAGS += -falign-functions=32
 MORE_CFLAGS += -std=gnu++14
 
