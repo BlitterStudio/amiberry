@@ -64,7 +64,8 @@ ConfigCategory categories[] = {
   { "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
   { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
-};     
+};
+
 enum
 {
 	PANEL_PATHS,
@@ -80,12 +81,12 @@ enum
 	PANEL_SOUND,
 	PANEL_INPUT,
 #ifndef PANDORA
-        PANEL_CUSTOM, 
+	PANEL_CUSTOM,
 #endif
 	PANEL_MISC,
 	PANEL_SAVESTATES,
 #ifdef ANDROIDSDL
-        PANEL_ONSCREEN, 
+	PANEL_ONSCREEN,
 #endif
 	NUM_PANELS
 };
@@ -331,6 +332,8 @@ namespace sdl
 
 	void checkInput()
 	{
+		const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
+
 		while (SDL_PollEvent(&gui_event))
 		{
 			if (gui_event.type == SDL_QUIT)
@@ -427,7 +430,7 @@ namespace sdl
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
 
-				if (gui_event.key.keysym.sym == SDL_GetKeyFromName(currprefs.open_gui))
+				if (gui_event.key.keysym.sym == key_for_gui)
 				{
 					if (emulating && widgets::cmdStart->isEnabled())
 					{
@@ -508,11 +511,11 @@ namespace sdl
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-			#ifdef ANDROIDSDL
-               	androidsdl_event(event, gui_input);
-            #else
-				gui_input->pushInput(gui_event);
-			#endif
+#ifdef ANDROIDSDL
+			androidsdl_event(event, gui_input);
+#else
+			gui_input->pushInput(gui_event);
+#endif
 		}
 	}
 
