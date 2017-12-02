@@ -283,7 +283,6 @@ public:
 		}
 #endif
 
-#ifdef AMIBERRY
 		else if (actionEvent.getSource() == cboPort2)
 		{
 			// Handle new device in port 2
@@ -313,7 +312,7 @@ public:
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
 		}
-#endif
+
 		else if (actionEvent.getSource() == cboPort0mode)
 		{
 			if (cboPort0mode->getSelected() == 0)
@@ -343,8 +342,7 @@ public:
 			RefreshPanelInput();
 		}
 
-#ifdef AMIBERRY 
-			// mousemap drop-down change
+		// mousemap drop-down change
 		else if (actionEvent.getSource() == cboPort0mousemode)
 		{
 			changed_prefs.jports[0].mousemap = cboPort0mousemode->getSelected();
@@ -355,7 +353,6 @@ public:
 			changed_prefs.jports[1].mousemap = cboPort1mousemode->getSelected();
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 		}
-#endif
 
 		else if (actionEvent.getSource() == cboAutofire)
 		{
@@ -526,22 +523,42 @@ static InputActionListener* inputActionListener;
 
 void InitPanelInput(const struct _ConfigCategory& category)
 {
-	inputActionListener = new InputActionListener();
-
-	if (ctrlPortList.getNumberOfElements() < 4 + inputdevice_get_device_total(IDTYPE_JOYSTICK))
+	
+#ifndef PANDORA
+	if (ctrlPortList.getNumberOfElements() == 0)
 	{
 		int idx = 0;
 		ctrlPortList.AddElement("None");
 		portListIDs[idx] = JPORT_NONE;
-		for (int i = 0; i < inputdevice_get_device_total(IDTYPE_JOYSTICK) - 1; i++)
+
+		int i;
+		for (i = 0; i < inputdevice_get_device_total(IDTYPE_MOUSE); i++)
 		{
-			ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_JOYSTICK, i + 1));
+			const auto device_name = inputdevice_get_device_name(IDTYPE_MOUSE, i);
+			if (device_name && device_name[0])
+			{
+				ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_MOUSE, i));
+				idx++;
+				portListIDs[idx] = JSEM_MICE + i;
+			}
+		}
+
+		for (i = 0; i < inputdevice_get_device_total(IDTYPE_JOYSTICK); i++)
+		{
+			ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_JOYSTICK, i));
+			idx++;
+			portListIDs[idx] = JSEM_JOYS + i;
 		}
 	}
-	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X * 2;
+#endif
 
-	lblPort0 = new gcn::Label("Port0:");
-	lblPort0->setSize(50, LABEL_HEIGHT);
+	inputActionListener = new InputActionListener();
+	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X * 2;
+	const int mode_length = 80;
+	const int port_lbl_length = 120;
+
+	lblPort0 = new gcn::Label("Port 0 [Mouse]:");
+	lblPort0->setSize(port_lbl_length, LABEL_HEIGHT);
 	lblPort0->setAlignment(gcn::Graphics::RIGHT);
 	cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort0->setSize(textFieldWidth, DROPDOWN_HEIGHT);
@@ -550,8 +567,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort0->setId("cboPort0");
 	cboPort0->addActionListener(inputActionListener);
 
-	lblPort1 = new gcn::Label("Port1:");
-	lblPort1->setSize(50, LABEL_HEIGHT);
+	cboPort0mode = new gcn::UaeDropDown(&ctrlPortModeList);
+	cboPort0mode->setSize(mode_length, DROPDOWN_HEIGHT);
+	cboPort0mode->setBaseColor(gui_baseCol);
+	cboPort0mode->setId("cboPort0mode");
+	cboPort0mode->addActionListener(inputActionListener);
+
+	lblPort1 = new gcn::Label("Port 1 [Joystick]:");
+	lblPort1->setSize(port_lbl_length, LABEL_HEIGHT);
 	lblPort1->setAlignment(gcn::Graphics::RIGHT);
 	cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort1->setSize(textFieldWidth, DROPDOWN_HEIGHT);
@@ -559,6 +582,48 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort1->setBackgroundColor(colTextboxBackground);
 	cboPort1->setId("cboPort1");
 	cboPort1->addActionListener(inputActionListener);
+
+	cboPort1mode = new gcn::UaeDropDown(&ctrlPortModeList);
+	cboPort1mode->setSize(mode_length, DROPDOWN_HEIGHT);
+	cboPort1mode->setBaseColor(gui_baseCol);
+	cboPort1mode->setId("cboPort1mode");
+	cboPort1mode->addActionListener(inputActionListener);
+
+	lblPort2 = new gcn::Label("Port 2 [Parallel 1]:");
+	lblPort2->setSize(port_lbl_length, LABEL_HEIGHT);
+	lblPort2->setAlignment(gcn::Graphics::LEFT);
+	cboPort2 = new gcn::UaeDropDown(&ctrlPortList);
+	cboPort2->setSize(textFieldWidth, DROPDOWN_HEIGHT);
+	cboPort2->setBaseColor(gui_baseCol);
+	cboPort2->setId("cboPort2");
+	cboPort2->addActionListener(inputActionListener);
+
+	lblPort3 = new gcn::Label("Port 3 [Parallel 2]:");
+	lblPort3->setSize(port_lbl_length, LABEL_HEIGHT);
+	lblPort3->setAlignment(gcn::Graphics::LEFT);
+	cboPort3 = new gcn::UaeDropDown(&ctrlPortList);
+	cboPort3->setSize(textFieldWidth, DROPDOWN_HEIGHT);
+	cboPort3->setBaseColor(gui_baseCol);
+	cboPort3->setId("cboPort3");
+	cboPort3->addActionListener(inputActionListener);
+
+	lblPort0mousemode = new gcn::Label("Mouse Stick 0:");
+	lblPort0mousemode->setSize(100, LABEL_HEIGHT);
+	lblPort0mousemode->setAlignment(gcn::Graphics::RIGHT);
+	cboPort0mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
+	cboPort0mousemode->setSize(68, DROPDOWN_HEIGHT);
+	cboPort0mousemode->setBaseColor(gui_baseCol);
+	cboPort0mousemode->setId("cboPort0mousemode");
+	cboPort0mousemode->addActionListener(inputActionListener);
+
+	lblPort1mousemode = new gcn::Label("Mouse Stick 1:");
+	lblPort1mousemode->setSize(100, LABEL_HEIGHT);
+	lblPort1mousemode->setAlignment(gcn::Graphics::RIGHT);
+	cboPort1mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
+	cboPort1mousemode->setSize(68, DROPDOWN_HEIGHT);
+	cboPort1mousemode->setBaseColor(gui_baseCol);
+	cboPort1mousemode->setId("cboPort1mousemode");
+	cboPort1mousemode->addActionListener(inputActionListener);
 
 	lblAutofire = new gcn::Label("Autofire Rate:");
 	lblAutofire->setSize(100, LABEL_HEIGHT);
@@ -745,21 +810,39 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
 	category.panel->add(cboPort0, DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
+	category.panel->add(cboPort0mode, +lblPort0->getWidth() + cboPort0->getWidth() + 30, posY);
+
 	posY += cboPort0->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblPort1, DISTANCE_BORDER, posY);
 	category.panel->add(cboPort1, DISTANCE_BORDER + lblPort1->getWidth() + 8, posY);
+	category.panel->add(cboPort1mode, +lblPort1->getWidth() + cboPort1->getWidth() + 30, posY);
 
 	posY += cboPort1->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(lblAutofire, DISTANCE_BORDER, posY);
-	category.panel->add(cboAutofire, DISTANCE_BORDER + lblAutofire->getWidth() + 8, posY);
-	posY += cboAutofire->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblPort2, DISTANCE_BORDER, posY);
+	category.panel->add(cboPort2, DISTANCE_BORDER + lblPort2->getWidth() + 8, posY);
 
+	posY += cboPort2->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblPort3, DISTANCE_BORDER, posY);
+	category.panel->add(cboPort3, DISTANCE_BORDER + lblPort3->getWidth() + 8, posY);
+
+	posY += cboPort3->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblMouseSpeed, DISTANCE_BORDER, posY);
 	category.panel->add(sldMouseSpeed, DISTANCE_BORDER + lblMouseSpeed->getWidth() + 8, posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 12, posY);
-	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
+	
+	category.panel->add(lblPort0mousemode, 320, posY);
+	category.panel->add(cboPort0mousemode, 320 + lblPort0mousemode->getWidth() + 8, posY);
 
-  category.panel->add(chkMouseHack, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
+	posY += sldMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
+	category.panel->add(chkMouseHack, DISTANCE_BORDER + lblA->getWidth() + 8, posY);
+	category.panel->add(lblPort1mousemode, 320, posY);
+	category.panel->add(cboPort1mousemode, 320 + lblPort1mousemode->getWidth() + 8, posY);
+
+	posY += cboAutofire->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblAutofire, DISTANCE_BORDER, posY);
+	category.panel->add(cboAutofire, DISTANCE_BORDER + lblAutofire->getWidth() + 8, posY);
+	posY += cboAutofire->getHeight() + DISTANCE_NEXT_Y;
+  
 #ifdef PANDORA
   category.panel->add(lblTapDelay, 300, posY);
   category.panel->add(cboTapDelay, 300 + lblTapDelay->getWidth() + 8, posY);
@@ -809,25 +892,21 @@ void ExitPanelInput()
 	delete lblPort0;
 	delete cboPort0;
 	delete cboPort0mode;
-#ifdef AMIBERRY
 	delete lblPort0mousemode;
 	delete cboPort0mousemode;
-#endif
+
 	delete lblPort1;
 	delete cboPort1;
 	delete cboPort1mode;
-#ifdef AMIBERRY
+
 	delete lblPort1mousemode;
 	delete cboPort1mousemode;
-#endif
 
-#ifdef AMIBERRY
 	delete lblPort2;
 	delete cboPort2;
 	delete lblPort3;
 	delete cboPort3;
 
-#endif
 	delete lblAutofire;
 	delete cboAutofire;
 	delete lblMouseSpeed;
@@ -942,8 +1021,6 @@ void RefreshPanelInput()
 	cboPort1->setSelected(idx);
 #endif
 
-#ifdef AMIBERRY
-
 	// Set current device in port 2
 	idx = 0;
 	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
@@ -967,7 +1044,6 @@ void RefreshPanelInput()
 		}
 	}
 	cboPort3->setSelected(idx);
-#endif
 
 	if (changed_prefs.input_autofire_linecnt == 0)
 		cboAutofire->setSelected(0);
@@ -998,9 +1074,6 @@ void RefreshPanelInput()
 	else
 		cboPort1mode->setSelected(3);
 
-#ifdef AMIBERRY 
-
-
 	// changed mouse map
 	cboPort0mousemode->setSelected(changed_prefs.jports[0].mousemap);
 	cboPort1mousemode->setSelected(changed_prefs.jports[1].mousemap);
@@ -1023,7 +1096,6 @@ void RefreshPanelInput()
 		cboPort1mousemode->setEnabled(true);
 	}
 
-#endif
 	for (int i = 0; i < 5; ++i)
 	{
 		if (changed_prefs.input_joymouse_multiplier == mousespeed_values[i])
