@@ -60,7 +60,7 @@
 
 #include "guisan/sdl/sdlimage.hpp"
 
-#include "SDL2/SDL_image.h"
+#include "SDL_image.h"
 
 #include "guisan/exception.hpp"
 #include "guisan/sdl/sdlimageloader.hpp"
