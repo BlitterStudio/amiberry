@@ -65,7 +65,7 @@ static gcn::Label* lblCDVolInfo;
 static gcn::Slider* sldCDVol;
 
 
-static int GetHDType(int index)
+static int GetHDType(const int index)
 {
 	struct mountedinfo mi;
 
@@ -273,7 +273,7 @@ public:
 	{
 		if (actionEvent.getSource() == sldCDVol)
 		{
-			int newvol = 100 - (int)sldCDVol->getValue();
+			const int newvol = 100 - int(sldCDVol->getValue());
 			if (changed_prefs.sound_volume_cd != newvol)
 			{
 				changed_prefs.sound_volume_cd = newvol;
@@ -301,7 +301,7 @@ public:
 		//---------------------------------------
 		if (!bIgnoreListChange)
 		{
-			int idx = cboCDFile->getSelected();
+			const int idx = cboCDFile->getSelected();
 
 			if (idx < 0)
 			{

@@ -27,10 +27,10 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202
 
-static SDL_Joystick *GUIjoy;
+static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
-extern std::string volName;
+extern string volName;
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -106,14 +106,16 @@ static void InitEditFilesysVirtual()
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->setId("virtOK");
 	cmdOK->addActionListener(filesysVirtualActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->setId("virtCancel");
 	cmdCancel->addActionListener(filesysVirtualActionListener);
@@ -221,6 +223,8 @@ static void ExitEditFilesysVirtual()
 
 static void EditFilesysVirtualLoop()
 {
+	FocusBugWorkaround(wndEditFilesysVirtual);
+
 	GUIjoy = SDL_JoystickOpen(0);
 	while (!dialogFinished)
 	{
@@ -265,67 +269,62 @@ static void EditFilesysVirtualLoop()
 					break;
 				}
 			}
-	else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
-      {
-          gcn::FocusHandler* focusHdl;
-          gcn::Widget* activeWidget;                                          
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+			{
+				gcn::FocusHandler* focusHdl;
+				gcn::Widget* activeWidget;
 
-          int hat = SDL_JoystickGetHat(GUIjoy, 0);
+				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-          if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))  // dpad
-              {   
-
-                  if(HandleNavigation(DIRECTION_UP))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_UP);}
-                  break; 
-
-              } 
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))   // dpad
-              {
-                  if(HandleNavigation(DIRECTION_DOWN))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_DOWN);}
-                  break; 
-              }
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))  // dpad
-              {   
-                  if(HandleNavigation(DIRECTION_RIGHT))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_RIGHT);}
-                  break;      
-              } 
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))  // dpad
-              {
-                  if(HandleNavigation(DIRECTION_LEFT))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_LEFT);}
-                      break; 
-              }
-
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))   // need this to be X button
-              {	
-                  PushFakeKey(SDLK_RETURN);
-                  continue; }
-          
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
-                    SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))   // need this to be START button
-               { dialogFinished = true; 
-                 break;}              
-      }
-      //-------------------------------------------------
-      // Send event to guichan-controls
-      //-------------------------------------------------
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_UP))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_UP);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_DOWN))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_DOWN);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_RIGHT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_RIGHT);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_LEFT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_LEFT);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+				{
+					PushFakeKey(SDLK_RETURN);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button)) // need this to be START button
+				{
+					dialogFinished = true;
+					break;
+				}
+			}
+			//-------------------------------------------------
+			// Send event to guichan-controls
+			//-------------------------------------------------
 #ifdef ANDROIDSDL
-        androidsdl_event(event, gui_input);
+			androidsdl_event(event, gui_input);
 #else
-        gui_input->pushInput(event);
+			gui_input->pushInput(event);
 #endif
-    }
+		}
 
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
@@ -338,7 +337,7 @@ static void EditFilesysVirtualLoop()
 }
 
 
-bool EditFilesysVirtual(int unit_no)
+bool EditFilesysVirtual(const int unit_no)
 {
 	struct mountedinfo mi;
 	struct uaedev_config_data* uci;
@@ -353,7 +352,7 @@ bool EditFilesysVirtual(int unit_no)
 	if (unit_no >= 0)
 	{
 		uci = &changed_prefs.mountconfig[unit_no];
-		struct uaedev_config_info * ci = &uci->ci;
+		struct uaedev_config_info* ci = &uci->ci;
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		strdevname.assign(ci->devname);
@@ -383,13 +382,13 @@ bool EditFilesysVirtual(int unit_no)
 	if (dialogResult)
 	{
 		struct uaedev_config_info ci;
-		int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
+		const int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
 		uci_set_defaults(&ci, true);
-		strncpy(ci.devname, (char *) txtDevice->getText().c_str(), MAX_DPATH);
-    		strncpy(ci.volname, (char *) txtVolume->getText().c_str(), MAX_DPATH);
-    		strncpy(ci.rootdir, (char *) txtPath->getText().c_str(), MAX_DPATH);
+		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
+		strncpy(ci.volname, const_cast<char *>(txtVolume->getText().c_str()), MAX_DPATH);
+		strncpy(ci.rootdir, const_cast<char *>(txtPath->getText().c_str()), MAX_DPATH);
 		ci.type = UAEDEV_DIR;
 		ci.readonly = !chkReadWrite->isSelected();
 		ci.bootpri = bp;

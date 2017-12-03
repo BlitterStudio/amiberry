@@ -13,14 +13,14 @@ namespace gcn
 
 		active = false;
 
-		container = new gcn::Container();
+		container = new Container();
 		container->setOpaque(true);
 
-		label = new gcn::Label(caption);
+		label = new Label(caption);
 		label->setHeight(16);
 
-		gcn::Image* img = gcn::Image::load(imagepath);
-		icon = new gcn::Icon(img);
+		Image* img = Image::load(imagepath);
+		icon = new Icon(img);
 		icon->setSize(16, 16);
 
 		container->add(icon, 4, 4);
@@ -65,7 +65,7 @@ namespace gcn
 	}
 
 
-	void SelectorEntry::setActive(bool active)
+	void SelectorEntry::setActive(const bool active)
 	{
 		this->active = active;
 		if (active)
@@ -75,7 +75,7 @@ namespace gcn
 	}
 
 
-	bool SelectorEntry::getActive()
+	bool SelectorEntry::getActive() const
 	{
 		return active;
 	}

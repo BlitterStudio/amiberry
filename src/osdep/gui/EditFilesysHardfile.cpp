@@ -27,19 +27,21 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 272
 
-static SDL_Joystick *GUIjoy;
+static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 static const char* harddisk_filter[] = {".hdf", "\0"};
 
-struct controller_map {
+struct controller_map
+{
 	int type;
 	char display[64];
 };
+
 static struct controller_map controller[] = {
-	{ HD_CONTROLLER_TYPE_UAE,     "UAE" },
-	{ HD_CONTROLLER_TYPE_IDE_FIRST,  "A600/A1200/A4000 IDE" },
-	{ -1 }
+	{HD_CONTROLLER_TYPE_UAE, "UAE"},
+	{HD_CONTROLLER_TYPE_IDE_FIRST, "A600/A1200/A4000 IDE"},
+	{-1}
 };
 
 static bool dialogResult = false;
@@ -67,13 +69,13 @@ static gcn::Label* lblSectors;
 static gcn::TextField* txtSectors;
 static gcn::Label* lblBlocksize;
 static gcn::TextField* txtBlocksize;
-static gcn::Label *lblController;
+static gcn::Label* lblController;
 static gcn::UaeDropDown* cboController;
 static gcn::UaeDropDown* cboUnit;
 
 static void check_rdb(const TCHAR* filename)
 {
-	bool isrdb = hardfile_testrdb(filename);
+	const bool isrdb = hardfile_testrdb(filename);
 	if (isrdb)
 	{
 		txtSectors->setText("0");
@@ -100,13 +102,14 @@ public:
 		return 2;
 	}
 
-	std::string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= 2)
 			return "---";
 		return controller[i].display;
 	}
 };
+
 static ControllerListModel controllerListModel;
 
 
@@ -122,7 +125,7 @@ public:
 		return 4;
 	}
 
-	std::string getElementAt(int i) override
+	string getElementAt(int i) override
 	{
 		char num[8];
 
@@ -132,6 +135,7 @@ public:
 		return num;
 	}
 };
+
 static UnitListModel unitListModel;
 
 class FilesysHardfileActionListener : public gcn::ActionListener
@@ -153,8 +157,10 @@ public:
 			wndEditFilesysHardfile->requestModalFocus();
 			cmdPath->requestFocus();
 		}
-		else if (actionEvent.getSource() == cboController) {
-			switch (controller[cboController->getSelected()].type) {
+		else if (actionEvent.getSource() == cboController)
+		{
+			switch (controller[cboController->getSelected()].type)
+			{
 			case HD_CONTROLLER_TYPE_UAE:
 				cboUnit->setSelected(0);
 				cboUnit->setEnabled(false);
@@ -190,11 +196,15 @@ static FilesysHardfileActionListener* filesysHardfileActionListener;
 
 static void InitEditFilesysHardfile()
 {
-	for (int i = 0; expansionroms[i].name; i++) {
-		const struct expansionromtype *erc = &expansionroms[i];
-		if (erc->deviceflags & EXPANSIONTYPE_IDE) {
-			for (int j = 0; controller[j].type >= 0; ++j) {
-				if (!strcmp(erc->friendlyname, controller[j].display)) {
+	for (int i = 0; expansionroms[i].name; i++)
+	{
+		const struct expansionromtype* erc = &expansionroms[i];
+		if (erc->deviceflags & EXPANSIONTYPE_IDE)
+		{
+			for (int j = 0; controller[j].type >= 0; ++j)
+			{
+				if (!strcmp(erc->friendlyname, controller[j].display))
+				{
 					controller[j].type = HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST + i;
 					break;
 				}
@@ -213,14 +223,16 @@ static void InitEditFilesysHardfile()
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->setId("hdfOK");
 	cmdOK->addActionListener(filesysHardfileActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->setId("hdfCancel");
 	cmdCancel->addActionListener(filesysHardfileActionListener);
@@ -386,8 +398,8 @@ static void ExitEditFilesysHardfile()
 
 static void EditFilesysHardfileLoop()
 {
-	// TODO: Check if this is needed in Guisan?
-	//FocusBugWorkaround(wndEditFilesysHardfile);
+	FocusBugWorkaround(wndEditFilesysHardfile);
+
 	GUIjoy = SDL_JoystickOpen(0);
 
 	while (!dialogFinished)
@@ -433,67 +445,62 @@ static void EditFilesysHardfileLoop()
 					break;
 				}
 			}
-		else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
-      {
-          gcn::FocusHandler* focusHdl;
-          gcn::Widget* activeWidget;                                          
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+			{
+				gcn::FocusHandler* focusHdl;
+				gcn::Widget* activeWidget;
 
-          int hat = SDL_JoystickGetHat(GUIjoy, 0);
+				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-          if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))  // dpad
-              {   
-
-                  if(HandleNavigation(DIRECTION_UP))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_UP);}
-                  break; 
-
-              } 
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))   // dpad
-              {
-                  if(HandleNavigation(DIRECTION_DOWN))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_DOWN);}
-                  break; 
-              }
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))  // dpad
-              {   
-                  if(HandleNavigation(DIRECTION_RIGHT))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_RIGHT);}
-                  break;      
-              } 
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))  // dpad
-              {
-                  if(HandleNavigation(DIRECTION_LEFT))
-                          continue; // Don't change value when enter Slider -> don't send event to control
-                  else
-                          {PushFakeKey(SDLK_LEFT);}
-                      break; 
-              }
-
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))   // need this to be X button
-              {	
-                  PushFakeKey(SDLK_RETURN);
-                  continue; }
-          
-          else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
-                    SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))   // need this to be START button
-               { dialogFinished = true; 
-                 break;}      
-      }
-      //-------------------------------------------------
-      // Send event to guichan-controls
-      //-------------------------------------------------
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_UP))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_UP);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_DOWN))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_DOWN);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_RIGHT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_RIGHT);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
+				{
+					if (HandleNavigation(DIRECTION_LEFT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_LEFT);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+				{
+					PushFakeKey(SDLK_RETURN);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button)) // need this to be START button
+				{
+					dialogFinished = true;
+					break;
+				}
+			}
+			//-------------------------------------------------
+			// Send event to guichan-controls
+			//-------------------------------------------------
 #ifdef ANDROIDSDL
-        androidsdl_event(event, gui_input);
+			androidsdl_event(event, gui_input);
 #else
-        gui_input->pushInput(event);
+			gui_input->pushInput(event);
 #endif
-    }
+		}
 
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
@@ -506,7 +513,7 @@ static void EditFilesysHardfileLoop()
 }
 
 
-bool EditFilesysHardfile(int unit_no)
+bool EditFilesysHardfile(const int unit_no)
 {
 	struct mountedinfo mi;
 	struct uaedev_config_data* uci;
@@ -521,7 +528,7 @@ bool EditFilesysHardfile(int unit_no)
 	if (unit_no >= 0)
 	{
 		uci = &changed_prefs.mountconfig[unit_no];
-		struct uaedev_config_info * ci = &uci->ci;
+		struct uaedev_config_info* ci = &uci->ci;
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		strdevname.assign(ci->devname);
@@ -543,7 +550,8 @@ bool EditFilesysHardfile(int unit_no)
 		snprintf(tmp, sizeof tmp, "%d", ci->blocksize);
 		txtBlocksize->setText(tmp);
 		int selIndex = 0;
-		for (int i = 0; i < 2; ++i) {
+		for (int i = 0; i < 2; ++i)
+		{
 			if (controller[i].type == ci->controller_type)
 				selIndex = i;
 		}
@@ -575,12 +583,12 @@ bool EditFilesysHardfile(int unit_no)
 	if (dialogResult)
 	{
 		struct uaedev_config_info ci;
-		int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
+		const int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
 		uci_set_defaults(&ci, false);
-		strncpy(ci.devname, (char *) txtDevice->getText().c_str(), MAX_DPATH);
-    		strncpy(ci.rootdir, (char *) txtPath->getText().c_str(), MAX_DPATH);
+		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
+		strncpy(ci.rootdir, const_cast<char *>(txtPath->getText().c_str()), MAX_DPATH);
 		ci.type = UAEDEV_HDF;
 		ci.controller_type = controller[cboController->getSelected()].type;
 		ci.controller_type_unit = 0;
@@ -599,7 +607,7 @@ bool EditFilesysHardfile(int unit_no)
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
-			struct hardfiledata *hfd = get_hardfile_data(uci->configoffset);
+			struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
 			if (hfd)
 				hardfile_media_change(hfd, &ci, true, false);
 			else

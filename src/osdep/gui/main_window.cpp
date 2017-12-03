@@ -183,20 +183,20 @@ void RegisterRefreshFunc(void (*func)(void))
 	refreshFuncAfterDraw = func;
 }
 
-//void FocusBugWorkaround(gcn::Window* wnd)
-//{
-//	// When modal dialog opens via mouse, the dialog will not
-//	// have the focus unless there is a mouse click. We simulate the click...
-//	SDL_Event event;
-//	event.type = SDL_MOUSEBUTTONDOWN;
-//	event.button.button = SDL_BUTTON_LEFT;
-//	event.button.state = SDL_PRESSED;
-//	event.button.x = wnd->getX() + 2;
-//	event.button.y = wnd->getY() + 2;
-//	gui_input->pushInput(event);
-//	event.type = SDL_MOUSEBUTTONUP;
-//	gui_input->pushInput(event);
-//}
+void FocusBugWorkaround(gcn::Window* wnd)
+{
+	// When modal dialog opens via mouse, the dialog will not
+	// have the focus unless there is a mouse click. We simulate the click...
+	SDL_Event event;
+	event.type = SDL_MOUSEBUTTONDOWN;
+	event.button.button = SDL_BUTTON_LEFT;
+	event.button.state = SDL_PRESSED;
+	event.button.x = wnd->getX() + 2;
+	event.button.y = wnd->getY() + 2;
+	gui_input->pushInput(event);
+	event.type = SDL_MOUSEBUTTONUP;
+	gui_input->pushInput(event);
+}
 
 static void ShowHelpRequested()
 {
@@ -849,8 +849,8 @@ void DisableResume()
 void run_gui()
 {
 #ifdef ANDROIDSDL
-  SDL_ANDROID_SetScreenKeyboardShown(0);
-  SDL_ANDROID_SetSystemMousePointerVisible(1);
+	SDL_ANDROID_SetScreenKeyboardShown(0);
+	SDL_ANDROID_SetSystemMousePointerVisible(1);
 #endif
 	gui_running = true;
 	gui_rtarea_flags_onenter = gui_create_rtarea_flag(&currprefs);
@@ -870,13 +870,13 @@ void run_gui()
 		sdl::gui_run();
 		widgets::gui_halt();
 		sdl::gui_halt();
-	#ifdef ANDROIDSDL
-                if (currprefs.onScreen!=0)
-                {
-                   SDL_ANDROID_SetScreenKeyboardShown(1);
-                   SDL_ANDROID_SetSystemMousePointerVisible(0);
-                }
-            #endif 
+#ifdef ANDROIDSDL
+		if (currprefs.onScreen != 0)
+		{
+			SDL_ANDROID_SetScreenKeyboardShown(1);
+			SDL_ANDROID_SetSystemMousePointerVisible(0);
+		}
+#endif 
 	}
 	
 	// Catch all guisan exceptions.

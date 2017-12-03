@@ -28,7 +28,7 @@
 #define FILE_SELECT_KEEP_POSITION
 #endif
 
-static SDL_Joystick *GUIjoy;
+static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 static bool dialogResult = false;
@@ -98,14 +98,14 @@ public:
 	{
 		if (actionEvent.getSource() == cmdOK)
 		{
-			int selected_item = lstFiles->getSelected();
+			const int selected_item = lstFiles->getSelected();
 			if (createNew)
 			{
 				char tmp[MAX_PATH];
 				if (txtFilename->getText().length() <= 0)
 					return;
 				strncpy(tmp, workingDir, MAX_PATH - 1);
-          			strncat(tmp, "/", MAX_PATH - 1);
+				strncat(tmp, "/", MAX_PATH - 1);
 				strncat(tmp, txtFilename->getText().c_str(), MAX_PATH - 1);
 				if (strstr(tmp, filefilter[0]) == nullptr)
 					strncat(tmp, filefilter[0], MAX_PATH - 1);
@@ -119,7 +119,7 @@ public:
 				if (fileList->isDir(selected_item))
 					return; // Directory selected -> Ok not possible
 				strncat(workingDir, "/", MAX_PATH - 1);
-          			strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
+				strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
 				dialogResult = true;
 			}
 		}
@@ -138,7 +138,7 @@ static void checkfoldername(char* current)
 	if ((dir = opendir(current)))
 	{
 		fileList->changeDir(current);
-		char * ptr = realpath(current, actualpath);
+		char* ptr = realpath(current, actualpath);
 		strncpy(workingDir, ptr, MAX_PATH);
 		closedir(dir);
 	}
@@ -170,10 +170,10 @@ public:
 	{
 		char foldername[MAX_PATH] = "";
 
-		int selected_item = lstFiles->getSelected();
+		const int selected_item = lstFiles->getSelected();
 		strncpy(foldername, workingDir, MAX_PATH);
-      		strncat(foldername, "/", MAX_PATH - 1);
-      		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
+		strncat(foldername, "/", MAX_PATH - 1);
+		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
 		if (fileList->isDir(selected_item))
 			checkfoldername(foldername);
 		else if (!createNew)
@@ -201,13 +201,15 @@ static void InitSelectFile(const char* title)
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->addActionListener(fileButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->addActionListener(fileButtonActionListener);
 
@@ -287,9 +289,9 @@ static void ExitSelectFile()
 
 static void SelectFileLoop()
 {
-//TODO: is this needed in guisan?
-	//FocusBugWorkaround(wndSelectFile);
-	GUIjoy = SDL_JoystickOpen(0); 
+	FocusBugWorkaround(wndSelectFile);
+
+	GUIjoy = SDL_JoystickOpen(0);
 
 	while (!dialogFinished)
 	{
@@ -319,7 +321,6 @@ static void SelectFileLoop()
 								lstFiles->requestFocus();
 						else if (activeWidget == txtFilename)
 							lstFiles->requestFocus();
-					continue;
 					}
 					break;
 
@@ -338,7 +339,6 @@ static void SelectFileLoop()
 							lstFiles->requestFocus();
 						else if (activeWidget == cmdOK)
 							cmdCancel->requestFocus();
-					continue;
 					}
 					break;
 
@@ -348,78 +348,78 @@ static void SelectFileLoop()
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;
-				default: 
+				default:
 					break;
 				}
 			}
-	else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
-      {
-        int hat = SDL_JoystickGetHat(GUIjoy, 0);
-        
-            if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))
-                {PushFakeKey(SDLK_RETURN);
-                 break;}
-            
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
-                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))
-                {dialogFinished = true;
-                 break;}
-        
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
-                {
-                  gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-                  gcn::Widget* activeWidget = focusHdl->getFocused();
-                  if(activeWidget == lstFiles)
-                    cmdCancel->requestFocus();
-                  else if(activeWidget == cmdCancel)
-                    cmdOK->requestFocus();
-                  else if(activeWidget == cmdOK)
-                    if(createNew)
-                      txtFilename->requestFocus();
-                    else
-                      lstFiles->requestFocus();
-                  else if(activeWidget == txtFilename)
-                    lstFiles->requestFocus();
-                  continue;
-                }
-               
-                          
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
-                {
-                  gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-                  gcn::Widget* activeWidget = focusHdl->getFocused();
-                  if(activeWidget == lstFiles)
-                    if(createNew)
-                      txtFilename->requestFocus();
-                    else
-                      cmdOK->requestFocus();
-                  else if(activeWidget == txtFilename)
-                    cmdOK->requestFocus();
-                  else if(activeWidget == cmdCancel)
-                    lstFiles->requestFocus();
-                  else if(activeWidget == cmdOK)
-                    cmdCancel->requestFocus();
-                  continue;
-                }
-                     
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
-                {PushFakeKey(SDLK_UP);
-                 break;}
-            
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
-                {PushFakeKey(SDLK_DOWN);
-                 break;}  
-        
-        
-       }
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+			{
+				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+				{
+					PushFakeKey(SDLK_RETURN);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+				{
+					dialogFinished = true;
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
+				{
+					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+					gcn::Widget* activeWidget = focusHdl->getFocused();
+					if (activeWidget == lstFiles)
+						cmdCancel->requestFocus();
+					else if (activeWidget == cmdCancel)
+						cmdOK->requestFocus();
+					else if (activeWidget == cmdOK)
+						if (createNew)
+							txtFilename->requestFocus();
+						else
+							lstFiles->requestFocus();
+					else if (activeWidget == txtFilename)
+						lstFiles->requestFocus();
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
+				{
+					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+					gcn::Widget* activeWidget = focusHdl->getFocused();
+					if (activeWidget == lstFiles)
+						if (createNew)
+							txtFilename->requestFocus();
+						else
+							cmdOK->requestFocus();
+					else if (activeWidget == txtFilename)
+						cmdOK->requestFocus();
+					else if (activeWidget == cmdCancel)
+						lstFiles->requestFocus();
+					else if (activeWidget == cmdOK)
+						cmdCancel->requestFocus();
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
+				{
+					PushFakeKey(SDLK_UP);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
+				{
+					PushFakeKey(SDLK_DOWN);
+					break;
+				}
+			}
 
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
 #ifdef ANDROIDSDL
-        androidsdl_event(event, gui_input);
+			androidsdl_event(event, gui_input);
 #else
-        gui_input->pushInput(event);
+			gui_input->pushInput(event);
 #endif
 		}
 
@@ -444,7 +444,7 @@ static void SelectFileLoop()
 static int Already_init = 0;
 #endif
 
-bool SelectFile(const char* title, char* value, const char* filter[], bool create)
+bool SelectFile(const char* title, char* value, const char* filter[], const bool create)
 {
 	dialogResult = false;
 	dialogFinished = false;

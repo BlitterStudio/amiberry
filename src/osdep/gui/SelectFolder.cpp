@@ -23,12 +23,12 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
-std::string volName;
+string volName;
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static char workingDir[MAX_PATH];
 
-static SDL_Joystick *GUIjoy;
+static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static gcn::Window* wndSelectFolder;
 static gcn::Button* cmdOK;
@@ -95,7 +95,7 @@ static void checkfoldername(char* current)
 	if ((dir = opendir(current)))
 	{
 		dirList = current;
-		char * ptr = realpath(current, actualpath);
+		char* ptr = realpath(current, actualpath);
 		strncpy(workingDir, ptr, MAX_PATH);
 		closedir(dir);
 	}
@@ -112,7 +112,7 @@ public:
 	{
 		char foldername[MAX_PATH] = "";
 
-		int selected_item = lstFolders->getSelected();
+		const int selected_item = lstFolders->getSelected();
 		strncpy(foldername, workingDir, MAX_PATH - 1);
 		strncat(foldername, "/", MAX_PATH - 1);
 		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_PATH - 1);
@@ -137,13 +137,15 @@ static void InitSelectFolder(const char* title)
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->addActionListener(buttonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->addActionListener(buttonActionListener);
 
@@ -198,30 +200,32 @@ static void ExitSelectFolder()
 }
 
 static void navigate_right(void)
-{ gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-  gcn::Widget* activeWidget = focusHdl->getFocused();
-  if(activeWidget == lstFolders)
-    cmdOK->requestFocus();
-  else if(activeWidget == cmdCancel)
-    lstFolders->requestFocus();
-  else if(activeWidget == cmdOK)
-    cmdCancel->requestFocus();
-  }  
+{
+	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+	gcn::Widget* activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFolders)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdCancel)
+		lstFolders->requestFocus();
+	else if (activeWidget == cmdOK)
+		cmdCancel->requestFocus();
+}
 
 static void navigate_left(void)
-    {
-      gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-      gcn::Widget* activeWidget = focusHdl->getFocused();
-      if(activeWidget == lstFolders)
-        cmdCancel->requestFocus();
-      else if(activeWidget == cmdCancel)
-        cmdOK->requestFocus();
-      else if(activeWidget == cmdOK)
-        lstFolders->requestFocus();
-    }
+{
+	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+	gcn::Widget* activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFolders)
+		cmdCancel->requestFocus();
+	else if (activeWidget == cmdCancel)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdOK)
+		lstFolders->requestFocus();
+}
+
 static void SelectFolderLoop()
 {
-	//FocusBugWorkaround(wndSelectFolder);
+	FocusBugWorkaround(wndSelectFolder);
 
 	while (!dialogFinished)
 	{
@@ -268,62 +272,73 @@ static void SelectFolderLoop()
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;
-				default: 
+				default:
 					break;
 				}
 			}
-else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
-      {
-          int hat = SDL_JoystickGetHat(GUIjoy, 0);
-          
-            if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))
-            {PushFakeKey(SDLK_RETURN);
-             break;}
-            
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
-                    SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))
-            {dialogFinished = true;
-             break;}
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+			{
+				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
-                { gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-                  gcn::Widget* activeWidget = focusHdl->getFocused();
-                  if(activeWidget == lstFolders)
-                    cmdCancel->requestFocus();
-                  else if(activeWidget == cmdCancel)
-                    cmdOK->requestFocus();
-                  else if(activeWidget == cmdOK)
-                    lstFolders->requestFocus(); 
-                  continue;}
-               
-                          
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
-                { gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-                  gcn::Widget* activeWidget = focusHdl->getFocused();
-                  if(activeWidget == lstFolders)
-                    cmdOK->requestFocus();
-                  else if(activeWidget == cmdCancel)
-                    lstFolders->requestFocus();
-                  else if(activeWidget == cmdOK)
-                    cmdCancel->requestFocus(); 
-                  continue;} 
-                     
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
-                {PushFakeKey(SDLK_UP);
-                 break;}
-            
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
-                {PushFakeKey(SDLK_DOWN);
-                 break;}            
-      }
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+				{
+					PushFakeKey(SDLK_RETURN);
+					break;
+				}
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+				{
+					dialogFinished = true;
+					break;
+				}
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
+				{
+					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+					gcn::Widget* activeWidget = focusHdl->getFocused();
+					if (activeWidget == lstFolders)
+						cmdCancel->requestFocus();
+					else if (activeWidget == cmdCancel)
+						cmdOK->requestFocus();
+					else if (activeWidget == cmdOK)
+						lstFolders->requestFocus();
+					break;
+				}
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
+				{
+					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+					gcn::Widget* activeWidget = focusHdl->getFocused();
+					if (activeWidget == lstFolders)
+						cmdOK->requestFocus();
+					else if (activeWidget == cmdCancel)
+						lstFolders->requestFocus();
+					else if (activeWidget == cmdOK)
+						cmdCancel->requestFocus();
+					break;
+				}
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
+				{
+					PushFakeKey(SDLK_UP);
+					break;
+				}
+
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
+				{
+					PushFakeKey(SDLK_DOWN);
+					break;
+				}
+			}
 
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
 #ifdef ANDROIDSDL
-        androidsdl_event(event, gui_input);
+			androidsdl_event(event, gui_input);
 #else
-        gui_input->pushInput(event);
+			gui_input->pushInput(event);
 #endif
 		}
 

@@ -20,7 +20,7 @@
 #include "androidsdl_event.h"
 #endif
 
-static SDL_Joystick *GUIjoy;
+static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 
@@ -29,7 +29,7 @@ extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 static bool dialogFinished = false;
 
-static gcn::Window *wndShowHelp;
+static gcn::Window* wndShowHelp;
 static gcn::Button* cmdOK;
 static gcn::ListBox* lstHelp;
 static gcn::ScrollArea* scrAreaHelp;
@@ -37,10 +37,10 @@ static gcn::ScrollArea* scrAreaHelp;
 
 class HelpListModel : public gcn::ListModel
 {
-	std::vector<std::string> lines;
+	vector<string> lines;
 
 public:
-	HelpListModel(std::vector<std::string> helptext)
+	HelpListModel(const vector<string> helptext)
 	{
 		lines = helptext;
 	}
@@ -50,14 +50,15 @@ public:
 		return lines.size();
 	}
 
-	std::string getElementAt(int i) override
+	string getElementAt(int i) override
 	{
 		if (i >= 0 && i < lines.size())
 			return lines[i];
 		return "";
 	}
 };
-static HelpListModel *helpList;
+
+static HelpListModel* helpList;
 
 
 class ShowHelpActionListener : public gcn::ActionListener
@@ -68,10 +69,11 @@ public:
 		dialogFinished = true;
 	}
 };
+
 static ShowHelpActionListener* showHelpActionListener;
 
 
-static void InitShowHelp(const std::vector<std::string>& helptext)
+static void InitShowHelp(const vector<string>& helptext)
 {
 	wndShowHelp = new gcn::Window("Help");
 	wndShowHelp->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -84,7 +86,8 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	helpList = new HelpListModel(helptext);
 
 	lstHelp = new gcn::ListBox(helpList);
-	lstHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
+	lstHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
+	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	lstHelp->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	lstHelp->setBaseColor(gui_baseCol + 0x202020);
 	lstHelp->setBackgroundColor(gui_baseCol);
@@ -93,14 +96,16 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	scrAreaHelp = new gcn::ScrollArea(lstHelp);
 	scrAreaHelp->setBorderSize(1);
 	scrAreaHelp->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
-	scrAreaHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
+	scrAreaHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
+	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	scrAreaHelp->setScrollbarWidth(20);
 	scrAreaHelp->setBaseColor(gui_baseCol + 0x202020);
 	scrAreaHelp->setBackgroundColor(gui_baseCol);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->addActionListener(showHelpActionListener);
 
@@ -132,8 +137,8 @@ static void ExitShowHelp(void)
 
 static void ShowHelpLoop(void)
 {
-//TODO: Check if this is needed in guisan?
-	//FocusBugWorkaround(wndShowHelp);
+	FocusBugWorkaround(wndShowHelp);
+
 	GUIjoy = SDL_JoystickOpen(0);
 
 	while (!dialogFinished)
@@ -154,31 +159,34 @@ static void ShowHelpLoop(void)
 				case SDL_SCANCODE_RETURN:
 					event.key.keysym.scancode = SDL_SCANCODE_RETURN;
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP;  // and the key up
+					event.type = SDL_KEYUP; // and the key up
 					break;
 				default:
 					break;
 				}
 			}
-else if (event.type == SDL_JOYBUTTONDOWN)
-      {
-            if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].south_button))
-                {PushFakeKey(SDLK_RETURN);
-                 break;}
-
-            else if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button) || 
-                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button))
-                {dialogFinished = true;
-                     break;}    
-      }
+			else if (event.type == SDL_JOYBUTTONDOWN)
+			{
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+				{
+					PushFakeKey(SDLK_RETURN);
+					break;
+				}
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+				{
+					dialogFinished = true;
+					break;
+				}
+			}
 
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
 #ifdef ANDROIDSDL
-        androidsdl_event(event, gui_input);
+			androidsdl_event(event, gui_input);
 #else
-        gui_input->pushInput(event);
+			gui_input->pushInput(event);
 #endif
 		}
 
@@ -193,7 +201,7 @@ else if (event.type == SDL_JOYBUTTONDOWN)
 }
 
 
-void ShowHelp(const char *title, const std::vector<std::string>& text)
+void ShowHelp(const char* title, const vector<string>& text)
 {
 	dialogFinished = false;
 
