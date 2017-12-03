@@ -83,8 +83,27 @@ namespace gcn
 
     ImageButton::~ImageButton()
     {
-	if (mInternalImage)
+        if (mInternalImage)
             delete mImage;
+    }
+
+    void ImageButton::adjustSize()
+    {
+        setWidth(mImage->getWidth());
+        setHeight(mImage->getHeight());
+    }
+
+    void ImageButton::setImage(Image* image)
+    {
+        if (mInternalImage)
+            delete mImage;
+        mImage = image;
+        mInternalImage = false;
+    }
+
+    Image* ImageButton::getImage()
+    {
+        return mImage;
     }
 
     void ImageButton::draw(Graphics* graphics)

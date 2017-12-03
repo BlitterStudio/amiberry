@@ -61,6 +61,7 @@
 #include <guisan/sdl/sdlimage.hpp>
 #include <guisan/sdl/sdlimageloader.hpp>
 #include <guisan/sdl/sdlinput.hpp>
+#include <guisan/sdl/sdltruetypefont.hpp>
 
 #include "platform.hpp"
 

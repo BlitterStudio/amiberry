@@ -193,6 +193,9 @@
     <ClCompile Include="..\..\src\guisan\src\widgets\window.cpp">
       <Filter>Source files\widgets</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\guisan\src\widgets\progressbar.cpp">
+      <Filter>Source files\widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\guisan\include\guisan.hpp">
@@ -385,6 +388,9 @@
       <Filter>Header files\guisan\widgets</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\window.hpp">
+      <Filter>Header files\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\progressbar.hpp">
       <Filter>Header files\guisan\widgets</Filter>
     </ClInclude>
   </ItemGroup>

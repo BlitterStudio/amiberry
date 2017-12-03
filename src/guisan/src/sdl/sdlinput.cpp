@@ -412,6 +412,44 @@ namespace gcn
                   break;
             }
         }
+        else
+        {
+            switch (keysym.sym)
+            {
+              case SDLK_KP_0:
+                  value = SDLK_0;
+                  break;
+              case SDLK_KP_1:
+                  value = SDLK_1;
+                  break;
+              case SDLK_KP_2:
+                  value = SDLK_2;
+                  break;
+              case SDLK_KP_3:
+                  value = SDLK_3;
+                  break;
+              case SDLK_KP_4:
+                  value = SDLK_4;
+                  break;
+              case SDLK_KP_5:
+                  value = SDLK_5;
+                  break;
+              case SDLK_KP_6:
+                  value = SDLK_6;
+                  break;
+              case SDLK_KP_7:
+                  value = SDLK_7;
+                  break;
+              case SDLK_KP_8:
+                  value = SDLK_8;
+                  break;
+              case SDLK_KP_9:
+                  value = SDLK_9;
+                  break;
+              default:
+                  break;
+            }
+        }
 
         return value;
     }

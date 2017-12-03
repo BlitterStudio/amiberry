@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2017 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -54,118 +54,158 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_EXCEPTION_HPP
-#define GCN_EXCEPTION_HPP
+#ifndef GCN_PROGRESSBAR_HPP
+#define GCN_PROGRESSBAR_HPP
 
 #include <string>
 
 #include "guisan/platform.hpp"
-
-
-#ifdef _MSC_VER
-#if _MSC_VER <= 1200
-#define __FUNCTION__ "?"
-#endif
-#endif
-
-/*
- * A macro to be used when throwing exceptions.
- * What it basicly does is that it creates a new exception
- * and automatically sets the filename and line number where
- * the exception occured.
- */
-#define GCN_EXCEPTION(mess) gcn::Exception(mess,   \
-                            __FUNCTION__,          \
-                            __FILE__,              \
-                            __LINE__)
+#include "guisan/widget.hpp"
+#include "guisan/widgets/label.hpp"
 
 namespace gcn
 {
-
     /**
-     * An exception containing a message, a file and a line number.
-     * Guichan will only throw exceptions of this class. You can use
-     * this class for your own exceptions. A nifty feature of the
-     * excpetion class is that it can tell you from which line and
-     * file it was thrown. To make things easier when throwing
-     * exceptions there exists a macro for creating exceptions
-     * which automatically sets the filename and line number.
-     *
-     * EXAMPLE: @code
-     *          throw GCN_EXCEPTION("my error message");
-     *          @endcode
+     * Implementation of a label capable of displaying a caption and a progress bar.
+     * 
+     * Setting both start and end to 0 creates an "infinite" progressbar with a small rectangle
+     * moving forward and disappearing. In this mode, it is up to the caller to set the progressbar
+     * value in the range 0-100 (which indicates the start of the rectangle) 
+     * regularly to achieve animation. 
      */
-    class GCN_CORE_DECLSPEC Exception
+    class GCN_CORE_DECLSPEC ProgressBar: public Label
     {
     public:
-
         /**
          * Constructor.
          */
-        Exception();
+        ProgressBar();
+        
+        /**
+         * Constructor.
+         *
+         * @param start minimum value
+         * @param end maximum value
+         * @param value current value
+         */
+        ProgressBar(const unsigned int start, const unsigned int end, const unsigned int value);
 
         /**
          * Constructor.
          *
-         * @param message the error message.
+         * @param caption The caption of the label.
          */
-        Exception(const std::string& message);
+        ProgressBar(const std::string& caption);
 
         /**
-         * Constructor.
+         * Gets the caption of the label.
          *
-         * NOTE: Don't use this constructor. Use the GCN_EXCEPTION macro instead.
-         *
-         * @param message the error message.
-         * @param function the function name.
-         * @param filename the name of the file.
-         * @param line the line number.
+         * @return The caption of the label.
+         * @see setCaption
          */
-        Exception(const std::string& message,
-                  const std::string& function,
-                  const std::string& filename,
-                  int line);
+        const std::string &getCaption() const;
 
         /**
-         * Gets the function name in which the exception was thrown.
+         * Sets the caption of the label. 
          *
-         * @return the function name in which the exception was thrown.
+         * @param caption The caption of the label.
+         * @see getCaption, adjustSize
          */
-        const std::string& getFunction() const;
+        void setCaption(const std::string& caption);
 
         /**
-         * Gets the error message of the exception.
+         * Sets the alignment for the caption. The alignment is relative
+         * to the center of the label.
          *
-         * @return the error message.
+         * @param alignemnt Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
+         * @see getAlignment, Graphics
          */
-        const std::string& getMessage() const;
+        void setAlignment(unsigned int alignment);
 
         /**
-         * Gets the filename in which the exceptions was thrown.
+         * Gets the alignment for the caption. The alignment is relative to
+         * the center of the label.
          *
-         * @return the filename in which the exception was thrown.
+         * @return alignment of caption. Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
+         * @see setAlignment, Graphics
          */
-        const std::string& getFilename() const;
-
+        unsigned int getAlignment() const;
+        
         /**
-         * Gets the line number of the line where the exception was thrown.
+         * Sets the minimum value.
          *
-         * @return the line number of the line where the exception was thrown.
+         * @param start the minimum value
+         * @see getStart
          */
-        int getLine() const;
+        void setStart(const unsigned int start);
+        
+        /**
+         * Gets the minimum value.
+         *
+         * @return the minimum value
+         * @see setStart
+         */
+        unsigned int getStart() const;
+        
+        /**
+         * Sets the maximum value.
+         *
+         * @param end the maximum value
+         * @see getEnd
+         */
+        void setEnd(const unsigned int end);
+        
+        /**
+         * Gets the maximum value.
+         *
+         * @return the maximum value
+         * @see setEnd
+         */
+        unsigned int getEnd() const;
+        
+        /**
+         * Sets the current progress value.
+         *
+         * @param value the current value
+         * @see getStart
+         */
+        void setValue(const unsigned int value);
+        
+        /**
+         * Gets the current progress value.
+         * 
+         * @return progress value
+         * @see setValue
+         */
+        unsigned int getValue() const;
+        
+        /**
+         * Adjusts the size of the widget. 
+         */
+        void adjustSize();
+
+
+        // Inherited from Widget
+
+        virtual void draw(Graphics* graphics);
+
+        virtual void drawBorder(Graphics* graphics);
 
     protected:
-        std::string mFunction;
-        std::string mMessage;
-        std::string mFilename;
-        int mLine;
+        /**
+         * Holds the caption of the label.
+         */
+        std::string mCaption;
+
+        /**
+         * Holds the alignment of the caption.
+         */
+        unsigned int mAlignment;
+        
+        unsigned int mStart; //! minimum value of the progressbar
+        unsigned int mEnd;   //! maximum value of the progressbar
+        unsigned int mValue; //! current value of the progressbar
     };
 }
 
-#endif // end GCN_EXCEPTION_HPP
-
-/*
- * "Final Fantasy XI is the BEST!... It's even better then water!"
- *  - Astrolite
- * I believe it's WoW now days.
- */
+#endif // end GCN_PROGRESSBAR_HPP

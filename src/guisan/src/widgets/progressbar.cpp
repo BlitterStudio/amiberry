@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2017 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -58,70 +58,137 @@
  * For comments regarding functions please see the header file.
  */
 
-#include "guisan/widgets/textfield.hpp"
+#include "guisan/widgets/progressbar.hpp"
 
+#include "guisan/exception.hpp"
 #include "guisan/font.hpp"
 #include "guisan/graphics.hpp"
-#include "guisan/key.hpp"
-#include "guisan/mouseinput.hpp"
 
 namespace gcn
 {
-    TextField::TextField()
+    ProgressBar::ProgressBar() : Label()
     {
-        mCaretPosition = 0;
-        mXScroll = 0;
-
-        setFocusable(true);
-
-        addMouseListener(this);
-        addKeyListener(this);
-        adjustHeight();
+        mAlignment = Graphics::CENTER;
+        mStart = 0;
+        mValue = 0;
+        mEnd = 100;
+        
+        setHeight(getFont()->getHeight());
         setBorderSize(1);
     }
-
-    TextField::TextField(const std::string& text)
+    
+    ProgressBar::ProgressBar(const unsigned int start, 
+            const unsigned int end, const unsigned int value) : Label()
     {
-        mCaretPosition = 0;
-        mXScroll = 0;
-
-        mText = text;
-        adjustSize();
-        setBorderSize(1);
-
-        setFocusable(true);
-
-        addMouseListener(this);
-        addKeyListener(this);
-    }
-
-    void TextField::setText(const std::string& text)
-    {
-        if(text.size() < mCaretPosition )
+        mAlignment = Graphics::CENTER;
+        
+        if(start > end)
         {
-            mCaretPosition = text.size();
+            mStart = end;
+            mEnd = start;
         }
-
-        mText = text;
+        else
+        {
+            mStart = start;
+            mEnd = end;
+        }
+        
+        if((value >= start && value <= end) || (start == 0 && end == 0))
+        {
+            mValue = value;
+        }
+        else
+        {
+            mValue = start;
+        }
+        
+        setHeight(getFont()->getHeight());
+        setBorderSize(1);
     }
 
-    void TextField::draw(Graphics* graphics)
+    ProgressBar::ProgressBar(const std::string& caption) : Label(caption)
     {
-        Color faceColor = getBackgroundColor();
-        graphics->setColor(faceColor);
+        mCaption = caption;
+        mAlignment = Graphics::CENTER;
+
+        setHeight(getFont()->getHeight());
+        setBorderSize(1);
+    }
+
+    const std::string &ProgressBar::getCaption() const
+    {
+        return mCaption;
+    }
+
+    void ProgressBar::setCaption(const std::string& caption)
+    {
+        mCaption = caption;
+    }
+
+    void ProgressBar::setAlignment(unsigned int alignment)
+    {
+        mAlignment = alignment;
+    }
+
+    unsigned int ProgressBar::getAlignment() const
+    {
+        return mAlignment;
+    }
+
+    void ProgressBar::draw(Graphics* graphics)
+    {
+        graphics->setColor(getBackgroundColor());
         graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
-
-        if (isFocused())
+        
+        int textX;
+        int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+        
+        graphics->setColor(getSelectionColor());
+        int progressWidth;
+        if(mStart == 0 && mEnd == 0)
         {
-            drawCaret(graphics, getFont()->getWidth(mText.substr(0, mCaretPosition)) - mXScroll);
+            // Infinite scrollbar
+            progressWidth = getWidth() / 5;
+            int barX = getWidth() * mValue / 100;
+            
+            if(barX + progressWidth > getWidth())
+            {
+                graphics->fillRectangle(Rectangle(barX, 0, getWidth() - barX, getHeight()));
+                graphics->fillRectangle(Rectangle(0, 0, progressWidth - (getWidth() - barX), getHeight()));
+            }
+            else
+            {
+                graphics->fillRectangle(Rectangle(barX,0,progressWidth,getHeight()));
+            }
+        }
+        else
+        {
+            // Standard scrollbar
+            progressWidth = getWidth() * mValue / (mEnd - mStart);
+            graphics->fillRectangle(Rectangle(0,0,progressWidth,getHeight()));
         }
 
-        graphics->setColor(getForegroundColor());
+        switch (getAlignment())
+        {
+          case Graphics::LEFT:
+              textX = 0;
+              break;
+          case Graphics::CENTER:
+              textX = getWidth() / 2;
+              break;
+          case Graphics::RIGHT:
+              textX = getWidth();
+              break;
+          default:
+              throw GCN_EXCEPTION("Unknown alignment.");
+        }
+
         graphics->setFont(getFont());
-        graphics->drawText(mText, 1 - mXScroll, 1);
+        graphics->setColor(getForegroundColor());
+        graphics->drawText(getCaption(), textX, textY, getAlignment());
     }
 
-    void TextField::drawBorder(Graphics* graphics)
+    void ProgressBar::drawBorder(Graphics* graphics)
     {
         Color faceColor = getBaseColor();
         Color highlightColor, shadowColor;
@@ -145,149 +212,54 @@ namespace gcn
         }
     }
 
-    void TextField::drawCaret(Graphics* graphics, int x)
+    void ProgressBar::adjustSize()
     {
-        graphics->setColor(getForegroundColor());
-        graphics->drawLine(x, getHeight() - 2, x, 1);
-    }
-
-    void TextField::mousePressed(MouseEvent& mouseEvent)
-    {
-        if (mouseEvent.getButton() == MouseEvent::LEFT)
-        {
-            mCaretPosition = getFont()->getStringIndexAt(mText, mouseEvent.getX() + mXScroll);
-            fixScroll();
-        }
-    }
-
-    void TextField::mouseDragged(MouseEvent& mouseEvent)
-    {
-        mouseEvent.consume();
+        setHeight(getFont()->getHeight());
     }
     
-    void TextField::keyPressed(KeyEvent& keyEvent)
+    void ProgressBar::setStart(const unsigned int start)
     {
-        Key key = keyEvent.getKey();
-
-        if (key.getValue() == Key::LEFT && mCaretPosition > 0)
+        if(start <= mEnd)
         {
-            --mCaretPosition;
+            mStart = start;
         }
-
-        else if (key.getValue() == Key::RIGHT && mCaretPosition < mText.size())
-        {
-            ++mCaretPosition;
-        }
-
-        else if (key.getValue() == Key::DELETE && mCaretPosition < mText.size())
-        {
-            mText.erase(mCaretPosition, 1);
-        }
-
-        else if (key.getValue() == Key::BACKSPACE && mCaretPosition > 0)
-        {
-            mText.erase(mCaretPosition - 1, 1);
-            --mCaretPosition;
-        }
-
-        else if (key.getValue() == Key::ENTER)
-        {
-            generateAction();
-        }
-
-        else if (key.getValue() == Key::HOME)
-        {
-            mCaretPosition = 0;
-        }
-
-        else if (key.getValue() == Key::END)
-        {
-            mCaretPosition = mText.size();
-        }
-
-        else if (key.isCharacter()
-                 && key.getValue() != Key::TAB)
-        {
-            if(keyEvent.isShiftPressed() && key.isLetter())
-            {
-                mText.insert(mCaretPosition, std::string(1,(char)(key.getValue() - 32)));
-            }
-            else
-            {
-                mText.insert(mCaretPosition, std::string(1,(char)key.getValue()));
-            }
-            ++mCaretPosition;
-        }
-
-        if (key.getValue() != Key::TAB)
-        {
-            keyEvent.consume();
-        }
+    }
         
-        fixScroll();
-    }
-
-    void TextField::adjustSize()
+    unsigned int ProgressBar::getStart() const
     {
-        setWidth(getFont()->getWidth(mText) + 4);
-        adjustHeight();
-
-        fixScroll();
+        return mStart;
     }
-
-    void TextField::adjustHeight()
+        
+    void ProgressBar::setEnd(const unsigned int end)
     {
-        setHeight(getFont()->getHeight() + 2);
-    }
-
-    void TextField::fixScroll()
-    {
-        if (isFocused())
+        if(end >= mStart)
         {
-            int caretX = getFont()->getWidth(mText.substr(0, mCaretPosition));
-
-            if (caretX - mXScroll > getWidth() - 4)
-            {
-                mXScroll = caretX - getWidth() + 4;
-            }
-            else if (caretX - mXScroll < getFont()->getWidth(" "))
-            {
-                mXScroll = caretX - getFont()->getWidth(" ");
-
-                if (mXScroll < 0)
-                {
-                    mXScroll = 0;
-                }
-            }
+            mEnd = end;
         }
     }
-
-    void TextField::setCaretPosition(unsigned int position)
+        
+    unsigned int ProgressBar::getEnd() const
     {
-        if (position > mText.size())
+        return mEnd;
+    }
+        
+    void ProgressBar::setValue(const unsigned int value)
+    {
+        if(value >= mStart && value <= mEnd)
         {
-            mCaretPosition = mText.size();
+            mValue = value;
         }
         else
         {
-            mCaretPosition = position;
+            if(mStart == 0 && mEnd == 0)
+            {
+                mValue = value % 100;
+            }
         }
-
-        fixScroll();
     }
-
-    unsigned int TextField::getCaretPosition() const
+    
+    unsigned int ProgressBar::getValue() const
     {
-        return mCaretPosition;
-    }
-
-    const std::string& TextField::getText() const
-    {
-        return mText;
-    }
-
-    void TextField::fontChanged()
-    {
-        fixScroll();
+        return mValue;
     }
 }

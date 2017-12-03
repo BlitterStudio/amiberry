@@ -352,7 +352,14 @@ namespace gcn
         else if (key.isCharacter()
                  && mEditable)
         {
-            mTextRows[mCaretRow].insert(mCaretColumn,std::string(1,(char)key.getValue()));
+            if(keyEvent.isShiftPressed() && key.isLetter())
+            {
+                mTextRows[mCaretRow].insert(mCaretColumn,std::string(1,(char)(key.getValue() - 32)));
+            }
+            else
+            {
+                mTextRows[mCaretRow].insert(mCaretColumn,std::string(1,(char)key.getValue()));
+            }
             ++mCaretColumn;
         }
 
