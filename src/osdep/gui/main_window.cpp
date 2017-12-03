@@ -684,7 +684,7 @@ namespace widgets
 		// Initialize fonts
 		//-------------------------------------------------
 		TTF_Init();
-		gui_font = new gcn::SDLTrueTypeFont("data/Topaznew.ttf", 14);
+		gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 14);
 		gcn::Widget::setGlobalFont(gui_font);
 
 		//--------------------------------------------------
