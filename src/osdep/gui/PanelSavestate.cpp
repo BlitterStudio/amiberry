@@ -150,7 +150,7 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(wndScreenshot, DISTANCE_BORDER + 100, DISTANCE_BORDER);
-	int buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
+	const int buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdLoadState, DISTANCE_BORDER, buttonY);
 	category.panel->add(cmdSaveState, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, buttonY);
 	category.panel->add(lblWarningHDDon, DISTANCE_BORDER + 100, DISTANCE_BORDER + 50);
@@ -220,7 +220,7 @@ void RefreshPanelSavestate()
 		if (f)
 		{
 			fclose(f);
-			gcn::Rectangle rect = wndScreenshot->getChildrenArea();
+			const gcn::Rectangle rect = wndScreenshot->getChildrenArea();
 			SDL_Surface* loadedImage = IMG_Load(screenshot_filename);
 			if (loadedImage != nullptr)
 			{
@@ -241,7 +241,7 @@ void RefreshPanelSavestate()
 		}
 	}
 
-	bool enabled = true; // nr_units () == 0;
+	const bool enabled = true; // nr_units () == 0;
 	optState0->setEnabled(enabled);
 	optState1->setEnabled(enabled);
 	optState2->setEnabled(enabled);

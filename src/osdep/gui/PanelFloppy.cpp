@@ -170,7 +170,7 @@ public:
 				//---------------------------------------
 				// Show info about current disk-image
 				//---------------------------------------
-				if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0); // ToDo: Show info dialog
+				//if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0); // ToDo: Show info dialog
 				//ToDo: Show info dialog
 			}
 			else if (actionEvent.getSource() == cmdDFxEject[i])
@@ -237,7 +237,7 @@ public:
 				//---------------------------------------
 				if (!bIgnoreListChange)
 				{
-					int idx = cboDFxFile[i]->getSelected();
+					const int idx = cboDFxFile[i]->getSelected();
 
 					if (idx < 0)
 					{
@@ -372,7 +372,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	int posX;
 	int posY = DISTANCE_BORDER;
 	int i;
-	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 
 	dfxCheckActionListener = new DFxCheckActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
@@ -571,7 +571,7 @@ void RefreshPanelFloppy()
 	changed_prefs.nr_floppies = 0;
 	for (i = 0; i < 4; ++i)
 	{
-		bool driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
+		const bool driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		chkDFx[i]->setSelected(driveEnabled);
 		cboDFxType[i]->setSelected(changed_prefs.floppyslots[i].dfxtype + 1);
 		chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df));

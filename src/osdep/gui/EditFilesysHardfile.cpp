@@ -125,7 +125,7 @@ public:
 		return 4;
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		char num[8];
 
@@ -399,8 +399,6 @@ static void ExitEditFilesysHardfile()
 static void EditFilesysHardfileLoop()
 {
 	FocusBugWorkaround(wndEditFilesysHardfile);
-
-	GUIjoy = SDL_JoystickOpen(0);
 
 	while (!dialogFinished)
 	{

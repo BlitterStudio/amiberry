@@ -225,7 +225,6 @@ static void EditFilesysVirtualLoop()
 {
 	FocusBugWorkaround(wndEditFilesysVirtual);
 
-	GUIjoy = SDL_JoystickOpen(0);
 	while (!dialogFinished)
 	{
 		SDL_Event event;

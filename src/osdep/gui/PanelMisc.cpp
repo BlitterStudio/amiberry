@@ -51,7 +51,7 @@ class StringListModel : public gcn::ListModel
 {
 	vector<string> values;
 public:
-	StringListModel(const char* entries[], int count)
+	StringListModel(const char* entries[], const int count)
 	{
 		for (int i = 0; i < count; ++i)
 			values.push_back(entries[i]);

@@ -423,6 +423,8 @@ bool HandleNavigation(int direction)
 						case DIRECTION_DOWN:
 							searchFor = navMap[i].downWidget;
 							break;
+						default: 
+							break;
 						}
 						if (searchFor.length() > 0)
 						{
@@ -465,7 +467,7 @@ bool HandleNavigation(int direction)
 	return focusTarget != nullptr;
 }
 
-void PushFakeKey(SDL_Keycode inKey)
+void PushFakeKey(const SDL_Keycode inKey)
 {       SDL_Event nuevent;
         
         nuevent.type = SDL_KEYDOWN;  // and the key up

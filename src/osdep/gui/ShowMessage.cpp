@@ -157,6 +157,16 @@ static void ShowMessageWaitInputLoop()
 	}
 }
 
+static void navigate_left_right()
+{
+	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+	gcn::Widget* activeWidget = focusHdl->getFocused();
+	if (activeWidget == cmdCancel)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdOK)
+		cmdCancel->requestFocus();
+}
+
 static void ShowMessageLoop()
 {
 	FocusBugWorkaround(wndShowMessage);
@@ -178,14 +188,7 @@ static void ShowMessageLoop()
 
 				case VK_LEFT:
 				case VK_RIGHT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == cmdCancel)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdOK)
-							cmdCancel->requestFocus();
-					}
+					navigate_left_right();
 					break;
 
 				case VK_Red:
@@ -220,12 +223,7 @@ static void ShowMessageLoop()
 					(hat & SDL_HAT_RIGHT))
 
 				{
-					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-					gcn::Widget* activeWidget = focusHdl->getFocused();
-					if (activeWidget == cmdCancel)
-						cmdOK->requestFocus();
-					else if (activeWidget == cmdOK)
-						cmdCancel->requestFocus();
+					navigate_left_right();
 					break;
 				}
 			}

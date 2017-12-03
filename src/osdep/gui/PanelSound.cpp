@@ -63,7 +63,7 @@ public:
 		return freq.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= freq.size())
 			return "---";
@@ -93,7 +93,7 @@ public:
 		return entry.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= entry.size())
 			return "---";
@@ -123,7 +123,7 @@ public:
 		return entry.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= entry.size())
 			return "---";
@@ -169,6 +169,8 @@ public:
 			case 3:
 				changed_prefs.sound_freq = 44100;
 				break;
+			default: 
+				break;
 			}
 		}
 
@@ -197,6 +199,8 @@ public:
 			case 4:
 				changed_prefs.sound_filter = FILTER_SOUND_ON;
 				changed_prefs.sound_filter_type = 1;
+				break;
+			default: 
 				break;
 			}
 		}
@@ -382,7 +386,6 @@ void ExitPanelSound()
 void RefreshPanelSound()
 {
 	char tmp[10];
-	int i;
 
 	switch (changed_prefs.produce_sound)
 	{
@@ -397,6 +400,8 @@ void RefreshPanelSound()
 		break;
 	case 3:
 		optSoundEmulatedBest->setSelected(true);
+		break;
+	default: 
 		break;
 	}
 
@@ -423,7 +428,7 @@ void RefreshPanelSound()
 
 	cboInterpolation->setSelected(changed_prefs.sound_interpol);
 
-	i = 0;
+	int i = 0;
 	switch (changed_prefs.sound_filter)
 	{
 	case 0:

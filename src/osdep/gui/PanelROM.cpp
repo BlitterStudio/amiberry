@@ -36,7 +36,7 @@ class ROMListModel : public gcn::ListModel
 	int ROMType;
 
 public:
-	ROMListModel(int romtype)
+	ROMListModel(const int romtype)
 	{
 		ROMType = romtype;
 	}
@@ -46,14 +46,14 @@ public:
 		return roms.size();
 	}
 
-	std::string getElementAt(int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= roms.size())
 			return "---";
 		return roms[i];
 	}
 
-	AvailableROM* getROMat(int i)
+	AvailableROM* getROMat(const int i)
 	{
 		if (i >= 0 && i < idxToAvailableROMs.size())
 			return idxToAvailableROMs[i] < 0 ? NULL : lstAvailableROMs[idxToAvailableROMs[i]];
@@ -204,7 +204,7 @@ static ROMButtonActionListener* romButtonActionListener;
 
 void InitPanelROM(const struct _ConfigCategory& category)
 {
-	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 
 	mainROMActionListener = new MainROMActionListener();
 	extROMActionListener = new ExtROMActionListener();

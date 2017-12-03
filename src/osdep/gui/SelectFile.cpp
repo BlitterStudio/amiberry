@@ -65,7 +65,7 @@ public:
 		return dirs.size() + files.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i >= dirs.size() + files.size() || i < 0)
 			return "---";
@@ -286,6 +286,39 @@ static void ExitSelectFile()
 	delete wndSelectFile;
 }
 
+static void navigate_right()
+{
+	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+	gcn::Widget* activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFiles)
+		if (createNew)
+			txtFilename->requestFocus();
+		else
+			cmdOK->requestFocus();
+	else if (activeWidget == txtFilename)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdCancel)
+		lstFiles->requestFocus();
+	else if (activeWidget == cmdOK)
+		cmdCancel->requestFocus();
+}
+
+static void navigate_left()
+{
+	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+	gcn::Widget* activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFiles)
+		cmdCancel->requestFocus();
+	else if (activeWidget == cmdCancel)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdOK)
+		if (createNew)
+			txtFilename->requestFocus();
+		else
+			lstFiles->requestFocus();
+	else if (activeWidget == txtFilename)
+		lstFiles->requestFocus();
+}
 
 static void SelectFileLoop()
 {
@@ -307,39 +340,11 @@ static void SelectFileLoop()
 					break;
 
 				case VK_LEFT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFiles)
-							cmdCancel->requestFocus();
-						else if (activeWidget == cmdCancel)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdOK)
-							if (createNew)
-								txtFilename->requestFocus();
-							else
-								lstFiles->requestFocus();
-						else if (activeWidget == txtFilename)
-							lstFiles->requestFocus();
-					}
+					navigate_left();
 					break;
 
 				case VK_RIGHT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFiles)
-							if (createNew)
-								txtFilename->requestFocus();
-							else
-								cmdOK->requestFocus();
-						else if (activeWidget == txtFilename)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdCancel)
-							lstFiles->requestFocus();
-						else if (activeWidget == cmdOK)
-							cmdCancel->requestFocus();
-					}
+					navigate_right();
 					break;
 
 				case VK_Red:
@@ -369,36 +374,12 @@ static void SelectFileLoop()
 				}
 				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
 				{
-					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-					gcn::Widget* activeWidget = focusHdl->getFocused();
-					if (activeWidget == lstFiles)
-						cmdCancel->requestFocus();
-					else if (activeWidget == cmdCancel)
-						cmdOK->requestFocus();
-					else if (activeWidget == cmdOK)
-						if (createNew)
-							txtFilename->requestFocus();
-						else
-							lstFiles->requestFocus();
-					else if (activeWidget == txtFilename)
-						lstFiles->requestFocus();
+					navigate_left();
 					break;
 				}
 				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
 				{
-					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-					gcn::Widget* activeWidget = focusHdl->getFocused();
-					if (activeWidget == lstFiles)
-						if (createNew)
-							txtFilename->requestFocus();
-						else
-							cmdOK->requestFocus();
-					else if (activeWidget == txtFilename)
-						cmdOK->requestFocus();
-					else if (activeWidget == cmdCancel)
-						lstFiles->requestFocus();
-					else if (activeWidget == cmdOK)
-						cmdCancel->requestFocus();
+					navigate_right();
 					break;
 				}
 				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))

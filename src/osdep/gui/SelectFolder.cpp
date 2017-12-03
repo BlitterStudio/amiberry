@@ -69,7 +69,7 @@ public:
 		return dirs.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i >= dirs.size() || i < 0)
 			return "---";
@@ -241,29 +241,11 @@ static void SelectFolderLoop()
 					break;
 
 				case VK_LEFT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFolders)
-							cmdCancel->requestFocus();
-						else if (activeWidget == cmdCancel)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdOK)
-							lstFolders->requestFocus();
-					}
+					navigate_left();
 					break;
 
 				case VK_RIGHT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFolders)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdCancel)
-							lstFolders->requestFocus();
-						else if (activeWidget == cmdOK)
-							cmdCancel->requestFocus();
-					}
+					navigate_right();
 					break;
 
 				case VK_Red:
@@ -295,27 +277,13 @@ static void SelectFolderLoop()
 
 				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
 				{
-					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-					gcn::Widget* activeWidget = focusHdl->getFocused();
-					if (activeWidget == lstFolders)
-						cmdCancel->requestFocus();
-					else if (activeWidget == cmdCancel)
-						cmdOK->requestFocus();
-					else if (activeWidget == cmdOK)
-						lstFolders->requestFocus();
+					navigate_left();
 					break;
 				}
 
 				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
 				{
-					gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-					gcn::Widget* activeWidget = focusHdl->getFocused();
-					if (activeWidget == lstFolders)
-						cmdOK->requestFocus();
-					else if (activeWidget == cmdCancel)
-						lstFolders->requestFocus();
-					else if (activeWidget == cmdOK)
-						cmdCancel->requestFocus();
+					navigate_right();
 					break;
 				}
 

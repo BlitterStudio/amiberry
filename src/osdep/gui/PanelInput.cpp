@@ -111,7 +111,7 @@ class StringListModel : public gcn::ListModel
   private:
     std::vector<std::string> values;
 public:
-	StringListModel(const char* entries[], int count)
+	StringListModel(const char* entries[], const int count)
 	{
 		for (int i = 0; i < count; ++i)
 			values.push_back(entries[i]);
@@ -128,7 +128,7 @@ public:
 		return 0;
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= values.size())
 			return "---";
@@ -210,7 +210,7 @@ static int GetAmigaKeyIndex(int key)
 class InputActionListener : public gcn::ActionListener
 {
 public:
-	void clear_ports(const int sel, const int current_port)
+	static void clear_ports(const int sel, const int current_port)
 	{
 		for (auto i = 0; i < MAX_JPORTS; i++)
 		{
@@ -553,7 +553,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 #endif
 
 	inputActionListener = new InputActionListener();
-	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X * 2;
+	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X * 2;
 	const int mode_length = 80;
 	const int port_lbl_length = 120;
 

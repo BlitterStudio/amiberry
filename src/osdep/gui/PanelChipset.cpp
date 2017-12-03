@@ -89,7 +89,7 @@ public:
 				//---------------------------------------
 				// Chipset selected
 				//---------------------------------------
-				int cs = chipsets[cboChipset->getSelected()].compatible;
+				const int cs = chipsets[cboChipset->getSelected()].compatible;
 				if (changed_prefs.cs_compatible != cs) {
 					changed_prefs.cs_compatible = cs;
 					built_in_chipset_prefs(&changed_prefs);

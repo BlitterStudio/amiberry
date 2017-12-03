@@ -40,7 +40,7 @@ namespace gcn
 		// Check the current clip area so we don't draw unnecessary items
 		// that are not visible.
 		const ClipRectangle currentClipArea = graphics->getCurrentClipArea();
-		int rowHeight = getFont()->getHeight();
+		const int rowHeight = getFont()->getHeight();
 
 		// Calculate the number of rows to draw by checking the clip area.
 		// The addition of two makes covers a partial visible row at the top
@@ -75,11 +75,10 @@ namespace gcn
 		colSelectorActive.g = 136;
 		colSelectorActive.b = 187;
 
-		int i;
 		// The y coordinate where we start to draw the text is
 		// simply the y coordinate multiplied with the font height.
 		int y = rowHeight * startRow;
-		for (i = startRow; i < startRow + numberOfRows; ++i)
+		for (int i = startRow; i < startRow + numberOfRows; ++i)
 		{
 			if (i == mSelected)
 			{

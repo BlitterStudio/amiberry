@@ -17,8 +17,8 @@ namespace gcn
 		UaeRadioButton();
 
 		UaeRadioButton(const std::string& caption,
-		               const std::string& group,
-		               bool selected = false);
+			const std::string& group,
+			bool selected = false);
 
 		virtual ~UaeRadioButton();
 

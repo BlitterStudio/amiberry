@@ -10,8 +10,8 @@ namespace gcn
 	}
 
 	UaeRadioButton::UaeRadioButton(const std::string& caption,
-	                               const std::string& group,
-	                               bool selected)
+		const std::string& group,
+		const bool selected)
 		: RadioButton(caption, group, selected)
 	{
 		setId(caption);
@@ -26,9 +26,9 @@ namespace gcn
 	void UaeRadioButton::draw(Graphics* graphics)
 	{
 		graphics->pushClipArea(Rectangle(1,
-		                                 1,
-		                                 getWidth() - 1,
-		                                 getHeight() - 1));
+			1,
+			getWidth() - 1,
+			getHeight() - 1));
 		drawBox(graphics);
 		graphics->popClipArea();
 
@@ -40,12 +40,12 @@ namespace gcn
 		{
 			graphics->setColor(Color(0x000000));
 			graphics->drawRectangle(Rectangle(0,
-			                                  0,
-			                                  getWidth(),
-			                                  getHeight()));
+				0,
+				getWidth(),
+				getHeight()));
 		}
 
-		int h = getHeight() + getHeight() / 2;
+		const int h = getHeight() + getHeight() / 2;
 
 		graphics->drawText(getCaption(), h - 2, 0);
 	}

@@ -45,20 +45,21 @@ namespace gcn
 		}
 	}
 
-	void UaeDropDown::clearSelected()
+	void UaeDropDown::clearSelected() const
 	{
 		mListBox->setSelected(-1);
 	}
 
-	bool UaeDropDown::isDroppedDown()
+	bool UaeDropDown::isDroppedDown() const
 	{
 		return mDroppedDown;
 	}
 
-bool UaeDropDown::getEnabled(void)
-{
-     return mEnabled;
-}
+	bool UaeDropDown::getEnabled() const
+	{
+		return mEnabled;
+	}
+
 	void UaeDropDown::setEnabled(bool enabled)
 	{
 		if (mEnabled != enabled)

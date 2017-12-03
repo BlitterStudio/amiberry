@@ -50,7 +50,7 @@ public:
 		return lines.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
 		if (i >= 0 && i < lines.size())
 			return lines[i];

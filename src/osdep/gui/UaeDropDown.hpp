@@ -11,29 +11,28 @@
 
 namespace gcn
 {
-class GCN_CORE_DECLSPEC UaeDropDown : public DropDown
-{
-public:
-    UaeDropDown(ListModel *listModel = nullptr,
-                ScrollArea *scrollArea = nullptr,
-                ListBox *listBox = nullptr);
+	class GCN_CORE_DECLSPEC UaeDropDown : public DropDown
+	{
+	public:
+		UaeDropDown(ListModel* listModel = nullptr,
+		            ScrollArea* scrollArea = nullptr,
+		            ListBox* listBox = nullptr);
 
-    virtual ~UaeDropDown();
+		virtual ~UaeDropDown();
 
-	void keyPressed(KeyEvent& keyEvent) override;
+		void keyPressed(KeyEvent& keyEvent) override;
 
-	void setEnabled(bool enabled);
+		void setEnabled(bool enabled);
 
-	bool getEnabled(void);
+		bool getEnabled(void) const;
 
-    void clearSelected(void);
+		void clearSelected(void) const;
 
-    bool isDroppedDown(void);
+		bool isDroppedDown(void) const;
 
-protected:
-    Color mBackgroundColorBackup;
-
-};
+	protected:
+		Color mBackgroundColorBackup;
+	};
 }
 
 

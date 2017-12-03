@@ -193,7 +193,7 @@ static JITActionListener* jitActionListener;
 class FPUActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == chkFPUstrict) {
 			changed_prefs.fpu_strict = chkFPUstrict->isSelected();
