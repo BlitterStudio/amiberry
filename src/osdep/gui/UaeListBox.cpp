@@ -1,9 +1,21 @@
 #include "UaeListBox.hpp"
+#ifdef USE_SDL1
+#include "guichan/widgets/listbox.hpp"
+
+#include "guichan/basiccontainer.hpp"
+#include "guichan/font.hpp"
+#include "guichan/graphics.hpp"
+#include "guichan/key.hpp"
+#include "guichan/listmodel.hpp"
+#include "guichan/mouseinput.hpp"
+#include "guichan/selectionlistener.hpp"
+#elif USE_SDL2
 #include <guisan/widgets/listbox.hpp>
 #include <guisan/basiccontainer.hpp>
 #include <guisan/font.hpp>
 #include <guisan/graphics.hpp>
 #include <guisan/listmodel.hpp>
+#endif
 
 namespace gcn
 {
@@ -40,7 +52,11 @@ namespace gcn
 		// Check the current clip area so we don't draw unnecessary items
 		// that are not visible.
 		const ClipRectangle currentClipArea = graphics->getCurrentClipArea();
+#ifdef USE_SDL1
+		int rowHeight = getRowHeight();
+#elif USE_SDL2
 		const int rowHeight = getFont()->getHeight();
+#endif
 
 		// Calculate the number of rows to draw by checking the clip area.
 		// The addition of two makes covers a partial visible row at the top

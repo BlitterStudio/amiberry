@@ -1,3 +1,4 @@
+#Default platform is rpi3
 ifeq ($(PLATFORM),)
 	PLATFORM = rpi3
 endif
@@ -6,26 +7,26 @@ ifeq ($(PLATFORM),rpi3)
     CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),rpi2)
     CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),rpi1)
     CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
     MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 else ifeq ($(PLATFORM),pine64)
     CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -D__arm__
     LDFLAGS += -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm
     CC = arm-linux-gnueabihf-gcc
-    CXX = arm-linux-gnueabihf-g++ 
+    CXX = arm-linux-gnueabihf-g++
 else ifeq ($(PLATFORM),Pandora)
     CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
@@ -262,7 +263,7 @@ OBJS += src/osdep/gui/PanelOnScreen.o
 OBJS += src/osdep/pandora_gfx.o
 endif
 
-	
+
 OBJS += src/osdep/neon_helper.o
 
 OBJS += src/newcpu.o

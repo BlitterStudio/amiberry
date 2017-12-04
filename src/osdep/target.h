@@ -161,3 +161,7 @@ STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic *p, uae_u32 
 	uae_u32 res = __sync_fetch_and_and(p, ~mask);
 	return (res && mask);
 }
+STATIC_INLINE void atomic_set(volatile uae_atomic *p, uae_u32 v)
+{
+	__sync_lock_test_and_set(p, v);
+}

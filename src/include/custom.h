@@ -145,6 +145,9 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 #define RES_HIRES 1
 #define RES_SUPERHIRES 2
 #define RES_MAX 2
+#define VRES_NONDOUBLE 0
+#define VRES_DOUBLE 1
+#define VRES_MAX 1
 
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)

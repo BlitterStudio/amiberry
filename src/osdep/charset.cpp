@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-// UAE4ARM and fs-uae uses only chars / UTF-8 internally, so TCHAR is typedefed to
+// Amiberry and fs-uae uses only chars / UTF-8 internally, so TCHAR is typedefed to
 // char (WinUAE uses wchar_t internally).
 
 char *ua(const TCHAR *s)

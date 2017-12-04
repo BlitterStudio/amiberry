@@ -438,7 +438,7 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 # endif
 # else
 /* Else, if using SDL, try SDL's endian functions. */
-# ifdef USE_SDL
+# if defined (USE_SDL1) || defined (USE_SDL2)
 #  include <SDL_endian.h>
 #  define bswap_16(x) SDL_Swap16(x)
 #  define bswap_32(x) SDL_Swap32(x)
@@ -448,7 +448,8 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #define bswap_32(x) (((x) << 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) | ((x) >> 24))
 # endif
 #endif
-#endif
+
+#endif /* ARMV6_ASSEMBLY*/
 
 #ifndef __cplusplus
 

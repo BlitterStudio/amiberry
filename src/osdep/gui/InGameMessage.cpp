@@ -1,7 +1,14 @@
+#ifdef USE_SDL1
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
+#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+#endif
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -180,11 +187,15 @@ void InGameMessage(const char* msg)
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 		// Finally we update the screen.
+#ifdef USE_SDL1
+		SDL_Flip(prSDLScreen);
+#elif USE_SDL2
 		if (!drawn && cursor != nullptr)
 		{
 			SDL_ShowCursor(SDL_ENABLE);
 			updatedisplayarea();
 		}
+#endif
 		drawn = true;
 	}
 

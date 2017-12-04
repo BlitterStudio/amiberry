@@ -2,6 +2,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
+#include "keyboard.h"
 #include "inputdevice.h"
 #include <SDL.h>
 
@@ -134,28 +135,31 @@ static void fill_blank_controller(void)
 	default_controller_map.is_retroarch = false;
 }
 
+//TODO: Check if we can use SCANCODES for both SDL versions
+#ifdef USE_SDL1
+static void fill_default_keyboard()
+{
+	// test using iPac layout 
+	default_keyboard_map.north_button = SDLK_LSHIFT;
+	default_keyboard_map.east_button = SDLK_LCTRL;
+	default_keyboard_map.south_button = SDLK_LALT;
+	default_keyboard_map.west_button = SDLK_SPACE;
+	default_keyboard_map.dpad_left = SDLK_LEFT;
+	default_keyboard_map.dpad_right = SDLK_RIGHT;
+	default_keyboard_map.dpad_up = SDLK_UP;
+	default_keyboard_map.dpad_down = SDLK_DOWN;
+	default_keyboard_map.left_shoulder = SDLK_z;
+	default_keyboard_map.right_shoulder = SDLK_x;
+	default_keyboard_map.select_button = SDLK_1;
+	default_keyboard_map.start_button = SDLK_2;
+	default_keyboard_map.lstick_button = SDLK_F1;
+	default_keyboard_map.rstick_button = SDLK_F2;
 
-//static void fill_default_keyboard()
-//{
-//	// test using iPac layout 
-//	default_keyboard_map.north_button = SDLK_LSHIFT;
-//	default_keyboard_map.east_button = SDLK_LCTRL;
-//	default_keyboard_map.south_button = SDLK_LALT;
-//	default_keyboard_map.west_button = SDLK_SPACE;
-//	default_keyboard_map.dpad_left = SDLK_LEFT;
-//	default_keyboard_map.dpad_right = SDLK_RIGHT;
-//	default_keyboard_map.dpad_up = SDLK_UP;
-//	default_keyboard_map.dpad_down = SDLK_DOWN;
-//	default_keyboard_map.left_shoulder = SDLK_z;
-//	default_keyboard_map.right_shoulder = SDLK_x;
-//	default_keyboard_map.select_button = SDLK_1;
-//	default_keyboard_map.start_button = SDLK_2;
-//	default_keyboard_map.lstick_button = SDLK_F1;
-//	default_keyboard_map.rstick_button = SDLK_F2;
-//
-//	default_keyboard_map.is_retroarch = false;
-//}
+	default_keyboard_map.is_retroarch = false;
+}
+#endif
 
+#ifdef USE_SDL2
 static void fill_default_keyboard()
 {
 	// test using iPac layout 
@@ -176,6 +180,7 @@ static void fill_default_keyboard()
 
 	default_keyboard_map.is_retroarch = false;
 }
+#endif
 
 //# Keyboard input. Will recognize letters (a to z) and the following special keys (where kp_
 //# is for keypad keys):
@@ -189,33 +194,36 @@ static void fill_default_keyboard()
 //#   tilde, backquote, pause, quote, comma, minus, slash, semicolon, equals, leftbracket,
 //#   backslash, rightbracket, kp_period, kp_equals, rctrl, ralt
 
-//const int RemapKeyMapList[] = {
-//	-1,
-//	SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e,
-//	SDLK_f, SDLK_g, SDLK_h, SDLK_i, SDLK_j,
-//	SDLK_k, SDLK_l, SDLK_m, SDLK_n, SDLK_o,
-//	SDLK_p, SDLK_q, SDLK_r, SDLK_s, SDLK_t,
-//	SDLK_u, SDLK_v, SDLK_w, SDLK_x, SDLK_y, SDLK_z,
-//	SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_DOWN, SDLK_RETURN,
-//	SDLK_KP_ENTER, SDLK_TAB, SDLK_INSERT, SDLK_DELETE, SDLK_END, SDLK_HOME,
-//	SDLK_RSHIFT, SDLK_LSHIFT, SDLK_LCTRL, SDLK_LALT, SDLK_SPACE,
-//	SDLK_ESCAPE, SDLK_PLUS, SDLK_MINUS, SDLK_KP_PLUS, SDLK_KP_MINUS,
-//	SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
-//	SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12,
-//	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5,
-//	SDLK_6, SDLK_7, SDLK_8, SDLK_9, SDLK_PAGEUP, SDLK_PAGEDOWN,
-//	SDLK_KP_0, SDLK_KP_1, SDLK_KP_2, SDLK_KP_3, SDLK_KP_4,
-//	SDLK_KP_5, SDLK_KP_6, SDLK_KP_7, SDLK_KP_8, SDLK_KP_9,
-//	SDLK_PERIOD, SDLK_CAPSLOCK, SDLK_NUMLOCKCLEAR, SDLK_BACKSPACE,
-//	//              divide
-//	SDLK_ASTERISK, -1, SDLK_PRINTSCREEN, SDLK_SCROLLLOCK,
-//	// tilde
-//	-1, SDLK_BACKQUOTE,SDLK_PAUSE, SDLK_QUOTE, SDLK_COMMA,
-//	SDLK_MINUS, SDLK_SLASH, SDLK_SEMICOLON,SDLK_EQUALS, SDLK_LEFTPAREN,
-//	SDLK_BACKSLASH, SDLK_RIGHTPAREN,
-//	SDLK_KP_PERIOD, SDLK_KP_EQUALS,SDLK_RCTRL, SDLK_RALT
-//};
+#ifdef USE_SDL1
+const int RemapKeyMapList[] = {
+	-1,
+	SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e,
+	SDLK_f, SDLK_g, SDLK_h, SDLK_i, SDLK_j,
+	SDLK_k, SDLK_l, SDLK_m, SDLK_n, SDLK_o,
+	SDLK_p, SDLK_q, SDLK_r, SDLK_s, SDLK_t,
+	SDLK_u, SDLK_v, SDLK_w, SDLK_x, SDLK_y, SDLK_z,
+	SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_DOWN, SDLK_RETURN,
+	SDLK_KP_ENTER, SDLK_TAB, SDLK_INSERT, SDLK_DELETE, SDLK_END, SDLK_HOME,
+	SDLK_RSHIFT, SDLK_LSHIFT, SDLK_LCTRL, SDLK_LALT, SDLK_SPACE,
+	SDLK_ESCAPE, SDLK_PLUS, SDLK_MINUS, SDLK_KP_PLUS, SDLK_KP_MINUS,
+	SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
+	SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12,
+	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5,
+	SDLK_6, SDLK_7, SDLK_8, SDLK_9, SDLK_PAGEUP, SDLK_PAGEDOWN,
+	SDLK_KP0, SDLK_KP1, SDLK_KP2, SDLK_KP3, SDLK_KP4,
+	SDLK_KP5, SDLK_KP6, SDLK_KP7, SDLK_KP8, SDLK_KP9,
+	SDLK_PERIOD, SDLK_CAPSLOCK, SDLK_NUMLOCK, SDLK_BACKSPACE,
+	//              divide
+	SDLK_ASTERISK, -1, SDLK_PRINT, SDLK_SCROLLOCK,
+	// tilde
+	-1, SDLK_BACKQUOTE,SDLK_PAUSE, SDLK_QUOTE, SDLK_COMMA,
+	SDLK_MINUS, SDLK_SLASH, SDLK_SEMICOLON,SDLK_EQUALS, SDLK_LEFTPAREN,
+	SDLK_BACKSLASH, SDLK_RIGHTPAREN,
+	SDLK_KP_PERIOD, SDLK_KP_EQUALS,SDLK_RCTRL, SDLK_RALT
+};
+#endif
 
+#ifdef USE_SDL2
 const int RemapKeyMapList[] = {
 	-1,
 	SDL_SCANCODE_A, SDL_SCANCODE_B, SDL_SCANCODE_C, SDL_SCANCODE_D, SDL_SCANCODE_E,
@@ -240,6 +248,7 @@ const int RemapKeyMapList[] = {
 	SDL_SCANCODE_BACKSLASH, SDL_SCANCODE_RIGHTBRACKET,
 	SDL_SCANCODE_KP_PERIOD, SDL_SCANCODE_KP_EQUALS, SDL_SCANCODE_RCTRL, SDL_SCANCODE_RALT
 	};
+#endif
 
 const char* RemapKeyMapListStrings[] = {
 	"nul",
@@ -740,8 +749,14 @@ static int init_joystick(void)
 
 		if (Joysticktable[cpt] != nullptr)
 		{
+#ifdef USE_SDL1
+			if (SDL_JoystickName(cpt) != nullptr)
+				strncpy(JoystickName[cpt], SDL_JoystickName(cpt), sizeof JoystickName[cpt] - 1);
+#endif
+#ifdef USE_SDL2
 			if (SDL_JoystickNameForIndex(cpt) != nullptr)
 				strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), sizeof JoystickName[cpt] - 1);
+#endif
 			else
 				sprintf(JoystickName[cpt], "Joystick%d", cpt);
 
@@ -910,6 +925,8 @@ static int get_joystick_widget_first(const int joy, const int type)
 			return FIRST_JOY_AXIS;
 		case IDEV_WIDGET_BUTTONAXIS:
 			return MAX_JOY_AXES + MAX_JOY_BUTTONS;
+		default: 
+			return -1;
 		}
 	}
 	return -1;
@@ -982,10 +999,14 @@ static void read_joystick(void)
 		// First handle retroarch (or default) keys as Joystick...
 		if (currprefs.jports[joyid].id >= JSEM_JOYS && currprefs.jports[joyid].id < JSEM_JOYS + numKeysAsJoys)
 		{
-			const int hostkeyid = 0;//currprefs.jports[joyid].id - JSEM_JOYS;
+			const int hostkeyid = currprefs.jports[joyid].id - JSEM_JOYS;
 
+#ifdef USE_SDL1
+			Uint8* keystate = SDL_GetKeyState(nullptr);
+#endif
+#ifdef USE_SDL2
 			const Uint8* keystate = SDL_GetKeyboardState(nullptr);
-
+#endif
 			// cd32 red, blue, green, yellow
 			setjoybuttonstate(0, 0, keystate[host_keyboard_buttons[hostkeyid].south_button]); // b
 			setjoybuttonstate(0, 1, keystate[host_keyboard_buttons[hostkeyid].east_button]); // a
@@ -1201,7 +1222,7 @@ struct inputdevice_functions inputdevicefunc_joystick = {
 	get_joystick_flags
 };
 
-int input_get_default_joystick(struct uae_input_device* uid, int num, int port, int af, int mode, bool gp,
+int input_get_default_joystick(struct uae_input_device* uid, const int num, int port, const int af, const int mode, const bool gp,
                                bool joymouseswap)
 {
 	// DEAL WITH AXIS INPUT EVENTS
@@ -1456,7 +1477,7 @@ int input_get_default_joystick_analog(struct uae_input_device* uid, int num, int
 }
 
 
-void SimulateMouseOrJoy(int code, int keypressed)
+void SimulateMouseOrJoy(const int code, const int keypressed)
 {
 	switch (code)
 	{

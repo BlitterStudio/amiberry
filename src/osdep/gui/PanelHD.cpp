@@ -1,7 +1,14 @@
+#ifdef USE_SDL1
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
+#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -215,6 +222,7 @@ public:
 			changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 		}
 		RefreshPanelHD();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -231,7 +239,7 @@ public:
 			//---------------------------------------
 			// Eject CD from drive
 			//---------------------------------------
-			strcpy(changed_prefs.cdslots[0].name, "");
+			strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
@@ -239,15 +247,15 @@ public:
 			char tmp[MAX_DPATH];
 
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
-				strcpy(tmp, changed_prefs.cdslots[0].name);
+				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
 				strcpy(tmp, currentDir);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
-				if (strncmp(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name))
+				if(strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH))
 				{
-					strcpy(changed_prefs.cdslots[0].name, tmp);
+					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
@@ -312,7 +320,7 @@ public:
 			{
 				if (cdfileList.getElementAt(idx).compare(changed_prefs.cdslots[0].name))
 				{
-					strcpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str());
+					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof(changed_prefs.cdslots[0].name));
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -352,7 +360,11 @@ void InitPanelHD(const struct _ConfigCategory& category)
 		listEntry[row] = new gcn::Container();
 		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, TEXTFIELD_HEIGHT + 4);
 		listEntry[row]->setBaseColor(gui_baseCol);
+#ifdef USE_SDL1
+		listEntry[row]->setFrameSize(0);
+#elif USE_SDL2
 		listEntry[row]->setBorderSize(0);
+#endif
 
 		listCmdProps[row] = new gcn::Button("...");
 		listCmdProps[row]->setBaseColor(gui_baseCol);
@@ -437,6 +449,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	sldCDVol->setId("CDVol");
 	sldCDVol->addActionListener(genericActionListener);
 	lblCDVolInfo = new gcn::Label("80 %");
+	lblCDVolInfo->setSize(100, LABEL_HEIGHT);
 
 	int posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
 	for (col = 0; col < COL_COUNT; ++col)

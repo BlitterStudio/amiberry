@@ -40,7 +40,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -54,7 +54,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

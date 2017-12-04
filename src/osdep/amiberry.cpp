@@ -33,7 +33,9 @@
 #include "zfile.h"
 #include "gfxboard.h"
 #include <SDL.h>
+#ifdef USE_SDL2
 #include <map>
+#endif
 #include "amiberry_rp9.h"
 
 #ifdef WITH_LOGGING
@@ -56,7 +58,13 @@ static int doStylusRightClick;
 extern void SetLastActiveConfig(const char* filename);
 
 /* Keyboard */
-std::map<int, TCHAR[256]> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map 
+#ifdef USE_SDL1
+int customControlMap[SDLK_LAST];
+#endif
+
+#ifdef USE_SDL2
+std::map<int, TCHAR[256]> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map
+#endif
 
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
@@ -163,7 +171,7 @@ void getfilepart(TCHAR *out, int size, const TCHAR *path)
 
 uae_u8 *target_load_keyfile(struct uae_prefs *p, const char *path, int *sizep, char *name)
 {
-	return 0;
+	return nullptr;
 }
 
 void target_run(void)
@@ -240,6 +248,9 @@ void target_fixup_options(struct uae_prefs* p)
 void target_default_options(struct uae_prefs* p, int type)
 {
 #ifdef PANDORA
+	p->gfx_size.width = 320;
+	p->gfx_size.height = 240;
+	p->gfx_resolution = RES_LORES;
 	p->pandora_vertical_offset = OFFSET_Y_ADJUST;
 	p->pandora_cpu_speed = defaultCpuSpeed;
 	p->pandora_hide_idle_led = 0;
@@ -269,7 +280,16 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
+
+#ifdef USE_SDL1
+	p->gfx_correct_aspect = 1;
+	p->gfx_fullscreen_ratio = 100;
+#endif
+
+#ifdef USE_SDL2
 	p->scaling_method = -1; //Default is Auto
+#endif
+
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
 
@@ -310,6 +330,10 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->disableMenuVKeyb = 0;
 #endif
 
+#ifdef USE_SDL1
+	memset(customControlMap, 0, sizeof(customControlMap));
+#endif
+
 	p->cr[CHIPSET_REFRESH_PAL].locked = true;
 	p->cr[CHIPSET_REFRESH_PAL].vsync = 1;
 
@@ -332,14 +356,24 @@ void target_default_options(struct uae_prefs* p, int type)
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
 #ifdef PANDORA
-	cfgfile_write (f, "pandora.cpu_speed", "%d", p->pandora_cpu_speed);
-	cfgfile_write (f, "pandora.hide_idle_led", "%d", p->pandora_hide_idle_led);
-	cfgfile_write (f, "pandora.tap_delay", "%d", p->pandora_tapDelay);
-	cfgfile_write (f, "pandora.move_y", "%d", p->pandora_vertical_offset - OFFSET_Y_ADJUST);
+	cfgfile_write(f, "pandora.cpu_speed", "%d", p->pandora_cpu_speed);
+	cfgfile_write(f, "pandora.hide_idle_led", "%d", p->pandora_hide_idle_led);
+	cfgfile_write(f, "pandora.tap_delay", "%d", p->pandora_tapDelay);
+	cfgfile_write(f, "pandora.move_y", "%d", p->pandora_vertical_offset - OFFSET_Y_ADJUST);
 #endif //PANDORA
+
+#ifdef USE_SDL1
+	cfgfile_write(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
+	cfgfile_write(f, _T("gfx_fullscreen_ratio"), _T("%d"), p->gfx_fullscreen_ratio);
+#endif
+
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
+
+#ifdef USE_SDL2
 	cfgfile_write(f, _T("amiberry.scaling_method"), _T("%d"), p->scaling_method);
+#endif
+
 	cfgfile_write_str(f, _T("amiberry.open_gui"), p->open_gui);
 	cfgfile_write_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 
@@ -359,35 +393,36 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, "amiberry.custom_l", "%d", p->custom_l);
 	cfgfile_write(f, "amiberry.custom_r", "%d", p->custom_r);
 	cfgfile_write(f, "amiberry.custom_play", "%d", p->custom_play);
+
 #ifdef ANDROIDSDL
-  cfgfile_write (f, "pandora.onscreen", "%d", p->onScreen);
-  cfgfile_write (f, "pandora.onscreen_textinput", "%d", p->onScreen_textinput);
-  cfgfile_write (f, "pandora.onscreen_dpad", "%d", p->onScreen_dpad);
-  cfgfile_write (f, "pandora.onscreen_button1", "%d", p->onScreen_button1);
-  cfgfile_write (f, "pandora.onscreen_button2", "%d", p->onScreen_button2);
-  cfgfile_write (f, "pandora.onscreen_button3", "%d", p->onScreen_button3);
-  cfgfile_write (f, "pandora.onscreen_button4", "%d", p->onScreen_button4);
-  cfgfile_write (f, "pandora.onscreen_button5", "%d", p->onScreen_button5);
-  cfgfile_write (f, "pandora.onscreen_button6", "%d", p->onScreen_button6);
-  cfgfile_write (f, "pandora.custom_position", "%d", p->custom_position);
-  cfgfile_write (f, "pandora.pos_x_textinput", "%d", p->pos_x_textinput);
-  cfgfile_write (f, "pandora.pos_y_textinput", "%d", p->pos_y_textinput);
-  cfgfile_write (f, "pandora.pos_x_dpad", "%d", p->pos_x_dpad);
-  cfgfile_write (f, "pandora.pos_y_dpad", "%d", p->pos_y_dpad);
-  cfgfile_write (f, "pandora.pos_x_button1", "%d", p->pos_x_button1);
-  cfgfile_write (f, "pandora.pos_y_button1", "%d", p->pos_y_button1);
-  cfgfile_write (f, "pandora.pos_x_button2", "%d", p->pos_x_button2);
-  cfgfile_write (f, "pandora.pos_y_button2", "%d", p->pos_y_button2);
-  cfgfile_write (f, "pandora.pos_x_button3", "%d", p->pos_x_button3);
-  cfgfile_write (f, "pandora.pos_y_button3", "%d", p->pos_y_button3);
-  cfgfile_write (f, "pandora.pos_x_button4", "%d", p->pos_x_button4);
-  cfgfile_write (f, "pandora.pos_y_button4", "%d", p->pos_y_button4);
-  cfgfile_write (f, "pandora.pos_x_button5", "%d", p->pos_x_button5);
-  cfgfile_write (f, "pandora.pos_y_button5", "%d", p->pos_y_button5);
-  cfgfile_write (f, "pandora.pos_x_button6", "%d", p->pos_x_button6);
-  cfgfile_write (f, "pandora.pos_y_button6", "%d", p->pos_y_button6);
-  cfgfile_write (f, "pandora.floating_joystick", "%d", p->floatingJoystick);
-  cfgfile_write (f, "pandora.disable_menu_vkeyb", "%d", p->disableMenuVKeyb);
+	cfgfile_write(f, "pandora.onscreen", "%d", p->onScreen);
+	cfgfile_write(f, "pandora.onscreen_textinput", "%d", p->onScreen_textinput);
+	cfgfile_write(f, "pandora.onscreen_dpad", "%d", p->onScreen_dpad);
+	cfgfile_write(f, "pandora.onscreen_button1", "%d", p->onScreen_button1);
+	cfgfile_write(f, "pandora.onscreen_button2", "%d", p->onScreen_button2);
+	cfgfile_write(f, "pandora.onscreen_button3", "%d", p->onScreen_button3);
+	cfgfile_write(f, "pandora.onscreen_button4", "%d", p->onScreen_button4);
+	cfgfile_write(f, "pandora.onscreen_button5", "%d", p->onScreen_button5);
+	cfgfile_write(f, "pandora.onscreen_button6", "%d", p->onScreen_button6);
+	cfgfile_write(f, "pandora.custom_position", "%d", p->custom_position);
+	cfgfile_write(f, "pandora.pos_x_textinput", "%d", p->pos_x_textinput);
+	cfgfile_write(f, "pandora.pos_y_textinput", "%d", p->pos_y_textinput);
+	cfgfile_write(f, "pandora.pos_x_dpad", "%d", p->pos_x_dpad);
+	cfgfile_write(f, "pandora.pos_y_dpad", "%d", p->pos_y_dpad);
+	cfgfile_write(f, "pandora.pos_x_button1", "%d", p->pos_x_button1);
+	cfgfile_write(f, "pandora.pos_y_button1", "%d", p->pos_y_button1);
+	cfgfile_write(f, "pandora.pos_x_button2", "%d", p->pos_x_button2);
+	cfgfile_write(f, "pandora.pos_y_button2", "%d", p->pos_y_button2);
+	cfgfile_write(f, "pandora.pos_x_button3", "%d", p->pos_x_button3);
+	cfgfile_write(f, "pandora.pos_y_button3", "%d", p->pos_y_button3);
+	cfgfile_write(f, "pandora.pos_x_button4", "%d", p->pos_x_button4);
+	cfgfile_write(f, "pandora.pos_y_button4", "%d", p->pos_y_button4);
+	cfgfile_write(f, "pandora.pos_x_button5", "%d", p->pos_x_button5);
+	cfgfile_write(f, "pandora.pos_y_button5", "%d", p->pos_y_button5);
+	cfgfile_write(f, "pandora.pos_x_button6", "%d", p->pos_x_button6);
+	cfgfile_write(f, "pandora.pos_y_button6", "%d", p->pos_y_button6);
+	cfgfile_write(f, "pandora.floating_joystick", "%d", p->floatingJoystick);
+	cfgfile_write(f, "pandora.disable_menu_vkeyb", "%d", p->disableMenuVKeyb);
 #endif
 }
 
@@ -399,7 +434,8 @@ void target_restart(void)
 
 TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
 {
-	if (out == NULL) {
+	if (out == nullptr)
+	{
 		return strdup(path);
 	}
 	_tcscpy(out, path);
@@ -420,43 +456,42 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 #endif //PANDORA
+
 #ifdef ANDROIDSDL
-    || cfgfile_intval (option, value, "onscreen", &p->onScreen, 1)
-    || cfgfile_intval (option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
-    || cfgfile_intval (option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
-    || cfgfile_intval (option, value, "onscreen_button1", &p->onScreen_button1, 1)
-    || cfgfile_intval (option, value, "onscreen_button2", &p->onScreen_button2, 1)
-    || cfgfile_intval (option, value, "onscreen_button3", &p->onScreen_button3, 1)
-    || cfgfile_intval (option, value, "onscreen_button4", &p->onScreen_button4, 1)
-    || cfgfile_intval (option, value, "onscreen_button5", &p->onScreen_button5, 1)
-    || cfgfile_intval (option, value, "onscreen_button6", &p->onScreen_button6, 1)
-    || cfgfile_intval (option, value, "custom_position", &p->custom_position, 1)
-    || cfgfile_intval (option, value, "pos_x_textinput", &p->pos_x_textinput, 1)
-    || cfgfile_intval (option, value, "pos_y_textinput", &p->pos_y_textinput, 1)
-    || cfgfile_intval (option, value, "pos_x_dpad", &p->pos_x_dpad, 1)
-    || cfgfile_intval (option, value, "pos_y_dpad", &p->pos_y_dpad, 1)
-    || cfgfile_intval (option, value, "pos_x_button1", &p->pos_x_button1, 1)
-    || cfgfile_intval (option, value, "pos_y_button1", &p->pos_y_button1, 1)
-    || cfgfile_intval (option, value, "pos_x_button2", &p->pos_x_button2, 1)
-    || cfgfile_intval (option, value, "pos_y_button2", &p->pos_y_button2, 1)
-    || cfgfile_intval (option, value, "pos_x_button3", &p->pos_x_button3, 1)
-    || cfgfile_intval (option, value, "pos_y_button3", &p->pos_y_button3, 1)
-    || cfgfile_intval (option, value, "pos_x_button4", &p->pos_x_button4, 1)
-    || cfgfile_intval (option, value, "pos_y_button4", &p->pos_y_button4, 1)
-    || cfgfile_intval (option, value, "pos_x_button5", &p->pos_x_button5, 1)
-    || cfgfile_intval (option, value, "pos_y_button5", &p->pos_y_button5, 1)
-    || cfgfile_intval (option, value, "pos_x_button6", &p->pos_x_button6, 1)
-    || cfgfile_intval (option, value, "pos_y_button6", &p->pos_y_button6, 1)
-    || cfgfile_intval (option, value, "floating_joystick", &p->floatingJoystick, 1)
-    || cfgfile_intval (option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
+		|| cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
+		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
+		|| cfgfile_intval(option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
+		|| cfgfile_intval(option, value, "onscreen_button1", &p->onScreen_button1, 1)
+		|| cfgfile_intval(option, value, "onscreen_button2", &p->onScreen_button2, 1)
+		|| cfgfile_intval(option, value, "onscreen_button3", &p->onScreen_button3, 1)
+		|| cfgfile_intval(option, value, "onscreen_button4", &p->onScreen_button4, 1)
+		|| cfgfile_intval(option, value, "onscreen_button5", &p->onScreen_button5, 1)
+		|| cfgfile_intval(option, value, "onscreen_button6", &p->onScreen_button6, 1)
+		|| cfgfile_intval(option, value, "custom_position", &p->custom_position, 1)
+		|| cfgfile_intval(option, value, "pos_x_textinput", &p->pos_x_textinput, 1)
+		|| cfgfile_intval(option, value, "pos_y_textinput", &p->pos_y_textinput, 1)
+		|| cfgfile_intval(option, value, "pos_x_dpad", &p->pos_x_dpad, 1)
+		|| cfgfile_intval(option, value, "pos_y_dpad", &p->pos_y_dpad, 1)
+		|| cfgfile_intval(option, value, "pos_x_button1", &p->pos_x_button1, 1)
+		|| cfgfile_intval(option, value, "pos_y_button1", &p->pos_y_button1, 1)
+		|| cfgfile_intval(option, value, "pos_x_button2", &p->pos_x_button2, 1)
+		|| cfgfile_intval(option, value, "pos_y_button2", &p->pos_y_button2, 1)
+		|| cfgfile_intval(option, value, "pos_x_button3", &p->pos_x_button3, 1)
+		|| cfgfile_intval(option, value, "pos_y_button3", &p->pos_y_button3, 1)
+		|| cfgfile_intval(option, value, "pos_x_button4", &p->pos_x_button4, 1)
+		|| cfgfile_intval(option, value, "pos_y_button4", &p->pos_y_button4, 1)
+		|| cfgfile_intval(option, value, "pos_x_button5", &p->pos_x_button5, 1)
+		|| cfgfile_intval(option, value, "pos_y_button5", &p->pos_y_button5, 1)
+		|| cfgfile_intval(option, value, "pos_x_button6", &p->pos_x_button6, 1)
+		|| cfgfile_intval(option, value, "pos_y_button6", &p->pos_y_button6, 1)
+		|| cfgfile_intval(option, value, "floating_joystick", &p->floatingJoystick, 1)
+		|| cfgfile_intval(option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
 #endif
 
 	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_quit"), &p->amiberry_use_retroarch_quit))
 		return 1;
-
 	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_menu"), &p->amiberry_use_retroarch_menu))
 		return 1;
-
 	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_reset"), &p->amiberry_use_retroarch_reset))
 		return 1;
 
@@ -464,8 +499,19 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
 		return 1;
+
+#ifdef USE_SDL1
+	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "gfx_fullscreen_ratio", &p->gfx_fullscreen_ratio, 1))
+		return 1;
+#endif
+
+#ifdef USE_SDL2
 	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
 		return 1;
+#endif
+
 	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
 		return 1;
 	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
@@ -517,7 +563,7 @@ void fetch_configurationpath(char *out, int size)
 
 void set_configurationpath(char *newpath)
 {
-	strcpy(config_path, newpath);
+	strncpy(config_path, newpath, MAX_DPATH);
 }
 
 void fetch_controllerspath(char* out, int size)
@@ -548,7 +594,7 @@ void fetch_rompath(char* out, int size)
 
 void set_rompath(char *newpath)
 {
-	strcpy(rom_path, newpath);
+	strncpy(rom_path, newpath, MAX_DPATH);
 }
 
 
@@ -590,7 +636,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	else
 	{
 		ptr = strstr((char *)filename, ".uae");
-		if (ptr > 0)
+		if (ptr > nullptr)
 		{
 			int type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
 			result = cfgfile_load(p, filename, &type, 0, 1);
@@ -603,7 +649,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	{
 		for (i = 0; i < p->nr_floppies; ++i)
 		{
-			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, NULL, NULL, NULL))
+			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
 			disk_insert(i, p->floppyslots[i].df);
 			if (strlen(p->floppyslots[i].df) > 0)
@@ -611,7 +657,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		}
 
 		if (!isdefault)
-			inputdevice_updateconfig(NULL, p);
+			inputdevice_updateconfig(nullptr, p);
 #ifdef WITH_LOGGING
 		p->leds_on_screen = true;
 #endif
@@ -632,12 +678,12 @@ int check_configfile(char *file)
 		return 1;
 	}
 
-	strcpy(tmp, file);
-	char *ptr = strstr(tmp, ".uae");
-	if (ptr > 0)
+	strncpy(tmp, file, MAX_PATH);
+	char* ptr = strstr(tmp, ".uae");
+	if (ptr > nullptr)
 	{
 		*(ptr + 1) = '\0';
-		strcat(tmp, "conf");
+		strncat(tmp, "conf", MAX_PATH);
 		f = fopen(tmp, "rt");
 		if (f)
 		{
@@ -654,13 +700,13 @@ void extractFileName(const char * str, char *buffer)
 	while (*p != '/' && p > str)
 		p--;
 	p++;
-	strcpy(buffer, p);
+	strncpy(buffer, p, MAX_PATH);
 }
 
 void extractPath(char *str, char *buffer)
 {
-	strcpy(buffer, str);
-	char *p = buffer + strlen(buffer) - 1;
+	strncpy(buffer, str, MAX_PATH);
+	char* p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p > buffer)
 		p--;
 	p[1] = '\0';
@@ -679,36 +725,35 @@ void removeFileExtension(char *filename)
 
 void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector<std::string> *files)
 {
-	DIR *dir;
 	struct dirent *dent;
 
-	if (dirs != NULL)
+	if (dirs != nullptr)
 		dirs->clear();
-	if (files != NULL)
+	if (files != nullptr)
 		files->clear();
 
-	dir = opendir(path);
-	if (dir != NULL)
+	DIR * dir = opendir(path);
+	if (dir != nullptr)
 	{
-		while ((dent = readdir(dir)) != NULL)
+		while ((dent = readdir(dir)) != nullptr)
 		{
 			if (dent->d_type == DT_DIR)
 			{
-				if (dirs != NULL)
+				if (dirs != nullptr)
 					dirs->push_back(dent->d_name);
 			}
-			else if (files != NULL)
+			else if (files != nullptr)
 				files->push_back(dent->d_name);
 		}
-		if (dirs != NULL && dirs->size() > 0 && (*dirs)[0] == ".")
+		if (dirs != nullptr && dirs->size() > 0 && (*dirs)[0] == ".")
 			dirs->erase(dirs->begin());
 		closedir(dir);
 	}
 
-	if (dirs != NULL)
-		std::sort(dirs->begin(), dirs->end());
-	if (files != NULL)
-		std::sort(files->begin(), files->end());
+	if (dirs != nullptr)
+		sort(dirs->begin(), dirs->end());
+	if (files != nullptr)
+		sort(files->begin(), files->end());
 }
 
 void saveAdfDir(void)
@@ -830,7 +875,8 @@ void loadAdfDir(void)
 		char romPath[MAX_PATH] = { '\0' };
 		char tmpFile[MAX_PATH];
 
-		while (zfile_fgetsa(linea, sizeof(linea), fh) != 0) {
+		while (zfile_fgetsa(linea, sizeof (linea), fh) != nullptr)
+		{
 			trimwsa(linea);
 			if (strlen(linea) > 0) {
 				if (!cfgfile_separate_linea(path, linea, option, value))
@@ -850,16 +896,20 @@ void loadAdfDir(void)
 						romType = -1;
 					}
 				}
-				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof(tmpFile))) {
-					FILE *f = fopen(tmpFile, "rb");
-					if (f != NULL) {
+				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof(tmpFile)))
+				{
+					FILE* f = fopen(tmpFile, "rb");
+					if (f != nullptr)
+					{
 						fclose(f);
 						lstMRUDiskList.push_back(tmpFile);
 					}
 				}
-				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof(tmpFile))) {
-					FILE *f = fopen(tmpFile, "rb");
-					if (f != NULL) {
+				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof(tmpFile)))
+				{
+					FILE* f = fopen(tmpFile, "rb");
+					if (f != nullptr)
+					{
 						fclose(f);
 						lstMRUCDList.push_back(tmpFile);
 					}
@@ -1006,7 +1056,7 @@ int main(int argc, char* argv[])
 	struct sigaction action;
 
 #ifdef AMIBERRY
-	printf("Amiberry-SDL2 v2.55, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
+	printf("Amiberry v2.6, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
 #endif
 	max_uae_width = 1920;
 	max_uae_height = 1080;
@@ -1038,7 +1088,7 @@ int main(int argc, char* argv[])
 	memset(&action, 0, sizeof(action));
 	action.sa_sigaction = signal_buserror;
 	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGBUS, &action, NULL) < 0)
+	if (sigaction(SIGBUS, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGBUS).\n");
 		abort();
@@ -1047,7 +1097,7 @@ int main(int argc, char* argv[])
 	memset(&action, 0, sizeof(action));
 	action.sa_sigaction = signal_term;
 	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGTERM, &action, NULL) < 0)
+	if (sigaction(SIGTERM, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGTERM).\n");
 		abort();
@@ -1077,7 +1127,7 @@ int main(int argc, char* argv[])
 
 	real_main(argc, argv);
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND 
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
 #endif
@@ -1117,11 +1167,11 @@ int handle_msgpump()
 	int got = 0;
 	SDL_Event rEvent;
 	int keycode;
-	if(delayed_mousebutton) {
-    		--delayed_mousebutton;
-    		if(delayed_mousebutton == 0)
-      			setmousebuttonstate (0, 0, 1);
-  		}
+	if (delayed_mousebutton) {
+		--delayed_mousebutton;
+		if (delayed_mousebutton == 0)
+			setmousebuttonstate(0, 0, 1);
+	}
 
 	if (currprefs.customControls)
 		PopulateCustomControlMap();
@@ -1129,7 +1179,13 @@ int handle_msgpump()
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
+#ifdef USE_SDL1
+		Uint8* keystate = SDL_GetKeyState(nullptr);
+#endif
+
+#ifdef USE_SDL2
 		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
+#endif
 
 		switch (rEvent.type)
 		{
@@ -1137,7 +1193,7 @@ int handle_msgpump()
 			uae_quit();
 			break;
 
-			//case SDL_JOYBUTTONDOWN:
+		//case SDL_JOYBUTTONDOWN:
 			//	if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
 			//		inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			//	if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
@@ -1145,11 +1201,35 @@ int handle_msgpump()
 			//	break;
 
 		case SDL_KEYDOWN:
+#ifdef USE_SDL1
+			// Strangely in FBCON left window is seen as left alt ??
+			if (keyboard_type == 2) // KEYCODE_FBCON
+			{
+				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[
+					SDLK_MENU]))
+#endif
+#ifdef USE_SDL2			
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
+#endif
 			{
 				uae_reset(0, 1);
 				break;
 			}
+#ifdef USE_SDL1
+			}
+			else
+			{
+				if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
+			}
+
+			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
+			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
+				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
+#endif
 
 			switch (rEvent.key.keysym.sym)
 			{
@@ -1182,18 +1262,23 @@ int handle_msgpump()
 			case SDLK_LSHIFT: // Shift key
 				inputdevice_do_keyboard(AK_LSH, 1);
 				break;
-           
+
 			case SDLK_RSHIFT: // Left shoulder button
 			case SDLK_RCTRL:  // Right shoulder button
 				if(currprefs.input_tablet > TABLET_OFF) {
 					// Holding left or right shoulder button -> stylus does right mousebutton
 					doStylusRightClick = 1;
             }
-#endif				
+#endif
 			default:
 				if (currprefs.customControls)
 				{
+#ifdef USE_SDL1
+					keycode = customControlMap[rEvent.key.keysym.sym];
+#endif
+#ifdef USE_SDL2
 					keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
+#endif
 					if (keycode < 0)
 					{
 						// Simulate mouse or joystick
@@ -1215,7 +1300,12 @@ int handle_msgpump()
 		case SDL_KEYUP:
 			if (currprefs.customControls)
 			{
+#ifdef USE_SDL1
+				keycode = customControlMap[rEvent.key.keysym.sym];
+#endif
+#ifdef USE_SDL2
 				keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
+#endif
 				if (keycode < 0)
 				{
 					// Simulate mouse or joystick
@@ -1268,10 +1358,10 @@ int handle_msgpump()
 			{
 				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 				{
-					int mouseScale = currprefs.input_joymouse_multiplier / 2;
-					int x = rEvent.motion.xrel;
-					int y = rEvent.motion.yrel;
-#ifdef PANDORA
+					const int mouseScale = currprefs.input_joymouse_multiplier / 2;
+					const int x = rEvent.motion.xrel;
+					const int y = rEvent.motion.yrel;
+#if defined (PANDORA) || defined (ANDROIDSDL)
     				if(rEvent.motion.x == 0 && x > -4)
     					x = -4;
     				if(rEvent.motion.y == 0 && y > -4)
@@ -1290,8 +1380,8 @@ int handle_msgpump()
 		case SDL_MOUSEWHEEL:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
-				int valY = rEvent.wheel.y;
-				int valX = rEvent.wheel.x;
+				const int valY = rEvent.wheel.y;
+				const int valX = rEvent.wheel.x;
 				setmousestate(0, 2, valY, 0);
 				setmousestate(0, 3, valX, 0);
 			}

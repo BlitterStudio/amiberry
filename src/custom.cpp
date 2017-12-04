@@ -60,11 +60,12 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-#define SPEEDUP_CYCLES_JIT 5000
+#define SPEEDUP_CYCLES_JIT_PAL 5000
+#define SPEEDUP_CYCLES_JIT_NTSC 4000
 #define SPEEDUP_CYCLES_NONJIT 256
 #define SPEEDUP_TIMELIMIT_JIT -750
 #define SPEEDUP_TIMELIMIT_NONJIT -750
-int pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
+int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
 
 /* Events */
@@ -339,18 +340,20 @@ STATIC_INLINE int ecsshres(void)
 
 void set_speedup_values(void)
 {
-  if(currprefs.m68k_speed < 0) {
-    if (currprefs.cachesize) {
-      pissoff_value = SPEEDUP_CYCLES_JIT * CYCLE_UNIT;
-      speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
-    } else {
-      pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
-      speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
-    }
-  } else {
-    pissoff_value = 0;
-    speedup_timelimit = 0;
-  }
+	if (currprefs.m68k_speed < 0) {
+		if (currprefs.cachesize) {
+			pissoff_value = ((vblank_hz > 55) ? SPEEDUP_CYCLES_JIT_NTSC : SPEEDUP_CYCLES_JIT_PAL) * CYCLE_UNIT;
+			speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+		}
+		else {
+			pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
+			speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+		}
+	}
+	else {
+		pissoff_value = 0;
+		speedup_timelimit = 0;
+	}
 }
 
 void reset_frame_rate_hack (void)
@@ -3166,7 +3169,7 @@ static void compute_framesync (void)
   lof_changing = 0;
 
   if (beamcon0 & 0x80) {
-    gui_message(_T("Variable beam counter comparator enabled. Not supported in UAE4ARM."));
+    gui_message(_T("Variable beam counter comparator enabled. Not supported in Amiberry."));
   }
 
 	memset (line_decisions, 0, sizeof line_decisions);
@@ -5937,6 +5940,14 @@ static void hsync_handler_post (bool onvsync)
     int lineno = vpos;
 		if (lineno >= MAXVPOS)
 			lineno %= MAXVPOS;
+		if (currprefs.gfx_vresolution) {
+			lineno *= 2;
+			if (interlace_seen) {
+				if (!lof_current) {
+					lineno++;
+				}
+			}
+		}
   	prev_lineno = next_lineno;
     next_lineno = lineno;
     reset_decisions ();
