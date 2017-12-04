@@ -135,23 +135,44 @@ static void fill_blank_controller(void)
 }
 
 
-static void fill_default_keyboard(void)
+//static void fill_default_keyboard()
+//{
+//	// test using iPac layout 
+//	default_keyboard_map.north_button = SDLK_LSHIFT;
+//	default_keyboard_map.east_button = SDLK_LCTRL;
+//	default_keyboard_map.south_button = SDLK_LALT;
+//	default_keyboard_map.west_button = SDLK_SPACE;
+//	default_keyboard_map.dpad_left = SDLK_LEFT;
+//	default_keyboard_map.dpad_right = SDLK_RIGHT;
+//	default_keyboard_map.dpad_up = SDLK_UP;
+//	default_keyboard_map.dpad_down = SDLK_DOWN;
+//	default_keyboard_map.left_shoulder = SDLK_z;
+//	default_keyboard_map.right_shoulder = SDLK_x;
+//	default_keyboard_map.select_button = SDLK_1;
+//	default_keyboard_map.start_button = SDLK_2;
+//	default_keyboard_map.lstick_button = SDLK_F1;
+//	default_keyboard_map.rstick_button = SDLK_F2;
+//
+//	default_keyboard_map.is_retroarch = false;
+//}
+
+static void fill_default_keyboard()
 {
 	// test using iPac layout 
-	default_keyboard_map.north_button = SDLK_LSHIFT;
-	default_keyboard_map.east_button = SDLK_LCTRL;
-	default_keyboard_map.south_button = SDLK_LALT;
-	default_keyboard_map.west_button = SDLK_SPACE;
-	default_keyboard_map.dpad_left = SDLK_LEFT;
-	default_keyboard_map.dpad_right = SDLK_RIGHT;
-	default_keyboard_map.dpad_up = SDLK_UP;
-	default_keyboard_map.dpad_down = SDLK_DOWN;
-	default_keyboard_map.left_shoulder = SDLK_z;
-	default_keyboard_map.right_shoulder = SDLK_x;
-	default_keyboard_map.select_button = SDLK_1;
-	default_keyboard_map.start_button = SDLK_2;
-	default_keyboard_map.lstick_button = SDLK_F1;
-	default_keyboard_map.rstick_button = SDLK_F2;
+	default_keyboard_map.north_button = SDL_SCANCODE_LSHIFT;
+	default_keyboard_map.east_button = SDL_SCANCODE_LCTRL;
+	default_keyboard_map.south_button = SDL_SCANCODE_LALT;
+	default_keyboard_map.west_button = SDL_SCANCODE_SPACE;
+	default_keyboard_map.dpad_left = SDL_SCANCODE_LEFT;
+	default_keyboard_map.dpad_right = SDL_SCANCODE_RIGHT;
+	default_keyboard_map.dpad_up = SDL_SCANCODE_UP;
+	default_keyboard_map.dpad_down = SDL_SCANCODE_DOWN;
+	default_keyboard_map.left_shoulder = SDL_SCANCODE_Z;
+	default_keyboard_map.right_shoulder = SDL_SCANCODE_X;
+	default_keyboard_map.select_button = SDL_SCANCODE_1;
+	default_keyboard_map.start_button = SDL_SCANCODE_2;
+	default_keyboard_map.lstick_button = SDL_SCANCODE_F1;
+	default_keyboard_map.rstick_button = SDL_SCANCODE_F2;
 
 	default_keyboard_map.is_retroarch = false;
 }
@@ -168,33 +189,57 @@ static void fill_default_keyboard(void)
 //#   tilde, backquote, pause, quote, comma, minus, slash, semicolon, equals, leftbracket,
 //#   backslash, rightbracket, kp_period, kp_equals, rctrl, ralt
 
+//const int RemapKeyMapList[] = {
+//	-1,
+//	SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e,
+//	SDLK_f, SDLK_g, SDLK_h, SDLK_i, SDLK_j,
+//	SDLK_k, SDLK_l, SDLK_m, SDLK_n, SDLK_o,
+//	SDLK_p, SDLK_q, SDLK_r, SDLK_s, SDLK_t,
+//	SDLK_u, SDLK_v, SDLK_w, SDLK_x, SDLK_y, SDLK_z,
+//	SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_DOWN, SDLK_RETURN,
+//	SDLK_KP_ENTER, SDLK_TAB, SDLK_INSERT, SDLK_DELETE, SDLK_END, SDLK_HOME,
+//	SDLK_RSHIFT, SDLK_LSHIFT, SDLK_LCTRL, SDLK_LALT, SDLK_SPACE,
+//	SDLK_ESCAPE, SDLK_PLUS, SDLK_MINUS, SDLK_KP_PLUS, SDLK_KP_MINUS,
+//	SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
+//	SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12,
+//	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5,
+//	SDLK_6, SDLK_7, SDLK_8, SDLK_9, SDLK_PAGEUP, SDLK_PAGEDOWN,
+//	SDLK_KP_0, SDLK_KP_1, SDLK_KP_2, SDLK_KP_3, SDLK_KP_4,
+//	SDLK_KP_5, SDLK_KP_6, SDLK_KP_7, SDLK_KP_8, SDLK_KP_9,
+//	SDLK_PERIOD, SDLK_CAPSLOCK, SDLK_NUMLOCKCLEAR, SDLK_BACKSPACE,
+//	//              divide
+//	SDLK_ASTERISK, -1, SDLK_PRINTSCREEN, SDLK_SCROLLLOCK,
+//	// tilde
+//	-1, SDLK_BACKQUOTE,SDLK_PAUSE, SDLK_QUOTE, SDLK_COMMA,
+//	SDLK_MINUS, SDLK_SLASH, SDLK_SEMICOLON,SDLK_EQUALS, SDLK_LEFTPAREN,
+//	SDLK_BACKSLASH, SDLK_RIGHTPAREN,
+//	SDLK_KP_PERIOD, SDLK_KP_EQUALS,SDLK_RCTRL, SDLK_RALT
+//};
+
 const int RemapKeyMapList[] = {
 	-1,
-	SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e,
-	SDLK_f, SDLK_g, SDLK_h, SDLK_i, SDLK_j,
-	SDLK_k, SDLK_l, SDLK_m, SDLK_n, SDLK_o,
-	SDLK_p, SDLK_q, SDLK_r, SDLK_s, SDLK_t,
-	SDLK_u, SDLK_v, SDLK_w, SDLK_x, SDLK_y, SDLK_z,
-	SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_DOWN, SDLK_RETURN,
-	SDLK_KP_ENTER, SDLK_TAB, SDLK_INSERT, SDLK_DELETE, SDLK_END, SDLK_HOME,
-	SDLK_RSHIFT, SDLK_LSHIFT, SDLK_LCTRL, SDLK_LALT, SDLK_SPACE,
-	SDLK_ESCAPE, SDLK_PLUS, SDLK_MINUS, SDLK_KP_PLUS, SDLK_KP_MINUS,
-	SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
-	SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12,
-	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5,
-	SDLK_6, SDLK_7, SDLK_8, SDLK_9, SDLK_PAGEUP, SDLK_PAGEDOWN,
-	SDLK_KP_0, SDLK_KP_1, SDLK_KP_2, SDLK_KP_3, SDLK_KP_4,
-	SDLK_KP_5, SDLK_KP_6, SDLK_KP_7, SDLK_KP_8, SDLK_KP_9,
-	SDLK_PERIOD, SDLK_CAPSLOCK, SDLK_NUMLOCKCLEAR, SDLK_BACKSPACE,
-	//              divide
-	SDLK_ASTERISK, -1, SDLK_PRINTSCREEN, SDLK_SCROLLLOCK,
-	// tilde
-	-1, SDLK_BACKQUOTE,SDLK_PAUSE, SDLK_QUOTE, SDLK_COMMA,
-	SDLK_MINUS, SDLK_SLASH, SDLK_SEMICOLON,SDLK_EQUALS, SDLK_LEFTPAREN,
-	SDLK_BACKSLASH, SDLK_RIGHTPAREN,
-	SDLK_KP_PERIOD, SDLK_KP_EQUALS,SDLK_RCTRL, SDLK_RALT
-};
-
+	SDL_SCANCODE_A, SDL_SCANCODE_B, SDL_SCANCODE_C, SDL_SCANCODE_D, SDL_SCANCODE_E,
+	SDL_SCANCODE_F, SDL_SCANCODE_G, SDL_SCANCODE_H, SDL_SCANCODE_I, SDL_SCANCODE_J,
+	SDL_SCANCODE_K, SDL_SCANCODE_L, SDL_SCANCODE_M, SDL_SCANCODE_N, SDL_SCANCODE_O,
+	SDL_SCANCODE_P, SDL_SCANCODE_Q, SDL_SCANCODE_R, SDL_SCANCODE_S, SDL_SCANCODE_T,
+	SDL_SCANCODE_U, SDL_SCANCODE_V, SDL_SCANCODE_W, SDL_SCANCODE_X, SDL_SCANCODE_Y, SDL_SCANCODE_Z,
+	SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN, SDL_SCANCODE_RETURN,
+	SDL_SCANCODE_KP_ENTER, SDL_SCANCODE_TAB, SDL_SCANCODE_INSERT, SDL_SCANCODE_DELETE, SDL_SCANCODE_END, SDL_SCANCODE_HOME,
+	SDL_SCANCODE_RSHIFT, SDL_SCANCODE_LSHIFT, SDL_SCANCODE_LCTRL, SDL_SCANCODE_LALT, SDL_SCANCODE_SPACE,
+	SDL_SCANCODE_ESCAPE, SDL_SCANCODE_KP_PLUSMINUS, SDL_SCANCODE_MINUS, SDL_SCANCODE_KP_PLUS, SDL_SCANCODE_KP_MINUS,
+	SDL_SCANCODE_F1, SDL_SCANCODE_F2, SDL_SCANCODE_F3, SDL_SCANCODE_F4, SDL_SCANCODE_F5, SDL_SCANCODE_F6,
+	SDL_SCANCODE_F7, SDL_SCANCODE_F8, SDL_SCANCODE_F9, SDL_SCANCODE_F10, SDL_SCANCODE_F11, SDL_SCANCODE_F12,
+	SDL_SCANCODE_0, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4, SDL_SCANCODE_5, SDL_SCANCODE_6,
+	SDL_SCANCODE_7, SDL_SCANCODE_8, SDL_SCANCODE_9, SDL_SCANCODE_PAGEUP, SDL_SCANCODE_PAGEDOWN,
+	SDL_SCANCODE_KP_0, SDL_SCANCODE_KP_1, SDL_SCANCODE_KP_2, SDL_SCANCODE_KP_3, SDL_SCANCODE_KP_4,
+	SDL_SCANCODE_KP_5, SDL_SCANCODE_KP_6, SDL_SCANCODE_KP_7, SDL_SCANCODE_KP_8, SDL_SCANCODE_KP_9,
+	SDL_SCANCODE_PERIOD, SDL_SCANCODE_CAPSLOCK, SDL_SCANCODE_NUMLOCKCLEAR, SDL_SCANCODE_BACKSPACE,
+	SDL_SCANCODE_KP_MULTIPLY, SDL_SCANCODE_KP_DIVIDE, SDL_SCANCODE_PRINTSCREEN, SDL_SCANCODE_SCROLLLOCK,
+	SDL_SCANCODE_GRAVE, SDL_SCANCODE_GRAVE, SDL_SCANCODE_PAUSE, SDL_SCANCODE_APOSTROPHE, SDL_SCANCODE_COMMA,
+	SDL_SCANCODE_MINUS, SDL_SCANCODE_SLASH, SDL_SCANCODE_SEMICOLON, SDL_SCANCODE_EQUALS, SDL_SCANCODE_LEFTBRACKET,
+	SDL_SCANCODE_BACKSLASH, SDL_SCANCODE_RIGHTBRACKET,
+	SDL_SCANCODE_KP_PERIOD, SDL_SCANCODE_KP_EQUALS, SDL_SCANCODE_RCTRL, SDL_SCANCODE_RALT
+	};
 
 const char* RemapKeyMapListStrings[] = {
 	"nul",
@@ -956,7 +1001,7 @@ static void read_joystick(void)
 			setjoybuttonstate(0, 9, keystate[host_keyboard_buttons[hostkeyid].dpad_left]);
 			setjoybuttonstate(0, 10, keystate[host_keyboard_buttons[hostkeyid].dpad_right]);
 
-			//stick left/right     
+			// stick left/right     
 			setjoybuttonstate(0, 11, keystate[host_keyboard_buttons[hostkeyid].lstick_button]);
 			setjoybuttonstate(0, 12, keystate[host_keyboard_buttons[hostkeyid].rstick_button]);
 			setjoybuttonstate(0, 13, keystate[host_keyboard_buttons[hostkeyid].select_button]); // num2
