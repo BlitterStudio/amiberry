@@ -319,7 +319,7 @@ extern bool target_can_autoswitchdevice(void);
 
 struct host_input_button {
 	int north_button;
-	int east_button; 
+	int east_button;
 	int south_button;
 	int west_button;
 	int dpad_left;
@@ -333,34 +333,34 @@ struct host_input_button {
 	int right_shoulder;
 	int left_trigger;
 	int right_trigger;
-        
+
 	int lstick_button;
-        int lstick_axis_y;
-        int lstick_axis_x;
+	int lstick_axis_y;
+	int lstick_axis_x;
 	int lstick_left;
 	int lstick_right;
 	int lstick_up;
 	int lstick_down;
-        
+
 	int rstick_button;
-        int rstick_axis_y;
-        int rstick_axis_x;
+	int rstick_axis_y;
+	int rstick_axis_x;
 	int rstick_left;
 	int rstick_right;
 	int rstick_up;
 	int rstick_down;
-        
-        int hotkey_button;
-        int quit_button;
-        int menu_button;
-        int reset_button;
-        int load_state_button;
-        int save_state_button;
-        
-        int number_of_hats;
-        int number_of_axis;    
-        
-        bool is_retroarch;
+
+	int hotkey_button;
+	int quit_button;
+	int menu_button;
+	int reset_button;
+	int load_state_button;
+	int save_state_button;
+
+	int number_of_hats;
+	int number_of_axis;
+
+	bool is_retroarch;
 };
 
 struct host_keyboard_button {
