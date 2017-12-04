@@ -1,10 +1,17 @@
 #include <algorithm>
-#include <guisan.hpp>
 #include <iostream>
 #include <sstream>
+#ifdef USE_SDL1
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
+#elif USE_SDL2
+#include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+#endif
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -24,7 +31,7 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
-#if defined(AMIBERRY) || defined(ANDROID)
+#if defined(ANDROID)
 #define FILE_SELECT_KEEP_POSITION
 #endif
 
@@ -228,7 +235,11 @@ static void InitSelectFile(const char* title)
 	lstFiles->addActionListener(selectFileActionListener);
 
 	scrAreaFiles = new gcn::ScrollArea(lstFiles);
+#ifdef USE_SDL1
+	scrAreaFiles->setFrameSize(1);
+#elif USE_SDL2
 	scrAreaFiles->setBorderSize(1);
+#endif
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
 	scrAreaFiles->setScrollbarWidth(20);

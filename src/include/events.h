@@ -1,6 +1,3 @@
-#ifndef EVENTS_H
-#define EVENTS_H
-
  /*
   * UAE - The Un*x Amiga Emulator
   *
@@ -12,27 +9,25 @@
   * Copyright 1995-1998 Bernd Schmidt
   */
 
-#undef EVENT_DEBUG
+#ifndef UAE_EVENTS_H
+#define UAE_EVENTS_H
+
+#include "uae/types.h"
 
 #include "machdep/rpt.h"
 
 extern frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
 extern int vsynctimebase, syncbase;
-extern void reset_frame_rate_hack ();
-extern unsigned long int vsync_cycles;
-extern unsigned long start_cycles;
-extern int event2_count;
-extern bool event_wait;
+extern void reset_frame_rate_hack (void);
 extern int speedup_timelimit;
 
-extern void compute_vsynctime ();
-extern void init_eventtab ();
-extern void events_schedule ();
+extern void compute_vsynctime (void);
+extern void init_eventtab (void);
+extern void events_schedule (void);
 
 extern unsigned long currcycle, nextevent;
-extern int is_syncline, is_syncline_end;
-extern long last_synctime;
-typedef void (*evfunc)();
+extern int is_syncline;
+typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 
 typedef void (*do_cycles_func)(unsigned long);
@@ -58,98 +53,89 @@ struct ev2
 };
 
 enum {
-	ev_cia, ev_audio, ev_misc, ev_hsync,
-	ev_max
+    ev_copper, 
+    ev_cia, ev_audio, ev_blitter, ev_dmal, ev_misc, ev_hsync,
+    ev_max
 };
 
 enum {
-	ev2_blitter, ev2_disk, ev2_misc,
-	ev2_max = 12
+    ev2_disk, ev2_ciaa_tod, ev2_ciab_tod, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
+    ev2_max
 };
 
 extern int pissoff_value;
-extern uae_s32 pissoff;
-
-#define countdown (pissoff)
-//TODO: check and implement this
-//#define do_cycles do_cycles_slow
+#define countdown (regs.pissoff)
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
 
-extern volatile bool vblank_found_chipset;
-extern volatile bool vblank_found_rtg;
-extern int hpos_offset;
-extern int maxhpos;
-
-STATIC_INLINE void cycles_do_special ()
+STATIC_INLINE void cycles_do_special (void)
 {
 #ifdef JIT
 	if (currprefs.cachesize) {
-		if (pissoff >= 0)
-			pissoff = -1;
+		if (regs.pissoff >= 0)
+			regs.pissoff = -1;
 	} else 
 #endif
   {
-		pissoff = 0;
+		regs.pissoff = 0;
 	}
 }
 
-STATIC_INLINE void do_extra_cycles(unsigned long cycles_to_add)
+STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
 {
-	pissoff -= cycles_to_add;
+	regs.pissoff -= cycles_to_add;
 }
 
-STATIC_INLINE unsigned long int get_cycles ()
+STATIC_INLINE unsigned long int get_cycles (void)
 {
   return currcycle;
 }
 
-STATIC_INLINE void set_cycles(unsigned long int x)
+STATIC_INLINE void set_cycles (unsigned long int x)
 {
-	currcycle = x;
+  currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
 }
 
-STATIC_INLINE int current_hpos_safe(void)
+STATIC_INLINE int current_hpos (void)
 {
-	int hp = (get_cycles() - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
+  int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
 	return hp;
 }
 
-extern int current_hpos(void);
-
-STATIC_INLINE bool cycles_in_range(unsigned long endcycles)
+STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 {
-	signed long c = get_cycles();
-	return static_cast<signed long>(endcycles) - c > 0;
+	signed long c = get_cycles ();
+	return (signed long)endcycles - c > 0;
 }
 
-extern void MISC_handler();
-extern void event2_newevent_xx(int no, evt t, uae_u32 data, evfunc2 func);
-extern void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func);
+extern void MISC_handler(void);
 
-STATIC_INLINE void event2_newevent_x(int no, evt t, uae_u32 data, evfunc2 func)
+STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
 {
-	if (int(t) <= 0) {
-		func(data);
-		return;
-	}
-	event2_newevent_xx(no, t * CYCLE_UNIT, data, func);
+	eventtab2[no].active = true;
+  eventtab2[no].evtime = (t * CYCLE_UNIT) + get_cycles();
+  eventtab2[no].data = data;
+  MISC_handler();
 }
 
-STATIC_INLINE void event2_newevent(int no, evt t, uae_u32 data)
-{
-	event2_newevent_x(no, t, data, eventtab2[no].handler);
-}
-STATIC_INLINE void event2_newevent2(evt t, uae_u32 data, evfunc2 func)
-{
-	event2_newevent_x(-1, t, data, func);
-}
-
-STATIC_INLINE void event2_remevent(int no)
+STATIC_INLINE void event2_remevent (int no)
 {
 	eventtab2[no].active = 0;
 }
 
-#endif
+STATIC_INLINE void event_newevent (int no, evt t)
+{
+  evt ct = get_cycles();
+	eventtab[no].active = true;
+  eventtab[no].evtime = ct + t * CYCLE_UNIT;
+  events_schedule();
+}
+
+STATIC_INLINE void event_remevent (int no)
+{
+	eventtab[no].active = 0;
+}
+
+#endif /* UAE_EVENTS_H */

@@ -1,19 +1,19 @@
-/*
- * E-UAE - The portable Amiga Emulator
- *
- * Support for traps
- *
- * Copyright Richard Drummond 2005
- *
- * Based on code:
- * Copyright 1995, 1996 Bernd Schmidt
- * Copyright 1996 Ed Hanway
- */
+ /*
+  * E-UAE - The portable Amiga Emulator
+  *
+  * Support for traps
+  *
+  * Copyright Richard Drummond 2005
+  *
+  * Based on code:
+  * Copyright 1995, 1996 Bernd Schmidt
+  * Copyright 1996 Ed Hanway
+  */
 
-#ifndef TRAPS_H
-#define TRAPS_H
+#ifndef UAE_TRAPS_H
+#define UAE_TRAPS_H
 
-#include "sysconfig.h"
+#include "uae/types.h"
 
 #define TRAPCMD_MULTI 0
 #define TRAPCMD_PUT_LONG 1
@@ -58,31 +58,30 @@ typedef struct TrapContext TrapContext;
 #define TRAPFLAG_UAERES     16
 
 /*
-* A function which handles a 68k trap
-*/
-typedef uae_u32(REGPARAM3 *TrapHandler) (TrapContext *) REGPARAM;
+ * A function which handles a 68k trap
+ */
+typedef uae_u32 (REGPARAM3 *TrapHandler) (TrapContext *) REGPARAM;
 
 
 /*
-* Interface with 68k interpreter
-*/
-extern void REGPARAM3 m68k_handle_trap(unsigned int trap_num) REGPARAM;
+ * Interface with 68k interpreter
+ */
+extern void REGPARAM3 m68k_handle_trap (unsigned int trap_num) REGPARAM;
 
-unsigned int define_trap(TrapHandler handler_func, int flags, const TCHAR *name);
-uaecptr find_trap(const TCHAR *name);
-
-/*
-* Call a 68k Library function from an extended trap
-*/
-extern uae_u32 CallLib(TrapContext *context, uaecptr library_base, uae_s16 func_offset);
-extern uae_u32 CallFunc(TrapContext *context, uaecptr func);
+unsigned int define_trap (TrapHandler handler_func, int flags, const TCHAR *name);
+uaecptr find_trap (const TCHAR *name);
 
 /*
-* Initialization
-*/
-void init_traps(void);
-void free_traps(void);
-void init_extended_traps(void);
+ * Call a 68k Library function from an extended trap
+ */
+extern uae_u32 CallLib (TrapContext *context, uaecptr library_base, uae_s16 func_offset);
+extern uae_u32 CallFunc (TrapContext *context, uaecptr func);
+
+/*
+ * Initialization
+ */
+void init_traps (void);
+void init_extended_traps (void);
 
 #define deftrap(f) define_trap((f), 0, _T(#f))
 #define deftrap2(f, mode, str) define_trap((f), (mode), (str))
@@ -90,22 +89,10 @@ void init_extended_traps(void);
 
 /* New trap system */
 
-void call_hardware_trap(uae_u8*, uaecptr, int);
-void trap_set_background(TrapContext *ctx);
-void trap_background_set_complete(TrapContext *ctx);
 bool trap_valid_address(TrapContext *ctx, uaecptr addr, uae_u32 size);
-bool trap_is_indirect(void);
-void trap_dos_active(void);
-void trap_reset(void);
-typedef uae_u32(*TRAP_CALLBACK)(TrapContext*, void*);
-void trap_callback(TRAP_CALLBACK, void*);
 
 void trap_memcpyha_safe(TrapContext *ctx, uaecptr dst, const uae_u8 *src, int size);
 void trap_memcpyah_safe(TrapContext *ctx, uae_u8 *dst, uaecptr src, int size);
-
-TrapContext *alloc_host_main_trap_context(void);
-TrapContext *alloc_host_thread_trap_context(void);
-void free_host_trap_context(TrapContext*);
 
 uae_u32 trap_get_dreg(TrapContext *ctx, int reg);
 uae_u32 trap_get_areg(TrapContext *ctx, int reg);
@@ -144,4 +131,4 @@ void trap_call_add_areg(TrapContext *ctx, int reg, uae_u32 v);
 uae_u32 trap_call_lib(TrapContext *ctx, uaecptr base, uae_s16 offset);
 uae_u32 trap_call_func(TrapContext *ctx, uaecptr func);
 
-#endif
+#endif /* UAE_TRAPS_H */

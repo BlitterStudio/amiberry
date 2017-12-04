@@ -15,13 +15,13 @@ FILE *debugfile = NULL;
 
 void console_out (const TCHAR *format,...)
 {
-    //va_list parms;
-    //TCHAR buffer[WRITE_LOG_BUF_SIZE];
+    va_list parms;
+    TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
-    //va_start (parms, format);
-    //vsnprintf (buffer, WRITE_LOG_BUF_SIZE-1, format, parms);
-    //va_end (parms);
-    //printf(buffer);
+    va_start (parms, format);
+    vsnprintf (buffer, WRITE_LOG_BUF_SIZE-1, format, parms);
+    va_end (parms);
+    printf(buffer);
 }
 
 void writeconsole(const TCHAR *buffer)
@@ -31,19 +31,19 @@ void writeconsole(const TCHAR *buffer)
 
 void write_log (const char *format,...)
 {
-    //int count;
-    //int numwritten;
-    //TCHAR buffer[WRITE_LOG_BUF_SIZE];
+    int count;
+    int numwritten;
+    TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
-    //va_list parms;
-    //va_start (parms, format);
-    //count = vsnprintf( buffer, WRITE_LOG_BUF_SIZE-1, format, parms );
-    //if( debugfile )
-    //{
-    //    fprintf( debugfile, buffer );
-    //    fflush (debugfile);
-    //}
-    //va_end (parms);
+    va_list parms;
+    va_start (parms, format);
+    count = vsnprintf( buffer, WRITE_LOG_BUF_SIZE-1, format, parms );
+    if( debugfile )
+    {
+        fprintf( debugfile, buffer );
+        fflush (debugfile);
+    }
+    va_end (parms);
 }
 
 void jit_abort (const TCHAR *format,...)

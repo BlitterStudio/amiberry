@@ -1,7 +1,14 @@
+#ifdef USE_SDL1
+#include <guichan.hpp>
+#include <SDL/SDL_ttf.h>
+#include <guichan/sdl.hpp>
+#include "sdltruetypefont.hpp"
+#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -570,7 +577,11 @@ void RefreshPanelCustom(void)
 	if (changed_prefs.jports[SelectedPort].id > JSEM_JOYS && changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
 		const int hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS - 1;
+#ifdef USE_SDL1
+		strncpy(tmp, SDL_JoystickName(hostjoyid), 255);
+#elif USE_SDL2
 		strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
+#endif
 
 		for (int n = 0; n < 14; ++n)
 		{

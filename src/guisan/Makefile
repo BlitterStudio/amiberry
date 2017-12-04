@@ -6,8 +6,8 @@ DIRS	=$(shell find ./src -maxdepth 3 -type d)
 SOURCE	= $(foreach dir,$(DIRS),$(wildcard $(dir)/*.cpp))
 OBJS    = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCE)))
 
-INCLUDE	=-I./include `sdl2-config --cflags --libs`
-CFLAGS  =-g -w -O3  $(INCLUDE)
+INCLUDE	=-I./include `sdl2-config --cflags`
+CFLAGS  = -g -w -O3  $(INCLUDE)
 CXXFLAGS= $(CFLAGS)
   
   
