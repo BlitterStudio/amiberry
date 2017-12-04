@@ -1,16 +1,8 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <SDL/SDL_image.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -262,12 +254,9 @@ void RefreshPanelSavestate()
 
 bool HelpPanelSavestate(std::vector<std::string> &helptext)
 {
-  helptext.clear();
-  helptext.push_back("Savestates are stored with the name of the disk in drive DF0 attached with the selected number.");
-  helptext.push_back("");
-  helptext.push_back("When you hold left shoulder button and press 'l' during emulation, the state of the last active number will be");
-  helptext.push_back("loaded. Hold left shoulder button and press 's' to save the current state in the last active slot.");
-  helptext.push_back("");
-  helptext.push_back("Note: Savestates will not work with HDDs.");
-  return true;
+	helptext.clear();
+	helptext.push_back("Savestates are stored with the name of the disk in drive DF0 attached with the selected number.");
+	helptext.push_back("");
+	helptext.push_back("Note: Savestates will not work with HDDs.");
+	return true;
 }

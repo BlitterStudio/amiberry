@@ -395,7 +395,7 @@ void translate_amiberry_keys(int scancode, int newstate)
 		inputdevice_translatekeycode(0, translatedScancode, newstate);
 }
 
-int target_checkcapslock(const int scancode, int *state)
+int target_checkcapslock(int scancode, int *state)
 {
 	if (scancode != SDLK_CAPSLOCK && scancode != SDLK_NUMLOCKCLEAR && scancode != SDLK_SCROLLLOCK)
 		return 0;

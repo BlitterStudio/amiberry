@@ -91,7 +91,7 @@ typedef enum {
 	NUMSG_KICKREPNO,
 	NUMSG_KS68030PLUS,
 	NUMSG_NOMEMORY,
-	NUMSG_LAST  // 20
+	NUMSG_LAST
 } notify_user_msg;
 
 #endif /* UAE_GUI_H */

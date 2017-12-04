@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -202,9 +195,6 @@ static int amigaKey[] =
 	AK_F2, AK_F3, AK_F4, AK_F5, AK_F6, AK_F7, AK_F8, AK_F9, /* 101 - 108 */
 	AK_F10, 0
 }; /*  109 - 110 */
-#ifdef USE_SDL1
-extern int customControlMap[SDLK_LAST];
-#endif
 
 static int GetAmigaKeyIndex(int key)
 {
@@ -639,7 +629,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblAutofire->setSize(100, LABEL_HEIGHT);
 	lblAutofire->setAlignment(gcn::Graphics::RIGHT);
 	cboAutofire = new gcn::UaeDropDown(&autofireList);
-	cboAutofire->setSize(80, DROPDOWN_HEIGHT);
 	cboAutofire->setBaseColor(gui_baseCol);
 	cboAutofire->setBackgroundColor(colTextboxBackground);
 	cboAutofire->setId("cboAutofire");

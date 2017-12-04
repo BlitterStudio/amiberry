@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -118,86 +111,77 @@ static MemorySliderActionListener* memorySliderActionListener;
 
 void InitPanelRAM(const struct _ConfigCategory& category)
 {
-  memorySliderActionListener = new MemorySliderActionListener();
-  int sldWidth;
-  int markerLength;
-#ifdef ANDROID
-  sldWidth = 150;
-  markerLength = 30;
-#else
-  sldWidth = 110;
-  markerLength = 20;
-#endif
-  
+	memorySliderActionListener = new MemorySliderActionListener();
+
 	lblChipmem = new gcn::Label("Chip:");
-  sldChipmem = new gcn::Slider(0, 4);
-  sldChipmem->setSize(sldWidth, SLIDER_HEIGHT);
-  sldChipmem->setBaseColor(gui_baseCol);
-	sldChipmem->setMarkerLength(markerLength);
+	sldChipmem = new gcn::Slider(0, 4);
+	sldChipmem->setSize(110, SLIDER_HEIGHT);
+	sldChipmem->setBaseColor(gui_baseCol);
+	sldChipmem->setMarkerLength(20);
 	sldChipmem->setStepLength(1);
 	sldChipmem->setId("Chipmem");
-  sldChipmem->addActionListener(memorySliderActionListener);
-  lblChipsize = new gcn::Label("None   ");
+	sldChipmem->addActionListener(memorySliderActionListener);
+	lblChipsize = new gcn::Label("None  ");
 
 	lblSlowmem = new gcn::Label("Slow:");
-  sldSlowmem = new gcn::Slider(0, 4);
-  sldSlowmem->setSize(sldWidth, SLIDER_HEIGHT);
-  sldSlowmem->setBaseColor(gui_baseCol);
-	sldSlowmem->setMarkerLength(markerLength);
+	sldSlowmem = new gcn::Slider(0, 4);
+	sldSlowmem->setSize(110, SLIDER_HEIGHT);
+	sldSlowmem->setBaseColor(gui_baseCol);
+	sldSlowmem->setMarkerLength(20);
 	sldSlowmem->setStepLength(1);
 	sldSlowmem->setId("Slowmem");
-  sldSlowmem->addActionListener(memorySliderActionListener);
-  lblSlowsize = new gcn::Label("None   ");
+	sldSlowmem->addActionListener(memorySliderActionListener);
+	lblSlowsize = new gcn::Label("None  ");
 
 	lblFastmem = new gcn::Label("Z2 Fast:");
-  sldFastmem = new gcn::Slider(0, 4);
-  sldFastmem->setSize(sldWidth, SLIDER_HEIGHT);
-  sldFastmem->setBaseColor(gui_baseCol);
-	sldFastmem->setMarkerLength(markerLength);
+	sldFastmem = new gcn::Slider(0, 4);
+	sldFastmem->setSize(110, SLIDER_HEIGHT);
+	sldFastmem->setBaseColor(gui_baseCol);
+	sldFastmem->setMarkerLength(20);
 	sldFastmem->setStepLength(1);
 	sldFastmem->setId("Fastmem");
-  sldFastmem->addActionListener(memorySliderActionListener);
-  lblFastsize = new gcn::Label("None   ");
+	sldFastmem->addActionListener(memorySliderActionListener);
+	lblFastsize = new gcn::Label("None   ");
 
 	lblZ3mem = new gcn::Label("Z3 fast:");
-  sldZ3mem = new gcn::Slider(0, 8);
-  sldZ3mem->setSize(sldWidth, SLIDER_HEIGHT);
-  sldZ3mem->setBaseColor(gui_baseCol);
-	sldZ3mem->setMarkerLength(markerLength);
+	sldZ3mem = new gcn::Slider(0, 8);
+	sldZ3mem->setSize(110, SLIDER_HEIGHT);
+	sldZ3mem->setBaseColor(gui_baseCol);
+	sldZ3mem->setMarkerLength(20);
 	sldZ3mem->setStepLength(1);
 	sldZ3mem->setId("Z3mem");
-  sldZ3mem->addActionListener(memorySliderActionListener);
-  lblZ3size = new gcn::Label("None    ");
-  
+	sldZ3mem->addActionListener(memorySliderActionListener);
+	lblZ3size = new gcn::Label("None    ");
+
 	lblGfxmem = new gcn::Label("RTG board:");
-  sldGfxmem = new gcn::Slider(0, 5);
-  sldGfxmem->setSize(sldWidth, SLIDER_HEIGHT);
-  sldGfxmem->setBaseColor(gui_baseCol);
-	sldGfxmem->setMarkerLength(markerLength);
+	sldGfxmem = new gcn::Slider(0, 5);
+	sldGfxmem->setSize(110, SLIDER_HEIGHT);
+	sldGfxmem->setBaseColor(gui_baseCol);
+	sldGfxmem->setMarkerLength(20);
 	sldGfxmem->setStepLength(1);
 	sldGfxmem->setId("Gfxmem");
-  sldGfxmem->addActionListener(memorySliderActionListener);
-  lblGfxsize = new gcn::Label("None   ");
+	sldGfxmem->addActionListener(memorySliderActionListener);
+	lblGfxsize = new gcn::Label("None   ");
 
 	lblA3000Lowmem = new gcn::Label("A4000 Motherb. slot:");
-  sldA3000Lowmem = new gcn::Slider(0, 2);
-  sldA3000Lowmem->setSize(sldWidth, SLIDER_HEIGHT);
-  sldA3000Lowmem->setBaseColor(gui_baseCol);
-	sldA3000Lowmem->setMarkerLength(markerLength);
+	sldA3000Lowmem = new gcn::Slider(0, 2);
+	sldA3000Lowmem->setSize(110, SLIDER_HEIGHT);
+	sldA3000Lowmem->setBaseColor(gui_baseCol);
+	sldA3000Lowmem->setMarkerLength(20);
 	sldA3000Lowmem->setStepLength(1);
 	sldA3000Lowmem->setId("A3000Low");
-  sldA3000Lowmem->addActionListener(memorySliderActionListener);
-  lblA3000Lowsize = new gcn::Label("None   ");
+	sldA3000Lowmem->addActionListener(memorySliderActionListener);
+	lblA3000Lowsize = new gcn::Label("None   ");
 
 	lblA3000Highmem = new gcn::Label("A4000 Proc. board:");
-  sldA3000Highmem = new gcn::Slider(0, 3);
-  sldA3000Highmem->setSize(sldWidth, SLIDER_HEIGHT);
-  sldA3000Highmem->setBaseColor(gui_baseCol);
-	sldA3000Highmem->setMarkerLength(markerLength);
+	sldA3000Highmem = new gcn::Slider(0, 3);
+	sldA3000Highmem->setSize(110, SLIDER_HEIGHT);
+	sldA3000Highmem->setBaseColor(gui_baseCol);
+	sldA3000Highmem->setMarkerLength(20);
 	sldA3000Highmem->setStepLength(1);
 	sldA3000Highmem->setId("A3000High");
-  sldA3000Highmem->addActionListener(memorySliderActionListener);
-  lblA3000Highsize = new gcn::Label("None   ");
+	sldA3000Highmem->addActionListener(memorySliderActionListener);
+	lblA3000Highsize = new gcn::Label("None   ");
 
 	grpRAM = new gcn::Window("Memory Settings");
 	grpRAM->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
@@ -212,7 +196,7 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	grpRAM->add(sldSlowmem, 160, posY);
 	grpRAM->add(lblSlowsize, 160 + sldSlowmem->getWidth() + 12, posY);
 	posY += sldSlowmem->getHeight() + DISTANCE_NEXT_Y;
-	 
+
 	grpRAM->add(lblFastmem, 8, posY);
 	grpRAM->add(sldFastmem, 160, posY);
 	grpRAM->add(lblFastsize, 160 + sldFastmem->getWidth() + 12, posY);

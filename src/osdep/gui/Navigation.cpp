@@ -1,12 +1,5 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -33,17 +26,13 @@ static NavigationMap navMap[] =
 	{ "Paths",            "SystemROMs",     "SystemROMs",     "Reset",            "Quickstart" },
 	{ "Quickstart",       "qsNTSC",         "AModel",         "Paths",            "Configurations" },
 	{ "Configurations",   "ConfigList",     "ConfigList",     "Quickstart",       "CPU and FPU" },
-	{ "CPU and FPU",      "7 Mhz",          "68000",          "Configurations",   "Chipset" },
+	{"CPU and FPU",	      "7 Mhz",          "68000",          "Configurations",   "Chipset"},
 	{ "Chipset",          "Fast copper",    "OCS",            "CPU and FPU",      "ROM" },
-	{ "ROM", "MainROM", "cboMainROM", "Chipset", "RAM" },
-	{ "RAM", "Chipmem", "Chipmem", "ROM", "Floppy drives" },
-	{ "Floppy drives", "cmdSel0", "DF0:", "RAM", "Hard drives/CD" },
-	{ "Hard drives/CD", "cmdCreateHDF", "cmdAddDir", "Floppy drives", "Display"},
-#ifdef USE_SDL1
-	{ "Display",          "sldWidth",       "sldWidth",       "Hard drives/CD", "Sound" },
-#elif USE_SDL2
-	{ "Display", "Frameskip", "Frameskip", "Hard drives/CD", "Sound" },
-#endif
+	{"ROM", "MainROM", "cboMainROM", "Chipset", "RAM"},
+	{"RAM", "Chipmem", "Chipmem", "ROM", "Floppy drives"},
+	{"Floppy drives", "cmdSel0", "DF0:", "RAM", "Hard drives/CD"},
+	{"Hard drives/CD", "cmdCreateHDF", "cmdAddDir", "Floppy drives", "Display"},
+	{"Display", "Frameskip", "Frameskip", "Hard drives/CD", "Sound"},
 	{ "Sound",            "sndDisable",           "sndDisable",       "Display",          "Input" },
   	{ "Input",            "cboPort0mode",         "cboPort0",         "Sound",            "Custom controls" },
   	{ "Custom controls",  "Right Trigger",        "0: Mouse",         "Input",            "Miscellaneous" },
@@ -213,20 +202,10 @@ static NavigationMap navMap[] =
 	{"CDVol", "", "", "cboCD", "cmdProp0"},
 
 	// PanelDisplay
-#ifdef USE_SDL1
-	{ "sldWidth",       "",             "",               "Frameskip",      "sldHeight" },
-  	{ "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
-  	{ "sldVertPos",     "",             "",               "sldHeight",      "FSRatio" },
-  	{ "FSRatio",        "",             "",               "sldVertPos",     "4by3Ratio" },
-  	{ "4by3Ratio",      "Display",      "Display",        "FSRatio",        "Line doubling" },
-  	{ "Line doubling",  "Display",      "Display",        "4by3Ratio",      "Frameskip" },
-  	{ "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
-#elif USE_SDL2
 	{"Frameskip", "Display", "Display", "Linear (smooth)", "Auto"},
 	{"Auto", "Display", "Display", "Frameskip", "Nearest Neighbor (pixelated)"},
 	{ "Nearest Neighbor (pixelated)", "Display", "Display", "Auto", "Linear (smooth)"},
 	{"Linear (smooth)", "Display", "Display", "Nearest Neighbor (pixelated)", "Frameskip"},
-#endif
 
 //PanelSound
   { "sndDisable",     "Sound",          "Mono",           "sldStereoDelay", "sndDisEmu" },

@@ -2,14 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <guichan/sdl.hpp>
-#endif
-#ifdef USE_SDL2
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
-#endif
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "uae.h"
@@ -142,9 +136,9 @@ static void addrom(struct romdata* rd, const char* path)
 	char tmpName[MAX_DPATH];
 	AvailableROM* tmp = new AvailableROM();
 	getromname(rd, tmpName);
-	strncpy(tmp->Name, tmpName, MAX_PATH);
+	strcpy(tmp->Name, tmpName);
 	if (path != nullptr)
-		strncpy(tmp->Path, path, MAX_PATH);
+		strcpy(tmp->Path, path);
 	tmp->ROMType = rd->type;
 	lstAvailableROMs.push_back(tmp);
 	romlist_add(path, rd);
@@ -214,7 +208,7 @@ static struct romdata* scan_single_rom(char* path)
 {
 	char tmp[MAX_DPATH];
 
-	strncpy (tmp, path, MAX_PATH);
+	strcpy(tmp, path);
 	struct romdata* rd = getromdatabypath(path);
 	if (rd && rd->crc32 == 0xffffffff)
 		return rd;
@@ -272,20 +266,20 @@ static void scan_rom(char *path)
 void RescanROMs()
 {
 	vector<string> files;
-	char path[MAX_PATH];
+	char path[MAX_DPATH];
 
 	romlist_clear();
 
 	ClearAvailableROMList();
-	fetch_rompath(path, MAX_PATH);
+	fetch_rompath(path, sizeof path);
 
 	load_keyring(&changed_prefs, path);
 	ReadDirectory(path, nullptr, &files);
 	for (int i = 0; i < files.size(); ++i)
 	{
-		char tmppath[MAX_PATH];
-		strncpy(tmppath, path, sizeof tmppath - 1);
-		strncat(tmppath, files[i].c_str(), sizeof tmppath - 1);
+		char tmppath[MAX_DPATH];
+		strcpy(tmppath, path);
+		strncat(tmppath, files[i].c_str(), sizeof tmppath);
 		scan_rom(tmppath);
 	}
 
@@ -419,7 +413,6 @@ int gui_init()
 		quit_program = -quit_program;
 	if (quit_program == UAE_QUIT)
 		ret = -2; // Quit without start of emulator
-	setCpuSpeed();
 
 	update_display(&changed_prefs);
 
@@ -430,7 +423,9 @@ int gui_init()
 
 void gui_exit()
 {
+#ifdef PANDORA
 	resetCpuSpeed();
+#endif
 	sync();
 	amiberry_stop_sound();
 	saveAdfDir();
@@ -441,18 +436,6 @@ void gui_exit()
 
 void gui_purge_events()
 {
-#ifdef USE_SDL1
-	int counter = 0;
-
-	SDL_Event event;
-	SDL_Delay(150);
-	// Strangely PS3 controller always send events, so we need a maximum number of event to purge.
-	while (SDL_PollEvent(&event) && counter < 50)
-	{
-		counter++;
-		SDL_Delay(10);
-	}
-#endif
 	keybuf_init();
 }
 
@@ -461,38 +444,38 @@ int gui_update()
 {
 	char tmp[MAX_DPATH];
 
-	fetch_savestatepath(savestate_fname, MAX_DPATH);
+	fetch_savestatepath(savestate_fname, sizeof savestate_fname);
 	fetch_screenshotpath(screenshot_filename, MAX_DPATH);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
 	else
-		strncpy(tmp, last_loaded_config, sizeof tmp);
+		strcpy(tmp, last_loaded_config);
 
-	strncat(savestate_fname, tmp, MAX_DPATH - 1);
-	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
+	strncat(savestate_fname, tmp, sizeof savestate_fname);
+	strncat(screenshot_filename, tmp, sizeof screenshot_filename);
 	removeFileExtension(savestate_fname);
 	removeFileExtension(screenshot_filename);
 
-  switch(currentStateNum)
-  {
-    case 1:
-  		strncat(savestate_fname,"-1.uss", MAX_PATH - 1);
-	    strncat(screenshot_filename,"-1.png", MAX_PATH - 1);
-	    break;
-    case 2:
-  		strncat(savestate_fname,"-2.uss", MAX_PATH - 1);
-  		strncat(screenshot_filename,"-2.png", MAX_PATH - 1);
-  		break;
-    case 3:
-  		strncat(savestate_fname,"-3.uss", MAX_PATH - 1);
-  		strncat(screenshot_filename,"-3.png", MAX_PATH - 1);
-  		break;
-    default: 
-	   	strncat(savestate_fname,".uss", MAX_PATH - 1);
-  		strncat(screenshot_filename,".png", MAX_PATH - 1);
-  }
-  return 0;
+	switch (currentStateNum)
+	{
+	case 1:
+		strcat(savestate_fname, "-1.uss");
+		strcat(screenshot_filename, "-1.png");
+		break;
+	case 2:
+		strcat(savestate_fname, "-2.uss");
+		strcat(screenshot_filename, "-2.png");
+		break;
+	case 3:
+		strcat(savestate_fname, "-3.uss");
+		strcat(screenshot_filename, "-3.png");
+		break;
+	default:
+		strcat(savestate_fname, ".uss");
+		strcat(screenshot_filename, ".png");
+	}
+	return 0;
 }
 
 
@@ -507,9 +490,6 @@ void gui_display(int shortcut)
 
 	if (lstAvailableROMs.size() == 0)
 		RescanROMs();
-#ifdef USE_SDL1
-	graphics_subshutdown();
-#endif
 
 	prefs_to_gui();
 	run_gui();
@@ -519,10 +499,6 @@ void gui_display(int shortcut)
 		screen_is_picasso = 0;
 	
 	update_display(&changed_prefs);
-#ifdef USE_SDL1
-	/* Clear menu garbage at the bottom of the screen */
-	black_screen_now();
-#endif
 
 	reset_sound();
 	resume_sound();
@@ -593,27 +569,6 @@ void gui_led(int led, int on)
 
 void gui_flicker_led(int led, int unitnum, int status)
 {
-  static int hd_resetcounter;
-
-  switch(led)
-  {
-    case -1: // Reset HD and CD
-      gui_data.hd = 0;
-      break;
-      
-    case LED_POWER:
-      break;
-
-    case LED_HD:
-      if (status == 0) {
-  	    hd_resetcounter--;
-  	    if (hd_resetcounter > 0)
-  	      return;
-      }
-      gui_data.hd = status;
-      hd_resetcounter = 2;
-      break;
-  }
 	gui_led(led, status);
 }
 
@@ -677,7 +632,7 @@ int translate_message(int msg, TCHAR* out)
 	{
 		if (gui_msglist[i].num == msg)
 		{
-			strncpy(out, gui_msglist[i].msg, MAX_DPATH);
+			strcpy(out, gui_msglist[i].msg);
 			return 1;
 		}
 		++i;

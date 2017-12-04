@@ -314,7 +314,6 @@ struct uae_prefs {
 	struct wh gfx_size;
 	struct apmode gfx_apmode[2];
 	int gfx_resolution;
-	int gfx_vresolution;
 
 	bool immediate_blits;
 	int waiting_blits;
@@ -409,16 +408,7 @@ struct uae_prefs {
 	int kbd_led_num;
 	int kbd_led_scr;
 	int kbd_led_cap;
-
-#ifdef USE_SDL1
-	int gfx_correct_aspect;
-	int gfx_fullscreen_ratio;
-#endif
-
-#ifdef USE_SDL2
 	int scaling_method;
-#endif
-
 	bool customControls;
 	TCHAR custom_up[256];
 	TCHAR custom_down[256];
@@ -431,7 +421,6 @@ struct uae_prefs {
 	TCHAR custom_l[256];
 	TCHAR custom_r[256];
 	TCHAR custom_play[256];
-
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 #endif

@@ -1,15 +1,8 @@
 #include <iostream>
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -103,12 +96,10 @@ enum
 * SDL Stuff we need
 */
 SDL_Surface* gui_screen;
-SDL_Event gui_event;
-#ifdef USE_SDL2
 SDL_Texture* gui_texture;
+SDL_Event gui_event;
 SDL_Cursor* cursor;
 SDL_Surface* cursorSurface;
-#endif
 
 /*
 * Guisan SDL stuff we need
@@ -223,22 +214,16 @@ static void ShowHelpRequested()
 
 void UpdateGuiScreen()
 {
-#ifdef USE_SDL1
-	wait_for_vsync();
-	SDL_Flip(gui_screen);
-#elif USE_SDL2
 	// Update the texture from the surface
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
-#endif
 }
 
 namespace sdl
 {
-#ifdef USE_SDL2
 	// Sets the cursor image up
 	void setup_cursor() 
 	{
@@ -272,30 +257,12 @@ namespace sdl
 
 		SDL_SetCursor(cursor);
 	}
-#endif
 
 	void gui_init()
 	{
-#ifdef USE_SDL1
-		//-------------------------------------------------
-		// Set layer for GUI screen
-		//-------------------------------------------------
-		char tmp[20];
-		snprintf(tmp, 20, "%dx%d", GUI_WIDTH, GUI_HEIGHT);
-		setenv("SDL_OMAP_LAYER_SIZE", tmp, 1);
-		snprintf(tmp, 20, "0,0,0,0");
-		setenv("SDL_OMAP_BORDER_CUT", tmp, 1);
-#endif
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
-#ifdef USE_SDL1
-		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo();
-		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
-		SDL_EnableUNICODE(1);
-		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-#endif
-#ifdef USE_SDL2
 		setup_cursor();
 
 		// make the scaled rendering look smoother (linear scaling).
@@ -308,21 +275,20 @@ namespace sdl
 
 		gui_texture = SDL_CreateTextureFromSurface(renderer, gui_screen);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture");
-#endif
+
 #ifdef ANDROIDSDL
 		// Enable Android multitouch
 		SDL_InitSubSystem(SDL_INIT_JOYSTICK);
 		SDL_JoystickOpen(0);
 #endif
-#ifdef USE_SDL2
+
 		if (cursor)
 		{
 			SDL_ShowCursor(SDL_ENABLE);
 		}
-#endif
 
 		//-------------------------------------------------
-		// Create helpers for GUI framework
+		// Create helpers for guisan
 		//-------------------------------------------------
 		gui_imageLoader = new gcn::SDLImageLoader();
 		// The ImageLoader in use is static and must be set to be
@@ -346,10 +312,6 @@ namespace sdl
 		delete gui_input;
 		delete gui_graphics;
 
-#ifdef USE_SDL1
-		if (gui_screen != nullptr)
-			SDL_FreeSurface(gui_screen);
-#elif USE_SDL2
 		SDL_FreeSurface(gui_screen);
 
 		SDL_DestroyTexture(gui_texture);
@@ -365,7 +327,6 @@ namespace sdl
 			SDL_FreeSurface(cursorSurface);
 			cursorSurface = nullptr;
 		}
-#endif
 		gui_screen = nullptr;
 	}
 
@@ -776,11 +737,7 @@ namespace widgets
 		selectors = new gcn::Container();
 		selectors->setSize(150, workAreaHeight - 2);
 		selectors->setBaseColor(colSelectorInactive);
-#ifdef USE_SDL1
-		selectors->setFrameSize(1);
-#elif USE_SDL2
 		selectors->setBorderSize(1);
-#endif
 		int panelStartX = DISTANCE_BORDER + selectors->getWidth() + 2 + 11;
 
 		panelFocusListener = new PanelFocusListener();
@@ -796,11 +753,7 @@ namespace widgets
 			categories[i].panel->setId(categories[i].category);
 			categories[i].panel->setSize(GUI_WIDTH - panelStartX - DISTANCE_BORDER - 1, workAreaHeight - 2);
 			categories[i].panel->setBaseColor(gui_baseCol);
-#ifdef USE_SDL1
-			categories[i].panel->setFrameSize(1);
-#elif USE_SDLL2
 			categories[i].panel->setBorderSize(1);
-#endif
 			categories[i].panel->setVisible(false);
 		}
 
@@ -926,7 +879,7 @@ void run_gui()
 #endif 
 	}
 	
-	// Catch all GUI framework exceptions.
+	// Catch all guisan exceptions.
 	catch (gcn::Exception e)
 	{
 		cout << e.getMessage() << endl;

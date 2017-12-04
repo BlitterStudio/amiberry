@@ -17,9 +17,7 @@
 #define DROPDOWN_HEIGHT 15
 #define SLIDER_HEIGHT 18
 #define TITLEBAR_HEIGHT 24
-#ifdef USE_SDL2
 #include <guisan/sdl/sdlinput.hpp>
-#endif
 
 typedef struct _ConfigCategory
 {

@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -294,15 +287,8 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpMode->setSize(90, 90);
 	grpMode->setBaseColor(gui_baseCol);
 
-    int labelWidth;
-#ifdef ANDROID
-	labelWidth = 135;
-#else
-	labelWidth = 130;
-#endif
-
 	lblInterpolation = new gcn::Label("Interpolation:");
-	lblInterpolation->setSize(labelWidth, LABEL_HEIGHT);
+	lblInterpolation->setSize(130, LABEL_HEIGHT);
 	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
 	cboInterpolation = new gcn::UaeDropDown(&interpolationTypeList);
 	cboInterpolation->setSize(160, DROPDOWN_HEIGHT);
@@ -312,7 +298,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboInterpolation->addActionListener(soundActionListener);
 
 	lblFilter = new gcn::Label("Filter:");
-	lblFilter->setSize(labelWidth, LABEL_HEIGHT);
+	lblFilter->setSize(130, LABEL_HEIGHT);
 	lblFilter->setAlignment(gcn::Graphics::RIGHT);
 	cboFilter = new gcn::UaeDropDown(&filterTypeList);
 	cboFilter->setSize(160, DROPDOWN_HEIGHT);
@@ -322,7 +308,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboFilter->addActionListener(soundActionListener);
 
 	lblSeparation = new gcn::Label("Stereo separation:");
-	lblSeparation->setSize(labelWidth, LABEL_HEIGHT);
+	lblSeparation->setSize(130, LABEL_HEIGHT);
 	lblSeparation->setAlignment(gcn::Graphics::RIGHT);
 	sldSeparation = new gcn::Slider(0, 10);
 	sldSeparation->setSize(160, SLIDER_HEIGHT);
@@ -334,7 +320,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	lblSeparationInfo = new gcn::Label("100%");
 
 	lblStereoDelay = new gcn::Label("Stereo delay:");
-	lblStereoDelay->setSize(labelWidth, LABEL_HEIGHT);
+	lblStereoDelay->setSize(130, LABEL_HEIGHT);
 	lblStereoDelay->setAlignment(gcn::Graphics::RIGHT);
 	sldStereoDelay = new gcn::Slider(0, 10);
 	sldStereoDelay->setSize(160, SLIDER_HEIGHT);

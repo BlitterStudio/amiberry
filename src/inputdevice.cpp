@@ -5548,36 +5548,34 @@ int inputdevice_config_change_test (void)
 }
 
 // copy configuration #src to configuration #dst
-void inputdevice_copyconfig(struct uae_prefs *src, struct uae_prefs *dst)
+void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 {
 	dst->input_selected_setting = src->input_selected_setting;
-	dst->input_joymouse_multiplier = src->input_joymouse_multiplier;
+        dst->input_joymouse_multiplier = src->input_joymouse_multiplier;
 	dst->input_joymouse_deadzone = src->input_joymouse_deadzone;
 	dst->input_joystick_deadzone = src->input_joystick_deadzone;
 	dst->input_joymouse_speed = src->input_joymouse_speed;
 	dst->input_mouse_speed = src->input_mouse_speed;
-	dst->input_autofire_linecnt = src->input_autofire_linecnt;
-#ifdef AMIBERRY
-	strcpy(dst->open_gui, src->open_gui);
-	strcpy(dst->quit_amiberry, src->quit_amiberry);
-	dst->amiberry_use_retroarch_quit = src->amiberry_use_retroarch_quit;
-	dst->amiberry_use_retroarch_menu = src->amiberry_use_retroarch_menu;
-	dst->amiberry_use_retroarch_reset = src->amiberry_use_retroarch_reset;
-#endif
+        dst->input_autofire_linecnt = src->input_autofire_linecnt;
+        strcpy(dst->open_gui,src->open_gui);
+		strcpy(dst->quit_amiberry,src->quit_amiberry);
+        dst->amiberry_use_retroarch_quit = src->amiberry_use_retroarch_quit;
+        dst->amiberry_use_retroarch_menu = src->amiberry_use_retroarch_menu;
+        dst->amiberry_use_retroarch_reset = src->amiberry_use_retroarch_reset;
 
 	for (int i = 0; i < MAX_JPORTS; i++) {
-		copyjport(src, dst, i);
+		copyjport (src, dst, i);
 	}
-
+  
 	for (int i = 0; i < MAX_INPUT_SETTINGS; i++) {
 		for (int j = 0; j < MAX_INPUT_DEVICES; j++) {
-			memcpy(&dst->joystick_settings[i][j], &src->joystick_settings[i][j], sizeof(struct uae_input_device));
-			memcpy(&dst->mouse_settings[i][j], &src->mouse_settings[i][j], sizeof(struct uae_input_device));
-			memcpy(&dst->keyboard_settings[i][j], &src->keyboard_settings[i][j], sizeof(struct uae_input_device));
+			memcpy (&dst->joystick_settings[i][j], &src->joystick_settings[i][j], sizeof (struct uae_input_device));
+			memcpy (&dst->mouse_settings[i][j], &src->mouse_settings[i][j], sizeof (struct uae_input_device));
+			memcpy (&dst->keyboard_settings[i][j], &src->keyboard_settings[i][j], sizeof (struct uae_input_device));
 		}
 	}
 
-	inputdevice_updateconfig(src, dst);
+	inputdevice_updateconfig (src, dst);
 }
 
 static void swapevent (struct uae_input_device *uid, int i, int j, int evt)

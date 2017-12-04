@@ -1,16 +1,10 @@
 #include <algorithm>
+#include <guisan.hpp>
 #include <iostream>
 #include <sstream>
-#ifdef USE_SDL1
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
-#include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -100,11 +94,7 @@ static void InitShowHelp(const vector<string>& helptext)
 	lstHelp->setWrappingEnabled(true);
 
 	scrAreaHelp = new gcn::ScrollArea(lstHelp);
-#ifdef USE_SDL1
-	scrAreaHelp->setFrameSize(1);
-#elif USE_SDL2
 	scrAreaHelp->setBorderSize(1);
-#endif
 	scrAreaHelp->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);

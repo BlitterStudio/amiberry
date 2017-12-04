@@ -124,39 +124,39 @@ void reset_all_systems (void)
 	uae_int_requested = 0;
 }
 
-void do_leave_program(void)
+void do_leave_program (void)
 {
 #ifdef JIT
-	compiler_exit();
+  compiler_exit();
 #endif
-	graphics_leave();
-	inputdevice_close();
-	DISK_free();
-	close_sound();
-	dump_counts();
+  graphics_leave ();
+  inputdevice_close ();
+  DISK_free ();
+  close_sound ();
+	dump_counts ();
 #ifdef CD32
-	akiko_free();
+	akiko_free ();
 	cd32_fmv_free();
 #endif
-	gui_exit();
-#if defined (USE_SDL1) || defined(USE_SDL2)
-	SDL_Quit();
+ 	gui_exit ();
+#ifdef USE_SDL
+  SDL_Quit ();
 #endif
-	hardfile_reset();
+  hardfile_reset();
 #ifdef AUTOCONFIG
-	expansion_cleanup();
+  expansion_cleanup ();
 #endif
 #ifdef FILESYS
-	filesys_cleanup();
+  filesys_cleanup ();
 #endif
 #ifdef BSDSOCKET
-	bsdlib_reset();
+  bsdlib_reset ();
 #endif
-	gayle_free();
-	device_func_reset();
-	memory_cleanup();
-	cfgfile_addcfgparam(0);
-	machdep_free();
+	gayle_free ();
+	device_func_reset ();
+  memory_cleanup ();
+  cfgfile_addcfgparam (0);
+  machdep_free ();
 	rtarea_free();
 }
 

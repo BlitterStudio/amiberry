@@ -34,11 +34,7 @@
 #include "devices.h"
 #include "jit/compemu.h"
 
-#ifdef USE_SDL1
-#include "SDL.h"
-#endif
-
-#ifdef USE_SDL2
+#ifdef USE_SDL
 #include "SDL.h"
 #include <iostream>
 #include "amiberry_gfx.h"
@@ -499,7 +495,7 @@ void  print_usage()
 	printf("Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used.\n");
 	printf("File names should be with absolute path.\n");
 	printf("\nExample:\n");
-	printf("amiberry -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
+	printf("uae4arm -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
 	printf("It will load A500.uae configuration with the save state named game.\n");
 	printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
 	exit(1);
@@ -657,7 +653,6 @@ void leave_program (void)
     do_leave_program ();
 }
 
-#ifdef USE_SDL2
 // In case of error, print the error code and close the application
 void check_error_sdl(bool check, const char* message) {
 	if (check) {
@@ -676,13 +671,13 @@ static void initialize_sdl2()
 	}
 
 	sdlWindow = SDL_CreateWindow("Amiberry-SDL2 v2",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		0,
-		0,
-		SDL_WINDOW_FULLSCREEN_DESKTOP);
+	                             SDL_WINDOWPOS_UNDEFINED,
+	                             SDL_WINDOWPOS_UNDEFINED,
+	                             0,
+	                             0,
+	                             SDL_WINDOW_FULLSCREEN_DESKTOP);
 	check_error_sdl(sdlWindow == nullptr, "Unable to create window");
-
+		
 	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 
@@ -690,33 +685,16 @@ static void initialize_sdl2()
 	{
 		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
 	}
-
+	
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
 		SDL_Log("SDL could not grab the keyboard");
-
+	
 	SDL_ShowCursor(SDL_DISABLE);
 }
-#endif
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-#ifdef USE_SDL1
-	int ret;
-#ifdef PANDORA
-	ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO);
-#else 
-	ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
-#endif
-	if (ret < 0)
-	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		abort();
-	};
-#endif
-
-#ifdef USE_SDL2
 	initialize_sdl2();
-#endif
 	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0]) {
@@ -752,7 +730,7 @@ static int real_main2 (int argc, TCHAR **argv)
 		no_gui = false;
 	restart_program = 0;
 	if (!no_gui) {
-		const int err = gui_init();
+		int err = gui_init();
 		currprefs = changed_prefs;
 		set_config_changed();
 		if (err == -1) {
@@ -765,7 +743,9 @@ static int real_main2 (int argc, TCHAR **argv)
 	}
 	else
 	{
+#ifdef PANDORA
 		setCpuSpeed();
+#endif
 		update_display(&currprefs);
 	}
 	memset(&gui_data, 0, sizeof gui_data);

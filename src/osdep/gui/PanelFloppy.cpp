@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -177,7 +170,7 @@ public:
 				//---------------------------------------
 				// Show info about current disk-image
 				//---------------------------------------
-				//if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
+				//if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0); // ToDo: Show info dialog
 				//ToDo: Show info dialog
 			}
 			else if (actionEvent.getSource() == cmdDFxEject[i])
@@ -186,7 +179,7 @@ public:
 				// Eject disk from drive
 				//---------------------------------------
 				disk_eject(i);
-				strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
+				strcpy(changed_prefs.floppyslots[i].df, "");
 				AdjustDropDownControls();
 			}
 			else if (actionEvent.getSource() == cmdDFxSelect[i])
@@ -197,14 +190,14 @@ public:
 				char tmp[MAX_DPATH];
 
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_PATH);
+					strcpy(tmp, changed_prefs.floppyslots[i].df);
 				else
-					strncpy(tmp, currentDir, MAX_PATH);
+					strcpy(tmp, currentDir);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
-					if(strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_PATH))
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp, sizeof changed_prefs.floppyslots[i].df))
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof(changed_prefs.floppyslots[i].df));
+						strcpy(changed_prefs.floppyslots[i].df, tmp);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extractPath(tmp, currentDir);
@@ -315,7 +308,7 @@ public:
 			extractFileName(changed_prefs.floppyslots[0].df, diskname);
 			removeFileExtension(diskname);
 
-			fetch_configurationpath(filename, MAX_DPATH);
+			fetch_configurationpath(filename, sizeof filename);
 			strncat(filename, diskname, MAX_DPATH - 1);
         		strncat(filename, ".uae", MAX_DPATH) - 1;
 
@@ -483,11 +476,11 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		//category.panel->add(cmdDFxInfo[i], posX, posY); //TODO disabled?
 		posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
-		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
-	  	category.panel->add(cmdDFxSelect[i], posX, posY);
-	  	posY += chkDFx[i]->getHeight() + 8;
+		posX = DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X;
+		posY += cboDFxType[i]->getHeight() + 8;
 
-	  	category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
+		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
+		category.panel->add(cmdDFxSelect[i], posX, posY);
 		if (i == 0)
 		{
 			posY += cboDFxFile[i]->getHeight() + 8;

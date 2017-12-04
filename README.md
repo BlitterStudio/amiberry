@@ -1,16 +1,14 @@
-# Amiga emulator for the Raspberry Pi
+Amiga emulator for the Raspberry Pi
 =================================
 Warning: this branch is still Work In Progress - it requires a few extra steps to build and some things may not be finished yet! :)
 If you're looking for the latest "stable" version, please use the master branch for now.
 Once this branch is complete, it will be merged back to the master and replace it.
 
 # History (newest first)
-- Added Line Doubling mode for Interlace resolutions
-- Added multi-threaded drawing routines to improve performance
-- Improved emulation accuracy
-- [SDL2] Added an option for choosing Scaling Method (for non-Picasso modes): Auto, Nearest Neighbor (pixelated) or Linear (smooth). Auto will automatically choose between the other two modes on the fly, depending on the Amiga resolution requested and if the native monitor resolution can display it as an exact multiple or not. This vastly improves the sharpness of the resulting image.
-- [SDL2] Improved image centering (for non-Picasso modes)
-- [SDL2] Ported to SDL2
+- Added GPerfTools for profiling and optimized malloc functions (note: this adds 2 extra dependencies, check below)
+- Added an option for choosing Scaling Method (for non-Picasso modes): Auto, Nearest Neighbor (pixelated) or Linear (smooth). Auto will automatically choose between the other two modes on the fly, depending on the Amiga resolution requested and if the native monitor resolution can display it as an exact multiple or not. This vastly improves the sharpness of the resulting image.
+- Improved image centering (for non-Picasso modes)
+- Ported to SDL2
 - Added new Picasso resolutions
 - Added NetBeans project
 - Added Visual Studio solution using VC++ for Linux
@@ -54,8 +52,8 @@ Install the following packages:
 Clone this repo:
       
       cd ~
-      git clone https://github.com/midwan/amiberry -b dev amiberry-dev
-      cd amiberry-dev
+      git clone https://github.com/midwan/amiberry -b sdl2 amiberry-sdl2
+      cd amiberry-sdl2
       
 Then for Raspberry Pi 3:  
 

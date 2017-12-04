@@ -1,15 +1,6 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#include <SDL/SDL_ttf.h>
-#elif USE_SDL2
 #include <guisan.hpp>
-#include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include <SDL.h>
-
+#include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
@@ -336,6 +327,7 @@ static void CreateFilesysHardfileLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
+
 		UpdateGuiScreen();
 	}
 }

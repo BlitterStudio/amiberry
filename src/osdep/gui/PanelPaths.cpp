@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -46,7 +39,7 @@ public:
 
 		if (actionEvent.getSource() == cmdSystemROMs)
 		{
-			fetch_rompath(tmp, MAX_PATH);
+			fetch_rompath(tmp, sizeof tmp);
 			if (SelectFolder("Folder for System ROMs", tmp))
 			{
 				set_rompath(tmp);
@@ -57,7 +50,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdConfigPath)
 		{
-			fetch_configurationpath(tmp, MAX_PATH);
+			fetch_configurationpath(tmp, sizeof tmp);
 			if (SelectFolder("Folder for configuration files", tmp))
 			{
 				set_configurationpath(tmp);
@@ -226,10 +219,10 @@ void RefreshPanelPaths()
 {
 	char tmp[MAX_PATH];
 
-	fetch_rompath(tmp, MAX_PATH);
+	fetch_rompath(tmp, sizeof tmp);
 	txtSystemROMs->setText(tmp);
 
-	fetch_configurationpath(tmp, MAX_PATH);
+	fetch_configurationpath(tmp, sizeof tmp);
 	txtConfigPath->setText(tmp);
 
 	fetch_controllerspath(tmp, MAX_PATH);
@@ -242,8 +235,8 @@ void RefreshPanelPaths()
 bool HelpPanelPaths(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("Specify the location of your kickstart roms and the folders where the configurations and controller files should be stored.");
-	helptext.push_back("With the button \"...\" you can open a dialog to choose the folder.");
+	helptext.push_back("Specify the location of your kickstart roms and the folder where the configurations and controller files should be stored.");
+	helptext.push_back("Use the \"...\" button to open a dialog to choose the folder.");
 	helptext.push_back("");
 	helptext.push_back("After changing the location of the kickstart roms, click on \"Rescan\" to refresh the list of the available");
 	helptext.push_back("ROMs.");
