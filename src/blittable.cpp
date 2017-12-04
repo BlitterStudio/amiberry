@@ -1,10 +1,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "include/memory.h"
-#include "newcpu.h"
 #include "custom.h"
-#include "savestate.h"
+#include "include/memory.h"
 #include "blitter.h"
 #include "blitfunc.h"
 

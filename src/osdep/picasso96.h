@@ -8,12 +8,7 @@
 #ifndef __PICASSO96_H__
 #define __PICASSO96_H__
 
-#include "uae/types.h"
-#include "traps.h"
 #include "rtgmodes.h"
-
-void picasso96_alloc (TrapContext* ctx);
-uae_u32 picasso_demux (uae_u32 arg, TrapContext *ctx);
 
 struct ScreenResolution
 {
@@ -258,11 +253,11 @@ struct LibResolution {
 #define PSSO_RenderInfo_sizeof 12
 
 struct RenderInfo {
-  uae_u8 *Memory;
-  uae_s16 BytesPerRow;
-  uae_s16 pad;
-  RGBFTYPE RGBFormat;
-  uaecptr AMemory;
+    uae_u8 *Memory;
+    uae_s16 BytesPerRow;
+    uae_s16 pad;
+    RGBFTYPE RGBFormat;
+    uaecptr AMemory;
 };
 
 #define PSSO_Pattern_Memory 0
@@ -274,12 +269,11 @@ struct RenderInfo {
 #define PSSO_Pattern_DrawMode 17
 #define PSSO_Pattern_sizeof 18
 struct Pattern {
-  uae_u8 *Memory;
-	uaecptr AMemory;
-  uae_u16 XOffset, YOffset;
-  uae_u32 FgPen, BgPen;
-  uae_u8 Size;					/* Width: 16, Height: (1<<pat_Size) */
-  uae_u8 DrawMode;
+    uae_u8 *Memory;
+    uae_u16 XOffset, YOffset;
+    uae_u32 FgPen, BgPen;
+    uae_u8 Size;					/* Width: 16, Height: (1<<pat_Size) */
+    uae_u8 DrawMode;
 };
 
 #define PSSO_Template_Memory 0
@@ -291,13 +285,12 @@ struct Pattern {
 #define PSSO_Template_sizeof 16
 
 struct Template {
-  uae_u8 *Memory;
-	uaecptr AMemory;
-  uae_s16 BytesPerRow;
-  uae_u8 XOffset;
-  uae_u8 DrawMode;
-  uae_u32 FgPen;
-  uae_u32 BgPen;
+    uae_u8 *Memory;
+    uae_s16 BytesPerRow;
+    uae_u8 XOffset;
+    uae_u8 DrawMode;
+    uae_u32 FgPen;
+    uae_u32 BgPen;
 };
 
 #define PSSO_Line_X 0
@@ -560,47 +553,50 @@ struct Line {
 /************************************************************************/
 struct picasso96_state_struct
 {
-    uae_u32		RGBFormat;   /* true-colour, CLUT, hi-colour, etc. */
-    struct MyCLUTEntry	CLUT[256];   /* Duh! */
-    uaecptr		Address;     /* Active screen address (Amiga-side) */
-    uaecptr		Extent;	     /* End address of screen (Amiga-side) */
-    uae_u16		Width;	     /* Active display width  (From SetGC) */
-    uae_u16		VirtualWidth;/* Total screen width (From SetPanning) */
-    uae_u16		BytesPerRow; /* Total screen width in bytes (From SetGC) */
-    uae_u16		Height;	     /* Active display height (From SetGC) */
-    uae_u16		VirtualHeight; /* Total screen height */
-    uae_u8		GC_Depth;    /* From SetGC() */
-    uae_u8		GC_Flags;    /* From SetGC() */
-    long		XOffset;     /* From SetPanning() */
-    long		YOffset;     /* From SetPanning() */
-    uae_u8		SwitchState; /* From SetSwitch() - 0 is Amiga, 1 is Picasso */
-    uae_u8		BytesPerPixel;
-    uae_u8		CardFound;
-    //here follow winuae additional entrys
-    uae_u8    *HostAddress; /* Active screen address (PC-side) */
-    // host address is need because Windows
-    // support NO direct access all the time to gfx Card
-    // everytime windows can remove your surface from card so the mainrender place
-    // must be in memory
-    long		XYOffset;
+	RGBFTYPE            RGBFormat;   /* true-colour, CLUT, hi-colour, etc.*/
+	struct MyCLUTEntry  CLUT[256];   /* Duh! */
+	uaecptr             Address;     /* Active screen address (Amiga-side)*/
+	uaecptr             Extent;      /* End address of screen (Amiga-side)*/
+	uae_u16             Width;       /* Active display width  (From SetGC)*/
+	uae_u16             VirtualWidth;/* Total screen width (From SetPanning)*/
+	uae_u16             BytesPerRow; /* Total screen width in bytes (FromSetGC) */
+	uae_u16             Height;      /* Active display height (From SetGC)*/
+	uae_u16             VirtualHeight; /* Total screen height */
+	uae_u8              GC_Depth;    /* From SetGC() */
+	uae_u8              GC_Flags;    /* From SetGC() */
+	long                XOffset;     /* From SetPanning() */
+	long                YOffset;     /* From SetPanning() */
+	uae_u8              SwitchState; /* From SetSwitch() - 0 is Amiga, 1 isPicasso */
+	uae_u8              BytesPerPixel;
+	uae_u8              CardFound;
+	//here follow winuae additional entrys
+	uae_u8		BigAssBitmap; /* Set to 1 when our Amiga screen is bigger than the displayable area */
+	unsigned int	Version;
+	uae_u8		*HostAddress; /* Active screen address (PC-side) */
+							  // host address is need because Windows
+							  // support NO direct access all the time to gfx Card
+							  // everytime windows can remove your surface from card so the mainrender place
+							  // must be in memory
+	long		XYOffset;
 };
 
 extern void InitPicasso96 (void);
 
 extern int uaegfx_card_found;
-extern bool picasso_rendered;
 
 extern struct picasso96_state_struct picasso96_state;
 
 extern void picasso_enablescreen (int on);
 extern void picasso_refresh (void);
 extern void init_hz_p96 (void);
+STATIC_INLINE void picasso_handle_hsync (void)
+{
+}
 extern void picasso_handle_vsync (void);
 extern void picasso_trigger_vblank (void);
 extern void picasso_reset (void);
-extern bool picasso_is_active (void);
-extern int picasso_palette (struct MyCLUTEntry *CLUT);
-extern bool picasso_flushpixels (uae_u8 *src, int offset);
+extern int picasso_palette (void);
+extern bool picasso_flushpixels(int index);
 
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
@@ -616,11 +612,13 @@ struct picasso_vidbuf_description {
 extern struct picasso_vidbuf_description picasso_vidinfo;
 
 extern void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 d, RGBFTYPE rgbfmt);
+extern void gfx_set_picasso_colors(RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_baseaddr (uaecptr);
 extern void gfx_set_picasso_state (int on);
 extern uae_u8 *gfx_lock_picasso (void);
-extern void gfx_unlock_picasso (bool);
+extern void gfx_unlock_picasso (void);
 
+extern int p96refresh_active;
 extern int p96hsync_counter;
 
 #define LIB_SIZE 34
@@ -647,13 +645,11 @@ extern int p96hsync_counter;
 #endif
 void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
 void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
-void copy_screen_16bit_swap_arm(uae_u8 *dst, uae_u8 *src, int bytes);
-void copy_screen_32bit_to_16bit_neon(uae_u8 *dst, uae_u8 *src, int bytes);
-void copy_screen_32bit_to_16bit_arm(uae_u8 *dst, uae_u8 *src, int bytes);
+void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
 #ifdef __cplusplus
   }
 #endif
 
 #endif
 
-#endif /* __PICASSO96_H__ */
+#endif

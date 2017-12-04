@@ -563,7 +563,6 @@ void gui_led(int led, int on)
 			else kbd_led_status &= ~LED_SCR;
 		}
 	}
-
 	ioctl(0, KDSETLED, kbd_led_status);
 }
 

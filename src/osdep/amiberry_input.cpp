@@ -1530,3 +1530,8 @@ void SimulateMouseOrJoy(int code, int keypressed)
 		break;
 	}
 }
+
+int is_tablet()
+{
+	return 0;
+}

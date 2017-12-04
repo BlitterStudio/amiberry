@@ -40,12 +40,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteRootDir>~/projects/Amiberry-sdl2/src</RemoteRootDir>
+    <RemoteRootDir>~/projects/Amiberry-dev/src</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteRootDir>~/projects/Amiberry-sdl2/src</RemoteRootDir>
+    <RemoteRootDir>~/projects/Amiberry-dev/src</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -69,14 +69,14 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make all</RemoteBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make clean</RemoteCleanCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make clean; make all</RemoteReBuildCommandLine>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-dev/src/guisan/; make all</RemoteBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-dev/src/guisan/; make clean</RemoteCleanCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-dev/src/guisan/; make clean; make all</RemoteReBuildCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make all</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make clean; make all</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make clean</RemoteCleanCommandLine>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-dev/src/guisan/; make all</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-dev/src/guisan/; make clean; make all</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-dev/src/guisan/; make clean</RemoteCleanCommandLine>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\src\guisan\lib\.keep">

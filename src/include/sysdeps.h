@@ -1,3 +1,6 @@
+#ifndef UAE_SYSDEPS_H
+#define UAE_SYSDEPS_H
+
 /*
   * UAE - The Un*x Amiga Emulator
   *
@@ -11,25 +14,8 @@
   *
   * Copyright 1996, 1997 Bernd Schmidt
   */
-#ifndef UAE_SYSDEPS_H
-#define UAE_SYSDEPS_H
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-#include "sysconfig.h"
-
-#ifndef UAE
-#define UAE
-#endif
-
-#ifdef __cplusplus
 #include <string>
 using namespace std;
-#else
-#include <string.h>
-#include <ctype.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -53,10 +39,28 @@ using namespace std;
 #error unrecognized CPU type
 #endif
 
+//#ifdef _WIN32
+/* Parameters are passed in ECX, EDX for both x86 and x86-64 (RCX, RDX).
+* For x86-64, __fastcall is the default, so it isn't really required. */
+//#define JITCALL __fastcall
+//#elif defined(CPU_x86_64)
+///* Parameters are passed in RDI, RSI by default (System V AMD64 ABI). */
+//#define JITCALL
+//#elif defined(HAVE_FUNC_ATTRIBUTE_REGPARM)
+///* Parameters are passed in EAX, EDX on x86 with regparm(2). */
+//#define JITCALL __attribute__((regparm(2)))
+///* This was originally regparm(3), but as far as I can see only two register
+//* params are supported by the JIT code. It probably just worked anyway
+//* if all functions used max two arguments. */
+//#elif !defined(JIT)
+//#define JITCALL
+//#endif
+#define REGPARAM
+#define REGPARAM2
+#define REGPARAM3
+
 #ifndef __STDC__
-#ifndef _MSC_VER_
 #error "Your compiler is not ANSI. Get a real one."
-#endif
 #endif
 
 #include <stdarg.h>
@@ -124,6 +128,10 @@ using namespace std;
 #include <errno.h>
 #include <assert.h>
 
+#if EEXIST == ENOTEMPTY
+#define BROKEN_OS_PROBABLY_AIX
+#endif
+
 #ifdef __NeXT__
 #define S_IRUSR S_IREAD
 #define S_IWUSR S_IWRITE
@@ -131,9 +139,49 @@ using namespace std;
 #define S_ISDIR(val) (S_IFDIR & val)
 struct utimbuf
 {
-    time_t actime;
-    time_t modtime;
+	time_t actime;
+	time_t modtime;
 };
+#endif
+
+/* sam: some definitions so that SAS/C can compile UAE */
+#if defined(__SASC) && defined(AMIGA)
+#define REGPARAM2
+#define REGPARAM
+#define S_IRUSR S_IREAD
+#define S_IWUSR S_IWRITE
+#define S_IXUSR S_IEXECUTE
+#define S_ISDIR(val) (S_IFDIR & val)
+#define mkdir(x,y) mkdir(x)
+#define truncate(x,y) 0
+#define creat(x,y) open("T:creat",O_CREAT|O_TEMP|O_RDWR) /* sam: for zfile.c */
+#define strcasecmp stricmp
+#define utime(file,time) 0
+struct utimbuf
+{
+	time_t actime;
+	time_t modtime;
+};
+#endif
+
+#ifdef __DOS__
+#include <pc.h>
+#include <io.h>
+#endif
+
+/* Acorn specific stuff */
+#ifdef ACORN
+
+#define S_IRUSR S_IREAD
+#define S_IWUSR S_IWRITE
+#define S_IXUSR S_IEXEC
+
+#define strcasecmp stricmp
+
+#endif
+
+#ifndef L_tmpnam
+#define L_tmpnam 128 /* ought to be safe */
 #endif
 
 /* If char has more then 8 bits, good night. */
@@ -185,27 +233,36 @@ typedef uae_u32 uaecptr;
 #define UVAL64(a) (a ## ul)
 #endif
 
+void atomic_and(volatile uae_atomic *p, uae_u32 v);
+void atomic_or(volatile uae_atomic *p, uae_u32 v);
+uae_atomic atomic_inc(volatile uae_atomic *p);
+uae_atomic atomic_dec(volatile uae_atomic *p);
+uae_u32 atomic_bit_test_and_reset(volatile uae_atomic *p, uae_u32 v);
+
 #ifdef HAVE_STRDUP
-#define my_strdup _tcsdup
+#define my_strdup strdup
 #else
-extern TCHAR *my_strdup (const TCHAR*s);
+extern TCHAR *my_strdup(const TCHAR*s);
 #endif
 
-extern TCHAR *my_strdup_ansi (const char*);
-extern void my_trim (TCHAR*);
-extern TCHAR *my_strdup_trim (const TCHAR*);
-extern TCHAR *au (const char*);
-extern char *ua (const TCHAR*);
-extern TCHAR *au_fs (const char*);
-extern char *ua_fs (const TCHAR*, int);
-extern char *ua_copy (char *dst, int maxlen, const TCHAR *src);
-extern TCHAR *au_copy (TCHAR *dst, int maxlen, const char *src);
-extern char *ua_fs_copy (char *dst, int maxlen, const TCHAR *src, int defchar);
-extern TCHAR *au_fs_copy (TCHAR *dst, int maxlen, const char *src);
-extern char *uutf8 (const TCHAR *s);
-extern TCHAR *utf8u (const char *s);
-extern void to_lower (TCHAR *s, int len);
-extern void to_upper (TCHAR *s, int len);
+extern TCHAR *my_strdup_ansi(const char*);
+extern void my_trim(TCHAR*);
+extern TCHAR *my_strdup_trim(const TCHAR*);
+extern TCHAR *au(const char*);
+extern char *ua(const TCHAR*);
+extern TCHAR *aucp(const char *s, unsigned int cp);
+extern char *uacp(const TCHAR *s, unsigned int cp);
+extern TCHAR *au_fs(const char*);
+extern char *ua_fs(const TCHAR*, int);
+extern char *ua_copy(char *dst, int maxlen, const TCHAR *src);
+extern TCHAR *au_copy(TCHAR *dst, int maxlen, const char *src);
+extern char *ua_fs_copy(char *dst, int maxlen, const TCHAR *src, int defchar);
+extern TCHAR *au_fs_copy(TCHAR *dst, int maxlen, const char *src);
+extern char *uutf8(const TCHAR *s);
+extern TCHAR *utf8u(const char *s);
+extern void unicode_init(void);
+extern void to_lower(TCHAR *s, int len);
+extern void to_upper(TCHAR *s, int len);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
@@ -238,8 +295,8 @@ extern void to_upper (TCHAR *s, int len);
 #undef DONT_HAVE_STDIO
 #undef DONT_HAVE_MALLOC
 
-#if defined AMIBERRY
-
+#ifdef AMIBERRY
+#include <SDL.h>
 #include <ctype.h>
 
 #define FILEFLAG_DIR     0x1
@@ -249,17 +306,6 @@ extern void to_upper (TCHAR *s, int len);
 #define FILEFLAG_EXECUTE 0x10
 #define FILEFLAG_SCRIPT  0x20
 #define FILEFLAG_PURE    0x40
-
-#define REGPARAM2
-#define REGPARAM3 
-#define REGPARAM
-
-#define abort() \
-  do { \
-    printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
-    SDL_Quit(); \
-    (abort) (); \
-} while (0)
 
 #endif
 
@@ -342,6 +388,8 @@ extern void mallocemu_free(void *ptr);
 #define ASM_SYM_FOR_FUNC(a)
 #endif
 
+#include "target.h"
+
 #ifdef UAE_CONSOLE
 #undef write_log
 #define write_log write_log_standard
@@ -362,19 +410,11 @@ extern void gui_message(const TCHAR *, ...);
 #endif
 
 #ifndef STATIC_INLINE
-#ifdef DEBUG
-#define STATIC_INLINE static __attribute__ ((noinline))
-#define NOINLINE __attribute__ ((noinline))
-#define NORETURN
-#elif __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
-#ifdef AMIBERRY
-#define STATIC_INLINE static __inline__
-#else
+#if __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
 #define STATIC_INLINE static __inline__ __attribute__ ((always_inline))
-#endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
-#elif _MSC_VER_
+#elif _MSC_VER
 #define STATIC_INLINE static __forceinline
 #define NOINLINE __declspec(noinline)
 #define NORETURN __declspec(noreturn)
@@ -384,8 +424,6 @@ extern void gui_message(const TCHAR *, ...);
 #define NORETURN
 #endif
 #endif
-
-#include "target.h"
 
 /* Every Amiga hardware clock cycle takes this many "virtual" cycles.  This
    used to be hardcoded as 1, but using higher values allows us to time some
@@ -413,29 +451,28 @@ extern void gui_message(const TCHAR *, ...);
  * Byte-swapping functions
  */
 
-#ifdef ARMV6_ASSEMBLY
-STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
-	__asm__(
-			"rev %0, %0"
-            : "=r" (v) : "0" (v)); return v;
-}
-
-STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
-	__asm__(
-  			"revsh %0, %0\n\t"
-            "uxth %0, %0"
-            : "=r" (v) : "0" (v)); return v;
-}
-#define bswap_16(x) do_byteswap_16(x)
-#define bswap_32(x) do_byteswap_32(x)
-#else
-
 /* Try to use system bswap_16/bswap_32 functions. */
 #if defined HAVE_BSWAP_16 && defined HAVE_BSWAP_32
 # include <byteswap.h>
 #  ifdef HAVE_BYTESWAP_H
 #  include <byteswap.h>
 # endif
+#else
+# ifdef ARMV6_ASSEMBLY
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
+	__asm__(
+						"rev %0, %0"
+                                                : "=r" (v) : "0" (v)); return v;
+}
+
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
+	__asm__(
+  						"revsh %0, %0\n\t"
+              "uxth %0, %0"
+                                                : "=r" (v) : "0" (v)); return v;
+}
+#define bswap_16(x) do_byteswap_16(x)
+#define bswap_32(x) do_byteswap_32(x)
 # else
 /* Else, if using SDL, try SDL's endian functions. */
 # ifdef USE_SDL
@@ -450,12 +487,20 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #endif
 #endif
 
+#endif
+
 #ifndef __cplusplus
 
 #define xmalloc(T, N) malloc(sizeof (T) * (N))
 #define xcalloc(T, N) calloc(sizeof (T), N)
 #define xfree(T) free(T)
 #define xrealloc(T, TP, N) realloc(TP, sizeof (T) * (N))
+
+#if 0
+extern void *xmalloc(size_t);
+extern void *xcalloc(size_t, size_t);
+extern void xfree(const void*);
+#endif
 
 #else
 
@@ -473,5 +518,3 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #else
 #define NOWARN_UNUSED(x) x
 #endif
-
-#endif /* UAE_SYSDEPS_H */

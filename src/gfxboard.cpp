@@ -11,15 +11,24 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "uae.h"
+#include "include/memory.h"
+#include "debug.h"
+#include "custom.h"
+#include "newcpu.h"
+#include "picasso96.h"
+#include "statusline.h"
+#include "rommgr.h"
+#include "zfile.h"
 #include "gfxboard.h"
 
-const TCHAR *gfxboard_get_name(int type)
+bool gfxboard_is_z3 (int type)
 {
 	if (type == GFXBOARD_UAE_Z2)
-		return _T("UAE Zorro II");
+		return false;
 	if (type == GFXBOARD_UAE_Z3)
-		return _T("UAE Zorro III (*)");
-	return NULL;
+		return true;
+	return false;
 }
 
 const TCHAR *gfxboard_get_configname(int type)
@@ -28,15 +37,5 @@ const TCHAR *gfxboard_get_configname(int type)
 		return _T("ZorroII");
 	if (type == GFXBOARD_UAE_Z3)
 		return _T("ZorroIII");
-	return NULL;
-}
-
-int gfxboard_get_configtype(struct rtgboardconfig *rbc)
-{
-	int type = rbc->rtgmem_type;
-	if (type == GFXBOARD_UAE_Z2)
-		return 2;
-	if (type == GFXBOARD_UAE_Z3)
-		return 3;
-	return 0;
+	//return boards[type - GFXBOARD_HARDWARE].configname;
 }
