@@ -1,39 +1,41 @@
-#Default platform is rpi3
+# Default platform is rpi3 / SDL1
+
 ifeq ($(PLATFORM),)
 	PLATFORM = rpi3
 endif
 
+#
+# SDL1 targets
+#
 ifeq ($(PLATFORM),rpi3)
     CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+    PROFILER_PATH = /home/pi/projects/amiberry
+	
 else ifeq ($(PLATFORM),rpi2)
     CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+    PROFILER_PATH = /home/pi/projects/amiberry
+	
 else ifeq ($(PLATFORM),rpi1)
     CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
-    MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND
+    MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
-else ifeq ($(PLATFORM),pine64)
-    CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard
-    MORE_CFLAGS += -DARMV6T2 -D__arm__
-    LDFLAGS += -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm
-    CC = arm-linux-gnueabihf-gcc
-    CXX = arm-linux-gnueabihf-g++
+    PROFILER_PATH = /home/pi/projects/amiberry
+
 else ifeq ($(PLATFORM),Pandora)
     CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -msoft-float
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -DUSE_SDL1 -msoft-float
     PROFILER_PATH = /media/MAINSD/pandora/test
+	
 else ifeq ($(PLATFORM),xu4)
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     LDFLAGS += -llzma -lfreetype -logg
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -47,7 +49,102 @@ else ifeq ($(PLATFORM),android)
 	ANDROID = 1
 	HAVE_NEON = 1
 	HAVE_SDL_DISPLAY = 1
+
+#
+# SDL2 targets
+#	
+else ifeq ($(PLATFORM),rpi3-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
+    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+	
+else ifeq ($(PLATFORM),rpi2-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
+    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+	
+else ifeq ($(PLATFORM),rpi1-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+    MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
+    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
+    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -licui18n -licuuc -licudata -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+
+else ifeq ($(PLATFORM),pine64-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -D__arm__ -DUSE_SDL2
+    LDFLAGS += -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm
+    CC = arm-linux-gnueabihf-gcc
+    CXX = arm-linux-gnueabihf-g++
+
+else ifeq ($(PLATFORM),xu4-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
+    LDFLAGS += -llzma -lfreetype -logg
+    ifdef DEBUG
+	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+        MORE_CFLAGS += -fomit-frame-pointer
+    endif
 endif
+
+#
+# SDL1 options
+#
+ifndef USE_SDL2
+
+NAME   = amiberry-sdl1-dev
+RM     = rm -f
+CC     ?= gcc
+CXX    ?= g++
+STRIP  ?= strip
+
+PROG   = $(NAME)
+
+all: $(PROG)
+
+#DEBUG=1
+#TRACER=1
+
+#GEN_PROFILE=1
+#USE_PROFILE=1
+
+SDL_CFLAGS = `sdl-config --cflags`
+
+DEFS +=  `xml2-config --cflags`
+DEFS += -DCPU_arm -DARMV6_ASSEMBLY
+DEFS += -DWITH_INGAME_WARNING 
+DEFS += -DUSE_SDL
+#DEFS += -DWITH_LOGGING
+
+MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers
+MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
+#MORE_CFLAGS += -fuse-ld=gold -fdiagnostics-color=auto
+MORE_CFLAGS += -mstructure-size-boundary=32
+MORE_CFLAGS += -falign-functions=32
+MORE_CFLAGS += -std=gnu++14
+
+LDFLAGS += -lSDL -lpthread -lz -lSDL_image -lpng -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
+LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan
+
+endif
+#
+# End of SDL1 options
+#
+
+#
+# SDL2 options
+#
+ifdef USE_SDL2
 
 NAME  = amiberry-sdl2-dev
 RM      = rm -f
@@ -71,6 +168,7 @@ SDL_CFLAGS = `sdl2-config --cflags --libs`
 DEFS += `xml2-config --cflags`
 DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
 DEFS += -DUSE_SDL
+#DEFS += -DWITH_LOGGING
 
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include -Isrc/archivers
 MORE_CFLAGS += -fdiagnostics-color=auto
@@ -81,6 +179,14 @@ MORE_CFLAGS += -std=gnu++14
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lsrc/guisan/lib
 
+endif
+#
+# End of SDL2 options
+#
+
+#
+# Common options
+#
 ifndef DEBUG
     MORE_CFLAGS += -Ofast -pipe
     MORE_CFLAGS += -fweb -frename-registers
@@ -257,12 +363,16 @@ OBJS =	\
 	src/osdep/gui/PanelSavestate.o \
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o
+
+ifndef USE_SDL2
+OBJS += src/osdep/gui/sdltruetypefont.o
+endif
+	
 ifeq ($(ANDROID), 1)
 OBJS += src/osdep/gui/androidsdl_event.o
 OBJS += src/osdep/gui/PanelOnScreen.o
 OBJS += src/osdep/pandora_gfx.o
 endif
-
 
 OBJS += src/osdep/neon_helper.o
 
@@ -290,9 +400,62 @@ ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
 
-clean:
-	$(RM) $(PROG) $(OBJS)
+ASMS = \
+	src/audio.s \
+	src/autoconf.s \
+	src/blitfunc.s \
+	src/blitter.s \
+	src/cia.s \
+	src/custom.s \
+	src/disk.s \
+	src/drawing.s \
+	src/events.s \
+	src/expansion.s \
+	src/filesys.s \
+	src/fpp.s \
+	src/fsdb.s \
+	src/fsdb_unix.s \
+	src/fsusage.s \
+	src/gfxutil.s \
+	src/hardfile.s \
+	src/inputdevice.s \
+	src/keybuf.s \
+	src/main.s \
+	src/memory.s \
+	src/native2amiga.s \
+	src/traps.s \
+	src/uaelib.s \
+	src/uaeresource.s \
+	src/zfile.s \
+	src/zfile_archive.s \
+	src/machdep/support.s \
+	src/osdep/picasso96.s \
+	src/osdep/amiberry.s \
+	src/osdep/amiberry_gfx.s \
+	src/osdep/amiberry_mem.s \
+	src/osdep/sigsegv_handler.s \
+	src/sounddep/sound.s \
+	src/newcpu.s \
+	src/newcpu_common.s \
+	src/readcpu.s \
+	src/cpudefs.s \
+	src/cpustbl.s \
+	src/cpuemu_0.s \
+	src/cpuemu_4.s \
+	src/cpuemu_11.s \
+	src/jit/compemu.s \
+	src/jit/compemu_fpp.s \
+	src/jit/compstbl.s \
+	src/jit/compemu_support.s
 
+genasm: $(ASMS)
+
+clean:
+	$(RM) $(PROG) $(OBJS) $(ASMS)
+
+delasm:
+	$(RM) $(ASMS)
+	
 bootrom:
 	od -v -t xC -w8 src/filesys |tail -n +5 | sed -e "s,^.......,," -e "s,[0123456789abcdefABCDEF][0123456789abcdefABCDEF],db(0x&);,g" > src/filesys_bootrom.cpp
 	touch src/filesys.cpp
