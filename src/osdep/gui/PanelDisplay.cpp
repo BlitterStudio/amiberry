@@ -46,9 +46,11 @@ static gcn::Slider* sldAmigaWidth;
 static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
+#ifdef PANDORA
 static gcn::Label* lblVertPos;
 static gcn::Label* lblVertPosInfo;
 static gcn::Slider* sldVertPos;
+#endif
 #endif // USE_SDL1
 
 static gcn::UaeCheckBox* chkLineDbl;
@@ -70,17 +72,17 @@ public:
 #ifdef USE_SDL1
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
-			if (changed_prefs.gfx_size.width != amigawidth_values[(int)(sldAmigaWidth->getValue())])
+			if (changed_prefs.gfx_size.width != amigawidth_values[int(sldAmigaWidth->getValue())])
 			{
-				changed_prefs.gfx_size.width = amigawidth_values[(int)(sldAmigaWidth->getValue())];
+				changed_prefs.gfx_size.width = amigawidth_values[int(sldAmigaWidth->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
-			if (changed_prefs.gfx_size.height != amigaheight_values[(int)(sldAmigaHeight->getValue())])
+			if (changed_prefs.gfx_size.height != amigaheight_values[int(sldAmigaHeight->getValue())])
 			{
-				changed_prefs.gfx_size.height = amigaheight_values[(int)(sldAmigaHeight->getValue())];
+				changed_prefs.gfx_size.height = amigaheight_values[int(sldAmigaHeight->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
@@ -246,8 +248,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->add(lblVertPos, 0, posY);
 	grpAmigaScreen->add(sldVertPos, 160, posY);
 	grpAmigaScreen->add(lblVertPosInfo, 160 + sldVertPos->getWidth() + 12, posY);
-#endif
 	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
+#endif	
 	grpAmigaScreen->add(lblFSRatio, 0, posY);
 	grpAmigaScreen->add(sldFSRatio, 160, posY);
 	grpAmigaScreen->add(lblFSRatioInfo, 160 + sldFSRatio->getWidth() + 12, posY);

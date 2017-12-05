@@ -33,15 +33,11 @@
 #include "gfxboard.h"
 #include "devices.h"
 #include "jit/compemu.h"
-
-#ifdef USE_SDL1
-#include "SDL.h"
-#endif
-
-#ifdef USE_SDL2
-#include "SDL.h"
 #include <iostream>
 #include "amiberry_gfx.h"
+#include "SDL.h"
+
+#ifdef USE_SDL2
 SDL_Window* sdlWindow;
 SDL_Renderer* renderer;
 SDL_Texture* texture;
