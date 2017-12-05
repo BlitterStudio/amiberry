@@ -72,6 +72,18 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 
 	{ SDLK_CAPSLOCK, INPUTEVENT_KEY_CAPS_LOCK, ID_FLAG_TOGGLE },
 
+#ifdef USE_SDL1
+	{ SDLK_KP1, INPUTEVENT_KEY_NP_1 },
+	{ SDLK_KP2, INPUTEVENT_KEY_NP_2 },
+	{ SDLK_KP3, INPUTEVENT_KEY_NP_3 },
+	{ SDLK_KP4, INPUTEVENT_KEY_NP_4 },
+	{ SDLK_KP5, INPUTEVENT_KEY_NP_5 },
+	{ SDLK_KP6, INPUTEVENT_KEY_NP_6 },
+	{ SDLK_KP7, INPUTEVENT_KEY_NP_7 },
+	{ SDLK_KP8, INPUTEVENT_KEY_NP_8 },
+	{ SDLK_KP9, INPUTEVENT_KEY_NP_9 },
+	{ SDLK_KP0, INPUTEVENT_KEY_NP_0 },
+#elif USE_SDL2
 	{ SDLK_KP_1, INPUTEVENT_KEY_NP_1 },
 	{ SDLK_KP_2, INPUTEVENT_KEY_NP_2 },
 	{ SDLK_KP_3, INPUTEVENT_KEY_NP_3 },
@@ -82,6 +94,7 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDLK_KP_8, INPUTEVENT_KEY_NP_8 },
 	{ SDLK_KP_9, INPUTEVENT_KEY_NP_9 },
 	{ SDLK_KP_0, INPUTEVENT_KEY_NP_0 },
+#endif
 	{ SDLK_KP_PERIOD, INPUTEVENT_KEY_PERIOD },
 	{ SDLK_KP_PLUS, INPUTEVENT_KEY_NP_ADD },
 	{ SDLK_KP_MINUS, INPUTEVENT_KEY_NP_SUB },
@@ -97,10 +110,18 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 
 	{ SDLK_LSHIFT, INPUTEVENT_KEY_SHIFT_LEFT, 0, INPUTEVENT_SPC_QUALIFIER_SHIFT },
 	{ SDLK_LCTRL, INPUTEVENT_KEY_CTRL, 0, INPUTEVENT_SPC_QUALIFIER_CONTROL },
+#ifdef USE_SDL1
+	{ SDLK_LSUPER, INPUTEVENT_KEY_AMIGA_LEFT, 0, INPUTEVENT_SPC_QUALIFIER_WIN },
+#elif USE_SDL2
 	{ SDLK_LGUI, INPUTEVENT_KEY_AMIGA_LEFT, 0, INPUTEVENT_SPC_QUALIFIER_WIN },
+#endif
 	{ SDLK_LALT, INPUTEVENT_KEY_ALT_LEFT, 0, INPUTEVENT_SPC_QUALIFIER_ALT },
 	{ SDLK_RALT, INPUTEVENT_KEY_ALT_RIGHT, 0, INPUTEVENT_SPC_QUALIFIER_ALT },
+#ifdef USE_SDL1
+	{ SDLK_RSUPER, INPUTEVENT_KEY_AMIGA_RIGHT, 0, INPUTEVENT_SPC_QUALIFIER_WIN },
+#elif USE_SDL2
 	{ SDLK_RGUI, INPUTEVENT_KEY_AMIGA_RIGHT, 0, INPUTEVENT_SPC_QUALIFIER_WIN },
+#endif
 	{ SDLK_MENU, INPUTEVENT_KEY_AMIGA_RIGHT, 0, INPUTEVENT_SPC_QUALIFIER_WIN },
 	{ SDLK_RCTRL, INPUTEVENT_KEY_CTRL, 0, INPUTEVENT_SPC_QUALIFIER_CONTROL },
 	{ SDLK_RSHIFT, INPUTEVENT_KEY_SHIFT_RIGHT, 0, INPUTEVENT_SPC_QUALIFIER_SHIFT },
@@ -141,20 +162,44 @@ static struct uae_input_device_kbr_default *keytrans[] =
 	keytrans_amiga
 };
 
+#ifdef USE_SDL1
+static int kb_np[] = { SDLK_KP4, -1, SDLK_KP6, -1, SDLK_KP8, -1, SDLK_KP2, -1, SDLK_KP0, SDLK_KP5, -1, SDLK_KP_PERIOD, -1, SDLK_KP_ENTER, -1, -1 };
+#elif USE_SDL2
 static int kb_np[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, -1, SDLK_KP_0, SDLK_KP_5, -1, SDLK_KP_DECIMAL, -1, SDLK_KP_ENTER, -1, -1 };
+#endif
 static int kb_ck[] = { SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_UP, -1, SDLK_DOWN, -1, SDLK_RCTRL, SDLK_RALT, -1, SDLK_RSHIFT, -1, -1 };
 static int kb_se[] = { SDLK_a, -1, SDLK_d, -1, SDLK_w, -1, SDLK_s, -1, SDLK_LALT, -1, SDLK_LSHIFT, -1, -1 };
+#ifdef USE_SDL1
+static int kb_np3[] = { SDLK_KP4, -1, SDLK_KP6, -1, SDLK_KP8, -1, SDLK_KP2, -1, SDLK_KP0, SDLK_KP5, -1, SDLK_KP_PERIOD, -1, SDLK_KP_ENTER, -1, -1 };
+#elif USE_SDL2
 static int kb_np3[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, -1, SDLK_KP_0, SDLK_KP_5, -1, SDLK_KP_DECIMAL, -1, SDLK_KP_ENTER, -1, -1 };
+#endif
 static int kb_ck3[] = { SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_UP, -1, SDLK_DOWN, -1, SDLK_RCTRL, -1, SDLK_RSHIFT, -1, SDLK_RALT, -1, -1 };
 static int kb_se3[] = { SDLK_a, -1, SDLK_d, -1, SDLK_w, -1, SDLK_s, -1, SDLK_LALT, -1, SDLK_LSHIFT, -1, SDLK_LCTRL, -1, -1 };
 
+#ifdef USE_SDL1
+static int kb_cd32_np[] = { SDLK_KP4, -1, SDLK_KP6, -1, SDLK_KP8, -1, SDLK_KP2, -1, SDLK_KP0, SDLK_KP5, SDLK_KP1, -1, SDLK_KP_PERIOD, SDLK_KP3, -1, SDLK_KP7, -1, SDLK_KP9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
+#elif USE_SDL2
 static int kb_cd32_np[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, -1, SDLK_KP_0, SDLK_KP_5, SDLK_KP_1, -1, SDLK_KP_DECIMAL, SDLK_KP_3, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
+#endif
+
+#ifdef USE_SDL1
+static int kb_cd32_ck[] = { SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_UP, -1, SDLK_DOWN, -1, SDLK_RCTRL, -1, SDLK_RALT, -1, SDLK_KP7, -1, SDLK_KP9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
+static int kb_cd32_se[] = { SDLK_a, -1, SDLK_d, -1, SDLK_w, -1, SDLK_s, -1, -1, SDLK_LALT, -1, SDLK_LSHIFT, -1, SDLK_KP7, -1, SDLK_KP9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
+#elif USE_SDL2
 static int kb_cd32_ck[] = { SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_UP, -1, SDLK_DOWN, -1, SDLK_RCTRL, -1, SDLK_RALT, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
 static int kb_cd32_se[] = { SDLK_a, -1, SDLK_d, -1, SDLK_w, -1, SDLK_s, -1, -1, SDLK_LALT, -1, SDLK_LSHIFT, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
+#endif
 
+#ifdef USE_SDL1
+static int kb_cdtv[] = { SDLK_KP1, -1, SDLK_KP3, -1, SDLK_KP7, -1, SDLK_KP9, -1, -1 };
+
+static int kb_xa1[] = { SDLK_KP4, -1, SDLK_KP6, -1, SDLK_KP8, -1, SDLK_KP2, SDLK_KP5, -1, SDLK_LCTRL, -1, SDLK_LALT, -1, SDLK_SPACE, -1, -1 };
+#elif USE_SDL2
 static int kb_cdtv[] = { SDLK_KP_1, -1, SDLK_KP_3, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, -1 };
 
 static int kb_xa1[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, SDLK_KP_5, -1, SDLK_LCTRL, -1, SDLK_LALT, -1, SDLK_SPACE, -1, -1 };
+#endif
 static int kb_xa2[] = { SDLK_d, -1, SDLK_g, -1, SDLK_r, -1, SDLK_f, -1, SDLK_a, -1, SDLK_s, -1, SDLK_q, -1 };
 static int kb_arcadia[] = { SDLK_F2, -1, SDLK_1, -1, SDLK_2, -1, SDLK_5, -1, SDLK_6, -1, -1 };
 static int kb_arcadiaxa[] = { SDLK_1, -1, SDLK_2, -1, SDLK_3, -1, SDLK_4, -1, SDLK_6, -1, SDLK_LEFTBRACKET, SDLK_LSHIFT, -1, SDLK_RIGHTBRACKET, -1, SDLK_c, -1, SDLK_5, -1, SDLK_z, -1, SDLK_x, -1, -1 };
@@ -204,10 +249,17 @@ void clearallkeys()
 	inputdevice_updateconfig(&changed_prefs, &currprefs);
 }
 
+#ifdef USE_SDL1
+static const int np[] = {
+	SDLK_KP0, 0, SDLK_KP_PERIOD, 0, SDLK_KP1, 1, SDLK_KP2, 2,
+	SDLK_KP3, 3, SDLK_KP4, 4, SDLK_KP5, 5, SDLK_KP6, 6, SDLK_KP7, 7,
+	SDLK_KP8, 8, SDLK_KP9, 9, -1 };
+#elif USE_SDL2
 static const int np[] = {
 	SDLK_KP_0, 0, SDLK_KP_PERIOD, 0, SDLK_KP_1, 1, SDLK_KP_2, 2,
 	SDLK_KP_3, 3, SDLK_KP_4, 4, SDLK_KP_5, 5, SDLK_KP_6, 6, SDLK_KP_7, 7,
 	SDLK_KP_8, 8, SDLK_KP_9, 9, -1 };
+#endif
 
 void translate_amiberry_keys(int scancode, int newstate)
 {
@@ -221,6 +273,14 @@ void translate_amiberry_keys(int scancode, int newstate)
 	if (newstate) {
 		int defaultguikey = SDLK_F12;
 		if (currprefs.open_gui != "") {
+#ifdef USE_SDL1
+			if (scancode_new == defaultguikey)
+			{
+				scancode = 0;
+				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
+					inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+			}
+#elif USE_SDL2
 			if (scancode_new == defaultguikey && SDL_GetKeyFromName(currprefs.open_gui) != scancode_new) {
 				scancode = 0;
 				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
@@ -230,16 +290,19 @@ void translate_amiberry_keys(int scancode, int newstate)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 				scancode = 0;
 			}
+#endif
 		}
 		else if (!specialpressed() && !ctrlpressed() && !shiftpressed() && !altpressed() && scancode_new == defaultguikey) {
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			scancode = 0;
 		}
+#ifdef USE_SDL2
 		if (currprefs.quit_amiberry != "" && scancode_new == SDL_GetKeyFromName(currprefs.quit_amiberry))
 		{
 			inputdevice_add_inputcode(AKS_QUIT, 1);
 			scancode = 0;
 		}
+#endif
 	}
 
 	if (code) {
@@ -253,14 +316,28 @@ void translate_amiberry_keys(int scancode, int newstate)
 			host_capslockstate = host_capslockstate ? 0 : 1;
 			capslockstate = host_capslockstate;
 		}
+#ifdef USE_SDL1
+		if (scancode == SDLK_NUMLOCK) {
+			host_numlockstate = host_numlockstate ? 0 : 1;
+			capslockstate = host_numlockstate;
+		}
+#elif USE_SDL2
 		if (scancode == SDLK_NUMLOCKCLEAR) {
 			host_numlockstate = host_numlockstate ? 0 : 1;
 			capslockstate = host_numlockstate;
 		}
+#endif
+#ifdef USE_SDL1
+		if (scancode == SDLK_SCROLLOCK) {
+			host_scrolllockstate = host_scrolllockstate ? 0 : 1;
+			capslockstate = host_scrolllockstate;
+		}
+#elif USE_SDL2
 		if (scancode == SDLK_SCROLLLOCK) {
 			host_scrolllockstate = host_scrolllockstate ? 0 : 1;
 			capslockstate = host_scrolllockstate;
 		}
+#endif
 	}
 
 	int translatedScancode = scancode;
@@ -314,6 +391,16 @@ void translate_amiberry_keys(int scancode, int newstate)
 	case SDLK_RSHIFT:
 		translatedScancode = AK_RSH;
 		break;
+#ifdef USE_SDL1
+	case SDLK_RSUPER:
+	case SDLK_RMETA:
+		translatedScancode = AK_RAMI;
+		break;
+	case SDLK_LSUPER:
+	case SDLK_LMETA:
+		translatedScancode = AK_LAMI;
+		break;
+#elif USE_SDL2
 	case SDLK_RGUI:
 	case SDLK_APPLICATION:
 		translatedScancode = AK_RAMI;
@@ -321,6 +408,7 @@ void translate_amiberry_keys(int scancode, int newstate)
 	case SDLK_LGUI:
 		translatedScancode = AK_LAMI;
 		break;
+#endif
 	case SDLK_LALT:
 		translatedScancode = AK_LALT;
 		break;
@@ -334,6 +422,38 @@ void translate_amiberry_keys(int scancode, int newstate)
 	case SDLK_PAGEDOWN:
 		translatedScancode = AK_HELP;
 		break;
+#ifdef USE_SDL1
+	case SDLK_KP0:
+		translatedScancode = AK_NP0;
+		break;
+	case SDLK_KP1:
+		translatedScancode = AK_NP1;
+		break;
+	case SDLK_KP2:
+		translatedScancode = AK_NP2;
+		break;
+	case SDLK_KP3:
+		translatedScancode = AK_NP3;
+		break;
+	case SDLK_KP4:
+		translatedScancode = AK_NP4;
+		break;
+	case SDLK_KP5:
+		translatedScancode = AK_NP5;
+		break;
+	case SDLK_KP6:
+		translatedScancode = AK_NP6;
+		break;
+	case SDLK_KP7:
+		translatedScancode = AK_NP7;
+		break;
+	case SDLK_KP8:
+		translatedScancode = AK_NP8;
+		break;
+	case SDLK_KP9:
+		translatedScancode = AK_NP9;
+		break;
+#elif USE_SDL2
 	case SDLK_KP_0:
 		translatedScancode = AK_NP0;
 		break;
@@ -364,6 +484,7 @@ void translate_amiberry_keys(int scancode, int newstate)
 	case SDLK_KP_9:
 		translatedScancode = AK_NP9;
 		break;
+#endif
 	case SDLK_KP_ENTER:
 		translatedScancode = AK_ENT;
 		break;
@@ -397,6 +518,19 @@ void translate_amiberry_keys(int scancode, int newstate)
 
 int target_checkcapslock(const int scancode, int *state)
 {
+#ifdef USE_SDL1
+	if (scancode != SDLK_CAPSLOCK && scancode != SDLK_NUMLOCK && scancode != SDLK_SCROLLOCK)
+		return 0;
+	if (*state == 0)
+		return -1;
+	if (scancode == SDLK_CAPSLOCK)
+		*state = host_capslockstate;
+	if (scancode == SDLK_NUMLOCK)
+		*state = host_numlockstate;
+	if (scancode == SDLK_SCROLLOCK)
+		*state = host_scrolllockstate;
+	return 1;
+#elif USE_SDL2
 	if (scancode != SDLK_CAPSLOCK && scancode != SDLK_NUMLOCKCLEAR && scancode != SDLK_SCROLLLOCK)
 		return 0;
 	if (*state == 0)
@@ -408,4 +542,5 @@ int target_checkcapslock(const int scancode, int *state)
 	if (scancode == SDLK_SCROLLLOCK)
 		*state = host_scrolllockstate;
 	return 1;
+#endif
 }

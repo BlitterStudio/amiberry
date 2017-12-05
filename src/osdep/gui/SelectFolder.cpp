@@ -1,5 +1,4 @@
 #include <algorithm>
-
 #include <iostream>
 #include <sstream>
 #ifdef USE_SDL1
@@ -171,7 +170,11 @@ static void InitSelectFolder(const char* title)
 	lstFolders->addActionListener(listBoxActionListener);
 
 	scrAreaFolders = new gcn::ScrollArea(lstFolders);
+#ifdef USE_SDL1
+	scrAreaFolders->setFrameSize(1);
+#elif USE_SDL2
 	scrAreaFolders->setBorderSize(1);
+#endif
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
 	scrAreaFolders->setScrollbarWidth(20);
@@ -242,7 +245,11 @@ static void SelectFolderLoop()
 		{
 			if (event.type == SDL_KEYDOWN)
 			{
+#ifdef USE_SDL1
+				switch (event.key.keysym.sym)
+#elif USE_SDL2
 				switch (event.key.keysym.scancode)
+#endif
 				{
 				case VK_ESCAPE:
 					dialogFinished = true;
@@ -258,7 +265,11 @@ static void SelectFolderLoop()
 
 				case VK_Red:
 				case VK_Green:
+#ifdef USE_SDL1
+					event.key.keysym.sym = SDLK_RETURN;
+#elif USE_SDL2
 					event.key.keysym.scancode = SDL_SCANCODE_RETURN;
+#endif
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;

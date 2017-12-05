@@ -13,15 +13,20 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|VisualGDB = Debug|VisualGDB
+		Debug-sdl1|VisualGDB = Debug-sdl1|VisualGDB
 		Release|VisualGDB = Release|VisualGDB
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-sdl1|VisualGDB.ActiveCfg = Debug-sdl1|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-sdl1|VisualGDB.Build.0 = Debug-sdl1|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release|VisualGDB.Build.0 = Release|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-sdl1|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-sdl1|VisualGDB.Build.0 = Debug|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release|VisualGDB.Build.0 = Release|VisualGDB
 	EndGlobalSection

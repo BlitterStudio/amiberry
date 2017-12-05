@@ -10,7 +10,6 @@
 #endif
 #include <SDL.h>
 
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -237,7 +236,11 @@ static void CreateFilesysHardfileLoop()
 		{
 			if (event.type == SDL_KEYDOWN)
 			{
+#ifdef USE_SDL1
+				switch (event.key.keysym.sym)
+#elif USE_SDL2
 				switch (event.key.keysym.scancode)
+#endif
 				{
 				case VK_ESCAPE:
 					dialogFinished = true;
@@ -265,7 +268,11 @@ static void CreateFilesysHardfileLoop()
 
 				case VK_Red:
 				case VK_Green:
+#ifdef USE_SDL1
+					event.key.keysym.sym = SDLK_RETURN;
+#elif USE_SDL2
 					event.key.keysym.scancode = SDL_SCANCODE_RETURN;
+#endif
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;

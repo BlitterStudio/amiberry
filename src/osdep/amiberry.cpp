@@ -1147,6 +1147,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+#ifdef USE_SDL2
 void PopulateCustomControlMap()
 {
 	strcpy(customControlMap[VK_UP], currprefs.custom_up);
@@ -1161,6 +1162,7 @@ void PopulateCustomControlMap()
 	strcpy(customControlMap[VK_RShoulder], currprefs.custom_r);
 	strcpy(customControlMap[VK_Play], currprefs.custom_play);
 }
+#endif
 
 int handle_msgpump()
 {
@@ -1172,10 +1174,10 @@ int handle_msgpump()
 		if (delayed_mousebutton == 0)
 			setmousebuttonstate(0, 0, 1);
 	}
-
+#ifdef USE_SDL2
 	if (currprefs.customControls)
 		PopulateCustomControlMap();
-
+#endif
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
@@ -1203,10 +1205,11 @@ int handle_msgpump()
 		case SDL_KEYDOWN:
 #ifdef USE_SDL1
 			// Strangely in FBCON left window is seen as left alt ??
-			if (keyboard_type == 2) // KEYCODE_FBCON
-			{
-				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[
-					SDLK_MENU]))
+			//if (keyboard_type == 2) // KEYCODE_FBCON
+			//{
+			//	if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[
+			//		SDLK_MENU]))
+			if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
 #endif
 #ifdef USE_SDL2			
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
@@ -1216,7 +1219,7 @@ int handle_msgpump()
 				break;
 			}
 #ifdef USE_SDL1
-			}
+			/*}
 			else
 			{
 				if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
@@ -1224,7 +1227,7 @@ int handle_msgpump()
 					uae_reset(0, 1);
 					break;
 				}
-			}
+			}*/
 
 			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
 			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
@@ -1376,7 +1379,7 @@ int handle_msgpump()
 				}
 			}
 			break;
-
+#ifdef USE_SDL2
 		case SDL_MOUSEWHEEL:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
@@ -1386,6 +1389,7 @@ int handle_msgpump()
 				setmousestate(0, 3, valX, 0);
 			}
 			break;
+#endif
 		}
 	}
 	return got;

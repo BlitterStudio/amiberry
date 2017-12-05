@@ -296,7 +296,11 @@ bool LoadConfigByName(const char *name)
 		lstConfigs->addActionListener(configsListActionListener);
 
 		scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
+#ifdef USE_SDL1
+		scrAreaConfigs->setFrameSize(1);
+#elif USE_SDL2
 		scrAreaConfigs->setBorderSize(1);
+#endif
 		scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 		scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
 		scrAreaConfigs->setScrollbarWidth(20);

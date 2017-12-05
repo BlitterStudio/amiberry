@@ -116,7 +116,11 @@ SDL_Surface* cursorSurface;
 gcn::SDLInput* gui_input;
 gcn::SDLGraphics* gui_graphics;
 gcn::SDLImageLoader* gui_imageLoader;
+#ifdef USE_SDL1
+gcn::contrib::SDLTrueTypeFont* gui_font;
+#elif USE_SDL2
 gcn::SDLTrueTypeFont* gui_font;
+#endif
 
 /*
 * Guisan stuff we need
@@ -371,7 +375,11 @@ namespace sdl
 
 	void checkInput()
 	{
+#ifdef USE_SDL1
+		const auto key_for_gui = SDLK_F12;
+#elif USE_SDL2
 		const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
+#endif
 
 		while (SDL_PollEvent(&gui_event))
 		{
@@ -464,7 +472,7 @@ namespace sdl
 				}
 			}
 
-			if (gui_event.type == SDL_KEYDOWN && gui_event.key.repeat == 0)
+			if (gui_event.type == SDL_KEYDOWN)
 			{
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
@@ -488,9 +496,17 @@ namespace sdl
 					}
 				}
 				else
+#ifdef USE_SDL1
+					switch (gui_event.key.keysym.sym)
+#elif USE_SDL2
 					switch (gui_event.key.keysym.scancode)
+#endif
 					{
+#ifdef USE_SDL1
+					case SDLK_q:
+#elif USE_SDL2
 					case SDL_SCANCODE_Q:
+#endif
 						//-------------------------------------------------
 						// Quit entire program via Q on keyboard
 						//-------------------------------------------------
@@ -513,7 +529,11 @@ namespace sdl
 						//------------------------------------------------
 						// Simulate press of enter when 'X' pressed
 						//------------------------------------------------
+#ifdef USE_SDL1
+						gui_event.key.keysym.sym = SDLK_RETURN;
+#elif USE_SDL2
 						gui_event.key.keysym.scancode = SDL_SCANCODE_RETURN;
+#endif
 						gui_input->pushInput(gui_event); // Fire key down
 						gui_event.type = SDL_KEYUP; // and the key up
 						break;
@@ -537,7 +557,11 @@ namespace sdl
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						break;
+#ifdef USE_SDL1
+					case SDLK_F1:
+#elif USE_SDL2
 					case SDL_SCANCODE_F1:
+#endif
 							ShowHelpRequested();
 							widgets::cmdHelp->requestFocus();
 							break;
@@ -723,7 +747,11 @@ namespace widgets
 		// Initialize fonts
 		//-------------------------------------------------
 		TTF_Init();
+#ifdef USE_SDL1
+		gui_font = new gcn::contrib::SDLTrueTypeFont("data/AmigaTopaz.ttf", 14);
+#elif USE_SDL2
 		gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 14);
+#endif
 		gcn::Widget::setGlobalFont(gui_font);
 
 		//--------------------------------------------------

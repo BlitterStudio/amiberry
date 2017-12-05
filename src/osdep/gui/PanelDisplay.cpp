@@ -84,6 +84,7 @@ public:
 				RefreshPanelDisplay();
 			}
 		}
+#ifdef PANDORA
 		else if (actionEvent.getSource() == sldVertPos)
 		{
 			if (changed_prefs.pandora_vertical_offset != (int)(sldVertPos->getValue()) + OFFSET_Y_ADJUST)
@@ -92,6 +93,7 @@ public:
 				RefreshPanelDisplay();
 			}
 		}
+#endif
 		else 
 #endif
 			if (actionEvent.getSource() == chkFrameskip)
@@ -119,6 +121,7 @@ public:
 
 AmigaScreenActionListener* amigaScreenActionListener;
 
+#ifdef USE_SDL2
 class ScalingMethodActionListener : public gcn::ActionListener
 {
 public:
@@ -134,6 +137,7 @@ public:
 };
 
 static ScalingMethodActionListener* scalingMethodActionListener;
+#endif
 
 void InitPanelDisplay(const struct _ConfigCategory& category)
 {
@@ -230,7 +234,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 #ifdef USE_SDL1
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	int posY = 10;
 	grpAmigaScreen->add(lblAmigaWidth, 0, posY);
 	grpAmigaScreen->add(sldAmigaWidth, 160, posY);
 	grpAmigaScreen->add(lblAmigaWidthInfo, 160 + sldAmigaWidth->getWidth() + 12, posY);

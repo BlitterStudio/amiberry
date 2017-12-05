@@ -1,5 +1,4 @@
 #include <algorithm>
-
 #include <iostream>
 #include <sstream>
 #ifdef USE_SDL1
@@ -141,14 +140,15 @@ static void ShowMessageWaitInputLoop()
 					break;
 				}
 			}
-
+// This only works in SDL2 for now
+#ifdef USE_SDL2
 			if (event.type == SDL_CONTROLLERBUTTONDOWN)
 			{
 				dialogControlPressed = SDL_GameControllerGetStringForButton(SDL_GameControllerButton(event.cbutton.button));
 				dialogFinished = true;
 				break;
 			}
-
+#endif
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
@@ -188,7 +188,11 @@ static void ShowMessageLoop()
 		{
 			if (event.type == SDL_KEYDOWN)
 			{
+#ifdef USE_SDL1
+				switch (event.key.keysym.sym)
+#elif USE_SDL2
 				switch (event.key.keysym.scancode)
+#endif
 				{
 				case VK_ESCAPE:
 					dialogFinished = true;
@@ -201,8 +205,13 @@ static void ShowMessageLoop()
 
 				case VK_Red:
 				case VK_Green:
+#ifdef USE_SDL1
+				case SDLK_RETURN:
+					event.key.keysym.sym = SDLK_RETURN;
+#elif USE_SDL2
 				case SDL_SCANCODE_RETURN:
 					event.key.keysym.scancode = SDL_SCANCODE_RETURN;
+#endif
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;

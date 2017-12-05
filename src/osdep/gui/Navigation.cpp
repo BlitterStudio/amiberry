@@ -488,6 +488,18 @@ bool HandleNavigation(int direction)
 	return focusTarget != nullptr;
 }
 
+#ifdef USE_SDL1
+void PushFakeKey(const SDLKey inKey)
+{
+	SDL_Event nuevent;
+
+	nuevent.type = SDL_KEYDOWN;  // and the key up
+	nuevent.key.keysym.sym = inKey;
+	gui_input->pushInput(nuevent); // Fire key down
+	nuevent.type = SDL_KEYUP;  // and the key up
+	gui_input->pushInput(nuevent); // Fire key down
+}
+#elif USE_SDL2
 void PushFakeKey(const SDL_Keycode inKey)
 {       SDL_Event nuevent;
         
@@ -497,3 +509,4 @@ void PushFakeKey(const SDL_Keycode inKey)
         nuevent.type = SDL_KEYUP;  // and the key up
         gui_input->pushInput(nuevent); // Fire key down
 }
+#endif

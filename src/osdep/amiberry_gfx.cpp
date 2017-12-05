@@ -45,8 +45,8 @@ SDL_Surface *Dummy_prSDLScreen = NULL;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 14
-static int x_size_table[MAX_SCREEN_MODES] = {640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1280, 1360, 1366, 1680, 1920};
-static int y_size_table[MAX_SCREEN_MODES] = {400, 480, 400, 480, 600, 540, 768, 720, 800, 1024, 768, 768, 1050, 1080};
+static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1280, 1360, 1366, 1680, 1920 };
+static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 1024, 768, 768, 1050, 1080 };
 
 struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
@@ -99,9 +99,11 @@ int graphics_setup(void)
 	TV_DISPLAY_STATE_T tvstate;
 
 	if (vchi_initialise(&vchi_instance) == 0) {
-		if (vchi_connect(NULL, 0, vchi_instance) == 0) {
+		if (vchi_connect(nullptr, 0, vchi_instance) == 0)
+		{
 			vc_vchi_tv_init(vchi_instance, &vchi_connection, 1);
-			if (vc_tv_get_display_state(&tvstate) == 0) {
+			if (vc_tv_get_display_state(&tvstate) == 0)
+			{
 				HDMI_PROPERTY_PARAM_T property;
 				property.property = HDMI_PROPERTY_PIXEL_CLOCK_TYPE;
 				vc_tv_hdmi_get_property(&property);
@@ -141,16 +143,19 @@ void graphics_subshutdown()
 		vc_dispmanx_update_submit_sync(dispmanxupdate);
 	}
 
-	if (dispmanxresource_amigafb_1 != 0) {
+	if (dispmanxresource_amigafb_1 != 0)
+	{
 		vc_dispmanx_resource_delete(dispmanxresource_amigafb_1);
 		dispmanxresource_amigafb_1 = 0;
 	}
-	if (dispmanxresource_amigafb_2 != 0) {
+	if (dispmanxresource_amigafb_2 != 0)
+	{
 		vc_dispmanx_resource_delete(dispmanxresource_amigafb_2);
 		dispmanxresource_amigafb_2 = 0;
 	}
 
-	if (screen != nullptr) {
+	if (screen != nullptr)
+	{
 		SDL_FreeSurface(screen);
 		screen = nullptr;
 	}
@@ -243,17 +248,17 @@ void updatedisplayarea()
 }
 
 #ifdef USE_SDL1
-void open_sdl1_screen(int width, int height)
+void open_sdl1_screen(int width, int height, VC_DISPMANX_ALPHA_T alpha, uint32_t vc_image_ptr)
 {
 	if (Dummy_prSDLScreen != NULL)
-	{ 
-	  // y.f. 2016-10-13 : free the previous screen surface every time, 
-	  // so we can have fullscreen while running and windowed while in config window.
-	  // Apparently, something somewhere is resetting the screen.
+	{
+		// y.f. 2016-10-13 : free the previous screen surface every time, 
+		// so we can have fullscreen while running and windowed while in config window.
+		// Apparently, something somewhere is resetting the screen.
 		SDL_FreeSurface(Dummy_prSDLScreen);
 		Dummy_prSDLScreen = NULL;
 	}
-	
+
 	if (Dummy_prSDLScreen == NULL)
 		Dummy_prSDLScreen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 
@@ -261,7 +266,7 @@ void open_sdl1_screen(int width, int height)
 	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
 
 	screen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, 16,
-		Dummy_prSDLScreen->format->Rmask,	Dummy_prSDLScreen->format->Gmask, Dummy_prSDLScreen->format->Bmask, Dummy_prSDLScreen->format->Amask);
+		Dummy_prSDLScreen->format->Rmask, Dummy_prSDLScreen->format->Gmask, Dummy_prSDLScreen->format->Bmask, Dummy_prSDLScreen->format->Amask);
 
 	vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
@@ -269,33 +274,33 @@ void open_sdl1_screen(int width, int height)
 	dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 
 	vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
-	vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGB565, prSDLScreen->pitch, prSDLScreen->pixels, &blit_rect);
+	vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGB565, screen->pitch, screen->pixels, &blit_rect);
 	vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
 
 	// 16/9 to 4/3 ratio adaptation.
 	if (currprefs.gfx_correct_aspect == 0)
 	{
-	  // Fullscreen.
+		// Fullscreen.
 		int scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio / 100;
 		int scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio / 100;
-		vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width - scaled_width)/2, (dispmanxdinfo.height - scaled_height)/2,
-			scaled_width,	scaled_height);
+		vc_dispmanx_rect_set(&dst_rect, (dispmanxdinfo.width - scaled_width) / 2, (dispmanxdinfo.height - scaled_height) / 2,
+			scaled_width, scaled_height);
 	}
 	else
 	{
-	  // 4/3 shrink.
+		// 4/3 shrink.
 		int scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio / 100;
 		int scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio / 100;
-		vc_dispmanx_rect_set( &dst_rect, (dispmanxdinfo.width - scaled_width / 16 * 12)/2, (dispmanxdinfo.height - scaled_height)/2,
-			scaled_width/16*12,	scaled_height);
+		vc_dispmanx_rect_set(&dst_rect, (dispmanxdinfo.width - scaled_width / 16 * 12) / 2, (dispmanxdinfo.height - scaled_height) / 2,
+			scaled_width / 16 * 12, scaled_height);
 	}
 
 	if (DispManXElementpresent == 0)
 	{
 		DispManXElementpresent = 1;
 		dispmanxupdate = vc_dispmanx_update_start(0);
-		dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay,	2,               // layer
-			&dst_rect, dispmanxresource_amigafb_1, &src_rect,	DISPMANX_PROTECTION_NONE,	&alpha,
+		dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 2,               // layer
+			&dst_rect, dispmanxresource_amigafb_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 			NULL,             // clamp
 			DISPMANX_NO_ROTATE);
 
@@ -337,7 +342,7 @@ static void open_screen(struct uae_prefs* p)
 		p->gfx_resolution = p->gfx_size.width ? (p->gfx_size.width > 600 ? 1 : 0) : 1;
 		width = p->gfx_size.width ? p->gfx_size.width : 640;
 		height = p->gfx_size.height ? p->gfx_size.height << p->gfx_vresolution : 256;
-		
+
 #ifdef USE_SDL2
 		if (p->scaling_method == -1)
 		{
@@ -356,7 +361,7 @@ static void open_screen(struct uae_prefs* p)
 	graphics_subshutdown();
 
 #ifdef USE_SDL1
-	open_sdl1_screen(width, height);
+	open_sdl1_screen(width, height, alpha, vc_image_ptr);
 	vsync_counter = 0;
 	current_vsync_frame = 2;
 #elif USE_SDL2
@@ -369,7 +374,7 @@ static void open_screen(struct uae_prefs* p)
 		if (p->gfx_vresolution)
 			SDL_RenderSetLogicalSize(renderer, width, height);
 		else
-			SDL_RenderSetLogicalSize(renderer, width, height*2);
+			SDL_RenderSetLogicalSize(renderer, width, height * 2);
 	}
 	Create_SDL_Texture(width, height, depth);
 	updatedisplayarea();
@@ -414,11 +419,11 @@ int check_prefs_changed_gfx()
 #ifdef PANDORA
 	if (currprefs.pandora_hide_idle_led != changed_prefs.pandora_hide_idle_led ||
 		currprefs.pandora_vertical_offset != changed_prefs.pandora_vertical_offset)
-		{
-			currprefs.pandora_hide_idle_led = changed_prefs.pandora_hide_idle_led;
-			currprefs.pandora_vertical_offset = changed_prefs.pandora_vertical_offset;
-			changed = 1;
-		}
+	{
+		currprefs.pandora_hide_idle_led = changed_prefs.pandora_hide_idle_led;
+		currprefs.pandora_vertical_offset = changed_prefs.pandora_vertical_offset;
+		changed = 1;
+	}
 #endif //PANDORA
 	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)
 	{
@@ -439,7 +444,7 @@ int check_prefs_changed_gfx()
 
 int lockscr()
 {
-	if(SDL_LockSurface(screen)== -1)
+	if (SDL_LockSurface(screen) == -1)
 		return 0;
 	init_row_map();
 	return 1;
@@ -480,7 +485,8 @@ void show_screen(int mode)
 	unsigned long start = read_processor_time();
 
 	int wait_till = current_vsync_frame;
-	if (vsync_modulo == 1) {
+	if (vsync_modulo == 1)
+	{
 		// Amiga framerate is equal to host framerate
 		do
 		{
@@ -488,17 +494,21 @@ void show_screen(int mode)
 			current_vsync_frame = vsync_counter;
 		} while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
 
-		if (wait_till + 1 != current_vsync_frame) {
+		if (wait_till + 1 != current_vsync_frame)
+		{
 			// We missed a vsync...
 			next_synctime = 0;
 		}
 	}
-	else {
+	else
+	{
 		// Amiga framerate differs from host framerate
 		unsigned long wait_till_time = (next_synctime != 0) ? next_synctime : last_synctime + time_per_frame;
-		if (current_vsync_frame % vsync_modulo == 0) {
+		if (current_vsync_frame % vsync_modulo == 0)
+		{
 			// Real vsync
-			if (start < wait_till_time) {
+			if (start < wait_till_time)
+			{
 				// We are in time, wait for vsync
 				atomic_set(&vsync_counter, current_vsync_frame);
 				do
@@ -507,13 +517,16 @@ void show_screen(int mode)
 					current_vsync_frame = vsync_counter;
 				} while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
 			}
-			else {
+			else
+			{
 				// Too late for vsync
 			}
 		}
-		else {
+		else
+		{
 			// Estimate vsync by time
-			while (wait_till_time > read_processor_time()) {
+			while (wait_till_time > read_processor_time())
+			{
 				usleep(10);
 			}
 			++current_vsync_frame;
@@ -552,7 +565,8 @@ bool show_screen_maybe(bool show)
 #ifdef USE_SDL1
 void black_screen_now(void)
 {
-	if (screen != NULL) {
+	if (screen != NULL)
+	{
 		SDL_FillRect(screen, NULL, 0);
 		render_screen(true);
 		show_screen(0);
@@ -615,15 +629,16 @@ static int init_colors()
 }
 
 /*
- * Find the colour depth of the display
- */
+* Find the colour depth of the display
+*/
 static int get_display_depth()
 {
 #ifdef USE_SDL1
 	const SDL_VideoInfo *vid_info;
 	int depth = 0;
 
-	if ((vid_info = SDL_GetVideoInfo())) {
+	if ((vid_info = SDL_GetVideoInfo()))
+	{
 		depth = vid_info->vfmt->BitsPerPixel;
 
 		/* Don't trust the answer if it's 16 bits; the display
@@ -643,12 +658,17 @@ int GetSurfacePixelFormat()
 	int depth = get_display_depth();
 	int unit = depth + 1 & 0xF8;
 
-	return (unit == 8 ? RGBFB_CHUNKY
-		        : depth == 15 && unit == 16 ? RGBFB_R5G5B5
-		        : depth == 16 && unit == 16 ? RGBFB_R5G6B5
-		        : unit == 24 ? RGBFB_B8G8R8
-		        : unit == 32 ? RGBFB_R8G8B8A8
-		        : RGBFB_NONE);
+	return (unit == 8
+		? RGBFB_CHUNKY
+		: depth == 15 && unit == 16
+		? RGBFB_R5G5B5
+		: depth == 16 && unit == 16
+		? RGBFB_R5G6B5
+		: unit == 24
+		? RGBFB_B8G8R8
+		: unit == 32
+		? RGBFB_R8G8B8A8
+		: RGBFB_NONE);
 }
 
 int graphics_init(bool mousecapture)
@@ -666,7 +686,8 @@ void graphics_leave()
 	graphics_subshutdown();
 
 #ifdef USE_SDL1
-	if (Dummy_prSDLScreen != NULL) {
+	if (Dummy_prSDLScreen != NULL)
+	{
 		SDL_FreeSurface(Dummy_prSDLScreen);
 		Dummy_prSDLScreen = NULL;
 	}
@@ -696,9 +717,9 @@ static int save_png(SDL_Surface* surface, char* path)
 	FILE* f = fopen(path, "wb");
 	if (!f) return 0;
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-	                                                                   nullptr,
-	                                                                   nullptr,
-	                                                                   nullptr);
+		nullptr,
+		nullptr,
+		nullptr);
 	if (!png_ptr)
 	{
 		fclose(f);
@@ -709,7 +730,7 @@ static int save_png(SDL_Surface* surface, char* path)
 
 	if (!info_ptr)
 	{
-		png_destroy_write_struct(&png_ptr,NULL);
+		png_destroy_write_struct(&png_ptr, NULL);
 		fclose(f);
 		return 0;
 	}
@@ -717,14 +738,14 @@ static int save_png(SDL_Surface* surface, char* path)
 	png_init_io(png_ptr, f);
 
 	png_set_IHDR(png_ptr,
-	             info_ptr,
-	             w,
-	             h,
-	             8,
-	             PNG_COLOR_TYPE_RGB,
-	             PNG_INTERLACE_NONE,
-	             PNG_COMPRESSION_TYPE_DEFAULT,
-	             PNG_FILTER_TYPE_DEFAULT);
+		info_ptr,
+		w,
+		h,
+		8,
+		PNG_COLOR_TYPE_RGB,
+		PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT,
+		PNG_FILTER_TYPE_DEFAULT);
 
 	png_write_info(png_ptr, info_ptr);
 
@@ -770,14 +791,14 @@ static void CreateScreenshot()
 	int w = screen->w;
 	int h = screen->h;
 	current_screenshot = SDL_CreateRGBSurfaceFrom(screen->pixels,
-	                                              w,
-	                                              h,
-	                                              screen->format->BitsPerPixel,
-	                                              screen->pitch,
-	                                              screen->format->Rmask,
-	                                              screen->format->Gmask,
-	                                              screen->format->Bmask,
-	                                              screen->format->Amask);
+		w,
+		h,
+		screen->format->BitsPerPixel,
+		screen->pitch,
+		screen->format->Rmask,
+		screen->format->Gmask,
+		screen->format->Bmask,
+		screen->format->Amask);
 }
 
 static int save_thumb(char* path)
@@ -795,16 +816,17 @@ static int save_thumb(char* path)
 bool vsync_switchmode(int hz)
 {
 	int changed_height = changed_prefs.gfx_size.height;
-		
+
 	if (hz >= 55)
 		hz = 60;
 	else
 		hz = 50;
-	
+
 	if (hz == 50 && currVSyncRate == 60)
 	{
 		// Switch from NTSC -> PAL
-		switch (changed_height) {
+		switch (changed_height)
+		{
 		case 200: changed_height = 240; break;
 		case 216: changed_height = 262; break;
 		case 240: changed_height = 270; break;
@@ -816,7 +838,8 @@ bool vsync_switchmode(int hz)
 	else if (hz == 60 && currVSyncRate == 50)
 	{
 		// Switch from PAL -> NTSC
-		switch (changed_height) {
+		switch (changed_height)
+		{
 		case 200: changed_height = 200; break;
 		case 216: changed_height = 200; break;
 		case 240: changed_height = 200; break;
@@ -825,7 +848,7 @@ bool vsync_switchmode(int hz)
 		case 270: changed_height = 240; break;
 		}
 	}
- 
+
 	if (hz != currVSyncRate)
 	{
 		SetVSyncRate(hz);
@@ -875,12 +898,14 @@ bool target_graphics_buffer_update()
 int picasso_palette(struct MyCLUTEntry *CLUT)
 {
 	int changed = 0;
-	for (int i = 0; i < 256; i++) {
+	for (int i = 0; i < 256; i++)
+	{
 		int r = CLUT[i].Red;
 		int g = CLUT[i].Green;
 		int b = CLUT[i].Blue;
 		uae_u32 v = CONVERT_RGB(r << 16 | g << 8 | b);
-		if (v != picasso_vidinfo.clut[i]) {
+		if (v != picasso_vidinfo.clut[i])
+		{
 			picasso_vidinfo.clut[i] = v;
 			changed = 1;
 		}
@@ -909,7 +934,7 @@ static void sortmodes()
 	int pw = -1, ph = -1;
 	while (DisplayModes[i].depth >= 0)
 		i++;
-	qsort(DisplayModes, i, sizeof (struct PicassoResolution), resolution_compare);
+	qsort(DisplayModes, i, sizeof(struct PicassoResolution), resolution_compare);
 	for (i = 0; DisplayModes[i].depth >= 0; i++)
 	{
 		if (DisplayModes[i].res.height != ph || DisplayModes[i].res.width != pw)
@@ -929,16 +954,16 @@ static void modesList()
 	i = 0;
 	while (DisplayModes[i].depth >= 0)
 	{
-		write_log ("%d: %s (", i, DisplayModes[i].name);
+		write_log("%d: %s (", i, DisplayModes[i].name);
 		j = 0;
 		while (DisplayModes[i].refresh[j] > 0)
 		{
 			if (j > 0)
-			write_log (",");
-			write_log ("%d", DisplayModes[i].refresh[j]);
+				write_log(",");
+			write_log("%d", DisplayModes[i].refresh[j]);
 			j++;
 		}
-		write_log (")\n");
+		write_log(")\n");
 		i++;
 	}
 }
@@ -947,7 +972,7 @@ void picasso_InitResolutions()
 {
 	int count = 0;
 	char tmp[200];
-	int bits[] = {8, 16, 32};
+	int bits[] = { 8, 16, 32 };
 
 	Displays[0].primary = 1;
 	Displays[0].disabled = 0;
@@ -960,7 +985,7 @@ void picasso_InitResolutions()
 	Displays[0].name2 = my_strdup("Display");
 
 	struct MultiDisplay * md1 = Displays;
-	DisplayModes = md1->DisplayModes = xmalloc (struct PicassoResolution, MAX_PICASSO_MODES);
+	DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 	for (int i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++)
 	{
 		for (int bit_idx = 0; bit_idx < 3; ++bit_idx)
@@ -979,7 +1004,7 @@ void picasso_InitResolutions()
 			DisplayModes[count].refresh[2] = 0;
 			DisplayModes[count].colormodes = pixelFormat;
 			sprintf(DisplayModes[count].name, "%dx%d, %d-bit",
-			        DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
+				DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
 
 			count++;
 		}

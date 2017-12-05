@@ -38,7 +38,11 @@ int msg_done = 0;
 gcn::Gui* msg_gui;
 gcn::SDLGraphics* msg_graphics;
 gcn::SDLInput* msg_input;
+#ifdef USE_SDL1
+gcn::contrib::SDLTrueTypeFont* msg_font;
+#elif USE_SDL2
 gcn::SDLTrueTypeFont* msg_font;
+#endif
 SDL_Event msg_event;
 
 gcn::Color msg_baseCol;
@@ -142,7 +146,11 @@ void gui_init(const char* msg)
 	msg_gui->setTop(msg_top);
 
 	TTF_Init();
+#ifdef USE_SDL1
+	msg_font = new gcn::contrib::SDLTrueTypeFont("data/Topaznew.ttf", 14);
+#elif USE_SDL2
 	msg_font = new gcn::SDLTrueTypeFont("data/Topaznew.ttf", 14);
+#endif
 	gcn::Widget::setGlobalFont(msg_font);
 
 	doneActionListener = new DoneActionListener();
@@ -188,7 +196,7 @@ void InGameMessage(const char* msg)
 		msg_gui->draw();
 		// Finally we update the screen.
 #ifdef USE_SDL1
-		SDL_Flip(prSDLScreen);
+		SDL_Flip(screen);
 #elif USE_SDL2
 		if (!drawn && cursor != nullptr)
 		{
