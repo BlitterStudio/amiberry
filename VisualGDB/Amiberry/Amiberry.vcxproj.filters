@@ -607,6 +607,9 @@
     <ClCompile Include="..\..\src\hrtmon.rom.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\archivers\7z\CpuArch.c">
+      <Filter>Source files\archivers\7z</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\blit.h">
@@ -1007,6 +1010,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\zip\unzip.h">
       <Filter>Source files\archivers\zip</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\archivers\7z\CpuArch.h">
+      <Filter>Source files\archivers\7z</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
