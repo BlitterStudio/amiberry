@@ -242,9 +242,11 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->add(sldAmigaHeight, 160, posY);
 	grpAmigaScreen->add(lblAmigaHeightInfo, 160 + sldAmigaHeight->getWidth() + 12, posY);
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
+#ifdef PANDORA
 	grpAmigaScreen->add(lblVertPos, 0, posY);
 	grpAmigaScreen->add(sldVertPos, 160, posY);
 	grpAmigaScreen->add(lblVertPosInfo, 160 + sldVertPos->getWidth() + 12, posY);
+#endif
 	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(lblFSRatio, 0, posY);
 	grpAmigaScreen->add(sldFSRatio, 160, posY);
@@ -278,9 +280,11 @@ void ExitPanelDisplay()
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete lblAmigaHeightInfo;
+#ifdef PANDORA
 	delete lblVertPos;
 	delete sldVertPos;
 	delete lblVertPosInfo;
+#endif
 	delete grpAmigaScreen;
 	delete lblFSRatio;
 	delete sldFSRatio;
