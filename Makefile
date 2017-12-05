@@ -121,15 +121,13 @@ all: $(PROG)
 SDL_CFLAGS = `sdl-config --cflags`
 
 DEFS +=  `xml2-config --cflags`
-DEFS += -DCPU_arm -DARMV6_ASSEMBLY
-DEFS += -DWITH_INGAME_WARNING 
-DEFS += -DUSE_SDL
+DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
 #DEFS += -DWITH_LOGGING
 
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers
 MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 #MORE_CFLAGS += -fuse-ld=gold -fdiagnostics-color=auto
-MORE_CFLAGS += -mstructure-size-boundary=32
+#MORE_CFLAGS += -mstructure-size-boundary=32
 MORE_CFLAGS += -falign-functions=32
 MORE_CFLAGS += -std=gnu++14
 
@@ -167,7 +165,6 @@ SDL_CFLAGS = `sdl2-config --cflags --libs`
 
 DEFS += `xml2-config --cflags`
 DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
-DEFS += -DUSE_SDL
 #DEFS += -DWITH_LOGGING
 
 MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include -Isrc/archivers
