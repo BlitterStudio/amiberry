@@ -1,8 +1,6 @@
 # Amiga emulator for the Raspberry Pi
 =================================
-Warning: this branch is still Work In Progress - it requires a few extra steps to build and some things may not be finished yet! :)
-If you're looking for the latest "stable" version, please use the master branch for now.
-Once this branch is complete, it will be merged back to the master and replace it.
+Warning: this branch is still Work In Progress - If you're looking for the latest "stable" version, please use the master branch for now.
 
 # History (newest first)
 - Added Line Doubling mode for Interlace resolutions
