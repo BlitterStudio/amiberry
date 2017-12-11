@@ -1,5 +1,4 @@
 # Amiga emulator for the Raspberry Pi
-=================================
 
 Warning: this branch is still Work In Progress - If you're looking for the latest "stable" version, please use the master branch for now.
 
