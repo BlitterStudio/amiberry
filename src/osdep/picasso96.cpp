@@ -67,11 +67,7 @@
 #define NOBLITTER_BLIT 0
 #define NOBLITTER_ALL 0
 
-#ifdef AMIBERRY
-static const int defaultHz = 50;
-#else
 static const int defaultHz = 60;
-#endif
 
 static int picasso96_BT = BT_uaegfx;
 static int picasso96_GCT = GCT_Unknown;
