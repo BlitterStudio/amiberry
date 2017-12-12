@@ -39,13 +39,7 @@
 #include "statusline.h"
 #include "native2amiga_api.h"
 
-// 01 = host events
-// 02 = joystick
-// 04 = cia buttons
-// 16 = potgo
-// 32 = vsync
-
-#define COMPA_RESERVED_FLAGS ID_FLAG_INVERT
+#define COMPA_RESERVED_FLAGS (ID_FLAG_INVERT)
 
 #define ID_FLAG_CANRELEASE 0x1000
 #define ID_FLAG_TOGGLED 0x2000
@@ -4928,15 +4922,15 @@ void inputdevice_devicechange (struct uae_prefs *prefs)
 #endif
 
 // set default prefs to all input configuration settings
-void inputdevice_default_prefs (struct uae_prefs *p)
+void inputdevice_default_prefs(struct uae_prefs *p)
 {
-	inputdevice_init ();
+	inputdevice_init();
 
 	p->input_selected_setting = GAMEPORT_INPUT_SETTINGS;
 #if defined (PANDORA) || defined(ANDROID)
-  p->input_joymouse_multiplier = 20;
+	p->input_joymouse_multiplier = 20;
 #else
-  p->input_joymouse_multiplier = 2;
+	p->input_joymouse_multiplier = 2;
 #endif
 	p->input_joymouse_deadzone = 33;
 	p->input_joystick_deadzone = 33;
@@ -4944,10 +4938,10 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_analog_joystick_mult = 15;
 	p->input_analog_joystick_offset = -1;
 	p->input_mouse_speed = 100;
-  p->input_autofire_linecnt = 8 * 312;
+	p->input_autofire_linecnt = 8 * 312;
 	p->input_keyboard_type = 0;
 	keyboard_default = keyboard_default_table[p->input_keyboard_type];
-	inputdevice_default_kb_all (p);
+	inputdevice_default_kb_all(p);
 }
 
 // set default keyboard and keyboard>joystick layouts
@@ -5864,8 +5858,6 @@ void setjoystickstate (int joy, int axis, int state, int max)
 		v1 = 0;
 	if (v2 < deadzone && v2 > -deadzone)
 		v2 = 0;
-
-	//write_log (_T("%d:%d new=%d old=%d state=%d max=%d\n"), joy, axis, v1, v2, state, max);
 
 	if (!joysticks[joy].enabled) {
 		if (v1 > 0)

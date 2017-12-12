@@ -709,6 +709,7 @@ static int patch_residents (uae_u8 *kickmemory, int size)
       }	
   	}
   }
+
   return patched;
 }
 
@@ -1032,7 +1033,6 @@ void map_overlay (int chip)
 {
   int size;
   addrbank *cb;
-  
   int currPC = m68k_getpc();
 
   size = chipmem_bank.allocated_size >= 0x180000 ? (chipmem_bank.allocated_size >> 16) : 32;
@@ -1166,7 +1166,6 @@ void memory_reset (void)
   int bnk, bnk_end;
 	bool gayleorfatgary;
 
-
 	need_hardreset = false;
 	/* Use changed_prefs, as m68k_reset is called later.  */
 	if (last_address_space_24 != changed_prefs.address_space_24)
@@ -1260,7 +1259,6 @@ void memory_reset (void)
 		map_banks (&gayle2_bank, 0xDD, 2, 0);
 	}
 #endif
-
 	if (a3000lmem_bank.baseaddr)
 		map_banks(&a3000lmem_bank, a3000lmem_bank.start >> 16, a3000lmem_bank.allocated_size >> 16, 0);
 	if (a3000hmem_bank.baseaddr)
