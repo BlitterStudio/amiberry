@@ -4290,30 +4290,30 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
   return !! _tcschr (arg_required, c);
 }
 
-void cfgfile_addcfgparam (TCHAR *line)
+void cfgfile_addcfgparam(TCHAR *line)
 {
-  struct strlist *u;
-  TCHAR line1b[CONFIG_BLEN], line2b[CONFIG_BLEN];
+	struct strlist *u;
+	TCHAR line1b[CONFIG_BLEN], line2b[CONFIG_BLEN];
 
-  if (!line) {
-	  struct strlist **ps = &temp_lines;
-	  while (*ps) {
-	    struct strlist *s = *ps;
-	    *ps = s->next;
-	    xfree (s->value);
-	    xfree (s->option);
-	    xfree (s);
-  	}
-  	temp_lines = 0;
-  	return;
-  }
-  if (!cfgfile_separate_line (line, line1b, line2b))
-  	return;
-  u = xcalloc (struct strlist, 1);
-  u->option = my_strdup(line1b);
-  u->value = my_strdup(line2b);
-  u->next = temp_lines;
-  temp_lines = u;
+	if (!line) {
+		struct strlist **ps = &temp_lines;
+		while (*ps) {
+			struct strlist *s = *ps;
+			*ps = s->next;
+			xfree(s->value);
+			xfree(s->option);
+			xfree(s);
+		}
+		temp_lines = 0;
+		return;
+	}
+	if (!cfgfile_separate_line(line, line1b, line2b))
+		return;
+	u = xcalloc(struct strlist, 1);
+	u->option = my_strdup(line1b);
+	u->value = my_strdup(line2b);
+	u->next = temp_lines;
+	temp_lines = u;
 }
 
 static int cmdlineparser (const TCHAR *s, TCHAR *outp[], int max)
@@ -4659,7 +4659,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->gfx_size.width = 640; //TODO: Default WinUAE prefs indicate this should be 720x568
 	p->gfx_size.height = 256;
 	p->gfx_resolution = RES_HIRES;
-	p->gfx_vresolution = VRES_DOUBLE;
+	p->gfx_vresolution = VRES_NONDOUBLE;
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;
