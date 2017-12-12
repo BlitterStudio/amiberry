@@ -892,6 +892,7 @@ static bool if_no_fpu(void)
 {
   return (regs.pcr & 2) || currprefs.fpu_model <= 0;
 }
+
 static bool fault_if_no_fpu (uae_u16 opcode, uae_u16 extra, uaecptr ea, uaecptr oldpc)
 {
   if (if_no_fpu()) {
@@ -1921,6 +1922,7 @@ void fpuop_restore (uae_u32 opcode)
 	uae_u32 d;
 
 	regs.fp_exception = false;
+
 #if DEBUG_FPP
 	if (!isinrom ())
 		write_log (_T("frestore_opp at %08x\n"), m68k_getpc ());

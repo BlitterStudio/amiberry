@@ -24,10 +24,7 @@ void console_out (const TCHAR *format,...)
     printf(buffer);
 }
 
-void writeconsole(const TCHAR *buffer)
-{
-	
-}
+#ifdef WITH_LOGGING
 
 void write_log (const char *format,...)
 {
@@ -46,6 +43,8 @@ void write_log (const char *format,...)
     va_end (parms);
 }
 
+#endif
+
 void jit_abort (const TCHAR *format,...)
 {
     static int happened;
@@ -55,7 +54,7 @@ void jit_abort (const TCHAR *format,...)
     va_start (parms, format);
 
     count = vsnprintf (buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
-	writeconsole(buffer);
+    write_log (buffer);
     va_end (parms);
     if (!happened)
         gui_message ("JIT: Serious error:\n%s", buffer);

@@ -342,19 +342,14 @@ extern void mallocemu_free(void *ptr);
 #define ASM_SYM_FOR_FUNC(a)
 #endif
 
-#ifdef UAE_CONSOLE
+#ifndef WITH_LOGGING
 #undef write_log
-#define write_log write_log_standard
-#endif
-
-#if __GNUC__ - 1 > 1 || __GNUC_MINOR__ - 1 > 6
-extern void write_log(const TCHAR *, ...) __attribute__((format(printf, 1, 2)));
-extern void write_log(char *, ...) __attribute__((format(printf, 1, 2)));
+#define write_log(FORMATO, RESTO...)
+#define write_log_standard(FORMATO, RESTO...)
 #else
 extern void write_log(const TCHAR *, ...);
-extern void write_log(const char *, ...);
 #endif
-extern void console_out(const TCHAR *, ...);
+
 extern void gui_message(const TCHAR *, ...);
 
 #ifndef O_BINARY

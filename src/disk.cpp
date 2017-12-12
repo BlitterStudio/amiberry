@@ -1343,7 +1343,7 @@ static int drive_running (drive * drv)
   return !drv->motoroff;
 }
 
-void DISK_motordelay_func(uae_u32 v)
+static void motordelay_func (uae_u32 v)
 {
   floppy[v].motordelay = 0;
 }
@@ -1359,7 +1359,7 @@ static void drive_motor (drive * drv, bool off)
 	  drv->dskready_down_time = DSKREADY_DOWN_TIME * 312 + (uaerand() & 511);
 	  if (currprefs.cpu_model <= 68010 && currprefs.m68k_speed == 0) {
 	    drv->motordelay = 1;
-	    event2_newevent(ev2_disk_motor0 + (drv - floppy), 30, drv - floppy);
+			event2_newevent2 (30, drv - floppy, motordelay_func);
 	  }
   }
   drv->motoroff = off;

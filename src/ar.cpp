@@ -1069,6 +1069,19 @@ void action_replay_reset (bool hardreset, bool keyboardreset)
 	}
 }
 
+static void action_replay_cia_access_delay(uae_u32 v)
+{
+	if (v) {
+		armode_read = ARMODE_WRITE_BFD100;
+		action_replay_flag = ACTION_REPLAY_ACTIVATE;
+		set_special(SPCFLAG_ACTION_REPLAY);
+	} else {
+		armode_read = ARMODE_READ_BFE001;
+		action_replay_flag = ACTION_REPLAY_ACTIVATE;
+		set_special(SPCFLAG_ACTION_REPLAY);
+	}
+}
+
 void action_replay_cia_access(bool write)
 {
 	if (armodel < 2)
@@ -1078,13 +1091,9 @@ void action_replay_cia_access(bool write)
 	if (action_replay_flag == ACTION_REPLAY_INACTIVE)
 		return;
 	if ((armode_write & ARMODE_ACTIVATE_BFE001) && !write) {
-		armode_read = ARMODE_READ_BFE001;
-		action_replay_flag = ACTION_REPLAY_ACTIVATE;
-		set_special (SPCFLAG_ACTION_REPLAY);
+		event2_newevent_xx(-1, 1, write, action_replay_cia_access_delay);
 	} else if ((armode_write & ARMODE_ACTIVATE_BFD100) && write) {
-		armode_read = ARMODE_WRITE_BFD100;
-		action_replay_flag = ACTION_REPLAY_ACTIVATE;
-		set_special (SPCFLAG_ACTION_REPLAY);
+		event2_newevent_xx(-1, 1, write, action_replay_cia_access_delay);
 	}
 }
 

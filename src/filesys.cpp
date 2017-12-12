@@ -7326,7 +7326,7 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		// boot rom copy done
 		return 0;
 	} else if (mode == 21) {
-		// keymap hook (nur für Retroplatform relevant)
+		// keymap hook (only for Retroplatform)
 		return 1;
   } else if (mode == 101) {
   } else if (mode == 102) {

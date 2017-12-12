@@ -458,7 +458,7 @@ static void CIAB_tod_inc (bool irq)
 	ciab_checkalarm (true, irq);
 }
 
-void CIAB_tod_inc_event (uae_u32 v)
+static void CIAB_tod_inc_event (uae_u32 v)
 {
 	if (ciab_tod_event_state != 2)
 		return;
@@ -479,7 +479,7 @@ static void CIAB_tod_check (void)
 	}
 	// Not yet, add event to guarantee exact TOD inc position
 	ciab_tod_event_state = 2; // event active
-	event2_newevent(ev2_ciab_tod, -hpos, 0);
+	event2_newevent_xx (-1, -hpos, 0, CIAB_tod_inc_event);
 }
 
 void CIAB_tod_handler (int hoffset)
@@ -491,7 +491,7 @@ void CIAB_tod_handler (int hoffset)
 	if (checkalarm ((ciabtod + 1) & 0xffffff, ciabalarm, true)) {
 		// causes interrupt on this line, add event
 		ciab_tod_event_state = 2; // event active
-		event2_newevent(ev2_ciab_tod, ciab_tod_hoffset, 0);
+		event2_newevent_xx (-1, ciab_tod_hoffset, 0, CIAB_tod_inc_event);
 	}
 }
 
@@ -548,7 +548,7 @@ void CIA_vsync_prehandler (void)
 	}
 }
 
-void CIAA_tod_handler (uae_u32 v)
+static void CIAA_tod_handler (uae_u32 v)
 {
 	ciaatod++;
   ciaatod &= 0xFFFFFF;
@@ -559,7 +559,7 @@ void CIAA_tod_inc (int cycles)
 {
 	if (!ciaatodon)
 		return;
-	event2_newevent(ev2_ciaa_tod, cycles + TOD_INC_DELAY, 0);
+	event2_newevent_xx (-1, cycles + TOD_INC_DELAY, 0, CIAA_tod_handler);
 }
 
 STATIC_INLINE void check_led (void)

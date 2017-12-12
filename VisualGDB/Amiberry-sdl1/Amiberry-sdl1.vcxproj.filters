@@ -409,9 +409,6 @@
     <ClInclude Include="..\..\src\include\autoconf.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\blit.h">
-      <Filter>Source files\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\blitter.h">
       <Filter>Source files\include</Filter>
     </ClInclude>

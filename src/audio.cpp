@@ -825,9 +825,14 @@ static int isirq (int nr)
   return INTREQR() & (0x80 << nr);
 }
 
-static void setirq (int nr, int which)
+static void audio_setirq_event(uae_u32 nr)
 {
   INTREQ_0 (0x8000 | (0x80 << nr));
+}
+
+static void setirq (int nr, int which)
+{
+		audio_setirq_event(nr);
 }
 
 static void newsample (int nr, sample8_t sample)
@@ -1380,15 +1385,15 @@ void AUDxDAT (int nr, uae_u16 v)
 	cdp->dat_written = false;
 }
 
-void audio_dmal_do (int nr, bool reset)
+uaecptr audio_getpt (int nr, bool reset)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
-  uae_u16 dat = chipmem_wget_indirect (cdp->pt);
+	uaecptr p = cdp->pt;
   cdp->pt += 2;
 	if (reset)
 		cdp->pt = cdp->lc;
 	cdp->ptx_tofetch = false;
-	AUDxDAT (nr, dat);
+	return p;
 }
 
 void AUDxLCH (int nr, uae_u16 v)

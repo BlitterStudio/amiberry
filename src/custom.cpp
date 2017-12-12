@@ -906,7 +906,7 @@ STATIC_INLINE void maybe_first_bpl1dat (int hpos)
 	}
 }
 
-STATIC_INLINE void fetch (int nr, int fm, bool modulo, int hpos)
+static void fetch (int nr, int fm, bool modulo, int hpos)
 {
 	if (nr < bplcon0_planes_limit) {
     uaecptr p;
@@ -3169,7 +3169,11 @@ static void compute_framesync (void)
   lof_changing = 0;
 
   if (beamcon0 & 0x80) {
+static bool warned = false;
+    if(!warned) {
+      warned = true;
     gui_message(_T("Variable beam counter comparator enabled. Not supported in Amiberry."));
+    }
   }
 
 	memset (line_decisions, 0, sizeof line_decisions);
@@ -3262,9 +3266,11 @@ static void init_hz (bool checkvposw)
 
   if (beamcon0 & 0x80) {
 		// programmable scanrates (ECS Agnus)
-#ifdef WITH_INGAME_WARNING
-    InGameMessage("Programmable scanrates (ECS Agnus) not supported.");
-#endif
+    static bool warned = false;
+    if(!warned) {
+      warned = true;
+      InGameMessage("Programmable scanrates (ECS Agnus) not supported.");
+    }
   }
 	if (maxvpos_nom >= MAXVPOS)
 		maxvpos_nom = MAXVPOS;
@@ -5704,74 +5710,80 @@ static void vsync_handler_post (void)
 	init_hardware_frame ();
 }
 
+static void events_dmal (int);
 static uae_u16 dmal, dmal_hpos;
 
-static void dmal_func2 (void)
+static void dmal_emu (uae_u32 v)
 {
-  event_remevent(ev_dmal);
-
 	// Disk and Audio DMA bits are ignored by Agnus, Agnus only checks DMAL and master bit
 	if (!(dmacon & DMA_MASTER))
 		return;
-
-	while (dmal) {
-		if (dmal & 3) {
-    	if (dmal_hpos >= 6) {
-    		int nr = (dmal_hpos - 6) >> 1;
-    		audio_dmal_do (nr, (dmal & 2) ? true : false);
-    	} else {
-    		uae_u16 dat;
-    		int w = (dmal & 2) ? 1 : 0;
-    		uaecptr pt = disk_getpt ();
-    		// disk_fifostatus() needed in >100% disk speed modes
-    		if (w) {
-    			// write to disk
-    			if (disk_fifostatus () <= 0) {
-    				dat = chipmem_wget_indirect (pt);
-		        last_custom_value1 = dat;
-    				DSKDAT (dat);
-    			}
-    		} else {
-    			// read from disk
-    			if (disk_fifostatus () >= 0) {
-    				dat = DSKDATR ();
-    				chipmem_wput_indirect (pt, dat);
-    			}
-    		}
-    	}
-    }
+	int hpos = current_hpos ();
+	if (v >= 6) {
+		v -= 6;
+		int nr = v / 2;
+		uaecptr pt = audio_getpt (nr, (v & 1) != 0);
+		uae_u16 dat = chipmem_wget_indirect (pt);
+		last_custom_value1 = dat;
+		AUDxDAT (nr, dat);
+	} else {
+		uae_u16 dat;
+		int w = v & 1;
+		uaecptr pt = disk_getpt ();
+		// disk_fifostatus() needed in >100% disk speed modes
+		if (w) {
+			// write to disk
+			if (disk_fifostatus () <= 0) {
+				dat = chipmem_wget_indirect (pt);
+        last_custom_value1 = dat;
+				DSKDAT (dat);
+			}
+		} else {
+			// read from disk
+			if (disk_fifostatus () >= 0) {
+				dat = DSKDATR ();
+				chipmem_wput_indirect (pt, dat);
+			}
+		}
+	}
+}
 			  
+static void dmal_func (uae_u32 v)
+{
+	dmal_emu (v);
+	events_dmal (0);
+}
+
+static void dmal_func2 (uae_u32 v)
+{
+	while (dmal) {
+		if (dmal & 3)
+			dmal_emu (dmal_hpos + ((dmal & 2) ? 1 : 0));
 		dmal_hpos += 2;
 		dmal >>= 2;
 	}
 }
 
-STATIC_INLINE void events_dmal (void)
+static void events_dmal (int hp)
 {
+	if (!dmal)
+		return;
 	if (currprefs.cachesize) {
-		dmal_func2 ();
+		dmal_func2 (0);
 	} else {
-		event_newevent (ev_dmal, 7);
+		event2_newevent2 (hp, 13, dmal_func2);
 	}
 }
 
 static void events_dmal_hsync (void)
 {
-  uae_u16 dmal_disk = disk_dmal ();
-  
 	dmal = audio_dmal ();
-	if (!dmal && !dmal_disk)
+	dmal <<= 6;
+	dmal |= disk_dmal ();
+	if (!dmal)
 		return;
-
-	if(dmal_disk)
-  {
-  	dmal_hpos = 0;
-  	dmal <<= 6;
-	  dmal |= dmal_disk;
-  }
-  else
-  	dmal_hpos = 6;
-	events_dmal ();
+	dmal_hpos = 0;
+	events_dmal (7);
 }
 
 static bool is_custom_vsync (void)
@@ -6083,16 +6095,9 @@ void init_eventtab (void)
 	eventtab[ev_copper].active = 0;
   eventtab[ev_misc].handler = MISC_handler;
 	eventtab[ev_audio].handler = audio_evhandler;
-  eventtab[ev_blitter].handler = blitter_handler;
-  eventtab[ev_dmal].handler = dmal_func2;
 
+	eventtab2[ev2_blitter].handler = blitter_handler;
   eventtab2[ev2_disk].handler = DISK_handler;
-  eventtab2[ev2_ciaa_tod].handler = CIAA_tod_handler;
-  eventtab2[ev2_ciab_tod].handler = CIAB_tod_inc_event;
-  eventtab2[ev2_disk_motor0].handler = DISK_motordelay_func;
-  eventtab2[ev2_disk_motor1].handler = DISK_motordelay_func;
-  eventtab2[ev2_disk_motor2].handler = DISK_motordelay_func;
-  eventtab2[ev2_disk_motor3].handler = DISK_motordelay_func;
 
 	events_schedule ();
 }

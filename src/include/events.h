@@ -54,13 +54,13 @@ struct ev2
 
 enum {
     ev_copper, 
-    ev_cia, ev_audio, ev_blitter, ev_dmal, ev_misc, ev_hsync,
+    ev_cia, ev_audio, ev_misc, ev_hsync,
     ev_max
 };
 
 enum {
-    ev2_disk, ev2_ciaa_tod, ev2_ciab_tod, ev2_disk_motor0, ev2_disk_motor1, ev2_disk_motor2, ev2_disk_motor3,
-    ev2_max
+    ev2_blitter, ev2_disk, ev2_misc,
+    ev2_max = 12
 };
 
 extern int pissoff_value;
@@ -111,31 +111,30 @@ STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 }
 
 extern void MISC_handler(void);
+extern void event2_newevent_xx (int no, evt t, uae_u32 data, evfunc2 func);
+extern void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func);
+
+STATIC_INLINE void event2_newevent_x (int no, evt t, uae_u32 data, evfunc2 func)
+{
+	if (((int)t) <= 0) {
+		func (data);
+		return;
+	}
+	event2_newevent_xx (no, t * CYCLE_UNIT, data, func);
+}
 
 STATIC_INLINE void event2_newevent (int no, evt t, uae_u32 data)
 {
-	eventtab2[no].active = true;
-  eventtab2[no].evtime = (t * CYCLE_UNIT) + get_cycles();
-  eventtab2[no].data = data;
-  MISC_handler();
+	event2_newevent_x (no, t, data, eventtab2[no].handler);
+}
+STATIC_INLINE void event2_newevent2 (evt t, uae_u32 data, evfunc2 func)
+{
+	event2_newevent_x (-1, t, data, func);
 }
 
 STATIC_INLINE void event2_remevent (int no)
 {
 	eventtab2[no].active = 0;
-}
-
-STATIC_INLINE void event_newevent (int no, evt t)
-{
-  evt ct = get_cycles();
-	eventtab[no].active = true;
-  eventtab[no].evtime = ct + t * CYCLE_UNIT;
-  events_schedule();
-}
-
-STATIC_INLINE void event_remevent (int no)
-{
-	eventtab[no].active = 0;
 }
 
 #endif /* UAE_EVENTS_H */

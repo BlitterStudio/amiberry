@@ -109,7 +109,6 @@
     <ClInclude Include="..\..\src\include\ar.h" />
     <ClInclude Include="..\..\src\include\audio.h" />
     <ClInclude Include="..\..\src\include\autoconf.h" />
-    <ClInclude Include="..\..\src\include\blit.h" />
     <ClInclude Include="..\..\src\include\blitter.h" />
     <ClInclude Include="..\..\src\include\blkdev.h" />
     <ClInclude Include="..\..\src\include\bsdsocket.h" />
