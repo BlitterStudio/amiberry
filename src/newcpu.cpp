@@ -1681,69 +1681,69 @@ bool is_hardreset(void)
 	return cpu_hardreset;
 }
 
-void m68k_go (int may_quit)
+void m68k_go(int may_quit)
 {
-  int hardboot = 1;
+	int hardboot = 1;
 	int startup = 1;
 
-  if (in_m68k_go || !may_quit) {
-		write_log (_T("Bug! m68k_go is not reentrant.\n"));
-	  abort ();
-  }
+	if (in_m68k_go || !may_quit) {
+		write_log(_T("Bug! m68k_go is not reentrant.\n"));
+		abort();
+	}
 
-  reset_frame_rate_hack ();
-  update_68k_cycles ();
+	reset_frame_rate_hack();
+	update_68k_cycles();
 
 	cpu_prefs_changed_flag = 0;
-  in_m68k_go++;
-  for (;;) {
-  	void (*run_func)(void);
+	in_m68k_go++;
+	for (;;) {
+		void(*run_func)(void);
 
-  	if (quit_program > 0) {
+		if (quit_program > 0) {
 			int restored = 0;
 			bool cpu_keyboardreset = quit_program == UAE_RESET_KEYBOARD;
 			cpu_hardreset = ((quit_program == UAE_RESET_HARD ? 1 : 0) | hardboot) != 0;
 
 			if (quit_program == UAE_QUIT)
-    		break;
+				break;
 
 			hsync_counter = 0;
-	    quit_program = 0;
-	    hardboot = 0;
+			quit_program = 0;
+			hardboot = 0;
 
 #ifdef SAVESTATE
 			if (savestate_state == STATE_DORESTORE)
 				savestate_state = STATE_RESTORE;
-	    if (savestate_state == STATE_RESTORE)
-		    restore_state (savestate_fname);
+			if (savestate_state == STATE_RESTORE)
+				restore_state(savestate_fname);
 #endif
 			prefs_changed_cpu();
-      build_cpufunctbl ();
-	    set_x_funcs ();
-			set_cycles (0);
-	    custom_reset (cpu_hardreset != 0, cpu_keyboardreset);
-			m68k_reset (cpu_hardreset != 0);
-	    if (cpu_hardreset) {
-				memory_clear ();
-				write_log (_T("hardreset, memory cleared\n"));
-	    }
+			build_cpufunctbl();
+			set_x_funcs();
+			set_cycles(0);
+			custom_reset(cpu_hardreset != 0, cpu_keyboardreset);
+			m68k_reset(cpu_hardreset != 0);
+			if (cpu_hardreset) {
+				memory_clear();
+				write_log(_T("hardreset, memory cleared\n"));
+			}
 			cpu_hardreset = false;
 #ifdef SAVESTATE
-	    /* We may have been restoring state, but we're done now.  */
-	    if (isrestore ()) {
-		    savestate_restore_finish ();
+			/* We may have been restoring state, but we're done now.  */
+			if (isrestore()) {
+				savestate_restore_finish();
 				startup = 1;
 				restored = 1;
-	    }
+			}
 #endif
-	    if (currprefs.produce_sound == 0)
-		    eventtab[ev_audio].active = 0;
-			m68k_setpc_normal (regs.pc);
-			check_prefs_changed_audio ();
+			if (currprefs.produce_sound == 0)
+				eventtab[ev_audio].active = 0;
+			m68k_setpc_normal(regs.pc);
+			check_prefs_changed_audio();
 
 			if (!restored || hsync_counter == 0)
-				savestate_check ();
-	  }
+				savestate_check();
+		}
 
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			if (cpu_prefs_changed_flag & 1) {
@@ -1753,22 +1753,22 @@ void m68k_go (int may_quit)
 				build_cpufunctbl();
 				m68k_setpc_normal(pc);
 				fill_prefetch();
-      }
+			}
 			if (cpu_prefs_changed_flag & 2) {
 				fixup_cpu(&changed_prefs);
 				currprefs.m68k_speed = changed_prefs.m68k_speed;
 				update_68k_cycles();
 			}
 			cpu_prefs_changed_flag = 0;
-      set_speedup_values();
+			set_speedup_values();
 		}
 
 		set_x_funcs();
-	  if (startup) {
-		  custom_prepare ();
-			protect_roms (true);
+		if (startup) {
+			custom_prepare();
+			protect_roms(true);
 		}
-	  startup = 0;
+		startup = 0;
 		unset_special(SPCFLAG_MODE_CHANGE);
 
 		if (!regs.halted) {
@@ -1780,29 +1780,29 @@ void m68k_go (int may_quit)
 			}
 		}
 		if (regs.halted) {
-			cpu_halt (regs.halted);
+			cpu_halt(regs.halted);
 			if (regs.halted < 0) {
 				haltloop();
-			  continue;
-      }
+				continue;
+			}
 		}
 
-    run_func = 
-      currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
+		run_func =
+			currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
 #ifdef JIT
-      currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
+			currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
 #endif
-      m68k_run_2;
-	  run_func ();
-  }
-	protect_roms (false);
+			m68k_run_2;
+		run_func();
+	}
+	protect_roms(false);
 
-  // Prepare for a restart: reset pc
-  regs.pc = 0;
-  regs.pc_p = NULL;
-  regs.pc_oldp = NULL;
+	// Prepare for a restart: reset pc
+	regs.pc = 0;
+	regs.pc_p = NULL;
+	regs.pc_oldp = NULL;
 
-  in_m68k_go--;
+	in_m68k_go--;
 }
 
 #ifdef SAVESTATE

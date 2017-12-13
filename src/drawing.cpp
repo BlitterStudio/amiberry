@@ -1484,12 +1484,12 @@ void init_row_map (void)
 	oldpitch = gfxvidinfo.drawbuffer.rowbytes;
 }
 
-static void init_aspect_maps (void)
+static void init_aspect_maps(void)
 {
-  int i, maxl, h;
+	int i, h;
 
 	linedbl = currprefs.gfx_vresolution;
-	maxl = (MAXVPOS + 1) << linedbl;
+	int maxl = (MAXVPOS + 1) << linedbl;
 	min_ypos_for_screen = minfirstline << linedbl;
 	max_drawn_amiga_line = -1;
 
@@ -1522,10 +1522,9 @@ static void init_aspect_maps (void)
 		native2amiga_line_map[i] = -1;
 
 	for (i = maxl - 1; i >= min_ypos_for_screen; i--) {
-		int j;
 		if (amiga2aspect_line_map[i] == -1)
 			continue;
-		for (j = amiga2aspect_line_map[i]; j < h && native2amiga_line_map[j] == -1; j++)
+		for (int j = amiga2aspect_line_map[i]; j < h && native2amiga_line_map[j] == -1; j++)
 			native2amiga_line_map[j] = (i + VERTICAL_OFFSET) >> linedbl;
 	}
 }
