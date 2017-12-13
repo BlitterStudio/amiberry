@@ -366,6 +366,11 @@ void updatedisplayarea()
 static void open_screen(struct uae_prefs* p)
 {
 	int depth = 16;
+	if (max_uae_width == 0 || max_uae_height == 0)
+	{
+		max_uae_width = 1920;
+		max_uae_height = 1080;
+	}
 
 #ifdef USE_SDL1
 	current_resource_amigafb = 0;
