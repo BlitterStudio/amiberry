@@ -631,7 +631,7 @@ namespace widgets
 				// ------------------------------------------------
 				uae_quit();
 				gui_running = false;
-				host_shutdown();
+				target_shutdown();
 			}
 
 			if (actionEvent.getSource() == cmdQuit)

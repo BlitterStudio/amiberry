@@ -1043,7 +1043,7 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 	return 0;
 }
 
-static void target_shutdown(void)
+void target_shutdown(void)
 {
 	system("sudo poweroff");
 }
