@@ -1462,7 +1462,7 @@ void init_row_map (void)
 {
 	static uae_u8 *oldbufmem;
 	static int oldheight, oldpitch;
-	int i, j;
+	int i;
 
 	if (!row_map) {
 		row_map = xmalloc(uae_u8*, max_uae_height + 1);
@@ -1472,7 +1472,7 @@ void init_row_map (void)
 		oldheight == gfxvidinfo.drawbuffer.outheight &&
 		oldpitch == gfxvidinfo.drawbuffer.rowbytes)
 		return;
-	j = oldheight == 0 ? max_uae_height : oldheight;
+	int j = oldheight == 0 ? max_uae_height : oldheight;
 	for (i = gfxvidinfo.drawbuffer.outheight; i < max_uae_height + 1 && i < j + 1; i++) {
 		row_map[i] = row_tmp;
 	}
@@ -1936,13 +1936,11 @@ static void init_drawing_frame (void)
 	drawing_color_matches = -1;
 }
 
-static void draw_status_line (int line, int statusy)
+static void draw_status_line(int line, int statusy)
 {
-  uae_u8 *buf;
-
-  xlinebuffer = row_map[line];
-  buf = xlinebuffer;
-  draw_status_line_single (buf, statusy, gfxvidinfo.drawbuffer.outwidth);
+	xlinebuffer = row_map[line];
+	uae_u8 *buf = xlinebuffer;
+	draw_status_line_single(buf, statusy, gfxvidinfo.drawbuffer.outwidth);
 }
 
 static void partial_draw_frame(void)
@@ -1956,10 +1954,10 @@ static void partial_draw_frame(void)
 
 		struct vidbuffer *vb = &gfxvidinfo.drawbuffer;
 		for (; next_line_to_render < max_ypos_thisframe; ++next_line_to_render) {
-			int i1 = next_line_to_render + min_ypos_for_screen;
-			int line = next_line_to_render + thisframe_y_adjust_real;
-			int whereline = amiga2aspect_line_map[i1];
-			int wherenext = amiga2aspect_line_map[i1 + 1];
+			const int i1 = next_line_to_render + min_ypos_for_screen;
+			const int line = next_line_to_render + thisframe_y_adjust_real;
+			const int whereline = amiga2aspect_line_map[i1];
+			const int wherenext = amiga2aspect_line_map[i1 + 1];
 
 			if (whereline >= vb->outheight || line >= linestate_first_undecided)
 				break;
@@ -1992,10 +1990,10 @@ static void finish_drawing_frame (void)
 	}
 
 	for (i = next_line_to_render; i < max_ypos_thisframe; i++) {
-		int i1 = i + min_ypos_for_screen;
-		int line = i + thisframe_y_adjust_real;
-		int whereline = amiga2aspect_line_map[i1];
-		int wherenext = amiga2aspect_line_map[i1 + 1];
+		const int i1 = i + min_ypos_for_screen;
+		const int line = i + thisframe_y_adjust_real;
+		const int whereline = amiga2aspect_line_map[i1];
+		const int wherenext = amiga2aspect_line_map[i1 + 1];
 
 		if (whereline >= vb->outheight || line >= linestate_first_undecided)
 			break;
@@ -2027,76 +2025,76 @@ void check_prefs_picasso(void)
 {
 #ifdef PICASSO96
 	if (picasso_on)
-		picasso_refresh ();
+		picasso_refresh();
 
-  if (picasso_requested_on == picasso_on && !picasso_requested_forced_on)
-  	return;
+	if (picasso_requested_on == picasso_on && !picasso_requested_forced_on)
+		return;
 
 	picasso_requested_forced_on = false;
-  picasso_on = picasso_requested_on;
+	picasso_on = picasso_requested_on;
 
-  if (!picasso_on)
-  	clear_inhibit_frame (IHF_PICASSO);
-  else
-    set_inhibit_frame (IHF_PICASSO);
+	if (!picasso_on)
+		clear_inhibit_frame(IHF_PICASSO);
+	else
+		set_inhibit_frame(IHF_PICASSO);
 
-  gfx_set_picasso_state (picasso_on);
-  picasso_enablescreen (picasso_requested_on);
+	gfx_set_picasso_state(picasso_on);
+	picasso_enablescreen(picasso_requested_on);
 
-  notice_new_xcolors ();
-  count_frame ();
+	notice_new_xcolors();
+	count_frame();
 #endif
 }
 
-bool vsync_handle_check (void)
+bool vsync_handle_check(void)
 {
-  int changed = check_prefs_changed_gfx ();
-  if (changed) {
-    reset_drawing ();
-    notice_new_xcolors ();
-  }
+	const int changed = check_prefs_changed_gfx();
+	if (changed) {
+		reset_drawing();
+		notice_new_xcolors();
+	}
 	device_check_config();
 	return changed != 0;
 }
 
-void vsync_handle_redraw (void)
+void vsync_handle_redraw(void)
 {
 	if (framecnt == 0) {
-    if(render_tid) {
-      while(render_thread_busy)
-        sleep_millis(1);
-      write_comm_pipe_u32 (render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
-      uae_sem_wait (&render_sem);
-    }
-  }
+		if (render_tid) {
+			while (render_thread_busy)
+				sleep_millis(1);
+			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
+			uae_sem_wait(&render_sem);
+		}
+	}
 
 	if (quit_program < 0) {
-    if(render_tid) {
-      while(render_thread_busy)
-        sleep_millis(1);
-      write_comm_pipe_u32 (render_pipe, RENDER_SIGNAL_QUIT, 1);
-      while(render_tid != 0) {
-        sleep_millis(10);
-      }
-      destroy_comm_pipe(render_pipe);
-      xfree(render_pipe);
-      render_pipe = 0;
-      uae_sem_destroy(&render_sem);
-      render_sem = 0;
-    }
+		if (render_tid) {
+			while (render_thread_busy)
+				sleep_millis(1);
+			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
+			while (render_tid != 0) {
+				sleep_millis(10);
+			}
+			destroy_comm_pipe(render_pipe);
+			xfree(render_pipe);
+			render_pipe = 0;
+			uae_sem_destroy(&render_sem);
+			render_sem = 0;
+		}
 
 		quit_program = -quit_program;
-    set_inhibit_frame (IHF_QUIT_PROGRAM);
+		set_inhibit_frame(IHF_QUIT_PROGRAM);
 		set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
 		return;
 	}
 
-	count_frame ();
+	count_frame();
 
 	if (framecnt == 0)
-		init_drawing_frame ();
+		init_drawing_frame();
 
-	gui_flicker_led (-1, 0, 0);
+	gui_flicker_led(-1, 0, 0);
 }
 
 void hsync_record_line_state(int lineno)
@@ -2162,56 +2160,56 @@ static void gen_direct_drawing_table(void)
 	}
 }
 
-static void *render_thread (void *unused)
+static void *render_thread(void *unused)
 {
-  for(;;) {
-    render_thread_busy = false;
-    uae_u32 signal = read_comm_pipe_u32_blocking(render_pipe);
-    render_thread_busy = true;
-    switch(signal) {
-      case RENDER_SIGNAL_PARTIAL:
-        partial_draw_frame();
-        break;
+	for (;;) {
+		render_thread_busy = false;
+		uae_u32 signal = read_comm_pipe_u32_blocking(render_pipe);
+		render_thread_busy = true;
+		switch (signal) {
+		case RENDER_SIGNAL_PARTIAL:
+			partial_draw_frame();
+			break;
 
-      case RENDER_SIGNAL_FRAME_DONE:
-        finish_drawing_frame();
-        uae_sem_post (&render_sem);
-        break;
+		case RENDER_SIGNAL_FRAME_DONE:
+			finish_drawing_frame();
+			uae_sem_post(&render_sem);
+			break;
 
-      case RENDER_SIGNAL_QUIT:
-        render_tid = 0;
-        return 0;
-    }
-  }
+		case RENDER_SIGNAL_QUIT:
+			render_tid = nullptr;
+			return nullptr;
+		}
+	}
 }
 
-void drawing_init (void)
+void drawing_init(void)
 {
-  gen_pfield_tables();
+	gen_pfield_tables();
 
 	gen_direct_drawing_table();
 
-  if(render_pipe == 0) {
-    render_pipe = xmalloc (smp_comm_pipe, 1);
-    init_comm_pipe(render_pipe, 20, 1);
-  }
-  if(render_sem == 0) {
-    uae_sem_init (&render_sem, 0, 0);
-  }
-  if(render_tid == 0 && render_pipe != 0 && render_sem != 0) {
-    uae_start_thread(_T("render"), render_thread, NULL, &render_tid);
-  }
+	if (render_pipe == 0) {
+		render_pipe = xmalloc(smp_comm_pipe, 1);
+		init_comm_pipe(render_pipe, 20, 1);
+	}
+	if (render_sem == 0) {
+		uae_sem_init(&render_sem, 0, 0);
+	}
+	if (render_tid == 0 && render_pipe != 0 && render_sem != 0) {
+		uae_start_thread(_T("render"), render_thread, NULL, &render_tid);
+	}
 
 #ifdef PICASSO96
-  if (!isrestore ()) {
-    picasso_on = 0;
-    picasso_requested_on = 0;
-    gfx_set_picasso_state (0);
-  }
+	if (!isrestore()) {
+		picasso_on = 0;
+		picasso_requested_on = 0;
+		gfx_set_picasso_state(0);
+	}
 #endif
-  xlinebuffer = gfxvidinfo.drawbuffer.bufmem;
+	xlinebuffer = gfxvidinfo.drawbuffer.bufmem;
 
-  inhibit_frame = 0;
+	inhibit_frame = 0;
 
-  reset_drawing ();
+	reset_drawing();
 }
