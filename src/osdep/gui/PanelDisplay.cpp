@@ -24,9 +24,10 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-#ifdef USE_SDL1
 const int amigawidth_values[] = { 320, 352, 384, 640, 704, 768 };
 const int amigaheight_values[] = { 200, 216, 240, 256, 262, 270 };
+
+#ifdef USE_SDL1
 const int FullscreenRatio[] = { 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
                                 90, 91, 92, 93, 94, 95, 96, 97,98, 99,100 };
 #endif
@@ -38,7 +39,6 @@ static gcn::UaeRadioButton* optNearest;
 static gcn::UaeRadioButton* optLinear;
 #endif
 
-#ifdef USE_SDL1
 static gcn::Window *grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;
 static gcn::Label* lblAmigaWidthInfo;
@@ -46,12 +46,12 @@ static gcn::Slider* sldAmigaWidth;
 static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
+
 #ifdef PANDORA
 static gcn::Label* lblVertPos;
 static gcn::Label* lblVertPosInfo;
 static gcn::Slider* sldVertPos;
 #endif
-#endif // USE_SDL1
 
 static gcn::UaeCheckBox* chkLineDbl;
 static gcn::UaeCheckBox* chkFrameskip;
@@ -69,7 +69,6 @@ class AmigaScreenActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-#ifdef USE_SDL1
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
 			if (changed_prefs.gfx_size.width != amigawidth_values[int(sldAmigaWidth->getValue())])
@@ -97,7 +96,6 @@ public:
 		}
 #endif
 		else 
-#endif
 			if (actionEvent.getSource() == chkFrameskip)
 		{
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 1 : 0;
@@ -146,7 +144,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	amigaScreenActionListener = new AmigaScreenActionListener();
 	int posY = DISTANCE_BORDER;
 
-#ifdef USE_SDL1
 	lblAmigaWidth = new gcn::Label("Width:");
 	lblAmigaWidth->setSize(150, LABEL_HEIGHT);
 	lblAmigaWidth->setAlignment(gcn::Graphics::RIGHT);
@@ -170,6 +167,79 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->setId("sldHeight");
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
+
+#ifdef PANDORA
+	lblVertPos = new gcn::Label("Vert. offset:");
+	lblVertPos->setSize(150, LABEL_HEIGHT);
+	lblVertPos->setAlignment(gcn::Graphics::RIGHT);
+	sldVertPos = new gcn::Slider(-16, 16);
+	sldVertPos->setSize(160, SLIDER_HEIGHT);
+	sldVertPos->setBaseColor(gui_baseCol);
+	sldVertPos->setMarkerLength(20);
+	sldVertPos->setStepLength(1);
+	sldVertPos->setId("sldVertPos");
+	sldVertPos->addActionListener(amigaScreenActionListener);
+	lblVertPosInfo = new gcn::Label("000");
+#endif //PANDORA
+
+#ifdef USE_SDL1
+	lblFSRatio = new gcn::Label("Fullscreen Ratio:");
+	lblFSRatio->setSize(150, LABEL_HEIGHT);
+	lblFSRatio->setAlignment(gcn::Graphics::RIGHT);
+	sldFSRatio = new gcn::Slider(0, 20);
+	sldFSRatio->setSize(160, SLIDER_HEIGHT);
+	sldFSRatio->setBaseColor(gui_baseCol);
+	sldFSRatio->setMarkerLength(20);
+	sldFSRatio->setStepLength(1);
+	sldFSRatio->setId("FSRatio");
+	sldFSRatio->addActionListener(amigaScreenActionListener);
+	lblFSRatioInfo = new gcn::Label("100%%");
+
+	chkAspect = new gcn::UaeCheckBox("4/3 ratio shrink");
+	chkAspect->setId("4by3Ratio");
+	chkAspect->addActionListener(amigaScreenActionListener);
+#endif
+
+	chkLineDbl = new gcn::UaeCheckBox("Line doubling");
+  	chkLineDbl->addActionListener(amigaScreenActionListener);
+	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
+	chkFrameskip->addActionListener(amigaScreenActionListener);
+
+	grpAmigaScreen = new gcn::Window("Amiga Screen");
+	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	grpAmigaScreen->add(lblAmigaWidth, 0, posY);
+	grpAmigaScreen->add(sldAmigaWidth, 160, posY);
+	grpAmigaScreen->add(lblAmigaWidthInfo, 160 + sldAmigaWidth->getWidth() + 12, posY);
+	posY += sldAmigaWidth->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(lblAmigaHeight, 0, posY);
+	grpAmigaScreen->add(sldAmigaHeight, 160, posY);
+	grpAmigaScreen->add(lblAmigaHeightInfo, 160 + sldAmigaHeight->getWidth() + 12, posY);
+	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
+
+#ifdef PANDORA
+	grpAmigaScreen->add(lblVertPos, 0, posY);
+	grpAmigaScreen->add(sldVertPos, 160, posY);
+	grpAmigaScreen->add(lblVertPosInfo, 160 + sldVertPos->getWidth() + 12, posY);
+	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
+#endif
+
+#ifdef USE_SDL1
+	grpAmigaScreen->add(lblFSRatio, 0, posY);
+	grpAmigaScreen->add(sldFSRatio, 160, posY);
+	grpAmigaScreen->add(lblFSRatioInfo, 160 + sldFSRatio->getWidth() + 12, posY);
+	posY += sldFSRatio->getHeight() + DISTANCE_NEXT_Y;
+#endif
+
+	grpAmigaScreen->setMovable(false);
+	grpAmigaScreen->setSize(460, posY + DISTANCE_BORDER);
+	grpAmigaScreen->setBaseColor(gui_baseCol);
+
+	category.panel->add(grpAmigaScreen);
+	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
+
+#ifdef USE_SDL1
+	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
+	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
 #endif
 
 #ifdef USE_SDL2
@@ -198,71 +268,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 #endif
 
-#ifdef PANDORA
-	lblVertPos = new gcn::Label("Vert. offset:");
-	lblVertPos->setSize(150, LABEL_HEIGHT);
-	lblVertPos->setAlignment(gcn::Graphics::RIGHT);
-	sldVertPos = new gcn::Slider(-16, 16);
-	sldVertPos->setSize(160, SLIDER_HEIGHT);
-	sldVertPos->setBaseColor(gui_baseCol);
-	sldVertPos->setMarkerLength(20);
-	sldVertPos->setStepLength(1);
-	sldVertPos->setId("sldVertPos");
-	sldVertPos->addActionListener(amigaScreenActionListener);
-	lblVertPosInfo = new gcn::Label("000");
-#endif //PANDORA
-#ifdef USE_SDL1
-	lblFSRatio = new gcn::Label("Fullscreen Ratio:");
-	lblFSRatio->setSize(150, LABEL_HEIGHT);
-	lblFSRatio->setAlignment(gcn::Graphics::RIGHT);
-	sldFSRatio = new gcn::Slider(0, 20);
-	sldFSRatio->setSize(160, SLIDER_HEIGHT);
-	sldFSRatio->setBaseColor(gui_baseCol);
-	sldFSRatio->setMarkerLength(20);
-	sldFSRatio->setStepLength(1);
-	sldFSRatio->setId("FSRatio");
-	sldFSRatio->addActionListener(amigaScreenActionListener);
-	lblFSRatioInfo = new gcn::Label("100%%");
-
-	chkAspect = new gcn::UaeCheckBox("4/3 ratio shrink");
-	chkAspect->setId("4by3Ratio");
-	chkAspect->addActionListener(amigaScreenActionListener);
-#endif
-	chkLineDbl = new gcn::UaeCheckBox("Line doubling");
-  	chkLineDbl->addActionListener(amigaScreenActionListener);
-	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
-	chkFrameskip->addActionListener(amigaScreenActionListener);
-
-#ifdef USE_SDL1
-	grpAmigaScreen = new gcn::Window("Amiga Screen");
-	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpAmigaScreen->add(lblAmigaWidth, 0, posY);
-	grpAmigaScreen->add(sldAmigaWidth, 160, posY);
-	grpAmigaScreen->add(lblAmigaWidthInfo, 160 + sldAmigaWidth->getWidth() + 12, posY);
-	posY += sldAmigaWidth->getHeight() + DISTANCE_NEXT_Y;
-	grpAmigaScreen->add(lblAmigaHeight, 0, posY);
-	grpAmigaScreen->add(sldAmigaHeight, 160, posY);
-	grpAmigaScreen->add(lblAmigaHeightInfo, 160 + sldAmigaHeight->getWidth() + 12, posY);
-	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
-#ifdef PANDORA
-	grpAmigaScreen->add(lblVertPos, 0, posY);
-	grpAmigaScreen->add(sldVertPos, 160, posY);
-	grpAmigaScreen->add(lblVertPosInfo, 160 + sldVertPos->getWidth() + 12, posY);
-	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
-#endif	
-	grpAmigaScreen->add(lblFSRatio, 0, posY);
-	grpAmigaScreen->add(sldFSRatio, 160, posY);
-	grpAmigaScreen->add(lblFSRatioInfo, 160 + sldFSRatio->getWidth() + 12, posY);
-	posY += sldFSRatio->getHeight() + DISTANCE_NEXT_Y;
-	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(460, posY + DISTANCE_BORDER);
-	grpAmigaScreen->setBaseColor(gui_baseCol);
-
-	category.panel->add(grpAmigaScreen);
-	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
-	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
-#endif
 	category.panel->add(chkLineDbl, DISTANCE_BORDER, posY);
 	posY += chkLineDbl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
@@ -275,24 +280,28 @@ void ExitPanelDisplay()
 {
 	delete chkFrameskip;
 	delete amigaScreenActionListener;
-#ifdef USE_SDL1
 	delete lblAmigaWidth;
 	delete sldAmigaWidth;
 	delete lblAmigaWidthInfo;
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete lblAmigaHeightInfo;
+
 #ifdef PANDORA
 	delete lblVertPos;
 	delete sldVertPos;
 	delete lblVertPosInfo;
 #endif
+
 	delete grpAmigaScreen;
+
+#ifdef USE_SDL1
 	delete lblFSRatio;
 	delete sldFSRatio;
 	delete lblFSRatioInfo;
 	delete chkAspect;
 #endif
+
 #ifdef USE_SDL2
 	delete optAuto;
 	delete optNearest;
@@ -308,7 +317,6 @@ void RefreshPanelDisplay()
 	chkLineDbl->setSelected(changed_prefs.gfx_vresolution != VRES_NONDOUBLE);
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate);
 
-#ifdef USE_SDL1
 	int i;
 	char tmp[32];
 
@@ -334,6 +342,7 @@ void RefreshPanelDisplay()
 		}
 	}
 
+#ifdef USE_SDL1
 	for (i = 0; i<21; ++i)
 	{
 		if (changed_prefs.gfx_fullscreen_ratio == FullscreenRatio[i])
@@ -365,18 +374,15 @@ void RefreshPanelDisplay()
 bool HelpPanelDisplay(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-#ifdef USE_SDL1
 	helptext.push_back("Select the required width and height of the Amiga screen. If you select \"NTSC\" in chipset, a value greater than");
 	helptext.push_back("240 for \"Height\" makes no sense. When the game, demo or workbench uses Hires mode and you selected a");
 	helptext.push_back("value for \"Width\" lower than 640, you will only see half of the pixels.");
 	helptext.push_back("");
-#elif USE_SDL2
 	helptext.push_back("Select the scaling method for the Amiga screen. The default option \"Auto\", will try to find the best looking");
 	helptext.push_back("scaling method depending on your monitor's resolution. \"Nearest Neighbor\" will give you a more pixelated");
 	helptext.push_back("and crisp image, but it may come with some distortion if your resolution is not an exact multiple.");
 	helptext.push_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
 	helptext.push_back("");
-#endif
 #ifdef PANDORA
 	helptext.push_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga screen. You can also change");
 	helptext.push_back("this during emulation with left and right shoulder button and dpad up/down.");
