@@ -82,10 +82,6 @@ static char retroarch_file[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
-static bool cpuSpeedChanged = false;
-static int lastCpuSpeed = 600;
-int defaultCpuSpeed = 600;
-
 int max_uae_width;
 int max_uae_height;
 
@@ -184,7 +180,7 @@ void target_quit(void)
 {
 }
 
-static void fix_apmodes(struct uae_prefs *p)
+void fix_apmodes(struct uae_prefs *p)
 {
 	if (p->ntscmode)
 	{
@@ -1051,17 +1047,18 @@ static void target_shutdown(void)
 {
 	system("sudo poweroff");
 }
+
 int main(int argc, char* argv[])
 {
 	struct sigaction action;
-
-#ifdef AMIBERRY
 	printf("Amiberry v2.6, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
-#endif
+
 	max_uae_width = 1920;
 	max_uae_height = 1080;
 
+#ifdef PANDORA
 	defaultCpuSpeed = getDefaultCpuSpeed();
+#endif
 
 	// Get startup path
 	getcwd(start_path_data, MAX_DPATH);

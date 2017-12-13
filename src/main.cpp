@@ -53,27 +53,25 @@ long int version = 256*65536L*UAEMAJOR + 65536L*UAEMINOR + UAESUBREV;
 struct uae_prefs currprefs, changed_prefs; 
 int config_changed;
 
-bool no_gui = 0;
-bool cloanto_rom = 0;
-bool kickstart_rom = 1;
+bool no_gui = false;
+bool cloanto_rom = false;
+bool kickstart_rom = true;
 
 struct gui_info gui_data;
 
 TCHAR optionsfile[256];
 
-void my_trim (TCHAR *s)
+void my_trim(TCHAR *s)
 {
-	int len;
-	while (_tcslen (s) > 0 && _tcscspn (s, _T("\t \r\n")) == 0)
-		memmove (s, s + 1, (_tcslen (s + 1) + 1) * sizeof (TCHAR));
-	len = _tcslen (s);
-	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
+	while (_tcslen(s) > 0 && _tcscspn(s, _T("\t \r\n")) == 0)
+		memmove(s, s + 1, (_tcslen(s + 1) + 1) * sizeof(TCHAR));
+	int len = _tcslen(s);
+	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		s[--len] = '\0';
 }
 
 TCHAR *my_strdup_trim (const TCHAR *s)
 {
-	TCHAR *out;
 	int len;
 
 	if (s[0] == 0)
@@ -83,52 +81,52 @@ TCHAR *my_strdup_trim (const TCHAR *s)
 	len = _tcslen (s);
 	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
 		len--;
-	out = xmalloc (TCHAR, len + 1);
+	TCHAR *out = xmalloc (TCHAR, len + 1);
 	memcpy (out, s, len * sizeof (TCHAR));
 	out[len] = 0;
 	return out;
 }
 
-void discard_prefs (struct uae_prefs *p, int type)
+void discard_prefs(struct uae_prefs *p, int type)
 {
-  struct strlist **ps = &p->all_lines;
-  while (*ps) {
-	  struct strlist *s = *ps;
-	  *ps = s->next;
-	  xfree (s->value);
-	  xfree (s->option);
-	  xfree (s);
-  }
+	struct strlist **ps = &p->all_lines;
+	while (*ps) {
+		struct strlist *s = *ps;
+		*ps = s->next;
+		xfree(s->value);
+		xfree(s->option);
+		xfree(s);
+	}
 	p->all_lines = NULL;
 	currprefs.all_lines = changed_prefs.all_lines = NULL;
 #ifdef FILESYS
-  filesys_cleanup ();
+	filesys_cleanup();
 #endif
 }
 
-static void fixup_prefs_dim2 (struct wh *wh)
+static void fixup_prefs_dim2(struct wh *wh)
 {
 	if (wh->width < 320) {
-		error_log (_T("Width (%d) must be at least 320."), wh->width);
+		error_log(_T("Width (%d) must be at least 320."), wh->width);
 		wh->width = 320;
 	}
 	if (wh->height < 200) {
-		error_log (_T("Height (%d) must be at least 200."), wh->height);
+		error_log(_T("Height (%d) must be at least 200."), wh->height);
 		wh->height = 200;
 	}
-	if (wh->width > max_uae_width) {
-		error_log (_T("Width (%d) max is %d."), wh->width, max_uae_width);
-		wh->width = max_uae_width;
-  }
-	if (wh->height > max_uae_height) {
-		error_log (_T("Height (%d) max is %d."), wh->height, max_uae_height);
-		wh->height = max_uae_height;
+	if (wh->width > 1920) {
+		error_log(_T("Width (%d) max is %d."), wh->width, max_uae_width);
+		wh->width = 1920;
+	}
+	if (wh->height > 1080) {
+		error_log(_T("Height (%d) max is %d."), wh->height, max_uae_height);
+		wh->height = 1080;
 	}
 }
 
-void fixup_prefs_dimensions (struct uae_prefs *prefs)
+void fixup_prefs_dimensions(struct uae_prefs *prefs)
 {
-  fixup_prefs_dim2(&prefs->gfx_size);
+	fixup_prefs_dim2(&prefs->gfx_size);
 
 	for (int i = 0; i < 2; i++) {
 		struct apmode *ap = &prefs->gfx_apmode[i];
@@ -136,53 +134,53 @@ void fixup_prefs_dimensions (struct uae_prefs *prefs)
 		if (ap->gfx_vsync > 0) {
 			// legacy vsync: always wait for flip
 			ap->gfx_vflip = -1;
-    }
-  }
+		}
+	}
 }
 
 void fixup_cpu(struct uae_prefs *p)
 {
 	if (p->cpu_model >= 68040 && p->address_space_24) {
-		error_log (_T("24-bit address space is not supported with 68040/060 configurations."));
+		error_log(_T("24-bit address space is not supported with 68040/060 configurations."));
 		p->address_space_24 = 0;
 	}
 	if (p->cpu_model < 68020 && p->fpu_model && p->cpu_compatible) {
-		error_log (_T("FPU is not supported with 68000/010 configurations."));
+		error_log(_T("FPU is not supported with 68000/010 configurations."));
 		p->fpu_model = 0;
 	}
-  if (p->cpu_model > 68010 && p->cpu_compatible) {
-    error_log(_T("CPU Compatible is only supported with 68000/010 configurations."));
-    p->cpu_compatible = 0;
-  }
+	if (p->cpu_model > 68010 && p->cpu_compatible) {
+		error_log(_T("CPU Compatible is only supported with 68000/010 configurations."));
+		p->cpu_compatible = 0;
+	}
 
-  switch(p->cpu_model)
-  {
-    case 68000:
-      break;
-  	case 68010:
-    	break;
-  	case 68020:
-    	break;
-  	case 68030:
-    	break;
-  	case 68040:
-    	if (p->fpu_model)
-  	    p->fpu_model = 68040;
-    	break;
-  }
+	switch (p->cpu_model)
+	{
+	case 68000:
+		break;
+	case 68010:
+		break;
+	case 68020:
+		break;
+	case 68030:
+		break;
+	case 68040:
+		if (p->fpu_model)
+			p->fpu_model = 68040;
+		break;
+	}
 
 	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
 	if (p->cachesize && (p->fpu_no_unimplemented)) {
-		error_log (_T("JIT is not compatible with unimplemented FPU instruction emulation."));
+		error_log(_T("JIT is not compatible with unimplemented FPU instruction emulation."));
 		p->fpu_no_unimplemented = false;
 	}
 
 	if (p->immediate_blits && p->waiting_blits) {
-		error_log (_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
+		error_log(_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
 		p->waiting_blits = 0;
-  }
+	}
 }
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
@@ -430,8 +428,6 @@ void uae_restart(int opengui, const TCHAR *cfgfile)
 	target_restart();
 }
 
-#ifndef DONT_PARSE_CMDLINE
-
 static void parse_cmdline_2(int argc, TCHAR **argv)
 {
 	cfgfile_addcfgparam(nullptr);
@@ -605,7 +601,6 @@ static void parse_cmdline(int argc, TCHAR **argv)
 		}
 	}
 }
-#endif
 
 static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 {
@@ -632,15 +627,15 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
  * of start_program() and leave_program() if you need to do anything special.
  * Add #ifdefs around these as appropriate.
  */
-void do_start_program (void)
+void do_start_program(void)
 {
 	if (quit_program == -UAE_QUIT)
-  	return;
-  /* Do a reset on startup. Whether this is elegant is debatable. */
-	inputdevice_updateconfig (&changed_prefs, &currprefs);
-  if (quit_program >= 0)
-	  quit_program = UAE_RESET;
-	m68k_go (1);
+		return;
+	/* Do a reset on startup. Whether this is elegant is debatable. */
+	inputdevice_updateconfig(&changed_prefs, &currprefs);
+	if (quit_program >= 0)
+		quit_program = UAE_RESET;
+	m68k_go(1);
 }
 
 void start_program (void)
@@ -665,7 +660,7 @@ void leave_program (void)
 
 #ifdef USE_SDL2
 // In case of error, print the error code and close the application
-void check_error_sdl(bool check, const char* message) {
+void check_error_sdl(const bool check, const char* message) {
 	if (check) {
 		cout << message << " " << SDL_GetError() << endl;
 		SDL_Quit();
@@ -733,11 +728,11 @@ static int real_main2 (int argc, TCHAR **argv)
 	if (!graphics_setup()) {
 		abort();
 	}
-	// TODO: temporarily disabled, as this caused gfx settings to be zeroed out
-	//if (restart_config[0])
-	//	parse_cmdline_and_init_file(argc, argv);
-	//else
-	//	currprefs = changed_prefs;
+
+	if (restart_config[0])
+		parse_cmdline_and_init_file(argc, argv);
+	else
+		currprefs = changed_prefs;
 
 	if (!machdep_init()) {
 		restart_program = 0;

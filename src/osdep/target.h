@@ -18,6 +18,11 @@ STATIC_INLINE FILE *uae_tfopen(const char *path, const char *mode)
 	return fopen(path, mode);
 }
 
+
+extern void fix_apmodes(struct uae_prefs *p);
+extern int generic_main (int argc, char *argv[]);
+
+
 #define OFFSET_Y_ADJUST 15
 
 extern int emulating;
@@ -25,7 +30,6 @@ extern int emulating;
 extern uae_u8* natmem_offset;
 extern int z3base_adr;
 
-extern int currVSyncRate;
 extern unsigned long time_per_frame;
 
 void run_gui(void);
@@ -36,13 +40,9 @@ unsigned long target_lastsynctime(void);
 extern int screen_is_picasso;
 
 void saveAdfDir(void);
-bool SetVSyncRate(int hz);
-void setCpuSpeed(void);
-void resetCpuSpeed(void);
 void update_display(struct uae_prefs *);
 void black_screen_now(void);
 void graphics_subshutdown (void);
-void moveVertical(int value);
 
 void amiberry_stop_sound();
 

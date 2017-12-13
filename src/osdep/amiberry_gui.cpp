@@ -419,7 +419,6 @@ int gui_init()
 		quit_program = -quit_program;
 	if (quit_program == UAE_QUIT)
 		ret = -2; // Quit without start of emulator
-	setCpuSpeed();
 
 	update_display(&changed_prefs);
 
@@ -430,7 +429,6 @@ int gui_init()
 
 void gui_exit()
 {
-	resetCpuSpeed();
 	sync();
 	amiberry_stop_sound();
 	saveAdfDir();
@@ -514,7 +512,7 @@ void gui_display(int shortcut)
 	prefs_to_gui();
 	run_gui();
 	gui_to_prefs();
-	setCpuSpeed();
+
 	if (quit_program)
 		screen_is_picasso = 0;
 	
