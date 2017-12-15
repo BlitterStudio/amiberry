@@ -257,7 +257,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpCPU->add(chkCPUCompatible, 5, 200);
 	grpCPU->add(chkJIT, 5, 230);
 	grpCPU->setMovable(false);
-	grpCPU->setSize(160, 275);
+	grpCPU->setSize(175, 275);
 	grpCPU->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCPU);
@@ -294,7 +294,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpFPU->add(chkFPUstrict, 5, 140);
 	grpFPU->add(chkSoftFloat, 5, 170);
 	grpFPU->setMovable(false);
-	grpFPU->setSize(180, 215);
+	grpFPU->setSize(185, 215);
 	grpFPU->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpFPU);
