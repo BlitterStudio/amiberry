@@ -130,7 +130,6 @@ static void InitCreateFilesysHardfile()
 	cmdCancel->addActionListener(createFilesysHardfileActionListener);
 
 	lblDevice = new gcn::Label("Device Name:");
-	lblDevice->setSize(100, LABEL_HEIGHT);
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(80, TEXTFIELD_HEIGHT);
@@ -140,25 +139,23 @@ static void InitCreateFilesysHardfile()
 	chkAutoboot->setId("createHdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
-	lblBootPri->setSize(100, LABEL_HEIGHT);
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
 	txtBootPri->setId("createHdfBootPri");
 
 	lblSize = new gcn::Label("Size (MB):");
-	lblSize->setSize(100, LABEL_HEIGHT);
 	lblSize->setAlignment(gcn::Graphics::RIGHT);
 	txtSize = new gcn::TextField();
 	txtSize->setSize(60, TEXTFIELD_HEIGHT);
 	txtSize->setId("createHdfSize");
 
 	lblPath = new gcn::Label("Path:");
-	lblPath->setSize(100, LABEL_HEIGHT);
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(338, TEXTFIELD_HEIGHT);
 	txtPath->setEnabled(false);
+
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdPath->setBaseColor(gui_baseCol);
