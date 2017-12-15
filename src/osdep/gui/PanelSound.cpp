@@ -268,11 +268,10 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpSound->add(optSoundEmulated, 5, 70);
 	grpSound->add(optSoundEmulatedBest, 5, 100);
 	grpSound->setMovable(false);
-	grpSound->setSize(200, 150);
+	grpSound->setSize(optSoundEmulatedBest->getWidth() + DISTANCE_BORDER, 150);
 	grpSound->setBaseColor(gui_baseCol);
 
 	lblFrequency = new gcn::Label("Frequency:");
-	lblFrequency->setSize(130, LABEL_HEIGHT);
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
 	cboFrequency = new gcn::UaeDropDown(&frequencyTypeList);
 	cboFrequency->setSize(160, DROPDOWN_HEIGHT);
@@ -294,15 +293,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpMode->setSize(90, 90);
 	grpMode->setBaseColor(gui_baseCol);
 
-    int labelWidth;
-#ifdef ANDROID
-	labelWidth = 135;
-#else
-	labelWidth = 130;
-#endif
-
 	lblInterpolation = new gcn::Label("Interpolation:");
-	lblInterpolation->setSize(labelWidth, LABEL_HEIGHT);
 	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
 	cboInterpolation = new gcn::UaeDropDown(&interpolationTypeList);
 	cboInterpolation->setSize(160, DROPDOWN_HEIGHT);
@@ -312,7 +303,6 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboInterpolation->addActionListener(soundActionListener);
 
 	lblFilter = new gcn::Label("Filter:");
-	lblFilter->setSize(labelWidth, LABEL_HEIGHT);
 	lblFilter->setAlignment(gcn::Graphics::RIGHT);
 	cboFilter = new gcn::UaeDropDown(&filterTypeList);
 	cboFilter->setSize(160, DROPDOWN_HEIGHT);
@@ -322,7 +312,6 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboFilter->addActionListener(soundActionListener);
 
 	lblSeparation = new gcn::Label("Stereo separation:");
-	lblSeparation->setSize(labelWidth, LABEL_HEIGHT);
 	lblSeparation->setAlignment(gcn::Graphics::RIGHT);
 	sldSeparation = new gcn::Slider(0, 10);
 	sldSeparation->setSize(160, SLIDER_HEIGHT);
@@ -334,7 +323,6 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	lblSeparationInfo = new gcn::Label("100%");
 
 	lblStereoDelay = new gcn::Label("Stereo delay:");
-	lblStereoDelay->setSize(labelWidth, LABEL_HEIGHT);
 	lblStereoDelay->setAlignment(gcn::Graphics::RIGHT);
 	sldStereoDelay = new gcn::Slider(0, 10);
 	sldStereoDelay->setSize(160, SLIDER_HEIGHT);
@@ -350,21 +338,21 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	category.panel->add(grpMode, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += grpSound->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblFrequency, DISTANCE_BORDER, posY);
-	category.panel->add(cboFrequency, lblFrequency->getX() + lblFrequency->getWidth() + 12, posY);
+	category.panel->add(cboFrequency, lblFrequency->getX() + lblFrequency->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboFrequency->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblInterpolation, DISTANCE_BORDER, posY);
-	category.panel->add(cboInterpolation, lblInterpolation->getX() + lblInterpolation->getWidth() + 12, posY);
+	category.panel->add(cboInterpolation, lblInterpolation->getX() + lblInterpolation->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboInterpolation->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblFilter, DISTANCE_BORDER, posY);
-	category.panel->add(cboFilter, lblFilter->getX() + lblFilter->getWidth() + 12, posY);
+	category.panel->add(cboFilter, lblFilter->getX() + lblFilter->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboFilter->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblSeparation, DISTANCE_BORDER, posY);
-	category.panel->add(sldSeparation, lblSeparation->getX() + lblSeparation->getWidth() + 12, posY);
-	category.panel->add(lblSeparationInfo, sldSeparation->getX() + sldSeparation->getWidth() + 12, posY);
+	category.panel->add(sldSeparation, lblSeparation->getX() + lblSeparation->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblSeparationInfo, sldSeparation->getX() + sldSeparation->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
 	category.panel->add(lblStereoDelay, DISTANCE_BORDER, posY);
-	category.panel->add(sldStereoDelay, lblStereoDelay->getX() + lblStereoDelay->getWidth() + 12, posY);
-	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + 12, posY);
+	category.panel->add(sldStereoDelay, lblStereoDelay->getX() + lblStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
 
 	RefreshPanelSound();
