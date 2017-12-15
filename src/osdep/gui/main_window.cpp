@@ -748,9 +748,9 @@ namespace widgets
 		//-------------------------------------------------
 		TTF_Init();
 #ifdef USE_SDL1
-		gui_font = new gcn::contrib::SDLTrueTypeFont("data/AmigaTopaz.ttf", 14);
+		gui_font = new gcn::contrib::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
 #elif USE_SDL2
-		gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 14);
+		gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
 #endif
 		gcn::Widget::setGlobalFont(gui_font);
 
