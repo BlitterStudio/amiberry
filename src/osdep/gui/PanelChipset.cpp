@@ -214,7 +214,6 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
 	lblChipset = new gcn::Label("Extra:");
-	lblChipset->setSize(40, LABEL_HEIGHT);
 	lblChipset->setAlignment(gcn::Graphics::RIGHT);
 	cboChipset = new gcn::UaeDropDown(&chipsetList);
 	cboChipset->setSize(75, DROPDOWN_HEIGHT);
@@ -229,11 +228,11 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpChipset->add(optECS, 5, 70);
 	grpChipset->add(optAGA, 5, 100);
 	grpChipset->add(chkNTSC, 5, 140);
-	grpChipset->add(lblChipset, 115, 10);
-	grpChipset->add(cboChipset, 115 + lblChipset->getWidth() + 8, 10);
+	grpChipset->add(lblChipset, 145, 10);
+	grpChipset->add(cboChipset, 145 + lblChipset->getWidth() + 8, 10);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(255, 185);
+	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 185);
 	grpChipset->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpChipset);
@@ -257,7 +256,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpBlitter->add(optBlitImmed, 5, 40);
 	grpBlitter->add(optBlitWait, 5, 70);
 	grpBlitter->setMovable(false);
-	grpBlitter->setSize(120, 115);
+	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER, 115);
 	grpBlitter->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpBlitter);
@@ -271,7 +270,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
 	grpCopper->add(chkFastCopper, 5, 10);
 	grpCopper->setMovable(false);
-	grpCopper->setSize(120, 55);
+	grpCopper->setSize(chkFastCopper->getWidth() + DISTANCE_BORDER, 55);
 	grpCopper->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCopper);
@@ -300,7 +299,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpCollisionLevel->add(optCollPlayfield, 5, 70);
 	grpCollisionLevel->add(optCollFull, 5, 100);
 	grpCollisionLevel->setMovable(false);
-	grpCollisionLevel->setSize(250, 145);
+	grpCollisionLevel->setSize(optCollPlayfield->getWidth() + DISTANCE_BORDER, 145);
 	grpCollisionLevel->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCollisionLevel);
