@@ -358,7 +358,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	for (row = 0; row < MAX_HD_DEVICES; ++row)
 	{
 		listEntry[row] = new gcn::Container();
-		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, TEXTFIELD_HEIGHT + 4);
+		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, SMALL_BUTTON_HEIGHT + 4);
 		listEntry[row]->setBaseColor(gui_baseCol);
 #ifdef USE_SDL1
 		listEntry[row]->setFrameSize(0);
@@ -383,7 +383,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 		for (col = 0; col < COL_COUNT; ++col)
 		{
 			listCells[row][col] = new gcn::TextField();
-			listCells[row][col]->setSize(COLUMN_SIZE[col], TEXTFIELD_HEIGHT);
+			listCells[row][col]->setSize(COLUMN_SIZE[col], SMALL_BUTTON_HEIGHT);
 			listCells[row][col]->setEnabled(false);
 			listCells[row][col]->setBackgroundColor(colTextboxBackground);
 		}
@@ -391,19 +391,19 @@ void InitPanelHD(const struct _ConfigCategory& category)
 
 	cmdAddDirectory = new gcn::Button("Add Directory");
 	cmdAddDirectory->setBaseColor(gui_baseCol);
-	cmdAddDirectory->setSize(BUTTON_WIDTH + 24, BUTTON_HEIGHT);
+	cmdAddDirectory->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
 	cmdAddDirectory->addActionListener(addVirtualHDActionListener);
 
 	cmdAddHardfile = new gcn::Button("Add Hardfile");
 	cmdAddHardfile->setBaseColor(gui_baseCol);
-	cmdAddHardfile->setSize(BUTTON_WIDTH + 24, BUTTON_HEIGHT);
+	cmdAddHardfile->setSize(cmdAddHardfile->getWidth(), BUTTON_HEIGHT);
 	cmdAddHardfile->setId("cmdAddHDF");
 	cmdAddHardfile->addActionListener(addHardfileActionListener);
 
 	cmdCreateHardfile = new gcn::Button("Create Hardfile");
 	cmdCreateHardfile->setBaseColor(gui_baseCol);
-	cmdCreateHardfile->setSize(BUTTON_WIDTH + 24, BUTTON_HEIGHT);
+	cmdCreateHardfile->setSize(cmdCreateHardfile->getWidth(), BUTTON_HEIGHT);
 	cmdCreateHardfile->setId("cmdCreateHDF");
 	cmdCreateHardfile->addActionListener(createHardfileActionListener);
 
@@ -439,7 +439,6 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cboCDFile->addActionListener(cdFileActionListener);
 
 	lblCDVol = new gcn::Label("CD Volume:");
-	lblCDVol->setSize(80, LABEL_HEIGHT);
 	lblCDVol->setAlignment(gcn::Graphics::RIGHT);
 	sldCDVol = new gcn::Slider(0, 100);
 	sldCDVol->setSize(200, SLIDER_HEIGHT);
@@ -449,7 +448,6 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	sldCDVol->setId("CDVol");
 	sldCDVol->addActionListener(genericActionListener);
 	lblCDVolInfo = new gcn::Label("80 %");
-	lblCDVolInfo->setSize(100, LABEL_HEIGHT);
 
 	int posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
 	for (col = 0; col < COL_COUNT; ++col)
@@ -461,7 +459,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 
 	for (row = 0; row < MAX_HD_DEVICES; ++row)
 	{
-		posX = 0;
+		posX = 1;
 		listEntry[row]->add(listCmdProps[row], posX, 2);
 		posX += listCmdProps[row]->getWidth() + 4;
 		listEntry[row]->add(listCmdDelete[row], posX, 2);
@@ -472,7 +470,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 			posX += COLUMN_SIZE[col];
 		}
 		category.panel->add(listEntry[row], DISTANCE_BORDER, posY);
-		posY += listEntry[row]->getHeight() + 4;
+		posY += listEntry[row]->getHeight() + DISTANCE_NEXT_Y/2;
 	}
 
 	posY += DISTANCE_NEXT_Y;
