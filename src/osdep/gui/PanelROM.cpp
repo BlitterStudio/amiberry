@@ -226,7 +226,6 @@ void InitPanelROM(const struct _ConfigCategory& category)
 #endif
 
 	lblMainROM = new gcn::Label("Main ROM File:");
-	lblMainROM->setSize(120, LABEL_HEIGHT);
 	cboMainROM = new gcn::UaeDropDown(mainROMList);
 	cboMainROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
 	cboMainROM->setBaseColor(gui_baseCol);
@@ -240,7 +239,6 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdMainROM->addActionListener(romButtonActionListener);
 
 	lblExtROM = new gcn::Label("Extended ROM File:");
-	lblExtROM->setSize(120, LABEL_HEIGHT);
 	cboExtROM = new gcn::UaeDropDown(extROMList);
 	cboExtROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
 	cboExtROM->setBaseColor(gui_baseCol);
@@ -255,10 +253,10 @@ void InitPanelROM(const struct _ConfigCategory& category)
 
 #ifdef ACTION_REPLAY
 	lblCartROM = new gcn::Label("Cartridge ROM File:");
-	lblCartROM->setSize(200, LABEL_HEIGHT);
 	cboCartROM = new gcn::UaeDropDown(cartROMList);
-	cboCartROM->setSize(400, DROPDOWN_HEIGHT);
+	cboCartROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
 	cboCartROM->setBaseColor(gui_baseCol);
+	cboCartROM->setBackgroundColor(colTextboxBackground);
 	cboCartROM->setId("cboCartROM");
 	cboCartROM->addActionListener(cartROMActionListener);
 	cmdCartROM = new gcn::Button("...");
