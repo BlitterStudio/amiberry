@@ -128,21 +128,18 @@ static void InitEditFilesysVirtual()
 	cmdCancel->addActionListener(filesysVirtualActionListener);
 
 	lblDevice = new gcn::Label("Device Name:");
-	lblDevice->setSize(100, LABEL_HEIGHT);
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
 	txtDevice->setId("virtDev");
 
 	lblVolume = new gcn::Label("Volume Label:");
-	lblVolume->setSize(100, LABEL_HEIGHT);
 	lblVolume->setAlignment(gcn::Graphics::RIGHT);
 	txtVolume = new gcn::TextField();
 	txtVolume->setSize(60, TEXTFIELD_HEIGHT);
 	txtVolume->setId("virtVol");
 
 	lblPath = new gcn::Label("Path:");
-	lblPath->setSize(100, LABEL_HEIGHT);
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(338, TEXTFIELD_HEIGHT);
@@ -160,7 +157,6 @@ static void InitEditFilesysVirtual()
 	chkAutoboot->setId("virtAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
-	lblBootPri->setSize(100, LABEL_HEIGHT);
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);

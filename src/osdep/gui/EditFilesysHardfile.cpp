@@ -245,7 +245,6 @@ static void InitEditFilesysHardfile()
 	cmdCancel->addActionListener(filesysHardfileActionListener);
 
 	lblDevice = new gcn::Label("Device Name:");
-	lblDevice->setSize(100, LABEL_HEIGHT);
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
@@ -258,42 +257,36 @@ static void InitEditFilesysHardfile()
 	chkAutoboot->setId("hdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
-	lblBootPri->setSize(100, LABEL_HEIGHT);
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
 	txtBootPri->setId("hdfBootPri");
 
 	lblSurfaces = new gcn::Label("Surfaces:");
-	lblSurfaces->setSize(100, LABEL_HEIGHT);
 	lblSurfaces->setAlignment(gcn::Graphics::RIGHT);
 	txtSurfaces = new gcn::TextField();
 	txtSurfaces->setSize(40, TEXTFIELD_HEIGHT);
 	txtSurfaces->setId("hdfSurface");
 
 	lblReserved = new gcn::Label("Reserved:");
-	lblReserved->setSize(100, LABEL_HEIGHT);
 	lblReserved->setAlignment(gcn::Graphics::RIGHT);
 	txtReserved = new gcn::TextField();
 	txtReserved->setSize(40, TEXTFIELD_HEIGHT);
 	txtReserved->setId("hdfReserved");
 
 	lblSectors = new gcn::Label("Sectors:");
-	lblSectors->setSize(100, LABEL_HEIGHT);
 	lblSectors->setAlignment(gcn::Graphics::RIGHT);
 	txtSectors = new gcn::TextField();
 	txtSectors->setSize(40, TEXTFIELD_HEIGHT);
 	txtSectors->setId("hdfSectors");
 
 	lblBlocksize = new gcn::Label("Blocksize:");
-	lblBlocksize->setSize(100, LABEL_HEIGHT);
 	lblBlocksize->setAlignment(gcn::Graphics::RIGHT);
 	txtBlocksize = new gcn::TextField();
 	txtBlocksize->setSize(40, TEXTFIELD_HEIGHT);
 	txtBlocksize->setId("hdfBlocksize");
 
 	lblPath = new gcn::Label("Path:");
-	lblPath->setSize(100, LABEL_HEIGHT);
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(338, TEXTFIELD_HEIGHT);
@@ -305,7 +298,6 @@ static void InitEditFilesysHardfile()
 	cmdPath->addActionListener(filesysHardfileActionListener);
 
 	lblController = new gcn::Label("Controller:");
-	lblController->setSize(100, LABEL_HEIGHT);
 	lblController->setAlignment(gcn::Graphics::RIGHT);
 	cboController = new gcn::UaeDropDown(&controllerListModel);
 	cboController->setSize(180, DROPDOWN_HEIGHT);
