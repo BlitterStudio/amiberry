@@ -145,7 +145,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	int posY = DISTANCE_BORDER;
 
 	lblAmigaWidth = new gcn::Label("Width:");
-	lblAmigaWidth->setSize(150, LABEL_HEIGHT);
 	lblAmigaWidth->setAlignment(gcn::Graphics::RIGHT);
 	sldAmigaWidth = new gcn::Slider(0, 5);
 	sldAmigaWidth->setSize(160, SLIDER_HEIGHT);
@@ -157,7 +156,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	lblAmigaWidthInfo = new gcn::Label("320");
 
 	lblAmigaHeight = new gcn::Label("Height:");
-	lblAmigaHeight->setSize(150, LABEL_HEIGHT);
 	lblAmigaHeight->setAlignment(gcn::Graphics::RIGHT);
 	sldAmigaHeight = new gcn::Slider(0, 5);
 	sldAmigaHeight->setSize(160, SLIDER_HEIGHT);
@@ -170,7 +168,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 #ifdef PANDORA
 	lblVertPos = new gcn::Label("Vert. offset:");
-	lblVertPos->setSize(150, LABEL_HEIGHT);
 	lblVertPos->setAlignment(gcn::Graphics::RIGHT);
 	sldVertPos = new gcn::Slider(-16, 16);
 	sldVertPos->setSize(160, SLIDER_HEIGHT);
@@ -184,7 +181,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 #ifdef USE_SDL1
 	lblFSRatio = new gcn::Label("Fullscreen Ratio:");
-	lblFSRatio->setSize(150, LABEL_HEIGHT);
 	lblFSRatio->setAlignment(gcn::Graphics::RIGHT);
 	sldFSRatio = new gcn::Slider(0, 20);
 	sldFSRatio->setSize(160, SLIDER_HEIGHT);
@@ -207,31 +203,31 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpAmigaScreen->add(lblAmigaWidth, 0, posY);
-	grpAmigaScreen->add(sldAmigaWidth, 160, posY);
-	grpAmigaScreen->add(lblAmigaWidthInfo, 160 + sldAmigaWidth->getWidth() + 12, posY);
+	grpAmigaScreen->add(lblAmigaWidth, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(sldAmigaWidth, lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpAmigaScreen->add(lblAmigaWidthInfo, sldAmigaWidth->getX() + sldAmigaWidth->getWidth() + DISTANCE_NEXT_Y, posY);
 	posY += sldAmigaWidth->getHeight() + DISTANCE_NEXT_Y;
-	grpAmigaScreen->add(lblAmigaHeight, 0, posY);
-	grpAmigaScreen->add(sldAmigaHeight, 160, posY);
-	grpAmigaScreen->add(lblAmigaHeightInfo, 160 + sldAmigaHeight->getWidth() + 12, posY);
+	grpAmigaScreen->add(lblAmigaHeight, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(sldAmigaHeight, lblAmigaHeight->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpAmigaScreen->add(lblAmigaHeightInfo, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_Y, posY);
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 
 #ifdef PANDORA
-	grpAmigaScreen->add(lblVertPos, 0, posY);
-	grpAmigaScreen->add(sldVertPos, 160, posY);
-	grpAmigaScreen->add(lblVertPosInfo, 160 + sldVertPos->getWidth() + 12, posY);
+	grpAmigaScreen->add(lblVertPos, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(sldVertPos, lblVertPos->getX() + lblVertPos->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpAmigaScreen->add(lblVertPosInfo, sldVertPos->getX() + sldVertPos->getWidth() + 12, posY);
 	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
 #endif
 
 #ifdef USE_SDL1
-	grpAmigaScreen->add(lblFSRatio, 0, posY);
-	grpAmigaScreen->add(sldFSRatio, 160, posY);
-	grpAmigaScreen->add(lblFSRatioInfo, 160 + sldFSRatio->getWidth() + 12, posY);
+	grpAmigaScreen->add(lblFSRatio, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(sldFSRatio, lblFSRatio->getX() + lblFSRatio->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpAmigaScreen->add(lblFSRatioInfo, sldFSRatio->getX() + sldFSRatio->getWidth() + DISTANCE_NEXT_Y, posY);
 	posY += sldFSRatio->getHeight() + DISTANCE_NEXT_Y;
 #endif
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(460, posY + DISTANCE_BORDER);
+	grpAmigaScreen->setSize(lblAmigaHeightInfo->getX() + lblAmigaHeightInfo->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpAmigaScreen);
@@ -260,7 +256,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->add(optNearest, 5, 40);
 	grpScalingMethod->add(optLinear, 5, 70);
 	grpScalingMethod->setMovable(false);
-	grpScalingMethod->setSize(240, optLinear->getY() + optLinear->getHeight() + 30);
+	grpScalingMethod->setSize(optNearest->getWidth() + DISTANCE_BORDER, optLinear->getY() + optLinear->getHeight() + 30);
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
