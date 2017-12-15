@@ -133,7 +133,7 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	grpNumber->add(optState2, 5, 70);
 	grpNumber->add(optState3, 5, 100);
 	grpNumber->setMovable(false);
-	grpNumber->setSize(60, 145);
+	grpNumber->setSize(optState0->getWidth(), 145);
 	grpNumber->setBaseColor(gui_baseCol);
 
 	wndScreenshot = new gcn::Window("State screen");
@@ -154,13 +154,12 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	cmdSaveState->addActionListener(savestateActionListener);
 
 	lblWarningHDDon = new gcn::Label("State saves do not support harddrive emulation.");
-	lblWarningHDDon->setSize(320, LABEL_HEIGHT);
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
-	category.panel->add(wndScreenshot, DISTANCE_BORDER + 100, DISTANCE_BORDER);
-	const int buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
-	category.panel->add(cmdLoadState, DISTANCE_BORDER, buttonY);
-	category.panel->add(cmdSaveState, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, buttonY);
+	category.panel->add(wndScreenshot, DISTANCE_BORDER + DISTANCE_NEXT_X * 2, DISTANCE_BORDER);
+	const int posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
+	category.panel->add(cmdLoadState, DISTANCE_BORDER, posY);
+	category.panel->add(cmdSaveState, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, posY);
 	category.panel->add(lblWarningHDDon, DISTANCE_BORDER + 100, DISTANCE_BORDER + 50);
 
 	RefreshPanelSavestate();
