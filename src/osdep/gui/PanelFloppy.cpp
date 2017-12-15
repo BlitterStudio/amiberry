@@ -398,7 +398,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 
 		cboDFxType[i] = new gcn::UaeDropDown(&driveTypeList);
 		cboDFxType[i]->setSize(106, DROPDOWN_HEIGHT);
-		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
+		cboDFxType[i]->setBaseColor(gui_baseCol);
 		snprintf(tmp, 20, "cboType%d", i);
 		cboDFxType[i]->setId(tmp);
 		cboDFxType[i]->addActionListener(driveTypeActionListener);
@@ -430,7 +430,6 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
 		cboDFxFile[i]->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
-		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboDisk%d", i);
 		cboDFxFile[i]->setId(tmp);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
@@ -454,19 +453,19 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	lblDriveSpeedInfo = new gcn::Label(drivespeedlist[0]);
 
 	cmdSaveForDisk = new gcn::Button("Save config for disk");
-	cmdSaveForDisk->setSize(160, BUTTON_HEIGHT);
+	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth(), BUTTON_HEIGHT);
 	cmdSaveForDisk->setBaseColor(gui_baseCol);
 	cmdSaveForDisk->setId("SaveForDisk");
 	cmdSaveForDisk->addActionListener(saveForDiskActionListener);
 
 	cmdCreateDDDisk = new gcn::Button("Create 3.5'' DD disk");
-	cmdCreateDDDisk->setSize(160, BUTTON_HEIGHT);
+	cmdCreateDDDisk->setSize(cmdCreateDDDisk->getWidth(), BUTTON_HEIGHT);
 	cmdCreateDDDisk->setBaseColor(gui_baseCol);
 	cmdCreateDDDisk->setId("CreateDD");
 	cmdCreateDDDisk->addActionListener(createDiskActionListener);
 
 	cmdCreateHDDisk = new gcn::Button("Create 3.5'' HD disk");
-	cmdCreateHDDisk->setSize(160, BUTTON_HEIGHT);
+	cmdCreateHDDisk->setSize(cmdCreateHDDisk->getWidth(), BUTTON_HEIGHT);
 	cmdCreateHDDisk->setBaseColor(gui_baseCol);
 	cmdCreateHDDisk->setId("CreateHD");
 	cmdCreateHDDisk->addActionListener(createDiskActionListener);
@@ -481,7 +480,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
 		posX += chkDFxWriteProtect[i]->getWidth() + 4 * DISTANCE_NEXT_X;
 		//category.panel->add(cmdDFxInfo[i], posX, posY); //TODO disabled?
-		posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
+		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
 		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
 	  	category.panel->add(cmdDFxSelect[i], posX, posY);
