@@ -214,7 +214,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkMasterWP->addActionListener(miscActionListener);
 
 	lblNumLock = new gcn::Label("NumLock:");
-	lblNumLock->setSize(85, LABEL_HEIGHT);
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
 	cboKBDLed_num->setBaseColor(gui_baseCol);
@@ -223,7 +222,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cboKBDLed_num->addActionListener(miscActionListener);
 
 	lblScrLock = new gcn::Label("ScrollLock:");
-	lblScrLock->setSize(85, LABEL_HEIGHT);
 	lblScrLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
 	cboKBDLed_scr->setBaseColor(gui_baseCol);
@@ -232,7 +230,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cboKBDLed_scr->addActionListener(miscActionListener);
 
 	lblOpenGUI = new gcn::Label("Open GUI:");
-	lblOpenGUI->setSize(85, LABEL_HEIGHT);
 	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
 	txtOpenGUI = new gcn::TextField();
 	txtOpenGUI->setEnabled(false);
@@ -245,7 +242,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdOpenGUI->addActionListener(miscActionListener);
 
 	lblKeyForQuit = new gcn::Label("Quit Key:");
-	lblKeyForQuit->setSize(85, LABEL_HEIGHT);
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyForQuit = new gcn::TextField();
 	txtKeyForQuit->setEnabled(false);
@@ -284,24 +280,24 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y * 2;
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
-	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
+	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
 
 
 	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
 	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);
 
-	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
 
-	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
+	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblOpenGUI, DISTANCE_BORDER, posY);
-	category.panel->add(txtOpenGUI, DISTANCE_BORDER + lblOpenGUI->getWidth() + 8, posY);
-	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(txtOpenGUI, lblOpenGUI->getX() + lblOpenGUI->getWidth() + 8, posY);
+	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
 
-	category.panel->add(lblKeyForQuit, cmdOpenGUI->getX() + cmdOpenGUI->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblKeyForQuit, cmdOpenGUI->getX() + cmdOpenGUI->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
-	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
 
 	RefreshPanelMisc();
 }
