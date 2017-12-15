@@ -210,7 +210,7 @@ static void AdjustPrefs(void)
 		changed_prefs.cdslots[0].inuse = true;
 		changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 		break;
-	default: 
+	default:
 		break;
 	}
 
@@ -705,7 +705,6 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	quickstartModeActionListener = new QuickstartModeActionListener();
 
 	lblModel = new gcn::Label("Amiga model:");
-	lblModel->setSize(100, LABEL_HEIGHT);
 	lblModel->setAlignment(gcn::Graphics::RIGHT);
 	cboModel = new gcn::UaeDropDown(&amigaModelList);
 	cboModel->setSize(160, DROPDOWN_HEIGHT);
@@ -713,8 +712,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cboModel->setId("AModel");
 	cboModel->addActionListener(amigaModelActionListener);
 
-	lblConfig = new gcn::Label("Configuration:");
-	lblConfig->setSize(100, LABEL_HEIGHT);
+	lblConfig = new gcn::Label("Config:");
 	lblConfig->setAlignment(gcn::Graphics::RIGHT);
 	cboConfig = new gcn::UaeDropDown(&amigaConfigList);
 	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
@@ -801,7 +799,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	posY += cboModel->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblConfig, DISTANCE_BORDER, posY);
 	category.panel->add(cboConfig, DISTANCE_BORDER + lblConfig->getWidth() + 8, posY);
-	posY += cboConfig->getHeight() + DISTANCE_NEXT_Y;
+	posY += cboConfig->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	for (i = 0; i < 2; ++i)
 	{
@@ -811,7 +809,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
 		posX += chkDFxWriteProtect[i]->getWidth() + 4 * DISTANCE_NEXT_X;
 		//	  category.panel->add(cmdDFxInfo[i], posX, posY);
-		posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
+		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
 		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxSelect[i], posX, posY);
