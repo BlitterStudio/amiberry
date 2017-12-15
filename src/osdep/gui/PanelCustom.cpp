@@ -435,16 +435,15 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	// the input-device should be listed
 	lblPortInput = new gcn::Label("Input Device:");
-	lblPortInput->setSize(100, LABEL_HEIGHT);
 	lblPortInput->setAlignment(gcn::Graphics::RIGHT);
 
 	txtPortInput = new gcn::TextField();
-	txtPortInput->setSize(435, TEXTFIELD_HEIGHT);
 	txtPortInput->setEnabled(false);
 
 	lblRetroarch = new gcn::Label("[-]");
-	lblRetroarch->setSize(20, TEXTFIELD_HEIGHT);
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
+
+	txtPortInput->setSize(grpFunction->getWidth() - (lblPortInput->getWidth() + (DISTANCE_NEXT_X * 2) + lblRetroarch->getWidth()), TEXTFIELD_HEIGHT);
 
 	lblCustomAction[0] = new gcn::Label("D-Pad Up:");
 	lblCustomAction[1] = new gcn::Label("D-Pad Down:");
@@ -464,12 +463,11 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	for (i = 0; i < 14; ++i)
 	{
-		lblCustomAction[i]->setSize(100, LABEL_HEIGHT);
+		lblCustomAction[i]->setSize(lblCustomAction[12]->getWidth(), lblCustomAction[12]->getHeight());
 		lblCustomAction[i]->setAlignment(gcn::Graphics::RIGHT);
 
-
 		cboCustomAction[i] = new gcn::UaeDropDown(&CustomEventList);
-		cboCustomAction[i]->setSize(174, DROPDOWN_HEIGHT);
+		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth(), DROPDOWN_HEIGHT);
 		cboCustomAction[i]->setBaseColor(gui_baseCol);
 
 		snprintf(tmp, 20, "cboCustomAction%d", i);
@@ -496,8 +494,8 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 
 	category.panel->add(lblPortInput, DISTANCE_BORDER, 144);
-	category.panel->add(txtPortInput, DISTANCE_BORDER + lblCustomAction[0]->getWidth() + 8, 144);
-	category.panel->add(lblRetroarch, DISTANCE_BORDER + 20 + lblPortInput->getWidth() + txtPortInput->getWidth(), 144);
+	category.panel->add(txtPortInput, lblPortInput->getX() + lblPortInput->getWidth() + DISTANCE_NEXT_X, 144);
+	category.panel->add(lblRetroarch, txtPortInput->getX() + txtPortInput->getWidth() + DISTANCE_NEXT_X, 144);
 
 	// optMultiLeft->setEnabled(false);
 	// optMultiRight->setEnabled(false);
