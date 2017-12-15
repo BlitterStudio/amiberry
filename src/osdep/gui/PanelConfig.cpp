@@ -26,8 +26,6 @@ static int ensureVisible = -1;
 
 static gcn::Button* cmdLoad;
 static gcn::Button* cmdSave;
-static gcn::Button* cmdLoadFrom;
-static gcn::Button* cmdSaveAs;
 static gcn::Button* cmdDelete;
 static gcn::Label* lblName;
 static gcn::TextField* txtName;
@@ -149,12 +147,6 @@ bool LoadConfigByName(const char *name)
 						RefreshPanelConfig();
 				}
 			}
-			else if (actionEvent.getSource() == cmdLoadFrom)
-			{
-			}
-			else if (actionEvent.getSource() == cmdSaveAs)
-			{
-			}
 			else if (actionEvent.getSource() == cmdDelete)
 			{
 				//-----------------------------------------------
@@ -237,20 +229,6 @@ bool LoadConfigByName(const char *name)
 		cmdSave->setId("ConfigSave");
 		cmdSave->addActionListener(configButtonActionListener);
 
-		cmdLoadFrom = new gcn::Button("Load From...");
-		cmdLoadFrom->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-		cmdLoadFrom->setBaseColor(gui_baseCol);
-		cmdLoadFrom->setId("CfgLoadFrom");
-		cmdLoadFrom->addActionListener(configButtonActionListener);
-		cmdLoadFrom->setEnabled(false);
-
-		cmdSaveAs = new gcn::Button("Save As...");
-		cmdSaveAs->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-		cmdSaveAs->setBaseColor(gui_baseCol);
-		cmdSaveAs->setId("CfgSaveAs");
-		cmdSaveAs->addActionListener(configButtonActionListener);
-		cmdSaveAs->setEnabled(false);
-
 		cmdDelete = new gcn::Button("Delete");
 		cmdDelete->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 		cmdDelete->setBaseColor(gui_baseCol);
@@ -329,8 +307,6 @@ bool LoadConfigByName(const char *name)
 
 		delete cmdLoad;
 		delete cmdSave;
-		delete cmdLoadFrom;
-		delete cmdSaveAs;
 		delete cmdDelete;
 
 		delete configButtonActionListener;
