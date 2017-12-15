@@ -439,6 +439,8 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	txtPortInput = new gcn::TextField();
 	txtPortInput->setEnabled(false);
+	txtPortInput->setBaseColor(gui_baseCol);
+	txtPortInput->setBackgroundColor(colTextboxBackground);
 
 	lblRetroarch = new gcn::Label("[-]");
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
@@ -469,6 +471,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		cboCustomAction[i] = new gcn::UaeDropDown(&CustomEventList);
 		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth(), DROPDOWN_HEIGHT);
 		cboCustomAction[i]->setBaseColor(gui_baseCol);
+		cboCustomAction[i]->setBackgroundColor(colTextboxBackground);
 
 		snprintf(tmp, 20, "cboCustomAction%d", i);
 		cboCustomAction[i]->setId(tmp);

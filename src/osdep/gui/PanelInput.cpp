@@ -402,12 +402,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort0->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
 	cboPort0->setBaseColor(gui_baseCol);
+	cboPort0->setBackgroundColor(colTextboxBackground);
 	cboPort0->setId("cboPort0");
 	cboPort0->addActionListener(inputActionListener);
 
 	cboPort0mode = new gcn::UaeDropDown(&ctrlPortModeList);
 	cboPort0mode->setSize(cboPort0mode->getWidth(), DROPDOWN_HEIGHT);
 	cboPort0mode->setBaseColor(gui_baseCol);
+	cboPort0mode->setBackgroundColor(colTextboxBackground);
 	cboPort0mode->setId("cboPort0mode");
 	cboPort0mode->addActionListener(inputActionListener);
 
@@ -417,12 +419,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort1->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
 	cboPort1->setBaseColor(gui_baseCol);
+	cboPort1->setBackgroundColor(colTextboxBackground);
 	cboPort1->setId("cboPort1");
 	cboPort1->addActionListener(inputActionListener);
 
 	cboPort1mode = new gcn::UaeDropDown(&ctrlPortModeList);
 	cboPort1mode->setSize(cboPort1mode->getWidth(), DROPDOWN_HEIGHT);
 	cboPort1mode->setBaseColor(gui_baseCol);
+	cboPort1mode->setBackgroundColor(colTextboxBackground);
 	cboPort1mode->setId("cboPort1mode");
 	cboPort1mode->addActionListener(inputActionListener);
 
@@ -431,6 +435,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort2 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort2->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
 	cboPort2->setBaseColor(gui_baseCol);
+	cboPort2->setBackgroundColor(colTextboxBackground);
 	cboPort2->setId("cboPort2");
 	cboPort2->addActionListener(inputActionListener);
 
@@ -439,6 +444,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort3 = new gcn::UaeDropDown(&ctrlPortList);
 	cboPort3->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
 	cboPort3->setBaseColor(gui_baseCol);
+	cboPort3->setBackgroundColor(colTextboxBackground);
 	cboPort3->setId("cboPort3");
 	cboPort3->addActionListener(inputActionListener);
 
@@ -447,6 +453,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort0mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
 	cboPort0mousemode->setSize(68, DROPDOWN_HEIGHT);
 	cboPort0mousemode->setBaseColor(gui_baseCol);
+	cboPort0mousemode->setBackgroundColor(colTextboxBackground);
 	cboPort0mousemode->setId("cboPort0mousemode");
 	cboPort0mousemode->addActionListener(inputActionListener);
 
@@ -455,6 +462,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboPort1mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
 	cboPort1mousemode->setSize(68, DROPDOWN_HEIGHT);
 	cboPort1mousemode->setBaseColor(gui_baseCol);
+	cboPort1mousemode->setBackgroundColor(colTextboxBackground);
 	cboPort1mousemode->setId("cboPort1mousemode");
 	cboPort1mousemode->addActionListener(inputActionListener);
 
@@ -463,6 +471,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboAutofire = new gcn::UaeDropDown(&autofireList);
 	cboAutofire->setSize(80, DROPDOWN_HEIGHT);
 	cboAutofire->setBaseColor(gui_baseCol);
+	cboAutofire->setBackgroundColor(colTextboxBackground);
 	cboAutofire->setId("cboAutofire");
 	cboAutofire->addActionListener(inputActionListener);
 

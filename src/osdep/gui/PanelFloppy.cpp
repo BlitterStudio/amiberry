@@ -399,6 +399,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cboDFxType[i] = new gcn::UaeDropDown(&driveTypeList);
 		cboDFxType[i]->setSize(106, DROPDOWN_HEIGHT);
 		cboDFxType[i]->setBaseColor(gui_baseCol);
+		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboType%d", i);
 		cboDFxType[i]->setId(tmp);
 		cboDFxType[i]->addActionListener(driveTypeActionListener);
@@ -430,6 +431,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
 		cboDFxFile[i]->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
+		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboDisk%d", i);
 		cboDFxFile[i]->setId(tmp);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);

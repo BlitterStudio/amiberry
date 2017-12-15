@@ -218,6 +218,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	cboChipset = new gcn::UaeDropDown(&chipsetList);
 	cboChipset->setSize(75, DROPDOWN_HEIGHT);
 	cboChipset->setBaseColor(gui_baseCol);
+	cboChipset->setBackgroundColor(colTextboxBackground);
 	cboChipset->setId("ChipsetExtra");
 	cboChipset->addActionListener(chipsetActionListener);
 

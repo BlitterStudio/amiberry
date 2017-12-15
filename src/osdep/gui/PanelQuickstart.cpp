@@ -709,6 +709,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cboModel = new gcn::UaeDropDown(&amigaModelList);
 	cboModel->setSize(160, DROPDOWN_HEIGHT);
 	cboModel->setBaseColor(gui_baseCol);
+	cboModel->setBackgroundColor(colTextboxBackground);
 	cboModel->setId("AModel");
 	cboModel->addActionListener(amigaModelActionListener);
 
@@ -717,6 +718,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cboConfig = new gcn::UaeDropDown(&amigaConfigList);
 	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
 	cboConfig->setBaseColor(gui_baseCol);
+	cboConfig->setBackgroundColor(colTextboxBackground);
 	cboConfig->setId("AConfig");
 	cboConfig->addActionListener(amigaModelActionListener);
 
@@ -762,6 +764,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
 		cboDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
+		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "qscboDisk%d", i);
 		cboDFxFile[i]->setId(tmp);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
@@ -786,6 +789,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cboCDFile = new gcn::UaeDropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
 	cboCDFile->setBaseColor(gui_baseCol);
+	cboCDFile->setBackgroundColor(colTextboxBackground);
 	cboCDFile->setId("qscboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
 
