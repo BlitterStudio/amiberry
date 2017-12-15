@@ -113,7 +113,7 @@ static RescanROMsButtonActionListener* rescanROMsButtonActionListener;
 
 void InitPanelPaths(const struct _ConfigCategory& category)
 {
-	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 	int yPos = DISTANCE_BORDER;
 	folderButtonActionListener = new FolderButtonActionListener();
 
@@ -140,32 +140,32 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdConfigPath->addActionListener(folderButtonActionListener);
 
 	lblControllersPath = new gcn::Label("Controller files:");
-	lblControllersPath->setSize(120, LABEL_HEIGHT);
 	txtControllersPath = new gcn::TextField();
-	txtControllersPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
-	txtControllersPath->setEnabled(false);
+	txtControllersPath->setSize(textFieldWidth, txtControllersPath->getHeight());
+	txtControllersPath->setBackgroundColor(colTextboxBackground);
+
 	cmdControllersPath = new gcn::Button("...");
 	cmdControllersPath->setId("ControllersPath");
 	cmdControllersPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdControllersPath->setBaseColor(gui_baseCol);
 	cmdControllersPath->addActionListener(folderButtonActionListener);
 
-  lblRetroArchFile = new gcn::Label("RetroArch configuration file (retroarch.cfg):");
-  lblRetroArchFile->setSize(120, LABEL_HEIGHT);
-  txtRetroArchFile = new gcn::TextField();
-  txtRetroArchFile->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
-  txtRetroArchFile->setEnabled(false);
-  cmdRetroArchFile = new gcn::Button("...");
-  cmdRetroArchFile->setId("RetroArchFile");
-  cmdRetroArchFile->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-  cmdRetroArchFile->setBaseColor(gui_baseCol);
-  cmdRetroArchFile->addActionListener(folderButtonActionListener);
-  
+	lblRetroArchFile = new gcn::Label("RetroArch configuration file (retroarch.cfg):");
+	txtRetroArchFile = new gcn::TextField();
+	txtRetroArchFile->setSize(textFieldWidth, txtRetroArchFile->getHeight());
+	txtRetroArchFile->setBackgroundColor(colTextboxBackground);
+
+	cmdRetroArchFile = new gcn::Button("...");
+	cmdRetroArchFile->setId("RetroArchFile");
+	cmdRetroArchFile->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdRetroArchFile->setBaseColor(gui_baseCol);
+	cmdRetroArchFile->addActionListener(folderButtonActionListener);
+
 	category.panel->add(lblSystemROMs, DISTANCE_BORDER, yPos);
 	yPos += lblSystemROMs->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(txtSystemROMs, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdSystemROMs, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
-	yPos += txtSystemROMs->getHeight() + DISTANCE_NEXT_Y * 2;
+	yPos += txtSystemROMs->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblConfigPath, DISTANCE_BORDER, yPos);
 	yPos += lblConfigPath->getHeight() + DISTANCE_NEXT_Y;
@@ -173,17 +173,17 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	category.panel->add(cmdConfigPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
 	yPos += txtConfigPath->getHeight() + DISTANCE_NEXT_Y;
 
-  category.panel->add(lblControllersPath, DISTANCE_BORDER, yPos);
-  yPos += lblControllersPath->getHeight();
-  category.panel->add(txtControllersPath, DISTANCE_BORDER, yPos);
-  category.panel->add(cmdControllersPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
-  yPos += txtControllersPath->getHeight() + DISTANCE_NEXT_Y;  
-  
-  category.panel->add(lblRetroArchFile, DISTANCE_BORDER, yPos);
-  yPos += lblRetroArchFile->getHeight();
-  category.panel->add(txtRetroArchFile, DISTANCE_BORDER, yPos);
-  category.panel->add(cmdRetroArchFile, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
-  yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblControllersPath, DISTANCE_BORDER, yPos);
+	yPos += lblControllersPath->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(txtControllersPath, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdControllersPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	yPos += txtControllersPath->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblRetroArchFile, DISTANCE_BORDER, yPos);
+	yPos += lblRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(txtRetroArchFile, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdRetroArchFile, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
 	rescanROMsButtonActionListener = new RescanROMsButtonActionListener();
 
 	cmdRescanROMs = new gcn::Button("Rescan Paths");
