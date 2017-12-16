@@ -338,7 +338,8 @@ bool HelpPanelROM(std::vector<std::string> &helptext)
 	helptext.push_back("");
 	helptext.push_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
 	helptext.push_back("");
-	helptext.push_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video playback in CD32.");
-	helptext.push_back("There are also some Action Replay and Freezer cards and the built in HRTMon available.");
+	helptext.push_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video");
+	helptext.push_back("playback in CD32. There are also some Action Replay and Freezer cards and the built-in");
+	helptext.push_back("HRTMon available.");
 	return true;
 }

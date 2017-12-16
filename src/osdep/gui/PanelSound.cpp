@@ -475,15 +475,17 @@ void RefreshPanelSound()
 bool HelpPanelSound(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("You can turn on sound emulation with different levels of accuracy and choose between mono and stereo.");
+	helptext.push_back("You can turn on sound emulation with different levels of accuracy and");
+	helptext.push_back("choose between Mono and Stereo.");
 	helptext.push_back("");
-	helptext.push_back("The different types of interpolation have different impact on the performance. Play with the settings to find the");
-	helptext.push_back("type you like most. You may need headphones to really hear the differences between the interpolations.");
+	helptext.push_back("The different types of interpolation have different impact on performance. ");
+	helptext.push_back("Play with the settings to find the type you like most. You may need headphones .");
+	helptext.push_back("to really hear the difference between the interpolation types.");
 	helptext.push_back("");
 	helptext.push_back("With \"Filter\", you can select the type of the Amiga audio filter.");
 	helptext.push_back("");
-	helptext.push_back("With \"Stereo separation\" and \"Stereo delay\", you can adjust how the left and right audio channels of the Amiga");
-	helptext.push_back("are mixed to the left and right channels of your device. A value of 70% for separation and no delay is a good");
-	helptext.push_back("start.");
+	helptext.push_back("With \"Stereo separation\" and \"Stereo delay\", you can adjust how the left ");
+	helptext.push_back("and right audio channels of the Amiga are mixed to the left and right channels ");
+	helptext.push_back("of your device. A value of 70% for separation and no delay is a good start.");
 	return true;
 }

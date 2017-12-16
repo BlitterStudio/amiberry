@@ -646,16 +646,18 @@ int count_HDs(struct uae_prefs* p)
 bool HelpPanelHD(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("Use \"Add Directory\" to add a folder or \"Add Hardfile\" to add a HDF file as a hard disk. To edit the settings of a");
-	helptext.push_back("HDD, click on \"...\" left to the entry in the list. With the red cross, you can delete an entry.");
+	helptext.push_back("Use \"Add Directory\" to add a folder or \"Add Hardfile\" to add a HDF file as");
+	helptext.push_back("a hard disk. To edit the settings of a HDD, click on \"...\" left to the entry in");
+	helptext.push_back("the list. With the red cross, you can delete an entry.");
 	helptext.push_back("");
-	helptext.push_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB. For large files, it will take some time");
-	helptext.push_back("to create the new hard disk. You have to format the new HDD in the Amiga via the Workbench.");
+	helptext.push_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB.");
+	helptext.push_back("For large files, it will take some time to create the new hard disk. You have to");
+	helptext.push_back("format the new HDD in the Amiga via the Workbench.");
 	helptext.push_back("");
 	helptext.push_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
 	helptext.push_back("");
-	helptext.push_back("Activate \"CD drive\" to emulate CD for CD32. Use \"Eject\" to remove current CD and click on \"...\" to open a dialog");
-	helptext.push_back("to select the iso/cue file for CD emulation.");
+	helptext.push_back("Activate \"CD drive\" to emulate CD for CD32. Use \"Eject\" to remove current CD");
+	helptext.push_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
 	helptext.push_back("");
 	helptext.push_back("In current version, WAV, MP3 and FLAC is supported for audio tracks.");
 	return true;

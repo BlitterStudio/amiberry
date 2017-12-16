@@ -364,14 +364,16 @@ void RefreshPanelMisc()
 bool HelpPanelMisc(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("\"Status Line\" shows/hides the status line indicator. During emulation, you can show/hide this by pressing left");
-	helptext.push_back("shoulder and 'd'. The first value in the status line shows the idle time of the Pandora CPU in %, the second value");
-	helptext.push_back("is the current frame rate. When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and");
-	helptext.push_back("write (red) access to the HDD. The next values are showing the track number for each disk drive and indicates");
-	helptext.push_back("disk access.");
+	helptext.push_back("\"Status Line\" Shows/Hides the status line indicator.");
+	helptext.push_back("The first value in the status line shows the idle time of the CPU in %,");
+	helptext.push_back("the second value is the current frame rate.");
+	helptext.push_back("When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and write");
+	helptext.push_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
+	helptext.push_back("and indicates disk access.");
 	helptext.push_back("");
-	helptext.push_back("When you deactivate the option \"Show GUI on startup\" and use this configuration by specifying it with the");
-	helptext.push_back("command line parameter \"-config=<file>\", the emulation starts directly without showing the GUI.");
+	helptext.push_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
+	helptext.push_back("by specifying it with the command line parameter \"-config=<file>\", ");
+	helptext.push_back("the emulation starts directly without showing the GUI.");
 	helptext.push_back("");
 #ifdef PANDORA
 	helptext.push_back("Set the speed for the Pandora CPU to overclock it for games which need more power. Be careful with this");

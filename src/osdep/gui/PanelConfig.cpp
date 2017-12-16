@@ -351,11 +351,11 @@ bool LoadConfigByName(const char *name)
 	bool HelpPanelConfig(std::vector<std::string> &helptext)
 	{
 		helptext.clear();
-		helptext.push_back("To load a configuration, select the entry in the list and then click on \"Load\". If you doubleclick on an entry");
-		helptext.push_back("in the list, the emulation starts with this configuration.");
+		helptext.push_back("To load a configuration, select the entry in the list and then click on \"Load\".");
+		helptext.push_back("If you doubleclick on an entry in the list, the emulation starts with this configuration.");
 		helptext.push_back("");
-		helptext.push_back("If you want to create a new configuration, setup all options, enter a new name in \"Name\", provide a short");
-		helptext.push_back("description and then click on \"Save\".");
+		helptext.push_back("If you want to create a new configuration, setup all options, enter a new name in");
+		helptext.push_back("\"Name\", provide a short description and then click on \"Save\".");
 		helptext.push_back("");
 		helptext.push_back("\"Delete\" will delete the selected configuration.");
 		return true;

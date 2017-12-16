@@ -242,10 +242,11 @@ void RefreshPanelPaths()
 bool HelpPanelPaths(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("Specify the location of your kickstart roms and the folders where the configurations and controller files should be stored.");
-	helptext.push_back("With the button \"...\" you can open a dialog to choose the folder.");
+	helptext.push_back("Specify the location of your kickstart roms and the folders where the configurations");
+	helptext.push_back("and controller files should be stored. With the button \"...\" you can open a dialog");
+	helptext.push_back("to choose the folder.");
 	helptext.push_back("");
-	helptext.push_back("After changing the location of the kickstart roms, click on \"Rescan\" to refresh the list of the available");
-	helptext.push_back("ROMs.");
+	helptext.push_back("After changing the location of the kickstart roms, click on \"Rescan\" to refresh");
+	helptext.push_back("the list of the available ROMs.");
 	return true;
 }

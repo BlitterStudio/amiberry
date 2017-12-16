@@ -370,23 +370,26 @@ void RefreshPanelDisplay()
 bool HelpPanelDisplay(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("Select the required width and height of the Amiga screen. If you select \"NTSC\" in chipset, a value greater than");
-	helptext.push_back("240 for \"Height\" makes no sense. When the game, demo or workbench uses Hires mode and you selected a");
-	helptext.push_back("value for \"Width\" lower than 640, you will only see half of the pixels.");
+	helptext.push_back("Select the required width and height of the Amiga screen. If you select \"NTSC\"");
+	helptext.push_back("in Chipset, a value greater than 240 for \"Height\" makes no sense. When the game,");
+	helptext.push_back("Demo or Workbench uses HiRes mode and you selected a value for \"Width\" lower than 640,");
+	helptext.push_back("you will only see half of the pixels.");
 	helptext.push_back("");
-	helptext.push_back("Select the scaling method for the Amiga screen. The default option \"Auto\", will try to find the best looking");
-	helptext.push_back("scaling method depending on your monitor's resolution. \"Nearest Neighbor\" will give you a more pixelated");
-	helptext.push_back("and crisp image, but it may come with some distortion if your resolution is not an exact multiple.");
+	helptext.push_back("Select the scaling method for the Amiga screen. The default option \"Auto\", ");
+	helptext.push_back("will try to find the best looking scaling method depending on your monitor's resolution. ");
+	helptext.push_back("\"Nearest Neighbor\" will give you a more pixelated and crisp image, but it may come with ");
+	helptext.push_back("some distortion if your resolution is not an exact multiple. ");
 	helptext.push_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
 	helptext.push_back("");
 #ifdef PANDORA
-	helptext.push_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga screen. You can also change");
-	helptext.push_back("this during emulation with left and right shoulder button and dpad up/down.");
+	helptext.push_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga ");
+	helptext.push_back("screen. You can also change this during emulation with left and right shoulder button ");
+	helptext.push_back("and dpad up/down.");
 	helptext.push_back("");
 #endif //PANDORA
 	helptext.push_back("Activate line doubling to remove flicker in interlace modes.");
 	helptext.push_back("");
-	helptext.push_back("When you activate \"Frameskip\", only every second frame is drawn. This will improve performance and some");
-	helptext.push_back("more games are playable.");
+	helptext.push_back("When you activate \"Frameskip\", only every second frame is drawn.");
+	helptext.push_back("This will improve performance and some more games are playable.");
 	return true;
 }

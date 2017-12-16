@@ -419,20 +419,22 @@ bool HelpPanelCPU(std::vector<std::string> &helptext)
 {
 	helptext.clear();
 	helptext.push_back("Select the required Amiga CPU (68000 - 68040).");
-	helptext.push_back("If you select 68020, you can choose between 24-bit addressing (68EC020) or 32-bit addressing (68020).");
-	helptext.push_back("The option \"More compatible\" is only available if 68000 or 68010 is selected and emulates simple prefetch of");
-	helptext.push_back("the 68000. This may improve compatibility in few situations but is not required for most games and demos.");
+	helptext.push_back("If you select 68020, you can choose between 24-bit addressing (68EC020) or 32-bit");
+	helptext.push_back("addressing (68020). The option \"More compatible\" is only available if 68000 or 68010");
+	helptext.push_back("is selected and emulates simple prefetch of the 68000. This may improve compatibility");
+	helptext.push_back("in few situations but is not required for most games and demos.");
 	helptext.push_back("");
 	helptext.push_back("JIT enables the Just-in-time compiler. This may break compatibility in some games.");
 	helptext.push_back("");
 	helptext.push_back("The available FPU models depending on the selected CPU.");
 	helptext.push_back("The option \"More compatible\" activates more accurate rounding and compare of two floats.");
-	helptext.push_back("\"Softfloat FPU emul.\" aktivates the FPU emulation from QEMU. This is more accurate, but a bit slower.");
+	helptext.push_back("\"Softfloat FPU emul.\" aktivates the FPU emulation from QEMU. This is more accurate,");
+	helptext.push_back("but a bit slower.");
 	helptext.push_back("");
 	helptext.push_back("With \"CPU Speed\" you can choose the clock rate of the Amiga.");
 	helptext.push_back("");
-	helptext.push_back("In current version, you will not see a difference in the performance for 68020, 68030 and 68040 CPUs. The cpu");
-	helptext.push_back("cycles for the opcodes are based on 68020. The different cycles for 68030 and 68040 may come in a later");
-	helptext.push_back("version.");
+	helptext.push_back("In current version, you will not see a difference in the performance for 68020,");
+	helptext.push_back("68030 and 68040 CPUs. The CPU cycles for the opcodes are based on 68020. The different");
+	helptext.push_back("cycles for 68030 and 68040 may come in a later version.");
 	return true;
 }

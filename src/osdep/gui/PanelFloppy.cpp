@@ -613,19 +613,24 @@ void RefreshPanelFloppy()
 bool HelpPanelFloppy(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("You can enable/disable each drive by clicking the checkbox next to DFx or select the drive type in the dropdown");
-	helptext.push_back("control. \"3.5'' DD\" is the right choise for nearly all ADF and ADZ files.");
-	helptext.push_back("The option \"Write-protected\" indicates if the emulator can write to the ADF. Changing the write protection of the");
-	helptext.push_back("disk file may fail because of missing rights on the host filesystem.");
-	helptext.push_back("The button \"...\" opens a dialog to select the required disk file. With the dropdown control, you can select one of");
-	helptext.push_back("the disks you recently used.");
+	helptext.push_back("You can enable/disable each drive by clicking the checkbox next to DFx or select");
+	helptext.push_back("the drive type in the dropdown control. \"3.5'' DD\" is the right choice for nearly");
+	helptext.push_back("all ADF and ADZ files.");
+	helptext.push_back("The option \"Write-protected\" indicates if the emulator can write to the ADF.");
+	helptext.push_back("Changing the write protection of the disk file may fail because of missing rights");
+	helptext.push_back("on the host filesystem.");
+	helptext.push_back("The button \"...\" opens a dialog to select the required");
+	helptext.push_back("disk file. With the dropdown control, you can select one of the disks you recently used.");
 	helptext.push_back("");
-	helptext.push_back("You can reduce the loading time for lot of games by increasing the floppy drive emulation speed. A few games");
-	helptext.push_back("will not load with higher drive speed and you have to select 100%.");
+	helptext.push_back("You can reduce the loading time for lot of games by increasing the floppy drive");
+	helptext.push_back("emulation speed. A few games will not load with higher drive speed and you have");
+	helptext.push_back("to select 100%.");
 	helptext.push_back("");
-	helptext.push_back("\"Save config for disk\" will create a new configuration file with the name of the disk in DF0. This configuration will");
-	helptext.push_back("be loaded each time you select the disk and have the option \"Load config with same name as disk\" enabled.");
+	helptext.push_back("\"Save config for disk\" will create a new configuration file with the name of");
+	helptext.push_back("the disk in DF0. This configuration will be loaded each time you select the disk");
+	helptext.push_back("and have the option \"Load config with same name as disk\" enabled.");
 	helptext.push_back("");
-	helptext.push_back("With the buttons \"Create 3.5'' DD disk\" and \"Create 3.5'' HD disk\" you can create a new and empty disk.");
+	helptext.push_back("With the buttons \"Create 3.5'' DD disk\" and \"Create 3.5'' HD disk\" you can");
+	helptext.push_back("create a new and empty disk.");
 	return true;
 }

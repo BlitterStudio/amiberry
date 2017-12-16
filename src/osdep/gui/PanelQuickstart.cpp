@@ -969,14 +969,13 @@ void RefreshPanelQuickstart(void)
 bool HelpPanelQuickstart(vector<string>& helptext)
 {
 	helptext.clear();
-	helptext.push_back("Simplified start of emulation by just selecting the Amiga model and the disk/CD you want to use.");
+	helptext.push_back("Simplified start of emulation by just selecting the Amiga model and the disk/CD");
+	helptext.push_back("you want to use.");
 	helptext.push_back("");
-	helptext.push_back(
-		"After selecting the Amiga model, you can choose from a small list of standard configurations for this model to");
-	helptext.push_back("start with.");
+	helptext.push_back("After selecting the Amiga model, you can choose from a small list of standard");
+	helptext.push_back("configurations for this model to start with.");
 	helptext.push_back("");
-	helptext.push_back(
-		"When you activate \"Start in Quickstart mode\", the next time you run the emulator, it  will start with the quickstart");
-	helptext.push_back("panel. Otherwise you start in configuraions panel.");
+	helptext.push_back("When you activate \"Start in Quickstart mode\", the next time you run the emulator,");
+	helptext.push_back("it  will start with the QuickStart panel. Otherwise you start in configurations panel.");
 	return true;
 }

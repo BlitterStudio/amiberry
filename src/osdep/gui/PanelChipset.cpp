@@ -387,19 +387,22 @@ void RefreshPanelChipset()
 bool HelpPanelChipset(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games, select \"Full ECS\". Some older");
-	helptext.push_back("Amiga games requires \"OCS\" or \"ECS Agnus\". You have to play with these options if a game won't work as");
-	helptext.push_back("expected. By selecting an entry in \"Extra\", all internal chipset settings will become the required values for the specified");
-	helptext.push_back("Amiga model.");
-	helptext.push_back("For some games, you have to activate \"NTSC\" (60 Hz instead of 50 Hz) for correct timing.");
+	helptext.push_back("If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games,");
+	helptext.push_back("select \"Full ECS\". Some older Amiga games requires \"OCS\" or \"ECS Agnus\".");
+	helptext.push_back("You have to play with these options if a game won't work as expected. By selecting");
+	helptext.push_back("an entry in \"Extra\", all internal chipset settings will become the required values");
+	helptext.push_back("for the specified Amiga model. For some games, you have to activate \"NTSC\"");
+	helptext.push_back("(60 Hz instead of 50 Hz) for correct timing.");
 	helptext.push_back("");
-	helptext.push_back("When you see some graphic issues in a game, try \"Immediate\" or \"Wait for blit.\" for blitter and/or disable");
-	helptext.push_back("\"Fast copper\".");
+	helptext.push_back("When you see some graphic issues in a game, try \"Immediate\" or \"Wait for blit.\"");
+	helptext.push_back("for blitter and/or disable \"Fast copper\".");
 	helptext.push_back("");
-	helptext.push_back("\"Fast copper\" uses a prediction algorithm instead of checking the copper state on a more regular basis. This may");
-	helptext.push_back("cause issues but brings a big performance improvement. The option was removed in WinUAE in an early state,");
-	helptext.push_back("but for most games, it works fine and the better performance is helpful for low powered devices.");
+	helptext.push_back("\"Fast copper\" uses a prediction algorithm instead of checking the copper state");
+	helptext.push_back("on a more regular basis. This may cause issues but brings a big performance improvement.");
+	helptext.push_back("The option was removed in WinUAE in an early state, but for most games, it works fine and");
+	helptext.push_back("the better performance is helpful for low powered devices.");
 	helptext.push_back("");
-	helptext.push_back("For \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine for nearly all games.");
+	helptext.push_back("For \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine");
+	helptext.push_back("for nearly all games.");
 	return true;
 }
