@@ -663,9 +663,9 @@ static int init_joystick(void)
 	// we will also use this routine to grab the retroarch buttons
 
 	// set up variables / paths etc.
-	char retroarch_file[MAX_PATH];
+	char retroarch_file[MAX_DPATH];
 	extern void fetch_retroarchfile(char* out, int size);
-	fetch_retroarchfile(retroarch_file, MAX_PATH);
+	fetch_retroarchfile(retroarch_file, MAX_DPATH);
 
 	if (zfile_exists(retroarch_file))
 	{
@@ -738,9 +738,9 @@ static int init_joystick(void)
 		nr_joysticks = MAX_INPUT_DEVICES;
 
 	// set up variables / paths etc.
-	char tmp[MAX_PATH];
+	char tmp[MAX_DPATH];
 	extern void fetch_controllerspath(char* out, int size);
-	fetch_controllerspath(tmp, MAX_PATH);
+	fetch_controllerspath(tmp, MAX_DPATH);
 
 	// do the loop
 	for (int cpt = 0; cpt < nr_joysticks; cpt++)

@@ -2,13 +2,8 @@
 #pragma once
 #define SUPPORT_THREADS
 
-#define MAX_DPATH 1000
-
 #include <limits.h>
-
-#ifndef MAX_PATH
-#define MAX_PATH PATH_MAX
-#endif
+#define MAX_DPATH PATH_MAX //1000
 
 /* #define DRIVESOUND */
 /* #define GFXFILTER */

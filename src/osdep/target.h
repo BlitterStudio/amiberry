@@ -99,8 +99,8 @@ extern void ClearAvailableROMList(void);
 #include <vector>
 #include <string>
 typedef struct {
-	char Name[MAX_PATH];
-	char Path[MAX_PATH];
+	char Name[MAX_DPATH];
+	char Path[MAX_DPATH];
 	int ROMType;
 } AvailableROM;
 extern std::vector<AvailableROM*> lstAvailableROMs;

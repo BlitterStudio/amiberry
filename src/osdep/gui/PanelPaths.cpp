@@ -42,11 +42,11 @@ class FolderButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char tmp[MAX_PATH];
+		char tmp[MAX_DPATH];
 
 		if (actionEvent.getSource() == cmdSystemROMs)
 		{
-			fetch_rompath(tmp, MAX_PATH);
+			fetch_rompath(tmp, MAX_DPATH);
 			if (SelectFolder("Folder for System ROMs", tmp))
 			{
 				set_rompath(tmp);
@@ -57,7 +57,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdConfigPath)
 		{
-			fetch_configurationpath(tmp, MAX_PATH);
+			fetch_configurationpath(tmp, MAX_DPATH);
 			if (SelectFolder("Folder for configuration files", tmp))
 			{
 				set_configurationpath(tmp);
@@ -69,7 +69,7 @@ public:
 		}
 		else if(actionEvent.getSource() == cmdControllersPath)
       {
-        fetch_controllerspath(tmp, MAX_PATH);
+        fetch_controllerspath(tmp, MAX_DPATH);
         if(SelectFolder("Folder for controller files", tmp))
         {
           set_controllerspath(tmp);
@@ -82,7 +82,7 @@ public:
       else if(actionEvent.getSource() == cmdRetroArchFile)
       {
         const char *filter[] = { "retroarch.cfg", "\0" };
-        fetch_retroarchfile(tmp, MAX_PATH);
+        fetch_retroarchfile(tmp, MAX_DPATH);
         if(SelectFile("Select RetroArch Config File", tmp,filter))
         {
           set_retroarchfile(tmp);
@@ -224,18 +224,18 @@ void ExitPanelPaths()
 
 void RefreshPanelPaths()
 {
-	char tmp[MAX_PATH];
+	char tmp[MAX_DPATH];
 
-	fetch_rompath(tmp, MAX_PATH);
+	fetch_rompath(tmp, MAX_DPATH);
 	txtSystemROMs->setText(tmp);
 
-	fetch_configurationpath(tmp, MAX_PATH);
+	fetch_configurationpath(tmp, MAX_DPATH);
 	txtConfigPath->setText(tmp);
 
-	fetch_controllerspath(tmp, MAX_PATH);
+	fetch_controllerspath(tmp, MAX_DPATH);
 	txtControllersPath->setText(tmp);
 
-	fetch_retroarchfile(tmp, MAX_PATH);
+	fetch_retroarchfile(tmp, MAX_DPATH);
 	txtRetroArchFile->setText(tmp); 
 }
 

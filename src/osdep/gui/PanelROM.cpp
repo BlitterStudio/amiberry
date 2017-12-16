@@ -155,13 +155,13 @@ public:
 
 		if (actionEvent.getSource() == cmdMainROM)
 		{
-			strncpy(tmp, currentDir, MAX_PATH);
+			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
 				AvailableROM * newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strncpy(newrom->Path, tmp, MAX_PATH);
+				strncpy(newrom->Path, tmp, MAX_DPATH);
 				newrom->ROMType = ROMTYPE_KICK;
 				lstAvailableROMs.push_back(newrom);
 				strncpy(changed_prefs.romfile, tmp, sizeof(changed_prefs.romfile));
@@ -171,13 +171,13 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdExtROM)
 		{
-			strncpy(tmp, currentDir, MAX_PATH);
+			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
 				AvailableROM * newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strncpy(newrom->Path, tmp, MAX_PATH);
+				strncpy(newrom->Path, tmp, MAX_DPATH);
 				newrom->ROMType = ROMTYPE_EXTCDTV;
 				lstAvailableROMs.push_back(newrom);
 				strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
@@ -188,13 +188,13 @@ public:
 #ifdef ACTION_REPLAY
 		else if (actionEvent.getSource() == cmdCartROM)
 		{
-			strncpy(tmp, currentDir, MAX_PATH);
+			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Select Cartridge ROM", tmp, filter))
 			{
 				AvailableROM *newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
-				strncpy(newrom->Path, tmp, MAX_PATH);
+				strncpy(newrom->Path, tmp, MAX_DPATH);
 				newrom->ROMType = ROMTYPE_CD32CART;
 				lstAvailableROMs.push_back(newrom);
 				strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));

@@ -658,11 +658,11 @@ namespace widgets
 				char tmp[MAX_DPATH];
 				fetch_configurationpath(tmp, sizeof tmp);
 				if (strlen(last_loaded_config) > 0)
-					strncat(tmp, last_loaded_config, MAX_PATH - 1);
+					strncat(tmp, last_loaded_config, MAX_DPATH - 1);
 				else
 				{
-					strncat(tmp, OPTIONSFILENAME, MAX_PATH);
-					strncat(tmp, ".uae", MAX_PATH);
+					strncat(tmp, OPTIONSFILENAME, MAX_DPATH);
+					strncat(tmp, ".uae", MAX_DPATH);
 				}
 				uae_restart(-1, tmp);
 				gui_running = false;

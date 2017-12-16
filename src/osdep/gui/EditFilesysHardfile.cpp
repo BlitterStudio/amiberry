@@ -153,7 +153,7 @@ public:
 		if (actionEvent.getSource() == cmdPath)
 		{
 			char tmp[MAX_DPATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
+			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
 			wndEditFilesysHardfile->releaseModalFocus();
 			if (SelectFile("Select harddisk file", tmp, harddisk_filter))
 			{

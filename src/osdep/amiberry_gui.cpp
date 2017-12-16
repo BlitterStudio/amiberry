@@ -142,9 +142,9 @@ static void addrom(struct romdata* rd, const char* path)
 	char tmpName[MAX_DPATH];
 	AvailableROM* tmp = new AvailableROM();
 	getromname(rd, tmpName);
-	strncpy(tmp->Name, tmpName, MAX_PATH);
+	strncpy(tmp->Name, tmpName, MAX_DPATH);
 	if (path != nullptr)
-		strncpy(tmp->Path, path, MAX_PATH);
+		strncpy(tmp->Path, path, MAX_DPATH);
 	tmp->ROMType = rd->type;
 	lstAvailableROMs.push_back(tmp);
 	romlist_add(path, rd);
@@ -214,7 +214,7 @@ static struct romdata* scan_single_rom(char* path)
 {
 	char tmp[MAX_DPATH];
 
-	strncpy (tmp, path, MAX_PATH);
+	strncpy (tmp, path, MAX_DPATH);
 	struct romdata* rd = getromdatabypath(path);
 	if (rd && rd->crc32 == 0xffffffff)
 		return rd;
@@ -272,18 +272,18 @@ static void scan_rom(char *path)
 void RescanROMs()
 {
 	vector<string> files;
-	char path[MAX_PATH];
+	char path[MAX_DPATH];
 
 	romlist_clear();
 
 	ClearAvailableROMList();
-	fetch_rompath(path, MAX_PATH);
+	fetch_rompath(path, MAX_DPATH);
 
 	load_keyring(&changed_prefs, path);
 	ReadDirectory(path, nullptr, &files);
 	for (int i = 0; i < files.size(); ++i)
 	{
-		char tmppath[MAX_PATH];
+		char tmppath[MAX_DPATH];
 		strncpy(tmppath, path, sizeof tmppath - 1);
 		strncat(tmppath, files[i].c_str(), sizeof tmppath - 1);
 		scan_rom(tmppath);
@@ -316,7 +316,7 @@ static void ClearConfigFileList()
 
 void ReadConfigFileList(void)
 {
-	char path[MAX_PATH];
+	char path[MAX_DPATH];
 	std::vector<std::string> files;
 	const char *filter_rp9[] = { ".rp9", "\0" };
 	const char *filter_uae[] = { ".uae", "\0" };
@@ -324,7 +324,7 @@ void ReadConfigFileList(void)
 	ClearConfigFileList();
 
 	// Read rp9 files
-	fetch_rp9path(path, MAX_PATH);
+	fetch_rp9path(path, MAX_DPATH);
 	ReadDirectory(path, NULL, &files);
 	FilterFiles(&files, filter_rp9);
 	for (int i = 0; i<files.size(); ++i)
@@ -334,12 +334,12 @@ void ReadConfigFileList(void)
 		strncat(tmp->FullPath, files[i].c_str(), MAX_DPATH);
 		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
-		strncpy(tmp->Description, _T("rp9"), MAX_PATH);
+		strncpy(tmp->Description, _T("rp9"), MAX_DPATH);
 		ConfigFilesList.push_back(tmp);
 	}
 
 	// Read standard config files
-	fetch_configurationpath(path, MAX_PATH);
+	fetch_configurationpath(path, MAX_DPATH);
 	ReadDirectory(path, NULL, &files);
 	FilterFiles(&files, filter_uae);
 	for (int i = 0; i<files.size(); ++i)
@@ -475,20 +475,20 @@ int gui_update()
   switch(currentStateNum)
   {
     case 1:
-  		strncat(savestate_fname,"-1.uss", MAX_PATH - 1);
-	    strncat(screenshot_filename,"-1.png", MAX_PATH - 1);
+  		strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
+	    strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
 	    break;
     case 2:
-  		strncat(savestate_fname,"-2.uss", MAX_PATH - 1);
-  		strncat(screenshot_filename,"-2.png", MAX_PATH - 1);
+  		strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
+  		strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
   		break;
     case 3:
-  		strncat(savestate_fname,"-3.uss", MAX_PATH - 1);
-  		strncat(screenshot_filename,"-3.png", MAX_PATH - 1);
+  		strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
+  		strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
   		break;
     default: 
-	   	strncat(savestate_fname,".uss", MAX_PATH - 1);
-  		strncat(screenshot_filename,".png", MAX_PATH - 1);
+	   	strncat(savestate_fname,".uss", MAX_DPATH - 1);
+  		strncat(screenshot_filename,".png", MAX_DPATH - 1);
   }
   return 0;
 }

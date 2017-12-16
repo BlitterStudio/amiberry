@@ -66,7 +66,7 @@ public:
 		if (actionEvent.getSource() == cmdPath)
 		{
 			char tmp[MAX_DPATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_PATH);
+			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
 			wndEditFilesysVirtual->releaseModalFocus();
 			if (SelectFolder("Select folder", tmp))
 			{

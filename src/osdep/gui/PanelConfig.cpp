@@ -21,7 +21,7 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-static char last_active_config[MAX_PATH] = {'\0'};
+static char last_active_config[MAX_DPATH] = {'\0'};
 static int ensureVisible = -1;
 
 static gcn::Button* cmdLoad;
@@ -49,7 +49,7 @@ bool LoadConfigByName(const char *name)
 			txtName->setText(config->Name);
 			txtDesc->setText(config->Description);
 			target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
-			strncpy(last_active_config, config->Name, MAX_PATH);
+			strncpy(last_active_config, config->Name, MAX_DPATH);
 			DisableResume();
 			RefreshAllPanels();
 		}
@@ -126,7 +126,7 @@ bool LoadConfigByName(const char *name)
 				else
 				{
 					target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
-					strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_PATH);
+					strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
 					DisableResume();
 					RefreshAllPanels();
 				}
@@ -196,7 +196,7 @@ bool LoadConfigByName(const char *name)
 				else
 				{
 					target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
-					strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_PATH);
+					strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
 					DisableResume();
 					RefreshAllPanels();
 					uae_reset(0, 1);
@@ -291,7 +291,7 @@ bool LoadConfigByName(const char *name)
 		category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 		if (strlen(last_active_config) == 0)
-			strncpy(last_active_config, OPTIONSFILENAME, MAX_PATH);
+			strncpy(last_active_config, OPTIONSFILENAME, MAX_DPATH);
 		txtName->setText(last_active_config);
 		txtDesc->setText(changed_prefs.description);
 		ensureVisible = -1;

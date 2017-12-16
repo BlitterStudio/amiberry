@@ -82,7 +82,7 @@ int my_readdir(struct my_opendir_s* mod, char* name)
 	struct dirent * de = readdir(static_cast<DIR *>(mod->h));
 	if (de == nullptr)
 		return 0;
-	strncpy(name, de->d_name, MAX_PATH);
+	strncpy(name, de->d_name, MAX_DPATH);
 	return 1;
 }
 

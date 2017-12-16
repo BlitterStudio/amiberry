@@ -33,7 +33,7 @@
 string volName;
 static bool dialogResult = false;
 static bool dialogFinished = false;
-static char workingDir[MAX_PATH];
+static char workingDir[MAX_DPATH];
 
 static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
@@ -96,18 +96,18 @@ static DirListModel dirList(".");
 
 static void checkfoldername(char* current)
 {
-	char actualpath [MAX_PATH];
+	char actualpath [MAX_DPATH];
 	DIR* dir;
 
 	if ((dir = opendir(current)))
 	{
 		dirList = current;
 		char* ptr = realpath(current, actualpath);
-		strncpy(workingDir, ptr, MAX_PATH);
+		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
 	else
-		strncpy(workingDir, start_path_data, MAX_PATH);
+		strncpy(workingDir, start_path_data, MAX_DPATH);
 	txtCurrent->setText(workingDir);
 }
 
@@ -117,12 +117,12 @@ class ListBoxActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char foldername[MAX_PATH] = "";
+		char foldername[MAX_DPATH] = "";
 
 		const int selected_item = lstFolders->getSelected();
-		strncpy(foldername, workingDir, MAX_PATH - 1);
-		strncat(foldername, "/", MAX_PATH - 1);
-		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_PATH - 1);
+		strncpy(foldername, workingDir, MAX_DPATH - 1);
+		strncat(foldername, "/", MAX_DPATH - 1);
+		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_DPATH - 1);
 		volName = dirList.getElementAt(selected_item).c_str();
 		checkfoldername(foldername);
 	}
@@ -350,9 +350,9 @@ bool SelectFolder(const char* title, char* value)
 	ExitSelectFolder();
 	if (dialogResult)
 	{
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, MAX_DPATH);
 		if (value[strlen(value) - 1] != '/')
-			strncat(value, "/", MAX_PATH);
+			strncat(value, "/", MAX_DPATH);
 	}
 	return dialogResult;
 }

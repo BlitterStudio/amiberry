@@ -613,7 +613,6 @@ void fetch_screenshotpath(char *out, int size)
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
 {
-	int i;
 	int result = 0;
 
 	write_log(_T("target_cfgfile_load(): load file %s\n"), filename);
@@ -621,7 +620,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	discard_prefs(p, type);
 	default_prefs(p, true, 0);
 
-	const char* ptr = strstr((char *)filename, ".rp9");
+	const char* ptr = strstr(const_cast<char *>(filename), ".rp9");
 	if (ptr > nullptr)
 	{
 		// Load rp9 config
@@ -631,7 +630,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	}
 	else
 	{
-		ptr = strstr((char *)filename, ".uae");
+		ptr = strstr(const_cast<char *>(filename), ".uae");
 		if (ptr > nullptr)
 		{
 			int type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
@@ -643,7 +642,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 
 	if (result)
 	{
-		for (i = 0; i < p->nr_floppies; ++i)
+		for (int i = 0; i < p->nr_floppies; ++i)
 		{
 			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
@@ -665,7 +664,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 
 int check_configfile(char *file)
 {
-	char tmp[MAX_PATH];
+	char tmp[MAX_DPATH];
 
 	FILE *f = fopen(file, "rt");
 	if (f)
@@ -674,12 +673,12 @@ int check_configfile(char *file)
 		return 1;
 	}
 
-	strncpy(tmp, file, MAX_PATH);
+	strncpy(tmp, file, MAX_DPATH);
 	char* ptr = strstr(tmp, ".uae");
 	if (ptr > nullptr)
 	{
 		*(ptr + 1) = '\0';
-		strncat(tmp, "conf", MAX_PATH);
+		strncat(tmp, "conf", MAX_DPATH);
 		f = fopen(tmp, "rt");
 		if (f)
 		{
@@ -696,12 +695,12 @@ void extractFileName(const char * str, char *buffer)
 	while (*p != '/' && p > str)
 		p--;
 	p++;
-	strncpy(buffer, p, MAX_PATH);
+	strncpy(buffer, p, MAX_DPATH);
 }
 
 void extractPath(char *str, char *buffer)
 {
-	strncpy(buffer, str, MAX_PATH);
+	strncpy(buffer, str, MAX_DPATH);
 	char* p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p > buffer)
 		p--;
@@ -814,8 +813,8 @@ void saveAdfDir(void)
 
 void get_string(FILE *f, char *dst, int size)
 {
-	char buffer[MAX_PATH];
-	fgets(buffer, MAX_PATH, f);
+	char buffer[MAX_DPATH];
+	fgets(buffer, MAX_DPATH, f);
 	int i = strlen(buffer);
 	while (i > 0 && (buffer[i - 1] == '\t' || buffer[i - 1] == ' '
 		|| buffer[i - 1] == '\r' || buffer[i - 1] == '\n'))
@@ -860,16 +859,15 @@ void loadAdfDir(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
-	struct zfile *fh;
-	fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
+	struct zfile *fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh) {
 		char linea[CONFIG_BLEN];
 		TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
 		int numROMs, numDisks, numCDs;
 		int romType = -1;
-		char romName[MAX_PATH] = { '\0' };
-		char romPath[MAX_PATH] = { '\0' };
-		char tmpFile[MAX_PATH];
+		char romName[MAX_DPATH] = { '\0' };
+		char romPath[MAX_DPATH] = { '\0' };
+		char tmpFile[MAX_DPATH];
 
 		while (zfile_fgetsa(linea, sizeof (linea), fh) != nullptr)
 		{

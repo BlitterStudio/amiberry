@@ -603,15 +603,15 @@ public:
 				//---------------------------------------
 				// Select disk for drive
 				//---------------------------------------
-				char tmp[MAX_PATH];
+				char tmp[MAX_DPATH];
 
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_PATH);
+					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
 				else
-					strncpy(tmp, currentDir, MAX_PATH);
+					strncpy(tmp, currentDir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
-					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_PATH))
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH))
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof(changed_prefs.floppyslots[i].df));
 						disk_insert(i, tmp);

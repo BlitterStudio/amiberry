@@ -41,7 +41,7 @@ extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool createNew = false;
-static char workingDir[MAX_PATH];
+static char workingDir[MAX_DPATH];
 static const char** filefilter;
 static bool dialogCreated = false;
 static int selectedOnStart = -1;
@@ -108,25 +108,25 @@ public:
 			const int selected_item = lstFiles->getSelected();
 			if (createNew)
 			{
-				char tmp[MAX_PATH];
+				char tmp[MAX_DPATH];
 				if (txtFilename->getText().length() <= 0)
 					return;
-				strncpy(tmp, workingDir, MAX_PATH - 1);
-				strncat(tmp, "/", MAX_PATH - 1);
-				strncat(tmp, txtFilename->getText().c_str(), MAX_PATH - 1);
+				strncpy(tmp, workingDir, MAX_DPATH - 1);
+				strncat(tmp, "/", MAX_DPATH - 1);
+				strncat(tmp, txtFilename->getText().c_str(), MAX_DPATH - 1);
 				if (strstr(tmp, filefilter[0]) == nullptr)
-					strncat(tmp, filefilter[0], MAX_PATH - 1);
+					strncat(tmp, filefilter[0], MAX_DPATH - 1);
 				if (my_existsfile(tmp) == 1)
 					return; // File already exists
-				strncpy(workingDir, tmp, MAX_PATH - 1);
+				strncpy(workingDir, tmp, MAX_DPATH - 1);
 				dialogResult = true;
 			}
 			else
 			{
 				if (fileList->isDir(selected_item))
 					return; // Directory selected -> Ok not possible
-				strncat(workingDir, "/", MAX_PATH - 1);
-				strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
+				strncat(workingDir, "/", MAX_DPATH - 1);
+				strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 1);
 				dialogResult = true;
 			}
 		}
@@ -139,24 +139,24 @@ static FileButtonActionListener* fileButtonActionListener;
 
 static void checkfoldername(char* current)
 {
-	char actualpath[MAX_PATH];
+	char actualpath[MAX_DPATH];
 	DIR* dir;
 
 	if ((dir = opendir(current)))
 	{
 		fileList->changeDir(current);
 		char* ptr = realpath(current, actualpath);
-		strncpy(workingDir, ptr, MAX_PATH);
+		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
 	else
-		strncpy(workingDir, start_path_data, MAX_PATH);
+		strncpy(workingDir, start_path_data, MAX_DPATH);
 	txtCurrent->setText(workingDir);
 }
 
 static void checkfilename(char* current)
 {
-	char actfile[MAX_PATH];
+	char actfile[MAX_DPATH];
 	extractFileName(current, actfile);
 	for (int i = 0; i < fileList->getNumberOfElements(); ++i)
 	{
@@ -175,12 +175,12 @@ class SelectFileActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char foldername[MAX_PATH] = "";
+		char foldername[MAX_DPATH] = "";
 
 		const int selected_item = lstFiles->getSelected();
-		strncpy(foldername, workingDir, MAX_PATH);
-		strncat(foldername, "/", MAX_PATH - 1);
-		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_PATH - 1);
+		strncpy(foldername, workingDir, MAX_DPATH);
+		strncat(foldername, "/", MAX_DPATH - 1);
+		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 1);
 		if (fileList->isDir(selected_item))
 			checkfoldername(foldername);
 		else if (!createNew)
@@ -483,7 +483,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	ExitSelectFile();
 #endif
 	if (dialogResult)
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, MAX_DPATH);
 #ifdef FILE_SELECT_KEEP_POSITION
 	else
 		strncpy(workingDir, value, MAX_PATH);
