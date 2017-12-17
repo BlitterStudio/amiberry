@@ -419,32 +419,17 @@ struct uae_prefs {
 	int scaling_method;
 #endif
 
-	bool customControls;
-	TCHAR custom_up[256];
-	TCHAR custom_down[256];
-	TCHAR custom_left[256];
-	TCHAR custom_right[256];
-	TCHAR custom_a[256];
-	TCHAR custom_b[256];
-	TCHAR custom_x[256];
-	TCHAR custom_y[256];
-	TCHAR custom_l[256];
-	TCHAR custom_r[256];
-	TCHAR custom_play[256];
-
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 #endif
 
 #ifdef PANDORA
-int pandora_vertical_offset;
-  int pandora_cpu_speed;
-  int pandora_hide_idle_led;
-  
-  int pandora_tapDelay;
-  int pandora_customControls;
-#endif
+	int pandora_vertical_offset;
+	int pandora_cpu_speed;
+	int pandora_hide_idle_led;
 
+	int pandora_tapDelay;
+#endif
 
 	/* input */
 
@@ -460,44 +445,44 @@ int pandora_vertical_offset;
 	int input_mouse_speed;
 	int input_tablet;
 	int input_keyboard_type;
-        
-        bool amiberry_use_retroarch_quit;
-        bool amiberry_use_retroarch_menu;
-        bool amiberry_use_retroarch_reset;
-        bool amiberry_use_retroarch_statebuttons;
 
-    /* ANDROID */
+	bool amiberry_use_retroarch_quit;
+	bool amiberry_use_retroarch_menu;
+	bool amiberry_use_retroarch_reset;
+	bool amiberry_use_retroarch_statebuttons;
+
+	/* ANDROID */
 #ifdef ANDROIDSDL
-int onScreen;
-int onScreen_textinput;
-int onScreen_dpad;
-int onScreen_button1;
-int onScreen_button2;
-int onScreen_button3;
-int onScreen_button4;
-int onScreen_button5;
-int onScreen_button6;
-int custom_position;
-int pos_x_textinput;
-int pos_y_textinput;
-int pos_x_dpad;
-int pos_y_dpad;
-int pos_x_button1;
-int pos_y_button1;
-int pos_x_button2;
-int pos_y_button2;
-int pos_x_button3;
-int pos_y_button3;
-int pos_x_button4;
-int pos_y_button4;
-int pos_x_button5;
-int pos_y_button5;
-int pos_x_button6;
-int pos_y_button6;
-int extfilter;
-int quickSwitch;
-int floatingJoystick;
-int disableMenuVKeyb;
+	int onScreen;
+	int onScreen_textinput;
+	int onScreen_dpad;
+	int onScreen_button1;
+	int onScreen_button2;
+	int onScreen_button3;
+	int onScreen_button4;
+	int onScreen_button5;
+	int onScreen_button6;
+	int custom_position;
+	int pos_x_textinput;
+	int pos_y_textinput;
+	int pos_x_dpad;
+	int pos_y_dpad;
+	int pos_x_button1;
+	int pos_y_button1;
+	int pos_x_button2;
+	int pos_y_button2;
+	int pos_x_button3;
+	int pos_y_button3;
+	int pos_x_button4;
+	int pos_y_button4;
+	int pos_x_button5;
+	int pos_y_button5;
+	int pos_x_button6;
+	int pos_y_button6;
+	int extfilter;
+	int quickSwitch;
+	int floatingJoystick;
+	int disableMenuVKeyb;
 #endif
 
 	struct uae_input_device joystick_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];

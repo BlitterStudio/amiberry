@@ -57,15 +57,6 @@ static int doStylusRightClick;
 
 extern void SetLastActiveConfig(const char* filename);
 
-/* Keyboard */
-#ifdef USE_SDL1
-int customControlMap[SDLK_LAST];
-#endif
-
-#ifdef USE_SDL2
-std::map<int, TCHAR[256]> customControlMap; // No SDLK_LAST. SDL2 migration guide suggests std::map
-#endif
-
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
 
@@ -259,19 +250,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->fast_copper = 0;
 #endif
 
-	p->customControls = false;
-	_tcscpy(p->custom_up, "");
-	_tcscpy(p->custom_down, "");
-	_tcscpy(p->custom_left, "");
-	_tcscpy(p->custom_right, "");
-	_tcscpy(p->custom_a, "");
-	_tcscpy(p->custom_b, "");
-	_tcscpy(p->custom_x, "");
-	_tcscpy(p->custom_y, "");
-	_tcscpy(p->custom_l, "");
-	_tcscpy(p->custom_r, "");
-	_tcscpy(p->custom_play, "");
-
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
@@ -326,10 +304,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->disableMenuVKeyb = 0;
 #endif
 
-#ifdef USE_SDL1
-	memset(customControlMap, 0, sizeof(customControlMap));
-#endif
-
 	p->cr[CHIPSET_REFRESH_PAL].locked = true;
 	p->cr[CHIPSET_REFRESH_PAL].vsync = 1;
 
@@ -376,19 +350,6 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry_use_retroarch_quit"), p->amiberry_use_retroarch_quit);
 	cfgfile_write_bool(f, _T("amiberry_use_retroarch_menu"), p->amiberry_use_retroarch_menu);
 	cfgfile_write_bool(f, _T("amiberry_use_retroarch_reset"), p->amiberry_use_retroarch_reset);
-
-	cfgfile_write_bool(f, "amiberry.custom_controls", p->customControls);
-	cfgfile_write(f, "amiberry.custom_up", "%d", p->custom_up);
-	cfgfile_write(f, "amiberry.custom_down", "%d", p->custom_down);
-	cfgfile_write(f, "amiberry.custom_left", "%d", p->custom_left);
-	cfgfile_write(f, "amiberry.custom_right", "%d", p->custom_right);
-	cfgfile_write(f, "amiberry.custom_a", "%d", p->custom_a);
-	cfgfile_write(f, "amiberry.custom_b", "%d", p->custom_b);
-	cfgfile_write(f, "amiberry.custom_x", "%d", p->custom_x);
-	cfgfile_write(f, "amiberry.custom_y", "%d", p->custom_y);
-	cfgfile_write(f, "amiberry.custom_l", "%d", p->custom_l);
-	cfgfile_write(f, "amiberry.custom_r", "%d", p->custom_r);
-	cfgfile_write(f, "amiberry.custom_play", "%d", p->custom_play);
 
 #ifdef ANDROIDSDL
 	cfgfile_write(f, "pandora.onscreen", "%d", p->onScreen);
@@ -511,31 +472,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
 		return 1;
 	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
-		return 1;
-
-	if (cfgfile_yesno(option, value, "custom_controls", &p->customControls))
-		return 1;
-	if (cfgfile_string(option, value, "custom_up", p->custom_up, sizeof p->custom_up))
-		return 1;
-	if (cfgfile_string(option, value, "custom_down", p->custom_down, sizeof p->custom_down))
-		return 1;
-	if (cfgfile_string(option, value, "custom_left", p->custom_left, sizeof p->custom_left))
-		return 1;
-	if (cfgfile_string(option, value, "custom_right", p->custom_right, sizeof p->custom_right))
-		return 1;
-	if (cfgfile_string(option, value, "custom_a", p->custom_a, sizeof p->custom_a))
-		return 1;
-	if (cfgfile_string(option, value, "custom_b", p->custom_b, sizeof p->custom_b))
-		return 1;
-	if (cfgfile_string(option, value, "custom_x", p->custom_x, sizeof p->custom_x))
-		return 1;
-	if (cfgfile_string(option, value, "custom_y", p->custom_y, sizeof p->custom_y))
-		return 1;
-	if (cfgfile_string(option, value, "custom_l", p->custom_l, sizeof p->custom_l))
-		return 1;
-	if (cfgfile_string(option, value, "custom_r", p->custom_r, sizeof p->custom_r))
-		return 1;
-	if (cfgfile_string(option, value, "custom_play", p->custom_play, sizeof p->custom_play))
 		return 1;
 	return 0;
 }
@@ -1142,23 +1078,6 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-#ifdef USE_SDL2
-void PopulateCustomControlMap()
-{
-	strcpy(customControlMap[VK_UP], currprefs.custom_up);
-	strcpy(customControlMap[VK_DOWN], currprefs.custom_down);
-	strcpy(customControlMap[VK_LEFT], currprefs.custom_left);
-	strcpy(customControlMap[VK_RIGHT], currprefs.custom_right);
-	strcpy(customControlMap[VK_Green], currprefs.custom_a);
-	strcpy(customControlMap[VK_Blue], currprefs.custom_b);
-	strcpy(customControlMap[VK_Red], currprefs.custom_x);
-	strcpy(customControlMap[VK_Yellow], currprefs.custom_y);
-	strcpy(customControlMap[VK_LShoulder], currprefs.custom_l);
-	strcpy(customControlMap[VK_RShoulder], currprefs.custom_r);
-	strcpy(customControlMap[VK_Play], currprefs.custom_play);
-}
-#endif
-
 int handle_msgpump()
 {
 	int got = 0;
@@ -1169,10 +1088,7 @@ int handle_msgpump()
 		if (delayed_mousebutton == 0)
 			setmousebuttonstate(0, 0, 1);
 	}
-#ifdef USE_SDL2
-	if (currprefs.customControls)
-		PopulateCustomControlMap();
-#endif
+
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
@@ -1214,16 +1130,6 @@ int handle_msgpump()
 				break;
 			}
 #ifdef USE_SDL1
-			/*}
-			else
-			{
-				if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-				{
-					uae_reset(0, 1);
-					break;
-				}
-			}*/
-
 			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
 			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
 				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
@@ -1269,55 +1175,12 @@ int handle_msgpump()
             }
 #endif
 			default:
-				if (currprefs.customControls)
-				{
-#ifdef USE_SDL1
-					keycode = customControlMap[rEvent.key.keysym.sym];
-#endif
-#ifdef USE_SDL2
-					keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
-#endif
-					if (keycode < 0)
-					{
-						// Simulate mouse or joystick
-						SimulateMouseOrJoy(keycode, 1);
-						break;
-					}
-					if (keycode > 0)
-					{
-						// Send mapped key press
-						inputdevice_do_keyboard(keycode, 1);
-						break;
-					}
-				}
 				translate_amiberry_keys(rEvent.key.keysym.sym, 1);
 				break;
 			}
 			break;
 
 		case SDL_KEYUP:
-			if (currprefs.customControls)
-			{
-#ifdef USE_SDL1
-				keycode = customControlMap[rEvent.key.keysym.sym];
-#endif
-#ifdef USE_SDL2
-				keycode = SDL_GetKeyFromName(customControlMap[rEvent.key.keysym.sym]);
-#endif
-				if (keycode < 0)
-				{
-					// Simulate mouse or joystick
-					SimulateMouseOrJoy(keycode, 0);
-					break;
-				}
-				if (keycode > 0)
-				{
-					// Send mapped key release
-					inputdevice_do_keyboard(keycode, 0);
-					break;
-				}
-			}
-
 			translate_amiberry_keys(rEvent.key.keysym.sym, 0);
 			break;
 
