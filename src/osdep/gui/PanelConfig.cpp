@@ -249,7 +249,7 @@ bool LoadConfigByName(const char *name)
 		lblName->setSize(lblName->getWidth(), lblName->getHeight());
 		lblName->setAlignment(gcn::Graphics::RIGHT);
 		txtName = new gcn::TextField();
-		txtName->setSize(300, txtName->getHeight());
+		txtName->setSize(300, TEXTFIELD_HEIGHT);
 		txtName->setId("ConfigName");
 		txtName->setBackgroundColor(colTextboxBackground);
 
@@ -257,7 +257,7 @@ bool LoadConfigByName(const char *name)
 		lblDesc->setSize(lblDesc->getWidth(), lblDesc->getHeight());
 		lblDesc->setAlignment(gcn::Graphics::RIGHT);
 		txtDesc = new gcn::TextField();
-		txtDesc->setSize(300, txtDesc->getHeight());
+		txtDesc->setSize(300, TEXTFIELD_HEIGHT);
 		txtDesc->setId("ConfigDesc");
 		txtDesc->setBackgroundColor(colTextboxBackground);
 

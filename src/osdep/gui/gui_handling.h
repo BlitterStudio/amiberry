@@ -13,9 +13,9 @@
 #define SMALL_BUTTON_WIDTH 30
 #define SMALL_BUTTON_HEIGHT 22
 #define LABEL_HEIGHT 15
-#define TEXTFIELD_HEIGHT 16
-#define DROPDOWN_HEIGHT 15
-#define SLIDER_HEIGHT 18
+#define TEXTFIELD_HEIGHT 20
+#define DROPDOWN_HEIGHT 20
+#define SLIDER_HEIGHT 20
 #define TITLEBAR_HEIGHT 24
 #ifdef USE_SDL2
 #include <guisan/sdl/sdlinput.hpp>

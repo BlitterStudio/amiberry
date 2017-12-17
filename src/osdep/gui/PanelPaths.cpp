@@ -119,7 +119,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 
 	lblSystemROMs = new gcn::Label("System ROMs:");
 	txtSystemROMs = new gcn::TextField();
-	txtSystemROMs->setSize(textFieldWidth, txtSystemROMs->getHeight());
+	txtSystemROMs->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtSystemROMs->setBackgroundColor(colTextboxBackground);
 
 	cmdSystemROMs = new gcn::Button("...");
@@ -130,7 +130,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 
 	lblConfigPath = new gcn::Label("Configuration files:");
 	txtConfigPath = new gcn::TextField();
-	txtConfigPath->setSize(textFieldWidth, txtConfigPath->getHeight());
+	txtConfigPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtConfigPath->setBackgroundColor(colTextboxBackground);
 
 	cmdConfigPath = new gcn::Button("...");
@@ -141,7 +141,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 
 	lblControllersPath = new gcn::Label("Controller files:");
 	txtControllersPath = new gcn::TextField();
-	txtControllersPath->setSize(textFieldWidth, txtControllersPath->getHeight());
+	txtControllersPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtControllersPath->setBackgroundColor(colTextboxBackground);
 
 	cmdControllersPath = new gcn::Button("...");
@@ -152,7 +152,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 
 	lblRetroArchFile = new gcn::Label("RetroArch configuration file (retroarch.cfg):");
 	txtRetroArchFile = new gcn::TextField();
-	txtRetroArchFile->setSize(textFieldWidth, txtRetroArchFile->getHeight());
+	txtRetroArchFile->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtRetroArchFile->setBackgroundColor(colTextboxBackground);
 
 	cmdRetroArchFile = new gcn::Button("...");
