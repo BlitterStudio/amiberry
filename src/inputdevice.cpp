@@ -2103,7 +2103,7 @@ static void cap_check()
 			// CD32 pad in 2-button mode: blue button is not floating
 			if (cd32_pad_enabled[joy] && i == 1 && charge == 0)
 				charge = 2;
-		
+
 			/* official Commodore mouse has pull-up resistors in button lines
 			* NOTE: 3rd party mice may not have pullups! */
 			if ((mouse_port[joy] && digital_port[joy][i]) && charge == 0)
@@ -3744,14 +3744,14 @@ static bool process_custom_event (struct uae_input_device *id, int offset, int s
 
 	if (!id)
 		return false;
-	
+
 	slotoffset = sub & ~3;
 	sub &= 3;
 	flags = id->flags[offset][slotoffset];
 	qual = flags & ID_FLAG_QUALIFIER_MASK;
 	custom = id->custom[offset][slotoffset];
 	int af = flags & ID_FLAG_AUTOFIRE_MASK;
- 
+
 	for (idx = 1; idx < 4; idx++) {
 		uae_u64 flags2 = id->flags[offset][slotoffset + idx];
 		TCHAR *custom2 = id->custom[offset][slotoffset + idx];
@@ -3796,7 +3796,7 @@ static bool process_custom_event (struct uae_input_device *id, int offset, int s
 	flags = id->flags[offset][slotoffset];
 	custompos = (flags & ID_FLAG_CUSTOMEVENT_TOGGLED1) ? 1 : 0;
 	custompos |= (flags & ID_FLAG_CUSTOMEVENT_TOGGLED2) ? 2 : 0;
- 
+
 	if (state < 0) {
 		idx = 0;
 		custompos = 0;

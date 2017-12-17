@@ -742,7 +742,7 @@ int main(int argc, char* argv[])
 
 	real_main(argc, argv);
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND 
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
 #endif
@@ -870,7 +870,7 @@ int handle_msgpump()
 						break;
 					}
 				}
-				translate_amiberry_keys(rEvent.key.keysym.sym, 1);
+				translate_amiberry_keys(rEvent.key.keysym.sym, 1, rEvent.key.keysym.scancode);
 				break;
 			}
 			break;
@@ -893,8 +893,8 @@ int handle_msgpump()
 				}
 			}
 
-			translate_amiberry_keys(rEvent.key.keysym.sym, 0);
-			break;
+				translate_amiberry_keys(rEvent.key.keysym.sym, 0, rEvent.key.keysym.scancode);
+				break;
 
 		case SDL_MOUSEBUTTONDOWN:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
