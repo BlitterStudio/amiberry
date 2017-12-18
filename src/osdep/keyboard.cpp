@@ -263,54 +263,38 @@ static const int np[] = {
 
 void translate_amiberry_keys(int scancode, int newstate)
 {
-	int code = 0;
-	bool amode = currprefs.input_keyboard_type == 0;
-	bool special = false;
-	static int swapperdrive = 0;
-
-	int scancode_new = scancode;
-
-	if (newstate) {
+	if (newstate) 
+	{
 		int defaultguikey = SDLK_F12;
-		if (currprefs.open_gui != "") {
+		if (currprefs.open_gui != "")
+		{
 #ifdef USE_SDL1
-			if (scancode_new == defaultguikey)
+			if (scancode == defaultguikey)
 			{
-				scancode = 0;
 				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
-					inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			}
 #elif USE_SDL2
-			if (scancode_new == defaultguikey && SDL_GetKeyFromName(currprefs.open_gui) != scancode_new) {
-				scancode = 0;
+			if (scancode_new == defaultguikey && SDL_GetKeyFromName(currprefs.open_gui) != scancode) {
 				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
 					inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			}
-			else if (scancode_new == SDL_GetKeyFromName(currprefs.open_gui)) {
+			else if (scancode == SDL_GetKeyFromName(currprefs.open_gui)) {
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-				scancode = 0;
 			}
 #endif
 		}
-		else if (!specialpressed() && !ctrlpressed() && !shiftpressed() && !altpressed() && scancode_new == defaultguikey) {
+		else if (!specialpressed() && !ctrlpressed() && !shiftpressed() && !altpressed() && scancode == defaultguikey) {
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			scancode = 0;
 		}
 #ifdef USE_SDL2
-		if (currprefs.quit_amiberry != "" && scancode_new == SDL_GetKeyFromName(currprefs.quit_amiberry))
+		if (currprefs.quit_amiberry != "" && scancode == SDL_GetKeyFromName(currprefs.quit_amiberry))
 		{
 			inputdevice_add_inputcode(AKS_QUIT, 1);
-			scancode = 0;
 		}
 #endif
 	}
 
-	if (code) {
-		inputdevice_add_inputcode(code, 1);
-		return;
-	}
-
-	scancode = scancode_new;
 	if (!specialpressed() && newstate) {
 		if (scancode == SDLK_CAPSLOCK) {
 			host_capslockstate = host_capslockstate ? 0 : 1;
@@ -503,11 +487,6 @@ void translate_amiberry_keys(int scancode, int newstate)
 	case SDLK_KP_PERIOD:
 		translatedScancode = AK_NPDEL;
 		break;
-	}
-
-	if (special) {
-		inputdevice_checkqualifierkeycode(0, translatedScancode, newstate);
-		return;
 	}
 
 	if (translatedScancode != scancode)
