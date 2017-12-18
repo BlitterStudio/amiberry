@@ -1082,12 +1082,6 @@ int handle_msgpump()
 {
 	int got = 0;
 	SDL_Event rEvent;
-	int keycode;
-	if (delayed_mousebutton) {
-		--delayed_mousebutton;
-		if (delayed_mousebutton == 0)
-			setmousebuttonstate(0, 0, 1);
-	}
 
 	while (SDL_PollEvent(&rEvent))
 	{
