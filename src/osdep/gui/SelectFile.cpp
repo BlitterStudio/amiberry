@@ -35,7 +35,6 @@
 #define FILE_SELECT_KEEP_POSITION
 #endif
 
-static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 static bool dialogResult = false;
@@ -335,8 +334,6 @@ static void SelectFileLoop()
 {
 	FocusBugWorkaround(wndSelectFile);
 
-	GUIjoy = SDL_JoystickOpen(0);
-
 	while (!dialogFinished)
 	{
 		SDL_Event event;
@@ -378,39 +375,43 @@ static void SelectFileLoop()
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
 			{
-				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+				if (GUIjoy)
+				{
+					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
-				{
-					PushFakeKey(SDLK_RETURN);
-					break;
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					{
+						PushFakeKey(SDLK_RETURN);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					{
+						dialogFinished = true;
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
+					{
+						navigate_left();
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
+					{
+						navigate_right();
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
+					{
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
+					{
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
 				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
-				{
-					dialogFinished = true;
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
-				{
-					navigate_left();
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
-				{
-					navigate_right();
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
-				{
-					PushFakeKey(SDLK_UP);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
-				{
-					PushFakeKey(SDLK_DOWN);
-					break;
-				}
+				break;
 			}
 
 			//-------------------------------------------------

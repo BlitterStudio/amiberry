@@ -27,9 +27,7 @@
 #include "androidsdl_event.h"
 #endif
 
-static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-
 
 #define DIALOG_WIDTH 760
 #define DIALOG_HEIGHT 420
@@ -150,8 +148,6 @@ static void ShowHelpLoop(void)
 {
 	FocusBugWorkaround(wndShowHelp);
 
-	GUIjoy = SDL_JoystickOpen(0);
-
 	while (!dialogFinished)
 	{
 		SDL_Event event;
@@ -187,17 +183,21 @@ static void ShowHelpLoop(void)
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN)
 			{
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+				if (GUIjoy)
 				{
-					PushFakeKey(SDLK_RETURN);
-					break;
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					{
+						PushFakeKey(SDLK_RETURN);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					{
+						dialogFinished = true;
+						break;
+					}
 				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
-				{
-					dialogFinished = true;
-					break;
-				}
+				break;
 			}
 
 			//-------------------------------------------------

@@ -29,7 +29,6 @@
 #include "androidsdl_event.h"
 #endif
 
-static SDL_Joystick *GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 extern SDL_Surface* screen;
@@ -89,7 +88,6 @@ void checkInput()
 	//-------------------------------------------------
 	// Check user input
 	//-------------------------------------------------	
-	GUIjoy = SDL_JoystickOpen(0); 
 	while (SDL_PollEvent(&msg_event))
 	{
 		if (msg_event.type == SDL_KEYDOWN)
@@ -107,13 +105,15 @@ void checkInput()
 		}
 		else if (msg_event.type == SDL_JOYBUTTONDOWN)
         { 
-        
-             if (SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button)  || 
-                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].start_button) ||
-                     SDL_JoystickGetButton(GUIjoy,host_input_buttons[0].east_button)) 
-                
-                msg_done = 1;
-                break;       
+			if (GUIjoy)
+			{
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button))
+
+					msg_done = 1;
+			}
+			break;
        }
 
 		//-------------------------------------------------

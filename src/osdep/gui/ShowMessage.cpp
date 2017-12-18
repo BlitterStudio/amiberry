@@ -32,7 +32,6 @@
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
-static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static const char* dialogControlPressed;
 static Uint8 dialogButtonPressed;
@@ -179,8 +178,6 @@ static void ShowMessageLoop()
 {
 	FocusBugWorkaround(wndShowMessage);
 
-	GUIjoy = SDL_JoystickOpen(0);
-
 	while (!dialogFinished)
 	{
 		SDL_Event event;
@@ -221,28 +218,32 @@ static void ShowMessageLoop()
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
 			{
-				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+				if (GUIjoy)
+				{
+					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
-				{
-					PushFakeKey(SDLK_RETURN);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
-				{
-					dialogFinished = true;
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) ||
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) ||
-					(hat & SDL_HAT_LEFT) ||
-					(hat & SDL_HAT_RIGHT))
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					{
+						PushFakeKey(SDLK_RETURN);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					{
+						dialogFinished = true;
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) ||
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) ||
+						(hat & SDL_HAT_LEFT) ||
+						(hat & SDL_HAT_RIGHT))
 
-				{
-					navigate_left_right();
-					break;
+					{
+						navigate_left_right();
+						break;
+					}
 				}
+				break;
 			}
 
 			//-------------------------------------------------

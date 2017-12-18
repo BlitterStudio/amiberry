@@ -34,7 +34,6 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 272
 
-static SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 static const char* harddisk_filter[] = {".hdf", "\0"};
@@ -455,47 +454,51 @@ static void EditFilesysHardfileLoop()
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
 
-				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+				if (GUIjoy)
+				{
+					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
-				{
-					if (HandleNavigation(DIRECTION_UP))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_UP);
-					break;
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_RIGHT);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_LEFT);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+					{
+						PushFakeKey(SDLK_RETURN);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button)) // need this to be START button
+					{
+						dialogFinished = true;
+						break;
+					}
 				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
-				{
-					if (HandleNavigation(DIRECTION_DOWN))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_DOWN);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
-				{
-					if (HandleNavigation(DIRECTION_RIGHT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_RIGHT);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
-				{
-					if (HandleNavigation(DIRECTION_LEFT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_LEFT);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
-				{
-					PushFakeKey(SDLK_RETURN);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button)) // need this to be START button
-				{
-					dialogFinished = true;
-					break;
-				}
+				break;
 			}
 			//-------------------------------------------------
 			// Send event to guichan-controls

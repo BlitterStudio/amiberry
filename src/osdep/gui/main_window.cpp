@@ -31,7 +31,7 @@
 #include <android/log.h>
 #endif
 
-static SDL_Joystick* GUIjoy;
+SDL_Joystick* GUIjoy;
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 bool gui_running = false;
@@ -62,15 +62,13 @@ ConfigCategory categories[] = {
 	{ "Display",          "data/screen.ico", nullptr, nullptr, InitPanelDisplay,   ExitPanelDisplay,   RefreshPanelDisplay,    HelpPanelDisplay },
 	{ "Sound",            "data/sound.ico", nullptr, nullptr, InitPanelSound,     ExitPanelSound,     RefreshPanelSound,      HelpPanelSound },
 	{ "Input",            "data/joystick.ico", nullptr, nullptr, InitPanelInput,     ExitPanelInput,     RefreshPanelInput,      HelpPanelInput },
-#ifndef PANDORA
-  { "Custom controls",  "data/controller.png",  NULL, NULL, InitPanelCustom,     ExitPanelCustom,     RefreshPanelCustom,      HelpPanelCustom },
-#endif
-  { "Miscellaneous",    "data/misc.ico",      NULL, NULL, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
-  { "Savestates",       "data/savestate.png", NULL, NULL, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
+	{ "Custom controls",  "data/controller.png",  NULL, NULL, InitPanelCustom,     ExitPanelCustom,     RefreshPanelCustom,      HelpPanelCustom },
+	{ "Miscellaneous",    "data/misc.ico",      NULL, NULL, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
+	{ "Savestates",       "data/savestate.png", NULL, NULL, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
 #ifdef ANDROIDSDL  
-  { "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
+	{ "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
-  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
 enum
@@ -280,7 +278,7 @@ namespace sdl
 
 	void gui_init()
 	{
-#ifdef USE_SDL1
+#ifdef PANDORA
 		//-------------------------------------------------
 		// Set layer for GUI screen
 		//-------------------------------------------------
@@ -294,10 +292,10 @@ namespace sdl
 		// Create new screen for GUI
 		//-------------------------------------------------
 #ifdef USE_SDL1
-		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo();
 		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 		SDL_EnableUNICODE(1);
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+		SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef USE_SDL2
 		setup_cursor();
@@ -350,14 +348,18 @@ namespace sdl
 		delete gui_input;
 		delete gui_graphics;
 
-#ifdef USE_SDL1
 		if (gui_screen != nullptr)
+		{
 			SDL_FreeSurface(gui_screen);
-#elif USE_SDL2
-		SDL_FreeSurface(gui_screen);
+			gui_screen = nullptr;
+		}
 
-		SDL_DestroyTexture(gui_texture);
-		gui_texture = nullptr;
+#ifdef USE_SDL2
+		if (gui_texture != nullptr)
+		{
+			SDL_DestroyTexture(gui_texture);
+			gui_texture = nullptr;
+		}
 
 		if (cursor)
 		{
@@ -370,7 +372,6 @@ namespace sdl
 			cursorSurface = nullptr;
 		}
 #endif
-		gui_screen = nullptr;
 	}
 
 	void checkInput()
@@ -399,77 +400,81 @@ namespace sdl
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
 
-				const int hat = SDL_JoystickGetHat(GUIjoy, 0);
-
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
+				if (GUIjoy)
 				{
-					if (HandleNavigation(DIRECTION_UP))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_UP);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
-				{
-					if (HandleNavigation(DIRECTION_DOWN))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_DOWN);
-					break;
-				}
+					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
-				{
-					for (int z = 0; z<10; ++z)
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
 					{
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
+						break;
 					}
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].right_shoulder)) // dpad
-				{
-					for (int z = 0; z<10; ++z)
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
 					{
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
+					{
+						for (int z = 0; z<10; ++z)
+						{
+							PushFakeKey(SDLK_UP);
+						}
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].right_shoulder)) // dpad
+					{
+						for (int z = 0; z<10; ++z)
+						{
+							PushFakeKey(SDLK_DOWN);
+						}
+					}
+
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_RIGHT);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_LEFT);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+					{
+						PushFakeKey(SDLK_RETURN);
+						continue;
+					}
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].quit_button) &&
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
+					{
+						uae_quit();
+						gui_running = false;
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_trigger))
+					{
+						ShowHelpRequested();
+						widgets::cmdHelp->requestFocus();
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].menu_button)) // use the HOTKEY button
+					{
+						gui_running = false;
 					}
 				}
-
-
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
-				{
-					if (HandleNavigation(DIRECTION_RIGHT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_RIGHT);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
-				{
-					if (HandleNavigation(DIRECTION_LEFT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_LEFT);
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
-				{
-					PushFakeKey(SDLK_RETURN);
-					continue;
-				}
-				
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].quit_button) &&
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
-				{
-					uae_quit();
-					gui_running = false;
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_trigger))
-				{
-					ShowHelpRequested();
-					widgets::cmdHelp->requestFocus();
-					break;
-				}
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].menu_button)) // use the HOTKEY button
-				{
-					gui_running = false;
-				}
+				break;
 			}
 
 			if (gui_event.type == SDL_KEYDOWN)
@@ -562,9 +567,9 @@ namespace sdl
 #elif USE_SDL2
 					case SDL_SCANCODE_F1:
 #endif
-							ShowHelpRequested();
-							widgets::cmdHelp->requestFocus();
-							break;
+						ShowHelpRequested();
+						widgets::cmdHelp->requestFocus();
+						break;
 
 					default:
 						break;
@@ -584,7 +589,8 @@ namespace sdl
 
 	void gui_run()
 	{
-		GUIjoy = SDL_JoystickOpen(0);
+		if (SDL_NumJoysticks() > 0)
+			GUIjoy = SDL_JoystickOpen(0);
 
 		//-------------------------------------------------
 		// The main loop
@@ -607,15 +613,16 @@ namespace sdl
 
 			if (refreshFuncAfterDraw != nullptr)
 			{
-				void (*currFunc)() = refreshFuncAfterDraw;
+				void(*currFunc)() = refreshFuncAfterDraw;
 				refreshFuncAfterDraw = nullptr;
 				currFunc();
 			}
 		}
-		SDL_JoystickClose(GUIjoy);
+
+		if (GUIjoy)
+			SDL_JoystickClose(GUIjoy);
 	}
 }
-
 
 namespace widgets
 {
@@ -851,7 +858,7 @@ namespace widgets
 		gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
 		gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
-		for (i = 0 , yPos = 0; categories[i].category != nullptr; ++i , yPos += 24)
+		for (i = 0, yPos = 0; categories[i].category != nullptr; ++i, yPos += 24)
 		{
 			selectors->add(categories[i].selector, 0, yPos);
 			gui_top->add(categories[i].panel, panelStartX, DISTANCE_BORDER + 1);
@@ -936,7 +943,8 @@ void run_gui()
 	{
 		sdl::gui_init();
 		widgets::gui_init();
-		if (_tcslen(startup_message) > 0) {
+		if (_tcslen(startup_message) > 0)
+		{
 			ShowMessage(startup_title, startup_message, _T(""), _T("Ok"), _T(""));
 			_tcscpy(startup_title, _T(""));
 			_tcscpy(startup_message, _T(""));
@@ -953,7 +961,7 @@ void run_gui()
 		}
 #endif 
 	}
-	
+
 	// Catch all GUI framework exceptions.
 	catch (gcn::Exception e)
 	{
@@ -967,14 +975,14 @@ void run_gui()
 		cout << "Std exception: " << e.what() << endl;
 		uae_quit();
 	}
-	
+
 	// Catch all unknown exceptions.
 	catch (...)
 	{
 		cout << "Unknown exception" << endl;
 		uae_quit();
 	}
-	
+
 	expansion_generate_autoconfig_info(&changed_prefs);
 	cfgfile_compatibility_romtype(&changed_prefs);
 
