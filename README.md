@@ -31,39 +31,48 @@ Warning: this branch is still Work In Progress - If you're looking for the lates
 - New target platform: Pi 3
 
 # Compiling SDL2
-Unfortunately we need to compile SDL2 from source on the Raspberry Pi, to get support for launching full screen applications from the console. Luckily, the RetroPie project has a handy script that takes care of downloading, compiling and installing SDL2 for us. This currently only handles SDL2, so we still need SDL2_ttf and SDL2_image (see below).
+If you want to run the SDL2 version, you currently need to compile SDL2 from source on the Raspberry Pi, to get support for launching full screen applications from the console. The version bundled with Stretch is not compiled with support for the "rpi" driver, so it only works under X11.
 
-Run these to clone the RetroPie-Setup repo, then run the relevant script:
+Follow these steps to download, compile and install SDL2 from source:
 
-      git clone https://github.com/RetroPie/RetroPie-Setup
-      cd RetroPie-Setup
-      sudo ./retropie_packages.sh sdl2
-
-Next, we need SDL2_image and SDL2_ttf:
-
-      sudo apt-get install libsdl2-image-dev libsdl2-ttf-dev 
-
+https://github.com/midwan/amiberry/wiki/Compile-SDL2-from-source
+      
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
+# Pre-requisites
 Install the following packages:
 
       sudo apt-get install libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
 
+# Compiling Amiberry
 Clone this repo:
       
       cd ~
       git clone https://github.com/midwan/amiberry -b dev amiberry-dev
       cd amiberry-dev
       
-Then for Raspberry Pi 3:  
+The default platform is currently "rpi3-sdl1", so for Raspberry Pi 3 (SDL1) you can just type:
 
       make all
 
-For Raspberry Pi 2:
+For Raspberry Pi 2 (SDL1):
 
-      make all PLATFORM=rpi2
+      make all PLATFORM=rpi2-sdl1
 
-For Raspberry Pi 1:  
+For Raspberry Pi 1 (SDL1):  
 
-      make all PLATFORM=rpi1
+      make all PLATFORM=rpi1-sdl1
 
+And for the SDL2 versions, you can use the following:
+
+      make all PLATFORM=rpi3-sdl2
+
+Or for Raspberry Pi 2 (SDL2):
+
+      make all PLATFORM=rpi2-sdl2
+      
+Or for Raspberry Pi 1/Zero (SDL2):
+
+      make all PLATFORM=rpi1-sdl2
+
+You can check the Makefile for a full list of supported platforms!
