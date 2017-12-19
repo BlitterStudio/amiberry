@@ -33,16 +33,38 @@ Warning: this branch is still Work In Progress - If you're looking for the lates
 # Compiling SDL2
 If you want to run the SDL2 version, you currently need to compile SDL2 from source on the Raspberry Pi, to get support for launching full screen applications from the console. The version bundled with Stretch is not compiled with support for the "rpi" driver, so it only works under X11.
 
-Run these to clone the RetroPie-Setup repo, then run the relevant script:
+Follow these steps to download, compile and install SDL2 from source:
 
-      git clone https://github.com/RetroPie/RetroPie-Setup
-      cd RetroPie-Setup
-      sudo ./retropie_packages.sh sdl2
+      sudo apt-get update && sudo apt-get upgrade
+      sudo apt-get install libudev-dev libasound2-dev liblzma-dev git build-essential
+      cd ~
+      wget https://www.libsdl.org/release/SDL2-2.0.7.tar.gz
+      tar zxvf SDL2-2.0.7.tar.gz
+      cd SDL2-2.0.7 && mkdir build && cd build
+      ../configure
+      make -j 4
+      sudo make install
 
-Next, we need SDL2_image and SDL2_ttf:
+Next, we need SDL2_image:
 
-      sudo apt-get install libsdl2-image-dev libsdl2-ttf-dev 
+      cd ~
+      wget https://www.libsdl.org/projects/SDL_image/release/SDL2_image-2.0.2.tar.gz
+      tar zxvf SDL2_image-2.0.2.tar.gz
+      cd SDL2_image-2.0.2 && mkdir build && cd build
+      ../configure
+      make -j 4
+      sudo make install
 
+...and SDL2_ttf:
+
+      cd ~
+      wget https://www.libsdl.org/projects/SDL_ttf/release/SDL2_ttf-2.0.14.tar.gz
+      tar zxvf SDL2_ttf-2.0.14.tar.gz
+      cd SDL2_ttf-2.0.14.tar.gz && mkdir build && cd build
+      ../configure
+      make -j 4
+      sudo make install
+      
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
 # Pre-requisites
