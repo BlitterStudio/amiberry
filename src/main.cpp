@@ -392,15 +392,15 @@ static int restart_program;
 static TCHAR restart_config[MAX_DPATH];
 static int default_config;
 
-void uae_reset (int hardreset, int keyboardreset)
+void uae_reset(int hardreset, int keyboardreset)
 {
-  if (quit_program == 0) {
+	if (quit_program == 0) {
 		quit_program = -UAE_RESET;
 		if (keyboardreset)
 			quit_program = -UAE_RESET_KEYBOARD;
-	  if (hardreset)
+		if (hardreset)
 			quit_program = -UAE_RESET_HARD;
-  }
+	}
 }
 
 void uae_quit(void)
@@ -653,7 +653,7 @@ void leave_program (void)
     do_leave_program ();
 }
 
-#ifdef USE_SDL2
+
 // In case of error, print the error code and close the application
 void check_error_sdl(const bool check, const char* message) {
 	if (check) {
@@ -662,7 +662,7 @@ void check_error_sdl(const bool check, const char* message) {
 		exit(-1);
 	}
 }
-
+#ifdef USE_SDL2
 static void initialize_sdl2()
 {
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)

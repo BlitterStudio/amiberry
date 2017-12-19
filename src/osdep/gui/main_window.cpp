@@ -293,9 +293,9 @@ namespace sdl
 		//-------------------------------------------------
 #ifdef USE_SDL1
 		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 		SDL_EnableUNICODE(1);
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-		SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef USE_SDL2
 		setup_cursor();
@@ -304,12 +304,12 @@ namespace sdl
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
-		check_error_sdl(gui_screen == nullptr, "Unable to create a surface");
+		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 
 		gui_texture = SDL_CreateTextureFromSurface(renderer, gui_screen);
-		check_error_sdl(gui_texture == nullptr, "Unable to create texture");
+		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 #endif
 #ifdef ANDROIDSDL
 		// Enable Android multitouch
