@@ -51,17 +51,17 @@ Clone this repo:
       git clone https://github.com/midwan/amiberry -b dev amiberry-dev
       cd amiberry-dev
       
-The default platform is currently "rpi3-sdl1", so for Raspberry Pi 3 (SDL1) you can just type:
+The default platform is currently "rpi3", so for Raspberry Pi 3 (SDL1) you can just type:
 
       make all
 
 For Raspberry Pi 2 (SDL1):
 
-      make all PLATFORM=rpi2-sdl1
+      make all PLATFORM=rpi2
 
-For Raspberry Pi 1 (SDL1):  
+For Raspberry Pi 1/Zero (SDL1):  
 
-      make all PLATFORM=rpi1-sdl1
+      make all PLATFORM=rpi1
 
 And for the SDL2 versions, you can use the following:
 
