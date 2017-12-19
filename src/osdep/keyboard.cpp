@@ -271,11 +271,11 @@ void translate_amiberry_keys(int scancode, int newstate)
 #ifdef USE_SDL1
 			if (scancode == defaultguikey)
 			{
-				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
+				//if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			}
 #elif USE_SDL2
-			if (scancode_new == defaultguikey && SDL_GetKeyFromName(currprefs.open_gui) != scancode) {
+			if (scancode == defaultguikey && SDL_GetKeyFromName(currprefs.open_gui) != scancode) {
 				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
 					inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 			}
