@@ -11,21 +11,21 @@ ifeq ($(PLATFORM),rpi3)
     CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi2)
     CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi1)
     CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
     MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry
 
 else ifeq ($(PLATFORM),Pandora)
@@ -36,7 +36,6 @@ else ifeq ($(PLATFORM),Pandora)
 else ifeq ($(PLATFORM),xu4)
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
-    LDFLAGS += -llzma -lfreetype -logg
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
@@ -57,31 +56,25 @@ else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
-    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
+    LDFLAGS += -lm
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
-    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
     MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
-    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 
 else ifeq ($(PLATFORM),pine64-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -D__arm__ -DUSE_SDL2
-    LDFLAGS += -lvchiq_arm -lvcos -llzma -lfreetype -logg -lm
     CC = arm-linux-gnueabihf-gcc
     CXX = arm-linux-gnueabihf-g++
 
@@ -89,7 +82,6 @@ else ifeq ($(PLATFORM),xu4-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
-    LDFLAGS += -llzma -lfreetype -logg
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.

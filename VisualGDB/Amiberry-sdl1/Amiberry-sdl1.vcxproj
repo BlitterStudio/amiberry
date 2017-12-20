@@ -44,7 +44,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;vchiq_arm;vcos;lzma;freetype;ogg;m;SDL;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL_image;SDL_ttf;guichan;guichan_sdl;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>bcm_host;vchiq_arm;SDL;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL_image;SDL_ttf;guichan;guichan_sdl;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
   </ItemDefinitionGroup>
@@ -58,7 +58,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;vchiq_arm;vcos;lzma;freetype;ogg;m;SDL;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL_image;SDL_ttf;guichan;guichan_sdl;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>bcm_host;vchiq_arm;SDL;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL_image;SDL_ttf;guichan;guichan_sdl;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
   </ItemDefinitionGroup>
