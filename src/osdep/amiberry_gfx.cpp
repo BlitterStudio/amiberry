@@ -68,7 +68,7 @@ static char screenshot_filename_default[MAX_DPATH] =
 };
 char* screenshot_filename = static_cast<char *>(&screenshot_filename_default[0]);
 FILE* screenshot_file = nullptr;
-static void CreateScreenshot();
+static void create_screenshot();
 static int save_thumb(char* path);
 int delay_savestate_frame = 0;
 
@@ -114,7 +114,7 @@ static void *display_thread(void *unused)
 		case DISPLAY_SIGNAL_SETUP:
 			bcm_host_init();
 			dispmanxdisplay = vc_dispmanx_display_open(0);
-			vc_dispmanx_vsync_callback(dispmanxdisplay, vsync_callback, NULL);
+			vc_dispmanx_vsync_callback(dispmanxdisplay, vsync_callback, nullptr);
 			break;
 
 		case DISPLAY_SIGNAL_SUBSHUTDOWN:
@@ -135,9 +135,9 @@ static void *display_thread(void *unused)
 				dispmanxresource_amigafb_2 = 0;
 			}
 
-			if (screen != NULL) {
+			if (screen != nullptr) {
 				SDL_FreeSurface(screen);
-				screen = NULL;
+				screen = nullptr;
 			}
 			uae_sem_post(&display_sem);
 			break;
@@ -184,10 +184,10 @@ static void *display_thread(void *unused)
 				dispmanxupdate = vc_dispmanx_update_start(0);
 				dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 2,               // layer
 					&dst_rect, dispmanxresource_amigafb_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-					NULL,             // clamp
+					nullptr,             // clamp
 					DISPMANX_NO_ROTATE);
 
-				vc_dispmanx_update_submit(dispmanxupdate, NULL, NULL);
+				vc_dispmanx_update_submit(dispmanxupdate, nullptr, nullptr);
 			}
 			uae_sem_post(&display_sem);
 			break;
@@ -215,11 +215,11 @@ static void *display_thread(void *unused)
 				dispmanxupdate = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_2);
 			}
-			vc_dispmanx_update_submit(dispmanxupdate, NULL, NULL);
+			vc_dispmanx_update_submit(dispmanxupdate, nullptr, nullptr);
 			break;
 
 		case DISPLAY_SIGNAL_QUIT:
-			vc_dispmanx_vsync_callback(dispmanxdisplay, NULL, NULL);
+			vc_dispmanx_vsync_callback(dispmanxdisplay, nullptr, nullptr);
 			vc_dispmanx_display_close(dispmanxdisplay);
 			bcm_host_deinit();
 			display_tid = nullptr;
@@ -267,7 +267,7 @@ int graphics_setup(void)
 		uae_sem_init(&display_sem, 0, 0);
 	}
 	if (display_tid == nullptr && display_pipe != nullptr && display_sem != nullptr) {
-		uae_start_thread(_T("render"), display_thread, NULL, &display_tid);
+		uae_start_thread(_T("render"), display_thread, nullptr, &display_tid);
 	}
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
 #endif
@@ -527,7 +527,7 @@ bool render_screen(bool immediate)
 			--delay_savestate_frame;
 		else
 		{
-			CreateScreenshot();
+			create_screenshot();
 			save_thumb(screenshot_filename);
 			savestate_state = 0;
 		}
@@ -648,7 +648,7 @@ static void graphics_subinit()
 	}
 }
 
-STATIC_INLINE int bitsInMask(unsigned long mask)
+int bits_in_mask(unsigned long mask)
 {
 	/* count bits in mask */
 	auto n = 0;
@@ -660,7 +660,7 @@ STATIC_INLINE int bitsInMask(unsigned long mask)
 	return n;
 }
 
-STATIC_INLINE int maskShift(unsigned long mask)
+int mask_shift(unsigned long mask)
 {
 	/* determine how far mask is shifted */
 	auto n = 0;
@@ -675,12 +675,12 @@ STATIC_INLINE int maskShift(unsigned long mask)
 static int init_colors()
 {
 	/* Truecolor: */
-	const int red_bits = bitsInMask(screen->format->Rmask);
-	const int green_bits = bitsInMask(screen->format->Gmask);
-	const int blue_bits = bitsInMask(screen->format->Bmask);
-	const int red_shift = maskShift(screen->format->Rmask);
-	const int green_shift = maskShift(screen->format->Gmask);
-	const int blue_shift = maskShift(screen->format->Bmask);
+	const int red_bits = bits_in_mask(screen->format->Rmask);
+	const int green_bits = bits_in_mask(screen->format->Gmask);
+	const int blue_bits = bits_in_mask(screen->format->Bmask);
+	const int red_shift = mask_shift(screen->format->Rmask);
+	const int green_shift = mask_shift(screen->format->Gmask);
+	const int blue_shift = mask_shift(screen->format->Bmask);
 	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, 0);
 	notice_new_xcolors();
 
@@ -704,7 +704,7 @@ static int get_display_depth()
 		* could actually be 15 bits deep. We'll count the bits
 		* ourselves */
 		if (depth == 16)
-			depth = bitsInMask(vid_info->vfmt->Rmask) + bitsInMask(vid_info->vfmt->Gmask) + bitsInMask(vid_info->vfmt->Bmask);
+			depth = bits_in_mask(vid_info->vfmt->Rmask) + bits_in_mask(vid_info->vfmt->Gmask) + bits_in_mask(vid_info->vfmt->Bmask);
 	}
 #elif USE_SDL2
 	int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
@@ -841,7 +841,7 @@ static int save_png(SDL_Surface* surface, char* path)
 	return 1;
 }
 
-static void CreateScreenshot()
+static void create_screenshot()
 {
 	if (current_screenshot != nullptr)
 	{
@@ -1018,7 +1018,7 @@ static void modes_list()
 	while (DisplayModes[i].depth >= 0)
 	{
 		write_log("%d: %s (", i, DisplayModes[i].name);
-		int j = 0;
+		auto j = 0;
 		while (DisplayModes[i].refresh[j] > 0)
 		{
 			if (j > 0)
