@@ -165,7 +165,7 @@ static void ShowHelpLoop(void)
 					dialogFinished = true;
 					break;
 
-				case VK_Red:
+				case VK_Blue:
 				case VK_Green:
 #ifdef USE_SDL1
 				case SDLK_RETURN:

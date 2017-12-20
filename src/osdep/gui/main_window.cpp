@@ -62,13 +62,13 @@ ConfigCategory categories[] = {
 	{ "Display",          "data/screen.ico", nullptr, nullptr, InitPanelDisplay,   ExitPanelDisplay,   RefreshPanelDisplay,    HelpPanelDisplay },
 	{ "Sound",            "data/sound.ico", nullptr, nullptr, InitPanelSound,     ExitPanelSound,     RefreshPanelSound,      HelpPanelSound },
 	{ "Input",            "data/joystick.ico", nullptr, nullptr, InitPanelInput,     ExitPanelInput,     RefreshPanelInput,      HelpPanelInput },
-	{ "Custom controls",  "data/controller.png",  NULL, NULL, InitPanelCustom,     ExitPanelCustom,     RefreshPanelCustom,      HelpPanelCustom },
-	{ "Miscellaneous",    "data/misc.ico",      NULL, NULL, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
-	{ "Savestates",       "data/savestate.png", NULL, NULL, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
+	{ "Custom controls",  "data/controller.png",  nullptr, nullptr, InitPanelCustom,     ExitPanelCustom,     RefreshPanelCustom,      HelpPanelCustom },
+	{ "Miscellaneous",    "data/misc.ico",      nullptr, nullptr, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
+	{ "Savestates",       "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
 #ifdef ANDROIDSDL  
 	{ "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
-	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
 };
 
 enum
@@ -101,7 +101,6 @@ enum
 * SDL Stuff we need
 */
 SDL_Surface* gui_screen;
-SDL_Event gui_event;
 #ifdef USE_SDL2
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
@@ -109,7 +108,7 @@ SDL_Surface* cursorSurface;
 #endif
 
 /*
-* Guisan SDL stuff we need
+* Gui SDL stuff we need
 */
 gcn::SDLInput* gui_input;
 gcn::SDLGraphics* gui_graphics;
@@ -121,7 +120,7 @@ gcn::SDLTrueTypeFont* gui_font;
 #endif
 
 /*
-* Guisan stuff we need
+* Gui stuff we need
 */
 gcn::Gui* uae_gui;
 gcn::Container* gui_top;
@@ -292,10 +291,16 @@ namespace sdl
 		// Create new screen for GUI
 		//-------------------------------------------------
 #ifdef USE_SDL1
+#ifdef DEBUG
+		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo();
+		printf("Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h,
+			videoInfo->vfmt->BitsPerPixel);
+#endif //DEBUG
 		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 		SDL_EnableUNICODE(1);
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+		SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef USE_SDL2
 		setup_cursor();
@@ -381,7 +386,7 @@ namespace sdl
 #elif USE_SDL2
 		const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 #endif
-
+		SDL_Event gui_event;
 		while (SDL_PollEvent(&gui_event))
 		{
 			if (gui_event.type == SDL_QUIT)
@@ -526,11 +531,13 @@ namespace sdl
 						break;
 
 					case VK_ESCAPE:
+					case VK_Red:
 						gui_running = false;
 						break;
 
-					case VK_Red:
+					
 					case VK_Green:
+					case VK_Blue:
 						//------------------------------------------------
 						// Simulate press of enter when 'X' pressed
 						//------------------------------------------------
@@ -577,7 +584,7 @@ namespace sdl
 			}
 
 			//-------------------------------------------------
-			// Send event to guisan-controls
+			// Send event to gui-controls
 			//-------------------------------------------------
 #ifdef ANDROIDSDL
 			androidsdl_event(event, gui_input);
@@ -638,7 +645,7 @@ namespace widgets
 				// ------------------------------------------------
 				uae_quit();
 				gui_running = false;
-				target_shutdown();
+				host_poweroff = true;
 			}
 
 			if (actionEvent.getSource() == cmdQuit)
@@ -746,7 +753,12 @@ namespace widgets
 		// Create container for main page
 		//-------------------------------------------------
 		gui_top = new gcn::Container();
+#ifdef USE_SDL1
+		gui_top->setDimension(gcn::Rectangle((gui_screen->w - GUI_WIDTH) / 2, (gui_screen->h - GUI_HEIGHT) / 2, GUI_WIDTH,
+			GUI_HEIGHT));
+#elif USE_SDL2
 		gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
+#endif
 		gui_top->setBaseColor(gui_baseCol);
 		uae_gui->setTop(gui_top);
 

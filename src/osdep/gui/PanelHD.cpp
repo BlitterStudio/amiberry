@@ -589,7 +589,7 @@ void RefreshPanelHD()
 				else
 					listCells[row][COL_READWRITE]->setText("yes");
 				listCells[row][COL_SIZE]->setText("n/a");
-				snprintf(tmp, sizeof tmp, "%d", ci->bootpri);
+				snprintf(tmp, 32, "%d", ci->bootpri);
 				listCells[row][COL_BOOTPRI]->setText(tmp);
 			}
 			else
@@ -602,13 +602,13 @@ void RefreshPanelHD()
 				else
 					listCells[row][COL_READWRITE]->setText("yes");
 				if (nosize)
-					snprintf(tmp, sizeof tmp, "n/a");
+					snprintf(tmp, 32, "n/a");
 				else if (mi.size >= 1024 * 1024 * 1024)
-					snprintf(tmp, sizeof tmp, "%.1fG", double(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
+					snprintf(tmp, 32, "%.1fG", double(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
 				else
-					snprintf(tmp, sizeof tmp, "%.1fM", double(uae_u32(mi.size / 1024)) / 1024.0);
+					snprintf(tmp, 32, "%.1fM", double(uae_u32(mi.size / 1024)) / 1024.0);
 				listCells[row][COL_SIZE]->setText(tmp);
-				snprintf(tmp, sizeof tmp, "%d", ci->bootpri);
+				snprintf(tmp, 32, "%d", ci->bootpri);
 				listCells[row][COL_BOOTPRI]->setText(tmp);
 			}
 			listCmdProps[row]->setEnabled(true);
@@ -633,7 +633,7 @@ void RefreshPanelHD()
 	sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
 
 	sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
-	snprintf(tmp, sizeof tmp, "%d %%", 100 - changed_prefs.sound_volume_cd);
+	snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);
 	lblCDVolInfo->setCaption(tmp);
 }
 

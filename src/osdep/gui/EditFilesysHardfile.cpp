@@ -34,8 +34,6 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 272
 
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-
 static const char* harddisk_filter[] = {".hdf", "\0"};
 
 struct controller_map
@@ -100,8 +98,7 @@ class ControllerListModel : public gcn::ListModel
 {
 public:
 	ControllerListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -123,8 +120,7 @@ class UnitListModel : public gcn::ListModel
 {
 public:
 	UnitListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -435,7 +431,7 @@ static void EditFilesysHardfileLoop()
 						continue; // Don't change value when enter Slider -> don't send event to control
 					break;
 
-				case VK_Red:
+				case VK_Blue:
 				case VK_Green:
 #ifdef USE_SDL1
 					event.key.keysym.sym = SDLK_RETURN;
@@ -589,7 +585,7 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (dialogResult)
 	{
-		struct uaedev_config_info ci;
+		struct uaedev_config_info ci{};
 		const int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 

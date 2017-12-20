@@ -264,7 +264,7 @@ static void EditFilesysVirtualLoop()
 						continue; // Don't change value when enter Slider -> don't send event to control
 					break;
 
-				case VK_Red:
+				case VK_Blue:
 				case VK_Green:
 #ifdef USE_SDL1
 					event.key.keysym.sym = SDLK_RETURN;
@@ -352,7 +352,7 @@ static void EditFilesysVirtualLoop()
 
 bool EditFilesysVirtual(const int unit_no)
 {
-	struct mountedinfo mi;
+	struct mountedinfo mi{};
 	struct uaedev_config_data* uci;
 	string strdevname, strvolname, strroot;
 	char tmp[32];
@@ -376,7 +376,7 @@ bool EditFilesysVirtual(const int unit_no)
 		txtPath->setText(strroot);
 		chkReadWrite->setSelected(!ci->readonly);
 		chkAutoboot->setSelected(ci->bootpri != BOOTPRI_NOAUTOBOOT);
-		snprintf(tmp, sizeof tmp, "%d", ci->bootpri >= -127 ? ci->bootpri : -127);
+		snprintf(tmp, 32, "%d", ci->bootpri >= -127 ? ci->bootpri : -127);
 		txtBootPri->setText(tmp);
 	}
 	else
@@ -394,7 +394,7 @@ bool EditFilesysVirtual(const int unit_no)
 
 	if (dialogResult)
 	{
-		struct uaedev_config_info ci;
+		struct uaedev_config_info ci{};
 		const int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 

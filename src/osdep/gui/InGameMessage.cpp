@@ -94,17 +94,17 @@ void checkInput()
 		{
 			switch (msg_event.key.keysym.sym)
 			{
-			case VK_Red:
+			case VK_Blue:
 			case VK_Green:
 			case SDLK_RETURN:
 				msg_done = 1;
 				break;
-			default: 
+			default:
 				break;
 			}
 		}
 		else if (msg_event.type == SDL_JOYBUTTONDOWN)
-        { 
+		{
 			if (GUIjoy)
 			{
 				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
@@ -114,15 +114,15 @@ void checkInput()
 					msg_done = 1;
 			}
 			break;
-       }
+		}
 
 		//-------------------------------------------------
-		// Send event to guisan-controls
+		// Send event to gui-controls
 		//-------------------------------------------------
 #ifdef ANDROIDSDL
-       androidsdl_event(event, msg_input);
+		androidsdl_event(event, msg_input);
 #else
-       msg_input->pushInput(msg_event);
+		msg_input->pushInput(msg_event);
 #endif 
 	}
 }
@@ -196,11 +196,13 @@ void InGameMessage(const char* msg)
 		msg_gui->draw();
 		// Finally we update the screen.
 #ifdef USE_SDL1
-		SDL_Flip(screen);
+		if(!drawn)
+			SDL_Flip(screen);
 #elif USE_SDL2
-		if (!drawn && cursor != nullptr)
+		if (!drawn)
 		{
-			SDL_ShowCursor(SDL_ENABLE);
+			if (cursor != nullptr)
+				SDL_ShowCursor(SDL_ENABLE);
 			updatedisplayarea();
 		}
 #endif

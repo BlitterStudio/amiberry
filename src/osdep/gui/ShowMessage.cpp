@@ -200,7 +200,7 @@ static void ShowMessageLoop()
 					navigate_left_right();
 					break;
 
-				case VK_Red:
+				case VK_Blue:
 				case VK_Green:
 #ifdef USE_SDL1
 				case SDLK_RETURN:

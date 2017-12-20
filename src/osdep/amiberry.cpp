@@ -60,10 +60,12 @@ extern void SetLastActiveConfig(const char* filename);
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
 
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 #include <linux/kd.h>
 #include <sys/ioctl.h>
 unsigned char kbd_led_status;
 char kbd_flags;
+#endif
 
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
@@ -1131,6 +1133,7 @@ int handle_msgpump()
 
 			switch (rEvent.key.keysym.sym)
 			{
+#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 			case SDLK_CAPSLOCK: // capslock
 				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 				ioctl(0, KDGKBLED, &kbd_flags);
@@ -1152,6 +1155,7 @@ int handle_msgpump()
 				ioctl(0, KDSETLED, kbd_led_status);
 				ioctl(0, KDSKBLED, kbd_flags);
 				break;
+#endif
 #ifdef PANDORA
   		    case SDLK_LCTRL: // Select key
   		      inputdevice_add_inputcode (AKS_ENTERGUI, 1);

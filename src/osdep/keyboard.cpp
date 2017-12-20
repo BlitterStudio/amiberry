@@ -265,8 +265,8 @@ void translate_amiberry_keys(int scancode, int newstate)
 {
 	if (newstate) 
 	{
-		int defaultguikey = SDLK_F12;
-		if (currprefs.open_gui != "")
+		const int defaultguikey = SDLK_F12;
+		if (strncmp(currprefs.open_gui, "",1) == 0)
 		{
 #ifdef USE_SDL1
 			if (scancode == defaultguikey)

@@ -261,7 +261,7 @@ static void CreateFilesysHardfileLoop()
 						continue; // Don't change value when enter Slider -> don't send event to control
 					break;
 
-				case VK_Red:
+				case VK_Blue:
 				case VK_Green:
 #ifdef USE_SDL1
 					event.key.keysym.sym = SDLK_RETURN;
@@ -328,7 +328,7 @@ static void CreateFilesysHardfileLoop()
 			}
 
 			//-------------------------------------------------
-			// Send event to guisan-controls
+			// Send event to gui-controls
 			//-------------------------------------------------
 #ifdef ANDROIDSDL
 			androidsdl_event(event, gui_input);

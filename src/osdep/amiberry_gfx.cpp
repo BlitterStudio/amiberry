@@ -849,6 +849,7 @@ static void create_screenshot()
 		current_screenshot = nullptr;
 	}
 
+	if (screen != nullptr) {
 	const auto w = screen->w;
 	const auto h = screen->h;
 	current_screenshot = SDL_CreateRGBSurfaceFrom(screen->pixels,
@@ -860,6 +861,7 @@ static void create_screenshot()
 		screen->format->Gmask,
 		screen->format->Bmask,
 		screen->format->Amask);
+	}
 }
 
 static int save_thumb(char* path)
@@ -1058,18 +1060,24 @@ void picasso_init_resolutions()
 			const auto rgbFormat = bitdepth == 8 ? RGBFB_CLUT : bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8;
 			auto pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
+#ifdef USE_SDL1
+			if (SDL_VideoModeOK(x_size_table[i], y_size_table[i], 16, SDL_HWSURFACE))
+			{
+#endif
+				DisplayModes[count].res.width = x_size_table[i];
+				DisplayModes[count].res.height = y_size_table[i];
+				DisplayModes[count].depth = bit_unit >> 3;
+				DisplayModes[count].refresh[0] = 50;
+				DisplayModes[count].refresh[1] = 60;
+				DisplayModes[count].refresh[2] = 0;
+				DisplayModes[count].colormodes = pixelFormat;
+				sprintf(DisplayModes[count].name, "%dx%d, %d-bit",
+					DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
 
-			DisplayModes[count].res.width = x_size_table[i];
-			DisplayModes[count].res.height = y_size_table[i];
-			DisplayModes[count].depth = bit_unit >> 3;
-			DisplayModes[count].refresh[0] = 50;
-			DisplayModes[count].refresh[1] = 60;
-			DisplayModes[count].refresh[2] = 0;
-			DisplayModes[count].colormodes = pixelFormat;
-			sprintf(DisplayModes[count].name, "%dx%d, %d-bit",
-				DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
-
-			count++;
+				count++;
+#ifdef USE_SDL1
+			}
+#endif
 		}
 	}
 	DisplayModes[count].depth = -1;
@@ -1087,6 +1095,7 @@ void gfx_set_picasso_state(int on)
 
 	screen_is_picasso = on;
 	open_screen(&currprefs);
+	if(screen != nullptr)
 	picasso_vidinfo.rowbytes = screen->pitch;
 }
 
@@ -1109,8 +1118,10 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	if (screen_is_picasso)
 	{
 		open_screen(&currprefs);
-		picasso_vidinfo.rowbytes = screen->pitch;
-		picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
+		if(screen != nullptr) {
+			picasso_vidinfo.rowbytes = screen->pitch;
+			picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
+		}
 	}
 }
 

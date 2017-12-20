@@ -284,8 +284,8 @@ void RescanROMs()
 	for (int i = 0; i < files.size(); ++i)
 	{
 		char tmppath[MAX_DPATH];
-		strncpy(tmppath, path, sizeof tmppath - 1);
-		strncat(tmppath, files[i].c_str(), sizeof tmppath - 1);
+		strncpy(tmppath, path, MAX_DPATH - 1);
+		strncat(tmppath, files[i].c_str(), MAX_DPATH - 1);
 		scan_rom(tmppath);
 	}
 
@@ -358,7 +358,7 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 {
 	for (int i = 0; i < ConfigFilesList.size(); ++i)
 	{
-		if (!strncasecmp(ConfigFilesList[i]->Name, name, sizeof ConfigFilesList[i]->Name))
+		if (!strncasecmp(ConfigFilesList[i]->Name, name, MAX_DPATH))
 			return ConfigFilesList[i];
 	}
 	return nullptr;
@@ -465,7 +465,7 @@ int gui_update()
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
 	else
-		strncpy(tmp, last_loaded_config, sizeof tmp);
+		strncpy(tmp, last_loaded_config, MAX_DPATH);
 
 	strncat(savestate_fname, tmp, MAX_DPATH - 1);
 	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
@@ -505,9 +505,8 @@ void gui_display(int shortcut)
 
 	if (lstAvailableROMs.size() == 0)
 		RescanROMs();
-#ifdef USE_SDL1
+
 	graphics_subshutdown();
-#endif
 
 	prefs_to_gui();
 	run_gui();
@@ -515,7 +514,7 @@ void gui_display(int shortcut)
 
 	if (quit_program)
 		screen_is_picasso = 0;
-	
+
 	update_display(&changed_prefs);
 #ifdef USE_SDL1
 	/* Clear menu garbage at the bottom of the screen */
