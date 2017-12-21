@@ -2060,15 +2060,20 @@ bool vsync_handle_check(void)
 void vsync_handle_redraw(void)
 {
 	if (framecnt == 0) {
+#ifdef USE_SDL1
 		if (render_tid) {
 			while (render_thread_busy)
 				sleep_millis(1);
 			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
 			uae_sem_wait(&render_sem);
 		}
+#elif USE_SDL2
+		finish_drawing_frame();
+#endif
 	}
 
 	if (quit_program < 0) {
+#ifdef USE_SDL1
 		if (render_tid) {
 			while (render_thread_busy)
 				sleep_millis(1);
@@ -2082,6 +2087,7 @@ void vsync_handle_redraw(void)
 			uae_sem_destroy(&render_sem);
 			render_sem = 0;
 		}
+#endif
 
 		quit_program = -quit_program;
 		set_inhibit_frame(IHF_QUIT_PROGRAM);
@@ -2103,7 +2109,7 @@ void hsync_record_line_state(int lineno)
 		return;
 
 	linestate_first_undecided = lineno + 1;
-
+#ifdef USE_SDL1
 	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
 		if (currprefs.gfx_vresolution) {
 			if (!(linestate_first_undecided & 0x3e))
@@ -2112,6 +2118,7 @@ void hsync_record_line_state(int lineno)
 		else if (!(linestate_first_undecided & 0x1f))
 			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
 	}
+#endif
 }
 
 bool notice_interlace_seen(bool lace)
@@ -2159,7 +2166,7 @@ static void gen_direct_drawing_table(void)
 		direct_colors_for_drawing.acolors[i] = CONVERT_RGB(v);
 	}
 }
-
+#ifdef USE_SDL1
 static void *render_thread(void *unused)
 {
 	for (;;) {
@@ -2182,13 +2189,13 @@ static void *render_thread(void *unused)
 		}
 	}
 }
-
+#endif
 void drawing_init(void)
 {
 	gen_pfield_tables();
 
 	gen_direct_drawing_table();
-
+#ifdef USE_SDL1
 	if (render_pipe == 0) {
 		render_pipe = xmalloc(smp_comm_pipe, 1);
 		init_comm_pipe(render_pipe, 20, 1);
@@ -2199,7 +2206,7 @@ void drawing_init(void)
 	if (render_tid == 0 && render_pipe != 0 && render_sem != 0) {
 		uae_start_thread(_T("render"), render_thread, NULL, &render_tid);
 	}
-
+#endif
 #ifdef PICASSO96
 	if (!isrestore()) {
 		picasso_on = 0;
