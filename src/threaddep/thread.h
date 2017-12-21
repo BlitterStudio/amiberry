@@ -58,7 +58,7 @@ STATIC_INLINE int uae_start_thread_fast (void *(*f) (void *), void *arg, uae_thr
 #elif USE_SDL2
 STATIC_INLINE uae_thread_id uae_start_thread(const TCHAR* name, void*(*f)(void*), void* arg, uae_thread_id* foo)
 {
-  uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, "StartThread", arg);
+  uae_thread_id id = SDL_CreateThread (reinterpret_cast<int (*)(void*)>(f), "StartThread", arg);
   if(foo != NULL)
     *foo = id;
   return id;
@@ -66,7 +66,7 @@ STATIC_INLINE uae_thread_id uae_start_thread(const TCHAR* name, void*(*f)(void*)
 
 STATIC_INLINE uae_thread_id uae_start_thread_fast(void*(*f)(void*), void* arg, uae_thread_id* foo)
 {
-  uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, "StartThreadFast", arg);
+  uae_thread_id id = SDL_CreateThread (reinterpret_cast<int (*)(void*)>(f), "StartThreadFast", arg);
   if(foo != NULL)
     *foo = id;
   return id;
@@ -75,7 +75,7 @@ STATIC_INLINE uae_thread_id uae_start_thread_fast(void*(*f)(void*), void* arg, u
 
 STATIC_INLINE void uae_wait_thread (uae_thread_id thread)
 {
-  SDL_WaitThread (thread, (int*)0);
+  SDL_WaitThread (thread, static_cast<int*>(0));
 }
 
 /* Do nothing; thread exits if thread function returns.  */
