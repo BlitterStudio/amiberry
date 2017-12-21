@@ -27,7 +27,7 @@ static int add_HDF_DHnum = 0;
 static bool clip_no_hires = false;
 
 
-void rp9_init(void)
+void rp9_init()
 {
 	fetch_rp9path(rp9tmp_path, MAX_DPATH);
 	strncat(rp9tmp_path, _T("tmp/"), MAX_DPATH);
@@ -36,17 +36,15 @@ void rp9_init(void)
 }
 
 
-static void del_tmpFiles(void)
+static void del_tmpFiles()
 {
-	int i;
-
-	for (i = 0; i<lstTmpRP9Files.size(); ++i)
-		remove(lstTmpRP9Files[i].c_str());
+	for (auto & lstTmpRP9File : lstTmpRP9Files)
+		remove(lstTmpRP9File.c_str());
 	lstTmpRP9Files.clear();
 }
 
 
-void rp9_cleanup(void)
+void rp9_cleanup()
 {
 	del_tmpFiles();
 	xmlCleanupParser();
@@ -54,37 +52,41 @@ void rp9_cleanup(void)
 }
 
 
-static xmlNode *get_node(xmlNode *node, const char *name)
+static xmlNode* get_node(xmlNode* node, const char* name)
 {
-	for (xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) {
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, name) == 0)
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), name) == 0)
 			return curr_node->children;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
-static bool get_value(xmlNode *node, const char *key, char *value, int max_size)
+static bool get_value(xmlNode* node, const char* key, char* value, int max_size)
 {
-	bool bResult = false;
+	auto result = false;
 
-	for (xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) {
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, key) == 0) {
-			xmlChar *content = xmlNodeGetContent(curr_node);
-			if (content != NULL) {
-				strncpy(value, (char *)content, max_size);
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), key) == 0)
+		{
+			const auto content = xmlNodeGetContent(curr_node);
+			if (content != nullptr)
+			{
+				strncpy(value, reinterpret_cast<char *>(content), max_size);
 				xmlFree(content);
-				bResult = true;
+				result = true;
 			}
 			break;
 		}
 	}
 
-	return bResult;
+	return result;
 }
 
 
-static void set_default_system(struct uae_prefs *p, const char *system, int rom)
+static void set_default_system(struct uae_prefs* p, const char* system, int rom)
 {
 	default_prefs(p, true, 0);
 	del_tmpFiles();
@@ -97,43 +99,45 @@ static void set_default_system(struct uae_prefs *p, const char *system, int rom)
 		bip_a1200(p, rom);
 	else if (strcmp(system, "a-2000") == 0)
 		bip_a2000(p, rom);
-	else if (strcmp(system, "a-4000") == 0) {
+	else if (strcmp(system, "a-4000") == 0)
+	{
 		bip_a4000(p, rom);
 	}
 }
 
 
-static void parse_compatibility(struct uae_prefs *p, xmlNode *node)
+static void parse_compatibility(struct uae_prefs* p, xmlNode* node)
 {
-	for (xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) {
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("compatibility")) == 0) {
-			xmlChar *content = xmlNodeGetContent(curr_node);
-			if (content != NULL) {
-				if (strcmp((const char *)content, "flexible-blitter-immediate") == 0)
-					p->immediate_blits = 1;
-				else if (strcmp((const char *)content, "turbo-floppy") == 0)
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("compatibility")) == 0)
+		{
+			const auto content = xmlNodeGetContent(curr_node);
+			if (content != nullptr)
+			{
+				if (strcmp(reinterpret_cast<const char *>(content), "flexible-blitter-immediate") == 0)
+					p->immediate_blits = true;
+				else if (strcmp(reinterpret_cast<const char *>(content), "turbo-floppy") == 0)
 					p->floppy_speed = 400;
-				else if (strcmp((const char *)content, "flexible-sprite-collisions-spritesplayfield") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-sprite-collisions-spritesplayfield") == 0)
 					p->collision_level = 2;
-				else if (strcmp((const char *)content, "flexible-sprite-collisions-spritesonly") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-sprite-collisions-spritesonly") == 0)
 					p->collision_level = 1;
-				else if (strcmp((const char *)content, "flexible-sound") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-sound") == 0)
 					p->produce_sound = 2;
-				else if (strcmp((const char *)content, "flexible-maxhorizontal-nohires") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-maxhorizontal-nohires") == 0)
 					clip_no_hires = true;
-				else if (strcmp((const char *)content, "jit") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "jit") == 0)
 				{
 					p->cachesize = 8192;
-					p->address_space_24 = 0;
+					p->address_space_24 = false;
 				}
-				else if (strcmp((const char *)content, "flexible-cpu-cycles") == 0)
-					p->cpu_compatible = 0;
-				else if (strcmp((const char *)content, "flexible-maxhorizontal-nosuperhires") == 0)
-					; /* nothing to change */
-				else if (strcmp((const char *)content, "flexible-maxvertical-nointerlace") == 0)
-					; /* nothing to change */
+				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-cpu-cycles") == 0)
+					p->cpu_compatible = false;
+				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-maxhorizontal-nosuperhires") == 0); /* nothing to change */
+				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-maxvertical-nointerlace") == 0); /* nothing to change */
 				else
-					printf("rp9: unknown compatibility: %s\n", content);
+					printf("rp9: unknown compatibility: %p\n", content);
 				xmlFree(content);
 			}
 		}
@@ -141,21 +145,24 @@ static void parse_compatibility(struct uae_prefs *p, xmlNode *node)
 }
 
 
-static void parse_ram(struct uae_prefs *p, xmlNode *node)
+static void parse_ram(struct uae_prefs* p, xmlNode* node)
 {
-	for (xmlNode *curr_node = node; curr_node; curr_node = curr_node->next) {
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("ram")) == 0) {
-			xmlChar *content = xmlNodeGetContent(curr_node);
-			if (content != NULL) {
-				xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("type"));
-				if (attr != NULL)
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("ram")) == 0)
+		{
+			const auto content = xmlNodeGetContent(curr_node);
+			if (content != nullptr)
+			{
+				const auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
+				if (attr != nullptr)
 				{
-					int size = atoi((const char *)content);
-					if (strcmp((const char *)attr, "fast") == 0)
+					auto size = atoi(reinterpret_cast<const char *>(content));
+					if (strcmp(reinterpret_cast<const char *>(attr), "fast") == 0)
 						p->fastmem[0].size = size;
-					else if (strcmp((const char *)attr, "z3") == 0)
+					else if (strcmp(reinterpret_cast<const char *>(attr), "z3") == 0)
 						p->z3fastmem[0].size = size;
-					else if (strcmp((const char *)attr, "chip") == 0)
+					else if (strcmp(reinterpret_cast<const char *>(attr), "chip") == 0)
 						p->chipmem_size = size;
 					xmlFree(attr);
 				}
@@ -167,34 +174,34 @@ static void parse_ram(struct uae_prefs *p, xmlNode *node)
 }
 
 
-static void parse_clip(struct uae_prefs *p, xmlNode *node)
+static void parse_clip(struct uae_prefs* p, xmlNode* node)
 {
-	int left = 0, top = 0, width = 320, height = 240;
+	auto left = 0, top = 0, width = 320, height = 240;
 
-	for (xmlNode *curr_node = node; curr_node; curr_node = curr_node->next)
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
 	{
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("clip")) == 0)
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("clip")) == 0)
 		{
-			xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("left"));
-			if (attr != NULL)
+			auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("left"));
+			if (attr != nullptr)
 			{
-				left = atoi((const char *)attr);
+				left = atoi(reinterpret_cast<const char *>(attr));
 				xmlFree(attr);
 			}
-			attr = xmlGetProp(curr_node, (const xmlChar *)_T("top"));
-			if (attr != NULL)
+			attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("top"));
+			if (attr != nullptr)
 			{
-				top = atoi((const char *)attr) / 2;
+				top = atoi(reinterpret_cast<const char *>(attr)) / 2;
 #ifdef PANDORA
 				p->pandora_vertical_offset = top - 41 + OFFSET_Y_ADJUST;
 #endif //PANDORA
 				xmlFree(attr);
 			}
-			attr = xmlGetProp(curr_node, (const xmlChar *)_T("width"));
-			if (attr != NULL)
+			attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("width"));
+			if (attr != nullptr)
 			{
-				width = atoi((const char *)attr);
-				if (p->chipset_mask & CSMASK_AGA && clip_no_hires == false)
+				width = atoi(reinterpret_cast<const char *>(attr));
+				if (p->chipset_mask & CSMASK_AGA && !clip_no_hires)
 					width = width / 2; // Use Hires in AGA mode
 				else
 					width = width / 4; // Use Lores in OCS/ECS
@@ -212,10 +219,10 @@ static void parse_clip(struct uae_prefs *p, xmlNode *node)
 					p->gfx_size.width = 768;
 				xmlFree(attr);
 			}
-			attr = xmlGetProp(curr_node, (const xmlChar *)_T("height"));
-			if (attr != NULL)
+			attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("height"));
+			if (attr != nullptr)
 			{
-				height = atoi((const char *)attr) / 2;
+				height = atoi(reinterpret_cast<const char *>(attr)) / 2;
 				if (height <= 200)
 					p->gfx_size.height = 200;
 				else if (height <= 216)
@@ -236,34 +243,34 @@ static void parse_clip(struct uae_prefs *p, xmlNode *node)
 }
 
 
-static void parse_peripheral(struct uae_prefs *p, xmlNode *node)
+static void parse_peripheral(struct uae_prefs* p, xmlNode* node)
 {
-	for (xmlNode *curr_node = node; curr_node; curr_node = curr_node->next)
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
 	{
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("peripheral")) == 0)
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("peripheral")) == 0)
 		{
-			xmlChar *content = xmlNodeGetContent(curr_node);
-			if (content != NULL)
+			const auto content = xmlNodeGetContent(curr_node);
+			if (content != nullptr)
 			{
-				if (strcmp((const char *)content, "floppy") == 0)
+				if (strcmp(reinterpret_cast<const char *>(content), "floppy") == 0)
 				{
 					int type = DRV_35_DD;
-					int unit = -1;
+					auto unit = -1;
 
-					xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("type"));
-					if (attr != NULL)
+					auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
+					if (attr != nullptr)
 					{
-						if (strcmp((const char *)attr, "dd") == 0)
+						if (strcmp(reinterpret_cast<const char *>(attr), "dd") == 0)
 							type = DRV_35_DD;
 						else
 							type = DRV_35_HD;
 						xmlFree(attr);
 					}
 
-					attr = xmlGetProp(curr_node, (const xmlChar *)_T("unit"));
-					if (attr != NULL)
+					attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("unit"));
+					if (attr != nullptr)
 					{
-						unit = atoi((const char *)attr);
+						unit = atoi(reinterpret_cast<const char *>(attr));
 						xmlFree(attr);
 					}
 
@@ -274,46 +281,46 @@ static void parse_peripheral(struct uae_prefs *p, xmlNode *node)
 						p->floppyslots[unit].dfxtype = type;
 					}
 				}
-				else if (strcmp((const char *)content, "a-501") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "a-501") == 0)
 					p->bogomem_size = 0x00080000;
-				else if (strcmp((const char *)content, "cpu") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "cpu") == 0)
 				{
-					xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("type"));
-					if (attr != NULL)
+					auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
+					if (attr != nullptr)
 					{
-						p->cpu_model = atoi((const char *)attr);
+						p->cpu_model = atoi(reinterpret_cast<const char *>(attr));
 						if (p->cpu_model > 68020)
-							p->address_space_24 = 0;
+							p->address_space_24 = false;
 						if (p->cpu_model == 68040)
 							p->fpu_model = 68040;
 						xmlFree(attr);
 					}
-					attr = xmlGetProp(curr_node, (const xmlChar *)_T("speed"));
-					if (attr != NULL)
+					attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("speed"));
+					if (attr != nullptr)
 					{
-						if (strcmp((const char *)attr, "max") == 0)
+						if (strcmp(reinterpret_cast<const char *>(attr), "max") == 0)
 							p->m68k_speed = -1;
 						xmlFree(attr);
 					}
 				}
-				else if (strcmp((const char *)content, "fpu") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "fpu") == 0)
 				{
-					xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("type"));
-					if (attr != NULL)
+					const auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
+					if (attr != nullptr)
 					{
-						if (strcmp((const char *)attr, "68881") == 0)
+						if (strcmp(reinterpret_cast<const char *>(attr), "68881") == 0)
 							p->fpu_model = 68881;
-						else if (strcmp((const char *)attr, "68882") == 0)
+						else if (strcmp(reinterpret_cast<const char *>(attr), "68882") == 0)
 							p->fpu_model = 68882;
 						xmlFree(attr);
 					}
 				}
-				else if (strcmp((const char *)content, "jit") == 0)
+				else if (strcmp(reinterpret_cast<const char *>(content), "jit") == 0)
 				{
-					xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("memory"));
-					if (attr != NULL)
+					const auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("memory"));
+					if (attr != nullptr)
 					{
-						p->cachesize = atoi((const char *)attr) / 1024;
+						p->cachesize = atoi(reinterpret_cast<const char *>(attr)) / 1024;
 						xmlFree(attr);
 					}
 				}
@@ -324,39 +331,40 @@ static void parse_peripheral(struct uae_prefs *p, xmlNode *node)
 }
 
 
-static void parse_boot(struct uae_prefs *p, xmlNode *node)
+static void parse_boot(struct uae_prefs* p, xmlNode* node)
 {
-	for (xmlNode *curr_node = node; curr_node; curr_node = curr_node->next)
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
 	{
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("boot")) == 0)
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("boot")) == 0)
 		{
-			xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("type"));
-			if (attr != NULL)
+			const auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("type"));
+			if (attr != nullptr)
 			{
-				if (strcmp((const char *)attr, "hdf") == 0)
+				if (strcmp(reinterpret_cast<const char *>(attr), "hdf") == 0)
 				{
 					// Built-in hdf required
-					xmlChar *content = xmlNodeGetContent(curr_node);
-					if (content != NULL)
+					const auto content = xmlNodeGetContent(curr_node);
+					if (content != nullptr)
 					{
 						char target_file[MAX_DPATH];
 						fetch_rp9path(target_file, MAX_DPATH);
 						strncat(target_file, "workbench-", MAX_DPATH - 1);
-						strncat(target_file, (const char *)content, MAX_DPATH - 1);
+						strncat(target_file, reinterpret_cast<const char *>(content), MAX_DPATH - 1);
 						strncat(target_file, ".hdf", MAX_DPATH - 1);
-						FILE *f = fopen(target_file, "rb");
-						if (f != NULL)
+						const auto f = fopen(target_file, "rbe");
+						if (f != nullptr)
 						{
-							struct uaedev_config_data *uci;
-							struct uaedev_config_info ci;
+							struct uaedev_config_info ci{};
 
 							fclose(f);
 
-							if (hardfile_testrdb(target_file)) {
+							if (hardfile_testrdb(target_file))
+							{
 								ci.physical_geometry = true;
 								uci_set_defaults(&ci, true);
 							}
-							else {
+							else
+							{
 								ci.physical_geometry = false;
 								uci_set_defaults(&ci, false);
 							}
@@ -366,18 +374,19 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
 							++add_HDF_DHnum;
 							strncpy(ci.rootdir, target_file, MAX_DPATH);
 
-							xmlChar *ro = xmlGetProp(curr_node, (const xmlChar *)_T("readonly"));
-							if (ro != NULL)
+							const auto ro = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("readonly"));
+							if (ro != nullptr)
 							{
-								if (strcmp((const char *)ro, "true") == 0)
-									ci.readonly = 1;
+								if (strcmp(reinterpret_cast<const char *>(ro), "true") == 0)
+									ci.readonly = true;
 								xmlFree(ro);
 							}
 							ci.bootpri = 127;
 
-							uci = add_filesys_config(p, -1, &ci);
-							if (uci) {
-								struct hardfiledata *hfd = get_hardfile_data(uci->configoffset);
+							const auto uci = add_filesys_config(p, -1, &ci);
+							if (uci)
+							{
+								const auto hfd = get_hardfile_data(uci->configoffset);
 								hardfile_media_change(hfd, &ci, true, false);
 							}
 						}
@@ -391,42 +400,42 @@ static void parse_boot(struct uae_prefs *p, xmlNode *node)
 }
 
 
-static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
+static void extract_media(struct uae_prefs* p, unzFile uz, xmlNode* node)
 {
-	xmlNode *tmp = get_node(node, "media");
-	if (tmp != NULL)
+	const auto tmp = get_node(node, "media");
+	if (tmp != nullptr)
 	{
-		for (xmlNode *curr_node = tmp; curr_node; curr_node = curr_node->next)
+		for (auto curr_node = tmp; curr_node; curr_node = curr_node->next)
 		{
-			int mediatype = -1;
-			if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("floppy")) == 0)
+			auto mediatype = -1;
+			if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("floppy")) == 0)
 				mediatype = 0;
-			else if (curr_node->type == XML_ELEMENT_NODE && strcmp((const char *)curr_node->name, _T("harddrive")) == 0)
+			else if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), _T("harddrive")) == 0)
 				mediatype = 1;
 			if (mediatype >= 0)
 			{
-				xmlChar *content = xmlNodeGetContent(curr_node);
-				if (content != NULL)
+				auto content = xmlNodeGetContent(curr_node);
+				if (content != nullptr)
 				{
-					int priority = 0;
-					xmlChar *attr = xmlGetProp(curr_node, (const xmlChar *)_T("priority"));
-					if (attr != NULL)
+					auto priority = 0;
+					const auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("priority"));
+					if (attr != nullptr)
 					{
-						priority = atoi((const char *)attr);
+						priority = atoi(reinterpret_cast<const char *>(attr));
 						xmlFree(attr);
 					}
 
-					if (unzLocateFile(uz, (char *)content, 1) == UNZ_OK)
+					if (unzLocateFile(uz, reinterpret_cast<char *>(content), 1) == UNZ_OK)
 					{
 						unz_file_info file_info;
-						if (unzGetCurrentFileInfo(uz, &file_info, NULL, 0, NULL, 0, NULL, 0) == UNZ_OK)
+						if (unzGetCurrentFileInfo(uz, &file_info, nullptr, 0, nullptr, 0, nullptr, 0) == UNZ_OK)
 						{
-							void *buffer = malloc(file_info.uncompressed_size);
-							if (buffer != NULL)
+							void* buffer = malloc(file_info.uncompressed_size);
+							if (buffer != nullptr)
 							{
 								if (unzOpenCurrentFile(uz) == UNZ_OK)
 								{
-									int readsize = unzReadCurrentFile(uz, buffer, file_info.uncompressed_size);
+									auto readsize = unzReadCurrentFile(uz, buffer, file_info.uncompressed_size);
 									unzCloseCurrentFile(uz);
 									if (readsize == file_info.uncompressed_size)
 									{
@@ -434,8 +443,8 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
 										if (!my_existsdir(rp9tmp_path))
 											my_mkdir(rp9tmp_path);
 										snprintf(target_file, MAX_DPATH, "%s%s", rp9tmp_path, content);
-										FILE *f = fopen(target_file, "wb");
-										if (f != NULL)
+										auto f = fopen(target_file, "wbe");
+										if (f != nullptr)
 										{
 											fwrite(buffer, 1, readsize, f);
 											fclose(f);
@@ -466,15 +475,15 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
 											}
 											else
 											{
-												// Add hardfile
-												struct uaedev_config_data *uci;
-												struct uaedev_config_info ci;
+												struct uaedev_config_info ci{};
 
-												if (hardfile_testrdb(target_file)) {
+												if (hardfile_testrdb(target_file))
+												{
 													ci.physical_geometry = true;
 													uci_set_defaults(&ci, true);
 												}
-												else {
+												else
+												{
 													ci.physical_geometry = false;
 													uci_set_defaults(&ci, false);
 												}
@@ -486,13 +495,14 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
 
 												ci.bootpri = 0;
 
-												uci = add_filesys_config(p, -1, &ci);
-												if (uci) {
-													struct hardfiledata *hfd = get_hardfile_data(uci->configoffset);
+												const auto uci = add_filesys_config(p, -1, &ci);
+												if (uci)
+												{
+													const auto hfd = get_hardfile_data(uci->configoffset);
 													hardfile_media_change(hfd, &ci, true, false);
 												}
 											}
-											lstTmpRP9Files.push_back(target_file);
+											lstTmpRP9Files.emplace_back(target_file);
 										}
 									}
 								}
@@ -509,28 +519,28 @@ static void extract_media(struct uae_prefs *p, unzFile uz, xmlNode *node)
 }
 
 
-static bool parse_manifest(struct uae_prefs *p, unzFile uz, const char *manifest)
+static bool parse_manifest(struct uae_prefs* p, unzFile uz, const char* manifest)
 {
-	bool bResult = false;
+	auto result = false;
 	char buffer[MAX_MANIFEST_ENTRY];
 
-	xmlDocPtr doc = xmlReadMemory(manifest, strlen(manifest), NULL, NULL, 0);;
-	if (doc != NULL)
+	const auto doc = xmlReadMemory(manifest, strlen(manifest), nullptr, nullptr, 0);
+	if (doc != nullptr)
 	{
-		xmlNode *root_element = xmlDocGetRootElement(doc);
-		xmlNode *rp9 = get_node(root_element, "rp9");
-		if (rp9 != NULL)
+		const auto root_element = xmlDocGetRootElement(doc);
+		const auto rp9 = get_node(root_element, "rp9");
+		if (rp9 != nullptr)
 		{
-			xmlNode *app = get_node(rp9, "application");
-			if (app != NULL)
+			const auto app = get_node(rp9, "application");
+			if (app != nullptr)
 			{
-				int rom = -1;
-				xmlNode *tmp = get_node(app, "description");
-				if (tmp != NULL && get_value(tmp, "systemrom", buffer, MAX_MANIFEST_ENTRY))
+				auto rom = -1;
+				auto tmp = get_node(app, "description");
+				if (tmp != nullptr && get_value(tmp, "systemrom", buffer, MAX_MANIFEST_ENTRY))
 					rom = atoi(buffer);
 
 				tmp = get_node(app, "configuration");
-				if (tmp != NULL && get_value(tmp, "system", buffer, MAX_MANIFEST_ENTRY))
+				if (tmp != nullptr && get_value(tmp, "system", buffer, MAX_MANIFEST_ENTRY))
 				{
 					set_default_system(p, buffer, rom);
 
@@ -540,52 +550,49 @@ static bool parse_manifest(struct uae_prefs *p, unzFile uz, const char *manifest
 					parse_peripheral(p, tmp);
 					parse_boot(p, tmp);
 					extract_media(p, uz, app);
-					bResult = true;
+					result = true;
 				}
 			}
 		}
 		xmlFreeDoc(doc);
 	}
 
-	return bResult;
+	return result;
 }
 
 
-bool rp9_parse_file(struct uae_prefs *p, const char *filename)
+bool rp9_parse_file(struct uae_prefs* p, const char* filename)
 {
-	bool bResult = false;
-	struct zfile *zf;
-	unzFile uz;
+	auto result = false;
 	unz_file_info file_info;
-	char *manifest;
 
 	add_HDF_DHnum = 0;
 	clip_no_hires = false;
 
-	zf = zfile_fopen(filename, _T("rb"));
-	if (zf != NULL)
+	const auto zf = zfile_fopen(filename, _T("rb"));
+	if (zf != nullptr)
 	{
-		uz = unzOpen(zf);
-		if (uz != NULL)
+		auto uz = unzOpen(zf);
+		if (uz != nullptr)
 		{
 			if (unzLocateFile(uz, RP9_MANIFEST, 1) == UNZ_OK)
 			{
-				if (unzGetCurrentFileInfo(uz, &file_info, NULL, 0, NULL, 0, NULL, 0) == UNZ_OK)
+				if (unzGetCurrentFileInfo(uz, &file_info, nullptr, 0, nullptr, 0, nullptr, 0) == UNZ_OK)
 				{
-					manifest = (char *)malloc(file_info.uncompressed_size + 1);
-					if (manifest != NULL)
+					auto * manifest = static_cast<char *>(malloc(file_info.uncompressed_size + 1));
+					if (manifest != nullptr)
 					{
 						if (unzOpenCurrentFile(uz) == UNZ_OK)
 						{
-							int readsize = unzReadCurrentFile(uz, manifest, file_info.uncompressed_size);
+							const auto readsize = unzReadCurrentFile(uz, manifest, file_info.uncompressed_size);
 							unzCloseCurrentFile(uz);
 
 							if (readsize == file_info.uncompressed_size)
 							{
 								manifest[readsize] = '\0';
-								bResult = parse_manifest(p, uz, manifest);
+								result = parse_manifest(p, uz, manifest);
 
-								if (bResult)
+								if (result)
 								{
 									// Fixup some prefs...
 									if (p->m68k_speed >= 0)
@@ -604,5 +611,5 @@ bool rp9_parse_file(struct uae_prefs *p, const char *filename)
 		zfile_fclose(zf);
 	}
 
-	return bResult;
+	return result;
 }
