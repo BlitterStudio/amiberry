@@ -15,22 +15,22 @@
 #include <SDL.h>
 
 
-uae_u8* natmem_offset = 0;
+uae_u8* natmem_offset = nullptr;
 static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
 
 /* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
 #define BARRIER 32
 
-static uae_u8* additional_mem = (uae_u8*) MAP_FAILED;
-#define ADDITIONAL_MEMSIZE (128 + 16) * 1024 * 1024
+static uae_u8* additional_mem = (uae_u8*)MAP_FAILED;
+#define ADDITIONAL_MEMSIZE ((128 + 16) * 1024 * 1024)
 
-static uae_u8* a3000_mem = (uae_u8*) MAP_FAILED;
+static uae_u8* a3000_mem = (uae_u8*)MAP_FAILED;
 static int a3000_totalsize = 0;
 #define A3000MEM_START 0x08000000
 
-static int lastLowSize = 0;
-static int lastHighSize = 0;
+static unsigned int lastLowSize = 0;
+static unsigned int lastHighSize = 0;
 
 
 int z3base_adr = 0;
@@ -38,26 +38,26 @@ int z3base_adr = 0;
 
 void free_AmigaMem(void)
 {
-  if(natmem_offset != 0)
-  {
+	if (natmem_offset != nullptr)
+	{
 #ifdef AMIBERRY
-    munmap(natmem_offset, natmem_size + BARRIER);
+		munmap(natmem_offset, natmem_size + BARRIER);
 #else
-    free(natmem_offset);
+		free(natmem_offset);
 #endif
-    natmem_offset = 0;
-  }
-  if(additional_mem != MAP_FAILED)
-  {
-    munmap(additional_mem, ADDITIONAL_MEMSIZE + BARRIER);
-    additional_mem = (uae_u8*) MAP_FAILED;
-  }
-  if(a3000_mem != MAP_FAILED)
-  {
-    munmap(a3000_mem, a3000_totalsize);
-    a3000_mem = (uae_u8*) MAP_FAILED;
-    a3000_totalsize = 0;
-  }
+		natmem_offset = nullptr;
+	}
+	if (additional_mem != MAP_FAILED)
+	{
+		munmap(additional_mem, ADDITIONAL_MEMSIZE + BARRIER);
+		additional_mem = (uae_u8*)MAP_FAILED;
+	}
+	if (a3000_mem != MAP_FAILED)
+	{
+		munmap(a3000_mem, a3000_totalsize);
+		a3000_mem = (uae_u8*)MAP_FAILED;
+		a3000_totalsize = 0;
+	}
 }
 
 
@@ -70,66 +70,66 @@ void alloc_AmigaMem(void)
 	free_AmigaMem();
 	set_expamem_z3_hack_mode(Z3MAPPING_AUTO);
 
-  // First attempt: allocate 16 MB for all memory in 24-bit area 
-  // and additional mem for Z3 and RTG at correct offset
-  natmem_size = 16 * 1024 * 1024;
+	// First attempt: allocate 16 MB for all memory in 24-bit area 
+	// and additional mem for Z3 and RTG at correct offset
+	natmem_size = 16 * 1024 * 1024;
 #ifdef AMIBERRY
-  // address returned by valloc() too high for later mmap() calls. Use mmap() also for first area.
-  natmem_offset = (uae_u8*) mmap((void *)0x20000000, natmem_size + BARRIER,
-    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+	// address returned by valloc() too high for later mmap() calls. Use mmap() also for first area.
+	natmem_offset = (uae_u8*)mmap(reinterpret_cast<void *>(0x20000000), natmem_size + BARRIER,
+		PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
 #else
-  natmem_offset = (uae_u8*)valloc (natmem_size + BARRIER);
+	natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
 #endif
-  max_z3fastmem = ADDITIONAL_MEMSIZE - (16 * 1024 * 1024);
+	max_z3fastmem = ADDITIONAL_MEMSIZE - (16 * 1024 * 1024);
 	if (!natmem_offset) {
 		write_log("Can't allocate 16M of virtual address space!?\n");
 		abort();
 	}
-// FIXME This part of code caused crash on Android devices
+	// FIXME This part of code caused crash on Android devices
 #ifndef ANDROID
-  additional_mem = (uae_u8*) mmap(natmem_offset + Z3BASE_REAL, ADDITIONAL_MEMSIZE + BARRIER,
-    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-  if(additional_mem != MAP_FAILED)
-  {
-    // Allocation successful -> we can use natmem_offset for entire memory access at real address
-    changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
-    z3base_adr = Z3BASE_REAL;
-    write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at real address (0x%08x - 0x%08x)\n", 
-      natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
-    set_expamem_z3_hack_mode(Z3MAPPING_REAL);
-    return;
-  }
+	additional_mem = (uae_u8*)mmap(natmem_offset + Z3BASE_REAL, ADDITIONAL_MEMSIZE + BARRIER,
+		PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+	if (additional_mem != MAP_FAILED)
+	{
+		// Allocation successful -> we can use natmem_offset for entire memory access at real address
+		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
+		z3base_adr = Z3BASE_REAL;
+		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at real address (0x%08x - 0x%08x)\n",
+			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+		set_expamem_z3_hack_mode(Z3MAPPING_REAL);
+		return;
+	}
 
-  additional_mem = (uae_u8*) mmap(natmem_offset + Z3BASE_UAE, ADDITIONAL_MEMSIZE + BARRIER,
-    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-  if(additional_mem != MAP_FAILED)
-  {
-    // Allocation successful -> we can use natmem_offset for entire memory access at fake address
-    changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
-    z3base_adr = Z3BASE_UAE;
-    write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n", 
-      natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
-    set_expamem_z3_hack_mode(Z3MAPPING_UAE);
-    return;
-  }
+	additional_mem = (uae_u8*)mmap(natmem_offset + Z3BASE_UAE, ADDITIONAL_MEMSIZE + BARRIER,
+		PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+	if (additional_mem != MAP_FAILED)
+	{
+		// Allocation successful -> we can use natmem_offset for entire memory access at fake address
+		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
+		z3base_adr = Z3BASE_UAE;
+		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n",
+			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+		set_expamem_z3_hack_mode(Z3MAPPING_UAE);
+		return;
+	}
 #endif
 #ifdef AMIBERRY
-  munmap(natmem_offset, natmem_size + BARRIER);
+	munmap(natmem_offset, natmem_size + BARRIER);
 #else
-  free(natmem_offset);
+	free(natmem_offset);
 #endif
-  
-  // Next attempt: allocate huge memory block for entire area
-  natmem_size = ADDITIONAL_MEMSIZE + 256 * 1024 * 1024;
-  natmem_offset = (uae_u8*)valloc (natmem_size + BARRIER);
-  if(natmem_offset)
-  {
-    // Allocation successful
-    changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
-    z3base_adr = Z3BASE_UAE;
-    write_log("Allocated %d MB for entire memory\n", natmem_size / (1024 * 1024));
-    return;
-  }
+
+	// Next attempt: allocate huge memory block for entire area
+	natmem_size = ADDITIONAL_MEMSIZE + 256 * 1024 * 1024;
+	natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
+	if (natmem_offset)
+	{
+		// Allocation successful
+		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
+		z3base_adr = Z3BASE_UAE;
+		write_log("Allocated %d MB for entire memory\n", natmem_size / (1024 * 1024));
+		return;
+	}
 
 	// No mem for Z3 or RTG at all
 	natmem_size = 16 * 1024 * 1024;
@@ -149,9 +149,9 @@ void alloc_AmigaMem(void)
 }
 
 
-static bool HandleA3000Mem(int lowsize, int highsize)
+static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
 {
-	bool result = true;
+	auto result = true;
 
 	if (lowsize == lastLowSize && highsize == lastHighSize)
 		return result;
@@ -199,8 +199,8 @@ static bool A3000MemAvailable(void)
 
 bool uae_mman_info(addrbank *ab, struct uae_mman_data *md)
 {
-	bool got = false;
-	bool readonly = false;
+	auto got = false;
+	auto readonly = false;
 	uaecptr start;
 	uae_u32 size = ab->reserved_size;
 	uae_u32 readonlysize = size;
@@ -430,48 +430,48 @@ bool mapped_malloc(addrbank *ab)
 	}
 	ab->flags |= ABFLAG_DIRECTMAP;
 
-	return (ab->baseaddr != NULL);
+	return (ab->baseaddr != nullptr);
 }
 
 
 void mapped_free(addrbank *ab)
 {
-	if (ab->label != NULL && !strcmp(ab->label, "filesys") && ab->baseaddr != NULL) {
+	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr) {
 		free(ab->baseaddr);
 		write_log("mapped_free(): 0x%08x - 0x%08x (0x%08x - 0x%08x) -> %s (%s)\n",
 			ab->baseaddr - natmem_offset, ab->baseaddr - natmem_offset + ab->allocated_size,
 			ab->baseaddr, ab->baseaddr + ab->allocated_size, ab->name, ab->label);
 	}
-	ab->baseaddr = NULL;
+	ab->baseaddr = nullptr;
 	ab->allocated_size = 0;
 }
 
 void protect_roms(bool protect)
 {
 	/*
-	  If this code is enabled, we can't switch back from JIT to nonJIT emulation...
-	  
-		if (protect) {
-			// protect only if JIT enabled, always allow unprotect
-			if (!currprefs.cachesize)
-				return;
-		}
-	
-	  // Protect all regions, which contains ROM
-	  if(extendedkickmem_bank.baseaddr != NULL)
-	    mprotect(extendedkickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	  if(extendedkickmem2_bank.baseaddr != NULL)
-	    mprotect(extendedkickmem2_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	  if(kickmem_bank.baseaddr != NULL)
-	    mprotect(kickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	  if(rtarea != NULL)
-	    mprotect(rtarea, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	  if(filesysory != NULL)
-	    mprotect(filesysory, 0x10000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	If this code is enabled, we can't switch back from JIT to nonJIT emulation...
+
+	if (protect) {
+	// protect only if JIT enabled, always allow unprotect
+	if (!currprefs.cachesize)
+	return;
+	}
+
+	// Protect all regions, which contains ROM
+	if(extendedkickmem_bank.baseaddr != NULL)
+	mprotect(extendedkickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	if(extendedkickmem2_bank.baseaddr != NULL)
+	mprotect(extendedkickmem2_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	if(kickmem_bank.baseaddr != NULL)
+	mprotect(kickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	if(rtarea != NULL)
+	mprotect(rtarea, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	if(filesysory != NULL)
+	mprotect(filesysory, 0x10000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
 	*/
 }
 
-static int doinit_shm(void)
+static int doinit_shm()
 {
 	expansion_scan_autoconfig(&currprefs, true);
 
@@ -484,17 +484,17 @@ static uae_u32 ofastmem_size[MAX_RAM_BOARDS];
 static uae_u32 ortgmem_size[MAX_RTG_BOARDS];
 static int ortgmem_type[MAX_RTG_BOARDS];
 
-bool init_shm(void)
+bool init_shm()
 {
-	bool changed = false;
+	auto changed = false;
 
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+	for (auto i = 0; i < MAX_RAM_BOARDS; i++) {
 		if (oz3fastmem_size[i] != changed_prefs.z3fastmem[i].size)
 			changed = true;
 		if (ofastmem_size[i] != changed_prefs.fastmem[i].size)
 			changed = true;
 	}
-	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+	for (auto i = 0; i < MAX_RTG_BOARDS; i++) {
 		if (ortgmem_size[i] != changed_prefs.rtgboards[i].rtgmem_size)
 			changed = true;
 		if (ortgmem_type[i] != changed_prefs.rtgboards[i].rtgmem_type)
@@ -503,11 +503,11 @@ bool init_shm(void)
 	if (!changed)
 		return true;
 
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+	for (auto i = 0; i < MAX_RAM_BOARDS; i++) {
 		oz3fastmem_size[i] = changed_prefs.z3fastmem[i].size;
 		ofastmem_size[i] = changed_prefs.fastmem[i].size;
 	}
-	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+	for (auto i = 0; i < MAX_RTG_BOARDS; i++) {
 		ortgmem_size[i] = changed_prefs.rtgboards[i].rtgmem_size;
 		ortgmem_type[i] = changed_prefs.rtgboards[i].rtgmem_type;
 	}
