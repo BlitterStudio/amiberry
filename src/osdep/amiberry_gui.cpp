@@ -82,9 +82,9 @@ std::vector<std::string> lstMRUCDList;
 
 void AddFileToDiskList(const char *file, int moveToTop)
 {
-	int i;
+	unsigned int i;
 
-	for (i = 0; i<lstMRUDiskList.size(); ++i)
+	for (i = 0; i < lstMRUDiskList.size(); ++i)
 	{
 		if (!strcasecmp(lstMRUDiskList[i].c_str(), file))
 		{
@@ -105,9 +105,9 @@ void AddFileToDiskList(const char *file, int moveToTop)
 
 void AddFileToCDList(const char *file, int moveToTop)
 {
-	int i;
+	unsigned int i;
 
-	for (i = 0; i<lstMRUCDList.size(); ++i)
+	for (i = 0; i < lstMRUCDList.size(); ++i)
 	{
 		if (!strcasecmp(lstMRUCDList[i].c_str(), file))
 		{
@@ -129,9 +129,9 @@ void AddFileToCDList(const char *file, int moveToTop)
 
 void ClearAvailableROMList()
 {
-	while (lstAvailableROMs.size() > 0)
+	while (!lstAvailableROMs.empty())
 	{
-		AvailableROM* tmp = lstAvailableROMs[0];
+		const auto tmp = lstAvailableROMs[0];
 		lstAvailableROMs.erase(lstAvailableROMs.begin());
 		delete tmp;
 	}
@@ -140,7 +140,7 @@ void ClearAvailableROMList()
 static void addrom(struct romdata* rd, const char* path)
 {
 	char tmpName[MAX_DPATH];
-	AvailableROM* tmp = new AvailableROM();
+	const auto tmp = new AvailableROM();
 	getromname(rd, tmpName);
 	strncpy(tmp->Name, tmpName, MAX_DPATH);
 	if (path != nullptr)
@@ -159,11 +159,11 @@ struct romscandata
 static struct romdata* scan_single_rom_2(struct zfile* f)
 {
 	uae_u8 buffer[20] = {0};
-	int cl = 0, size;
+	auto cl = 0;
 	struct romdata* rd = nullptr;
 
 	zfile_fseek(f, 0, SEEK_END);
-	size = zfile_ftell(f);
+	int size = zfile_ftell(f);
 	zfile_fseek(f, 0, SEEK_SET);
 	if (size > 524288 * 2) /* don't skip KICK disks or 1M ROMs */
 		return nullptr;
@@ -197,7 +197,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 		rd = getromdatabydata(rombuf, size);
 		if (!rd && (size & 65535) == 0)
 		{
-			for (int i = 0; i < size; i += 2)
+			for (auto i = 0; i < size; i += 2)
 			{
 				uae_u8 b = rombuf[i];
 				rombuf[i] = rombuf[i + 1];
@@ -215,10 +215,10 @@ static struct romdata* scan_single_rom(char* path)
 	char tmp[MAX_DPATH];
 
 	strncpy (tmp, path, MAX_DPATH);
-	struct romdata* rd = getromdatabypath(path);
+	auto rd = getromdatabypath(path);
 	if (rd && rd->crc32 == 0xffffffff)
 		return rd;
-	struct zfile* z = zfile_fopen(path, "rb", ZFD_NORMAL);
+	const auto z = zfile_fopen(path, "rb", ZFD_NORMAL);
 	if (!z)
 		return nullptr;
 	return scan_single_rom_2(z);
@@ -226,12 +226,9 @@ static struct romdata* scan_single_rom(char* path)
 
 static int isromext(char* path)
 {
-	char* ext;
-	int i;
-
 	if (!path)
 		return 0;
-	ext = strrchr(path, '.');
+	auto ext = strrchr(path, '.');
 	if (!ext)
 		return 0;
 	ext++;
@@ -239,7 +236,7 @@ static int isromext(char* path)
 	if (!stricmp(ext, "rom") || !stricmp(ext, "adf") || !stricmp(ext, "key")
 		|| !stricmp(ext, "a500") || !stricmp(ext, "a1200") || !stricmp(ext, "a4000"))
 		return 1;
-	for (i = 0; uae_archive_extensions[i]; i++)
+	for (auto i = 0; uae_archive_extensions[i]; i++)
 	{
 		if (!stricmp(ext, uae_archive_extensions[i]))
 			return 1;
@@ -249,11 +246,11 @@ static int isromext(char* path)
 
 static int scan_rom_2(struct zfile* f, void* dummy)
 {
-	char* path = zfile_getname(f);
+	const auto path = zfile_getname(f);
 
 	if (!isromext(path))
 		return 0;
-	struct romdata* rd = scan_single_rom_2(f);
+	const auto rd = scan_single_rom_2(f);
 	if (rd)
 		addrom(rd, path);
 	return 0;
@@ -281,17 +278,17 @@ void RescanROMs()
 
 	load_keyring(&changed_prefs, path);
 	ReadDirectory(path, nullptr, &files);
-	for (int i = 0; i < files.size(); ++i)
+	for (auto & file : files)
 	{
 		char tmppath[MAX_DPATH];
 		strncpy(tmppath, path, MAX_DPATH - 1);
-		strncat(tmppath, files[i].c_str(), MAX_DPATH - 1);
+		strncat(tmppath, file.c_str(), MAX_DPATH - 1);
 		scan_rom(tmppath);
 	}
 
-	int id = 1;
+	auto id = 1;
 	for (;;) {
-		struct romdata *rd = getromdatabyid(id);
+		auto rd = getromdatabyid(id);
 		if (!rd)
 			break;
 		if (rd->crc32 == 0xffffffff && strncmp(rd->model, "AROS", 4) == 0)
@@ -305,9 +302,9 @@ void RescanROMs()
 
 static void ClearConfigFileList()
 {
-	while (ConfigFilesList.size() > 0)
+	while (!ConfigFilesList.empty())
 	{
-		ConfigFileInfo* tmp = ConfigFilesList[0];
+		const auto tmp = ConfigFilesList[0];
 		ConfigFilesList.erase(ConfigFilesList.begin());
 		delete tmp;
 	}
@@ -325,14 +322,14 @@ void ReadConfigFileList(void)
 
 	// Read rp9 files
 	fetch_rp9path(path, MAX_DPATH);
-	ReadDirectory(path, NULL, &files);
+	ReadDirectory(path, nullptr, &files);
 	FilterFiles(&files, filter_rp9);
-	for (int i = 0; i<files.size(); ++i)
+	for (auto & file : files)
 	{
-		ConfigFileInfo *tmp = new ConfigFileInfo();
+		auto tmp = new ConfigFileInfo();
 		strncpy(tmp->FullPath, path, MAX_DPATH);
-		strncat(tmp->FullPath, files[i].c_str(), MAX_DPATH);
-		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
+		strncat(tmp->FullPath, file.c_str(), MAX_DPATH);
+		strncpy(tmp->Name, file.c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
 		strncpy(tmp->Description, _T("rp9"), MAX_DPATH);
 		ConfigFilesList.push_back(tmp);
@@ -340,14 +337,14 @@ void ReadConfigFileList(void)
 
 	// Read standard config files
 	fetch_configurationpath(path, MAX_DPATH);
-	ReadDirectory(path, NULL, &files);
+	ReadDirectory(path, nullptr, &files);
 	FilterFiles(&files, filter_uae);
-	for (int i = 0; i<files.size(); ++i)
+	for (auto & file : files)
 	{
-		ConfigFileInfo *tmp = new ConfigFileInfo();
+		auto tmp = new ConfigFileInfo();
 		strncpy(tmp->FullPath, path, MAX_DPATH);
-		strncat(tmp->FullPath, files[i].c_str(), MAX_DPATH);
-		strncpy(tmp->Name, files[i].c_str(), MAX_DPATH);
+		strncat(tmp->FullPath, file.c_str(), MAX_DPATH);
+		strncpy(tmp->Name, file.c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
 		cfgfile_get_description(tmp->FullPath, tmp->Description);
 		ConfigFilesList.push_back(tmp);
@@ -356,10 +353,10 @@ void ReadConfigFileList(void)
 
 ConfigFileInfo* SearchConfigInList(const char* name)
 {
-	for (int i = 0; i < ConfigFilesList.size(); ++i)
+	for (auto & i : ConfigFilesList)
 	{
-		if (!strncasecmp(ConfigFilesList[i]->Name, name, MAX_DPATH))
-			return ConfigFilesList[i];
+		if (!strncasecmp(i->Name, name, MAX_DPATH))
+			return i;
 	}
 	return nullptr;
 }
@@ -385,10 +382,10 @@ static void gui_to_prefs(void)
 static void after_leave_gui()
 {
 	// Check if we have to set or clear autofire
-	int new_af = changed_prefs.input_autofire_linecnt == 0 ? 0 : 1;
-	int update = 0;
+	const auto new_af = changed_prefs.input_autofire_linecnt == 0 ? 0 : 1;
+	auto update = 0;
 
-	for (int num = 0; num < 2; ++num)
+	for (auto num = 0; num < 2; ++num)
 	{
 		if (changed_prefs.jports[num].id == JSEM_JOYS && changed_prefs.jports[num].autofire != new_af)
 		{
@@ -407,9 +404,9 @@ static void after_leave_gui()
 int gui_init()
 {
 	emulating = 0;
-	int ret = 0;
+	auto ret = 0;
 
-	if (lstAvailableROMs.size() == 0)
+	if (lstAvailableROMs.empty())
 		RescanROMs();
 
 	prefs_to_gui();
@@ -440,7 +437,7 @@ void gui_exit()
 void gui_purge_events()
 {
 #ifdef USE_SDL1
-	int counter = 0;
+	auto counter = 0;
 
 	SDL_Event event;
 	SDL_Delay(150);
@@ -503,7 +500,7 @@ void gui_display(int shortcut)
 	pause_sound();
 	blkdev_entergui();
 
-	if (lstAvailableROMs.size() == 0)
+	if (lstAvailableROMs.empty())
 		RescanROMs();
 
 	graphics_subshutdown();
@@ -590,27 +587,29 @@ void gui_led(int led, int on)
 
 void gui_flicker_led(int led, int unitnum, int status)
 {
-  static int hd_resetcounter;
+	static int hd_resetcounter;
 
-  switch(led)
-  {
-    case -1: // Reset HD and CD
-      gui_data.hd = 0;
-      break;
-      
-    case LED_POWER:
-      break;
+	switch (led)
+	{
+	case -1: // Reset HD and CD
+		gui_data.hd = 0;
+		break;
 
-    case LED_HD:
-      if (status == 0) {
-  	    hd_resetcounter--;
-  	    if (hd_resetcounter > 0)
-  	      return;
-      }
-      gui_data.hd = status;
-      hd_resetcounter = 2;
-      break;
-  }
+	case LED_POWER:
+		break;
+
+	case LED_HD:
+		if (status == 0) {
+			hd_resetcounter--;
+			if (hd_resetcounter > 0)
+				return;
+		}
+		gui_data.hd = status;
+		hd_resetcounter = 2;
+		break;
+	default:
+		break;
+	}
 	gui_led(led, status);
 }
 
@@ -632,7 +631,7 @@ void gui_message(const char* format, ...)
 
 void notify_user(int msg)
 {
-	int i = 0;
+	auto i = 0;
 	while (gui_msglist[i].num >= 0)
 	{
 		if (gui_msglist[i].num == msg)
@@ -648,10 +647,10 @@ void notify_user_parms(int msg, const TCHAR *parms, ...)
 {
 	TCHAR msgtxt[MAX_DPATH];
 	TCHAR tmp[MAX_DPATH];
-	int c = 0;
+	auto c = 0;
 	va_list parms2;
 
-	int i = 0;
+	auto i = 0;
 	while (gui_msglist[i].num >= 0)
 	{
 		if (gui_msglist[i].num == msg)
@@ -669,7 +668,7 @@ void notify_user_parms(int msg, const TCHAR *parms, ...)
 
 int translate_message(int msg, TCHAR* out)
 {
-	int i = 0;
+	auto i = 0;
 	while (gui_msglist[i].num >= 0)
 	{
 		if (gui_msglist[i].num == msg)
@@ -685,24 +684,24 @@ int translate_message(int msg, TCHAR* out)
 
 void FilterFiles(vector<string>* files, const char* filter[])
 {
-	for (int q = 0; q < files->size(); q++)
+	for (auto q = 0; q < files->size(); q++)
 	{
-		string tmp = (*files)[q];
+		auto tmp = (*files)[q];
 
-		bool bRemove = true;
-		for (int f = 0; filter[f] != nullptr && strlen(filter[f]) > 0; ++f)
+		auto remove = true;
+		for (auto f = 0; filter[f] != nullptr && strlen(filter[f]) > 0; ++f)
 		{
 			if (tmp.size() >= strlen(filter[f]))
 			{
 				if (!strcasecmp(tmp.substr(tmp.size() - strlen(filter[f])).c_str(), filter[f]))
 				{
-					bRemove = false;
+					remove = false;
 					break;
 				}
 			}
 		}
 
-		if (bRemove)
+		if (remove)
 		{
 			files->erase(files->begin() + q);
 			--q;
@@ -713,16 +712,16 @@ void FilterFiles(vector<string>* files, const char* filter[])
 
 bool DevicenameExists(const char* name)
 {
-	for (int i = 0; i < MAX_HD_DEVICES; ++i)
+	for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 	{
-		struct uaedev_config_data* uci = &changed_prefs.mountconfig[i];
-		struct uaedev_config_info* ci = &uci->ci;
+		auto uci = &changed_prefs.mountconfig[i];
+		const auto ci = &uci->ci;
 
-		if (ci->devname && ci->devname[0])
+		if (ci->devname[0])
 		{
 			if (!strcmp(ci->devname, name))
 				return true;
-			if (ci->volname != nullptr && !strcmp(ci->volname, name))
+			if (!strcmp(ci->volname, name))
 				return true;
 		}
 	}
@@ -732,8 +731,8 @@ bool DevicenameExists(const char* name)
 
 void CreateDefaultDevicename(char* name)
 {
-	int freeNum = 0;
-	bool foundFree = false;
+	auto freeNum = 0;
+	auto foundFree = false;
 
 	while (!foundFree && freeNum < 10)
 	{
@@ -758,13 +757,13 @@ int tweakbootpri(int bp, int ab, int dnm)
 
 bool hardfile_testrdb(const TCHAR* filename)
 {
-	bool isrdb = false;
-	struct zfile* f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
+	auto isrdb = false;
+	auto f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
 	uae_u8 tmp[8];
 
 	if (!f)
 		return false;
-	for (int i = 0; i < 16; i++)
+	for (auto i = 0; i < 16; i++)
 	{
 		zfile_fseek(f, i * 512, SEEK_SET);
 		memset(tmp, 0, sizeof tmp);

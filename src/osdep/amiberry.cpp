@@ -142,7 +142,7 @@ void fixtrailing(TCHAR *p)
 void getpathpart(TCHAR *outpath, int size, const TCHAR *inpath)
 {
 	_tcscpy(outpath, inpath);
-	TCHAR *p = _tcsrchr(outpath, '/');
+	const auto p = _tcsrchr(outpath, '/');
 	if (p)
 		p[0] = 0;
 	fixtrailing(outpath);
@@ -151,7 +151,7 @@ void getpathpart(TCHAR *outpath, int size, const TCHAR *inpath)
 void getfilepart(TCHAR *out, int size, const TCHAR *path)
 {
 	out[0] = 0;
-	const TCHAR *p = _tcsrchr(path, '/');
+	const auto p = _tcsrchr(path, '/');
 	if (p)
 		_tcscpy(out, p + 1);
 	else
@@ -551,7 +551,7 @@ void fetch_screenshotpath(char *out, int size)
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
 {
-	int result = 0;
+	auto result = 0;
 
 	write_log(_T("target_cfgfile_load(): load file %s\n"), filename);
 
@@ -571,7 +571,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		ptr = strstr(const_cast<char *>(filename), ".uae");
 		if (ptr > nullptr)
 		{
-			int type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+			auto type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
 			result = cfgfile_load(p, filename, &type, 0, 1);
 		}
 		if (result)
@@ -604,7 +604,7 @@ int check_configfile(char *file)
 {
 	char tmp[MAX_DPATH];
 
-	FILE *f = fopen(file, "rt");
+	auto f = fopen(file, "rte");
 	if (f)
 	{
 		fclose(f);
@@ -612,12 +612,12 @@ int check_configfile(char *file)
 	}
 
 	strncpy(tmp, file, MAX_DPATH);
-	char* ptr = strstr(tmp, ".uae");
+	const auto ptr = strstr(tmp, ".uae");
 	if (ptr > nullptr)
 	{
 		*(ptr + 1) = '\0';
 		strncat(tmp, "conf", MAX_DPATH);
-		f = fopen(tmp, "rt");
+		f = fopen(tmp, "rte");
 		if (f)
 		{
 			fclose(f);
@@ -629,7 +629,7 @@ int check_configfile(char *file)
 
 void extractFileName(const char * str, char *buffer)
 {
-	const char *p = str + strlen(str) - 1;
+	auto p = str + strlen(str) - 1;
 	while (*p != '/' && p > str)
 		p--;
 	p++;
@@ -639,7 +639,7 @@ void extractFileName(const char * str, char *buffer)
 void extractPath(char *str, char *buffer)
 {
 	strncpy(buffer, str, MAX_DPATH);
-	char* p = buffer + strlen(buffer) - 1;
+	auto p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p > buffer)
 		p--;
 	p[1] = '\0';
@@ -647,7 +647,7 @@ void extractPath(char *str, char *buffer)
 
 void removeFileExtension(char *filename)
 {
-	char *p = filename + strlen(filename) - 1;
+	auto p = filename + strlen(filename) - 1;
 	while (p > filename && *p != '.')
 	{
 		*p = '\0';
@@ -665,7 +665,7 @@ void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector
 	if (files != nullptr)
 		files->clear();
 
-	DIR * dir = opendir(path);
+	const auto dir = opendir(path);
 	if (dir != nullptr)
 	{
 		while ((dent = readdir(dir)) != nullptr)
@@ -678,7 +678,7 @@ void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector
 			else if (files != nullptr)
 				files->push_back(dent->d_name);
 		}
-		if (dirs != nullptr && dirs->size() > 0 && (*dirs)[0] == ".")
+		if (dirs != nullptr && !dirs->empty() && (*dirs)[0] == ".")
 			dirs->erase(dirs->begin());
 		closedir(dir);
 	}
@@ -695,7 +695,7 @@ void saveAdfDir(void)
 	int i;
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
-	FILE *f = fopen(path, "w");
+	const auto f = fopen(path, "we");
 	if (!f)
 		return;
 
@@ -797,12 +797,12 @@ void loadAdfDir(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
-	struct zfile *fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
+	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh) {
 		char linea[CONFIG_BLEN];
 		TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
 		int numROMs, numDisks, numCDs;
-		int romType = -1;
+		auto romType = -1;
 		char romName[MAX_DPATH] = { '\0' };
 		char romPath[MAX_DPATH] = { '\0' };
 		char tmpFile[MAX_DPATH];
@@ -818,7 +818,7 @@ void loadAdfDir(void)
 					|| cfgfile_string(option, value, "ROMPath", romPath, sizeof(romPath))
 					|| cfgfile_intval(option, value, "ROMType", &romType, 1)) {
 					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1) {
-						AvailableROM *tmp = new AvailableROM();
+						auto tmp = new AvailableROM();
 						strncpy(tmp->Name, romName, sizeof(tmp->Name));
 						strncpy(tmp->Path, romPath, sizeof(tmp->Path));
 						tmp->ROMType = romType;
@@ -830,11 +830,11 @@ void loadAdfDir(void)
 				}
 				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof(tmpFile)))
 				{
-					FILE* f = fopen(tmpFile, "rb");
+					auto f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
-						lstMRUDiskList.push_back(tmpFile);
+						lstMRUDiskList.emplace_back(tmpFile);
 					}
 				}
 				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof(tmpFile)))
@@ -843,7 +843,7 @@ void loadAdfDir(void)
 					if (f != nullptr)
 					{
 						fclose(f);
-						lstMRUCDList.push_back(tmpFile);
+						lstMRUCDList.emplace_back(tmpFile);
 					}
 				}
 				else {
@@ -970,9 +970,9 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 		return 0;
 	}
 	if (v == 2) {
-		struct timespec ts;
+		struct timespec ts{};
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+		const int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 		*low = (uae_u32)(time & 0xffffffff);
 		return (uae_u32)(time >> 32);
 	}
@@ -986,7 +986,7 @@ void target_shutdown(void)
 
 int main(int argc, char* argv[])
 {
-	struct sigaction action;
+	struct sigaction action{};
 	printf("Amiberry v2.6, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
 
 	max_uae_width = 1920;
@@ -1004,7 +1004,7 @@ int main(int argc, char* argv[])
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/saves/default.ads", start_path_data);
 	logging_init();
 
-	memset(&action, 0, sizeof(action));
+	memset(&action, 0, sizeof action);
 	action.sa_sigaction = signal_segv;
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGSEGV, &action, nullptr) < 0)
@@ -1018,7 +1018,7 @@ int main(int argc, char* argv[])
 		abort();
 	}
 
-	memset(&action, 0, sizeof(action));
+	memset(&action, 0, sizeof action);
 	action.sa_sigaction = signal_buserror;
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGBUS, &action, nullptr) < 0)
@@ -1027,7 +1027,7 @@ int main(int argc, char* argv[])
 		abort();
 	}
 
-	memset(&action, 0, sizeof(action));
+	memset(&action, 0, sizeof action);
 	action.sa_sigaction = signal_term;
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGTERM, &action, nullptr) < 0)
@@ -1082,7 +1082,7 @@ int main(int argc, char* argv[])
 
 int handle_msgpump()
 {
-	int got = 0;
+	auto got = 0;
 	SDL_Event rEvent;
 
 	while (SDL_PollEvent(&rEvent))
@@ -1234,6 +1234,8 @@ int handle_msgpump()
 					setmousestate(0, 1, y * mouseScale, 0);
 				}
 			}
+			break;
+		default: 
 			break;
 #ifdef USE_SDL2
 		case SDL_MOUSEWHEEL:
