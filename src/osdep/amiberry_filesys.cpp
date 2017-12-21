@@ -10,7 +10,7 @@
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
 {
-	const int ret = 0;
+	const auto ret = 0;
 	if (oldcur)
 		getcwd(oldcur, MAX_DPATH);
 	if (curdir)
@@ -51,9 +51,7 @@ struct my_opendir_s
 
 struct my_opendir_s* my_opendir(const char* name)
 {
-	struct my_opendir_s* mod;
-
-	mod = xmalloc (struct my_opendir_s, 1);
+	auto * mod = xmalloc (struct my_opendir_s, 1);
 	if (!mod)
 		return nullptr;
 	mod->h = opendir(name);
@@ -79,7 +77,7 @@ int my_readdir(struct my_opendir_s* mod, char* name)
 	if (!mod)
 		return 0;
 
-	struct dirent * de = readdir(static_cast<DIR *>(mod->h));
+	auto de = readdir(static_cast<DIR *>(mod->h));
 	if (de == nullptr)
 		return 0;
 	strncpy(name, de->d_name, MAX_DPATH);
@@ -130,7 +128,7 @@ unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
 
 int my_existsfile(const char* name)
 {
-	struct stat st;
+	struct stat st{};
 	if (lstat(name, &st) == -1)
 	{
 		return 0;
@@ -143,7 +141,7 @@ int my_existsfile(const char* name)
 
 int my_existsdir(const char* name)
 {
-	struct stat st;
+	struct stat st{};
 
 	if (lstat(name, &st) == -1)
 	{
@@ -157,9 +155,7 @@ int my_existsdir(const char* name)
 
 struct my_openfile_s* my_open(const TCHAR* name, const int flags)
 {
-	struct my_openfile_s* mos;
-
-	mos = xmalloc (struct my_openfile_s, 1);
+	auto * mos = xmalloc (struct my_openfile_s, 1);
 	if (!mos)
 		return nullptr;
 	if (flags & O_CREAT)
@@ -183,8 +179,8 @@ int my_truncate(const TCHAR* name, uae_u64 len)
 
 int my_getvolumeinfo(const char* root)
 {
-	struct stat st;
-	const int ret = 0;
+	struct stat st{};
+	const auto ret = 0;
 
 	if (lstat(root, &st) == -1)
 		return -1;
@@ -196,23 +192,19 @@ int my_getvolumeinfo(const char* root)
 
 FILE* my_opentext(const TCHAR* name)
 {
-	return fopen(name, "r");
+	return fopen(name, "re");
 }
 
 
 bool my_issamepath(const TCHAR* path1, const TCHAR* path2)
 {
-	if (!_tcsicmp(path1, path2))
-		return true;
-	return false;
+	return _tcsicmp(path1, path2) == 0;
 }
 
 
 const TCHAR* my_getfilepart(const TCHAR* filename)
 {
-	const TCHAR* p;
-
-	p = _tcsrchr(filename, '\\');
+	auto p = _tcsrchr(filename, '\\');
 	if (p)
 		return p + 1;
 	p = _tcsrchr(filename, '/');

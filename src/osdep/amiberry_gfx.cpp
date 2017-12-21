@@ -505,7 +505,7 @@ void unlockscr()
 }
 
 
-void wait_for_vsync(void)
+void wait_for_vsync()
 {
 #ifdef USE_SDL1
 	const auto start = read_processor_time();
@@ -609,12 +609,12 @@ void show_screen(int mode)
 		next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 }
 
-unsigned long target_lastsynctime(void)
+unsigned long target_lastsynctime()
 {
 	return last_synctime;
 }
 
-bool show_screen_maybe(bool show)
+bool show_screen_maybe(const bool show)
 {
 	if (show)
 		show_screen(0);
@@ -622,7 +622,7 @@ bool show_screen_maybe(bool show)
 }
 
 #ifdef USE_SDL1
-void black_screen_now(void)
+void black_screen_now()
 {
 	if (screen != nullptr)
 	{
@@ -793,7 +793,7 @@ static int save_png(SDL_Surface* surface, char* path)
 
 	if (!info_ptr)
 	{
-		png_destroy_write_struct(&png_ptr, NULL);
+		png_destroy_write_struct(&png_ptr, nullptr);
 		fclose(f);
 		return 0;
 	}
@@ -1053,9 +1053,8 @@ void picasso_init_resolutions()
 	DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 	for (auto i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++)
 	{
-		for (auto bit_idx = 0; bit_idx < 3; ++bit_idx)
+		for (auto bitdepth : bits)
 		{
-			const auto bitdepth = bits[bit_idx];
 			const auto bit_unit = bitdepth + 1 & 0xF8;
 			const auto rgbFormat = bitdepth == 8 ? RGBFB_CLUT : bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8;
 			auto pixelFormat = 1 << rgbFormat;
@@ -1134,7 +1133,7 @@ uae_u8* gfx_lock_picasso()
 	return static_cast<uae_u8 *>(screen->pixels);
 }
 
-void gfx_unlock_picasso(bool dorender)
+void gfx_unlock_picasso(const bool dorender)
 {
 	SDL_UnlockSurface(screen);
 	if (dorender)
