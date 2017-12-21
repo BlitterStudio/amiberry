@@ -32,7 +32,6 @@
 #endif
 
 SDL_Joystick* GUIjoy;
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 bool gui_running = false;
 static int last_active_panel = 2;
@@ -156,7 +155,7 @@ static int gui_rtarea_flags_onenter;
 
 static int gui_create_rtarea_flag(struct uae_prefs* p)
 {
-	int flag = 0;
+	auto flag = 0;
 
 	if (count_HDs(p) > 0)
 		flag |= 1;
@@ -176,12 +175,12 @@ static int gui_create_rtarea_flag(struct uae_prefs* p)
 	return flag;
 }
 
-void gui_force_rtarea_hdchange(void)
+void gui_force_rtarea_hdchange()
 {
 	gui_rtarea_flags_onenter |= 2;
 }
 
-void gui_restart(void)
+void gui_restart()
 {
 	gui_running = false;
 }
@@ -292,7 +291,7 @@ namespace sdl
 		//-------------------------------------------------
 #ifdef USE_SDL1
 #ifdef DEBUG
-		const SDL_VideoInfo* videoInfo = SDL_GetVideoInfo();
+		const auto videoInfo = SDL_GetVideoInfo();
 		printf("Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h,
 			videoInfo->vfmt->BitsPerPixel);
 #endif //DEBUG
@@ -819,7 +818,7 @@ namespace widgets
 		//--------------------------------------------------
 		// Create selector entries
 		//--------------------------------------------------
-		int workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
+		const auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
 		selectors = new gcn::Container();
 		selectors->setSize(150, workAreaHeight - 2);
 		selectors->setBaseColor(colSelectorInactive);
@@ -828,7 +827,7 @@ namespace widgets
 #elif USE_SDL2
 		selectors->setBorderSize(1);
 #endif
-		int panelStartX = DISTANCE_BORDER + selectors->getWidth() + 2 + 11;
+		const auto panelStartX = DISTANCE_BORDER + selectors->getWidth() + 2 + 11;
 
 		panelFocusListener = new PanelFocusListener();
 		for (i = 0; categories[i].category != nullptr; ++i)
@@ -918,7 +917,7 @@ namespace widgets
 
 void RefreshAllPanels()
 {
-	for (int i = 0; categories[i].category != nullptr; ++i)
+	for (auto i = 0; categories[i].category != nullptr; ++i)
 	{
 		if (categories[i].RefreshFunc != nullptr)
 			(*categories[i].RefreshFunc)();
@@ -975,14 +974,14 @@ void run_gui()
 	}
 
 	// Catch all GUI framework exceptions.
-	catch (gcn::Exception e)
+	catch (gcn::Exception &e)
 	{
 		cout << e.getMessage() << endl;
 		uae_quit();
 	}
 
 	// Catch all Std exceptions.
-	catch (exception e)
+	catch (exception &e)
 	{
 		cout << "Std exception: " << e.what() << endl;
 		uae_quit();
