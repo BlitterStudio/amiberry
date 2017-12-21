@@ -281,7 +281,7 @@ const int RemapKeyMapListSize = sizeof RemapKeyMapList / sizeof RemapKeyMapList[
 
 static int init_mouse(void)
 {
-	const int mouse = open("/dev/input/mouse0", O_RDONLY);
+	const auto mouse = open("/dev/input/mouse0", O_RDONLY);
 	if (mouse != -1)
 	{
 		numMice++;
@@ -530,17 +530,17 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 	string line;
 	string delimiter = " = ";
 
-	int tempbutton = -1;
+	auto tempbutton = -1;
 
 	// read each line in
 	while (std::getline(readFile, line))
 	{
-		const string option = line.substr(0, line.find(delimiter));
+		const auto option = line.substr(0, line.find(delimiter));
 
 		if (option != line) // exit if we got no result from splitting the string
 		{
 			// using the " = " to work out whis is the option, and which is the parameter.
-			string param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 
 			// remove leading "
 			if (param.at(0) == '"')
@@ -563,7 +563,7 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 			// this will need something separate to pull out the number of hats 
 			//  use SET_BIT on hX numbers 
 
-			if (find_setting == "count_hats" && param.at(0) == 'h')
+			if (strncmp(find_setting, "count_hats", 11) == 0 && param.at(0) == 'h')
 			{
 				if (param.at(1) == '0') { SET_BIT (tempbutton,0); }
 				if (param.at(1) == '1') { SET_BIT (tempbutton,1); }
@@ -576,7 +576,7 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 			{
 				break;
 			}
-			if (find_setting != "count_hats")
+			if (strncmp(find_setting, "count_hats", 11) != 0)
 			{
 				tempbutton = -1;
 			}
@@ -595,12 +595,12 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting, char* retroarch_file)
 	string line;
 	string delimiter = " = ";
 
-	const TCHAR* output = "nul";
+	auto output = "nul";
 
 	// read each line in
 	while (std::getline(readFile, line))
 	{
-		const string option = line.substr(0, line.find(delimiter));
+		const auto option = line.substr(0, line.find(delimiter));
 
 		if (option != line) // exit if we got no result from splitting the string
 		{
@@ -636,9 +636,9 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting, char* retroarch_file)
 
 int find_string_in_array(const char* arr[], const int n, const char* key)
 {
-	int index = -1;
+	auto index = -1;
 
-	for (int i = 0; i < n; i++)
+	for (auto i = 0; i < n; i++)
 	{
 		// _tcscmp  // strcmp
 		if (!_tcsicmp(arr[i], key))
@@ -664,15 +664,14 @@ static int init_joystick(void)
 
 	// set up variables / paths etc.
 	char retroarch_file[MAX_DPATH];
-	extern void fetch_retroarchfile(char* out, int size);
 	fetch_retroarchfile(retroarch_file, MAX_DPATH);
 
 	if (zfile_exists(retroarch_file))
 	{
-		struct host_keyboard_button temp_keyboard_buttons;
+		struct host_keyboard_button temp_keyboard_buttons{};
 
-		const char* tempkey = find_retroarch_key("input_player1_y", retroarch_file);
-		int x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
+		auto tempkey = find_retroarch_key("input_player1_y", retroarch_file);
+		auto x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.north_button = RemapKeyMapList[x];
 		tempkey = find_retroarch_key("input_player1_a", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
@@ -739,11 +738,10 @@ static int init_joystick(void)
 
 	// set up variables / paths etc.
 	char tmp[MAX_DPATH];
-	extern void fetch_controllerspath(char* out, int size);
 	fetch_controllerspath(tmp, MAX_DPATH);
 
 	// do the loop
-	for (int cpt = 0; cpt < nr_joysticks; cpt++)
+	for (auto cpt = 0; cpt < nr_joysticks; cpt++)
 	{
 		Joysticktable[cpt] = SDL_JoystickOpen(cpt);
 
@@ -848,7 +846,7 @@ void import_joysticks(void)
 
 static void close_joystick(void)
 {
-	for (int cpt = 0; cpt < nr_joysticks; cpt++)
+	for (auto cpt = 0; cpt < nr_joysticks; cpt++)
 	{
 		SDL_JoystickClose(Joysticktable[cpt]);
 	}
@@ -868,12 +866,12 @@ static void unacquire_joystick(int num)
 
 static const TCHAR* get_joystick_friendlyname(const int joy)
 {
-	TCHAR* tmp1 = new char[255];
-	for (int n = 0; n < numKeysAsJoys; ++n)
+	const auto tmp1 = new char[255];
+	for (auto n = 0; n < numKeysAsJoys; ++n)
 	{
 		if (joy == n)
 		{
-			if (host_keyboard_buttons[n].is_retroarch == true)
+			if (host_keyboard_buttons[n].is_retroarch)
 			{
 				sprintf(tmp1, "RetroArch Keyboard as Joystick [Input #%d]", n + 1);
 				return tmp1;
@@ -994,12 +992,12 @@ static int get_joystick_flags(int num)
 
 static void read_joystick(void)
 {
-	for (int joyid = 0; joyid < MAX_JPORTS; joyid++)
+	for (auto joyid = 0; joyid < MAX_JPORTS; joyid++)
 	{
 		// First handle retroarch (or default) keys as Joystick...
 		if (currprefs.jports[joyid].id >= JSEM_JOYS && currprefs.jports[joyid].id < JSEM_JOYS + numKeysAsJoys)
 		{
-			const int hostkeyid = currprefs.jports[joyid].id - JSEM_JOYS;
+			const auto hostkeyid = currprefs.jports[joyid].id - JSEM_JOYS;
 
 #ifdef USE_SDL1
 			Uint8* keystate = SDL_GetKeyState(nullptr);
@@ -1032,7 +1030,7 @@ static void read_joystick(void)
 		else if (jsem_isjoy(joyid, &currprefs) != -1)
 		{
 			// Now we handle real SDL joystick...
-			const int hostjoyid = currprefs.jports[joyid].id - JSEM_JOYS - numKeysAsJoys;
+			const auto hostjoyid = currprefs.jports[joyid].id - JSEM_JOYS - numKeysAsJoys;
 
 			static struct host_input_button current_controller_map;
 
@@ -1104,7 +1102,7 @@ static void read_joystick(void)
 
 			// left stick   
 			// handle the X axis  (left stick) and d-pad (Hat)
-			int val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
+			auto val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
 			setjoystickstate(hostjoyid + 1, 0, val, 32767);
 
 			// handle the Y axis   
@@ -1119,7 +1117,7 @@ static void read_joystick(void)
 			setjoystickstate(hostjoyid + 1, 3, val, 32767);
 
 
-			int held_offset = 0;
+			auto held_offset = 0;
 
 
 			// temporary solution for retroarch buttons inc. HOTKEY 
@@ -1230,7 +1228,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 
 	if (port < 2) // ports 0, 1 ... both sticks, with mousemap
 	{
-		for (int n = 0; n < 2; ++n)
+		for (auto n = 0; n < 2; ++n)
 		{
 			if (CHECK_BIT(currprefs.jports[port].mousemap, n))
 			{
@@ -1249,7 +1247,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	}
 	else // ports 2, 3 (parallel ports) ... both sticks,
 	{
-		for (int n = 0; n < 2; ++n)
+		for (auto n = 0; n < 2; ++n)
 		{
 			h = port - 2 ? INPUTEVENT_PAR_JOY1_HORIZ : INPUTEVENT_PAR_JOY2_HORIZ;
 			v = port - 2 ? INPUTEVENT_PAR_JOY1_VERT : INPUTEVENT_PAR_JOY2_VERT;
@@ -1419,10 +1417,10 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	//	thismap[3] = currprefs.jports[port].amiberry_custom_right_trigger; // grab the 'right trigger' options for the current map
 
 	//  Now assign the actual buttons VALUES (TRUE/FALSE) to trigger the EVENTS
-	int function_offset = 0;
+	auto function_offset = 0;
 
 
-	for (int n = 0; n < 2; ++n) /// temporarily limited to '2' only
+	for (auto n = 0; n < 2; ++n) /// temporarily limited to '2' only
 	{
 		function_offset = n * REMAP_BUTTONS;
 
@@ -1451,15 +1449,15 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	}
 
 	// if using retroarch options
-	if (currprefs.amiberry_use_retroarch_menu == true)
+	if (currprefs.amiberry_use_retroarch_menu)
 	{
 		setid(uid, num, ID_BUTTON_OFFSET + 14, 0, port, INPUTEVENT_SPC_ENTERGUI, gp);
 	}
-	if (currprefs.amiberry_use_retroarch_quit == true)
+	if (currprefs.amiberry_use_retroarch_quit)
 	{
 		setid(uid, num, ID_BUTTON_OFFSET + 15, 0, port, INPUTEVENT_SPC_QUIT, gp);
 	}
-	if (currprefs.amiberry_use_retroarch_reset == true)
+	if (currprefs.amiberry_use_retroarch_reset)
 	{
 		setid(uid, num, ID_BUTTON_OFFSET + 30, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
 	}
