@@ -161,8 +161,8 @@ static void InitEditFilesysVirtual()
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
 	txtBootPri->setId("virtBootpri");
 
-	int posY = DISTANCE_BORDER;
-	int posX = DISTANCE_BORDER;
+	auto posY = DISTANCE_BORDER;
+	auto posX = DISTANCE_BORDER;
 
 	wndEditFilesysVirtual->add(lblDevice, DISTANCE_BORDER, posY);
 	posX += lblDevice->getWidth() + 8;
@@ -186,7 +186,6 @@ static void InitEditFilesysVirtual()
 	wndEditFilesysVirtual->add(lblPath, DISTANCE_BORDER, posY);
 	wndEditFilesysVirtual->add(txtPath, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
 	wndEditFilesysVirtual->add(cmdPath, wndEditFilesysVirtual->getWidth() - DISTANCE_BORDER - SMALL_BUTTON_WIDTH, posY);
-	posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
 
 	wndEditFilesysVirtual->add(cmdOK);
 	wndEditFilesysVirtual->add(cmdCancel);
@@ -365,7 +364,7 @@ bool EditFilesysVirtual(const int unit_no)
 	if (unit_no >= 0)
 	{
 		uci = &changed_prefs.mountconfig[unit_no];
-		struct uaedev_config_info* ci = &uci->ci;
+		const auto ci = &uci->ci;
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		strdevname.assign(ci->devname);
@@ -395,7 +394,7 @@ bool EditFilesysVirtual(const int unit_no)
 	if (dialogResult)
 	{
 		struct uaedev_config_info ci{};
-		const int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
+		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
 		uci_set_defaults(&ci, true);
@@ -409,7 +408,7 @@ bool EditFilesysVirtual(const int unit_no)
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
-			struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
+			const auto hfd = get_hardfile_data(uci->configoffset);
 			hardfile_media_change(hfd, &ci, true, false);
 		}
 	}

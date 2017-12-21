@@ -59,8 +59,8 @@ private:
 public:
 	StringListModel(const char* entries[], const int count)
 	{
-		for (int i = 0; i < count; ++i)
-			values.push_back(entries[i]);
+		for (auto i = 0; i < count; ++i)
+			values.emplace_back(entries[i]);
 	}
 
 	int getNumberOfElements() override
@@ -70,7 +70,7 @@ public:
 
 	int AddElement(const char* Elem)
 	{
-		values.push_back(Elem);
+		values.emplace_back(Elem);
 		return 0;
 	}
 
@@ -156,7 +156,7 @@ const int RemapEventList[] = {
 
 };
 
-const int RemapEventListSize = sizeof(RemapEventList) / sizeof(RemapEventList[0]);
+const int RemapEventListSize = sizeof RemapEventList / sizeof RemapEventList[0];
 
 //int RemapEventListSize = 20;
 
@@ -257,73 +257,73 @@ public:
 			if (actionEvent.getSource() == cboCustomAction[0])
 			{
 				sel = cboCustomAction[0]->getSelected();
-				tempmap.dpad_up_action = (RemapEventList[sel - 1]);
+				tempmap.dpad_up_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[1])
 			{
 				sel = cboCustomAction[1]->getSelected();
-				tempmap.dpad_down_action = (RemapEventList[sel - 1]);
+				tempmap.dpad_down_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[2])
 			{
 				sel = cboCustomAction[2]->getSelected();
-				tempmap.dpad_left_action = (RemapEventList[sel - 1]);
+				tempmap.dpad_left_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[3])
 			{
 				sel = cboCustomAction[3]->getSelected();
-				tempmap.dpad_right_action = (RemapEventList[sel - 1]);
+				tempmap.dpad_right_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[4])
 			{
 				sel = cboCustomAction[4]->getSelected();
-				tempmap.select_action = (RemapEventList[sel - 1]);
+				tempmap.select_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[5])
 			{
 				sel = cboCustomAction[5]->getSelected();
-				tempmap.left_shoulder_action = (RemapEventList[sel - 1]);
+				tempmap.left_shoulder_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[6])
 			{
 				sel = cboCustomAction[6]->getSelected();
-				tempmap.lstick_select_action = (RemapEventList[sel - 1]);
+				tempmap.lstick_select_action = RemapEventList[sel - 1];
 			}
 
 			else if (actionEvent.getSource() == cboCustomAction[7])
 			{
 				sel = cboCustomAction[7]->getSelected();
-				tempmap.north_action = (RemapEventList[sel - 1]);
+				tempmap.north_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[8])
 			{
 				sel = cboCustomAction[8]->getSelected();
-				tempmap.south_action = (RemapEventList[sel - 1]);
+				tempmap.south_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[9])
 			{
 				sel = cboCustomAction[9]->getSelected();
-				tempmap.east_action = (RemapEventList[sel - 1]);
+				tempmap.east_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[10])
 			{
 				sel = cboCustomAction[10]->getSelected();
-				tempmap.west_action = (RemapEventList[sel - 1]);
+				tempmap.west_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[11])
 			{
 				sel = cboCustomAction[11]->getSelected();
-				tempmap.start_action = (RemapEventList[sel - 1]);
+				tempmap.start_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[12])
 			{
 				sel = cboCustomAction[12]->getSelected();
-				tempmap.right_shoulder_action = (RemapEventList[sel - 1]);
+				tempmap.right_shoulder_action = RemapEventList[sel - 1];
 			}
 			else if (actionEvent.getSource() == cboCustomAction[13])
 			{
 				sel = cboCustomAction[13]->getSelected();
-				tempmap.rstick_select_action = (RemapEventList[sel - 1]);
+				tempmap.rstick_select_action = RemapEventList[sel - 1];
 			}
 
 
@@ -364,7 +364,6 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	int i;
 	char tmp[255];
 	static TCHAR* myname;
-	const struct inputevent* ie;
 
 	//int num_elements = sizeof( RemapEventList ) / sizeof( RemapEventList[0] );
 
@@ -372,9 +371,9 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	{
 		CustomEventList.AddElement("None");
 
-		for (int idx = 0; idx < RemapEventListSize; ++idx)
+		for (auto idx : RemapEventList)
 		{
-			ie = inputdevice_get_eventinfo(RemapEventList[idx]);
+			const auto ie = inputdevice_get_eventinfo(idx);
 			snprintf(tmp, 255, "%s", ie->name);
 			CustomEventList.AddElement(tmp);
 		}
@@ -445,7 +444,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	lblRetroarch = new gcn::Label("[-]");
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
 
-	txtPortInput->setSize(grpFunction->getWidth() - (lblPortInput->getWidth() + (DISTANCE_NEXT_X * 2) + lblRetroarch->getWidth()), TEXTFIELD_HEIGHT);
+	txtPortInput->setSize(grpFunction->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()), TEXTFIELD_HEIGHT);
 
 	lblCustomAction[0] = new gcn::Label("D-Pad Up:");
 	lblCustomAction[1] = new gcn::Label("D-Pad Down:");
@@ -478,7 +477,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		cboCustomAction[i]->addActionListener(customActionListener);
 	}
 
-	int posY = 144 + 40;
+	auto posY = 144 + 40;
 	for (i = 0; i < 7; ++i)
 	{
 		category.panel->add(lblCustomAction[i], DISTANCE_BORDER, posY);
@@ -507,7 +506,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 }
 
 
-void ExitPanelCustom(void)
+void ExitPanelCustom()
 {
 	delete optPort0;
 	delete optPort1;
@@ -521,11 +520,9 @@ void ExitPanelCustom(void)
 	delete optMultiRight;
 	delete grpFunction;
 
-	int i;
-
-	for (i = 0; i < 14; ++i)
+	for (auto & i : lblCustomAction)
 	{
-		delete lblCustomAction[i];
+		delete i;
 		//        delete cboCustomAction[i];                   
 	}
 
@@ -569,6 +566,8 @@ void RefreshPanelCustom(void)
 	case 3:
 		tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger;
 		break;
+	default: 
+		break;
 	}
 
 
@@ -577,16 +576,16 @@ void RefreshPanelCustom(void)
 
 	if (changed_prefs.jports[SelectedPort].id > JSEM_JOYS && changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
-		const int hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS - 1;
+		const auto hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS - 1;
 #ifdef USE_SDL1
 		strncpy(tmp, SDL_JoystickName(hostjoyid), 255);
 #elif USE_SDL2
 		strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
 #endif
 
-		for (int n = 0; n < 14; ++n)
+		for (auto n = 0; n < 14; ++n)
 		{
-			int temp_button = 0;
+			auto temp_button = 0;
 
 			switch (n)
 			{
@@ -665,7 +664,7 @@ void RefreshPanelCustom(void)
 			}
 
 			// disable unmapped buttons
-			cboCustomAction[n]->setEnabled(temp_button + 1 ? true : false);
+			cboCustomAction[n]->setEnabled((temp_button + 1) != 0);
 
 			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
 			if (temp_button == host_input_buttons[hostjoyid].hotkey_button && temp_button != -1)
@@ -676,7 +675,7 @@ void RefreshPanelCustom(void)
 			}
 
 			else if (temp_button == host_input_buttons[hostjoyid].quit_button && temp_button != -1 && SelectedFunction == 1 &&
-				changed_prefs.amiberry_use_retroarch_quit == true)
+				changed_prefs.amiberry_use_retroarch_quit)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
 				cboCustomAction[n]->setEnabled(false);
@@ -684,7 +683,7 @@ void RefreshPanelCustom(void)
 			}
 
 			else if (temp_button == host_input_buttons[hostjoyid].menu_button && temp_button != -1 && SelectedFunction == 1 &&
-				changed_prefs.amiberry_use_retroarch_menu == true)
+				changed_prefs.amiberry_use_retroarch_menu)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
 				cboCustomAction[n]->setEnabled(false);
@@ -692,7 +691,7 @@ void RefreshPanelCustom(void)
 			}
 
 			else if (temp_button == host_input_buttons[hostjoyid].reset_button && temp_button != -1 && SelectedFunction == 1 &&
-				changed_prefs.amiberry_use_retroarch_reset == true)
+				changed_prefs.amiberry_use_retroarch_reset)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
 				cboCustomAction[n]->setEnabled(false);
@@ -713,7 +712,7 @@ void RefreshPanelCustom(void)
 			cboCustomAction[ 3]->setEnabled(true);
 		}
 
-		if (host_input_buttons[hostjoyid].is_retroarch == true)
+		if (host_input_buttons[hostjoyid].is_retroarch)
 			lblRetroarch->setCaption("[R]");
 		else
 			lblRetroarch->setCaption("[N]");
@@ -722,10 +721,10 @@ void RefreshPanelCustom(void)
 	else
 	{
 		_stprintf(tmp, _T("%s"), "Not a valid Input Controller for Joystick Emulation.");
-		for (int n = 0; n < 14; ++n)
+		for (auto & n : cboCustomAction)
 		{
-			cboCustomAction[n]->setListModel(&CustomEventList);
-			cboCustomAction[ n]->setEnabled(false);
+			n->setListModel(&CustomEventList);
+			n->setEnabled(false);
 		}
 
 		lblRetroarch->setCaption("[_]");
@@ -735,9 +734,9 @@ void RefreshPanelCustom(void)
 
 
 	// now select which items in drop-down are 'done'
-	int eventnum = 0;
+	auto eventnum = 0;
 
-	for (int z = 0; z < 14; ++z)
+	for (auto z = 0; z < 14; ++z)
 	{
 		switch (z)
 		{
@@ -814,7 +813,7 @@ void RefreshPanelCustom(void)
 		default: 
 			break;
 		}
-		const int x = find_in_array(RemapEventList, RemapEventListSize, eventnum);
+		const auto x = find_in_array(RemapEventList, RemapEventListSize, eventnum);
 		if (cboCustomAction[z]->getEnabled())
 		{
 			cboCustomAction[z]->setSelected(x + 1);
@@ -826,19 +825,19 @@ void RefreshPanelCustom(void)
 bool HelpPanelCustom(vector<string>& helptext)
 {
 	helptext.clear();
-	helptext.push_back("Set up Custom input actions for each Amiga port, such as Keyboard remapping,");
-	helptext.push_back("or emulator functions.");
-	helptext.push_back("");
-	helptext.push_back("Select the port which you wish to re-map with 'Joystick Port'.");
-	helptext.push_back("The currently selected Input Device will then be displayed under 'Input Device'.");
-	helptext.push_back("");
-	helptext.push_back("Buttons which are not available on this device (detected with RetroArch ");
-	helptext.push_back("configuration files) are unavailable to remap.");
-	helptext.push_back("");
-	helptext.push_back("The HotKey button (used for secondary functions) is also unavailable for custom options. ");
-	helptext.push_back("The actions performed by pressing the HotKey with other buttons can also be remapped.");
-	helptext.push_back("Pre-defined functions such as Quit/Reset/Menu will be displayed as the 'default' option.");
-	helptext.push_back("");
-	helptext.push_back("The Function of the individual buttons are selectable via the marked drop-down boxes.");
+	helptext.emplace_back("Set up Custom input actions for each Amiga port, such as Keyboard remapping,");
+	helptext.emplace_back("or emulator functions.");
+	helptext.emplace_back("");
+	helptext.emplace_back("Select the port which you wish to re-map with 'Joystick Port'.");
+	helptext.emplace_back("The currently selected Input Device will then be displayed under 'Input Device'.");
+	helptext.emplace_back("");
+	helptext.emplace_back("Buttons which are not available on this device (detected with RetroArch ");
+	helptext.emplace_back("configuration files) are unavailable to remap.");
+	helptext.emplace_back("");
+	helptext.emplace_back("The HotKey button (used for secondary functions) is also unavailable for custom options. ");
+	helptext.emplace_back("The actions performed by pressing the HotKey with other buttons can also be remapped.");
+	helptext.emplace_back("Pre-defined functions such as Quit/Reset/Menu will be displayed as the 'default' option.");
+	helptext.emplace_back("");
+	helptext.emplace_back("The Function of the individual buttons are selectable via the marked drop-down boxes.");
 	return true;
 }

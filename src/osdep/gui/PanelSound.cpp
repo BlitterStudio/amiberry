@@ -59,10 +59,10 @@ class FrequencyListModel : public gcn::ListModel
 public:
 	FrequencyListModel()
 	{
-		freq.push_back("11025");
-		freq.push_back("22050");
-		freq.push_back("32000");
-		freq.push_back("44100");
+		freq.emplace_back("11025");
+		freq.emplace_back("22050");
+		freq.emplace_back("32000");
+		freq.emplace_back("44100");
 	}
 
 	int getNumberOfElements() override
@@ -88,11 +88,11 @@ class InterpolationListModel : public gcn::ListModel
 public:
 	InterpolationListModel()
 	{
-		entry.push_back("Disabled");
-		entry.push_back("Anti");
-		entry.push_back("Sinc");
-		entry.push_back("RH");
-		entry.push_back("Crux");
+		entry.emplace_back("Disabled");
+		entry.emplace_back("Anti");
+		entry.emplace_back("Sinc");
+		entry.emplace_back("RH");
+		entry.emplace_back("Crux");
 	}
 
 	int getNumberOfElements() override
@@ -118,11 +118,11 @@ class FilterListModel : public gcn::ListModel
 public:
 	FilterListModel()
 	{
-		entry.push_back("Always off");
-		entry.push_back("Emulated (A500)");
-		entry.push_back("Emulated (A1200)");
-		entry.push_back("Always on (A500)");
-		entry.push_back("Always on (A1200)");
+		entry.emplace_back("Always off");
+		entry.emplace_back("Emulated (A500)");
+		entry.emplace_back("Emulated (A1200)");
+		entry.emplace_back("Always on (A500)");
+		entry.emplace_back("Always on (A1200)");
 	}
 
 	int getNumberOfElements() override
@@ -333,7 +333,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldStereoDelay->addActionListener(soundActionListener);
 	lblStereoDelayInfo = new gcn::Label("10");
 
-	int posY = DISTANCE_BORDER;
+	auto posY = DISTANCE_BORDER;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
 	category.panel->add(grpMode, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += grpSound->getHeight() + DISTANCE_NEXT_Y;
@@ -430,7 +430,7 @@ void RefreshPanelSound()
 
 	cboInterpolation->setSelected(changed_prefs.sound_interpol);
 
-	int i = 0;
+	auto i = 0;
 	switch (changed_prefs.sound_filter)
 	{
 	case 0:
@@ -441,6 +441,8 @@ void RefreshPanelSound()
 		break;
 	case 2:
 		i = changed_prefs.sound_filter_type ? 4 : 3;
+		break;
+	default: 
 		break;
 	}
 	cboFilter->setSelected(i);
@@ -475,17 +477,17 @@ void RefreshPanelSound()
 bool HelpPanelSound(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("You can turn on sound emulation with different levels of accuracy and");
-	helptext.push_back("choose between Mono and Stereo.");
-	helptext.push_back("");
-	helptext.push_back("The different types of interpolation have different impact on performance. ");
-	helptext.push_back("Play with the settings to find the type you like most. You may need headphones .");
-	helptext.push_back("to really hear the difference between the interpolation types.");
-	helptext.push_back("");
-	helptext.push_back("With \"Filter\", you can select the type of the Amiga audio filter.");
-	helptext.push_back("");
-	helptext.push_back("With \"Stereo separation\" and \"Stereo delay\", you can adjust how the left ");
-	helptext.push_back("and right audio channels of the Amiga are mixed to the left and right channels ");
-	helptext.push_back("of your device. A value of 70% for separation and no delay is a good start.");
+	helptext.emplace_back("You can turn on sound emulation with different levels of accuracy and");
+	helptext.emplace_back("choose between Mono and Stereo.");
+	helptext.emplace_back("");
+	helptext.emplace_back("The different types of interpolation have different impact on performance. ");
+	helptext.emplace_back("Play with the settings to find the type you like most. You may need headphones .");
+	helptext.emplace_back("to really hear the difference between the interpolation types.");
+	helptext.emplace_back("");
+	helptext.emplace_back("With \"Filter\", you can select the type of the Amiga audio filter.");
+	helptext.emplace_back("");
+	helptext.emplace_back(R"(With "Stereo separation" and "Stereo delay", you can adjust how the left )");
+	helptext.emplace_back("and right audio channels of the Amiga are mixed to the left and right channels ");
+	helptext.emplace_back("of your device. A value of 70% for separation and no delay is a good start.");
 	return true;
 }

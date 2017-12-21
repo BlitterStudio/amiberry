@@ -128,9 +128,9 @@ static void CountModelConfigs(void)
 	numModelConfigs = 0;
 	if (quickstart_model >= 0 && quickstart_model < numModels)
 	{
-		for (int i = 0; i < 8; ++i)
+		for (auto & config : amodels[quickstart_model].configs)
 		{
-			if (amodels[quickstart_model].configs[i][0] == '\0')
+			if (config[0] == '\0')
 				break;
 			++numModelConfigs;
 		}
@@ -185,7 +185,7 @@ static void SetControlState(const int model)
 
 static void AdjustPrefs(void)
 {
-	const int old_cs = changed_prefs.cs_compatible;
+	const auto old_cs = changed_prefs.cs_compatible;
 
 	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 	switch (quickstart_model)
@@ -296,8 +296,7 @@ class AmigaModelListModel : public gcn::ListModel
 {
 public:
 	AmigaModelListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -319,8 +318,7 @@ class AmigaConfigListModel : public gcn::ListModel
 {
 public:
 	AmigaConfigListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -342,8 +340,7 @@ class QSDiskfileListModel : public gcn::ListModel
 {
 public:
 	QSDiskfileListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -365,8 +362,7 @@ class QSCDfileListModel : public gcn::ListModel
 {
 public:
 	QSCDfileListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -408,7 +404,7 @@ public:
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
-				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH))
+				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
 					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
 					changed_prefs.cdslots[0].inuse = true;
@@ -439,7 +435,7 @@ public:
 		//---------------------------------------
 		if (!bIgnoreListChange)
 		{
-			const int idx = cboCDFile->getSelected();
+			const auto idx = cboCDFile->getSelected();
 
 			if (idx < 0)
 			{
@@ -448,10 +444,10 @@ public:
 			}
 			else
 			{
-				if (cdfileList.getElementAt(idx).compare(changed_prefs.cdslots[0].name))
+				if (cdfileList.getElementAt(idx) == changed_prefs.cdslots[0].name)
 				{
 					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(),
-					        sizeof(changed_prefs.cdslots[0].name));
+					        sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -538,7 +534,7 @@ class QSDFxCheckActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		for (int i = 0; i < 2; ++i)
+		for (auto i = 0; i < 2; ++i)
 		{
 			if (actionEvent.getSource() == chkDFx[i])
 			{
@@ -579,7 +575,7 @@ class QSDFxButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		for (int i = 0; i < 2; ++i)
+		for (auto i = 0; i < 2; ++i)
 		{
 			if (actionEvent.getSource() == cmdDFxInfo[i])
 			{
@@ -611,9 +607,9 @@ public:
 					strncpy(tmp, currentDir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
-					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH))
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof(changed_prefs.floppyslots[i].df));
+						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof changed_prefs.floppyslots[i].df);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extractPath(tmp, currentDir);
@@ -638,7 +634,7 @@ class QSDiskFileActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		for (int i = 0; i < 2; ++i)
+		for (auto i = 0; i < 2; ++i)
 		{
 			if (actionEvent.getSource() == cboDFxFile[i])
 			{
@@ -647,7 +643,7 @@ public:
 				//---------------------------------------
 				if (!bIgnoreListChange)
 				{
-					const int idx = cboDFxFile[i]->getSelected();
+					const auto idx = cboDFxFile[i]->getSelected();
 
 					if (idx < 0)
 					{
@@ -657,10 +653,10 @@ public:
 					}
 					else
 					{
-						if (diskfileList.getElementAt(idx).compare(changed_prefs.floppyslots[i].df))
+						if (diskfileList.getElementAt(idx) == changed_prefs.floppyslots[i].df)
 						{
 							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(),
-							        sizeof(changed_prefs.floppyslots[i].df));
+							        sizeof changed_prefs.floppyslots[i].df);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
@@ -694,7 +690,7 @@ static QuickstartModeActionListener* quickstartModeActionListener;
 
 void InitPanelQuickstart(const struct _ConfigCategory& category)
 {
-	int posY = DISTANCE_BORDER;
+	auto posY = DISTANCE_BORDER;
 	int i;
 
 	amigaModelActionListener = new AmigaModelActionListener();
@@ -809,7 +805,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 
 	for (i = 0; i < 2; ++i)
 	{
-		int posX = DISTANCE_BORDER;
+		auto posX = DISTANCE_BORDER;
 		category.panel->add(chkDFx[i], posX, posY);
 		posX += 180;
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
@@ -859,7 +855,7 @@ void ExitPanelQuickstart(void)
 	delete lblConfig;
 	delete cboConfig;
 	delete chkNTSC;
-	for (int i = 0; i < 2; ++i)
+	for (auto i = 0; i < 2; ++i)
 	{
 		delete chkDFx[i];
 		delete chkDFxWriteProtect[i];
@@ -897,9 +893,9 @@ static void AdjustDropDownControls(void)
 
 		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
-			for (int j = 0; j < lstMRUDiskList.size(); ++j)
+			for (auto j = 0; j < lstMRUDiskList.size(); ++j)
 			{
-				if (!lstMRUDiskList[j].compare(changed_prefs.floppyslots[i].df))
+				if (lstMRUDiskList[j] != changed_prefs.floppyslots[i].df)
 				{
 					cboDFxFile[i]->setSelected(j);
 					break;
@@ -913,7 +909,7 @@ static void AdjustDropDownControls(void)
 	{
 		for (i = 0; i < lstMRUCDList.size(); ++i)
 		{
-			if (!lstMRUCDList[i].compare(changed_prefs.cdslots[0].name))
+			if (lstMRUCDList[i] != changed_prefs.cdslots[0].name)
 			{
 				cboCDFile->setSelected(i);
 				break;
@@ -927,16 +923,16 @@ static void AdjustDropDownControls(void)
 
 void RefreshPanelQuickstart(void)
 {
-	bool prevAvailable = true;
+	auto prevAvailable = true;
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
 
 	AdjustDropDownControls();
 
 	changed_prefs.nr_floppies = 0;
-	for (int i = 0; i < 4; ++i)
+	for (auto i = 0; i < 4; ++i)
 	{
-		const bool driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
+		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		if (i < 2)
 		{
 			chkDFx[i]->setSelected(driveEnabled);
@@ -969,13 +965,13 @@ void RefreshPanelQuickstart(void)
 bool HelpPanelQuickstart(vector<string>& helptext)
 {
 	helptext.clear();
-	helptext.push_back("Simplified start of emulation by just selecting the Amiga model and the disk/CD");
-	helptext.push_back("you want to use.");
-	helptext.push_back("");
-	helptext.push_back("After selecting the Amiga model, you can choose from a small list of standard");
-	helptext.push_back("configurations for this model to start with.");
-	helptext.push_back("");
-	helptext.push_back("When you activate \"Start in Quickstart mode\", the next time you run the emulator,");
-	helptext.push_back("it  will start with the QuickStart panel. Otherwise you start in configurations panel.");
+	helptext.emplace_back("Simplified start of emulation by just selecting the Amiga model and the disk/CD");
+	helptext.emplace_back("you want to use.");
+	helptext.emplace_back("");
+	helptext.emplace_back("After selecting the Amiga model, you can choose from a small list of standard");
+	helptext.emplace_back("configurations for this model to start with.");
+	helptext.emplace_back("");
+	helptext.emplace_back("When you activate \"Start in Quickstart mode\", the next time you run the emulator,");
+	helptext.emplace_back("it  will start with the QuickStart panel. Otherwise you start in configurations panel.");
 	return true;
 }

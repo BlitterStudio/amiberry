@@ -14,9 +14,7 @@
 namespace gcn
 {
 	UaeCheckBox::UaeCheckBox()
-		: CheckBox()
-	{
-	}
+	= default;
 
 	UaeCheckBox::UaeCheckBox(const std::string& caption,
 		const bool selected)
@@ -26,8 +24,7 @@ namespace gcn
 	}
 
 	UaeCheckBox::~UaeCheckBox()
-	{
-	}
+	= default;
 
 	void UaeCheckBox::draw(Graphics* graphics)
 	{
@@ -36,7 +33,7 @@ namespace gcn
 		graphics->setFont(getFont());
 		graphics->setColor(getForegroundColor());
 
-		const int h = getHeight() + getHeight() / 2;
+		const auto h = getHeight() + getHeight() / 2;
 
 		graphics->drawText(getCaption(), h - 2, 0);
 
@@ -52,13 +49,13 @@ namespace gcn
 
 	void UaeCheckBox::drawBox(Graphics* graphics)
 	{
-		const int h = getHeight() - 2;
-		const int alpha = getBaseColor().a;
-		Color faceColor = getBaseColor();
+		const auto h = getHeight() - 2;
+		const auto alpha = getBaseColor().a;
+		auto faceColor = getBaseColor();
 		faceColor.a = alpha;
-		Color highlightColor = faceColor + 0x303030;
+		auto highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		Color shadowColor = faceColor - 0x303030;
+		auto shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
 		graphics->setColor(shadowColor);
@@ -69,7 +66,7 @@ namespace gcn
 		graphics->drawLine(h, 1, h, h);
 		graphics->drawLine(1, h, h - 1, h);
 
-		Color backCol = getBackgroundColor();
+		auto backCol = getBackgroundColor();
 		if (!isEnabled())
 			backCol = backCol - 0x303030;
 		graphics->setColor(backCol);

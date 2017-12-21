@@ -79,7 +79,7 @@ static gcn::UaeDropDown* cboUnit;
 
 static void check_rdb(const TCHAR* filename)
 {
-	const bool isrdb = hardfile_testrdb(filename);
+	const auto isrdb = hardfile_testrdb(filename);
 	if (isrdb)
 	{
 		txtSectors->setText("0");
@@ -344,8 +344,7 @@ static void InitEditFilesysHardfile()
 	wndEditFilesysHardfile->add(lblController, DISTANCE_BORDER, posY);
 	wndEditFilesysHardfile->add(cboController, DISTANCE_BORDER + lblController->getWidth() + 8, posY);
 	wndEditFilesysHardfile->add(cboUnit, cboController->getX() + cboController->getWidth() + 8, posY);
-	posY += cboController->getHeight() + DISTANCE_NEXT_Y;
-
+	
 	wndEditFilesysHardfile->add(cmdOK);
 	wndEditFilesysHardfile->add(cmdCancel);
 
@@ -518,7 +517,7 @@ static void EditFilesysHardfileLoop()
 
 bool EditFilesysHardfile(const int unit_no)
 {
-	struct mountedinfo mi;
+	struct mountedinfo mi{};
 	struct uaedev_config_data* uci;
 	string strdevname, strroot;
 	char tmp[32];
@@ -531,7 +530,7 @@ bool EditFilesysHardfile(const int unit_no)
 	if (unit_no >= 0)
 	{
 		uci = &changed_prefs.mountconfig[unit_no];
-		struct uaedev_config_info* ci = &uci->ci;
+		const auto ci = &uci->ci;
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		strdevname.assign(ci->devname);
@@ -552,8 +551,8 @@ bool EditFilesysHardfile(const int unit_no)
 		txtSectors->setText(tmp);
 		snprintf(tmp, sizeof tmp, "%d", ci->blocksize);
 		txtBlocksize->setText(tmp);
-		int selIndex = 0;
-		for (int i = 0; i < 2; ++i)
+		auto selIndex = 0;
+		for (auto i = 0; i < 2; ++i)
 		{
 			if (controller[i].type == ci->controller_type)
 				selIndex = i;
@@ -586,7 +585,7 @@ bool EditFilesysHardfile(const int unit_no)
 	if (dialogResult)
 	{
 		struct uaedev_config_info ci{};
-		const int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
+		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
 		uci_set_defaults(&ci, false);
@@ -610,7 +609,7 @@ bool EditFilesysHardfile(const int unit_no)
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
-			struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
+			const auto hfd = get_hardfile_data(uci->configoffset);
 			if (hfd)
 				hardfile_media_change(hfd, &ci, true, false);
 			else

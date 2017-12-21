@@ -166,8 +166,8 @@ static void ShowMessageWaitInputLoop()
 
 static void navigate_left_right()
 {
-	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-	gcn::Widget* activeWidget = focusHdl->getFocused();
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
 	if (activeWidget == cmdCancel)
 		cmdOK->requestFocus();
 	else if (activeWidget == cmdOK)

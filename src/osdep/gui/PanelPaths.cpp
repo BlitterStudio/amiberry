@@ -67,30 +67,30 @@ public:
 			}
 			cmdConfigPath->requestFocus();
 		}
-		else if(actionEvent.getSource() == cmdControllersPath)
-      {
-        fetch_controllerspath(tmp, MAX_DPATH);
-        if(SelectFolder("Folder for controller files", tmp))
-        {
-          set_controllerspath(tmp);
-          saveAdfDir();
-          RefreshPanelPaths();
-        }
-        cmdControllersPath->requestFocus();
-      } 
-      
-      else if(actionEvent.getSource() == cmdRetroArchFile)
-      {
-        const char *filter[] = { "retroarch.cfg", "\0" };
-        fetch_retroarchfile(tmp, MAX_DPATH);
-        if(SelectFile("Select RetroArch Config File", tmp,filter))
-        {
-          set_retroarchfile(tmp);
-          saveAdfDir();
-          RefreshPanelPaths();
-        }
-        cmdRetroArchFile->requestFocus();
-      }
+		else if (actionEvent.getSource() == cmdControllersPath)
+		{
+			fetch_controllerspath(tmp, MAX_DPATH);
+			if (SelectFolder("Folder for controller files", tmp))
+			{
+				set_controllerspath(tmp);
+				saveAdfDir();
+				RefreshPanelPaths();
+			}
+			cmdControllersPath->requestFocus();
+		}
+
+		else if (actionEvent.getSource() == cmdRetroArchFile)
+		{
+			const char *filter[] = { "retroarch.cfg", "\0" };
+			fetch_retroarchfile(tmp, MAX_DPATH);
+			if (SelectFile("Select RetroArch Config File", tmp, filter))
+			{
+				set_retroarchfile(tmp);
+				saveAdfDir();
+				RefreshPanelPaths();
+			}
+			cmdRetroArchFile->requestFocus();
+		}
 	}
 };
 
@@ -113,8 +113,8 @@ static RescanROMsButtonActionListener* rescanROMsButtonActionListener;
 
 void InitPanelPaths(const struct _ConfigCategory& category)
 {
-	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
-	int yPos = DISTANCE_BORDER;
+	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	auto yPos = DISTANCE_BORDER;
 	folderButtonActionListener = new FolderButtonActionListener();
 
 	lblSystemROMs = new gcn::Label("System ROMs:");
@@ -242,11 +242,11 @@ void RefreshPanelPaths()
 bool HelpPanelPaths(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("Specify the location of your kickstart roms and the folders where the configurations");
-	helptext.push_back("and controller files should be stored. With the button \"...\" you can open a dialog");
-	helptext.push_back("to choose the folder.");
-	helptext.push_back("");
-	helptext.push_back("After changing the location of the kickstart roms, click on \"Rescan\" to refresh");
-	helptext.push_back("the list of the available ROMs.");
+	helptext.emplace_back("Specify the location of your kickstart roms and the folders where the configurations");
+	helptext.emplace_back("and controller files should be stored. With the button \"...\" you can open a dialog");
+	helptext.emplace_back("to choose the folder.");
+	helptext.emplace_back("");
+	helptext.emplace_back("After changing the location of the kickstart roms, click on \"Rescan\" to refresh");
+	helptext.emplace_back("the list of the available ROMs.");
 	return true;
 }

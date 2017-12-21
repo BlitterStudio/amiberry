@@ -74,12 +74,12 @@ static gcn::Slider* sldCDVol;
 
 static int GetHDType(const int index)
 {
-	struct mountedinfo mi;
+	struct mountedinfo mi{};
 
-	int type = get_filesys_unitconfig(&changed_prefs, index, &mi);
+	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
 	if (type < 0)
 	{
-		struct uaedev_config_data* uci = &changed_prefs.mountconfig[index];
+		const auto uci = &changed_prefs.mountconfig[index];
 		type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
 	}
 	return type;
@@ -90,8 +90,7 @@ class CDfileListModel : public gcn::ListModel
 {
 public:
 	CDfileListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -114,7 +113,7 @@ class HDRemoveActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		for (int i = 0; i < MAX_HD_DEVICES; ++i)
+		for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 		{
 			if (actionEvent.getSource() == listCmdDelete[i])
 			{
@@ -136,7 +135,7 @@ class HDEditActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		for (int i = 0; i < MAX_HD_DEVICES; ++i)
+		for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 		{
 			if (actionEvent.getSource() == listCmdProps[i])
 			{
@@ -253,7 +252,7 @@ public:
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
-				if(strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH))
+				if(strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
 					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
 					changed_prefs.cdslots[0].inuse = true;
@@ -281,7 +280,7 @@ public:
 	{
 		if (actionEvent.getSource() == sldCDVol)
 		{
-			const int newvol = 100 - int(sldCDVol->getValue());
+			const auto newvol = 100 - int(sldCDVol->getValue());
 			if (changed_prefs.sound_volume_cd != newvol)
 			{
 				changed_prefs.sound_volume_cd = newvol;
@@ -309,7 +308,7 @@ public:
 		//---------------------------------------
 		if (!bIgnoreListChange)
 		{
-			const int idx = cboCDFile->getSelected();
+			const auto idx = cboCDFile->getSelected();
 
 			if (idx < 0)
 			{
@@ -318,9 +317,9 @@ public:
 			}
 			else
 			{
-				if (cdfileList.getElementAt(idx).compare(changed_prefs.cdslots[0].name))
+				if (cdfileList.getElementAt(idx) == changed_prefs.cdslots[0].name)
 				{
-					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof(changed_prefs.cdslots[0].name));
+					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -341,7 +340,7 @@ static CDFileActionListener* cdFileActionListener;
 void InitPanelHD(const struct _ConfigCategory& category)
 {
 	int row, col;
-	int posY = DISTANCE_BORDER;
+	auto posY = DISTANCE_BORDER;
 	char tmp[20];
 
 	hdRemoveActionListener = new HDRemoveActionListener();
@@ -350,7 +349,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	addHardfileActionListener = new AddHardfileActionListener();
 	createHardfileActionListener = new CreateHardfileActionListener();
 
-	int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 
 	for (col = 0; col < COL_COUNT; ++col)
 		lblList[col] = new gcn::Label(column_caption[col]);
@@ -505,7 +504,7 @@ void ExitPanelHD()
 	for (col = 0; col < COL_COUNT; ++col)
 		delete lblList[col];
 
-	for (int row = 0; row < MAX_HD_DEVICES; ++row)
+	for (auto row = 0; row < MAX_HD_DEVICES; ++row)
 	{
 		delete listCmdProps[row];
 		delete listCmdDelete[row];
@@ -545,9 +544,9 @@ static void AdjustDropDownControls()
 	cboCDFile->clearSelected();
 	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		for (int i = 0; i < lstMRUCDList.size(); ++i)
+		for (auto i = 0; i < lstMRUCDList.size(); ++i)
 		{
-			if (!lstMRUCDList[i].compare(changed_prefs.cdslots[0].name))
+			if (lstMRUCDList[i] != changed_prefs.cdslots[0].name)
 			{
 				cboCDFile->setSelected(i);
 				break;
@@ -559,18 +558,18 @@ static void AdjustDropDownControls()
 void RefreshPanelHD()
 {
 	char tmp[32];
-	struct mountedinfo mi;
-	int nosize = 0;
+	struct mountedinfo mi{};
+	auto nosize = 0;
 
 	AdjustDropDownControls();
 
-	for (int row = 0; row < MAX_HD_DEVICES; ++row)
+	for (auto row = 0; row < MAX_HD_DEVICES; ++row)
 	{
 		if (row < changed_prefs.mountitems)
 		{
-			struct uaedev_config_data* uci = &changed_prefs.mountconfig[row];
-			struct uaedev_config_info* ci = &uci->ci;
-			int type = get_filesys_unitconfig(&changed_prefs, row, &mi);
+			auto uci = &changed_prefs.mountconfig[row];
+			const auto ci = &uci->ci;
+			auto type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
 				type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
@@ -617,7 +616,7 @@ void RefreshPanelHD()
 		else
 		{
 			// Empty slot
-			for (int col = 0; col < COL_COUNT; ++col)
+			for (auto col = 0; col < COL_COUNT; ++col)
 				listCells[row][col]->setText("");
 			listCmdProps[row]->setEnabled(false);
 			listCmdDelete[row]->setEnabled(false);
@@ -646,19 +645,19 @@ int count_HDs(struct uae_prefs* p)
 bool HelpPanelHD(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("Use \"Add Directory\" to add a folder or \"Add Hardfile\" to add a HDF file as");
-	helptext.push_back("a hard disk. To edit the settings of a HDD, click on \"...\" left to the entry in");
-	helptext.push_back("the list. With the red cross, you can delete an entry.");
-	helptext.push_back("");
-	helptext.push_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB.");
-	helptext.push_back("For large files, it will take some time to create the new hard disk. You have to");
-	helptext.push_back("format the new HDD in the Amiga via the Workbench.");
-	helptext.push_back("");
-	helptext.push_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
-	helptext.push_back("");
-	helptext.push_back("Activate \"CD drive\" to emulate CD for CD32. Use \"Eject\" to remove current CD");
-	helptext.push_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
-	helptext.push_back("");
-	helptext.push_back("In current version, WAV, MP3 and FLAC is supported for audio tracks.");
+	helptext.emplace_back(R"(Use "Add Directory" to add a folder or "Add Hardfile" to add a HDF file as)");
+	helptext.emplace_back("a hard disk. To edit the settings of a HDD, click on \"...\" left to the entry in");
+	helptext.emplace_back("the list. With the red cross, you can delete an entry.");
+	helptext.emplace_back("");
+	helptext.emplace_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB.");
+	helptext.emplace_back("For large files, it will take some time to create the new hard disk. You have to");
+	helptext.emplace_back("format the new HDD in the Amiga via the Workbench.");
+	helptext.emplace_back("");
+	helptext.emplace_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
+	helptext.emplace_back("");
+	helptext.emplace_back(R"(Activate "CD drive" to emulate CD for CD32. Use "Eject" to remove current CD)");
+	helptext.emplace_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
+	helptext.emplace_back("");
+	helptext.emplace_back("In current version, WAV, MP3 and FLAC is supported for audio tracks.");
 	return true;
 }

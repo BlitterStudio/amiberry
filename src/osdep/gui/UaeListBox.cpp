@@ -23,9 +23,7 @@ namespace gcn
 	Color colSelectorActive;
 
 	UaeListBox::UaeListBox()
-		: ListBox()
-	{
-	}
+	= default;
 
 	UaeListBox::UaeListBox(ListModel* listModel)
 		: ListBox(listModel)
@@ -33,8 +31,7 @@ namespace gcn
 	}
 
 	UaeListBox::~UaeListBox()
-	{
-	}
+	= default;
 
 	void UaeListBox::draw(Graphics* graphics)
 	{
@@ -51,9 +48,9 @@ namespace gcn
 
 		// Check the current clip area so we don't draw unnecessary items
 		// that are not visible.
-		const ClipRectangle currentClipArea = graphics->getCurrentClipArea();
+		const auto currentClipArea = graphics->getCurrentClipArea();
 #ifdef USE_SDL1
-		int rowHeight = getRowHeight();
+		const int rowHeight = getRowHeight();
 #elif USE_SDL2
 		const int rowHeight = getFont()->getHeight();
 #endif
@@ -61,7 +58,7 @@ namespace gcn
 		// Calculate the number of rows to draw by checking the clip area.
 		// The addition of two makes covers a partial visible row at the top
 		// and a partial visible row at the bottom.
-		int numberOfRows = currentClipArea.height / rowHeight + 2;
+		auto numberOfRows = currentClipArea.height / rowHeight + 2;
 
 		if (numberOfRows > mListModel->getNumberOfElements())
 		{
@@ -93,8 +90,8 @@ namespace gcn
 
 		// The y coordinate where we start to draw the text is
 		// simply the y coordinate multiplied with the font height.
-		int y = rowHeight * startRow;
-		for (int i = startRow; i < startRow + numberOfRows; ++i)
+		auto y = rowHeight * startRow;
+		for (auto i = startRow; i < startRow + numberOfRows; ++i)
 		{
 			if (i == mSelected)
 			{

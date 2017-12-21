@@ -25,18 +25,14 @@
 #include "filesys.h"
 #include "gui.h"
 #include "gui_handling.h"
-
 #include "inputdevice.h"
 
 #ifdef ANDROIDSDL
 #include "androidsdl_event.h"
 #endif
 
-
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 202
-
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 
 static const char* harddisk_filter[] = {".hdf", "\0"};
 
@@ -373,15 +369,15 @@ bool CreateFilesysHardfile()
 	if (dialogResult)
 	{
 		char buffer[512];
-		int size = atoi(txtSize->getText().c_str());
+		auto size = atoi(txtSize->getText().c_str());
 		if (size < 1)
 			size = 1;
 		if (size > 2048)
 			size = 2048;
-		const int bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
+		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
-		FILE* newFile = fopen(txtPath->getText().c_str(), "wb");
+		const auto newFile = fopen(txtPath->getText().c_str(), "wb");
 		if (!newFile)
 		{
 			ShowMessage("Create Hardfile", "Unable to create new file.", "", "Ok", "");
@@ -391,7 +387,7 @@ bool CreateFilesysHardfile()
 		fwrite(&zero, 1, 1, newFile);
 		fclose(newFile);
 
-		struct uaedev_config_info ci;
+		struct uaedev_config_info ci{};
 
 		uci_set_defaults(&ci, false);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
@@ -400,10 +396,10 @@ bool CreateFilesysHardfile()
 		ci.surfaces = (size / 1024) + 1;
 		ci.bootpri = bp;
 
-		struct uaedev_config_data* uci = add_filesys_config(&changed_prefs, -1, &ci);
+		const auto uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{
-			struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
+			const auto hfd = get_hardfile_data(uci->configoffset);
 			hardfile_media_change(hfd, &ci, true, false);
 		}
 	}

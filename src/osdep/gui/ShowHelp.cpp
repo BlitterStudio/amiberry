@@ -27,8 +27,6 @@
 #include "androidsdl_event.h"
 #endif
 
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-
 #define DIALOG_WIDTH 760
 #define DIALOG_HEIGHT 420
 
@@ -45,7 +43,7 @@ class HelpListModel : public gcn::ListModel
 	vector<string> lines;
 
 public:
-	HelpListModel(const vector<string> helptext)
+	HelpListModel(const vector<string>& helptext)
 	{
 		lines = helptext;
 	}

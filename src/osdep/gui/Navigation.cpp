@@ -409,24 +409,24 @@ static NavigationMap navMap[] =
 
 bool HandleNavigation(int direction)
 {
-	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+	const auto focusHdl = gui_top->_getFocusHandler();
 	gcn::Widget* focusTarget = nullptr;
 
 	if (focusHdl != nullptr)
 	{
-		gcn::Widget* activeWidget = focusHdl->getFocused();
+		auto activeWidget = focusHdl->getFocused();
 
 		if (activeWidget != nullptr && activeWidget->getId().length() > 0)
 		{
-			string activeName = activeWidget->getId();
-			bool bFoundEnabled = false;
-			int tries = 10;
+			auto activeName = activeWidget->getId();
+			auto bFoundEnabled = false;
+			auto tries = 10;
 
 			while (!bFoundEnabled && tries > 0)
 			{
-				string searchFor = "";
+				string searchFor;
 
-				for (int i = 0; navMap[i].activeWidget != "END"; ++i)
+				for (auto i = 0; navMap[i].activeWidget != "END"; ++i)
 				{
 					if (navMap[i].activeWidget == activeName)
 					{
@@ -466,16 +466,16 @@ bool HandleNavigation(int direction)
 						break;
 					}
 				}
-				if (searchFor == "")
+				if (searchFor.empty())
 					bFoundEnabled = true; // No entry to navigate to -> exit loop
 				--tries;
 			}
 
 			if (focusTarget != nullptr)
 			{
-				if (!activeWidget->getId().substr(0, 3).compare("cbo") || !activeWidget->getId().substr(0, 5).compare("qscbo"))
+				if (activeWidget->getId().substr(0, 3) != "cbo" || activeWidget->getId().substr(0, 5) != "qscbo")
 				{
-					gcn::UaeDropDown* dropdown = static_cast<gcn::UaeDropDown *>(activeWidget);
+					const auto dropdown = dynamic_cast<gcn::UaeDropDown *>(activeWidget);
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
 						focusTarget = nullptr; // Up/down navigates in list if dropped down
 				}

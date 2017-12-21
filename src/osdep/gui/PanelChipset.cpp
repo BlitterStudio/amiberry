@@ -67,8 +67,7 @@ class ChipsetListModel : public gcn::ListModel
 {
 public:
 	ChipsetListModel()
-	{
-	}
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -96,7 +95,7 @@ public:
 				//---------------------------------------
 				// Chipset selected
 				//---------------------------------------
-				const int cs = chipsets[cboChipset->getSelected()].compatible;
+				const auto cs = chipsets[cboChipset->getSelected()].compatible;
 				if (changed_prefs.cs_compatible != cs) {
 					changed_prefs.cs_compatible = cs;
 					built_in_chipset_prefs(&changed_prefs);
@@ -152,7 +151,7 @@ static NTSCButtonActionListener* ntscButtonActionListener;
 class FastCopperActionListener : public gcn::ActionListener
 {
   public:
-    void action(const gcn::ActionEvent& actionEvent)
+    void action(const gcn::ActionEvent& actionEvent) override
     {
 	    changed_prefs.fast_copper = chkFastCopper->isSelected();
     }
@@ -344,8 +343,8 @@ void ExitPanelChipset()
 void RefreshPanelChipset()
 {
 	bIgnoreListChange = true;
-	int idx = 0;
-	for (int i = 0; i<numChipsets; ++i) {
+	auto idx = 0;
+	for (auto i = 0; i<numChipsets; ++i) {
 		if (chipsets[i].compatible == changed_prefs.cs_compatible) {
 			idx = i;
 			break;
@@ -387,22 +386,22 @@ void RefreshPanelChipset()
 bool HelpPanelChipset(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games,");
-	helptext.push_back("select \"Full ECS\". Some older Amiga games requires \"OCS\" or \"ECS Agnus\".");
-	helptext.push_back("You have to play with these options if a game won't work as expected. By selecting");
-	helptext.push_back("an entry in \"Extra\", all internal chipset settings will become the required values");
-	helptext.push_back("for the specified Amiga model. For some games, you have to activate \"NTSC\"");
-	helptext.push_back("(60 Hz instead of 50 Hz) for correct timing.");
-	helptext.push_back("");
-	helptext.push_back("When you see some graphic issues in a game, try \"Immediate\" or \"Wait for blit.\"");
-	helptext.push_back("for blitter and/or disable \"Fast copper\".");
-	helptext.push_back("");
-	helptext.push_back("\"Fast copper\" uses a prediction algorithm instead of checking the copper state");
-	helptext.push_back("on a more regular basis. This may cause issues but brings a big performance improvement.");
-	helptext.push_back("The option was removed in WinUAE in an early state, but for most games, it works fine and");
-	helptext.push_back("the better performance is helpful for low powered devices.");
-	helptext.push_back("");
-	helptext.push_back("For \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine");
-	helptext.push_back("for nearly all games.");
+	helptext.emplace_back("If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games,");
+	helptext.emplace_back("select \"Full ECS\". Some older Amiga games requires \"OCS\" or \"ECS Agnus\".");
+	helptext.emplace_back("You have to play with these options if a game won't work as expected. By selecting");
+	helptext.emplace_back("an entry in \"Extra\", all internal chipset settings will become the required values");
+	helptext.emplace_back("for the specified Amiga model. For some games, you have to activate \"NTSC\"");
+	helptext.emplace_back("(60 Hz instead of 50 Hz) for correct timing.");
+	helptext.emplace_back("");
+	helptext.emplace_back("When you see some graphic issues in a game, try \"Immediate\" or \"Wait for blit.\"");
+	helptext.emplace_back("for blitter and/or disable \"Fast copper\".");
+	helptext.emplace_back("");
+	helptext.emplace_back("\"Fast copper\" uses a prediction algorithm instead of checking the copper state");
+	helptext.emplace_back("on a more regular basis. This may cause issues but brings a big performance improvement.");
+	helptext.emplace_back("The option was removed in WinUAE in an early state, but for most games, it works fine and");
+	helptext.emplace_back("the better performance is helpful for low powered devices.");
+	helptext.emplace_back("");
+	helptext.emplace_back("For \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine");
+	helptext.emplace_back("for nearly all games.");
 	return true;
 }

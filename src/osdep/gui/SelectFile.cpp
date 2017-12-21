@@ -104,7 +104,7 @@ public:
 	{
 		if (actionEvent.getSource() == cmdOK)
 		{
-			const int selected_item = lstFiles->getSelected();
+			const auto selected_item = lstFiles->getSelected();
 			if (createNew)
 			{
 				char tmp[MAX_DPATH];
@@ -157,7 +157,7 @@ static void checkfilename(char* current)
 {
 	char actfile[MAX_DPATH];
 	extractFileName(current, actfile);
-	for (int i = 0; i < fileList->getNumberOfElements(); ++i)
+	for (auto i = 0; i < fileList->getNumberOfElements(); ++i)
 	{
 		if (!fileList->isDir(i) && !strcasecmp(fileList->getElementAt(i).c_str(), actfile))
 		{
@@ -176,7 +176,7 @@ public:
 	{
 		char foldername[MAX_DPATH] = "";
 
-		const int selected_item = lstFiles->getSelected();
+		const auto selected_item = lstFiles->getSelected();
 		strncpy(foldername, workingDir, MAX_DPATH);
 		strncat(foldername, "/", MAX_DPATH - 1);
 		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 1);
@@ -298,8 +298,8 @@ static void ExitSelectFile()
 
 static void navigate_right()
 {
-	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-	gcn::Widget* activeWidget = focusHdl->getFocused();
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFiles)
 		if (createNew)
 			txtFilename->requestFocus();
@@ -315,8 +315,8 @@ static void navigate_right()
 
 static void navigate_left()
 {
-	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-	gcn::Widget* activeWidget = focusHdl->getFocused();
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFiles)
 		cmdCancel->requestFocus();
 	else if (activeWidget == cmdCancel)

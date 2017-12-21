@@ -26,17 +26,17 @@
 
 
 static const char* ChipMem_list[] = {"512 K", "1 MB", "2 MB", "4 MB", "8 MB"};
-static const int ChipMem_values[] = {0x080000, 0x100000, 0x200000, 0x400000, 0x800000};
+static unsigned int ChipMem_values[] = {0x080000, 0x100000, 0x200000, 0x400000, 0x800000};
 static const char* SlowMem_list[] = {"None", "512 K", "1 MB", "1.5 MB", "1.8 MB"};
-static const int SlowMem_values[] = {0x000000, 0x080000, 0x100000, 0x180000, 0x1c0000};
+static unsigned int SlowMem_values[] = {0x000000, 0x080000, 0x100000, 0x180000, 0x1c0000};
 static const char* FastMem_list[] = {"None", "1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB"};
-static const int FastMem_values[] = {
+static unsigned int FastMem_values[] = {
 	0x000000, 0x100000, 0x200000, 0x400000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000
 };
 static const char* A3000LowMem_list[] = {"None", "8 MB", "16 MB"};
-static const int A3000LowMem_values[] = {0x080000, 0x800000, 0x1000000};
+static unsigned int A3000LowMem_values[] = {0x080000, 0x800000, 0x1000000};
 static const char* A3000HighMem_list[] = {"None", "8 MB", "16 MB", "32 MB"};
-static const int A3000HighMem_values[] = {0x080000, 0x800000, 0x1000000, 0x2000000};
+static unsigned int A3000HighMem_values[] = {0x080000, 0x800000, 0x1000000, 0x2000000};
 
 static gcn::Window* grpRAM;
 static gcn::Label* lblChipmem;
@@ -361,17 +361,17 @@ void RefreshPanelRAM()
 bool HelpPanelRAM(vector<string>& helptext)
 {
 	helptext.clear();
-	helptext.push_back("Select the amount of RAM for each type you want to emulate in your Amiga.");
-	helptext.push_back("");
-	helptext.push_back("\"Slow\" is the simple memory extension of an Amiga 500.");
-	helptext.push_back("\"Z2 Fast\" is real fast memory in 24 bit address space.");
-	helptext.push_back("\"Z3 Fast\" is real fast memory in 32 bit address space and only available if");
-	helptext.push_back("a 32 bit CPU is selected.");
-	helptext.push_back("\"RTG board\" is the graphics memory used by Picasso96 and only available if");
-	helptext.push_back("a 32 bit CPU is selected. If you select some memory for this type,");
-	helptext.push_back("the Z3 RTG board will be activated.");
-	helptext.push_back("");
-	helptext.push_back("A4000 motherboard and processor board memory is only detected by the Amiga if ");
-	helptext.push_back("you choose the correct Kickstart ROM (A4000).");
+	helptext.emplace_back("Select the amount of RAM for each type you want to emulate in your Amiga.");
+	helptext.emplace_back("");
+	helptext.emplace_back("\"Slow\" is the simple memory extension of an Amiga 500.");
+	helptext.emplace_back("\"Z2 Fast\" is real fast memory in 24 bit address space.");
+	helptext.emplace_back("\"Z3 Fast\" is real fast memory in 32 bit address space and only available if");
+	helptext.emplace_back("a 32 bit CPU is selected.");
+	helptext.emplace_back("\"RTG board\" is the graphics memory used by Picasso96 and only available if");
+	helptext.emplace_back("a 32 bit CPU is selected. If you select some memory for this type,");
+	helptext.emplace_back("the Z3 RTG board will be activated.");
+	helptext.emplace_back("");
+	helptext.emplace_back("A4000 motherboard and processor board memory is only detected by the Amiga if ");
+	helptext.emplace_back("you choose the correct Kickstart ROM (A4000).");
 	return true;
 }

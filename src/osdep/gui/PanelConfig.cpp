@@ -71,8 +71,7 @@ bool LoadConfigByName(const char *name)
 
 	public:
 		ConfigsListModel()
-		{
-		}
+		= default;
 
 		int getNumberOfElements() override
 		{
@@ -89,17 +88,17 @@ bool LoadConfigByName(const char *name)
 		void InitConfigsList(void)
 		{
 			configs.clear();
-			for (int i = 0; i<ConfigFilesList.size(); ++i)
+			for (auto & i : ConfigFilesList)
 			{
 				char tmp[MAX_DPATH];
-				strncpy(tmp, ConfigFilesList[i]->Name, MAX_DPATH);
-				if (strlen(ConfigFilesList[i]->Description) > 0)
+				strncpy(tmp, i->Name, MAX_DPATH);
+				if (strlen(i->Description) > 0)
 				{
 					strncat(tmp, " (", MAX_DPATH - 1);
-					strncat(tmp, ConfigFilesList[i]->Description, MAX_DPATH - 1);
+					strncat(tmp, i->Description, MAX_DPATH - 1);
 					strncat(tmp, ")", MAX_DPATH - 1);
 				}
-				configs.push_back(tmp);
+				configs.emplace_back(tmp);
 			}
 		}
 	};
@@ -154,7 +153,7 @@ bool LoadConfigByName(const char *name)
 				//-----------------------------------------------
 				char msg[256];
 				i = lstConfigs->getSelected();
-				if (i >= 0 && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME))
+				if (i >= 0 && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME) != 0)
 				{
 					snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
 					if (ShowMessage("Delete Configuration", msg, "", "Yes", "No"))
@@ -184,7 +183,7 @@ bool LoadConfigByName(const char *name)
 		void action(const gcn::ActionEvent& actionEvent) override
 		{
 			const int selected_item = lstConfigs->getSelected();
-			if (!txtName->getText().compare(ConfigFilesList[selected_item]->Name))
+			if (txtName->getText() != ConfigFilesList[selected_item]->Name)
 			{
 				//-----------------------------------------------
 				// Selected same config again -> load and start it
@@ -235,8 +234,8 @@ bool LoadConfigByName(const char *name)
 		cmdDelete->setId("CfgDelete");
 		cmdDelete->addActionListener(configButtonActionListener);
 
-		int buttonX = DISTANCE_BORDER;
-		int buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
+		auto buttonX = DISTANCE_BORDER;
+		const auto buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 		category.panel->add(cmdLoad, buttonX, buttonY);
 		buttonX += BUTTON_WIDTH + DISTANCE_NEXT_X;
 		category.panel->add(cmdSave, buttonX, buttonY);
@@ -334,7 +333,7 @@ bool LoadConfigByName(const char *name)
 		// Search current entry
 		if (!txtName->getText().empty())
 		{
-			for (int i = 0; i < ConfigFilesList.size(); ++i)
+			for (auto i = 0; i < ConfigFilesList.size(); ++i)
 			{
 				if (!_tcscmp(ConfigFilesList[i]->Name, txtName->getText().c_str()))
 				{
@@ -351,12 +350,12 @@ bool LoadConfigByName(const char *name)
 	bool HelpPanelConfig(std::vector<std::string> &helptext)
 	{
 		helptext.clear();
-		helptext.push_back("To load a configuration, select the entry in the list and then click on \"Load\".");
-		helptext.push_back("If you doubleclick on an entry in the list, the emulation starts with this configuration.");
-		helptext.push_back("");
-		helptext.push_back("If you want to create a new configuration, setup all options, enter a new name in");
-		helptext.push_back("\"Name\", provide a short description and then click on \"Save\".");
-		helptext.push_back("");
-		helptext.push_back("\"Delete\" will delete the selected configuration.");
+		helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\".");
+		helptext.emplace_back("If you doubleclick on an entry in the list, the emulation starts with this configuration.");
+		helptext.emplace_back("");
+		helptext.emplace_back("If you want to create a new configuration, setup all options, enter a new name in");
+		helptext.emplace_back(R"("Name", provide a short description and then click on "Save".)");
+		helptext.emplace_back("");
+		helptext.emplace_back("\"Delete\" will delete the selected configuration.");
 		return true;
 	}

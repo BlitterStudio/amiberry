@@ -35,7 +35,6 @@ static bool dialogResult = false;
 static bool dialogFinished = false;
 static char workingDir[MAX_DPATH];
 
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static gcn::Window* wndSelectFolder;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
@@ -85,8 +84,8 @@ public:
 	void changeDir(const char* path)
 	{
 		ReadDirectory(path, &dirs, nullptr);
-		if (dirs.size() == 0)
-			dirs.push_back("..");
+		if (dirs.empty())
+			dirs.emplace_back("..");
 	}
 };
 
@@ -101,7 +100,7 @@ static void checkfoldername(char* current)
 	if ((dir = opendir(current)))
 	{
 		dirList = current;
-		char* ptr = realpath(current, actualpath);
+		const auto ptr = realpath(current, actualpath);
 		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
@@ -118,11 +117,11 @@ public:
 	{
 		char foldername[MAX_DPATH] = "";
 
-		const int selected_item = lstFolders->getSelected();
+		const auto selected_item = lstFolders->getSelected();
 		strncpy(foldername, workingDir, MAX_DPATH - 1);
 		strncat(foldername, "/", MAX_DPATH - 1);
 		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_DPATH - 1);
-		volName = dirList.getElementAt(selected_item).c_str();
+		volName = dirList.getElementAt(selected_item);
 		checkfoldername(foldername);
 	}
 };
@@ -209,10 +208,10 @@ static void ExitSelectFolder()
 	delete wndSelectFolder;
 }
 
-static void navigate_right(void)
+static void navigate_right()
 {
-	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-	gcn::Widget* activeWidget = focusHdl->getFocused();
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFolders)
 		cmdOK->requestFocus();
 	else if (activeWidget == cmdCancel)
@@ -221,10 +220,10 @@ static void navigate_right(void)
 		cmdCancel->requestFocus();
 }
 
-static void navigate_left(void)
+static void navigate_left()
 {
-	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-	gcn::Widget* activeWidget = focusHdl->getFocused();
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFolders)
 		cmdCancel->requestFocus();
 	else if (activeWidget == cmdCancel)

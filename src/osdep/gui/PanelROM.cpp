@@ -72,7 +72,7 @@ public:
 		roms.clear();
 		idxToAvailableROMs.clear();
 
-		int currIdx = -1;
+		auto currIdx = -1;
 		if (ROMType & (ROMTYPE_ALL_EXT | ROMTYPE_ALL_CART))
 		{
 			roms.push_back("");
@@ -80,13 +80,13 @@ public:
 			currIdx = 0;
 		}
 		
-		for (int i = 0; i < lstAvailableROMs.size(); ++i)
+		for (auto i = 0; i < lstAvailableROMs.size(); ++i)
 		{
 			if (lstAvailableROMs[i]->ROMType & ROMType)
 			{
 				if (!strcasecmp(lstAvailableROMs[i]->Path, current))
 					currIdx = roms.size();
-				roms.push_back(lstAvailableROMs[i]->Name);
+				roms.emplace_back(lstAvailableROMs[i]->Name);
 				idxToAvailableROMs.push_back(i);
 			}
 		}
@@ -105,7 +105,7 @@ class MainROMActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		AvailableROM* rom = mainROMList->getROMat(cboMainROM->getSelected());
+		const auto rom = mainROMList->getROMat(cboMainROM->getSelected());
 		if (rom != nullptr)
 			strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
 	}
@@ -119,7 +119,7 @@ class ExtROMActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		AvailableROM* rom = extROMList->getROMat(cboExtROM->getSelected());
+		const auto rom = extROMList->getROMat(cboExtROM->getSelected());
 		if (rom != nullptr)
 			strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
 		else
@@ -135,11 +135,11 @@ class CartROMActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		AvailableROM* rom = cartROMList->getROMat(cboCartROM->getSelected());
+		const auto rom = cartROMList->getROMat(cboCartROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.cartfile, rom->Path, sizeof(changed_prefs.cartfile));
+			strncpy(changed_prefs.cartfile, rom->Path, sizeof changed_prefs.cartfile);
 		else
-			strncpy(changed_prefs.cartfile, "", sizeof(changed_prefs.cartfile));
+			strncpy(changed_prefs.cartfile, "", sizeof changed_prefs.cartfile);
 	}
 };
 static CartROMActionListener* cartROMActionListener;
@@ -158,7 +158,7 @@ public:
 			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
-				AvailableROM * newrom = new AvailableROM();
+				const auto newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH);
@@ -174,7 +174,7 @@ public:
 			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
-				AvailableROM * newrom = new AvailableROM();
+				const auto newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH);
@@ -191,7 +191,7 @@ public:
 			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Select Cartridge ROM", tmp, filter))
 			{
-				AvailableROM *newrom = new AvailableROM();
+				const auto newrom = new AvailableROM();
 				extractFileName(tmp, newrom->Name);
 				removeFileExtension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH);
@@ -211,7 +211,7 @@ static ROMButtonActionListener* romButtonActionListener;
 
 void InitPanelROM(const struct _ConfigCategory& category)
 {
-	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 
 	mainROMActionListener = new MainROMActionListener();
 	extROMActionListener = new ExtROMActionListener();
@@ -319,7 +319,7 @@ void ExitPanelROM()
 
 void RefreshPanelROM()
 {
-	int idx = mainROMList->InitROMList(changed_prefs.romfile);
+	auto idx = mainROMList->InitROMList(changed_prefs.romfile);
 	cboMainROM->setSelected(idx);
 
 	idx = extROMList->InitROMList(changed_prefs.romextfile);
@@ -334,12 +334,12 @@ void RefreshPanelROM()
 bool HelpPanelROM(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("Select the required kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
-	helptext.push_back("");
-	helptext.push_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
-	helptext.push_back("");
-	helptext.push_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video");
-	helptext.push_back("playback in CD32. There are also some Action Replay and Freezer cards and the built-in");
-	helptext.push_back("HRTMon available.");
+	helptext.emplace_back("Select the required kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
+	helptext.emplace_back("");
+	helptext.emplace_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
+	helptext.emplace_back("");
+	helptext.emplace_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video");
+	helptext.emplace_back("playback in CD32. There are also some Action Replay and Freezer cards and the built-in");
+	helptext.emplace_back("HRTMon available.");
 	return true;
 }

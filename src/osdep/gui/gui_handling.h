@@ -28,8 +28,8 @@ typedef struct _ConfigCategory
 	gcn::SelectorEntry* selector;
 	gcn::Container* panel;
 	void (*InitFunc)(const struct _ConfigCategory& category);
-	void (*ExitFunc)(void);
-	void (*RefreshFunc)(void);
+	void (*ExitFunc)();
+	void (*RefreshFunc)();
 	bool(*HelpFunc) (std::vector<std::string>&);
 } ConfigCategory;
 

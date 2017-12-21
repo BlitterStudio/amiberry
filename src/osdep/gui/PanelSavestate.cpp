@@ -68,7 +68,7 @@ public:
 			{
 				if (strlen(savestate_fname) > 0)
 				{
-					FILE* f = fopen(savestate_fname, "rb");
+					const auto f = fopen(savestate_fname, "rbe");
 					if (f)
 					{
 						fclose(f);
@@ -174,11 +174,9 @@ void ExitPanelSavestate()
 	delete optState3;
 	delete grpNumber;
 
-	if (imgSavestate != nullptr)
-		delete imgSavestate;
+	delete imgSavestate;
 	imgSavestate = nullptr;
-	if (icoSavestate != nullptr)
-		delete icoSavestate;
+	delete icoSavestate;
 	icoSavestate = nullptr;
 	delete wndScreenshot;
 
@@ -218,17 +216,19 @@ void RefreshPanelSavestate()
 	case 3:
 		optState3->setSelected(true);
 		break;
+	default: 
+		break;
 	}
 
 	gui_update();
 	if (strlen(screenshot_filename) > 0)
 	{
-		FILE* f = fopen(screenshot_filename, "rb");
+		const auto f = fopen(screenshot_filename, "rbe");
 		if (f)
 		{
 			fclose(f);
-			const gcn::Rectangle rect = wndScreenshot->getChildrenArea();
-			SDL_Surface* loadedImage = IMG_Load(screenshot_filename);
+			const auto rect = wndScreenshot->getChildrenArea();
+			auto loadedImage = IMG_Load(screenshot_filename);
 			if (loadedImage != nullptr)
 			{
 				SDL_Rect source = {0, 0, 0, 0};
@@ -248,7 +248,7 @@ void RefreshPanelSavestate()
 		}
 	}
 
-	const bool enabled = true; // nr_units () == 0;
+	const auto enabled = true; // nr_units () == 0;
 	optState0->setEnabled(enabled);
 	optState1->setEnabled(enabled);
 	optState2->setEnabled(enabled);
@@ -262,13 +262,13 @@ void RefreshPanelSavestate()
 bool HelpPanelSavestate(std::vector<std::string> &helptext)
 {
   helptext.clear();
-  helptext.push_back("Savestates are stored with the name of the disk in drive DF0 attached");
-  helptext.push_back("with the selected number.");
-  helptext.push_back("");
-  helptext.push_back("When you hold left shoulder button and press 'l' during emulation, ");
-  helptext.push_back("the state of the last active number will be loaded. Hold left shoulder ");
-  helptext.push_back("button and press 's' to save the current state in the last active slot.");
-  helptext.push_back("");
-  helptext.push_back("Note: Savestates will not work with HDDs.");
+  helptext.emplace_back("Savestates are stored with the name of the disk in drive DF0 attached");
+  helptext.emplace_back("with the selected number.");
+  helptext.emplace_back("");
+  helptext.emplace_back("When you hold left shoulder button and press 'l' during emulation, ");
+  helptext.emplace_back("the state of the last active number will be loaded. Hold left shoulder ");
+  helptext.emplace_back("button and press 's' to save the current state in the last active slot.");
+  helptext.emplace_back("");
+  helptext.emplace_back("Note: Savestates will not work with HDDs.");
   return true;
 }

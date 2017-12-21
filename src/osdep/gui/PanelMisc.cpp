@@ -60,8 +60,8 @@ class StringListModel : public gcn::ListModel
 public:
 	StringListModel(const char* entries[], const int count)
 	{
-		for (int i = 0; i < count; ++i)
-			values.push_back(entries[i]);
+		for (auto i = 0; i < count; ++i)
+			values.emplace_back(entries[i]);
 	}
 
 	int getNumberOfElements() override
@@ -117,7 +117,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
-			const char* key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
 			if (key != nullptr)
 			{
 				txtOpenGUI->setText(key);
@@ -127,7 +127,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyForQuit)
 		{
-			const char* key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyForQuit->setText(key);
@@ -253,7 +253,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyForQuit->setBaseColor(gui_baseCol);
 	cmdKeyForQuit->addActionListener(miscActionListener);
 
-	int posY = DISTANCE_BORDER;
+	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkHideIdleLed, DISTANCE_BORDER, posY);
@@ -262,7 +262,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
 
 	posY = DISTANCE_BORDER;
-	int posX = 300;
+	auto posX = 300;
 	category.panel->add(chkRetroArchQuit, posX + DISTANCE_BORDER, posY);
 	posY += chkRetroArchQuit->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkRetroArchMenu, posX + DISTANCE_BORDER, posY);
@@ -357,31 +357,31 @@ void RefreshPanelMisc()
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
 
-	txtOpenGUI->setText(changed_prefs.open_gui != "" ? changed_prefs.open_gui : "Click to map");
-	txtKeyForQuit->setText(changed_prefs.quit_amiberry != "" ? changed_prefs.quit_amiberry : "Click to map");
+	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
+	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0 ? changed_prefs.quit_amiberry : "Click to map");
 }
 
 bool HelpPanelMisc(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("\"Status Line\" Shows/Hides the status line indicator.");
-	helptext.push_back("The first value in the status line shows the idle time of the CPU in %,");
-	helptext.push_back("the second value is the current frame rate.");
-	helptext.push_back("When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and write");
-	helptext.push_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
-	helptext.push_back("and indicates disk access.");
-	helptext.push_back("");
-	helptext.push_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
-	helptext.push_back("by specifying it with the command line parameter \"-config=<file>\", ");
-	helptext.push_back("the emulation starts directly without showing the GUI.");
-	helptext.push_back("");
+	helptext.emplace_back("\"Status Line\" Shows/Hides the status line indicator.");
+	helptext.emplace_back("The first value in the status line shows the idle time of the CPU in %,");
+	helptext.emplace_back("the second value is the current frame rate.");
+	helptext.emplace_back("When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and write");
+	helptext.emplace_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
+	helptext.emplace_back("and indicates disk access.");
+	helptext.emplace_back("");
+	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
+	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
+	helptext.emplace_back("the emulation starts directly without showing the GUI.");
+	helptext.emplace_back("");
 #ifdef PANDORA
-	helptext.push_back("Set the speed for the Pandora CPU to overclock it for games which need more power. Be careful with this");
-	helptext.push_back("parameter.");
-	helptext.push_back("");
+	helptext.emplace_back("Set the speed for the Pandora CPU to overclock it for games which need more power. Be careful with this");
+	helptext.emplace_back("parameter.");
+	helptext.emplace_back("");
 #endif	
-	helptext.push_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
-	helptext.push_back("");
-	helptext.push_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
+	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
+	helptext.emplace_back("");
+	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
 	return true;
 }

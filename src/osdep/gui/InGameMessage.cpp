@@ -29,10 +29,6 @@
 #include "androidsdl_event.h"
 #endif
 
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-
-extern SDL_Surface* screen;
-
 int msg_done = 0;
 gcn::Gui* msg_gui;
 gcn::SDLGraphics* msg_graphics;
@@ -147,9 +143,9 @@ void gui_init(const char* msg)
 
 	TTF_Init();
 #ifdef USE_SDL1
-	msg_font = new gcn::contrib::SDLTrueTypeFont("data/Topaznew.ttf", 14);
+	msg_font = new gcn::contrib::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
 #elif USE_SDL2
-	msg_font = new gcn::SDLTrueTypeFont("data/Topaznew.ttf", 14);
+	msg_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
 #endif
 	gcn::Widget::setGlobalFont(msg_font);
 
@@ -184,7 +180,7 @@ void InGameMessage(const char* msg)
 	gui_init(msg);
 
 	msg_done = 0;
-	bool drawn = false;
+	auto drawn = false;
 	while (!msg_done)
 	{
 		// Poll input

@@ -23,8 +23,7 @@ namespace gcn
 
 
 	UaeDropDown::~UaeDropDown()
-	{
-	}
+	= default;
 
 
 	void UaeDropDown::keyPressed(KeyEvent& keyEvent)
@@ -32,7 +31,7 @@ namespace gcn
 		if (keyEvent.isConsumed())
 			return;
 
-		Key key = keyEvent.getKey();
+		auto key = keyEvent.getKey();
 
 		if ((key.getValue() == Key::ENTER || key.getValue() == Key::SPACE)
 			&& !mDroppedDown)

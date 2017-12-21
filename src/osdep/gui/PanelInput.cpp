@@ -76,7 +76,7 @@ public:
 	StringListModel(const char* entries[], const int count)
 	{
 		for (int i = 0; i < count; ++i)
-			values.push_back(entries[i]);
+			values.emplace_back(entries[i]);
 	}
 
 	int getNumberOfElements() override
@@ -86,7 +86,7 @@ public:
 
 	int AddElement(const char* Elem)
 	{
-		values.push_back(Elem);
+		values.emplace_back(Elem);
 		return 0;
 	}
 
@@ -183,7 +183,7 @@ public:
 				continue;
 			if (changed_prefs.jports[i].id == portListIDs[sel])
 			{
-				changed_prefs.jports[i].id = JPORT_NONE; 
+				changed_prefs.jports[i].id = JPORT_NONE;
 				changed_prefs.jports[i].idc.configname[0] = 0;
 				changed_prefs.jports[i].idc.name[0] = 0;
 				changed_prefs.jports[i].idc.shortid[0] = 0;
@@ -194,35 +194,35 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 #ifdef PANDORA
-      if (actionEvent.getSource() == cboPort0) {
-        // Handle new device in port 0
-        switch(cboPort0->getSelected()) {
-          case 0: changed_prefs.jports[0].id = JSEM_MICE;     changed_prefs.jports[0].mode = JSEM_MODE_MOUSE; break;
-          case 1: changed_prefs.jports[0].id = JSEM_MICE + 1; changed_prefs.jports[0].mode = JSEM_MODE_MOUSE; break;
-          case 2: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK; break;
-          case 3: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK_CD32; break;
-          case 4: changed_prefs.jports[0].id = -1;            changed_prefs.jports[0].mode = JSEM_MODE_DEFAULT; break;
-        }
-        inputdevice_updateconfig(NULL, &changed_prefs);
-      }
-      
-      else if (actionEvent.getSource() == cboPort1) {
-        // Handle new device in port 1
-        switch(cboPort1->getSelected()) {
-          case 0: changed_prefs.jports[1].id = JSEM_MICE;     changed_prefs.jports[1].mode = JSEM_MODE_MOUSE; break;
-          case 1: changed_prefs.jports[1].id = JSEM_MICE + 1; changed_prefs.jports[1].mode = JSEM_MODE_MOUSE; break;
-          case 2: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK; break;
-          case 3: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK_CD32; break;
-          case 4: changed_prefs.jports[1].id = -1;            changed_prefs.jports[1].mode = JSEM_MODE_DEFAULT; break;
-        }
-        inputdevice_updateconfig(NULL, &changed_prefs);
-      }
+		if (actionEvent.getSource() == cboPort0) {
+			// Handle new device in port 0
+			switch (cboPort0->getSelected()) {
+			case 0: changed_prefs.jports[0].id = JSEM_MICE;     changed_prefs.jports[0].mode = JSEM_MODE_MOUSE; break;
+			case 1: changed_prefs.jports[0].id = JSEM_MICE + 1; changed_prefs.jports[0].mode = JSEM_MODE_MOUSE; break;
+			case 2: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK; break;
+			case 3: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK_CD32; break;
+			case 4: changed_prefs.jports[0].id = -1;            changed_prefs.jports[0].mode = JSEM_MODE_DEFAULT; break;
+			}
+			inputdevice_updateconfig(NULL, &changed_prefs);
+		}
+
+		else if (actionEvent.getSource() == cboPort1) {
+			// Handle new device in port 1
+			switch (cboPort1->getSelected()) {
+			case 0: changed_prefs.jports[1].id = JSEM_MICE;     changed_prefs.jports[1].mode = JSEM_MODE_MOUSE; break;
+			case 1: changed_prefs.jports[1].id = JSEM_MICE + 1; changed_prefs.jports[1].mode = JSEM_MODE_MOUSE; break;
+			case 2: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK; break;
+			case 3: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK_CD32; break;
+			case 4: changed_prefs.jports[1].id = -1;            changed_prefs.jports[1].mode = JSEM_MODE_DEFAULT; break;
+			}
+			inputdevice_updateconfig(NULL, &changed_prefs);
+		}
 #else
 		if (actionEvent.getSource() == cboPort0)
 		{
 			// Handle new device in port 0
-			const int sel = cboPort0->getSelected();
-			const int current_port = 0;
+			const auto sel = cboPort0->getSelected();
+			const auto current_port = 0;
 
 			// clear 
 			clear_ports(sel, current_port);
@@ -235,8 +235,8 @@ public:
 		else if (actionEvent.getSource() == cboPort1)
 		{
 			// Handle new device in port 1
-			const int sel = cboPort1->getSelected();
-			const int current_port = 1;
+			const auto sel = cboPort1->getSelected();
+			const auto current_port = 1;
 
 			// clear 
 			clear_ports(sel, current_port);
@@ -253,10 +253,10 @@ public:
 			// Handle new device in port 2
 			const int sel = cboPort2->getSelected();
 			const int current_port = 2;
-			
+
 			// clear 
 			clear_ports(sel, current_port);
-			
+
 			// set
 			changed_prefs.jports[current_port].id = portListIDs[sel];
 			inputdevice_updateconfig(nullptr, &changed_prefs);
@@ -337,26 +337,26 @@ public:
 			RefreshPanelInput();
 		}
 #ifdef PANDORA
-	else if (actionEvent.getSource() == cboTapDelay)
-      {
-        if(cboTapDelay->getSelected() == 0)
-          changed_prefs.pandora_tapDelay = 10;
-        else if (cboTapDelay->getSelected() == 1)
-          changed_prefs.pandora_tapDelay = 5;
-        else
-          changed_prefs.pandora_tapDelay = 2;
-      }
+		else if (actionEvent.getSource() == cboTapDelay)
+		{
+			if (cboTapDelay->getSelected() == 0)
+				changed_prefs.pandora_tapDelay = 10;
+			else if (cboTapDelay->getSelected() == 1)
+				changed_prefs.pandora_tapDelay = 5;
+			else
+				changed_prefs.pandora_tapDelay = 2;
+		}
 #endif
-    	else if (actionEvent.getSource() == chkMouseHack)
-  	  {
+		else if (actionEvent.getSource() == chkMouseHack)
+		{
 #ifdef ANDROIDSDL
-        if (chkMouseHack->isSelected())
-             SDL_ANDROID_SetMouseEmulationMode(0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-        else
-             SDL_ANDROID_SetMouseEmulationMode(1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+			if (chkMouseHack->isSelected())
+				SDL_ANDROID_SetMouseEmulationMode(0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+			else
+				SDL_ANDROID_SetMouseEmulationMode(1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 #endif
-  	    changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
-  	  }
+			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
+		}
 	}
 };
 
@@ -369,7 +369,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 #ifndef PANDORA
 	if (ctrlPortList.getNumberOfElements() == 0)
 	{
-		int idx = 0;
+		auto idx = 0;
 		ctrlPortList.AddElement("None");
 		portListIDs[idx] = JPORT_NONE;
 
@@ -395,7 +395,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 #endif
 
 	inputActionListener = new InputActionListener();
-	const int textFieldWidth = category.panel->getWidth() - (2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X);
+	const auto textFieldWidth = category.panel->getWidth() - (2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X);
 	
 	lblPort0 = new gcn::Label("Port 0 [Mouse]:");
 	lblPort0->setAlignment(gcn::Graphics::RIGHT);
@@ -631,8 +631,8 @@ void RefreshPanelInput()
 #else
 
 	// Set current device in port 0
-	int idx = 0;
-	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	auto idx = 0;
+	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[0].id == portListIDs[i])
 		{
@@ -644,7 +644,7 @@ void RefreshPanelInput()
 
 	// Set current device in port 1
 	idx = 0;
-	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[1].id == portListIDs[i])
 		{
@@ -657,7 +657,7 @@ void RefreshPanelInput()
 
 	// Set current device in port 2
 	idx = 0;
-	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[2].id == portListIDs[i])
 		{
@@ -669,7 +669,7 @@ void RefreshPanelInput()
 
 	// Set current device in port 3
 	idx = 0;
-	for (int i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
 		if (changed_prefs.jports[3].id == portListIDs[i])
 		{
@@ -730,7 +730,7 @@ void RefreshPanelInput()
 		cboPort1mousemode->setEnabled(true);
 	}
 
-	for (int i = 0; i < 5; ++i)
+	for (auto i = 0; i < 5; ++i)
 	{
 		if (changed_prefs.input_joymouse_multiplier == mousespeed_values[i])
 		{
@@ -753,16 +753,16 @@ void RefreshPanelInput()
 bool HelpPanelInput(std::vector<std::string> &helptext)
 {
 	helptext.clear();
-	helptext.push_back("You can select the control type for both ports and the rate for autofire.");
-	helptext.push_back("");
-	helptext.push_back("Set the emulated mouse speed to .25x, .5x, 1x, 2x and 4x to slow down or ");
-	helptext.push_back("speed up the mouse.");
-	helptext.push_back("");
-  	helptext.push_back("When \"Enable mousehack\" is activated, you can use touch input to set .");
-  	helptext.push_back("the mouse pointer to the exact position. This works very well on Workbench, ");
-  	helptext.push_back("but many games using their own mouse handling and will not profit from this mode.");
-  	helptext.push_back("");
-  	helptext.push_back("\"Tap Delay\" specifies the time between taping the screen and an emulated ");
-  	helptext.push_back("mouse button click.");
+	helptext.emplace_back("You can select the control type for both ports and the rate for autofire.");
+	helptext.emplace_back("");
+	helptext.emplace_back("Set the emulated mouse speed to .25x, .5x, 1x, 2x and 4x to slow down or ");
+	helptext.emplace_back("speed up the mouse.");
+	helptext.emplace_back("");
+  	helptext.emplace_back("When \"Enable mousehack\" is activated, you can use touch input to set .");
+  	helptext.emplace_back("the mouse pointer to the exact position. This works very well on Workbench, ");
+  	helptext.emplace_back("but many games using their own mouse handling and will not profit from this mode.");
+  	helptext.emplace_back("");
+  	helptext.emplace_back("\"Tap Delay\" specifies the time between taping the screen and an emulated ");
+  	helptext.emplace_back("mouse button click.");
 	return true;
 }
