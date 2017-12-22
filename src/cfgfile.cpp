@@ -1930,106 +1930,111 @@ static void set_chipset_mask (struct uae_prefs *p, int val)
     : CSMASK_AGA | CSMASK_ECS_DENISE | CSMASK_ECS_AGNUS);
 }
 
-static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
+static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 {
 	int i;
-  bool vb;
-  TCHAR *section = 0;
-  TCHAR *tmpp;
-  TCHAR tmpbuf[CONFIG_BLEN];
-  const TCHAR *tmp1;
-  TCHAR *tmp2;
+	bool vb;
+	TCHAR *section = 0;
+	TCHAR *tmpp;
+	TCHAR tmpbuf[CONFIG_BLEN];
+	const TCHAR *tmp1;
+	TCHAR *tmp2;
 
-	if (_tcsncmp (option, _T("input."), 6) == 0) {
-    read_inputdevice_config (p, option, value);
-    return 1;
-  }
-  
+	if (_tcsncmp(option, _T("input."), 6) == 0) {
+		read_inputdevice_config(p, option, value);
+		return 1;
+	}
+
 #ifndef PANDORA
-  // custom options LOADING
+	// custom options LOADING
 
-  
-   for (int i=0; i<4 ; ++i)  // Loop 1 ... all 4 joyports
-    { 
-       struct joypad_map_layout tempcustom = {};
-       
-   for (int m=0; m<2 ; ++m)  // Loop 2 ... none/hotkey function keys
-     {
-             if (m == 0) {tmp1 = "none";   tempcustom = p->jports[i].amiberry_custom_none  ;}
-        else if (m == 1) {tmp1 = "hotkey"; tempcustom = p->jports[i].amiberry_custom_hotkey;} 
-             
-   for (int n=0; n < 14; ++n) // Loop 3 ... all 14 buttons
-      {                           
-       _stprintf (tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);    
-         
-       // this is where we need to check if we have this particular option!!
-        if (!_tcsncmp (option, _T(tmpbuf), sizeof (tmpbuf) / sizeof (TCHAR))) 
-          {  
-              int b = 0;
-              if (find_inputevent(value) > -1) {b = RemapEventList[find_inputevent(value)];}
-              //else {b=0;}
 
-                        if (n==0 ) {tempcustom.dpad_up_action    = b;}
-                        if (n==1 ) {tempcustom.dpad_down_action  = b;}
-                        if (n==2 ) {tempcustom.dpad_left_action  = b;}
-                        if (n==3 ) {tempcustom.dpad_right_action = b;}
-                        if (n==4 ) {tempcustom.select_action     = b;}
-                        if (n==5 ) {tempcustom.left_shoulder_action = b;}
-                        if (n==6 ) {tempcustom.lstick_select_action = b;}
-                        if (n==7 ) {tempcustom.north_action      = b;}
-                        if (n==8 ) {tempcustom.south_action      = b;}
-                        if (n==9 ) {tempcustom.east_action       = b;}
-                        if (n==10) {tempcustom.west_action       = b;}
-                        if (n==11) {tempcustom.start_action      = b;}
-                        if (n==12) {tempcustom.right_shoulder_action = b;}
-                        if (n==13) {tempcustom.rstick_select_action  = b;}  
-             
-                       if (m==0)
-                        { p->jports[i].amiberry_custom_none     = tempcustom;  }
-                        
-                  else if (m==1)    
-                        { p->jports[i].amiberry_custom_hotkey   = tempcustom;  }
-             return 1; 
-             
-          } // close the IF check
-      } // close loop 3 
-     } // close loop 2
-    } // close loop 1
-  
+	for (int i = 0; i<4; ++i)  // Loop 1 ... all 4 joyports
+	{
+		struct joypad_map_layout tempcustom = {};
+
+		for (int m = 0; m<2; ++m)  // Loop 2 ... none/hotkey function keys
+		{
+			if (m == 0) { tmp1 = "none";   tempcustom = p->jports[i].amiberry_custom_none; }
+			else if (m == 1) { tmp1 = "hotkey"; tempcustom = p->jports[i].amiberry_custom_hotkey; }
+
+			for (int n = 0; n < 14; ++n) // Loop 3 ... all 14 buttons
+			{
+				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);
+
+				// this is where we need to check if we have this particular option!!
+				if (!_tcsncmp(option, _T(tmpbuf), sizeof(tmpbuf) / sizeof(TCHAR)))
+				{
+					int b = 0;
+					if (find_inputevent(value) > -1) { b = RemapEventList[find_inputevent(value)]; }
+					//else {b=0;}
+
+					if (n == 0) { tempcustom.dpad_up_action = b; }
+					if (n == 1) { tempcustom.dpad_down_action = b; }
+					if (n == 2) { tempcustom.dpad_left_action = b; }
+					if (n == 3) { tempcustom.dpad_right_action = b; }
+					if (n == 4) { tempcustom.select_action = b; }
+					if (n == 5) { tempcustom.left_shoulder_action = b; }
+					if (n == 6) { tempcustom.lstick_select_action = b; }
+					if (n == 7) { tempcustom.north_action = b; }
+					if (n == 8) { tempcustom.south_action = b; }
+					if (n == 9) { tempcustom.east_action = b; }
+					if (n == 10) { tempcustom.west_action = b; }
+					if (n == 11) { tempcustom.start_action = b; }
+					if (n == 12) { tempcustom.right_shoulder_action = b; }
+					if (n == 13) { tempcustom.rstick_select_action = b; }
+
+					if (m == 0)
+					{
+						p->jports[i].amiberry_custom_none = tempcustom;
+					}
+
+					else if (m == 1)
+					{
+						p->jports[i].amiberry_custom_hotkey = tempcustom;
+					}
+					return 1;
+
+				} // close the IF check
+			} // close loop 3 
+		} // close loop 2
+	} // close loop 1
+
 #endif
-   
 
-  for (tmpp = option; *tmpp != '\0'; tmpp++)
-  	if (_istupper (*tmpp))
-	    *tmpp = _totlower (*tmpp);
-  tmpp = _tcschr (option, '.');
-  if (tmpp) {
-    section = option;
-    option = tmpp + 1;
-    *tmpp = '\0';
-    if (_tcscmp (section, TARGET_NAME) == 0) {
-	    /* We special case the various path options here.  */
-      if (cfgfile_path (option, value, _T("rom_path"), p->path_rom, sizeof p->path_rom / sizeof (TCHAR))
-  		|| cfgfile_path (option, value, _T("floppy_path"), p->path_floppy, sizeof p->path_floppy / sizeof (TCHAR))
-  		|| cfgfile_path (option, value, _T("cd_path"), p->path_cd, sizeof p->path_cd / sizeof (TCHAR))
-  		|| cfgfile_path (option, value, _T("hardfile_path"), p->path_hardfile, sizeof p->path_hardfile / sizeof (TCHAR)))
-	    	return 1;
-  	  return target_parse_option (p, option, value);
-  	}
-  	return 0;
-  }
+
+	for (tmpp = option; *tmpp != '\0'; tmpp++)
+		if (_istupper(*tmpp))
+			*tmpp = _totlower(*tmpp);
+	tmpp = _tcschr(option, '.');
+	if (tmpp) {
+		section = option;
+		option = tmpp + 1;
+		*tmpp = '\0';
+		if (_tcscmp(section, TARGET_NAME) == 0) {
+			/* We special case the various path options here.  */
+			if (cfgfile_path(option, value, _T("rom_path"), p->path_rom, sizeof p->path_rom / sizeof(TCHAR))
+				|| cfgfile_path(option, value, _T("floppy_path"), p->path_floppy, sizeof p->path_floppy / sizeof(TCHAR))
+				|| cfgfile_path(option, value, _T("cd_path"), p->path_cd, sizeof p->path_cd / sizeof(TCHAR))
+				|| cfgfile_path(option, value, _T("hardfile_path"), p->path_hardfile, sizeof p->path_hardfile / sizeof(TCHAR)))
+				return 1;
+			return target_parse_option(p, option, value);
+		}
+		return 0;
+	}
 
 	for (i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 		TCHAR tmp[20];
-		_stprintf (tmp, _T("cdimage%d"), i);
-		if (!_tcsicmp (option, tmp)) {
-			if (!_tcsicmp (value, _T("autodetect"))) {
+		_stprintf(tmp, _T("cdimage%d"), i);
+		if (!_tcsicmp(option, tmp)) {
+			if (!_tcsicmp(value, _T("autodetect"))) {
 				p->cdslots[i].type = SCSI_UNIT_DEFAULT;
 				p->cdslots[i].inuse = true;
 				p->cdslots[i].name[0] = 0;
-			} else {
+			}
+			else {
 				p->cdslots[i].delayed = false;
-				TCHAR *next = _tcsrchr (value, ',');
+				TCHAR *next = _tcsrchr(value, ',');
 				int type = SCSI_UNIT_DEFAULT;
 				int mode = 0;
 				int unitnum = 0;
@@ -2037,19 +2042,19 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 					if (!next)
 						break;
 					*next++ = 0;
-					TCHAR *next2 = _tcschr (next, ':');
+					TCHAR *next2 = _tcschr(next, ':');
 					if (next2)
 						*next2++ = 0;
-					if (!_tcsicmp (next, _T("delay"))) {
+					if (!_tcsicmp(next, _T("delay"))) {
 						p->cdslots[i].delayed = true;
 						next = next2;
 						if (!next)
 							break;
-						next2 = _tcschr (next, ':');
+						next2 = _tcschr(next, ':');
 						if (next2)
 							*next2++ = 0;
 					}
-					type = match_string (cdmodes, next);
+					type = match_string(cdmodes, next);
 					if (type < 0)
 						type = SCSI_UNIT_DEFAULT;
 					else
@@ -2057,24 +2062,24 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 					next = next2;
 					if (!next)
 						break;
-					next2 = _tcschr (next, ':');
+					next2 = _tcschr(next, ':');
 					if (next2)
 						*next2++ = 0;
-					mode = match_string (cdconmodes, next);
+					mode = match_string(cdconmodes, next);
 					if (mode < 0)
 						mode = 0;
 					next = next2;
 					if (!next)
 						break;
-					next2 = _tcschr (next, ':');
+					next2 = _tcschr(next, ':');
 					if (next2)
 						*next2++ = 0;
-					cfgfile_intval (option, next, tmp, &unitnum, 1);
+					cfgfile_intval(option, next, tmp, &unitnum, 1);
 				}
-				if (_tcslen (value) > 0) {
-					TCHAR *s = cfgfile_subst_path (UNEXPANDED, p->path_cd, value);
-					_tcsncpy (p->cdslots[i].name, s, sizeof p->cdslots[i].name / sizeof (TCHAR));
-					xfree (s);
+				if (_tcslen(value) > 0) {
+					TCHAR *s = cfgfile_subst_path(UNEXPANDED, p->path_cd, value);
+					_tcsncpy(p->cdslots[i].name, s, sizeof p->cdslots[i].name / sizeof(TCHAR));
+					xfree(s);
 				}
 				p->cdslots[i].name[sizeof p->cdslots[i].name - 1] = 0;
 				p->cdslots[i].inuse = true;
@@ -2090,58 +2095,58 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 	}
 
-               if (cfgfile_intval (option, value, _T("sound_frequency"), &p->sound_freq, 1)
-		|| cfgfile_intval (option, value, _T("sound_volume_cd"), &p->sound_volume_cd, 1)
-                || cfgfile_intval (option, value, _T("sound_stereo_separation"), &p->sound_stereo_separation, 1)
-                || cfgfile_intval (option, value, _T("sound_stereo_mixing_delay"), &p->sound_mixed_stereo_delay, 1)
+	if (cfgfile_intval(option, value, _T("sound_frequency"), &p->sound_freq, 1)
+		|| cfgfile_intval(option, value, _T("sound_volume_cd"), &p->sound_volume_cd, 1)
+		|| cfgfile_intval(option, value, _T("sound_stereo_separation"), &p->sound_stereo_separation, 1)
+		|| cfgfile_intval(option, value, _T("sound_stereo_mixing_delay"), &p->sound_mixed_stereo_delay, 1)
 
-                || cfgfile_intval (option, value, _T("gfx_framerate"), &p->gfx_framerate, 1)
-		|| cfgfile_intval (option, value, _T("gfx_refreshrate"), &p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate, 1)
-		|| cfgfile_intval (option, value, _T("gfx_refreshrate_rtg"), &p->gfx_apmode[APMODE_RTG].gfx_refreshrate, 1)
+		|| cfgfile_intval(option, value, _T("gfx_framerate"), &p->gfx_framerate, 1)
+		|| cfgfile_intval(option, value, _T("gfx_refreshrate"), &p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate, 1)
+		|| cfgfile_intval(option, value, _T("gfx_refreshrate_rtg"), &p->gfx_apmode[APMODE_RTG].gfx_refreshrate, 1)
 
-		|| cfgfile_intval (option, value, _T("filesys_max_size"), &p->filesys_limit, 1)
-		|| cfgfile_intval (option, value, _T("filesys_max_name_length"), &p->filesys_max_name, 1)
-		|| cfgfile_yesno (option, value, _T("filesys_inject_icons"), &p->filesys_inject_icons)
-		|| cfgfile_string (option, value, _T("filesys_inject_icons_drawer"), p->filesys_inject_icons_drawer, sizeof p->filesys_inject_icons_drawer / sizeof (TCHAR))
-		|| cfgfile_string (option, value, _T("filesys_inject_icons_project"), p->filesys_inject_icons_project, sizeof p->filesys_inject_icons_project / sizeof (TCHAR))
-		|| cfgfile_string (option, value, _T("filesys_inject_icons_tool"), p->filesys_inject_icons_tool, sizeof p->filesys_inject_icons_tool / sizeof (TCHAR)))
-	  return 1;
+		|| cfgfile_intval(option, value, _T("filesys_max_size"), &p->filesys_limit, 1)
+		|| cfgfile_intval(option, value, _T("filesys_max_name_length"), &p->filesys_max_name, 1)
+		|| cfgfile_yesno(option, value, _T("filesys_inject_icons"), &p->filesys_inject_icons)
+		|| cfgfile_string(option, value, _T("filesys_inject_icons_drawer"), p->filesys_inject_icons_drawer, sizeof p->filesys_inject_icons_drawer / sizeof(TCHAR))
+		|| cfgfile_string(option, value, _T("filesys_inject_icons_project"), p->filesys_inject_icons_project, sizeof p->filesys_inject_icons_project / sizeof(TCHAR))
+		|| cfgfile_string(option, value, _T("filesys_inject_icons_tool"), p->filesys_inject_icons_tool, sizeof p->filesys_inject_icons_tool / sizeof(TCHAR)))
+		return 1;
 
 	if (cfgfile_string(option, value, _T("config_info"), p->info, sizeof p->info / sizeof(TCHAR))
 		|| cfgfile_string(option, value, _T("config_description"), p->description, sizeof p->description / sizeof(TCHAR)))
 		return 1;
 
-               if (cfgfile_yesno (option, value, _T("floppy0wp"), &p->floppyslots[0].forcedwriteprotect)
-		|| cfgfile_yesno (option, value, _T("floppy1wp"), &p->floppyslots[1].forcedwriteprotect)
-		|| cfgfile_yesno (option, value, _T("floppy2wp"), &p->floppyslots[2].forcedwriteprotect)
-		|| cfgfile_yesno (option, value, _T("floppy3wp"), &p->floppyslots[3].forcedwriteprotect)
-                || cfgfile_yesno (option, value, _T("bsdsocket_emu"), &p->socket_emu))
-	  return 1;
+	if (cfgfile_yesno(option, value, _T("floppy0wp"), &p->floppyslots[0].forcedwriteprotect)
+		|| cfgfile_yesno(option, value, _T("floppy1wp"), &p->floppyslots[1].forcedwriteprotect)
+		|| cfgfile_yesno(option, value, _T("floppy2wp"), &p->floppyslots[2].forcedwriteprotect)
+		|| cfgfile_yesno(option, value, _T("floppy3wp"), &p->floppyslots[3].forcedwriteprotect)
+		|| cfgfile_yesno(option, value, _T("bsdsocket_emu"), &p->socket_emu))
+		return 1;
 
-               if (cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode1, 1)
-                || cfgfile_strval (option, value, _T("sound_output"), &p->produce_sound, soundmode2, 0)
-                || cfgfile_strval (option, value, _T("sound_interpol"), &p->sound_interpol, interpolmode, 0)
-                || cfgfile_strval (option, value, _T("sound_filter"), &p->sound_filter, soundfiltermode1, 0)
-                || cfgfile_strval (option, value, _T("sound_filter_type"), &p->sound_filter_type, soundfiltermode2, 0)
-                || cfgfile_strboolval (option, value, _T("use_gui"), &p->start_gui, guimode1, 1)
-                || cfgfile_strboolval (option, value, _T("use_gui"), &p->start_gui, guimode2, 1)
-                || cfgfile_strboolval (option, value, _T("use_gui"), &p->start_gui, guimode3, 0)
-                || cfgfile_strval (option, value, _T("gfx_resolution"), &p->gfx_resolution, lorestype1, 0)
-                || cfgfile_strval (option, value, _T("gfx_lores"), &p->gfx_resolution, lorestype2, 0)
-                || cfgfile_strval (option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
-          return 1;
-	
-	if (_tcscmp (option, _T("gfx_width_windowed")) == 0) {
+	if (cfgfile_strval(option, value, _T("sound_output"), &p->produce_sound, soundmode1, 1)
+		|| cfgfile_strval(option, value, _T("sound_output"), &p->produce_sound, soundmode2, 0)
+		|| cfgfile_strval(option, value, _T("sound_interpol"), &p->sound_interpol, interpolmode, 0)
+		|| cfgfile_strval(option, value, _T("sound_filter"), &p->sound_filter, soundfiltermode1, 0)
+		|| cfgfile_strval(option, value, _T("sound_filter_type"), &p->sound_filter_type, soundfiltermode2, 0)
+		|| cfgfile_strboolval(option, value, _T("use_gui"), &p->start_gui, guimode1, 1)
+		|| cfgfile_strboolval(option, value, _T("use_gui"), &p->start_gui, guimode2, 1)
+		|| cfgfile_strboolval(option, value, _T("use_gui"), &p->start_gui, guimode3, 0)
+		|| cfgfile_strval(option, value, _T("gfx_resolution"), &p->gfx_resolution, lorestype1, 0)
+		|| cfgfile_strval(option, value, _T("gfx_lores"), &p->gfx_resolution, lorestype2, 0)
+		|| cfgfile_strval(option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
+		return 1;
+
+	if (_tcscmp(option, _T("gfx_width_windowed")) == 0) {
 		return 1;
 	}
-	if (_tcscmp (option, _T("gfx_height_windowed")) == 0) {
+	if (_tcscmp(option, _T("gfx_height_windowed")) == 0) {
 		return 1;
 	}
 
-	if (_tcscmp (option, _T("gfx_width_fullscreen")) == 0) {
+	if (_tcscmp(option, _T("gfx_width_fullscreen")) == 0) {
 		return 1;
 	}
-	if (_tcscmp (option, _T("gfx_height_fullscreen")) == 0) {
+	if (_tcscmp(option, _T("gfx_height_fullscreen")) == 0) {
 		return 1;
 	}
 
@@ -2157,203 +2162,204 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
-	if (_tcscmp (option, _T("gfx_vsync")) == 0) {
-		if (cfgfile_strval (option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync, vsyncmodes, 0) >= 0) {
+	if (_tcscmp(option, _T("gfx_vsync")) == 0) {
+		if (cfgfile_strval(option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync, vsyncmodes, 0) >= 0) {
 			p->gfx_apmode[APMODE_NATIVE].gfx_vsync--;
 			return 1;
 		}
-		return cfgfile_yesno (option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync);
+		return cfgfile_yesno(option, value, _T("gfx_vsync"), &p->gfx_apmode[APMODE_NATIVE].gfx_vsync);
 	}
-	if (_tcscmp (option, _T("gfx_vsync_picasso")) == 0) {
-		if (cfgfile_strval (option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync, vsyncmodes, 0) >= 0) {
+	if (_tcscmp(option, _T("gfx_vsync_picasso")) == 0) {
+		if (cfgfile_strval(option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync, vsyncmodes, 0) >= 0) {
 			p->gfx_apmode[APMODE_RTG].gfx_vsync--;
 			return 1;
 		}
-		return cfgfile_yesno (option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync);
+		return cfgfile_yesno(option, value, _T("gfx_vsync_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_vsync);
 	}
 
-  if(cfgfile_yesno (option, value, _T("show_leds"), &vb)) {
-    p->leds_on_screen = vb;
+	if (cfgfile_yesno(option, value, _T("show_leds"), &vb)) {
+		p->leds_on_screen = vb;
 		return 1;
-  }
+	}
 
-  if (_tcscmp (option, _T("gfx_width")) == 0 || _tcscmp (option, _T("gfx_height")) == 0) {
-	  cfgfile_intval (option, value, _T("gfx_width"), &p->gfx_size.width, 1);
-	  cfgfile_intval (option, value, _T("gfx_height"), &p->gfx_size.height, 1);
-	  return 1;
-  }
+	if (_tcscmp(option, _T("gfx_width")) == 0 || _tcscmp(option, _T("gfx_height")) == 0) {
+		cfgfile_intval(option, value, _T("gfx_width"), &p->gfx_size.width, 1);
+		cfgfile_intval(option, value, _T("gfx_height"), &p->gfx_size.height, 1);
+		return 1;
+	}
 
-// olde versions (compatibility)
-  
-	if (_tcscmp (option, _T("joyportfriendlyname0")) == 0 || _tcscmp (option, _T("joyportfriendlyname1")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyportfriendlyname0")) == 0 ? 0 : 1, -1, 2);
+	// olde versions (compatibility)
+
+	if (_tcscmp(option, _T("joyportfriendlyname0")) == 0 || _tcscmp(option, _T("joyportfriendlyname1")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportfriendlyname0")) == 0 ? 0 : 1, -1, 2);
 		return 1;
 	}
-	if (_tcscmp (option, _T("joyportfriendlyname2")) == 0 || _tcscmp (option, _T("joyportfriendlyname3")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyportfriendlyname2")) == 0 ? 2 : 3, -1, 2);
+	if (_tcscmp(option, _T("joyportfriendlyname2")) == 0 || _tcscmp(option, _T("joyportfriendlyname3")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportfriendlyname2")) == 0 ? 2 : 3, -1, 2);
 		return 1;
 	}
-	if (_tcscmp (option, _T("joyportname0")) == 0 || _tcscmp (option, _T("joyportname1")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyportname0")) == 0 ? 0 : 1, -1, 1);
+	if (_tcscmp(option, _T("joyportname0")) == 0 || _tcscmp(option, _T("joyportname1")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportname0")) == 0 ? 0 : 1, -1, 1);
 		return 1;
 	}
-	if (_tcscmp (option, _T("joyportname2")) == 0 || _tcscmp (option, _T("joyportname3")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyportname2")) == 0 ? 2 : 3, -1, 1);
+	if (_tcscmp(option, _T("joyportname2")) == 0 || _tcscmp(option, _T("joyportname3")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportname2")) == 0 ? 2 : 3, -1, 1);
 		return 1;
 	}
-  
-  
-  // new versions  
- 	if (_tcscmp (option, _T("joyport0_friendlyname")) == 0 || _tcscmp (option, _T("joyport1_friendlyname")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyport0_friendlyname")) == 0 ? 0 : 1, -1, 2);
+
+
+	// new versions  
+	if (_tcscmp(option, _T("joyport0_friendlyname")) == 0 || _tcscmp(option, _T("joyport1_friendlyname")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0_friendlyname")) == 0 ? 0 : 1, -1, 2);
 		return 1;
 	}
-	if (_tcscmp (option, _T("joyport2_friendlyname")) == 0 || _tcscmp (option, _T("joyport3_friendlyname")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyport2_friendlyname")) == 0 ? 2 : 3, -1, 2);
+	if (_tcscmp(option, _T("joyport2_friendlyname")) == 0 || _tcscmp(option, _T("joyport3_friendlyname")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2_friendlyname")) == 0 ? 2 : 3, -1, 2);
 		return 1;
 	}
-	if (_tcscmp (option, _T("joyport0_name")) == 0 || _tcscmp (option, _T("joyport1_name")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyport0_name")) == 0 ? 0 : 1, -1, 1);
+	if (_tcscmp(option, _T("joyport0_name")) == 0 || _tcscmp(option, _T("joyport1_name")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0_name")) == 0 ? 0 : 1, -1, 1);
 		return 1;
 	}
-	if (_tcscmp (option, _T("joyport2_name")) == 0 || _tcscmp (option, _T("joyport3_name")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyport2_name")) == 0 ? 2 : 3, -1, 1);
-		return 1;
-	} 
-  
-// old version only 
-	if (_tcscmp (option, _T("joyport0")) == 0 || _tcscmp (option, _T("joyport1")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyport0")) == 0 ? 0 : 1, -1, 0);
+	if (_tcscmp(option, _T("joyport2_name")) == 0 || _tcscmp(option, _T("joyport3_name")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2_name")) == 0 ? 2 : 3, -1, 1);
 		return 1;
 	}
-	if (_tcscmp (option, _T("joyport2")) == 0 || _tcscmp (option, _T("joyport3")) == 0) {
-		inputdevice_joyport_config_store(p, value, _tcscmp (option, _T("joyport2")) == 0 ? 2 : 3, -1, 0);
+
+	// old version only 
+	if (_tcscmp(option, _T("joyport0")) == 0 || _tcscmp(option, _T("joyport1")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0")) == 0 ? 0 : 1, -1, 0);
 		return 1;
 	}
-  
-  // shared version
-	if (cfgfile_strval (option, value, _T("joyport0_mode"), &p->jports[0].mode, joyportmodes, 0) ||
-            cfgfile_strval (option, value, _T("joyport0mode"),  &p->jports[0].mode, joyportmodes, 0))
+	if (_tcscmp(option, _T("joyport2")) == 0 || _tcscmp(option, _T("joyport3")) == 0) {
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2")) == 0 ? 2 : 3, -1, 0);
 		return 1;
-	if (cfgfile_strval (option, value, _T("joyport1_mode"), &p->jports[1].mode, joyportmodes, 0) ||
-            cfgfile_strval (option, value, _T("joyport1mode"),  &p->jports[1].mode, joyportmodes, 0) )
+	}
+
+	// shared version
+	if (cfgfile_strval(option, value, _T("joyport0_mode"), &p->jports[0].mode, joyportmodes, 0) ||
+		cfgfile_strval(option, value, _T("joyport0mode"), &p->jports[0].mode, joyportmodes, 0))
+		return 1;
+	if (cfgfile_strval(option, value, _T("joyport1_mode"), &p->jports[1].mode, joyportmodes, 0) ||
+		cfgfile_strval(option, value, _T("joyport1mode"), &p->jports[1].mode, joyportmodes, 0))
 		return 1;
 
-	if (cfgfile_strval (option, value, _T("joyport0autofire"),  &p->jports[0].autofire, joyaf, 0) ||
-            cfgfile_strval (option, value, _T("joyport0_autofire"), &p->jports[0].autofire, joyaf, 0))
+	if (cfgfile_strval(option, value, _T("joyport0autofire"), &p->jports[0].autofire, joyaf, 0) ||
+		cfgfile_strval(option, value, _T("joyport0_autofire"), &p->jports[0].autofire, joyaf, 0))
 		return 1;
-	if (cfgfile_strval (option, value, _T("joyport1autofire"),  &p->jports[1].autofire, joyaf, 0) ||
-            cfgfile_strval (option, value, _T("joyport1_autofire"), &p->jports[1].autofire, joyaf, 0))
+	if (cfgfile_strval(option, value, _T("joyport1autofire"), &p->jports[1].autofire, joyaf, 0) ||
+		cfgfile_strval(option, value, _T("joyport1_autofire"), &p->jports[1].autofire, joyaf, 0))
 		return 1;
-	if (cfgfile_strval (option, value, _T("joyport2autofire"),  &p->jports[2].autofire, joyaf, 0) ||
-            cfgfile_strval (option, value, _T("joyport2_autofire"), &p->jports[2].autofire, joyaf, 0))
+	if (cfgfile_strval(option, value, _T("joyport2autofire"), &p->jports[2].autofire, joyaf, 0) ||
+		cfgfile_strval(option, value, _T("joyport2_autofire"), &p->jports[2].autofire, joyaf, 0))
 		return 1;
-	if (cfgfile_strval (option, value, _T("joyport3autofire"),  &p->jports[3].autofire, joyaf, 0) ||
-            cfgfile_strval (option, value, _T("joyport3_autofire"), &p->jports[3].autofire, joyaf, 0))
+	if (cfgfile_strval(option, value, _T("joyport3autofire"), &p->jports[3].autofire, joyaf, 0) ||
+		cfgfile_strval(option, value, _T("joyport3_autofire"), &p->jports[3].autofire, joyaf, 0))
 		return 1;
-  
- 
+
+
 #ifndef PANDORA  
 	if (cfgfile_strval(option, value, _T("joyport0_mousemap"), &p->jports[0].mousemap, mousemaps, 0))
 		return 1;
 	if (cfgfile_strval(option, value, _T("joyport1_mousemap"), &p->jports[1].mousemap, mousemaps, 0))
 		return 1;
 #endif   
-  
-// shared version
-	if (cfgfile_yesno (option, value, _T("joyport0keyboardoverride"),  &vb) ||
-            cfgfile_yesno (option, value, _T("joyport0_keyboardoverride"), &vb)) {
+
+	// shared version
+	if (cfgfile_yesno(option, value, _T("joyport0keyboardoverride"), &vb) ||
+		cfgfile_yesno(option, value, _T("joyport0_keyboardoverride"), &vb)) {
 		p->jports[0].nokeyboardoverride = !vb;
 		return 1;
 	}
-	if (cfgfile_yesno (option, value, _T("joyport1keyboardoverride"),  &vb) ||
-            cfgfile_yesno (option, value, _T("joyport1_keyboardoverride"), &vb)) {
+	if (cfgfile_yesno(option, value, _T("joyport1keyboardoverride"), &vb) ||
+		cfgfile_yesno(option, value, _T("joyport1_keyboardoverride"), &vb)) {
 		p->jports[1].nokeyboardoverride = !vb;
 		return 1;
 	}
-	if (cfgfile_yesno (option, value, _T("joyport2keyboardoverride"),  &vb) ||
-            cfgfile_yesno (option, value, _T("joyport2_keyboardoverride"), &vb)) {
+	if (cfgfile_yesno(option, value, _T("joyport2keyboardoverride"), &vb) ||
+		cfgfile_yesno(option, value, _T("joyport2_keyboardoverride"), &vb)) {
 		p->jports[2].nokeyboardoverride = !vb;
 		return 1;
 	}
-	if (cfgfile_yesno (option, value, _T("joyport3keyboardoverride"),  &vb) ||
-            cfgfile_yesno (option, value, _T("joyport3_keyboardoverride"), &vb)) {
+	if (cfgfile_yesno(option, value, _T("joyport3keyboardoverride"), &vb) ||
+		cfgfile_yesno(option, value, _T("joyport3_keyboardoverride"), &vb)) {
 		p->jports[3].nokeyboardoverride = !vb;
 		return 1;
 	}
 
-  if (cfgfile_string (option, value, _T("statefile"), tmpbuf, sizeof (tmpbuf) / sizeof (TCHAR))) {
-	  _tcscpy (savestate_fname, tmpbuf);
-	  if (zfile_exists (savestate_fname)) {
-	    savestate_state = STATE_DORESTORE;
-  	} else {
-	    int ok = 0;
-	    if (savestate_fname[0]) {
-    		for (;;) {
-  		    TCHAR *p;
-  		    if (my_existsdir (savestate_fname)) {
-		        ok = 1;
-		        break;
-  		    }
-		      p = _tcsrchr (savestate_fname, '\\');
-		      if (!p)
-		        p = _tcsrchr (savestate_fname, '/');
-  		    if (!p)
-		        break;
-  		    *p = 0;
-    		}
-	    }
-	    if (!ok) {
-    		savestate_fname[0] = 0;
+	if (cfgfile_string(option, value, _T("statefile"), tmpbuf, sizeof(tmpbuf) / sizeof(TCHAR))) {
+		_tcscpy(savestate_fname, tmpbuf);
+		if (zfile_exists(savestate_fname)) {
+			savestate_state = STATE_DORESTORE;
+		}
+		else {
+			int ok = 0;
+			if (savestate_fname[0]) {
+				for (;;) {
+					TCHAR *p;
+					if (my_existsdir(savestate_fname)) {
+						ok = 1;
+						break;
+					}
+					p = _tcsrchr(savestate_fname, '\\');
+					if (!p)
+						p = _tcsrchr(savestate_fname, '/');
+					if (!p)
+						break;
+					*p = 0;
+				}
 			}
-  	}
-	  return 1;
-  }
+			if (!ok) {
+				savestate_fname[0] = 0;
+			}
+		}
+		return 1;
+	}
 
-  if (cfgfile_strval (option, value, _T("sound_channels"), &p->sound_stereo, stereomode, 1)) {
-	  if (p->sound_stereo == SND_NONE) { /* "mixed stereo" compatibility hack */
-	    p->sound_stereo = SND_STEREO;
-	    p->sound_mixed_stereo_delay = 5;
-	    p->sound_stereo_separation = 7;
-	  }
-	  return 1;
-  }
+	if (cfgfile_strval(option, value, _T("sound_channels"), &p->sound_stereo, stereomode, 1)) {
+		if (p->sound_stereo == SND_NONE) { /* "mixed stereo" compatibility hack */
+			p->sound_stereo = SND_STEREO;
+			p->sound_mixed_stereo_delay = 5;
+			p->sound_stereo_separation = 7;
+		}
+		return 1;
+	}
 
-	if (_tcscmp (option, _T("kbd_lang")) == 0) {
+	if (_tcscmp(option, _T("kbd_lang")) == 0) {
 		KbdLang l;
-		if ((l = KBD_LANG_DE, _tcsicmp (value, _T("de")) == 0)
-			|| (l = KBD_LANG_DK, _tcsicmp (value, _T("dk")) == 0)
-			|| (l = KBD_LANG_SE, _tcsicmp (value, _T("se")) == 0)
-			|| (l = KBD_LANG_US, _tcsicmp (value, _T("us")) == 0)
-			|| (l = KBD_LANG_FR, _tcsicmp (value, _T("fr")) == 0)
-			|| (l = KBD_LANG_IT, _tcsicmp (value, _T("it")) == 0)
-			|| (l = KBD_LANG_ES, _tcsicmp (value, _T("es")) == 0))
+		if ((l = KBD_LANG_DE, _tcsicmp(value, _T("de")) == 0)
+			|| (l = KBD_LANG_DK, _tcsicmp(value, _T("dk")) == 0)
+			|| (l = KBD_LANG_SE, _tcsicmp(value, _T("se")) == 0)
+			|| (l = KBD_LANG_US, _tcsicmp(value, _T("us")) == 0)
+			|| (l = KBD_LANG_FR, _tcsicmp(value, _T("fr")) == 0)
+			|| (l = KBD_LANG_IT, _tcsicmp(value, _T("it")) == 0)
+			|| (l = KBD_LANG_ES, _tcsicmp(value, _T("es")) == 0))
 			p->keyboard_lang = l;
 		else
 			cfgfile_warning(_T("Unknown keyboard language\n"));
 		return 1;
 	}
 
-  if (cfgfile_string (option, value, _T("config_version"), tmpbuf, sizeof (tmpbuf) / sizeof (TCHAR))) {
-  	TCHAR *tmpp2;
-	  tmpp = _tcschr (value, '.');
-	  if (tmpp) {
-	    *tmpp++ = 0;
-	    tmpp2 = tmpp;
-	    p->config_version = _tstol (tmpbuf) << 16;
-	    tmpp = _tcschr (tmpp, '.');
-	    if (tmpp) {
-	    	*tmpp++ = 0;
-	    	p->config_version |= _tstol (tmpp2) << 8;
-	    	p->config_version |= _tstol (tmpp);
-	    }
-	  }
-	  return 1;
-  }
+	if (cfgfile_string(option, value, _T("config_version"), tmpbuf, sizeof(tmpbuf) / sizeof(TCHAR))) {
+		TCHAR *tmpp2;
+		tmpp = _tcschr(value, '.');
+		if (tmpp) {
+			*tmpp++ = 0;
+			tmpp2 = tmpp;
+			p->config_version = _tstol(tmpbuf) << 16;
+			tmpp = _tcschr(tmpp, '.');
+			if (tmpp) {
+				*tmpp++ = 0;
+				p->config_version |= _tstol(tmpp2) << 8;
+				p->config_version |= _tstol(tmpp);
+			}
+		}
+		return 1;
+	}
 
-	if (_tcscmp (option, _T("displaydata")) == 0 || _tcscmp (option, _T("displaydata_pal")) == 0 || _tcscmp (option, _T("displaydata_ntsc")) == 0) {
-		_tcsncpy (tmpbuf, value, sizeof tmpbuf / sizeof (TCHAR) - 1);
-		tmpbuf[sizeof tmpbuf / sizeof (TCHAR) - 1] = '\0';
+	if (_tcscmp(option, _T("displaydata")) == 0 || _tcscmp(option, _T("displaydata_pal")) == 0 || _tcscmp(option, _T("displaydata_ntsc")) == 0) {
+		_tcsncpy(tmpbuf, value, sizeof tmpbuf / sizeof(TCHAR) - 1);
+		tmpbuf[sizeof tmpbuf / sizeof(TCHAR) - 1] = '\0';
 
 		int vert = -1, horiz = -1, lace = -1, ntsc = -1, vsync = -1, hres = 0;
 		bool locked = false, rtg = false;
@@ -2361,10 +2367,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		float rate = -1;
 		TCHAR label[16] = { 0 };
 		TCHAR *tmpp = tmpbuf;
-		TCHAR *end = tmpbuf + _tcslen (tmpbuf);
+		TCHAR *end = tmpbuf + _tcslen(tmpbuf);
 		for (;;) {
-			TCHAR *next = _tcschr (tmpp, ',');
-			TCHAR *equals = _tcschr (tmpp, '=');
+			TCHAR *next = _tcschr(tmpp, ',');
+			TCHAR *equals = _tcschr(tmpp, '=');
 
 			if (!next)
 				next = end;
@@ -2414,16 +2420,17 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 		for (int i = 0; i < MAX_CHIPSET_REFRESH; i++) {
 			struct chipset_refresh *cr = &p->cr[i];
-			if (_tcscmp (option, _T("displaydata_pal")) == 0) {
+			if (_tcscmp(option, _T("displaydata_pal")) == 0) {
 				i = CHIPSET_REFRESH_PAL;
-        cr = &p->cr[i];
+				cr = &p->cr[i];
 				cr->rate = -1;
-				_tcscpy (label, _T("PAL"));
-			} else if (_tcscmp (option, _T("displaydata_ntsc")) == 0) {
+				_tcscpy(label, _T("PAL"));
+			}
+			else if (_tcscmp(option, _T("displaydata_ntsc")) == 0) {
 				i = CHIPSET_REFRESH_NTSC;
-        cr = &p->cr[i];
+				cr = &p->cr[i];
 				cr->rate = -1;
-				_tcscpy (label, _T("NTSC"));
+				_tcscpy(label, _T("NTSC"));
 			}
 			if (!cr->inuse) {
 				cr->inuse = true;
@@ -2444,7 +2451,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
-  return 0;
+	return 0;
 }
 
 static struct uaedev_config_data *getuci(struct uae_prefs *p)

@@ -405,7 +405,7 @@ struct uae_prefs {
 	bool harddrive_read_only;
 
 	/* Target specific options */
-#ifdef AMIBERRY
+
 	int kbd_led_num;
 	int kbd_led_scr;
 	int kbd_led_cap;
@@ -421,13 +421,11 @@ struct uae_prefs {
 
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
-#endif
 
 #ifdef PANDORA
 	int pandora_vertical_offset;
 	int pandora_cpu_speed;
 	int pandora_hide_idle_led;
-
 	int pandora_tapDelay;
 #endif
 
@@ -446,10 +444,10 @@ struct uae_prefs {
 	int input_tablet;
 	int input_keyboard_type;
 
-	bool amiberry_use_retroarch_quit;
-	bool amiberry_use_retroarch_menu;
-	bool amiberry_use_retroarch_reset;
-	bool amiberry_use_retroarch_statebuttons;
+	bool use_retroarch_quit;
+	bool use_retroarch_menu;
+	bool use_retroarch_reset;
+	bool use_retroarch_statebuttons;
 
 	/* ANDROID */
 #ifdef ANDROIDSDL

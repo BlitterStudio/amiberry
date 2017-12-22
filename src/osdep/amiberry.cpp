@@ -50,7 +50,6 @@ bool host_poweroff = false;
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
-extern void gui_force_rtarea_hdchange(void);
 
 static int delayed_mousebutton = 0;
 static int doStylusRightClick;
@@ -223,7 +222,7 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->gfx_size.width == 0)
 		p->gfx_size.width = 640;
 	if (p->gfx_size.height == 0)
-		p->gfx_size.height == 256;
+		p->gfx_size.height = 256;
 	p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 
 	if (p->cachesize > 0)
@@ -269,9 +268,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
 
-	p->amiberry_use_retroarch_quit = true;
-	p->amiberry_use_retroarch_menu = true;
-	p->amiberry_use_retroarch_reset = false;
+	p->use_retroarch_quit = true;
+	p->use_retroarch_menu = true;
+	p->use_retroarch_reset = false;
 
 #ifdef ANDROIDSDL
 	p->onScreen = 1;
@@ -328,15 +327,15 @@ void target_default_options(struct uae_prefs* p, int type)
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
 #ifdef PANDORA
-	cfgfile_write(f, "pandora.cpu_speed", "%d", p->pandora_cpu_speed);
-	cfgfile_write(f, "pandora.hide_idle_led", "%d", p->pandora_hide_idle_led);
-	cfgfile_write(f, "pandora.tap_delay", "%d", p->pandora_tapDelay);
-	cfgfile_write(f, "pandora.move_y", "%d", p->pandora_vertical_offset - OFFSET_Y_ADJUST);
+	cfgfile_write(f, "amiberry.cpu_speed", "%d", p->pandora_cpu_speed);
+	cfgfile_write(f, "amiberry.hide_idle_led", "%d", p->pandora_hide_idle_led);
+	cfgfile_write(f, "amiberry.tap_delay", "%d", p->pandora_tapDelay);
+	cfgfile_write(f, "amiberry.move_y", "%d", p->pandora_vertical_offset - OFFSET_Y_ADJUST);
 #endif //PANDORA
 
 #ifdef USE_SDL1
-	cfgfile_write(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
-	cfgfile_write(f, _T("gfx_fullscreen_ratio"), _T("%d"), p->gfx_fullscreen_ratio);
+	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
+	cfgfile_write(f, _T("amiberry.gfx_fullscreen_ratio"), _T("%d"), p->gfx_fullscreen_ratio);
 #endif
 
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
@@ -349,39 +348,39 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_str(f, _T("amiberry.open_gui"), p->open_gui);
 	cfgfile_write_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 
-	cfgfile_write_bool(f, _T("amiberry_use_retroarch_quit"), p->amiberry_use_retroarch_quit);
-	cfgfile_write_bool(f, _T("amiberry_use_retroarch_menu"), p->amiberry_use_retroarch_menu);
-	cfgfile_write_bool(f, _T("amiberry_use_retroarch_reset"), p->amiberry_use_retroarch_reset);
+	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
+	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
+	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
 #ifdef ANDROIDSDL
-	cfgfile_write(f, "pandora.onscreen", "%d", p->onScreen);
-	cfgfile_write(f, "pandora.onscreen_textinput", "%d", p->onScreen_textinput);
-	cfgfile_write(f, "pandora.onscreen_dpad", "%d", p->onScreen_dpad);
-	cfgfile_write(f, "pandora.onscreen_button1", "%d", p->onScreen_button1);
-	cfgfile_write(f, "pandora.onscreen_button2", "%d", p->onScreen_button2);
-	cfgfile_write(f, "pandora.onscreen_button3", "%d", p->onScreen_button3);
-	cfgfile_write(f, "pandora.onscreen_button4", "%d", p->onScreen_button4);
-	cfgfile_write(f, "pandora.onscreen_button5", "%d", p->onScreen_button5);
-	cfgfile_write(f, "pandora.onscreen_button6", "%d", p->onScreen_button6);
-	cfgfile_write(f, "pandora.custom_position", "%d", p->custom_position);
-	cfgfile_write(f, "pandora.pos_x_textinput", "%d", p->pos_x_textinput);
-	cfgfile_write(f, "pandora.pos_y_textinput", "%d", p->pos_y_textinput);
-	cfgfile_write(f, "pandora.pos_x_dpad", "%d", p->pos_x_dpad);
-	cfgfile_write(f, "pandora.pos_y_dpad", "%d", p->pos_y_dpad);
-	cfgfile_write(f, "pandora.pos_x_button1", "%d", p->pos_x_button1);
-	cfgfile_write(f, "pandora.pos_y_button1", "%d", p->pos_y_button1);
-	cfgfile_write(f, "pandora.pos_x_button2", "%d", p->pos_x_button2);
-	cfgfile_write(f, "pandora.pos_y_button2", "%d", p->pos_y_button2);
-	cfgfile_write(f, "pandora.pos_x_button3", "%d", p->pos_x_button3);
-	cfgfile_write(f, "pandora.pos_y_button3", "%d", p->pos_y_button3);
-	cfgfile_write(f, "pandora.pos_x_button4", "%d", p->pos_x_button4);
-	cfgfile_write(f, "pandora.pos_y_button4", "%d", p->pos_y_button4);
-	cfgfile_write(f, "pandora.pos_x_button5", "%d", p->pos_x_button5);
-	cfgfile_write(f, "pandora.pos_y_button5", "%d", p->pos_y_button5);
-	cfgfile_write(f, "pandora.pos_x_button6", "%d", p->pos_x_button6);
-	cfgfile_write(f, "pandora.pos_y_button6", "%d", p->pos_y_button6);
-	cfgfile_write(f, "pandora.floating_joystick", "%d", p->floatingJoystick);
-	cfgfile_write(f, "pandora.disable_menu_vkeyb", "%d", p->disableMenuVKeyb);
+	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
+	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
+	cfgfile_write(f, "amiberry.onscreen_dpad", "%d", p->onScreen_dpad);
+	cfgfile_write(f, "amiberry.onscreen_button1", "%d", p->onScreen_button1);
+	cfgfile_write(f, "amiberry.onscreen_button2", "%d", p->onScreen_button2);
+	cfgfile_write(f, "amiberry.onscreen_button3", "%d", p->onScreen_button3);
+	cfgfile_write(f, "amiberry.onscreen_button4", "%d", p->onScreen_button4);
+	cfgfile_write(f, "amiberry.onscreen_button5", "%d", p->onScreen_button5);
+	cfgfile_write(f, "amiberry.onscreen_button6", "%d", p->onScreen_button6);
+	cfgfile_write(f, "amiberry.custom_position", "%d", p->custom_position);
+	cfgfile_write(f, "amiberry.pos_x_textinput", "%d", p->pos_x_textinput);
+	cfgfile_write(f, "amiberry.pos_y_textinput", "%d", p->pos_y_textinput);
+	cfgfile_write(f, "amiberry.pos_x_dpad", "%d", p->pos_x_dpad);
+	cfgfile_write(f, "amiberry.pos_y_dpad", "%d", p->pos_y_dpad);
+	cfgfile_write(f, "amiberry.pos_x_button1", "%d", p->pos_x_button1);
+	cfgfile_write(f, "amiberry.pos_y_button1", "%d", p->pos_y_button1);
+	cfgfile_write(f, "amiberry.pos_x_button2", "%d", p->pos_x_button2);
+	cfgfile_write(f, "amiberry.pos_y_button2", "%d", p->pos_y_button2);
+	cfgfile_write(f, "amiberry.pos_x_button3", "%d", p->pos_x_button3);
+	cfgfile_write(f, "amiberry.pos_y_button3", "%d", p->pos_y_button3);
+	cfgfile_write(f, "amiberry.pos_x_button4", "%d", p->pos_x_button4);
+	cfgfile_write(f, "amiberry.pos_y_button4", "%d", p->pos_y_button4);
+	cfgfile_write(f, "amiberry.pos_x_button5", "%d", p->pos_x_button5);
+	cfgfile_write(f, "amiberry.pos_y_button5", "%d", p->pos_y_button5);
+	cfgfile_write(f, "amiberry.pos_x_button6", "%d", p->pos_x_button6);
+	cfgfile_write(f, "amiberry.pos_y_button6", "%d", p->pos_y_button6);
+	cfgfile_write(f, "amiberry.floating_joystick", "%d", p->floatingJoystick);
+	cfgfile_write(f, "amiberry.disable_menu_vkeyb", "%d", p->disableMenuVKeyb);
 #endif
 }
 
@@ -447,11 +446,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		|| cfgfile_intval(option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
 #endif
 
-	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_quit"), &p->amiberry_use_retroarch_quit))
+	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;
-	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_menu"), &p->amiberry_use_retroarch_menu))
+	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))
 		return 1;
-	if (cfgfile_yesno(option, value, _T("amiberry_use_retroarch_reset"), &p->amiberry_use_retroarch_reset))
+	if (cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset))
 		return 1;
 
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
@@ -839,7 +838,7 @@ void loadAdfDir(void)
 				}
 				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof(tmpFile)))
 				{
-					FILE* f = fopen(tmpFile, "rb");
+					FILE* f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);

@@ -675,7 +675,7 @@ void RefreshPanelCustom(void)
 			}
 
 			else if (temp_button == host_input_buttons[hostjoyid].quit_button && temp_button != -1 && SelectedFunction == 1 &&
-				changed_prefs.amiberry_use_retroarch_quit)
+				changed_prefs.use_retroarch_quit)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
 				cboCustomAction[n]->setEnabled(false);
@@ -683,7 +683,7 @@ void RefreshPanelCustom(void)
 			}
 
 			else if (temp_button == host_input_buttons[hostjoyid].menu_button && temp_button != -1 && SelectedFunction == 1 &&
-				changed_prefs.amiberry_use_retroarch_menu)
+				changed_prefs.use_retroarch_menu)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
 				cboCustomAction[n]->setEnabled(false);
@@ -691,7 +691,7 @@ void RefreshPanelCustom(void)
 			}
 
 			else if (temp_button == host_input_buttons[hostjoyid].reset_button && temp_button != -1 && SelectedFunction == 1 &&
-				changed_prefs.amiberry_use_retroarch_reset)
+				changed_prefs.use_retroarch_reset)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
 				cboCustomAction[n]->setEnabled(false);

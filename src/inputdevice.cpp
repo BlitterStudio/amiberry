@@ -5554,9 +5554,9 @@ void inputdevice_copyconfig(struct uae_prefs *src, struct uae_prefs *dst)
 #ifdef AMIBERRY
 	strcpy(dst->open_gui, src->open_gui);
 	strcpy(dst->quit_amiberry, src->quit_amiberry);
-	dst->amiberry_use_retroarch_quit = src->amiberry_use_retroarch_quit;
-	dst->amiberry_use_retroarch_menu = src->amiberry_use_retroarch_menu;
-	dst->amiberry_use_retroarch_reset = src->amiberry_use_retroarch_reset;
+	dst->use_retroarch_quit = src->use_retroarch_quit;
+	dst->use_retroarch_menu = src->use_retroarch_menu;
+	dst->use_retroarch_reset = src->use_retroarch_reset;
 #endif
 
 	for (int i = 0; i < MAX_JPORTS; i++) {

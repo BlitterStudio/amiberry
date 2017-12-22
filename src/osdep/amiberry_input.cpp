@@ -1449,15 +1449,15 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	}
 
 	// if using retroarch options
-	if (currprefs.amiberry_use_retroarch_menu)
+	if (currprefs.use_retroarch_menu)
 	{
 		setid(uid, num, ID_BUTTON_OFFSET + 14, 0, port, INPUTEVENT_SPC_ENTERGUI, gp);
 	}
-	if (currprefs.amiberry_use_retroarch_quit)
+	if (currprefs.use_retroarch_quit)
 	{
 		setid(uid, num, ID_BUTTON_OFFSET + 15, 0, port, INPUTEVENT_SPC_QUIT, gp);
 	}
-	if (currprefs.amiberry_use_retroarch_reset)
+	if (currprefs.use_retroarch_reset)
 	{
 		setid(uid, num, ID_BUTTON_OFFSET + 30, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
 	}

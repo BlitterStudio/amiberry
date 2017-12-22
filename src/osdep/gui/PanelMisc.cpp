@@ -95,13 +95,13 @@ public:
 			changed_prefs.start_gui = chkShowGUI->isSelected();
 
 		else if (actionEvent.getSource() == chkRetroArchQuit)
-			changed_prefs.amiberry_use_retroarch_quit = chkRetroArchQuit->isSelected();
+			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
 
 		else if (actionEvent.getSource() == chkRetroArchMenu)
-			changed_prefs.amiberry_use_retroarch_menu = chkRetroArchMenu->isSelected();
+			changed_prefs.use_retroarch_menu = chkRetroArchMenu->isSelected();
 
 		else if (actionEvent.getSource() == chkRetroArchReset)
-			changed_prefs.amiberry_use_retroarch_reset = chkRetroArchReset->isSelected();
+			changed_prefs.use_retroarch_reset = chkRetroArchReset->isSelected();
 
 		//      else if (actionEvent.getSource() == chkRetroArchSavestate)
 		//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
@@ -342,10 +342,10 @@ void RefreshPanelMisc()
 #endif
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 
-	chkRetroArchQuit->setSelected(changed_prefs.amiberry_use_retroarch_quit);
-	chkRetroArchMenu->setSelected(changed_prefs.amiberry_use_retroarch_menu);
-	chkRetroArchReset->setSelected(changed_prefs.amiberry_use_retroarch_reset);
-	//chkRetroArchSavestate->setSelected(changed_prefs.amiberry_use_retroarch_statebuttons);  
+	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
+	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
+	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
+	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
 #ifdef PANDORA
 	sldPandoraSpeed->setValue(changed_prefs.pandora_cpu_speed);
 	snprintf(tmp, 20, "%d MHz", changed_prefs.pandora_cpu_speed);
