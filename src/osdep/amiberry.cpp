@@ -345,8 +345,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, _T("amiberry.scaling_method"), _T("%d"), p->scaling_method);
 #endif
 
-	cfgfile_write_str(f, _T("amiberry.open_gui"), p->open_gui);
-	cfgfile_write_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
+	cfgfile_dwrite_str(f, _T("amiberry.open_gui"), p->open_gui);
+	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
