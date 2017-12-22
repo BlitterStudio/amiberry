@@ -43,9 +43,7 @@ static int display_height;
 /* SDL Surface for output of emulation */
 SDL_Surface* screen = nullptr;
 
-#ifdef USE_SDL1
 static unsigned int current_vsync_frame = 0;
-#endif
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static unsigned long last_synctime;
 static int vsync_modulo = 1;
@@ -103,13 +101,14 @@ static void *display_thread(void *unused)
 		255 /*alpha 0->255*/ , 	0
 	};
 	uint32_t vc_image_ptr;
+	SDL_Surface *dummy_screen;
+	int width, height;
 
 	for (;;) {
 		display_thread_busy = false;
 		auto signal = read_comm_pipe_u32_blocking(display_pipe);
 		display_thread_busy = true;
-		int width, height;
-		SDL_Surface *dummy_screen;
+		
 		switch (signal) {
 		case DISPLAY_SIGNAL_SETUP:
 			bcm_host_init();
@@ -309,6 +308,7 @@ void graphics_subshutdown()
 	if (texture != nullptr)
 	{
 		SDL_DestroyTexture(texture);
+		texture = nullptr;
 	}
 #endif
 }
@@ -345,9 +345,7 @@ void Create_SDL_Texture(const int width, const int height, const int depth)
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
 bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int height)
 {
-	if (mode->w % width == 0 && mode->h % height == 0)
-		return true;
-	return false;
+	return mode->w % width == 0 && mode->h % height == 0;
 }
 #endif
 
@@ -357,7 +355,7 @@ void updatedisplayarea()
 	// Update the texture from the surface
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
-	// Copy the texture on the renderer
+	// Copy the texture to the renderer
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
@@ -366,6 +364,7 @@ void updatedisplayarea()
 
 static void open_screen(struct uae_prefs* p)
 {
+	graphics_subshutdown();
 	const auto depth = 16;
 	if (max_uae_width == 0 || max_uae_height == 0)
 	{
@@ -376,9 +375,10 @@ static void open_screen(struct uae_prefs* p)
 #ifdef USE_SDL1
 	current_resource_amigafb = 0;
 	next_synctime = 0;
+	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
+	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
 #endif
 
-#ifdef PICASSO96
 	if (screen_is_picasso)
 	{
 		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
@@ -388,7 +388,6 @@ static void open_screen(struct uae_prefs* p)
 #endif //USE_SDL2
 	}
 	else
-#endif //PICASSO96
 	{
 		p->gfx_resolution = p->gfx_size.width ? (p->gfx_size.width > 600 ? 1 : 0) : 1;
 		display_width = p->gfx_size.width ? p->gfx_size.width : 640;
@@ -409,12 +408,9 @@ static void open_screen(struct uae_prefs* p)
 #endif
 	}
 
-	graphics_subshutdown();
-
 #ifdef USE_SDL1
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_OPEN, 1);
-	vsync_counter = 0;
-	current_vsync_frame = 2;
+	uae_sem_wait (&display_sem);
 #elif USE_SDL2
 	Create_SDL_Surface(display_width, display_height, depth);
 
@@ -424,10 +420,15 @@ static void open_screen(struct uae_prefs* p)
 	{
 		SDL_RenderSetLogicalSize(renderer, display_width, (display_height * 2) >> p->gfx_vresolution);
 	}
+
 	Create_SDL_Texture(display_width, display_height, depth);
+
 	updatedisplayarea();
 #endif
 
+	vsync_counter = 0;
+	current_vsync_frame = 2;
+	
 	if (screen != nullptr)
 	{
 		InitAmigaVidMode(p);
@@ -437,8 +438,8 @@ static void open_screen(struct uae_prefs* p)
 
 void update_display(struct uae_prefs* p)
 {
+	open_screen(p);	
 	SDL_ShowCursor(SDL_DISABLE);
-	open_screen(p);
 	framecnt = 1; // Don't draw frame before reset done
 }
 
@@ -539,6 +540,7 @@ bool render_screen(bool immediate)
 void show_screen(int mode)
 {
 	const auto start = read_processor_time();
+
 #ifdef USE_SDL1
 	const auto wait_till = current_vsync_frame;
 	if (vsync_modulo == 1)
@@ -590,11 +592,9 @@ void show_screen(int mode)
 	}
 
 	current_vsync_frame += currprefs.gfx_framerate;
-#endif
 
 	last_synctime = read_processor_time();
 
-#ifdef USE_SDL1
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
@@ -621,7 +621,6 @@ bool show_screen_maybe(const bool show)
 	return false;
 }
 
-#ifdef USE_SDL1
 void black_screen_now()
 {
 	if (screen != nullptr)
@@ -631,7 +630,6 @@ void black_screen_now()
 		show_screen(0);
 	}
 }
-#endif
 
 static void graphics_subinit()
 {
@@ -648,7 +646,7 @@ static void graphics_subinit()
 	}
 }
 
-int bits_in_mask(unsigned long mask)
+STATIC_INLINE int bitsInMask(unsigned long mask)
 {
 	/* count bits in mask */
 	auto n = 0;
@@ -660,7 +658,7 @@ int bits_in_mask(unsigned long mask)
 	return n;
 }
 
-int mask_shift(unsigned long mask)
+STATIC_INLINE int maskShift(unsigned long mask)
 {
 	/* determine how far mask is shifted */
 	auto n = 0;
@@ -675,12 +673,12 @@ int mask_shift(unsigned long mask)
 static int init_colors()
 {
 	/* Truecolor: */
-	const int red_bits = bits_in_mask(screen->format->Rmask);
-	const int green_bits = bits_in_mask(screen->format->Gmask);
-	const int blue_bits = bits_in_mask(screen->format->Bmask);
-	const int red_shift = mask_shift(screen->format->Rmask);
-	const int green_shift = mask_shift(screen->format->Gmask);
-	const int blue_shift = mask_shift(screen->format->Bmask);
+	const int red_bits = bitsInMask(screen->format->Rmask);
+	const int green_bits = bitsInMask(screen->format->Gmask);
+	const int blue_bits = bitsInMask(screen->format->Bmask);
+	const int red_shift = maskShift(screen->format->Rmask);
+	const int green_shift = maskShift(screen->format->Gmask);
+	const int blue_shift = maskShift(screen->format->Bmask);
 	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, 0);
 	notice_new_xcolors();
 
@@ -704,10 +702,10 @@ static int get_display_depth()
 		* could actually be 15 bits deep. We'll count the bits
 		* ourselves */
 		if (depth == 16)
-			depth = bits_in_mask(vid_info->vfmt->Rmask) + bits_in_mask(vid_info->vfmt->Gmask) + bits_in_mask(vid_info->vfmt->Bmask);
+			depth = bitsInMask(vid_info->vfmt->Rmask) + bitsInMask(vid_info->vfmt->Gmask) + bitsInMask(vid_info->vfmt->Bmask);
 	}
 #elif USE_SDL2
-	int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
+	const int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
 #endif
 	return depth;
 }
@@ -758,8 +756,14 @@ void graphics_leave()
 	}
 
 #elif USE_SDL2
-	SDL_DestroyRenderer(renderer);
+	if (renderer != nullptr)
+	{
+		SDL_DestroyRenderer(renderer);
+		renderer = nullptr;
+	}
+	
 	SDL_DestroyWindow(sdlWindow);
+	sdlWindow = nullptr;
 #endif
 	SDL_VideoQuit();
 }
