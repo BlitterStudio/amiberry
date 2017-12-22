@@ -185,32 +185,28 @@ public:
 		const int selected_item = lstConfigs->getSelected();
 		if (txtName->getText() != ConfigFilesList[selected_item]->Name || txtDesc->getText() != ConfigFilesList[selected_item]->Description)
 		{
+			//-----------------------------------------------
+			// Selected a config -> Update Name and Description fields
+			//-----------------------------------------------
 			txtName->setText(ConfigFilesList[selected_item]->Name);
 			txtDesc->setText(ConfigFilesList[selected_item]->Description);
-			//-----------------------------------------------
-			// Selected same config again -> load and start it
-			//-----------------------------------------------
-			//if (emulating)
-			//{
-			//	uae_restart(0, ConfigFilesList[selected_item]->FullPath);
-			//}
-			//else
-			//{
-			//	target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
-			//	//strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
-			//	txtName->setText(ConfigFilesList[selected_item]->Name);
-			//	txtDesc->setText(ConfigFilesList[selected_item]->Description);
-			//	DisableResume();
-			//	RefreshAllPanels();
-				//uae_reset(0, 1);
-			//}
-			//gui_running = false;
 		}
-		//else
-		//{
-		//	txtName->setText(ConfigFilesList[selected_item]->Name);
-		//	txtDesc->setText(ConfigFilesList[selected_item]->Description);
-		//}
+		else
+		{
+			//-----------------------------------------------
+			// Second click on selected config -> Load it and start emulation
+			// ----------------------------------------------
+			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
+			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
+
+			if (emulating)
+			{
+				DisableResume();
+			}
+			RefreshAllPanels();
+			uae_reset(1, 0);
+			gui_running = false;
+		}
 	}
 };
 
