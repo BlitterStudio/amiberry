@@ -129,7 +129,7 @@ static void parse_compatibility(struct uae_prefs* p, xmlNode* node)
 					clip_no_hires = true;
 				else if (strcmp(reinterpret_cast<const char *>(content), "jit") == 0)
 				{
-					p->cachesize = 8192;
+					p->cachesize = MAX_JIT_CACHE;
 					p->address_space_24 = false;
 				}
 				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-cpu-cycles") == 0)
