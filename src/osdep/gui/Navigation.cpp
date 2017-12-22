@@ -473,7 +473,7 @@ bool HandleNavigation(int direction)
 
 			if (focusTarget != nullptr)
 			{
-				if (activeWidget->getId().substr(0, 3) != "cbo" || activeWidget->getId().substr(0, 5) != "qscbo")
+				if (activeWidget->getId().substr(0, 3) == "cbo" || activeWidget->getId().substr(0, 5) == "qscbo")
 				{
 					const auto dropdown = dynamic_cast<gcn::UaeDropDown *>(activeWidget);
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
