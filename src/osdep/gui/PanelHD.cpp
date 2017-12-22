@@ -476,22 +476,22 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	category.panel->add(cmdAddDirectory, DISTANCE_BORDER, posY);
 	category.panel->add(cmdAddHardfile, DISTANCE_BORDER + cmdAddDirectory->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cmdCreateHardfile, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
 
-	posY += cmdAddDirectory->getHeight() + 2 * DISTANCE_NEXT_Y;
 	category.panel->add(chkHDReadOnly, DISTANCE_BORDER, posY);
+	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y;
 
-	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y + 4;
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
 	category.panel->add(cmdCDEject, category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelect, category.panel->getWidth() - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
 	posY += cmdCDSelect->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(cboCDFile, DISTANCE_BORDER, posY);
 	posY += cboCDFile->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblCDVol, DISTANCE_BORDER, posY);
 	category.panel->add(sldCDVol, DISTANCE_BORDER + lblCDVol->getWidth() + 8, posY);
 	category.panel->add(lblCDVolInfo, sldCDVol->getX() + sldCDVol->getWidth() + 12, posY);
-	posY += sldCDVol->getHeight() + DISTANCE_NEXT_Y;
 
 	RefreshPanelHD();
 }
