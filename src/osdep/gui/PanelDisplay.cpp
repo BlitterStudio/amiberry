@@ -180,7 +180,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 #endif //PANDORA
 
 #ifdef USE_SDL1
-	lblFSRatio = new gcn::Label("Fullscreen Ratio:");
+	lblFSRatio = new gcn::Label("Ratio:");
 	lblFSRatio->setAlignment(gcn::Graphics::RIGHT);
 	sldFSRatio = new gcn::Slider(0, 20);
 	sldFSRatio->setSize(160, SLIDER_HEIGHT);
@@ -349,6 +349,7 @@ void RefreshPanelDisplay()
 			break;
 		}
 	}
+	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 #endif
 
 #ifdef USE_SDL2
