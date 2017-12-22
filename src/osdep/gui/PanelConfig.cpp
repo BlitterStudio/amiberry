@@ -120,13 +120,12 @@ public:
 			i = lstConfigs->getSelected();
 			if (emulating)
 			{
-				uae_restart(-1, ConfigFilesList[i]->FullPath);
+				DisableResume();
 			}
 			else
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
-				DisableResume();
 				RefreshAllPanels();
 			}
 		}
@@ -267,7 +266,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 
 	lstConfigs = new gcn::UaeListBox(configsList);
 	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 232);
-	lstConfigs->setBaseColor(gui_baseCol);
+	lstConfigs->setBaseColor(colTextboxBackground);
 	lstConfigs->setBackgroundColor(colTextboxBackground);
 	lstConfigs->setWrappingEnabled(true);
 	lstConfigs->setId("ConfigList");
@@ -336,7 +335,7 @@ void RefreshPanelConfig()
 	{
 		for (auto i = 0; i < ConfigFilesList.size(); ++i)
 		{
-			if (!_tcscmp(ConfigFilesList[i]->Name, txtName->getText().c_str()))
+			if (txtName->getText() == ConfigFilesList[i]->Name)
 			{
 				// Select current entry
 				lstConfigs->setSelected(i);
