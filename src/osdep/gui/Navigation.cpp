@@ -247,13 +247,12 @@ static NavigationMap navMap[] =
   { "cboPort1",         "Input",          "cboPort1mode",       "cboPort0",         "cboPort2" },
   { "cboPort1mode",     "cboPort1",       "Input",              "cboPort0mode",     "cboPort2" },
   { "cboPort2",         "Input",          "cboPort2mode",       "cboPort1",         "cboPort3" },
-  { "cboPort3",         "Input",          "cboPort3mode",       "cboPort2",         "MouseSpeed" },
+  { "cboPort3",         "Input",          "cboPort3mode",       "cboPort2",         "cboPort0mousemode" },
+  { "cboPort0mousemode","Input",          "MouseSpeed",         "cboPort3",         "cboPort1mousemode" },
+  { "cboPort1mousemode","Input",          "MouseSpeed",         "cboPort0mousemode","cboAutofire" },
   { "MouseSpeed",       "",               "",                   "cboPort3",         "MouseHack" },
-  { "MouseHack",        "Input",          "cboPort1mousemode",  "MouseSpeed",       "cboAutofire" },
-  { "cboPort0mousemode","MouseSpeed",     "Input",              "cboPort3",         "cboPort1mousemode"  },
-  { "cboPort1mousemode","MouseHack",      "Input",              "cboPort0mousemode","cboTapDelay"  },
-  { "cboAutofire",      "Input",          "cboTapDelay",        "MouseHack",        "cboPort0" },
-  { "cboTapDelay",      "cboAutofire",    "Input",              "cboPort1mousemode","cboPort0mode" },
+  { "MouseHack",        "cboAutofire",    "cboAutofire",        "MouseSpeed",       "cboPort0" },
+  { "cboAutofire",      "Input",          "MouseHack",          "cboPort1mousemode","cboPort0" },
 
   // PanelCustom
   { "0: Mouse",         "Custom controls",  "1: Joystick",      "cboCustomAction13",     "None" },
@@ -305,12 +304,12 @@ static NavigationMap navMap[] =
   { "RetroArchMenu",  "HideIdle",       "Miscellaneous",  "RetroArchQuit",  "RetroArchReset" },
   { "RetroArchReset", "ShowGUI",        "Miscellaneous",  "RetroArchMenu",  "BSDSocket" },
 
-  { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",        "numlock" },
+  { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",        "MasterWP" },
   { "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "numlock" },
-  { "numlock",        "Miscellaneous",	"scrolllock",	  "MasterWP",	     "KeyForMenu" },
-  { "scrolllock",     "numlock",	"Miscellaneous",  "MasterWP",	     "KeyForQuit" },
-  { "KeyForMenu",     "Miscellaneous",	"KeyForQuit",     "numlock",	     "StatusLine" },
-  { "KeyForQuit",     "KeyForMenu",	"Miscellaneous",  "scrolllock",	     "StatusLine" },
+  { "numlock",        "Miscellaneous",	"scrolllock",	  "MasterWP",	     "OpenGUI" },
+  { "scrolllock",     "numlock",	    "Miscellaneous",  "MasterWP",	     "KeyForQuit" },
+  { "OpenGUI",        "Miscellaneous",	"KeyForQuit",     "numlock",	     "StatusLine" },
+  { "KeyForQuit",     "OpenGUI",	    "Miscellaneous",  "scrolllock",	     "StatusLine" },
 
 #endif
 
