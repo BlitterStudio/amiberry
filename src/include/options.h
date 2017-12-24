@@ -419,11 +419,12 @@ struct uae_prefs {
 	int scaling_method;
 #endif
 
+	int vertical_offset;
+
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 
 #ifdef PANDORA
-	int pandora_vertical_offset;
 	int pandora_cpu_speed;
 	int pandora_hide_idle_led;
 	int pandora_tapDelay;

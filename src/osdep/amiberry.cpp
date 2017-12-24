@@ -238,8 +238,7 @@ void target_default_options(struct uae_prefs* p, int type)
 #ifdef PANDORA
 	p->gfx_size.width = 320;
 	p->gfx_size.height = 240;
-	p->gfx_resolution = RES_LORES;
-	p->pandora_vertical_offset = OFFSET_Y_ADJUST;
+	p->gfx_resolution = RES_LORES;	
 	p->pandora_cpu_speed = defaultCpuSpeed;
 	p->pandora_hide_idle_led = 0;
 	p->pandora_tapDelay = 10;
@@ -255,6 +254,8 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
+
+	p->vertical_offset = OFFSET_Y_ADJUST;
 
 #ifdef USE_SDL1
 	p->gfx_correct_aspect = 1;
@@ -330,8 +331,9 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write(f, "amiberry.cpu_speed", "%d", p->pandora_cpu_speed);
 	cfgfile_write(f, "amiberry.hide_idle_led", "%d", p->pandora_hide_idle_led);
 	cfgfile_write(f, "amiberry.tap_delay", "%d", p->pandora_tapDelay);
-	cfgfile_write(f, "amiberry.move_y", "%d", p->pandora_vertical_offset - OFFSET_Y_ADJUST);
 #endif //PANDORA
+
+	cfgfile_write(f, "amiberry.vertical_offset", "%d", p->vertical_offset - OFFSET_Y_ADJUST);
 
 #ifdef USE_SDL1
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
@@ -409,10 +411,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, "tap_delay", &p->pandora_tapDelay, 1)
 		return 1;
-	if (cfgfile_intval(option, value, "move_y", &p->pandora_vertical_offset, 1) {
-		p->pandora_vertical_offset += OFFSET_Y_ADJUST;
-		return 1;
-	}
 #endif //PANDORA
 
 #ifdef ANDROIDSDL
@@ -458,6 +456,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
 		return 1;
 
+	if (cfgfile_intval(option, value, "vertical_offset", &p->vertical_offset, 1))
+	{
+		p->vertical_offset += OFFSET_Y_ADJUST;
+		return 1;
+	}
 #ifdef USE_SDL1
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
 		return 1;
@@ -986,7 +989,7 @@ void target_shutdown(void)
 int main(int argc, char* argv[])
 {
 	struct sigaction action{};
-	printf("Amiberry v2.6, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
+	printf("Amiberry v2.7, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
 
 	max_uae_width = 1920;
 	max_uae_height = 1080;

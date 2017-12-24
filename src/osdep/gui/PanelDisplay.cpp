@@ -47,11 +47,9 @@ static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
 
-#ifdef PANDORA
 static gcn::Label* lblVertPos;
 static gcn::Label* lblVertPosInfo;
 static gcn::Slider* sldVertPos;
-#endif
 
 static gcn::UaeCheckBox* chkLineDbl;
 static gcn::UaeCheckBox* chkFrameskip;
@@ -85,16 +83,14 @@ public:
 				RefreshPanelDisplay();
 			}
 		}
-#ifdef PANDORA
 		else if (actionEvent.getSource() == sldVertPos)
 		{
-			if (changed_prefs.pandora_vertical_offset != (int)(sldVertPos->getValue()) + OFFSET_Y_ADJUST)
+			if (changed_prefs.vertical_offset != int(sldVertPos->getValue()) + OFFSET_Y_ADJUST)
 			{
-				changed_prefs.pandora_vertical_offset = (int)(sldVertPos->getValue()) + OFFSET_Y_ADJUST;
+				changed_prefs.vertical_offset = int(sldVertPos->getValue()) + OFFSET_Y_ADJUST;
 				RefreshPanelDisplay();
 			}
 		}
-#endif
 		else
 			if (actionEvent.getSource() == chkFrameskip)
 			{
@@ -166,8 +162,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
-#ifdef PANDORA
-	lblVertPos = new gcn::Label("Vert. offset:");
+	lblVertPos = new gcn::Label("V. offset:");
 	lblVertPos->setAlignment(gcn::Graphics::RIGHT);
 	sldVertPos = new gcn::Slider(-16, 16);
 	sldVertPos->setSize(160, SLIDER_HEIGHT);
@@ -177,7 +172,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldVertPos->setId("sldVertPos");
 	sldVertPos->addActionListener(amigaScreenActionListener);
 	lblVertPosInfo = new gcn::Label("000");
-#endif //PANDORA
 
 #ifdef USE_SDL1
 	lblFSRatio = new gcn::Label("Ratio:");
@@ -203,21 +197,21 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+
 	grpAmigaScreen->add(lblAmigaWidth, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(sldAmigaWidth, lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpAmigaScreen->add(lblAmigaWidthInfo, sldAmigaWidth->getX() + sldAmigaWidth->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpAmigaScreen->add(sldAmigaWidth, lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(lblAmigaWidthInfo, sldAmigaWidth->getX() + sldAmigaWidth->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += sldAmigaWidth->getHeight() + DISTANCE_NEXT_Y;
+
 	grpAmigaScreen->add(lblAmigaHeight, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(sldAmigaHeight, lblAmigaHeight->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpAmigaScreen->add(lblAmigaHeightInfo, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpAmigaScreen->add(sldAmigaHeight, lblAmigaHeight->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(lblAmigaHeightInfo, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 
-#ifdef PANDORA
 	grpAmigaScreen->add(lblVertPos, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(sldVertPos, lblVertPos->getX() + lblVertPos->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpAmigaScreen->add(sldVertPos, lblVertPos->getX() + lblVertPos->getWidth() + DISTANCE_NEXT_X, posY);
 	grpAmigaScreen->add(lblVertPosInfo, sldVertPos->getX() + sldVertPos->getWidth() + 12, posY);
 	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
-#endif
 
 #ifdef USE_SDL1
 	grpAmigaScreen->add(lblFSRatio, DISTANCE_BORDER, posY);
@@ -227,7 +221,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 #endif
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(lblAmigaHeightInfo->getX() + lblAmigaHeightInfo->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER);
+	grpAmigaScreen->setSize(lblVertPos->getX() + lblVertPos->getWidth() + sldVertPos->getX() + sldVertPos->getWidth() + lblVertPosInfo->getX() + lblVertPosInfo->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpAmigaScreen);
@@ -260,7 +254,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
-
 	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 #endif
 
@@ -282,13 +275,9 @@ void ExitPanelDisplay()
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete lblAmigaHeightInfo;
-
-#ifdef PANDORA
 	delete lblVertPos;
 	delete sldVertPos;
 	delete lblVertPosInfo;
-#endif
-
 	delete grpAmigaScreen;
 
 #ifdef USE_SDL1
@@ -361,11 +350,9 @@ void RefreshPanelDisplay()
 		optLinear->setSelected(true);
 #endif
 
-#ifdef PANDORA
-	sldVertPos->setValue(changed_prefs.pandora_vertical_offset - OFFSET_Y_ADJUST);
-	snprintf(tmp, 32, "%d", changed_prefs.pandora_vertical_offset - OFFSET_Y_ADJUST);
+	sldVertPos->setValue(changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
+	snprintf(tmp, 32, "%d", changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
 	lblVertPosInfo->setCaption(tmp);
-#endif //PANDORA
 }
 
 bool HelpPanelDisplay(std::vector<std::string> &helptext)
@@ -382,12 +369,9 @@ bool HelpPanelDisplay(std::vector<std::string> &helptext)
 	helptext.emplace_back("some distortion if your resolution is not an exact multiple. ");
 	helptext.emplace_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
 	helptext.emplace_back("");
-#ifdef PANDORA
 	helptext.emplace_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga ");
-	helptext.emplace_back("screen. You can also change this during emulation with left and right shoulder button ");
-	helptext.emplace_back("and dpad up/down.");
+	helptext.emplace_back("screen.");
 	helptext.emplace_back("");
-#endif //PANDORA
 	helptext.emplace_back("Activate line doubling to remove flicker in interlace modes.");
 	helptext.emplace_back("");
 	helptext.emplace_back("When you activate \"Frameskip\", only every second frame is drawn.");

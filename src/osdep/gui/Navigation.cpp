@@ -39,11 +39,7 @@ static NavigationMap navMap[] =
 	{ "RAM", "Chipmem", "Chipmem", "ROM", "Floppy drives" },
 	{ "Floppy drives", "cmdSel0", "DF0:", "RAM", "Hard drives/CD" },
 	{ "Hard drives/CD", "cmdCreateHDF", "cmdAddDir", "Floppy drives", "Display"},
-#ifdef USE_SDL1
 	{ "Display",          "sldWidth",       "sldWidth",       "Hard drives/CD", "Sound" },
-#elif USE_SDL2
-	{ "Display", "Frameskip", "Frameskip", "Hard drives/CD", "Sound" },
-#endif
 	{ "Sound",            "sndDisable",           "sndDisable",       "Display",          "Input" },
   	{ "Input",            "cboPort0mode",         "cboPort0",         "Sound",            "Custom controls" },
   	{ "Custom controls",  "Right Trigger",        "0: Mouse",         "Input",            "Miscellaneous" },
@@ -214,18 +210,21 @@ static NavigationMap navMap[] =
 
 	// PanelDisplay
 #ifdef USE_SDL1
-	{ "sldWidth",       "",             "",               "Frameskip",      "sldHeight" },
-  	{ "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
-  	{ "sldVertPos",     "",             "",               "sldHeight",      "FSRatio" },
-  	{ "FSRatio",        "",             "",               "sldVertPos",     "4by3Ratio" },
-  	{ "4by3Ratio",      "Display",      "Display",        "FSRatio",        "Line doubling" },
-  	{ "Line doubling",  "Display",      "Display",        "4by3Ratio",      "Frameskip" },
-  	{ "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
+  { "sldWidth",       "",             "",               "Frameskip",      "sldHeight" },
+  { "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
+  { "sldVertPos",     "",             "",               "sldHeight",      "FSRatio" },
+  { "FSRatio",        "",             "",               "sldVertPos",     "4by3Ratio" },
+  { "4by3Ratio",      "Display",      "Display",        "FSRatio",        "Line doubling" },
+  { "Line doubling",  "Display",      "Display",        "4by3Ratio",      "Frameskip" },
+  { "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
 #elif USE_SDL2
-	{"Frameskip", "Display", "Display", "Linear (smooth)", "Auto"},
-	{"Auto", "Display", "Display", "Frameskip", "Nearest Neighbor (pixelated)"},
-	{ "Nearest Neighbor (pixelated)", "Display", "Display", "Auto", "Linear (smooth)"},
-	{"Linear (smooth)", "Display", "Display", "Nearest Neighbor (pixelated)", "Frameskip"},
+  { "sldWidth",       "",             "",               "Linear (smooth)","sldHeight" },
+  { "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
+  { "sldVertPos",     "",             "",               "sldHeight",      "Frameskip" },
+  { "Frameskip", "Display", "Display", "Linear (smooth)", "Auto" },
+  { "Auto", "Display", "Display", "Frameskip", "Nearest Neighbor (pixelated)" },
+  { "Nearest Neighbor (pixelated)", "Display", "Display", "Auto", "Linear (smooth)" },
+  { "Linear (smooth)", "Display", "Display", "Nearest Neighbor (pixelated)", "Frameskip" },
 #endif
 
 //PanelSound
@@ -243,7 +242,6 @@ static NavigationMap navMap[] =
   
 //  active            move left           move right          move up           move down
 // PanelInput
-#ifdef AMIBERRY
   { "cboPort0",         "Input",          "cboPort0mode",       "cboAutofire",      "cboPort1" },
   { "cboPort0mode",     "cboPort0",       "Input",              "cboTapDelay",      "cboPort1mode" },
   { "cboPort1",         "Input",          "cboPort1mode",       "cboPort0",         "cboPort2" },
@@ -256,34 +254,7 @@ static NavigationMap navMap[] =
   { "cboPort1mousemode","MouseHack",      "Input",              "cboPort0mousemode","cboTapDelay"  },
   { "cboAutofire",      "Input",          "cboTapDelay",        "MouseHack",        "cboPort0" },
   { "cboTapDelay",      "cboAutofire",    "Input",              "cboPort1mousemode","cboPort0mode" },
-#else
-  { "cboPort0",         "Input",          "cboPort0mode",       "cboLeft",          "cboPort1" },
-  { "cboPort0mode",     "cboPort0",       "cboPort0mousemode",  "cboLeft",          "cboPort1mode" },  
-  { "cboPort1",         "Input",          "cboPort1mode",       "cboPort0",         "MouseSpeed" },
-  { "cboPort1mode",     "cboPort1",       "Input",              "cboPort0mode",     "MouseSpeed" },
-  { "cboAutofire",      "cboPort1",       "Input",              "cboPort1mousemode","cboTapDelay" },  
-  { "MouseSpeed",       "",               "",                   "cboPort1",         "MouseHack" },
-  { "MouseHack",        "Input",          "cboTapDelay",        "MouseSpeed",       "CustomCtrl" },
-  { "cboTapDelay",      "cboAutofire",      "Input",              "cboAutofire",      "cboB" },
-#endif
 
-#ifdef PANDORA
-  { "CustomCtrl",       "Input",          "Input",              "MouseHack",        "cboA" },
-  { "cboA",             "Input",          "cboB",               "CustomCtrl",       "cboX" },
-  { "cboB",             "cboA",           "Input",              "cboTapDelay",      "cboY" },
-  { "cboX",             "Input",          "cboY",               "cboA",             "cboL" },
-  { "cboY",             "cboX",           "Input",              "cboB",             "cboR" },
-  { "cboL",             "Input",          "cboR",               "cboX",             "cboUp" },
-  { "cboR",             "cboL",           "Input",              "cboY",             "cboDown" },
-  { "cboUp",            "Input",          "cboDown",            "cboL",             "cboLeft" },
-  { "cboDown",          "cboUp",          "Input",              "cboR",             "cboRight" },
-  { "cboLeft",          "Input",          "cboRight",           "cboUp",            "cboPort0" },
-  { "cboRight",         "cboLeft",        "Input",              "cboDown",          "cboPort0mode" },
-
-#endif
-
-  
-#ifndef PANDORA
   // PanelCustom
   { "0: Mouse",         "Custom controls",  "1: Joystick",      "cboCustomAction13",     "None" },
   { "1: Joystick",      "0: Mouse",         "2: Parallel 1",    "cboCustomAction13",     "HotKey" },
@@ -311,7 +282,6 @@ static NavigationMap navMap[] =
   { "cboCustomAction12", "cboCustomAction5",  "Custom controls", "cboCustomAction11",  "cboCustomAction13" },
   { "cboCustomAction13", "cboCustomAction6",  "Custom controls", "cboCustomAction12",  "1: Joystick" },
 
-#endif
 // PanelMisc
 //  active            move left           move right          move up           move down
 
@@ -501,12 +471,13 @@ void PushFakeKey(const SDLKey inKey)
 }
 #elif USE_SDL2
 void PushFakeKey(const SDL_Keycode inKey)
-{       SDL_Event nuevent;
-        
-        nuevent.type = SDL_KEYDOWN;  // and the key up
-        nuevent.key.keysym.sym = inKey;
-        gui_input->pushInput(nuevent); // Fire key down
-        nuevent.type = SDL_KEYUP;  // and the key up
-        gui_input->pushInput(nuevent); // Fire key down
+{
+	SDL_Event nuevent;
+
+	nuevent.type = SDL_KEYDOWN;  // and the key up
+	nuevent.key.keysym.sym = inKey;
+	gui_input->pushInput(nuevent); // Fire key down
+	nuevent.type = SDL_KEYUP;  // and the key up
+	gui_input->pushInput(nuevent); // Fire key down
 }
 #endif

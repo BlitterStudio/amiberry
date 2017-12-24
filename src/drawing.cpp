@@ -49,8 +49,6 @@
 #include "audio.h"
 #include "devices.h"
 
-#define VERTICAL_OFFSET 18
-
 #define RENDER_SIGNAL_PARTIAL 1
 #define RENDER_SIGNAL_FRAME_DONE 2
 #define RENDER_SIGNAL_QUIT 3
@@ -1525,7 +1523,7 @@ static void init_aspect_maps(void)
 		if (amiga2aspect_line_map[i] == -1)
 			continue;
 		for (int j = amiga2aspect_line_map[i]; j < h && native2amiga_line_map[j] == -1; j++)
-			native2amiga_line_map[j] = (i + VERTICAL_OFFSET) >> linedbl;
+			native2amiga_line_map[j] = i + currprefs.vertical_offset >> linedbl;
 	}
 }
 
@@ -1906,11 +1904,7 @@ static void center_image(void)
 		max_drawn_amiga_line_tmp = gfxvidinfo.drawbuffer.outheight;
 	max_drawn_amiga_line_tmp >>= linedbl;
 
-#ifdef PANDORA
-	thisframe_y_adjust = minfirstline + currprefs.pandora_vertical_offset;
-#else
-	thisframe_y_adjust = minfirstline + VERTICAL_OFFSET;
-#endif
+	thisframe_y_adjust = minfirstline + currprefs.vertical_offset;
 
 	/* Make sure the value makes sense */
 	if (thisframe_y_adjust + max_drawn_amiga_line_tmp > maxvpos + maxvpos / 2)
