@@ -8,21 +8,21 @@ endif
 # SDL1 targets
 #
 ifeq ($(PLATFORM),rpi3)
-    CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi2)
-    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi1)
-    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
     MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
     LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
@@ -34,7 +34,7 @@ else ifeq ($(PLATFORM),Pandora)
     PROFILER_PATH = /media/MAINSD/pandora/test
 	
 else ifeq ($(PLATFORM),xu4)
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -54,20 +54,20 @@ else ifeq ($(PLATFORM),android)
 #	
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
     LDFLAGS += -lm
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard
+    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 
@@ -80,7 +80,7 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),xu4-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -105,26 +105,11 @@ PROG   = $(NAME)
 all: $(PROG)
 
 #DEBUG=1
-#TRACER=1
-
 #GEN_PROFILE=1
 #USE_PROFILE=1
 
 SDL_CFLAGS = `sdl-config --cflags`
-
-DEFS +=  `xml2-config --cflags`
-DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
-#DEFS += -DWITH_LOGGING
-
-MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers
-MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
-#MORE_CFLAGS += -fuse-ld=gold -fdiagnostics-color=auto
-#MORE_CFLAGS += -mstructure-size-boundary=32
-MORE_CFLAGS += -falign-functions=32
-MORE_CFLAGS += -std=gnu++14
-
-LDFLAGS += -lSDL -lpthread -lz -lSDL_image -lpng -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
-LDFLAGS += -lSDL_ttf -lguichan_sdl -lguichan
+LDFLAGS += -lSDL -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
 
 endif
 #
@@ -154,18 +139,7 @@ guisan:
 #USE_PROFILE=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
-
-DEFS += `xml2-config --cflags`
-DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
-#DEFS += -DWITH_LOGGING
-
-MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/guisan/include -Isrc/archivers
-MORE_CFLAGS += -fdiagnostics-color=auto
-#MORE_CFLAGS += -mstructure-size-boundary=32
-MORE_CFLAGS += -falign-functions=32
-MORE_CFLAGS += -std=gnu++14
-
-LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
+MORE_CFLAGS += -Isrc/guisan/include
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lsrc/guisan/lib
 
 endif
@@ -176,18 +150,28 @@ endif
 #
 # Common options
 #
+
+MORE_CFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers
+DEFS += `xml2-config --cflags`
+DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
+#DEFS += -DWITH_LOGGING
+
 ifndef DEBUG
-    MORE_CFLAGS += -Ofast -pipe
-    MORE_CFLAGS += -fweb -frename-registers
-    MORE_CFLAGS += -funroll-loops -ftracer -funswitch-loops
+    MORE_CFLAGS += -Ofast -pipe -std=gnu++14
+    MORE_CFLAGS += -fweb -frename-registers -falign-functions=32
+    MORE_CFLAGS += -funroll-loops -ftracer -fdiagnostics-color=auto
+    MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 else
-    MORE_CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+    MORE_CFLAGS += -std=gnu++14 -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+    MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 endif
 
 ifdef WITH_LOGGING
     MORE_CFLAGS += -DWITH_LOGGING
 endif
 
+LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
+	
 ASFLAGS += $(CPU_FLAGS) -falign-functions=32
 
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
