@@ -288,7 +288,7 @@ void translate_amiberry_keys(int scancode, int newstate)
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1);
 		}
 #ifdef USE_SDL2
-		if (currprefs.quit_amiberry != "" && scancode == SDL_GetKeyFromName(currprefs.quit_amiberry))
+		if (strncmp(currprefs.quit_amiberry, "", 1) != 0 && scancode == SDL_GetKeyFromName(currprefs.quit_amiberry))
 		{
 			inputdevice_add_inputcode(AKS_QUIT, 1);
 		}
