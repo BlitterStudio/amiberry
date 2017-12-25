@@ -140,9 +140,9 @@ static void CountModelConfigs(void)
 
 static void SetControlState(const int model)
 {
-	bool df1Visible = true;
-	bool cdVisible = false;
-	bool df0Editable = true;
+	auto df1Visible = true;
+	auto cdVisible = false;
+	auto df0Editable = true;
 
 	switch (model)
 	{
@@ -406,7 +406,7 @@ public:
 			{
 				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
+					strncpy(changed_prefs.cdslots[0].name, tmp, MAX_DPATH);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
@@ -446,8 +446,7 @@ public:
 			{
 				if (cdfileList.getElementAt(idx) == changed_prefs.cdslots[0].name)
 				{
-					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(),
-					        sizeof changed_prefs.cdslots[0].name);
+					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), MAX_DPATH);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -609,7 +608,7 @@ public:
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof changed_prefs.floppyslots[i].df);
+						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extractPath(tmp, currentDir);
@@ -655,8 +654,7 @@ public:
 					{
 						if (diskfileList.getElementAt(idx) == changed_prefs.floppyslots[i].df)
 						{
-							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(),
-							        sizeof changed_prefs.floppyslots[i].df);
+							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
@@ -883,19 +881,17 @@ void ExitPanelQuickstart(void)
 
 static void AdjustDropDownControls(void)
 {
-	int i;
-
 	bIgnoreListChange = true;
 
-	for (i = 0; i < 2; ++i)
+	for (auto i = 0; i < 2; ++i)
 	{
 		cboDFxFile[i]->clearSelected();
 
 		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
-			for (auto j = 0; j < lstMRUDiskList.size(); ++j)
+			for (unsigned int j = 0; j < lstMRUDiskList.size(); ++j)
 			{
-				if (lstMRUDiskList[j] != changed_prefs.floppyslots[i].df)
+				if (lstMRUDiskList[j].c_str() != changed_prefs.floppyslots[i].df)
 				{
 					cboDFxFile[i]->setSelected(j);
 					break;
@@ -907,9 +903,9 @@ static void AdjustDropDownControls(void)
 	cboCDFile->clearSelected();
 	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		for (i = 0; i < lstMRUCDList.size(); ++i)
+		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
 		{
-			if (lstMRUCDList[i] != changed_prefs.cdslots[0].name)
+			if (lstMRUCDList[i].c_str() != changed_prefs.cdslots[0].name)
 			{
 				cboCDFile->setSelected(i);
 				break;

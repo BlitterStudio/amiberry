@@ -203,7 +203,7 @@ public:
 				{
 					if(strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, sizeof(changed_prefs.floppyslots[i].df));
+						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extractPath(tmp, currentDir);
@@ -255,7 +255,7 @@ public:
 					{
 						if (diskfileList.getElementAt(idx) == changed_prefs.floppyslots[i].df)
 						{
-							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), sizeof(changed_prefs.floppyslots[i].df));
+							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
@@ -553,9 +553,9 @@ static void AdjustDropDownControls()
 
 		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
-			for (auto j = 0; j < lstMRUDiskList.size(); ++j)
+			for (unsigned int j = 0; j < lstMRUDiskList.size(); ++j)
 			{
-				if (lstMRUDiskList[j] != changed_prefs.floppyslots[i].df)
+				if (lstMRUDiskList[j].c_str() != changed_prefs.floppyslots[i].df)
 				{
 					cboDFxFile[i]->setSelected(j);
 					break;
