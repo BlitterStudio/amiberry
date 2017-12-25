@@ -79,16 +79,16 @@ struct inputdevconfig {
 	TCHAR shortid[16];
 };
 struct jport {
-	int id;
-	int mode; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
-	int autofire;
-	int mousemap;
-	struct inputdevconfig idc;
-	bool nokeyboardoverride;
-        struct joypad_map_layout amiberry_custom_none;
-        struct joypad_map_layout amiberry_custom_hotkey;
-        struct joypad_map_layout amiberry_custom_left_trigger;
-        struct joypad_map_layout amiberry_custom_right_trigger;
+	int id{};
+	int mode{}; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
+	int autofire{};
+	int mousemap{};
+	struct inputdevconfig idc {};
+	bool nokeyboardoverride{};
+	struct joypad_map_layout amiberry_custom_none;
+	struct joypad_map_layout amiberry_custom_hotkey;
+	struct joypad_map_layout amiberry_custom_left_trigger;
+	struct joypad_map_layout amiberry_custom_right_trigger;
 };
 
 #define JPORT_UNPLUGGED -2
@@ -572,9 +572,6 @@ extern struct uae_prefs currprefs, changed_prefs;
 
 extern int machdep_init (void);
 extern void machdep_free (void);
-
-
-
 
 struct amiberry_customised_layout {
     
