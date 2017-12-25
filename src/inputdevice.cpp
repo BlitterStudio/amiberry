@@ -499,7 +499,7 @@ static void inputdevice_store_used_device(struct jport *jps, int portnum, bool d
 
 static void inputdevice_store_unplugged_port(struct uae_prefs *p, struct inputdevconfig *idc)
 {
-	struct jport jpt = { 0 };
+	struct jport jpt = {};
 	_tcscpy(jpt.idc.configname, idc->configname);
 	_tcscpy(jpt.idc.name, idc->name);
 	jpt.id = JPORT_UNPLUGGED;
@@ -6385,7 +6385,7 @@ void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 			}
 			if (!matched[i]) {
 				if (jp->idc.configname[0] && jp->idc.name[0]) {
-					struct jport jpt = { 0 };
+					struct jport jpt = {};
 					memcpy(&jpt.idc, &jp->idc, sizeof(struct inputdevconfig));
 					jpt.id = JPORT_UNPLUGGED;
 					write_log(_T("Unplugged stored, port %d '%s' (%s)\n"), i, jp->idc.name, jp->idc.configname);
