@@ -446,21 +446,21 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	txtPortInput->setSize(grpFunction->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()), TEXTFIELD_HEIGHT);
 
-	lblCustomAction[0] = new gcn::Label("D-Pad Up:");
-	lblCustomAction[1] = new gcn::Label("D-Pad Down:");
-	lblCustomAction[2] = new gcn::Label("D-Pad Left:");
-	lblCustomAction[3] = new gcn::Label("D-Pad Right:");
+	lblCustomAction[0] = new gcn::Label("DPad Up:");
+	lblCustomAction[1] = new gcn::Label("DPad Down:");
+	lblCustomAction[2] = new gcn::Label("DPad Left:");
+	lblCustomAction[3] = new gcn::Label("DPad Right:");
 	lblCustomAction[4] = new gcn::Label("Select:");
-	lblCustomAction[5] = new gcn::Label("Left Shoulder:");
-	lblCustomAction[6] = new gcn::Label("Left Analog:");
+	lblCustomAction[5] = new gcn::Label("L.Shoulder:");
+	lblCustomAction[6] = new gcn::Label("L.Analog:");
 
 	lblCustomAction[7] = new gcn::Label("North:");
 	lblCustomAction[8] = new gcn::Label("South:");
 	lblCustomAction[9] = new gcn::Label("East:");
 	lblCustomAction[10] = new gcn::Label("West:");
 	lblCustomAction[11] = new gcn::Label("Start:");
-	lblCustomAction[12] = new gcn::Label("Right Shoulder:");
-	lblCustomAction[13] = new gcn::Label("Right Analog:");
+	lblCustomAction[12] = new gcn::Label("R.Shoulder:");
+	lblCustomAction[13] = new gcn::Label("R.Analog:");
 
 	for (i = 0; i < 14; ++i)
 	{
@@ -468,7 +468,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		lblCustomAction[i]->setAlignment(gcn::Graphics::RIGHT);
 
 		cboCustomAction[i] = new gcn::UaeDropDown(&CustomEventList);
-		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth(), DROPDOWN_HEIGHT);
+		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth()*2, DROPDOWN_HEIGHT);
 		cboCustomAction[i]->setBaseColor(gui_baseCol);
 		cboCustomAction[i]->setBackgroundColor(colTextboxBackground);
 
@@ -480,8 +480,8 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	auto posY = 144 + 40;
 	for (i = 0; i < 7; ++i)
 	{
-		category.panel->add(lblCustomAction[i], DISTANCE_BORDER, posY);
-		category.panel->add(cboCustomAction[i], DISTANCE_BORDER + lblCustomAction[i]->getWidth() + 8, posY);
+		category.panel->add(lblCustomAction[i], DISTANCE_BORDER/2, posY);
+		category.panel->add(cboCustomAction[i], DISTANCE_BORDER/2 + lblCustomAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
@@ -490,7 +490,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	for (i = 7; i < 14; ++i)
 	{
 		category.panel->add(lblCustomAction[i], DISTANCE_BORDER + 290, posY);
-		category.panel->add(cboCustomAction[i], DISTANCE_BORDER + lblCustomAction[i]->getWidth() + 290 + 8, posY);
+		category.panel->add(cboCustomAction[i], DISTANCE_BORDER + lblCustomAction[i]->getWidth() + 290 + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
