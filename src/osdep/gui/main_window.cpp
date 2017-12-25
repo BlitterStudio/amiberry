@@ -57,7 +57,7 @@ ConfigCategory categories[] = {
 	{ "ROM",              "data/chip.ico", nullptr, nullptr, InitPanelROM,       ExitPanelROM,       RefreshPanelROM,        HelpPanelROM },
 	{ "RAM",              "data/chip.ico", nullptr, nullptr, InitPanelRAM,       ExitPanelRAM,       RefreshPanelRAM,        HelpPanelRAM },
 	{ "Floppy drives",    "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy,    ExitPanelFloppy,    RefreshPanelFloppy,     HelpPanelFloppy },
-	{ "Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD,        ExitPanelHD,        RefreshPanelHD,         HelpPanelHD },
+	{ "Hard drives/CD",   "data/drive.ico", nullptr, nullptr, InitPanelHD,        ExitPanelHD,        RefreshPanelHD,         HelpPanelHD },
 	{ "Display",          "data/screen.ico", nullptr, nullptr, InitPanelDisplay,   ExitPanelDisplay,   RefreshPanelDisplay,    HelpPanelDisplay },
 	{ "Sound",            "data/sound.ico", nullptr, nullptr, InitPanelSound,     ExitPanelSound,     RefreshPanelSound,      HelpPanelSound },
 	{ "Input",            "data/joystick.ico", nullptr, nullptr, InitPanelInput,     ExitPanelInput,     RefreshPanelInput,      HelpPanelInput },
@@ -84,9 +84,7 @@ enum
 	PANEL_DISPLAY,
 	PANEL_SOUND,
 	PANEL_INPUT,
-#ifndef PANDORA
 	PANEL_CUSTOM,
-#endif
 	PANEL_MISC,
 	PANEL_SAVESTATES,
 #ifdef ANDROIDSDL
@@ -766,9 +764,35 @@ namespace widgets
 		//-------------------------------------------------
 		TTF_Init();
 #ifdef USE_SDL1
-		gui_font = new gcn::contrib::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
+		try
+		{
+			gui_font = new gcn::contrib::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
+		}
+		catch (const std::exception& ex)
+		{
+			write_log("Could not open data/AmigaTopaz.ttf!\n");
+			abort();
+		}
+		catch (...)
+		{
+			write_log("An error occurred while trying to open data/AmigaTopaz.ttf!\n");
+			abort();
+		}
 #elif USE_SDL2
-		gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
+		try
+		{
+			gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
+		}
+		catch(const std::exception& ex)
+		{
+			write_log("Could not open data/AmigaTopaz.ttf!\n");
+			abort();
+		}
+		catch (...)
+		{
+			write_log("An error occurred while trying to open data/AmigaTopaz.ttf!\n");
+			abort();
+		}		
 #endif
 		gcn::Widget::setGlobalFont(gui_font);
 
