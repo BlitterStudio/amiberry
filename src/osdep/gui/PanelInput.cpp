@@ -114,62 +114,10 @@ StringListModel ctrlPortMouseModeList(mousemapValues, 4);
 
 const char* joyportmodes[] = {"Mouse", "Joystick", "CD32", "Default"};
 StringListModel ctrlPortModeList(joyportmodes, 4);
-const char *tapDelayValues[] = { "Normal", "Short", "None" };
-StringListModel tapDelayList(tapDelayValues, 3);
 
 #ifdef PANDORA
-const char* mappingValues[] =
-{
-	"CD32 rwd", "CD32 ffw", "CD32 play", "CD32 yellow", "CD32 green",
-	"Joystick Right", "Joystick Left", "Joystick Down", "Joystick Up",
-	"Joystick fire but.2", "Joystick fire but.1", "Mouse right button", "Mouse left button",
-	"------------------",
-	"Arrow Up", "Arrow Down", "Arrow Left", "Arrow Right", "Numpad 0", "Numpad 1", "Numpad 2",
-	"Numpad 3", "Numpad 4", "Numpad 5", "Numpad 6", "Numpad 7", "Numpad 8", "Numpad 9",
-	"Numpad Enter", "Numpad /", "Numpad *", "Numpad -", "Numpad +",
-	"Numpad Delete", "Numpad (", "Numpad )",
-	"Space", "Backspace", "Tab", "Return", "Escape", "Delete",
-	"Left Shift", "Right Shift", "CAPS LOCK", "CTRL", "Left ALT", "Right ALT",
-	"Left Amiga Key", "Right Amiga Key", "Help", "Left Bracket", "Right Bracket",
-	"Semicolon", "Comma", "Period", "Slash", "Backslash", "Quote", "#",
-	"</>", "Backquote", "-", "=",
-	"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-	"N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-	"1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-	"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "NULL"
-};
-StringListModel mappingList(mappingValues, 110);
-static int amigaKey[] =
-{
-	REMAP_CD32_RWD, REMAP_CD32_FFW, REMAP_CD32_PLAY, REMAP_CD32_YELLOW, REMAP_CD32_GREEN,
-	REMAP_JOY_RIGHT, REMAP_JOY_LEFT, REMAP_JOY_DOWN, REMAP_JOY_UP, REMAP_JOYBUTTON_TWO, REMAP_JOYBUTTON_ONE, REMAP_MOUSEBUTTON_RIGHT, REMAP_MOUSEBUTTON_LEFT,
-	0, AK_UP, AK_DN, AK_LF, AK_RT, AK_NP0, AK_NP1, AK_NP2, /*  13 -  20 */
-	AK_NP3, AK_NP4, AK_NP5, AK_NP6, AK_NP7, AK_NP8, AK_NP9, AK_ENT, /*  21 -  28 */
-	AK_NPDIV, AK_NPMUL, AK_NPSUB, AK_NPADD, AK_NPDEL, AK_NPLPAREN, AK_NPRPAREN, AK_SPC, /*  29 -  36 */
-	AK_BS, AK_TAB, AK_RET, AK_ESC, AK_DEL, AK_LSH, AK_RSH, AK_CAPSLOCK, /*  37 -  44 */
-	AK_CTRL, AK_LALT, AK_RALT, AK_LAMI, AK_RAMI, AK_HELP, AK_LBRACKET, AK_RBRACKET, /*  45 -  52 */
-	AK_SEMICOLON, AK_COMMA, AK_PERIOD, AK_SLASH, AK_BACKSLASH, AK_QUOTE, AK_NUMBERSIGN, AK_LTGT, /*  53 -  60 */
-	AK_BACKQUOTE, AK_MINUS, AK_EQUAL, AK_A, AK_B, AK_C, AK_D, AK_E, /*  61 -  68 */
-	AK_F, AK_G, AK_H, AK_I, AK_J, AK_K, AK_L, AK_M, /*  69 -  76 */
-	AK_N, AK_O, AK_P, AK_Q, AK_R, AK_S, AK_T, AK_U, /*  77 -  84 */
-	AK_V, AK_W, AK_X, AK_Y, AK_Z, AK_1, AK_2, AK_3, /*  85 -  92 */
-	AK_4, AK_5, AK_6, AK_7, AK_8, AK_9, AK_0, AK_F1, /*  93 - 100 */
-	AK_F2, AK_F3, AK_F4, AK_F5, AK_F6, AK_F7, AK_F8, AK_F9, /* 101 - 108 */
-	AK_F10, 0
-}; /*  109 - 110 */
-#ifdef USE_SDL1
-extern int customControlMap[SDLK_LAST];
-#endif
-
-static int GetAmigaKeyIndex(int key)
-{
-	for (int i = 0; i < 110; ++i)
-	{
-		if (amigaKey[i] == key)
-			return i;
-	}
-	return 13; // Default: no key
-}
+const char *tapDelayValues[] = { "Normal", "Short", "None" };
+StringListModel tapDelayList(tapDelayValues, 3);
 #endif
 
 class InputActionListener : public gcn::ActionListener
@@ -365,8 +313,6 @@ static InputActionListener* inputActionListener;
 
 void InitPanelInput(const struct _ConfigCategory& category)
 {
-	
-#ifndef PANDORA
 	if (ctrlPortList.getNumberOfElements() == 0)
 	{
 		auto idx = 0;
@@ -392,7 +338,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 			portListIDs[idx] = JSEM_JOYS + i;
 		}
 	}
-#endif
 
 	inputActionListener = new InputActionListener();
 	const auto textFieldWidth = category.panel->getWidth() - (2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X);

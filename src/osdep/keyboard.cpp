@@ -14,6 +14,256 @@
 #include "gui.h"
 #include <SDL.h>
 
+char keyboard_type = 0;
+
+static struct uae_input_device_kbr_default keytrans_amiga_x11[] = {
+
+{ 9, INPUTEVENT_KEY_ESC },
+{ 67, INPUTEVENT_KEY_F1 },
+{ 68, INPUTEVENT_KEY_F2 },
+{ 69, INPUTEVENT_KEY_F3 },
+{ 70, INPUTEVENT_KEY_F4 },
+{ 71, INPUTEVENT_KEY_F5 },
+{ 72, INPUTEVENT_KEY_F6 },
+{ 73, INPUTEVENT_KEY_F7 },
+{ 74, INPUTEVENT_KEY_F8 },
+{ 75, INPUTEVENT_KEY_F9 },
+{ 76, INPUTEVENT_KEY_F10 },
+//{ 95,   INPUTEVENT_KEY_F11},
+//{ 96,   INPUTEVENT_KEY_F12},
+
+{ 49, INPUTEVENT_KEY_BACKQUOTE },
+
+{ 10, INPUTEVENT_KEY_1 },
+{ 11, INPUTEVENT_KEY_2 },
+{ 12, INPUTEVENT_KEY_3 },
+{ 13, INPUTEVENT_KEY_4 },
+{ 14, INPUTEVENT_KEY_5 },
+{ 15, INPUTEVENT_KEY_6 },
+{ 16, INPUTEVENT_KEY_7 },
+{ 17, INPUTEVENT_KEY_8 },
+{ 18, INPUTEVENT_KEY_9 },
+{ 19, INPUTEVENT_KEY_0 },
+{ 20, INPUTEVENT_KEY_SUB },
+{ 21, INPUTEVENT_KEY_EQUALS },
+{ 22, INPUTEVENT_KEY_BACKSPACE },
+
+{ 23, INPUTEVENT_KEY_TAB },
+{ 24, INPUTEVENT_KEY_Q },
+{ 25, INPUTEVENT_KEY_W },
+{ 26, INPUTEVENT_KEY_E },
+{ 27, INPUTEVENT_KEY_R },
+{ 28, INPUTEVENT_KEY_T },
+{ 29, INPUTEVENT_KEY_Y },
+{ 30, INPUTEVENT_KEY_U },
+{ 31, INPUTEVENT_KEY_I },
+{ 32, INPUTEVENT_KEY_O },
+{ 33, INPUTEVENT_KEY_P },
+{ 34, INPUTEVENT_KEY_LEFTBRACKET },
+{ 35, INPUTEVENT_KEY_RIGHTBRACKET },
+{ 36, INPUTEVENT_KEY_RETURN },
+
+{ 66, INPUTEVENT_KEY_CAPS_LOCK },
+{ 38, INPUTEVENT_KEY_A },
+{ 39, INPUTEVENT_KEY_S },
+{ 40, INPUTEVENT_KEY_D },
+{ 41, INPUTEVENT_KEY_F },
+{ 42, INPUTEVENT_KEY_G },
+{ 43, INPUTEVENT_KEY_H },
+{ 44, INPUTEVENT_KEY_J },
+{ 45, INPUTEVENT_KEY_K },
+{ 46, INPUTEVENT_KEY_L },
+{ 47, INPUTEVENT_KEY_SEMICOLON },
+{ 48, INPUTEVENT_KEY_SINGLEQUOTE },
+{ 51, INPUTEVENT_KEY_BACKSLASH },
+
+{ 50, INPUTEVENT_KEY_SHIFT_LEFT },
+{ 94, INPUTEVENT_KEY_LTGT },
+{ 52, INPUTEVENT_KEY_Z },
+{ 53, INPUTEVENT_KEY_X },
+{ 54, INPUTEVENT_KEY_C },
+{ 55, INPUTEVENT_KEY_V },
+{ 56, INPUTEVENT_KEY_B },
+{ 57, INPUTEVENT_KEY_N },
+{ 58, INPUTEVENT_KEY_M },
+{ 59, INPUTEVENT_KEY_COMMA },
+{ 60, INPUTEVENT_KEY_PERIOD },
+{ 61, INPUTEVENT_KEY_DIV },
+{ 62, INPUTEVENT_KEY_SHIFT_RIGHT },
+
+{ 37, INPUTEVENT_KEY_CTRL },
+{ 64, INPUTEVENT_KEY_ALT_LEFT },
+{ 65, INPUTEVENT_KEY_SPACE },
+
+{ 108, INPUTEVENT_KEY_ALT_RIGHT },
+
+//{ 78,  INPUTEVENT_KEY_SCROLLOCK},
+
+//{ 77,  INPUTEVENT_KEY_NUMLOCK},
+{ 106, INPUTEVENT_KEY_NP_DIV },
+{ 63, INPUTEVENT_KEY_NP_MUL },
+{ 82, INPUTEVENT_KEY_NP_SUB },
+
+{ 79, INPUTEVENT_KEY_NP_7 },
+{ 80, INPUTEVENT_KEY_NP_8 },
+{ 81, INPUTEVENT_KEY_NP_9 },
+{ 86, INPUTEVENT_KEY_NP_ADD },
+
+{ 83, INPUTEVENT_KEY_NP_4 },
+{ 84, INPUTEVENT_KEY_NP_5 },
+{ 85, INPUTEVENT_KEY_NP_6 },
+
+{ 87, INPUTEVENT_KEY_NP_1 },
+{ 88, INPUTEVENT_KEY_NP_2 },
+{ 89, INPUTEVENT_KEY_NP_3 },
+{ 104, INPUTEVENT_KEY_ENTER },         // The ENT from keypad..
+
+{ 90, INPUTEVENT_KEY_NP_0 },
+{ 91, INPUTEVENT_KEY_NP_PERIOD },
+
+{ 111, INPUTEVENT_KEY_CURSOR_UP },
+{ 113, INPUTEVENT_KEY_CURSOR_LEFT },
+{ 116, INPUTEVENT_KEY_CURSOR_DOWN },
+{ 114, INPUTEVENT_KEY_CURSOR_RIGHT },
+
+
+{ 110, INPUTEVENT_KEY_NP_LPAREN },     // Map home   to left  parent (as fsuae)
+{ 112, INPUTEVENT_KEY_NP_RPAREN },     // Map pageup to right parent (as fsuae)
+
+{ 115, INPUTEVENT_KEY_HELP },          // Help mapped to End key (as fsuae)
+
+{ 119, INPUTEVENT_KEY_DEL },
+
+{ 133, INPUTEVENT_KEY_AMIGA_LEFT },   // Left amiga mapped to left Windows
+{ 134, INPUTEVENT_KEY_AMIGA_RIGHT },  // Right amiga mapped to right windows key.
+{ 135, INPUTEVENT_KEY_AMIGA_RIGHT },  // Right amiga mapped to Menu key.
+{ -1, 0 }
+};
+
+static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] = {
+
+{ 9 - 8, INPUTEVENT_KEY_ESC },
+{ 67 - 8, INPUTEVENT_KEY_F1 },
+{ 68 - 8, INPUTEVENT_KEY_F2 },
+{ 69 - 8, INPUTEVENT_KEY_F3 },
+{ 70 - 8, INPUTEVENT_KEY_F4 },
+{ 71 - 8, INPUTEVENT_KEY_F5 },
+{ 72 - 8, INPUTEVENT_KEY_F6 },
+{ 73 - 8, INPUTEVENT_KEY_F7 },
+{ 74 - 8, INPUTEVENT_KEY_F8 },
+{ 75 - 8, INPUTEVENT_KEY_F9 },
+{ 76 - 8, INPUTEVENT_KEY_F10 },
+// { 95 -8 ,   INPUTEVENT_KEY_F11},
+// { 96 -8 ,   INPUTEVENT_KEY_F12},
+
+{ 49 - 8, INPUTEVENT_KEY_BACKQUOTE },
+
+{ 10 - 8, INPUTEVENT_KEY_1 },
+{ 11 - 8, INPUTEVENT_KEY_2 },
+{ 12 - 8, INPUTEVENT_KEY_3 },
+{ 13 - 8, INPUTEVENT_KEY_4 },
+{ 14 - 8, INPUTEVENT_KEY_5 },
+{ 15 - 8, INPUTEVENT_KEY_6 },
+{ 16 - 8, INPUTEVENT_KEY_7 },
+{ 17 - 8, INPUTEVENT_KEY_8 },
+{ 18 - 8, INPUTEVENT_KEY_9 },
+{ 19 - 8, INPUTEVENT_KEY_0 },
+{ 20 - 8, INPUTEVENT_KEY_SUB },
+{ 21 - 8, INPUTEVENT_KEY_EQUALS },
+{ 22 - 8, INPUTEVENT_KEY_BACKSPACE },
+
+{ 23 - 8, INPUTEVENT_KEY_TAB },
+{ 24 - 8, INPUTEVENT_KEY_Q },
+{ 25 - 8, INPUTEVENT_KEY_W },
+{ 26 - 8, INPUTEVENT_KEY_E },
+{ 27 - 8, INPUTEVENT_KEY_R },
+{ 28 - 8, INPUTEVENT_KEY_T },
+{ 29 - 8, INPUTEVENT_KEY_Y },
+{ 30 - 8, INPUTEVENT_KEY_U },
+{ 31 - 8, INPUTEVENT_KEY_I },
+{ 32 - 8, INPUTEVENT_KEY_O },
+{ 33 - 8, INPUTEVENT_KEY_P },
+{ 34 - 8, INPUTEVENT_KEY_LEFTBRACKET },
+{ 35 - 8, INPUTEVENT_KEY_RIGHTBRACKET },
+{ 36 - 8, INPUTEVENT_KEY_RETURN },
+
+{ 66 - 8, INPUTEVENT_KEY_CAPS_LOCK },
+{ 38 - 8, INPUTEVENT_KEY_A },
+{ 39 - 8, INPUTEVENT_KEY_S },
+{ 40 - 8, INPUTEVENT_KEY_D },
+{ 41 - 8, INPUTEVENT_KEY_F },
+{ 42 - 8, INPUTEVENT_KEY_G },
+{ 43 - 8, INPUTEVENT_KEY_H },
+{ 44 - 8, INPUTEVENT_KEY_J },
+{ 45 - 8, INPUTEVENT_KEY_K },
+{ 46 - 8, INPUTEVENT_KEY_L },
+{ 47 - 8, INPUTEVENT_KEY_SEMICOLON },
+{ 48 - 8, INPUTEVENT_KEY_SINGLEQUOTE },
+{ 51 - 8, INPUTEVENT_KEY_BACKSLASH },
+
+{ 50 - 8, INPUTEVENT_KEY_SHIFT_LEFT },
+{ 94 - 8, INPUTEVENT_KEY_LTGT },
+{ 52 - 8, INPUTEVENT_KEY_Z },
+{ 53 - 8, INPUTEVENT_KEY_X },
+{ 54 - 8, INPUTEVENT_KEY_C },
+{ 55 - 8, INPUTEVENT_KEY_V },
+{ 56 - 8, INPUTEVENT_KEY_B },
+{ 57 - 8, INPUTEVENT_KEY_N },
+{ 58 - 8, INPUTEVENT_KEY_M },
+{ 59 - 8, INPUTEVENT_KEY_COMMA },
+{ 60 - 8, INPUTEVENT_KEY_PERIOD },
+{ 61 - 8, INPUTEVENT_KEY_DIV },
+{ 62 - 8, INPUTEVENT_KEY_SHIFT_RIGHT },
+
+{ 37 - 8, INPUTEVENT_KEY_CTRL },
+{ 64 - 8, INPUTEVENT_KEY_ALT_LEFT },
+{ 65 - 8, INPUTEVENT_KEY_SPACE },
+
+{ 108 - 8, INPUTEVENT_KEY_ALT_RIGHT },
+
+//{ 78 -8 ,  INPUTEVENT_KEY_SCROLLOCK},
+
+//{ 77 -8 ,  INPUTEVENT_KEY_NUMLOCK},
+{ 106 - 8, INPUTEVENT_KEY_NP_DIV },
+{ 63 - 8, INPUTEVENT_KEY_NP_MUL },
+{ 82 - 8, INPUTEVENT_KEY_NP_SUB },
+
+{ 79 - 8, INPUTEVENT_KEY_NP_7 },
+{ 80 - 8, INPUTEVENT_KEY_NP_8 },
+{ 81 - 8, INPUTEVENT_KEY_NP_9 },
+{ 86 - 8, INPUTEVENT_KEY_NP_ADD },
+
+{ 83 - 8, INPUTEVENT_KEY_NP_4 },
+{ 84 - 8, INPUTEVENT_KEY_NP_5 },
+{ 85 - 8, INPUTEVENT_KEY_NP_6 },
+
+{ 87 - 8, INPUTEVENT_KEY_NP_1 },
+{ 88 - 8, INPUTEVENT_KEY_NP_2 },
+{ 89 - 8, INPUTEVENT_KEY_NP_3 },
+{ 104 - 8, INPUTEVENT_KEY_ENTER },         // The ENT from keypad..
+
+{ 90 - 8, INPUTEVENT_KEY_NP_0 },
+{ 91 - 8, INPUTEVENT_KEY_PERIOD },
+
+{ 111 - 8, INPUTEVENT_KEY_CURSOR_UP },
+{ 113 - 8, INPUTEVENT_KEY_CURSOR_LEFT },
+{ 116 - 8, INPUTEVENT_KEY_CURSOR_DOWN },
+{ 114 - 8, INPUTEVENT_KEY_CURSOR_RIGHT },
+
+
+{ 110 - 8, INPUTEVENT_KEY_NP_LPAREN },     // Map home   to left  parent (as fsuae)
+{ 112 - 8, INPUTEVENT_KEY_NP_RPAREN },     // Map pageup to right parent (as fsuae)
+
+{ 115 - 8, INPUTEVENT_KEY_HELP },          // Help mapped to End key (as fsuae)
+
+{ 119 - 8, INPUTEVENT_KEY_DEL },
+
+{ 133 - 8, INPUTEVENT_KEY_AMIGA_LEFT },   // Left amiga mapped to left Windows
+{ 134 - 8, INPUTEVENT_KEY_AMIGA_RIGHT },  // Right amiga mapped to right windows key.
+{ 135 - 8, INPUTEVENT_KEY_AMIGA_RIGHT },  // Right amiga mapped to Menu key.
+{ -1, 0 }
+};
+
 static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	
 	{ VK_ESCAPE, INPUTEVENT_KEY_ESC },
@@ -162,6 +412,18 @@ static struct uae_input_device_kbr_default *keytrans[] =
 	keytrans_amiga
 };
 
+static struct uae_input_device_kbr_default *keytrans_x11[] = {
+	keytrans_amiga_x11,
+	keytrans_amiga_x11,
+	keytrans_amiga_x11
+};
+
+static struct uae_input_device_kbr_default *keytrans_fbcon[] = {
+	keytrans_amiga_fbcon,
+	keytrans_amiga_fbcon,
+	keytrans_amiga_fbcon
+};
+
 #ifdef USE_SDL1
 static int kb_np[] = { SDLK_KP4, -1, SDLK_KP6, -1, SDLK_KP8, -1, SDLK_KP2, -1, SDLK_KP0, SDLK_KP5, -1, SDLK_KP_PERIOD, -1, SDLK_KP_ENTER, -1, -1 };
 #elif USE_SDL2
@@ -212,7 +474,28 @@ static int *kbmaps[] = {
 
 void keyboard_settrans(void)
 {
+#ifdef USE_SDL1
+	char vid_drv_name[32];
+	// get display type...
+	SDL_VideoDriverName(vid_drv_name, sizeof vid_drv_name);
+	if (strcmp(vid_drv_name, "x11") == 0)
+	{
+		keyboard_type = KEYCODE_X11;
+		inputdevice_setkeytranslation(keytrans_x11, kbmaps);
+	}
+	else  if (strcmp(vid_drv_name, "fbcon") == 0)
+	{
+		keyboard_type = KEYCODE_FBCON;
+		inputdevice_setkeytranslation(keytrans_fbcon, kbmaps);
+	}
+	else
+	{
+		keyboard_type = KEYCODE_UNK;
+		inputdevice_setkeytranslation(keytrans, kbmaps);
+	}
+#elif USE_SDL2
 	inputdevice_setkeytranslation(keytrans, kbmaps);
+#endif
 }
 
 static bool specialpressed()
@@ -260,240 +543,6 @@ static const int np[] = {
 	SDLK_KP_3, 3, SDLK_KP_4, 4, SDLK_KP_5, 5, SDLK_KP_6, 6, SDLK_KP_7, 7,
 	SDLK_KP_8, 8, SDLK_KP_9, 9, -1 };
 #endif
-
-void translate_amiberry_keys(int scancode, int newstate)
-{
-	if (newstate) 
-	{
-		const int defaultguikey = SDLK_F12;
-		if (strncmp(currprefs.open_gui, "",1) == 0)
-		{
-#ifdef USE_SDL1
-			if (scancode == defaultguikey)
-			{
-				//if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			}
-#elif USE_SDL2
-			if (scancode == defaultguikey && SDL_GetKeyFromName(currprefs.open_gui) != scancode) {
-				if (specialpressed() && ctrlpressed() && shiftpressed() && altpressed())
-					inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			}
-			else if (scancode == SDL_GetKeyFromName(currprefs.open_gui)) {
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			}
-#endif
-		}
-		else if (!specialpressed() && !ctrlpressed() && !shiftpressed() && !altpressed() && scancode == defaultguikey) {
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-		}
-#ifdef USE_SDL2
-		if (strncmp(currprefs.quit_amiberry, "", 1) != 0 && scancode == SDL_GetKeyFromName(currprefs.quit_amiberry))
-		{
-			inputdevice_add_inputcode(AKS_QUIT, 1);
-		}
-#endif
-	}
-
-	if (!specialpressed() && newstate) {
-		if (scancode == SDLK_CAPSLOCK) {
-			host_capslockstate = host_capslockstate ? 0 : 1;
-			capslockstate = host_capslockstate;
-		}
-#ifdef USE_SDL1
-		if (scancode == SDLK_NUMLOCK) {
-			host_numlockstate = host_numlockstate ? 0 : 1;
-			capslockstate = host_numlockstate;
-		}
-#elif USE_SDL2
-		if (scancode == SDLK_NUMLOCKCLEAR) {
-			host_numlockstate = host_numlockstate ? 0 : 1;
-			capslockstate = host_numlockstate;
-		}
-#endif
-#ifdef USE_SDL1
-		if (scancode == SDLK_SCROLLOCK) {
-			host_scrolllockstate = host_scrolllockstate ? 0 : 1;
-			capslockstate = host_scrolllockstate;
-		}
-#elif USE_SDL2
-		if (scancode == SDLK_SCROLLLOCK) {
-			host_scrolllockstate = host_scrolllockstate ? 0 : 1;
-			capslockstate = host_scrolllockstate;
-		}
-#endif
-	}
-
-	int translatedScancode = scancode;
-	switch (scancode)
-	{
-	case SDLK_UP:
-		translatedScancode = AK_UP;
-		break;
-	case SDLK_DOWN:
-		translatedScancode = AK_DN;
-		break;
-	case SDLK_LEFT:
-		translatedScancode = AK_LF;
-		break;
-	case SDLK_RIGHT:
-		translatedScancode = AK_RT;
-		break;
-	case SDLK_F1:
-		translatedScancode = AK_F1;
-		break;
-	case SDLK_F2:
-		translatedScancode = AK_F2;
-		break;
-	case SDLK_F3:
-		translatedScancode = AK_F3;
-		break;
-	case SDLK_F4:
-		translatedScancode = AK_F4;
-		break;
-	case SDLK_F5:
-		translatedScancode = AK_F5;
-		break;
-	case SDLK_F6:
-		translatedScancode = AK_F6;
-		break;
-	case SDLK_F7:
-		translatedScancode = AK_F7;
-		break;
-	case SDLK_F8:
-		translatedScancode = AK_F8;
-		break;
-	case SDLK_F9:
-		translatedScancode = AK_F9;
-		break;
-	case SDLK_F10:
-		translatedScancode = AK_F10;
-		break;
-	case SDLK_LSHIFT:
-		translatedScancode = AK_LSH;
-		break;
-	case SDLK_RSHIFT:
-		translatedScancode = AK_RSH;
-		break;
-#ifdef USE_SDL1
-	case SDLK_RSUPER:
-	case SDLK_RMETA:
-		translatedScancode = AK_RAMI;
-		break;
-	case SDLK_LSUPER:
-	case SDLK_LMETA:
-		translatedScancode = AK_LAMI;
-		break;
-#elif USE_SDL2
-	case SDLK_RGUI:
-	case SDLK_APPLICATION:
-		translatedScancode = AK_RAMI;
-		break;
-	case SDLK_LGUI:
-		translatedScancode = AK_LAMI;
-		break;
-#endif
-	case SDLK_LALT:
-		translatedScancode = AK_LALT;
-		break;
-	case SDLK_RALT:
-		translatedScancode = AK_RALT;
-		break;
-	case SDLK_LCTRL:
-	case SDLK_RCTRL:
-		translatedScancode = AK_CTRL;
-		break;
-	case SDLK_PAGEDOWN:
-		translatedScancode = AK_HELP;
-		break;
-#ifdef USE_SDL1
-	case SDLK_KP0:
-		translatedScancode = AK_NP0;
-		break;
-	case SDLK_KP1:
-		translatedScancode = AK_NP1;
-		break;
-	case SDLK_KP2:
-		translatedScancode = AK_NP2;
-		break;
-	case SDLK_KP3:
-		translatedScancode = AK_NP3;
-		break;
-	case SDLK_KP4:
-		translatedScancode = AK_NP4;
-		break;
-	case SDLK_KP5:
-		translatedScancode = AK_NP5;
-		break;
-	case SDLK_KP6:
-		translatedScancode = AK_NP6;
-		break;
-	case SDLK_KP7:
-		translatedScancode = AK_NP7;
-		break;
-	case SDLK_KP8:
-		translatedScancode = AK_NP8;
-		break;
-	case SDLK_KP9:
-		translatedScancode = AK_NP9;
-		break;
-#elif USE_SDL2
-	case SDLK_KP_0:
-		translatedScancode = AK_NP0;
-		break;
-	case SDLK_KP_1:
-		translatedScancode = AK_NP1;
-		break;
-	case SDLK_KP_2:
-		translatedScancode = AK_NP2;
-		break;
-	case SDLK_KP_3:
-		translatedScancode = AK_NP3;
-		break;
-	case SDLK_KP_4:
-		translatedScancode = AK_NP4;
-		break;
-	case SDLK_KP_5:
-		translatedScancode = AK_NP5;
-		break;
-	case SDLK_KP_6:
-		translatedScancode = AK_NP6;
-		break;
-	case SDLK_KP_7:
-		translatedScancode = AK_NP7;
-		break;
-	case SDLK_KP_8:
-		translatedScancode = AK_NP8;
-		break;
-	case SDLK_KP_9:
-		translatedScancode = AK_NP9;
-		break;
-#endif
-	case SDLK_KP_ENTER:
-		translatedScancode = AK_ENT;
-		break;
-	case SDLK_KP_DIVIDE:
-		translatedScancode = AK_NPDIV;
-		break;
-	case SDLK_KP_MULTIPLY:
-		translatedScancode = AK_NPMUL;
-		break;
-	case SDLK_KP_MINUS:
-		translatedScancode = AK_NPSUB;
-		break;
-	case SDLK_KP_PLUS:
-		translatedScancode = AK_NPADD;
-		break;
-	case SDLK_KP_PERIOD:
-		translatedScancode = AK_NPDEL;
-		break;
-	}
-
-	if (translatedScancode != scancode)
-		inputdevice_do_keyboard(translatedScancode, newstate);
-	else
-		inputdevice_translatekeycode(0, translatedScancode, newstate);
-}
 
 int target_checkcapslock(const int scancode, int *state)
 {

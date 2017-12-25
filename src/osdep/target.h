@@ -47,7 +47,7 @@ void graphics_subshutdown (void);
 void amiberry_stop_sound();
 
 void keyboard_settrans();
-void translate_amiberry_keys(int symbol, int newstate);
+
 #ifdef PANDORA
 int translate_pandora_keys(int symbol, int *modifier);
 #endif

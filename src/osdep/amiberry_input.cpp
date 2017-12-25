@@ -1060,7 +1060,10 @@ static void read_joystick(void)
 			{
 				current_controller_map.dpad_right = -1;
 			}
-			if (current_controller_map.dpad_up == current_controller_map.hotkey_button) { current_controller_map.dpad_up = -1; }
+			if (current_controller_map.dpad_up == current_controller_map.hotkey_button)
+			{
+				current_controller_map.dpad_up = -1;
+			}
 			if (current_controller_map.dpad_down == current_controller_map.hotkey_button)
 			{
 				current_controller_map.dpad_down = -1;
@@ -1241,8 +1244,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				v = port ? INPUTEVENT_JOY2_VERT : INPUTEVENT_JOY1_VERT;
 			}
 
-			setid(uid, num, ID_AXIS_OFFSET + (n * 2) + 0, 0, port, h, gp);
-			setid(uid, num, ID_AXIS_OFFSET + (n * 2) + 1, 0, port, v, gp);
+			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 0, 0, port, h, gp);
+			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 1, 0, port, v, gp);
 		}
 	}
 	else // ports 2, 3 (parallel ports) ... both sticks,
@@ -1251,8 +1254,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 		{
 			h = port - 2 ? INPUTEVENT_PAR_JOY1_HORIZ : INPUTEVENT_PAR_JOY2_HORIZ;
 			v = port - 2 ? INPUTEVENT_PAR_JOY1_VERT : INPUTEVENT_PAR_JOY2_VERT;
-			setid(uid, num, ID_AXIS_OFFSET + (n * 2) + 0, 0, port, h, gp);
-			setid(uid, num, ID_AXIS_OFFSET + (n * 2) + 1, 0, port, v, gp);
+			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 0, 0, port, h, gp);
+			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 1, 0, port, v, gp);
 		}
 	}
 
@@ -1275,69 +1278,70 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	{
 		if (CHECK_BIT(currprefs.jports[port].mousemap,0))
 		{
-			thismap[0].dpad_up_action = (thismap[0].dpad_up_action
-				                             ? thismap[0].dpad_up_action
-				                             : (port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP));
-			thismap[0].dpad_down_action = (thismap[0].dpad_down_action
-				                               ? thismap[0].dpad_down_action
-				                               : (port ? INPUTEVENT_MOUSE2_DOWN : INPUTEVENT_MOUSE1_DOWN));
-			thismap[0].dpad_left_action = (thismap[0].dpad_left_action
-				                               ? thismap[0].dpad_left_action
-				                               : (port ? INPUTEVENT_MOUSE2_LEFT : INPUTEVENT_MOUSE1_LEFT));
-			thismap[0].dpad_right_action = (thismap[0].dpad_right_action
-				                                ? thismap[0].dpad_right_action
-				                                : (port ? INPUTEVENT_MOUSE2_RIGHT : INPUTEVENT_MOUSE1_RIGHT));
+			thismap[0].dpad_up_action = thismap[0].dpad_up_action
+				                            ? thismap[0].dpad_up_action
+				                            : port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP;
+			thismap[0].dpad_down_action = thismap[0].dpad_down_action
+				                              ? thismap[0].dpad_down_action
+				                              : port ? INPUTEVENT_MOUSE2_DOWN : INPUTEVENT_MOUSE1_DOWN;
+			thismap[0].dpad_left_action = thismap[0].dpad_left_action
+				                              ? thismap[0].dpad_left_action
+				                              : port ? INPUTEVENT_MOUSE2_LEFT : INPUTEVENT_MOUSE1_LEFT;
+			thismap[0].dpad_right_action = thismap[0].dpad_right_action
+				                               ? thismap[0].dpad_right_action
+				                               : port ? INPUTEVENT_MOUSE2_RIGHT : INPUTEVENT_MOUSE1_RIGHT;
 		}
 		else
 		{
-			thismap[0].dpad_up_action = (thismap[0].dpad_up_action
-				                             ? thismap[0].dpad_up_action
-				                             : (port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP));
-			thismap[0].dpad_down_action = (thismap[0].dpad_down_action
-				                               ? thismap[0].dpad_down_action
-				                               : (port ? INPUTEVENT_JOY2_DOWN : INPUTEVENT_JOY1_DOWN));
-			thismap[0].dpad_left_action = (thismap[0].dpad_left_action
-				                               ? thismap[0].dpad_left_action
-				                               : (port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT));
-			thismap[0].dpad_right_action = (thismap[0].dpad_right_action
-				                                ? thismap[0].dpad_right_action
-				                                : (port ? INPUTEVENT_JOY2_RIGHT : INPUTEVENT_JOY1_RIGHT));
+			thismap[0].dpad_up_action = thismap[0].dpad_up_action
+				                            ? thismap[0].dpad_up_action
+				                            : port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
+			thismap[0].dpad_down_action = thismap[0].dpad_down_action
+				                              ? thismap[0].dpad_down_action
+				                              : port ? INPUTEVENT_JOY2_DOWN : INPUTEVENT_JOY1_DOWN;
+			thismap[0].dpad_left_action = thismap[0].dpad_left_action
+				                              ? thismap[0].dpad_left_action
+				                              : port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT;
+			thismap[0].dpad_right_action = thismap[0].dpad_right_action
+				                               ? thismap[0].dpad_right_action
+				                               : port ? INPUTEVENT_JOY2_RIGHT : INPUTEVENT_JOY1_RIGHT;
 		}
 		// standard fire buttons
 		if (mode == JSEM_MODE_JOYSTICK_CD32) // CD32 joypad  
 		{
-			thismap[0].south_action = (thismap[0].south_action
-				                           ? thismap[0].south_action
-				                           : (port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED));
-			thismap[0].east_action = (thismap[0].east_action
-				                          ? thismap[0].east_action
-				                          : (port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE));
-			thismap[0].west_action = (thismap[0].west_action
-				                          ? thismap[0].west_action
-				                          : (port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN));
-			thismap[0].north_action = (thismap[0].north_action
-				                           ? thismap[0].north_action
-				                           : (port ? INPUTEVENT_JOY2_CD32_YELLOW : INPUTEVENT_JOY1_CD32_YELLOW));
-			thismap[0].start_action = (thismap[0].start_action
-				                           ? thismap[0].start_action
-				                           : (port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY));
+			thismap[0].south_action = thismap[0].south_action
+				                          ? thismap[0].south_action
+				                          : port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED;
+			thismap[0].east_action = thismap[0].east_action
+				                         ? thismap[0].east_action
+				                         : port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE;
+			thismap[0].west_action = thismap[0].west_action
+				                         ? thismap[0].west_action
+				                         : port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN;
+			thismap[0].north_action = thismap[0].north_action
+				                          ? thismap[0].north_action
+				                          : port ? INPUTEVENT_JOY2_CD32_YELLOW : INPUTEVENT_JOY1_CD32_YELLOW;
+			thismap[0].start_action = thismap[0].start_action
+				                          ? thismap[0].start_action
+				                          : port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY;
 		}
 		else // default, normal joystick  
 		{
-			thismap[0].south_action = (thismap[0].south_action
-				                           ? thismap[0].south_action
-				                           : (port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON));
-			thismap[0].east_action = (thismap[0].east_action
-				                          ? thismap[0].east_action
-				                          : (port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON));
-			thismap[0].west_action = (thismap[0].west_action
-				                          ? thismap[0].west_action
-				                          : (port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP));
-			thismap[0].north_action = (thismap[0].north_action
-				                           ? thismap[0].north_action
-				                           : (port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON));
+			thismap[0].south_action = thismap[0].south_action
+				                          ? thismap[0].south_action
+				                          : port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON;
+			thismap[0].east_action = thismap[0].east_action
+				                         ? thismap[0].east_action
+				                         : port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON;
+			thismap[0].west_action = thismap[0].west_action
+				                         ? thismap[0].west_action
+				                         : port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
+			thismap[0].north_action = thismap[0].north_action
+				                          ? thismap[0].north_action
+				                          : port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON;
 
-			thismap[0].start_action = (thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P);
+			// DISABLED for now (should not trigger keyboard input when using Keyboard as Joystick!)
+			//thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
 		}
 
 
@@ -1346,67 +1350,69 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 			// if we use right-analogue as mouse, then we will use shoulder buttons as LMB/RMB
 			//if (1==0)
 		{
-			thismap[0].left_shoulder_action = (thismap[0].left_shoulder_action
-				                                   ? thismap[0].left_shoulder_action
+			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
+				                                  ? thismap[0].left_shoulder_action
+				                                  : port
+				                                  ? INPUTEVENT_JOY2_FIRE_BUTTON
+				                                  : INPUTEVENT_JOY1_FIRE_BUTTON;
+			thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
+				                                   ? thismap[0].right_shoulder_action
 				                                   : port
-				                                   ? INPUTEVENT_JOY2_FIRE_BUTTON
-				                                   : INPUTEVENT_JOY1_FIRE_BUTTON);
-			thismap[0].right_shoulder_action = (thismap[0].right_shoulder_action
-				                                    ? thismap[0].right_shoulder_action
-				                                    : port
-				                                    ? INPUTEVENT_JOY2_2ND_BUTTON
-				                                    : INPUTEVENT_JOY1_2ND_BUTTON);
+				                                   ? INPUTEVENT_JOY2_2ND_BUTTON
+				                                   : INPUTEVENT_JOY1_2ND_BUTTON;
 		}
 
 		else if (mode == JSEM_MODE_JOYSTICK_CD32) // CD32 joypad, use RWD/FWD
 		{
-			thismap[0].left_shoulder_action = (thismap[0].left_shoulder_action
-				                                   ? thismap[0].left_shoulder_action
-				                                   : (port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD));
+			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
+				                                  ? thismap[0].left_shoulder_action
+				                                  : port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD;
 
-			thismap[0].right_shoulder_action = (thismap[0].right_shoulder_action
-				                                    ? thismap[0].right_shoulder_action
-				                                    : (port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW));
+			thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
+				                                   ? thismap[0].right_shoulder_action
+				                                   : port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW;
 		}
-		else // default, normal joystick
-		{
-			thismap[0].left_shoulder_action = (thismap[0].left_shoulder_action
-				                                   ? thismap[0].left_shoulder_action
-				                                   : INPUTEVENT_KEY_SPACE);
-			thismap[0].right_shoulder_action = (thismap[0].right_shoulder_action
-				                                    ? thismap[0].right_shoulder_action
-				                                    : INPUTEVENT_KEY_RETURN);
-		}
+		// DISABLED for now (should not trigger keyboard input when using Keyboard as Joystick!)
+		//else // default, normal joystick
+		//{
+		//	thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
+		//		                                  ? thismap[0].left_shoulder_action
+		//		                                  : INPUTEVENT_KEY_SPACE;
+		//	thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
+		//		                                   ? thismap[0].right_shoulder_action
+		//		                                   : INPUTEVENT_KEY_RETURN;
+		//}
 	}
 	else // ports 2, 3 ... parallel ports 
 	{
-		thismap[0].dpad_up_action = (thismap[0].dpad_up_action
-			                             ? thismap[0].dpad_up_action
-			                             : (port - 2 ? INPUTEVENT_PAR_JOY2_UP : INPUTEVENT_PAR_JOY1_UP));
-		thismap[0].dpad_down_action = (thismap[0].dpad_down_action
-			                               ? thismap[0].dpad_down_action
-			                               : (port - 2 ? INPUTEVENT_PAR_JOY2_DOWN : INPUTEVENT_PAR_JOY1_DOWN));
-		thismap[0].dpad_left_action = (thismap[0].dpad_left_action
-			                               ? thismap[0].dpad_left_action
-			                               : (port - 2 ? INPUTEVENT_PAR_JOY2_LEFT : INPUTEVENT_PAR_JOY1_LEFT));
-		thismap[0].dpad_right_action = (thismap[0].dpad_right_action
-			                                ? thismap[0].dpad_right_action
-			                                : (port - 2 ? INPUTEVENT_PAR_JOY2_RIGHT : INPUTEVENT_PAR_JOY1_RIGHT));
+		thismap[0].dpad_up_action = thismap[0].dpad_up_action
+			                            ? thismap[0].dpad_up_action
+			                            : port - 2 ? INPUTEVENT_PAR_JOY2_UP : INPUTEVENT_PAR_JOY1_UP;
+		thismap[0].dpad_down_action = thismap[0].dpad_down_action
+			                              ? thismap[0].dpad_down_action
+			                              : port - 2 ? INPUTEVENT_PAR_JOY2_DOWN : INPUTEVENT_PAR_JOY1_DOWN;
+		thismap[0].dpad_left_action = thismap[0].dpad_left_action
+			                              ? thismap[0].dpad_left_action
+			                              : port - 2 ? INPUTEVENT_PAR_JOY2_LEFT : INPUTEVENT_PAR_JOY1_LEFT;
+		thismap[0].dpad_right_action = thismap[0].dpad_right_action
+			                               ? thismap[0].dpad_right_action
+			                               : port - 2 ? INPUTEVENT_PAR_JOY2_RIGHT : INPUTEVENT_PAR_JOY1_RIGHT;
 
-		thismap[0].south_action = (thismap[0].south_action
-			                           ? thismap[0].south_action
-			                           : (port - 2 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON));
-		thismap[0].east_action = (thismap[0].east_action
-			                          ? thismap[0].east_action
-			                          : (port - 2 ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON));
+		thismap[0].south_action = thismap[0].south_action
+			                          ? thismap[0].south_action
+			                          : port - 2 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON;
+		thismap[0].east_action = thismap[0].east_action
+			                         ? thismap[0].east_action
+			                         : port - 2 ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON;
 
-		thismap[0].start_action = (thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P);
-		thismap[0].left_shoulder_action = (thismap[0].left_shoulder_action
-			                                   ? thismap[0].left_shoulder_action
-			                                   : INPUTEVENT_KEY_SPACE);
-		thismap[0].right_shoulder_action = (thismap[0].right_shoulder_action
-			                                    ? thismap[0].right_shoulder_action
-			                                    : INPUTEVENT_KEY_RETURN);
+		// DISABLED for now (should not trigger keyboard input when using Keyboard as Joystick!)
+		//thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
+		//thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
+		//	                                  ? thismap[0].left_shoulder_action
+		//	                                  : INPUTEVENT_KEY_SPACE;
+		//thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
+		//	                                   ? thismap[0].right_shoulder_action
+		//	                                   : INPUTEVENT_KEY_RETURN;
 	}
 
 

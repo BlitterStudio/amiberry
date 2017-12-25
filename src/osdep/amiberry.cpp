@@ -59,12 +59,10 @@ extern void SetLastActiveConfig(const char* filename);
 char start_path_data[MAX_DPATH];
 char currentDir[MAX_DPATH];
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 #include <linux/kd.h>
 #include <sys/ioctl.h>
 unsigned char kbd_led_status;
 char kbd_flags;
-#endif
 
 static char config_path[MAX_DPATH];
 static char rom_path[MAX_DPATH];
@@ -77,9 +75,7 @@ char last_loaded_config[MAX_DPATH] = {'\0'};
 int max_uae_width;
 int max_uae_height;
 
-
 extern "C" int main(int argc, char* argv[]);
-
 
 void sleep_millis(int ms)
 {
@@ -573,8 +569,8 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		ptr = strstr(const_cast<char *>(filename), ".uae");
 		if (ptr > nullptr)
 		{
-			auto type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
-			result = cfgfile_load(p, filename, &type, 0, 1);
+			auto config_type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+			result = cfgfile_load(p, filename, &config_type, 0, 1);
 		}
 		if (result)
 			extractFileName(filename, last_loaded_config);
@@ -582,7 +578,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 
 	if (result)
 	{
-		for (int i = 0; i < p->nr_floppies; ++i)
+		for (auto i = 0; i < p->nr_floppies; ++i)
 		{
 			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
@@ -1041,7 +1037,6 @@ int main(int argc, char* argv[])
 	alloc_AmigaMem();
 	RescanROMs();
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
 	ioctl(0, KDGETLED, &kbd_led_status);
@@ -1058,7 +1053,6 @@ int main(int argc, char* argv[])
 		inputdevice_do_keyboard(AK_CAPSLOCK, 0);
 	}
 	ioctl(0, KDSETLED, kbd_led_status);
-#endif
 
 	real_main(argc, argv);
 
@@ -1087,56 +1081,86 @@ int handle_msgpump()
 	auto got = 0;
 	SDL_Event rEvent;
 
+	// Default Enter GUI key is F12
+	int enter_gui_key = SDLK_F12;
+	if (strncmp(currprefs.open_gui, "", 1) != 0)
+	{
+		// If we have a value in the config, we use that instead
+		// SDL2-only for now
+#ifdef USE_SDL2
+		enter_gui_key = SDL_GetKeyFromName(currprefs.open_gui);
+#endif
+	}
+
+	// We don't set a default value for Quitting
+	int quit_key = 0;
+	if (strncmp(currprefs.quit_amiberry, "", 1) != 0)
+	{
+		// If we have a value in the config, we use that instead
+		// SDL2-only for now
+#ifdef USE_SDL2
+		quit_key = SDL_GetKeyFromName(currprefs.quit_amiberry);
+#endif
+	}
+
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
 #ifdef USE_SDL1
 		Uint8* keystate = SDL_GetKeyState(nullptr);
-#endif
-
-#ifdef USE_SDL2
+#elif USE_SDL2
 		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
 #endif
-
 		switch (rEvent.type)
 		{
 		case SDL_QUIT:
 			uae_quit();
 			break;
 
-		//case SDL_JOYBUTTONDOWN:
-			//	if (currprefs.button_for_menu != -1 && rEvent.jbutton.button == currprefs.button_for_menu)
-			//		inputdevice_add_inputcode(AKS_ENTERGUI, 1);
-			//	if (currprefs.button_for_quit != -1 && rEvent.jbutton.button == currprefs.button_for_quit)
-			//		inputdevice_add_inputcode(AKS_QUIT, 1);
-			//	break;
-
 		case SDL_KEYDOWN:
+			// If the Enter GUI key was pressed, handle it
+			if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key)
+			{
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+				break;
+			}
+			
+			// If the Quit emulator key was pressed, handle it
+			if (quit_key && rEvent.key.keysym.sym == quit_key)
+			{
+				inputdevice_add_inputcode(AKS_QUIT, 1);
+				break;
+			}
+
+			// If the reset combination was pressed, handle it
 #ifdef USE_SDL1
 			// Strangely in FBCON left window is seen as left alt ??
-			//if (keyboard_type == 2) // KEYCODE_FBCON
-			//{
-			//	if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[
-			//		SDLK_MENU]))
-			if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-#endif
-#ifdef USE_SDL2			
+			if (keyboard_type == 2) // KEYCODE_FBCON
+			{
+				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[
+					SDLK_MENU]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
+			}
+			else if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+#elif USE_SDL2			
 			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 #endif
 			{
 				uae_reset(0, 1);
 				break;
 			}
+
 #ifdef USE_SDL1
 			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
 			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
 				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
 #endif
 
-			switch (rEvent.key.keysym.sym)
+			if (rEvent.key.keysym.sym ==  SDLK_CAPSLOCK)
 			{
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
-			case SDLK_CAPSLOCK: // capslock
 				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 				ioctl(0, KDGKBLED, &kbd_flags);
 				ioctl(0, KDGETLED, &kbd_led_status);
@@ -1157,7 +1181,7 @@ int handle_msgpump()
 				ioctl(0, KDSETLED, kbd_led_status);
 				ioctl(0, KDSKBLED, kbd_flags);
 				break;
-#endif
+
 #ifdef PANDORA
   		    case SDLK_LCTRL: // Select key
   		      inputdevice_add_inputcode (AKS_ENTERGUI, 1);
@@ -1173,15 +1197,32 @@ int handle_msgpump()
 					// Holding left or right shoulder button -> stylus does right mousebutton
 					doStylusRightClick = 1;
             }
-#endif
-			default:
-				translate_amiberry_keys(rEvent.key.keysym.sym, 1);
 				break;
+#endif
 			}
+		
+			// Handle all other keys
+			//translate_amiberry_keys(rEvent.key.keysym.sym, 1);
+#ifdef USE_SDL1
+			if (keyboard_type == KEYCODE_UNK)
+				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+			else
+				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+#elif USE_SDL2
+			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+#endif
 			break;
 
 		case SDL_KEYUP:
-			translate_amiberry_keys(rEvent.key.keysym.sym, 0);
+			//translate_amiberry_keys(rEvent.key.keysym.sym, 0);
+#ifdef USE_SDL1
+			if (keyboard_type == KEYCODE_UNK)
+				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+			else
+				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+#elif USE_SDL2
+			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+#endif
 			break;
 
 		case SDL_MOUSEBUTTONDOWN:
@@ -1219,9 +1260,9 @@ int handle_msgpump()
 			{
 				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 				{
-					const int mouseScale = currprefs.input_joymouse_multiplier / 2;
-					const int x = rEvent.motion.xrel;
-					const int y = rEvent.motion.yrel;
+					const auto mouseScale = currprefs.input_joymouse_multiplier / 2;
+					const auto x = rEvent.motion.xrel;
+					const auto y = rEvent.motion.yrel;
 #if defined (PANDORA) || defined (ANDROIDSDL)
     				if(rEvent.motion.x == 0 && x > -4)
     					x = -4;
@@ -1237,8 +1278,7 @@ int handle_msgpump()
 				}
 			}
 			break;
-		default: 
-			break;
+
 #ifdef USE_SDL2
 		case SDL_MOUSEWHEEL:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
@@ -1250,6 +1290,9 @@ int handle_msgpump()
 			}
 			break;
 #endif
+
+		default:
+			break;
 		}
 	}
 	return got;
