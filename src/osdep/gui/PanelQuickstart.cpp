@@ -195,7 +195,7 @@ static void AdjustPrefs(void)
 	case 2: // A600
 	case 3: // A1200
 	case 4: // A4000
-		// df0 always active
+			// df0 always active
 		changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
 
 		// No CD available
@@ -204,7 +204,7 @@ static void AdjustPrefs(void)
 		break;
 
 	case 5: // CD32
-		// No floppy drive available, CD available
+			// No floppy drive available, CD available
 		changed_prefs.floppyslots[0].dfxtype = DRV_NONE;
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 		changed_prefs.cdslots[0].inuse = true;
@@ -689,7 +689,6 @@ static QuickstartModeActionListener* quickstartModeActionListener;
 void InitPanelQuickstart(const struct _ConfigCategory& category)
 {
 	auto posY = DISTANCE_BORDER;
-	int i;
 
 	amigaModelActionListener = new AmigaModelActionListener();
 	ntscButtonActionListener = new QSNTSCButtonActionListener();
@@ -722,7 +721,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	chkNTSC->setId("qsNTSC");
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
-	for (i = 0; i < 2; ++i)
+	for (auto i = 0; i < 2; ++i)
 	{
 		char tmp[20];
 		snprintf(tmp, 20, "DF%d:", i);
@@ -801,7 +800,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	category.panel->add(cboConfig, DISTANCE_BORDER + lblConfig->getWidth() + 8, posY);
 	posY += cboConfig->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	for (i = 0; i < 2; ++i)
+	for (auto i = 0; i < 2; ++i)
 	{
 		auto posX = DISTANCE_BORDER;
 		category.panel->add(chkDFx[i], posX, posY);

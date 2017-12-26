@@ -60,6 +60,11 @@ typedef struct
 
 extern vector<ConfigFileInfo*> ConfigFilesList;
 
+void InitPanelAbout(const struct _ConfigCategory& category);
+void ExitPanelAbout();
+void RefreshPanelAbout();
+bool HelpPanelAbout(std::vector<std::string> &helptext);
+
 void InitPanelPaths(const struct _ConfigCategory& category);
 void ExitPanelPaths(void);
 void RefreshPanelPaths(void);

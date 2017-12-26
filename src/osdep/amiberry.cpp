@@ -984,7 +984,6 @@ void target_shutdown(void)
 int main(int argc, char* argv[])
 {
 	struct sigaction action{};
-	printf("Amiberry v2.7, by Dimitris (MiDWaN) Panokostas, Dom (Horace&TheSpider) Cresswell and TomB\n");
 
 	max_uae_width = 1920;
 	max_uae_height = 1080;

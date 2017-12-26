@@ -17,7 +17,6 @@
 #include "config.h"
 #include "options.h"
 #include "uae.h"
-#include "gui.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
 #include "autoconf.h"
@@ -49,6 +48,7 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 }
 
 ConfigCategory categories[] = {
+	{ "About",            "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout,     RefreshPanelAbout,      HelpPanelAbout },
 	{ "Paths",            "data/paths.ico", nullptr, nullptr, InitPanelPaths,     ExitPanelPaths,     RefreshPanelPaths,      HelpPanelPaths },
 	{ "Quickstart",       "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart,  ExitPanelQuickstart,  RefreshPanelQuickstart, HelpPanelQuickstart },
 	{ "Configurations",   "data/file.ico", nullptr, nullptr, InitPanelConfig,    ExitPanelConfig,    RefreshPanelConfig,     HelpPanelConfig },
@@ -67,11 +67,12 @@ ConfigCategory categories[] = {
 #ifdef ANDROIDSDL  
 	{ "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
-	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
+	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
 };
 
 enum
 {
+	PANEL_ABOUT,
 	PANEL_PATHS,
 	PANEL_QUICKSTART,
 	PANEL_CONFIGURATIONS,
@@ -274,16 +275,6 @@ namespace sdl
 
 	void gui_init()
 	{
-#ifdef PANDORA
-		//-------------------------------------------------
-		// Set layer for GUI screen
-		//-------------------------------------------------
-		char tmp[20];
-		snprintf(tmp, 20, "%dx%d", GUI_WIDTH, GUI_HEIGHT);
-		setenv("SDL_OMAP_LAYER_SIZE", tmp, 1);
-		snprintf(tmp, 20, "0,0,0,0");
-		setenv("SDL_OMAP_BORDER_CUT", tmp, 1);
-#endif
 		//-------------------------------------------------
 		// Create new screen for GUI
 		//-------------------------------------------------
@@ -532,7 +523,7 @@ namespace sdl
 						gui_running = false;
 						break;
 
-					
+
 					case VK_Green:
 					case VK_Blue:
 						//------------------------------------------------
@@ -712,7 +703,7 @@ namespace widgets
 	public:
 		void focusGained(const gcn::Event& event) override
 		{
-			for (int i = 0; categories[i].category != nullptr; ++i)
+			for (auto i = 0; categories[i].category != nullptr; ++i)
 			{
 				if (event.getSource() == categories[i].selector)
 				{
@@ -903,7 +894,7 @@ namespace widgets
 		// Activate last active panel
 		//--------------------------------------------------
 		if (!emulating && quickstart_start)
-			last_active_panel = 1;
+			last_active_panel = 2;
 		categories[last_active_panel].selector->requestFocus();
 		cmdHelp->setVisible(categories[last_active_panel].HelpFunc != nullptr);
 	}
