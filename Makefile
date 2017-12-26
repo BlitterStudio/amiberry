@@ -5,36 +5,35 @@ ifeq ($(PLATFORM),)
 endif
 
 #
+# Common flags for both SDL1 and SDL2
+#
+RPI_FLAGS += -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations -DCAPSLOCK_DEBIAN_WORKAROUND
+
+#
 # SDL1 targets
 #
+RPI_SDL1_FLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads -DUSE_SDL1
+RPI_SDL1_LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
+
 ifeq ($(PLATFORM),rpi3)
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
-    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
+    MORE_CFLAGS += ${RPI_SDL1_FLAGS} -DARMV6T2 -DUSE_ARMNEON
+    LDFLAGS += ${RPI_SDL1_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi2)
-    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
-    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 ${RPI_FLAGS}
+    MORE_CFLAGS += ${RPI_SDL1_FLAGS} -DARMV6T2 -DUSE_ARMNEON
+    LDFLAGS += ${RPI_SDL1_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi1)
-    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
-    MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL1
-    MORE_CFLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads
-    LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
+    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp ${RPI_FLAGS}
+    LDFLAGS += ${RPI_SDL1_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 
-else ifeq ($(PLATFORM),Pandora)
-    CPU_FLAGS +=  -march=armv7-a -mfpu=neon -mfloat-abi=softfp
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DPANDORA -DUSE_SDL1 -msoft-float
-    PROFILER_PATH = /media/MAINSD/pandora/test
-	
 else ifeq ($(PLATFORM),xu4)
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 ${RPI_FLAGS}
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -54,21 +53,21 @@ else ifeq ($(PLATFORM),android)
 #	
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     LDFLAGS += -lm
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
-    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 ${RPI_FLAGS}
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv6zk -mfpu=vfp -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
-    MORE_CFLAGS += -DCAPSLOCK_DEBIAN_WORKAROUND -DUSE_SDL2
+    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp ${RPI_FLAGS}
+    MORE_CFLAGS += -DUSE_SDL2
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 
 else ifeq ($(PLATFORM),pine64-sdl2)
@@ -80,7 +79,7 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),xu4-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4  ${RPI_FLAGS}
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
