@@ -31,7 +31,7 @@
 #include "newcpu.h"
 
 static uae_u32 dhex_nan[]   ={0xffffffff, 0x7fffffff};
-static double *fp_nan    = (double *)dhex_nan;
+static double *fp_nan    = reinterpret_cast<double *>(dhex_nan);
 static const double twoto32 = 4294967296.0;
 
 #define	FPCR_ROUNDING_MODE	0x00000030
@@ -101,12 +101,12 @@ static void fp_clear_status(void)
 /* Functions for detecting float type */
 static bool fp_is_snan(fpdata *fpd)
 {
-    return 0; /* FIXME: how to detect SNAN */
+    return false; /* FIXME: how to detect SNAN */
 }
 static bool fp_unset_snan(fpdata *fpd)
 {
     /* FIXME: how to unset SNAN */
-	return 0;
+	return false;
 }
 static bool fp_is_nan (fpdata *fpd)
 {
@@ -152,19 +152,19 @@ static void fp_to_single(fpdata *fpd, uae_u32 wrd1)
     union {
         float f;
         uae_u32 u;
-    } val;
+    } val{};
     
     val.u = wrd1;
-    fpd->fp = (fptype) val.f;
+    fpd->fp = fptype(val.f);
 }
 static uae_u32 fp_from_single(fpdata *fpd)
 {
     union {
         float f;
         uae_u32 u;
-    } val;
+    } val{};
     
-    val.f = (float) fpd->fp;
+    val.f = float(fpd->fp);
     return val.u;
 }
 
@@ -173,7 +173,7 @@ static void fp_to_double(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2)
     union {
         double d;
         uae_u32 u[2];
-    } val;
+    } val{};
     
 #ifdef WORDS_BIGENDIAN
     val.u[0] = wrd1;
@@ -182,16 +182,16 @@ static void fp_to_double(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2)
     val.u[1] = wrd1;
     val.u[0] = wrd2;
 #endif
-    fpd->fp = (fptype) val.d;
+    fpd->fp = fptype(val.d);
 }
 static void fp_from_double(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2)
 {
     union {
         double d;
         uae_u32 u[2];
-    } val;
+    } val{};
     
-    val.d = (double) fpd->fp;
+    val.d = double(fpd->fp);
 #ifdef WORDS_BIGENDIAN
     *wrd1 = val.u[0];
     *wrd2 = val.u[1];
@@ -247,12 +247,11 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 	float64 f = floatx80_to_float64(fx80, &fs);
 	fp_to_double(fpd, f >> 32, (uae_u32)f);
 #else
-    double frac;
-    if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
+	if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
         fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
         return;
     }
-    frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
+    double frac = (double(wrd2) + (double(wrd3) / twoto32)) / 2147483648.0;
     if (wrd1 & 0x80000000)
         frac = -frac;
     fpd->fp = ldexp (frac, ((wrd1 >> 16) & 0x7fff) - 16383);
@@ -269,8 +268,7 @@ static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wr
 	*wrd3 = (uae_u32)f.low;
 #else
     int expon;
-    double frac;
-    fptype v;
+	fptype v;
     
     v = fpd->fp;
     if (v == 0.0) {
@@ -285,7 +283,7 @@ static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wr
     } else {
         *wrd1 = 0;
     }
-    frac = frexp (v, &expon);
+	auto frac = frexp (v, &expon);
     frac += 0.5 / (twoto32 * twoto32);
     if (frac >= 1.0) {
         frac /= 2.0;
@@ -321,7 +319,7 @@ static uae_s64 fp_to_int(fpdata *src, int size)
         -2147483648.0, 2147483647.0
     };
 
-	fptype fp = src->fp;
+	auto fp = src->fp;
 	if (fp_is_nan(src)) {
 		uae_u32 w1, w2, w3;
 		fp_from_exten(src, &w1, &w2, &w3);
@@ -374,7 +372,7 @@ static uae_s64 fp_to_int(fpdata *src, int size)
 }
 static void fp_from_int(fpdata *fpd, uae_s32 src)
 {
-    fpd->fp = (fptype) src;
+    fpd->fp = fptype(src);
 }
 
 
@@ -384,24 +382,22 @@ static void fp_from_int(fpdata *fpd, uae_s32 src)
 static void fp_round32(fpdata *fpd)
 {
     int expon;
-    float mant;
-    mant = (float)(frexpl(fpd->fp, &expon) * 2.0);
-    fpd->fp = ldexpl((fptype)mant, expon - 1);
+	const auto mant = float(frexpl(fpd->fp, &expon) * 2.0);
+    fpd->fp = ldexpl(fptype(mant), expon - 1);
 }
 
 // round to double with extended precision exponent
 static void fp_round64(fpdata *fpd)
 {
     int expon;
-    double mant;
-    mant = (double)(frexpl(fpd->fp, &expon) * 2.0);
-    fpd->fp = ldexpl((fptype)mant, expon - 1);
+	const auto mant = double(frexpl(fpd->fp, &expon) * 2.0);
+    fpd->fp = ldexpl(fptype(mant), expon - 1);
 }
 
 // round to float
 static void fp_round_single(fpdata *fpd)
 {
-    fpd->fp = (float) fpd->fp;
+    fpd->fp = float(fpd->fp);
 }
 
 // round to double
@@ -415,7 +411,6 @@ static void fp_round_double(fpdata *fpd)
 static const TCHAR *fp_print(fpdata *fpd, int mode)
 {
 	static TCHAR fsout[32];
-	bool n;
 
 	if (mode < 0) {
 		uae_u32 w1, w2, w3;
@@ -424,7 +419,7 @@ static const TCHAR *fp_print(fpdata *fpd, int mode)
 		return fsout;
 	}
 
-	n = signbit(fpd->fp) ? 1 : 0;
+	const auto n = signbit(fpd->fp) ? true : false;
 
 	if(isinf(fpd->fp)) {
 		_stprintf(fsout, _T("%c%s"), n ? '-' : '+', _T("inf"));
@@ -468,7 +463,7 @@ static void fp_set_prec(int prec)
 }
 static void fp_reset_prec(fpdata *fpd)
 {
-	int prec = temp_prec;
+	auto prec = temp_prec;
 	if (temp_prec == 0)
 		prec = fpu_prec;
 	fp_round_prec(fpd, prec);
@@ -485,7 +480,7 @@ static void fp_move(fpdata *a, fpdata *b, int prec)
 
 static void fp_int(fpdata *a, fpdata *b)
 {
-	fptype bb = b->fp;
+	const auto bb = b->fp;
 #if USE_HOST_ROUNDING
 	a->fp = rintl(bb);
 #else
@@ -513,7 +508,7 @@ static void fp_getexp(fpdata *a, fpdata *b)
 {
     int expon;
     frexpl(b->fp, &expon);
-    a->fp = (fptype) (expon - 1);
+    a->fp = fptype(expon - 1);
 	fp_round(a);
 }
 static void fp_getman(fpdata *a, fpdata *b)
@@ -542,7 +537,7 @@ static void fp_mod(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
     } else {
         *s = 0;
     }
-    *q = (uae_u64)quot;
+    *q = static_cast<uae_u64>(quot);
     a->fp = fmodl(a->fp, b->fp);
 	fp_round(a);
 }
@@ -561,14 +556,14 @@ static void fp_rem(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
     } else {
         *s = 0;
     }
-    *q = (uae_u64)quot;
+    *q = static_cast<uae_u64>(quot);
     a->fp = remainderl(a->fp, b->fp);
 	fp_round(a);
 }
 
 static void fp_scale(fpdata *a, fpdata *b)
 {
-	a->fp = ldexpl(a->fp, (int)b->fp);
+	a->fp = ldexpl(a->fp, int(b->fp));
 	fp_round(a);
 }
 
@@ -708,24 +703,20 @@ static void fp_mul(fpdata *a, fpdata *b, int prec)
 }
 static void fp_sglmul(fpdata *a, fpdata *b)
 {
-    fptype z;
-    float mant;
-    int expon;
+	int expon;
     /* FIXME: truncate mantissa of a and b to single precision */
-    z = a->fp * b->fp;
+	const auto z = a->fp * b->fp;
 
-    mant = (float)(frexpl(z, &expon) * 2.0);
-    a->fp = ldexpl((fptype)mant, expon - 1);
+	const auto mant = float(frexpl(z, &expon) * 2.0);
+    a->fp = ldexpl(fptype(mant), expon - 1);
 }
 static void fp_sgldiv(fpdata *a, fpdata *b)
 {
-    fptype z;
-    float mant;
-    int expon;
-    z = a->fp / b->fp;
-    
-    mant = (float)(frexpl(z, &expon) * 2.0);
-    a->fp = ldexpl((fptype)mant, expon - 1);
+	int expon;
+	const auto z = a->fp / b->fp;
+
+	const auto mant = float(frexpl(z, &expon) * 2.0);
+    a->fp = ldexpl(fptype(mant), expon - 1);
 }
 
 static void fp_normalize(fpdata *a)
@@ -736,14 +727,14 @@ static void fp_cmp(fpdata *a, fpdata *b)
 {
 	fptype v = 1.0;
 	if (currprefs.fpu_strict) {
-		bool a_neg = fpp_is_neg(a);
-		bool b_neg = fpp_is_neg(b);
-		bool a_inf = fpp_is_infinity(a);
-		bool b_inf = fpp_is_infinity(b);
-		bool a_zero = fpp_is_zero(a);
-		bool b_zero = fpp_is_zero(b);
-		bool a_nan = fpp_is_nan(a);
-		bool b_nan = fpp_is_nan(b);
+		const bool a_neg = fpp_is_neg(a);
+		const bool b_neg = fpp_is_neg(b);
+		const bool a_inf = fpp_is_infinity(a);
+		const bool b_inf = fpp_is_infinity(b);
+		const bool a_zero = fpp_is_zero(a);
+		const bool b_zero = fpp_is_zero(b);
+		const bool a_nan = fpp_is_nan(a);
+		const bool b_nan = fpp_is_nan(b);
 
 		if (a_nan || b_nan) {
 			// FCMP never returns N + NaN
@@ -961,7 +952,7 @@ static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 	if (exp > 9999) // ??
 		exp = 9999;
 	if (exp > 999) {
-		int d = exp / 1000;
+		const int d = exp / 1000;
 		wrd[0] |= d << 12;
 		exp -= d * 1000;
 		fpsr_set_exception(FPSR_OPERR);
@@ -981,7 +972,6 @@ static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 static void fp_to_pack (fpdata *fpd, uae_u32 *wrd, int dummy)
 {
 	fptype d;
-	char *cp;
 	char str[100];
 
     if (((wrd[0] >> 16) & 0x7fff) == 0x7fff) {
@@ -997,7 +987,7 @@ static void fp_to_pack (fpdata *fpd, uae_u32 *wrd, int dummy)
         return;
     }
 
-	cp = str;
+	char *cp = str;
 	if (wrd[0] & 0x80000000)
 		*cp++ = '-';
 	*cp++ = (wrd[0] & 0xf) + '0';
@@ -1135,7 +1125,7 @@ double softfloat_tan(double v)
 	set_floatx80_rounding_precision(80, &f);
 	set_float_rounding_mode(float_round_to_zero, &f);
 	fp_from_double(&fpd, &w1, &w2);
-	floatx80 fv = float64_to_floatx80(((uae_u64)w1 << 32) | w2, &fs);
+	floatx80 fv = float64_to_floatx80((static_cast<uae_u64>(w1) << 32) | w2, &fs);
 	fv = floatx80_tan(fv, &fs);
 	float64 f64 = floatx80_to_float64(fv, &fs);
 	fp_to_double(&fpd, f64 >> 32, (uae_u32)f64);
