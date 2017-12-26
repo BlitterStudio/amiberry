@@ -465,12 +465,15 @@ int check_prefs_changed_gfx()
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
 		changed = 1;
 	}
+	if (currprefs.vertical_offset != changed_prefs.vertical_offset)
+	{
+		currprefs.vertical_offset = changed_prefs.vertical_offset;
+		changed = 1;
+	}
 #ifdef PANDORA
-	if (currprefs.pandora_hide_idle_led != changed_prefs.pandora_hide_idle_led ||
-		currprefs.pandora_vertical_offset != changed_prefs.pandora_vertical_offset)
+	if (currprefs.pandora_hide_idle_led != changed_prefs.pandora_hide_idle_led)
 	{
 		currprefs.pandora_hide_idle_led = changed_prefs.pandora_hide_idle_led;
-		currprefs.pandora_vertical_offset = changed_prefs.pandora_vertical_offset;
 		changed = 1;
 	}
 #endif //PANDORA
@@ -1002,7 +1005,7 @@ static int resolution_compare(const void* a, const void* b)
 static void sortmodes()
 {
 	auto i = 0, idx = -1;
-	auto pw = -1, ph = -1;
+	unsigned int pw = -1, ph = -1;
 	while (DisplayModes[i].depth >= 0)
 		i++;
 	qsort(DisplayModes, i, sizeof(struct PicassoResolution), resolution_compare);
