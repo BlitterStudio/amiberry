@@ -2574,7 +2574,7 @@ int i;
 int num_elements;
 
 
-static bool inputdevice_handle_inputcode2 (int code, int state)
+static bool inputdevice_handle_inputcode2(int code, int state)
 {
 	if (code == 0)
 		goto end;
@@ -2582,66 +2582,62 @@ static bool inputdevice_handle_inputcode2 (int code, int state)
 	switch (code)
 	{
 	case AKS_ENTERGUI:
-		gui_display (-1);
+		gui_display(-1);
 		break;
 #ifdef ACTION_REPLAY
 	case AKS_FREEZEBUTTON:
-		action_replay_freeze ();
+		action_replay_freeze();
 		break;
 #endif
 	case AKS_QUIT:
-		uae_quit ();
+		uae_quit();
 		break;
 	case AKS_SOFTRESET:
-		uae_reset (0, 0);
+		uae_reset(0, 0);
 		break;
 	case AKS_HARDRESET:
-		uae_reset (1, 1);   
+		uae_reset(1, 1);
 		break;
-#ifndef PANDORA
-        case AKS_MOUSEMAP_PORT0_LEFT:
-                ((changed_prefs.jports[0].mousemap) ^= 1 << 0);
-                inputdevice_updateconfig (&changed_prefs, &currprefs);
-		break;   
-        case AKS_MOUSEMAP_PORT0_RIGHT:
-                ((changed_prefs.jports[0].mousemap) ^= 1 << 1);
-                inputdevice_updateconfig (&changed_prefs, &currprefs);
-		break;              
-        case AKS_MOUSEMAP_PORT1_LEFT:
-                ((changed_prefs.jports[1].mousemap) ^= 1 << 0);
-                inputdevice_updateconfig (&changed_prefs, &currprefs);
-		break;   
-        case AKS_MOUSEMAP_PORT1_RIGHT:
+
+	case AKS_MOUSEMAP_PORT0_LEFT:
+		((changed_prefs.jports[0].mousemap) ^= 1 << 0);
+		inputdevice_updateconfig(&changed_prefs, &currprefs);
+		break;
+	case AKS_MOUSEMAP_PORT0_RIGHT:
+		((changed_prefs.jports[0].mousemap) ^= 1 << 1);
+		inputdevice_updateconfig(&changed_prefs, &currprefs);
+		break;
+	case AKS_MOUSEMAP_PORT1_LEFT:
+		((changed_prefs.jports[1].mousemap) ^= 1 << 0);
+		inputdevice_updateconfig(&changed_prefs, &currprefs);
+		break;
+	case AKS_MOUSEMAP_PORT1_RIGHT:
 		((changed_prefs.jports[1].mousemap) ^= 1 << 1);
-                inputdevice_updateconfig (&changed_prefs, &currprefs);
-                break;   
-#endif                
-        case AKS_MOUSE_SPEED_DOWN:
-                
-                num_elements = sizeof(mousespeed_values) / sizeof( mousespeed_values[0] );
-                mousespeed = currprefs.input_joymouse_multiplier;
-                 
-                i = find_in_array(mousespeed_values, num_elements, mousespeed);
-                i = i - 1;
-                if (i < 0  ) { i  = num_elements - 1 ;}
-                changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
-                inputdevice_updateconfig (&changed_prefs, &currprefs);
-		
-                break;      
-                
-        case AKS_MOUSE_SPEED_UP:
-            
-                num_elements = sizeof(mousespeed_values) / sizeof( mousespeed_values[0] );
-                mousespeed = currprefs.input_joymouse_multiplier;
-                 
-                i = find_in_array(mousespeed_values, num_elements, mousespeed);
-                i = i + 1;
-                if (i >= num_elements ) { i  =0 ;}
-                changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
-                inputdevice_updateconfig (&changed_prefs, &currprefs);
-                 
-		break;                      
-  }
+		inputdevice_updateconfig(&changed_prefs, &currprefs);
+		break;
+
+	case AKS_MOUSE_SPEED_DOWN:
+		num_elements = sizeof(mousespeed_values) / sizeof(mousespeed_values[0]);
+		mousespeed = currprefs.input_joymouse_multiplier;
+
+		i = find_in_array(mousespeed_values, num_elements, mousespeed);
+		i = i - 1;
+		if (i < 0) { i = num_elements - 1; }
+		changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
+		inputdevice_updateconfig(&changed_prefs, &currprefs);
+		break;
+
+	case AKS_MOUSE_SPEED_UP:
+		num_elements = sizeof(mousespeed_values) / sizeof(mousespeed_values[0]);
+		mousespeed = currprefs.input_joymouse_multiplier;
+
+		i = find_in_array(mousespeed_values, num_elements, mousespeed);
+		i = i + 1;
+		if (i >= num_elements) { i = 0; }
+		changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
+		inputdevice_updateconfig(&changed_prefs, &currprefs);
+		break;
+	}
 end:
 	return false;
 }

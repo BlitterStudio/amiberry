@@ -1125,12 +1125,12 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				_stprintf (tmp1, _T("joyport%d_mode"), i);
 				cfgfile_dwrite_str (f, tmp1, joyportmodes[jp->mode]);
 			}
-#ifndef PANDORA                       
+                   
 			if (jp->mousemap > 0) {
 				_stprintf (tmp1, _T("joyport%d_mousemap"), i);
 				cfgfile_dwrite_str (f, tmp1, mousemaps[jp->mousemap]);
-			}                  
-#endif        
+			}   
+			
 			if (jp->idc.name[0]) {
 				_stprintf (tmp1, _T("joyport%d_friendlyname"), i);
 				cfgfile_write (f, tmp1, jp->idc.name);
@@ -1147,7 +1147,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
                         }   
                 }       
                 
-#ifndef PANDORA 
           // custom options SAVING
                 if (i < 4 ) { 
 
@@ -1201,7 +1200,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
                           cfgfile_dwrite_str (f, tmp1, tmp2); }
                     }
                 }       
-#endif  
+
         cfg_write (_T("; "), f);
         }
         
@@ -1945,10 +1944,7 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
-#ifndef PANDORA
 	// custom options LOADING
-
-
 	for (int i = 0; i<4; ++i)  // Loop 1 ... all 4 joyports
 	{
 		struct joypad_map_layout tempcustom = {};
@@ -1999,9 +1995,6 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			} // close loop 3 
 		} // close loop 2
 	} // close loop 1
-
-#endif
-
 
 	for (tmpp = option; *tmpp != '\0'; tmpp++)
 		if (_istupper(*tmpp))
@@ -2257,13 +2250,10 @@ static int cfgfile_parse_host(struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		cfgfile_strval(option, value, _T("joyport3_autofire"), &p->jports[3].autofire, joyaf, 0))
 		return 1;
 
-
-#ifndef PANDORA  
 	if (cfgfile_strval(option, value, _T("joyport0_mousemap"), &p->jports[0].mousemap, mousemaps, 0))
 		return 1;
 	if (cfgfile_strval(option, value, _T("joyport1_mousemap"), &p->jports[1].mousemap, mousemaps, 0))
 		return 1;
-#endif   
 
 	// shared version
 	if (cfgfile_yesno(option, value, _T("joyport0keyboardoverride"), &vb) ||

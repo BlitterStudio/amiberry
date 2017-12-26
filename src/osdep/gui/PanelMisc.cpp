@@ -139,9 +139,9 @@ public:
 		{
 			int newspeed = (int)sldPandoraSpeed->getValue();
 			newspeed = newspeed - (newspeed % 20);
-			if (changed_prefs.pandora_cpu_speed != newspeed)
+			if (changed_prefs.cpu_speed != newspeed)
 			{
-				changed_prefs.pandora_cpu_speed = newspeed;
+				changed_prefs.cpu_speed = newspeed;
 				RefreshPanelMisc();
 			}
 		}
@@ -338,7 +338,7 @@ void RefreshPanelMisc()
 {
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
 #ifdef PANDORA
-	chkHideIdleLed->setSelected(changed_prefs.pandora_hide_idle_led);
+	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
 #endif
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 
@@ -347,8 +347,8 @@ void RefreshPanelMisc()
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
 	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
 #ifdef PANDORA
-	sldPandoraSpeed->setValue(changed_prefs.pandora_cpu_speed);
-	snprintf(tmp, 20, "%d MHz", changed_prefs.pandora_cpu_speed);
+	sldPandoraSpeed->setValue(changed_prefs.cpu_speed);
+	snprintf(tmp, 20, "%d MHz", changed_prefs.cpu_speed);
 	lblPandoraSpeedInfo->setCaption(tmp);
 #endif
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);

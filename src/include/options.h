@@ -425,9 +425,9 @@ struct uae_prefs {
 	TCHAR quit_amiberry[256];
 
 #ifdef PANDORA
-	int pandora_cpu_speed;
-	int pandora_hide_idle_led;
-	int pandora_tapDelay;
+	int cpu_speed;
+	int hide_idle_led;
+	int tapDelay;
 #endif
 
 	/* input */

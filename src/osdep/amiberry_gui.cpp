@@ -532,13 +532,11 @@ void gui_display(int shortcut)
 
 void moveVertical(int value)
 {
-#ifdef PANDORA
-	changed_prefs.pandora_vertical_offset += value;
-	if(changed_prefs.pandora_vertical_offset < -16 + OFFSET_Y_ADJUST)
-		changed_prefs.pandora_vertical_offset = -16 + OFFSET_Y_ADJUST;
-	else if(changed_prefs.pandora_vertical_offset > 16 + OFFSET_Y_ADJUST)
-		changed_prefs.pandora_vertical_offset = 16 + OFFSET_Y_ADJUST;
-#endif
+	changed_prefs.vertical_offset += value;
+	if(changed_prefs.vertical_offset < -16 + OFFSET_Y_ADJUST)
+		changed_prefs.vertical_offset = -16 + OFFSET_Y_ADJUST;
+	else if(changed_prefs.vertical_offset > 16 + OFFSET_Y_ADJUST)
+		changed_prefs.vertical_offset = 16 + OFFSET_Y_ADJUST;
 }
 
 void gui_led(int led, int on)

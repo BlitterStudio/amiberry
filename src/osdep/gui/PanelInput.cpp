@@ -288,11 +288,11 @@ public:
 		else if (actionEvent.getSource() == cboTapDelay)
 		{
 			if (cboTapDelay->getSelected() == 0)
-				changed_prefs.pandora_tapDelay = 10;
+				changed_prefs.tapDelay = 10;
 			else if (cboTapDelay->getSelected() == 1)
-				changed_prefs.pandora_tapDelay = 5;
+				changed_prefs.tapDelay = 5;
 			else
-				changed_prefs.pandora_tapDelay = 2;
+				changed_prefs.tapDelay = 2;
 		}
 #endif
 		else if (actionEvent.getSource() == chkMouseHack)
@@ -685,9 +685,9 @@ void RefreshPanelInput()
 		}
 	}
 #ifdef PANDORA
-	if (changed_prefs.pandora_tapDelay == 10)
+	if (changed_prefs.tapDelay == 10)
 		cboTapDelay->setSelected(0);
-	else if (changed_prefs.pandora_tapDelay == 5)
+	else if (changed_prefs.tapDelay == 5)
 		cboTapDelay->setSelected(1);
 	else
 		cboTapDelay->setSelected(2);

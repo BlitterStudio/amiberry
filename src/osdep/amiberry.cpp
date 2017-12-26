@@ -235,9 +235,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_size.width = 320;
 	p->gfx_size.height = 240;
 	p->gfx_resolution = RES_LORES;	
-	p->pandora_cpu_speed = defaultCpuSpeed;
-	p->pandora_hide_idle_led = 0;
-	p->pandora_tapDelay = 10;
+	p->cpu_speed = defaultCpuSpeed;
+	p->hide_idle_led = 0;
+	p->tapDelay = 10;
 #endif //PANDORA
 
 #ifdef PANDORA
@@ -940,7 +940,7 @@ void resetCpuSpeed(void)
   if(cpuSpeedChanged)
   {
     lastCpuSpeed = defaultCpuSpeed - 10;
-    currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed = defaultCpuSpeed;
+    currprefs.cpu_speed = changed_prefs.cpu_speed = defaultCpuSpeed;
     setCpuSpeed();
   }
 #endif

@@ -287,14 +287,12 @@ static NavigationMap navMap[] =
 #ifdef PANDORA
   { "StatusLine",     "Miscellaneous",  "Miscellaneous",  "MasterWP",       "HideIdle" },
   { "HideIdle",       "Miscellaneous",  "Miscellaneous",  "StatusLine",     "ShowGUI" },
-
-      { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "HideIdle",     "PandSpeed" },
-      { "PandSpeed",      "",               "",               "ShowGUI",      "BSDSocket" },
-      { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "PandSpeed",    "MasterWP" },
-      { "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",    "StatusLine" },
-      
-  { "KeyForMenu",     "Miscellaneous",	"KeyForQuit",     "MasterWP",	     "StatusLine" },
-  { "KeyForQuit",     "KeyForMenu",	"Miscellaneous",  "MasterWP",	     "StatusLine" },
+  { "ShowGUI",        "Miscellaneous",  "Miscellaneous",  "HideIdle",     "PandSpeed" },
+  { "PandSpeed",      "",               "",               "ShowGUI",      "BSDSocket" },
+  { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "PandSpeed",    "MasterWP" },
+  { "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",    "StatusLine" },     
+  { "OpenGUI",        "Miscellaneous",	"KeyForQuit",     "MasterWP",	     "StatusLine" },
+  { "KeyForQuit",     "OpenGUI",	    "Miscellaneous",  "MasterWP",	     "StatusLine" },
 
 #else
   { "StatusLine",     "Miscellaneous",  "RetroArchQuit",  "scrolllock",     "HideIdle" },

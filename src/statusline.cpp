@@ -67,7 +67,7 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
   if(nr_units() < 1)
     x += TD_WIDTH;
 #ifdef PANDORA
-  if(currprefs.pandora_hide_idle_led)
+  if(currprefs.hide_idle_led)
     x += TD_WIDTH;
 #endif    
   if(picasso_on)
@@ -76,7 +76,7 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
     memset (buf + (x - 4) * gfxvidinfo.drawbuffer.pixbytes, 0, (gfxvidinfo.drawbuffer.outwidth - x + 4) * gfxvidinfo.drawbuffer.pixbytes);
 
 #ifdef PANDORA
-	for (led = (currprefs.pandora_hide_idle_led == 0) ? -2 : -1; led < (currprefs.nr_floppies+1); led++) {
+	for (led = (currprefs.hide_idle_led == 0) ? -2 : -1; led < (currprefs.nr_floppies+1); led++) {
 #else
   for (led = -2; led < (currprefs.nr_floppies + 1); led++) {
 #endif

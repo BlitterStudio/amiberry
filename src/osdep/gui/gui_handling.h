@@ -120,12 +120,10 @@ void ExitPanelInput(void);
 void RefreshPanelInput(void);
 bool HelpPanelInput(std::vector<std::string> &helptext);
 
-#ifndef PANDORA
 void InitPanelCustom(const struct _ConfigCategory& category);
 void ExitPanelCustom(void);
 void RefreshPanelCustom(void);
 bool HelpPanelCustom(std::vector<std::string> &helptext);
-#endif
 
 void InitPanelMisc(const struct _ConfigCategory& category);
 void ExitPanelMisc(void);
