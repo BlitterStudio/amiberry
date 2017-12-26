@@ -391,9 +391,8 @@ void target_restart(void)
 TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
 {
 	if (out == nullptr)
-	{
 		return strdup(path);
-	}
+
 	_tcscpy(out, path);
 	return out;
 }

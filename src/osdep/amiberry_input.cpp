@@ -298,6 +298,7 @@ static int acquire_mouse(const int num, int flags)
 {
 	if (num >= 0 && num < numMice)
 		return 1;
+
 	return 0;
 }
 
@@ -314,6 +315,7 @@ static const TCHAR* get_mouse_friendlyname(const int mouse)
 {
 	if (numMice > 0 && mouse == 0)
 		return "Mouse";
+
 	return "";
 }
 
@@ -321,15 +323,15 @@ static const TCHAR* get_mouse_uniquename(const int mouse)
 {
 	if (numMice > 0 && mouse == 0)
 		return "MOUSE0";
+
 	return "";
 }
 
 static int get_mouse_widget_num(const int mouse)
 {
 	if (numMice > 0 && mouse == 0)
-	{
 		return MAX_MOUSE_AXES + MAX_MOUSE_BUTTONS;
-	}
+
 	return 0;
 }
 
@@ -360,6 +362,7 @@ static int get_mouse_widget_type(const int mouse, const int num, TCHAR* name, ua
 		{
 			if (name)
 				sprintf(name, "Button %d", num + 1 - MAX_MOUSE_AXES);
+
 			return IDEV_WIDGET_BUTTON;
 		}
 		if (num < MAX_MOUSE_AXES)
@@ -506,9 +509,8 @@ struct inputdevice_functions inputdevicefunc_keyboard = {
 int input_get_default_keyboard(int num)
 {
 	if (num == 0)
-	{
 		return 1;
-	}
+
 	return 0;
 }
 
@@ -544,21 +546,16 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 
 			// remove leading "
 			if (param.at(0) == '"')
-			{
 				param.erase(0, 1);
-			}
 
 			// remove trailing "
 			if (param.at(param.length() - 1) == '"')
-			{
 				param.erase(param.length() - 1, 1);
-			}
 
 			//  time to get the output number
 			if (param.at(0) != 'h') // check it isnt some kind of hat starting 'h' (so if D-pad uses buttons)
-			{
 				tempbutton = abs(atol(param.c_str()));
-			} // gets the parameter
+			// gets the parameter
 
 			// this will need something separate to pull out the number of hats 
 			//  use SET_BIT on hX numbers 
@@ -573,13 +570,10 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 
 			// ok, this is the 'normal' storing of values
 			if (option == find_setting)
-			{
 				break;
-			}
+
 			if (strncmp(find_setting, "count_hats", 11) != 0)
-			{
 				tempbutton = -1;
-			}
 		}
 	}
 	readFile.close();
@@ -605,27 +599,22 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting, char* retroarch_file)
 		if (option != line) // exit if we got no result from splitting the string
 		{
 			// using the " = " to work out whis is the option, and which is the parameter.
-			string param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 
 			// remove leading "
 			if (param.at(0) == '"')
-			{
 				param.erase(0, 1);
-			}
 
 			// remove trailing "
 			if (param.at(param.length() - 1) == '"')
-			{
 				param.erase(param.length() - 1, 1);
-			}
 
 			output = &param[0u];
 
 			// ok, this is the 'normal' storing of values
 			if (option == find_setting)
-			{
 				break;
-			}
+
 			output = "nul";
 		}
 	}
@@ -673,42 +662,55 @@ static int init_joystick(void)
 		auto tempkey = find_retroarch_key("input_player1_y", retroarch_file);
 		auto x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.north_button = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_a", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.east_button = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_b", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.south_button = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_x", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.west_button = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_left", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.dpad_left = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_right", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.dpad_right = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_up", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.dpad_up = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_down", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.dpad_down = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_l", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.left_shoulder = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_r", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.right_shoulder = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_select", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.select_button = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_start", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.start_button = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_l3", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.lstick_button = RemapKeyMapList[x];
+
 		tempkey = find_retroarch_key("input_player1_r3", retroarch_file);
 		x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
 		temp_keyboard_buttons.rstick_button = RemapKeyMapList[x];
@@ -803,16 +805,12 @@ static int init_joystick(void)
 				host_input_buttons[cpt].lstick_axis_x = find_retroarch("input_l_x_plus_axis", ControlConfig,
 				                                                       host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_x == -1)
-				{
 					host_input_buttons[cpt].lstick_axis_x = find_retroarch("input_right_axis", ControlConfig, host_input_buttons[cpt]);
-				}
 
 				host_input_buttons[cpt].lstick_axis_y = find_retroarch("input_l_y_plus_axis", ControlConfig,
 				                                                       host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_y == -1)
-				{
 					host_input_buttons[cpt].lstick_axis_y = find_retroarch("input_down_axis", ControlConfig, host_input_buttons[cpt]);
-				}
 
 				host_input_buttons[cpt].rstick_axis_x = find_retroarch("input_r_x_plus_axis", ControlConfig,
 				                                                       host_input_buttons[cpt]);
@@ -1037,70 +1035,37 @@ static void read_joystick(void)
 			current_controller_map = host_input_buttons[hostjoyid];
 
 			if (current_controller_map.east_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.east_button = -1;
-			}
 			if (current_controller_map.south_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.south_button = -1;
-			}
 			if (current_controller_map.north_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.north_button = -1;
-			}
 			if (current_controller_map.west_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.west_button = -1;
-			}
 			if (current_controller_map.dpad_left == current_controller_map.hotkey_button)
-			{
 				current_controller_map.dpad_left = -1;
-			}
 			if (current_controller_map.dpad_right == current_controller_map.hotkey_button)
-			{
 				current_controller_map.dpad_right = -1;
-			}
 			if (current_controller_map.dpad_up == current_controller_map.hotkey_button)
-			{
 				current_controller_map.dpad_up = -1;
-			}
 			if (current_controller_map.dpad_down == current_controller_map.hotkey_button)
-			{
 				current_controller_map.dpad_down = -1;
-			}
 			if (current_controller_map.select_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.select_button = -1;
-			}
 			if (current_controller_map.start_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.start_button = -1;
-			}
 			if (current_controller_map.left_trigger == current_controller_map.hotkey_button)
-			{
 				current_controller_map.left_trigger = -1;
-			}
 			if (current_controller_map.right_trigger == current_controller_map.hotkey_button)
-			{
 				current_controller_map.right_trigger = -1;
-			}
 			if (current_controller_map.lstick_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.lstick_button = -1;
-			}
 			if (current_controller_map.rstick_button == current_controller_map.hotkey_button)
-			{
 				current_controller_map.rstick_button = -1;
-			}
-
 			if (current_controller_map.left_shoulder == current_controller_map.hotkey_button)
-			{
 				current_controller_map.left_shoulder = -1;
-			}
 			if (current_controller_map.right_shoulder == current_controller_map.hotkey_button)
-			{
 				current_controller_map.right_shoulder = -1;
-			}
 
 
 			// left stick   

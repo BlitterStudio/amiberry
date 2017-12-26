@@ -14,27 +14,25 @@ typedef unsigned long frame_time_t;
 extern int64_t g_uae_epoch;
 
 /* Returns elapsed time in microseconds since start of emulator. */
-static __inline__ frame_time_t read_processor_time (void)
+static frame_time_t read_processor_time()
 {
-  int64_t time;
-  struct timespec ts;
+	struct timespec ts {};
 
-  clock_gettime (CLOCK_MONOTONIC, &ts);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 
-  time = (((int64_t) ts.tv_sec) * 1000000) + (ts.tv_nsec / 1000);
-  return time - g_uae_epoch;
+	const int64_t time = int64_t(ts.tv_sec) * 1000000 + ts.tv_nsec / 1000;
+	return time - g_uae_epoch;
 }
 
 
-static __inline__ int64_t read_processor_time_ns (void)
+static int64_t read_processor_time_ns()
 {
-  int64_t time;
-  struct timespec ts;
-  
-  clock_gettime (CLOCK_MONOTONIC, &ts);
+	struct timespec ts{};
 
-  time = (((int64_t) ts.tv_sec) * 1000000 * 1000) + (ts.tv_nsec);
-  return time;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+
+	const int64_t time = int64_t(ts.tv_sec) * 1000000 * 1000 + ts.tv_nsec;
+	return time;
 }
 
 #endif /* _RPT_H_ */

@@ -43,13 +43,13 @@
 #define _vsnprintf vsnprintf
 #define _vsntprintf vsnprintf
 
-static inline size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)
+static size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)
 {
 	if (size == 0) {
 		return 0;
 	}
-	size_t src_len = _tcslen(src);
-	size_t cpy_len = src_len;
+	const auto src_len = _tcslen(src);
+	auto cpy_len = src_len;
 	if (cpy_len >= size) {
 		cpy_len = size - 1;
 	}
@@ -58,13 +58,13 @@ static inline size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)
 	return src_len;
 }
 
-static inline size_t uae_strlcpy(char *dst, const char *src, size_t size)
+static size_t uae_strlcpy(char *dst, const char *src, size_t size)
 {
 	if (size == 0) {
 		return 0;
 	}
-	size_t src_len = strlen(src);
-	size_t cpy_len = src_len;
+	const auto src_len = strlen(src);
+	auto cpy_len = src_len;
 	if (cpy_len >= size) {
 		cpy_len = size - 1;
 	}

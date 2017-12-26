@@ -44,8 +44,6 @@
 #endif
 
 int emulating = 0;
-
-extern int screen_is_picasso;
 struct uae_prefs workprefs;
 
 struct gui_msg
