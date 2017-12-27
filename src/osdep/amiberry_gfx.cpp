@@ -269,6 +269,13 @@ int graphics_setup(void)
 		uae_start_thread(_T("render"), display_thread, nullptr, &display_tid);
 	}
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
+#elif USE_SDL2
+	SDL_DisplayMode current;
+	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
+	if (should_be_zero == 0)
+		host_hz = current.refresh_rate;
+	else
+		return 0;
 #endif
 	return 1;
 }
@@ -285,7 +292,7 @@ void InitAmigaVidMode(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
 	gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
-	gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8 *>(screen->pixels);
+	gfxvidinfo.drawbuffer.bufmem = (uae_u8*)screen->pixels;
 	gfxvidinfo.drawbuffer.outwidth = p->gfx_size.width;
 	gfxvidinfo.drawbuffer.outheight = p->gfx_size.height << p->gfx_vresolution;
 	gfxvidinfo.drawbuffer.rowbytes = screen->pitch;
@@ -422,13 +429,9 @@ static void open_screen(struct uae_prefs* p)
 	if (screen_is_picasso)
 		SDL_RenderSetLogicalSize(renderer, display_width, display_height);
 	else
-	{
 		SDL_RenderSetLogicalSize(renderer, display_width, (display_height * 2) >> p->gfx_vresolution);
-	}
 
 	Create_SDL_Texture(display_width, display_height, depth);
-
-	updatedisplayarea();
 #endif
 
 	vsync_counter = 0;
@@ -539,7 +542,7 @@ bool render_screen(bool immediate)
 void show_screen(int mode)
 {
 	const auto start = read_processor_time();
-
+		
 #ifdef USE_SDL1
 	const auto wait_till = current_vsync_frame;
 	if (vsync_modulo == 1)
@@ -550,7 +553,6 @@ void show_screen(int mode)
 			usleep(10);
 			current_vsync_frame = vsync_counter;
 		} while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
-
 		if (wait_till + 1 != current_vsync_frame)
 		{
 			// We missed a vsync...
@@ -589,17 +591,18 @@ void show_screen(int mode)
 			++current_vsync_frame;
 		}
 	}
+#endif
 
 	current_vsync_frame += currprefs.gfx_framerate;
-
-	last_synctime = read_processor_time();
-
+	
+#ifdef USE_SDL1
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
 	updatedisplayarea();
 #endif
 
+	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
 	
 	if (last_synctime - next_synctime > time_per_frame - 5000)
@@ -723,7 +726,7 @@ int GetSurfacePixelFormat()
 		: unit == 24
 		? RGBFB_B8G8R8
 		: unit == 32
-		? RGBFB_R8G8B8A8
+		? RGBFB_B8G8R8A8
 		: RGBFB_NONE;
 }
 
@@ -1059,7 +1062,7 @@ void picasso_init_resolutions()
 		for (auto bitdepth : bits)
 		{
 			const auto bit_unit = bitdepth + 1 & 0xF8;
-			const auto rgbFormat = bitdepth == 8 ? RGBFB_CLUT : bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8;
+			const auto rgbFormat = bitdepth == 8 ? RGBFB_CLUT : bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_B8G8R8A8;
 			auto pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
 #ifdef USE_SDL1
@@ -1097,8 +1100,8 @@ void gfx_set_picasso_state(int on)
 
 	screen_is_picasso = on;
 	open_screen(&currprefs);
-	if(screen != nullptr)
-	picasso_vidinfo.rowbytes = screen->pitch;
+	if (screen != nullptr)
+		picasso_vidinfo.rowbytes = screen->pitch;
 }
 
 void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
@@ -1113,16 +1116,16 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	picasso_vidinfo.selected_rgbformat = rgbfmt;
 	picasso_vidinfo.width = w;
 	picasso_vidinfo.height = h;
-	picasso_vidinfo.depth = screen->format->BytesPerPixel; // Native depth
+	picasso_vidinfo.depth = screen->format->BitsPerPixel; // Native depth
 	picasso_vidinfo.extra_mem = 1;
-
 	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel; // Native bytes
+
 	if (screen_is_picasso)
 	{
 		open_screen(&currprefs);
 		if(screen != nullptr) {
 			picasso_vidinfo.rowbytes = screen->pitch;
-			picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
+			picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_B8G8R8A8 : RGBFB_R5G6B5;
 		}
 	}
 }
