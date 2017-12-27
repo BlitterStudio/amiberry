@@ -140,6 +140,7 @@
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\imagebutton.hpp" />
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\label.hpp" />
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\listbox.hpp" />
+    <ClInclude Include="..\..\src\guisan\include\guisan\widgets\progressbar.hpp" />
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\radiobutton.hpp" />
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\scrollarea.hpp" />
     <ClInclude Include="..\..\src\guisan\include\guisan\widgets\slider.hpp" />
@@ -192,6 +193,7 @@
     <ClCompile Include="..\..\src\guisan\src\widgets\imagebutton.cpp" />
     <ClCompile Include="..\..\src\guisan\src\widgets\label.cpp" />
     <ClCompile Include="..\..\src\guisan\src\widgets\listbox.cpp" />
+    <ClCompile Include="..\..\src\guisan\src\widgets\progressbar.cpp" />
     <ClCompile Include="..\..\src\guisan\src\widgets\radiobutton.cpp" />
     <ClCompile Include="..\..\src\guisan\src\widgets\scrollarea.cpp" />
     <ClCompile Include="..\..\src\guisan\src\widgets\slider.cpp" />

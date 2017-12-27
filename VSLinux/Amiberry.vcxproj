@@ -51,21 +51,21 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j3</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j3</RemoteReBuildCommandLine>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j3 PLATFORM=rpi3-sdl2</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j3 PLATFORM=rpi3-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;..\src;..\src\include;..\src\osdep;..\src\archivers;..\src\threaddep;..\src\guisan\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\src\guisan\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-sdl2</RemoteProjectDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;..\src;..\src\include;..\src\osdep;..\src\archivers;..\src\threaddep;..\src\guisan\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j3</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j3</RemoteReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\src\guisan\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j3 PLATFORM=rpi3-sdl2</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j3 PLATFORM=rpi3-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;CAPSLOCK_DEBIAN_WORKAROUND;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-sdl2</RemoteProjectDir>
   </PropertyGroup>
   <ItemGroup>
@@ -86,9 +86,12 @@
     <Image Include="..\data\35floppy.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="..\data\amiberry-logo.png" />
+    <Image Include="..\data\amigainfo.ico" />
     <Image Include="..\data\chip.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="..\data\controller.png" />
     <Image Include="..\data\cpu.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
@@ -131,6 +134,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
+    <Font Include="..\data\AmigaTopaz.ttf" />
     <Font Include="..\data\Topaznew.ttf">
       <DeploymentContent>true</DeploymentContent>
     </Font>
@@ -247,9 +251,6 @@
     <ClCompile Include="..\src\bsdsocket.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\build68k.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
     <ClCompile Include="..\src\calc.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -327,12 +328,6 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\gayle.cpp" />
-    <ClCompile Include="..\src\genblitter.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\gencpu.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
     <ClCompile Include="..\src\gfxboard.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -352,7 +347,6 @@
     <ClCompile Include="..\src\jit\compemu_fpp.cpp" />
     <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp" />
     <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp" />
-    <ClCompile Include="..\src\jit\compemu_prefs.cpp" />
     <ClCompile Include="..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\src\jit\compstbl.cpp" />
     <ClCompile Include="..\src\jit\gencomp_arm.cpp" />
@@ -395,9 +389,11 @@
     <ClCompile Include="..\src\osdep\gui\InGameMessage.cpp" />
     <ClCompile Include="..\src\osdep\gui\main_window.cpp" />
     <ClCompile Include="..\src\osdep\gui\Navigation.cpp" />
+    <ClCompile Include="..\src\osdep\gui\PanelAbout.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelChipset.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelConfig.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelCPU.cpp" />
+    <ClCompile Include="..\src\osdep\gui\PanelCustom.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelDisplay.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelFloppy.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelHD.cpp" />
@@ -512,12 +508,13 @@
     <ClInclude Include="..\src\archivers\mp2\kjmp2.h" />
     <ClInclude Include="..\src\archivers\wrp\warp.h" />
     <ClInclude Include="..\src\archivers\zip\unzip.h" />
+    <ClInclude Include="..\src\blit.h" />
+    <ClInclude Include="..\src\blitfunc.h" />
+    <ClInclude Include="..\src\cputbl.h" />
     <ClInclude Include="..\src\include\akiko.h" />
     <ClInclude Include="..\src\include\ar.h" />
     <ClInclude Include="..\src\include\audio.h" />
     <ClInclude Include="..\src\include\autoconf.h" />
-    <ClInclude Include="..\src\include\blit.h" />
-    <ClInclude Include="..\src\include\blitfunc.h" />
     <ClInclude Include="..\src\include\blitter.h" />
     <ClInclude Include="..\src\include\blkdev.h" />
     <ClInclude Include="..\src\include\bsdsocket.h" />
@@ -526,7 +523,6 @@
     <ClInclude Include="..\src\include\cia.h" />
     <ClInclude Include="..\src\include\commpipe.h" />
     <ClInclude Include="..\src\include\cpummu.h" />
-    <ClInclude Include="..\src\include\cputbl.h" />
     <ClInclude Include="..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\src\include\crc32.h" />
     <ClInclude Include="..\src\include\custom.h" />
@@ -616,7 +612,7 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-sdl2/amiberry-sdl2 ~/projects/amiberry/amiberry-sdl2-dev</Command>
+      <Command>cp ~/projects/Amiberry-sdl2/amiberry-sdl2-dev ~/projects/amiberry/</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
@@ -626,7 +622,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-sdl2/amiberry-sdl2 ~/projects/amiberry/amiberry-sdl2-dev</Command>
+      <Command>cp ~/projects/Amiberry-sdl2/amiberry-sdl2-dev ~/projects/amiberry/</Command>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>

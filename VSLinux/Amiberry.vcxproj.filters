@@ -134,9 +134,21 @@
     <Image Include="..\data\quickstart.ico">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\amiberry-logo.png">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\amigainfo.ico">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\controller.png">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\Topaznew.ttf">
+      <Filter>data</Filter>
+    </Font>
+    <Font Include="..\data\AmigaTopaz.ttf">
       <Filter>data</Filter>
     </Font>
   </ItemGroup>
@@ -187,9 +199,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\bsdsocket.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\build68k.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\calc.cpp">
@@ -256,12 +265,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\fsusage.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\genblitter.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\gencpu.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gfxboard.cpp">
@@ -639,9 +642,6 @@
     <ClCompile Include="..\src\softfloat\softfloat_fpsp.cpp">
       <Filter>src\softfloat</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\jit\compemu_prefs.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\archivers\7z\7zBuf2.c">
       <Filter>src\archivers\7z</Filter>
     </ClCompile>
@@ -744,6 +744,12 @@
     <ClCompile Include="..\src\archivers\7z\7zAlloc.cpp">
       <Filter>src\archivers\7z</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelAbout.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelCustom.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -827,12 +833,6 @@
     <ClInclude Include="..\src\include\autoconf.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\blit.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\blitfunc.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\blitter.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -852,9 +852,6 @@
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\cpu_prefetch.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\cputbl.h">
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\crc32.h">
@@ -1180,6 +1177,15 @@
     </ClInclude>
     <ClInclude Include="..\src\archivers\7z\7zAlloc.h">
       <Filter>src\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\blit.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\blitfunc.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cputbl.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
