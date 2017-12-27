@@ -1290,7 +1290,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				                          ? thismap[0].start_action
 				                          : port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY;
 		}
-		else // default, normal joystick  
+		else if(currprefs.jports[port].id > JSEM_JOYS + numKeysAsJoys) // default, normal joystick  
 		{
 			thismap[0].south_action = thismap[0].south_action
 				                          ? thismap[0].south_action
@@ -1305,8 +1305,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				                          ? thismap[0].north_action
 				                          : port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON;
 
-			// DISABLED for now (should not trigger keyboard input when using Keyboard as Joystick!)
-			//thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
+			thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
 		}
 
 
@@ -1337,16 +1336,16 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				                                   ? thismap[0].right_shoulder_action
 				                                   : port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW;
 		}
-		// DISABLED for now (should not trigger keyboard input when using Keyboard as Joystick!)
-		//else // default, normal joystick
-		//{
-		//	thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
-		//		                                  ? thismap[0].left_shoulder_action
-		//		                                  : INPUTEVENT_KEY_SPACE;
-		//	thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
-		//		                                   ? thismap[0].right_shoulder_action
-		//		                                   : INPUTEVENT_KEY_RETURN;
-		//}
+
+		else if(currprefs.jports[port].id > JSEM_JOYS + numKeysAsJoys) // default, normal joystick
+		{
+			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
+				                                  ? thismap[0].left_shoulder_action
+				                                  : INPUTEVENT_KEY_SPACE;
+			thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
+				                                   ? thismap[0].right_shoulder_action
+				                                   : INPUTEVENT_KEY_RETURN;
+		}
 	}
 	else // ports 2, 3 ... parallel ports 
 	{
@@ -1370,14 +1369,13 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 			                         ? thismap[0].east_action
 			                         : port - 2 ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON;
 
-		// DISABLED for now (should not trigger keyboard input when using Keyboard as Joystick!)
-		//thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
-		//thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
-		//	                                  ? thismap[0].left_shoulder_action
-		//	                                  : INPUTEVENT_KEY_SPACE;
-		//thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
-		//	                                   ? thismap[0].right_shoulder_action
-		//	                                   : INPUTEVENT_KEY_RETURN;
+		thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
+		thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
+			                                  ? thismap[0].left_shoulder_action
+			                                  : INPUTEVENT_KEY_SPACE;
+		thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
+			                                   ? thismap[0].right_shoulder_action
+			                                   : INPUTEVENT_KEY_RETURN;
 	}
 
 
