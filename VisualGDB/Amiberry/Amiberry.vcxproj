@@ -197,6 +197,7 @@
     <ClCompile Include="..\..\src\osdep\gui\InGameMessage.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\main_window.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\Navigation.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelAbout.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelChipset.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelConfig.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelCPU.cpp" />

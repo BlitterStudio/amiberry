@@ -10,7 +10,7 @@
       <Transport>None</Transport>
     </BuildHost>
     <DeploymentHost>
-      <HostName>192.168.1.189</HostName>
+      <HostName>192.168.1.121</HostName>
       <Transport>SSH</Transport>
       <UserName>pi</UserName>
     </DeploymentHost>
@@ -58,6 +58,7 @@
     <ProjectFile>Amiberry.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
+      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>
@@ -105,7 +106,7 @@
     <KeepConsoleAfterExit>false</KeepConsoleAfterExit>
     <RunGDBUnderSudo>false</RunGDBUnderSudo>
     <DeploymentMode>Auto</DeploymentMode>
-    <LdLibraryPath />
+    <LdLibraryPath>/usr/local/lib</LdLibraryPath>
     <DeployWhenLaunchedWithoutDebugging>true</DeployWhenLaunchedWithoutDebugging>
     <SuppressTTYCreation>false</SuppressTTYCreation>
   </Debug>
