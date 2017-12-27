@@ -33,11 +33,7 @@ static gcn::UaeCheckBox* chkRetroArchReset;
 static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;
-#ifdef PANDORA
-static gcn::Label* lblPandoraSpeed;
-static gcn::Label* lblPandoraSpeedInfo;
-static gcn::Slider* sldPandoraSpeed;
-#endif
+
 static gcn::UaeCheckBox* chkBSDSocket;
 static gcn::UaeCheckBox* chkMasterWP;
 
@@ -87,10 +83,7 @@ public:
 	{
 		if (actionEvent.getSource() == chkStatusLine)
 			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
-#ifdef PANDORA
-		else if (actionEvent.getSource() == chkHideIdleLed)
-			changed_prefs.pandora_hide_idle_led = chkHideIdleLed->isSelected();
-#endif
+
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
 
@@ -134,18 +127,6 @@ public:
 				strcpy(changed_prefs.quit_amiberry, key);
 			}
 		}
-#ifdef PANDORA
-		else if (actionEvent.getSource() == sldPandoraSpeed)
-		{
-			int newspeed = (int)sldPandoraSpeed->getValue();
-			newspeed = newspeed - (newspeed % 20);
-			if (changed_prefs.cpu_speed != newspeed)
-			{
-				changed_prefs.cpu_speed = newspeed;
-				RefreshPanelMisc();
-			}
-		}
-#endif
 
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
@@ -190,21 +171,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	//chkRetroArchSavestate->setId("RetroArchState");
 	//chkRetroArchSavestate->addActionListener(miscActionListener);
 
-
-        
-#ifdef PANDORA
-	lblPandoraSpeed = new gcn::Label("Pandora Speed:");
-	lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
-	lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
-	sldPandoraSpeed = new gcn::Slider(500, 1260);
-	sldPandoraSpeed->setSize(200, SLIDER_HEIGHT);
-	sldPandoraSpeed->setBaseColor(gui_baseCol);
-	sldPandoraSpeed->setMarkerLength(20);
-	sldPandoraSpeed->setStepLength(20);
-	sldPandoraSpeed->setId("PandSpeed");
-	sldPandoraSpeed->addActionListener(miscActionListener);
-	lblPandoraSpeedInfo = new gcn::Label("1000 MHz");
-#endif
 	chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
 	chkBSDSocket->setId("BSDSocket");
 	chkBSDSocket->addActionListener(miscActionListener);
@@ -271,12 +237,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkRetroArchReset->getHeight() + DISTANCE_NEXT_Y;
 	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
 
-#ifdef PANDORA
-	category.panel->add(lblPandoraSpeed, DISTANCE_BORDER, posY);
-	category.panel->add(sldPandoraSpeed, DISTANCE_BORDER + lblPandoraSpeed->getWidth() + 8, posY);
-	category.panel->add(lblPandoraSpeedInfo, sldPandoraSpeed->getX() + sldPandoraSpeed->getWidth() + 12, posY);
-	posY += sldPandoraSpeed->getHeight() + DISTANCE_NEXT_Y;
-#endif
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y * 2;
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
@@ -312,11 +272,7 @@ void ExitPanelMisc()
 	delete chkRetroArchMenu;
 	delete chkRetroArchReset;
 	//delete chkRetroArchSaveState;
-#ifdef PANDORA
-	delete lblPandoraSpeed;
-	delete sldPandoraSpeed;
-	delete lblPandoraSpeedInfo;
-#endif
+
 	delete chkBSDSocket;
 	delete chkMasterWP;
 
@@ -337,20 +293,12 @@ void ExitPanelMisc()
 void RefreshPanelMisc()
 {
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
-#ifdef PANDORA
-	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
-#endif
 	chkShowGUI->setSelected(changed_prefs.start_gui);
-
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
 	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
-#ifdef PANDORA
-	sldPandoraSpeed->setValue(changed_prefs.cpu_speed);
-	snprintf(tmp, 20, "%d MHz", changed_prefs.cpu_speed);
-	lblPandoraSpeedInfo->setCaption(tmp);
-#endif
+
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 
@@ -375,11 +323,6 @@ bool HelpPanelMisc(std::vector<std::string> &helptext)
 	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
 	helptext.emplace_back("the emulation starts directly without showing the GUI.");
 	helptext.emplace_back("");
-#ifdef PANDORA
-	helptext.emplace_back("Set the speed for the Pandora CPU to overclock it for games which need more power. Be careful with this");
-	helptext.emplace_back("parameter.");
-	helptext.emplace_back("");
-#endif	
 	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
 	helptext.emplace_back("");
 	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");

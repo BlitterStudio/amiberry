@@ -8,10 +8,10 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
-#include <stdlib.h>
-#include <stdarg.h>
+#include <cstdlib>
+#include <cstdarg>
 #include <asm/sigcontext.h>
-#include <signal.h>
+#include <csignal>
 #include <dlfcn.h>
 #ifndef ANDROID
 #include <execinfo.h>
@@ -231,21 +231,7 @@ void target_fixup_options(struct uae_prefs* p)
 
 void target_default_options(struct uae_prefs* p, int type)
 {
-#ifdef PANDORA
-	p->gfx_size.width = 320;
-	p->gfx_size.height = 240;
-	p->gfx_resolution = RES_LORES;	
-	p->cpu_speed = defaultCpuSpeed;
-	p->hide_idle_led = 0;
-	p->tapDelay = 10;
-#endif //PANDORA
-
-#ifdef PANDORA
-	p->fast_copper = 1;
-#else
 	p->fast_copper = 0;
-#endif
-
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
@@ -323,12 +309,6 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-#ifdef PANDORA
-	cfgfile_write(f, "amiberry.cpu_speed", "%d", p->pandora_cpu_speed);
-	cfgfile_write(f, "amiberry.hide_idle_led", "%d", p->pandora_hide_idle_led);
-	cfgfile_write(f, "amiberry.tap_delay", "%d", p->pandora_tapDelay);
-#endif //PANDORA
-
 	cfgfile_write(f, "amiberry.vertical_offset", "%d", p->vertical_offset - OFFSET_Y_ADJUST);
 
 #ifdef USE_SDL1
@@ -399,15 +379,6 @@ TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
-#ifdef PANDORA
-	if (cfgfile_intval(option, value, "cpu_speed", &p->pandora_cpu_speed, 1)
-		return 1;
-	if (cfgfile_intval(option, value, "hide_idle_led", &p->pandora_hide_idle_led, 1)
-		return 1;
-	if (cfgfile_intval(option, value, "tap_delay", &p->pandora_tapDelay, 1)
-		return 1;
-#endif //PANDORA
-
 #ifdef ANDROIDSDL
 		|| cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
 		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
@@ -867,10 +838,6 @@ bool SetVSyncRate(int hz)
 
   if(currVSyncRate != hz && (hz == 50 || hz == 60))
   {
-#ifdef PANDORA
-    snprintf((char*)cmd, 64, "sudo /usr/pandora/scripts/op_lcdrate.sh %d", hz);
-    system(cmd);
-#endif
     currVSyncRate = hz;
     return true;
   }
@@ -879,19 +846,6 @@ bool SetVSyncRate(int hz)
 
 void setCpuSpeed()
 {
-#ifdef PANDORA
-	char speedCmd[128];
-
-  currprefs.pandora_cpu_speed = changed_prefs.pandora_cpu_speed;
-
-	if(currprefs.pandora_cpu_speed != lastCpuSpeed)
-	{
-		snprintf((char*)speedCmd, 128, "unset DISPLAY; echo y | sudo -n /usr/pandora/scripts/op_cpuspeed.sh %d", currprefs.pandora_cpu_speed);
-		system(speedCmd);
-		lastCpuSpeed = currprefs.pandora_cpu_speed;
-		cpuSpeedChanged = true;
-	}
-#endif
 	if(changed_prefs.ntscmode != currprefs.ntscmode)
 	{
 		if(changed_prefs.ntscmode)
@@ -900,49 +854,6 @@ void setCpuSpeed()
 			SetVSyncRate(50);
 		fix_apmodes(&changed_prefs);
 	}
-}
-
-
-int getDefaultCpuSpeed(void)
-{
-#ifdef PANDORA
-  int speed = 600;
-  FILE* f = fopen ("/etc/pandora/conf/cpu.conf", "rt");
-  if(f)
-  {
-    char line[128];
-    for(int i=0; i<6; ++i)
-    {
-      fscanf(f, "%s\n", &line);
-      if(strncmp(line, "default:", 8) == 0)
-      {
-        int value = 0;
-        sscanf(line, "default:%d", &value);
-        if(value > 500 && value < 1200)
-        {
-          speed = value;
-        }
-      }
-    }
-    fclose(f);
-  }
-  return speed;
-#else
-	return 0;
-#endif
-}
-
-
-void resetCpuSpeed(void)
-{
-#ifdef PANDORA
-  if(cpuSpeedChanged)
-  {
-    lastCpuSpeed = defaultCpuSpeed - 10;
-    currprefs.cpu_speed = changed_prefs.cpu_speed = defaultCpuSpeed;
-    setCpuSpeed();
-  }
-#endif
 }
 
 void target_addtorecent(const TCHAR *name, int t)
@@ -970,8 +881,8 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 		struct timespec ts{};
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		const int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
-		*low = (uae_u32)(time & 0xffffffff);
-		return (uae_u32)(time >> 32);
+		*low = uae_u32(time & 0xffffffff);
+		return uae_u32(time >> 32);
 	}
 	return 0;
 }
@@ -987,10 +898,6 @@ int main(int argc, char* argv[])
 
 	max_uae_width = 1920;
 	max_uae_height = 1080;
-
-#ifdef PANDORA
-	defaultCpuSpeed = getDefaultCpuSpeed();
-#endif
 
 	// Get startup path
 	getcwd(start_path_data, MAX_DPATH);
@@ -1054,10 +961,8 @@ int main(int argc, char* argv[])
 
 	real_main(argc, argv);
 
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
-#endif
 
 	ClearAvailableROMList();
 	romlist_clear();
@@ -1179,24 +1084,6 @@ int handle_msgpump()
 				ioctl(0, KDSETLED, kbd_led_status);
 				ioctl(0, KDSKBLED, kbd_flags);
 				break;
-
-#ifdef PANDORA
-  		    case SDLK_LCTRL: // Select key
-  		      inputdevice_add_inputcode (AKS_ENTERGUI, 1);
-  		      break;
-
-			case SDLK_LSHIFT: // Shift key
-				inputdevice_do_keyboard(AK_LSH, 1);
-				break;
-
-			case SDLK_RSHIFT: // Left shoulder button
-			case SDLK_RCTRL:  // Right shoulder button
-				if(currprefs.input_tablet > TABLET_OFF) {
-					// Holding left or right shoulder button -> stylus does right mousebutton
-					doStylusRightClick = 1;
-            }
-				break;
-#endif
 			}
 		
 			// Handle all other keys
@@ -1207,7 +1094,7 @@ int handle_msgpump()
 			else
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
 #elif USE_SDL2
-			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+			inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
 #endif
 			break;
 
@@ -1219,7 +1106,7 @@ int handle_msgpump()
 			else
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
 #elif USE_SDL2
-			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+			inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
 #endif
 			break;
 
@@ -1227,11 +1114,6 @@ int handle_msgpump()
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
 				if (rEvent.button.button == SDL_BUTTON_LEFT) {
-#ifdef PANDORA
-					if (currprefs.input_tablet > TABLET_OFF && !doStylusRightClick)
-						delayed_mousebutton = currprefs.pandora_tapDelay << 1;
-					else
-#endif //PANDORA
 					setmousebuttonstate(0, doStylusRightClick, 1);
 				}
 				if (rEvent.button.button == SDL_BUTTON_RIGHT)
@@ -1261,7 +1143,7 @@ int handle_msgpump()
 					const auto mouseScale = currprefs.input_joymouse_multiplier / 2;
 					const auto x = rEvent.motion.xrel;
 					const auto y = rEvent.motion.yrel;
-#if defined (PANDORA) || defined (ANDROIDSDL)
+#if defined (ANDROIDSDL)
     				if(rEvent.motion.x == 0 && x > -4)
     					x = -4;
     				if(rEvent.motion.y == 0 && y > -4)
@@ -1270,7 +1152,7 @@ int handle_msgpump()
     					x = 4;
     				if(rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
     					y = 4;
-#endif //PANDORA
+#endif //ANDROIDSDL
 					setmousestate(0, 0, x * mouseScale, 0);
 					setmousestate(0, 1, y * mouseScale, 0);
 				}

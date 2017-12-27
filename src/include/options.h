@@ -424,12 +424,6 @@ struct uae_prefs {
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 
-#ifdef PANDORA
-	int cpu_speed;
-	int hide_idle_led;
-	int tapDelay;
-#endif
-
 	/* input */
 
 	struct jport jports[MAX_JPORTS];

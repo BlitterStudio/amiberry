@@ -475,13 +475,6 @@ int check_prefs_changed_gfx()
 		currprefs.vertical_offset = changed_prefs.vertical_offset;
 		changed = 1;
 	}
-#ifdef PANDORA
-	if (currprefs.pandora_hide_idle_led != changed_prefs.pandora_hide_idle_led)
-	{
-		currprefs.pandora_hide_idle_led = changed_prefs.pandora_hide_idle_led;
-		changed = 1;
-	}
-#endif //PANDORA
 	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)
 	{
 		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;

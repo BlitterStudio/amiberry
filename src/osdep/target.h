@@ -48,10 +48,6 @@ void amiberry_stop_sound();
 
 void keyboard_settrans();
 
-#ifdef PANDORA
-int translate_pandora_keys(int symbol, int *modifier);
-#endif
-
 void SimulateMouseOrJoy(int code, int keypressed);
 
 #define REMAP_MOUSEBUTTON_LEFT    -1

@@ -55,17 +55,11 @@ static gcn::UaeDropDown* cboPort3;
 static gcn::UaeDropDown* cboPort2mode;
 static gcn::UaeDropDown* cboPort3mode;
 
-
-
 static gcn::Label* lblAutofire;
 static gcn::UaeDropDown* cboAutofire;
 static gcn::Label* lblMouseSpeed;
 static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
-#ifdef PANDORA
-static gcn::Label *lblTapDelay;
-static gcn::UaeDropDown* cboTapDelay;
-#endif
 static gcn::UaeCheckBox* chkMouseHack;
   
 class StringListModel : public gcn::ListModel
@@ -98,13 +92,8 @@ public:
 	}
 };
 
-#ifdef PANDORA
-static const char* inputport_list[] = {"Mouse", "Arrows as mouse", "Arrows as joystick", "Arrows as CD32 contr.", "none"};
-StringListModel ctrlPortList(inputport_list, 5);
-#else
 static StringListModel ctrlPortList(nullptr, 0);
 static int portListIDs[MAX_INPUT_DEVICES];
-#endif
 
 const char* autofireValues[] = {"Off", "Slow", "Medium", "Fast"};
 StringListModel autofireList(autofireValues, 4);
@@ -114,11 +103,6 @@ StringListModel ctrlPortMouseModeList(mousemapValues, 4);
 
 const char* joyportmodes[] = {"Mouse", "Joystick", "CD32", "Default"};
 StringListModel ctrlPortModeList(joyportmodes, 4);
-
-#ifdef PANDORA
-const char *tapDelayValues[] = { "Normal", "Short", "None" };
-StringListModel tapDelayList(tapDelayValues, 3);
-#endif
 
 class InputActionListener : public gcn::ActionListener
 {
@@ -141,31 +125,6 @@ public:
 
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-#ifdef PANDORA
-		if (actionEvent.getSource() == cboPort0) {
-			// Handle new device in port 0
-			switch (cboPort0->getSelected()) {
-			case 0: changed_prefs.jports[0].id = JSEM_MICE;     changed_prefs.jports[0].mode = JSEM_MODE_MOUSE; break;
-			case 1: changed_prefs.jports[0].id = JSEM_MICE + 1; changed_prefs.jports[0].mode = JSEM_MODE_MOUSE; break;
-			case 2: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK; break;
-			case 3: changed_prefs.jports[0].id = JSEM_JOYS;     changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK_CD32; break;
-			case 4: changed_prefs.jports[0].id = -1;            changed_prefs.jports[0].mode = JSEM_MODE_DEFAULT; break;
-			}
-			inputdevice_updateconfig(NULL, &changed_prefs);
-		}
-
-		else if (actionEvent.getSource() == cboPort1) {
-			// Handle new device in port 1
-			switch (cboPort1->getSelected()) {
-			case 0: changed_prefs.jports[1].id = JSEM_MICE;     changed_prefs.jports[1].mode = JSEM_MODE_MOUSE; break;
-			case 1: changed_prefs.jports[1].id = JSEM_MICE + 1; changed_prefs.jports[1].mode = JSEM_MODE_MOUSE; break;
-			case 2: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK; break;
-			case 3: changed_prefs.jports[1].id = JSEM_JOYS;     changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK_CD32; break;
-			case 4: changed_prefs.jports[1].id = -1;            changed_prefs.jports[1].mode = JSEM_MODE_DEFAULT; break;
-			}
-			inputdevice_updateconfig(NULL, &changed_prefs);
-		}
-#else
 		if (actionEvent.getSource() == cboPort0)
 		{
 			// Handle new device in port 0
@@ -194,7 +153,6 @@ public:
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
 		}
-#endif
 
 		else if (actionEvent.getSource() == cboPort2)
 		{
@@ -284,17 +242,7 @@ public:
 			changed_prefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
 			RefreshPanelInput();
 		}
-#ifdef PANDORA
-		else if (actionEvent.getSource() == cboTapDelay)
-		{
-			if (cboTapDelay->getSelected() == 0)
-				changed_prefs.tapDelay = 10;
-			else if (cboTapDelay->getSelected() == 1)
-				changed_prefs.tapDelay = 5;
-			else
-				changed_prefs.tapDelay = 2;
-		}
-#endif
+
 		else if (actionEvent.getSource() == chkMouseHack)
 		{
 #ifdef ANDROIDSDL
@@ -431,16 +379,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->addActionListener(inputActionListener);
 	lblMouseSpeedInfo = new gcn::Label(".25");
 
-#ifdef PANDORA
-	lblTapDelay = new gcn::Label("Tap Delay:");
-  	lblTapDelay->setAlignment(gcn::Graphics::RIGHT);
-	cboTapDelay = new gcn::UaeDropDown(&tapDelayList);
-  	cboTapDelay->setSize(80, DROPDOWN_HEIGHT);
-  	cboTapDelay->setBaseColor(gui_baseCol);
-  	cboTapDelay->setId("cboTapDelay");
-  	cboTapDelay->addActionListener(inputActionListener);
-#endif
-
   	chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
   	chkMouseHack->setId("MouseHack");
   	chkMouseHack->addActionListener(inputActionListener);
@@ -481,11 +419,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(chkMouseHack, cboAutofire->getX() + cboAutofire->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += chkMouseHack->getHeight() + DISTANCE_NEXT_Y;
   
-#ifdef PANDORA
-  category.panel->add(lblTapDelay, 300, posY);
-  category.panel->add(cboTapDelay, 300 + lblTapDelay->getWidth() + 8, posY);
-#endif
-
 	RefreshPanelInput();
 }
 
@@ -515,10 +448,7 @@ void ExitPanelInput()
 	delete lblMouseSpeed;
 	delete sldMouseSpeed;
 	delete lblMouseSpeedInfo;
-#ifdef PANDORA
-  	delete lblTapDelay;
-  	delete cboTapDelay;
-#endif
+
   	delete chkMouseHack;
 	delete inputActionListener;
 }
@@ -526,55 +456,6 @@ void ExitPanelInput()
 
 void RefreshPanelInput()
 {
-#ifdef PANDORA
-  int i;
-	// Set current device in port 0
-	switch (changed_prefs.jports[0].id)
-	{
-	case JSEM_MICE:
-		cboPort0->setSelected(0);
-		break;
-	case JSEM_MICE + 1:
-		cboPort0->setSelected(1);
-		break;
-	case JSEM_JOYS:
-		if (changed_prefs.jports[0].mode != JSEM_MODE_JOYSTICK_CD32)
-			cboPort0->setSelected(2);
-		else
-			cboPort0->setSelected(3);
-		break;
-	case -1:
-		cboPort0->setSelected(4);
-		break;
-	default:
-		cboPort0->setSelected(changed_prefs.jports[0].id - JSEM_JOYS + 4);
-		break;
-	}
-
-	// Set current device in port 1
-	switch (changed_prefs.jports[1].id)
-	{
-	case JSEM_MICE:
-		cboPort1->setSelected(0);
-		break;
-	case JSEM_MICE + 1:
-		cboPort1->setSelected(1);
-		break;
-	case JSEM_JOYS:
-		if (changed_prefs.jports[1].mode != JSEM_MODE_JOYSTICK_CD32)
-			cboPort1->setSelected(2);
-		else
-			cboPort1->setSelected(3);
-		break;
-	case -1:
-		cboPort1->setSelected(4);
-		break;
-	default:
-		cboPort1->setSelected(changed_prefs.jports[1].id - JSEM_JOYS + 4);
-		break;
-	}
-#else
-
 	// Set current device in port 0
 	auto idx = 0;
 	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
@@ -598,7 +479,6 @@ void RefreshPanelInput()
 		}
 	}
 	cboPort1->setSelected(idx);
-#endif
 
 	// Set current device in port 2
 	idx = 0;
@@ -684,14 +564,7 @@ void RefreshPanelInput()
 			break;
 		}
 	}
-#ifdef PANDORA
-	if (changed_prefs.tapDelay == 10)
-		cboTapDelay->setSelected(0);
-	else if (changed_prefs.tapDelay == 5)
-		cboTapDelay->setSelected(1);
-	else
-		cboTapDelay->setSelected(2);
-#endif
+
 	chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 }
 
