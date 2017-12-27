@@ -352,8 +352,13 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 void updatedisplayarea()
 {
 #ifdef USE_SDL2
+	void* pixels;
+	int pitch;
 	// Update the texture from the surface
-	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+	SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+	SDL_ConvertPixels(screen->w, screen->h, screen->format->format, screen->pixels, screen->pitch, SDL_PIXELFORMAT_RGB565, pixels, pitch);
+	SDL_UnlockTexture(texture);
+	// Clear the screen first
 	SDL_RenderClear(renderer);
 	// Copy the texture to the renderer
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
@@ -511,7 +516,6 @@ void unlockscr()
 
 void wait_for_vsync()
 {
-#ifdef USE_SDL1
 	const auto start = read_processor_time();
 	const auto wait_till = current_vsync_frame;
 	do
@@ -519,7 +523,6 @@ void wait_for_vsync()
 		usleep(10);
 		current_vsync_frame = vsync_counter;
 	} while (wait_till >= current_vsync_frame && read_processor_time() - start < 20000);
-#endif
 }
 
 
