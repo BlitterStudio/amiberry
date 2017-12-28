@@ -7,7 +7,7 @@ endif
 #
 # Common flags for both SDL1 and SDL2
 #
-RPI_FLAGS += -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations -DCAPSLOCK_DEBIAN_WORKAROUND
+RPI_FLAGS += -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
 
 #
 # SDL1 targets
