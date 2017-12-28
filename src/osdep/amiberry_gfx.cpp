@@ -386,9 +386,9 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_width = 1920;
 		max_uae_height = 1080;
 	}
-	
-#ifdef USE_SDL1
+
 	next_synctime = 0;
+#ifdef USE_SDL1
 	current_resource_amigafb = 0;
 	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
@@ -929,9 +929,7 @@ bool vsync_switchmode(int hz)
 	if (hz != currVSyncRate)
 	{
 		currVSyncRate = hz;
-#ifdef USE_SDL1
 		black_screen_now();
-#endif
 		fpscounter_reset();
 		time_per_frame = 1000 * 1000 / (hz);
 		
@@ -961,9 +959,7 @@ bool target_graphics_buffer_update()
 
 	if (rate_changed)
 	{
-#ifdef USE_SDL1
 		black_screen_now();
-#endif
 		fpscounter_reset();
 		time_per_frame = 1000 * 1000 / currprefs.chipset_refreshrate;
 	}
