@@ -359,24 +359,6 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 }
 #endif
 
-void updatedisplayarea()
-{
-#ifdef USE_SDL2
-	void* pixels;
-	int pitch;
-
-	// Update the texture from the surface
-	SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-	memcpy(pixels, screen->pixels, screen->h * screen->pitch);
-	SDL_UnlockTexture(texture);
-
-	// Copy the texture to the renderer
-	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-	// Update the window surface (show the renderer)
-	SDL_RenderPresent(renderer);
-#endif
-}
-
 static void open_screen(struct uae_prefs* p)
 {
 	graphics_subshutdown();
@@ -503,8 +485,6 @@ int check_prefs_changed_gfx()
 
 int lockscr()
 {
-	if (SDL_LockSurface(screen) == -1)
-		return 0;
 	init_row_map();
 	return 1;
 }
@@ -512,7 +492,7 @@ int lockscr()
 
 void unlockscr()
 {
-	SDL_UnlockSurface(screen);
+
 }
 
 
@@ -541,7 +521,15 @@ bool render_screen(bool immediate)
 			savestate_state = 0;
 		}
 	}
+#ifdef USE_SDL2
+	void* pixels;
+	int pitch;
 
+	// Update the texture from the surface
+	SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+	memcpy(pixels, screen->pixels, screen->h * screen->pitch);
+	SDL_UnlockTexture(texture);
+#endif
 	return true;
 }
 
@@ -605,7 +593,11 @@ void show_screen(int mode)
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
-	updatedisplayarea();
+	// Copy the texture to the renderer
+	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+	// Update the window surface (show the renderer)
+	SDL_RenderPresent(renderer);
+	//updatedisplayarea();
 #endif
 
 	last_synctime = read_processor_time();
@@ -1135,14 +1127,13 @@ uae_u8* gfx_lock_picasso()
 {
 	if (screen == nullptr || screen_is_picasso == 0)
 		return nullptr;
-	SDL_LockSurface(screen);
+
 	picasso_vidinfo.rowbytes = screen->pitch;
 	return static_cast<uae_u8 *>(screen->pixels);
 }
 
 void gfx_unlock_picasso(const bool dorender)
 {
-	SDL_UnlockSurface(screen);
 	if (dorender)
 	{
 		render_screen(true);

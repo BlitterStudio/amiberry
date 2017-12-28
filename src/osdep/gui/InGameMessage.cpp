@@ -191,15 +191,26 @@ void InGameMessage(const char* msg)
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 		// Finally we update the screen.
-#ifdef USE_SDL1
-		if(!drawn)
-			SDL_Flip(screen);
-#elif USE_SDL2
 		if (!drawn)
 		{
+#ifdef USE_SDL1
+			SDL_Flip(screen);
+#elif USE_SDL2
 			if (cursor != nullptr)
 				SDL_ShowCursor(SDL_ENABLE);
-			updatedisplayarea();
+
+			void* pixels;
+			int pitch;
+
+			// Update the texture from the surface
+			SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+			memcpy(pixels, screen->pixels, screen->h * screen->pitch);
+			SDL_UnlockTexture(texture);
+
+			// Copy the texture to the renderer
+			SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+			// Update the window surface (show the renderer)
+			SDL_RenderPresent(renderer);
 		}
 #endif
 		drawn = true;
