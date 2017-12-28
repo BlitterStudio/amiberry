@@ -418,7 +418,7 @@ static void open_screen(struct uae_prefs* p)
 	else
 		SDL_RenderSetLogicalSize(renderer, display_width, (display_height * 2) >> p->gfx_vresolution);
 
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
+	texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
 #endif
 
@@ -759,7 +759,7 @@ void graphics_leave()
 	if (renderer)
 	{
 		SDL_DestroyRenderer(renderer);
-		renderer == nullptr;
+		renderer = nullptr;
 	}
 	SDL_DestroyWindow(sdlWindow);
 	sdlWindow = nullptr;
