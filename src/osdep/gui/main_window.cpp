@@ -228,9 +228,10 @@ void UpdateGuiScreen()
 #elif USE_SDL2
 	void *pixels;
 	int pitch;
+
 	// Update the texture from the surface
 	SDL_LockTexture(gui_texture, nullptr, &pixels, &pitch);
-	SDL_ConvertPixels(gui_screen->w, gui_screen->h, gui_screen->format->format, gui_screen->pixels, gui_screen->pitch, SDL_PIXELFORMAT_BGRA32, pixels, pitch);
+	memcpy(pixels, gui_screen->pixels, gui_screen->h * gui_screen->pitch);
 	SDL_UnlockTexture(gui_texture);
 	// Copy the texture on the renderer
 	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
@@ -300,27 +301,22 @@ namespace sdl
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
+		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 
-		//gui_texture = SDL_CreateTextureFromSurface(renderer, gui_screen);
-		gui_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
+		gui_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
+
+		if (cursor)
+			SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef ANDROIDSDL
 		// Enable Android multitouch
 		SDL_InitSubSystem(SDL_INIT_JOYSTICK);
 		SDL_JoystickOpen(0);
 #endif
-#ifdef USE_SDL2
-		if (cursor)
-		{
-			SDL_ShowCursor(SDL_ENABLE);
-		}
-#endif
-
 		//-------------------------------------------------
 		// Create helpers for GUI framework
 		//-------------------------------------------------

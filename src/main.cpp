@@ -635,7 +635,6 @@ void do_start_program(void)
 
 void start_program (void)
 {
-#ifdef CAPSLOCK_DEBIAN_WORKAROUND
 	char kbd_flags;
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
@@ -644,7 +643,6 @@ void start_program (void)
 	  // record capslock pressed
 		inputdevice_do_keyboard(AK_CAPSLOCK, 1);
 	}
-#endif
     do_start_program ();
 }
 
@@ -662,50 +660,9 @@ void check_error_sdl(const bool check, const char* message) {
 		exit(-1);
 	}
 }
-#ifdef USE_SDL2
-static void initialize_sdl2()
-{
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-	{
-		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		abort();
-	}
-
-	sdlWindow = SDL_CreateWindow("Amiberry-SDL2 v2",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		0,
-		0,
-		SDL_WINDOW_FULLSCREEN_DESKTOP);
-	check_error_sdl(sdlWindow == nullptr, "Unable to create window");
-
-	renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	check_error_sdl(renderer == nullptr, "Unable to create a renderer");
-
-	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
-	{
-		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
-	}
-
-	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		SDL_Log("SDL could not grab the keyboard");
-
-	SDL_ShowCursor(SDL_DISABLE);
-}
-#endif
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-#ifdef USE_SDL1
-	int ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
-	if (ret < 0)
-	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		abort();
-	};
-#elif USE_SDL2
-	initialize_sdl2();
-#endif
 	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0]) {

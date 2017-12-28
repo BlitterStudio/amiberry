@@ -237,6 +237,13 @@ int graphics_setup(void)
 	InitPicasso96();
 #endif
 #ifdef USE_SDL1
+	int ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+	if (ret < 0)
+	{
+		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+		abort();
+	};
+
 	VCHI_INSTANCE_T vchi_instance;
 	VCHI_CONNECTION_T *vchi_connection;
 	TV_DISPLAY_STATE_T tvstate;
@@ -270,6 +277,36 @@ int graphics_setup(void)
 	}
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
 #elif USE_SDL2
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+		abort();
+	}
+
+	sdlWindow = SDL_CreateWindow("Amiberry-SDL2",
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		0,
+		0,
+		SDL_WINDOW_FULLSCREEN_DESKTOP);
+	check_error_sdl(sdlWindow == nullptr, "Unable to create window");
+	
+	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
+	{
+		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
+	}
+
+	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
+		SDL_Log("SDL could not grab the keyboard");
+	
+	SDL_ShowCursor(SDL_DISABLE);
+
+	if (renderer == nullptr)
+	{
+		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+	}
+
 	SDL_DisplayMode current;
 	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
 	if (should_be_zero == 0)
@@ -292,7 +329,7 @@ void InitAmigaVidMode(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
 	gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
-	gfxvidinfo.drawbuffer.bufmem = (uae_u8*)screen->pixels;
+	gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8*>(screen->pixels);
 	gfxvidinfo.drawbuffer.outwidth = p->gfx_size.width;
 	gfxvidinfo.drawbuffer.outheight = p->gfx_size.height << p->gfx_vresolution;
 	gfxvidinfo.drawbuffer.rowbytes = screen->pitch;
@@ -321,33 +358,6 @@ void graphics_subshutdown()
 }
 
 #ifdef USE_SDL2
-void Create_SDL_Surface(const int width, const int height, const int depth)
-{
-	screen = SDL_CreateRGBSurface(0, width, height, depth, 0, 0, 0, 0);
-	check_error_sdl(screen == nullptr, "Unable to create a surface");
-}
-
-void Create_SDL_Texture(const int width, const int height, const int depth)
-{
-	if (depth == 16) {
-		// Initialize SDL Texture for the renderer
-		texture = SDL_CreateTexture(renderer,
-			SDL_PIXELFORMAT_RGB565, // 16-bit
-			SDL_TEXTUREACCESS_STREAMING,
-			width,
-			height);
-	}
-	else if (depth == 32)
-	{
-		texture = SDL_CreateTexture(renderer,
-			SDL_PIXELFORMAT_BGRA32, // 32-bit
-			SDL_TEXTUREACCESS_STREAMING,
-			width,
-			height);
-	}
-	check_error_sdl(texture == nullptr, "Unable to create texture");
-}
-
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
 bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int height)
@@ -361,12 +371,12 @@ void updatedisplayarea()
 #ifdef USE_SDL2
 	void* pixels;
 	int pitch;
+
 	// Update the texture from the surface
 	SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-	SDL_ConvertPixels(screen->w, screen->h, screen->format->format, screen->pixels, screen->pitch, SDL_PIXELFORMAT_RGB565, pixels, pitch);
+	memcpy(pixels, screen->pixels, screen->h * screen->pitch);
 	SDL_UnlockTexture(texture);
-	// Clear the screen first
-	SDL_RenderClear(renderer);
+
 	// Copy the texture to the renderer
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	// Update the window surface (show the renderer)
@@ -383,10 +393,10 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_width = 1920;
 		max_uae_height = 1080;
 	}
-
+	
 #ifdef USE_SDL1
-	current_resource_amigafb = 0;
 	next_synctime = 0;
+	current_resource_amigafb = 0;
 	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
 #endif
@@ -424,14 +434,17 @@ static void open_screen(struct uae_prefs* p)
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_OPEN, 1);
 	uae_sem_wait (&display_sem);
 #elif USE_SDL2
-	Create_SDL_Surface(display_width, display_height, depth);
+
+	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
+	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
 	if (screen_is_picasso)
 		SDL_RenderSetLogicalSize(renderer, display_width, display_height);
 	else
 		SDL_RenderSetLogicalSize(renderer, display_width, (display_height * 2) >> p->gfx_vresolution);
 
-	Create_SDL_Texture(display_width, display_height, depth);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
+	check_error_sdl(texture == nullptr, "Unable to create texture");
 #endif
 
 	vsync_counter = 0;
@@ -758,12 +771,11 @@ void graphics_leave()
 	}
 
 #elif USE_SDL2
-	if (renderer != nullptr)
+	if (renderer)
 	{
 		SDL_DestroyRenderer(renderer);
-		renderer = nullptr;
+		renderer == nullptr;
 	}
-	
 	SDL_DestroyWindow(sdlWindow);
 	sdlWindow = nullptr;
 #endif
