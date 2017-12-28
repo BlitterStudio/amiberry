@@ -663,6 +663,14 @@ void check_error_sdl(const bool check, const char* message) {
 
 static int real_main2 (int argc, TCHAR **argv)
 {
+#ifdef USE_SDL1
+	int ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+	if (ret < 0)
+	{
+		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+		abort();
+	};
+#endif
 	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0]) {

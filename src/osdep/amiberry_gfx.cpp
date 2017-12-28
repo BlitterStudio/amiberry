@@ -237,13 +237,6 @@ int graphics_setup(void)
 	InitPicasso96();
 #endif
 #ifdef USE_SDL1
-	int ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
-	if (ret < 0)
-	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		abort();
-	};
-
 	VCHI_INSTANCE_T vchi_instance;
 	VCHI_CONNECTION_T *vchi_connection;
 	TV_DISPLAY_STATE_T tvstate;
