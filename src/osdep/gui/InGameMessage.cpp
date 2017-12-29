@@ -195,10 +195,12 @@ void InGameMessage(const char* msg)
 		{
 #ifdef USE_SDL1
 			SDL_Flip(screen);
+		}
 #elif USE_SDL2
 			if (cursor != nullptr)
 				SDL_ShowCursor(SDL_ENABLE);
-
+// TODO update for SDL2 only as well
+#ifndef USE_DISPMANX
 			void* pixels;
 			int pitch;
 
@@ -211,6 +213,7 @@ void InGameMessage(const char* msg)
 			SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 			// Update the window surface (show the renderer)
 			SDL_RenderPresent(renderer);
+#endif
 		}
 #endif
 		drawn = true;
