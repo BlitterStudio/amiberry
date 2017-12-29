@@ -31,6 +31,27 @@ unsigned int doMask (int p, int bits, int shift)
   return val;
 }
 
+int bits_in_mask(unsigned long mask)
+{
+	int n = 0;
+	while (mask) {
+		n += mask & 1;
+		mask >>= 1;
+	}
+	return n;
+}
+
+int mask_shift(unsigned long mask)
+{
+	int n = 0;
+	if (!mask)
+		return 0;
+	while (!(mask & 1)) {
+		n++;
+		mask >>= 1;
+	}
+	return n;
+}
 
 unsigned int doMask256 (int p, int bits, int shift)
 {

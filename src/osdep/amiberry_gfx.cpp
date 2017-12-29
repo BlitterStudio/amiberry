@@ -646,39 +646,19 @@ static void graphics_subinit()
 	}
 }
 
-STATIC_INLINE int bitsInMask(unsigned long mask)
-{
-	/* count bits in mask */
-	auto n = 0;
-	while (mask)
-	{
-		n += mask & 1;
-		mask >>= 1;
-	}
-	return n;
-}
-
-STATIC_INLINE int maskShift(unsigned long mask)
-{
-	/* determine how far mask is shifted */
-	auto n = 0;
-	while (!(mask & 1))
-	{
-		n++;
-		mask >>= 1;
-	}
-	return n;
-}
+static int red_bits, green_bits, blue_bits, alpha_bits;
+static int red_shift, green_shift, blue_shift, alpha_shift;
+static int alpha;
 
 static int init_colors()
 {
 	/* Truecolor: */
-	const int red_bits = bitsInMask(screen->format->Rmask);
-	const int green_bits = bitsInMask(screen->format->Gmask);
-	const int blue_bits = bitsInMask(screen->format->Bmask);
-	const int red_shift = maskShift(screen->format->Rmask);
-	const int green_shift = maskShift(screen->format->Gmask);
-	const int blue_shift = maskShift(screen->format->Bmask);
+	red_bits = bits_in_mask(screen->format->Rmask);
+	green_bits = bits_in_mask(screen->format->Gmask);
+	blue_bits = bits_in_mask(screen->format->Bmask);
+	red_shift = mask_shift(screen->format->Rmask);
+	green_shift = mask_shift(screen->format->Gmask);
+	blue_shift = mask_shift(screen->format->Bmask);
 	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, 0);
 	notice_new_xcolors();
 
@@ -702,7 +682,7 @@ static int get_display_depth()
 		* could actually be 15 bits deep. We'll count the bits
 		* ourselves */
 		if (depth == 16)
-			depth = bitsInMask(vid_info->vfmt->Rmask) + bitsInMask(vid_info->vfmt->Gmask) + bitsInMask(vid_info->vfmt->Bmask);
+			depth = bits_in_mask(vid_info->vfmt->Rmask) + bits_in_mask(vid_info->vfmt->Gmask) + bits_in_mask(vid_info->vfmt->Bmask);
 	}
 #elif USE_SDL2
 	const int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
