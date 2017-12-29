@@ -421,6 +421,8 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
             "uxth %0, %0"
             : "=r" (v) : "0" (v)); return v;
 }
+#define bswap_16(x) do_byteswap_16(x)
+#define bswap_32(x) do_byteswap_32(x)
 #else
 
 /* Try to use system bswap_16/bswap_32 functions. */
