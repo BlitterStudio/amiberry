@@ -20,8 +20,11 @@
 #include <SDL_image.h>
 #include <SDL_gfxPrimitives.h>
 #include <SDL_ttf.h>
-#include "threaddep/thread.h"
+#endif
+#ifdef USE_DISPMANX
 #include "bcm_host.h"
+#include "threaddep/thread.h"
+
 #define DISPLAY_SIGNAL_SETUP 				1
 #define DISPLAY_SIGNAL_SUBSHUTDOWN 			2
 #define DISPLAY_SIGNAL_OPEN 				3
@@ -72,7 +75,7 @@ int delay_savestate_frame = 0;
 
 static unsigned long next_synctime = 0;
 
-#ifdef USE_SDL1
+#ifdef USE_DISPMANX
 DISPMANX_DISPLAY_HANDLE_T   dispmanxdisplay;
 DISPMANX_MODEINFO_T         dispmanxdinfo;
 DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_1 = 0;
@@ -93,7 +96,7 @@ void vsync_callback(unsigned int a, void* b)
 	atomic_inc(&vsync_counter);
 }
 
-#ifdef USE_SDL1
+#ifdef USE_DISPMANX
 static void *display_thread(void *unused)
 {
 	VC_DISPMANX_ALPHA_T alpha = {
@@ -138,17 +141,21 @@ static void *display_thread(void *unused)
 				SDL_FreeSurface(screen);
 				screen = nullptr;
 			}
+
 			uae_sem_post(&display_sem);
 			break;
 
 		case DISPLAY_SIGNAL_OPEN:
 			width = display_width;
 			height = display_height;
-
+#ifdef USE_SDL1
 			dummy_screen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 			screen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, 16,
 				dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
 			SDL_FreeSurface(dummy_screen);
+#elif USE_SDL2
+			screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
+#endif
 
 			vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
@@ -159,6 +166,7 @@ static void *display_thread(void *unused)
 			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGB565, screen->pitch, screen->pixels, &blit_rect);
 			vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
 
+#ifdef USE_SDL1
 			// 16/9 to 4/3 ratio adaptation.
 			if (currprefs.gfx_correct_aspect == 0)
 			{
@@ -176,7 +184,10 @@ static void *display_thread(void *unused)
 				vc_dispmanx_rect_set(&dst_rect, (dispmanxdinfo.width - scaled_width / 16 * 12) / 2, (dispmanxdinfo.height - scaled_height) / 2,
 					scaled_width / 16 * 12, scaled_height);
 			}
-
+#elif USE_SDL2
+			vc_dispmanx_rect_set(&dst_rect, (dispmanxdinfo.width - dispmanxdinfo.width * 100 / 100) / 2, (dispmanxdinfo.height - dispmanxdinfo.height * 100 / 100) / 2,
+				dispmanxdinfo.width * 100 / 100, dispmanxdinfo.height * 100 / 100);
+#endif
 			if (DispManXElementpresent == 0)
 			{
 				DispManXElementpresent = 1;
@@ -257,7 +268,27 @@ int graphics_setup(void)
 			vchi_disconnect(vchi_instance);
 		}
 	}
+#elif USE_SDL2
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+		abort();
+	}
 
+	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
+		SDL_Log("SDL could not grab the keyboard");
+
+	SDL_ShowCursor(SDL_DISABLE);
+
+	SDL_DisplayMode current;
+	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
+	if (should_be_zero == 0)
+		host_hz = current.refresh_rate;
+	else
+		return 0;
+#endif
+
+#ifdef USE_DISPMANX
 	if (display_pipe == nullptr) {
 		display_pipe = xmalloc(smp_comm_pipe, 1);
 		init_comm_pipe(display_pipe, 20, 1);
@@ -269,48 +300,12 @@ int graphics_setup(void)
 		uae_start_thread(_T("render"), display_thread, nullptr, &display_tid);
 	}
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
-#elif USE_SDL2
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-	{
-		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		abort();
-	}
-
-	sdlWindow = SDL_CreateWindow("Amiberry-SDL2",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		0,
-		0,
-		SDL_WINDOW_FULLSCREEN_DESKTOP);
-	check_error_sdl(sdlWindow == nullptr, "Unable to create window");
-	
-	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
-	{
-		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
-	}
-
-	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		SDL_Log("SDL could not grab the keyboard");
-	
-	SDL_ShowCursor(SDL_DISABLE);
-
-	if (renderer == nullptr)
-	{
-		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
-	}
-
-	SDL_DisplayMode current;
-	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
-	if (should_be_zero == 0)
-		host_hz = current.refresh_rate;
-	else
-		return 0;
 #endif
+
 	return 1;
 }
 
-#ifdef USE_SDL1
+#ifdef USE_DISPMANX
 static void wait_for_display_thread(void)
 {
 	while(display_thread_busy)
@@ -330,11 +325,11 @@ void InitAmigaVidMode(struct uae_prefs* p)
 
 void graphics_subshutdown()
 {
-#ifdef USE_SDL1
-	if(display_tid != nullptr) {
+#ifdef USE_DISPMANX
+	if (display_tid != nullptr) {
 		wait_for_display_thread();
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SUBSHUTDOWN, 1);
-	  uae_sem_wait (&display_sem);
+		uae_sem_wait(&display_sem);
 	}
 #elif USE_SDL2
 	if (screen != nullptr)
@@ -362,7 +357,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 static void open_screen(struct uae_prefs* p)
 {
 	graphics_subshutdown();
-	const auto depth = 16;
+
 	if (max_uae_width == 0 || max_uae_height == 0)
 	{
 		max_uae_width = 1920;
@@ -370,8 +365,8 @@ static void open_screen(struct uae_prefs* p)
 	}
 
 	next_synctime = 0;
+
 #ifdef USE_SDL1
-	current_resource_amigafb = 0;
 	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
 #endif
@@ -382,7 +377,7 @@ static void open_screen(struct uae_prefs* p)
 		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 256;
 #ifdef USE_SDL2
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
-#endif //USE_SDL2
+#endif
 	}
 	else
 	{
@@ -405,12 +400,26 @@ static void open_screen(struct uae_prefs* p)
 #endif
 	}
 
-#ifdef USE_SDL1
+#ifdef USE_DISPMANX
+	current_resource_amigafb = 0;
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_OPEN, 1);
-	uae_sem_wait (&display_sem);
+	uae_sem_wait(&display_sem);
 #elif USE_SDL2
+	if (sdlWindow == nullptr)
+	{
+		sdlWindow = SDL_CreateWindow("Amiberry-SDL2",
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		0,
+		0,
+		SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
 
-	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
+		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+	}
+
+	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
 	if (screen_is_picasso)
@@ -521,15 +530,7 @@ bool render_screen(bool immediate)
 			savestate_state = 0;
 		}
 	}
-#ifdef USE_SDL2
-	void* pixels;
-	int pitch;
 
-	// Update the texture from the surface
-	SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-	memcpy(pixels, screen->pixels, screen->h * screen->pitch);
-	SDL_UnlockTexture(texture);
-#endif
 	return true;
 }
 
@@ -537,7 +538,7 @@ void show_screen(int mode)
 {
 	const auto start = read_processor_time();
 		
-#ifdef USE_SDL1
+#ifdef USE_DISPMANX
 	const auto wait_till = current_vsync_frame;
 	if (vsync_modulo == 1)
 	{
@@ -589,15 +590,23 @@ void show_screen(int mode)
 
 	current_vsync_frame += currprefs.gfx_framerate;
 	
-#ifdef USE_SDL1
+#ifdef USE_DISPMANX
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
+	void* pixels;
+	int pitch;
+
+	// Update the texture from the surface
+	SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+	pitch = gfxvidinfo.drawbuffer.rowbytes;
+	memcpy(pixels, gfxvidinfo.drawbuffer.bufmem, display_height * pitch);
+	SDL_UnlockTexture(texture);
+
 	// Copy the texture to the renderer
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
-	//updatedisplayarea();
 #endif
 
 	last_synctime = read_processor_time();
@@ -722,7 +731,7 @@ void graphics_leave()
 {
 	graphics_subshutdown();
 
-#ifdef USE_SDL1
+#ifdef USE_DISPMANX
 	if (display_tid != nullptr) {
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_QUIT, 1);
 		while (display_tid != nullptr) {
@@ -734,16 +743,20 @@ void graphics_leave()
 		uae_sem_destroy(&display_sem);
 		display_sem = nullptr;
 	}
-
 #elif USE_SDL2
 	if (renderer)
 	{
 		SDL_DestroyRenderer(renderer);
 		renderer = nullptr;
 	}
-	SDL_DestroyWindow(sdlWindow);
-	sdlWindow = nullptr;
+
+	if (sdlWindow)
+	{
+		SDL_DestroyWindow(sdlWindow);
+		sdlWindow = nullptr;
+	}
 #endif
+
 	SDL_VideoQuit();
 }
 

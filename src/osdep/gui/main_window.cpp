@@ -100,9 +100,11 @@ enum
 */
 SDL_Surface* gui_screen;
 #ifdef USE_SDL2
+SDL_Window* gui_window;
+SDL_Renderer* gui_renderer;
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
-SDL_Surface* cursorSurface;
+SDL_Surface* cursor_surface;
 #endif
 
 /*
@@ -234,9 +236,9 @@ void UpdateGuiScreen()
 	memcpy(pixels, gui_screen->pixels, gui_screen->h * gui_screen->pitch);
 	SDL_UnlockTexture(gui_texture);
 	// Copy the texture on the renderer
-	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
+	SDL_RenderCopy(gui_renderer, gui_texture, nullptr, nullptr);
 	// Update the window surface (show the renderer)
-	SDL_RenderPresent(renderer);
+	SDL_RenderPresent(gui_renderer);
 #endif
 }
 
@@ -249,14 +251,14 @@ namespace sdl
 		// Detect resolution and load appropiate cursor image
 		if (sdlMode.w > 1280)
 		{
-			cursorSurface = SDL_LoadBMP("data/cursor-x2.bmp");
+			cursor_surface = SDL_LoadBMP("data/cursor-x2.bmp");
 		}
 		else
 		{
-			cursorSurface = SDL_LoadBMP("data/cursor.bmp");
+			cursor_surface = SDL_LoadBMP("data/cursor.bmp");
 		}
 		
-		if (cursorSurface == nullptr)
+		if (cursor_surface == nullptr)
 		{
 			// Load failed. Log error.
 			cout << "Could not load cursor bitmap: " << SDL_GetError() << endl;
@@ -264,13 +266,13 @@ namespace sdl
 		}
 
 		// Create new cursor with surface
-		cursor = SDL_CreateColorCursor(cursorSurface, 0, 0);
+		cursor = SDL_CreateColorCursor(cursor_surface, 0, 0);
 		if (cursor == nullptr)
 		{
 			// Cursor creation failed. Log error and free surface
 			cout << "Could not create color cursor: " << SDL_GetError() << endl;
-			SDL_FreeSurface(cursorSurface);
-			cursorSurface = nullptr;
+			SDL_FreeSurface(cursor_surface);
+			cursor_surface = nullptr;
 			return;
 		}
 
@@ -296,17 +298,36 @@ namespace sdl
 		SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef USE_SDL2
+		gui_window = SDL_CreateWindow("Amiberry-GUI",
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			0,
+			0,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(gui_window == nullptr, "Unable to create window");
+
+		if (SDL_GetWindowDisplayMode(gui_window, &sdlMode) != 0)
+		{
+			SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
+		}
+
+		if (gui_renderer == nullptr)
+		{
+			gui_renderer = SDL_CreateRenderer(gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+			check_error_sdl(gui_renderer == nullptr, "Unable to create a renderer");
+		}
+
 		setup_cursor();
 
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 
-		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
+		SDL_RenderSetLogicalSize(gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 
-		gui_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
+		gui_texture = SDL_CreateTexture(gui_renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 
 		if (cursor)
@@ -360,10 +381,21 @@ namespace sdl
 			SDL_FreeCursor(cursor);
 			cursor = nullptr;
 		}
-		if (cursorSurface)
+		if (cursor_surface)
 		{
-			SDL_FreeSurface(cursorSurface);
-			cursorSurface = nullptr;
+			SDL_FreeSurface(cursor_surface);
+			cursor_surface = nullptr;
+		}
+
+		if (gui_renderer)
+		{
+			SDL_DestroyRenderer(gui_renderer);
+			gui_renderer = nullptr;
+		}
+		if (gui_window)
+		{
+			SDL_DestroyWindow(gui_window);
+			gui_window = nullptr;
 		}
 #endif
 	}

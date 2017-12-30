@@ -8,28 +8,28 @@ endif
 # Common flags for both SDL1 and SDL2
 #
 RPI_FLAGS += -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
+DISPMANX_FLAGS += -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
+DISPMANX_LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
 
 #
 # SDL1 targets
 #
-RPI_SDL1_FLAGS += -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads -DUSE_SDL1
-RPI_SDL1_LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
-
 ifeq ($(PLATFORM),rpi3)
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
-    MORE_CFLAGS += ${RPI_SDL1_FLAGS} -DARMV6T2 -DUSE_ARMNEON
-    LDFLAGS += ${RPI_SDL1_LDFLAGS}
+    MORE_CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
+    LDFLAGS += ${DISPMANX_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi2)
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 ${RPI_FLAGS}
-    MORE_CFLAGS += ${RPI_SDL1_FLAGS} -DARMV6T2 -DUSE_ARMNEON
-    LDFLAGS += ${RPI_SDL1_LDFLAGS}
+    MORE_CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
+    LDFLAGS += ${DISPMANX_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi1)
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp ${RPI_FLAGS}
-    LDFLAGS += ${RPI_SDL1_LDFLAGS}
+    MORE_CFLAGS += ${DISPMANX_FLAGS} -DUSE_SDL1
+    LDFLAGS += ${DISPMANX_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 
 else ifeq ($(PLATFORM),xu4)
@@ -50,12 +50,18 @@ else ifeq ($(PLATFORM),android)
 
 #
 # SDL2 targets
-#	
+#
+else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
+    MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
+    LDFLAGS += ${DISPMANX_LDFLAGS}
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+	
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
-    LDFLAGS += -lm
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
