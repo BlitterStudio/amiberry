@@ -1290,7 +1290,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				                          ? thismap[0].start_action
 				                          : port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY;
 		}
-		else if(currprefs.jports[port].id > JSEM_JOYS + numKeysAsJoys) // default, normal joystick  
+		else if(currprefs.jports[port].id >= JSEM_JOYS + numKeysAsJoys) // default, normal joystick  
 		{
 			thismap[0].south_action = thismap[0].south_action
 				                          ? thismap[0].south_action
@@ -1337,7 +1337,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				                                   : port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW;
 		}
 
-		else if(currprefs.jports[port].id > JSEM_JOYS + numKeysAsJoys) // default, normal joystick
+		else if(currprefs.jports[port].id >= JSEM_JOYS + numKeysAsJoys) // default, normal joystick
 		{
 			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
 				                                  ? thismap[0].left_shoulder_action
