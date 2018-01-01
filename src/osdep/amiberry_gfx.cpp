@@ -46,7 +46,9 @@ static int display_height;
 /* SDL Surface for output of emulation */
 SDL_Surface* screen = nullptr;
 
+#ifdef USE_DISPMANX
 static unsigned int current_vsync_frame = 0;
+#endif
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static unsigned long last_synctime;
 static int vsync_modulo = 1;
@@ -88,7 +90,6 @@ VC_RECT_T       blit_rect;
 
 static int DispManXElementpresent = 0;
 static unsigned char current_resource_amigafb = 0;
-#endif
 
 static volatile uae_atomic vsync_counter = 0;
 void vsync_callback(unsigned int a, void* b)
@@ -96,7 +97,6 @@ void vsync_callback(unsigned int a, void* b)
 	atomic_inc(&vsync_counter);
 }
 
-#ifdef USE_DISPMANX
 static void *display_thread(void *unused)
 {
 	VC_DISPMANX_ALPHA_T alpha = {
@@ -275,6 +275,23 @@ int graphics_setup(void)
 		abort();
 	}
 
+	if (sdlWindow == nullptr)
+	{
+		sdlWindow = SDL_CreateWindow("Amiberry-GUI",
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			0,
+			0,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
+	}
+	
+	if (renderer == nullptr)
+	{
+		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+	}
+
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
 		SDL_Log("SDL could not grab the keyboard");
 
@@ -364,8 +381,6 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_height = 1080;
 	}
 
-	next_synctime = 0;
-
 #ifdef USE_SDL1
 	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
@@ -401,23 +416,14 @@ static void open_screen(struct uae_prefs* p)
 	}
 
 #ifdef USE_DISPMANX
+	next_synctime = 0;
 	current_resource_amigafb = 0;
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_OPEN, 1);
 	uae_sem_wait(&display_sem);
-#elif USE_SDL2
-	if (sdlWindow == nullptr)
-	{
-		sdlWindow = SDL_CreateWindow("Amiberry-SDL2",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		0,
-		0,
-		SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
 
-		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
-	}
+	vsync_counter = 0;
+	current_vsync_frame = 2;
+#elif USE_SDL2
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
@@ -431,9 +437,6 @@ static void open_screen(struct uae_prefs* p)
 	check_error_sdl(texture == nullptr, "Unable to create texture");
 #endif
 
-	vsync_counter = 0;
-	current_vsync_frame = 2;
-	
 	if (screen != nullptr)
 	{
 		InitAmigaVidMode(p);
@@ -504,7 +507,7 @@ void unlockscr()
 
 }
 
-
+#ifdef USE_SDL1
 void wait_for_vsync()
 {
 	const auto start = read_processor_time();
@@ -515,7 +518,7 @@ void wait_for_vsync()
 		current_vsync_frame = vsync_counter;
 	} while (wait_till >= current_vsync_frame && read_processor_time() - start < 20000);
 }
-
+#endif
 
 bool render_screen(bool immediate)
 {
@@ -530,7 +533,9 @@ bool render_screen(bool immediate)
 			savestate_state = 0;
 		}
 	}
-
+#ifdef USE_SDL2
+	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+#endif
 	return true;
 }
 
@@ -586,36 +591,38 @@ void show_screen(int mode)
 			++current_vsync_frame;
 		}
 	}
-#endif
 
 	current_vsync_frame += currprefs.gfx_framerate;
-	
+#endif
+
 #ifdef USE_DISPMANX
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
-	void* pixels;
-	int pitch;
+	//void* pixels;
+	//int pitch;
+	//SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+	//pitch = gfxvidinfo.drawbuffer.rowbytes;
+	//memcpy(pixels, gfxvidinfo.drawbuffer.bufmem, display_height * pitch);
+	//SDL_UnlockTexture(texture);
 
-	// Update the texture from the surface
-	SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-	pitch = gfxvidinfo.drawbuffer.rowbytes;
-	memcpy(pixels, gfxvidinfo.drawbuffer.bufmem, display_height * pitch);
-	SDL_UnlockTexture(texture);
+	// we update the texture in render_screen()
+	//SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 
-	// Copy the texture to the renderer
+	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-	// Update the window surface (show the renderer)
 	SDL_RenderPresent(renderer);
 #endif
 
 	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
-	
+
+#ifdef USE_DISPMANX
 	if (last_synctime - next_synctime > time_per_frame - 5000)
 		next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 	else
 		next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+#endif
 }
 
 unsigned long target_lastsynctime()
@@ -744,6 +751,12 @@ void graphics_leave()
 		display_sem = nullptr;
 	}
 #elif USE_SDL2
+	if (texture)
+	{
+		SDL_DestroyTexture(texture);
+		texture = nullptr;
+	}
+
 	if (renderer)
 	{
 		SDL_DestroyRenderer(renderer);
@@ -914,7 +927,9 @@ bool vsync_switchmode(int hz)
 	if (hz != currVSyncRate)
 	{
 		currVSyncRate = hz;
+#ifdef USE_SDL1
 		black_screen_now();
+#endif
 		fpscounter_reset();
 		time_per_frame = 1000 * 1000 / (hz);
 		
@@ -944,7 +959,9 @@ bool target_graphics_buffer_update()
 
 	if (rate_changed)
 	{
+#ifdef USE_SDL1
 		black_screen_now();
+#endif
 		fpscounter_reset();
 		time_per_frame = 1000 * 1000 / currprefs.chipset_refreshrate;
 	}

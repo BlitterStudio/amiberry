@@ -35,7 +35,9 @@ extern unsigned long time_per_frame;
 void run_gui(void);
 void InGameMessage(const char *msg);
 void init_max_signals(void);
+#ifdef USE_SDL1
 void wait_for_vsync(void);
+#endif
 unsigned long target_lastsynctime(void);
 extern int screen_is_picasso;
 
