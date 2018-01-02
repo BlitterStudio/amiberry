@@ -7,7 +7,7 @@ endif
 #
 # Common flags for both SDL1 and SDL2
 #
-RPI_FLAGS += -mfloat-abi=hard -mstructure-size-boundary=32 -ftree-vectorize -funsafe-math-optimizations
+RPI_FLAGS += -mfloat-abi=hard
 DISPMANX_FLAGS += -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
 
@@ -163,8 +163,6 @@ DEFS += -DAMIBERRY -DCPU_arm -DARMV6_ASSEMBLY
 
 ifndef DEBUG
     MORE_CFLAGS += -Ofast -pipe -std=gnu++14
-    MORE_CFLAGS += -fweb -frename-registers -falign-functions=32
-    MORE_CFLAGS += -funroll-loops -ftracer -fdiagnostics-color=auto
     MORE_CFLAGS += -Wno-unused -Wno-format -DGCCCONSTFUNC="__attribute__((const))"
 else
     MORE_CFLAGS += -std=gnu++14 -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
@@ -177,7 +175,7 @@ endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 	
-ASFLAGS += $(CPU_FLAGS) -falign-functions=32
+ASFLAGS += $(CPU_FLAGS)
 
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
 
