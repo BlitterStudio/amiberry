@@ -209,7 +209,7 @@ static void *display_thread(void *unused)
 			{
 				DispManXElementpresent = 1;
 				dispmanxupdate = vc_dispmanx_update_start(0);
-				dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 2,               // layer
+				dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 0,               // layer
 					&dst_rect, dispmanxresource_amigafb_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 					nullptr,             // clamp
 					DISPMANX_NO_ROTATE);
