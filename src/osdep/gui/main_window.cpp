@@ -226,14 +226,6 @@ void UpdateGuiScreen()
 	wait_for_vsync();
 	SDL_Flip(gui_screen);
 #elif USE_SDL2
-	//void *pixels;
-	//int pitch;
-
-	// Update the texture from the surface
-	//SDL_LockTexture(gui_texture, nullptr, &pixels, &pitch);
-	//memcpy(pixels, gui_screen->pixels, gui_screen->h * gui_screen->pitch);
-	//SDL_UnlockTexture(gui_texture);
-
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	
 	SDL_RenderClear(renderer);
@@ -373,6 +365,7 @@ namespace sdl
 			SDL_FreeSurface(cursor_surface);
 			cursor_surface = nullptr;
 		}
+
 		// Clear the screen
 		SDL_RenderClear(renderer);
 		SDL_RenderPresent(renderer);

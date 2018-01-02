@@ -410,15 +410,8 @@ struct uae_prefs {
 	int kbd_led_scr;
 	int kbd_led_cap;
 
-#ifdef USE_SDL1
 	int gfx_correct_aspect;
-	int gfx_fullscreen_ratio;
-#endif
-
-#ifdef USE_SDL2
 	int scaling_method;
-#endif
-
 	int vertical_offset;
 
 	TCHAR open_gui[256];

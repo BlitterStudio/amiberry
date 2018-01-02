@@ -27,11 +27,6 @@
 const int amigawidth_values[] = { 320, 352, 384, 640, 704, 768 };
 const int amigaheight_values[] = { 200, 216, 240, 256, 262, 270 };
 
-#ifdef USE_SDL1
-const int FullscreenRatio[] = { 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
-                                90, 91, 92, 93, 94, 95, 96, 97,98, 99,100 };
-#endif
-
 #ifdef USE_SDL2
 static gcn::Window* grpScalingMethod;
 static gcn::UaeRadioButton* optAuto;
@@ -54,12 +49,7 @@ static gcn::Slider* sldVertPos;
 static gcn::UaeCheckBox* chkLineDbl;
 static gcn::UaeCheckBox* chkFrameskip;
 
-#ifdef USE_SDL1
-static gcn::Label*  lblFSRatio;
-static gcn::Label*  lblFSRatioInfo;
-static gcn::Slider* sldFSRatio;
 static gcn::UaeCheckBox* chkAspect;
-#endif
 
 
 class AmigaScreenActionListener : public gcn::ActionListener
@@ -91,27 +81,17 @@ public:
 				RefreshPanelDisplay();
 			}
 		}
-		else
-			if (actionEvent.getSource() == chkFrameskip)
-			{
-				changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 1 : 0;
-			}
-			else if (actionEvent.getSource() == chkLineDbl)
-			{
-				changed_prefs.gfx_vresolution = chkLineDbl->isSelected() ? VRES_DOUBLE : VRES_NONDOUBLE;
-			}
-#ifdef USE_SDL1
-			else if (actionEvent.getSource() == sldFSRatio)
-			{
-				if (changed_prefs.gfx_fullscreen_ratio != FullscreenRatio[int(sldFSRatio->getValue())])
-				{
-					changed_prefs.gfx_fullscreen_ratio = FullscreenRatio[int(sldFSRatio->getValue())];
-					RefreshPanelDisplay();
-				}
-			}
-			else if (actionEvent.getSource() == chkAspect)
-				changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
-#endif
+		else if (actionEvent.getSource() == chkFrameskip)
+		{
+			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 1 : 0;
+		}
+		else if (actionEvent.getSource() == chkLineDbl)
+		{
+			changed_prefs.gfx_vresolution = chkLineDbl->isSelected() ? VRES_DOUBLE : VRES_NONDOUBLE;
+		}
+		else if (actionEvent.getSource() == chkAspect)
+			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
+
 	}
 };
 
@@ -173,22 +153,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldVertPos->addActionListener(amigaScreenActionListener);
 	lblVertPosInfo = new gcn::Label("000");
 
-#ifdef USE_SDL1
-	lblFSRatio = new gcn::Label("Ratio:");
-	lblFSRatio->setAlignment(gcn::Graphics::RIGHT);
-	sldFSRatio = new gcn::Slider(0, 20);
-	sldFSRatio->setSize(160, SLIDER_HEIGHT);
-	sldFSRatio->setBaseColor(gui_baseCol);
-	sldFSRatio->setMarkerLength(20);
-	sldFSRatio->setStepLength(1);
-	sldFSRatio->setId("FSRatio");
-	sldFSRatio->addActionListener(amigaScreenActionListener);
-	lblFSRatioInfo = new gcn::Label("100%%");
-
-	chkAspect = new gcn::UaeCheckBox("4/3 ratio shrink");
-	chkAspect->setId("4by3Ratio");
+	chkAspect = new gcn::UaeCheckBox("Correct Aspect Ratio");
+	chkAspect->setId("CorrectAR");
 	chkAspect->addActionListener(amigaScreenActionListener);
-#endif
 
 	chkLineDbl = new gcn::UaeCheckBox("Line doubling");
   	chkLineDbl->addActionListener(amigaScreenActionListener);
@@ -213,24 +180,12 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->add(lblVertPosInfo, sldVertPos->getX() + sldVertPos->getWidth() + 12, posY);
 	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
 
-#ifdef USE_SDL1
-	grpAmigaScreen->add(lblFSRatio, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(sldFSRatio, lblFSRatio->getX() + lblFSRatio->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpAmigaScreen->add(lblFSRatioInfo, sldFSRatio->getX() + sldFSRatio->getWidth() + DISTANCE_NEXT_Y, posY);
-	posY += sldFSRatio->getHeight() + DISTANCE_NEXT_Y;
-#endif
-
 	grpAmigaScreen->setMovable(false);
 	grpAmigaScreen->setSize(lblVertPos->getX() + lblVertPos->getWidth() + sldVertPos->getWidth() + lblVertPosInfo->getX() + lblVertPosInfo->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpAmigaScreen);
 	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
-
-#ifdef USE_SDL1
-	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
-	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
-#endif
 
 #ifdef USE_SDL2
 	scalingMethodActionListener = new ScalingMethodActionListener();
@@ -257,6 +212,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 #endif
 
+	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
+	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(chkLineDbl, DISTANCE_BORDER, posY);
 	posY += chkLineDbl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
@@ -280,12 +238,7 @@ void ExitPanelDisplay()
 	delete lblVertPosInfo;
 	delete grpAmigaScreen;
 
-#ifdef USE_SDL1
-	delete lblFSRatio;
-	delete sldFSRatio;
-	delete lblFSRatioInfo;
 	delete chkAspect;
-#endif
 
 #ifdef USE_SDL2
 	delete optAuto;
@@ -327,19 +280,7 @@ void RefreshPanelDisplay()
 		}
 	}
 
-#ifdef USE_SDL1
-	for (i = 0; i<21; ++i)
-	{
-		if (changed_prefs.gfx_fullscreen_ratio == FullscreenRatio[i])
-		{
-			sldFSRatio->setValue(i);
-			snprintf(tmp, 32, "%d%%", changed_prefs.gfx_fullscreen_ratio);
-			lblFSRatioInfo->setCaption(tmp);
-			break;
-		}
-	}
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
-#endif
 
 #ifdef USE_SDL2
 	if (changed_prefs.scaling_method == -1)

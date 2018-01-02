@@ -510,6 +510,8 @@ void gui_display(int shortcut)
 	if (quit_program)
 		screen_is_picasso = 0;
 
+	black_screen_now();
+
 	update_display(&changed_prefs);
 #ifdef USE_SDL1
 	/* Clear menu garbage at the bottom of the screen */
@@ -531,9 +533,9 @@ void gui_display(int shortcut)
 void moveVertical(int value)
 {
 	changed_prefs.vertical_offset += value;
-	if(changed_prefs.vertical_offset < -16 + OFFSET_Y_ADJUST)
+	if (changed_prefs.vertical_offset < -16 + OFFSET_Y_ADJUST)
 		changed_prefs.vertical_offset = -16 + OFFSET_Y_ADJUST;
-	else if(changed_prefs.vertical_offset > 16 + OFFSET_Y_ADJUST)
+	else if (changed_prefs.vertical_offset > 16 + OFFSET_Y_ADJUST)
 		changed_prefs.vertical_offset = 16 + OFFSET_Y_ADJUST;
 }
 

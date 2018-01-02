@@ -168,53 +168,43 @@ static void *display_thread(void *unused)
 			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGB565, screen->pitch, screen->pixels, &blit_rect);
 			vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
 
-#ifdef USE_SDL1
-			// 16/9 to 4/3 ratio adaptation.
+			// Correct Aspect Ratio
 			if (currprefs.gfx_correct_aspect == 0)
 			{
 				// Fullscreen.
-				auto scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio / 100;
-				auto scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio / 100;
-				vc_dispmanx_rect_set(&dst_rect, (dispmanxdinfo.width - scaled_width) / 2, (dispmanxdinfo.height - scaled_height) / 2,
-					scaled_width, scaled_height);
+				vc_dispmanx_rect_set(&dst_rect, 0, 0, dispmanxdinfo.width, dispmanxdinfo.height);
 			}
 			else
 			{
-				// 4/3 shrink.
-				auto scaled_width = dispmanxdinfo.width * currprefs.gfx_fullscreen_ratio / 100;
-				auto scaled_height = dispmanxdinfo.height * currprefs.gfx_fullscreen_ratio / 100;
-				vc_dispmanx_rect_set(&dst_rect, (dispmanxdinfo.width - scaled_width / 16 * 12) / 2, (dispmanxdinfo.height - scaled_height) / 2,
-					scaled_width / 16 * 12, scaled_height);
-			}
-#elif USE_SDL2
-			if (screen_is_picasso)
-				height = display_height;
-			else
-				height = (display_height * 2) >> currprefs.gfx_vresolution;
+				if (screen_is_picasso)
+					height = display_height;
+				else
+					height = (display_height * 2) >> currprefs.gfx_vresolution;
 
-			want_aspect = float(width) / float(height);
+				want_aspect = float(width) / float(height);
 
-			real_aspect = float(dispmanxdinfo.width) / float(dispmanxdinfo.height);
+				real_aspect = float(dispmanxdinfo.width) / float(dispmanxdinfo.height);
 
-			if (want_aspect > real_aspect)
-			{
-				scale = float(dispmanxdinfo.width) / float(display_width);
-				viewport.x = 0;
-				viewport.w = dispmanxdinfo.width;
-				viewport.h = int(SDL_ceil(height * scale));
-				viewport.y = (dispmanxdinfo.height - viewport.h) / 2;
-			}
-			else
-			{
-				scale = float(dispmanxdinfo.height) / float(height);
-				viewport.y = 0;
-				viewport.h = dispmanxdinfo.height;
-				viewport.w = int(SDL_ceil(display_width * scale));
-				viewport.x = (dispmanxdinfo.width - viewport.w) / 2;
+				if (want_aspect > real_aspect)
+				{
+					scale = float(dispmanxdinfo.width) / float(display_width);
+					viewport.x = 0;
+					viewport.w = dispmanxdinfo.width;
+					viewport.h = int(SDL_ceil(height * scale));
+					viewport.y = (dispmanxdinfo.height - viewport.h) / 2;
+				}
+				else
+				{
+					scale = float(dispmanxdinfo.height) / float(height);
+					viewport.y = 0;
+					viewport.h = dispmanxdinfo.height;
+					viewport.w = int(SDL_ceil(display_width * scale));
+					viewport.x = (dispmanxdinfo.width - viewport.w) / 2;
+				}
+
+				vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
 			}
 
-			vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
-#endif
 			if (DispManXElementpresent == 0)
 			{
 				DispManXElementpresent = 1;
@@ -408,10 +398,7 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_height = 1080;
 	}
 
-#ifdef USE_SDL1
 	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
-	currprefs.gfx_fullscreen_ratio = changed_prefs.gfx_fullscreen_ratio;
-#endif
 
 	if (screen_is_picasso)
 	{
@@ -450,6 +437,7 @@ static void open_screen(struct uae_prefs* p)
 
 	vsync_counter = 0;
 	current_vsync_frame = 2;
+
 #elif USE_SDL2
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
@@ -485,13 +473,15 @@ int check_prefs_changed_gfx()
 	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height ||
 		currprefs.gfx_size.width != changed_prefs.gfx_size.width ||
 		currprefs.gfx_resolution != changed_prefs.gfx_resolution ||
-		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution)
+		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
+		currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect)
 	{
 		cfgfile_configuration_change(1);
 		currprefs.gfx_size.height = changed_prefs.gfx_size.height;
 		currprefs.gfx_size.width = changed_prefs.gfx_size.width;
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
+		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		update_display(&currprefs);
 		changed = 1;
 	}
@@ -534,7 +524,6 @@ void unlockscr()
 
 }
 
-#ifdef USE_SDL1
 void wait_for_vsync()
 {
 	const auto start = read_processor_time();
@@ -545,7 +534,6 @@ void wait_for_vsync()
 		current_vsync_frame = vsync_counter;
 	} while (wait_till >= current_vsync_frame && read_processor_time() - start < 20000);
 }
-#endif
 
 bool render_screen(bool immediate)
 {
@@ -626,15 +614,6 @@ void show_screen(int mode)
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
-	//void* pixels;
-	//int pitch;
-	//SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-	//pitch = gfxvidinfo.drawbuffer.rowbytes;
-	//memcpy(pixels, gfxvidinfo.drawbuffer.bufmem, display_height * pitch);
-	//SDL_UnlockTexture(texture);
-
-	// we update the texture in render_screen()
-	//SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);

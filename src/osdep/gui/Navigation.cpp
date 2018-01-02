@@ -210,23 +210,16 @@ static NavigationMap navMap[] =
 { "CDVol", "", "", "cboCD", "cmdProp0" },
 
 // PanelDisplay
-#ifdef USE_SDL1
 { "sldWidth",       "",             "",               "Frameskip",      "sldHeight" },
 { "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
-{ "sldVertPos",     "",             "",               "sldHeight",      "FSRatio" },
-{ "FSRatio",        "",             "",               "sldVertPos",     "4by3Ratio" },
-{ "4by3Ratio",      "Display",      "Display",        "FSRatio",        "Line doubling" },
-{ "Line doubling",  "Display",      "Display",        "4by3Ratio",      "Frameskip" },
-{ "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
-#elif USE_SDL2
-{ "sldWidth",       "",             "",               "Linear (smooth)","sldHeight" },
-{ "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
-{ "sldVertPos",     "",             "",               "sldHeight",      "Frameskip" },
-{ "Frameskip", "Display", "Display", "Linear (smooth)", "Auto" },
-{ "Auto", "Display", "Display", "Frameskip", "Nearest Neighbor (pixelated)" },
+{ "sldVertPos",     "",             "",               "sldHeight",      "Auto" },
+{ "Auto",           "Display",      "Display",        "sldVertPos",     "Nearest Neighbor (pixelated)" },
 { "Nearest Neighbor (pixelated)", "Display", "Display", "Auto", "Linear (smooth)" },
-{ "Linear (smooth)", "Display", "Display", "Nearest Neighbor (pixelated)", "Frameskip" },
-#endif
+{ "Linear (smooth)", "Display",     "Display",        "Nearest Neighbor (pixelated)", "CorrectAR" },
+{ "CorrectAR",      "Display",      "Display",        "Linear (smooth)","Line doubling" },
+{ "Line doubling",  "Display",      "Display",        "CorrectAR",      "Frameskip" },
+{ "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
+
 
 //PanelSound
 { "sndDisable",     "Sound",          "Mono",           "sldStereoDelay", "sndDisEmu" },
