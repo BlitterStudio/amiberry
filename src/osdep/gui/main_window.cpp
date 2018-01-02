@@ -373,6 +373,9 @@ namespace sdl
 			SDL_FreeSurface(cursor_surface);
 			cursor_surface = nullptr;
 		}
+		// Clear the screen
+		SDL_RenderClear(renderer);
+		SDL_RenderPresent(renderer);
 #endif
 	}
 

@@ -75,9 +75,9 @@ static void create_screenshot();
 static int save_thumb(char* path);
 int delay_savestate_frame = 0;
 
+#ifdef USE_DISPMANX
 static unsigned long next_synctime = 0;
 
-#ifdef USE_DISPMANX
 DISPMANX_DISPLAY_HANDLE_T   dispmanxdisplay;
 DISPMANX_MODEINFO_T         dispmanxdinfo;
 DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_1 = 0;
@@ -106,6 +106,8 @@ static void *display_thread(void *unused)
 	uint32_t vc_image_ptr;
 	SDL_Surface *dummy_screen;
 	int width, height;
+	float want_aspect, real_aspect, scale;
+	SDL_Rect viewport;
 
 	for (;;) {
 		display_thread_busy = false;
@@ -185,8 +187,33 @@ static void *display_thread(void *unused)
 					scaled_width / 16 * 12, scaled_height);
 			}
 #elif USE_SDL2
-			vc_dispmanx_rect_set(&dst_rect, (dispmanxdinfo.width - dispmanxdinfo.width * 100 / 100) / 2, (dispmanxdinfo.height - dispmanxdinfo.height * 100 / 100) / 2,
-				dispmanxdinfo.width * 100 / 100, dispmanxdinfo.height * 100 / 100);
+			if (screen_is_picasso)
+				height = display_height;
+			else
+				height = (display_height * 2) >> currprefs.gfx_vresolution;
+
+			want_aspect = float(width) / float(height);
+
+			real_aspect = float(dispmanxdinfo.width) / float(dispmanxdinfo.height);
+
+			if (want_aspect > real_aspect)
+			{
+				scale = float(dispmanxdinfo.width) / float(display_width);
+				viewport.x = 0;
+				viewport.w = dispmanxdinfo.width;
+				viewport.h = int(SDL_ceil(height * scale));
+				viewport.y = (dispmanxdinfo.height - viewport.h) / 2;
+			}
+			else
+			{
+				scale = float(dispmanxdinfo.height) / float(height);
+				viewport.y = 0;
+				viewport.h = dispmanxdinfo.height;
+				viewport.w = int(SDL_ceil(display_width * scale));
+				viewport.x = (dispmanxdinfo.width - viewport.w) / 2;
+			}
+
+			vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
 #endif
 			if (DispManXElementpresent == 0)
 			{
