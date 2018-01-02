@@ -37,6 +37,7 @@
 #include <map>
 #endif
 #include "amiberry_rp9.h"
+#include "amiberry_gfx.h"
 
 #ifdef WITH_LOGGING
 extern FILE *debugfile;
@@ -221,6 +222,9 @@ void target_fixup_options(struct uae_prefs* p)
 		p->gfx_size.height = 256;
 	p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 
+	if (p->gfx_vresolution && !can_have_linedouble)
+		p->gfx_vresolution = 0;
+
 	if (p->cachesize > 0)
 		p->fpu_no_unimplemented = false;
 	else
@@ -240,6 +244,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->vertical_offset = OFFSET_Y_ADJUST;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
+	p->gfx_vresolution = 1;
 
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");

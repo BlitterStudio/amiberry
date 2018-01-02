@@ -16,4 +16,5 @@ extern SDL_Texture* gui_texture;
 extern SDL_DisplayMode sdlMode;
 #endif
 
+extern bool can_have_linedouble;
 extern void check_error_sdl(bool check, const char* message);

@@ -20,6 +20,7 @@
 #include <SDL_image.h>
 #include <SDL_gfxPrimitives.h>
 #include <SDL_ttf.h>
+ #include <cmath>
 #endif
 #ifdef USE_DISPMANX
 #include "bcm_host.h"
@@ -42,6 +43,7 @@ static bool volatile display_thread_busy = false;
 
 static int display_width;
 static int display_height;
+bool can_have_linedouble;
 
 /* SDL Surface for output of emulation */
 SDL_Surface* screen = nullptr;
@@ -190,7 +192,7 @@ static void *display_thread(void *unused)
 					scale = float(dispmanxdinfo.width) / float(display_width);
 					viewport.x = 0;
 					viewport.w = dispmanxdinfo.width;
-					viewport.h = int(SDL_ceil(height * scale));
+					viewport.h = int(std::ceil(height * scale));
 					viewport.y = (dispmanxdinfo.height - viewport.h) / 2;
 				}
 				else
@@ -198,7 +200,7 @@ static void *display_thread(void *unused)
 					scale = float(dispmanxdinfo.height) / float(height);
 					viewport.y = 0;
 					viewport.h = dispmanxdinfo.height;
-					viewport.w = int(SDL_ceil(display_width * scale));
+					viewport.w = int(std::ceil(display_width * scale));
 					viewport.x = (dispmanxdinfo.width - viewport.w) / 2;
 				}
 
@@ -265,6 +267,9 @@ int graphics_setup(void)
 	InitPicasso96();
 #endif
 #ifdef USE_SDL1
+	const SDL_VideoInfo* sdl_video_info = SDL_GetVideoInfo();
+	can_have_linedouble = sdl_video_info->current_h >= 540;
+
 	VCHI_INSTANCE_T vchi_instance;
 	VCHI_CONNECTION_T *vchi_connection;
 	TV_DISPLAY_STATE_T tvstate;
@@ -303,6 +308,12 @@ int graphics_setup(void)
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
 	}
 	
+	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
+	{
+		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
+	}
+	can_have_linedouble = sdlMode.h >= 540;
+
 	if (renderer == nullptr)
 	{
 		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -524,6 +535,7 @@ void unlockscr()
 
 }
 
+#ifdef USE_DISPMANX
 void wait_for_vsync()
 {
 	const auto start = read_processor_time();
@@ -534,6 +546,7 @@ void wait_for_vsync()
 		current_vsync_frame = vsync_counter;
 	} while (wait_till >= current_vsync_frame && read_processor_time() - start < 20000);
 }
+#endif
 
 bool render_screen(bool immediate)
 {

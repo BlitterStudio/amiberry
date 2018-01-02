@@ -290,10 +290,6 @@ namespace sdl
 		SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef USE_SDL2
-		if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
-		{
-			SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
-		}
 
 		setup_cursor();
 
