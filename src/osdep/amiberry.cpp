@@ -52,9 +52,6 @@ extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
 
-static int delayed_mousebutton = 0;
-static int doStylusRightClick;
-
 extern void SetLastActiveConfig(const char* filename);
 
 char start_path_data[MAX_DPATH];
@@ -814,31 +811,6 @@ void loadAdfDir(void)
 	}
 }
 
-int currVSyncRate = 0;
-bool SetVSyncRate(int hz)
-{
-	char cmd[64];
-
-  if(currVSyncRate != hz && (hz == 50 || hz == 60))
-  {
-    currVSyncRate = hz;
-    return true;
-  }
-  return false;
-}
-
-void setCpuSpeed()
-{
-	if(changed_prefs.ntscmode != currprefs.ntscmode)
-	{
-		if(changed_prefs.ntscmode)
-			SetVSyncRate(60);
-		else
-			SetVSyncRate(50);
-		fix_apmodes(&changed_prefs);
-	}
-}
-
 void target_addtorecent(const TCHAR *name, int t)
 {
 }
@@ -1096,9 +1068,8 @@ int handle_msgpump()
 		case SDL_MOUSEBUTTONDOWN:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
-				if (rEvent.button.button == SDL_BUTTON_LEFT) {
-					setmousebuttonstate(0, doStylusRightClick, 1);
-				}
+				if (rEvent.button.button == SDL_BUTTON_LEFT)
+					setmousebuttonstate(0, 0, 1);
 				if (rEvent.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 1);
 				if (rEvent.button.button == SDL_BUTTON_MIDDLE)
@@ -1110,7 +1081,7 @@ int handle_msgpump()
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
 				if (rEvent.button.button == SDL_BUTTON_LEFT)
-					setmousebuttonstate(0, doStylusRightClick, 0);
+					setmousebuttonstate(0, 0, 0);
 				if (rEvent.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 0);
 				if (rEvent.button.button == SDL_BUTTON_MIDDLE)
