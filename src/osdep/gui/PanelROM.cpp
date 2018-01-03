@@ -30,11 +30,9 @@ static gcn::Button* cmdMainROM;
 static gcn::Label* lblExtROM;
 static gcn::UaeDropDown* cboExtROM;
 static gcn::Button* cmdExtROM;
-#ifdef ACTION_REPLAY
 static gcn::Label *lblCartROM;
 static gcn::UaeDropDown* cboCartROM;
 static gcn::Button *cmdCartROM;
-#endif
 
 class ROMListModel : public gcn::ListModel
 {
@@ -96,9 +94,7 @@ public:
 
 static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
-#ifdef ACTION_REPLAY
 static ROMListModel *cartROMList;
-#endif
 
 class MainROMActionListener : public gcn::ActionListener
 {
@@ -129,7 +125,6 @@ public:
 
 static ExtROMActionListener* extROMActionListener;
 
-#ifdef ACTION_REPLAY
 class CartROMActionListener : public gcn::ActionListener
 {
 public:
@@ -143,7 +138,6 @@ public:
 	}
 };
 static CartROMActionListener* cartROMActionListener;
-#endif
 
 class ROMButtonActionListener : public gcn::ActionListener
 {
@@ -185,7 +179,6 @@ public:
 			}
 			cmdExtROM->requestFocus();
 		}
-#ifdef ACTION_REPLAY
 		else if (actionEvent.getSource() == cmdCartROM)
 		{
 			strncpy(tmp, currentDir, MAX_DPATH);
@@ -202,7 +195,6 @@ public:
 			}
 			cmdCartROM->requestFocus();
 		}
-#endif
 	}
 };
 
@@ -215,15 +207,11 @@ void InitPanelROM(const struct _ConfigCategory& category)
 
 	mainROMActionListener = new MainROMActionListener();
 	extROMActionListener = new ExtROMActionListener();
-#ifdef ACTION_REPLAY
 	cartROMActionListener = new CartROMActionListener();
-#endif
 	romButtonActionListener = new ROMButtonActionListener();
 	mainROMList = new ROMListModel(ROMTYPE_ALL_KICK);
 	extROMList = new ROMListModel(ROMTYPE_ALL_EXT);
-#ifdef ACTION_REPLAY
 	cartROMList = new ROMListModel(ROMTYPE_ALL_CART);
-#endif
 
 	lblMainROM = new gcn::Label("Main ROM File:");
 	cboMainROM = new gcn::UaeDropDown(mainROMList);
@@ -251,7 +239,6 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdExtROM->setBaseColor(gui_baseCol);
 	cmdExtROM->addActionListener(romButtonActionListener);
 
-#ifdef ACTION_REPLAY
 	lblCartROM = new gcn::Label("Cartridge ROM File:");
 	cboCartROM = new gcn::UaeDropDown(cartROMList);
 	cboCartROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
@@ -264,7 +251,6 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdCartROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdCartROM->setBaseColor(gui_baseCol);
 	cmdCartROM->addActionListener(romButtonActionListener);
-#endif
 
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
@@ -279,13 +265,11 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	category.panel->add(cmdExtROM, DISTANCE_BORDER + cboExtROM->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboExtROM->getHeight() + DISTANCE_NEXT_Y;
 
-#ifdef ACTION_REPLAY
 	category.panel->add(lblCartROM, DISTANCE_BORDER, posY);
 	posY += lblCartROM->getHeight() + 4;
 	category.panel->add(cboCartROM, DISTANCE_BORDER, posY);
 	category.panel->add(cmdCartROM, DISTANCE_BORDER + cboCartROM->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboCartROM->getHeight() + DISTANCE_NEXT_Y;
-#endif
 
 	RefreshPanelROM();
 }
@@ -305,13 +289,11 @@ void ExitPanelROM()
 	delete extROMList;
 	delete extROMActionListener;
 
-#ifdef ACTION_REPLAY
 	delete lblCartROM;
 	delete cboCartROM;
 	delete cmdCartROM;
 	delete cartROMList;
 	delete cartROMActionListener;
-#endif
 
 	delete romButtonActionListener;
 }
@@ -325,10 +307,8 @@ void RefreshPanelROM()
 	idx = extROMList->InitROMList(changed_prefs.romextfile);
 	cboExtROM->setSelected(idx);
 
-#ifdef ACTION_REPLAY
 	idx = cartROMList->InitROMList(changed_prefs.cartfile);
 	cboCartROM->setSelected(idx);
-#endif
 }
 
 bool HelpPanelROM(std::vector<std::string> &helptext)

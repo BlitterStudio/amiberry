@@ -137,19 +137,12 @@ static NavigationMap navMap[] =
 
 //  active            move left         move right        move up           move down
 // PanelROM
-#ifdef ACTION_REPLAY
 { "cboMainROM",     "ROM",            "MainROM",        "cboCartROM",     "cboExtROM" },
 { "MainROM",        "cboMainROM",     "ROM",            "CartROM",        "ExtROM" },
 { "cboExtROM",      "ROM",            "ExtROM",         "cboMainROM",     "cboCartROM" },
 { "ExtROM",         "cboExtROM",      "ROM",            "MainROM",        "CartROM" },
 { "cboCartROM",     "ROM",            "CartROM",        "cboExtROM",      "cboMainROM" },
 { "CartROM",        "cboCartROM",     "ROM",            "ExtROM",         "MainROM" },
-#else
-{ "cboMainROM",     "ROM",            "MainROM",        "cboExtROM",      "cboExtROM" },
-{ "MainROM",        "cboMainROM",     "ROM",            "ExtROM",         "ExtROM" },
-{ "cboExtROM",      "ROM",            "ExtROM",         "cboMainROM",     "cboMainROM" },
-{ "ExtROM",         "cboExtROM",      "ROM",            "MainROM",        "MainROM" },
-#endif
 
 //PanelRAM
 { "Chipmem",        "",               "",               "RAM",            "Slowmem" },
