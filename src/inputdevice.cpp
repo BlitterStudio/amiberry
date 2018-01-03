@@ -2676,7 +2676,7 @@ static uae_u64 isqual (int evt)
 	return ID_FLAG_QUALIFIER1 << (num * 2);
 }
 
-static int handle_input_event (int nr, int state, int max, int autofire)
+static int handle_input_event(int nr, int state, int max, int autofire)
 {
 	const struct inputevent *ie;
 	int joy;
@@ -2692,7 +2692,7 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 #endif
 
 	ie = &events[nr];
-	if (isqual (nr))
+	if (isqual(nr))
 		return 0; // qualifiers do nothing
 	if (ie->unit == 0 && ie->data >= AKS_FIRST) {
 		isaks = true;
@@ -2700,9 +2700,9 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 
 	if (autofire) {
 		if (state)
-			queue_input_event (nr, state, max, currprefs.input_autofire_linecnt);
+			queue_input_event(nr, state, max, currprefs.input_autofire_linecnt);
 		else
-			queue_input_event (nr, -1, 0, 0);
+			queue_input_event(nr, -1, 0, 0);
 	}
 	switch (ie->unit)
 	{
@@ -2716,11 +2716,13 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 
 			if (state) {
 				joybutton[joy] |= 1 << ie->data;
-			} else {
+			}
+			else {
 				joybutton[joy] &= ~(1 << ie->data);
 			}
 
-		} else if (ie->type & 8) {
+		}
+		else if (ie->type & 8) {
 
 			/* real mouse / analog stick mouse emulation */
 			int delta;
@@ -2731,20 +2733,24 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 				if (state <= deadzone && state >= -deadzone) {
 					state = 0;
 					mouse_deltanoreset[joy][unit] = 0;
-				} else if (state < 0) {
+				}
+				else if (state < 0) {
 					state += deadzone;
 					mouse_deltanoreset[joy][unit] = 1;
-				} else {
+				}
+				else {
 					state -= deadzone;
 					mouse_deltanoreset[joy][unit] = 1;
 				}
 				if (max > 0) {
-				  max -= deadzone;
-				  delta = state * currprefs.input_joymouse_multiplier / max;
-			  } else {
-				  delta = state;
+					max -= deadzone;
+					delta = state * currprefs.input_joymouse_multiplier / max;
 				}
-			} else {
+				else {
+					delta = state;
+				}
+			}
+			else {
 				delta = state;
 				mouse_deltanoreset[joy][unit] = 0;
 			}
@@ -2758,33 +2764,40 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 				mouse_delta[joy][unit] += delta;
 
 			max = 32;
-		} else if (ie->type & 32) { /* button mouse emulation vertical */
+		}
+		else if (ie->type & 32) { /* button mouse emulation vertical */
 
 			int speed = currprefs.input_joymouse_speed;
 
 			if (state && (ie->data & DIR_UP)) {
 				mouse_delta[joy][1] = -speed;
 				mouse_deltanoreset[joy][1] = 1;
-			} else if (state && (ie->data & DIR_DOWN)) {
+			}
+			else if (state && (ie->data & DIR_DOWN)) {
 				mouse_delta[joy][1] = speed;
 				mouse_deltanoreset[joy][1] = 1;
-			} else
+			}
+			else
 				mouse_deltanoreset[joy][1] = 0;
 
-		} else if (ie->type & 64) { /* button mouse emulation horizontal */
+		}
+		else if (ie->type & 64) { /* button mouse emulation horizontal */
 
 			int speed = currprefs.input_joymouse_speed;
 
 			if (state && (ie->data & DIR_LEFT)) {
 				mouse_delta[joy][0] = -speed;
 				mouse_deltanoreset[joy][0] = 1;
-			} else if (state && (ie->data & DIR_RIGHT)) {
+			}
+			else if (state && (ie->data & DIR_RIGHT)) {
 				mouse_delta[joy][0] = speed;
 				mouse_deltanoreset[joy][0] = 1;
-			} else
+			}
+			else
 				mouse_deltanoreset[joy][0] = 0;
 
-		} else if (ie->type & 128) { /* analog joystick / paddle */
+		}
+		else if (ie->type & 128) { /* analog joystick / paddle */
 
 #ifndef INPUTDEVICE_SIMPLE
 			int deadzone = currprefs.input_joymouse_deadzone * max / 100;
@@ -2792,13 +2805,16 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 			if (max) {
 				if (state <= deadzone && state >= -deadzone) {
 					state = 0;
-				} else if (state < 0) {
+				}
+				else if (state < 0) {
 					state += deadzone;
-				} else {
+				}
+				else {
 					state -= deadzone;
 				}
 				state = state * max / (max - deadzone);
-			} else {
+			}
+			else {
 				max = 100;
 				relativecount[joy][unit] += state;
 				state = relativecount[joy][unit];
@@ -2823,7 +2839,8 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 			mouse_deltanoreset[joy][1] = 1;
 #endif
 
-		} else {
+		}
+		else {
 
 			int left = oleft[joy], right = oright[joy], top = otop[joy], bot = obot[joy];
 			if (ie->type & 16) {
@@ -2840,7 +2857,8 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 				if (ie->data & DIR_DOWN) {
 					bot = obot[joy] = state ? 1 : 0;
 				}
-			} else {
+			}
+			else {
 				/* "normal" joystick axis */
 				int deadzone = currprefs.input_joystick_deadzone * max / 100;
 				int neg, pos;
@@ -2851,18 +2869,19 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 					// relative events
 					relativecount[joy][unit] += state;
 					cnt = relativecount[joy][unit];
-					neg = cnt < -mmax;	
+					neg = cnt < -mmax;
 					pos = cnt > mmax;
 					if (cnt < -(mmax + mextra))
 						cnt = -(mmax + mextra);
-					if (cnt > (mmax + mextra))
+					if (cnt >(mmax + mextra))
 						cnt = (mmax + mextra);
 					relativecount[joy][unit] = cnt;
-				} else {
-				  if (state < deadzone && state > -deadzone)
-					  state = 0;
-				  neg = state < 0 ? 1 : 0;
-				  pos = state > 0 ? 1 : 0;
+				}
+				else {
+					if (state < deadzone && state > -deadzone)
+						state = 0;
+					neg = state < 0 ? 1 : 0;
+					pos = state > 0 ? 1 : 0;
 				}
 				if (ie->data & DIR_LEFT) {
 					left = oleft[joy] = neg;
@@ -2889,13 +2908,13 @@ static int handle_input_event (int nr, int state, int max, int autofire)
 			if (bot)
 				joydir[joy] |= DIR_DOWN;
 			if (joy == 0 || joy == 1)
-				joymousecounter (joy); 
+				joymousecounter(joy);
 		}
 		break;
 	case 0: /* ->KEY */
-		inputdevice_do_keyboard (ie->data, state);
+		inputdevice_do_keyboard(ie->data, state);
 		break;
-  }
+	}
 	return 1;
 }
 
@@ -5011,10 +5030,8 @@ static int inputdevice_translatekeycode_2 (int keyboard, int scancode, int keyst
 				int evt = na->eventid[j][sublevdir[keystate == 0 ? 1 : 0][k]];
 				uae_u64 flags = *flagsp;
 				int autofire = (flags & ID_FLAG_AUTOFIRE) ? 1 : 0;
-#ifndef INPUTDEVICE_SIMPLE
 				int toggle = (flags & ID_FLAG_TOGGLE) ? 1 : 0;
 				int inverttoggle = (flags & ID_FLAG_INVERTTOGGLE) ? 1 : 0;
-#endif
 				int invert = (flags & ID_FLAG_INVERT) ? 1 : 0;
 				int setmode = (flags & ID_FLAG_SET_ONOFF) ? 1: 0;
 				int setval = (flags & ID_FLAG_SET_ONOFF_VAL) ? SET_ONOFF_ON_VALUE : SET_ONOFF_OFF_VALUE;
@@ -5042,6 +5059,21 @@ static int inputdevice_translatekeycode_2 (int keyboard, int scancode, int keyst
 					}
 					continue;
         }
+				// if evt == caps and scan == caps: sync with native caps led
+				if (evt == INPUTEVENT_KEY_CAPS_LOCK) {
+					int v;
+					if (state < 0)
+						state = 1;
+					v = target_checkcapslock(scancode, &state);
+					if (v < 0)
+						continue;
+					if (v > 0)
+						toggle = 0;
+				}
+				else if (state < 0) {
+					// it was caps lock resync, ignore, not mapped to caps
+					continue;
+				}
 
 #ifndef INPUTDEVICE_SIMPLE
 				if (inverttoggle) {

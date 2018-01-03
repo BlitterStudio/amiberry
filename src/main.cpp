@@ -203,18 +203,18 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		err = 1;
 	}
 
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-		if ((p->fastmem[i].size & (p->fastmem[i].size - 1)) != 0
-			|| (p->fastmem[i].size != 0 && (p->fastmem[i].size < 0x10000 || p->fastmem[i].size > 0x800000)))
+	for (auto & i : p->fastmem) {
+		if ((i.size & (i.size - 1)) != 0
+			|| (i.size != 0 && (i.size < 0x10000 || i.size > 0x800000)))
 		{
-			error_log(_T("Unsupported fastmem size %d (0x%x)."), p->fastmem[i].size, p->fastmem[i].size);
-			p->fastmem[i].size = 0;
+			error_log(_T("Unsupported fastmem size %d (0x%x)."), i.size, i.size);
+			i.size = 0;
 			err = 1;
 		}
 	}
 
-	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
-		struct rtgboardconfig *rbc = &p->rtgboards[i];
+	for (auto & rtgboard : p->rtgboards) {
+		const auto rbc = &rtgboard;
 		if (rbc->rtgmem_size > 0x1000000 && rbc->rtgmem_type == GFXBOARD_UAE_Z3) {
 			error_log(_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), rbc->rtgmem_size, rbc->rtgmem_size, 0x1000000, 0x1000000);
 			rbc->rtgmem_size = 0x1000000;
@@ -231,11 +231,11 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		}
 	}
 
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-		if ((p->z3fastmem[i].size & (p->z3fastmem[i].size - 1)) != 0 || (p->z3fastmem[i].size != 0 && p->z3fastmem[i].size < 0x100000))
+	for (auto & i : p->z3fastmem) {
+		if ((i.size & (i.size - 1)) != 0 || (i.size != 0 && i.size < 0x100000))
 		{
-			error_log(_T("Unsupported Zorro III fastmem size %d (0x%x)."), p->z3fastmem[i].size, p->z3fastmem[i].size);
-			p->z3fastmem[i].size = 0;
+			error_log(_T("Unsupported Zorro III fastmem size %d (0x%x)."), i.size, i.size);
+			i.size = 0;
 			err = 1;
 		}
 	}
@@ -273,8 +273,8 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		error_log(_T("Unsupported CPU Board RAM size."));
 	}
 
-	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
-		struct rtgboardconfig *rbc = &p->rtgboards[i];
+	for (auto & rtgboard : p->rtgboards) {
+		const auto rbc = &rtgboard;
 		if (p->chipmem_size > 0x200000 && rbc->rtgmem_size && gfxboard_get_configtype(rbc) == 2) {
 			error_log(_T("You can't use Zorro II RTG and more than 2MB chip at the same time."));
 			p->chipmem_size = 0x200000;
@@ -307,10 +307,10 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->z3fastmem[0].size = 0;
 		err = 1;
 	}
-	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
-		if ((p->rtgboards[i].rtgmem_size > 0 && p->rtgboards[i].rtgmem_type == GFXBOARD_UAE_Z3) && p->address_space_24) {
+	for (auto & rtgboard : p->rtgboards) {
+		if ((rtgboard.rtgmem_size > 0 && rtgboard.rtgmem_type == GFXBOARD_UAE_Z3) && p->address_space_24) {
 			error_log(_T("UAEGFX Z3 RTG can't be used if address space is 24-bit."));
-			p->rtgboards[i].rtgmem_size = 0;
+			rtgboard.rtgmem_size = 0;
 			err = 1;
 		}
 	}
