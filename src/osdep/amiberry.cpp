@@ -1049,7 +1049,7 @@ int handle_msgpump()
 			else
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
 #elif USE_SDL2
-			inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
 #endif
 			break;
 
@@ -1061,7 +1061,7 @@ int handle_msgpump()
 			else
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
 #elif USE_SDL2
-			inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
 #endif
 			break;
 
