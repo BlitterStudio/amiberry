@@ -61,41 +61,25 @@
  * default: HOME (278)
  */
 #pragma once
-#ifdef USE_SDL1
 #define VK_Green SDLK_HOME
-#elif USE_SDL2
-#define VK_Green SDL_SCANCODE_HOME
-#endif
 
 /*
  * Virtual Key for CD32 Blue button
  * default: END (279)
  */
-#ifdef USE_SDL1
 #define VK_Blue SDLK_PAGEDOWN
-#elif USE_SDL2
-#define VK_Blue SDL_SCANCODE_PAGEDOWN
-#endif
 
 /*
  * Virtual Key for CD32 Red button
  * default: PAGEDOWN (281)
  */
-#ifdef USE_SDL1
 #define VK_Red SDLK_END
-#elif USE_SDL2
-#define VK_Red SDL_SCANCODE_END
-#endif
 
 /*
  * Virtual Key for (Y) button
  * default: PAGEUP (280)
  */
-#ifdef USE_SDL1
 #define VK_Yellow SDLK_PAGEUP
-#elif USE_SDL2
-#define VK_Yellow SDL_SCANCODE_PAGEUP
-#endif
 
 /*
  * Virtual Key for (Left shoulder) button
@@ -104,79 +88,47 @@
 #ifdef ANDROID
 #define VK_L SDLK_F13
 #else
-#ifdef USE_SDL1
 #define VK_LShoulder SDLK_RSHIFT
-#elif USE_SDL2
-#define VK_LShoulder SDL_SCANCODE_RSHIFT
-#endif
 #endif
 
 /*
  * Virtual Key for (Right shoulder) button
  * default: RCTRL (305)
  */
-#ifdef USE_SDL1
 #define VK_RShoulder SDLK_RCTRL
-#elif USE_SDL2
-#define VK_RShoulder SDL_SCANCODE_RCTRL
-#endif
 
 /*
  * Virtual Key for CD32 Start button
  * default: Pause/Break
  */
-#ifdef USE_SDL1
 #define VK_Play SDLK_RETURN
-#elif USE_SDL2
-#define VK_Play SDL_SCANCODE_RETURN
-#endif
 
 /*
  * Virtual Key for (up) button
  * default: UP (273)
  */
-#ifdef USE_SDL1
 #define VK_UP SDLK_UP
-#elif USE_SDL2
-#define VK_UP SDL_SCANCODE_UP
-#endif
 
 /*
  * Virtual Key for (down) button
  * default: DOWN (274)
  */
-#ifdef USE_SDL1
 #define VK_DOWN SDLK_DOWN
-#elif USE_SDL2
-#define VK_DOWN SDL_SCANCODE_DOWN
-#endif
 
 /*
  * Virtual Key for (right) button
  * default: RIGHT (275)
  */
-#ifdef USE_SDL1
 #define VK_RIGHT SDLK_RIGHT
-#elif USE_SDL2
-#define VK_RIGHT SDL_SCANCODE_RIGHT
-#endif
 
 /*
  * Virtual Key for (left) button
  * default: LEFT (276)
  */
-#ifdef USE_SDL1
 #define VK_LEFT SDLK_LEFT
-#elif USE_SDL2
-#define VK_LEFT SDL_SCANCODE_LEFT
-#endif
 
 /*
  * Virtual Key for (ESC) button
  * default: ESC (27)
  */
-#ifdef USE_SDL1
 #define VK_ESCAPE SDLK_ESCAPE
-#elif USE_SDL2
-#define VK_ESCAPE SDL_SCANCODE_ESCAPE
-#endif

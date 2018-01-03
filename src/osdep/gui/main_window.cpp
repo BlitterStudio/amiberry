@@ -495,17 +495,11 @@ namespace sdl
 					}
 				}
 				else
-#ifdef USE_SDL1
 					switch (gui_event.key.keysym.sym)
-#elif USE_SDL2
-					switch (gui_event.key.keysym.scancode)
-#endif
+
 					{
-#ifdef USE_SDL1
 					case SDLK_q:
-#elif USE_SDL2
-					case SDL_SCANCODE_Q:
-#endif
+
 						//-------------------------------------------------
 						// Quit entire program via Q on keyboard
 						//-------------------------------------------------
@@ -530,11 +524,8 @@ namespace sdl
 						//------------------------------------------------
 						// Simulate press of enter when 'X' pressed
 						//------------------------------------------------
-#ifdef USE_SDL1
 						gui_event.key.keysym.sym = SDLK_RETURN;
-#elif USE_SDL2
-						gui_event.key.keysym.scancode = SDL_SCANCODE_RETURN;
-#endif
+
 						gui_input->pushInput(gui_event); // Fire key down
 						gui_event.type = SDL_KEYUP; // and the key up
 						break;
@@ -558,11 +549,8 @@ namespace sdl
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						break;
-#ifdef USE_SDL1
+					
 					case SDLK_F1:
-#elif USE_SDL2
-					case SDL_SCANCODE_F1:
-#endif
 						ShowHelpRequested();
 						widgets::cmdHelp->requestFocus();
 						break;
