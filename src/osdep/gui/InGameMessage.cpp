@@ -125,6 +125,43 @@ void checkInput()
 
 void gui_init(const char* msg)
 {
+#ifdef USE_SDL1
+	dummy_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+	screen = SDL_CreateRGBSurface(SDL_HWSURFACE, GUI_WIDTH, GUI_HEIGHT, 16,
+		dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
+	SDL_FreeSurface(dummy_screen);
+#elif USE_SDL2
+	if (sdlWindow == nullptr)
+	{
+		sdlWindow = SDL_CreateWindow("Amiberry-GUI",
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			0,
+			0,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
+	}
+
+	if (screen == nullptr)
+	{
+		screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+		check_error_sdl(screen == nullptr, "Unable to create SDL surface");
+	}
+
+	if (renderer == nullptr)
+	{
+		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
+	}
+		
+	if (texture == nullptr)
+	{
+		texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
+		check_error_sdl(renderer == nullptr, "Unable to create texture from Surface");
+	}
+#endif
+
 	msg_graphics = new gcn::SDLGraphics();
 	msg_graphics->setTarget(screen);
 	msg_input = new gcn::SDLInput();
@@ -191,32 +228,19 @@ void InGameMessage(const char* msg)
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 		// Finally we update the screen.
-		if (!drawn)
-		{
+
 #ifdef USE_SDL1
 			SDL_Flip(screen);
-		}
 #elif USE_SDL2
 			if (cursor != nullptr)
 				SDL_ShowCursor(SDL_ENABLE);
-// TODO update for SDL2 only as well
-#ifndef USE_DISPMANX
-			void* pixels;
-			int pitch;
 
-			// Update the texture from the surface
-			SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-			memcpy(pixels, screen->pixels, screen->h * screen->pitch);
-			SDL_UnlockTexture(texture);
+			SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 
-			// Copy the texture to the renderer
+			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-			// Update the window surface (show the renderer)
 			SDL_RenderPresent(renderer);
 #endif
-		}
-#endif
-		drawn = true;
 	}
 
 	gui_halt();
