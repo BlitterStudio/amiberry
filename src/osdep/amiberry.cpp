@@ -419,7 +419,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
 		return 1;
-		if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
+	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
 		return 1;
 	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
 		return 1;
@@ -440,6 +440,7 @@ void fetch_saveimagepath(char *out, int size, int dir)
 
 void fetch_configurationpath(char *out, int size)
 {
+	fixtrailing(config_path);
 	strncpy(out, config_path, size);
 }
 
@@ -450,6 +451,7 @@ void set_configurationpath(char *newpath)
 
 void fetch_controllerspath(char* out, int size)
 {
+	fixtrailing(controllers_path);
 	strncpy(out, controllers_path, size);
 }
 
@@ -471,6 +473,7 @@ void set_retroarchfile(char* newpath)
 
 void fetch_rompath(char* out, int size)
 {
+	fixtrailing(rom_path);
 	strncpy(out, rom_path, size);
 }
 
@@ -482,6 +485,7 @@ void set_rompath(char *newpath)
 
 void fetch_rp9path(char *out, int size)
 {
+	fixtrailing(rp9_path);
 	strncpy(out, rp9_path, size);
 }
 
