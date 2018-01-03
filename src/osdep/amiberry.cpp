@@ -640,7 +640,6 @@ void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector
 void saveAdfDir(void)
 {
 	char path[MAX_DPATH];
-	int i;
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
 	const auto f = fopen(path, "we");
@@ -665,29 +664,29 @@ void saveAdfDir(void)
 
 	snprintf(buffer, MAX_DPATH, "ROMs=%d\n", lstAvailableROMs.size());
 	fputs(buffer, f);
-	for (i = 0; i<lstAvailableROMs.size(); ++i)
+	for (auto & lstAvailableROM : lstAvailableROMs)
 	{
-		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROMs[i]->Name);
+		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROM->Name);
 		fputs(buffer, f);
-		snprintf(buffer, MAX_DPATH, "ROMPath=%s\n", lstAvailableROMs[i]->Path);
+		snprintf(buffer, MAX_DPATH, "ROMPath=%s\n", lstAvailableROM->Path);
 		fputs(buffer, f);
-		snprintf(buffer, MAX_DPATH, "ROMType=%d\n", lstAvailableROMs[i]->ROMType);
+		snprintf(buffer, MAX_DPATH, "ROMType=%d\n", lstAvailableROM->ROMType);
 		fputs(buffer, f);
 	}
 
 	snprintf(buffer, MAX_DPATH, "MRUDiskList=%d\n", lstMRUDiskList.size());
 	fputs(buffer, f);
-	for (i = 0; i<lstMRUDiskList.size(); ++i)
+	for (auto & i : lstMRUDiskList)
 	{
-		snprintf(buffer, MAX_DPATH, "Diskfile=%s\n", lstMRUDiskList[i].c_str());
+		snprintf(buffer, MAX_DPATH, "Diskfile=%s\n", i.c_str());
 		fputs(buffer, f);
 	}
 
 	snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
 	fputs(buffer, f);
-	for (i = 0; i<lstMRUCDList.size(); ++i)
+	for (auto & i : lstMRUCDList)
 	{
-		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", lstMRUCDList[i].c_str());
+		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", i.c_str());
 		fputs(buffer, f);
 	}
 
@@ -755,28 +754,28 @@ void loadAdfDir(void)
 		char romPath[MAX_DPATH] = { '\0' };
 		char tmpFile[MAX_DPATH];
 
-		while (zfile_fgetsa(linea, sizeof (linea), fh) != nullptr)
+		while (zfile_fgetsa(linea, sizeof linea, fh) != nullptr)
 		{
 			trimwsa(linea);
 			if (strlen(linea) > 0) {
 				if (!cfgfile_separate_linea(path, linea, option, value))
 					continue;
 
-				if (cfgfile_string(option, value, "ROMName", romName, sizeof(romName))
-					|| cfgfile_string(option, value, "ROMPath", romPath, sizeof(romPath))
+				if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
+					|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
 					|| cfgfile_intval(option, value, "ROMType", &romType, 1)) {
 					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1) {
 						auto tmp = new AvailableROM();
-						strncpy(tmp->Name, romName, sizeof(tmp->Name));
-						strncpy(tmp->Path, romPath, sizeof(tmp->Path));
+						strncpy(tmp->Name, romName, sizeof tmp->Name);
+						strncpy(tmp->Path, romPath, sizeof tmp->Path);
 						tmp->ROMType = romType;
-						lstAvailableROMs.push_back(tmp);
-						strncpy(romName, "", sizeof(romName));
-						strncpy(romPath, "", sizeof(romPath));
+						lstAvailableROMs.emplace_back(tmp);
+						strncpy(romName, "", sizeof romName);
+						strncpy(romPath, "", sizeof romPath);
 						romType = -1;
 					}
 				}
-				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof(tmpFile)))
+				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 				{
 					auto f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
@@ -785,7 +784,7 @@ void loadAdfDir(void)
 						lstMRUDiskList.emplace_back(tmpFile);
 					}
 				}
-				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof(tmpFile)))
+				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
 				{
 					FILE* f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
@@ -795,11 +794,11 @@ void loadAdfDir(void)
 					}
 				}
 				else {
-					cfgfile_string(option, value, "path", currentDir, sizeof(currentDir));
-					cfgfile_string(option, value, "config_path", config_path, sizeof(config_path));
-					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof(controllers_path));
-					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof(retroarch_file));
-					cfgfile_string(option, value, "rom_path", rom_path, sizeof(rom_path));
+					cfgfile_string(option, value, "path", currentDir, sizeof currentDir);
+					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
+					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
+					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
+					cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
 					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
@@ -859,7 +858,7 @@ int main(int argc, char* argv[])
 	loadAdfDir();
 	rp9_init();
 
-	snprintf(savestate_fname, sizeof savestate_fname, "%s/saves/default.ads", start_path_data);
+	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);
 	logging_init();
 
 	memset(&action, 0, sizeof action);
