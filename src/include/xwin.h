@@ -57,7 +57,7 @@ extern int lockscr (void);
 extern void unlockscr (void);
 extern bool target_graphics_buffer_update (void);
 
-extern void screenshot (int);
+extern void screenshot(int, int);
 
 extern int bits_in_mask (unsigned long mask);
 extern int mask_shift (unsigned long mask);

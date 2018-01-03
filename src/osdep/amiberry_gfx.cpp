@@ -878,11 +878,9 @@ static void create_screenshot()
 	}
 
 	if (screen != nullptr) {
-	const auto w = screen->w;
-	const auto h = screen->h;
 	current_screenshot = SDL_CreateRGBSurfaceFrom(screen->pixels,
-		w,
-		h,
+		screen->w,
+		screen->h,
 		screen->format->BitsPerPixel,
 		screen->pitch,
 		screen->format->Rmask,

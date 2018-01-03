@@ -38,6 +38,8 @@
 #include "autoconf.h"
 #include "statusline.h"
 #include "native2amiga_api.h"
+#include "sounddep/sound.h"
+#include "disk.h"
 
 #define COMPA_RESERVED_FLAGS (ID_FLAG_INVERT)
 
@@ -47,6 +49,7 @@
 #define ID_FLAG_CUSTOMEVENT_TOGGLED2 0x8000
 
 #define IE_INVERT 0x80
+#define IE_CDTV 0x100
 
 #define INPUTEVENT_JOY1_CD32_FIRST INPUTEVENT_JOY1_CD32_PLAY
 #define INPUTEVENT_JOY2_CD32_FIRST INPUTEVENT_JOY2_CD32_PLAY
@@ -56,12 +59,22 @@
 #define DEFEVENT(A, B, C, D, E, F) {_T(#A), B, NULL, C, D, E, F, 0 },
 #define DEFEVENT2(A, B, B2, C, D, E, F, G) {_T(#A), B, B2, C, D, E, F, G },
 static const struct inputevent events[] = {
-	{0, 0, 0, AM_K, 0, 0, 0, 0},
+	{ 0, 0, 0, AM_K, 0, 0, 0, 0 },
 #include "inputevents.def"
-	{0, 0, 0, 0, 0, 0, 0, 0}
+{ 0, 0, 0, 0, 0, 0, 0, 0 }
 };
 #undef DEFEVENT
 #undef DEFEVENT2
+struct aksevent
+{
+	int aks;
+	const TCHAR *name;
+};
+#define AKS(A) { AKS_ ## A, _T("AKS_") _T(#A) },
+static const struct aksevent akss[] = {
+#include "aks.def"
+	{ 0, NULL }
+};
 
 static int sublevdir[2][MAX_INPUT_SUB_EVENT];
 
@@ -2522,18 +2535,25 @@ static void queue_input_event (int evt, int state, int max, int linecnt)
 
 static uae_u8 keybuf[256];
 #define MAX_PENDING_EVENTS 20
-static int inputcode_pending[MAX_PENDING_EVENTS], inputcode_pending_state[MAX_PENDING_EVENTS];
-
-void inputdevice_add_inputcode (int code, int state)
+struct inputcode
 {
-	for (int i = 0; i < MAX_PENDING_EVENTS; i++) {
-		if (inputcode_pending[i] == code && inputcode_pending_state[i] == state)
+	int code;
+	int state;
+	TCHAR *s;
+};
+static struct inputcode inputcode_pending[MAX_PENDING_EVENTS];
+
+void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
+{
+	for (auto & i : inputcode_pending) {
+		if (i.code == code && i.state == state)
 			return;
 	}
-	for (int i = 0; i < MAX_PENDING_EVENTS; i++) {
-		if (inputcode_pending[i] == 0) {
-		  inputcode_pending[i] = code;
-		  inputcode_pending_state[i] = state;
+	for (auto & i : inputcode_pending) {
+		if (i.code == 0) {
+			i.code = code;
+			i.state = state;
+			i.s != nullptr ? i.s = my_strdup(s) : nullptr;
 			return;
 		}
 	}
@@ -2548,7 +2568,7 @@ void inputdevice_do_keyboard (int code, int state)
 		}
 		return;
 	}
-	inputdevice_add_inputcode (code, state);
+	inputdevice_add_inputcode (code, state, NULL);
 }
 
 
@@ -2574,21 +2594,104 @@ int i;
 int num_elements;
 
 
-static bool inputdevice_handle_inputcode2(int code, int state)
+static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 {
+	int newstate, onoffstate;
+
 	if (code == 0)
 		goto end;
+
+	onoffstate = state & ~SET_ONOFF_MASK_PRESS;
+
+	if (onoffstate == SET_ONOFF_ON_VALUE)
+		newstate = 1;
+	else if (onoffstate == SET_ONOFF_OFF_VALUE)
+		newstate = 0;
+	else if (onoffstate == SET_ONOFF_PRESS_VALUE)
+		newstate = -1;
+	else if (onoffstate == SET_ONOFF_PRESSREL_VALUE)
+		newstate = (state & SET_ONOFF_MASK_PRESS) ? 1 : -1;
+	else if (state)
+		newstate = -1;
+	else
+		newstate = 0;
 
 	switch (code)
 	{
 	case AKS_ENTERGUI:
 		gui_display(-1);
 		break;
+	//case AKS_SCREENSHOT_FILE:
+	//	if (state > 1) {
+	//		screenshot(3, 1);
+	//	}
+	//	else {
+	//		screenshot(1, 1);
+	//	}
+	//	break;
 #ifdef ACTION_REPLAY
 	case AKS_FREEZEBUTTON:
 		action_replay_freeze();
 		break;
 #endif
+	case AKS_FLOPPY0:
+		if (s) {
+			_tcsncpy(changed_prefs.floppyslots[0].df, s, MAX_DPATH);
+			changed_prefs.floppyslots[0].df[MAX_DPATH - 1] = 0;
+			set_config_changed();
+		}
+		else {
+			gui_display(0);
+		}
+		break;
+	case AKS_FLOPPY1:
+		if (s) {
+			_tcsncpy(changed_prefs.floppyslots[1].df, s, MAX_DPATH);
+			changed_prefs.floppyslots[1].df[MAX_DPATH - 1] = 0;
+			set_config_changed();
+		}
+		else {
+			gui_display(1);
+		}
+		break;
+	case AKS_FLOPPY2:
+		if (s) {
+			_tcsncpy(changed_prefs.floppyslots[2].df, s, MAX_DPATH);
+			changed_prefs.floppyslots[2].df[MAX_DPATH - 1] = 0;
+			set_config_changed();
+		}
+		else {
+			gui_display(2);
+		}
+		break;
+	case AKS_FLOPPY3:
+		if (s) {
+			_tcsncpy(changed_prefs.floppyslots[3].df, s, MAX_DPATH);
+			changed_prefs.floppyslots[3].df[MAX_DPATH - 1] = 0;
+			set_config_changed();
+		}
+		else {
+			gui_display(3);
+		}
+		break;
+	case AKS_EFLOPPY0:
+		disk_eject(0);
+		break;
+	case AKS_EFLOPPY1:
+		disk_eject(1);
+		break;
+	case AKS_EFLOPPY2:
+		disk_eject(2);
+		break;
+	case AKS_EFLOPPY3:
+		disk_eject(3);
+		break;
+	case AKS_VOLDOWN:
+		sound_volume(newstate <= 0 ? -1 : 1);
+		break;
+	case AKS_VOLUP:
+		sound_volume(newstate <= 0 ? 1 : -1);
+		break;
 	case AKS_QUIT:
 		uae_quit();
 		break;
@@ -2598,26 +2701,25 @@ static bool inputdevice_handle_inputcode2(int code, int state)
 	case AKS_HARDRESET:
 		uae_reset(1, 1);
 		break;
-
 	case AKS_MOUSEMAP_PORT0_LEFT:
-		((changed_prefs.jports[0].mousemap) ^= 1 << 0);
+		(changed_prefs.jports[0].mousemap) ^= 1 << 0;
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 	case AKS_MOUSEMAP_PORT0_RIGHT:
-		((changed_prefs.jports[0].mousemap) ^= 1 << 1);
+		(changed_prefs.jports[0].mousemap) ^= 1 << 1;
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 	case AKS_MOUSEMAP_PORT1_LEFT:
-		((changed_prefs.jports[1].mousemap) ^= 1 << 0);
+		(changed_prefs.jports[1].mousemap) ^= 1 << 0;
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 	case AKS_MOUSEMAP_PORT1_RIGHT:
-		((changed_prefs.jports[1].mousemap) ^= 1 << 1);
+		(changed_prefs.jports[1].mousemap) ^= 1 << 1;
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 
 	case AKS_MOUSE_SPEED_DOWN:
-		num_elements = sizeof(mousespeed_values) / sizeof(mousespeed_values[0]);
+		num_elements = sizeof mousespeed_values / sizeof mousespeed_values[0];
 		mousespeed = currprefs.input_joymouse_multiplier;
 
 		i = find_in_array(mousespeed_values, num_elements, mousespeed);
@@ -2628,7 +2730,7 @@ static bool inputdevice_handle_inputcode2(int code, int state)
 		break;
 
 	case AKS_MOUSE_SPEED_UP:
-		num_elements = sizeof(mousespeed_values) / sizeof(mousespeed_values[0]);
+		num_elements = sizeof mousespeed_values / sizeof mousespeed_values[0];
 		mousespeed = currprefs.input_joymouse_multiplier;
 
 		i = find_in_array(mousespeed_values, num_elements, mousespeed);
@@ -2644,20 +2746,23 @@ end:
 
 
 
-void inputdevice_handle_inputcode (void)
+void inputdevice_handle_inputcode(void)
 {
 	bool got = false;
-	for (int i = 0; i < MAX_PENDING_EVENTS; i++) {
-		int code = inputcode_pending[i];
-		int state = inputcode_pending_state[i];
+	for (auto & i : inputcode_pending) {
+		int code = i.code;
+		int state = i.state;
+		const TCHAR *s = i.s;
 		if (code) {
-			if (!inputdevice_handle_inputcode2 (code, state))
-				inputcode_pending[i] = 0;
+			if (!inputdevice_handle_inputcode2(code, state, s)) {
+				xfree(i.s);
+				i.code = 0;
+			}
 			got = true;
 		}
 	}
 	if (!got)
-		inputdevice_handle_inputcode2 (0, 0);
+		inputdevice_handle_inputcode2(0, 0, NULL);
 }
 
 

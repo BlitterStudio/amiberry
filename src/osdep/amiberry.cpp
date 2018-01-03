@@ -982,14 +982,14 @@ int handle_msgpump()
 			// If the Enter GUI key was pressed, handle it
 			if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key)
 			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1);
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 				break;
 			}
 			
 			// If the Quit emulator key was pressed, handle it
 			if (quit_key && rEvent.key.keysym.sym == quit_key)
 			{
-				inputdevice_add_inputcode(AKS_QUIT, 1);
+				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
 				break;
 			}
 

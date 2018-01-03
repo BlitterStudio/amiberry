@@ -32,10 +32,13 @@
 #define JOYBUTTON_CD32_RED 8
 #define JOYBUTTON_CD32_BLUE 9
 
+#define JOYBUTTON_LIGHTPEN2 10
+
 #define IDTYPE_JOYSTICK 0
 #define IDTYPE_MOUSE 1
 #define IDTYPE_KEYBOARD 2
-#define IDTYPE_MAX 3
+#define IDTYPE_INTERNALEVENT 3
+#define IDTYPE_MAX 4
 
 struct inputdevice_functions {
     int (*init)(void);
@@ -146,8 +149,11 @@ struct inputevent {
 #define IDEV_MAPPED_QUALIFIER_WIN       0x100000000000000ULL
 #define IDEV_MAPPED_QUALIFIER_MASK      0xfffffff00000000ULL
 
-#define SET_ONOFF_ON_VALUE  0x7fffff01
+#define SET_ONOFF_PRESSREL_VALUE 0x7fffff30
+#define SET_ONOFF_PRESS_VALUE 0x7fffff20
+#define SET_ONOFF_ON_VALUE  0x7fffff10
 #define SET_ONOFF_OFF_VALUE 0x7fffff00
+#define SET_ONOFF_MASK_PRESS 15
 
 #define ID_BUTTON_OFFSET 0
 #define ID_BUTTON_TOTAL 128
@@ -277,7 +283,7 @@ extern void inputdevice_acquire (int allmode);
 extern void inputdevice_unacquire (void);
 extern void inputdevice_unacquire(bool emulationactive, int inputmask);
 
-extern void inputdevice_add_inputcode (int code, int state);
+extern void inputdevice_add_inputcode(int code, int state, const TCHAR *);
 extern void inputdevice_handle_inputcode (void);
 
 extern void inputdevice_tablet_strobe (void);
@@ -366,7 +372,7 @@ struct host_input_button {
 struct host_keyboard_button {
 
 	int north_button;
-	int east_button; 
+	int east_button;
 	int south_button;
 	int west_button;
 	int dpad_left;
@@ -379,18 +385,12 @@ struct host_keyboard_button {
 	int start_button;
 	int lstick_button;
 	int rstick_button;
-        
-        bool is_retroarch;     
-    
+
+	bool is_retroarch;
 };
 
-
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-
 extern int multipler_maps[MAX_JPORTS];
-
-
 extern int find_in_array(const int arr[], int n, int key);
-
 
 #endif /* UAE_INPUTDEVICE_H */
