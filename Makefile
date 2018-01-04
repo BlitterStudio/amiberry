@@ -10,6 +10,10 @@ endif
 RPI_FLAGS += -mfloat-abi=hard
 DISPMANX_FLAGS += -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
+#DEBUG=1
+#GCC_PROFILE=1
+#GEN_PROFILE=1
+#USE_PROFILE=1
 
 #
 # SDL1 targets
@@ -109,11 +113,6 @@ PROG   = $(NAME)
 
 all: $(PROG)
 
-#DEBUG=1
-#GCC_PROFILE=1
-#GEN_PROFILE=1
-#USE_PROFILE=1
-
 SDL_CFLAGS = `sdl-config --cflags`
 LDFLAGS += -lSDL -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
 
@@ -139,11 +138,6 @@ all: guisan $(PROG)
 
 guisan:
 	$(MAKE) -C src/guisan
-
-#DEBUG=1
-#GCC_PROFILE=1
-#GEN_PROFILE=1
-#USE_PROFILE=1
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
 MORE_CFLAGS += -Isrc/guisan/include
