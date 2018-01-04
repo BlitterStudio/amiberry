@@ -42,6 +42,14 @@ static gcn::UaeDropDown* cboKBDLed_num;
 static gcn::Label* lblScrLock;
 static gcn::UaeDropDown* cboKBDLed_scr;
 
+static gcn::Label* lblOpenGUI;
+static gcn::TextField* txtOpenGUI;
+static gcn::Button* cmdOpenGUI;
+
+static gcn::Label* lblKeyForQuit;
+static gcn::TextField* txtKeyForQuit;
+static gcn::Button* cmdKeyForQuit;
+
 class StringListModel : public gcn::ListModel
 {
 	vector<string> values;
@@ -105,6 +113,26 @@ public:
 
 		else if (actionEvent.getSource() == cboKBDLed_scr)
 			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
+
+		else if (actionEvent.getSource() == cmdOpenGUI)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
+			if (key != nullptr)
+			{
+				txtOpenGUI->setText(key);
+				strcpy(changed_prefs.open_gui, key);
+			}
+		}
+
+		else if (actionEvent.getSource() == cmdKeyForQuit)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
+			if (key != nullptr)
+			{
+				txtKeyForQuit->setText(key);
+				strcpy(changed_prefs.quit_amiberry, key);
+			}
+		}
 	}
 };
 
@@ -167,6 +195,30 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cboKBDLed_scr->setId("scrolllock");
 	cboKBDLed_scr->addActionListener(miscActionListener);
 
+	lblOpenGUI = new gcn::Label("Open GUI:");
+	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
+	txtOpenGUI = new gcn::TextField();
+	txtOpenGUI->setEnabled(false);
+	txtOpenGUI->setSize(85, TEXTFIELD_HEIGHT);
+	txtOpenGUI->setBackgroundColor(colTextboxBackground);
+	cmdOpenGUI = new gcn::Button("...");
+	cmdOpenGUI->setId("OpenGUI");
+	cmdOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdOpenGUI->setBaseColor(gui_baseCol);
+	cmdOpenGUI->addActionListener(miscActionListener);
+
+	lblKeyForQuit = new gcn::Label("Quit Key:");
+	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
+	txtKeyForQuit = new gcn::TextField();
+	txtKeyForQuit->setEnabled(false);
+	txtKeyForQuit->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
+	cmdKeyForQuit = new gcn::Button("...");
+	cmdKeyForQuit->setId("KeyForQuit");
+	cmdKeyForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyForQuit->setBaseColor(gui_baseCol);
+	cmdKeyForQuit->addActionListener(miscActionListener);
+
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
@@ -199,6 +251,14 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y * 2;
 
+	category.panel->add(lblOpenGUI, DISTANCE_BORDER, posY);
+	category.panel->add(txtOpenGUI, lblOpenGUI->getX() + lblOpenGUI->getWidth() + 8, posY);
+	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
+
+	category.panel->add(lblKeyForQuit, cmdOpenGUI->getX() + cmdOpenGUI->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
+	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
+
 	RefreshPanelMisc();
 }
 
@@ -221,6 +281,14 @@ void ExitPanelMisc()
 	delete cboKBDLed_num;
 	delete cboKBDLed_scr;
 
+	delete lblOpenGUI;
+	delete txtOpenGUI;
+	delete cmdOpenGUI;
+
+	delete lblKeyForQuit;
+	delete txtKeyForQuit;
+	delete cmdKeyForQuit;
+
 	delete miscActionListener;
 }
 
@@ -238,6 +306,10 @@ void RefreshPanelMisc()
 
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
+
+	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
+	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0 ? changed_prefs.quit_amiberry : "Click to map");
+
 }
 
 bool HelpPanelMisc(std::vector<std::string> &helptext)
