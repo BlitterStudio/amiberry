@@ -126,10 +126,13 @@ void checkInput()
 void gui_init(const char* msg)
 {
 #ifdef USE_SDL1
-	dummy_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
-	screen = SDL_CreateRGBSurface(SDL_HWSURFACE, GUI_WIDTH, GUI_HEIGHT, 16,
-		dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
-	SDL_FreeSurface(dummy_screen);
+	if (screen == nullptr)
+	{
+		auto dummy_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+		screen = SDL_CreateRGBSurface(SDL_HWSURFACE, GUI_WIDTH, GUI_HEIGHT, 16,
+			dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
+		SDL_FreeSurface(dummy_screen);
+	}
 #elif USE_SDL2
 	if (sdlWindow == nullptr)
 	{
