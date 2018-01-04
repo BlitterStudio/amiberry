@@ -32,16 +32,13 @@
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static const char* dialogControlPressed;
-static Uint8 dialogButtonPressed;
 
 static gcn::Window* wndShowMessage;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
 static gcn::Label* lblText1;
 static gcn::Label* lblText2;
-
 
 class ShowMessageActionListener : public gcn::ActionListener
 {
