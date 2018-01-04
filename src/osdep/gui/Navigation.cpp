@@ -55,8 +55,9 @@ static NavigationMap navMap[] =
 #else
 { "Savestates",       "State0",         "State0",         "Miscellaneous",  "Reset" },
 { "Reset",            "Start",          "Quit",           "Savestates",     "Paths" },
-{ "Quit",             "Reset",          "Help",          "Savestates",      "Paths" },
-{ "Help",             "Quit",           "Start",          "Savestates",     "Paths" },
+{ "Quit",             "Reset",          "Shutdown",       "Savestates",     "Paths" },
+{ "Shutdown",         "Quit",           "Help",           "Savestates",     "Paths" },
+{ "Help",             "Shutdown",       "Start",          "Savestates",     "Paths" },
 { "Start",            "Help",           "Reset",          "Savestates",     "Paths" },
 #endif
 
