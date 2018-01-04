@@ -106,7 +106,9 @@ static void *display_thread(void *unused)
 		255 /*alpha 0->255*/ , 	0
 	};
 	uint32_t vc_image_ptr;
+#ifdef USE_SDL1
 	SDL_Surface *dummy_screen;
+#endif
 	int width, height;
 	float want_aspect, real_aspect, scale;
 	SDL_Rect viewport;
