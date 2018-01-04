@@ -110,6 +110,7 @@ PROG   = $(NAME)
 all: $(PROG)
 
 #DEBUG=1
+#GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
 
@@ -140,6 +141,7 @@ guisan:
 	$(MAKE) -C src/guisan
 
 #DEBUG=1
+#GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
 
@@ -178,6 +180,11 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 ASFLAGS += $(CPU_FLAGS)
 
 CXXFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(MORE_CFLAGS)
+
+ifdef GCC_PROFILE
+    MORE_CFLAGS += -pg
+    LDFLAGS += -pg
+endif
 
 ifdef GEN_PROFILE
     MORE_CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
