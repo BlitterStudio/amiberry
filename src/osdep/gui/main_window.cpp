@@ -40,7 +40,6 @@ static int last_active_panel = 2;
 static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
-
 void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 {
 	_tcsncpy(startup_title, title, MAX_STARTUP_TITLE);
@@ -288,9 +287,7 @@ namespace sdl
 		SDL_EnableUNICODE(1);
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 		SDL_ShowCursor(SDL_ENABLE);
-#endif
-#ifdef USE_SDL2
-
+#elif USE_SDL2
 		setup_cursor();
 
 		// make the scaled rendering look smoother (linear scaling).
@@ -342,7 +339,6 @@ namespace sdl
 			SDL_FreeSurface(gui_screen);
 			gui_screen = nullptr;
 		}
-
 #ifdef USE_SDL2
 		if (gui_texture != nullptr)
 		{
@@ -848,7 +844,7 @@ namespace widgets
 			categories[i].panel->setBaseColor(gui_baseCol);
 #ifdef USE_SDL1
 			categories[i].panel->setFrameSize(1);
-#elif USE_SDLL2
+#elif USE_SDL2
 			categories[i].panel->setBorderSize(1);
 #endif
 			categories[i].panel->setVisible(false);
