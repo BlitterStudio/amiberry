@@ -8,6 +8,7 @@
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+#include <guisan/gui.hpp>
 #endif
 #include "SelectorEntry.hpp"
 
@@ -24,6 +25,7 @@
 #include "amiberry_gfx.h"
 
 #include "inputdevice.h"
+
 
 #ifdef ANDROIDSDL
 #include "androidsdl_event.h"
@@ -84,6 +86,10 @@ void checkInput()
 	//-------------------------------------------------
 	// Check user input
 	//-------------------------------------------------	
+	if (SDL_NumJoysticks() > 0)
+		if (GUIjoy == nullptr)
+			GUIjoy = SDL_JoystickOpen(0);
+
 	while (SDL_PollEvent(&msg_event))
 	{
 		if (msg_event.type == SDL_KEYDOWN)
@@ -121,6 +127,8 @@ void checkInput()
 		msg_input->pushInput(msg_event);
 #endif 
 	}
+	if (GUIjoy)
+		SDL_JoystickClose(GUIjoy);
 }
 
 void gui_init(const char* msg)
