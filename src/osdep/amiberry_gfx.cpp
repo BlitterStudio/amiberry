@@ -561,7 +561,8 @@ bool render_screen(bool immediate)
 			savestate_state = 0;
 		}
 	}
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 #endif
 	return true;
