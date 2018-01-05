@@ -135,7 +135,7 @@ namespace gcn
         bool hasPink = false;
         bool hasAlpha = false;
 
-        unsigned int surfaceMask = SDL_PIXELFORMAT_RGBX8888;
+        //unsigned int surfaceMask = SDL_PIXELFORMAT_RGBX8888;
 
         for (i = 0; i < mSurface->w * mSurface->h; ++i)
         {
@@ -155,23 +155,23 @@ namespace gcn
 
             if (a != 255)
             {
-                surfaceMask = SDL_PIXELFORMAT_RGBA8888;
+				hasAlpha = true;
                 break;
             }
         }
 
-        SDL_Surface* tmp = SDL_ConvertSurfaceFormat(mSurface, surfaceMask, 0);
-        SDL_FreeSurface(mSurface);
-        mSurface = NULL;
+		SDL_Surface *tmp = mSurface;
+
+		if (tmp == NULL)
+		{
+			throw GCN_EXCEPTION("Unable to convert image to display format.");
+		}
 
         if (hasPink)
         {
             SDL_SetColorKey(tmp, SDL_TRUE,
                             SDL_MapRGB(tmp->format,255,0,255));
         }
-
-        if (surfaceMask == SDL_PIXELFORMAT_RGBA8888)
-            SDL_SetSurfaceAlphaMod(tmp, 255);
 
         mSurface = tmp;
     }

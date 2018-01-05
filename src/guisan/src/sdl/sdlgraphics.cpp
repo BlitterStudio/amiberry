@@ -78,7 +78,13 @@ namespace gcn
     SDLGraphics::SDLGraphics()
     {
         mAlpha = false;
+		mTarget = NULL;
     }
+
+	void clearTransparentSurface(SDL_Surface* s)
+	{
+		SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 0, 0, 0, 0));
+	}
 
     void SDLGraphics::_beginDraw()
     {
@@ -88,6 +94,8 @@ namespace gcn
         area.width = mTarget->w;
         area.height = mTarget->h;
         pushClipArea(area);
+
+		clearTransparentSurface(mTarget);
     }
 
     void SDLGraphics::_endDraw()
