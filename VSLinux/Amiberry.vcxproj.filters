@@ -166,6 +166,9 @@
     <None Include="..\src\osdep\neon_helper.s">
       <Filter>src\osdep</Filter>
     </None>
+    <None Include="..\src\aks.def">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\akiko.cpp">

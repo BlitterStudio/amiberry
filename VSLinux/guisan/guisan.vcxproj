@@ -72,6 +72,7 @@
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make all</RemoteBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make clean</RemoteCleanCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make clean; make all</RemoteReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/src/guisan/; make all</RemoteBuildCommandLine>
