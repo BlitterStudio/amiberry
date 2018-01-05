@@ -131,9 +131,7 @@ void checkInput()
 #else
 			msg_input->pushInput(msg_event);
 #endif 
-		}
-		}
-		while (SDL_PollEvent(&msg_event));
+		} while (SDL_PollEvent(&msg_event));
 
 		// Now we let the Gui object perform its logic.
 		msg_gui->logic();
@@ -153,6 +151,7 @@ void checkInput()
 		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 		SDL_RenderPresent(renderer);
 #endif
+	}
 }
 
 void gui_init(const char* msg)
