@@ -309,7 +309,7 @@ namespace sdl
 
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 
-		gui_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
+		gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 
 		if (cursor)
@@ -425,14 +425,14 @@ namespace sdl
 
 						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
 						{
-							for (int z = 0; z<10; ++z)
+							for (int z = 0; z < 10; ++z)
 							{
 								PushFakeKey(SDLK_UP);
 							}
 						}
 						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].right_shoulder)) // dpad
 						{
-							for (int z = 0; z<10; ++z)
+							for (int z = 0; z < 10; ++z)
 							{
 								PushFakeKey(SDLK_DOWN);
 							}
@@ -562,7 +562,7 @@ namespace sdl
 						}
 					break;
 
-				default: 
+				default:
 					break;
 				}
 
@@ -574,9 +574,8 @@ namespace sdl
 #else
 				gui_input->pushInput(gui_event);
 #endif
-				
-
-			} while (SDL_PollEvent(&gui_event));
+			}
+			while (SDL_PollEvent(&gui_event));
 
 			// Now we let the Gui object perform its logic.
 			uae_gui->logic();
