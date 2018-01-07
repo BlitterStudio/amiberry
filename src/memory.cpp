@@ -568,7 +568,7 @@ static const uae_char *kickstring = "exec.library";
 static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksum, int noalias)
 {
   uae_char buffer[20];
-  int i, j, oldpos;
+  volatile int i, j, oldpos;
   int cr = 0, kickdisk = 0;
 
   if (size < 0) {
