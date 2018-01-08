@@ -568,7 +568,7 @@ static const uae_char *kickstring = "exec.library";
 static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksum, int noalias)
 {
   uae_char buffer[20];
-  volatile int i, j, oldpos;
+  int i, j, oldpos;
   int cr = 0, kickdisk = 0;
 
   if (size < 0) {
@@ -578,6 +578,8 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
   }
   oldpos = zfile_ftell (f);
   i = zfile_fread (buffer, 1, 11, f);
+  if (i < 11) // Unable to read kickstart file
+	return 0;
   if (!memcmp(buffer, "KICK", 4)) {
     zfile_fseek (f, 512, SEEK_SET);
     kickdisk = 1;
