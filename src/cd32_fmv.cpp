@@ -11,7 +11,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"

@@ -11,8 +11,9 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <assert.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdlib>
 
 #include "options.h"
 #include "include/memory.h"

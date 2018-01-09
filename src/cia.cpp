@@ -12,7 +12,7 @@
 #include <assert.h>
 
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cia.h"
@@ -23,7 +23,7 @@
 #include "savestate.h"
 #include "inputdevice.h"
 #include "zfile.h"
-#include "ar.h"
+#include "include/ar.h"
 #include "akiko.h"
 #include "audio.h"
 #include "keyboard.h"

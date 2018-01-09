@@ -10,7 +10,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 
 #include "traps.h"
 #include "blkdev.h"

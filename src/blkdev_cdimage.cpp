@@ -25,7 +25,7 @@
 #include "threaddep/thread.h"
 #include "mp3decoder.h"
 #include "cda_play.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "audio.h"
 #include "uae.h"
 #include "uae/cdrom.h"
