@@ -1022,5 +1022,8 @@
     <ClCompile Include="..\..\src\archivers\7z\CpuArch.c">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\PanelAbout.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

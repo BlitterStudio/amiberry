@@ -77,6 +77,9 @@
     <None Include="..\..\src\inputevents.def">
       <Filter>Source files</Filter>
     </None>
+    <None Include="..\..\src\aks.def">
+      <Filter>Source files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp">
