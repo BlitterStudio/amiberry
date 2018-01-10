@@ -221,77 +221,6 @@ static void AdjustPrefs(void)
 }
 
 
-static void SetModelFromConfig(void)
-{
-	switch (changed_prefs.cs_compatible)
-	{
-	case CP_A500:
-		quickstart_model = 0;
-		if (changed_prefs.chipset_mask == 0)
-			quickstart_conf = 0;
-		else if (changed_prefs.chipmem_size == 0x100000)
-			quickstart_conf = 2;
-		else
-			quickstart_conf = 1;
-		break;
-
-	case CP_A500P:
-		quickstart_model = 1;
-		if (changed_prefs.chipmem_size == 0x200000)
-			quickstart_conf = 1;
-		else if (changed_prefs.fastmem[0].size == 0x400000)
-			quickstart_conf = 2;
-		else
-			quickstart_conf = 1;
-		break;
-
-	case CP_A600:
-		quickstart_model = 2;
-		if (changed_prefs.chipmem_size == 0x200000)
-			quickstart_conf = 1;
-		else if (changed_prefs.fastmem[0].size == 0x400000)
-			quickstart_conf = 2;
-		else
-			quickstart_conf = 1;
-		break;
-
-	case CP_A1200:
-		quickstart_model = 3;
-		if (changed_prefs.fastmem[0].size == 0x400000)
-			quickstart_conf = 1;
-		else
-			quickstart_conf = 0;
-		break;
-
-	case CP_A4000:
-		quickstart_model = 4;
-		if (changed_prefs.cpu_model == 68040)
-			quickstart_conf = 1;
-		else
-			quickstart_conf = 0;
-		break;
-
-	case CP_CD32:
-		quickstart_model = 5;
-		if (changed_prefs.cs_cd32fmv)
-			quickstart_conf = 1;
-		else
-			quickstart_conf = 0;
-		break;
-
-	default:
-		if (changed_prefs.cpu_model == 68000)
-			quickstart_model = 0;
-		else if (changed_prefs.cpu_model == 68020)
-			quickstart_model = 3;
-		else
-			quickstart_model = 4;
-		quickstart_conf = 0;
-	}
-	cboModel->setSelected(quickstart_model);
-}
-
-
 class AmigaModelListModel : public gcn::ListModel
 {
 public:
@@ -839,7 +768,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cboConfig->setSelected(quickstart_conf);
 	SetControlState(quickstart_model);
 
-	SetModelFromConfig();
+	AdjustPrefs();
 
 	RefreshPanelQuickstart();
 }
