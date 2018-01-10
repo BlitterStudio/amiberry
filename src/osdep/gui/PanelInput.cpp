@@ -138,6 +138,7 @@ public:
 			changed_prefs.jports[current_port].id = portListIDs[sel];
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
+			RefreshPanelCustom();
 		}
 		else if (actionEvent.getSource() == cboPort1)
 		{
@@ -152,6 +153,7 @@ public:
 			changed_prefs.jports[current_port].id = portListIDs[sel];
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
+			RefreshPanelCustom();
 		}
 
 		else if (actionEvent.getSource() == cboPort2)
@@ -167,6 +169,7 @@ public:
 			changed_prefs.jports[current_port].id = portListIDs[sel];
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
+			RefreshPanelCustom();
 		}
 
 		else if (actionEvent.getSource() == cboPort3)
@@ -182,6 +185,7 @@ public:
 			changed_prefs.jports[current_port].id = portListIDs[sel];
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
+			RefreshPanelCustom();
 		}
 
 		else if (actionEvent.getSource() == cboPort0mode)
@@ -197,6 +201,7 @@ public:
 
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
+			RefreshPanelCustom();
 		}
 		else if (actionEvent.getSource() == cboPort1mode)
 		{
@@ -211,6 +216,7 @@ public:
 
 			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
+			RefreshPanelCustom();
 		}
 
 		// mousemap drop-down change
