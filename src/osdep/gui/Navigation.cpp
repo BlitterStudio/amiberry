@@ -206,11 +206,16 @@ static NavigationMap navMap[] =
 // PanelDisplay
 { "sldWidth",       "",             "",               "Frameskip",      "sldHeight" },
 { "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
+#ifdef USE_SDL1
+{ "sldVertPos",     "",             "",               "sldHeight",      "CorrectAR" },
+{ "CorrectAR",      "Display",      "Display",        "sldVertPos",     "Line doubling" },
+#elif USE_SDL2
 { "sldVertPos",     "",             "",               "sldHeight",      "Auto" },
 { "Auto",           "Display",      "Display",        "sldVertPos",     "Nearest Neighbor (pixelated)" },
-{ "Nearest Neighbor (pixelated)", "Display", "Display", "Auto", "Linear (smooth)" },
+{ "Nearest Neighbor (pixelated)","Display","Display", "Auto",           "Linear (smooth)" },
 { "Linear (smooth)", "Display",     "Display",        "Nearest Neighbor (pixelated)", "CorrectAR" },
 { "CorrectAR",      "Display",      "Display",        "Linear (smooth)","Line doubling" },
+#endif
 { "Line doubling",  "Display",      "Display",        "CorrectAR",      "Frameskip" },
 { "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
 
