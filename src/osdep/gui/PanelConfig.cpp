@@ -121,6 +121,9 @@ public:
 			if (emulating)
 			{
 				DisableResume();
+				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
+				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
+				RefreshAllPanels();
 			}
 			else
 			{
