@@ -32,7 +32,7 @@ static NavigationMap navMap[] =
 // main_window
 { "About",            "",               "",               "Reset",            "Paths" },
 { "Paths",            "SystemROMs",     "SystemROMs",     "About",            "Quickstart" },
-{ "Quickstart",       "qsNTSC",         "AModel",         "Paths",            "Configurations" },
+{ "Quickstart",       "qsNTSC",         "qscboAModel",    "Paths",            "Configurations" },
 { "Configurations",   "ConfigList",     "ConfigList",     "Quickstart",       "CPU and FPU" },
 { "CPU and FPU",      "7 Mhz",          "68000",          "Configurations",   "Chipset" },
 { "Chipset",          "Fast copper",    "OCS",            "CPU and FPU",      "ROM" },
@@ -70,14 +70,14 @@ static NavigationMap navMap[] =
 
 //  active            move left         move right        move up           move down
 // PanelQuickstart
-{ "AModel",         "Quickstart",     "qsNTSC",         "qsMode",         "AConfig" },
-{ "qsNTSC",         "AModel",         "Quickstart",     "qsMode",         "AConfig" },
-{ "AConfig",        "Quickstart",     "Quickstart",     "AModel",         "qscmdSel0" },
-{ "qsDF0",          "Quickstart",     "qsWP0",          "AConfig",        "qscboDisk0" },
-{ "qsWP0",          "qsDF0",          "qscmdEject0",    "AConfig",        "qscboDisk0" },
+{ "qscboAModel",    "Quickstart",     "qsNTSC",         "qsMode",         "qscboAConfig" },
+{ "qsNTSC",         "qscboAModel",    "Quickstart",     "qsMode",         "qscboAConfig" },
+{ "qscboAConfig",   "Quickstart",     "Quickstart",     "qscboAModel",    "qscmdSel0" },
+{ "qsDF0",          "Quickstart",     "qsWP0",          "qscboAConfig",   "qscboDisk0" },
+{ "qsWP0",          "qsDF0",          "qscmdEject0",    "qscboAConfig",   "qscboDisk0" },
 //  { "qsInfo0",        "Quickstart",     "",     "",               "" },
-{ "qscmdEject0",    "qsWP0",          "qscmdSel0",      "AConfig",        "qscboDisk0" },
-{ "qscmdSel0",      "qscmdEject0",    "Quickstart",     "AConfig",        "qscboDisk0" },
+{ "qscmdEject0",    "qsWP0",          "qscmdSel0",      "qscboAConfig",   "qscboDisk0" },
+{ "qscmdSel0",      "qscmdEject0",    "Quickstart",     "qscboAConfig",   "qscboDisk0" },
 { "qscboDisk0",     "Quickstart",     "Quickstart",     "qscmdSel0",      "qscmdSel1" },
 { "qsDF1",          "Quickstart",     "qsWP1",          "qscboDisk0",     "qscboDisk1" },
 { "qsWP1",          "qsDF1",          "qscmdEject1",    "qscboDisk0",     "qscboDisk1" },
@@ -152,7 +152,7 @@ static NavigationMap navMap[] =
 { "Z3mem",          "",               "",               "Fastmem",        "Gfxmem" },
 { "Gfxmem",         "",               "",               "Z3mem",          "A3000Low" },
 { "A3000Low",       "",               "",               "Gfxmem",         "A3000High" },
-{ "A3000High",      "",               "",               "A3000Low",       "RAM" },
+{ "A3000High",      "",               "",               "A3000Low",       "Chipmem" },
 
 //PanelFloppy
 { "DF0:",           "Floppy drives",  "cboType0",       "SaveForDisk",    "cboDisk0" },
@@ -277,7 +277,7 @@ static NavigationMap navMap[] =
 // PanelMisc
 //  active            move left           move right          move up           move down
 
-{ "StatusLine",     "Miscellaneous",  "RetroArchQuit",  "scrolllock",     "HideIdle" },
+{ "StatusLine",     "Miscellaneous",  "RetroArchQuit",  "cboScrolllock",     "HideIdle" },
 { "HideIdle",       "Miscellaneous",  "RetroArchMenu",  "StatusLine",     "ShowGUI" },
 { "ShowGUI",        "Miscellaneous",  "RetroArchReset",  "HideIdle",      "BSDSocket" },
 { "RetroArchQuit",  "StatusLine",     "Miscellaneous",  "KeyForQuit",     "RetroArchMenu" },
@@ -285,11 +285,11 @@ static NavigationMap navMap[] =
 { "RetroArchReset", "ShowGUI",        "Miscellaneous",  "RetroArchMenu",  "BSDSocket" },
 
 { "BSDSocket",      "Miscellaneous",  "Miscellaneous",  "ShowGUI",        "MasterWP" },
-{ "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "numlock" },
-{ "numlock",        "Miscellaneous",	"scrolllock",	  "MasterWP",	     "OpenGUI" },
-{ "scrolllock",     "numlock",	    "Miscellaneous",  "MasterWP",	     "KeyForQuit" },
-{ "OpenGUI",        "Miscellaneous",	"KeyForQuit",     "numlock",	     "StatusLine" },
-{ "KeyForQuit",     "OpenGUI",	    "Miscellaneous",  "scrolllock",	     "StatusLine" },
+{ "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "cboNumlock" },
+{ "cboNumlock",     "Miscellaneous",  "cboScrolllock",	"MasterWP",	      "OpenGUI" },
+{ "cboScrolllock",  "cboNumlock",	  "Miscellaneous",  "MasterWP",	      "KeyForQuit" },
+{ "OpenGUI",        "Miscellaneous",  "KeyForQuit",     "cboNumlock",	  "StatusLine" },
+{ "KeyForQuit",     "OpenGUI",	      "Miscellaneous",  "cboScrolllock",  "StatusLine" },
 
 // PanelSavestate
 { "State0", "Savestates", "Savestates", "LoadState", "State1" },

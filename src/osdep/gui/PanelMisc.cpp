@@ -187,7 +187,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
 	cboKBDLed_num->setBaseColor(gui_baseCol);
 	cboKBDLed_num->setBackgroundColor(colTextboxBackground);
-	cboKBDLed_num->setId("numlock");
+	cboKBDLed_num->setId("cboNumlock");
 	cboKBDLed_num->addActionListener(miscActionListener);
 
 	lblScrLock = new gcn::Label("ScrollLock:");
@@ -195,7 +195,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
 	cboKBDLed_scr->setBaseColor(gui_baseCol);
 	cboKBDLed_scr->setBackgroundColor(colTextboxBackground);
-	cboKBDLed_scr->setId("scrolllock");
+	cboKBDLed_scr->setId("cboScrolllock");
 	cboKBDLed_scr->addActionListener(miscActionListener);
 
 	lblOpenGUI = new gcn::Label("Open GUI:");
@@ -300,6 +300,7 @@ void RefreshPanelMisc()
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
 	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
+
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
