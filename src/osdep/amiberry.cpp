@@ -233,6 +233,7 @@ void target_fixup_options(struct uae_prefs* p)
 void target_default_options(struct uae_prefs* p, int type)
 {
 	p->fast_copper = 0;
+	p->hide_idle_led = 0;
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
@@ -305,6 +306,7 @@ void target_default_options(struct uae_prefs* p, int type)
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
 	cfgfile_write(f, "amiberry.vertical_offset", "%d", p->vertical_offset - OFFSET_Y_ADJUST);
+	cfgfile_write(f, "amiberry.hide_idle_led", "%d", p->hide_idle_led);
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -414,7 +416,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		p->vertical_offset += OFFSET_Y_ADJUST;
 		return 1;
 	}
-
+	if (cfgfile_intval(option, value, "hide_idle_led", &p->hide_idle_led, 1))
+		return 1;
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))

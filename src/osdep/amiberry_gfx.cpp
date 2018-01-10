@@ -498,13 +498,12 @@ int check_prefs_changed_gfx()
 		update_display(&currprefs);
 		changed = 1;
 	}
-	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen)
+	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen ||
+		currprefs.hide_idle_led != changed_prefs.hide_idle_led || 
+		currprefs.vertical_offset != changed_prefs.vertical_offset)
 	{
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
-		changed = 1;
-	}
-	if (currprefs.vertical_offset != changed_prefs.vertical_offset)
-	{
+		currprefs.hide_idle_led = changed_prefs.hide_idle_led;
 		currprefs.vertical_offset = changed_prefs.vertical_offset;
 		changed = 1;
 	}

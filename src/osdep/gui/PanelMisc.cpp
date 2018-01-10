@@ -84,6 +84,9 @@ public:
 		if (actionEvent.getSource() == chkStatusLine)
 			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
 
+		else if (actionEvent.getSource() == chkHideIdleLed)
+			changed_prefs.hide_idle_led = chkHideIdleLed->isSelected();
+
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
 
@@ -295,6 +298,7 @@ void ExitPanelMisc()
 void RefreshPanelMisc()
 {
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
+	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
