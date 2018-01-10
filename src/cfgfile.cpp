@@ -4820,6 +4820,7 @@ static void buildin_default_prefs(struct uae_prefs *p)
 	p->collision_level = 2;
 	if (p->produce_sound < 1)
 		p->produce_sound = 1;
+	p->cachesize = 0;
 	p->socket_emu = false;
 	p->sound_volume_cd = 0;
 
@@ -4858,7 +4859,6 @@ static void buildin_default_prefs(struct uae_prefs *p)
 	_tcscpy(p->romextfile, _T(""));
 
 	p->mountitems = 0;
-	p->leds_on_screen = 0;
 
 	target_default_options(p, 1);
 	cfgfile_compatibility_romtype(p);
