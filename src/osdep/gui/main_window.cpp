@@ -591,7 +591,13 @@ namespace sdl
 		if (SDL_NumJoysticks() > 0)
 			GUIjoy = SDL_JoystickOpen(0);
 
+		// Draw the screen once, then it's handled by the input loop
+		// Now we let the Gui object perform its logic.
+		uae_gui->logic();
+		// Now we let the Gui object draw itself.
+		uae_gui->draw();
 		UpdateGuiScreen();
+
 		//-------------------------------------------------
 		// The main loop
 		//-------------------------------------------------
