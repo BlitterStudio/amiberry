@@ -1012,7 +1012,7 @@ static void read_joystick(void)
 			setjoybuttonstate(0, 4, keystate[host_keyboard_buttons[hostkeyid].left_shoulder]); // z 
 			setjoybuttonstate(0, 5, keystate[host_keyboard_buttons[hostkeyid].right_shoulder]); // x
 			setjoybuttonstate(0, 6, keystate[host_keyboard_buttons[hostkeyid].start_button]); //num1
-			// up down left right     
+																							  // up down left right     
 			setjoybuttonstate(0, 7, keystate[host_keyboard_buttons[hostkeyid].dpad_up]);
 			setjoybuttonstate(0, 8, keystate[host_keyboard_buttons[hostkeyid].dpad_down]);
 			setjoybuttonstate(0, 9, keystate[host_keyboard_buttons[hostkeyid].dpad_left]);
@@ -1093,14 +1093,14 @@ static void read_joystick(void)
 			{
 				held_offset = REMAP_BUTTONS;
 				setjoybuttonstate(hostjoyid + 1, 14,
-				                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.menu_button) & 1));
+					(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.menu_button) & 1));
 				// menu button
 				setjoybuttonstate(hostjoyid + 1, 15,
-				                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.quit_button) & 1));
+					(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.quit_button) & 1));
 				// quit button
 				setjoybuttonstate(hostjoyid + 1, 30,
-				                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.reset_button) & 1));
-				// reest button
+					(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.reset_button) & 1));
+				// reset button
 			}
 
 				// this *should* allow us to handle function buttons (l2/r2/select)  <<<  except there were issues this work, picking a fixed number!!                            
@@ -1116,27 +1116,27 @@ static void read_joystick(void)
 			// cd32 red, blue, green, yellow
 			// south 
 			setjoybuttonstate(hostjoyid + 1, 0 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.south_button) & 1));
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.south_button) & 1));
 			// east                    
 			setjoybuttonstate(hostjoyid + 1, 1 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.east_button) & 1));
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.east_button) & 1));
 			// west
 			setjoybuttonstate(hostjoyid + 1, 2 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.west_button) & 1));
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.west_button) & 1));
 			// north
 			setjoybuttonstate(hostjoyid + 1, 3 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.north_button) & 1));
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.north_button) & 1));
 
 
 			// cd32  rwd, ffw, start
 			setjoybuttonstate(hostjoyid + 1, 4 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.left_shoulder) & 1));
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.left_shoulder) & 1));
 			// left shoulder
 			setjoybuttonstate(hostjoyid + 1, 5 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.right_shoulder) & 1));
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.right_shoulder) & 1));
 			// right shoulder
 			setjoybuttonstate(hostjoyid + 1, 6 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.start_button) & 1));
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.start_button) & 1));
 			// start
 
 			// up down left right
@@ -1144,37 +1144,23 @@ static void read_joystick(void)
 			const int hat = SDL_JoystickGetHat(Joysticktable[hostjoyid], 0);
 
 			setjoybuttonstate(hostjoyid + 1, 7 + held_offset, current_controller_map.dpad_up + 1
-				                                                  ? (SDL_JoystickGetButton(
-					                                                  Joysticktable[hostjoyid],
-					                                                  current_controller_map.dpad_up) & 1)
-				                                                  : hat & SDL_HAT_UP);
+				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_up) & 1)
+				: hat & SDL_HAT_UP);
 			setjoybuttonstate(hostjoyid + 1, 8 + held_offset, current_controller_map.dpad_down + 1
-				                                                  ? (SDL_JoystickGetButton(
-					                                                  Joysticktable[hostjoyid],
-					                                                  current_controller_map.dpad_down) & 1)
-				                                                  : hat & SDL_HAT_DOWN);
+				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_down) & 1)
+				: hat & SDL_HAT_DOWN);
 			setjoybuttonstate(hostjoyid + 1, 9 + held_offset, current_controller_map.dpad_left + 1
-				                                                  ? (SDL_JoystickGetButton(
-					                                                  Joysticktable[hostjoyid],
-					                                                  current_controller_map.dpad_left) & 1)
-				                                                  : hat & SDL_HAT_LEFT);
+				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_left) & 1)
+				: hat & SDL_HAT_LEFT);
 			setjoybuttonstate(hostjoyid + 1, 10 + held_offset, current_controller_map.dpad_right + 1
-				                                                   ? (SDL_JoystickGetButton(
-					                                                   Joysticktable[hostjoyid],
-					                                                   current_controller_map.dpad_right) & 1)
-				                                                   : hat & SDL_HAT_RIGHT);
+				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_right) & 1)
+				: hat & SDL_HAT_RIGHT);
 
 			// stick left/right/select
-			setjoybuttonstate(hostjoyid + 1, 11 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid],
-			                                         current_controller_map.lstick_button) & 1)); // left stick
-			setjoybuttonstate(hostjoyid + 1, 12 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid],
-			                                         current_controller_map.rstick_button) & 1)); // right stick
+			setjoybuttonstate(hostjoyid + 1, 11 + held_offset, (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.lstick_button) & 1)); // left stick
+			setjoybuttonstate(hostjoyid + 1, 12 + held_offset, (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.rstick_button) & 1)); // right stick
 
-			setjoybuttonstate(hostjoyid + 1, 13 + held_offset,
-			                  (SDL_JoystickGetButton(Joysticktable[hostjoyid],
-			                                         current_controller_map.select_button) & 1)); // select button
+			setjoybuttonstate(hostjoyid + 1, 13 + held_offset, (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.select_button) & 1)); // select button
 		}
 	}
 }
@@ -1441,80 +1427,4 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 int input_get_default_joystick_analog(struct uae_input_device* uid, int num, int port, int af, bool joymouseswap)
 {
 	return 0;
-}
-
-
-void SimulateMouseOrJoy(const int code, const int keypressed)
-{
-	switch (code)
-	{
-	case REMAP_MOUSEBUTTON_LEFT:
-		mouseBut1viaCustom = keypressed;
-		setmousebuttonstate(0, 0, keypressed);
-		setmousebuttonstate(1, 0, keypressed);
-		break;
-
-	case REMAP_MOUSEBUTTON_RIGHT:
-		mouseBut2viaCustom = keypressed;
-		setmousebuttonstate(0, 1, keypressed);
-		setmousebuttonstate(1, 1, keypressed);
-		break;
-
-	case REMAP_JOYBUTTON_ONE:
-		joyButXviaCustom[0] = keypressed;
-		setjoybuttonstate(0, 0, keypressed);
-		break;
-
-	case REMAP_JOYBUTTON_TWO:
-		joyButXviaCustom[1] = keypressed;
-		setjoybuttonstate(0, 1, keypressed);
-		break;
-
-	case REMAP_JOY_UP:
-		joyYviaCustom = keypressed;
-		setjoystickstate(0, 1, keypressed ? -32767 : 0, 32767);
-		break;
-
-	case REMAP_JOY_DOWN:
-		joyYviaCustom = keypressed;
-		setjoystickstate(0, 1, keypressed ? 32767 : 0, 32767);
-		break;
-
-	case REMAP_JOY_LEFT:
-		joyXviaCustom = keypressed;
-		setjoystickstate(0, 0, keypressed ? -32767 : 0, 32767);
-		break;
-
-	case REMAP_JOY_RIGHT:
-		joyXviaCustom = keypressed;
-		setjoystickstate(0, 0, keypressed ? 32767 : 0, 32767);
-		break;
-
-	case REMAP_CD32_GREEN:
-		joyButXviaCustom[2] = keypressed;
-		setjoybuttonstate(0, 2, keypressed);
-		break;
-
-	case REMAP_CD32_YELLOW:
-		joyButXviaCustom[3] = keypressed;
-		setjoybuttonstate(0, 3, keypressed);
-		break;
-
-	case REMAP_CD32_PLAY:
-		joyButXviaCustom[6] = keypressed;
-		setjoybuttonstate(0, 6, keypressed);
-		break;
-
-	case REMAP_CD32_FFW:
-		joyButXviaCustom[5] = keypressed;
-		setjoybuttonstate(0, 5, keypressed);
-		break;
-
-	case REMAP_CD32_RWD:
-		joyButXviaCustom[4] = keypressed;
-		setjoybuttonstate(0, 4, keypressed);
-		break;
-	default: 
-		break;
-	}
 }
