@@ -768,7 +768,9 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cboConfig->setSelected(quickstart_conf);
 	SetControlState(quickstart_model);
 
-	AdjustPrefs();
+	// Only change the current prefs if we're not already emulating
+	if (!emulating)
+		AdjustPrefs();
 
 	RefreshPanelQuickstart();
 }
