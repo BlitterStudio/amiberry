@@ -47,7 +47,7 @@ static gcn::Button* cmdCDSelect;
 static gcn::UaeDropDown* cboCDFile;
 
 static gcn::UaeCheckBox* chkQuickstartMode;
-
+static gcn::Button* cmdSetConfiguration;
 
 struct amigamodels
 {
@@ -346,6 +346,7 @@ public:
 			}
 			cmdCDSelect->requestFocus();
 		}
+
 		RefreshPanelHD();
 		RefreshPanelQuickstart();
 	}
@@ -427,6 +428,12 @@ public:
 					AdjustPrefs();
 				}
 			}
+			RefreshAllPanels();
+		}
+
+		if (actionEvent.getSource() == cmdSetConfiguration)
+		{
+			AdjustPrefs();
 			RefreshAllPanels();
 		}
 	}
@@ -721,6 +728,12 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	chkQuickstartMode->setId("qsMode");
 	chkQuickstartMode->addActionListener(quickstartModeActionListener);
 
+	cmdSetConfiguration = new gcn::Button("Set configuration");
+	cmdSetConfiguration->setSize(BUTTON_WIDTH*2, BUTTON_HEIGHT);
+	cmdSetConfiguration->setBaseColor(gui_baseCol);
+	cmdSetConfiguration->setId("cmdSetConfig");
+	cmdSetConfiguration->addActionListener(amigaModelActionListener);
+
 	category.panel->add(lblModel, DISTANCE_BORDER, posY);
 	category.panel->add(cboModel, DISTANCE_BORDER + lblModel->getWidth() + 8, posY);
 	category.panel->add(chkNTSC, cboModel->getX() + cboModel->getWidth() + 8, posY);
@@ -755,6 +768,8 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	category.panel->add(chkQuickstartMode, category.panel->getWidth() - chkQuickstartMode->getWidth() - DISTANCE_BORDER,
 	                    posY);
 	posY += chkQuickstartMode->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(cmdSetConfiguration, DISTANCE_BORDER, posY);
 
 	chkCD->setVisible(false);
 	cmdCDEject->setVisible(false);
@@ -797,6 +812,7 @@ void ExitPanelQuickstart(void)
 	delete cmdCDSelect;
 	delete cboCDFile;
 	delete chkQuickstartMode;
+	delete cmdSetConfiguration;
 
 	delete amigaModelActionListener;
 	delete ntscButtonActionListener;

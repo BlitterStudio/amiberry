@@ -70,7 +70,7 @@ static NavigationMap navMap[] =
 
 //  active            move left         move right        move up           move down
 // PanelQuickstart
-{ "qscboAModel",    "Quickstart",     "qsNTSC",         "qsMode",         "qscboAConfig" },
+{ "qscboAModel",    "Quickstart",     "qsNTSC",         "cmdSetConfig",   "qscboAConfig" },
 { "qsNTSC",         "qscboAModel",    "Quickstart",     "qsMode",         "qscboAConfig" },
 { "qscboAConfig",   "Quickstart",     "Quickstart",     "qscboAModel",    "qscmdSel0" },
 { "qsDF0",          "Quickstart",     "qsWP0",          "qscboAConfig",   "qscboDisk0" },
@@ -89,7 +89,8 @@ static NavigationMap navMap[] =
 { "qscdEject",      "qsCD drive",     "qsCDSelect",     "qscboDisk1",     "qscboCD" },
 { "qsCDSelect",     "qscdEject",      "Quickstart",     "qscboDisk1",     "qscboCD" },
 { "qscboCD",        "Quickstart",     "Quickstart",     "qsCDSelect",     "qsMode" },
-{ "qsMode",         "Quickstart",     "Quickstart",     "qscboCD",        "qsNTSC" },
+{ "qsMode",         "Quickstart",     "Quickstart",     "qscboCD",        "cmdSetConfig" },
+{ "cmdSetConfig",   "Quickstart",     "Quickstart",     "qsMode",         "qscboAModel"},
 
 // PanelConfig
 { "ConfigList",     "Configurations", "ConfigName",     "",               "" },
