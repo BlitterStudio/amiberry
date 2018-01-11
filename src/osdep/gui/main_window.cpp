@@ -386,6 +386,12 @@ namespace sdl
 		{
 			/* No event: Wait some time */
 			usleep(time_to_sleep);
+#ifdef USE_SDL2
+			// Update the screen in case we had something undrawn from the previous loop (if we missed a vsync)
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
+			SDL_RenderPresent(renderer);
+#endif
 		}
 		else
 		{
