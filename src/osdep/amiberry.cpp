@@ -233,7 +233,6 @@ void target_fixup_options(struct uae_prefs* p)
 void target_default_options(struct uae_prefs* p, int type)
 {
 	p->fast_copper = 0;
-	p->hide_idle_led = 0;
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
