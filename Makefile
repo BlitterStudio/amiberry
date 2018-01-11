@@ -7,7 +7,6 @@ endif
 #
 # Common flags for both SDL1 and SDL2
 #
-RPI_FLAGS += -mfloat-abi=hard
 DISPMANX_FLAGS += -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
 #DEBUG=1
@@ -19,25 +18,25 @@ DISPMANX_LDFLAGS += -lbcm_host -lvchiq_arm -L/opt/vc/lib
 # SDL1 targets
 #
 ifeq ($(PLATFORM),rpi3)
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     MORE_CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi2)
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     MORE_CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 	
 else ifeq ($(PLATFORM),rpi1)
-    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     MORE_CFLAGS += ${DISPMANX_FLAGS} -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry
 
 else ifeq ($(PLATFORM),xu4)
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4 ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -57,39 +56,39 @@ else ifeq ($(PLATFORM),android)
 #
 else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     MORE_CFLAGS += -DUSE_SDL2
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
 
 else ifeq ($(PLATFORM),pine64-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16
     MORE_CFLAGS += -DARMV6T2 -D__arm__ -DUSE_SDL2
     CC = arm-linux-gnueabihf-gcc
     CXX = arm-linux-gnueabihf-g++
 
 else ifeq ($(PLATFORM),xu4-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4  ${RPI_FLAGS}
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
     MORE_CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
