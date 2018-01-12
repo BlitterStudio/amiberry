@@ -5,10 +5,11 @@ ifeq ($(PLATFORM),)
 endif
 
 #
-# Common flags for both SDL1 and SDL2
+# DispmanX Common flags for both SDL1 and SDL2 (RPI-specific)
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib
+
 #DEBUG=1
 #GCC_PROFILE=1
 #GEN_PROFILE=1
@@ -59,7 +60,7 @@ else ifeq ($(PLATFORM),android)
     NAME  = amiberry-android-sdl1-dev
 
 #
-# SDL2 targets
+# SDL2 with DispmanX targets (RPI only)
 #
 else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
 USE_SDL2 = 1
@@ -69,7 +70,27 @@ USE_SDL2 = 1
     HAVE_NEON = 1
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi3-sdl2-dispmanx-dev
-	
+
+else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
+    LDFLAGS += ${DISPMANX_LDFLAGS}
+    HAVE_NEON = 1
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+    NAME  = amiberry-rpi2-sdl2-dispmanx-dev
+
+else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
+    CFLAGS += -DUSE_SDL2 ${DISPMANX_FLAGS}
+    LDFLAGS += ${DISPMANX_LDFLAGS}
+    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
+    NAME  = amiberry-rpi1-sdl2-dispmanx-dev
+
+#
+# SDL2 targets
+#	
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
@@ -128,9 +149,6 @@ all: $(PROG)
 SDL_CFLAGS = `sdl-config --cflags`
 LDFLAGS += -lSDL -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
 endif
-#
-# End of SDL1 options
-#
 
 #
 # SDL2 options
@@ -142,9 +160,6 @@ SDL_CFLAGS = `sdl2-config --cflags --libs`
 CPPFLAGS += -Isrc/guisan/include
 LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lsrc/guisan/lib
 endif
-#
-# End of SDL2 options
-#
 
 #
 # Common options
