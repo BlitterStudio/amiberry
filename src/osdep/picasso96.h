@@ -646,10 +646,13 @@ extern int p96hsync_counter;
   extern "C" {
 #endif
 void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
+#ifdef USE_ARMNEON
 void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
-void copy_screen_16bit_swap_arm(uae_u8 *dst, uae_u8 *src, int bytes);
 void copy_screen_32bit_to_16bit_neon(uae_u8 *dst, uae_u8 *src, int bytes);
+#else
+void copy_screen_16bit_swap_arm(uae_u8 *dst, uae_u8 *src, int bytes);
 void copy_screen_32bit_to_16bit_arm(uae_u8 *dst, uae_u8 *src, int bytes);
+#endif
 #ifdef __cplusplus
   }
 #endif

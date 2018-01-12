@@ -136,10 +136,8 @@ extern unsigned long timeframes;
  * needs to be larger for superhires support */
 #define MAX_WORDS_PER_LINE 100
 
-#ifndef ARMV6_ASSEMBLY
 /* AGA mode color lookup tables */
 extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
-#endif
 
 #define RES_LORES 0
 #define RES_HIRES 1

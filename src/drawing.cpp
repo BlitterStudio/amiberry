@@ -125,9 +125,7 @@ static struct spritepixelsbuf *spritepixels;
 static int sprite_first_x, sprite_last_x;
 
 /* AGA mode color lookup tables */
-#ifndef ARMV6_ASSEMBLY
 unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
-#endif
 static int dblpf_ind1_aga[256], dblpf_ind2_aga[256];
 
 struct color_entry colors_for_drawing;

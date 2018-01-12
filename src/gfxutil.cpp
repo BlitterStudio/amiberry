@@ -85,7 +85,6 @@ static uae_u32 lowbits (int v, int shift, int lsize)
   return v;
 }
 
-#ifndef ARMV6_ASSEMBLY
 void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap,
 	uae_u32 *rc, uae_u32 *gc, uae_u32 *bc)
 {
@@ -115,7 +114,6 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int byte_
 		}
 	}
 }
-#endif
 
 void alloc_colors64k (int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap)
 {
@@ -129,7 +127,7 @@ void alloc_colors64k (int rw, int gw, int bw, int rs, int gs, int bs, int byte_s
 		* with a copy of the colour. */
 		xcolors[i] = xcolors[i] * 0x00010001;
 	}
-#ifndef ARMV6_ASSEMBLY
+#ifndef ARMV6T2
 	alloc_colors_rgb (rw, gw, bw, rs, gs, bs, byte_swap, xredcolors, xgreencolors, xbluecolors);
 #endif
 }

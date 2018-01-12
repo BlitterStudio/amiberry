@@ -87,7 +87,7 @@ struct color_entry {
 };
 
 /* convert 24 bit AGA Amiga RGB to native color */
-#ifdef ARMV6_ASSEMBLY
+#ifdef ARMV6T2
 STATIC_INLINE uae_u32 CONVERT_RGB(uae_u32 c)
 {
   uae_u32 ret;
@@ -114,10 +114,13 @@ STATIC_INLINE uae_u16 CONVERT_RGB_16(uae_u32 c)
   return ret;
 }
 #else
-#define CONVERT_RGB(c) \
-    ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
-#define CONVERT_RGB_16(c) \
-    ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
+#ifdef WORDS_BIGENDIAN
+# define CONVERT_RGB(c) \
+	( xbluecolors[((uae_u8*)(&c))[3]] | xgreencolors[((uae_u8*)(&c))[2]] | xredcolors[((uae_u8*)(&c))[1]] )
+#else
+# define CONVERT_RGB(c) \
+	( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
+#endif
 #endif
 
 STATIC_INLINE xcolnr getxcolor (int c)

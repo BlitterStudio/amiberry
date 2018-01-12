@@ -995,10 +995,14 @@ int picasso_palette(struct MyCLUTEntry *clut)
 	auto changed = 0;
 	for (auto i = 0; i < 256; i++)
 	{
-		const int r = clut[i].Red;
-		const int g = clut[i].Green;
-		const int b = clut[i].Blue;
-		auto v = CONVERT_RGB(r << 16 | g << 8 | b);
+		int r = clut[i].Red;
+		int g = clut[i].Green;
+		int b = clut[i].Blue;
+		//auto v = CONVERT_RGB(r << 16 | g << 8 | b);
+		uae_u32 v = (doMask256(r, red_bits, red_shift)
+			| doMask256(g, green_bits, green_shift)
+			| doMask256(b, blue_bits, blue_shift))
+			| doMask256(0xff, alpha_bits, alpha_shift);
 		if (v != picasso_vidinfo.clut[i])
 		{
 			picasso_vidinfo.clut[i] = v;
