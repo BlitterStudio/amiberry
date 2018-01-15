@@ -601,21 +601,24 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting, char* retroarch_file)
 			// using the " = " to work out whis is the option, and which is the parameter.
 			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 
-			// remove leading "
-			if (param.at(0) == '"')
-				param.erase(0, 1);
+			if (!param.empty())
+			{
+				// remove leading "
+				if (param.at(0) == '"')
+					param.erase(0, 1);
 
-			// remove trailing "
-			if (param.at(param.length() - 1) == '"')
-				param.erase(param.length() - 1, 1);
+				// remove trailing "
+				if (param.at(param.length() - 1) == '"')
+					param.erase(param.length() - 1, 1);
 
-			output = &param[0u];
+				output = &param[0u];
 
-			// ok, this is the 'normal' storing of values
-			if (option == find_setting)
-				break;
+				// ok, this is the 'normal' storing of values
+				if (option == find_setting)
+					break;
 
-			output = "nul";
+				output = "nul";
+			}
 		}
 	}
 	readFile.close();
