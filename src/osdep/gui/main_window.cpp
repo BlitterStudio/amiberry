@@ -253,19 +253,19 @@ namespace sdl
 			cursor_surface = SDL_LoadBMP("data/cursor.bmp");
 		}
 		
-		if (cursor_surface == nullptr)
+		if (!cursor_surface)
 		{
 			// Load failed. Log error.
-			cout << "Could not load cursor bitmap: " << SDL_GetError() << endl;
+			SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
 			return;
 		}
 
 		// Create new cursor with surface
 		cursor = SDL_CreateColorCursor(cursor_surface, 0, 0);
-		if (cursor == nullptr)
+		if (!cursor)
 		{
 			// Cursor creation failed. Log error and free surface
-			cout << "Could not create color cursor: " << SDL_GetError() << endl;
+			SDL_Log("Could not create color cursor: %s\n", SDL_GetError());
 			SDL_FreeSurface(cursor_surface);
 			cursor_surface = nullptr;
 			return;
@@ -312,8 +312,7 @@ namespace sdl
 		gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 
-		if (cursor)
-			SDL_ShowCursor(SDL_ENABLE);
+		SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef ANDROIDSDL
 		// Enable Android multitouch
@@ -384,14 +383,14 @@ namespace sdl
 #endif
 		if (SDL_PollEvent(&gui_event) == 0)
 		{
-			/* No event: Wait some time */
-			usleep(time_to_sleep);
 #ifdef USE_SDL2
 			// Update the screen in case we had something undrawn from the previous loop (if we missed a vsync)
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 			SDL_RenderPresent(renderer);
 #endif
+			/* No event: Wait some time */
+			usleep(time_to_sleep);
 		}
 		else
 		{
@@ -598,9 +597,7 @@ namespace sdl
 			GUIjoy = SDL_JoystickOpen(0);
 
 		// Draw the screen once, then it's handled by the input loop
-		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		UpdateGuiScreen();
 
