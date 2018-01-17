@@ -118,23 +118,24 @@ static int amiberry_start_sound(int rate, int bits, int stereo)
 	int frag = 0, buffers, ret;
 	unsigned int bsize;
 
-  if(SDL_GetAudioStatus() == SDL_AUDIO_STOPPED) {
-  	init_soundbuffer_usage();
+	if (SDL_GetAudioStatus() == SDL_AUDIO_STOPPED) {
+		init_soundbuffer_usage();
 
-    s_oldrate = 0;
-    s_oldbits = 0;
-    s_oldstereo = 0;
+		s_oldrate = 0;
+		s_oldbits = 0;
+		s_oldstereo = 0;
 
 		sound_thread_exit = 0;
-  }
+	}
 
 	// if no settings change, we don't need to do anything
-	if (rate == s_oldrate && s_oldbits == bits && s_oldstereo == stereo) 
+	if (rate == s_oldrate && s_oldbits == bits && s_oldstereo == stereo)
 		return 0;
+
 
 	SDL_AudioSpec as;
 	memset(&as, 0, sizeof(as));
-  
+
 	as.freq = rate;
 	as.format = (bits == 8 ? AUDIO_S8 : AUDIO_S16);
 	as.channels = (stereo ? 2 : 1);
@@ -142,10 +143,10 @@ static int amiberry_start_sound(int rate, int bits, int stereo)
 	as.callback = sound_thread_mixer;
 
 	if (SDL_OpenAudio(&as, NULL))
-		printf("Error when opening SDL audio !\n");
-  
-	s_oldrate = rate; 
-	s_oldbits = bits; 
+		write_log("Error when opening SDL audio !\n");
+
+	s_oldrate = rate;
+	s_oldbits = bits;
 	s_oldstereo = stereo;
 
 	clear_sound_buffers();
