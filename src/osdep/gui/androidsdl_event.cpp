@@ -1,4 +1,8 @@
+#ifdef USE_SDL1
 #include <guichan/sdl.hpp>
+#elif USE_SDL2
+#include <guisan/sdl.hpp>
+#endif
 
 void androidsdl_event(SDL_Event event, gcn::SDLInput* gui_input) {
             /*
