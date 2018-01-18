@@ -34,7 +34,6 @@ SDL_Joystick* GUIjoy;
 
 bool gui_running = false;
 static int last_active_panel = 2;
-int time_to_sleep = 20000;
 
 #define MAX_STARTUP_TITLE 64
 #define MAX_STARTUP_MESSAGE 256
@@ -141,7 +140,6 @@ namespace widgets
 	gcn::Button* cmdHelp;
 	gcn::Button* cmdShutdown;
 }
-
 
 /* Flag for changes in rtarea:
   Bit 0: any HD in config?
@@ -257,9 +255,14 @@ namespace sdl
 			SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
 			return;
 		}
-
-		// Create new cursor with surface
-		cursor = SDL_CreateColorCursor(cursor_surface, 0, 0);
+		auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGB565, NULL);
+		if (formattedSurface != nullptr)
+		{
+			SDL_FreeSurface(cursor_surface);
+			// Create new cursor with surface
+			cursor = SDL_CreateColorCursor(formattedSurface, 0, 0);
+		}
+		
 		if (!cursor)
 		{
 			// Cursor creation failed. Log error and free surface
@@ -290,12 +293,6 @@ namespace sdl
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 		SDL_ShowCursor(SDL_ENABLE);
 #elif USE_SDL2
-		SDL_DisplayMode current;
-		const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
-		if (should_be_zero == 0)
-			time_to_sleep = current.refresh_rate == 50 ? 20000 : 16666;
-		else
-			time_to_sleep = 20000; // if we didn't get anything back, default to 50Hz
 
 		setup_cursor();
 
@@ -381,225 +378,199 @@ namespace sdl
 #elif USE_SDL2
 		const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 #endif
-		if (SDL_PollEvent(&gui_event) == 0)
+		while (SDL_PollEvent(&gui_event))
 		{
-#ifdef USE_SDL2
-			// Update the screen in case we had something undrawn from the previous loop (if we missed a vsync)
-			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
-			SDL_RenderPresent(renderer);
-#endif
-			/* No event: Wait some time */
-			usleep(time_to_sleep);
-		}
-		else
-		{
-			do
+			switch (gui_event.type)
 			{
-				switch (gui_event.type)
+			case SDL_QUIT:
+				//-------------------------------------------------
+				// Quit entire program via SQL-Quit
+				//-------------------------------------------------
+				uae_quit();
+				gui_running = false;
+				break;
+
+			case SDL_JOYBUTTONDOWN:
+			case SDL_JOYHATMOTION:
+				if (GUIjoy)
 				{
-				case SDL_QUIT:
-					//-------------------------------------------------
-					// Quit entire program via SQL-Quit
-					//-------------------------------------------------
-					uae_quit();
-					gui_running = false;
-					break;
+					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-				case SDL_JOYBUTTONDOWN:
-				case SDL_JOYHATMOTION:
-					if (GUIjoy)
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
 					{
-						const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
 
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
+					{
+						for (int z = 0; z < 10; ++z)
 						{
-							if (HandleNavigation(DIRECTION_UP))
-								continue; // Don't change value when enter Slider -> don't send event to control
 							PushFakeKey(SDLK_UP);
-							break;
-						}
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
-						{
-							if (HandleNavigation(DIRECTION_DOWN))
-								continue; // Don't change value when enter Slider -> don't send event to control
-							PushFakeKey(SDLK_DOWN);
-							break;
-						}
-
-
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
-						{
-							for (int z = 0; z < 10; ++z)
-							{
-								PushFakeKey(SDLK_UP);
-							}
-						}
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].right_shoulder)) // dpad
-						{
-							for (int z = 0; z < 10; ++z)
-							{
-								PushFakeKey(SDLK_DOWN);
-							}
-						}
-
-
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
-						{
-							if (HandleNavigation(DIRECTION_RIGHT))
-								continue; // Don't change value when enter Slider -> don't send event to control
-							PushFakeKey(SDLK_RIGHT);
-							break;
-						}
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
-						{
-							if (HandleNavigation(DIRECTION_LEFT))
-								continue; // Don't change value when enter Slider -> don't send event to control
-							PushFakeKey(SDLK_LEFT);
-							break;
-						}
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
-						{
-							PushFakeKey(SDLK_RETURN);
-							continue;
-						}
-
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].quit_button) &&
-							SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
-						{
-							uae_quit();
-							gui_running = false;
-							break;
-						}
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_trigger))
-						{
-							ShowHelpRequested();
-							widgets::cmdHelp->requestFocus();
-							break;
-						}
-						if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].menu_button)) // use the HOTKEY button
-						{
-							gui_running = false;
 						}
 					}
-					break;
-
-				case SDL_KEYDOWN:
-					if (gui_event.key.keysym.sym == key_for_gui)
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].right_shoulder)) // dpad
 					{
-						if (emulating && widgets::cmdStart->isEnabled())
+						for (int z = 0; z < 10; ++z)
 						{
-							//------------------------------------------------
-							// Continue emulation
-							//------------------------------------------------
-							gui_running = false;
+							PushFakeKey(SDLK_DOWN);
 						}
-						else
-						{
-							//------------------------------------------------
-							// First start of emulator -> reset Amiga
-							//------------------------------------------------
-							uae_reset(0, 1);
-							gui_running = false;
-						}
+					}
+
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_RIGHT);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
+					{
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_LEFT);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+					{
+						PushFakeKey(SDLK_RETURN);
+						continue;
+					}
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].quit_button) &&
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
+					{
+						uae_quit();
+						gui_running = false;
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_trigger))
+					{
+						ShowHelpRequested();
+						widgets::cmdHelp->requestFocus();
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].menu_button)) // use the HOTKEY button
+					{
+						gui_running = false;
+					}
+				}
+				break;
+
+			case SDL_KEYDOWN:
+				if (gui_event.key.keysym.sym == key_for_gui)
+				{
+					if (emulating && widgets::cmdStart->isEnabled())
+					{
+						//------------------------------------------------
+						// Continue emulation
+						//------------------------------------------------
+						gui_running = false;
 					}
 					else
-						switch (gui_event.key.keysym.sym)
-						{
-						case SDLK_q:
-							//-------------------------------------------------
-							// Quit entire program via Q on keyboard
-							//-------------------------------------------------
-							focusHdl = gui_top->_getFocusHandler();
-							activeWidget = focusHdl->getFocused();
-							if (dynamic_cast<gcn::TextField*>(activeWidget) == nullptr)
-							{
-								// ...but only if we are not in a Textfield...
-								uae_quit();
-								gui_running = false;
-							}
-							break;
-
-						case VK_ESCAPE:
-						case VK_Red:
-							gui_running = false;
-							break;
-
-
-						case VK_Green:
-						case VK_Blue:
-							//------------------------------------------------
-							// Simulate press of enter when 'X' pressed
-							//------------------------------------------------
-							gui_event.key.keysym.sym = SDLK_RETURN;
-
-							gui_input->pushInput(gui_event); // Fire key down
-							gui_event.type = SDL_KEYUP; // and the key up
-							break;
-
-						case VK_UP:
-							if (HandleNavigation(DIRECTION_UP))
-								continue; // Don't change value when enter ComboBox -> don't send event to control
-							break;
-
-						case VK_DOWN:
-							if (HandleNavigation(DIRECTION_DOWN))
-								continue; // Don't change value when enter ComboBox -> don't send event to control
-							break;
-
-						case VK_LEFT:
-							if (HandleNavigation(DIRECTION_LEFT))
-								continue; // Don't change value when enter Slider -> don't send event to control
-							break;
-
-						case VK_RIGHT:
-							if (HandleNavigation(DIRECTION_RIGHT))
-								continue; // Don't change value when enter Slider -> don't send event to control
-							break;
-
-						case SDLK_F1:
-							ShowHelpRequested();
-							widgets::cmdHelp->requestFocus();
-							break;
-
-						default:
-							break;
-						}
-					break;
-
-				default:
-					break;
+					{
+						//------------------------------------------------
+						// First start of emulator -> reset Amiga
+						//------------------------------------------------
+						uae_reset(0, 1);
+						gui_running = false;
+					}
 				}
+				else
+					switch (gui_event.key.keysym.sym)
+					{
+					case SDLK_q:
+						//-------------------------------------------------
+						// Quit entire program via Q on keyboard
+						//-------------------------------------------------
+						focusHdl = gui_top->_getFocusHandler();
+						activeWidget = focusHdl->getFocused();
+						if (dynamic_cast<gcn::TextField*>(activeWidget) == nullptr)
+						{
+							// ...but only if we are not in a Textfield...
+							uae_quit();
+							gui_running = false;
+						}
+						break;
 
-				//-------------------------------------------------
-				// Send event to gui-controls
-				//-------------------------------------------------
-#ifdef ANDROIDSDL
-				androidsdl_event(event, gui_input);
-#else
-				gui_input->pushInput(gui_event);
-#endif
+					case VK_ESCAPE:
+					case VK_Red:
+						gui_running = false;
+						break;
+
+
+					case VK_Green:
+					case VK_Blue:
+						//------------------------------------------------
+						// Simulate press of enter when 'X' pressed
+						//------------------------------------------------
+						gui_event.key.keysym.sym = SDLK_RETURN;
+
+						gui_input->pushInput(gui_event); // Fire key down
+						gui_event.type = SDL_KEYUP; // and the key up
+						break;
+
+					case VK_UP:
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter ComboBox -> don't send event to control
+						break;
+
+					case VK_DOWN:
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter ComboBox -> don't send event to control
+						break;
+
+					case VK_LEFT:
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						break;
+
+					case VK_RIGHT:
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						break;
+
+					case SDLK_F1:
+						ShowHelpRequested();
+						widgets::cmdHelp->requestFocus();
+						break;
+
+					default:
+						break;
+					}
+				break;
+
+			default:
+				break;
 			}
-			while (SDL_PollEvent(&gui_event));
 
-			// Now we let the Gui object perform its logic.
-			uae_gui->logic();
-			// Now we let the Gui object draw itself.
-			uae_gui->draw();
-			// Finally we update the screen.
-			UpdateGuiScreen();
+			//-------------------------------------------------
+			// Send event to gui-controls
+			//-------------------------------------------------
+#ifdef ANDROIDSDL
+			androidsdl_event(event, gui_input);
+#else
+			gui_input->pushInput(gui_event);
+#endif
 		}
 	}
+
 
 	void gui_run()
 	{
 		if (SDL_NumJoysticks() > 0)
 			GUIjoy = SDL_JoystickOpen(0);
-
-		// Draw the screen once, then it's handled by the input loop
-		uae_gui->logic();
-		uae_gui->draw();
-		UpdateGuiScreen();
 
 		//-------------------------------------------------
 		// The main loop
@@ -608,6 +579,11 @@ namespace sdl
 		{
 			// Poll input
 			checkInput();
+
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
 
 			if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 				DisableResume();
@@ -618,6 +594,8 @@ namespace sdl
 				refreshFuncAfterDraw = nullptr;
 				currFunc();
 			}
+
+			UpdateGuiScreen();
 		}
 
 		if (GUIjoy)
