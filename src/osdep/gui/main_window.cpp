@@ -229,8 +229,6 @@ void UpdateGuiScreen()
 	wait_for_vsync();
 	SDL_Flip(gui_screen);
 #elif USE_SDL2
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-	
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 	SDL_RenderPresent(renderer);
@@ -312,6 +310,8 @@ namespace sdl
 		gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 
+		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+
 		SDL_ShowCursor(SDL_ENABLE);
 #endif
 #ifdef ANDROIDSDL
@@ -369,8 +369,8 @@ namespace sdl
 		}
 
 		// Clear the screen
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 		SDL_RenderClear(renderer);
-		SDL_RenderPresent(renderer);
 #endif
 	}
 

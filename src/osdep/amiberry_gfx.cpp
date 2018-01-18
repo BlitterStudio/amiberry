@@ -531,6 +531,8 @@ static void open_screen(struct uae_prefs* p)
 
 	texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
+
+	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 #endif
 
 	if (screen != nullptr)
@@ -629,10 +631,7 @@ bool render_screen(bool immediate)
 			savestate_state = 0;
 		}
 	}
-#ifdef USE_DISPMANX
-#elif USE_SDL2
-	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
-#endif
+
 	return true;
 }
 
