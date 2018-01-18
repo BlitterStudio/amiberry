@@ -520,6 +520,8 @@ static void open_screen(struct uae_prefs* p)
 	current_vsync_frame = 2;
 
 #elif USE_SDL2
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
+	SDL_RenderClear(renderer);
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
