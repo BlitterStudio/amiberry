@@ -142,10 +142,7 @@ void checkInput()
 #ifdef USE_SDL1
 		SDL_Flip(screen);
 #elif USE_SDL2
-		if (cursor != nullptr)
-			SDL_ShowCursor(SDL_ENABLE);
-
-		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+		SDL_ShowCursor(SDL_ENABLE);
 
 		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
@@ -194,6 +191,8 @@ void gui_init(const char* msg)
 		texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 		check_error_sdl(renderer == nullptr, "Unable to create texture from Surface");
 	}
+
+	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 #endif
 
 	msg_graphics = new gcn::SDLGraphics();
