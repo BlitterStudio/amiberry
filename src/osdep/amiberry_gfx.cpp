@@ -532,7 +532,6 @@ static void open_screen(struct uae_prefs* p)
 	texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
 
-	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 #endif
 
 	if (screen != nullptr)
@@ -695,7 +694,7 @@ void show_screen(int mode)
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
-
+	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	SDL_RenderPresent(renderer);

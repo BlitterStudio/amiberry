@@ -93,7 +93,6 @@ enum
 	NUM_PANELS
 };
 
-
 /*
 * SDL Stuff we need
 */
@@ -255,12 +254,13 @@ namespace sdl
 			SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
 			return;
 		}
-		auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGB565, NULL);
+		auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
 		if (formattedSurface != nullptr)
 		{
 			SDL_FreeSurface(cursor_surface);
 			// Create new cursor with surface
 			cursor = SDL_CreateColorCursor(formattedSurface, 0, 0);
+			SDL_FreeSurface(formattedSurface);
 		}
 		
 		if (!cursor)
@@ -299,7 +299,7 @@ namespace sdl
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
@@ -307,7 +307,7 @@ namespace sdl
 		gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 
-		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+		
 
 		SDL_ShowCursor(SDL_ENABLE);
 #endif
@@ -359,12 +359,6 @@ namespace sdl
 			cursor = nullptr;
 		}
 
-		if (cursor_surface)
-		{
-			SDL_FreeSurface(cursor_surface);
-			cursor_surface = nullptr;
-		}
-
 		// Clear the screen
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 		SDL_RenderClear(renderer);
@@ -378,8 +372,10 @@ namespace sdl
 #elif USE_SDL2
 		const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 #endif
+		int gotEvent = 0;
 		while (SDL_PollEvent(&gui_event))
 		{
+			gotEvent = 1;
 			switch (gui_event.type)
 			{
 			case SDL_QUIT:
@@ -564,8 +560,15 @@ namespace sdl
 			gui_input->pushInput(gui_event);
 #endif
 		}
+		if (gotEvent)
+		{
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
+			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+		}
 	}
-
 
 	void gui_run()
 	{
@@ -577,13 +580,7 @@ namespace sdl
 		//-------------------------------------------------
 		while (gui_running)
 		{
-			// Poll input
 			checkInput();
-
-			// Now we let the Gui object perform its logic.
-			uae_gui->logic();
-			// Now we let the Gui object draw itself.
-			uae_gui->draw();
 
 			if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 				DisableResume();
@@ -594,8 +591,11 @@ namespace sdl
 				refreshFuncAfterDraw = nullptr;
 				currFunc();
 			}
+			SDL_RenderClear(renderer);
+			
+			SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 
-			UpdateGuiScreen();
+			SDL_RenderPresent(renderer);
 		}
 
 		if (GUIjoy)

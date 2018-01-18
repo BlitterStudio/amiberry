@@ -87,67 +87,54 @@ void checkInput()
 	// Check user input
 	//-------------------------------------------------	
 
-
-	if (SDL_PollEvent(&msg_event) == 0)
+	int gotEvent = 0;
+	while (SDL_PollEvent(&msg_event))
 	{
-		/* No event: Wait some time */
-		usleep(20000);
-	}
-	else
-	{
-		do
+		gotEvent = 1;
+		if (msg_event.type == SDL_KEYDOWN)
 		{
-			if (msg_event.type == SDL_KEYDOWN)
+			switch (msg_event.key.keysym.sym)
 			{
-				switch (msg_event.key.keysym.sym)
-				{
-				case VK_Blue:
-				case VK_Green:
-				case SDLK_RETURN:
-					msg_done = 1;
-					break;
-				default:
-					break;
-				}
-			}
-			else if (msg_event.type == SDL_JOYBUTTONDOWN)
-			{
-				if (GUIjoy)
-				{
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button))
-
-						msg_done = 1;
-				}
+			case VK_Blue:
+			case VK_Green:
+			case SDLK_RETURN:
+				msg_done = 1;
+				break;
+			default:
 				break;
 			}
+		}
+		else if (msg_event.type == SDL_JOYBUTTONDOWN)
+		{
+			if (GUIjoy)
+			{
+				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button) ||
+					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button))
 
-			//-------------------------------------------------
-			// Send event to gui-controls
-			//-------------------------------------------------
+					msg_done = 1;
+			}
+			break;
+		}
+
+		//-------------------------------------------------
+		// Send event to gui-controls
+		//-------------------------------------------------
 #ifdef ANDROIDSDL
-			androidsdl_event(event, msg_input);
+		androidsdl_event(event, msg_input);
 #else
-			msg_input->pushInput(msg_event);
+		msg_input->pushInput(msg_event);
 #endif 
-		} while (SDL_PollEvent(&msg_event));
-
+	}
+	if (gotEvent)
+	{
 		// Now we let the Gui object perform its logic.
 		msg_gui->logic();
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 		// Finally we update the screen.
+		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 
-#ifdef USE_SDL1
-		SDL_Flip(screen);
-#elif USE_SDL2
-		SDL_ShowCursor(SDL_ENABLE);
-
-		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-		SDL_RenderPresent(renderer);
-#endif
 	}
 }
 
@@ -191,8 +178,7 @@ void gui_init(const char* msg)
 		texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 		check_error_sdl(renderer == nullptr, "Unable to create texture from Surface");
 	}
-
-	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+	SDL_ShowCursor(SDL_ENABLE);
 #endif
 
 	msg_graphics = new gcn::SDLGraphics();
@@ -260,6 +246,14 @@ void InGameMessage(const char* msg)
 	{
 		// Poll input
 		checkInput();
+
+#ifdef USE_SDL1
+		SDL_Flip(screen);
+#elif USE_SDL2		
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+		SDL_RenderPresent(renderer);
+#endif
 	}
 
 	if (GUIjoy)
