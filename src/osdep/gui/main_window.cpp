@@ -33,7 +33,7 @@
 SDL_Joystick* GUIjoy;
 
 bool gui_running = false;
-static int last_active_panel = 2;
+static int last_active_panel = 3;
 
 #define MAX_STARTUP_TITLE 64
 #define MAX_STARTUP_MESSAGE 256
