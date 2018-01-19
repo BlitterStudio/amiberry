@@ -613,7 +613,7 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-sdl2/amiberry-sdl2-dev ~/projects/amiberry/</Command>
+      <Command>cp ~/projects/Amiberry-sdl2/amiberry-rpi3-sdl2-dev ~/projects/amiberry/</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
