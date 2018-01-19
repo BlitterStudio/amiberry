@@ -365,30 +365,33 @@ public:
 		//---------------------------------------
 		if (!bIgnoreListChange)
 		{
-			const auto idx = cboCDFile->getSelected();
+			if (actionEvent.getSource() == cboCDFile)
+			{
+				const auto idx = cboCDFile->getSelected();
 
-			if (idx < 0)
-			{
-				strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
-				AdjustDropDownControls();
-			}
-			else
-			{
-				if (cdfileList.getElementAt(idx) == changed_prefs.cdslots[0].name)
+				if (idx < 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), MAX_DPATH);
-					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
-					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
-					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
-					bIgnoreListChange = true;
-					cboCDFile->setSelected(0);
-					bIgnoreListChange = false;
+					strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+					AdjustDropDownControls();
 				}
+				else
+				{
+					if (cdfileList.getElementAt(idx) != changed_prefs.cdslots[0].name)
+					{
+						strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), MAX_DPATH);
+						changed_prefs.cdslots[0].inuse = true;
+						changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
+						lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
+						bIgnoreListChange = true;
+						cboCDFile->setSelected(0);
+						bIgnoreListChange = false;
+					}
+				}
+				RefreshPanelHD();
+				RefreshPanelQuickstart();
 			}
 		}
-		RefreshPanelHD();
-		RefreshPanelQuickstart();
 	}
 };
 
@@ -588,7 +591,7 @@ public:
 					}
 					else
 					{
-						if (diskfileList.getElementAt(idx) == changed_prefs.floppyslots[i].df)
+						if (diskfileList.getElementAt(idx) != changed_prefs.floppyslots[i].df)
 						{
 							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
@@ -712,7 +715,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cmdCDEject->addActionListener(cdButtonActionListener);
 
 	cmdCDSelect = new gcn::Button("Select image");
-	cmdCDSelect->setSize(BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdCDSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdCDSelect->setBaseColor(gui_baseCol);
 	cmdCDSelect->setId("qsCDSelect");
 	cmdCDSelect->addActionListener(cdButtonActionListener);
