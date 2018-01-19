@@ -7,10 +7,9 @@
 #include <SDL.h>
 
 #include "zfile.h"  /// Horace added
-
 #include <fstream>  /// Horace added 
 #include <string> /// Horace added (to remove)
-#include <stdlib.h>   /// Horace added   /* atol */
+#include <cstdlib>   /// Horace added   /* atol */
 
 
 static struct host_input_button default_controller_map;
@@ -19,18 +18,10 @@ struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 static struct host_keyboard_button default_keyboard_map;
 struct host_keyboard_button host_keyboard_buttons[4];
 
-
-static int joyXviaCustom = 0;
-static int joyYviaCustom = 0;
-static int joyButXviaCustom[7] = {0, 0, 0, 0, 0, 0, 0};
-static int mouseBut1viaCustom = 0;
-static int mouseBut2viaCustom = 0;
-
-
 const int REMAP_BUTTONS = 16;
-#define REMAP_BUTTONS             16
+#define REMAP_BUTTONS        16
 #define MAX_MOUSE_BUTTONS	  2
-#define MAX_MOUSE_AXES            2
+#define MAX_MOUSE_AXES        2
 #define FIRST_MOUSE_AXIS	  0
 #define FIRST_MOUSE_BUTTON	MAX_MOUSE_AXES
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
@@ -135,7 +126,6 @@ static void fill_blank_controller(void)
 	default_controller_map.is_retroarch = false;
 }
 
-//TODO: Check if we can use SCANCODES for both SDL versions
 #ifdef USE_SDL1
 static void fill_default_keyboard()
 {
@@ -157,9 +147,7 @@ static void fill_default_keyboard()
 
 	default_keyboard_map.is_retroarch = false;
 }
-#endif
-
-#ifdef USE_SDL2
+#elif USE_SDL2
 static void fill_default_keyboard()
 {
 	// test using iPac layout 
@@ -221,9 +209,7 @@ const int RemapKeyMapList[] = {
 	SDLK_BACKSLASH, SDLK_RIGHTPAREN,
 	SDLK_KP_PERIOD, SDLK_KP_EQUALS,SDLK_RCTRL, SDLK_RALT
 };
-#endif
-
-#ifdef USE_SDL2
+#elif USE_SDL2
 const int RemapKeyMapList[] = {
 	-1,
 	SDL_SCANCODE_A, SDL_SCANCODE_B, SDL_SCANCODE_C, SDL_SCANCODE_D, SDL_SCANCODE_E,
@@ -470,7 +456,6 @@ static const TCHAR* get_kb_friendlyname(int kb)
 	return strdup("Default Keyboard");
 }
 
-
 static const TCHAR* get_kb_uniquename(int kb)
 {
 	return strdup("KEYBOARD0");
@@ -515,8 +500,8 @@ int input_get_default_keyboard(int num)
 }
 
 #define MAX_JOY_BUTTONS	  16
-#define MAX_JOY_AXES	    8
-#define FIRST_JOY_AXIS	  0
+#define MAX_JOY_AXES	   8
+#define FIRST_JOY_AXIS	   0
 #define FIRST_JOY_BUTTON	MAX_JOY_AXES
 
 static int nr_joysticks = 0;
@@ -528,9 +513,9 @@ static SDL_Joystick* Joysticktable[MAX_INPUT_DEVICES];
 int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_button current_hostinput)
 {
 	// opening file and parsing
-	ifstream readFile(retroarch_file);
-	string line;
-	string delimiter = " = ";
+	std::ifstream readFile(retroarch_file);
+	std::string line;
+	std::string delimiter = " = ";
 
 	auto tempbutton = -1;
 
@@ -576,7 +561,6 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 				tempbutton = -1;
 		}
 	}
-	readFile.close();
 
 	return tempbutton;
 }
@@ -621,7 +605,6 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting, char* retroarch_file)
 			}
 		}
 	}
-	readFile.close();
 
 	return output;
 }
@@ -730,12 +713,6 @@ static int init_joystick(void)
 		numKeysAsJoys = 1;
 	}
 
-
-	//This function is called too many times... we can filter if number of joy is good...
-	// this code 
-	if (nr_joysticks == SDL_NumJoysticks())
-		return 1;
-
 	// cap the number of joysticks etc
 	nr_joysticks = SDL_NumJoysticks();
 	if (nr_joysticks > MAX_INPUT_DEVICES)
@@ -755,8 +732,7 @@ static int init_joystick(void)
 #ifdef USE_SDL1
 			if (SDL_JoystickName(cpt) != nullptr)
 				strncpy(JoystickName[cpt], SDL_JoystickName(cpt), sizeof JoystickName[cpt] - 1);
-#endif
-#ifdef USE_SDL2
+#elif USE_SDL2
 			if (SDL_JoystickNameForIndex(cpt) != nullptr)
 				strncpy(JoystickName[cpt], SDL_JoystickNameForIndex(cpt), sizeof JoystickName[cpt] - 1);
 #endif
@@ -999,11 +975,9 @@ static void read_joystick(void)
 		if (currprefs.jports[joyid].id >= JSEM_JOYS && currprefs.jports[joyid].id < JSEM_JOYS + numKeysAsJoys)
 		{
 			const auto hostkeyid = currprefs.jports[joyid].id - JSEM_JOYS;
-
 #ifdef USE_SDL1
 			Uint8* keystate = SDL_GetKeyState(nullptr);
-#endif
-#ifdef USE_SDL2
+#elif USE_SDL2
 			const Uint8* keystate = SDL_GetKeyboardState(nullptr);
 #endif
 			// cd32 red, blue, green, yellow
@@ -1279,7 +1253,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				                          ? thismap[0].start_action
 				                          : port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY;
 		}
-		else if(currprefs.jports[port].id >= JSEM_JOYS + numKeysAsJoys) // default, normal joystick  
+		else if(currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick  
 		{
 			thismap[0].south_action = thismap[0].south_action
 				                          ? thismap[0].south_action
@@ -1326,7 +1300,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 				                                   : port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW;
 		}
 
-		else if(currprefs.jports[port].id >= JSEM_JOYS + numKeysAsJoys) // default, normal joystick
+		else if(currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick
 		{
 			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
 				                                  ? thismap[0].left_shoulder_action
