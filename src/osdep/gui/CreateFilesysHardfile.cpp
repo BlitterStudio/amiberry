@@ -26,6 +26,7 @@
 #include "gui.h"
 #include "gui_handling.h"
 #include "inputdevice.h"
+#include "amiberry_gfx.h"
 
 #ifdef ANDROIDSDL
 #include "androidsdl_event.h"
@@ -222,9 +223,11 @@ static void CreateFilesysHardfileLoop()
 
 	while (!dialogFinished)
 	{
+		int gotEvent = 0;
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			gotEvent = 1;
 			if (event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
@@ -325,11 +328,17 @@ static void CreateFilesysHardfileLoop()
 			gui_input->pushInput(event);
 #endif
 		}
+		if (gotEvent)
+		{
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
+#ifdef USE_SDL2
+			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+		}
 
-		// Now we let the Gui object perform its logic.
-		uae_gui->logic();
-		// Now we let the Gui object draw itself.
-		uae_gui->draw();
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
