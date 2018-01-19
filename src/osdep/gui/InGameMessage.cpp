@@ -132,9 +132,9 @@ void checkInput()
 		msg_gui->logic();
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
-		// Finally we update the screen.
+#ifdef USE_SDL2
 		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
-
+#endif
 	}
 }
 

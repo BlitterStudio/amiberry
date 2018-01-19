@@ -566,7 +566,9 @@ namespace sdl
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
+#ifdef USE_SDL2
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
 		}
 	}
 
@@ -591,11 +593,7 @@ namespace sdl
 				refreshFuncAfterDraw = nullptr;
 				currFunc();
 			}
-			SDL_RenderClear(renderer);
-			
-			SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
-
-			SDL_RenderPresent(renderer);
+			UpdateGuiScreen();
 		}
 
 		if (GUIjoy)
