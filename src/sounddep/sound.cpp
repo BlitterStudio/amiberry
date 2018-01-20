@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <pthread.h>
-#include <errno.h>
+#include <cerrno>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
