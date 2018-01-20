@@ -32,12 +32,18 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	lblEmulatorVersion = new gcn::Label("Amiberry v2.9 beta");
 
 	textBox = new gcn::TextBox("Contributors:\n"
-		"Dimitris Panokostas (MiDWaN)\n"
-		"Dom Cresswell (Horace & The Spider)\n"
-		"TomB\n");
+		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
+		"Toni Wilen - WinUAE author\n"
+		"TomB - Original ARM port of UAE, core emulation updates\n"
+		"Chips - Original RPI port\n"
+		"Dom Cresswell (Horace & The Spider) - Controller updates\n"
+		"Christer Solskogen - Makefile improvements\n"
+		);
 
 	textBox->setBackgroundColor(gui_baseCol);
 	textBoxScrollArea = new gcn::ScrollArea(textBox);
+	textBoxScrollArea->setBackgroundColor(gui_baseCol);
+	textBoxScrollArea->setBaseColor(gui_baseCol);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	textBoxScrollArea->setHeight(50);
 #ifdef USE_SDL1
@@ -53,7 +59,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	category.panel->add(lblEmulatorVersion, DISTANCE_BORDER, pos_y);
 	pos_y += lblEmulatorVersion->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	category.panel->add(textBox, DISTANCE_BORDER, pos_y);
+	category.panel->add(textBoxScrollArea, DISTANCE_BORDER, pos_y);
 
 	RefreshPanelAbout();
 }
@@ -63,6 +69,7 @@ void ExitPanelAbout()
 	delete lblEmulatorVersion;
 	delete icon;
 	delete amiberryLogoImage;
+	delete textBoxScrollArea;
 	delete textBox;
 }
 
