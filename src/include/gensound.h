@@ -15,7 +15,7 @@ extern int sound_available;
 extern void (*sample_handler) (void);
 /* sample_evtime is in normal Amiga cycles; scaled_sample_evtime is in our
    event cycles. */
-extern unsigned long scaled_sample_evtime;
+extern float scaled_sample_evtime;
 
 /* Determine if we can produce any sound at all.  This can be only a guess;
  * if unsure, say yes.  Any call to init_sound may change the value.  */

@@ -68,6 +68,8 @@ int m68k_move2c (int regno, uae_u32 *regp)
 	  case 5: regs.itt1 = *regp & 0xffffe364; break;
 	  case 6: regs.dtt0 = *regp & 0xffffe364; break;
 	  case 7: regs.dtt1 = *regp & 0xffffe364; break;
+			/* 68060 only */
+		case 8: regs.buscr = *regp & 0xf0000000; break;
 
 	  case 0x800: regs.usp = *regp; break;
 	  case 0x801: regs.vbr = *regp; break;
@@ -410,6 +412,64 @@ void divbyzero_special (bool issigned, uae_s32 dst)
 	}
 }
 
+/* DIVU overflow
+ *
+ * 68000: V=1 N=1
+ * 68020: V=1 N=X
+ * 68040: V=1
+ * 68060: V=1
+ *
+ * X) N is set if original 32-bit destination value is negative.
+ *
+ */
+
+void setdivuoverflowflags(uae_u32 dividend, uae_u16 divisor)
+{
+	if (currprefs.cpu_model >= 68040) {
+		SET_VFLG(1);
+	} else if (currprefs.cpu_model >= 68020) {
+		SET_VFLG(1);
+		if ((uae_s32)dividend < 0)
+			SET_NFLG(1);
+	} else {
+		SET_VFLG(1);
+		SET_NFLG(1);
+	}
+}
+
+/*
+ * DIVS overflow
+ *
+ * 68000: V = 1 N = 1
+ * 68020: V = 1 ZN = X
+ * 68040: V = 1
+ * 68060: V = 1
+ *
+ * X) if absolute overflow(Check getDivs68kCycles for details) : Z = 0, N = 0
+ * if not absolute overflow : N is set if internal result BYTE is negative, Z is set if it is zero!
+ *
+ */
+
+void setdivsoverflowflags(uae_s32 dividend, uae_s16 divisor)
+{
+	if (currprefs.cpu_model >= 68040) {
+		SET_VFLG(1);
+	} else if (currprefs.cpu_model >= 68020) {
+		SET_VFLG(1);
+		// absolute overflow?
+		if (((uae_u32)abs(dividend) >> 16) >= (uae_u16)abs(divisor))
+			return;
+		uae_u32 aquot = (uae_u32)abs(dividend) / (uae_u16)abs(divisor);
+		if ((uae_s8)aquot == 0)
+			SET_ZFLG(1);
+		if ((uae_s8)aquot < 0)
+			SET_NFLG(1);
+	} else {
+		SET_VFLG(1);
+		SET_NFLG(1);
+	}
+}
+
 #if !defined (uae_s64)
 STATIC_INLINE int div_unsigned(uae_u32 src_hi, uae_u32 src_lo, uae_u32 div, uae_u32 *quot, uae_u32 *rem)
 {
@@ -440,7 +500,7 @@ void m68k_divl (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 {
   // Done in caller
   //if (src == 0) {
-  //  Exception (5);
+  //  Exception_cpu (5);
   //  return;
   //}
 #if defined(uae_s64)

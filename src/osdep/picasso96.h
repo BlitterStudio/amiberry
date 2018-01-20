@@ -186,7 +186,7 @@ struct BitMap
 
 struct Settings {
     uae_u32					BoardType;
-    /* a value discribing assignment to nth board local to boardtype
+    /* a value describing assignment to nth board local to boardtype
      * to be used for reassignment when boards are added or removed.  */
     uae_u16					LocalOrdering;
     uae_s16					LastSelected;
@@ -465,6 +465,7 @@ struct Line {
 #define PSSO_BoardInfo_SetFeatureAttrs		    PSSO_BoardInfo_CreateFeature + 4
 #define PSSO_BoardInfo_DeleteFeature		    PSSO_BoardInfo_SetFeatureAttrs + 4
 #define PSSO_BoardInfo_SpecialFeatures		    PSSO_BoardInfo_DeleteFeature + 4
+
 #define PSSO_BoardInfo_ModeInfo			   PSSO_BoardInfo_SpecialFeatures + 12 /* SpecialFeatures is 12-bytes */
 #define PSSO_BoardInfo_RGBFormat		   PSSO_BoardInfo_ModeInfo + 4
 #define PSSO_BoardInfo_XOffset			   PSSO_BoardInfo_RGBFormat + 4
@@ -513,12 +514,10 @@ struct Line {
 #define BIB_DBLSCANDBLSPRITEY	8	/* hardware sprite y position is doubled on doublescan display modes */
 #define BIB_ILACEHALFSPRITEY	9	/* hardware sprite y position is halved on interlace display modes */
 #define BIB_ILACEDBLROWOFFSET	10	/* doubled row offset in interlaced display modes needs additional horizontal bit */
-
 #define BIB_FLICKERFIXER	12	/* board can flicker fix Amiga RGB signal */
 #define BIB_VIDEOCAPTURE	13	/* board can capture video data to a memory area */
 #define BIB_VIDEOWINDOW		14	/* board can display a second mem area as a pip */
 #define BIB_BLITTER		15	/* board has blitter */
-
 #define BIB_HIRESSPRITE		16	/* mouse sprite has double resolution */
 #define BIB_BIGSPRITE		17	/* user wants big mouse sprite */
 #define BIB_BORDEROVERRIDE	18	/* user wants to override system overscan border prefs */
@@ -620,8 +619,6 @@ extern void gfx_set_picasso_baseaddr (uaecptr);
 extern void gfx_set_picasso_state (int on);
 extern uae_u8 *gfx_lock_picasso (void);
 extern void gfx_unlock_picasso (bool);
-
-extern int p96hsync_counter;
 
 #define LIB_SIZE 34
 #define CARD_FLAGS LIB_SIZE

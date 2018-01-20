@@ -15,11 +15,9 @@
 #include "blkdev.h"
 #include "scsi.h"
 
-#define NCR_LAST 1
-
-static const int outcmd[] = { 0x04, 0x0a, 0x0c, 0x2a, 0xaa, 0x15, 0x55, 0x0f, -1 };
-static const int incmd[] = { 0x01, 0x03, 0x08, 0x12, 0x1a, 0x5a, 0x25, 0x28, 0x34, 0x37, 0x42, 0x43, 0xa8, 0x51, 0x52, 0xb9, 0xbd, 0xbe, -1 };
-static const int nonecmd[] = { 0x00, 0x05, 0x06, 0x09, 0x0b, 0x11, 0x16, 0x17, 0x19, 0x1b, 0x1d, 0x1e, 0x2b, 0x35, 0x45, 0x47, 0x48, 0x49, 0x4b, 0x4e, 0xa5, 0xa9, 0xba, 0xbc, 0xe0, 0xe3, 0xe4, -1 };
+static const int outcmd[] = { 0x04, 0x0a, 0x0c, 0x11, 0x2a, 0xaa, 0x15, 0x55, 0x0f, -1 };
+static const int incmd[] = { 0x01, 0x03, 0x08, 0x0e, 0x12, 0x1a, 0x5a, 0x25, 0x28, 0x34, 0x37, 0x42, 0x43, 0xa8, 0x51, 0x52, 0xb9, 0xbd, 0xd8, 0xd9, 0xbe, -1 };
+static const int nonecmd[] = { 0x00, 0x05, 0x06, 0x07, 0x09, 0x0b, 0x10, 0x16, 0x17, 0x19, 0x1b, 0x1d, 0x1e, 0x2b, 0x35, 0x45, 0x47, 0x48, 0x49, 0x4b, 0x4e, 0xa5, 0xa9, 0xba, 0xbc, 0xe0, 0xe3, 0xe4, -1 };
 static const int scsicmdsizes[] = { 6, 10, 10, 12, 16, 12, 10, 6 };
 
 static void scsi_illegal_command(struct scsi_data *sd)
@@ -74,7 +72,7 @@ static int scsi_data_dir(struct scsi_data *sd)
 
 bool scsi_emulate_analyze (struct scsi_data *sd)
 {
-	int cmd_len, data_len, data_len2, tmp_len;
+	int cmd_len, data_len, data_len2;
 
 	data_len = sd->data_len;
 	data_len2 = 0;
@@ -85,8 +83,6 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 	switch (sd->cmd[0])
 	{
 	case 0x04: // FORMAT UNIT
-		if (sd->device_type == UAEDEV_CD)
-			goto nocmd;
 		// FmtData set?
 		if (sd->cmd[1] & 0x10) {
 			int cl = (sd->cmd[1] & 8) != 0;
@@ -99,8 +95,7 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 		}
 	break;
 	case 0x06: // FORMAT TRACK
-		if (sd->device_type == UAEDEV_CD)
-			goto nocmd;
+	case 0x07: // FORMAT BAD TRACK 
 		sd->direction = 0;
 		sd->data_len = 0;
 		return true;
@@ -112,6 +107,11 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 	case 0x08: // READ(6)
 		data_len2 = (sd->cmd[4] == 0 ? 256 : sd->cmd[4]) * sd->blocksize;
 		scsi_grow_buffer(sd, data_len2);
+	break;
+	case 0x11: // ASSIGN ALTERNATE TRACK (SASI)
+		if (sd->hfd && sd->hfd->ci.unit_feature_level < HD_LEVEL_SASI)
+			goto nocmd;
+		data_len = 4;
 	break;
 	case 0x28: // READ(10)
 		data_len2 = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * (uae_s64)sd->blocksize;
@@ -126,31 +126,22 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 		scsi_grow_buffer(sd, data_len);
 	break;
 	case 0x0a: // WRITE(6)
-		if (sd->device_type == UAEDEV_CD)
-			goto nocmd;
 		data_len = (sd->cmd[4] == 0 ? 256 : sd->cmd[4]) * sd->blocksize;
 		scsi_grow_buffer(sd, data_len);
 	break;
 	case 0x2a: // WRITE(10)
-		if (sd->device_type == UAEDEV_CD)
-			goto nocmd;
 		data_len = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * (uae_s64)sd->blocksize;
 		scsi_grow_buffer(sd, data_len);
 	break;
 	case 0xaa: // WRITE(12)
-		if (sd->device_type == UAEDEV_CD)
-			goto nocmd;
 		data_len = ((sd->cmd[6] << 24) | (sd->cmd[7] << 16) | (sd->cmd[8] << 8) | (sd->cmd[9] << 0)) * (uae_s64)sd->blocksize;
 		scsi_grow_buffer(sd, data_len);
 	break;
 	case 0xbe: // READ CD
 	case 0xb9: // READ CD MSF
-		if (sd->device_type != UAEDEV_CD)
-			goto nocmd;
-		tmp_len = (sd->cmd[6] << 16) | (sd->cmd[7] << 8) | sd->cmd[8];
-		// max block transfer size, it is usually smaller.
-		tmp_len *= 2352 + 96;
-		scsi_grow_buffer(sd, tmp_len);
+	case 0xd8: // READ CD-DA
+	case 0xd9: // READ CD-DA MSF
+		goto nocmd;
 	break;
 	case 0x2f: // VERIFY
 		if (sd->cmd[1] & 2) {
@@ -162,11 +153,6 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 			sd->direction = 0;
 		}
 		return true;
-	case 0x15: // MODE SELECT
-	case 0x55: 
-	if (sd->device_type != UAEDEV_CD)
-		goto nocmd;
-	break;
 	}
 	if (data_len < 0) {
 		if (cmd_len == 6) {
@@ -278,21 +264,7 @@ void scsi_emulate_cmd(struct scsi_data *sd)
 		sd->cmd[1] &= ~(7 << 5);
 		sd->cmd[1] |= lun << 5;
 	}
-	if (sd->device_type == UAEDEV_CD && sd->cd_emu_unit >= 0) {
-		uae_u32 ua = 0;
-		ua = scsi_cd_emulate(sd->cd_emu_unit, NULL, 0, 0, 0, 0, 0, 0, 0, sd->atapi);
-		if (ua)
-			sd->unit_attention = ua;
-		if (handle_ca(sd)) {
-			if (sd->cmd[0] == 0x03) { /* REQUEST SENSE */
-				scsi_cd_emulate(sd->cd_emu_unit, sd->cmd, 0, 0, 0, 0, 0, 0, 0, sd->atapi); /* ack request sense */
-				copysense(sd);
-			} else {
-				sd->status = scsi_cd_emulate(sd->cd_emu_unit, sd->cmd, sd->cmd_len, sd->buffer, &sd->data_len, sd->reply, &sd->reply_len, sd->sense, &sd->sense_len, sd->atapi);
-				copyreply(sd);
-			}
-		}
-	} else if (sd->device_type == UAEDEV_HDF) {
+	if (sd->device_type == UAEDEV_HDF) {
 		uae_u32 ua = 0;
 		ua = scsi_hd_emulate(sd->hfd, sd->hdhfd, NULL, 0, 0, 0, 0, 0, 0, 0);
 		if (ua)
@@ -322,26 +294,8 @@ struct scsi_data *scsi_alloc_generic(struct hardfiledata *hfd, int type)
 	struct scsi_data *sd = xcalloc(struct scsi_data, 1);
 	sd->hfd = hfd;
 	sd->id = -1;
-	sd->cd_emu_unit = -1;
 	sd->blocksize = hfd->ci.blocksize;
 	sd->device_type = type;
-	allocscsibuf(sd);
-	return sd;
-}
-
-struct scsi_data *scsi_alloc_cd(int id, int unitnum, bool atapi)
-{
-	struct scsi_data *sd;
-	if (!sys_command_open (unitnum)) {
-		write_log (_T("SCSI: CD EMU scsi unit %d failed to open\n"), unitnum);
-		return NULL;
-	}
-	sd = xcalloc (struct scsi_data, 1);
-	sd->id = id;
-	sd->cd_emu_unit = unitnum;
-	sd->atapi = atapi;
-	sd->blocksize = 2048;
-	sd->device_type = UAEDEV_CD;
 	allocscsibuf(sd);
 	return sd;
 }
@@ -350,10 +304,6 @@ void scsi_free(struct scsi_data *sd)
 {
 	if (!sd)
 		return;
-	if (sd->cd_emu_unit >= 0) {
-		sys_command_close (sd->cd_emu_unit);
-		sd->cd_emu_unit = -1;
-	}
 	xfree(sd->buffer);
 	xfree(sd);
 }

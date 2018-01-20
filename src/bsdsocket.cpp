@@ -11,9 +11,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <cassert>
-#include <cstddef>
-#include <cstdlib>
+#include <assert.h>
+#include <stddef.h>
 
 #include "options.h"
 #include "include/memory.h"
@@ -624,14 +623,14 @@ static uae_u32 REGPARAM2 bsdsocklib_recv (TrapContext *ctx)
 static uae_u32 REGPARAM2 bsdsocklib_shutdown (TrapContext *ctx)
 {
 	struct socketbase *sb = get_socketbase (ctx);
-	return host_shutdown (ctx, sb, trap_get_dreg(ctx, 0), trap_get_dreg(ctx, 1));
+	return host_shutdown (sb, trap_get_dreg(ctx, 0), trap_get_dreg(ctx, 1));
 }
 
 /* setsockopt(s, level, optname, optval, optlen)(d0/d1/d2/a0/d3) */
 static uae_u32 REGPARAM2 bsdsocklib_setsockopt (TrapContext *ctx)
 {
 	struct socketbase *sb = get_socketbase (ctx);
-	host_setsockopt (ctx, sb, trap_get_dreg(ctx, 0), trap_get_dreg(ctx, 1), trap_get_dreg(ctx, 2),
+	host_setsockopt (sb, trap_get_dreg(ctx, 0), trap_get_dreg(ctx, 1), trap_get_dreg(ctx, 2),
 		trap_get_areg(ctx, 0), trap_get_dreg(ctx, 3));
 	return sb->resultval;
 }

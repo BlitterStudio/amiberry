@@ -11,7 +11,7 @@
 
 #include "uae/types.h"
 
-typedef enum { DRV_NONE = -1, DRV_35_DD = 0, DRV_35_HD, DRV_525_SD, DRV_35_DD_ESCOM, DRV_PC_ONLY_40, DRV_PC_ONLY_80 } drive_type;
+typedef enum { DRV_NONE = -1, DRV_35_DD = 0, DRV_35_HD, DRV_525_SD, DRV_35_DD_ESCOM, DRV_PC_ONLY_40, DRV_PC_ONLY_80, DRV_525_DD } drive_type;
 
 #define HISTORY_FLOPPY 0
 #define HISTORY_CD 1
@@ -67,10 +67,6 @@ extern uae_u16 DSKDATR (void);
 extern uae_u16 disk_dmal (void);
 extern uaecptr disk_getpt (void);
 extern int disk_fifostatus (void);
-
-#define DISK_DEBUG_DMA_READ 1
-#define DISK_DEBUG_DMA_WRITE 2
-#define DISK_DEBUG_PIO 4
 
 #define MAX_PREVIOUS_IMAGES 50
 

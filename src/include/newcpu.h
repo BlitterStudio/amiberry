@@ -62,13 +62,8 @@ typedef uae_u8 flagtype;
 
 #ifdef FPUEMU
 
-#ifdef USE_LONG_DOUBLE
-typedef long double fptype;
-#define LDPTR tbyte ptr
-#else
 typedef double fptype;
 #define LDPTR qword ptr
-#endif
 #endif
 
 typedef struct
@@ -161,7 +156,6 @@ extern uae_u32(*x_get_long)(uaecptr addr);
 extern void(*x_put_byte)(uaecptr addr, uae_u32 v);
 extern void(*x_put_word)(uaecptr addr, uae_u32 v);
 extern void(*x_put_long)(uaecptr addr, uae_u32 v);
-extern uae_u32(*x_get_iword)(int);
 
 #define x_cp_get_byte x_get_byte
 #define x_cp_get_word x_get_word
@@ -186,16 +180,23 @@ STATIC_INLINE uaecptr m68k_getpc (void)
 	return (uaecptr)(regs.pc + ((uae_u8*)regs.pc_p - (uae_u8*)regs.pc_oldp));
 }
 #define M68K_GETPC m68k_getpc()
+STATIC_INLINE void m68k_incpc(int o)
+{
+	regs.pc_p += o;
+}
 
-#define m68k_incpc(o) ((regs).pc_p += (o))
-
-#define get_dibyte(o) do_get_mem_byte((uae_u8 *)((regs).pc_p + (o) + 1))
+STATIC_INLINE uae_u32 get_dibyte(int o)
+{
+	return do_get_mem_byte((uae_u8 *)((regs).pc_p + (o) + 1));
+}
 STATIC_INLINE uae_u32 get_diword(int o)
 {
 	return do_get_mem_word((uae_u16 *)((regs).pc_p + (o)));
 }
-#define get_dilong(o) do_get_mem_long((uae_u32 *)((regs).pc_p + (o)))
-
+STATIC_INLINE uae_u32 get_dilong(int o)
+{
+	return do_get_mem_long((uae_u32 *)((regs).pc_p + (o)));
+}
 STATIC_INLINE uae_u32 next_diword (void)
 {
   uae_u32 r = do_get_mem_word((uae_u16 *)((regs).pc_p));
@@ -224,12 +225,18 @@ STATIC_INLINE void m68k_do_rts (void)
 
 /* indirect (regs.pc) access */
 
-#define m68k_setpci(newpc) (regs.instruction_pc = regs.pc = newpc)
+STATIC_INLINE void m68k_setpci(uaecptr newpc)
+{
+	regs.instruction_pc = regs.pc = newpc;
+}
 STATIC_INLINE uaecptr m68k_getpci(void)
 {
 	return regs.pc;
 }
-#define m68k_incpci(o) (regs.pc += (o))
+STATIC_INLINE void m68k_incpci(int o)
+{
+	regs.pc += o;
+}
 
 STATIC_INLINE uae_u32 get_iiword(int o)
 {
@@ -285,6 +292,8 @@ extern void REGPARAM3 put_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, 
 extern int get_cpu_model(void);
 
 extern void set_cpu_caches (bool flush);
+extern void flush_cpu_caches(bool flush);
+extern void flush_cpu_caches_040(uae_u16 opcode);
 extern void REGPARAM3 MakeSR (void) REGPARAM;
 extern void REGPARAM3 MakeFromSR (void) REGPARAM;
 extern void REGPARAM3 MakeFromSR_T0(void) REGPARAM;
@@ -302,6 +311,8 @@ extern void m68k_go (int);
 extern int getDivu68kCycles(uae_u32 dividend, uae_u16 divisor);
 extern int getDivs68kCycles(uae_s32 dividend, uae_s16 divisor);
 extern void divbyzero_special (bool issigned, uae_s32 dst);
+extern void setdivuoverflowflags(uae_u32 dividend, uae_u16 divisor);
+extern void setdivsoverflowflags(uae_s32 dividend, uae_s16 divisor);
 extern void protect_roms (bool);
 extern bool is_hardreset(void);
 
@@ -343,6 +354,7 @@ extern void exception3b (uae_u32 opcode, uaecptr addr, bool w, bool i, uaecptr p
 extern void exception2 (uaecptr addr, bool read, int size, uae_u32 fc);
 extern void cpureset (void);
 extern void cpu_halt (int id);
+extern int cpu_sleep_millis(int ms);
 
 extern void fill_prefetch (void);
 
@@ -383,11 +395,8 @@ extern int movec_illg (int regno);
 #define CPU_HALT_BUS_ERROR_DOUBLE_FAULT 1
 #define CPU_HALT_DOUBLE_FAULT 2
 #define CPU_HALT_OPCODE_FETCH_FROM_NON_EXISTING_ADDRESS 3
-#define CPU_HALT_ALL_CPUS_STOPPED 5
 #define CPU_HALT_FAKE_DMA 6
 #define CPU_HALT_AUTOCONFIG_CONFLICT 7
-#define CPU_HALT_PCI_CONFLICT 8
-#define CPU_HALT_CPU_STUCK 9
 #define CPU_HALT_SSP_IN_NON_EXISTING_ADDRESS 10
 #define CPU_HALT_INVALID_START_ADDRESS 11
 

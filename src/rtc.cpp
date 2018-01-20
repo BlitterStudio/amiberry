@@ -117,17 +117,12 @@ void put_clock_ricoh(struct rtc_ricoh_data *data, int addr, uae_u8 v)
 	int bank = data->clock_control_d & 3;
 	/* memory access */
 	if (bank >= 2 && addr < 0x0d) {
-		uae_u8 ov = data->rtc_memory[addr];
 		data->rtc_memory[addr] &= ((bank == 2) ? 0xf0 : 0x0f);
 		data->rtc_memory[addr] |= v << ((bank == 2) ? 0 : 4);
 		return;
 	}
 	/* alarm */
 	if (bank == 1 && addr < 0x0d) {
-#if CLOCK_DEBUG
-		write_log (_T("CLOCK ALARM W %X: %X\n"), addr, value);
-#endif
-		uae_u8 ov = data->rtc_alarm[addr];
 		data->rtc_alarm[addr] = v;
 		data->rtc_alarm[0] = data->rtc_alarm[1] = data->rtc_alarm[9] = data->rtc_alarm[12] = 0;
 		data->rtc_alarm[3] &= ~0x8;
@@ -138,9 +133,6 @@ void put_clock_ricoh(struct rtc_ricoh_data *data, int addr, uae_u8 v)
 		data->rtc_alarm[11] &= ~0xc;
 		return;
 	}
-#if CLOCK_DEBUG
-	write_log (_T("CLOCK W %X: %X\n"), addr, value);
-#endif
 	switch (addr)
 	{
 		case 0xD: data->clock_control_d = v; break;

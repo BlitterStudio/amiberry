@@ -456,7 +456,7 @@ struct zfile *unwarp(struct zfile *zf)
 		} else {
 			uae_u16 crc2;
 			int os = zfile_ftell (tmpf);
-			data = zfile_getdata (tmpf, 0, os);
+			data = zfile_getdata (tmpf, 0, os, NULL);
 			crc2 = wrpcrc16 (wrpcrc16table, data, os);
 			if (crc != crc2)
 				write_log (_T("WRP crc error %04x<>%04x, track=%d,side=%d\n"), crc, crc2, track, side);
@@ -464,7 +464,7 @@ struct zfile *unwarp(struct zfile *zf)
 		}
 		if (dstpos >= 0) {
 			zfile_fseek (nf, dstpos, SEEK_SET);
-			data = zfile_getdata (tmpf, 0, outsize);
+			data = zfile_getdata (tmpf, 0, outsize, NULL);
 			zfile_fwrite (data, outsize, 1, nf);
 		}
 		zfile_fseek (zf, pos + size, SEEK_SET);

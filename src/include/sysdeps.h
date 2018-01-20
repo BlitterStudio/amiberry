@@ -190,7 +190,6 @@ typedef uae_u32 uaecptr;
 #else
 extern TCHAR *my_strdup (const TCHAR*s);
 #endif
-
 extern TCHAR *my_strdup_ansi (const char*);
 extern void my_trim (TCHAR*);
 extern TCHAR *my_strdup_trim (const TCHAR*);

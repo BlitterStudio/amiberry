@@ -133,12 +133,11 @@ STATIC_INLINE int same_aname (const TCHAR *an1, const TCHAR *an2)
 }
 
 /* Filesystem-dependent functions.  */
-extern int fsdb_name_invalid (const TCHAR *n);
-extern int fsdb_name_invalid_dir (const TCHAR *n);
+extern int fsdb_name_invalid (a_inode *, const TCHAR *n);
+extern int fsdb_name_invalid_dir (a_inode *, const TCHAR *n);
 extern int fsdb_fill_file_attrs (a_inode *, a_inode *);
 extern int fsdb_set_file_attrs (a_inode *);
 extern int fsdb_mode_representable_p (const a_inode *, int);
-extern int fsdb_mode_supported (const a_inode *);
 extern TCHAR *fsdb_create_unique_nname (a_inode *base, const TCHAR *);
 
 struct my_opendir_s;

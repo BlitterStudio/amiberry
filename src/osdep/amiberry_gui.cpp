@@ -425,7 +425,7 @@ int gui_init()
 void gui_exit()
 {
 	sync();
-	amiberry_stop_sound();
+	stop_sound();
 	saveAdfDir();
 	ClearConfigFileList();
 	ClearAvailableROMList();

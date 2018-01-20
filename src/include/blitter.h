@@ -47,8 +47,9 @@ extern void reset_blit (int);
 extern int blitnasty (void);
 extern void blitter_handler (uae_u32);
 extern void build_blitfilltable (void);
-extern void do_blitter (void);
-extern void blitter_done_notify (void);
+extern void do_blitter (int);
+extern void decide_blitter (int hpos);
+extern void blitter_done_notify (int hpos);
 extern void blitter_slowdown (int, int, int, int);
 extern void blitter_check_start (void);
 

@@ -1309,13 +1309,15 @@ static uae_u32 REGPARAM2 gayle_attr_wget (uaecptr addr)
 {
 	uae_u16 v = 0;
 
-	if (pcmcia_type == PCMCIA_IDE && pcmcia_configured >= 0) {
-		struct ide_hdf *ide = NULL;
-		int reg = get_pcmcmia_ide_reg (addr, 2, &ide);
-		if (reg == IDE_DATA) {
-			// 16-bit register
-			pcmcia_idedata = ide_get_data (ide);
-			return pcmcia_idedata;
+	if (pcmcia_configured >= 0) {
+		if (pcmcia_type == PCMCIA_IDE) {
+		  struct ide_hdf *ide = NULL;
+		  int reg = get_pcmcmia_ide_reg (addr, 2, &ide);
+		  if (reg == IDE_DATA) {
+			  // 16-bit register
+			  pcmcia_idedata = ide_get_data (ide);
+			  return pcmcia_idedata;
+			}
 		}
 	}
 
@@ -1334,14 +1336,16 @@ static void REGPARAM2 gayle_attr_lput (uaecptr addr, uae_u32 value)
 }
 static void REGPARAM2 gayle_attr_wput (uaecptr addr, uae_u32 value)
 {
-	if (pcmcia_type == PCMCIA_IDE && pcmcia_configured >= 0) {
-		struct ide_hdf *ide = NULL;
-		int reg = get_pcmcmia_ide_reg (addr, 2, &ide);
-		if (reg == IDE_DATA) {
-			// 16-bit register
-			pcmcia_idedata = value;
-			ide_put_data (ide, pcmcia_idedata);
-			return;
+	if (pcmcia_configured >= 0) {
+		if (pcmcia_type == PCMCIA_IDE) {
+		  struct ide_hdf *ide = NULL;
+		  int reg = get_pcmcmia_ide_reg (addr, 2, &ide);
+		  if (reg == IDE_DATA) {
+			  // 16-bit register
+			  pcmcia_idedata = value;
+			  ide_put_data (ide, pcmcia_idedata);
+			  return;
+			}
 		}
 	}
 

@@ -603,7 +603,7 @@ extern uae_u32 chipmem_full_mask;
 extern addrbank dummy_bank;
 
 STATIC_INLINE uae_u32 chipmem_lget_indirect(uae_u32 PT) {
-  return do_get_mem_long((uae_u32 *)&chipmem_bank.baseaddr[PT & chipmem_full_mask]);
+  return do_get_mem_long((uae_u32 *)&chipmem_bank.baseaddr[PT & chipmem_bank.mask]);
 }
 STATIC_INLINE uae_u32 chipmem_wget_indirect (uae_u32 PT) {
   return do_get_mem_word((uae_u16 *)&chipmem_bank.baseaddr[PT & chipmem_full_mask]);

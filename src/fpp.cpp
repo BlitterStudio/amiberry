@@ -1952,7 +1952,7 @@ void fpuop_restore (uae_u32 opcode)
 retry:
 	ad = ad_orig + 4;
 	fpu_version = get_fpu_version(fpu_model);
-	if (currprefs.fpu_model == 68040) {
+	if (fpu_model == 68040) {
 
 		 if (frame_version == fpu_version) { // not null frame
 			uae_u32 frame_size = (d >> 16) & 0xff;
@@ -2727,7 +2727,7 @@ uae_u8 *restore_fpu (uae_u8 *src)
 		regs.fp_exp_pend = (v >> 16) & 0xff;
 		regs.fp_opword = restore_u16();
 		regs.fp_ea = restore_u32();
-		if (currprefs.fpu_model == 68060 || currprefs.fpu_model >= 68881) {
+		if (currprefs.fpu_model >= 68881) {
 			fsave_data.ccr = restore_u32();
 			fsave_data.eo[0] = restore_u32();
 			fsave_data.eo[1] = restore_u32();
@@ -2796,7 +2796,7 @@ uae_u8 *save_fpu (int *len, uae_u8 *dstptr)
 	save_u16(regs.fp_opword);
 	save_u32(regs.fp_ea);
 
-	if (currprefs.fpu_model == 68060 || currprefs.fpu_model >= 68881) {
+	if (currprefs.fpu_model >= 68881) {
 		save_u32(fsave_data.ccr);
 		save_u32(fsave_data.eo[0]);
 		save_u32(fsave_data.eo[1]);
@@ -2828,5 +2828,3 @@ uae_u8 *save_fpu (int *len, uae_u8 *dstptr)
 	*len = dst - dstbak;
 	return dstbak;
 }
-
-

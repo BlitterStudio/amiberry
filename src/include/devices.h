@@ -5,11 +5,12 @@ void devices_reset(int hardreset);
 void devices_vsync_pre(void);
 void devices_hsync(void);
 void devices_rethink(void);
-STATIC_INLINE void devices_update_sound(float clk, float syncadjust)
+STATIC_INLINE void devices_update_sound(double clk, double syncadjust)
 {
   update_sound (clk);
 }
-void devices_update_sync(float svpos, float syncadjust);
+
+void devices_update_sync(double svpos, double syncadjust);
 void reset_all_systems(void);
 void do_leave_program(void);
 void virtualdevice_init(void);

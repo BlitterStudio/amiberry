@@ -16,6 +16,7 @@ extern void start_program (void);
 extern void leave_program (void);
 extern void real_main (int, TCHAR **);
 extern void sleep_millis (int ms);
+extern int sleep_millis_main(int ms);
 
 #define UAE_QUIT 1
 #define UAE_RESET 2

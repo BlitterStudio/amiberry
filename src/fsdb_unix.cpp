@@ -22,7 +22,7 @@ static TCHAR evilchars[NUM_EVILCHARS] = { '\\', '*', '?', '\"', '<', '>', '|' };
 #define UAEFSDB_BEGINS _T("__uae___")
 
 /* Return nonzero for any name we can't create on the native filesystem.  */
-static int fsdb_name_invalid_2 (const TCHAR *n, int dir)
+static int fsdb_name_invalid_2 (a_inode *aino, const TCHAR *n, int dir)
 {
   int i;
 	int l = _tcslen (n);
@@ -47,18 +47,18 @@ static int fsdb_name_invalid_2 (const TCHAR *n, int dir)
 	return 0; /* the filename passed all checks, now it should be ok */
 }
 
-int fsdb_name_invalid (const TCHAR *n)
+int fsdb_name_invalid (a_inode *aino, const TCHAR *n)
 {
-  int v = fsdb_name_invalid_2 (n, 0);
+  int v = fsdb_name_invalid_2 (aino, n, 0);
   if (v <= 0)
     return v;
   write_log (_T("FILESYS: '%s' illegal filename\n"), n);
   return v;
 }
 
-int fsdb_name_invalid_dir (const TCHAR *n)
+int fsdb_name_invalid_dir (a_inode *aino, const TCHAR *n)
 {
-	int v = fsdb_name_invalid_2 (n, 1);
+	int v = fsdb_name_invalid_2 (aino, n, 1);
 	if (v <= 0)
 		return v;
 	write_log (_T("FILESYS: '%s' illegal filename\n"), n);
@@ -129,28 +129,6 @@ int fsdb_set_file_attrs (a_inode *aino)
     return 0;
 }
 
-/* return supported combination */
-int fsdb_mode_supported (const a_inode *aino)
-{
-  int mask = aino->amigaos_mode;
-	if (aino->vfso)
-		return mask;
-  if (0 && aino->dir)
-    return 0;
-  if (fsdb_mode_representable_p (aino, mask))
-    return mask;
-  mask &= ~(A_FIBF_SCRIPT | A_FIBF_READ | A_FIBF_EXECUTE);
-  if (fsdb_mode_representable_p (aino, mask))
-    return mask;
-  mask &= ~A_FIBF_WRITE;
-  if (fsdb_mode_representable_p (aino, mask))
-    return mask;
-  mask &= ~A_FIBF_DELETE;
-  if (fsdb_mode_representable_p (aino, mask))
-    return mask;
-  return 0;
-}
-
 /* Return nonzero if we can represent the amigaos_mode of AINO within the
  * native FS.  Return zero if that is not possible.  */
 int fsdb_mode_representable_p (const a_inode *aino, int amigaos_mode)
@@ -200,11 +178,10 @@ TCHAR *fsdb_create_unique_nname (a_inode *base, const TCHAR *suggestion)
   	    return p;
   	}
   	xfree (p);
-
 	  /* tmpnam isn't reentrant and I don't really want to hack configure
 	   * right now to see whether tmpnam_r is available...  */
 	  for (i = 0; i < 8; i++) {
-      tmp[i+8] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[uaerand () % 63];
+      tmp[i+8] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[rand () % 63];
 	  }
   }
 }

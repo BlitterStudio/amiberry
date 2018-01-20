@@ -127,15 +127,6 @@ static void fixup_prefs_dim2(struct wh *wh)
 void fixup_prefs_dimensions(struct uae_prefs *prefs)
 {
 	fixup_prefs_dim2(&prefs->gfx_size);
-
-	for (int i = 0; i < 2; i++) {
-		struct apmode *ap = &prefs->gfx_apmode[i];
-		ap->gfx_vflip = 0;
-		if (ap->gfx_vsync > 0) {
-			// legacy vsync: always wait for flip
-			ap->gfx_vflip = -1;
-		}
-	}
 }
 
 void fixup_cpu(struct uae_prefs *p)

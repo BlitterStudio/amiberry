@@ -66,39 +66,9 @@ static void REGPARAM3 dummy_wput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 dummy_bput (uaecptr, uae_u32) REGPARAM;
 static int REGPARAM3 dummy_check (uaecptr addr, uae_u32 size) REGPARAM;
 
-/* fake UAE ROM */
-
-extern addrbank fakeuaebootrom_bank;
-MEMORY_FUNCTIONS(fakeuaebootrom);
-
 #define	MAX_ILG 1000
 #define NONEXISTINGDATA 0
 //#define NONEXISTINGDATA 0xffffffff
-
-static bool map_uae_boot_rom_direct(void)
-{
-	if (!fakeuaebootrom_bank.allocated_size) {
-		fakeuaebootrom_bank.start = 0xf00000;
-		fakeuaebootrom_bank.reserved_size = 65536;
-		fakeuaebootrom_bank.mask = fakeuaebootrom_bank.reserved_size - 1;
-		if (!mapped_malloc (&fakeuaebootrom_bank))
-			return false;
-		// create jump table to real uae boot rom
-		for (int i = 0xff00; i < 0xfff8; i += 8) {
-			uae_u8 *p = fakeuaebootrom_bank.baseaddr + i;
-			p[0] = 0x4e;
-			p[1] = 0xf9;
-			uaecptr p2 = rtarea_base + i;
-			p[2] = p2 >> 24;
-			p[3] = p2 >> 16;
-			p[4] = p2 >>  8;
-			p[5] = p2 >>  0;
-		}
-	}
-	map_banks(&fakeuaebootrom_bank, 0xf0, 1, 1);
-	write_log(_T("Mapped fake UAE Boot ROM jump table.\n"));
-	return true;
-}
 
 static bool gary_nonrange(uaecptr addr)
 {
@@ -117,6 +87,15 @@ static bool gary_nonrange(uaecptr addr)
 	return true;
 }
 
+static uae_u32 nonexistingdata(void)
+{
+	if (currprefs.cs_unmapped_space == 1)
+		return 0x00000000;
+	if (currprefs.cs_unmapped_space == 2)
+		return 0xffffffff;
+	return NONEXISTINGDATA;
+}
+
 uae_u32 dummy_get_safe(uaecptr addr, int size, bool inst, uae_u32 defvalue)
 {
 	uae_u32 v = defvalue;
@@ -129,9 +108,11 @@ uae_u32 dummy_get_safe(uaecptr addr, int size, bool inst, uae_u32 defvalue)
 		addr &= 0x00ffffff;
 	if (addr >= 0x10000000)
 		return v & mask;
-	// CD32 returns zeros from all unmapped addresses
-	if (currprefs.cs_cd32cd)
+	// CD32 and B2000
+	if (currprefs.cs_unmapped_space == 1)
 		return 0;
+	if (currprefs.cs_unmapped_space == 2)
+		return 0xffffffff & mask;
 	if ((currprefs.cpu_model <= 68010) || (currprefs.cpu_model == 68020 && (currprefs.chipset_mask & CSMASK_AGA) && currprefs.address_space_24)) {
 	  if (size == 4) {
 			v = regs.db & 0xffff;
@@ -165,25 +146,25 @@ uae_u32 dummy_get (uaecptr addr, int size, bool inst, uae_u32 defvalue)
 
 static uae_u32 REGPARAM2 dummy_lget (uaecptr addr)
 {
-	return dummy_get (addr, 4, false, NONEXISTINGDATA);
+	return dummy_get (addr, 4, false, nonexistingdata());
 }
 uae_u32 REGPARAM2 dummy_lgeti (uaecptr addr)
 {
-	return dummy_get (addr, 4, true, NONEXISTINGDATA);
+	return dummy_get (addr, 4, true, nonexistingdata());
 }
 
 static uae_u32 REGPARAM2 dummy_wget (uaecptr addr)
 {
-	return dummy_get (addr, 2, false, NONEXISTINGDATA);
+	return dummy_get (addr, 2, false, nonexistingdata());
 }
 uae_u32 REGPARAM2 dummy_wgeti (uaecptr addr)
 {
-	return dummy_get (addr, 2, true, NONEXISTINGDATA);
+	return dummy_get (addr, 2, true, nonexistingdata());
 }
 
 static uae_u32 REGPARAM2 dummy_bget (uaecptr addr)
 {
-	return dummy_get (addr, 1, false, NONEXISTINGDATA);
+	return dummy_get (addr, 1, false, nonexistingdata());
 }
 
 static void REGPARAM2 dummy_lput (uaecptr addr, uae_u32 l)
@@ -394,7 +375,6 @@ static void REGPARAM2 kickmem_bput (uaecptr addr, uae_u32 b)
 static int extendedkickmem_type;
 
 #define EXTENDED_ROM_CD32 1
-#define EXTENDED_ROM_CDTV 2
 #define EXTENDED_ROM_KS 3
 
 static void REGPARAM3 extendedkickmem_lput (uaecptr, uae_u32) REGPARAM;
@@ -537,13 +517,6 @@ addrbank extendedkickmem2_bank = {
 	extendedkickmem2_lget, extendedkickmem2_wget,
 	ABFLAG_ROM | ABFLAG_THREADSAFE, 0, S_WRITE
 };
-addrbank fakeuaebootrom_bank = {
-	fakeuaebootrom_lget, fakeuaebootrom_wget, fakeuaebootrom_bget,
-	fakeuaebootrom_lput, fakeuaebootrom_wput, fakeuaebootrom_bput,
-	fakeuaebootrom_xlate, fakeuaebootrom_check, NULL, _T("*"), _T("fakeuaerom"),
-	fakeuaebootrom_lget, fakeuaebootrom_wget,
-	ABFLAG_RAM | ABFLAG_THREADSAFE, 0, 0
-};
 
 MEMORY_FUNCTIONS(custmem1);
 MEMORY_FUNCTIONS(custmem2);
@@ -578,8 +551,6 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
   }
   oldpos = zfile_ftell (f);
   i = zfile_fread (buffer, 1, 11, f);
-  if (i < 11) // Unable to read kickstart file
-	return 0;
   if (!memcmp(buffer, "KICK", 4)) {
     zfile_fseek (f, 512, SEEK_SET);
     kickdisk = 1;
@@ -711,7 +682,6 @@ static int patch_residents (uae_u8 *kickmemory, int size)
       }	
   	}
   }
-
   return patched;
 }
 
@@ -880,7 +850,7 @@ err:
 }
 
 
-void init_mem_banks (void)
+static void init_mem_banks (void)
 {
 	// unsigned so i << 16 won't overflow to negative when i >= 32768
   for (unsigned int i = 0; i < MEMORY_BANKS; i++)
@@ -896,12 +866,9 @@ static bool singlebit (uae_u32 v)
 
 static void allocate_memory (void)
 {
-	mapped_free(&fakeuaebootrom_bank);
-
   if (chipmem_bank.reserved_size != currprefs.chipmem_size) {
     int memsize;
 		mapped_free (&chipmem_bank);
-		chipmem_bank.flags &= ~ABFLAG_NOALLOC;
 	  if (currprefs.chipmem_size > 2 * 1024 * 1024) {
 	    free_fastmemory (0);
 		}
@@ -1159,7 +1126,7 @@ bool read_kickstart_version(struct uae_prefs *p)
 		if (kickstart_version > 33)
 			kickstart_version = 0;
 	}
-	write_log(_T("KS ver = %04x\n"), kickstart_version);
+	write_log(_T("KS ver = %d (0x%02x)\n"), kickstart_version & 255, kickstart_version);
 	return true;
 }
 
@@ -1188,6 +1155,7 @@ void memory_reset (void)
 	currprefs.cs_ide = changed_prefs.cs_ide;
 	currprefs.cs_fatgaryrev = changed_prefs.cs_fatgaryrev;
 	currprefs.cs_ramseyrev = changed_prefs.cs_ramseyrev;
+	currprefs.cs_unmapped_space = changed_prefs.cs_unmapped_space;
 
 	gayleorfatgary = ((currprefs.chipset_mask & CSMASK_AGA) || currprefs.cs_pcmcia || currprefs.cs_ide > 0) && !currprefs.cs_cd32cd;
 
@@ -1214,7 +1182,7 @@ void memory_reset (void)
 	bnk_end = currprefs.cs_cd32cd ? 0xBE : (gayleorfatgary ? 0xBF : 0xA0);
   map_banks (&dummy_bank, bnk, bnk_end - bnk, 0);
   if (gayleorfatgary) {
-	  // a3000 or a4000 = custom chips from 0xc0 to 0xd0
+	  // a4000 = custom chips from 0xc0 to 0xd0
 		if (currprefs.cs_ide == IDE_A4000)
 			map_banks (&dummy_bank, 0xd0, 8, 0);
 		else
@@ -1296,7 +1264,7 @@ void memory_reset (void)
   }
 
 #ifdef AUTOCONFIG
-  if (need_uae_boot_rom (&currprefs))
+	if ((need_uae_boot_rom (&currprefs) && currprefs.uaeboard == 0) || currprefs.uaeboard == 1)
   	map_banks_set(&rtarea_bank, rtarea_base >> 16, 1, 0);
 #endif
 
@@ -1387,7 +1355,6 @@ void memory_cleanup (void)
 	mapped_free (&chipmem_bank);
 	mapped_free (&custmem1_bank);
 	mapped_free (&custmem2_bank);
-	mapped_free(&fakeuaebootrom_bank);
   
   bogomem_bank.baseaddr = NULL;
   kickmem_bank.baseaddr = NULL;

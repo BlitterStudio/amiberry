@@ -61,7 +61,7 @@ extern size_t zfile_fputs (struct zfile *z, const TCHAR *s);
 extern int zfile_getc (struct zfile *z);
 extern int zfile_putc (int c, struct zfile *z);
 extern int zfile_ferror (struct zfile *z);
-extern uae_u8 *zfile_getdata (struct zfile *z, uae_s64 offset, int len);
+extern uae_u8 *zfile_getdata (struct zfile *z, uae_s64 offset, int len, int *outlen);
 extern void zfile_exit (void);
 extern int execute_command (TCHAR *);
 extern int zfile_iscompressed (struct zfile *z);

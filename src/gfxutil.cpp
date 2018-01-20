@@ -127,7 +127,5 @@ void alloc_colors64k (int rw, int gw, int bw, int rs, int gs, int bs, int byte_s
 		* with a copy of the colour. */
 		xcolors[i] = xcolors[i] * 0x00010001;
 	}
-#ifndef ARMV6T2
 	alloc_colors_rgb (rw, gw, bw, rs, gs, bs, byte_swap, xredcolors, xgreencolors, xbluecolors);
-#endif
 }

@@ -18,9 +18,9 @@
 #include "sysdeps.h"
 
 #include "calc.h"
-#include "cstdlib"
-#include <cstring>
-#include <cstdio>
+
+#include <string.h>
+#include <stdio.h>
  
 #define STACK_SIZE 32
 #define MAX_VALUES 32

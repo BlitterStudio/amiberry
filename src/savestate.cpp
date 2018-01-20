@@ -309,12 +309,18 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, unsigned int *len, u
   int len2;
 
   *totallen = 0;
+	*filepos = 0;
+	*name = 0;
   /* chunk name */
-	zfile_fread (tmp, 1, 4, f);
+	if (zfile_fread(tmp, 1, 4, f) != 4)
+		return NULL;
 	tmp[4] = 0;
 	au_copy (name, 5, (char*)tmp);
   /* chunk size */
-  zfile_fread (tmp, 1, 4, f);
+	if (zfile_fread(tmp, 1, 4, f) != 4) {
+		*name = 0;
+		return NULL;
+	}
   src = tmp;
   len2 = restore_u32 () - 4 - 4 - 4;
   if (len2 < 0)
@@ -326,7 +332,10 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, unsigned int *len, u
   }
 
   /* chunk flags */
-  zfile_fread (tmp, 1, 4, f);
+	if (zfile_fread(tmp, 1, 4, f) != 4) {
+		*name = 0;
+		return NULL;
+	}
   src = tmp;
   flags = restore_u32 ();
   *totallen = *len;
@@ -593,6 +602,8 @@ void restore_state (const TCHAR *filename)
 			write_log (_T("Chunk '%s' total size %d bytes but read %ld bytes!\n"),
 	      name, totallen, end - chunk);
   	xfree (chunk);
+		if (name[0] == 0)
+			break;
   }
 	target_addtorecent (filename, 0);
   return;
@@ -615,6 +626,7 @@ void savestate_restore_finish (void)
   restore_cpu_finish();
 	restore_audio_finish ();
 	restore_disk_finish ();
+	restore_blitter_finish ();
 	restore_akiko_finish ();
 #ifdef PICASSO96
 	restore_p96_finish ();
@@ -625,7 +637,7 @@ void savestate_restore_finish (void)
 	audio_activate ();
 }
 
-/* 1=compressed,2=not compressed,3=ram dump,4=audio dump */
+/* 1=compressed,2=not compressed */
 void savestate_initsave (const TCHAR *filename, int mode, int nodialogs, bool save)
 {
   if (filename == NULL) {

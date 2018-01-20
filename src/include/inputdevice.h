@@ -32,8 +32,6 @@
 #define JOYBUTTON_CD32_RED 8
 #define JOYBUTTON_CD32_BLUE 9
 
-#define JOYBUTTON_LIGHTPEN2 10
-
 #define IDTYPE_JOYSTICK 0
 #define IDTYPE_MOUSE 1
 #define IDTYPE_KEYBOARD 2
@@ -151,7 +149,7 @@ struct inputevent {
 
 #define SET_ONOFF_PRESSREL_VALUE 0x7fffff30
 #define SET_ONOFF_PRESS_VALUE 0x7fffff20
-#define SET_ONOFF_ON_VALUE  0x7fffff10
+#define SET_ONOFF_ON_VALUE  0x7fffff01
 #define SET_ONOFF_OFF_VALUE 0x7fffff00
 #define SET_ONOFF_MASK_PRESS 15
 

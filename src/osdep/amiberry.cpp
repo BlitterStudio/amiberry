@@ -21,23 +21,25 @@
 #include "config.h"
 #include "uae.h"
 #include "options.h"
-#include "threaddep/thread.h"
-#include "gui.h"
-#include "include/memory.h"
+#include "custom.h"
 #include "inputdevice.h"
-#include "keyboard.h"
 #include "disk.h"
 #include "savestate.h"
-#include "rtgmodes.h"
 #include "rommgr.h"
 #include "zfile.h"
-#include "gfxboard.h"
 #include <SDL.h>
+#include "amiberry_rp9.h"
+#include "machdep/rpt.h"
+
+#include "threaddep/thread.h"
+#include "include/memory.h"
+#include "keyboard.h"
+#include "rtgmodes.h"
+#include "gfxboard.h"
+#include "amiberry_gfx.h"
 #ifdef USE_SDL2
 #include <map>
 #endif
-#include "amiberry_rp9.h"
-#include "amiberry_gfx.h"
 
 #ifdef WITH_LOGGING
 extern FILE *debugfile;
@@ -51,6 +53,7 @@ bool host_poweroff = false;
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
+extern void gui_force_rtarea_hdchange(void);
 
 extern void SetLastActiveConfig(const char* filename);
 
@@ -80,6 +83,13 @@ void sleep_millis(int ms)
 	usleep(ms * 1000);
 }
 
+int sleep_millis_main(int ms)
+{
+	unsigned long start = read_processor_time();
+	usleep(ms * 1000);
+	idletime += read_processor_time() - start;
+	return 0;
+}
 
 void logging_init(void)
 {
@@ -178,11 +188,6 @@ void fix_apmodes(struct uae_prefs *p)
 		p->gfx_apmode[0].gfx_refreshrate = 50;
 		p->gfx_apmode[1].gfx_refreshrate = 50;
 	}
-
-	p->gfx_apmode[0].gfx_vsync = 2;
-	p->gfx_apmode[1].gfx_vsync = 2;
-	p->gfx_apmode[0].gfx_vflip = -1;
-	p->gfx_apmode[1].gfx_vflip = -1;
 
 	fixup_prefs_dimensions(p);
 }

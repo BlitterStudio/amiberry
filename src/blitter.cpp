@@ -20,6 +20,7 @@
 #include "blit.h"
 
 static int immediate_blits;
+static int blt_statefile_type;
 
 uae_u16 bltcon0, bltcon1;
 uae_u32 bltapt, bltbpt, bltcpt, bltdpt;
@@ -48,6 +49,7 @@ static int blit_last_cycle, blit_dmacount, blit_dmacount2;
 static int blit_nod;
 static const int *blit_diag;
 static int blit_faulty;
+static int blt_delayed_irq;
 static int ddat1use;
 
 int blit_interrupt;
@@ -242,12 +244,12 @@ static void blitter_interrupt (void)
 	send_interrupt (6);
 }
 
-static void blitter_done (void)
+static void blitter_done (int hpos)
 {
 	ddat1use = 0;
 	bltstate = BLT_done;
 	blitter_interrupt ();
-	blitter_done_notify ();
+	blitter_done_notify (hpos);
 	event2_remevent (ev2_blitter);
 	unset_special (SPCFLAG_BLTNASTY);
 }
@@ -570,11 +572,11 @@ static void actually_do_blit(void)
 static void blitter_doit (void)
 {
 	if (blt_info.vblitsize == 0 || (blitline && blt_info.hblitsize != 2)) {
-		blitter_done ();
+		blitter_done (current_hpos());
 		return;
 	}
 	actually_do_blit ();
-	blitter_done ();
+	blitter_done (current_hpos ());
 }
 
 void blitter_handler (uae_u32 data)
@@ -599,6 +601,28 @@ void blitter_handler (uae_u32 data)
 	blitter_doit ();
 }
 
+void decide_blitter (int hpos)
+{
+	int hsync = hpos < 0;
+
+	if (hsync && blt_delayed_irq) {
+		if (blt_delayed_irq > 0)
+			blt_delayed_irq--;
+		if (blt_delayed_irq <= 0) {
+			blt_delayed_irq = 0;
+			send_interrupt(6);
+		}
+	}
+
+	if (immediate_blits) {
+		if (bltstate == BLT_done)
+			return;
+		if (dmaen (DMA_BLITTER))
+			blitter_doit();
+		return;
+	}
+}
+
 static void blitter_force_finish (void)
 {
   uae_u16 odmacon;
@@ -611,7 +635,7 @@ static void blitter_force_finish (void)
 	  odmacon = dmacon;
 	  dmacon |= DMA_MASTER | DMA_BLITTER;
 	  actually_do_blit ();
-	  blitter_done ();
+		blitter_done (current_hpos ());
 	  dmacon = odmacon;
   }
 }
@@ -631,9 +655,6 @@ static void blit_bltset (int con)
 		blt_info.blitdownbshift = 16 - blt_info.blitbshift;
 		if ((bltcon1 & 1) && !blitline_started) {
 			write_log (_T("BLITTER: linedraw enabled after starting normal blit! %08x\n"), M68K_GETPC);
-			return;
-		}
-    if (bltstate != BLT_done) {
     	return;
     }
 	}
@@ -736,7 +757,7 @@ static void blitter_start_init (void)
 	}
 }
 
-void do_blitter ()
+void do_blitter (int hpos)
 {
 	int cycles;
 	int cleanstart;
@@ -775,44 +796,31 @@ void do_blitter ()
   else
   	unset_special (SPCFLAG_BLTNASTY);
 
+	if (dmaen (DMA_BLITTER))
+		bltstate = BLT_work;
+
 	if (blt_info.vblitsize == 0 || (blitline && blt_info.hblitsize != 2)) {
 		if (dmaen (DMA_BLITTER))
-		  blitter_done ();
+			blitter_done (hpos);
 		return;
 	}
 
-  blit_cyclecounter = cycles * (blit_dmacount2 + (blit_nod ? 0 : 1)); 
-	if (!dmaen (DMA_BLITTER))
-    return;
-
-	bltstate = BLT_work;
-
 	if (immediate_blits) {
-    blitter_doit ();
+		if (dmaen (DMA_BLITTER))
+      blitter_doit ();
     return;
 	}
 
+  blit_cyclecounter = cycles * (blit_dmacount2 + (blit_nod ? 0 : 1)); 
   event2_newevent (ev2_blitter, blit_cyclecounter, 0);
-
-	if (dmaen (DMA_BLITTER)) {
-		if (currprefs.waiting_blits) {
-			// wait immediately if all cycles in use and blitter nastry
-			if (blit_dmacount == blit_diag[0] && (regs.spcflags & SPCFLAG_BLTNASTY)) {
-				waitingblits ();
-			}
-		}
-	}
 }
 
 void blitter_check_start (void)
 {
 	blitter_start_init ();
 	bltstate = BLT_work;
-
 	if (immediate_blits) {
 		blitter_doit ();
-	} else {
-    event2_newevent (ev2_blitter, blit_cyclecounter, 0);
   }
 }
 
@@ -884,14 +892,40 @@ void blitter_slowdown (int ddfstrt, int ddfstop, int totalcycles, int freecycles
 
 #ifdef SAVESTATE
 
+void restore_blitter_finish (void)
+{
+	if (blt_statefile_type == 0) {
+		blit_interrupt = 1;
+		if (bltstate == BLT_init) {
+			write_log (_T("blitter was started but DMA was inactive during save\n"));
+			//do_blitter (0);
+		}
+		if (blt_delayed_irq < 0) {
+			if (intreq & 0x0040)
+				blt_delayed_irq = 3;
+			intreq &= ~0x0040;
+		}
+	}
+}
+
 uae_u8 *restore_blitter (uae_u8 *src)
 {
   uae_u32 flags = restore_u32();
 
+	blt_statefile_type = 0;
+	blt_delayed_irq = 0;
 	bltstate = BLT_done;
 	if (flags & 4) {
     bltstate = (flags & 1) ? BLT_done : BLT_init;
   }
+	if (flags & 2) {
+		write_log (_T("blitter was force-finished when this statefile was saved\n"));
+		write_log (_T("contact the author if restored program freezes\n"));
+		// there is a problem. if system ks vblank is active, we must not activate
+		// "old" blit's intreq until vblank is handled or ks 1.x thinks it was blitter
+		// interrupt..
+		blt_delayed_irq = -1;
+	}
   return src;
 }
 
@@ -921,6 +955,7 @@ uae_u8 *save_blitter (int *len, uae_u8 *dstptr)
 uae_u8 *restore_blitter_new (uae_u8 *src)
 {
 	uae_u8 state;
+	blt_statefile_type = 1;
 	state = restore_u8 ();
 
 	blit_first_cycle = restore_u32 ();
@@ -951,6 +986,7 @@ uae_u8 *restore_blitter_new (uae_u8 *src)
 	blitonedot = restore_u8 ();
 	blitsing = restore_u8 ();
 	blit_interrupt = restore_u8 ();
+	blt_delayed_irq = restore_u8 ();
 	blt_info.blitzero = restore_u8 ();
 
 	blit_faulty = restore_u8 ();
@@ -963,7 +999,7 @@ uae_u8 *restore_blitter_new (uae_u8 *src)
 
 	bltstate = BLT_done;
 	if (state > 0)
-		do_blitter ();
+		do_blitter (0);
 	return src;
 }
 
@@ -1016,6 +1052,7 @@ uae_u8 *save_blitter_new (int *len, uae_u8 *dstptr)
 	save_u8 (blitonedot);
 	save_u8 (blitsing);
 	save_u8 (blit_interrupt);
+	save_u8 (blt_delayed_irq);
 	save_u8 (blt_info.blitzero);
 	
 	save_u8 (blit_faulty);

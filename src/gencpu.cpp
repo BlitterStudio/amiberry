@@ -26,7 +26,8 @@
 
 #define BOOL_TYPE "int"
 /* Define the minimal 680x0 where NV flags are not affected by xBCD instructions.  */
-#define xBCD_KEEPS_NV_FLAGS 4
+#define xBCD_KEEPS_N_FLAG 4
+#define xBCD_KEEPS_V_FLAG 2
 
 static FILE *headerfile;
 static FILE *stblfile;
@@ -178,7 +179,6 @@ static void pop_ins_cnt(void)
 	count_cycles = s_count_cycles;
 	count_ncycles = s_count_ncycles;
 }
-
 
 static void returncycles (const char *s, int cycles)
 {
@@ -530,7 +530,6 @@ static void sync_m68k_pc_noreset (void)
 	m68k_pc_offset = m68k_pc_offset_old;
 }
 
-
 static void next_level_000 (void)
 {
 	if (next_cpu_level < 0)
@@ -541,7 +540,7 @@ static void next_level_000 (void)
 * the calling routine handles Apdi and Aipi modes.
 * gb-- movem == 2 means the same thing but for a MOVE16 instruction */
 
-/* fixup indicates if we want to fix up adress registers in pre decrement
+/* fixup indicates if we want to fix up address registers in pre decrement
 * or post increment mode now (0) or later (1). A value of 2 will then be
 * used to do the actual fix up. This allows to do all memory readings
 * before any register is modified, and so to rerun operation without
@@ -974,6 +973,10 @@ static void genastore_2 (const char *from, amodes mode, const char *reg, wordsiz
 static void genastore (const char *from, amodes mode, const char *reg, wordsizes size, const char *to)
 {
 	genastore_2 (from, mode, reg, size, to, 0, 0);
+}
+static void genastore_tas (const char *from, amodes mode, const char *reg, wordsizes size, const char *to)
+{
+	genastore_2 (from, mode, reg, size, to, 0, GF_LRMW);
 }
 static void genastore_cas (const char *from, amodes mode, const char *reg, wordsizes size, const char *to)
 {
@@ -1773,13 +1776,18 @@ static void gen_opcode (unsigned int opcode)
 		printf ("\tif ((((dst & 0xFF) - (src & 0xFF) - (GET_XFLG () ? 1 : 0)) & 0x100) > 0xFF) { newv -= 0x60; }\n");
 		printf ("\tSET_CFLG ((((dst & 0xFF) - (src & 0xFF) - bcd - (GET_XFLG () ? 1 : 0)) & 0x300) > 0xFF);\n");
 		duplicate_carry (0);
-		/* Manual says bits NV are undefined though a real 68040/060 don't change them */
-		if (cpu_level >= xBCD_KEEPS_NV_FLAGS) {
-			if (next_cpu_level < xBCD_KEEPS_NV_FLAGS)
-				next_cpu_level = xBCD_KEEPS_NV_FLAGS - 1;
+		/* Manual says bits NV are undefined though a real 68030 doesn't change V and 68040/060 don't change both */
+		if (cpu_level >= xBCD_KEEPS_N_FLAG) {
+			if (next_cpu_level < xBCD_KEEPS_N_FLAG)
+				next_cpu_level = xBCD_KEEPS_N_FLAG - 1;
 			genflags (flag_z, curi->size, "newv", "", "");
 		} else {
 			genflags (flag_zn, curi->size, "newv", "", "");
+		}
+		if (cpu_level >= xBCD_KEEPS_V_FLAG) {
+			if (next_cpu_level < xBCD_KEEPS_V_FLAG)
+				next_cpu_level = xBCD_KEEPS_V_FLAG - 1;
+		} else {
 			printf ("\tSET_VFLG ((tmp_newv & 0x80) != 0 && (newv & 0x80) == 0);\n");
 		}
 		if (isreg (curi->smode)) {
@@ -1865,14 +1873,18 @@ static void gen_opcode (unsigned int opcode)
 		printf ("\tif (cflg) newv += 0x60;\n");
 		printf ("\tSET_CFLG (cflg);\n");
 		duplicate_carry (0);
-		/* Manual says bits NV are undefined though a real 68040 don't change them */
-		if (cpu_level >= xBCD_KEEPS_NV_FLAGS) {
-			if (next_cpu_level < xBCD_KEEPS_NV_FLAGS)
-				next_cpu_level = xBCD_KEEPS_NV_FLAGS - 1;
+		/* Manual says bits NV are undefined though a real 68030 doesn't change V and 68040/060 don't change both */
+		if (cpu_level >= xBCD_KEEPS_N_FLAG) {
+			if (next_cpu_level < xBCD_KEEPS_N_FLAG)
+				next_cpu_level = xBCD_KEEPS_N_FLAG - 1;
 			genflags (flag_z, curi->size, "newv", "", "");
-		}
-		else {
+		} else {
 			genflags (flag_zn, curi->size, "newv", "", "");
+		}
+		if (cpu_level >= xBCD_KEEPS_V_FLAG) {
+			if (next_cpu_level < xBCD_KEEPS_V_FLAG)
+				next_cpu_level = xBCD_KEEPS_V_FLAG - 1;
+		} else {
 			printf ("\tSET_VFLG ((tmp_newv & 0x80) == 0 && (newv & 0x80) != 0);\n");
 		}
 		if (isreg (curi->smode)) {
@@ -1910,20 +1922,25 @@ static void gen_opcode (unsigned int opcode)
 		printf ("\tuae_u16 newv_hi = - (src & 0xF0);\n");
 		printf ("\tuae_u16 newv;\n");
 		printf ("\tint cflg, tmp_newv;\n");
+		printf ("\ttmp_newv = newv_hi + newv_lo;\n");
 		printf ("\tif (newv_lo > 9) { newv_lo -= 6; }\n");
-		printf ("\ttmp_newv = newv = newv_hi + newv_lo;\n");
+		printf ("\tnewv = newv_hi + newv_lo;\n");
 		printf ("\tcflg = (newv & 0x1F0) > 0x90;\n");
 		printf ("\tif (cflg) newv -= 0x60;\n");
 		printf ("\tSET_CFLG (cflg);\n");
 		duplicate_carry(0);
-		/* Manual says bits NV are undefined though a real 68040 don't change them */
-		if (cpu_level >= xBCD_KEEPS_NV_FLAGS) {
-			if (next_cpu_level < xBCD_KEEPS_NV_FLAGS)
-				next_cpu_level = xBCD_KEEPS_NV_FLAGS - 1;
+		/* Manual says bits NV are undefined though a real 68030 doesn't change V and 68040/060 don't change both */
+		if (cpu_level >= xBCD_KEEPS_N_FLAG) {
+			if (next_cpu_level < xBCD_KEEPS_N_FLAG)
+				next_cpu_level = xBCD_KEEPS_N_FLAG - 1;
 			genflags (flag_z, curi->size, "newv", "", "");
-		}
-		else {
+		} else {
 			genflags (flag_zn, curi->size, "newv", "", "");
+		}
+		if (cpu_level >= xBCD_KEEPS_V_FLAG) {
+			if (next_cpu_level < xBCD_KEEPS_V_FLAG)
+				next_cpu_level = xBCD_KEEPS_V_FLAG - 1;
+		} else {
 			printf ("\tSET_VFLG ((tmp_newv & 0x80) != 0 && (newv & 0x80) == 0);\n");
 		}
 		genastore ("newv", curi->smode, "srcreg", curi->size, "src");
@@ -2221,26 +2238,41 @@ static void gen_opcode (unsigned int opcode)
 		fill_prefetch_next ();
 		break;
 	case i_STOP:
+		next_level_000();
 		if (using_prefetch) {
-			printf ("\tregs.sr = regs.irc;\n");
+			printf("\tuae_u16 sr = regs.irc;\n");
 			m68k_pc_offset += 2;
 		} else {
 			genamode (curi, curi->smode, "srcreg", curi->size, "src", 1, 0, 0);
-			printf ("\tregs.sr = src;\n");
+			printf("\tuae_u16 sr = src;\n");
 		}
+		// STOP undocumented features:
+		// if SR is not set:
+		// 68000 (68010?): Update SR, increase PC and then cause privilege violation exception (handled in newcpu)
+		// 68000 (68010?): Traced STOP also runs 4 cycles faster.
+		// 68020 68030: STOP works normally
+		// 68040 68060: Immediate privilege violation exception
+		if (cpu_level >= 4) {
+			printf("\tif (!(sr & 0x2000)) {\n");
+			incpc("%d", m68k_pc_offset);
+			printf("\t\tException(8); return 4 * CYCLE_UNIT / 2;\n");
+			printf("\t}\n");
+		}
+		printf("\tregs.sr = sr;\n");
 		makefromsr ();
 		printf ("\tm68k_setstopped ();\n");
 		sync_m68k_pc ();
 		// STOP does not prefetch anything
 		did_prefetch = -1;
+		next_cpu_level = cpu_level - 1;
 		break;
 	case i_LPSTOP: /* 68060 */
 		printf ("\tuae_u16 sw = %s (2);\n", srcwi);
-		printf ("\tuae_u16 sr;\n");
 		printf ("\tif (sw != (0x100|0x80|0x40)) { Exception (4); return 4 * CYCLE_UNIT / 2; }\n");
-		printf ("\tsr = %s (4);\n", srcwi);
-		printf ("\tif (!(sr & 0x8000)) { Exception (8); return 4 * CYCLE_UNIT / 2; }\n");
-		printf ("\tregs.sr = sr;\n");
+		printf("\tif (!(regs.sr & 0x2000)) {\n");
+		printf("\t\tException(8); return 4 * CYCLE_UNIT / 2;\n");
+		printf("\t}\n");
+		printf("\tregs.sr = %s (4);\n", srcwi);
 		makefromsr ();
 		printf ("\tm68k_setstopped();\n");
 		m68k_pc_offset += 4;
@@ -2672,13 +2704,7 @@ bccl_not68020:
 		/* The N flag appears to be set each time there is an overflow.
 		* Weird. but 68020 only sets N when dst is negative.. */
 		printf ("\t\tif (newv > 0xffff) {\n");
-		printf ("\t\t\tSET_VFLG (1);\n");
-#ifdef UNDEF68020
-		if (cpu_level >= 2)
-			printf ("\t\t\tif (currprefs.cpu_level == 0 || dst < 0) SET_NFLG (&regs, 1);\n");
-		else /* ??? some 68000 revisions may not set NFLG when overflow happens.. */
-#endif
-			printf ("\t\t\tSET_NFLG (1);\n");
+		printf ("\t\t\tsetdivuoverflowflags((uae_u32)dst, (uae_u16)src);\n");
 		printf ("\t\t} else {\n");
 		printf ("\t\t"); genflags (flag_logical, sz_word, "newv", "", "");
 		printf ("\t\t\tnewv = (newv & 0xffff) | ((uae_u32)rem << 16);\n");
@@ -2704,19 +2730,12 @@ bccl_not68020:
 		addcycles000_nonces("\t\t", "(getDivs68kCycles((uae_s32)dst, (uae_s16)src)) - 4");
 		fill_prefetch_next ();
 		printf ("\tif (dst == 0x80000000 && src == -1) {\n");
-		printf ("\t\tSET_VFLG (1);\n");
-		printf ("\t\tSET_NFLG (1);\n");
+		printf ("\t\tsetdivsoverflowflags((uae_s32)dst, (uae_s16)src);\n");
 		printf ("\t} else {\n");
 		printf ("\t\tuae_s32 newv = (uae_s32)dst / (uae_s32)(uae_s16)src;\n");
 		printf ("\t\tuae_u16 rem = (uae_s32)dst %% (uae_s32)(uae_s16)src;\n");
 		printf ("\t\tif ((newv & 0xffff8000) != 0 && (newv & 0xffff8000) != 0xffff8000) {\n");
-		printf ("\t\t\tSET_VFLG (1);\n");
-#ifdef UNDEF68020
-		if (cpu_level > 0)
-			printf ("\t\t\tif (currprefs.cpu_level == 0) SET_NFLG (&regs, 1);\n");
-		else
-#endif
-			printf ("\t\t\tSET_NFLG (1);\n");
+		printf ("\t\t\tsetdivsoverflowflags((uae_s32)dst, (uae_s16)src);\n");
 		printf ("\t\t} else {\n");
 		printf ("\t\t\tif (((uae_s16)rem < 0) != ((uae_s32)dst < 0)) rem = -rem;\n");
 		genflags (flag_logical, sz_word, "newv", "", "");
@@ -3329,7 +3348,7 @@ bccl_not68020:
 			printf ("\t}\n");
 		}
 		break;
-	case i_MOVES:
+	case i_MOVES: /* ignore DFC and SFC */
 		{
 			int old_brace_level;
 			genamode (curi, curi->smode, "srcreg", curi->size, "extra", 1, 0, 0);
@@ -3525,7 +3544,9 @@ bccl_not68020:
 			addcycles000 (6);
 		fill_prefetch_next ();
 		printf ("\tsrc |= 0x80;\n");
-		genastore ("src", curi->smode, "srcreg", curi->size, "src");
+		if (next_cpu_level < 2)
+			next_cpu_level = 2 - 1;
+		genastore_tas ("src", curi->smode, "srcreg", curi->size, "src");
 		break;
 	case i_FPP:
 		fpulimit();
@@ -3628,6 +3649,7 @@ bccl_not68020:
 	case i_CPUSHL:
 	case i_CPUSHP:
 	case i_CPUSHA:
+		printf ("\tflush_cpu_caches_040(opcode);\n");
 		printf ("\tif (opcode & 0x80)\n");
 		printf ("\t\tflush_icache((opcode >> 6) & 3);\n");
 		break;

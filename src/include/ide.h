@@ -46,8 +46,6 @@ struct ide_board
 	bool enabled;
 	int state;
 	int type;
-	int userdata;
-	int subtype;
 	uae_u16 data_latch;
 	struct ide_board **self_ptr;
 };
@@ -62,8 +60,6 @@ struct ide_hdf
 	struct ide_hdf *pair; // master<>slave
 	struct ide_thread_state *its;
 	bool byteswap;
-	int byteswapped_buffer;
-	bool adide;
 
 	uae_u8 *secbuf;
 	int secbuf_size;
@@ -76,7 +72,9 @@ struct ide_hdf
 	bool lba48;
 	bool lba48cmd;
 	uae_u64 start_lba;
+	uae_u64 max_lba;
 	int start_nsec;
+	int max_multiple_mode;
 	uae_u8 multiple_mode;
 	int irq_delay;
 	int irq;
@@ -126,9 +124,6 @@ void ide_reset_device(struct ide_hdf *ide);
 
 void start_ide_thread(struct ide_thread_state *its);
 void stop_ide_thread(struct ide_thread_state *its);
-
-uae_u16 adide_decode_word(uae_u16 w);
-uae_u16 adide_encode_word(uae_u16 w);
 
 uae_u8 *ide_save_state(uae_u8 *dst, struct ide_hdf *ide);
 uae_u8 *ide_restore_state(uae_u8 *src, struct ide_hdf *ide);

@@ -17,6 +17,7 @@
 
 unsigned long int nextevent, currcycle;
 int is_syncline;
+
 frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
 int vsynctimebase;
 

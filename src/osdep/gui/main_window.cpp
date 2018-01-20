@@ -358,10 +358,6 @@ namespace sdl
 			SDL_FreeCursor(cursor);
 			cursor = nullptr;
 		}
-
-		// Clear the screen
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
-		SDL_RenderClear(renderer);
 #endif
 	}
 

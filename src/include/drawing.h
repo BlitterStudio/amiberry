@@ -9,6 +9,8 @@
 
 #include "uae/types.h"
 
+#define SMART_UPDATE 1
+
 #define MAX_PLANES 8
 
 /* According to the HRM, pixel data spends a couple of cycles somewhere in the chips
@@ -67,6 +69,7 @@ extern int framecnt;
  * !!! See color_reg_xxx functions below before touching !!!
  */
 #define CE_BORDERBLANK 0
+#define CE_BORDERNTRANS 1
 #define CE_BORDERSPRITE 2
 #define CE_SHRES_DELAY 4
 
@@ -78,6 +81,10 @@ STATIC_INLINE bool ce_is_bordersprite(uae_u8 data)
 {
 	return (data & (1 << CE_BORDERSPRITE)) != 0;
 }
+STATIC_INLINE bool ce_is_borderntrans(uae_u8 data)
+{
+	return (data & (1 << CE_BORDERNTRANS)) != 0;
+}
 
 struct color_entry {
   uae_u16 color_regs_ecs[32];
@@ -87,33 +94,34 @@ struct color_entry {
 };
 
 /* convert 24 bit AGA Amiga RGB to native color */
-#ifdef ARMV6T2
-STATIC_INLINE uae_u32 CONVERT_RGB(uae_u32 c)
-{
-  uae_u32 ret;
-  __asm__ (
-			"ubfx    r1, %[c], #19, #5 \n\t"
-			"ubfx    r2, %[c], #10, #6 \n\t"
-			"ubfx    %[v], %[c], #3, #5 \n\t"
-			"orr     %[v], %[v], r1, lsl #11 \n\t"
-			"orr     %[v], %[v], r2, lsl #5 \n\t"
-			"pkhbt   %[v], %[v], %[v], lsl #16 \n\t"
-           : [v] "=r" (ret) : [c] "r" (c) : "r1", "r2" );
-  return ret;
-}
-STATIC_INLINE uae_u16 CONVERT_RGB_16(uae_u32 c)
-{
-  uae_u16 ret;
-  __asm__ (
-			"ubfx    r1, %[c], #19, #5 \n\t"
-			"ubfx    r2, %[c], #10, #6 \n\t"
-			"ubfx    %[v], %[c], #3, #5 \n\t"
-			"orr     %[v], %[v], r1, lsl #11 \n\t"
-			"orr     %[v], %[v], r2, lsl #5 \n\t"
-           : [v] "=r" (ret) : [c] "r" (c) : "r1", "r2" );
-  return ret;
-}
-#else
+// Disabled because it only works for 16-bit modes (wrong colors on AGA modes if running 32-bit)
+//#ifdef ARMV6T2
+//STATIC_INLINE uae_u32 CONVERT_RGB(uae_u32 c)
+//{
+//  uae_u32 ret;
+//  __asm__ (
+//			"ubfx    r1, %[c], #19, #5 \n\t"
+//			"ubfx    r2, %[c], #10, #6 \n\t"
+//			"ubfx    %[v], %[c], #3, #5 \n\t"
+//			"orr     %[v], %[v], r1, lsl #11 \n\t"
+//			"orr     %[v], %[v], r2, lsl #5 \n\t"
+//			"pkhbt   %[v], %[v], %[v], lsl #16 \n\t"
+//           : [v] "=r" (ret) : [c] "r" (c) : "r1", "r2" );
+//  return ret;
+//}
+//STATIC_INLINE uae_u16 CONVERT_RGB_16(uae_u32 c)
+//{
+//  uae_u16 ret;
+//  __asm__ (
+//			"ubfx    r1, %[c], #19, #5 \n\t"
+//			"ubfx    r2, %[c], #10, #6 \n\t"
+//			"ubfx    %[v], %[c], #3, #5 \n\t"
+//			"orr     %[v], %[v], r1, lsl #11 \n\t"
+//			"orr     %[v], %[v], r2, lsl #5 \n\t"
+//           : [v] "=r" (ret) : [c] "r" (c) : "r1", "r2" );
+//  return ret;
+//}
+//#else
 #ifdef WORDS_BIGENDIAN
 # define CONVERT_RGB(c) \
 	( xbluecolors[((uae_u8*)(&c))[3]] | xgreencolors[((uae_u8*)(&c))[2]] | xredcolors[((uae_u8*)(&c))[1]] )
@@ -123,7 +131,7 @@ STATIC_INLINE uae_u16 CONVERT_RGB_16(uae_u32 c)
 #define CONVERT_RGB_16(c) \
     ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
 #endif
-#endif
+//#endif
 
 STATIC_INLINE xcolnr getxcolor (int c)
 {
@@ -173,6 +181,7 @@ STATIC_INLINE void color_reg_cpy (struct color_entry *dst, struct color_entry *s
 
 #define COLOR_CHANGE_BRDBLANK 0x80000000
 #define COLOR_CHANGE_SHRES_DELAY 0x40000000
+#define COLOR_CHANGE_HSYNC_HACK 0x20000000
 #define COLOR_CHANGE_MASK 0xf0000000
 struct color_change {
   int linepos;
@@ -214,20 +223,25 @@ extern struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
 /* struct decision contains things we save across drawing frames for
  * comparison (smart update stuff). */
 struct decision {
-  /* Records the leftmost access of BPL1DAT.  */
-  int plfleft, plfright, plflinelen;
-  /* Display window: native coordinates, depend on lores state.  */
-  int diwfirstword, diwlastword;
-  int ctable;
+	/* Records the leftmost access of BPL1DAT.  */
+	int plfleft, plfright, plflinelen;
+	/* Display window: native coordinates, depend on lores state.  */
+	int diwfirstword, diwlastword;
+	int ctable;
 
-  uae_u16 bplcon0, bplcon2;
-  uae_u16 bplcon3, bplcon4;
-  uae_u8 nr_planes;
-  uae_u8 bplres;
-  bool ham_seen;
-  bool ham_at_start;
+	uae_u16 bplcon0, bplcon2;
+#ifdef AGA
+	uae_u16 bplcon3, bplcon4;
+#endif
+	uae_u8 nr_planes;
+	uae_u8 bplres;
+	bool ehb_seen;
+	bool ham_seen;
+	bool ham_at_start;
+#ifdef AGA
 	bool bordersprite_seen;
 	bool xor_seen;
+#endif
 };
 
 /* Anything related to changes in hw registers during the DDF for one
@@ -245,6 +259,27 @@ extern uae_u8 line_data[(MAXVPOS + 2) * 2][MAX_PLANES * MAX_WORDS_PER_LINE * 2];
 /* Functions in drawing.c.  */
 extern int coord_native_to_amiga_y (int);
 extern int coord_native_to_amiga_x (int);
+
+extern void record_diw_line(int plfstrt, int first, int last);
+extern void hardware_line_completed(int lineno);
+
+/* Determine how to draw a scan line.  */
+enum nln_how {
+	/* All lines on a non-doubled display. */
+	nln_normal,
+	/* Non-interlace, doubled display.  */
+	nln_doubled,
+	/* Interlace, doubled display, upper line.  */
+	nln_upper,
+	/* Interlace, doubled display, lower line.  */
+	nln_lower,
+	/* This line normal, next one black.  */
+	nln_nblack,
+	nln_upper_black,
+	nln_lower_black,
+	nln_upper_black_always,
+	nln_lower_black_always
+};
 
 extern void hsync_record_line_state (int lineno);
 extern void halt_draw_frame(void);

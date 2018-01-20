@@ -380,7 +380,7 @@ static uae_u32 REGPARAM2 uaelib_demux (TrapContext *ctx)
 void emulib_install (void)
 {
   uaecptr a;
-	if (!uae_boot_rom_type)
+	if (!uae_boot_rom_type && !currprefs.uaeboard)
   	return;
   a = here ();
   org (rtarea_base + 0xFF60);

@@ -59,9 +59,9 @@
 #define DEFEVENT(A, B, C, D, E, F) {_T(#A), B, NULL, C, D, E, F, 0 },
 #define DEFEVENT2(A, B, B2, C, D, E, F, G) {_T(#A), B, B2, C, D, E, F, G },
 static const struct inputevent events[] = {
-	{ 0, 0, 0, AM_K, 0, 0, 0, 0 },
+	{0, 0, 0, AM_K, 0, 0, 0, 0},
 #include "inputevents.def"
-{ 0, 0, 0, 0, 0, 0, 0, 0 }
+	{0, 0, 0, 0, 0, 0, 0, 0}
 };
 #undef DEFEVENT
 #undef DEFEVENT2
@@ -136,8 +136,6 @@ static void check_enable(int ei);
 
 int inputdevice_uaelib (const TCHAR *s, const TCHAR *parm)
 {
-	int i;
-
 	if (!_tcsncmp(s, _T("KEY_RAW_"), 8)) {
 		// KEY_RAW_UP <code>
 		// KEY_RAW_DOWN <code>
@@ -149,7 +147,7 @@ int inputdevice_uaelib (const TCHAR *s, const TCHAR *parm)
 		if (value[0] == '0' && _totupper(value[1]) == 'X')
 			value += 2, base = 16;
 		v = _tcstol(value, &endptr, base);
-		for (i = 1; events[i].name; i++) {
+		for (int i = 1; events[i].name; i++) {
 			const struct inputevent *ie = &events[i];
 			if (_tcsncmp(ie->confname, _T("KEY_"), 4))
 				continue;
@@ -161,7 +159,21 @@ int inputdevice_uaelib (const TCHAR *s, const TCHAR *parm)
 		return 0;
 	}
 
-	for (i = 1; events[i].name; i++) {
+	if (!_tcsncmp(s, _T("AKS_"), 4)) {
+		for (int i = 0; akss[i].name; i++) {
+			if (!_tcscmp(s, akss[i].name)) {
+				int v = _tstol(parm);
+				if (!_tcscmp(parm, _T("0")) || !_tcscmp(parm, _T("1")))
+					parm = NULL;
+				else
+					v = 1;
+				inputdevice_add_inputcode(akss[i].aks, v, nullptr);
+				return 1;
+			}
+		}
+	}
+
+	for (int i = 1; events[i].name; i++) {
 		if (!_tcscmp (s, events[i].confname)) {
 			check_enable(i);
 			handle_input_event (i, parm ? _tstol (parm) : 0, 1, 0);
@@ -512,7 +524,7 @@ static void inputdevice_store_used_device(struct jport *jps, int portnum, bool d
 
 static void inputdevice_store_unplugged_port(struct uae_prefs *p, struct inputdevconfig *idc)
 {
-	struct jport jpt = {};
+	struct jport jpt = { 0 };
 	_tcscpy(jpt.idc.configname, idc->configname);
 	_tcscpy(jpt.idc.name, idc->name);
 	jpt.id = JPORT_UNPLUGGED;
@@ -1842,42 +1854,41 @@ static int getvelocity (int num, int subnum, int pct)
 
 static void mouseupdate (int pct, bool vsync)
 {
-	int v, i;
 	int max = 120;
 
-	for (i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++) {
 
 		if (mouse_port[i]) {
 
-			v = getvelocity (i, 0, pct);
-			mouse_x[i] += v;
+			int v1 = getvelocity (i, 0, pct);
+			mouse_x[i] += v1;
 			if (mouse_x[i] < 0) {
 				mouse_x[i] += MOUSEXY_MAX;
-				mouse_frame_x[i] = mouse_x[i] - v;
+				mouse_frame_x[i] = mouse_x[i] - v1;
 			}
 			if (mouse_x[i] >= MOUSEXY_MAX) {
 				mouse_x[i] -= MOUSEXY_MAX;
-				mouse_frame_x[i] = mouse_x[i] - v;
+				mouse_frame_x[i] = mouse_x[i] - v1;
 			}
 
-			v = getvelocity (i, 1, pct);
-			mouse_y[i] += v;
+			int v2 = getvelocity (i, 1, pct);
+			mouse_y[i] += v2;
 			if (mouse_y[i] < 0) {
 				mouse_y[i] += MOUSEXY_MAX;
-				mouse_frame_y[i] = mouse_y[i] - v;
+				mouse_frame_y[i] = mouse_y[i] - v2;
 			}
 			if (mouse_y[i] >= MOUSEXY_MAX) {
 				mouse_y[i] -= MOUSEXY_MAX;
-				mouse_frame_y[i] = mouse_y[i] - v;
+				mouse_frame_y[i] = mouse_y[i] - v2;
 			}
 
 #ifndef INPUTDEVICE_SIMPLE
-			v = getvelocity (i, 2, pct);
+			int v3 = getvelocity (i, 2, pct);
 			/* if v != 0, record mouse wheel key presses
 			 * according to the NewMouse standard */
-			if (v > 0)
+			if (v3 > 0)
 				record_key (0x7a << 1);
-			else if (v < 0)
+			else if (v3 < 0)
 				record_key (0x7b << 1);
 #endif
 			if (!mouse_deltanoreset[i][2])
@@ -2214,12 +2225,18 @@ uae_u8 handle_joystick_buttons (uae_u8 pra, uae_u8 dra)
 			if (!cd32padmode (p5dir, p5dat)) {
 				if (getbuttonstate (i, JOYBUTTON_CD32_RED) || getbuttonstate (i, JOYBUTTON_1))
 					but &= ~mask;
+				// always zero if output=1 and data=0
+				if ((dra & mask) && !(pra & mask)) {
+					but &= ~mask;
+				}
 			}
 		} else {
 			if (!getbuttonstate (i, JOYBUTTON_1))
 				but |= mask;
-			if (dra & mask)
-				but = (but & ~mask) | (pra & mask);
+			// always zero if output=1 and data=0
+			if ((dra & mask) && !(pra & mask)) {
+				but &= ~mask;
+			}
 		}
 	}
 
@@ -6518,7 +6535,7 @@ void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 			}
 			if (!matched[i]) {
 				if (jp->idc.configname[0] && jp->idc.name[0]) {
-					struct jport jpt = {};
+					struct jport jpt = { 0 };
 					memcpy(&jpt.idc, &jp->idc, sizeof(struct inputdevconfig));
 					jpt.id = JPORT_UNPLUGGED;
 					write_log(_T("Unplugged stored, port %d '%s' (%s)\n"), i, jp->idc.name, jp->idc.configname);

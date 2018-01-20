@@ -16,7 +16,6 @@
 
 #define RTAREA_DEFAULT 0xf00000
 #define RTAREA_BACKUP  0xef0000
-#define RTAREA_BACKUP_2 0xdb0000
 #define RTAREA_SIZE 0x10000
 
 #define RTAREA_TRAPS 0x3000
@@ -87,7 +86,7 @@ extern uaecptr ROM_filesys_resname, ROM_filesys_resid;
 extern uaecptr ROM_filesys_diagentry;
 extern uaecptr ROM_hardfile_resname, ROM_hardfile_resid;
 extern uaecptr ROM_hardfile_init;
-extern uaecptr filesys_initcode, filesys_initcode_ptr;
+extern uaecptr filesys_initcode, filesys_initcode_ptr, filesys_initcode_real;
 
 extern int is_hardfile (int unit_no);
 extern int nr_units (void);
@@ -129,6 +128,7 @@ extern void filesys_vsync (void);
 
 extern void filesys_install (void);
 extern void filesys_install_code (void);
+extern void create_ks12_boot(void);
 extern uaecptr filesys_get_entry(int);
 extern void filesys_store_devinfo (uae_u8 *);
 extern void hardfile_install (void);
@@ -138,7 +138,6 @@ extern void expansion_init (void);
 extern void expansion_cleanup (void);
 extern void expansion_clear (void);
 extern uaecptr expansion_startaddress(struct uae_prefs*, uaecptr addr, uae_u32 size);
-extern uae_u8 *uaeboard_map_ram(uaecptr);
 extern void expansion_scan_autoconfig(struct uae_prefs*, bool);
 extern void expansion_generate_autoconfig_info(struct uae_prefs *p);
 extern struct autoconfig_info *expansion_get_autoconfig_by_address(struct uae_prefs *p, uaecptr addr);
@@ -173,27 +172,16 @@ typedef void(*DEVICE_MEMORY_CALLBACK)(struct romconfig*, uae_u8*, int);
 #define EXPANSIONBOARD_MULTI 1
 #define EXPANSIONBOARD_STRING 2
 
-struct expansionboardsettings
-{
-	const TCHAR *name;
-	const TCHAR *configname;
-	int type;
-	bool invert;
-};
 struct expansionromtype
 {
 	const TCHAR *name;
 	const TCHAR *friendlyname;
 	const TCHAR *friendlymanufacturer;
-	DEVICE_INIT init, init2;
+	DEVICE_INIT init;
 	DEVICE_ADD add;
 	uae_u32 romtype;
-	uae_u32 romtype_extra;
-	uae_u32 parentromtype;
 	int zorro;
-	bool singleonly;
 	int deviceflags;
-	const struct expansionboardsettings *settings;
 	uae_u8 autoconfig[16];
 };
 extern const struct expansionromtype expansionroms[];

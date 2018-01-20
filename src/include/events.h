@@ -64,6 +64,7 @@ enum {
 };
 
 extern int pissoff_value;
+
 #define countdown (regs.pissoff)
 
 extern struct ev eventtab[ev_max];

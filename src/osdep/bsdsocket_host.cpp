@@ -1018,8 +1018,9 @@ void host_recvfrom (TrapContext *ctx, SB, uae_u32 sd, uae_u32 msg, uae_u8* hmsg,
   WAITSIGNAL;
 }
 
-void host_setsockopt (TrapContext *ctx, SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 optval, uae_u32 optlen)
+void host_setsockopt (SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 optval, uae_u32 optlen)
 {
+	TrapContext *ctx = NULL;
   int s = getsock (ctx, sb, sd + 1);
   int nativelevel = mapsockoptlevel (level);
   int nativeoptname = mapsockoptname(nativelevel, optname);
@@ -1519,8 +1520,9 @@ uae_u32 host_inet_addr (TrapContext *ctx, uae_u32 cp)
   return addr;
 }
 
-uae_u32 host_shutdown (TrapContext *ctx, SB, uae_u32 sd, uae_u32 how)
+uae_u32 host_shutdown (SB, uae_u32 sd, uae_u32 how)
 {
+	TrapContext *ctx = NULL;
   SOCKET s;
 
   BSDTRACE (("shutdown(%d,%d) -> ", sd, how));

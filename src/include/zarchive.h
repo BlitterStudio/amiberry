@@ -8,12 +8,13 @@ typedef uae_s64 (*ZFILEWRITE)(const void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILESEEK)(struct zfile*, uae_s64, int);
 
 struct zfile {
-  TCHAR *name;
-  TCHAR *zipname;
-  TCHAR *mode;
-  FILE *f; // real file handle if physical file
-  uae_u8 *data; // unpacked data
-  int dataseek; // use seek position even if real file
+    TCHAR *name;
+    TCHAR *zipname;
+    TCHAR *mode;
+	TCHAR *originalname;
+    FILE *f; // real file handle if physical file
+    uae_u8 *data; // unpacked data
+    int dataseek; // use seek position even if real file
 	struct zfile *archiveparent; // set if parent is archive and this has not yet been unpacked (datasize < size)
 	int archiveid;
   uae_s64 size; // real size

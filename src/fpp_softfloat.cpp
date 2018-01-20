@@ -497,31 +497,19 @@ static void to_native(fptype *fp, fpdata *fpd)
 		return;
 	}
 	if (fp_is_nan(fpd)) {
-#if USE_LONG_DOUBLE
-		*fp = sqrtl(-1);
-#else
 		*fp = sqrt(-1);
-#endif
 		return;
 	}
 	if (fp_is_infinity(fpd)) {
 		double zero = 0.0;
-#if USE_LONG_DOUBLE
-		*fp = fp_is_neg(fpd) ? logl(0.0) : (1.0 / zero);
-#else
 		*fp = fp_is_neg(fpd) ? log(0.0) : (1.0 / zero);
-#endif
 		return;
 	}
 	
 	frac = (fptype)fpd->fpx.low / (fptype)(twoto32 * 2147483648.0);
 	if (fp_is_neg(fpd))
 		frac = -frac;
-#if USE_LONG_DOUBLE
-	*fp = ldexpl (frac, expon - 16383);
-#else
 	*fp = ldexp (frac, expon - 16383);
-#endif
 }
 
 static void from_native(fptype fp, fpdata *fpd)
@@ -551,11 +539,7 @@ static void from_native(fptype fp, fpdata *fpd)
 	if (fp < 0.0)
 		fp = -fp;
 	
-#if USE_LONG_DOUBLE
-	 frac = frexpl (fp, &expon);
-#else
 	 frac = frexp (fp, &expon);
-#endif
 	frac += 0.5 / (twoto32 * twoto32);
 	if (frac >= 1.0) {
 		frac /= 2.0;

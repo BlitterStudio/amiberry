@@ -1,4 +1,8 @@
-class cda_audio {
+
+extern volatile bool cd_audio_mode_changed;
+
+class cda_audio 
+{
 private:
 	int bufsize;
 	int sectorsize;

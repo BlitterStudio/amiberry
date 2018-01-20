@@ -1,10 +1,10 @@
-/*
- * UAE - The Un*x Amiga Emulator
- *
- * Sound emulation stuff
- *
- * Copyright 1995, 1996, 1997 Bernd Schmidt
- */
+ /*
+  * UAE - The Un*x Amiga Emulator
+  *
+  * Sound emulation stuff
+  *
+  * Copyright 1995, 1996, 1997 Bernd Schmidt
+  */
 
 #ifndef UAE_AUDIO_H
 #define UAE_AUDIO_H
@@ -30,7 +30,7 @@ void update_audio (void);
 void audio_evhandler (void);
 void audio_hsync (void);
 void audio_update_adkmasks (void);
-void update_sound (float clk);
+void update_sound (double clk);
 void led_filter_audio (void);
 void set_audio(void);
 int audio_activate(void);
@@ -41,12 +41,12 @@ extern int sound_cd_volume[2];
 #define AUDIO_CHANNELS_PAULA 4
 
 enum {
-	SND_MONO,
-	SND_STEREO,
-	SND_NONE
+  SND_MONO,
+  SND_STEREO,
+  SND_NONE
 };
 
-STATIC_INLINE int get_audio_ismono(int stereomode)
+STATIC_INLINE int get_audio_ismono (int stereomode)
 {
 	return stereomode == 0;
 }

@@ -74,7 +74,7 @@ typedef unsigned long UInt64;
 
 #else
 
-#if defined(_MSC_VER) || defined(__BORLANDC__)
+#if defined(_MSC_VER_) || defined(__BORLANDC__)
 typedef __int64 Int64;
 typedef unsigned __int64 UInt64;
 #define UINT64_CONST(n) n
@@ -103,7 +103,7 @@ typedef int Bool;
 #define MY_STD_CALL
 #endif
 
-#ifdef _MSC_VER
+#ifdef _MSC_VER_
 
 #if _MSC_VER >= 1300
 #define MY_NO_INLINE __declspec(noinline)

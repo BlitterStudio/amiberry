@@ -206,7 +206,7 @@ static const int fmv_board_size = 1048576;
 #define CL450_VIDEO_BUFFER_SIZE (352 * 288 * 4)
 
 static uae_u16 cl450_regs[256];
-static float cl450_scr;
+static double cl450_scr;
 #define CL450_IMEM_WORDS (2 * 512)
 #define CL450_TMEM_WORDS 128
 #define CL450_HMEM_WORDS 16
@@ -224,7 +224,7 @@ static uae_u16 cl450_threshold;
 static int cl450_buffer_offset;
 static int cl450_buffer_empty_cnt;
 static int libmpeg_offset;
-static float fmv_syncadjust;
+static double fmv_syncadjust;
 
 struct cl450_videoram
 {
@@ -1286,17 +1286,13 @@ static void REGPARAM2 fmv_bput (uaecptr addr, uae_u32 w)
 		io_bput (addr, w);
 }
 
-static float max_sync_vpos;
-static float remaining_sync_vpos;
+static double max_sync_vpos;
+static double remaining_sync_vpos;
 
-void cd32_fmv_set_sync(float svpos, float adjust)
+void cd32_fmv_set_sync(double svpos, double adjust)
 {
 	max_sync_vpos = svpos / adjust;
 	fmv_syncadjust = adjust;
-}
-
-void cd32_fmv_vsync_handler(void)
-{
 }
 
 static void cd32_fmv_audio_handler(void)
@@ -1307,6 +1303,8 @@ static void cd32_fmv_audio_handler(void)
 
 	if (!fmv_ram_bank.baseaddr)
 		return;
+
+	cd_audio_mode_changed = false;
 
 	if (cl450_buffer_offset == 0) {
 		if (cl450_buffer_empty_cnt >= 2)
@@ -1443,9 +1441,9 @@ addrbank *cd32_fmv_init (struct autoconfig_info *aci)
 		return &expamem_null;
 
 	fmv_rom_bank.start = expamem_board_pointer;
-  fmv_ram_bank.start = fmv_rom_bank.start + 0x80000;
+	fmv_ram_bank.start = fmv_rom_bank.start + 0x80000;
 
-  fmv_rom_bank.mask = fmv_rom_size - 1;
+	fmv_rom_bank.mask = fmv_rom_size - 1;
 	fmv_rom_bank.reserved_size = fmv_rom_size;
 	fmv_ram_bank.mask = fmv_ram_size - 1;
 	fmv_ram_bank.reserved_size = fmv_ram_size;

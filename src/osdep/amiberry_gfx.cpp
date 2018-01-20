@@ -165,7 +165,6 @@ static void *display_thread(void *unused)
 #elif USE_SDL2
 			screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
 #endif
-
 			vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
 			dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
@@ -692,6 +691,7 @@ void show_screen(int mode)
 	current_vsync_frame += currprefs.gfx_framerate;
 #endif
 
+	last_synctime = read_processor_time();
 #ifdef USE_DISPMANX
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
@@ -702,7 +702,6 @@ void show_screen(int mode)
 	SDL_RenderPresent(renderer);
 #endif
 
-	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
 
 #ifdef USE_DISPMANX
@@ -808,7 +807,7 @@ int GetSurfacePixelFormat()
 		: unit == 24
 		? RGBFB_B8G8R8
 		: unit == 32
-		? RGBFB_B8G8R8A8
+		? RGBFB_R8G8B8A8
 		: RGBFB_NONE;
 }
 
@@ -1156,7 +1155,7 @@ void picasso_init_resolutions()
 		for (auto bitdepth : bits)
 		{
 			const auto bit_unit = bitdepth + 1 & 0xF8;
-			const auto rgbFormat = bitdepth == 8 ? RGBFB_CLUT : bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_B8G8R8A8;
+			const auto rgbFormat = bitdepth == 8 ? RGBFB_CLUT : bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8;
 			auto pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
 			DisplayModes[count].res.width = x_size_table[i];
@@ -1212,7 +1211,7 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 		open_screen(&currprefs);
 		if(screen != nullptr) {
 			picasso_vidinfo.rowbytes = screen->pitch;
-			picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_B8G8R8A8 : RGBFB_R5G6B5;
+			picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
 		}
 	}
 }

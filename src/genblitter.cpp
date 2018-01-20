@@ -39,7 +39,7 @@ static void generate_func(void)
   printf("#include \"sysconfig.h\"\n");
   printf("#include \"sysdeps.h\"\n");
   printf("#include \"options.h\"\n");
-  printf("#include \"memory.h\"\n");
+  printf("#include \"include/memory.h\"\n");
   printf("#include \"newcpu.h\"\n");
   printf("#include \"custom.h\"\n");
   printf("#include \"savestate.h\"\n");
@@ -60,7 +60,7 @@ static void generate_func(void)
     printf("for (j = 0; j < b->vblitsize; j++) {\n");
     printf("\tfor (i = 0; i < b->hblitsize; i++) {\n\t\tuae_u32 bltadat, srca;\n\n");
     if (c_is_on) printf("\t\tif (ptc) { srcc = do_get_mem_word ((uae_u16 *)ptc); ptc += 2; }\n");
-    if (b_is_on) printf("\t\tif (ptb) {\n\t\t\tuae_bltbdat = b->bltbdat = do_get_mem_word ((uae_u16 *)ptb); ptb += 2;\n");
+    if (b_is_on) printf("\t\tif (ptb) {\n\t\t\tuae_u32 bltbdat = b->bltbdat = do_get_mem_word ((uae_u16 *)ptb); ptb += 2;\n");
 	  if (b_is_on) printf("\t\t\tsrcb = (((uae_u32)b->bltbold << 16) | bltbdat) >> b->blitbshift;\n");
 	  if (b_is_on) printf("\t\t\tb->bltbold = bltbdat;\n\t\t}\n");
     if (a_is_on) printf("\t\tif (pta) { bltadat = b->bltadat = do_get_mem_word ((uae_u16 *)pta); pta += 2; } else { bltadat = b->bltadat; }\n");
@@ -87,7 +87,6 @@ static void generate_func(void)
     printf("{\n");
     printf("uae_u32 totald = 0;\n");
     printf("int i,j;\n");
-
     if (b_is_on) printf("uae_u32 srcb = b->bltbhold;\n");
     if (c_is_on) printf("uae_u32 srcc = b->bltcdat;\n");
     printf("uae_u32 dstd = 0;\n");
@@ -127,7 +126,7 @@ static void generate_table(void)
   printf("#include \"sysconfig.h\"\n");
   printf("#include \"sysdeps.h\"\n");
   printf("#include \"options.h\"\n");
-  printf("#include \"memory.h\"\n");
+  printf("#include \"include/memory.h\"\n");
   printf("#include \"newcpu.h\"\n");
   printf("#include \"custom.h\"\n");
   printf("#include \"savestate.h\"\n");

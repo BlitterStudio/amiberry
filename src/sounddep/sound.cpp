@@ -47,16 +47,20 @@ static int cdrdcnt = 0;
 
 static int have_sound = 0;
 
-void update_sound(float clk)
+void update_sound(double clk)
 {
-	float evtime = clk * CYCLE_UNIT / float(currprefs.sound_freq);
-	scaled_sample_evtime = int(evtime);
+	double evtime;
+  
+	evtime = clk * CYCLE_UNIT / (double)currprefs.sound_freq;
+	scaled_sample_evtime = evtime;
 }
+
 
 static int s_oldrate = 0, s_oldbits = 0, s_oldstereo = 0;
 static int sound_thread_active = 0, sound_thread_exit = 0;
 static int rdcnt = 0;
 static int wrcnt = 0;
+
 
 static void sound_copy_produced_block(void *ud, Uint8 *stream, int len)
 {
@@ -113,7 +117,8 @@ static void init_soundbuffer_usage(void)
 	cdwrcnt = 0;
 }
 
-static int amiberry_start_sound(int rate, int bits, int stereo)
+
+static int start_sound(int rate, int bits, int stereo)
 {
 	int frag = 0, buffers, ret;
 	unsigned int bsize;
@@ -158,8 +163,7 @@ static int amiberry_start_sound(int rate, int bits, int stereo)
 }
 
 
-// this is meant to be called only once on exit
-void amiberry_stop_sound(void)
+void stop_sound(void)
 {
 	if(sound_thread_exit == 0) {
   	SDL_PauseAudio(1);
@@ -221,7 +225,7 @@ bool cdaudio_catchup(void)
 /* Try to determine whether sound is available.  This is only for GUI purposes.  */
 int setup_sound(void)
 {
-	if (amiberry_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
+	if (start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
 		return 0;
 
 	sound_available = 1;
@@ -231,7 +235,7 @@ int setup_sound(void)
 static int open_sound(void)
 {
 	config_changed = 1;
-	if (amiberry_start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
+	if (start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
 		return 0;
 
 	have_sound = 1;
@@ -251,7 +255,8 @@ void close_sound(void)
 	if (!have_sound)
 		return;
 
-    amiberry_stop_sound();
+	stop_sound();
+
 	have_sound = 0;
 }
 
