@@ -215,9 +215,6 @@ static void AdjustPrefs(void)
 	default:
 		break;
 	}
-
-	if (emulating && old_cs != changed_prefs.cs_compatible)
-		uae_restart(-1, nullptr);
 }
 
 
