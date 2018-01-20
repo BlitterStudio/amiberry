@@ -393,7 +393,7 @@ OBJS += src/jit/compemu_support.o
 -include $(OBJS:%.o=%.d)
 
 $(PROG): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
+	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
