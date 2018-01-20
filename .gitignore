@@ -27,6 +27,7 @@ VisualGDB/VisualGDB/Release/Amiberry
 *.db-shm
 *.db-wal
 *.TMP
+*.d
 VisualGDB/VisualGDB/Release/Amiberry-sdl2
 *.npa00-cfdc2249
 *.a
@@ -48,3 +49,4 @@ VisualGDB/VisualGDB/Debug/Amiberry-sdl2-dev
 VSLinux/obj/ARM/Debug/
 VisualGDB/Amiberry/VisualGDB/Debug/Amiberry-sdl1
 VisualGDB/Amiberry/VisualGDB/Debug/Amiberry-sdl2
+VisualGDB/Amiberry/VisualGDB/

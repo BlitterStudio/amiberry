@@ -10,6 +10,7 @@ endif
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib
 
+CPPFLAGS+= -MD -MP
 #DEBUG=1
 #GCC_PROFILE=1
 #GEN_PROFILE=1
@@ -389,6 +390,8 @@ OBJS += src/jit/compstbl.o
 OBJS += src/jit/compemu_fpp.o
 OBJS += src/jit/compemu_support.o
 
+-include $(OBJS:%.o=%.d)
+
 $(PROG): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG
@@ -446,7 +449,7 @@ ASMS = \
 genasm: $(ASMS)
 
 clean:
-	$(RM) $(PROG) $(OBJS) $(ASMS)
+	$(RM) $(PROG) $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
 	$(MAKE) -C src/guisan clean
 
 delasm:
