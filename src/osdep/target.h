@@ -44,7 +44,7 @@ void update_display(struct uae_prefs *);
 void black_screen_now(void);
 void graphics_subshutdown (void);
 
-void amiberry_stop_sound();
+void stop_sound();
 
 void keyboard_settrans();
 
