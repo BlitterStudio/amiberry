@@ -581,6 +581,10 @@ bool EditFilesysHardfile(const int unit_no)
 		cboUnit->setSelected(0);
 	}
 
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+
 	EditFilesysHardfileLoop();
 
 	if (dialogResult)

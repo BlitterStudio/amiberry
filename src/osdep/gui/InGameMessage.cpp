@@ -242,6 +242,10 @@ void InGameMessage(const char* msg)
 		if (GUIjoy == nullptr)
 			GUIjoy = SDL_JoystickOpen(0);
 
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+
 	while (!msg_done)
 	{
 		// Poll input

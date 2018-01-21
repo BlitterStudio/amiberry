@@ -474,6 +474,10 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	checkfoldername(workingDir);
 	checkfilename(value);
 
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+
 	SelectFileLoop();
 #ifdef FILE_SELECT_KEEP_POSITION
 	wndSelectFile->releaseModalFocus();

@@ -35,8 +35,6 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202
 
-extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-
 extern string volName;
 
 static bool dialogResult = false;
@@ -387,6 +385,10 @@ bool EditFilesysVirtual(const int unit_no)
 		chkReadWrite->setSelected(true);
 		txtBootPri->setText("0");
 	}
+
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
 
 	EditFilesysVirtualLoop();
 

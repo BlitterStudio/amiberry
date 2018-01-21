@@ -573,6 +573,10 @@ namespace sdl
 		if (SDL_NumJoysticks() > 0)
 			GUIjoy = SDL_JoystickOpen(0);
 
+		// Prepare the screen once
+		uae_gui->logic();
+		uae_gui->draw();
+
 		//-------------------------------------------------
 		// The main loop
 		//-------------------------------------------------

@@ -365,6 +365,10 @@ bool CreateFilesysHardfile()
 	txtBootPri->setText("0");
 	txtSize->setText("100");
 
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+
 	CreateFilesysHardfileLoop();
 	ExitCreateFilesysHardfile();
 

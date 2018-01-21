@@ -348,6 +348,11 @@ bool SelectFolder(const char* title, char* value)
 	dialogFinished = false;
 	InitSelectFolder(title);
 	checkfoldername(value);
+
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+
 	SelectFolderLoop();
 	ExitSelectFolder();
 	if (dialogResult)
