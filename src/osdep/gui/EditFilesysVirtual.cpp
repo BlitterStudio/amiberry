@@ -26,6 +26,7 @@
 #include "gui_handling.h"
 
 #include "inputdevice.h"
+#include "amiberry_gfx.h"
 
 #ifdef ANDROIDSDL
 #include "androidsdl_event.h"
@@ -228,16 +229,14 @@ static void EditFilesysVirtualLoop()
 
 	while (!dialogFinished)
 	{
+		int gotEvent = 0;
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
 			if (event.type == SDL_KEYDOWN)
 			{
-#ifdef USE_SDL1
+				gotEvent = 1;
 				switch (event.key.keysym.sym)
-#elif USE_SDL2
-				switch (event.key.keysym.scancode)
-#endif
 				{
 				case VK_ESCAPE:
 					dialogFinished = true;
@@ -265,11 +264,7 @@ static void EditFilesysVirtualLoop()
 
 				case VK_Blue:
 				case VK_Green:
-#ifdef USE_SDL1
 					event.key.keysym.sym = SDLK_RETURN;
-#elif USE_SDL2
-					event.key.keysym.scancode = SDL_SCANCODE_RETURN;
-#endif
 					gui_input->pushInput(event); // Fire key down
 					event.type = SDL_KEYUP; // and the key up
 					break;
@@ -337,13 +332,17 @@ static void EditFilesysVirtualLoop()
 			gui_input->pushInput(event);
 #endif
 		}
-
-		// Now we let the Gui object perform its logic.
-		uae_gui->logic();
-		// Now we let the Gui object draw itself.
-		uae_gui->draw();
+		if (gotEvent)
+		{
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
+#ifdef USE_SDL2
+			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+		}
 		// Finally we update the screen.
-
 		UpdateGuiScreen();
 	}
 }
