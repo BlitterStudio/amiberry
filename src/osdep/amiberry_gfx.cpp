@@ -16,11 +16,11 @@
 
 #include <png.h>
 #include <SDL.h>
+#include <cmath>
 #ifdef USE_SDL1
 #include <SDL_image.h>
 #include <SDL_gfxPrimitives.h>
 #include <SDL_ttf.h>
- #include <cmath>
 #endif
 #ifdef ANDROIDSDL
 #include <SDL_screenkeyboard.h>
