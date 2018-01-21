@@ -44,7 +44,7 @@ static gcn::ScrollArea* scrAreaFolders;
 static gcn::TextField* txtCurrent;
 
 
-class ButtonActionListener : public gcn::ActionListener
+class FolderButtonActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -57,15 +57,15 @@ public:
 	}
 };
 
-static ButtonActionListener* buttonActionListener;
+static FolderButtonActionListener* folderButtonActionListener;
 
 
-class DirListModel : public gcn::ListModel
+class SelectDirListModel : public gcn::ListModel
 {
 	vector<string> dirs;
 
 public:
-	DirListModel(const char* path)
+	SelectDirListModel(const char* path)
 	{
 		changeDir(path);
 	}
@@ -90,7 +90,7 @@ public:
 	}
 };
 
-static DirListModel dirList(".");
+static SelectDirListModel dirList(".");
 
 
 static void checkfoldername(char* current)
@@ -139,21 +139,21 @@ static void InitSelectFolder(const char* title)
 	wndSelectFolder->setCaption(title);
 	wndSelectFolder->setTitleBarHeight(TITLEBAR_HEIGHT);
 
-	buttonActionListener = new ButtonActionListener();
+	folderButtonActionListener = new FolderButtonActionListener();
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
-	cmdOK->addActionListener(buttonActionListener);
+	cmdOK->addActionListener(folderButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
-	cmdCancel->addActionListener(buttonActionListener);
+	cmdCancel->addActionListener(folderButtonActionListener);
 
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
@@ -199,7 +199,7 @@ static void ExitSelectFolder()
 
 	delete cmdOK;
 	delete cmdCancel;
-	delete buttonActionListener;
+	delete folderButtonActionListener;
 
 	delete txtCurrent;
 	delete lstFolders;
@@ -346,12 +346,17 @@ bool SelectFolder(const char* title, char* value)
 {
 	dialogResult = false;
 	dialogFinished = false;
+
 	InitSelectFolder(title);
 	checkfoldername(value);
 
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
+#ifdef USE_SDL2
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	UpdateGuiScreen();
 
 	SelectFolderLoop();
 	ExitSelectFolder();

@@ -82,12 +82,12 @@ public:
 	void changeDir(const char* path)
 	{
 		ReadDirectory(path, &dirs, &files);
-		if (dirs.size() == 0)
-			dirs.push_back("..");
+		if (dirs.empty())
+			dirs.emplace_back("..");
 		FilterFiles(&files, filefilter);
 	}
 
-	bool isDir(int i) const
+	bool isDir(unsigned int i) const
 	{
 		return (i < dirs.size());
 	}
@@ -477,6 +477,10 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
+#ifdef USE_SDL2
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	UpdateGuiScreen();
 
 	SelectFileLoop();
 #ifdef FILE_SELECT_KEEP_POSITION

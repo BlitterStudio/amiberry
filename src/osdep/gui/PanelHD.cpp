@@ -7,7 +7,6 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
@@ -16,14 +15,10 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
 #include "autoconf.h"
 #include "filesys.h"
 #include "blkdev.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 enum
@@ -544,7 +539,7 @@ static void AdjustDropDownControls()
 	cboCDFile->clearSelected();
 	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		for (auto i = 0; i < lstMRUCDList.size(); ++i)
+		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
 		{
 			if (lstMRUCDList[i] != changed_prefs.cdslots[0].name)
 			{
