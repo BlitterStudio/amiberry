@@ -358,6 +358,10 @@ namespace sdl
 			SDL_FreeCursor(cursor);
 			cursor = nullptr;
 		}
+
+		// Clear the screen
+		SDL_RenderClear(renderer);
+		SDL_RenderPresent(renderer);
 #endif
 	}
 
