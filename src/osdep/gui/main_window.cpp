@@ -271,8 +271,8 @@ namespace sdl
 			cursor_surface = nullptr;
 			return;
 		}
-
-		SDL_SetCursor(cursor);
+		if (cursor)
+			SDL_SetCursor(cursor);
 	}
 #endif
 
