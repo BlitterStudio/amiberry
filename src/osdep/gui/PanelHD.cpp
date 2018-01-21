@@ -160,10 +160,13 @@ class AddVirtualHDActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (EditFilesysVirtual(-1))
-			gui_force_rtarea_hdchange();
-		cmdAddDirectory->requestFocus();
-		RefreshPanelHD();
+		if (actionEvent.getSource() == cmdAddDirectory)
+		{
+			if (EditFilesysVirtual(-1))
+				gui_force_rtarea_hdchange();
+			cmdAddDirectory->requestFocus();
+			RefreshPanelHD();
+		}
 	}
 };
 
@@ -175,10 +178,13 @@ class AddHardfileActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (EditFilesysHardfile(-1))
-			gui_force_rtarea_hdchange();
-		cmdAddHardfile->requestFocus();
-		RefreshPanelHD();
+		if (actionEvent.getSource() == cmdAddHardfile)
+		{
+			if (EditFilesysHardfile(-1))
+				gui_force_rtarea_hdchange();
+			cmdAddHardfile->requestFocus();
+			RefreshPanelHD();
+		}
 	}
 };
 
@@ -190,10 +196,13 @@ class CreateHardfileActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (CreateFilesysHardfile())
-			gui_force_rtarea_hdchange();
-		cmdCreateHardfile->requestFocus();
-		RefreshPanelHD();
+		if (actionEvent.getSource() == cmdCreateHardfile)
+		{
+			if (CreateFilesysHardfile())
+				gui_force_rtarea_hdchange();
+			cmdCreateHardfile->requestFocus();
+			RefreshPanelHD();
+		}
 	}
 };
 
@@ -205,18 +214,21 @@ class CDCheckActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (changed_prefs.cdslots[0].inuse)
+		if (actionEvent.getSource() == chkCD)
 		{
-			changed_prefs.cdslots[0].inuse = false;
-			changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+			if (changed_prefs.cdslots[0].inuse)
+			{
+				changed_prefs.cdslots[0].inuse = false;
+				changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+			}
+			else
+			{
+				changed_prefs.cdslots[0].inuse = true;
+				changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+			}
+			RefreshPanelHD();
+			RefreshPanelQuickstart();
 		}
-		else
-		{
-			changed_prefs.cdslots[0].inuse = true;
-			changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
-		}
-		RefreshPanelHD();
-		RefreshPanelQuickstart();
 	}
 };
 

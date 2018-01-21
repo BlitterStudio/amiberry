@@ -231,9 +231,9 @@ static void EditFilesysVirtualLoop()
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			gotEvent = 1;
 			if (event.type == SDL_KEYDOWN)
 			{
-				gotEvent = 1;
 				switch (event.key.keysym.sym)
 				{
 				case VK_ESCAPE:

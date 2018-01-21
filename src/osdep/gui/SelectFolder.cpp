@@ -359,6 +359,7 @@ bool SelectFolder(const char* title, char* value)
 	UpdateGuiScreen();
 
 	SelectFolderLoop();
+
 	ExitSelectFolder();
 	if (dialogResult)
 	{
