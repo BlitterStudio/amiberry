@@ -29,12 +29,13 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 {
 	amiberryLogoImage = gcn::Image::load("data/amiberry-logo.png");
 	icon = new gcn::Icon(amiberryLogoImage);
-	lblEmulatorVersion = new gcn::Label("Amiberry v2.9 beta");
+	lblEmulatorVersion = new gcn::Label("Amiberry v2.10 beta");
 
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
 		"Toni Wilen - WinUAE author\n"
 		"TomB - Original ARM port of UAE, core emulation updates\n"
+		"Alynna Trypnotk - Tinker Board port\n"
 		"Chips - Original RPI port\n"
 		"Dom Cresswell (Horace & The Spider) - Controller updates\n"
 		"Christer Solskogen - Makefile improvements\n"
