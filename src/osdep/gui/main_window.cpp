@@ -293,8 +293,12 @@ namespace sdl
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 		SDL_ShowCursor(SDL_ENABLE);
 #elif USE_SDL2
-
+#ifndef TINKER
 		setup_cursor();
+#else
+		cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+		SDL_SetCursor(cursor);
+#endif
 
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");

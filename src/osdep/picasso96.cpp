@@ -3103,23 +3103,64 @@ static void picasso_statusline(uae_u8 *dst)
 // TODO: Change this to use SDL2 native conversions
 static void copyall(uae_u8 *src, uae_u8 *dst)
 {
-	if (picasso96_state.RGBFormat == RGBFB_R5G6B5)
+	int bytes;
+	if (picasso96_state.RGBFormat == RGBFB_R5G6B5) 	{
+#ifdef TINKER
+	bytes = picasso96_state.Width * picasso96_state.Height * 2;
+	for (int i=0; i < bytes; i+=4) {
+            *((uae_u32 *)(dst + i)) =(
+	      __builtin_bswap16(*((uae_u16 *)(src + i + 2))) << 16 |
+	      __builtin_bswap16(*((uae_u16 *)(src + i)))
+             );
+        }
+#else
 #ifdef USE_ARMNEON
 		copy_screen_16bit_swap(dst, src, picasso96_state.Width * picasso96_state.Height * 2);
 #else
 		copy_screen_16bit_swap_arm(dst, src, picasso96_state.Width * picasso96_state.Height * 2);
 #endif
+#endif
+	}
 	else if (picasso96_state.RGBFormat == RGBFB_CLUT)
 	{
-		int pixels = picasso96_state.Width * picasso96_state.Height;
-		copy_screen_8bit(dst, src, pixels, picasso_vidinfo.clut);
+#ifdef TINKER
+	    bytes = picasso96_state.Width * picasso96_state.Height;
+	    for (int i=0; i < bytes; ++i) {
+        	*((uae_u16 *)(dst + (i << 1))) = (
+		    (picasso96_state_uaegfx.CLUT[(*(uae_u8 *)(src+i))].Red   >> 3) << 11 |
+		    (picasso96_state_uaegfx.CLUT[(*(uae_u8 *)(src+i))].Green >> 2) << 5  |
+		    (picasso96_state_uaegfx.CLUT[(*(uae_u8 *)(src+i))].Blue  >> 3)
+		    );		
+    		}
+#else
+		bytes = picasso96_state.Width * picasso96_state.Height;
+		copy_screen_8bit(dst, src, bytes, picasso_vidinfo.clut);
+#endif
 	}
-	else
+	else {
+#ifdef TINKER
+	    bytes = picasso96_state.Width * picasso96_state.Height * 2;
+	    for (int i=0; i < bytes; i+=4) {
+        	*((uae_u32 *)(dst + i)) = (
+                  (
+		    (*(uae_u8 *)(src + (i << 1) + 4)) >> 3 << 11 |
+		    (*(uae_u8 *)(src + (i << 1) + 5)) >> 2 << 5  |
+		    (*(uae_u8 *)(src + (i << 1) + 6)) >> 3
+                  ) << 16 | (
+		    (*(uae_u8 *)(src + (i << 1) + 0)) >> 3 << 11 |
+		    (*(uae_u8 *)(src + (i << 1) + 1)) >> 2 << 5  |
+		    (*(uae_u8 *)(src + (i << 1) + 2)) >> 3
+		  )
+	       );
+    	    }
+#else
 #ifdef USE_ARMNEON
 		copy_screen_32bit_to_16bit_neon(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
 #else
 		copy_screen_32bit_to_16bit_arm(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
 #endif
+#endif
+        }
 }
 
 bool picasso_flushpixels(uae_u8 *src, int off)

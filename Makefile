@@ -133,6 +133,13 @@ USE_SDL2 = 1
         MORE_CFLAGS += -fomit-frame-pointer
     endif
     NAME  = amiberry-xu4-sdl2-dev
+else ifeq ($(PLATFORM),tinker)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -I/usr/local/include
+    LDFLAGS += -L/usr/local/lib -lmali
+    HAVE_NEON = 1
+    NAME  = amiberry-tinker-dev
 endif
 
 RM     = rm -f
