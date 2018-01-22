@@ -66,10 +66,17 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
+#ifdef TINKER
+#define SPEEDUP_CYCLES_JIT_PAL 10000
+#define SPEEDUP_CYCLES_JIT_NTSC 8000
+#define SPEEDUP_CYCLES_NONJIT 1024
+#define SPEEDUP_TIMELIMIT_JIT -6000
+#else
 #define SPEEDUP_CYCLES_JIT_PAL 5000
 #define SPEEDUP_CYCLES_JIT_NTSC 4000
 #define SPEEDUP_CYCLES_NONJIT 256
 #define SPEEDUP_TIMELIMIT_JIT -750
+#endif
 #define SPEEDUP_TIMELIMIT_NONJIT -750
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;

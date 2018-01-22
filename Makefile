@@ -115,7 +115,7 @@ USE_SDL2 = 1
     PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi1-sdl2-dev
 
-else ifeq ($(PLATFORM),pine64-sdl2)
+else ifeq ($(PLATFORM),pine64)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16
     CFLAGS += -DARMV6T2 -D__arm__ -DUSE_SDL2
@@ -133,6 +133,13 @@ USE_SDL2 = 1
         MORE_CFLAGS += -fomit-frame-pointer
     endif
     NAME  = amiberry-xu4-sdl2-dev
+
+else ifeq ($(PLATFORM),tinker)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -I/usr/local/include
+    LDFLAGS += -L/usr/local/lib -lmali
+    NAME  = amiberry-tinker-dev
 endif
 
 RM     = rm -f

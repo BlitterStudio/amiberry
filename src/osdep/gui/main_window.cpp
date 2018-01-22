@@ -293,9 +293,9 @@ namespace sdl
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 		SDL_ShowCursor(SDL_ENABLE);
 #elif USE_SDL2
-
+#ifndef TINKER
 		setup_cursor();
-
+#endif
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
@@ -306,8 +306,6 @@ namespace sdl
 
 		gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
-
-		
 
 		SDL_ShowCursor(SDL_ENABLE);
 #endif

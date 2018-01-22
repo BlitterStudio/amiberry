@@ -691,7 +691,7 @@ void show_screen(int mode)
 	current_vsync_frame += currprefs.gfx_framerate;
 #endif
 
-	last_synctime = read_processor_time();
+	
 #ifdef USE_DISPMANX
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
@@ -701,7 +701,7 @@ void show_screen(int mode)
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	SDL_RenderPresent(renderer);
 #endif
-
+	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
 
 #ifdef USE_DISPMANX
