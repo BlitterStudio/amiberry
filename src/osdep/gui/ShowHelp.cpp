@@ -226,6 +226,17 @@ void ShowHelp(const char* title, const vector<string>& text)
 
 	wndShowHelp->setCaption(title);
 	cmdOK->setCaption("Ok");
+
+	// Now we let the Gui object perform its logic.
+	uae_gui->logic();
+	// Now we let the Gui object draw itself.
+	uae_gui->draw();
+#ifdef USE_SDL2
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	UpdateGuiScreen();
+
 	ShowHelpLoop();
+
 	ExitShowHelp();
 }

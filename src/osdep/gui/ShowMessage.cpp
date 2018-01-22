@@ -183,11 +183,13 @@ static void ShowMessageLoop()
 {
 	FocusBugWorkaround(wndShowMessage);
 
+	int gotEvent = 0;
 	while (!dialogFinished)
 	{
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			gotEvent = 1;
 			if (event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
@@ -251,13 +253,17 @@ static void ShowMessageLoop()
 			gui_input->pushInput(event);
 #endif
 		}
-
-		// Now we let the Gui object perform its logic.
-		uae_gui->logic();
-		// Now we let the Gui object draw itself.
-		uae_gui->draw();
+		if (gotEvent)
+		{
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
+#ifdef USE_SDL2
+			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+		}
 		// Finally we update the screen.
-
 		UpdateGuiScreen();
 	}
 }
@@ -281,7 +287,17 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 		cmdOK->setPosition(cmdCancel->getX(), cmdCancel->getY());
 	}
 	cmdOK->setEnabled(true);
+
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+#ifdef USE_SDL2
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	UpdateGuiScreen();
+
 	ShowMessageLoop();
+
 	ExitShowMessage();
 
 	return dialogResult;
@@ -298,7 +314,16 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 	cmdOK->setVisible(false);
 	cmdCancel->setCaption(button1);
 
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+#ifdef USE_SDL2
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	UpdateGuiScreen();
+
 	ShowMessageWaitInputLoop();
+
 	ExitShowMessage();
 
 	return dialogControlPressed;
