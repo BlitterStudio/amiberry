@@ -1,4 +1,4 @@
-# Amibian for Armbian / TinkerBoard # Beta 1.3
+# Amibian for Armbian / TinkerBoard | Beta 1.3
 
 Possible Requirements:
 1) I am testing with this Armbian system image:
@@ -35,9 +35,9 @@ Directions to get this going:
 
 ```./setup.sh```
 
-Building the system will take 10-30 mins depending on SD card speed, but ensures
-that all the components on the system are using accelerated drivers.
-5) Reboot your future Amiga:
+5) Building the system will take 10-30 mins depending on SD card speed, but ensures
+   that all the components on the system are using accelerated drivers.
+6) Reboot your future Amiga:
 
 ```reboot```
 
