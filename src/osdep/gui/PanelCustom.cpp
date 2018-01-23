@@ -468,7 +468,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		lblCustomAction[i]->setAlignment(gcn::Graphics::RIGHT);
 
 		cboCustomAction[i] = new gcn::UaeDropDown(&CustomEventList);
-		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth()*2, DROPDOWN_HEIGHT);
+		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth()*2, cboCustomAction[i]->getHeight());
 		cboCustomAction[i]->setBaseColor(gui_baseCol);
 		cboCustomAction[i]->setBackgroundColor(colTextboxBackground);
 

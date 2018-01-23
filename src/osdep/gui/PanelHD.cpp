@@ -438,7 +438,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cmdCDSelect->addActionListener(cdButtonActionListener);
 
 	cboCDFile = new gcn::UaeDropDown(&cdfileList);
-	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
+	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_baseCol);
 	cboCDFile->setBackgroundColor(colTextboxBackground);
 	cboCDFile->setId("cboCD");

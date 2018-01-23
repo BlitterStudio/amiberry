@@ -215,7 +215,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 
 	lblMainROM = new gcn::Label("Main ROM File:");
 	cboMainROM = new gcn::UaeDropDown(mainROMList);
-	cboMainROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
+	cboMainROM->setSize(textFieldWidth, cboMainROM->getHeight());
 	cboMainROM->setBaseColor(gui_baseCol);
 	cboMainROM->setBackgroundColor(colTextboxBackground);
 	cboMainROM->setId("cboMainROM");
@@ -228,7 +228,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 
 	lblExtROM = new gcn::Label("Extended ROM File:");
 	cboExtROM = new gcn::UaeDropDown(extROMList);
-	cboExtROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
+	cboExtROM->setSize(textFieldWidth, cboExtROM->getHeight());
 	cboExtROM->setBaseColor(gui_baseCol);
 	cboExtROM->setBackgroundColor(colTextboxBackground);
 	cboExtROM->setId("cboExtROM");
@@ -241,7 +241,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 
 	lblCartROM = new gcn::Label("Cartridge ROM File:");
 	cboCartROM = new gcn::UaeDropDown(cartROMList);
-	cboCartROM->setSize(textFieldWidth, DROPDOWN_HEIGHT);
+	cboCartROM->setSize(textFieldWidth, cboCartROM->getHeight());
 	cboCartROM->setBaseColor(gui_baseCol);
 	cboCartROM->setBackgroundColor(colTextboxBackground);
 	cboCartROM->setId("cboCartROM");

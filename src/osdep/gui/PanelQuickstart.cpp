@@ -638,7 +638,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	lblModel = new gcn::Label("Amiga model:");
 	lblModel->setAlignment(gcn::Graphics::RIGHT);
 	cboModel = new gcn::UaeDropDown(&amigaModelList);
-	cboModel->setSize(160, DROPDOWN_HEIGHT);
+	cboModel->setSize(160, cboModel->getHeight());
 	cboModel->setBaseColor(gui_baseCol);
 	cboModel->setBackgroundColor(colTextboxBackground);
 	cboModel->setId("qscboAModel");
@@ -647,7 +647,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	lblConfig = new gcn::Label("Config:");
 	lblConfig->setAlignment(gcn::Graphics::RIGHT);
 	cboConfig = new gcn::UaeDropDown(&amigaConfigList);
-	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
+	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER, cboConfig->getHeight());
 	cboConfig->setBaseColor(gui_baseCol);
 	cboConfig->setBackgroundColor(colTextboxBackground);
 	cboConfig->setId("qscboAConfig");
@@ -686,14 +686,14 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 		cmdDFxEject[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxSelect[i] = new gcn::Button("Select file");
-		cmdDFxSelect[i]->setSize(BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+		cmdDFxSelect[i]->setSize(BUTTON_WIDTH + 8, SMALL_BUTTON_HEIGHT);
 		cmdDFxSelect[i]->setBaseColor(gui_baseCol);
 		snprintf(tmp, 20, "qscmdSel%d", i);
 		cmdDFxSelect[i]->setId(tmp);
 		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
 
 		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
-		cboDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
+		cboDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "qscboDisk%d", i);
@@ -718,7 +718,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cmdCDSelect->addActionListener(cdButtonActionListener);
 
 	cboCDFile = new gcn::UaeDropDown(&cdfileList);
-	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, DROPDOWN_HEIGHT);
+	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_baseCol);
 	cboCDFile->setBackgroundColor(colTextboxBackground);
 	cboCDFile->setId("qscboCD");
@@ -754,7 +754,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 		category.panel->add(cmdDFxEject[i], posX, posY);
 		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxSelect[i], posX, posY);
-		posY += chkDFx[i]->getHeight() + 8;
+		posY += cmdDFxEject[i]->getHeight() + 8;
 
 		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
 		posY += cboDFxFile[i]->getHeight() + DISTANCE_NEXT_Y + 4;

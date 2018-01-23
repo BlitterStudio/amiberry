@@ -52,6 +52,7 @@ public:
 		if (actionEvent.getSource() == cmdOK)
 		{
 			dialogResult = true;
+			
 		}
 		dialogFinished = true;
 	}
