@@ -136,9 +136,9 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -I/usr/local/include
-    LDFLAGS += -L/usr/local/lib -lmali
+    LDFLAGS += -L/usr/local/lib
     NAME  = amiberry-tinker-dev
 endif
 
@@ -399,6 +399,9 @@ OBJS += src/jit/compemu_support.o
 
 -include $(OBJS:%.o=%.d)
 
+src/jit/compemu_support.o: src/jit/compemu_support.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -fomit-frame-pointer -o src/jit/compemu_support.o -c src/jit/compemu_support.cpp 
+	
 $(PROG): $(OBJS)
 	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
 ifndef DEBUG
