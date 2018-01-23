@@ -32,7 +32,10 @@ Directions to get this going:
 1) Get the Armbian image above, use something like Win32DiskImager or dd (unix)
    to image it onto an SD card.
 2) Place in Tinkerboard, boot, and set up Armbian according to the onscreen directions.
-3) Download your amibian-tinker-<date/time>.tar.gz to your /root dir (not /).
+3) Download your amibian-tinker-<date/time>.tar.gz to your /root dir (not /), then extract it with
+
+   ```tar xzvf <name of file```
+
 4) Run the setup command below:
 
    ```./setup.sh```
