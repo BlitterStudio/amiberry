@@ -624,6 +624,12 @@ void gui_message(const char* format, ...)
 	vsprintf(msg, format, parms);
 	va_end(parms);
 
+	if (!uae_gui)
+	{
+		// GUI screen is not initialized, output message to the console instead
+		printf("%s\n", msg);
+		return;
+	}
 	InGameMessage(msg);
 }
 
