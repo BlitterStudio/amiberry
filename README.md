@@ -2,7 +2,9 @@
 
 Possible Requirements:
 1) I am testing with this Armbian system image:
+
    https://dl.armbian.com/tinkerboard/Debian_stretch_next.7z
+
    Its possible that any kernel that supports the Mali GPU userspace
    drivers will work, but if no display comes up try this kernel.
    If you get this running on TinkerOS let me know, I haven't
@@ -33,13 +35,13 @@ Directions to get this going:
 3) Download your amibian-tinker-<date/time>.tar.gz to your /root dir (not /).
 4) Run the setup command below:
 
-```./setup.sh```
+   ```./setup.sh```
 
-5) Building the system will take 10-30 mins depending on SD card speed, but ensures
+   Building the system will take 10-30 mins depending on SD card speed, but ensures
    that all the components on the system are using accelerated drivers.
 6) Reboot your future Amiga:
 
-```reboot```
+   ```reboot```
 
 Note: You need a ROM, preferably Kickstart 3.1 but anything should do.
       You need either a floppy or hardfile ready, or a bootable directory.
