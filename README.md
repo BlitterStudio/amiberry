@@ -1,6 +1,4 @@
-#####################################
 # Amibian for Armbian / TinkerBoard # Beta 1.3
-#####################################
 
 Possible Requirements:
 1) I am testing with this Armbian system image:
@@ -19,7 +17,9 @@ Possible Requirements:
    at 70c, giving you a great experience for about 30 mins until slowing to
    a crawl.   Try it without it first, but if the emulator seems super slow
    please check:
-    cat /sys/devices/virtual/thermal/thermal_zone0/temp
+   
+    ```cat /sys/devices/virtual/thermal/thermal_zone0/temp```
+    
    Preferably while the emulator is running.  If it is 70000 or higher, the
    Tinkerboard is overheating and is throttling.
 
@@ -32,11 +32,14 @@ Directions to get this going:
 2) Place in Tinkerboard, boot, and set up Armbian according to the onscreen directions.
 3) Download your amibian-tinker-<date/time>.tar.gz to your /root dir (not /).
 4) Run the setup command below:
-    ./setup.sh
-   Building the system will take 10-30 mins depending on SD card speed, but ensures
-   that all the components on the system are using accelerated drivers.
+
+```./setup.sh```
+
+Building the system will take 10-30 mins depending on SD card speed, but ensures
+that all the components on the system are using accelerated drivers.
 5) Reboot your future Amiga:
-    reboot
+
+```reboot```
 
 Note: You need a ROM, preferably Kickstart 3.1 but anything should do.
       You need either a floppy or hardfile ready, or a bootable directory.
@@ -49,14 +52,15 @@ on Windows, Mac, Linux and even sufficiently advanced Amigas.
 
 To run it:
 
+ ```
  cd ~/amiberry
  ./amiberry-tinker-dev
-
+```
 To try the upcoming "GO64" support:
-
+```
  cd ~/vice-3.1
  src/x64                           # or src/x128, or src/x<my fav commodore)
-
+```
 Some programs are provided in SMB0 to benchmark the performance and to test in
 general.   Picasso96 is also provided.  You will need it to enjoy RTG.  Currently
 packed are:
