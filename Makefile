@@ -15,6 +15,7 @@ CPPFLAGS+= -MD -MP
 #GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
+#WITH_LOGGING=1
 
 #
 # SDL1 targets
@@ -401,9 +402,10 @@ OBJS += src/jit/compemu_support.o
 
 src/jit/compemu_support.o: src/jit/compemu_support.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -fomit-frame-pointer -o src/jit/compemu_support.o -c src/jit/compemu_support.cpp 
-	
+
 $(PROG): $(OBJS)
 	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
+	cp $(PROG) $(PROG)-debug
 ifndef DEBUG
 	$(STRIP) $(PROG)
 endif

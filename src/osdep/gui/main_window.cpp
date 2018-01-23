@@ -296,6 +296,7 @@ namespace sdl
 #ifndef TINKER
 		setup_cursor();
 #endif
+
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 

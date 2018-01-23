@@ -320,7 +320,7 @@ int graphics_setup(void)
 
 	if (renderer == nullptr)
 	{
-		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
 		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 	}
 
@@ -537,8 +537,10 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen != nullptr)
 	{
+		
 		InitAmigaVidMode(p);
 		init_row_map();
+		vsync_switchmode(p->ntscmode ? 60 : 50);
 	}
 }
 
@@ -691,7 +693,6 @@ void show_screen(int mode)
 	current_vsync_frame += currprefs.gfx_framerate;
 #endif
 
-	
 #ifdef USE_DISPMANX
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
