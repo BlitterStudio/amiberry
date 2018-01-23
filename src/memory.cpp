@@ -538,72 +538,76 @@ addrbank custmem2_bank = {
 
 static const uae_char *kickstring = "exec.library";
 
-static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksum, int noalias)
+static int read_kickstart(struct zfile *f, uae_u8 *mem, int size, int dochecksum, int noalias)
 {
-  uae_char buffer[20];
-  int i, j, oldpos;
-  int cr = 0, kickdisk = 0;
+	uae_char buffer[20];
+	int i, j, oldpos;
+	int cr = 0, kickdisk = 0;
 
-  if (size < 0) {
-  	zfile_fseek (f, 0, SEEK_END);
-  	size = zfile_ftell (f) & ~0x3ff;
-  	zfile_fseek (f, 0, SEEK_SET);
-  }
-  oldpos = zfile_ftell (f);
-  i = zfile_fread (buffer, 1, 11, f);
-  if (!memcmp(buffer, "KICK", 4)) {
-    zfile_fseek (f, 512, SEEK_SET);
-    kickdisk = 1;
-  } else if (memcmp ((uae_char*)buffer, "AMIROMTYPE1", 11) != 0) {
-    zfile_fseek (f, oldpos, SEEK_SET);
-  } else {
-  	cloanto_rom = 1;
-  	cr = 1;
-  }
-
-  memset (mem, 0, size);
-	if (size >= 131072) {
-		for (i = 0; i < 8; i++) {
-    	mem[size - 16 + i * 2 + 1] = 0x18 + i;
-		}
-    mem[size - 20] = size >> 24;
-    mem[size - 19] = size >> 16;
-    mem[size - 18] = size >>  8;
-    mem[size - 17] = size >>  0;
+	if (size < 0) {
+		zfile_fseek(f, 0, SEEK_END);
+		size = zfile_ftell(f) & ~0x3ff;
+		zfile_fseek(f, 0, SEEK_SET);
+	}
+	oldpos = zfile_ftell(f);
+	i = zfile_fread(buffer, 1, 11, f);
+	if (i < 11)
+		return 0;
+	if (!memcmp(buffer, "KICK", 4)) {
+		zfile_fseek(f, 512, SEEK_SET);
+		kickdisk = 1;
+	}
+	else if (memcmp((uae_char*)buffer, "AMIROMTYPE1", 11) != 0) {
+		zfile_fseek(f, oldpos, SEEK_SET);
+	}
+	else {
+		cloanto_rom = 1;
+		cr = 1;
 	}
 
-  i = zfile_fread (mem, 1, size, f);
+	memset(mem, 0, size);
+	if (size >= 131072) {
+		for (i = 0; i < 8; i++) {
+			mem[size - 16 + i * 2 + 1] = 0x18 + i;
+		}
+		mem[size - 20] = size >> 24;
+		mem[size - 19] = size >> 16;
+		mem[size - 18] = size >> 8;
+		mem[size - 17] = size >> 0;
+	}
 
-  if (kickdisk && i > ROM_SIZE_256)
-    i = ROM_SIZE_256;
-  if (i < size - 20)
-  	kickstart_fix_checksum (mem, size);
-  j = 1;
-  while (j < i)
-  	j <<= 1;
-  i = j;
+	i = zfile_fread(mem, 1, size, f);
 
-  if (!noalias && i == size / 2)
-    memcpy (mem + size / 2, mem, size / 2);
+	if (kickdisk && i > ROM_SIZE_256)
+		i = ROM_SIZE_256;
+	if (i < size - 20)
+		kickstart_fix_checksum(mem, size);
+	j = 1;
+	while (j < i)
+		j <<= 1;
+	i = j;
 
-  if (cr) {
-    if(!decode_rom (mem, size, cr, i))
-      return 0;
-  }
+	if (!noalias && i == size / 2)
+		memcpy(mem + size / 2, mem, size / 2);
+
+	if (cr) {
+		if (!decode_rom(mem, size, cr, i))
+			return 0;
+	}
 
 	if (size <= 256)
 		return size;
 
-  for (j = 0; j < 256 && i >= ROM_SIZE_256; j++) {
-  	if (!memcmp (mem + j, kickstring, strlen (kickstring) + 1))
-	    break;
-  }
+	for (j = 0; j < 256 && i >= ROM_SIZE_256; j++) {
+		if (!memcmp(mem + j, kickstring, strlen(kickstring) + 1))
+			break;
+	}
 
-  if (j == 256 || i < ROM_SIZE_256)
-  	dochecksum = 0;
-  if (dochecksum)
-  	kickstart_checksum (mem, size);
-  return i;
+	if (j == 256 || i < ROM_SIZE_256)
+		dochecksum = 0;
+	if (dochecksum)
+		kickstart_checksum(mem, size);
+	return i;
 }
 
 static bool load_extendedkickstart (const TCHAR *romextfile, int type)
