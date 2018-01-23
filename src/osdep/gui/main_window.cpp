@@ -295,6 +295,9 @@ namespace sdl
 #elif USE_SDL2
 #ifndef TINKER
 		setup_cursor();
+#else
+		cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+		SDL_SetCursor(cursor);
 #endif
 
 		// make the scaled rendering look smoother (linear scaling).
