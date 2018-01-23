@@ -241,6 +241,7 @@ void InGameMessage(const char* msg)
 	if (SDL_NumJoysticks() > 0)
 		if (GUIjoy == nullptr)
 			GUIjoy = SDL_JoystickOpen(0);
+	if (!uae_gui) { printf("%s\n",msg); return; }        
 
 	// Prepare the screen once
 	uae_gui->logic();

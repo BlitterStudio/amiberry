@@ -15,6 +15,7 @@ CPPFLAGS+= -MD -MP
 #GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
+#WITH_LOGGING=1
 
 #
 # SDL1 targets
@@ -135,9 +136,9 @@ USE_SDL2 = 1
     NAME  = amiberry-xu4-sdl2-dev
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4 -mfloat-abi=hard
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -I/usr/local/include
-    LDFLAGS += -L/usr/local/lib -lmali
+    LDFLAGS += -L/usr/local/lib
     HAVE_NEON = 1
     NAME  = amiberry-tinker-dev
 endif
@@ -399,8 +400,12 @@ OBJS += src/jit/compemu_support.o
 
 -include $(OBJS:%.o=%.d)
 
+src/jit/compemu_support.o: src/jit/compemu_support.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -fomit-frame-pointer -o src/jit/compemu_support.o -c src/jit/compemu_support.cpp 
+
 $(PROG): $(OBJS)
 	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
+	cp $(PROG) $(PROG)-debug
 ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
