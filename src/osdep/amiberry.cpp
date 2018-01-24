@@ -53,7 +53,6 @@ bool host_poweroff = false;
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
-extern void gui_force_rtarea_hdchange(void);
 
 extern void SetLastActiveConfig(const char* filename);
 
@@ -246,7 +245,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->vertical_offset = OFFSET_Y_ADJUST;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
-	p->gfx_vresolution = 1;
+	p->gfx_vresolution = 0; // Disabled by default due to big performance hit under SDL2
 
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
