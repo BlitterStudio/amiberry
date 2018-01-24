@@ -177,7 +177,6 @@ endif
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers
 DEFS += `xml2-config --cflags`
 DEFS += -DAMIBERRY -DARMV6_ASSEMBLY
-#DEFS += -DWITH_LOGGING
 
 ifndef DEBUG
     CFLAGS += -Ofast
@@ -462,7 +461,7 @@ ASMS = \
 genasm: $(ASMS)
 
 clean:
-	$(RM) $(PROG) $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
+	$(RM) $(PROG) $(PROG)-debug $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
 	$(MAKE) -C src/guisan clean
 
 delasm:
