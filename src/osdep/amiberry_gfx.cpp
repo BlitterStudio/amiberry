@@ -303,12 +303,12 @@ int graphics_setup(void)
 
 	if (sdlWindow == nullptr)
 	{
-		sdlWindow = SDL_CreateWindow("Amiberry-GUI",
+		sdlWindow = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
-			0,
-			0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
+			800,
+			480,
+			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
 	}
 	
