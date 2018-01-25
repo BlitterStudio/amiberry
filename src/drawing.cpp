@@ -207,10 +207,11 @@ int framecnt = 0;
 
 STATIC_INLINE void count_frame (void)
 {
-  framecnt++;
-  if (framecnt > currprefs.gfx_framerate)
-		framecnt = 0;
-  if (inhibit_frame)
+    framecnt++; 
+    if (framecnt > currprefs.gfx_framerate)
+	framecnt = 0;
+
+ if (inhibit_frame)
     framecnt = 1;
 }
 

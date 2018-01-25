@@ -70,20 +70,31 @@ static void uae_abort (const TCHAR *format,...)
 // Alynna // 
 // Justifications for the numbers set here
 // Frametime is 20000 cycles in PAL
-// Give back 90% the frametime if possible.
-// To keep things even speedwise, we'll match PAL
-// and NTSC top speed.
-// The timelimits are set in such a way to maintain
-// 40FPS in all modes.
+//              16667 cycles in NTSC
+// The most we can give back is a frame's worth of
+// cycles, but we shouldn't give them ALL back for timing
+// coordination so I have picked 90% of the cycles.
+// NOTE: NON-JIT has less to give back.
 #define SPEEDUP_CYCLES_JIT_PAL     18000
-#define SPEEDUP_CYCLES_JIT_NTSC    18000
-#define SPEEDUP_CYCLES_NONJIT      18000
-
-// These try to define the fastest CPU that gives 50-60FPS
-#define SPEEDUP_TIMELIMIT_JIT      -9000
-#define SPEEDUP_TIMELIMIT_NONJIT   -9000
-
-// These try to define the fastest CPU that gives 30-40FPS
+#define SPEEDUP_CYCLES_JIT_NTSC    15000
+#define SPEEDUP_CYCLES_NONJIT       1024
+// These are set to give enough time to hit 60 fps
+// on the ASUS tinker board, and giving the rest of the
+// time to the CPU (minus the 10% reserve above).
+// As these numbers are decreased towards -(SPEEDUP_CYCLES),
+// more chipset time is given and the CPU gets slower.
+// For your platform its best to tune these to the point where
+// you hit 60FPS in NTSC and not higher.
+// Do not tune below -(SPEEDUP_CYCLES) or the emulation will
+// become unstable.
+#define SPEEDUP_TIMELIMIT_JIT     -10000
+#define SPEEDUP_TIMELIMIT_NONJIT    -960
+// These define the maximum CPU possible and work well with
+// frameskip on and operation at 30fps at full chipset speed
+// They give the minimum possible chipset time.  Do not make
+// these positive numbers.  Doing so may give you a 500mhz
+// 68040 but your emulation will not be able to reset at this
+// speed.
 #define SPEEDUP_TIMELIMIT_JIT_30      0
 #define SPEEDUP_TIMELIMIT_NONJIT_30   0
 #else
@@ -5598,15 +5609,14 @@ static void fpscounter (void)
 
 	if ((int)last < 0)
 		return;
-
 	if(currprefs.gfx_framerate)
 	  idletime >>= 1;
-
+	
 	mavg (&fps_mavg, last / 10, FPSCOUNTER_MAVG_SIZE);
 	mavg (&idle_mavg, idletime / 10, FPSCOUNTER_MAVG_SIZE);
 	idletime = 0;
 
-  timeframes++;
+	timeframes++;
 
 	if ((timeframes & 7) == 0) {
 		double idle = 1000 - (idle_mavg.mavg == 0 ? 0.0 : (double)idle_mavg.mavg * 1000.0 / vsynctimebase);
@@ -5769,7 +5779,7 @@ static void dmal_emu (uae_u32 v)
 			// write to disk
 			if (disk_fifostatus () <= 0) {
 				dat = chipmem_wget_indirect (pt);
-        last_custom_value1 = dat;
+    				last_custom_value1 = dat;
 				DSKDAT (dat);
 			}
 		} else {

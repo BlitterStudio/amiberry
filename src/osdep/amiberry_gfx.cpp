@@ -657,6 +657,11 @@ int sdl2_render_thread(void *ptr) {
 void show_screen(int mode)
 {
 	const auto start = read_processor_time();
+
+#ifdef USE_SDL2
+	// Alynna // This hack is to keep good timing in RTG.
+	currprefs.gfx_framerate = screen_is_picasso;
+#endif
 		
 #ifdef USE_DISPMANX
 	const auto wait_till = current_vsync_frame;
@@ -725,6 +730,7 @@ void show_screen(int mode)
 	//SDL_RenderClear(renderer);
 	//SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	//SDL_RenderPresent(renderer);
+	//printf("%d\n",currprefs.gfx_framerate);
 #endif
 	last_synctime = read_processor_time();
 	idletime += last_synctime - start;

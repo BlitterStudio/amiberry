@@ -240,8 +240,8 @@ void swcursor(bool op) {
 	SDL_FreeSurface(cursor_surface);	
     } else {
         SDL_GetMouseState(&dst.x,&dst.y);
-	dst.x *= mscalex;
-	dst.y *= mscaley;
+	dst.x *= mscalex * 1.03;
+	dst.y *= mscaley * 1.005;
         SDL_RenderCopy(renderer, swcursor_texture, nullptr, &dst);
     }
 }
@@ -329,8 +329,8 @@ namespace sdl
 #else
 		swcursor(0);
 		SDL_GetCurrentDisplayMode(0, &physmode);
-		mscalex = (double)1.025 * ((double)GUI_WIDTH  / (double)physmode.w);
-		mscaley = (double)1.025 * ((double)GUI_HEIGHT / (double)physmode.h);
+		mscalex = ((double)GUI_WIDTH  / (double)physmode.w);
+		mscaley = ((double)GUI_HEIGHT / (double)physmode.h);
 #endif	    
 
 		// make the scaled rendering look smoother (linear scaling).
