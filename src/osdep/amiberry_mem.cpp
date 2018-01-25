@@ -396,7 +396,7 @@ bool uae_mman_info(addrbank *ab, struct uae_mman_data *md)
 	return got;
 }
 
-
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 bool mapped_malloc(addrbank *ab)
 {
 	if (ab->allocated_size) {
@@ -433,7 +433,7 @@ bool mapped_malloc(addrbank *ab)
 	return (ab->baseaddr != nullptr);
 }
 
-
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 void mapped_free(addrbank *ab)
 {
 	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr) {
