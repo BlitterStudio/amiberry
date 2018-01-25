@@ -306,13 +306,12 @@ int graphics_setup(void)
 
 	if (sdlWindow == nullptr)
 	{
-		sdlWindow = SDL_CreateWindow("Amiberry-GUI",
+		sdlWindow = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
 			0,
 			0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
-
+			SDL_WINDOW_FULLSCREEN);
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
 	}
 	
@@ -324,7 +323,7 @@ int graphics_setup(void)
 
 	if (renderer == nullptr)
 	{
-		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
+		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 	}
 

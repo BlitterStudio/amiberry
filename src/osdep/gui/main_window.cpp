@@ -22,7 +22,6 @@
 #include "autoconf.h"
 
 #include "inputdevice.h"
-#include "swcursor.cpp"
 
 #if defined(ANDROIDSDL)
 #include "androidsdl_event.h"
@@ -105,7 +104,7 @@ SDL_Cursor* cursor;
 SDL_Surface* cursor_surface;
 SDL_Texture* swcursor_texture = NULL;
 static SDL_DisplayMode physmode;
-static float mscalex, mscaley;
+static double mscalex, mscaley;
 #endif
 
 /*
@@ -270,14 +269,14 @@ namespace sdl
 	void setup_cursor() 
 	{
 		// Detect resolution and load appropiate cursor image
-		if (sdlMode.w > 1280)
-		{
-			cursor_surface = SDL_LoadBMP("data/cursor-x2.bmp");
-		}
-		else
-		{
+		//if (sdlMode.w > 1280)
+		//{
+		//	cursor_surface = SDL_LoadBMP("data/cursor-x2.bmp");
+		//}
+		//else
+		//{
 			cursor_surface = SDL_LoadBMP("data/cursor.bmp");
-		}
+		//}
 		
 		if (!cursor_surface)
 		{
@@ -330,8 +329,8 @@ namespace sdl
 #else
 		swcursor(0);
 		SDL_GetCurrentDisplayMode(0, &physmode);
-		mscalex = (float)GUI_WIDTH  / (float)physmode.w;
-		mscaley = (float)GUI_HEIGHT / (float)physmode.h;
+		mscalex = (double)1.025 * ((double)GUI_WIDTH  / (double)physmode.w);
+		mscaley = (double)1.025 * ((double)GUI_HEIGHT / (double)physmode.h);
 #endif	    
 
 		// make the scaled rendering look smoother (linear scaling).

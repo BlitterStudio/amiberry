@@ -66,6 +66,7 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
+#ifdef TINKER
 // Alynna // 
 // Justifications for the numbers set here
 // Frametime is 20000 cycles in PAL
@@ -85,6 +86,17 @@ static void uae_abort (const TCHAR *format,...)
 // These try to define the fastest CPU that gives 30-40FPS
 #define SPEEDUP_TIMELIMIT_JIT_30      5000
 #define SPEEDUP_TIMELIMIT_NONJIT_30   5000
+#else
+// Setting these to reasonable guess for raspberry pi.
+// Dimitris can mess with these.
+#define SPEEDUP_CYCLES_JIT_PAL 5000
+#define SPEEDUP_CYCLES_JIT_NTSC 4000
+#define SPEEDUP_CYCLES_NONJIT 256
+#define SPEEDUP_TIMELIMIT_JIT -750
+#define SPEEDUP_TIMELIMIT_NONJIT -750
+#define SPEEDUP_TIMELIMIT_JIT_30      3000
+#define SPEEDUP_TIMELIMIT_NONJIT_30   3000
+#endif
 
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;

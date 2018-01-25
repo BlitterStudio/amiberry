@@ -396,7 +396,6 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 
 		cboDFxType[i] = new gcn::UaeDropDown(&driveTypeList);
-		cboDFxType[i]->setSize(106, DROPDOWN_HEIGHT);
 		cboDFxType[i]->setBaseColor(gui_baseCol);
 		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboType%d", i);
@@ -428,7 +427,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
 
 		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
-		cboDFxFile[i]->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+		cboDFxFile[i]->setSize(textFieldWidth, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboDisk%d", i);
@@ -485,7 +484,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		category.panel->add(cmdDFxEject[i], posX, posY);
 		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
 	  	category.panel->add(cmdDFxSelect[i], posX, posY);
-	  	posY += chkDFx[i]->getHeight() + 8;
+	  	posY += cmdDFxEject[i]->getHeight() + 8;
 
 	  	category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
 		if (i == 0)

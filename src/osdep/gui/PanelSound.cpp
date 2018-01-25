@@ -274,7 +274,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	lblFrequency = new gcn::Label("Frequency:");
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
 	cboFrequency = new gcn::UaeDropDown(&frequencyTypeList);
-	cboFrequency->setSize(160, DROPDOWN_HEIGHT);
+	cboFrequency->setSize(160, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
@@ -296,7 +296,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	lblInterpolation = new gcn::Label("Interpolation:");
 	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
 	cboInterpolation = new gcn::UaeDropDown(&interpolationTypeList);
-	cboInterpolation->setSize(160, DROPDOWN_HEIGHT);
+	cboInterpolation->setSize(160, cboInterpolation->getHeight());
 	cboInterpolation->setBaseColor(gui_baseCol);
 	cboInterpolation->setBackgroundColor(colTextboxBackground);
 	cboInterpolation->setId("cboInterpol");
@@ -305,7 +305,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	lblFilter = new gcn::Label("Filter:");
 	lblFilter->setAlignment(gcn::Graphics::RIGHT);
 	cboFilter = new gcn::UaeDropDown(&filterTypeList);
-	cboFilter->setSize(160, DROPDOWN_HEIGHT);
+	cboFilter->setSize(160, cboFilter->getHeight());
 	cboFilter->setBaseColor(gui_baseCol);
 	cboFilter->setBackgroundColor(colTextboxBackground);
 	cboFilter->setId("cboFilter");

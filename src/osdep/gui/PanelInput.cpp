@@ -299,14 +299,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort0 = new gcn::Label("Port 0 [Mouse]:");
 	lblPort0->setAlignment(gcn::Graphics::RIGHT);
 	cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort0->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
+	cboPort0->setSize(textFieldWidth/2, cboPort0->getHeight());
 	cboPort0->setBaseColor(gui_baseCol);
 	cboPort0->setBackgroundColor(colTextboxBackground);
 	cboPort0->setId("cboPort0");
 	cboPort0->addActionListener(inputActionListener);
 
 	cboPort0mode = new gcn::UaeDropDown(&ctrlPortModeList);
-	cboPort0mode->setSize(cboPort0mode->getWidth(), DROPDOWN_HEIGHT);
+	cboPort0mode->setSize(cboPort0mode->getWidth(), cboPort0mode->getHeight());
 	cboPort0mode->setBaseColor(gui_baseCol);
 	cboPort0mode->setBackgroundColor(colTextboxBackground);
 	cboPort0mode->setId("cboPort0mode");
@@ -316,14 +316,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort1->setAlignment(gcn::Graphics::RIGHT);
 	lblPort0->setSize(lblPort1->getWidth(), lblPort0->getHeight());
 	cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort1->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
+	cboPort1->setSize(textFieldWidth/2, cboPort1->getHeight());
 	cboPort1->setBaseColor(gui_baseCol);
 	cboPort1->setBackgroundColor(colTextboxBackground);
 	cboPort1->setId("cboPort1");
 	cboPort1->addActionListener(inputActionListener);
 
 	cboPort1mode = new gcn::UaeDropDown(&ctrlPortModeList);
-	cboPort1mode->setSize(cboPort1mode->getWidth(), DROPDOWN_HEIGHT);
+	cboPort1mode->setSize(cboPort1mode->getWidth(), cboPort1mode->getHeight());
 	cboPort1mode->setBaseColor(gui_baseCol);
 	cboPort1mode->setBackgroundColor(colTextboxBackground);
 	cboPort1mode->setId("cboPort1mode");
@@ -332,7 +332,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort2 = new gcn::Label("Port 2 [Parallel 1]:");
 	lblPort2->setAlignment(gcn::Graphics::LEFT);
 	cboPort2 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort2->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
+	cboPort2->setSize(textFieldWidth/2, cboPort2->getHeight());
 	cboPort2->setBaseColor(gui_baseCol);
 	cboPort2->setBackgroundColor(colTextboxBackground);
 	cboPort2->setId("cboPort2");
@@ -341,7 +341,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort3 = new gcn::Label("Port 3 [Parallel 2]:");
 	lblPort3->setAlignment(gcn::Graphics::LEFT);
 	cboPort3 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort3->setSize(textFieldWidth/2, DROPDOWN_HEIGHT);
+	cboPort3->setSize(textFieldWidth/2, cboPort3->getHeight());
 	cboPort3->setBaseColor(gui_baseCol);
 	cboPort3->setBackgroundColor(colTextboxBackground);
 	cboPort3->setId("cboPort3");
@@ -350,7 +350,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort0mousemode = new gcn::Label("Mouse Stick 0:");
 	lblPort0mousemode->setAlignment(gcn::Graphics::RIGHT);
 	cboPort0mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
-	cboPort0mousemode->setSize(68, DROPDOWN_HEIGHT);
+	cboPort0mousemode->setSize(68, cboPort0mousemode->getHeight());
 	cboPort0mousemode->setBaseColor(gui_baseCol);
 	cboPort0mousemode->setBackgroundColor(colTextboxBackground);
 	cboPort0mousemode->setId("cboPort0mousemode");
@@ -359,7 +359,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort1mousemode = new gcn::Label("Mouse Stick 1:");
 	lblPort1mousemode->setAlignment(gcn::Graphics::RIGHT);
 	cboPort1mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
-	cboPort1mousemode->setSize(68, DROPDOWN_HEIGHT);
+	cboPort1mousemode->setSize(68, cboPort1mousemode->getHeight());
 	cboPort1mousemode->setBaseColor(gui_baseCol);
 	cboPort1mousemode->setBackgroundColor(colTextboxBackground);
 	cboPort1mousemode->setId("cboPort1mousemode");
@@ -368,7 +368,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblAutofire = new gcn::Label("Autofire Rate:");
 	lblAutofire->setAlignment(gcn::Graphics::RIGHT);
 	cboAutofire = new gcn::UaeDropDown(&autofireList);
-	cboAutofire->setSize(80, DROPDOWN_HEIGHT);
+	cboAutofire->setSize(80, cboAutofire->getHeight());
 	cboAutofire->setBaseColor(gui_baseCol);
 	cboAutofire->setBackgroundColor(colTextboxBackground);
 	cboAutofire->setId("cboAutofire");

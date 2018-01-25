@@ -44,7 +44,7 @@ static gcn::ScrollArea* scrAreaFolders;
 static gcn::TextField* txtCurrent;
 
 
-class FolderButtonActionListener : public gcn::ActionListener
+class FolderRequesterButtonActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -52,12 +52,13 @@ public:
 		if (actionEvent.getSource() == cmdOK)
 		{
 			dialogResult = true;
+			
 		}
 		dialogFinished = true;
 	}
 };
 
-static FolderButtonActionListener* folderButtonActionListener;
+static FolderRequesterButtonActionListener* folderButtonActionListener;
 
 
 class SelectDirListModel : public gcn::ListModel
@@ -139,7 +140,7 @@ static void InitSelectFolder(const char* title)
 	wndSelectFolder->setCaption(title);
 	wndSelectFolder->setTitleBarHeight(TITLEBAR_HEIGHT);
 
-	folderButtonActionListener = new FolderButtonActionListener();
+	folderButtonActionListener = new FolderRequesterButtonActionListener();
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
