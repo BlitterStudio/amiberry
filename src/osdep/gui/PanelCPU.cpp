@@ -44,6 +44,7 @@ static gcn::UaeRadioButton* opt7Mhz;
 static gcn::UaeRadioButton* opt14Mhz;
 static gcn::UaeRadioButton* opt28Mhz;
 static gcn::UaeRadioButton* optFastest;
+static gcn::UaeRadioButton* optFastest30;
 
 
 class CPUButtonActionListener : public gcn::ActionListener
@@ -140,6 +141,8 @@ public:
 			changed_prefs.m68k_speed = M68K_SPEED_25MHZ_CYCLES;
 		else if (actionEvent.getSource() == optFastest)
 			changed_prefs.m68k_speed = -1;
+		else if (actionEvent.getSource() == optFastest30)
+			changed_prefs.m68k_speed = -30;
 	}
 };
 
@@ -312,8 +315,11 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	opt28Mhz = new gcn::UaeRadioButton("25 Mhz", "radiocpuspeedgroup");
 	opt28Mhz->addActionListener(cpuSpeedButtonActionListener);
 
-	optFastest = new gcn::UaeRadioButton("Fastest", "radiocpuspeedgroup");
+	optFastest = new gcn::UaeRadioButton("Fastest (>50fps)", "radiocpuspeedgroup");
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
+
+	optFastest30 = new gcn::UaeRadioButton("Fastest (~30fps)", "radiocpuspeedgroup");
+	optFastest30->addActionListener(cpuSpeedButtonActionListener);
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");
 	grpCPUSpeed->setPosition(grpFPU->getX() + grpFPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
@@ -321,8 +327,9 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpCPUSpeed->add(opt14Mhz, 5, 40);
 	grpCPUSpeed->add(opt28Mhz, 5, 70);
 	grpCPUSpeed->add(optFastest, 5, 100);
+	grpCPUSpeed->add(optFastest30, 5, 130);
 	grpCPUSpeed->setMovable(false);
-	grpCPUSpeed->setSize(95, 145);
+	grpCPUSpeed->setSize(180, 200);
 	grpCPUSpeed->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCPUSpeed);
@@ -416,6 +423,8 @@ void RefreshPanelCPU()
 		opt28Mhz->setSelected(true);
 	else if (changed_prefs.m68k_speed == -1)
 		optFastest->setSelected(true);
+	else if (changed_prefs.m68k_speed == -30)
+		optFastest30->setSelected(true);
 }
 
 bool HelpPanelCPU(std::vector<std::string> &helptext)

@@ -265,10 +265,10 @@ static uae_u32 REGPARAM2 uae_puts (TrapContext *ctx)
 
 void rtarea_init_mem (void)
 {
-	rtarea_bank.reserved_size = RTAREA_SIZE;
-	rtarea_bank.start = rtarea_base;
-	if (!mapped_malloc (&rtarea_bank)) {
-  	write_log (_T("virtual memory exhausted (rtarea)!\n"));
+    rtarea_bank.reserved_size = RTAREA_SIZE;
+    rtarea_bank.start = rtarea_base;
+    if (!mapped_malloc (&rtarea_bank)) {
+    write_log (_T("virtual memory exhausted (rtarea)!\n"));
     target_startup_msg(_T("Internal error"), _T("Virtual memory exhausted (rtarea)."));
     uae_restart(1, NULL);
     return;
@@ -280,6 +280,7 @@ void rtarea_free(void)
 	mapped_free(&rtarea_bank);
 }
 
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 void rtarea_init (void)
 {
   uae_u32 a;
@@ -291,7 +292,7 @@ void rtarea_init (void)
   init_traps ();
 
   rtarea_init_mem ();
-	memset (rtarea_bank.baseaddr, 0, RTAREA_SIZE);
+  memset (rtarea_bank.baseaddr, 0, RTAREA_SIZE);
 
   _stprintf (uaever, _T("uae-%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 

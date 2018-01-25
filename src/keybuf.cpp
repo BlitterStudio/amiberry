@@ -61,8 +61,10 @@ int record_key (int kc)
   return 1;
 }
 
-void keybuf_init (void)
+
+					void keybuf_init (void)
 {
   kpb_first = kpb_last = 0;
 	inputdevice_updateconfig (&changed_prefs, &currprefs);
 }
+

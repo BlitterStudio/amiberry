@@ -66,11 +66,26 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-#define SPEEDUP_CYCLES_JIT_PAL 10000
-#define SPEEDUP_CYCLES_JIT_NTSC 8000
-#define SPEEDUP_CYCLES_NONJIT 1024
-#define SPEEDUP_TIMELIMIT_JIT -6000
-#define SPEEDUP_TIMELIMIT_NONJIT -750
+// Alynna // 
+// Justifications for the numbers set here
+// Frametime is 20000 cycles in PAL
+// Give back 90% the frametime if possible.
+// To keep things even speedwise, we'll match PAL
+// and NTSC top speed.
+// The timelimits are set in such a way to maintain
+// 40FPS in all modes.
+#define SPEEDUP_CYCLES_JIT_PAL     18000
+#define SPEEDUP_CYCLES_JIT_NTSC    18000
+#define SPEEDUP_CYCLES_NONJIT      18000
+
+// These try to define the fastest CPU that gives 50-60FPS
+#define SPEEDUP_TIMELIMIT_JIT      -9000
+#define SPEEDUP_TIMELIMIT_NONJIT   -9000
+
+// These try to define the fastest CPU that gives 30-40FPS
+#define SPEEDUP_TIMELIMIT_JIT_30      5000
+#define SPEEDUP_TIMELIMIT_NONJIT_30   5000
+
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
 
@@ -354,10 +369,16 @@ void set_speedup_values(void)
   if(currprefs.m68k_speed < 0) {
     if (currprefs.cachesize) {
       pissoff_value = ((vblank_hz > 55) ? SPEEDUP_CYCLES_JIT_NTSC : SPEEDUP_CYCLES_JIT_PAL) * CYCLE_UNIT;
-      speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+      if (currprefs.m68k_speed != -30) 
+          speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+      else
+          speedup_timelimit = SPEEDUP_TIMELIMIT_JIT_30;
     } else {
       pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
-      speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+      if (currprefs.m68k_speed != -30) 
+          speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+      else
+          speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT_30;
     }
   } else {
     pissoff_value = 0;

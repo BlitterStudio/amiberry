@@ -19,6 +19,7 @@ uae_u8* natmem_offset = nullptr;
 static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
 
+
 /* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
 #define BARRIER 32
 
@@ -396,7 +397,7 @@ bool uae_mman_info(addrbank *ab, struct uae_mman_data *md)
 	return got;
 }
 
-
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 bool mapped_malloc(addrbank *ab)
 {
 	if (ab->allocated_size) {
@@ -433,7 +434,7 @@ bool mapped_malloc(addrbank *ab)
 	return (ab->baseaddr != nullptr);
 }
 
-
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 void mapped_free(addrbank *ab)
 {
 	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr) {

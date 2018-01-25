@@ -22,6 +22,7 @@
 #include "autoconf.h"
 
 #include "inputdevice.h"
+#include "swcursor.cpp"
 
 #if defined(ANDROIDSDL)
 #include "androidsdl_event.h"
@@ -102,6 +103,9 @@ SDL_Event gui_event;
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
 SDL_Surface* cursor_surface;
+SDL_Texture* swcursor_texture = NULL;
+static SDL_DisplayMode physmode;
+static float mscalex, mscaley;
 #endif
 
 /*
@@ -220,17 +224,44 @@ static void ShowHelpRequested()
 	}
 }
 
+static SDL_Rect dst;
+void swcursor(bool op) {
+    if (op == -1) {
+	SDL_DestroyTexture(swcursor_texture);
+	swcursor_texture = NULL;
+    } else if (op == 0) {
+        cursor_surface = SDL_LoadBMP("data/cursor.bmp");
+	swcursor_texture = SDL_CreateTextureFromSurface(renderer, cursor_surface);
+        // Hide real cursor
+	SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
+        SDL_ShowCursor(0);
+        // Set cursor width,height to that of loaded bmp
+        dst.w = cursor_surface->w;
+        dst.h = cursor_surface->h;
+	SDL_FreeSurface(cursor_surface);	
+    } else {
+        SDL_GetMouseState(&dst.x,&dst.y);
+	dst.x *= mscalex;
+	dst.y *= mscaley;
+        SDL_RenderCopy(renderer, swcursor_texture, nullptr, &dst);
+    }
+}
+
 void UpdateGuiScreen()
 {
 #ifdef USE_SDL1
-	wait_for_vsync();
+	wait_for_vsync();	
 	SDL_Flip(gui_screen);
 #elif USE_SDL2
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
+#ifdef TINKER
+	swcursor(1);
+#endif	
 	SDL_RenderPresent(renderer);
 #endif
 }
+
 
 namespace sdl
 {
@@ -282,11 +313,12 @@ namespace sdl
 		// Create new screen for GUI
 		//-------------------------------------------------
 #ifdef USE_SDL1
-#ifdef DEBUG
 		const auto videoInfo = SDL_GetVideoInfo();
+#ifdef DEBUG
 		printf("Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h,
 			videoInfo->vfmt->BitsPerPixel);
-#endif //DEBUG
+#endif
+
 		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 		SDL_EnableUNICODE(1);
@@ -296,9 +328,11 @@ namespace sdl
 #ifndef TINKER
 		setup_cursor();
 #else
-		cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-		SDL_SetCursor(cursor);
-#endif
+		swcursor(0);
+		SDL_GetCurrentDisplayMode(0, &physmode);
+		mscalex = (float)GUI_WIDTH  / (float)physmode.w;
+		mscaley = (float)GUI_HEIGHT / (float)physmode.h;
+#endif	    
 
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -310,8 +344,6 @@ namespace sdl
 
 		gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
-
-		
 
 		SDL_ShowCursor(SDL_ENABLE);
 #endif
@@ -356,11 +388,15 @@ namespace sdl
 			SDL_DestroyTexture(gui_texture);
 			gui_texture = nullptr;
 		}
-
 		if (cursor)
 		{
 			SDL_FreeCursor(cursor);
 			cursor = nullptr;
+		}
+		if (cursor_surface)
+		{
+			SDL_FreeSurface(cursor_surface);
+			cursor_surface = nullptr;
 		}
 
 		// Clear the screen

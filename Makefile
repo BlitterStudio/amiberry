@@ -16,6 +16,12 @@ CPPFLAGS+= -MD -MP
 #GEN_PROFILE=1
 #USE_PROFILE=1
 #WITH_LOGGING=1
+#SANITIZE=1
+
+ifdef SANITIZE
+    LDFLAGS += -lasan
+    CFLAGS += -fsanitize=leak -fsanitize-recover=address
+endif
 
 #
 # SDL1 targets
