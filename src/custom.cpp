@@ -84,18 +84,18 @@ static void uae_abort (const TCHAR *format,...)
 #define SPEEDUP_TIMELIMIT_NONJIT   -9000
 
 // These try to define the fastest CPU that gives 30-40FPS
-#define SPEEDUP_TIMELIMIT_JIT_30      5000
-#define SPEEDUP_TIMELIMIT_NONJIT_30   5000
+#define SPEEDUP_TIMELIMIT_JIT_30      0
+#define SPEEDUP_TIMELIMIT_NONJIT_30   0
 #else
 // Setting these to reasonable guess for raspberry pi.
 // Dimitris can mess with these.
-#define SPEEDUP_CYCLES_JIT_PAL 5000
-#define SPEEDUP_CYCLES_JIT_NTSC 4000
-#define SPEEDUP_CYCLES_NONJIT 256
-#define SPEEDUP_TIMELIMIT_JIT -750
-#define SPEEDUP_TIMELIMIT_NONJIT -750
-#define SPEEDUP_TIMELIMIT_JIT_30      3000
-#define SPEEDUP_TIMELIMIT_NONJIT_30   3000
+#define SPEEDUP_CYCLES_JIT_PAL        5000
+#define SPEEDUP_CYCLES_JIT_NTSC       4000
+#define SPEEDUP_CYCLES_NONJIT          256
+#define SPEEDUP_TIMELIMIT_JIT         -750
+#define SPEEDUP_TIMELIMIT_NONJIT      -750
+#define SPEEDUP_TIMELIMIT_JIT_30      0
+#define SPEEDUP_TIMELIMIT_NONJIT_30   0
 #endif
 
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;

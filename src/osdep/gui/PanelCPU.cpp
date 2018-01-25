@@ -315,10 +315,10 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	opt28Mhz = new gcn::UaeRadioButton("25 Mhz", "radiocpuspeedgroup");
 	opt28Mhz->addActionListener(cpuSpeedButtonActionListener);
 
-	optFastest = new gcn::UaeRadioButton("Fastest (>50fps)", "radiocpuspeedgroup");
+	optFastest = new gcn::UaeRadioButton("Fast (>50fps)", "radiocpuspeedgroup");
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
 
-	optFastest30 = new gcn::UaeRadioButton("Fastest (~30fps)", "radiocpuspeedgroup");
+	optFastest30 = new gcn::UaeRadioButton("Turbo (~30fps)", "radiocpuspeedgroup");
 	optFastest30->addActionListener(cpuSpeedButtonActionListener);
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");

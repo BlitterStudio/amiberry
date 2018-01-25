@@ -63,7 +63,7 @@ static const TCHAR* linemode[] = {
 	_T("double3"), _T("scanlines3"), _T("scanlines3p2"), _T("scanlines3p3"),
 	nullptr
 };
-static const TCHAR* speedmode[] = {_T("max"), _T("real"), nullptr};
+static const TCHAR* speedmode[] = {_T("max"), _T("real"), _T("turbo"), nullptr};
 static const TCHAR* soundmode1[] = {_T("none"), _T("interrupts"), _T("normal"), _T("exact"), nullptr};
 static const TCHAR* soundmode2[] = {_T("none"), _T("interrupts"), _T("good"), _T("best"), nullptr};
 static const TCHAR* stereomode[] = {
@@ -1416,7 +1416,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	}
 	else
 	{
-		cfgfile_write_str(f, _T("cpu_speed"), p->m68k_speed < 0 ? _T("max") : _T("real"));
+		cfgfile_write_str(f, _T("cpu_speed"), (p->m68k_speed > -30 ? (p->m68k_speed < 0 ? _T("max") : _T("real")) : "turbo"));
 	}
 
 	/* do not reorder start */
@@ -3836,7 +3836,12 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 
 	if (cfgfile_strval(option, value, _T("cpu_speed"), &p->m68k_speed, speedmode, 1))
 	{
-		p->m68k_speed--;
+		if (_tcsicmp(value, _T("max")) == 0)
+			p->m68k_speed = -1;
+		else if (_tcsicmp(value, _T("turbo")) == 0)
+			p->m68k_speed = -30;
+		else 
+			p->m68k_speed--;
 		return 1;
 	}
 	if (cfgfile_intval(option, value, _T("cpu_speed"), &p->m68k_speed, 1))
@@ -3853,6 +3858,8 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		}
 		if (_tcsicmp(value, _T("max")) == 0)
 			p->m68k_speed = -1;
+		if (_tcsicmp(value, _T("turbo")) == 0)
+			p->m68k_speed = -30;
 		return 1;
 	}
 
