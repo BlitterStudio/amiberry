@@ -148,6 +148,15 @@ USE_SDL2 = 1
     LDFLAGS += -L/usr/local/lib
     HAVE_NEON = 1
     NAME  = amiberry-tinker-dev
+
+else ifeq ($(PLATFORM),android-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
+    DEFS += -DANDROIDSDL
+    ANDROID = 1
+    HAVE_NEON = 1
+    HAVE_SDL_DISPLAY = 1
+    NAME  = amiberry-android-sdl2-dev
 endif
 
 RM     = rm -f
