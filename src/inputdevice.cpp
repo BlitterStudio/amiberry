@@ -6478,7 +6478,7 @@ void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 		memcpy(&jport_config_store[i], &p->jports[i], sizeof(struct jport));
 	}
 
-	bool defaultports = userconfig == false;
+	const bool defaultports = !userconfig;
 	bool matched[MAX_JPORTS];
 	// configname+friendlyname first
 	for (int i = 0; i < MAX_JPORTS; i++) {
