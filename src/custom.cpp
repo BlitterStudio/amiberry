@@ -44,9 +44,7 @@
 
 STATIC_INLINE bool nocustom (void)
 {
-	if (picasso_on)
-		return true;
-	return false;
+	return picasso_on;
 }
 
 static void uae_abort (const TCHAR *format,...)

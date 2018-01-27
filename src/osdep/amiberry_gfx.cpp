@@ -50,6 +50,9 @@ bool can_have_linedouble;
 
 /* SDL Surface for output of emulation */
 SDL_Surface* screen = nullptr;
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+SDL_Thread * renderthread = nullptr;
+#endif
 
 #ifdef USE_DISPMANX
 static unsigned int current_vsync_frame = 0;
@@ -308,6 +311,7 @@ int graphics_setup(void)
 			SDL_WINDOWPOS_UNDEFINED,
 			800,
 			480,
+			//SDL_WINDOW_FULLSCREEN_DESKTOP);
 			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
 	}
@@ -379,6 +383,14 @@ void graphics_subshutdown()
 		uae_sem_wait(&display_sem);
 	}
 #elif USE_SDL2
+#if (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL); 
+		renderthread = NULL;
+	}
+#endif
+
 	if (screen != nullptr)
 	{
 		SDL_FreeSurface(screen);
@@ -637,6 +649,20 @@ bool render_screen(bool immediate)
 	return true;
 }
 
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+// All the moving and copying of data, happens here.
+int sdl2_render_thread(void *ptr) {
+	if (texture == NULL || renderer == NULL || screen == NULL) {
+		return 0;
+	}
+
+	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+	SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+	return 0;
+}
+#endif
+
 void show_screen(int mode)
 {
 	const auto start = read_processor_time();
@@ -697,11 +723,23 @@ void show_screen(int mode)
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
+#if (defined USE_RENDER_THREAD)
+	// Wait for the last thread to finish before rendering it.
+	SDL_WaitThread(renderthread, NULL); 
+	renderthread = NULL;
+	// RenderPresent must be done in the main thread.
+	SDL_RenderPresent(renderer);
+	// Then start the next render thread.
+	renderthread = SDL_CreateThread(sdl2_render_thread, "AmigaScreen", nullptr);
+#else
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 	SDL_RenderPresent(renderer);
-#endif
+#endif //USE_RENDER_THREAD
+	
+#endif //USE_SDL2
+
 	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
 
@@ -727,6 +765,13 @@ bool show_screen_maybe(const bool show)
 
 void black_screen_now()
 {
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL); 
+		renderthread = NULL;
+	}
+#endif
 	if (screen != nullptr)
 	{
 		SDL_FillRect(screen, nullptr, 0);
@@ -941,6 +986,13 @@ static int save_png(SDL_Surface* surface, char* path)
 
 static void create_screenshot()
 {
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL);
+		renderthread = NULL;
+	}
+#endif
 	if (current_screenshot != nullptr)
 	{
 		SDL_FreeSurface(current_screenshot);
@@ -962,6 +1014,13 @@ static void create_screenshot()
 
 static int save_thumb(char* path)
 {
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL);
+		renderthread = NULL;
+	}
+#endif
 	auto ret = 0;
 	if (current_screenshot != nullptr)
 	{
