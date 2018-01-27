@@ -249,6 +249,8 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
+	_tcscpy(p->action_replay, "Pause");
+	_tcscpy(p->fullscreen_toggle, "");
 
 	p->use_retroarch_quit = true;
 	p->use_retroarch_menu = true;
@@ -317,6 +319,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 
 	cfgfile_dwrite_str(f, _T("amiberry.open_gui"), p->open_gui);
 	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
+	cfgfile_dwrite_str(f, _T("amiberry.action_replay"), p->action_replay);
+	cfgfile_dwrite_str(f, _T("amiberry.fullscreen_toggle"), p->fullscreen_toggle);
 
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
@@ -428,6 +432,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
 		return 1;
 	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
+		return 1;
+	if (cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay))
+		return 1;
+	if (cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle))
 		return 1;
 	return 0;
 }
@@ -970,6 +978,24 @@ int handle_msgpump()
 #endif
 	}
 
+	// The default value for Action Replay is Pause/Break
+	int action_replay_button = SDLK_PAUSE;
+	if (strncmp(currprefs.action_replay, "", 1) != 0)
+	{
+#ifdef USE_SDL2
+		action_replay_button = SDL_GetKeyFromName(currprefs.action_replay);
+#endif
+	}
+
+	// No default value for Full Screen toggle
+	int fullscreen_key = 0;
+	if (strncmp(currprefs.fullscreen_toggle, "", 1) != 0)
+	{
+#ifdef USE_SDL2
+		fullscreen_key = SDL_GetKeyFromName(currprefs.fullscreen_toggle);
+#endif
+	}
+
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
@@ -986,16 +1012,28 @@ int handle_msgpump()
 
 		case SDL_KEYDOWN:
 			// If the Enter GUI key was pressed, handle it
-			if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key)
+			if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key && rEvent.key.repeat == 0)
 			{
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 				break;
 			}
 			
 			// If the Quit emulator key was pressed, handle it
-			if (quit_key && rEvent.key.keysym.sym == quit_key)
+			if (quit_key && rEvent.key.keysym.sym == quit_key && rEvent.key.repeat == 0)
 			{
 				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+				break;
+			}
+
+			if (action_replay_button && rEvent.key.keysym.sym == action_replay_button && rEvent.key.repeat == 0)
+			{
+				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+				break;
+			}
+
+			if (fullscreen_key && rEvent.key.keysym.sym == fullscreen_key && rEvent.key.repeat == 0)
+			{
+				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
 				break;
 			}
 
@@ -1026,7 +1064,7 @@ int handle_msgpump()
 				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
 #endif
 
-			if (rEvent.key.keysym.sym ==  SDLK_CAPSLOCK)
+			if (rEvent.key.keysym.sym ==  SDLK_CAPSLOCK && rEvent.key.repeat == 0)
 			{
 				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 				ioctl(0, KDGKBLED, &kbd_flags);
@@ -1051,27 +1089,30 @@ int handle_msgpump()
 			}
 		
 			// Handle all other keys
-			//translate_amiberry_keys(rEvent.key.keysym.sym, 1);
+			if (rEvent.key.repeat == 0)
+			{
 #ifdef USE_SDL1
-			if (keyboard_type == KEYCODE_UNK)
-				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
-			else
+				if (keyboard_type == KEYCODE_UNK)
+					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+				else
+					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+#elif USE_SDL2
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
-#elif USE_SDL2
-			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
 #endif
+			}
 			break;
-
 		case SDL_KEYUP:
-			//translate_amiberry_keys(rEvent.key.keysym.sym, 0);
+			if (rEvent.key.repeat == 0)
+			{
 #ifdef USE_SDL1
-			if (keyboard_type == KEYCODE_UNK)
-				inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
-			else
-				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+				if (keyboard_type == KEYCODE_UNK)
+					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+				else
+					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
 #elif USE_SDL2
-			inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
 #endif
+			}
 			break;
 
 		case SDL_MOUSEBUTTONDOWN:

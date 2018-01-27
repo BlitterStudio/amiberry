@@ -309,8 +309,9 @@ int graphics_setup(void)
 		sdlWindow = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
-			800,
-			480,
+			0,
+			0,
+			//SDL_WINDOW_FULLSCREEN);
 			//SDL_WINDOW_FULLSCREEN_DESKTOP);
 			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
@@ -354,6 +355,17 @@ int graphics_setup(void)
 #endif
 
 	return 1;
+}
+
+void toggle_fullscreen()
+{
+	Uint32 FullscreenFlag = SDL_WINDOW_FULLSCREEN;
+	if (sdlWindow)
+	{
+		bool IsFullscreen = SDL_GetWindowFlags(sdlWindow) & FullscreenFlag;
+		SDL_SetWindowFullscreen(sdlWindow, IsFullscreen ? 0 : FullscreenFlag);
+		SDL_ShowCursor(IsFullscreen);
+	}
 }
 
 #ifdef USE_DISPMANX
@@ -533,6 +545,17 @@ static void open_screen(struct uae_prefs* p)
 #elif USE_SDL2
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
+
+	if (sdlWindow)
+	{
+		if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
+		{
+			if (screen_is_picasso)
+				SDL_SetWindowSize(sdlWindow, display_width, display_height);
+			else
+				SDL_SetWindowSize(sdlWindow, display_width, display_height * 2 >> p->gfx_vresolution);
+		}	
+	}
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");

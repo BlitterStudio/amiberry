@@ -50,6 +50,14 @@ static gcn::Label* lblKeyForQuit;
 static gcn::TextField* txtKeyForQuit;
 static gcn::Button* cmdKeyForQuit;
 
+static gcn::Label* lblKeyActionReplay;
+static gcn::TextField* txtKeyActionReplay;
+static gcn::Button* cmdKeyActionReplay;
+
+static gcn::Label* lblKeyFullScreen;
+static gcn::TextField* txtKeyFullScreen;
+static gcn::Button* cmdKeyFullScreen;
+
 class StringListModel : public gcn::ListModel
 {
 	vector<string> values;
@@ -134,6 +142,26 @@ public:
 			{
 				txtKeyForQuit->setText(key);
 				strcpy(changed_prefs.quit_amiberry, key);
+			}
+		}
+
+		else if (actionEvent.getSource() == cmdKeyActionReplay)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay", "Cancel");
+			if (key != nullptr)
+			{
+				txtKeyActionReplay->setText(key);
+				strcpy(changed_prefs.action_replay, key);
+			}
+		}
+
+		else if (actionEvent.getSource() == cmdKeyFullScreen)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen", "Cancel");
+			if (key != nullptr)
+			{
+				txtKeyFullScreen->setText(key);
+				strcpy(changed_prefs.fullscreen_toggle, key);
 			}
 		}
 	}
@@ -222,6 +250,30 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyForQuit->setBaseColor(gui_baseCol);
 	cmdKeyForQuit->addActionListener(miscActionListener);
 
+	lblKeyActionReplay = new gcn::Label("Action Replay:");
+	lblKeyActionReplay->setAlignment(gcn::Graphics::RIGHT);
+	txtKeyActionReplay = new gcn::TextField();
+	txtKeyActionReplay->setEnabled(false);
+	txtKeyActionReplay->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyActionReplay->setBackgroundColor(colTextboxBackground);
+	cmdKeyActionReplay = new gcn::Button("...");
+	cmdKeyActionReplay->setId("KeyActionReplay");
+	cmdKeyActionReplay->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyActionReplay->setBaseColor(gui_baseCol);
+	cmdKeyActionReplay->addActionListener(miscActionListener);
+
+	lblKeyFullScreen = new gcn::Label("FullScreen toggle:");
+	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
+	txtKeyFullScreen = new gcn::TextField();
+	txtKeyFullScreen->setEnabled(false);
+	txtKeyFullScreen->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyFullScreen->setBackgroundColor(colTextboxBackground);
+	cmdKeyFullScreen = new gcn::Button("...");
+	cmdKeyFullScreen->setId("KeyFullScreen");
+	cmdKeyFullScreen->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyFullScreen->setBaseColor(gui_baseCol);
+	cmdKeyFullScreen->addActionListener(miscActionListener);
+
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
@@ -262,6 +314,16 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
 	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
 
+	posY += cmdOpenGUI->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblKeyActionReplay, DISTANCE_BORDER, posY);
+	category.panel->add(txtKeyActionReplay, lblKeyActionReplay->getX() + lblKeyActionReplay->getWidth() + 8, posY);
+	category.panel->add(cmdKeyActionReplay, txtKeyActionReplay->getX() + txtKeyActionReplay->getWidth() + 8, posY);
+
+	category.panel->add(lblKeyFullScreen, cmdKeyActionReplay->getX() + cmdKeyActionReplay->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX() + lblKeyFullScreen->getWidth() + 8, posY);
+	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
+
 	RefreshPanelMisc();
 }
 
@@ -292,6 +354,14 @@ void ExitPanelMisc()
 	delete txtKeyForQuit;
 	delete cmdKeyForQuit;
 
+	delete lblKeyActionReplay;
+	delete txtKeyActionReplay;
+	delete cmdKeyActionReplay;
+
+	delete lblKeyFullScreen;
+	delete txtKeyFullScreen;
+	delete cmdKeyFullScreen;
+
 	delete miscActionListener;
 }
 
@@ -314,7 +384,8 @@ void RefreshPanelMisc()
 
 	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
 	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0 ? changed_prefs.quit_amiberry : "Click to map");
-
+	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0 ? changed_prefs.action_replay : "Click to map");
+	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0 ? changed_prefs.fullscreen_toggle : "Click to map");
 }
 
 bool HelpPanelMisc(std::vector<std::string> &helptext)

@@ -40,6 +40,7 @@
 #include "native2amiga_api.h"
 #include "sounddep/sound.h"
 #include "disk.h"
+#include "amiberry_gfx.h"
 
 #define COMPA_RESERVED_FLAGS (ID_FLAG_INVERT)
 
@@ -2646,6 +2647,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	//		screenshot(1, 1);
 	//	}
 	//	break;
+	case AKS_TOGGLEWINDOWEDFULLSCREEN:
+		toggle_fullscreen();
+		break;
 #ifdef ACTION_REPLAY
 	case AKS_FREEZEBUTTON:
 		action_replay_freeze();
@@ -5704,6 +5708,8 @@ void inputdevice_copyconfig(struct uae_prefs *src, struct uae_prefs *dst)
 #ifdef AMIBERRY
 	strcpy(dst->open_gui, src->open_gui);
 	strcpy(dst->quit_amiberry, src->quit_amiberry);
+	strcpy(dst->action_replay, src->action_replay);
+	strcpy(dst->fullscreen_toggle, src->fullscreen_toggle);
 	dst->use_retroarch_quit = src->use_retroarch_quit;
 	dst->use_retroarch_menu = src->use_retroarch_menu;
 	dst->use_retroarch_reset = src->use_retroarch_reset;

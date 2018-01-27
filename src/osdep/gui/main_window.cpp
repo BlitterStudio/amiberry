@@ -296,6 +296,11 @@ namespace sdl
 #ifndef TINKER
 		setup_cursor();
 #endif
+		if (sdlWindow)
+		{
+			if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
+				SDL_SetWindowSize(sdlWindow, GUI_WIDTH, GUI_HEIGHT);
+		}
 
 		// make the scaled rendering look smoother (linear scaling).
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");

@@ -510,7 +510,7 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 
 	{ SDL_SCANCODE_END, INPUTEVENT_SPC_QUALIFIER_SPECIAL },
 	{ SDL_SCANCODE_NONUSBACKSLASH, INPUTEVENT_KEY_30 },
-	{ SDL_SCANCODE_PAUSE, INPUTEVENT_SPC_FREEZEBUTTON },
+	//{ SDL_SCANCODE_PAUSE, INPUTEVENT_SPC_FREEZEBUTTON },
 
 	// This is configurable, so let's not hardcode it here
 	//{SDL_SCANCODE_F12, INPUTEVENT_SPC_ENTERGUI },

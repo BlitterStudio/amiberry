@@ -421,6 +421,8 @@ struct uae_prefs {
 
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
+	TCHAR action_replay[256];
+	TCHAR fullscreen_toggle[256];
 
 	/* input */
 
