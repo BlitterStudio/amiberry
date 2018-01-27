@@ -64,20 +64,46 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-
 #ifdef TINKER
-#define SPEEDUP_CYCLES_JIT_PAL 10000
-#define SPEEDUP_CYCLES_JIT_NTSC 8000
-#define SPEEDUP_CYCLES_NONJIT 1024
-#define SPEEDUP_TIMELIMIT_JIT -6000
+
+// Alynna //
+// Justifications for the numbers set here
+// Frametime is 20000 cycles in PAL
+//              16667 cycles in NTSC
+// The most we can give back is a frame's worth of
+// cycles, but we shouldn't give them ALL back for timing
+// coordination so I have picked 90% of the cycles.
+#define SPEEDUP_CYCLES_JIT_PAL     18000
+#define SPEEDUP_CYCLES_JIT_NTSC    15000
+#define SPEEDUP_CYCLES_NONJIT       1024
+// These are set to give enough time to hit 60 fps
+// on the ASUS tinker board, and giving the rest of the
+// time to the CPU (minus the 10% reserve above).
+// As these numbers are decreased towards -(SPEEDUP_CYCLES),
+// more chipset time is given and the CPU gets slower.
+// For your platform its best to tune these to the point where
+// you hit 60FPS in NTSC and not higher.
+// Do not tune above -(SPEEDUP_CYCLES) or the emulation will
+// become unstable.
+#define SPEEDUP_TIMELIMIT_JIT      -10000
+#define SPEEDUP_TIMELIMIT_NONJIT    -960
+// These define the maximum CPU possible and work well with
+// frameskip on and operation at 30fps at full chipset speed
+// They give the minimum possible chipset time.  Do not make
+// these positive numbers.  Doing so may give you a 500mhz
+// 68040 but your emulation will not be able to reset at this
+// speed.
+#define SPEEDUP_TIMELIMIT_JIT_30      0
+#define SPEEDUP_TIMELIMIT_NONJIT_30   0
 #else
-#define SPEEDUP_CYCLES_JIT_PAL 5000
-#define SPEEDUP_CYCLES_JIT_NTSC 4000
+
+#define SPEEDUP_CYCLES_JIT_PAL 10000//10000
+#define SPEEDUP_CYCLES_JIT_NTSC 6667//6667
 #define SPEEDUP_CYCLES_NONJIT 256
-#define SPEEDUP_TIMELIMIT_JIT -750
+#define SPEEDUP_TIMELIMIT_JIT -5000
+#define SPEEDUP_TIMELIMIT_NONJIT -5000
 #endif
 
-#define SPEEDUP_TIMELIMIT_NONJIT -750
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
 
