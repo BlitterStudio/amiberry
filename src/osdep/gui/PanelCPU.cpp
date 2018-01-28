@@ -44,7 +44,7 @@ static gcn::UaeRadioButton* opt7Mhz;
 static gcn::UaeRadioButton* opt14Mhz;
 static gcn::UaeRadioButton* opt28Mhz;
 static gcn::UaeRadioButton* optFastest;
-
+static gcn::UaeRadioButton* optTurbo;
 
 class CPUButtonActionListener : public gcn::ActionListener
 {
@@ -140,6 +140,8 @@ public:
 			changed_prefs.m68k_speed = M68K_SPEED_25MHZ_CYCLES;
 		else if (actionEvent.getSource() == optFastest)
 			changed_prefs.m68k_speed = -1;
+		else if (actionEvent.getSource() == optTurbo)
+			changed_prefs.m68k_speed = -30;
 	}
 };
 
@@ -315,14 +317,18 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	optFastest = new gcn::UaeRadioButton("Fastest", "radiocpuspeedgroup");
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
 
+	optTurbo = new gcn::UaeRadioButton("Turbo", "radiocpuspeedgroup");
+	optTurbo->addActionListener(cpuSpeedButtonActionListener);
+
 	grpCPUSpeed = new gcn::Window("CPU Speed");
 	grpCPUSpeed->setPosition(grpFPU->getX() + grpFPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	grpCPUSpeed->add(opt7Mhz, 5, 10);
 	grpCPUSpeed->add(opt14Mhz, 5, 40);
 	grpCPUSpeed->add(opt28Mhz, 5, 70);
 	grpCPUSpeed->add(optFastest, 5, 100);
+	grpCPUSpeed->add(optTurbo, 5, 130);
 	grpCPUSpeed->setMovable(false);
-	grpCPUSpeed->setSize(95, 145);
+	grpCPUSpeed->setSize(95, 200);
 	grpCPUSpeed->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCPUSpeed);
@@ -361,6 +367,7 @@ void ExitPanelCPU()
 	delete opt14Mhz;
 	delete opt28Mhz;
 	delete optFastest;
+	delete optTurbo;
 	delete grpCPUSpeed;
 	delete cpuSpeedButtonActionListener;
 }
@@ -416,6 +423,8 @@ void RefreshPanelCPU()
 		opt28Mhz->setSelected(true);
 	else if (changed_prefs.m68k_speed == -1)
 		optFastest->setSelected(true);
+	else if (changed_prefs.m68k_speed == -30)
+		optTurbo->setSelected(true);
 }
 
 bool HelpPanelCPU(std::vector<std::string> &helptext)
@@ -435,6 +444,9 @@ bool HelpPanelCPU(std::vector<std::string> &helptext)
 	helptext.emplace_back("but a bit slower.");
 	helptext.emplace_back("");
 	helptext.emplace_back("With \"CPU Speed\" you can choose the clock rate of the Amiga.");
+	helptext.emplace_back("Use 7MHz for A500 games or 14MHz for A1200 ones. Fastest uses more emulation time");
+	helptext.emplace_back("for the CPU, and Turbo will give only the minimum time to the chipset, using as");
+	helptext.emplace_back("much as possible for the CPU, usually resulting in dropping frames also.");
 	helptext.emplace_back("");
 	helptext.emplace_back("In current version, you will not see a difference in the performance for 68020,");
 	helptext.emplace_back("68030 and 68040 CPUs. The CPU cycles for the opcodes are based on 68020. The different");

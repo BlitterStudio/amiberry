@@ -93,7 +93,7 @@ static void InitShowHelp(const vector<string>& helptext)
 	lstHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	lstHelp->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	lstHelp->setBaseColor(gui_baseCol + 0x202020);
+	lstHelp->setBaseColor(gui_baseCol);
 	lstHelp->setBackgroundColor(gui_baseCol);
 	lstHelp->setWrappingEnabled(true);
 
@@ -107,7 +107,7 @@ static void InitShowHelp(const vector<string>& helptext)
 	scrAreaHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	scrAreaHelp->setScrollbarWidth(20);
-	scrAreaHelp->setBaseColor(gui_baseCol + 0x202020);
+	scrAreaHelp->setBaseColor(gui_baseCol);
 	scrAreaHelp->setBackgroundColor(gui_baseCol);
 
 	cmdOK = new gcn::Button("Ok");

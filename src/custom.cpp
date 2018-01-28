@@ -87,6 +87,14 @@ static void uae_abort (const TCHAR *format,...)
 // become unstable.
 #define SPEEDUP_TIMELIMIT_JIT      -10000
 #define SPEEDUP_TIMELIMIT_NONJIT    -960
+#else
+#define SPEEDUP_CYCLES_JIT_PAL 10000
+#define SPEEDUP_CYCLES_JIT_NTSC 6667
+#define SPEEDUP_CYCLES_NONJIT 256
+#define SPEEDUP_TIMELIMIT_JIT -5000
+#define SPEEDUP_TIMELIMIT_NONJIT -5000
+#endif
+
 // These define the maximum CPU possible and work well with
 // frameskip on and operation at 30fps at full chipset speed
 // They give the minimum possible chipset time.  Do not make
@@ -95,14 +103,6 @@ static void uae_abort (const TCHAR *format,...)
 // speed.
 #define SPEEDUP_TIMELIMIT_JIT_30      0
 #define SPEEDUP_TIMELIMIT_NONJIT_30   0
-#else
-
-#define SPEEDUP_CYCLES_JIT_PAL 10000//10000
-#define SPEEDUP_CYCLES_JIT_NTSC 6667//6667
-#define SPEEDUP_CYCLES_NONJIT 256
-#define SPEEDUP_TIMELIMIT_JIT -5000
-#define SPEEDUP_TIMELIMIT_NONJIT -5000
-#endif
 
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
@@ -384,18 +384,26 @@ STATIC_INLINE int nodraw (void)
 
 void set_speedup_values(void)
 {
-  if(currprefs.m68k_speed < 0) {
-    if (currprefs.cachesize) {
-      pissoff_value = ((vblank_hz > 55) ? SPEEDUP_CYCLES_JIT_NTSC : SPEEDUP_CYCLES_JIT_PAL) * CYCLE_UNIT;
-      speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
-    } else {
-      pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
-      speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
-    }
-  } else {
-    pissoff_value = 0;
-    speedup_timelimit = 0;
-  }
+	if (currprefs.m68k_speed < 0) {
+		if (currprefs.cachesize) {
+			pissoff_value = ((vblank_hz > 55) ? SPEEDUP_CYCLES_JIT_NTSC : SPEEDUP_CYCLES_JIT_PAL) * CYCLE_UNIT;
+			if (currprefs.m68k_speed != -30)
+				speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+			else
+				speedup_timelimit = SPEEDUP_TIMELIMIT_JIT_30;
+		}
+		else {
+			pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
+			if (currprefs.m68k_speed != -30)
+				speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+			else
+				speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT_30;
+		}
+	}
+	else {
+		pissoff_value = 0;
+		speedup_timelimit = 0;
+	}
 }
 
 void reset_frame_rate_hack (void)
