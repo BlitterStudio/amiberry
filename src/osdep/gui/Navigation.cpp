@@ -209,14 +209,15 @@ static NavigationMap navMap[] =
 { "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
 #ifdef USE_SDL1
 { "sldVertPos",     "",             "",               "sldHeight",      "CorrectAR" },
-{ "CorrectAR",      "Display",      "Display",        "sldVertPos",     "Line doubling" },
+{ "CorrectAR",      "Display",      "Fullscreen",        "sldVertPos",     "Line doubling" },
 #elif USE_SDL2
 { "sldVertPos",     "",             "",               "sldHeight",      "Auto" },
 { "Auto",           "Display",      "Display",        "sldVertPos",     "Nearest Neighbor (pixelated)" },
 { "Nearest Neighbor (pixelated)","Display","Display", "Auto",           "Linear (smooth)" },
 { "Linear (smooth)", "Display",     "Display",        "Nearest Neighbor (pixelated)", "CorrectAR" },
-{ "CorrectAR",      "Display",      "Display",        "Linear (smooth)","Line doubling" },
+{ "CorrectAR",      "Display",      "Fullscreen",     "Linear (smooth)","Line doubling" },
 #endif
+{ "Fullscreen",     "CorrectAR",    "CorrectAR",      "Linear (smooth)","Line doubling" },
 { "Line doubling",  "Display",      "Display",        "CorrectAR",      "Frameskip" },
 { "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
 
@@ -289,8 +290,10 @@ static NavigationMap navMap[] =
 { "MasterWP",       "Miscellaneous",  "Miscellaneous",  "BSDSocket",      "cboNumlock" },
 { "cboNumlock",     "Miscellaneous",  "cboScrolllock",	"MasterWP",	      "OpenGUI" },
 { "cboScrolllock",  "cboNumlock",	  "Miscellaneous",  "MasterWP",	      "KeyForQuit" },
-{ "OpenGUI",        "Miscellaneous",  "KeyForQuit",     "cboNumlock",	  "StatusLine" },
-{ "KeyForQuit",     "OpenGUI",	      "Miscellaneous",  "cboScrolllock",  "StatusLine" },
+{ "OpenGUI",        "Miscellaneous",  "KeyForQuit",     "cboNumlock",	  "KeyActionReplay" },
+{ "KeyForQuit",     "OpenGUI",	      "Miscellaneous",  "cboScrolllock",  "KeyFullScreen" },
+{ "KeyActionReplay","Miscellaneous",  "KeyFullScreen",  "OpenGUI",        "StatusLine" },
+{ "KeyFullScreen",  "KeyActionReplay","KeyActionReplay","KeyForQuit",     "RetroArchQuit"},
 
 // PanelSavestate
 { "State0", "Savestates", "Savestates", "LoadState", "State1" },

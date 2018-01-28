@@ -362,9 +362,9 @@ void toggle_fullscreen()
 	Uint32 FullscreenFlag = SDL_WINDOW_FULLSCREEN;
 	if (sdlWindow)
 	{
-		bool IsFullscreen = SDL_GetWindowFlags(sdlWindow) & FullscreenFlag;
-		SDL_SetWindowFullscreen(sdlWindow, IsFullscreen ? 0 : FullscreenFlag);
-		SDL_ShowCursor(IsFullscreen);
+		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & FullscreenFlag;
+		SDL_SetWindowFullscreen(sdlWindow, is_fullscreen ? 0 : FullscreenFlag);
+		SDL_ShowCursor(is_fullscreen);
 	}
 }
 
@@ -548,6 +548,20 @@ static void open_screen(struct uae_prefs* p)
 
 	if (sdlWindow)
 	{
+		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN;
+		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+		{
+			// Switch to Fullscreen mode, if we don't have it already
+			if (!is_fullscreen)
+				SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
+		}
+		else
+		{
+			// Switch to Window mode, if we don't have it already
+			if (is_fullscreen)
+				SDL_SetWindowFullscreen(sdlWindow, 0);
+		}
+
 		if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
 		{
 			if (screen_is_picasso)

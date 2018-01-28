@@ -262,7 +262,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyActionReplay->setBaseColor(gui_baseCol);
 	cmdKeyActionReplay->addActionListener(miscActionListener);
 
-	lblKeyFullScreen = new gcn::Label("FullScreen toggle:");
+	lblKeyFullScreen = new gcn::Label("FullScreen:");
 	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyFullScreen = new gcn::TextField();
 	txtKeyFullScreen->setEnabled(false);
@@ -297,21 +297,22 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
 	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
 
+	const auto column2_x = DISTANCE_BORDER + 290;
 
 	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
 	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);
 
-	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(lblScrLock, column2_x, posY);
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
 
 	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblOpenGUI, DISTANCE_BORDER, posY);
-	category.panel->add(txtOpenGUI, lblOpenGUI->getX() + lblOpenGUI->getWidth() + 8, posY);
+	category.panel->add(txtOpenGUI, lblOpenGUI->getX() + lblKeyActionReplay->getWidth() + 8, posY);
 	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
 
-	category.panel->add(lblKeyForQuit, cmdOpenGUI->getX() + cmdOpenGUI->getWidth() + DISTANCE_NEXT_X * 2, posY);
-	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
+	category.panel->add(lblKeyForQuit, column2_x, posY);
+	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyFullScreen->getWidth() + 8, posY);
 	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
 
 	posY += cmdOpenGUI->getHeight() + DISTANCE_NEXT_Y;
@@ -320,7 +321,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(txtKeyActionReplay, lblKeyActionReplay->getX() + lblKeyActionReplay->getWidth() + 8, posY);
 	category.panel->add(cmdKeyActionReplay, txtKeyActionReplay->getX() + txtKeyActionReplay->getWidth() + 8, posY);
 
-	category.panel->add(lblKeyFullScreen, cmdKeyActionReplay->getX() + cmdKeyActionReplay->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(lblKeyFullScreen, column2_x, posY);
 	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX() + lblKeyFullScreen->getWidth() + 8, posY);
 	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
 

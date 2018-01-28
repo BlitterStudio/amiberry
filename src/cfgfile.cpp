@@ -87,6 +87,7 @@ static const TCHAR* cscompa[] = {
 static const TCHAR* qsmodes[] = {
 	_T("A500"), _T("A500+"), _T("A600"), _T("A1200"), _T("A4000"), _T("CD32"), nullptr
 };
+static const TCHAR *fullmodes[] = { _T("false"), _T("true"), /* "FILE_NOT_FOUND", */ _T("fullwindow"), nullptr };
 static const TCHAR* abspointers[] = {_T("none"), _T("mousehack"), _T("tablet"), nullptr};
 static const TCHAR* joyportmodes[] = {
 	_T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), nullptr
@@ -1402,7 +1403,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 
 	cfgfile_write_bool(f, _T("gfx_lores"), p->gfx_resolution == 0);
 	cfgfile_write_str(f, _T("gfx_resolution"), lorestype1[p->gfx_resolution]);
-	cfgfile_write_str(f, _T("gfx_linemode"), p->gfx_vresolution > 0 ? linemode[1] : linemode[0]);
+	cfgfile_write_str(f, _T("gfx_linemode"), p->gfx_vresolution > 0 ? linemode[p->gfx_iscanlines * 4 + p->gfx_pscanlines + 1] : linemode[0]);
+	cfgfile_write_str(f, _T("gfx_fullscreen_amiga"), fullmodes[p->gfx_apmode[0].gfx_fullscreen]);
+	cfgfile_write_str(f, _T("gfx_fullscreen_picasso"), fullmodes[p->gfx_apmode[1].gfx_fullscreen]);
 
 	cfgfile_write_bool(f, _T("ntsc"), p->ntscmode);
 
@@ -2289,6 +2292,8 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		|| cfgfile_strboolval(option, value, _T("use_gui"), &p->start_gui, guimode3, 0)
 		|| cfgfile_strval(option, value, _T("gfx_resolution"), &p->gfx_resolution, lorestype1, 0)
 		|| cfgfile_strval(option, value, _T("gfx_lores"), &p->gfx_resolution, lorestype2, 0)
+		|| cfgfile_strval(option, value, _T("gfx_fullscreen_amiga"), &p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen, fullmodes, 0)
+		|| cfgfile_strval(option, value, _T("gfx_fullscreen_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_fullscreen, fullmodes, 0)
 		|| cfgfile_strval(option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
 
@@ -2314,11 +2319,15 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	{
 		int v;
 		p->gfx_vresolution = VRES_DOUBLE;
+		p->gfx_pscanlines = 0;
+		p->gfx_iscanlines = 0;
 		if (cfgfile_strval(option, value, _T("gfx_linemode"), &v, linemode, 0))
 		{
 			p->gfx_vresolution = VRES_NONDOUBLE;
 			if (v > 0)
 			{
+				p->gfx_iscanlines = (v - 1) / 4;
+				p->gfx_pscanlines = (v - 1) % 4;
 				p->gfx_vresolution = VRES_DOUBLE;
 			}
 		}
@@ -5158,12 +5167,15 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 
 	p->cachesize = 0;
 
-	p->gfx_framerate = 0;
+	p->gfx_framerate = 1;
 
 	p->gfx_size.width = 640; //TODO: Default WinUAE prefs indicate this should be 720x568
 	p->gfx_size.height = 256;
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_NONDOUBLE;
+	p->gfx_iscanlines = 1;
+	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
+	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;

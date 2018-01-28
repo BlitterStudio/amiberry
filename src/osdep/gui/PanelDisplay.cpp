@@ -48,9 +48,8 @@ static gcn::Slider* sldVertPos;
 
 static gcn::UaeCheckBox* chkLineDbl;
 static gcn::UaeCheckBox* chkFrameskip;
-
 static gcn::UaeCheckBox* chkAspect;
-
+static gcn::UaeCheckBox* chkFullscreen;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -82,16 +81,27 @@ public:
 			}
 		}
 		else if (actionEvent.getSource() == chkFrameskip)
-		{
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 1 : 0;
-		}
+
 		else if (actionEvent.getSource() == chkLineDbl)
-		{
 			changed_prefs.gfx_vresolution = chkLineDbl->isSelected() ? VRES_DOUBLE : VRES_NONDOUBLE;
-		}
+
 		else if (actionEvent.getSource() == chkAspect)
 			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
 
+		else if (actionEvent.getSource() == chkFullscreen)
+		{
+			if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+			{
+				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
+				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
+			}
+			else
+			{
+				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
+				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
+			}
+		}	
 	}
 };
 
@@ -162,6 +172,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
+	chkFullscreen = new gcn::UaeCheckBox("Fullscreen");
+	chkFullscreen->addActionListener(amigaScreenActionListener);
+
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 
@@ -213,6 +226,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 #endif
 
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
+	category.panel->add(chkFullscreen, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkLineDbl, DISTANCE_BORDER, posY);
@@ -239,6 +253,7 @@ void ExitPanelDisplay()
 	delete grpAmigaScreen;
 
 	delete chkAspect;
+	delete chkFullscreen;
 
 #ifdef USE_SDL2
 	delete optAuto;
@@ -281,6 +296,7 @@ void RefreshPanelDisplay()
 	}
 
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
+	chkFullscreen->setSelected(changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN);
 
 #ifdef USE_SDL2
 	if (changed_prefs.scaling_method == -1)
