@@ -1317,6 +1317,8 @@ uae_u8* gfx_lock_picasso()
 {
 	if (screen == nullptr || screen_is_picasso == 0)
 		return nullptr;
+	if (SDL_MUSTLOCK(screen))
+		SDL_LockSurface(screen);
 
 	picasso_vidinfo.rowbytes = screen->pitch;
 	return static_cast<uae_u8 *>(screen->pixels);
@@ -1324,6 +1326,9 @@ uae_u8* gfx_lock_picasso()
 
 void gfx_unlock_picasso(const bool dorender)
 {
+	if (SDL_MUSTLOCK(screen))
+		SDL_UnlockSurface(screen);
+	
 	if (dorender)
 	{
 		render_screen(true);
