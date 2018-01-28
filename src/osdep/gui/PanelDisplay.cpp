@@ -181,7 +181,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(lblVertPos->getX() + lblVertPos->getWidth() + sldVertPos->getWidth() + lblVertPosInfo->getX() + lblVertPosInfo->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER);
+	grpAmigaScreen->setSize(lblVertPos->getX() + lblVertPos->getWidth() + sldVertPos->getWidth() + lblVertPosInfo->getWidth() + (DISTANCE_BORDER*2), posY + DISTANCE_BORDER);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpAmigaScreen);
