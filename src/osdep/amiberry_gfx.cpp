@@ -234,8 +234,8 @@ static void *display_thread(void *unused)
 				current_resource_amigafb = 0;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
 					VC_IMAGE_RGB565,
-					gfxvidinfo.drawbuffer.rowbytes,
-					gfxvidinfo.drawbuffer.bufmem,
+					screen->pitch,
+					screen->pixels,
 					&blit_rect);
 				dispmanxupdate = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_1);
@@ -245,8 +245,8 @@ static void *display_thread(void *unused)
 				current_resource_amigafb = 1;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_2,
 					VC_IMAGE_RGB565,
-					gfxvidinfo.drawbuffer.rowbytes,
-					gfxvidinfo.drawbuffer.bufmem,
+					screen->pitch,
+					screen->pixels,
 					&blit_rect);
 				dispmanxupdate = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_2);
