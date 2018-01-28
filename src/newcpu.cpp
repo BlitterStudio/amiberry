@@ -1977,7 +1977,8 @@ uae_u8 *restore_cpu_extra (uae_u8 *src)
 		currprefs.m68k_speed = changed_prefs.m68k_speed = -1;
 	if (flags & 16)
 		currprefs.m68k_speed = changed_prefs.m68k_speed = (flags >> 24) * CYCLE_UNIT;
-
+	if (flags & 32)
+		currprefs.m68k_speed = changed_prefs.m68k_speed = -30;
 	return src;
 }
 
@@ -1996,6 +1997,7 @@ uae_u8 *save_cpu_extra (int *len, uae_u8 *dstptr)
 	flags |= currprefs.m68k_speed < 0 ? 4 : 0;
 	flags |= currprefs.cachesize > 0 ? 8 : 0;
 	flags |= currprefs.m68k_speed > 0 ? 16 : 0;
+	flags |= currprefs.m68k_speed < -25 ? 32 : 0;
 	if (currprefs.m68k_speed > 0)
 		flags |= (currprefs.m68k_speed / CYCLE_UNIT) << 24;
 	save_u32 (flags);
