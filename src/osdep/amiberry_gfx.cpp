@@ -307,10 +307,10 @@ int graphics_setup(void)
 	if (sdlWindow == nullptr)
 	{
 		sdlWindow = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			0,
-			0,
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			800,
+			480,
 			//SDL_WINDOW_FULLSCREEN);
 			//SDL_WINDOW_FULLSCREEN_DESKTOP);
 			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
