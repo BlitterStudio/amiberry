@@ -203,6 +203,10 @@ enum { CP_GENERIC = 1, CP_CD32, CP_A500, CP_A500P, CP_A600,
 #define IDE_A600A1200 1
 #define IDE_A4000 2
 
+#define GFX_WINDOW 0
+#define GFX_FULLSCREEN 1
+#define GFX_FULLWINDOW 2
+
 #define MAX_CHIPSET_REFRESH 1
 #define MAX_CHIPSET_REFRESH_TOTAL (MAX_CHIPSET_REFRESH + 2)
 #define CHIPSET_REFRESH_PAL (MAX_CHIPSET_REFRESH + 0)
@@ -229,6 +233,7 @@ struct chipset_refresh
 
 struct apmode
 {
+	int gfx_fullscreen;
 	int gfx_refreshrate;
 };
 
@@ -305,15 +310,16 @@ struct uae_prefs {
 	int sound_volume_paula;
 	int sound_volume_cd;
 
+	bool compfpu;
 	int cachesize;
 	bool fpu_strict;
-	bool fpu_softfloat;
 
 	int gfx_framerate;
 	struct wh gfx_size;
 	struct apmode gfx_apmode[2];
 	int gfx_resolution;
 	int gfx_vresolution;
+	int gfx_pscanlines, gfx_iscanlines;
 
 	bool immediate_blits;
 	int waiting_blits;
@@ -421,6 +427,8 @@ struct uae_prefs {
 
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
+	TCHAR action_replay[256];
+	TCHAR fullscreen_toggle[256];
 
 	/* input */
 

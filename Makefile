@@ -144,10 +144,19 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -I/usr/local/include
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
     LDFLAGS += -L/usr/local/lib
     HAVE_NEON = 1
     NAME  = amiberry-tinker-dev
+
+else ifeq ($(PLATFORM),android-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
+    DEFS += -DANDROIDSDL
+    ANDROID = 1
+    HAVE_NEON = 1
+    HAVE_SDL_DISPLAY = 1
+    NAME  = amiberry-android-sdl2-dev
 endif
 
 RM     = rm -f
@@ -245,11 +254,6 @@ OBJS =	\
 	src/filesys.o \
 	src/flashrom.o \
 	src/fpp.o \
-	src/fpp_native.o \
-	src/fpp_softfloat.o \
-	src/softfloat/softfloat.o \
-	src/softfloat/softfloat_decimal.o \
-	src/softfloat/softfloat_fpsp.o \
 	src/fsdb.o \
 	src/fsdb_unix.o \
 	src/fsusage.o \

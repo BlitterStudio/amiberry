@@ -1230,7 +1230,6 @@ static uae_u32 REGPARAM2 picasso_SetSpriteColor (TrapContext *ctx)
 	return 0;
 }
 
-
 /*
 SetSpriteImage:
 Synopsis: SetSpriteImage(bi, RGBFormat);
@@ -1942,7 +1941,7 @@ static void init_picasso_screen(void)
  * This function is called whenever another ModeInfo has to be set. This
  * function simply sets up the CRTC and TS registers to generate the
  * timing used for that screen mode. You should not set the DAC, clocks
- * or linear start adress. They will be set when appropriate by their
+ * or linear start address. They will be set when appropriate by their
  * own functions.
  */
 static uae_u32 REGPARAM2 picasso_SetGC(TrapContext *ctx)
@@ -2103,6 +2102,7 @@ static uae_u32 REGPARAM2 picasso_InvertRect(TrapContext *ctx)
 
 	if (NOBLITTER)
 		return 0;
+
 	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri)) {
 		P96TRACE((_T("InvertRect %dbpp 0x%lx\n"), Bpp, (long)mask));
 
@@ -2451,6 +2451,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 
 	if (NOBLITTER)
 		return 0;
+
 	if (CopyRenderInfoStructureA2U(ctx, rinf, &ri) && CopyPatternStructureA2U(ctx, pinf, &pattern)) {
 		if (!validatecoords(ctx, &ri, &X, &Y, &W, &H))
 			return 0;
@@ -2497,6 +2498,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 				unsigned long cols;
 
 				d = do_get_mem_word(((uae_u16 *)pattern.Memory) + prow);
+
 				if (xshift != 0)
 					d = (d << xshift) | (d >> (16 - xshift));
 
@@ -3069,6 +3071,7 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext *ctx)
 
 	if (NOBLITTER)
 		return 0;
+
 	if (minterm != 0x0C) {
 		write_log(_T("WARNING - BlitPlanar2Direct() has unhandled op-code 0x%x. Using fall-back routine.\n"), minterm);
 		return 0;
@@ -3112,15 +3115,13 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
 				__builtin_bswap16(*((uae_u16 *)(src + i + 2))) << 16 |
 				__builtin_bswap16(*((uae_u16 *)(src + i)))
 				);
-	}
-#else
-#ifdef USE_ARMNEON
+		}
+#elif USE_ARMNEON
 		copy_screen_16bit_swap(dst, src, picasso96_state.Width * picasso96_state.Height * 2);
 #else
 		copy_screen_16bit_swap_arm(dst, src, picasso96_state.Width * picasso96_state.Height * 2);
 #endif
-#endif
-}
+	}
 	else if (picasso96_state.RGBFormat == RGBFB_CLUT)
 	{
 #ifdef TINKER
@@ -3153,12 +3154,10 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
 						)
 				);
 		}
-#else
-#ifdef USE_ARMNEON
+#elif USE_ARMNEON
 		copy_screen_32bit_to_16bit_neon(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
 #else
 		copy_screen_32bit_to_16bit_arm(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
-#endif
 #endif
 	}
 }
@@ -3180,8 +3179,8 @@ static int copyall_multithreaded_wrapper(void *ptr) {
 
 static void copyall_multithreaded(uae_u8 *src, uae_u8 *dst)
 {
-    srcdst.src = src; srcdst.dst = dst;
-    SDL_DetachThread(SDL_CreateThread(copyall_multithreaded_wrapper, "GOTTA GO FAST", nullptr));
+	srcdst.src = src; srcdst.dst = dst;
+	SDL_DetachThread(SDL_CreateThread(copyall_multithreaded_wrapper, "copyall_thread", nullptr));
 }
 #endif
 
@@ -3205,12 +3204,12 @@ bool picasso_flushpixels(uae_u8 *src, int off)
 
 #ifdef MULTITHREADED_COPYALL
 	copyall_multithreaded(src + off, dst);
-#else	
+#else
 	copyall(src + off, dst);
+#endif
 
 	if (currprefs.leds_on_screen)
 		picasso_statusline(dst);
-#endif
         gfx_unlock_picasso(true);
 	return true;
 }

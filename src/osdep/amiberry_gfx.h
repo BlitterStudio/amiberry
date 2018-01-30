@@ -18,3 +18,4 @@ extern SDL_DisplayMode sdlMode;
 
 extern bool can_have_linedouble;
 extern void check_error_sdl(bool check, const char* message);
+extern void toggle_fullscreen();

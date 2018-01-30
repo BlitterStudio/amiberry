@@ -86,7 +86,7 @@ public:
 
 	string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= values.size())
+		if (i < 0 || static_cast<unsigned int>(i) >= values.size())
 			return "---";
 		return values[i];
 	}
@@ -123,6 +123,20 @@ public:
 		}
 	}
 
+	static void set_port(const int sel, const int current_port)
+	{
+		changed_prefs.jports[current_port].id = portListIDs[sel];
+		if (changed_prefs.jports[current_port].id == JPORT_NONE)
+		{
+			changed_prefs.jports[current_port].idc.configname[0] = 0;
+			changed_prefs.jports[current_port].idc.name[0] = 0;
+			changed_prefs.jports[current_port].idc.shortid[0] = 0;
+		}
+		inputdevice_updateconfig(nullptr, &changed_prefs);
+		RefreshPanelInput();
+		RefreshPanelCustom();
+	}
+
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cboPort0)
@@ -135,11 +149,9 @@ public:
 			clear_ports(sel, current_port);
 
 			// set
-			changed_prefs.jports[current_port].id = portListIDs[sel];
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-			RefreshPanelInput();
-			RefreshPanelCustom();
+			set_port(sel, current_port);
 		}
+
 		else if (actionEvent.getSource() == cboPort1)
 		{
 			// Handle new device in port 1
@@ -150,42 +162,33 @@ public:
 			clear_ports(sel, current_port);
 
 			// set
-			changed_prefs.jports[current_port].id = portListIDs[sel];
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-			RefreshPanelInput();
-			RefreshPanelCustom();
+			set_port(sel, current_port);
 		}
 
 		else if (actionEvent.getSource() == cboPort2)
 		{
 			// Handle new device in port 2
-			const int sel = cboPort2->getSelected();
-			const int current_port = 2;
+			const auto sel = cboPort2->getSelected();
+			const auto current_port = 2;
 
 			// clear 
 			clear_ports(sel, current_port);
 
 			// set
-			changed_prefs.jports[current_port].id = portListIDs[sel];
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-			RefreshPanelInput();
-			RefreshPanelCustom();
+			set_port(sel, current_port);
 		}
 
 		else if (actionEvent.getSource() == cboPort3)
 		{
 			// Handle new device in port 3
-			const int sel = cboPort3->getSelected();
-			const int current_port = 3;
+			const auto sel = cboPort3->getSelected();
+			const auto current_port = 3;
 
 			// clear 
 			clear_ports(sel, current_port);
 
 			// set
-			changed_prefs.jports[current_port].id = portListIDs[sel];
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-			RefreshPanelInput();
-			RefreshPanelCustom();
+			set_port(sel, current_port);
 		}
 
 		else if (actionEvent.getSource() == cboPort0mode)

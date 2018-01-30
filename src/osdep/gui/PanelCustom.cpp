@@ -158,19 +158,6 @@ const int RemapEventList[] = {
 
 const int RemapEventListSize = sizeof RemapEventList / sizeof RemapEventList[0];
 
-//int RemapEventListSize = 20;
-
-class MultiActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-	}
-};
-
-static MultiActionListener* multiActionListener;
-
-
 class GroupActionListener : public gcn::ActionListener
 {
 public:
@@ -210,9 +197,6 @@ public:
 			SelectedFunction = 3;
 		}
 
-		// you'll want to refresh the drop-down section here
-
-		// inputdevice_updateconfig(nullptr, &changed_prefs);
 		RefreshPanelCustom();
 	}
 };
@@ -363,9 +347,6 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 {
 	int i;
 	char tmp[255];
-	static TCHAR* myname;
-
-	//int num_elements = sizeof( RemapEventList ) / sizeof( RemapEventList[0] );
 
 	if (CustomEventList.getNumberOfElements() == 0)
 	{

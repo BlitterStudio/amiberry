@@ -11,6 +11,7 @@
       <Vfork>false</Vfork>
       <Syscalls />
     </CatchpointConfiguration>
+    <LiveWatches />
     <MaskInterruptsWhileStepping>false</MaskInterruptsWhileStepping>
     <MemoryWindowPreferences />
   </DebugPreferences>

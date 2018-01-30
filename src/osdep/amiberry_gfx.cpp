@@ -50,8 +50,8 @@ bool can_have_linedouble;
 
 /* SDL Surface for output of emulation */
 SDL_Surface* screen = nullptr;
-#ifdef USE_SDL2
-SDL_Thread* renderthread = nullptr;
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+SDL_Thread * renderthread = nullptr;
 #endif
 
 #ifdef USE_DISPMANX
@@ -234,8 +234,8 @@ static void *display_thread(void *unused)
 				current_resource_amigafb = 0;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
 					VC_IMAGE_RGB565,
-					gfxvidinfo.drawbuffer.rowbytes,
-					gfxvidinfo.drawbuffer.bufmem,
+					screen->pitch,
+					screen->pixels,
 					&blit_rect);
 				dispmanxupdate = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_1);
@@ -245,8 +245,8 @@ static void *display_thread(void *unused)
 				current_resource_amigafb = 1;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_2,
 					VC_IMAGE_RGB565,
-					gfxvidinfo.drawbuffer.rowbytes,
-					gfxvidinfo.drawbuffer.bufmem,
+					screen->pitch,
+					screen->pixels,
 					&blit_rect);
 				dispmanxupdate = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_2);
@@ -306,13 +306,22 @@ int graphics_setup(void)
 
 	if (sdlWindow == nullptr)
 	{
+#if 0
 		sdlWindow = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
 			0,
 			0,
 			SDL_WINDOW_FULLSCREEN);
-		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
+#else
+		sdlWindow = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			800,
+			480,
+			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+#endif
+		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
 	}
 	
 	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
@@ -355,6 +364,19 @@ int graphics_setup(void)
 	return 1;
 }
 
+void toggle_fullscreen()
+{
+#ifdef USE_SDL2
+	Uint32 FullscreenFlag = SDL_WINDOW_FULLSCREEN;
+	if (sdlWindow)
+	{
+		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & FullscreenFlag;
+		SDL_SetWindowFullscreen(sdlWindow, is_fullscreen ? 0 : FullscreenFlag);
+		SDL_ShowCursor(is_fullscreen);
+	}
+#endif
+}
+
 #ifdef USE_DISPMANX
 static void wait_for_display_thread(void)
 {
@@ -385,6 +407,14 @@ void graphics_subshutdown()
 		uae_sem_wait(&display_sem);
 	}
 #elif USE_SDL2
+#if (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL); 
+		renderthread = NULL;
+	}
+#endif
+
 	if (screen != nullptr)
 	{
 		SDL_FreeSurface(screen);
@@ -528,6 +558,31 @@ static void open_screen(struct uae_prefs* p)
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 
+	if (sdlWindow)
+	{
+		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN;
+		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+		{
+			// Switch to Fullscreen mode, if we don't have it already
+			if (!is_fullscreen)
+				SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
+		}
+		else
+		{
+			// Switch to Window mode, if we don't have it already
+			if (is_fullscreen)
+				SDL_SetWindowFullscreen(sdlWindow, 0);
+		}
+
+		if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
+		{
+			if (screen_is_picasso)
+				SDL_SetWindowSize(sdlWindow, display_width, display_height);
+			else
+				SDL_SetWindowSize(sdlWindow, display_width, display_height * 2 >> p->gfx_vresolution);
+		}	
+	}
+
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
@@ -642,12 +697,11 @@ bool render_screen(bool immediate)
 	return true;
 }
 
-#ifdef USE_SDL2
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
 // All the moving and copying of data, happens here.
 int sdl2_render_thread(void *ptr) {
-        if (texture == NULL || renderer == NULL || screen == NULL) {
-	    printf("T: %08x; R: %08x; S: %08x\n", texture, renderer, screen);
-	    return 0;
+	if (texture == NULL || renderer == NULL || screen == NULL) {
+		return 0;
 	}
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
@@ -721,19 +775,23 @@ void show_screen(int mode)
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #elif USE_SDL2
-        // Wait for the last thread to finish before rendering it.
-        SDL_WaitThread(renderthread, NULL); renderthread = NULL;
-        // RenderPresent must be done in the main thread.
+#if (defined USE_RENDER_THREAD)
+	// Wait for the last thread to finish before rendering it.
+	SDL_WaitThread(renderthread, NULL); 
+	renderthread = NULL;
+	// RenderPresent must be done in the main thread.
 	SDL_RenderPresent(renderer);
-        // Then start the next render thread.
-        renderthread = SDL_CreateThread(sdl2_render_thread, "AmigaScreen", nullptr);
+	// Then start the next render thread.
+	renderthread = SDL_CreateThread(sdl2_render_thread, "AmigaScreen", nullptr);
+#else
+	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+	SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+	SDL_RenderPresent(renderer);
+#endif //USE_RENDER_THREAD
+	
+#endif //USE_SDL2
 
-        // Alynna // Old mainthread method of rendering.  Preserved just in case.
-	//SDL_RenderClear(renderer);
-	//SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-	//SDL_RenderPresent(renderer);
-	//printf("%d\n",currprefs.gfx_framerate);
-#endif
 	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
 
@@ -760,8 +818,12 @@ bool show_screen_maybe(const bool show)
 
 void black_screen_now()
 {
-#ifdef USE_SDL2
-	if (renderthread) { SDL_WaitThread(renderthread, NULL); renderthread = NULL; }
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL); 
+		renderthread = NULL;
+	}
 #endif
 	if (screen != nullptr)
 	{
@@ -977,8 +1039,12 @@ static int save_png(SDL_Surface* surface, char* path)
 
 static void create_screenshot()
 {
-#ifdef USE_SDL2
-	if (renderthread) { SDL_WaitThread(renderthread, NULL); renderthread = NULL; }     
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL);
+		renderthread = NULL;
+	}
 #endif
 	if (current_screenshot != nullptr)
 	{
@@ -1001,8 +1067,12 @@ static void create_screenshot()
 
 static int save_thumb(char* path)
 {
-#ifdef USE_SDL2
-	if (renderthread) { SDL_WaitThread(renderthread, NULL); renderthread = NULL; }
+#if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
+	if (renderthread)
+	{
+		SDL_WaitThread(renderthread, NULL);
+		renderthread = NULL;
+	}
 #endif
 	auto ret = 0;
 	if (current_screenshot != nullptr)
@@ -1263,6 +1333,8 @@ uae_u8* gfx_lock_picasso()
 {
 	if (screen == nullptr || screen_is_picasso == 0)
 		return nullptr;
+	if (SDL_MUSTLOCK(screen))
+		SDL_LockSurface(screen);
 
 	picasso_vidinfo.rowbytes = screen->pitch;
 	return static_cast<uae_u8 *>(screen->pixels);
@@ -1270,6 +1342,9 @@ uae_u8* gfx_lock_picasso()
 
 void gfx_unlock_picasso(const bool dorender)
 {
+	if (SDL_MUSTLOCK(screen))
+		SDL_UnlockSurface(screen);
+	
 	if (dorender)
 	{
 		render_screen(true);

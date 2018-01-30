@@ -87,6 +87,7 @@ static const TCHAR* cscompa[] = {
 static const TCHAR* qsmodes[] = {
 	_T("A500"), _T("A500+"), _T("A600"), _T("A1200"), _T("A4000"), _T("CD32"), nullptr
 };
+static const TCHAR *fullmodes[] = { _T("false"), _T("true"), /* "FILE_NOT_FOUND", */ _T("fullwindow"), nullptr };
 static const TCHAR* abspointers[] = {_T("none"), _T("mousehack"), _T("tablet"), nullptr};
 static const TCHAR* joyportmodes[] = {
 	_T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), nullptr
@@ -196,13 +197,17 @@ static const TCHAR* obsolete[] = {
 	_T("avoid_vid"), _T("avoid_dga"), _T("z3chipmem_size"), _T("state_replay_buffer"), _T("state_replay"),
 	_T("z3realmapping"), _T("force_0x10000000_z3"),
 	_T("fpu_arithmetic_exceptions"),
+
 	_T("gfx_filter_vert_zoom"),_T("gfx_filter_horiz_zoom"),
 	_T("gfx_filter_vert_zoom_mult"), _T("gfx_filter_horiz_zoom_mult"),
 	_T("gfx_filter_vert_offset"), _T("gfx_filter_horiz_offset"),
+
 	_T("pcibridge_rom_file"),
 	_T("pcibridge_rom_options"),
+
 	_T("cpuboard_ext_rom_file"),
 	_T("uaeboard_mode"),
+
 	_T("comp_oldsegv"),
 	_T("comp_midopt"),
 	_T("comp_lowopt"),
@@ -1402,7 +1407,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 
 	cfgfile_write_bool(f, _T("gfx_lores"), p->gfx_resolution == 0);
 	cfgfile_write_str(f, _T("gfx_resolution"), lorestype1[p->gfx_resolution]);
-	cfgfile_write_str(f, _T("gfx_linemode"), p->gfx_vresolution > 0 ? linemode[1] : linemode[0]);
+	cfgfile_write_str(f, _T("gfx_linemode"), p->gfx_vresolution > 0 ? linemode[p->gfx_iscanlines * 4 + p->gfx_pscanlines + 1] : linemode[0]);
+	cfgfile_write_str(f, _T("gfx_fullscreen_amiga"), fullmodes[p->gfx_apmode[0].gfx_fullscreen]);
+	cfgfile_write_str(f, _T("gfx_fullscreen_picasso"), fullmodes[p->gfx_apmode[1].gfx_fullscreen]);
 
 	cfgfile_write_bool(f, _T("ntsc"), p->ntscmode);
 
@@ -1430,8 +1437,10 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 
 	cfgfile_dwrite_bool(f, _T("fpu_no_unimplemented"), p->fpu_no_unimplemented);
 	cfgfile_write_bool(f, _T("fpu_strict"), p->fpu_strict);
-	cfgfile_dwrite_bool(f, _T("fpu_softfloat"), p->fpu_softfloat);
 
+#ifdef USE_JIT_FPU
+	cfgfile_write_bool(f, _T("compfpu"), p->compfpu);
+#endif
 	cfgfile_write(f, _T("cachesize"), _T("%d"), p->cachesize);
 
 	cfg_write(_T("; "), f);
@@ -2289,6 +2298,8 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		|| cfgfile_strboolval(option, value, _T("use_gui"), &p->start_gui, guimode3, 0)
 		|| cfgfile_strval(option, value, _T("gfx_resolution"), &p->gfx_resolution, lorestype1, 0)
 		|| cfgfile_strval(option, value, _T("gfx_lores"), &p->gfx_resolution, lorestype2, 0)
+		|| cfgfile_strval(option, value, _T("gfx_fullscreen_amiga"), &p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen, fullmodes, 0)
+		|| cfgfile_strval(option, value, _T("gfx_fullscreen_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_fullscreen, fullmodes, 0)
 		|| cfgfile_strval(option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
 
@@ -2314,11 +2325,15 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	{
 		int v;
 		p->gfx_vresolution = VRES_DOUBLE;
+		p->gfx_pscanlines = 0;
+		p->gfx_iscanlines = 0;
 		if (cfgfile_strval(option, value, _T("gfx_linemode"), &v, linemode, 0))
 		{
 			p->gfx_vresolution = VRES_NONDOUBLE;
 			if (v > 0)
 			{
+				p->gfx_iscanlines = (v - 1) / 4;
+				p->gfx_pscanlines = (v - 1) % 4;
 				p->gfx_vresolution = VRES_DOUBLE;
 			}
 		}
@@ -3557,11 +3572,14 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		|| cfgfile_yesno(option, value, _T("ksmirror_a8"), &p->cs_ksmirror_a8)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
+
 		|| cfgfile_yesno(option, value, _T("ntsc"), &p->ntscmode)
 		|| cfgfile_yesno(option, value, _T("cpu_compatible"), &p->cpu_compatible)
 		|| cfgfile_yesno(option, value, _T("cpu_24bit_addressing"), &p->address_space_24)
 		|| cfgfile_yesno(option, value, _T("fpu_strict"), &p->fpu_strict)
-		|| cfgfile_yesno(option, value, _T("fpu_softfloat"), &p->fpu_softfloat)
+#ifdef USE_JIT_FPU
+		|| cfgfile_yesno(option, value, _T("compfpu"), &p->compfpu)
+#endif
 		|| cfgfile_yesno(option, value, _T("floppy_write_protect"), &p->floppy_read_only)
 		|| cfgfile_yesno(option, value, _T("harddrive_write_protect"), &p->harddrive_read_only))
 		return 1;
@@ -3840,7 +3858,7 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 			p->m68k_speed = -1;
 		else if (_tcsicmp(value, _T("turbo")) == 0)
 			p->m68k_speed = -30;
-		else 
+		else
 			p->m68k_speed--;
 		return 1;
 	}
@@ -5156,14 +5174,22 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->sound_filter_type = 0;
 	p->sound_volume_cd = 20;
 
+#ifdef USE_JIT_FPU
+	p->compfpu = 1;
+#else
+	p->compfpu = 0;
+#endif
 	p->cachesize = 0;
 
-	p->gfx_framerate = 0;
+	p->gfx_framerate = 1;
 
 	p->gfx_size.width = 640; //TODO: Default WinUAE prefs indicate this should be 720x568
 	p->gfx_size.height = 256;
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_NONDOUBLE;
+	p->gfx_iscanlines = 1;
+	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
+	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;
@@ -5211,7 +5237,6 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cpu_model = 68000;
 	p->fpu_no_unimplemented = false;
 	p->fpu_strict = false;
-	p->fpu_softfloat = false;
 	p->m68k_speed = 0;
 	p->cpu_compatible = false;
 	p->address_space_24 = true;

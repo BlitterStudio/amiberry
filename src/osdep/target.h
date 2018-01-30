@@ -145,3 +145,14 @@ STATIC_INLINE void atomic_set(volatile uae_atomic *p, uae_u32 v)
 {
 	__sync_lock_test_and_set(p, v);
 }
+
+#ifdef USE_JIT_FPU
+#ifdef __cplusplus
+extern "C" {
+#endif
+	void save_host_fp_regs(void* buf);
+	void restore_host_fp_regs(void* buf);
+#ifdef __cplusplus
+}
+#endif
+#endif

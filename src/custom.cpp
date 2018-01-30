@@ -44,9 +44,7 @@
 
 STATIC_INLINE bool nocustom (void)
 {
-	if (picasso_on)
-		return true;
-	return false;
+	return picasso_on;
 }
 
 static void uae_abort (const TCHAR *format,...)
@@ -67,14 +65,14 @@ static void uae_abort (const TCHAR *format,...)
 }
 
 #ifdef TINKER
-// Alynna // 
+
+// Alynna //
 // Justifications for the numbers set here
 // Frametime is 20000 cycles in PAL
 //              16667 cycles in NTSC
 // The most we can give back is a frame's worth of
 // cycles, but we shouldn't give them ALL back for timing
 // coordination so I have picked 90% of the cycles.
-// NOTE: NON-JIT has less to give back.
 #define SPEEDUP_CYCLES_JIT_PAL     18000
 #define SPEEDUP_CYCLES_JIT_NTSC    15000
 #define SPEEDUP_CYCLES_NONJIT       1024
@@ -85,10 +83,18 @@ static void uae_abort (const TCHAR *format,...)
 // more chipset time is given and the CPU gets slower.
 // For your platform its best to tune these to the point where
 // you hit 60FPS in NTSC and not higher.
-// Do not tune below -(SPEEDUP_CYCLES) or the emulation will
+// Do not tune above -(SPEEDUP_CYCLES) or the emulation will
 // become unstable.
-#define SPEEDUP_TIMELIMIT_JIT     -10000
+#define SPEEDUP_TIMELIMIT_JIT      -10000
 #define SPEEDUP_TIMELIMIT_NONJIT    -960
+#else
+#define SPEEDUP_CYCLES_JIT_PAL 10000
+#define SPEEDUP_CYCLES_JIT_NTSC 6667
+#define SPEEDUP_CYCLES_NONJIT 256
+#define SPEEDUP_TIMELIMIT_JIT -5000
+#define SPEEDUP_TIMELIMIT_NONJIT -5000
+#endif
+
 // These define the maximum CPU possible and work well with
 // frameskip on and operation at 30fps at full chipset speed
 // They give the minimum possible chipset time.  Do not make
@@ -97,17 +103,6 @@ static void uae_abort (const TCHAR *format,...)
 // speed.
 #define SPEEDUP_TIMELIMIT_JIT_30      0
 #define SPEEDUP_TIMELIMIT_NONJIT_30   0
-#else
-// Setting these to reasonable guess for raspberry pi.
-// Dimitris can mess with these.
-#define SPEEDUP_CYCLES_JIT_PAL        5000
-#define SPEEDUP_CYCLES_JIT_NTSC       4000
-#define SPEEDUP_CYCLES_NONJIT          256
-#define SPEEDUP_TIMELIMIT_JIT         -750
-#define SPEEDUP_TIMELIMIT_NONJIT      -750
-#define SPEEDUP_TIMELIMIT_JIT_30      0
-#define SPEEDUP_TIMELIMIT_NONJIT_30   0
-#endif
 
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
@@ -318,7 +313,6 @@ struct color_change *curr_color_changes = 0;
 
 struct decision line_decisions[2 * (MAXVPOS + 2) + 1];
 struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
-#define COLOR_TABLE_SIZE (MAXVPOS + 2) * 2
 struct color_entry curr_color_tables[COLOR_TABLE_SIZE];
 
 static int next_sprite_entry = 0;
@@ -389,24 +383,26 @@ STATIC_INLINE int nodraw (void)
 
 void set_speedup_values(void)
 {
-  if(currprefs.m68k_speed < 0) {
-    if (currprefs.cachesize) {
-      pissoff_value = ((vblank_hz > 55) ? SPEEDUP_CYCLES_JIT_NTSC : SPEEDUP_CYCLES_JIT_PAL) * CYCLE_UNIT;
-      if (currprefs.m68k_speed != -30) 
-          speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
-      else
-          speedup_timelimit = SPEEDUP_TIMELIMIT_JIT_30;
-    } else {
-      pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
-      if (currprefs.m68k_speed != -30) 
-          speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
-      else
-          speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT_30;
-    }
-  } else {
-    pissoff_value = 0;
-    speedup_timelimit = 0;
-  }
+	if (currprefs.m68k_speed < 0) {
+		if (currprefs.cachesize) {
+			pissoff_value = ((vblank_hz > 55) ? SPEEDUP_CYCLES_JIT_NTSC : SPEEDUP_CYCLES_JIT_PAL) * CYCLE_UNIT;
+			if (currprefs.m68k_speed != -30)
+				speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
+			else
+				speedup_timelimit = SPEEDUP_TIMELIMIT_JIT_30;
+		}
+		else {
+			pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
+			if (currprefs.m68k_speed != -30)
+				speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
+			else
+				speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT_30;
+		}
+	}
+	else {
+		pissoff_value = 0;
+		speedup_timelimit = 0;
+	}
 }
 
 void reset_frame_rate_hack (void)

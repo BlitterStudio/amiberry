@@ -90,7 +90,7 @@ typedef union {
 
 #define BYTES_PER_INST 10240  /* paranoid ;-) */
 #if defined(CPU_arm)
-#define LONGEST_68K_INST 256 /* The number of bytes the longest possible
+#define LONGEST_68K_INST 128 /* The number of bytes the longest possible
 			       68k instruction takes */
 #else
 #define LONGEST_68K_INST 16 /* The number of bytes the longest possible
@@ -127,7 +127,8 @@ typedef union {
 #else
 #define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
 #endif
-#define N_FREGS 6 /* That leaves us two positions on the stack to play with */
+#define N_FREGS 16  // We use 16 regs: 0 - FP_RESULT, 1-3 - SCRATCH, 4-7 - ???, 8-15 - Amiga regs FP0-FP7
+
 
 /* Functions exposed to newcpu, or to what was moved from newcpu.c to
  * compemu_support.c */
@@ -151,11 +152,21 @@ extern int check_for_cache_miss(void);
 
 #define scaled_cycles(x) (currprefs.m68k_speed<0?(((x)/SCALE)?(((x)/SCALE<MAXCYCLES?((x)/SCALE):MAXCYCLES)):1):(x))
 
+/* JIT FPU compilation */
+extern void comp_fpp_opp (uae_u32 opcode, uae_u16 extra);
+extern void comp_fbcc_opp (uae_u32 opcode);
+extern void comp_fscc_opp (uae_u32 opcode, uae_u16 extra);
+void comp_fdbcc_opp (uae_u32 opcode, uae_u16 extra);
+void comp_ftrapcc_opp (uae_u32 opcode, uaecptr oldpc);
+void comp_fsave_opp (uae_u32 opcode);
+void comp_frestore_opp (uae_u32 opcode);
+
 extern uae_u32 needed_flags;
 extern uae_u8* comp_pc_p;
 extern void* pushall_call_handler;
 
 #define VREGS 32
+#define VFREGS 16
 
 #define INMEM 1
 #define CLEAN 2
@@ -172,6 +183,13 @@ typedef struct {
   uae_u8 validsize;
   uae_u8 dirtysize;
 } reg_status;
+
+typedef struct {
+  uae_u32* mem;
+  uae_u8 status;
+  uae_s8 realreg; /* gb-- realreg can hold -1 */
+  uae_u8 needflush;
+} freg_status;
 
 typedef struct {
     uae_u8 use_flags;
@@ -209,12 +227,24 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 #define FS2 10
 #define FS3 11
 
+#define SCRATCH_F64_1  1
+#define SCRATCH_F64_2  2
+#define SCRATCH_F64_3  3
+#define SCRATCH_F32_1  2
+#define SCRATCH_F32_2  4
+#define SCRATCH_F32_3  6
+
 typedef struct {
   uae_u32 touched;
   uae_s8 holds[VREGS];
   uae_u8 nholds;
   uae_u8 locked;
 } n_status;
+
+typedef struct {
+  uae_s8 holds;
+  uae_u8 nholds;
+} fn_status;
 
 /* For flag handling */
 #define NADA 1
@@ -233,6 +263,9 @@ typedef struct {
     uae_u32 flags_on_stack;
     uae_u32 flags_in_flags;
     uae_u32 flags_are_important;
+    /* FPU part */
+    freg_status fate[VFREGS];
+    fn_status   fat[N_FREGS];
 } bigstate;
 
 typedef struct {
@@ -276,9 +309,9 @@ extern int touchcnt;
 #include "compemu_midfunc_arm2.h"
 #endif
 
-//#if defined(CPU_i386) || defined(CPU_x86_64)
-//#include "compemu_midfunc_x86.h"
-//#endif
+#if defined(CPU_i386) || defined(CPU_x86_64)
+#include "compemu_midfunc_x86.h"
+#endif
 
 #undef DECLARE_MIDFUNC
 
@@ -297,7 +330,7 @@ extern void writelong_clobber(int address, int source, int tmp);
 extern void get_n_addr(int address, int dest, int tmp);
 extern void get_n_addr_jmp(int address, int dest, int tmp);
 extern void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp);
-#define SYNC_PC_OFFSET 100
+#define SYNC_PC_OFFSET 124
 extern void sync_m68k_pc(void);
 extern uae_u32 get_const(int r);
 extern int  is_const(int r);
@@ -374,13 +407,9 @@ void execute_normal(void);
 void exec_nostats(void);
 void do_nothing(void);
 
-void comp_fdbcc_opp (uae_u32 opcode, uae_u16 extra);
-void comp_fscc_opp (uae_u32 opcode, uae_u16 extra);
-void comp_ftrapcc_opp (uae_u32 opcode, uaecptr oldpc);
-void comp_fbcc_opp (uae_u32 opcode);
-void comp_fsave_opp (uae_u32 opcode);
-void comp_frestore_opp (uae_u32 opcode);
-void comp_fpp_opp (uae_u32 opcode, uae_u16 extra);
+/* ARAnyM uses fpu_register name, used in scratch_t */
+/* FIXME: check that no ARAnyM code assumes different floating point type */
+typedef fptype fpu_register;
 
 void jit_abort(const TCHAR *format,...);
 

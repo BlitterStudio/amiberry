@@ -348,8 +348,8 @@ static void build_cpufunctbl (void)
 
 	write_log(_T("CPU=%d, FPU=%d%s, JIT%s=%d."),
 		currprefs.cpu_model,
-		currprefs.fpu_model, currprefs.fpu_model ? (currprefs.fpu_softfloat ? _T(" (softfloat)") : _T(" (host)")) : _T(""),
-	  currprefs.cachesize ? _T("=CPU") : _T(""),
+		currprefs.fpu_model, currprefs.fpu_model ? _T(" (host)") : _T(""),
+		currprefs.cachesize ? (currprefs.compfpu ? _T("=CPU/FPU") : _T("=CPU")) : _T(""),
 	  currprefs.cachesize);
 
   regs.address_space_mask = 0xffffffff;
@@ -428,8 +428,7 @@ static int check_prefs_changed_cpu2(void)
 	|| currprefs.cpu_model != changed_prefs.cpu_model
 	|| currprefs.fpu_model != changed_prefs.fpu_model
 	|| currprefs.fpu_no_unimplemented != changed_prefs.fpu_no_unimplemented
-	|| currprefs.cpu_compatible != changed_prefs.cpu_compatible
-	|| currprefs.fpu_softfloat != changed_prefs.fpu_softfloat) {
+	|| currprefs.cpu_compatible != changed_prefs.cpu_compatible) {
 			cpu_prefs_changed_flag |= 1;
   }
   if (changed 
@@ -1740,6 +1739,10 @@ bool is_hardreset(void)
 	return cpu_hardreset;
 }
 
+#ifdef USE_JIT_FPU
+static uae_u8 fp_buffer[8 * 8];
+#endif
+
 void m68k_go (int may_quit)
 {
   int hardboot = 1;
@@ -1749,6 +1752,10 @@ void m68k_go (int may_quit)
 		write_log (_T("Bug! m68k_go is not reentrant.\n"));
 	  abort ();
   }
+
+#ifdef USE_JIT_FPU
+	save_host_fp_regs(fp_buffer);
+#endif
 
   reset_frame_rate_hack ();
   update_68k_cycles ();
@@ -1808,7 +1815,6 @@ void m68k_go (int may_quit)
 			if (cpu_prefs_changed_flag & 1) {
 				uaecptr pc = m68k_getpc();
 				prefs_changed_cpu();
-				fpu_modechange();
 				build_cpufunctbl();
 				m68k_setpc_normal(pc);
 				fill_prefetch();
@@ -1861,6 +1867,10 @@ void m68k_go (int may_quit)
   regs.pc = 0;
   regs.pc_p = NULL;
   regs.pc_oldp = NULL;
+
+#ifdef USE_JIT_FPU
+  restore_host_fp_regs(fp_buffer);
+#endif
 
   in_m68k_go--;
 }
