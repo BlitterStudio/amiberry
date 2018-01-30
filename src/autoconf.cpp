@@ -296,7 +296,6 @@ void rtarea_init(void)
 
 	rtarea_init_mem();
 	memset(rtarea_bank.baseaddr, 0, RTAREA_SIZE);
->>>>>>> 0a3d70c059d9ab4dddbae0f13cfc279ad92ea118
 
 	_stprintf(uaever, _T("uae-%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 
