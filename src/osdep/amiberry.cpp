@@ -868,8 +868,13 @@ int main(int argc, char* argv[])
 {
 	struct sigaction action{};
 
+#ifdef TINKER
+	max_uae_width = 1360;
+	max_uae_height = 768;
+#else
 	max_uae_width = 1920;
 	max_uae_height = 1080;
+#endif
 
 	// Get startup path
 	getcwd(start_path_data, MAX_DPATH);

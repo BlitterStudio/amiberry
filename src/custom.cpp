@@ -5605,15 +5605,14 @@ static void fpscounter (void)
 
 	if ((int)last < 0)
 		return;
-
 	if(currprefs.gfx_framerate)
 	  idletime >>= 1;
-
+	
 	mavg (&fps_mavg, last / 10, FPSCOUNTER_MAVG_SIZE);
 	mavg (&idle_mavg, idletime / 10, FPSCOUNTER_MAVG_SIZE);
 	idletime = 0;
 
-  timeframes++;
+	timeframes++;
 
 	if ((timeframes & 7) == 0) {
 		double idle = 1000 - (idle_mavg.mavg == 0 ? 0.0 : (double)idle_mavg.mavg * 1000.0 / vsynctimebase);
@@ -5776,7 +5775,7 @@ static void dmal_emu (uae_u32 v)
 			// write to disk
 			if (disk_fifostatus () <= 0) {
 				dat = chipmem_wget_indirect (pt);
-        last_custom_value1 = dat;
+    				last_custom_value1 = dat;
 				DSKDAT (dat);
 			}
 		} else {

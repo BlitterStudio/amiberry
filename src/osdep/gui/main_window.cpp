@@ -257,7 +257,7 @@ void swcursor(bool op) {
 void UpdateGuiScreen()
 {
 #ifdef USE_SDL1
-	wait_for_vsync();
+	wait_for_vsync();	
 	SDL_Flip(gui_screen);
 #elif USE_SDL2
 	SDL_RenderClear(renderer);
@@ -268,6 +268,7 @@ void UpdateGuiScreen()
 	SDL_RenderPresent(renderer);
 #endif
 }
+
 
 namespace sdl
 {
@@ -323,7 +324,8 @@ namespace sdl
 #ifdef DEBUG
 		printf("Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h,
 			videoInfo->vfmt->BitsPerPixel);
-#endif //DEBUG
+#endif
+
 		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 		SDL_EnableUNICODE(1);
@@ -398,11 +400,15 @@ namespace sdl
 			SDL_DestroyTexture(gui_texture);
 			gui_texture = nullptr;
 		}
-
 		if (cursor)
 		{
 			SDL_FreeCursor(cursor);
 			cursor = nullptr;
+		}
+		if (cursor_surface)
+		{
+			SDL_FreeSurface(cursor_surface);
+			cursor_surface = nullptr;
 		}
 
 #ifdef MALI_GPU

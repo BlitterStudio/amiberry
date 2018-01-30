@@ -19,6 +19,7 @@ uae_u8* natmem_offset = nullptr;
 static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
 
+
 /* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
 #define BARRIER 32
 

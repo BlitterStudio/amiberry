@@ -44,6 +44,7 @@ static gcn::UaeRadioButton* opt7Mhz;
 static gcn::UaeRadioButton* opt14Mhz;
 static gcn::UaeRadioButton* opt28Mhz;
 static gcn::UaeRadioButton* optFastest;
+static gcn::UaeRadioButton* optFastest30;
 static gcn::UaeRadioButton* optTurbo;
 
 class CPUButtonActionListener : public gcn::ActionListener
@@ -319,7 +320,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	opt28Mhz = new gcn::UaeRadioButton("25 Mhz", "radiocpuspeedgroup");
 	opt28Mhz->addActionListener(cpuSpeedButtonActionListener);
 
-	optFastest = new gcn::UaeRadioButton("Fastest", "radiocpuspeedgroup");
+	optFastest = new gcn::UaeRadioButton("Fast (>50fps)", "radiocpuspeedgroup");
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
 
 	optTurbo = new gcn::UaeRadioButton("Turbo", "radiocpuspeedgroup");

@@ -77,7 +77,7 @@ static uae_u32 emulib_EnableJoystick(uae_u32 val)
  */
 static uae_u32 emulib_SetFrameRate(uae_u32 val)
 {
-	if (val == 0)
+	if (val < 0)
 		return 0;
 	if (val > 20)
 		return 0;

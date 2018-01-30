@@ -637,6 +637,7 @@ static int init_joystick(void)
 {
 	// we will also use this routine to grab the retroarch buttons
 
+#ifdef RETROARCH
 	// set up variables / paths etc.
 	char retroarch_file[MAX_DPATH];
 	fetch_retroarchfile(retroarch_file, MAX_DPATH);
@@ -707,6 +708,7 @@ static int init_joystick(void)
 	}
 
 	else
+#endif
 	{
 		fill_default_keyboard();
 		host_keyboard_buttons[0] = default_keyboard_map;

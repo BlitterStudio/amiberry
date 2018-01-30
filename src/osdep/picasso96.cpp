@@ -3163,17 +3163,18 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
 }
 
 #ifdef MULTITHREADED_COPYALL
+// Alynna // GOTTA GO FAST // Actually this doesn't seem to help much at all, but it works and may speed up
+                           // machines where the copyall routines take a long time..
 static struct srcdst_t {
-	uae_u8 *src;
-	uae_u8 *dst;
+    uae_u8 *src;
+    uae_u8 *dst;
 } srcdst;
 
 static int copyall_multithreaded_wrapper(void *ptr) {
-	copyall(srcdst.src, srcdst.dst);
-	if (currprefs.leds_on_screen)
-		picasso_statusline(srcdst.dst);
-	return 0;
-
+    copyall(srcdst.src, srcdst.dst);
+    if (currprefs.leds_on_screen)
+	picasso_statusline(srcdst.dst);
+    return 0;
 }
 
 static void copyall_multithreaded(uae_u8 *src, uae_u8 *dst)
@@ -3209,8 +3210,7 @@ bool picasso_flushpixels(uae_u8 *src, int off)
 
 	if (currprefs.leds_on_screen)
 		picasso_statusline(dst);
-
-	gfx_unlock_picasso(true);
+        gfx_unlock_picasso(true);
 	return true;
 }
 

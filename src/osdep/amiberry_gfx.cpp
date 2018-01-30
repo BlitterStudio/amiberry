@@ -306,14 +306,21 @@ int graphics_setup(void)
 
 	if (sdlWindow == nullptr)
 	{
+#if 0
+		sdlWindow = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			0,
+			0,
+			SDL_WINDOW_FULLSCREEN);
+#else
 		sdlWindow = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_CENTERED,
 			SDL_WINDOWPOS_CENTERED,
 			800,
 			480,
-			//SDL_WINDOW_FULLSCREEN);
-			//SDL_WINDOW_FULLSCREEN_DESKTOP);
 			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+#endif
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
 	}
 	
@@ -390,6 +397,9 @@ void InitAmigaVidMode(struct uae_prefs* p)
 
 void graphics_subshutdown()
 {
+#ifdef USE_SDL2
+	if (renderthread) { SDL_WaitThread(renderthread, NULL); renderthread = NULL; }
+#endif
 #ifdef USE_DISPMANX
 	if (display_tid != nullptr) {
 		wait_for_display_thread();
@@ -588,7 +598,6 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen != nullptr)
 	{
-		
 		InitAmigaVidMode(p);
 		init_row_map();
 		vsync_switchmode(p->ntscmode ? 60 : 50);
@@ -694,7 +703,6 @@ int sdl2_render_thread(void *ptr) {
 	if (texture == NULL || renderer == NULL || screen == NULL) {
 		return 0;
 	}
-
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
@@ -705,6 +713,11 @@ int sdl2_render_thread(void *ptr) {
 void show_screen(int mode)
 {
 	const auto start = read_processor_time();
+
+#ifdef USE_SDL2
+	// Alynna // This hack is to keep good timing in RTG.
+	currprefs.gfx_framerate = screen_is_picasso;
+#endif
 		
 #ifdef USE_DISPMANX
 	const auto wait_till = current_vsync_frame;
@@ -789,6 +802,7 @@ void show_screen(int mode)
 		next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
 #endif
 }
+
 
 unsigned long target_lastsynctime()
 {
