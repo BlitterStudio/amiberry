@@ -543,7 +543,6 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen != nullptr)
 	{
-		
 		InitAmigaVidMode(p);
 		init_row_map();
 		vsync_switchmode(p->ntscmode ? 60 : 50);
@@ -646,7 +645,10 @@ bool render_screen(bool immediate)
 #ifdef USE_SDL2
 // All the moving and copying of data, happens here.
 int sdl2_render_thread(void *ptr) {
-        if (texture == NULL || renderer == NULL || screen == NULL) return 0;
+        if (texture == NULL || renderer == NULL || screen == NULL) {
+	    printf("T: %08x; R: %08x; S: %08x\n", texture, renderer, screen);
+	    return 0;
+	}
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, nullptr, nullptr);
