@@ -18,9 +18,6 @@
     <Filter Include="Source files\sounddep">
       <UniqueIdentifier>{406f7c18-2b0e-4564-8646-fdaef3089f65}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source files\softfloat">
-      <UniqueIdentifier>{6e21b349-366f-4684-bb77-ead2ccf9c8f4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source files\osdep">
       <UniqueIdentifier>{29512242-0e9f-4bfa-b302-f46f792e55cd}</UniqueIdentifier>
     </Filter>
@@ -196,12 +193,6 @@
     <ClCompile Include="..\..\src\fpp.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\fpp_native.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\fpp_softfloat.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\fsdb.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
@@ -282,15 +273,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\sounddep\sound.cpp">
       <Filter>Source files\sounddep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\softfloat\softfloat.cpp">
-      <Filter>Source files\softfloat</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\softfloat\softfloat_decimal.cpp">
-      <Filter>Source files\softfloat</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\softfloat\softfloat_fpsp.cpp">
-      <Filter>Source files\softfloat</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\amiberry.cpp">
       <Filter>Source files\osdep</Filter>
@@ -632,18 +614,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\sounddep\sound.h">
       <Filter>Source files\sounddep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat.h">
-      <Filter>Source files\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat_fpsp_tables.h">
-      <Filter>Source files\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat-macros.h">
-      <Filter>Source files\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat-specialize.h">
-      <Filter>Source files\softfloat</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h">
       <Filter>Source files\osdep</Filter>

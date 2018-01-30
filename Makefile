@@ -254,11 +254,6 @@ OBJS =	\
 	src/filesys.o \
 	src/flashrom.o \
 	src/fpp.o \
-	src/fpp_native.o \
-	src/fpp_softfloat.o \
-	src/softfloat/softfloat.o \
-	src/softfloat/softfloat_decimal.o \
-	src/softfloat/softfloat_fpsp.o \
 	src/fsdb.o \
 	src/fsdb_unix.o \
 	src/fsusage.o \

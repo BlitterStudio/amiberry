@@ -313,7 +313,6 @@ struct color_change *curr_color_changes = 0;
 
 struct decision line_decisions[2 * (MAXVPOS + 2) + 1];
 struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
-#define COLOR_TABLE_SIZE (MAXVPOS + 2) * 2
 struct color_entry curr_color_tables[COLOR_TABLE_SIZE];
 
 static int next_sprite_entry = 0;

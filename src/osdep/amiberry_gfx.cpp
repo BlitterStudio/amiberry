@@ -359,6 +359,7 @@ int graphics_setup(void)
 
 void toggle_fullscreen()
 {
+#ifdef USE_SDL2
 	Uint32 FullscreenFlag = SDL_WINDOW_FULLSCREEN;
 	if (sdlWindow)
 	{
@@ -366,6 +367,7 @@ void toggle_fullscreen()
 		SDL_SetWindowFullscreen(sdlWindow, is_fullscreen ? 0 : FullscreenFlag);
 		SDL_ShowCursor(is_fullscreen);
 	}
+#endif
 }
 
 #ifdef USE_DISPMANX

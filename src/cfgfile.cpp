@@ -197,13 +197,17 @@ static const TCHAR* obsolete[] = {
 	_T("avoid_vid"), _T("avoid_dga"), _T("z3chipmem_size"), _T("state_replay_buffer"), _T("state_replay"),
 	_T("z3realmapping"), _T("force_0x10000000_z3"),
 	_T("fpu_arithmetic_exceptions"),
+
 	_T("gfx_filter_vert_zoom"),_T("gfx_filter_horiz_zoom"),
 	_T("gfx_filter_vert_zoom_mult"), _T("gfx_filter_horiz_zoom_mult"),
 	_T("gfx_filter_vert_offset"), _T("gfx_filter_horiz_offset"),
+
 	_T("pcibridge_rom_file"),
 	_T("pcibridge_rom_options"),
+
 	_T("cpuboard_ext_rom_file"),
 	_T("uaeboard_mode"),
+
 	_T("comp_oldsegv"),
 	_T("comp_midopt"),
 	_T("comp_lowopt"),
@@ -1433,8 +1437,10 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 
 	cfgfile_dwrite_bool(f, _T("fpu_no_unimplemented"), p->fpu_no_unimplemented);
 	cfgfile_write_bool(f, _T("fpu_strict"), p->fpu_strict);
-	cfgfile_dwrite_bool(f, _T("fpu_softfloat"), p->fpu_softfloat);
 
+#ifdef USE_JIT_FPU
+	cfgfile_write_bool(f, _T("compfpu"), p->compfpu);
+#endif
 	cfgfile_write(f, _T("cachesize"), _T("%d"), p->cachesize);
 
 	cfg_write(_T("; "), f);
@@ -3566,11 +3572,14 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		|| cfgfile_yesno(option, value, _T("ksmirror_a8"), &p->cs_ksmirror_a8)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
+
 		|| cfgfile_yesno(option, value, _T("ntsc"), &p->ntscmode)
 		|| cfgfile_yesno(option, value, _T("cpu_compatible"), &p->cpu_compatible)
 		|| cfgfile_yesno(option, value, _T("cpu_24bit_addressing"), &p->address_space_24)
 		|| cfgfile_yesno(option, value, _T("fpu_strict"), &p->fpu_strict)
-		|| cfgfile_yesno(option, value, _T("fpu_softfloat"), &p->fpu_softfloat)
+#ifdef USE_JIT_FPU
+		|| cfgfile_yesno(option, value, _T("compfpu"), &p->compfpu)
+#endif
 		|| cfgfile_yesno(option, value, _T("floppy_write_protect"), &p->floppy_read_only)
 		|| cfgfile_yesno(option, value, _T("harddrive_write_protect"), &p->harddrive_read_only))
 		return 1;
@@ -5165,6 +5174,11 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->sound_filter_type = 0;
 	p->sound_volume_cd = 20;
 
+#ifdef USE_JIT_FPU
+	p->compfpu = 1;
+#else
+	p->compfpu = 0;
+#endif
 	p->cachesize = 0;
 
 	p->gfx_framerate = 1;
@@ -5223,7 +5237,6 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cpu_model = 68000;
 	p->fpu_no_unimplemented = false;
 	p->fpu_strict = false;
-	p->fpu_softfloat = false;
 	p->m68k_speed = 0;
 	p->cpu_compatible = false;
 	p->address_space_24 = true;

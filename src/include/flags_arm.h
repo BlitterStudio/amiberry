@@ -32,21 +32,36 @@
 
 /* Native integer code conditions */
 enum {
-      	NATIVE_CC_EQ = 0,
-        NATIVE_CC_NE = 1,
-        NATIVE_CC_CS = 2,
-        NATIVE_CC_CC = 3,
-        NATIVE_CC_MI = 4,
-        NATIVE_CC_PL = 5,
-        NATIVE_CC_VS = 6,
-        NATIVE_CC_VC = 7,
-        NATIVE_CC_HI = 8,
-        NATIVE_CC_LS = 9,
-        NATIVE_CC_GE = 10,
-        NATIVE_CC_LT = 11,
-        NATIVE_CC_GT = 12,
-        NATIVE_CC_LE = 13,
-        NATIVE_CC_AL = 14
+	NATIVE_CC_EQ = 0,
+  NATIVE_CC_NE = 1,
+  NATIVE_CC_CS = 2,
+  NATIVE_CC_CC = 3,
+  NATIVE_CC_MI = 4,
+  NATIVE_CC_PL = 5,
+  NATIVE_CC_VS = 6,
+  NATIVE_CC_VC = 7,
+  NATIVE_CC_HI = 8,
+  NATIVE_CC_LS = 9,
+  NATIVE_CC_GE = 10,
+  NATIVE_CC_LT = 11,
+  NATIVE_CC_GT = 12,
+  NATIVE_CC_LE = 13,
+  NATIVE_CC_AL = 14,
+  
+  // For FBcc, we need some pseudo condition codes
+  NATIVE_CC_F_OGT = 16 + 2,
+  NATIVE_CC_F_OGE = 16 + 3,
+  NATIVE_CC_F_OLT = 16 + 4,
+  NATIVE_CC_F_OLE = 16 + 5,
+  NATIVE_CC_F_OGL = 16 + 6,
+  NATIVE_CC_F_OR  = 16 + 7,
+  NATIVE_CC_F_UN  = 16 + 8,
+  NATIVE_CC_F_UEQ = 16 + 9,
+  NATIVE_CC_F_UGT = 16 + 10,
+  NATIVE_CC_F_UGE = 16 + 11,
+  NATIVE_CC_F_ULT = 16 + 12,
+  NATIVE_CC_F_ULE = 16 + 13
+  
 };
 
 #endif /* NATIVE_FLAGS_ARM_H */

@@ -54,9 +54,6 @@
     <Filter Include="Source files\osdep\gui">
       <UniqueIdentifier>{d946fd2c-30b2-45d3-9999-ccc3749160b7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source files\softfloat">
-      <UniqueIdentifier>{628a02d1-51f3-4021-81e5-6103ddf96904}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source files\sounddep">
       <UniqueIdentifier>{49dfa14b-d5bf-4aa3-a660-12f97ae62bdb}</UniqueIdentifier>
     </Filter>
@@ -186,9 +183,6 @@
       <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\fpp_native.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\fpp_softfloat.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\fsdb.cpp">
@@ -658,18 +652,6 @@
     <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat.h">
-      <Filter>Source files\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat_fpsp_tables.h">
-      <Filter>Source files\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat-macros.h">
-      <Filter>Source files\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\softfloat\softfloat-specialize.h">
-      <Filter>Source files\softfloat</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\sounddep\sound.h">
       <Filter>Source files\sounddep</Filter>
     </ClInclude>
@@ -1006,15 +988,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp">
       <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\softfloat\softfloat.cpp">
-      <Filter>Source files\softfloat</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\softfloat\softfloat_decimal.cpp">
-      <Filter>Source files\softfloat</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\softfloat\softfloat_fpsp.cpp">
-      <Filter>Source files\softfloat</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\sounddep\sound.cpp">
       <Filter>Source files\sounddep</Filter>

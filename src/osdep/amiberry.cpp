@@ -1011,32 +1011,38 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
-			// If the Enter GUI key was pressed, handle it
-			if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key && rEvent.key.repeat == 0)
+#ifdef USE_SDL2
+			if (rEvent.key.repeat == 0)
 			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-				break;
-			}
-			
-			// If the Quit emulator key was pressed, handle it
-			if (quit_key && rEvent.key.keysym.sym == quit_key && rEvent.key.repeat == 0)
-			{
-				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-				break;
-			}
+#endif
+				// If the Enter GUI key was pressed, handle it
+				if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key)
+				{
+					inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+					break;
+				}
 
-			if (action_replay_button && rEvent.key.keysym.sym == action_replay_button && rEvent.key.repeat == 0)
-			{
-				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-				break;
-			}
+				// If the Quit emulator key was pressed, handle it
+				if (quit_key && rEvent.key.keysym.sym == quit_key)
+				{
+					inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+					break;
+				}
 
-			if (fullscreen_key && rEvent.key.keysym.sym == fullscreen_key && rEvent.key.repeat == 0)
-			{
-				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-				break;
-			}
+				if (action_replay_button && rEvent.key.keysym.sym == action_replay_button)
+				{
+					inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+					break;
+				}
 
+				if (fullscreen_key && rEvent.key.keysym.sym == fullscreen_key)
+				{
+					inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+					break;
+				}
+#ifdef USE_SDL2
+			}
+#endif
 			// If the reset combination was pressed, handle it
 #ifdef USE_SDL1
 			// Strangely in FBCON left window is seen as left alt ??
@@ -1063,34 +1069,35 @@ int handle_msgpump()
 			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
 				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
 #endif
-
-			if (rEvent.key.keysym.sym ==  SDLK_CAPSLOCK && rEvent.key.repeat == 0)
-			{
-				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-				ioctl(0, KDGKBLED, &kbd_flags);
-				ioctl(0, KDGETLED, &kbd_led_status);
-				if (kbd_flags & 07 & LED_CAP)
-				{
-					// On, so turn off
-					kbd_led_status &= ~LED_CAP;
-					kbd_flags &= ~LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-				}
-				else
-				{
-					// Off, so turn on
-					kbd_led_status |= LED_CAP;
-					kbd_flags |= LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-				}
-				ioctl(0, KDSETLED, kbd_led_status);
-				ioctl(0, KDSKBLED, kbd_flags);
-				break;
-			}
-		
-			// Handle all other keys
+#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
+#endif
+				if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
+				{
+					// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
+					ioctl(0, KDGKBLED, &kbd_flags);
+					ioctl(0, KDGETLED, &kbd_led_status);
+					if (kbd_flags & 07 & LED_CAP)
+					{
+						// On, so turn off
+						kbd_led_status &= ~LED_CAP;
+						kbd_flags &= ~LED_CAP;
+						inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+					}
+					else
+					{
+						// Off, so turn on
+						kbd_led_status |= LED_CAP;
+						kbd_flags |= LED_CAP;
+						inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+					}
+					ioctl(0, KDSETLED, kbd_led_status);
+					ioctl(0, KDSKBLED, kbd_flags);
+					break;
+				}
+
+				// Handle all other keys
 #ifdef USE_SDL1
 				if (keyboard_type == KEYCODE_UNK)
 					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
@@ -1098,12 +1105,14 @@ int handle_msgpump()
 					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
 #elif USE_SDL2
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
-#endif
 			}
+#endif
 			break;
 		case SDL_KEYUP:
+#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
+#endif
 #ifdef USE_SDL1
 				if (keyboard_type == KEYCODE_UNK)
 					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
@@ -1111,8 +1120,8 @@ int handle_msgpump()
 					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
 #elif USE_SDL2
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
-#endif
 			}
+#endif
 			break;
 
 		case SDL_MOUSEBUTTONDOWN:
@@ -1148,14 +1157,14 @@ int handle_msgpump()
 					const auto x = rEvent.motion.xrel;
 					const auto y = rEvent.motion.yrel;
 #if defined (ANDROIDSDL)
-    				if(rEvent.motion.x == 0 && x > -4)
-    					x = -4;
-    				if(rEvent.motion.y == 0 && y > -4)
-    					y = -4;
-    				if(rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
-    					x = 4;
-    				if(rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
-    					y = 4;
+					if (rEvent.motion.x == 0 && x > -4)
+						x = -4;
+					if (rEvent.motion.y == 0 && y > -4)
+						y = -4;
+					if (rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
+						x = 4;
+					if (rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
+						y = 4;
 #endif //ANDROIDSDL
 					setmousestate(0, 0, x * mouseScale, 0);
 					setmousestate(0, 1, y * mouseScale, 0);

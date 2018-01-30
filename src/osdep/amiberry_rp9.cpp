@@ -131,6 +131,7 @@ static void parse_compatibility(struct uae_prefs* p, xmlNode* node)
 				{
 					p->cachesize = MAX_JIT_CACHE;
 					p->address_space_24 = false;
+          p->compfpu = true;
 				}
 				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-cpu-cycles") == 0)
 					p->cpu_compatible = false;
@@ -315,11 +316,17 @@ static void parse_peripheral(struct uae_prefs* p, xmlNode* node)
 				}
 				else if (strcmp(reinterpret_cast<const char *>(content), "jit") == 0)
 				{
-					const auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("memory"));
+					auto attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("memory"));
 					if (attr != nullptr)
 					{
 						p->cachesize = atoi(reinterpret_cast<const char *>(attr)) / 1024;
 						xmlFree(attr);
+					}
+					attr = xmlGetProp(curr_node, (const xmlChar *)_T("fpu"));
+					if (attr != NULL)
+					{
+						if (strcmp((const char *)attr, "false") == 0)
+							p->compfpu = false;
 					}
 				}
 				xmlFree(content);

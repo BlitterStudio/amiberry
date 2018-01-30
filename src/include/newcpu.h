@@ -12,7 +12,6 @@
 #include "uae/types.h"
 #include "readcpu.h"
 #include "machdep/m68k.h"
-#include <softfloat/softfloat.h>
 
 extern const int areg_byteinc[];
 extern const int imm8_table[];
@@ -68,7 +67,6 @@ typedef double fptype;
 
 typedef struct
 {
-	floatx80 fpx;
 	fptype fp;
 } fpdata;
 
@@ -101,6 +99,9 @@ struct regstruct
 
 #ifdef FPUEMU
 	fpdata fp[8];
+#ifdef JIT
+	fpdata fp_result;
+#endif
   uae_u32 fpcr,fpsr, fpiar;
 	uae_u32 fpu_state;
 	uae_u32 fpu_exp_state;
@@ -341,9 +342,7 @@ extern void fpuop_trapcc(uae_u32, uaecptr, uae_u16);
 extern void fpuop_bcc(uae_u32, uaecptr, uae_u32);
 extern void fpuop_save(uae_u32);
 extern void fpuop_restore(uae_u32);
-extern uae_u32 fpp_get_fpsr (void);
 extern void fpu_reset (void);
-extern bool fpu_get_constant(fpdata *fp, int cr);
 extern int fpp_cond(int condition);
 
 extern void exception3_read(uae_u32 opcode, uaecptr addr);

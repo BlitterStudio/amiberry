@@ -38,7 +38,7 @@ static gcn::UaeRadioButton* optFPU68881;
 static gcn::UaeRadioButton* optFPU68882;
 static gcn::UaeRadioButton* optFPUinternal;
 static gcn::UaeCheckBox* chkFPUstrict;
-static gcn::UaeCheckBox* chkSoftFloat;
+static gcn::UaeCheckBox* chkFPUJIT;
 static gcn::Window* grpCPUSpeed;
 static gcn::UaeRadioButton* opt7Mhz;
 static gcn::UaeRadioButton* opt14Mhz;
@@ -186,14 +186,23 @@ class JITActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (chkJIT->isSelected())
+		if (actionEvent.getSource() == chkJIT)
 		{
-			changed_prefs.cpu_compatible = false;
-			changed_prefs.cachesize = MAX_JIT_CACHE;
+			if (chkJIT->isSelected())
+			{
+				changed_prefs.cpu_compatible = 0;
+				changed_prefs.cachesize = MAX_JIT_CACHE;
+				changed_prefs.compfpu = true;
+			}
+			else
+			{
+				changed_prefs.cachesize = 0;
+				changed_prefs.compfpu = false;
+			}
 		}
-		else
+		else if (actionEvent.getSource() == chkFPUJIT)
 		{
-			changed_prefs.cachesize = 0;
+			changed_prefs.compfpu = chkFPUJIT->isSelected();
 		}
 		RefreshPanelCPU();
 	}
@@ -208,10 +217,6 @@ public:
 	{
 		if (actionEvent.getSource() == chkFPUstrict) {
 			changed_prefs.fpu_strict = chkFPUstrict->isSelected();
-
-		}
-		else if (actionEvent.getSource() == chkSoftFloat) {
-			changed_prefs.fpu_softfloat = chkSoftFloat->isSelected();
 
 		}
 		RefreshPanelCPU();
@@ -285,9 +290,9 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	chkFPUstrict->setId("FPUstrict");
 	chkFPUstrict->addActionListener(fpuActionListener);
 
-	chkSoftFloat = new gcn::UaeCheckBox("Softfloat FPU emul.", true);
-	chkSoftFloat->setId("SoftFloat");
-	chkSoftFloat->addActionListener(fpuActionListener);
+	chkFPUJIT = new gcn::UaeCheckBox("FPU JIT", true);
+	chkFPUJIT->setId("FPUJIT");
+	chkFPUJIT->addActionListener(jitActionListener);
 
 	grpFPU = new gcn::Window("FPU");
 	grpFPU->setPosition(DISTANCE_BORDER + grpCPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
@@ -296,7 +301,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpFPU->add(optFPU68882, 5, 70);
 	grpFPU->add(optFPUinternal, 5, 100);
 	grpFPU->add(chkFPUstrict, 5, 140);
-	grpFPU->add(chkSoftFloat, 5, 170);
+	grpFPU->add(chkFPUJIT, 5, 170);
 	grpFPU->setMovable(false);
 	grpFPU->setSize(185, 215);
 	grpFPU->setBaseColor(gui_baseCol);
@@ -358,7 +363,7 @@ void ExitPanelCPU()
 	delete optFPU68882;
 	delete optFPUinternal;
 	delete chkFPUstrict;
-	delete chkSoftFloat;
+	delete chkFPUJIT;
 	delete grpFPU;
 	delete fpuButtonActionListener;
 	delete fpuActionListener;
@@ -413,7 +418,8 @@ void RefreshPanelCPU()
 	optFPUinternal->setEnabled(changed_prefs.cpu_model == 68040);
 
 	chkFPUstrict->setSelected(changed_prefs.fpu_strict);
-	chkSoftFloat->setSelected(changed_prefs.fpu_softfloat);
+	chkFPUJIT->setSelected(changed_prefs.compfpu);
+	chkFPUJIT->setEnabled(changed_prefs.cachesize > 0);
 
 	if (changed_prefs.m68k_speed == M68K_SPEED_7MHZ_CYCLES)
 		opt7Mhz->setSelected(true);
@@ -440,8 +446,6 @@ bool HelpPanelCPU(std::vector<std::string> &helptext)
 	helptext.emplace_back("");
 	helptext.emplace_back("The available FPU models depending on the selected CPU.");
 	helptext.emplace_back("The option \"More compatible\" activates more accurate rounding and compare of two floats.");
-	helptext.emplace_back("\"Softfloat FPU emul.\" aktivates the FPU emulation from QEMU. This is more accurate,");
-	helptext.emplace_back("but a bit slower.");
 	helptext.emplace_back("");
 	helptext.emplace_back("With \"CPU Speed\" you can choose the clock rate of the Amiga.");
 	helptext.emplace_back("Use 7MHz for A500 games or 14MHz for A1200 ones. Fastest uses more emulation time");

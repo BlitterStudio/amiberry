@@ -15,7 +15,7 @@
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
 #define JIT /* JIT compiler support */
-/* #define USE_JIT_FPU */
+#define USE_JIT_FPU
 /* #define NATMEM_OFFSET natmem_offset */
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 /* #define AHI */ /* AHI sound emulation */

@@ -32,6 +32,8 @@
 #define writemem_special writemem
 #define readmem_special  readmem
 
+#include <math.h>
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -108,7 +110,11 @@ const int	follow_const_jumps = 0;
 
 static uae_u32 cache_size = 0; // Size of total cache allocated for compiled blocks
 static uae_u32 current_cache_size	= 0;		// Cache grows upwards: how much has been consumed already
+#ifdef USE_JIT_FPU
+#define avoid_fpu (!currprefs.compfpu)
+#else
 #define avoid_fpu (true)
+#endif
 static const int align_loops = 0;	      // Align the start of loops
 static const int align_jumps = 0;	      // Align the start of jumps
 static int optcount[10]		= {
@@ -646,13 +652,15 @@ bool check_prefs_changed_comp(bool checkonly)
 {
 	bool changed = 0;
 
-	if (currprefs.fpu_strict != changed_prefs.fpu_strict ||
+	if (currprefs.compfpu != changed_prefs.compfpu ||
+		currprefs.fpu_strict != changed_prefs.fpu_strict ||
 		currprefs.cachesize != changed_prefs.cachesize)
 		changed = 1;
 
 	if (checkonly)
 		return changed;
 
+	currprefs.compfpu = changed_prefs.compfpu;
 	currprefs.fpu_strict = changed_prefs.fpu_strict;
 
 	if (currprefs.cachesize != changed_prefs.cachesize) {
@@ -955,6 +963,7 @@ static  void evict(int r)
   if (live.nat[rr].nholds != live.state[r].realind) { /* Was not last */
 	  int topreg = live.nat[rr].holds[live.nat[rr].nholds];
 	  int thisind = live.state[r].realind;
+	
 	  live.nat[rr].holds[thisind] = topreg;
 	  live.state[topreg].realind = thisind;
   }
@@ -1343,6 +1352,142 @@ static int rmw(int r, int wsize, int rsize)
   return rmw_general(r, wsize, rsize);
 }
 
+/********************************************************************
+ * FPU register status handling. EMIT TIME!                         *
+ ********************************************************************/
+
+STATIC_INLINE void f_tomem_drop(int r)
+{
+	if (live.fate[r].status == DIRTY) {
+		compemu_raw_fmov_mr_drop((uintptr)live.fate[r].mem, live.fate[r].realreg);
+		live.fate[r].status = INMEM;
+	}
+}
+
+
+STATIC_INLINE int f_isinreg(int r)
+{
+	return live.fate[r].status == CLEAN || live.fate[r].status == DIRTY;
+}
+
+STATIC_INLINE void f_evict(int r)
+{
+	int rr;
+
+	if (!f_isinreg(r))
+		return;
+	rr = live.fate[r].realreg;
+	f_tomem_drop(r);
+
+	live.fat[rr].nholds = 0;
+	live.fate[r].status = INMEM;
+	live.fate[r].realreg = -1;
+}
+
+STATIC_INLINE void f_free_nreg(int r)
+{
+	int vr;
+	vr = live.fat[r].holds;
+	f_evict(vr);
+}
+
+
+/* Use with care! */
+STATIC_INLINE void f_isclean(int r)
+{
+	if (!f_isinreg(r))
+		return;
+	live.fate[r].status = CLEAN;
+}
+
+STATIC_INLINE void f_disassociate(int r)
+{
+	f_isclean(r);
+	f_evict(r);
+}
+
+
+
+static int f_alloc_reg(int r, int willclobber)
+{
+	int bestreg;
+
+	if(r < 8)
+	  bestreg = r + 8; // map real Amiga reg to ARM VFP reg 8-15
+	else
+	  bestreg = r - 8; // map FP_RESULT, FS1, FS2 or FS3 to ARM VFP reg 0-3
+
+	if (!willclobber) {
+		if (live.fate[r].status == INMEM) {
+			compemu_raw_fmov_rm(bestreg, (uintptr)live.fate[r].mem);
+			live.fate[r].status=CLEAN;
+		}
+	}
+	else {
+		live.fate[r].status = DIRTY;
+	}
+	live.fate[r].realreg=bestreg;
+	live.fat[bestreg].holds = r;
+	live.fat[bestreg].nholds = 1;
+
+	return bestreg;
+}
+
+STATIC_INLINE void f_unlock(int r)
+{
+}
+
+STATIC_INLINE int f_readreg(int r)
+{
+	int answer=-1;
+
+	if (f_isinreg(r)) {
+		answer = live.fate[r].realreg;
+	}
+	/* either the value was in memory to start with, or it was evicted and
+	is in memory now */
+	if (answer < 0)
+		answer = f_alloc_reg(r,0);
+
+	return answer;
+}
+
+STATIC_INLINE int f_writereg(int r)
+{
+	int answer = -1;
+
+	if (f_isinreg(r)) {
+		answer = live.fate[r].realreg;
+	}
+	if (answer < 0) {
+		answer = f_alloc_reg(r,1);
+	}
+	live.fate[r].status = DIRTY;
+	return answer;
+}
+
+STATIC_INLINE int f_rmw(int r)
+{
+	int n;
+
+	if (f_isinreg(r)) {
+		n = live.fate[r].realreg;
+	}
+	else
+		n = f_alloc_reg(r,0);
+	live.fate[r].status = DIRTY;
+	return n;
+}
+
+static void fflags_into_flags_internal(void)
+{
+	int r;
+
+	r = f_readreg(FP_RESULT);
+  raw_fflags_into_flags(r);
+	f_unlock(r);
+	live_flags();
+}
 
 
 #if defined(CPU_arm)
@@ -1379,6 +1524,7 @@ void sync_m68k_pc(void)
 
 struct scratch_t {
   uae_u32 regs[VREGS];
+	fpu_register	fregs[VFREGS];
 };
 
 static scratch_t scratch;
@@ -1479,6 +1625,12 @@ void init_comp(void)
 	  set_status(i, UNDEF);
   }
 
+	for (i=0;i<VFREGS;i++) {
+		live.fate[i].status = UNDEF;
+		live.fate[i].realreg = -1;
+		live.fate[i].needflush = NF_SCRATCH;
+	}
+
   for (i=0; i<VREGS; i++) {
   	if (i < 16) { /* First 16 registers map to 68k registers */
 	    live.state[i].mem = &regs.regs[i];
@@ -1502,6 +1654,22 @@ void init_comp(void)
 
   set_status(NEXT_HANDLER, UNDEF);
 
+	for (i = 0; i < VFREGS; i++) {
+		if (i < 8) { /* First 8 registers map to 68k FPU registers */
+			live.fate[i].mem = (uae_u32*)(&regs.fp[i].fp);
+			live.fate[i].needflush = NF_TOMEM;
+			live.fate[i].status = INMEM;
+		}
+		else if (i == FP_RESULT) {
+			live.fate[i].mem = (uae_u32*)(&regs.fp_result.fp);
+			live.fate[i].needflush = NF_TOMEM;
+			live.fate[i].status = INMEM;
+		}
+		else
+			live.fate[i].mem = (uae_u32*)(&scratch.fregs[i]);
+	}
+
+
   for (i=0; i<N_REGS; i++) {
 	  live.nat[i].touched = 0;
 	  live.nat[i].nholds = 0;
@@ -1511,6 +1679,10 @@ void init_comp(void)
 	    au++;
 	  }
   }
+
+	for (i=0;i<N_FREGS;i++) {
+		live.fat[i].nholds = 0;
+	}
 
   touchcnt = 1;
   m68k_pc_offset = 0;
@@ -1528,6 +1700,12 @@ void flush(int save_regs)
   sync_m68k_pc(); /* mid level */
 
   if (save_regs) {
+		for (i = 0; i < VFREGS; i++) {
+			if (live.fate[i].needflush == NF_SCRATCH ||
+				live.fate[i].status == CLEAN) {
+					f_disassociate(i);
+			}
+		}
   	for (i=0; i<=FLAGTMP; i++) {
   		switch(live.state[i].status) {
   		  case INMEM:
@@ -1548,6 +1726,11 @@ void flush(int save_regs)
   	      break;
 	    }
 	  }
+		for (i = 0; i <= FP_RESULT; i++) {
+			if (live.fate[i].status == DIRTY) {
+				f_evict(i);
+			}
+		}
   }
 }
 
@@ -1565,6 +1748,9 @@ void freescratch(void)
 
   for (i = S1; i < VREGS; i++)
     forget_about(i);
+
+	for (i = FS1; i <= FS3; i++) // only FS1-FS3
+		f_forget_about(i);
 }
 
 /********************************************************************
@@ -1598,6 +1784,9 @@ static void flush_all(void)
     		tomem(i);
 	    }
   	}
+		for (i = FP_RESULT; i <= FS3; i++) // only FP_RESULT and FS1-FS3, FP0-FP7 are call save
+			if (f_isinreg(i))
+				f_evict(i);
 }
 
 /* Make sure all registers that will get clobbered by a call are
@@ -1618,6 +1807,10 @@ static void prepare_for_call_2(void)
   	if (!call_saved[i] && live.nat[i].nholds > 0)
 	    free_nreg(i);
   }
+
+	for (i = 0; i < 4; i++) // only FP_RESULT and FS1-FS3, FP0-FP7 are call save
+		if (live.fat[i].nholds > 0)
+			f_free_nreg(i);
 
   live.flags_in_flags = TRASH;  /* Note: We assume we already rescued the
 			         flags at the very start of the call_r
@@ -2038,7 +2231,6 @@ STATIC_INLINE int block_check_checksum(blockinfo* bi)
 	     means we have to move it into the needs-to-be-flushed list */
 	  bi->handler_to_use = bi->handler;
 	  set_dhtu(bi, bi->direct_handler);
-
 	  bi->status = BI_CHECKING;
 	  isgood = called_check_checksum(bi) != 0;
   }
@@ -2694,7 +2886,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
       if (next_pc_p) { /* A branch was registered */
   		  uintptr t1 = next_pc_p;
   		  uintptr t2 = taken_pc_p;
-  		  int cc = branch_cc;
+  		  int cc = branch_cc; // this is native (ARM) condition code
   
   		  uae_u32* branchadd;
   		  uae_u32* tba;
@@ -2707,7 +2899,10 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   		       the 68k branch is taken. */
   		    t1 = taken_pc_p;
   		    t2 = next_pc_p;
-  		    cc = branch_cc^1;
+  		    if(cc < NATIVE_CC_AL)
+  		      cc = branch_cc^1;
+  		    else if(cc > NATIVE_CC_AL)
+  		    	cc = 0x10 | (branch_cc ^ 0xf);
     		}
   
     		tmp = live; /* ouch! This is big... */

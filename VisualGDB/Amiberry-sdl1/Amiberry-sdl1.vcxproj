@@ -192,10 +192,6 @@
     <ClInclude Include="..\..\src\osdep\picasso96.h" />
     <ClInclude Include="..\..\src\osdep\sysconfig.h" />
     <ClInclude Include="..\..\src\osdep\target.h" />
-    <ClInclude Include="..\..\src\softfloat\softfloat-macros.h" />
-    <ClInclude Include="..\..\src\softfloat\softfloat-specialize.h" />
-    <ClInclude Include="..\..\src\softfloat\softfloat.h" />
-    <ClInclude Include="..\..\src\softfloat\softfloat_fpsp_tables.h" />
     <ClInclude Include="..\..\src\sounddep\sound.h" />
     <ClInclude Include="..\..\src\threaddep\thread.h" />
   </ItemGroup>
@@ -295,7 +291,6 @@
     <ClCompile Include="..\..\src\flashrom.cpp" />
     <ClCompile Include="..\..\src\fpp.cpp" />
     <ClCompile Include="..\..\src\fpp_native.cpp" />
-    <ClCompile Include="..\..\src\fpp_softfloat.cpp" />
     <ClCompile Include="..\..\src\fsdb.cpp" />
     <ClCompile Include="..\..\src\fsdb_unix.cpp" />
     <ClCompile Include="..\..\src\fsusage.cpp" />
@@ -372,9 +367,6 @@
     <ClCompile Include="..\..\src\rtc.cpp" />
     <ClCompile Include="..\..\src\savestate.cpp" />
     <ClCompile Include="..\..\src\scsi.cpp" />
-    <ClCompile Include="..\..\src\softfloat\softfloat.cpp" />
-    <ClCompile Include="..\..\src\softfloat\softfloat_decimal.cpp" />
-    <ClCompile Include="..\..\src\softfloat\softfloat_fpsp.cpp" />
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
