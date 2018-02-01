@@ -189,7 +189,7 @@ DEFS += `xml2-config --cflags`
 DEFS += -DAMIBERRY -DARMV6_ASSEMBLY
 
 ifndef DEBUG
-    CFLAGS += -Ofast
+    CFLAGS += -std=gnu++14 -Ofast 
 else
     CFLAGS += -std=gnu++14 -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
 endif
@@ -220,7 +220,7 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 ASFLAGS += $(CPU_FLAGS)
 
 export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-unused -Wno-format
-export CXXFLAGS += $(CFLAGS) -std=gnu++14
+export CXXFLAGS += $(CFLAGS)
 
 
 OBJS =	\
