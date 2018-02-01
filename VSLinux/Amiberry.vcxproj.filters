@@ -64,9 +64,6 @@
     <Filter Include="src\include\uae">
       <UniqueIdentifier>{3fc35769-8a69-4a89-bb60-fe31d03164b8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\softfloat">
-      <UniqueIdentifier>{8eabae2d-309a-48b9-9db7-a45edab01739}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\archivers\mp2">
       <UniqueIdentifier>{887bad08-7067-4275-9748-6606e23c388e}</UniqueIdentifier>
     </Filter>
@@ -618,9 +615,6 @@
     <ClCompile Include="..\src\fpp_native.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fpp_softfloat.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\gayle.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -635,15 +629,6 @@
     </ClCompile>
     <ClCompile Include="..\src\scsi.cpp">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\softfloat\softfloat.cpp">
-      <Filter>src\softfloat</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\softfloat\softfloat_decimal.cpp">
-      <Filter>src\softfloat</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\softfloat\softfloat_fpsp.cpp">
-      <Filter>src\softfloat</Filter>
     </ClCompile>
     <ClCompile Include="..\src\archivers\7z\7zBuf2.c">
       <Filter>src\archivers\7z</Filter>
@@ -1093,18 +1078,6 @@
     </ClInclude>
     <ClInclude Include="..\src\include\rtc.h">
       <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\softfloat\softfloat.h">
-      <Filter>src\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\softfloat\softfloat_fpsp_tables.h">
-      <Filter>src\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\softfloat\softfloat-macros.h">
-      <Filter>src\softfloat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\softfloat\softfloat-specialize.h">
-      <Filter>src\softfloat</Filter>
     </ClInclude>
     <ClInclude Include="..\src\archivers\7z\7z.h">
       <Filter>src\archivers\7z</Filter>

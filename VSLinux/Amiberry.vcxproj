@@ -318,7 +318,6 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\fpp_native.cpp" />
-    <ClCompile Include="..\src\fpp_softfloat.cpp" />
     <ClCompile Include="..\src\fsdb.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -438,9 +437,6 @@
     <ClCompile Include="..\src\sinctable.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\softfloat\softfloat.cpp" />
-    <ClCompile Include="..\src\softfloat\softfloat_decimal.cpp" />
-    <ClCompile Include="..\src\softfloat\softfloat_fpsp.cpp" />
     <ClCompile Include="..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\src\statusline.cpp">
       <DeploymentContent>false</DeploymentContent>
@@ -601,10 +597,6 @@
     <ClInclude Include="..\src\osdep\picasso96.h" />
     <ClInclude Include="..\src\osdep\sysconfig.h" />
     <ClInclude Include="..\src\osdep\target.h" />
-    <ClInclude Include="..\src\softfloat\softfloat-macros.h" />
-    <ClInclude Include="..\src\softfloat\softfloat-specialize.h" />
-    <ClInclude Include="..\src\softfloat\softfloat.h" />
-    <ClInclude Include="..\src\softfloat\softfloat_fpsp_tables.h" />
     <ClInclude Include="..\src\sounddep\sound.h" />
     <ClInclude Include="..\src\threaddep\thread.h" />
   </ItemGroup>
