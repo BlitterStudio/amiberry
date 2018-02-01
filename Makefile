@@ -47,12 +47,13 @@ else ifeq ($(PLATFORM),rpi1)
 else ifeq ($(PLATFORM),xu4)
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
+    HAVE_NEON = 1
+    NAME  = amiberry-xu4-sdl1-dev
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
-    NAME  = amiberry-xu4-sdl1-dev
 
 else ifeq ($(PLATFORM),android)
     CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
@@ -129,12 +130,13 @@ else ifeq ($(PLATFORM),xu4-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
+    HAVE_NEON = 1
+    NAME  = amiberry-xu4-sdl2-dev
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
-    NAME  = amiberry-xu4-sdl2-dev
 
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
