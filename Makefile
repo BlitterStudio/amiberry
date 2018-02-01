@@ -18,11 +18,6 @@ CPPFLAGS+= -MD -MP
 #WITH_LOGGING=1
 #SANITIZE=1
 
-ifdef SANITIZE
-    LDFLAGS += -lasan
-    CFLAGS += -fsanitize=leak -fsanitize-recover=address
-endif
-
 #
 # SDL1 targets
 #
@@ -213,6 +208,11 @@ ifdef GEN_PROFILE
 endif
 ifdef USE_PROFILE
     CFLAGS += -fprofile-use -fprofile-correction -fbranch-probabilities -fvpt
+endif
+
+ifdef SANITIZE
+    LDFLAGS += -lasan
+    CFLAGS += -fsanitize=leak -fsanitize-recover=address
 endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
