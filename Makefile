@@ -380,7 +380,6 @@ endif
 ifeq ($(ANDROID), 1)
 OBJS += src/osdep/gui/androidsdl_event.o
 OBJS += src/osdep/gui/PanelOnScreen.o
-OBJS += src/osdep/pandora_gfx.o
 endif
 
 ifdef HAVE_NEON
@@ -415,8 +414,9 @@ src/jit/compemu_support.o: src/jit/compemu_support.cpp
 
 $(PROG): $(OBJS)
 	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
-	cp $(PROG) $(PROG)-debug
 ifndef DEBUG
+# want to keep a copy of the binary before stripping? Then enable the below line
+#	cp $(PROG) $(PROG)-debug
 	$(STRIP) $(PROG)
 endif
 
