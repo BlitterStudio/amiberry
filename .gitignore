@@ -2,6 +2,7 @@
 conf/*.uae
 conf/*.conf
 kickstarts/*.rom
+kickstarts/*.key
 *.db
 *.dep
 *.ast
@@ -50,3 +51,4 @@ VSLinux/obj/ARM/Debug/
 VisualGDB/Amiberry/VisualGDB/Debug/Amiberry-sdl1
 VisualGDB/Amiberry/VisualGDB/Debug/Amiberry-sdl2
 VisualGDB/Amiberry/VisualGDB/
+/amiberry*
