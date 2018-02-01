@@ -46,7 +46,7 @@ else ifeq ($(PLATFORM),rpi1)
 
 else ifeq ($(PLATFORM),xu4)
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1 -DMALI_GPU
     HAVE_NEON = 1
     NAME  = amiberry-xu4-sdl1-dev
     ifdef DEBUG
@@ -129,7 +129,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),xu4-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DMALI_GPU
     HAVE_NEON = 1
     NAME  = amiberry-xu4-sdl2-dev
     ifdef DEBUG
