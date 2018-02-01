@@ -92,11 +92,11 @@ static void fpp_set_mode(uae_u32 mode_control)
 /* Functions for detecting float type */
 static bool fpp_is_nan (fpdata *fpd)
 {
-  return ::isnan(fpd->fp) != 0;
+  return std::isnan(fpd->fp) != 0;
 }
 static bool fpp_is_infinity (fpdata *fpd)
 {
-  return ::isinf(fpd->fp) != 0;
+  return std::isinf(fpd->fp) != 0;
 }
 static bool fpp_is_zero(fpdata *fpd)
 {
