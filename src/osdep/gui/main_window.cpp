@@ -338,8 +338,10 @@ namespace sdl
 #else
 		setup_cursor();
 #endif
-		if (sdlWindow)
+
+		if (sdlWindow && strcmp(sdl_video_driver, "x11") == 0)
 		{
+			// Only resize the window if we're under x11, otherwise we're fullscreen anyway
 			if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
 				SDL_SetWindowSize(sdlWindow, GUI_WIDTH, GUI_HEIGHT);
 		}

@@ -53,6 +53,9 @@ SDL_Surface* screen = nullptr;
 #if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
 SDL_Thread * renderthread = nullptr;
 #endif
+#ifdef USE_SDL2
+const char* sdl_video_driver;
+#endif
 
 #ifdef USE_DISPMANX
 static unsigned int current_vsync_frame = 0;
@@ -304,6 +307,20 @@ int graphics_setup(void)
 		abort();
 	}
 
+	sdl_video_driver = SDL_GetCurrentVideoDriver();
+	Uint32 sdl_window_mode;
+
+	if (strcmp(sdl_video_driver,"x11") == 0)
+	{
+		// Only enable Windowed mode if we're running under x11
+		sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+	}
+	else
+	{
+		// otherwise go for Fullscreen
+		sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+	}
+
 	if (sdlWindow == nullptr)
 	{
 		sdlWindow = SDL_CreateWindow("Amiberry",
@@ -311,9 +328,7 @@ int graphics_setup(void)
 			SDL_WINDOWPOS_CENTERED,
 			800,
 			480,
-			//SDL_WINDOW_FULLSCREEN);
-			//SDL_WINDOW_FULLSCREEN_DESKTOP);
-			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+			sdl_window_mode);
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
 	}
 	
@@ -360,11 +375,11 @@ int graphics_setup(void)
 void toggle_fullscreen()
 {
 #ifdef USE_SDL2
-	Uint32 FullscreenFlag = SDL_WINDOW_FULLSCREEN;
+	const Uint32 fullscreen_flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	if (sdlWindow)
 	{
-		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & FullscreenFlag;
-		SDL_SetWindowFullscreen(sdlWindow, is_fullscreen ? 0 : FullscreenFlag);
+		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & fullscreen_flag;
+		SDL_SetWindowFullscreen(sdlWindow, is_fullscreen ? 0 : fullscreen_flag);
 		SDL_ShowCursor(is_fullscreen);
 	}
 #endif
@@ -548,14 +563,14 @@ static void open_screen(struct uae_prefs* p)
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 
-	if (sdlWindow)
+	if (sdlWindow && strcmp(sdl_video_driver, "x11") == 0)
 	{
-		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN;
+		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP;
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
 			// Switch to Fullscreen mode, if we don't have it already
 			if (!is_fullscreen)
-				SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN);
+				SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
 		else
 		{
@@ -564,13 +579,14 @@ static void open_screen(struct uae_prefs* p)
 				SDL_SetWindowFullscreen(sdlWindow, 0);
 		}
 
-		if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
-		{
-			if (screen_is_picasso)
-				SDL_SetWindowSize(sdlWindow, display_width, display_height);
-			else
-				SDL_SetWindowSize(sdlWindow, display_width, display_height * 2 >> p->gfx_vresolution);
-		}	
+		if (!is_fullscreen)
+			if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
+			{
+				if (screen_is_picasso)
+					SDL_SetWindowSize(sdlWindow, display_width, display_height);
+				else
+					SDL_SetWindowSize(sdlWindow, display_width, display_height * 2 >> p->gfx_vresolution);
+			}	
 	}
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);

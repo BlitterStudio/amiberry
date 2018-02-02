@@ -14,6 +14,7 @@ extern SDL_Surface* gui_screen;
 #ifdef USE_SDL2
 extern SDL_Texture* gui_texture;
 extern SDL_DisplayMode sdlMode;
+extern const char* sdl_video_driver;
 #endif
 
 extern bool can_have_linedouble;
