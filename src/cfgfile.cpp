@@ -5181,7 +5181,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 #endif
 	p->cachesize = 0;
 
-	p->gfx_framerate = 1;
+	p->gfx_framerate = 0;
 
 	p->gfx_size.width = 640; //TODO: Default WinUAE prefs indicate this should be 720x568
 	p->gfx_size.height = 256;
