@@ -121,6 +121,7 @@ struct regstruct
   uae_u32 address_space_mask;
 
   uae_s32 pissoff;
+	uae_u8* natmem_offset;
 };
 
 extern struct regstruct regs;

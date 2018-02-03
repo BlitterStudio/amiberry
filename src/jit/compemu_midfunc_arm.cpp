@@ -491,6 +491,8 @@ STATIC_INLINE void emit_jmp_target(uae_u32 a) {
 * FPU stuff                                                             *
 *************************************************************************/
 
+#ifdef USE_JIT_FPU
+
 MIDFUNC(1,f_forget_about,(FW r))
 {
 	if (f_isinreg(r))
@@ -875,24 +877,26 @@ MIDFUNC(3,ffunc_rr,(double (*func)(double), FW d, FR s))
 }
 MENDFUNC(3,ffunc_rr,(double (*func)(double), FW d, FR s))
 
-MIDFUNC(3,fsincos_rr,(FW d, FW c, FR s))
-{
-  clobber_flags();
-  prepare_for_call_1();
-  prepare_for_call_2();
-
-	s = f_readreg(s);  /* s for source */
-	d = f_writereg(d); /* d for sine   */
-	c = f_writereg(c); /* c for cosine */
-
-	raw_ffunc_rr(cos, c, s);
-	raw_ffunc_rr(sin, d, s);
-
-	f_unlock(s);
-	f_unlock(d);
-	f_unlock(c);
-}
-MENDFUNC(3,fsincos_rr,(FW d, FW c, FR s))
+//MIDFUNC(3,fsincos_rr,(FW d, FW c, FR s))
+//{
+//  clobber_flags();
+//  prepare_for_call_1();
+//  prepare_for_call_2();
+//
+//	s = f_readreg(s);  /* s for source */
+//	d = f_writereg(d); /* d for sine   */
+//	c = f_writereg(c); /* c for cosine */
+//
+//	// s may be FS1, so we need to save it before we call external func
+//	
+//	raw_ffunc_rr(cos, c, s);
+//	raw_ffunc_rr(sin, d, s);
+//
+//	f_unlock(s);
+//	f_unlock(d);
+//	f_unlock(c);
+//}
+//MENDFUNC(3,fsincos_rr,(FW d, FW c, FR s))
 
 MIDFUNC(3,fpowx_rr,(uae_u32 x, FW d, FR s))
 {
@@ -917,3 +921,37 @@ MIDFUNC(1,fflags_into_flags,())
 	fflags_into_flags_internal();
 }
 MENDFUNC(1,fflags_into_flags,())
+
+MIDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))
+{
+  clobber_flags();
+
+	adr = readreg(adr, 4);
+	s = f_readreg(s);
+  raw_fp_from_exten_mr(adr, s);
+	f_unlock(s);
+	unlock2(adr);
+}
+MENDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))
+
+MIDFUNC(2,fp_to_exten_rm,(FW d, RR4 adr))
+{
+  clobber_flags();
+
+	adr = readreg(adr, 4);
+	d = f_writereg(d);
+  raw_fp_to_exten_rm(d, adr);
+	unlock2(adr);
+	f_unlock(d);
+}
+MENDFUNC(2,fp_to_exten_rm,(FW d, RR4 adr))
+
+MIDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
+{
+	d = rmw(d, 4, 4);
+	raw_fp_fscc_ri(d, cc);
+	unlock2(d);
+}
+MENDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
+
+#endif // USE_JIT_FPU

@@ -314,8 +314,6 @@ static void ShowSupportedResolutions (void)
 
 #endif
 
-extern uae_u8 *natmem_offset;
-
 static uae_u8 GetBytesPerPixel (uae_u32 RGBfmt)
 {
   switch (RGBfmt) 
@@ -596,7 +594,7 @@ static bool rtg_render (void)
 	bool flushed = false;
 
 	if (!doskip ())
-		flushed = picasso_flushpixels (gfxmem_banks[0]->start + natmem_offset, picasso96_state.XYOffset - gfxmem_banks[0]->start);
+		flushed = picasso_flushpixels (gfxmem_banks[0]->start + regs.natmem_offset, picasso96_state.XYOffset - gfxmem_banks[0]->start);
 
 	return flushed;
 }

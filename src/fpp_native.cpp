@@ -184,6 +184,11 @@ static void fpp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *w
     *wrd2 = 0;
     *wrd3 = 0;
     return;
+	} else if (fpp_is_nan(fpd)) {
+	 *wrd1 = 0x7fff0000;
+	 *wrd2 = 0xffffffff;
+	 *wrd3 = 0xffffffff;
+	 return;
   }
   if (v < 0) {
     *wrd1 = 0x80000000;

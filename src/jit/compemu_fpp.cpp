@@ -34,7 +34,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 	int mode = (opcode >> 3) & 7;
 	int size = (extra >> 10) & 7;
 
-	if ((size == 2 && (mode != 7 || reg != 4)) || size == 3 || size == 7) /* 2 = long double, 3 = packed decimal, 7 is not defined */
+	if (size == 3 || size == 7) /* 3 = packed decimal, 7 is not defined */
 		return -1;
 	switch (mode) {
 		case 0: /* Dn */
@@ -180,6 +180,9 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
   		readlong (S1, S2, S3);
 			fmov_s_rr (treg, S2);
   		return 1;
+		case 2: /* Long Double */
+		  fp_to_exten_rm (treg, S1);
+		  return 0;
 		case 4: /* Word */
   		readword (S1, S2, S3);
 			fmov_w_rr (treg, S2);
@@ -208,7 +211,7 @@ STATIC_INLINE int comp_fp_put (uae_u32 opcode, uae_u16 extra)
 	int mode = (opcode >> 3) & 7;
 	int size = (extra >> 10) & 7;
 
-	if (size == 2 || size == 3 || size == 7) /* 2 = long double, 3 = packed decimal, 7 is not defined */
+	if (size == 3 || size == 7) /* 3 = packed decimal, 7 is not defined */
 		return -1;
 	switch (mode) {
 		case 0: /* Dn */
@@ -282,9 +285,12 @@ STATIC_INLINE int comp_fp_put (uae_u32 opcode, uae_u16 extra)
       fmov_to_s_rr(S2, sreg);
 	    writelong_clobber (S1, S2, S3);
 	    return 0;
+		case 2:/* Long Double */
+		  fp_from_exten_mr (S1, sreg);
+		  return 0;
 		case 4: /* Word */
 		  fmov_to_w_rr(S2, sreg);
-		  writeword (S1, S2, S3);
+		  writeword_clobber (S1, S2, S3);
 		  return 0;
 		case 5: /* Double */
       fmov_to_d_rrr(S2, S3, sreg);
@@ -344,14 +350,45 @@ void comp_fdbcc_opp (uae_u32 opcode, uae_u16 extra)
 
 void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 {
-  //printf("comp_fscc_opp() called (0x%04x, 0x%04x)\n", opcode, extra);
+	int reg;
+
 	if (!currprefs.compfpu) {
 		FAIL (1);
 		return;
 	}
 
-	FAIL (1);
-	return;
+	if (extra & 0x20) {  /* only cc from 00 to 1f are defined */
+	  FAIL (1);
+	  return;
+	}
+	if ((opcode & 0x38) != 0) { /* We can only do to integer register */
+		FAIL (1);
+		return;
+	}
+
+	fflags_into_flags ();
+	reg = (opcode & 7);
+
+	if (!(opcode & 0x38)) {
+	  switch (extra & 0x0f) { /* according to fpp.c, the 0x10 bit is ignored */
+		  case 0: fp_fscc_ri(reg, NATIVE_CC_F_NEVER); break;
+		  case 1: fp_fscc_ri(reg, NATIVE_CC_EQ); break;
+		  case 2: fp_fscc_ri(reg, NATIVE_CC_F_OGT); break;
+		  case 3: fp_fscc_ri(reg, NATIVE_CC_F_OGE); break;
+		  case 4: fp_fscc_ri(reg, NATIVE_CC_F_OLT); break;
+		  case 5: fp_fscc_ri(reg, NATIVE_CC_F_OLE); break;
+		  case 6: fp_fscc_ri(reg, NATIVE_CC_F_OGL); break;
+		  case 7: fp_fscc_ri(reg, NATIVE_CC_F_OR); break;
+		  case 8: fp_fscc_ri(reg, NATIVE_CC_F_UN); break;
+		  case 9: fp_fscc_ri(reg, NATIVE_CC_F_UEQ); break;
+		  case 10: fp_fscc_ri(reg, NATIVE_CC_F_UGT); break;
+		  case 11: fp_fscc_ri(reg, NATIVE_CC_F_UGE); break;
+		  case 12: fp_fscc_ri(reg, NATIVE_CC_F_ULT); break;
+		  case 13: fp_fscc_ri(reg, NATIVE_CC_F_ULE); break;
+		  case 14: fp_fscc_ri(reg, NATIVE_CC_NE); break;
+		  case 15: fp_fscc_ri(reg, NATIVE_CC_AL); break;
+	  }
+  }
 }
 
 void comp_ftrapcc_opp (uae_u32 opcode, uaecptr oldpc)
@@ -519,8 +556,122 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 		  return;
 		case 6:
 		case 7:
-		  FAIL (1);
-		  return;
+		{
+			uae_u32 list = 0;
+			int incr = 0;
+			if (extra & 0x2000) {
+				int ad;
+
+				/* FMOVEM FPP->memory */
+				switch ((extra >> 11) & 3) { /* Get out early if failure */
+					case 0:
+					case 2:
+					  break;
+					case 1:
+					case 3:
+					default:
+					  FAIL (1); 
+            return;
+				}
+				ad = comp_fp_adr (opcode);
+				if (ad < 0) {
+					m68k_setpc (m68k_getpc () - 4);
+					op_illg (opcode);
+					return;
+				}
+				switch ((extra >> 11) & 3) {
+					case 0:	/* static pred */
+					  list = extra & 0xff;
+					  incr = -1;
+					  break;
+					case 2:	/* static postinc */
+					  list = extra & 0xff;
+					  incr = 1;
+					  break;
+					case 1:	/* dynamic pred */
+					case 3:	/* dynamic postinc */
+  					abort ();
+				}
+				if (incr < 0) { /* Predecrement */
+					for (reg = 7; reg >= 0; reg--) {
+						if (list & 0x80) {
+							sub_l_ri (ad, 12);
+							fp_from_exten_mr (ad, reg);
+						}
+						list <<= 1;
+					}
+				} else { /* Postincrement */
+					for (reg = 0; reg <= 7; reg++) {
+						if (list & 0x80) {
+							fp_from_exten_mr (ad, reg);
+							add_l_ri (ad, 12);
+						}
+						list <<= 1;
+					}
+				}
+				if ((opcode & 0x38) == 0x18)
+					mov_l_rr ((opcode & 7) + 8, ad);
+				if ((opcode & 0x38) == 0x20)
+					mov_l_rr ((opcode & 7) + 8, ad);
+			} else {
+				/* FMOVEM memory->FPP */
+
+				int ad;
+				switch ((extra >> 11) & 3) { /* Get out early if failure */
+					case 0:
+					case 2:
+					  break;
+					case 1:
+					case 3:
+					default:
+					  FAIL (1); 
+            return;
+				}
+				ad = comp_fp_adr (opcode);
+				if (ad < 0) {
+					m68k_setpc (m68k_getpc () - 4);
+					op_illg (opcode);
+					return;
+				}
+				switch ((extra >> 11) & 3) {
+					case 0:	/* static pred */
+					  list = extra & 0xff;
+					  incr = -1;
+					  break;
+					case 2:	/* static postinc */
+					  list = extra & 0xff;
+					  incr = 1;
+					  break;
+					case 1:	/* dynamic pred */
+					case 3:	/* dynamic postinc */
+  					abort ();
+				}
+
+				if (incr < 0) {
+					// not reached
+					for (reg = 7; reg >= 0; reg--) {
+						if (list & 0x80) {
+							sub_l_ri (ad, 12);
+              fp_to_exten_rm(reg, ad);
+						}
+						list <<= 1;
+					}
+				} else {
+					for (reg = 0; reg <= 7; reg++) {
+						if (list & 0x80) {
+              fp_to_exten_rm(reg, ad);
+							add_l_ri (ad, 12);
+						}
+						list <<= 1;
+					}
+				}
+				if ((opcode & 0x38) == 0x18)
+					mov_l_rr ((opcode & 7) + 8, ad);
+				if ((opcode & 0x38) == 0x20)
+					mov_l_rr ((opcode & 7) + 8, ad);
+			}
+		}
+    return;
 		case 2: /* from <EA> to FPx */
 		  dont_care_fflags ();
 		  if ((extra & 0xfc00) == 0x5c00) { /* FMOVECR */
@@ -722,11 +873,13 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			  case 0x35:
 			  case 0x36:
 			  case 0x37:
-			    if (dreg == (extra & 7))
-				    ffunc_rr (sin, dreg, sreg);
-			    else
-				    fsincos_rr (dreg, extra & 7, sreg);
-			    break;
+				  FAIL (1);
+				  return;
+//			    if (dreg == (extra & 7))
+//				    ffunc_rr (sin, dreg, sreg);
+//			    else
+//				    fsincos_rr (dreg, extra & 7, sreg);
+//			    break;
 			  case 0x38: /* FCMP */
 			    fmov_rr (FP_RESULT, dreg);
 			    fsub_rr (FP_RESULT, sreg);

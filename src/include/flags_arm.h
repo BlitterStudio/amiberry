@@ -60,7 +60,8 @@ enum {
   NATIVE_CC_F_UGT = 16 + 10,
   NATIVE_CC_F_UGE = 16 + 11,
   NATIVE_CC_F_ULT = 16 + 12,
-  NATIVE_CC_F_ULE = 16 + 13
+  NATIVE_CC_F_ULE = 16 + 13,
+  NATIVE_CC_F_NEVER = 32
   
 };
 

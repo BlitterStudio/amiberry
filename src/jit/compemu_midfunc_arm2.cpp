@@ -1859,13 +1859,13 @@ MENDFUNC(2,jff_DBCC,(RR2 d, IMM cc))
   s2 = readreg(s2, 4);
   d = writereg(d, 4);
   
-  VMOV_sr(0, s1);         // move to s0
-  VMOV_sr(1, s2);         // move to s1
-  VCVT_f64_u32(2, 0);     // convert s0 to d2 (int to float)
-  VCVT_f64_u32(3, 1);     // convert s1 to d3 (int to float)
-  VDIV_ddd(4, 2, 3);      // d4 = d2 / d3
-  VCVT_u32_f64(0, 4);     // convert d4 to s0 (float to int)
-  VMOV_rs(REG_WORK1, 0);  // move from s0
+  VMOV32_sr(0, s1);   			// move to s0
+  VMOV32_sr(1, s2);   			// move to s1
+  VCVTIto64_ds(2, 0);     	// convert s0 to d2 (int to float)
+  VCVTIto64_ds(3, 1);     	// convert s1 to d3 (int to float)
+  VDIV64_ddd(4, 2, 3);    	// d4 = d2 / d3
+  VCVT64toI_sd(0, 4);     	// convert d4 to s0 (float to int)
+  VMOV32_rs(REG_WORK1, 0);  // move from s0
   
   LSRS_rri(REG_WORK2, REG_WORK1, 16); // if result of this is not 0, DIVU overflows -> no result
   BNE_i(2);
@@ -1887,13 +1887,13 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
   s2 = readreg(s2, 4);
   d = writereg(d, 4);
   
-  VMOV_sr(0, s1);         // move to s0
-  VMOV_sr(1, s2);         // move to s1
-  VCVT_f64_u32(2, 0);     // convert s0 to d2 (int to float)
-  VCVT_f64_u32(3, 1);     // convert s1 to d3 (int to float)
-  VDIV_ddd(4, 2, 3);      // d4 = d2 / d3
-  VCVT_u32_f64(0, 4);     // convert d4 to s0 (float to int)
-  VMOV_rs(REG_WORK1, 0);  // move from s0
+  VMOV32_sr(0, s1);   			// move to s0
+  VMOV32_sr(1, s2);   			// move to s1
+  VCVTIto64_ds(2, 0);     	// convert s0 to d2 (int to float)
+  VCVTIto64_ds(3, 1);     	// convert s1 to d3 (int to float)
+  VDIV64_ddd(4, 2, 3);      // d4 = d2 / d3
+  VCVT64toI_sd(0, 4);     	// convert d4 to s0 (float to int)
+  VMOV32_rs(REG_WORK1, 0);  // move from s0
   
   LSRS_rri(REG_WORK2, REG_WORK1, 16); // if result of this is not 0, DIVU overflows
   BEQ_i(2);
@@ -2855,13 +2855,8 @@ MIDFUNC(2,jnf_MOVE16,(RR4 d, RR4 s))
 	BIC_rri(s, s, 0x0000000F);
 	BIC_rri(d, d, 0x0000000F);
 
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK1, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK1, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK1, R_REGSTRUCT, offs);
 
 	ADD_rrr(s, s, REG_WORK1);
 	ADD_rrr(d, d, REG_WORK1);
@@ -5115,13 +5110,8 @@ MENDFUNC(1,jff_TST_l,(RR4 s))
  */
 MIDFUNC(2,jnf_MEM_WRITE_OFF_b,(RR4 adr, RR4 b))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   b = readreg(b, 4);
@@ -5135,13 +5125,8 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_b,(RR4 adr, RR4 b))
 
 MIDFUNC(2,jnf_MEM_WRITE_OFF_w,(RR4 adr, RR4 w))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   w = readreg(w, 4);
@@ -5156,13 +5141,8 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_w,(RR4 adr, RR4 w))
 
 MIDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   l = readreg(l, 4);
@@ -5178,13 +5158,8 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_b,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5198,13 +5173,8 @@ MENDFUNC(2,jnf_MEM_READ_OFF_b,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_w,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5219,13 +5189,8 @@ MENDFUNC(2,jnf_MEM_READ_OFF_w,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5241,13 +5206,8 @@ MENDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_b,(RR4 adr, RR4 b))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   b = readreg(b, 4);
@@ -5262,13 +5222,8 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_b,(RR4 adr, RR4 b))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_w,(RR4 adr, RR4 w))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   w = readreg(w, 4);
@@ -5284,13 +5239,8 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_w,(RR4 adr, RR4 w))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   l = readreg(l, 4);
@@ -5307,13 +5257,8 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_b,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5328,13 +5273,8 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_b,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_w,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5350,13 +5290,8 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_w,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5373,13 +5308,8 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);
@@ -5393,13 +5323,8 @@ MENDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 {
-#ifdef ARMV6T2
-  MOVW_ri16(REG_WORK2, NATMEM_OFFSETX);
-  MOVT_ri16(REG_WORK2, NATMEM_OFFSETX >> 16);
-#else
-	uae_s32 offs = get_data_natmem();
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
   d = writereg(d, 4);

@@ -90,7 +90,7 @@ typedef union {
 
 #define BYTES_PER_INST 10240  /* paranoid ;-) */
 #if defined(CPU_arm)
-#define LONGEST_68K_INST 128 /* The number of bytes the longest possible
+#define LONGEST_68K_INST 256 /* The number of bytes the longest possible
 			       68k instruction takes */
 #else
 #define LONGEST_68K_INST 16 /* The number of bytes the longest possible
@@ -127,7 +127,7 @@ typedef union {
 #else
 #define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
 #endif
-#define N_FREGS 16  // We use 16 regs: 0 - FP_RESULT, 1-3 - SCRATCH, 4-7 - ???, 8-15 - Amiga regs FP0-FP7
+#define N_FREGS 16  // We use 10 regs: 6 - FP_RESULT, 7 - SCRATCH, 8-15 - Amiga regs FP0-FP7
 
 
 /* Functions exposed to newcpu, or to what was moved from newcpu.c to
@@ -140,8 +140,6 @@ extern void set_target(uae_u8* t);
 extern void freescratch(void);
 extern void build_comp(void);
 extern void set_cache_state(int enabled);
-extern int get_cache_state(void);
-extern uae_u32 get_jitted_size(void);
 #ifdef JIT
 extern void flush_icache(int n);
 extern void flush_icache_hard(int n);
@@ -166,7 +164,7 @@ extern uae_u8* comp_pc_p;
 extern void* pushall_call_handler;
 
 #define VREGS 32
-#define VFREGS 16
+#define VFREGS 10
 
 #define INMEM 1
 #define CLEAN 2
@@ -224,8 +222,6 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 
 #define FP_RESULT 8
 #define FS1 9
-#define FS2 10
-#define FS3 11
 
 #define SCRATCH_F64_1  1
 #define SCRATCH_F64_2  2
@@ -326,6 +322,7 @@ extern void readlong(int address, int dest, int tmp);
 extern void writebyte(int address, int source, int tmp);
 extern void writeword(int address, int source, int tmp);
 extern void writelong(int address, int source, int tmp);
+extern void writeword_clobber(int address, int source, int tmp);
 extern void writelong_clobber(int address, int source, int tmp);
 extern void get_n_addr(int address, int dest, int tmp);
 extern void get_n_addr_jmp(int address, int dest, int tmp);

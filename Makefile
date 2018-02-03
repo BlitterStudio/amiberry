@@ -26,7 +26,6 @@ ifeq ($(PLATFORM),rpi3)
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    PROFILER_PATH = /home/pi/projects/amiberry
     NAME  = amiberry-rpi3-sdl1-dev
 	
 else ifeq ($(PLATFORM),rpi2)
@@ -34,14 +33,12 @@ else ifeq ($(PLATFORM),rpi2)
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    PROFILER_PATH = /home/pi/projects/amiberry
     NAME  = amiberry-rpi2-sdl1-dev
 	
 else ifeq ($(PLATFORM),rpi1)
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += ${DISPMANX_FLAGS} -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
-    PROFILER_PATH = /home/pi/projects/amiberry
     NAME  = amiberry-rpi1-sdl1-dev
 
 else ifeq ($(PLATFORM),xu4)
@@ -72,7 +69,6 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi3-sdl2-dispmanx-dev
 
 else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
@@ -81,7 +77,6 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi2-sdl2-dispmanx-dev
 
 else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
@@ -89,7 +84,6 @@ USE_SDL2 = 1
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi1-sdl2-dispmanx-dev
 
 #
@@ -100,7 +94,6 @@ USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     HAVE_NEON = 1
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi3-sdl2-dev
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
@@ -108,14 +101,12 @@ USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     HAVE_NEON = 1
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi2-sdl2-dev
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2
-    PROFILER_PATH = /home/pi/projects/amiberry/amiberry-sdl2-prof
     NAME  = amiberry-rpi1-sdl2-dev
 
 else ifeq ($(PLATFORM),pine64)
@@ -191,7 +182,7 @@ DEFS += `xml2-config --cflags`
 DEFS += -DAMIBERRY -DARMV6_ASSEMBLY
 
 ifndef DEBUG
-    CFLAGS += -std=gnu++14 -Ofast 
+    CFLAGS += -std=gnu++14 -Ofast -frename-registers
 else
     CFLAGS += -std=gnu++14 -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
 endif
@@ -206,10 +197,13 @@ ifdef GCC_PROFILE
 endif
 
 ifdef GEN_PROFILE
-    CFLAGS += -fprofile-generate=$(PROFILER_PATH) -fprofile-arcs -fvpt
+    CFLAGS += -fprofile-generate -fprofile-arcs -fvpt
+    LDFLAGS += -lgcov
 endif
+
 ifdef USE_PROFILE
     CFLAGS += -fprofile-use -fprofile-correction -fbranch-probabilities -fvpt
+    LDFLAGS += -lgcov
 endif
 
 ifdef SANITIZE
@@ -476,6 +470,9 @@ clean:
 	$(RM) $(PROG) $(PROG)-debug $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
 	$(MAKE) -C src/guisan clean
 
+cleanprofile:
+	$(RM) $(OBJS:%.o=%.gcda)
+	
 delasm:
 	$(RM) $(ASMS)
 	
