@@ -445,6 +445,7 @@ struct uae_prefs {
 	int input_tablet;
 	int input_keyboard_type;
 
+        bool input_analog_remap;
 	bool use_retroarch_quit;
 	bool use_retroarch_menu;
 	bool use_retroarch_reset;

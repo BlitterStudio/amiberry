@@ -48,6 +48,8 @@ static gcn::Label* lblPortInput;
 static gcn::TextField* txtPortInput;
 static gcn::Label* lblRetroarch;
 
+static gcn::UaeCheckBox* chkAnalogRemap;
+
 static int SelectedPort = 1;
 static int SelectedFunction = 0;
 
@@ -197,6 +199,10 @@ public:
 			SelectedFunction = 3;
 		}
 
+                
+                else if (actionEvent.getSource() == chkAnalogRemap)
+                        changed_prefs.input_analog_remap = chkAnalogRemap->isSelected();
+                        
 		RefreshPanelCustom();
 	}
 };
@@ -391,6 +397,11 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	//	optMultiRight = new gcn::UaeRadioButton("Right Trigger", "radiomultigroup");
 	//	optMultiRight->addActionListener(grpActionListener);
 
+	chkAnalogRemap = new gcn::UaeCheckBox("Remap DPad to left axis");
+	chkAnalogRemap->setId("chkAnalogRemap");
+	chkAnalogRemap->addActionListener(grpActionListener);
+        chkAnalogRemap->setEnabled(true);
+        
 	grpPort = new gcn::Window("Joystick Port");
 	grpPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpPort->add(optPort0, 10, 5);
@@ -474,7 +485,9 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		category.panel->add(cboCustomAction[i], DISTANCE_BORDER + lblCustomAction[i]->getWidth() + 290 + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
-
+        
+        category.panel->add(chkAnalogRemap, DISTANCE_BORDER + lblCustomAction[0]->getWidth(), posY);
+	posY += chkAnalogRemap->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblPortInput, DISTANCE_BORDER, 144);
 	category.panel->add(txtPortInput, lblPortInput->getX() + lblPortInput->getWidth() + DISTANCE_NEXT_X, 144);
@@ -500,6 +513,7 @@ void ExitPanelCustom()
 	delete optMultiLeft;
 	delete optMultiRight;
 	delete grpFunction;
+        delete chkAnalogRemap;
 
 	for (auto & i : lblCustomAction)
 	{
@@ -529,7 +543,8 @@ void RefreshPanelCustom(void)
 	// optMultiLeft->setSelected(SelectedFunction == 2);
 	//  optMultiRight->setSelected(SelectedFunction == 3);
 
-
+	chkAnalogRemap->setSelected(changed_prefs.input_analog_remap);
+        
 	// you'll want to refresh the drop-down section here
 	// get map
 	struct joypad_map_layout tempmap;
@@ -685,7 +700,7 @@ void RefreshPanelCustom(void)
 			}
 		}
 
-		if (host_input_buttons[hostjoyid].number_of_hats > 0)
+		if (host_input_buttons[hostjoyid].number_of_hats > 0 || changed_prefs.input_analog_remap == true)
 		{
 			cboCustomAction[ 0]->setEnabled(true);
 			cboCustomAction[ 1]->setEnabled(true);

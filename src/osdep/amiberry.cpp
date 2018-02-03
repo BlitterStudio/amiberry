@@ -252,6 +252,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, "Pause");
 	_tcscpy(p->fullscreen_toggle, "");
 
+       p->input_analog_remap = false;
+                
 	p->use_retroarch_quit = true;
 	p->use_retroarch_menu = true;
 	p->use_retroarch_reset = false;
@@ -321,6 +323,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 	cfgfile_dwrite_str(f, _T("amiberry.action_replay"), p->action_replay);
 	cfgfile_dwrite_str(f, _T("amiberry.fullscreen_toggle"), p->fullscreen_toggle);
+	cfgfile_write_bool(f, _T("amiberry.use_analogue_remap"), p->input_analog_remap);        
 
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
@@ -412,7 +415,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset))
 		return 1;
-
+	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
+		return 1;
+                
+                
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
