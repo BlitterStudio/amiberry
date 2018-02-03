@@ -253,7 +253,7 @@ public:
 					}
 					else
 					{
-						if (diskfileList.getElementAt(idx) == changed_prefs.floppyslots[i].df)
+						if (diskfileList.getElementAt(idx) != changed_prefs.floppyslots[i].df)
 						{
 							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
