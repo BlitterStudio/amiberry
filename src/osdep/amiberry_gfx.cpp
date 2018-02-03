@@ -93,11 +93,14 @@ DISPMANX_DISPLAY_HANDLE_T   dispmanxdisplay;
 DISPMANX_MODEINFO_T         dispmanxdinfo;
 DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_1 = 0;
 DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_2 = 0;
+DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_blackfb = 0;
 DISPMANX_ELEMENT_HANDLE_T   dispmanxelement;
+DISPMANX_ELEMENT_HANDLE_T	blackscreenelement;
 DISPMANX_UPDATE_HANDLE_T    dispmanxupdate;
 VC_RECT_T       src_rect;
 VC_RECT_T       dst_rect;
 VC_RECT_T       blit_rect;
+VC_RECT_T		black_rect;
 
 static int DispManXElementpresent = 0;
 static unsigned char current_resource_amigafb = 0;
@@ -140,6 +143,7 @@ static void *display_thread(void *unused)
 				DispManXElementpresent = 0;
 				dispmanxupdate = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_remove(dispmanxupdate, dispmanxelement);
+				vc_dispmanx_element_remove(dispmanxupdate, blackscreenelement);
 				vc_dispmanx_update_submit_sync(dispmanxupdate);
 			}
 
@@ -150,6 +154,11 @@ static void *display_thread(void *unused)
 			if (dispmanxresource_amigafb_2 != 0) {
 				vc_dispmanx_resource_delete(dispmanxresource_amigafb_2);
 				dispmanxresource_amigafb_2 = 0;
+			}
+			if (dispmanxresource_blackfb != 0)
+			{
+				vc_dispmanx_resource_delete(dispmanxresource_blackfb);
+				dispmanxresource_blackfb = 0;
 			}
 
 			if (screen != nullptr) {
@@ -175,10 +184,15 @@ static void *display_thread(void *unused)
 
 			dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 			dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
+			dispmanxresource_blackfb = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
 
 			vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
 			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGB565, screen->pitch, screen->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(dispmanxresource_blackfb, VC_IMAGE_RGB565, screen->pitch, screen->pixels, &blit_rect);
 			vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
+
+			// Use the full screen size for the black frame
+			vc_dispmanx_rect_set(&black_rect, 0, 0, dispmanxdinfo.width, dispmanxdinfo.height);
 
 			// Correct Aspect Ratio
 			if (currprefs.gfx_correct_aspect == 0)
@@ -221,7 +235,11 @@ static void *display_thread(void *unused)
 			{
 				DispManXElementpresent = 1;
 				dispmanxupdate = vc_dispmanx_update_start(0);
-				dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 0,               // layer
+				blackscreenelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 0,
+					&black_rect, dispmanxresource_blackfb, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 
+					nullptr, DISPMANX_NO_ROTATE);
+
+				dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 10,               // layer
 					&dst_rect, dispmanxresource_amigafb_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 					nullptr,             // clamp
 					DISPMANX_NO_ROTATE);
