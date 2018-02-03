@@ -276,14 +276,14 @@ namespace sdl
 	void setup_cursor() 
 	{
 		// Detect resolution and load appropiate cursor image
-		//if (sdlMode.w > 1280)
-		//{
-		//	cursor_surface = SDL_LoadBMP("data/cursor-x2.bmp");
-		//}
-		//else
-		//{
+		if (strcmp(sdl_video_driver, "x11") != 0 && sdlMode.w > 1280)
+		{
+			cursor_surface = SDL_LoadBMP("data/cursor-x2.bmp");
+		}
+		else
+		{
 			cursor_surface = SDL_LoadBMP("data/cursor.bmp");
-		//}
+		}
 		
 		if (!cursor_surface)
 		{
