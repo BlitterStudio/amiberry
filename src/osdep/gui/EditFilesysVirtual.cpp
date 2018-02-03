@@ -270,7 +270,7 @@ static void EditFilesysVirtualLoop()
 					break;
 				}
 			}
-			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
 			{
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
@@ -279,28 +279,28 @@ static void EditFilesysVirtualLoop()
 				{
 					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP)) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN)) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
 					{
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
 					{
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT)) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control

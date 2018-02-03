@@ -366,7 +366,7 @@ static void SelectFileLoop()
 					break;
 				}
 			}
-			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
 			{
 				if (GUIjoy)
 				{
@@ -383,22 +383,22 @@ static void SelectFileLoop()
 						dialogFinished = true;
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT))
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768)
 					{
 						navigate_left();
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT))
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767)
 					{
 						navigate_right();
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP))
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768)
 					{
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN))
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767)
 					{
 						PushFakeKey(SDLK_DOWN);
 						break;
