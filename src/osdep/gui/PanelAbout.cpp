@@ -29,7 +29,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 {
 	amiberryLogoImage = gcn::Image::load("data/amiberry-logo.png");
 	icon = new gcn::Icon(amiberryLogoImage);
-	lblEmulatorVersion = new gcn::Label("Amiberry v2.10 beta");
+	lblEmulatorVersion = new gcn::Label("Amiberry v2.11 beta");
 
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
@@ -39,6 +39,11 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 		"Chips - Original RPI port\n"
 		"Dom Cresswell (Horace & The Spider) - Controller updates\n"
 		"Christer Solskogen - Makefile improvements\n"
+		"Gunnar Kristjansson - Amibian and inspiration\n"
+		"Thomas Navarro Garcia - Amiberry logo\n"
+		"Vasiliki Soufi - Amiberry name\n"
+		"\n"
+		"Dedicated to HeZoR - R.I.P. (1978-2017)\n"
 		);
 
 	textBox->setBackgroundColor(gui_baseCol);
