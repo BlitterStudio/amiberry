@@ -492,6 +492,7 @@ public:
 					// Failed to change write protection -> maybe filesystem doesn't support this
 					ShowMessage("Set/Clear write protect", "Failed to change write permission.",
 					            "Maybe underlying filesystem doesn't support this.", "Ok", "");
+					chkDFxWriteProtect[i]->requestFocus();
 				}
 				DISK_reinsert(i);
 			}
