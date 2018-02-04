@@ -1,0 +1,74 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2020
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Amiberry", "Amiberry.vcxproj", "{FDC6BF55-C4BC-44FB-85A9-3369784716E8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6} = {E613050D-EE8C-4ED1-936D-EB9E0E155EA6}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "guisan", "..\guisan\guisan.vcxproj", "{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Amiberry-sdl1", "..\Amiberry-sdl1\Amiberry-sdl1.vcxproj", "{14635D01-67B8-4863-9507-3FA5C8FB4B32}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genblitter", "..\genblitter\genblitter.vcxproj", "{619EFB8C-E41A-4058-B085-1B8CD22692DD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genlinetoscr", "..\genlinetoscr\genlinetoscr.vcxproj", "{883F2A00-8030-429B-AC7F-E930DDF9568F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|VisualGDB = Debug|VisualGDB
+		Debug-dispmanx|VisualGDB = Debug-dispmanx|VisualGDB
+		Release|VisualGDB = Release|VisualGDB
+		Release-dispmanx|VisualGDB = Release-dispmanx|VisualGDB
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug-dispmanx|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-dispmanx|VisualGDB.Build.0 = Debug-dispmanx|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release|VisualGDB.Build.0 = Release|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release-dispmanx|VisualGDB.ActiveCfg = Release-dispmanx|VisualGDB
+		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release-dispmanx|VisualGDB.Build.0 = Release-dispmanx|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release|VisualGDB.Build.0 = Release|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
+		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release-dispmanx|VisualGDB.Build.0 = Release|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Release|VisualGDB.Build.0 = Release|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
+		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Release-dispmanx|VisualGDB.Build.0 = Release|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Release|VisualGDB.Build.0 = Release|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
+		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Release-dispmanx|VisualGDB.Build.0 = Release|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Release|VisualGDB.Build.0 = Release|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
+		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Release-dispmanx|VisualGDB.Build.0 = Release|VisualGDB
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {92D4AA99-3244-4535-8DB4-C7E117E62389}
+	EndGlobalSection
+EndGlobal

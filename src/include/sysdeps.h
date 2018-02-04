@@ -1,6 +1,3 @@
-#ifndef UAE_SYSDEPS_H
-#define UAE_SYSDEPS_H
-
 /*
   * UAE - The Un*x Amiga Emulator
   *
@@ -14,26 +11,52 @@
   *
   * Copyright 1996, 1997 Bernd Schmidt
   */
+#ifndef UAE_SYSDEPS_H
+#define UAE_SYSDEPS_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#include "sysconfig.h"
+
+#ifndef UAE
+#define UAE
+#endif
+
+#ifdef __cplusplus
 #include <string>
 using namespace std;
+#else
+#include <string.h>
+#include <ctype.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
 
-#ifdef _GCCRES_
-#undef _GCCRES_
+#ifndef UAE
+#define UAE
 #endif
 
-#ifdef UAE4ALL_NO_USE_RESTRICT
-#define _GCCRES_
+#if defined(__x86_64__) || defined(_M_AMD64)
+#define CPU_x86_64 1
+#define CPU_64_BIT 1
+#elif defined(__i386__) || defined(_M_IX86)
+#define CPU_i386 1
+#elif defined(__arm__) || defined(_M_ARM)
+#define CPU_arm 1
+#elif defined(__powerpc__) || defined(_M_PPC)
+#define CPU_powerpc 1
 #else
-#define _GCCRES_ __restrict__
+#error unrecognized CPU type
 #endif
 
 #ifndef __STDC__
+#ifndef _MSC_VER_
 #error "Your compiler is not ANSI. Get a real one."
+#endif
 #endif
 
 #include <stdarg.h>
@@ -101,10 +124,6 @@ using namespace std;
 #include <errno.h>
 #include <assert.h>
 
-#if EEXIST == ENOTEMPTY
-#define BROKEN_OS_PROBABLY_AIX
-#endif
-
 #ifdef __NeXT__
 #define S_IRUSR S_IREAD
 #define S_IWUSR S_IWRITE
@@ -115,55 +134,6 @@ struct utimbuf
     time_t actime;
     time_t modtime;
 };
-#endif
-
-#if defined(__GNUC__) && defined(AMIGA)
-/* gcc on the amiga need that __attribute((regparm)) must */
-/* be defined in function prototypes as well as in        */
-/* function definitions !                                 */
-#define REGPARAM2 REGPARAM
-#else /* not(GCC & AMIGA) */
-#define REGPARAM2
-#endif
-
-/* sam: some definitions so that SAS/C can compile UAE */
-#if defined(__SASC) && defined(AMIGA)
-#define REGPARAM2
-#define REGPARAM
-#define S_IRUSR S_IREAD
-#define S_IWUSR S_IWRITE
-#define S_IXUSR S_IEXECUTE
-#define S_ISDIR(val) (S_IFDIR & val)
-#define mkdir(x,y) mkdir(x)
-#define truncate(x,y) 0
-#define creat(x,y) open("T:creat",O_CREAT|O_TEMP|O_RDWR) /* sam: for zfile.c */
-#define strcasecmp stricmp
-#define utime(file,time) 0
-struct utimbuf
-{
-    time_t actime;
-    time_t modtime;
-};
-#endif
-
-#ifdef __DOS__
-#include <pc.h>
-#include <io.h>
-#endif
-
-/* Acorn specific stuff */
-#ifdef ACORN
-
-#define S_IRUSR S_IREAD
-#define S_IWUSR S_IWRITE
-#define S_IXUSR S_IEXEC
-
-#define strcasecmp stricmp
-
-#endif
-
-#ifndef L_tmpnam
-#define L_tmpnam 128 /* ought to be safe */
 #endif
 
 /* If char has more then 8 bits, good night. */
@@ -216,11 +186,10 @@ typedef uae_u32 uaecptr;
 #endif
 
 #ifdef HAVE_STRDUP
-#define my_strdup strdup
+#define my_strdup _tcsdup
 #else
 extern TCHAR *my_strdup (const TCHAR*s);
 #endif
-
 extern TCHAR *my_strdup_ansi (const char*);
 extern void my_trim (TCHAR*);
 extern TCHAR *my_strdup_trim (const TCHAR*);
@@ -234,6 +203,8 @@ extern char *ua_fs_copy (char *dst, int maxlen, const TCHAR *src, int defchar);
 extern TCHAR *au_fs_copy (TCHAR *dst, int maxlen, const char *src);
 extern char *uutf8 (const TCHAR *s);
 extern TCHAR *utf8u (const char *s);
+extern void to_lower (TCHAR *s, int len);
+extern void to_upper (TCHAR *s, int len);
 
 /* We can only rely on GNU C getting enums right. Mickeysoft VSC++ is known
  * to have problems, and it's likely that other compilers choke too. */
@@ -266,7 +237,7 @@ extern TCHAR *utf8u (const char *s);
 #undef DONT_HAVE_STDIO
 #undef DONT_HAVE_MALLOC
 
-#if defined PANDORA
+#if defined AMIBERRY
 
 #include <ctype.h>
 
@@ -294,63 +265,63 @@ extern TCHAR *utf8u (const char *s);
 #ifdef DONT_HAVE_POSIX
 
 #define access posixemu_access
-extern int posixemu_access (const TCHAR *, int);
+extern int posixemu_access(const TCHAR *, int);
 #define open posixemu_open
-extern int posixemu_open (const TCHAR *, int, int);
+extern int posixemu_open(const TCHAR *, int, int);
 #define close posixemu_close
-extern void posixemu_close (int);
+extern void posixemu_close(int);
 #define read posixemu_read
-extern int posixemu_read (int, TCHAR *, int);
+extern int posixemu_read(int, TCHAR *, int);
 #define write posixemu_write
-extern int posixemu_write (int, const TCHAR *, int);
+extern int posixemu_write(int, const TCHAR *, int);
 #undef lseek
 #define lseek posixemu_seek
-extern int posixemu_seek (int, int, int);
+extern int posixemu_seek(int, int, int);
 #define stat(a,b) posixemu_stat ((a), (b))
-extern int posixemu_stat (const TCHAR *, STAT *);
+extern int posixemu_stat(const TCHAR *, STAT *);
 #define mkdir posixemu_mkdir
-extern int mkdir (const TCHAR *, int);
+extern int mkdir(const TCHAR *, int);
 #define rmdir posixemu_rmdir
-extern int posixemu_rmdir (const TCHAR *);
+extern int posixemu_rmdir(const TCHAR *);
 #define unlink posixemu_unlink
-extern int posixemu_unlink (const TCHAR *);
+extern int posixemu_unlink(const TCHAR *);
 #define truncate posixemu_truncate
-extern int posixemu_truncate (const TCHAR *, long int);
+extern int posixemu_truncate(const TCHAR *, long int);
 #define rename posixemu_rename
-extern int posixemu_rename (const TCHAR *, const TCHAR *);
+extern int posixemu_rename(const TCHAR *, const TCHAR *);
 #define chmod posixemu_chmod
-extern int posixemu_chmod (const TCHAR *, int);
+extern int posixemu_chmod(const TCHAR *, int);
 #define tmpnam posixemu_tmpnam
-extern void posixemu_tmpnam (TCHAR *);
+extern void posixemu_tmpnam(TCHAR *);
 #define utime posixemu_utime
-extern int posixemu_utime (const TCHAR *, struct utimbuf *);
+extern int posixemu_utime(const TCHAR *, struct utimbuf *);
 #define opendir posixemu_opendir
-extern DIR * posixemu_opendir (const TCHAR *);
+extern DIR * posixemu_opendir(const TCHAR *);
 #define readdir posixemu_readdir
-extern struct dirent* readdir (DIR *);
+extern struct dirent* readdir(DIR *);
 #define closedir posixemu_closedir
-extern void closedir (DIR *);
+extern void closedir(DIR *);
 
 /* This isn't the best place for this, but it fits reasonably well. The logic
  * is that you probably don't have POSIX errnos if you don't have the above
  * functions. */
-extern long dos_errno (void);
+extern long dos_errno(void);
 
 #endif
 
 #ifdef DONT_HAVE_STDIO
 
-extern FILE *stdioemu_fopen (const TCHAR *, const TCHAR *);
+extern FILE *stdioemu_fopen(const TCHAR *, const TCHAR *);
 #define fopen(a,b) stdioemu_fopen(a, b)
-extern int stdioemu_fseek (FILE *, int, int);
+extern int stdioemu_fseek(FILE *, int, int);
 #define fseek(a,b,c) stdioemu_fseek(a, b, c)
-extern int stdioemu_fread (TCHAR *, int, int, FILE *);
+extern int stdioemu_fread(TCHAR *, int, int, FILE *);
 #define fread(a,b,c,d) stdioemu_fread(a, b, c, d)
-extern int stdioemu_fwrite (const TCHAR *, int, int, FILE *);
+extern int stdioemu_fwrite(const TCHAR *, int, int, FILE *);
 #define fwrite(a,b,c,d) stdioemu_fwrite(a, b, c, d)
-extern int stdioemu_ftell (FILE *);
+extern int stdioemu_ftell(FILE *);
 #define ftell(a) stdioemu_ftell(a)
-extern int stdioemu_fclose (FILE *);
+extern int stdioemu_fclose(FILE *);
 #define fclose(a) stdioemu_fclose(a)
 
 #endif
@@ -358,9 +329,9 @@ extern int stdioemu_fclose (FILE *);
 #ifdef DONT_HAVE_MALLOC
 
 #define malloc(a) mallocemu_malloc(a)
-extern void *mallocemu_malloc (int size);
+extern void *mallocemu_malloc(int size);
 #define free(a) mallocemu_free(a)
-extern void mallocemu_free (void *ptr);
+extern void mallocemu_free(void *ptr);
 
 #endif
 
@@ -370,36 +341,34 @@ extern void mallocemu_free (void *ptr);
 #define ASM_SYM_FOR_FUNC(a)
 #endif
 
-#ifdef UAE_CONSOLE
-#undef write_log
-#define write_log write_log_standard
-#endif
-
 #ifndef WITH_LOGGING
 #undef write_log
 #define write_log(FORMATO, RESTO...)
 #define write_log_standard(FORMATO, RESTO...)
 #else
-extern void write_log (const TCHAR *format,...);
-extern FILE *debugfile;
+extern void write_log(const TCHAR *, ...);
 #endif
-extern void console_out (const TCHAR *, ...);
-extern void gui_message (const TCHAR *,...);
+
+extern void gui_message(const TCHAR *, ...);
 
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
 
 #ifndef STATIC_INLINE
-#if __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
-#ifdef RASPBERRY
+#ifdef DEBUG
+#define STATIC_INLINE static __attribute__ ((noinline))
+#define NOINLINE __attribute__ ((noinline))
+#define NORETURN
+#elif __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
+#ifdef AMIBERRY
 #define STATIC_INLINE static __inline__
 #else
 #define STATIC_INLINE static __inline__ __attribute__ ((always_inline))
 #endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
-#elif _MSC_VER
+#elif _MSC_VER_
 #define STATIC_INLINE static __forceinline
 #define NOINLINE __declspec(noinline)
 #define NORETURN __declspec(noreturn)
@@ -438,31 +407,33 @@ extern void gui_message (const TCHAR *,...);
  * Byte-swapping functions
  */
 
+#ifdef ARMV6_ASSEMBLY
+
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
+  __asm__ (
+		"rev %0, %0"
+    : "=r" (v) : "0" (v) ); return v;
+}
+
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
+  __asm__ (
+    "revsh %0, %0\n\t"
+    "uxth %0, %0"
+    : "=r" (v) : "0" (v) ); return v;
+}
+#define bswap_16(x) do_byteswap_16(x)
+#define bswap_32(x) do_byteswap_32(x)
+#else
+
 /* Try to use system bswap_16/bswap_32 functions. */
 #if defined HAVE_BSWAP_16 && defined HAVE_BSWAP_32
 # include <byteswap.h>
 #  ifdef HAVE_BYTESWAP_H
 #  include <byteswap.h>
 # endif
-#else
-# ifdef ARMV6_ASSEMBLY
-STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
-	__asm__(
-						"rev %0, %0"
-                                                : "=r" (v) : "0" (v)); return v;
-}
-
-STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
-	__asm__(
-  						"revsh %0, %0\n\t"
-              "uxth %0, %0"
-                                                : "=r" (v) : "0" (v)); return v;
-}
-#define bswap_16(x) do_byteswap_16(x)
-#define bswap_32(x) do_byteswap_32(x)
 # else
 /* Else, if using SDL, try SDL's endian functions. */
-# ifdef USE_SDL
+# if defined (USE_SDL1) || defined (USE_SDL2)
 #  include <SDL_endian.h>
 #  define bswap_16(x) SDL_Swap16(x)
 #  define bswap_32(x) SDL_Swap32(x)
@@ -472,9 +443,8 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #define bswap_32(x) (((x) << 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) | ((x) >> 24))
 # endif
 #endif
-#endif
 
-#endif
+#endif /* ARMV6_ASSEMBLY*/
 
 #ifndef __cplusplus
 
@@ -482,12 +452,6 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #define xcalloc(T, N) calloc(sizeof (T), N)
 #define xfree(T) free(T)
 #define xrealloc(T, TP, N) realloc(TP, sizeof (T) * (N))
-
-#if 0
-extern void *xmalloc (size_t);
-extern void *xcalloc (size_t, size_t);
-extern void xfree (const void*);
-#endif
 
 #else
 
@@ -499,3 +463,11 @@ extern void xfree (const void*);
 #endif
 
 #define DBLEQU(f, i) (abs ((f) - (i)) < 0.000001)
+
+#ifdef HAVE_VAR_ATTRIBUTE_UNUSED
+#define NOWARN_UNUSED(x) __attribute__((unused)) x
+#else
+#define NOWARN_UNUSED(x) x
+#endif
+
+#endif /* UAE_SYSDEPS_H */

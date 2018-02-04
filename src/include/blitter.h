@@ -6,11 +6,16 @@
   * (c) 1995 Bernd Schmidt
   */
 
+#ifndef UAE_BLITTER_H
+#define UAE_BLITTER_H
+
+#include "uae/types.h"
+
 struct bltinfo {
     int blitzero;
     int blitashift,blitbshift,blitdownashift,blitdownbshift;
     uae_u16 bltadat, bltbdat, bltcdat,bltddat;
-    uae_u16 bltahold,bltbhold,bltafwm,bltalwm;
+    uae_u16 bltaold, bltahold, bltbold, bltbhold, bltafwm, bltalwm;
     int vblitsize,hblitsize;
     int bltamod,bltbmod,bltcmod,bltdmod;
 };
@@ -20,6 +25,8 @@ extern enum blitter_states {
 } bltstate;
 
 extern struct bltinfo blt_info;
+
+extern int blit_interrupt;
 
 extern uae_u16 bltsize;
 extern uae_u16 bltcon0,bltcon1;
@@ -38,10 +45,11 @@ STATIC_INLINE void maybe_blit (int hack)
 }
 extern void reset_blit (int);
 extern int blitnasty (void);
-extern void blitter_handler (void);
+extern void blitter_handler (uae_u32);
 extern void build_blitfilltable (void);
-extern void do_blitter (void);
-extern void blitter_done_notify (void);
+extern void do_blitter (int);
+extern void decide_blitter (int hpos);
+extern void blitter_done_notify (int hpos);
 extern void blitter_slowdown (int, int, int, int);
 extern void blitter_check_start (void);
 
@@ -57,3 +65,5 @@ extern uae_u32 blit_masktable[BLITTER_MAX_WORDS];
 #define BLIT_MODE_APPROXIMATE 0
 #define BLIT_MODE_COMPATIBLE 1
 #define BLIT_MODE_EXACT 2
+
+#endif /* UAE_BLITTER_H */

@@ -14,11 +14,11 @@
             </sourceRootList>
             <confList>
                 <confElem>
-                    <name>Pi2_Debug</name>
+                    <name>Pi3_Debug</name>
                     <type>0</type>
                 </confElem>
                 <confElem>
-                    <name>Pi2_Release</name>
+                    <name>Pi3_Release</name>
                     <type>0</type>
                 </confElem>
             </confList>

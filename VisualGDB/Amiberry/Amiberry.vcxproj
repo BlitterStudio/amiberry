@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-dispmanx|VisualGDB">
+      <Configuration>Debug-dispmanx</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|VisualGDB">
       <Configuration>Debug</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-rpi1|VisualGDB">
-      <Configuration>Release-rpi1</Configuration>
-      <Platform>VisualGDB</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-rpi2|VisualGDB">
-      <Configuration>Release-rpi2</Configuration>
+    <ProjectConfiguration Include="Release-dispmanx|VisualGDB">
+      <Configuration>Release-dispmanx</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|VisualGDB">
@@ -19,9 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{D76BB09D-FF2A-4028-A065-421C430CD238}</ProjectGuid>
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{FDC6BF55-C4BC-44FB-85A9-3369784716E8}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'" Label="Configuration" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'" Label="Configuration" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -30,103 +37,117 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <TargetName>$(ProjectName)-sdl2</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
+    <GNUConfigurationType>Debug</GNUConfigurationType>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
-    <Toolchain>C:\SysGCC\raspberry</Toolchain>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL;pthread;m;z;SDL_image;png;rt;xml2;FLAC;mpg123;dl;SDL_ttf;guichan_sdl;guichan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LibrarySearchDirectories>=/usr/local/lib;../../src/guisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
+    <ClCompile>
+      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>=/usr/local/lib;../../src/guisan/lib;=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;bcm_host;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript>
+      </LinkerScript>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_RENDER_THREAD;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
-      <OmitFramePointer>true</OmitFramePointer>
-      <InlineFunctions>true</InlineFunctions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL;pthread;m;z;SDL_image;png;rt;xml2;FLAC;mpg123;dl;SDL_ttf;guichan_sdl;guichan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LibrarySearchDirectories>=/usr/local/lib;../../src/guisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi2|VisualGDB'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;ARMV6T2;PICASSO96;USE_ARMNEON;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <OmitFramePointer>true</OmitFramePointer>
       <InlineFunctions>true</InlineFunctions>
+      <AdditionalCOptions>-march=armv8-a -mfpu=neon-fp-armv8</AdditionalCOptions>
+      <AdditionalCPPOptions>-march=armv8-a -mfpu=neon-fp-armv8</AdditionalCPPOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL;pthread;m;z;SDL_image;png;rt;xml2;FLAC;mpg123;dl;SDL_ttf;guichan_sdl;guichan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LibrarySearchDirectories>=/usr/local/lib;../../src/guisan/lib;=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;bcm_host;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-rpi1|VisualGDB'">
-    <ClCompile>
-      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>../../src;../../src/include;../../src/osdep;../../src/threaddep;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL;=/usr/include/libxml2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;RASPBERRY;CAPSLOCK_DEBIAN_WORKAROUND;PICASSO96;CPU_arm;ARMV6_ASSEMBLY;PANDORA;WITH_INGAME_WARNING;USE_SDL;ROM_PATH_PREFIX=\"./\";DATA_PREFIX=\"./data/\";SAVE_PREFIX=\"./saves/\";GCCCONSTFUNC="__attribute__((const))";%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv6zk -mfpu=vfp -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
-      <OmitFramePointer>true</OmitFramePointer>
-      <InlineFunctions>true</InlineFunctions>
-    </ClCompile>
-    <Link>
-      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>bcm_host;SDL;pthread;m;z;SDL_image;png;rt;xml2;FLAC;mpg123;dl;SDL_ttf;guichan_sdl;guichan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
-      <LinkerScript>
-      </LinkerScript>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemGroup>
-    <None Include="..\..\src\filesys.asm" />
-    <None Include="..\..\src\inputevents.def" />
-    <None Include="..\..\src\table68k" />
-    <None Include="Amiberry-Debug.vgdbsettings" />
-    <None Include="Amiberry-Release.vgdbsettings" />
-  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp" />
+    <ClCompile Include="..\..\src\ar.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zBuf.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zBuf2.c" />
     <ClCompile Include="..\..\src\archivers\7z\7zCrc.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\7zDecode.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\7zExtract.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\7zHeader.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zCrcOpt.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zDec.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zFile.c" />
     <ClCompile Include="..\..\src\archivers\7z\7zIn.cpp" />
-    <ClCompile Include="..\..\src\archivers\7z\7zItem.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\7zStream.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Alloc.c" />
     <ClCompile Include="..\..\src\archivers\7z\Bcj2.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Bra.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Bra86.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\BraIA64.c" />
+    <ClCompile Include="..\..\src\archivers\7z\CpuArch.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Delta.c" />
+    <ClCompile Include="..\..\src\archivers\7z\LzFind.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Lzma2Dec.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Lzma86Enc.c" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\LzmaLib.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Sha256.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Xz.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\XzCrc64.c" />
+    <ClCompile Include="..\..\src\archivers\7z\XzDec.c" />
+    <ClCompile Include="..\..\src\archivers\7z\XzIn.c" />
     <ClCompile Include="..\..\src\archivers\dms\crc_csum.cpp" />
     <ClCompile Include="..\..\src\archivers\dms\getbits.cpp" />
     <ClCompile Include="..\..\src\archivers\dms\maketbl.cpp" />
@@ -150,6 +171,7 @@
     <ClCompile Include="..\..\src\archivers\lha\uae_lha.cpp" />
     <ClCompile Include="..\..\src\archivers\lha\util.cpp" />
     <ClCompile Include="..\..\src\archivers\lzx\unlzx.cpp" />
+    <ClCompile Include="..\..\src\archivers\mp2\kjmp2.cpp" />
     <ClCompile Include="..\..\src\archivers\wrp\warp.cpp" />
     <ClCompile Include="..\..\src\archivers\zip\unzip.cpp" />
     <ClCompile Include="..\..\src\aros.rom.cpp" />
@@ -163,6 +185,8 @@
     <ClCompile Include="..\..\src\blkdev_cdimage.cpp" />
     <ClCompile Include="..\..\src\bsdsocket.cpp" />
     <ClCompile Include="..\..\src\calc.cpp" />
+    <ClCompile Include="..\..\src\cd32_fmv.cpp" />
+    <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp" />
     <ClCompile Include="..\..\src\cdrom.cpp" />
     <ClCompile Include="..\..\src\cfgfile.cpp" />
     <ClCompile Include="..\..\src\cia.cpp" />
@@ -170,34 +194,51 @@
     <ClCompile Include="..\..\src\cpuemu_0.cpp" />
     <ClCompile Include="..\..\src\cpuemu_11.cpp" />
     <ClCompile Include="..\..\src\cpuemu_4.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_40.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_44.cpp" />
     <ClCompile Include="..\..\src\cpustbl.cpp" />
     <ClCompile Include="..\..\src\crc32.cpp" />
     <ClCompile Include="..\..\src\custom.cpp" />
+    <ClCompile Include="..\..\src\def_icons.cpp" />
+    <ClCompile Include="..\..\src\devices.cpp" />
     <ClCompile Include="..\..\src\disk.cpp" />
     <ClCompile Include="..\..\src\diskutil.cpp" />
     <ClCompile Include="..\..\src\drawing.cpp" />
     <ClCompile Include="..\..\src\events.cpp" />
     <ClCompile Include="..\..\src\expansion.cpp" />
+    <ClCompile Include="..\..\src\fdi2raw.cpp" />
     <ClCompile Include="..\..\src\filesys.cpp" />
+    <ClCompile Include="..\..\src\flashrom.cpp" />
     <ClCompile Include="..\..\src\fpp.cpp" />
     <ClCompile Include="..\..\src\fsdb.cpp" />
     <ClCompile Include="..\..\src\fsdb_unix.cpp" />
     <ClCompile Include="..\..\src\fsusage.cpp" />
+    <ClCompile Include="..\..\src\gayle.cpp" />
     <ClCompile Include="..\..\src\gfxboard.cpp" />
     <ClCompile Include="..\..\src\gfxutil.cpp" />
     <ClCompile Include="..\..\src\hardfile.cpp" />
+    <ClCompile Include="..\..\src\hrtmon.rom.cpp" />
+    <ClCompile Include="..\..\src\ide.cpp" />
     <ClCompile Include="..\..\src\inputdevice.cpp" />
     <ClCompile Include="..\..\src\jit\compemu.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_fpp.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\..\src\jit\compstbl.cpp" />
     <ClCompile Include="..\..\src\keybuf.cpp" />
-    <ClCompile Include="..\..\src\main.cpp" />
     <ClCompile Include="..\..\src\machdep\support.cpp" />
+    <ClCompile Include="..\..\src\main.cpp" />
     <ClCompile Include="..\..\src\memory.cpp" />
     <ClCompile Include="..\..\src\native2amiga.cpp" />
     <ClCompile Include="..\..\src\newcpu.cpp" />
     <ClCompile Include="..\..\src\newcpu_common.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_filesys.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_gfx.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_gui.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_hardfile.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_input.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_mem.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_rp9.cpp" />
     <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
     <ClCompile Include="..\..\src\osdep\charset.cpp" />
@@ -208,47 +249,43 @@
     <ClCompile Include="..\..\src\osdep\gui\InGameMessage.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\main_window.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\Navigation.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelAbout.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelChipset.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelConfig.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelCPU.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelCustom.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelDisplay.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelFloppy.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelHD.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelSavestate.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelSound.cpp" />
-    <ClCompile Include="..\..\src\osdep\gui\sdltruetypefont.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectFolder.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectorEntry.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeCheckBox.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp" />
-    <ClCompile Include="..\..\src\osdep\hardfile_pandora.cpp" />
     <ClCompile Include="..\..\src\osdep\keyboard.cpp" />
-    <ClCompile Include="..\..\src\osdep\menu\menu_config.cpp" />
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\..\src\osdep\neon_helper.s" />
-    <ClCompile Include="..\..\src\osdep\pandora.cpp" />
-    <ClCompile Include="..\..\src\osdep\pandora_filesys.cpp" />
-    <ClCompile Include="..\..\src\osdep\pandora_gui.cpp" />
-    <ClCompile Include="..\..\src\osdep\pandora_input.cpp" />
-    <ClCompile Include="..\..\src\osdep\pandora_mem.cpp" />
-    <ClCompile Include="..\..\src\osdep\pandora_rp9.cpp" />
     <ClCompile Include="..\..\src\osdep\picasso96.cpp" />
-    <ClCompile Include="..\..\src\osdep\rasp_gfx.cpp" />
     <ClCompile Include="..\..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\..\src\osdep\writelog.cpp" />
     <ClCompile Include="..\..\src\readcpu.cpp" />
     <ClCompile Include="..\..\src\rommgr.cpp" />
+    <ClCompile Include="..\..\src\rtc.cpp" />
     <ClCompile Include="..\..\src\savestate.cpp" />
-    <ClCompile Include="..\..\src\sounddep\sound_sdl_new.cpp" />
+    <ClCompile Include="..\..\src\scsi.cpp" />
+    <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
     <ClCompile Include="..\..\src\uaelib.cpp" />
@@ -256,76 +293,39 @@
     <ClCompile Include="..\..\src\zfile.cpp" />
     <ClCompile Include="..\..\src\zfile_archive.cpp" />
   </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
   <ItemGroup>
-    <Image Include="..\..\data\35floppy.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\chip.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\cpu.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\delete.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\drive.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\expansion.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\file.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\joystick.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\joystick.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\misc.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\mouse.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\paths.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\remapping.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\savestate.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\screen.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\..\data\sound.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
+    <None Include="..\..\src\aks.def" />
+    <None Include="..\..\src\filesys.asm" />
+    <None Include="..\..\src\inputevents.def" />
+    <None Include="Amiberry-Debug.vgdbsettings" />
+    <None Include="Amiberry-Release.vgdbsettings" />
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\..\data\FreeSans.ttf">
-      <DeploymentContent>true</DeploymentContent>
-    </Font>
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="..\..\src\archivers\7z\7z.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zAlloc.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zBuf.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zCrc.h" />
-    <ClInclude Include="..\..\src\archivers\7z\7zDecode.h" />
-    <ClInclude Include="..\..\src\archivers\7z\7zExtract.h" />
-    <ClInclude Include="..\..\src\archivers\7z\7zHeader.h" />
-    <ClInclude Include="..\..\src\archivers\7z\7zIn.h" />
-    <ClInclude Include="..\..\src\archivers\7z\7zItem.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zFile.h" />
     <ClInclude Include="..\..\src\archivers\7z\7zVersion.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Alloc.h" />
     <ClInclude Include="..\..\src\archivers\7z\Bcj2.h" />
     <ClInclude Include="..\..\src\archivers\7z\Bra.h" />
     <ClInclude Include="..\..\src\archivers\7z\CpuArch.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Delta.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzFind.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzHash.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Lzma2Dec.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Lzma86.h" />
     <ClInclude Include="..\..\src\archivers\7z\LzmaDec.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzmaLib.h" />
+    <ClInclude Include="..\..\src\archivers\7z\RotateDefs.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Sha256.h" />
     <ClInclude Include="..\..\src\archivers\7z\Types.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Xz.h" />
+    <ClInclude Include="..\..\src\archivers\7z\XzCrc64.h" />
     <ClInclude Include="..\..\src\archivers\dms\cdata.h" />
     <ClInclude Include="..\..\src\archivers\dms\crc_csum.h" />
     <ClInclude Include="..\..\src\archivers\dms\getbits.h" />
@@ -340,93 +340,99 @@
     <ClInclude Include="..\..\src\archivers\dms\u_rle.h" />
     <ClInclude Include="..\..\src\archivers\lha\lha.h" />
     <ClInclude Include="..\..\src\archivers\lha\lha_macro.h" />
+    <ClInclude Include="..\..\src\archivers\mp2\kjmp2.h" />
     <ClInclude Include="..\..\src\archivers\wrp\warp.h" />
     <ClInclude Include="..\..\src\archivers\zip\unzip.h" />
+    <ClInclude Include="..\..\src\blit.h" />
+    <ClInclude Include="..\..\src\blitfunc.h" />
+    <ClInclude Include="..\..\src\cputbl.h" />
     <ClInclude Include="..\..\src\include\akiko.h" />
+    <ClInclude Include="..\..\src\include\ar.h" />
     <ClInclude Include="..\..\src\include\audio.h" />
     <ClInclude Include="..\..\src\include\autoconf.h" />
-    <ClInclude Include="..\..\src\include\blit.h" />
-    <ClInclude Include="..\..\src\include\blitfunc.h" />
     <ClInclude Include="..\..\src\include\blitter.h" />
     <ClInclude Include="..\..\src\include\blkdev.h" />
     <ClInclude Include="..\..\src\include\bsdsocket.h" />
     <ClInclude Include="..\..\src\include\calc.h" />
+    <ClInclude Include="..\..\src\include\cd32_fmv.h" />
     <ClInclude Include="..\..\src\include\cia.h" />
-    <ClInclude Include="..\..\src\include\clipboard.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
-    <ClInclude Include="..\..\src\include\cputbl.h" />
+    <ClInclude Include="..\..\src\include\cpummu.h" />
     <ClInclude Include="..\..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\..\src\include\crc32.h" />
     <ClInclude Include="..\..\src\include\custom.h" />
-    <ClInclude Include="..\..\src\include\debug.h" />
+    <ClInclude Include="..\..\src\include\devices.h" />
     <ClInclude Include="..\..\src\include\disk.h" />
     <ClInclude Include="..\..\src\include\diskutil.h" />
     <ClInclude Include="..\..\src\include\drawing.h" />
-    <ClInclude Include="..\..\src\include\ersatz.h" />
     <ClInclude Include="..\..\src\include\events.h" />
     <ClInclude Include="..\..\src\include\execio.h" />
     <ClInclude Include="..\..\src\include\execlib.h" />
+    <ClInclude Include="..\..\src\include\fdi2raw.h" />
     <ClInclude Include="..\..\src\include\filesys.h" />
     <ClInclude Include="..\..\src\include\flags_arm.h" />
-    <ClInclude Include="..\..\src\include\fpp-ieee-be.h" />
-    <ClInclude Include="..\..\src\include\fpp-unknown.h" />
+    <ClInclude Include="..\..\src\include\flashrom.h" />
+    <ClInclude Include="..\..\src\include\fpp.h" />
     <ClInclude Include="..\..\src\include\fsdb.h" />
     <ClInclude Include="..\..\src\include\fsusage.h" />
+    <ClInclude Include="..\..\src\include\gayle.h" />
     <ClInclude Include="..\..\src\include\genblitter.h" />
     <ClInclude Include="..\..\src\include\gensound.h" />
     <ClInclude Include="..\..\src\include\gfxboard.h" />
     <ClInclude Include="..\..\src\include\gui.h" />
+    <ClInclude Include="..\..\src\include\ide.h" />
     <ClInclude Include="..\..\src\include\inputdevice.h" />
     <ClInclude Include="..\..\src\include\keyboard.h" />
     <ClInclude Include="..\..\src\include\keybuf.h" />
     <ClInclude Include="..\..\src\include\mackbd.h" />
     <ClInclude Include="..\..\src\include\memory.h" />
+    <ClInclude Include="..\..\src\include\mmu_common.h" />
     <ClInclude Include="..\..\src\include\native2amiga.h" />
     <ClInclude Include="..\..\src\include\native2amiga_api.h" />
     <ClInclude Include="..\..\src\include\newcpu.h" />
     <ClInclude Include="..\..\src\include\options.h" />
-    <ClInclude Include="..\..\src\include\osemu.h" />
-    <ClInclude Include="..\..\src\include\picasso96.h" />
     <ClInclude Include="..\..\src\include\readcpu.h" />
     <ClInclude Include="..\..\src\include\rommgr.h" />
+    <ClInclude Include="..\..\src\include\rtc.h" />
     <ClInclude Include="..\..\src\include\rtgmodes.h" />
     <ClInclude Include="..\..\src\include\savestate.h" />
     <ClInclude Include="..\..\src\include\scsi.h" />
-    <ClInclude Include="..\..\src\include\scsidev.h" />
     <ClInclude Include="..\..\src\include\statusline.h" />
     <ClInclude Include="..\..\src\include\sysdeps.h" />
     <ClInclude Include="..\..\src\include\traps.h" />
     <ClInclude Include="..\..\src\include\uae.h" />
     <ClInclude Include="..\..\src\include\uaeresource.h" />
+    <ClInclude Include="..\..\src\include\uae\attributes.h" />
+    <ClInclude Include="..\..\src\include\uae\cdrom.h" />
+    <ClInclude Include="..\..\src\include\uae\io.h" />
+    <ClInclude Include="..\..\src\include\uae\likely.h" />
+    <ClInclude Include="..\..\src\include\uae\mman.h" />
+    <ClInclude Include="..\..\src\include\uae\string.h" />
+    <ClInclude Include="..\..\src\include\uae\types.h" />
+    <ClInclude Include="..\..\src\include\uae\vm.h" />
     <ClInclude Include="..\..\src\include\xwin.h" />
     <ClInclude Include="..\..\src\include\zarchive.h" />
     <ClInclude Include="..\..\src\include\zfile.h" />
-    <ClInclude Include="..\..\src\jit\codegen_arm.h" />
     <ClInclude Include="..\..\src\jit\compemu.h" />
-    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm.h" />
-    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm2.h" />
     <ClInclude Include="..\..\src\jit\comptbl.h" />
     <ClInclude Include="..\..\src\machdep\m68k.h" />
     <ClInclude Include="..\..\src\machdep\maccess.h" />
-    <ClInclude Include="..\..\src\machdep\md-fpp.h" />
     <ClInclude Include="..\..\src\machdep\rpt.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
     <ClInclude Include="..\..\src\osdep\cda_play.h" />
     <ClInclude Include="..\..\src\osdep\config.h" />
     <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />
-    <ClInclude Include="..\..\src\osdep\gui\sdltruetypefont.hpp" />
     <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp" />
     <ClInclude Include="..\..\src\osdep\gui\UaeCheckBox.hpp" />
     <ClInclude Include="..\..\src\osdep\gui\UaeDropDown.hpp" />
     <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp" />
     <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp" />
     <ClInclude Include="..\..\src\osdep\mp3decoder.h" />
-    <ClInclude Include="..\..\src\osdep\pandora_rp9.h" />
+    <ClInclude Include="..\..\src\osdep\picasso96.h" />
     <ClInclude Include="..\..\src\osdep\sysconfig.h" />
     <ClInclude Include="..\..\src\osdep\target.h" />
     <ClInclude Include="..\..\src\sounddep\sound.h" />
     <ClInclude Include="..\..\src\threaddep\thread.h" />
   </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
 </Project>

@@ -2,13 +2,29 @@
 
 .arm
 
+.global save_host_fp_regs
+.global restore_host_fp_regs
 .global copy_screen_8bit
-.global copy_screen_16bit_swap
-.global copy_screen_32bit_to_16bit
+.global copy_screen_16bit_swap_arm
+.global copy_screen_32bit_to_16bit_arm
 
 .text
 
 .align 8
+
+@----------------------------------------------------------------
+@ save_host_fp_regs
+@----------------------------------------------------------------
+save_host_fp_regs:
+	vstmia    r0!, {d7-d15}
+  bx        lr
+
+@----------------------------------------------------------------
+@ restore_host_fp_regs
+@----------------------------------------------------------------
+restore_host_fp_regs:
+  vldmia    r0!, {d7-d15}
+  bx        lr
 
 
 @----------------------------------------------------------------
@@ -51,35 +67,35 @@ copy_screen_8bit_loop_2:
 
 
 @----------------------------------------------------------------
-@ copy_screen_16bit_swap
+@ copy_screen_16bit_swap_arm
 @
 @ r0: uae_u8   *dst
 @ r1: uae_u8   *src
 @ r2: int      bytes always a multiple of 128: even number of lines, 2 bytes per pixel, number of pixel per line is multiple of 32 (320, 640, 800, 1024, 1152, 1280)
 @
-@ void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
+@ void copy_screen_16bit_swap_arm(uae_u8 *dst, uae_u8 *src, int bytes);
 @
 @----------------------------------------------------------------
-copy_screen_16bit_swap:
+copy_screen_16bit_swap_arm:
 ldr r3, [r1], #4
 rev16 r3, r3
 str r3, [r0], #4
 subs r2, r2, #4
-bne copy_screen_16bit_swap
+bne copy_screen_16bit_swap_arm
 bx lr
 
 
 @----------------------------------------------------------------
-@ copy_screen_32bit_to_16bit
+@ copy_screen_32bit_to_16bit_arm
 @
 @ r0: uae_u8   *dst - Format (bits): rrrr rggg gggb bbbb
 @ r1: uae_u8   *src - Format (bytes) in memory rgba
 @ r2: int      bytes
 @
-@ void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
+@ void copy_screen_32bit_to_16bit_arm(uae_u8 *dst, uae_u8 *src, int bytes);
 @
 @----------------------------------------------------------------
-copy_screen_32bit_to_16bit:
+copy_screen_32bit_to_16bit_arm:
 stmdb sp!, {r4-r6, lr}
 copy_screen_32bit_to_16bit_loop:
 ldr r3, [r1], #4

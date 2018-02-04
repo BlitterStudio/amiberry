@@ -333,7 +333,7 @@
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
-    <conf name="Pi2_Debug" type="0">
+    <conf name="Pi3_Debug" type="0">
       <toolsSet>
         <compilerSet>GNU|GNU</compilerSet>
         <dependencyChecking>false</dependencyChecking>
@@ -341,14 +341,15 @@
       </toolsSet>
       <flagsDictionary>
         <element flagsID="0" commonFlags="-march=armv7-a"/>
+        <element flagsID="1" commonFlags="-march=armv8-a -std=gnu++14"/>
       </flagsDictionary>
       <codeAssistance>
       </codeAssistance>
       <makefileType>
         <makeTool>
           <buildCommandWorkingDir>.</buildCommandWorkingDir>
-          <buildCommand>${MAKE} -f Makefile DEBUG=1 PLATFORM=rpi2</buildCommand>
-          <cleanCommand>${MAKE} -f Makefile clean DEBUG=1 PLATFORM=rpi2</cleanCommand>
+          <buildCommand>${MAKE} -f Makefile DEBUG=1</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean DEBUG=1</cleanCommand>
           <executablePath>amiberry</executablePath>
           <cTool>
             <incDir>
@@ -373,7 +374,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -408,7 +409,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -440,36 +441,17 @@
       </folder>
       <folder path="0/src/osdep/gui">
         <ccTool>
-          <incDir>
-            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
-            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
-            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
-            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
-            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
-            <pElem>src</pElem>
-            <pElem>src/osdep</pElem>
-            <pElem>src/threaddep</pElem>
-            <pElem>src/include</pElem>
-            <pElem></pElem>
-          </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
             <Elem>ARMV6_ASSEMBLY</Elem>
             <Elem>CAPSLOCK_DEBIAN_WORKAROUND</Elem>
             <Elem>CPU_arm</Elem>
-            <Elem>DATA_PREFIX="./data/"</Elem>
             <Elem>DEBUG</Elem>
             <Elem>GCCCONSTFUNC=__attribute__((const))</Elem>
-            <Elem>PANDORA</Elem>
-            <Elem>PICASSO96</Elem>
             <Elem>RASPBERRY</Elem>
-            <Elem>ROM_PATH_PREFIX="./"</Elem>
-            <Elem>SAVE_PREFIX="./saves/"</Elem>
             <Elem>USE_ARMNEON</Elem>
             <Elem>USE_SDL</Elem>
             <Elem>WITH_INGAME_WARNING</Elem>
-            <Elem>_GNU_SOURCE=1</Elem>
-            <Elem>_REENTRANT</Elem>
           </preprocessorList>
         </ccTool>
       </folder>
@@ -485,7 +467,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -520,7 +502,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -725,7 +707,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -760,7 +742,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -795,7 +777,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -830,7 +812,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -872,7 +854,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -907,7 +889,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -942,7 +924,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -977,7 +959,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1012,7 +994,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1054,7 +1036,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1089,7 +1071,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1124,7 +1106,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1159,7 +1141,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1194,7 +1176,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1229,7 +1211,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1264,7 +1246,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1299,7 +1281,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1334,7 +1316,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1369,7 +1351,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1404,7 +1386,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1439,7 +1421,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1474,7 +1456,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1509,7 +1491,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1544,7 +1526,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1579,7 +1561,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1614,7 +1596,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1656,7 +1638,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1691,7 +1673,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1726,7 +1708,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1761,7 +1743,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1810,7 +1792,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1845,7 +1827,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1880,7 +1862,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1915,7 +1897,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1957,7 +1939,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -1992,7 +1974,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2041,7 +2023,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2076,7 +2058,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2118,7 +2100,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2159,7 +2141,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2194,7 +2176,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2229,7 +2211,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2264,7 +2246,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2299,7 +2281,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2342,7 +2324,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2377,7 +2359,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2412,7 +2394,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2447,7 +2429,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2475,6 +2457,27 @@
             tool="1"
             flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/EditFilesysHardfile.cpp"
@@ -2482,6 +2485,27 @@
             tool="1"
             flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/EditFilesysVirtual.cpp"
@@ -2489,106 +2513,643 @@
             tool="1"
             flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/InGameMessage.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/Navigation.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelCPU.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelChipset.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelConfig.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelDisplay.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelFloppy.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelHD.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
-      <item path="src/osdep/gui/PanelInput.cpp" ex="false" tool="1" flavor2="9">
-        <ccTool flags="0">
+      <item path="src/osdep/gui/PanelInput.cpp" ex="false" tool="1" flavor2="11">
+        <ccTool flags="1">
+          <incDir>
+            <pElem>/usr/include/libxml2</pElem>
+            <pElem>/opt/vc/include</pElem>
+            <pElem>/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>src/archivers</pElem>
+            <pElem>.</pElem>
+          </incDir>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelMisc.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelPaths.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelRAM.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelROM.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelSavestate.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/PanelSound.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/SelectFile.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/SelectFolder.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/SelectorEntry.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/ShowMessage.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/UaeCheckBox.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/UaeDropDown.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/UaeListBox.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/UaeRadioButton.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/main_window.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/gui/sdltruetypefont.cpp" ex="false" tool="1" flavor2="9">
         <ccTool flags="0">
+          <incDir>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/SDL</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/usr/include/libxml2</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vmcs_host/linux</pElem>
+            <pElem>../../Users/oaing/AppData/Local/NetBeans/Cache/8.2/remote-files/retropie_22_pi/opt/vc/include/interface/vcos/pthreads</pElem>
+            <pElem>src</pElem>
+            <pElem>src/osdep</pElem>
+            <pElem>src/threaddep</pElem>
+            <pElem>src/include</pElem>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DATA_PREFIX="./data/"</Elem>
+            <Elem>PANDORA</Elem>
+            <Elem>PICASSO96</Elem>
+            <Elem>ROM_PATH_PREFIX="./"</Elem>
+            <Elem>SAVE_PREFIX="./saves/"</Elem>
+            <Elem>_GNU_SOURCE=1</Elem>
+            <Elem>_REENTRANT</Elem>
+          </preprocessorList>
         </ccTool>
       </item>
       <item path="src/osdep/hardfile_pandora.cpp" ex="false" tool="1" flavor2="9">
@@ -2603,7 +3164,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2638,7 +3199,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2677,7 +3238,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2712,7 +3273,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2747,7 +3308,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2789,7 +3350,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2824,7 +3385,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2859,7 +3420,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2894,7 +3455,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2929,7 +3490,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2964,7 +3525,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -2999,7 +3560,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3034,7 +3595,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3076,7 +3637,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3111,7 +3672,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3146,7 +3707,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3195,7 +3756,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3230,7 +3791,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3267,7 +3828,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3302,7 +3863,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3337,7 +3898,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3372,7 +3933,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3407,7 +3968,7 @@
             <pElem>src/osdep</pElem>
             <pElem>src/threaddep</pElem>
             <pElem>src/include</pElem>
-            <pElem></pElem>
+            <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>ARMV6T2</Elem>
@@ -3431,7 +3992,7 @@
         </ccTool>
       </item>
     </conf>
-    <conf name="Pi2_Release" type="0">
+    <conf name="Pi3_Release" type="0">
       <toolsSet>
         <compilerSet>GNU|GNU</compilerSet>
         <dependencyChecking>false</dependencyChecking>
@@ -3442,9 +4003,9 @@
       <makefileType>
         <makeTool>
           <buildCommandWorkingDir>.</buildCommandWorkingDir>
-          <buildCommand>${MAKE} -f Makefile DEBUG=1 PLATFORM=rpi2</buildCommand>
-          <cleanCommand>${MAKE} -f Makefile clean DEBUG=1 PLATFORM=rpi2</cleanCommand>
-          <executablePath></executablePath>
+          <buildCommand>${MAKE} -f Makefile </buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean </cleanCommand>
+          <executablePath>amiberry</executablePath>
         </makeTool>
         <preBuild>
           <preBuildCommandWorkingDir>.</preBuildCommandWorkingDir>

@@ -9,6 +9,7 @@
 #ifndef UAE_CUSTOM_H
 #define UAE_CUSTOM_H
 
+#include "uae/types.h"
 #include "machdep/rpt.h"
 
 /* These are the masks that are ORed together in the chipset_mask option.
@@ -36,11 +37,10 @@ extern void do_copper (void);
 
 extern void notice_new_xcolors (void);
 extern void init_row_map (void);
-extern void init_hz_full (void);
+extern void init_hz_normal (void);
 extern void init_custom (void);
 
-extern bool picasso_requested_on;
-extern bool picasso_on;
+extern bool picasso_requested_on, picasso_requested_forced_on, picasso_on;
 
 extern unsigned long int hsync_counter;
 
@@ -64,11 +64,11 @@ STATIC_INLINE int dmaen (unsigned int dmamask)
 #define SPCFLAG_BLTNASTY 512
 #define SPCFLAG_EXEC 1024
 #define SPCFLAG_ACTION_REPLAY 2048
-#define SPCFLAG_TRAP 4096 /* enforcer-hack */
 #define SPCFLAG_MODE_CHANGE 8192
 #ifdef JIT
 #define SPCFLAG_END_COMPILE 16384
 #endif
+#define SPCFLAG_CHECK 32768
 
 extern uae_u16 adkcon;
 
@@ -79,21 +79,15 @@ STATIC_INLINE void send_interrupt (int num)
 {
 	INTREQ_0 (0x8000 | (1 << num));
 }
-
+extern void rethink_uae_int(void);
 STATIC_INLINE uae_u16 INTREQR (void)
 {
   return intreq;
 }
 
 /* maximums for statically allocated tables */
-#ifdef UAE_MINI
-/* absolute minimums for basic A500/A1200-emulation */
 #define MAXHPOS 227
-#define MAXVPOS 312
-#else
-#define MAXHPOS 256
-#define MAXVPOS 592
-#endif
+#define MAXVPOS 314
 
 /* PAL/NTSC values */
 
@@ -118,7 +112,8 @@ STATIC_INLINE uae_u16 INTREQR (void)
 extern int maxhpos;
 extern int maxvpos, maxvpos_nom, maxvpos_display;
 extern int minfirstline;
-extern int vblank_hz;
+extern double vblank_hz, fake_vblank_hz;
+extern double hblank_hz;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002
@@ -132,14 +127,12 @@ extern int vblank_hz;
 #define DMA_MASTER    0x0200
 #define DMA_BLITPRI   0x0400
 
+extern unsigned long timeframes;
+
 /* 100 words give you 1600 horizontal pixels. Should be more than enough for
  * superhires. Don't forget to update the definition in genp2c.c as well.
  * needs to be larger for superhires support */
-#ifdef CUSTOM_SIMPLE
-#define MAX_WORDS_PER_LINE 50
-#else
 #define MAX_WORDS_PER_LINE 100
-#endif
 
 /* AGA mode color lookup tables */
 extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
@@ -148,19 +141,22 @@ extern unsigned int xredcolors[256], xgreencolors[256], xbluecolors[256];
 #define RES_HIRES 1
 #define RES_SUPERHIRES 2
 #define RES_MAX 2
+#define VRES_NONDOUBLE 0
+#define VRES_DOUBLE 1
+#define VRES_MAX 1
 
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
-		con0 &= ~0x40; // SUPERHIRES
-	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
+	if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && ((con0) & 0x40))
+		return RES_SUPERHIRES; // SUPERHIRES
+  return ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 STATIC_INLINE int GET_RES_AGNUS (uae_u16 con0)
 {
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-		con0 &= ~0x40; // SUPERHIRES
-  return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
+  if ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) && ((con0) & 0x40))
+		return RES_SUPERHIRES; // SUPERHIRES
+  return ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 /* get sprite width from FMODE */
 #define GET_SPRITEWIDTH(FMODE) ((((FMODE) >> 2) & 3) == 3 ? 64 : (((FMODE) >> 2) & 3) == 0 ? 16 : 32)
@@ -175,7 +171,9 @@ STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 }
 
 extern void fpscounter_reset (void);
+extern unsigned long idletime;
 
 extern int current_maxvpos (void);
+extern struct chipset_refresh *get_chipset_refresh (void);
 
-#endif /* CUSTOM_H */
+#endif /* UAE_CUSTOM_H */

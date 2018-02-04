@@ -27,48 +27,48 @@
 
 
 #ifndef INLINE
-#ifdef __cplusplus
-#define INLINE inline
-#else
-#ifdef __GNUC__
-#define INLINE inline
-#else
-#ifdef __SASC
-#define INLINE __inline
-#else
-#define INLINE static
-#endif
-#endif
-#endif
+	#ifdef __cplusplus
+		#define INLINE inline
+	#else
+		#ifdef __GNUC__
+			#define INLINE inline
+		#else
+			#ifdef __SASC
+				#define INLINE __inline
+			#else
+				#define INLINE static
+			#endif
+		#endif
+	#endif
 #endif
 
 
 #ifndef UNDER_DOS
-#ifdef __MSDOS__
-#define UNDER_DOS
-#else
-#ifdef __MSDOS
-#define UNDER_DOS
-#else
-#ifdef _OS2
-#define UNDER_DOS
-#else
-#ifdef _QC
-#define UNDER_DOS
-#endif
-#endif
-#endif
-#endif
+	#ifdef __MSDOS__
+		#define UNDER_DOS
+	#else
+		#ifdef __MSDOS
+			#define UNDER_DOS
+		#else
+			#ifdef _OS2
+				#define UNDER_DOS
+			#else
+				#ifdef _QC
+					#define UNDER_DOS
+				#endif
+			#endif
+		#endif
+	#endif
 #endif
 
 
 #ifndef DIR_CHAR
-#ifdef UNDER_DOS
-/* running under MSDOS or DOS-like OS */
-#define DIR_CHAR '\\'
-#else
-#define DIR_CHAR '/'
-#endif
+	#ifdef UNDER_DOS
+		/* running under MSDOS or DOS-like OS */
+		#define DIR_CHAR '\\'
+	#else
+		#define DIR_CHAR '/'
+	#endif
 #endif
 
 

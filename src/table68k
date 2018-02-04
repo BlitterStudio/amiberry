@@ -229,7 +229,7 @@
 - 0 0 2
 0100 1010 zzss sSSS:000:-NZ00:-----:--:10: TST.z   s[!Areg,Dreg,PC16,PC8r,Immd]
 - 0 0 2 fea
-0100 1010 zzss sSSS:200:-NZ00:-----:--:10: TST.z   s[Areg,PC16,PC8r]
+0100 1010 zzss sSSS:200:-NZ00:-----:--:10: TST.z   s[Areg,PC16,PC8r,Immd]
 - 0 0 2 fea
 0100 1010 11dd dDDD:000:-NZ00:-----:--:30: TAS.B   d[Dreg]
 - 0 0 2
@@ -263,7 +263,7 @@
 - 0 0 8
 0100 1110 0111 0011:002:XNZVC:-----:TR:00: RTE
 - 1 9 18
-0100 1110 0111 0100:000:-----:-----:-R:10: RTD     #1
+0100 1110 0111 0100:100:-----:-----:-R:10: RTD     #1
 - 2 0 10
 0100 1110 0111 0101:000:-----:-----:-R:00: RTS
 - 1 0 9
@@ -343,9 +343,9 @@
 - 0 0 2 fea
 
 1000 rrr0 11ss sSSS:000:-NZV0:-----:T-:13: DIVU.W  s[Dreg],Dr
-- 2 0 54
+- 2 0 20
 1000 rrr0 11ss sSSS:000:-NZV0:-----:T-:13: DIVU.W  s[!Areg,Dreg],Dr
-- 0 0 54 fea
+- 0 0 20 fea
 
 1000 rrr1 00dd dDDD:000:XxZxC:X-Z--:--:13: SBCD.B  d[Dreg],Dr
 - 0 0 4
@@ -365,9 +365,9 @@
 - 2 1 11
 
 1000 rrr1 11ss sSSS:000:-NZV0:-----:T-:13: DIVS.W  s[Dreg],Dr
-- 2 0 54
+- 2 0 20
 1000 rrr1 11ss sSSS:000:-NZV0:-----:T-:13: DIVS.W  s[!Areg,Dreg],Dr
-- 0 0 54 fea
+- 0 0 20 fea
 
 1001 rrr0 zzss sSSS:000:XNZVC:-----:--:13: SUB.z   s[Areg,Dreg],Dr
 - 2 0 2
@@ -414,7 +414,7 @@
 1100 rrr0 zzss sSSS:000:-NZ00:-----:--:13: AND.z   s[!Areg,Dreg],Dr
 - 0 1 3 fea
 1100 rrr0 11ss sSSS:000:-NZ00:-----:--:13: MULU.W  s[!Areg],Dr
-- 2 0 25 fea
+- 2 0 12 fea
 
 1100 rrr1 00dd dDDD:000:XxZxC:X-Z--:--:13: ABCD.B  d[Dreg],Dr
 - 0 0 4
@@ -430,7 +430,7 @@
 1100 rrr1 10dd dDDD:000:-----:-----:--:33: EXG.L   Dr,d[Areg]
 - 4 0 4
 1100 rrr1 11ss sSSS:000:-NZ00:-----:--:13: MULS.W  s[!Areg],Dr
-- 2 0 25 fea
+- 2 0 12 fea
 
 1101 rrr0 zzss sSSS:000:XNZVC:-----:--:13: ADD.z   s[Areg,Dreg],Dr
 - 2 0 2

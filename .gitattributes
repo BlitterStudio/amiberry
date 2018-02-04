@@ -1,5 +1,14 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+#* text=auto
+
+# Declare files that will always have CRLF line endings on checkout.
+*.sln text eol=crlf
+
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.ico binary
+*.bmp binary
+*.ttf binary
 
 # Custom for Visual Studio
 *.cs     diff=csharp

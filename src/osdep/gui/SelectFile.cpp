@@ -1,10 +1,17 @@
 #include <algorithm>
-#include <guichan.hpp>
 #include <iostream>
 #include <sstream>
+#ifdef USE_SDL1
+#include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
 #include <guichan/sdl.hpp>
 #include "sdltruetypefont.hpp"
+#elif USE_SDL2
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
+#include <guisan/sdl/sdltruetypefont.hpp>
+#endif
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -15,49 +22,55 @@
 #include "gui.h"
 #include "gui_handling.h"
 
+#include "options.h"
+#include "inputdevice.h"
+#include "amiberry_gfx.h"
 
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
-#if defined(RASPBERRY) || defined(ANDROID)
+#if defined(ANDROID)
 #define FILE_SELECT_KEEP_POSITION
 #endif
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool createNew = false;
-static char workingDir[MAX_PATH];
-static const char **filefilter;
+static char workingDir[MAX_DPATH];
+static const char** filefilter;
 static bool dialogCreated = false;
 static int selectedOnStart = -1;
 
-static gcn::Window *wndSelectFile;
+static gcn::Window* wndSelectFile;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
 static gcn::ListBox* lstFiles;
 static gcn::ScrollArea* scrAreaFiles;
-static gcn::TextField *txtCurrent;
-static gcn::Label *lblFilename;
-static gcn::TextField *txtFilename;
+static gcn::TextField* txtCurrent;
+static gcn::Label* lblFilename;
+static gcn::TextField* txtFilename;
 
 
 class SelectFileListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs;
-	std::vector<std::string> files;
+	vector<string> dirs;
+	vector<string> files;
 
 public:
-	SelectFileListModel(const char * path)
+	SelectFileListModel(const char* path)
 	{
 		changeDir(path);
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return dirs.size() + files.size();
 	}
 
-	std::string getElementAt(int i)
+	string getElementAt(const int i) override
 	{
 		if (i >= dirs.size() + files.size() || i < 0)
 			return "---";
@@ -66,84 +79,84 @@ public:
 		return files[i - dirs.size()];
 	}
 
-	void changeDir(const char *path)
+	void changeDir(const char* path)
 	{
 		ReadDirectory(path, &dirs, &files);
-		if (dirs.size() == 0)
-			dirs.push_back("..");
+		if (dirs.empty())
+			dirs.emplace_back("..");
 		FilterFiles(&files, filefilter);
 	}
 
-	bool isDir(int i)
+	bool isDir(unsigned int i) const
 	{
 		return (i < dirs.size());
 	}
 };
-static SelectFileListModel *fileList;
+
+static SelectFileListModel* fileList;
 
 
 class FileButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdOK)
 		{
-			int selected_item;
-			selected_item = lstFiles->getSelected();
+			const auto selected_item = lstFiles->getSelected();
 			if (createNew)
 			{
-				char tmp[MAX_PATH];
+				char tmp[MAX_DPATH];
 				if (txtFilename->getText().length() <= 0)
 					return;
-				strcpy(tmp, workingDir);
-				strcat(tmp, "/");
-				strcat(tmp, txtFilename->getText().c_str());
-				if (strstr(tmp, filefilter[0]) == NULL)
-					strcat(tmp, filefilter[0]);
+				strncpy(tmp, workingDir, MAX_DPATH - 1);
+				strncat(tmp, "/", MAX_DPATH - 1);
+				strncat(tmp, txtFilename->getText().c_str(), MAX_DPATH - 1);
+				if (strstr(tmp, filefilter[0]) == nullptr)
+					strncat(tmp, filefilter[0], MAX_DPATH - 1);
 				if (my_existsfile(tmp) == 1)
 					return; // File already exists
-				strcpy(workingDir, tmp);
+				strncpy(workingDir, tmp, MAX_DPATH - 1);
 				dialogResult = true;
 			}
 			else
 			{
 				if (fileList->isDir(selected_item))
 					return; // Directory selected -> Ok not possible
-				strcat(workingDir, "/");
-				strcat(workingDir, fileList->getElementAt(selected_item).c_str());
+				strncat(workingDir, "/", MAX_DPATH - 1);
+				strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 1);
 				dialogResult = true;
 			}
 		}
 		dialogFinished = true;
 	}
 };
+
 static FileButtonActionListener* fileButtonActionListener;
 
 
-static void checkfoldername(char *current)
+static void checkfoldername(char* current)
 {
-	char *ptr;
-	char actualpath[MAX_PATH];
-	DIR *dir;
+	char actualpath[MAX_DPATH];
+	DIR* dir;
 
-	if (dir = opendir(current))
+	if ((dir = opendir(current)))
 	{
 		fileList->changeDir(current);
-		ptr = realpath(current, actualpath);
-		strcpy(workingDir, ptr);
+		char* ptr = realpath(current, actualpath);
+		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
 	else
-		strcpy(workingDir, start_path_data);
+		strncpy(workingDir, start_path_data, MAX_DPATH);
 	txtCurrent->setText(workingDir);
 }
 
-static void checkfilename(char *current)
+static void checkfilename(char* current)
 {
-	char actfile[MAX_PATH];
+	char actfile[MAX_DPATH];
 	extractFileName(current, actfile);
-	for (int i = 0; i < fileList->getNumberOfElements(); ++i)
+	for (auto i = 0; i < fileList->getNumberOfElements(); ++i)
 	{
 		if (!fileList->isDir(i) && !strcasecmp(fileList->getElementAt(i).c_str(), actfile))
 		{
@@ -158,15 +171,14 @@ static void checkfilename(char *current)
 class SelectFileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		int selected_item;
-		char foldername[256] = "";
+		char foldername[MAX_DPATH] = "";
 
-		selected_item = lstFiles->getSelected();
-		strcpy(foldername, workingDir);
-		strcat(foldername, "/");
-		strcat(foldername, fileList->getElementAt(selected_item).c_str());
+		const auto selected_item = lstFiles->getSelected();
+		strncpy(foldername, workingDir, MAX_DPATH);
+		strncat(foldername, "/", MAX_DPATH - 1);
+		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 1);
 		if (fileList->isDir(selected_item))
 			checkfoldername(foldername);
 		else if (!createNew)
@@ -177,15 +189,16 @@ public:
 		}
 	}
 };
+
 static SelectFileActionListener* selectFileActionListener;
 
 
-static void InitSelectFile(const char *title)
+static void InitSelectFile(const char* title)
 {
 	wndSelectFile = new gcn::Window("Load");
 	wndSelectFile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndSelectFile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndSelectFile->setBaseColor(gui_baseCol + 0x202020);
+	wndSelectFile->setBaseColor(gui_baseCol);
 	wndSelectFile->setCaption(title);
 	wndSelectFile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -193,14 +206,16 @@ static void InitSelectFile(const char *title)
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol + 0x202020);
+	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->addActionListener(fileButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol + 0x202020);
+	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->addActionListener(fileButtonActionListener);
 
 	txtCurrent = new gcn::TextField();
@@ -218,11 +233,15 @@ static void InitSelectFile(const char *title)
 	lstFiles->addActionListener(selectFileActionListener);
 
 	scrAreaFiles = new gcn::ScrollArea(lstFiles);
+#ifdef USE_SDL1
 	scrAreaFiles->setFrameSize(1);
+#elif USE_SDL2
+	scrAreaFiles->setBorderSize(1);
+#endif
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
 	scrAreaFiles->setScrollbarWidth(20);
-	scrAreaFiles->setBaseColor(gui_baseCol + 0x202020);
+	scrAreaFiles->setBaseColor(gui_baseCol);
 
 	if (createNew)
 	{
@@ -253,7 +272,7 @@ static void InitSelectFile(const char *title)
 }
 
 
-static void ExitSelectFile(void)
+static void ExitSelectFile()
 {
 	wndSelectFile->releaseModalFocus();
 	gui_top->remove(wndSelectFile);
@@ -276,14 +295,51 @@ static void ExitSelectFile(void)
 	delete wndSelectFile;
 }
 
-
-static void SelectFileLoop(void)
+static void navigate_right()
 {
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFiles)
+		if (createNew)
+			txtFilename->requestFocus();
+		else
+			cmdOK->requestFocus();
+	else if (activeWidget == txtFilename)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdCancel)
+		lstFiles->requestFocus();
+	else if (activeWidget == cmdOK)
+		cmdCancel->requestFocus();
+}
+
+static void navigate_left()
+{
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFiles)
+		cmdCancel->requestFocus();
+	else if (activeWidget == cmdCancel)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdOK)
+		if (createNew)
+			txtFilename->requestFocus();
+		else
+			lstFiles->requestFocus();
+	else if (activeWidget == txtFilename)
+		lstFiles->requestFocus();
+}
+
+static void SelectFileLoop()
+{
+	FocusBugWorkaround(wndSelectFile);
+
 	while (!dialogFinished)
 	{
+		int gotEvent = 0;
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			gotEvent = 1;
 			if (event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
@@ -293,65 +349,86 @@ static void SelectFileLoop(void)
 					break;
 
 				case VK_LEFT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFiles)
-							cmdCancel->requestFocus();
-						else if (activeWidget == cmdCancel)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdOK)
-							if (createNew)
-								txtFilename->requestFocus();
-							else
-								lstFiles->requestFocus();
-						else if (activeWidget == txtFilename)
-							lstFiles->requestFocus();
-						continue;
-					}
+					navigate_left();
 					break;
 
 				case VK_RIGHT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFiles)
-							if (createNew)
-								txtFilename->requestFocus();
-							else
-								cmdOK->requestFocus();
-						else if (activeWidget == txtFilename)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdCancel)
-							lstFiles->requestFocus();
-						else if (activeWidget == cmdOK)
-							cmdCancel->requestFocus();
-						continue;
-					}
+					navigate_right();
 					break;
 
-				case VK_X:
-				case VK_A:
+				case VK_Red:
+				case VK_Green:
 					event.key.keysym.sym = SDLK_RETURN;
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP;  // and the key up
+					event.type = SDL_KEYUP; // and the key up
+					break;
+				default:
 					break;
 				}
 			}
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
+			{
+				if (GUIjoy)
+				{
+					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-			            //-------------------------------------------------
-			            // Send event to guichan-controls
-			            //-------------------------------------------------
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					{
+						PushFakeKey(SDLK_RETURN);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					{
+						dialogFinished = true;
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768)
+					{
+						navigate_left();
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767)
+					{
+						navigate_right();
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768)
+					{
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767)
+					{
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+				}
+				break;
+			}
+
+			//-------------------------------------------------
+			// Send event to guisan-controls
+			//-------------------------------------------------
+#ifdef ANDROIDSDL
+			androidsdl_event(event, gui_input);
+#else
 			gui_input->pushInput(event);
+#endif
 		}
-
-		        // Now we let the Gui object perform its logic.
-		uae_gui->logic();
-		// Now we let the Gui object draw itself.
-		uae_gui->draw();
+		if (gotEvent)
+		{
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
+#ifdef USE_SDL2
+			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+		}
+		
 		// Finally we update the screen.
-		wait_for_vsync();
-		SDL_Flip(gui_screen);
+		UpdateGuiScreen();
 
 		if (!dialogCreated)
 		{
@@ -366,7 +443,7 @@ static void SelectFileLoop(void)
 static int Already_init = 0;
 #endif
 
-bool SelectFile(const char *title, char *value, const char *filter[], bool create)
+bool SelectFile(const char* title, char* value, const char* filter[], const bool create)
 {
 	dialogResult = false;
 	dialogFinished = false;
@@ -383,7 +460,7 @@ bool SelectFile(const char *title, char *value, const char *filter[], bool creat
 	}
 	else
 	{
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, MAX_DPATH);
 		gui_top->add(wndSelectFile);
 		wndSelectFile->setCaption(title);
 		wndSelectFile->requestModalFocus();
@@ -397,6 +474,14 @@ bool SelectFile(const char *title, char *value, const char *filter[], bool creat
 	checkfoldername(workingDir);
 	checkfilename(value);
 
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+#ifdef USE_SDL2
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	UpdateGuiScreen();
+
 	SelectFileLoop();
 #ifdef FILE_SELECT_KEEP_POSITION
 	wndSelectFile->releaseModalFocus();
@@ -405,10 +490,10 @@ bool SelectFile(const char *title, char *value, const char *filter[], bool creat
 	ExitSelectFile();
 #endif
 	if (dialogResult)
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, MAX_DPATH);
 #ifdef FILE_SELECT_KEEP_POSITION
 	else
-		strncpy(workingDir, value, MAX_PATH);
+		strncpy(workingDir, value, MAX_DPATH);
 #endif
 	return dialogResult;
 }

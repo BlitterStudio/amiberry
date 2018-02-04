@@ -35,174 +35,141 @@ INLINE USHORT decode_p(void);
 
 
 
-USHORT Unpack_HEAVY(UCHAR *in, UCHAR *out, UCHAR flags, USHORT origsize)
-{
-    USHORT j, i, c, bitmask;
-    UCHAR *outend;
+USHORT Unpack_HEAVY(UCHAR *in, UCHAR *out, UCHAR flags, USHORT origsize){
+	USHORT j, i, c, bitmask;
+	UCHAR *outend;
 
-    /*  Heavy 1 uses a 4Kb dictionary,  Heavy 2 uses 8Kb  */
+	/*  Heavy 1 uses a 4Kb dictionary,  Heavy 2 uses 8Kb  */
 
-    if (flags & 8)
-    {
-        dms_np = 15;
-        bitmask = 0x1fff;
-    }
-    else
-    {
-        dms_np = 14;
-        bitmask = 0x0fff;
-    }
+	if (flags & 8) {
+		dms_np = 15;
+		bitmask = 0x1fff;
+	} else {
+		dms_np = 14;
+		bitmask = 0x0fff;
+	}
 
-    initbitbuf(in);
+	initbitbuf(in);
 
-    if (flags & 2)
-    {
-        if (read_tree_c()) return 1;
-        if (read_tree_p()) return 2;
-    }
+	if (flags & 2) {
+		if (read_tree_c()) return 1;
+		if (read_tree_p()) return 2;
+	}
 
-    outend = out+origsize;
+	outend = out+origsize;
 
-    while (out<outend)
-    {
-        c = decode_c();
-        if (c < 256)
-        {
-            *out++ = dms_text[dms_heavy_text_loc++ & bitmask] = (UCHAR)c;
-        }
-        else
-        {
-            j = (USHORT) (c - OFFSET);
-            i = (USHORT) (dms_heavy_text_loc - decode_p() - 1);
-            while(j--) *out++ = dms_text[dms_heavy_text_loc++ & bitmask] = dms_text[i++ & bitmask];
-        }
-    }
+	while (out<outend) {
+		c = decode_c();
+		if (c < 256) {
+			*out++ = dms_text[dms_heavy_text_loc++ & bitmask] = (UCHAR)c;
+		} else {
+			j = (USHORT) (c - OFFSET);
+			i = (USHORT) (dms_heavy_text_loc - decode_p() - 1);
+			while(j--) *out++ = dms_text[dms_heavy_text_loc++ & bitmask] = dms_text[i++ & bitmask];
+		}
+	}
 
-    return 0;
+	return 0;
 }
 
 
 
-INLINE USHORT decode_c(void)
-{
-    USHORT i, j, m;
+INLINE USHORT decode_c(void){
+	USHORT i, j, m;
 
-    j = c_table[GETBITS(12)];
-    if (j < N1)
-    {
-        DROPBITS(c_len[j]);
-    }
-    else
-    {
-        DROPBITS(12);
-        i = GETBITS(16);
-        m = 0x8000;
-        do
-        {
-            if (i & m) j = dms_right[j];
-            else              j = dms_left [j];
-            m >>= 1;
-        }
-        while (j >= N1);
-        DROPBITS(c_len[j] - 12);
-    }
-    return j;
+	j = c_table[GETBITS(12)];
+	if (j < N1) {
+		DROPBITS(c_len[j]);
+	} else {
+		DROPBITS(12);
+		i = GETBITS(16);
+		m = 0x8000;
+		do {
+			if (i & m) j = dms_right[j];
+			else              j = dms_left [j];
+			m >>= 1;
+		} while (j >= N1);
+		DROPBITS(c_len[j] - 12);
+	}
+	return j;
 }
 
 
 
-INLINE USHORT decode_p(void)
-{
-    USHORT i, j, m;
+INLINE USHORT decode_p(void){
+	USHORT i, j, m;
 
-    j = pt_table[GETBITS(8)];
-    if (j < dms_np)
-    {
-        DROPBITS(pt_len[j]);
-    }
-    else
-    {
-        DROPBITS(8);
-        i = GETBITS(16);
-        m = 0x8000;
-        do
-        {
-            if (i & m) j = dms_right[j];
-            else             j = dms_left [j];
-            m >>= 1;
-        }
-        while (j >= dms_np);
-        DROPBITS(pt_len[j] - 8);
-    }
+	j = pt_table[GETBITS(8)];
+	if (j < dms_np) {
+		DROPBITS(pt_len[j]);
+	} else {
+		DROPBITS(8);
+		i = GETBITS(16);
+		m = 0x8000;
+		do {
+			if (i & m) j = dms_right[j];
+			else             j = dms_left [j];
+			m >>= 1;
+		} while (j >= dms_np);
+		DROPBITS(pt_len[j] - 8);
+	}
 
-    if (j != dms_np-1)
-    {
-        if (j > 0)
-        {
-            j = (USHORT)(GETBITS(i=(USHORT)(j-1)) | (1U << (j-1)));
-            DROPBITS(i);
-        }
-        dms_lastlen=j;
-    }
+	if (j != dms_np-1) {
+		if (j > 0) {
+			j = (USHORT)(GETBITS(i=(USHORT)(j-1)) | (1U << (j-1)));
+			DROPBITS(i);
+		}
+		dms_lastlen=j;
+	}
 
-    return dms_lastlen;
+	return dms_lastlen;
 
 }
 
 
 
-static USHORT read_tree_c(void)
-{
-    USHORT i,n;
+static USHORT read_tree_c(void){
+	USHORT i,n;
 
-    n = GETBITS(9);
-    DROPBITS(9);
-    if (n>0)
-    {
-        for (i=0; i<n; i++)
-        {
-            c_len[i] = (UCHAR)GETBITS(5);
-            DROPBITS(5);
-        }
-        for (i=n; i<510; i++) c_len[i] = 0;
-        if (dms_make_table(510,c_len,12,c_table)) return 1;
-    }
-    else
-    {
-        n = GETBITS(9);
-        DROPBITS(9);
-        for (i=0; i<510; i++) c_len[i] = 0;
-        for (i=0; i<4096; i++) c_table[i] = n;
-    }
-    return 0;
+	n = GETBITS(9);
+	DROPBITS(9);
+	if (n>0){
+		for (i=0; i<n; i++) {
+			c_len[i] = (UCHAR)GETBITS(5);
+			DROPBITS(5);
+		}
+		for (i=n; i<510; i++) c_len[i] = 0;
+		if (dms_make_table(510,c_len,12,c_table)) return 1;
+	} else {
+		n = GETBITS(9);
+		DROPBITS(9);
+		for (i=0; i<510; i++) c_len[i] = 0;
+		for (i=0; i<4096; i++) c_table[i] = n;
+	}
+	return 0;
 }
 
 
 
-static USHORT read_tree_p(void)
-{
-    USHORT i,n;
+static USHORT read_tree_p(void){
+	USHORT i,n;
 
-    n = GETBITS(5);
-    DROPBITS(5);
-    if (n>0)
-    {
-        for (i=0; i<n; i++)
-        {
-            pt_len[i] = (UCHAR)GETBITS(4);
-            DROPBITS(4);
-        }
-        for (i=n; i<dms_np; i++) pt_len[i] = 0;
-        if (dms_make_table(dms_np,pt_len,8,pt_table)) return 1;
-    }
-    else
-    {
-        n = GETBITS(5);
-        DROPBITS(5);
-        for (i=0; i<dms_np; i++) pt_len[i] = 0;
-        for (i=0; i<256; i++) pt_table[i] = n;
-    }
-    return 0;
+	n = GETBITS(5);
+	DROPBITS(5);
+	if (n>0){
+		for (i=0; i<n; i++) {
+			pt_len[i] = (UCHAR)GETBITS(4);
+			DROPBITS(4);
+		}
+		for (i=n; i<dms_np; i++) pt_len[i] = 0;
+		if (dms_make_table(dms_np,pt_len,8,pt_table)) return 1;
+	} else {
+		n = GETBITS(5);
+		DROPBITS(5);
+		for (i=0; i<dms_np; i++) pt_len[i] = 0;
+		for (i=0; i<256; i++) pt_table[i] = n;
+	}
+	return 0;
 }
 
 

@@ -26,7 +26,7 @@ void console_out (const TCHAR *format,...)
 
 #ifdef WITH_LOGGING
 
-void write_log (const TCHAR *format,...)
+void write_log (const char *format,...)
 {
     int count;
     int numwritten;

@@ -1,6 +1,8 @@
+#ifndef UAE_RTGMODES_H
+#define UAE_RTGMODES_H
+
 /* Types for RGBFormat used */
-typedef enum
-{
+typedef enum {
     RGBFB_NONE,		/* no valid RGB format (should not happen) */
     RGBFB_CLUT,		/* palette mode, set colors when opening screen using
 			   tags or use SetRGB32/LoadRGB32(...) */
@@ -64,3 +66,5 @@ typedef enum
 
 #define	RGBFB_PLANAR	RGBFB_NONE
 #define	RGBFB_CHUNKY	RGBFB_CLUT
+
+#endif /* UAE_RTGMODES_H */

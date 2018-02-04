@@ -1,7 +1,14 @@
+#ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
 #include <guichan/sdl.hpp>
 #include "sdltruetypefont.hpp"
+#elif USE_SDL2
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
+#include <guisan/sdl/sdltruetypefont.hpp>
+#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -18,344 +25,395 @@
 #include "gui.h"
 #include "gui_handling.h"
 
+static gcn::UaeCheckBox* chkRetroArchQuit;
+static gcn::UaeCheckBox* chkRetroArchMenu;
+static gcn::UaeCheckBox* chkRetroArchReset;
+//static gcn::UaeCheckBox* chkRetroArchSaveState;
 
 static gcn::UaeCheckBox* chkStatusLine;
 static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;
-#ifdef PANDORA_SPECIFIC
-static gcn::Label* lblPandoraSpeed;
-static gcn::Label* lblPandoraSpeedInfo;
-static gcn::Slider* sldPandoraSpeed;
-#endif
-static gcn::UaeCheckBox* chkBSDSocket;
-static gcn::Label *lblKeyForMenu;
-static gcn::UaeDropDown* KeyForMenu;
-static gcn::Label *lblButtonForMenu;
-static gcn::UaeDropDown* ButtonForMenu;
-static gcn::Label *lblKeyForQuit;
-static gcn::UaeDropDown* KeyForQuit;
-static gcn::Label *lblButtonForQuit;
-static gcn::UaeDropDown* ButtonForQuit;
 
-#ifdef RASPBERRY
+static gcn::UaeCheckBox* chkBSDSocket;
+static gcn::UaeCheckBox* chkMasterWP;
+
+static gcn::Label* lblNumLock;
+static gcn::UaeDropDown* cboKBDLed_num;
+static gcn::Label* lblScrLock;
+static gcn::UaeDropDown* cboKBDLed_scr;
+
+static gcn::Label* lblOpenGUI;
+static gcn::TextField* txtOpenGUI;
+static gcn::Button* cmdOpenGUI;
+
+static gcn::Label* lblKeyForQuit;
+static gcn::TextField* txtKeyForQuit;
+static gcn::Button* cmdKeyForQuit;
+
+static gcn::Label* lblKeyActionReplay;
+static gcn::TextField* txtKeyActionReplay;
+static gcn::Button* cmdKeyActionReplay;
+
+static gcn::Label* lblKeyFullScreen;
+static gcn::TextField* txtKeyFullScreen;
+static gcn::Button* cmdKeyFullScreen;
+
 class StringListModel : public gcn::ListModel
 {
-private:
-    std::vector<std::string> values;
+	vector<string> values;
 public:
-    StringListModel(const char *entries[], int count)
-    {
-        for(int i=0; i<count; ++i)
-            values.push_back(entries[i]);
-    }
+	StringListModel(const char* entries[], const int count)
+	{
+		for (auto i = 0; i < count; ++i)
+			values.emplace_back(entries[i]);
+	}
 
-    int getNumberOfElements()
-    {
-        return values.size();
-    }
+	int getNumberOfElements() override
+	{
+		return values.size();
+	}
 
-    std::string getElementAt(int i)
-    {
-        if(i < 0 || i >= values.size())
-            return "---";
-        return values[i];
-    }
+	string getElementAt(int i) override
+	{
+		if (i < 0 || i >= values.size())
+			return "---";
+		return values[i];
+	}
 };
 
-
-static gcn::Label *lblNumLock;
-static gcn::UaeDropDown* cboKBDLed_num;
-static gcn::Label *lblScrLock;
-static gcn::UaeDropDown* cboKBDLed_scr;
-static gcn::Label *lblCapLock;
-static gcn::UaeDropDown* cboKBDLed_cap;
-
-const char *listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD" };
-StringListModel KBDLedList(listValues, 9);
-#endif
-
-static const int ControlKey_SDLKeyValues[] = { 0, SDLK_F11, SDLK_F12 };
-
-const char *ControlKeyValues[] = { "------------------", "F11", "F12" };
-StringListModel ControlKeyList(ControlKeyValues, 3);
-
-static int GetControlKeyIndex(int key)
-{
-	int ControlKey_SDLKeyValues_Length = sizeof(ControlKey_SDLKeyValues) / sizeof(int);
-	for (int i = 0; i < (ControlKey_SDLKeyValues_Length + 1); ++i)
-	{
-		if (ControlKey_SDLKeyValues[i] == key)
-			return i;
-	}
-	return 0; // Default: no key
-}
-
-static const int ControlButton_SDLButtonValues[] = { -1, 0, 1, 2, 3 };
-
-const char *ControlButtonValues[] = { "------------------", "JoyButton0", "JoyButton1", "JoyButton2", "JoyButton3" };
-StringListModel ControlButtonList(ControlButtonValues, 5);
-
-static int GetControlButtonIndex(int button)
-{
-	int ControlButton_SDLButtonValues_Length = sizeof(ControlButton_SDLButtonValues) / sizeof(int);
-	for (int i = 0; i < (ControlButton_SDLButtonValues_Length + 1); ++i)
-	{
-		if (ControlButton_SDLButtonValues[i] == button)
-			return i;
-	}
-	return 0; // Default: no key
-}
+static const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD"};
+static StringListModel KBDLedList(listValues, 9);
 
 class MiscActionListener : public gcn::ActionListener
 {
 public:
-    void action(const gcn::ActionEvent& actionEvent)
-    {
-        if (actionEvent.getSource() == chkStatusLine)
-            changed_prefs.leds_on_screen = chkStatusLine->isSelected();
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == chkStatusLine)
+			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
 
-        else if (actionEvent.getSource() == chkHideIdleLed)
-            changed_prefs.pandora_hide_idle_led = chkHideIdleLed->isSelected();
+		else if (actionEvent.getSource() == chkHideIdleLed)
+			changed_prefs.hide_idle_led = chkHideIdleLed->isSelected();
 
-        else if (actionEvent.getSource() == chkShowGUI)
-            changed_prefs.start_gui = chkShowGUI->isSelected();
+		else if (actionEvent.getSource() == chkShowGUI)
+			changed_prefs.start_gui = chkShowGUI->isSelected();
 
-        else if (actionEvent.getSource() == chkBSDSocket)
-            changed_prefs.socket_emu = chkBSDSocket->isSelected();
+		else if (actionEvent.getSource() == chkRetroArchQuit)
+		{
+			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
+			RefreshPanelCustom();
+		}
+			
+		else if (actionEvent.getSource() == chkRetroArchMenu)
+		{
+			changed_prefs.use_retroarch_menu = chkRetroArchMenu->isSelected();
+			RefreshPanelCustom();
+		}
+			
+		else if (actionEvent.getSource() == chkRetroArchReset)
+		{
+			changed_prefs.use_retroarch_reset = chkRetroArchReset->isSelected();
+			RefreshPanelCustom();
+		}
+			
+		//      else if (actionEvent.getSource() == chkRetroArchSavestate)
+		//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
 
-	    else if (actionEvent.getSource() == KeyForMenu)
-		    changed_prefs.key_for_menu = ControlKey_SDLKeyValues[KeyForMenu->getSelected()];
-        
-	    else if (actionEvent.getSource() == KeyForQuit)
-		    changed_prefs.key_for_quit = ControlKey_SDLKeyValues[KeyForQuit->getSelected()];
+		else if (actionEvent.getSource() == chkBSDSocket)
+			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
-	    else if (actionEvent.getSource() == ButtonForMenu)
-		    changed_prefs.button_for_menu = ControlButton_SDLButtonValues[ButtonForMenu->getSelected()];
-        
-	    else if (actionEvent.getSource() == ButtonForQuit)
-		    changed_prefs.button_for_quit = ControlButton_SDLButtonValues[ButtonForQuit->getSelected()];
+		else if (actionEvent.getSource() == chkMasterWP) {
+			changed_prefs.floppy_read_only = chkMasterWP->isSelected();
+			RefreshPanelQuickstart();
+			RefreshPanelFloppy();
+		}
 
-#ifdef PANDORA_SPECIFIC
-        else if (actionEvent.getSource() == sldPandoraSpeed)
-        {
-            int newspeed = (int) sldPandoraSpeed->getValue();
-            newspeed = newspeed - (newspeed % 20);
-            if(changed_prefs.pandora_cpu_speed != newspeed)
-            {
-                changed_prefs.pandora_cpu_speed = newspeed;
-                RefreshPanelMisc();
-            }
-        }
-#endif
+		else if (actionEvent.getSource() == cboKBDLed_num)
+			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
 
-#ifdef RASPBERRY
-        else if (actionEvent.getSource() == cboKBDLed_num)
-	        changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
-
-        else if (actionEvent.getSource() == cboKBDLed_scr)
+		else if (actionEvent.getSource() == cboKBDLed_scr)
 			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
-#endif
-    }
+
+		else if (actionEvent.getSource() == cmdOpenGUI)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
+			if (key != nullptr)
+			{
+				txtOpenGUI->setText(key);
+				strcpy(changed_prefs.open_gui, key);
+			}
+		}
+
+		else if (actionEvent.getSource() == cmdKeyForQuit)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
+			if (key != nullptr)
+			{
+				txtKeyForQuit->setText(key);
+				strcpy(changed_prefs.quit_amiberry, key);
+			}
+		}
+
+		else if (actionEvent.getSource() == cmdKeyActionReplay)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay", "Cancel");
+			if (key != nullptr)
+			{
+				txtKeyActionReplay->setText(key);
+				strcpy(changed_prefs.action_replay, key);
+			}
+		}
+
+		else if (actionEvent.getSource() == cmdKeyFullScreen)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen", "Cancel");
+			if (key != nullptr)
+			{
+				txtKeyFullScreen->setText(key);
+				strcpy(changed_prefs.fullscreen_toggle, key);
+			}
+		}
+	}
 };
+
 MiscActionListener* miscActionListener;
 
 
 void InitPanelMisc(const struct _ConfigCategory& category)
 {
-    miscActionListener = new MiscActionListener();
+	miscActionListener = new MiscActionListener();
 
-    chkStatusLine = new gcn::UaeCheckBox("Status Line");
-    chkStatusLine->setId("StatusLine");
-    chkStatusLine->addActionListener(miscActionListener);
+	chkStatusLine = new gcn::UaeCheckBox("Status Line");
+	chkStatusLine->setId("StatusLine");
+	chkStatusLine->addActionListener(miscActionListener);
 
-    chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
-    chkHideIdleLed->setId("HideIdle");
-    chkHideIdleLed->addActionListener(miscActionListener);
+	chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
+	chkHideIdleLed->setId("HideIdle");
+	chkHideIdleLed->addActionListener(miscActionListener);
 
-    chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
-    chkShowGUI->setId("ShowGUI");
-    chkShowGUI->addActionListener(miscActionListener);
+	chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
+	chkShowGUI->setId("ShowGUI");
+	chkShowGUI->addActionListener(miscActionListener);
 
-#ifdef PANDORA_SPECIFIC
-    lblPandoraSpeed = new gcn::Label("Pandora Speed:");
-    lblPandoraSpeed->setSize(110, LABEL_HEIGHT);
-    lblPandoraSpeed->setAlignment(gcn::Graphics::RIGHT);
-    sldPandoraSpeed = new gcn::Slider(500, 1260);
-    sldPandoraSpeed->setSize(200, SLIDER_HEIGHT);
-    sldPandoraSpeed->setBaseColor(gui_baseCol);
-    sldPandoraSpeed->setMarkerLength(20);
-    sldPandoraSpeed->setStepLength(20);
-    sldPandoraSpeed->setId("PandSpeed");
-    sldPandoraSpeed->addActionListener(miscActionListener);
-    lblPandoraSpeedInfo = new gcn::Label("1000 MHz");
-#endif
+	chkRetroArchQuit = new gcn::UaeCheckBox("Use RetroArch Quit Button");
+	chkRetroArchQuit->setId("RetroArchQuit");
+	chkRetroArchQuit->addActionListener(miscActionListener);
 
-    chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
-    chkBSDSocket->setId("BSDSocket");
-    chkBSDSocket->addActionListener(miscActionListener);
+	chkRetroArchMenu = new gcn::UaeCheckBox("Use RetroArch Menu Button");
+	chkRetroArchMenu->setId("RetroArchMenu");
+	chkRetroArchMenu->addActionListener(miscActionListener);
 
-    lblNumLock = new gcn::Label("NumLock LED:");
-    lblNumLock->setSize(100, LABEL_HEIGHT);
-    lblNumLock->setAlignment(gcn::Graphics::RIGHT);
-    cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
-    cboKBDLed_num->setSize(150, DROPDOWN_HEIGHT);
-    cboKBDLed_num->setBaseColor(gui_baseCol);
-    cboKBDLed_num->setId("numlock");
-    cboKBDLed_num->addActionListener(miscActionListener);
-//
-//    lblCapLock = new gcn::Label("CapsLock LED:");
-//    lblCapLock->setSize(100, LABEL_HEIGHT);
-//    lblCapLock->setAlignment(gcn::Graphics::RIGHT);
-//    cboKBDLed_cap = new gcn::UaeDropDown(&KBDLedList);
-//    cboKBDLed_cap->setSize(150, DROPDOWN_HEIGHT);
-//    cboKBDLed_cap->setBaseColor(gui_baseCol);
-//    cboKBDLed_cap->setId("capslock");
-//    cboKBDLed_cap->addActionListener(miscActionListener);
+	chkRetroArchReset = new gcn::UaeCheckBox("Use RetroArch Reset Button");
+	chkRetroArchReset->setId("RetroArchReset");
+	chkRetroArchReset->addActionListener(miscActionListener);
 
-    lblScrLock = new gcn::Label("ScrollLock LED:");
-    lblScrLock->setSize(100, LABEL_HEIGHT);
-    lblScrLock->setAlignment(gcn::Graphics::RIGHT);
-    cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
-    cboKBDLed_scr->setSize(150, DROPDOWN_HEIGHT);
-    cboKBDLed_scr->setBaseColor(gui_baseCol);
-    cboKBDLed_scr->setId("scrolllock");
-    cboKBDLed_scr->addActionListener(miscActionListener);
+	//chkRetroArchSavestate = new gcn::UaeCheckBox("Use RetroArch State Controls");
+	//chkRetroArchSavestate->setId("RetroArchState");
+	//chkRetroArchSavestate->addActionListener(miscActionListener);
 
-	lblKeyForMenu = new gcn::Label("Menu Key:");
-	lblKeyForMenu->setSize(100, LABEL_HEIGHT);
-	lblKeyForMenu->setAlignment(gcn::Graphics::RIGHT);
-	KeyForMenu = new gcn::UaeDropDown(&ControlKeyList);
-	KeyForMenu->setSize(150, DROPDOWN_HEIGHT);
-	KeyForMenu->setBaseColor(gui_baseCol);
-	KeyForMenu->setId("KeyForMenu");
-	KeyForMenu->addActionListener(miscActionListener);
+	chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
+	chkBSDSocket->setId("BSDSocket");
+	chkBSDSocket->addActionListener(miscActionListener);
+
+	chkMasterWP = new gcn::UaeCheckBox("Master floppy write protection");
+	chkMasterWP->setId("MasterWP");
+	chkMasterWP->addActionListener(miscActionListener);
+
+	lblNumLock = new gcn::Label("NumLock:");
+	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
+	cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
+	cboKBDLed_num->setBaseColor(gui_baseCol);
+	cboKBDLed_num->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_num->setId("cboNumlock");
+	cboKBDLed_num->addActionListener(miscActionListener);
+
+	lblScrLock = new gcn::Label("ScrollLock:");
+	lblScrLock->setAlignment(gcn::Graphics::RIGHT);
+	cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
+	cboKBDLed_scr->setBaseColor(gui_baseCol);
+	cboKBDLed_scr->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_scr->setId("cboScrolllock");
+	cboKBDLed_scr->addActionListener(miscActionListener);
+
+	lblOpenGUI = new gcn::Label("Open GUI:");
+	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
+	txtOpenGUI = new gcn::TextField();
+	txtOpenGUI->setEnabled(false);
+	txtOpenGUI->setSize(85, TEXTFIELD_HEIGHT);
+	txtOpenGUI->setBackgroundColor(colTextboxBackground);
+	cmdOpenGUI = new gcn::Button("...");
+	cmdOpenGUI->setId("OpenGUI");
+	cmdOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdOpenGUI->setBaseColor(gui_baseCol);
+	cmdOpenGUI->addActionListener(miscActionListener);
 
 	lblKeyForQuit = new gcn::Label("Quit Key:");
-	lblKeyForQuit->setSize(100, LABEL_HEIGHT);
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
-	KeyForQuit = new gcn::UaeDropDown(&ControlKeyList);
-	KeyForQuit->setSize(150, DROPDOWN_HEIGHT);
-	KeyForQuit->setBaseColor(gui_baseCol);
-	KeyForQuit->setId("KeyForQuit");
-	KeyForQuit->addActionListener(miscActionListener);
+	txtKeyForQuit = new gcn::TextField();
+	txtKeyForQuit->setEnabled(false);
+	txtKeyForQuit->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
+	cmdKeyForQuit = new gcn::Button("...");
+	cmdKeyForQuit->setId("KeyForQuit");
+	cmdKeyForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyForQuit->setBaseColor(gui_baseCol);
+	cmdKeyForQuit->addActionListener(miscActionListener);
 
-	lblButtonForMenu = new gcn::Label("Menu Button:");
-	lblButtonForMenu->setSize(100, LABEL_HEIGHT);
-	lblButtonForMenu->setAlignment(gcn::Graphics::RIGHT);
-	ButtonForMenu = new gcn::UaeDropDown(&ControlButtonList);
-	ButtonForMenu->setSize(150, DROPDOWN_HEIGHT);
-	ButtonForMenu->setBaseColor(gui_baseCol);
-	ButtonForMenu->setId("ButtonForMenu");
-	ButtonForMenu->addActionListener(miscActionListener);
+	lblKeyActionReplay = new gcn::Label("Action Replay:");
+	lblKeyActionReplay->setAlignment(gcn::Graphics::RIGHT);
+	txtKeyActionReplay = new gcn::TextField();
+	txtKeyActionReplay->setEnabled(false);
+	txtKeyActionReplay->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyActionReplay->setBackgroundColor(colTextboxBackground);
+	cmdKeyActionReplay = new gcn::Button("...");
+	cmdKeyActionReplay->setId("KeyActionReplay");
+	cmdKeyActionReplay->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyActionReplay->setBaseColor(gui_baseCol);
+	cmdKeyActionReplay->addActionListener(miscActionListener);
 
-	lblButtonForQuit = new gcn::Label("Quit Button:");
-	lblButtonForQuit->setSize(100, LABEL_HEIGHT);
-	lblButtonForQuit->setAlignment(gcn::Graphics::RIGHT);
-	ButtonForQuit = new gcn::UaeDropDown(&ControlButtonList);
-	ButtonForQuit->setSize(150, DROPDOWN_HEIGHT);
-	ButtonForQuit->setBaseColor(gui_baseCol);
-	ButtonForQuit->setId("ButtonForQuit");
-	ButtonForQuit->addActionListener(miscActionListener);
+	lblKeyFullScreen = new gcn::Label("FullScreen:");
+	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
+	txtKeyFullScreen = new gcn::TextField();
+	txtKeyFullScreen->setEnabled(false);
+	txtKeyFullScreen->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyFullScreen->setBackgroundColor(colTextboxBackground);
+	cmdKeyFullScreen = new gcn::Button("...");
+	cmdKeyFullScreen->setId("KeyFullScreen");
+	cmdKeyFullScreen->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyFullScreen->setBaseColor(gui_baseCol);
+	cmdKeyFullScreen->addActionListener(miscActionListener);
 
-	int posY = DISTANCE_BORDER;
+	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkHideIdleLed, DISTANCE_BORDER, posY);
 	posY += chkHideIdleLed->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
-	
-#ifdef PANDORA_SPECIFIC
-	category.panel->add(lblPandoraSpeed, DISTANCE_BORDER, posY);
-	category.panel->add(sldPandoraSpeed, DISTANCE_BORDER + lblPandoraSpeed->getWidth() + 8, posY);
-	category.panel->add(lblPandoraSpeedInfo, sldPandoraSpeed->getX() + sldPandoraSpeed->getWidth() + 12, posY);
-	posY += sldPandoraSpeed->getHeight() + DISTANCE_NEXT_Y;
-#endif
-	
+
+	posY = DISTANCE_BORDER;
+	auto posX = 300;
+	category.panel->add(chkRetroArchQuit, posX + DISTANCE_BORDER, posY);
+	posY += chkRetroArchQuit->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkRetroArchMenu, posX + DISTANCE_BORDER, posY);
+	posY += chkRetroArchMenu->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkRetroArchReset, posX + DISTANCE_BORDER, posY);
+	posY += chkRetroArchReset->getHeight() + DISTANCE_NEXT_Y;
+	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
+
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
-	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
+	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y * 2;
+	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
+	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
 
-    category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
+	const auto column2_x = DISTANCE_BORDER + 290;
+
+	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
 	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);
-	
-//  category.panel->add(lblCapLock, lblNumLock->getX() + lblNumLock->getWidth() + DISTANCE_NEXT_X, posY);
-//  category.panel->add(cboKBDLed_cap, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
 
-	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblScrLock, column2_x, posY);
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
-		
-    posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblKeyForMenu, DISTANCE_BORDER, posY);
-	category.panel->add(KeyForMenu, DISTANCE_BORDER + lblKeyForMenu->getWidth() + 8, posY);
-	
-	category.panel->add(lblKeyForQuit, KeyForMenu->getX() + KeyForMenu->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(KeyForQuit, lblKeyForQuit->getX() + lblKeyForQuit->getWidth() + 8, posY);
-	
-	posY += KeyForMenu->getHeight() + DISTANCE_NEXT_Y;
+	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	category.panel->add(lblButtonForMenu, DISTANCE_BORDER, posY);
-	category.panel->add(ButtonForMenu, DISTANCE_BORDER + lblButtonForMenu->getWidth() + 8, posY);
-	
-	category.panel->add(lblButtonForQuit, ButtonForMenu->getX() + ButtonForMenu->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(ButtonForQuit, lblButtonForQuit->getX() + lblButtonForQuit->getWidth() + 8, posY);
-	
-    RefreshPanelMisc();
+	category.panel->add(lblOpenGUI, DISTANCE_BORDER, posY);
+	category.panel->add(txtOpenGUI, lblOpenGUI->getX() + lblKeyActionReplay->getWidth() + 8, posY);
+	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
+
+	category.panel->add(lblKeyForQuit, column2_x, posY);
+	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyFullScreen->getWidth() + 8, posY);
+	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
+
+	posY += cmdOpenGUI->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblKeyActionReplay, DISTANCE_BORDER, posY);
+	category.panel->add(txtKeyActionReplay, lblKeyActionReplay->getX() + lblKeyActionReplay->getWidth() + 8, posY);
+	category.panel->add(cmdKeyActionReplay, txtKeyActionReplay->getX() + txtKeyActionReplay->getWidth() + 8, posY);
+
+	category.panel->add(lblKeyFullScreen, column2_x, posY);
+	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX() + lblKeyFullScreen->getWidth() + 8, posY);
+	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
+
+	RefreshPanelMisc();
 }
 
-
-void ExitPanelMisc(void)
+void ExitPanelMisc()
 {
-    delete chkStatusLine;
-    delete chkHideIdleLed;
-    delete chkShowGUI;
-#ifdef PANDORA_SPECIFIC
-    delete lblPandoraSpeed;
-    delete sldPandoraSpeed;
-    delete lblPandoraSpeedInfo;
-#endif
-    delete chkBSDSocket;
+	delete chkStatusLine;
+	delete chkHideIdleLed;
+	delete chkShowGUI;
 
-#ifdef RASPBERRY
-    delete lblCapLock;
-    delete lblScrLock;
-    delete lblNumLock;
-    delete cboKBDLed_num;
-    delete cboKBDLed_cap;
-    delete cboKBDLed_scr;
-#endif
-    delete miscActionListener;
-	delete lblKeyForMenu;
-	delete KeyForMenu;
+	delete chkRetroArchQuit;
+	delete chkRetroArchMenu;
+	delete chkRetroArchReset;
+	//delete chkRetroArchSaveState;
+
+	delete chkBSDSocket;
+	delete chkMasterWP;
+
+	delete lblScrLock;
+	delete lblNumLock;
+	delete cboKBDLed_num;
+	delete cboKBDLed_scr;
+
+	delete lblOpenGUI;
+	delete txtOpenGUI;
+	delete cmdOpenGUI;
+
 	delete lblKeyForQuit;
-	delete KeyForQuit;
-	delete lblButtonForMenu;
-	delete ButtonForMenu;
-	delete lblButtonForQuit;
-	delete ButtonForQuit;
+	delete txtKeyForQuit;
+	delete cmdKeyForQuit;
+
+	delete lblKeyActionReplay;
+	delete txtKeyActionReplay;
+	delete cmdKeyActionReplay;
+
+	delete lblKeyFullScreen;
+	delete txtKeyFullScreen;
+	delete cmdKeyFullScreen;
+
+	delete miscActionListener;
 }
 
-
-void RefreshPanelMisc(void)
+void RefreshPanelMisc()
 {
-    char tmp[20];
+	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
+	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
+	chkShowGUI->setSelected(changed_prefs.start_gui);
 
-    chkStatusLine->setSelected(changed_prefs.leds_on_screen);
-    chkHideIdleLed->setSelected(changed_prefs.pandora_hide_idle_led);
-    chkShowGUI->setSelected(changed_prefs.start_gui);
-#ifdef PANDORA_SPECIFIC
-    sldPandoraSpeed->setValue(changed_prefs.pandora_cpu_speed);
-    snprintf(tmp, 20, "%d MHz", changed_prefs.pandora_cpu_speed);
-    lblPandoraSpeedInfo->setCaption(tmp);
-#endif
+	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
+	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
+	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
+	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
 
-    chkBSDSocket->setSelected(changed_prefs.socket_emu);
-#ifdef RASPBERRY
+	chkBSDSocket->setSelected(changed_prefs.socket_emu);
+	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
+
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
-#endif
-	KeyForMenu->setSelected(GetControlKeyIndex(changed_prefs.key_for_menu));
-	KeyForQuit->setSelected(GetControlKeyIndex(changed_prefs.key_for_quit));
-	ButtonForMenu->setSelected(GetControlButtonIndex(changed_prefs.button_for_menu));
-	ButtonForQuit->setSelected(GetControlButtonIndex(changed_prefs.button_for_quit));
+
+	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
+	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0 ? changed_prefs.quit_amiberry : "Click to map");
+	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0 ? changed_prefs.action_replay : "Click to map");
+	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0 ? changed_prefs.fullscreen_toggle : "Click to map");
+}
+
+bool HelpPanelMisc(std::vector<std::string> &helptext)
+{
+	helptext.clear();
+	helptext.emplace_back("\"Status Line\" Shows/Hides the status line indicator.");
+	helptext.emplace_back("The first value in the status line shows the idle time of the CPU in %,");
+	helptext.emplace_back("the second value is the current frame rate.");
+	helptext.emplace_back("When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and write");
+	helptext.emplace_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
+	helptext.emplace_back("and indicates disk access.");
+	helptext.emplace_back("");
+	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
+	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
+	helptext.emplace_back("the emulation starts directly without showing the GUI.");
+	helptext.emplace_back("");
+	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
+	helptext.emplace_back("");
+	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
+	return true;
 }

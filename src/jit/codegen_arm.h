@@ -2,7 +2,7 @@
  * compiler/codegen_arm.h - IA-32 and AMD64 code generator
  *
  * Copyright (c) 2013 Jens Heitmann of ARAnyM dev team (see AUTHORS)
- *
+ * 
  * Inspired by Christian Bauer's Basilisk II
  *
  * This file is part of the ARAnyM project which builds a new and powerful
@@ -174,31 +174,29 @@
 
 /* Branch instructions */
 #ifndef __ANDROID__
-enum
-{
-    _B, _BL, _BLX, _BX, _BXJ
+enum {
+	_B, _BL, _BLX, _BX, _BXJ
 };
 #endif
 
 /* Data processing instructions */
-enum
-{
-    _AND = 0,
-    _EOR,
-    _SUB,
-    _RSB,
-    _ADD,
-    _ADC,
-    _SBC,
-    _RSC,
-    _TST,
-    _TEQ,
-    _CMP,
-    _CMN,
-    _ORR,
-    _MOV,
-    _BIC,
-    _MVN
+enum {
+	_AND = 0,
+	_EOR,
+	_SUB,
+	_RSB,
+	_ADD,
+	_ADC,
+	_SBC,
+	_RSC,
+	_TST,
+	_TEQ,
+	_CMP,
+	_CMN,
+	_ORR,
+	_MOV,
+	_BIC,
+	_MVN
 };
 
 /* Single instruction Multiple Data (SIMD) instructions */
@@ -1319,8 +1317,12 @@ enum
 #define CC_SXTAH_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6b << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
 #define SXTAH_rrr(Rd,Rn,Rm)             CC_SXTAH_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
+#define CC_STM_Ri(cc,Rn,i)					_W(((cc) << 28) | (0x8 << 24) | (0x8 << 20) | ((Rn) << 16) | i)
+#define STM_Ri(Rn,i)								CC_STM_Ri(NATIVE_CC_AL,Rn,i)
+
 // ARMv6T2
 #ifdef ARMV6T2
+
 #define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
 #define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
 
@@ -1335,23 +1337,150 @@ enum
 
 #define CC_MOVT_ri16(cc,Rd,i)                _W(((cc) << 28) | (0x34 << 20) | (((i >> 12) & 0xf) << 16) | (Rd << 12) | (i & 0x0fff))
 #define MOVT_ri16(Rd,i)					             CC_MOVT_ri16(NATIVE_CC_AL,Rd,i)
+
+#define CC_SSAT_rir(cc,Rd,i,Rn)			_W(((cc) << 28) | (0x6a << 20) | (i << 16) | (Rd << 12) | (0x1 << 4) | (Rn))
+#define SSAT_rir(Rd,i,Rn)						CC_SSAT_rir(NATIVE_CC_AL,Rd,i,Rn)
+
 #endif
 
 // Floatingpoint
+#define FADR_ADD(offs)              ((1 << 23) | (offs) >> 2)
+#define FADR_SUB(offs)              ((0 << 23) | (offs) >> 2)
+#define FOFFSET8(offs)              (offs >= 0 ? FADR_ADD(offs) : FADR_SUB(-offs))
 
-#define CC_VMOV_sr(cc,Sd,Rn)        _W(((cc) << 28) | (0x70 << 21) | (0 << 20) | (Sd << 16) | (Rn << 12) | (0x0a << 8) | (0x10))
-#define VMOV_sr(Sd,Rn)              CC_VMOV_sr(NATIVE_CC_AL,Sd,Rn)
+#define MAKE_Dd(Dd)                 (((Dd & 0x10) << 18) | ((Dd & 0x0f) << 12))
+#define MAKE_Dm(Dm)                 (((Dm & 0x10) <<  1) | ((Dm & 0x0f) <<  0))
+#define MAKE_Dn(Dn)                 (((Dn & 0x10) <<  3) | ((Dn & 0x0f) << 16))
+#define MAKE_Sd(Sd)                 (((Sd & 0x01) << 22) | ((Sd & 0x1e) << 11))
+#define MAKE_Sm(Sm)                 (((Sm & 0x01) <<  5) | ((Sm & 0x1e) >>  1))
+#define MAKE_Sn(Sn)                 (((Sn & 0x01) <<  7) | ((Sn & 0x1e) << 15))
 
-#define CC_VMOV_rs(cc,Rd,Sn)        _W(((cc) << 28) | (0x70 << 21) | (1 << 20) | (Sn << 16) | (Rd << 12) | (0x0a << 8) | (0x10))
-#define VMOV_rs(Rd,Sn)              CC_VMOV_rs(NATIVE_CC_AL,Rd,Sn)
 
-#define CC_VCVT_f64_u32(cc,Dd,Sn)   _W(((cc) << 28) | (0x1d << 23) | (0x7 << 19) | (0x0 << 16) | (Dd << 12) | (0xb << 8) | (0x4 << 4) | (Sn))
-#define VCVT_f64_u32(Dd,Sn)         CC_VCVT_f64_u32(NATIVE_CC_AL,Dd,Sn)
+#define CC_VLDR64_dRi(cc,Dd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x1 << 20) | (Rn << 16) | (0xb << 8) | FOFFSET8(offs) | MAKE_Dd(Dd))
+#define VLDR64_dRi(Dd,Rn,offs)          CC_VLDR64_dRi(NATIVE_CC_AL,Dd,Rn,offs)
+#define CC_VLDR32_sRi(cc,Sd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x1 << 20) | (Rn << 16) | (0xa << 8) | FOFFSET8(offs) | MAKE_Sd(Sd))
+#define VLDR32_sRi(Sd,Rn,offs)          CC_VLDR32_sRi(NATIVE_CC_AL,Sd,Rn,offs)
 
-#define CC_VCVT_u32_f64(cc,Sd,Dn)   _W(((cc) << 28) | (0x1d << 23) | (0x7 << 19) | (0x4 << 16) | (Sd << 12) | (0xb << 8) | (0xc << 4) | (Dn))
-#define VCVT_u32_f64(Sd,Dn)         CC_VCVT_u32_f64(NATIVE_CC_AL,Sd,Dn)
+#define CC_VSTR64_dRi(cc,Dd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x0 << 20) | (Rn << 16) | (0xb << 8) | FOFFSET8(offs) | MAKE_Dd(Dd))
+#define VSTR64_dRi(Dd,Rn,offs)          CC_VSTR64_dRi(NATIVE_CC_AL,Dd,Rn,offs)
+#define CC_VSTR32_sRi(cc,Sd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x0 << 20) | (Rn << 16) | (0xa << 8) | FOFFSET8(offs) | MAKE_Sd(Sd))
+#define VSTR32_sRi(Sd,Rn,offs)          CC_VSTR32_sRi(NATIVE_CC_AL,Sd,Rn,offs)
 
-#define CC_VDIV_ddd(cc,Dd,Dn,Dm)    _W(((cc) << 28) | (0x1d << 23) | (0x0 << 20) | (Dn << 16) | (Dd << 12) | (0xb << 8) | (0x0 << 4) | (Dm))
-#define VDIV_ddd(Dd,Dn,Dm)          CC_VDIV_ddd(NATIVE_CC_AL,Dd,Dn,Dm)
+#define CC_VMOV64_dd(cc,Dd,Dm)					_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xb << 8) | (0x4 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm))
+#define VMOV64_dd(Dd,Dm)								CC_VMOV64_dd(NATIVE_CC_AL,Dd,Dm)
+#define CC_VMOV32_ss(cc,Sd,Sm)					_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xa << 8) | (0x4 << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VMOV32_ss(Sd,Sm)								CC_VMOV32_ss(NATIVE_CC_AL,Sd,Sm)
+
+#define CC_VMOV32_rs(cc,Rt,Sn)        	_W(((cc) << 28) | (0xe << 24) | (0x1 << 20) | (Rt << 12) | (0xa << 8) | (0x1 << 4) | MAKE_Sn(Sn))
+#define VMOV32_rs(Rt,Sn)              	CC_VMOV32_rs(NATIVE_CC_AL,Rt,Sn)
+#define CC_VMOV32_sr(cc,Sn,Rt)      		_W(((cc) << 28) | (0xe << 24) | (0x0 << 20) | (Rt << 12) | (0xa << 8) | (0x1 << 4) | MAKE_Sn(Sn))
+#define VMOV32_sr(Sn,Rt)            		CC_VMOV32_sr(NATIVE_CC_AL,Sn,Rt)
+
+#define CC_VMOVi_from_ARM_dr(cc,Dn,Rt,x)  _W(((cc) << 28) | (0xe << 24) | (0x0 << 20) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | ((x) << 21) | MAKE_Dn(Dn))
+#define VMOVi_from_ARM_dr(Dn,Rt,x)        CC_VMOVi_from_ARM_dr(NATIVE_CC_AL,Dn,Rt,x)
+#define CC_VMOVi_to_ARM_rd(cc,Rt,Dn,x)  _W(((cc) << 28) | (0xe << 24) | (0x1 << 20) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | ((x) << 21) | MAKE_Dn(Dn))
+#define VMOVi_to_ARM_rd(Rt,Dn,x)        CC_VMOVi_to_ARM_rd(NATIVE_CC_AL,Rt,Dn,x)
+
+#define CC_VMOV64_rrd(cc,Rt,Rt2,Dm)    	_W(((cc) << 28) | (0xc << 24) | (0x5 << 20) | (Rt2 << 16) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | MAKE_Dm(Dm))
+#define VMOV64_rrd(Rt,Rt2,Dm)          	CC_VMOV64_rrd(NATIVE_CC_AL,Rt,Rt2,Dm)
+#define CC_VMOV64_drr(cc,Dm,Rt,Rt2)  		_W(((cc) << 28) | (0xc << 24) | (0x4 << 20) | (Rt2 << 16) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | MAKE_Dm(Dm))
+#define VMOV64_drr(Dm,Rt,Rt2)        		CC_VMOV64_drr(NATIVE_CC_AL,Dm,Rt,Rt2)
+
+#define CC_VCVT64to32_sd(cc,Sd,Dm)  		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x7 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Dm(Dm))
+#define VCVT64to32_sd(Sd,Dm)        		CC_VCVT64to32_sd(NATIVE_CC_AL,Sd,Dm)
+#define CC_VCVT32to64_ds(cc,Dd,Sm)  		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x7 << 16) | (0xa << 8) | (0xc << 4) | MAKE_Dd(Dd) | MAKE_Sm(Sm))
+#define VCVT32to64_ds(Dd,Sm)        		CC_VCVT32to64_ds(NATIVE_CC_AL,Dd,Sm)
+
+#define CC_VCVTR64toI_sd(cc,Sd,Dm)  		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xd << 16) | (0xb << 8) | (0x4 << 4) | MAKE_Sd(Sd) | MAKE_Dm(Dm))
+#define VCVTR64toI_sd(Sd,Dm)        		CC_VCVTR64toI_sd(NATIVE_CC_AL,Sd,Dm)
+#define CC_VCVTR32toI_ss(cc,Sd,Sm)  		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xd << 16) | (0xa << 8) | (0x4 << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VCVTR32toI_ss(Sd,Sm)        		CC_VCVTR32toI_ss(NATIVE_CC_AL,Sd,Sm)
+
+#define CC_VCVT64toI_sd(cc,Sd,Dm)   		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xd << 16) | (0xb << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Dm(Dm))
+#define VCVT64toI_sd(Sd,Dm)         		CC_VCVT64toI_sd(NATIVE_CC_AL,Sd,Dm)
+#define CC_VCVT32toI_ss(cc,Sd,Sm)   		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xd << 16) | (0xa << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VCVT32toI_ss(Sd,Sm)         		CC_VCVT32toI_ss(NATIVE_CC_AL,Sd,Sm)
+
+#define CC_VCVTIto64_ds(cc,Dd,Sm) 			_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x8 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Dd(Dd) | MAKE_Sm(Sm))
+#define VCVTIto64_ds(Dd,Sm)       			CC_VCVTIto64_ds(NATIVE_CC_AL,Dd,Sm)
+#define CC_VCVTIto32_ss(cc,Sd,Sm) 			_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x8 << 16) | (0xa << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VCVTIto32_ss(Sd,Sm)       			CC_VCVTIto32_ss(NATIVE_CC_AL,Dd,Sm)
+
+#define CC_VADD64_ddd(cc,Dd,Dn,Dm)      _W(((cc) << 28) | (0xe << 24) | (0x3 << 20) | (0xb << 8) | (0x0 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
+#define VADD64_ddd(Dd,Dn,Dm)            CC_VADD64_ddd(NATIVE_CC_AL,Dd,Dn,Dm)
+#define CC_VADD32_sss(cc,Sd,Sn,Sm)      _W(((cc) << 28) | (0xe << 24) | (0x3 << 20) | (0xa << 8) | (0x0 << 4) | MAKE_Sd(Sd) | MAKE_Sn(Sn) | MAKE_Sm(Sm))
+#define VADD32_sss(Sd,Sn,Sm)            CC_VADD32_sss(NATIVE_CC_AL,Sd,Sn,Sm)
+
+#define CC_VSUB64_ddd(cc,Dd,Dn,Dm)      _W(((cc) << 28) | (0xe << 24) | (0x3 << 20) | (0xb << 8) | (0x4 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
+#define VSUB64_ddd(Dd,Dn,Dm)            CC_VSUB64_ddd(NATIVE_CC_AL,Dd,Dn,Dm)
+#define CC_VSUB32_sss(cc,Sd,Sn,Sm)      _W(((cc) << 28) | (0xe << 24) | (0x3 << 20) | (0xa << 8) | (0x4 << 4) | MAKE_Sd(Sd) | MAKE_Sn(Sn) | MAKE_Sm(Sm))
+#define VSUB32_sss(Sd,Sn,Sm)            CC_VSUB32_sss(NATIVE_CC_AL,Sd,Sn,Sm)
+
+#define CC_VMUL64_ddd(cc,Dd,Dn,Dm)      _W(((cc) << 28) | (0xe << 24) | (0x2 << 20) | (0xb << 8) | (0x0 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
+#define VMUL64_ddd(Dd,Dn,Dm)            CC_VMUL64_ddd(NATIVE_CC_AL,Dd,Dn,Dm)
+#define CC_VMUL32_sss(cc,Sd,Sn,Sm)      _W(((cc) << 28) | (0xe << 24) | (0x2 << 20) | (0xa << 8) | (0x0 << 4) | MAKE_Sd(Sd) | MAKE_Sn(Sn) | MAKE_Sm(Sm))
+#define VMUL32_sss(Sd,Sn,Sm)            CC_VMUL32_sss(NATIVE_CC_AL,Sd,Sn,Sm)
+
+#define CC_VDIV64_ddd(cc,Dd,Dn,Dm)      _W(((cc) << 28) | (0xe << 24) | (0x8 << 20) | (0xb << 8) | (0x0 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
+#define VDIV64_ddd(Dd,Dn,Dm)            CC_VDIV64_ddd(NATIVE_CC_AL,Dd,Dn,Dm)
+#define CC_VDIV32_sss(cc,Sd,Sn,Sm)      _W(((cc) << 28) | (0xe << 24) | (0x8 << 20) | (0xa << 8) | (0x0 << 4) | MAKE_Sd(Sd) | MAKE_Sn(Sn) | MAKE_Sm(Sm))
+#define VDIV32_sss(Sd,Sn,Sm)            CC_VDIV32_sss(NATIVE_CC_AL,Sd,Sn,Sm)
+
+#define CC_VABS64_dd(cc,Dd,Dm)         	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xb << 8) | (0xc << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm))
+#define VABS64_dd(Dd,Dm)               	CC_VABS64_dd(NATIVE_CC_AL,Dd,Dm)
+#define CC_VABS32_ss(cc,Sd,Sm)         	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xa << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VABS32_ss(Sd,Sm)               	CC_VABS32_ss(NATIVE_CC_AL,Sd,Sm)
+
+#define CC_VNEG64_dd(cc,Dd,Dm)         	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x1 << 16) | (0xb << 8) | (0x4 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm))
+#define VNEG64_dd(Dd,Dm)               	CC_VNEG64_dd(NATIVE_CC_AL,Dd,Dm)
+#define CC_VNEG32_ss(cc,Sd,Sm)         	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x1 << 16) | (0xa << 8) | (0x4 << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VNEG32_ss(Sd,Sm)               	CC_VNEG32_ss(NATIVE_CC_AL,Sd,Sm)
+
+#define CC_VSQRT64_dd(cc,Dd,Dm)        	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x1 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm))
+#define VSQRT64_dd(Dd,Dm)              	CC_VSQRT64_dd(NATIVE_CC_AL,Dd,Dm)
+#define CC_VSQRT32_ss(cc,Sd,Sm)        	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x1 << 16) | (0xa << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VSQRT32_ss(Sd,Sm)              	CC_VSQRT32_ss(NATIVE_CC_AL,Sd,Sm)
+
+#define CC_VCMP64_dd(cc,Dd,Dm)         	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x4 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm))
+#define VCMP64_dd(Dd,Dm)               	CC_VCMP64_dd(NATIVE_CC_AL,Dd,Dm)
+#define CC_VCMP32_ss(cc,Sd,Sm)         	_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x4 << 16) | (0xa << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
+#define VCMP32_ss(Sd,Sm)               	CC_VCMP32_ss(NATIVE_CC_AL,Sd,Sm)
+
+#define CC_VCMP64_d0(cc,Dd)          		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x5 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Dd(Dd))
+#define VCMP64_d0(Dd)                		CC_VCMP64_d0(NATIVE_CC_AL,Dd)
+
+#define CC_VMRS_r(cc,Rt)  							_W(((cc) << 28) | (0xe << 24) | (0xf << 20) | (0x1 << 16) | (Rt << 12) | (0xa << 8) | (0x1 << 4))
+#define VMRS_r(Rt)											CC_VMRS_r(NATIVE_CC_AL,Rt)
+#define VMRS_CPSR()											VMRS_r(15)
+
+#define CC_VMSR_r(cc,Rt)  							_W(((cc) << 28) | (0xe << 24) | (0xe << 20) | (0x1 << 16) | (Rt << 12) | (0xa << 8) | (0x1 << 4))
+#define VMSR_r(Rt)											CC_VMSR_r(NATIVE_CC_AL,Rt)
+
+// Immediate values for VBIC, VMOV (I32), VMVN (I32) and VORR
+#define FIMMVAL(imm)             (((imm & 0x80) << 17) | ((imm & 0x70) << 12) | ((imm & 0x0f) << 0))
+#define FIMM32(imm)               ((imm & 0xffffff00) == 0 ? (FIMMVAL(imm >>  0) | (0x0 << 8)) : \
+                                   (imm & 0xffff00ff) == 0 ? (FIMMVAL(imm >>  8) | (0x1 << 8)) : \
+                                   (imm & 0xff00ffff) == 0 ? (FIMMVAL(imm >> 16) | (0x2 << 8)) : \
+                                                             (FIMMVAL(imm >> 24) | (0x3 << 8))
+
+// VMOV I64: each bit of imm defines the value for an entire byte
+//           imm <abcdefgh> -> aaaaaaaa bbbbbbbb cccccccc dddddddd eeeeeeee ffffffff gggggggg hhhhhhhh
+#define VMOV_I64_dimmI(Dd,imm)      		_W((0xf << 28) | (0x2 << 24) | (0x8 << 20) | (0x0 << 16) | (0xe << 8) | (0x3 << 4) | MAKE_Dd(Dd) | FIMMVAL(imm))
+
+// VMOV F64: imm <abcdefgh> -> aBbbbbbb bbcdefgh 00000000 00000000 00000000 00000000 00000000 00000000 (B = not b)
+#define FIMMF64(imm)                    (((imm & 0xf0) << 12) | ((imm & 0x0f) << 0))
+#define CC_VMOV_F64_dimmF(cc,Dd,imm)	  _W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xb << 8) | MAKE_Dd(Dd) | FIMMF64(imm))
+#define VMOV_F64_dimmF(Dd,imm)				  CC_VMOV_F64_dimmF(NATIVE_CC_AL,Dd,imm)
+
+// VMOV F32: imm <abcdefgh> -> aBbbbbbc defgh000 00000000 00000000 (B = not b)
+#define CC_VMOV_F32_si(cc,Sd,imm)	  		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xa << 8) | MAKE_Sd(Sd) | FIMMF64(imm))
+#define VMOV_F32_si(Sd,imm)				  		CC_VMOV_F32_si(NATIVE_CC_AL,sd,imm)
+
+// Immediate value for shift
+#define FIMM6(imm)                  ((imm) << 16)
+#define VSHL64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x2 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(imm))
+#define VSHR64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x0 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(64-imm))
+
+#define VORR_ddd(Dd,Dn,Dm)       				_W((0xf << 28) | (0x2 << 24) | (0x2 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dn) | MAKE_Dm(Dm))
 
 #endif /* ARM_RTASM_H */

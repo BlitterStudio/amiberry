@@ -4,29 +4,34 @@
 #include <map>
 #include <string>
 
+#ifdef USE_SDL1
 #include "guichan/keylistener.hpp"
 #include "guichan/mouselistener.hpp"
 #include "guichan/platform.hpp"
 #include "guichan/widget.hpp"
 #include "guichan/widgets/radiobutton.hpp"
+#elif USE_SDL2
+#include <guisan/platform.hpp>
+#include <guisan/widget.hpp>
+#include <guisan/widgets/radiobutton.hpp>
+#endif
 
 
 namespace gcn
 {
-class GCN_CORE_DECLSPEC UaeRadioButton : public RadioButton
-{
-public:
-    UaeRadioButton();
+	class GCN_CORE_DECLSPEC UaeRadioButton : public RadioButton
+	{
+	public:
+		UaeRadioButton();
 
-    UaeRadioButton(const std::string &caption,
-                   const std::string &group,
-                   bool selected = false);
+		UaeRadioButton(const std::string& caption,
+			const std::string& group,
+			bool selected = false);
 
-    virtual ~UaeRadioButton();
+		virtual ~UaeRadioButton();
 
-    virtual void draw(Graphics* graphics);
-
-};
+		void draw(Graphics* graphics) override;
+	};
 }
 
 

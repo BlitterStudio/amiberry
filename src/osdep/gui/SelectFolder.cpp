@@ -1,10 +1,17 @@
 #include <algorithm>
-#include <guichan.hpp>
 #include <iostream>
 #include <sstream>
+#ifdef USE_SDL1
+#include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
 #include <guichan/sdl.hpp>
 #include "sdltruetypefont.hpp"
+#elif USE_SDL2
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
+#include <guisan/sdl/sdltruetypefont.hpp>
+#endif
 #include "SelectorEntry.hpp"
 
 #include "sysconfig.h"
@@ -13,85 +20,94 @@
 #include "uae.h"
 #include "gui_handling.h"
 
+#include "options.h"
+#include "inputdevice.h"
+#include "amiberry_gfx.h"
+
+#ifdef ANDROIDSDL
+#include "androidsdl_event.h"
+#endif
 
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
-std::string volName;
+string volName;
 static bool dialogResult = false;
 static bool dialogFinished = false;
-static char workingDir[MAX_PATH];
+static char workingDir[MAX_DPATH];
 
-static gcn::Window *wndSelectFolder;
+static gcn::Window* wndSelectFolder;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
 static gcn::ListBox* lstFolders;
 static gcn::ScrollArea* scrAreaFolders;
-static gcn::TextField *txtCurrent;
+static gcn::TextField* txtCurrent;
 
 
-class ButtonActionListener : public gcn::ActionListener
+class FolderRequesterButtonActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdOK)
 		{
 			dialogResult = true;
+			
 		}
 		dialogFinished = true;
 	}
 };
-static ButtonActionListener* buttonActionListener;
+
+static FolderRequesterButtonActionListener* folderButtonActionListener;
 
 
-class DirListModel : public gcn::ListModel
+class SelectDirListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs;
+	vector<string> dirs;
 
 public:
-	DirListModel(const char * path)
+	SelectDirListModel(const char* path)
 	{
 		changeDir(path);
 	}
 
-	int getNumberOfElements()
+	int getNumberOfElements() override
 	{
 		return dirs.size();
 	}
 
-	std::string getElementAt(int i)
+	string getElementAt(const int i) override
 	{
 		if (i >= dirs.size() || i < 0)
 			return "---";
 		return dirs[i];
 	}
 
-	void changeDir(const char *path)
+	void changeDir(const char* path)
 	{
-		ReadDirectory(path, &dirs, NULL);
-		if (dirs.size() == 0)
-			dirs.push_back("..");
+		ReadDirectory(path, &dirs, nullptr);
+		if (dirs.empty())
+			dirs.emplace_back("..");
 	}
 };
-static DirListModel dirList(".");
+
+static SelectDirListModel dirList(".");
 
 
-static void checkfoldername(char *current)
+static void checkfoldername(char* current)
 {
-	char *ptr;
-	char actualpath[PATH_MAX];
-	DIR *dir;
+	char actualpath [MAX_DPATH];
+	DIR* dir;
 
-	if (dir = opendir(current))
+	if ((dir = opendir(current)))
 	{
 		dirList = current;
-		ptr = realpath(current, actualpath);
-		strcpy(workingDir, ptr);
+		const auto ptr = realpath(current, actualpath);
+		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
 	else
-		strcpy(workingDir, start_path_data);
+		strncpy(workingDir, start_path_data, MAX_DPATH);
 	txtCurrent->setText(workingDir);
 }
 
@@ -99,44 +115,46 @@ static void checkfoldername(char *current)
 class ListBoxActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		int selected_item;
-		char foldername[256] = "";
+		char foldername[MAX_DPATH] = "";
 
-		selected_item = lstFolders->getSelected();
-		strcpy(foldername, workingDir);
-		strcat(foldername, "/");
-		strcat(foldername, dirList.getElementAt(selected_item).c_str());
-		volName = dirList.getElementAt(selected_item).c_str();
+		const auto selected_item = lstFolders->getSelected();
+		strncpy(foldername, workingDir, MAX_DPATH - 1);
+		strncat(foldername, "/", MAX_DPATH - 1);
+		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_DPATH - 1);
+		volName = dirList.getElementAt(selected_item);
 		checkfoldername(foldername);
 	}
 };
+
 static ListBoxActionListener* listBoxActionListener;
 
 
-static void InitSelectFolder(const char *title)
+static void InitSelectFolder(const char* title)
 {
 	wndSelectFolder = new gcn::Window("Load");
 	wndSelectFolder->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndSelectFolder->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndSelectFolder->setBaseColor(gui_baseCol + 0x202020);
+	wndSelectFolder->setBaseColor(gui_baseCol);
 	wndSelectFolder->setCaption(title);
 	wndSelectFolder->setTitleBarHeight(TITLEBAR_HEIGHT);
 
-	buttonActionListener = new ButtonActionListener();
+	folderButtonActionListener = new FolderRequesterButtonActionListener();
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol + 0x202020);
-	cmdOK->addActionListener(buttonActionListener);
+	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdOK->setBaseColor(gui_baseCol);
+	cmdOK->addActionListener(folderButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol + 0x202020);
-	cmdCancel->addActionListener(buttonActionListener);
+	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCancel->setBaseColor(gui_baseCol);
+	cmdCancel->addActionListener(folderButtonActionListener);
 
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
@@ -152,11 +170,15 @@ static void InitSelectFolder(const char *title)
 	lstFolders->addActionListener(listBoxActionListener);
 
 	scrAreaFolders = new gcn::ScrollArea(lstFolders);
+#ifdef USE_SDL1
 	scrAreaFolders->setFrameSize(1);
+#elif USE_SDL2
+	scrAreaFolders->setBorderSize(1);
+#endif
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
 	scrAreaFolders->setScrollbarWidth(20);
-	scrAreaFolders->setBaseColor(gui_baseCol + 0x202020);
+	scrAreaFolders->setBaseColor(gui_baseCol);
 
 	wndSelectFolder->add(cmdOK);
 	wndSelectFolder->add(cmdCancel);
@@ -171,14 +193,14 @@ static void InitSelectFolder(const char *title)
 }
 
 
-static void ExitSelectFolder(void)
+static void ExitSelectFolder()
 {
 	wndSelectFolder->releaseModalFocus();
 	gui_top->remove(wndSelectFolder);
 
 	delete cmdOK;
 	delete cmdCancel;
-	delete buttonActionListener;
+	delete folderButtonActionListener;
 
 	delete txtCurrent;
 	delete lstFolders;
@@ -188,14 +210,41 @@ static void ExitSelectFolder(void)
 	delete wndSelectFolder;
 }
 
-
-static void SelectFolderLoop(void)
+static void navigate_right()
 {
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFolders)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdCancel)
+		lstFolders->requestFocus();
+	else if (activeWidget == cmdOK)
+		cmdCancel->requestFocus();
+}
+
+static void navigate_left()
+{
+	const auto focusHdl = gui_top->_getFocusHandler();
+	const auto activeWidget = focusHdl->getFocused();
+	if (activeWidget == lstFolders)
+		cmdCancel->requestFocus();
+	else if (activeWidget == cmdCancel)
+		cmdOK->requestFocus();
+	else if (activeWidget == cmdOK)
+		lstFolders->requestFocus();
+}
+
+static void SelectFolderLoop()
+{
+	FocusBugWorkaround(wndSelectFolder);
+
 	while (!dialogFinished)
 	{
+		int gotEvent = 0;
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
+			gotEvent = 1;
 			if (event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
@@ -205,72 +254,119 @@ static void SelectFolderLoop(void)
 					break;
 
 				case VK_LEFT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFolders)
-							cmdCancel->requestFocus();
-						else if (activeWidget == cmdCancel)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdOK)
-							lstFolders->requestFocus();
-						continue;
-					}
+					navigate_left();
 					break;
 
 				case VK_RIGHT:
-					{
-						gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
-						gcn::Widget* activeWidget = focusHdl->getFocused();
-						if (activeWidget == lstFolders)
-							cmdOK->requestFocus();
-						else if (activeWidget == cmdCancel)
-							lstFolders->requestFocus();
-						else if (activeWidget == cmdOK)
-							cmdCancel->requestFocus();
-						continue;
-					}
+					navigate_right();
 					break;
 
-				case VK_X:
-				case VK_A:
+				case VK_Red:
+				case VK_Green:
 					event.key.keysym.sym = SDLK_RETURN;
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP;  // and the key up
+					event.type = SDL_KEYUP; // and the key up
+					break;
+				default:
 					break;
 				}
+			}                        
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
+			{
+				if (GUIjoy)
+				{
+					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					{
+						PushFakeKey(SDLK_RETURN);
+						break;
+					}
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					{
+						dialogFinished = true;
+						break;
+					}
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768)
+					{
+						navigate_left();
+						break;
+					}
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767)
+					{
+						navigate_right();
+						break;
+					}
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768)
+					{
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767)
+					{
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+				}
+				break;
 			}
 
-			            //-------------------------------------------------
-			            // Send event to guichan-controls
-			            //-------------------------------------------------
+			//-------------------------------------------------
+			// Send event to guisan-controls
+			//-------------------------------------------------
+#ifdef ANDROIDSDL
+			androidsdl_event(event, gui_input);
+#else
 			gui_input->pushInput(event);
+#endif
 		}
-
-		        // Now we let the Gui object perform its logic.
-		uae_gui->logic();
-		// Now we let the Gui object draw itself.
-		uae_gui->draw();
+		if (gotEvent)
+		{
+			// Now we let the Gui object perform its logic.
+			uae_gui->logic();
+			// Now we let the Gui object draw itself.
+			uae_gui->draw();
+#ifdef USE_SDL2
+			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+		}
+		
 		// Finally we update the screen.
-		wait_for_vsync();
-		SDL_Flip(gui_screen);
+		UpdateGuiScreen();
 	}
 }
 
 
-bool SelectFolder(const char *title, char *value)
+bool SelectFolder(const char* title, char* value)
 {
 	dialogResult = false;
 	dialogFinished = false;
+
 	InitSelectFolder(title);
 	checkfoldername(value);
+
+	// Prepare the screen once
+	uae_gui->logic();
+	uae_gui->draw();
+#ifdef USE_SDL2
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	UpdateGuiScreen();
+
 	SelectFolderLoop();
+
 	ExitSelectFolder();
 	if (dialogResult)
 	{
-		strncpy(value, workingDir, MAX_PATH);
+		strncpy(value, workingDir, MAX_DPATH);
 		if (value[strlen(value) - 1] != '/')
-			strcat(value, "/");
+			strncat(value, "/", MAX_DPATH);
 	}
 	return dialogResult;
 }

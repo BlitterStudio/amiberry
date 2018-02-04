@@ -1,3 +1,6 @@
+#ifndef UAE_EXECIO_H
+#define UAE_EXECIO_H
+
 #define IOERR_OPENFAIL	 -1
 #define IOERR_ABORTED	 -2
 #define IOERR_NOCMD	 -3
@@ -114,3 +117,5 @@
 #define NSCMD_TD_WRITE64 0xc001
 #define NSCMD_TD_SEEK64 0xc002
 #define NSCMD_TD_FORMAT64 0xc003
+
+#endif /* UAE_EXECIO_H */

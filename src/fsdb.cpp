@@ -12,6 +12,7 @@
 
 #include "options.h"
 #include "uae.h"
+#include "traps.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -19,6 +20,7 @@
 #include "autoconf.h"
 #include "fsusage.h"
 #include "fsdb.h"
+#include "uae/io.h"
 
 /* The on-disk format is as follows:
  * Offset 0, 1 byte, valid
@@ -43,7 +45,7 @@ TCHAR *nname_begin (TCHAR *nname)
   return nname;
 }
 
-#ifndef _WIN32
+#ifndef _WIN32_
 /* Find the name REL in directory DIRNAME.  If we find a file that
  * has exactly the same name, return REL.  If we find a file that
  * has the same name when compared case-insensitively, return a
@@ -80,7 +82,7 @@ static FILE *get_fsdb (a_inode *dir, const TCHAR *mode)
 	if (!dir->nname)
 		return NULL;
   n = build_nname (dir->nname, FSDB_FILE);
-  f = _tfopen (n, mode);
+	f = uae_tfopen (n, mode);
   xfree (n);
   return f;
 }
@@ -126,7 +128,7 @@ void fsdb_clean_dir (a_inode *dir)
 	if (!dir->nname)
 		return;
   n = build_nname (dir->nname, FSDB_FILE);
-	f = _tfopen (n, _T("r+b"));
+	f = uae_tfopen (n, _T("r+b"));
   if (f == 0) {
   	xfree (n);
     return;
@@ -273,6 +275,7 @@ static int needs_dbentry (a_inode *aino)
 static void write_aino (FILE *f, a_inode *aino)
 {
   uae_u8 buf[1 + 4 + 257 + 257 + 81] = { 0 };
+
 	buf[0] = aino->needs_dbentry ? 1 : 0;
   do_put_mem_long ((uae_u32 *)(buf + 1), aino->amigaos_mode);
 	ua_copy ((char*)buf + 5, 256, aino->aname);
@@ -363,6 +366,7 @@ void fsdb_dir_writeback (a_inode *dir)
 			xfree (s);
 	    i += 1 + 4 + 257 + 257 + 81;
 	  }
+
 	  if (! aino->has_dbentry) {
 	    fseek (f, 0, SEEK_END);
 	    aino->has_dbentry = 1;

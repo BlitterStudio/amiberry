@@ -118,9 +118,9 @@
 #define DISABLE_I_ROXLW
 #define DISABLE_I_ROXRW
 //#define DISABLE_I_MULL
-#define DISABLE_I_FPP
-#define DISABLE_I_FBCC
-#define DISABLE_I_FSCC
+//#define DISABLE_I_FPP
+//#define DISABLE_I_FBCC
+//#define DISABLE_I_FSCC
 //#define DISABLE_I_MOVE16
 
 #define DISABLE_I_DIVU // DIVU works, but we have to think about exceptions. No big performance enhancement.
@@ -1220,9 +1220,6 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, char* ssize) {
 	comprintf("\tarm_ADD_l_ri(PC_P, m68k_pc_offset);\n");
 	comprintf("\tm68k_pc_offset=0;\n");
 
-	start_brace();
-	comprintf("\tint nsrc = scratchie++;\n");
-
 	if (curi->cc >= 2) {
 		comprintf("\tmake_flags_live();\n"); /* Load the flags */
 	}
@@ -1260,7 +1257,6 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, char* ssize) {
 		  break;
 	  default: abort();
 	}
-	genastore("src", curi->smode, "srcreg", curi->size, "src");
 	gen_update_next_handler();
 }
 
@@ -2425,7 +2421,7 @@ gen_opcode(unsigned long int opcode) {
 			comprintf("\tv2 = get_const(src);\n");
 			comprintf("\tregister_branch(v1, v2, %d);\n", cond_codes[curi->cc]);
 			comprintf("\tmake_flags_live();\n"); /* Load the flags */
-			isjump;
+      isjump;
 		} else {
 			is_const_jump
 			;
@@ -2857,7 +2853,6 @@ generate_includes(FILE * f)
 	fprintf(f, "#include \"newcpu.h\"\n");
 	fprintf (f, "#include \"custom.h\"\n");
 	fprintf(f, "#include \"comptbl.h\"\n");
-  fprintf(f, "#include \"debug.h\"\n");
 }
 
 static int postfix;

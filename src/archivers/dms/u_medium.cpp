@@ -23,44 +23,36 @@ USHORT dms_medium_text_loc;
 
 
 
-USHORT Unpack_MEDIUM(UCHAR *in, UCHAR *out, USHORT origsize)
-{
-    USHORT i, j, c;
-    UCHAR u, *outend;
+USHORT Unpack_MEDIUM(UCHAR *in, UCHAR *out, USHORT origsize){
+	USHORT i, j, c;
+	UCHAR u, *outend;
 
 
-    initbitbuf(in);
+	initbitbuf(in);
 
-    outend = out+origsize;
-    while (out < outend)
-    {
-        if (GETBITS(1)!=0)
-        {
-            DROPBITS(1);
-            *out++ = dms_text[dms_medium_text_loc++ & MBITMASK] = (UCHAR)GETBITS(8);
-            DROPBITS(8);
-        }
-        else
-        {
-            DROPBITS(1);
-            c = GETBITS(8);
-            DROPBITS(8);
-            j = (USHORT) (d_code[c]+3);
-            u = d_len[c];
-            c = (USHORT) (((c << u) | GETBITS(u)) & 0xff);
-            DROPBITS(u);
-            u = d_len[c];
-            c = (USHORT) ((d_code[c] << 8) | (((c << u) | GETBITS(u)) & 0xff));
-            DROPBITS(u);
-            i = (USHORT) (dms_medium_text_loc - c - 1);
+	outend = out+origsize;
+	while (out < outend) {
+		if (GETBITS(1)!=0) {
+			DROPBITS(1);
+			*out++ = dms_text[dms_medium_text_loc++ & MBITMASK] = (UCHAR)GETBITS(8);
+			DROPBITS(8);
+		} else {
+			DROPBITS(1);
+			c = GETBITS(8);  DROPBITS(8);
+			j = (USHORT) (d_code[c]+3);
+			u = d_len[c];
+			c = (USHORT) (((c << u) | GETBITS(u)) & 0xff);  DROPBITS(u);
+			u = d_len[c];
+			c = (USHORT) ((d_code[c] << 8) | (((c << u) | GETBITS(u)) & 0xff));  DROPBITS(u);
+			i = (USHORT) (dms_medium_text_loc - c - 1);
 
-            while(j--) *out++ = dms_text[dms_medium_text_loc++ & MBITMASK] = dms_text[i++ & MBITMASK];
+			while(j--) *out++ = dms_text[dms_medium_text_loc++ & MBITMASK] = dms_text[i++ & MBITMASK];
 
-        }
-    }
-    dms_medium_text_loc = (USHORT)((dms_medium_text_loc+66) & MBITMASK);
+		}
+	}
+	dms_medium_text_loc = (USHORT)((dms_medium_text_loc+66) & MBITMASK);
 
-    return 0;
+	return 0;
 }
 
 

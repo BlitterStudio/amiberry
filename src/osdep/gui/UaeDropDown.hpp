@@ -1,39 +1,47 @@
 #ifndef GCN_UAEDROPDOWN_HPP
 #define GCN_UAEDROPDOWN_HPP
 
+#ifdef USE_SDL1
 #include <map>
-#include <string>
-
 #include "guichan/keylistener.hpp"
 #include "guichan/mouselistener.hpp"
 #include "guichan/platform.hpp"
 #include "guichan/widget.hpp"
 #include "guichan/widgets/dropdown.hpp"
+#elif USE_SDL2
+#include <guisan/keylistener.hpp>
+#include <guisan/platform.hpp>
+#include <guisan/widget.hpp>
+#include <guisan/widgets/dropdown.hpp>
+#endif
+
+#include <string>
 
 
 namespace gcn
 {
-class GCN_CORE_DECLSPEC UaeDropDown : public DropDown
-{
-public:
-    UaeDropDown(ListModel *listModel = NULL,
-                ScrollArea *scrollArea = NULL,
-                ListBox *listBox = NULL);
+	class GCN_CORE_DECLSPEC UaeDropDown : public DropDown
+	{
+	public:
+		UaeDropDown(ListModel* listModel = nullptr,
+		            ScrollArea* scrollArea = nullptr,
+		            ListBox* listBox = nullptr);
 
-    virtual ~UaeDropDown();
+		virtual ~UaeDropDown();
 
-    virtual void keyPressed(KeyEvent& keyEvent);
+		void keyPressed(KeyEvent& keyEvent) override;
 
-    virtual void setEnabled(bool enabled);
+		void setEnabled(bool enabled);
 
-    void clearSelected(void);
+		bool getEnabled(void) const;
 
-    bool isDroppedDown(void);
+		void clearSelected(void) const;
 
-protected:
-    Color mBackgroundColorBackup;
+		bool isDroppedDown(void) const;
 
-};
+	protected:
+		Color mBackgroundColorBackup;
+	};
 }
 
 

@@ -59,13 +59,15 @@
 #include "audio.h"
 #include "filesys.h"
 #include "disk.h"
+#include "threaddep/thread.h"
+#include "devices.h"
 
 int savestate_state = 0;
 
 static bool new_blitter = false;
 
 struct zfile *savestate_file;
-static int savestate_docompress, savestate_specialdump, savestate_nodialogs;
+static int savestate_docompress, savestate_nodialogs;
 
 TCHAR savestate_fname[MAX_DPATH];
 
@@ -77,14 +79,6 @@ static void state_incompatible_warn(void)
 
 #ifdef BSDSOCKET
 	if (currprefs.socket_emu)
-		dowarn = 1;
-#endif
-#ifdef SCSIEMU
-	if (currprefs.scsi)
-		dowarn = 1;
-#endif
-#ifdef CATWEASEL
-	if (currprefs.catweasel)
 		dowarn = 1;
 #endif
 #ifdef FILESYS
@@ -100,9 +94,6 @@ static void state_incompatible_warn(void)
   	notify_user (NUMSG_STATEHD);
   }
 }
-
-/* functions for reading/writing bytes, shorts and longs in big-endian
- * format independent of host machine's endianess */
 
 void save_u32_func (uae_u8 **dstp, uae_u32 v)
 {
@@ -187,6 +178,7 @@ TCHAR *restore_string_func (uae_u8 **dstp)
   uae_u8 *dst = *dstp;
   char *top, *to;
 	TCHAR *s;
+
   len = strlen((char *)dst) + 1;
   top = to = xmalloc (char, len);
   do {
@@ -244,13 +236,13 @@ TCHAR *restore_path_func (uae_u8 **dstp, int type)
 
 /* read and write IFF-style hunks */
 
-static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, const char *name, int compress)
+static void save_chunk (struct zfile *f, uae_u8 *chunk, unsigned int len, const TCHAR *name, int compress)
 {
   uae_u8 tmp[8], *dst;
   uae_u8 zero[4]= { 0, 0, 0, 0 };
   uae_u32 flags;
-  size_t pos;
-  size_t chunklen, len2;
+	unsigned int pos;
+	unsigned int chunklen, len2;
 	char *s;
 
   if (!chunk)
@@ -260,6 +252,7 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, const char *
   	zfile_fwrite (chunk, 1, len, f);
   	return;
   }
+
   /* chunk name */
 	s = ua (name);
 	zfile_fwrite (s, 1, 4, f);
@@ -306,22 +299,28 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, const char *
   if (len2)
   	zfile_fwrite (zero, 1, len2, f);
 
-  write_log (_T("Chunk '%s' chunk size %d (%d)\n"), name, chunklen, len);
+	write_log (_T("Chunk '%s' chunk size %u (%u)\n"), name, chunklen, len);
 }
 
-static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, size_t *len, size_t *totallen, size_t *filepos)
+static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, unsigned int *len, unsigned int *totallen, size_t *filepos)
 {
   uae_u8 tmp[6], dummy[4], *mem, *src;
   uae_u32 flags;
   int len2;
 
   *totallen = 0;
+	*filepos = 0;
+	*name = 0;
   /* chunk name */
-	zfile_fread (tmp, 1, 4, f);
+	if (zfile_fread(tmp, 1, 4, f) != 4)
+		return NULL;
 	tmp[4] = 0;
 	au_copy (name, 5, (char*)tmp);
   /* chunk size */
-  zfile_fread (tmp, 1, 4, f);
+	if (zfile_fread(tmp, 1, 4, f) != 4) {
+		*name = 0;
+		return NULL;
+	}
   src = tmp;
   len2 = restore_u32 () - 4 - 4 - 4;
   if (len2 < 0)
@@ -333,7 +332,10 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, size_t *len, size_t 
   }
 
   /* chunk flags */
-  zfile_fread (tmp, 1, 4, f);
+	if (zfile_fread(tmp, 1, 4, f) != 4) {
+		*name = 0;
+		return NULL;
+	}
   src = tmp;
   flags = restore_u32 ();
   *totallen = *len;
@@ -352,7 +354,6 @@ static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, size_t *len, size_t 
   	&& _tcscmp (name, _T("BRAM")) != 0
   	&& _tcscmp (name, _T("FRAM")) != 0
   	&& _tcscmp (name, _T("ZRAM")) != 0
-		&& _tcscmp (name, _T("ZCRM")) != 0
   	&& _tcscmp (name, _T("PRAM")) != 0
   	&& _tcscmp (name, _T("A3K1")) != 0
 		&& _tcscmp (name, _T("A3K2")) != 0
@@ -427,9 +428,9 @@ void restore_state (const TCHAR *filename)
   struct zfile *f;
   uae_u8 *chunk,*end;
   TCHAR name[5];
-  size_t len, totallen;
+	unsigned int len, totallen;
   size_t filepos, filesize;
-  int z3num;
+	int z3num, z2num;
 
   chunk = 0;
 	f = zfile_fopen (filename, _T("rb"), ZFD_NORMAL);
@@ -446,19 +447,16 @@ void restore_state (const TCHAR *filename)
   	goto error;
   }
 	write_log (_T("STATERESTORE: '%s'\n"), filename);
+	set_config_changed ();
   savestate_file = f;
   restore_header (chunk);
   xfree (chunk);
-	restore_cia_start ();
-  changed_prefs.bogomem_size = 0;
-  changed_prefs.chipmem_size = 0;
-  changed_prefs.fastmem_size = 0;
-  changed_prefs.z3fastmem_size = 0;
-  z3num = 0;
+	devices_restore_start();
+	z2num = z3num = 0;
   for (;;) {
   	name[0] = 0;
   	chunk = end = restore_chunk (f, name, &len, &totallen, &filepos);
-  	write_log (_T("Chunk '%s' size %d (%d)\n"), name, len, totallen);
+		write_log (_T("Chunk '%s' size %u (%u)\n"), name, len, totallen);
   	if (!_tcscmp (name, _T("END "))) {
 	    break;
     }
@@ -468,12 +466,18 @@ void restore_state (const TCHAR *filename)
 		} else if (!_tcscmp (name, _T("BRAM"))) {
 	    restore_bram (totallen, filepos);
 	    continue;
+		} else if (!_tcscmp (name, _T("A3K1"))) {
+			restore_a3000lram (totallen, filepos);
+			continue;
+		} else if (!_tcscmp (name, _T("A3K2"))) {
+			restore_a3000hram (totallen, filepos);
+			continue;
 #ifdef AUTOCONFIG
 		} else if (!_tcscmp (name, _T("FRAM"))) {
-	    restore_fram (totallen, filepos);
+			restore_fram (totallen, filepos, z2num++);
 	    continue;
 		} else if (!_tcscmp (name, _T("ZRAM"))) {
-	    restore_zram (totallen, filepos, z3num++);
+			restore_zram (totallen, filepos, z3num++);
 	    continue;
   	} else if (!_tcscmp (name, _T("BORO"))) {
 	    restore_bootrom (totallen, filepos);
@@ -562,6 +566,12 @@ void restore_state (const TCHAR *filename)
 		else if (!_tcscmp (name, _T("P96 ")))
 	    end = restore_p96 (chunk);
 #endif
+#ifdef ACTION_REPLAY
+		else if (!_tcscmp (name, _T("ACTR")))
+			end = restore_action_replay (chunk);
+		else if (!_tcscmp (name, _T("HRTM")))
+			end = restore_hrtmon (chunk);
+#endif
 #ifdef FILESYS
 		else if (!_tcscmp (name, _T("FSYS")))
 	    end = restore_filesys (chunk);
@@ -572,9 +582,15 @@ void restore_state (const TCHAR *filename)
 		else if (!_tcscmp (name, _T("CD32")))
 			end = restore_akiko (chunk);
 #endif
-
+		else if (!_tcscmp (name, _T("GAYL")))
+			end = restore_gayle (chunk);
+		else if (!_tcscmp (name, _T("IDE ")))
+			end = restore_gayle_ide (chunk);
 		else if (!_tcsncmp (name, _T("CDU"), 3))
 			end = restore_cd (name[3] - '0', chunk);
+		else if (!_tcsncmp (name, _T("EXPI"), 4))
+			end = restore_expansion_info(chunk);
+
 	  else {
 	    end = chunk + len;
 			write_log (_T("unknown chunk '%s' size %d bytes\n"), name, len);
@@ -583,10 +599,13 @@ void restore_state (const TCHAR *filename)
 			write_log (_T("Chunk '%s', size %d bytes was not accepted!\n"),
 	      name, len);
   	else if (totallen != end - chunk)
-  		write_log (_T("Chunk '%s' total size %d bytes but read %d bytes!\n"),
+			write_log (_T("Chunk '%s' total size %d bytes but read %ld bytes!\n"),
 	      name, totallen, end - chunk);
   	xfree (chunk);
+		if (name[0] == 0)
+			break;
   }
+	target_addtorecent (filename, 0);
   return;
 
 error:
@@ -607,29 +626,28 @@ void savestate_restore_finish (void)
   restore_cpu_finish();
 	restore_audio_finish ();
 	restore_disk_finish ();
+	restore_blitter_finish ();
 	restore_akiko_finish ();
 #ifdef PICASSO96
 	restore_p96_finish ();
 #endif
 	restore_cia_finish ();
 	savestate_state = 0;
-  init_hz_full ();
+	init_hz_normal();
 	audio_activate ();
 }
 
-/* 1=compressed,2=not compressed,3=ram dump,4=audio dump */
+/* 1=compressed,2=not compressed */
 void savestate_initsave (const TCHAR *filename, int mode, int nodialogs, bool save)
 {
   if (filename == NULL) {
 	  savestate_fname[0] = 0;
 	  savestate_docompress = 0;
-	  savestate_specialdump = 0;
 	  savestate_nodialogs = 0;
 	  return;
   }
   _tcscpy (savestate_fname, filename);
   savestate_docompress = (mode == 1) ? 1 : 0;
-  savestate_specialdump = (mode == 3) ? 1 : (mode == 4) ? 2 : 0;
   savestate_nodialogs = nodialogs;
 	new_blitter = false;
 }
@@ -643,11 +661,19 @@ static void save_rams (struct zfile *f, int comp)
 	save_chunk (f, dst, len, _T("CRAM"), comp);
   dst = save_bram (&len);
   save_chunk (f, dst, len, _T("BRAM"), comp);
+	dst = save_a3000lram (&len);
+	save_chunk (f, dst, len, _T("A3K1"), comp);
+	dst = save_a3000hram (&len);
+	save_chunk (f, dst, len, _T("A3K2"), comp);
 #ifdef AUTOCONFIG
-  dst = save_fram (&len);
-	save_chunk (f, dst, len, _T("FRAM"), comp);
-  dst = save_zram (&len, 0);
-  save_chunk (f, dst, len, _T("ZRAM"), comp);
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+    dst = save_fram (&len, i);
+	  save_chunk (f, dst, len, _T("FRAM"), comp);
+	}
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+    dst = save_zram (&len, i);
+    save_chunk (f, dst, len, _T("ZRAM"), comp);
+	}
   dst = save_bootrom (&len);
 	save_chunk (f, dst, len, _T("BORO"), comp);
 #endif
@@ -768,6 +794,8 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
   xfree (dst);
 
 #ifdef AUTOCONFIG
+	dst = save_expansion_info(&len, 0);
+	save_chunk(f, dst, len, _T("EXPI"), 0);
   dst = save_expansion (&len, 0);
   save_chunk (f, dst, len, _T("EXPA"), 0);
   xfree (dst);
@@ -791,7 +819,12 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	save_chunk (f, dst, len, _T("CD32"), 0);
 	xfree (dst);
 #endif
-
+#ifdef ACTION_REPLAY
+	dst = save_action_replay (&len, NULL);
+	save_chunk (f, dst, len, _T("ACTR"), comp);
+	dst = save_hrtmon (&len, NULL);
+	save_chunk (f, dst, len, _T("HRTM"), comp);
+#endif
 #ifdef FILESYS
   dst = save_filesys_common (&len);
   if (dst) {
@@ -805,6 +838,18 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
     }
   }
 #endif
+	dst = save_gayle (&len, NULL);
+	if (dst) {
+		save_chunk (f, dst, len, _T("GAYL"), 0);
+		xfree(dst);
+	}
+	for (i = 0; i < 4; i++) {
+		dst = save_gayle_ide (i, &len, NULL);
+		if (dst) {
+			save_chunk (f, dst, len, _T("IDE "), 0);
+			xfree (dst);
+		}
+	}
 
 	for (i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 		dst = save_cd (i, &len);
@@ -824,7 +869,7 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 	struct zfile *f;
   int comp = savestate_docompress;
 
-  if (!savestate_specialdump && !savestate_nodialogs) {
+  if (!savestate_nodialogs) {
 	  state_incompatible_warn();
 	  if (!save_filesys_cando()) {
 			gui_message (_T("Filesystem active. Try again later."));

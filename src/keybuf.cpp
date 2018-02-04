@@ -56,12 +56,6 @@ int record_key (int kc)
 		write_log (_T("Keyboard buffer overrun. Congratulations.\n"));
     return 0;
   }
-#if 0
-  if ((kc >> 1) == AK_RCTRL) {
-  	kc ^= AK_RCTRL << 1;
-  	kc ^= AK_CTRL << 1;
-  }
-#endif
   keybuf[kpb_first] = kc;
   kpb_first = kpb_next;
   return 1;

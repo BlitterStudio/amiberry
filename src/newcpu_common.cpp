@@ -1,8 +1,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#define MOVEC_DEBUG 0
-
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
@@ -83,21 +81,6 @@ int m68k_move2c (int regno, uae_u32 *regp)
 	  /* 68040/060 */
     case 0x806: regs.urp = *regp & 0xfffffe00; break;
 	  case 0x807: regs.srp = *regp & 0xfffffe00; break;
-			/* 68060 only */
-		case 0x808:
-			{
-				uae_u32 opcr = regs.pcr;
-				regs.pcr &= ~(0x40 | 2 | 1);
-				regs.pcr |= (*regp) & (0x40 | 2 | 1);
-				if (currprefs.fpu_model <= 0)
-					regs.pcr |= 2;
-				if (((opcr ^ regs.pcr) & 2) == 2) {
-					write_log (_T("68060 FPU state: %s\n"), regs.pcr & 2 ? _T("disabled") : _T("enabled"));
-					/* flush possible already translated FPU instructions */
-					flush_icache (0, 3);
-				}
-			}
-			break;
 	  default:
 			op_illg (0x4E7B);
 			return 0;
@@ -405,6 +388,89 @@ int getDivs68kCycles (uae_s32 dividend, uae_s16 divisor)
 	return mcycles * 2;
 }
 
+/* 68000 Z=1. NVC=0
+ * 68020 and 68030: Signed: Z=1 NVC=0. Unsigned: V=1, N<dst, Z=!N, C=0.
+ * 68040/68060 C=0.
+ */
+void divbyzero_special (bool issigned, uae_s32 dst)
+{
+	if (currprefs.cpu_model == 68020 || currprefs.cpu_model == 68030) {
+		CLEAR_CZNV ();
+		if (issigned == false) {
+			if (dst < 0) 
+				SET_NFLG (1);
+			SET_ZFLG (!GET_NFLG ());
+			SET_VFLG (1);
+		} else {
+			SET_ZFLG (1);
+		}
+	} else if (currprefs.cpu_model >= 68040) {
+		SET_CFLG (0);
+	} else {
+		// 68000/010
+		CLEAR_CZNV ();
+	}
+}
+
+/* DIVU overflow
+ *
+ * 68000: V=1 N=1
+ * 68020: V=1 N=X
+ * 68040: V=1
+ * 68060: V=1
+ *
+ * X) N is set if original 32-bit destination value is negative.
+ *
+ */
+
+void setdivuoverflowflags(uae_u32 dividend, uae_u16 divisor)
+{
+	if (currprefs.cpu_model >= 68040) {
+		SET_VFLG(1);
+	} else if (currprefs.cpu_model >= 68020) {
+		SET_VFLG(1);
+		if ((uae_s32)dividend < 0)
+			SET_NFLG(1);
+	} else {
+		SET_VFLG(1);
+		SET_NFLG(1);
+	}
+}
+
+/*
+ * DIVS overflow
+ *
+ * 68000: V = 1 N = 1
+ * 68020: V = 1 ZN = X
+ * 68040: V = 1
+ * 68060: V = 1
+ *
+ * X) if absolute overflow(Check getDivs68kCycles for details) : Z = 0, N = 0
+ * if not absolute overflow : N is set if internal result BYTE is negative, Z is set if it is zero!
+ *
+ */
+
+void setdivsoverflowflags(uae_s32 dividend, uae_s16 divisor)
+{
+	if (currprefs.cpu_model >= 68040) {
+		SET_VFLG(1);
+	} else if (currprefs.cpu_model >= 68020) {
+		SET_VFLG(1);
+		// absolute overflow?
+		if (((uae_u32)abs(dividend) >> 16) >= (uae_u16)abs(divisor))
+			return;
+		uae_u32 aquot = (uae_u32)abs(dividend) / (uae_u16)abs(divisor);
+		if ((uae_s8)aquot == 0)
+			SET_ZFLG(1);
+		if ((uae_s8)aquot < 0)
+			SET_NFLG(1);
+	} else {
+		SET_VFLG(1);
+		SET_NFLG(1);
+	}
+}
+
+#if !defined (uae_s64)
 STATIC_INLINE int div_unsigned(uae_u32 src_hi, uae_u32 src_lo, uae_u32 div, uae_u32 *quot, uae_u32 *rem)
 {
 	uae_u32 q = 0, cbit = 0;
@@ -428,12 +494,13 @@ STATIC_INLINE int div_unsigned(uae_u32 src_hi, uae_u32 src_lo, uae_u32 div, uae_
 	*rem = src_hi;
 	return 0;
 }
+#endif
 
 void m68k_divl (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 {
   // Done in caller
   //if (src == 0) {
-  //  Exception (5);
+  //  Exception_cpu (5);
   //  return;
   //}
 #if defined(uae_s64)
@@ -446,7 +513,8 @@ void m68k_divl (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 	    a &= 0xffffffffu;
 	    a |= (uae_s64)m68k_dreg(regs, extra & 7) << 32;
   	}
-		if (a == 0x8000000000000000 && src == -1) {
+
+		if ((uae_u64)a == 0x8000000000000000UL && src == ~0u) {
 			SET_VFLG (1);
 			SET_NFLG (1);
 			SET_CFLG (0);
@@ -553,6 +621,7 @@ void m68k_divl (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 #endif
 }
 
+#if !defined (uae_s64)
 STATIC_INLINE void mul_unsigned(uae_u32 src1, uae_u32 src2, uae_u32 *dst_hi, uae_u32 *dst_lo)
 {
 	uae_u32 r0 = (src1 & 0xffff) * (src2 & 0xffff);
@@ -570,6 +639,7 @@ STATIC_INLINE void mul_unsigned(uae_u32 src1, uae_u32 src2, uae_u32 *dst_hi, uae
 	*dst_lo = lo;
 	*dst_hi = r3;
 }
+#endif
 
 void m68k_mull (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 {
@@ -583,9 +653,9 @@ void m68k_mull (uae_u32 opcode, uae_u32 src, uae_u16 extra)
   	SET_CFLG (0);
   	SET_ZFLG (a == 0);
   	SET_NFLG (a < 0);
-  	if (extra & 0x400)
+		if (extra & 0x400) {
 	    m68k_dreg(regs, extra & 7) = (uae_u32)(a >> 32);
-  	else if ((a & UVAL64(0xffffffff80000000)) != 0
+		} else if ((a & UVAL64 (0xffffffff80000000)) != 0
 		  && (a & UVAL64(0xffffffff80000000)) != UVAL64(0xffffffff80000000))
 	  {
 	    SET_VFLG (1);
@@ -600,9 +670,9 @@ void m68k_mull (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 	  SET_CFLG (0);
 	  SET_ZFLG (a == 0);
 	  SET_NFLG (((uae_s64)a) < 0);
-	  if (extra & 0x400)
+		if (extra & 0x400) {
 	    m68k_dreg(regs, extra & 7) = (uae_u32)(a >> 32);
-	  else if ((a & UVAL64(0xffffffff00000000)) != 0) {
+		} else if ((a & UVAL64 (0xffffffff00000000)) != 0) {
 	    SET_VFLG (1);
 	  }
 	  m68k_dreg(regs, (extra >> 12) & 7) = (uae_u32)a;
