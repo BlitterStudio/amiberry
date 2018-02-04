@@ -26,14 +26,14 @@ ifeq ($(PLATFORM),rpi3)
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl1-dev
+    NAME  = amiberry-rpi3-sdl1
 	
 else ifeq ($(PLATFORM),rpi2)
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl1-dev
+    NAME  = amiberry-rpi2-sdl1
 	
 else ifeq ($(PLATFORM),rpi1)
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
@@ -45,7 +45,7 @@ else ifeq ($(PLATFORM),xu4)
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1 -DMALI_GPU
     HAVE_NEON = 1
-    NAME  = amiberry-xu4-sdl1-dev
+    NAME  = amiberry-xu4-sdl1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
@@ -69,7 +69,7 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl2-dispmanx-dev
+    NAME  = amiberry-rpi3-sdl2-dispmanx
 
 else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
 USE_SDL2 = 1
@@ -77,14 +77,14 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl2-dispmanx-dev
+    NAME  = amiberry-rpi2-sdl2-dispmanx
 
 else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
-    NAME  = amiberry-rpi1-sdl2-dispmanx-dev
+    NAME  = amiberry-rpi1-sdl2-dispmanx
 
 #
 # SDL2 targets
@@ -94,20 +94,20 @@ USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl2-dev
+    NAME  = amiberry-rpi3-sdl2
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl2-dev
+    NAME  = amiberry-rpi2-sdl2
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2
-    NAME  = amiberry-rpi1-sdl2-dev
+    NAME  = amiberry-rpi1-sdl2
 
 else ifeq ($(PLATFORM),pine64)
 USE_SDL2 = 1
@@ -115,14 +115,14 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -D__arm__ -DUSE_SDL2
     CC = arm-linux-gnueabihf-gcc
     CXX = arm-linux-gnueabihf-g++
-    NAME  = amiberry-pine64-sdl2-dev
+    NAME  = amiberry-pine64-sdl2
 
 else ifeq ($(PLATFORM),xu4-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DMALI_GPU
     HAVE_NEON = 1
-    NAME  = amiberry-xu4-sdl2-dev
+    NAME  = amiberry-xu4-sdl2
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
@@ -135,7 +135,7 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
     LDFLAGS += -L/usr/local/lib
     HAVE_NEON = 1
-    NAME  = amiberry-tinker-dev
+    NAME  = amiberry-tinker
 
 else ifeq ($(PLATFORM),android-sdl2)
 USE_SDL2 = 1
