@@ -82,6 +82,8 @@ public:
 			}
 			else
 				ShowMessage("Loading savestate", "Emulation hasn't started yet.", "", "Ok", "");
+
+			cmdLoadState->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdSaveState)
 		{
@@ -98,6 +100,8 @@ public:
 			}
 			else
 				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "Ok", "");
+
+			cmdSaveState->requestFocus();
 		}
 
 		RefreshPanelSavestate();
