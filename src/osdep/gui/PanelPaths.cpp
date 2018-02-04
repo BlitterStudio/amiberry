@@ -104,7 +104,12 @@ public:
 	{
 		RescanROMs();
 		import_joysticks();
+		RefreshPanelInput();
+		RefreshPanelCustom();
 		RefreshPanelROM();
+
+		ShowMessage("Rescan Paths", "Scan complete", "", "Ok", "");
+		cmdRescanROMs->requestFocus();
 	}
 };
 
