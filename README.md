@@ -1,4 +1,6 @@
 # Amiga emulator for the Raspberry Pi and other ARM SoC
+Amiberry's aim is to create the best possible Amiga experience on ARM-based SoC devices (like the Raspberry Pi).
+Amiberry is a labour of love, from many people. It's possible thanks to the tremendous amount of work from lots of people in the Amiga community.
 
 # Pre-requisites
 Please check the relevant Wiki section: [First installation](https://github.com/midwan/amiberry/wiki/First-Installation)
