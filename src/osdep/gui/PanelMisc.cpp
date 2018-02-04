@@ -99,14 +99,23 @@ public:
 			changed_prefs.start_gui = chkShowGUI->isSelected();
 
 		else if (actionEvent.getSource() == chkRetroArchQuit)
+		{
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
-
+			RefreshPanelCustom();
+		}
+			
 		else if (actionEvent.getSource() == chkRetroArchMenu)
+		{
 			changed_prefs.use_retroarch_menu = chkRetroArchMenu->isSelected();
-
+			RefreshPanelCustom();
+		}
+			
 		else if (actionEvent.getSource() == chkRetroArchReset)
+		{
 			changed_prefs.use_retroarch_reset = chkRetroArchReset->isSelected();
-
+			RefreshPanelCustom();
+		}
+			
 		//      else if (actionEvent.getSource() == chkRetroArchSavestate)
 		//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
 
