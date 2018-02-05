@@ -324,7 +324,7 @@ public:
 			}
 			else
 			{
-				if (cdfileList.getElementAt(idx) == changed_prefs.cdslots[0].name)
+				if (cdfileList.getElementAt(idx) != changed_prefs.cdslots[0].name)
 				{
 					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
@@ -553,7 +553,7 @@ static void AdjustDropDownControls()
 	{
 		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
 		{
-			if (lstMRUCDList[i] != changed_prefs.cdslots[0].name)
+			if (lstMRUCDList[i].c_str() != changed_prefs.cdslots[0].name)
 			{
 				cboCDFile->setSelected(i);
 				break;
