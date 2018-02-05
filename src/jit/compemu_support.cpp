@@ -1342,7 +1342,7 @@ static int rmw(int r, int wsize, int rsize)
 /********************************************************************
  * FPU register status handling. EMIT TIME!                         *
  ********************************************************************/
-
+#ifdef USE_JIT_FPU
 STATIC_INLINE void f_tomem_drop(int r)
 {
 	if (live.fate[r].status == DIRTY) {
@@ -1476,7 +1476,7 @@ static void fflags_into_flags_internal(void)
 	f_unlock(r);
 	live_flags();
 }
-
+#endif
 
 #if defined(CPU_arm)
 #include "compemu_midfunc_arm.cpp"
@@ -1662,12 +1662,14 @@ void flush(int save_regs)
   sync_m68k_pc(); /* mid level */
 
   if (save_regs) {
+#ifdef USE_JIT_FPU
 		for (i = 0; i < VFREGS; i++) {
 			if (live.fate[i].needflush == NF_SCRATCH ||
 				live.fate[i].status == CLEAN) {
 					f_disassociate(i);
 			}
 		}
+#endif
   	for (i=0; i<=FLAGTMP; i++) {
   		switch(live.state[i].status) {
   		  case INMEM:
@@ -1688,11 +1690,13 @@ void flush(int save_regs)
   	      break;
 	    }
 	  }
+#ifdef USE_JIT_FPU
 		for (i = 0; i <= FP_RESULT; i++) {
 			if (live.fate[i].status == DIRTY) {
 				f_evict(i);
 			}
 		}
+#endif
   }
 }
 
@@ -1710,8 +1714,9 @@ void freescratch(void)
 
   for (i = S1; i < VREGS; i++)
     forget_about(i);
-
+#ifdef USE_JIT_FPU
 	f_forget_about(FS1);
+#endif
 }
 
 /********************************************************************
@@ -1745,10 +1750,12 @@ static void flush_all(void)
     		tomem(i);
 	    }
   	}
+#ifdef USE_JIT_FPU
   if (f_isinreg(FP_RESULT))
     f_evict(FP_RESULT);
   if (f_isinreg(FS1))
     f_evict(FS1);
+#endif
 }
 
 /* Make sure all registers that will get clobbered by a call are
@@ -1769,11 +1776,11 @@ static void prepare_for_call_2(void)
   	if (!call_saved[i] && live.nat[i].nholds > 0)
 	    free_nreg(i);
   }
-
+#ifdef USE_JIT_FPU
 	for (i = 6; i <= 7; i++) // only FP_RESULT and FS1, FP0-FP7 are call save
 		if (live.fat[i].nholds > 0)
 			f_free_nreg(i);
-
+#endif
   live.flags_in_flags = TRASH;  /* Note: We assume we already rescued the
 			         flags at the very start of the call_r
 			         functions! */
