@@ -59,6 +59,7 @@ typedef struct
 } ConfigFileInfo;
 
 extern vector<ConfigFileInfo*> ConfigFilesList;
+extern bool read_config_descriptions;
 
 void InitPanelAbout(const struct _ConfigCategory& category);
 void ExitPanelAbout();

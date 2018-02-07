@@ -77,7 +77,6 @@ std::vector<AvailableROM*> lstAvailableROMs;
 std::vector<std::string> lstMRUDiskList;
 std::vector<std::string> lstMRUCDList;
 
-
 void AddFileToDiskList(const char *file, int moveToTop)
 {
 	unsigned int i;
@@ -144,7 +143,7 @@ static void addrom(struct romdata* rd, const char* path)
 	if (path != nullptr)
 		strncpy(tmp->Path, path, MAX_DPATH);
 	tmp->ROMType = rd->type;
-	lstAvailableROMs.push_back(tmp);
+	lstAvailableROMs.emplace_back(tmp);
 	romlist_add(path, rd);
 }
 
@@ -330,7 +329,7 @@ void ReadConfigFileList(void)
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
 		strncpy(tmp->Description, _T("rp9"), MAX_DPATH);
-		ConfigFilesList.push_back(tmp);
+		ConfigFilesList.emplace_back(tmp);
 	}
 
 	// Read standard config files
@@ -344,8 +343,10 @@ void ReadConfigFileList(void)
 		strncat(tmp->FullPath, file.c_str(), MAX_DPATH);
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH);
 		removeFileExtension(tmp->Name);
-		cfgfile_get_description(tmp->FullPath, tmp->Description);
-		ConfigFilesList.push_back(tmp);
+		// If the user has many (thousands) of configs, this will take a long time
+		if (read_config_descriptions)
+			cfgfile_get_description(tmp->FullPath, tmp->Description);
+		ConfigFilesList.emplace_back(tmp);
 	}
 }
 

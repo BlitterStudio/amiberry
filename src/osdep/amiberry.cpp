@@ -49,6 +49,7 @@ int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
+bool read_config_descriptions = true;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -717,6 +718,9 @@ void saveAdfDir(void)
 	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
+	fputs(buffer, f);
+
 	fclose(f);
 }
 
@@ -768,6 +772,7 @@ void loadAdfDir(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+
 	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh) {
 		char linea[CONFIG_BLEN];
@@ -827,6 +832,7 @@ void loadAdfDir(void)
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
 					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
+					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
 				}
 			}
 		}
