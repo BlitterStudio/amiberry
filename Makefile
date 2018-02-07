@@ -43,7 +43,7 @@ else ifeq ($(PLATFORM),rpi1)
 
 else ifeq ($(PLATFORM),android)
     CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
-    DEFS += -DANDROIDSDL -DUSE_SDL1
+    DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
@@ -129,7 +129,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),android-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
-    DEFS += -DANDROIDSDL -DUSE_SDL2
+    DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
