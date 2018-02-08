@@ -126,6 +126,10 @@ static int optcount[10]		= {
 
 op_properties prop[65536];
 
+uae_u32 jit_exception = 0;
+bool may_raise_exception = false;
+
+
 STATIC_INLINE bool is_const_jump(uae_u32 opcode)
 {
 	return (prop[opcode].cflow == fl_const_jump);
@@ -160,6 +164,7 @@ static void* popall_execute_normal = NULL;
 static void* popall_cache_miss = NULL;
 static void* popall_recompile_block = NULL;
 static void* popall_check_checksum = NULL;
+static void* popall_execute_exception = NULL;
 
 /* The 68k only ever executes from even addresses. So right now, we
  * waste half the entries in this array
@@ -1393,7 +1398,6 @@ STATIC_INLINE void f_disassociate(int r)
 	f_evict(r);
 }
 
-
 static int f_alloc_reg(int r, int willclobber)
 {
 	int bestreg;
@@ -1651,6 +1655,8 @@ void init_comp(void)
   live.flags_in_flags = TRASH;
   live.flags_on_stack = VALID;
   live.flags_are_important = 1;
+  
+  jit_exception = 0;
 }
 
 /* Only do this if you really mean it! The next call should be to init!*/
@@ -1795,6 +1801,11 @@ void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond)
   next_pc_p = not_taken;
   taken_pc_p = taken;
   branch_cc = cond;
+}
+
+void register_possible_exception(void)
+{
+  may_raise_exception = true;
 }
 
 /* Note: get_handler may fail in 64 Bit environments, if direct_handler_to_use is
@@ -2379,6 +2390,12 @@ STATIC_INLINE void create_popalls(void)
   raw_pop_preserved_regs();
   compemu_raw_jmp(uae_p32(check_checksum));
 
+  align_target(align_jumps);
+  popall_execute_exception = get_target();
+  raw_inc_sp(stack_space);
+  raw_pop_preserved_regs();
+  compemu_raw_jmp(uae_p32(execute_exception));
+
 #if defined(CPU_arm) && !defined(ARMV6T2)
   reset_data_buffer();
 #endif
@@ -2776,6 +2793,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 	    was_comp = 1;
 
 	    for (i = 0; i < blocklen && get_target_noopt() < MAX_COMPILE_PTR; i++) {
+  		  may_raise_exception = false;
   		  cpuop_func **cputbl;
   		  compop_func **comptbl;
   		  uae_u32 opcode = DO_GET_OPCODE(pc_hist[i].location);
@@ -2845,6 +2863,9 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   			    compemu_raw_jmp((uintptr)popall_do_nothing);
   			    *(branchadd - 4) = (((uintptr)get_target() - (uintptr)branchadd) - 4) >> 2;
   		    }
+	    	} else if(may_raise_exception) {
+					compemu_raw_handle_except(scaled_cycles(totcycles));
+					may_raise_exception = false;
     		}
       }
 

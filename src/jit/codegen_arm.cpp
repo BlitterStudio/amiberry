@@ -943,6 +943,48 @@ STATIC_INLINE void compemu_raw_jcc_l_oponly(int cc)
   // emit of target will be done by caller
 }
 
+STATIC_INLINE void compemu_raw_handle_except(IMM cycles)
+{
+	uae_u32* branchadd;	
+
+  clobber_flags();
+
+  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+  LDR_rR(REG_WORK1, REG_WORK2);
+	TST_rr(REG_WORK1, REG_WORK1);
+	BNE_i(1);		// exception, skip LDR and target
+	
+	LDR_rRI(RPC_INDEX, RPC_INDEX, -4);	// jump to next opcode
+	branchadd = (uae_u32*)get_target();
+	skip_long();	// emit of target (next opcode handler) will be done later
+
+  // countdown -= scaled_cycles(totcycles);
+  uae_s32 offs = (uae_u32)&countdown - (uae_u32)&regs;
+	LDR_rRI(REG_WORK1, R_REGSTRUCT, offs);
+  if(CHECK32(cycles)) {
+	  SUBS_rri(REG_WORK1, REG_WORK1, cycles);
+	} else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK2, cycles);
+    if(cycles >> 16)
+      MOVT_ri16(REG_WORK2, cycles >> 16);
+#else
+  	int offs2 = data_long_offs(cycles);
+  	LDR_rRI(REG_WORK2, RPC_INDEX, offs2);
+#endif
+  	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+  }
+	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
+
+  LDR_rRI(RPC_INDEX, RPC_INDEX, -4); // <popall_execute_exception>
+	emit_long((uintptr)popall_execute_exception);
+	
+	// Write target of next instruction
+	write_jmp_target(branchadd, (cpuop_func*)get_target());
+	
+}
+
 STATIC_INLINE void compemu_raw_jl(uae_u32 t)
 {
 #ifdef ARMV6T2
@@ -1185,8 +1227,7 @@ LOWFUNC(NONE,NONE,2,raw_fmov_to_w_rr,(W4 d, FR s))
 {
   VCVTR64toI_sd(SCRATCH_F32_1, s);
   VMOV32_rs(REG_WORK1, SCRATCH_F32_1);
-	SSAT_rir(REG_WORK1, 15, REG_WORK1);
-	BFI_rrii(d, REG_WORK1, 0, 15);
+	SSAT_rir(d, 15, REG_WORK1);
 }
 LENDFUNC(NONE,NONE,2,raw_fmov_to_w_rr,(W4 d, FR s))
 
@@ -1194,8 +1235,7 @@ LOWFUNC(NONE,NONE,2,raw_fmov_to_b_rr,(W4 d, FR s))
 {
   VCVTR64toI_sd(SCRATCH_F32_1, s);
   VMOV32_rs(REG_WORK1, SCRATCH_F32_1);
-  SSAT_rir(REG_WORK1, 7, REG_WORK1);
-  BFI_rrii(d, REG_WORK1, 0, 7);
+  SSAT_rir(d, 7, REG_WORK1);
 }
 LENDFUNC(NONE,NONE,2,raw_fmov_to_b_rr,(W4 d, FR s))
 
@@ -1343,7 +1383,7 @@ LOWFUNC(NONE,NONE,2,raw_frem1_rr,(FRW d, FR s))
 	
 	VMRS_r(REG_WORK2);
 	UBFX_rrii(REG_WORK1, REG_WORK1, 22, 2);
-	BFI_rrii(REG_WORK2, REG_WORK1, 22, 2);
+	BFI_rrii(REG_WORK2, REG_WORK1, 22, 23);
 	VMSR_r(REG_WORK2);
 }
 LENDFUNC(NONE,NONE,2,raw_frem1_rr,(FRW d, FR s))
@@ -1425,7 +1465,7 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
 	ADD_rrr(REG_WORK1, adr, REG_WORK1);
 
   REV_rr(REG_WORK3, REG_WORK3);
-  STR_rR(REG_WORK3, REG_WORK1);             	// write exponent
+  STRH_rR(REG_WORK3, REG_WORK1);             	// write exponent
 
   VSHL64_ddi(SCRATCH_F64_1, s, 11);             // shift mantissa to correct position
   VMOV64_rrd(REG_WORK3, REG_WORK2, SCRATCH_F64_1);
@@ -1494,7 +1534,7 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 	MOVW_ri16(REG_WORK1, 15360);              // diff of bias between double and long double
 	SUB_rrr(REG_WORK3, REG_WORK3, REG_WORK1);	// exponent done, ToDo: check for carry -> result gets Inf in double
 	UBFX_rrii(REG_WORK2, REG_WORK2, 15, 1);		// extract sign
-	BFI_rrii(REG_WORK3, REG_WORK2, 11, 1);		// insert sign
+	BFI_rrii(REG_WORK3, REG_WORK2, 11, 11);		// insert sign
 	VSHR64_ddi(d, d, 11);											// shift mantissa to correct position
 	LSL_rri(REG_WORK3, REG_WORK3, 20);
 	VMOV_I64_dimmI(0, 0x00);
@@ -1503,7 +1543,7 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 // end_of_op
 
 }
-LENDFUNC(NONE,READ,2,raw_fp_from_exten_mr,(FW d, RR4 adr))
+LENDFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 
 STATIC_INLINE void raw_fflags_into_flags(int r)
 {
@@ -1620,5 +1660,14 @@ LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 	}
 }
 LENDFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
+
+LOWFUNC(NONE,NONE,1,raw_roundingmode,(IMM mode))
+{
+  VMRS_r(REG_WORK1);
+  BIC_rri(REG_WORK1, REG_WORK1, 0x00c00000);
+  ORR_rri(REG_WORK1, REG_WORK1, mode);
+  VMSR_r(REG_WORK1);
+}
+LENDFUNC(NONE,NONE,1,raw_roundingmode,(IMM mode))
 
 #endif // USE_JIT_FPU

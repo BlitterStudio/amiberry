@@ -1852,28 +1852,44 @@ MENDFUNC(2,jff_DBCC,(RR2 d, IMM cc))
  * C Always cleared.
  *
  */
-// ToDo: How to handle exceptions (division by zero). Performance improvement isn't big, so this is on hold.
  MIDFUNC(3,jnf_DIVU,(W4 d, RR4 s1, RR4 s2))
 {
   s1 = readreg(s1, 4);
   s2 = readreg(s2, 4);
   d = writereg(d, 4);
   
-  VMOV32_sr(0, s1);   			// move to s0
-  VMOV32_sr(1, s2);   			// move to s1
-  VCVTIto64_ds(2, 0);     	// convert s0 to d2 (int to float)
-  VCVTIto64_ds(3, 1);     	// convert s1 to d3 (int to float)
-  VDIV64_ddd(4, 2, 3);    	// d4 = d2 / d3
-  VCVT64toI_sd(0, 4);     	// convert d4 to s0 (float to int)
-  VMOV32_rs(REG_WORK1, 0);  // move from s0
+  UNSIGNED16_REG_2_REG(REG_WORK3, s2);
+  TST_rr(REG_WORK3, REG_WORK3);
+  BNE_i(6);     // src is not 0
+
+  // Signal exception 5
+  MOV_ri(REG_WORK1, 5);
+  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+  STR_rR(REG_WORK1, REG_WORK2);
+  
+  // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
+  MOV_ri(REG_WORK1, ARM_Z_FLAG | ARM_V_FLAG);
+  MSR_CPSRf_r(REG_WORK1);
+  B_i(11);       // end_of_op
+
+// src is not 0  
+	VMOVi_from_ARM_dr(SCRATCH_F64_1, s1, 0);
+	VMOVi_from_ARM_dr(SCRATCH_F64_2, REG_WORK3, 0);
+	VCVTIuto64_ds(SCRATCH_F64_1, SCRATCH_F32_1);
+	VCVTIuto64_ds(SCRATCH_F64_2, SCRATCH_F32_2);
+	VDIV64_ddd(SCRATCH_F64_3, SCRATCH_F64_1, SCRATCH_F64_2);
+	VCVT64toIu_sd(SCRATCH_F32_1, SCRATCH_F64_3);
+	VMOVi_to_ARM_rd(REG_WORK1, SCRATCH_F64_1, 0);
   
   LSRS_rri(REG_WORK2, REG_WORK1, 16); // if result of this is not 0, DIVU overflows -> no result
   BNE_i(2);
   
   // Here we have to calc reminder
-  MUL_rrr(REG_WORK2, REG_WORK1, s2);
+  MUL_rrr(REG_WORK2, REG_WORK1, REG_WORK3);
   SUB_rrr(REG_WORK2, s1, REG_WORK2);
   PKHBT_rrrLSLi(d, REG_WORK1, REG_WORK2, 16);
+// end_of_op
   
   unlock2(d);
   unlock2(s1);
@@ -1887,13 +1903,29 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
   s2 = readreg(s2, 4);
   d = writereg(d, 4);
   
-  VMOV32_sr(0, s1);   			// move to s0
-  VMOV32_sr(1, s2);   			// move to s1
-  VCVTIto64_ds(2, 0);     	// convert s0 to d2 (int to float)
-  VCVTIto64_ds(3, 1);     	// convert s1 to d3 (int to float)
-  VDIV64_ddd(4, 2, 3);      // d4 = d2 / d3
-  VCVT64toI_sd(0, 4);     	// convert d4 to s0 (float to int)
-  VMOV32_rs(REG_WORK1, 0);  // move from s0
+  UNSIGNED16_REG_2_REG(REG_WORK3, s2);
+  TST_rr(REG_WORK3, REG_WORK3);
+  BNE_i(6);     // src is not 0
+
+  // Signal exception 5
+	MOV_ri(REG_WORK1, 5);
+  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+  STR_rR(REG_WORK1, REG_WORK2);
+  
+  // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
+  MOV_ri(REG_WORK1, ARM_Z_FLAG | ARM_V_FLAG);
+  MSR_CPSRf_r(REG_WORK1);
+  B_i(18);       // end_of_op
+
+// src is not 0  
+	VMOVi_from_ARM_dr(SCRATCH_F64_1, s1, 0);
+	VMOVi_from_ARM_dr(SCRATCH_F64_2, REG_WORK3, 0);
+	VCVTIuto64_ds(SCRATCH_F64_1, SCRATCH_F32_1);
+	VCVTIuto64_ds(SCRATCH_F64_2, SCRATCH_F32_2);
+	VDIV64_ddd(SCRATCH_F64_3, SCRATCH_F64_1, SCRATCH_F64_2);
+	VCVT64toIu_sd(SCRATCH_F32_1, SCRATCH_F64_3);
+	VMOVi_to_ARM_rd(REG_WORK1, SCRATCH_F64_1, 0);
   
   LSRS_rri(REG_WORK2, REG_WORK1, 16); // if result of this is not 0, DIVU overflows
   BEQ_i(2);
@@ -1908,9 +1940,10 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
 	BIC_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG | ARM_V_FLAG);
 	MSR_CPSRf_r(REG_WORK2);
   
-  MUL_rrr(REG_WORK2, REG_WORK1, s2);
+  MUL_rrr(REG_WORK2, REG_WORK1, REG_WORK3);
   SUB_rrr(REG_WORK2, s1, REG_WORK2);
   PKHBT_rrrLSLi(d, REG_WORK1, REG_WORK2, 16);
+// end_of_op
   
   unlock2(d);
   unlock2(s1);
@@ -1918,6 +1951,138 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
 }
 MENDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
  
+/*
+ * DIVS
+ *
+ * X Not affected.
+ * N Set if the most significant bit of the result is set or overflow. Cleared otherwise.
+ * Z Set if the result is zero. Cleared otherwise.
+ * V Set if overflow. Cleared otherwise.
+ * C Always cleared.
+ *
+ */
+MIDFUNC(3,jnf_DIVS,(W4 d, RR4 s1, RR4 s2))
+{
+  s1 = readreg(s1, 4);
+  s2 = readreg(s2, 4);
+  d = writereg(d, 4);
+  
+  SIGNED16_REG_2_REG(REG_WORK3, s2);
+  TST_rr(REG_WORK3, REG_WORK3);
+  BNE_i(6);     // src is not 0
+
+  // Signal exception 5
+  MOV_ri(REG_WORK1, 5);
+  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+  STR_rR(REG_WORK1, REG_WORK2);
+  
+  // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
+  MOV_ri(REG_WORK1, ARM_Z_FLAG);
+  MSR_CPSRf_r(REG_WORK1);
+  B_i(18);       // end_of_op
+
+// src is not 0  
+	VMOVi_from_ARM_dr(SCRATCH_F64_1, s1, 0);
+	VMOVi_from_ARM_dr(SCRATCH_F64_2, REG_WORK3, 0);
+	VCVTIto64_ds(SCRATCH_F64_1, SCRATCH_F32_1);
+	VCVTIto64_ds(SCRATCH_F64_2, SCRATCH_F32_2);
+	VDIV64_ddd(SCRATCH_F64_3, SCRATCH_F64_1, SCRATCH_F64_2);
+	VCVT64toI_sd(SCRATCH_F32_1, SCRATCH_F64_3);
+	VMOVi_to_ARM_rd(REG_WORK1, SCRATCH_F64_1, 0);
+  
+  // check for overflow
+  MVN_ri(REG_WORK2, 0);
+  LSL_rri(REG_WORK2, REG_WORK2, 15); 		// REG_WORK2 is now 0xffff8000
+  ANDS_rrr(REG_WORK3, REG_WORK1, REG_WORK2);
+  BEQ_i(1); 														// positive result, no overflow
+	CMP_rr(REG_WORK3, REG_WORK2);
+	BNE_i(5);															// overflow -> end_of_op
+	
+  // Here we have to calc reminder
+  SIGNED16_REG_2_REG(REG_WORK3, s2);
+  MUL_rrr(REG_WORK2, REG_WORK1, REG_WORK3);
+	SUB_rrr(REG_WORK2, s1, REG_WORK2);		// REG_WORK2 contains remainder
+	
+	EORS_rrr(REG_WORK3, REG_WORK2, s1);	// If sign of remainder and first operand differs, change sign of remainder
+	CC_RSB_rri(NATIVE_CC_MI, REG_WORK2, REG_WORK2, 0);
+	
+	PKHBT_rrrLSLi(d, REG_WORK1, REG_WORK2, 16);
+// end_of_op
+
+  unlock2(d);
+  unlock2(s1);
+  unlock2(s2);
+}
+MENDFUNC(3,jnf_DIVS,(W4 d, RR4 s1, RR4 s2))
+
+MIDFUNC(3,jff_DIVS,(W4 d, RR4 s1, RR4 s2))
+{
+  s1 = readreg(s1, 4);
+  s2 = readreg(s2, 4);
+  d = writereg(d, 4);
+
+  SIGNED16_REG_2_REG(REG_WORK3, s2);
+  TST_rr(REG_WORK3, REG_WORK3);
+  BNE_i(6);     // src is not 0
+
+  // Signal exception 5
+	MOV_ri(REG_WORK1, 5);
+  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+  STR_rR(REG_WORK1, REG_WORK2);
+  
+  // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
+  MOV_ri(REG_WORK1, ARM_Z_FLAG);
+  MSR_CPSRf_r(REG_WORK1);
+  B_i(25);       // end_of_op
+
+// src is not 0  
+	VMOVi_from_ARM_dr(SCRATCH_F64_1, s1, 0);
+	VMOVi_from_ARM_dr(SCRATCH_F64_2, REG_WORK3, 0);
+	VCVTIto64_ds(SCRATCH_F64_1, SCRATCH_F32_1);
+	VCVTIto64_ds(SCRATCH_F64_2, SCRATCH_F32_2);
+	VDIV64_ddd(SCRATCH_F64_3, SCRATCH_F64_1, SCRATCH_F64_2);
+	VCVT64toI_sd(SCRATCH_F32_1, SCRATCH_F64_3);
+	VMOVi_to_ARM_rd(REG_WORK1, SCRATCH_F64_1, 0);
+
+  // check for overflow
+  MVN_ri(REG_WORK2, 0);
+  LSL_rri(REG_WORK2, REG_WORK2, 15); 		// REG_WORK2 is now 0xffff8000
+  ANDS_rrr(REG_WORK3, REG_WORK1, REG_WORK2);
+  BEQ_i(4); 														// positive result, no overflow
+	CMP_rr(REG_WORK3, REG_WORK2);
+	BEQ_i(2);															// no overflow
+  
+  // Here we handle overflow
+  MOV_ri(REG_WORK1, ARM_V_FLAG | ARM_N_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
+  B_i(9);
+  
+  // calc flags
+  LSLS_rri(REG_WORK2, REG_WORK1, 16);  // N and Z ok
+	MRS_CPSR(REG_WORK2);
+	BIC_rri(REG_WORK2, REG_WORK2, ARM_C_FLAG | ARM_V_FLAG);
+	MSR_CPSRf_r(REG_WORK2);
+  
+  // calc remainder
+  SIGNED16_REG_2_REG(REG_WORK3, s2);
+  MUL_rrr(REG_WORK2, REG_WORK1, REG_WORK3);
+	SUB_rrr(REG_WORK2, s1, REG_WORK2);		// REG_WORK2 contains remainder
+	
+	EORS_rrr(REG_WORK3, REG_WORK2, s1);	// If sign of remainder and first operand differs, change sign of remainder
+	CC_RSB_rri(NATIVE_CC_MI, REG_WORK2, REG_WORK2, 0);
+	
+	PKHBT_rrrLSLi(d, REG_WORK1, REG_WORK2, 16);
+
+// end_of_op
+	
+  unlock2(d);
+  unlock2(s1);
+  unlock2(s2);
+}
+MENDFUNC(3,jff_DIVS,(W4 d, RR4 s1, RR4 s2))
+
 /*
  * EOR
  * Operand Syntax: 	Dn, <ea>
@@ -5114,7 +5279,7 @@ MIDFUNC(2,jnf_MEM_WRITE_OFF_b,(RR4 adr, RR4 b))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  b = readreg(b, 4);
+  b = readreg(b, 1);
   
   STRB_rRR(b, adr, REG_WORK2);
   
@@ -5129,7 +5294,7 @@ MIDFUNC(2,jnf_MEM_WRITE_OFF_w,(RR4 adr, RR4 w))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  w = readreg(w, 4);
+  w = readreg(w, 2);
   
   REV16_rr(REG_WORK1, w);
   STRH_rRR(REG_WORK1, adr, REG_WORK2);
@@ -5162,7 +5327,7 @@ MIDFUNC(2,jnf_MEM_READ_OFF_b,(W4 d, RR4 adr))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  d = writereg(d, 4);
+  d = writereg(d, 1);
   
   LDRB_rRR(d, adr, REG_WORK2);
   
@@ -5177,7 +5342,7 @@ MIDFUNC(2,jnf_MEM_READ_OFF_w,(W4 d, RR4 adr))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  d = writereg(d, 4);
+  d = writereg(d, 2);
   
   LDRH_rRR(REG_WORK1, adr, REG_WORK2);
   REV16_rr(d, REG_WORK1);
@@ -5210,7 +5375,7 @@ MIDFUNC(2,jnf_MEM_WRITE24_OFF_b,(RR4 adr, RR4 b))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  b = readreg(b, 4);
+  b = readreg(b, 1);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
   STRB_rRR(b, REG_WORK1, REG_WORK2);
@@ -5226,7 +5391,7 @@ MIDFUNC(2,jnf_MEM_WRITE24_OFF_w,(RR4 adr, RR4 w))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  w = readreg(w, 4);
+  w = readreg(w, 2);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
   REV16_rr(REG_WORK3, w);
@@ -5261,7 +5426,7 @@ MIDFUNC(2,jnf_MEM_READ24_OFF_b,(W4 d, RR4 adr))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  d = writereg(d, 4);
+  d = writereg(d, 1);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
   LDRB_rRR(d, REG_WORK1, REG_WORK2);
@@ -5277,7 +5442,7 @@ MIDFUNC(2,jnf_MEM_READ24_OFF_w,(W4 d, RR4 adr))
   LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
 
   adr = readreg(adr, 4);
-  d = writereg(d, 4);
+  d = writereg(d, 2);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
   LDRH_rRR(REG_WORK1, REG_WORK1, REG_WORK2);

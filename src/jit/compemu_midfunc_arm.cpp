@@ -109,7 +109,7 @@ MIDFUNC(2,sign_extend_16_rr,(W4 d, RR2 s))
 		s = readreg(s, 2);
 		d = writereg(d, 4);
 	}
-	else { /* If we try to lock this twice, with different sizes, we are int trouble! */
+	else { /* If we try to lock this twice, with different sizes, we are in trouble! */
 		s = d = rmw(s, 4, 2);
 	}
 	SIGNED16_REG_2_REG(d, s);
@@ -628,7 +628,7 @@ MENDFUNC(2,fmov_to_s_rr,(W4 d, FR s))
 MIDFUNC(2,fmov_to_w_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-  d = rmw(d, 2, 4);
+  d = writereg(d, 2);
   raw_fmov_to_w_rr(d, s);
 	unlock2(d);
   f_unlock(s);
@@ -638,7 +638,7 @@ MENDFUNC(2,fmov_to_w_rr,(W4 d, FR s))
 MIDFUNC(2,fmov_to_b_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-  d = rmw(d, 1, 4);
+  d = writereg(d, 1);
   raw_fmov_to_b_rr(d, s);
 	unlock2(d);
   f_unlock(s);
@@ -864,54 +864,48 @@ MENDFUNC(2,fmovs_rr,(FW d, FR s))
 MIDFUNC(3,ffunc_rr,(double (*func)(double), FW d, FR s))
 {
   clobber_flags();
-  prepare_for_call_1();
-  prepare_for_call_2();
 
 	s = f_readreg(s);
-	d = f_writereg(d);
+	int reald = f_writereg(d);
 
-	raw_ffunc_rr(func, d, s);
+  prepare_for_call_1();
 
 	f_unlock(s);
-	f_unlock(d);
+	f_unlock(reald);
+
+  prepare_for_call_2();
+
+	raw_ffunc_rr(func, reald, s);
+
+  live.fat[reald].holds = d;
+  live.fat[reald].nholds = 1;
+
+  live.fate[d].realreg = reald;
+  live.fate[d].status = DIRTY;
 }
 MENDFUNC(3,ffunc_rr,(double (*func)(double), FW d, FR s))
-
-//MIDFUNC(3,fsincos_rr,(FW d, FW c, FR s))
-//{
-//  clobber_flags();
-//  prepare_for_call_1();
-//  prepare_for_call_2();
-//
-//	s = f_readreg(s);  /* s for source */
-//	d = f_writereg(d); /* d for sine   */
-//	c = f_writereg(c); /* c for cosine */
-//
-//	// s may be FS1, so we need to save it before we call external func
-//	
-//	raw_ffunc_rr(cos, c, s);
-//	raw_ffunc_rr(sin, d, s);
-//
-//	f_unlock(s);
-//	f_unlock(d);
-//	f_unlock(c);
-//}
-//MENDFUNC(3,fsincos_rr,(FW d, FW c, FR s))
 
 MIDFUNC(3,fpowx_rr,(uae_u32 x, FW d, FR s))
 {
   clobber_flags();
-  prepare_for_call_1();
-  prepare_for_call_2();
 
 	s = f_readreg(s);
-	d = f_writereg(d);
+	int reald = f_writereg(d);
 
-	raw_fpowx_rr(x, d, s);
+  prepare_for_call_1();
 
 	f_unlock(s);
-	f_unlock(d);
+	f_unlock(reald);
 
+  prepare_for_call_2();
+
+	raw_fpowx_rr(x, reald, s);
+
+  live.fat[reald].holds = d;
+  live.fat[reald].nholds = 1;
+
+  live.fate[d].realreg = reald;
+  live.fate[d].status = DIRTY;
 }
 MENDFUNC(3,fpowx_rr,(uae_u32 x, FW d, FR s))
 
@@ -953,5 +947,12 @@ MIDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
 	unlock2(d);
 }
 MENDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
+
+MIDFUNC(1,roundingmode,(IMM mode))
+{
+	raw_roundingmode(mode);
+}
+MENDFUNC(1,roundingmode,(IMM mode))
+
 
 #endif // USE_JIT_FPU
