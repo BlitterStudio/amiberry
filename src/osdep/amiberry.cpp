@@ -253,8 +253,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, "Pause");
 	_tcscpy(p->fullscreen_toggle, "");
 
-       p->input_analog_remap = false;
-                
+	p->input_analog_remap = false;
+
 	p->use_retroarch_quit = true;
 	p->use_retroarch_menu = true;
 	p->use_retroarch_reset = false;
