@@ -1864,8 +1864,13 @@ MENDFUNC(2,jff_DBCC,(RR2 d, IMM cc))
 
   // Signal exception 5
   MOV_ri(REG_WORK1, 5);
+#ifdef ARMV6T2
   MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
   MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+#else
+  auto offs = data_long_offs((uae_u32)(&jit_exception));
+  LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
   STR_rR(REG_WORK1, REG_WORK2);
   
   // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
@@ -1909,8 +1914,13 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
 
   // Signal exception 5
 	MOV_ri(REG_WORK1, 5);
-  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
-  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+#ifdef ARMV6T2
+	MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+	MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+#else
+	auto offs = data_long_offs((uae_u32)(&jit_exception));
+	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
   STR_rR(REG_WORK1, REG_WORK2);
   
   // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
@@ -1973,8 +1983,13 @@ MIDFUNC(3,jnf_DIVS,(W4 d, RR4 s1, RR4 s2))
 
   // Signal exception 5
   MOV_ri(REG_WORK1, 5);
+#ifdef ARMV6T2
   MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
   MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+#else
+  auto offs = data_long_offs((uae_u32)(&jit_exception));
+  LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
   STR_rR(REG_WORK1, REG_WORK2);
   
   // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
@@ -2028,8 +2043,13 @@ MIDFUNC(3,jff_DIVS,(W4 d, RR4 s1, RR4 s2))
 
   // Signal exception 5
 	MOV_ri(REG_WORK1, 5);
-  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
-  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+#ifdef ARMV6T2
+	MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+	MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+#else
+	auto offs = data_long_offs((uae_u32)(&jit_exception));
+	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
   STR_rR(REG_WORK1, REG_WORK2);
   
   // simplified flag handling for div0: set Z and V (for signed DIV: Z only)

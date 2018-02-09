@@ -491,8 +491,6 @@ STATIC_INLINE void emit_jmp_target(uae_u32 a) {
 * FPU stuff                                                             *
 *************************************************************************/
 
-#ifdef USE_JIT_FPU
-
 MIDFUNC(1,f_forget_about,(FW r))
 {
 	if (f_isinreg(r))
@@ -955,4 +953,4 @@ MIDFUNC(1,roundingmode,(IMM mode))
 MENDFUNC(1,roundingmode,(IMM mode))
 
 
-#endif // USE_JIT_FPU
+

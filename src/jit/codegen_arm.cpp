@@ -945,44 +945,49 @@ STATIC_INLINE void compemu_raw_jcc_l_oponly(int cc)
 
 STATIC_INLINE void compemu_raw_handle_except(IMM cycles)
 {
-	uae_u32* branchadd;	
+	uae_u32* branchadd;
 
-  clobber_flags();
-
-  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
-  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
-  LDR_rR(REG_WORK1, REG_WORK2);
+	clobber_flags();
+#ifdef ARMV6T2
+	MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+	MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
+#else
+	auto offset = data_long_offs((uae_u32)(&jit_exception));
+	LDR_rRI(REG_WORK2, RPC_INDEX, offset);
+#endif
+	LDR_rR(REG_WORK1, REG_WORK2);
 	TST_rr(REG_WORK1, REG_WORK1);
 	BNE_i(1);		// exception, skip LDR and target
-	
+
 	LDR_rRI(RPC_INDEX, RPC_INDEX, -4);	// jump to next opcode
 	branchadd = (uae_u32*)get_target();
 	skip_long();	// emit of target (next opcode handler) will be done later
 
-  // countdown -= scaled_cycles(totcycles);
-  uae_s32 offs = (uae_u32)&countdown - (uae_u32)&regs;
+					// countdown -= scaled_cycles(totcycles);
+	uae_s32 offs = (uae_u32)&countdown - (uae_u32)&regs;
 	LDR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-  if(CHECK32(cycles)) {
-	  SUBS_rri(REG_WORK1, REG_WORK1, cycles);
-	} else {
+	if (CHECK32(cycles)) {
+		SUBS_rri(REG_WORK1, REG_WORK1, cycles);
+	}
+	else {
 #ifdef ARMV6T2
-    MOVW_ri16(REG_WORK2, cycles);
-    if(cycles >> 16)
-      MOVT_ri16(REG_WORK2, cycles >> 16);
+		MOVW_ri16(REG_WORK2, cycles);
+		if (cycles >> 16)
+			MOVT_ri16(REG_WORK2, cycles >> 16);
 #else
-  	int offs2 = data_long_offs(cycles);
-  	LDR_rRI(REG_WORK2, RPC_INDEX, offs2);
+		int offs2 = data_long_offs(cycles);
+		LDR_rRI(REG_WORK2, RPC_INDEX, offs2);
 #endif
-  	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
-  }
+		SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+	}
 	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
 
-  LDR_rRI(RPC_INDEX, RPC_INDEX, -4); // <popall_execute_exception>
+	LDR_rRI(RPC_INDEX, RPC_INDEX, -4); // <popall_execute_exception>
 	emit_long((uintptr)popall_execute_exception);
-	
+
 	// Write target of next instruction
 	write_jmp_target(branchadd, (cpuop_func*)get_target());
-	
+
 }
 
 STATIC_INLINE void compemu_raw_jl(uae_u32 t)
@@ -1140,8 +1145,6 @@ LENDFUNC(NONE,NONE,2,compemu_raw_endblock_pc_isconst,(IMM cycles, IMM v))
 * FPU stuff                                                             *
 *************************************************************************/
 
-#ifdef USE_JIT_FPU
-
 LOWFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 {
 	VMOV64_dd(d, s);
@@ -1153,8 +1156,13 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
   if(mem >= (uae_u32) &regs && mem < (uae_u32) &regs + 1020 && ((mem - (uae_u32) &regs) & 0x3) == 0) {
     VSTR64_dRi(s, R_REGSTRUCT, (mem - (uae_u32) &regs));
   } else {
+#ifdef ARMV6T2
     MOVW_ri16(REG_WORK1, mem);
     MOVT_ri16(REG_WORK1, mem >> 16);
+#else
+	  auto offs = data_long_offs(mem);
+	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
     VSTR64_dRi(s, REG_WORK1, 0);
   }
 }
@@ -1166,8 +1174,13 @@ LOWFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMR mem))
   if(mem >= (uae_u32) &regs && mem < (uae_u32) &regs + 1020 && ((mem - (uae_u32) &regs) & 0x3) == 0) {
     VLDR64_dRi(d, R_REGSTRUCT, (mem - (uae_u32) &regs));
   } else {
+#ifdef ARMV6T2
     MOVW_ri16(REG_WORK1, mem);
     MOVT_ri16(REG_WORK1, mem >> 16);
+#else
+	  auto offs = data_long_offs(mem);
+	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
     VLDR64_dRi(d, REG_WORK1, 0);
   }
 }
@@ -1266,16 +1279,26 @@ LENDFUNC(NONE,NONE,1,raw_fmov_d_ri_10,(FW r))
 
 LOWFUNC(NONE,READ,2,raw_fmov_d_rm,(FW r, MEMR m))
 {
+#ifdef ARMV6T2
   MOVW_ri16(REG_WORK1, m);
   MOVT_ri16(REG_WORK1, m >> 16);
+#else
+	auto offs = data_long_offs(m);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
   VLDR64_dRi(r, REG_WORK1, 0);
 }
 LENDFUNC(NONE,READ,2,raw_fmov_d_rm,(FW r, MEMR m))
 
 LOWFUNC(NONE,READ,2,raw_fmovs_rm,(FW r, MEMR m))
 {
-  MOVW_ri16(REG_WORK1, m);
-  MOVT_ri16(REG_WORK1, m >> 16);
+#ifdef ARMV6T2
+	MOVW_ri16(REG_WORK1, m);
+	MOVT_ri16(REG_WORK1, m >> 16);
+#else
+	auto offs = data_long_offs(m);
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
   VLDR32_sRi(SCRATCH_F32_1, REG_WORK1, 0);
   VCVT32to64_ds(r, SCRATCH_F32_1);
 }
@@ -1407,10 +1430,13 @@ LENDFUNC(NONE,NONE,2,raw_fmovs_rr,(FW d, FR s))
 LOWFUNC(NONE,NONE,3,raw_ffunc_rr,(double (*func)(double), FW d, FR s))
 {
 	VMOV64_dd(0, s);
-
+#ifdef ARMV6T2
   MOVW_ri16(REG_WORK1, (uae_u32)func);
   MOVT_ri16(REG_WORK1, ((uae_u32)func) >> 16);
-
+#else
+	auto offs = data_long_offs(uae_u32(func));
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 	PUSH(RLR_INDEX);
 	BLX_r(REG_WORK1);
 	POP(RLR_INDEX);
@@ -1431,8 +1457,13 @@ LOWFUNC(NONE,NONE,3,raw_fpowx_rr,(uae_u32 x, FW d, FR s))
 
 	VMOV64_dd(1, s);
 		
-  MOVW_ri16(REG_WORK1, (uae_u32)func);
-  MOVT_ri16(REG_WORK1, ((uae_u32)func) >> 16);
+#ifdef ARMV6T2
+	MOVW_ri16(REG_WORK1, (uae_u32)func);
+	MOVT_ri16(REG_WORK1, ((uae_u32)func) >> 16);
+#else
+	auto offs = data_long_offs(uae_u32(func));
+	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
 
 	PUSH(RLR_INDEX);
 	BLX_r(REG_WORK1);
@@ -1670,4 +1701,3 @@ LOWFUNC(NONE,NONE,1,raw_roundingmode,(IMM mode))
 }
 LENDFUNC(NONE,NONE,1,raw_roundingmode,(IMM mode))
 
-#endif // USE_JIT_FPU
