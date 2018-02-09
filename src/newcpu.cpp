@@ -1766,7 +1766,8 @@ void m68k_go (int may_quit)
   }
 
 #ifdef USE_JIT_FPU
-	save_host_fp_regs(fp_buffer);
+	asm volatile("vstmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
+	//save_host_fp_regs((uae_u8 *)(&fp_buffer[0]));
 #endif
 
   reset_frame_rate_hack ();
@@ -1881,7 +1882,8 @@ void m68k_go (int may_quit)
   regs.pc_oldp = NULL;
 
 #ifdef USE_JIT_FPU
-  restore_host_fp_regs(fp_buffer);
+	asm volatile("vldmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
+  //restore_host_fp_regs(fp_buffer);
 #endif
 
   in_m68k_go--;
