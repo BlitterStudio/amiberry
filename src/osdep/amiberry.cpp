@@ -963,6 +963,27 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+#ifdef USE_SDL1
+SDLKey GetKeyFromName(const char *name)
+{
+	if (!name || !*name) {
+		return SDLK_UNKNOWN;
+	}
+
+	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
+	{
+		if (!SDL_GetKeyName(SDLKey(key)))
+			continue;
+		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
+		{
+			return SDLKey(key);
+		}
+	}
+
+	return SDLK_UNKNOWN;
+}
+#endif
+
 int handle_msgpump()
 {
 	auto got = 0;
@@ -974,7 +995,9 @@ int handle_msgpump()
 	{
 		// If we have a value in the config, we use that instead
 		// SDL2-only for now
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		enter_gui_key = GetKeyFromName(currprefs.open_gui);
+#elif USE_SDL2
 		enter_gui_key = SDL_GetKeyFromName(currprefs.open_gui);
 #endif
 	}
@@ -984,8 +1007,9 @@ int handle_msgpump()
 	if (strncmp(currprefs.quit_amiberry, "", 1) != 0)
 	{
 		// If we have a value in the config, we use that instead
-		// SDL2-only for now
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		quit_key = GetKeyFromName(currprefs.quit_amiberry);
+#elif USE_SDL2
 		quit_key = SDL_GetKeyFromName(currprefs.quit_amiberry);
 #endif
 	}
@@ -994,7 +1018,9 @@ int handle_msgpump()
 	int action_replay_button = SDLK_PAUSE;
 	if (strncmp(currprefs.action_replay, "", 1) != 0)
 	{
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		action_replay_button = GetKeyFromName(currprefs.action_replay);
+#elif USE_SDL2
 		action_replay_button = SDL_GetKeyFromName(currprefs.action_replay);
 #endif
 	}
@@ -1003,7 +1029,9 @@ int handle_msgpump()
 	int fullscreen_key = 0;
 	if (strncmp(currprefs.fullscreen_toggle, "", 1) != 0)
 	{
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		fullscreen_key = GetKeyFromName(currprefs.fullscreen_toggle);
+#elif USE_SDL2
 		fullscreen_key = SDL_GetKeyFromName(currprefs.fullscreen_toggle);
 #endif
 	}
