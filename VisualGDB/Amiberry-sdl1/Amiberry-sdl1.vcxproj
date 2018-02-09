@@ -104,6 +104,8 @@
     <ClInclude Include="..\..\src\archivers\zip\unzip.h" />
     <ClInclude Include="..\..\src\blit.h" />
     <ClInclude Include="..\..\src\blitfunc.h" />
+    <ClInclude Include="..\..\src\caps\CapsAPI.h" />
+    <ClInclude Include="..\..\src\caps\Comtype.h" />
     <ClInclude Include="..\..\src\cputbl.h" />
     <ClInclude Include="..\..\src\include\akiko.h" />
     <ClInclude Include="..\..\src\include\ar.h" />
@@ -161,13 +163,17 @@
     <ClInclude Include="..\..\src\include\traps.h" />
     <ClInclude Include="..\..\src\include\uae.h" />
     <ClInclude Include="..\..\src\include\uaeresource.h" />
+    <ClInclude Include="..\..\src\include\uae\api.h" />
     <ClInclude Include="..\..\src\include\uae\attributes.h" />
+    <ClInclude Include="..\..\src\include\uae\caps.h" />
     <ClInclude Include="..\..\src\include\uae\cdrom.h" />
+    <ClInclude Include="..\..\src\include\uae\dlopen.h" />
     <ClInclude Include="..\..\src\include\uae\io.h" />
     <ClInclude Include="..\..\src\include\uae\likely.h" />
     <ClInclude Include="..\..\src\include\uae\mman.h" />
     <ClInclude Include="..\..\src\include\uae\string.h" />
     <ClInclude Include="..\..\src\include\uae\types.h" />
+    <ClInclude Include="..\..\src\include\uae\uae.h" />
     <ClInclude Include="..\..\src\include\uae\vm.h" />
     <ClInclude Include="..\..\src\include\xwin.h" />
     <ClInclude Include="..\..\src\include\zarchive.h" />
@@ -265,6 +271,7 @@
     <ClCompile Include="..\..\src\blkdev_cdimage.cpp" />
     <ClCompile Include="..\..\src\bsdsocket.cpp" />
     <ClCompile Include="..\..\src\calc.cpp" />
+    <ClCompile Include="..\..\src\caps\caps_win32.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp" />
     <ClCompile Include="..\..\src\cdrom.cpp" />
@@ -283,6 +290,7 @@
     <ClCompile Include="..\..\src\devices.cpp" />
     <ClCompile Include="..\..\src\disk.cpp" />
     <ClCompile Include="..\..\src\diskutil.cpp" />
+    <ClCompile Include="..\..\src\dlopen.cpp" />
     <ClCompile Include="..\..\src\drawing.cpp" />
     <ClCompile Include="..\..\src\events.cpp" />
     <ClCompile Include="..\..\src\expansion.cpp" />

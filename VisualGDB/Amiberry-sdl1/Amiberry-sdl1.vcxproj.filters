@@ -60,6 +60,9 @@
     <Filter Include="Source files\threaddep">
       <UniqueIdentifier>{16614409-437c-450b-a649-1a7fadd04898}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source files\caps">
+      <UniqueIdentifier>{5cef2156-ecaa-490f-8423-b3526adf4f9b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Amiberry-sdl1-Debug.vgdbsettings">
@@ -661,6 +664,24 @@
     <ClInclude Include="..\..\src\archivers\7z\CpuArch.h">
       <Filter>Source files\archivers\7z</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\dlopen.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\uae.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\caps.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\api.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\caps\CapsAPI.h">
+      <Filter>Source files\caps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\caps\Comtype.h">
+      <Filter>Source files\caps</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\filesys.asm">
@@ -997,6 +1018,12 @@
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\gui\PanelAbout.cpp">
       <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\dlopen.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\caps\caps_win32.cpp">
+      <Filter>Source files\caps</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -60,6 +60,9 @@
     <Filter Include="Source files\archivers\zip">
       <UniqueIdentifier>{08ca7b92-10d6-48f5-bc08-bc91ccc3a9d0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source files\caps">
+      <UniqueIdentifier>{0a52f580-62f7-4e5c-9275-c789d1fe0c19}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Amiberry-Debug.vgdbsettings">
@@ -598,6 +601,12 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelAbout.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\dlopen.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\caps\caps_win32.cpp">
+      <Filter>Source files\caps</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\blit.h">
@@ -989,6 +998,24 @@
     </ClInclude>
     <ClInclude Include="..\..\src\archivers\7z\CpuArch.h">
       <Filter>Source files\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\dlopen.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\uae.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\caps.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\api.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\caps\CapsAPI.h">
+      <Filter>Source files\caps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\caps\Comtype.h">
+      <Filter>Source files\caps</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

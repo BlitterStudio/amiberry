@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <VisualGDBProjectSettings2 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <ConfigurationName>Release-dispmanx</ConfigurationName>
+  <ConfigurationName>Debug-rpi1-dispmanx</ConfigurationName>
   <Project xsi:type="com.visualgdb.project.linux">
     <CustomSourceDirectories>
       <Directories />
@@ -58,7 +58,6 @@
     <ProjectFile>Amiberry.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
-      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>
@@ -68,14 +67,14 @@
     <AdditionalGDBSettings>
       <Features>
         <DisableAutoDetection>false</DisableAutoDetection>
-        <UseFrameParameter>false</UseFrameParameter>
-        <SimpleValuesFlagSupported>false</SimpleValuesFlagSupported>
-        <ListLocalsSupported>false</ListLocalsSupported>
-        <ByteLevelMemoryCommandsAvailable>false</ByteLevelMemoryCommandsAvailable>
-        <ThreadInfoSupported>false</ThreadInfoSupported>
-        <PendingBreakpointsSupported>false</PendingBreakpointsSupported>
-        <SupportTargetCommand>false</SupportTargetCommand>
-        <ReliableBreakpointNotifications>false</ReliableBreakpointNotifications>
+        <UseFrameParameter>true</UseFrameParameter>
+        <SimpleValuesFlagSupported>true</SimpleValuesFlagSupported>
+        <ListLocalsSupported>true</ListLocalsSupported>
+        <ByteLevelMemoryCommandsAvailable>true</ByteLevelMemoryCommandsAvailable>
+        <ThreadInfoSupported>true</ThreadInfoSupported>
+        <PendingBreakpointsSupported>true</PendingBreakpointsSupported>
+        <SupportTargetCommand>true</SupportTargetCommand>
+        <ReliableBreakpointNotifications>true</ReliableBreakpointNotifications>
       </Features>
       <EnableSmartStepping>false</EnableSmartStepping>
       <FilterSpuriousStoppedNotifications>false</FilterSpuriousStoppedNotifications>
@@ -91,7 +90,7 @@
       <StepIntoNewInstanceEntry>main</StepIntoNewInstanceEntry>
       <ExamineRegistersInRawFormat>true</ExamineRegistersInRawFormat>
       <DisableSignals>false</DisableSignals>
-      <EnableAsyncExecutionMode>false</EnableAsyncExecutionMode>
+      <EnableAsyncExecutionMode>true</EnableAsyncExecutionMode>
       <EnableNonStopMode>false</EnableNonStopMode>
       <MaxBreakpointLimit>0</MaxBreakpointLimit>
     </AdditionalGDBSettings>
@@ -106,7 +105,7 @@
     <KeepConsoleAfterExit>false</KeepConsoleAfterExit>
     <RunGDBUnderSudo>false</RunGDBUnderSudo>
     <DeploymentMode>Auto</DeploymentMode>
-    <LdLibraryPath />
+    <LdLibraryPath>/usr/local/lib</LdLibraryPath>
     <DeployWhenLaunchedWithoutDebugging>true</DeployWhenLaunchedWithoutDebugging>
     <SuppressTTYCreation>false</SuppressTTYCreation>
   </Debug>
@@ -147,7 +146,47 @@
       </DiscoverySettings>
     </ExtraSettings>
     <CodeAnalyzerSettings>
-      <Enabled>false</Enabled>
+      <Enabled>true</Enabled>
+      <SelectedAnalyzers>
+        <string>core.builtin.BuiltinFunctions</string>
+        <string>core.builtin.NoReturnFunctions</string>
+        <string>core.CallAndMessage</string>
+        <string>core.DivideZero</string>
+        <string>core.DynamicTypePropagation</string>
+        <string>core.NonNullParamChecker</string>
+        <string>core.NullDereference</string>
+        <string>core.StackAddressEscape</string>
+        <string>core.UndefinedBinaryOperatorResult</string>
+        <string>core.uninitialized.ArraySubscript</string>
+        <string>core.uninitialized.Assign</string>
+        <string>core.uninitialized.Branch</string>
+        <string>core.uninitialized.CapturedBlockVariable</string>
+        <string>core.uninitialized.UndefReturn</string>
+        <string>core.VLASize</string>
+        <string>cplusplus.NewDelete</string>
+        <string>cplusplus.NewDeleteLeaks</string>
+        <string>deadcode.DeadStores</string>
+        <string>nullability.NullPassedToNonnull</string>
+        <string>nullability.NullReturnedFromNonnull</string>
+        <string>security.insecureAPI.getpw</string>
+        <string>security.insecureAPI.gets</string>
+        <string>security.insecureAPI.mkstemp</string>
+        <string>security.insecureAPI.mktemp</string>
+        <string>security.insecureAPI.UncheckedReturn</string>
+        <string>security.insecureAPI.vfork</string>
+        <string>unix.API</string>
+        <string>unix.cstring.BadSizeArg</string>
+        <string>unix.cstring.NullArg</string>
+        <string>unix.Malloc</string>
+        <string>unix.MallocSizeof</string>
+        <string>unix.MismatchedDeallocator</string>
+        <string>unix.Vfork</string>
+      </SelectedAnalyzers>
+      <ExtraArguments>
+        <string>-analyzer-store=region</string>
+        <string>-analyzer-opt-analyze-nested-blocks</string>
+        <string>-analyzer-eagerly-assume</string>
+      </ExtraArguments>
     </CodeAnalyzerSettings>
   </CodeSense>
   <BuildContextDirectory>VisualGDB\VisualGDBCache</BuildContextDirectory>
