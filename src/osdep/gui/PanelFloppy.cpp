@@ -40,7 +40,7 @@ static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
-static const char *diskfile_filter[] = { ".adf", ".adz", ".fdi", ".zip", ".dms", ".gz", ".xz", "\0" };
+static const char *diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0" };
 static const char* drivespeedlist[] = {"100% (compatible)", "200%", "400%", "800%"};
 static const int drivespeedvalues[] = {100, 200, 400, 800};
 

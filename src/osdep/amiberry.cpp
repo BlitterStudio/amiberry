@@ -1088,8 +1088,7 @@ int handle_msgpump()
 			// Strangely in FBCON left window is seen as left alt ??
 			if (keyboard_type == 2) // KEYCODE_FBCON
 			{
-				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[
-					SDLK_MENU]))
+				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
 				{
 					uae_reset(0, 1);
 					break;

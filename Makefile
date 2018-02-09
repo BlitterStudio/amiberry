@@ -232,6 +232,7 @@ OBJS =	\
 	src/devices.o \
 	src/disk.o \
 	src/diskutil.o \
+	src/dlopen.o \
 	src/drawing.o \
 	src/events.o \
 	src/expansion.o \
@@ -307,6 +308,7 @@ OBJS =	\
 	src/archivers/mp2/kjmp2.o \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
+	src/caps/caps_win32.o \
 	src/machdep/support.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
