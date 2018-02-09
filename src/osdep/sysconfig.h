@@ -506,7 +506,9 @@ typedef long uae_atomic;
 #define _GCCRES_ __restrict__
 #endif
 
+#ifndef __cdecl
 #define __cdecl
+#endif
 
 #define strcmpi(x,y) strcasecmp(x,y)
 #define stricmp(x,y) strcasecmp(x,y)
