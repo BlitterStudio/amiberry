@@ -22,7 +22,6 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|VisualGDB = Debug|VisualGDB
 		Debug-dispmanx|VisualGDB = Debug-dispmanx|VisualGDB
-		Debug-rpi1-dispmanx|VisualGDB = Debug-rpi1-dispmanx|VisualGDB
 		Release|VisualGDB = Release|VisualGDB
 		Release-dispmanx|VisualGDB = Release-dispmanx|VisualGDB
 	EndGlobalSection
@@ -31,8 +30,6 @@ Global
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug-dispmanx|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-dispmanx|VisualGDB.Build.0 = Debug-dispmanx|VisualGDB
-		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-rpi1-dispmanx|VisualGDB.ActiveCfg = Debug-rpi1-dispmanx|VisualGDB
-		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Debug-rpi1-dispmanx|VisualGDB.Build.0 = Debug-rpi1-dispmanx|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release|VisualGDB.Build.0 = Release|VisualGDB
 		{FDC6BF55-C4BC-44FB-85A9-3369784716E8}.Release-dispmanx|VisualGDB.ActiveCfg = Release-dispmanx|VisualGDB
@@ -41,8 +38,6 @@ Global
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
-		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-rpi1-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
-		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Debug-rpi1-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release|VisualGDB.Build.0 = Release|VisualGDB
 		{E613050D-EE8C-4ED1-936D-EB9E0E155EA6}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
@@ -51,8 +46,6 @@ Global
 		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
 		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
 		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
-		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug-rpi1-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
-		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Debug-rpi1-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
 		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Release|VisualGDB.Build.0 = Release|VisualGDB
 		{14635D01-67B8-4863-9507-3FA5C8FB4B32}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
@@ -61,8 +54,6 @@ Global
 		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
 		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
 		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
-		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug-rpi1-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
-		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Debug-rpi1-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
 		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Release|VisualGDB.Build.0 = Release|VisualGDB
 		{619EFB8C-E41A-4058-B085-1B8CD22692DD}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
@@ -71,8 +62,6 @@ Global
 		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
 		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
 		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
-		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug-rpi1-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
-		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Debug-rpi1-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
 		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Release|VisualGDB.Build.0 = Release|VisualGDB
 		{883F2A00-8030-429B-AC7F-E930DDF9568F}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
@@ -81,8 +70,6 @@ Global
 		{740C6C27-4C85-4927-A508-49116A0D36F9}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
 		{740C6C27-4C85-4927-A508-49116A0D36F9}.Debug-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
 		{740C6C27-4C85-4927-A508-49116A0D36F9}.Debug-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
-		{740C6C27-4C85-4927-A508-49116A0D36F9}.Debug-rpi1-dispmanx|VisualGDB.ActiveCfg = Debug|VisualGDB
-		{740C6C27-4C85-4927-A508-49116A0D36F9}.Debug-rpi1-dispmanx|VisualGDB.Build.0 = Debug|VisualGDB
 		{740C6C27-4C85-4927-A508-49116A0D36F9}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
 		{740C6C27-4C85-4927-A508-49116A0D36F9}.Release|VisualGDB.Build.0 = Release|VisualGDB
 		{740C6C27-4C85-4927-A508-49116A0D36F9}.Release-dispmanx|VisualGDB.ActiveCfg = Release|VisualGDB
