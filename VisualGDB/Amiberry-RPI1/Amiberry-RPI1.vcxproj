@@ -1,0 +1,390 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|VisualGDB">
+      <Configuration>Debug</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|VisualGDB">
+      <Configuration>Release</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{740C6C27-4C85-4927-A508-49116A0D36F9}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <GNUConfigurationType>Debug</GNUConfigurationType>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <TargetName>$(ProjectName)-sdl2</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <ClCompile>
+      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>=/usr/local/lib;../../src/guisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <ClCompile>
+      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../src/guisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>=/usr/local/lib;../../src/guisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\akiko.cpp" />
+    <ClCompile Include="..\..\src\ar.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zAlloc.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zBuf.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zBuf2.c" />
+    <ClCompile Include="..\..\src\archivers\7z\7zCrc.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zCrcOpt.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zDec.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zFile.c" />
+    <ClCompile Include="..\..\src\archivers\7z\7zIn.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\7zStream.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Alloc.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Bcj2.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Bra.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Bra86.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\BraIA64.c" />
+    <ClCompile Include="..\..\src\archivers\7z\CpuArch.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Delta.c" />
+    <ClCompile Include="..\..\src\archivers\7z\LzFind.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Lzma2Dec.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Lzma86Enc.c" />
+    <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\LzmaLib.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Sha256.c" />
+    <ClCompile Include="..\..\src\archivers\7z\Xz.cpp" />
+    <ClCompile Include="..\..\src\archivers\7z\XzCrc64.c" />
+    <ClCompile Include="..\..\src\archivers\7z\XzDec.c" />
+    <ClCompile Include="..\..\src\archivers\7z\XzIn.c" />
+    <ClCompile Include="..\..\src\archivers\dms\crc_csum.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\getbits.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\maketbl.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\pfile.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\tables.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\u_deep.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\u_heavy.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\u_init.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\u_medium.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\u_quick.cpp" />
+    <ClCompile Include="..\..\src\archivers\dms\u_rle.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\crcio.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\dhuf.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\header.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\huf.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\larc.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\lhamaketbl.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\lharc.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\shuf.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\slide.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\uae_lha.cpp" />
+    <ClCompile Include="..\..\src\archivers\lha\util.cpp" />
+    <ClCompile Include="..\..\src\archivers\lzx\unlzx.cpp" />
+    <ClCompile Include="..\..\src\archivers\mp2\kjmp2.cpp" />
+    <ClCompile Include="..\..\src\archivers\wrp\warp.cpp" />
+    <ClCompile Include="..\..\src\archivers\zip\unzip.cpp" />
+    <ClCompile Include="..\..\src\aros.rom.cpp" />
+    <ClCompile Include="..\..\src\audio.cpp" />
+    <ClCompile Include="..\..\src\autoconf.cpp" />
+    <ClCompile Include="..\..\src\blitfunc.cpp" />
+    <ClCompile Include="..\..\src\blittable.cpp" />
+    <ClCompile Include="..\..\src\blitter.cpp" />
+    <ClCompile Include="..\..\src\blkdev.cpp" />
+    <ClCompile Include="..\..\src\blkdev_cdimage.cpp" />
+    <ClCompile Include="..\..\src\bsdsocket.cpp" />
+    <ClCompile Include="..\..\src\calc.cpp" />
+    <ClCompile Include="..\..\src\caps\caps_win32.cpp" />
+    <ClCompile Include="..\..\src\cd32_fmv.cpp" />
+    <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp" />
+    <ClCompile Include="..\..\src\cdrom.cpp" />
+    <ClCompile Include="..\..\src\cfgfile.cpp" />
+    <ClCompile Include="..\..\src\cia.cpp" />
+    <ClCompile Include="..\..\src\cpudefs.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_0.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_11.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_4.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_40.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_44.cpp" />
+    <ClCompile Include="..\..\src\cpustbl.cpp" />
+    <ClCompile Include="..\..\src\crc32.cpp" />
+    <ClCompile Include="..\..\src\custom.cpp" />
+    <ClCompile Include="..\..\src\def_icons.cpp" />
+    <ClCompile Include="..\..\src\devices.cpp" />
+    <ClCompile Include="..\..\src\disk.cpp" />
+    <ClCompile Include="..\..\src\diskutil.cpp" />
+    <ClCompile Include="..\..\src\dlopen.cpp" />
+    <ClCompile Include="..\..\src\drawing.cpp" />
+    <ClCompile Include="..\..\src\events.cpp" />
+    <ClCompile Include="..\..\src\expansion.cpp" />
+    <ClCompile Include="..\..\src\fdi2raw.cpp" />
+    <ClCompile Include="..\..\src\filesys.cpp" />
+    <ClCompile Include="..\..\src\flashrom.cpp" />
+    <ClCompile Include="..\..\src\fpp.cpp" />
+    <ClCompile Include="..\..\src\fsdb.cpp" />
+    <ClCompile Include="..\..\src\fsdb_unix.cpp" />
+    <ClCompile Include="..\..\src\fsusage.cpp" />
+    <ClCompile Include="..\..\src\gayle.cpp" />
+    <ClCompile Include="..\..\src\gfxboard.cpp" />
+    <ClCompile Include="..\..\src\gfxutil.cpp" />
+    <ClCompile Include="..\..\src\hardfile.cpp" />
+    <ClCompile Include="..\..\src\hrtmon.rom.cpp" />
+    <ClCompile Include="..\..\src\ide.cpp" />
+    <ClCompile Include="..\..\src\inputdevice.cpp" />
+    <ClCompile Include="..\..\src\jit\compemu.cpp" />
+    <ClCompile Include="..\..\src\jit\compemu_fpp.cpp" />
+    <ClCompile Include="..\..\src\jit\compemu_support.cpp" />
+    <ClCompile Include="..\..\src\jit\compstbl.cpp" />
+    <ClCompile Include="..\..\src\keybuf.cpp" />
+    <ClCompile Include="..\..\src\machdep\support.cpp" />
+    <ClCompile Include="..\..\src\main.cpp" />
+    <ClCompile Include="..\..\src\memory.cpp" />
+    <ClCompile Include="..\..\src\native2amiga.cpp" />
+    <ClCompile Include="..\..\src\newcpu.cpp" />
+    <ClCompile Include="..\..\src\newcpu_common.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_filesys.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_gfx.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_gui.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_hardfile.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_input.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_mem.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_rp9.cpp" />
+    <ClCompile Include="..\..\src\osdep\arm_helper.s" />
+    <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
+    <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
+    <ClCompile Include="..\..\src\osdep\charset.cpp" />
+    <ClCompile Include="..\..\src\osdep\fsdb_host.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\CreateFilesysHardfile.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\EditFilesysHardfile.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\EditFilesysVirtual.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\InGameMessage.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\main_window.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\Navigation.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelAbout.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelChipset.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelConfig.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelCPU.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelCustom.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelDisplay.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelFloppy.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelHD.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelSavestate.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelSound.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\SelectFolder.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\SelectorEntry.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeCheckBox.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp" />
+    <ClCompile Include="..\..\src\osdep\keyboard.cpp" />
+    <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
+    <ClCompile Include="..\..\src\osdep\picasso96.cpp" />
+    <ClCompile Include="..\..\src\osdep\sigsegv_handler.cpp" />
+    <ClCompile Include="..\..\src\osdep\writelog.cpp" />
+    <ClCompile Include="..\..\src\readcpu.cpp" />
+    <ClCompile Include="..\..\src\rommgr.cpp" />
+    <ClCompile Include="..\..\src\rtc.cpp" />
+    <ClCompile Include="..\..\src\savestate.cpp" />
+    <ClCompile Include="..\..\src\scsi.cpp" />
+    <ClCompile Include="..\..\src\sounddep\sound.cpp" />
+    <ClCompile Include="..\..\src\statusline.cpp" />
+    <ClCompile Include="..\..\src\traps.cpp" />
+    <ClCompile Include="..\..\src\uaelib.cpp" />
+    <ClCompile Include="..\..\src\uaeresource.cpp" />
+    <ClCompile Include="..\..\src\zfile.cpp" />
+    <ClCompile Include="..\..\src\zfile_archive.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ItemGroup>
+    <None Include="..\..\src\aks.def" />
+    <None Include="..\..\src\filesys.asm" />
+    <None Include="..\..\src\inputevents.def" />
+    <None Include="Amiberry-RPI1-Debug.vgdbsettings" />
+    <None Include="Amiberry-RPI1-Release.vgdbsettings" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\archivers\7z\7z.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zAlloc.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zBuf.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zCrc.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zFile.h" />
+    <ClInclude Include="..\..\src\archivers\7z\7zVersion.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Alloc.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Bcj2.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Bra.h" />
+    <ClInclude Include="..\..\src\archivers\7z\CpuArch.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Delta.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzFind.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzHash.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Lzma2Dec.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Lzma86.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzmaDec.h" />
+    <ClInclude Include="..\..\src\archivers\7z\LzmaLib.h" />
+    <ClInclude Include="..\..\src\archivers\7z\RotateDefs.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Sha256.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Types.h" />
+    <ClInclude Include="..\..\src\archivers\7z\Xz.h" />
+    <ClInclude Include="..\..\src\archivers\7z\XzCrc64.h" />
+    <ClInclude Include="..\..\src\archivers\dms\cdata.h" />
+    <ClInclude Include="..\..\src\archivers\dms\crc_csum.h" />
+    <ClInclude Include="..\..\src\archivers\dms\getbits.h" />
+    <ClInclude Include="..\..\src\archivers\dms\maketbl.h" />
+    <ClInclude Include="..\..\src\archivers\dms\pfile.h" />
+    <ClInclude Include="..\..\src\archivers\dms\tables.h" />
+    <ClInclude Include="..\..\src\archivers\dms\u_deep.h" />
+    <ClInclude Include="..\..\src\archivers\dms\u_heavy.h" />
+    <ClInclude Include="..\..\src\archivers\dms\u_init.h" />
+    <ClInclude Include="..\..\src\archivers\dms\u_medium.h" />
+    <ClInclude Include="..\..\src\archivers\dms\u_quick.h" />
+    <ClInclude Include="..\..\src\archivers\dms\u_rle.h" />
+    <ClInclude Include="..\..\src\archivers\lha\lha.h" />
+    <ClInclude Include="..\..\src\archivers\lha\lha_macro.h" />
+    <ClInclude Include="..\..\src\archivers\mp2\kjmp2.h" />
+    <ClInclude Include="..\..\src\archivers\wrp\warp.h" />
+    <ClInclude Include="..\..\src\archivers\zip\unzip.h" />
+    <ClInclude Include="..\..\src\blit.h" />
+    <ClInclude Include="..\..\src\blitfunc.h" />
+    <ClInclude Include="..\..\src\caps\CapsAPI.h" />
+    <ClInclude Include="..\..\src\caps\Comtype.h" />
+    <ClInclude Include="..\..\src\cputbl.h" />
+    <ClInclude Include="..\..\src\include\akiko.h" />
+    <ClInclude Include="..\..\src\include\ar.h" />
+    <ClInclude Include="..\..\src\include\audio.h" />
+    <ClInclude Include="..\..\src\include\autoconf.h" />
+    <ClInclude Include="..\..\src\include\blitter.h" />
+    <ClInclude Include="..\..\src\include\blkdev.h" />
+    <ClInclude Include="..\..\src\include\bsdsocket.h" />
+    <ClInclude Include="..\..\src\include\calc.h" />
+    <ClInclude Include="..\..\src\include\cd32_fmv.h" />
+    <ClInclude Include="..\..\src\include\cia.h" />
+    <ClInclude Include="..\..\src\include\commpipe.h" />
+    <ClInclude Include="..\..\src\include\cpummu.h" />
+    <ClInclude Include="..\..\src\include\cpu_prefetch.h" />
+    <ClInclude Include="..\..\src\include\crc32.h" />
+    <ClInclude Include="..\..\src\include\custom.h" />
+    <ClInclude Include="..\..\src\include\devices.h" />
+    <ClInclude Include="..\..\src\include\disk.h" />
+    <ClInclude Include="..\..\src\include\diskutil.h" />
+    <ClInclude Include="..\..\src\include\drawing.h" />
+    <ClInclude Include="..\..\src\include\events.h" />
+    <ClInclude Include="..\..\src\include\execio.h" />
+    <ClInclude Include="..\..\src\include\execlib.h" />
+    <ClInclude Include="..\..\src\include\fdi2raw.h" />
+    <ClInclude Include="..\..\src\include\filesys.h" />
+    <ClInclude Include="..\..\src\include\flags_arm.h" />
+    <ClInclude Include="..\..\src\include\flashrom.h" />
+    <ClInclude Include="..\..\src\include\fpp.h" />
+    <ClInclude Include="..\..\src\include\fsdb.h" />
+    <ClInclude Include="..\..\src\include\fsusage.h" />
+    <ClInclude Include="..\..\src\include\gayle.h" />
+    <ClInclude Include="..\..\src\include\genblitter.h" />
+    <ClInclude Include="..\..\src\include\gensound.h" />
+    <ClInclude Include="..\..\src\include\gfxboard.h" />
+    <ClInclude Include="..\..\src\include\gui.h" />
+    <ClInclude Include="..\..\src\include\ide.h" />
+    <ClInclude Include="..\..\src\include\inputdevice.h" />
+    <ClInclude Include="..\..\src\include\keyboard.h" />
+    <ClInclude Include="..\..\src\include\keybuf.h" />
+    <ClInclude Include="..\..\src\include\mackbd.h" />
+    <ClInclude Include="..\..\src\include\memory.h" />
+    <ClInclude Include="..\..\src\include\mmu_common.h" />
+    <ClInclude Include="..\..\src\include\native2amiga.h" />
+    <ClInclude Include="..\..\src\include\native2amiga_api.h" />
+    <ClInclude Include="..\..\src\include\newcpu.h" />
+    <ClInclude Include="..\..\src\include\options.h" />
+    <ClInclude Include="..\..\src\include\readcpu.h" />
+    <ClInclude Include="..\..\src\include\rommgr.h" />
+    <ClInclude Include="..\..\src\include\rtc.h" />
+    <ClInclude Include="..\..\src\include\rtgmodes.h" />
+    <ClInclude Include="..\..\src\include\savestate.h" />
+    <ClInclude Include="..\..\src\include\scsi.h" />
+    <ClInclude Include="..\..\src\include\statusline.h" />
+    <ClInclude Include="..\..\src\include\sysdeps.h" />
+    <ClInclude Include="..\..\src\include\traps.h" />
+    <ClInclude Include="..\..\src\include\uae.h" />
+    <ClInclude Include="..\..\src\include\uaeresource.h" />
+    <ClInclude Include="..\..\src\include\uae\api.h" />
+    <ClInclude Include="..\..\src\include\uae\attributes.h" />
+    <ClInclude Include="..\..\src\include\uae\caps.h" />
+    <ClInclude Include="..\..\src\include\uae\cdrom.h" />
+    <ClInclude Include="..\..\src\include\uae\dlopen.h" />
+    <ClInclude Include="..\..\src\include\uae\io.h" />
+    <ClInclude Include="..\..\src\include\uae\likely.h" />
+    <ClInclude Include="..\..\src\include\uae\mman.h" />
+    <ClInclude Include="..\..\src\include\uae\string.h" />
+    <ClInclude Include="..\..\src\include\uae\types.h" />
+    <ClInclude Include="..\..\src\include\uae\uae.h" />
+    <ClInclude Include="..\..\src\include\uae\vm.h" />
+    <ClInclude Include="..\..\src\include\xwin.h" />
+    <ClInclude Include="..\..\src\include\zarchive.h" />
+    <ClInclude Include="..\..\src\include\zfile.h" />
+    <ClInclude Include="..\..\src\jit\compemu.h" />
+    <ClInclude Include="..\..\src\jit\comptbl.h" />
+    <ClInclude Include="..\..\src\machdep\m68k.h" />
+    <ClInclude Include="..\..\src\machdep\maccess.h" />
+    <ClInclude Include="..\..\src\machdep\rpt.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
+    <ClInclude Include="..\..\src\osdep\cda_play.h" />
+    <ClInclude Include="..\..\src\osdep\config.h" />
+    <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />
+    <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeCheckBox.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeDropDown.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp" />
+    <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp" />
+    <ClInclude Include="..\..\src\osdep\mp3decoder.h" />
+    <ClInclude Include="..\..\src\osdep\picasso96.h" />
+    <ClInclude Include="..\..\src\osdep\sysconfig.h" />
+    <ClInclude Include="..\..\src\osdep\target.h" />
+    <ClInclude Include="..\..\src\sounddep\sound.h" />
+    <ClInclude Include="..\..\src\threaddep\thread.h" />
+  </ItemGroup>
+</Project>

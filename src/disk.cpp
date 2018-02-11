@@ -30,6 +30,9 @@
 #ifdef FDI2RAW
 #include "fdi2raw.h"
 #endif
+#ifdef CAPS
+#include "uae/caps.h"
+#endif
 #include "crc32.h"
 #include "fsdb.h"
 #include "rommgr.h"
@@ -129,57 +132,62 @@ typedef struct {
 #define DRIVE_ID_35HD  0xAAAAAAAA
 #define DRIVE_ID_525SD 0x55555555 /* 40 track 5.25 drive , kickstart does not recognize this */
 
-typedef enum { ADF_NONE = -1, ADF_NORMAL, ADF_EXT1, ADF_EXT2, ADF_FDI, ADF_PCDOS, ADF_KICK, ADF_SKICK } drive_filetype;
+typedef enum { ADF_NONE = -1, ADF_NORMAL, ADF_EXT1, ADF_EXT2, ADF_FDI, ADF_IPF, ADF_SCP, ADF_CATWEASEL, ADF_PCDOS, ADF_KICK, ADF_SKICK } drive_filetype;
 typedef struct {
-  struct zfile *diskfile;
-  struct zfile *writediskfile;
+	struct zfile *diskfile;
+	struct zfile *writediskfile;
 	struct zfile *pcdecodedfile;
-  drive_filetype filetype;
-  trackid trackdata[MAX_TRACKS];
-  trackid writetrackdata[MAX_TRACKS];
-  int buffered_cyl, buffered_side;
-  int cyl;
-  bool motoroff;
-  int motordelay; /* dskrdy needs some clock cycles before it changes after switching off motor */
-  bool state;
+	drive_filetype filetype;
+	trackid trackdata[MAX_TRACKS];
+	trackid writetrackdata[MAX_TRACKS];
+	int buffered_cyl, buffered_side;
+	int cyl;
+	bool motoroff;
+	int motordelay; /* dskrdy needs some clock cycles before it changes after switching off motor */
+	bool state;
 	int selected_delay;
-  bool wrprot;
+	bool wrprot;
 	bool forcedwrprot;
-  uae_u16 bigmfmbuf[0x4000 * DDHDMULT];
-  uae_u16 tracktiming[0x4000 * DDHDMULT];
-  int multi_revolution;
+	uae_u16 bigmfmbuf[0x4000 * DDHDMULT];
+	uae_u16 tracktiming[0x4000 * DDHDMULT];
+	int multi_revolution;
 	int revolution_check;
-  int skipoffset;
-  int mfmpos;
-  int indexoffset;
-  int tracklen;
-  int revolutions;
-  int prevtracklen;
-  int trackspeed;
+	int skipoffset;
+	int mfmpos;
+	int indexoffset;
+	int tracklen;
+	int revolutions;
+	int prevtracklen;
+	int trackspeed;
 	int num_tracks, write_num_tracks, num_secs, num_heads;
-  int hard_num_cyls;
+	int hard_num_cyls;
 	bool dskeject;
-  bool dskchange;
-  int dskchange_time;
-  bool dskready;
-  int dskready_up_time;
-  int dskready_down_time;
-  int writtento;
-  int steplimit;
-  frame_time_t steplimitcycle;
-  int indexhack, indexhackmode;
-  int ddhd; /* 1=DD 2=HD */
-  int drive_id_scnt; /* drive id shift counter */
-  int idbit;
-  unsigned long drive_id; /* drive id to be reported */
-  TCHAR newname[256]; /* storage space for new filename during eject delay */
+	bool dskchange;
+	int dskchange_time;
+	bool dskready;
+	int dskready_up_time;
+	int dskready_down_time;
+	int writtento;
+	int steplimit;
+	frame_time_t steplimitcycle;
+	int indexhack, indexhackmode;
+	int ddhd; /* 1=DD 2=HD */
+	int drive_id_scnt; /* drive id shift counter */
+	int idbit;
+	unsigned long drive_id; /* drive id to be reported */
+	TCHAR newname[256]; /* storage space for new filename during eject delay */
 	bool newnamewriteprotected;
-  uae_u32 crc32;
+	uae_u32 crc32;
 #ifdef FDI2RAW
 	FDI *fdi;
 #endif
-  int useturbo;
-  int floppybitcounter; /* number of bits left */
+	int useturbo;
+	int floppybitcounter; /* number of bits left */
+#ifdef CAPS
+	int lastdataacesstrack;
+	int lastrev;
+	bool track_access_done;
+#endif
 } drive;
 
 #define MIN_STEPLIMIT_CYCLE (CYCLE_UNIT * 140)
@@ -577,21 +585,26 @@ static void drive_settype_id (drive *drv)
   }
 }
 
-static void drive_image_free (drive *drv)
+static void drive_image_free(drive *drv)
 {
 	switch (drv->filetype)
 	{
-  	case ADF_FDI:
-#ifdef FDI2RAW
-		  fdi2raw_header_free (drv->fdi);
-		  drv->fdi = 0;
+	case ADF_IPF:
+#ifdef CAPS
+		caps_unloadimage(drv - floppy);
 #endif
-  		break;
-  }
-  drv->filetype = ADF_NONE;
-  zfile_fclose (drv->diskfile);
+		break;
+	case ADF_FDI:
+#ifdef FDI2RAW
+		fdi2raw_header_free(drv->fdi);
+		drv->fdi = 0;
+#endif
+		break;
+	}
+	drv->filetype = ADF_NONE;
+	zfile_fclose(drv->diskfile);
 	drv->diskfile = NULL;
-  zfile_fclose (drv->writediskfile);
+	zfile_fclose(drv->writediskfile);
 	drv->writediskfile = NULL;
 	zfile_fclose(drv->pcdecodedfile);
 	drv->pcdecodedfile = NULL;
@@ -936,43 +949,47 @@ static int openwritefile (struct uae_prefs *p, drive *drv, int create)
   return drv->writediskfile ? 1 : 0;
 }
 
-static bool diskfile_iswriteprotect (struct uae_prefs *p, const TCHAR *fname, int *needwritefile, drive_type *drvtype)
+static bool diskfile_iswriteprotect(struct uae_prefs *p, const TCHAR *fname, int *needwritefile, drive_type *drvtype)
 {
-  struct zfile *zf1, *zf2;
-  bool wrprot1 = 0, wrprot2 = 1;
-  uae_char buffer[25];
-  
-  *needwritefile = 0;
-  *drvtype = DRV_35_DD;
-  DISK_validate_filename (p, fname, 1, &wrprot1, NULL, &zf1);
-  if (!zf1) 
-    return 1;
-  if (zfile_iscompressed (zf1)) {
-    wrprot1 = 1;
-    *needwritefile = 1;
-  }
+	struct zfile *zf1, *zf2;
+	bool wrprot1 = 0, wrprot2 = 1;
+	uae_char buffer[25];
+
+	*needwritefile = 0;
+	*drvtype = DRV_35_DD;
+	DISK_validate_filename(p, fname, 1, &wrprot1, NULL, &zf1);
+	if (!zf1)
+		return 1;
+	if (zfile_iscompressed(zf1)) {
+		wrprot1 = 1;
+		*needwritefile = 1;
+	}
 	zf2 = getexistingwritefile(p, fname, &wrprot2);
-  zfile_fclose (zf2);
-  zfile_fread (buffer, sizeof (char), 25, zf1);
-  zfile_fclose (zf1);
-  if (strncmp ((uae_char *) buffer, "Formatted Disk Image file", 25) == 0) {
-	  *needwritefile = 1;
-	  return wrprot2;
-  }
-  if (strncmp ((uae_char *) buffer, "UAE-1ADF", 8) == 0) {
-	  if (wrprot1)
-	    return wrprot2;
-	  return wrprot1;
-  }
-  if (strncmp ((uae_char *) buffer, "UAE--ADF", 8) == 0) {
-	  *needwritefile = 1;
-	  return wrprot2;
-  }
-  if (memcmp (exeheader, buffer, sizeof exeheader) == 0)
-  	return 0;
-  if (wrprot1)
-    return wrprot2;
-  return wrprot1;
+	zfile_fclose(zf2);
+	zfile_fread(buffer, sizeof(char), 25, zf1);
+	zfile_fclose(zf1);
+	if (strncmp((uae_char*)buffer, "CAPS", 4) == 0) {
+		*needwritefile = 1;
+		return wrprot2;
+	}
+	if (strncmp((uae_char *)buffer, "Formatted Disk Image file", 25) == 0) {
+		*needwritefile = 1;
+		return wrprot2;
+	}
+	if (strncmp((uae_char *)buffer, "UAE-1ADF", 8) == 0) {
+		if (wrprot1)
+			return wrprot2;
+		return wrprot1;
+	}
+	if (strncmp((uae_char *)buffer, "UAE--ADF", 8) == 0) {
+		*needwritefile = 1;
+		return wrprot2;
+	}
+	if (memcmp(exeheader, buffer, sizeof exeheader) == 0)
+		return 0;
+	if (wrprot1)
+		return wrprot2;
+	return wrprot1;
 }
 
 static bool isrecognizedext (const TCHAR *name)
@@ -986,11 +1003,11 @@ static bool isrecognizedext (const TCHAR *name)
 	return false;
 }
 
-static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR *fname, bool fake, bool forcedwriteprotect)
+static int drive_insert(drive * drv, struct uae_prefs *p, int dnum, const TCHAR *fname, bool fake, bool forcedwriteprotect)
 {
-  uae_u8 buffer[2 + 2 + 4 + 4];
-  trackid *tid;
-  int size;
+	uae_u8 buffer[2 + 2 + 4 + 4];
+	trackid *tid;
+	int num_tracks, size;
 	int canauto;
 
   drive_image_free (drv);
@@ -1054,7 +1071,18 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 		canauto = 1;
 
 	if (0) {
-
+#ifdef CAPS
+	}
+	else if (strncmp((char*)buffer, "CAPS", 4) == 0) {
+			drv->wrprot = false;
+		if (!caps_loadimage(drv->diskfile, drv - floppy, &num_tracks)) {
+			zfile_fclose(drv->diskfile);
+			drv->diskfile = 0;
+			return 0;
+		}
+		drv->num_tracks = num_tracks;
+		drv->filetype = ADF_IPF;
+#endif
 #ifdef FDI2RAW
 	} else if ((drv->fdi = fdi2raw_header (drv->diskfile))) {
 
@@ -1714,80 +1742,94 @@ static void decode_diskspare (drive *drv)
   }
 }
 
-static void drive_fill_bigbuf (drive * drv, int force)
+static void drive_fill_bigbuf(drive * drv, int force)
 {
-  int tr = drv->cyl * 2 + side;
-  trackid *ti = drv->trackdata + tr;
+	int tr = drv->cyl * 2 + side;
+	trackid *ti = drv->trackdata + tr;
+	bool retrytrack;
 	int rev = -1;
 
 	if ((!drv->diskfile) || tr >= drv->num_tracks) {
-  	track_reset (drv);
-  	return;
-  }
-  
-  if (!force && drv->buffered_cyl == drv->cyl && drv->buffered_side == side)
-  	return;
-  drv->indexoffset = 0;
-  drv->multi_revolution = 0;
-  drv->tracktiming[0] = 0;
-  drv->skipoffset = -1;
-  drv->revolutions = 1;
+		track_reset(drv);
+		return;
+	}
 
-  if (drv->writediskfile && drv->writetrackdata[tr].bitlen > 0) {
-	  int i;
-	  trackid *wti = &drv->writetrackdata[tr];
-	  drv->tracklen = wti->bitlen;
-	  drv->revolutions = wti->revolutions;
-		read_floppy_data (drv->writediskfile, drv->filetype, wti, 0, (uae_u8*)drv->bigmfmbuf, (wti->bitlen + 7) / 8);
-	  for (i = 0; i < (drv->tracklen + 15) / 16; i++) {
-	    uae_u16 *mfm = drv->bigmfmbuf + i;
-	    uae_u8 *data = (uae_u8 *) mfm;
-	    *mfm = 256 * *data + *(data + 1);
-	  }
+	if (!force && drv->buffered_cyl == drv->cyl && drv->buffered_side == side)
+		return;
+	drv->indexoffset = 0;
+	drv->multi_revolution = 0;
+	drv->tracktiming[0] = 0;
+	drv->skipoffset = -1;
+	drv->revolutions = 1;
 
-	} else if (drv->filetype == ADF_FDI) {
+	retrytrack = drv->lastdataacesstrack == drv->cyl * 2 + side;
+	if (!dskdmaen && !retrytrack)
+		drv->track_access_done = false;
+
+	if (drv->writediskfile && drv->writetrackdata[tr].bitlen > 0) {
+		int i;
+		trackid *wti = &drv->writetrackdata[tr];
+		drv->tracklen = wti->bitlen;
+		drv->revolutions = wti->revolutions;
+		read_floppy_data(drv->writediskfile, drv->filetype, wti, 0, (uae_u8*)drv->bigmfmbuf, (wti->bitlen + 7) / 8);
+		for (i = 0; i < (drv->tracklen + 15) / 16; i++) {
+			uae_u16 *mfm = drv->bigmfmbuf + i;
+			uae_u8 *data = (uae_u8 *)mfm;
+			*mfm = 256 * *data + *(data + 1);
+		}
+	} else if (drv->filetype == ADF_IPF) {
+#ifdef CAPS
+		caps_loadtrack(drv->bigmfmbuf, drv->tracktiming, drv - floppy, tr, &drv->tracklen, &drv->multi_revolution, &drv->skipoffset, &drv->lastrev, retrytrack);
+#endif
+	}
+	else if (drv->filetype == ADF_FDI) {
 
 #ifdef FDI2RAW
-		fdi2raw_loadtrack (drv->fdi, drv->bigmfmbuf, drv->tracktiming, tr, &drv->tracklen, &drv->indexoffset, &drv->multi_revolution, 1);
+		fdi2raw_loadtrack(drv->fdi, drv->bigmfmbuf, drv->tracktiming, tr, &drv->tracklen, &drv->indexoffset, &drv->multi_revolution, 1);
 #endif
 
-  } else if (ti->type == TRACK_PCDOS) {
+	}
+	else if (ti->type == TRACK_PCDOS) {
 
-	  decode_pcdos(drv);
+		decode_pcdos(drv);
 
-  } else if (ti->type == TRACK_AMIGADOS) {
+	}
+	else if (ti->type == TRACK_AMIGADOS) {
 
-  	decode_amigados(drv);
+		decode_amigados(drv);
 
-  } else if (ti->type == TRACK_DISKSPARE) {
+	}
+	else if (ti->type == TRACK_DISKSPARE) {
 
-  	decode_diskspare (drv);
+		decode_diskspare(drv);
 
-	} else if (ti->type == TRACK_NONE) {
+	}
+	else if (ti->type == TRACK_NONE) {
 
-	;
+		;
 
-  } else {
-	  int i;
-	  int base_offset = ti->type == TRACK_RAW ? 0 : 1;
-	  drv->tracklen = ti->bitlen + 16 * base_offset;
-	  drv->bigmfmbuf[0] = ti->sync;
-		read_floppy_data (drv->diskfile, drv->filetype, ti, 0, (uae_u8*)(drv->bigmfmbuf + base_offset), (ti->bitlen + 7) / 8);
-	  for (i = base_offset; i < (drv->tracklen + 15) / 16; i++) {
-	    uae_u16 *mfm = drv->bigmfmbuf + i;
-	    uae_u8 *data = (uae_u8 *) mfm;
-	    *mfm = 256 * *data + *(data + 1);
-  	}
-  }
-  drv->buffered_side = side;
-  drv->buffered_cyl = drv->cyl;
-  if (drv->tracklen == 0) {
-  	drv->tracklen = FLOPPY_WRITE_LEN * drv->ddhd * 2 * 8;
-    memset (drv->bigmfmbuf, 0, FLOPPY_WRITE_LEN * 2 * drv->ddhd);
-  }
+	}
+	else {
+		int i;
+		int base_offset = ti->type == TRACK_RAW ? 0 : 1;
+		drv->tracklen = ti->bitlen + 16 * base_offset;
+		drv->bigmfmbuf[0] = ti->sync;
+		read_floppy_data(drv->diskfile, drv->filetype, ti, 0, (uae_u8*)(drv->bigmfmbuf + base_offset), (ti->bitlen + 7) / 8);
+		for (i = base_offset; i < (drv->tracklen + 15) / 16; i++) {
+			uae_u16 *mfm = drv->bigmfmbuf + i;
+			uae_u8 *data = (uae_u8 *)mfm;
+			*mfm = 256 * *data + *(data + 1);
+		}
+	}
+	drv->buffered_side = side;
+	drv->buffered_cyl = drv->cyl;
+	if (drv->tracklen == 0) {
+		drv->tracklen = FLOPPY_WRITE_LEN * drv->ddhd * 2 * 8;
+		memset(drv->bigmfmbuf, 0, FLOPPY_WRITE_LEN * 2 * drv->ddhd);
+	}
 
-  drv->trackspeed = get_floppy_speed2 (drv);
-  updatemfmpos (drv);
+	drv->trackspeed = get_floppy_speed2(drv);
+	updatemfmpos(drv);
 }
 
 /* Update ADF_EXT2 track header */
@@ -2783,21 +2825,26 @@ static void disk_dmafinished (void)
 	dsklen = 0;
 }
 
-static void fetchnextrevolution (drive *drv)
+static void fetchnextrevolution(drive *drv)
 {
 	if (drv->revolution_check)
 		return;
-  drv->trackspeed = get_floppy_speed2 (drv);
+	drv->trackspeed = get_floppy_speed2(drv);
 	drv->revolution_check = 2;
-  if (!drv->multi_revolution)
-  	return;
+	if (!drv->multi_revolution)
+		return;
 	switch (drv->filetype)
 	{
-	  case ADF_FDI:
-#ifdef FDI2RAW
-		  fdi2raw_loadrevolution(drv->fdi, drv->bigmfmbuf, drv->tracktiming, drv->cyl * 2 + side, &drv->tracklen, 1);
+	case ADF_IPF:
+#ifdef CAPS
+		caps_loadrevolution(drv->bigmfmbuf, drv->tracktiming, drv - floppy, drv->cyl * 2 + side, &drv->tracklen, &drv->lastrev, drv->track_access_done);
 #endif
-		  break;
+		break;
+	case ADF_FDI:
+#ifdef FDI2RAW
+		fdi2raw_loadrevolution(drv->fdi, drv->bigmfmbuf, drv->tracktiming, drv->cyl * 2 + side, &drv->tracklen, 1);
+#endif
+		break;
 	}
 }
 

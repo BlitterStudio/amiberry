@@ -2,8 +2,6 @@
 
 .arm
 
-.global save_host_fp_regs
-.global restore_host_fp_regs
 .global copy_screen_8bit
 .global copy_screen_16bit_swap
 .global copy_screen_32bit_to_16bit_neon
@@ -17,21 +15,6 @@
 .text
 
 .align 8
-
-@----------------------------------------------------------------
-@ save_host_fp_regs
-@----------------------------------------------------------------
-save_host_fp_regs:
-	vstmia    r0!, {d7-d15}
-  bx        lr
-
-@----------------------------------------------------------------
-@ restore_host_fp_regs
-@----------------------------------------------------------------
-restore_host_fp_regs:
-  vldmia    r0!, {d7-d15}
-  bx        lr
-
 
 @----------------------------------------------------------------
 @ copy_screen_8bit

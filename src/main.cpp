@@ -660,7 +660,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
-	};
+	}
 #endif
 	keyboard_settrans();
 	set_config_changed();

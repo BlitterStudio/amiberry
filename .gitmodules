@@ -1,0 +1,3 @@
+[submodule "capsimg"]
+	path = capsimg
+	url = https://github.com/FrodeSolheim/capsimg

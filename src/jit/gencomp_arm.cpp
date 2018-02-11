@@ -123,7 +123,8 @@
 //#define DISABLE_I_FSCC
 //#define DISABLE_I_MOVE16
 
-#define DISABLE_I_DIVU // DIVU works, but we have to think about exceptions. No big performance enhancement.
+//#define DISABLE_I_DIVU
+//#define DISABLE_I_DIVS
 
 
 #define RETURN "return 0;"
@@ -1268,6 +1269,7 @@ static void gen_divu(uae_u32 opcode, struct instr *curi, char* ssize) {
 	genamode(curi->dmode, "dstreg", sz_word, "dst", 1, 0);
 
   comprintf("\tint tmp=scratchie++;\n");
+  comprintf("\tregister_possible_exception();\n");
   if (!noflags) {
 		comprintf("\tjff_DIVU(tmp,dst,src);\n");
 		comprintf("\tlive_flags();\n");
@@ -1275,7 +1277,27 @@ static void gen_divu(uae_u32 opcode, struct instr *curi, char* ssize) {
 		comprintf("\tjnf_DIVU(tmp,dst,src);\n");
 	}
 
-	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
+	genastore("tmp", curi->dmode, "dstreg", sz_long /*curi->size*/, "dst");
+}
+
+static void gen_divs(uae_u32 opcode, struct instr *curi, char* ssize) {
+  (void)opcode;
+  (void)ssize;
+  comprintf("\t dont_care_flags();\n");
+  genamode(curi->smode, "srcreg", sz_word, "src", 1, 0);
+  genamode(curi->dmode, "dstreg", sz_word, "dst", 1, 0);
+
+  comprintf("\tint tmp=scratchie++;\n");
+  comprintf("\tregister_possible_exception();\n");
+  if (!noflags) {
+    comprintf("\tjff_DIVS(tmp,dst,src);\n");
+    comprintf("\tlive_flags();\n");
+  }
+  else {
+    comprintf("\tjnf_DIVS(tmp,dst,src);\n");
+	}
+
+	genastore("tmp", curi->dmode, "dstreg", sz_long /*curi->size*/, "dst");
 }
 
 static void gen_eor(uae_u32 opcode, struct instr *curi, char* ssize) {
@@ -2507,8 +2529,11 @@ gen_opcode(unsigned long int opcode) {
 		break;
 
 	case i_DIVS:
+#ifdef DISABLE_I_DIVS
 		isjump;
 		failure;
+#endif
+    gen_divs(opcode, curi, ssize);
 		break;
 
 	case i_MULU:
@@ -3018,6 +3043,13 @@ generate_one_opcode(int rp, int noflags)
 	dmsk = 7;
 
 	next_cpu_level = -1;
+  if (table68k[opcode].mnemo == i_DIVU || table68k[opcode].mnemo == i_DIVS) {
+    comprintf("#ifndef ARMV6T2\n");
+    comprintf("  FAIL(1);\n");
+    comprintf("  " RETURN "\n");
+    comprintf("#else\n");
+  }
+
 	if (table68k[opcode].suse 
       && table68k[opcode].smode != imm && table68k[opcode].smode != imm0 
       && table68k[opcode].smode != imm1 && table68k[opcode].smode != imm2 
@@ -3109,6 +3141,10 @@ generate_one_opcode(int rp, int noflags)
 		if (global_fpu)	flags |= 32;
 
 	  comprintf ("return 0;\n");
+    if (table68k[opcode].mnemo == i_DIVU || table68k[opcode].mnemo == i_DIVS) {
+      comprintf("#endif\n");
+    }
+
 		comprintf("}\n");
 
 	  char name[100] = { 0 };
@@ -3132,6 +3168,7 @@ generate_one_opcode(int rp, int noflags)
 			com_flush();
 		}
 	}
+  
 	opcode_next_clev[rp] = next_cpu_level;
 	opcode_last_postfix[rp] = postfix;
 }

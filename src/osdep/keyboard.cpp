@@ -243,19 +243,17 @@ static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] = {
 { 104 - 8, INPUTEVENT_KEY_ENTER },         // The ENT from keypad..
 
 { 90 - 8, INPUTEVENT_KEY_NP_0 },
-{ 91 - 8, INPUTEVENT_KEY_PERIOD },
+{ 91 - 8, INPUTEVENT_KEY_NP_PERIOD },
 
 { 111 - 8, INPUTEVENT_KEY_CURSOR_UP },
 { 113 - 8, INPUTEVENT_KEY_CURSOR_LEFT },
 { 116 - 8, INPUTEVENT_KEY_CURSOR_DOWN },
 { 114 - 8, INPUTEVENT_KEY_CURSOR_RIGHT },
 
-
 { 110 - 8, INPUTEVENT_KEY_NP_LPAREN },     // Map home   to left  parent (as fsuae)
 { 112 - 8, INPUTEVENT_KEY_NP_RPAREN },     // Map pageup to right parent (as fsuae)
 
 { 115 - 8, INPUTEVENT_KEY_HELP },          // Help mapped to End key (as fsuae)
-
 { 119 - 8, INPUTEVENT_KEY_DEL },
 
 { 133 - 8, INPUTEVENT_KEY_AMIGA_LEFT },   // Left amiga mapped to left Windows
@@ -367,9 +365,10 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 
 { SDLK_INSERT, INPUTEVENT_KEY_AMIGA_LEFT },
 { SDLK_DELETE, INPUTEVENT_KEY_DEL },
-{ SDLK_HOME, INPUTEVENT_KEY_AMIGA_RIGHT },
+{ SDLK_HOME, INPUTEVENT_KEY_NP_LPAREN },     // Map home   to left  parent (as fsuae)
+{ SDLK_END, INPUTEVENT_KEY_HELP },          // Help mapped to End key (as fsuae)}
 { SDLK_PAGEDOWN, INPUTEVENT_KEY_HELP },
-{ SDLK_PAGEUP, INPUTEVENT_SPC_FREEZEBUTTON },
+{ SDLK_PAGEUP, INPUTEVENT_KEY_NP_RPAREN },     // Map pageup to right parent (as fsuae)
 
 { SDLK_LEFTBRACKET, INPUTEVENT_KEY_LEFTBRACKET },
 { SDLK_RIGHTBRACKET, INPUTEVENT_KEY_RIGHTBRACKET },
@@ -381,10 +380,10 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 { SDLK_PERIOD, INPUTEVENT_KEY_PERIOD },
 { SDLK_SLASH, INPUTEVENT_KEY_DIV },
 
-{ SDLK_END, INPUTEVENT_SPC_QUALIFIER_SPECIAL },
-{ SDLK_PAUSE, INPUTEVENT_SPC_PAUSE },
 
-{ SDLK_F12, INPUTEVENT_SPC_ENTERGUI },
+//{ SDLK_PAUSE, INPUTEVENT_SPC_PAUSE },
+
+//{ SDLK_F12, INPUTEVENT_SPC_ENTERGUI },
 
 { -1, 0 }
 };
@@ -494,9 +493,10 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 
 	{ SDL_SCANCODE_INSERT, INPUTEVENT_KEY_AMIGA_LEFT },
 	{ SDL_SCANCODE_DELETE, INPUTEVENT_KEY_DEL },
-	{ SDL_SCANCODE_HOME, INPUTEVENT_KEY_AMIGA_RIGHT },
+	{ SDL_SCANCODE_HOME, INPUTEVENT_KEY_NP_LPAREN },     // Map home   to left  parent (as fsuae)
+	{ SDL_SCANCODE_END, INPUTEVENT_KEY_HELP },          // Help mapped to End key (as fsuae)}
 	{ SDL_SCANCODE_PAGEDOWN, INPUTEVENT_KEY_HELP },
-	{ SDL_SCANCODE_PAGEUP, INPUTEVENT_SPC_FREEZEBUTTON },
+	{ SDL_SCANCODE_PAGEUP, INPUTEVENT_KEY_NP_RPAREN },     // Map pageup to right parent (as fsuae)
 	
 	{ SDL_SCANCODE_LEFTBRACKET, INPUTEVENT_KEY_LEFTBRACKET },
 	{ SDL_SCANCODE_RIGHTBRACKET, INPUTEVENT_KEY_RIGHTBRACKET },
@@ -508,7 +508,6 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDL_SCANCODE_PERIOD, INPUTEVENT_KEY_PERIOD },
 	{ SDL_SCANCODE_SLASH, INPUTEVENT_KEY_DIV },
 
-	{ SDL_SCANCODE_END, INPUTEVENT_SPC_QUALIFIER_SPECIAL },
 	{ SDL_SCANCODE_NONUSBACKSLASH, INPUTEVENT_KEY_30 },
 	//{ SDL_SCANCODE_PAUSE, INPUTEVENT_SPC_FREEZEBUTTON },
 

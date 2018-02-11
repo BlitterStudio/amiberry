@@ -49,6 +49,7 @@ int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
+bool read_config_descriptions = true;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -252,8 +253,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, "Pause");
 	_tcscpy(p->fullscreen_toggle, "");
 
-       p->input_analog_remap = false;
-                
+	p->input_analog_remap = false;
+
 	p->use_retroarch_quit = true;
 	p->use_retroarch_menu = true;
 	p->use_retroarch_reset = false;
@@ -717,6 +718,9 @@ void saveAdfDir(void)
 	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
+	fputs(buffer, f);
+
 	fclose(f);
 }
 
@@ -768,6 +772,7 @@ void loadAdfDir(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
 	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+
 	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh) {
 		char linea[CONFIG_BLEN];
@@ -827,6 +832,7 @@ void loadAdfDir(void)
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
 					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
+					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
 				}
 			}
 		}
@@ -957,6 +963,27 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+#ifdef USE_SDL1
+SDLKey GetKeyFromName(const char *name)
+{
+	if (!name || !*name) {
+		return SDLK_UNKNOWN;
+	}
+
+	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
+	{
+		if (!SDL_GetKeyName(SDLKey(key)))
+			continue;
+		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
+		{
+			return SDLKey(key);
+		}
+	}
+
+	return SDLK_UNKNOWN;
+}
+#endif
+
 int handle_msgpump()
 {
 	auto got = 0;
@@ -968,7 +995,9 @@ int handle_msgpump()
 	{
 		// If we have a value in the config, we use that instead
 		// SDL2-only for now
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		enter_gui_key = GetKeyFromName(currprefs.open_gui);
+#elif USE_SDL2
 		enter_gui_key = SDL_GetKeyFromName(currprefs.open_gui);
 #endif
 	}
@@ -978,8 +1007,9 @@ int handle_msgpump()
 	if (strncmp(currprefs.quit_amiberry, "", 1) != 0)
 	{
 		// If we have a value in the config, we use that instead
-		// SDL2-only for now
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		quit_key = GetKeyFromName(currprefs.quit_amiberry);
+#elif USE_SDL2
 		quit_key = SDL_GetKeyFromName(currprefs.quit_amiberry);
 #endif
 	}
@@ -988,7 +1018,9 @@ int handle_msgpump()
 	int action_replay_button = SDLK_PAUSE;
 	if (strncmp(currprefs.action_replay, "", 1) != 0)
 	{
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		action_replay_button = GetKeyFromName(currprefs.action_replay);
+#elif USE_SDL2
 		action_replay_button = SDL_GetKeyFromName(currprefs.action_replay);
 #endif
 	}
@@ -997,7 +1029,9 @@ int handle_msgpump()
 	int fullscreen_key = 0;
 	if (strncmp(currprefs.fullscreen_toggle, "", 1) != 0)
 	{
-#ifdef USE_SDL2
+#ifdef USE_SDL1
+		fullscreen_key = GetKeyFromName(currprefs.fullscreen_toggle);
+#elif USE_SDL2
 		fullscreen_key = SDL_GetKeyFromName(currprefs.fullscreen_toggle);
 #endif
 	}
@@ -1054,8 +1088,7 @@ int handle_msgpump()
 			// Strangely in FBCON left window is seen as left alt ??
 			if (keyboard_type == 2) // KEYCODE_FBCON
 			{
-				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[
-					SDLK_MENU]))
+				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
 				{
 					uae_reset(0, 1);
 					break;

@@ -1321,7 +1321,7 @@ enum {
 #define STM_Ri(Rn,i)								CC_STM_Ri(NATIVE_CC_AL,Rn,i)
 
 // ARMv6T2
-#ifdef ARMV6T2
+//#ifdef ARMV6T2
 
 #define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
 #define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
@@ -1341,7 +1341,7 @@ enum {
 #define CC_SSAT_rir(cc,Rd,i,Rn)			_W(((cc) << 28) | (0x6a << 20) | (i << 16) | (Rd << 12) | (0x1 << 4) | (Rn))
 #define SSAT_rir(Rd,i,Rn)						CC_SSAT_rir(NATIVE_CC_AL,Rd,i,Rn)
 
-#endif
+//#endif
 
 // Floatingpoint
 #define FADR_ADD(offs)              ((1 << 23) | (offs) >> 2)
@@ -1401,10 +1401,16 @@ enum {
 #define CC_VCVT32toI_ss(cc,Sd,Sm)   		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xd << 16) | (0xa << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
 #define VCVT32toI_ss(Sd,Sm)         		CC_VCVT32toI_ss(NATIVE_CC_AL,Sd,Sm)
 
+#define CC_VCVT64toIu_sd(cc,Sd,Dm)   		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xd << 16) | (0xb << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Dm(Dm))
+#define VCVT64toIu_sd(Sd,Dm)         		CC_VCVT64toIu_sd(NATIVE_CC_AL,Sd,Dm)
+
 #define CC_VCVTIto64_ds(cc,Dd,Sm) 			_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x8 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Dd(Dd) | MAKE_Sm(Sm))
 #define VCVTIto64_ds(Dd,Sm)       			CC_VCVTIto64_ds(NATIVE_CC_AL,Dd,Sm)
 #define CC_VCVTIto32_ss(cc,Sd,Sm) 			_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x8 << 16) | (0xa << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
 #define VCVTIto32_ss(Sd,Sm)       			CC_VCVTIto32_ss(NATIVE_CC_AL,Dd,Sm)
+
+#define CC_VCVTIuto64_ds(cc,Dd,Sm) 			_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x8 << 16) | (0xb << 8) | (0x4 << 4) | MAKE_Dd(Dd) | MAKE_Sm(Sm))
+#define VCVTIuto64_ds(Dd,Sm)       			CC_VCVTIuto64_ds(NATIVE_CC_AL,Dd,Sm)
 
 #define CC_VADD64_ddd(cc,Dd,Dn,Dm)      _W(((cc) << 28) | (0xe << 24) | (0x3 << 20) | (0xb << 8) | (0x0 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
 #define VADD64_ddd(Dd,Dn,Dm)            CC_VADD64_ddd(NATIVE_CC_AL,Dd,Dn,Dm)
@@ -1481,6 +1487,6 @@ enum {
 #define VSHL64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x2 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(imm))
 #define VSHR64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x0 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(64-imm))
 
-#define VORR_ddd(Dd,Dn,Dm)       				_W((0xf << 28) | (0x2 << 24) | (0x2 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dn) | MAKE_Dm(Dm))
+#define VORR_ddd(Dd,Dn,Dm)       				_W((0xf << 28) | (0x2 << 24) | (0x2 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
 
 #endif /* ARM_RTASM_H */

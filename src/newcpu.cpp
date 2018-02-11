@@ -1597,6 +1597,18 @@ static void m68k_run_1 (void)
 
 #ifdef JIT  /* Completely different run_2 replacement */
 
+extern uae_u32 jit_exception;
+
+void execute_exception(void)
+{
+  Exception_cpu(jit_exception);
+  jit_exception = 0;
+  cpu_cycles = adjust_cycles(4 * CYCLE_UNIT / 2);
+  do_cycles (cpu_cycles);
+  // after leaving this function, we fall back to execute_normal()
+}
+
+
 void do_nothing(void)
 {
   /* What did you expect this to do? */
@@ -1754,7 +1766,8 @@ void m68k_go (int may_quit)
   }
 
 #ifdef USE_JIT_FPU
-	save_host_fp_regs(fp_buffer);
+	asm volatile("vstmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
+	//save_host_fp_regs((uae_u8 *)(&fp_buffer[0]));
 #endif
 
   reset_frame_rate_hack ();
@@ -1869,7 +1882,8 @@ void m68k_go (int may_quit)
   regs.pc_oldp = NULL;
 
 #ifdef USE_JIT_FPU
-  restore_host_fp_regs(fp_buffer);
+	asm volatile("vldmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
+  //restore_host_fp_regs(fp_buffer);
 #endif
 
   in_m68k_go--;

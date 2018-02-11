@@ -497,6 +497,11 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 	int source = (extra >> 13) & 7;
 	int	opmode = extra & 0x7f;
 
+   if (special_mem) {
+    FAIL(1);
+    return;
+  } 
+
 	if (!currprefs.compfpu) {
 		FAIL (1);
 		return;
@@ -525,6 +530,25 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			  if (extra & 0x1000) { /* FPCR */
 				  uae_u32 val = comp_get_ilong ((m68k_pc_offset += 4) - 4);
 				  mov_l_mi (uae_p32(&regs.fpcr), val);
+	        switch(val & 0x30) {
+	          case 0x00:
+	            // round to nearest
+	            roundingmode(0x00000000);
+	            break;
+	          case 0x10:
+	            // round toward minus infinity
+	            roundingmode(0x00800000);
+	            break;
+	          case 0x01:
+	            // round toward plus infinity
+	            roundingmode(0x00400000);
+	            break;
+	          case 0x11:
+	          default:
+	            // round towards zero
+	            roundingmode(0x00c00000);
+	            break;
+	        }
 				  return;
 			  }
 			  if (extra & 0x0800) { /* FPSR */
@@ -875,11 +899,6 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			  case 0x37:
 				  FAIL (1);
 				  return;
-//			    if (dreg == (extra & 7))
-//				    ffunc_rr (sin, dreg, sreg);
-//			    else
-//				    fsincos_rr (dreg, extra & 7, sreg);
-//			    break;
 			  case 0x38: /* FCMP */
 			    fmov_rr (FP_RESULT, dreg);
 			    fsub_rr (FP_RESULT, sreg);

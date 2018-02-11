@@ -53,7 +53,7 @@
 #define PICASSO96 /* Picasso96 display card emulation */
 #define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
 #define BSDSOCKET /* bsdsocket.library emulation */
-/* #define CAPS */ /* CAPS-image support */
+#define CAPS  /* CAPS-image support */
 /* #define SCP */ /* SuperCardPro */
 #define FDI2RAW /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
@@ -506,7 +506,9 @@ typedef long uae_atomic;
 #define _GCCRES_ __restrict__
 #endif
 
+#ifndef __cdecl
 #define __cdecl
+#endif
 
 #define strcmpi(x,y) strcasecmp(x,y)
 #define stricmp(x,y) strcasecmp(x,y)
