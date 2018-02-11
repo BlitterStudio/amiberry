@@ -32,16 +32,11 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
-#if defined(ANDROID)
-#define FILE_SELECT_KEEP_POSITION
-#endif
-
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool createNew = false;
 static char workingDir[MAX_DPATH];
 static const char** filefilter;
-static bool dialogCreated = false;
 static int selectedOnStart = -1;
 
 static gcn::Window* wndSelectFile;
@@ -183,7 +178,7 @@ public:
 			checkfoldername(foldername);
 		else if (!createNew)
 		{
-			strncpy(workingDir, foldername, sizeof(workingDir));
+			strncpy(workingDir, foldername, sizeof workingDir);
 			dialogResult = true;
 			dialogFinished = true;
 		}
@@ -416,6 +411,12 @@ static void SelectFileLoop()
 			gui_input->pushInput(event);
 #endif
 		}
+		if (selectedOnStart >= 0)
+		{
+			scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 15);
+			gotEvent = 1;
+		}
+			
 		if (gotEvent)
 		{
 			// Now we let the Gui object perform its logic.
@@ -429,19 +430,8 @@ static void SelectFileLoop()
 		
 		// Finally we update the screen.
 		UpdateGuiScreen();
-
-		if (!dialogCreated)
-		{
-			dialogCreated = true;
-			if (selectedOnStart >= 0)
-				scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 19);
-		}
 	}
 }
-
-#ifdef FILE_SELECT_KEEP_POSITION
-static int Already_init = 0;
-#endif
 
 bool SelectFile(const char* title, char* value, const char* filter[], const bool create)
 {
@@ -449,27 +439,10 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	dialogFinished = false;
 	createNew = create;
 	filefilter = filter;
-	dialogCreated = false;
 	selectedOnStart = -1;
 
-#ifdef FILE_SELECT_KEEP_POSITION
-	if (Already_init == 0)
-	{
-		InitSelectFile(title);
-		Already_init = 1;
-	}
-	else
-	{
-		strncpy(value, workingDir, MAX_DPATH);
-		gui_top->add(wndSelectFile);
-		wndSelectFile->setCaption(title);
-		wndSelectFile->requestModalFocus();
-		wndSelectFile->setVisible(true);
-		gui_top->moveToTop(wndSelectFile);
-	}
-#else
 	InitSelectFile(title);
-#endif
+
 	extractPath(value, workingDir);
 	checkfoldername(workingDir);
 	checkfilename(value);
@@ -483,17 +456,11 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	UpdateGuiScreen();
 
 	SelectFileLoop();
-#ifdef FILE_SELECT_KEEP_POSITION
-	wndSelectFile->releaseModalFocus();
-	wndSelectFile->setVisible(false);
-#else
+
 	ExitSelectFile();
-#endif
+
 	if (dialogResult)
 		strncpy(value, workingDir, MAX_DPATH);
-#ifdef FILE_SELECT_KEEP_POSITION
-	else
-		strncpy(workingDir, value, MAX_DPATH);
-#endif
+
 	return dialogResult;
 }
