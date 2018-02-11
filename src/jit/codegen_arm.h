@@ -1321,7 +1321,7 @@ enum {
 #define STM_Ri(Rn,i)								CC_STM_Ri(NATIVE_CC_AL,Rn,i)
 
 // ARMv6T2
-#ifdef ARMV6T2
+//#ifdef ARMV6T2
 
 #define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
 #define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
@@ -1341,7 +1341,7 @@ enum {
 #define CC_SSAT_rir(cc,Rd,i,Rn)			_W(((cc) << 28) | (0x6a << 20) | (i << 16) | (Rd << 12) | (0x1 << 4) | (Rn))
 #define SSAT_rir(Rd,i,Rn)						CC_SSAT_rir(NATIVE_CC_AL,Rd,i,Rn)
 
-#endif
+//#endif
 
 // Floatingpoint
 #define FADR_ADD(offs)              ((1 << 23) | (offs) >> 2)
