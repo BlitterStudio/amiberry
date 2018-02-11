@@ -394,6 +394,10 @@ namespace sdl
 			SDL_FreeSurface(gui_screen);
 			gui_screen = nullptr;
 		}
+#ifdef USE_SDL1
+		// Disable key repeat
+		SDL_EnableKeyRepeat(0, 0);
+#endif
 #ifdef USE_SDL2
 		if (gui_texture != nullptr)
 		{
