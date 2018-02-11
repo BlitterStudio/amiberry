@@ -243,7 +243,7 @@ static struct uae_input_device_kbr_default keytrans_amiga_fbcon[] = {
 { 104 - 8, INPUTEVENT_KEY_ENTER },         // The ENT from keypad..
 
 { 90 - 8, INPUTEVENT_KEY_NP_0 },
-{ 91 - 8, INPUTEVENT_KEY_PERIOD },
+{ 91 - 8, INPUTEVENT_KEY_NP_PERIOD },
 
 { 111 - 8, INPUTEVENT_KEY_CURSOR_UP },
 { 113 - 8, INPUTEVENT_KEY_CURSOR_LEFT },
@@ -382,9 +382,9 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 { SDLK_SLASH, INPUTEVENT_KEY_DIV },
 
 { SDLK_END, INPUTEVENT_SPC_QUALIFIER_SPECIAL },
-{ SDLK_PAUSE, INPUTEVENT_SPC_PAUSE },
+//{ SDLK_PAUSE, INPUTEVENT_SPC_PAUSE },
 
-{ SDLK_F12, INPUTEVENT_SPC_ENTERGUI },
+//{ SDLK_F12, INPUTEVENT_SPC_ENTERGUI },
 
 { -1, 0 }
 };
