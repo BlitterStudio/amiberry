@@ -67,6 +67,9 @@
     <Filter Include="src\archivers\mp2">
       <UniqueIdentifier>{887bad08-7067-4275-9748-6606e23c388e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\caps">
+      <UniqueIdentifier>{1884c917-cb72-4e81-9e87-bdc056c501d3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -738,6 +741,12 @@
     <ClCompile Include="..\src\osdep\gui\PanelCustom.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\dlopen.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\caps\caps_win32.cpp">
+      <Filter>src\caps</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1162,6 +1171,24 @@
     </ClInclude>
     <ClInclude Include="..\src\cputbl.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\caps\CapsAPI.h">
+      <Filter>src\caps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\caps\Comtype.h">
+      <Filter>src\caps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\api.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\caps.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\dlopen.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\uae.h">
+      <Filter>src\include\uae</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
