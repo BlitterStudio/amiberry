@@ -27,7 +27,7 @@ const int REMAP_BUTTONS = 16;
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 #define SET_BIT(var,pos) (var |= 1 << pos)
 
-static int numMice = 0;
+static int numMice = 1;
 static int numKeysAsJoys;
 
 static void fill_default_controller(void)
@@ -267,13 +267,7 @@ const int RemapKeyMapListSize = sizeof RemapKeyMapList / sizeof RemapKeyMapList[
 
 static int init_mouse(void)
 {
-	const auto mouse = open("/dev/input/mouse0", O_RDONLY);
-	if (mouse != -1)
-	{
-		numMice++;
-		close(mouse);
-	}
-	return numMice;
+	return 1;
 }
 
 static void close_mouse(void)
