@@ -20,5 +20,3 @@
 #if defined(CPU_i386) || defined(CPU_x86_64)
 extern void init_fpucw_x87(void);
 #endif
-
-extern void fpsr_set_exception(uae_u32 exception);

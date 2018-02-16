@@ -1341,6 +1341,12 @@ enum {
 #define CC_SSAT_rir(cc,Rd,i,Rn)			_W(((cc) << 28) | (0x6a << 20) | (i << 16) | (Rd << 12) | (0x1 << 4) | (Rn))
 #define SSAT_rir(Rd,i,Rn)						CC_SSAT_rir(NATIVE_CC_AL,Rd,i,Rn)
 
+#define CC_SDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x1 << 20) | (Rd << 16) | (0xf << 12) | (Rm << 8) | (0x1 << 4) | (Rn))
+#define SDIV_rrr(Rd,Rn,Rm)					CC_SDIV_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+
+#define CC_UDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x3 << 20) | (Rd << 16) | (0xf << 12) | (Rm << 8) | (0x1 << 4) | (Rn))
+#define UDIV_rrr(Rd,Rn,Rm)					CC_UDIV_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+
 //#endif
 
 // Floatingpoint
