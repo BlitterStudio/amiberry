@@ -46,7 +46,6 @@ DECLARE_MIDFUNC(jff_ADD_w_imm(W4 d, RR2 s, IMM v));
 DECLARE_MIDFUNC(jff_ADD_l_imm(W4 d, RR4 s, IMM v));
 
 // ADDA
-DECLARE_MIDFUNC(jnf_ADDA_b(W4 d, RR1 s));
 DECLARE_MIDFUNC(jnf_ADDA_w(W4 d, RR2 s));
 DECLARE_MIDFUNC(jnf_ADDA_l(W4 d, RR4 s));
 

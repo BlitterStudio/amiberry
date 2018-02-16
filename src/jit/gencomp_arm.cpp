@@ -693,15 +693,14 @@ static void gen_move16(uae_u32 opcode, struct instr *curi)
   comprintf("  " RETURN "\n");
 	comprintf("} \n");
 
-  comprintf("\tint src=scratchie++;\n");
-	comprintf("\tint dst=scratchie++;\n");
-
 	uae_u32 masked_op = (opcode & 0xfff8);
 	if (masked_op == 0xf620) {
 		// POSTINCREMENT SOURCE AND DESTINATION version: MOVE16 (Ax)+,(Ay)+
+    comprintf("\tint srca=scratchie++;\n");
+    comprintf("\tint dsta=scratchie++;\n");
 		comprintf("\t uae_u16 dstreg = ((%s)>>12) & 0x07;\n", gen_nextiword());
-		comprintf("\t jnf_MOVE(src, srcreg + 8);\n");
-		comprintf("\t jnf_MOVE(dst, dstreg + 8);\n");
+		comprintf("\t jnf_MOVE(srca, srcreg + 8);\n");
+		comprintf("\t jnf_MOVE(dsta, dstreg + 8);\n");
 		comprintf("\t if (srcreg != dstreg)\n");
 		comprintf("\t   jnf_ADD_im8(srcreg + 8, srcreg + 8, 16);\n");
 		comprintf("\t jnf_ADD_im8(dstreg + 8, dstreg + 8, 16);\n");
@@ -718,7 +717,7 @@ static void gen_move16(uae_u32 opcode, struct instr *curi)
 			  break;
 		}
 	}
-	comprintf("\tjnf_MOVE16(dst, src);\n");
+	comprintf("\tjnf_MOVE16(dsta, srca);\n");
 }
 
 static void 
@@ -3285,10 +3284,6 @@ int main(int argc, char *argv[])
   headerfile = fopen("jit/comptbl.h", "wb");
 
 	fprintf (headerfile, "" \
-		"#ifdef NOFLAGS_SUPPORT\n" \
-		"/* 68040 */\n" \
-		"extern const struct comptbl op_smalltbl_0_nf[];\n" \
-		"#endif\n" \
 		"extern const struct comptbl op_smalltbl_0_comp_nf[];\n" \
 		"extern const struct comptbl op_smalltbl_0_comp_ff[];\n" \
 		"");

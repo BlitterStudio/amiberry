@@ -1,7 +1,3 @@
-#ifdef NOFLAGS_SUPPORT
-/* 68040 */
-extern const struct comptbl op_smalltbl_0_nf[];
-#endif
 extern const struct comptbl op_smalltbl_0_comp_nf[];
 extern const struct comptbl op_smalltbl_0_comp_ff[];
 extern compop_func op_0_0_comp_ff;

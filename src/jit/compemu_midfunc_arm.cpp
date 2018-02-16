@@ -477,13 +477,10 @@ STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
 	#endif
 }
 
-STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, cpuop_func* a) {
-	*(jmpaddr) = (uae_u32)a;
-    flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
-}
-
-STATIC_INLINE void emit_jmp_target(uae_u32 a) {
-	emit_long((uae_u32)a);
+STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a) {
+	uae_s32 off = ((uae_u32)a - (uae_u32)jmpaddr - 8) >> 2;
+	*(jmpaddr) = (*(jmpaddr) & 0xff000000) | (off & 0x00ffffff);
+  flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
 }
 
 
