@@ -204,7 +204,7 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 
 ASFLAGS += $(CPU_FLAGS)
 
-export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-unused -Wno-format
+export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
 export CXXFLAGS += $(CFLAGS)
 
 
