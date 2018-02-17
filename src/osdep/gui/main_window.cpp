@@ -559,28 +559,28 @@ namespace sdl
 					}
 					joypad_axis_state[axis] = axis_state;
 
-					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == -1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) < 0) // dpad
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == -1)
 					{
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == 1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) > 0) // dpad
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == 1)
 					{
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
 						break;
 					}
-					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == 1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) > 0) // dpad
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == 1)
 					{
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == -1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) < 0) // dpad
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == -1)
 					{
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
