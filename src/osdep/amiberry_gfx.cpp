@@ -622,10 +622,8 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen != nullptr)
 	{
-		
 		InitAmigaVidMode(p);
 		init_row_map();
-		vsync_switchmode(p->ntscmode ? 60 : 50);
 	}
 }
 
