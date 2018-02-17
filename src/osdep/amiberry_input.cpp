@@ -626,7 +626,12 @@ static int get_joystick_num(void)
 	return nr_joysticks + numKeysAsJoys;
 }
 
-//
+static std::string sanitize_retroarch_name(std::string path)
+{
+	std::string sanitized_name = path.substr(path.find_last_of('/') + 1, path.find_last_of('.'));
+	return sanitized_name;
+}
+
 static int init_joystick(void)
 {
 	// we will also use this routine to grab the retroarch buttons
@@ -736,7 +741,8 @@ static int init_joystick(void)
 			//this now uses controllers path (in tmp)
 			char ControlConfig[255];
 			strcpy(ControlConfig, tmp);
-			strcat(ControlConfig, JoystickName[cpt]);
+			auto sanitized_name = sanitize_retroarch_name(JoystickName[cpt]);
+			strcat(ControlConfig, sanitized_name.c_str());
 			strcat(ControlConfig, ".cfg");
 
 			if (zfile_exists(ControlConfig))
