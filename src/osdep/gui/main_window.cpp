@@ -31,6 +31,7 @@
 #endif
 
 SDL_Joystick* GUIjoy;
+std::vector<int> joypad_axis_state; // Keep track of horizontal and vertical axis states
 
 bool gui_running = false;
 static int last_active_panel = 3;
@@ -424,6 +425,24 @@ namespace sdl
 #endif
 	}
 
+	// Return the state of a joypad axis
+	// -1 (left or up), 0 (centered) or 1 (right or down)
+	int get_joypad_axis_state(int axis)
+	{
+		if (!GUIjoy)
+			return 0;
+
+		const auto state = SDL_JoystickGetAxis(GUIjoy, axis);
+
+		int result;
+		if (std::abs(state) < 10000)
+			result = 0;
+		else
+			result = state > 0 ? 1 : -1;
+
+		return result;
+	}
+
 	void checkInput()
 	{
 #ifdef USE_SDL1
@@ -445,28 +464,26 @@ namespace sdl
 				gui_running = false;
 				break;
 
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYAXISMOTION:                                                    
 			case SDL_JOYHATMOTION:
+			case SDL_JOYBUTTONDOWN:
 				if (GUIjoy)
 				{
 					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || hat & SDL_HAT_UP) // dpad
 					{
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || hat & SDL_HAT_DOWN) // dpad
 					{
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
 						break;
 					}
-
 
 					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
 					{
@@ -483,15 +500,14 @@ namespace sdl
 						}
 					}
 
-
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || hat & SDL_HAT_RIGHT) // dpad
 					{
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
+					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || hat & SDL_HAT_LEFT) // dpad
 					{
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
@@ -520,6 +536,56 @@ namespace sdl
 					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].menu_button)) // use the HOTKEY button
 					{
 						gui_running = false;
+					}
+				}
+				break;
+
+			case SDL_JOYAXISMOTION:
+				// Deadzone
+				if (std::abs(gui_event.jaxis.value) >= 10000 || std::abs(gui_event.jaxis.value) <= 5000)
+				{
+					int axis_state = 0;
+					int axis = gui_event.jaxis.axis;
+					int value = gui_event.jaxis.value;
+					if (std::abs(value) < 10000)
+						axis_state = 0;
+					else
+						axis_state = value > 0 ? 1 : -1;
+
+					if (joypad_axis_state[axis] == axis_state)
+					{
+						// ignore repeated axis movement state
+						break;
+					}
+					joypad_axis_state[axis] = axis_state;
+
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == -1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) < 0) // dpad
+					{
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == 1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) > 0) // dpad
+					{
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == 1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) > 0) // dpad
+					{
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_RIGHT);
+						break;
+					}
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == -1)//SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) < 0) // dpad
+					{
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_LEFT);
+						break;
 					}
 				}
 				break;
@@ -635,7 +701,11 @@ namespace sdl
 	void gui_run()
 	{
 		if (SDL_NumJoysticks() > 0)
+		{
 			GUIjoy = SDL_JoystickOpen(0);
+			joypad_axis_state.assign(SDL_JoystickNumAxes(GUIjoy), 0);
+		}
+			
 
 		// Prepare the screen once
 		uae_gui->logic();
@@ -661,7 +731,12 @@ namespace sdl
 		}
 
 		if (GUIjoy)
+		{
 			SDL_JoystickClose(GUIjoy);
+			GUIjoy = nullptr;
+			joypad_axis_state.clear();
+		}
+			
 	}
 }
 
