@@ -664,9 +664,9 @@ STATIC_INLINE uae_u8* get_target(void)
 #if defined(CPU_arm) && !defined(ARMV6T2)
 
 #define DATA_BUFFER_SIZE 768             // Enlarge POPALLSPACE_SIZE if this value is greater than 768
-#define DATA_BUFFER_MAXOFFSET 4096 - 32  // max range between emit of data and use of data
-static uae_u8* data_writepos = 0;
-static uae_u8* data_endpos = 0;
+#define DATA_BUFFER_MAXOFFSET (4096 - 32)  // max range between emit of data and use of data
+static uae_u8* data_writepos = nullptr;
+static uae_u8* data_endpos = nullptr;
 #ifdef DEBUG_DATA_BUFFER
 static uae_u32 data_wasted = 0;
 static uae_u32 data_buffers_used = 0;
@@ -676,7 +676,7 @@ STATIC_INLINE void compemu_raw_branch(IMM d);
 
 STATIC_INLINE void data_check_end(uae_s32 n, uae_s32 codesize)
 {
-  if(data_writepos + n > data_endpos || get_target + codesize - data_writepos > DATA_BUFFER_MAXOFFSET)
+  if(data_writepos + n > data_endpos || get_target() + codesize - data_writepos > DATA_BUFFER_MAXOFFSET)
   {
     // Start new buffer
 #ifdef DEBUG_DATA_BUFFER
