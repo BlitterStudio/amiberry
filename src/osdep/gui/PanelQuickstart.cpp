@@ -838,7 +838,7 @@ static void AdjustDropDownControls(void)
 		{
 			for (unsigned int j = 0; j < lstMRUDiskList.size(); ++j)
 			{
-				if (lstMRUDiskList[j].c_str() != changed_prefs.floppyslots[i].df)
+				if (strcmp(lstMRUDiskList[j].c_str(), changed_prefs.floppyslots[i].df) == 0)
 				{
 					cboDFxFile[i]->setSelected(j);
 					break;

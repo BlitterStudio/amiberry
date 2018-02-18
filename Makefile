@@ -23,14 +23,14 @@ CPPFLAGS+= -MD -MP
 #
 ifeq ($(PLATFORM),rpi3)
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
+    CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl1
 	
 else ifeq ($(PLATFORM),rpi2)
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
+    CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl1
@@ -43,7 +43,7 @@ else ifeq ($(PLATFORM),rpi1)
 
 else ifeq ($(PLATFORM),android)
     CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
-    DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL1
+    DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
@@ -55,7 +55,7 @@ else ifeq ($(PLATFORM),android)
 else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl2-dispmanx
@@ -63,7 +63,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 ${DISPMANX_FLAGS}
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl2-dispmanx
@@ -81,14 +81,14 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl2
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl2
 	
@@ -101,7 +101,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),pine64)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mfpu=vfpv3-d16
-    CFLAGS += -DARMV6T2 -D__arm__ -DUSE_SDL2
+    CFLAGS += -DARMV6T2 -D__arm__ -DARM_HAS_DIV -DUSE_SDL2
     CC = arm-linux-gnueabihf-gcc
     CXX = arm-linux-gnueabihf-g++
     NAME  = amiberry-pine64-sdl2
@@ -109,7 +109,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),xu4)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     NAME  = amiberry-xu4
     ifdef DEBUG
@@ -121,7 +121,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2 -DTINKER -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DTINKER -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
     LDFLAGS += -L/usr/local/lib
     HAVE_NEON = 1
     NAME  = amiberry-tinker
@@ -129,7 +129,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),android-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
-    DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DUSE_SDL2
+    DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
@@ -204,7 +204,7 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 
 ASFLAGS += $(CPU_FLAGS)
 
-export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-unused -Wno-format
+export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
 export CXXFLAGS += $(CFLAGS)
 
 

@@ -107,7 +107,7 @@
 //#define DISABLE_I_LSL
 //#define DISABLE_I_ROL
 //#define DISABLE_I_ROR
-#define DISABLE_I_ROXL
+//#define DISABLE_I_ROXL
 #define DISABLE_I_ROXR
 //#define DISABLE_I_ASRW
 //#define DISABLE_I_ASLW
@@ -125,6 +125,7 @@
 
 //#define DISABLE_I_DIVU
 //#define DISABLE_I_DIVS
+//#define DISABLE_I_DIVL
 
 
 #define RETURN "return 0;"
@@ -692,15 +693,14 @@ static void gen_move16(uae_u32 opcode, struct instr *curi)
   comprintf("  " RETURN "\n");
 	comprintf("} \n");
 
-  comprintf("\tint src=scratchie++;\n");
-	comprintf("\tint dst=scratchie++;\n");
-
 	uae_u32 masked_op = (opcode & 0xfff8);
 	if (masked_op == 0xf620) {
 		// POSTINCREMENT SOURCE AND DESTINATION version: MOVE16 (Ax)+,(Ay)+
+    comprintf("\tint srca=scratchie++;\n");
+    comprintf("\tint dsta=scratchie++;\n");
 		comprintf("\t uae_u16 dstreg = ((%s)>>12) & 0x07;\n", gen_nextiword());
-		comprintf("\t jnf_MOVE(src, srcreg + 8);\n");
-		comprintf("\t jnf_MOVE(dst, dstreg + 8);\n");
+		comprintf("\t jnf_MOVE(srca, srcreg + 8);\n");
+		comprintf("\t jnf_MOVE(dsta, dstreg + 8);\n");
 		comprintf("\t if (srcreg != dstreg)\n");
 		comprintf("\t   jnf_ADD_im8(srcreg + 8, srcreg + 8, 16);\n");
 		comprintf("\t jnf_ADD_im8(dstreg + 8, dstreg + 8, 16);\n");
@@ -717,7 +717,7 @@ static void gen_move16(uae_u32 opcode, struct instr *curi)
 			  break;
 		}
 	}
-	comprintf("\tjnf_MOVE16(dst, src);\n");
+	comprintf("\tjnf_MOVE16(dsta, srca);\n");
 }
 
 static void 
@@ -1300,6 +1300,47 @@ static void gen_divs(uae_u32 opcode, struct instr *curi, char* ssize) {
 	genastore("tmp", curi->dmode, "dstreg", sz_long /*curi->size*/, "dst");
 }
 
+static void gen_divl(uae_u32 opcode, struct instr *curi, char* ssize) {
+	(void) opcode;
+	(void) ssize;
+  comprintf("\t dont_care_flags();\n");
+	comprintf("\t uae_u16 extra=%s;\n", gen_nextiword());
+  comprintf("\t int r2=(extra>>12)&7;\n");
+	comprintf("\t int r3=extra&7;\n");
+	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
+  comprintf("\tregister_possible_exception();\n");
+
+	if (!noflags) {
+		comprintf("\t if (extra & 0x0400) {\n"); /* Need full 64 bit divisor */
+		comprintf("\t   FAIL(1);\n");
+    comprintf("\t   m68k_pc_offset=m68k_pc_offset_thisinst;\n");
+		comprintf("\t  " RETURN "\n");
+		comprintf("\t	} else { \n");
+		/* operands in src and r2, result goes into r2, remainder into r3 */
+		/* s2 = s2 / src */
+		/* s3 = s2 % src */
+		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t     jff_DIVLS32(r2,dst,r3);\n");
+		comprintf("\t	} else { \n");
+		comprintf("\t\t	  jff_DIVLU32(r2,dst,r3);\n");
+		comprintf("\t	} \n");
+		comprintf("\t }\n");
+		comprintf("\t live_flags();\n");
+	} else {
+		comprintf("\t if (extra & 0x0400) {\n"); /* Need full 64 bit divisor */
+		comprintf("\t   FAIL(1);\n");
+    comprintf("\t   m68k_pc_offset=m68k_pc_offset_thisinst;\n");
+		comprintf("\t  " RETURN "\n");
+		comprintf("\t } else {\n");
+		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
+		comprintf("\t     jnf_DIVLS32(r2,dst,r3);\n");
+		comprintf("\t	} else { \n");
+		comprintf("\t\t	  jnf_DIVLU32(r2,dst,r3);\n");
+		comprintf("\t	} \n");
+		comprintf("\t }\n");
+	}
+}
+
 static void gen_eor(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
@@ -1538,7 +1579,6 @@ static void gen_mull(uae_u32 opcode, struct instr *curi, char* ssize) {
 		comprintf("\t	} \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
 		comprintf("\t } else {\n"); /* Only want 32 bit result */
 		/* operands in dst and r2, result goes into r2 */
-		/* shouldn't matter whether it's signed or unsigned?!? */
 		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
 		comprintf("\t     jff_MULS32(r2,dst);\n");
 		comprintf("\t	} else { \n");
@@ -1557,7 +1597,6 @@ static void gen_mull(uae_u32 opcode, struct instr *curi, char* ssize) {
 		comprintf("\t	} \n"); /* The result is in r2/r3, with r2 holding the lower 32 bits */
 		comprintf("\t } else {\n"); /* Only want 32 bit result */
 		/* operands in dst and r2, result foes into r2 */
-		/* shouldn't matter whether it's signed or unsigned?!? */
 		comprintf("\t   if (extra & 0x0800) { \n"); /* signed */
 		comprintf("\t     jnf_MULS32(r2,dst);\n");
 		comprintf("\t	} else { \n");
@@ -2716,8 +2755,10 @@ gen_opcode(unsigned long int opcode) {
 		break;
 
 	case i_DIVL:
-		isjump;
+#ifdef DISABLE_I_DIVL
 		failure;
+#endif
+		gen_divl(opcode, curi, ssize);
 		break;
 
 	case i_MULL:
@@ -3043,7 +3084,7 @@ generate_one_opcode(int rp, int noflags)
 	dmsk = 7;
 
 	next_cpu_level = -1;
-  if (table68k[opcode].mnemo == i_DIVU || table68k[opcode].mnemo == i_DIVS) {
+  if (table68k[opcode].mnemo == i_DIVU || table68k[opcode].mnemo == i_DIVS || table68k[opcode].mnemo == i_DIVL) {
     comprintf("#ifndef ARMV6T2\n");
     comprintf("  FAIL(1);\n");
     comprintf("  " RETURN "\n");
@@ -3141,7 +3182,7 @@ generate_one_opcode(int rp, int noflags)
 		if (global_fpu)	flags |= 32;
 
 	  comprintf ("return 0;\n");
-    if (table68k[opcode].mnemo == i_DIVU || table68k[opcode].mnemo == i_DIVS) {
+    if (table68k[opcode].mnemo == i_DIVU || table68k[opcode].mnemo == i_DIVS || table68k[opcode].mnemo == i_DIVL) {
       comprintf("#endif\n");
     }
 
@@ -3243,10 +3284,6 @@ int main(int argc, char *argv[])
   headerfile = fopen("jit/comptbl.h", "wb");
 
 	fprintf (headerfile, "" \
-		"#ifdef NOFLAGS_SUPPORT\n" \
-		"/* 68040 */\n" \
-		"extern const struct comptbl op_smalltbl_0_nf[];\n" \
-		"#endif\n" \
 		"extern const struct comptbl op_smalltbl_0_comp_nf[];\n" \
 		"extern const struct comptbl op_smalltbl_0_comp_ff[];\n" \
 		"");

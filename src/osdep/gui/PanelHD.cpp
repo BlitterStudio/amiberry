@@ -553,7 +553,7 @@ static void AdjustDropDownControls()
 	{
 		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
 		{
-			if (lstMRUCDList[i].c_str() != changed_prefs.cdslots[0].name)
+			if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
 			{
 				cboCDFile->setSelected(i);
 				break;

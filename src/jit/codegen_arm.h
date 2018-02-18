@@ -645,8 +645,8 @@ enum {
 #define CC_ADD_rrrRORr(cc,Rd,Rn,Rm,Rs)  	_OP3(cc,_ADD,0,Rd,Rn,SHIFT_ROR_r(Rm,Rs))
 #define CC_ADD_rrrRRX(cc,Rd,Rn,Rm)     		_OP3(cc,_ADD,0,Rd,Rn,SHIFT_RRX(Rm))
 
-#define ADD_rri8(cc,Rd,Rn,i)          		CC_ADD_rri8(NATIVE_CC_AL,Rd,Rn,i)
-#define ADD_rri8RORi(cc,Rd,Rn,Rm,i)   		CC_ADD_rri8RORi(NATIVE_CC_AL,Rd,Rn,Rm,i)
+#define ADD_rri8(Rd,Rn,i)          				CC_ADD_rri8(NATIVE_CC_AL,Rd,Rn,i)
+#define ADD_rri8RORi(Rd,Rn,Rm,i)   				CC_ADD_rri8RORi(NATIVE_CC_AL,Rd,Rn,Rm,i)
 
 #define ADD_rri(Rd,Rn,i)                	CC_ADD_rri(NATIVE_CC_AL,Rd,Rn,i)
 #define ADD_rrr(Rd,Rn,Rm)               	CC_ADD_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
@@ -1320,6 +1320,12 @@ enum {
 #define CC_STM_Ri(cc,Rn,i)					_W(((cc) << 28) | (0x8 << 24) | (0x8 << 20) | ((Rn) << 16) | i)
 #define STM_Ri(Rn,i)								CC_STM_Ri(NATIVE_CC_AL,Rn,i)
 
+#define CC_MLS_rrrr(cc,Rd,Rn,Rm,Ra)			_W(((cc) << 28) | (0x0 << 24) | (0x6 << 20) | (Rd << 16) | (Ra << 12) | (Rm << 8) | (0x9 << 4) | Rn)
+#define MLS_rrrr(Rd,Rn,Rm,Ra)           CC_MLS_rrrr(NATIVE_CC_AL,Rd,Rn,Rm,Ra)
+
+#define CC_SMULxy_rrr(cc,Rd,Rn,Rm,x,y)	_W(((cc) << 28) | (0x1 << 24) | (0x6 << 20) | (Rd << 16) | (0x0 << 12) | (Rm << 8) | (0x8 << 4) | (Rn) | (x << 5) | (y << 6))
+#define SMULxy_rrr(Rd,Rn,Rm,x,y)        CC_SMULxy_rrr(NATIVE_CC_AL,Rd,Rn,Rm,x,y)
+
 // ARMv6T2
 //#ifdef ARMV6T2
 
@@ -1340,6 +1346,12 @@ enum {
 
 #define CC_SSAT_rir(cc,Rd,i,Rn)			_W(((cc) << 28) | (0x6a << 20) | (i << 16) | (Rd << 12) | (0x1 << 4) | (Rn))
 #define SSAT_rir(Rd,i,Rn)						CC_SSAT_rir(NATIVE_CC_AL,Rd,i,Rn)
+
+#define CC_SDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x1 << 20) | (Rd << 16) | (0xf << 12) | (Rm << 8) | (0x1 << 4) | (Rn))
+#define SDIV_rrr(Rd,Rn,Rm)					CC_SDIV_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+
+#define CC_UDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x3 << 20) | (Rd << 16) | (0xf << 12) | (Rm << 8) | (0x1 << 4) | (Rn))
+#define UDIV_rrr(Rd,Rn,Rm)					CC_UDIV_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
 //#endif
 
@@ -1486,7 +1498,10 @@ enum {
 #define FIMM6(imm)                  ((imm) << 16)
 #define VSHL64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x2 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(imm))
 #define VSHR64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x0 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(64-imm))
+#define VSLI64_ddi(Dd,Dm,i)      				_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(i))
 
 #define VORR_ddd(Dd,Dn,Dm)       				_W((0xf << 28) | (0x2 << 24) | (0x2 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
+
+#define VREV64_8_dd(Dd,Dm)      				_W((0xf << 28) | (0x3 << 24) | (0xb << 20) | (0x0 << 16) | (0x0 << 8) | (0x0 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm))
 
 #endif /* ARM_RTASM_H */

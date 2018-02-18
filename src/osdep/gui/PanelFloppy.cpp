@@ -51,7 +51,7 @@ static bool bIgnoreListChange = false;
 class DriveTypeListModel : public gcn::ListModel
 {
 private:
-    std::vector<std::string> types;
+    std::vector<std::string> types{};
 
 public:
 	DriveTypeListModel()
@@ -555,7 +555,7 @@ static void AdjustDropDownControls()
 		{
 			for (unsigned int j = 0; j < lstMRUDiskList.size(); ++j)
 			{
-				if (lstMRUDiskList[j].c_str() != changed_prefs.floppyslots[i].df)
+				if (strcmp(lstMRUDiskList[j].c_str(), changed_prefs.floppyslots[i].df) == 0)
 				{
 					cboDFxFile[i]->setSelected(j);
 					break;

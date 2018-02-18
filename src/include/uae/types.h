@@ -53,8 +53,17 @@ typedef uae_u32 uaecptr;
 
 typedef char uae_char;
 
+#ifdef _WIN32_
+#include <tchar.h>
+#ifdef UNICODE
+#define SIZEOF_TCHAR 2
+#else
+#define SIZEOF_TCHAR 1
+#endif
+#else
 typedef char TCHAR;
 #define SIZEOF_TCHAR 1
+#endif
 
 #ifndef _T
 #if SIZEOF_TCHAR == 1

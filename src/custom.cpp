@@ -101,8 +101,8 @@ static void uae_abort (const TCHAR *format,...)
 // these positive numbers.  Doing so may give you a 500mhz
 // 68040 but your emulation will not be able to reset at this
 // speed.
-#define SPEEDUP_TIMELIMIT_JIT_30      0
-#define SPEEDUP_TIMELIMIT_NONJIT_30   0
+#define SPEEDUP_TIMELIMIT_JIT_TURBO      0
+#define SPEEDUP_TIMELIMIT_NONJIT_TURBO   0
 
 int pissoff_value = SPEEDUP_CYCLES_JIT_PAL * CYCLE_UNIT;
 int speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
@@ -389,14 +389,14 @@ void set_speedup_values(void)
 			if (currprefs.m68k_speed != -30)
 				speedup_timelimit = SPEEDUP_TIMELIMIT_JIT;
 			else
-				speedup_timelimit = SPEEDUP_TIMELIMIT_JIT_30;
+				speedup_timelimit = SPEEDUP_TIMELIMIT_JIT_TURBO;
 		}
 		else {
 			pissoff_value = SPEEDUP_CYCLES_NONJIT * CYCLE_UNIT;
 			if (currprefs.m68k_speed != -30)
 				speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT;
 			else
-				speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT_30;
+				speedup_timelimit = SPEEDUP_TIMELIMIT_NONJIT_TURBO;
 		}
 	}
 	else {

@@ -162,7 +162,7 @@ extern uae_u32 needed_flags;
 extern uae_u8* comp_pc_p;
 extern void* pushall_call_handler;
 
-#define VREGS 32
+#define VREGS 24
 #define VFREGS 10
 
 #define INMEM 1
@@ -205,19 +205,11 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 #define PC_P 16
 #define FLAGX 17
 #define FLAGTMP 18
-#define NEXT_HANDLER 19
-#define S1 20
-#define S2 21
-#define S3 22
-#define S4 23
-#define S5 24
-#define S6 25
-#define S7 26
-#define S8 27
-#define S9 28
-#define S10 29
-#define S11 30
-#define S12 31
+#define S1 19
+#define S2 20
+#define S3 21
+#define S4 22
+#define S5 23
 
 #define FP_RESULT 8
 #define FS1 9
@@ -262,14 +254,6 @@ typedef struct {
     freg_status fate[VFREGS];
     fn_status   fat[N_FREGS];
 } bigstate;
-
-typedef struct {
-    /* Integer part */
-  uae_s8 virt[VREGS];
-  uae_s8 nat[N_REGS];
-} smallstate;
-
-extern int touchcnt;
 
 #define IMM uae_s32
 #define RR1 uae_u32
@@ -329,7 +313,6 @@ extern void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp);
 #define SYNC_PC_OFFSET 124
 extern void sync_m68k_pc(void);
 extern uae_u32 get_const(int r);
-extern int  is_const(int r);
 extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
 extern void register_possible_exception(void);
 
@@ -385,11 +368,9 @@ typedef struct blockinfo_t {
     uae_u8 optlevel;
     uae_u8 needed_flags;
     uae_u8 status;
-    uae_u8 havestate;
 
     dependency  dep[2];  /* Holds things we depend on */
     dependency* deplist; /* List of things that depend on this */
-    smallstate  env;
 } blockinfo;
 
 #define BI_INVALID 0
