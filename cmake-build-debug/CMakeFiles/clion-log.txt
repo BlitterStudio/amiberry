@@ -1,8 +1,0 @@
-"C:\Program Files\JetBrains\CLion 2017.3.3\bin\cmake\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - MinGW Makefiles" D:\Github\amiberry
-CMake Error at CMakeLists.txt:347 (target_link_libraries):
-  Cannot specify link libraries for target "pthread" which is not built by
-  this project.
-
-
--- Configuring incomplete, errors occurred!
-See also "D:/Github/amiberry/cmake-build-debug/CMakeFiles/CMakeOutput.log".
