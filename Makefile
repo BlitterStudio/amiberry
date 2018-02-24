@@ -47,7 +47,7 @@ else ifeq ($(PLATFORM),android)
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry-android
+    NAME  = amiberry
 
 #
 # SDL2 with DispmanX targets (RPI only)
@@ -133,7 +133,7 @@ USE_SDL2 = 1
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry-android
+    NAME  = amiberry
 endif
 
 RM     = rm -f
