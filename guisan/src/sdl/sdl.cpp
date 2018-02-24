@@ -60,7 +60,8 @@
 
 #include "guisan/sdl.hpp"
 
-extern "C"
+extern "C" {
+void gcnSDL()
 {
-    void gcnSDL() { }
+}
 }

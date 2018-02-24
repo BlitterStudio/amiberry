@@ -61,61 +61,62 @@
 
 namespace gcn
 {
-    class KeyInput;
-    class MouseInput;
+	class KeyInput;
+	class MouseInput;
 
-    /**
-     * Used for grabbing user input and heavily used internally by Guichan. 
-     * We include implemented Input classes for some common platforms like
-     * the Allegro library, the OpenGL library and the SDL library. To make
-     * Guichan usable under another platform, an Input class must be
-     * implemented.
-     *
-     * @see SDLInput, AllegroInput
-     */
-    class GCN_CORE_DECLSPEC Input
-    {
-    public:
+	/**
+	 * Used for grabbing user input and heavily used internally by Guichan. 
+	 * We include implemented Input classes for some common platforms like
+	 * the Allegro library, the OpenGL library and the SDL library. To make
+	 * Guichan usable under another platform, an Input class must be
+	 * implemented.
+	 *
+	 * @see SDLInput, AllegroInput
+	 */
+	class GCN_CORE_DECLSPEC Input
+	{
+	public:
 
-        /**
-         * Destructor.
-         */
-        virtual ~Input(){ }
+		/**
+		 * Destructor.
+		 */
+		virtual ~Input()
+		= default;
 
-        /**
-         * Checks whether the key queue is empty or not.
-         *
-         * @return true if the key queue is empty.
-         */
-        virtual bool isKeyQueueEmpty() = 0;
+		/**
+		 * Checks whether the key queue is empty or not.
+		 *
+		 * @return true if the key queue is empty.
+		 */
+		virtual bool isKeyQueueEmpty() = 0;
 
-        /**
-         * Dequeues the key input queue.
-         *
-         * @return key input.
-         */
-        virtual KeyInput dequeueKeyInput() = 0;
+		/**
+		 * Dequeues the key input queue.
+		 *
+		 * @return key input.
+		 */
+		virtual KeyInput dequeueKeyInput() = 0;
 
-        /**
-         * Checks whether the mouse queue is empyt or not.
-         *
-         * @return true if the mouse queue is empty.
-         */
-        virtual bool isMouseQueueEmpty() = 0;
+		/**
+		 * Checks whether the mouse queue is empyt or not.
+		 *
+		 * @return true if the mouse queue is empty.
+		 */
+		virtual bool isMouseQueueEmpty() = 0;
 
-        /**
-         * Dequeues the mouse input queue.
-         *
-         * @return mouse input.
-         */
-        virtual MouseInput dequeueMouseInput() = 0;
+		/**
+		 * Dequeues the mouse input queue.
+		 *
+		 * @return mouse input.
+		 */
+		virtual MouseInput dequeueMouseInput() = 0;
 
-        /**
-         * Polls all exsisting input. It exists for Input implementation
-         * compatibility. It is used internally by the library.
-         */
-        virtual void _pollInput() = 0;
-    };
+		/**
+		 * Polls all exsisting input. It exists for Input implementation
+		 * compatibility. It is used internally by the library.
+		 */
+		virtual void _pollInput() = 0;
+	};
 }
 
 #endif // end GCN_INPUT_HPP

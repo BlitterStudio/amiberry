@@ -62,155 +62,159 @@
 
 namespace gcn
 {
-    /**
-     * Internal class representing keyboard input. Generally you won't have to
-     * bother using this class.
-     */
-    class GCN_CORE_DECLSPEC KeyInput
-    {
-    public:
+	/**
+	 * Internal class representing keyboard input. Generally you won't have to
+	 * bother using this class.
+	 */
+	class GCN_CORE_DECLSPEC KeyInput
+	{
+	public:
 
-        /**
-         * Constructor.
-         */
-        KeyInput() { };
+		/**
+		 * Constructor.
+		 */
+		KeyInput(): mType(0), mButton(0), mShiftPressed(false), mControlPressed(false), mAltPressed(false),
+		            mMetaPressed(false), mNumericPad(false)
+		{
+		}
+		;
 
-        /**
-         * Constructor.
-         *
-         * @param key the Key the input concerns.
-         * @param type the type of input.
-         */
-        KeyInput(const Key& key, int type);
+		/**
+		 * Constructor.
+		 *
+		 * @param key the Key the input concerns.
+		 * @param type the type of input.
+		 */
+		KeyInput(const Key& key, int type);
 
-        /**
-         * Sets the input type.
-         *
-         * @param type the type of input.
-         */
-        void setType(int type);
+		/**
+		 * Sets the input type.
+		 *
+		 * @param type the type of input.
+		 */
+		void setType(int type);
 
-        /**
-         * Gets the input type.
-         *
-         * @return the input type.
-         */
-        int getType() const;
+		/**
+		 * Gets the input type.
+		 *
+		 * @return the input type.
+		 */
+		int getType() const;
 
-        /**
-         * Sets the key the input concerns.
-         *
-         * @param key the Key the input concerns.
-         */
-        void setKey(const Key& key);
+		/**
+		 * Sets the key the input concerns.
+		 *
+		 * @param key the Key the input concerns.
+		 */
+		void setKey(const Key& key);
 
-        /**
-         * Gets the key the input concerns.
-         *
-         * @return the Key the input concerns.
-         */
-        const Key& getKey() const;
+		/**
+		 * Gets the key the input concerns.
+		 *
+		 * @return the Key the input concerns.
+		 */
+		const Key& getKey() const;
 
-        /**
-         * Checks whether shift is pressed.
-         *
-         * @return true if shift was pressed at the same time as the key.
-         * @since 0.6.0
-         */
-        bool isShiftPressed() const;
+		/**
+		 * Checks whether shift is pressed.
+		 *
+		 * @return true if shift was pressed at the same time as the key.
+		 * @since 0.6.0
+		 */
+		bool isShiftPressed() const;
 
-        /**
-         * Sets the shift pressed flag.
-         *
-         * @param pressed the shift flag value.
-         * @since 0.6.0
-         */
-        void setShiftPressed(bool pressed);
+		/**
+		 * Sets the shift pressed flag.
+		 *
+		 * @param pressed the shift flag value.
+		 * @since 0.6.0
+		 */
+		void setShiftPressed(bool pressed);
 
-        /**
-         * Checks whether control is pressed.
-         *
-         * @return true if control was pressed at the same time as the key.
-         * @since 0.6.0
-         */
-        bool isControlPressed() const;
+		/**
+		 * Checks whether control is pressed.
+		 *
+		 * @return true if control was pressed at the same time as the key.
+		 * @since 0.6.0
+		 */
+		bool isControlPressed() const;
 
-        /**
-         * Sets the control pressed flag.
-         *
-         * @param pressed the control flag value.
-         * @since 0.6.0
-         */
-        void setControlPressed(bool pressed);
+		/**
+		 * Sets the control pressed flag.
+		 *
+		 * @param pressed the control flag value.
+		 * @since 0.6.0
+		 */
+		void setControlPressed(bool pressed);
 
-        /**
-         * Checks whether alt is pressed.
-         *
-         * @return true if alt was pressed at the same time as the key.
-         * @since 0.6.0
-         */
-        bool isAltPressed() const;
+		/**
+		 * Checks whether alt is pressed.
+		 *
+		 * @return true if alt was pressed at the same time as the key.
+		 * @since 0.6.0
+		 */
+		bool isAltPressed() const;
 
-        /**
-         * Sets the alt pressed flag.
-         *
-         * @param pressed the alt flag value.
-         * @since 0.6.0
-         */
-        void setAltPressed(bool pressed);
+		/**
+		 * Sets the alt pressed flag.
+		 *
+		 * @param pressed the alt flag value.
+		 * @since 0.6.0
+		 */
+		void setAltPressed(bool pressed);
 
-        /**
-         * Checks whether meta is pressed.
-         *
-         * @return true if meta was pressed at the same time as the key.
-         * @since 0.6.0
-         */
-        bool isMetaPressed() const;
+		/**
+		 * Checks whether meta is pressed.
+		 *
+		 * @return true if meta was pressed at the same time as the key.
+		 * @since 0.6.0
+		 */
+		bool isMetaPressed() const;
 
-        /**
-         * Sets the meta pressed flag.
-         *
-         * @param pressed the meta flag value.
-         * @since 0.6.0
-         */
-        void setMetaPressed(bool pressed);
+		/**
+		 * Sets the meta pressed flag.
+		 *
+		 * @param pressed the meta flag value.
+		 * @since 0.6.0
+		 */
+		void setMetaPressed(bool pressed);
 
-        /**
-         * Checks whether the key was pressed at the numeric pad.
-         *
-         * @return true if key pressed at the numeric pad.
-         * @since 0.6.0
-         */
-        bool isNumericPad() const;
+		/**
+		 * Checks whether the key was pressed at the numeric pad.
+		 *
+		 * @return true if key pressed at the numeric pad.
+		 * @since 0.6.0
+		 */
+		bool isNumericPad() const;
 
-        /**
-         * Sets the numeric pad flag.
-         *
-         * @param numpad the numeric pad flag value.
-         * @since 0.6.0
-         */
-        void setNumericPad(bool numpad);
+		/**
+		 * Sets the numeric pad flag.
+		 *
+		 * @param numpad the numeric pad flag value.
+		 * @since 0.6.0
+		 */
+		void setNumericPad(bool numpad);
 
-        /**
-         * Key input types. This enum corresponds to the enum with event
-         * types on KeyEvent for easy mapping.
-         */
-        enum
-        {
-            PRESSED = 0,
-            RELEASED
-        };
+		/**
+		 * Key input types. This enum corresponds to the enum with event
+		 * types on KeyEvent for easy mapping.
+		 */
+		enum
+		{
+			PRESSED = 0,
+			RELEASED
+		};
 
-    protected:
-        Key mKey;
-        int mType;
-        int mButton;
-        bool mShiftPressed;
-        bool mControlPressed;
-        bool mAltPressed;
-        bool mMetaPressed;
-        bool mNumericPad;
-    };
+	protected:
+		Key mKey;
+		int mType;
+		int mButton;
+		bool mShiftPressed;
+		bool mControlPressed;
+		bool mAltPressed;
+		bool mMetaPressed;
+		bool mNumericPad;
+	};
 }
 
 #endif // end GCN_KEYINPUT_HPP

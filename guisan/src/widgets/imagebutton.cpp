@@ -65,101 +65,101 @@
 
 namespace gcn
 {
-    ImageButton::ImageButton(const std::string& filename)
-    {
-        mImage = Image::load(filename);
-        mInternalImage = true;
-        setWidth(mImage->getWidth() + mImage->getWidth() / 2);
-        setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-    }
+	ImageButton::ImageButton(const std::string& filename)
+	{
+		mImage = Image::load(filename);
+		mInternalImage = true;
+		setWidth(mImage->getWidth() + mImage->getWidth() / 2);
+		setHeight(mImage->getHeight() + mImage->getHeight() / 2);
+	}
 
-    ImageButton::ImageButton(Image* image)
-    {
-        mImage = image;
-        mInternalImage = false;
-        setWidth(mImage->getWidth() + mImage->getWidth() / 2);
-        setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-    }
+	ImageButton::ImageButton(Image* image)
+	{
+		mImage = image;
+		mInternalImage = false;
+		setWidth(mImage->getWidth() + mImage->getWidth() / 2);
+		setHeight(mImage->getHeight() + mImage->getHeight() / 2);
+	}
 
-    ImageButton::~ImageButton()
-    {
-        if (mInternalImage)
-            delete mImage;
-    }
+	ImageButton::~ImageButton()
+	{
+		if (mInternalImage)
+			delete mImage;
+	}
 
-    void ImageButton::adjustSize()
-    {
-        setWidth(mImage->getWidth());
-        setHeight(mImage->getHeight());
-    }
+	void ImageButton::adjustSize()
+	{
+		setWidth(mImage->getWidth());
+		setHeight(mImage->getHeight());
+	}
 
-    void ImageButton::setImage(Image* image)
-    {
-        if (mInternalImage)
-            delete mImage;
-        mImage = image;
-        mInternalImage = false;
-    }
+	void ImageButton::setImage(Image* image)
+	{
+		if (mInternalImage)
+			delete mImage;
+		mImage = image;
+		mInternalImage = false;
+	}
 
-    Image* ImageButton::getImage()
-    {
-        return mImage;
-    }
+	Image* ImageButton::getImage()
+	{
+		return mImage;
+	}
 
-    void ImageButton::draw(Graphics* graphics)
-    {
-        gcn::Color faceColor = getBaseColor();
-        gcn::Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
+	void ImageButton::draw(Graphics* graphics)
+	{
+		auto faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		auto alpha = getBaseColor().a;
 
-        if (isPressed())
-        {
-            faceColor = faceColor - 0x303030;
-            faceColor.a = alpha;
-            highlightColor = faceColor - 0x303030;
-            highlightColor.a = alpha;
-            shadowColor = faceColor + 0x303030;
-            shadowColor.a = alpha;
-        }
-        else
-        {
-            highlightColor = faceColor + 0x303030;
-            highlightColor.a = alpha;
-            shadowColor = faceColor - 0x303030;
-            shadowColor.a = alpha;
-        }
+		if (isPressed())
+		{
+			faceColor = faceColor - 0x303030;
+			faceColor.a = alpha;
+			highlightColor = faceColor - 0x303030;
+			highlightColor.a = alpha;
+			shadowColor = faceColor + 0x303030;
+			shadowColor.a = alpha;
+		}
+		else
+		{
+			highlightColor = faceColor + 0x303030;
+			highlightColor.a = alpha;
+			shadowColor = faceColor - 0x303030;
+			shadowColor.a = alpha;
+		}
 
-        graphics->setColor(faceColor);
-        graphics->fillRectangle(Rectangle(1, 1, getDimension().width-1, getHeight() - 1));
+		graphics->setColor(faceColor);
+		graphics->fillRectangle(Rectangle(1, 1, getDimension().width - 1, getHeight() - 1));
 
-        graphics->setColor(highlightColor);
-        graphics->drawLine(0, 0, getWidth() - 1, 0);
-        graphics->drawLine(0, 1, 0, getHeight() - 1);
+		graphics->setColor(highlightColor);
+		graphics->drawLine(0, 0, getWidth() - 1, 0);
+		graphics->drawLine(0, 1, 0, getHeight() - 1);
 
-        graphics->setColor(shadowColor);
-        graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
-        graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
+		graphics->setColor(shadowColor);
+		graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
+		graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
 
-        graphics->setColor(getForegroundColor());
+		graphics->setColor(getForegroundColor());
 
-        int textX = getWidth() / 2 - mImage->getWidth() / 2;
-        int textY = getHeight() / 2 - mImage->getHeight() / 2;
+		auto textX = getWidth() / 2 - mImage->getWidth() / 2;
+		auto textY = getHeight() / 2 - mImage->getHeight() / 2;
 
-        if (isPressed())
-        {
-            graphics->drawImage(mImage, textX + 1, textY + 1);
-        }
-        else
-        {
-            graphics->drawImage(mImage, textX, textY);
-           
-            if (isFocused())
-            {
-                graphics->drawRectangle(Rectangle(2, 
-                                                  2, 
-                                                  getWidth() - 4,
-                                                  getHeight() - 4));
-            }
-        }
-    }
+		if (isPressed())
+		{
+			graphics->drawImage(mImage, textX + 1, textY + 1);
+		}
+		else
+		{
+			graphics->drawImage(mImage, textX, textY);
+
+			if (isFocused())
+			{
+				graphics->drawRectangle(Rectangle(2,
+				                                  2,
+				                                  getWidth() - 4,
+				                                  getHeight() - 4));
+			}
+		}
+	}
 }

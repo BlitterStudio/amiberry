@@ -61,49 +61,50 @@
 
 #include <guisan/exception.hpp>
 #include <guisan/opengl/openglimage.hpp>
+#include "SDL.h"
 
 namespace gcn
 {
-    class Image;
+	class Image;
 
-    /**
-     * OpenGL ImageLoader that loads images with SDL.
-     */
-    class OpenGLSDLImageLoader : public SDLImageLoader
-    {
-    public:
+	/**
+	 * OpenGL ImageLoader that loads images with SDL.
+	 */
+	class OpenGLSDLImageLoader : public SDLImageLoader
+	{
+	public:
 
-        // Inherited from ImageLoader
+		// Inherited from ImageLoader
 
-        virtual Image* load(const std::string& filename,
-                            bool convertToDisplayFormat = true)
-        {
-            SDL_Surface *loadedSurface = loadSDLSurface(filename);
+		Image* load(const std::string& filename,
+		            bool convertToDisplayFormat = true) override
+		{
+			SDL_Surface* loadedSurface = loadSDLSurface(filename);
 
-            if (loadedSurface == NULL)
-            {
-                throw GCN_EXCEPTION(
-                        std::string("Unable to load image file: ") + filename);
-            }
+			if (loadedSurface == nullptr)
+			{
+				throw GCN_EXCEPTION(
+					std::string("Unable to load image file: ") + filename);
+			}
 
-            SDL_Surface *surface = convertToStandardFormat(loadedSurface);
-            SDL_FreeSurface(loadedSurface);
+			SDL_Surface* surface = convertToStandardFormat(loadedSurface);
+			SDL_FreeSurface(loadedSurface);
 
-            if (surface == NULL)
-            {
-                throw GCN_EXCEPTION(
-                        std::string("Not enough memory to load: ") + filename);
-            }
+			if (surface == nullptr)
+			{
+				throw GCN_EXCEPTION(
+					std::string("Not enough memory to load: ") + filename);
+			}
 
-            OpenGLImage *image = new OpenGLImage((unsigned int*)surface->pixels,
-                                                 surface->w,
-                                                 surface->h,
-                                                 convertToDisplayFormat);
-            SDL_FreeSurface(surface);
+			OpenGLImage* image = new OpenGLImage((unsigned int*)surface->pixels,
+			                                     surface->w,
+			                                     surface->h,
+			                                     convertToDisplayFormat);
+			SDL_FreeSurface(surface);
 
-            return image;
-        }
-    };
+			return image;
+		}
+	};
 }
 
 #endif // end GCN_OPENGLSDLIMAGELOADER_HPP

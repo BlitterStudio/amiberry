@@ -64,33 +64,33 @@
 
 namespace gcn
 {
-    /**
-     * Listener of death events from Widgets. To be able to
-     * listen for deaths you must make a class which inherits
-     * from this class and implements the death function.
-     *
-     * @see Widget::addDeathListener
-     * @author Olof Naessén
-     * @since 0.6.0
-     */
-    class GCN_CORE_DECLSPEC DeathListener
-    {
-    public:
+	/**
+	 * Listener of death events from Widgets. To be able to
+	 * listen for deaths you must make a class which inherits
+	 * from this class and implements the death function.
+	 *
+	 * @see Widget::addDeathListener
+	 * @author Olof Naessén
+	 * @since 0.6.0
+	 */
+	class GCN_CORE_DECLSPEC DeathListener
+	{
+	public:
 
-        /**
-         * Destructor.
-         */
-        virtual ~DeathListener() { }
+		/**
+		 * Destructor.
+		 */
+		virtual ~DeathListener()
+		= default;
 
-        /**
-         * Called when a widget dies. It is used to be able to recieve
-         * a notification when a death of a widget occurs.
-         *
-         * @param event the event of the death.
-         */
-        virtual void death(const Event& event) = 0;
-
-    };
+		/**
+		 * Called when a widget dies. It is used to be able to recieve
+		 * a notification when a death of a widget occurs.
+		 *
+		 * @param event the event of the death.
+		 */
+		virtual void death(const Event& event) = 0;
+	};
 }
 
 #endif // end GCN_DEATHLISTENER_HPP

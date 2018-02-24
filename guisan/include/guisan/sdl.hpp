@@ -65,12 +65,11 @@
 
 #include "platform.hpp"
 
-extern "C"
-{
-    /**
-     * Exists to be able to check for Guichan SDL with autotools.
-     */
-    GCN_EXTENSION_DECLSPEC extern void gcnSDL();
+extern "C" {
+/**
+ * Exists to be able to check for Guichan SDL with autotools.
+ */
+GCN_EXTENSION_DECLSPEC extern void gcnSDL();
 }
 
 #endif // end GCN_SDL_HPP

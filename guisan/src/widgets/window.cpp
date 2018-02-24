@@ -67,281 +67,276 @@
 
 namespace gcn
 {
-    Window::Window()
-            :mIsMoving(false)
-    {
-        setBorderSize(1);
-        setPadding(2);
-        setTitleBarHeight(16);
-        setAlignment(Graphics::CENTER);
-        addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
-    }
+	Window::Window()
+		: mIsMoving(false)
+	{
+		setBorderSize(1);
+		setPadding(2);
+		setTitleBarHeight(16);
+		setAlignment(Graphics::CENTER);
+		addMouseListener(this);
+		setMovable(true);
+		Window::setOpaque(true);
+	}
 
-    Window::Window(const std::string& caption)
-            :mIsMoving(false)
-    {
-        setCaption(caption);
-        setBorderSize(1);
-        setPadding(2);
-        setTitleBarHeight(16);
-        setAlignment(Graphics::CENTER);
-        addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
-    }
+	Window::Window(const std::string& caption)
+		: mIsMoving(false)
+	{
+		setCaption(caption);
+		setBorderSize(1);
+		setPadding(2);
+		setTitleBarHeight(16);
+		setAlignment(Graphics::CENTER);
+		addMouseListener(this);
+		setMovable(true);
+		Window::setOpaque(true);
+	}
 
-    Window::~Window()
-    {
-    }
+	Window::~Window()
+	= default;
 
-    void Window::setPadding(unsigned int padding)
-    {
-        mPadding = padding;
-    }
+	void Window::setPadding(unsigned int padding)
+	{
+		mPadding = padding;
+	}
 
-    unsigned int Window::getPadding() const
-    {
-        return mPadding;
-    }
+	int Window::getPadding() const
+	{
+		return mPadding;
+	}
 
-    void Window::setTitleBarHeight(unsigned int height)
-    {
-        mTitleBarHeight = height;
-    }
+	void Window::setTitleBarHeight(unsigned int height)
+	{
+		mTitleBarHeight = height;
+	}
 
-    unsigned int Window::getTitleBarHeight()
-    {
-        return mTitleBarHeight;
-    }
+	int Window::getTitleBarHeight() const
+	{
+		return mTitleBarHeight;
+	}
 
-    void Window::setCaption(const std::string& caption)
-    {
-        mCaption = caption;
-    }
+	void Window::setCaption(const std::string& caption)
+	{
+		mCaption = caption;
+	}
 
-    const std::string& Window::getCaption() const
-    {
-        return mCaption;
-    }
+	const std::string& Window::getCaption() const
+	{
+		return mCaption;
+	}
 
-    void Window::setAlignment(unsigned int alignment)
-    {
-        mAlignment = alignment;
-    }
+	void Window::setAlignment(unsigned int alignment)
+	{
+		mAlignment = alignment;
+	}
 
-    unsigned int Window::getAlignment() const
-    {
-        return mAlignment;
-    }
+	int Window::getAlignment() const
+	{
+		return mAlignment;
+	}
 
-    void Window::draw(Graphics* graphics)
-    {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        //int width = getWidth() + getBorderSize() * 2 - 1;
-        //int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+	void Window::draw(Graphics* graphics)
+	{
+		auto faceColor = getBaseColor();
+		auto alpha = getBaseColor().a;
+		//int width = getWidth() + getBorderSize() * 2 - 1;
+		//int height = getHeight() + getBorderSize() * 2 - 1;
+		Color highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		Color shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-        Rectangle d = getChildrenArea();
+		Rectangle d = getChildrenArea();
 
-        // Fill the background around the content
-        graphics->setColor(faceColor);
-        // Fill top
-        graphics->fillRectangle(Rectangle(0,0,getWidth(),d.y - 1));
-        // Fill left
-        graphics->fillRectangle(Rectangle(0,d.y - 1, d.x - 1, getHeight() - d.y + 1));
-        // Fill right
-        graphics->fillRectangle(Rectangle(d.x + d.width + 1,
-                                          d.y - 1,
-                                          getWidth() - d.x - d.width - 1,
-                                          getHeight() - d.y + 1));
-        // Fill bottom
-        graphics->fillRectangle(Rectangle(d.x - 1,
-                                          d.y + d.height + 1,
-                                          d.width + 2,
-                                          getHeight() - d.height - d.y - 1));
+		// Fill the background around the content
+		graphics->setColor(faceColor);
+		// Fill top
+		graphics->fillRectangle(Rectangle(0, 0, getWidth(), d.y - 1));
+		// Fill left
+		graphics->fillRectangle(Rectangle(0, d.y - 1, d.x - 1, getHeight() - d.y + 1));
+		// Fill right
+		graphics->fillRectangle(Rectangle(d.x + d.width + 1,
+		                                  d.y - 1,
+		                                  getWidth() - d.x - d.width - 1,
+		                                  getHeight() - d.y + 1));
+		// Fill bottom
+		graphics->fillRectangle(Rectangle(d.x - 1,
+		                                  d.y + d.height + 1,
+		                                  d.width + 2,
+		                                  getHeight() - d.height - d.y - 1));
 
-        if (isOpaque())
-        {
-            graphics->fillRectangle(d);
-        }
+		if (isOpaque())
+		{
+			graphics->fillRectangle(d);
+		}
 
-        // Construct a rectangle one pixel bigger than the content
-        d.x -= 1;
-        d.y -= 1;
-        d.width += 2;
-        d.height += 2;
+		// Construct a rectangle one pixel bigger than the content
+		d.x -= 1;
+		d.y -= 1;
+		d.width += 2;
+		d.height += 2;
 
-        // Draw a border around the content
-        graphics->setColor(shadowColor);
-        // Top line
-        graphics->drawLine(d.x,
-                           d.y,
-                           d.x + d.width - 2,
-                           d.y);
+		// Draw a border around the content
+		graphics->setColor(shadowColor);
+		// Top line
+		graphics->drawLine(d.x,
+		                   d.y,
+		                   d.x + d.width - 2,
+		                   d.y);
 
-        // Left line
-        graphics->drawLine(d.x,
-                           d.y + 1,
-                           d.x,
-                           d.y + d.height - 1);
+		// Left line
+		graphics->drawLine(d.x,
+		                   d.y + 1,
+		                   d.x,
+		                   d.y + d.height - 1);
 
-        graphics->setColor(highlightColor);
-        // Right line
-        graphics->drawLine(d.x + d.width - 1,
-                           d.y,
-                           d.x + d.width - 1,
-                           d.y + d.height - 2);
-        // Bottom line
-        graphics->drawLine(d.x + 1,
-                           d.y + d.height - 1,
-                           d.x + d.width - 1,
-                           d.y + d.height - 1);
+		graphics->setColor(highlightColor);
+		// Right line
+		graphics->drawLine(d.x + d.width - 1,
+		                   d.y,
+		                   d.x + d.width - 1,
+		                   d.y + d.height - 2);
+		// Bottom line
+		graphics->drawLine(d.x + 1,
+		                   d.y + d.height - 1,
+		                   d.x + d.width - 1,
+		                   d.y + d.height - 1);
 
-        drawChildren(graphics);
+		drawChildren(graphics);
 
-        int textX;
-        int textY;
+		int textX;
 
-        textY = ((int)getTitleBarHeight() - getFont()->getHeight()) / 2;
+		auto textY = (int(getTitleBarHeight()) - getFont()->getHeight()) / 2;
 
-        switch (getAlignment())
-        {
-          case Graphics::LEFT:
-              textX = 4;
-              break;
-          case Graphics::CENTER:
-              textX = getWidth() / 2;
-              break;
-          case Graphics::RIGHT:
-              textX = getWidth() - 4;
-              break;
-          default:
-              throw GCN_EXCEPTION("Unknown alignment.");
-        }
+		switch (getAlignment())
+		{
+		case Graphics::LEFT:
+			textX = 4;
+			break;
+		case Graphics::CENTER:
+			textX = getWidth() / 2;
+			break;
+		case Graphics::RIGHT:
+			textX = getWidth() - 4;
+			break;
+		default:
+			throw GCN_EXCEPTION("Unknown alignment.");
+		}
 
-        graphics->setColor(getForegroundColor());
-        graphics->setFont(getFont());
-        graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
-        graphics->drawText(getCaption(), textX, textY, getAlignment());
-        graphics->popClipArea();
-    }
+		graphics->setColor(getForegroundColor());
+		graphics->setFont(getFont());
+		graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
+		graphics->drawText(getCaption(), textX, textY, getAlignment());
+		graphics->popClipArea();
+	}
 
-    void Window::drawBorder(Graphics* graphics)
-    {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+	void Window::drawBorder(Graphics* graphics)
+	{
+		auto faceColor = getBaseColor();
+		auto alpha = getBaseColor().a;
+		int width = getWidth() + getBorderSize() * 2 - 1;
+		int height = getHeight() + getBorderSize() * 2 - 1;
+		auto highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		auto shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
-        {
-            graphics->setColor(highlightColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(shadowColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
-    }
+		for (unsigned int i = 0; i < getBorderSize(); ++i)
+		{
+			graphics->setColor(highlightColor);
+			graphics->drawLine(i, i, width - i, i);
+			graphics->drawLine(i, i + 1, i, height - i - 1);
+			graphics->setColor(shadowColor);
+			graphics->drawLine(width - i, i + 1, width - i, height - i);
+			graphics->drawLine(i, height - i, width - i - 1, height - i);
+		}
+	}
 
-    void Window::mousePressed(MouseEvent& mouseEvent)
-    {
-        if (mouseEvent.getSource() != this)
-        {
-            return;
-        }
-        
-        if (getParent() != NULL)
-        {
-            getParent()->moveToTop(this);
-        }
+	void Window::mousePressed(MouseEvent& mouseEvent)
+	{
+		if (mouseEvent.getSource() != this)
+		{
+			return;
+		}
 
-        mDragOffsetX = mouseEvent.getX();
-        mDragOffsetY = mouseEvent.getY();
-        
-        mIsMoving = mouseEvent.getY() <= (int)mTitleBarHeight;
-    }
+		if (getParent() != nullptr)
+		{
+			getParent()->moveToTop(this);
+		}
 
-    void Window::mouseReleased(MouseEvent& mouseEvent)
-    {
-        mIsMoving = false;
-    }
+		mDragOffsetX = mouseEvent.getX();
+		mDragOffsetY = mouseEvent.getY();
 
-    void Window::mouseDragged(MouseEvent& mouseEvent)
-    {
-        if (mouseEvent.isConsumed() || mouseEvent.getSource() != this)
-        {
-            return;
-        }
-        
-        if (isMovable() && mIsMoving)
-        {
-            setPosition(mouseEvent.getX() - mDragOffsetX + getX(),
-                        mouseEvent.getY() - mDragOffsetY + getY());
-        }
+		mIsMoving = mouseEvent.getY() <= (int)mTitleBarHeight;
+	}
 
-        mouseEvent.consume();
-    }
+	void Window::mouseReleased(MouseEvent& mouseEvent)
+	{
+		mIsMoving = false;
+	}
 
-    Rectangle Window::getChildrenArea()
-    {
-        return Rectangle(getPadding(),
-                         getTitleBarHeight(),
-                         getWidth() - getPadding() * 2,
-                         getHeight() - getPadding() - getTitleBarHeight());
-    }
+	void Window::mouseDragged(MouseEvent& mouseEvent)
+	{
+		if (mouseEvent.isConsumed() || mouseEvent.getSource() != this)
+		{
+			return;
+		}
 
-    void Window::setMovable(bool movable)
-    {
-        mMovable = movable;
-    }
+		if (isMovable() && mIsMoving)
+		{
+			setPosition(mouseEvent.getX() - mDragOffsetX + getX(),
+			            mouseEvent.getY() - mDragOffsetY + getY());
+		}
 
-    bool Window::isMovable() const
-    {
-        return mMovable;
-    }
+		mouseEvent.consume();
+	}
 
-    void Window::setOpaque(bool opaque)
-    {
-        mOpaque = opaque;
-    }
+	Rectangle Window::getChildrenArea()
+	{
+		return {
+			getPadding(),
+			getTitleBarHeight(),
+			getWidth() - getPadding() * 2,
+			getHeight() - getPadding() - getTitleBarHeight()
+		};
+	}
 
-    bool Window::isOpaque()
-    {
-        return mOpaque;
-    }
+	void Window::setMovable(bool movable)
+	{
+		mMovable = movable;
+	}
 
-    void Window::resizeToContent()
-    {
-        WidgetListIterator it;
+	bool Window::isMovable() const
+	{
+		return mMovable;
+	}
 
-        int w = 0, h = 0;
-        for (it = mWidgets.begin(); it != mWidgets.end(); it++)
-        {
-            if ((*it)->getX() + (*it)->getWidth() > w)
-            {
-                w = (*it)->getX() + (*it)->getWidth();
-            }
+	void Window::setOpaque(bool opaque)
+	{
+		mOpaque = opaque;
+	}
 
-            if ((*it)->getY() + (*it)->getHeight() > h)
-            {
-                h = (*it)->getY() + (*it)->getHeight();
-            }
-        }
+	bool Window::isOpaque() const
+	{
+		return mOpaque;
+	}
 
-        setSize(w + 2* getPadding(), h + getPadding() + getTitleBarHeight());
-    }
+	void Window::resizeToContent()
+	{
+		auto w = 0, h = 0;
+		for (auto& mWidget : mWidgets)
+		{
+			if (mWidget->getX() + mWidget->getWidth() > w)
+			{
+				w = mWidget->getX() + mWidget->getWidth();
+			}
+
+			if (mWidget->getY() + mWidget->getHeight() > h)
+			{
+				h = mWidget->getY() + mWidget->getHeight();
+			}
+		}
+
+		setSize(w + 2 * getPadding(), h + getPadding() + getTitleBarHeight());
+	}
 }

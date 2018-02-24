@@ -64,23 +64,23 @@
 
 namespace gcn
 {
-    class Image;
+	class Image;
 
-    /**
-     * SDL implementation of ImageLoader.
-     */
-    class GCN_EXTENSION_DECLSPEC SDLImageLoader : public ImageLoader
-    {
-    public:
+	/**
+	 * SDL implementation of ImageLoader.
+	 */
+	class GCN_EXTENSION_DECLSPEC SDLImageLoader : public ImageLoader
+	{
+	public:
 
-        // Inherited from ImageLoader
+		// Inherited from ImageLoader
 
-        virtual Image* load(const std::string& filename, bool convertToDisplayFormat = true);
+		Image* load(const std::string& filename, bool convertToDisplayFormat = true) override;
 
-    protected:
-        virtual SDL_Surface* loadSDLSurface(const std::string& filename);
-        virtual SDL_Surface* convertToStandardFormat(SDL_Surface* surface);
-    };
+	protected:
+		virtual SDL_Surface* loadSDLSurface(const std::string& filename);
+		virtual SDL_Surface* convertToStandardFormat(SDL_Surface* surface);
+	};
 }
 
 #endif // end GCN_SDLIMAGELOADER_HPP

@@ -65,153 +65,153 @@
 
 namespace gcn
 {
-    /**
-     * A movable window which can contain another Widgets.
-     */
-    class GCN_CORE_DECLSPEC Window : public Container,
-                                     public MouseListener
-    {
-    public:
-        /**
-         * Constructor.
-         */
-        Window();
+	/**
+	 * A movable window which can contain another Widgets.
+	 */
+	class GCN_CORE_DECLSPEC Window : public Container,
+	                                 public MouseListener
+	{
+	public:
+		/**
+		 * Constructor.
+		 */
+		Window();
 
-        /**
-         * Constructor.
-         *
-         * @param caption the Window caption.
-         */
-        Window(const std::string& caption);
+		/**
+		 * Constructor.
+		 *
+		 * @param caption the Window caption.
+		 */
+		Window(const std::string& caption);
 
-        /**
-         * Destructor.
-         */
-        virtual ~Window();
+		/**
+		 * Destructor.
+		 */
+		virtual ~Window();
 
-        /**
-         * Sets the Window caption.
-         *
-         * @param caption the Window caption.
-         */
-        void setCaption(const std::string& caption);
+		/**
+		 * Sets the Window caption.
+		 *
+		 * @param caption the Window caption.
+		 */
+		void setCaption(const std::string& caption);
 
-        /**
-         * Gets the Window caption.
-         *
-         * @return the Window caption.
-         */
-        const std::string& getCaption() const;
+		/**
+		 * Gets the Window caption.
+		 *
+		 * @return the Window caption.
+		 */
+		const std::string& getCaption() const;
 
-        /**
-         * Sets the alignment for the caption.
-         *
-         * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
-         */
-        void setAlignment(unsigned int alignment);
+		/**
+		 * Sets the alignment for the caption.
+		 *
+		 * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
+		 */
+		void setAlignment(unsigned int alignment);
 
-        /**
-         * Gets the alignment for the caption.
-         *
-         * @return alignment of caption.
-         */
-        unsigned int getAlignment() const;
+		/**
+		 * Gets the alignment for the caption.
+		 *
+		 * @return alignment of caption.
+		 */
+		int getAlignment() const;
 
-        /**
-         * Sets the padding of the window which is the distance between the
-         * window border and the content.
-         *
-         * @param padding the padding value.
-         */
-        void setPadding(unsigned int padding);
+		/**
+		 * Sets the padding of the window which is the distance between the
+		 * window border and the content.
+		 *
+		 * @param padding the padding value.
+		 */
+		void setPadding(unsigned int padding);
 
-        /**
-         * Gets the padding.
-         *
-         * @return the padding value.
-         */
-        unsigned int getPadding() const;
+		/**
+		 * Gets the padding.
+		 *
+		 * @return the padding value.
+		 */
+		int getPadding() const;
 
-        /**
-         * Sets the title bar height.
-         *
-         * @param height the title height value.
-         */
-        void setTitleBarHeight(unsigned int height);
+		/**
+		 * Sets the title bar height.
+		 *
+		 * @param height the title height value.
+		 */
+		void setTitleBarHeight(unsigned int height);
 
-        /**
-         * Gets the title bar height.
-         *
-         * @return the title bar height.
-         */
-        unsigned int getTitleBarHeight();
+		/**
+		 * Gets the title bar height.
+		 *
+		 * @return the title bar height.
+		 */
+		int getTitleBarHeight() const;
 
-        /**
-         * Sets the Window to be moveble.
-         *
-         * @param movable true or false.
-         */
-        void setMovable(bool movable);
+		/**
+		 * Sets the Window to be moveble.
+		 *
+		 * @param movable true or false.
+		 */
+		void setMovable(bool movable);
 
-        /**
-         * Check if the window is movable.
-         *
-         * @return true or false.
-         */
-        bool isMovable() const;
+		/**
+		 * Check if the window is movable.
+		 *
+		 * @return true or false.
+		 */
+		bool isMovable() const;
 
-        /**
-         * Sets the Window to be opaque. If it's not opaque, the content area
-         * will not be filled with a color.
-         *
-         * @param opaque true or false.
-         */
-        void setOpaque(bool opaque);
+		/**
+		 * Sets the Window to be opaque. If it's not opaque, the content area
+		 * will not be filled with a color.
+		 *
+		 * @param opaque true or false.
+		 */
+		void setOpaque(bool opaque) override;
 
-        /**
-         * Checks if the Window is opaque.
-         *
-         * @return true or false.
-         */
-        bool isOpaque();
+		/**
+		 * Checks if the Window is opaque.
+		 *
+		 * @return true or false.
+		 */
+		bool isOpaque() const override;
 
-        /**
-         * Resizes the container to fit the content exactly.
-         */
-        virtual void resizeToContent();
-
-
-        // Inherited from BasicContainer
-
-        virtual Rectangle getChildrenArea();
+		/**
+		 * Resizes the container to fit the content exactly.
+		 */
+		virtual void resizeToContent();
 
 
-        // Inherited from Widget
+		// Inherited from BasicContainer
 
-        virtual void draw(Graphics* graphics);
-
-        virtual void drawBorder(Graphics* graphics);
+		Rectangle getChildrenArea() override;
 
 
-        // Inherited from MouseListener
+		// Inherited from Widget
 
-        virtual void mousePressed(MouseEvent& mouseEvent);
+		void draw(Graphics* graphics) override;
 
-        virtual void mouseDragged(MouseEvent& mouseEvent);
+		void drawBorder(Graphics* graphics) override;
 
-        virtual void mouseReleased(MouseEvent& mouseEvent);
 
-    protected:
-        std::string mCaption;
-        unsigned int mAlignment;
-        unsigned int mPadding;
-        unsigned int mTitleBarHeight;
-        bool mMovable;
-        bool mOpaque;
-        int mDragOffsetX;
-        int mDragOffsetY;
-        bool mIsMoving;
-    };
+		// Inherited from MouseListener
+
+		void mousePressed(MouseEvent& mouseEvent) override;
+
+		void mouseDragged(MouseEvent& mouseEvent) override;
+
+		void mouseReleased(MouseEvent& mouseEvent) override;
+
+	protected:
+		std::string mCaption;
+		unsigned int mAlignment{};
+		unsigned int mPadding{};
+		unsigned int mTitleBarHeight{};
+		bool mMovable{};
+		bool mOpaque{};
+		int mDragOffsetX{};
+		int mDragOffsetY{};
+		bool mIsMoving;
+	};
 }
 
 #endif // end GCN_WINDOW_HPP

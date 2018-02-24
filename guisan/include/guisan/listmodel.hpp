@@ -63,36 +63,36 @@
 
 namespace gcn
 {
-    /**
-     * Represents a list. It is used in certain Widgets, like the ListBox, to
-     * handle a list with string elements. If you want to use Widgets like
-     * ListBox, you should inherit from this class and implement it's
-     * functions.
-     */
-    class GCN_CORE_DECLSPEC ListModel
-    {
+	/**
+	 * Represents a list. It is used in certain Widgets, like the ListBox, to
+	 * handle a list with string elements. If you want to use Widgets like
+	 * ListBox, you should inherit from this class and implement it's
+	 * functions.
+	 */
+	class GCN_CORE_DECLSPEC ListModel
+	{
+	public:
+		/**
+		 * Destructor.
+		 */
+		virtual ~ListModel()
+		= default;
 
-    public:
-        /**
-         * Destructor.
-         */
-        virtual ~ListModel() { }
+		/**
+		 * Gets the number of elements in the ListModel.
+		 *
+		 * @return the number of elements in the ListModel
+		 */
+		virtual int getNumberOfElements() = 0;
 
-        /**
-         * Gets the number of elements in the ListModel.
-         *
-         * @return the number of elements in the ListModel
-         */
-        virtual int getNumberOfElements() = 0;
-
-        /**
-         * Gets an element at a certain index in the list.
-         *
-         * @param i an index in the list.
-         * @return an element as a string.
-         */
-        virtual std::string getElementAt(int i) = 0;
-    };
+		/**
+		 * Gets an element at a certain index in the list.
+		 *
+		 * @param i an index in the list.
+		 * @return an element as a string.
+		 */
+		virtual std::string getElementAt(int i) = 0;
+	};
 }
 
 #endif // end GCN_LISTMODEL_HPP

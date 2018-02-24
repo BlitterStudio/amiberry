@@ -66,81 +66,81 @@
 
 namespace gcn
 {
-    class Label;
-    class TabbedArea;
-    
-    /**
-     * A simple tab widget used as the default tab in the TabbedArea widget.
-     */
-    class GCN_CORE_DECLSPEC Tab:
-        public BasicContainer,
-        public MouseListener
-    {
-    public:
+	class Label;
+	class TabbedArea;
 
-        /**
-         * Constructor.
-         */
-        Tab();
+	/**
+	 * A simple tab widget used as the default tab in the TabbedArea widget.
+	 */
+	class GCN_CORE_DECLSPEC Tab :
+		public BasicContainer,
+		public MouseListener
+	{
+	public:
 
-        /**
-         * Destructor.
-         */
-        virtual ~Tab();
+		/**
+		 * Constructor.
+		 */
+		Tab();
 
-        /**
-         * Adjusts the tab size to fit the label.
-         */
-        void adjustSize();
+		/**
+		 * Destructor.
+		 */
+		virtual ~Tab();
 
-        /**
-         * Sets the tabbed area the tab should be a part of.
-         *
-         * @param tabbedArea The tabbed area the tab should be a part of.
-         */
-        void setTabbedArea(TabbedArea* tabbedArea);
+		/**
+		 * Adjusts the tab size to fit the label.
+		 */
+		void adjustSize();
 
-        /**
-         * Gets the tabbed are the tab is a part of.
-         *
-         * @return The tabbed are the tab is a part of.
-         */
-        TabbedArea* getTabbedArea();
+		/**
+		 * Sets the tabbed area the tab should be a part of.
+		 *
+		 * @param tabbedArea The tabbed area the tab should be a part of.
+		 */
+		void setTabbedArea(TabbedArea* tabbedArea);
 
-        /**
-         * Sets the caption of the tab.
-         *
-         * @param caption The caption of the tab.         
-         */
-        void setCaption(const std::string& caption);
+		/**
+		 * Gets the tabbed are the tab is a part of.
+		 *
+		 * @return The tabbed are the tab is a part of.
+		 */
+		TabbedArea* getTabbedArea() const;
 
-        /**
-         * Gets the caption of the tab.
-         *
-         * @return The caption of the tab.
-         */
-        const std::string& getCaption() const;
+		/**
+		 * Sets the caption of the tab.
+		 *
+		 * @param caption The caption of the tab.         
+		 */
+		void setCaption(const std::string& caption);
 
-                
-        // Inherited from Widget
+		/**
+		 * Gets the caption of the tab.
+		 *
+		 * @return The caption of the tab.
+		 */
+		const std::string& getCaption() const;
 
-        virtual void draw(Graphics *graphics);
 
-        virtual void drawBorder(Graphics* graphics);
-                
+		// Inherited from Widget
 
-        // Inherited from MouseListener
+		void draw(Graphics* graphics) override;
 
-        virtual void mouseEntered(MouseEvent& mouseEvent);
+		void drawBorder(Graphics* graphics) override;
 
-        virtual void mouseExited(MouseEvent& mouseEvent);
-        
-    protected:
-        Label* mLabel;
-        TabbedArea* mTabbedArea;
-        std::string mCaption;
-        bool mHasMouse;
-    };
+
+		// Inherited from MouseListener
+
+		void mouseEntered(MouseEvent& mouseEvent) override;
+
+		void mouseExited(MouseEvent& mouseEvent) override;
+
+	protected:
+		Label* mLabel;
+		TabbedArea* mTabbedArea{};
+		std::string mCaption;
+		bool mHasMouse;
+	};
 }
 
 #endif // end GCN_TABBEDAREA_HPP

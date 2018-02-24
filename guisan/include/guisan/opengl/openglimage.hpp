@@ -79,93 +79,92 @@
 
 namespace gcn
 {
-    /**
-     * OpenGL implementation of Image.
-     */
-    class GCN_EXTENSION_DECLSPEC OpenGLImage : public Image
-    {
-    public:
-        /**
-         * Constructor. Loads an image from an array of pixels. The pixel array is
-		 * is copied in the constructor and should thus be freed after the constructor
-		 * has been called.
-         *
-         * NOTE: The functions getPixel and putPixel are only guaranteed to work
-         *       before an image has been converted to display format.
-         *
-         * @param pixels to load from.
-         * @param width the width of the image.
-         * @param height the height of the image.
-         * @param convertToDisplayFormat true if the image should be converted
-         *                               to display, false otherwise.
-         */
-        OpenGLImage(unsigned int* pixels, int width, int height, bool convertToDisplayFormat = true);
-
-        /**
-         * Constructor. Load an image from an OpenGL texture handle. The width
-		 * and height specifies the size of the "interesting" part of the
-		 * texture, the real width and height of the texture are assumed to
-		 * be the closest higher power of two.
-         *
-         * @param textureHandle the texture handle from which to load.
+	/**
+	 * OpenGL implementation of Image.
+	 */
+	class GCN_EXTENSION_DECLSPEC OpenGLImage : public Image
+	{
+	public:
+		/**
+		 * Constructor. Loads an image from an array of pixels. The pixel array is
+		   * is copied in the constructor and should thus be freed after the constructor
+		   * has been called.
+		 *
+		 * NOTE: The functions getPixel and putPixel are only guaranteed to work
+		 *       before an image has been converted to display format.
+		 *
+		 * @param pixels to load from.
 		 * @param width the width of the image.
 		 * @param height the height of the image.
-         * @param autoFree true if the surface should automatically be deleted.
-         */
-        OpenGLImage(GLuint textureHandle, int width, int height, bool autoFree);
+		 * @param convertToDisplayFormat true if the image should be converted
+		 *                               to display, false otherwise.
+		 */
+		OpenGLImage(unsigned int* pixels, int width, int height, bool convertToDisplayFormat = true);
 
-        /**
-         * Destructor.
-         */
-        virtual ~OpenGLImage();
+		/**
+		 * Constructor. Load an image from an OpenGL texture handle. The width
+		   * and height specifies the size of the "interesting" part of the
+		   * texture, the real width and height of the texture are assumed to
+		   * be the closest higher power of two.
+		 *
+		 * @param textureHandle the texture handle from which to load.
+		   * @param width the width of the image.
+		   * @param height the height of the image.
+		 * @param autoFree true if the surface should automatically be deleted.
+		 */
+		OpenGLImage(GLuint textureHandle, int width, int height, bool autoFree);
 
-        /**
-         * Gets the OpenGL texture handle for the image.
-         *
-         * @return the OpenGL texture handle for the image.
-         */
+		/**
+		 * Destructor.
+		 */
+		virtual ~OpenGLImage();
 
-        virtual GLuint getTextureHandle() const;
+		/**
+		 * Gets the OpenGL texture handle for the image.
+		 *
+		 * @return the OpenGL texture handle for the image.
+		 */
 
-        /**
-         * Gets the width of texture.
-         *
-         * @return the width of the texture.
-         */
-        virtual int getTextureWidth() const;
+		virtual GLuint getTextureHandle() const;
 
-        /**
-         * Gets the height of the texture.
-         *
-         * @return the height of the texture.
-         */
-        virtual int getTextureHeight() const;
+		/**
+		 * Gets the width of texture.
+		 *
+		 * @return the width of the texture.
+		 */
+		virtual int getTextureWidth() const;
+
+		/**
+		 * Gets the height of the texture.
+		 *
+		 * @return the height of the texture.
+		 */
+		virtual int getTextureHeight() const;
 
 
-        // Inherited from Image
+		// Inherited from Image
 
-        virtual void free();
+		void free() override;
 
-        virtual int getWidth() const;
+		int getWidth() const override;
 
-        virtual int getHeight() const;
+		int getHeight() const override;
 
-        virtual Color getPixel(int x, int y);
+		Color getPixel(int x, int y) override;
 
-        virtual void putPixel(int x, int y, const Color& color);
+		void putPixel(int x, int y, const Color& color) override;
 
-        virtual void convertToDisplayFormat();
+		void convertToDisplayFormat() override;
 
-    protected:
-        GLuint mTextureHandle;
-        unsigned int* mPixels;
-        bool mAutoFree;
-        int mWidth;
-        int mHeight;
+	protected:
+		GLuint mTextureHandle{};
+		unsigned int* mPixels;
+		bool mAutoFree;
+		int mWidth;
+		int mHeight;
 		int mTextureWidth;
 		int mTextureHeight;
-
-    };
+	};
 }
 
 #endif // end GCN_OPENGLIMAGE_HPP

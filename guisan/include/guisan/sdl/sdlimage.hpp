@@ -67,54 +67,54 @@
 
 namespace gcn
 {
-    /**
-     * SDL implementation of Image.
-     */
-    class GCN_EXTENSION_DECLSPEC SDLImage : public Image
-    {
-    public:
-        /**
-         * Constructor. Load an image from an SDL surface.
-         *
-         * NOTE: The functions getPixel and putPixel are only guaranteed to work
-         *       before an image has been converted to display format.
-         *
-         * @param surface the surface from which to load.
-         * @param autoFree true if the surface should automatically be deleted.
-         */
-        SDLImage(SDL_Surface* surface, bool autoFree);
+	/**
+	 * SDL implementation of Image.
+	 */
+	class GCN_EXTENSION_DECLSPEC SDLImage : public Image
+	{
+	public:
+		/**
+		 * Constructor. Load an image from an SDL surface.
+		 *
+		 * NOTE: The functions getPixel and putPixel are only guaranteed to work
+		 *       before an image has been converted to display format.
+		 *
+		 * @param surface the surface from which to load.
+		 * @param autoFree true if the surface should automatically be deleted.
+		 */
+		SDLImage(SDL_Surface* surface, bool autoFree);
 
-        /**
-         * Destructor.
-         */
-        virtual ~SDLImage();
+		/**
+		 * Destructor.
+		 */
+		virtual ~SDLImage();
 
-        /**
-         * Gets the SDL surface for the image.
-         *
-         * @return the SDL surface for the image.
-         */
-        virtual SDL_Surface* getSurface() const;
+		/**
+		 * Gets the SDL surface for the image.
+		 *
+		 * @return the SDL surface for the image.
+		 */
+		virtual SDL_Surface* getSurface() const;
 
 
-        // Inherited from Image
+		// Inherited from Image
 
-        virtual void free();
+		void free() override;
 
-        virtual int getWidth() const;
+		int getWidth() const override;
 
-        virtual int getHeight() const;
+		int getHeight() const override;
 
-        virtual Color getPixel(int x, int y);
+		Color getPixel(int x, int y) override;
 
-        virtual void putPixel(int x, int y, const Color& color);
+		void putPixel(int x, int y, const Color& color) override;
 
-        virtual void convertToDisplayFormat();
+		void convertToDisplayFormat() override;
 
-    protected:
-        SDL_Surface* mSurface;
-        bool mAutoFree;
-    };
+	protected:
+		SDL_Surface* mSurface;
+		bool mAutoFree;
+	};
 }
 
 #endif // end GCN_SDLIMAGE_HPP

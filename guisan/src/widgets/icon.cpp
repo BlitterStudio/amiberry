@@ -66,56 +66,54 @@
 
 namespace gcn
 {
-    Icon::Icon(const std::string& filename)
-    {
-        mImage = Image::load(filename);
-        mInternalImage = true;
-        setHeight(mImage->getHeight());
-        setWidth(mImage->getWidth());
-    }
+	Icon::Icon(const std::string& filename)
+	{
+		mImage = Image::load(filename);
+		mInternalImage = true;
+		setHeight(mImage->getHeight());
+		setWidth(mImage->getWidth());
+	}
 
-    Icon::Icon(Image* image)
-    {
-        mImage = image;
-        mInternalImage = false;
-        setHeight(mImage->getHeight());
-        setWidth(mImage->getWidth());
-    }
+	Icon::Icon(Image* image)
+	{
+		mImage = image;
+		mInternalImage = false;
+		setHeight(mImage->getHeight());
+		setWidth(mImage->getWidth());
+	}
 
-    Icon::~Icon()
-    {
-        if (mInternalImage)
-        {
-            delete mImage;
-        }
-    }
+	Icon::~Icon()
+	{
+		if (mInternalImage)
+		{
+			delete mImage;
+		}
+	}
 
-    void Icon::draw(Graphics* graphics)
-    {
-        graphics->drawImage(mImage, 0, 0);
-    }
+	void Icon::draw(Graphics* graphics)
+	{
+		graphics->drawImage(mImage, 0, 0);
+	}
 
-    void Icon::drawBorder(Graphics* graphics)
-    {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+	void Icon::drawBorder(Graphics* graphics)
+	{
+		auto faceColor = getBaseColor();
+		auto alpha = getBaseColor().a;
+		int width = getWidth() + getBorderSize() * 2 - 1;
+		int height = getHeight() + getBorderSize() * 2 - 1;
+		auto highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		auto shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
-        {
-            graphics->setColor(shadowColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(highlightColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
-    }
+		for (unsigned int i = 0; i < getBorderSize(); ++i)
+		{
+			graphics->setColor(shadowColor);
+			graphics->drawLine(i, i, width - i, i);
+			graphics->drawLine(i, i + 1, i, height - i - 1);
+			graphics->setColor(highlightColor);
+			graphics->drawLine(width - i, i + 1, width - i, height - i);
+			graphics->drawLine(i, height - i, width - i - 1, height - i);
+		}
+	}
 }
