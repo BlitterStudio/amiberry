@@ -3218,11 +3218,11 @@ static void compute_framesync (void)
   lof_changing = 0;
 
   if (beamcon0 & 0x80) {
-    static bool warned = false;
-    if(!warned) {
-      warned = true;
-    gui_message(_T("Variable beam counter comparator enabled. Not supported in Amiberry."));
-    }
+	  static bool warned = false;
+	  if (!warned) {
+		  warned = true;
+		  gui_message(_T("Variable beam counter comparator enabled. Not supported in Amiberry."));
+	  }
   }
 
 	memset (line_decisions, 0, sizeof line_decisions);
@@ -3316,10 +3316,10 @@ static void init_hz (bool checkvposw)
   if (beamcon0 & 0x80) {
 		// programmable scanrates (ECS Agnus)
     static bool warned = false;
-    if(!warned) {
-      warned = true;
-      InGameMessage("Programmable scanrates (ECS Agnus) not supported.");
-    }
+	if (!warned) {
+		warned = true;
+		gui_message(_T("Programmable scanrates (ECS Agnus) not supported."));
+	}
   }
 	if (maxvpos_nom >= MAXVPOS)
 		maxvpos_nom = MAXVPOS;
