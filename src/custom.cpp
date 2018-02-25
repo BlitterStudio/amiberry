@@ -11,15 +11,12 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <ctype.h>
-#include <assert.h>
-#include <math.h>
+#include <cctype>
+#include <cmath>
 
 #include "options.h"
 #include "uae.h"
-#include "gensound.h"
 #include "audio.h"
-#include "sounddep/sound.h"
 #include "include/memory.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -3225,21 +3222,22 @@ static void compute_framesync (void)
 	  }
   }
 
-	memset (line_decisions, 0, sizeof line_decisions);
-	memset (curr_drawinfo, 0, sizeof curr_drawinfo);
-	for (int i = 0; i < sizeof (line_decisions) / sizeof *line_decisions; i++) {
-		line_decisions[i].plfleft = -2;
-	}
+  memset(line_decisions, 0, sizeof line_decisions);
+  memset(curr_drawinfo, 0, sizeof curr_drawinfo);
+  for (auto& line_decision : line_decisions)
+  {
+	  line_decision.plfleft = -2;
+  }
 
-  compute_vsynctime ();
+  compute_vsynctime();
 
-	hblank_hz = (double)(currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (islinetoggle() ? 0.5 : 0));
+  hblank_hz = double(currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (islinetoggle() ? 0.5 : 0));
 
-	set_config_changed ();
+  set_config_changed();
 
-  if (target_graphics_buffer_update ()) {
-		reset_drawing ();
-	}
+  if (target_graphics_buffer_update()) {
+	  reset_drawing();
+  }
 }
 
 /* set PAL/NTSC or custom timing variables */
@@ -3247,101 +3245,105 @@ static void init_hz (bool checkvposw)
 {
 	int isntsc, islace;
 	int omaxvpos = maxvpos;
-  int hzc = 0;
+	int hzc = 0;
 
 	if (!checkvposw)
 		vpos_count = 0;
 
 	vpos_count_diff = vpos_count;
 
-  if ((beamcon0 & 0xA0) != (new_beamcon0 & 0xA0))
-  	hzc = 1;
-  if (beamcon0 != new_beamcon0) {
+	if ((beamcon0 & 0xA0) != (new_beamcon0 & 0xA0))
+		hzc = 1;
+	if (beamcon0 != new_beamcon0) {
 		vpos_count_diff = vpos_count = 0;
-  }
+	}
 	beamcon0 = new_beamcon0;
 	isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	islace = (interlace_seen) ? 1 : 0;
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-	  isntsc = currprefs.ntscmode ? 1 : 0;
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+		isntsc = currprefs.ntscmode ? 1 : 0;
 	int clk = currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL;
-  if (!isntsc) {
-	  maxvpos = MAXVPOS_PAL;
-	  maxhpos = MAXHPOS_PAL;
-	  minfirstline = VBLANK_ENDLINE_PAL;
+	if (!isntsc) {
+		maxvpos = MAXVPOS_PAL;
+		maxhpos = MAXHPOS_PAL;
+		minfirstline = VBLANK_ENDLINE_PAL;
 		vblank_hz_nom = vblank_hz = VBLANK_HZ_PAL;
-    sprite_vblank_endline = VBLANK_SPRITE_PAL;
+		sprite_vblank_endline = VBLANK_SPRITE_PAL;
 		equ_vblank_endline = EQU_ENDLINE_PAL;
 		equ_vblank_toggle = true;
-		vblank_hz_shf = (float)((double)clk / ((maxvpos + 0) * maxhpos));
-		vblank_hz_lof = (float)((double)clk / ((maxvpos + 1) * maxhpos));
-		vblank_hz_lace = (float)((double)clk / ((maxvpos + 0.5) * maxhpos));
-  } else {
-	  maxvpos = MAXVPOS_NTSC;
-	  maxhpos = MAXHPOS_NTSC;
-	  minfirstline = VBLANK_ENDLINE_NTSC;
+		vblank_hz_shf = float(double(clk) / ((maxvpos + 0) * maxhpos));
+		vblank_hz_lof = float(double(clk) / ((maxvpos + 1) * maxhpos));
+		vblank_hz_lace = float(double(clk) / ((maxvpos + 0.5) * maxhpos));
+	}
+	else {
+		maxvpos = MAXVPOS_NTSC;
+		maxhpos = MAXHPOS_NTSC;
+		minfirstline = VBLANK_ENDLINE_NTSC;
 		vblank_hz_nom = vblank_hz = VBLANK_HZ_NTSC;
-    sprite_vblank_endline = VBLANK_SPRITE_NTSC;
+		sprite_vblank_endline = VBLANK_SPRITE_NTSC;
 		equ_vblank_endline = EQU_ENDLINE_NTSC;
 		equ_vblank_toggle = false;
-		vblank_hz_shf = (float)((double)clk / ((maxvpos + 0) * (maxhpos + 0.5)));
-		vblank_hz_lof = (float)((double)clk / ((maxvpos + 1) * (maxhpos + 0.5)));
-		vblank_hz_lace = (float)((double)clk / ((maxvpos + 0.5) * (maxhpos + 0.5)));
-  }
-
-	maxvpos_nom = maxvpos;
-	maxvpos_display = maxvpos;
-	if (vpos_count > 0) {
-		// we come here if vpos_count != maxvpos and beamcon0 didn't change
-		// (someone poked VPOSW)
-		if (vpos_count < 10)
-			vpos_count = 10;
-		vblank_hz = (isntsc ? 15734.0 : 15625.0) / vpos_count;
-		vblank_hz_nom = vblank_hz_shf = vblank_hz_lof = vblank_hz_lace = (float)vblank_hz;
-		maxvpos_nom = vpos_count - (lof_current ? 1 : 0);
-		if ((maxvpos_nom >= 256 && maxvpos_nom <= 313)) {
-			maxvpos_display = maxvpos_nom;
-		} else if (maxvpos_nom < 256) {
-			maxvpos_display = 255;
-		} else {
-			maxvpos_display = 313;
-		}
-		reset_drawing ();
-	} else if (vpos_count == 0) {
-		// mode reset
-		vpos_count = maxvpos;
-		vpos_count_diff = maxvpos;
+		vblank_hz_shf = float(double(clk) / ((maxvpos + 0) * (maxhpos + 0.5)));
+		vblank_hz_lof = float(double(clk) / ((maxvpos + 1) * (maxhpos + 0.5)));
+		vblank_hz_lace = float(double(clk) / ((maxvpos + 0.5) * (maxhpos + 0.5)));
 	}
+
+  maxvpos_nom = maxvpos;
+  maxvpos_display = maxvpos;
+  if (vpos_count > 0) {
+	  // we come here if vpos_count != maxvpos and beamcon0 didn't change
+	  // (someone poked VPOSW)
+	  if (vpos_count < 10)
+		  vpos_count = 10;
+	  vblank_hz = (isntsc ? 15734.0 : 15625.0) / vpos_count;
+	  vblank_hz_nom = vblank_hz_shf = vblank_hz_lof = vblank_hz_lace = (float)vblank_hz;
+	  maxvpos_nom = vpos_count - (lof_current ? 1 : 0);
+	  if ((maxvpos_nom >= 256 && maxvpos_nom <= 313)) {
+		  maxvpos_display = maxvpos_nom;
+	  }
+	  else if (maxvpos_nom < 256) {
+		  maxvpos_display = 255;
+	  }
+	  else {
+		  maxvpos_display = 313;
+	  }
+	  reset_drawing();
+  }
+  else if (vpos_count == 0) {
+	  // mode reset
+	  vpos_count = maxvpos;
+	  vpos_count_diff = maxvpos;
+  }
 
   if (beamcon0 & 0x80) {
-		// programmable scanrates (ECS Agnus)
-    static bool warned = false;
-	if (!warned) {
-		warned = true;
-		gui_message(_T("Programmable scanrates (ECS Agnus) not supported."));
-	}
+	  // programmable scanrates (ECS Agnus)
+	  static bool warned = false;
+	  if (!warned) {
+		  warned = true;
+		  gui_message(_T("Programmable scanrates (ECS Agnus) not supported."));
+	  }
   }
-	if (maxvpos_nom >= MAXVPOS)
-		maxvpos_nom = MAXVPOS;
-	if (maxvpos_display >= MAXVPOS)
-		maxvpos_display = MAXVPOS;
-	if (maxvpos != omaxvpos)
-		hzc = 1;
+  if (maxvpos_nom >= MAXVPOS)
+	  maxvpos_nom = MAXVPOS;
+  if (maxvpos_display >= MAXVPOS)
+	  maxvpos_display = MAXVPOS;
+  if (maxvpos != omaxvpos)
+	  hzc = 1;
   /* limit to sane values */
   if (vblank_hz < 10)
 	  vblank_hz = 10;
   if (vblank_hz > 300)
 	  vblank_hz = 300;
-	set_delay_lastcycle ();
+  set_delay_lastcycle();
 
-		hsyncstartpos = maxhpos + 13;
+  hsyncstartpos = maxhpos + 13;
 
-  eventtab[ev_hsync].oldcycles = get_cycles ();
+  eventtab[ev_hsync].oldcycles = get_cycles();
   eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
-  events_schedule ();
+  events_schedule();
   if (hzc) {
-		interlace_seen = islace;
-    reset_drawing ();
+	  interlace_seen = islace;
+	  reset_drawing();
   }
 
 	maxvpos_total = (currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? (MAXVPOS_LINES_ECS - 1) : (MAXVPOS_LINES_OCS - 1);
