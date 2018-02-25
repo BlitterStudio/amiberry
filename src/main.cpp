@@ -206,7 +206,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 
 	for (auto & rtgboard : p->rtgboards) {
 		const auto rbc = &rtgboard;
-		if (rbc->rtgmem_size > 0x1000000 && rbc->rtgmem_type == GFXBOARD_UAE_Z3) {
+		if (rbc->rtgmem_size > max_z3fastmem && rbc->rtgmem_type == GFXBOARD_UAE_Z3) {
 			error_log(_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), rbc->rtgmem_size, rbc->rtgmem_size, 0x1000000, 0x1000000);
 			rbc->rtgmem_size = 0x1000000;
 			err = 1;
@@ -214,8 +214,8 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 
 		if ((rbc->rtgmem_size & (rbc->rtgmem_size - 1)) != 0 || (rbc->rtgmem_size != 0 && (rbc->rtgmem_size < 0x100000))) {
 			error_log(_T("Unsupported graphics card memory size %d (0x%x)."), rbc->rtgmem_size, rbc->rtgmem_size);
-			if (rbc->rtgmem_size > 0x1000000)
-				rbc->rtgmem_size = 0x1000000;
+			if (rbc->rtgmem_size > max_z3fastmem)
+				rbc->rtgmem_size = max_z3fastmem;
 			else
 				rbc->rtgmem_size = 0;
 			err = 1;
