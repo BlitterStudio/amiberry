@@ -293,9 +293,17 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 	if (strlen(last_active_config) == 0)
+        {
+            if (strlen(last_loaded_config) == 0)
 		strncpy(last_active_config, OPTIONSFILENAME, MAX_DPATH);
+            else
+            {    
+                strcpy(last_active_config, last_loaded_config);
+                removeFileExtension(last_active_config);
+            }
+        }
 	txtName->setText(last_active_config);
-	txtDesc->setText(changed_prefs.description);
+	txtDesc->setText(changed_prefs.description);    
 	ensureVisible = -1;
 	RefreshPanelConfig();
 }

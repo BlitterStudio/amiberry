@@ -1343,8 +1343,7 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
    //_tcscpy(last_loaded_config, _T(filename));
   // OPTIONSFILENAME = filename;
    //ConfigFileInfo->Name = filename;
-   
-
+  
 
        
    // SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
@@ -1356,9 +1355,10 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
      // DO A CHECK FOR AGA
        
        const int is_aga = strstr(filename,"_AGA") != NULL;
+       const int is_cd32 = strstr(filename,"_CD32") != NULL;
  
      // A1200 no AGA 
-       if (is_aga == false)   
+       if (is_aga == false && is_cd32 == false)   
         {
            _tcscpy(p->description, _T("WHDLoad AutoBoot Configuration"));
            
@@ -1406,7 +1406,10 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
    //SET/GET THE HOST SETTINGS 
           
-
+        if (is_cd32 == true)
+        {  p->jports[0].mode = 7;
+           p->jports[1].mode = 7;   }
+         
          
    //  SET THE GAME SETTINGS
       	char WHDPath[MAX_DPATH];
@@ -1429,12 +1432,10 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
      
 
        // APPLY SPECIAL OPTIONS E.G. MOUSE OR ALT. JOYSTICK SETTINGS
-        
-        
+         extractFileName(filepath, last_loaded_config);
 
-                extractFileName(filepath, last_loaded_config);
-
-
+         
+         
       //  CLEAN UP SETTINGS (MAYBE??)
          
     // fixup_prefs(&currprefs, true); 
