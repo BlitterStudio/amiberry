@@ -1323,41 +1323,72 @@ int whdhost_parse_option(struct uae_prefs* p, const char* option, const char* va
 void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
 {
-    
-    // setup variables etc
+ // setup variables etc
     TCHAR *txt2;
     TCHAR tmp[MAX_DPATH];
+    char BootPath[MAX_DPATH];
+    char KickPath[MAX_DPATH];
+    int rom_test;    
+    int roms[2];   
+  
     
+  // here we can do some checks for Kickstarts we might need to make symlinks for
+ 	strncpy(currentDir, start_path_data, MAX_DPATH);
+        snprintf(KickPath, MAX_DPATH, "%s/whdboot/boot-data/Devs/Kickstarts/kick33180.A500", start_path_data);
+
+        if (zfile_exists(KickPath))
+        {   roms[0] = 6;   // kickstart 1.2 A500
+            roms[1] = -1;
+            rom_test = configure_rom(p, roms, 0);  // returns 0 or 1 if found or not found
+        // if (rom_test == 1)
+        // create symlink <<< ERRR... ?
+        }
+        
+        snprintf(KickPath, MAX_DPATH, "%s/whdboot/boot-data/Devs/Kickstarts/kick34005.A500", start_path_data);
+        if (zfile_exists(KickPath))
+        {   roms[0] = 5;   // kickstart 1.3 A500
+            rom_test = configure_rom(p, roms, 0);  // returns 0 or 1 if found or not found
+        // if (rom_test == 1)
+        // create symlink <<< ERRR... ?
+        }
+        
+        snprintf(KickPath, MAX_DPATH, "%s/whdboot/boot-data/Devs/Kickstarts/kick40068.A1200", start_path_data);
+        if (zfile_exists(KickPath))
+        {   roms[0] = 15;  // kickstart 3.1 A1200
+            rom_test = configure_rom(p, roms, 0);  // returns 0 or 1 if found or not found
+        // if (rom_test == 1)
+        // create symlink <<< ERRR... ?
+        }
+        
+    // this allows A600HD to be used to slow games down
+        roms[0] = 9;   // kickstart 2.05 A600HD  ..  10
+        rom_test = configure_rom(p, roms, 0);  // returns 0 or 1 if found or not found
+        const int a600_available = rom_test;
+
+    
+
     // find the SHA1 - this currently does not return the correct result!! 
     long filesize;   
     filesize = GetFileSize(filepath);
-   // const TCHAR* filesha = get_sha1_txt (input, filesize);
+   // const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
 
-  // REMOVE THE FILE PATH AND EXTENSION
-    const TCHAR* filename = my_getfilepart(filepath);
-    
+   // REMOVE THE FILE PATH AND EXTENSION
+        const TCHAR* filename = my_getfilepart(filepath);
          
-  // SET UNIVERSAL DEFAULTS
-    p->start_gui = false;
+   // SET UNIVERSAL DEFAULTS
+        p->start_gui = false;
 
-   //_tcscpy(last_loaded_config, _T(filename));
-  // OPTIONSFILENAME = filename;
-   //ConfigFileInfo->Name = filename;
-  
-
-       
    // SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
-     
-         
-    //SET THE BASE AMIGA      
+        extractFileName(filepath, last_loaded_config);
+        
+   // SET THE BASE AMIGA (Expanded A1200)
         built_in_prefs(&currprefs, 3, 1, 0, 0);
  
-     // DO A CHECK FOR AGA
-       
-       const int is_aga = strstr(filename,"_AGA") != NULL;
-       const int is_cd32 = strstr(filename,"_CD32") != NULL;
+   // DO CHECKS FOR AGA / CD32
+        const int is_aga = strstr(filename,"_AGA") != NULL;
+        const int is_cd32 = strstr(filename,"_CD32") != NULL;
  
-     // A1200 no AGA 
+   // A1200 no AGA 
        if (is_aga == false && is_cd32 == false)   
         {
            _tcscpy(p->description, _T("WHDLoad AutoBoot Configuration"));
@@ -1366,10 +1397,6 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
             built_in_chipset_prefs(p);
             p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
             p->m68k_speed = 0;
-           
-           // cfgfile_parse_option(&currprefs, _T("chipset="), _T("ecs"), 0);  
-           // cfgfile_parse_option(&currprefs, _T("cpu_type="), _T("68ec020"), 0);             
-
         }
      // A1200
        else
@@ -1377,18 +1404,13 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
        
        //SET THE WHD BOOTER AND GAME DATA  
-   
-     
-        char BootPath[MAX_DPATH];
  	strncpy(currentDir, start_path_data, MAX_DPATH);
-        snprintf(BootPath, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
-        
+        snprintf(BootPath, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);     
     
       // set the first (whdboot) Drive
          _stprintf(tmp,_T("filesystem2=rw,DH0:DH0:%s,10"),BootPath);   
          txt2 = parsetextpath(_T(tmp));
          cfgfile_parse_line(p, txt2, 0);
-
 
          _stprintf(tmp,_T("uaehf0=dir,rw,DH0:DH0::%s,10") , BootPath);
          txt2 = parsetextpath(_T(tmp));
@@ -1422,22 +1444,23 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         strcat(WHDConfig,filename);
         strcat(WHDConfig,".whd");     
         
-        printf("\nWHD file: %s  \n",WHDConfig);
+        printf("\nWHD file: %s  \n",WHDConfig); 
         
         int *type;
          
-        // LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
+   // LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
         if (zfile_exists(WHDConfig))
                 cfgfile_load(p, WHDConfig, type, 0, 1);
      
 
-       // APPLY SPECIAL OPTIONS E.G. MOUSE OR ALT. JOYSTICK SETTINGS
-         extractFileName(filepath, last_loaded_config);
+   // APPLY SPECIAL OPTIONS E.G. MOUSE OR ALT. JOYSTICK SETTINGS   <<< NEEDS HOST SETTINGS
 
          
-         
-      //  CLEAN UP SETTINGS (MAYBE??)
-         
-    // fixup_prefs(&currprefs, true); 
-    // cfgfile_configuration_change(1);
+
+       // SECONDARY CONFIG LOAD IF .UAE IS IN CONFIG PATH  <<<
+
+        
+      //  CLEAN UP SETTINGS (MAYBE??)  
+      // fixup_prefs(&currprefs, true); 
+      // cfgfile_configuration_change(1);
 }
