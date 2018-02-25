@@ -174,7 +174,7 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	lblZ3size = new gcn::Label("None    ");
 
 	lblGfxmem = new gcn::Label("RTG board:");
-	sldGfxmem = new gcn::Slider(0, 5);
+	sldGfxmem = new gcn::Slider(0, 8);
 	sldGfxmem->setSize(sldWidth, SLIDER_HEIGHT);
 	sldGfxmem->setBaseColor(gui_baseCol);
 	sldGfxmem->setMarkerLength(markerLength);
@@ -325,7 +325,7 @@ void RefreshPanelRAM()
 	}
 	sldZ3mem->setEnabled(!changed_prefs.address_space_24);
 
-	for (i = 0; i < 6; ++i)
+	for (i = 0; i < 9; ++i)
 	{
 		if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
 		{

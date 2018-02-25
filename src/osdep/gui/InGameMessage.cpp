@@ -23,15 +23,21 @@
 #include "gui.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
-
 #include "inputdevice.h"
-
 
 #ifdef ANDROIDSDL
 #include "androidsdl_event.h"
 #endif
 
-int msg_done = 0;
+#define DIALOG_WIDTH 600
+#define DIALOG_HEIGHT 200
+
+SDL_Surface* msg_screen;
+SDL_Event msg_event;
+#ifdef USE_SDL2
+SDL_Texture* msg_texture;
+#endif
+bool msg_done = false;
 gcn::Gui* msg_gui;
 gcn::SDLGraphics* msg_graphics;
 gcn::SDLInput* msg_input;
@@ -40,17 +46,12 @@ gcn::contrib::SDLTrueTypeFont* msg_font;
 #elif USE_SDL2
 gcn::SDLTrueTypeFont* msg_font;
 #endif
-SDL_Event msg_event;
 
 gcn::Color msg_baseCol;
 gcn::Container* msg_top;
 gcn::Window* wndMsg;
 gcn::Button* cmdDone;
-gcn::TextBox* txtMsg;
-
-int msgWidth = 260;
-int msgHeight = 110;
-int borderSize = 6;
+gcn::Label* txtMsg;
 
 class DoneActionListener : public gcn::ActionListener
 {
@@ -79,6 +80,34 @@ void gui_halt()
 	delete msg_gui;
 	delete msg_input;
 	delete msg_graphics;
+
+	if (msg_screen != nullptr)
+	{
+		SDL_FreeSurface(msg_screen);
+		msg_screen = nullptr;
+	}
+#ifdef USE_SDL2
+	if (msg_texture != nullptr)
+	{
+		SDL_DestroyTexture(msg_texture);
+		msg_texture = nullptr;
+	}
+	// Clear the screen
+	SDL_RenderClear(renderer);
+	SDL_RenderPresent(renderer);
+#endif
+}
+
+void UpdateScreen()
+{
+#ifdef USE_SDL1
+	wait_for_vsync();
+	SDL_Flip(msg_screen);
+#elif USE_SDL2
+	SDL_RenderClear(renderer);
+	SDL_RenderCopy(renderer, msg_texture, nullptr, nullptr);
+	SDL_RenderPresent(renderer);
+#endif
 }
 
 void checkInput()
@@ -124,7 +153,7 @@ void checkInput()
 		androidsdl_event(event, msg_input);
 #else
 		msg_input->pushInput(msg_event);
-#endif 
+#endif
 	}
 	if (gotEvent)
 	{
@@ -133,18 +162,20 @@ void checkInput()
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 #ifdef USE_SDL2
-		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+		SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
 	}
+	// Finally we update the screen.
+	UpdateScreen();
 }
 
 void gui_init(const char* msg)
 {
 #ifdef USE_SDL1
-	if (screen == nullptr)
+	if (msg_screen == nullptr)
 	{
 		auto dummy_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
-		screen = SDL_CreateRGBSurface(SDL_HWSURFACE, GUI_WIDTH, GUI_HEIGHT, 16,
+		msg_screen = SDL_CreateRGBSurface(SDL_HWSURFACE, GUI_WIDTH, GUI_HEIGHT, 16,
 			dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
 		SDL_FreeSurface(dummy_screen);
 	}
@@ -152,18 +183,20 @@ void gui_init(const char* msg)
 	if (sdlWindow == nullptr)
 	{
 		sdlWindow = SDL_CreateWindow("Amiberry-GUI",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			0,
-			0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		                             SDL_WINDOWPOS_UNDEFINED,
+		                             SDL_WINDOWPOS_UNDEFINED,
+		                             0,
+		                             0,
+		                             SDL_WINDOW_FULLSCREEN_DESKTOP);
 		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
 	}
+	// make the scaled rendering look smoother (linear scaling).
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-	if (screen == nullptr)
+	if (msg_screen == nullptr)
 	{
-		screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
-		check_error_sdl(screen == nullptr, "Unable to create SDL surface");
+		msg_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
+		check_error_sdl(msg_screen == nullptr, "Unable to create SDL surface");
 	}
 
 	if (renderer == nullptr)
@@ -172,28 +205,30 @@ void gui_init(const char* msg)
 		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
-		
-	if (texture == nullptr)
+
+	if (msg_texture == nullptr)
 	{
-		texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
-		check_error_sdl(renderer == nullptr, "Unable to create texture from Surface");
+		msg_texture = SDL_CreateTexture(renderer, msg_screen->format->format, SDL_TEXTUREACCESS_STREAMING, msg_screen->w,
+		                                msg_screen->h);
+		check_error_sdl(msg_texture == nullptr, "Unable to create texture from Surface");
 	}
 	SDL_ShowCursor(SDL_ENABLE);
 #endif
 
 	msg_graphics = new gcn::SDLGraphics();
-	msg_graphics->setTarget(screen);
+	msg_graphics->setTarget(msg_screen);
 	msg_input = new gcn::SDLInput();
 	msg_gui = new gcn::Gui();
 	msg_gui->setGraphics(msg_graphics);
 	msg_gui->setInput(msg_input);
+}
 
-	msg_baseCol.r = 160;
-	msg_baseCol.g = 160;
-	msg_baseCol.b = 160;
+void widgets_init(const char* msg)
+{
+	msg_baseCol = gcn::Color(170, 170, 170);
 
 	msg_top = new gcn::Container();
-	msg_top->setDimension(gcn::Rectangle((screen->w - msgWidth + borderSize * 4) / 2, (screen->h - msgHeight + borderSize * 4) / 4, msgWidth + (borderSize * 2), msgHeight + (borderSize * 2) + BUTTON_HEIGHT));
+	msg_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
 	msg_top->setBaseColor(msg_baseCol);
 	msg_gui->setTop(msg_top);
 
@@ -205,68 +240,69 @@ void gui_init(const char* msg)
 #endif
 	gcn::Widget::setGlobalFont(msg_font);
 
-	doneActionListener = new DoneActionListener();
-
-	wndMsg = new gcn::Window("Load");
-	wndMsg->setSize(msgWidth + (borderSize * 2), msgHeight + (borderSize * 2) + BUTTON_HEIGHT);
-	wndMsg->setPosition(0, 0);
-	wndMsg->setBaseColor(msg_baseCol + 0x202020);
+	wndMsg = new gcn::Window("InGameMessage");
+	wndMsg->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
+	wndMsg->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
+	wndMsg->setBaseColor(msg_baseCol);
 	wndMsg->setCaption("Information");
-	wndMsg->setTitleBarHeight(12);
+	wndMsg->setTitleBarHeight(TITLEBAR_HEIGHT);
+
+	doneActionListener = new DoneActionListener();
 
 	cmdDone = new gcn::Button("Ok");
 	cmdDone->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdDone->setBaseColor(msg_baseCol + 0x202020);
+	cmdDone->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdDone->setBaseColor(msg_baseCol);
 	cmdDone->setId("Done");
 	cmdDone->addActionListener(doneActionListener);
 
-	txtMsg = new gcn::TextBox(msg);
-	txtMsg->setPosition(0, 0);
-	txtMsg->setSize(msgWidth, msgHeight);
+	txtMsg = new gcn::Label(msg);
+	txtMsg->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER, LABEL_HEIGHT);
 
-	wndMsg->add(txtMsg, borderSize, borderSize);
-	wndMsg->add(cmdDone, (wndMsg->getWidth() - cmdDone->getWidth()) / 2, wndMsg->getHeight() - (borderSize * 2) - BUTTON_HEIGHT);
+	wndMsg->add(txtMsg, DISTANCE_BORDER, DISTANCE_BORDER);
+	wndMsg->add(cmdDone);
 
 	msg_top->add(wndMsg);
 	cmdDone->requestFocus();
+	wndMsg->requestModalFocus();
 }
 
-void InGameMessage(const char* msg)
+void gui_run()
 {
-	gui_init(msg);
-
-	msg_done = 0;
-	auto drawn = false;
-
 	if (SDL_NumJoysticks() > 0)
-		if (GUIjoy == nullptr)
-			GUIjoy = SDL_JoystickOpen(0);
-	if (!uae_gui) { printf("%s\n",msg); return; }        
+	{
+		GUIjoy = SDL_JoystickOpen(0);
+	}
 
 	// Prepare the screen once
-	uae_gui->logic();
-	uae_gui->draw();
+	msg_gui->logic();
+	msg_gui->draw();
 #ifdef USE_SDL2
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+	SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
-	UpdateGuiScreen();
+	UpdateScreen();
 
 	while (!msg_done)
 	{
 		// Poll input
 		checkInput();
-
-#ifdef USE_SDL1
-		SDL_Flip(screen);
-#elif USE_SDL2		
-		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-		SDL_RenderPresent(renderer);
-#endif
+		UpdateScreen();
 	}
 
 	if (GUIjoy)
+	{
 		SDL_JoystickClose(GUIjoy);
+		GUIjoy = nullptr;
+	}
+}
+
+void InGameMessage(const char* msg)
+{
+	gui_init(msg);
+	widgets_init(msg);
+
+	gui_run();
 
 	gui_halt();
 	SDL_ShowCursor(SDL_DISABLE);

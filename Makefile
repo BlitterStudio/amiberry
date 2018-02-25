@@ -159,8 +159,8 @@ ifdef USE_SDL2
 all: guisan $(PROG)
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
-CPPFLAGS += -Iguisan/include
-LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lguisan/lib
+CPPFLAGS += -Iguisan-dev/include
+LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
 endif
 
 #
@@ -459,7 +459,7 @@ genasm: $(ASMS)
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
-	$(MAKE) -C guisan clean
+	$(MAKE) -C guisan-dev clean
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
@@ -472,4 +472,4 @@ bootrom:
 	touch src/filesys.cpp
 
 guisan:
-	$(MAKE) -C guisan
+	$(MAKE) -C guisan-dev
