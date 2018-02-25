@@ -45,6 +45,11 @@
 extern FILE *debugfile;
 #endif
 
+
+#include "crc32.h"
+#include "fsdb.h"
+
+
 int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
@@ -1261,4 +1266,177 @@ int amiga_clipboard_want_data()
 
 void clipboard_vsync()
 {
+}
+
+
+
+static TCHAR *parsetext(const TCHAR *s)
+{
+	if (*s == '"' || *s == '\'') {
+		TCHAR *d;
+		TCHAR c = *s++;
+		int i;
+		d = my_strdup(s);
+		for (i = 0; i < _tcslen(d); i++) {
+			if (d[i] == c) {
+				d[i] = 0;
+				break;
+			}
+		}
+		return d;
+	}
+	else {
+		return my_strdup(s);
+	}
+}
+
+static TCHAR *parsetextpath(const TCHAR *s)
+{
+	TCHAR *s2 = parsetext(s);
+	TCHAR *s3 = target_expand_environment(s2, NULL, 0);
+	xfree(s2);
+	return s3;
+}
+
+
+long GetFileSize(std::string filename)
+{
+    struct stat stat_buf;
+    int rc = stat(filename.c_str(), &stat_buf);
+    return rc == 0 ? stat_buf.st_size : -1;
+}
+
+void RemoveChar(char* array, int len, int index)
+{
+  for(int i = index; i < len-1; ++i)
+    array[i] = array[i+1];
+  array[len-1] = 0;
+}
+
+
+int whdhost_parse_option(struct uae_prefs* p, const char* option, const char* value)
+{
+    
+}
+
+
+void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
+
+{
+    
+    // setup variables etc
+    TCHAR *txt2;
+    TCHAR tmp[MAX_DPATH];
+    
+    // find the SHA1 - this currently does not return the correct result!! 
+    long filesize;   
+    filesize = GetFileSize(filepath);
+   // const TCHAR* filesha = get_sha1_txt (input, filesize);
+
+  // REMOVE THE FILE PATH AND EXTENSION
+    const TCHAR* filename = my_getfilepart(filepath);
+    
+         
+  // SET UNIVERSAL DEFAULTS
+    p->start_gui = false;
+
+   //_tcscpy(last_loaded_config, _T(filename));
+  // OPTIONSFILENAME = filename;
+   //ConfigFileInfo->Name = filename;
+   
+
+
+       
+   // SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
+     
+         
+    //SET THE BASE AMIGA      
+        built_in_prefs(&currprefs, 3, 1, 0, 0);
+ 
+     // DO A CHECK FOR AGA
+       
+       const int is_aga = strstr(filename,"_AGA") != NULL;
+ 
+     // A1200 no AGA 
+       if (is_aga == false)   
+        {
+           _tcscpy(p->description, _T("WHDLoad AutoBoot Configuration"));
+           
+            p->cs_compatible = CP_A600;
+            built_in_chipset_prefs(p);
+            p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+            p->m68k_speed = 0;
+           
+           // cfgfile_parse_option(&currprefs, _T("chipset="), _T("ecs"), 0);  
+           // cfgfile_parse_option(&currprefs, _T("cpu_type="), _T("68ec020"), 0);             
+
+        }
+     // A1200
+       else
+           _tcscpy(p->description, _T("WHDLoad AutoBoot Configuration [AGA]"));
+
+       
+       //SET THE WHD BOOTER AND GAME DATA  
+   
+     
+        char BootPath[MAX_DPATH];
+ 	strncpy(currentDir, start_path_data, MAX_DPATH);
+        snprintf(BootPath, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
+        
+    
+      // set the first (whdboot) Drive
+         _stprintf(tmp,_T("filesystem2=rw,DH0:DH0:%s,10"),BootPath);   
+         txt2 = parsetextpath(_T(tmp));
+         cfgfile_parse_line(p, txt2, 0);
+
+
+         _stprintf(tmp,_T("uaehf0=dir,rw,DH0:DH0::%s,10") , BootPath);
+         txt2 = parsetextpath(_T(tmp));
+         cfgfile_parse_line(p, txt2, 0);
+
+       //set the Second (game data) drive
+         _stprintf(tmp,"filesystem2=rw,DH1:games:%s,0" , filepath);
+         txt2 = parsetextpath(_T(tmp));
+         cfgfile_parse_line(p, txt2, 0);
+
+         _stprintf(tmp,"uaehf1=dir,rw,DH1:games:%s,0" , filepath);
+         txt2 = parsetextpath(_T(tmp));
+         cfgfile_parse_line(p, txt2, 0);
+    
+
+   //SET/GET THE HOST SETTINGS 
+          
+
+         
+   //  SET THE GAME SETTINGS
+      	char WHDPath[MAX_DPATH];
+	strncpy(currentDir, start_path_data, MAX_DPATH);
+	snprintf(WHDPath, MAX_DPATH, "%s/whdboot/game-data/", start_path_data);          
+                
+           // EDIT THE FILE NAME TO USE HERE
+        char WHDConfig[255];
+ 	strcpy(WHDConfig, WHDPath);
+        strcat(WHDConfig,filename);
+        strcat(WHDConfig,".whd");     
+        
+        printf("\nWHD file: %s  \n",WHDConfig);
+        
+        int *type;
+         
+        // LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
+        if (zfile_exists(WHDConfig))
+                cfgfile_load(p, WHDConfig, type, 0, 1);
+     
+
+       // APPLY SPECIAL OPTIONS E.G. MOUSE OR ALT. JOYSTICK SETTINGS
+        
+        
+
+                extractFileName(filepath, last_loaded_config);
+
+
+      //  CLEAN UP SETTINGS (MAYBE??)
+         
+    // fixup_prefs(&currprefs, true); 
+    // cfgfile_configuration_change(1);
 }
