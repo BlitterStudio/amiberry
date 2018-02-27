@@ -1314,6 +1314,9 @@ void RemoveChar(char* array, int len, int index)
 }
 
 
+//extern struct whdload_host_options my_host;
+
+
 int whdhost_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
     
@@ -1330,8 +1333,10 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
     char KickPath[MAX_DPATH];
     int rom_test;    
     int roms[2];   
-  
+    struct whdload_host_options my_host;
     
+
+            
   // here we can do some checks for Kickstarts we might need to make symlinks for
  	strncpy(currentDir, start_path_data, MAX_DPATH);
         snprintf(KickPath, MAX_DPATH, "%s/whdboot/boot-data/Devs/Kickstarts/kick33180.A500", start_path_data);
@@ -1374,12 +1379,14 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
    // REMOVE THE FILE PATH AND EXTENSION
         const TCHAR* filename = my_getfilepart(filepath);
-         
+ 
+        
    // SET UNIVERSAL DEFAULTS
         p->start_gui = false;
 
    // SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
         extractFileName(filepath, last_loaded_config);
+        removeFileExtension(last_loaded_config);
         
    // SET THE BASE AMIGA (Expanded A1200)
         built_in_prefs(&currprefs, 3, 1, 0, 0);
@@ -1426,11 +1433,22 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
          cfgfile_parse_line(p, txt2, 0);
     
 
-   //SET/GET THE HOST SETTINGS 
+   //GET THE HOST SETTINGS 
           
         if (is_cd32 == true)
         {  p->jports[0].mode = 7;
            p->jports[1].mode = 7;   }
+         
+         
+     //       strcpy(my_host.controller_ply1,_T("joy0"));
+    //        strcpy(my_host.controller_ply2,_T("joy1"));
+             _stprintf(my_host.controller_ply1,_T("joy0"));
+             _stprintf(my_host.controller_ply2,_T("joy1"));
+             
+             printf("TEST: %s",my_host.controller_ply1);
+             
+         //my_host.controller_ply1 = _T("joy0");
+         //my_host.controller_ply2 = _T("joy1");
          
          
    //  SET THE GAME SETTINGS
@@ -1441,7 +1459,7 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
            // EDIT THE FILE NAME TO USE HERE
         char WHDConfig[255];
  	strcpy(WHDConfig, WHDPath);
-        strcat(WHDConfig,filename);
+        strcat(WHDConfig,last_loaded_config);
         strcat(WHDConfig,".whd");     
         
         printf("\nWHD file: %s  \n",WHDConfig); 
@@ -1455,10 +1473,29 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
    // APPLY SPECIAL OPTIONS E.G. MOUSE OR ALT. JOYSTICK SETTINGS   <<< NEEDS HOST SETTINGS
 
+        
+        // joystick games
+         _stprintf(txt2,"joyport1");
+         cfgfile_parse_option(&currprefs, txt2, my_host.controller_ply1,0);
+
+         _stprintf(txt2,"joyport0");
+         cfgfile_parse_option(&currprefs, txt2, my_host.controller_ply2,0);
+
          
 
-       // SECONDARY CONFIG LOAD IF .UAE IS IN CONFIG PATH  <<<
 
+
+                 
+       // SECONDARY CONFIG LOAD IF .UAE IS IN CONFIG PATH  <<<
+ 	strcpy(WHDConfig, config_path);
+        strcat(WHDConfig,last_loaded_config);
+        strcat(WHDConfig,".uae");     
+        if (zfile_exists(WHDConfig))
+                cfgfile_load(p, WHDConfig, type, 0, 1);
+        
+
+        
+        printf("\nALT WHD file: %s  \n",WHDConfig);
         
       //  CLEAN UP SETTINGS (MAYBE??)  
       // fixup_prefs(&currprefs, true); 
