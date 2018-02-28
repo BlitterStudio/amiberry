@@ -623,6 +623,12 @@ void extractPath(char *str, char *buffer)
 	p[1] = '\0';
 }
 
+std::string remove_extension(const std::string& filename) {
+    size_t lastdot = filename.find_last_of(".");
+    if (lastdot == std::string::npos) return filename;
+    return filename.substr(0, lastdot); 
+}
+
 void removeFileExtension(char *filename)
 {
 	auto p = filename + strlen(filename) - 1;
@@ -1327,6 +1333,7 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
 {
  // setup variables etc
+    TCHAR game_name[MAX_DPATH];;
     TCHAR *txt2;
     TCHAR tmp[MAX_DPATH];
     char BootPath[MAX_DPATH];
@@ -1373,20 +1380,22 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
     
 
     // find the SHA1 - this currently does not return the correct result!! 
-    long filesize;   
-    filesize = GetFileSize(filepath);
+        long filesize;   
+        filesize = GetFileSize(filepath);
+        
    // const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
 
    // REMOVE THE FILE PATH AND EXTENSION
         const TCHAR* filename = my_getfilepart(filepath);
- 
+                 _stprintf(tmp,_T("uaehf0=dir,rw,DH0:DH0::%s,10") , BootPath);
         
    // SET UNIVERSAL DEFAULTS
         p->start_gui = false;
 
    // SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
         extractFileName(filepath, last_loaded_config);
-        removeFileExtension(last_loaded_config);
+        extractFileName(filepath, game_name);
+        removeFileExtension(game_name);
         
    // SET THE BASE AMIGA (Expanded A1200)
         built_in_prefs(&currprefs, 3, 1, 0, 0);
@@ -1439,16 +1448,35 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         {  p->jports[0].mode = 7;
            p->jports[1].mode = 7;   }
          
+        
+       // this structure needs to be filled from a config file, and not manually like this!!!
          
-     //       strcpy(my_host.controller_ply1,_T("joy0"));
-    //        strcpy(my_host.controller_ply2,_T("joy1"));
-             _stprintf(my_host.controller_ply1,_T("joy0"));
-             _stprintf(my_host.controller_ply2,_T("joy1"));
+             _stprintf(my_host.controller_mouse1,_T("mouse"));
+             _stprintf(my_host.controller_mouse2,_T("joy1"));
              
-             printf("TEST: %s",my_host.controller_ply1);
+             _stprintf(my_host.controller_ply1,_T("joy1"));
+             _stprintf(my_host.controller_ply2,_T("joy0"));
+             _stprintf(my_host.controller_ply3,_T("joy2"));
+             _stprintf(my_host.controller_ply4,_T("joy3"));
+
+             my_host.controller_deadzone = 33;
+             my_host.controller_mouse_map = 2;         
+
+             _stprintf(my_host.key_quit,_T("Esc"));
+             _stprintf(my_host.key_menu,_T("F12"));
              
-         //my_host.controller_ply1 = _T("joy0");
-         //my_host.controller_ply2 = _T("joy1");
+             my_host.sound_seperation = 1;
+             my_host.sound_on = true;
+          //   my_host.sound_stereo = SND_MONO;
+            
+             my_host.retroarch_quit = true;
+             my_host.retroarch_menu = true;
+             my_host.retroarch_reset = true;
+      
+             my_host.gfx_fix_aspect = true;
+             my_host.gfx_frameskip = false;
+          // bool gfx_vertical_offset = 4;   
+                     
          
          
    //  SET THE GAME SETTINGS
@@ -1459,7 +1487,7 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
            // EDIT THE FILE NAME TO USE HERE
         char WHDConfig[255];
  	strcpy(WHDConfig, WHDPath);
-        strcat(WHDConfig,last_loaded_config);
+        strcat(WHDConfig,game_name);
         strcat(WHDConfig,".whd");     
         
         printf("\nWHD file: %s  \n",WHDConfig); 
@@ -1470,34 +1498,81 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         if (zfile_exists(WHDConfig))
                 cfgfile_load(p, WHDConfig, type, 0, 1);
      
-
    // APPLY SPECIAL OPTIONS E.G. MOUSE OR ALT. JOYSTICK SETTINGS   <<< NEEDS HOST SETTINGS
 
+    // joystick games
+
+
+             // this worked   
+  //               p->jports[0].id = JSEM_JOYS ;
+//		_tcscpy(p->jports[0].idc.name, _T("JOY0"));
+//		_tcscpy(p->jports[0].idc.configname, _T("JOY0"));
+
+                   
         
-        // joystick games
-         _stprintf(txt2,"joyport1");
-         cfgfile_parse_option(&currprefs, txt2, my_host.controller_ply1,0);
+                   
+      //       _stprintf(my_host.controller_mouse1,_T("mouse"));
+        //     _stprintf(my_host.controller_mouse2,_T("joy1"));
+    //         my_host.controller_mouse_map = 2;         
+            
+      //       _stprintf(my_host.controller_ply1,_T("joy0"));
+      //       _stprintf(my_host.controller_ply2,_T("joy1"));
+     //        _stprintf(my_host.controller_ply3,_T("joy2"));
+     //        _stprintf(my_host.controller_ply4,_T("joy3"));
 
-         _stprintf(txt2,"joyport0");
-         cfgfile_parse_option(&currprefs, txt2, my_host.controller_ply2,0);
-
+               p->input_joymouse_deadzone = my_host.controller_deadzone;
+               
+    //         _stprintf(my_host.key_quit,_T("Esc"));
+     //        _stprintf(my_host.key_menu,_T("F12"));
+             
+             p->sound_stereo_separation = my_host.sound_seperation;
+    //         my_host.sound_on = true;
+    //         my_host.sound_stereo = SND_MONO;
+            
+             p->use_retroarch_quit = my_host.retroarch_quit;
+             p->use_retroarch_menu = my_host.retroarch_menu;
+             p->use_retroarch_reset = my_host.retroarch_reset;
+      
+             p->gfx_correct_aspect = my_host.gfx_fix_aspect;
+             p->gfx_framerate = my_host.gfx_frameskip;
+          // p->vertical_offset = gfx_vertical_offset;   
+                     
+             
+             
+       // 	for (auto i = 0; i < MAX_JPORTS; i++)
+	//	{
+        //            p->jports[i].id = JPORT_NONE;
+        //            p->jports[i].idc.configname[0] = 0;
+         //           p->jports[i].idc.name[0] = 0;
+        //            p->jports[i].idc.shortid[0] = 0;
+        //        }
+        // +++      
+        //        _stprintf(txt2,_T(my_host.controller_ply1));  
+       //          cfgfile_parse_option(&currprefs, _T("joyport0"), txt2, 0);
+      //            p->jports[0].id = JSEM_JOYS + 1;
+    //		_tcscpy(p->jports[0].idc.name, _T(my_host.controller_ply1));
+	//	_tcscpy(p->jports[0].idc.configname, _T(my_host.controller_ply1));
          
+        //        _stprintf(txt2,_T(my_host.controller_ply2));  
+        //         cfgfile_parse_option(&currprefs, _T("joyport1"), txt2, 0);
+        //         p->jports[1].id = JSEM_JOYS;
+    	//	_tcscpy(p->jports[1].idc.name, _T(my_host.controller_ply2));
+	//	_tcscpy(p->jports[1].idc.configname, _T(my_host.controller_ply2));
+         
+                
 
+                     
+       //  CLEAN UP SETTINGS (MAYBE??)  
+        //   fixup_prefs(&currprefs, true); 
+      //     cfgfile_configuration_change(1);
 
-
-                 
-       // SECONDARY CONFIG LOAD IF .UAE IS IN CONFIG PATH  <<<
+       
+       // SECONDARY CONFIG LOAD IF .UAE IS IN CONFIG PATH  
  	strcpy(WHDConfig, config_path);
-        strcat(WHDConfig,last_loaded_config);
+        strcat(WHDConfig, game_name);
         strcat(WHDConfig,".uae");     
         if (zfile_exists(WHDConfig))
                 cfgfile_load(p, WHDConfig, type, 0, 1);
-        
+        printf("\nConf file: %s  \n",WHDConfig); 
 
-        
-        printf("\nALT WHD file: %s  \n",WHDConfig);
-        
-      //  CLEAN UP SETTINGS (MAYBE??)  
-      // fixup_prefs(&currprefs, true); 
-      // cfgfile_configuration_change(1);
 }
