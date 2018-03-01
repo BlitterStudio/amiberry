@@ -1,0 +1,50 @@
+; 
+; DEFAULT SETTINGS FOR JOYSTICK GAMES
+;  SET JOYPORT1= XXX TO YOUR INPUT DEVICE (JOY0 = KEYBOARD AS JOYSTICK)
+;   DO *NOT* INCLUDE JOYPORTX_MODE= HERE AS THIS WILL INTERFERE WITH AUTO-SETTINGS
+;
+;
+; *** Controller/Input Configuration
+;
+joyport0=joy1
+;joyport0_autofire=none
+;joyport0_friendlyname=Fancy Joystick Name (not needed)
+
+joyport1=joy0
+;joyport1_autofire=none
+;joyport0_friendlyname=Fancy Joystick Name 2 (not needed)
+
+; ** IT IS BETTER NOT TO SET THOSE 
+;joyport2=joy2
+;joyport3=joy3
+
+;
+; *** SOME DEFAULTS FOR MOUSE/ANALOGUE SPEED HERE 
+;
+input.joymouse_speed_analog=2
+input.joymouse_speed_digital=10
+input.joymouse_deadzone=33
+input.joystick_deadzone=33
+input.analog_joystick_multiplier=15
+input.analog_joystick_offset=-1
+input.mouse_speed=100
+input.autofire_speed=0
+kbd_lang=us
+; 
+; *** Host-Specific
+; *** PICK WHICH RETROARCH BUTTONS YOU WANT TO USE ETC
+; 
+amiberry.use_retroarch_quit=true
+amiberry.use_retroarch_menu=true
+amiberry.use_retroarch_reset=false
+amiberry.open_gui=F12
+amiberry.quit_amiberry=Esc
+amiberry.gfx_correct_aspect=1
+gfx_framerate=0
+; 
+; *** Sound Options
+; *** YOU CAN PUT THESE HERE BUT AVOID SETTING OTHER MACHINE SETTINGS
+;  
+;sound_output=none
+sound_channels=stereo
+sound_stereo_separation=1
