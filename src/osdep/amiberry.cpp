@@ -78,6 +78,29 @@ static char retroarch_file[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
+#include "zfile.h"  /// Horace added
+#include <fstream>  /// Horace added 
+#include <string> /// Horace added (to remove)
+struct game_options {
+       TCHAR port0[256];
+       TCHAR port1[256];
+       TCHAR fastcopper[256];
+       TCHAR cpu[256];
+       TCHAR blitter[256];
+       TCHAR clock[256];
+       TCHAR chipset[256];
+       TCHAR jit[256];
+       TCHAR cpu_comp[256];
+       TCHAR sprites[256];
+       TCHAR scr_height[256];
+       TCHAR y_offset[256];
+       TCHAR ntsc[256]; 
+       TCHAR chip[256];
+       TCHAR fast[256];
+       TCHAR z3[256];
+};
+
+
 int max_uae_width;
 int max_uae_height;
 
@@ -1319,11 +1342,50 @@ void RemoveChar(char* array, int len, int index)
   array[len-1] = 0;
 }
 
-int whdhost_parse_option(struct uae_prefs* p, const char* option, const char* value)
-{
-    
-}
 
+
+const TCHAR* find_whdload_game_option(const TCHAR* find_setting, char* whd_game_file)
+{
+	// opening file and parsing
+	ifstream readFile(whd_game_file);
+	string line;
+	string delimiter = "=";
+
+	auto output = "nul";
+
+	// read each line in
+	while (std::getline(readFile, line))
+	{
+		const auto option = line.substr(0, line.find(delimiter));
+
+		if (option != line) // exit if we got no result from splitting the string
+		{
+			// using the " = " to work out which is the option, and which is the parameter.
+			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+
+			if (!param.empty())
+			{
+				// remove leading "
+				if (param.at(0) == '"')
+					param.erase(0, 1);
+
+				// remove trailing "
+				if (param.at(param.length() - 1) == '"')
+					param.erase(param.length() - 1, 1);
+
+				output = &param[0u];
+
+				// ok, this is the 'normal' storing of values
+				if (option == find_setting)
+					break;
+
+				output = "nul";
+			}
+		}
+	}
+
+	return output;
+}
 
 void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
@@ -1375,43 +1437,60 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         rom_test = configure_rom(p, roms, 0);  // returns 0 or 1 if found or not found
         const int a600_available = rom_test;
 
-    
- //     
+//     
 //      *** GAME DETECTION ***
- //            
-    // find the SHA1 - this currently does not return the correct result!! 
-        long filesize;   
-        filesize = GetFileSize(filepath);
-        
-
-      	char WHDPath[MAX_DPATH];
-	snprintf(WHDPath, MAX_DPATH, "%s/whdboot/game-data/", start_path_data);          
-                
-           // EDIT THE FILE NAME TO USE HERE
-        char WHDConfig[255];
- 	strcpy(WHDConfig, WHDPath);
-        strcat(WHDConfig,game_name);
-        strcat(WHDConfig,".whd");     
-        
-        printf("\nWHD file: %s  \n",WHDConfig); 
-
-
-   // LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
-    //    if (zfile_exists(WHDConfig))
-    //            cfgfile_load(p, WHDConfig, type, 0, 1);
-        
-
-        
-   // const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
-
-        
+   
    // REMOVE THE FILE PATH AND EXTENSION
         const TCHAR* filename = my_getfilepart(filepath);
    // SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
         extractFileName(filepath, last_loaded_config);
         extractFileName(filepath, game_name);
         removeFileExtension(game_name);
+                 
+    // find the SHA1 - this currently does not return the correct result!! 
+        long filesize;   
+        filesize = GetFileSize(filepath);
+     // const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
+
+
         
+     // LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
+      	char WHDPath[MAX_DPATH];
+	snprintf(WHDPath, MAX_DPATH, "%s/whdboot/game-data/", start_path_data);          
+          
+       // EDIT THE FILE NAME TO USE HERE
+        char WHDConfig[255];
+ 	strcpy(WHDConfig, WHDPath);
+        strcat(WHDConfig,game_name);
+        strcat(WHDConfig,".whd");      
+
+        struct game_options game_detail;
+
+       if (zfile_exists(WHDConfig))
+        {
+             strcpy(game_detail.port0,       find_whdload_game_option("PORT0",WHDConfig));
+             strcpy(game_detail.port1,       find_whdload_game_option("PORT1",WHDConfig));
+             strcpy(game_detail.fastcopper,  find_whdload_game_option("FAST_COPPER",WHDConfig));
+             strcpy(game_detail.cpu,         find_whdload_game_option("CPU",WHDConfig));
+             strcpy(game_detail.blitter,     find_whdload_game_option("BLITTER",WHDConfig));             
+             strcpy(game_detail.clock,       find_whdload_game_option("CLOCK",WHDConfig));
+             strcpy(game_detail.chipset,     find_whdload_game_option("CHIPSET",WHDConfig));
+             strcpy(game_detail.jit,         find_whdload_game_option("JIT",WHDConfig));
+             strcpy(game_detail.cpu_comp,    find_whdload_game_option("CPU_COMPATIBLE",WHDConfig));
+             strcpy(game_detail.sprites,     find_whdload_game_option("SPRITES",WHDConfig));            
+             strcpy(game_detail.scr_height,  find_whdload_game_option("SCREEN_HEIGHT",WHDConfig));             
+             strcpy(game_detail.y_offset,    find_whdload_game_option("SCREEN_Y_OFFSET",WHDConfig));
+             strcpy(game_detail.ntsc,        find_whdload_game_option("NTSC",WHDConfig));
+             strcpy(game_detail.chip,        find_whdload_game_option("CHIP_RAM",WHDConfig));
+             strcpy(game_detail.fast,        find_whdload_game_option("FAST_RAM",WHDConfig));
+             strcpy(game_detail.z3,          find_whdload_game_option("Z3_RAM",WHDConfig));            
+        }
+        
+        
+        printf("port 0: %s  \n",game_detail.port0); 
+        printf("port 1: %s  \n",game_detail.port1); 
+        
+
   //     
 //      *** EMULATED HARDWARE ***
  //            
@@ -1442,10 +1521,10 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         built_in_prefs(&currprefs, 3, 1, 0, 0);
  
    // DO CHECKS FOR AGA / CD32
-        const int is_aga = strstr(filename,"_AGA") != NULL;
-        const int is_cd32 = strstr(filename,"_CD32") != NULL;
+        const int is_aga = (strstr(filename,"_AGA") != NULL || strcmp(game_detail.chipset,"AGA") == 0);
+        const int is_cd32 = (strstr(filename,"_CD32") != NULL || strcmp(game_detail.chipset,"CD32") == 0);
  
-   // A1200 no AGA 
+   // A1200 no AGA
        if (is_aga == false && is_cd32 == false)   
         {
            _tcscpy(p->description, _T("WHDLoad AutoBoot Configuration"));
@@ -1488,17 +1567,25 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
            p->jports[1].mode = 7;   }
                
 
-     //      *** GAME-SPECIFICS ***
+   //      *** GAME-SPECIFICS ***
    //  SET THE GAME COMPATIBILITY SETTINGS   
-     // 
-      // SCREEN HEIGHT, BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC  
+   // 
+   // SCREEN HEIGHT, BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC  
          
-         
-       //  CLEAN UP SETTINGS (MAYBE??)  
-      //     fixup_prefs(&currprefs, true); 
-      //     cfgfile_configuration_change(1);
+         printf("aga: %d\n",is_aga);
 
-       
+         
+    // CUSTOM CONTROLS FILES
+        strcpy(WHDConfig, WHDPath);
+        strcat(WHDConfig,game_name);
+        strcat(WHDConfig,".controls");  
+        if (zfile_exists(WHDConfig))
+            cfgfile_load(p, WHDConfig, type, 0, 1);       
+   
+        
+    //  CLEAN UP SETTINGS 
+        fixup_prefs(&currprefs, true); 
+        cfgfile_configuration_change(1);
         
         
     // SECONDARY CONFIG LOAD IF .UAE IS IN CONFIG PATH  
