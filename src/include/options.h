@@ -565,33 +565,6 @@ extern void cfgfile_compatibility_rtg(struct uae_prefs *p);
 
 extern void whdload_auto_prefs (struct uae_prefs *p, char* filename);
 
-struct whdload_host_options {
-    TCHAR controller_mouse1[256];
-    TCHAR controller_mouse2[256];           
-    TCHAR controller_ply1[256];
-    TCHAR controller_ply2[256];
-    TCHAR controller_ply3[256];
-    TCHAR controller_ply4[256];
-    int controller_deadzone;
-    int controller_mouse_map;
-    
-    TCHAR key_quit[256];
-    TCHAR key_menu[256];
-
-    bool retroarch_quit;
-    bool retroarch_menu;
-    bool retroarch_reset;
-
-    int  sound_seperation;
-    bool sound_stereo;
-    bool sound_on;
-    
-    bool gfx_fix_aspect;
-    bool gfx_frameskip;
-    bool gfx_vertical_offset;
-            
-};
-    
 
 extern void check_prefs_changed_custom (void);
 extern void check_prefs_changed_cpu (void);
