@@ -45,9 +45,6 @@
 extern FILE *debugfile;
 #endif
 
-#include "crc32.h"
-#include "fsdb.h"
-
 int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
@@ -619,12 +616,6 @@ void extractPath(char *str, char *buffer)
 	while (*p != '/' && p > buffer)
 		p--;
 	p[1] = '\0';
-}
-
-std::string remove_extension(const std::string& filename) {
-    size_t lastdot = filename.find_last_of(".");
-    if (lastdot == std::string::npos) return filename;
-    return filename.substr(0, lastdot); 
 }
 
 void removeFileExtension(char *filename)
@@ -1271,4 +1262,3 @@ int amiga_clipboard_want_data()
 void clipboard_vsync()
 {
 }
-
