@@ -334,12 +334,16 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
     if ((strcmpi(game_detail.cpu,"68000") == 0 || strcmpi(game_detail.cpu,"68010") == 0) && a600_available != 0)
     // SET THE BASE AMIGA (Expanded A600)
-        built_in_prefs(&currprefs, 2, 2, 0, 0);
+    {   built_in_prefs(&currprefs, 2, 2, 0, 0);
+        _stprintf(txt2,"chipmem_size=4");
+              cfgfile_parse_line(p, txt2, 0); 
+    }
     else
     // SET THE BASE AMIGA (Expanded A1200)
-        built_in_prefs(&currprefs, 3, 1, 0, 0);
- 
-        
+    {    built_in_prefs(&currprefs, 3, 1, 0, 0);
+        if  ((strcmpi(game_detail.fast,"nul") != 0) && (strcmpi(game_detail.cpu,"nul") == 0))
+                strcpy(game_detail.cpu,_T("68020"));
+    }
         
    // DO CHECKS FOR AGA / CD32
         const int is_aga = (strstr(filename,"_AGA") != NULL || strcmpi(game_detail.chipset,"AGA") == 0);
@@ -408,16 +412,40 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
               {  _stprintf(txt2,"cpu_type=%s",game_detail.cpu);
                 cfgfile_parse_line(p, txt2, 0);    }       
          
+
     // CPU SPEED
-              // finegrain_cpu_speed=<<clockspeed>>
-            //cpu_speed=<<cpuspeed>>                   
-            //CPU_SPEED=REAL>  
+         if  (strcmpi(game_detail.clock,"7") == 0) 
+             {  _stprintf(txt2,"cpu_speed=real");
+                cfgfile_parse_line(p, txt2, 0);    }                
+         else if  (strcmpi(game_detail.clock,"14") == 0) 
+             {  _stprintf(txt2,"finegrain_cpu_speed=1024");
+                cfgfile_parse_line(p, txt2, 0);    }                    
+         else if  (strcmpi(game_detail.clock,"28") == 0) 
+             {  _stprintf(txt2,"finegrain_cpu_speed=128");
+                cfgfile_parse_line(p, txt2, 0);    }                    
+         else if  (strcmpi(game_detail.clock,"max") == 0) 
+             {  _stprintf(txt2,"cpu_speed=max");
+                cfgfile_parse_line(p, txt2, 0);    }                    
+         else if  (strcmpi(game_detail.clock,"turbo") == 0) 
+             {  _stprintf(txt2,"cpu_speed=turbo");
+                cfgfile_parse_line(p, txt2, 0);    }                    
          
-    //MEMORY REQUIREMENTS
-                 //chipmem_size=<<chipmem>>
-        //fastmem_size=<<fastmem>>
-        //z3mem_size=<<z3mem>>         
+    //FAST / Z3 MEMORY REQUIREMENTS
          
+        int temp_ram; 
+        if  (strcmpi(game_detail.fast,"nul") != 0)
+          {     
+              temp_ram = atol(game_detail.fast) ;
+             _stprintf(txt2,"fastmem_size=%d",temp_ram);
+              cfgfile_parse_line(p, txt2, 0);  
+          }
+        if  (strcmpi(game_detail.fast,"nul") != 0)
+          {     
+              temp_ram = atol(game_detail.z3) ; 
+             _stprintf(txt2,"z3mem_size=%d",temp_ram);
+              cfgfile_parse_line(p, txt2, 0);  
+          }
+                        
          
     // FAST COPPER  
         if (strcmpi(game_detail.fastcopper,"true") == 0)
@@ -478,6 +506,12 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
             _stprintf(txt2,"gfx_height_fullscreen=%s",game_detail.scr_height);
              cfgfile_parse_line(p, txt2, 0);    }  
         
+      // Y OFFSET
+         if (strcmpi(game_detail.y_offset,"nul") != 0 ) 
+         {  _stprintf(txt2,"amiberry.vertical_offset=%s",game_detail.y_offset);
+             cfgfile_parse_line(p, txt2, 0);      
+         }
+            
       // SPRITE COLLISION
           if (strcmpi(game_detail.scr_height,"nul") != 0 ) 
          {  _stprintf(txt2,"collision_level=%s",game_detail.sprites);
@@ -485,6 +519,8 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
          
 
              
+         
+         
              
     // CUSTOM CONTROLS FILES
         strcpy(WHDConfig, WHDPath);
@@ -495,7 +531,7 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
     
         
     //  CLEAN UP SETTINGS 
-     //   fixup_prefs(&currprefs, true); 
+     //   fixup_prefs(&currprefs, true);    
      //   cfgfile_configuration_change(1); 
         
 }
