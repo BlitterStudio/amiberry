@@ -326,6 +326,7 @@ OBJS =	\
 	src/osdep/amiberry_gui.o \
 	src/osdep/amiberry_rp9.o \
 	src/osdep/amiberry_mem.o \
+	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
 	src/sounddep/sound.o \
 	src/osdep/gui/UaeRadioButton.o \
