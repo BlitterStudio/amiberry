@@ -82,22 +82,22 @@ char last_loaded_config[MAX_DPATH] = {'\0'};
 #include <fstream>  /// Horace added 
 #include <string> /// Horace added (to remove)
 struct game_options {
-       TCHAR port0[256];
-       TCHAR port1[256];
-       TCHAR fastcopper[256];
-       TCHAR cpu[256];
-       TCHAR blitter[256];
-       TCHAR clock[256];
-       TCHAR chipset[256];
-       TCHAR jit[256];
-       TCHAR cpu_comp[256];
-       TCHAR sprites[256];
-       TCHAR scr_height[256];
-       TCHAR y_offset[256];
-       TCHAR ntsc[256]; 
-       TCHAR chip[256];
-       TCHAR fast[256];
-       TCHAR z3[256];
+       TCHAR port0[256]     = "nul\0";
+       TCHAR port1[256]     = "nul\0";
+       TCHAR fastcopper[256] = "nul\0";
+       TCHAR cpu[256]       = "nul\0";
+       TCHAR blitter[256]   = "nul\0";
+       TCHAR clock[256]     = "nul\0";
+       TCHAR chipset[256]   = "nul\0";
+       TCHAR jit[256]       = "nul\0";
+       TCHAR cpu_comp[256]  = "nul\0";
+       TCHAR sprites[256]   = "nul\0";
+       TCHAR scr_height[256] = "nul\0";
+       TCHAR y_offset[256]  = "nul\0";
+       TCHAR ntsc[256]      = "nul\0";
+       TCHAR chip[256]      = "nul\0";
+       TCHAR fast[256]      = "nul\0";
+       TCHAR z3[256]       = "nul\0";
 };
 
 
@@ -1397,10 +1397,12 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
     char BootPath[MAX_DPATH];
     char KickPath[MAX_DPATH];
     char GameTypePath[MAX_DPATH];
+    char WHDConfig[255];
     int rom_test;    
     int roms[2];   
     int *type;
-
+    auto config_type = CONFIG_TYPE_ALL;
+         
  //     
 //      *** KICKSTARTS ***
  //            
@@ -1452,14 +1454,25 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         filesize = GetFileSize(filepath);
      // const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
 
+        
+        
+     // LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE   
+        //  CONFIG LOAD IF .UAE IS IN CONFIG PATH  
+            strcpy(WHDConfig, config_path);
+            strcat(WHDConfig, game_name);
+            strcat(WHDConfig,".uae");  
+      
+        if (zfile_exists(WHDConfig))
+        {        target_cfgfile_load(&currprefs, WHDConfig,  CONFIG_TYPE_ALL, 0);
+                 return;}
 
+        
         
      // LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
       	char WHDPath[MAX_DPATH];
 	snprintf(WHDPath, MAX_DPATH, "%s/whdboot/game-data/", start_path_data);          
           
        // EDIT THE FILE NAME TO USE HERE
-        char WHDConfig[255];
  	strcpy(WHDConfig, WHDPath);
         strcat(WHDConfig,game_name);
         strcat(WHDConfig,".whd");      
@@ -1580,20 +1593,16 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         strcat(WHDConfig,game_name);
         strcat(WHDConfig,".controls");  
         if (zfile_exists(WHDConfig))
-            cfgfile_load(p, WHDConfig, type, 0, 1);       
+           cfgfile_load(&currprefs, WHDConfig, &config_type, 0, 1);       
    
+         
+        
+   
+
+        
         
     //  CLEAN UP SETTINGS 
-        fixup_prefs(&currprefs, true); 
-        cfgfile_configuration_change(1);
+     //   fixup_prefs(&currprefs, true); 
+     //   cfgfile_configuration_change(1); 
         
-        
-    // SECONDARY CONFIG LOAD IF .UAE IS IN CONFIG PATH  
- 	strcpy(WHDConfig, config_path);
-        strcat(WHDConfig, game_name);
-        strcat(WHDConfig,".uae");     
-        if (zfile_exists(WHDConfig))
-                cfgfile_load(p, WHDConfig, type, 0, 1);
-        printf("\nConf file: %s  \n",WHDConfig); 
-
 }
