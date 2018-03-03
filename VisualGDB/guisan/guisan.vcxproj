@@ -30,95 +30,95 @@
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
-    <OutDir>$(SolutionDir)..\..\guisan\lib\</OutDir>
+    <OutDir>$(SolutionDir)..\..\guisan-dev\lib\</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
-    <OutDir>$(SolutionDir)..\..\guisan\lib\</OutDir>
+    <OutDir>$(SolutionDir)..\..\guisan-dev\lib\</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vcos/pthreads;=/opt/vc/include/interface/vmcs_host/linux;../../guisan/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vcos/pthreads;=/opt/vc/include/interface/vmcs_host/linux;../../guisan-dev/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;_REENTRANT;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LibrarySearchDirectories>=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vcos/pthreads;=/opt/vc/include/interface/vmcs_host/linux;../../guisan/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vcos/pthreads;=/opt/vc/include/interface/vmcs_host/linux;../../guisan-dev/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LibrarySearchDirectories>=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\guisan\src\actionevent.cpp" />
-    <ClCompile Include="..\..\guisan\src\basiccontainer.cpp" />
-    <ClCompile Include="..\..\guisan\src\cliprectangle.cpp" />
-    <ClCompile Include="..\..\guisan\src\color.cpp" />
-    <ClCompile Include="..\..\guisan\src\defaultfont.cpp" />
-    <ClCompile Include="..\..\guisan\src\event.cpp" />
-    <ClCompile Include="..\..\guisan\src\exception.cpp" />
-    <ClCompile Include="..\..\guisan\src\focushandler.cpp" />
-    <ClCompile Include="..\..\guisan\src\font.cpp" />
-    <ClCompile Include="..\..\guisan\src\genericinput.cpp" />
-    <ClCompile Include="..\..\guisan\src\graphics.cpp" />
-    <ClCompile Include="..\..\guisan\src\gui.cpp" />
-    <ClCompile Include="..\..\guisan\src\guisan.cpp" />
-    <ClCompile Include="..\..\guisan\src\image.cpp" />
-    <ClCompile Include="..\..\guisan\src\imagefont.cpp" />
-    <ClCompile Include="..\..\guisan\src\inputevent.cpp" />
-    <ClCompile Include="..\..\guisan\src\key.cpp" />
-    <ClCompile Include="..\..\guisan\src\keyevent.cpp" />
-    <ClCompile Include="..\..\guisan\src\keyinput.cpp" />
-    <ClCompile Include="..\..\guisan\src\mouseevent.cpp" />
-    <ClCompile Include="..\..\guisan\src\mouseinput.cpp" />
-    <ClCompile Include="..\..\guisan\src\opengl\opengl.cpp" />
-    <ClCompile Include="..\..\guisan\src\opengl\openglgraphics.cpp" />
-    <ClCompile Include="..\..\guisan\src\opengl\openglimage.cpp" />
-    <ClCompile Include="..\..\guisan\src\rectangle.cpp" />
-    <ClCompile Include="..\..\guisan\src\sdl\sdl.cpp" />
-    <ClCompile Include="..\..\guisan\src\sdl\sdlgraphics.cpp" />
-    <ClCompile Include="..\..\guisan\src\sdl\sdlimage.cpp" />
-    <ClCompile Include="..\..\guisan\src\sdl\sdlimageloader.cpp" />
-    <ClCompile Include="..\..\guisan\src\sdl\sdlinput.cpp" />
-    <ClCompile Include="..\..\guisan\src\sdl\sdltruetypefont.cpp" />
-    <ClCompile Include="..\..\guisan\src\selectionevent.cpp" />
-    <ClCompile Include="..\..\guisan\src\widget.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\button.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\checkbox.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\container.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\dropdown.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\icon.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\imagebutton.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\label.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\listbox.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\progressbar.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\radiobutton.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\scrollarea.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\slider.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\tab.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\tabbedarea.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\textbox.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\textfield.cpp" />
-    <ClCompile Include="..\..\guisan\src\widgets\window.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\actionevent.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\basiccontainer.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\cliprectangle.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\color.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\defaultfont.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\event.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\exception.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\focushandler.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\font.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\genericinput.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\graphics.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\gui.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\guisan.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\image.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\imagefont.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\inputevent.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\key.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\keyevent.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\keyinput.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\mouseevent.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\mouseinput.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\opengl\opengl.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\opengl\openglgraphics.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\opengl\openglimage.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\rectangle.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdl.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdlgraphics.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdlimage.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdlimageloader.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdlinput.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdltruetypefont.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\selectionevent.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widget.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\button.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\checkbox.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\container.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\dropdown.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\icon.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\imagebutton.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\label.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\listbox.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\progressbar.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\radiobutton.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\scrollarea.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\slider.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\tab.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\tabbedarea.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\textbox.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\textfield.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\widgets\window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -128,70 +128,70 @@
     <None Include="guisan-Release.vgdbsettings" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\guisan\include\guisan.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\actionevent.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\actionlistener.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\basiccontainer.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\cliprectangle.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\color.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\deathlistener.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\defaultfont.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\event.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\exception.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\focushandler.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\focuslistener.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\font.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\genericinput.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\glut.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\graphics.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\gui.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\image.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\imagefont.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\imageloader.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\input.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\inputevent.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\key.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\keyevent.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\keyinput.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\keylistener.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\listmodel.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\mouseevent.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\mouseinput.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\mouselistener.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\opengl.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\opengl\openglgraphics.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\opengl\openglimage.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\opengl\openglsdlimageloader.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\platform.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\rectangle.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\sdl.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\sdl\sdlgraphics.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\sdl\sdlimage.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\sdl\sdlimageloader.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\sdl\sdlinput.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\sdl\sdlpixel.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\sdl\sdltruetypefont.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\selectionevent.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\selectionlistener.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widget.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgetlistener.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\button.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\checkbox.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\container.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\dropdown.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\icon.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\imagebutton.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\label.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\listbox.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\progressbar.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\radiobutton.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\scrollarea.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\slider.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\tab.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\tabbedarea.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\textbox.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\textfield.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\widgets\window.hpp" />
-    <ClInclude Include="..\..\guisan\include\guisan\x.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\actionevent.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\actionlistener.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\basiccontainer.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\cliprectangle.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\color.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\deathlistener.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\defaultfont.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\event.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\exception.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\focushandler.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\focuslistener.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\font.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\genericinput.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\glut.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\graphics.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\gui.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\image.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\imagefont.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\imageloader.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\input.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\inputevent.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\key.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\keyevent.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\keyinput.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\keylistener.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\listmodel.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\mouseevent.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\mouseinput.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\mouselistener.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\opengl.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\opengl\openglgraphics.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\opengl\openglimage.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\opengl\openglsdlimageloader.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\platform.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\rectangle.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\sdl.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\sdl\sdlgraphics.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\sdl\sdlimage.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\sdl\sdlimageloader.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\sdl\sdlinput.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\sdl\sdlpixel.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\sdl\sdltruetypefont.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\selectionevent.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\selectionlistener.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widget.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgetlistener.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\button.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\checkbox.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\container.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\dropdown.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\icon.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\imagebutton.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\label.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\listbox.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\progressbar.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\radiobutton.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\scrollarea.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\slider.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\tab.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\tabbedarea.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\textbox.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\textfield.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\widgets\window.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan-dev\x.hpp" />
   </ItemGroup>
 </Project>
