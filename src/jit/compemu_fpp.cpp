@@ -20,7 +20,7 @@
 #include "compemu.h"
 #include "flags_arm.h"
 
-#if defined(JIT)
+#if defined(USE_JIT_FPU)
 
 extern void fpp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3);
 
@@ -188,10 +188,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 			fmov_w_rr (treg, S2);
   		return 1;
 		case 5: /* Double */
-  		readlong (S1, S2, S3);
-  		add_l_ri (S1, 4);
-  		readlong (S1, S4, S3);
-  		fmov_d_rrr (treg, S4, S2);
+		  fp_to_double_rm (treg, S1);
   		return 2;
 		case 6: /* Byte */
   		readbyte (S1, S2, S3);
@@ -293,10 +290,7 @@ STATIC_INLINE int comp_fp_put (uae_u32 opcode, uae_u16 extra)
 		  writeword_clobber (S1, S2, S3);
 		  return 0;
 		case 5: /* Double */
-      fmov_to_d_rrr(S2, S3, sreg);
-  		writelong_clobber (S1, S3, S4);
-      add_l_ri (S1, 4);
-      writelong_clobber (S1, S2, S4);
+			fp_from_double_mr(S1, sreg);
 		  return 0;
 		case 6: /* Byte */
       fmov_to_b_rr(S2, sreg);
@@ -766,6 +760,11 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			  sreg = FS1;
 		  else /* one operand only, thus we can load the argument into dreg */
 			  sreg = dreg;
+		  if(opmode >= 0x30 && opmode <= 0x37) {
+				// get out early for unsupported ops
+			  FAIL (1);
+			  return;
+		  }
 		  if ((prec = comp_fp_get (opcode, extra, sreg)) < 0) {
 			  FAIL (1);
 			  return;

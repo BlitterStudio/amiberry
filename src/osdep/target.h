@@ -13,20 +13,13 @@
 
 #define OPTIONSFILENAME "uaeconfig"
 
-#ifndef ARMV6T2
-#undef USE_JIT_FPU
-#endif
-
-
 STATIC_INLINE FILE *uae_tfopen(const TCHAR *path, const TCHAR *mode)
 {
 	return fopen(path, mode);
 }
 
-
 extern void fix_apmodes(struct uae_prefs *p);
 extern int generic_main (int argc, char *argv[]);
-
 
 #define OFFSET_Y_ADJUST 18
 

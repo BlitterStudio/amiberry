@@ -218,11 +218,11 @@ extern struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
 /* struct decision contains things we save across drawing frames for
  * comparison (smart update stuff). */
 struct decision {
-	/* Records the leftmost access of BPL1DAT.  */
-	int plfleft, plfright, plflinelen;
-	/* Display window: native coordinates, depend on lores state.  */
-	int diwfirstword, diwlastword;
-	int ctable;
+  /* Records the leftmost access of BPL1DAT.  */
+  int plfleft, plfright, plflinelen;
+  /* Display window: native coordinates, depend on lores state.  */
+  int diwfirstword, diwlastword;
+  int ctable;
 
   uae_u16 bplcon0, bplcon2;
   uae_u16 bplcon3, bplcon4;

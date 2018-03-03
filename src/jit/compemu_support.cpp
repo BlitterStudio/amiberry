@@ -44,7 +44,6 @@
 #include "compemu.h"
 #include <SDL.h>
 
-#define DEBUG 0
 
 #if DEBUG
 #define PROFILE_COMPILE_TIME		1
@@ -134,7 +133,6 @@ static int redo_current_block;
 uae_u8* current_compile_p = NULL;
 static uae_u8* max_compile_start;
 uae_u8* compiled_code = NULL;
-const int POPALLSPACE_SIZE = 512; /* That should be enough space */
 uae_u8 *popallspace = NULL;
 
 void* pushall_call_handler = NULL;
@@ -926,7 +924,7 @@ static  int alloc_reg_hinted(int r, int size, int willclobber, int hint)
   bestreg = -1;
   when = 2000000000;
 
-  for (i=0; i<N_REGS; i++) {
+  for (i = N_REGS - 1; i >= 0; i--) {
   	badness = live.nat[i].touched;
   	if (live.nat[i].nholds == 0)
 	    badness = 0;
@@ -1248,6 +1246,7 @@ static int rmw(int r, int wsize, int rsize)
 /********************************************************************
  * FPU register status handling. EMIT TIME!                         *
  ********************************************************************/
+#ifdef USE_JIT_FPU
 
 STATIC_INLINE void f_tomem_drop(int r)
 {
@@ -1382,6 +1381,7 @@ static void fflags_into_flags_internal(void)
 	live_flags();
 }
 
+#endif
 
 #if defined(CPU_arm)
 #include "compemu_midfunc_arm.cpp"
@@ -2599,7 +2599,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   			    compemu_raw_mov_l_rm(0, (uintptr)specflags);
   			    compemu_raw_test_l_rr(0, 0);
 #if defined(CPU_arm) && !defined(ARMV6T2)
-            data_check_end(8, 56);
+            data_check_end(8, 64);
 #endif
   			    compemu_raw_jz_b_oponly();
   			    branchadd = (uae_s8 *)get_target();
@@ -2609,6 +2609,9 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   			    *(branchadd - 4) = (((uintptr)get_target() - (uintptr)branchadd) - 4) >> 2;
   		    }
 	    	} else if(may_raise_exception) {
+#if defined(CPU_arm) && !defined(ARMV6T2)
+          data_check_end(8, 64);
+#endif
 					compemu_raw_handle_except(scaled_cycles(totcycles));
 					may_raise_exception = false;
     		}
@@ -2637,6 +2640,9 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
     		}
   
     		tmp = live; /* ouch! This is big... */
+#if defined(CPU_arm) && !defined(ARMV6T2)
+        data_check_end(8, 128);
+#endif
     		compemu_raw_jcc_l_oponly(cc);  // Last emitted opcode is branch to target
   		  branchadd = (uae_u32*)get_target() - 1;
 		
@@ -2644,9 +2650,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   		  tbi = get_blockinfo_addr_new((void*)t1);
   		  match_states(tbi);
 		  
-#if defined(CPU_arm) && !defined(ARMV6T2)
-        data_check_end(4, 56);
-#endif
   		  tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), t1);
   		  write_jmp_target(tba, get_handler(t1));
   		  create_jmpdep(bi, 0, tba, t1);
@@ -2658,9 +2661,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   		  match_states(tbi);
 
   		  //flush(1); /* Can only get here if was_comp==1 */
-#if defined(CPU_arm) && !defined(ARMV6T2)
-        data_check_end(4, 56);
-#endif
   	    tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), t2);
   		  write_jmp_target(tba, get_handler(t2));
   		  create_jmpdep(bi, 1, tba, t2);
@@ -2674,7 +2674,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 		    /* Let's find out where next_handler is... */
 		    if (was_comp && isinreg(PC_P)) {
 #if defined(CPU_arm) && !defined(ARMV6T2)
-          data_check_end(4, 52);
+          data_check_end(4, 64);
 #endif
 	        r = live.state[PC_P].realreg;
 	        compemu_raw_endblock_pc_inreg(r, scaled_cycles(totcycles));
@@ -2688,7 +2688,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 		      match_states(tbi);
 
 #if defined(CPU_arm) && !defined(ARMV6T2)
-          data_check_end(4, 56);
+          data_check_end(4, 64);
 #endif
 		      tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), v);
 		      write_jmp_target(tba, get_handler(v));
@@ -2698,7 +2698,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 		      r = REG_PC_TMP;
 		      compemu_raw_mov_l_rm(r, (uintptr)&regs.pc_p);
 #if defined(CPU_arm) && !defined(ARMV6T2)
-          data_check_end(4, 52);
+          data_check_end(4, 64);
 #endif
     	    compemu_raw_endblock_pc_inreg(r, scaled_cycles(totcycles));
 		    }

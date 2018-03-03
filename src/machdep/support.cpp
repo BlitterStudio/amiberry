@@ -25,7 +25,7 @@ int machdep_init (void)
   // Initialize timebase
   g_uae_epoch = read_processor_time();
   syncbase = 1000000; // Microseconds
-
+  
   return 1;
 }
 

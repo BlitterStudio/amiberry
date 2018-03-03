@@ -49,7 +49,6 @@ void backtrace_symbols_fd(void* const*,int,int){}
 extern uae_u8* current_compile_p;
 extern uae_u8* compiled_code;
 extern uae_u8 *popallspace;
-#define POPALLSPACE_SIZE 2048
 extern blockinfo* active;
 extern blockinfo* dormant;
 extern void invalidate_block(blockinfo* bi);
