@@ -1701,6 +1701,7 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 	trap_put_word(ctx, ABI + PSSO_BoardInfo_MaxVerResolution + 4, hicolour.height);
 	trap_put_word(ctx, ABI + PSSO_BoardInfo_MaxVerResolution + 6, truecolour.height);
 	trap_put_word(ctx, ABI + PSSO_BoardInfo_MaxVerResolution + 8, alphacolour.height);
+
 	inituaegfxfuncs(ctx, uaegfx_rom, ABI);
 }
 
@@ -1820,6 +1821,7 @@ static uae_u32 REGPARAM2 picasso_SetSwitch(TrapContext *ctx)
 			picasso96_state_uaegfx.Width, picasso96_state_uaegfx.Height, picasso96_state_uaegfx.BytesPerPixel * 8,
 			picasso_vidinfo.width, picasso_vidinfo.height, picasso_vidinfo.pixbytes * 8);
 	write_log(_T("SetSwitch() - %s\n"), flag ? p96text : _T("amiga"));
+
 	/* Put old switch-state in D0 */
 	return !flag;
 }

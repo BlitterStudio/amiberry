@@ -123,7 +123,7 @@ typedef union {
 #if defined(CPU_arm)
 //#define DEBUG_DATA_BUFFER
 #define ALIGN_NOT_NEEDED
-#define N_REGS 13  /* really 16, but 13 to 15 are SP, LR, PC */
+#define N_REGS 11  /* really 16, but 13 to 15 are SP, LR, PC; 12 is scratch reg and 11 holds regs-struct */
 #else
 #define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
 #endif
@@ -380,6 +380,12 @@ typedef struct blockinfo_t {
 #define BI_CHECKING 4
 #define BI_COMPILING 5
 #define BI_FINALIZING 6
+
+#if defined(CPU_arm) && !defined(ARMV6T2)
+const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
+#else
+const int POPALLSPACE_SIZE = 512; /* That should be enough space */
+#endif
 
 void execute_normal(void);
 void exec_nostats(void);

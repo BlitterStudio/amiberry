@@ -1327,7 +1327,7 @@ enum {
 #define SMULxy_rrr(Rd,Rn,Rm,x,y)        CC_SMULxy_rrr(NATIVE_CC_AL,Rd,Rn,Rm,x,y)
 
 // ARMv6T2
-//#ifdef ARMV6T2
+#ifdef ARMV6T2
 
 #define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
 #define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
@@ -1353,7 +1353,7 @@ enum {
 #define CC_UDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x3 << 20) | (Rd << 16) | (0xf << 12) | (Rm << 8) | (0x1 << 4) | (Rn))
 #define UDIV_rrr(Rd,Rn,Rm)					CC_UDIV_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
-//#endif
+#endif
 
 // Floatingpoint
 #define FADR_ADD(offs)              ((1 << 23) | (offs) >> 2)

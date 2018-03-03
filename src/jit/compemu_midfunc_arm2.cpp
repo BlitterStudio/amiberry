@@ -1835,6 +1835,8 @@ MENDFUNC(2,jff_DBCC,(RR2 d, IMM cc))
  * C Always cleared.
  *
  */
+#ifdef ARMV6T2
+
 MIDFUNC(3,jnf_DIVU,(W4 d, RR4 s1, RR4 s2))
 {
   s1 = readreg(s1, 4);
@@ -1847,13 +1849,8 @@ MIDFUNC(3,jnf_DIVU,(W4 d, RR4 s1, RR4 s2))
 
   // Signal exception 5
   MOV_ri(REG_WORK1, 5);
-#ifdef ARMV6T2
   MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
   MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
-#else
-  auto offs = data_long_offs((uae_u32)(&jit_exception));
-  LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
   STR_rR(REG_WORK1, REG_WORK2);
 #ifdef ARM_HAS_DIV
   B_i(4);        // end_of_op
@@ -1899,13 +1896,8 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
 
   // Signal exception 5
 	MOV_ri(REG_WORK1, 5);
-#ifdef ARMV6T2
-	MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
-	MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
-#else
-	auto offs = data_long_offs((uae_u32)(&jit_exception));
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
   STR_rR(REG_WORK1, REG_WORK2);
   
   // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
@@ -1918,8 +1910,8 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
 	UDIV_rrr(REG_WORK1, s1, REG_WORK3);
 #else
   B_i(17);       // end_of_op
-
-// src is not 0  
+	
+	// src is not 0  
 	VMOVi_from_ARM_dr(SCRATCH_F64_1, s1, 0);
 	VMOVi_from_ARM_dr(SCRATCH_F64_2, REG_WORK3, 0);
 	VCVTIuto64_ds(SCRATCH_F64_1, SCRATCH_F32_1);
@@ -1929,7 +1921,7 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
 	VMOVi_to_ARM_rd(REG_WORK1, SCRATCH_F64_1, 0);
 #endif
   
-  LSRS_rri(REG_WORK2, REG_WORK1, 16); // if result of this is not 0, DIVU overflows
+  LSRS_rri(REG_WORK2, REG_WORK1, 16); 							// if result of this is not 0, DIVU overflows
   BEQ_i(2);
   // Here we handle overflow
   MOV_ri(REG_WORK1, ARM_V_FLAG | ARM_N_FLAG);
@@ -1945,12 +1937,14 @@ MIDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
   MLS_rrrr(REG_WORK2, REG_WORK1, REG_WORK3, s1);
   PKHBT_rrrLSLi(d, REG_WORK1, REG_WORK2, 16);
 // end_of_op
-  
+	
   unlock2(d);
   unlock2(s1);
   unlock2(s2);
 }
 MENDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
+ 
+#endif
  
 /*
  * DIVS
@@ -1962,6 +1956,8 @@ MENDFUNC(3,jff_DIVU,(W4 d, RR4 s1, RR4 s2))
  * C Always cleared.
  *
  */
+#ifdef ARMV6T2
+
 MIDFUNC(3,jnf_DIVS,(W4 d, RR4 s1, RR4 s2))
 {
   s1 = readreg(s1, 4);
@@ -1974,23 +1970,18 @@ MIDFUNC(3,jnf_DIVS,(W4 d, RR4 s1, RR4 s2))
 
   // Signal exception 5
   MOV_ri(REG_WORK1, 5);
-#ifdef ARMV6T2
   MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
   MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
-#else
-  auto offs = data_long_offs((uae_u32)(&jit_exception));
-  LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
   STR_rR(REG_WORK1, REG_WORK2);
 #ifdef ARM_HAS_DIV
   B_i(12);        // end_of_op
-  
+
 	// src is not 0  
 	SDIV_rrr(REG_WORK1, s1, REG_WORK3);
 #else
   B_i(18);       // end_of_op
-
-// src is not 0  
+	
+	// src is not 0  
 	VMOVi_from_ARM_dr(SCRATCH_F64_1, s1, 0);
 	VMOVi_from_ARM_dr(SCRATCH_F64_2, REG_WORK3, 0);
 	VCVTIto64_ds(SCRATCH_F64_1, SCRATCH_F32_1);
@@ -2037,13 +2028,8 @@ MIDFUNC(3,jff_DIVS,(W4 d, RR4 s1, RR4 s2))
 
   // Signal exception 5
 	MOV_ri(REG_WORK1, 5);
-#ifdef ARMV6T2
-	MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
-	MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
-#else
-	auto offs = data_long_offs((uae_u32)(&jit_exception));
-	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
-#endif
+  MOVW_ri16(REG_WORK2, (uae_u32)(&jit_exception));
+  MOVT_ri16(REG_WORK2, ((uae_u32)(&jit_exception)) >> 16);
   STR_rR(REG_WORK1, REG_WORK2);
   
   // simplified flag handling for div0: set Z and V (for signed DIV: Z only)
@@ -2057,7 +2043,7 @@ MIDFUNC(3,jff_DIVS,(W4 d, RR4 s1, RR4 s2))
 #else
   B_i(25);       // end_of_op
 
-// src is not 0  
+	// src is not 0  
 	VMOVi_from_ARM_dr(SCRATCH_F64_1, s1, 0);
 	VMOVi_from_ARM_dr(SCRATCH_F64_2, REG_WORK3, 0);
 	VCVTIto64_ds(SCRATCH_F64_1, SCRATCH_F32_1);
@@ -2298,6 +2284,8 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
   unlock2(s1);
 }
 MENDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
+
+#endif
 
 /*
  * EOR
@@ -3242,11 +3230,23 @@ MIDFUNC(2,jnf_MOVE16,(RR4 d, RR4 s))
 	ADD_rrr(s, s, REG_WORK1);
 	ADD_rrr(d, d, REG_WORK1);
 
+#ifdef ARMV6T2
 	LDRD_rR(REG_WORK1, s);
 	STRD_rR(REG_WORK1, d);
 
 	LDRD_rRI(REG_WORK1, s, 8);
 	STRD_rRI(REG_WORK1, d, 8);
+#else
+	LDR_rR(REG_WORK1, s);
+	LDR_rRI(REG_WORK2, s, 4);
+	STR_rR(REG_WORK1, d);
+	STR_rRI(REG_WORK2, d, 4);
+
+	LDR_rRI(REG_WORK1, s, 8);
+	LDR_rRI(REG_WORK2, s, 12);
+	STR_rRI(REG_WORK1, d, 8);
+	STR_rRI(REG_WORK2, d, 12);
+#endif
 
   POP_REGS((1 << s) | (1 << d));
 
@@ -4499,7 +4499,12 @@ MIDFUNC(3,jff_ROXL_b,(W4 d, RR4 s, RR4 i))
   CC_MOV_ri(NATIVE_CC_CC, x, 0);
 
 	// Calc N and Z
+#ifdef ARMV6T2
 	BFI_rrii(d, x, 8, 8); // Make sure to set carry (last bit shifted out)
+#else
+	BIC_rri(d, d, 0x100);
+	ORR_rrrLSLi(d, d, x, 8);
+#endif
 	LSLS_rri(REG_WORK1, d, 24);
 	
 // end of op
@@ -4549,7 +4554,12 @@ MIDFUNC(3,jff_ROXL_w,(W4 d, RR4 s, RR4 i))
   CC_MOV_ri(NATIVE_CC_CC, x, 0);
 
 	// Calc N and Z
+#ifdef ARMV6T2
 	BFI_rrii(d, x, 16, 16); // Make sure to set carry (last bit shifted out)
+#else
+	BIC_rri(d, d, 0x10000);
+	ORR_rrrLSLi(d, d, x, 16);
+#endif
 	LSLS_rri(REG_WORK1, d, 16);
 	
 // end of op
