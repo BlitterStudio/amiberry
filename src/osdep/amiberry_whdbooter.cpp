@@ -170,6 +170,29 @@ void RemoveChar(char* array, int len, int index)
   array[len-1] = 0;
 }
 
+
+void parse_custom_settings(struct uae_prefs* p, char* InSettings)
+{
+    char temp_options[4096];            
+        strcpy(temp_options, InSettings);
+        
+        char *full_line;    
+        full_line = strtok (temp_options,"\n");
+           
+            while (full_line != NULL)
+            {
+                std::string line = full_line;   
+                std::string check = "amiberry_custom";
+                    
+                    if(strstr(line.c_str(),check.c_str()) != NULL)
+                    {
+                         cfgfile_parse_line(p, full_line, 0);
+                        }   
+                full_line = strtok (NULL, "\n");
+            }     
+}
+
+
 struct membuf : std::streambuf
 {
     membuf(char* begin, char* end) {
@@ -179,7 +202,7 @@ struct membuf : std::streambuf
 
 const TCHAR* find_whdload_game_option(const TCHAR* find_setting, char* whd_options)
 {      
-        char temp_options[sizeof whd_options];
+        char temp_options[4096];
         char temp_setting[4096];
 
             strcpy(temp_options, whd_options);
@@ -237,6 +260,9 @@ struct game_options get_game_settings(char* HW)
              return output_detail;
 }
         
+
+
+
 void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
 {
@@ -334,6 +360,8 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         strcat(WHDConfig,".whd");   
         
         char HardwareSettings[4096];
+        char CustomSettings[4096];
+        
                                          
         if (zfile_exists(WHDConfig)) // use direct .whd file
         {
@@ -372,19 +400,22 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
                             if (strcmpi(reinterpret_cast<const char*>(attr),game_name) == 0) 
                             {                              
                             // now get the <hardware> and <custom_controls> items
-                                xmlChar *key;
+                                
                                 temp_node = game_node->xmlChildrenNode;                                
                                 temp_node = get_node(temp_node, "hardware");
-
-                               _stprintf(HardwareSettings, "%s",xmlNodeGetContent(temp_node)); 
-                               // printf(HardwareSettings); 
-                                game_detail = get_game_settings(HardwareSettings);
-                               // printf(HardwareSettings);            
-                                
+                                if (xmlNodeGetContent(temp_node) != NULL)
+                                {     
+                                 _stprintf(HardwareSettings, "%s",xmlNodeGetContent(temp_node)); 
+                                  game_detail = get_game_settings(HardwareSettings);
+                                }
+                                   
+                                temp_node = game_node->xmlChildrenNode; 
                                 temp_node = get_node(temp_node, "custom_controls");
-                                key = xmlNodeGetContent(temp_node);
-                               // printf("keyword 2: %s\n", key);
-     
+                                if (xmlNodeGetContent(temp_node) != NULL)
+                                { 
+                                 _stprintf(CustomSettings, "%s",xmlNodeGetContent(temp_node)); 
+                                //  process these later
+                                }
                                 break;
                             }
                          }
@@ -428,8 +459,8 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
     // if joystick game
         else
             snprintf(GameTypePath, MAX_DPATH, "%s/whdboot/default_mouse.uae", start_path_data);
-              
-                
+             
+        
         if (zfile_exists(GameTypePath))
         {
                 for (auto i = 0; i < MAX_JPORTS; i++)
@@ -441,8 +472,9 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
                 }
                 cfgfile_load(p, GameTypePath, type, 0, 1);
         }           
-           
+         
 
+        
     if ((strcmpi(game_detail.cpu,"68000") == 0 || strcmpi(game_detail.cpu,"68010") == 0) && a600_available != 0)
     // SET THE BASE AMIGA (Expanded A600)
     {   built_in_prefs(&currprefs, 2, 2, 0, 0);
@@ -506,6 +538,13 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
              p->jports[0].mode = 7;
          if (game_detail.port1 == "CD32")
              p->jports[1].mode = 7;
+    
+         
+         
+    // CUSTOM CONTROLS
+        if (strlen(CustomSettings) > 0 )        
+            parse_custom_settings(p, CustomSettings);  
+         
          
    //      *** GAME-SPECIFICS ***
    //  SET THE GAME COMPATIBILITY SETTINGS   
@@ -629,17 +668,6 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
              cfgfile_parse_line(p, txt2, 0);      }       
          
 
-             
-         
-         
-             
-    // CUSTOM CONTROLS FILES
-        strcpy(WHDConfig, WHDPath);
-        strcat(WHDConfig,game_name);
-        strcat(WHDConfig,".controls");  
-        if (zfile_exists(WHDConfig))
-           cfgfile_load(&currprefs, WHDConfig, &config_type, 0, 1);       
-    
         
     //  CLEAN UP SETTINGS 
      //   fixup_prefs(&currprefs, true);    
