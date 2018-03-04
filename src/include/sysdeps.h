@@ -454,9 +454,9 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 
 #else
 
-#define xmalloc(T, N) static_cast<T*>(malloc (sizeof (T) * (N)))
-#define xcalloc(T, N) static_cast<T*>(calloc (sizeof (T), N))
-#define xrealloc(T, TP, N) static_cast<T*>(realloc (TP, sizeof (T) * (N)))
+#define xmalloc(T, N) (static_cast<T*>(malloc (sizeof (T) * (N))))
+#define xcalloc(T, N) (static_cast<T*>(calloc (sizeof (T), N)))
+#define xrealloc(T, TP, N) (static_cast<T*>(realloc (TP, sizeof (T) * (N))))
 #define xfree(T) free(T)
 
 #endif
