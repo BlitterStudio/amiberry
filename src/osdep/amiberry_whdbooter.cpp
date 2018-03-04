@@ -41,6 +41,8 @@
 #include <map>
 #endif
 
+
+
 #ifdef WITH_LOGGING
 extern FILE *debugfile;
 #endif
@@ -48,7 +50,13 @@ extern FILE *debugfile;
 
 #include "crc32.h"
 #include "fsdb.h"
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+#include <libxml/xmlmemory.h>
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 extern void SetLastActiveConfig(const char* filename);
 
@@ -84,6 +92,39 @@ struct game_options {
        TCHAR z3[256]       = "nul\0";
 };
 
+
+static xmlNode* get_node(xmlNode* node, const char* name)
+{
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), name) == 0)
+			return curr_node->children;
+	}
+	return nullptr;
+}
+
+
+static bool get_value(xmlNode* node, const char* key, char* value, int max_size)
+{
+	auto result = false;
+
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), key) == 0)
+		{
+			const auto content = xmlNodeGetContent(curr_node);
+			if (content != nullptr)
+			{
+				strncpy(value, reinterpret_cast<char *>(content), max_size);
+				xmlFree(content);
+				result = true;
+			}
+			break;
+		}
+	}
+
+	return result;
+}
 
 
 static TCHAR *parsetext(const TCHAR *s)
@@ -129,51 +170,73 @@ void RemoveChar(char* array, int len, int index)
   array[len-1] = 0;
 }
 
-
-
-const TCHAR* find_whdload_game_option(const TCHAR* find_setting, char* whd_game_file)
+struct membuf : std::streambuf
 {
-	// opening file and parsing
-	ifstream readFile(whd_game_file);
-	string line;
-	string delimiter = "=";
+    membuf(char* begin, char* end) {
+        this->setg(begin, begin, end);
+    }
+};
 
-	auto output = "nul";
+const TCHAR* find_whdload_game_option(const TCHAR* find_setting, char* whd_options)
+{      
+        char temp_options[sizeof whd_options];
+        char temp_setting[4096];
 
-	// read each line in
-	while (std::getline(readFile, line))
-	{
-		const auto option = line.substr(0, line.find(delimiter));
+            strcpy(temp_options, whd_options);
+            auto output = "nul";
+                
+            char *full_line;    
+            full_line = strtok (temp_options,"\n");
 
-		if (option != line) // exit if we got no result from splitting the string
-		{
-			// using the " = " to work out which is the option, and which is the parameter.
-			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+            char *this_option; 
+            
+            while (full_line != NULL)
+            {
+               strcpy(temp_setting, find_setting);
+               strcat(temp_setting, "=");
 
-			if (!param.empty())
-			{
-				// remove leading "
-				if (param.at(0) == '"')
-					param.erase(0, 1);
-
-				// remove trailing "
-				if (param.at(param.length() - 1) == '"')
-					param.erase(param.length() - 1, 1);
-
-				output = &param[0u];
-
-				// ok, this is the 'normal' storing of values
-				if (option == find_setting)
-					break;
-
-				output = "nul";
-			}
-		}
-	}
+               if (strlen(full_line) >=  strlen(temp_setting)) 
+               {
+                    // check that the beginging of the full line
+                    if (strncmp(temp_setting, full_line ,strlen(find_setting))==0)
+                      {
+                        std::string t = full_line;
+                        t.erase (t.begin(),t.begin()  + strlen(temp_setting));                                
+                        output = &t[0u];
+                        return output;
+                      }      
+               }    
+               full_line = strtok (NULL, "\n");
+            }       
 
 	return output;
 }
 
+
+struct game_options get_game_settings(char* HW)
+{        
+    
+             struct game_options output_detail;
+             strcpy(output_detail.port0,       find_whdload_game_option("PORT0",HW));
+             strcpy(output_detail.port1,       find_whdload_game_option("PORT1",HW));
+             strcpy(output_detail.control,     find_whdload_game_option("PRIMARY_CONTROL",HW));            
+             strcpy(output_detail.fastcopper,  find_whdload_game_option("FAST_COPPER",HW));
+             strcpy(output_detail.cpu,         find_whdload_game_option("CPU",HW));
+             strcpy(output_detail.blitter,     find_whdload_game_option("BLITTER",HW));             
+             strcpy(output_detail.clock,       find_whdload_game_option("CLOCK",HW));
+             strcpy(output_detail.chipset,     find_whdload_game_option("CHIPSET",HW));
+             strcpy(output_detail.jit,         find_whdload_game_option("JIT",HW));
+             strcpy(output_detail.cpu_comp,    find_whdload_game_option("CPU_COMPATIBLE",HW));
+             strcpy(output_detail.sprites,     find_whdload_game_option("SPRITES",HW));            
+             strcpy(output_detail.scr_height,  find_whdload_game_option("SCREEN_HEIGHT",HW));             
+             strcpy(output_detail.y_offset,    find_whdload_game_option("SCREEN_Y_OFFSET",HW));
+             strcpy(output_detail.ntsc,        find_whdload_game_option("NTSC",HW));
+             strcpy(output_detail.fast,        find_whdload_game_option("FAST_RAM",HW));
+             strcpy(output_detail.z3,          find_whdload_game_option("Z3_RAM",HW));  
+
+             return output_detail;
+}
+        
 void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
 
 {
@@ -229,7 +292,6 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
         rom_test = configure_rom(p, roms, 0);  // returns 0 or 1 if found or not found
         const int a600_available = rom_test;
 
-        printf ("a600: %d\n",a600_available);
 //     
 //      *** GAME DETECTION ***
    
@@ -254,8 +316,6 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
             strcat(WHDConfig,".uae");  
             
             
-       printf("cgf: %s  \n",WHDConfig);
-            
         if (zfile_exists(WHDConfig))
         {        target_cfgfile_load(&currprefs, WHDConfig,  CONFIG_TYPE_ALL, 0);
                  return;}
@@ -265,42 +325,94 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
      // LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
       	char WHDPath[MAX_DPATH];
 	snprintf(WHDPath, MAX_DPATH, "%s/whdboot/game-data/", start_path_data);          
-          
-       // EDIT THE FILE NAME TO USE HERE
- 	strcpy(WHDConfig, WHDPath);
-        strcat(WHDConfig,game_name);
-        strcat(WHDConfig,".whd");     
-        
-        printf("game-db: %s  \n",WHDConfig);
-
         struct game_options game_detail;
-
-       if (zfile_exists(WHDConfig))
+    
+        
+        // EDIT THE FILE NAME TO USE HERE
+        strcpy(WHDConfig, WHDPath);
+        strcat(WHDConfig,game_name);
+        strcat(WHDConfig,".whd");   
+        
+        char HardwareSettings[4096];
+                                         
+        if (zfile_exists(WHDConfig)) // use direct .whd file
         {
-             strcpy(game_detail.port0,       find_whdload_game_option("PORT0",WHDConfig));
-             strcpy(game_detail.port1,       find_whdload_game_option("PORT1",WHDConfig));
-             strcpy(game_detail.control,     find_whdload_game_option("PRIMARY_CONTROL",WHDConfig));            
-             strcpy(game_detail.fastcopper,  find_whdload_game_option("FAST_COPPER",WHDConfig));
-             strcpy(game_detail.cpu,         find_whdload_game_option("CPU",WHDConfig));
-             strcpy(game_detail.blitter,     find_whdload_game_option("BLITTER",WHDConfig));             
-             strcpy(game_detail.clock,       find_whdload_game_option("CLOCK",WHDConfig));
-             strcpy(game_detail.chipset,     find_whdload_game_option("CHIPSET",WHDConfig));
-             strcpy(game_detail.jit,         find_whdload_game_option("JIT",WHDConfig));
-             strcpy(game_detail.cpu_comp,    find_whdload_game_option("CPU_COMPATIBLE",WHDConfig));
-             strcpy(game_detail.sprites,     find_whdload_game_option("SPRITES",WHDConfig));            
-             strcpy(game_detail.scr_height,  find_whdload_game_option("SCREEN_HEIGHT",WHDConfig));             
-             strcpy(game_detail.y_offset,    find_whdload_game_option("SCREEN_Y_OFFSET",WHDConfig));
-             strcpy(game_detail.ntsc,        find_whdload_game_option("NTSC",WHDConfig));
-             strcpy(game_detail.chip,        find_whdload_game_option("CHIP_RAM",WHDConfig));
-             strcpy(game_detail.fast,        find_whdload_game_option("FAST_RAM",WHDConfig));
-             strcpy(game_detail.z3,          find_whdload_game_option("Z3_RAM",WHDConfig));            
+            
+                ifstream readFile(WHDConfig);
+                std::ifstream in(WHDConfig);
+                std::string contents((std::istreambuf_iterator<char>(in)), 
+                std::istreambuf_iterator<char>());
+                
+                _stprintf(HardwareSettings, "%s",contents.c_str());
+                 game_detail = get_game_settings(HardwareSettings);
+        }
+        else
+        {
+            strcpy(WHDConfig, WHDPath);
+            strcat(WHDConfig, "whdload_db.xml");
+            
+            if (zfile_exists(WHDConfig))  // use XML database 
+            {   
+                char buffer[4096];
+                xmlDocPtr    doc;
+                xmlNodePtr   game_node;
+                xmlNodePtr   temp_node;
+                
+                  doc = xmlParseFile(WHDConfig);
+
+                  const auto root_element = xmlDocGetRootElement(doc);
+             
+                             game_node = get_node(root_element, "whdbooter");
+                     
+                    while (game_node != NULL) 
+                    {
+                         auto attr = xmlGetProp(game_node, reinterpret_cast<const xmlChar *>("filename"));                         
+                         if (attr != NULL) 
+                         {
+                            if (strcmpi(reinterpret_cast<const char*>(attr),game_name) == 0) 
+                            {                              
+                            // now get the <hardware> and <custom_controls> items
+                                xmlChar *key;
+                                temp_node = game_node->xmlChildrenNode;                                
+                                temp_node = get_node(temp_node, "hardware");
+
+                               _stprintf(HardwareSettings, "%s",xmlNodeGetContent(temp_node)); 
+                               // printf(HardwareSettings); 
+                                game_detail = get_game_settings(HardwareSettings);
+                               // printf(HardwareSettings);            
+                                
+                                temp_node = get_node(temp_node, "custom_controls");
+                                key = xmlNodeGetContent(temp_node);
+                               // printf("keyword 2: %s\n", key);
+     
+                                break;
+                            }
+                         }
+                         xmlFree(attr);
+                        game_node = game_node->next;
+                    }
+                
+                xmlCleanupParser();         
+            }
         }
         
-        
-        printf("port 0: %s  \n",game_detail.port0); 
-        printf("port 1: %s  \n",game_detail.port1); 
-        
-
+        // debugging code!
+//        printf("port 0: %s  \n",game_detail.port0); 
+//        printf("port 1: %s  \n",game_detail.port1); 
+//        printf("contrl: %s  \n",game_detail.control);  
+//        printf("fstcpr: %s  \n",game_detail.fastcopper);  
+//        printf("cpu   : %s  \n",game_detail.cpu);  
+//        printf("blitta: %s  \n",game_detail.blitter);  
+//        printf("clock : %s  \n",game_detail.clock);  
+//        printf("chipst: %s  \n",game_detail.chipset);  
+//        printf("jit   : %s  \n",game_detail.jit);  
+//        printf("cpcomp: %s  \n",game_detail.cpu_comp);  
+//        printf("scrhei: %s  \n",game_detail.scr_height);   
+//        printf("scr y : %s  \n",game_detail.y_offset);  
+//        printf("ntsc  : %s  \n",game_detail.ntsc);  
+//        printf("fast  : %s  \n",game_detail.fast);  
+//        printf("z3    : %s  \n",game_detail.z3);      
+             
   //     
 //      *** EMULATED HARDWARE ***
  //            
@@ -316,8 +428,7 @@ void whdload_auto_prefs (struct uae_prefs* p, char* filepath)
     // if joystick game
         else
             snprintf(GameTypePath, MAX_DPATH, "%s/whdboot/default_mouse.uae", start_path_data);
-        
-            
+              
                 
         if (zfile_exists(GameTypePath))
         {
