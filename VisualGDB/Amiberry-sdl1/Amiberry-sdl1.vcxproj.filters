@@ -185,9 +185,6 @@
     <ClCompile Include="..\..\src\fpp.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\fpp_native.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\fsdb.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
