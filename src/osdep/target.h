@@ -25,7 +25,7 @@ extern int generic_main (int argc, char *argv[]);
 
 extern int emulating;
 
-extern int z3base_adr;
+extern int z3_base_adr;
 
 extern unsigned long time_per_frame;
 
