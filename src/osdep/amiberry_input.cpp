@@ -406,16 +406,22 @@ static void setid_af(struct uae_input_device* uid, const int i, const int slot, 
 		uid[i].flags[slot][sub] |= ID_FLAG_AUTOFIRE;
 }
 
-int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp,
+int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp, 
                             bool wheel,
                             bool joymouseswap)
-{
-	setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ, gp);
+{	
+        if (currprefs.jports[port].id >= JSEM_MICE && currprefs.jports[port].id < JSEM_END)
+        {
+        setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ, gp);
 	setid(uid, i, ID_AXIS_OFFSET + 1, 0, port, port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT, gp);
 	setid_af(uid, i, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON, af,
 	         gp);
 	setid(uid, i, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON, gp);
-
+        }
+        
+        else
+            input_get_default_joystick(uid, i,  port,   af,  JSEM_MODE_MOUSE,  port, joymouseswap);
+     
 	if (i == 0)
 		return 1;
 	return 0;
@@ -1209,7 +1215,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	{
 		for (auto n = 0; n < 2; ++n)
 		{
-			if (CHECK_BIT(currprefs.jports[port].mousemap, n))
+			//if (CHECK_BIT(currprefs.jports[port].mousemap, n))
+                        if (mode == JSEM_MODE_MOUSE)
 			{
 				h = port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ;
 				v = port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT;
@@ -1252,7 +1259,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 
 	if (port < 2) // ports 0, 1 ... 
 	{
-		if (CHECK_BIT(currprefs.jports[port].mousemap,0))
+		//if (CHECK_BIT(currprefs.jports[port].mousemap,0))
+                if (mode == JSEM_MODE_MOUSE)
 		{
 			thismap[0].dpad_up_action = thismap[0].dpad_up_action
 				                            ? thismap[0].dpad_up_action
@@ -1355,7 +1363,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 
 
 		// shoulder buttons
-		if (CHECK_BIT(currprefs.jports[port].mousemap,1))
+		//if (CHECK_BIT(currprefs.jports[port].mousemap,1))
+                if (mode == JSEM_MODE_MOUSE)
 			// if we use right-analogue as mouse, then we will use shoulder buttons as LMB/RMB
 			//if (1==0)
 		{
