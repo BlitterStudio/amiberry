@@ -321,7 +321,6 @@ void symlink_roms(struct uae_prefs* p)
         
        if (!zfile_exists(KickPath))
         {   roms[0] = 5;   // kickstart 1.2 A500
-            roms[1] = -1;
             rom_test = configure_rom(p, roms, 0);  // returns 0 or 1 if found or not found
         if (rom_test == 1)
             symlink(p->romfile, KickPath);
