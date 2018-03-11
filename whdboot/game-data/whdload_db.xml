@@ -1,0 +1,58 @@
+<whdbooter>
+<game filename="IK+_v1.8_2063" sha1="066a43d17271b9f523350a8c3639c554c0a2bb0a">
+	<name>IK+</name>
+	<slave_count>1</slave_count>
+	<slave_default>IK+.slave</slave_default>
+	<hardware>
+PRIMARY_CONTROL=JOYSTICK
+PORT0=JOY
+PORT1=JOY
+SCREEN_HEIGHT=200
+SCREEN_Y_OFFSET=8
+FAST_RAM=1
+	</hardware>
+	<custom_controls></custom_controls>
+</game>
+<game filename="IndyHeat_v1.1" sha1="36ad3f8831240d77fa77b35da5e1af10df5b06ce">
+	<name>Indy Heat</name>
+	<slave_count>1</slave_count>
+	<slave_default>IndyHeat.slave</slave_default>
+	<hardware>
+PRIMARY_CONTROL=JOYSTICK
+PORT0=JOY
+PORT1=JOY
+SCREEN_HEIGHT=240
+SCREEN_Y_OFFSET=3
+
+FAST_RAM=1	</hardware>
+	<custom_controls>
+joyport2_amiberry_custom_none_dpad_up=Cursor Up
+joyport2_amiberry_custom_none_dpad_down=Cursor Down
+joyport2_amiberry_custom_none_dpad_left=Cursor Left
+joyport2_amiberry_custom_none_dpad_right=Cursor Right
+joyport2_amiberry_custom_none_south=Right Shift
+	</custom_controls>
+</game>
+<game filename="OhNoMoreLemmings_v1.2_0697" sha1="">
+	<name>Oh No! More Lemmings</name>
+	<hardware>
+PRIMARY_CONTROL=MOUSE
+SECONDARY_CONTROL=MOUSE
+PORT0=MOUSE
+PORT1=MOUSE
+SCREEN_HEIGHT=240
+SCREEN_Y_OFFSET=3
+
+FAST_RAM=1	</hardware>
+	<custom_controls>
+joyport0_amiberry_custom_none_left_shoulder=Cursor Left
+joyport0_amiberry_custom_none_east=P
+joyport0_amiberry_custom_none_start=ESC
+joyport0_amiberry_custom_none_right_shoulder=Cursor Right
+joyport1_amiberry_custom_none_left_shoulder=Z
+joyport1_amiberry_custom_none_east=P
+joyport1_amiberry_custom_none_start=ESC
+joyport1_amiberry_custom_none_right_shoulder=X
+	</custom_controls>
+</game>
+</whdbooter> 

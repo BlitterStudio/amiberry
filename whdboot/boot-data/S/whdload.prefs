@@ -1,0 +1,32 @@
+;
+; global configuration file for WHDLoad
+; searched as "S:whdload.prefs"
+;
+; CLI-Arguments and ToolTypes will overwrite these !
+;
+
+NoWriteCache        		;disable the disk write cache
+QuitKey=$5a         		;rawkey code to quit
+SplashDelay=0     		;time to display splash window (1/50 seconds)
+SavePath=dh0:WHDBooter/Savegames/
+
+;ButtonWait      	 	;wait for button pressed (slave must support this)
+;ChipNoCache         		;disable cachebility of Chip-Memory
+;CoreDumpPath=T:     		;path for coredump files
+;DebugKey=$5b        		;rawkey code to quit with coredump (debug)
+;ExecuteStartup=rx offline.rexx  ;command to execute on WHDLoad startup
+;ExecuteCleanup=rx online.rexx   ;command to execute on WHDLoad exit
+;Expert           ;selects expert mode
+;FreezeKey=$5d       ;rawkey code to enter HrtMon/TK
+;MMU           ;use MMU (for 68030)
+;NoAutoVec        ;ignore unwanted autovector interrupts
+;NoFilter         ;disable audio filter
+;NoFlushMem       ;do not flush memory
+;NoMemReverse        ;do not allocate memory reverse
+;ReadDelay=150       ;wait after reading from disk (1/50 seconds)
+;RestartKey=$5c         ;rawkey code to restart
+;ShowRegs=SYS:Utilities/MuchMore W WL=80 WT=80 WW=582 WH=700   ;command for Show Regs
+;WriteDelay=150         ;wait after saving something to disk (1/50 seconds)
+
+
+

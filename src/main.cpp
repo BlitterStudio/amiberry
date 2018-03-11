@@ -463,6 +463,7 @@ void  print_usage()
 	printf("\nUsage:\n");
 	printf(" -f <file>                  Load a configuration file.\n");
 	printf(" -config=<file>             Load a configuration file.\n");
+        printf(" -autowhdload=<file>        Load a WHDLoad game pack.\n");
 	printf(" -statefile=<file>          Load a save state file.\n");
 	printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
 	printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
@@ -517,6 +518,13 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			xfree(txt);
 			loaded = true;
 		}
+		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0) {
+			TCHAR *txt = parsetextpath(argv[i] + 13);                        
+                        whdload_auto_prefs (&currprefs, txt);                     
+			xfree(txt);
+                        firstconfig = false;
+			loaded = true;
+                }
 		else if (_tcscmp(argv[i], _T("-f")) == 0) {
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
 			if (i + 1 == argc) {
