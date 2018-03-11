@@ -42,7 +42,7 @@ void free_AmigaMem(void)
 #ifdef AMIBERRY
 		munmap(regs.natmem_offset, natmem_size + BARRIER);
 #else
-    free(regs.natmem_offset);
+		free(regs.natmem_offset);
 #endif
 		regs.natmem_offset = nullptr;
 	}

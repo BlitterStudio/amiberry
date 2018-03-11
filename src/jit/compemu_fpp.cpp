@@ -245,7 +245,7 @@ STATIC_INLINE int comp_fp_put (uae_u32 opcode, uae_u16 extra)
 		{
 			uae_u32 off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 			mov_l_rr (S1, reg + 8);
-			add_l_ri (S1, off);
+			arm_ADD_l_ri (S1, off);
 			break;
 		}
 		case 6: /* (d8,An,Xn) or (bd,An,Xn) or ([bd,An,Xn],od) or ([bd,An],Xn,od) */
@@ -318,7 +318,7 @@ STATIC_INLINE int comp_fp_adr (uae_u32 opcode)
 		case 5:
 		  off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
       mov_l_rr (S1, 8 + reg);
-		  add_l_ri (S1, off);
+		  arm_ADD_l_ri (S1, off);
 		  return S1;
 		case 7:
 		  switch (reg) {
@@ -428,8 +428,8 @@ void comp_fbcc_opp (uae_u32 opcode)
 	mov_l_ri(PC_P, (uintptr) comp_pc_p);
 
 	/* Now they are both constant. Might as well fold in m68k_pc_offset */
-	add_l_ri (S1, m68k_pc_offset);
-	add_l_ri (PC_P, m68k_pc_offset);
+	arm_ADD_l_ri (S1, m68k_pc_offset);
+	arm_ADD_l_ri (PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 
 	v1 = get_const (PC_P);
@@ -622,7 +622,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 					for (reg = 0; reg <= 7; reg++) {
 						if (list & 0x80) {
 							fp_from_exten_mr (ad, reg);
-							add_l_ri (ad, 12);
+							arm_ADD_l_ri (ad, 12);
 						}
 						list <<= 1;
 					}
@@ -678,7 +678,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 					for (reg = 0; reg <= 7; reg++) {
 						if (list & 0x80) {
               fp_to_exten_rm(reg, ad);
-							add_l_ri (ad, 12);
+							arm_ADD_l_ri (ad, 12);
 						}
 						list <<= 1;
 					}

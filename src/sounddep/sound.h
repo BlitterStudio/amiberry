@@ -10,7 +10,7 @@
 #define DEFAULT_SOUND_CHANNELS 2
 
 #define SOUND_BUFFERS_COUNT 4
-#define SNDBUFFER_LEN 2048
+#define SNDBUFFER_LEN 1024
 
 extern uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN+32)*DEFAULT_SOUND_CHANNELS];
 extern uae_u16 *sndbufpt;
@@ -53,9 +53,9 @@ STATIC_INLINE void clear_sound_buffers (void)
 #define FILTER_SOUND_TYPE_A1200 1
 
 
-#define CDAUDIO_BUFFERS 32
-#define CDAUDIO_BUFFER_LEN 2048
-extern uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * 2];
+#define CDAUDIO_BUFFERS 16
+#define CDAUDIO_BUFFER_LEN 1024
+extern uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS];
 extern uae_u16 *cdbufpt;
 extern uae_u16 *render_cdbuff;
 extern uae_u16 *finish_cdbuff;

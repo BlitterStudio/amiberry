@@ -178,7 +178,6 @@ typedef struct {
   uae_s8 realreg; /* gb-- realreg can hold -1 */
   uae_u8 realind; /* The index in the holds[] array */
   uae_u8 validsize;
-  uae_u8 dirtysize;
 } reg_status;
 
 typedef struct {

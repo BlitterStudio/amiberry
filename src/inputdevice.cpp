@@ -600,7 +600,7 @@ static bool write_config_head (struct zfile *f, int idnum, int devnum, const TCH
 		cfgfile_write_bool (f, tmp2, true);
 		if (id->enabled) {
 			_stprintf (tmp2, _T("input.%d.%s.%d.disabled"), idnum + 1, name, devnum);
-			cfgfile_write_bool (f, tmp2, id->enabled ? false : true);
+			cfgfile_write_bool (f, tmp2, id->enabled == 0);
 		}
 		return false;
 	}
@@ -612,7 +612,7 @@ static bool write_config_head (struct zfile *f, int idnum, int devnum, const TCH
 		_stprintf (tmp2, _T("input.%d.%s.%d.empty"), idnum + 1, name, devnum);
 		cfgfile_write_bool (f, tmp2, false);
 		_stprintf (tmp2, _T("input.%d.%s.%d.disabled"), idnum + 1, name, devnum);
-		cfgfile_write_bool (f, tmp2, id->enabled ? false : true);
+		cfgfile_write_bool (f, tmp2, id->enabled == 0);
 	}
 	return true;
 }
@@ -649,8 +649,6 @@ static bool write_slot (TCHAR *p, struct uae_input_device *uid, int i, int j)
 	}
 	return ok;
 }
-
-static struct inputdevice_functions *getidf (int devnum);
 
 static void kbrlabel (TCHAR *s)
 {
@@ -2095,9 +2093,7 @@ uae_u8 handle_parport_joystick (int port, uae_u8 pra, uae_u8 dra)
 /* p5 is 1 or floating = cd32 2-button mode */
 static bool cd32padmode (uae_u16 p5dir, uae_u16 p5dat)
 {
-	if (!(potgo_value & p5dir) || ((potgo_value & p5dat) && (potgo_value & p5dir)))
-		return false;
-	return true;
+	return !(!(potgo_value & p5dir) || ((potgo_value & p5dat) && (potgo_value & p5dir)));
 }
 
 #ifndef INPUTDEVICE_SIMPLE

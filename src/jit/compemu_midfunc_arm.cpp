@@ -52,6 +52,96 @@
  *     - 5th unlock2 all registers that were locked
  */
 
+#define INIT_REGS_b(d,s) 					\
+	int targetIsReg = (d < 16); 		\
+	int s_is_d = (s == d);  				\
+	if(!s_is_d) 										\
+		s = readreg(s); 							\
+	d = rmw(d);											\
+	if(s_is_d)											\
+		s = d;
+
+#define INIT_RREGS_b(d,s) 				\
+	int targetIsReg = (d < 16); 		\
+	int s_is_d = (s == d);  				\
+	if(!s_is_d) 										\
+		s = readreg(s); 							\
+	d = readreg(d);									\
+	if(s_is_d)											\
+		s = d;
+
+#define INIT_REG_b(d) 						\
+	int targetIsReg = (d < 16); 		\
+	d = rmw(d);
+
+#define INIT_RREG_b(d) 						\
+	int targetIsReg = (d < 16); 		\
+	d = readreg(d);
+
+#define INIT_WREG_b(d) 						\
+	int targetIsReg = (d < 16); 		\
+	if(targetIsReg)									\
+		d = rmw(d); 									\
+	else														\
+		d = writereg(d);
+
+#define INIT_REGS_w(d,s) 					\
+	int targetIsReg = (d < 16); 		\
+	int s_is_d = (s == d);  				\
+	if(!s_is_d) 										\
+		s = readreg(s); 							\
+	d = rmw(d);											\
+	if(s_is_d)											\
+		s = d;
+
+#define INIT_RREGS_w(d,s)					\
+	int targetIsReg = (d < 16); 		\
+	int s_is_d = (s == d);  				\
+	if(!s_is_d) 										\
+		s = readreg(s); 							\
+	d = readreg(d);									\
+	if(s_is_d)											\
+		s = d;
+
+#define INIT_REG_w(d) 						\
+	int targetIsReg = (d < 16); 		\
+	d = rmw(d);
+
+#define INIT_RREG_w(d) 						\
+	int targetIsReg = (d < 16); 		\
+	d = readreg(d);
+
+#define INIT_WREG_w(d) 						\
+	int targetIsReg = (d < 16); 		\
+	if(targetIsReg)									\
+		d = rmw(d);										\
+	else														\
+		d = writereg(d);
+
+#define INIT_REGS_l(d,s) 					\
+	int targetIsReg = (d < 16); 		\
+	int s_is_d = (s == d);  				\
+	if(!s_is_d) 										\
+		s = readreg(s); 							\
+	d = rmw(d);											\
+	if(s_is_d)											\
+		s = d;
+
+#define INIT_RREGS_l(d,s) 				\
+	int targetIsReg = (d < 16); 		\
+	int s_is_d = (s == d);  				\
+	if(!s_is_d) 										\
+		s = readreg(s); 							\
+	d = readreg(d);									\
+	if(s_is_d)											\
+		s = d;
+
+#define EXIT_REGS(d,s)						\
+	unlock2(d);											\
+	if(!s_is_d)											\
+		unlock2(s);
+	
+
 MIDFUNC(0,live_flags,(void))
 {
 	live.flags_on_stack = TRASH;
@@ -74,7 +164,39 @@ MENDFUNC(0,make_flags_live,(void))
 
 MIDFUNC(2,mov_l_mi,(IMM d, IMM s))
 {
-	raw_mov_l_mi(d, s);
+#ifdef ARMV6T2
+  if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+    uae_s32 idx = d - (uae_u32) &regs;
+    STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  } else {
+    MOVW_ri16(REG_WORK1, d);
+    MOVT_ri16(REG_WORK1, d >> 16);
+    MOVW_ri16(REG_WORK2, s);
+    if(s >> 16)
+      MOVT_ri16(REG_WORK2, s >> 16);
+  	STR_rR(REG_WORK2, REG_WORK1);
+  }    
+#else
+  if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    uae_s32 offs = data_long_offs(s);
+    LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+    uae_s32 idx = d - (uae_u32) & regs;
+    STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  } else {
+    data_check_end(8, 12);
+    uae_s32 offs = data_long_offs(d);
+  
+  	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+  
+  	offs = data_long_offs(s);
+  	LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+  
+  	STR_rR(REG_WORK2, REG_WORK1);
+  }
+#endif
 }
 MENDFUNC(2,mov_l_mi,(IMM d, IMM s))
 
@@ -84,12 +206,14 @@ MIDFUNC(2,shll_l_ri,(RW4 r, IMM i))
 	if (!i)
 	  return;
 	if (isconst(r)) {
-		live.state[r].val<<=i;
+		live.state[r].val <<= i;
 		return;
 	}
 
-	r = rmw(r, 4, 4);
-	raw_shll_l_ri(r, i);
+	r = rmw(r);
+
+	LSL_rri(r,r, i & 0x1f);
+
 	unlock2(r);
 }
 MENDFUNC(2,shll_l_ri,(RW4 r, IMM i))
@@ -97,65 +221,24 @@ MENDFUNC(2,shll_l_ri,(RW4 r, IMM i))
 MIDFUNC(2,sign_extend_16_rr,(W4 d, RR2 s))
 {
   // Only used in calc_disp_ea_020() -> flags not relevant and never modified
-	int isrmw;
-
 	if (isconst(s)) {
 		set_const(d, (uae_s32)(uae_s16)live.state[s].val);
 		return;
 	}
 
-	isrmw = (s == d);
-	if (!isrmw) {
-		s = readreg(s, 2);
-		d = writereg(d, 4);
-	}
-	else { /* If we try to lock this twice, with different sizes, we are in trouble! */
-		s = d = rmw(s, 4, 2);
+	int s_is_d = (s == d);
+	if (!s_is_d) {
+		s = readreg(s);
+		d = writereg(d);
+	}	else {
+		s = d = rmw(s);
 	}
 	SIGNED16_REG_2_REG(d, s);
-	if (!isrmw) {
+	if (!s_is_d)
 		unlock2(d);
-		unlock2(s);
-	}
-	else {
-		unlock2(s);
-	}
+	unlock2(s);
 }
 MENDFUNC(2,sign_extend_16_rr,(W4 d, RR2 s))
-
-MIDFUNC(2,mov_b_rr,(W1 d, RR1 s))
-{
-	if (d == s)
-	  return;
-	if (isconst(s)) {
-		COMPCALL(mov_b_ri)(d, (uae_u8)live.state[s].val);
-		return;
-	}
-
-	s = readreg(s, 1);
-	d = writereg(d, 1);
-	raw_mov_b_rr(d, s);
-	unlock2(d);
-	unlock2(s);
-}
-MENDFUNC(2,mov_b_rr,(W1 d, RR1 s))
-
-MIDFUNC(2,mov_w_rr,(W2 d, RR2 s))
-{
-	if (d == s)
-	  return;
-	if (isconst(s)) {
-		COMPCALL(mov_w_ri)(d, (uae_u16)live.state[s].val);
-		return;
-	}
-
-	s = readreg(s, 2);
-	d = writereg(d, 2);
-	raw_mov_w_rr(d, s);
-	unlock2(d);
-	unlock2(s);
-}
-MENDFUNC(2,mov_w_rr,(W2 d, RR2 s))
 
 MIDFUNC(3,lea_l_brr,(W4 d, RR4 s, IMM offset))
 {
@@ -164,11 +247,29 @@ MIDFUNC(3,lea_l_brr,(W4 d, RR4 s, IMM offset))
 		return;
 	}
 
-	s = readreg(s, 4);
-	d = writereg(d, 4);
-	raw_lea_l_brr(d, s, offset);
-	unlock2(d);
-	unlock2(s);
+	int s_is_d = (s == d);
+	if(s_is_d) {
+		s = d = rmw(d);
+	} else {
+		s = readreg(s);
+		d = writereg(d);
+	}
+	
+  if(CHECK32(offset)) {
+    ADD_rri(d, s, offset);
+  } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, offset);
+    if(offset >> 16)
+      MOVT_ri16(REG_WORK1, offset >> 16);
+#else
+    uae_s32 offs = data_long_offs(offset);
+  	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+  	ADD_rrr(d, s, REG_WORK1);
+  }
+
+	EXIT_REGS(d,s);
 }
 MENDFUNC(3,lea_l_brr,(W4 d, RR4 s, IMM offset))
 
@@ -179,10 +280,23 @@ MIDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IMM factor, IMM offset))
 		return;
 	}
 	
-	s = readreg(s, 4);
-	index = readreg(index, 4);
-	d = writereg(d, 4);
-	raw_lea_l_brr_indexed(d, s, index, factor, offset);
+	s = readreg(s);
+	index = readreg(index);
+	d = writereg(d);
+
+	int shft;
+	switch(factor) {
+  	case 1: shft=0; break;
+  	case 2: shft=1; break;
+  	case 4: shft=2; break;
+  	case 8: shft=3; break;
+  	default: abort();
+	}
+
+  SIGNED8_IMM_2_REG(REG_WORK1, offset);
+  ADD_rrr(REG_WORK1, s, REG_WORK1);
+	ADD_rrrLSLi(d, REG_WORK1, index, shft);
+
 	unlock2(d);
 	unlock2(index);
 	unlock2(s);
@@ -191,10 +305,21 @@ MENDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IMM factor, IMM offset))
 
 MIDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IMM factor))
 {
-	s = readreg(s, 4);
-	index = readreg(index, 4);
-	d = writereg(d, 4);
-	raw_lea_l_rr_indexed(d, s, index, factor);
+	s = readreg(s);
+	index = readreg(index);
+	d = writereg(d);
+
+	int shft;
+	switch(factor) {
+  	case 1: shft=0; break;
+  	case 2: shft=1; break;
+  	case 4: shft=2; break;
+  	case 8: shft=3; break;
+  	default: abort();
+	}
+
+	ADD_rrrLSLi(d, s, index, shft);
+
 	unlock2(d);
 	unlock2(index);
 	unlock2(s);
@@ -214,12 +339,11 @@ MIDFUNC(2,mov_l_rr,(W4 d, RR4 s))
 	}
 	olds = s;
 	disassociate(d);
-	s = readreg(s, 4);
+	s = readreg(s);
 	live.state[d].realreg = s;
 	live.state[d].realind = live.nat[s].nholds;
 	live.state[d].val = live.state[olds].val;
 	live.state[d].validsize = 4;
-	live.state[d].dirtysize = 4;
 	set_status(d, DIRTY);
 
 	live.nat[s].holds[live.nat[s].nholds] = d;
@@ -235,16 +359,46 @@ MIDFUNC(2,mov_l_mr,(IMM d, RR4 s))
 		return;
 	}
 	
-	s = readreg(s, 4);
-	raw_mov_l_mr(d, s);
+	s = readreg(s);
+
+  if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    uae_s32 idx = d - (uae_u32) &regs;
+    STR_rRI(s, R_REGSTRUCT, idx);
+  } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, d);
+    if(d >> 16)
+	    MOVT_ri16(REG_WORK1, d >> 16);
+#else
+    uae_s32 offs = data_long_offs(d);
+  	LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+  	STR_rR(s, REG_WORK1);
+  }
+
 	unlock2(s);
 }
 MENDFUNC(2,mov_l_mr,(IMM d, RR4 s))
 
 MIDFUNC(2,mov_l_rm,(W4 d, IMM s))
 {
-	d = writereg(d, 4);
-	raw_mov_l_rm(d, s);
+	d = writereg(d);
+
+  if(s >= (uae_u32) &regs && s < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    uae_s32 idx = s - (uae_u32) & regs;
+    LDR_rRI(d, R_REGSTRUCT, idx);
+  } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, s);
+    if(s >> 16)
+	    MOVT_ri16(REG_WORK1, s >> 16);
+#else
+    uae_s32 offs = data_long_offs(s);
+	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+	  LDR_rR(d, REG_WORK1);
+  }
+
 	unlock2(d);
 }
 MENDFUNC(2,mov_l_rm,(W4 d, IMM s))
@@ -252,40 +406,27 @@ MENDFUNC(2,mov_l_rm,(W4 d, IMM s))
 MIDFUNC(2,mov_l_ri,(W4 d, IMM s))
 {
 	set_const(d, s);
-	return;
 }
 MENDFUNC(2,mov_l_ri,(W4 d, IMM s))
 
-MIDFUNC(2,mov_w_ri,(W2 d, IMM s))
-{
-	d = writereg(d, 2);
-	raw_mov_w_ri(d, s);
-	unlock2(d);
-}
-MENDFUNC(2,mov_w_ri,(W2 d, IMM s))
-
 MIDFUNC(2,mov_b_ri,(W1 d, IMM s))
 {
-	d = writereg(d, 1);
-	raw_mov_b_ri(d, s);
-	unlock2(d);
+  if(d < 16) {
+	  if (isconst(d)) {
+		  set_const(d, (live.state[d].val & 0xffffff00) | (s & 0x000000ff));
+		  return;
+	  }
+	  d = rmw(d);
+
+		BIC_rri(d, d, 0xff);
+		ORR_rri(d, d, (s & 0xff));
+	
+	  unlock2(d);
+  } else {
+    set_const(d, s & 0xff);
+  }
 }
 MENDFUNC(2,mov_b_ri,(W1 d, IMM s))
-
-MIDFUNC(2,add_l,(RW4 d, RR4 s))
-{
-	if (isconst(s)) {
-		COMPCALL(add_l_ri)(d, live.state[s].val);
-		return;
-	}
-
-	s = readreg(s, 4);
-	d = rmw(d, 4, 4);
-	raw_add_l(d, s);
-	unlock2(d);
-	unlock2(s);
-}
-MENDFUNC(2,add_l,(RW4 d, RR4 s))
 
 MIDFUNC(2,sub_l_ri,(RW4 d, IMM i))
 {
@@ -296,44 +437,53 @@ MIDFUNC(2,sub_l_ri,(RW4 d, IMM i))
 		return;
 	}
 
-	d = rmw(d, 4, 4);
-	raw_sub_l_ri(d, i);
+	d = rmw(d);
+
+  if(CHECK32(i)) {
+    SUB_rri(d, d, i);
+  } else {
+#ifdef ARMV6T2
+    MOVW_ri16(REG_WORK1, i);
+    if(i >> 16)
+      MOVT_ri16(REG_WORK1, i >> 16);
+#else
+    uae_s32 offs = data_long_offs(i);
+	  LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+	  SUB_rrr(d, d, REG_WORK1);
+  }
+
 	unlock2(d);
 }
 MENDFUNC(2,sub_l_ri,(RW4 d, IMM i))
 
 MIDFUNC(2,sub_w_ri,(RW2 d, IMM i))
 {
+  // This function is only called with i = 1
 	// Caller needs flags...
 	clobber_flags();
 
-	d = rmw(d, 2, 2);
-	raw_sub_w_ri(d, i);
+	d = rmw(d);
+
+	LSL_rri(REG_WORK2, d, 16);
+
+	SUBS_rri(REG_WORK2, REG_WORK2, (i & 0xff) << 16);
+  PKHTB_rrrASRi(d, d, REG_WORK2, 16);
+
+	MRS_CPSR(REG_WORK1);
+	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
+	MSR_CPSRf_r(REG_WORK1);
+
 	unlock2(d);
 }
 MENDFUNC(2,sub_w_ri,(RW2 d, IMM i))
 
-MIDFUNC(2,add_l_ri,(RW4 d, IMM i))
-{
-	if (!i)
-	  return;
-	if (isconst(d)) {
-		live.state[d].val += i;
-		return;
-	}
-
-	d = rmw(d, 4, 4);
-	raw_add_l_ri(d, i);
-	unlock2(d);
-}
-MENDFUNC(2,add_l_ri,(RW4 d, IMM i))
-
-MIDFUNC(5,call_r_02,(RR4 r, RR4 in1, RR4 in2, IMM isize1, IMM isize2))
+MIDFUNC(3,call_r_02,(RR4 r, RR4 in1, RR4 in2))
 {
   clobber_flags();
-  in1 = readreg_specific(in1, isize1, REG_PAR1);
-  in2 = readreg_specific(in2, isize2, REG_PAR2);
-  r = readreg(r, 4);
+  in1 = readreg_specific(in1, REG_PAR1);
+  in2 = readreg_specific(in2, REG_PAR2);
+  r = readreg(r);
   prepare_for_call_1();
   unlock2(r);
   unlock2(in1);
@@ -341,22 +491,17 @@ MIDFUNC(5,call_r_02,(RR4 r, RR4 in1, RR4 in2, IMM isize1, IMM isize2))
   prepare_for_call_2();
   compemu_raw_call_r(r);
 }
-MENDFUNC(5,call_r_02,(RR4 r, RR4 in1, RR4 in2, IMM isize1, IMM isize2))
+MENDFUNC(3,call_r_02,(RR4 r, RR4 in1, RR4 in2))
 
-MIDFUNC(5,call_r_11,(W4 out1, RR4 r, RR4 in1, IMM osize, IMM isize))
+MIDFUNC(3,call_r_11,(W4 out1, RR4 r, RR4 in1))
 {
   clobber_flags();
-  if (osize == 4) {
-    if (out1 != in1 && out1 != r) {
-      COMPCALL(forget_about)(out1);
-    }
-  }
-  else {
-    tomem_c(out1);
+  if (out1 != in1 && out1 != r) {
+    COMPCALL(forget_about)(out1);
   }
 
-  in1 = readreg_specific(in1, isize, REG_PAR1);
-  r = readreg(r, 4);
+  in1 = readreg_specific(in1, REG_PAR1);
+  r = readreg(r);
   prepare_for_call_1();
 
   unlock2(in1);
@@ -372,11 +517,10 @@ MIDFUNC(5,call_r_11,(W4 out1, RR4 r, RR4 in1, IMM osize, IMM isize))
   live.state[out1].realreg = REG_RESULT;
   live.state[out1].realind = 0;
   live.state[out1].val = 0;
-  live.state[out1].validsize = osize;
-  live.state[out1].dirtysize = osize;
+  live.state[out1].validsize = 4;
   set_status(out1, DIRTY);
 }
-MENDFUNC(5,call_r_11,(W4 out1, RR4 r, RR4 in1, IMM osize, IMM isize))
+MENDFUNC(3,call_r_11,(W4 out1, RR4 r, RR4 in1))
 
 /* forget_about() takes a mid-layer register */
 MIDFUNC(1,forget_about,(W4 r))
@@ -398,9 +542,9 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 		return;
 	}
 
-	s = readreg(s, 4);
-	d = rmw(d, 4, 4);
-	raw_ADD_l_rr(d, s);
+	s = readreg(s);
+	d = rmw(d);
+	ADD_rrr(d, d, s);
 	unlock2(d);
 	unlock2(s);
 }
@@ -415,13 +559,20 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IMM i))
 		return;
 	}
 
-	d = rmw(d, 4, 4);
+	d = rmw(d);
 
 	if(CHECK32(i)) {
-    raw_ADD_l_rri(d, d, i);
+		ADD_rri(d, d, i);
 	} else {
-  	raw_LDR_l_ri(REG_WORK1, i);
-  	raw_ADD_l_rr(d, REG_WORK1);
+#ifdef ARMV6T2
+	  MOVW_ri16(REG_WORK1, i);
+	  if(i >> 16)
+	    MOVT_ri16(REG_WORK1, i >> 16);
+#else
+	  uae_s32 offs = data_long_offs(i);
+		LDR_rRI(REG_WORK1, RPC_INDEX, offs);
+#endif
+		ADD_rrr(d, d, REG_WORK1);
   }
 	
 	unlock2(d);
@@ -437,8 +588,8 @@ MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IMM i))
 		return;
 	}
 
-	d = rmw(d, 4, 4);
-	raw_ADD_l_rri(d, d, i);
+	d = rmw(d);
+	ADD_rri(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_ADD_l_ri8,(RW4 d, IMM i))
@@ -452,8 +603,8 @@ MIDFUNC(2,arm_SUB_l_ri8,(RW4 d, IMM i))
 		return;
 	}
 
-	d = rmw(d, 4, 4);
-	raw_SUB_l_rri(d, d, i);
+	d = rmw(d);
+	SUB_rri(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_SUB_l_ri8,(RW4 d, IMM i))
@@ -494,7 +645,7 @@ MIDFUNC(1,f_forget_about,(FW r))
 {
 	if (f_isinreg(r))
 		f_disassociate(r);
-	live.fate[r].status=UNDEF;
+	live.fate[r].status = UNDEF;
 }
 MENDFUNC(1,f_forget_about,(FW r))
 
@@ -519,7 +670,7 @@ MENDFUNC(2,fmov_rr,(FW d, FR s))
 
 MIDFUNC(2,fmov_l_rr,(FW d, RR4 s))
 {
-	s = readreg(s, 4);
+	s = readreg(s);
   d = f_writereg(d);
   raw_fmov_l_rr(d, s);
 	f_unlock(d);
@@ -529,7 +680,7 @@ MENDFUNC(2,fmov_l_rr,(FW d, RR4 s))
 
 MIDFUNC(2,fmov_s_rr,(FW d, RR4 s))
 {
-	s = readreg(s, 4);
+	s = readreg(s);
   d = f_writereg(d);
   raw_fmov_s_rr(d, s);
 	f_unlock(d);
@@ -539,7 +690,7 @@ MENDFUNC(2,fmov_s_rr,(FW d, RR4 s))
 
 MIDFUNC(2,fmov_w_rr,(FW d, RR2 s))
 {
-	s = readreg(s, 2);
+	s = readreg(s);
   d = f_writereg(d);
   raw_fmov_w_rr(d, s);
 	f_unlock(d);
@@ -549,7 +700,7 @@ MENDFUNC(2,fmov_w_rr,(FW d, RR2 s))
 
 MIDFUNC(2,fmov_b_rr,(FW d, RR1 s))
 {
-	s = readreg(s, 1);
+	s = readreg(s);
   d = f_writereg(d);
   raw_fmov_b_rr(d, s);
 	f_unlock(d);
@@ -559,8 +710,8 @@ MENDFUNC(2,fmov_b_rr,(FW d, RR1 s))
 
 MIDFUNC(3,fmov_d_rrr,(FW d, RR4 s1, RR4 s2))
 {
-	s1 = readreg(s1, 4);
-	s2 = readreg(s2, 4);
+	s1 = readreg(s1);
+	s2 = readreg(s2);
   d = f_writereg(d);
   raw_fmov_d_rrr(d, s1, s2);
 	f_unlock(d);
@@ -605,7 +756,7 @@ MENDFUNC(2,fmov_s_ri,(FW d, IMM i))
 MIDFUNC(2,fmov_to_l_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-  d = writereg(d, 4);
+  d = writereg(d);
   raw_fmov_to_l_rr(d, s);
 	unlock2(d);
   f_unlock(s);
@@ -615,7 +766,7 @@ MENDFUNC(2,fmov_to_l_rr,(W4 d, FR s))
 MIDFUNC(2,fmov_to_s_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-  d = writereg(d, 4);
+  d = writereg(d);
   raw_fmov_to_s_rr(d, s);
 	unlock2(d);
   f_unlock(s);
@@ -625,8 +776,9 @@ MENDFUNC(2,fmov_to_s_rr,(W4 d, FR s))
 MIDFUNC(2,fmov_to_w_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-  d = writereg(d, 2);
-  raw_fmov_to_w_rr(d, s);
+	INIT_WREG_w(d);
+
+  raw_fmov_to_w_rr(d, s, targetIsReg);
 	unlock2(d);
   f_unlock(s);
 }
@@ -635,8 +787,9 @@ MENDFUNC(2,fmov_to_w_rr,(W4 d, FR s))
 MIDFUNC(2,fmov_to_b_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-  d = writereg(d, 1);
-  raw_fmov_to_b_rr(d, s);
+	INIT_WREG_b(d);
+
+  raw_fmov_to_b_rr(d, s, targetIsReg);
 	unlock2(d);
   f_unlock(s);
 }
@@ -701,8 +854,8 @@ MENDFUNC(2,fmov_rm,(FW r, MEMR m))
 MIDFUNC(3,fmov_to_d_rrr,(W4 d1, W4 d2, FR s))
 {
 	s = f_readreg(s);
-  d1 = writereg(d1, 4);
-  d2 = writereg(d2, 4);
+  d1 = writereg(d1);
+  d2 = writereg(d2);
   raw_fmov_to_d_rrr(d1, d2, s);
 	unlock2(d2);
 	unlock2(d1);
@@ -917,7 +1070,7 @@ MIDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))
 {
   clobber_flags();
 
-	adr = readreg(adr, 4);
+	adr = readreg(adr);
 	s = f_readreg(s);
   raw_fp_from_exten_mr(adr, s);
 	f_unlock(s);
@@ -929,7 +1082,7 @@ MIDFUNC(2,fp_to_exten_rm,(FW d, RR4 adr))
 {
   clobber_flags();
 
-	adr = readreg(adr, 4);
+	adr = readreg(adr);
 	d = f_writereg(d);
   raw_fp_to_exten_rm(d, adr);
 	unlock2(adr);
@@ -939,7 +1092,7 @@ MENDFUNC(2,fp_to_exten_rm,(FW d, RR4 adr))
 
 MIDFUNC(2,fp_from_double_mr,(RR4 adr, FR s))
 {
-	adr = readreg(adr, 4);
+	adr = readreg(adr);
 	s = f_readreg(s);
   raw_fp_from_double_mr(adr, s);
 	f_unlock(s);
@@ -949,7 +1102,7 @@ MENDFUNC(2,fp_from_double_mr,(RR4 adr, FR s))
 
 MIDFUNC(2,fp_to_double_rm,(FW d, RR4 adr))
 {
-	adr = readreg(adr, 4);
+	adr = readreg(adr);
 	d = f_writereg(d);
   raw_fp_to_double_rm(d, adr);
 	unlock2(adr);
@@ -959,7 +1112,7 @@ MENDFUNC(2,fp_to_double_rm,(FW d, RR4 adr))
 
 MIDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
 {
-	d = rmw(d, 4, 4);
+	d = rmw(d);
 	raw_fp_fscc_ri(d, cc);
 	unlock2(d);
 }
