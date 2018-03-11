@@ -499,23 +499,23 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	//        printf("z3    : %s  \n",game_detail.z3);      
 
 	// debugging code!
-	printf("cont 1: %s  \n", host_detail.controller1);
-	printf("cont 2: %s  \n", host_detail.controller2);
-	printf("cont 3: %s  \n", host_detail.controller3);
-	printf("cont 4: %s  \n", host_detail.controller4);
-	printf("mous 1: %s  \n", host_detail.mouse1);
-	printf("mous 2: %s  \n", host_detail.mouse2);
-	printf("ra_qui: %s  \n", host_detail.ra_quit);
-	printf("ra_men: %s  \n", host_detail.ra_menu);
-	printf("ra_rst: %s  \n", host_detail.ra_reset);
-	printf("ky_qut: %s  \n", host_detail.key_quit);
-	printf("ky_gui: %s  \n", host_detail.key_gui);
-	printf("deadzn: %s  \n", host_detail.stereo_split);
-	printf("stereo: %s  \n", host_detail.stereo_split);
-	printf("snd_on: %s  \n", host_detail.sound_on);
-	printf("snd_md: %s  \n", host_detail.sound_mode);
-	printf("aspect: %s  \n", host_detail.aspect_ratio);
-	printf("frames: %s  \n", host_detail.frameskip);
+	//printf("cont 1: %s  \n", host_detail.controller1);
+	//printf("cont 2: %s  \n", host_detail.controller2);
+	//printf("cont 3: %s  \n", host_detail.controller3);
+	//printf("cont 4: %s  \n", host_detail.controller4);
+	//printf("mous 1: %s  \n", host_detail.mouse1);
+	//printf("mous 2: %s  \n", host_detail.mouse2);
+	//printf("ra_qui: %s  \n", host_detail.ra_quit);
+	//printf("ra_men: %s  \n", host_detail.ra_menu);
+	//printf("ra_rst: %s  \n", host_detail.ra_reset);
+	//printf("ky_qut: %s  \n", host_detail.key_quit);
+	//printf("ky_gui: %s  \n", host_detail.key_gui);
+	//printf("deadzn: %s  \n", host_detail.stereo_split);
+	//printf("stereo: %s  \n", host_detail.stereo_split);
+	//printf("snd_on: %s  \n", host_detail.sound_on);
+	//printf("snd_md: %s  \n", host_detail.sound_mode);
+	//printf("aspect: %s  \n", host_detail.aspect_ratio);
+	//printf("frames: %s  \n", host_detail.frameskip);
 
 
 	//     
