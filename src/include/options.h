@@ -55,19 +55,19 @@ struct uae_input_device {
 
 struct joypad_map_layout {
 	int south_action = 0;
-	int east_action = 0; 
+	int east_action = 0;
 	int west_action = 0;
- 	int north_action = 0;
-        int left_shoulder_action = 0;
+	int north_action = 0;
+	int left_shoulder_action = 0;
 	int right_shoulder_action = 0;
- 	int start_action = 0;
-        int select_action = 0;
-        int dpad_left_action = 0;
+	int start_action = 0;
+	int select_action = 0;
+	int dpad_left_action = 0;
 	int dpad_right_action = 0;
 	int dpad_up_action = 0;
 	int dpad_down_action = 0;
-        int lstick_select_action = 0;
-	int rstick_select_action = 0; 
+	int lstick_select_action = 0;
+	int rstick_select_action = 0;
 };
 
 #define MAX_JPORTS 4
