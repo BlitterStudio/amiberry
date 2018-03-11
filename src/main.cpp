@@ -8,7 +8,7 @@
   */
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include <assert.h>
+#include <cassert>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -72,16 +72,14 @@ void my_trim(TCHAR *s)
 
 TCHAR *my_strdup_trim (const TCHAR *s)
 {
-	int len;
-
 	if (s[0] == 0)
 		return my_strdup(s);
 	while (_tcscspn (s, _T("\t \r\n")) == 0)
 		s++;
-	len = _tcslen (s);
+	int len = _tcslen (s);
 	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
 		len--;
-	TCHAR *out = xmalloc (TCHAR, len + 1);
+	auto out = xmalloc (TCHAR, len + 1);
 	memcpy (out, s, len * sizeof (TCHAR));
 	out[len] = 0;
 	return out;
@@ -89,9 +87,9 @@ TCHAR *my_strdup_trim (const TCHAR *s)
 
 void discard_prefs(struct uae_prefs *p, int type)
 {
-	struct strlist **ps = &p->all_lines;
+	auto ps = &p->all_lines;
 	while (*ps) {
-		struct strlist *s = *ps;
+		auto s = *ps;
 		*ps = s->next;
 		xfree(s->value);
 		xfree(s->option);
@@ -176,7 +174,7 @@ void fixup_cpu(struct uae_prefs *p)
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
 {
-	int err = 0;
+	auto err = 0;
 
 	built_in_chipset_prefs(p);
 	fixup_cpu(p);
@@ -417,7 +415,7 @@ void uae_restart(int opengui, const TCHAR *cfgfile)
 static void parse_cmdline_2(int argc, TCHAR **argv)
 {
 	cfgfile_addcfgparam(nullptr);
-	for (int i = 1; i < argc; i++) {
+	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
 		}
@@ -433,11 +431,9 @@ static void parse_cmdline_2(int argc, TCHAR **argv)
 static TCHAR *parsetext(const TCHAR *s)
 {
 	if (*s == '"' || *s == '\'') {
-		TCHAR *d;
-		TCHAR c = *s++;
-		int i;
-		d = my_strdup(s);
-		for (i = 0; i < _tcslen(d); i++) {
+		const auto c = *s++;
+		const auto d = my_strdup(s);
+		for (auto i = 0; i < _tcslen(d); i++) {
 			if (d[i] == c) {
 				d[i] = 0;
 				break;
@@ -452,18 +448,18 @@ static TCHAR *parsetext(const TCHAR *s)
 
 static TCHAR *parsetextpath(const TCHAR *s)
 {
-	TCHAR *s2 = parsetext(s);
-	TCHAR *s3 = target_expand_environment(s2, NULL, 0);
+	const auto s2 = parsetext(s);
+	const auto s3 = target_expand_environment(s2, NULL, 0);
 	xfree(s2);
 	return s3;
 }
 
-void  print_usage()
+void print_usage()
 {
 	printf("\nUsage:\n");
 	printf(" -f <file>                  Load a configuration file.\n");
 	printf(" -config=<file>             Load a configuration file.\n");
-        printf(" -autowhdload=<file>        Load a WHDLoad game pack.\n");
+	printf(" -autowhdload=<file>        Load a WHDLoad game pack.\n");
 	printf(" -statefile=<file>          Load a save state file.\n");
 	printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
 	printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
@@ -488,23 +484,22 @@ void  print_usage()
 
 static void parse_cmdline(int argc, TCHAR **argv)
 {
-	int i;
 	static bool started;
-	bool firstconfig = true;
-	bool loaded = false;
+	auto firstconfig = true;
+	auto loaded = false;
 
 	// only parse command line when starting for the first time
 	if (started)
 		return;
 	started = true;
 
-	for (i = 1; i < argc; i++) {
+	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
 			if (i + 1 < argc)
 				i++;
 		}
 		else if (_tcsncmp(argv[i], _T("-config="), 8) == 0) {
-			TCHAR *txt = parsetextpath(argv[i] + 8);
+			const auto txt = parsetextpath(argv[i] + 8);
 			currprefs.mountitems = 0;
 			target_cfgfile_load(&currprefs, txt, firstconfig ? CONFIG_TYPE_ALL : CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
 			xfree(txt);
@@ -512,26 +507,26 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			loaded = true;
 		}
 		else if (_tcsncmp(argv[i], _T("-statefile="), 11) == 0) {
-			TCHAR *txt = parsetextpath(argv[i] + 11);
+			const auto txt = parsetextpath(argv[i] + 11);
 			savestate_state = STATE_DORESTORE;
 			_tcscpy(savestate_fname, txt);
 			xfree(txt);
 			loaded = true;
 		}
 		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0) {
-			TCHAR *txt = parsetextpath(argv[i] + 13);                        
-                        whdload_auto_prefs (&currprefs, txt);                     
+			const auto txt = parsetextpath(argv[i] + 13);
+			whdload_auto_prefs(&currprefs, txt);
 			xfree(txt);
-                        firstconfig = false;
+			firstconfig = false;
 			loaded = true;
-                }
+		}
 		else if (_tcscmp(argv[i], _T("-f")) == 0) {
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
 			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '-f' option.\n"));
 			}
 			else {
-				TCHAR *txt = parsetextpath(argv[++i]);
+				const auto txt = parsetextpath(argv[++i]);
 				currprefs.mountitems = 0;
 				target_cfgfile_load(&currprefs, txt, firstconfig ? CONFIG_TYPE_ALL : CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
 				xfree(txt);
@@ -546,8 +541,8 @@ static void parse_cmdline(int argc, TCHAR **argv)
 				cfgfile_parse_line(&currprefs, argv[++i], 0);
 		}
 		else if (_tcsncmp(argv[i], _T("-cdimage="), 9) == 0) {
-			TCHAR *txt = parsetextpath(argv[i] + 9);
-			TCHAR *txt2 = xmalloc(TCHAR, _tcslen(txt) + 2);
+			const auto txt = parsetextpath(argv[i] + 9);
+			const auto txt2 = xmalloc(TCHAR, _tcslen(txt) + 2);
 			_tcscpy(txt2, txt);
 			if (_tcsrchr(txt2, ',') != NULL)
 				_tcscat(txt2, _T(","));
@@ -561,7 +556,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			const int extra_arg = *arg == '\0';
 			if (extra_arg)
 				arg = i + 1 < argc ? argv[i + 1] : 0;
-			const int ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
+			const auto ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
 			if (ret == -1)
 				print_usage();
 			if (ret && extra_arg)
@@ -571,10 +566,10 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			// if last config entry is an orphan and nothing else was loaded:
 			// check if it is config file or statefile
 			if (!loaded) {
-				TCHAR *txt = parsetextpath(argv[i]);
-				struct zfile *z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
+				const auto txt = parsetextpath(argv[i]);
+				const auto z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
 				if (z) {
-					int type = zfile_gettype(z);
+					const auto type = zfile_gettype(z);
 					zfile_fclose(z);
 					if (type == ZFILE_CONFIGURATION) {
 						currprefs.mountitems = 0;
