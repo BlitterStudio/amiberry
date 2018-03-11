@@ -1235,8 +1235,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	{
 		for (auto n = 0; n < 2; ++n)
 		{
-			h = port - 2 ? INPUTEVENT_PAR_JOY1_HORIZ : INPUTEVENT_PAR_JOY2_HORIZ;
-			v = port - 2 ? INPUTEVENT_PAR_JOY1_VERT : INPUTEVENT_PAR_JOY2_VERT;
+			h = port - 2 ? INPUTEVENT_PAR_JOY2_HORIZ : INPUTEVENT_PAR_JOY1_HORIZ;
+			v = port - 2 ? INPUTEVENT_PAR_JOY2_VERT : INPUTEVENT_PAR_JOY1_VERT;
 			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 0, 0, port, h, gp);
 			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 1, 0, port, v, gp);
 		}
