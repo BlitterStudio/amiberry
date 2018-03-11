@@ -607,6 +607,9 @@
     <ClCompile Include="..\..\src\caps\caps_win32.cpp">
       <Filter>Source files\caps</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_whdbooter.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\blit.h">
