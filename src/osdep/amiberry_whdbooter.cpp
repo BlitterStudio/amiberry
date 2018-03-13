@@ -707,8 +707,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 	// SOUND OPTIONS
 
-	if (!strcmpi(host_detail.sound_on,"false") == 0 || !strcmpi(host_detail.sound_on,"off") == 0 || !strcmpi(host_detail.
-		sound_on,"none") == 0)
+	if (strcmpi(host_detail.sound_on,"false") == 0 || strcmpi(host_detail.sound_on,"off") == 0 || strcmpi(host_detail.sound_on,"none") == 0)
 	{
 		_stprintf(txt2, "sound_output=none");
 		cfgfile_parse_line(p, txt2, 0);
