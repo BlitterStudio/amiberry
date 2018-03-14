@@ -2,6 +2,10 @@ C:Assign ENV: RAM: >nil:
 C:Assign T: RAM: >nil:
 C:Assign PROGDIR: C: >nil:
 
+cd :WHDbooter/
+c:run SplashScreen
+c:wait 2
+
 Resident C:WHDLoad PURE
 Echo ""
 
@@ -35,18 +39,21 @@ endif
  IF $MouseInput EQ 1
     Echo "Left Mouse Button held. Force creation of new Auto-Startup file"
     Echo ""
+    c:wait 4
+
  ELSE
 
  SET Reply `C:joytest 1 0`
  IF $Reply EQ "(Fire-1)"
      Echo "Joystick Fire held. Force creation of new Auto-Startup file"
      Echo ""
+     c:wait 4
 
  ELSE
     Echo "Scan for auto-startup and debugging messages..."
 
     cd :WHDbooter/
-    Find_AutoStartup.exe
+    Find_AutoStartup
 
     Echo "Scan done"
     Echo ""
@@ -60,14 +67,15 @@ IF EXISTS T:auto-startup
      Echo ""
 ELSE
     cd :WHDbooter/
-    GameBootLoader.exe scanpath=WHDLoadGame: only usefolderpath
+    c:wait 2
+    GameBootLoader scanpath=WHDLoadGame: only usefolderpath
 ENDIF
 
 
 ; ======================
-;IF EXISTS :WHDbooter/SplashScreen.exe
+;IF EXISTS :WHDbooter/SplashScreen
 ;   cd :WHDbooter
-;   :WHDbooter/SplashScreen.exe >NIL:
+;   :WHDbooter/SplashScreen >NIL:
 ;ELSE
 ;   c:TUDE hardreset >nil:
 ;ENDIF
