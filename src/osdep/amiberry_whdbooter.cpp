@@ -64,6 +64,7 @@ struct game_options
 	TCHAR chipset[256] = "nul\0";
 	TCHAR jit[256] = "nul\0";
 	TCHAR cpu_comp[256] = "nul\0";
+	TCHAR cpu_24bit[256] = "nul\0";
 	TCHAR sprites[256] = "nul\0";
 	TCHAR scr_height[256] = "nul\0";
 	TCHAR y_offset[256] = "nul\0";
@@ -248,6 +249,7 @@ struct game_options get_game_settings(char* HW)
 	strcpy(output_detail.clock, find_whdload_game_option("CLOCK", HW));
 	strcpy(output_detail.chipset, find_whdload_game_option("CHIPSET", HW));
 	strcpy(output_detail.jit, find_whdload_game_option("JIT", HW));
+	strcpy(output_detail.cpu_24bit, find_whdload_game_option("CPU_24BITADDRESSING", HW));
 	strcpy(output_detail.cpu_comp, find_whdload_game_option("CPU_COMPATIBLE", HW));
 	strcpy(output_detail.sprites, find_whdload_game_option("SPRITES", HW));
 	strcpy(output_detail.scr_height, find_whdload_game_option("SCREEN_HEIGHT", HW));
@@ -438,7 +440,9 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 
 		if (zfile_exists(whd_config)) // use XML database 
 		{
-			char buffer[4096];
+                        //printf("XML exists %s\n",game_name); 
+                                
+                        char buffer[4096];
 
 			const auto doc = xmlParseFile(whd_config);
 
@@ -451,16 +455,20 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 				const auto attr = xmlGetProp(game_node, reinterpret_cast<const xmlChar *>("filename"));
 				if (attr != nullptr)
 				{
-					if (strcmpi(reinterpret_cast<const char*>(attr),game_name) == 0)
+                                       // printf ("%s\n",attr);
+                                    	if (strcmpi(reinterpret_cast<const char*>(attr),game_name) == 0)
 					{
 						// now get the <hardware> and <custom_controls> items
 
+                                                //printf("found game in XML?\n");
 						auto temp_node = game_node->xmlChildrenNode;
 						temp_node = get_node(temp_node, "hardware");
 						if (xmlNodeGetContent(temp_node) != nullptr)
-						{
-							_stprintf(hardware_settings, "%p", xmlNodeGetContent(temp_node));
+						{ 
+							_stprintf(hardware_settings, "%s", xmlNodeGetContent(temp_node));
+                                                        // printf("%s\n",hardware_settings);
 							game_detail = get_game_settings(hardware_settings);
+                                                        
 						}
 
 						temp_node = game_node->xmlChildrenNode;
@@ -485,18 +493,18 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	//        printf("port 0: %s  \n",game_detail.port0); 
 	//        printf("port 1: %s  \n",game_detail.port1); 
 	//        printf("contrl: %s  \n",game_detail.control);  
-	//        printf("fstcpr: %s  \n",game_detail.fastcopper);  
-	//        printf("cpu   : %s  \n",game_detail.cpu);  
-	//        printf("blitta: %s  \n",game_detail.blitter);  
-	//        printf("clock : %s  \n",game_detail.clock);  
-	//        printf("chipst: %s  \n",game_detail.chipset);  
+	 //       printf("fstcpr: %s  \n",game_detail.fastcopper);  
+	 //       printf("cpu   : %s  \n",game_detail.cpu);  
+	 //       printf("blitta: %s  \n",game_detail.blitter);  
+	 //       printf("clock : %s  \n",game_detail.clock);  
+	 //       printf("chipst: %s  \n",game_detail.chipset);  
 	//        printf("jit   : %s  \n",game_detail.jit);  
 	//        printf("cpcomp: %s  \n",game_detail.cpu_comp);  
 	//        printf("scrhei: %s  \n",game_detail.scr_height);   
 	//        printf("scr y : %s  \n",game_detail.y_offset);  
 	//        printf("ntsc  : %s  \n",game_detail.ntsc);  
-	//        printf("fast  : %s  \n",game_detail.fast);  
-	//        printf("z3    : %s  \n",game_detail.z3);      
+	 //       printf("fast  : %s  \n",game_detail.fast);  
+	 //       printf("z3    : %s  \n",game_detail.z3);      
 
 	// debugging code!
 	//printf("cont 1: %s  \n", host_detail.controller1);
@@ -775,7 +783,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		_stprintf(txt2, "fastmem_size=%d", temp_ram);
 		cfgfile_parse_line(p, txt2, 0);
 	}
-	if (strcmpi(game_detail.fast,"nul") != 0)
+	if (strcmpi(game_detail.z3,"nul") != 0)
 	{
 		temp_ram = atol(game_detail.z3);
 		_stprintf(txt2, "z3mem_size=%d", temp_ram);
@@ -838,6 +846,14 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
+	// COMPATIBLE CPU
+	if (strcmpi(game_detail.cpu_comp,"false") == 0)
+	{
+		_stprintf(txt2, "cpu_24bit_addressing=false");
+		cfgfile_parse_line(p, txt2, 0);
+	}
+
+        
 	// NTSC 
 	if (strcmpi(game_detail.ntsc,"true") == 0)
 	{
