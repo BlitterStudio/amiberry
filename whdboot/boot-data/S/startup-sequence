@@ -1,0 +1,103 @@
+C:Assign ENV: RAM: >nil:
+C:Assign T: RAM: >nil:
+C:Assign PROGDIR: C: >nil:
+
+cd :WHDbooter/
+c:run SplashScreen
+c:wait 2
+
+Resident C:WHDLoad PURE
+Echo ""
+
+
+; ======================
+IF EXISTS C:SetPatch
+   C:SetPatch > NIL:
+ENDIF
+
+
+
+; ====================== Set path
+info >t:tempfile DH1:
+search >nil: t:tempfile "[Mounted]"
+
+if not warn
+	Assign WHDLoadGame: DH1:
+	echo "WHDLoadGame: will be mapped to DH1:"
+	Echo ""
+else
+  	Assign WHDLoadGame: DH0:
+	echo "WHDLoadGame: will be mapped to DH0:"
+	Echo ""
+endif
+
+
+
+; ======================  
+
+ C:GetMouseInput Local
+ IF $MouseInput EQ 1
+    Echo "Left Mouse Button held. Force creation of new Auto-Startup file"
+    Echo ""
+    c:wait 4
+
+ ELSE
+
+ SET Reply `C:joytest 1 0`
+ IF $Reply EQ "(Fire-1)"
+     Echo "Joystick Fire held. Force creation of new Auto-Startup file"
+     Echo ""
+     c:wait 4
+
+ ELSE
+    Echo "Scan for auto-startup and debugging messages..."
+
+    cd :WHDbooter/
+    Find_AutoStartup
+
+    Echo "Scan done"
+    Echo ""
+
+ ENDIF
+ ENDIF
+
+
+; ======= did we create a file earlier?
+IF EXISTS T:auto-startup
+     Echo ""
+ELSE
+    cd :WHDbooter/
+    c:wait 2
+    GameBootLoader scanpath=WHDLoadGame: only usefolderpath
+ENDIF
+
+
+; ======================
+;IF EXISTS :WHDbooter/SplashScreen
+;   cd :WHDbooter
+;   :WHDbooter/SplashScreen >NIL:
+;ELSE
+;   c:TUDE hardreset >nil:
+;ENDIF
+
+
+
+
+; +++ RUN IT
+
+IF EXISTS T:auto-startup
+   Echo "Execute the Auto-Startup boot script."
+   Echo ""
+   c:execute T:auto-startup
+ELSE
+   echo "Error: There is still no Auto-Startup boot script."
+
+ENDIF
+
+
+;   c:TUDE hardreset >nil:
+
+
+
+
+

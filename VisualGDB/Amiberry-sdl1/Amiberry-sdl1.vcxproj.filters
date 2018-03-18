@@ -185,9 +185,6 @@
     <ClCompile Include="..\..\src\fpp.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\fpp_native.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\fsdb.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
@@ -1024,6 +1021,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\caps\caps_win32.cpp">
       <Filter>Source files\caps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_whdbooter.cpp">
+      <Filter>Source files\osdep</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

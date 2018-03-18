@@ -327,10 +327,17 @@ static void navigate_left()
 static void SelectFileLoop()
 {
 	FocusBugWorkaround(wndSelectFile);
+	int gotEvent = 0;
+
+	if (selectedOnStart >= 0)
+	{
+		scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 15);
+		gotEvent = 1;
+	}
 
 	while (!dialogFinished)
 	{
-		int gotEvent = 0;
+		
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -411,12 +418,7 @@ static void SelectFileLoop()
 			gui_input->pushInput(event);
 #endif
 		}
-		if (selectedOnStart >= 0)
-		{
-			scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 15);
-			gotEvent = 1;
-		}
-			
+		
 		if (gotEvent)
 		{
 			// Now we let the Gui object perform its logic.

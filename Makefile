@@ -47,7 +47,7 @@ else ifeq ($(PLATFORM),android)
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry-android
+    NAME  = amiberry
 
 #
 # SDL2 with DispmanX targets (RPI only)
@@ -133,7 +133,7 @@ USE_SDL2 = 1
     ANDROID = 1
     HAVE_NEON = 1
     HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry-android
+    NAME  = amiberry
 endif
 
 RM     = rm -f
@@ -159,8 +159,8 @@ ifdef USE_SDL2
 all: guisan $(PROG)
 
 SDL_CFLAGS = `sdl2-config --cflags --libs`
-CPPFLAGS += -Isrc/guisan/include
-LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lsrc/guisan/lib
+CPPFLAGS += -Iguisan-dev/include
+LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
 endif
 
 #
@@ -326,6 +326,7 @@ OBJS =	\
 	src/osdep/amiberry_gui.o \
 	src/osdep/amiberry_rp9.o \
 	src/osdep/amiberry_mem.o \
+	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
 	src/sounddep/sound.o \
 	src/osdep/gui/UaeRadioButton.o \
@@ -459,7 +460,7 @@ genasm: $(ASMS)
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
-	$(MAKE) -C src/guisan clean
+	$(MAKE) -C guisan-dev clean
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
@@ -472,4 +473,4 @@ bootrom:
 	touch src/filesys.cpp
 
 guisan:
-	$(MAKE) -C src/guisan
+	$(MAKE) -C guisan-dev

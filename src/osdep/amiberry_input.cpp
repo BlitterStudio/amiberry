@@ -233,7 +233,7 @@ const int RemapKeyMapList[] = {
 	SDL_SCANCODE_MINUS, SDL_SCANCODE_SLASH, SDL_SCANCODE_SEMICOLON, SDL_SCANCODE_EQUALS, SDL_SCANCODE_LEFTBRACKET,
 	SDL_SCANCODE_BACKSLASH, SDL_SCANCODE_RIGHTBRACKET,
 	SDL_SCANCODE_KP_PERIOD, SDL_SCANCODE_KP_EQUALS, SDL_SCANCODE_RCTRL, SDL_SCANCODE_RALT
-	};
+};
 #endif
 
 const char* RemapKeyMapListStrings[] = {
@@ -255,10 +255,10 @@ const char* RemapKeyMapListStrings[] = {
 	"keypad5", "keypad6", "keypad7", "keypad8", "keypad9",
 	"period", "capslock", "numlock", "backspace",
 	"multiply", "divide", "print_screen", "scroll_lock",
-	"tilde", "backquote","pause", "quote", "comma",
-	"minus", "slash", "semicolon","equals", "leftbracket",
+	"tilde", "backquote", "pause", "quote", "comma",
+	"minus", "slash", "semicolon", "equals", "leftbracket",
 	"backslash", "rightbracket",
-	"kp_period", "kp_equals","rctrl", "ralt"
+	"kp_period", "kp_equals", "rctrl", "ralt"
 
 };
 
@@ -327,7 +327,7 @@ static int get_mouse_widget_first(const int mouse, const int type)
 			return FIRST_MOUSE_AXIS;
 		case IDEV_WIDGET_BUTTONAXIS:
 			return MAX_MOUSE_AXES + MAX_MOUSE_BUTTONS;
-		default: 
+		default:
 			return -1;
 		}
 	}
@@ -388,7 +388,8 @@ struct inputdevice_functions inputdevicefunc_mouse = {
 	get_mouse_flags
 };
 
-static void setid(struct uae_input_device* uid, const int i, const int slot, const int sub, const int port, int evt, const bool gp)
+static void setid(struct uae_input_device* uid, const int i, const int slot, const int sub, const int port, int evt,
+                  const bool gp)
 {
 	if (gp)
 		inputdevice_sparecopy(&uid[i], slot, 0);
@@ -396,7 +397,8 @@ static void setid(struct uae_input_device* uid, const int i, const int slot, con
 	uid[i].port[slot][sub] = port + 1;
 }
 
-static void setid_af(struct uae_input_device* uid, const int i, const int slot, const int sub, const int port, const int evt, const int af, const bool gp)
+static void setid_af(struct uae_input_device* uid, const int i, const int slot, const int sub, const int port,
+                     const int evt, const int af, const bool gp)
 {
 	setid(uid, i, slot, sub, port, evt, gp);
 	uid[i].flags[slot][sub] &= ~ID_FLAG_AUTOFIRE_MASK;
@@ -404,14 +406,22 @@ static void setid_af(struct uae_input_device* uid, const int i, const int slot, 
 		uid[i].flags[slot][sub] |= ID_FLAG_AUTOFIRE;
 }
 
-int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp, bool wheel,
+int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp, 
+                            bool wheel,
                             bool joymouseswap)
-{
-	setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ, gp);
+{	
+        if (currprefs.jports[port].id >= JSEM_MICE && currprefs.jports[port].id < JSEM_END)
+        {
+        setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ, gp);
 	setid(uid, i, ID_AXIS_OFFSET + 1, 0, port, port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT, gp);
-	setid_af(uid, i, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON, af, gp);
+	setid_af(uid, i, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON, af,
+	         gp);
 	setid(uid, i, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON, gp);
-
+        }
+        
+        else
+            input_get_default_joystick(uid, i,  port,   af,  JSEM_MODE_MOUSE,  port, joymouseswap);
+     
 	if (i == 0)
 		return 1;
 	return 0;
@@ -642,7 +652,7 @@ static int init_joystick(void)
 
 	if (zfile_exists(retroarch_file))
 	{
-		struct host_keyboard_button temp_keyboard_buttons{};
+		struct host_keyboard_button temp_keyboard_buttons {};
 
 		auto tempkey = find_retroarch_key("input_player1_y", retroarch_file);
 		auto x = find_string_in_array(RemapKeyMapListStrings, RemapKeyMapListSize, tempkey);
@@ -753,12 +763,12 @@ static int init_joystick(void)
 				host_input_buttons[cpt].is_retroarch = true;
 
 				host_input_buttons[cpt].hotkey_button = find_retroarch("input_enable_hotkey_btn", ControlConfig,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].quit_button = find_retroarch("input_exit_emulator_btn", ControlConfig,
-				                                                     host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].menu_button = find_retroarch("input_menu_toggle_btn", ControlConfig,
-				                                                     host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].reset_button = find_retroarch("input_reset_btn", ControlConfig, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].east_button = find_retroarch("input_a_btn", ControlConfig, host_input_buttons[cpt]);
@@ -782,19 +792,19 @@ static int init_joystick(void)
 				host_input_buttons[cpt].rstick_button = find_retroarch("input_r3_btn", ControlConfig, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].lstick_axis_x = find_retroarch("input_l_x_plus_axis", ControlConfig,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_x == -1)
 					host_input_buttons[cpt].lstick_axis_x = find_retroarch("input_right_axis", ControlConfig, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].lstick_axis_y = find_retroarch("input_l_y_plus_axis", ControlConfig,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_y == -1)
 					host_input_buttons[cpt].lstick_axis_y = find_retroarch("input_down_axis", ControlConfig, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].rstick_axis_x = find_retroarch("input_r_x_plus_axis", ControlConfig,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].rstick_axis_y = find_retroarch("input_r_y_plus_axis", ControlConfig,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].number_of_hats = find_retroarch("count_hats", ControlConfig, host_input_buttons[cpt]);
 
@@ -900,7 +910,7 @@ static int get_joystick_widget_first(const int joy, const int type)
 			return FIRST_JOY_AXIS;
 		case IDEV_WIDGET_BUTTONAXIS:
 			return MAX_JOY_AXES + MAX_JOY_BUTTONS;
-		default: 
+		default:
 			return -1;
 		}
 	}
@@ -938,7 +948,7 @@ static int get_joystick_widget_type(const int joy, const int num, TCHAR* name, u
 				case FIRST_JOY_BUTTON + 6:
 					sprintf(name, "CD32 rwd");
 					break;
-				default: 
+				default:
 					break;
 				}
 			}
@@ -1063,42 +1073,56 @@ static void read_joystick(void)
 				// reset button
 			}
 
-				// this *should* allow us to handle function buttons (l2/r2/select)  <<<  except there were issues this work, picking a fixed number!!                            
-				// these two cannot be used whilst we are limtied to 32 buttons, since 'REMAP_BUTTONS' = 14
-				// else if (SDL_JoystickGetButton(Joysticktable[hostjoyid], host_input_buttons[hostjoyid].left_trigger) & 1)
-				//     held_offset = REMAP_BUTTONS * 2;
-				// else if (SDL_JoystickGetButton(Joysticktable[hostjoyid], host_input_buttons[hostjoyid].right_trigger) & 1)
-				//     held_offset = REMAP_BUTTONS * 3;
+			// this *should* allow us to handle function buttons (l2/r2/select)  <<<  except there were issues this work, picking a fixed number!!                            
+			// these two cannot be used whilst we are limtied to 32 buttons, since 'REMAP_BUTTONS' = 14
+			// else if (SDL_JoystickGetButton(Joysticktable[hostjoyid], host_input_buttons[hostjoyid].left_trigger) & 1)
+			//     held_offset = REMAP_BUTTONS * 2;
+			// else if (SDL_JoystickGetButton(Joysticktable[hostjoyid], host_input_buttons[hostjoyid].right_trigger) & 1)
+			//     held_offset = REMAP_BUTTONS * 3;
 
 			else
-                                { held_offset = 0; }
-                        
-                        
-                        auto val = 0;
-                        
-			// left stick   
-                        
-                        if (currprefs.input_analog_remap == false)
-                        {
-                            // handle the X axis  (left stick)
-                            val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
-                            setjoystickstate(hostjoyid + 1, 0, val, 32767);
+			{
+				held_offset = 0;
+			}
 
-                            // handle the Y axis   
-                            val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
-                            setjoystickstate(hostjoyid + 1, 1, val, 32767);
-                        }
-                        
-                        else
-                        {
-                            // alternative code for custom remapping the left stick  
-                            // handle the Y axis  (left stick)
-                            setjoybuttonstate(hostjoyid + 1,  7 + held_offset, SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_y) == -32768 ? 1 : 0);
-                            setjoybuttonstate(hostjoyid + 1,  8 + held_offset, SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_y) ==  32767 ? 1 : 0);
-                            // handle the X axis  
-                            setjoybuttonstate(hostjoyid + 1,  9 + held_offset, SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x) == -32768 ? 1 : 0);
-                            setjoybuttonstate(hostjoyid + 1, 10 + held_offset, SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x) ==  32767 ? 1 : 0);
-                         }
+
+			auto val = 0;
+
+			// left stick   
+
+			if (!currprefs.input_analog_remap)
+			{
+				// handle the X axis  (left stick)
+				val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
+				setjoystickstate(hostjoyid + 1, 0, val, 32767);
+
+				// handle the Y axis   
+				val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
+				setjoystickstate(hostjoyid + 1, 1, val, 32767);
+			}
+
+			else
+			{
+				// alternative code for custom remapping the left stick  
+				// handle the Y axis  (left stick)
+				setjoybuttonstate(hostjoyid + 1, 7 + held_offset,
+					SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_y) == -32768
+					? 1
+					: 0);
+				setjoybuttonstate(hostjoyid + 1, 8 + held_offset,
+					SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_y) == 32767
+					? 1
+					: 0);
+				// handle the X axis  
+				setjoybuttonstate(hostjoyid + 1, 9 + held_offset,
+					SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x) == -32768
+					? 1
+					: 0);
+				setjoybuttonstate(hostjoyid + 1, 10 + held_offset,
+					SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.lstick_axis_x) == 32767
+					? 1
+					: 0);
+			}
 
 			// right stick
 			val = SDL_JoystickGetAxis(Joysticktable[hostjoyid], current_controller_map.rstick_axis_x);
@@ -1139,23 +1163,34 @@ static void read_joystick(void)
 			const int hat = SDL_JoystickGetHat(Joysticktable[hostjoyid], 0);
 
 			setjoybuttonstate(hostjoyid + 1, 7 + held_offset, current_controller_map.dpad_up + 1
-				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_up) & 1)
+				? (SDL_JoystickGetButton(
+					Joysticktable[hostjoyid], current_controller_map.dpad_up) & 1)
 				: hat & SDL_HAT_UP);
 			setjoybuttonstate(hostjoyid + 1, 8 + held_offset, current_controller_map.dpad_down + 1
-				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_down) & 1)
+				? (SDL_JoystickGetButton(
+					Joysticktable[hostjoyid], current_controller_map.dpad_down) & 1)
 				: hat & SDL_HAT_DOWN);
 			setjoybuttonstate(hostjoyid + 1, 9 + held_offset, current_controller_map.dpad_left + 1
-				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_left) & 1)
+				? (SDL_JoystickGetButton(
+					Joysticktable[hostjoyid], current_controller_map.dpad_left) & 1)
 				: hat & SDL_HAT_LEFT);
 			setjoybuttonstate(hostjoyid + 1, 10 + held_offset, current_controller_map.dpad_right + 1
-				? (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.dpad_right) & 1)
+				? (SDL_JoystickGetButton(
+					Joysticktable[hostjoyid],
+					current_controller_map.dpad_right) & 1)
 				: hat & SDL_HAT_RIGHT);
 
 			// stick left/right/select
-			setjoybuttonstate(hostjoyid + 1, 11 + held_offset, (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.lstick_button) & 1)); // left stick
-			setjoybuttonstate(hostjoyid + 1, 12 + held_offset, (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.rstick_button) & 1)); // right stick
+			setjoybuttonstate(hostjoyid + 1, 11 + held_offset,
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.lstick_button) & 1));
+			// left stick
+			setjoybuttonstate(hostjoyid + 1, 12 + held_offset,
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.rstick_button) & 1));
+			// right stick
 
-			setjoybuttonstate(hostjoyid + 1, 13 + held_offset, (SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.select_button) & 1)); // select button
+			setjoybuttonstate(hostjoyid + 1, 13 + held_offset,
+				(SDL_JoystickGetButton(Joysticktable[hostjoyid], current_controller_map.select_button) & 1));
+			// select button
 		}
 	}
 }
@@ -1169,8 +1204,9 @@ struct inputdevice_functions inputdevicefunc_joystick = {
 	get_joystick_flags
 };
 
-int input_get_default_joystick(struct uae_input_device* uid, const int num, int port, const int af, const int mode, const bool gp,
-                               bool joymouseswap)
+int input_get_default_joystick(struct uae_input_device* uid, const int num, int port, const int af, const int mode,
+	const bool gp,
+	bool joymouseswap)
 {
 	// DEAL WITH AXIS INPUT EVENTS
 	int h, v;
@@ -1179,7 +1215,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	{
 		for (auto n = 0; n < 2; ++n)
 		{
-			if (CHECK_BIT(currprefs.jports[port].mousemap, n))
+			//if (CHECK_BIT(currprefs.jports[port].mousemap, n))
+			if (mode == JSEM_MODE_MOUSE)
 			{
 				h = port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ;
 				v = port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT;
@@ -1198,8 +1235,8 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	{
 		for (auto n = 0; n < 2; ++n)
 		{
-			h = port - 2 ? INPUTEVENT_PAR_JOY1_HORIZ : INPUTEVENT_PAR_JOY2_HORIZ;
-			v = port - 2 ? INPUTEVENT_PAR_JOY1_VERT : INPUTEVENT_PAR_JOY2_VERT;
+			h = port - 2 ? INPUTEVENT_PAR_JOY2_HORIZ : INPUTEVENT_PAR_JOY1_HORIZ;
+			v = port - 2 ? INPUTEVENT_PAR_JOY2_VERT : INPUTEVENT_PAR_JOY1_VERT;
 			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 0, 0, port, h, gp);
 			setid(uid, num, ID_AXIS_OFFSET + n * 2 + 1, 0, port, v, gp);
 		}
@@ -1218,155 +1255,207 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 
 	thismap[0] = currprefs.jports[port].amiberry_custom_none; // grab the 'no selection' options for the current map
 
-	// directions
+															  // directions
 
 	if (port < 2) // ports 0, 1 ... 
 	{
-		if (CHECK_BIT(currprefs.jports[port].mousemap,0))
+		//if (CHECK_BIT(currprefs.jports[port].mousemap,0))
+		if (mode == JSEM_MODE_MOUSE)
 		{
 			thismap[0].dpad_up_action = thismap[0].dpad_up_action
-				                            ? thismap[0].dpad_up_action
-				                            : port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP;
+				? thismap[0].dpad_up_action
+				: port
+				? INPUTEVENT_MOUSE2_UP
+				: INPUTEVENT_MOUSE1_UP;
 			thismap[0].dpad_down_action = thismap[0].dpad_down_action
-				                              ? thismap[0].dpad_down_action
-				                              : port ? INPUTEVENT_MOUSE2_DOWN : INPUTEVENT_MOUSE1_DOWN;
+				? thismap[0].dpad_down_action
+				: port
+				? INPUTEVENT_MOUSE2_DOWN
+				: INPUTEVENT_MOUSE1_DOWN;
 			thismap[0].dpad_left_action = thismap[0].dpad_left_action
-				                              ? thismap[0].dpad_left_action
-				                              : port ? INPUTEVENT_MOUSE2_LEFT : INPUTEVENT_MOUSE1_LEFT;
+				? thismap[0].dpad_left_action
+				: port
+				? INPUTEVENT_MOUSE2_LEFT
+				: INPUTEVENT_MOUSE1_LEFT;
 			thismap[0].dpad_right_action = thismap[0].dpad_right_action
-				                               ? thismap[0].dpad_right_action
-				                               : port ? INPUTEVENT_MOUSE2_RIGHT : INPUTEVENT_MOUSE1_RIGHT;
+				? thismap[0].dpad_right_action
+				: port
+				? INPUTEVENT_MOUSE2_RIGHT
+				: INPUTEVENT_MOUSE1_RIGHT;
 		}
 		else
 		{
 			thismap[0].dpad_up_action = thismap[0].dpad_up_action
-				                            ? thismap[0].dpad_up_action
-				                            : port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
+				? thismap[0].dpad_up_action
+				: port
+				? INPUTEVENT_JOY2_UP
+				: INPUTEVENT_JOY1_UP;
 			thismap[0].dpad_down_action = thismap[0].dpad_down_action
-				                              ? thismap[0].dpad_down_action
-				                              : port ? INPUTEVENT_JOY2_DOWN : INPUTEVENT_JOY1_DOWN;
+				? thismap[0].dpad_down_action
+				: port
+				? INPUTEVENT_JOY2_DOWN
+				: INPUTEVENT_JOY1_DOWN;
 			thismap[0].dpad_left_action = thismap[0].dpad_left_action
-				                              ? thismap[0].dpad_left_action
-				                              : port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT;
+				? thismap[0].dpad_left_action
+				: port
+				? INPUTEVENT_JOY2_LEFT
+				: INPUTEVENT_JOY1_LEFT;
 			thismap[0].dpad_right_action = thismap[0].dpad_right_action
-				                               ? thismap[0].dpad_right_action
-				                               : port ? INPUTEVENT_JOY2_RIGHT : INPUTEVENT_JOY1_RIGHT;
+				? thismap[0].dpad_right_action
+				: port
+				? INPUTEVENT_JOY2_RIGHT
+				: INPUTEVENT_JOY1_RIGHT;
 		}
 		// standard fire buttons
 		if (mode == JSEM_MODE_JOYSTICK_CD32) // CD32 joypad  
 		{
 			thismap[0].south_action = thismap[0].south_action
-				                          ? thismap[0].south_action
-				                          : port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED;
+				? thismap[0].south_action
+				: port
+				? INPUTEVENT_JOY2_CD32_RED
+				: INPUTEVENT_JOY1_CD32_RED;
 			thismap[0].east_action = thismap[0].east_action
-				                         ? thismap[0].east_action
-				                         : port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE;
+				? thismap[0].east_action
+				: port
+				? INPUTEVENT_JOY2_CD32_BLUE
+				: INPUTEVENT_JOY1_CD32_BLUE;
 			thismap[0].west_action = thismap[0].west_action
-				                         ? thismap[0].west_action
-				                         : port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN;
+				? thismap[0].west_action
+				: port
+				? INPUTEVENT_JOY2_CD32_GREEN
+				: INPUTEVENT_JOY1_CD32_GREEN;
 			thismap[0].north_action = thismap[0].north_action
-				                          ? thismap[0].north_action
-				                          : port ? INPUTEVENT_JOY2_CD32_YELLOW : INPUTEVENT_JOY1_CD32_YELLOW;
+				? thismap[0].north_action
+				: port
+				? INPUTEVENT_JOY2_CD32_YELLOW
+				: INPUTEVENT_JOY1_CD32_YELLOW;
 			thismap[0].start_action = thismap[0].start_action
-				                          ? thismap[0].start_action
-				                          : port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY;
+				? thismap[0].start_action
+				: port
+				? INPUTEVENT_JOY2_CD32_PLAY
+				: INPUTEVENT_JOY1_CD32_PLAY;
 		}
-		else if(currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick  
+		else if (currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick  
 		{
 			thismap[0].south_action = thismap[0].south_action
-				                          ? thismap[0].south_action
-				                          : port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON;
+				? thismap[0].south_action
+				: port
+				? INPUTEVENT_JOY2_FIRE_BUTTON
+				: INPUTEVENT_JOY1_FIRE_BUTTON;
 			thismap[0].east_action = thismap[0].east_action
-				                         ? thismap[0].east_action
-				                         : port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON;
+				? thismap[0].east_action
+				: port
+				? INPUTEVENT_JOY2_2ND_BUTTON
+				: INPUTEVENT_JOY1_2ND_BUTTON;
 			thismap[0].west_action = thismap[0].west_action
-				                         ? thismap[0].west_action
-				                         : port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
+				? thismap[0].west_action
+				: port
+				? INPUTEVENT_JOY2_UP
+				: INPUTEVENT_JOY1_UP;
 			thismap[0].north_action = thismap[0].north_action
-				                          ? thismap[0].north_action
-				                          : port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON;
+				? thismap[0].north_action
+				: port
+				? INPUTEVENT_JOY2_3RD_BUTTON
+				: INPUTEVENT_JOY1_3RD_BUTTON;
 
 			thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
 		}
 
 
 		// shoulder buttons
-		if (CHECK_BIT(currprefs.jports[port].mousemap,1))
+		//if (CHECK_BIT(currprefs.jports[port].mousemap,1))
+		if (mode == JSEM_MODE_MOUSE)
 			// if we use right-analogue as mouse, then we will use shoulder buttons as LMB/RMB
 			//if (1==0)
 		{
 			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
-				                                  ? thismap[0].left_shoulder_action
-				                                  : port
-				                                  ? INPUTEVENT_JOY2_FIRE_BUTTON
-				                                  : INPUTEVENT_JOY1_FIRE_BUTTON;
+				? thismap[0].left_shoulder_action
+				: port
+				? INPUTEVENT_JOY2_FIRE_BUTTON
+				: INPUTEVENT_JOY1_FIRE_BUTTON;
 			thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
-				                                   ? thismap[0].right_shoulder_action
-				                                   : port
-				                                   ? INPUTEVENT_JOY2_2ND_BUTTON
-				                                   : INPUTEVENT_JOY1_2ND_BUTTON;
+				? thismap[0].right_shoulder_action
+				: port
+				? INPUTEVENT_JOY2_2ND_BUTTON
+				: INPUTEVENT_JOY1_2ND_BUTTON;
 		}
 
 		else if (mode == JSEM_MODE_JOYSTICK_CD32) // CD32 joypad, use RWD/FWD
 		{
 			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
-				                                  ? thismap[0].left_shoulder_action
-				                                  : port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD;
+				? thismap[0].left_shoulder_action
+				: port
+				? INPUTEVENT_JOY2_CD32_RWD
+				: INPUTEVENT_JOY1_CD32_RWD;
 
 			thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
-				                                   ? thismap[0].right_shoulder_action
-				                                   : port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW;
+				? thismap[0].right_shoulder_action
+				: port
+				? INPUTEVENT_JOY2_CD32_FFW
+				: INPUTEVENT_JOY1_CD32_FFW;
 		}
 
-		else if(currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick
+		else if (currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick
 		{
 			thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
-				                                  ? thismap[0].left_shoulder_action
-				                                  : INPUTEVENT_KEY_SPACE;
+				? thismap[0].left_shoulder_action
+				: INPUTEVENT_KEY_SPACE;
 			thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
-				                                   ? thismap[0].right_shoulder_action
-				                                   : INPUTEVENT_KEY_RETURN;
+				? thismap[0].right_shoulder_action
+				: INPUTEVENT_KEY_RETURN;
 		}
 	}
 	else // ports 2, 3 ... parallel ports 
 	{
 		thismap[0].dpad_up_action = thismap[0].dpad_up_action
-			                            ? thismap[0].dpad_up_action
-			                            : port - 2 ? INPUTEVENT_PAR_JOY2_UP : INPUTEVENT_PAR_JOY1_UP;
+			? thismap[0].dpad_up_action
+			: port - 2
+			? INPUTEVENT_PAR_JOY2_UP
+			: INPUTEVENT_PAR_JOY1_UP;
 		thismap[0].dpad_down_action = thismap[0].dpad_down_action
-			                              ? thismap[0].dpad_down_action
-			                              : port - 2 ? INPUTEVENT_PAR_JOY2_DOWN : INPUTEVENT_PAR_JOY1_DOWN;
+			? thismap[0].dpad_down_action
+			: port - 2
+			? INPUTEVENT_PAR_JOY2_DOWN
+			: INPUTEVENT_PAR_JOY1_DOWN;
 		thismap[0].dpad_left_action = thismap[0].dpad_left_action
-			                              ? thismap[0].dpad_left_action
-			                              : port - 2 ? INPUTEVENT_PAR_JOY2_LEFT : INPUTEVENT_PAR_JOY1_LEFT;
+			? thismap[0].dpad_left_action
+			: port - 2
+			? INPUTEVENT_PAR_JOY2_LEFT
+			: INPUTEVENT_PAR_JOY1_LEFT;
 		thismap[0].dpad_right_action = thismap[0].dpad_right_action
-			                               ? thismap[0].dpad_right_action
-			                               : port - 2 ? INPUTEVENT_PAR_JOY2_RIGHT : INPUTEVENT_PAR_JOY1_RIGHT;
+			? thismap[0].dpad_right_action
+			: port - 2
+			? INPUTEVENT_PAR_JOY2_RIGHT
+			: INPUTEVENT_PAR_JOY1_RIGHT;
 
 		thismap[0].south_action = thismap[0].south_action
-			                          ? thismap[0].south_action
-			                          : port - 2 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON;
+			? thismap[0].south_action
+			: port - 2
+			? INPUTEVENT_PAR_JOY2_FIRE_BUTTON
+			: INPUTEVENT_PAR_JOY1_FIRE_BUTTON;
 		thismap[0].east_action = thismap[0].east_action
-			                         ? thismap[0].east_action
-			                         : port - 2 ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON;
+			? thismap[0].east_action
+			: port - 2
+			? INPUTEVENT_PAR_JOY2_2ND_BUTTON
+			: INPUTEVENT_PAR_JOY1_2ND_BUTTON;
 
 		thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
 		thismap[0].left_shoulder_action = thismap[0].left_shoulder_action
-			                                  ? thismap[0].left_shoulder_action
-			                                  : INPUTEVENT_KEY_SPACE;
+			? thismap[0].left_shoulder_action
+			: INPUTEVENT_KEY_SPACE;
 		thismap[0].right_shoulder_action = thismap[0].right_shoulder_action
-			                                   ? thismap[0].right_shoulder_action
-			                                   : INPUTEVENT_KEY_RETURN;
+			? thismap[0].right_shoulder_action
+			: INPUTEVENT_KEY_RETURN;
 	}
 
 
 	thismap[1] = currprefs.jports[port].amiberry_custom_hotkey; // grab the 'select button' options for the current map
 
-	// currently disabled
-	//	thismap[2] = currprefs.jports[port].amiberry_custom_left_trigger; // grab the 'left trigger'  options for the current map        
-	//	thismap[3] = currprefs.jports[port].amiberry_custom_right_trigger; // grab the 'right trigger' options for the current map
+																// currently disabled
+																//	thismap[2] = currprefs.jports[port].amiberry_custom_left_trigger; // grab the 'left trigger'  options for the current map        
+																//	thismap[3] = currprefs.jports[port].amiberry_custom_right_trigger; // grab the 'right trigger' options for the current map
 
-	//  Now assign the actual buttons VALUES (TRUE/FALSE) to trigger the EVENTS
+																//  Now assign the actual buttons VALUES (TRUE/FALSE) to trigger the EVENTS
 	auto function_offset = 0;
 
 

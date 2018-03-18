@@ -631,6 +631,7 @@ void gui_message(const char* format, ...)
 		printf("%s\n", msg);
 		return;
 	}
+	graphics_subshutdown();
 	InGameMessage(msg);
 }
 

@@ -196,15 +196,15 @@ void target_fixup_options(struct uae_prefs* p)
 {
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 
-	if (z3base_adr == Z3BASE_REAL) {
+	if (z3_base_adr == Z3BASE_REAL) {
 		// map Z3 memory at real address (0x40000000)
 		p->z3_mapping_mode = Z3MAPPING_REAL;
-		p->z3autoconfig_start = z3base_adr;
+		p->z3autoconfig_start = z3_base_adr;
 	}
 	else {
 		// map Z3 memory at UAE address (0x10000000)
 		p->z3_mapping_mode = Z3MAPPING_UAE;
-		p->z3autoconfig_start = z3base_adr;
+		p->z3autoconfig_start = z3_base_adr;
 	}
 
 	if (p->cs_cd32cd && p->cs_cd32nvram && (p->cs_compatible == CP_GENERIC || p->cs_compatible == 0)) {

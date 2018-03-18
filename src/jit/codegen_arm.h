@@ -66,46 +66,46 @@
 /* --- ENCODINGS ----------------------------------------------------------- */
 /* ========================================================================= */
 
-#define IMM32(c) ((c & 0xffffff00) == 0 ? c : \
-                  (c & 0x3fffffc0) == 0 ? (0x100 | ((c >> 30) & 0x3) | ((c << 2) & 0xfc)) : \
-                  (c & 0x0ffffff0) == 0 ? (0x200 | ((c >> 28) & 0xf) | ((c << 4) & 0xf0)) : \
-                  (c & 0x03fffffc) == 0 ? (0x300 | ((c >> 26) & 0x3f) | ((c << 6) & 0xc0) ) : \
-                  (c & 0x00ffffff) == 0 ? (0x400 | ((c >> 24) & 0xff)) : \
-                  (c & 0xc03fffff) == 0 ? (0x500 | (c >> 22)) : \
-                  (c & 0xf00fffff) == 0 ? (0x600 | (c >> 20)) : \
-                  (c & 0xfc03ffff) == 0 ? (0x700 | (c >> 18)) : \
-                  (c & 0xff00ffff) == 0 ? (0x800 | (c >> 16)) : \
-                  (c & 0xffc03fff) == 0 ? (0x900 | (c >> 14)) : \
-                  (c & 0xfff00fff) == 0 ? (0xa00 | (c >> 12)) : \
-                  (c & 0xfffc03ff) == 0 ? (0xb00 | (c >> 10)) : \
-                  (c & 0xffff00ff) == 0 ? (0xc00 | (c >> 8)) : \
-                  (c & 0xffffc03f) == 0 ? (0xd00 | (c >> 6)) : \
-                  (c & 0xfffff00f) == 0 ? (0xe00 | (c >> 4)) : \
-                  (c & 0xfffffc03) == 0 ? (0xf00 | (c >> 2)) : \
+#define IMM32(c) (((c) & 0xffffff00) == 0 ? c : \
+                  ((c) & 0x3fffffc0) == 0 ? (0x100 | (((c) >> 30) & 0x3) | (((c) << 2) & 0xfc)) : \
+                  ((c) & 0x0ffffff0) == 0 ? (0x200 | (((c) >> 28) & 0xf) | (((c) << 4) & 0xf0)) : \
+                  ((c) & 0x03fffffc) == 0 ? (0x300 | (((c) >> 26) & 0x3f) | (((c) << 6) & 0xc0) ) : \
+                  ((c) & 0x00ffffff) == 0 ? (0x400 | (((c) >> 24) & 0xff)) : \
+                  ((c) & 0xc03fffff) == 0 ? (0x500 | ((c) >> 22)) : \
+                  ((c) & 0xf00fffff) == 0 ? (0x600 | ((c) >> 20)) : \
+                  ((c) & 0xfc03ffff) == 0 ? (0x700 | ((c) >> 18)) : \
+                  ((c) & 0xff00ffff) == 0 ? (0x800 | ((c) >> 16)) : \
+                  ((c) & 0xffc03fff) == 0 ? (0x900 | ((c) >> 14)) : \
+                  ((c) & 0xfff00fff) == 0 ? (0xa00 | ((c) >> 12)) : \
+                  ((c) & 0xfffc03ff) == 0 ? (0xb00 | ((c) >> 10)) : \
+                  ((c) & 0xffff00ff) == 0 ? (0xc00 | ((c) >> 8)) : \
+                  ((c) & 0xffffc03f) == 0 ? (0xd00 | ((c) >> 6)) : \
+                  ((c) & 0xfffff00f) == 0 ? (0xe00 | ((c) >> 4)) : \
+                  ((c) & 0xfffffc03) == 0 ? (0xf00 | ((c) >> 2)) : \
                         0\
                  )
 
-#define CHECK32(c) ((c & 0xffffff00) == 0 || \
-                  (c & 0x3fffffc0) == 0 || \
-                  (c & 0x0ffffff0) == 0 || \
-                  (c & 0x03fffffc) == 0 || \
-                  (c & 0x00ffffff) == 0 || \
-                  (c & 0xc03fffff) == 0 || \
-                  (c & 0xf00fffff) == 0 || \
-                  (c & 0xfc03ffff) == 0 || \
-                  (c & 0xff00ffff) == 0 || \
-                  (c & 0xffc03fff) == 0 || \
-                  (c & 0xfff00fff) == 0 || \
-                  (c & 0xfffc03ff) == 0 || \
-                  (c & 0xffff00ff) == 0 || \
-                  (c & 0xffffc03f) == 0 || \
-                  (c & 0xfffff00f) == 0 || \
-                  (c & 0xfffffc03) == 0)
+#define CHECK32(c) (((c) & 0xffffff00) == 0 || \
+                  ((c) & 0x3fffffc0) == 0 || \
+                  ((c) & 0x0ffffff0) == 0 || \
+                  ((c) & 0x03fffffc) == 0 || \
+                  ((c) & 0x00ffffff) == 0 || \
+                  ((c) & 0xc03fffff) == 0 || \
+                  ((c) & 0xf00fffff) == 0 || \
+                  ((c) & 0xfc03ffff) == 0 || \
+                  ((c) & 0xff00ffff) == 0 || \
+                  ((c) & 0xffc03fff) == 0 || \
+                  ((c) & 0xfff00fff) == 0 || \
+                  ((c) & 0xfffc03ff) == 0 || \
+                  ((c) & 0xffff00ff) == 0 || \
+                  ((c) & 0xffffc03f) == 0 || \
+                  ((c) & 0xfffff00f) == 0 || \
+                  ((c) & 0xfffffc03) == 0)
 
 #define SHIFT_IMM(c) (0x02000000 | (IMM32((c))))
 
 #define UNSHIFTED_IMM8(c) (0x02000000 | (c))
-#define SHIFT_IMM8_ROR(c,r) (0x02000000 | (c) | ((r >> 1) << 8))
+#define SHIFT_IMM8_ROR(c,r) (0x02000000 | (c) | (((r) >> 1) << 8))
 
 #define SHIFT_REG(Rm) (Rm)
 #define SHIFT_LSL_i(Rm,s) ((Rm) | ((s) << 7))
@@ -149,8 +149,8 @@
 #define ADD_RRX(Rm) ADR_ADD(ADR_REG(Rm) | (3 << 5))
 #define SUB_RRX(Rm) ADR_SUB(ADR_REG(Rm) | (3 << 5))
 
-#define ADD2_IMM(i) ADR_ADD(i | (1 << 22))
-#define SUB2_IMM(i) ADR_SUB(i | (1 << 22))
+#define ADD2_IMM(i) ADR_ADD((i) | (1 << 22))
+#define SUB2_IMM(i) ADR_SUB((i) | (1 << 22))
 
 #define ADD2_REG(Rm)	ADR_ADD(Rm)
 #define SUB2_REG(Rm)	ADR_SUB(Rm)
@@ -935,8 +935,8 @@ enum {
 #define BICS_rrrRRX(Rd,Rn,Rm)           	CC_BICS_rrrRRX(NATIVE_CC_AL,Rd,Rn,Rm)
 
 /* Branch instructions */
-#define CC_B_i(cc,i)                        _W(((cc) << 28) | (10 << 24) | (i & 0x00ffffff))
-#define CC_BL_i(cc,i)                       _W(((cc) << 28) | (11 << 24) | (i & 0x00ffffff))
+#define CC_B_i(cc,i)                        _W(((cc) << 28) | (10 << 24) | ((i) & 0x00ffffff))
+#define CC_BL_i(cc,i)                       _W(((cc) << 28) | (11 << 24) | ((i) & 0x00ffffff))
 #define CC_BLX_r(cc,r)                      _W(((cc) << 28) | (0x12 << 20) | (3 << 4) | (0xfff << 8) | (r))
 #define CC_BX_r(cc,r)                       _W(((cc) << 28) | (0x12 << 20) | (1 << 4) | (0xfff << 8) | (r))
 #define CC_BXJ_r(cc,r)                      _W(((cc) << 28) | (0x12 << 20) | (2 << 4) | (0xfff << 8) | (r))
@@ -1266,116 +1266,116 @@ enum {
 #define SXTH_rr_ROR24(Rd,Rm)				CC_SXTH_rr_ROR24(NATIVE_CC_AL,Rd,Rm)
 
 #define CC_UXTB_rr(cc,Rd,Rm)				_W(((cc) << 28) | (0x6e << 20) | (0xf << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
-#define UXTB_rr(Rd,Rm)						CC_UXTB_rr(NATIVE_CC_AL,Rd,Rm)
+#define UXTB_rr(Rd,Rm)							CC_UXTB_rr(NATIVE_CC_AL,Rd,Rm)
 
-#define CC_UXTB_rr_ROR8(cc,Rd,Rm)			_W(((cc) << 28) | (0x6e << 20) | (0xf << 16) | ((Rd) << 12) | (1 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
+#define CC_UXTB_rr_ROR8(cc,Rd,Rm)		_W(((cc) << 28) | (0x6e << 20) | (0xf << 16) | ((Rd) << 12) | (1 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
 #define UXTB_rr_ROR8(Rd,Rm)					CC_UXTB_rr_ROR8(NATIVE_CC_AL,Rd,Rm)
 
-#define CC_UXTB_rr_ROR16(cc,Rd,Rm)			_W(((cc) << 28) | (0x6e << 20) | (0xf << 16) | ((Rd) << 12) | (2 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
+#define CC_UXTB_rr_ROR16(cc,Rd,Rm)	_W(((cc) << 28) | (0x6e << 20) | (0xf << 16) | ((Rd) << 12) | (2 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
 #define UXTB_rr_ROR16(Rd,Rm)				CC_UXTB_rr_ROR16(NATIVE_CC_AL,Rd,Rm)
 
-#define CC_UXTB_rr_ROR24(cc,Rd,Rm)			_W(((cc) << 28) | (0x6e << 20) | (0xf << 16) | ((Rd) << 12) | (3 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
+#define CC_UXTB_rr_ROR24(cc,Rd,Rm)	_W(((cc) << 28) | (0x6e << 20) | (0xf << 16) | ((Rd) << 12) | (3 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
 #define UXTB_rr_ROR24(Rd,Rm)				CC_UXTB_rr_ROR24(NATIVE_CC_AL,Rd,Rm)
 
 #define CC_UXTH_rr(cc,Rd,Rm)				_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
-#define UXTH_rr(Rd,Rm)						CC_UXTH_rr(NATIVE_CC_AL,Rd,Rm)
+#define UXTH_rr(Rd,Rm)							CC_UXTH_rr(NATIVE_CC_AL,Rd,Rm)
 
-#define CC_UXTH_rr_ROR8(cc,Rd,Rm)			_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | ((Rd) << 12) | (1 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
+#define CC_UXTH_rr_ROR8(cc,Rd,Rm)		_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | ((Rd) << 12) | (1 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
 #define UXTH_rr_ROR8(Rd,Rm)					CC_UXTH_rr_ROR8(NATIVE_CC_AL,Rd,Rm)
 
-#define CC_UXTH_rr_ROR16(cc,Rd,Rm)			_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | ((Rd) << 12) | (2 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
+#define CC_UXTH_rr_ROR16(cc,Rd,Rm)	_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | ((Rd) << 12) | (2 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
 #define UXTH_rr_ROR16(Rd,Rm)				CC_UXTH_rr_ROR16(NATIVE_CC_AL,Rd,Rm)
 
-#define CC_UXTH_rr_ROR24(cc,Rd,Rm)			_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | ((Rd) << 12) | (3 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
+#define CC_UXTH_rr_ROR24(cc,Rd,Rm)	_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | ((Rd) << 12) | (3 << 10) | (0x7 << 4) | SHIFT_REG(Rm))
 #define UXTH_rr_ROR24(Rd,Rm)				CC_UXTH_rr_ROR24(NATIVE_CC_AL,Rd,Rm)
 
 #define CC_REV_rr(cc,Rd,Rm)					_W(((cc) << 28) | (0x6b << 20) | (0xf << 16) | (0xf << 8) | ((Rd) << 12) | (0x3 << 4) | SHIFT_REG(Rm))
-#define REV_rr(Rd,Rm)						CC_REV_rr(NATIVE_CC_AL,Rd,Rm)
+#define REV_rr(Rd,Rm)								CC_REV_rr(NATIVE_CC_AL,Rd,Rm)
 
 #define CC_REV16_rr(cc,Rd,Rm)				_W(((cc) << 28) | (0x6b << 20) | (0xf << 16) | (0xf << 8) | ((Rd) << 12) | (0xB << 4) | SHIFT_REG(Rm))
-#define REV16_rr(Rd,Rm)						CC_REV16_rr(NATIVE_CC_AL,Rd,Rm)
+#define REV16_rr(Rd,Rm)							CC_REV16_rr(NATIVE_CC_AL,Rd,Rm)
 
 #define CC_REVSH_rr(cc,Rd,Rm)				_W(((cc) << 28) | (0x6f << 20) | (0xf << 16) | (0xf << 8) | ((Rd) << 12) | (0xB << 4) | SHIFT_REG(Rm))
-#define REVSH_rr(Rd,Rm)						CC_REVSH_rr(NATIVE_CC_AL,Rd,Rm)
+#define REVSH_rr(Rd,Rm)							CC_REVSH_rr(NATIVE_CC_AL,Rd,Rm)
 
-#define CC_PKHBT_rrr(cc,Rd,Rn,Rm)			_W(((cc) << 28) | (0x68 << 20) | (Rn << 16) | (Rd << 12) | (0x1 << 4) | (Rm))
-#define CC_PKHBT_rrrLSLi(cc,Rd,Rn,Rm,s)		_W(((cc) << 28) | (0x68 << 20) | (Rn << 16) | (Rd << 12) | (0x1 << 4) | SHIFT_PK(Rm, s))
+#define CC_PKHBT_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x68 << 20) | ((Rn) << 16) | ((Rd) << 12) | (0x1 << 4) | (Rm))
+#define CC_PKHBT_rrrLSLi(cc,Rd,Rn,Rm,s)		_W(((cc) << 28) | (0x68 << 20) | ((Rn) << 16) | ((Rd) << 12) | (0x1 << 4) | SHIFT_PK(Rm, s))
 #define PKHBT_rrr(Rd,Rn,Rm)					CC_PKHBT_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
-#define PKHBT_rrrLSLi(Rd,Rn,Rm,s)			CC_PKHBT_rrrLSLi(NATIVE_CC_AL,Rd,Rn,Rm,s)
+#define PKHBT_rrrLSLi(Rd,Rn,Rm,s)		CC_PKHBT_rrrLSLi(NATIVE_CC_AL,Rd,Rn,Rm,s)
 
-#define CC_PKHTB_rrrASRi(cc,Rd,Rn,Rm,s)		_W(((cc) << 28) | (0x68 << 20) | (Rn << 16) | (Rd << 12) | (0x5 << 4) | SHIFT_PK(Rm, s))
-#define PKHTB_rrrASRi(Rd,Rn,Rm,s)			CC_PKHTB_rrrASRi(NATIVE_CC_AL,Rd,Rn,Rm,s)
-#define CC_PKHTB_rrr(cc,Rd,Rn,Rm)		      _W(((cc) << 28) | (0x68 << 20) | (Rn << 16) | (Rd << 12) | (0x5 << 4) | (Rm))
-#define PKHTB_rrr(Rd,Rn,Rm)			          CC_PKHTB_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+#define CC_PKHTB_rrrASRi(cc,Rd,Rn,Rm,s)		_W(((cc) << 28) | (0x68 << 20) | ((Rn) << 16) | ((Rd) << 12) | (0x5 << 4) | SHIFT_PK(Rm, s))
+#define PKHTB_rrrASRi(Rd,Rn,Rm,s)		CC_PKHTB_rrrASRi(NATIVE_CC_AL,Rd,Rn,Rm,s)
+#define CC_PKHTB_rrr(cc,Rd,Rn,Rm)		CC_PKHBT_rrr(cc,Rd,Rm,Rn)
+#define PKHTB_rrr(Rd,Rn,Rm)			    PKHBT_rrr(Rd,Rm,Rn)
 
-#define CC_SADD16_rrr(cc,Rd,Rn,Rm)    _W(((cc) << 28) | (0x61 << 20) | (Rn << 16) | (Rd << 12) | (0xf1 << 4) | (Rm))
-#define SADD16_rrr(Rd,Rn,Rm)					CC_SADD16_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+#define CC_SADD16_rrr(cc,Rd,Rn,Rm)  _W(((cc) << 28) | (0x61 << 20) | ((Rn) << 16) | ((Rd) << 12) | (0xf1 << 4) | (Rm))
+#define SADD16_rrr(Rd,Rn,Rm)				CC_SADD16_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
-#define CC_SXTAB_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6a << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
-#define SXTAB_rrr(Rd,Rn,Rm)             CC_SXTAB_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+#define CC_SXTAB_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x6a << 20) | ((Rn) << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
+#define SXTAB_rrr(Rd,Rn,Rm)          CC_SXTAB_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
-#define CC_SXTAH_rrr(cc,Rd,Rn,Rm)				_W(((cc) << 28) | (0x6b << 20) | (Rn << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
-#define SXTAH_rrr(Rd,Rn,Rm)             CC_SXTAH_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
+#define CC_SXTAH_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x6b << 20) | ((Rn) << 16) | ((Rd) << 12) | (0x7 << 4) | SHIFT_REG(Rm))
+#define SXTAH_rrr(Rd,Rn,Rm)          CC_SXTAH_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
-#define CC_STM_Ri(cc,Rn,i)					_W(((cc) << 28) | (0x8 << 24) | (0x8 << 20) | ((Rn) << 16) | i)
+#define CC_STM_Ri(cc,Rn,i)					_W(((cc) << 28) | (0x8 << 24) | (0x8 << 20) | ((Rn) << 16) | (i))
 #define STM_Ri(Rn,i)								CC_STM_Ri(NATIVE_CC_AL,Rn,i)
 
-#define CC_MLS_rrrr(cc,Rd,Rn,Rm,Ra)			_W(((cc) << 28) | (0x0 << 24) | (0x6 << 20) | (Rd << 16) | (Ra << 12) | (Rm << 8) | (0x9 << 4) | Rn)
+#define CC_MLS_rrrr(cc,Rd,Rn,Rm,Ra)			_W(((cc) << 28) | (0x0 << 24) | (0x6 << 20) | ((Rd) << 16) | ((Ra) << 12) | ((Rm) << 8) | (0x9 << 4) | (Rn))
 #define MLS_rrrr(Rd,Rn,Rm,Ra)           CC_MLS_rrrr(NATIVE_CC_AL,Rd,Rn,Rm,Ra)
 
-#define CC_SMULxy_rrr(cc,Rd,Rn,Rm,x,y)	_W(((cc) << 28) | (0x1 << 24) | (0x6 << 20) | (Rd << 16) | (0x0 << 12) | (Rm << 8) | (0x8 << 4) | (Rn) | (x << 5) | (y << 6))
+#define CC_SMULxy_rrr(cc,Rd,Rn,Rm,x,y)	_W(((cc) << 28) | (0x1 << 24) | (0x6 << 20) | ((Rd) << 16) | (0x0 << 12) | ((Rm) << 8) | (0x8 << 4) | (Rn) | ((x) << 5) | ((y) << 6))
 #define SMULxy_rrr(Rd,Rn,Rm,x,y)        CC_SMULxy_rrr(NATIVE_CC_AL,Rd,Rn,Rm,x,y)
 
 // ARMv6T2
-//#ifdef ARMV6T2
+#ifdef ARMV6T2
 
-#define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
+#define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | ((Rd) << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
 #define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
 
-#define CC_BFC_rii(cc,Rd,lsb,msb)       _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | (Rd << 12) | ((lsb) << 7) | (0x1 << 4) | 15)
+#define CC_BFC_rii(cc,Rd,lsb,msb)       _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | ((Rd) << 12) | ((lsb) << 7) | (0x1 << 4) | 15)
 #define BFC_rii(Rd,lsb,msb)             CC_BFC_rii(NATIVE_CC_AL,Rd,lsb,msb)
 
-#define CC_UBFX_rrii(cc,Rd,Rn,lsb,width)   _W(((cc) << 28) | (0x3f << 21) | ((width-1) << 16) | (Rd << 12) | ((lsb) << 7) | (0x5 << 4) | (Rn))
+#define CC_UBFX_rrii(cc,Rd,Rn,lsb,width)   _W(((cc) << 28) | (0x3f << 21) | ((width-1) << 16) | ((Rd) << 12) | ((lsb) << 7) | (0x5 << 4) | (Rn))
 #define UBFX_rrii(Rd,Rn,lsb,width)         CC_UBFX_rrii(NATIVE_CC_AL,Rd,Rn,lsb,width)
 
-#define CC_MOVW_ri16(cc,Rd,i)                _W(((cc) << 28) | (0x30 << 20) | (((i >> 12) & 0xf) << 16) | (Rd << 12) | (i & 0x0fff))
-#define MOVW_ri16(Rd,i)					             CC_MOVW_ri16(NATIVE_CC_AL,Rd,i)
+#define CC_MOVW_ri16(cc,Rd,i)           _W(((cc) << 28) | (0x30 << 20) | ((((i) >> 12) & 0xf) << 16) | ((Rd) << 12) | ((i) & 0x0fff))
+#define MOVW_ri16(Rd,i)					        CC_MOVW_ri16(NATIVE_CC_AL,Rd,i)
 
-#define CC_MOVT_ri16(cc,Rd,i)                _W(((cc) << 28) | (0x34 << 20) | (((i >> 12) & 0xf) << 16) | (Rd << 12) | (i & 0x0fff))
-#define MOVT_ri16(Rd,i)					             CC_MOVT_ri16(NATIVE_CC_AL,Rd,i)
+#define CC_MOVT_ri16(cc,Rd,i)           _W(((cc) << 28) | (0x34 << 20) | ((((i) >> 12) & 0xf) << 16) | ((Rd) << 12) | ((i) & 0x0fff))
+#define MOVT_ri16(Rd,i)					        CC_MOVT_ri16(NATIVE_CC_AL,Rd,i)
 
-#define CC_SSAT_rir(cc,Rd,i,Rn)			_W(((cc) << 28) | (0x6a << 20) | (i << 16) | (Rd << 12) | (0x1 << 4) | (Rn))
+#define CC_SSAT_rir(cc,Rd,i,Rn)			_W(((cc) << 28) | (0x6a << 20) | ((i) << 16) | ((Rd) << 12) | (0x1 << 4) | (Rn))
 #define SSAT_rir(Rd,i,Rn)						CC_SSAT_rir(NATIVE_CC_AL,Rd,i,Rn)
 
-#define CC_SDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x1 << 20) | (Rd << 16) | (0xf << 12) | (Rm << 8) | (0x1 << 4) | (Rn))
+#define CC_SDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x1 << 20) | ((Rd) << 16) | (0xf << 12) | ((Rm) << 8) | (0x1 << 4) | (Rn))
 #define SDIV_rrr(Rd,Rn,Rm)					CC_SDIV_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
-#define CC_UDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x3 << 20) | (Rd << 16) | (0xf << 12) | (Rm << 8) | (0x1 << 4) | (Rn))
+#define CC_UDIV_rrr(cc,Rd,Rn,Rm)		_W(((cc) << 28) | (0x7 << 24) | (0x3 << 20) | ((Rd) << 16) | (0xf << 12) | ((Rm) << 8) | (0x1 << 4) | (Rn))
 #define UDIV_rrr(Rd,Rn,Rm)					CC_UDIV_rrr(NATIVE_CC_AL,Rd,Rn,Rm)
 
-//#endif
+#endif
 
 // Floatingpoint
 #define FADR_ADD(offs)              ((1 << 23) | (offs) >> 2)
 #define FADR_SUB(offs)              ((0 << 23) | (offs) >> 2)
-#define FOFFSET8(offs)              (offs >= 0 ? FADR_ADD(offs) : FADR_SUB(-offs))
+#define FOFFSET8(offs)              ((offs) >= 0 ? FADR_ADD(offs) : FADR_SUB(-offs))
 
-#define MAKE_Dd(Dd)                 (((Dd & 0x10) << 18) | ((Dd & 0x0f) << 12))
-#define MAKE_Dm(Dm)                 (((Dm & 0x10) <<  1) | ((Dm & 0x0f) <<  0))
-#define MAKE_Dn(Dn)                 (((Dn & 0x10) <<  3) | ((Dn & 0x0f) << 16))
-#define MAKE_Sd(Sd)                 (((Sd & 0x01) << 22) | ((Sd & 0x1e) << 11))
-#define MAKE_Sm(Sm)                 (((Sm & 0x01) <<  5) | ((Sm & 0x1e) >>  1))
-#define MAKE_Sn(Sn)                 (((Sn & 0x01) <<  7) | ((Sn & 0x1e) << 15))
+#define MAKE_Dd(Dd)                 ((((Dd) & 0x10) << 18) | (((Dd) & 0x0f) << 12))
+#define MAKE_Dm(Dm)                 ((((Dm) & 0x10) <<  1) | (((Dm) & 0x0f) <<  0))
+#define MAKE_Dn(Dn)                 ((((Dn) & 0x10) <<  3) | (((Dn) & 0x0f) << 16))
+#define MAKE_Sd(Sd)                 ((((Sd) & 0x01) << 22) | (((Sd) & 0x1e) << 11))
+#define MAKE_Sm(Sm)                 ((((Sm) & 0x01) <<  5) | (((Sm) & 0x1e) >>  1))
+#define MAKE_Sn(Sn)                 ((((Sn) & 0x01) <<  7) | (((Sn) & 0x1e) << 15))
 
 
-#define CC_VLDR64_dRi(cc,Dd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x1 << 20) | (Rn << 16) | (0xb << 8) | FOFFSET8(offs) | MAKE_Dd(Dd))
+#define CC_VLDR64_dRi(cc,Dd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x1 << 20) | ((Rn) << 16) | (0xb << 8) | FOFFSET8(offs) | MAKE_Dd(Dd))
 #define VLDR64_dRi(Dd,Rn,offs)          CC_VLDR64_dRi(NATIVE_CC_AL,Dd,Rn,offs)
-#define CC_VLDR32_sRi(cc,Sd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x1 << 20) | (Rn << 16) | (0xa << 8) | FOFFSET8(offs) | MAKE_Sd(Sd))
+#define CC_VLDR32_sRi(cc,Sd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x1 << 20) | ((Rn) << 16) | (0xa << 8) | FOFFSET8(offs) | MAKE_Sd(Sd))
 #define VLDR32_sRi(Sd,Rn,offs)          CC_VLDR32_sRi(NATIVE_CC_AL,Sd,Rn,offs)
 
-#define CC_VSTR64_dRi(cc,Dd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x0 << 20) | (Rn << 16) | (0xb << 8) | FOFFSET8(offs) | MAKE_Dd(Dd))
+#define CC_VSTR64_dRi(cc,Dd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x0 << 20) | ((Rn) << 16) | (0xb << 8) | FOFFSET8(offs) | MAKE_Dd(Dd))
 #define VSTR64_dRi(Dd,Rn,offs)          CC_VSTR64_dRi(NATIVE_CC_AL,Dd,Rn,offs)
-#define CC_VSTR32_sRi(cc,Sd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x0 << 20) | (Rn << 16) | (0xa << 8) | FOFFSET8(offs) | MAKE_Sd(Sd))
+#define CC_VSTR32_sRi(cc,Sd,Rn,offs)    _W(((cc) << 28) | (0xd << 24) | (0x0 << 20) | ((Rn) << 16) | (0xa << 8) | FOFFSET8(offs) | MAKE_Sd(Sd))
 #define VSTR32_sRi(Sd,Rn,offs)          CC_VSTR32_sRi(NATIVE_CC_AL,Sd,Rn,offs)
 
 #define CC_VMOV64_dd(cc,Dd,Dm)					_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xb << 8) | (0x4 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm))
@@ -1383,19 +1383,19 @@ enum {
 #define CC_VMOV32_ss(cc,Sd,Sm)					_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xa << 8) | (0x4 << 4) | MAKE_Sd(Sd) | MAKE_Sm(Sm))
 #define VMOV32_ss(Sd,Sm)								CC_VMOV32_ss(NATIVE_CC_AL,Sd,Sm)
 
-#define CC_VMOV32_rs(cc,Rt,Sn)        	_W(((cc) << 28) | (0xe << 24) | (0x1 << 20) | (Rt << 12) | (0xa << 8) | (0x1 << 4) | MAKE_Sn(Sn))
+#define CC_VMOV32_rs(cc,Rt,Sn)        	_W(((cc) << 28) | (0xe << 24) | (0x1 << 20) | ((Rt) << 12) | (0xa << 8) | (0x1 << 4) | MAKE_Sn(Sn))
 #define VMOV32_rs(Rt,Sn)              	CC_VMOV32_rs(NATIVE_CC_AL,Rt,Sn)
-#define CC_VMOV32_sr(cc,Sn,Rt)      		_W(((cc) << 28) | (0xe << 24) | (0x0 << 20) | (Rt << 12) | (0xa << 8) | (0x1 << 4) | MAKE_Sn(Sn))
+#define CC_VMOV32_sr(cc,Sn,Rt)      		_W(((cc) << 28) | (0xe << 24) | (0x0 << 20) | ((Rt) << 12) | (0xa << 8) | (0x1 << 4) | MAKE_Sn(Sn))
 #define VMOV32_sr(Sn,Rt)            		CC_VMOV32_sr(NATIVE_CC_AL,Sn,Rt)
 
-#define CC_VMOVi_from_ARM_dr(cc,Dn,Rt,x)  _W(((cc) << 28) | (0xe << 24) | (0x0 << 20) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | ((x) << 21) | MAKE_Dn(Dn))
+#define CC_VMOVi_from_ARM_dr(cc,Dn,Rt,x)  _W(((cc) << 28) | (0xe << 24) | (0x0 << 20) | ((Rt) << 12) | (0xb << 8) | (0x1 << 4) | ((x) << 21) | MAKE_Dn(Dn))
 #define VMOVi_from_ARM_dr(Dn,Rt,x)        CC_VMOVi_from_ARM_dr(NATIVE_CC_AL,Dn,Rt,x)
-#define CC_VMOVi_to_ARM_rd(cc,Rt,Dn,x)  _W(((cc) << 28) | (0xe << 24) | (0x1 << 20) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | ((x) << 21) | MAKE_Dn(Dn))
+#define CC_VMOVi_to_ARM_rd(cc,Rt,Dn,x)  _W(((cc) << 28) | (0xe << 24) | (0x1 << 20) | ((Rt) << 12) | (0xb << 8) | (0x1 << 4) | ((x) << 21) | MAKE_Dn(Dn))
 #define VMOVi_to_ARM_rd(Rt,Dn,x)        CC_VMOVi_to_ARM_rd(NATIVE_CC_AL,Rt,Dn,x)
 
-#define CC_VMOV64_rrd(cc,Rt,Rt2,Dm)    	_W(((cc) << 28) | (0xc << 24) | (0x5 << 20) | (Rt2 << 16) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | MAKE_Dm(Dm))
+#define CC_VMOV64_rrd(cc,Rt,Rt2,Dm)    	_W(((cc) << 28) | (0xc << 24) | (0x5 << 20) | ((Rt2) << 16) | ((Rt) << 12) | (0xb << 8) | (0x1 << 4) | MAKE_Dm(Dm))
 #define VMOV64_rrd(Rt,Rt2,Dm)          	CC_VMOV64_rrd(NATIVE_CC_AL,Rt,Rt2,Dm)
-#define CC_VMOV64_drr(cc,Dm,Rt,Rt2)  		_W(((cc) << 28) | (0xc << 24) | (0x4 << 20) | (Rt2 << 16) | (Rt << 12) | (0xb << 8) | (0x1 << 4) | MAKE_Dm(Dm))
+#define CC_VMOV64_drr(cc,Dm,Rt,Rt2)  		_W(((cc) << 28) | (0xc << 24) | (0x4 << 20) | ((Rt2) << 16) | ((Rt) << 12) | (0xb << 8) | (0x1 << 4) | MAKE_Dm(Dm))
 #define VMOV64_drr(Dm,Rt,Rt2)        		CC_VMOV64_drr(NATIVE_CC_AL,Dm,Rt,Rt2)
 
 #define CC_VCVT64to32_sd(cc,Sd,Dm)  		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x7 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Sd(Sd) | MAKE_Dm(Dm))
@@ -1467,26 +1467,26 @@ enum {
 #define CC_VCMP64_d0(cc,Dd)          		_W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0x5 << 16) | (0xb << 8) | (0xc << 4) | MAKE_Dd(Dd))
 #define VCMP64_d0(Dd)                		CC_VCMP64_d0(NATIVE_CC_AL,Dd)
 
-#define CC_VMRS_r(cc,Rt)  							_W(((cc) << 28) | (0xe << 24) | (0xf << 20) | (0x1 << 16) | (Rt << 12) | (0xa << 8) | (0x1 << 4))
+#define CC_VMRS_r(cc,Rt)  							_W(((cc) << 28) | (0xe << 24) | (0xf << 20) | (0x1 << 16) | ((Rt) << 12) | (0xa << 8) | (0x1 << 4))
 #define VMRS_r(Rt)											CC_VMRS_r(NATIVE_CC_AL,Rt)
 #define VMRS_CPSR()											VMRS_r(15)
 
-#define CC_VMSR_r(cc,Rt)  							_W(((cc) << 28) | (0xe << 24) | (0xe << 20) | (0x1 << 16) | (Rt << 12) | (0xa << 8) | (0x1 << 4))
+#define CC_VMSR_r(cc,Rt)  							_W(((cc) << 28) | (0xe << 24) | (0xe << 20) | (0x1 << 16) | ((Rt) << 12) | (0xa << 8) | (0x1 << 4))
 #define VMSR_r(Rt)											CC_VMSR_r(NATIVE_CC_AL,Rt)
 
 // Immediate values for VBIC, VMOV (I32), VMVN (I32) and VORR
-#define FIMMVAL(imm)             (((imm & 0x80) << 17) | ((imm & 0x70) << 12) | ((imm & 0x0f) << 0))
-#define FIMM32(imm)               ((imm & 0xffffff00) == 0 ? (FIMMVAL(imm >>  0) | (0x0 << 8)) : \
-                                   (imm & 0xffff00ff) == 0 ? (FIMMVAL(imm >>  8) | (0x1 << 8)) : \
-                                   (imm & 0xff00ffff) == 0 ? (FIMMVAL(imm >> 16) | (0x2 << 8)) : \
-                                                             (FIMMVAL(imm >> 24) | (0x3 << 8))
+#define FIMMVAL(imm)             ((((imm) & 0x80) << 17) | (((imm) & 0x70) << 12) | (((imm) & 0x0f) << 0))
+#define FIMM32(imm)               (((imm) & 0xffffff00) == 0 ? (FIMMVAL((imm) >>  0) | (0x0 << 8)) : \
+                                   ((imm) & 0xffff00ff) == 0 ? (FIMMVAL((imm) >>  8) | (0x1 << 8)) : \
+                                   ((imm) & 0xff00ffff) == 0 ? (FIMMVAL((imm) >> 16) | (0x2 << 8)) : \
+                                                             (FIMMVAL((imm) >> 24) | (0x3 << 8))
 
 // VMOV I64: each bit of imm defines the value for an entire byte
 //           imm <abcdefgh> -> aaaaaaaa bbbbbbbb cccccccc dddddddd eeeeeeee ffffffff gggggggg hhhhhhhh
 #define VMOV_I64_dimmI(Dd,imm)      		_W((0xf << 28) | (0x2 << 24) | (0x8 << 20) | (0x0 << 16) | (0xe << 8) | (0x3 << 4) | MAKE_Dd(Dd) | FIMMVAL(imm))
 
 // VMOV F64: imm <abcdefgh> -> aBbbbbbb bbcdefgh 00000000 00000000 00000000 00000000 00000000 00000000 (B = not b)
-#define FIMMF64(imm)                    (((imm & 0xf0) << 12) | ((imm & 0x0f) << 0))
+#define FIMMF64(imm)                    ((((imm) & 0xf0) << 12) | (((imm) & 0x0f) << 0))
 #define CC_VMOV_F64_dimmF(cc,Dd,imm)	  _W(((cc) << 28) | (0xe << 24) | (0xb << 20) | (0xb << 8) | MAKE_Dd(Dd) | FIMMF64(imm))
 #define VMOV_F64_dimmF(Dd,imm)				  CC_VMOV_F64_dimmF(NATIVE_CC_AL,Dd,imm)
 
@@ -1497,7 +1497,7 @@ enum {
 // Immediate value for shift
 #define FIMM6(imm)                  ((imm) << 16)
 #define VSHL64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x2 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(imm))
-#define VSHR64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x0 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(64-imm))
+#define VSHR64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x0 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(64-(imm)))
 #define VSLI64_ddi(Dd,Dm,i)      				_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(i))
 
 #define VORR_ddd(Dd,Dn,Dm)       				_W((0xf << 28) | (0x2 << 24) | (0x2 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))

@@ -9,5 +9,5 @@ JOBS=4
 ln -sf libsdl_ttf.so $LOCAL_PATH/../../../obj/local/$1/libSDL_ttf.so
 ln -sf libguichan.so $LOCAL_PATH/../../../obj/local/$1/libguichan_sdl.so
 
-../setEnvironment-$1.sh sh -c "make -j$JOBS" && mv -f amiberry-android libapplication-$1.so
+../setEnvironment-$1.sh sh -c "make -j$JOBS" && mv -f amiberry libapplication-$1.so
 

@@ -55,19 +55,19 @@ struct uae_input_device {
 
 struct joypad_map_layout {
 	int south_action = 0;
-	int east_action = 0; 
+	int east_action = 0;
 	int west_action = 0;
- 	int north_action = 0;
-        int left_shoulder_action = 0;
+	int north_action = 0;
+	int left_shoulder_action = 0;
 	int right_shoulder_action = 0;
- 	int start_action = 0;
-        int select_action = 0;
-        int dpad_left_action = 0;
+	int start_action = 0;
+	int select_action = 0;
+	int dpad_left_action = 0;
 	int dpad_right_action = 0;
 	int dpad_up_action = 0;
 	int dpad_down_action = 0;
-        int lstick_select_action = 0;
-	int rstick_select_action = 0; 
+	int lstick_select_action = 0;
+	int rstick_select_action = 0;
 };
 
 #define MAX_JPORTS 4
@@ -562,6 +562,10 @@ extern void fixup_cpu (struct uae_prefs *prefs);
 extern void cfgfile_compatibility_romtype(struct uae_prefs *p);
 extern void cfgfile_compatibility_rtg(struct uae_prefs *p);
 
+
+extern void whdload_auto_prefs (struct uae_prefs *p, char* filename);
+
+
 extern void check_prefs_changed_custom (void);
 extern void check_prefs_changed_cpu (void);
 extern void check_prefs_changed_audio (void);
@@ -582,6 +586,7 @@ struct amiberry_customised_layout {
     
     };
     
+
 extern const int RemapEventList[];
 extern const int RemapEventListSize;
     

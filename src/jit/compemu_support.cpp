@@ -44,7 +44,6 @@
 #include "compemu.h"
 #include <SDL.h>
 
-#define DEBUG 0
 
 #if DEBUG
 #define PROFILE_COMPILE_TIME		1
@@ -134,7 +133,6 @@ static int redo_current_block;
 uae_u8* current_compile_p = NULL;
 static uae_u8* max_compile_start;
 uae_u8* compiled_code = NULL;
-const int POPALLSPACE_SIZE = 512; /* That should be enough space */
 uae_u8 *popallspace = NULL;
 
 void* pushall_call_handler = NULL;
@@ -180,10 +178,10 @@ extern const struct comptbl op_smalltbl_0_comp_ff[];
 
 static bigstate live;
 
-static int writereg(int r, int size);
+static int writereg(int r);
 static void unlock2(int r);
 static void setlock(int r);
-static int readreg_specific(int r, int size, int spec);
+static int readreg_specific(int r, int spec);
 static void prepare_for_call_1(void);
 static void prepare_for_call_2(void);
 
@@ -753,7 +751,7 @@ static void make_flags_live_internal(void)
   	return;
   if (live.flags_on_stack == VALID) {
 	  int tmp;
-	  tmp = readreg_specific(FLAGTMP, 4, -1);
+	  tmp = readreg_specific(FLAGTMP, -1);
 	  raw_reg_to_flags(tmp);
 	  unlock2(tmp);
 
@@ -774,7 +772,7 @@ static void flags_to_stack(void)
   }
   {
 	  int tmp;
-	  tmp = writereg(FLAGTMP, 4);
+	  tmp = writereg(FLAGTMP);
 	  raw_flags_to_reg(tmp);
 	  unlock2(tmp);
   }
@@ -824,14 +822,8 @@ static void tomem(int r)
   int rr = live.state[r].realreg;
 
   if (live.state[r].status == DIRTY) {
-  	switch (live.state[r].dirtysize) {
-	    case 1: compemu_raw_mov_b_mr((uintptr)live.state[r].mem, rr); break;
-	    case 2: compemu_raw_mov_w_mr((uintptr)live.state[r].mem, rr); break;
-	    case 4: compemu_raw_mov_l_mr((uintptr)live.state[r].mem, rr); break;
-	    default: abort();
-	  }
+	  compemu_raw_mov_l_mr((uintptr)live.state[r].mem, rr);
 	  set_status(r, CLEAN);
-	  live.state[r].dirtysize = 0;
   }
 }
 
@@ -899,7 +891,6 @@ STATIC_INLINE void isclean(int r)
   if (!isinreg(r))
   	return;
   live.state[r].validsize = 4;
-  live.state[r].dirtysize = 0;
   live.state[r].val = 0;
   set_status(r, CLEAN);
 }
@@ -917,7 +908,7 @@ STATIC_INLINE void set_const(int r, uae_u32 val)
   set_status(r, ISCONST);
 }
 
-static  int alloc_reg_hinted(int r, int size, int willclobber, int hint)
+static  int alloc_reg_hinted(int r, int willclobber, int hint)
 {
   int bestreg;
   uae_s32 when;
@@ -926,7 +917,7 @@ static  int alloc_reg_hinted(int r, int size, int willclobber, int hint)
   bestreg = -1;
   when = 2000000000;
 
-  for (i=0; i<N_REGS; i++) {
+  for (i = N_REGS - 1; i >= 0; i--) {
   	badness = live.nat[i].touched;
   	if (live.nat[i].nholds == 0)
 	    badness = 0;
@@ -949,23 +940,6 @@ static  int alloc_reg_hinted(int r, int size, int willclobber, int hint)
   	int rr = live.state[r].realreg;
   	/* This will happen if we read a partially dirty register at a
 	   bigger size */
-  	if (size == 4 && live.state[r].validsize == 2) {
-	    compemu_raw_mov_l_rm(bestreg, (uintptr)live.state[r].mem);
-	    compemu_raw_MERGE_rr(rr, bestreg);
-	    live.state[r].validsize = 4;
-	    live.nat[rr].touched = touchcnt++;
-	    return rr;
-	  }
-	  if (live.state[r].validsize == 1) {
-	  	if(size == 4) {
-		    compemu_raw_mov_l_rm(bestreg, (uintptr)live.state[r].mem);
-		    compemu_raw_MERGE8_rr(rr, bestreg);
-		    live.state[r].validsize = 4;
-		    live.nat[rr].touched = touchcnt++;
-		    return rr;
-	  	}
-	    /* Nothing yet for size == 2 */
-	  }
 	  evict(r);
   }
 
@@ -974,38 +948,23 @@ static  int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 	    if (isconst(r)) {
 		    compemu_raw_mov_l_ri(bestreg, live.state[r].val);
 		    live.state[r].val = 0;
-		    live.state[r].dirtysize = 4;
 		    set_status(r, DIRTY);
 	    }
 	    else {
 		    do_load_reg(bestreg, r);
-		    live.state[r].dirtysize = 0;
 		    set_status(r, CLEAN);
 	    }
   	}
   	else {
 	    live.state[r].val = 0;
-	    live.state[r].dirtysize = 0;
 	    set_status(r, CLEAN);
 	  }
 	  live.state[r].validsize = 4;
   }
-  else { /* this is the easiest way, but not optimal. FIXME! */
-  	/* Now it's trickier, but hopefully still OK */
-  	if (!isconst(r) || size == 4) {
-	    live.state[r].validsize = size;
-	    live.state[r].dirtysize = size;
-	    live.state[r].val = 0;
-	    set_status(r, DIRTY);
-  	}
-  	else {
-      if (live.state[r].status != UNDEF)
-    		compemu_raw_mov_l_ri(bestreg, live.state[r].val);
-      live.state[r].val = 0;
-      live.state[r].validsize = 4;
-      live.state[r].dirtysize = 4;
-      set_status(r, DIRTY);
-  	}
+  else { /* this is the easiest way, but not optimal. */
+    live.state[r].validsize = 4;
+    live.state[r].val = 0;
+    set_status(r, DIRTY);
   }
   live.state[r].realreg = bestreg;
   live.state[r].realind = live.nat[bestreg].nholds;
@@ -1091,15 +1050,7 @@ STATIC_INLINE void make_exclusive(int r, int size)
   /* Forget about r being in the register rr */
   disassociate(r);
   /* Get a new register, that we will clobber completely */
-  if (oldstate.status == DIRTY) {
-  	/* If dirtysize is <4, we need a register that can handle the
-	  eventual smaller memory store! Thanks to Quake68k for exposing
-    this detail ;-) */
-    nr = alloc_reg_hinted(r, oldstate.dirtysize, 1, -1);
-  }
-  else {
-  	nr = alloc_reg_hinted(r, 4, 1, -1);
-  }
+ 	nr = alloc_reg_hinted(r, 1, -1);
   nind = live.state[r].realind;
   live.state[r] = oldstate;   /* Keep all the old state info */
   live.state[r].realreg = nr;
@@ -1110,7 +1061,6 @@ STATIC_INLINE void make_exclusive(int r, int size)
       /* Might as well compensate for the offset now */
       compemu_raw_lea_l_brr(nr,rr,oldstate.val);
       live.state[r].val = 0;
-      live.state[r].dirtysize = 4;
       set_status(r, DIRTY);
   	}
   	else
@@ -1119,7 +1069,7 @@ STATIC_INLINE void make_exclusive(int r, int size)
   unlock2(rr);
 }
 
-STATIC_INLINE int readreg_general(int r, int size, int spec)
+STATIC_INLINE int readreg_general(int r, int spec)
 {
   int n;
   int answer = -1;
@@ -1128,7 +1078,7 @@ STATIC_INLINE int readreg_general(int r, int size, int spec)
 		jit_log("WARNING: Unexpected read of undefined register %d", r);
 	}
 
-  if (isinreg(r) && live.state[r].validsize >= size) {
+  if (isinreg(r) && live.state[r].validsize >= 4) {
 	  n = live.state[r].realreg;
 
     answer = n;
@@ -1139,7 +1089,7 @@ STATIC_INLINE int readreg_general(int r, int size, int spec)
   /* either the value was in memory to start with, or it was evicted and
      is in memory now */
   if (answer < 0) {
-  	answer = alloc_reg_hinted(r, spec >= 0 ? 4 : size, 0, spec);
+  	answer = alloc_reg_hinted(r, 0, spec);
   }
 
   if (spec >= 0 && spec != answer) {
@@ -1153,39 +1103,34 @@ STATIC_INLINE int readreg_general(int r, int size, int spec)
 }
 
 
-
-static int readreg(int r, int size)
+static int readreg(int r)
 {
-  return readreg_general(r, size, -1);
+  return readreg_general(r, -1);
 }
 
-static int readreg_specific(int r, int size, int spec)
+static int readreg_specific(int r, int spec)
 {
-  return readreg_general(r, size, spec);
+  return readreg_general(r, spec);
 }
 
-/* writereg(r, size, spec)
+/* writereg(r)
  *
  * INPUT
  * - r    : mid-layer register
- * - size : requested size (1/2/4)
  *
  * OUTPUT
  * - hard (physical, x86 here) register allocated to virtual register r
  */
-static int writereg(int r, int size)
+static int writereg(int r)
 {
   int n;
   int answer = -1;
 
-  make_exclusive(r, size);
+  make_exclusive(r, 4);
   if (isinreg(r)) {
-	  int nvsize = size > live.state[r].validsize ? size : live.state[r].validsize;
-	  int ndsize = size > live.state[r].dirtysize ? size : live.state[r].dirtysize;
 	  n = live.state[r].realreg;
 
-    live.state[r].dirtysize = ndsize;
-    live.state[r].validsize = nvsize;
+    live.state[r].validsize = 4;
     answer = n;
 
 	  if (answer < 0)
@@ -1194,23 +1139,18 @@ static int writereg(int r, int size)
   /* either the value was in memory to start with, or it was evicted and
      is in memory now */
   if (answer < 0) {
-  	answer = alloc_reg_hinted(r, size, 1, -1);
+  	answer = alloc_reg_hinted(r, 1, -1);
   }
-  if (live.state[r].status == UNDEF)
-  	live.state[r].validsize = 4;
-  live.state[r].dirtysize = size > live.state[r].dirtysize ? size : live.state[r].dirtysize;
-  live.state[r].validsize = size > live.state[r].validsize ? size : live.state[r].validsize;
+  live.state[r].validsize = 4;
 
   live.nat[answer].locked++;
   live.nat[answer].touched = touchcnt++;
-  if (size == 4) {
-    live.state[r].val = 0;
-  }
+  live.state[r].val = 0;
   set_status(r, DIRTY);
   return answer;
 }
 
-static int rmw(int r, int wsize, int rsize)
+static int rmw(int r)
 {
   int n;
   int answer = -1;
@@ -1220,7 +1160,7 @@ static int rmw(int r, int wsize, int rsize)
 	}
   make_exclusive(r, 0);
 
-  if (isinreg(r) && live.state[r].validsize >= rsize) {
+  if (isinreg(r) && live.state[r].validsize >= 4) {
 	  n = live.state[r].realreg;
 
     answer = n;
@@ -1230,13 +1170,10 @@ static int rmw(int r, int wsize, int rsize)
   /* either the value was in memory to start with, or it was evicted and
      is in memory now */
   if (answer < 0) {
-  	answer = alloc_reg_hinted(r, rsize, 0, -1);
+  	answer = alloc_reg_hinted(r, 0, -1);
   }
 
-  if (wsize > live.state[r].dirtysize)
-  	live.state[r].dirtysize = wsize;
-  if (wsize > live.state[r].validsize)
-  	live.state[r].validsize = wsize;
+ 	live.state[r].validsize = 4;
   set_status(r, DIRTY);
 
   live.nat[answer].locked++;
@@ -1248,6 +1185,7 @@ static int rmw(int r, int wsize, int rsize)
 /********************************************************************
  * FPU register status handling. EMIT TIME!                         *
  ********************************************************************/
+#ifdef USE_JIT_FPU
 
 STATIC_INLINE void f_tomem_drop(int r)
 {
@@ -1382,6 +1320,7 @@ static void fflags_into_flags_internal(void)
 	live_flags();
 }
 
+#endif
 
 #if defined(CPU_arm)
 #include "compemu_midfunc_arm.cpp"
@@ -1405,7 +1344,7 @@ uae_u32 get_const(int r)
 void sync_m68k_pc(void)
 {
   if (m68k_pc_offset) {
-	  add_l_ri(PC_P, m68k_pc_offset);
+	  arm_ADD_l_ri(PC_P, m68k_pc_offset);
 	  comp_pc_p += m68k_pc_offset;
 	  m68k_pc_offset = 0;
   }
@@ -1724,18 +1663,18 @@ static void writemem_real(int address, int source, int size)
   }
 }
 
-STATIC_INLINE void writemem_special(int address, int source, int offset, int size, int tmp)
+STATIC_INLINE void writemem_special(int address, int source, int offset, int tmp)
 {
   jnf_MEM_GETBANKFUNC(tmp, address, offset);
   /* Now tmp holds the address of the b/w/lput function */
-  call_r_02(tmp, address, source, 4, size);
+  call_r_02(tmp, address, source);
   forget_about(tmp);
 }
 
 void writebyte(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 20, 1, tmp);
+  	writemem_special(address, source, 20, tmp);
   else
   	writemem_real(address, source, 1);
 }
@@ -1743,7 +1682,7 @@ void writebyte(int address, int source, int tmp)
 void writeword(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 16, 2, tmp);
+  	writemem_special(address, source, 16, tmp);
   else
   	writemem_real(address, source, 2);
 }
@@ -1751,7 +1690,7 @@ void writeword(int address, int source, int tmp)
 void writelong(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 12, 4, tmp);
+  	writemem_special(address, source, 12, tmp);
   else
   	writemem_real(address, source, 4);
 }
@@ -1781,7 +1720,7 @@ STATIC_INLINE void writemem_real_clobber(int address, int source, int size)
 void writeword_clobber(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 16, 2, tmp);
+  	writemem_special(address, source, 16, tmp);
   else
   	writemem_real_clobber(address, source, 2);
 }
@@ -1789,7 +1728,7 @@ void writeword_clobber(int address, int source, int tmp)
 void writelong_clobber(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 12, 4, tmp);
+  	writemem_special(address, source, 12, tmp);
   else
   	writemem_real_clobber(address, source, 4);
 }
@@ -1819,18 +1758,18 @@ static void readmem_real(int address, int dest, int size)
   }
 }
 
-STATIC_INLINE void readmem_special(int address, int dest, int offset, int size, int tmp)
+STATIC_INLINE void readmem_special(int address, int dest, int offset, int tmp)
 {
   jnf_MEM_GETBANKFUNC(tmp, address, offset);
   /* Now tmp holds the address of the b/w/lget function */
-  call_r_11(dest, tmp, address, size, 4);
+  call_r_11(dest, tmp, address);
   forget_about(tmp);
 }
 
 void readbyte(int address, int dest, int tmp)
 {
   if (special_mem & S_READ)
-  	readmem_special(address, dest, 8, 1, tmp);
+  	readmem_special(address, dest, 8, tmp);
   else
   	readmem_real(address, dest, 1);
 }
@@ -1838,7 +1777,7 @@ void readbyte(int address, int dest, int tmp)
 void readword(int address, int dest, int tmp)
 {
   if (special_mem & S_READ)
-  	readmem_special(address, dest, 4, 2, tmp);
+  	readmem_special(address, dest, 4, tmp);
   else
   	readmem_real(address, dest, 2);
 }
@@ -1846,7 +1785,7 @@ void readword(int address, int dest, int tmp)
 void readlong(int address, int dest, int tmp)
 {
   if (special_mem & S_READ)
-  	readmem_special(address, dest, 0, 4, tmp);
+  	readmem_special(address, dest, 0, tmp);
   else
   	readmem_real(address, dest, 4);
 }
@@ -1854,7 +1793,7 @@ void readlong(int address, int dest, int tmp)
 /* This one might appear a bit odd... */
 STATIC_INLINE void get_n_addr_old(int address, int dest, int tmp)
 {
-  readmem_special(address, dest, 24, 4, tmp);
+  readmem_special(address, dest, 24, tmp);
 }
 
 STATIC_INLINE void get_n_addr_real(int address, int dest)
@@ -1915,13 +1854,13 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp)
 
 	    /* target is now regd */
 	    if (!ignorebase)
-    		add_l(target, base);
-	    add_l_ri(target, addbase);
+    		arm_ADD_l(target, base);
+	    arm_ADD_l_ri(target, addbase);
 	    if (dp&0x03) readlong(target, target, tmp);
   	} else { /* do the getlong first, then add regd */
 	    if (!ignorebase) {
 		    mov_l_rr(target, base);
-		    add_l_ri(target, addbase);
+		    arm_ADD_l_ri(target, addbase);
 	    }
 	    else
     		mov_l_ri(target, addbase);
@@ -1934,10 +1873,10 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp)
   		    mov_l_rr(tmp, reg);
     		shll_l_ri(tmp, regd_shift);
     		/* tmp is now regd */
-    		add_l(target, tmp);
+    		arm_ADD_l(target, tmp);
       }
 	  }
-	  add_l_ri(target, outer);
+	  arm_ADD_l_ri(target, outer);
   }
   else { /* 68000 version */
 	  if ((dp & 0x800) == 0) { /* Sign extend */
@@ -2599,7 +2538,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   			    compemu_raw_mov_l_rm(0, (uintptr)specflags);
   			    compemu_raw_test_l_rr(0, 0);
 #if defined(CPU_arm) && !defined(ARMV6T2)
-            data_check_end(8, 56);
+            data_check_end(8, 64);
 #endif
   			    compemu_raw_jz_b_oponly();
   			    branchadd = (uae_s8 *)get_target();
@@ -2609,6 +2548,9 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   			    *(branchadd - 4) = (((uintptr)get_target() - (uintptr)branchadd) - 4) >> 2;
   		    }
 	    	} else if(may_raise_exception) {
+#if defined(CPU_arm) && !defined(ARMV6T2)
+          data_check_end(8, 64);
+#endif
 					compemu_raw_handle_except(scaled_cycles(totcycles));
 					may_raise_exception = false;
     		}
@@ -2637,6 +2579,9 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
     		}
   
     		tmp = live; /* ouch! This is big... */
+#if defined(CPU_arm) && !defined(ARMV6T2)
+        data_check_end(8, 128);
+#endif
     		compemu_raw_jcc_l_oponly(cc);  // Last emitted opcode is branch to target
   		  branchadd = (uae_u32*)get_target() - 1;
 		
@@ -2644,9 +2589,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   		  tbi = get_blockinfo_addr_new((void*)t1);
   		  match_states(tbi);
 		  
-#if defined(CPU_arm) && !defined(ARMV6T2)
-        data_check_end(4, 56);
-#endif
   		  tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), t1);
   		  write_jmp_target(tba, get_handler(t1));
   		  create_jmpdep(bi, 0, tba, t1);
@@ -2658,9 +2600,6 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
   		  match_states(tbi);
 
   		  //flush(1); /* Can only get here if was_comp==1 */
-#if defined(CPU_arm) && !defined(ARMV6T2)
-        data_check_end(4, 56);
-#endif
   	    tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), t2);
   		  write_jmp_target(tba, get_handler(t2));
   		  create_jmpdep(bi, 1, tba, t2);
@@ -2674,7 +2613,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 		    /* Let's find out where next_handler is... */
 		    if (was_comp && isinreg(PC_P)) {
 #if defined(CPU_arm) && !defined(ARMV6T2)
-          data_check_end(4, 52);
+          data_check_end(4, 64);
 #endif
 	        r = live.state[PC_P].realreg;
 	        compemu_raw_endblock_pc_inreg(r, scaled_cycles(totcycles));
@@ -2688,7 +2627,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 		      match_states(tbi);
 
 #if defined(CPU_arm) && !defined(ARMV6T2)
-          data_check_end(4, 56);
+          data_check_end(4, 64);
 #endif
 		      tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), v);
 		      write_jmp_target(tba, get_handler(v));
@@ -2698,7 +2637,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 		      r = REG_PC_TMP;
 		      compemu_raw_mov_l_rm(r, (uintptr)&regs.pc_p);
 #if defined(CPU_arm) && !defined(ARMV6T2)
-          data_check_end(4, 52);
+          data_check_end(4, 64);
 #endif
     	    compemu_raw_endblock_pc_inreg(r, scaled_cycles(totcycles));
 		    }

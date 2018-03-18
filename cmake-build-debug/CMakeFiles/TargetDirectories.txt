@@ -1,3 +1,0 @@
-D:/Github/amiberry/cmake-build-debug/CMakeFiles/amiberry.dir
-D:/Github/amiberry/cmake-build-debug/CMakeFiles/edit_cache.dir
-D:/Github/amiberry/cmake-build-debug/CMakeFiles/rebuild_cache.dir

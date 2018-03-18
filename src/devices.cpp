@@ -35,23 +35,23 @@
 
 void device_check_config(void)
 {
-  check_prefs_changed_audio ();
-  check_prefs_changed_custom ();
-  check_prefs_changed_cpu ();
+	check_prefs_changed_audio();
+	check_prefs_changed_custom();
+	check_prefs_changed_cpu();
 	check_prefs_picasso();
 }
 
 void devices_reset(int hardreset)
 {
-	gayle_reset (hardreset);
-	DISK_reset ();
-	CIA_reset ();
-	gayle_reset (0);
+	gayle_reset(hardreset);
+	DISK_reset();
+	CIA_reset();
+	gayle_reset(0);
 #ifdef JIT
-  compemu_reset ();
+	compemu_reset();
 #endif
 #ifdef AUTOCONFIG
-	expamem_reset ();
+	expamem_reset();
 	rtarea_reset();
 #endif
 	uae_int_requested = 0;
@@ -60,34 +60,34 @@ void devices_reset(int hardreset)
 
 void devices_vsync_pre(void)
 {
-	blkdev_vsync ();
-  CIA_vsync_prehandler();
-  inputdevice_vsync ();
-  filesys_vsync ();
+	blkdev_vsync();
+	CIA_vsync_prehandler();
+	inputdevice_vsync();
+	filesys_vsync();
 }
 
 void devices_hsync(void)
 {
 #ifdef CD32
-	AKIKO_hsync_handler ();
+	AKIKO_hsync_handler();
 	cd32_fmv_hsync_handler();
 #endif
-	decide_blitter (-1);
+	decide_blitter(-1);
 
-  DISK_hsync ();
- 	audio_hsync ();
-	gayle_hsync ();
+	DISK_hsync();
+	audio_hsync();
+	gayle_hsync();
 }
 
 // these really should be dynamically allocated..
 void devices_rethink(void)
 {
-  rethink_cias ();
+	rethink_cias();
 #ifdef CD32
-	rethink_akiko ();
+	rethink_akiko();
 	rethink_cd32fmv();
 #endif
-	rethink_gayle ();
+	rethink_gayle();
 	rethink_uae_int();
 }
 
@@ -96,42 +96,43 @@ void devices_update_sync(double svpos, double syncadjust)
 	cd32_fmv_set_sync(svpos, syncadjust);
 }
 
-void reset_all_systems (void)
+void reset_all_systems(void)
 {
-  init_eventtab ();
+	init_eventtab();
 
 #ifdef PICASSO96
-  picasso_reset ();
+	picasso_reset();
 #endif
 #ifdef FILESYS
-  filesys_prepare_reset ();
-  filesys_reset ();
+	filesys_prepare_reset();
+	filesys_reset();
 #endif
-	init_shm ();
-  memory_reset ();
+	init_shm();
+	memory_reset();
 #if defined (BSDSOCKET)
-	bsdlib_reset ();
+	bsdlib_reset();
 #endif
 #ifdef FILESYS
-  filesys_start_threads ();
-  hardfile_reset ();
+	filesys_start_threads();
+	hardfile_reset();
 #endif
-  native2amiga_reset ();
+	native2amiga_reset();
+	device_func_reset();
 	uae_int_requested = 0;
 }
 
-void do_leave_program (void)
+void do_leave_program(void)
 {
 #ifdef JIT
-  compiler_exit();
+	compiler_exit();
 #endif
-  graphics_leave ();
-  inputdevice_close ();
-  DISK_free ();
-  close_sound ();
-	dump_counts ();
+	graphics_leave();
+	inputdevice_close();
+	DISK_free();
+	close_sound();
+	dump_counts();
 #ifdef CD32
-	akiko_free ();
+	akiko_free();
 	cd32_fmv_free();
 #endif
 	gui_exit();
@@ -149,42 +150,43 @@ void do_leave_program (void)
 	bsdlib_reset();
 #endif
 	gayle_free();
-	device_func_reset();
+	device_func_free();
 	memory_cleanup();
-	cfgfile_addcfgparam(0);
+	cfgfile_addcfgparam(nullptr);
 	machdep_free();
 	rtarea_free();
 }
 
-void virtualdevice_init (void)
+void virtualdevice_init(void)
 {
 #ifdef AUTOCONFIG
-	rtarea_setup ();
+	rtarea_setup();
 #endif
 #ifdef FILESYS
-	rtarea_init ();
-	uaeres_install ();
-	hardfile_install ();
+	rtarea_init();
+	uaeres_install();
+	hardfile_install();
 #endif
 #ifdef AUTOCONFIG
-	expansion_init ();
-	emulib_install ();
+	expansion_init();
+	emulib_install();
 #endif
 #ifdef FILESYS
-	filesys_install ();
+	filesys_install();
 #endif
 #if defined (BSDSOCKET)
-	bsdlib_install ();
+	bsdlib_install();
 #endif
 }
 
 void devices_restore_start(void)
 {
-	restore_cia_start ();
+	restore_cia_start();
 	restore_blkdev_start();
-  changed_prefs.bogomem_size = 0;
-  changed_prefs.chipmem_size = 0;
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+	changed_prefs.bogomem_size = 0;
+	changed_prefs.chipmem_size = 0;
+	for (int i = 0; i < MAX_RAM_BOARDS; i++)
+	{
 		changed_prefs.fastmem[i].size = 0;
 		changed_prefs.z3fastmem[i].size = 0;
 	}
