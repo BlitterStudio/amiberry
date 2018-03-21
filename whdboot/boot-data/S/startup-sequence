@@ -19,7 +19,7 @@ ENDIF
 
 ; ====================== Set path
 info >t:tempfile DH1:
-search >nil: t:tempfile "[Mounted]"
+search >nil: t:tempfile "read"
 
 if not warn
 	Assign WHDLoadGame: DH1:
@@ -30,8 +30,6 @@ else
 	echo "WHDLoadGame: will be mapped to DH0:"
 	Echo ""
 endif
-
-
 
 ; ======================  
 
