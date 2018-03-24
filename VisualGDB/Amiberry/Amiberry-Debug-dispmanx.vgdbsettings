@@ -4,7 +4,7 @@
   <Project xsi:type="com.visualgdb.project.linux">
     <CustomSourceDirectories>
       <Directories />
-      <PathStyle>MinGWUnixSlash</PathStyle>
+      <PathStyle>Unknown</PathStyle>
     </CustomSourceDirectories>
     <BuildHost>
       <Transport>None</Transport>
@@ -58,6 +58,7 @@
     <ProjectFile>Amiberry.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
+      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>

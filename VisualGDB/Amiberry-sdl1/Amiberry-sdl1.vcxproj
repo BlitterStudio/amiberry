@@ -28,7 +28,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <ToolchainVersion>4.9.2/7.7.1/r4</ToolchainVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
