@@ -291,41 +291,51 @@ void symlink_roms(struct uae_prefs* p)
 	//      *** KICKSTARTS ***
 	//     
 	char kick_path[MAX_DPATH];
+        char kick_long[MAX_DPATH];
 	int rom_test;
 	int roms[2];
 
 	// here we can do some checks for Kickstarts we might need to make symlinks for
-	strncpy(currentDir, start_path_data, MAX_DPATH);
-	snprintf(kick_path, MAX_DPATH, "%s/whdboot/boot-data/Devs/Kickstarts/kick33180.A500", start_path_data);
+        strncpy(currentDir, start_path_data, MAX_DPATH);
+                
+                
+        // are we using save-data/ ?
+        snprintf(kick_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts", start_path_data);
 
+        // otherwise, use the old route
+ 	if (!my_existsdir(kick_path))
+            snprintf(kick_path, MAX_DPATH, "%s/whdboot/game-data/Devs/Kickstarts", start_path_data);
 
-	if (!zfile_exists(kick_path))
+        
+        // do the checks...
+	snprintf(kick_long, MAX_DPATH, "%s/kick33180.A500", kick_path);
+	if (!zfile_exists(kick_long))
 	{
 		roms[0] = 5; // kickstart 1.2 A500
 		rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
 		if (rom_test == 1)
-			symlink(p->romfile, kick_path);
+			symlink(p->romfile, kick_long);
 	}
 
-	snprintf(kick_path, MAX_DPATH, "%s/whdboot/boot-data/Devs/Kickstarts/kick34005.A500", start_path_data);
-	if (!zfile_exists(kick_path))
+	snprintf(kick_long, MAX_DPATH, "%s/kick34005.A500", kick_path);
+	if (!zfile_exists(kick_long))
 	{
 		roms[0] = 6; // kickstart 1.3 A500
 		rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
-		printf(p->romfile);
-		printf("result: %d\n", rom_test);
+		//printf(p->romfile);
+		//printf("result: %d\n", rom_test);
 
 		if (rom_test == 1)
-			symlink(p->romfile, kick_path);
+			symlink(p->romfile, kick_long);
 	}
 
-	snprintf(kick_path, MAX_DPATH, "%s/whdboot/boot-data/Devs/Kickstarts/kick40068.A1200", start_path_data);
-	if (!zfile_exists(kick_path))
+	snprintf(kick_long, MAX_DPATH, "%s/kick40068.A1200", kick_path);
+	if (!zfile_exists(kick_long))
 	{
 		roms[0] = 15; // kickstart 3.1 A1200
 		rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
 		if (rom_test == 1)
-			symlink(p->romfile, kick_path);
+			symlink(p->romfile, kick_long);
 	}
 }
 
@@ -340,6 +350,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	TCHAR tmp2[MAX_DPATH];
 
 	char boot_path[MAX_DPATH];
+        char save_path[MAX_DPATH];
 	char config_path[MAX_DPATH];
 	// char GameTypePath[MAX_DPATH];
 	char whd_config[255];
@@ -567,10 +578,17 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	else
 		_tcscpy(p->description, _T("WHDLoad AutoBoot Configuration [AGA]"));
 
+        
+        
 
 	//SET THE WHD BOOTER AND GAME DATA  
-	snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
+	snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
 
+        if (!zfile_exists(boot_path))
+            snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);               
+       
+            
+        
 	// set the first (whdboot) Drive
 	_stprintf(tmp,_T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 	txt2 = parsetextpath(_T(tmp));
@@ -589,6 +607,25 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	txt2 = parsetextpath(_T(tmp));
 	cfgfile_parse_line(p, txt2, 0);
 
+	//set the third (save data) drive
+        snprintf(save_path, MAX_DPATH, "%s/whdboot/save-data/", start_path_data);
+                
+        if (my_existsdir(save_path))
+        {
+            _stprintf(tmp, "filesystem2=rw,DH2:saves:%s,0", save_path);
+            txt2 = parsetextpath(_T(tmp));
+            cfgfile_parse_line(p, txt2, 0);
+
+            _stprintf(tmp, "uaehf2=dir,rw,DH2:saves:%s,0", save_path);
+            txt2 = parsetextpath(_T(tmp));
+            cfgfile_parse_line(p, txt2, 0);
+        }
+        
+        
+        
+        
+        
+        
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	// CD32
 	if ((static_cast<bool>(is_cd32) && strcmpi(game_detail.port0,"nul") == 0)

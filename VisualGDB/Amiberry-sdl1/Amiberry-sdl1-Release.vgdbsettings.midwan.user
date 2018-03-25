@@ -3,13 +3,11 @@
   <UserDefinedVariableValues />
   <DebugPreferences>
     <CatchpointConfiguration>
-      <Throw>false</Throw>
-      <Rethrow>false</Rethrow>
-      <Catch>false</Catch>
       <Exec>false</Exec>
       <Fork>false</Fork>
       <Vfork>false</Vfork>
       <Syscalls />
+      <CXXCatchpoints />
     </CatchpointConfiguration>
     <MaskInterruptsWhileStepping>false</MaskInterruptsWhileStepping>
     <MemoryWindowPreferences />
