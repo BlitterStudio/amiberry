@@ -93,6 +93,7 @@ struct host_options
 	TCHAR sound_mode[256] = "nul\0";
 	TCHAR frameskip[256] = "nul\0";
 	TCHAR aspect_ratio[256] = "nul\0";
+	TCHAR line_double[256] = "nul\0";
 };
 
 static xmlNode* get_node(xmlNode* node, const char* name)
@@ -281,9 +282,31 @@ struct host_options get_host_settings(char* HW)
 	strcpy(output_detail.sound_mode, find_whdload_game_option("SOUND_MODE", HW));
 	strcpy(output_detail.aspect_ratio, find_whdload_game_option("ASPECT_RATIO_FIX", HW));
 	strcpy(output_detail.frameskip, find_whdload_game_option("FRAMESKIP", HW));
+	strcpy(output_detail.line_double, find_whdload_game_option("LINE_DOUBLING", HW));        
+        
 
 	return output_detail;
 }
+
+void make_rom_symlink(char* kick_short, char* kick_path, int kick_numb, struct uae_prefs* p)
+{
+        char kick_long[MAX_DPATH];
+ 	int rom_test;
+	int roms[2];
+        
+        // do the checks...
+	snprintf(kick_long, MAX_DPATH, "%s/%s", kick_path,kick_short);
+	if (!zfile_exists(kick_long))
+	{
+		roms[0] = kick_numb; // kickstart 1.2 A500
+		rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
+		if (rom_test == 1)
+			symlink(p->romfile, kick_long);
+	}
+        
+}
+
+
 
 void symlink_roms(struct uae_prefs* p)
 
@@ -291,14 +314,10 @@ void symlink_roms(struct uae_prefs* p)
 	//      *** KICKSTARTS ***
 	//     
 	char kick_path[MAX_DPATH];
-        char kick_long[MAX_DPATH];
-	int rom_test;
-	int roms[2];
 
 	// here we can do some checks for Kickstarts we might need to make symlinks for
         strncpy(currentDir, start_path_data, MAX_DPATH);
-                
-                
+                       
         // are we using save-data/ ?
         snprintf(kick_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts", start_path_data);
 
@@ -307,36 +326,31 @@ void symlink_roms(struct uae_prefs* p)
             snprintf(kick_path, MAX_DPATH, "%s/whdboot/game-data/Devs/Kickstarts", start_path_data);
 
         
-        // do the checks...
-	snprintf(kick_long, MAX_DPATH, "%s/kick33180.A500", kick_path);
-	if (!zfile_exists(kick_long))
-	{
-		roms[0] = 5; // kickstart 1.2 A500
-		rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
-		if (rom_test == 1)
-			symlink(p->romfile, kick_long);
-	}
+    // These are all the kickstart rom files found in skick346.lha
+    //   http://aminet.net/package/util/boot/skick346
 
-	snprintf(kick_long, MAX_DPATH, "%s/kick34005.A500", kick_path);
-	if (!zfile_exists(kick_long))
-	{
-		roms[0] = 6; // kickstart 1.3 A500
-		rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
-		//printf(p->romfile);
-		//printf("result: %d\n", rom_test);
-
-		if (rom_test == 1)
-			symlink(p->romfile, kick_long);
-	}
-
-	snprintf(kick_long, MAX_DPATH, "%s/kick40068.A1200", kick_path);
-	if (!zfile_exists(kick_long))
-	{
-		roms[0] = 15; // kickstart 3.1 A1200
-		rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
-		if (rom_test == 1)
-			symlink(p->romfile, kick_long);
-	}
+        make_rom_symlink("kick33180.A500",  kick_path, 5  ,p);
+        make_rom_symlink("kick34005.A500",  kick_path, 6  ,p);
+        make_rom_symlink("kick37175.A500",  kick_path, 7  ,p);
+        make_rom_symlink("kick39106.A1200", kick_path, 11 ,p);  
+        make_rom_symlink("kick40063.A600",  kick_path, 14 ,p);           
+        make_rom_symlink("kick40068.A1200", kick_path, 15 ,p);       
+        make_rom_symlink("kick40068.A4000", kick_path, 16 ,p); 
+        
+        
+    // these ones could not be located in 'rommgr.cpp' although all but one are BETA(?) anyway    
+   //     make_rom_symlink("kick36143.A3000", kick_path, ?  ,p);
+   //     make_rom_symlink("kick39046.A500.BETA", kick_path, ?  ,p);
+   //     make_rom_symlink("kick39106.A500.BETA", kick_path, ?  ,p);             
+   //     make_rom_symlink("kick39110.A500.BETA", kick_path, ?  ,p);
+    //     make_rom_symlink("kick39115.A3000.BETA", kick_path, ?  ,p);
+    //     make_rom_symlink("kick40003.A600.BETA", kick_path, ?  ,p);
+    //     make_rom_symlink("kick40003.A3000.BETA", kick_path, ?  ,p);        
+    //     make_rom_symlink("kick40009.A600.BETA", kick_path, ?  ,p);       
+    //     make_rom_symlink("kick40009.A4000.BETA", kick_path, ?  ,p);                 
+    //     make_rom_symlink("kick40038.A600.BETA", kick_path, ?  ,p);                
+    //     make_rom_symlink("kick40038.A4000.BETA", kick_path, ?  ,p);
+                
 }
 
 
@@ -745,6 +759,21 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		_stprintf(txt2, "amiberry.gfx_correct_aspect=%s",_T(host_detail.aspect_ratio));
 		cfgfile_parse_line(p, txt2, 0);
 	}
+        
+              
+	if (strcmpi(host_detail.line_double,"yes") == 0 || strcmpi(host_detail.line_double,"true") == 0)
+	{
+		_stprintf(txt2, "gfx_linemode=double");
+		cfgfile_parse_line(p, txt2, 0);
+        }
+        else if (strcmpi(host_detail.line_double,"no") == 0 || strcmpi(host_detail.line_double,"false") == 0)
+	{
+		_stprintf(txt2, "gfx_linemode=none");
+		cfgfile_parse_line(p, txt2, 0);
+	}
+        
+        
+        
 	if (!strcmpi(host_detail.frameskip,"nul") == 0)
 	{
 		_stprintf(txt2, "gfx_framerate=%s",_T(host_detail.frameskip));
