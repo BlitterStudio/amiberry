@@ -373,6 +373,8 @@ int graphics_setup(void)
 		host_hz = current.refresh_rate;
 #endif
 
+	currprefs.gfx_apmode[1].gfx_refreshrate = host_hz;
+
 #ifdef USE_DISPMANX
 	if (display_pipe == nullptr) {
 		display_pipe = xmalloc(smp_comm_pipe, 1);

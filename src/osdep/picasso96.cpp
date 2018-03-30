@@ -1353,7 +1353,7 @@ static void FillBoardInfo(TrapContext *ctx, uaecptr amigamemptr, struct LibResol
 	trap_put_byte(ctx, amigamemptr + PSSO_ModeInfo_second_union, 14);
 
 	trap_put_long(ctx, amigamemptr + PSSO_ModeInfo_PixelClock,
-    width * height * defaultHz);
+    width * height * (currprefs.gfx_apmode[1].gfx_refreshrate ? abs (currprefs.gfx_apmode[1].gfx_refreshrate) : defaultHz));
 }
 
 struct modeids {
