@@ -200,23 +200,55 @@ MIDFUNC(2,mov_l_mi,(IMM d, IMM s))
 }
 MENDFUNC(2,mov_l_mi,(IMM d, IMM s))
 
-MIDFUNC(2,shll_l_ri,(RW4 r, IMM i))
+MIDFUNC(4,disp_ea20_target_add,(RW4 target, RR4 reg, IMM shift, IMM extend))
 {
-  // Only used in calc_disp_ea_020() -> flags not relevant and never modified
-	if (!i)
-	  return;
-	if (isconst(r)) {
-		live.state[r].val <<= i;
+	if(isconst(target) && isconst(reg)) {
+		if(extend)
+			set_const(target, live.state[target].val + (((uae_s32)(uae_s16)live.state[reg].val) << (shift & 0x1f)));
+		else
+			set_const(target, live.state[target].val + (live.state[reg].val << (shift & 0x1f)));
 		return;
 	}
 
-	r = rmw(r);
-
-	LSL_rri(r,r, i & 0x1f);
-
-	unlock2(r);
+	reg = readreg(reg);
+	target = rmw(target);
+	
+	if(extend) {
+		SIGNED16_REG_2_REG(REG_WORK1, reg);
+		ADD_rrrLSLi(target, target, REG_WORK1, shift & 0x1f);
+	} else {
+		ADD_rrrLSLi(target, target, reg, shift & 0x1f);
+	}
+	
+	unlock2(target);
+	unlock2(reg);
 }
-MENDFUNC(2,shll_l_ri,(RW4 r, IMM i))
+MENDFUNC(4,disp_ea20_target_add,(RW4 target, RR4 reg, IMM shift, IMM extend))
+
+MIDFUNC(4,disp_ea20_target_mov,(W4 target, RR4 reg, IMM shift, IMM extend))
+{
+	if(isconst(reg)) {
+		if(extend)
+			set_const(target, ((uae_s32)(uae_s16)live.state[reg].val) << (shift & 0x1f));
+		else
+			set_const(target, live.state[reg].val << (shift & 0x1f));
+		return;
+	}
+
+	reg = readreg(reg);
+	target = writereg(target);
+	
+	if(extend) {
+		SIGNED16_REG_2_REG(REG_WORK1, reg);
+		LSL_rri(target, REG_WORK1, shift & 0x1f);
+	} else {
+		LSL_rri(target, reg, shift & 0x1f);
+	}
+	
+	unlock2(target);
+	unlock2(reg);
+}
+MENDFUNC(4,disp_ea20_target_mov,(W4 target, RR4 reg, IMM shift, IMM extend))
 
 MIDFUNC(2,sign_extend_16_rr,(W4 d, RR2 s))
 {
@@ -478,49 +510,6 @@ MIDFUNC(2,sub_w_ri,(RW2 d, IMM i))
 }
 MENDFUNC(2,sub_w_ri,(RW2 d, IMM i))
 
-MIDFUNC(3,call_r_02,(RR4 r, RR4 in1, RR4 in2))
-{
-  clobber_flags();
-  in1 = readreg_specific(in1, REG_PAR1);
-  in2 = readreg_specific(in2, REG_PAR2);
-  r = readreg(r);
-  prepare_for_call_1();
-  unlock2(r);
-  unlock2(in1);
-  unlock2(in2);
-  prepare_for_call_2();
-  compemu_raw_call_r(r);
-}
-MENDFUNC(3,call_r_02,(RR4 r, RR4 in1, RR4 in2))
-
-MIDFUNC(3,call_r_11,(W4 out1, RR4 r, RR4 in1))
-{
-  clobber_flags();
-  if (out1 != in1 && out1 != r) {
-    COMPCALL(forget_about)(out1);
-  }
-
-  in1 = readreg_specific(in1, REG_PAR1);
-  r = readreg(r);
-  prepare_for_call_1();
-
-  unlock2(in1);
-  unlock2(r);
-
-  prepare_for_call_2();
-  compemu_raw_call_r(r);
-
-  live.nat[REG_RESULT].holds[0] = out1;
-  live.nat[REG_RESULT].nholds = 1;
-  live.nat[REG_RESULT].touched = touchcnt++;
-
-  live.state[out1].realreg = REG_RESULT;
-  live.state[out1].realind = 0;
-  live.state[out1].val = 0;
-  live.state[out1].validsize = 4;
-  set_status(out1, DIRTY);
-}
-MENDFUNC(3,call_r_11,(W4 out1, RR4 r, RR4 in1))
 
 /* forget_about() takes a mid-layer register */
 MIDFUNC(1,forget_about,(W4 r))

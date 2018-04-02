@@ -108,7 +108,7 @@
 //#define DISABLE_I_ROL
 //#define DISABLE_I_ROR
 //#define DISABLE_I_ROXL
-#define DISABLE_I_ROXR
+//#define DISABLE_I_ROXR
 //#define DISABLE_I_ASRW
 //#define DISABLE_I_ASLW
 //#define DISABLE_I_LSRW
@@ -275,32 +275,32 @@ static inline void gen_update_next_handler(void)
 
 static void gen_writebyte(const char* address, const char* source) 
 {
-	comprintf("\twritebyte(%s,%s,scratchie);\n", address, source);
+	comprintf("\twritebyte(%s,%s);\n", address, source);
 }
 
 static void gen_writeword(const char* address, const char* source) 
 {
-	comprintf("\twriteword(%s,%s,scratchie);\n", address, source);
+	comprintf("\twriteword(%s,%s);\n", address, source);
 }
 
 static void gen_writelong(const char* address, const char* source) 
 {
-	comprintf("\twritelong(%s,%s,scratchie);\n", address, source);
+	comprintf("\twritelong(%s,%s);\n", address, source);
 }
 
 static void gen_readbyte(const char* address, const char* dest) 
 {
-	comprintf("\treadbyte(%s,%s,scratchie);\n", address, dest);
+	comprintf("\treadbyte(%s,%s);\n", address, dest);
 }
 
 static void gen_readword(const char* address, const char* dest) 
 {
-	comprintf("\treadword(%s,%s,scratchie);\n", address, dest);
+	comprintf("\treadword(%s,%s);\n", address, dest);
 }
 
 static void gen_readlong(const char* address, const char* dest) 
 {
-	comprintf("\treadlong(%s,%s,scratchie);\n", address, dest);
+	comprintf("\treadlong(%s,%s);\n", address, dest);
 }
 
 
@@ -443,7 +443,7 @@ static void genamode(amodes mode, const char *reg, wordsizes size, const char *n
 		break;
 	case Ad8r:
 		comprintf("\tint %sa=scratchie++;\n", name);
-		comprintf("\tcalc_disp_ea_020(%s+8,%s,%sa,scratchie);\n", reg, gen_nextiword(), name);
+		comprintf("\tcalc_disp_ea_020(%s+8,%s,%sa);\n", reg, gen_nextiword(), name);
 		break;
 
 	case PC16:
@@ -460,7 +460,7 @@ static void genamode(amodes mode, const char *reg, wordsizes size, const char *n
 		start_brace();
 		comprintf("\tmov_l_ri(pctmp,address);\n");
 
-		comprintf("\tcalc_disp_ea_020(pctmp,%s,%sa,scratchie);\n", gen_nextiword(), name);
+		comprintf("\tcalc_disp_ea_020(pctmp,%s,%sa);\n", gen_nextiword(), name);
 		break;
 	case absw:
 		comprintf("\tint %sa = scratchie++;\n", name);
@@ -659,7 +659,7 @@ static void genamode_new(amodes mode, const char *reg, wordsizes size, const cha
     break;
   case Ad8r:
     comprintf("\tint %sa=scratchie++;\n", name);
-    comprintf("\tcalc_disp_ea_020(%s+8,%s,%sa,scratchie);\n", reg, gen_nextiword(), name);
+    comprintf("\tcalc_disp_ea_020(%s+8,%s,%sa);\n", reg, gen_nextiword(), name);
     break;
 
   case PC16:
@@ -675,7 +675,7 @@ static void genamode_new(amodes mode, const char *reg, wordsizes size, const cha
     comprintf("\tuae_u32 address=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
     comprintf("\tmov_l_ri(pctmp,address);\n");
 
-    comprintf("\tcalc_disp_ea_020(pctmp,%s,%sa,scratchie);\n", gen_nextiword(), name);
+    comprintf("\tcalc_disp_ea_020(pctmp,%s,%sa);\n", gen_nextiword(), name);
     break;
   case absw:
     comprintf("\tint %sa = scratchie++;\n", name);
@@ -1006,7 +1006,7 @@ static void genmovemel(uae_u16 opcode)
   comprintf("\tif (!special_mem) {\n");
 
   /* Fast but unsafe...  */
-	comprintf("\tget_n_addr(srca,native,scratchie);\n");
+	comprintf("\tget_n_addr(srca,native);\n");
 
 	comprintf("\tfor (i=0;i<16;i++) {\n"
 			"\t\tif ((mask>>i)&1) {\n");
@@ -1037,11 +1037,11 @@ static void genmovemel(uae_u16 opcode)
 	      "\t\t\tif ((mask>>i)&1) {\n");
   switch(table68k[opcode].size) {
     case sz_long:
-	    comprintf("\t\t\t\treadlong(tmp,i,scratchie);\n"
+	    comprintf("\t\t\t\treadlong(tmp,i);\n"
 		      "\t\t\t\tarm_ADD_l_ri8(tmp,4);\n");
 	    break;
     case sz_word:
-	    comprintf("\t\t\t\treadword(tmp,i,scratchie);\n"
+	    comprintf("\t\t\t\treadword(tmp,i);\n"
 		      "\t\t\t\tarm_ADD_l_ri8(tmp,2);\n");
 	    break;
     default: abort();
@@ -1071,7 +1071,7 @@ static void genmovemle(uae_u16 opcode)
       act of cleverness means that movmle must pay attention to special_mem,
       or Genetic Species is a rather boring-looking game ;-) */
   comprintf("\tif (!special_mem) {\n");
-	comprintf("\tget_n_addr(srca,native,scratchie);\n");
+	comprintf("\tget_n_addr(srca,native);\n");
 
 	if (table68k[opcode].dmode != Apdi) {
 		comprintf("\tfor (i=0;i<16;i++) {\n"
@@ -1120,11 +1120,11 @@ static void genmovemle(uae_u16 opcode)
   		  "\t\tif ((mask>>i)&1) {\n");
 	  switch(table68k[opcode].size) {
 	    case sz_long:
-	      comprintf("\t\t\twritelong(tmp,i,scratchie);\n"
+	      comprintf("\t\t\twritelong(tmp,i);\n"
 		        "\t\t\tarm_ADD_l_ri8(tmp,4);\n");
 	      break;
 	    case sz_word:
-	      comprintf("\t\t\twriteword(tmp,i,scratchie);\n"
+	      comprintf("\t\t\twriteword(tmp,i);\n"
 		        "\t\t\tarm_ADD_l_ri8(tmp,2);\n");
 	      break;
 	    default: abort();
@@ -1136,11 +1136,11 @@ static void genmovemle(uae_u16 opcode)
 	  switch(table68k[opcode].size) {
 	    case sz_long:
 	      comprintf("\t\t\tarm_SUB_l_ri8(srca,4);\n"
-		        "\t\t\twritelong(srca,15-i,scratchie);\n");
+		        "\t\t\twritelong(srca,15-i);\n");
 	      break;
 	    case sz_word:
 	      comprintf("\t\t\tarm_SUB_l_ri8(srca,2);\n"
-		        "\t\t\twriteword(srca,15-i,scratchie);\n");
+		        "\t\t\twriteword(srca,15-i);\n");
 	      break;
 	    default: abort();
 	  }
@@ -1245,14 +1245,6 @@ static void gen_andsr(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_asl(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-        "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	comprintf("\t dont_care_flags();\n");
 
 	genamode_new(curi->smode, "srcreg", curi->size, "", 1, 0);
@@ -1297,15 +1289,6 @@ static void gen_aslw(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_asr(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void)opcode;
-
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-        "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	comprintf("\t dont_care_flags();\n");
 
 	genamode_new(curi->smode, "srcreg", curi->size, "", 1, 0);
@@ -1664,14 +1647,6 @@ static void gen_ext(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_lsl(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-        "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	comprintf("\tdont_care_flags();\n");
 
 	genamode_new(curi->smode, "srcreg", curi->size, "", 1, 0);
@@ -1715,14 +1690,6 @@ static void gen_lslw(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_lsr(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-		    "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	comprintf("\t dont_care_flags();\n");
 
 	genamode_new(curi->smode, "srcreg", curi->size, "", 1, 0);
@@ -1970,14 +1937,6 @@ static void gen_orsr(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_rol(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-        "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	comprintf("\t dont_care_flags();\n");
 	genamode_new(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
 	genamode_new(curi->dmode, "dstreg", curi->size, "data", 1, 0);
@@ -2009,14 +1968,6 @@ static void gen_rolw(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_ror(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-        "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	comprintf("\t dont_care_flags();\n");
 	genamode_new(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
 	genamode_new(curi->dmode, "dstreg", curi->size, "data", 1, 0);
@@ -2048,14 +1999,6 @@ static void gen_rorw(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_roxl(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-        "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	isaddx;
 	comprintf("\t dont_care_flags();\n");
 	genamode_new(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
@@ -2091,15 +2034,6 @@ static void gen_roxlw(uae_u32 opcode, struct instr *curi, char* ssize) {
 
 static void gen_roxr(uae_u32 opcode, struct instr *curi, char* ssize) {
 	(void) opcode;
-	(void) ssize;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-        "  " RETURN "\n"
-				"} \n");
-		start_brace();
-	}
 	isaddx;
 	comprintf("\t dont_care_flags();\n");
 	genamode_new(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
@@ -2597,9 +2531,9 @@ static int gen_opcode(unsigned long int opcode)
 		comprintf("\tarm_ADD_l_ri8(offs,4);\n");
 		start_brace();
 		comprintf("\tint newad=scratchie++;\n"
-				"\treadlong(15,newad,scratchie);\n"
+				"\treadlong(15,newad);\n"
 				"\tmov_l_mr((uintptr)&regs.pc,newad);\n"
-				"\tget_n_addr_jmp(newad,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(newad,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n"
 				"\tarm_ADD_l(15,offs);\n");
@@ -2614,7 +2548,7 @@ static int gen_opcode(unsigned long int opcode)
 		genamode_new(curi->smode, "srcreg", sz_long, "src", 1, 0);
 		genamode_new(curi->dmode, "dstreg", curi->size, "offs", 1, 0);
 		comprintf("\tsub_l_ri(15,4);\n"
-				"\twritelong_clobber(15,src,scratchie);\n"
+				"\twritelong_clobber(15,src);\n"
 				"\tmov_l_rr(src,15);\n");
 		comprintf("\tarm_ADD_l(15,offs);\n");
 		genastore("src", curi->smode, "srcreg", sz_long, "src");
@@ -2626,7 +2560,7 @@ static int gen_opcode(unsigned long int opcode)
 #endif
 		genamode_new(curi->smode, "srcreg", curi->size, "src", 1, 0);
 		comprintf("\tmov_l_rr(15,src);\n"
-				"\treadlong(15,src,scratchie);\n"
+				"\treadlong(15,src);\n"
 				"\tarm_ADD_l_ri8(15,4);\n");
 		genastore("src", curi->smode, "srcreg", curi->size, "src");
 		break;
@@ -2636,9 +2570,9 @@ static int gen_opcode(unsigned long int opcode)
     failure;
 #endif
 		comprintf("\tint newad=scratchie++;\n"
-				"\treadlong(15,newad,scratchie);\n"
+				"\treadlong(15,newad);\n"
 				"\tmov_l_mr((uintptr)&regs.pc,newad);\n"
-				"\tget_n_addr_jmp(newad,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(newad,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n"
 				"\tarm_ADD_l_ri8(15,4);\n");
@@ -2668,9 +2602,9 @@ static int gen_opcode(unsigned long int opcode)
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
-				"\twritelong_clobber(15,ret,scratchie);\n");
+				"\twritelong_clobber(15,ret);\n");
 		comprintf("\tmov_l_mr((uintptr)&regs.pc,srca);\n"
-				"\tget_n_addr_jmp(srca,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(srca,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n");
 		gen_update_next_handler();
@@ -2683,7 +2617,7 @@ static int gen_opcode(unsigned long int opcode)
 		isjump;
 		genamode_new(curi->smode, "srcreg", curi->size, "src", 0, 0);
 		comprintf("\tmov_l_mr((uintptr)&regs.pc,srca);\n"
-				"\tget_n_addr_jmp(srca,PC_P,scratchie);\n"
+				"\tget_n_addr_jmp(srca,PC_P);\n"
 				"\tmov_l_mr((uintptr)&regs.pc_oldp,PC_P);\n"
 				"\tm68k_pc_offset=0;\n");
 		gen_update_next_handler();
@@ -2702,7 +2636,7 @@ static int gen_opcode(unsigned long int opcode)
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
-				"\twritelong_clobber(15,ret,scratchie);\n");
+				"\twritelong_clobber(15,ret);\n");
 		comprintf("\tarm_ADD_l_ri(src,m68k_pc_offset_thisinst+2);\n");
 		comprintf("\tm68k_pc_offset=0;\n");
 		comprintf("\tarm_ADD_l(PC_P,src);\n");

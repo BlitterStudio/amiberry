@@ -123,7 +123,7 @@ typedef union {
 #if defined(CPU_arm)
 //#define DEBUG_DATA_BUFFER
 #define ALIGN_NOT_NEEDED
-#define N_REGS 11  /* really 16, but 13 to 15 are SP, LR, PC; 12 is scratch reg and 11 holds regs-struct */
+#define N_REGS 10  /* really 16, but 13 to 15 are SP, LR, PC; 12 is scratch reg, 10 holds memstart and 11 holds regs-struct */
 #else
 #define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
 #endif
@@ -298,17 +298,17 @@ extern int failure;
 
 /* Convenience functions exposed to gencomp */
 extern uae_u32 m68k_pc_offset;
-extern void readbyte(int address, int dest, int tmp);
-extern void readword(int address, int dest, int tmp);
-extern void readlong(int address, int dest, int tmp);
-extern void writebyte(int address, int source, int tmp);
-extern void writeword(int address, int source, int tmp);
-extern void writelong(int address, int source, int tmp);
-extern void writeword_clobber(int address, int source, int tmp);
-extern void writelong_clobber(int address, int source, int tmp);
-extern void get_n_addr(int address, int dest, int tmp);
-extern void get_n_addr_jmp(int address, int dest, int tmp);
-extern void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp);
+extern void readbyte(int address, int dest);
+extern void readword(int address, int dest);
+extern void readlong(int address, int dest);
+extern void writebyte(int address, int source);
+extern void writeword(int address, int source);
+extern void writelong(int address, int source);
+extern void writeword_clobber(int address, int source);
+extern void writelong_clobber(int address, int source);
+extern void get_n_addr(int address, int dest);
+extern void get_n_addr_jmp(int address, int dest);
+extern void calc_disp_ea_020(int base, uae_u32 dp, int target);
 #define SYNC_PC_OFFSET 124
 extern void sync_m68k_pc(void);
 extern uae_u32 get_const(int r);
