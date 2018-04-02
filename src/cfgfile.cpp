@@ -5407,20 +5407,27 @@ static void set_68020_compa(struct uae_prefs* p, int compa, int cd32)
 	case 0:
 		p->cpu_compatible = false;
 		p->m68k_speed = 0;
+		p->cachesize = 0;
+		p->compfpu = false;
 		break;
 	case 1:
 		p->cpu_compatible = false;
 		p->m68k_speed = 0;
+		p->cachesize = 0;
+		p->compfpu = false;
 		break;
 	case 2:
 		p->cpu_compatible = false;
 		p->m68k_speed = -1;
+		p->cachesize = 0;
+		p->compfpu = false;
 		p->address_space_24 = false;
 		break;
 	case 3:
 		p->cpu_compatible = false;
 		p->address_space_24 = false;
 		p->cachesize = MAX_JIT_CACHE;
+		p->compfpu = true;
 		break;
 	}
 	if (p->cpu_model >= 68030)
@@ -5479,6 +5486,7 @@ static int bip_a4000(struct uae_prefs* p, int config, int compa, int romcheck)
 	p->immediate_blits = false;
 	p->produce_sound = 2;
 	p->cachesize = MAX_JIT_CACHE;
+	p->compfpu = true;
 
 	p->nr_floppies = 2;
 	p->floppyslots[0].dfxtype = DRV_35_HD;

@@ -232,13 +232,15 @@ void target_fixup_options(struct uae_prefs* p)
 	else
 		p->fpu_no_unimplemented = true;
 
+	if (!p->cachesize > 0)
+		p->compfpu = false;
+
 	fix_apmodes(p);
 }
 
 void target_default_options(struct uae_prefs* p, int type)
 {
 	p->fast_copper = 0;
-	p->compfpu = false;
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock

@@ -131,7 +131,7 @@ static void parse_compatibility(struct uae_prefs* p, xmlNode* node)
 				{
 					p->cachesize = MAX_JIT_CACHE;
 					p->address_space_24 = false;
-          p->compfpu = true;
+					p->compfpu = true;
 				}
 				else if (strcmp(reinterpret_cast<const char *>(content), "flexible-cpu-cycles") == 0)
 					p->cpu_compatible = false;

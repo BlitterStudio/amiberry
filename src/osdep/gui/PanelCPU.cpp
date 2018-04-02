@@ -59,6 +59,7 @@ public:
 			changed_prefs.z3fastmem[0].size = 0;
 			changed_prefs.rtgboards[0].rtgmem_size = 0;
 			changed_prefs.cachesize = 0;
+			changed_prefs.compfpu = false;
 		}
 		else if (actionEvent.getSource() == optCPU68010)
 		{
@@ -68,6 +69,7 @@ public:
 			changed_prefs.z3fastmem[0].size = 0;
 			changed_prefs.rtgboards[0].rtgmem_size = 0;
 			changed_prefs.cachesize = 0;
+			changed_prefs.compfpu = false;
 		}
 		else if (actionEvent.getSource() == optCPU68020)
 		{
@@ -190,7 +192,7 @@ public:
 		{
 			if (chkJIT->isSelected())
 			{
-				changed_prefs.cpu_compatible = 0;
+				changed_prefs.cpu_compatible = false;
 				changed_prefs.cachesize = MAX_JIT_CACHE;
 				changed_prefs.compfpu = true;
 			}
@@ -420,8 +422,8 @@ void RefreshPanelCPU()
 	chkFPUstrict->setSelected(changed_prefs.fpu_strict);
 
 #ifdef USE_JIT_FPU
-  chkFPUJIT->setSelected(changed_prefs.compfpu);
-  chkFPUJIT->setEnabled(changed_prefs.cachesize > 0);
+	chkFPUJIT->setEnabled(changed_prefs.cachesize > 0);
+	chkFPUJIT->setSelected(changed_prefs.compfpu);
 #else
   chkFPUJIT->setSelected(false);
   chkFPUJIT->setEnabled(false);
