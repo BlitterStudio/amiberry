@@ -22,7 +22,8 @@ uae_u32 max_z3fastmem;
 #define BARRIER 32
 
 static uae_u8* additional_mem = (uae_u8*)MAP_FAILED;
-#define ADDITIONAL_MEMSIZE ((128 + 16) * 1024 * 1024)
+#define MAX_RTG_MEM 128
+#define ADDITIONAL_MEMSIZE ((128 + MAX_RTG_MEM) * 1024 * 1024)
 
 static uae_u8* a3000_mem = (uae_u8*)MAP_FAILED;
 static int a3000_totalsize = 0;
@@ -79,7 +80,7 @@ void alloc_AmigaMem(void)
 #else
 	regs.natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
 #endif
-	max_z3fastmem = ADDITIONAL_MEMSIZE - (16 * 1024 * 1024);
+	max_z3fastmem = ADDITIONAL_MEMSIZE - (MAX_RTG_MEM * 1024 * 1024);
 	if (!regs.natmem_offset)
 	{
 		write_log("Can't allocate 16M of virtual address space!?\n");
