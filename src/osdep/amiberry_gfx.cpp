@@ -205,10 +205,9 @@ static void *display_thread(void *unused)
 				if (screen_is_picasso)
 					height = display_height;
 				else
-					height = (display_height * 2) >> currprefs.gfx_vresolution;
+					height = display_height * 2 >> currprefs.gfx_vresolution;
 
 				want_aspect = float(width) / float(height);
-
 				real_aspect = float(dispmanxdinfo.width) / float(dispmanxdinfo.height);
 
 				if (want_aspect > real_aspect)
@@ -537,7 +536,9 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_height = 1080;
 	}
 
-	currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
+	currprefs.gfx_correct_aspect = p->gfx_correct_aspect;
+	currprefs.gfx_vresolution = p->gfx_vresolution;
+
 #ifdef ANDROIDSDL
 	update_onscreen();
 #endif

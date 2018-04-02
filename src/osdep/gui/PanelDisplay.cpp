@@ -267,7 +267,7 @@ void ExitPanelDisplay()
 
 void RefreshPanelDisplay()
 {
-	chkLineDbl->setSelected(changed_prefs.gfx_vresolution != VRES_NONDOUBLE);
+	chkLineDbl->setSelected(changed_prefs.gfx_vresolution == VRES_DOUBLE);
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate);
 
 	int i;
