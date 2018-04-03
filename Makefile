@@ -117,6 +117,14 @@ USE_SDL2 = 1
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
+    
+else ifeq ($(PLATFORM),vero4k-sdl2)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+    CFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
+    LDFLAGS += -L/opt/vero3/lib
+    HAVE_NEON = 1
+    NAME  = amiberry-vero4k-sdl2
 
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
