@@ -1,4 +1,5 @@
 
+#pragma once
 extern volatile bool cd_audio_mode_changed;
 
 class cda_audio 
@@ -6,12 +7,12 @@ class cda_audio
 private:
 	int bufsize;
 	int sectorsize;
-	int volume[2];
+	int volume[2]{};
 	bool playing;
 	bool active;
 
 public:
-	uae_u8 *buffers[2];
+	uae_u8 *buffers[2]{};
 	int currBuf;
 	int num_sectors;
 
