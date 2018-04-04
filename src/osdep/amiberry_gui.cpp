@@ -514,13 +514,10 @@ void gui_display(int shortcut)
 	black_screen_now();
 
 	update_display(&changed_prefs);
-#ifdef USE_SDL1
-	/* Clear menu garbage at the bottom of the screen */
-	black_screen_now();
-#endif
 
 	reset_sound();
-	resume_sound();
+	if (!quit_program)
+		resume_sound();
 	blkdev_exitgui();
 
 	after_leave_gui();
