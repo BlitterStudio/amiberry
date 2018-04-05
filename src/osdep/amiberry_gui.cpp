@@ -516,8 +516,7 @@ void gui_display(int shortcut)
 	update_display(&changed_prefs);
 
 	reset_sound();
-	if (!quit_program)
-		resume_sound();
+	resume_sound();
 	blkdev_exitgui();
 
 	after_leave_gui();
