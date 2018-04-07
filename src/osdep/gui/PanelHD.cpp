@@ -40,9 +40,9 @@ static const int COLUMN_SIZE[] =
 {
 	55, // Device
 	65, // Volume
-	220, // Path
-	40, // R/W
-	50, // Size
+	260, // Path
+	30, // R/W
+	55, // Size
 	40 // Bootpri
 };
 
@@ -65,7 +65,6 @@ static gcn::Button* cmdCDSelect;
 static gcn::Label* lblCDVol;
 static gcn::Label* lblCDVolInfo;
 static gcn::Slider* sldCDVol;
-
 
 static int GetHDType(const int index)
 {
@@ -259,7 +258,7 @@ public:
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
-				if(strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
+				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
 					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
 					changed_prefs.cdslots[0].inuse = true;
@@ -294,7 +293,8 @@ public:
 				RefreshPanelHD();
 			}
 		}
-		else if (actionEvent.getSource() == chkHDReadOnly) {
+		else if (actionEvent.getSource() == chkHDReadOnly)
+		{
 			changed_prefs.harddrive_read_only = chkHDReadOnly->isSelected();
 		}
 	}
@@ -347,7 +347,7 @@ static CDFileActionListener* cdFileActionListener;
 void InitPanelHD(const struct _ConfigCategory& category)
 {
 	int row, col;
-	auto posY = DISTANCE_BORDER;
+	auto posY = DISTANCE_BORDER / 2;
 	char tmp[20];
 
 	hdRemoveActionListener = new HDRemoveActionListener();
@@ -355,8 +355,6 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	addVirtualHDActionListener = new AddVirtualHDActionListener();
 	addHardfileActionListener = new AddHardfileActionListener();
 	createHardfileActionListener = new CreateHardfileActionListener();
-
-	auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 
 	for (col = 0; col < COL_COUNT; ++col)
 		lblList[col] = new gcn::Label(column_caption[col]);
@@ -476,10 +474,10 @@ void InitPanelHD(const struct _ConfigCategory& category)
 			posX += COLUMN_SIZE[col];
 		}
 		category.panel->add(listEntry[row], DISTANCE_BORDER, posY);
-		posY += listEntry[row]->getHeight() + DISTANCE_NEXT_Y/2;
+		posY += listEntry[row]->getHeight() + DISTANCE_NEXT_Y / 2;
 	}
 
-	posY += DISTANCE_NEXT_Y;
+	posY += DISTANCE_NEXT_Y / 2;
 	category.panel->add(cmdAddDirectory, DISTANCE_BORDER, posY);
 	category.panel->add(cmdAddHardfile, DISTANCE_BORDER + cmdAddDirectory->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cmdCreateHardfile, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
@@ -489,7 +487,9 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
-	category.panel->add(cmdCDEject, category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
+	category.panel->add(cmdCDEject,
+	                    category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth() -
+	                    DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelect, category.panel->getWidth() - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
 	posY += cmdCDSelect->getHeight() + DISTANCE_NEXT_Y;
 
@@ -649,7 +649,7 @@ int count_HDs(struct uae_prefs* p)
 	return p->mountitems;
 }
 
-bool HelpPanelHD(std::vector<std::string> &helptext)
+bool HelpPanelHD(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back(R"(Use "Add Directory" to add a folder or "Add Hardfile" to add a HDF file as)");

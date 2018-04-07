@@ -199,12 +199,12 @@ static FilesysHardfileActionListener* filesysHardfileActionListener;
 
 static void InitEditFilesysHardfile()
 {
-	for (int i = 0; expansionroms[i].name; i++)
+	for (auto i = 0; expansionroms[i].name; i++)
 	{
-		const struct expansionromtype* erc = &expansionroms[i];
+		const auto erc = &expansionroms[i];
 		if (erc->deviceflags & EXPANSIONTYPE_IDE)
 		{
-			for (int j = 0; controller[j].type >= 0; ++j)
+			for (auto j = 0; controller[j].type >= 0; ++j)
 			{
 				if (!strcmp(erc->friendlyname, controller[j].display))
 				{
@@ -285,7 +285,7 @@ static void InitEditFilesysHardfile()
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
-	txtPath->setSize(338, TEXTFIELD_HEIGHT);
+	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtPath->setEnabled(false);
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);

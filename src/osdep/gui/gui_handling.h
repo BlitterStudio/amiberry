@@ -1,10 +1,8 @@
-#ifndef _GUI_HANDLING_H
-#define _GUI_HANDLING_H
+#ifndef GUI_HANDLING_H
+#define GUI_HANDLING_H
 
 #define GUI_WIDTH  800
 #define GUI_HEIGHT 480
-#define MIN_GUI_WIDTH 320
-#define MIN_GUI_HEIGHT 240
 #define DISTANCE_BORDER 15
 #define DISTANCE_NEXT_X 15
 #define DISTANCE_NEXT_Y 15
@@ -186,7 +184,7 @@ void PushFakeKey(SDLKey inKey);
 void PushFakeKey(SDL_Keycode inKey);
 #endif
 
-#define MAX_HD_DEVICES 5
+#define MAX_HD_DEVICES 6
 extern void CreateDefaultDevicename(char* name);
 extern bool DevicenameExists(const char* name);
 extern int tweakbootpri(int bp, int ab, int dnm);
@@ -197,4 +195,4 @@ extern int delay_savestate_frame;
 
 extern void UpdateGuiScreen();
 
-#endif // _GUI_HANDLING_H
+#endif // GUI_HANDLING_H

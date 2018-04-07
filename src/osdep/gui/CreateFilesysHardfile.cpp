@@ -149,7 +149,7 @@ static void InitCreateFilesysHardfile()
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
-	txtPath->setSize(338, TEXTFIELD_HEIGHT);
+	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtPath->setEnabled(false);
 
 	cmdPath = new gcn::Button("...");
