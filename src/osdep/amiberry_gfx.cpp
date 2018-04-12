@@ -195,7 +195,7 @@ static void *display_thread(void *unused)
 			vc_dispmanx_rect_set(&black_rect, 0, 0, dispmanxdinfo.width, dispmanxdinfo.height);
 
 			// Correct Aspect Ratio
-			if (currprefs.gfx_correct_aspect == 0)
+			if (changed_prefs.gfx_correct_aspect == 0)
 			{
 				// Fullscreen.
 				vc_dispmanx_rect_set(&dst_rect, 0, 0, dispmanxdinfo.width, dispmanxdinfo.height);
@@ -205,7 +205,7 @@ static void *display_thread(void *unused)
 				if (screen_is_picasso)
 					height = display_height;
 				else
-					height = display_height * 2 >> currprefs.gfx_vresolution;
+					height = display_height * 2 >> changed_prefs.gfx_vresolution;
 
 				want_aspect = float(width) / float(height);
 				real_aspect = float(dispmanxdinfo.width) / float(dispmanxdinfo.height);
@@ -536,9 +536,6 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_height = 1080;
 	}
 
-	currprefs.gfx_correct_aspect = p->gfx_correct_aspect;
-	currprefs.gfx_vresolution = p->gfx_vresolution;
-
 #ifdef ANDROIDSDL
 	update_onscreen();
 #endif
@@ -668,7 +665,6 @@ int check_prefs_changed_gfx()
 	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)
 	{
 		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
-		init_hz_normal();
 		changed = 1;
 	}
 
