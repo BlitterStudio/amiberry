@@ -386,7 +386,7 @@ static void after_leave_gui()
 
 	for (auto num = 0; num < 2; ++num)
 	{
-		if (changed_prefs.jports[num].id >= JSEM_JOYS && changed_prefs.jports[num].autofire != new_af)
+		if (changed_prefs.jports[num].id < JSEM_MICE && changed_prefs.jports[num].autofire != new_af)
 		{
 			changed_prefs.jports[num].autofire = new_af;
 			update = 1;
