@@ -26,20 +26,20 @@ ifeq ($(PLATFORM),rpi3)
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl1-dev
+    NAME  = amiberry-rpi3-sdl1
 	
 else ifeq ($(PLATFORM),rpi2)
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl1-dev
+    NAME  = amiberry-rpi2-sdl1
 	
 else ifeq ($(PLATFORM),rpi1)
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += ${DISPMANX_FLAGS} -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
-    NAME  = amiberry-rpi1-sdl1-dev
+    NAME  = amiberry-rpi1-sdl1
 
 else ifeq ($(PLATFORM),android)
     CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
@@ -58,7 +58,7 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl2-dispmanx-dev
+    NAME  = amiberry-rpi3-sdl2-dispmanx
 
 else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
 USE_SDL2 = 1
@@ -66,14 +66,14 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl2-dispmanx-dev
+    NAME  = amiberry-rpi2-sdl2-dispmanx
 
 else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
-    NAME  = amiberry-rpi1-sdl2-dispmanx-dev
+    NAME  = amiberry-rpi1-sdl2-dispmanx
 
 #
 # SDL2 targets
@@ -83,20 +83,20 @@ USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl2-dev
+    NAME  = amiberry-rpi3-sdl2
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl2-dev
+    NAME  = amiberry-rpi2-sdl2
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2
-    NAME  = amiberry-rpi1-sdl2-dev
+    NAME  = amiberry-rpi1-sdl2
 
 else ifeq ($(PLATFORM),pine64)
 USE_SDL2 = 1
@@ -104,7 +104,7 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -D__arm__ -DARM_HAS_DIV -DUSE_SDL2
     CC = arm-linux-gnueabihf-gcc
     CXX = arm-linux-gnueabihf-g++
-    NAME  = amiberry-pine64-sdl2-dev
+    NAME  = amiberry-pine64-sdl2
 
 else ifeq ($(PLATFORM),xu4)
 USE_SDL2 = 1
@@ -132,7 +132,7 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DTINKER -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
     LDFLAGS += -L/usr/local/lib
     HAVE_NEON = 1
-    NAME  = amiberry-tinker-dev
+    NAME  = amiberry-tinker
 
 else ifeq ($(PLATFORM),android-sdl2)
 USE_SDL2 = 1
