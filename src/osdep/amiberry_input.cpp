@@ -183,7 +183,7 @@ static void fill_default_keyboard()
 //#   backslash, rightbracket, kp_period, kp_equals, rctrl, ralt
 
 #ifdef USE_SDL1
-const int RemapKeyMapList[] = {
+const int remap_key_map_list[] = {
 	-1,
 	SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e,
 	SDLK_f, SDLK_g, SDLK_h, SDLK_i, SDLK_j,
@@ -735,7 +735,7 @@ static int init_joystick(void)
 		{
 #ifdef USE_SDL1
 			if (SDL_JoystickName(cpt) != nullptr)
-				strncpy(JoystickName[cpt], SDL_JoystickName(cpt), sizeof JoystickName[cpt] - 1);
+				strncpy(joystick_name[cpt], SDL_JoystickName(cpt), sizeof joystick_name[cpt] - 1);
 #elif USE_SDL2
 			if (SDL_JoystickNameForIndex(cpt) != nullptr)
 				strncpy(joystick_name[cpt], SDL_JoystickNameForIndex(cpt), sizeof joystick_name[cpt] - 1);
@@ -1070,9 +1070,9 @@ static void read_joystick(void)
 
 			// this *should* allow us to handle function buttons (l2/r2/select)  <<<  except there were issues this work, picking a fixed number!!                            
 			// these two cannot be used whilst we are limtied to 32 buttons, since 'REMAP_BUTTONS' = 14
-			// else if (SDL_JoystickGetButton(Joysticktable[hostjoyid], host_input_buttons[hostjoyid].left_trigger) & 1)
+			// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].left_trigger) & 1)
 			//     held_offset = REMAP_BUTTONS * 2;
-			// else if (SDL_JoystickGetButton(Joysticktable[hostjoyid], host_input_buttons[hostjoyid].right_trigger) & 1)
+			// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].right_trigger) & 1)
 			//     held_offset = REMAP_BUTTONS * 3;
 
 			else
