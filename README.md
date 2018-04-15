@@ -20,8 +20,8 @@ Install the following packages:
 Clone this repo:
       
       cd ~
-      git clone https://github.com/midwan/amiberry -b dev amiberry-dev
-      cd amiberry-dev
+      git clone https://github.com/midwan/amiberry amiberry
+      cd amiberry
       
 The default platform is currently "rpi3", so for Raspberry Pi 3 (SDL1) you can just type:
 
