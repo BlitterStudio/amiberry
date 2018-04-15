@@ -470,12 +470,12 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 					{
 						// now get the <hardware> and <custom_controls> items
 
-						//printf("found game in XML?\n");
+						//printf("found game in XML\n");
 						auto temp_node = game_node->xmlChildrenNode;
 						temp_node = get_node(temp_node, "hardware");
 						if (xmlNodeGetContent(temp_node) != nullptr)
 						{
-							_stprintf(hardware_settings, "%p", xmlNodeGetContent(temp_node));
+							_stprintf(hardware_settings, "%s", xmlNodeGetContent(temp_node));
 							// printf("%s\n",hardware_settings);
 							game_detail = get_game_settings(hardware_settings);
 						}
@@ -484,8 +484,9 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 						temp_node = get_node(temp_node, "custom_controls");
 						if (xmlNodeGetContent(temp_node) != nullptr)
 						{
-							_stprintf(custom_settings, "%p", xmlNodeGetContent(temp_node));
+							_stprintf(custom_settings, "%s", xmlNodeGetContent(temp_node));
 							//  process these later
+                                                        //printf("%s\n",custom_settings);
 						}
 						break;
 					}
@@ -502,8 +503,8 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	//        printf("port 0: %s  \n",game_detail.port0); 
 	//        printf("port 1: %s  \n",game_detail.port1); 
 	//        printf("contrl: %s  \n",game_detail.control);  
-	//       printf("fstcpr: %s  \n",game_detail.fastcopper);  
-	//       printf("cpu   : %s  \n",game_detail.cpu);  
+	//        printf("fstcpr: %s  \n",game_detail.fastcopper);  
+	//        printf("cpu   : %s  \n",game_detail.cpu);  
 	//       printf("blitta: %s  \n",game_detail.blitter);  
 	//       printf("clock : %s  \n",game_detail.clock);  
 	//       printf("chipst: %s  \n",game_detail.chipset);  
