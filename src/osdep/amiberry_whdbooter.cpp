@@ -500,9 +500,9 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// debugging code!
-	//        printf("port 0: %s  \n",game_detail.port0); 
-	//        printf("port 1: %s  \n",game_detail.port1); 
-	//        printf("contrl: %s  \n",game_detail.control);  
+	write_log("WHDBooter - Game: Port 0:    %s  \n",game_detail.port0); 
+	write_log("WHDBooter - Game: Port 1:    %s  \n",game_detail.port1); 
+	write_log("WHDBooter - Game: Control:   %s  \n",game_detail.control);  
 	//        printf("fstcpr: %s  \n",game_detail.fastcopper);  
 	//        printf("cpu   : %s  \n",game_detail.cpu);  
 	//       printf("blitta: %s  \n",game_detail.blitter);  
@@ -517,12 +517,12 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	//       printf("z3    : %s  \n",game_detail.z3);      
 
 	// debugging code!
-	//printf("cont 1: %s  \n", host_detail.controller1);
-	//printf("cont 2: %s  \n", host_detail.controller2);
-	//printf("cont 3: %s  \n", host_detail.controller3);
-	//printf("cont 4: %s  \n", host_detail.controller4);
-	//printf("mous 1: %s  \n", host_detail.mouse1);
-	//printf("mous 2: %s  \n", host_detail.mouse2);
+	write_log("WHDBooter - Host: Controller 1: %s  \n", host_detail.controller1);
+	write_log("WHDBooter - Host: Controller 2: %s  \n", host_detail.controller2);
+	write_log("WHDBooter - Host: Controller 3: %s  \n", host_detail.controller3);
+	write_log("WHDBooter - Host: Controller 4: %s  \n", host_detail.controller4);
+        write_log("WHDBooter - Host: Mouse 1:      %s  \n", host_detail.mouse1);
+	write_log("WHDBooter - Host: Mouse 2:      %s  \n", host_detail.mouse2);
 	//printf("ra_qui: %s  \n", host_detail.ra_quit);
 	//printf("ra_men: %s  \n", host_detail.ra_menu);
 	//printf("ra_rst: %s  \n", host_detail.ra_reset);
@@ -651,31 +651,49 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 
 
 	// WHAT IS THE MAIN CONTROL?
-	// MOUSE GAMES    
-	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(host_detail.mouse1, "nul") != 0)
+	// PORT 0 - MOUSE GAMES     
+	if (strcmpi(game_detail.control, "mouse") == 0 && !strcmpi(host_detail.mouse1, "nul") == 0)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
 		cfgfile_parse_line(p, txt2, 0);
+                write_log("WHDBooter Option (Mouse Control): %s\n",txt2);
+        }
+        
+	// PORT 0 -  JOYSTICK GAMES 
+        else if (!strcmpi(host_detail.controller1, "nul") == 0)
+        {
+                _stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
+		cfgfile_parse_line(p, txt2, 0);  
+                write_log("WHDBooter Option (Joystick Control): %s\n",txt2);
 	}
-
-	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(host_detail.mouse2, "nul") != 0)
+        else
+        {
+            	_stprintf(txt2, "%s=mouse", _T("joyport0"));
+		 cfgfile_parse_line(p, txt2, 0);
+                write_log("WHDBooter Option (Default Mouse): %s\n",txt2);
+        }
+        
+	// PORT 1 - MOUSE GAMES    
+	if (strcmpi(game_detail.control, "mouse") == 0 && !strcmpi(host_detail.mouse2, "nul") == 0)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.mouse2));
 		cfgfile_parse_line(p, txt2, 0);
+                write_log("WHDBooter Option (Mouse Control): %s\n",txt2);
 	}
+        // PORT 1 - JOYSTICK GAMES
+        else if (!strcmpi(host_detail.controller1, "nul") == 0)
+        {
+            	_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
+		 cfgfile_parse_line(p, txt2, 0);
+                write_log("WHDBooter Option (Joystick Control): %s\n",txt2);
+        }
+        else
+        {
+            	_stprintf(txt2, "%s=joy1", _T("joyport1"));
+		 cfgfile_parse_line(p, txt2, 0);
+                write_log("WHDBooter Option (Default Joystick): %s\n",txt2);
+        }
 
-	// JOYSTICK GAMES     
-	if (!strcmpi(game_detail.control, "mouse") == 0 && strcmpi(host_detail.controller1, "nul") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
-		cfgfile_parse_line(p, txt2, 0);
-	}
-
-	if (!strcmpi(game_detail.control, "mouse") == 0 && strcmpi(host_detail.controller2, "nul") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
-		cfgfile_parse_line(p, txt2, 0);
-	}
 
 	// PARALLEL PORT GAMES  
 	if (strcmpi(host_detail.controller3, "nul") != 0)
