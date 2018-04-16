@@ -475,7 +475,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 						temp_node = get_node(temp_node, "hardware");
 						if (xmlNodeGetContent(temp_node) != nullptr)
 						{
-							_stprintf(hardware_settings, "%s", xmlNodeGetContent(temp_node));
+							_stprintf(hardware_settings, "%s", reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
 							// printf("%s\n",hardware_settings);
 							game_detail = get_game_settings(hardware_settings);
 						}
@@ -484,7 +484,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 						temp_node = get_node(temp_node, "custom_controls");
 						if (xmlNodeGetContent(temp_node) != nullptr)
 						{
-							_stprintf(custom_settings, "%s", xmlNodeGetContent(temp_node));
+							_stprintf(custom_settings, "%s", reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
 							//  process these later
                                                         //printf("%s\n",custom_settings);
 						}
