@@ -747,6 +747,9 @@
     <ClCompile Include="..\src\caps\caps_win32.cpp">
       <Filter>src\caps</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_whdbooter.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">

@@ -381,6 +381,7 @@
     <ClCompile Include="..\src\osdep\amiberry_input.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_mem.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_rp9.cpp" />
+    <ClCompile Include="..\src\osdep\amiberry_whdbooter.cpp" />
     <ClCompile Include="..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\src\osdep\cda_play.cpp" />
     <ClCompile Include="..\src\osdep\charset.cpp" />
