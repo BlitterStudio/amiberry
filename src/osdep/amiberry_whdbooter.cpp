@@ -656,43 +656,43 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
 		cfgfile_parse_line(p, txt2, 0);
-                write_log("WHDBooter Option (Mouse Control): %s\n",txt2);
-        }
-        
-	// PORT 0 -  JOYSTICK GAMES 
-        else if (!strcmpi(host_detail.controller1, "nul") == 0)
-        {
-                _stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
-		cfgfile_parse_line(p, txt2, 0);  
-                write_log("WHDBooter Option (Joystick Control): %s\n",txt2);
+		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
-        else
-        {
-            	_stprintf(txt2, "%s=mouse", _T("joyport0"));
-		 cfgfile_parse_line(p, txt2, 0);
-                write_log("WHDBooter Option (Default Mouse): %s\n",txt2);
-        }
-        
+
+	// PORT 0 -  JOYSTICK GAMES 
+	else if (!strcmpi(host_detail.controller1, "nul") == 0)
+	{
+		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
+		cfgfile_parse_line(p, txt2, 0);
+		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
+	}
+	else
+	{
+		_stprintf(txt2, "%s=mouse", _T("joyport0"));
+		cfgfile_parse_line(p, txt2, 0);
+		write_log("WHDBooter Option (Default Mouse): %s\n", txt2);
+	}
+
 	// PORT 1 - MOUSE GAMES    
 	if (strcmpi(game_detail.control, "mouse") == 0 && !strcmpi(host_detail.mouse2, "nul") == 0)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.mouse2));
 		cfgfile_parse_line(p, txt2, 0);
-                write_log("WHDBooter Option (Mouse Control): %s\n",txt2);
+		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
-        // PORT 1 - JOYSTICK GAMES
-        else if (!strcmpi(host_detail.controller1, "nul") == 0)
-        {
-            	_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
-		 cfgfile_parse_line(p, txt2, 0);
-                write_log("WHDBooter Option (Joystick Control): %s\n",txt2);
-        }
-        else
-        {
-            	_stprintf(txt2, "%s=joy1", _T("joyport1"));
-		 cfgfile_parse_line(p, txt2, 0);
-                write_log("WHDBooter Option (Default Joystick): %s\n",txt2);
-        }
+	// PORT 1 - JOYSTICK GAMES
+	else if (!strcmpi(host_detail.controller1, "nul") == 0)
+	{
+		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
+		cfgfile_parse_line(p, txt2, 0);
+		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
+	}
+	else
+	{
+		_stprintf(txt2, "%s=joy1", _T("joyport1"));
+		cfgfile_parse_line(p, txt2, 0);
+		write_log("WHDBooter Option (Default Joystick): %s\n", txt2);
+	}
 
 
 	// PARALLEL PORT GAMES  
