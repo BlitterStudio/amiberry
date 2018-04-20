@@ -121,7 +121,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),vero4k-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
+    CFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
     NAME  = amiberry-vero4k-sdl2
