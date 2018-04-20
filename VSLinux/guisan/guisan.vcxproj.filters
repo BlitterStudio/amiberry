@@ -272,9 +272,6 @@
     <ClCompile Include="..\..\guisan-dev\src\gui.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\guisan-dev\guisan.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\guisan-dev\src\image.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -385,6 +382,9 @@
     </ClCompile>
     <ClCompile Include="..\..\guisan-dev\src\widgets\progressbar.cpp">
       <Filter>src\widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\guisan-dev\src\guisan.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
