@@ -1544,7 +1544,7 @@ void freescratch(void)
   int i;
   for (i=0; i<N_REGS; i++)
 #if defined(CPU_arm)
-  	if (live.nat[i].locked && i != 2 && i != 3 && i != 10 && i != 11 && i != 12) {
+  	if (live.nat[i].locked && i != 2 && i != 3 && i != 11 && i != 12) {
 #else
 		if (live.nat[i].locked && i!=4 && i!= 12) {
 #endif
@@ -1663,52 +1663,74 @@ static void writemem_real(int address, int source, int size)
   }
 }
 
-STATIC_INLINE void writemem_special(int address, int source, int offset)
+STATIC_INLINE void writemem_special(int address, int source, int offset, int tmp)
 {
-  jnf_MEM_WRITEMEMBANK(address, source, offset);
+  jnf_MEM_GETBANKFUNC(tmp, address, offset);
+  /* Now tmp holds the address of the b/w/lput function */
+  call_r_02(tmp, address, source);
+  forget_about(tmp);
 }
 
-void writebyte(int address, int source)
+void writebyte(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 20);
+  	writemem_special(address, source, 20, tmp);
   else
   	writemem_real(address, source, 1);
 }
 
-void writeword(int address, int source)
+void writeword(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 16);
+  	writemem_special(address, source, 16, tmp);
   else
   	writemem_real(address, source, 2);
 }
 
-void writelong(int address, int source)
+void writelong(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 12);
+  	writemem_special(address, source, 12, tmp);
   else
   	writemem_real(address, source, 4);
 }
 
 // Now the same for clobber variant
-void writeword_clobber(int address, int source)
+STATIC_INLINE void writemem_real_clobber(int address, int source, int size)
 {
-  if (special_mem & S_WRITE)
-  	writemem_special(address, source, 16);
+  if(currprefs.address_space_24)
+  {
+  	switch(size) {
+  	  case 1: jnf_MEM_WRITE24_OFF_b(address, source); break;
+  	  case 2: jnf_MEM_WRITE24_OFF_w(address, source); break;
+  	  case 4: jnf_MEM_WRITE24_OFF_l(address, source); break;
+  	}
+  }
   else
-  	writemem_real(address, source, 2);
+  {
+  	switch(size) {
+  	  case 1: jnf_MEM_WRITE_OFF_b(address, source); break;
+  	  case 2: jnf_MEM_WRITE_OFF_w(address, source); break;
+  	  case 4: jnf_MEM_WRITE_OFF_l(address, source); break;
+  	}
+  }
 	forget_about(source);
 }
 
-void writelong_clobber(int address, int source)
+void writeword_clobber(int address, int source, int tmp)
 {
   if (special_mem & S_WRITE)
-  	writemem_special(address, source, 12);
+  	writemem_special(address, source, 16, tmp);
   else
-  	writemem_real(address, source, 4);
-	forget_about(source);
+  	writemem_real_clobber(address, source, 2);
+}
+
+void writelong_clobber(int address, int source, int tmp)
+{
+  if (special_mem & S_WRITE)
+  	writemem_special(address, source, 12, tmp);
+  else
+  	writemem_real_clobber(address, source, 4);
 }
 
 
@@ -1736,39 +1758,42 @@ static void readmem_real(int address, int dest, int size)
   }
 }
 
-STATIC_INLINE void readmem_special(int address, int dest, int offset)
+STATIC_INLINE void readmem_special(int address, int dest, int offset, int tmp)
 {
-	jnf_MEM_READMEMBANK(dest, address, offset);
+  jnf_MEM_GETBANKFUNC(tmp, address, offset);
+  /* Now tmp holds the address of the b/w/lget function */
+  call_r_11(dest, tmp, address);
+  forget_about(tmp);
 }
 
-void readbyte(int address, int dest)
+void readbyte(int address, int dest, int tmp)
 {
   if (special_mem & S_READ)
-  	readmem_special(address, dest, 8);
+  	readmem_special(address, dest, 8, tmp);
   else
   	readmem_real(address, dest, 1);
 }
 
-void readword(int address, int dest)
+void readword(int address, int dest, int tmp)
 {
   if (special_mem & S_READ)
-  	readmem_special(address, dest, 4);
+  	readmem_special(address, dest, 4, tmp);
   else
   	readmem_real(address, dest, 2);
 }
 
-void readlong(int address, int dest)
+void readlong(int address, int dest, int tmp)
 {
   if (special_mem & S_READ)
-  	readmem_special(address, dest, 0);
+  	readmem_special(address, dest, 0, tmp);
   else
   	readmem_real(address, dest, 4);
 }
 
 /* This one might appear a bit odd... */
-STATIC_INLINE void get_n_addr_old(int address, int dest)
+STATIC_INLINE void get_n_addr_old(int address, int dest, int tmp)
 {
-  readmem_special(address, dest, 24);
+  readmem_special(address, dest, 24, tmp);
 }
 
 STATIC_INLINE void get_n_addr_real(int address, int dest)
@@ -1779,27 +1804,27 @@ STATIC_INLINE void get_n_addr_real(int address, int dest)
   	jnf_MEM_GETADR_OFF(dest, address);
 }
 
-void get_n_addr(int address, int dest)
+void get_n_addr(int address, int dest, int tmp)
 {
   if (special_mem)
-  	get_n_addr_old(address, dest);
+  	get_n_addr_old(address,dest,tmp);
   else
   	get_n_addr_real(address,dest);
 }
 
-void get_n_addr_jmp(int address, int dest)
+void get_n_addr_jmp(int address, int dest, int tmp)
 {
   /* For this, we need to get the same address as the rest of UAE
 	 would --- otherwise we end up translating everything twice */
   if (special_mem)
-  	get_n_addr_old(address, dest);
+  	get_n_addr_old(address,dest,tmp);
   else
   	get_n_addr_real(address,dest);
 }
 
 /* base is a register, but dp is an actual value. 
-   target is a register */
-void calc_disp_ea_020(int base, uae_u32 dp, int target)
+   target is a register, as is tmp */
+void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp)
 {
   int reg = (dp >> 12) & 15;
   int regd_shift=(dp >> 9) & 3;
@@ -1818,7 +1843,11 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
 
   	if ((dp & 0x4) == 0) {  /* add regd *before* the get_long */
 	    if (!ignorereg) {
-    		disp_ea20_target_mov(target, reg, regd_shift, ((dp & 0x800) == 0));
+    		if ((dp & 0x800) == 0)
+  		    sign_extend_16_rr(target, reg);
+    		else
+  		    mov_l_rr(target, reg);
+    		shll_l_ri(target, regd_shift);
 	    }
 	    else
     		mov_l_ri(target, 0);
@@ -1827,7 +1856,7 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
 	    if (!ignorebase)
     		arm_ADD_l(target, base);
 	    arm_ADD_l_ri(target, addbase);
-	    if (dp&0x03) readlong(target, target);
+	    if (dp&0x03) readlong(target, target, tmp);
   	} else { /* do the getlong first, then add regd */
 	    if (!ignorebase) {
 		    mov_l_rr(target, base);
@@ -1835,10 +1864,16 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
 	    }
 	    else
     		mov_l_ri(target, addbase);
-	    if (dp&0x03) readlong(target, target);
+	    if (dp&0x03) readlong(target, target, tmp);
 
 	    if (!ignorereg) {
-    		disp_ea20_target_add(target, reg, regd_shift, ((dp & 0x800) == 0));
+    		if ((dp & 0x800) == 0)
+  		    sign_extend_16_rr(tmp, reg);
+    		else
+  		    mov_l_rr(tmp, reg);
+    		shll_l_ri(tmp, regd_shift);
+    		/* tmp is now regd */
+    		arm_ADD_l(target, tmp);
       }
 	  }
 	  arm_ADD_l_ri(target, outer);
@@ -1852,6 +1887,7 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
 	    lea_l_brr_indexed(target, base, reg, 1 << regd_shift, (uae_s8)dp);
 	  }
   }
+  forget_about(tmp);
 }
 
 void set_cache_state(int enabled)
@@ -1991,6 +2027,7 @@ STATIC_INLINE int block_check_checksum(blockinfo* bi)
 	     means we have to move it into the needs-to-be-flushed list */
 	  bi->handler_to_use = bi->handler;
 	  set_dhtu(bi, bi->direct_handler);
+
 	  bi->status = BI_CHECKING;
 	  isgood = called_check_checksum(bi) != 0;
   }

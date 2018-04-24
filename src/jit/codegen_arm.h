@@ -1327,7 +1327,8 @@ enum {
 #define SMULxy_rrr(Rd,Rn,Rm,x,y)        CC_SMULxy_rrr(NATIVE_CC_AL,Rd,Rn,Rm,x,y)
 
 // ARMv6T2
-#ifdef ARMV6T2
+//#ifdef ARMV6T2
+#if 1
 
 #define CC_BFI_rrii(cc,Rd,Rn,lsb,msb)   _W(((cc) << 28) | (0x3e << 21) | ((msb) << 16) | ((Rd) << 12) | ((lsb) << 7) | (0x1 << 4) | (Rn))
 #define BFI_rrii(Rd,Rn,lsb,msb)         CC_BFI_rrii(NATIVE_CC_AL,Rd,Rn,lsb,msb)
