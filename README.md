@@ -1,7 +1,5 @@
 # Amiga emulator for the Raspberry Pi and other ARM SoC
 
-Warning: this branch is where Development takes place. It may be unstable, crash, not work from time to time - If you're looking for the latest "stable" version, please use the master branch for now.
-
 # Compiling SDL2
 If you want to run the SDL2 version, you currently need to compile SDL2 from source on the Raspberry Pi, to get support for launching full screen applications from the console. The version bundled with Stretch is not compiled with support for the "rpi" driver, so it only works under X11.
 
