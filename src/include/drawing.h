@@ -94,32 +94,9 @@ struct color_entry {
 };
 
 /* convert 24 bit AGA Amiga RGB to native color */
-#ifdef ARMV6T2
-STATIC_INLINE uae_u32 CONVERT_RGB(uae_u32 c)
-{
-  uae_u32 ret;
-  __asm__ (
-			"ubfx    r1, %[c], #19, #5 \n\t"
-			"ubfx    r2, %[c], #10, #6 \n\t"
-			"ubfx    %[v], %[c], #3, #5 \n\t"
-			"orr     %[v], %[v], r1, lsl #11 \n\t"
-			"orr     %[v], %[v], r2, lsl #5 \n\t"
-			"pkhbt   %[v], %[v], %[v], lsl #16 \n\t"
-           : [v] "=r" (ret) : [c] "r" (c) : "r1", "r2" );
-  return ret;
-}
-STATIC_INLINE uae_u16 CONVERT_RGB_16(uae_u32 c)
-{
-  uae_u16 ret;
-  __asm__ (
-			"ubfx    r1, %[c], #19, #5 \n\t"
-			"ubfx    r2, %[c], #10, #6 \n\t"
-			"ubfx    %[v], %[c], #3, #5 \n\t"
-			"orr     %[v], %[v], r1, lsl #11 \n\t"
-			"orr     %[v], %[v], r2, lsl #5 \n\t"
-           : [v] "=r" (ret) : [c] "r" (c) : "r1", "r2" );
-  return ret;
-}
+#ifdef WORDS_BIGENDIAN
+# define CONVERT_RGB(c) \
+	( xbluecolors[((uae_u8*)(&c))[3]] | xgreencolors[((uae_u8*)(&c))[2]] | xredcolors[((uae_u8*)(&c))[1]] )
 #else
 #define CONVERT_RGB(c) \
     ( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
@@ -225,13 +202,18 @@ struct decision {
   int ctable;
 
   uae_u16 bplcon0, bplcon2;
+#ifdef AGA
   uae_u16 bplcon3, bplcon4;
+#endif
   uae_u8 nr_planes;
   uae_u8 bplres;
+	bool ehb_seen;
   bool ham_seen;
   bool ham_at_start;
+#ifdef AGA
 	bool bordersprite_seen;
 	bool xor_seen;
+#endif
 };
 
 /* Anything related to changes in hw registers during the DDF for one

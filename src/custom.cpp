@@ -167,6 +167,7 @@ static struct chipset_refresh *stored_chipset_refresh;
 int syncbase;
 static int fmode_saved, fmode;
 static uae_u16 beamcon0, new_beamcon0;
+static bool varsync_changed;
 static uae_u16 vtotal = MAXVPOS_PAL, htotal = MAXHPOS_PAL;
 static uae_u16 hsstop, hbstrt, hbstop, vsstop, vbstrt, vbstop, hsstrt, vsstrt, hcenter;
 static int diw_hstrt, diw_hstop;
@@ -444,6 +445,7 @@ STATIC_INLINE uae_u8 *pfield_xlateptr (uaecptr plpt, int bytecount)
     return NULL;
   return chipmem_bank.baseaddr + plpt;
 }
+
 static void docols (struct color_entry *colentry)
 {
 	int i;
@@ -1228,6 +1230,10 @@ static void toscr_right_edge (int nbits, int fm)
 		do_delays (diff, fm);
 		nbits2 -= diff;
 		delay_cycles = 0;
+		if (hpos_is_zero_bplcon1_hack >= 0) {
+			compute_toscr_delay(hpos_is_zero_bplcon1_hack);
+			hpos_is_zero_bplcon1_hack = -1;
+		}
 		toscr_delay[0] -= 2;
 		toscr_delay[0] &= fetchmode_mask;
 		toscr_delay[1] -= 2;
@@ -2427,7 +2433,7 @@ static void record_color_change (int hpos, int regno, unsigned long value)
 	if (thisline_decision.ctable < 0)
 		remember_ctable ();
 	
-  if ((regno < 0x1000 || regno == 0x1000 + 0x10c) && hpos < HBLANK_OFFSET && prev_lineno >= 0) {
+  if ((regno < 0x1000 || regno == 0x1000 + 0x10c) && hpos < HBLANK_OFFSET && !(beamcon0 & 0x80) && prev_lineno >= 0) {
   	struct draw_info *pdip = curr_drawinfo + prev_lineno;
   	int idx = pdip->last_color_change;
 		int extrahpos = regno == 0x1000 + 0x10c ? 1 : 0;
@@ -2922,6 +2928,7 @@ static void decide_sprites(int spnr, int hpos, bool quick)
 	}
 	last_sprite_point = point;
 }
+
 STATIC_INLINE void decide_sprites(int spnr, int hpos)
 {
 	decide_sprites(spnr, hpos, false);
@@ -3180,7 +3187,7 @@ static void compute_framesync (void)
 	  if (!picasso_on && !picasso_requested_on) {
 			if (isvsync_chipset ()) {
 				if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
-	        if (fabs (vblank_hz - 50) < 1 || fabs (vblank_hz - 60) < 1 || fabs (vblank_hz - 100) < 1 || fabs (vblank_hz - 120) < 1) {
+	        if ((fabs (vblank_hz - 50) < 1 || fabs (vblank_hz - 60) < 1 || fabs (vblank_hz - 100) < 1 || fabs (vblank_hz - 120) < 1)) {
 		        vsync_switchmode ((int)vblank_hz);
   	      }
         }	else if (isvsync_chipset () > 0) {
@@ -3188,8 +3195,12 @@ static void compute_framesync (void)
 						v = abs (currprefs.gfx_apmode[0].gfx_refreshrate);
 				}
 			} else {
+				if (cr->locked == false) {
 				changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
 				break;
+				} else {
+					v = cr->rate;
+				}
       }
 			if (v < 0)
 				v = cr->rate;
@@ -3197,7 +3208,10 @@ static void compute_framesync (void)
 				changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = v;
 			}
     } else {
+			if (cr->locked == false)
 			v = vblank_hz;
+			else
+				v = cr->rate;
 			changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = v;
 			vsync_switchmode((int)v);
     }
@@ -3298,7 +3312,7 @@ static void init_hz (bool checkvposw)
 	  vblank_hz = (isntsc ? 15734.0 : 15625.0) / vpos_count;
 	  vblank_hz_nom = vblank_hz_shf = vblank_hz_lof = vblank_hz_lace = (float)vblank_hz;
 	  maxvpos_nom = vpos_count - (lof_current ? 1 : 0);
-	  if ((maxvpos_nom >= 256 && maxvpos_nom <= 313)) {
+		if ((maxvpos_nom >= 256 && maxvpos_nom <= 313) || (beamcon0 & 0x80)) {
 		  maxvpos_display = maxvpos_nom;
 	  }
 	  else if (maxvpos_nom < 256) {
@@ -3337,6 +3351,7 @@ static void init_hz (bool checkvposw)
   set_delay_lastcycle();
 
   hsyncstartpos = maxhpos + 13;
+		hsyncendpos = 24;
 
   eventtab[ev_hsync].oldcycles = get_cycles();
   eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
@@ -3356,6 +3371,8 @@ static void init_hz (bool checkvposw)
   init_hz_p96 ();
 #endif
   inputdevice_tablet_strobe ();
+
+	varsync_changed = false;
 }
 
 static void init_hz_vposw (void)
@@ -3884,6 +3901,15 @@ static void BEAMCON0 (uae_u16 v)
   }
 }
 
+STATIC_INLINE void varsync (void)
+{
+  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+	  return;
+  if (!(beamcon0 & 0x80))
+	  return;
+	varsync_changed = true;
+}
+
 static void BPLxPTH (int hpos, uae_u16 v, int num)
 {
   decide_line (hpos);
@@ -3895,10 +3921,12 @@ static void BPLxPTH (int hpos, uae_u16 v, int num)
 
   bplpt[num] = (bplpt[num] & 0x0000ffff) | ((uae_u32)v << 16);
 }
+
 static void BPLxPTL (int hpos, uae_u16 v, int num)
 {
   decide_line (hpos);
 	decide_fetch_safe (hpos);
+
 	/* chipset feature:
 	 * BPLxPTL write and next cycle doing DMA fetch using same pointer register ->
 	 * next DMA cycle uses old value.
@@ -4021,6 +4049,7 @@ STATIC_INLINE void BPLCON3 (int hpos, uae_u16 v)
   sprres = expand_sprres (bplcon0, bplcon3);
   record_register_change (hpos, 0x106, v);
 }
+
 STATIC_INLINE void BPLCON4 (int hpos, uae_u16 v)
 {
 	if (! (aga_mode))
@@ -5477,7 +5506,6 @@ static bool framewait (void)
 {
 	frame_time_t curr_time;
 	frame_time_t start;
-  frame_time_t time_for_next_frame = vsynctimebase;
 	int vs = isvsync_chipset ();
 	int status = 0;
 
@@ -5489,29 +5517,38 @@ static bool framewait (void)
 	frameskiptime = 0;
 
 	if (vs > 0) {
+		static struct mavg_data ma_legacy;
+		static frame_time_t vsync_time;
+		int t;
 
-		if(!nodraw()) {
+		curr_time = read_processor_time();
+		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
   		if (!frame_rendered && !picasso_on)
   			frame_rendered = render_screen (false);
   
+		start = read_processor_time();
+		t = 0;
+		if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase)
+			t += (int)start - (int)vsync_time;
+
   		if (!frame_shown) {
   			show_screen (1);
   		}
-      curr_time = target_lastsynctime();
-    } else {
-      curr_time = target_lastsynctime() + vsynctimebase;
 
-      if(read_processor_time () > curr_time)
-        time_for_next_frame = curr_time - read_processor_time ();
-    }
+		int legacy_avg = mavg(&ma_legacy, t, MAVG_VSYNC_SIZE);
+		if (t > legacy_avg)
+			legacy_avg = t;
+		t = legacy_avg;
 
-		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
-    vsyncmintime = curr_time;
+		vsync_time = read_processor_time();
+		if (t > vsynctimebase * 2 / 3)
+			t = vsynctimebase * 2 / 3;
     
 		if (currprefs.m68k_speed < 0) {
-			vsynctimeperline = (time_for_next_frame) / (maxvpos_display + 1);
-		} else {
-			vsynctimeperline = (time_for_next_frame) / 3;
+			vsynctimeperline = (vsynctimebase - t) / (maxvpos_display + 1);
+		}
+		else {
+			vsynctimeperline = (vsynctimebase - t) / 3;
 		}
 
 		if (vsynctimeperline < 1)
@@ -5536,7 +5573,7 @@ static bool framewait (void)
 		int adjust = 0;
 		if ((int)curr_time - (int)vsyncwaittime > 0 && (int)curr_time - (int)vsyncwaittime < vstb / 2)
 			adjust += curr_time - vsyncwaittime;
-		max = (int)(vstb - adjust);
+		max = (int)(vstb * (1000.0) / 1000.0 - adjust);
 		vsyncwaittime = curr_time + vstb - adjust;
 		vsyncmintime = curr_time;
 
@@ -5558,7 +5595,7 @@ static bool framewait (void)
 			t = read_processor_time () - start;
 		}
 		while (true) {
-			double v = rpt_vsync () / (syncbase / 1000.0);
+			auto v = rpt_vsync() / (syncbase / 1000.0);
 			if (v >= -2)
 				break;
 			cpu_sleep_millis(1);
@@ -5736,7 +5773,7 @@ static void vsync_handler_post (void)
 		lof_lace = false;
 	}
 	
-	if ((beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200)) != (new_beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200))) {
+	if (varsync_changed || (beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200)) != (new_beamcon0 & (0x10 | 0x20 | 0x80 | 0x100 | 0x200))) {
 		init_hz_normal();
   } else if (vpos_count > 0 && abs (vpos_count - vpos_count_diff) > 1 && vposw_change < 4) {
 		init_hz_vposw();
@@ -5791,6 +5828,12 @@ static void dmal_emu (uae_u32 v)
 	}
 }
 			  
+static void dmal_func (uae_u32 v)
+{
+	dmal_emu (v);
+	events_dmal (0);
+}
+
 static void dmal_func2 (uae_u32 v)
 {
 	while (dmal) {
@@ -5852,6 +5895,15 @@ static void hsync_handler_pre (bool onvsync)
     /* Using 0x8A makes sure that we don't accidentally trip over the
        modified_regtypes check.  */
     sync_copper_with_cpu (maxhpos, 0, 0x8A);
+
+	// Seven Seas scrolling quick fix hack
+	// checks if copper is going to modify BPLCON1 in next cycle.
+	if (copper_enabled_thisline && cop_state.state == COP_read2 && (cop_state.i1 & 0x1fe) == 0x102) {
+		// it did, pre-load value for Denise shifter emulation
+		hpos_is_zero_bplcon1_hack = chipmem_wget_indirect(cop_state.ip);
+		// following finish_decision() is going to finish this line
+		// it is too late when copper actually does the move
+	}
 
     finish_decisions ();
     if (thisline_decision.plfleft >= 0) {
@@ -5951,6 +6003,7 @@ static void hsync_handler_post (bool onvsync)
   }
 	if (vpos == 0)
 		send_interrupt (5);
+   
 	// lastline - 1?
 	if (vpos + 1 == maxvpos + lof_store || vpos + 1 == maxvpos + lof_store + 1) {
 		lof_lastline = lof_store != 0;
@@ -6267,6 +6320,7 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		BPLCON0 (0, 0);
 		BPLCON0 (0, v);
 		FMODE (0, fmode);
+		
 		if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 			for(int i = 0 ; i < 32 ; i++)  {
 				vv = current_colors.color_regs_ecs[i];
@@ -6566,6 +6620,7 @@ static uae_u32 REGPARAM2 custom_lget (uaecptr addr)
 		return dummy_get(addr, 4, false, 0);
   return ((uae_u32)custom_wget (addr) << 16) | custom_wget (addr + 2);
 }
+
 static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int noget)
 {
   addr &= 0x1FE;
@@ -6739,18 +6794,18 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
     	SPRxDATB (hpos, value, (addr - 0x146) / 8);
     	break;
 
-    case 0x1C0: if (htotal != value) { htotal = value & (MAXHPOS_ROWS - 1); } break;
-    case 0x1C2: if (hsstop != value) { hsstop = value & (MAXHPOS_ROWS - 1); } break;
-    case 0x1C4: if (hbstrt != value) { hbstrt = value & (MAXHPOS_ROWS - 1); } break;
-    case 0x1C6: if (hbstop != value) { hbstop = value & (MAXHPOS_ROWS - 1); } break;
-    case 0x1C8: if (vtotal != value) { vtotal = value & (MAXVPOS_LINES_ECS - 1); } break;
-    case 0x1CA: if (vsstop != value) { vsstop = value & (MAXVPOS_LINES_ECS - 1); } break;
-    case 0x1CC: if (vbstrt < value || vbstrt > (value & (MAXVPOS_LINES_ECS - 1)) + 1) { vbstrt = value & (MAXVPOS_LINES_ECS - 1); } break;
-    case 0x1CE: if (vbstop < value || vbstop > (value & (MAXVPOS_LINES_ECS - 1)) + 1) { vbstop = value & (MAXVPOS_LINES_ECS - 1); } break;
+    case 0x1C0: if (htotal != value) { htotal = value & (MAXHPOS_ROWS - 1); varsync (); } break;
+    case 0x1C2: if (hsstop != value) { hsstop = value & (MAXHPOS_ROWS - 1); varsync (); } break;
+    case 0x1C4: if (hbstrt != value) { hbstrt = value & (MAXHPOS_ROWS - 1); varsync (); } break;
+    case 0x1C6: if (hbstop != value) { hbstop = value & (MAXHPOS_ROWS - 1); varsync (); } break;
+    case 0x1C8: if (vtotal != value) { vtotal = value & (MAXVPOS_LINES_ECS - 1); varsync (); } break;
+    case 0x1CA: if (vsstop != value) { vsstop = value & (MAXVPOS_LINES_ECS - 1); varsync (); } break;
+    case 0x1CC: if (vbstrt < value || vbstrt > (value & (MAXVPOS_LINES_ECS - 1)) + 1) { vbstrt = value & (MAXVPOS_LINES_ECS - 1); varsync (); } break;
+    case 0x1CE: if (vbstop < value || vbstop > (value & (MAXVPOS_LINES_ECS - 1)) + 1) { vbstop = value & (MAXVPOS_LINES_ECS - 1); varsync (); } break;
     case 0x1DC: BEAMCON0 (value); break;
-    case 0x1DE: if (hsstrt != value) { hsstrt = value & (MAXHPOS_ROWS - 1); } break;
-    case 0x1E0: if (vsstrt != value) { vsstrt = value & (MAXVPOS_LINES_ECS - 1); } break;
-    case 0x1E2: if (hcenter != value) { hcenter = value & (MAXHPOS_ROWS - 1); } break;
+    case 0x1DE: if (hsstrt != value) { hsstrt = value & (MAXHPOS_ROWS - 1); varsync (); } break;
+    case 0x1E0: if (vsstrt != value) { vsstrt = value & (MAXVPOS_LINES_ECS - 1); varsync (); } break;
+    case 0x1E2: if (hcenter != value) { hcenter = value & (MAXHPOS_ROWS - 1); varsync (); } break;
     case 0x1E4: DIWHIGH (hpos, value); break;
 
     case 0x1FC: FMODE (hpos, value); break;
