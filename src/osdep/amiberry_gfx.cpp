@@ -173,12 +173,12 @@ static void *display_thread(void *unused)
 			width = display_width;
 			height = display_height;
 #ifdef USE_SDL1
-			dummy_screen = SDL_SetVideoMode(width, height, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
-			screen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, 16,
+			dummy_screen = SDL_SetVideoMode(width, height, 32, SDL_SWSURFACE | SDL_FULLSCREEN);
+			screen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, 32,
 				dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
 			SDL_FreeSurface(dummy_screen);
 #elif USE_SDL2
-			screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
+			screen = SDL_CreateRGBSurface(0, display_width, display_height, 32, 0, 0, 0, 0);
 #endif
 			vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
@@ -607,7 +607,7 @@ static void open_screen(struct uae_prefs* p)
 			}	
 	}
 
-	screen = SDL_CreateRGBSurface(0, display_width, display_height, 16, 0, 0, 0, 0);
+	screen = SDL_CreateRGBSurface(0, display_width, display_height, 32, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
 	if (screen_is_picasso)
