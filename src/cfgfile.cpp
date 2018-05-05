@@ -4662,7 +4662,7 @@ static void cmdpath(TCHAR* dst, const TCHAR* src, int maxsz)
 int parse_cmdline_option(struct uae_prefs* p, TCHAR c, const TCHAR* arg)
 {
 	struct strlist* u = xcalloc (struct strlist, 1);
-	const TCHAR arg_required[] = _T("0123rKpImWSAJwNCZUFcblOdHRv");
+	const TCHAR arg_required[] = _T("0123rKpImMWSRJwnvCZUFbclOdH");
 
 	if (_tcschr(arg_required, c) && ! arg)
 	{
