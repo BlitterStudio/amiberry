@@ -104,7 +104,7 @@ USE_SDL2 = 1
     CFLAGS += -DARMV6T2 -D__arm__ -DARM_HAS_DIV -DUSE_SDL2
     CC = arm-linux-gnueabihf-gcc
     CXX = arm-linux-gnueabihf-g++
-    NAME  = amiberry-pine64-sdl2
+    NAME  = amiberry-pine64
 
 else ifeq ($(PLATFORM),xu4)
 USE_SDL2 = 1
@@ -117,14 +117,26 @@ USE_SDL2 = 1
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
-    
-else ifeq ($(PLATFORM),vero4k-sdl2)
+
+else ifeq ($(PLATFORM),c1)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a7 -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    HAVE_NEON = 1
+    NAME  = amiberry-c1
+    ifdef DEBUG
+	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+        MORE_CFLAGS += -fomit-frame-pointer
+    endif
+	
+else ifeq ($(PLATFORM),vero4k)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     CFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
-    NAME  = amiberry-vero4k-sdl2
+    NAME  = amiberry-vero4k
 
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
