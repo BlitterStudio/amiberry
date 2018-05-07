@@ -10,7 +10,7 @@
 #include <fstream>  /// Horace added 
 #include <string> /// Horace added (to remove)
 #include <cstdlib>   /// Horace added   /* atol */
-
+#include <algorithm>
 
 static struct host_input_button default_controller_map;
 struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
@@ -631,19 +631,16 @@ static int get_joystick_num(void)
 	return nr_joysticks + num_keys_as_joys;
 }
 
-static std::string sanitize_retroarch_name(const std::string& s)
+static std::string sanitize_retroarch_name(std::string s)
 {
-	string illegal_chars = "\\/:?\"<>|";
+	char illegal_chars[] = "\\/:?\"<>|";
 
-	for (auto it = s.begin(); it < s.end(); ++it) {
-		const auto found = illegal_chars.find(*it) != string::npos;
-		if (found) {
-			it = '';
-		}
+	for (unsigned int i = 0; i < strlen(illegal_chars); ++i)
+	{
+		s.erase(remove(s.begin(), s.end(), illegal_chars[i]), s.end());
 	}
 
-	auto sanitized_string = s;
-	return sanitized_string;
+	return s;
 }
 
 static int init_joystick(void)
