@@ -120,7 +120,7 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),c1)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a7 -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CPU_FLAGS += -march=armv7-a -mcpu=cortex-a5 -mtune=cortex-a5 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
     HAVE_NEON = 1
     NAME  = amiberry-c1
