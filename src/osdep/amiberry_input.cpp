@@ -631,10 +631,19 @@ static int get_joystick_num(void)
 	return nr_joysticks + num_keys_as_joys;
 }
 
-static std::string sanitize_retroarch_name(const std::string& path)
+static std::string sanitize_retroarch_name(const std::string& s)
 {
-	auto sanitized_name = path.substr(path.find_last_of('/') + 1, path.find_last_of('.'));
-	return sanitized_name;
+	string illegal_chars = "\\/:?\"<>|";
+
+	for (auto it = s.begin(); it < s.end(); ++it) {
+		const auto found = illegal_chars.find(*it) != string::npos;
+		if (found) {
+			it = '';
+		}
+	}
+
+	auto sanitized_string = s;
+	return sanitized_string;
 }
 
 static int init_joystick(void)
