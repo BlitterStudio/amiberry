@@ -629,17 +629,27 @@ static void open_screen(struct uae_prefs* p)
 	}
 
 	int depth;
+	Uint32 pixel_format;
+
 	if (screen_is_picasso)
 	{
 		if (picasso96_state.RGBFormat == RGBFB_R5G6B5 || picasso96_state.RGBFormat == RGBFB_CLUT)
+		{
 			depth = 16;
+			pixel_format = SDL_PIXELFORMAT_RGB565;
+		}
 		else
+		{
 			depth = 32;
+			pixel_format = SDL_PIXELFORMAT_RGBA32;
+		}
 	}
 	else
 	{
 		depth = 16;
+		pixel_format = SDL_PIXELFORMAT_RGB565;
 	}
+
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
@@ -648,7 +658,7 @@ static void open_screen(struct uae_prefs* p)
 	else
 		SDL_RenderSetLogicalSize(renderer, display_width, (display_height * 2) >> p->gfx_vresolution);
 
-	texture = SDL_CreateTexture(renderer, screen->format->format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
+	texture = SDL_CreateTexture(renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
 
 #endif
