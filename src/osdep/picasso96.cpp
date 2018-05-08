@@ -739,12 +739,12 @@ static void setconvert(void)
 {
 	static int ohost_mode, orgbformat;
 
-	picasso_convert = getconvert (picasso96_state.RGBFormat, picasso_vidinfo.pixbytes);
-  host_mode = GetSurfacePixelFormat();
-	picasso_palette (picasso96_state.CLUT);
+	picasso_convert = getconvert(picasso96_state.RGBFormat, picasso_vidinfo.pixbytes);
+	host_mode = GetSurfacePixelFormat();
+	picasso_palette(picasso96_state.CLUT);
 	if (host_mode != ohost_mode || picasso96_state.RGBFormat != orgbformat) {
-    write_log (_T("RTG conversion: Depth=%d HostRGBF=%d P96RGBF=%d Mode=%d\n"), 
-      picasso_vidinfo.pixbytes, host_mode, picasso96_state.RGBFormat, picasso_convert);
+		write_log(_T("RTG conversion: Depth=%d HostRGBF=%d P96RGBF=%d Mode=%d\n"),
+			picasso_vidinfo.pixbytes, host_mode, picasso96_state.RGBFormat, picasso_convert);
 		ohost_mode = host_mode;
 		orgbformat = picasso96_state.RGBFormat;
 	}
@@ -3121,6 +3121,7 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
 #else
 		copy_screen_16bit_swap_arm(dst, src, picasso96_state.Width * picasso96_state.Height * 2);
 #endif
+
 	}
 	else if (picasso96_state.RGBFormat == RGBFB_CLUT)
 	{
@@ -3139,26 +3140,12 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
 #endif
 	}
 	else {
-#ifdef TINKER
-		bytes = picasso96_state.Width * picasso96_state.Height * 4;
-		for (int i = 0; i < bytes; i += 4) {
-			*((uae_u32 *)(dst + i)) = (
-				(
-				(*(uae_u8 *)(src + (i << 1) + 4)) >> 3 << 11 |
-					(*(uae_u8 *)(src + (i << 1) + 5)) >> 2 << 5 |
-					(*(uae_u8 *)(src + (i << 1) + 6)) >> 3
-					) << 16 | (
-					(*(uae_u8 *)(src + (i << 1) + 0)) >> 3 << 11 |
-						(*(uae_u8 *)(src + (i << 1) + 1)) >> 2 << 5 |
-						(*(uae_u8 *)(src + (i << 1) + 2)) >> 3
-						)
-				);
+		auto w = picasso96_state.Width * picasso96_state.BytesPerPixel;
+		for (auto y = 0; y < picasso96_state.Height; y++) {
+			memcpy(dst, src, w);
+			dst += picasso96_state.BytesPerRow;
+			src += picasso96_state.BytesPerRow;
 		}
-#elif USE_ARMNEON
-		copy_screen_32bit_to_16bit_neon(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
-#else
-		copy_screen_32bit_to_16bit_arm(dst, src, picasso96_state.Width * picasso96_state.Height * 4);
-#endif
 	}
 }
 

@@ -102,6 +102,8 @@ VC_RECT_T       dst_rect;
 VC_RECT_T       blit_rect;
 VC_RECT_T		black_rect;
 
+VC_IMAGE_TYPE_T rgb_mode = VC_IMAGE_RGB565;
+
 static int DispManXElementpresent = 0;
 static unsigned char current_resource_amigafb = 0;
 
@@ -121,7 +123,7 @@ static void *display_thread(void *unused)
 #ifdef USE_SDL1
 	SDL_Surface *dummy_screen;
 #endif
-	int width, height;
+	int width, height, depth;
 	float want_aspect, real_aspect, scale;
 	SDL_Rect viewport;
 
@@ -172,23 +174,42 @@ static void *display_thread(void *unused)
 		case DISPLAY_SIGNAL_OPEN:
 			width = display_width;
 			height = display_height;
+			if (screen_is_picasso)
+			{
+				if (picasso96_state.RGBFormat == RGBFB_R5G6B5 || picasso96_state.RGBFormat == RGBFB_CLUT)
+				{
+					depth = 16;
+					rgb_mode = VC_IMAGE_RGB565;
+				}
+				else 
+				{
+					depth = 32;
+					rgb_mode = VC_IMAGE_RGBA32;
+				}	
+			}
+			else
+			{
+				depth = 16;
+				rgb_mode = VC_IMAGE_RGB565;
+			}
+
 #ifdef USE_SDL1
-			dummy_screen = SDL_SetVideoMode(width, height, 32, SDL_SWSURFACE | SDL_FULLSCREEN);
-			screen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, 32,
+			dummy_screen = SDL_SetVideoMode(width, height, depth, SDL_SWSURFACE | SDL_FULLSCREEN);
+			screen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, depth,
 				dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
 			SDL_FreeSurface(dummy_screen);
 #elif USE_SDL2
-			screen = SDL_CreateRGBSurface(0, display_width, display_height, 32, 0, 0, 0, 0);
+			screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
 #endif
 			vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
-			dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_XRGB8888, width, height, &vc_image_ptr);
-			dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_XRGB8888, width, height, &vc_image_ptr);
-			dispmanxresource_blackfb = vc_dispmanx_resource_create(VC_IMAGE_XRGB8888, width, height, &vc_image_ptr);
+			dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			dispmanxresource_blackfb = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
 
 			vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
-			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_XRGB8888, screen->pitch, screen->pixels, &blit_rect);
-			vc_dispmanx_resource_write_data(dispmanxresource_blackfb, VC_IMAGE_XRGB8888, screen->pitch, screen->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, rgb_mode, screen->pitch, screen->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(dispmanxresource_blackfb, rgb_mode, screen->pitch, screen->pixels, &blit_rect);
 			vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
 
 			// Use the full screen size for the black frame
@@ -253,7 +274,7 @@ static void *display_thread(void *unused)
 			{
 				current_resource_amigafb = 0;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
-					VC_IMAGE_XRGB8888,
+					rgb_mode,
 					screen->pitch,
 					screen->pixels,
 					&blit_rect);
@@ -264,7 +285,7 @@ static void *display_thread(void *unused)
 			{
 				current_resource_amigafb = 1;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_2,
-					VC_IMAGE_XRGB8888,
+					rgb_mode,
 					screen->pitch,
 					screen->pixels,
 					&blit_rect);
@@ -607,7 +628,19 @@ static void open_screen(struct uae_prefs* p)
 			}	
 	}
 
-	screen = SDL_CreateRGBSurface(0, display_width, display_height, 32, 0, 0, 0, 0);
+	int depth;
+	if (screen_is_picasso)
+	{
+		if (picasso96_state.RGBFormat == RGBFB_R5G6B5 || picasso96_state.RGBFormat == RGBFB_CLUT)
+			depth = 16;
+		else
+			depth = 32;
+	}
+	else
+	{
+		depth = 16;
+	}
+	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
 	if (screen_is_picasso)
