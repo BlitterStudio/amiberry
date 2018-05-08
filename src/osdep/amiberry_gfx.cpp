@@ -182,13 +182,13 @@ static void *display_thread(void *unused)
 #endif
 			vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
-			dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
-			dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
-			dispmanxresource_blackfb = vc_dispmanx_resource_create(VC_IMAGE_RGB565, width, height, &vc_image_ptr);
+			dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, width, height, &vc_image_ptr);
+			dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, width, height, &vc_image_ptr);
+			dispmanxresource_blackfb = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, width, height, &vc_image_ptr);
 
 			vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
-			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGB565, screen->pitch, screen->pixels, &blit_rect);
-			vc_dispmanx_resource_write_data(dispmanxresource_blackfb, VC_IMAGE_RGB565, screen->pitch, screen->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, VC_IMAGE_RGBA32, screen->pitch, screen->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(dispmanxresource_blackfb, VC_IMAGE_RGBA32, screen->pitch, screen->pixels, &blit_rect);
 			vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
 
 			// Use the full screen size for the black frame
@@ -253,7 +253,7 @@ static void *display_thread(void *unused)
 			{
 				current_resource_amigafb = 0;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
-					VC_IMAGE_RGB565,
+					VC_IMAGE_RGBA32,
 					screen->pitch,
 					screen->pixels,
 					&blit_rect);
@@ -264,7 +264,7 @@ static void *display_thread(void *unused)
 			{
 				current_resource_amigafb = 1;
 				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_2,
-					VC_IMAGE_RGB565,
+					VC_IMAGE_RGBA32,
 					screen->pitch,
 					screen->pixels,
 					&blit_rect);

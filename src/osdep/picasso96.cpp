@@ -3140,7 +3140,7 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
 	}
 	else {
 #ifdef TINKER
-		bytes = picasso96_state.Width * picasso96_state.Height * 2;
+		bytes = picasso96_state.Width * picasso96_state.Height * 4;
 		for (int i = 0; i < bytes; i += 4) {
 			*((uae_u32 *)(dst + i)) = (
 				(

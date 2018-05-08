@@ -325,7 +325,7 @@ namespace sdl
 		printf("Current resolution: %d x %d %d bpp\n", videoInfo->current_w, videoInfo->current_h,
 			videoInfo->vfmt->BitsPerPixel);
 #endif //DEBUG
-		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+		gui_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 32, SDL_SWSURFACE | SDL_FULLSCREEN);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 		SDL_EnableUNICODE(1);
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
