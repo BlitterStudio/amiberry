@@ -340,7 +340,9 @@ struct host_input_button {
 
 	int lstick_button;
 	int lstick_axis_y;
+        bool lstick_axis_y_invert;
 	int lstick_axis_x;
+        bool lstick_axis_x_invert;
 	int lstick_left;
 	int lstick_right;
 	int lstick_up;
@@ -348,7 +350,9 @@ struct host_input_button {
 
 	int rstick_button;
 	int rstick_axis_y;
+        bool rstick_axis_y_invert;
 	int rstick_axis_x;
+        bool rstick_axis_x_invert;
 	int rstick_left;
 	int rstick_right;
 	int rstick_up;
