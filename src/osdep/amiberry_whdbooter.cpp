@@ -300,14 +300,15 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 	}
 }
 
-
 void symlink_roms(struct uae_prefs* p)
 
 {
 	//      *** KICKSTARTS ***
 	//     
 	char kick_path[MAX_DPATH];
-
+        char tmp[MAX_DPATH];
+        char tmp2[MAX_DPATH];
+        
 	// here we can do some checks for Kickstarts we might need to make symlinks for
 	strncpy(currentDir, start_path_data, MAX_DPATH);
 
@@ -329,8 +330,7 @@ void symlink_roms(struct uae_prefs* p)
 	make_rom_symlink("kick40063.A600", kick_path, 14, p);
 	make_rom_symlink("kick40068.A1200", kick_path, 15, p);
 	make_rom_symlink("kick40068.A4000", kick_path, 16, p);
-
-
+ 
 	// these ones could not be located in 'rommgr.cpp' although all but one are BETA(?) anyway    
 	//     make_rom_symlink("kick36143.A3000", kick_path, ?  ,p);
 	//     make_rom_symlink("kick39046.A500.BETA", kick_path, ?  ,p);
@@ -343,6 +343,20 @@ void symlink_roms(struct uae_prefs* p)
 	//     make_rom_symlink("kick40009.A4000.BETA", kick_path, ?  ,p);                 
 	//     make_rom_symlink("kick40038.A600.BETA", kick_path, ?  ,p);                
 	//     make_rom_symlink("kick40038.A4000.BETA", kick_path, ?  ,p);
+        
+        
+        // Symlink rom.key also
+        // source file
+        fetch_rompath(tmp2,MAX_DPATH);
+        snprintf(tmp, MAX_DPATH, "%s/rom.key", tmp2);
+        
+        // destination file (symlink) 
+        snprintf(tmp2, MAX_DPATH, "%s/rom.key", kick_path);
+        
+        if (zfile_exists(tmp))
+            symlink(tmp, tmp2);
+	                
+        
 }
 
 
@@ -899,12 +913,17 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// COMPATIBLE CPU
-	if (strcmpi(game_detail.cpu_comp,"true") == 0)
+	if (strcmpi(game_detail.cpu_comp,"true") == 0) 
 	{
 		_stprintf(txt2, "cpu_compatible=true");
 		cfgfile_parse_line(p, txt2, 0);
 	}
-
+	else if (strcmpi(game_detail.cpu_comp,"false") == 0) 
+	{
+		_stprintf(txt2, "cpu_compatible=false");
+		cfgfile_parse_line(p, txt2, 0);
+	}
+        
 	// COMPATIBLE CPU
 	if (strcmpi(game_detail.cpu_comp,"false") == 0)
 	{
