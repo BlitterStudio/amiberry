@@ -543,13 +543,11 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	// SET UNIVERSAL DEFAULTS
 	p->start_gui = false;
 
-
+       
 	if ((strcmpi(game_detail.cpu,"68000") == 0 || strcmpi(game_detail.cpu,"68010") == 0) && a600_available != 0)
 		// SET THE BASE AMIGA (Expanded A600)
 	{
 		built_in_prefs(&currprefs, 2, 2, 0, 0);
-		_stprintf(txt2, "chipmem_size=4");
-		cfgfile_parse_line(p, txt2, 0);
 	}
 	else
 		// SET THE BASE AMIGA (Expanded A1200)
@@ -576,7 +574,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		// A1200
 	else
 		_tcscpy(p->description, _T("WHDLoad AutoBoot Configuration [AGA]"));
-
 
 	//SET THE WHD BOOTER AND GAME DATA  
 	snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
@@ -617,7 +614,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
-
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	// CD32
 	if ((static_cast<bool>(is_cd32) && strcmpi(game_detail.port0, "nul") == 0)
@@ -648,7 +644,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		jport.idc.name[0] = 0;
 		jport.idc.shortid[0] = 0;
 	}
-
 
 	// WHAT IS THE MAIN CONTROL?
 	// PORT 0 - MOUSE GAMES     
@@ -806,8 +801,10 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	{
 		_stprintf(txt2, "cpu_type=%s", game_detail.cpu);
 		cfgfile_parse_line(p, txt2, 0);
+                
+                _stprintf(txt2, "chipmem_size=4");
+  		cfgfile_parse_line(p, txt2, 0);   
 	}
-
 
 	// CPU SPEED
 	if (strcmpi(game_detail.clock,"7") == 0)
