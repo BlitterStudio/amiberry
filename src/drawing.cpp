@@ -79,7 +79,7 @@ int debug_bpl_mask = 0xff, debug_bpl_mask_one;
 
 static void lores_set(int lores)
 {
-	int old = lores;
+	int old = lores_shift;
 	lores_shift = lores;
 	if (lores_shift != old)
 		pfield_set_linetoscr();
