@@ -300,14 +300,15 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 	}
 }
 
-
 void symlink_roms(struct uae_prefs* p)
 
 {
 	//      *** KICKSTARTS ***
 	//     
 	char kick_path[MAX_DPATH];
-
+        char tmp[MAX_DPATH];
+        char tmp2[MAX_DPATH];
+        
 	// here we can do some checks for Kickstarts we might need to make symlinks for
 	strncpy(currentDir, start_path_data, MAX_DPATH);
 
@@ -329,8 +330,7 @@ void symlink_roms(struct uae_prefs* p)
 	make_rom_symlink("kick40063.A600", kick_path, 14, p);
 	make_rom_symlink("kick40068.A1200", kick_path, 15, p);
 	make_rom_symlink("kick40068.A4000", kick_path, 16, p);
-
-
+ 
 	// these ones could not be located in 'rommgr.cpp' although all but one are BETA(?) anyway    
 	//     make_rom_symlink("kick36143.A3000", kick_path, ?  ,p);
 	//     make_rom_symlink("kick39046.A500.BETA", kick_path, ?  ,p);
@@ -343,6 +343,20 @@ void symlink_roms(struct uae_prefs* p)
 	//     make_rom_symlink("kick40009.A4000.BETA", kick_path, ?  ,p);                 
 	//     make_rom_symlink("kick40038.A600.BETA", kick_path, ?  ,p);                
 	//     make_rom_symlink("kick40038.A4000.BETA", kick_path, ?  ,p);
+        
+        
+        // Symlink rom.key also
+        // source file
+        fetch_rompath(tmp2,MAX_DPATH);
+        snprintf(tmp, MAX_DPATH, "%s/rom.key", tmp2);
+        
+        // destination file (symlink) 
+        snprintf(tmp2, MAX_DPATH, "%s/rom.key", kick_path);
+        
+        if (zfile_exists(tmp))
+            symlink(tmp, tmp2);
+	                
+        
 }
 
 
@@ -543,13 +557,11 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	// SET UNIVERSAL DEFAULTS
 	p->start_gui = false;
 
-
+       
 	if ((strcmpi(game_detail.cpu,"68000") == 0 || strcmpi(game_detail.cpu,"68010") == 0) && a600_available != 0)
 		// SET THE BASE AMIGA (Expanded A600)
 	{
 		built_in_prefs(&currprefs, 2, 2, 0, 0);
-		_stprintf(txt2, "chipmem_size=4");
-		cfgfile_parse_line(p, txt2, 0);
 	}
 	else
 		// SET THE BASE AMIGA (Expanded A1200)
@@ -576,7 +588,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		// A1200
 	else
 		_tcscpy(p->description, _T("WHDLoad AutoBoot Configuration [AGA]"));
-
 
 	//SET THE WHD BOOTER AND GAME DATA  
 	snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
@@ -617,7 +628,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
-
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	// CD32
 	if ((static_cast<bool>(is_cd32) && strcmpi(game_detail.port0, "nul") == 0)
@@ -648,7 +658,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		jport.idc.name[0] = 0;
 		jport.idc.shortid[0] = 0;
 	}
-
 
 	// WHAT IS THE MAIN CONTROL?
 	// PORT 0 - MOUSE GAMES     
@@ -806,8 +815,10 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	{
 		_stprintf(txt2, "cpu_type=%s", game_detail.cpu);
 		cfgfile_parse_line(p, txt2, 0);
+                
+                _stprintf(txt2, "chipmem_size=4");
+  		cfgfile_parse_line(p, txt2, 0);   
 	}
-
 
 	// CPU SPEED
 	if (strcmpi(game_detail.clock,"7") == 0)
@@ -902,12 +913,17 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// COMPATIBLE CPU
-	if (strcmpi(game_detail.cpu_comp,"true") == 0)
+	if (strcmpi(game_detail.cpu_comp,"true") == 0) 
 	{
 		_stprintf(txt2, "cpu_compatible=true");
 		cfgfile_parse_line(p, txt2, 0);
 	}
-
+	else if (strcmpi(game_detail.cpu_comp,"false") == 0) 
+	{
+		_stprintf(txt2, "cpu_compatible=false");
+		cfgfile_parse_line(p, txt2, 0);
+	}
+        
 	// COMPATIBLE CPU
 	if (strcmpi(game_detail.cpu_comp,"false") == 0)
 	{
