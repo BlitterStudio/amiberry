@@ -1052,9 +1052,27 @@ static void read_joystick(void)
 
 			auto held_offset = 0;
 
-
-			// temporary solution for retroarch buttons inc. HOTKEY 
-			if (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.hotkey_button) & 1)
+			// detect standalone retroarch hotkeys
+			if (current_controller_map.hotkey_button == -1)
+			{
+				if (current_controller_map.menu_button != -1)
+				{
+					setjoybuttonstate(hostjoyid + 1, 14,
+						(SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.menu_button) & 1));
+				}
+				if (current_controller_map.quit_button != -1)
+				{
+					setjoybuttonstate(hostjoyid + 1, 15,
+						(SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.quit_button) & 1));
+				}
+				if (current_controller_map.reset_button != -1)
+				{
+					setjoybuttonstate(hostjoyid + 1, 30,
+						(SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.reset_button) & 1));
+				}
+			}
+			// temporary solution for retroarch buttons inc. HOTKEY
+			else if (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.hotkey_button) & 1)
 			{
 				held_offset = REMAP_BUTTONS;
 				setjoybuttonstate(hostjoyid + 1, 14,
