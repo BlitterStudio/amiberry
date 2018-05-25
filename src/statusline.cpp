@@ -16,7 +16,7 @@
 #include "drawing.h"
 #include "statusline.h"
 
-extern SDL_Surface *screen;
+extern SDL_Surface* screen;
 
 /*
 * Some code to put status information on the screen.
@@ -26,7 +26,8 @@ extern SDL_Surface *screen;
 #define HDLED_READ		1
 #define HDLED_WRITE		2
 
-static const char *numbers = { /* ugly  0123456789CHD%+-P */
+static const char* numbers = {
+	/* ugly  0123456789CHD%+-P */
 	"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------+++++++"
 	"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------+xxxxx+"
 	"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--+x---x+"
@@ -36,19 +37,28 @@ static const char *numbers = { /* ugly  0123456789CHD%+-P */
 	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----"
 };
 
-STATIC_INLINE void putpixel(uae_u8 *buf, int x, xcolnr c8)
+STATIC_INLINE void putpixel(uae_u8* buf, int x, xcolnr c8)
 {
-	uae_u16 *p = (uae_u16 *)buf + x;
-	*p = (uae_u16)c8;
+	if (x <= 0)
+		return;
+
+	if (picasso_vidinfo.pixbytes < 4)
+	{
+		const auto p = reinterpret_cast<uae_u16 *>(buf) + x;
+		*p = uae_u16(c8);
+	}
+	else
+	{
+		const auto p = reinterpret_cast<uae_u32*>(buf) + x;
+		*p = c8;
+	}
 }
 
-static void write_tdnumber(uae_u8 *buf, int x, int y, int num)
+static void write_tdnumber(uae_u8* buf, int x, int y, int num)
 {
-	int j;
-	const char *numptr;
-
-	numptr = numbers + num * TD_NUM_WIDTH + NUMBERS_NUM * TD_NUM_WIDTH * y;
-	for (j = 0; j < TD_NUM_WIDTH; j++) {
+	auto numptr = numbers + num * TD_NUM_WIDTH + NUMBERS_NUM * TD_NUM_WIDTH * y;
+	for (auto j = 0; j < TD_NUM_WIDTH; j++)
+	{
 		if (*numptr == 'x')
 			putpixel(buf, x + j, xcolors[0xfff]);
 		else if (*numptr == '+')
@@ -57,7 +67,7 @@ static void write_tdnumber(uae_u8 *buf, int x, int y, int num)
 	}
 }
 
-void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
+void draw_status_line_single(uae_u8* buf, int y, int totalwidth)
 {
 	int x, i, j, led, on;
 	int on_rgb, off_rgb, c;
@@ -69,16 +79,19 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
 	if (currprefs.hide_idle_led)
 		x += TD_WIDTH;
 	if (picasso_on)
-		memset(buf + (x - 4) * picasso96_state.BytesPerPixel, 0, (screen->w - x + 4) * picasso96_state.BytesPerPixel);
+		memset(buf + (x - 4) * picasso_vidinfo.pixbytes, 0, (screen->w - x + 4) * picasso_vidinfo.pixbytes);
 	else
-		memset(buf + (x - 4) * gfxvidinfo.drawbuffer.pixbytes, 0, (gfxvidinfo.drawbuffer.outwidth - x + 4) * gfxvidinfo.drawbuffer.pixbytes);
+		memset(buf + (x - 4) * gfxvidinfo.drawbuffer.pixbytes, 0,
+		       (gfxvidinfo.drawbuffer.outwidth - x + 4) * gfxvidinfo.drawbuffer.pixbytes);
 
-  for (led = (currprefs.hide_idle_led == 0) ? -2 : -1; led < (currprefs.nr_floppies + 1); led++) {
+	for (led = (currprefs.hide_idle_led == 0) ? -2 : -1; led < (currprefs.nr_floppies + 1); led++)
+	{
 		int num1 = -1, num2 = -1, num3 = -1;
 
 		if (led == 0 && nr_units() < 1)
 			continue; // skip led for HD if not in use
-		if (led > 0) {
+		if (led > 0)
+		{
 			/* Floppy */
 			int track = gui_data.drive_track[led - 1];
 			num1 = -1;
@@ -90,7 +103,8 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
 			if (gui_data.drive_writing[led - 1])
 				on_rgb = 0xc00;
 		}
-		else if (led < -1) {
+		else if (led < -1)
+		{
 			/* Idle time */
 			int track = ((1000 - gui_data.idle) + 5) / 10;
 			if (track < 0)
@@ -102,7 +116,8 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
 			on_rgb = 0x666;
 			off_rgb = 0x666;
 		}
-		else if (led < 0) {
+		else if (led < 0)
+		{
 			/* Power */
 			int track = (gui_data.fps + 5) / 10;
 			num1 = track / 100;
@@ -111,20 +126,23 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
 			on = gui_data.powerled;
 			on_rgb = 0xc00;
 			off_rgb = 0x300;
-			if (gui_data.cpu_halted) {
+			if (gui_data.cpu_halted)
+			{
 				on = 1;
 				num1 = gui_data.cpu_halted >= 10 ? 11 : -1;
 				num2 = gui_data.cpu_halted >= 10 ? gui_data.cpu_halted / 10 : 11;
 				num3 = gui_data.cpu_halted % 10;
 			}
 		}
-		else {
+		else
+		{
 			/* Hard disk */
 			num1 = -1;
 			num2 = 11;
 			num3 = 12;
 
-			switch (gui_data.hd) {
+			switch (gui_data.hd)
+			{
 			case HDLED_OFF:
 				on = 0;
 				off_rgb = 0x003;
@@ -146,7 +164,8 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
 		for (j = 0; j < TD_LED_WIDTH; j++)
 			putpixel(buf, x + j, c);
 
-		if (y >= TD_PADY && y - TD_PADY < TD_NUM_HEIGHT) {
+		if (y >= TD_PADY && y - TD_PADY < TD_NUM_HEIGHT)
+		{
 			int tn = num1 > 0 ? 3 : 2;
 			int offs = (TD_LED_WIDTH - tn * TD_NUM_WIDTH) / 2;
 			if (num1 > 0)
