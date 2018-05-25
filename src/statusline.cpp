@@ -68,7 +68,10 @@ void draw_status_line_single(uae_u8 *buf, int y, int totalwidth)
 		x += TD_WIDTH;
 	if (currprefs.hide_idle_led)
 		x += TD_WIDTH;
-	memset(buf + (x - 4) * gfxvidinfo.drawbuffer.pixbytes, 0, (gfxvidinfo.drawbuffer.outwidth - x + 4) * gfxvidinfo.drawbuffer.pixbytes);
+	if (picasso_on)
+		memset(buf + (x - 4) * picasso96_state.BytesPerPixel, 0, (screen->w - x + 4) * picasso96_state.BytesPerPixel);
+	else
+		memset(buf + (x - 4) * gfxvidinfo.drawbuffer.pixbytes, 0, (gfxvidinfo.drawbuffer.outwidth - x + 4) * gfxvidinfo.drawbuffer.pixbytes);
 
   for (led = (currprefs.hide_idle_led == 0) ? -2 : -1; led < (currprefs.nr_floppies + 1); led++) {
 		int num1 = -1, num2 = -1, num3 = -1;
