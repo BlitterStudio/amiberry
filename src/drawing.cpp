@@ -3101,7 +3101,10 @@ static void draw_status_line(int line, int statusy)
 {
 	xlinebuffer = row_map[line];
 	uae_u8 *buf = xlinebuffer;
-	draw_status_line_single(buf, statusy, gfxvidinfo.drawbuffer.outwidth);
+	if (!buf)
+		return;
+
+	draw_status_line_single(buf, gfxvidinfo.drawbuffer.pixbytes, statusy, gfxvidinfo.drawbuffer.outwidth, xredcolors, xgreencolors, xbluecolors, NULL);
 }
 
 static const int refresh_indicator_colors[] = { 0x777, 0x0f0, 0x00f, 0xff0, 0xf0f };

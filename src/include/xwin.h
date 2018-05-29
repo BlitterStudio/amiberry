@@ -17,6 +17,7 @@ typedef uae_u32 xcolnr;
 typedef int (*allocfunc_type)(int, int, int, xcolnr *);
 
 extern xcolnr xcolors[4096];
+extern uae_u32 p96_rgbx16[65536];
 
 extern int graphics_setup (void);
 extern int graphics_init (bool);
@@ -56,6 +57,8 @@ extern int mask_shift (unsigned long mask);
 extern unsigned int doMask (int p, int bits, int shift);
 extern unsigned int doMask256 (int p, int bits, int shift);
 extern void alloc_colors64k (int, int, int, int, int, int, int);
+extern void alloc_colors_rgb(int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap,
+	uae_u32 *rc, uae_u32 *gc, uae_u32 *bc);
 extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt);
 
 struct vidbuffer

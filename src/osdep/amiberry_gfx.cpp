@@ -1389,6 +1389,11 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	}
 }
 
+void gfx_set_picasso_colors(RGBFTYPE rgbfmt)
+{
+	alloc_colors_picasso(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, rgbfmt);
+}
+
 uae_u8* gfx_lock_picasso()
 {
 	if (screen == nullptr || screen_is_picasso == 0)
