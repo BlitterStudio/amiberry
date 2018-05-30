@@ -163,11 +163,6 @@ static void *display_thread(void *unused)
 				dispmanxresource_blackfb = 0;
 			}
 
-			if (screen != nullptr) {
-				SDL_FreeSurface(screen);
-				screen = nullptr;
-			}
-
 			uae_sem_post(&display_sem);
 			break;
 
