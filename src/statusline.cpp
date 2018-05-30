@@ -26,15 +26,14 @@ extern SDL_Surface* screen;
 #define HDLED_READ		1
 #define HDLED_WRITE		2
 
-static const char* numbers = {
-	/* ugly  0123456789CHD%+-P */
-	"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------+++++++"
-	"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------+xxxxx+"
-	"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--+x---x+"
-	"+x+-+x+---+x+-+xxxxx++xxxxx++xxxxx++xxxxx++xxxxx+--++x+-+xxxxx++xxxxx++x+----+xxxx+-+x++x+----+x+--+xxx+--+xxx+-+xxxxx+"
-	"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--+x+++++"
-	"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------+x+----"
-	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----"
+static const char *numbers = { /* ugly  0123456789CHD%+-PNK */
+	"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------+++++++++++++++++++++"
+	"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------+xxxxx++x+++x++x++x++"
+	"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--+x---x++xx++x++x+x+++"
+	"+x+-+x+---+x+-+xxxxx++xxxxx++xxxxx++xxxxx++xxxxx+--++x+-+xxxxx++xxxxx++x+----+xxxx+-+x++x+----+x+--+xxx+--+xxx+-+xxxxx++x+x+x++xx++++"
+	"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--+x++++++x+x+x++x+x+++"
+	"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------+x+----+x++xx++x++x++"
+	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----++++++++++++++"
 };
 
 STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32* rc, uae_u32* gc, uae_u32* bc, uae_u32* a)
@@ -113,13 +112,9 @@ void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth, uae_u3
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
 		int half = 0;
 
-		if (led == 0 && nr_units() < 1)
-			continue; // skip led for HD if not in use
-
 		pen_rgb = c1;
 		if (led >= LED_DF0 && led <= LED_DF3) 
 		{
-			/* Floppy */
 			int pled = led - LED_DF0;
 			int track = gui_data.drive_track[pled];
 			pos = 7 + pled;
@@ -335,4 +330,38 @@ void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth, uae_u3
 			}
 		}
 	}
+}
+
+#define MAX_STATUSLINE_QUEUE 8
+struct statusline_struct
+{
+	TCHAR *text;
+	int type;
+};
+struct statusline_struct statusline_data[MAX_STATUSLINE_QUEUE];
+static TCHAR *statusline_text_active;
+static int statusline_delay;
+static bool statusline_had_changed;
+
+bool has_statusline_updated(void)
+{
+	bool v = statusline_had_changed;
+	statusline_had_changed = false;
+	return v;
+}
+
+static void statusline_update_notification(void)
+{
+	statusline_had_changed = true;
+}
+
+void statusline_clear(void)
+{
+	statusline_text_active = NULL;
+	statusline_delay = 0;
+	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+		xfree(statusline_data[i].text);
+		statusline_data[i].text = NULL;
+	}
+	statusline_update_notification();
 }

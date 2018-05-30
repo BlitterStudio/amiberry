@@ -28,6 +28,7 @@
 #include "fpp.h"
 #include "threaddep/thread.h"
 #include "bsdsocket.h"
+#include "statusline.h"
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>
@@ -1822,6 +1823,7 @@ void m68k_go (int may_quit)
 
 			if (!restored || hsync_counter == 0)
 				savestate_check ();
+			statusline_clear();
 	  }
 
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
