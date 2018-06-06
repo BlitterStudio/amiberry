@@ -29,21 +29,19 @@ extern bool no_gui;
 #define LED_CD_ACTIVE2 2
 #define LED_CD_AUDIO 4
 
-#define LED_NONE 0
-#define LED_POWER 1
-#define LED_DF0 2
-#define LED_DF1 3
-#define LED_DF2 4
-#define LED_DF3 5
-#define LED_DFs 6         // Define for any DF* access
-#define LED_HD 7
-#define LED_CD 8
-#define LED_FPS 9
-#define LED_CPU 10
-#define LED_SND 11
-#define LED_MD 12
-#define LED_NET 13
-#define LED_MAX 14
+#define LED_POWER 0
+#define LED_DF0 1
+#define LED_DF1 2
+#define LED_DF2 3
+#define LED_DF3 4
+#define LED_HD 5
+#define LED_CD 6
+#define LED_FPS 7
+#define LED_CPU 8
+#define LED_SND 9
+#define LED_MD 10
+#define LED_NET 11
+#define LED_MAX 12
 
 struct gui_info
 {
@@ -52,17 +50,22 @@ struct gui_info
     bool drive_writing[4];  /* drive is writing */
     bool drive_disabled[4];	/* drive is disabled */
     bool powerled;          /* state of power led */
+	uae_u8 powerled_brightness;	/* 0 to 255 */
     uae_s8 drive_side;				/* floppy side */
     uae_s8 hd;			          /* harddrive */
     uae_s8 cd;			          /* CD */
+	uae_s8 md;					/* CD32 or CDTV internal storage */
+	uae_s8 net;					/* network */
     int cpu_halted;
     int fps, idle;
+	int fps_color;
     int sndbuf, sndbuf_status;
+	bool sndbuf_avail;
     TCHAR df[4][256];		    /* inserted image */
     uae_u32 crc32[4];		    /* crc32 of image */
 };
 #define NUM_LEDS (LED_MAX)
-#define VISIBLE_LEDS 6
+#define VISIBLE_LEDS (LED_MAX - 1)
 
 extern struct gui_info gui_data;
 
@@ -91,9 +94,11 @@ typedef enum {
 	NUMSG_OLDCAPS,
 	NUMSG_KICKREP,
 	NUMSG_KICKREPNO,
-	NUMSG_KS68030PLUS,
+	NUMSG_KS68030PLUS, // 20
+	NUMSG_NO_PPC,
+	NUMSG_UAEBOOTROM_PPC,
 	NUMSG_NOMEMORY,
-	NUMSG_LAST  // 20
+	NUMSG_LAST
 } notify_user_msg;
 
 #endif /* UAE_GUI_H */

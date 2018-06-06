@@ -28,19 +28,9 @@ STATIC_INLINE void handle_events (void)
 extern int handle_msgpump (void);
 
 extern bool vsync_switchmode (int);
-STATIC_INLINE int isvsync_chipset (void)
-{
-	if (picasso_on)
-		return 0;
-	return 1;
-}
-
-STATIC_INLINE int isvsync_rtg (void)
-{
-	if (!picasso_on)
-		return 0;
-	return 1;
-}
+extern int isvsync_chipset(void);
+extern int isvsync_rtg(void);
+extern int isvsync(void);
 
 extern bool render_screen (bool);
 extern void show_screen (int);

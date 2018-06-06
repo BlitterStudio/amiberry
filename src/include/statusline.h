@@ -36,5 +36,6 @@ extern void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth,
 #define STATUSTYPE_OTHER 5
 
 extern void statusline_clear(void);
+extern void statusline_vsync(void);
 
 #endif /* UAE_STATUSLINE_H */

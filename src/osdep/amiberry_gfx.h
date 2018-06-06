@@ -7,7 +7,6 @@ extern SDL_Renderer* renderer;
 extern SDL_Texture* texture;
 #endif
 
-extern SDL_Surface* screen;
 extern SDL_Cursor* cursor;
 extern SDL_Surface* gui_screen;
 

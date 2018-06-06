@@ -3097,13 +3097,46 @@ static void init_drawing_frame(void)
 	drawing_color_matches = -1;
 }
 
+void putpixel(uae_u8* buf, uae_u8* genlockbuf, int bpp, int x, xcolnr c8, int opaq)
+{
+	if (x <= 0)
+		return;
+
+	if (genlockbuf)
+		genlockbuf[x] = 0xff;
+
+	switch (bpp)
+	{
+	case 1:
+		buf[x] = (uae_u8)c8;
+		break;
+	case 2:
+	{
+		uae_u16* p = (uae_u16*)buf + x;
+		*p = (uae_u16)c8;
+		break;
+	}
+	case 3:
+		/* no 24 bit yet */
+		break;
+	case 4:
+	{
+		int i;
+		uae_u32* p = (uae_u32*)buf + x;
+		*p = c8;
+		break;
+	}
+	}
+}
+
 static void draw_status_line(int line, int statusy)
 {
 	xlinebuffer = row_map[line];
 	uae_u8 *buf = xlinebuffer;
 	if (!buf)
 		return;
-
+	if (statusy < 0)
+		return;
 	draw_status_line_single(buf, gfxvidinfo.drawbuffer.pixbytes, statusy, gfxvidinfo.drawbuffer.outwidth, xredcolors, xgreencolors, xbluecolors, NULL);
 }
 
@@ -3541,4 +3574,25 @@ void drawing_init(void)
 	inhibit_frame = 0;
 
 	reset_drawing();
+}
+
+int isvsync_chipset(void)
+{
+	if (picasso_on)
+		return 0;
+	return 1;
+}
+
+int isvsync_rtg(void)
+{
+	if (!picasso_on)
+		return 0;
+	return 1;
+}
+
+int isvsync(void)
+{
+	if (picasso_on)
+		return isvsync_rtg();
+	return isvsync_chipset();
 }
