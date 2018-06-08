@@ -45,6 +45,7 @@
 #include "drawing.h"
 #include "savestate.h"
 #include "statusline.h"
+#include "inputdevice.h"
 #include "cd32_fmv.h"
 #include "audio.h"
 #include "devices.h"
@@ -61,6 +62,7 @@ typedef enum
 	CMODE_HAM
 } CMODE_T;
 
+#ifdef AMIBERRY
 #define RENDER_SIGNAL_PARTIAL 1
 #define RENDER_SIGNAL_FRAME_DONE 2
 #define RENDER_SIGNAL_QUIT 3
@@ -68,6 +70,7 @@ static uae_thread_id render_tid = 0;
 static smp_comm_pipe *volatile render_pipe = 0;
 static uae_sem_t render_sem = 0;
 static bool volatile render_thread_busy = false;
+#endif
 
 extern int sprite_buffer_res;
 static int lores_factor;
