@@ -374,18 +374,15 @@ bool CreateFilesysHardfile()
 	UpdateGuiScreen();
 
 	CreateFilesysHardfileLoop();
-	ExitCreateFilesysHardfile();
-
+	
 	if (dialogResult)
 	{
-		char buffer[512];
 		auto size = atoi(txtSize->getText().c_str());
 		if (size < 1)
 			size = 1;
 		if (size > 2048)
 			size = 2048;
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
-		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
 		const auto newFile = fopen(txtPath->getText().c_str(), "wb");
 		if (!newFile)
@@ -413,6 +410,7 @@ bool CreateFilesysHardfile()
 			hardfile_media_change(hfd, &ci, true, false);
 		}
 	}
-
+	
+        ExitCreateFilesysHardfile();
 	return dialogResult;
 }
