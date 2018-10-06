@@ -4064,11 +4064,8 @@ MIDFUNC(2,jnf_MOVE16,(RR4 d, RR4 s))
 	BIC_rri(s, s, 0x0000000F);
 	BIC_rri(d, d, 0x0000000F);
 
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-
-	ADD_rrr(s, s, REG_WORK1);
-	ADD_rrr(d, d, REG_WORK1);
+	ADD_rrr(s, s, R_MEMSTART);
+	ADD_rrr(d, d, R_MEMSTART);
 
 #ifdef ARMV6T2
 	LDRD_rR(REG_WORK1, s);
@@ -5591,10 +5588,11 @@ MIDFUNC(2,jff_ROXL_b,(RW1 d, RR4 i))
 	CMP_ri(REG_WORK1, 8);
 	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 9);
 	TST_rr(REG_WORK1, REG_WORK1);
-	BNE_i(2);			// need to rotate
+	BNE_i(3);			// need to rotate
 
 	MSR_CPSRf_i(0);
-	MOVS_rrLSLi(REG_WORK1, d, 24);
+	AND_rri(REG_WORK1, d, 0xff); // make sure to clear carry
+	MOVS_rrLSLi(REG_WORK1, REG_WORK1, 24);
 #ifdef ARMV6T2
 	B_i(13);			// end of op
 #else
@@ -5656,7 +5654,8 @@ MIDFUNC(2,jff_ROXL_w,(RW2 d, RR4 i))
 	BNE_i(3);			// need to rotate
 
 	MSR_CPSRf_i(0);
-	MOVS_rrLSLi(REG_WORK1, d, 16);
+	BIC_rri(REG_WORK1, d, 0x00ff0000); // make sure to clear carry
+	MOVS_rrLSLi(REG_WORK1, REG_WORK1, 16);
 #ifdef ARMV6T2
 	B_i(13);			// end of op
 #else
@@ -6036,6 +6035,282 @@ MIDFUNC(1,jff_RORW,(RW2 d))
 	unlock2(d);
 }
 MENDFUNC(1,jff_RORW,(RW2 d))
+
+
+/*
+ * ROXR
+ * Operand Syntax: Dx, Dy
+ * 				   #<data>, Dy
+ *
+ * Operand Size: 8,16,32
+ *
+ * X Set according to the last bit rotated out of the operand. Unchanged when the rotate count is zero.
+ * N Set if the most significant bit of the result is set. Cleared otherwise.
+ * Z Set if the result is zero. Cleared otherwise.
+ * V Always cleared.
+ * C Set according to the last bit rotated out of the operand. Cleared when the rotate count is zero.
+ *
+ */
+MIDFUNC(2,jnf_ROXR_b,(RW1 d, RR4 i))
+{
+  int x = readreg(FLAGX);
+	INIT_REGS_b(d, i);
+
+	clobber_flags();
+
+	AND_rri(REG_WORK1, i, 63);
+	CMP_ri(REG_WORK1, 35);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 36);
+	CMP_ri(REG_WORK1, 17);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 18);
+	CMP_ri(REG_WORK1, 8);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 9);
+	TST_rr(REG_WORK1, REG_WORK1);
+#ifdef ARMV6T2
+	BEQ_i(4);			// end of op
+#else
+	BEQ_i(6);			// end of op
+#endif
+
+// need to rotate
+	AND_rri(REG_WORK2, d, 0xff);						 					// val = val & 0xff
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, REG_WORK2, 9);	// val = val | (val << 9)
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, x, 8); 					// val = val | (x << 8)
+	MOV_rrLSRr(REG_WORK2, REG_WORK2, REG_WORK1); 			// val = val >> cnt
+	
+#ifdef ARMV6T2
+  BFI_rrii(d, REG_WORK2, 0, 7);
+#else
+  AND_rri(REG_WORK2, REG_WORK2, 0xff);
+  BIC_rri(d, d, 0xff);
+  ORR_rrr(d, d, REG_WORK2);
+#endif
+	
+// end of op
+
+	unlock2(x);
+	EXIT_REGS(d, i);
+}
+MENDFUNC(2,jnf_ROXR_b,(RW1 d, RR4 i))
+
+MIDFUNC(2,jnf_ROXR_w,(RW2 d, RR4 i))
+{
+  int x = readreg(FLAGX);
+	INIT_REGS_w(d, i);
+
+	clobber_flags();
+
+	AND_rri(REG_WORK1, i, 63);
+	CMP_ri(REG_WORK1, 33);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 34);
+	CMP_ri(REG_WORK1, 16);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 17);
+	TST_rr(REG_WORK1, REG_WORK1);
+	BEQ_i(5);			// end of op
+
+// need to rotate
+	BIC_rri(REG_WORK2, d, 0xff000000);
+	BIC_rri(REG_WORK2, REG_WORK2, 0x00ff0000);				// val = val & 0xffff
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, REG_WORK2, 17);	// val = val | (val << 17)
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, x, 16); 				// val = val | (x << 16)
+	MOV_rrLSRr(REG_WORK2, REG_WORK2, REG_WORK1); 			// val = val >> cnt
+
+  PKHTB_rrr(d, d, REG_WORK2);
+	
+// end of op
+
+	unlock2(x);
+	EXIT_REGS(d, i);
+}
+MENDFUNC(2,jnf_ROXR_w,(RW2 d, RR4 i))
+
+MIDFUNC(2,jnf_ROXR_l,(RW4 d, RR4 i))
+{
+  int x = readreg(FLAGX);
+	INIT_REGS_l(d, i);
+
+	clobber_flags();
+	
+	AND_rri(REG_WORK1, i, 63);
+	CMP_ri(REG_WORK1, 32);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 33);
+	TST_rr(REG_WORK1, REG_WORK1);
+	BEQ_i(6);			// end of op
+
+// need to rotate
+	CMP_ri(REG_WORK1, 32);
+	CC_MOV_rrLSRr(NATIVE_CC_NE, REG_WORK2, d, REG_WORK1);
+	CC_MOV_ri(NATIVE_CC_EQ, REG_WORK2, 0);
+
+	RSB_rri(REG_WORK3, REG_WORK1, 32);
+	ORR_rrrLSLr(REG_WORK2, REG_WORK2, x, REG_WORK3);
+	
+	ADD_rri(REG_WORK3, REG_WORK3, 1);	
+	ORR_rrrLSLr(d, REG_WORK2, d, REG_WORK3);
+
+// end of op
+
+	unlock2(x);
+	EXIT_REGS(d, i);
+}
+MENDFUNC(2,jnf_ROXR_l,(RW4 d, RR4 i))
+
+MIDFUNC(2,jff_ROXR_b,(RW1 d, RR4 i))
+{
+	INIT_REGS_b(d, i);
+  int x = rmw(FLAGX);
+
+	AND_rri(REG_WORK1, i, 63);
+	CMP_ri(REG_WORK1, 35);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 36);
+	CMP_ri(REG_WORK1, 17);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 18);
+	CMP_ri(REG_WORK1, 8);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 9);
+	TST_rr(REG_WORK1, REG_WORK1);
+	BNE_i(3);			// need to rotate
+
+	MSR_CPSRf_i(0);
+	BIC_rri(REG_WORK1, d, 0x0000ff00); // make sure to clear carry
+	MOVS_rrLSLi(REG_WORK1, REG_WORK1, 24);
+#ifdef ARMV6T2
+	B_i(9);			  // end of op
+#else
+	B_i(12);			// end of op
+#endif
+
+// need to rotate
+	AND_rri(REG_WORK2, d, 0xff);						 					// val = val & 0xff
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, REG_WORK2, 9);	// val = val | (val << 9)
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, x, 8); 					// val = val | (x << 8)
+	MSR_CPSRf_i(0);
+	MOVS_rrLSRr(REG_WORK2, REG_WORK2, REG_WORK1); 		// val = val >> cnt
+	
+  // Duplicate carry
+	MOV_ri(x, 1);
+  CC_MOV_ri(NATIVE_CC_CC, x, 0);
+
+	// Calc N and Z
+#ifdef ARMV6T2
+	BFI_rrii(REG_WORK2, x, 8, 8); // Make sure to set carry (last bit shifted out)
+#else
+	BIC_rri(REG_WORK2, REG_WORK2, 0x100);
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, x, 8);
+#endif
+	LSLS_rri(REG_WORK1, REG_WORK2, 24);
+
+#ifdef ARMV6T2
+  BFI_rrii(d, REG_WORK2, 0, 7);
+#else
+  AND_rri(REG_WORK2, REG_WORK2, 0xff);
+  BIC_rri(d, d, 0xff);
+  ORR_rrr(d, d, REG_WORK2);
+#endif
+	
+// end of op
+
+	unlock2(x);
+	EXIT_REGS(d, i);
+}
+MENDFUNC(2,jff_ROXR_b,(RW1 d, RR4 i))
+
+MIDFUNC(2,jff_ROXR_w,(RW2 d, RR4 i))
+{
+	INIT_REGS_w(d, i);
+  int x = rmw(FLAGX);
+
+	AND_rri(REG_WORK1, i, 63);
+	CMP_ri(REG_WORK1, 33);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 34);
+	CMP_ri(REG_WORK1, 16);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 17);
+	TST_rr(REG_WORK1, REG_WORK1);
+	BNE_i(3);			// need to rotate
+
+	MSR_CPSRf_i(0);
+	BIC_rri(REG_WORK1, d, 0x00ff0000); // make sure to clear carry
+	MOVS_rrLSLi(REG_WORK1, REG_WORK1, 16);
+#ifdef ARMV6T2
+	B_i(10);			// end of op
+#else
+	B_i(11);			// end of op
+#endif
+
+// need to rotate
+	BIC_rri(REG_WORK2, d, 0xff000000);
+	BIC_rri(REG_WORK2, REG_WORK2, 0x00ff0000);				// val = val & 0xffff
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, REG_WORK2, 17);	// val = val | (val << 17)
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, x, 16); 				// val = val | (x << 16)
+	MSR_CPSRf_i(0);
+	MOVS_rrLSRr(REG_WORK2, REG_WORK2, REG_WORK1); 		// val = val >> cnt
+
+  // Duplicate carry
+	MOV_ri(x, 1);
+  CC_MOV_ri(NATIVE_CC_CC, x, 0);
+
+	// Calc N and Z
+#ifdef ARMV6T2
+	BFI_rrii(REG_WORK2, x, 16, 16); // Make sure to set carry (last bit shifted out)
+#else
+	BIC_rri(REG_WORK2, REG_WORK2, 0x10000);
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, x, 16);
+#endif
+	LSLS_rri(REG_WORK1, REG_WORK2, 16);
+
+  PKHTB_rrr(d, d, REG_WORK2);
+	
+// end of op
+
+	unlock2(x);
+	EXIT_REGS(d, i);
+}
+MENDFUNC(2,jff_ROXR_w,(RW2 d, RR4 i))
+
+MIDFUNC(2,jff_ROXR_l,(RW4 d, RR4 i))
+{
+	INIT_REGS_l(d, i);
+  int x = rmw(FLAGX);
+
+	AND_rri(REG_WORK1, i, 63);
+	CMP_ri(REG_WORK1, 32);
+	CC_SUB_rri(NATIVE_CC_GT, REG_WORK1, REG_WORK1, 33);
+	TST_rr(REG_WORK1, REG_WORK1);
+	BNE_i(2);			// need to rotate
+
+	MSR_CPSRf_i(0);
+	TST_rr(d, d);
+	B_i(13);			// end of op
+
+// need to rotate
+	CMP_ri(REG_WORK1, 32);
+	BNE_i(3);			// rotate 1-31
+
+// rotate 32
+	MSR_CPSRf_i(0);
+	LSLS_rri(d, d, 1);
+	ORRS_rrr(d, d, x);
+	B_i(5);				// duplicate carry
+
+// rotate 1-31
+	MSR_CPSRf_i(0);
+	MOVS_rrLSRr(REG_WORK2, d, REG_WORK1);
+
+	RSB_rri(REG_WORK3, REG_WORK1, 32);
+	ORR_rrrLSLr(REG_WORK2, REG_WORK2, x, REG_WORK3);
+	
+	ADD_rri(REG_WORK3, REG_WORK3, 1);	
+	ORR_rrrLSLr(d, REG_WORK2, d, REG_WORK3);
+	
+  // Duplicate carry
+	MOV_ri(x, 1);
+  CC_MOV_ri(NATIVE_CC_CC, x, 0);
+
+// end of op
+
+	unlock2(x);
+	EXIT_REGS(d, i);
+}
+MENDFUNC(2,jff_ROXR_l,(RW4 d, RR4 i))
 
 /*
  * SCC
@@ -6654,13 +6929,10 @@ MENDFUNC(1,jff_TST_l,(RR4 s))
  */
 MIDFUNC(2,jnf_MEM_WRITE_OFF_b,(RR4 adr, RR4 b))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
 	b = readreg(b);
   
-  STRB_rRR(b, adr, REG_WORK2);
+  STRB_rRR(b, adr, R_MEMSTART);
   
   unlock2(b);
   unlock2(adr);
@@ -6669,14 +6941,11 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_b,(RR4 adr, RR4 b))
 
 MIDFUNC(2,jnf_MEM_WRITE_OFF_w,(RR4 adr, RR4 w))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
 	w = readreg(w);
   
   REV16_rr(REG_WORK1, w);
-  STRH_rRR(REG_WORK1, adr, REG_WORK2);
+  STRH_rRR(REG_WORK1, adr, R_MEMSTART);
   
   unlock2(w);
   unlock2(adr);
@@ -6685,14 +6954,11 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_w,(RR4 adr, RR4 w))
 
 MIDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   l = readreg(l);
   
   REV_rr(REG_WORK1, l);
-  STR_rRR(REG_WORK1, adr, REG_WORK2);
+  STR_rRR(REG_WORK1, adr, R_MEMSTART);
   
   unlock2(l);
   unlock2(adr);
@@ -6702,13 +6968,10 @@ MENDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_b,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
-  LDRB_rRR(d, adr, REG_WORK2);
+  LDRB_rRR(d, adr, R_MEMSTART);
   
   unlock2(d);
   unlock2(adr);
@@ -6717,13 +6980,10 @@ MENDFUNC(2,jnf_MEM_READ_OFF_b,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_w,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
-  LDRH_rRR(REG_WORK1, adr, REG_WORK2);
+  LDRH_rRR(REG_WORK1, adr, R_MEMSTART);
   REV16_rr(d, REG_WORK1);
   
   unlock2(d);
@@ -6733,13 +6993,10 @@ MENDFUNC(2,jnf_MEM_READ_OFF_w,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
-  LDR_rRR(REG_WORK1, adr, REG_WORK2);
+  LDR_rRR(REG_WORK1, adr, R_MEMSTART);
   REV_rr(d, REG_WORK1);
   
   unlock2(d);
@@ -6750,14 +7007,11 @@ MENDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_b,(RR4 adr, RR4 b))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   b = readreg(b);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
-  STRB_rRR(b, REG_WORK1, REG_WORK2);
+  STRB_rRR(b, REG_WORK1, R_MEMSTART);
   
   unlock2(b);
   unlock2(adr);
@@ -6766,15 +7020,12 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_b,(RR4 adr, RR4 b))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_w,(RR4 adr, RR4 w))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   w = readreg(w);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
   REV16_rr(REG_WORK3, w);
-  STRH_rRR(REG_WORK3, REG_WORK1, REG_WORK2);
+  STRH_rRR(REG_WORK3, REG_WORK1, R_MEMSTART);
   
   unlock2(w);
   unlock2(adr);
@@ -6783,15 +7034,12 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_w,(RR4 adr, RR4 w))
 
 MIDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   l = readreg(l);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
   REV_rr(REG_WORK3, l);
-  STR_rRR(REG_WORK3, REG_WORK1, REG_WORK2);
+  STR_rRR(REG_WORK3, REG_WORK1, R_MEMSTART);
   
   unlock2(l);
   unlock2(adr);
@@ -6801,14 +7049,11 @@ MENDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_b,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
-  LDRB_rRR(d, REG_WORK1, REG_WORK2);
+  LDRB_rRR(d, REG_WORK1, R_MEMSTART);
   
   unlock2(d);
   unlock2(adr);
@@ -6817,14 +7062,11 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_b,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_w,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
-  LDRH_rRR(REG_WORK1, REG_WORK1, REG_WORK2);
+  LDRH_rRR(REG_WORK1, REG_WORK1, R_MEMSTART);
   REV16_rr(d, REG_WORK1);
   
   unlock2(d);
@@ -6834,14 +7076,11 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_w,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
-  LDR_rRR(d, REG_WORK1, REG_WORK2);
+  LDR_rRR(d, REG_WORK1, R_MEMSTART);
   REV_rr(d, d);
   
   unlock2(d);
@@ -6852,13 +7091,10 @@ MENDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
-  ADD_rrr(d, adr, REG_WORK2);
+  ADD_rrr(d, adr, R_MEMSTART);
   
   unlock2(d);
   unlock2(adr);
@@ -6867,14 +7103,11 @@ MENDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 
 MIDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-  LDR_rRI(REG_WORK2, R_REGSTRUCT, offs);
-
   adr = readreg(adr);
   d = writereg(d);
   
   BIC_rri(REG_WORK1, adr, 0xff000000);
-  ADD_rrr(d, REG_WORK1, REG_WORK2);
+  ADD_rrr(d, REG_WORK1, R_MEMSTART);
   
   unlock2(d);
   unlock2(adr);
@@ -6882,10 +7115,17 @@ MIDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 MENDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 
 
-MIDFUNC(2,jnf_MEM_GETBANKFUNC,(W4 d, RR4 adr, IMM offset))
+MIDFUNC(3,jnf_MEM_READMEMBANK,(W4 dest, RR4 adr, IMM offset))
 {
-  adr = readreg(adr);
-  d = writereg(d);
+  clobber_flags();
+  if (dest != adr) {
+    COMPCALL(forget_about)(dest);
+  }
+
+  adr = readreg_specific(adr, REG_PAR1);
+  prepare_for_call_1();
+  unlock2(adr);
+  prepare_for_call_2();
 	
 #ifdef ARMV6T2
   MOVW_ri16(REG_WORK2, (uae_u32)mem_banks);
@@ -6895,10 +7135,47 @@ MIDFUNC(2,jnf_MEM_GETBANKFUNC,(W4 d, RR4 adr, IMM offset))
   LDR_rRI(REG_WORK2, RPC_INDEX, offs);
 #endif
   LSR_rri(REG_WORK1, adr, 16);
-  LDR_rRR_LSLi(d, REG_WORK2, REG_WORK1, 2);
-  LDR_rRI(d, d, offset);
-  
-  unlock2(d);
-  unlock2(adr);
+  LDR_rRR_LSLi(REG_WORK3, REG_WORK2, REG_WORK1, 2);
+  LDR_rRI(REG_WORK3, REG_WORK3, offset);
+   
+  compemu_raw_call_r(REG_WORK3);
+
+  live.nat[REG_RESULT].holds[0] = dest;
+  live.nat[REG_RESULT].nholds = 1;
+  live.nat[REG_RESULT].touched = touchcnt++;
+
+  live.state[dest].realreg = REG_RESULT;
+  live.state[dest].realind = 0;
+  live.state[dest].val = 0;
+  live.state[dest].validsize = 4;
+  set_status(dest, DIRTY);
 }
-MENDFUNC(2,jnf_MEM_GETBANKFUNC,(W4 d, RR4 adr, IMM offset))
+MENDFUNC(3,jnf_MEM_READMEMBANK,(W4 dest, RR4 adr, IMM offset))
+
+
+MIDFUNC(3,jnf_MEM_WRITEMEMBANK,(RR4 adr, RR4 source, IMM offset))
+{
+  clobber_flags();
+
+  adr = readreg_specific(adr, REG_PAR1);
+  source = readreg_specific(source, REG_PAR2);
+  prepare_for_call_1();
+  unlock2(adr);
+  unlock2(source);
+  prepare_for_call_2();
+	
+#ifdef ARMV6T2
+  MOVW_ri16(REG_WORK2, (uae_u32)mem_banks);
+  MOVT_ri16(REG_WORK2, (uae_u32)mem_banks >> 16);
+#else
+  uae_s32 offs = data_long_offs((uae_u32)mem_banks);
+  LDR_rRI(REG_WORK2, RPC_INDEX, offs);
+#endif
+  LSR_rri(REG_WORK1, adr, 16);
+  LDR_rRR_LSLi(REG_WORK3, REG_WORK2, REG_WORK1, 2);
+  LDR_rRI(REG_WORK3, REG_WORK3, offset);
+    
+  compemu_raw_call_r(REG_WORK3);
+}
+MENDFUNC(3,jnf_MEM_WRITEMEMBANK,(RR4 adr, RR4 source, IMM offset))
+

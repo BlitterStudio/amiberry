@@ -77,7 +77,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 		case 6: /* (d8,An,Xn) or (bd,An,Xn) or ([bd,An,Xn],od) or ([bd,An],Xn,od) */
 		{
 			uae_u32 dp = comp_get_iword ((m68k_pc_offset += 2) - 2);
-			calc_disp_ea_020 (reg + 8, dp, S1, S2);
+			calc_disp_ea_020 (reg + 8, dp, S1);
 			break;
 		}
 		case 7:
@@ -173,25 +173,25 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
   
 	switch (size) {
 		case 0: /* Long */
-  		readlong (S1, S2, S3);
+  		readlong (S1, S2);
   		fmov_l_rr (treg, S2);
   		return 2;
 		case 1: /* Single */
-  		readlong (S1, S2, S3);
+  		readlong (S1, S2);
 			fmov_s_rr (treg, S2);
   		return 1;
 		case 2: /* Long Double */
 		  fp_to_exten_rm (treg, S1);
 		  return 0;
 		case 4: /* Word */
-  		readword (S1, S2, S3);
+  		readword (S1, S2);
 			fmov_w_rr (treg, S2);
   		return 1;
 		case 5: /* Double */
 		  fp_to_double_rm (treg, S1);
   		return 2;
 		case 6: /* Byte */
-  		readbyte (S1, S2, S3);
+  		readbyte (S1, S2);
 		  fmov_b_rr (treg, S2);
   		return 1;
 		default:
@@ -251,7 +251,7 @@ STATIC_INLINE int comp_fp_put (uae_u32 opcode, uae_u16 extra)
 		case 6: /* (d8,An,Xn) or (bd,An,Xn) or ([bd,An,Xn],od) or ([bd,An],Xn,od) */
 		{
 			uae_u32 dp = comp_get_iword ((m68k_pc_offset += 2) - 2);
-			calc_disp_ea_020 (reg + 8, dp, S1, S2);
+			calc_disp_ea_020 (reg + 8, dp, S1);
 			break;
 		}
 		case 7:
@@ -276,25 +276,25 @@ STATIC_INLINE int comp_fp_put (uae_u32 opcode, uae_u16 extra)
 	switch (size) {
 		case 0: /* Long */
     	fmov_to_l_rr(S2, sreg);
-		  writelong_clobber (S1, S2, S3);
+		  writelong_clobber (S1, S2);
 		  return 0;
 		case 1: /* Single */
       fmov_to_s_rr(S2, sreg);
-	    writelong_clobber (S1, S2, S3);
+	    writelong_clobber (S1, S2);
 	    return 0;
 		case 2:/* Long Double */
 		  fp_from_exten_mr (S1, sreg);
 		  return 0;
 		case 4: /* Word */
 		  fmov_to_w_rr(S2, sreg);
-		  writeword_clobber (S1, S2, S3);
+		  writeword_clobber (S1, S2);
 		  return 0;
 		case 5: /* Double */
 			fp_from_double_mr(S1, sreg);
 		  return 0;
 		case 6: /* Byte */
       fmov_to_b_rr(S2, sreg);
-		  writebyte (S1, S2, S3);
+		  writebyte (S1, S2);
 		  return 0;
 		default:
   		return -1;

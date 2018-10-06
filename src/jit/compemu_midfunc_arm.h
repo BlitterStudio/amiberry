@@ -38,8 +38,10 @@ DECLARE_MIDFUNC(arm_ADD_l_ri8(RW4 d, IMM i));
 DECLARE_MIDFUNC(arm_SUB_l_ri8(RW4 d, IMM i));
 
 // Emulated midfunc
+DECLARE_MIDFUNC(disp_ea20_target_add(RW4 target, RR4 reg, IMM shift, IMM extend));
+DECLARE_MIDFUNC(disp_ea20_target_mov(W4 target, RR4 reg, IMM shift, IMM extend));
+
 DECLARE_MIDFUNC(mov_l_mi(IMM d, IMM s));
-DECLARE_MIDFUNC(shll_l_ri(RW4 r, IMM i));
 DECLARE_MIDFUNC(pop_l(W4 d));
 DECLARE_MIDFUNC(push_l(RR4 s));
 DECLARE_MIDFUNC(sign_extend_16_rr(W4 d, RR2 s));
@@ -54,8 +56,6 @@ DECLARE_MIDFUNC(mov_l_ri(W4 d, IMM s));
 DECLARE_MIDFUNC(mov_b_ri(W1 d, IMM s));
 DECLARE_MIDFUNC(sub_l_ri(RW4 d, IMM i));
 DECLARE_MIDFUNC(sub_w_ri(RW2 d, IMM i));
-DECLARE_MIDFUNC(call_r_02(RR4 r, RR4 in1, RR4 in2));
-DECLARE_MIDFUNC(call_r_11(W4 out1, RR4 r, RR4 in1));
 DECLARE_MIDFUNC(live_flags(void));
 DECLARE_MIDFUNC(dont_care_flags(void));
 DECLARE_MIDFUNC(make_flags_live(void));

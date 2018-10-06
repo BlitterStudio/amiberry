@@ -400,7 +400,7 @@ struct boardromconfig
 	int device_order;
 	struct romconfig roms[MAX_BOARD_ROMS];
 };
-#define MAX_RTG_BOARDS 4
+#define MAX_RTG_BOARDS 1
 struct rtgboardconfig
 {
 	int rtg_index;
@@ -409,7 +409,7 @@ struct rtgboardconfig
 	int device_order;
 	int monitor_id;
 };
-#define MAX_RAM_BOARDS 4
+#define MAX_RAM_BOARDS 1
 struct ramboard
 {
 	uae_u32 size;
