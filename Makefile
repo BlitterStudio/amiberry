@@ -195,7 +195,7 @@ DEFS += `xml2-config --cflags`
 DEFS += -DAMIBERRY -DARMV6_ASSEMBLY
 
 ifndef DEBUG
-    CFLAGS += -std=gnu++14 -Ofast -frename-registers
+    CFLAGS += -std=gnu++14 -Ofast -frename-registers -falign-functions=16
 else
     CFLAGS += -std=gnu++14 -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
 endif
@@ -226,7 +226,7 @@ endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
-ASFLAGS += $(CPU_FLAGS)
+ASFLAGS += $(CPU_FLAGS) -falign-functions=16
 
 export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
 export CXXFLAGS += $(CFLAGS)

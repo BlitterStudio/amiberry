@@ -82,11 +82,11 @@ extern void __clear_cache (char*, char*);
 
 //#define REG_DATAPTR R10_INDEX
 
-#define REG_PC_PRE R0_INDEX /* The register we use for preloading regs.pc_p */
 #define REG_PC_TMP R1_INDEX /* Another register that is not the above */
 
+#define R_MEMSTART 10
 #define R_REGSTRUCT 11
-uae_s8 always_used[]={2,3,R_REGSTRUCT,12,-1}; // r2, r3 and r12 are work register in emitted code
+uae_s8 always_used[]={2,3,R_MEMSTART,R_REGSTRUCT,12,-1}; // r2, r3 and r12 are work register in emitted code
 
 uae_u8 call_saved[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 0,1,1,1};
 
@@ -241,11 +241,11 @@ LOWFUNC(WRITE,READ,2,compemu_raw_cmp_l_mi,(MEMR d, IMM s))
   
  #ifdef ARMV6T2
   if(d >= (uae_u32) &regs && d < ((uae_u32) &regs) + sizeof(struct regstruct)) {
+    uae_s32 idx = d - (uae_u32) & regs;
+    LDR_rRI(REG_WORK1, R_REGSTRUCT, idx);
     MOVW_ri16(REG_WORK2, s);
     if(s >> 16)
       MOVT_ri16(REG_WORK2, s >> 16);
-    uae_s32 idx = d - (uae_u32) & regs;
-    LDR_rRI(REG_WORK1, R_REGSTRUCT, idx);
   } else {
     MOVW_ri16(REG_WORK1, d);
     MOVT_ri16(REG_WORK1, d >> 16);
@@ -666,7 +666,7 @@ STATIC_INLINE void compemu_raw_branch(IMM d)
 }
 
 
-// Optimize access to struct regstruct with r11
+// Optimize access to struct regstruct with r11 and memory with r10
 
 LOWFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMM s))
 {
@@ -677,6 +677,8 @@ LOWFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMM s))
   uae_s32 offs = data_long_offs(s);
 	LDR_rRI(R_REGSTRUCT, RPC_INDEX, offs);
 #endif
+	uae_s32 offsmem = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
+  LDR_rRI(R_MEMSTART, R_REGSTRUCT, offsmem);
 }
 LENDFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMM s))
 
@@ -1122,24 +1124,22 @@ LENDFUNC(NONE,NONE,3,raw_fpowx_rr,(uae_u32 x, FW d, FR s))
 
 LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
- 
   VMOVi_to_ARM_rd(REG_WORK1, s, 1);    				// get high part of double
   VCMP64_d0(s);
   VMRS_CPSR();
 #ifdef ARMV6T2
-  BEQ_i(20);          // iszero
+  BEQ_i(19);          // iszero
 #else
-  BEQ_i(21);
+  BEQ_i(20);
 #endif
 
   UBFX_rrii(REG_WORK2, REG_WORK1, 20, 11);  	// get exponent
 	MOVW_ri16(REG_WORK3, 2047);
 	CMP_rr(REG_WORK2, REG_WORK3);
 #ifdef ARMV6T2
-	BEQ_i(13); 				// isnan
+	BEQ_i(12); 				// isnan
 #else
-	BEQ_i(14);
+	BEQ_i(13);
 #endif
 
   MOVW_ri16(REG_WORK3, 15360);              	// diff of bias between double and long double
@@ -1147,8 +1147,7 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
   AND_rri(REG_WORK1, REG_WORK1, 0x80000000);        // extract sign
   ORR_rrrLSLi(REG_WORK2, REG_WORK1, REG_WORK2, 16); // merge sign and exponent
 
-  LDR_rRI(REG_WORK3, R_REGSTRUCT, offs);
-	ADD_rrr(REG_WORK3, adr, REG_WORK3);
+	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 
   REV_rr(REG_WORK2, REG_WORK2);
   STRH_rR(REG_WORK2, REG_WORK3);             	// write exponent
@@ -1159,11 +1158,11 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
   ORR_rri(REG_WORK1, REG_WORK1, 0x80);  			// insert explicit 1
 #ifdef ARMV6T2
   STRD_rRI(REG_WORK1, REG_WORK3, 4);
-  B_i(9);            // end_of_op
+  B_i(8);            // end_of_op
 #else
   STR_rRI(REG_WORK1, REG_WORK3, 4);
   STR_rRI(REG_WORK2, REG_WORK3, 8);
-  B_i(10);
+  B_i(9);
 #endif
 
 // isnan
@@ -1175,8 +1174,7 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
   CC_AND_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, 0x80000000); // extract sign
   CC_MOV_ri(NATIVE_CC_EQ, REG_WORK2, 0);
 
-  LDR_rRI(REG_WORK3, R_REGSTRUCT, offs);
-	ADD_rrr(REG_WORK3, adr, REG_WORK3);
+	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 
   REV_rr(REG_WORK1, REG_WORK1);
 #ifdef ARMV6T2
@@ -1194,10 +1192,7 @@ LENDFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
 
 LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-
-  LDR_rRI(REG_WORK3, R_REGSTRUCT, offs);
-	ADD_rrr(REG_WORK3, adr, REG_WORK3);
+	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 
 #ifdef ARMV6T2
 	LDRD_rRI(REG_WORK1, REG_WORK3, 4);
@@ -1244,10 +1239,7 @@ LENDFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 
 LOWFUNC(NONE,WRITE,2,raw_fp_from_double_mr,(RR4 adr, FR s))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-
-  LDR_rRI(REG_WORK3, R_REGSTRUCT, offs);
-	ADD_rrr(REG_WORK3, adr, REG_WORK3);
+	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 	
   VREV64_8_dd(SCRATCH_F64_1, s);
   VSTR64_dRi(SCRATCH_F64_1, REG_WORK3, 0);
@@ -1256,10 +1248,7 @@ LENDFUNC(NONE,WRITE,2,raw_fp_from_double_mr,(RR4 adr, FR s))
 
 LOWFUNC(NONE,READ,2,raw_fp_to_double_rm,(FW d, RR4 adr))
 {
-	uae_s32 offs = (uae_u32)&NATMEM_OFFSETX - (uae_u32) &regs;
-
-  LDR_rRI(REG_WORK3, R_REGSTRUCT, offs);
-	ADD_rrr(REG_WORK3, adr, REG_WORK3);
+	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 	
   VLDR64_dRi(d, REG_WORK3, 0);
   VREV64_8_dd(d, d);

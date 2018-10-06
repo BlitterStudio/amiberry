@@ -60,7 +60,7 @@ void bsdsock_fake_int_handler(void)
 #include <signal.h>
 #include <arpa/inet.h>
 
-#define DEBUG_BSDSOCKET
+//#define DEBUG_BSDSOCKET
 #ifdef DEBUG_BSDSOCKET
 #define DEBUG_LOG write_log
 #else
