@@ -359,6 +359,7 @@ namespace sdl
 		check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 
 		SDL_ShowCursor(SDL_ENABLE);
+		SDL_SetRelativeMouseMode(SDL_FALSE);
 #endif
 #ifdef ANDROIDSDL
 		// Enable Android multitouch
