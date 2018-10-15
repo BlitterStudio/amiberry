@@ -13,7 +13,7 @@ https://github.com/midwan/amiberry/wiki/Compile-SDL2-from-source
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
 # Pre-requisites
-Amiberry requires the following packages:
+Amiberry requires the following packages, besides SDL (v1 or v2) itself:
 
       sudo apt-get install libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
 
