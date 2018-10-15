@@ -95,3 +95,5 @@ For the OrangePi PC (SDL2):
       make all PLATFORM=orancepi-pc
       
 You can check the Makefile for a full list of supported platforms!
+
+For more documentation subjects, please check the [Wiki page](https://github.com/midwan/amiberry/wiki)
