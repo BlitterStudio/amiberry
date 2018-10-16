@@ -1196,8 +1196,8 @@ int handle_msgpump()
 				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 				{
 					const auto mouseScale = currprefs.input_joymouse_multiplier / 2;
-					const auto x = rEvent.motion.xrel;
-					const auto y = rEvent.motion.yrel;
+					auto x = rEvent.motion.xrel;
+					auto y = rEvent.motion.yrel;
 #if defined (ANDROIDSDL)
 					if (rEvent.motion.x == 0 && x > -4)
 						x = -4;
