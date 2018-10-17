@@ -55,6 +55,7 @@ struct inputdevice_functions {
 extern struct inputdevice_functions inputdevicefunc_joystick;
 extern struct inputdevice_functions inputdevicefunc_mouse;
 extern struct inputdevice_functions inputdevicefunc_keyboard;
+extern int pause_emulation;
 
 struct uae_input_device_default_node
 {

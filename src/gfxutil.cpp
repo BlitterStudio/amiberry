@@ -13,7 +13,7 @@
 #include "rtgmodes.h"
 #include "xwin.h"
 
-#define	RED 	0
+#define	RED 0
 #define	GRN	1
 #define	BLU	2
 
@@ -85,7 +85,100 @@ static uae_u32 lowbits (int v, int shift, int lsize)
   return v;
 }
 
-void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap,
+void alloc_colors_picasso(int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt)
+{
+#ifdef PICASSO96
+	int byte_swap = 0;
+	int i;
+	int red_bits = 0, green_bits, blue_bits;
+	int red_shift, green_shift, blue_shift;
+	int bpp = rw + gw + bw;
+
+	switch (rgbfmt)
+	{
+	case RGBFB_R5G6B5PC:
+		red_bits = 5;
+		green_bits = 6;
+		blue_bits = 5;
+		red_shift = 11;
+		green_shift = 5;
+		blue_shift = 0;
+		break;
+	case RGBFB_R5G5B5PC:
+		red_bits = green_bits = blue_bits = 5;
+		red_shift = 10;
+		green_shift = 5;
+		blue_shift = 0;
+		break;
+	case RGBFB_R5G6B5:
+		red_bits = 5;
+		green_bits = 6;
+		blue_bits = 5;
+		red_shift = 11;
+		green_shift = 5;
+		blue_shift = 0;
+		byte_swap = 1;
+		break;
+	case RGBFB_R5G5B5:
+		red_bits = green_bits = blue_bits = 5;
+		red_shift = 10;
+		green_shift = 5;
+		blue_shift = 0;
+		byte_swap = 1;
+		break;
+	case RGBFB_B5G6R5PC:
+		red_bits = 5;
+		green_bits = 6;
+		blue_bits = 5;
+		red_shift = 0;
+		green_shift = 5;
+		blue_shift = 11;
+		break;
+	case RGBFB_B5G5R5PC:
+		red_bits = green_bits = blue_bits = 5;
+		red_shift = 0;
+		green_shift = 5;
+		blue_shift = 10;
+		break;
+	default:
+		red_bits = rw;
+		green_bits = gw;
+		blue_bits = bw;
+		red_shift = rs;
+		green_shift = gs;
+		blue_shift = bs;
+		break;
+	}
+
+#ifdef WORDS_BIGENDIAN
+	byte_swap = !byte_swap;
+#endif
+
+	memset(p96_rgbx16, 0, sizeof p96_rgbx16);
+
+	if (red_bits) {
+		int lrbits = 8 - red_bits;
+		int lgbits = 8 - green_bits;
+		int lbbits = 8 - blue_bits;
+		int lrmask = (1 << red_bits) - 1;
+		int lgmask = (1 << green_bits) - 1;
+		int lbmask = (1 << blue_bits) - 1;
+		for (i = 65535; i >= 0; i--) {
+			uae_u32 r, g, b, c;
+			uae_u32 j = byte_swap ? bswap_16(i) : i;
+			r = (((j >> red_shift) & lrmask) << lrbits) | lowbits(j, red_shift, lrbits);
+			g = (((j >> green_shift) & lgmask) << lgbits) | lowbits(j, green_shift, lgbits);
+			b = (((j >> blue_shift) & lbmask) << lbbits) | lowbits(j, blue_shift, lbbits);
+			c = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs);
+			if (bpp <= 16)
+				c *= 0x00010001;
+			p96_rgbx16[i] = c;
+		}
+	}
+#endif
+}
+
+void alloc_colors_rgb(int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap,
 	uae_u32 *rc, uae_u32 *gc, uae_u32 *bc)
 {
 	int bpp = rw + gw + bw;
@@ -117,15 +210,28 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int byte_
 
 void alloc_colors64k (int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap)
 {
-	int i;
+	int bpp = rw + gw + bw;
+	int i, j;
+
+	j = 256;
 	for (i = 0; i < 4096; i++) {
 		int r = ((i >> 8) << 4) | (i >> 8);
 		int g = (((i >> 4) & 0xf) << 4) | ((i >> 4) & 0x0f);
 		int b = ((i & 0xf) << 4) | (i & 0x0f);
 		xcolors[i] = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs);
-		/* Fill upper 16 bits of each colour value
-		* with a copy of the colour. */
-		xcolors[i] = xcolors[i] * 0x00010001;
+		if (byte_swap) {
+			if (bpp <= 16) {
+				xcolors[i] = bswap_16(xcolors[i]);
+			}
+			else {
+				xcolors[i] = bswap_32(xcolors[i]);
+			}
+		}
+		if (bpp <= 16) {
+			/* Fill upper 16 bits of each colour value
+			* with a copy of the colour. */
+			xcolors[i] |= xcolors[i] * 0x00010001;
+		}
 	}
-	alloc_colors_rgb (rw, gw, bw, rs, gs, bs, byte_swap, xredcolors, xgreencolors, xbluecolors);
+	alloc_colors_rgb(rw, gw, bw, rs, gs, bs, byte_swap, xredcolors, xgreencolors, xbluecolors);
 }

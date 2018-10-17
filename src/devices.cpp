@@ -29,6 +29,7 @@
 #include "gensound.h"
 #include "gui.h"
 #include "drawing.h"
+#include "statusline.h"
 #ifdef JIT
 #include "jit/compemu.h"
 #endif
@@ -64,6 +65,7 @@ void devices_vsync_pre(void)
 	CIA_vsync_prehandler();
 	inputdevice_vsync();
 	filesys_vsync();
+	statusline_vsync();
 }
 
 void devices_hsync(void)

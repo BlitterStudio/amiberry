@@ -45,6 +45,7 @@
 extern FILE *debugfile;
 #endif
 
+int pause_emulation;
 int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;

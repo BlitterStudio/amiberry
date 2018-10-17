@@ -163,7 +163,8 @@ static void *display_thread(void *unused)
 				dispmanxresource_blackfb = 0;
 			}
 
-			if (screen != nullptr) {
+			if (screen != nullptr)
+			{
 				SDL_FreeSurface(screen);
 				screen = nullptr;
 			}
@@ -673,9 +674,9 @@ static void open_screen(struct uae_prefs* p)
 void update_display(struct uae_prefs* p)
 {
 	open_screen(p);
-	#ifdef USE_SDL1
+#ifdef USE_SDL2
 	SDL_SetRelativeMouseMode(SDL_TRUE);
-	#endif
+#endif
 	SDL_ShowCursor(SDL_DISABLE);
 	framecnt = 1; // Don't draw frame before reset done
 }
@@ -1390,6 +1391,11 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 			picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
 		}
 	}
+}
+
+void gfx_set_picasso_colors(RGBFTYPE rgbfmt)
+{
+	alloc_colors_picasso(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, rgbfmt);
 }
 
 uae_u8* gfx_lock_picasso()

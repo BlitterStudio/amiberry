@@ -718,6 +718,8 @@ static int real_main2 (int argc, TCHAR **argv)
 	memset(&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
 	gui_data.hd = -1;
+	gui_data.net = -1;
+	gui_data.md = currprefs.cs_cd32nvram ? 0 : -1;
 
 	if (!init_shm()) {
 		if (currprefs.start_gui)

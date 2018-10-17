@@ -5634,25 +5634,25 @@ void fpscounter_reset (void)
 	idletime = 0;
 }
 
-static void fpscounter (void)
+static void fpscounter(bool frameok)
 {
-  frame_time_t now, last;
+	frame_time_t now, last;
 
-  now = read_processor_time ();
-  last = now - lastframetime;
-  lastframetime = now;
+	now = read_processor_time();
+	last = now - lastframetime;
+	lastframetime = now;
 
 	if ((int)last < 0)
 		return;
 
-	if(currprefs.gfx_framerate)
-	  idletime >>= 1;
+	if (currprefs.gfx_framerate)
+		idletime >>= 1;
 
-	mavg (&fps_mavg, last / 10, FPSCOUNTER_MAVG_SIZE);
-	mavg (&idle_mavg, idletime / 10, FPSCOUNTER_MAVG_SIZE);
+	mavg(&fps_mavg, last / 10, FPSCOUNTER_MAVG_SIZE);
+	mavg(&idle_mavg, idletime / 10, FPSCOUNTER_MAVG_SIZE);
 	idletime = 0;
 
-  timeframes++;
+	timeframes++;
 
 	if ((timeframes & 7) == 0) {
 		double idle = 1000 - (idle_mavg.mavg == 0 ? 0.0 : (double)idle_mavg.mavg * 1000.0 / vsynctimebase);
@@ -5664,61 +5664,62 @@ static void fpscounter (void)
 		if (idle > 100 * 10)
 			idle = 100 * 10;
 		gui_data.fps = fps;
-    gui_data.idle = (int)idle;
-  }
+		gui_data.idle = (int)idle;
+		gui_data.fps_color = frameok ? 0 : 1;
+	}
 }
 
 // vsync functions that are not hardware timing related
-static void vsync_handler_pre (void)
+static void vsync_handler_pre(void)
 {
-	config_check_vsync ();
-  if (timehack_alive > 0)
-	  timehack_alive--;
+	config_check_vsync();
+	if (timehack_alive > 0)
+		timehack_alive--;
 
 #ifdef PICASSO96
-  rtg_vsync ();
+	rtg_vsync();
 #endif
 
 	if (!vsync_rendered) {
 		frame_time_t start, end;
-		start = read_processor_time ();
-		vsync_handle_redraw ();
+		start = read_processor_time();
+		vsync_handle_redraw();
 		vsync_rendered = true;
-		end = read_processor_time ();
+		end = read_processor_time();
 		frameskiptime += end - start;
 	}
 
-  framewait ();
-	
+	bool frameok = framewait();
+
 	if (!picasso_on && !nodraw()) {
 		if (!frame_rendered) {
-			frame_rendered = render_screen (false);
+			frame_rendered = render_screen(false);
 		}
 		if (frame_rendered && !frame_shown) {
-			frame_shown = show_screen_maybe (true);
+			frame_shown = show_screen_maybe(true);
 		}
 	}
 
 	// GUI check here, must be after frame rendering
 	devices_vsync_pre();
 
-  if(!nodraw() || (picasso_on && picasso_rendered))
-    fpscounter();
+	if (!nodraw() || (picasso_on && picasso_rendered))
+		fpscounter(frameok);
 
-	handle_events ();
+	handle_events();
 
 	if (quit_program > 0) {
-	  /* prevent possible infinite loop at wait_cycles().. */
+		/* prevent possible infinite loop at wait_cycles().. */
 		framecnt = 0;
-    reset_decisions ();
-	  return;
-  }
-	
+		reset_decisions();
+		return;
+	}
+
 	vsync_rendered = false;
 	frame_shown = false;
 	frame_rendered = false;
 
-	vsync_handle_check ();
+	vsync_handle_check();
 }
 
 // emulated hardware vsync

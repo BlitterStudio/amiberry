@@ -116,6 +116,9 @@ static struct ScreenResolution hicolour = { 640, 480 };
 static struct ScreenResolution truecolour = { 640, 480 };
 static struct ScreenResolution alphacolour = { 640, 480 };
 
+uae_u32 p96_rgbx16[65536];
+uae_u32 p96rc[256], p96gc[256], p96bc[256];
+
 static uaecptr boardinfo, ABI_interrupt;
 static int interrupt_enabled;
 double p96vblank;
@@ -741,6 +744,11 @@ static void setconvert(void)
 
 	picasso_convert = getconvert(picasso96_state.RGBFormat, picasso_vidinfo.pixbytes);
 	host_mode = GetSurfacePixelFormat();
+	if (picasso_vidinfo.pixbytes == 4)
+		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, p96rc, p96gc, p96bc);
+	else
+		alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, p96rc, p96gc, p96bc);
+	gfx_set_picasso_colors(picasso96_state.RGBFormat);
 	picasso_palette(picasso96_state.CLUT);
 	if (host_mode != ohost_mode || picasso96_state.RGBFormat != orgbformat) {
 		write_log(_T("RTG conversion: Depth=%d HostRGBF=%d P96RGBF=%d Mode=%d\n"),
@@ -3099,7 +3107,7 @@ static void picasso_statusline(uae_u8 *dst)
 	for (y = 0; y < TD_TOTAL_HEIGHT; y++) {
 		int line = dst_height - TD_TOTAL_HEIGHT + y;
 		uae_u8 *buf = dst + line * pitch;
-		draw_status_line_single(buf, y, dst_width);
+		draw_status_line_single(buf, picasso_vidinfo.pixbytes, y, dst_width, p96rc, p96gc, p96bc, NULL);
 	}
 }
 
@@ -3711,7 +3719,7 @@ uae_u8 *restore_p96(uae_u8 *src)
 	interrupt_enabled = !!(flags & 32);
 	changed_prefs.rtgboards[0].rtgmem_size = restore_u32();
 	picasso96_state_uaegfx.Address = restore_u32();
-	picasso96_state_uaegfx.RGBFormat = restore_u32();
+	picasso96_state_uaegfx.RGBFormat = (RGBFTYPE)restore_u32();
 	picasso96_state_uaegfx.Width = restore_u16();
 	picasso96_state_uaegfx.Height = restore_u16();
 	picasso96_state_uaegfx.VirtualWidth = restore_u16();

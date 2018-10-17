@@ -23,6 +23,7 @@
 #include "gensound.h"
 #include "sounddep/sound.h"
 #include <SDL.h>
+#include "gui.h"
 
 #ifdef ANDROIDSDL
 #include <android/log.h>
@@ -243,6 +244,8 @@ static int open_sound()
 	have_sound = 1;
 	sound_available = 1;
 
+	gui_data.sndbuf_avail = true;
+
 	if (currprefs.sound_stereo)
 		sample_handler = sample16s_handler;
 	else
@@ -254,6 +257,9 @@ static int open_sound()
 void close_sound()
 {
 	config_changed = 1;
+	gui_data.sndbuf = 0;
+	gui_data.sndbuf_status = 3;
+	gui_data.sndbuf_avail = false;
 	if (!have_sound)
 		return;
 
@@ -264,6 +270,9 @@ void close_sound()
 
 int init_sound()
 {
+	gui_data.sndbuf_status = 3;
+	gui_data.sndbuf = 0;
+	gui_data.sndbuf_avail = false;
 	have_sound = open_sound();
 	return have_sound;
 }

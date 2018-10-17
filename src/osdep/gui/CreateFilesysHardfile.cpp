@@ -372,7 +372,6 @@ bool CreateFilesysHardfile()
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();
-
 	CreateFilesysHardfileLoop();
 	
 	if (dialogResult)
@@ -384,7 +383,7 @@ bool CreateFilesysHardfile()
 			size = 2048;
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
 
-		const auto newFile = fopen(txtPath->getText().c_str(), "wb");
+		const auto newFile = fopen(txtPath->getText().c_str(), "wbe");
 		if (!newFile)
 		{
 			ShowMessage("Create Hardfile", "Unable to create new file.", "", "Ok", "");
@@ -410,7 +409,7 @@ bool CreateFilesysHardfile()
 			hardfile_media_change(hfd, &ci, true, false);
 		}
 	}
-	
-        ExitCreateFilesysHardfile();
+
+	ExitCreateFilesysHardfile();
 	return dialogResult;
 }

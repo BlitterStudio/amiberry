@@ -559,7 +559,7 @@ struct Line {
 /************************************************************************/
 struct picasso96_state_struct
 {
-    uae_u32		RGBFormat;   /* true-colour, CLUT, hi-colour, etc. */
+	RGBFTYPE		RGBFormat;   /* true-colour, CLUT, hi-colour, etc. */
     struct MyCLUTEntry	CLUT[256];   /* Duh! */
     uaecptr		Address;     /* Active screen address (Amiga-side) */
     uaecptr		Extent;	     /* End address of screen (Amiga-side) */
@@ -608,13 +608,14 @@ struct picasso_vidbuf_description {
     int rowbytes, pixbytes;
     int extra_mem; /* nonzero if there's a second buffer that must be updated */
     uae_u32 rgbformat;
-    uae_u32 selected_rgbformat;
+    RGBFTYPE selected_rgbformat;
     uae_u32 clut[256];
 };
 
 extern struct picasso_vidbuf_description picasso_vidinfo;
 
 extern void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 d, RGBFTYPE rgbfmt);
+extern void gfx_set_picasso_colors(RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_baseaddr (uaecptr);
 extern void gfx_set_picasso_state (int on);
 extern uae_u8 *gfx_lock_picasso (void);

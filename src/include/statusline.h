@@ -3,9 +3,9 @@
 
 #include "uae/types.h"
 
-#define TD_PADX 10
+#define TD_PADX 4
 #define TD_PADY 2
-#define TD_WIDTH 32
+#define TD_WIDTH 30
 #define TD_LED_WIDTH 24
 #define TD_LED_HEIGHT 4
 
@@ -19,7 +19,7 @@ static int td_pos = (TD_RIGHT|TD_BOTTOM);
 
 #define TD_TOTAL_HEIGHT (TD_PADY * 2 + TD_NUM_HEIGHT)
 
-#define NUMBERS_NUM 17
+#define NUMBERS_NUM 19
 
 #define TD_BORDER 0x333333
 
@@ -27,6 +27,15 @@ static int td_pos = (TD_RIGHT|TD_BOTTOM);
 #define STATUSLINE_RTG 2
 #define STATUSLINE_TARGET 0x80
 
-extern void draw_status_line_single (uae_u8 *buf, int y, int totalwidth);
+extern void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
+
+#define STATUSTYPE_FLOPPY 1
+#define STATUSTYPE_DISPLAY 2
+#define STATUSTYPE_INPUT 3
+#define STATUSTYPE_CD 4
+#define STATUSTYPE_OTHER 5
+
+extern void statusline_clear(void);
+extern void statusline_vsync(void);
 
 #endif /* UAE_STATUSLINE_H */
