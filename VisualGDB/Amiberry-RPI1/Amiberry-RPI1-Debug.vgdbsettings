@@ -52,7 +52,7 @@
       <Version>
         <GCC>6.3.0</GCC>
         <GDB>7.12</GDB>
-        <Revision>1</Revision>
+        <Revision>3</Revision>
       </Version>
     </ToolchainID>
     <ProjectFile>Amiberry-RPI1.vcxproj</ProjectFile>

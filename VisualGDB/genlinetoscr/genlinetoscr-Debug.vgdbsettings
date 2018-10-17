@@ -24,7 +24,7 @@
       <Version>
         <GCC>6.3.0</GCC>
         <GDB>7.12</GDB>
-        <Revision>1</Revision>
+        <Revision>3</Revision>
       </Version>
     </ToolchainID>
     <Toolchain>
@@ -60,6 +60,7 @@
           <Value>C:\SysGCC\raspberry\bin;%PATH%</Value>
         </Record>
       </Records>
+      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>

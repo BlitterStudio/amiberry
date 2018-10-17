@@ -38,23 +38,23 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">

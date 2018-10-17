@@ -10,7 +10,7 @@
       <Transport>None</Transport>
     </BuildHost>
     <DeploymentHost>
-      <HostName>192.168.1.233</HostName>
+      <HostName>192.168.1.173</HostName>
       <Transport>SSH</Transport>
       <UserName>pi</UserName>
     </DeploymentHost>
@@ -35,7 +35,6 @@
       </FileMasks>
       <TransferNewFilesOnly>true</TransferNewFilesOnly>
       <IncludeSubdirectories>true</IncludeSubdirectories>
-      <SelectedDirectories />
       <DeleteDisappearedFiles>false</DeleteDisappearedFiles>
       <ApplyGlobalExclusionList>true</ApplyGlobalExclusionList>
     </MainSourceTransferCommand>
@@ -52,7 +51,7 @@
       <Version>
         <GCC>6.3.0</GCC>
         <GDB>7.12</GDB>
-        <Revision>1</Revision>
+        <Revision>3</Revision>
       </Version>
     </ToolchainID>
     <ProjectFile>Amiberry.vcxproj</ProjectFile>
@@ -63,6 +62,95 @@
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>
   </Build>
+  <CustomBuild>
+    <PreSyncActions />
+    <PreBuildActions />
+    <PostBuildActions />
+    <PreCleanActions />
+    <PostCleanActions />
+  </CustomBuild>
+  <CustomDebug>
+    <PreDebugActions />
+    <PostDebugActions />
+    <DebugStopActions />
+    <BreakMode>Default</BreakMode>
+  </CustomDebug>
+  <CustomShortcuts>
+    <Shortcuts />
+    <ShowMessageAfterExecuting>true</ShowMessageAfterExecuting>
+  </CustomShortcuts>
+  <UserDefinedVariables />
+  <ImportedPropertySheets />
+  <CodeSense>
+    <Enabled>Unknown</Enabled>
+    <CFLAGS />
+    <CXXFLAGS />
+    <ExternalSourceFileList />
+    <ExtraSettings>
+      <HideErrorsInSystemHeaders>true</HideErrorsInSystemHeaders>
+      <SupportLightweightReferenceAnalysis>false</SupportLightweightReferenceAnalysis>
+      <DiscoverySettings>
+        <Mode>Enabled</Mode>
+        <SearchInProjectDir>true</SearchInProjectDir>
+        <SearchInSourceDirs>true</SearchInSourceDirs>
+        <SearchInIncludeSubdirs>true</SearchInIncludeSubdirs>
+        <IgnoredDirs />
+        <IgnoredHeaders />
+      </DiscoverySettings>
+      <CheckForClangFormatFiles xsi:nil="true" />
+      <FormattingEngine>ClangFormat</FormattingEngine>
+    </ExtraSettings>
+    <CodeAnalyzerSettings>
+      <Enabled>true</Enabled>
+      <SelectedAnalyzers>
+        <string>apiModeling.google.GTest</string>
+        <string>core.builtin.BuiltinFunctions</string>
+        <string>core.builtin.NoReturnFunctions</string>
+        <string>core.CallAndMessage</string>
+        <string>core.DivideZero</string>
+        <string>core.DynamicTypePropagation</string>
+        <string>core.NonnilStringConstants</string>
+        <string>core.NonNullParamChecker</string>
+        <string>core.NullDereference</string>
+        <string>core.StackAddressEscape</string>
+        <string>core.UndefinedBinaryOperatorResult</string>
+        <string>core.uninitialized.ArraySubscript</string>
+        <string>core.uninitialized.Assign</string>
+        <string>core.uninitialized.Branch</string>
+        <string>core.uninitialized.CapturedBlockVariable</string>
+        <string>core.uninitialized.UndefReturn</string>
+        <string>core.VLASize</string>
+        <string>cplusplus.NewDelete</string>
+        <string>cplusplus.NewDeleteLeaks</string>
+        <string>cplusplus.SelfAssignment</string>
+        <string>deadcode.DeadStores</string>
+        <string>nullability.NullPassedToNonnull</string>
+        <string>nullability.NullReturnedFromNonnull</string>
+        <string>security.insecureAPI.getpw</string>
+        <string>security.insecureAPI.gets</string>
+        <string>security.insecureAPI.mkstemp</string>
+        <string>security.insecureAPI.mktemp</string>
+        <string>security.insecureAPI.UncheckedReturn</string>
+        <string>security.insecureAPI.vfork</string>
+        <string>unix.API</string>
+        <string>unix.cstring.BadSizeArg</string>
+        <string>unix.cstring.NullArg</string>
+        <string>unix.Malloc</string>
+        <string>unix.MallocSizeof</string>
+        <string>unix.MismatchedDeallocator</string>
+        <string>unix.StdCLibraryFunctions</string>
+        <string>unix.Vfork</string>
+      </SelectedAnalyzers>
+      <ExtraArguments>
+        <string>-analyzer-store=region</string>
+        <string>-analyzer-opt-analyze-nested-blocks</string>
+        <string>-analyzer-eagerly-assume</string>
+      </ExtraArguments>
+    </CodeAnalyzerSettings>
+  </CodeSense>
+  <BuildContextDirectory>VisualGDB\VisualGDBCache</BuildContextDirectory>
+  <Configurations />
+  <ProgramArgumentsSuggestions />
   <Debug xsi:type="com.visualgdb.debug.remote">
     <AdditionalStartupCommands />
     <AdditionalGDBSettings>
@@ -110,86 +198,4 @@
     <DeployWhenLaunchedWithoutDebugging>true</DeployWhenLaunchedWithoutDebugging>
     <SuppressTTYCreation>false</SuppressTTYCreation>
   </Debug>
-  <CustomBuild>
-    <PreSyncActions />
-    <PreBuildActions />
-    <PostBuildActions />
-    <PreCleanActions />
-    <PostCleanActions />
-  </CustomBuild>
-  <CustomDebug>
-    <PreDebugActions />
-    <PostDebugActions />
-    <DebugStopActions />
-    <BreakMode>Default</BreakMode>
-  </CustomDebug>
-  <CustomShortcuts>
-    <Shortcuts />
-    <ShowMessageAfterExecuting>true</ShowMessageAfterExecuting>
-  </CustomShortcuts>
-  <UserDefinedVariables />
-  <ImportedPropertySheets />
-  <CodeSense>
-    <Enabled>False</Enabled>
-    <CFLAGS />
-    <CXXFLAGS />
-    <ExternalSourceFileList />
-    <ExtraSettings>
-      <HideErrorsInSystemHeaders>true</HideErrorsInSystemHeaders>
-      <SupportLightweightReferenceAnalysis>false</SupportLightweightReferenceAnalysis>
-      <DiscoverySettings>
-        <Mode>Enabled</Mode>
-        <SearchInProjectDir>true</SearchInProjectDir>
-        <SearchInSourceDirs>true</SearchInSourceDirs>
-        <SearchInIncludeSubdirs>true</SearchInIncludeSubdirs>
-        <IgnoredDirs />
-        <IgnoredHeaders />
-      </DiscoverySettings>
-    </ExtraSettings>
-    <CodeAnalyzerSettings>
-      <Enabled>true</Enabled>
-      <SelectedAnalyzers>
-        <string>core.builtin.BuiltinFunctions</string>
-        <string>core.builtin.NoReturnFunctions</string>
-        <string>core.CallAndMessage</string>
-        <string>core.DivideZero</string>
-        <string>core.DynamicTypePropagation</string>
-        <string>core.NonNullParamChecker</string>
-        <string>core.NullDereference</string>
-        <string>core.StackAddressEscape</string>
-        <string>core.UndefinedBinaryOperatorResult</string>
-        <string>core.uninitialized.ArraySubscript</string>
-        <string>core.uninitialized.Assign</string>
-        <string>core.uninitialized.Branch</string>
-        <string>core.uninitialized.CapturedBlockVariable</string>
-        <string>core.uninitialized.UndefReturn</string>
-        <string>core.VLASize</string>
-        <string>cplusplus.NewDelete</string>
-        <string>cplusplus.NewDeleteLeaks</string>
-        <string>deadcode.DeadStores</string>
-        <string>nullability.NullPassedToNonnull</string>
-        <string>nullability.NullReturnedFromNonnull</string>
-        <string>security.insecureAPI.getpw</string>
-        <string>security.insecureAPI.gets</string>
-        <string>security.insecureAPI.mkstemp</string>
-        <string>security.insecureAPI.mktemp</string>
-        <string>security.insecureAPI.UncheckedReturn</string>
-        <string>security.insecureAPI.vfork</string>
-        <string>unix.API</string>
-        <string>unix.cstring.BadSizeArg</string>
-        <string>unix.cstring.NullArg</string>
-        <string>unix.Malloc</string>
-        <string>unix.MallocSizeof</string>
-        <string>unix.MismatchedDeallocator</string>
-        <string>unix.Vfork</string>
-      </SelectedAnalyzers>
-      <ExtraArguments>
-        <string>-analyzer-store=region</string>
-        <string>-analyzer-opt-analyze-nested-blocks</string>
-        <string>-analyzer-eagerly-assume</string>
-      </ExtraArguments>
-    </CodeAnalyzerSettings>
-  </CodeSense>
-  <BuildContextDirectory>VisualGDB\VisualGDBCache</BuildContextDirectory>
-  <ProgramArgumentsSuggestions />
 </VisualGDBProjectSettings2>
