@@ -673,7 +673,9 @@ static void open_screen(struct uae_prefs* p)
 void update_display(struct uae_prefs* p)
 {
 	open_screen(p);
+	#ifdef USE_SDL1
 	SDL_SetRelativeMouseMode(SDL_TRUE);
+	#endif
 	SDL_ShowCursor(SDL_DISABLE);
 	framecnt = 1; // Don't draw frame before reset done
 }
