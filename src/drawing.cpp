@@ -2424,6 +2424,15 @@ static void pfield_expand_dp_bplcon(void)
 	bplres = dp_for_drawing->bplres;
 	bplplanecnt = dp_for_drawing->nr_planes;
 	bplham = dp_for_drawing->ham_seen;
+	if (aga_mode) {
+		bplehb = (dp_for_drawing->bplcon0 & 0x7010) == 0x6000;
+		bpldualpf2of = (dp_for_drawing->bplcon3 >> 10) & 7;
+		sbasecol[0] = ((dp_for_drawing->bplcon4 >> 4) & 15) << 4;
+		sbasecol[1] = ((dp_for_drawing->bplcon4 >> 0) & 15) << 4;
+		bplxor = dp_for_drawing->bplcon4 >> 8;
+	}
+	else
+		bplehb = (dp_for_drawing->bplcon0 & 0xFC00) == 0x6000 || (dp_for_drawing->bplcon0 & 0xFC00) == 0x7000;
 	if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && (dp_for_drawing->bplcon2 & 0x0200)) {
 		bplehb = 0;
 		if (!(currprefs.chipset_mask & CSMASK_AGA))
