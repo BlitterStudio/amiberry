@@ -332,12 +332,14 @@ static TCHAR* cfgfile_option_find_it(const TCHAR* s, const TCHAR* option, bool c
 	}
 }
 
-static bool cfgfile_option_find(const TCHAR* s, const TCHAR* option)
+bool cfgfile_option_find(const TCHAR *s, const TCHAR *option)
 {
-	return cfgfile_option_find_it(s, option, false) != nullptr;
+	TCHAR *ss = cfgfile_option_find_it(s, option, false);
+	xfree(ss);
+	return ss != NULL;
 }
 
-static TCHAR* cfgfile_option_get(const TCHAR* s, const TCHAR* option)
+TCHAR *cfgfile_option_get(const TCHAR *s, const TCHAR *option)
 {
 	return cfgfile_option_find_it(s, option, true);
 }
@@ -4610,6 +4612,7 @@ static void parse_hardfile_spec(struct uae_prefs* p, const TCHAR* spec)
 argh:
 	free(x0);
 	cfgfile_warning(_T("Bad hardfile parameter specified\n"));
+	return;
 }
 
 static void parse_cpu_specs(struct uae_prefs* p, const TCHAR* spec)
@@ -4868,7 +4871,7 @@ static bool cfgfile_parse_uaelib_option(struct uae_prefs* p, TCHAR* option, TCHA
 	return false;
 }
 
-static int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outsize)
+int cfgfile_searchconfig(const TCHAR *in, int index, TCHAR *out, int outsize)
 {
 	TCHAR tmp[CONFIG_BLEN];
 	int j = 0;
@@ -4877,8 +4880,7 @@ static int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outs
 	uae_u32 err = 0;
 	bool configsearchfound = false;
 
-	if (in[inlen - 1] == '*')
-	{
+	if (in[inlen - 1] == '*') {
 		joker = 1;
 		inlen--;
 	}
@@ -4889,15 +4891,20 @@ static int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outs
 	if (!configstore)
 		return 20;
 
-	if (index < 0)
+	if (index < 0) {
+		index = 0;
 		zfile_fseek(configstore, 0, SEEK_SET);
+	} else {
+		// if seek position==0: configstore was reset, always start from the beginning.
+		if (zfile_ftell(configstore) > 0)
+			index = 0;
+	}
 
-	for (;;)
-	{
+	tmp[0] = 0;
+	for (;;) {
 		uae_u8 b = 0;
 
-		if (zfile_fread(&b, 1, 1, configstore) != 1)
-		{
+		if (zfile_fread (&b, 1, 1, configstore) != 1) {
 			err = 10;
 			if (configsearchfound)
 				err = 0;
@@ -4905,26 +4912,22 @@ static int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outs
 		}
 		if (j >= sizeof (tmp) / sizeof (TCHAR) - 1)
 			j = sizeof (tmp) / sizeof (TCHAR) - 1;
-		if (b == 0)
-		{
+		if (b == 0) {
 			err = 10;
 			if (configsearchfound)
 				err = 0;
 			goto end;
 		}
-		if (b == '\n')
-		{
-			if (!_tcsncmp(tmp, in, inlen) && ((inlen > 0 && _tcslen(tmp) > inlen && tmp[inlen] == '=') || (joker)))
-			{
+		if (b == '\n') {
+			if (!_tcsncmp (tmp, in, inlen) && ((inlen > 0 && _tcslen (tmp) > inlen && tmp[inlen] == '=') || (joker))) {
+				if (index <= 0) {
 				TCHAR* p;
 				if (joker)
 					p = tmp - 1;
 				else
 					p = _tcschr(tmp, '=');
-				if (p)
-				{
-					for (int i = 0; out && i < outsize - 1; i++)
-					{
+					if (p) {
+						for (int i = 0; out && i < outsize - 1; i++) {
 						TCHAR b = *++p;
 						out[i] = b;
 						out[i + 1] = 0;
@@ -4935,11 +4938,12 @@ static int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outs
 				err = 0xffffffff;
 				configsearchfound = true;
 				goto end;
+				} else {
+					index--;
+				}
 			}
 			j = 0;
-		}
-		else
-		{
+		} else {
 			tmp[j++] = b;
 			tmp[j] = 0;
 		}
@@ -4992,6 +4996,7 @@ uae_u32 cfgfile_modify(uae_u32 index, const TCHAR* parms, uae_u32 size, TCHAR* o
 
 	if (size > 10000)
 		return 10;
+
 	argv = cmdlineparser(parms, argc, UAELIB_MAX_PARSE);
 
 	if (argv <= 1 && index == 0xffffffff)
@@ -5129,7 +5134,141 @@ uae_u32 cfgfile_uaelib(TrapContext* ctx, int mode, uae_u32 name, uae_u32 dst, ua
 	return 0;
 }
 
+uae_u8 *restore_configuration (uae_u8 *src)
+{
+	struct uae_prefs *p = &currprefs;
+	TCHAR *sp = au ((char*)src);
+	TCHAR *s = sp;
+	for (;;) {
+		TCHAR option[MAX_DPATH];
+		TCHAR value[MAX_DPATH];
+		TCHAR tmp[MAX_DPATH];
+
+		TCHAR *ss = s;
+		while (*s && *s != 10 && *s != 13)
+			s++;
+		if (*s == 0) {
+			xfree(sp);
+			return src += strlen((char*)src) + 1;
+		}
+		*s++ = 0;
+		while (*s == 10 || *s == 13)
+			s++;
+		if (cfgfile_separate_line(ss, option, value)) {
+			if (!_tcsncmp(option, _T("diskimage"), 9)) {
+				for (int i = 0; i < MAX_SPARE_DRIVES; i++) {
+					_stprintf(tmp, _T("diskimage%d"), i);
+					if (!_tcscmp(option, tmp)) {
+						cfgfile_string(option, value, tmp, p->dfxlist[i], sizeof p->dfxlist[i] / sizeof(TCHAR));
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+uae_u8 *save_configuration (int *len, bool fullconfig)
+{
+	int tmpsize = 100000;
+	uae_u8 *dstbak, *dst, *p;
+	int index = -1;
+
+	dstbak = dst = xcalloc (uae_u8, tmpsize);
+	p = dst;
+	for (;;) {
+		TCHAR tmpout[1000];
+		int ret;
+		tmpout[0] = 0;
+		ret = cfgfile_modify (index, _T("*"), 1, tmpout, sizeof (tmpout) / sizeof (TCHAR));
+		index++;
+		if (_tcslen (tmpout) > 0) {
+			char *out;
+			if (!fullconfig && !_tcsncmp (tmpout, _T("input."), 6))
+				continue;
+			//write_log (_T("'%s'\n"), tmpout);
+			out = uutf8 (tmpout);
+			strcpy ((char*)p, out);
+			xfree (out);
+			strcat ((char*)p, "\n");
+			p += strlen ((char*)p);
+			if (p - dstbak >= tmpsize - sizeof (tmpout))
+				break;
+		}
+		if (ret >= 0)
+			break;
+	}
+	*len = p - dstbak + 1;
+	return dstbak;
+}
+
+#ifdef UAE_MINI
+static void default_prefs_mini (struct uae_prefs *p, int type)
+{
+	_tcscpy (p->description, _T("UAE default A500 configuration"));
+
+	p->nr_floppies = 1;
+	p->floppyslots[0].dfxtype = DRV_35_DD;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	p->cpu_model = 68000;
+	p->address_space_24 = 1;
+	p->chipmem_size = 0x00080000;
+	p->bogomem_size = 0x00080000;
+}
+#endif
+
 #include "sounddep/sound.h"
+
+static void copy_inputdevice_settings(struct uae_input_device *src, struct uae_input_device *dst)
+{
+	for (int l = 0; l < MAX_INPUT_DEVICE_EVENTS; l++) {
+		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
+			if (src->custom[l][i]) {
+				dst->custom[l][i] = my_strdup(src->custom[l][i]);
+			} else {
+				dst->custom[l][i] = NULL;
+			}
+		}
+	}
+}
+
+static void copy_inputdevice_settings_free(struct uae_input_device *src, struct uae_input_device *dst)
+{
+	for (int l = 0; l < MAX_INPUT_DEVICE_EVENTS; l++) {
+		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
+			if (dst->custom[l][i] == NULL && src->custom[l][i] == NULL)
+				continue;
+			// same string in both src and dest: separate them (fixme: this shouldn't happen!)
+			if (dst->custom[l][i] == src->custom[l][i]) {
+				dst->custom[l][i] = NULL;
+			} else {
+				if (dst->custom[l][i]) {
+					xfree(dst->custom[l][i]);
+					dst->custom[l][i] = NULL;
+				}
+			}
+		}
+	}
+}
+
+void copy_prefs(struct uae_prefs *src, struct uae_prefs *dst)
+{
+	for (int slot = 0; slot < MAX_INPUT_SETTINGS; slot++) {
+		for (int m = 0; m < MAX_INPUT_DEVICES; m++) {
+			copy_inputdevice_settings_free(&src->joystick_settings[slot][m], &dst->joystick_settings[slot][m]);
+			copy_inputdevice_settings_free(&src->mouse_settings[slot][m], &dst->mouse_settings[slot][m]);
+			copy_inputdevice_settings_free(&src->keyboard_settings[slot][m], &dst->keyboard_settings[slot][m]);
+		}
+	}
+	memcpy(dst, src, sizeof(struct uae_prefs));
+	for (int slot = 0; slot < MAX_INPUT_SETTINGS; slot++) {
+		for (int m = 0; m < MAX_INPUT_DEVICES; m++) {
+			copy_inputdevice_settings(&src->joystick_settings[slot][m], &dst->joystick_settings[slot][m]);
+			copy_inputdevice_settings(&src->mouse_settings[slot][m], &dst->mouse_settings[slot][m]);
+			copy_inputdevice_settings(&src->keyboard_settings[slot][m], &dst->keyboard_settings[slot][m]);
+		}
+	}
+}
 
 void default_prefs(struct uae_prefs* p, bool reset, int type)
 {
@@ -5139,8 +5278,12 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	reset_inputdevice_config(p, reset);
 	memset(p, 0, sizeof(struct uae_prefs));
 	_tcscpy(p->description, _T("UAE default configuration"));
+	p->config_hardware_path[0] = 0;
+	p->config_host_path[0] = 0;
 
+	p->gfx_scandoubler = false;
 	p->start_gui = true;
+	p->start_debugger = false;
 
 	p->all_lines = nullptr;
 
@@ -5163,6 +5306,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 		inputdevice_joyport_config_store(p, _T("joy1"), 1, -1, 0);
 	}
 	p->keyboard_lang = KBD_LANG_US;
+	p->keyboard_connected = true;
 
 	p->produce_sound = 3;
 	p->sound_stereo = SND_STEREO;
@@ -5174,11 +5318,19 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->sound_filter_type = 0;
 	p->sound_volume_cd = 20;
 
+	p->comptrustbyte = 0;
+	p->comptrustword = 0;
+	p->comptrustlong = 0;
+	p->comptrustnaddr= 0;
+	p->compnf = 1;
+	p->comp_hardflush = 0;
+	p->comp_constjump = 1;
 #ifdef USE_JIT_FPU
 	p->compfpu = 1;
 #else
 	p->compfpu = 0;
 #endif
+	p->comp_catchfault = true;
 	p->cachesize = 0;
 
 	p->gfx_framerate = 0;
@@ -5190,21 +5342,57 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->gfx_iscanlines = 1;
 	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
+	p->gfx_xcenter = 0; p->gfx_ycenter = 0;
+	p->gfx_xcenter_pos = -1;
+	p->gfx_ycenter_pos = -1;
+	p->gfx_xcenter_size = -1;
+	p->gfx_ycenter_size = -1;
+	p->gfx_max_horizontal = RES_HIRES;
+	p->gfx_max_vertical = VRES_DOUBLE;
+	p->gfx_autoresolution_minv = 0;
+	p->gfx_autoresolution_minh = 0;
+	p->color_mode = 2;
+	p->gfx_blackerthanblack = 0;
+	p->gfx_autoresolution_vga = true;
+	p->gfx_apmode[0].gfx_backbuffers = 2;
+	p->gfx_apmode[1].gfx_backbuffers = 1;
+	p->gfx_display_sections = 4;
+	p->gfx_variable_sync = 0;
+	p->gfx_windowed_resize = true;
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;
 	p->chipset_refreshrate = 50;
 	p->collision_level = 2;
 	p->leds_on_screen = 0;
+	p->leds_on_screen_mask[0] = p->leds_on_screen_mask[1] = (1 << LED_MAX) - 1;
+	p->keyboard_leds_in_use = 0;
+	p->keyboard_leds[0] = p->keyboard_leds[1] = p->keyboard_leds[2] = 0;
+	p->scsi = 0;
+	p->uaeserial = 0;
+	p->cpu_idle = 0;
+	p->turbo_emulation = 0;
+	p->turbo_emulation_limit = 0;
+	p->headless = 0;
+	p->catweasel = 0;
+	p->tod_hack = 0;
+	p->maprom = 0;
 	p->boot_rom = 0;
 
 	p->cart_internal = 1;
+	p->sana2 = 0;
+	p->clipboard_sharing = false;
+	p->native_code = false;
+	p->lightpen_crosshair = true;
 
 	p->cs_compatible = CP_GENERIC;
 	p->cs_rtc = 2;
 	p->cs_df0idhw = true;
 	p->cs_fatgaryrev = -1;
 	p->cs_ramseyrev = -1;
+	p->cs_agnusrev = -1;
+	p->cs_deniserev = -1;
+	p->cs_mbdmac = 0;
 	p->cs_cd32c2p = p->cs_cd32cd = p->cs_cd32nvram = p->cs_cd32fmv = false;
 	p->cs_cd32nvram_size = 1024;
 	p->cs_pcmcia = false;
@@ -5215,6 +5403,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cs_df0idhw = true;
 	p->cs_ciatodbug = false;
 	p->cs_unmapped_space = 0;
+	p->cs_color_burst = false;
 	p->cs_ciatype[0] = 0;
 	p->cs_ciatype[1] = 0;
 
@@ -5225,8 +5414,11 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 
 	configure_rom(p, roms, 0);
 	_tcscpy(p->romextfile, _T(""));
+	_tcscpy (p->romextfile2, _T(""));
+	p->romextfile2addr = 0;
 	_tcscpy(p->flashfile, _T(""));
 	_tcscpy(p->cartfile, _T(""));
+	_tcscpy (p->rtcfile, _T(""));
 
 	sprintf(p->path_rom, _T("%s/kickstarts/"), start_path_data);
 	sprintf(p->path_floppy, _T("%s/disks/"), start_path_data);
@@ -5235,6 +5427,12 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 
 	p->fpu_model = 0;
 	p->cpu_model = 68000;
+	p->m68k_speed_throttle = 0;
+	p->cpu_clock_multiplier = 0;
+	p->cpu_frequency = 0;
+	p->mmu_model = 0;
+	p->cpu060_revision = 6;
+	p->fpu_revision = 0;
 	p->fpu_no_unimplemented = false;
 	p->fpu_strict = false;
 	p->m68k_speed = 0;
@@ -5244,6 +5442,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->ntscmode = false;
 	p->filesys_limit = 0;
 	p->filesys_max_name = 107;
+	p->filesys_max_file_size = 0x7fffffff;
 
 	p->fastmem[0].size = 0x00000000;
 	p->mbresmem_low_size = 0x00000000;
@@ -5267,13 +5466,28 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->floppyslots[3].dfxtype = DRV_NONE;
 	p->floppy_speed = 100;
 	p->floppy_write_length = 0;
+	p->floppy_random_bits_min = 1;
+	p->floppy_random_bits_max = 3;
+	p->dfxclickvolume_disk[0] = 33;
+	p->dfxclickvolume_disk[1] = 33;
+	p->dfxclickvolume_disk[2] = 33;
+	p->dfxclickvolume_disk[3] = 33;
+	p->dfxclickvolume_empty[0] = 33;
+	p->dfxclickvolume_empty[1] = 33;
+	p->dfxclickvolume_empty[2] = 33;
+	p->dfxclickvolume_empty[3] = 33;
+	p->dfxclickchannelmask = 0xffff;
 	p->cd_speed = 100;
 
 	p->socket_emu = false;
 
 	p->input_tablet = TABLET_OFF;
+	p->tablet_library = false;
+	p->input_mouse_untrap = MOUSEUNTRAP_MIDDLEBUTTON;
+	p->input_magic_mouse_cursor = 0;
 
 	inputdevice_default_prefs(p);
+
 	blkdev_default_prefs(p);
 
 	p->cr_selected = -1;
@@ -5290,6 +5504,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	cr->vert = -1;
 	cr->lace = -1;
 	cr->vsync = -1;
+	cr->framelength = -1;
 	cr->rate = 50.0;
 	cr->ntsc = 0;
 	cr->locked = false;
@@ -5301,11 +5516,15 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	cr->vert = -1;
 	cr->lace = -1;
 	cr->vsync = -1;
+	cr->framelength = -1;
 	cr->rate = 60.0;
 	cr->ntsc = 1;
 	cr->locked = false;
 	cr->inuse = true;
 	_tcscpy(cr->label, _T("NTSC"));
+
+	p->lightboost_strobo = false;
+	p->lightboost_strobo_ratio = 50;
 
 	savestate_state = 0;
 
@@ -5347,6 +5566,10 @@ static void buildin_default_prefs(struct uae_prefs* p)
 
 	p->fpu_model = 0;
 	p->cpu_model = 68000;
+	p->cpu_clock_multiplier = 0;
+	p->cpu_frequency = 0;
+	p->cpu060_revision = 1;
+	p->fpu_revision = -1;
 	p->m68k_speed = 0;
 	p->cpu_compatible = true;
 	p->address_space_24 = true;
@@ -5356,6 +5579,14 @@ static void buildin_default_prefs(struct uae_prefs* p)
 	p->collision_level = 2;
 	if (p->produce_sound < 1)
 		p->produce_sound = 1;
+	p->scsi = 0;
+	p->uaeserial = 0;
+	p->cpu_idle = 0;
+	p->turbo_emulation = 0;
+	p->turbo_emulation_limit = 0;
+	p->catweasel = 0;
+	p->tod_hack = 0;
+	p->maprom = 0;
 	p->cachesize = 0;
 	p->socket_emu = false;
 	p->sound_volume_cd = 0;
@@ -5380,9 +5611,14 @@ static void buildin_default_prefs(struct uae_prefs* p)
 	}
 
 	p->cs_rtc = 0;
+	p->cs_a1000ram = false;
 	p->cs_fatgaryrev = -1;
 	p->cs_ramseyrev = -1;
+	p->cs_agnusrev = -1;
+	p->cs_deniserev = -1;
+	p->cs_mbdmac = 0;
 	p->cs_cd32c2p = p->cs_cd32cd = p->cs_cd32nvram = p->cs_cd32fmv = false;
+	p->cs_cdtvcd = p->cs_cdtvram = false;
 	p->cs_ide = 0;
 	p->cs_pcmcia = false;
 	p->cs_ksmirror_e0 = true;
@@ -5391,8 +5627,17 @@ static void buildin_default_prefs(struct uae_prefs* p)
 	p->cs_ciaatod = 0;
 	p->cs_df0idhw = true;
 	p->cs_ciatodbug = false;
+	p->cs_1mchipjumper = false;
 
 	_tcscpy(p->romextfile, _T(""));
+	_tcscpy (p->romextfile2, _T(""));
+
+	p->ne2000pciname[0] = 0;
+	p->ne2000pcmcianame[0] = 0;
+	p->a2065name[0] = 0;
+
+	p->prtname[0] = 0;
+	p->sername[0] = 0;
 
 	p->mountitems = 0;
 
@@ -5442,9 +5687,11 @@ static void set_68020_compa(struct uae_prefs* p, int compa, int cd32)
 
 static void set_68000_compa(struct uae_prefs* p, int compa)
 {
+	p->cpu_clock_multiplier = 2 << 8;
 	switch (compa)
 	{
 	case 0:
+		p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 1;
 		break;
 	case 1:
 		break;
@@ -5458,6 +5705,40 @@ static void set_68000_compa(struct uae_prefs* p, int compa)
 	}
 }
 
+static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[2];
+
+	if (config == 2)
+		roms[0] = 61;
+	else if (config == 1)
+		roms[0] = 71;
+	else
+		roms[0] = 59;
+	roms[1] = -1;
+	p->bogomem_size = 0;
+	p->chipmem_size = 0x200000;
+	p->cpu_model = 68030;
+	p->fpu_model = 68882;
+	p->fpu_no_unimplemented = true;
+	if (compa == 0)
+		p->mmu_model = 68030;
+	else
+		p->cachesize = MAX_JIT_CACHE;
+	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	p->cpu_compatible = p->address_space_24 = 0;
+	p->m68k_speed = -1;
+	p->immediate_blits = 0;
+	p->produce_sound = 2;
+	p->floppyslots[0].dfxtype = DRV_35_HD;
+	p->floppy_speed = 0;
+	p->cpu_idle = 150;
+	p->cs_compatible = CP_A3000;
+	p->mbresmem_low_size = 8 * 1024 * 1024;
+	built_in_chipset_prefs (p);
+	p->cs_ciaatod = p->ntscmode ? 2 : 1;
+	return configure_rom (p, roms, romcheck);
+}
 static int bip_a4000(struct uae_prefs* p, int config, int compa, int romcheck)
 {
 	int roms[8];
@@ -5492,10 +5773,162 @@ static int bip_a4000(struct uae_prefs* p, int config, int compa, int romcheck)
 	p->floppyslots[0].dfxtype = DRV_35_HD;
 	p->floppyslots[1].dfxtype = DRV_35_HD;
 	p->floppy_speed = 0;
+	p->cpu_idle = 150;
 	p->cs_compatible = CP_A4000;
 	built_in_chipset_prefs(p);
 	p->cs_ciaatod = p->ntscmode ? 2 : 1;
 	return configure_rom(p, roms, romcheck);
+}
+static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
+{
+
+	int roms[8];
+
+	roms[0] = 16;
+	roms[1] = 31;
+	roms[2] = 13;
+	roms[3] = -1;
+
+	p->bogomem_size = 0;
+	p->chipmem_size = 0x200000;
+	p->mbresmem_low_size = 8 * 1024 * 1024;
+	p->cpu_model = 68030;
+	p->fpu_model = 68882;
+	if (config > 0) {
+		p->cpu_model = 68040;
+		p->fpu_model = 68040;
+	}
+	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	p->cpu_compatible = p->address_space_24 = 0;
+	p->m68k_speed = -1;
+	p->immediate_blits = 0;
+	p->produce_sound = 2;
+	p->cachesize = MAX_JIT_CACHE;
+	p->floppyslots[0].dfxtype = DRV_35_HD;
+	p->floppyslots[1].dfxtype = DRV_35_HD;
+	p->floppy_speed = 0;
+	p->cpu_idle = 150;
+	p->cs_compatible = CP_A4000T;
+	built_in_chipset_prefs (p);
+	p->cs_ciaatod = p->ntscmode ? 2 : 1;
+	return configure_rom (p, roms, romcheck);
+}
+
+static void bip_velvet(struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	p->chipset_mask = 0;
+	p->bogomem_size = 0;
+	p->sound_filter = FILTER_SOUND_ON;
+	set_68000_compa (p, compa);
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	p->cs_compatible = CP_VELVET;
+	p->cs_slowmemisfast = 1;
+	p->cs_dipagnus = 1;
+	p->cs_agnusbltbusybug = 1;
+	built_in_chipset_prefs (p);
+	p->cs_denisenoehb = 1;
+	p->cs_cia6526 = 1;
+	p->chipmem_size = 0x40000;
+}
+
+static int bip_a1000 (struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[2];
+
+	roms[0] = 24;
+	roms[1] = -1;
+	p->chipset_mask = 0;
+	p->bogomem_size = 0;
+	p->sound_filter = FILTER_SOUND_ON;
+	set_68000_compa (p, compa);
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	p->cs_compatible = CP_A1000;
+	p->cs_slowmemisfast = 1;
+	p->cs_dipagnus = 1;
+	p->cs_agnusbltbusybug = 1;
+	built_in_chipset_prefs (p);
+	if (config > 0)
+		p->cs_denisenoehb = 1;
+	if (config > 1)
+		p->chipmem_size = 0x40000;
+	if (config > 2) {
+		roms[0] = 125;
+		roms[1] = -1;
+		bip_velvet(p, config, compa, romcheck);
+	}
+	return configure_rom (p, roms, romcheck);
+}
+
+static int bip_cdtvcr (struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[4];
+
+	p->bogomem_size = 0;
+	p->chipmem_size = 0x100000;
+	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	p->cs_cdtvcd = p->cs_cdtvram = true;
+	p->cs_cdtvcr = true;
+	p->cs_rtc = 1;
+	p->nr_floppies = 0;
+	p->floppyslots[0].dfxtype = DRV_NONE;
+	if (config > 0)
+		p->floppyslots[0].dfxtype = DRV_35_DD;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	set_68000_compa (p, compa);
+	p->cs_compatible = CP_CDTVCR;
+	built_in_chipset_prefs (p);
+	fetch_datapath (p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
+	_tcscat (p->flashfile, _T("cdtv-cr.nvr"));
+	roms[0] = 9;
+	roms[1] = 10;
+	roms[2] = -1;
+	if (!configure_rom (p, roms, romcheck))
+		return 0;
+	roms[0] = 108;
+	roms[1] = 107;
+	roms[2] = -1;
+	if (!configure_rom (p, roms, romcheck))
+		return 0;
+	return 1;
+}
+
+static int bip_cdtv (struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[4];
+
+	if (config >= 2)
+		return bip_cdtvcr(p, config - 2, compa, romcheck);
+
+	p->bogomem_size = 0;
+	p->chipmem_size = 0x100000;
+	p->chipset_mask = CSMASK_ECS_AGNUS;
+	p->cs_cdtvcd = p->cs_cdtvram = 1;
+	if (config > 0) {
+		addbcromtype(p, ROMTYPE_CDTVSRAM, true, NULL, 0);
+	}
+	p->cs_rtc = 1;
+	p->nr_floppies = 0;
+	p->floppyslots[0].dfxtype = DRV_NONE;
+	if (config > 0)
+		p->floppyslots[0].dfxtype = DRV_35_DD;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	set_68000_compa (p, compa);
+	p->cs_compatible = CP_CDTV;
+	built_in_chipset_prefs (p);
+	fetch_datapath (p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
+	_tcscat (p->flashfile, _T("cdtv.nvr"));
+	roms[0] = 6;
+	roms[1] = 32;
+	roms[2] = -1;
+	if (!configure_rom (p, roms, romcheck))
+		return 0;
+	roms[0] = 20;
+	roms[1] = 21;
+	roms[2] = 22;
+	roms[3] = -1;
+	if (!configure_rom (p, roms, romcheck))
+		return 0;
+	return 1;
 }
 
 static int bip_cd32(struct uae_prefs* p, int config, int compa, int romcheck)
@@ -5526,8 +5959,7 @@ static int bip_cd32(struct uae_prefs* p, int config, int compa, int romcheck)
 		if (!configure_rom(p, roms, romcheck))
 			return 0;
 	}
-	if (config > 0)
-	{
+	if (config == 1) {
 		p->cs_cd32fmv = true;
 		roms[0] = 74;
 		roms[1] = 23;
@@ -5670,6 +6102,121 @@ static int bip_a500(struct uae_prefs* p, int config, int compa, int romcheck)
 	return configure_rom(p, roms, romcheck);
 }
 
+static int bip_super (struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[7];
+
+	roms[0] = 16;
+	roms[1] = 31;
+	roms[2] = 15;
+	roms[3] = 14;
+	roms[4] = 12;
+	roms[5] = 11;
+	roms[6] = -1;
+	p->bogomem_size = 0;
+	p->chipmem_size = 0x400000;
+	p->z3fastmem[0].size = 8 * 1024 * 1024;
+	p->rtgboards[0].rtgmem_size = 16 * 1024 * 1024;
+	p->cpu_model = 68040;
+	p->fpu_model = 68040;
+	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	p->cpu_compatible = p->address_space_24 = 0;
+	p->m68k_speed = -1;
+	p->immediate_blits = 1;
+	p->produce_sound = 2;
+	p->cachesize = MAX_JIT_CACHE;
+	p->floppyslots[0].dfxtype = DRV_35_HD;
+	p->floppyslots[1].dfxtype = DRV_35_HD;
+	p->floppy_speed = 0;
+	p->cpu_idle = 150;
+	p->scsi = 1;
+	p->uaeserial = 1;
+	p->socket_emu = 1;
+	p->cart_internal = 0;
+	p->picasso96_nocustom = 1;
+	p->cs_compatible = 1;
+	p->cs_unmapped_space = 1;
+	built_in_chipset_prefs (p);
+	p->cs_ide = -1;
+	p->cs_ciaatod = p->ntscmode ? 2 : 1;
+	//_tcscat(p->flashfile, _T("battclock.nvr"));
+	return configure_rom (p, roms, romcheck);
+}
+
+static int bip_arcadia (struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[4], i;
+	struct romlist **rl;
+
+	p->bogomem_size = 0;
+	p->chipset_mask = 0;
+	p->cs_rtc = 0;
+	p->nr_floppies = 0;
+	p->floppyslots[0].dfxtype = DRV_NONE;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	set_68000_compa (p, compa);
+	p->cs_compatible = CP_A500;
+	built_in_chipset_prefs (p);
+	fetch_datapath (p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
+	_tcscat (p->flashfile, _T("arcadia.nvr"));
+	roms[0] = 5;
+	roms[1] = 4;
+	roms[2] = -1;
+	if (!configure_rom (p, roms, romcheck))
+		return 0;
+	roms[0] = 51;
+	roms[1] = 49;
+	roms[2] = -1;
+	if (!configure_rom (p, roms, romcheck))
+		return 0;
+	rl = getarcadiaroms ();
+	for (i = 0; rl[i]; i++) {
+		if (config-- == 0) {
+			roms[0] = rl[i]->rd->id;
+			roms[1] = -1;
+			configure_rom (p, roms, 0);
+			break;
+		}
+	}
+	xfree (rl);
+	return 1;
+}
+
+static int bip_casablanca(struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[8];
+
+	roms[0] = 231;
+	roms[1] = -1;
+
+	p->bogomem_size = 0;
+	p->chipmem_size = 0x200000;
+	switch (config)
+	{
+	default:
+	case 1:
+		p->cpu_model = 68040;
+		p->fpu_model = 68040;
+		p->mmu_model = 68040;
+		break;
+	case 2:
+		p->cpu_model = 68060;
+		p->fpu_model = 68060;
+		p->mmu_model = 68040;
+		break;
+	}
+	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	p->cpu_compatible = p->address_space_24 = 0;
+	p->m68k_speed = -1;
+	p->immediate_blits = 0;
+	p->produce_sound = 2;
+	p->floppyslots[0].dfxtype = DRV_NONE;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	p->cs_compatible = CP_CASABLANCA;
+	built_in_chipset_prefs(p);
+	return configure_rom(p, roms, romcheck);
+}
+
 int built_in_prefs(struct uae_prefs* p, int model, int config, int compa, int romcheck)
 {
 	int v = 0;
@@ -5687,13 +6234,34 @@ int built_in_prefs(struct uae_prefs* p, int model, int config, int compa, int ro
 		v = bip_a600(p, config, compa, romcheck);
 		break;
 	case 3:
-		v = bip_a1200(p, config, compa, romcheck);
+		v = bip_a1000 (p, config, compa, romcheck);
 		break;
 	case 4:
-		v = bip_a4000(p, config, compa, romcheck);
+		v = bip_a1200(p, config, compa, romcheck);
 		break;
 	case 5:
+		v = bip_a3000 (p, config, compa, romcheck);
+		break;
+	case 6:
+		v = bip_a4000(p, config, compa, romcheck);
+		break;
+	case 7:
+		v = bip_a4000t (p, config, compa, romcheck);
+		break;
+	case 8:
 		v = bip_cd32(p, config, compa, romcheck);
+		break;
+	case 9:
+		v = bip_cdtv (p, config, compa, romcheck);
+		break;
+	case 10:
+		v = bip_arcadia(p, config, compa, romcheck);
+		break;
+	case 11:
+		v = bip_casablanca(p, config, compa, romcheck);
+		break;
+	case 12:
+		v = bip_super (p, config, compa, romcheck);
 		break;
 	}
 	if (!p->immediate_blits)
@@ -5727,7 +6295,12 @@ int built_in_chipset_prefs(struct uae_prefs* p)
 	p->cs_ciatodbug = false;
 	p->cs_z3autoconfig = false;
 	p->cs_bytecustomwritebug = false;
+	p->cs_1mchipjumper = false;
 	p->cs_unmapped_space = 0;
+	p->cs_color_burst = false;
+	p->cs_romisslow = false;
+	p->cs_toshibagary = false;
+	p->cs_ciatype[0] = p->cs_ciatype[1] = 0;
 
 	switch (p->cs_compatible)
 	{
@@ -5744,7 +6317,8 @@ int built_in_chipset_prefs(struct uae_prefs* p)
 		else if (p->cpu_compatible)
 		{
 			// very A500-like
-			p->cs_df0idhw = false;
+			p->cs_df0idhw = 0;
+			p->cs_resetwarning = 0;
 			if (p->bogomem_size || p->chipmem_size > 0x80000 || p->fastmem[0].size)
 				p->cs_rtc = 1;
 			p->cs_ciatodbug = true;
@@ -5756,30 +6330,68 @@ int built_in_chipset_prefs(struct uae_prefs* p)
 			p->cs_rtc = 1;
 		}
 		break;
+	case CP_CDTV: // CDTV
+		p->cs_rtc = 1;
+		p->cs_cdtvcd = p->cs_cdtvram = 1;
+		p->cs_df0idhw = 1;
+		p->cs_ksmirror_e0 = 0;
+		break;
+	case CP_CDTVCR: // CDTV-CR
+		p->cs_rtc = 1;
+		p->cs_cdtvcd = p->cs_cdtvram = 1;
+		p->cs_cdtvcr = true;
+		p->cs_df0idhw = 1;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_ide = IDE_A600A1200;
+		p->cs_pcmcia = 1;
+		p->cs_ksmirror_a8 = 1;
+		p->cs_ciaoverlay = 0;
+		p->cs_resetwarning = 0;
+		p->cs_ciatodbug = true;
+		break;
 	case CP_CD32: // CD32
 		p->cs_cd32c2p = p->cs_cd32cd = p->cs_cd32nvram = true;
-		p->cs_ksmirror_e0 = false;
-		p->cs_ksmirror_a8 = true;
-		p->cs_ciaoverlay = false;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_ksmirror_a8 = 1;
+		p->cs_ciaoverlay = 0;
+		p->cs_resetwarning = 0;
 		p->cs_unmapped_space = 1;
 		break;
 	case CP_A500: // A500
-		p->cs_df0idhw = false;
+		p->cs_df0idhw = 0;
+		p->cs_resetwarning = 0;
 		if (p->bogomem_size || p->chipmem_size > 0x80000 || p->fastmem[0].size)
 			p->cs_rtc = 1;
 		p->cs_ciatodbug = true;
 		break;
 	case CP_A500P: // A500+
 		p->cs_rtc = 1;
+		p->cs_resetwarning = 0;
 		p->cs_ciatodbug = true;
 		break;
 	case CP_A600: // A600
 		p->cs_ide = IDE_A600A1200;
-		p->cs_pcmcia = true;
-		p->cs_ksmirror_a8 = true;
-		p->cs_ciaoverlay = false;
+		p->cs_pcmcia = 1;
+		p->cs_ksmirror_a8 = 1;
+		p->cs_ciaoverlay = 0;
+		p->cs_resetwarning = 0;
 		p->cs_ciatodbug = true;
 		p->cs_ciatype[0] = p->cs_ciatype[1] = 1;
+		break;
+	case CP_A1000: // A1000
+		p->cs_a1000ram = 1;
+		p->cs_ciaatod = p->ntscmode ? 2 : 1;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_agnusbltbusybug = 1;
+		p->cs_dipagnus = 1;
+		p->cs_ciatodbug = true;
+		break;
+	case CP_VELVET: // A1000 Prototype
+		p->cs_ciaatod = p->ntscmode ? 2 : 1;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_agnusbltbusybug = 1;
+		p->cs_dipagnus = 1;
+		p->cs_denisenoehb = 1;
 		break;
 	case CP_A1200: // A1200
 		p->cs_ide = IDE_A600A1200;
@@ -5795,16 +6407,53 @@ int built_in_chipset_prefs(struct uae_prefs* p)
 		p->cs_ciatodbug = true;
 		p->cs_unmapped_space = 1;
 		break;
+	case CP_A3000: // A3000
+		p->cs_rtc = 2;
+		p->cs_fatgaryrev = 0;
+		p->cs_ramseyrev = 0x0d;
+		p->cs_mbdmac = 1;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_ciaatod = p->ntscmode ? 2 : 1;
+		p->cs_z3autoconfig = true;
+		p->cs_unmapped_space = 1;
+		break;
+	case CP_A3000T: // A3000T
+		p->cs_rtc = 2;
+		p->cs_fatgaryrev = 0;
+		p->cs_ramseyrev = 0x0d;
+		p->cs_mbdmac = 1;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_ciaatod = p->ntscmode ? 2 : 1;
+		p->cs_z3autoconfig = true;
+		p->cs_unmapped_space = 1;
+		break;
 	case CP_A4000: // A4000
 		p->cs_rtc = 2;
 		p->cs_fatgaryrev = 0;
 		p->cs_ramseyrev = 0x0f;
 		p->cs_ide = IDE_A4000;
-		p->cs_ksmirror_a8 = false;
-		p->cs_ksmirror_e0 = false;
-		p->cs_ciaoverlay = false;
+		p->cs_mbdmac = 0;
+		p->cs_ksmirror_a8 = 0;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_ciaoverlay = 0;
 		p->cs_z3autoconfig = true;
 		p->cs_unmapped_space = 1;
+		break;
+	case CP_A4000T: // A4000T
+		p->cs_rtc = 2;
+		p->cs_fatgaryrev = 0;
+		p->cs_ramseyrev = 0x0f;
+		p->cs_ide = IDE_A4000;
+		p->cs_mbdmac = 2;
+		p->cs_ksmirror_a8 = 0;
+		p->cs_ksmirror_e0 = 0;
+		p->cs_ciaoverlay = 0;
+		p->cs_z3autoconfig = true;
+		p->cs_unmapped_space = 1;
+		break;
+	case CP_CASABLANCA:
+		break;
+	case CP_DRACO:
 		break;
 	}
 	if (p->cpu_model >= 68040)

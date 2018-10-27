@@ -85,19 +85,35 @@ static struct amigamodels amodels[] = {
 		}
 	},
 	{
+		4, "Amiga 1000", {
+			"Basic non-expanded configuration",
+			"\0"
+		}
+	},
+	{
 		4, "Amiga 1200", {
 			"Basic non-expanded configuration",
 			"4 MB Fast RAM expanded configuration",
 			"\0"
 		}
 	},
-	//	{ 2, "Amiga 3000", { 
-	//       "1.4 ROM, 2MB Chip + 8MB Fast",
-	//       "2.04 ROM, 2MB Chip + 8MB Fast",
-	//       "3.1 ROM, 2MB Chip + 8MB Fast",
-	//       "\0" } },
+	{
+		2, "Amiga 3000", {
+			"1.4 ROM, 2MB Chip + 8MB Fast",
+			"2.04 ROM, 2MB Chip + 8MB Fast",
+			"3.1 ROM, 2MB Chip + 8MB Fast",
+			"\0"
+		}
+	},
 	{
 		1, "Amiga 4000", {
+			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"\0"
+		}
+	},
+	{
+		1, "Amiga 4000T", {
 			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
 			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
 			"\0"
@@ -110,10 +126,16 @@ static struct amigamodels amodels[] = {
 			"\0"
 		}
 	},
+	{
+		3, "CDTV", {
+			"CDTV",
+			"\0"
+		}
+	},
 	{-1}
 };
 
-static const int numModels = 6;
+static const int numModels = 10;
 static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
 
@@ -128,7 +150,7 @@ static void CountModelConfigs(void)
 	numModelConfigs = 0;
 	if (quickstart_model >= 0 && quickstart_model < numModels)
 	{
-		for (auto & config : amodels[quickstart_model].configs)
+		for (auto& config : amodels[quickstart_model].configs)
 		{
 			if (config[0] == '\0')
 				break;
@@ -149,11 +171,15 @@ static void SetControlState(const int model)
 	case 0: // A500
 	case 1: // A500+
 	case 2: // A600
-	case 3: // A1200
-	case 4: // A4000
+	case 3: // A1000
+	case 4: // A1200
+	case 5: // A3000
+	case 6: // A4000
+	case 7: // A4000T
 		break;
 
-	case 5: // CD32
+	case 8: // CD32
+	case 9: // CDTV
 		// No floppy drive available, CD available
 		df0Editable = false;
 		df1Visible = false;
@@ -193,9 +219,12 @@ static void AdjustPrefs(void)
 	case 0: // A500
 	case 1: // A500+
 	case 2: // A600
-	case 3: // A1200
-	case 4: // A4000
-			// df0 always active
+	case 3: // A1000
+	case 4: // A1200
+	case 5: // A3000
+	case 6: // A4000
+	case 7: // A4000T
+		// df0 always active
 		changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
 
 		// No CD available
@@ -203,8 +232,9 @@ static void AdjustPrefs(void)
 		changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
 		break;
 
-	case 5: // CD32
-			// No floppy drive available, CD available
+	case 8: // CD32
+	case 9: // CDTV
+		// No floppy drive available, CD available
 		changed_prefs.floppyslots[0].dfxtype = DRV_NONE;
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 		changed_prefs.cdslots[0].inuse = true;
@@ -486,8 +516,10 @@ public:
 				//---------------------------------------
 				// Write-protect changed
 				//---------------------------------------
-				disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, chkDFxWriteProtect[i]->isSelected());
-				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->isSelected())
+				disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
+				                     chkDFxWriteProtect[i]->isSelected());
+				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
+					isSelected())
 				{
 					// Failed to change write protection -> maybe filesystem doesn't support this
 					ShowMessage("Set/Clear write protect", "Failed to change write permission.",
@@ -648,7 +680,8 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	lblConfig = new gcn::Label("Config:");
 	lblConfig->setAlignment(gcn::Graphics::RIGHT);
 	cboConfig = new gcn::UaeDropDown(&amigaConfigList);
-	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER, cboConfig->getHeight());
+	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER,
+	                   cboConfig->getHeight());
 	cboConfig->setBaseColor(gui_baseCol);
 	cboConfig->setBackgroundColor(colTextboxBackground);
 	cboConfig->setId("qscboAConfig");
@@ -730,7 +763,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	chkQuickstartMode->addActionListener(quickstartModeActionListener);
 
 	cmdSetConfiguration = new gcn::Button("Set configuration");
-	cmdSetConfiguration->setSize(BUTTON_WIDTH*2, BUTTON_HEIGHT);
+	cmdSetConfiguration->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
 	cmdSetConfiguration->setBaseColor(gui_baseCol);
 	cmdSetConfiguration->setId("cmdSetConfig");
 	cmdSetConfiguration->addActionListener(amigaModelActionListener);
