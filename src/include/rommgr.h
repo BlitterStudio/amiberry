@@ -42,6 +42,14 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_B1230MK2	0x00040015
 #define ROMTYPE_CB_B1230MK3	0x00040016
 #define ROMTYPE_CB_VECTOR	0x00040017
+#define ROMTYPE_CB_ZEUS040	0x00040018
+#define ROMTYPE_CB_MAGNUM40	0x00040019
+#define ROMTYPE_CB_TQM		0x0004001a
+#define ROMTYPE_CB_FALCON40	0x0004001b
+#define ROMTYPE_CB_A1230S2	0x0004001c
+#define ROMTYPE_CB_TYPHOON2	0x0004001d
+#define ROMTYPE_CB_QUIKPAK	0x0004001e
+#define ROMTYPE_CB_12GAUGE	0x0004001f
 
 #define ROMTYPE_FREEZER		0x00080000
 #define ROMTYPE_AR			0x00080001
@@ -99,7 +107,7 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_A2286		0x0010002d
 #define ROMTYPE_A2386		0x0010002e
 #define ROMTYPE_OMTIADAPTER	0x0010002f
-#define ROMTYPE_X86_HD		0x00100030
+#define ROMTYPE_X86_RT1000	0x00100030
 #define ROMTYPE_X86_AT_HD1	0x00100031
 #define ROMTYPE_X86_AT_HD2	0x00100032
 #define ROMTYPE_X86_XT_IDE	0x00100033
@@ -164,6 +172,13 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_ARRIBA		0x0010006e
 #define ROMTYPE_EVESHAMREF	0x0010006f
 #define ROMTYPE_PROFEX		0x00100070
+#define ROMTYPE_ELSATHD		0x00100071
+#define ROMTYPE_ALF3		0x00100072
+#define ROMTYPE_FASTTRAK	0x00100073
+#define ROMTYPE_CDTVSRAM	0x00100074
+#define ROMTYPE_SBISA		0x00100075
+#define ROMTYPE_X86MOUSE	0x00100076
+#define ROMTYPE_ACCESSX		0x00100077
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
@@ -176,36 +191,36 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_NONE		0x80000000
 
 #define ROMTYPE_ALL_KICK (ROMTYPE_KICK | ROMTYPE_KICKCD32 | ROMTYPE_CD32)
-#define ROMTYPE_ALL_EXT (ROMTYPE_EXTCD32)
-#define ROMTYPE_ALL_CART (ROMTYPE_AR | ROMTYPE_HRTMON | ROMTYPE_NORDIC | ROMTYPE_XPOWER | ROMTYPE_CD32CART)
+#define ROMTYPE_ALL_EXT (ROMTYPE_EXTCD32 | ROMTYPE_EXTCDTV | ROMTYPE_ARCADIABIOS)
+#define ROMTYPE_ALL_CART (ROMTYPE_AR | ROMTYPE_HRTMON | ROMTYPE_NORDIC | ROMTYPE_XPOWER | ROMTYPE_CD32CART | ROMTYPE_ARCADIAGAME | ROMTYPE_ALG)
 
 struct romheader {
 	const TCHAR *name;
-  int id;
+	int id;
 };
 
 struct romdata {
 	const TCHAR *name;
-  int ver, rev;
-  int subver, subrev;
+	int ver, rev;
+	int subver, subrev;
 	const TCHAR *model;
-  uae_u32 size;
-  int id;
-  int cpu;
-  int cloanto;
+	uae_u32 size;
+	int id;
+	int cpu;
+	int cloanto;
 	uae_u32 type;
-  int group;
-  int title;
+	int group;
+	int title;
 	const TCHAR *partnumber;
-  uae_u32 crc32;
-  uae_u32 sha1[5];
+	uae_u32 crc32;
+	uae_u32 sha1[5];
 	const TCHAR *configname;
 	const TCHAR *defaultfilename;
 };
 
 struct romlist {
-  TCHAR *path;
-  struct romdata *rd;
+	TCHAR *path;
+	struct romdata *rd;
 };
 
 extern struct romdata *getromdatabypath (const TCHAR *path);
@@ -213,14 +228,20 @@ extern struct romdata *getromdatabycrc (uae_u32 crc32);
 extern struct romdata *getromdatabycrc (uae_u32 crc32, bool);
 extern struct romdata *getromdatabydata (uae_u8 *rom, int size);
 extern struct romdata *getromdatabyid (int id);
+extern struct romdata *getromdatabytype (int romtype);
 extern struct romdata *getromdatabyidgroup (int id, int group, int subitem);
 extern struct romdata *getromdatabyzfile (struct zfile *f);
 extern struct romdata *getfrombydefaultname(const TCHAR *name, int size);
+extern struct romlist **getarcadiaroms (void);
+extern struct romdata *getarcadiarombyname (const TCHAR *name);
 extern struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all);
 extern void getromname (const struct romdata*, TCHAR*);
 extern struct romdata *getromdatabyname (const TCHAR*);
 extern struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
-extern struct romlist *getromlistbyromdata(const struct romdata *rd);
+extern struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname);
+extern void romwarning(const int *ids);
+extern void romwarning(int romtype);
+extern struct romlist *getromlistbyromdata (const struct romdata *rd);
 extern void romlist_add (const TCHAR *path, struct romdata *rd);
 extern TCHAR *romlist_get (const struct romdata *rd);
 extern void romlist_clear (void);
@@ -245,9 +266,12 @@ extern struct romlist *romlist_getit (void);
 extern int configure_rom (struct uae_prefs *p, const int *rom, int msg);
 
 int is_device_rom(struct uae_prefs *p, int romtype, int devnum);
+struct zfile *read_device_rom(struct uae_prefs *p, int romtype, int devnum, int *roms);
 struct romconfig *get_device_romconfig(struct uae_prefs *p, int romtype, int devnum);
 struct boardromconfig *get_device_rom(struct uae_prefs *p, int romtype, int devnum, int *index);
+void set_device_rom(struct uae_prefs *p, const TCHAR *path, int romtype, int devnum);
 const struct expansionromtype *get_device_expansion_rom(int romtype);
+const struct expansionromtype *get_unit_expansion_rom(int hdunit);
 struct boardromconfig *get_device_rom_new(struct uae_prefs *p, int romtype, int devnum, int *index);
 void clear_device_rom(struct uae_prefs *p, int romtype, int devnum, bool deleteDevice);
 struct boardromconfig *get_boardromconfig(struct uae_prefs *p, int romtype, int *index);
@@ -261,6 +285,7 @@ void board_prefs_changed(int romtype, int devnum);
 #define LOADROM_ZEROFILL 8
 #define LOADROM_ODDFILL(x) ((x << 16) | LOADROM_EVENONLY)
 bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags);
+struct zfile *flashromfile_open(const TCHAR *name);
 
 #define EXPANSION_ORDER_MAX 10000
 
