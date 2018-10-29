@@ -95,7 +95,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
   return NULL;
 }
 
-#define NEXT_ROM_ID 247
+#define NEXT_ROM_ID 248
 
 #define ALTROM(id,grp,num,size,flags,crc32,a,b,c,d,e) \
 { _T("X"), 0, 0, 0, 0, 0, size, id, 0, 0, flags, (grp << 16) | num, 0, NULL, crc32, a, b, c, d, e },
@@ -176,7 +176,8 @@ static struct romdata roms[] = {
 #ifdef AMIBERRY
 	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 199, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xF17FA97F, 0x6355A9ED, 0x5DC84042, 0x2F9B7330, 0x8A91BE0D, 0x0BB506BD },
-	//ALTROM(199, 1, 1, 524288, NULL, 0xb87506a7, 0xEF36C463, 0x8EE45DE6, 0xBB937017, 0x61216C95, 0x8CD0D57B)
+	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 200, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0xb87506a7, 0xEF36C463, 0x8EE45DE6, 0xBB937017, 0x61216C95, 0x8CD0D57B },
 #endif
 	{ _T("KS ROM v3.1 (A3000)"), 3, 1, 40, 68, _T("A3000\0"), 524288, 61, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xefb239cc, 0xF8E210D7,0x2B4C4853,0xE0C9B85D,0x223BA20E,0x3D1B36EE },
