@@ -1471,21 +1471,21 @@ static void pfield_set_linetoscr(void)
 			}
 		}
 		else if (res_shift == -1) {
-			//if (currprefs.gfx_lores_mode) {
-			//	switch (gfxvidinfo.drawbuffer.pixbytes) {
-			//	case 2:
-			//		pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1f_aga_genlock : linetoscr_16_shrink1f_aga;
-			//		pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1f_aga_spr_genlock : linetoscr_16_shrink1f_aga_spr;
-			//		pfield_do_linetoscr_spriteonly = linetoscr_16_shrink1f_aga_spronly;
-			//		break;
-			//	case 4:
-			//		pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1f_aga_genlock : linetoscr_32_shrink1f_aga;
-			//		pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1f_aga_spr_genlock : linetoscr_32_shrink1f_aga_spr;
-			//		pfield_do_linetoscr_spriteonly = linetoscr_32_shrink1f_aga_spronly;
-			//		break;
-			//	}
-			//}
-			//else {
+			if (currprefs.gfx_lores_mode) {
+				switch (gfxvidinfo.drawbuffer.pixbytes) {
+				case 2:
+					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1f_aga_genlock : linetoscr_16_shrink1f_aga;
+					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1f_aga_spr_genlock : linetoscr_16_shrink1f_aga_spr;
+					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink1f_aga_spronly;
+					break;
+				case 4:
+					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1f_aga_genlock : linetoscr_32_shrink1f_aga;
+					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1f_aga_spr_genlock : linetoscr_32_shrink1f_aga_spr;
+					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink1f_aga_spronly;
+					break;
+				}
+			}
+			else {
 				switch (gfxvidinfo.drawbuffer.pixbytes) {
 				case 2:
 					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1_aga_genlock : linetoscr_16_shrink1_aga;
@@ -1498,24 +1498,24 @@ static void pfield_set_linetoscr(void)
 					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink1_aga_spronly;
 					break;
 				}
-			//}
+			}
 		}
 		else if (res_shift == -2) {
-			//if (currprefs.gfx_lores_mode) {
-			//	switch (gfxvidinfo.drawbuffer.pixbytes) {
-			//	case 2:
-			//		pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink2f_aga_genlock : linetoscr_16_shrink2f_aga;
-			//		pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink2f_aga_spr_genlock : linetoscr_16_shrink2f_aga_spr;
-			//		pfield_do_linetoscr_spriteonly = linetoscr_16_shrink2f_aga_spronly;
-			//		break;
-			//	case 4:
-			//		pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink2f_aga_genlock : linetoscr_32_shrink2f_aga;
-			//		pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink2f_aga_spr_genlock : linetoscr_32_shrink2f_aga_spr;
-			//		pfield_do_linetoscr_spriteonly = linetoscr_32_shrink2f_aga_spronly;
-			//		break;
-			//	}
-			//}
-			//else {
+			if (currprefs.gfx_lores_mode) {
+				switch (gfxvidinfo.drawbuffer.pixbytes) {
+				case 2:
+					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink2f_aga_genlock : linetoscr_16_shrink2f_aga;
+					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink2f_aga_spr_genlock : linetoscr_16_shrink2f_aga_spr;
+					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink2f_aga_spronly;
+					break;
+				case 4:
+					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink2f_aga_genlock : linetoscr_32_shrink2f_aga;
+					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink2f_aga_spr_genlock : linetoscr_32_shrink2f_aga_spr;
+					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink2f_aga_spronly;
+					break;
+				}
+			}
+			else {
 				switch (gfxvidinfo.drawbuffer.pixbytes) {
 				case 2:
 					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink2_aga_genlock : linetoscr_16_shrink2_aga;
@@ -1528,7 +1528,7 @@ static void pfield_set_linetoscr(void)
 					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink2_aga_spronly;
 					break;
 				}
-			//}
+			}
 		}
 		if (get_shdelay_add()) {
 			pfield_do_linetoscr_shdelay_normal = pfield_do_linetoscr_normal;
@@ -1554,19 +1554,19 @@ static void pfield_set_linetoscr(void)
 			}
 		}
 		else if (res_shift == -1) {
-			//if (currprefs.gfx_lores_mode) {
-			//	switch (gfxvidinfo.drawbuffer.pixbytes) {
-			//	case 2:
-			//		pfield_do_linetoscr_normal = linetoscr_16_shrink1f_sh;
-			//		pfield_do_linetoscr_sprite = linetoscr_16_shrink1f_sh_spr;
-			//		break;
-			//	case 4:
-			//		pfield_do_linetoscr_normal = linetoscr_32_shrink1f_sh;
-			//		pfield_do_linetoscr_sprite = linetoscr_32_shrink1f_sh_spr;
-			//		break;
-			//	}
-			//}
-			//else {
+			if (currprefs.gfx_lores_mode) {
+				switch (gfxvidinfo.drawbuffer.pixbytes) {
+				case 2:
+					pfield_do_linetoscr_normal = linetoscr_16_shrink1f_sh;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink1f_sh_spr;
+					break;
+				case 4:
+					pfield_do_linetoscr_normal = linetoscr_32_shrink1f_sh;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink1f_sh_spr;
+					break;
+				}
+			}
+			else {
 				switch (gfxvidinfo.drawbuffer.pixbytes) {
 				case 2:
 			pfield_do_linetoscr_normal = linetoscr_16_shrink1_sh;
@@ -1577,22 +1577,22 @@ static void pfield_set_linetoscr(void)
 					pfield_do_linetoscr_sprite = linetoscr_32_shrink1_sh_spr;
 					break;
 				}
-			//}
+			}
 		}
 		else if (res_shift == -2) {
-			//if (currprefs.gfx_lores_mode) {
-			//	switch (gfxvidinfo.drawbuffer.pixbytes) {
-			//	case 2:
-			//		pfield_do_linetoscr_normal = linetoscr_16_shrink2f_sh;
-			//		pfield_do_linetoscr_sprite = linetoscr_16_shrink2f_sh_spr;
-			//		break;
-			//	case 4:
-			//		pfield_do_linetoscr_normal = linetoscr_32_shrink2f_sh;
-			//		pfield_do_linetoscr_sprite = linetoscr_32_shrink2f_sh_spr;
-			//		break;
-			//	}
-			//}
-			//else {
+			if (currprefs.gfx_lores_mode) {
+				switch (gfxvidinfo.drawbuffer.pixbytes) {
+				case 2:
+					pfield_do_linetoscr_normal = linetoscr_16_shrink2f_sh;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink2f_sh_spr;
+					break;
+				case 4:
+					pfield_do_linetoscr_normal = linetoscr_32_shrink2f_sh;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink2f_sh_spr;
+					break;
+				}
+			}
+			else {
 				switch (gfxvidinfo.drawbuffer.pixbytes) {
 				case 2:
 			pfield_do_linetoscr_normal = linetoscr_16_shrink2_sh;
@@ -1603,7 +1603,7 @@ static void pfield_set_linetoscr(void)
 					pfield_do_linetoscr_sprite = linetoscr_32_shrink2_sh_spr;
 					break;
 				}
-			//}
+			}
 		}
 	}
 #endif
@@ -1645,19 +1645,19 @@ static void pfield_set_linetoscr(void)
 			}
 		}
 		else if (res_shift == -1) {
-			//if (currprefs.gfx_lores_mode) {
-			//	switch (gfxvidinfo.drawbuffer.pixbytes) {
-			//	case 2:
-			//		pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1f_genlock : linetoscr_16_shrink1f;
-			//		pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1f_spr_genlock : linetoscr_16_shrink1f_spr;
-			//		break;
-			//	case 4:
-			//		pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1f_genlock : linetoscr_32_shrink1f;
-			//		pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1f_spr_genlock : linetoscr_32_shrink1f_spr;
-			//		break;
-			//	}
-			//}
-			//else {
+			if (currprefs.gfx_lores_mode) {
+				switch (gfxvidinfo.drawbuffer.pixbytes) {
+				case 2:
+					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1f_genlock : linetoscr_16_shrink1f;
+					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1f_spr_genlock : linetoscr_16_shrink1f_spr;
+					break;
+				case 4:
+					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1f_genlock : linetoscr_32_shrink1f;
+					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1f_spr_genlock : linetoscr_32_shrink1f_spr;
+					break;
+				}
+			}
+			else {
 				switch (gfxvidinfo.drawbuffer.pixbytes) {
 				case 2:
 					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1_genlock : linetoscr_16_shrink1;
@@ -1668,7 +1668,7 @@ static void pfield_set_linetoscr(void)
 					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1_spr_genlock : linetoscr_32_shrink1_spr;
 					break;
 				}
-			//}
+			}
 		}
 	}
 }

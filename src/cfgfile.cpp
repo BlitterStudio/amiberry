@@ -75,6 +75,9 @@ static const TCHAR* soundfiltermode1[] = {_T("off"), _T("emulated"), _T("on"), n
 static const TCHAR* soundfiltermode2[] = {_T("standard"), _T("enhanced"), nullptr};
 static const TCHAR* lorestype1[] = {_T("lores"), _T("hires"), _T("superhires"), nullptr};
 static const TCHAR* lorestype2[] = {_T("true"), _T("false"), nullptr};
+static const TCHAR *loresmode[] = { _T("normal"), _T("filtered"), 0 };
+static const TCHAR *horizmode[] = { _T("vertical"), _T("lores"), _T("hires"), _T("superhires"), 0 };
+static const TCHAR *vertmode[] = { _T("horizontal"), _T("single"), _T("double"), _T("quadruple"), 0 };
 static const TCHAR* cartsmode[] = {_T("none"), _T("hrtmon"), nullptr};
 static const TCHAR* idemode[] = {_T("none"), _T("a600/a1200"), _T("a4000"), nullptr};
 static const TCHAR* rtctype[] = {_T("none"), _T("MSM6242B"), _T("RP5C01A"), _T("MSM6242B_A2000"), nullptr};
@@ -1409,6 +1412,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 
 	cfgfile_write_bool(f, _T("gfx_lores"), p->gfx_resolution == 0);
 	cfgfile_write_str(f, _T("gfx_resolution"), lorestype1[p->gfx_resolution]);
+	cfgfile_write_str(f, _T("gfx_lores_mode"), loresmode[p->gfx_lores_mode]);
 	cfgfile_write_str(f, _T("gfx_linemode"), p->gfx_vresolution > 0 ? linemode[p->gfx_iscanlines * 4 + p->gfx_pscanlines + 1] : linemode[0]);
 	cfgfile_write_str(f, _T("gfx_fullscreen_amiga"), fullmodes[p->gfx_apmode[0].gfx_fullscreen]);
 	cfgfile_write_str(f, _T("gfx_fullscreen_picasso"), fullmodes[p->gfx_apmode[1].gfx_fullscreen]);
@@ -2300,6 +2304,7 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		|| cfgfile_strboolval(option, value, _T("use_gui"), &p->start_gui, guimode3, 0)
 		|| cfgfile_strval(option, value, _T("gfx_resolution"), &p->gfx_resolution, lorestype1, 0)
 		|| cfgfile_strval(option, value, _T("gfx_lores"), &p->gfx_resolution, lorestype2, 0)
+		|| cfgfile_strval(option, value, _T("gfx_lores_mode"), &p->gfx_lores_mode, loresmode, 0)
 		|| cfgfile_strval(option, value, _T("gfx_fullscreen_amiga"), &p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen, fullmodes, 0)
 		|| cfgfile_strval(option, value, _T("gfx_fullscreen_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_fullscreen, fullmodes, 0)
 		|| cfgfile_strval(option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))

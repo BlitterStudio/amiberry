@@ -689,7 +689,8 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_size.width != changed_prefs.gfx_size.width ||
 		currprefs.gfx_resolution != changed_prefs.gfx_resolution ||
 		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
-		currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect)
+		currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ||
+		currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode)
 	{
 		cfgfile_configuration_change(1);
 		currprefs.gfx_size.height = changed_prefs.gfx_size.height;
@@ -697,6 +698,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
+		currprefs.gfx_lores_mode = changed_prefs.gfx_lores_mode;
 		update_display(&currprefs);
 		changed = 1;
 	}
