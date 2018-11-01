@@ -95,7 +95,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
   return NULL;
 }
 
-#define NEXT_ROM_ID 249
+#define NEXT_ROM_ID 250
 
 #define ALTROM(id,grp,num,size,flags,crc32,a,b,c,d,e) \
 { _T("X"), 0, 0, 0, 0, 0, size, id, 0, 0, flags, (grp << 16) | num, 0, NULL, crc32, a, b, c, d, e },
@@ -175,12 +175,14 @@ static struct romdata roms[] = {
 	ALTROMPN(15, 1, 2, 262144, ROMTYPE_ODD , _T("391774-01"), 0x16c07bf8,0x90e331be,0x1970b0e5,0x3f53a9b0,0x390b51b5,0x9b3869c2)
 
 #ifdef AMIBERRY
-	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 246, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
-	0xF17FA97F, 0x6355A9ED, 0x5DC84042, 0x2F9B7330, 0x8A91BE0D, 0x0BB506BD },
-	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 247, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
-	0xB87506A7, 0xEF36C463, 0x8EE45DE6, 0xBB937017, 0x61216C95, 0x8CD0D57B },
-	{ _T("KS ROM v3.2 (Walker)"), 3, 2, 43, 1, _T("Walker\0"), 524288, 248, 2, 1, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.2 (Walker)"), 3, 2, 43, 1, _T("Walker\0"), 524288, 246, 2, 1, ROMTYPE_KICK, 0, 0, NULL,
 	0x261339f8, 0x7A9095F1, 0x107966F9, 0x0267DC4C, 0xB3C1972E, 0xFB4B78A8 },
+	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 247, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0xF17FA97F, 0x6355A9ED, 0x5DC84042, 0x2F9B7330, 0x8A91BE0D, 0x0BB506BD },
+	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 248, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0xB87506A7, 0xEF36C463, 0x8EE45DE6, 0xBB937017, 0x61216C95, 0x8CD0D57B },
+	{ _T("KS ROM v3.1.4 (A3000)"), 3, 1, 46, 143, _T("A3000\0"), 524288, 249, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0xBA35F8EB, 0xD73AE3A3, 0x6F12BB49, 0xBBF6BA04, 0xA890FF7A, 0xAC419015 },
 #endif
 
 	{ _T("KS ROM v3.1 (A3000)"), 3, 1, 40, 68, _T("A3000\0"), 524288, 61, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
