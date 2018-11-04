@@ -1,7 +1,18 @@
 # Default platform is rpi3 / SDL1
-
 ifeq ($(PLATFORM),)
 	PLATFORM = rpi3
+endif
+
+ifneq (,$(findstring rpi3,$(PLATFORM)))
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+endif
+
+ifneq (,$(findstring rpi2,$(PLATFORM)))
+    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+endif
+
+ifneq (,$(findstring rpi1,$(PLATFORM)))
+    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
 endif
 
 #
@@ -22,21 +33,18 @@ CPPFLAGS+= -MD -MP
 # SDL1 targets
 #
 ifeq ($(PLATFORM),rpi3)
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl1
 	
 else ifeq ($(PLATFORM),rpi2)
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl1
 	
 else ifeq ($(PLATFORM),rpi1)
-    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += ${DISPMANX_FLAGS} -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     NAME  = amiberry-rpi1-sdl1
@@ -54,7 +62,6 @@ else ifeq ($(PLATFORM),android)
 #
 else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
@@ -62,7 +69,6 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
@@ -70,7 +76,6 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     NAME  = amiberry-rpi1-sdl2-dispmanx
@@ -80,21 +85,18 @@ USE_SDL2 = 1
 #	
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl2
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl2
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
     CFLAGS += -DUSE_SDL2
     NAME  = amiberry-rpi1-sdl2
 
@@ -172,8 +174,10 @@ PROG   = $(NAME)
 ifndef USE_SDL2
 all: $(PROG)
 
-SDL_CFLAGS = `sdl-config --cflags`
-LDFLAGS += -lSDL -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
+SDL_CFLAGS := $(shell sdl-config --cflags)
+SDL_LDFLAGS := $(shell sdl-config --libs)
+
+LDFLAGS += $(SDL_LDFLAGS) -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
 endif
 
 #
@@ -181,23 +185,25 @@ endif
 #
 ifdef USE_SDL2
 all: guisan $(PROG)
+SDL_CFLAGS := $(shell sdl2-config --cflags)
+SDL_LDFLAGS := $(shell sdl2-config --libs)
 
-SDL_CFLAGS = `sdl2-config --cflags --libs`
-CPPFLAGS += -Iguisan-dev/include
-LDFLAGS += -lSDL2 -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
+CPPFLAGS += $(SDL_CFLAGS) -Iguisan-dev/include
+LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
 endif
 
 #
 # Common options
 #
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers
-DEFS += `xml2-config --cflags`
-DEFS += -DAMIBERRY -DARMV6_ASSEMBLY
+XML_CFLAGS := $(shell xml2-config --cflags )
+DEFS += $(XML_CFLAGS) -DAMIBERRY -DARMV6_ASSEMBLY
+CXXFLAGS += -std=gnu++14
 
 ifndef DEBUG
-    CFLAGS += -std=gnu++14 -Ofast -frename-registers -falign-functions=16
+    CFLAGS += -Ofast -frename-registers -falign-functions=16
 else
-    CFLAGS += -std=gnu++14 -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+    CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
 endif
 
 ifdef WITH_LOGGING
@@ -231,6 +237,12 @@ ASFLAGS += $(CPU_FLAGS) -falign-functions=16
 export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
 export CXXFLAGS += $(CFLAGS)
 
+C_OBJS= \
+	src/archivers/7z/BraIA64.o \
+	src/archivers/7z/Delta.o \
+	src/archivers/7z/Sha256.o \
+	src/archivers/7z/XzCrc64.o \
+	src/archivers/7z/XzDec.o
 
 OBJS =	\
 	src/akiko.o \
@@ -300,12 +312,7 @@ OBJS =	\
 	src/archivers/7z/Bra86.o \
 	src/archivers/7z/LzmaDec.o \
 	src/archivers/7z/Lzma2Dec.o \
-	src/archivers/7z/BraIA64.o \
-	src/archivers/7z/Delta.o \
-	src/archivers/7z/Sha256.o \
 	src/archivers/7z/Xz.o \
-	src/archivers/7z/XzCrc64.o \
-	src/archivers/7z/XzDec.o \
 	src/archivers/dms/crc_csum.o \
 	src/archivers/dms/getbits.o \
 	src/archivers/dms/maketbl.o \
@@ -424,8 +431,8 @@ OBJS += src/jit/compemu_support.o
 src/jit/compemu_support.o: src/jit/compemu_support.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -fomit-frame-pointer -o src/jit/compemu_support.o -c src/jit/compemu_support.cpp 
 
-$(PROG): $(OBJS)
-	$(CXX) -o $(PROG) $(OBJS) $(LDFLAGS)
+$(PROG): $(OBJS) $(C_OBJS)
+	$(CXX) -o $(PROG) $(OBJS) $(C_OBJS) $(LDFLAGS)
 ifndef DEBUG
 # want to keep a copy of the binary before stripping? Then enable the below line
 #	cp $(PROG) $(PROG)-debug
