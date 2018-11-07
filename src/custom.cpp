@@ -5502,53 +5502,47 @@ static int mavg (struct mavg_data *md, int newval, int size)
 
 #define MAVG_VSYNC_SIZE 128
 
-static bool framewait (void)
+static bool framewait(void)
 {
 	frame_time_t curr_time;
 	frame_time_t start;
-	int vs = isvsync_chipset ();
+	frame_time_t time_for_next_frame = vsynctimebase;
+	int vs = isvsync_chipset();
 	int status = 0;
 
 	is_syncline = 0;
 
 	static struct mavg_data ma_frameskipt;
-	int frameskipt_avg = mavg (&ma_frameskipt, frameskiptime, MAVG_VSYNC_SIZE);
+	int frameskipt_avg = mavg(&ma_frameskipt, frameskiptime, MAVG_VSYNC_SIZE);
 
 	frameskiptime = 0;
 
 	if (vs > 0) {
-		static struct mavg_data ma_legacy;
-		static frame_time_t vsync_time;
-		int t;
 
-		curr_time = read_processor_time();
-		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
-  		if (!frame_rendered && !picasso_on)
-  			frame_rendered = render_screen (false);
-  
-		start = read_processor_time();
-		t = 0;
-		if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase)
-			t += (int)start - (int)vsync_time;
+		if (!nodraw()) {
+			if (!frame_rendered && !picasso_on)
+				frame_rendered = render_screen(false);
 
-  		if (!frame_shown) {
-  			show_screen (1);
-  		}
-
-		int legacy_avg = mavg(&ma_legacy, t, MAVG_VSYNC_SIZE);
-		if (t > legacy_avg)
-			legacy_avg = t;
-		t = legacy_avg;
-
-		vsync_time = read_processor_time();
-		if (t > vsynctimebase * 2 / 3)
-			t = vsynctimebase * 2 / 3;
-    
-		if (currprefs.m68k_speed < 0) {
-			vsynctimeperline = (vsynctimebase - t) / (maxvpos_display + 1);
+			if (!frame_shown) {
+				show_screen(1);
+			}
+			curr_time = target_lastsynctime();
 		}
 		else {
-			vsynctimeperline = (vsynctimebase - t) / 3;
+			curr_time = target_lastsynctime() + vsynctimebase;
+
+			if (read_processor_time() > curr_time)
+				time_for_next_frame = curr_time - read_processor_time();
+		}
+
+		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
+		vsyncmintime = curr_time;
+
+		if (currprefs.m68k_speed < 0) {
+			vsynctimeperline = (time_for_next_frame) / (maxvpos_display + 1);
+		}
+		else {
+			vsynctimeperline = (time_for_next_frame) / 3;
 		}
 
 		if (vsynctimeperline < 1)
@@ -5565,51 +5559,53 @@ static bool framewait (void)
 	if (currprefs.m68k_speed < 0) {
 
 		if (!frame_rendered && !picasso_on)
-			frame_rendered = render_screen (false);
+			frame_rendered = render_screen(false);
 
-		curr_time = read_processor_time ();
+		curr_time = read_processor_time();
 
 		int max;
 		int adjust = 0;
 		if ((int)curr_time - (int)vsyncwaittime > 0 && (int)curr_time - (int)vsyncwaittime < vstb / 2)
 			adjust += curr_time - vsyncwaittime;
-		max = (int)(vstb * (1000.0) / 1000.0 - adjust);
+		max = (int)(vstb - adjust);
 		vsyncwaittime = curr_time + vstb - adjust;
 		vsyncmintime = curr_time;
 
 		if (max < 0) {
 			max = 0;
 			vsynctimeperline = 1;
-		} else {
+		}
+		else {
 			vsynctimeperline = max / (maxvpos_display + 1);
 		}
 		vsyncmaxtime = curr_time + max;
 
-	} else {
+	}
+	else {
 
 		int t = 0;
 
-		start = read_processor_time ();
+		start = read_processor_time();
 		if (!frame_rendered && !picasso_on) {
-			frame_rendered = render_screen (false);
-			t = read_processor_time () - start;
+			frame_rendered = render_screen(false);
+			t = read_processor_time() - start;
 		}
 		while (true) {
-			auto v = rpt_vsync() / (syncbase / 1000.0);
+			double v = rpt_vsync() / (syncbase / 1000.0);
 			if (v >= -2)
 				break;
 			cpu_sleep_millis(1);
 		}
-		while (rpt_vsync () < 0) {
+		while (rpt_vsync() < 0) {
 			;
 		}
 		idletime += read_processor_time() - start;
-		curr_time = read_processor_time ();
+		curr_time = read_processor_time();
 		vsyncmintime = curr_time;
 		vsyncmaxtime = vsyncwaittime = curr_time + vstb;
 		if (frame_rendered) {
-			show_screen (0);
-			t += read_processor_time () - curr_time;
+			show_screen(0);
+			t += read_processor_time() - curr_time;
 		}
 		t += frameskipt_avg;
 		vsynctimeperline = (vstb - t) / 3;
@@ -5617,9 +5613,9 @@ static bool framewait (void)
 			vsynctimeperline = 0;
 		else if (vsynctimeperline > vstb / 3)
 			vsynctimeperline = vstb / 3;
-		
+
 		frame_shown = true;
-  }
+	}
 	return status != 0;
 }
 
