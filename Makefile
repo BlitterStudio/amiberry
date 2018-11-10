@@ -152,6 +152,13 @@ USE_SDL2 = 1
     HAVE_NEON = 1
     NAME  = amiberry-tinker
 
+else ifeq ($(PLATFORM),rockpro64)
+USE_SDL2 = 1
+    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+    CFLAGS +=  -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    HAVE_NEON = 1
+    NAME  = amiberry-rockpro64
+	
 else ifeq ($(PLATFORM),android-sdl2)
 USE_SDL2 = 1
     CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
