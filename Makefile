@@ -170,8 +170,8 @@ USE_SDL2 = 1
 endif
 
 RM     = rm -f
-CC     = gcc
-CXX    = g++
+CC     ?= gcc
+CXX    ?= g++
 STRIP  = strip
 PROG   = $(NAME)
 
