@@ -650,8 +650,8 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 
-		// PORT 0 -  JOYSTICK GAMES 
-	else if (!strcmpi(host_detail.controller1, "nul") == 0)
+	// PORT 0 -  JOYSTICK GAMES 
+	else if (!strcmpi(host_detail.controller2, "nul") == 0)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
 		cfgfile_parse_line(p, txt2, 0);
