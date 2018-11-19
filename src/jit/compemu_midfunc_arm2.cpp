@@ -2244,6 +2244,7 @@ MIDFUNC(2,jff_DBCC,(RW4 d, IMM cc))
 
     case 8: // HI
       CC_MOV_ri(NATIVE_CC_CC, REG_WORK1, 0);
+	  CC_MOV_ri(NATIVE_CC_EQ, REG_WORK1, ARM_C_FLAG);
       break;
 
     default:
