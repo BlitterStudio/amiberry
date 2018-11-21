@@ -980,7 +980,7 @@ extern void cfgfile_compatibility_rtg(struct uae_prefs *p);
 
 
 extern void whdload_auto_prefs (struct uae_prefs *p, char* filename);
-
+extern void cd_auto_prefs (struct uae_prefs *p, char* filename);
 
 extern void check_prefs_changed_custom (void);
 extern void check_prefs_changed_cpu (void);

@@ -520,6 +520,13 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			firstconfig = false;
 			loaded = true;
 		}
+		else if (_tcsncmp(argv[i], _T("-autocd="), 8) == 0) {
+			const auto txt = parsetextpath(argv[i] + 8);
+			cd_auto_prefs(&currprefs, txt);
+			xfree(txt);
+			firstconfig = false;
+			loaded = true;
+		}                
 		else if (_tcscmp(argv[i], _T("-f")) == 0) {
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
 			if (i + 1 == argc) {

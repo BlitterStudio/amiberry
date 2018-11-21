@@ -342,7 +342,63 @@ void symlink_roms(struct uae_prefs* p)
 		symlink(tmp, tmp2);
 }
 
+void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 
+{
+	//      *** GAME DETECTION ***
+        printf("\nCD Autoload: %s  \n\n",filepath); 
+        p->start_gui = false;
+                
+	// REMOVE THE FILE PATH AND EXTENSION
+	//const auto filename = my_getfilepart(filepath);
+
+
+     	const int is_cdtv = strstr(filepath, "CDTV") != nullptr;
+	const int is_cd32 = strstr(filepath, "CD32") != nullptr;
+        
+    	// CD32
+	if (static_cast<bool>(is_cd32))
+	{
+		_tcscpy(p->description, _T("CD32 AutoBoot Configuration"));
+                // SET THE BASE AMIGA (CD32)
+		built_in_prefs(&currprefs, 8, 0, 0, 0);
+                p->jports[0].mode = 7;
+	}
+	else if (static_cast<bool>(is_cd32))
+	{
+		_tcscpy(p->description, _T("CDTV AutoBoot Configuration"));
+                // SET THE BASE AMIGA (CDTV)
+		built_in_prefs(&currprefs, 9, 0, 0, 0);
+                p->jports[0].mode = 7;
+	}
+	else 
+	{
+		_tcscpy(p->description, _T("CD AutoBoot Configuration"));
+                // SET THE BASE AMIGA (Expanded A1200)
+		built_in_prefs(&currprefs, 4, 1, 0, 0);
+                
+	}
+      
+                
+        TCHAR* txt2 = nullptr;
+	TCHAR tmp[MAX_DPATH];
+        
+        // enable CD
+        _stprintf(tmp, "cd32cd=1");
+	txt2 = parsetextpath(_T(tmp));
+	cfgfile_parse_line(p, txt2, 0);
+        
+        // mount the image
+        _stprintf(tmp, "cdimage0=%s,image", filepath);
+	txt2 = parsetextpath(_T(tmp));
+	cfgfile_parse_line(p, txt2, 0);
+
+        //cfgfile_parse_option(&currprefs, _T("cdimage0"), filepath, 0);
+          
+        
+}                   
+                        
+                        
 void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 
 {
