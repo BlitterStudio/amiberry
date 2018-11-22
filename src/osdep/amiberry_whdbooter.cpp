@@ -345,44 +345,105 @@ void symlink_roms(struct uae_prefs* p)
 void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 
 {
+
+	// setup variables etc
+	TCHAR game_name[MAX_DPATH];
+	TCHAR* txt2 = nullptr;
+	TCHAR tmp[MAX_DPATH];
+
+	char boot_path[MAX_DPATH];
+	char save_path[MAX_DPATH];
+	char config_path[MAX_DPATH];
+	char whd_config[255];
+
+	char hardware_settings[4096];
+	//char custom_settings[4096];
+
+	fetch_configurationpath(config_path,MAX_DPATH);
+	//     
 	//      *** GAME DETECTION ***
         printf("\nCD Autoload: %s  \n\n",filepath); 
+        
+	// REMOVE THE FILE PATH AND EXTENSION
+	const auto filename = my_getfilepart(filepath);
+	// SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
+	extractFileName(filepath, last_loaded_config);
+	extractFileName(filepath, game_name);
+	removeFileExtension(game_name);
+
+	auto filesize = get_file_size(filepath);
+	// const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
+
+
+	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE   
+	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH  
+	strcpy(whd_config, config_path);
+	strcat(whd_config, game_name);
+	strcat(whd_config, ".uae");
+
+
+	if (zfile_exists(whd_config))
+	{
+		target_cfgfile_load(&currprefs, whd_config, CONFIG_TYPE_ALL, 0);
+		return;
+	}
+
+
+     
+   	// LOAD HOST OPTIONS
+	char whd_path[MAX_DPATH];
+	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
+ 
+   //  this should be made into it's own routine!! 1 (see repeat, below)
+        
+        struct host_options host_detail;
+	strcpy(whd_config, whd_path);
+	strcat(whd_config, "hostprefs.conf");
+
+	if (zfile_exists(whd_config)) // use direct .whd file
+	{
+		ifstream read_file(whd_config);
+		std::ifstream in(whd_config);
+		std::string contents((std::istreambuf_iterator<char>(in)),
+		                     std::istreambuf_iterator<char>());
+
+		_stprintf(hardware_settings, "%s", contents.c_str());
+
+		host_detail = get_host_settings(hardware_settings);
+	}     
+        
+                                     
+	//     
+	//      *** EMULATED HARDWARE ***
+	//  
+        
         p->start_gui = false;
                 
-	// REMOVE THE FILE PATH AND EXTENSION
-	//const auto filename = my_getfilepart(filepath);
-
-
      	const int is_cdtv = strstr(filepath, "CDTV") != nullptr;
 	const int is_cd32 = strstr(filepath, "CD32") != nullptr;
         
     	// CD32
 	if (static_cast<bool>(is_cd32))
 	{
-		_tcscpy(p->description, _T("CD32 AutoBoot Configuration"));
+		_tcscpy(p->description, _T("AutoBoot Configuration [CD32]"));
                 // SET THE BASE AMIGA (CD32)
 		built_in_prefs(&currprefs, 8, 0, 0, 0);
-                p->jports[0].mode = 7;
 	}
 	else if (static_cast<bool>(is_cd32))
 	{
-		_tcscpy(p->description, _T("CDTV AutoBoot Configuration"));
+		_tcscpy(p->description, _T("AutoBoot Configuration [CDTV]"));
                 // SET THE BASE AMIGA (CDTV)
 		built_in_prefs(&currprefs, 9, 0, 0, 0);
-                p->jports[0].mode = 7;
 	}
 	else 
 	{
-		_tcscpy(p->description, _T("CD AutoBoot Configuration"));
+		_tcscpy(p->description, _T("AutoBoot Configuration [A1200CD]"));
                 // SET THE BASE AMIGA (Expanded A1200)
 		built_in_prefs(&currprefs, 4, 1, 0, 0);
                 
 	}
       
-                
-        TCHAR* txt2 = nullptr;
-	TCHAR tmp[MAX_DPATH];
-        
+
         // enable CD
         _stprintf(tmp, "cd32cd=1");
 	txt2 = parsetextpath(_T(tmp));
@@ -395,6 +456,61 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 
         //cfgfile_parse_option(&currprefs, _T("cdimage0"), filepath, 0);
           
+        
+       
+	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
+	// CD32
+	if (static_cast<bool>(is_cd32))
+	{	p->jports[0].mode = 7;
+		p->jports[1].mode = 7;
+        }
+        else
+        {
+	// JOY
+		p->jports[1].mode = 3;
+	// MOUSE
+		p->jports[0].mode = 2;
+        }
+        
+	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS   
+	for (auto& jport : p->jports)
+	{
+		jport.id = JPORT_NONE;
+		jport.idc.configname[0] = 0;
+		jport.idc.name[0] = 0;
+		jport.idc.shortid[0] = 0;
+	}
+
+        	// WHAT IS THE MAIN CONTROL?
+	// PORT 0 - MOUSE      
+        if (static_cast<bool>(is_cd32) && !strcmpi(host_detail.controller2, "nul") == 0)
+	{
+            _stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
+		cfgfile_parse_line(p, txt2, 0);  
+        }
+	else if (!strcmpi(host_detail.mouse1, "nul") == 0)
+	{
+		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
+		cfgfile_parse_line(p, txt2, 0);
+	}
+	else
+	{
+		_stprintf(txt2, "%s=mouse", _T("joyport0"));
+		cfgfile_parse_line(p, txt2, 0);
+	}
+
+
+	// PORT 1 - JOYSTICK 
+	if (!strcmpi(host_detail.controller1, "nul") == 0)
+	{
+		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
+		cfgfile_parse_line(p, txt2, 0);
+	}
+	else
+	{
+		_stprintf(txt2, "%s=joy1", _T("joyport1"));
+		cfgfile_parse_line(p, txt2, 0);
+	}
         
 }                   
                         
@@ -458,9 +574,12 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 
 	// LOAD HOST OPTIONS
 	char whd_path[MAX_DPATH];
-	struct host_options host_detail;
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
 
+        
+   //  this should be made into it's own routine!! 1 (see repeat, above)
+        
+        struct host_options host_detail;
 	strcpy(whd_config, whd_path);
 	strcat(whd_config, "hostprefs.conf");
 
@@ -616,7 +735,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	// A1200 no AGA
 	if (!static_cast<bool>(is_aga) && !static_cast<bool>(is_cd32))
 	{
-		_tcscpy(p->description, _T("WHDLoad AutoBoot Configuration"));
+		_tcscpy(p->description, _T("AutoBoot Configuration [WHDLoad]"));
 
 		p->cs_compatible = CP_A600;
 		built_in_chipset_prefs(p);
@@ -625,7 +744,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 		// A1200
 	else
-		_tcscpy(p->description, _T("WHDLoad AutoBoot Configuration [AGA]"));
+		_tcscpy(p->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
 
 	//SET THE WHD BOOTER AND GAME DATA  
 	snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
@@ -666,6 +785,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
+        
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	// CD32
 	if ((static_cast<bool>(is_cd32) && strcmpi(game_detail.port0, "nul") == 0)
