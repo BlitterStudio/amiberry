@@ -51,17 +51,26 @@ struct chipset {
 };
 static struct chipset chipsets[] = {
 	{ CP_GENERIC, "Generic" },
+	{ CP_CDTV,	  "CDTV" },
+	{ CP_CDTVCR,  "CDTV-CR" },
 	{ CP_CD32,    "CD32" },
 	{ CP_A500,    "A500" },
 	{ CP_A500P,   "A500+" },
 	{ CP_A600,    "A600" },
+	{ CP_A1000,   "A1000" },
 	{ CP_A1200,   "A1200" },
 	{ CP_A2000,   "A2000" },
+	{ CP_A3000,   "A3000" },
+	{ CP_A3000T,  "A3000T" },
 	{ CP_A4000,   "A4000" },
+	{ CP_A4000T,  "A4000T" },
+	{ CP_VELVET,  "Velvet" },
+	{ CP_CASABLANCA, "Casablanca" },
+	{ CP_DRACO,  "DraCo" },
 	{ -1, "" }
 };
 
-static const int numChipsets = 8;
+static const int numChipsets = 18;
 
 class ChipsetListModel : public gcn::ListModel
 {
