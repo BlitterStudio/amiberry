@@ -70,7 +70,7 @@ static struct chipset chipsets[] = {
 	{ -1, "" }
 };
 
-static const int numChipsets = 18;
+static const int numChipsets = 17;
 
 class ChipsetListModel : public gcn::ListModel
 {
