@@ -102,6 +102,11 @@ static const TCHAR* cdmodes[] = {_T("disabled"), _T(""), _T("image"), _T("ioctl"
 static const TCHAR* cdconmodes[] = {_T(""), _T("uae"), _T("ide"), _T("scsi"), _T("cdtv"), _T("cd32"), nullptr};
 static const TCHAR* waitblits[] = {_T("disabled"), _T("automatic"), _T("noidleonly"), _T("always"), nullptr};
 static const TCHAR* autoext2[] = {_T("disabled"), _T("copy"), _T("replace"), nullptr};
+static const TCHAR *leds[] = { _T("power"), _T("df0"), _T("df1"), _T("df2"), _T("df3"), _T("hd"), _T("cd"), _T("fps"), _T("cpu"), _T("snd"), _T("md"), _T("net"), 0 };
+static const int leds_order[] = { 3, 6, 7, 8, 9, 4, 5, 2, 1, 0, 9, 10 };
+static const TCHAR *lacer[] = { _T("off"), _T("i"), _T("p"), 0 };
+/* another boolean to choice update.. */
+static const TCHAR *cycleexact[] = { _T("false"), _T("memory"), _T("true"), 0 };
 static const TCHAR *unmapped[] = { _T("floating"), _T("zero"), _T("one"), 0 };
 static const TCHAR *ciatype[] = { _T("default"), _T("391078-01"), 0 };
 
@@ -1074,13 +1079,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write(f, _T("config_version"), _T("%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 
 	for (sl = p->all_lines; sl; sl = sl->next)
-	{
 		if (sl->unknown)
-		{
 			if (sl->option)
 				cfgfile_write_str(f, sl->option, sl->value);
-		}
-	}
 
 	_stprintf(tmp, _T("%s.rom_path"), TARGET_NAME);
 	cfgfile_write_str(f, tmp, p->path_rom);
