@@ -82,14 +82,15 @@ static const TCHAR* cartsmode[] = {_T("none"), _T("hrtmon"), nullptr};
 static const TCHAR* idemode[] = {_T("none"), _T("a600/a1200"), _T("a4000"), nullptr};
 static const TCHAR* rtctype[] = {_T("none"), _T("MSM6242B"), _T("RP5C01A"), _T("MSM6242B_A2000"), nullptr};
 static const TCHAR* ciaatodmode[] = {_T("vblank"), _T("50hz"), _T("60hz"), nullptr};
-static const TCHAR* cscompa[] = {
-	_T("-"), _T("Generic"), _T("CD32"), _T("A500"), _T("A500+"), _T("A600"),
-	_T("A1200"), _T("A2000"), _T("A4000"),
-	nullptr
+static const TCHAR *cscompa[] = {
+	_T("-"), _T("Generic"), _T("CDTV"), _T("CDTV-CR"), _T("CD32"), _T("A500"), _T("A500+"), _T("A600"),
+	_T("A1000"), _T("A1200"), _T("A2000"), _T("A3000"), _T("A3000T"), _T("A4000"), _T("A4000T"),
+	_T("Velvet"), _T("Casablanca"), _T("DraCo"),
+	NULL
 };
-static const TCHAR* qsmodes[] = {
-	_T("A500"), _T("A500+"), _T("A600"), _T("A1200"), _T("A4000"), _T("CD32"), nullptr
-};
+static const TCHAR *qsmodes[] = {
+	_T("A500"), _T("A500+"), _T("A600"), _T("A1000"), _T("A1200"), _T("A3000"), _T("A4000"), _T(""), _T("CD32"), _T("CDTV"), _T("CDTV-CR"), _T("ARCADIA"), NULL };
+/* 3-state boolean! */
 static const TCHAR *fullmodes[] = { _T("false"), _T("true"), /* "FILE_NOT_FOUND", */ _T("fullwindow"), nullptr };
 static const TCHAR* abspointers[] = {_T("none"), _T("mousehack"), _T("tablet"), nullptr};
 static const TCHAR* joyportmodes[] = {
