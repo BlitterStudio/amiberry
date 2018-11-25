@@ -30,7 +30,7 @@ static const char* numbers = {
 	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----++++++++++++++"
 };
 
-STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32* rc, uae_u32* gc, uae_u32* bc, uae_u32* a)
+STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *a)
 {
 	uae_u32 v = rc[(c >> 16) & 0xff] | gc[(c >> 8) & 0xff] | bc[(c >> 0) & 0xff];
 	if (a)
@@ -54,8 +54,7 @@ static void write_tdnumber(uae_u8* buf, int bpp, int x, int y, int num, uae_u32 
 	}
 }
 
-void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth, uae_u32* rc, uae_u32* gc, uae_u32* bc,
-                             uae_u32* alpha)
+void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
 	int x_start, j, led, border;
 	uae_u32 c1, c2, cb;
@@ -278,45 +277,37 @@ void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth, uae_u3
 		}
 		on_rgb |= 0x33000000;
 		off_rgb |= 0x33000000;
-		if (half > 0)
-		{
+		if (half > 0) {
 			c = ledcolor(on ? (y >= TD_TOTAL_HEIGHT / 2 ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
 		}
-		else if (half < 0)
-		{
+		else if (half < 0) {
 			c = ledcolor(on ? (y < TD_TOTAL_HEIGHT / 2 ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
 		}
-		else
-		{
+		else {
 			c = ledcolor(on ? on_rgb : off_rgb, rc, gc, bc, alpha);
 		}
 		border = 0;
-		if (y == 0 || y == TD_TOTAL_HEIGHT - 1)
-		{
+		if (y == 0 || y == TD_TOTAL_HEIGHT - 1) {
 			c = ledcolor(TD_BORDER, rc, gc, bc, alpha);
 			border = 1;
 		}
 
 		x = x_start + pos * TD_WIDTH;
 		if (!border)
-			putpixel(buf, nullptr, bpp, x - 1, cb, 0);
+			putpixel(buf, NULL, bpp, x - 1, cb, 0);
 		for (j = 0; j < TD_LED_WIDTH; j++)
-			putpixel(buf, nullptr, bpp, x + j, c, 0);
+			putpixel(buf, NULL, bpp, x + j, c, 0);
 		if (!border)
-			putpixel(buf, nullptr, bpp, x + j, cb, 0);
+			putpixel(buf, NULL, bpp, x + j, cb, 0);
 
-		if (y >= TD_PADY && y - TD_PADY < TD_NUM_HEIGHT)
-		{
-			if (num3 >= 0)
-			{
+		if (y >= TD_PADY && y - TD_PADY < TD_NUM_HEIGHT) {
+			if (num3 >= 0) {
 				x += (TD_LED_WIDTH - am * TD_NUM_WIDTH) / 2;
-				if (num1 > 0)
-				{
+				if (num1 > 0) {
 					write_tdnumber(buf, bpp, x, y - TD_PADY, num1, pen_rgb, c2);
 					x += TD_NUM_WIDTH;
 				}
-				if (num2 >= 0)
-				{
+				if (num2 >= 0) {
 					write_tdnumber(buf, bpp, x, y - TD_PADY, num2, pen_rgb, c2);
 					x += TD_NUM_WIDTH;
 				}

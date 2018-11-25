@@ -46,8 +46,8 @@ extern int bits_in_mask (unsigned long mask);
 extern int mask_shift (unsigned long mask);
 extern unsigned int doMask (int p, int bits, int shift);
 extern unsigned int doMask256 (int p, int bits, int shift);
-extern void alloc_colors64k (int, int, int, int, int, int, int);
-extern void alloc_colors_rgb(int rw, int gw, int bw, int rs, int gs, int bs, int byte_swap,
+extern void alloc_colors64k(int, int, int, int, int, int, int, int, int, int, bool);
+extern void alloc_colors_rgb(int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
 	uae_u32 *rc, uae_u32 *gc, uae_u32 *bc);
 extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt);
 
@@ -67,19 +67,19 @@ extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs
 */
 struct vidbuffer
 {
-  uae_u8 *bufmem;
-  int rowbytes; /* Bytes per row in the memory pointed at by bufmem. */
-  int pixbytes; /* Bytes per pixel. */
-	/* size of max visible image */
-  int outwidth;
-  int outheight;
+	uae_u8 *bufmem;
+	int rowbytes; /* Bytes per row in the memory pointed at by bufmem. */
+	int pixbytes; /* Bytes per pixel. */
+	  /* size of max visible image */
+	int outwidth;
+	int outheight;
 };
 
 extern int max_uae_width, max_uae_height;
 
 struct vidbuf_description
 {
-  struct vidbuffer drawbuffer;
+	struct vidbuffer drawbuffer;
 };
 
 extern struct vidbuf_description gfxvidinfo;

@@ -5699,7 +5699,7 @@ static void vsync_handler_pre(void)
 	// GUI check here, must be after frame rendering
 	devices_vsync_pre();
 
-	if (!nodraw() || (picasso_on && picasso_rendered))
+	if (!nodraw() || picasso_on)
 		fpscounter(frameok);
 
 	handle_events();

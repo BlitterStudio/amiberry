@@ -594,22 +594,32 @@ extern struct picasso96_state_struct picasso96_state;
 extern void picasso_enablescreen (int on);
 extern void picasso_refresh (void);
 extern void init_hz_p96 (void);
+extern void picasso_handle_hsync(void);
 extern void picasso_handle_vsync (void);
 extern void picasso_trigger_vblank (void);
 extern void picasso_reset (void);
 extern bool picasso_is_active (void);
 extern int picasso_palette (struct MyCLUTEntry *CLUT);
 extern bool picasso_flushpixels (uae_u8 *src, int offset);
+extern void picasso_free(void);
 
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
 struct picasso_vidbuf_description {
     int width, height, depth;
-    int rowbytes, pixbytes;
+	int rowbytes, pixbytes, offset;
     int extra_mem; /* nonzero if there's a second buffer that must be updated */
     uae_u32 rgbformat;
     RGBFTYPE selected_rgbformat;
     uae_u32 clut[256];
+	int picasso_convert, host_mode;
+	int ohost_mode, orgbformat;
+	int full_refresh;
+	int set_panning_called;
+	int rtg_clear_flag;
+	bool picasso_active;
+	bool picasso_changed;
+	uae_atomic picasso_state_change;
 };
 
 extern struct picasso_vidbuf_description picasso_vidinfo;

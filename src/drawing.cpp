@@ -3528,16 +3528,24 @@ void drawing_init(void)
 
 int isvsync_chipset(void)
 {
-	if (picasso_on)
+	if (picasso_on || currprefs.gfx_apmode[0].gfx_vsync <= 0)
 		return 0;
-	return 1;
+	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0)
+		return 1;
+	if (currprefs.m68k_speed >= 0)
+		return -1;
+	return currprefs.cachesize ? -3 : -2;
 }
 
 int isvsync_rtg(void)
 {
 	if (!picasso_on)
 		return 0;
-	return 1;
+	if (currprefs.gfx_apmode[1].gfx_vsyncmode == 0)
+		return 1;
+	if (currprefs.m68k_speed >= 0)
+		return -1;
+	return currprefs.cachesize ? -3 : -2;
 }
 
 int isvsync(void)

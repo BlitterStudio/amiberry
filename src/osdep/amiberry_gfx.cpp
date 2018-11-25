@@ -927,7 +927,10 @@ static int init_colors()
 	red_shift = mask_shift(screen->format->Rmask);
 	green_shift = mask_shift(screen->format->Gmask);
 	blue_shift = mask_shift(screen->format->Bmask);
-	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, 0);
+	alpha_bits = 0;
+	alpha_shift = 0;
+
+	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, alpha_bits, alpha_shift, alpha, 0, false);
 	notice_new_xcolors();
 
 	return 1;
@@ -970,7 +973,7 @@ int GetSurfacePixelFormat()
 		: depth == 16 && unit == 16
 		? RGBFB_R5G6B5
 		: unit == 24
-		? RGBFB_B8G8R8
+		? RGBFB_R8G8B8
 		: unit == 32
 		? RGBFB_R8G8B8A8
 		: RGBFB_NONE;
@@ -1384,6 +1387,7 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	picasso_vidinfo.depth = screen->format->BitsPerPixel; // Native depth
 	picasso_vidinfo.extra_mem = 1;
 	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel; // Native bytes
+	picasso_vidinfo.offset = 0;
 
 	if (screen_is_picasso)
 	{

@@ -1497,6 +1497,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	}
 	cfgfile_write(f, _T("z3mem_start"), _T("0x%x"), p->z3autoconfig_start);
 	cfgfile_write(f, _T("bogomem_size"), _T("%d"), p->bogomem_size / 0x40000);
+	cfgfile_write_bool(f, _T("gfxcard_hardware_vblank"), p->rtg_hardwareinterrupt);
+	cfgfile_write_bool(f, _T("gfxcard_hardware_sprite"), p->rtg_hardwaresprite);
+	cfgfile_write_bool(f, _T("gfxcard_multithread"), p->rtg_multithread);
 	for (int i = 0; i < MAX_RTG_BOARDS; i++)
 	{
 		struct rtgboardconfig* rbc = &p->rtgboards[i];
@@ -3573,14 +3576,34 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 	if (cfgfile_yesno(option, value, _T("immediate_blits"), &p->immediate_blits)
 		|| cfgfile_yesno(option, value, _T("fast_copper"), &p->fast_copper)
 		|| cfgfile_yesno(option, value, _T("fpu_no_unimplemented"), &p->fpu_no_unimplemented)
+		|| cfgfile_yesno(option, value, _T("cpu_no_unimplemented"), &p->int_no_unimplemented)
 		|| cfgfile_yesno(option, value, _T("cd32cd"), &p->cs_cd32cd)
 		|| cfgfile_yesno(option, value, _T("cd32c2p"), &p->cs_cd32c2p)
 		|| cfgfile_yesno(option, value, _T("cd32nvram"), &p->cs_cd32nvram)
+		|| cfgfile_yesno(option, value, _T("cdtvcd"), &p->cs_cdtvcd)
+		|| cfgfile_yesno(option, value, _T("cdtv-cr"), &p->cs_cdtvcr)
+		|| cfgfile_yesno(option, value, _T("cdtvram"), &p->cs_cdtvram)
+		|| cfgfile_yesno(option, value, _T("a1000ram"), &p->cs_a1000ram)
 		|| cfgfile_yesno(option, value, _T("cia_overlay"), &p->cs_ciaoverlay)
+		|| cfgfile_yesno(option, value, _T("bogomem_fast"), &p->cs_slowmemisfast)
 		|| cfgfile_yesno(option, value, _T("ksmirror_e0"), &p->cs_ksmirror_e0)
 		|| cfgfile_yesno(option, value, _T("ksmirror_a8"), &p->cs_ksmirror_a8)
+		|| cfgfile_yesno(option, value, _T("resetwarning"), &p->cs_resetwarning)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
+		|| cfgfile_yesno(option, value, _T("denise_noehb"), &p->cs_denisenoehb)
+		|| cfgfile_yesno(option, value, _T("ics_agnus"), &p->cs_dipagnus)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
+		|| cfgfile_yesno(option, value, _T("color_burst"), &p->cs_color_burst)
+		|| cfgfile_yesno(option, value, _T("toshiba_gary"), &p->cs_toshibagary)
+		|| cfgfile_yesno(option, value, _T("rom_is_slow"), &p->cs_romisslow)
+		|| cfgfile_yesno(option, value, _T("1mchipjumper"), &p->cs_1mchipjumper)
+		|| cfgfile_yesno(option, value, _T("agnus_bltbusybug"), &p->cs_agnusbltbusybug)
+		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_vblank"), &p->rtg_hardwareinterrupt)
+		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_sprite"), &p->rtg_hardwaresprite)
+		|| cfgfile_yesno(option, value, _T("gfxcard_multithread"), &p->rtg_multithread)
+		|| cfgfile_yesno(option, value, _T("synchronize_clock"), &p->tod_hack)
+		|| cfgfile_yesno(option, value, _T("keyboard_connected"), &p->keyboard_connected)
+		|| cfgfile_yesno(option, value, _T("lightpen_crosshair"), &p->lightpen_crosshair)
 
 		|| cfgfile_yesno(option, value, _T("ntsc"), &p->ntscmode)
 		|| cfgfile_yesno(option, value, _T("cpu_compatible"), &p->cpu_compatible)
