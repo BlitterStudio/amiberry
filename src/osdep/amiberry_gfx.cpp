@@ -1386,6 +1386,7 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	picasso_vidinfo.height = h;
 	picasso_vidinfo.depth = screen->format->BitsPerPixel; // Native depth
 	picasso_vidinfo.extra_mem = 1;
+	picasso_vidinfo.rowbytes = screen->pitch;
 	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel; // Native bytes
 	picasso_vidinfo.offset = 0;
 
@@ -1411,6 +1412,7 @@ uae_u8* gfx_lock_picasso()
 	if (SDL_MUSTLOCK(screen))
 		SDL_LockSurface(screen);
 
+	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel;
 	picasso_vidinfo.rowbytes = screen->pitch;
 	return static_cast<uae_u8 *>(screen->pixels);
 }
