@@ -5662,6 +5662,9 @@ static void fpscounter(bool frameok)
 		gui_data.fps = fps;
 		gui_data.idle = (int)idle;
 		gui_data.fps_color = frameok ? 0 : 1;
+		if ((timeframes & 15) == 0) {
+			gui_fps(fps, (int)idle, frameok ? 0 : 1);
+		}
 	}
 }
 

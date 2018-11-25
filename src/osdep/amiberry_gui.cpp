@@ -537,6 +537,84 @@ void moveVertical(int value)
 		changed_prefs.vertical_offset = 16 + OFFSET_Y_ADJUST;
 }
 
+static void gui_flicker_led2(int led, int unitnum, int status)
+{
+	static int resetcounter[LED_MAX];
+	uae_s8 old;
+	uae_s8 *p;
+
+	if (led == LED_HD)
+		p = &gui_data.hd;
+	else if (led == LED_CD)
+		p = &gui_data.cd;
+	else if (led == LED_MD)
+		p = &gui_data.md;
+	else if (led == LED_NET)
+		p = &gui_data.net;
+	else
+		return;
+	old = *p;
+	if (status < 0) {
+		if (old < 0) {
+			gui_led(led, -1, -1);
+		}
+		else {
+			gui_led(led, 0, -1);
+		}
+		return;
+	}
+	if (status == 0 && old < 0) {
+		*p = 0;
+		resetcounter[led] = 0;
+		gui_led(led, 0, -1);
+		return;
+	}
+	if (status == 0) {
+		resetcounter[led]--;
+		if (resetcounter[led] > 0)
+			return;
+	}
+#ifdef RETROPLATFORM
+	if (unitnum >= 0) {
+		if (led == LED_HD) {
+			rp_hd_activity(unitnum, status ? 1 : 0, status == 2 ? 1 : 0);
+		}
+		else if (led == LED_CD) {
+			rp_cd_activity(unitnum, status);
+		}
+	}
+#endif
+	*p = status;
+	resetcounter[led] = 4;
+	if (old != *p)
+		gui_led(led, *p, -1);
+}
+
+void gui_flicker_led(int led, int unitnum, int status)
+{
+	if (led < 0) {
+		gui_flicker_led2(LED_HD, 0, 0);
+		gui_flicker_led2(LED_CD, 0, 0);
+		if (gui_data.net >= 0)
+			gui_flicker_led2(LED_NET, 0, 0);
+		if (gui_data.md >= 0)
+			gui_flicker_led2(LED_MD, 0, 0);
+	}
+	else {
+		gui_flicker_led2(led, unitnum, status);
+	}
+}
+
+void gui_fps(int fps, int idle, int color)
+{
+	gui_data.fps = fps;
+	gui_data.idle = idle;
+	gui_data.fps_color = color;
+	gui_led(LED_FPS, 0, -1);
+	gui_led(LED_CPU, 0, -1);
+	gui_led(LED_SND, (gui_data.sndbuf_status > 1 || gui_data.sndbuf_status < 0) ? 0 : 1, -1);
+}
+
 void gui_led(int led, int on)
 {
 	unsigned char kbd_led_status;
@@ -549,7 +627,7 @@ void gui_led(int led, int on)
 	ioctl(0, KDGETLED, &kbd_led_status);
 
 	// Handle floppy led status
-	if (led == LED_DF0 || led == LED_DF1 || led == LED_DF2 || led == LED_DF3)
+	if (led >= LED_DF0 && led <= LED_DF3)
 	{
 		if (currprefs.kbd_led_num == led)
 		{
@@ -579,34 +657,6 @@ void gui_led(int led, int on)
 	}
 
 	ioctl(0, KDSETLED, kbd_led_status);
-}
-
-void gui_flicker_led(int led, int unitnum, int status)
-{
-	static int hd_resetcounter;
-
-	switch (led)
-	{
-	case -1: // Reset HD and CD
-		gui_data.hd = 0;
-		break;
-
-	case LED_POWER:
-		break;
-
-	case LED_HD:
-		if (status == 0) {
-			hd_resetcounter--;
-			if (hd_resetcounter > 0)
-				return;
-		}
-		gui_data.hd = status;
-		hd_resetcounter = 2;
-		break;
-	default:
-		break;
-	}
-	gui_led(led, status);
 }
 
 void gui_filename(int num, const char* name)
