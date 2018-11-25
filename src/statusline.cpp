@@ -76,6 +76,9 @@ void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth, uae_u3
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
 		int half = 0;
 
+		if (!(currprefs.leds_on_screen_mask[picasso_on ? 1 : 0] & (1 << led)))
+			continue;
+
 		pen_rgb = c1;
 		if (led >= LED_DF0 && led <= LED_DF3)
 		{
@@ -105,8 +108,7 @@ void draw_status_line_single(uae_u8* buf, int bpp, int y, int totalwidth, uae_u3
 		else if (led == LED_POWER)
 		{
 			pos = 3;
-			//on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16;
-			on_rgb = ((100 * 10 / 16) + 0x33) << 16;
+			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16;
 			on = 1;
 			off_rgb = 0x330000;
 		}
