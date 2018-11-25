@@ -95,8 +95,8 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				on = gui_data.drive_motor[pled];
 				if (gui_data.drive_writing[pled])
 				{
-					on_rgb = 0xcc0000;
-					on_rgb2 = 0x880000;
+					on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
+					on_rgb2 = bpp == 2 ? 0x880000 : 0x000088;
 				}
 				half = gui_data.drive_side ? 1 : -1;
 				if (gui_data.df[pled][0] == 0)
@@ -107,9 +107,9 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		else if (led == LED_POWER)
 		{
 			pos = 3;
-			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16;
+			on_rgb = bpp == 2 ? ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16 : ((gui_data.powerled_brightness * 10 / 16) + 0x330000) << 4;
 			on = 1;
-			off_rgb = 0x330000;
+			off_rgb = bpp == 2 ? 0x330000 : 0x000033;
 		}
 		else if (led == LED_CD)
 		{
@@ -117,13 +117,13 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			if (gui_data.cd >= 0)
 			{
 				on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
-				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : 0x0000cc;
+				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : bpp == 2 ? 0x0000cc : 0xcc0000;
 				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO))
 				{
 					on_rgb &= 0xfefefe;
 					on_rgb >>= 1;
 				}
-				off_rgb = 0x000033;
+				off_rgb = bpp == 2 ? 0x000033 : 0x330000;
 				num1 = -1;
 				num2 = 10;
 				num3 = 12;
@@ -135,7 +135,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			if (gui_data.hd >= 0)
 			{
 				on = gui_data.hd;
-				on_rgb = on == 2 ? 0xcc0000 : 0x0000cc;
+				on_rgb = on == 2 ? (bpp == 2 ? 0xcc0000 : 0x0000cc) : (bpp == 2 ? 0x0000cc : 0xcc0000);
 				off_rgb = 0x000033;
 				num1 = -1;
 				num2 = 11;
@@ -184,7 +184,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		{
 			int idle = (gui_data.idle + 5) / 10;
 			pos = 1;
-			on_rgb = 0xcc0000;
+			on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
 			off_rgb = 0x000000;
 			if (gui_data.cpu_halted)
 			{
@@ -233,9 +233,9 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			if (on < 0)
 				on_rgb = 0xcccc00; // underflow
 			else if (on == 2)
-				on_rgb = 0xcc0000; // really big overflow
+				on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc; // really big overflow
 			else if (on == 1)
-				on_rgb = 0x0000cc; // "normal" overflow
+				on_rgb = bpp == 2 ? 0x0000cc : 0xcc0000; // "normal" overflow
 			off_rgb = 0x000000;
 			am = 3;
 		}
@@ -246,7 +246,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			if (gui_data.md >= 0)
 			{
 				on = gui_data.md;
-				on_rgb = on == 2 ? 0xcc0000 : 0x00cc00;
+				on_rgb = on == 2 ? bpp == 2 ? 0xcc0000: 0x0000cc : 0x00cc00;
 				off_rgb = 0x003300;
 			}
 			num1 = -1;
@@ -263,7 +263,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				if (on & 1)
 					on_rgb |= 0x00cc00;
 				if (on & 2)
-					on_rgb |= 0xcc0000;
+					on_rgb |= bpp == 2 ? 0xcc0000 : 0x0000cc;
 				off_rgb = 0x000000;
 				num1 = -1;
 				num2 = -1;
