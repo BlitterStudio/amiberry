@@ -804,9 +804,9 @@ static void pfield_do_fill_line (int start, int stop, bool blank)
 	case 4: fill_line_32(xlinebuffer, start, stop, blank); break;
 	default: return;
 	}
-	if (need_genlock_data) {
-		memset(xlinebuffer_genlock + start, 0, stop - start);
-	}
+	//if (need_genlock_data) {
+	//	memset(xlinebuffer_genlock + start, 0, stop - start);
+	//}
 }
 
 static void fill_line2(int startpos, int len)
@@ -865,9 +865,9 @@ static void fill_line_border(int lineno)
 		int b = hposblank;
 		hposblank = 3;
 		fill_line2(lastpos, gfxvidinfo.drawbuffer.outwidth);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
+		//}
 		hposblank = b;
 		return;
 	}
@@ -884,9 +884,9 @@ static void fill_line_border(int lineno)
 	// hblank not visible
 	if (hblank_left_start <= lastpos && hblank_right_stop >= endpos) {
 		fill_line2(lastpos, gfxvidinfo.drawbuffer.outwidth);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
+		//}
 		return;
 	}
 
@@ -2890,7 +2890,7 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			if (do_double) {
 				if (dh == dh_buf) {
 				xlinebuffer = row_map[follow_ypos] - linetoscr_x_adjust_pixbytes;
-					xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
+					//xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
 				fill_line_border(lineno);
 			}
 				/* If dh == dh_line, do_flush_line will re-use the rendered line
