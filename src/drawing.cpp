@@ -3247,7 +3247,7 @@ bool vsync_handle_check(void)
 void vsync_handle_redraw(void)
 {
 	last_redraw_point++;
-	if (interlace_seen <= 0 || last_redraw_point >= 2 || doublescan < 0) {
+	if (interlace_seen <= 0 || (currprefs.gfx_iscanlines && interlace_seen > 0) || last_redraw_point >= 2 || doublescan < 0) {
 		last_redraw_point = 0;
 
 		if (framecnt == 0) {
@@ -3342,27 +3342,28 @@ void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 		//		if (lineno == (maxvpos + lof_store) * 2 - 1)
 		//			*state = LINE_BLACK;
 		break;
-	//case nln_upper_black_always:
-	//	*state = LINE_DECIDED;
-	//	if (lineno > 0) {
-	//		state[-1] = LINE_BLACK;
-	//	}
-	//	if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-	//		state[1] = LINE_BLACK;
-	//	}
-	//	break;
-	//case nln_upper_black:
-	//	changed |= state[0] != LINE_DONE;
-	//	*state = changed ? LINE_DECIDED : LINE_DONE;
-	//	if (lineno > 0) {
-	//		state[-1] = LINE_DONE;
-	//	}
-	//	if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-	//		state[1] = LINE_DONE;
-	//	}
-	//	break;
+	case nln_upper_black_always:
+		*state = LINE_DECIDED;
+		if (lineno > 0) {
+			state[-1] = LINE_BLACK;
+		}
+		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
+			state[1] = LINE_BLACK;
+		}
+		break;
+	case nln_upper_black:
+		changed |= state[0] != LINE_DONE;
+		*state = changed ? LINE_DECIDED : LINE_DONE;
+		if (lineno > 0) {
+			state[-1] = LINE_DONE;
+		}
+		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
+			state[1] = LINE_DONE;
+		}
+		break;
 	}
 
+#ifdef AMIBERRY
 	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
 		if (currprefs.gfx_vresolution) {
 			if (!(linestate_first_undecided & 0x3e))
@@ -3371,6 +3372,7 @@ void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 		else if (!(linestate_first_undecided & 0x1f))
 			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
 	}
+#endif
 }
 
 void hsync_record_line_state(int lineno)

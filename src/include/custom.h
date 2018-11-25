@@ -47,7 +47,7 @@ extern unsigned long int hsync_counter;
 extern uae_u16 dmacon;
 extern uae_u16 intreq;
 
-extern int vpos;
+extern int vpos, lof_store;
 
 STATIC_INLINE int dmaen (unsigned int dmamask)
 {
