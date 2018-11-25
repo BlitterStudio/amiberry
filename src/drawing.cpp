@@ -343,7 +343,7 @@ static void reset_decision_table(void)
 STATIC_INLINE void count_frame(void)
 {
 	framecnt++;
-	if (framecnt >= currprefs.gfx_framerate)
+	if (framecnt > currprefs.gfx_framerate)
 		framecnt = 0;
 	if (inhibit_frame)
 		framecnt = 1;
