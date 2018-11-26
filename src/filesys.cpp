@@ -7192,13 +7192,13 @@ static int dofakefilesys (TrapContext *ctx, UnitInfo *uip, uaecptr parmpacket, s
 }
 
 /* Fill in per-unit fields of a parampacket */
-static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
+static uae_u32 REGPARAM2 filesys_dev_storeinfo(TrapContext *ctx)
 {
-  UnitInfo *uip = mountinfo.ui;
+	UnitInfo *uip = mountinfo.ui;
 	int no = trap_get_dreg(ctx, 6) & 0x7fffffff;
-  int unit_no = no & 65535;
-  int sub_no = no >> 16;
-  int type;
+	int unit_no = no & 65535;
+	int sub_no = no >> 16;
+	int type;
 	uaecptr parmpacket = trap_get_areg(ctx, 0);
 	struct uaedev_config_info *ci = &uip[unit_no].hf.ci;
 
@@ -7209,16 +7209,16 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 	trap_put_long(ctx, parmpacket + PP_ADDTOFSRES, 0);
 	trap_put_long(ctx, parmpacket + PP_FSSIZE, 0);
 
-	gui_flicker_led (LED_HD, unit_no, 0);
-  type = is_hardfile (unit_no);
+	gui_flicker_led(LED_HD, unit_no, 0);
+	type = is_hardfile(unit_no);
 	if (type == FILESYS_HARDFILE_RDB) {
 		/* RDB hardfile */
 		uip[unit_no].devno = uip[unit_no].hf.ci.controller_unit;
-		return rdb_mount (ctx, &uip[unit_no], unit_no, sub_no, parmpacket);
+		return rdb_mount(ctx, &uip[unit_no], unit_no, sub_no, parmpacket);
 	}
-  if (sub_no)
-  	return -2;
-	write_log (_T("Mounting uaehf.device:%d %d (%d):\n"), uip->hf.ci.controller_unit, unit_no, sub_no);
+	if (sub_no)
+		return -2;
+	write_log(_T("Mounting uaehf.device:%d %d (%d):\n"), uip->hf.ci.controller_unit, unit_no, sub_no);
 	get_new_device(ctx, type, parmpacket, &uip[unit_no].devname, &uip[unit_no].devname_amiga, unit_no);
 	uip[unit_no].devno = uip[unit_no].hf.ci.controller_unit;
 	trap_put_long(ctx, parmpacket, uip[unit_no].devname_amiga);
@@ -7234,22 +7234,23 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 	trap_put_long(ctx, parmpacket + 72, 0xFFFFFFFE); /* dma mask */
 	trap_put_long(ctx, parmpacket + 76, uip[unit_no].bootpri); /* bootPri */
 	if (type == FILESYS_VIRTUAL) {
-			// generate some sane-looking geometry if some program really cares..
-			uae_s64 hicyl = 100;
-			uae_u32 heads = 16;
-			if (currprefs.filesys_limit) {
-				hicyl = ((currprefs.filesys_limit * 1024) / 512) / (heads * 127);
-			} else {
-				struct fs_usage fsu;
-				if (!get_fs_usage(uip[unit_no].rootdir, 0, &fsu)) {
-					for (;;) {
-						hicyl = (fsu.total / 512) / (heads * 127);
-						if (hicyl < 65536 || heads == 64)
-							break;
-						heads *= 2;
-					}
+		// generate some sane-looking geometry if some program really cares..
+		uae_s64 hicyl = 100;
+		uae_u32 heads = 16;
+		if (currprefs.filesys_limit) {
+			hicyl = ((currprefs.filesys_limit * 1024) / 512) / (heads * 127);
+		}
+		else {
+			struct fs_usage fsu;
+			if (!get_fs_usage(uip[unit_no].rootdir, 0, &fsu)) {
+				for (;;) {
+					hicyl = (fsu.total / 512) / (heads * 127);
+					if (hicyl < 65536 || heads == 64)
+						break;
+					heads *= 2;
 				}
 			}
+		}
 		trap_put_long(ctx, parmpacket + 4, fsdevname);
 		trap_put_long(ctx, parmpacket + 20, 512 >> 2); /* longwords per block */
 		trap_put_long(ctx, parmpacket + 28, heads); /* heads */
@@ -7258,8 +7259,9 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 		trap_put_long(ctx, parmpacket + 40, 2); /* reserved blocks */
 		trap_put_long(ctx, parmpacket + 52, 1); /* lowCyl */
 		trap_put_long(ctx, parmpacket + 56, (uae_u32)hicyl); /* hiCyl */
-    trap_put_long(ctx, parmpacket + 80, DISK_TYPE_DOS); /* DOS\0 */
-	} else {
+		trap_put_long(ctx, parmpacket + 80, DISK_TYPE_DOS); /* DOS\0 */
+	}
+	else {
 		uae_u8 buf[512];
 		trap_put_long(ctx, parmpacket + 4, ROM_hardfile_resname);
 		trap_put_long(ctx, parmpacket + 20, ci->blocksize >> 2); /* longwords per block */
@@ -7278,8 +7280,9 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 		memset(buf, 0, sizeof buf);
 		if (ci->dostype) { // forced dostype?
 			trap_put_long(ctx, parmpacket + 80, ci->dostype); /* dostype */
-		} else if (hdf_read (&uip[unit_no].hf, buf, 0, sizeof buf)) {
-			uae_u32 dt = rl (buf);
+		}
+		else if (hdf_read(&uip[unit_no].hf, buf, 0, sizeof buf)) {
+			uae_u32 dt = rl(buf);
 			if (dt != 0x00000000 && dt != 0xffffffff)
 				trap_put_long(ctx, parmpacket + 80, dt);
 		}
@@ -7293,12 +7296,12 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 			buf[i + 128] = trap_get_byte(ctx, parmpacket + 16 + i);
 	}
 	if (type == FILESYS_HARDFILE)
-			type = dofakefilesys (ctx, &uip[unit_no], parmpacket, ci);
-		if (uip[unit_no].bootpri < -127 || (type == FILESYS_HARDFILE && ci->rootdir[0] == 0))
-			trap_set_dreg(ctx, 7, trap_get_dreg(ctx, 7) & ~1); /* do not boot */
-  if (uip[unit_no].bootpri < -128)
-  	return -1; /* do not mount */
-  return type;
+		type = dofakefilesys(ctx, &uip[unit_no], parmpacket, ci);
+	if (uip[unit_no].bootpri < -127 || (type == FILESYS_HARDFILE && ci->rootdir[0] == 0))
+		trap_set_dreg(ctx, 7, trap_get_dreg(ctx, 7) & ~1); /* do not boot */
+	if (uip[unit_no].bootpri < -128)
+		return -1; /* do not mount */
+	return type;
 }
 
 static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)

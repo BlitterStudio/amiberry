@@ -233,6 +233,9 @@ typedef void (*line_draw_func)(int, int, bool);
 
 #define LINESTATE_SIZE ((MAXVPOS + 2) * 2 + 1)
 
+static bool screenlocked = false;
+static int linestate_first_undecided = 0;
+
 static uae_u8 linestate[LINESTATE_SIZE];
 
 uae_u8 line_data[(MAXVPOS + 2) * 2][MAX_PLANES * MAX_WORDS_PER_LINE * 2];
@@ -340,7 +343,7 @@ static void reset_decision_table(void)
 STATIC_INLINE void count_frame(void)
 {
 	framecnt++;
-	if (framecnt >= currprefs.gfx_framerate)
+	if (framecnt > currprefs.gfx_framerate)
 		framecnt = 0;
 	if (inhibit_frame)
 		framecnt = 1;
@@ -801,9 +804,9 @@ static void pfield_do_fill_line (int start, int stop, bool blank)
 	case 4: fill_line_32(xlinebuffer, start, stop, blank); break;
 	default: return;
 	}
-	if (need_genlock_data) {
-		memset(xlinebuffer_genlock + start, 0, stop - start);
-	}
+	//if (need_genlock_data) {
+	//	memset(xlinebuffer_genlock + start, 0, stop - start);
+	//}
 }
 
 static void fill_line2(int startpos, int len)
@@ -862,9 +865,9 @@ static void fill_line_border(int lineno)
 		int b = hposblank;
 		hposblank = 3;
 		fill_line2(lastpos, gfxvidinfo.drawbuffer.outwidth);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
+		//}
 		hposblank = b;
 		return;
 	}
@@ -881,9 +884,9 @@ static void fill_line_border(int lineno)
 	// hblank not visible
 	if (hblank_left_start <= lastpos && hblank_right_stop >= endpos) {
 		fill_line2(lastpos, gfxvidinfo.drawbuffer.outwidth);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
+		//}
 		return;
 	}
 
@@ -2393,7 +2396,8 @@ STATIC_INLINE void do_flush_line(struct vidbuffer *vb, int lineno)
 
 static void do_flush_screen(struct vidbuffer *vb, int start, int stop)
 {
-  unlockscr ();
+	unlockscr();
+	screenlocked = false;
 	//if (start <= stop)
 	//	flush_screen(vb, start, stop);
 	//else if (isvsync_chipset())
@@ -2886,7 +2890,7 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			if (do_double) {
 				if (dh == dh_buf) {
 				xlinebuffer = row_map[follow_ypos] - linetoscr_x_adjust_pixbytes;
-					xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
+					//xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
 				fill_line_border(lineno);
 			}
 				/* If dh == dh_line, do_flush_line will re-use the rendered line
@@ -2985,6 +2989,8 @@ static void init_drawing_frame(void)
 
 	init_hardware_for_drawing_frame();
 
+	linestate_first_undecided = 0;
+
 	if (thisframe_first_drawn_line < 0)
 		thisframe_first_drawn_line = minfirstline;
 	if (thisframe_first_drawn_line > thisframe_last_drawn_line)
@@ -3078,37 +3084,30 @@ struct vidbuffer *xvbin, *xvbout;
 
 static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
-	int i;
-
 	xvbin = vbin;
 	xvbout = vbout;
 
-#if LARGEST_LINE_DEBUG
-	int largest = 0;
-#endif
-		for (i = 0; i < max_ypos_thisframe; i++) {
-		int i1 = i + min_ypos_for_screen;
-		int line = i + thisframe_y_adjust_real;
-		int whereline = amiga2aspect_line_map[i1];
-		int wherenext = amiga2aspect_line_map[i1 + 1];
+	if (framecnt == 0) {
+		if (!screenlocked) {
+			if (!lockscr())
+				return;
+			screenlocked = true;
+		}
+		for (int i = 0; i < max_ypos_thisframe; i++) {
+			int i1 = i + min_ypos_for_screen;
+			int line = i + thisframe_y_adjust_real;
+			int whereline = amiga2aspect_line_map[i1];
+			int wherenext = amiga2aspect_line_map[i1 + 1];
 
-		if (whereline >= vbin->outheight)
+			if (whereline >= vbin->outheight || line >= linestate_first_undecided)
 				break;
 			if (whereline < 0)
 				continue;
 
-#if LARGEST_LINE_DEBUG
-		if (largest < whereline)
-			largest = whereline;
-#endif
-
 			hposblank = 0;
-		pfield_draw_line(vbout, line, whereline, wherenext);
+			pfield_draw_line(vbout, line, whereline, wherenext);
+		}
 	}
-
-#if LARGEST_LINE_DEBUG
-	write_log(_T("%d\n"), largest);
-#endif
 }
 
 bool draw_frame(struct vidbuffer *vb)
@@ -3165,9 +3164,12 @@ static void finish_drawing_frame(void)
 	bool didflush = false;
 	struct vidbuffer *vb = &gfxvidinfo.drawbuffer;
 
-	if (!lockscr()) {
-		notice_screen_contents_lost();
-		return;
+	if (!screenlocked) {
+		if (!lockscr()) {
+			notice_screen_contents_lost();
+			return;
+		}
+		screenlocked = true;
 	}
 
 	draw_frame2(vb, vb);
@@ -3245,47 +3247,46 @@ bool vsync_handle_check(void)
 void vsync_handle_redraw(void)
 {
 	last_redraw_point++;
-	if (interlace_seen <= 0 || last_redraw_point >= 2 || doublescan < 0) {
+	if (interlace_seen <= 0 || (currprefs.gfx_iscanlines && interlace_seen > 0) || last_redraw_point >= 2 || doublescan < 0) {
 		last_redraw_point = 0;
 
-	if (framecnt == 0) {
-		if (render_tid) {
-			while (render_thread_busy)
-				sleep_millis(1);
-			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
-			uae_sem_wait(&render_sem);
-		}
-	}
-
-	if (quit_program < 0) {
-		if (render_tid) {
-			while (render_thread_busy)
-				sleep_millis(1);
-			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
-			while (render_tid != 0) {
-				sleep_millis(10);
+		if (framecnt == 0) {
+			if (render_tid) {
+				while (render_thread_busy)
+					sleep_millis(1);
+				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
+				uae_sem_wait(&render_sem);
 			}
-			destroy_comm_pipe(render_pipe);
-			xfree(render_pipe);
-			render_pipe = 0;
-			uae_sem_destroy(&render_sem);
-			render_sem = 0;
 		}
 
-		quit_program = -quit_program;
-		set_inhibit_frame(IHF_QUIT_PROGRAM);
-		set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
-		return;
-	}
+		if (quit_program < 0) {
+			if (render_tid) {
+				while (render_thread_busy)
+					sleep_millis(1);
+				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
+				while (render_tid != 0) {
+					sleep_millis(10);
+				}
+				destroy_comm_pipe(render_pipe);
+				xfree(render_pipe);
+				render_pipe = 0;
+				uae_sem_destroy(&render_sem);
+				render_sem = 0;
+			}
 
-	count_frame();
+			quit_program = -quit_program;
+			set_inhibit_frame(IHF_QUIT_PROGRAM);
+			set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
+			return;
+		}
+
+		count_frame();
 
 		if (framecnt == 0) {
-		init_drawing_frame();
-
-	gui_flicker_led(-1, 0, 0);
-}
+			init_drawing_frame();
+		}
 	}
+	gui_flicker_led(-1, 0, 0);
 }
 
 void hsync_record_line_state(int lineno, enum nln_how how, int changed)
@@ -3294,6 +3295,8 @@ void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 
 	if (framecnt != 0)
 		return;
+
+	linestate_first_undecided = lineno + 1;
 
 	state = linestate + lineno;
 	changed |= frame_redraw_necessary != 0 || refresh_indicator_buffer != NULL;
@@ -3339,26 +3342,37 @@ void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 		//		if (lineno == (maxvpos + lof_store) * 2 - 1)
 		//			*state = LINE_BLACK;
 		break;
-	//case nln_upper_black_always:
-	//	*state = LINE_DECIDED;
-	//	if (lineno > 0) {
-	//		state[-1] = LINE_BLACK;
-	//	}
-	//	if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-	//		state[1] = LINE_BLACK;
-	//	}
-	//	break;
-	//case nln_upper_black:
-	//	changed |= state[0] != LINE_DONE;
-	//	*state = changed ? LINE_DECIDED : LINE_DONE;
-	//	if (lineno > 0) {
-	//		state[-1] = LINE_DONE;
-	//	}
-	//	if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-	//		state[1] = LINE_DONE;
-	//	}
-	//	break;
+	case nln_upper_black_always:
+		*state = LINE_DECIDED;
+		if (lineno > 0) {
+			state[-1] = LINE_BLACK;
+		}
+		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
+			state[1] = LINE_BLACK;
+		}
+		break;
+	case nln_upper_black:
+		changed |= state[0] != LINE_DONE;
+		*state = changed ? LINE_DECIDED : LINE_DONE;
+		if (lineno > 0) {
+			state[-1] = LINE_DONE;
+		}
+		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
+			state[1] = LINE_DONE;
+		}
+		break;
 	}
+
+#ifdef AMIBERRY
+	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
+		if (currprefs.gfx_vresolution) {
+			if (!(linestate_first_undecided & 0x3e))
+				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+		}
+		else if (!(linestate_first_undecided & 0x1f))
+			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+	}
+#endif
 }
 
 void hsync_record_line_state(int lineno)
@@ -3456,11 +3470,16 @@ static void gen_direct_drawing_table(void)
 
 static void *render_thread(void *unused)
 {
+	struct vidbuffer *vb = &gfxvidinfo.drawbuffer;
 	for (;;) {
 		render_thread_busy = false;
 		uae_u32 signal = read_comm_pipe_u32_blocking(render_pipe);
 		render_thread_busy = true;
 		switch (signal) {
+
+		case RENDER_SIGNAL_PARTIAL:
+			draw_frame2(vb, vb);
+			break;
 
 		case RENDER_SIGNAL_FRAME_DONE:
 			finish_drawing_frame();

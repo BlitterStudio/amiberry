@@ -76,6 +76,9 @@ void devices_hsync(void)
 #endif
 	decide_blitter(-1);
 
+#ifdef PICASSO96
+	picasso_handle_hsync();
+#endif
 	DISK_hsync();
 	audio_hsync();
 	gayle_hsync();
@@ -128,6 +131,7 @@ void do_leave_program(void)
 #ifdef JIT
 	compiler_exit();
 #endif
+	picasso_free();
 	graphics_leave();
 	inputdevice_close();
 	DISK_free();

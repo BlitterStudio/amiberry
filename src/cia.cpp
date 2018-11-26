@@ -60,6 +60,8 @@ static unsigned long ciaatod, ciabtod, ciaatol, ciabtol, ciaaalarm, ciabalarm;
 static int ciaatlatch, ciabtlatch;
 static bool oldovl, oldcd32mute;
 static bool led;
+static int led_old_brightness;
+static unsigned long led_cycles_on, led_cycles_off, led_cycle;
 
 static unsigned int ciabpra;
 
@@ -536,8 +538,51 @@ void CIA_hsync_posthandler (bool ciahsync)
   }
 }
 
+static void calc_led(int old_led)
+{
+	unsigned long c = get_cycles();
+	unsigned long t = (c - led_cycle) / CYCLE_UNIT;
+	if (old_led)
+		led_cycles_on += t;
+	else
+		led_cycles_off += t;
+	led_cycle = c;
+}
+
+static void led_vsync(void)
+{
+	int v;
+
+	calc_led(led);
+	if (led_cycles_on && !led_cycles_off)
+		v = 255;
+	else if (led_cycles_off && !led_cycles_on)
+		v = 0;
+	else if (led_cycles_off)
+		v = led_cycles_on * 255 / (led_cycles_on + led_cycles_off);
+	else
+		v = 255;
+	if (v < 0)
+		v = 0;
+	if (currprefs.power_led_dim && v < currprefs.power_led_dim)
+		v = currprefs.power_led_dim;
+	if (v > 255)
+		v = 255;
+	gui_data.powerled_brightness = v;
+	led_cycles_on = 0;
+	led_cycles_off = 0;
+	if (led_old_brightness != gui_data.powerled_brightness) {
+		gui_data.powerled = gui_data.powerled_brightness > 96;
+		gui_led(LED_POWER, gui_data.powerled, gui_data.powerled_brightness);
+		led_filter_audio();
+	}
+	led_old_brightness = gui_data.powerled_brightness;
+	led_cycle = get_cycles();
+}
+
 void CIA_vsync_prehandler (void)
 {
+	led_vsync();
 	CIA_handler ();
 	if (kblostsynccnt > 0) {
 		kblostsynccnt -= maxvpos;
@@ -548,11 +593,11 @@ void CIA_vsync_prehandler (void)
 	}
 }
 
-static void CIAA_tod_handler (uae_u32 v)
+static void CIAA_tod_handler(uae_u32 v)
 {
 	ciaatod++;
-  ciaatod &= 0xFFFFFF;
-	ciaa_checkalarm (true);
+	ciaatod &= 0xFFFFFF;
+	ciaa_checkalarm(true);
 }
 
 void CIAA_tod_inc (int cycles)
@@ -562,18 +607,18 @@ void CIAA_tod_inc (int cycles)
 	event2_newevent_xx (-1, cycles + TOD_INC_DELAY, 0, CIAA_tod_handler);
 }
 
-STATIC_INLINE void check_led (void)
+static void check_led(void)
 {
-  uae_u8 v = ciaapra;
-  bool led2;
+	uae_u8 v = ciaapra;
+	bool led2;
 
-  v |= ~ciaadra; /* output is high when pin's direction is input */
-  led2 = (v & 2) ? 0 : 1;
-  if (led2 != led) {
-    led = led2;
-    gui_data.powerled = led2;
-    led_filter_audio();
-  }
+	v |= ~ciaadra; /* output is high when pin's direction is input */
+	led2 = (v & 2) ? 0 : 1;
+	if (led2 != led) {
+		calc_led(led);
+		led = led2;
+		led_old_brightness = -1;
+	}
 }
 
 static void bfe001_change (void)
@@ -1094,36 +1139,39 @@ addrbank cia_bank = {
 	ABFLAG_IO | ABFLAG_CIA, S_READ, S_WRITE, NULL, 0x3f01, 0xbfc000
 };
 
-static void cia_wait_pre (void)
+static void cia_wait_pre(void)
 {
 	if (currprefs.cachesize)
 		return;
 
-  int div = (get_cycles () - eventtab[ev_cia].oldcycles) % DIV10;
-  int cycles;
+	int div = (get_cycles() - eventtab[ev_cia].oldcycles) % DIV10;
+	int cycles;
 
-  if (div >= DIV10 * ECLOCK_DATA_CYCLE / 10) {
-  	cycles = DIV10 - div;
-	  cycles += DIV10 * ECLOCK_DATA_CYCLE / 10;
-	} else if (div) {
+	if (div >= DIV10 * ECLOCK_DATA_CYCLE / 10) {
+		cycles = DIV10 - div;
+		cycles += DIV10 * ECLOCK_DATA_CYCLE / 10;
+	}
+	else if (div) {
 		cycles = DIV10 + DIV10 * ECLOCK_DATA_CYCLE / 10 - div;
-  } else {
-	  cycles = DIV10 * ECLOCK_DATA_CYCLE / 10 - div;
-  }
+	}
+	else {
+		cycles = DIV10 * ECLOCK_DATA_CYCLE / 10 - div;
+	}
 
 	if (cycles) {
-  	do_cycles (cycles);
-  }
+		do_cycles(cycles);
+	}
 }
 
-static void cia_wait_post (uae_u32 value)
+static void cia_wait_post(uae_u32 value)
 {
 	if (currprefs.cachesize) {
-		do_cycles (8 * CYCLE_UNIT / 2);
-	} else {
+		do_cycles(8 * CYCLE_UNIT / 2);
+	}
+	else {
 		int c = 6 * CYCLE_UNIT / 2;
-		do_cycles (c);
-  }
+		do_cycles(c);
+	}
 }
 
 // Gayle or Fat Gary does not enable CIA /CS lines if both CIAs are selected

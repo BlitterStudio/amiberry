@@ -112,10 +112,10 @@ struct ev2 eventtab2[ev2_max];
 
 int vpos;
 static int vpos_count, vpos_count_diff;
-static int lof_store; // real bit in custom registers
+int lof_store; // real bit in custom registers
 static int lof_current; // what display device thinks
 static bool lof_lastline, lof_prev_lastline;
-static const int lol = 0;
+static int lol;
 static int next_lineno, prev_lineno;
 static int lof_changed = 0, lof_changing = 0, interlace_changed = 0;
 static int lof_changed_previous_field;
@@ -3518,37 +3518,57 @@ STATIC_INLINE int GETHPOS (void)
 #define HPOS_OFFSET (CPU_ACCURATE ? HPOS_SHIFT : 0)
 #define VPOS_INC_DELAY (HPOS_OFFSET ? 1 : 0)
 
-STATIC_INLINE uae_u16 VPOSR (void)
+STATIC_INLINE uae_u16 VPOSR(void)
 {
-  unsigned int csbit = 0;
-	uae_u16 vp = GETVPOS ();
-	uae_u16 hp = GETHPOS ();
+	unsigned int csbit = 0;
+	uae_u16 vp = GETVPOS();
+	uae_u16 hp = GETHPOS();
+	int lof = lof_store;
 
+	if (vp + 1 == maxvpos + lof_store && (hp == maxhpos - 1 || hp == maxhpos - 2)) {
+		// lof toggles 2 cycles before maxhpos, so do fake toggle here.
+		if ((bplcon0 & 4) && CPU_ACCURATE)
+			lof = lof ? 0 : 1;
+	}
 	if (hp + HPOS_OFFSET >= maxhpos + VPOS_INC_DELAY) {
 		vp++;
 		if (vp >= maxvpos + lof_store)
 			vp = 0;
 	}
-  vp = (vp >> 8) & 7;
+	vp = (vp >> 8) & 7;
 
-	csbit |= (aga_mode) ? 0x2300 : 0;
-	csbit |= (currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? 0x2000 : 0;
-	if (currprefs.ntscmode)
-	  csbit |= 0x1000;
+	if (currprefs.cs_agnusrev >= 0) {
+		csbit |= currprefs.cs_agnusrev << 8;
+	}
+	else {
+#ifdef AGA
+		csbit |= (currprefs.chipset_mask & CSMASK_AGA) ? 0x2300 : 0;
+#endif
+		csbit |= (currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? 0x2000 : 0;
+		if (currprefs.ntscmode)
+			csbit |= 0x1000;
+	}
 
-  if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
-    vp &= 1;
-  vp |= (lof_store ? 0x8000 : 0) | csbit;
-  return vp;
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+		vp &= 1;
+	vp |= (lof ? 0x8000 : 0) | csbit;
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS)
+		vp |= lol ? 0x80 : 0;
+	return vp;
 }
 
-static void VPOSW (uae_u16 v)
+static void VPOSW(uae_u16 v)
 {
 	int oldvpos = vpos;
 	if (lof_store != ((v & 0x8000) ? 1 : 0)) {
-  	lof_store = (v & 0x8000) ? 1 : 0;
+		lof_store = (v & 0x8000) ? 1 : 0;
 		lof_changing = lof_store ? 1 : -1;
-  }
+	}
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
+		lol = (v & 0x0080) ? 1 : 0;
+		if (!islinetoggle())
+			lol = 0;
+	}
 	if (lof_changing)
 		return;
 	vpos &= 0x00ff;
@@ -3579,30 +3599,30 @@ static void VHPOSW (uae_u16 v)
 	}
 }
 
-STATIC_INLINE uae_u16 VHPOSR (void)
+STATIC_INLINE uae_u16 VHPOSR(void)
 {
-	uae_u16 vp = GETVPOS ();
-	uae_u16 hp = GETHPOS ();
+	uae_u16 vp = GETVPOS();
+	uae_u16 hp = GETHPOS();
 
 	hp += HPOS_OFFSET;
-  if (hp >= maxhpos) {
-   	hp -= maxhpos;
+	if (hp >= maxhpos) {
+		hp -= maxhpos;
 		// vpos increases when hp==1, not when hp==0
 		if (hp >= VPOS_INC_DELAY) {
-	    vp++;
-	    if (vp >= maxvpos + lof_store)
-	      vp = 0;
-    }
+			vp++;
+			if (vp >= maxvpos + lof_store)
+				vp = 0;
+		}
 	}
 	if (HPOS_OFFSET) {
-	  hp += 1;
-	  if (hp >= maxhpos)
-		  hp -= maxhpos;
+		hp += 1;
+		if (hp >= maxhpos)
+			hp -= maxhpos;
 	}
 
-  vp <<= 8;
-  vp |= hp;
-  return vp;
+	vp <<= 8;
+	vp |= hp;
+	return vp;
 }
 
 static int test_copper_dangerous (unsigned int address)
@@ -5662,6 +5682,9 @@ static void fpscounter(bool frameok)
 		gui_data.fps = fps;
 		gui_data.idle = (int)idle;
 		gui_data.fps_color = frameok ? 0 : 1;
+		if ((timeframes & 15) == 0) {
+			gui_fps(fps, (int)idle, frameok ? 0 : 1);
+		}
 	}
 }
 
@@ -5699,7 +5722,7 @@ static void vsync_handler_pre(void)
 	// GUI check here, must be after frame rendering
 	devices_vsync_pre();
 
-	if (!nodraw() || (picasso_on && picasso_rendered))
+	if (!nodraw() || picasso_on)
 		fpscounter(frameok);
 
 	handle_events();

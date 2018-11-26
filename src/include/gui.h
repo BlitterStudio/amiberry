@@ -20,6 +20,7 @@ extern void gui_led (int, int, int);
 STATIC_INLINE void gui_led (int led, int on, int brightness) { }
 #endif
 extern void gui_filename (int, const TCHAR *);
+extern void gui_fps(int fps, int idle, int color);
 extern void gui_flicker_led (int, int, int);
 extern void gui_display (int shortcut);
 

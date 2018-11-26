@@ -82,14 +82,15 @@ static const TCHAR* cartsmode[] = {_T("none"), _T("hrtmon"), nullptr};
 static const TCHAR* idemode[] = {_T("none"), _T("a600/a1200"), _T("a4000"), nullptr};
 static const TCHAR* rtctype[] = {_T("none"), _T("MSM6242B"), _T("RP5C01A"), _T("MSM6242B_A2000"), nullptr};
 static const TCHAR* ciaatodmode[] = {_T("vblank"), _T("50hz"), _T("60hz"), nullptr};
-static const TCHAR* cscompa[] = {
-	_T("-"), _T("Generic"), _T("CD32"), _T("A500"), _T("A500+"), _T("A600"),
-	_T("A1200"), _T("A2000"), _T("A4000"),
-	nullptr
+static const TCHAR *cscompa[] = {
+	_T("-"), _T("Generic"), _T("CDTV"), _T("CDTV-CR"), _T("CD32"), _T("A500"), _T("A500+"), _T("A600"),
+	_T("A1000"), _T("A1200"), _T("A2000"), _T("A3000"), _T("A3000T"), _T("A4000"), _T("A4000T"),
+	_T("Velvet"), _T("Casablanca"), _T("DraCo"),
+	NULL
 };
-static const TCHAR* qsmodes[] = {
-	_T("A500"), _T("A500+"), _T("A600"), _T("A1200"), _T("A4000"), _T("CD32"), nullptr
-};
+static const TCHAR *qsmodes[] = {
+	_T("A500"), _T("A500+"), _T("A600"), _T("A1000"), _T("A1200"), _T("A3000"), _T("A4000"), _T(""), _T("CD32"), _T("CDTV"), _T("CDTV-CR"), _T("ARCADIA"), NULL };
+/* 3-state boolean! */
 static const TCHAR *fullmodes[] = { _T("false"), _T("true"), /* "FILE_NOT_FOUND", */ _T("fullwindow"), nullptr };
 static const TCHAR* abspointers[] = {_T("none"), _T("mousehack"), _T("tablet"), nullptr};
 static const TCHAR* joyportmodes[] = {
@@ -101,6 +102,11 @@ static const TCHAR* cdmodes[] = {_T("disabled"), _T(""), _T("image"), _T("ioctl"
 static const TCHAR* cdconmodes[] = {_T(""), _T("uae"), _T("ide"), _T("scsi"), _T("cdtv"), _T("cd32"), nullptr};
 static const TCHAR* waitblits[] = {_T("disabled"), _T("automatic"), _T("noidleonly"), _T("always"), nullptr};
 static const TCHAR* autoext2[] = {_T("disabled"), _T("copy"), _T("replace"), nullptr};
+static const TCHAR *leds[] = { _T("power"), _T("df0"), _T("df1"), _T("df2"), _T("df3"), _T("hd"), _T("cd"), _T("fps"), _T("cpu"), _T("snd"), _T("md"), _T("net"), 0 };
+static const int leds_order[] = { 3, 6, 7, 8, 9, 4, 5, 2, 1, 0, 9, 10 };
+static const TCHAR *lacer[] = { _T("off"), _T("i"), _T("p"), 0 };
+/* another boolean to choice update.. */
+static const TCHAR *cycleexact[] = { _T("false"), _T("memory"), _T("true"), 0 };
 static const TCHAR *unmapped[] = { _T("floating"), _T("zero"), _T("one"), 0 };
 static const TCHAR *ciatype[] = { _T("default"), _T("391078-01"), 0 };
 
@@ -1073,13 +1079,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write(f, _T("config_version"), _T("%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 
 	for (sl = p->all_lines; sl; sl = sl->next)
-	{
 		if (sl->unknown)
-		{
 			if (sl->option)
 				cfgfile_write_str(f, sl->option, sl->value);
-		}
-	}
 
 	_stprintf(tmp, _T("%s.rom_path"), TARGET_NAME);
 	cfgfile_write_str(f, tmp, p->path_rom);
@@ -1495,6 +1497,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	}
 	cfgfile_write(f, _T("z3mem_start"), _T("0x%x"), p->z3autoconfig_start);
 	cfgfile_write(f, _T("bogomem_size"), _T("%d"), p->bogomem_size / 0x40000);
+	cfgfile_write_bool(f, _T("gfxcard_hardware_vblank"), p->rtg_hardwareinterrupt);
+	cfgfile_write_bool(f, _T("gfxcard_hardware_sprite"), p->rtg_hardwaresprite);
+	cfgfile_write_bool(f, _T("gfxcard_multithread"), p->rtg_multithread);
 	for (int i = 0; i < MAX_RTG_BOARDS; i++)
 	{
 		struct rtgboardconfig* rbc = &p->rtgboards[i];
@@ -3571,14 +3576,34 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 	if (cfgfile_yesno(option, value, _T("immediate_blits"), &p->immediate_blits)
 		|| cfgfile_yesno(option, value, _T("fast_copper"), &p->fast_copper)
 		|| cfgfile_yesno(option, value, _T("fpu_no_unimplemented"), &p->fpu_no_unimplemented)
+		|| cfgfile_yesno(option, value, _T("cpu_no_unimplemented"), &p->int_no_unimplemented)
 		|| cfgfile_yesno(option, value, _T("cd32cd"), &p->cs_cd32cd)
 		|| cfgfile_yesno(option, value, _T("cd32c2p"), &p->cs_cd32c2p)
 		|| cfgfile_yesno(option, value, _T("cd32nvram"), &p->cs_cd32nvram)
+		|| cfgfile_yesno(option, value, _T("cdtvcd"), &p->cs_cdtvcd)
+		|| cfgfile_yesno(option, value, _T("cdtv-cr"), &p->cs_cdtvcr)
+		|| cfgfile_yesno(option, value, _T("cdtvram"), &p->cs_cdtvram)
+		|| cfgfile_yesno(option, value, _T("a1000ram"), &p->cs_a1000ram)
 		|| cfgfile_yesno(option, value, _T("cia_overlay"), &p->cs_ciaoverlay)
+		|| cfgfile_yesno(option, value, _T("bogomem_fast"), &p->cs_slowmemisfast)
 		|| cfgfile_yesno(option, value, _T("ksmirror_e0"), &p->cs_ksmirror_e0)
 		|| cfgfile_yesno(option, value, _T("ksmirror_a8"), &p->cs_ksmirror_a8)
+		|| cfgfile_yesno(option, value, _T("resetwarning"), &p->cs_resetwarning)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
+		|| cfgfile_yesno(option, value, _T("denise_noehb"), &p->cs_denisenoehb)
+		|| cfgfile_yesno(option, value, _T("ics_agnus"), &p->cs_dipagnus)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
+		|| cfgfile_yesno(option, value, _T("color_burst"), &p->cs_color_burst)
+		|| cfgfile_yesno(option, value, _T("toshiba_gary"), &p->cs_toshibagary)
+		|| cfgfile_yesno(option, value, _T("rom_is_slow"), &p->cs_romisslow)
+		|| cfgfile_yesno(option, value, _T("1mchipjumper"), &p->cs_1mchipjumper)
+		|| cfgfile_yesno(option, value, _T("agnus_bltbusybug"), &p->cs_agnusbltbusybug)
+		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_vblank"), &p->rtg_hardwareinterrupt)
+		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_sprite"), &p->rtg_hardwaresprite)
+		|| cfgfile_yesno(option, value, _T("gfxcard_multithread"), &p->rtg_multithread)
+		|| cfgfile_yesno(option, value, _T("synchronize_clock"), &p->tod_hack)
+		|| cfgfile_yesno(option, value, _T("keyboard_connected"), &p->keyboard_connected)
+		|| cfgfile_yesno(option, value, _T("lightpen_crosshair"), &p->lightpen_crosshair)
 
 		|| cfgfile_yesno(option, value, _T("ntsc"), &p->ntscmode)
 		|| cfgfile_yesno(option, value, _T("cpu_compatible"), &p->cpu_compatible)
