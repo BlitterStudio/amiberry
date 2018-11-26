@@ -308,19 +308,9 @@ void alloc_colors_rgb(int rw, int gw, int bw, int rs, int gs, int bs, int aw, in
 	int bpp = rw + gw + bw + aw;
 	int i;
 	for (i = 0; i < 256; i++) {
-		int j;
-
-		if (currprefs.gfx_blackerthanblack) {
-			j = i * 15 / 16 + 15;
-		}
-		else {
-			j = i;
-		}
-		j += 256;
-
-		rc[i] = doColor(gamma_value[j][0], rw, rs) | doAlpha(alpha, aw, as);
-		gc[i] = doColor(gamma_value[j][1], gw, gs) | doAlpha(alpha, aw, as);
-		bc[i] = doColor(gamma_value[j][2], bw, bs) | doAlpha(alpha, aw, as);
+		rc[i] = doColor(i, rw, rs);
+		gc[i] = doColor(i, gw, gs);
+		bc[i] = doColor(i, bw, bs);
 		if (byte_swap) {
 			if (bpp <= 16) {
 				rc[i] = bswap_16(rc[i]);
@@ -348,16 +338,16 @@ void alloc_colors64k(int rw, int gw, int bw, int rs, int gs, int bs, int aw, int
 	int bpp = rw + gw + bw;
 	int i, j;
 
-	video_calc_gammatable();
+	//video_calc_gammatable();
 	j = 256;
 	for (i = 0; i < 4096; i++) {
 		int r = ((i >> 8) << 4) | (i >> 8);
 		int g = (((i >> 4) & 0xf) << 4) | ((i >> 4) & 0x0f);
 		int b = ((i & 0xf) << 4) | (i & 0x0f);
-		r = gamma_value[r + j][0];
-		g = gamma_value[g + j][1];
-		b = gamma_value[b + j][2];
-		xcolors[i] = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs) | doAlpha(alpha, aw, as);
+		//r = gamma_value[r + j][0];
+		//g = gamma_value[g + j][1];
+		//b = gamma_value[b + j][2];
+		xcolors[i] = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs);
 		if (byte_swap) {
 			if (bpp <= 16) {
 				xcolors[i] = bswap_16(xcolors[i]);
