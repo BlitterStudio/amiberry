@@ -136,7 +136,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			{
 				on = gui_data.hd;
 				on_rgb = on == 2 ? (bpp == 2 ? 0xcc0000 : 0x0000cc) : (bpp == 2 ? 0x0000cc : 0xcc0000);
-				off_rgb = 0x000033;
+				off_rgb = bpp == 2 ? 0x000033 : 0x330000;
 				num1 = -1;
 				num2 = 11;
 				num3 = 12;
