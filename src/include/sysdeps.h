@@ -43,7 +43,7 @@ using namespace std;
 #if defined(__x86_64__) || defined(_M_AMD64)
 #define CPU_x86_64 1
 #define CPU_64_BIT 1
-#elif defined(__i386__) || defined(_M_IX86)
+#elif defined(__i386__) || defined(_M_IX86) && !defined(__arm__)
 #define CPU_i386 1
 #elif defined(__arm__) || defined(_M_ARM)
 #define CPU_arm 1
