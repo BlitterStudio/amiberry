@@ -87,9 +87,9 @@ STATIC_INLINE bool ce_is_borderntrans(uae_u8 data)
 }
 
 struct color_entry {
-  uae_u16 color_regs_ecs[32];
-  xcolnr acolors[256];
-  uae_u32 color_regs_aga[256];
+	uae_u16 color_regs_ecs[32];
+	xcolnr acolors[256];
+	uae_u32 color_regs_aga[256];
 	uae_u8 extra;
 };
 
@@ -127,6 +127,20 @@ STATIC_INLINE void color_reg_set (struct color_entry *ce, int c, int v)
 		ce->color_regs_aga[c] = v;
 	else
 		ce->color_regs_ecs[c] = v;
+}
+
+STATIC_INLINE int color_reg_cmp(struct color_entry *ce1, struct color_entry *ce2)
+{
+	int v;
+#ifdef AGA
+	if (aga_mode)
+		v = memcmp(ce1->color_regs_aga, ce2->color_regs_aga, sizeof(uae_u32) * 256);
+	else
+#endif
+		v = memcmp(ce1->color_regs_ecs, ce2->color_regs_ecs, sizeof(uae_u16) * 32);
+	if (!v && ce1->extra == ce2->extra)
+		return 0;
+	return 1;
 }
 
 /* ugly copy hack, is there better solution? */
@@ -174,42 +188,46 @@ struct sprite_entry
   bool has_attached;
 };
 
-union sps_union {
-	uae_u8 bytes[2 * MAX_SPR_PIXELS];
-	uae_u32 words[2 * MAX_SPR_PIXELS / 4];
+struct sprite_stb
+{
+	/* Eight bits for every pixel for attachment
+	 * Another eight for 64/32 status
+	 */
+	uae_u8 stb[2 * MAX_SPR_PIXELS];
+	uae_u16 stbfm[2 * MAX_SPR_PIXELS];
 };
-extern union sps_union spixstate;
+extern struct sprite_stb spixstate;
 
 extern uae_u16 spixels[MAX_SPR_PIXELS * 2];
 
 /* Way too much... */
 #define MAX_REG_CHANGE ((MAXVPOS + 1) * MAXHPOS)
-#define COLOR_TABLE_SIZE (MAXVPOS + 2) * 2
 
-extern struct color_entry curr_color_tables[COLOR_TABLE_SIZE];
+extern struct color_entry *curr_color_tables, *prev_color_tables;
 
-extern struct sprite_entry *curr_sprite_entries;
-extern struct color_change *curr_color_changes;
-extern struct draw_info curr_drawinfo[2 * (MAXVPOS + 2) + 1];
+extern struct sprite_entry *curr_sprite_entries, *prev_sprite_entries;
+extern struct color_change *curr_color_changes, *prev_color_changes;
+extern struct draw_info *curr_drawinfo, *prev_drawinfo;
 
 /* struct decision contains things we save across drawing frames for
  * comparison (smart update stuff). */
 struct decision {
-  /* Records the leftmost access of BPL1DAT.  */
-  int plfleft, plfright, plflinelen;
-  /* Display window: native coordinates, depend on lores state.  */
-  int diwfirstword, diwlastword;
-  int ctable;
+	/* Records the leftmost access of BPL1DAT.  */
+	int plfleft, plfright, plflinelen;
+	/* Display window: native coordinates, depend on lores state.  */
+	int diwfirstword, diwlastword;
+	int ctable;
 
-  uae_u16 bplcon0, bplcon2;
+	uae_u16 bplcon0, bplcon2;
 #ifdef AGA
-  uae_u16 bplcon3, bplcon4;
+	uae_u16 bplcon3, bplcon4;
+	uae_u16 fmode;
 #endif
-  uae_u8 nr_planes;
-  uae_u8 bplres;
+	uae_u8 nr_planes;
+	uae_u8 bplres;
 	bool ehb_seen;
-  bool ham_seen;
-  bool ham_at_start;
+	bool ham_seen;
+	bool ham_at_start;
 #ifdef AGA
 	bool bordersprite_seen;
 	bool xor_seen;
@@ -253,7 +271,7 @@ enum nln_how {
 	nln_lower_black_always
 };
 
-extern void hsync_record_line_state (int lineno);
+extern void hsync_record_line_state(int lineno, enum nln_how, int changed);
 extern void halt_draw_frame(void);
 extern void vsync_handle_redraw (void);
 extern bool vsync_handle_check (void);
@@ -265,6 +283,8 @@ extern void putpixel(uae_u8* buf, uae_u8* genlockbuf, int bpp, int x, xcolnr c8,
 extern void check_prefs_picasso(void);
 
 /* Finally, stuff that shouldn't really be shared.  */
+
+extern int thisframe_first_drawn_line, thisframe_last_drawn_line;
 
 #define IHF_SCROLLLOCK 0
 #define IHF_QUIT_PROGRAM 1

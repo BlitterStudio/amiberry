@@ -114,6 +114,7 @@ extern int maxvpos, maxvpos_nom, maxvpos_display;
 extern int minfirstline;
 extern double vblank_hz, fake_vblank_hz;
 extern double hblank_hz;
+extern int doublescan;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002
