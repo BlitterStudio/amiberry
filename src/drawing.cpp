@@ -2298,7 +2298,7 @@ void init_row_map(void)
 {
 	static uae_u8 *oldbufmem;
 	static int oldheight, oldpitch;
-	static bool oldgenlock;
+	//static bool oldgenlock;
 	int i, j;
 
 	if (gfxvidinfo.drawbuffer.outheight > max_uae_height) {
