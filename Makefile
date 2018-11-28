@@ -383,6 +383,7 @@ OBJS =	\
 	src/osdep/gui/PanelAbout.o \
 	src/osdep/gui/PanelPaths.o \
 	src/osdep/gui/PanelQuickstart.o \
+	src/osdep/gui/PanelBooter.o \
 	src/osdep/gui/PanelConfig.o \
 	src/osdep/gui/PanelCPU.o \
 	src/osdep/gui/PanelChipset.o \

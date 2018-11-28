@@ -74,6 +74,11 @@ void ExitPanelQuickstart(void);
 void RefreshPanelQuickstart(void);
 bool HelpPanelQuickstart(std::vector<std::string> &helptext);
 
+void InitPanelBooter(const struct _ConfigCategory& category);
+void ExitPanelBooter(void);
+void RefreshPanelBooter(void);
+bool HelpPanelBooter(std::vector<std::string> &helptext);
+
 void InitPanelConfig(const struct _ConfigCategory& category);
 void ExitPanelConfig(void);
 void RefreshPanelConfig(void);
