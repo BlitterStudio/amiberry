@@ -98,6 +98,8 @@
       <LibrarySearchDirectories>=/usr/local/lib;../../guisan-dev/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
+      <CustomPostLinkTool>C:\SysGCC\raspberryStretch\bin\arm-linux-gnueabihf-strip</CustomPostLinkTool>
+      <CustomPostLinkArguments>$@</CustomPostLinkArguments>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
@@ -113,6 +115,8 @@
       <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;bcm_host;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
+      <CustomPostLinkTool>C:\SysGCC\raspberryStretch\bin\arm-linux-gnueabihf-strip</CustomPostLinkTool>
+      <CustomPostLinkArguments>$@</CustomPostLinkArguments>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

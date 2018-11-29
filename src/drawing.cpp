@@ -51,7 +51,6 @@
 #include "devices.h"
 
 bool programmedmode = false;
-int doublescan = 0;
 
 typedef enum
 {
@@ -151,8 +150,9 @@ struct vidbuf_description gfxvidinfo;
 xcolnr xcolors[4096];
 
 struct spritepixelsbuf {
-	uae_u8 attach;
+	bool attach;
 	uae_u8 stdata;
+	uae_u16 stfmdata;
 	uae_u16 data;
 };
 static struct spritepixelsbuf spritepixels_buffer[MAX_PIXELS_PER_LINE];
@@ -199,8 +199,7 @@ uae_u16 *spixels;
 uae_u16 spixels[2 * MAX_SPR_PIXELS];
 #endif
 
-/* Eight bits for every pixel.  */
-union sps_union spixstate;
+struct sprite_stb spixstate;
 
 static uae_u32 ham_linebuf[MAX_PIXELS_PER_LINE * 2];
 static uae_u8 *real_bplpt[8];
@@ -1893,13 +1892,15 @@ static void gen_pfield_tables(void)
 STATIC_INLINE void draw_sprites_1(struct sprite_entry *e, int dualpf, int has_attach)
 {
 	uae_u16 *buf = spixels + e->first_pixel;
-	uae_u8 *stbuf = spixstate.bytes + e->first_pixel;
+	uae_u8 *stbuf = spixstate.stb + e->first_pixel;
+	uae_u16 *stfmbuf = spixstate.stbfm + e->first_pixel;
 	int spr_pos, pos;
 	int epos = e->pos;
 	int emax = e->max;
 
 	buf -= epos;
 	stbuf -= epos;
+	stfmbuf -= epos;
 
 	spr_pos = epos + ((DIW_DDF_OFFSET - DISPLAY_LEFT_SHIFT) << sprite_buffer_res);
 
@@ -1910,6 +1911,7 @@ STATIC_INLINE void draw_sprites_1(struct sprite_entry *e, int dualpf, int has_at
 		if (spr_pos >= 0 && spr_pos < MAX_PIXELS_PER_LINE) {
 			spritepixels[spr_pos].data = buf[pos];
 			spritepixels[spr_pos].stdata = stbuf[pos];
+			spritepixels[spr_pos].stfmdata = stfmbuf[pos];
 			spritepixels[spr_pos].attach = has_attach;
 		}
 	}
@@ -2296,7 +2298,7 @@ void init_row_map(void)
 {
 	static uae_u8 *oldbufmem;
 	static int oldheight, oldpitch;
-	static bool oldgenlock;
+	//static bool oldgenlock;
 	int i, j;
 
 	if (gfxvidinfo.drawbuffer.outheight > max_uae_height) {
@@ -3373,11 +3375,6 @@ void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
 	}
 #endif
-}
-
-void hsync_record_line_state(int lineno)
-{
-	hsync_record_line_state(lineno, nln_normal, 1);
 }
 
 void notice_resolution_seen(int res, bool lace)

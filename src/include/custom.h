@@ -36,6 +36,7 @@ extern int intlev (void);
 extern void do_copper (void);
 
 extern void notice_new_xcolors (void);
+extern void notice_screen_contents_lost();
 extern void init_row_map (void);
 extern void init_hz_normal (void);
 extern void init_custom (void);
@@ -114,6 +115,7 @@ extern int maxvpos, maxvpos_nom, maxvpos_display;
 extern int minfirstline;
 extern double vblank_hz, fake_vblank_hz;
 extern double hblank_hz;
+extern int doublescan;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002

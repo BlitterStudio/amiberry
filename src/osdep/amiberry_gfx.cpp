@@ -667,6 +667,7 @@ static void open_screen(struct uae_prefs* p)
 	if (screen != nullptr)
 	{
 		InitAmigaVidMode(p);
+		notice_screen_contents_lost();
 		init_row_map();
 	}
 }
