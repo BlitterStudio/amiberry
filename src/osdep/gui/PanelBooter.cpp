@@ -27,9 +27,14 @@
 #include "gui.h"
 #include "gui_handling.h"
 
-TCHAR pick_file[MAX_DPATH];
+#include "fsdb.h"
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+#include <libxml/xmlmemory.h>
 
-// 
+//  DIMITRIS I AM REALLY SORRY - THIS XML READING CODE IS A REPEAT FROM AMIBERRY_WHDBOOTER.CPP
+//    I AM SURE WE CAN OPTIMISE BY SHARING IT IN A HEADER BUT I AM TOO LAZY - DOM
+
 static gcn::Label* lblGameFile;
 static gcn::TextField* txtGameFile;
 static gcn::Button* cmdSetGameFile;
@@ -44,8 +49,44 @@ static gcn::Label* lblCustomOptions;
 static gcn::TextField* txtCustomOptions;
 static gcn::Button* cmdSetCustomOptions;
 
+static gcn::Button* cmdReadDB;
 
-class GameButtonActionListener : public gcn::ActionListener
+
+
+static xmlNode* get_node(xmlNode* node, const char* name)
+{
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), name) == 0)
+			return curr_node->children;
+	}
+	return nullptr;
+}
+
+static bool get_value(xmlNode* node, const char* key, char* value, int max_size)
+{
+	auto result = false;
+
+	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	{
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), key) == 0)
+		{
+			const auto content = xmlNodeGetContent(curr_node);
+			if (content != nullptr)
+			{
+				strncpy(value, reinterpret_cast<char *>(content), max_size);
+				xmlFree(content);
+				result = true;
+			}
+			break;
+		}
+	}
+	return result;
+}
+
+
+
+class BooterActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -58,27 +99,47 @@ public:
 			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Select WHDLoad Game LHA Archive", tmp, filter))
 			{
-				//const auto newrom = new AvailableROM();
-				//extractFileName(tmp, newrom->Name);
-				//removeFileExtension(newrom->Name);
-				  strncpy(pick_file, tmp, MAX_DPATH);
-				//newrom->ROMType = ROMTYPE_KICK;
-				//lstAvailableROMs.push_back(newrom);
+				 //strncpy(pick_file, tmp, MAX_DPATH); 
+                                 
+                            
+                            //	const auto pick_file = my_getfilepart(tmp);
+                            //    TCHAR game_name[MAX_DPATH];
+
                                 
-                                
-				//strncpy(changed_prefs.whdload_file, tmp, sizeof(changed_prefs.whdload_file));
-                                
-                                //whdload_auto_prefs(pick_file);
-				RefreshPanelBooter();
+                               // extractFileName(filepath, last_loaded_config);
+                               // extractFileName(filepath, game_name);
+                           //     removeFileExtension(game_name);
+        
+        
+                                 //const auto pick_file = my_getfilepart(tmp);
+                                 auto pick_file = my_getfilepart(tmp);
+
+                                 txtGameFile->setText(pick_file);
+                                          
+                                 RefreshPanelBooter();
 			}
 			cmdSetGameFile->requestFocus();
 		}
+                else if (actionEvent.getSource() == cmdReadDB)
+		{ 
+                    auto fish = ShowMessage("Some information goes here","","Other information goes here ... ok?? ", "Ok", "");  
+                    cmdReadDB->requestFocus();
+                    
+                    // just some test stuff
+                    // scan the XML for this game
+                    // find the subpath
 
+                    // find all the game options
+                    
+                    // find all the available slaves (put this in dropdown)
+                        // set the default slave
+                        // get the data path option for this slave
+                }
 	}
 };
 
+static BooterActionListener* booterActionListener;
 
-static GameButtonActionListener* gameButtonActionListener;
 
 
 
@@ -91,8 +152,7 @@ void InitPanelBooter(const struct _ConfigCategory& category)
 	//folderButtonActionListener = new FolderButtonActionListener();
         
         
-        gameButtonActionListener = new GameButtonActionListener();
-        
+        booterActionListener = new BooterActionListener();
         
         lblGameFile = new gcn::Label("Name:");
         lblGameFile->setAlignment(gcn::Graphics::RIGHT);
@@ -106,22 +166,22 @@ void InitPanelBooter(const struct _ConfigCategory& category)
 	cmdSetGameFile->setId("SetGameFile");
 	cmdSetGameFile->setSize(SMALL_BUTTON_WIDTH * 4, SMALL_BUTTON_HEIGHT);
 	cmdSetGameFile->setBaseColor(gui_baseCol);
-	cmdSetGameFile->addActionListener(gameButtonActionListener);
+	cmdSetGameFile->addActionListener(booterActionListener);
         
         lblSlaveFile = new gcn::Label("Slave File:");
         lblSlaveFile->setAlignment(gcn::Graphics::RIGHT);
 	txtSlaveFile = new gcn::TextField();
+ 	txtSlaveFile->setId("SlaveFile");
 	txtSlaveFile->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtSlaveFile->setBackgroundColor(colTextboxBackground);
- 	txtSlaveFile->setId("SlaveFile");
         
         lblDataPath = new gcn::Label("Data Path:");
         lblDataPath->setAlignment(gcn::Graphics::RIGHT);    
         
 	txtDataPath = new gcn::TextField();
+ 	txtDataPath->setId("DataPath");
 	txtDataPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtDataPath->setBackgroundColor(colTextboxBackground);
- 	txtDataPath->setId("DataPath");
         
         lblCustomOptions = new gcn::Label("Custom Options:");
         lblCustomOptions->setAlignment(gcn::Graphics::RIGHT);  
@@ -137,6 +197,14 @@ void InitPanelBooter(const struct _ConfigCategory& category)
 	cmdSetCustomOptions->setSize(SMALL_BUTTON_WIDTH * 4, SMALL_BUTTON_HEIGHT);
 	cmdSetCustomOptions->setBaseColor(gui_baseCol);
 	//cmdSetCustomOptions->addActionListener(folderButtonActionListener);
+        
+        
+        cmdReadDB = new gcn::Button("Read XML");
+	cmdReadDB->setId("ReadXML");
+	cmdReadDB->setSize(SMALL_BUTTON_WIDTH * 4, SMALL_BUTTON_HEIGHT);
+	cmdReadDB->setBaseColor(gui_baseCol);
+        cmdReadDB->addActionListener(booterActionListener);      
+        
         
         
         auto button_x = category.panel->getWidth() - 2 * DISTANCE_BORDER - (SMALL_BUTTON_WIDTH * 4);
@@ -161,13 +229,18 @@ void InitPanelBooter(const struct _ConfigCategory& category)
 	yPos += txtCustomOptions->getHeight() + DISTANCE_NEXT_Y;
 
         
+	category.panel->add(cmdReadDB, button_x, yPos);
+        
+
+
+        
 	RefreshPanelBooter();
 }
 
 
 void ExitPanelBooter(void)
 {
-        delete gameButtonActionListener;
+        delete booterActionListener;
         
 }
 

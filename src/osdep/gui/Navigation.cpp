@@ -103,12 +103,12 @@ static NavigationMap navMap[] =
 
 // PanelBooter
 { "GameFile",        "Booter",          "SetGameFile",      "CustomOptions",    "SlaveFile" },
-{ "SetGameFile",     "GameFile",        "Booter",           "SetCustomOptions", "SetCustomOptions" },
 { "SlaveFile",       "Booter",          "Booter",           "GameFile",         "DataPath" },
 { "DataPath",        "Booter",          "Booter",           "SlaveFile",        "CustomOptions" },
 { "CustomOptions",   "Booter",          "SetCustomOptions", "DataPath",         "GameFile" },
-{ "SetCustomOptions","CustomOptions",   "Booter",           "SetGameFile",      "SetGameFile" },
-
+{ "SetGameFile",     "GameFile",        "Booter",           "ReadXML",          "SetCustomOptions" },
+{ "SetCustomOptions","CustomOptions",   "Booter",           "SetGameFile",      "ReadXML" },
+{ "ReadXML",         "Booter",          "Booter",           "SetCustomOptions", "SetGameFile" },
 
 
 //  active            move left         move right        move up           move down
