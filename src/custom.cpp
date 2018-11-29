@@ -3099,7 +3099,7 @@ STATIC_INLINE void finish_decisions(void)
 	dip = curr_drawinfo + next_lineno;
 	dip_old = prev_drawinfo + next_lineno;
 	dp = line_decisions + next_lineno;
-	changed = thisline_changed;
+	changed = thisline_changed | custom_frame_redraw_necessary;
 	if (thisline_decision.plfleft >= 0 && thisline_decision.nr_planes > 0)
 		record_diw_line(thisline_decision.plfleft, diwfirstword, diwlastword);
 
@@ -5946,9 +5946,15 @@ static void vsync_handler_post(void)
 	lof_current = lof_store;
 	if (lof_togglecnt_lace >= LOF_TOGGLES_NEEDED) {
 		interlace_changed = notice_interlace_seen(true);
+		if (interlace_changed) {
+			notice_screen_contents_lost();
+		}
 	}
 	else if (lof_togglecnt_nlace >= LOF_TOGGLES_NEEDED) {
 		interlace_changed = notice_interlace_seen(false);
+		if (interlace_changed) {
+			notice_screen_contents_lost();
+		}
 	}
 	if (lof_changing) {
 		// still same? Trigger change now.

@@ -84,6 +84,8 @@ struct vidbuf_description
 
 extern struct vidbuf_description gfxvidinfo;
 
+extern int custom_frame_redraw_necessary;
+
 struct amigadisplay
 {
 	bool picasso_requested_on;
