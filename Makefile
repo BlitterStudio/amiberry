@@ -195,7 +195,7 @@ all: guisan $(PROG)
 SDL_CFLAGS := $(shell sdl2-config --cflags)
 SDL_LDFLAGS := $(shell sdl2-config --libs)
 
-CPPFLAGS += $(SDL_CFLAGS) -Iguisan-dev/include
+export CPPFLAGS += $(SDL_CFLAGS) -Iguisan-dev/include
 LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
 endif
 
@@ -241,7 +241,7 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 
 ASFLAGS += $(CPU_FLAGS) -falign-functions=16
 
-export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
+export CFLAGS += $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
 export CXXFLAGS += $(CFLAGS)
 
 C_OBJS= \
