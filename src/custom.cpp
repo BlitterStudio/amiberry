@@ -2737,43 +2737,43 @@ static void do_sprite_collisions (void)
   }
 }
 
-static void record_sprite_1 (int sprxp, uae_u16 *buf, uae_u32 datab, int num, int dbl,
-  unsigned int mask, int do_collisions, uae_u32 collision_mask)
+static void record_sprite_1(int sprxp, uae_u16 *buf, uae_u32 datab, int num, int dbl,
+	unsigned int mask, int do_collisions, uae_u32 collision_mask)
 {
 	int j = 0;
 	while (datab) {
-	  unsigned int col = 0;
-    unsigned int coltmp = 0;
-		
-	  if ((sprxp >= sprite_minx && sprxp < sprite_maxx) || (bplcon3 & 2))
-      col = (datab & 3) << (2 * num);
+		unsigned int col = 0;
+		unsigned int coltmp = 0;
+
+		if ((sprxp >= sprite_minx && sprxp < sprite_maxx) || (bplcon3 & 2))
+			col = (datab & 3) << (2 * num);
 		if ((j & mask) == 0) {
- 	    unsigned int tmp = (*buf) | col;
+			unsigned int tmp = (*buf) | col;
 			*buf++ = tmp;
-	    if (do_collisions)
-		    coltmp |= tmp;
-	    sprxp++;
-    }
-	  if (dbl > 0) {
-    	unsigned int tmp = (*buf) | col;
+			if (do_collisions)
+				coltmp |= tmp;
+			sprxp++;
+		}
+		if (dbl > 0) {
+			unsigned int tmp = (*buf) | col;
 			*buf++ = tmp;
-	    if (do_collisions)
-    		coltmp |= tmp;
-	    sprxp++;
-	  }
-	  if (dbl > 1) {
-	    unsigned int tmp;
-	    tmp = (*buf) | col;
-	    *buf++ = tmp;
-	    if (do_collisions)
-		    coltmp |= tmp;
-	    tmp = (*buf) | col;
-	    *buf++ = tmp;
-	    if (do_collisions)
-		    coltmp |= tmp;
-	    sprxp++;
-	    sprxp++;
-    }
+			if (do_collisions)
+				coltmp |= tmp;
+			sprxp++;
+		}
+		if (dbl > 1) {
+			unsigned int tmp;
+			tmp = (*buf) | col;
+			*buf++ = tmp;
+			if (do_collisions)
+				coltmp |= tmp;
+			tmp = (*buf) | col;
+			*buf++ = tmp;
+			if (do_collisions)
+				coltmp |= tmp;
+			sprxp++;
+			sprxp++;
+		}
 		j++;
 		datab >>= 2;
 		if (do_collisions) {
@@ -4985,28 +4985,28 @@ static int customdelay[]= {
 	- Write word from new copper pointer to 8C
 */
 
-static void update_copper (int until_hpos)
+static void update_copper(int until_hpos)
 {
 	int vp = vpos & (((cop_state.i2 >> 8) & 0x7F) | 0x80);
 	int c_hpos = cop_state.hpos;
-	
-  if (nocustom()) {
-    eventtab[ev_copper].active = 0;
-  	return;
-  }
 
-  if(currprefs.fast_copper) {
-  	if (eventtab[ev_copper].active) {
-      eventtab[ev_copper].active = 0;
-  		return;
-    }
-  }
+	if (nocustom()) {
+		eventtab[ev_copper].active = 0;
+		return;
+	}
+
+	if (currprefs.fast_copper) {
+		if (eventtab[ev_copper].active) {
+			eventtab[ev_copper].active = 0;
+			return;
+		}
+	}
 	
-  if (cop_state.state == COP_wait && vp < cop_state.vcmp) {
- 	  eventtab[ev_copper].active = 0;
-	 	copper_enabled_thisline = 0;
-	  cop_state.state = COP_stop;
-	  unset_special(SPCFLAG_COPPER);
+	if (cop_state.state == COP_wait && vp < cop_state.vcmp) {
+		eventtab[ev_copper].active = 0;
+		copper_enabled_thisline = 0;
+		cop_state.state = COP_stop;
+		unset_special(SPCFLAG_COPPER);
 		return;
 	}
 	
@@ -5028,54 +5028,55 @@ static void update_copper (int until_hpos)
 		// bitplane only, don't want blitter to steal our cycles.
 		decide_fetch (c_hpos);
 
-	  if (cop_state.movedelay) { // cop_state.movedelay is 0 or 1
-	    cop_state.movedelay = 0;
-      custom_wput_copper (c_hpos, cop_state.moveaddr, cop_state.movedata, 0);
-	    if (! copper_enabled_thisline)
-	      goto out;
-	  }
+		if (cop_state.movedelay) { // cop_state.movedelay is 0 or 1
+			cop_state.movedelay = 0;
+			custom_wput_copper(c_hpos, cop_state.moveaddr, cop_state.movedata, 0);
+			if (!copper_enabled_thisline)
+				goto out;
+		}
 
 		if ((c_hpos == maxhpos - 3) && (maxhpos & 1))
 			c_hpos += 1;
 		else
-		  c_hpos += 2;
+			c_hpos += 2;
 
-		switch (cop_state.state) 
-    {
-    	case COP_wait_in2:
-  	    if (copper_cant_read (old_hpos))
-      		continue;
-  	    cop_state.state = COP_wait1;
-  	    break;
-    	case COP_skip_in2:
-  	    if (copper_cant_read (old_hpos))
-      		continue;
-  	    cop_state.state = COP_skip1;
-			  break;
+		switch (cop_state.state)
+		{
+		case COP_wait_in2:
+			if (copper_cant_read(old_hpos))
+				continue;
+			cop_state.state = COP_wait1;
+			break;
+		case COP_skip_in2:
+			if (copper_cant_read(old_hpos))
+				continue;
+			cop_state.state = COP_skip1;
+			break;
 
-		  case COP_strobe_extra:
-			  // Wait 1 copper cycle doing nothing
-			  cop_state.state = COP_strobe_delay1;
-			  break;
-    	case COP_strobe_delay1:
-			  // First cycle after COPJMP is just like normal first read cycle
-			  // Cycle is used and needs to be free.
-			  if (copper_cant_read (old_hpos))
-				  continue;
-			  if (old_hpos == maxhpos - 2) {
-				  // if COP_strobe_delay2 would cross scanlines (positioned immediately
-				  // after first strobe/refresh slot) it will disappear!
-				  cop_state.state = COP_read1;
-				  if (cop_state.strobe == 1)
-					  cop_state.ip = cop1lc;
-				  else
-					  cop_state.ip = cop2lc;
-				  cop_state.strobe = 0;
-			  } else {
-    	    cop_state.state = COP_strobe_delay2;
-    			cop_state.ip += 2;
-        }
-  	    break;
+		case COP_strobe_extra:
+			// Wait 1 copper cycle doing nothing
+			cop_state.state = COP_strobe_delay1;
+			break;
+		case COP_strobe_delay1:
+			// First cycle after COPJMP is just like normal first read cycle
+			// Cycle is used and needs to be free.
+			if (copper_cant_read(old_hpos))
+				continue;
+			if (old_hpos == maxhpos - 2) {
+				// if COP_strobe_delay2 would cross scanlines (positioned immediately
+				// after first strobe/refresh slot) it will disappear!
+				cop_state.state = COP_read1;
+				if (cop_state.strobe == 1)
+					cop_state.ip = cop1lc;
+				else
+					cop_state.ip = cop2lc;
+				cop_state.strobe = 0;
+			}
+			else {
+				cop_state.state = COP_strobe_delay2;
+				cop_state.ip += 2;
+			}
+			break;
     	case COP_strobe_delay2:
 			  // Second cycle after COPJMP. This is the strange one.
 			  // This cycle does not need to be free
@@ -5094,10 +5095,10 @@ static void update_copper (int until_hpos)
 			  cop_state.state = COP_strobe_delay2x;
 			  break;
 		  case COP_strobe_delay2x:
-			// Second cycle fetches following word and tosses it away.
-			// Cycle can be free and copper won't allocate it.
-			// If Blitter uses this cycle = Copper's PC gets copied to blitter DMA pointer..
-			  if (copper_cant_read (old_hpos))
+			  // Second cycle fetches following word and tosses it away.
+			  // Cycle can be free and copper won't allocate it.
+			  // If Blitter uses this cycle = Copper's PC gets copied to blitter DMA pointer..
+			  if (copper_cant_read(old_hpos))
 				  continue;
 			  cop_state.state = COP_read1;
 			  // Next cycle finally reads from new pointer
@@ -5106,158 +5107,163 @@ static void update_copper (int until_hpos)
 			  else
 				  cop_state.ip = cop2lc;
 			  cop_state.strobe = 0;
-		    break;
-
-		  case COP_start_delay:
-			// cycle after vblank strobe fetches word from old pointer first
-			  if (copper_cant_read (old_hpos))
-				  continue;
-			  cop_state.state = COP_read1;
-			  cop_state.i1 = last_custom_value1 = chipmem_wget_indirect (cop_state.ip);
-  			cop_state.ip = cop1lc;
 			  break;
 
-			case COP_read1:
-  	    if (copper_cant_read (old_hpos))
-      		continue;
-				cop_state.i1 = last_custom_value1 = chipmem_wget_indirect (cop_state.ip);
-				cop_state.ip += 2;
-				cop_state.state = COP_read2;
-				break;
+		  case COP_start_delay:
+			  // cycle after vblank strobe fetches word from old pointer first
+			  if (copper_cant_read(old_hpos))
+				  continue;
+			  cop_state.state = COP_read1;
+			  cop_state.i1 = last_custom_value1 = chipmem_wget_indirect(cop_state.ip);
+			  cop_state.ip = cop1lc;
+			  break;
+
+		  case COP_read1:
+			  if (copper_cant_read(old_hpos))
+				  continue;
+			  cop_state.i1 = last_custom_value1 = chipmem_wget_indirect(cop_state.ip);
+			  cop_state.ip += 2;
+			  cop_state.state = COP_read2;
+			  break;
 				
-			case COP_read2:
-  	    if (copper_cant_read (old_hpos))
-      		continue;
-				cop_state.i2 = last_custom_value1 = chipmem_wget_indirect (cop_state.ip);
-				cop_state.ip += 2;
-				
-				if (cop_state.i1 & 1) { // WAIT or SKIP
-		      cop_state.ignore_next = 0;
-					if (cop_state.i2 & 1)
-						cop_state.state = COP_skip_in2;
-					else
-						cop_state.state = COP_wait_in2;
-				} else { // MOVE
-					unsigned int reg = cop_state.i1 & 0x1FE;
+		  case COP_read2:
+			  if (copper_cant_read(old_hpos))
+				  continue;
+			  cop_state.i2 = last_custom_value1 = chipmem_wget_indirect(cop_state.ip);
+			  cop_state.ip += 2;
+
+			  if (cop_state.i1 & 1) { // WAIT or SKIP
+				  cop_state.ignore_next = 0;
+				  if (cop_state.i2 & 1)
+					  cop_state.state = COP_skip_in2;
+				  else
+					  cop_state.state = COP_wait_in2;
+			  }
+			  else { // MOVE
+				  unsigned int reg = cop_state.i1 & 0x1FE;
 				  uae_u16 data = cop_state.i2;
-					cop_state.state = COP_read1;
-		      test_copper_dangerous (reg);
-		      if (! copper_enabled_thisline)
-    			  goto out; // was "dangerous" register -> copper stopped
+				  cop_state.state = COP_read1;
+				  test_copper_dangerous(reg);
+				  if (!copper_enabled_thisline)
+					  goto out; // was "dangerous" register -> copper stopped
 
-  				if (cop_state.ignore_next) {
-    		    reg = 0x1fe;
-    		    cop_state.ignore_next = 0;
-      		}
+				  if (cop_state.ignore_next) {
+					  reg = 0x1fe;
+					  cop_state.ignore_next = 0;
+				  }
 
-		      if (reg == 0x88) {
-		        cop_state.strobe = 1;
-		        cop_state.state = COP_strobe_delay1;
-		      } else if (reg == 0x8a) {
-		        cop_state.strobe = 2;
-		        cop_state.state = COP_strobe_delay1;
-		      } else {
+				  if (reg == 0x88) {
+					  cop_state.strobe = 1;
+					  cop_state.state = COP_strobe_delay1;
+				  }
+				  else if (reg == 0x8a) {
+					  cop_state.strobe = 2;
+					  cop_state.state = COP_strobe_delay1;
+				  }
+				  else {
 					  // FIX: all copper writes happen 1 cycle later than CPU writes
 					  if (customdelay[reg / 2]) {
 						  cop_state.moveaddr = reg;
 						  cop_state.movedata = data;
 						  cop_state.movedelay = 1;
-					  } else {
-              custom_wput_copper (old_hpos, reg, data, 0);
 					  }
-		      }
-	      }
+					  else {
+						  custom_wput_copper(old_hpos, reg, data, 0);
+					  }
+				  }
+			  }
 			  check_copper_stop();
-				break;
+			  break;
 				
-			case COP_wait1:
-				cop_state.state = COP_wait;
-				
-				cop_state.vcmp = (cop_state.i1 & (cop_state.i2 | 0x8000)) >> 8;
-				cop_state.hcmp = (cop_state.i1 & cop_state.i2 & 0xFE);
-				
-				vp = vpos & (((cop_state.i2 >> 8) & 0x7F) | 0x80);
-				
-	      if (cop_state.i1 == 0xFFFF && cop_state.i2 == 0xFFFE) {
+		  case COP_wait1:
+			  cop_state.state = COP_wait;
+
+			  cop_state.vcmp = (cop_state.i1 & (cop_state.i2 | 0x8000)) >> 8;
+			  cop_state.hcmp = (cop_state.i1 & cop_state.i2 & 0xFE);
+
+			  vp = vpos & (((cop_state.i2 >> 8) & 0x7F) | 0x80);
+
+			  if (cop_state.i1 == 0xFFFF && cop_state.i2 == 0xFFFE) {
 				  cop_state.state = COP_waitforever;
-					copper_enabled_thisline = 0;
-					unset_special (SPCFLAG_COPPER);
-					goto out;
-				}
-				if (vp < cop_state.vcmp) {
-					copper_enabled_thisline = 0;
-					unset_special (SPCFLAG_COPPER);
-					goto out;
-				}
+				  copper_enabled_thisline = 0;
+				  unset_special(SPCFLAG_COPPER);
+				  goto out;
+			  }
+			  if (vp < cop_state.vcmp) {
+				  copper_enabled_thisline = 0;
+				  unset_special(SPCFLAG_COPPER);
+				  goto out;
+			  }
 				
 				/* fall through */
-			case COP_wait:
-			  {
-				  int ch_comp = c_hpos;
-				  if (ch_comp & 1)
-					  ch_comp = 0;
+		  case COP_wait:
+		  {
+			  int ch_comp = c_hpos;
+			  if (ch_comp & 1)
+				  ch_comp = 0;
 
-				/* First handle possible blitter wait
-				 * Must be before following free cycle check
-				 */
-			    if ((cop_state.i2 & 0x8000) == 0) {
-					  decide_blitter(old_hpos);
-				    if (bltstate != BLT_done) {
-					    /* We need to wait for the blitter.  */
-					    cop_state.state = COP_bltwait;
-					    copper_enabled_thisline = 0;
-					    unset_special (SPCFLAG_COPPER);
-					    goto out;
-				    }
-			    }
-				
-    	    if (copper_cant_read (old_hpos))
-        		continue;
-				
-				  hp = ch_comp & (cop_state.i2 & 0xFE);
-	        if (vp == cop_state.vcmp && hp < cop_state.hcmp) {
-					  /* Position not reached yet.  */
-            if(currprefs.fast_copper) {
-    					if ((cop_state.i2 & 0xFE) == 0xFE) {
-    						int wait_finish = cop_state.hcmp - 2;
-    						/* This will leave c_hpos untouched if it's equal to wait_finish.  */
-    						if (wait_finish < c_hpos)
-    							return;
-    						else if (wait_finish <= until_hpos) {
-    							c_hpos = wait_finish;
-    						} else
-    							c_hpos = until_hpos;
-    					}
-    				}
-					  break;
+			  /* First handle possible blitter wait
+			   * Must be before following free cycle check
+			   */
+			  if ((cop_state.i2 & 0x8000) == 0) {
+				  decide_blitter(old_hpos);
+				  if (bltstate != BLT_done) {
+					  /* We need to wait for the blitter.  */
+					  cop_state.state = COP_bltwait;
+					  copper_enabled_thisline = 0;
+					  unset_special(SPCFLAG_COPPER);
+					  goto out;
 				  }
-				  cop_state.state = COP_read1;
 			  }
-				break;
+
+			  if (copper_cant_read(old_hpos))
+				  continue;
+
+			  hp = ch_comp & (cop_state.i2 & 0xFE);
+			  if (vp == cop_state.vcmp && hp < cop_state.hcmp) {
+				  /* Position not reached yet.  */
+				  if (currprefs.fast_copper) {
+					  if ((cop_state.i2 & 0xFE) == 0xFE) {
+						  int wait_finish = cop_state.hcmp - 2;
+						  /* This will leave c_hpos untouched if it's equal to wait_finish.  */
+						  if (wait_finish < c_hpos)
+							  return;
+						  else if (wait_finish <= until_hpos) {
+							  c_hpos = wait_finish;
+						  }
+						  else
+							  c_hpos = until_hpos;
+					  }
+				  }
+				  break;
+			  }
+			  cop_state.state = COP_read1;
+		  }
+		  break;
 				
-	  case COP_skip1:
-	    {
-	      unsigned int vcmp, hcmp, vp1, hp1;
+		  case COP_skip1:
+		  {
+			  unsigned int vcmp, hcmp, vp1, hp1;
 
-				if (c_hpos >= (maxhpos & ~1) || (c_hpos & 1))
-      		break;
+			  if (c_hpos >= (maxhpos & ~1) || (c_hpos & 1))
+				  break;
 
-	      if (copper_cant_read (old_hpos))
-		      continue;
+			  if (copper_cant_read(old_hpos))
+				  continue;
 
-	      vcmp = (cop_state.i1 & (cop_state.i2 | 0x8000)) >> 8;
-	      hcmp = (cop_state.i1 & cop_state.i2 & 0xFE);
-	      vp1 = vpos & (((cop_state.i2 >> 8) & 0x7F) | 0x80);
-	      hp1 = c_hpos & (cop_state.i2 & 0xFE);
+			  vcmp = (cop_state.i1 & (cop_state.i2 | 0x8000)) >> 8;
+			  hcmp = (cop_state.i1 & cop_state.i2 & 0xFE);
+			  vp1 = vpos & (((cop_state.i2 >> 8) & 0x7F) | 0x80);
+			  hp1 = c_hpos & (cop_state.i2 & 0xFE);
 
-	      if ((vp1 > vcmp || (vp1 == vcmp && hp1 >= hcmp)) && ((cop_state.i2 & 0x8000) != 0 || bltstate == BLT_done))
-		      cop_state.ignore_next = 1;
+			  if ((vp1 > vcmp || (vp1 == vcmp && hp1 >= hcmp)) && ((cop_state.i2 & 0x8000) != 0 || bltstate == BLT_done))
+				  cop_state.ignore_next = 1;
 
-	      cop_state.state = COP_read1;
-	      break;
-	    }
-			default:
-				break;
+			  cop_state.state = COP_read1;
+			  break;
+		  }
+		  default:
+			  break;
 		}
 	}
 	
@@ -5265,13 +5271,13 @@ out:
 	cop_state.hpos = c_hpos;
 	last_copper_hpos = until_hpos;
 	
-  if(currprefs.fast_copper) {
-    /* The test against maxhpos also prevents us from calling predict_copper
-       when we are being called from hsync_handler, which would not only be
-       stupid, but actively harmful.  */
-	  if ((regs.spcflags & SPCFLAG_COPPER) && (c_hpos + 8 < maxhpos))
-		  predict_copper ();
-  }
+	if (currprefs.fast_copper) {
+		/* The test against maxhpos also prevents us from calling predict_copper
+		   when we are being called from hsync_handler, which would not only be
+		   stupid, but actively harmful.  */
+		if ((regs.spcflags & SPCFLAG_COPPER) && (c_hpos + 8 < maxhpos))
+			predict_copper();
+	}
 }
 
 static void compute_spcflag_copper (int hpos)
