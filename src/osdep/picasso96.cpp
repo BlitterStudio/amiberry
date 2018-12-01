@@ -174,154 +174,21 @@ STATIC_INLINE void endianswap(uae_u32 *vp, int bpp)
 	switch (bpp)
 	{
 	case 2:
+#ifdef AMIBERRY
+		*vp = bswap_16(v);
+#else
 		*vp = (((v >> 8) & 0x00ff) | (v << 8)) & 0xffff;
+#endif
 		break;
 	case 4:
+#ifdef AMIBERRY
+		*vp = bswap_32(v);
+#else
 		*vp = ((v >> 24) & 0x000000ff) | ((v >> 8) & 0x0000ff00) | ((v << 8) & 0x00ff0000) | ((v << 24) & 0xff000000);
+#endif
 		break;
 	}
 }
-
-#if P96TRACING_ENABLED
-/*
-* Debugging dumps
-*/
-static void DumpModeInfoStructure(TrapContext *ctx, uaecptr amigamodeinfoptr)
-{
-	write_log (_T("ModeInfo Structure Dump:\n"));
-	write_log (_T("  Node.ln_Succ  = 0x%x\n"), trap_get_long(ctx, amigamodeinfoptr));
-	write_log (_T("  Node.ln_Pred  = 0x%x\n"), trap_get_long(ctx, amigamodeinfoptr + 4));
-	write_log (_T("  Node.ln_Type  = 0x%x\n"), trap_get_byte(ctx, amigamodeinfoptr + 8));
-	write_log (_T("  Node.ln_Pri   = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + 9));
-	/*write_log (_T("  Node.ln_Name  = %s\n"), uaememptr->Node.ln_Name); */
-	write_log (_T("  OpenCount     = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_OpenCount));
-	write_log (_T("  Active        = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_Active));
-	write_log (_T("  Width         = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_Width));
-	write_log (_T("  Height        = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_Height));
-	write_log (_T("  Depth         = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_Depth));
-	write_log (_T("  Flags         = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_Flags));
-	write_log (_T("  HorTotal      = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorTotal));
-	write_log (_T("  HorBlankSize  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorBlankSize));
-	write_log (_T("  HorSyncStart  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorSyncStart));
-	write_log (_T("  HorSyncSize   = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorSyncSize));
-	write_log (_T("  HorSyncSkew   = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorSyncSkew));
-	write_log (_T("  HorEnableSkew = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_HorEnableSkew));
-	write_log (_T("  VerTotal      = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerTotal));
-	write_log (_T("  VerBlankSize  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerBlankSize));
-	write_log (_T("  VerSyncStart  = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerSyncStart));
-	write_log (_T("  VerSyncSize   = %d\n"), trap_get_word(ctx, amigamodeinfoptr + PSSO_ModeInfo_VerSyncSize));
-	write_log (_T("  Clock         = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_first_union));
-	write_log (_T("  ClockDivide   = %d\n"), trap_get_byte(ctx, amigamodeinfoptr + PSSO_ModeInfo_second_union));
-	write_log (_T("  PixelClock    = %d\n"), trap_get_long(ctx, amigamodeinfoptr + PSSO_ModeInfo_PixelClock));
-}
-
-static void DumpLibResolutionStructure(TrapContext *ctx, uaecptr amigalibresptr)
-{
-  int i;
-  uaecptr amigamodeinfoptr;
-  struct LibResolution *uaememptr = (struct LibResolution *)get_mem_bank(amigalibresptr).xlateaddr(amigalibresptr);
-
-	write_log (_T("LibResolution Structure Dump:\n"));
-
-	if (trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_DisplayID) == 0xFFFFFFFF) {
-		write_log (_T("  Finished With LibResolutions...\n"));
-  } else {
-		write_log (_T("  Name      = %s\n"), uaememptr->P96ID);
-		write_log (_T("  DisplayID = 0x%x\n"), trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_DisplayID));
-		write_log (_T("  Width     = %d\n"), trap_get_word(ctx, amigalibresptr + PSSO_LibResolution_Width));
-		write_log (_T("  Height    = %d\n"), trap_get_word(ctx, amigalibresptr + PSSO_LibResolution_Height));
-		write_log (_T("  Flags     = %d\n"), trap_get_word(ctx, amigalibresptr + PSSO_LibResolution_Flags));
-  	for (i = 0; i < MAXMODES; i++) {
-			amigamodeinfoptr = trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_Modes + i*4);
-			write_log (_T("  ModeInfo[%d] = 0x%x\n"), i, amigamodeinfoptr);
-	    if (amigamodeinfoptr)
-				DumpModeInfoStructure(ctx, amigamodeinfoptr);
-	  }
-		write_log (_T("  BoardInfo = 0x%x\n"), trap_get_long(ctx, amigalibresptr + PSSO_LibResolution_BoardInfo));
-  }
-}
-
-static TCHAR binary_byte[9] = { 0,0,0,0,0,0,0,0,0 };
-
-static TCHAR *BuildBinaryString (uae_u8 value)
-{
-  int i;
-  for (i = 0; i < 8; i++) {
-  	binary_byte[i] = (value & (1 << (7 - i))) ? '#' : '.';
-  }
-  return binary_byte;
-}
-
-static void DumpPattern (struct Pattern *patt)
-{
-  uae_u8 *mem;
-  int row, col;
-
-	if (!patt->Memory)
-		return;
-
-  for (row = 0; row < (1 << patt->Size); row++) {
-  	mem = patt->Memory + row * 2;
-  	for (col = 0; col < 2; col++) {
-			write_log (_T("%s "), BuildBinaryString (*mem++));
-  	}
-		write_log (_T("\n"));
-  }
-}
-
-static void DumpTemplate (struct Template *tmp, unsigned long w, unsigned long h)
-{
-	uae_u8 *mem = tmp->Memory;
-  unsigned int row, col, width;
-
-	if (!mem)
-		return;
-  width = (w + 7) >> 3;
-	write_log (_T("xoffset = %d, bpr = %d\n"), tmp->XOffset, tmp->BytesPerRow);
-  for (row = 0; row < h; row++) {
-		mem = tmp->Memory + row * tmp->BytesPerRow;
-  	for (col = 0; col < width; col++) {
-			write_log (_T("%s "), BuildBinaryString (*mem++));
-  	}
-		write_log (_T("\n"));
-  }
-}
-
-static void DumpLine(struct Line *line)
-{
-  if (line) {
-		write_log (_T("Line->X = %d\n"), line->X);
-		write_log (_T("Line->Y = %d\n"), line->Y);
-		write_log (_T("Line->Length = %d\n"), line->Length);
-		write_log (_T("Line->dX = %d\n"), line->dX);
-		write_log (_T("Line->dY = %d\n"), line->dY);
-		write_log (_T("Line->sDelta = %d\n"), line->sDelta);
-		write_log (_T("Line->lDelta = %d\n"), line->lDelta);
-		write_log (_T("Line->twoSDminusLD = %d\n"), line->twoSDminusLD);
-		write_log (_T("Line->LinePtrn = %d\n"), line->LinePtrn);
-		write_log (_T("Line->PatternShift = %d\n"), line->PatternShift);
-		write_log (_T("Line->FgPen = 0x%x\n"), line->FgPen);
-		write_log (_T("Line->BgPen = 0x%x\n"), line->BgPen);
-		write_log (_T("Line->Horizontal = %d\n"), line->Horizontal);
-		write_log (_T("Line->DrawMode = %d\n"), line->DrawMode);
-		write_log (_T("Line->Xorigin = %d\n"), line->Xorigin);
-		write_log (_T("Line->Yorigin = %d\n"), line->Yorigin);
-  }
-}
-
-static void ShowSupportedResolutions (void)
-{
-  int i = 0;
-
-	write_log (_T("-----------------\n"));
-  while (newmodes[i].depth >= 0) {
-		write_log (_T("%s\n"), newmodes[i].name);
-    	i++;
-  }
-	write_log (_T("-----------------\n"));
-}
-
-#endif
 
 static uae_u8 GetBytesPerPixel (uae_u32 RGBfmt)
 {
