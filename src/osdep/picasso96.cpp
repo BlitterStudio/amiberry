@@ -3356,33 +3356,21 @@ static void copyall(uae_u8 *src, uae_u8 *dst)
 	int bytes;
 	if (picasso96_state.RGBFormat == RGBFB_R5G6B5) {
 		bytes = picasso96_state.Width * picasso96_state.Height * 2;
-#ifdef TINKER
-		for (int i = 0; i < bytes; i += 4) {
-			*((uae_u32 *)(dst + i)) = (
-				__builtin_bswap16(*((uae_u16 *)(src + i + 2))) << 16 |
-				__builtin_bswap16(*((uae_u16 *)(src + i)))
-				);
+		for (auto i = 0; i < bytes; i += 4) {
+			*reinterpret_cast<uae_u32 *>(dst + i) = 
+				bswap_16(*reinterpret_cast<uae_u16 *>(src + i + 2)) << 16 |
+				bswap_16(*reinterpret_cast<uae_u16 *>(src + i));
 		}
-#elif USE_ARMNEON
-		copy_screen_16bit_swap(dst, src, bytes);
-#else
-		copy_screen_16bit_swap_arm(dst, src, picasso96_state.Width * picasso96_state.Height * 2);
-#endif
 	}
 	else if (picasso96_state.RGBFormat == RGBFB_CLUT)
 	{
 		bytes = picasso96_state.Width * picasso96_state.Height;
-#ifdef TINKER
-		for (int i = 0; i < bytes; ++i) {
-			*((uae_u16 *)(dst + (i << 1))) = (
-				(picasso96_state_uaegfx.CLUT[(*(uae_u8 *)(src + i))].Red >> 3) << 11 |
-				(picasso96_state_uaegfx.CLUT[(*(uae_u8 *)(src + i))].Green >> 2) << 5 |
-				(picasso96_state_uaegfx.CLUT[(*(uae_u8 *)(src + i))].Blue >> 3)
-				);
+		for (auto i = 0; i < bytes; ++i) {
+			*reinterpret_cast<uae_u16 *>(dst + (i << 1)) = 
+				picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Red >> 3 << 11 |
+				picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Green >> 2 << 5 |
+				picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Blue >> 3;
 		}
-#else
-		copy_screen_8bit(dst, src, bytes, picasso_vidinfo.clut);
-#endif
 	}
 	else {
 		auto w = picasso96_state.Width * picasso96_state.BytesPerPixel;
