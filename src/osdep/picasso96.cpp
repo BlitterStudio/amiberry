@@ -544,98 +544,98 @@ enum {
 	RGBFB_CLUT_8
 };
 
-static int getconvert (int rgbformat, int pixbytes)
+static int getconvert(int rgbformat, int pixbytes)
 {
 	int v = 0;
 	int d = pixbytes;
 
 	switch (rgbformat)
-  {
+	{
 	case RGBFB_CLUT:
-  	if (d == 1)
-	    v = RGBFB_CLUT_8;
-  	else if (d == 2)
-	    v = RGBFB_CLUT_RGBFB_16;
-  	else if (d == 4)
-	    v = RGBFB_CLUT_RGBFB_32;
-  	break;
+		if (d == 1)
+			v = RGBFB_CLUT_8;
+		else if (d == 2)
+			v = RGBFB_CLUT_RGBFB_16;
+		else if (d == 4)
+			v = RGBFB_CLUT_RGBFB_32;
+		break;
 
 	case RGBFB_B5G6R5PC:
-  	if (d == 2)
-	    v = RGBFB_B5G6R5PC_16;
-  	else if (d == 4)
-	    v = RGBFB_B5G6R5PC_32;
-  	break;
+		if (d == 2)
+			v = RGBFB_B5G6R5PC_16;
+		else if (d == 4)
+			v = RGBFB_B5G6R5PC_32;
+		break;
 	case RGBFB_R5G6B5PC:
-  	if (d == 2)
-	    v = RGBFB_R5G6B5PC_16;
-  	else if (d == 4)
-	    v = RGBFB_R5G6B5PC_32;
-  	break;
+		if (d == 2)
+			v = RGBFB_R5G6B5PC_16;
+		else if (d == 4)
+			v = RGBFB_R5G6B5PC_32;
+		break;
 
 	case RGBFB_R5G5B5PC:
-  	if (d == 4)
-	    v = RGBFB_R5G5B5PC_32;
-  	else if (d == 2)
-	    v = RGBFB_R5G5B5PC_16;
-  	break;
+		if (d == 4)
+			v = RGBFB_R5G5B5PC_32;
+		else if (d == 2)
+			v = RGBFB_R5G5B5PC_16;
+		break;
 	case RGBFB_R5G6B5:
-  	if (d == 4)
-	    v = RGBFB_R5G6B5_32;
-  	else
-	    v = RGBFB_R5G6B5_16;
-  	break;
+		if (d == 4)
+			v = RGBFB_R5G6B5_32;
+		else
+			v = RGBFB_R5G6B5_16;
+		break;
 	case RGBFB_R5G5B5:
-  	if (d == 4)
-	    v = RGBFB_R5G5B5_32;
-  	else
-	    v = RGBFB_R5G5B5_16;
-  	break;
+		if (d == 4)
+			v = RGBFB_R5G5B5_32;
+		else
+			v = RGBFB_R5G5B5_16;
+		break;
 	case RGBFB_B5G5R5PC:
-  	if (d == 4)
-	    v = RGBFB_B5G5R5PC_32;
-  	else
-	    v = RGBFB_B5G5R5PC_16;
-  	break;
+		if (d == 4)
+			v = RGBFB_B5G5R5PC_32;
+		else
+			v = RGBFB_B5G5R5PC_16;
+		break;
 
 	case RGBFB_A8R8G8B8:
-  	if (d == 2)
-	    v = RGBFB_A8R8G8B8_16;
-  	else if (d == 4)
-	    v = RGBFB_A8R8G8B8_32;
-  	break;
+		if (d == 2)
+			v = RGBFB_A8R8G8B8_16;
+		else if (d == 4)
+			v = RGBFB_A8R8G8B8_32;
+		break;
 	case RGBFB_R8G8B8:
-  	if (d == 2)
-	    v = RGBFB_R8G8B8_16;
-  	else if (d == 4)
-	    v = RGBFB_R8G8B8_32;
-  	break;
+		if (d == 2)
+			v = RGBFB_R8G8B8_16;
+		else if (d == 4)
+			v = RGBFB_R8G8B8_32;
+		break;
 	case RGBFB_B8G8R8:
-  	if (d == 2)
-	    v = RGBFB_B8G8R8_16;
-  	else if (d == 4)
-	    v = RGBFB_B8G8R8_32;
-  	break;
+		if (d == 2)
+			v = RGBFB_B8G8R8_16;
+		else if (d == 4)
+			v = RGBFB_B8G8R8_32;
+		break;
 	case RGBFB_A8B8G8R8:
-  	if (d == 2)
-	    v = RGBFB_A8B8G8R8_16;
-  	else if (d == 4)
-	    v = RGBFB_A8B8G8R8_32;
-  	break;
+		if (d == 2)
+			v = RGBFB_A8B8G8R8_16;
+		else if (d == 4)
+			v = RGBFB_A8B8G8R8_32;
+		break;
 	case RGBFB_B8G8R8A8:
-  	if (d == 2)
-	    v = RGBFB_B8G8R8A8_16;
-  	else if (d == 4)
-	    v = RGBFB_B8G8R8A8_32;
-  	break;
+		if (d == 2)
+			v = RGBFB_B8G8R8A8_16;
+		else if (d == 4)
+			v = RGBFB_B8G8R8A8_32;
+		break;
 	case RGBFB_R8G8B8A8:
-  	if (d == 2)
-	    v = RGBFB_R8G8B8A8_16;
-  	else if (d == 4)
-	    v = RGBFB_R8G8B8A8_32;
-  	break;
-    }
-  return v;
+		if (d == 2)
+			v = RGBFB_R8G8B8A8_16;
+		else if (d == 4)
+			v = RGBFB_R8G8B8A8_32;
+		break;
+	}
+	return v;
 }
 
 static void setconvert(void)
@@ -3350,36 +3350,41 @@ static void copyrow(uae_u8 *src, uae_u8 *dst, int x, int y, int width, int srcby
 	break;
 	}
 }
-
-static void copyall(uae_u8 *src, uae_u8 *dst)
+static void copyall(uae_u8 *src, uae_u8 *dst, int pwidth, int pheight, int srcbytesperrow, int srcpixbytes, int dstbytesperrow, int dstpixbytes, bool direct, int mode_convert)
 {
-	int bytes;
-	if (picasso96_state.RGBFormat == RGBFB_R5G6B5) {
-		bytes = picasso96_state.Width * picasso96_state.Height * 2;
-		for (auto i = 0; i < bytes; i += 4) {
-			*reinterpret_cast<uae_u32 *>(dst + i) = 
-				bswap_16(*reinterpret_cast<uae_u16 *>(src + i + 2)) << 16 |
-				bswap_16(*reinterpret_cast<uae_u16 *>(src + i));
-		}
-	}
-	else if (picasso96_state.RGBFormat == RGBFB_CLUT)
-	{
-		bytes = picasso96_state.Width * picasso96_state.Height;
-		for (auto i = 0; i < bytes; ++i) {
-			*reinterpret_cast<uae_u16 *>(dst + (i << 1)) = 
-				picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Red >> 3 << 11 |
-				picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Green >> 2 << 5 |
-				picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Blue >> 3;
+	int y, bytes;
+	if (direct) {
+		auto w = pwidth * picasso_vidinfo.pixbytes;
+		for (y = 0; y < pheight; y++) {
+			memcpy(dst, src, w);
+			dst += dstbytesperrow;
+			src += srcbytesperrow;
 		}
 	}
 	else {
-		auto w = picasso96_state.Width * picasso96_state.BytesPerPixel;
-		for (auto y = 0; y < picasso96_state.Height; y++) {
-			memcpy(dst, src, w);
-			dst += picasso96_state.BytesPerRow;
-			src += picasso96_state.BytesPerRow;
-		}
+		for (y = 0; y < pheight; y++)
+			copyrow(src, dst, 0, y, pwidth, srcbytesperrow, srcpixbytes, y, dstbytesperrow, dstpixbytes, direct, mode_convert);
 	}
+
+	//else if (picasso96_state.RGBFormat == RGBFB_R5G6B5 
+	//	|| picasso96_state.RGBFormat == RGBFB_R5G6B5PC) {
+	//	bytes = picasso96_state.Width * picasso96_state.Height * 2;
+	//	for (auto i = 0; i < bytes; i += 4) {
+	//		*reinterpret_cast<uae_u32 *>(dst + i) =
+	//			bswap_16(*reinterpret_cast<uae_u16 *>(src + i + 2)) << 16 |
+	//			bswap_16(*reinterpret_cast<uae_u16 *>(src + i));
+	//	}
+	//}
+	//else if (picasso96_state.RGBFormat == RGBFB_CLUT)
+	//{
+	//	bytes = picasso96_state.Width * picasso96_state.Height;
+	//	for (auto i = 0; i < bytes; ++i) {
+	//		*reinterpret_cast<uae_u16 *>(dst + (i << 1)) =
+	//			picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Red >> 3 << 11 |
+	//			picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Green >> 2 << 5 |
+	//			picasso96_state.CLUT[(*static_cast<uae_u8 *>(src + i))].Blue >> 3;
+	//	}
+	//}
 }
 
 bool picasso_flushpixels(uae_u8 *src, int off)
@@ -3399,12 +3404,24 @@ bool picasso_flushpixels(uae_u8 *src, int off)
 	if (picasso_vidinfo.full_refresh || picasso_vidinfo.rtg_clear_flag)
 		picasso_vidinfo.full_refresh = -1;
 
-	dst = gfx_lock_picasso();
-	if (dst == NULL)
-		return false;
+	for (;;) {
+		if (doskip())
+			break;
 
-	copyall(src + off, dst);
+		dst = gfx_lock_picasso();
+		if (dst == NULL)
+			return false;
 
+		if (doskip())
+			break;
+
+		//copyall(src + off, dst);
+		copyall(src + off, dst, pwidth, pheight,
+			picasso96_state.BytesPerRow, picasso96_state.BytesPerPixel,
+			picasso_vidinfo.rowbytes, picasso_vidinfo.pixbytes,
+			picasso96_state.RGBFormat == picasso_vidinfo.host_mode, picasso_vidinfo.picasso_convert);
+		break;
+	}
 	if (currprefs.leds_on_screen)
 		picasso_statusline(dst);
 
