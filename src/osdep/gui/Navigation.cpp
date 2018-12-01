@@ -205,24 +205,30 @@ static NavigationMap navMap[] =
 { "cboCD", "Hard drives/CD", "Hard drives/CD", "CD drive", "CDVol" },
 { "CDVol", "", "", "cboCD", "cmdProp0" },
 
+//  active            move left           move right          move up           move down
 // PanelDisplay
 { "sldWidth",       "",             "",               "Frameskip",      "sldHeight" },
 { "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
 #ifdef USE_SDL1
-{ "sldVertPos",     "",             "",               "sldHeight",      "CorrectAR" },
-{ "CorrectAR",      "Display",      "Fullscreen",        "sldVertPos",     "Line doubling" },
+{ "sldVertPos",     "",             "",               "sldHeight",       "Single" },
+{ "Single",        "Display",       "Display",        "sdlVertPos",      "Double" },
+{ "Double",        "Display",       "Display",        "Single",          "Scanlines" },
+{ "Scanlines",     "Display",       "Display",        "Double",          "Fullscreen" },
+{ "CorrectAR",      "Display",      "Fullscreen",     "Scanlines",       "Frameskip" },
 #elif USE_SDL2
-{ "sldVertPos",     "",             "",               "sldHeight",      "Auto" },
-{ "Auto",           "Display",      "Display",        "sldVertPos",     "Nearest Neighbor (pixelated)" },
-{ "Nearest Neighbor (pixelated)","Display","Display", "Auto",           "Linear (smooth)" },
-{ "Linear (smooth)", "Display",     "Display",        "Nearest Neighbor (pixelated)", "CorrectAR" },
-{ "CorrectAR",      "Display",      "Fullscreen",     "Linear (smooth)","Line doubling" },
+{ "sldVertPos",     "",             "",               "sldHeight",       "Auto" },
+{ "Auto",           "Display",      "Single",         "sldVertPos",      "Nearest Neighbor (pixelated)" },
+{ "Nearest Neighbor (pixelated)","Display","Double",  "Auto",            "Linear (smooth)" },
+{ "Linear (smooth)","Display",      "Scanlines", "Nearest Neighbor (pixelated)", "CorrectAR" },
+{ "Single",         "Auto",         "Auto",           "sdlVertPos",      "Double" },
+{ "Double", "Nearest Neighbor (pixelated)", "Nearest Neighbor (pixelated)", "Single", "Scanlines" },
+{ "Scanlines", "Linear (smooth)",   "Linear (smooth)", "Double",         "Fullscreen" },
+{ "CorrectAR",      "Display",      "Fullscreen",     "Linear (smooth)", "Frameskip" },
 #endif
-{ "Fullscreen",     "CorrectAR",    "CorrectAR",      "Linear (smooth)","Line doubling" },
-{ "Line doubling",  "Display",      "Display",        "CorrectAR",      "Frameskip" },
-{ "Frameskip",      "Display",      "Display",        "Line doubling",  "sldWidth" },
+{ "Fullscreen",     "CorrectAR",    "CorrectAR",      "Scanlines", "Frameskip" },
+{ "Frameskip",      "Display",      "Display",        "CorrectAR",  "sldWidth" },
 
-
+//  active            move left           move right          move up           move down
 //PanelSound
 { "sndDisable",     "Sound",          "Mono",           "sldStereoDelay", "sndDisEmu" },
 { "sndDisEmu",      "Sound",          "Stereo",         "sndDisable",     "sndEmulate" },
