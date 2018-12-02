@@ -650,7 +650,7 @@ static void setconvert(void)
 	picasso_palette(picasso96_state.CLUT);
 	if (picasso_vidinfo.host_mode != picasso_vidinfo.ohost_mode || picasso96_state.RGBFormat != picasso_vidinfo.orgbformat) {
 		write_log(_T("RTG conversion: Depth=%d HostRGBF=%d P96RGBF=%d Mode=%d\n"),
-			picasso_vidinfo.pixbytes, host_mode, picasso96_state.RGBFormat, picasso_vidinfo.picasso_convert);
+			picasso_vidinfo.pixbytes, picasso_vidinfo.host_mode, picasso96_state.RGBFormat, picasso_vidinfo.picasso_convert);
 		picasso_vidinfo.ohost_mode = picasso_vidinfo.host_mode;
 		picasso_vidinfo.orgbformat = picasso96_state.RGBFormat;
 	}
