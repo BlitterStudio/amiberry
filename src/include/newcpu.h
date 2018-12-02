@@ -38,6 +38,7 @@ struct cputbl {
 };
 
 #ifdef JIT
+#define MIN_JIT_CACHE 128
 #define MAX_JIT_CACHE 16384
 typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 
@@ -62,8 +63,14 @@ typedef uae_u8 flagtype;
 #ifdef FPUEMU
 
 typedef double fptype;
-#define LDPTR qword ptr
 #endif
+
+struct mmufixup
+{
+    int reg;
+    uae_u32 value;
+};
+extern struct mmufixup mmufixup[1];
 
 typedef struct
 {
@@ -105,7 +112,6 @@ struct regstruct
   uae_u32 fpcr,fpsr, fpiar;
 	uae_u32 fpu_state;
 	uae_u32 fpu_exp_state;
-	uae_u16 fp_opword;
 	uaecptr fp_ea;
 	uae_u32 fp_exp_pend, fp_unimp_pend;
 	bool fpu_exp_pre;
@@ -177,6 +183,11 @@ STATIC_INLINE void m68k_setpc (uaecptr newpc)
   regs.pc_p = regs.pc_oldp = get_real_address (newpc);
   regs.instruction_pc = regs.pc = newpc;
 }
+STATIC_INLINE void m68k_setpc_j(uaecptr newpc)
+{
+	regs.pc_p = regs.pc_oldp = get_real_address(newpc);
+	regs.pc = newpc;
+}
 STATIC_INLINE uaecptr m68k_getpc (void)
 {
 	return (uaecptr)(regs.pc + ((uae_u8*)regs.pc_p - (uae_u8*)regs.pc_oldp));
@@ -231,6 +242,10 @@ STATIC_INLINE void m68k_setpci(uaecptr newpc)
 {
 	regs.instruction_pc = regs.pc = newpc;
 }
+STATIC_INLINE void m68k_setpci_j(uaecptr newpc)
+{
+	regs.pc = newpc;
+}
 STATIC_INLINE uaecptr m68k_getpci(void)
 {
 	return regs.pc;
@@ -240,20 +255,15 @@ STATIC_INLINE void m68k_incpci(int o)
 	regs.pc += o;
 }
 
-STATIC_INLINE uae_u32 get_iiword(int o)
-{
-	return get_wordi(m68k_getpci() + (o));
-}
-
 STATIC_INLINE void m68k_do_bsri(uaecptr oldpc, uae_s32 offset)
 {
 	m68k_areg(regs, 7) -= 4;
-	put_long(m68k_areg(regs, 7), oldpc);
+	x_put_long(m68k_areg(regs, 7), oldpc);
 	m68k_incpci(offset);
 }
 STATIC_INLINE void m68k_do_rtsi(void)
 {
-	uae_u32 newpc = get_long(m68k_areg(regs, 7));
+	uae_u32 newpc = x_get_long(m68k_areg(regs, 7));
 	m68k_setpci(newpc);
 	m68k_areg(regs, 7) += 4;
 }
@@ -316,7 +326,6 @@ extern void divbyzero_special (bool issigned, uae_s32 dst);
 extern void setdivuoverflowflags(uae_u32 dividend, uae_u16 divisor);
 extern void setdivsoverflowflags(uae_s32 dividend, uae_s16 divisor);
 extern void protect_roms (bool);
-extern bool is_hardreset(void);
 
 STATIC_INLINE int bitset_count16(uae_u16 data)
 {
@@ -344,7 +353,6 @@ extern void fpuop_bcc(uae_u32, uaecptr, uae_u32);
 extern void fpuop_save(uae_u32);
 extern void fpuop_restore(uae_u32);
 extern void fpu_reset (void);
-extern int fpp_cond(int condition);
 
 extern void exception3_read(uae_u32 opcode, uaecptr addr);
 extern void exception3_write(uae_u32 opcode, uaecptr addr);
@@ -354,7 +362,7 @@ extern void exception3b (uae_u32 opcode, uaecptr addr, bool w, bool i, uaecptr p
 extern void exception2 (uaecptr addr, bool read, int size, uae_u32 fc);
 extern void cpureset (void);
 extern void cpu_halt (int id);
-extern int cpu_sleep_millis(int ms);
+extern void cpu_sleep_millis(int ms);
 
 extern void fill_prefetch (void);
 
@@ -395,7 +403,6 @@ extern int movec_illg (int regno);
 #define CPU_HALT_BUS_ERROR_DOUBLE_FAULT 1
 #define CPU_HALT_DOUBLE_FAULT 2
 #define CPU_HALT_OPCODE_FETCH_FROM_NON_EXISTING_ADDRESS 3
-#define CPU_HALT_FAKE_DMA 6
 #define CPU_HALT_AUTOCONFIG_CONFLICT 7
 #define CPU_HALT_SSP_IN_NON_EXISTING_ADDRESS 10
 #define CPU_HALT_INVALID_START_ADDRESS 11

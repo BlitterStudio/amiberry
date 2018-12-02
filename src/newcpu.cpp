@@ -74,6 +74,8 @@ struct cputbl_data
 };
 static struct cputbl_data cpudatatbl[65536];
 
+struct mmufixup mmufixup[1];
+
 #define COUNT_INSTRS 0
 
 static uae_u64 fake_srp_030, fake_crp_030;
@@ -210,7 +212,6 @@ void flush_cpu_caches_040(uae_u16 opcode)
 			if (scope == 3) {
 				// all
 				if (!k) {
-					// data
 				} else {
 					// instruction
 					flush_cpu_caches(true);
@@ -277,7 +278,7 @@ static void build_cpufunctbl (void)
 		m68k_pc_indirect = 0;
 	}
 	lvl = (currprefs.cpu_model - 68000) / 10;
-	if (lvl >= 4)
+	if (lvl >= 5)
 		lvl = 4;
 	tbl = cputbls[lvl][mode];
 
@@ -502,7 +503,7 @@ STATIC_INLINE unsigned long adjust_cycles(unsigned long cycles)
   return res;  
 }
 
-STATIC_INLINE void m68k_set_stop(void)
+static void m68k_set_stop(void)
 {
 	if (regs.stopped)
 		return;
@@ -510,7 +511,7 @@ STATIC_INLINE void m68k_set_stop(void)
 	set_special(SPCFLAG_STOP);
 }
 
-STATIC_INLINE void m68k_unset_stop(void)
+static void m68k_unset_stop(void)
 {
 	regs.stopped = 0;
 	unset_special(SPCFLAG_STOP);
@@ -520,6 +521,14 @@ static void activate_trace(void)
 {
 	unset_special (SPCFLAG_TRACE);
 	set_special (SPCFLAG_DOTRACE);
+}
+
+// make sure interrupt is checked immediately after current instruction
+static void doint_imm(void)
+{
+	doint();
+	if (!currprefs.cachesize && !(regs.spcflags & SPCFLAG_INT) && (regs.spcflags & SPCFLAG_DOINT))
+		set_special(SPCFLAG_INT);
 }
 
 void REGPARAM2 MakeSR (void)
@@ -588,7 +597,7 @@ STATIC_INLINE void MakeFromSR_x(int t0trace)
   	}
   }
 
-  doint();
+  doint_imm();
   if (regs.t1 || regs.t0) {
   	set_special (SPCFLAG_TRACE);
 	} else {
@@ -626,7 +635,7 @@ static void exception_check_trace (int nr)
   regs.t1 = regs.t0 = 0;
 }
 
-STATIC_INLINE int iack_cycle(int nr)
+static int iack_cycle(int nr)
 {
 	int vector;
 
@@ -708,7 +717,6 @@ static void Exception_build_stack_frame (uae_u32 oldpc, uae_u32 currpc, uae_u32 
 {
   switch (format) {
     case 0x0: // four word stack frame
-    case 0x1: // throwaway four word stack frame
       break;
     case 0x2: // six word stack frame
       m68k_areg (regs, 7) -= 4;
@@ -736,12 +744,12 @@ static void Exception_build_stack_frame (uae_u32 oldpc, uae_u32 currpc, uae_u32 
     x_put_word (m68k_areg (regs, 7), regs.sr);
 }
 
-static void Exception_build_stack_frame_common (uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int nr)
+static void Exception_build_stack_frame_common (uae_u32 oldpc, uae_u32 currpc, int nr)
 {
 	if (nr == 5 || nr == 6 || nr == 7 || nr == 9) {
-		Exception_build_stack_frame(oldpc, currpc, 0 /*regs.mmu_ssw*/, nr, 0x2);
+		Exception_build_stack_frame(oldpc, currpc, 0, nr, 0x2);
 	} else if (nr == 60 || nr == 61) {
-		Exception_build_stack_frame(oldpc, regs.instruction_pc, 0 /*regs.mmu_ssw*/, nr, 0x0);
+		Exception_build_stack_frame(oldpc, regs.instruction_pc, 0, nr, 0x0);
 	} else if (nr >= 48 && nr <= 55) {
 		if (regs.fpu_exp_pre) {
 			Exception_build_stack_frame(oldpc, regs.instruction_pc, 0, nr, 0x0);
@@ -750,13 +758,13 @@ static void Exception_build_stack_frame_common (uae_u32 oldpc, uae_u32 currpc, u
 		}
 	} else if (nr == 11 && regs.fp_unimp_ins) {
 		regs.fp_unimp_ins = false;
-		if ((currprefs.cpu_model == 68040 && currprefs.fpu_model == 0)) {
+		if (currprefs.cpu_model == 68040 && currprefs.fpu_model == 0) {
 			Exception_build_stack_frame(regs.fp_ea, currpc, regs.instruction_pc, nr, 0x4);
 		} else {
-			Exception_build_stack_frame(regs.fp_ea, currpc, 0 /*regs.mmu_ssw*/, nr, 0x2);
+			Exception_build_stack_frame(regs.fp_ea, currpc, 0, nr, 0x2);
 		}
 	} else {
-		Exception_build_stack_frame(oldpc, currpc, 0 /*regs.mmu_ssw*/, nr, 0x0);
+		Exception_build_stack_frame(oldpc, currpc, 0, nr, 0x0);
 	}
 }
 
@@ -890,7 +898,7 @@ void Exception (int nr)
 	    m68k_areg(regs, 7) -= 2;
 	    x_put_word (m68k_areg(regs, 7), 0x1000 + vector_nr * 4);
 	  } else {
-			Exception_build_stack_frame_common(oldpc, currpc, 0 /*regs.mmu_ssw*/, nr);
+			Exception_build_stack_frame_common(oldpc, currpc, nr);
 			used_exception_build_stack_frame = true;
 	  }
   } else {
@@ -928,6 +936,8 @@ kludge_me_do:
 			exception3_notinstruction(regs.ir, newpc);
   	return;
   }
+	if (interrupt)
+		regs.intmask = nr - 24;
   m68k_setpc (newpc);
 #ifdef JIT
   set_special(SPCFLAG_END_COMPILE);
@@ -961,7 +971,6 @@ static void do_interrupt (int nr)
 
 	for (;;) {
     Exception (nr + 24);
-		regs.intmask = nr;
 		if (!currprefs.cpu_compatible)
 			break;
 		nr = intlev();
@@ -1046,6 +1055,7 @@ static void m68k_reset (bool hardreset)
 	  set_cpu_caches (false);
   }
 
+	mmufixup[0].reg = -1;
 	if (currprefs.cpu_model >= 68040) {
 		set_cpu_caches(false);
 	}
@@ -1216,7 +1226,6 @@ static bool mmu_op30fake_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecpt
 
 	if (!reg)
 		return true;
-
 	return false;
 }
 
@@ -1253,6 +1262,7 @@ static bool mmu_op30fake_pflush (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecp
 	switch (flushmode)
 	{
 	  case 0x00:
+	  case 0x02:
 		  return mmu_op30fake_pload(pc, opcode, next, extra);
 	  case 0x18:
 		  if (mmu_op30_invea(opcode))
@@ -1343,7 +1353,7 @@ void mmu_op(uae_u32 opcode, uae_u32 extra)
   	/* PFLUSH */
   	regs.mmusr = 0;
   	return;
-  } else if ((opcode & 0x0FD8) == 0x548) {
+  } else if ((opcode & 0x0FD8) == 0x0548) {
   	/* PTEST */
 		int regno = opcode & 7;
 		uae_u32 addr = m68k_areg(regs, regno);
@@ -1390,16 +1400,15 @@ static void check_uae_int_request(void)
 		if (uae_int_requested & 0xff0000) {
 			atomic_and(&uae_int_requested, ~0x010000);
 		}
-		if (irq)
+		if (irq) {
 			doint();
+    }
 	}
 }
 
-int cpu_sleep_millis(int ms)
+void cpu_sleep_millis(int ms)
 {
-	int ret = 0;
-	ret = sleep_millis_main(ms);
-	return ret;
+	sleep_millis_main(ms);
 }
 
 static bool haltloop(void)
@@ -1455,9 +1464,6 @@ static int do_specialties (int cycles)
 		/* exit from HRTMon? */
 		if (hrtmon_flag == ACTION_REPLAY_ACTIVE && !isinhrt)
 			hrtmon_hide ();
-		/* HRTMon breakpoint? (not via IRQ7) */
-		if (hrtmon_flag == ACTION_REPLAY_IDLE && isinhrt)
-			hrtmon_breakenter ();
 		if (hrtmon_flag == ACTION_REPLAY_ACTIVATE)
 			hrtmon_enter ();
 	}
@@ -1504,6 +1510,15 @@ static int do_specialties (int cycles)
 
   if (regs.spcflags & SPCFLAG_DOTRACE)
    	Exception (9);
+
+	if ((regs.spcflags & SPCFLAG_STOP) && regs.s == 0 && currprefs.cpu_model <= 68010) {
+		// 68000/68010 undocumented special case:
+		// if STOP clears S-bit and T was not set:
+		// cause privilege violation exception, PC pointing to following instruction.
+		// If T was set before STOP: STOP works as documented.
+		m68k_unset_stop();
+		Exception(8);
+	}
 
 	bool first = true;
   while ((regs.spcflags & SPCFLAG_STOP) && !(regs.spcflags & SPCFLAG_BRK)) {
@@ -1608,7 +1623,6 @@ void execute_exception(void)
   do_cycles (cpu_cycles);
   // after leaving this function, we fall back to execute_normal()
 }
-
 
 void do_nothing(void)
 {
@@ -1746,11 +1760,6 @@ static void m68k_run_2 (void)
 static int in_m68k_go = 0;
 
 static bool cpu_hardreset;
-
-bool is_hardreset(void)
-{
-	return cpu_hardreset;
-}
 
 #ifdef USE_JIT_FPU
 static uae_u8 fp_buffer[8 * 8];
@@ -1981,6 +1990,8 @@ static void fill_prefetch_quick (void)
 
 void restore_cpu_finish(void)
 {
+	if (!currprefs.fpu_model)
+		fpu_reset();
   init_m68k ();
 	m68k_setpc_normal (regs.pc);
 	doint ();
@@ -2032,7 +2043,7 @@ uae_u8 *save_cpu_extra (int *len, uae_u8 *dstptr)
 uae_u8 *save_cpu (int *len, uae_u8 *dstptr)
 {
   uae_u8 *dstbak,*dst;
-  int model, i, khz;
+  int model, khz;
 
   if (dstptr)
   	dstbak = dst = dstptr;
@@ -2041,7 +2052,7 @@ uae_u8 *save_cpu (int *len, uae_u8 *dstptr)
   model = currprefs.cpu_model;
   save_u32 (model);					/* MODEL */
   save_u32 (0x80000000 | (currprefs.address_space_24 ? 1 : 0));	/* FLAGS */
-  for(i = 0;i < 15; i++) 
+  for(int i = 0;i < 15; i++) 
     save_u32 (regs.regs[i]);	/* D0-D7 A0-A6 */
   save_u32 (m68k_getpc ());			/* PC */
   save_u16 (regs.irc);				/* prefetch */
@@ -2221,9 +2232,7 @@ void fill_prefetch (void)
 		return;
 	if (!currprefs.cpu_compatible)
 		return;
-	if (currprefs.cpu_model <= 68010) {
-	  uaecptr pc = m68k_getpc ();
-	  regs.ir = x_get_word (pc);
-	  regs.irc = x_get_word (pc + 2);
-	}
+  uaecptr pc = m68k_getpc ();
+  regs.ir = x_get_word (pc);
+  regs.irc = x_get_word (pc + 2);
 }

@@ -20,3 +20,8 @@
 #if defined(CPU_i386) || defined(CPU_x86_64)
 extern void init_fpucw_x87(void);
 #endif
+
+#define PREC_NORMAL 0
+#define PREC_FLOAT 1
+#define PREC_DOUBLE 2
+#define PREC_EXTENDED 3
