@@ -274,6 +274,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER, optScanlines->getY() + optScanlines->getHeight() + 30);
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
+#ifndef USE_SDL2
+	posY += DISTANCE_BORDER + grpLineMode->getHeight() + DISTANCE_NEXT_Y;
+#endif
 
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
 	category.panel->add(chkFullscreen, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 2, posY);
