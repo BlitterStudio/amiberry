@@ -47,8 +47,8 @@
 
 #if DEBUG
 #define PROFILE_COMPILE_TIME		1
-#define PROFILE_UNTRANSLATED_INSNS	1
 #endif
+//#define PROFILE_UNTRANSLATED_INSNS	1
 
 #ifndef UNUSED
 #define UNUSED(x)	((void)x)
@@ -392,35 +392,6 @@ STATIC_INLINE void block_need_recompile(blockinfo * bi)
   if (bi == cache_tags[cl + 1].bi)
 	  cache_tags[cl].handler = (cpuop_func *)popall_execute_normal;
   bi->status = BI_NEED_RECOMP;
-}
-
-STATIC_INLINE void mark_callers_recompile(blockinfo * bi)
-{
-  dependency *x = bi->deplist;
-
-  while (x)	{
-  	dependency *next = x->next;	/* This disappears when we mark for
-								 * recompilation and thus remove the
-								 * blocks from the lists */
-  	if (x->jmp_off) {
-  	  blockinfo *cbi = x->source;
-
-  	  if (cbi->status == BI_ACTIVE || cbi->status == BI_NEED_CHECK) {
-  		  block_need_recompile(cbi);
-  		  mark_callers_recompile(cbi);
-  	  }
-  	  else if (cbi->status == BI_COMPILING) {
-    		redo_current_block = 1;
-  	  }
-  	  else if (cbi->status == BI_NEED_RECOMP) {
-    		/* nothing */
-  	  }
-  	  else {
-    		jit_log2("Status %d in mark_callers", cbi->status); // FIXME?
-  	  }
-  	}
-  	x = next;
-  }
 }
 
 STATIC_INLINE blockinfo* get_blockinfo_addr_new(void* addr)
@@ -1928,7 +1899,6 @@ static void calc_checksum(blockinfo* bi, uae_u32* c1, uae_u32* c2)
 	*c2 = k2;
 }
 
-
 int check_for_cache_miss(void)
 {
   blockinfo* bi = get_blockinfo_addr(regs.pc_p);
@@ -2229,7 +2199,9 @@ void build_comp(void)
   	if (compfunctbl[opcode])
 	    count++;
   }
+#ifdef JIT_DEBUG
 	jit_log("Supposedly %d compileable opcodes!",count);
+#endif
 
   /* Initialise state */
   create_popalls();

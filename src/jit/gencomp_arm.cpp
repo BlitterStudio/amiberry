@@ -129,6 +129,8 @@
 
 
 #define RETURN "return 0;"
+#define RETTYPE "uae_u32"
+#define NEXT_CPU_LEVEL 5
 
 #define BOOL_TYPE		"int"
 #define failure			global_failure=1
@@ -157,16 +159,16 @@ static int comp_index = 0;
 
 #include "flags_arm.h"
 
-static int cond_codes[] = { //
-		NATIVE_CC_AL, -1, //
-				NATIVE_CC_HI, NATIVE_CC_LS, //
-				NATIVE_CC_CC, NATIVE_CC_CS, //
-				NATIVE_CC_NE, NATIVE_CC_EQ, //
-				NATIVE_CC_VC, NATIVE_CC_VS, //
-				NATIVE_CC_PL, NATIVE_CC_MI, //
-				NATIVE_CC_GE, NATIVE_CC_LT, //
-				NATIVE_CC_GT, NATIVE_CC_LE //
-		};
+static int cond_codes[] = {
+  NATIVE_CC_AL, -1,
+	NATIVE_CC_HI, NATIVE_CC_LS,
+	NATIVE_CC_CC, NATIVE_CC_CS,
+	NATIVE_CC_NE, NATIVE_CC_EQ,
+	NATIVE_CC_VC, NATIVE_CC_VS,
+	NATIVE_CC_PL, NATIVE_CC_MI,
+	NATIVE_CC_GE, NATIVE_CC_LT,
+	NATIVE_CC_GT, NATIVE_CC_LE
+};
 
 static void comprintf(const char* format, ...) 
 {
@@ -222,7 +224,7 @@ static void read_counts(void)
 		fscanf(file, "Total: %lu\n", &total);
 		while (fscanf(file, "%lx: %lu %s\n", &opcode, &count, name) == 3) 
     {
-			opcode_next_clev[nr] = 5;
+			opcode_next_clev[nr] = NEXT_CPU_LEVEL;
 			opcode_last_postfix[nr] = -1;
 			opcode_map[nr++] = opcode;
 			counts[opcode] = count;
@@ -234,9 +236,9 @@ static void read_counts(void)
 	for (opcode = 0; opcode < 0x10000; opcode++) 
   {
 		if (table68k[opcode].handler == -1 && table68k[opcode].mnemo != i_ILLG
-				&& counts[opcode] == 0) 
+		&& counts[opcode] == 0) 
     {
-			opcode_next_clev[nr] = 5;
+			opcode_next_clev[nr] = NEXT_CPU_LEVEL;
 			opcode_last_postfix[nr] = -1;
 			opcode_map[nr++] = opcode;
 			counts[opcode] = count;
@@ -2195,7 +2197,7 @@ static void gen_tst(uae_u32 opcode, struct instr *curi, char* ssize) {
 }
 
 /* returns zero for success, non-zero for failure */
-static int gen_opcode(unsigned long int opcode) 
+static int gen_opcode(unsigned int opcode) 
 {
 	struct instr *curi = table68k + opcode;
 	char* ssize = NULL;
@@ -2601,8 +2603,7 @@ static int gen_opcode(unsigned long int opcode)
 		isjump;
 		genamode_new(curi->smode, "srcreg", curi->size, "src", 0, 0);
 		start_brace();
-		comprintf(
-				"\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
+		comprintf("\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
@@ -2631,12 +2632,10 @@ static int gen_opcode(unsigned long int opcode)
 #ifdef DISABLE_I_BSR
     failure;
 #endif
-		is_const_jump
-		;
+		is_const_jump;
 		genamode_new(curi->smode, "srcreg", curi->size, "src", 1, 0);
 		start_brace();
-		comprintf(
-				"\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
+		comprintf("\tuae_u32 retadd=start_pc+((char *)comp_pc_p-(char *)start_pc_p)+m68k_pc_offset;\n");
 		comprintf("\tint ret=scratchie++;\n"
 				"\tmov_l_ri(ret,retadd);\n"
 				"\tsub_l_ri(15,4);\n"
@@ -2671,8 +2670,7 @@ static int gen_opcode(unsigned long int opcode)
 			comprintf("\tmake_flags_live();\n"); /* Load the flags */
       isjump;
 		} else {
-			is_const_jump
-			;
+			is_const_jump;
 		}
 
 		switch (curi->cc) {
@@ -2722,7 +2720,8 @@ static int gen_opcode(unsigned long int opcode)
     failure;
 #endif
     comprintf("\tint dodgy=0;\n");
-		if (table68k[opcode].smode == Areg || table68k[opcode].smode == Aind
+		if (table68k[opcode].smode == Areg 
+        || table68k[opcode].smode == Aind
 				|| table68k[opcode].smode == Aipi
 				|| table68k[opcode].smode == Apdi
 				|| table68k[opcode].smode == Ad16
@@ -3383,22 +3382,19 @@ static void generate_one_opcode(int rp, int noflags)
 	opcode_last_postfix[rp] = postfix;
 }
 
-static void 
-generate_func(int noflags) 
+static void generate_func(int noflags) 
 {
 	int i, j, rp;
+	const char *tbl = noflags ? "nf" : "ff";
 
 	using_prefetch = 0;
 	using_exception_3 = 0;
 	for (i = 0; i < 1; i++) /* We only do one level! */
 	{
-		cpu_level = 5 - i;
+		cpu_level = NEXT_CPU_LEVEL - i;
 		postfix = i;
 
-		if (noflags)
-			fprintf(stblfile, "extern const struct comptbl op_smalltbl_%d_comp_nf[] = {\n", postfix);
-		else
-			fprintf(stblfile, "extern const struct comptbl op_smalltbl_%d_comp_ff[] = {\n", postfix);
+		fprintf(stblfile, "extern const struct comptbl op_smalltbl_%d_comp_%s[] = {\n", postfix, tbl);
 
 		/* sam: this is for people with low memory (eg. me :)) */
 		printf("\n"
