@@ -184,6 +184,7 @@ all: $(PROG)
 SDL_CFLAGS := $(shell sdl-config --cflags)
 SDL_LDFLAGS := $(shell sdl-config --libs)
 
+export CPPFLAGS += $(SDL_CFLAGS)
 LDFLAGS += $(SDL_LDFLAGS) -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
 endif
 
