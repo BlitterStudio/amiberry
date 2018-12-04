@@ -47,9 +47,6 @@
 
 #define NEWTRAP 1
 
-#define P96TRACING_ENABLED 0
-#define P96TRACING_SETUP_ENABLED 0
-
 #include "config.h"
 #include "options.h"
 #include "threaddep/thread.h"
@@ -93,20 +90,6 @@ static volatile int render_thread_state;
 static uae_atomic picasso_state_change;
 
 #ifdef PICASSO96
-#ifdef DEBUG // Change this to _DEBUG for debugging
-#define P96TRACING_ENABLED 1
-#define P96TRACING_LEVEL 1
-#endif
-#if P96TRACING_ENABLED
-#define P96TRACE(x) do { write_log x; } while(0)
-#else
-#define P96TRACE(x)
-#endif
-#if P96TRACING_SETUP_ENABLED
-#define P96TRACE_SETUP(x) do { write_log x; } while(0)
-#else
-#define P96TRACE_SETUP(x)
-#endif
 
 static uae_u8 all_ones_bitmap, all_zeros_bitmap; /* yuk */
 
@@ -737,15 +720,6 @@ static void picasso_handle_vsync2()
 		// do nothing
 	}
 
-	//getvsyncrate(mon->monitor_id, currprefs.chipset_refreshrate, &mult);
-	//if (vsync && mult < 0) {
-	//	vsynccnt++;
-	//	if (vsynccnt < 2)
-	//		thisisvsync = 0;
-	//	else
-	//		vsynccnt = 0;
-	//}
-
 	p96_framecnt++;
 
 	if (!uaegfx && !picasso_on) {
@@ -1067,7 +1041,6 @@ static int do_blitrect_frame_buffer (struct RenderInfo *ri, struct
 		write_log (_T("WARNING - BlitRect() has mask 0x%x with Bpp %d.\n"), mask, Bpp);
   }
 
-	P96TRACE ((_T("(%dx%d)=(%dx%d)=(%dx%d)=%d\n"), srcx, srcy, dstx, dsty, width, height, opcode));
   if (mask == 0xFF || Bpp > 1) {
 
 	  if(opcode == BLIT_SRC) {
@@ -1554,6 +1527,11 @@ static void picasso96_alloc2(TrapContext *ctx)
 	cnt = 0;
 	i = 0;
 	while (DisplayModes[i].depth >= 0) {
+		// Not even 256 color mode fits in VRAM? Ignore it completely.
+		if (DisplayModes[i].res.width * DisplayModes[i].res.height > gfxmem_bank.allocated_size - 256) {
+			i++;
+			continue;
+		}
 		j = i;
 		size += PSSO_LibResolution_sizeof;
 		while (missmodes[misscnt * 2] == 0)
@@ -1770,9 +1748,6 @@ static uae_u32 REGPARAM2 picasso_InitCard (TrapContext *ctx)
 
       LibResolutionStructureCount++;
     	CopyLibResolutionStructureU2A (ctx, &res, amem);
-#if P96TRACING_ENABLED && P96TRACING_LEVEL > 1
-    	DumpLibResolutionStructure(ctx, amem);
-#endif
     	AmigaListAddTail (ctx, AmigaBoardInfo + PSSO_BoardInfo_ResolutionsList, amem);
     	amem += PSSO_LibResolution_sizeof;
 		} else {
@@ -1887,7 +1862,6 @@ static uae_u32 REGPARAM2 picasso_SetColorArray(TrapContext *ctx)
 		return 0;
 	if (updateclut(ctx, clut, start, count))
 		picasso_vidinfo.full_refresh = 1;
-	P96TRACE_SETUP((_T("SetColorArray(%d,%d)\n"), start, count));
 	return 1;
 }
 
@@ -1904,8 +1878,7 @@ static uae_u32 REGPARAM2 picasso_SetDAC(TrapContext *ctx)
 	/* Fill in some static UAE related structure about this new DAC setting
 	* Lets us keep track of what pixel format the Amiga is thinking about in our frame-buffer */
 
-	atomic_or(&picasso_state_change, PICASSO_STATE_SETDAC);
-	P96TRACE_SETUP((_T("SetDAC()\n")));
+	atomic_or(&picasso_vidinfo.picasso_state_change, PICASSO_STATE_SETDAC);
 	return 1;
 }
 
@@ -1959,8 +1932,6 @@ static uae_u32 REGPARAM2 picasso_SetGC(TrapContext *ctx)
 
 	picasso96_state_uaegfx.GC_Depth = trap_get_byte(ctx, modeinfo + PSSO_ModeInfo_Depth);
 	picasso96_state_uaegfx.GC_Flags = trap_get_byte(ctx, modeinfo + PSSO_ModeInfo_Flags);
-
-	P96TRACE_SETUP((_T("SetGC(%d,%d,%d,%d)\n"), picasso96_state_uaegfx.Width, picasso96_state_uaegfx.Height, picasso96_state_uaegfx.GC_Depth, border));
 
 	picasso96_state_uaegfx.HostAddress = NULL;
 
@@ -2034,11 +2005,6 @@ static uae_u32 REGPARAM2 picasso_SetPanning(TrapContext *ctx)
 		setconvert();
 	}
 
-	P96TRACE_SETUP((_T("SetPanning(%d, %d, %d) (%dx%d) Start 0x%x, BPR %d Bpp %d RGBF %d\n"),
-		Width, picasso96_state_uaegfx.XOffset, picasso96_state_uaegfx.YOffset,
-		bme_width, bme_height,
-		start_of_screen, picasso96_state_uaegfx.BytesPerRow, picasso96_state_uaegfx.BytesPerPixel, picasso96_state_uaegfx.RGBFormat));
-
 	atomic_or(&picasso_state_change, PICASSO_STATE_SETPANNING);
 
 	return 1;
@@ -2101,8 +2067,6 @@ static uae_u32 REGPARAM2 picasso_InvertRect(TrapContext *ctx)
 		return 0;
 
 	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri)) {
-		P96TRACE((_T("InvertRect %dbpp 0x%lx\n"), Bpp, (long)mask));
-
 		if (!validatecoords(ctx, &ri, &X, &Y, &Width, &Height))
 			return 1;
 
@@ -2156,9 +2120,6 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 			return 1;
 
 		Bpp = GetBytesPerPixel(RGBFormat);
-
-		P96TRACE((_T("FillRect(%d, %d, %d, %d) Pen 0x%x BPP %d BPR %d Mask 0x%x\n"),
-			X, Y, Width, Height, Pen, Bpp, ri.BytesPerRow, Mask));
 
 		if (Bpp > 1)
 			Mask = 0xFF;
@@ -2279,7 +2240,7 @@ STATIC_INLINE int BlitRectHelper(TrapContext *ctx)
 	return do_blitrect_frame_buffer(ri, dstri, srcx, srcy, dstx, dsty, width, height, mask, opcode);
 }
 
-STATIC_INLINE int BlitRect(TrapContext *ctx, uaecptr ri, uaecptr dstri,
+static int BlitRect (TrapContext *ctx, uaecptr ri, uaecptr dstri,
 	unsigned long srcx, unsigned long srcy, unsigned long dstx, unsigned long dsty,
 	unsigned long width, unsigned long height, uae_u8 mask, BLIT_OPCODE opcode)
 {
@@ -2334,7 +2295,6 @@ static uae_u32 REGPARAM2 picasso_BlitRect(TrapContext *ctx)
 
 	if (NOBLITTER_BLIT)
 		return 0;
-	P96TRACE((_T("BlitRect(%d, %d, %d, %d, %d, %d, 0x%x)\n"), srcx, srcy, dstx, dsty, width, height, Mask));
 	result = BlitRect(ctx, renderinfo, (uaecptr)NULL, srcx, srcy, dstx, dsty, width, height, Mask, BLIT_SRC);
 	return result;
 }
@@ -2374,8 +2334,6 @@ static uae_u32 REGPARAM2 picasso_BlitRectNoMaskComplete(TrapContext *ctx)
 	if (NOBLITTER_BLIT)
 		return 0;
 
-	P96TRACE((_T("BlitRectNoMaskComplete() op 0x%02x, %08x:(%4d,%4d) --> %08x:(%4d,%4d), wh(%4d,%4d)\n"),
-		OpCode, trap_get_long(ctx, srcri + PSSO_RenderInfo_Memory), srcx, srcy, trap_get_long(ctx, dstri + PSSO_RenderInfo_Memory), dstx, dsty, width, height));
 	result = BlitRect(ctx, srcri, dstri, srcx, srcy, dstx, dsty, width, height, 0xFF, OpCode);
 	return result;
 }
@@ -2474,12 +2432,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 
 		if (result) {
 			uae_u32 fgpen, bgpen;
-			P96TRACE((_T("BlitPattern() xy(%d,%d), wh(%d,%d) draw 0x%x, off(%d,%d), ph %d fg 0x%x bg 0x%x\n"),
-				X, Y, W, H, pattern.DrawMode, pattern.XOffset, pattern.YOffset, 1 << pattern.Size, pattern.FgPen, pattern.BgPen));
 
-#if P96TRACING_ENABLED
-			DumpPattern(&pattern);
-#endif
 			ysize_mask = (1 << pattern.Size) - 1;
 			xshift = pattern.XOffset & 15;
 
@@ -2648,14 +2601,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 		if (result) {
 			uae_u32 fgpen, bgpen;
 
-			P96TRACE((_T("BlitTemplate() xy(%d,%d), wh(%d,%d) draw 0x%x fg 0x%x bg 0x%x \n"),
-				X, Y, W, H, tmp.DrawMode, tmp.FgPen, tmp.BgPen));
-
 			bitoffset = tmp.XOffset % 8;
-
-#if P96TRACING_ENABLED && P96TRACING_LEVEL > 0
-			DumpTemplate(&tmp, W, H);
-#endif
 
 			fgpen = tmp.FgPen;
 			endianswap(&fgpen, Bpp);
@@ -2785,7 +2731,6 @@ static uae_u32 REGPARAM2 picasso_CalculateBytesPerRow(TrapContext *ctx)
 static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext *ctx)
 {
 	uae_u32 state = trap_get_dreg(ctx, 0);
-	P96TRACE_SETUP((_T("SetDisplay(%d)\n"), state));
 	resetpalette();
 	atomic_or(&picasso_state_change, PICASSO_STATE_SETDISPLAY);
 	return !state;
@@ -2911,9 +2856,6 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Chunky(TrapContext *ctx)
 			minterm);
 	}
 	else if (CopyRenderInfoStructureA2U(ctx, ri, &local_ri) && CopyBitMapStructureA2U(ctx, bm, &local_bm)) {
-		P96TRACE((_T("BlitPlanar2Chunky(%d, %d, %d, %d, %d, %d) Minterm 0x%x, Mask 0x%x, Depth %d\n"),
-			srcx, srcy, dstx, dsty, width, height, minterm, mask, local_bm.Depth));
-		P96TRACE((_T("P2C - BitMap has %d BPR, %d rows\n"), local_bm.BytesPerRow, local_bm.Rows));
 		PlanarToChunky(ctx, &local_ri, &local_bm, srcx, srcy, dstx, dsty, width, height, mask);
 		result = 1;
 	}
@@ -3080,8 +3022,6 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext *ctx)
 	}
 	if (CopyRenderInfoStructureA2U(ctx, ri, &local_ri) && CopyBitMapStructureA2U(ctx, bm, &local_bm)) {
 		Mask = 0xFF;
-		P96TRACE((_T("BlitPlanar2Direct(%d, %d, %d, %d, %d, %d) Minterm 0x%x, Mask 0x%x, Depth %d\n"),
-			srcx, srcy, dstx, dsty, width, height, minterm, Mask, local_bm.Depth));
 		PlanarToDirect(ctx, &local_ri, &local_bm, srcx, srcy, dstx, dsty, width, height, Mask, cim);
 		result = 1;
 	}
@@ -3559,7 +3499,6 @@ static void initvblankirq(TrapContext *ctx, uaecptr base)
 static uae_u32 REGPARAM2 picasso_SetClock(TrapContext *ctx)
 {
 	uaecptr bi = trap_get_areg(ctx, 0);
-	P96TRACE_SETUP((_T("SetClock\n")));
 	return 0;
 }
 
@@ -3567,7 +3506,6 @@ static uae_u32 REGPARAM2 picasso_SetMemoryMode(TrapContext *ctx)
 {
 	uaecptr bi = trap_get_areg(ctx, 0);
 	uae_u32 rgbformat = trap_get_dreg(ctx, 7);
-	P96TRACE_SETUP((_T("SetMemoryMode\n")));
 	return 0;
 }
 
@@ -3685,47 +3623,7 @@ static void inituaegfxfuncs(TrapContext *ctx, uaecptr start, uaecptr ABI)
 	RTGNONE(PSSO_BoardInfo_SetClearMask);
 	RTGNONE(PSSO_BoardInfo_SetReadPlane);
 
-#if 1
 	RTGNONE(PSSO_BoardInfo_WaitVerticalSync);
-#else
-	PUTABI(PSSO_BoardInfo_WaitVerticalSync);
-	dl(0x48e7203e);	// movem.l d2/a5/a6,-(sp)
-	dl(0x2c68003c);
-	dw(0x93c9);
-	dl(0x4eaefeda);
-	dw(0x2440);
-	dw(0x70ff);
-	dl(0x4eaefeb6);
-	dw(0x7400);
-	dw(0x1400);
-	dw(0x6b40);
-	dw(0x49f9);
-	dl(uaegfx_base + CARD_VSYNCLIST);
-	dw(0x47f9);
-	dl(uaegfx_base + CARD_VSYNCLIST + CARD_VSYNCMAX * 8);
-	dl(0x4eaeff88);
-	dw(0xb9cb);
-	dw(0x6606);
-	dl(0x4eaeff82);
-	dw(0x601c);
-	dw(0x4a94);
-	dw(0x6704);
-	dw(0x508c);
-	dw(0x60ee);
-	dw(0x288a);
-	dl(0x29420004);
-	dl(0x4eaeff82);
-	dw(0x7000);
-	dw(0x05c0);
-	dl(0x4eaefec2);
-	dw(0x4294);
-	dw(0x7000);
-	dw(0x1002);
-	dw(0x6b04);
-	dl(0x4eaefeb0);
-	dl(0x4cdf7c04);
-	dw(RTS);
-#endif
 	RTGNONE(PSSO_BoardInfo_WaitBlitter);
 
 	RTGCALL(PSSO_BoardInfo_BlitPlanar2Direct, PSSO_BoardInfo_BlitPlanar2DirectDefault, picasso_BlitPlanar2Direct);
