@@ -1805,14 +1805,8 @@ static void m68k_run_1(void)
 #if defined (CPU_arm) && defined(USE_ARMNEON)
 				// Well not really since pli is ArmV7...
 				/* Load ARM code for next opcode into L2 cache during execute of do_cycles() */
-				__asm__ volatile (
-				"pli [%[radr]]\n\t"
-				:
-				:
-				[radr]
-				"r"(cpufunctbl[r->opcode])
-				:
-				)
+				__asm__ volatile ("pli [%[radr]]\n\t" \
+					: : [radr] "r" (cpufunctbl[r->opcode]) : );
 #endif
 				count_instr(r->opcode);
 
@@ -1971,14 +1965,8 @@ static void m68k_run_2(void)
 #if defined (CPU_arm) && defined(USE_ARMNEON)
 				// Well not really since pli is ArmV7...
 				/* Load ARM code for next opcode into L2 cache during execute of do_cycles() */
-				__asm__ volatile (
-				"pli [%[radr]]\n\t"
-				:
-				:
-				[radr]
-				"r"(cpufunctbl[r->opcode])
-				:
-				)
+				__asm__ volatile ("pli [%[radr]]\n\t" \
+					: : [radr] "r" (cpufunctbl[r->opcode]) : );
 #endif
 				count_instr(r->opcode);
 
@@ -2026,11 +2014,7 @@ void m68k_go(int may_quit)
 	}
 
 #ifdef USE_JIT_FPU
-	__asm__ volatile (
-	"vstmia %[fp_buffer]!, {d7-d15}"
-	::[fp_buffer]
-	"r"(fp_buffer)
-	)
+	__asm__ volatile("vstmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
 	//save_host_fp_regs((uae_u8 *)(&fp_buffer[0]));
 #endif
 
@@ -2163,11 +2147,7 @@ void m68k_go(int may_quit)
 	regs.pc_oldp = nullptr;
 
 #ifdef USE_JIT_FPU
-	__asm__ volatile (
-	"vldmia %[fp_buffer]!, {d7-d15}"
-	::[fp_buffer]
-	"r"(fp_buffer)
-	)
+	__asm__ volatile("vldmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
 	//restore_host_fp_regs(fp_buffer);
 #endif
 
