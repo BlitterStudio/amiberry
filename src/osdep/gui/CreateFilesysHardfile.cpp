@@ -393,7 +393,7 @@ bool CreateFilesysHardfile()
 		fwrite(&zero, 1, 1, newFile);
 		fclose(newFile);
 
-		struct uaedev_config_info ci{};
+		struct uaedev_config_info ci {};
 
 		uci_set_defaults(&ci, false);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
@@ -402,6 +402,12 @@ bool CreateFilesysHardfile()
 		ci.surfaces = (size / 1024) + 1;
 		ci.bootpri = bp;
 
+		ci.controller_type = 0;
+		ci.controller_type_unit = 0;
+		ci.controller_unit = 0;
+		ci.controller_media_type = 0;
+		ci.unit_feature_level = 1;
+		ci.readonly = false;
 		const auto uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{
