@@ -102,6 +102,6 @@ struct amigadisplay
 	struct vidbuf_description gfxvidinfo;
 };
 
-extern struct amigadisplay adisplays[MAX_AMIGADISPLAYS];
+//extern struct amigadisplay adisplays[MAX_AMIGADISPLAYS];
 
 #endif /* UAE_XWIN_H */
