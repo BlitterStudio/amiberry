@@ -413,8 +413,7 @@ bool EditFilesysVirtual(const int unit_no)
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
-			const auto hfd = get_hardfile_data(uci->configoffset);
-			hardfile_media_change(hfd, &ci, true, false);
+			filesys_media_change (ci.rootdir, 1, uci);
 		}
 	}
 
