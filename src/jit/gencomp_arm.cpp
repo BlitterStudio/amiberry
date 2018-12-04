@@ -2418,7 +2418,7 @@ static int gen_opcode(unsigned int opcode)
 		break;
 
 	case i_CMPA:
-#ifdef DISABLE_I_CMPM_CMP
+#ifdef DISABLE_I_CMPA
     failure;
 #endif
 		gen_cmpa(opcode, curi, ssize);

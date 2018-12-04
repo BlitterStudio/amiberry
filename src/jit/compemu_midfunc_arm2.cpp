@@ -2201,9 +2201,9 @@ MIDFUNC(2,jff_CMPA_w,(RR2 d, RR2 s))
 {
 	INIT_RREGS_w(d, s);
 
-	LSL_rri(REG_WORK1, d, 16);
-	CMP_rrLSLi(REG_WORK1, s, 16);
-
+  SIGNED16_REG_2_REG(REG_WORK2, s);
+  CMP_rr(d, REG_WORK2);
+  
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);
 	MSR_CPSRf_r(REG_WORK1);
@@ -2244,7 +2244,7 @@ MIDFUNC(2,jff_DBCC,(RW4 d, IMM cc))
 
     case 8: // HI
       CC_MOV_ri(NATIVE_CC_CC, REG_WORK1, 0);
-	  CC_MOV_ri(NATIVE_CC_EQ, REG_WORK1, ARM_C_FLAG);
+      CC_MOV_ri(NATIVE_CC_EQ, REG_WORK1, ARM_C_FLAG);
       break;
 
     default:
