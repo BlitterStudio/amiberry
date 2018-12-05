@@ -158,12 +158,22 @@ void fixup_cpu(struct uae_prefs *p)
 		break;
 	}
 
+	if (p->cpu_model < 68020 && p->cachesize) {
+		p->cachesize = 0;
+		error_log(_T("JIT requires 68020 or better CPU."));
+	}
+
 	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
 	if (p->cachesize && (p->fpu_no_unimplemented)) {
 		error_log(_T("JIT is not compatible with unimplemented FPU instruction emulation."));
 		p->fpu_no_unimplemented = false;
+	}
+
+	if (p->cachesize && p->compfpu && p->fpu_mode > 0) {
+		error_log(_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
+		p->fpu_mode = 0;
 	}
 
 	if (p->immediate_blits && p->waiting_blits) {
