@@ -28,6 +28,7 @@
 ; 2015.09.28 KS 1.2 boot hack improved, 1.1 and older BCPL-only DOS support.
 ; 2016.01.14 'Indirect' boot ROM trap support.
 ; 2018.03.22 Segment tracking
+; 2018.07.08 68060 FPU disable
 
 AllocMem = -198
 FreeMem = -210
@@ -89,19 +90,20 @@ our_seglist:
 	dc.l 0 									; 8 /* NextSeg */
 start:
 	bra.s startjmp
-	dc.w 12						;0 12
+	dc.w 13						;  0 12
 startjmp:
 	bra.w filesys_mainloop		;  1 16
-	dc.l make_dev-start				;  2 20
+	dc.l make_dev-start			;  2 20
 	dc.l filesys_init-start		;  3 24
-	dc.l moverom-start				;  4 28
-	dc.l bootcode-start				;  5 32
+	dc.l moverom-start			;  4 28
+	dc.l bootcode-start			;  5 32
 	dc.l setup_exter-start		;  6 36
 	dc.l bcplwrapper-start		;  7 40
-	dc.l afterdos-start				;  8 44
-	dc.l hwtrap_install-start ;  9 48
+	dc.l afterdos-start			;  8 44
+	dc.l hwtrap_install-start	;  9 48
 	dc.l hwtrap_entry-start 	; 10 52
-	dc.l keymaphack-start			; 11 56
+	dc.l keymaphack-start		; 11 56
+	dc.l fpu060disable-start	; 12 60
 
 bootcode:
 	lea.l doslibname(pc),a1
@@ -111,6 +113,12 @@ bootcode:
 	move.l d0,a0
 	jsr (a0)
 	rts
+
+fpu060disable:
+	movec pcr,d0
+	bset #1,d0
+	movec d0,pcr
+	jmp (a5)
 
 ; BCPL filehandler segment entry point
 ; for KS 1.1 and older.
@@ -2207,6 +2215,8 @@ getgfxlimits:
 	sub.l a2,a2
 	sub.l a3,a3
 	sub.l a4,a4
+	moveq #-1,d1
+	moveq #-1,d2
 	moveq #0,d4
 
 	move.l MH_FOO_GFXBASE(a5),a6
@@ -2233,7 +2243,7 @@ getgfxlimits:
 	move.w 100(a0),d4
 	move.l MH_FOO_GFXBASE(a5),a6
 
-  ; Text Overscan area needed
+	; Text Overscan area needed
 	sub.l a0,a0
 	lea MH_FOO_DIMS(a5),a1
 	moveq #0,d0
@@ -2250,10 +2260,13 @@ getgfxlimits:
 	move.l 54(a2),d2
 .end
 
+	move.l a4,d0
+	beq.s .novp
 	move.l 28(a4),d0
-	cmp.w MH_FOO_MOFFSET(a5),d4
-	bne.s .dosend
 	cmp.l MH_FOO_VPXY(a5),d0
+	bne.s .dosend
+.novp
+	cmp.w MH_FOO_MOFFSET(a5),d4
 	bne.s .dosend
 	cmp.l MH_FOO_DIMS_X(a5),d1
 	bne.s .dosend
@@ -2266,12 +2279,13 @@ getgfxlimits:
 	move.w d4,MH_FOO_MOFFSET(a5)
 
 	; This only for doublescan properties bit..
+	move.l d3,d2
+	beq.s .nomntr
 	sub.l a0,a0
 	lea MH_FOO_DISP(a5),a1
 	moveq #0,d0
 	move.w #88,d0
 	move.l #DTAG_DISP,d1
-	move.l d3,d2
 	jsr -$2f4(a6) ;GetDisplayInfoData
 	tst.l d0
 	bmi.s .nomntr
