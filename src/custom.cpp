@@ -61,7 +61,7 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-#ifdef TINKER
+#ifdef FASTERCYCLES
 
 // Alynna //
 // Justifications for the numbers set here

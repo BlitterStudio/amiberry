@@ -115,7 +115,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),xu4)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-xu4
     ifdef DEBUG
@@ -127,7 +127,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),c1)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mcpu=cortex-a5 -mtune=cortex-a5 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-c1
     ifdef DEBUG
@@ -139,7 +139,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),vero4k)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
     NAME  = amiberry-vero4k
@@ -147,7 +147,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DTINKER -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
     LDFLAGS += -L/usr/local/lib
     HAVE_NEON = 1
     NAME  = amiberry-tinker
@@ -155,7 +155,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),rockpro64)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS +=  -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS +=  -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-rockpro64
 	
