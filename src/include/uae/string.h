@@ -44,6 +44,7 @@
 #define _tcstod strtod
 #define _tcstok strtok
 #define _tcstol strtol
+#define _tcstoul strtoul 
 #define _totlower tolower
 #define _totupper toupper
 #define _tprintf printf
