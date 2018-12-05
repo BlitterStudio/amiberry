@@ -94,18 +94,17 @@ static uae_atomic picasso_state_change;
 static uae_u8 all_ones_bitmap, all_zeros_bitmap; /* yuk */
 
 struct picasso96_state_struct picasso96_state;
-#define picasso96_state_uaegfx picasso96_state
 struct picasso_vidbuf_description picasso_vidinfo;
 static struct PicassoResolution* newmodes = nullptr;
 
 /* These are the maximum resolutions... They are filled in by GetSupportedResolutions() */
 /* have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
 /* data here. */
-static struct ScreenResolution planar = {320, 240};
-static struct ScreenResolution chunky = {640, 480};
-static struct ScreenResolution hicolour = {640, 480};
-static struct ScreenResolution truecolour = {640, 480};
-static struct ScreenResolution alphacolour = {640, 480};
+static struct ScreenResolution planar = { 320, 240 };
+static struct ScreenResolution chunky = { 640, 480 };
+static struct ScreenResolution hicolour = { 640, 480 };
+static struct ScreenResolution truecolour = { 640, 480 };
+static struct ScreenResolution alphacolour = { 640, 480 };
 
 uae_u32 p96_rgbx16[65536];
 uae_u32 p96rc[256], p96gc[256], p96bc[256];
@@ -117,13 +116,12 @@ double p96vblank;
 static int uaegfx_old, uaegfx_active;
 static uae_u32 reserved_gfxmem;
 static uaecptr uaegfx_resname,
-               uaegfx_resid,
-               uaegfx_init,
-               uaegfx_base,
-               uaegfx_rom;
+	uaegfx_resid,
+	uaegfx_init,
+	uaegfx_base,
+	uaegfx_rom;
 
-typedef enum
-{
+typedef enum {
 	BLIT_FALSE,
 	BLIT_NOR,
 	BLIT_ONLYDST,
@@ -202,8 +200,7 @@ static uae_u8 GetBytesPerPixel(uae_u32 RGBfmt)
 	return 0;
 }
 
-STATIC_INLINE bool validatecoords2(TrapContext* ctx, struct RenderInfo* ri, uae_u32* Xp, uae_u32* Yp, uae_u32* Widthp,
-                                   uae_u32* Heightp)
+STATIC_INLINE bool validatecoords2(TrapContext *ctx, struct RenderInfo *ri, uae_u32 *Xp, uae_u32 *Yp, uae_u32 *Widthp, uae_u32 *Heightp)
 {
 	uae_u32 Width = *Widthp;
 	uae_u32 Height = *Heightp;
@@ -211,14 +208,12 @@ STATIC_INLINE bool validatecoords2(TrapContext* ctx, struct RenderInfo* ri, uae_
 	uae_u32 Y = *Yp;
 	if (!Width || !Height)
 		return true;
-	if (ri)
-	{
-		int bpp = GetBytesPerPixel(ri->RGBFormat);
+	if (ri) {
+		int bpp = GetBytesPerPixel (ri->RGBFormat);
 		if (X * bpp >= ri->BytesPerRow)
 			return false;
 		uae_u32 X2 = X + Width;
-		if (X2 * bpp > ri->BytesPerRow)
-		{
+		if (X2 * bpp > ri->BytesPerRow) {
 			X2 = ri->BytesPerRow / bpp;
 			Width = X2 - X;
 			*Widthp = Width;
@@ -228,14 +223,11 @@ STATIC_INLINE bool validatecoords2(TrapContext* ctx, struct RenderInfo* ri, uae_
 	}
 	return true;
 }
-
-static bool validatecoords(TrapContext* ctx, struct RenderInfo* ri, uae_u32* X, uae_u32* Y, uae_u32* Width,
-                           uae_u32* Height)
+static bool validatecoords(TrapContext *ctx, struct RenderInfo *ri, uae_u32 *X, uae_u32 *Y, uae_u32 *Width, uae_u32 *Height)
 {
 	if (validatecoords2(ctx, ri, X, Y, Width, Height))
 		return true;
-	write_log (_T("RTG invalid region: %08X:%d:%d (%dx%d)-(%dx%d)\n"), ri->AMemory, ri->BytesPerRow, ri->RGBFormat, *X,
-		*Y, *Width, *Height);
+	write_log (_T("RTG invalid region: %08X:%d:%d (%dx%d)-(%dx%d)\n"), ri->AMemory, ri->BytesPerRow, ri->RGBFormat, *X, *Y, *Width, *Height);
 	return false;
 }
 
@@ -245,25 +237,24 @@ static bool validatecoords(TrapContext* ctx, struct RenderInfo* ri, uae_u32* X, 
 
 static int CopyRenderInfoStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct RenderInfo* ri)
 {
-	if (trap_valid_address(ctx, amigamemptr, PSSO_RenderInfo_sizeof))
-	{
+	if (trap_valid_address(ctx, amigamemptr, PSSO_RenderInfo_sizeof)) {
 		struct trapmd md[] =
 		{
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_RenderInfo_Memory}},
-			{TRAPCMD_GET_WORD, {amigamemptr + PSSO_RenderInfo_BytesPerRow}},
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_RenderInfo_RGBFormat}}
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_RenderInfo_Memory } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_RenderInfo_BytesPerRow } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_RenderInfo_RGBFormat } }
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		uaecptr memp = md[0].params[0];
 		ri->AMemory = memp;
-		ri->Memory = get_real_address(memp);
+		ri->Memory = get_real_address (memp);
 		ri->BytesPerRow = md[1].params[0];
 		ri->RGBFormat = (RGBFTYPE)md[2].params[0];
 		// Can't really validate this better at this point, no height.
 		if (trap_valid_address(ctx, memp, ri->BytesPerRow))
 			return 1;
 	}
-	write_log(_T("ERROR - Invalid RenderInfo memory area...\n"));
+	write_log (_T("ERROR - Invalid RenderInfo memory area...\n"));
 	return 0;
 }
 
@@ -273,13 +264,13 @@ static int CopyPatternStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct
 	{
 		struct trapmd md[] =
 		{
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_Pattern_Memory}},
-			{TRAPCMD_GET_WORD, {amigamemptr + PSSO_Pattern_XOffset}},
-			{TRAPCMD_GET_WORD, {amigamemptr + PSSO_Pattern_YOffset}},
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_Pattern_FgPen}},
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_Pattern_BgPen}},
-			{TRAPCMD_GET_BYTE, {amigamemptr + PSSO_Pattern_Size}},
-			{TRAPCMD_GET_BYTE, {amigamemptr + PSSO_Pattern_DrawMode}}
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Pattern_Memory } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_Pattern_XOffset } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_Pattern_YOffset } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Pattern_FgPen } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Pattern_BgPen } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Pattern_Size } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Pattern_DrawMode } }
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		uaecptr memp = md[0].params[0];
@@ -294,7 +285,7 @@ static int CopyPatternStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct
 		if (trap_valid_address(ctx, memp, 2))
 			return 1;
 	}
-	write_log(_T("ERROR - Invalid Pattern memory area...\n"));
+	write_log (_T("ERROR - Invalid Pattern memory area...\n"));
 	return 0;
 }
 
@@ -304,18 +295,18 @@ static int CopyBitMapStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct 
 
 	struct trapmd md[] =
 	{
-		{TRAPCMD_GET_WORD, {amigamemptr + PSSO_BitMap_BytesPerRow}},
-		{TRAPCMD_GET_WORD, {amigamemptr + PSSO_BitMap_Rows}},
-		{TRAPCMD_GET_BYTE, {amigamemptr + PSSO_BitMap_Flags}},
-		{TRAPCMD_GET_BYTE, {amigamemptr + PSSO_BitMap_Depth}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 0}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 4}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 8}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 12}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 16}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 20}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 24}},
-		{TRAPCMD_GET_LONG, {amigamemptr + PSSO_BitMap_Planes + 28}}
+		{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_BitMap_BytesPerRow } },
+		{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_BitMap_Rows } },
+		{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_BitMap_Flags } },
+		{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_BitMap_Depth } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 0 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 4 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 8 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 12 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 16 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 20 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 24 } },
+		{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_BitMap_Planes + 28} }
 	};
 	trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 	bm->BytesPerRow = md[0].params[0];
@@ -324,14 +315,13 @@ static int CopyBitMapStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct 
 	bm->Depth = md[3].params[0];
 
 	/* ARGH - why is THIS happening? */
-	if (bm->Depth > 8)
+	if(bm->Depth > 8)
 		bm->Depth = 8;
 
-	for (i = 0; i < bm->Depth; i++)
-	{
+	for (i = 0; i < bm->Depth; i++) {
 		uaecptr plane = md[4 + i].params[0];
-		switch (plane)
-		{
+		bm->APlanes[i] = plane;
+		switch (plane) {
 		case 0:
 			bm->Planes[i] = &all_zeros_bitmap;
 			break;
@@ -351,16 +341,15 @@ static int CopyBitMapStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct 
 
 static int CopyTemplateStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct Template* tmpl)
 {
-	if (trap_valid_address(ctx, amigamemptr, PSSO_Template_sizeof))
-	{
+	if (trap_valid_address(ctx, amigamemptr, PSSO_Template_sizeof)) {
 		struct trapmd md[] =
 		{
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_Template_Memory}},
-			{TRAPCMD_GET_WORD, {amigamemptr + PSSO_Template_BytesPerRow}},
-			{TRAPCMD_GET_BYTE, {amigamemptr + PSSO_Template_XOffset}},
-			{TRAPCMD_GET_BYTE, {amigamemptr + PSSO_Template_DrawMode}},
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_Template_FgPen}},
-			{TRAPCMD_GET_LONG, {amigamemptr + PSSO_Template_BgPen}}
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Template_Memory } },
+			{ TRAPCMD_GET_WORD, { amigamemptr + PSSO_Template_BytesPerRow } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Template_XOffset } },
+			{ TRAPCMD_GET_BYTE, { amigamemptr + PSSO_Template_DrawMode } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Template_FgPen } },
+			{ TRAPCMD_GET_LONG, { amigamemptr + PSSO_Template_BgPen } }
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 
@@ -374,13 +363,38 @@ static int CopyTemplateStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struc
 		tmpl->BgPen = md[5].params[0];
 		return 1;
 	}
-	write_log(_T("ERROR - Invalid Template memory area...\n"));
+	write_log (_T("ERROR - Invalid Template memory area...\n"));
+	return 0;
+}
+
+static int CopyLineStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struct Line *line)
+{
+	if (trap_valid_address(ctx, amigamemptr, sizeof(struct Line))) {
+		line->X = trap_get_word(ctx, amigamemptr + PSSO_Line_X);
+		line->Y = trap_get_word(ctx, amigamemptr + PSSO_Line_Y);
+		line->Length = trap_get_word(ctx, amigamemptr + PSSO_Line_Length);
+		line->dX = trap_get_word(ctx, amigamemptr + PSSO_Line_dX);
+		line->dY = trap_get_word(ctx, amigamemptr + PSSO_Line_dY);
+		line->lDelta = trap_get_word(ctx, amigamemptr + PSSO_Line_lDelta);
+		line->sDelta = trap_get_word(ctx, amigamemptr + PSSO_Line_sDelta);
+		line->twoSDminusLD = trap_get_word(ctx, amigamemptr + PSSO_Line_twoSDminusLD);
+		line->LinePtrn = trap_get_word(ctx, amigamemptr + PSSO_Line_LinePtrn);
+		line->PatternShift = trap_get_word(ctx, amigamemptr + PSSO_Line_PatternShift);
+		line->FgPen = trap_get_long(ctx, amigamemptr + PSSO_Line_FgPen);
+		line->BgPen = trap_get_long(ctx, amigamemptr + PSSO_Line_BgPen);
+		line->Horizontal = trap_get_word(ctx, amigamemptr + PSSO_Line_Horizontal);
+		line->DrawMode = trap_get_byte(ctx, amigamemptr + PSSO_Line_DrawMode);
+		line->Xorigin = trap_get_word(ctx, amigamemptr + PSSO_Line_Xorigin);
+		line->Yorigin = trap_get_word(ctx, amigamemptr + PSSO_Line_Yorigin);
+		return 1;
+	}
+	write_log (_T("ERROR - Invalid Line structure...\n"));
 	return 0;
 }
 
 /* list is Amiga address of list, in correct endian format for UAE
- * node is Amiga address of node, in correct endian format for UAE */
-static void AmigaListAddTail(TrapContext* ctx, uaecptr l, uaecptr n)
+* node is Amiga address of node, in correct endian format for UAE */
+static void AmigaListAddTail(TrapContext *ctx, uaecptr l, uaecptr n)
 {
 	trap_put_long(ctx, n + 0, l + 4); // n->ln_Succ = (struct Node *)&l->lh_Tail;
 	trap_put_long(ctx, n + 4, trap_get_long(ctx, l + 8)); // n->ln_Pred = l->lh_TailPred;
@@ -390,32 +404,28 @@ static void AmigaListAddTail(TrapContext* ctx, uaecptr l, uaecptr n)
 
 /*
 * Fill a rectangle in the screen.
- */
-static void do_fillrect_frame_buffer(struct RenderInfo* ri, int X, int Y, int Width, int Height, uae_u32 Pen, int Bpp)
+*/
+static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Width, int Height, uae_u32 Pen, int Bpp)
 {
 	int cols;
-	uae_u8* dst;
-	int lines;
+	uae_u8 *dst;
 	int bpr = ri->BytesPerRow;
 
-	dst = ri->Memory + X * Bpp + Y * ri->BytesPerRow;
-	endianswap(&Pen, Bpp);
+	dst = ri->Memory + X * Bpp + Y * bpr;
+	endianswap (&Pen, Bpp);
 	switch (Bpp)
 	{
 	case 1:
-		for (lines = 0; lines < Height; lines++, dst += bpr)
-		{
+		for (int lines = 0; lines < Height; lines++, dst += bpr) {
 			memset(dst, Pen, Width);
 		}
 		break;
 	case 2:
 		Pen |= Pen << 16;
-		for (lines = 0; lines < Height; lines++, dst += bpr)
-		{
+		for (int lines = 0; lines < Height; lines++, dst += bpr) {
 			uae_u16* dst16 = (uae_u16 *)dst;
 			int tmpwidth = Width;
-			if ((uintptr_t)dst16 & 3)
-			{
+			if ((uintptr_t)dst16 & 3) {
 				*dst16++ = (uae_u16)Pen;
 				tmpwidth--;
 			}
@@ -427,11 +437,9 @@ static void do_fillrect_frame_buffer(struct RenderInfo* ri, int X, int Y, int Wi
 		}
 		break;
 	case 3:
-		for (lines = 0; lines < Height; lines++, dst += bpr)
-		{
+		for (int lines = 0; lines < Height; lines++, dst += bpr) {
 			uae_u8* p = (uae_u8*)dst;
-			for (cols = 0; cols < Width; cols++)
-			{
+			for (cols = 0; cols < Width; cols++) {
 				*p++ = Pen >> 0;
 				*p++ = Pen >> 8;
 				*p++ = Pen >> 16;
@@ -439,8 +447,7 @@ static void do_fillrect_frame_buffer(struct RenderInfo* ri, int X, int Y, int Wi
 		}
 		break;
 	case 4:
-		for (lines = 0; lines < Height; lines++, dst += bpr)
-		{
+		for (int lines = 0; lines < Height; lines++, dst += bpr) {
 			uae_u32* p = (uae_u32*)dst;
 			for (cols = 0; cols < Width; cols++)
 				*p++ = Pen;
@@ -450,8 +457,8 @@ static void do_fillrect_frame_buffer(struct RenderInfo* ri, int X, int Y, int Wi
 }
 
 static int p96_framecnt;
-
-static int doskip(void)
+int p96skipmode = -1;
+static int doskip (void)
 {
 	if (p96_framecnt > currprefs.gfx_framerate)
 		p96_framecnt = 0;
@@ -706,13 +713,13 @@ void picasso_refresh(void)
 
 static void picasso_handle_vsync2()
 {
-	static int vsynccnt;
+	//static int vsynccnt;
 	int thisisvsync = 1;
-	int vsync = isvsync_rtg();
-	int mult;
-	bool rendered = false;
+	//int vsync = isvsync_rtg();
+	//int mult;
+	//bool rendered = false;
 	bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
-	bool uaegfx_active = is_uaegfx_active();
+	//bool uaegfx_active = is_uaegfx_active();
 
 	int state = picasso_state_change;
 	if (state & PICASSO_STATE_SETDAC)
@@ -783,7 +790,7 @@ static int p96hsync;
 void picasso_handle_vsync(void)
 {
 	bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
-	bool uaegfx_active = is_uaegfx_active();
+	//bool uaegfx_active = is_uaegfx_active();
 
 	if (currprefs.rtgboards[0].rtgmem_size == 0)
 		return;
@@ -804,7 +811,7 @@ void picasso_handle_vsync(void)
 void picasso_handle_hsync(void)
 {
 	bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
-	bool uaegfx_active = is_uaegfx_active();
+	//bool uaegfx_active = is_uaegfx_active();
 
 	if (currprefs.rtgboards[0].rtgmem_size == 0)
 		return;
@@ -1110,156 +1117,98 @@ static int do_blitrect_frame_buffer(struct RenderInfo* ri, struct
 				src += (height - 1) * ri->BytesPerRow;
 				dst += (height - 1) * dstri->BytesPerRow;
 				for (i = 0; i < height; i++, src -= ri->BytesPerRow, dst -= dstri->BytesPerRow)
-					memcpy(dst, src, total_width);
+					memcpy (dst, src, total_width);
 			}
 			return 1;
-		}
-		if (Bpp == 4)
-		{
-			/* 32-bit optimized */
-			switch (opcode)
-			{
-			case BLIT_FALSE: BLIT_FALSE_32(PARMS);
-				break;
-			case BLIT_NOR: BLIT_NOR_32(PARMS);
-				break;
-			case BLIT_ONLYDST: BLIT_ONLYDST_32(PARMS);
-				break;
-			case BLIT_NOTSRC: BLIT_NOTSRC_32(PARMS);
-				break;
-			case BLIT_ONLYSRC: BLIT_ONLYSRC_32(PARMS);
-				break;
-			case BLIT_NOTDST: BLIT_NOTDST_32(PARMS);
-				break;
-			case BLIT_EOR: BLIT_EOR_32(PARMS);
-				break;
-			case BLIT_NAND: BLIT_NAND_32(PARMS);
-				break;
-			case BLIT_AND: BLIT_AND_32(PARMS);
-				break;
-			case BLIT_NEOR: BLIT_NEOR_32(PARMS);
-				break;
-			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_32(PARMS);
-				break;
-			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_32(PARMS);
-				break;
-			case BLIT_OR: BLIT_OR_32(PARMS);
-				break;
-			case BLIT_TRUE: BLIT_TRUE_32(PARMS);
-				break;
-			case BLIT_SWAP: BLIT_SWAP_32(PARMS);
-				break;
-			}
-		}
-		else if (Bpp == 3)
-		{
-			/* 24-bit (not very) optimized */
-			switch (opcode)
-			{
-			case BLIT_FALSE: BLIT_FALSE_24(PARMS);
-				break;
-			case BLIT_NOR: BLIT_NOR_24(PARMS);
-				break;
-			case BLIT_ONLYDST: BLIT_ONLYDST_24(PARMS);
-				break;
-			case BLIT_NOTSRC: BLIT_NOTSRC_24(PARMS);
-				break;
-			case BLIT_ONLYSRC: BLIT_ONLYSRC_24(PARMS);
-				break;
-			case BLIT_NOTDST: BLIT_NOTDST_24(PARMS);
-				break;
-			case BLIT_EOR: BLIT_EOR_24(PARMS);
-				break;
-			case BLIT_NAND: BLIT_NAND_24(PARMS);
-				break;
-			case BLIT_AND: BLIT_AND_24(PARMS);
-				break;
-			case BLIT_NEOR: BLIT_NEOR_24(PARMS);
-				break;
-			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_24(PARMS);
-				break;
-			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_24(PARMS);
-				break;
-			case BLIT_OR: BLIT_OR_24(PARMS);
-				break;
-			case BLIT_TRUE: BLIT_TRUE_24(PARMS);
-				break;
-			case BLIT_SWAP: BLIT_SWAP_24(PARMS);
-				break;
-			}
-		}
-		else if (Bpp == 2)
-		{
-			/* 16-bit optimized */
-			switch (opcode)
-			{
-			case BLIT_FALSE: BLIT_FALSE_16(PARMS);
-				break;
-			case BLIT_NOR: BLIT_NOR_16(PARMS);
-				break;
-			case BLIT_ONLYDST: BLIT_ONLYDST_16(PARMS);
-				break;
-			case BLIT_NOTSRC: BLIT_NOTSRC_16(PARMS);
-				break;
-			case BLIT_ONLYSRC: BLIT_ONLYSRC_16(PARMS);
-				break;
-			case BLIT_NOTDST: BLIT_NOTDST_16(PARMS);
-				break;
-			case BLIT_EOR: BLIT_EOR_16(PARMS);
-				break;
-			case BLIT_NAND: BLIT_NAND_16(PARMS);
-				break;
-			case BLIT_AND: BLIT_AND_16(PARMS);
-				break;
-			case BLIT_NEOR: BLIT_NEOR_16(PARMS);
-				break;
-			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_16(PARMS);
-				break;
-			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_16(PARMS);
-				break;
-			case BLIT_OR: BLIT_OR_16(PARMS);
-				break;
-			case BLIT_TRUE: BLIT_TRUE_16(PARMS);
-				break;
-			case BLIT_SWAP: BLIT_SWAP_16(PARMS);
-				break;
-			}
-		}
-		else if (Bpp == 1)
-		{
-			/* 8-bit optimized */
-			switch (opcode)
-			{
-			case BLIT_FALSE: BLIT_FALSE_8(PARMS);
-				break;
-			case BLIT_NOR: BLIT_NOR_8(PARMS);
-				break;
-			case BLIT_ONLYDST: BLIT_ONLYDST_8(PARMS);
-				break;
-			case BLIT_NOTSRC: BLIT_NOTSRC_8(PARMS);
-				break;
-			case BLIT_ONLYSRC: BLIT_ONLYSRC_8(PARMS);
-				break;
-			case BLIT_NOTDST: BLIT_NOTDST_8(PARMS);
-				break;
-			case BLIT_EOR: BLIT_EOR_8(PARMS);
-				break;
-			case BLIT_NAND: BLIT_NAND_8(PARMS);
-				break;
-			case BLIT_AND: BLIT_AND_8(PARMS);
-				break;
-			case BLIT_NEOR: BLIT_NEOR_8(PARMS);
-				break;
-			case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_8(PARMS);
-				break;
-			case BLIT_NOTONLYDST: BLIT_NOTONLYDST_8(PARMS);
-				break;
-			case BLIT_OR: BLIT_OR_8(PARMS);
-				break;
-			case BLIT_TRUE: BLIT_TRUE_8(PARMS);
-				break;
-			case BLIT_SWAP: BLIT_SWAP_8(PARMS);
-				break;
+
+		} else {
+
+			if (Bpp == 4) {
+
+				/* 32-bit optimized */
+				switch (opcode)
+				{
+				case BLIT_FALSE: BLIT_FALSE_32 (PARMS); break;
+				case BLIT_NOR: BLIT_NOR_32 (PARMS); break;
+				case BLIT_ONLYDST: BLIT_ONLYDST_32 (PARMS); break;
+				case BLIT_NOTSRC: BLIT_NOTSRC_32 (PARMS); break;
+				case BLIT_ONLYSRC: BLIT_ONLYSRC_32 (PARMS); break;
+				case BLIT_NOTDST: BLIT_NOTDST_32 (PARMS); break;
+				case BLIT_EOR: BLIT_EOR_32 (PARMS); break;
+				case BLIT_NAND: BLIT_NAND_32 (PARMS); break;
+				case BLIT_AND: BLIT_AND_32 (PARMS); break;
+				case BLIT_NEOR: BLIT_NEOR_32 (PARMS); break;
+				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_32 (PARMS); break;
+				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_32 (PARMS); break;
+				case BLIT_OR: BLIT_OR_32 (PARMS); break;
+				case BLIT_TRUE: BLIT_TRUE_32 (PARMS); break;
+				case BLIT_SWAP: BLIT_SWAP_32 (PARMS); break;
+				}
+			} else if (Bpp == 3) {
+
+				/* 24-bit (not very) optimized */
+				switch (opcode)
+				{
+				case BLIT_FALSE: BLIT_FALSE_24 (PARMS); break;
+				case BLIT_NOR: BLIT_NOR_24 (PARMS); break;
+				case BLIT_ONLYDST: BLIT_ONLYDST_24 (PARMS); break;
+				case BLIT_NOTSRC: BLIT_NOTSRC_24 (PARMS); break;
+				case BLIT_ONLYSRC: BLIT_ONLYSRC_24 (PARMS); break;
+				case BLIT_NOTDST: BLIT_NOTDST_24 (PARMS); break;
+				case BLIT_EOR: BLIT_EOR_24 (PARMS); break;
+				case BLIT_NAND: BLIT_NAND_24 (PARMS); break;
+				case BLIT_AND: BLIT_AND_24 (PARMS); break;
+				case BLIT_NEOR: BLIT_NEOR_24 (PARMS); break;
+				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_24 (PARMS); break;
+				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_24 (PARMS); break;
+				case BLIT_OR: BLIT_OR_24 (PARMS); break;
+				case BLIT_TRUE: BLIT_TRUE_24 (PARMS); break;
+				case BLIT_SWAP: BLIT_SWAP_24 (PARMS); break;
+				}
+
+			} else if (Bpp == 2) {
+
+				/* 16-bit optimized */
+				switch (opcode)
+				{
+				case BLIT_FALSE: BLIT_FALSE_16 (PARMS); break;
+				case BLIT_NOR: BLIT_NOR_16 (PARMS); break;
+				case BLIT_ONLYDST: BLIT_ONLYDST_16 (PARMS); break;
+				case BLIT_NOTSRC: BLIT_NOTSRC_16 (PARMS); break;
+				case BLIT_ONLYSRC: BLIT_ONLYSRC_16 (PARMS); break;
+				case BLIT_NOTDST: BLIT_NOTDST_16 (PARMS); break;
+				case BLIT_EOR: BLIT_EOR_16 (PARMS); break;
+				case BLIT_NAND: BLIT_NAND_16 (PARMS); break;
+				case BLIT_AND: BLIT_AND_16 (PARMS); break;
+				case BLIT_NEOR: BLIT_NEOR_16 (PARMS); break;
+				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_16 (PARMS); break;
+				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_16 (PARMS); break;
+				case BLIT_OR: BLIT_OR_16 (PARMS); break;
+				case BLIT_TRUE: BLIT_TRUE_16 (PARMS); break;
+				case BLIT_SWAP: BLIT_SWAP_16 (PARMS); break;
+				}
+
+			} else if (Bpp == 1) {
+
+				/* 8-bit optimized */
+				switch (opcode)
+				{
+				case BLIT_FALSE: BLIT_FALSE_8 (PARMS); break;
+				case BLIT_NOR: BLIT_NOR_8 (PARMS); break;
+				case BLIT_ONLYDST: BLIT_ONLYDST_8 (PARMS); break;
+				case BLIT_NOTSRC: BLIT_NOTSRC_8 (PARMS); break;
+				case BLIT_ONLYSRC: BLIT_ONLYSRC_8 (PARMS); break;
+				case BLIT_NOTDST: BLIT_NOTDST_8 (PARMS); break;
+				case BLIT_EOR: BLIT_EOR_8 (PARMS); break;
+				case BLIT_NAND: BLIT_NAND_8 (PARMS); break;
+				case BLIT_AND: BLIT_AND_8 (PARMS); break;
+				case BLIT_NEOR: BLIT_NEOR_8 (PARMS); break;
+				case BLIT_NOTONLYSRC: BLIT_NOTONLYSRC_8 (PARMS); break;
+				case BLIT_NOTONLYDST: BLIT_NOTONLYDST_8 (PARMS); break;
+				case BLIT_OR: BLIT_OR_8 (PARMS); break;
+				case BLIT_TRUE: BLIT_TRUE_8 (PARMS); break;
+				case BLIT_SWAP: BLIT_SWAP_8 (PARMS); break;
+				}
 			}
 		}
 		return 1;
@@ -1380,12 +1329,12 @@ static uae_u32 REGPARAM2 picasso_FindCard(TrapContext* ctx)
 	}
 	boardinfo = AmigaBoardInfo;
 
-	if (gfxmem_bank.allocated_size && !picasso96_state_uaegfx.CardFound)
+	if (gfxmem_bank.allocated_size && !picasso96_state.CardFound)
 	{
 		/* Fill in MemoryBase, MemorySize */
 		trap_put_long(ctx, AmigaBoardInfo + PSSO_BoardInfo_MemoryBase, gfxmem_bank.start);
 		trap_put_long(ctx, AmigaBoardInfo + PSSO_BoardInfo_MemorySize, gfxmem_bank.allocated_size - reserved_gfxmem);
-		picasso96_state_uaegfx.CardFound = 1; /* mark our "card" as being found */
+		picasso96_state.CardFound = 1; /* mark our "card" as being found */
 		return -1;
 	}
 	return 0;
@@ -1907,15 +1856,15 @@ static uae_u32 REGPARAM2 picasso_InitCard(TrapContext* ctx)
 	}
 
 	if (amem > picasso96_amemend)
-	write_log (_T("P96: display resolution list corruption %08x<>%08x (%d)\n"), amem, picasso96_amemend, i);
+		write_log (_T("P96: display resolution list corruption %08x<>%08x (%d)\n"), amem, picasso96_amemend, i);
 
 	return -1;
 }
 
 /*
 * SetSwitch:
-* a0:	struct BoardInfo
-* d0.w:	BOOL state
+* a0: struct BoardInfo
+* d0.w: BOOL state
 * this function should set a board switch to let the Amiga signal pass
 * through when supplied with a 0 in d0 and to show the board signal if
 * a 1 is passed in d0. You should remember the current state of the
@@ -1930,13 +1879,14 @@ static uae_u32 REGPARAM2 picasso_SetSwitch(TrapContext* ctx)
 
 	atomic_or(&picasso_state_change, PICASSO_STATE_SETSWITCH);
 	picasso_requested_on = flag != 0;
+	set_config_changed();
 
 	TCHAR p96text[100];
 	p96text[0] = 0;
 	if (flag)
 		_stprintf(p96text, _T("Picasso96 %dx%dx%d (%dx%dx%d)"),
-		          picasso96_state_uaegfx.Width, picasso96_state_uaegfx.Height, picasso96_state_uaegfx.BytesPerPixel * 8,
-		          picasso_vidinfo.width, picasso_vidinfo.height, picasso_vidinfo.pixbytes * 8);
+			picasso96_state.Width, picasso96_state.Height, picasso96_state.BytesPerPixel * 8,
+			picasso_vidinfo.width, picasso_vidinfo.height, picasso_vidinfo.pixbytes * 8);
 	write_log(_T("SetSwitch() - %s\n"), flag ? p96text : _T("amiga"));
 
 	/* Put old switch-state in D0 */
@@ -1960,7 +1910,7 @@ void picasso_enablescreen(int on)
 static void resetpalette(void)
 {
 	for (int i = 0; i < 256; i++)
-		picasso96_state_uaegfx.CLUT[i].Pad = 0xff;
+		picasso96_state.CLUT[i].Pad = 0xff;
 }
 
 /*
@@ -1981,23 +1931,22 @@ static int updateclut(TrapContext* ctx, uaecptr clut, int start, int count)
 	int i, changed = 0;
 	clut += start * 3;
 	trap_get_bytes(ctx, clutbuf + start * 3, clut, count * 3);
-	for (i = start; i < start + count; i++)
-	{
+	for (i = start; i < start + count; i++) {
 		int r = clutbuf[i * 3 + 0];
 		int g = clutbuf[i * 3 + 1];
 		int b = clutbuf[i * 3 + 2];
 
-		changed |= picasso96_state_uaegfx.CLUT[i].Red != r
-			|| picasso96_state_uaegfx.CLUT[i].Green != g
-			|| picasso96_state_uaegfx.CLUT[i].Blue != b;
-		if (picasso96_state_uaegfx.CLUT[i].Pad)
+		changed |= picasso96_state.CLUT[i].Red != r
+			|| picasso96_state.CLUT[i].Green != g
+			|| picasso96_state.CLUT[i].Blue != b;
+		if (picasso96_state.CLUT[i].Pad)
 		{
 			changed = 1;
-			picasso96_state_uaegfx.CLUT[i].Pad = 0;
+			picasso96_state.CLUT[i].Pad = 0;
 		}
-		picasso96_state_uaegfx.CLUT[i].Red = r;
-		picasso96_state_uaegfx.CLUT[i].Green = g;
-		picasso96_state_uaegfx.CLUT[i].Blue = b;
+		picasso96_state.CLUT[i].Red = r;
+		picasso96_state.CLUT[i].Green = g;
+		picasso96_state.CLUT[i].Blue = b;
 	}
 	changed |= picasso_palette(picasso96_state.CLUT);
 	return changed;
@@ -2039,19 +1988,19 @@ static void init_picasso_screen(void)
 {
 	if (picasso_vidinfo.set_panning_called)
 	{
-		picasso96_state_uaegfx.Extent = picasso96_state_uaegfx.Address + picasso96_state_uaegfx.BytesPerRow *
-			picasso96_state_uaegfx.VirtualHeight;
+		picasso96_state.Extent = picasso96_state.Address + picasso96_state.BytesPerRow *
+			picasso96_state.VirtualHeight;
 	}
 	if (set_gc_called)
 	{
-		gfx_set_picasso_modeinfo(picasso96_state_uaegfx.Width, picasso96_state_uaegfx.Height,
-		                         picasso96_state_uaegfx.GC_Depth, (RGBFTYPE)picasso96_state_uaegfx.RGBFormat);
+		gfx_set_picasso_modeinfo(picasso96_state.Width, picasso96_state.Height,
+			picasso96_state.GC_Depth, (RGBFTYPE)picasso96_state.RGBFormat);
 		set_gc_called = 0;
 	}
-	if ((picasso_vidinfo.width == picasso96_state_uaegfx.Width) &&
-		(picasso_vidinfo.height == picasso96_state_uaegfx.Height) &&
-		(picasso_vidinfo.depth == (picasso96_state_uaegfx.GC_Depth >> 3)) &&
-		(picasso_vidinfo.selected_rgbformat == picasso96_state_uaegfx.RGBFormat))
+	if ((picasso_vidinfo.width == picasso96_state.Width) &&
+		(picasso_vidinfo.height == picasso96_state.Height) &&
+		(picasso_vidinfo.depth == (picasso96_state.GC_Depth >> 3)) &&
+		(picasso_vidinfo.selected_rgbformat == picasso96_state.RGBFormat))
 	{
 		picasso_refresh();
 	}
@@ -2079,16 +2028,16 @@ static uae_u32 REGPARAM2 picasso_SetGC(TrapContext* ctx)
 	trap_put_long(ctx, AmigaBoardInfo + PSSO_BoardInfo_ModeInfo, modeinfo);
 	trap_put_word(ctx, AmigaBoardInfo + PSSO_BoardInfo_Border, border);
 
-	picasso96_state_uaegfx.Width = trap_get_word(ctx, modeinfo + PSSO_ModeInfo_Width);
-	picasso96_state_uaegfx.VirtualWidth = picasso96_state_uaegfx.Width; /* in case SetPanning doesn't get called */
+	picasso96_state.Width = trap_get_word(ctx, modeinfo + PSSO_ModeInfo_Width);
+	picasso96_state.VirtualWidth = picasso96_state.Width; /* in case SetPanning doesn't get called */
 
-	picasso96_state_uaegfx.Height = trap_get_word(ctx, modeinfo + PSSO_ModeInfo_Height);
-	picasso96_state_uaegfx.VirtualHeight = picasso96_state_uaegfx.Height; /* in case SetPanning doesn't get called */
+	picasso96_state.Height = trap_get_word(ctx, modeinfo + PSSO_ModeInfo_Height);
+	picasso96_state.VirtualHeight = picasso96_state.Height; /* in case SetPanning doesn't get called */
 
-	picasso96_state_uaegfx.GC_Depth = trap_get_byte(ctx, modeinfo + PSSO_ModeInfo_Depth);
-	picasso96_state_uaegfx.GC_Flags = trap_get_byte(ctx, modeinfo + PSSO_ModeInfo_Flags);
+	picasso96_state.GC_Depth = trap_get_byte(ctx, modeinfo + PSSO_ModeInfo_Depth);
+	picasso96_state.GC_Flags = trap_get_byte(ctx, modeinfo + PSSO_ModeInfo_Flags);
 
-	picasso96_state_uaegfx.HostAddress = nullptr;
+	picasso96_state.HostAddress = nullptr;
 
 	atomic_or(&picasso_state_change, PICASSO_STATE_SETGC);
 
@@ -2120,9 +2069,13 @@ static uae_u32 REGPARAM2 picasso_SetGC(TrapContext* ctx)
 
 static void picasso_SetPanningInit(void)
 {
-	picasso96_state_uaegfx.XYOffset = picasso96_state_uaegfx.Address + (picasso96_state_uaegfx.XOffset *
-			picasso96_state_uaegfx.BytesPerPixel)
-		+ (picasso96_state_uaegfx.YOffset * picasso96_state_uaegfx.BytesPerRow);
+	picasso96_state.XYOffset = picasso96_state.Address + (picasso96_state.XOffset *
+		picasso96_state.BytesPerPixel)
+		+ (picasso96_state.YOffset * picasso96_state.BytesPerRow);
+	if (picasso96_state.VirtualWidth > picasso96_state.Width || picasso96_state.VirtualHeight > picasso96_state.Height)
+		picasso96_state.BigAssBitmap = 1;
+	else
+		picasso96_state.BigAssBitmap = 0;
 }
 
 static uae_u32 REGPARAM2 picasso_SetPanning(TrapContext* ctx)
@@ -2130,36 +2083,37 @@ static uae_u32 REGPARAM2 picasso_SetPanning(TrapContext* ctx)
 	uae_u16 Width = trap_get_dreg(ctx, 0);
 	uaecptr start_of_screen = trap_get_areg(ctx, 1);
 	uaecptr bi = trap_get_areg(ctx, 0);
-	uaecptr bmeptr = trap_get_long(ctx, bi + PSSO_BoardInfo_BitMapExtra); /* Get our BoardInfo ptr's BitMapExtra ptr */
+	uaecptr bmeptr = trap_get_long(ctx, bi + PSSO_BoardInfo_BitMapExtra);  /* Get our BoardInfo ptr's BitMapExtra ptr */
 	uae_u16 bme_width, bme_height;
+	int changed = 0;
 	RGBFTYPE rgbf;
 
-	if (oldscr == 0)
-	{
+	if (oldscr == 0) {
 		oldscr = start_of_screen;
+		changed = 1;
 	}
-	if (oldscr != start_of_screen)
-	{
+	if (oldscr != start_of_screen) {
 		oldscr = start_of_screen;
+		changed = 1;
 	}
 
 	bme_width = trap_get_word(ctx, bmeptr + PSSO_BitMapExtra_Width);
 	bme_height = trap_get_word(ctx, bmeptr + PSSO_BitMapExtra_Height);
-	rgbf = (RGBFTYPE)picasso96_state_uaegfx.RGBFormat;
+	rgbf = picasso96_state.RGBFormat;
 
-	picasso96_state_uaegfx.Address = start_of_screen; /* Amiga-side address */
-	picasso96_state_uaegfx.XOffset = (uae_s16)(trap_get_dreg(ctx, 1) & 0xFFFF);
-	picasso96_state_uaegfx.YOffset = (uae_s16)(trap_get_dreg(ctx, 2) & 0xFFFF);
-	trap_put_word(ctx, bi + PSSO_BoardInfo_XOffset, picasso96_state_uaegfx.XOffset);
-	trap_put_word(ctx, bi + PSSO_BoardInfo_YOffset, picasso96_state_uaegfx.YOffset);
-	picasso96_state_uaegfx.VirtualWidth = bme_width;
-	picasso96_state_uaegfx.VirtualHeight = bme_height;
-	picasso96_state_uaegfx.RGBFormat = (RGBFTYPE)trap_get_dreg(ctx, 7);
-	picasso96_state_uaegfx.BytesPerPixel = GetBytesPerPixel(picasso96_state_uaegfx.RGBFormat);
-	picasso96_state_uaegfx.BytesPerRow = picasso96_state_uaegfx.VirtualWidth * picasso96_state_uaegfx.BytesPerPixel;
+	picasso96_state.Address = start_of_screen; /* Amiga-side address */
+	picasso96_state.XOffset = (uae_s16)(trap_get_dreg(ctx, 1) & 0xFFFF);
+	picasso96_state.YOffset = (uae_s16)(trap_get_dreg(ctx, 2) & 0xFFFF);
+	trap_put_word(ctx, bi + PSSO_BoardInfo_XOffset, picasso96_state.XOffset);
+	trap_put_word(ctx, bi + PSSO_BoardInfo_YOffset, picasso96_state.YOffset);
+	picasso96_state.VirtualWidth = bme_width;
+	picasso96_state.VirtualHeight = bme_height;
+	picasso96_state.RGBFormat = (RGBFTYPE)trap_get_dreg(ctx, 7);
+	picasso96_state.BytesPerPixel = GetBytesPerPixel(picasso96_state.RGBFormat);
+	picasso96_state.BytesPerRow = picasso96_state.VirtualWidth * picasso96_state.BytesPerPixel;
 	picasso_SetPanningInit();
 
-	if (rgbf != picasso96_state_uaegfx.RGBFormat)
+	if (rgbf != picasso96_state.RGBFormat)
 	{
 		setconvert();
 	}
@@ -2169,30 +2123,50 @@ static uae_u32 REGPARAM2 picasso_SetPanning(TrapContext* ctx)
 	return 1;
 }
 
-static void do_xor8(uae_u8* p, int w, uae_u32 v)
+#ifdef CPU_64_BIT
+static void do_xor8 (uae_u8 *p, int w, uae_u32 v)
 {
-	while (ALIGN_POINTER_TO32(p) != 3 && w)
-	{
+	while (ALIGN_POINTER_TO32 (p) != 7 && w) {
 		*p ^= v;
 		p++;
 		w--;
 	}
-	while (w >= 2 * 4)
-	{
+	uae_u64 vv = v | ((uae_u64)v << 32);
+	while (w >= 2 * 8) {
+		*((uae_u64*)p) ^= vv;
+		p += 8;
+		*((uae_u64*)p) ^= vv;
+		p += 8;
+		w -= 2 * 8;
+	}
+	while (w) {
+		*p ^= v;
+		p++;
+		w--;
+	}
+}
+#else
+static void do_xor8 (uae_u8 *p, int w, uae_u32 v)
+{
+	while (ALIGN_POINTER_TO32 (p) != 3 && w) {
+		*p ^= v;
+		p++;
+		w--;
+	}
+	while (w >= 2 * 4) {
 		*((uae_u32*)p) ^= v;
 		p += 4;
 		*((uae_u32*)p) ^= v;
 		p += 4;
 		w -= 2 * 4;
 	}
-	while (w)
-	{
+	while (w) {
 		*p ^= v;
 		p++;
 		w--;
 	}
 }
-
+#endif
 /*
 * InvertRect:
 *
@@ -2209,7 +2183,7 @@ static void do_xor8(uae_u8* p, int w, uae_u32 v)
 * This function is used to invert a rectangular area on the board. It is called by BltBitMap,
 * BltPattern and BltTemplate.
 */
-static uae_u32 REGPARAM2 picasso_InvertRect(TrapContext* ctx)
+static uae_u32 REGPARAM2 picasso_InvertRect (TrapContext *ctx)
 {
 	uaecptr renderinfo = trap_get_areg(ctx, 1);
 	uae_u32 X = (uae_u16)trap_get_dreg(ctx, 0);
@@ -2217,7 +2191,7 @@ static uae_u32 REGPARAM2 picasso_InvertRect(TrapContext* ctx)
 	uae_u32 Width = (uae_u16)trap_get_dreg(ctx, 2);
 	uae_u32 Height = (uae_u16)trap_get_dreg(ctx, 3);
 	uae_u8 mask = (uae_u8)trap_get_dreg(ctx, 4);
-	int Bpp = GetBytesPerPixel(trap_get_dreg(ctx, 7));
+	int Bpp = GetBytesPerPixel (trap_get_dreg(ctx, 7));
 	uae_u32 xorval;
 	unsigned int lines;
 	struct RenderInfo ri;
@@ -2241,7 +2215,7 @@ static uae_u32 REGPARAM2 picasso_InvertRect(TrapContext* ctx)
 		rectstart = uae_mem = ri.Memory + Y * ri.BytesPerRow + X * Bpp;
 
 		for (lines = 0; lines < Height; lines++, uae_mem += ri.BytesPerRow)
-			do_xor8(uae_mem, width_in_bytes, xorval);
+			do_xor8 (uae_mem, width_in_bytes, xorval);
 		result = 1;
 	}
 
@@ -2251,15 +2225,15 @@ static uae_u32 REGPARAM2 picasso_InvertRect(TrapContext* ctx)
 /***********************************************************
 FillRect:
 ***********************************************************
-* a0: 	struct BoardInfo *
-* a1:	struct RenderInfo *
-* d0: 	WORD X
-* d1: 	WORD Y
-* d2: 	WORD Width
-* d3: 	WORD Height
-* d4:	uae_u32 Pen
-* d5:	UBYTE Mask
-* d7:	uae_u32 RGBFormat
+* a0: struct BoardInfo *
+* a1: struct RenderInfo *
+* d0: WORD X
+* d1: WORD Y
+* d2: WORD Width
+* d3: WORD Height
+* d4: uae_u32 Pen
+* d5: UBYTE Mask
+* d7: uae_u32 RGBFormat
 ***********************************************************/
 static uae_u32 REGPARAM2 picasso_FillRect(TrapContext* ctx)
 {
@@ -2278,8 +2252,7 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext* ctx)
 
 	if (NOBLITTER)
 		return 0;
-	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri) && Y != 0xFFFF)
-	{
+	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri)) {
 		if (!validatecoords(ctx, &ri, &X, &Y, &Width, &Height))
 			return 1;
 
@@ -2288,36 +2261,30 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext* ctx)
 		if (Bpp > 1)
 			Mask = 0xFF;
 
-		if (Mask == 0xFF)
-		{
+		if (Mask == 0xFF) {
+
 			/* Do the fill-rect in the frame-buffer */
 			do_fillrect_frame_buffer(&ri, X, Y, Width, Height, Pen, Bpp);
 			result = 1;
-		}
-		else
-		{
+
+		} else {
+
 			/* We get here only if Mask != 0xFF */
-			if (Bpp != 1)
-			{
-				write_log(_T("WARNING - FillRect() has unhandled mask 0x%x with Bpp %d. Using fall-back routine.\n"),
-					Mask, Bpp);
-			}
-			else
-			{
+			if (Bpp != 1) {
+				write_log (_T("WARNING - FillRect() has unhandled mask 0x%x with Bpp %d. Using fall-back routine.\n"), Mask, Bpp);
+			} else {
 				Pen &= Mask;
 				Mask = ~Mask;
 				oldstart = ri.Memory + Y * ri.BytesPerRow + X * Bpp;
 				{
-					uae_u8* start = oldstart;
-					uae_u8* end = start + Height * ri.BytesPerRow;
-					for (; start != end; start += ri.BytesPerRow)
-					{
-						uae_u8* p = start;
+					uae_u8 *start = oldstart;
+					uae_u8 *end = start + Height * ri.BytesPerRow;
+					for (; start != end; start += ri.BytesPerRow) {
+						uae_u8 *p = start;
 						unsigned long cols;
-						for (cols = 0; cols < Width; cols++)
-						{
-							uae_u32 tmpval = do_get_mem_byte(p + cols) & Mask;
-							do_put_mem_byte(p + cols, (uae_u8)(Pen | tmpval));
+						for (cols = 0; cols < Width; cols++) {
+							uae_u32 tmpval = do_get_mem_byte (p + cols) & Mask;
+							do_put_mem_byte (p + cols, (uae_u8)(Pen | tmpval));
 						}
 					}
 				}
@@ -2333,29 +2300,29 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext* ctx)
 * NOTE: If dstri is NULL, then we're only dealing with one RenderInfo area, and called from picasso_BlitRect()
 *
 * OpCodes:
-* 0 = FALSE:    dst = 0
-* 1 = NOR:      dst = ~(src | dst)
-* 2 = ONLYDST:  dst = dst & ~src
-* 3 = NOTSRC:   dst = ~src
-* 4 = ONLYSRC:  dst = src & ~dst
-* 5 = NOTDST:   dst = ~dst
-* 6 = EOR:      dst = src^dst
-* 7 = NAND:     dst = ~(src & dst)
-* 8 = AND:      dst = (src & dst)
-* 9 = NEOR:     dst = ~(src ^ dst)
-*10 = DST:      dst = dst
+* 0 = FALSE:	dst = 0
+* 1 = NOR:	dst = ~(src | dst)
+* 2 = ONLYDST:	dst = dst & ~src
+* 3 = NOTSRC:	dst = ~src
+* 4 = ONLYSRC:	dst = src & ~dst
+* 5 = NOTDST:	dst = ~dst
+* 6 = EOR:	dst = src^dst
+* 7 = NAND:	dst = ~(src & dst)
+* 8 = AND:	dst = (src & dst)
+* 9 = NEOR:	dst = ~(src ^ dst)
+*10 = DST:	dst = dst
 *11 = NOTONLYSRC: dst = ~src | dst
-*12 = SRC:      dst = src
+*12 = SRC:	dst = src
 *13 = NOTONLYDST: dst = ~dst | src
-*14 = OR:       dst = src | dst
-*15 = TRUE:     dst = 0xFF
+*14 = OR:	dst = src | dst
+*15 = TRUE:	dst = 0xFF
 */
 struct blitdata
 {
 	struct RenderInfo ri_struct;
 	struct RenderInfo dstri_struct;
-	struct RenderInfo* ri; /* Self-referencing pointers */
-	struct RenderInfo* dstri;
+	struct RenderInfo *ri; /* Self-referencing pointers */
+	struct RenderInfo *dstri;
 	unsigned long srcx;
 	unsigned long srcy;
 	unsigned long dstx;
@@ -2366,10 +2333,10 @@ struct blitdata
 	BLIT_OPCODE opcode;
 } blitrectdata;
 
-STATIC_INLINE int BlitRectHelper(TrapContext* ctx)
+STATIC_INLINE int BlitRectHelper(TrapContext *ctx)
 {
-	struct RenderInfo* ri = blitrectdata.ri;
-	struct RenderInfo* dstri = blitrectdata.dstri;
+	struct RenderInfo *ri = blitrectdata.ri;
+	struct RenderInfo *dstri = blitrectdata.dstri;
 	uae_u32 srcx = blitrectdata.srcx;
 	uae_u32 srcy = blitrectdata.srcy;
 	uae_u32 dstx = blitrectdata.dstx;
@@ -2384,24 +2351,22 @@ STATIC_INLINE int BlitRectHelper(TrapContext* ctx)
 	if (!validatecoords(ctx, dstri, &dstx, &dsty, &width, &height))
 		return 1;
 
-	uae_u8 Bpp = GetBytesPerPixel(ri->RGBFormat);
+	uae_u8 Bpp = GetBytesPerPixel (ri->RGBFormat);
 
-	if (opcode == BLIT_DST)
-	{
-		write_log(_T("WARNING: BlitRect() being called with opcode of BLIT_DST\n"));
+	if (opcode == BLIT_DST) {
+		write_log ( _T("WARNING: BlitRect() being called with opcode of BLIT_DST\n") );
 		return 1;
 	}
 
 	/*
-* If we have no destination RenderInfo, then we're dealing with a single-buffer action, called
-* from picasso_BlitRect().  The code in do_blitrect_frame_buffer() deals with the frame-buffer,
-* while the do_blit() code deals with the visible screen.
-*
-* If we have a destination RenderInfo, then we've been called from picasso_BlitRectNoMaskComplete()
-* and we need to put the results on the screen from the frame-buffer.
-*/
-	if (dstri == nullptr || dstri->Memory == ri->Memory)
-	{
+	* If we have no destination RenderInfo, then we're dealing with a single-buffer action, called
+	* from picasso_BlitRect().  The code in do_blitrect_frame_buffer() deals with the frame-buffer,
+	* while the do_blit() code deals with the visible screen.
+	*
+	* If we have a destination RenderInfo, then we've been called from picasso_BlitRectNoMaskComplete()
+	* and we need to put the results on the screen from the frame-buffer.
+	*/
+	if (dstri == NULL || dstri->Memory == ri->Memory) {
 		if (mask != 0xFF && Bpp > 1)
 			mask = 0xFF;
 		dstri = ri;
@@ -2410,22 +2375,18 @@ STATIC_INLINE int BlitRectHelper(TrapContext* ctx)
 	return do_blitrect_frame_buffer(ri, dstri, srcx, srcy, dstx, dsty, width, height, mask, opcode);
 }
 
-static int BlitRect(TrapContext* ctx, uaecptr ri, uaecptr dstri,
-                    unsigned long srcx, unsigned long srcy, unsigned long dstx, unsigned long dsty,
-                    unsigned long width, unsigned long height, uae_u8 mask, BLIT_OPCODE opcode)
+static int BlitRect(TrapContext *ctx, uaecptr ri, uaecptr dstri,
+	unsigned long srcx, unsigned long srcy, unsigned long dstx, unsigned long dsty,
+	unsigned long width, unsigned long height, uae_u8 mask, BLIT_OPCODE opcode)
 {
 	/* Set up the params */
 	CopyRenderInfoStructureA2U(ctx, ri, &blitrectdata.ri_struct);
 	blitrectdata.ri = &blitrectdata.ri_struct;
-
-	if (dstri)
-	{
+	if(dstri) {
 		CopyRenderInfoStructureA2U(ctx, dstri, &blitrectdata.dstri_struct);
 		blitrectdata.dstri = &blitrectdata.dstri_struct;
-	}
-	else
-	{
-		blitrectdata.dstri = nullptr;
+	} else {
+		blitrectdata.dstri = NULL;
 	}
 	blitrectdata.srcx = srcx;
 	blitrectdata.srcy = srcy;
@@ -2442,18 +2403,18 @@ static int BlitRect(TrapContext* ctx, uaecptr ri, uaecptr dstri,
 /***********************************************************
 BlitRect:
 ***********************************************************
-* a0:   struct BoardInfo
-* a1:   struct RenderInfo
-* d0:   WORD SrcX
-* d1:   WORD SrcY
-* d2:   WORD DstX
-* d3:   WORD DstY
-* d4:   WORD Width
-* d5:   WORD Height
-* d6:   UBYTE Mask
-* d7:   uae_u32 RGBFormat
+* a0:	struct BoardInfo
+* a1:	struct RenderInfo
+* d0:	WORD SrcX
+* d1:	WORD SrcY
+* d2:	WORD DstX
+* d3:	WORD DstY
+* d4:	WORD Width
+* d5:	WORD Height
+* d6:	UBYTE Mask
+* d7:	uae_u32 RGBFormat
 ***********************************************************/
-static uae_u32 REGPARAM2 picasso_BlitRect(TrapContext* ctx)
+static uae_u32 REGPARAM2 picasso_BlitRect (TrapContext *ctx)
 {
 	uaecptr renderinfo = trap_get_areg(ctx, 1);
 	unsigned long srcx = (uae_u16)trap_get_dreg(ctx, 0);
@@ -2474,22 +2435,22 @@ static uae_u32 REGPARAM2 picasso_BlitRect(TrapContext* ctx)
 /***********************************************************
 BlitRectNoMaskComplete:
 ***********************************************************
-* a0: 	struct BoardInfo
+* a0:	struct BoardInfo
 * a1:	struct RenderInfo (src)
-* a2:   struct RenderInfo (dst)
-* d0: 	WORD SrcX
-* d1: 	WORD SrcY
-* d2: 	WORD DstX
-* d3: 	WORD DstY
-* d4:   WORD Width
-* d5:   WORD Height
+* a2:	struct RenderInfo (dst)
+* d0:	WORD SrcX
+* d1:	WORD SrcY
+* d2:	WORD DstX
+* d3:	WORD DstY
+* d4:	WORD Width
+* d5:	WORD Height
 * d6:	UBYTE OpCode
 * d7:	uae_u32 RGBFormat
-* NOTE: MUST return 0 in D0 if we're not handling this operation
-*       because the RGBFormat or opcode aren't supported.
-*       OTHERWISE return 1
+* NOTE:	MUST return 0 in D0 if we're not handling this operation
+*	because the RGBFormat or opcode aren't supported.
+*	OTHERWISE return 1
 ***********************************************************/
-static uae_u32 REGPARAM2 picasso_BlitRectNoMaskComplete(TrapContext* ctx)
+static uae_u32 REGPARAM2 picasso_BlitRectNoMaskComplete (TrapContext *ctx)
 {
 	uaecptr srcri = trap_get_areg(ctx, 1);
 	uaecptr dstri = trap_get_areg(ctx, 2);
@@ -2511,7 +2472,7 @@ static uae_u32 REGPARAM2 picasso_BlitRectNoMaskComplete(TrapContext* ctx)
 }
 
 /* NOTE: fgpen MUST be in host byte order */
-STATIC_INLINE void PixelWrite(uae_u8* mem, int bits, uae_u32 fgpen, int Bpp, uae_u32 mask)
+STATIC_INLINE void PixelWrite(uae_u8 *mem, int bits, uae_u32 fgpen, int Bpp, uae_u32 mask)
 {
 	switch (Bpp)
 	{
@@ -2556,7 +2517,7 @@ STATIC_INLINE void PixelWrite(uae_u8* mem, int bits, uae_u32 fgpen, int Bpp, uae
 * always 16 pixels (one word) and the height is calculated as 2^Size. The data must be shifted up
 * and to the left by XOffset and YOffset pixels at the beginning.
 */
-static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
+static uae_u32 REGPARAM2 picasso_BlitPattern (TrapContext *ctx)
 {
 	uaecptr rinf = trap_get_areg(ctx, 1);
 	uaecptr pinf = trap_get_areg(ctx, 2);
@@ -2566,12 +2527,12 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 	uae_u32 H = (uae_u16)trap_get_dreg(ctx, 3);
 	uae_u8 Mask = (uae_u8)trap_get_dreg(ctx, 4);
 	uae_u32 RGBFmt = trap_get_dreg(ctx, 7);
-	uae_u8 Bpp = GetBytesPerPixel(RGBFmt);
+	uae_u8 Bpp = GetBytesPerPixel (RGBFmt);
 	int inversion = 0;
 	struct RenderInfo ri;
 	struct Pattern pattern;
 	unsigned long rows;
-	uae_u8* uae_mem;
+	uae_u8 *uae_mem;
 	int xshift;
 	unsigned long ysize_mask;
 	uae_u32 result = 0;
@@ -2579,8 +2540,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 	if (NOBLITTER)
 		return 0;
 
-	if (CopyRenderInfoStructureA2U(ctx, rinf, &ri) && CopyPatternStructureA2U(ctx, pinf, &pattern))
-	{
+	if(CopyRenderInfoStructureA2U(ctx, rinf, &ri) && CopyPatternStructureA2U(ctx, pinf, &pattern)) {
 		if (!validatecoords(ctx, &ri, &X, &Y, &W, &H))
 			return 0;
 
@@ -2591,14 +2551,11 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 			inversion = 1;
 
 		pattern.DrawMode &= 0x03;
-		if (Mask != 0xFF)
-		{
-			if (Bpp > 1)
+		if (Mask != 0xFF) {
+			if(Bpp > 1)
 				Mask = 0xFF;
 			result = 1;
-		}
-		else
-		{
+		} else {
 			result = 1;
 		}
 
@@ -2629,8 +2586,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 				if (xshift != 0)
 					d = (d << xshift) | (d >> (16 - xshift));
 
-				for (cols = 0; cols < W; cols += 16, uae_mem2 += Bpp * 16)
-				{
+				for (cols = 0; cols < W; cols += 16, uae_mem2 += Bpp * 16) {
 					long bits;
 					long max = W - cols;
 					unsigned int data = d;
@@ -2642,37 +2598,33 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 					{
 					case JAM1:
 						{
-							for (bits = 0; bits < max; bits++)
-							{
+							for (bits = 0; bits < max; bits++) {
 								int bit_set = data & 0x8000;
 								data <<= 1;
 								if (inversion)
 									bit_set = !bit_set;
 								if (bit_set)
-									PixelWrite(uae_mem2, bits, fgpen, Bpp, Mask);
+									PixelWrite (uae_mem2, bits, fgpen, Bpp, Mask);
 							}
 							break;
 						}
 					case JAM2:
 						{
-							for (bits = 0; bits < max; bits++)
-							{
+							for (bits = 0; bits < max; bits++) {
 								int bit_set = data & 0x8000;
 								data <<= 1;
 								if (inversion)
 									bit_set = !bit_set;
-								PixelWrite(uae_mem2, bits, bit_set ? fgpen : bgpen, Bpp, Mask);
+								PixelWrite (uae_mem2, bits, bit_set ? fgpen : bgpen, Bpp, Mask);
 							}
 							break;
 						}
 					case COMP:
 						{
-							for (bits = 0; bits < max; bits++)
-							{
+							for (bits = 0; bits < max; bits++) {
 								int bit_set = data & 0x8000;
 								data <<= 1;
-								if (bit_set)
-								{
+								if (bit_set) {
 									switch (Bpp)
 									{
 									case 1:
@@ -2682,19 +2634,19 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 										break;
 									case 2:
 										{
-											uae_u16* addr = (uae_u16 *)uae_mem2;
+											uae_u16 *addr = (uae_u16 *)uae_mem2;
 											addr[bits] ^= 0xffff;
 										}
 										break;
 									case 3:
 										{
-											uae_u32* addr = (uae_u32 *)(uae_mem2 + bits * 3);
-											do_put_mem_long(addr, do_get_mem_long(addr) ^ 0x00ffffff);
+											uae_u32 *addr = (uae_u32 *)(uae_mem2 + bits * 3);
+											do_put_mem_long (addr, do_get_mem_long (addr) ^ 0x00ffffff);
 										}
 										break;
 									case 4:
 										{
-											uae_u32* addr = (uae_u32 *)uae_mem2;
+											uae_u32 *addr = (uae_u32 *)uae_mem2;
 											addr[bits] ^= 0xffffffff;
 										}
 										break;
@@ -2747,17 +2699,16 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 	unsigned long rows;
 	int bitoffset;
 	uae_u8 *uae_mem, Bpp;
-	uae_u8* tmpl_base;
+	uae_u8 *tmpl_base;
 	uae_u32 result = 0;
 
 	if (NOBLITTER)
 		return 0;
-	if (CopyRenderInfoStructureA2U(ctx, rinf, &ri) && CopyTemplateStructureA2U(ctx, tmpl, &tmp))
-	{
+	if (CopyRenderInfoStructureA2U(ctx, rinf, &ri) && CopyTemplateStructureA2U(ctx, tmpl, &tmp)) {
 		if (!validatecoords(ctx, &ri, &X, &Y, &W, &H))
 			return 1;
 
-		Bpp = GetBytesPerPixel(ri.RGBFormat);
+		Bpp = GetBytesPerPixel (ri.RGBFormat);
 		uae_mem = ri.Memory + Y * ri.BytesPerRow + X * Bpp; /* offset into address */
 
 		if (tmp.DrawMode & INVERS)
@@ -2765,28 +2716,20 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 
 		tmp.DrawMode &= 0x03;
 
-		if (Mask != 0xFF)
-		{
-			if (Bpp > 1)
+		if (Mask != 0xFF) {
+			if(Bpp > 1)
 				Mask = 0xFF;
-
-			if (tmp.DrawMode == COMP)
-			{
-				write_log(_T(
-						"WARNING - BlitTemplate() has unhandled mask 0x%x with COMP DrawMode. Using fall-back routine.\n"
-					),
-					Mask);
+			if(tmp.DrawMode == COMP) {
+				write_log (_T("WARNING - BlitTemplate() has unhandled mask 0x%x with COMP DrawMode. Using fall-back routine.\n"), Mask);
 				return 0;
+			} else {
+				result = 1;
 			}
-			result = 1;
-		}
-		else
-		{
+		} else {
 			result = 1;
 		}
 
-		if (result)
-		{
+		if(result) {
 			uae_u32 fgpen, bgpen;
 
 			bitoffset = tmp.XOffset % 8;
@@ -2798,17 +2741,15 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 
 			tmpl_base = tmp.Memory + tmp.XOffset / 8;
 
-			for (rows = 0; rows < H; rows++, uae_mem += ri.BytesPerRow, tmpl_base += tmp.BytesPerRow)
-			{
+			for (rows = 0; rows < H; rows++, uae_mem += ri.BytesPerRow, tmpl_base += tmp.BytesPerRow) {
 				unsigned long cols;
-				uae_u8* uae_mem2 = uae_mem;
-				uae_u8* tmpl_mem = tmpl_base;
+				uae_u8 *uae_mem2 = uae_mem;
+				uae_u8 *tmpl_mem = tmpl_base;
 				unsigned int data;
-
+				
 				data = *tmpl_mem;
 
-				for (cols = 0; cols < W; cols += 8, uae_mem2 += Bpp * 8)
-				{
+				for (cols = 0; cols < W; cols += 8, uae_mem2 += Bpp * 8) {
 					unsigned int byte;
 					long bits;
 					long max = W - cols;
@@ -2825,8 +2766,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 					{
 					case JAM1:
 						{
-							for (bits = 0; bits < max; bits++)
-							{
+							for (bits = 0; bits < max; bits++) {
 								int bit_set = (byte & 0x80);
 								byte <<= 1;
 								if (inversion)
@@ -2838,8 +2778,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 						}
 					case JAM2:
 						{
-							for (bits = 0; bits < max; bits++)
-							{
+							for (bits = 0; bits < max; bits++) {
 								int bit_set = (byte & 0x80);
 								byte <<= 1;
 								if (inversion)
@@ -2850,35 +2789,33 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 						}
 					case COMP:
 						{
-							for (bits = 0; bits < max; bits++)
-							{
+							for (bits = 0; bits < max; bits++) {
 								int bit_set = (byte & 0x80);
 								byte <<= 1;
-								if (bit_set)
-								{
+								if (bit_set) {
 									switch (Bpp)
 									{
 									case 1:
 										{
-											uae_u8* addr = uae_mem2;
+											uae_u8 *addr = uae_mem2;
 											addr[bits] ^= 0xff;
 										}
 										break;
 									case 2:
 										{
-											uae_u16* addr = (uae_u16 *)uae_mem2;
+											uae_u16 *addr = (uae_u16 *)uae_mem2;
 											addr[bits] ^= 0xffff;
 										}
 										break;
 									case 3:
 										{
-											uae_u32* addr = (uae_u32 *)(uae_mem2 + bits * 3);
-											do_put_mem_long(addr, do_get_mem_long(addr) ^ 0x00FFFFFF);
+											uae_u32 *addr = (uae_u32 *)(uae_mem2 + bits * 3);
+											do_put_mem_long (addr, do_get_mem_long (addr) ^ 0x00FFFFFF);
 										}
 										break;
 									case 4:
 										{
-											uae_u32* addr = (uae_u32 *)uae_mem2;
+											uae_u32 *addr = (uae_u32 *)uae_mem2;
 											addr[bits] ^= 0xffffffff;
 										}
 										break;
@@ -2905,7 +2842,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 * This function calculates the amount of bytes needed for a line of
 * "Width" pixels in the given RGBFormat.
 */
-static uae_u32 REGPARAM2 picasso_CalculateBytesPerRow(TrapContext* ctx)
+static uae_u32 REGPARAM2 picasso_CalculateBytesPerRow (TrapContext *ctx)
 {
 	uae_u16 width = trap_get_dreg(ctx, 0);
 	uae_u32 type = trap_get_dreg(ctx, 7);
@@ -2916,18 +2853,18 @@ static uae_u32 REGPARAM2 picasso_CalculateBytesPerRow(TrapContext* ctx)
 
 /*
 * SetDisplay:
-* a0:	struct BoardInfo
-* d0:	BOOL state
+* a0: struct BoardInfo
+* d0: BOOL state
 * This function enables and disables the video display.
 *
 * NOTE: return the opposite of the state
 */
 static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 {
-	uae_u32 state = trap_get_dreg(ctx, 0);
+	uae_u32 setstate = trap_get_dreg(ctx, 0);
 	resetpalette();
-	atomic_or(&picasso_state_change, PICASSO_STATE_SETDISPLAY);
-	return !state;
+	atomic_or(&picasso_vidinfo.picasso_state_change, PICASSO_STATE_SETDISPLAY);
+	return !setstate;
 }
 
 void init_hz_p96(void)
@@ -2949,16 +2886,15 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 {
 	int j;
 
-	uae_u8* PLANAR[8];
-	uae_u8* image = ri->Memory + dstx * GetBytesPerPixel(ri->RGBFormat) + dsty * ri->BytesPerRow;
+	uae_u8 *PLANAR[8];
+	uae_u8 *image = ri->Memory + dstx * GetBytesPerPixel(ri->RGBFormat) + dsty * ri->BytesPerRow;
 	int Depth = bm->Depth;
 	unsigned long rows, bitoffset = srcx & 7;
 	long eol_offset;
 
 	/* Set up our bm->Planes[] pointers to the right horizontal offset */
-	for (j = 0; j < Depth; j++)
-	{
-		uae_u8* p = bm->Planes[j];
+	for (j = 0; j < Depth; j++) {
+		uae_u8 *p = bm->Planes[j];
 		if (p != &all_zeros_bitmap && p != &all_ones_bitmap)
 			p += srcx / 8 + srcy * bm->BytesPerRow;
 		PLANAR[j] = p;
@@ -2966,37 +2902,31 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 			PLANAR[j] = &all_zeros_bitmap;
 	}
 	eol_offset = (long)bm->BytesPerRow - (long)((width + 7) >> 3);
-	for (rows = 0; rows < height; rows++, image += ri->BytesPerRow)
-	{
+	for (rows = 0; rows < height; rows++, image += ri->BytesPerRow) {
 		unsigned long cols;
 
-		for (cols = 0; cols < width; cols += 8)
-		{
+		for (cols = 0; cols < width; cols += 8) {
 			int k;
 			uae_u32 a = 0, b = 0;
 			unsigned int msk = 0xFF;
 			long tmp = cols + 8 - width;
-			if (tmp > 0)
-			{
+			if (tmp > 0) {
 				msk <<= tmp;
-				b = do_get_mem_long((uae_u32 *)(image + cols + 4));
+				b = do_get_mem_long ((uae_u32 *)(image + cols + 4));
 				if (tmp < 4)
 					b &= 0xFFFFFFFF >> (32 - tmp * 8);
-				else if (tmp > 4)
-				{
-					a = do_get_mem_long((uae_u32 *)(image + cols));
+				else if (tmp > 4) {
+					a = do_get_mem_long ((uae_u32 *)(image + cols));
 					a &= 0xFFFFFFFF >> (64 - tmp * 8);
 				}
 			}
-			for (k = 0; k < Depth; k++)
-			{
+			for (k = 0; k < Depth; k++) {
 				unsigned int data;
 				if (PLANAR[k] == &all_zeros_bitmap)
 					data = 0;
 				else if (PLANAR[k] == &all_ones_bitmap)
 					data = 0xFF;
-				else
-				{
+				else {
 					data = (uae_u8)(do_get_mem_word((uae_u16 *)PLANAR[k]) >> (8 - bitoffset));
 					PLANAR[k]++;
 				}
@@ -3009,8 +2939,7 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 		}
 		for (j = 0; j < Depth; j++)
 		{
-			if (PLANAR[j] != &all_zeros_bitmap && PLANAR[j] != &all_ones_bitmap)
-			{
+			if (PLANAR[j] != &all_zeros_bitmap && PLANAR[j] != &all_ones_bitmap) {
 				PLANAR[j] += eol_offset;
 			}
 		}
@@ -3053,10 +2982,8 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Chunky(TrapContext* ctx)
 
 	if (NOBLITTER)
 		return 0;
-
-	if (minterm != 0x0C)
-	{
-		write_log(_T("ERROR - BlitPlanar2Chunky() has minterm 0x%x, which I don't handle. Using fall-back routine.\n"),
+	if (minterm != 0x0C) {
+		write_log (_T("ERROR - BlitPlanar2Chunky() has minterm 0x%x, which I don't handle. Using fall-back routine.\n"),
 			minterm);
 	}
 	else if (CopyRenderInfoStructureA2U(ctx, ri, &local_ri) && CopyBitMapStructureA2U(ctx, bm, &local_bm))
@@ -3083,13 +3010,13 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 	int maxc = -1;
 	uae_u32 cim[256];
 
-	if (!bpp)
+	if(!bpp)
 		return;
 
 	/* Set up our bm->Planes[] pointers to the right horizontal offset */
 	for (j = 0; j < Depth; j++)
 	{
-		uae_u8* p = bm->Planes[j];
+		uae_u8 *p = bm->Planes[j];
 		if (p != &all_zeros_bitmap && p != &all_ones_bitmap)
 			p += srcx / 8 + srcy * bm->BytesPerRow;
 		PLANAR[j] = p;
@@ -3098,30 +3025,26 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 	}
 
 	eol_offset = (long)bm->BytesPerRow - (long)((width + (srcx & 7)) >> 3);
-	for (rows = 0; rows < height; rows++, image += ri->BytesPerRow)
-	{
+	for (rows = 0; rows < height; rows++, image += ri->BytesPerRow) {
 		unsigned long cols;
-		uae_u8* image2 = image;
+		uae_u8 *image2 = image;
 		unsigned int bitoffs = 7 - (srcx & 7);
 		int i;
 
 		for (cols = 0; cols < width; cols++)
 		{
 			int v = 0, k;
-			for (k = 0; k < Depth; k++)
-			{
+			for (k = 0; k < Depth; k++) {
 				if (PLANAR[k] == &all_ones_bitmap)
 					v |= 1 << k;
-				else if (PLANAR[k] != &all_zeros_bitmap)
-				{
+				else if (PLANAR[k] != &all_zeros_bitmap) {
 					v |= ((*PLANAR[k] >> bitoffs) & 1) << k;
 				}
 			}
 
 			// most operations use only low palette values
 			// do not fetch and convert whole palette unless needed
-			if (v > maxc)
-			{
+			if (v > maxc) {
 				int vc = v;
 				if (vc < 3)
 					vc = 3;
@@ -3136,12 +3059,12 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 				else
 					vc = 255;
 				trap_get_longs(ctx, &cim[maxc + 1], acim + 4 + (maxc + 1) * 4, vc - maxc);
-				for (int i = maxc + 1; i <= vc; i++)
-				{
+				for (int i = maxc + 1; i <= vc; i++) {
 					endianswap(&cim[i], bpp);
 				}
 				maxc = vc;
 			}
+
 
 			switch (bpp)
 			{
@@ -3162,23 +3085,18 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 			}
 			bitoffs--;
 			bitoffs &= 7;
-			if (bitoffs == 7)
-			{
+			if (bitoffs == 7) {
 				int k;
-				for (k = 0; k < Depth; k++)
-				{
-					if (PLANAR[k] != &all_zeros_bitmap && PLANAR[k] != &all_ones_bitmap)
-					{
+				for (k = 0; k < Depth; k++) {
+					if (PLANAR[k] != &all_zeros_bitmap && PLANAR[k] != &all_ones_bitmap) {
 						PLANAR[k]++;
 					}
 				}
 			}
 		}
 
-		for (i = 0; i < Depth; i++)
-		{
-			if (PLANAR[i] != &all_zeros_bitmap && PLANAR[i] != &all_ones_bitmap)
-			{
+		for (i = 0; i < Depth; i++) {
+			if (PLANAR[i] != &all_zeros_bitmap && PLANAR[i] != &all_ones_bitmap) {
 				PLANAR[i] += eol_offset;
 			}
 		}
@@ -3212,8 +3130,7 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 * triple bytes or longwords respectively similar to the color values used in FillRect(), BlitPattern() or
 * BlitTemplate().
 */
-
-static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext* ctx)
+static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct (TrapContext *ctx)
 {
 	uaecptr bm = trap_get_areg(ctx, 1);
 	uaecptr ri = trap_get_areg(ctx, 2);
@@ -3233,13 +3150,11 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext* ctx)
 	if (NOBLITTER)
 		return 0;
 
-	if (minterm != 0x0C)
-	{
-		write_log(_T("WARNING - BlitPlanar2Direct() has unhandled op-code 0x%x. Using fall-back routine.\n"), minterm);
+	if (minterm != 0x0C) {
+		write_log (_T("WARNING - BlitPlanar2Direct() has unhandled op-code 0x%x. Using fall-back routine.\n"), minterm);
 		return 0;
 	}
-	if (CopyRenderInfoStructureA2U(ctx, ri, &local_ri) && CopyBitMapStructureA2U(ctx, bm, &local_bm))
-	{
+	if (CopyRenderInfoStructureA2U(ctx, ri, &local_ri) && CopyBitMapStructureA2U(ctx, bm, &local_bm)) {
 		Mask = 0xFF;
 		PlanarToDirect(ctx, &local_ri, &local_bm, srcx, srcy, dstx, dsty, width, height, Mask, cim);
 		result = 1;
@@ -3643,8 +3558,7 @@ bool picasso_flushpixels(uae_u8* src, int off)
 static void* render_thread(void* v)
 {
 	render_thread_state = 1;
-	for (;;)
-	{
+	for (;;) {
 		int idx = read_comm_pipe_int_blocking(render_pipe);
 		if (idx == -1)
 			break;
@@ -3690,7 +3604,7 @@ void InitPicasso96(void)
 	//fastscreen
 	oldscr = 0;
 	//fastscreen
-	memset(&picasso96_state_uaegfx, 0, sizeof(struct picasso96_state_struct));
+	memset(&picasso96_state, 0, sizeof(struct picasso96_state_struct));
 
 	for (int i = 0; i < 256; i++)
 	{
@@ -3741,37 +3655,30 @@ static void initvblankirq(TrapContext* ctx, uaecptr base)
 	trap_put_long(ctx, p2 + 14, base + CARD_IRQFLAG);
 	trap_put_long(ctx, p2 + 18, c);
 
-	trap_put_word(ctx, c, 0x4a11);
-	c += 2; // tst.b (a1) CARD_IRQFLAG
-	trap_put_word(ctx, c, 0x670e);
-	c += 2; // beq.s label
-	trap_put_word(ctx, c, 0x4211);
-	c += 2; // clr.b (a1)
-	trap_put_long(ctx, c, 0x2c690008);
-	c += 4; // move.l 8(a1),a6 CARD_IRQEXECBASE
-	trap_put_long(ctx, c, 0x22690004);
-	c += 4; // move.l 4(a1),a1 CARD_IRQPTR
-	trap_put_long(ctx, c, 0x4eaeff4c);
-	c += 4; // jsr Cause(a6)
-	trap_put_word(ctx, c, 0x7000);
-	c += 2; // label: moveq #0,d0
-	trap_put_word(ctx, c, RTS); // rts
+	trap_put_word(ctx, c, 0x4a11); c += 2;		// tst.b (a1) CARD_IRQFLAG
+	trap_put_word(ctx, c, 0x670e); c += 2;		// beq.s label
+	trap_put_word(ctx, c, 0x4211); c += 2;		// clr.b (a1)
+	trap_put_long(ctx, c, 0x2c690008); c += 4;	// move.l 8(a1),a6 CARD_IRQEXECBASE
+	trap_put_long(ctx, c, 0x22690004); c += 4;	// move.l 4(a1),a1 CARD_IRQPTR
+	trap_put_long(ctx, c, 0x4eaeff4c); c += 4;	// jsr Cause(a6)
+	trap_put_word(ctx, c, 0x7000); c += 2;		// label: moveq #0,d0
+	trap_put_word(ctx, c, RTS);					// rts
 
 #if NEWTRAP
 	trap_call_add_areg(ctx, 1, p1);
 	trap_call_add_dreg(ctx, 0, 5);
-	trap_call_lib(ctx, trap_get_long(ctx, 4), -168); /* AddIntServer */
+	trap_call_lib(ctx, trap_get_long(ctx, 4), -168); 	/* AddIntServer */
 
 	trap_call_add_areg(ctx, 1, p2);
 	trap_call_add_dreg(ctx, 0, 3);
-	trap_call_lib(ctx, trap_get_long(ctx, 4), -168); /* AddIntServer */
+	trap_call_lib(ctx, trap_get_long(ctx, 4), -168); 	/* AddIntServer */
 #else
 	trap_set_areg(ctx, 1, p1);
 	trap_set_dreg(ctx, 0, 5);			/* VERTB */
-	CallLib(ctx, trap_get_long(ctx, 4), -168); 	/* AddIntServer */
+	CallLib (ctx, trap_get_long(ctx, 4), -168); 	/* AddIntServer */
 	trap_set_areg(ctx, 1, p2);
 	trap_set_dreg(ctx, 0, 3);			/* PORTS */
-	CallLib(ctx, trap_get_long(ctx, 4), -168);	/* AddIntServer */
+	CallLib (ctx, trap_get_long(ctx, 4), -168);	/* AddIntServer */
 #endif
 }
 
@@ -3809,10 +3716,16 @@ static uae_u32 REGPARAM2 picasso_SetMemoryMode(TrapContext* ctx)
   dw (RTS);
 
 #define RTGCALLDEFAULT(func,funcdef) \
-  PUTABI (func); \
-  dw (0x2f28); \
-  dw (funcdef); \
-  dw (RTS);
+	PUTABI (func); \
+	dw (0x2f28); \
+	dw (funcdef); \
+	dw (RTS);
+
+#define RTGCALLONLYDEFAULT(func,funcdef,unused) \
+	PUTABI (func); \
+	dw (0x2f28); \
+	dw (funcdef); \
+	dw (RTS);
 
 #define RTGNONE(func) \
   if (ABI) \
@@ -3826,38 +3739,36 @@ static void inituaegfxfuncs(TrapContext* ctx, uaecptr start, uaecptr ABI)
 
 	dw(RTS);
 	/* ResolvePixelClock
-move.l	D0,gmi_PixelClock(a1)	; pass the pixelclock through
-moveq	#0,D0			; index is 0
-move.b	#98,gmi_Numerator(a1)	; whatever
-move.b	#14,gmi_Denominator(a1)	; whatever
-rts
-*/
-	PUTABI(PSSO_BoardInfo_ResolvePixelClock);
-	dl(0x2340002c);
-	dw(0x7000);
-	dl(0x137c0062);
-	dw(0x002a);
-	dl(0x137c000e);
-	dw(0x002b);
-	dw(RTS);
+	move.l	D0,gmi_PixelClock(a1)	; pass the pixelclock through
+	moveq	#0,D0					; index is 0
+	move.b	#98,gmi_Numerator(a1)	; whatever
+	move.b	#14,gmi_Denominator(a1)	; whatever
+	rts
+	*/
+	PUTABI (PSSO_BoardInfo_ResolvePixelClock);
+	dl (0x2340002c);
+	dw (0x7000);
+	dl (0x137c0062); dw (0x002a);
+	dl (0x137c000e); dw (0x002b);
+	dw (RTS);
 
 	/* GetPixelClock
-move.l #CLOCK,D0 ; fill in D0 with our one true pixel clock
-rts
-*/
-	PUTABI(PSSO_BoardInfo_GetPixelClock);
-	dw(0x203c);
-	dl(100227260);
-	dw(RTS);
+	move.l #CLOCK,D0 ; fill in D0 with our one true pixel clock
+	rts
+	*/
+	PUTABI (PSSO_BoardInfo_GetPixelClock);
+	dw (0x203c);
+	dl (100227260);
+	dw (RTS);
 
 	/* CalculateMemory
-; this is simple, because we're not supporting planar modes in UAE
-move.l	a1,d0
-rts
-*/
-	PUTABI(PSSO_BoardInfo_CalculateMemory);
-	dw(0x2009);
-	dw(RTS);
+	; this is simple, because we're not supporting planar modes in UAE
+	move.l	a1,d0
+	rts
+	*/
+	PUTABI (PSSO_BoardInfo_CalculateMemory);
+	dw (0x2009);
+	dw (RTS);
 
 	/* GetCompatibleFormats
 ; all formats can coexist without any problems, since we don't support planar stuff in UAE
@@ -3880,8 +3791,7 @@ rts
 	dw(0x6500 | (addr2 - addr)); // bcs.s .l1
 	org(addr2);
 	dw(RTS);
-	dw(0x0c87);
-	dl(0x00000010); // l1: cmp.l #$10,d7
+	dw(0x0c87); dl (0x00000010); // l1: cmp.l #$10,d7
 	dw(0x640a); // bcc.s .l2
 	dw(0x7200); // moveq #0,d1
 	dl(0x123b7010); // move.b table(pc,d7.w),d1
@@ -3889,7 +3799,7 @@ rts
 	dw(0xe368); // lsl.w d1,d0
 	dw(RTS); // .l2
 	dw(0x3200); // .l3 move.w d0,d1
-	dw(0xd041); // add.w d1,d0
+	dw(0xd041);  // add.w d1,d0
 	dw(0xd041); // add.w d1,d0
 	dw(RTS);
 	dl(0x0000ffff); // table
@@ -3914,8 +3824,7 @@ rts
 	RTGCALL(PSSO_BoardInfo_BlitPlanar2Chunky, PSSO_BoardInfo_BlitPlanar2ChunkyDefault, picasso_BlitPlanar2Chunky);
 	RTGCALL(PSSO_BoardInfo_BlitTemplate, PSSO_BoardInfo_BlitTemplateDefault, picasso_BlitTemplate);
 	RTGCALL(PSSO_BoardInfo_InvertRect, PSSO_BoardInfo_InvertRectDefault, picasso_InvertRect);
-	RTGCALL(PSSO_BoardInfo_BlitRectNoMaskComplete, PSSO_BoardInfo_BlitRectNoMaskCompleteDefault,
-		picasso_BlitRectNoMaskComplete);
+	RTGCALL(PSSO_BoardInfo_BlitRectNoMaskComplete, PSSO_BoardInfo_BlitRectNoMaskCompleteDefault, picasso_BlitRectNoMaskComplete);
 	RTGCALL(PSSO_BoardInfo_BlitPattern, PSSO_BoardInfo_BlitPatternDefault, picasso_BlitPattern);
 
 	RTGCALL2(PSSO_BoardInfo_SetSwitch, picasso_SetSwitch);
@@ -4014,40 +3923,35 @@ static uaecptr uaegfx_card_install(TrapContext* ctx, uae_u32 extrasize)
 	uaegfx_portsname = ds(_T("UAE Graphics Card PORTS"));
 
 	/* Open */
-	openfunc = here();
-	calltrap(deftrap(gfx_open));
-	dw(RTS);
+	openfunc = here ();
+	calltrap (deftrap (gfx_open)); dw (RTS);
 
 	/* Close */
-	closefunc = here();
-	calltrap(deftrap(gfx_close));
-	dw(RTS);
+	closefunc = here ();
+	calltrap (deftrap (gfx_close)); dw (RTS);
 
 	/* Expunge */
-	expungefunc = here();
-	calltrap(deftrap(gfx_expunge));
-	dw(RTS);
+	expungefunc = here ();
+	calltrap (deftrap (gfx_expunge)); dw (RTS);
 
 	/* FindCard */
-	findcardfunc = here();
-	calltrap(deftrap(picasso_FindCard));
-	dw(RTS);
+	findcardfunc = here ();
+	calltrap (deftrap (picasso_FindCard)); dw (RTS);
 
 	/* InitCard */
-	initcardfunc = here();
-	calltrap(deftrap(picasso_InitCard));
-	dw(RTS);
+	initcardfunc = here ();
+	calltrap (deftrap (picasso_InitCard)); dw (RTS);
 
-	functable = here();
-	dl(openfunc);
-	dl(closefunc);
-	dl(expungefunc);
-	dl(EXPANSION_nullfunc);
-	dl(findcardfunc);
-	dl(initcardfunc);
-	dl(0xFFFFFFFF); /* end of table */
+	functable = here ();
+	dl (openfunc);
+	dl (closefunc);
+	dl (expungefunc);
+	dl (EXPANSION_nullfunc);
+	dl (findcardfunc);
+	dl (initcardfunc);
+	dl (0xFFFFFFFF); /* end of table */
 
-	datatable = makedatatable(uaegfx_resid, uaegfx_resname, 0x09, -50, UAEGFX_VERSION, UAEGFX_REVISION);
+	datatable = makedatatable (uaegfx_resid, uaegfx_resname, 0x09, -50, UAEGFX_VERSION, UAEGFX_REVISION);
 
 	a2 = trap_get_areg(ctx, 2);
 
@@ -4108,45 +4012,42 @@ uae_u32 picasso_demux(uae_u32 arg, TrapContext* ctx)
 {
 	uae_u32 num = trap_get_long(ctx, trap_get_areg(ctx, 7) + 4);
 
-	if (uaegfx_base)
-	{
-		if (num >= 16 && num <= 39)
-		{
-			write_log(_T("uaelib: obsolete Picasso96 uaelib hook called, call ignored\n"));
+	if (uaegfx_base) {
+		if (num >= 16 && num <= 39) {
+			write_log (_T("uaelib: obsolete Picasso96 uaelib hook called, call ignored\n"));
 			return 0;
 		}
 	}
-	if (!uaegfx_old)
-	{
-		write_log(_T("uaelib: uaelib hook in use\n"));
+	if (!uaegfx_old) {
+		write_log (_T("uaelib: uaelib hook in use\n"));
 		uaegfx_old = 1;
 		uaegfx_active = 1;
 	}
 	switch (num)
 	{
-	case 16: return picasso_FindCard(ctx);
-	case 17: return picasso_FillRect(ctx);
-	case 18: return picasso_SetSwitch(ctx);
-	case 19: return picasso_SetColorArray(ctx);
-	case 20: return picasso_SetDAC(ctx);
-	case 21: return picasso_SetGC(ctx);
-	case 22: return picasso_SetPanning(ctx);
-	case 23: return picasso_CalculateBytesPerRow(ctx);
-	case 24: return picasso_BlitPlanar2Chunky(ctx);
-	case 25: return picasso_BlitRect(ctx);
-	case 26: return picasso_SetDisplay(ctx);
-	case 27: return picasso_BlitTemplate(ctx);
-	case 28: return picasso_BlitRectNoMaskComplete(ctx);
-	case 29: return picasso_InitCard(ctx);
-	case 30: return picasso_BlitPattern(ctx);
-	case 31: return picasso_InvertRect(ctx);
-	case 32: return picasso_BlitPlanar2Direct(ctx);
-		//case 34: return picasso_WaitVerticalSync (ctx);
-	case 35: return gfxmem_bank.allocated_size ? 1 : 0;
-	case 36: return picasso_SetSprite(ctx);
-	case 37: return picasso_SetSpritePosition(ctx);
-	case 38: return picasso_SetSpriteImage(ctx);
-	case 39: return picasso_SetSpriteColor(ctx);
+     case 16: return picasso_FindCard (ctx);
+     case 17: return picasso_FillRect (ctx);
+     case 18: return picasso_SetSwitch (ctx);
+     case 19: return picasso_SetColorArray (ctx);
+     case 20: return picasso_SetDAC (ctx);
+     case 21: return picasso_SetGC (ctx);
+     case 22: return picasso_SetPanning (ctx);
+     case 23: return picasso_CalculateBytesPerRow (ctx);
+     case 24: return picasso_BlitPlanar2Chunky (ctx);
+     case 25: return picasso_BlitRect (ctx);
+     case 26: return picasso_SetDisplay (ctx);
+     case 27: return picasso_BlitTemplate (ctx);
+     case 28: return picasso_BlitRectNoMaskComplete (ctx);
+     case 29: return picasso_InitCard (ctx);
+     case 30: return picasso_BlitPattern (ctx);
+     case 31: return picasso_InvertRect (ctx);
+     case 32: return picasso_BlitPlanar2Direct (ctx);
+     //case 34: return picasso_WaitVerticalSync (ctx);
+     case 35: return gfxmem_bank.allocated_size ? 1 : 0;
+	 case 36: return picasso_SetSprite (ctx);
+	 case 37: return picasso_SetSpritePosition (ctx);
+	 case 38: return picasso_SetSpriteImage (ctx);
+	 case 39: return picasso_SetSpriteColor (ctx);
 	}
 
 	return 0;
@@ -4154,22 +4055,26 @@ uae_u32 picasso_demux(uae_u32 arg, TrapContext* ctx)
 
 void picasso_free(void)
 {
-	if (render_thread_state > 0)
-	{
+	if (render_thread_state > 0) {
 		write_comm_pipe_int(render_pipe, -1, 0);
-		while (render_thread_state >= 0)
-		{
+		while (render_thread_state >= 0) {
 			Sleep(10);
 		}
 		render_thread_state = 0;
 	}
 }
 
+static uae_u32 p96_restored_flags;
+
 void restore_p96_finish(void)
 {
 	init_alloc(nullptr, 0);
-	if (uaegfx_rom && boardinfo)
+	if (uaegfx_rom && boardinfo) {
 		inituaegfxfuncs(nullptr, uaegfx_rom, boardinfo);
+		picasso_requested_on = !!(p96_restored_flags & 1);
+		picasso_vidinfo.picasso_active = picasso_requested_on;
+		set_config_changed();
+	}
 }
 
 uae_u8* restore_p96(uae_u8* src)
@@ -4180,27 +4085,25 @@ uae_u8* restore_p96(uae_u8* src)
 	if (restore_u32() != 2)
 		return src;
 	InitPicasso96();
-	flags = restore_u32();
+	p96_restored_flags = flags = restore_u32();
 	picasso_requested_on = !!(flags & 1);
-	picasso96_state_uaegfx.SwitchState = picasso_requested_on;
-	picasso_on = false;
 	init_picasso_screen_called = 0;
 	set_gc_called = !!(flags & 2);
 	picasso_vidinfo.set_panning_called = !!(flags & 4);
 	interrupt_enabled = !!(flags & 32);
 	changed_prefs.rtgboards[0].rtgmem_size = restore_u32();
-	picasso96_state_uaegfx.Address = restore_u32();
-	picasso96_state_uaegfx.RGBFormat = (RGBFTYPE)restore_u32();
-	picasso96_state_uaegfx.Width = restore_u16();
-	picasso96_state_uaegfx.Height = restore_u16();
-	picasso96_state_uaegfx.VirtualWidth = restore_u16();
-	picasso96_state_uaegfx.VirtualHeight = restore_u16();
-	picasso96_state_uaegfx.XOffset = restore_u16();
-	picasso96_state_uaegfx.YOffset = restore_u16();
-	picasso96_state_uaegfx.GC_Depth = restore_u8();
-	picasso96_state_uaegfx.GC_Flags = restore_u8();
-	picasso96_state_uaegfx.BytesPerRow = restore_u16();
-	picasso96_state_uaegfx.BytesPerPixel = restore_u8();
+	picasso96_state.Address = restore_u32();
+	picasso96_state.RGBFormat = (RGBFTYPE)restore_u32();
+	picasso96_state.Width = restore_u16();
+	picasso96_state.Height = restore_u16();
+	picasso96_state.VirtualWidth = restore_u16();
+	picasso96_state.VirtualHeight = restore_u16();
+	picasso96_state.XOffset = restore_u16();
+	picasso96_state.YOffset = restore_u16();
+	picasso96_state.GC_Depth = restore_u8();
+	picasso96_state.GC_Flags = restore_u8();
+	picasso96_state.BytesPerRow = restore_u16();
+	picasso96_state.BytesPerPixel = restore_u8();
 	uaegfx_base = restore_u32();
 	uaegfx_rom = restore_u32();
 	boardinfo = restore_u32();
@@ -4208,15 +4111,14 @@ uae_u8* restore_p96(uae_u8* src)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			picasso96_state_uaegfx.CLUT[i].Red = restore_u8();
-			picasso96_state_uaegfx.CLUT[i].Green = restore_u8();
-			picasso96_state_uaegfx.CLUT[i].Blue = restore_u8();
+			picasso96_state.CLUT[i].Red = restore_u8();
+			picasso96_state.CLUT[i].Green = restore_u8();
+			picasso96_state.CLUT[i].Blue = restore_u8();
 		}
 	}
-	picasso96_state_uaegfx.HostAddress = nullptr;
+	picasso96_state.HostAddress = nullptr;
 	picasso_SetPanningInit();
-	picasso96_state_uaegfx.Extent = picasso96_state_uaegfx.Address + picasso96_state_uaegfx.BytesPerRow *
-		picasso96_state_uaegfx.VirtualHeight;
+	picasso96_state.Extent = picasso96_state.Address + picasso96_state.BytesPerRow * picasso96_state.VirtualHeight;
 	return src;
 }
 
@@ -4235,26 +4137,26 @@ uae_u8* save_p96(int* len, uae_u8* dstptr)
 	save_u32((picasso_on ? 1 : 0) | (set_gc_called ? 2 : 0) | (picasso_vidinfo.set_panning_called ? 4 : 0) |
 		(interrupt_enabled ? 32 : 0) | 64);
 	save_u32(currprefs.rtgboards[0].rtgmem_size);
-	save_u32(picasso96_state_uaegfx.Address);
-	save_u32(picasso96_state_uaegfx.RGBFormat);
-	save_u16(picasso96_state_uaegfx.Width);
-	save_u16(picasso96_state_uaegfx.Height);
-	save_u16(picasso96_state_uaegfx.VirtualWidth);
-	save_u16(picasso96_state_uaegfx.VirtualHeight);
-	save_u16(picasso96_state_uaegfx.XOffset);
-	save_u16(picasso96_state_uaegfx.YOffset);
-	save_u8(picasso96_state_uaegfx.GC_Depth);
-	save_u8(picasso96_state_uaegfx.GC_Flags);
-	save_u16(picasso96_state_uaegfx.BytesPerRow);
-	save_u8(picasso96_state_uaegfx.BytesPerPixel);
+	save_u32(picasso96_state.Address);
+	save_u32(picasso96_state.RGBFormat);
+	save_u16(picasso96_state.Width);
+	save_u16(picasso96_state.Height);
+	save_u16(picasso96_state.VirtualWidth);
+	save_u16(picasso96_state.VirtualHeight);
+	save_u16(picasso96_state.XOffset);
+	save_u16(picasso96_state.YOffset);
+	save_u8(picasso96_state.GC_Depth);
+	save_u8(picasso96_state.GC_Flags);
+	save_u16(picasso96_state.BytesPerRow);
+	save_u8(picasso96_state.BytesPerPixel);
 	save_u32(uaegfx_base);
 	save_u32(uaegfx_rom);
 	save_u32(boardinfo);
 	for (i = 0; i < 256; i++)
 	{
-		save_u8(picasso96_state_uaegfx.CLUT[i].Red);
-		save_u8(picasso96_state_uaegfx.CLUT[i].Green);
-		save_u8(picasso96_state_uaegfx.CLUT[i].Blue);
+		save_u8(picasso96_state.CLUT[i].Red);
+		save_u8(picasso96_state.CLUT[i].Green);
+		save_u8(picasso96_state.CLUT[i].Blue);
 	}
 	*len = dst - dstbak;
 	return dstbak;
