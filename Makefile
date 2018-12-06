@@ -1,6 +1,6 @@
-# Default platform is rpi3 / SDL1
+# Default platform is rpi3 / SDL2 / Dispmanx
 ifeq ($(PLATFORM),)
-	PLATFORM = rpi3
+	PLATFORM = rpi3-sdl2-dispmanx
 endif
 
 ifneq (,$(findstring rpi3,$(PLATFORM)))
@@ -21,7 +21,6 @@ endif
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib
 
-CPPFLAGS+= -MD -MP
 #DEBUG=1
 #GCC_PROFILE=1
 #GEN_PROFILE=1
@@ -147,8 +146,7 @@ USE_SDL2 = 1
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
     CPU_FLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
-    LDFLAGS += -L/usr/local/lib
+    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU
     HAVE_NEON = 1
     NAME  = amiberry-tinker
 
@@ -242,7 +240,7 @@ LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -
 
 ASFLAGS += $(CPU_FLAGS) -falign-functions=16
 
-export CFLAGS += $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
+export CFLAGS += $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -pipe -Wno-shift-overflow -Wno-narrowing
 export CXXFLAGS += $(CFLAGS)
 
 C_OBJS= \
@@ -405,8 +403,8 @@ OBJS += src/osdep/gui/sdltruetypefont.o
 endif
 	
 ifeq ($(ANDROID), 1)
-OBJS += src/osdep/gui/androidsdl_event.o
-OBJS += src/osdep/gui/PanelOnScreen.o
+OBJS += src/osdep/gui/androidsdl_event.o \
+	src/osdep/gui/PanelOnScreen.o
 endif
 
 ifdef HAVE_NEON
@@ -419,20 +417,20 @@ src/osdep/arm_helper.o: src/osdep/arm_helper.s
 	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
 endif
 
-OBJS += src/newcpu.o
-OBJS += src/newcpu_common.o
-OBJS += src/readcpu.o
-OBJS += src/cpudefs.o
-OBJS += src/cpustbl.o
-OBJS += src/cpuemu_0.o
-OBJS += src/cpuemu_4.o
-OBJS += src/cpuemu_11.o
-OBJS += src/cpuemu_40.o
-OBJS += src/cpuemu_44.o
-OBJS += src/jit/compemu.o
-OBJS += src/jit/compstbl.o
-OBJS += src/jit/compemu_fpp.o
-OBJS += src/jit/compemu_support.o
+OBJS += src/newcpu.o \
+	src/newcpu_common.o \
+	src/readcpu.o \
+	src/cpudefs.o \
+	src/cpustbl.o \
+	src/cpuemu_0.o \
+	src/cpuemu_4.o \
+	src/cpuemu_11.o \
+	src/cpuemu_40.o \
+	src/cpuemu_44.o \
+	src/jit/compemu.o \
+	src/jit/compstbl.o \
+	src/jit/compemu_fpp.o \
+	src/jit/compemu_support.o
 
 -include $(OBJS:%.o=%.d)
 
@@ -447,65 +445,12 @@ ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
 
-ASMS = \
-	src/audio.s \
-	src/autoconf.s \
-	src/blitfunc.s \
-	src/blitter.s \
-	src/cia.s \
-	src/custom.s \
-	src/disk.s \
-	src/drawing.s \
-	src/events.s \
-	src/expansion.s \
-	src/filesys.s \
-	src/fpp.s \
-	src/fsdb.s \
-	src/fsdb_unix.s \
-	src/fsusage.s \
-	src/gfxutil.s \
-	src/hardfile.s \
-	src/inputdevice.s \
-	src/keybuf.s \
-	src/main.s \
-	src/memory.s \
-	src/native2amiga.s \
-	src/traps.s \
-	src/uaelib.s \
-	src/uaeresource.s \
-	src/zfile.s \
-	src/zfile_archive.s \
-	src/machdep/support.s \
-	src/osdep/picasso96.s \
-	src/osdep/amiberry.s \
-	src/osdep/amiberry_gfx.s \
-	src/osdep/amiberry_mem.s \
-	src/osdep/sigsegv_handler.s \
-	src/sounddep/sound.s \
-	src/newcpu.s \
-	src/newcpu_common.s \
-	src/readcpu.s \
-	src/cpudefs.s \
-	src/cpustbl.s \
-	src/cpuemu_0.s \
-	src/cpuemu_4.s \
-	src/cpuemu_11.s \
-	src/jit/compemu.s \
-	src/jit/compemu_fpp.s \
-	src/jit/compstbl.s \
-	src/jit/compemu_support.s
-
-genasm: $(ASMS)
-
 clean:
-	$(RM) $(PROG) $(PROG)-debug $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
+	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS)
 	$(MAKE) -C guisan-dev clean
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
-	
-delasm:
-	$(RM) $(ASMS)
 	
 bootrom:
 	od -v -t xC -w8 src/filesys |tail -n +5 | sed -e "s,^.......,," -e "s,[0123456789abcdefABCDEF][0123456789abcdefABCDEF],db(0x&);,g" > src/filesys_bootrom.cpp
