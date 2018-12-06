@@ -95,7 +95,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
   return NULL;
 }
 
-#define NEXT_ROM_ID 250
+#define NEXT_ROM_ID 251
 
 #define ALTROM(id,grp,num,size,flags,crc32,a,b,c,d,e) \
 { _T("X"), 0, 0, 0, 0, 0, size, id, 0, 0, flags, (grp << 16) | num, 0, NULL, crc32, a, b, c, d, e },
@@ -183,6 +183,8 @@ static struct romdata roms[] = {
 	0xB87506A7, 0xEF36C463, 0x8EE45DE6, 0xBB937017, 0x61216C95, 0x8CD0D57B },
 	{ _T("KS ROM v3.1.4 (A3000)"), 3, 1, 46, 143, _T("A3000\0"), 524288, 249, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xBA35F8EB, 0xD73AE3A3, 0x6F12BB49, 0xBBF6BA04, 0xA890FF7A, 0xAC419015 },
+	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 250, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0xD52B52FD, 0x8A240508, 0x7CE18222, 0x5656DD0B, 0x93069C45, 0x743F9E34 },
 #endif
 
 	{ _T("KS ROM v3.1 (A3000)"), 3, 1, 40, 68, _T("A3000\0"), 524288, 61, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
