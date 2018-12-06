@@ -306,12 +306,17 @@ void ExitPanelDisplay()
 	delete chkAspect;
 	delete chkFullscreen;
 
+	delete optSingle;
+	delete optDouble;
+	delete optScanlines;
+	delete grpLineMode;
+	delete lineModeActionListener;
+
 #ifdef USE_SDL2
 	delete optAuto;
 	delete optNearest;
 	delete optLinear;
 	delete grpScalingMethod;
-	delete grpLineMode;
 	delete scalingMethodActionListener;
 #endif
 }
@@ -378,12 +383,14 @@ bool HelpPanelDisplay(std::vector<std::string> &helptext)
 	helptext.emplace_back("Demo or Workbench uses HiRes mode and you selected a value for \"Width\" lower than 640,");
 	helptext.emplace_back("you will only see half of the pixels.");
 	helptext.emplace_back("");
+#ifdef USE_SDL2
 	helptext.emplace_back("Select the scaling method for the Amiga screen. The default option \"Auto\", ");
 	helptext.emplace_back("will try to find the best looking scaling method depending on your monitor's resolution. ");
 	helptext.emplace_back("\"Nearest Neighbor\" will give you a more pixelated and crisp image, but it may come with ");
 	helptext.emplace_back("some distortion if your resolution is not an exact multiple. ");
 	helptext.emplace_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
 	helptext.emplace_back("");
+#endif
 	helptext.emplace_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga ");
 	helptext.emplace_back("screen.");
 	helptext.emplace_back("");
