@@ -113,7 +113,7 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),xu4)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
+    CPU_FLAGS += -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
     CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-xu4
