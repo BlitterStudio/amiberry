@@ -19,7 +19,7 @@ endif
 # DispmanX Common flags for both SDL1 and SDL2 (RPI-specific)
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
-DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib
+DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
 CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 
 #DEBUG=1
@@ -171,7 +171,7 @@ endif
 RM     = rm -f
 CC     ?= gcc
 CXX    ?= g++
-STRIP  = strip
+STRIP  ?= strip
 PROG   = $(NAME)
 
 #

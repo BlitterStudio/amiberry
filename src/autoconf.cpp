@@ -7,16 +7,13 @@
   * Copyright 1996 Ed Hanway
   */
 
-#include "sysconfig.h"
+#include <string.h>
 #include "sysdeps.h"
 
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
-#include "custom.h"
-#include "newcpu.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "inputdevice.h"
 
 /* Commonly used autoconfig strings */

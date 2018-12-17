@@ -29,17 +29,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* IF UAE */
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "zfile.h"
 #include "uae.h"
 /* ELSE */
-//#include "types.h"
 
 #include "fdi2raw.h"
 #include "crc32.h"
@@ -47,7 +44,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #undef DEBUG
 #define VERBOSE
 
-#include <assert.h>
 
 #ifdef DEBUG
 static TCHAR *datalog (uae_u8 *src, int len)

@@ -1,11 +1,9 @@
-#include "sysconfig.h"
+#include <stdbool.h>
+
 #include "sysdeps.h"
 #include "options.h"
 #include "include/memory.h"
-#include "custom.h"
 #include "newcpu.h"
-#include "cpu_prefetch.h"
-#include "cputbl.h"
 #define CPUFUNC(x) x##_ff
 #define SET_CFLG_ALWAYS(x) SET_CFLG(x)
 #define SET_NFLG_ALWAYS(x) SET_NFLG(x)

@@ -9,27 +9,18 @@
 */
 
 #define __USE_ISOC9X  /* We might be able to pick up a NaN */
+#include <math.h>
+#include <stdbool.h>
 
-#include <cmath>
-#include <float.h>
-#include <cfenv>
 
-#include "sysconfig.h"
+//#include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "options.h"
-#include "memory.h"
-#include "uae/attributes.h"
-#include "uae/vm.h"
-#include "custom.h"
-#include "newcpu.h"
-#include "fpp.h"
 #include "savestate.h"
-#include "cpu_prefetch.h"
 
 static void fpsr_set_exception(uae_u32 exception);
 
-#include "fpp_native.cpp"
+#include "fpp_native.cpp.in"
 
 struct fpp_cr_entry {
 	uae_u32 val[3];

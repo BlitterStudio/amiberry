@@ -23,19 +23,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#include <string.h>
+#include <stdlib.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
 #include "include/memory.h"
 #include "newcpu.h"
-#include "custom.h"
-#include "jit/comptbl.h"
 #include "jit/compemu.h"
 #include "uae.h"
 
-#include <asm/sigcontext.h>
-#include <signal.h>
 #include <dlfcn.h>
 #ifndef ANDROID
 #include <execinfo.h>
@@ -44,7 +41,6 @@ int backtrace(void**,int){ return 0; }
 char** backtrace_symbols(void* const*,int){return NULL; }
 void backtrace_symbols_fd(void* const*,int,int){} 
 #endif
-#include <SDL.h>
 
 extern uae_u8* current_compile_p;
 extern uae_u8* compiled_code;

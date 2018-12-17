@@ -5,7 +5,9 @@
   *
   */ 
 
-#include "sysconfig.h"
+#include <string.h>
+#include <stdbool.h>
+
 #include "sysdeps.h"
 
 #include "options.h"

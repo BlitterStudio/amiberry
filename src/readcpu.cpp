@@ -5,11 +5,9 @@
 *
 * Copyright 1995,1996 Bernd Schmidt
 */
+#include <stdlib.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include <ctype.h>
-
 #include "readcpu.h"
 
 int nr_cpuop_funcs;

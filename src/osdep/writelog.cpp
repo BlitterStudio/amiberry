@@ -5,7 +5,9 @@
  *
  * Copyright 2001 Bernd Schmidt
  */
-#include "sysconfig.h"
+#include <stdarg.h>
+#include <stdio.h>
+
 #include "sysdeps.h"
 #include "uae.h"
 

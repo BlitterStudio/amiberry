@@ -10,11 +10,13 @@
 #define MBRES_LOG 0
 #define PCMCIA_LOG 0
 
-#include "sysconfig.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
-
 #include "options.h"
-
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -22,13 +24,9 @@
 #include "gayle.h"
 #include "savestate.h"
 #include "uae.h"
-#include "gui.h"
 #include "threaddep/thread.h"
-#include "blkdev.h"
-#include "scsi.h"
 #include "ide.h"
 #include "autoconf.h"
-#include "rommgr.h"
 
 #define PCMCIA_SRAM 1
 #define PCMCIA_IDE 2

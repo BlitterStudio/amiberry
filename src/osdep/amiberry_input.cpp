@@ -1,15 +1,14 @@
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "keyboard.h"
 #include "inputdevice.h"
-#include <SDL.h>
 
 #include "zfile.h"  /// Horace added
 #include <fstream>  /// Horace added 
-#include <string> /// Horace added (to remove)
-#include <cstdlib>   /// Horace added   /* atol */
 #include <algorithm>
 
 static struct host_input_button default_controller_map;

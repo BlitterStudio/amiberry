@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -11,18 +13,10 @@
 #endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
-#include "UaeCheckBox.hpp"
 #include "UaeDropDown.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "uae.h"
-#include "gui.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "custom.h"
 #include "gui_handling.h"
 #include "sounddep/sound.h"
 

@@ -1,22 +1,19 @@
-#include "sysconfig.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
-#include "config.h"
-#include "uae.h"
 #include "options.h"
-#include "gui.h"
 #include "disk.h"
 #include "fsdb.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "filesys.h"
-#include "autoconf.h"
 #include "zfile.h"
 #include "archivers/zip/unzip.h"
 #include <libxml/tree.h>
-#include <libxml/parser.h>
-#include <vector>
-
 
 #define RP9_MANIFEST _T("rp9-manifest.xml")
 #define MAX_MANIFEST_ENTRY 256

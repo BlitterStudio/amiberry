@@ -8,20 +8,13 @@
  * Change UAE parameters and other stuff from inside the emulation.
  */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-
-#include <assert.h>
-#include <string.h>
 
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
-#include "custom.h"
-#include "newcpu.h"
-#include "xwin.h"
+//#include "newcpu.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "disk.h"
 #include "gensound.h"
 #include "picasso96.h"

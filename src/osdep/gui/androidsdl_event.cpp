@@ -1,3 +1,5 @@
+#include <string.h>
+
 #ifdef USE_SDL1
 #include <guichan/sdl.hpp>
 #elif USE_SDL2

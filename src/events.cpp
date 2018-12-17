@@ -7,8 +7,8 @@
 * Copyright 1995 Alessandro Bissacco
 * Copyright 2000-2012 Toni Wilen
 */
+#include <stdbool.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"

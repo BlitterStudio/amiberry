@@ -1,3 +1,6 @@
+#include <stdbool.h>
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -12,15 +15,9 @@
 #endif
 #include "SelectorEntry.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "uae.h"
-#include "custom.h"
-#include "xwin.h"
-#include "drawing.h"
-#include "gui.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
 #include "inputdevice.h"

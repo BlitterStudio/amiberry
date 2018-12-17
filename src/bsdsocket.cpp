@@ -8,18 +8,23 @@
 * Library initialization code (c) Tauno Taipaleenmaki
 */
 
-#include "sysconfig.h"
+#include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
+
 #include "sysdeps.h"
 
-#include <assert.h>
-#include <stddef.h>
 
 #include "options.h"
 #include "include/memory.h"
-#include "custom.h"
-#include "newcpu.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "threaddep/thread.h"
 #include "bsdsocket.h"
 #include "native2amiga.h"
@@ -1048,9 +1053,6 @@ static uae_u32 REGPARAM2 bsdsocklib_Dup2Socket (TrapContext *ctx)
 	struct socketbase *sb = get_socketbase (ctx);
 	return host_dup2socket(ctx, sb, trap_get_dreg(ctx, 0), trap_get_dreg(ctx, 1));
 }
-
-#define MSG_EOR		0x08	/* data completes record */
-#define	MSG_TRUNC	0x10	/* data discarded before delivery */
 
 static uae_u32 REGPARAM2 bsdsocklib_sendmsg (TrapContext *ctx)
 {

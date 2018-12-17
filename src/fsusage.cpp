@@ -15,15 +15,15 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysconfig.h"
-#include "sysdeps.h"
-
 #include <stdlib.h>
 #include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/statvfs.h>
 
-#if HAVE_SYS_STATFS_H
-# include <sys/statfs.h>
-#endif
+#include "sysconfig.h"
+
 #if defined(STAT_STATVFS) && !defined(__ANDROID__)
 #include <sys/statvfs.h>
 #else

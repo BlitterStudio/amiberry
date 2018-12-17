@@ -11,7 +11,12 @@
   *
   */
 
-#include "sysconfig.h"
+#include <string.h>
+#include <ctype.h>
+#include <sys/time.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "sysdeps.h"
 
 #define MFM_VALIDATOR 0
@@ -24,7 +29,6 @@
 #include "gui.h"
 #include "zfile.h"
 #include "newcpu.h"
-#include "execlib.h"
 #include "savestate.h"
 #include "cia.h"
 #ifdef FDI2RAW
@@ -35,7 +39,6 @@
 #endif
 #include "crc32.h"
 #include "fsdb.h"
-#include "rommgr.h"
 
 static int longwritemode = 0;
 

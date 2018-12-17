@@ -4,21 +4,21 @@
  * Amiberry interface
  *
  */
+#include <stdbool.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <time.h>
+#include <signal.h>
 
 #include <algorithm>
-#include <iostream>
-#include <vector>
-#include <cstdlib>
-#include <cstdarg>
-#include <asm/sigcontext.h>
-#include <csignal>
-#include <dlfcn.h>
 #ifndef ANDROID
 #include <execinfo.h>
 #endif
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "uae.h"
 #include "options.h"
 #include "custom.h"
@@ -27,11 +27,7 @@
 #include "savestate.h"
 #include "rommgr.h"
 #include "zfile.h"
-#include <SDL.h>
 #include "amiberry_rp9.h"
-#include "machdep/rpt.h"
-
-#include "threaddep/thread.h"
 #include "include/memory.h"
 #include "keyboard.h"
 #include "rtgmodes.h"

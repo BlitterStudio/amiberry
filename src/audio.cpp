@@ -12,21 +12,19 @@
   *
   */
 
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
 
 #include "options.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "autoconf.h"
-#include "gensound.h"
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "savestate.h"
 #include "gui.h"
-
-#include <math.h>
 
 #define PERIOD_MIN 4
 #define PERIOD_MIN_NONCE 60
@@ -48,7 +46,7 @@ STATIC_INLINE bool usehacks (void)
  * sufficient for all imaginable purposes. This must be power of two. */
 #define SINC_QUEUE_LENGTH 256
 
-#include "sinctable.cpp"
+#include "sinctable.cpp.in"
 
 typedef struct {
 	int time, output;

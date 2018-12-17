@@ -7,17 +7,14 @@
   *           2002 Toni Wilen (scsi emulation, 64-bit support)
   */
 
-#include "sysconfig.h"
+#include <string.h>
+#include <stdbool.h>
+
 #include "sysdeps.h"
 
 #include "threaddep/thread.h"
 #include "options.h"
-#include "memory.h"
-#include "custom.h"
-#include "newcpu.h"
-#include "disk.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "filesys.h"
 #include "execlib.h"
 #include "native2amiga.h"
@@ -26,8 +23,6 @@
 #include "scsi.h"
 #include "gayle.h"
 #include "execio.h"
-#include "zfile.h"
-#include "ide.h"
 
 #define HDF_SUPPORT_NSD 1
 #define HDF_SUPPORT_TD64 1

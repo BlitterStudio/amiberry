@@ -8,14 +8,10 @@
 * (c) 2014 Toni Wilen
 */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "options.h"
 #include "zfile.h"
 #include "flashrom.h"
-#include "memory.h"
-#include "newcpu.h"
 #include "gui.h"
 #include "uae.h"
 

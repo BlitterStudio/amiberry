@@ -1,7 +1,10 @@
-#include <algorithm>
-#include <iostream>
-#include <vector>
-#include <sstream>
+#include <stdio.h>
+#include <strings.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stdbool.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <guichan/sdl.hpp>
@@ -10,7 +13,6 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #endif
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
@@ -19,24 +21,12 @@
 #include "gui.h"
 #include "osdep/gui/SelectorEntry.hpp"
 #include "gui/gui_handling.h"
-#include "include/memory.h"
 #include "rommgr.h"
-#include "newcpu.h"
 #include "custom.h"
 #include "inputdevice.h"
-#include "xwin.h"
-#include "drawing.h"
 #include "sounddep/sound.h"
-#include "audio.h"
-#include "keybuf.h"
-#include "keyboard.h"
-#include "disk.h"
 #include "savestate.h"
-#include "filesys.h"
-#include "autoconf.h"
 #include "blkdev.h"
-#include <SDL.h>
-#include "threaddep/thread.h"
 
 #ifdef AMIBERRY
 #include <linux/kd.h>

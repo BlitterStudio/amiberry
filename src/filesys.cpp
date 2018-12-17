@@ -21,17 +21,17 @@
   * Will probably fail spectacularly in some cases if the filesystem is
   * modified at the same time by another process while UAE is running.
   */
+#include <string.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "threaddep/thread.h"
 #include "options.h"
-#include "traps.h"
 #include "uae.h"
 #include "memory.h"
 #include "custom.h"
-#include "newcpu.h"
 #include "filesys.h"
 #include "autoconf.h"
 #include "fsusage.h"
@@ -45,7 +45,6 @@
 #include "bsdsocket.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
-#include "blkdev.h"
 #include "picasso96.h"
 #include "rommgr.h"
 
@@ -7499,7 +7498,7 @@ void filesys_install_code (void)
   bootrom_header = 3 * 4;
   align(4);
 	bootrom_start = here ();
-  #include "filesys_bootrom.cpp"
+  #include "filesys_bootrom.cpp.in"
 
 	items = dlg (bootrom_start + 8) & 0xffff;
   /* The last offset comes from the code itself, look for it near the top. */

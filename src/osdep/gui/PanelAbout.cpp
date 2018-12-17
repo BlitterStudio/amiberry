@@ -11,12 +11,7 @@
 #endif
 #include "SelectorEntry.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
-#include "options.h"
-#include "uae.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 static gcn::Label* lblEmulatorVersion;
