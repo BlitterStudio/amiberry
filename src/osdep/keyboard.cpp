@@ -3,6 +3,8 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "inputdevice.h"
+#include "keyboard.h"
+#include "config.h"
 
 char keyboard_type = 0;
 #ifdef USE_SDL1
