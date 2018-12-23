@@ -8,25 +8,20 @@
   *   - added gfxcard code
   *
   */
+#include <string.h>
+#include <stdbool.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
-#include "traps.h"
 #include "memory.h"
 #include "rommgr.h"
-#include "custom.h"
 #include "newcpu.h"
 #include "savestate.h"
-#include "zfile.h"
-#include "threaddep/thread.h"
 #include "gfxboard.h"
 #include "cd32_fmv.h"
 #include "gayle.h"
 #include "autoconf.h"
-#include "filesys.h"
 
 #define CARD_FLAG_CAN_Z3 1
 

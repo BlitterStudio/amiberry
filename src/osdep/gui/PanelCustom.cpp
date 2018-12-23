@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -14,20 +18,10 @@
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
-#include "autoconf.h"
-#include "filesys.h"
-#include "gui.h"
 #include "gui_handling.h"
-#include "keyboard.h"
 #include "inputdevice.h"
-
-#include <iostream> // horace
 
 static gcn::Window* grpPort;
 static gcn::UaeRadioButton* optPort0;

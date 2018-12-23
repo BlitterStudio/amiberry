@@ -201,7 +201,10 @@
 *
 */
 
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "sysdeps.h"
 
 #include "options.h"
@@ -214,7 +217,6 @@
 #include "ar.h"
 #include "savestate.h"
 #include "crc32.h"
-#include "akiko.h"
 
 static const TCHAR *cart_memnames[] = { NULL, _T("hrtmon"), _T("arhrtmon"), _T("superiv") };
 

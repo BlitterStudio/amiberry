@@ -28,10 +28,14 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <string.h>
+#include <time.h>
 
-#include <math.h>
-
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #if defined(JIT)
@@ -705,7 +709,7 @@ STATIC_INLINE void reset_data_buffer(void)
 STATIC_INLINE void clobber_flags(void);
 
 #if defined(CPU_arm) 
-#include "codegen_arm.cpp"
+#include "codegen_arm.cpp.in"
 #endif
 #if defined(CPU_i386) || defined(CPU_x86_64)
 #include "codegen_x86.cpp"
@@ -1294,8 +1298,8 @@ static void fflags_into_flags_internal(void)
 #endif
 
 #if defined(CPU_arm)
-#include "compemu_midfunc_arm.cpp"
-#include "compemu_midfunc_arm2.cpp"
+#include "compemu_midfunc_arm.cpp.in"
+#include "compemu_midfunc_arm2.cpp.in"
 #endif
 
 #if defined(CPU_i386) || defined(CPU_x86_64)

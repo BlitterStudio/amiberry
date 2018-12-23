@@ -4,16 +4,15 @@
  * Amiberry interface
  *
  */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
-#include <algorithm>
-#include <iostream>
-#include <vector>
-#include <cstdarg>
-#include <asm/sigcontext.h>
-#include <csignal>
 #ifndef ANDROID
 #endif
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
@@ -31,17 +30,12 @@ extern FILE *debugfile;
 
 #include "fsdb.h"
 #include <libxml/tree.h>
-#include <libxml/parser.h>
-#include <libxml/xmlmemory.h>
-
-#include <cstring>
 
 extern void SetLastActiveConfig(const char* filename);
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
 #include <fstream>  /// Horace added 
-#include <string> /// Horace added (to remove)
 
 struct game_options
 {

@@ -1,9 +1,10 @@
-#include "sysconfig.h"
+#include <string.h>
+#include <stdlib.h>
+
 #include "sysdeps.h"
 
 #include "zfile.h"
 #include "mp3decoder.h"
-#include "cda_play.h"
 #include <mpg123.h>
 
 

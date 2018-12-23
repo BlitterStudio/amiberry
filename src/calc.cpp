@@ -13,15 +13,10 @@
 */
 
 #define calc_log(x)
-
-#include "sysconfig.h"
+#include <stdio.h>
+#include <stdbool.h>
 #include "sysdeps.h"
 
-#include "calc.h"
-
-#include <string.h>
-#include <stdio.h>
- 
 #define STACK_SIZE 32
 #define MAX_VALUES 32
 #define IOBUFFERS 256

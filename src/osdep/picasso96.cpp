@@ -38,8 +38,11 @@
  *       I removed some code which handled unsupported modes and formats to make code
  *       easier to read.
  */
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "gfxboard.h"
 
@@ -856,54 +859,54 @@ void picasso_handle_hsync(void)
 #define BLT_MULT 1
 #define BLT_NAME BLIT_FALSE_32
 #define BLT_FUNC(s,d) *d = 0
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_32
 #define BLT_FUNC(s,d) *d = ~(*s | * d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_32
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_32
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_32
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_32
 #define BLT_FUNC(s,d) *d = ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_32
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_32
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_32
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_32
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_32
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_32
 #define BLT_FUNC(s,d) *d = ~(*d) | (*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_32
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_32
 #ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
 #endif
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_32
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
 #define BLT_TEMP
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
@@ -911,54 +914,54 @@ void picasso_handle_hsync(void)
 #define BLT_MULT 1
 #define BLT_NAME BLIT_FALSE_24
 #define BLT_FUNC(s,d) *d = 0
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_24
 #define BLT_FUNC(s,d) *d = ~(*s | * d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_24
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_24
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_24
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_24
 #define BLT_FUNC(s,d) *d = ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_24
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_24
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_24
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_24
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_24
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_24
 #define BLT_FUNC(s,d) *d = ~(*d) | (*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_24
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_24
 #ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
 #endif
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_24
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
 #define BLT_TEMP
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
@@ -966,54 +969,54 @@ void picasso_handle_hsync(void)
 #define BLT_MULT 2
 #define BLT_NAME BLIT_FALSE_16
 #define BLT_FUNC(s,d) *d = 0
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_16
 #define BLT_FUNC(s,d) *d = ~(*s | * d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_16
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_16
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_16
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_16
 #define BLT_FUNC(s,d) *d = ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_16
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_16
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_16
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_16
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_16
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_16
 #define BLT_FUNC(s,d) *d = ~(*d) | (*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_16
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_16
 #ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
 #endif
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_16
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
 #define BLT_TEMP
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 
@@ -1021,54 +1024,54 @@ void picasso_handle_hsync(void)
 #define BLT_MULT 4
 #define BLT_NAME BLIT_FALSE_8
 #define BLT_FUNC(s,d) *d = 0
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_8
 #define BLT_FUNC(s,d) *d = ~(*s | * d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_8
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTSRC_8
 #define BLT_FUNC(s,d) *d = ~(*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYSRC_8
 #define BLT_FUNC(s,d) *d = (*s) & ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTDST_8
 #define BLT_FUNC(s,d) *d = ~(*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_EOR_8
 #define BLT_FUNC(s,d) *d = (*s) ^ (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NAND_8
 #define BLT_FUNC(s,d) *d = ~((*s) & (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_AND_8
 #define BLT_FUNC(s,d) *d = (*s) & (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NEOR_8
 #define BLT_FUNC(s,d) *d = ~((*s) ^ (*d))
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYSRC_8
 #define BLT_FUNC(s,d) *d = ~(*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_8
 #define BLT_FUNC(s,d) *d = ~(*d) | (*s)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_OR_8
 #define BLT_FUNC(s,d) *d = (*s) | (*d)
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_TRUE_8
 #ifdef AMIBERRY
 #define BLT_FUNC(s,d) memset(d, 0xff, sizeof (*d))
 #else
 #define BLT_FUNC(s,d) *d = 0xffffffff
 #endif
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_SWAP_8
 #define BLT_FUNC(s,d) tmp = *d ; *d = *s; *s = tmp;
 #define BLT_TEMP
-#include "p96_blit.cpp"
+#include "p96_blit.cpp.in"
 #undef BLT_SIZE
 #undef BLT_MULT
 

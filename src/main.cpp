@@ -6,16 +6,21 @@
   * Copyright 1995 Ed Hanway
   * Copyright 1995, 1996, 1997 Bernd Schmidt
   */
-#include "sysconfig.h"
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
-#include <cassert>
 
 #include "options.h"
 #include "threaddep/thread.h"
 #include "uae.h"
 #include "gensound.h"
 #include "audio.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "disk.h"
@@ -28,14 +33,9 @@
 #include "picasso96.h"
 #include "native2amiga.h"
 #include "savestate.h"
-#include "filesys.h"
 #include "blkdev.h"
 #include "gfxboard.h"
 #include "devices.h"
-#include "jit/compemu.h"
-#include <iostream>
-#include "amiberry_gfx.h"
-#include "SDL.h"
 
 #ifdef USE_SDL2
 SDL_Window* sdlWindow;

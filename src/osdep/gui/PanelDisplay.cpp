@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -11,17 +13,11 @@
 #endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
-#include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
 #include "custom.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 const int amigawidth_values[] = { 320, 352, 384, 640, 704, 768 };

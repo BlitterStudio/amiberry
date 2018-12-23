@@ -1,11 +1,12 @@
-#include "sysconfig.h"
+#include <string.h>
+#include <sys/time.h>
+#include <time.h>
+
 #include "sysdeps.h"
-#include "config.h"
 #include "fsdb.h"
 #include "zfile.h"
 #include <sys/types.h>
 #include <sys/stat.h>
-
 
 int dos_errno(void)
 {

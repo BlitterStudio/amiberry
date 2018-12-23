@@ -6,7 +6,8 @@
   * (c) 1996 Bernd Schmidt, Ed Hanway, Samuel Devulder
   */
 
-#include "sysconfig.h"
+#include <string.h>
+
 #include "sysdeps.h"
 #include "options.h"
 #include "custom.h"

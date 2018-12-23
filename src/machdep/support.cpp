@@ -1,10 +1,3 @@
-#include "config.h"
-#include "sysconfig.h"
-
-#include <stdlib.h>
-#include <stdarg.h>
-#include <signal.h>
-
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"

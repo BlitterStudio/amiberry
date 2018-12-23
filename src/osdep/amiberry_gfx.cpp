@@ -1,22 +1,20 @@
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+
 #include "sysdeps.h"
-#include "config.h"
 #include "uae.h"
 #include "options.h"
-#include "gui.h"
-#include "memory.h"
-#include "newcpu.h"
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
-#include "inputdevice.h"
 #include "savestate.h"
 #include "picasso96.h"
 #include "amiberry_gfx.h"
 
 #include <png.h>
-#include <SDL.h>
-#include <cmath>
 #ifdef USE_SDL1
 #include <SDL_image.h>
 #include <SDL_gfxPrimitives.h>

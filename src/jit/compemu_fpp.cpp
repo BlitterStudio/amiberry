@@ -8,14 +8,12 @@
   * Modified 2005 Peter Keunecke
  */
 
-#include <math.h>
+#include <stdlib.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "memory.h"
-#include "custom.h"
 #include "newcpu.h"
 #include "compemu.h"
 #include "flags_arm.h"

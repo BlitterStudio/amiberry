@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #include "osdep/gui/SelectorEntry.hpp"
 
 #ifdef USE_SDL1

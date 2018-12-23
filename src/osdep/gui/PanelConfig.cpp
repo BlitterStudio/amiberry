@@ -1,3 +1,7 @@
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -12,13 +16,9 @@
 #include "SelectorEntry.hpp"
 #include "UaeListBox.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
 #include "uae.h"
-#include "blkdev.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 static char last_active_config[MAX_DPATH] = { '\0' };

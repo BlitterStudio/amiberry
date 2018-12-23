@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -8,12 +10,9 @@
 #include <guisan/sdl/sdltruetypefont.hpp>
 #endif
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "gui_handling.h"
 
 typedef struct

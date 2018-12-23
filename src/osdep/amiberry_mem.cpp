@@ -1,19 +1,14 @@
-#include "sysconfig.h"
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
-#include "config.h"
-#include "uae.h"
 #include "options.h"
-#include "gui.h"
 #include "include/memory.h"
 #include "newcpu.h"
-#include "custom.h"
 #include "autoconf.h"
-#include "akiko.h"
-#include "ar.h"
 #include "uae/mman.h"
 #include <sys/mman.h>
-#include <SDL.h>
-
 
 static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;

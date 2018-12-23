@@ -5,8 +5,11 @@
 *
 *     2007 Toni Wilen
 */
+#include <string.h>
+#include <time.h>
+#include <strings.h>
+#include <stdio.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #ifdef _WIN32_
@@ -14,15 +17,10 @@
 #include "win32.h"
 #endif
 
-#include "options.h"
 #include "zfile.h"
 #include "archivers/zip/unzip.h"
-#include "archivers/dms/pfile.h"
-#include "crc32.h"
 #include "zarchive.h"
 #include "disk.h"
-
-#include <zlib.h>
 
 #define unpack_log write_log
 #undef unpack_log

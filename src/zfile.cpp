@@ -9,20 +9,26 @@
 
 #define RECURSIVE_ARCHIVES 1
 
-#include "sysconfig.h"
+#include <time.h>
+#include <string.h>
+#include <stdio.h>
+#include <strings.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdarg.h>
+
+
 #include "sysdeps.h"
 
 #include "options.h"
 #include "zfile.h"
 #include "disk.h"
-#include "gui.h"
 #include "crc32.h"
 #include "fsdb.h"
 #include "fsusage.h"
 #include "zarchive.h"
 #include "diskutil.h"
 #include "fdi2raw.h"
-#include "uae/io.h"
 #include "uae.h"
 
 #include "archivers/zip/unzip.h"
@@ -547,7 +553,6 @@ end:
 	return NULL;
 }
 
-#include "fdi2raw.h"
 static struct zfile *fdi (struct zfile *z, int index, int *retcode)
 {
 	int i, j, r;

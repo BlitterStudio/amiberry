@@ -6,29 +6,25 @@
   * Copyright 1995 Bernd Schmidt, Alessandro Bissacco
   * Copyright 1996, 1997 Stefan Reinauer, Christian Schmitt
   */
+#include <stdbool.h>
+#include <time.h>
+#include <string.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include <assert.h>
 
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "cia.h"
 #include "disk.h"
-#include "xwin.h"
 #include "keybuf.h"
 #include "gui.h"
 #include "savestate.h"
 #include "inputdevice.h"
-#include "zfile.h"
 #include "include/ar.h"
 #include "akiko.h"
 #include "audio.h"
 #include "keyboard.h"
-#include "uae.h"
-#include "autoconf.h"
 #include "rtc.h"
 
 /* Akiko internal CIA differences:

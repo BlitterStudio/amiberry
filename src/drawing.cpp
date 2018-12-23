@@ -26,11 +26,11 @@
    To prevent extremely bad things (think pixels cut in half by window borders) from
    happening, all ports should restrict window widths to be multiples of 16 pixels.  */
 
-#include "sysconfig.h"
-#include "sysdeps.h"
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include <ctype.h>
-#include <assert.h>
+#include "sysdeps.h"
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -39,13 +39,11 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "xwin.h"
-#include "autoconf.h"
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"
 #include "savestate.h"
 #include "statusline.h"
-#include "inputdevice.h"
 #include "cd32_fmv.h"
 #include "audio.h"
 #include "devices.h"
@@ -1018,7 +1016,7 @@ STATIC_INLINE bool get_genlock_transparency(uae_u8 v)
 	}
 }
 
-#include "linetoscr.cpp"
+#include "linetoscr.cpp.in"
 
 #define LTPARMS src_pixel, start, stop
 

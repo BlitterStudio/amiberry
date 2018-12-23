@@ -1,7 +1,10 @@
-#include "sysconfig.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
 
-#include "threaddep/thread.h"
 #include "options.h"
 #include "filesys.h"
 #include "zfile.h"

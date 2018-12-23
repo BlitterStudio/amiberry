@@ -1,6 +1,10 @@
-#include <algorithm>
-#include <iostream>
-#include <sstream>
+#include <stdbool.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -14,7 +18,6 @@
 #endif
 #include "SelectorEntry.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
 #include "uae.h"

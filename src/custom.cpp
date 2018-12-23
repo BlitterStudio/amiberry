@@ -7,12 +7,14 @@
 * Copyright 1995 Alessandro Bissacco
 * Copyright 2000-2015 Toni Wilen
 */
+#include <stdarg.h>
+#include <stdbool.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+#include <sys/time.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-
-#include <cctype>
-#include <cmath>
 
 #include "options.h"
 #include "uae.h"
@@ -27,7 +29,6 @@
 #include "xwin.h"
 #include "inputdevice.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"

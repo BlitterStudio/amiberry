@@ -5,8 +5,12 @@
   *
   * (c) 1995 Bernd Schmidt
   */
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
@@ -15,17 +19,12 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "cpummu.h"
-#include "cpu_prefetch.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "gui.h"
 #include "savestate.h"
 #include "blitter.h"
 #include "ar.h"
-#include "cia.h"
-#include "inputdevice.h"
 #include "audio.h"
-#include "fpp.h"
 #include "threaddep/thread.h"
 #include "bsdsocket.h"
 #include "statusline.h"

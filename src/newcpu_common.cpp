@@ -1,10 +1,11 @@
-#include "sysconfig.h"
+#include <stdlib.h>
+#include <stdbool.h>
+
 #include "sysdeps.h"
 
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
-#include "cpu_prefetch.h"
 
 int movec_illg (int regno)
 {

@@ -1,4 +1,3 @@
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "readcpu.h"
 struct instr_def defs68k[] = {

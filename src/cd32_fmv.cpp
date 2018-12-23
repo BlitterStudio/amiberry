@@ -7,20 +7,18 @@
 *
 */
 
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include "sysdeps.h"
 
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "rommgr.h"
 #include "custom.h"
-#include "newcpu.h"
-#include "zfile.h"
 #include "cd32_fmv.h"
-#include "uae.h"
-#include "custom.h"
-#include "audio.h"
-#include "threaddep/thread.h"
 
 #include "cda_play.h"
 #include "archivers/mp2/kjmp2.h"

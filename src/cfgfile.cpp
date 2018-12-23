@@ -7,18 +7,21 @@
   * Copyright 1998 Brian King, Bernd Schmidt
   */
 
-#include "sysconfig.h"
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
 #include "sysdeps.h"
 
-#include <ctype.h>
-
 #include "options.h"
+#include "memory.h"
 #include "uae.h"
 #include "audio.h"
 #include "custom.h"
 #include "inputdevice.h"
 #include "savestate.h"
-#include "include/memory.h"
 #include "autoconf.h"
 #include "rommgr.h"
 #include "gui.h"
@@ -30,7 +33,6 @@
 #include "blkdev.h"
 #include "calc.h"
 #include "gfxboard.h"
-#include "native2amiga_api.h"
 
 #define cfgfile_warning write_log
 #define cfgfile_warning_obsolete write_log

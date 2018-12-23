@@ -1,8 +1,6 @@
-#include "sysconfig.h"
+#include <dlfcn.h>
 #include "sysdeps.h"
-#include "uae/api.h"
 #include "uae/dlopen.h"
-//#include "uae/log.h"
 
 #define FSUAE
 

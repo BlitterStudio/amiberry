@@ -21,16 +21,26 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <signal.h>
+#include <unistd.h>
+#include <stddef.h>
 
-#include "sysconfig.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
 #include "sysdeps.h"
 
 #include "options.h"
 #include "include/memory.h"
-#include "newcpu.h"
-#include "custom.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "../threaddep/thread.h"
 #include "bsdsocket.h"
 #include "native2amiga.h"
@@ -45,20 +55,15 @@ void bsdsock_fake_int_handler(void)
 
 #else
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
 #ifdef HAVE_SYS_FILIO_H
 # include <sys/filio.h>
 #endif
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <stddef.h>
 #include <netdb.h>
 
 #include <signal.h>
-#include <arpa/inet.h>
 
 //#define DEBUG_BSDSOCKET
 #ifdef DEBUG_BSDSOCKET

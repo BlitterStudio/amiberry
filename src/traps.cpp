@@ -9,17 +9,16 @@
   * Copyright 1995, 1996 Bernd Schmidt
   * Copyright 1996 Ed Hanway
   */
+#include <string.h>
+#include <stdbool.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "include/memory.h"
-#include "custom.h"
 #include "newcpu.h"
 #include "threaddep/thread.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "uae.h"
 
 /*

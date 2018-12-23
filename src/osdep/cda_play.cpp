@@ -1,12 +1,13 @@
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include "sysdeps.h"
 
 #include "audio.h"
 
 #include "cda_play.h"
 #include "sounddep/sound.h"
-#include "uae.h"
-
 
 cda_audio::~cda_audio()
 {

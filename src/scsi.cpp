@@ -6,13 +6,12 @@
 * Copyright 2007-2015 Toni Wilen
 *
 */
+#include <string.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "filesys.h"
-#include "blkdev.h"
 #include "scsi.h"
 
 static const int outcmd[] = { 0x04, 0x0a, 0x0c, 0x11, 0x2a, 0xaa, 0x15, 0x55, 0x0f, -1 };

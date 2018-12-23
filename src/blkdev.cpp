@@ -7,19 +7,18 @@
 *
 */
 
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "sysdeps.h"
 #include "options.h"
-#include "include/memory.h"
 
-#include "traps.h"
 #include "blkdev.h"
 #include "savestate.h"
 #include "crc32.h"
 #include "threaddep/thread.h"
-#include "execio.h"
 #include "zfile.h"
-#include "fsdb.h"
 
 #define PRE_INSERT_DELAY (3 * (currprefs.ntscmode ? 60 : 50))
 

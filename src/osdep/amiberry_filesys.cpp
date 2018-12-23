@@ -1,10 +1,12 @@
-#include <sys/timeb.h>
-#include <fcntl.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
-#include "sysconfig.h"
+#include <dirent.h>
+#include <string.h>
+#include <fcntl.h>
+
 #include "sysdeps.h"
-#include "config.h"
-#include "zfile.h"
 #include "options.h"
 
 
