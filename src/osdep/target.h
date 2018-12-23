@@ -47,9 +47,6 @@ void keyboard_settrans();
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
-#ifdef WITH_LOGGING
-extern void ShowLiveInfo(char *msg);
-#endif
 
 extern void fetch_configurationpath(char *out, int size);
 extern void set_configurationpath(char *newpath);
