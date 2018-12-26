@@ -264,7 +264,6 @@
     <ClCompile Include="..\..\src\audio.cpp" />
     <ClCompile Include="..\..\src\autoconf.cpp" />
     <ClCompile Include="..\..\src\blitfunc.cpp" />
-    <ClCompile Include="..\..\src\blitops.cpp" />
     <ClCompile Include="..\..\src\blittable.cpp" />
     <ClCompile Include="..\..\src\blitter.cpp" />
     <ClCompile Include="..\..\src\blkdev.cpp" />
