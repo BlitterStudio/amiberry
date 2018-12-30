@@ -37,7 +37,7 @@
 #define _tcsncat strncat
 #define _tcsncmp strncmp
 #define _tcsncpy strncpy
-#define _tcsnicmp strncasecmp
+#define _tcsnicmp SDL_strncasecmp
 #define _tcsrchr strrchr
 #define _tcsspn strspn
 #define _tcsstr strstr

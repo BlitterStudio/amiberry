@@ -344,7 +344,7 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 {
 	for (auto & i : ConfigFilesList)
 	{
-		if (!strncasecmp(i->Name, name, MAX_DPATH))
+		if (!SDL_strncasecmp(i->Name, name, MAX_DPATH))
 			return i;
 	}
 	return nullptr;
