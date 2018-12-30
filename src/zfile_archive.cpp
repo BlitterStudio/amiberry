@@ -159,7 +159,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 			select = 0;
 			if (!zf->zipname)
 				select = 1;
-			if (zf->zipname && _tcslen (zn->fullname) >= _tcslen (zf->zipname) && !strcasecmp (zf->zipname, zn->fullname + _tcslen (zn->fullname) - _tcslen (zf->zipname)))
+			if (zf->zipname && _tcslen (zn->fullname) >= _tcslen (zf->zipname) && !stricmp(zf->zipname, zn->fullname + _tcslen (zn->fullname) - _tcslen (zf->zipname)))
 				select = -1;
 			if (zf->zipname && zf->zipname[0] == '#' && _tstol (zf->zipname + 1) == zipcnt)
 				select = -1;

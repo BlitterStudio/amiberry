@@ -78,7 +78,7 @@ public:
 		{
 			if (lstAvailableROMs[i]->ROMType & ROMType)
 			{
-				if (!strcasecmp(lstAvailableROMs[i]->Path, current))
+				if (!stricmp(lstAvailableROMs[i]->Path, current))
 					currIdx = roms.size();
 				roms.emplace_back(lstAvailableROMs[i]->Name);
 				idxToAvailableROMs.push_back(i);

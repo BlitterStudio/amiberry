@@ -32,7 +32,7 @@
 #define _tcsdup strdup
 #define _tcsftime strftime
 #define _tcsftime strftime
-#define _tcsicmp strcasecmp
+#define _tcsicmp stricmp
 #define _tcslen strlen
 #define _tcsncat strncat
 #define _tcsncmp strncmp

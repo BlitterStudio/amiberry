@@ -512,8 +512,8 @@ typedef long uae_atomic;
 #define __cdecl
 #endif
 
-#define strcmpi(x,y) strcasecmp(x,y)
-#define stricmp(x,y) strcasecmp(x,y)
+#define strcmpi(x,y) SDL_strcasecmp(x,y)
+#define stricmp(x,y) SDL_strcasecmp(x,y)
 
 #define M68K_SPEED_7MHZ_CYCLES 0
 #define M68K_SPEED_14MHZ_CYCLES 1024

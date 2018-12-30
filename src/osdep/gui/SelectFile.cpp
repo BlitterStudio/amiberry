@@ -156,7 +156,7 @@ static void checkfilename(char* current)
 	extractFileName(current, actfile);
 	for (auto i = 0; i < fileList->getNumberOfElements(); ++i)
 	{
-		if (!fileList->isDir(i) && !strcasecmp(fileList->getElementAt(i).c_str(), actfile))
+		if (!fileList->isDir(i) && !stricmp(fileList->getElementAt(i).c_str(), actfile))
 		{
 			lstFiles->setSelected(i);
 			selectedOnStart = i;

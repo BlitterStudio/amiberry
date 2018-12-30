@@ -73,7 +73,7 @@ void AddFileToDiskList(const char *file, int moveToTop)
 
 	for (i = 0; i < lstMRUDiskList.size(); ++i)
 	{
-		if (!strcasecmp(lstMRUDiskList[i].c_str(), file))
+		if (!stricmp(lstMRUDiskList[i].c_str(), file))
 		{
 			if (moveToTop)
 			{
@@ -96,7 +96,7 @@ void AddFileToCDList(const char *file, int moveToTop)
 
 	for (i = 0; i < lstMRUCDList.size(); ++i)
 	{
-		if (!strcasecmp(lstMRUCDList[i].c_str(), file))
+		if (!stricmp(lstMRUCDList[i].c_str(), file))
 		{
 			if (moveToTop)
 			{
@@ -736,7 +736,7 @@ void FilterFiles(vector<string>* files, const char* filter[])
 		{
 			if (tmp.size() >= strlen(filter[f]))
 			{
-				if (!strcasecmp(tmp.substr(tmp.size() - strlen(filter[f])).c_str(), filter[f]))
+				if (!stricmp(tmp.substr(tmp.size() - strlen(filter[f])).c_str(), filter[f]))
 				{
 					remove = false;
 					break;
