@@ -104,7 +104,7 @@
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j6 PLATFORM=rockpro64</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j6 PLATFORM=rockpro64</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberryStretch\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
@@ -129,7 +129,7 @@
     <NMakeIncludeSearchPath>..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;..\src</NMakeIncludeSearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberryStretch\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberryStretch\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j3 PLATFORM=rpi3-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j3 PLATFORM=rpi3-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2; make clean</RemoteCleanCommandLine>
@@ -310,9 +310,6 @@
     <ClCompile Include="..\src\blitfunc.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\blitops.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
     <ClCompile Include="..\src\blittable.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -388,14 +385,14 @@
     <ClCompile Include="..\src\filesys.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\filesys_bootrom.cpp">
+    <ClCompile Include="..\src\filesys_bootrom.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\flashrom.cpp" />
     <ClCompile Include="..\src\fpp.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\fpp_native.cpp" />
+    <ClCompile Include="..\src\fpp_native.cpp.in" />
     <ClCompile Include="..\src\fsdb.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -420,18 +417,17 @@
     <ClCompile Include="..\src\inputdevice.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\jit\codegen_arm.cpp" />
+    <ClCompile Include="..\src\jit\codegen_arm.cpp.in" />
     <ClCompile Include="..\src\jit\compemu.cpp" />
     <ClCompile Include="..\src\jit\compemu_fpp.cpp" />
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp" />
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp" />
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp.in" />
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp.in" />
     <ClCompile Include="..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\src\jit\compstbl.cpp" />
-    <ClCompile Include="..\src\jit\gencomp_arm.cpp" />
     <ClCompile Include="..\src\keybuf.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\linetoscr.cpp">
+    <ClCompile Include="..\src\linetoscr.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\machdep\support.cpp" />
@@ -499,7 +495,7 @@
     <ClCompile Include="..\src\osdep\picasso96.cpp" />
     <ClCompile Include="..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\src\osdep\writelog.cpp" />
-    <ClCompile Include="..\src\p96_blit.cpp">
+    <ClCompile Include="..\src\p96_blit.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\readcpu.cpp">
@@ -513,7 +509,7 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\scsi.cpp" />
-    <ClCompile Include="..\src\sinctable.cpp">
+    <ClCompile Include="..\src\sinctable.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\sounddep\sound.cpp" />
@@ -584,15 +580,14 @@
     <ClInclude Include="..\src\archivers\mp2\kjmp2.h" />
     <ClInclude Include="..\src\archivers\wrp\warp.h" />
     <ClInclude Include="..\src\archivers\zip\unzip.h" />
-    <ClInclude Include="..\src\blit.h" />
-    <ClInclude Include="..\src\blitfunc.h" />
     <ClInclude Include="..\src\caps\CapsAPI.h" />
     <ClInclude Include="..\src\caps\Comtype.h" />
-    <ClInclude Include="..\src\cputbl.h" />
     <ClInclude Include="..\src\include\akiko.h" />
     <ClInclude Include="..\src\include\ar.h" />
     <ClInclude Include="..\src\include\audio.h" />
     <ClInclude Include="..\src\include\autoconf.h" />
+    <ClInclude Include="..\src\include\blit.h" />
+    <ClInclude Include="..\src\include\blitfunc.h" />
     <ClInclude Include="..\src\include\blitter.h" />
     <ClInclude Include="..\src\include\blkdev.h" />
     <ClInclude Include="..\src\include\bsdsocket.h" />
@@ -601,6 +596,7 @@
     <ClInclude Include="..\src\include\cia.h" />
     <ClInclude Include="..\src\include\commpipe.h" />
     <ClInclude Include="..\src\include\cpummu.h" />
+    <ClInclude Include="..\src\include\cputbl.h" />
     <ClInclude Include="..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\src\include\crc32.h" />
     <ClInclude Include="..\src\include\custom.h" />
@@ -619,7 +615,6 @@
     <ClInclude Include="..\src\include\fsdb.h" />
     <ClInclude Include="..\src\include\fsusage.h" />
     <ClInclude Include="..\src\include\gayle.h" />
-    <ClInclude Include="..\src\include\genblitter.h" />
     <ClInclude Include="..\src\include\gensound.h" />
     <ClInclude Include="..\src\include\gfxboard.h" />
     <ClInclude Include="..\src\include\gui.h" />
@@ -627,7 +622,6 @@
     <ClInclude Include="..\src\include\inputdevice.h" />
     <ClInclude Include="..\src\include\keyboard.h" />
     <ClInclude Include="..\src\include\keybuf.h" />
-    <ClInclude Include="..\src\include\mackbd.h" />
     <ClInclude Include="..\src\include\memory.h" />
     <ClInclude Include="..\src\include\mmu_common.h" />
     <ClInclude Include="..\src\include\native2amiga.h" />
@@ -645,18 +639,13 @@
     <ClInclude Include="..\src\include\traps.h" />
     <ClInclude Include="..\src\include\uae.h" />
     <ClInclude Include="..\src\include\uaeresource.h" />
-    <ClInclude Include="..\src\include\uae\api.h" />
-    <ClInclude Include="..\src\include\uae\attributes.h" />
     <ClInclude Include="..\src\include\uae\caps.h" />
-    <ClInclude Include="..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\src\include\uae\dlopen.h" />
-    <ClInclude Include="..\src\include\uae\io.h" />
     <ClInclude Include="..\src\include\uae\likely.h" />
     <ClInclude Include="..\src\include\uae\mman.h" />
     <ClInclude Include="..\src\include\uae\string.h" />
     <ClInclude Include="..\src\include\uae\types.h" />
     <ClInclude Include="..\src\include\uae\uae.h" />
-    <ClInclude Include="..\src\include\uae\vm.h" />
     <ClInclude Include="..\src\include\xwin.h" />
     <ClInclude Include="..\src\include\zarchive.h" />
     <ClInclude Include="..\src\include\zfile.h" />
