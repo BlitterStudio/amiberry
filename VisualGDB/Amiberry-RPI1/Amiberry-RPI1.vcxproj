@@ -290,15 +290,14 @@
     <ClInclude Include="..\..\src\archivers\mp2\kjmp2.h" />
     <ClInclude Include="..\..\src\archivers\wrp\warp.h" />
     <ClInclude Include="..\..\src\archivers\zip\unzip.h" />
-    <ClInclude Include="..\..\src\blit.h" />
-    <ClInclude Include="..\..\src\blitfunc.h" />
     <ClInclude Include="..\..\src\caps\CapsAPI.h" />
     <ClInclude Include="..\..\src\caps\Comtype.h" />
-    <ClInclude Include="..\..\src\cputbl.h" />
     <ClInclude Include="..\..\src\include\akiko.h" />
     <ClInclude Include="..\..\src\include\ar.h" />
     <ClInclude Include="..\..\src\include\audio.h" />
     <ClInclude Include="..\..\src\include\autoconf.h" />
+    <ClInclude Include="..\..\src\include\blit.h" />
+    <ClInclude Include="..\..\src\include\blitfunc.h" />
     <ClInclude Include="..\..\src\include\blitter.h" />
     <ClInclude Include="..\..\src\include\blkdev.h" />
     <ClInclude Include="..\..\src\include\bsdsocket.h" />
@@ -307,6 +306,7 @@
     <ClInclude Include="..\..\src\include\cia.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
+    <ClInclude Include="..\..\src\include\cputbl.h" />
     <ClInclude Include="..\..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\..\src\include\crc32.h" />
     <ClInclude Include="..\..\src\include\custom.h" />

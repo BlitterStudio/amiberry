@@ -613,15 +613,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\blit.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\blitfunc.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\cputbl.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\archivers\7z\7z.h">
       <Filter>Source files\archivers\7z</Filter>
     </ClInclude>
@@ -1020,6 +1011,15 @@
     </ClInclude>
     <ClInclude Include="..\..\src\threaddep\thread.h">
       <Filter>Source files\threaddep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blit.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blitfunc.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cputbl.h">
+      <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
