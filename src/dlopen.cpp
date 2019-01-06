@@ -1,4 +1,3 @@
-#include <dlfcn.h>
 #include "sysdeps.h"
 #include "uae/dlopen.h"
 
