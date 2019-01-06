@@ -27,7 +27,7 @@ extern long int version;
 #define MAX_PATHS 8
 
 struct multipath {
-	TCHAR path[MAX_PATHS][PATH_MAX];
+	TCHAR path[MAX_PATHS][MAX_DPATH];
 };
 
 #define PATH_NONE -1

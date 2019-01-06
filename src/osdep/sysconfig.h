@@ -3,7 +3,11 @@
 #define SUPPORT_THREADS
 
 #include <limits.h>
+#ifdef PATH_MAX
 #define MAX_DPATH PATH_MAX
+#else
+#define MAX_DPATH 4096
+#endif
 
 /* #define DRIVESOUND */
 /* #define GFXFILTER */

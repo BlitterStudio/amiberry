@@ -103,7 +103,11 @@ using namespace std;
 #endif
 
 #if HAVE_DIRENT_H
+#if defined(__PSP2__) // NOT __SWITCH__
+# include "psp2-dirent.h"
+#else
 # include <dirent.h>
+#endif
 #else
 # define dirent direct
 # if HAVE_SYS_NDIR_H
@@ -154,8 +158,8 @@ typedef int uae_s16;
 #endif
 
 #if SIZEOF_INT == 4
-typedef unsigned int uae_u32;
-typedef int uae_s32;
+//typedef unsigned int uae_u32;
+//typedef int uae_s32;
 #elif SIZEOF_LONG == 4
 typedef unsigned long uae_u32;
 typedef long uae_s32;
