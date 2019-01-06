@@ -158,8 +158,8 @@ typedef int uae_s16;
 #endif
 
 #if SIZEOF_INT == 4
-//typedef unsigned int uae_u32;
-//typedef int uae_s32;
+typedef unsigned int uae_u32;
+typedef int uae_s32;
 #elif SIZEOF_LONG == 4
 typedef unsigned long uae_u32;
 typedef long uae_s32;
