@@ -502,6 +502,10 @@ typedef long uae_atomic;
 /* Define to 1 if `S_un' is a member of `struct in_addr'. */
 /* #un#def HAVE_STRUCT_IN_ADDR_S_UN */
 
+#ifdef _WIN32
+#undef _WIN32
+#endif
+
 #ifdef _GCCRES_
 #undef _GCCRES_
 #endif
