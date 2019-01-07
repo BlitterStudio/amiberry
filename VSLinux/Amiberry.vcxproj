@@ -1,6 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-rockpro64|ARM">
+      <Configuration>Debug-rockpro64</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug-xu4|ARM">
       <Configuration>Debug-xu4</Configuration>
       <Platform>ARM</Platform>
@@ -38,6 +42,11 @@
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteRootDir>~/projects</RemoteRootDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteRootDir>~/projects</RemoteRootDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -51,6 +60,10 @@
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|x86'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|x86'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
@@ -70,6 +83,10 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|x64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -84,11 +101,11 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j2 PLATFORM=rpi3-sdl2</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j2 PLATFORM=rpi3-sdl2</RemoteReBuildCommandLine>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j6 PLATFORM=rockpro64</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j6 PLATFORM=rockpro64</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-sdl2</RemoteProjectDir>
@@ -98,16 +115,25 @@
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4 PLATFORM=xu4</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;ARM_HAS_DIV;MALI_GPU;USE_RENDER_THREAD;TINKER;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;ARM_HAS_DIV;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j6 PLATFORM=rockpro64</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j6 PLATFORM=rockpro64</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;ARM_HAS_DIV;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <RemoteBuildOutputs />
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
+    <NMakeIncludeSearchPath>..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;..\src</NMakeIncludeSearchPath>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j3 PLATFORM=rpi3-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j3 PLATFORM=rpi3-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-sdl2</RemoteProjectDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM'">
@@ -115,7 +141,7 @@
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2; make -j3 PLATFORM=rpi3-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2; make clean; make -j3 PLATFORM=rpi3-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;_REENTRANT;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-sdl2</RemoteProjectDir>
   </PropertyGroup>
   <ItemGroup>
@@ -284,9 +310,6 @@
     <ClCompile Include="..\src\blitfunc.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\blitops.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
     <ClCompile Include="..\src\blittable.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -362,14 +385,14 @@
     <ClCompile Include="..\src\filesys.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\filesys_bootrom.cpp">
+    <ClCompile Include="..\src\filesys_bootrom.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\flashrom.cpp" />
     <ClCompile Include="..\src\fpp.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\fpp_native.cpp" />
+    <ClCompile Include="..\src\fpp_native.cpp.in" />
     <ClCompile Include="..\src\fsdb.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -394,18 +417,17 @@
     <ClCompile Include="..\src\inputdevice.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\jit\codegen_arm.cpp" />
+    <ClCompile Include="..\src\jit\codegen_arm.cpp.in" />
     <ClCompile Include="..\src\jit\compemu.cpp" />
     <ClCompile Include="..\src\jit\compemu_fpp.cpp" />
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp" />
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp" />
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp.in" />
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp.in" />
     <ClCompile Include="..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\src\jit\compstbl.cpp" />
-    <ClCompile Include="..\src\jit\gencomp_arm.cpp" />
     <ClCompile Include="..\src\keybuf.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
-    <ClCompile Include="..\src\linetoscr.cpp">
+    <ClCompile Include="..\src\linetoscr.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\machdep\support.cpp" />
@@ -473,7 +495,7 @@
     <ClCompile Include="..\src\osdep\picasso96.cpp" />
     <ClCompile Include="..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\src\osdep\writelog.cpp" />
-    <ClCompile Include="..\src\p96_blit.cpp">
+    <ClCompile Include="..\src\p96_blit.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\readcpu.cpp">
@@ -487,7 +509,7 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\scsi.cpp" />
-    <ClCompile Include="..\src\sinctable.cpp">
+    <ClCompile Include="..\src\sinctable.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\sounddep\sound.cpp" />
@@ -558,15 +580,14 @@
     <ClInclude Include="..\src\archivers\mp2\kjmp2.h" />
     <ClInclude Include="..\src\archivers\wrp\warp.h" />
     <ClInclude Include="..\src\archivers\zip\unzip.h" />
-    <ClInclude Include="..\src\blit.h" />
-    <ClInclude Include="..\src\blitfunc.h" />
     <ClInclude Include="..\src\caps\CapsAPI.h" />
     <ClInclude Include="..\src\caps\Comtype.h" />
-    <ClInclude Include="..\src\cputbl.h" />
     <ClInclude Include="..\src\include\akiko.h" />
     <ClInclude Include="..\src\include\ar.h" />
     <ClInclude Include="..\src\include\audio.h" />
     <ClInclude Include="..\src\include\autoconf.h" />
+    <ClInclude Include="..\src\include\blit.h" />
+    <ClInclude Include="..\src\include\blitfunc.h" />
     <ClInclude Include="..\src\include\blitter.h" />
     <ClInclude Include="..\src\include\blkdev.h" />
     <ClInclude Include="..\src\include\bsdsocket.h" />
@@ -575,6 +596,7 @@
     <ClInclude Include="..\src\include\cia.h" />
     <ClInclude Include="..\src\include\commpipe.h" />
     <ClInclude Include="..\src\include\cpummu.h" />
+    <ClInclude Include="..\src\include\cputbl.h" />
     <ClInclude Include="..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\src\include\crc32.h" />
     <ClInclude Include="..\src\include\custom.h" />
@@ -593,7 +615,6 @@
     <ClInclude Include="..\src\include\fsdb.h" />
     <ClInclude Include="..\src\include\fsusage.h" />
     <ClInclude Include="..\src\include\gayle.h" />
-    <ClInclude Include="..\src\include\genblitter.h" />
     <ClInclude Include="..\src\include\gensound.h" />
     <ClInclude Include="..\src\include\gfxboard.h" />
     <ClInclude Include="..\src\include\gui.h" />
@@ -601,7 +622,6 @@
     <ClInclude Include="..\src\include\inputdevice.h" />
     <ClInclude Include="..\src\include\keyboard.h" />
     <ClInclude Include="..\src\include\keybuf.h" />
-    <ClInclude Include="..\src\include\mackbd.h" />
     <ClInclude Include="..\src\include\memory.h" />
     <ClInclude Include="..\src\include\mmu_common.h" />
     <ClInclude Include="..\src\include\native2amiga.h" />
@@ -619,18 +639,13 @@
     <ClInclude Include="..\src\include\traps.h" />
     <ClInclude Include="..\src\include\uae.h" />
     <ClInclude Include="..\src\include\uaeresource.h" />
-    <ClInclude Include="..\src\include\uae\api.h" />
-    <ClInclude Include="..\src\include\uae\attributes.h" />
     <ClInclude Include="..\src\include\uae\caps.h" />
-    <ClInclude Include="..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\src\include\uae\dlopen.h" />
-    <ClInclude Include="..\src\include\uae\io.h" />
     <ClInclude Include="..\src\include\uae\likely.h" />
     <ClInclude Include="..\src\include\uae\mman.h" />
     <ClInclude Include="..\src\include\uae\string.h" />
     <ClInclude Include="..\src\include\uae\types.h" />
     <ClInclude Include="..\src\include\uae\uae.h" />
-    <ClInclude Include="..\src\include\uae\vm.h" />
     <ClInclude Include="..\src\include\xwin.h" />
     <ClInclude Include="..\src\include\zarchive.h" />
     <ClInclude Include="..\src\include\zfile.h" />
@@ -664,13 +679,18 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-sdl2/amiberry-rpi3-sdl2-dev ~/projects/amiberry/</Command>
+      <Command>cp ~/projects/Amiberry-sdl2/amiberry-rpi3-sdl2-dispmanx ~/projects/amiberry/</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
     <RemotePostBuildEvent>
       <Command>
       </Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry/amiberry-rockpro64 ~/projects/amiberry/</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
@@ -682,6 +702,11 @@
     <RemotePostBuildEvent>
       <Message>
       </Message>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'">
+    <RemotePostBuildEvent>
+      <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">

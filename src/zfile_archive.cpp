@@ -5,8 +5,11 @@
 *
 *     2007 Toni Wilen
 */
+#include <string.h>
+#include <time.h>
+#include <strings.h>
+#include <stdio.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #ifdef _WIN32_
@@ -14,15 +17,10 @@
 #include "win32.h"
 #endif
 
-#include "options.h"
 #include "zfile.h"
 #include "archivers/zip/unzip.h"
-#include "archivers/dms/pfile.h"
-#include "crc32.h"
 #include "zarchive.h"
 #include "disk.h"
-
-#include <zlib.h>
 
 #define unpack_log write_log
 #undef unpack_log
@@ -161,7 +159,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 			select = 0;
 			if (!zf->zipname)
 				select = 1;
-			if (zf->zipname && _tcslen (zn->fullname) >= _tcslen (zf->zipname) && !strcasecmp (zf->zipname, zn->fullname + _tcslen (zn->fullname) - _tcslen (zf->zipname)))
+			if (zf->zipname && _tcslen (zn->fullname) >= _tcslen (zf->zipname) && !stricmp(zf->zipname, zn->fullname + _tcslen (zn->fullname) - _tcslen (zf->zipname)))
 				select = -1;
 			if (zf->zipname && zf->zipname[0] == '#' && _tstol (zf->zipname + 1) == zipcnt)
 				select = -1;

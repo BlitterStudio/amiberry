@@ -3,7 +3,11 @@
 #define SUPPORT_THREADS
 
 #include <limits.h>
+#ifdef PATH_MAX
 #define MAX_DPATH PATH_MAX
+#else
+#define MAX_DPATH 4096
+#endif
 
 /* #define DRIVESOUND */
 /* #define GFXFILTER */
@@ -498,6 +502,10 @@ typedef long uae_atomic;
 /* Define to 1 if `S_un' is a member of `struct in_addr'. */
 /* #un#def HAVE_STRUCT_IN_ADDR_S_UN */
 
+#ifdef _WIN32
+#undef _WIN32
+#endif
+
 #ifdef _GCCRES_
 #undef _GCCRES_
 #endif
@@ -512,8 +520,8 @@ typedef long uae_atomic;
 #define __cdecl
 #endif
 
-#define strcmpi(x,y) strcasecmp(x,y)
-#define stricmp(x,y) strcasecmp(x,y)
+#define strcmpi(x,y) SDL_strcasecmp(x,y)
+#define stricmp(x,y) SDL_strcasecmp(x,y)
 
 #define M68K_SPEED_7MHZ_CYCLES 0
 #define M68K_SPEED_14MHZ_CYCLES 1024
@@ -542,7 +550,9 @@ typedef char TCHAR;
 #define _tzset()            tzset()
 #define _timezone           timezone
 #define _daylight           daylight
+#ifndef _ftime
 #define _ftime(x)           ftime(x)
+#endif
 #ifdef ANDROID
 #define _ftelli64(x)        ftello(x)
 #define _fseeki64(x,y,z)    fseeko(x,y,z)

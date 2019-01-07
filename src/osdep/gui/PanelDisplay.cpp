@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -11,17 +13,11 @@
 #endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
-#include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
 #include "custom.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 const int amigawidth_values[] = { 320, 352, 384, 640, 704, 768 };
@@ -33,6 +29,11 @@ static gcn::UaeRadioButton* optAuto;
 static gcn::UaeRadioButton* optNearest;
 static gcn::UaeRadioButton* optLinear;
 #endif
+
+static gcn::Window* grpLineMode;
+static gcn::UaeRadioButton* optSingle;
+static gcn::UaeRadioButton* optDouble;
+static gcn::UaeRadioButton* optScanlines;
 
 static gcn::Window *grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;
@@ -46,7 +47,6 @@ static gcn::Label* lblVertPos;
 static gcn::Label* lblVertPosInfo;
 static gcn::Slider* sldVertPos;
 
-static gcn::UaeCheckBox* chkLineDbl;
 static gcn::UaeCheckBox* chkFrameskip;
 static gcn::UaeCheckBox* chkAspect;
 static gcn::UaeCheckBox* chkFullscreen;
@@ -82,9 +82,6 @@ public:
 		}
 		else if (actionEvent.getSource() == chkFrameskip)
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 1 : 0;
-
-		else if (actionEvent.getSource() == chkLineDbl)
-			changed_prefs.gfx_vresolution = chkLineDbl->isSelected() ? VRES_DOUBLE : VRES_NONDOUBLE;
 
 		else if (actionEvent.getSource() == chkAspect)
 			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
@@ -124,6 +121,31 @@ public:
 
 static ScalingMethodActionListener* scalingMethodActionListener;
 #endif
+
+class LineModeActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& action_event) override
+	{
+		if (action_event.getSource() == optSingle)
+		{
+			changed_prefs.gfx_vresolution = VRES_NONDOUBLE;
+			changed_prefs.gfx_pscanlines = 0;
+		}
+		else if (action_event.getSource() == optDouble)
+		{
+			changed_prefs.gfx_vresolution = VRES_DOUBLE;
+			changed_prefs.gfx_pscanlines = 0;
+		}
+		else if (action_event.getSource() == optScanlines)
+		{
+			changed_prefs.gfx_vresolution = VRES_DOUBLE;
+			changed_prefs.gfx_pscanlines = 1;
+		}
+	}
+};
+
+static LineModeActionListener* lineModeActionListener;
 
 void InitPanelDisplay(const struct _ConfigCategory& category)
 {
@@ -167,8 +189,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkAspect->setId("CorrectAR");
 	chkAspect->addActionListener(amigaScreenActionListener);
 
-	chkLineDbl = new gcn::UaeCheckBox("Line doubling");
-  	chkLineDbl->addActionListener(amigaScreenActionListener);
 	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
@@ -225,12 +245,39 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 #endif
 
+	lineModeActionListener = new LineModeActionListener();
+	optSingle = new gcn::UaeRadioButton("Single", "linemodegroup");
+	optSingle->addActionListener(lineModeActionListener);
+
+	optDouble = new gcn::UaeRadioButton("Double", "linemodegroup");
+	optDouble->addActionListener(lineModeActionListener);
+
+	optScanlines = new gcn::UaeRadioButton("Scanlines", "linemodegroup");
+	optScanlines->addActionListener(lineModeActionListener);
+
+	grpLineMode = new gcn::Window("Line mode");
+#ifdef USE_SDL2
+	grpLineMode->setPosition(
+		grpScalingMethod->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, 
+		posY - DISTANCE_BORDER - grpScalingMethod->getHeight() - DISTANCE_NEXT_Y);
+#else
+	grpLineMode->setPosition(DISTANCE_BORDER, posY);
+#endif
+	grpLineMode->add(optSingle, 5, 10);
+	grpLineMode->add(optDouble, 5, 40);
+	grpLineMode->add(optScanlines, 5, 70);
+	grpLineMode->setMovable(false);
+	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER, optScanlines->getY() + optScanlines->getHeight() + 30);
+	grpLineMode->setBaseColor(gui_baseCol);
+	category.panel->add(grpLineMode);
+#ifndef USE_SDL2
+	posY += DISTANCE_BORDER + grpLineMode->getHeight() + DISTANCE_NEXT_Y;
+#endif
+
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
 	category.panel->add(chkFullscreen, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(chkLineDbl, DISTANCE_BORDER, posY);
-	posY += chkLineDbl->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
 
 	RefreshPanelDisplay();
@@ -255,6 +302,12 @@ void ExitPanelDisplay()
 	delete chkAspect;
 	delete chkFullscreen;
 
+	delete optSingle;
+	delete optDouble;
+	delete optScanlines;
+	delete grpLineMode;
+	delete lineModeActionListener;
+
 #ifdef USE_SDL2
 	delete optAuto;
 	delete optNearest;
@@ -267,7 +320,6 @@ void ExitPanelDisplay()
 
 void RefreshPanelDisplay()
 {
-	chkLineDbl->setSelected(changed_prefs.gfx_vresolution == VRES_DOUBLE);
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate);
 
 	int i;
@@ -307,6 +359,13 @@ void RefreshPanelDisplay()
 		optLinear->setSelected(true);
 #endif
 
+	if (changed_prefs.gfx_vresolution == VRES_NONDOUBLE && changed_prefs.gfx_pscanlines == 0)
+		optSingle->setSelected(true);
+	else if (changed_prefs.gfx_vresolution == VRES_DOUBLE && changed_prefs.gfx_pscanlines == 0)
+		optDouble->setSelected(true);
+	else if (changed_prefs.gfx_vresolution == VRES_DOUBLE && changed_prefs.gfx_pscanlines == 1)
+		optScanlines->setSelected(true);
+
 	sldVertPos->setValue(changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
 	snprintf(tmp, 32, "%d", changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
 	lblVertPosInfo->setCaption(tmp);
@@ -320,16 +379,18 @@ bool HelpPanelDisplay(std::vector<std::string> &helptext)
 	helptext.emplace_back("Demo or Workbench uses HiRes mode and you selected a value for \"Width\" lower than 640,");
 	helptext.emplace_back("you will only see half of the pixels.");
 	helptext.emplace_back("");
+#ifdef USE_SDL2
 	helptext.emplace_back("Select the scaling method for the Amiga screen. The default option \"Auto\", ");
 	helptext.emplace_back("will try to find the best looking scaling method depending on your monitor's resolution. ");
 	helptext.emplace_back("\"Nearest Neighbor\" will give you a more pixelated and crisp image, but it may come with ");
 	helptext.emplace_back("some distortion if your resolution is not an exact multiple. ");
 	helptext.emplace_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
 	helptext.emplace_back("");
+#endif
 	helptext.emplace_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga ");
 	helptext.emplace_back("screen.");
 	helptext.emplace_back("");
-	helptext.emplace_back("Activate line doubling to remove flicker in interlace modes.");
+	helptext.emplace_back("Activate line doubling to remove flicker in interlace modes, or Scanlines for the CRT effect.");
 	helptext.emplace_back("");
 	helptext.emplace_back("When you activate \"Frameskip\", only every second frame is drawn.");
 	helptext.emplace_back("This will improve performance and some more games are playable.");

@@ -11,13 +11,16 @@
 * Copyright 2010-2013 Toni Wilen
 *
 */
-#include "sysconfig.h"
-#include "sysdeps.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include <sys/timeb.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
+#include "sysdeps.h"
 #include "options.h"
-#include "traps.h"
 #include "blkdev.h"
 #include "zfile.h"
 #include "gui.h"
@@ -26,9 +29,7 @@
 #include "mp3decoder.h"
 #include "cda_play.h"
 #include "include/memory.h"
-#include "audio.h"
 #include "uae.h"
-#include "uae/cdrom.h"
 
 #define FLAC__NO_DLL
 #include "FLAC/stream_decoder.h"

@@ -1,4 +1,5 @@
-#include "sysconfig.h"
+#include <stdio.h>
+#include <stdbool.h>
 #include "sysdeps.h"
 
 #ifdef CAPS

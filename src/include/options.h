@@ -18,7 +18,7 @@
 #define UAEMINOR 1
 #define UAESUBREV 0
 
-#define MAX_AMIGADISPLAYS 4
+#define MAX_AMIGADISPLAYS 1
 
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
 
@@ -27,7 +27,7 @@ extern long int version;
 #define MAX_PATHS 8
 
 struct multipath {
-	TCHAR path[MAX_PATHS][PATH_MAX];
+	TCHAR path[MAX_PATHS][MAX_DPATH];
 };
 
 #define PATH_NONE -1

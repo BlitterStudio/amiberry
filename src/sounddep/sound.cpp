@@ -2,27 +2,17 @@
   * Sdl sound.c implementation
   * (c) 2015
   */
+#include <stdbool.h>
+#include <string.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <semaphore.h>
-#include <pthread.h>
-#include <cerrno>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "uae.h"
 #include "options.h"
-#include "memory.h"
-#include "newcpu.h"
-#include "custom.h"
 #include "audio.h"
 #include "gensound.h"
 #include "sounddep/sound.h"
-#include <SDL.h>
 #include "gui.h"
 
 #ifdef ANDROIDSDL

@@ -7,18 +7,21 @@
   * Copyright 1998 Brian King, Bernd Schmidt
   */
 
-#include "sysconfig.h"
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
 #include "sysdeps.h"
 
-#include <ctype.h>
-
 #include "options.h"
+#include "memory.h"
 #include "uae.h"
 #include "audio.h"
 #include "custom.h"
 #include "inputdevice.h"
 #include "savestate.h"
-#include "include/memory.h"
 #include "autoconf.h"
 #include "rommgr.h"
 #include "gui.h"
@@ -30,7 +33,6 @@
 #include "blkdev.h"
 #include "calc.h"
 #include "gfxboard.h"
-#include "native2amiga_api.h"
 
 #define cfgfile_warning write_log
 #define cfgfile_warning_obsolete write_log
@@ -5302,7 +5304,7 @@ void copy_prefs(struct uae_prefs *src, struct uae_prefs *dst)
 
 void default_prefs(struct uae_prefs* p, bool reset, int type)
 {
-	int roms[] = {6, 7, 8, 9, 10, 14, 5, 4, 3, 2, 1, -1};
+	int roms[] = { 6, 7, 8, 9, 10, 14, 5, 4, 3, 2, 1, -1 };
 	TCHAR zero = 0;
 
 	reset_inputdevice_config(p, reset);
@@ -5317,13 +5319,29 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 
 	p->all_lines = nullptr;
 
+	/* Note to porters: please don't change any of these options! UAE is supposed
+	* to behave identically on all platforms if possible.
+	* (TW says: maybe it is time to update default config..) */
+	p->illegal_mem = 0;
+	p->use_serial = 0;
+	p->serial_demand = 0;
+	p->serial_hwctsrts = 1;
+	p->serial_stopbits = 0;
+	p->parallel_demand = 0;
+	p->parallel_matrix_emulation = 0;
+	p->parallel_postscript_emulation = 0;
+	p->parallel_postscript_detection = 0;
+	p->parallel_autoflush_time = 5;
+	p->ghostscript_parameters[0] = 0;
+	p->uae_hide = 0;
+	p->uae_hide_autoconfig = false;
 	p->z3_mapping_mode = Z3MAPPING_AUTO;
 
 	p->mountitems = 0;
-	for (int i = 0; i < MOUNT_CONFIG_SIZE; i++)
+	for (auto& i : p->mountconfig)
 	{
-		p->mountconfig[i].configoffset = -1;
-		p->mountconfig[i].unitnum = -1;
+		i.configoffset = -1;
+		i.unitnum = -1;
 	}
 
 	p->jports[0].id = -1;
@@ -5343,6 +5361,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->sound_stereo_separation = 7;
 	p->sound_mixed_stereo_delay = 0;
 	p->sound_freq = DEFAULT_SOUND_FREQ;
+	p->sound_maxbsiz = DEFAULT_SOUND_MAXB;
 	p->sound_interpol = 0;
 	p->sound_filter = FILTER_SOUND_OFF;
 	p->sound_filter_type = 0;
@@ -5364,12 +5383,12 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cachesize = 0;
 
 	p->gfx_framerate = 0;
-
+	p->gfx_autoframerate = 50;
 	p->gfx_size.width = 640; //TODO: Default WinUAE prefs indicate this should be 720x568
 	p->gfx_size.height = 256;
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_NONDOUBLE;
-	p->gfx_iscanlines = 1;
+	p->gfx_iscanlines = 0;
 	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_xcenter = 0; p->gfx_ycenter = 0;
@@ -5408,7 +5427,9 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->tod_hack = 0;
 	p->maprom = 0;
 	p->boot_rom = 0;
-
+	p->filesys_no_uaefsdb = 0;
+	p->filesys_custom_uaefsdb = 1;
+	p->picasso96_nocustom = 1;
 	p->cart_internal = 1;
 	p->sana2 = 0;
 	p->clipboard_sharing = false;
@@ -5418,6 +5439,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cs_compatible = CP_GENERIC;
 	p->cs_rtc = 2;
 	p->cs_df0idhw = true;
+	p->cs_a1000ram = 0;
 	p->cs_fatgaryrev = -1;
 	p->cs_ramseyrev = -1;
 	p->cs_agnusrev = -1;
@@ -5425,12 +5447,15 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cs_mbdmac = 0;
 	p->cs_cd32c2p = p->cs_cd32cd = p->cs_cd32nvram = p->cs_cd32fmv = false;
 	p->cs_cd32nvram_size = 1024;
+	p->cs_cdtvcd = p->cs_cdtvram = false;
 	p->cs_pcmcia = false;
 	p->cs_ksmirror_e0 = true;
 	p->cs_ksmirror_a8 = false;
 	p->cs_ciaoverlay = true;
 	p->cs_ciaatod = 0;
 	p->cs_df0idhw = true;
+	p->cs_slowmemisfast = 0;
+	p->cs_resetwarning = 1;
 	p->cs_ciatodbug = false;
 	p->cs_unmapped_space = 0;
 	p->cs_color_burst = false;
@@ -5455,6 +5480,11 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	sprintf(p->path_hardfile, _T("%s/"), start_path_data);
 	sprintf(p->path_cd, _T("%s/cd32/"), start_path_data);
 
+	p->prtname[0] = 0;
+	p->sername[0] = 0;
+
+	p->cpu_thread = false;
+
 	p->fpu_model = 0;
 	p->cpu_model = 68000;
 	p->m68k_speed_throttle = 0;
@@ -5464,11 +5494,20 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cpu060_revision = 6;
 	p->fpu_revision = 0;
 	p->fpu_no_unimplemented = false;
+	p->int_no_unimplemented = false;
 	p->fpu_strict = false;
+	p->fpu_mode = -1;
 	p->m68k_speed = 0;
 	p->cpu_compatible = false;
 	p->address_space_24 = true;
+	p->cpu_cycle_exact = 0;
+	p->cpu_memory_cycle_exact = 0;
+	p->blitter_cycle_exact = 0;
 	p->chipset_mask = CSMASK_ECS_AGNUS;
+	p->chipset_hr = false;
+	p->genlock = 0;
+	p->genlock_image = 0;
+	p->genlock_mix = 0;
 	p->ntscmode = false;
 	p->filesys_limit = 0;
 	p->filesys_max_name = 107;
@@ -5509,6 +5548,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->dfxclickchannelmask = 0xffff;
 	p->cd_speed = 100;
 
+	p->inprec_autoplay = true;
 	p->socket_emu = false;
 
 	p->input_tablet = TABLET_OFF;

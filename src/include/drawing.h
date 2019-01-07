@@ -198,7 +198,11 @@ struct sprite_stb
 };
 extern struct sprite_stb spixstate;
 
+#ifdef OS_WITHOUT_MEMORY_MANAGEMENT
+extern uae_u16 *spixels;
+#else
 extern uae_u16 spixels[MAX_SPR_PIXELS * 2];
+#endif
 
 /* Way too much... */
 #define MAX_REG_CHANGE ((MAXVPOS + 1) * MAXHPOS)

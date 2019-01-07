@@ -6,13 +6,12 @@
   * (c) 1995 Bernd Schmidt, Alessandro Bissacco
   * (c) 2002 - 2005 Toni Wilen
   */
+#include <stdbool.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "savestate.h"

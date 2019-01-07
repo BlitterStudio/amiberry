@@ -100,9 +100,6 @@
     <ClCompile Include="..\..\src\blitfunc.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\blitops.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\blittable.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
@@ -612,15 +609,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\blit.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\blitfunc.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\cputbl.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\threaddep\thread.h">
       <Filter>Source files\theaddep</Filter>
     </ClInclude>
@@ -759,9 +747,6 @@
     <ClInclude Include="..\..\src\include\gayle.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\genblitter.h">
-      <Filter>Source files\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\gensound.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
@@ -781,9 +766,6 @@
       <Filter>Source files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\keybuf.h">
-      <Filter>Source files\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\mackbd.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\memory.h">
@@ -846,15 +828,6 @@
     <ClInclude Include="..\..\src\include\zfile.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\uae\attributes.h">
-      <Filter>Source files\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\uae\cdrom.h">
-      <Filter>Source files\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\uae\io.h">
-      <Filter>Source files\include\uae</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\uae\likely.h">
       <Filter>Source files\include\uae</Filter>
     </ClInclude>
@@ -865,9 +838,6 @@
       <Filter>Source files\include\uae</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\uae\types.h">
-      <Filter>Source files\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\uae\vm.h">
       <Filter>Source files\include\uae</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\jit\compemu.h">
@@ -1011,14 +981,20 @@
     <ClInclude Include="..\..\src\include\uae\caps.h">
       <Filter>Source files\include\uae</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\uae\api.h">
-      <Filter>Source files\include\uae</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\caps\CapsAPI.h">
       <Filter>Source files\caps</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\caps\Comtype.h">
       <Filter>Source files\caps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blit.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\blitfunc.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cputbl.h">
+      <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

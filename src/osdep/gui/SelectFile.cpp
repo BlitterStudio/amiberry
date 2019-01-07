@@ -1,6 +1,11 @@
-#include <algorithm>
-#include <iostream>
-#include <sstream>
+#include <stdbool.h>
+#include <string.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -14,12 +19,10 @@
 #endif
 #include "SelectorEntry.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
 #include "uae.h"
 #include "fsdb.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 #include "options.h"
@@ -153,7 +156,7 @@ static void checkfilename(char* current)
 	extractFileName(current, actfile);
 	for (auto i = 0; i < fileList->getNumberOfElements(); ++i)
 	{
-		if (!fileList->isDir(i) && !strcasecmp(fileList->getElementAt(i).c_str(), actfile))
+		if (!fileList->isDir(i) && !stricmp(fileList->getElementAt(i).c_str(), actfile))
 		{
 			lstFiles->setSelected(i);
 			selectedOnStart = i;

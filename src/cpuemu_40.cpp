@@ -1,11 +1,9 @@
-#include "sysconfig.h"
+#include <stdbool.h>
+
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"
-#include "custom.h"
 #include "newcpu.h"
-#include "cpu_prefetch.h"
-#include "cputbl.h"
 #define CPUFUNC(x) x##_ff
 #define SET_CFLG_ALWAYS(x) SET_CFLG(x)
 #define SET_NFLG_ALWAYS(x) SET_NFLG(x)
@@ -15913,7 +15911,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_40)(uae_u32 opcode)
 		exception3i (0x4E73, newpc);
 		return 4 * CYCLE_UNIT / 2;
   }
-	m68k_setpc (newpc);
+	m68k_setpc_j(newpc);
 }}return 24 * CYCLE_UNIT / 2;
 }
 
@@ -15930,7 +15928,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e74_40)(uae_u32 opcode)
 		exception3i (0x4E74, pc);
 		return 4 * CYCLE_UNIT / 2;
 	}
-		m68k_setpc (pc);
+	m68k_setpc_j(pc);
 	if(regs.t0) check_t0_trace();
 }}}}return 12 * CYCLE_UNIT / 2;
 }
@@ -15942,7 +15940,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e75_40)(uae_u32 opcode)
 	m68k_do_rts ();
 	if (m68k_getpc () & 1) {
 	  uaecptr faultpc = m68k_getpc ();
-	  m68k_setpc (pc);
+	  m68k_setpc_j(pc);
 	  exception3i (0x4E75, faultpc);
 		return 8 * CYCLE_UNIT / 2;
 	}
@@ -15976,11 +15974,11 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e77_40)(uae_u32 opcode)
 	m68k_areg (regs, 7) += 4;
 	regs.sr &= 0xFF00; sr &= 0xFF;
 	regs.sr |= sr;
-	m68k_setpc (pc);
+	m68k_setpc_j(pc);
 	MakeFromSR ();
 	if (m68k_getpc () & 1) {
 	  uaecptr faultpc = m68k_getpc ();
-	  m68k_setpc (oldpc);
+	  m68k_setpc_j(oldpc);
 	  exception3i (0x4E77, faultpc);
 		return 8 * CYCLE_UNIT / 2;
 	}
@@ -16020,14 +16018,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e90_40)(uae_u32 opcode)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg);
-{	uaecptr oldpc = m68k_getpc () + 2;
+{	uaecptr nextpc = m68k_getpc () + 2;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	m68k_areg (regs, 7) -= 4;
-	put_long_jit (m68k_areg (regs, 7), oldpc);
+	put_long_jit (m68k_areg (regs, 7), nextpc);
 }}}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -16037,14 +16035,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ea8_40)(uae_u32 opcode)
 	uae_u32 srcreg = (opcode & 7);
 {{	uaecptr srca;
 	srca = m68k_areg (regs, srcreg) + (uae_s32)(uae_s16)get_diword (2);
-{	uaecptr oldpc = m68k_getpc () + 4;
+{	uaecptr nextpc = m68k_getpc () + 4;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	m68k_areg (regs, 7) -= 4;
-	put_long_jit (m68k_areg (regs, 7), oldpc);
+	put_long_jit (m68k_areg (regs, 7), nextpc);
 }}}return 15 * CYCLE_UNIT / 2;
 }
 
@@ -16055,14 +16053,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb0_40)(uae_u32 opcode)
 {{	uaecptr srca;
 	m68k_incpc (2);
 {	srca = get_disp_ea_020 (m68k_areg (regs, srcreg), 0);
-{	uaecptr oldpc = m68k_getpc () + 0;
+{	uaecptr nextpc = m68k_getpc () + 0;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	m68k_areg (regs, 7) -= 4;
-	put_long_jit (m68k_areg (regs, 7), oldpc);
+	put_long_jit (m68k_areg (regs, 7), nextpc);
 }}}}return 17 * CYCLE_UNIT / 2;
 }
 
@@ -16071,14 +16069,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb8_40)(uae_u32 opcode)
 {
 {{	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_diword (2);
-{	uaecptr oldpc = m68k_getpc () + 4;
+{	uaecptr nextpc = m68k_getpc () + 4;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	m68k_areg (regs, 7) -= 4;
-	put_long_jit (m68k_areg (regs, 7), oldpc);
+	put_long_jit (m68k_areg (regs, 7), nextpc);
 }}}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -16087,14 +16085,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb9_40)(uae_u32 opcode)
 {
 {{	uaecptr srca;
 	srca = get_dilong (2);
-{	uaecptr oldpc = m68k_getpc () + 6;
+{	uaecptr nextpc = m68k_getpc () + 6;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 12 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	m68k_areg (regs, 7) -= 4;
-	put_long_jit (m68k_areg (regs, 7), oldpc);
+	put_long_jit (m68k_areg (regs, 7), nextpc);
 }}}return 13 * CYCLE_UNIT / 2;
 }
 
@@ -16104,14 +16102,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eba_40)(uae_u32 opcode)
 {{	uaecptr srca;
 	srca = m68k_getpc () + 2;
 	srca += (uae_s32)(uae_s16)get_diword (2);
-{	uaecptr oldpc = m68k_getpc () + 4;
+{	uaecptr nextpc = m68k_getpc () + 4;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	m68k_areg (regs, 7) -= 4;
-	put_long_jit (m68k_areg (regs, 7), oldpc);
+	put_long_jit (m68k_areg (regs, 7), nextpc);
 }}}return 15 * CYCLE_UNIT / 2;
 }
 
@@ -16123,14 +16121,14 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ebb_40)(uae_u32 opcode)
 	m68k_incpc (2);
 {	tmppc = m68k_getpc ();
 	srca = get_disp_ea_020 (tmppc, 0);
-{	uaecptr oldpc = m68k_getpc () + 0;
+{	uaecptr nextpc = m68k_getpc () + 0;
 	if (srca & 1) {
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	m68k_areg (regs, 7) -= 4;
-	put_long_jit (m68k_areg (regs, 7), oldpc);
+	put_long_jit (m68k_areg (regs, 7), nextpc);
 }}}}return 17 * CYCLE_UNIT / 2;
 }
 
@@ -16144,7 +16142,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ed0_40)(uae_u32 opcode)
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	if(regs.t0) check_t0_trace();
 }}return 9 * CYCLE_UNIT / 2;
 }
@@ -16159,7 +16157,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ee8_40)(uae_u32 opcode)
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	if(regs.t0) check_t0_trace();
 }}return 11 * CYCLE_UNIT / 2;
 }
@@ -16175,7 +16173,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef0_40)(uae_u32 opcode)
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	if(regs.t0) check_t0_trace();
 }}}return 13 * CYCLE_UNIT / 2;
 }
@@ -16189,7 +16187,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef8_40)(uae_u32 opcode)
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	if(regs.t0) check_t0_trace();
 }}return 9 * CYCLE_UNIT / 2;
 }
@@ -16203,7 +16201,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef9_40)(uae_u32 opcode)
 		exception3i (opcode, srca);
 		return 12 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	if(regs.t0) check_t0_trace();
 }}return 9 * CYCLE_UNIT / 2;
 }
@@ -16218,7 +16216,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4efa_40)(uae_u32 opcode)
 		exception3i (opcode, srca);
 		return 8 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	if(regs.t0) check_t0_trace();
 }}return 11 * CYCLE_UNIT / 2;
 }
@@ -16235,7 +16233,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4efb_40)(uae_u32 opcode)
 		exception3i (opcode, srca);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (srca);
+	m68k_setpc_j(srca);
 	if(regs.t0) check_t0_trace();
 }}}return 13 * CYCLE_UNIT / 2;
 }
@@ -16844,7 +16842,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -17563,7 +17561,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -17710,7 +17708,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -17857,7 +17855,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18004,7 +18002,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18151,7 +18149,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18298,7 +18296,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18445,7 +18443,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18592,7 +18590,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18739,7 +18737,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59c8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -18886,7 +18884,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ac8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19033,7 +19031,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bc8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19180,7 +19178,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cc8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19327,7 +19325,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dc8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19474,7 +19472,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ec8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -19621,7 +19619,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fc8_40)(uae_u32 opcode)
 		}
 	} else {
 	}
-	m68k_setpc (oldpc + 4);
+	m68k_setpc_j(oldpc + 4);
 }}}return 10 * CYCLE_UNIT / 2;
 }
 
@@ -34022,7 +34020,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_41)(uae_u32 opcode)
 		exception3i (0x4E73, newpc);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (newpc);
+	m68k_setpc_j(newpc);
 }}return 24 * CYCLE_UNIT / 2;
 }
 
@@ -34302,7 +34300,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_42)(uae_u32 opcode)
 		exception3i (0x4E73, newpc);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (newpc);
+	m68k_setpc_j(newpc);
 }}return 24 * CYCLE_UNIT / 2;
 }
 
@@ -34490,7 +34488,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_43)(uae_u32 opcode)
 		exception3i (0x4E73, newpc);
 		return 4 * CYCLE_UNIT / 2;
 	}
-	m68k_setpc (newpc);
+	m68k_setpc_j(newpc);
 }}return 24 * CYCLE_UNIT / 2;
 }
 

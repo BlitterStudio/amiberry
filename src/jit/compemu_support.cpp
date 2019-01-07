@@ -28,10 +28,14 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <cstring>
+#include <time.h>
 
-#include <math.h>
-
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #if defined(JIT)
@@ -47,8 +51,8 @@
 
 #if DEBUG
 #define PROFILE_COMPILE_TIME		1
-#define PROFILE_UNTRANSLATED_INSNS	1
 #endif
+//#define PROFILE_UNTRANSLATED_INSNS	1
 
 #ifndef UNUSED
 #define UNUSED(x)	((void)x)
@@ -394,35 +398,6 @@ STATIC_INLINE void block_need_recompile(blockinfo * bi)
   bi->status = BI_NEED_RECOMP;
 }
 
-STATIC_INLINE void mark_callers_recompile(blockinfo * bi)
-{
-  dependency *x = bi->deplist;
-
-  while (x)	{
-  	dependency *next = x->next;	/* This disappears when we mark for
-								 * recompilation and thus remove the
-								 * blocks from the lists */
-  	if (x->jmp_off) {
-  	  blockinfo *cbi = x->source;
-
-  	  if (cbi->status == BI_ACTIVE || cbi->status == BI_NEED_CHECK) {
-  		  block_need_recompile(cbi);
-  		  mark_callers_recompile(cbi);
-  	  }
-  	  else if (cbi->status == BI_COMPILING) {
-    		redo_current_block = 1;
-  	  }
-  	  else if (cbi->status == BI_NEED_RECOMP) {
-    		/* nothing */
-  	  }
-  	  else {
-    		jit_log2("Status %d in mark_callers", cbi->status); // FIXME?
-  	  }
-  	}
-  	x = next;
-  }
-}
-
 STATIC_INLINE blockinfo* get_blockinfo_addr_new(void* addr)
 {
   blockinfo* bi = get_blockinfo_addr(addr);
@@ -734,7 +709,7 @@ STATIC_INLINE void reset_data_buffer(void)
 STATIC_INLINE void clobber_flags(void);
 
 #if defined(CPU_arm) 
-#include "codegen_arm.cpp"
+#include "codegen_arm.cpp.in"
 #endif
 #if defined(CPU_i386) || defined(CPU_x86_64)
 #include "codegen_x86.cpp"
@@ -1323,8 +1298,8 @@ static void fflags_into_flags_internal(void)
 #endif
 
 #if defined(CPU_arm)
-#include "compemu_midfunc_arm.cpp"
-#include "compemu_midfunc_arm2.cpp"
+#include "compemu_midfunc_arm.cpp.in"
+#include "compemu_midfunc_arm2.cpp.in"
 #endif
 
 #if defined(CPU_i386) || defined(CPU_x86_64)
@@ -1928,7 +1903,6 @@ static void calc_checksum(blockinfo* bi, uae_u32* c1, uae_u32* c2)
 	*c2 = k2;
 }
 
-
 int check_for_cache_miss(void)
 {
   blockinfo* bi = get_blockinfo_addr(regs.pc_p);
@@ -2229,7 +2203,9 @@ void build_comp(void)
   	if (compfunctbl[opcode])
 	    count++;
   }
+#ifdef JIT_DEBUG
 	jit_log("Supposedly %d compileable opcodes!",count);
+#endif
 
   /* Initialise state */
   create_popalls();

@@ -10,8 +10,10 @@
 * Copyright 2001-2016 Toni Wilen
 *
 */
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
@@ -21,7 +23,6 @@
 #include "blkdev.h"
 #include "zfile.h"
 #include "threaddep/thread.h"
-#include "akiko.h"
 #include "gui.h"
 #include "crc32.h"
 #include "uae.h"

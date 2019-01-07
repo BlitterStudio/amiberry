@@ -15,6 +15,9 @@ Global
 		Debug|ARM = Debug|ARM
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Debug-rockpro64|ARM = Debug-rockpro64|ARM
+		Debug-rockpro64|x64 = Debug-rockpro64|x64
+		Debug-rockpro64|x86 = Debug-rockpro64|x86
 		Debug-xu4|ARM = Debug-xu4|ARM
 		Debug-xu4|x64 = Debug-xu4|x64
 		Debug-xu4|x86 = Debug-xu4|x86
@@ -30,6 +33,10 @@ Global
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug|ARM.Build.0 = Debug|ARM
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug|x64.ActiveCfg = Debug|ARM
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug|x86.ActiveCfg = Debug|ARM
+		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-rockpro64|ARM.ActiveCfg = Debug-rockpro64|ARM
+		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-rockpro64|ARM.Build.0 = Debug-rockpro64|ARM
+		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-rockpro64|x64.ActiveCfg = Debug-rockpro64|ARM
+		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-rockpro64|x86.ActiveCfg = Debug-rockpro64|ARM
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-xu4|ARM.ActiveCfg = Debug-xu4|ARM
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-xu4|ARM.Build.0 = Debug-xu4|ARM
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-xu4|x64.ActiveCfg = Debug-xu4|ARM
@@ -48,6 +55,11 @@ Global
 		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|x64.Build.0 = Debug|x64
 		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|x86.ActiveCfg = Debug|x86
 		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|x86.Build.0 = Debug|x86
+		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-rockpro64|ARM.ActiveCfg = Debug-rockpro64|ARM
+		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-rockpro64|x64.ActiveCfg = Debug-rockpro64|x64
+		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-rockpro64|x64.Build.0 = Debug-rockpro64|x64
+		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-rockpro64|x86.ActiveCfg = Debug-rockpro64|x86
+		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-rockpro64|x86.Build.0 = Debug-rockpro64|x86
 		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-xu4|ARM.ActiveCfg = Debug-xu4|ARM
 		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-xu4|ARM.Build.0 = Debug-xu4|ARM
 		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug-xu4|x64.ActiveCfg = Debug-xu4|x64

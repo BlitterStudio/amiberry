@@ -1,27 +1,27 @@
-# Default platform is rpi3 / SDL1
+# Default platform is rpi3 / SDL2 / Dispmanx
 ifeq ($(PLATFORM),)
-	PLATFORM = rpi3
+	PLATFORM = rpi3-sdl2-dispmanx
 endif
 
 ifneq (,$(findstring rpi3,$(PLATFORM)))
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+    CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
 endif
 
 ifneq (,$(findstring rpi2,$(PLATFORM)))
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
 endif
 
 ifneq (,$(findstring rpi1,$(PLATFORM)))
-    CPU_FLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
+    CFLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
 endif
 
 #
 # DispmanX Common flags for both SDL1 and SDL2 (RPI-specific)
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
-DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib
+DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
+CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 
-CPPFLAGS+= -MD -MP
 #DEBUG=1
 #GCC_PROFILE=1
 #GEN_PROFILE=1
@@ -33,24 +33,24 @@ CPPFLAGS+= -MD -MP
 # SDL1 targets
 #
 ifeq ($(PLATFORM),rpi3)
-    CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
+    CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl1
 	
 else ifeq ($(PLATFORM),rpi2)
-    CFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
+    CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl1
 	
 else ifeq ($(PLATFORM),rpi1)
-    CFLAGS += ${DISPMANX_FLAGS} -DUSE_SDL1
+    CPPFLAGS += ${DISPMANX_FLAGS} -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     NAME  = amiberry-rpi1-sdl1
 
 else ifeq ($(PLATFORM),android)
-    CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
+    CFLAGS += -mfpu=neon -mfloat-abi=soft
     DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     ANDROID = 1
     HAVE_NEON = 1
@@ -62,21 +62,21 @@ else ifeq ($(PLATFORM),android)
 #
 else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
 USE_SDL2 = 1
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl2-dispmanx
 
 else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
 USE_SDL2 = 1
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl2-dispmanx
 
 else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
 USE_SDL2 = 1
-    CFLAGS += -DUSE_SDL2 ${DISPMANX_FLAGS}
+    CPPFLAGS += -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     NAME  = amiberry-rpi1-sdl2-dispmanx
 
@@ -85,25 +85,25 @@ USE_SDL2 = 1
 #	
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl2
 	
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl2
 	
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
-    CFLAGS += -DUSE_SDL2
+    CPPFLAGS += -DUSE_SDL2
     NAME  = amiberry-rpi1-sdl2
 
 else ifeq ($(PLATFORM),orangepi-pc)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
+    CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     NAME  = amiberry-orangepi-pc
     ifdef DEBUG
@@ -114,8 +114,8 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),xu4)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7ve -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS += -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-xu4
     ifdef DEBUG
@@ -126,8 +126,8 @@ USE_SDL2 = 1
 
 else ifeq ($(PLATFORM),c1)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mcpu=cortex-a5 -mtune=cortex-a5 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS += -march=armv7-a -mcpu=cortex-a5 -mtune=cortex-a5 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-c1
     ifdef DEBUG
@@ -138,30 +138,29 @@ USE_SDL2 = 1
 	
 else ifeq ($(PLATFORM),vero4k)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+    CPPFLAGS += -I/opt/vero3/include -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
     NAME  = amiberry-vero4k
 
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
-    CFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DTINKER -DUSE_RENDER_THREAD -DMALI_GPU -I/usr/local/include
-    LDFLAGS += -L/usr/local/lib
+    CFLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU
     HAVE_NEON = 1
     NAME  = amiberry-tinker
 
 else ifeq ($(PLATFORM),rockpro64)
 USE_SDL2 = 1
-    CPU_FLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CFLAGS +=  -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DTINKER
+    CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+    CPPFLAGS +=  -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-rockpro64
 	
 else ifeq ($(PLATFORM),android-sdl2)
 USE_SDL2 = 1
-    CPU_FLAGS += -mfpu=neon -mfloat-abi=soft
+    CFLAGS += -mfpu=neon -mfloat-abi=soft
     DEFS += -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     ANDROID = 1
     HAVE_NEON = 1
@@ -172,7 +171,7 @@ endif
 RM     = rm -f
 CC     ?= gcc
 CXX    ?= g++
-STRIP  = strip
+STRIP  ?= strip
 PROG   = $(NAME)
 
 #
@@ -184,6 +183,7 @@ all: $(PROG)
 SDL_CFLAGS := $(shell sdl-config --cflags)
 SDL_LDFLAGS := $(shell sdl-config --libs)
 
+export CPPFLAGS += $(SDL_CFLAGS)
 LDFLAGS += $(SDL_LDFLAGS) -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
 endif
 
@@ -192,8 +192,8 @@ endif
 #
 ifdef USE_SDL2
 all: guisan $(PROG)
-SDL_CFLAGS := $(shell sdl2-config --cflags)
-SDL_LDFLAGS := $(shell sdl2-config --libs)
+export SDL_CFLAGS := $(shell sdl2-config --cflags)
+export SDL_LDFLAGS := $(shell sdl2-config --libs)
 
 CPPFLAGS += $(SDL_CFLAGS) -Iguisan-dev/include
 LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
@@ -202,10 +202,10 @@ endif
 #
 # Common options
 #
-CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers
+DEFS = $(XML_CFLAGS) -DAMIBERRY -DARMV6_ASSEMBLY
+CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers $(DEFS)
 XML_CFLAGS := $(shell xml2-config --cflags )
-DEFS += $(XML_CFLAGS) -DAMIBERRY -DARMV6_ASSEMBLY
-CXXFLAGS += -std=gnu++14
+LDFLAGS += -flto -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
     CFLAGS += -Ofast -frename-registers -falign-functions=16
@@ -239,10 +239,10 @@ endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
-ASFLAGS += $(CPU_FLAGS) -falign-functions=16
+ASFLAGS += $(CFLAGS) -falign-functions=16
 
-export CFLAGS += $(SDL_CFLAGS) $(CPU_FLAGS) $(DEFS) $(EXTRA_CFLAGS) -DGCCCONSTFUNC="__attribute__((const))" -pipe -Wno-shift-overflow -Wno-narrowing
-export CXXFLAGS += $(CFLAGS)
+export CFLAGS +=  -pipe -Wno-shift-overflow -Wno-narrowing $(EXTRA_CFLAGS)
+export CXXFLAGS += $(CFLAGS) -std=gnu++14 
 
 C_OBJS= \
 	src/archivers/7z/BraIA64.o \
@@ -405,39 +405,36 @@ OBJS += src/osdep/gui/sdltruetypefont.o
 endif
 	
 ifeq ($(ANDROID), 1)
-OBJS += src/osdep/gui/androidsdl_event.o
-OBJS += src/osdep/gui/PanelOnScreen.o
+OBJS += src/osdep/gui/androidsdl_event.o \
+	src/osdep/gui/PanelOnScreen.o
 endif
 
 ifdef HAVE_NEON
 OBJS += src/osdep/neon_helper.o
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
+	$(CXX) $(CFLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 else
 OBJS += src/osdep/arm_helper.o
 src/osdep/arm_helper.o: src/osdep/arm_helper.s
-	$(CXX) $(CPU_FLAGS) -Wall -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
+	$(CXX) $(CFLAGS) -Wall -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
 endif
 
-OBJS += src/newcpu.o
-OBJS += src/newcpu_common.o
-OBJS += src/readcpu.o
-OBJS += src/cpudefs.o
-OBJS += src/cpustbl.o
-OBJS += src/cpuemu_0.o
-OBJS += src/cpuemu_4.o
-OBJS += src/cpuemu_11.o
-OBJS += src/cpuemu_40.o
-OBJS += src/cpuemu_44.o
-OBJS += src/jit/compemu.o
-OBJS += src/jit/compstbl.o
-OBJS += src/jit/compemu_fpp.o
-OBJS += src/jit/compemu_support.o
+OBJS += src/newcpu.o \
+	src/newcpu_common.o \
+	src/readcpu.o \
+	src/cpudefs.o \
+	src/cpustbl.o \
+	src/cpuemu_0.o \
+	src/cpuemu_4.o \
+	src/cpuemu_11.o \
+	src/cpuemu_40.o \
+	src/cpuemu_44.o \
+	src/jit/compemu.o \
+	src/jit/compstbl.o \
+	src/jit/compemu_fpp.o \
+	src/jit/compemu_support.o
 
--include $(OBJS:%.o=%.d)
-
-src/jit/compemu_support.o: src/jit/compemu_support.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -fomit-frame-pointer -o src/jit/compemu_support.o -c src/jit/compemu_support.cpp 
+DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
 $(PROG): $(OBJS) $(C_OBJS)
 	$(CXX) -o $(PROG) $(OBJS) $(C_OBJS) $(LDFLAGS)
@@ -447,65 +444,12 @@ ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
 
-ASMS = \
-	src/audio.s \
-	src/autoconf.s \
-	src/blitfunc.s \
-	src/blitter.s \
-	src/cia.s \
-	src/custom.s \
-	src/disk.s \
-	src/drawing.s \
-	src/events.s \
-	src/expansion.s \
-	src/filesys.s \
-	src/fpp.s \
-	src/fsdb.s \
-	src/fsdb_unix.s \
-	src/fsusage.s \
-	src/gfxutil.s \
-	src/hardfile.s \
-	src/inputdevice.s \
-	src/keybuf.s \
-	src/main.s \
-	src/memory.s \
-	src/native2amiga.s \
-	src/traps.s \
-	src/uaelib.s \
-	src/uaeresource.s \
-	src/zfile.s \
-	src/zfile_archive.s \
-	src/machdep/support.s \
-	src/osdep/picasso96.s \
-	src/osdep/amiberry.s \
-	src/osdep/amiberry_gfx.s \
-	src/osdep/amiberry_mem.s \
-	src/osdep/sigsegv_handler.s \
-	src/sounddep/sound.s \
-	src/newcpu.s \
-	src/newcpu_common.s \
-	src/readcpu.s \
-	src/cpudefs.s \
-	src/cpustbl.s \
-	src/cpuemu_0.s \
-	src/cpuemu_4.s \
-	src/cpuemu_11.s \
-	src/jit/compemu.s \
-	src/jit/compemu_fpp.s \
-	src/jit/compstbl.s \
-	src/jit/compemu_support.s
-
-genasm: $(ASMS)
-
 clean:
-	$(RM) $(PROG) $(PROG)-debug $(OBJS) $(ASMS) $(OBJS:%.o=%.d)
+	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
 	$(MAKE) -C guisan-dev clean
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
-	
-delasm:
-	$(RM) $(ASMS)
 	
 bootrom:
 	od -v -t xC -w8 src/filesys |tail -n +5 | sed -e "s,^.......,," -e "s,[0123456789abcdefABCDEF][0123456789abcdefABCDEF],db(0x&);,g" > src/filesys_bootrom.cpp
@@ -513,3 +457,5 @@ bootrom:
 
 guisan:
 	$(MAKE) -C guisan-dev
+	
+-include $(DEPS)

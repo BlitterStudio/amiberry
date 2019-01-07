@@ -6,7 +6,9 @@
   * (c) 1995 Bernd Schmidt
   */
 
-#include "sysconfig.h"
+#include <string.h>
+#include <stdbool.h>
+
 #include "sysdeps.h"
 
 #include "options.h"
@@ -22,9 +24,7 @@
 #include "crc32.h"
 #include "gui.h"
 #include "akiko.h"
-#include "threaddep/thread.h"
 #include "gayle.h"
-#include "gfxboard.h"
 #include "audio.h"
 #include "devices.h"
 

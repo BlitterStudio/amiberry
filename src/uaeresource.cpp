@@ -5,17 +5,12 @@
 *
 */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "include/memory.h"
-#include "custom.h"
-#include "newcpu.h"
-#include "traps.h"
 #include "autoconf.h"
 #include "execlib.h"
-#include "uaeresource.h"
 
 static uaecptr res_init, res_name, res_id, base;
 

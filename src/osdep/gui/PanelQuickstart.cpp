@@ -1,3 +1,7 @@
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL_ttf.h>
@@ -10,23 +14,14 @@
 #include <guisan/sdl/sdltruetypefont.hpp>
 #endif
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "include/memory.h"
 #include "disk.h"
-#include "uae.h"
-#include "autoconf.h"
-#include "filesys.h"
 #include "blkdev.h"
-#include "gui.h"
 #include "gui_handling.h"
-
 
 static gcn::Label* lblModel;
 static gcn::UaeDropDown* cboModel;

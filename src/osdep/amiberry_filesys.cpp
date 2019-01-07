@@ -1,10 +1,12 @@
-#include <sys/timeb.h>
-#include <fcntl.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
-#include "sysconfig.h"
+#include <dirent.h>
+#include <string.h>
+#include <fcntl.h>
+
 #include "sysdeps.h"
-#include "config.h"
-#include "zfile.h"
 #include "options.h"
 
 
@@ -99,13 +101,13 @@ void my_close(struct my_openfile_s* mos)
 }
 
 
-uae_s64 int my_lseek(struct my_openfile_s* mos,const uae_s64 int offset, const int pos)
+uae_s64 my_lseek(struct my_openfile_s* mos,const uae_s64 offset, const int pos)
 {
 	return lseek(int(mos->h), offset, pos);
 }
 
 
-uae_s64 int my_fsize(struct my_openfile_s* mos)
+uae_s64 my_fsize(struct my_openfile_s* mos)
 {
 	uae_s64 pos = lseek(int(mos->h), 0, SEEK_CUR);
 	uae_s64 size = lseek(int(mos->h), 0, SEEK_END);

@@ -186,9 +186,6 @@
     <ClCompile Include="..\src\blitfunc.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\blitops.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\blittable.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -255,9 +252,6 @@
     <ClCompile Include="..\src\filesys.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\filesys_bootrom.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\fpp.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -285,9 +279,6 @@
     <ClCompile Include="..\src\keybuf.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\linetoscr.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -303,9 +294,6 @@
     <ClCompile Include="..\src\newcpu_common.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\p96_blit.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\readcpu.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -313,9 +301,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\savestate.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\sinctable.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\statusline.cpp">
@@ -432,28 +417,16 @@
     <ClCompile Include="..\src\archivers\zip\unzip.cpp">
       <Filter>src\archivers\zip</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\jit\codegen_arm.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\jit\compemu.cpp">
       <Filter>src\jit</Filter>
     </ClCompile>
     <ClCompile Include="..\src\jit\compemu_fpp.cpp">
       <Filter>src\jit</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\jit\compemu_support.cpp">
       <Filter>src\jit</Filter>
     </ClCompile>
     <ClCompile Include="..\src\jit\compstbl.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\gencomp_arm.cpp">
       <Filter>src\jit</Filter>
     </ClCompile>
     <ClCompile Include="..\src\machdep\support.cpp">
@@ -615,9 +588,6 @@
     <ClCompile Include="..\src\flashrom.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fpp_native.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\gayle.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -749,6 +719,30 @@
     </ClCompile>
     <ClCompile Include="..\src\osdep\amiberry_whdbooter.cpp">
       <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\filesys_bootrom.cpp.in">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\fpp_native.cpp.in">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\linetoscr.cpp.in">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\p96_blit.cpp.in">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sinctable.cpp.in">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\codegen_arm.cpp.in">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp.in">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp.in">
+      <Filter>src\jit</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -890,9 +884,6 @@
     <ClInclude Include="..\src\include\fsusage.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\genblitter.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\gensound.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -909,9 +900,6 @@
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\keybuf.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\mackbd.h">
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\memory.h">
@@ -1037,15 +1025,6 @@
     <ClInclude Include="..\src\threaddep\thread.h">
       <Filter>src\threaddep</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\uae\attributes.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\cdrom.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\io.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\uae\likely.h">
       <Filter>src\include\uae</Filter>
     </ClInclude>
@@ -1056,9 +1035,6 @@
       <Filter>src\include\uae</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\uae\types.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\vm.h">
       <Filter>src\include\uae</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\cd32_fmv.h">
@@ -1166,23 +1142,11 @@
     <ClInclude Include="..\src\archivers\7z\7zAlloc.h">
       <Filter>src\archivers\7z</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\blit.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\blitfunc.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\cputbl.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\caps\CapsAPI.h">
       <Filter>src\caps</Filter>
     </ClInclude>
     <ClInclude Include="..\src\caps\Comtype.h">
       <Filter>src\caps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\api.h">
-      <Filter>src\include\uae</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\uae\caps.h">
       <Filter>src\include\uae</Filter>
@@ -1192,6 +1156,15 @@
     </ClInclude>
     <ClInclude Include="..\src\include\uae\uae.h">
       <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\blit.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\blitfunc.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\cputbl.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

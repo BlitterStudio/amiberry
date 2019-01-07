@@ -1,3 +1,8 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include <iostream>
 #ifdef USE_SDL1
 #include <guichan.hpp>
@@ -12,7 +17,6 @@
 #endif
 #include "SelectorEntry.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"

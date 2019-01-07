@@ -11,12 +11,7 @@
 #endif
 #include "SelectorEntry.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
-#include "options.h"
-#include "uae.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 static gcn::Label* lblEmulatorVersion;
@@ -29,7 +24,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 {
 	amiberryLogoImage = gcn::Image::load("data/amiberry-logo.png");
 	icon = new gcn::Icon(amiberryLogoImage);
-	lblEmulatorVersion = new gcn::Label("Amiberry v2.24b9 (2018-11-29)");
+	lblEmulatorVersion = new gcn::Label("Amiberry v2.24b12 (2018-12-06)");
 
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"

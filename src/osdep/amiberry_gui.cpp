@@ -1,7 +1,10 @@
-#include <algorithm>
-#include <iostream>
-#include <vector>
-#include <sstream>
+#include <stdio.h>
+#include <strings.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stdbool.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <guichan/sdl.hpp>
@@ -10,7 +13,6 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #endif
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
@@ -19,24 +21,12 @@
 #include "gui.h"
 #include "osdep/gui/SelectorEntry.hpp"
 #include "gui/gui_handling.h"
-#include "include/memory.h"
 #include "rommgr.h"
-#include "newcpu.h"
 #include "custom.h"
 #include "inputdevice.h"
-#include "xwin.h"
-#include "drawing.h"
 #include "sounddep/sound.h"
-#include "audio.h"
-#include "keybuf.h"
-#include "keyboard.h"
-#include "disk.h"
 #include "savestate.h"
-#include "filesys.h"
-#include "autoconf.h"
 #include "blkdev.h"
-#include <SDL.h>
-#include "threaddep/thread.h"
 
 #ifdef AMIBERRY
 #include <linux/kd.h>
@@ -83,7 +73,7 @@ void AddFileToDiskList(const char *file, int moveToTop)
 
 	for (i = 0; i < lstMRUDiskList.size(); ++i)
 	{
-		if (!strcasecmp(lstMRUDiskList[i].c_str(), file))
+		if (!stricmp(lstMRUDiskList[i].c_str(), file))
 		{
 			if (moveToTop)
 			{
@@ -106,7 +96,7 @@ void AddFileToCDList(const char *file, int moveToTop)
 
 	for (i = 0; i < lstMRUCDList.size(); ++i)
 	{
-		if (!strcasecmp(lstMRUCDList[i].c_str(), file))
+		if (!stricmp(lstMRUCDList[i].c_str(), file))
 		{
 			if (moveToTop)
 			{
@@ -354,7 +344,7 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 {
 	for (auto & i : ConfigFilesList)
 	{
-		if (!strncasecmp(i->Name, name, MAX_DPATH))
+		if (!SDL_strncasecmp(i->Name, name, MAX_DPATH))
 			return i;
 	}
 	return nullptr;
@@ -746,7 +736,7 @@ void FilterFiles(vector<string>* files, const char* filter[])
 		{
 			if (tmp.size() >= strlen(filter[f]))
 			{
-				if (!strcasecmp(tmp.substr(tmp.size() - strlen(filter[f])).c_str(), filter[f]))
+				if (!stricmp(tmp.substr(tmp.size() - strlen(filter[f])).c_str(), filter[f]))
 				{
 					remove = false;
 					break;

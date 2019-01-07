@@ -7,20 +7,16 @@
   * Copyright 1999 Bernd Schmidt
   */
 
-#include "sysconfig.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
-#include "traps.h"
 #include "memory.h"
-#include "custom.h"
-#include "newcpu.h"
-#include "filesys.h"
-#include "autoconf.h"
-#include "fsusage.h"
 #include "fsdb.h"
-#include "uae/io.h"
 
 /* The on-disk format is as follows:
  * Offset 0, 1 byte, valid
@@ -66,7 +62,7 @@ TCHAR *fsdb_search_dir (const TCHAR *dirname, TCHAR *rel)
 	while (p == 0 && (de = my_readdir (dir, fn)) != 0) {
 		if (strcmp (fn, rel) == 0)
 	    p = rel;
-		else if (strcasecmp (fn, rel) == 0)
+		else if (stricmp(fn, rel) == 0)
 			p = my_strdup (fn);
   }
 	my_closedir (dir);

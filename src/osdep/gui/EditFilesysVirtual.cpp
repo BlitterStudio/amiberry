@@ -1,3 +1,7 @@
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -10,19 +14,12 @@
 #include <guisan/sdl/sdltruetypefont.hpp>
 #endif
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
-#include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "memory.h"
-#include "uae.h"
 #include "autoconf.h"
-#include "filesys.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 #include "inputdevice.h"
@@ -413,8 +410,7 @@ bool EditFilesysVirtual(const int unit_no)
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
-			const auto hfd = get_hardfile_data(uci->configoffset);
-			hardfile_media_change(hfd, &ci, true, false);
+			filesys_media_change (ci.rootdir, 1, uci);
 		}
 	}
 

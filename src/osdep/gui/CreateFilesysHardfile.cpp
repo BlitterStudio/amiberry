@@ -1,3 +1,7 @@
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <guichan/sdl.hpp>
@@ -8,22 +12,14 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #endif
-#include <SDL.h>
 
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
-#include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
-#include "include/memory.h"
-#include "uae.h"
-#include "autoconf.h"
 #include "filesys.h"
-#include "gui.h"
 #include "gui_handling.h"
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
@@ -393,7 +389,7 @@ bool CreateFilesysHardfile()
 		fwrite(&zero, 1, 1, newFile);
 		fclose(newFile);
 
-		struct uaedev_config_info ci{};
+		struct uaedev_config_info ci {};
 
 		uci_set_defaults(&ci, false);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
@@ -402,6 +398,12 @@ bool CreateFilesysHardfile()
 		ci.surfaces = (size / 1024) + 1;
 		ci.bootpri = bp;
 
+		ci.controller_type = 0;
+		ci.controller_type_unit = 0;
+		ci.controller_unit = 0;
+		ci.controller_media_type = 0;
+		ci.unit_feature_level = 1;
+		ci.readonly = false;
 		const auto uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{

@@ -4,21 +4,21 @@
  * Amiberry interface
  *
  */
+#include <stdbool.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <time.h>
+#include <signal.h>
 
 #include <algorithm>
-#include <iostream>
-#include <vector>
-#include <cstdlib>
-#include <cstdarg>
-#include <asm/sigcontext.h>
-#include <csignal>
-#include <dlfcn.h>
 #ifndef ANDROID
 #include <execinfo.h>
 #endif
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "uae.h"
 #include "options.h"
 #include "custom.h"
@@ -27,11 +27,7 @@
 #include "savestate.h"
 #include "rommgr.h"
 #include "zfile.h"
-#include <SDL.h>
 #include "amiberry_rp9.h"
-#include "machdep/rpt.h"
-
-#include "threaddep/thread.h"
 #include "include/memory.h"
 #include "keyboard.h"
 #include "rtgmodes.h"
@@ -218,14 +214,14 @@ void target_fixup_options(struct uae_prefs* p)
 		p->cs_cd32fmv = true;
 	}
 
-	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 	if (p->gfx_size.width == 0)
 		p->gfx_size.width = 640;
 	if (p->gfx_size.height == 0)
 		p->gfx_size.height = 256;
 	p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
 
-	if (p->gfx_vresolution && !can_have_linedouble)
+	if (p->gfx_vresolution && !can_have_linedouble) // If there's not enough vertical space, cancel Line Doubling/Scanlines
 		p->gfx_vresolution = 0;
 
 	if (p->cachesize > 0)
@@ -242,7 +238,7 @@ void target_fixup_options(struct uae_prefs* p)
 void target_default_options(struct uae_prefs* p, int type)
 {
 	p->fast_copper = 0;
-	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
@@ -250,7 +246,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->vertical_offset = OFFSET_Y_ADJUST;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
-	p->gfx_vresolution = 0; // Disabled by default due to big performance hit under SDL2
+	p->gfx_vresolution = 0; // Disabled by default due performance hit
 
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");

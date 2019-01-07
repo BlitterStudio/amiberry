@@ -7,17 +7,15 @@
 */
 
 #define IDE_LOG 0
+#include <stdbool.h>
+#include <string.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
-#include "blkdev.h"
 #include "filesys.h"
 #include "gui.h"
 #include "uae.h"
-#include "memory.h"
-#include "newcpu.h"
 #include "threaddep/thread.h"
 #include "savestate.h"
 #include "scsi.h"

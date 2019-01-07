@@ -15,8 +15,11 @@
 * - fully backward compatible with old joystick/mouse configuration
 *
 */
+#include <string.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <sys/time.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
@@ -33,11 +36,7 @@
 #include "ar.h"
 #include "gui.h"
 #include "savestate.h"
-#include "zfile.h"
-#include "cia.h"
 #include "autoconf.h"
-#include "statusline.h"
-#include "native2amiga_api.h"
 #include "sounddep/sound.h"
 #include "disk.h"
 #include "amiberry_gfx.h"

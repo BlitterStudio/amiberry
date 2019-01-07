@@ -1,6 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-rockpro64|ARM">
+      <Configuration>Debug-rockpro64</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-rockpro64|x64">
+      <Configuration>Debug-rockpro64</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-rockpro64|x86">
+      <Configuration>Debug-rockpro64</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug-xu4|ARM">
       <Configuration>Debug-xu4</Configuration>
       <Platform>ARM</Platform>
@@ -71,6 +83,11 @@
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteRootDir>~/projects/Amiberry</RemoteRootDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteRootDir>~/projects/Amiberry</RemoteRootDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -89,6 +106,10 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|x86'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -102,6 +123,10 @@
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|x64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
@@ -125,6 +150,13 @@
     <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make all</RemoteBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make all</RemoteBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean</RemoteCleanCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>

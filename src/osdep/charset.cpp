@@ -1,4 +1,4 @@
-#include "sysconfig.h"
+#include <ctype.h>
 #include "sysdeps.h"
 
 #include <string.h>

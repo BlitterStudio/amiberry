@@ -6,16 +6,21 @@
   * Copyright 1995 Ed Hanway
   * Copyright 1995, 1996, 1997 Bernd Schmidt
   */
-#include "sysconfig.h"
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
-#include <cassert>
 
 #include "options.h"
 #include "threaddep/thread.h"
 #include "uae.h"
 #include "gensound.h"
 #include "audio.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "disk.h"
@@ -28,14 +33,9 @@
 #include "picasso96.h"
 #include "native2amiga.h"
 #include "savestate.h"
-#include "filesys.h"
 #include "blkdev.h"
 #include "gfxboard.h"
 #include "devices.h"
-#include "jit/compemu.h"
-#include <iostream>
-#include "amiberry_gfx.h"
-#include "SDL.h"
 
 #ifdef USE_SDL2
 SDL_Window* sdlWindow;
@@ -158,12 +158,22 @@ void fixup_cpu(struct uae_prefs *p)
 		break;
 	}
 
+	if (p->cpu_model < 68020 && p->cachesize) {
+		p->cachesize = 0;
+		error_log(_T("JIT requires 68020 or better CPU."));
+	}
+
 	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
 	if (p->cachesize && (p->fpu_no_unimplemented)) {
 		error_log(_T("JIT is not compatible with unimplemented FPU instruction emulation."));
 		p->fpu_no_unimplemented = false;
+	}
+
+	if (p->cachesize && p->compfpu && p->fpu_mode > 0) {
+		error_log(_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
+		p->fpu_mode = 0;
 	}
 
 	if (p->immediate_blits && p->waiting_blits) {

@@ -1,5 +1,5 @@
+#include <string.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "crc32.h"

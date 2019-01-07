@@ -43,23 +43,20 @@
   * set savestate_state = STATE_DORESTORE, savestate_filename = "..."
   *
   */
+#include <stdbool.h>
+#include <string.h>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
 #include "zfile.h"
 #include "autoconf.h"
 #include "custom.h"
-#include "newcpu.h"
 #include "savestate.h"
 #include "uae.h"
 #include "gui.h"
 #include "audio.h"
 #include "filesys.h"
-#include "disk.h"
-#include "threaddep/thread.h"
 #include "devices.h"
 
 int savestate_state = 0;

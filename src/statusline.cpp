@@ -1,11 +1,10 @@
-#include "sysconfig.h"
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "sysdeps.h"
 
-#include <ctype.h>
-#include <assert.h>
-
 #include "options.h"
-#include "uae.h"
 #include "xwin.h"
 #include "gui.h"
 #include "custom.h"

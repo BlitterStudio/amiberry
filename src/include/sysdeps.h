@@ -103,7 +103,11 @@ using namespace std;
 #endif
 
 #if HAVE_DIRENT_H
+#if defined(__PSP2__) // NOT __SWITCH__
+# include "psp2-dirent.h"
+#else
 # include <dirent.h>
+#endif
 #else
 # define dirent direct
 # if HAVE_SYS_NDIR_H
@@ -143,47 +147,7 @@ typedef char uae_char;
 
 typedef struct { uae_u8 RGB[3]; } RGB;
 
-#if SIZEOF_SHORT == 2
-typedef unsigned short uae_u16;
-typedef short uae_s16;
-#elif SIZEOF_INT == 2
-typedef unsigned int uae_u16;
-typedef int uae_s16;
-#else
-#error No 2 byte type, you lose.
-#endif
-
-#if SIZEOF_INT == 4
-typedef unsigned int uae_u32;
-typedef int uae_s32;
-#elif SIZEOF_LONG == 4
-typedef unsigned long uae_u32;
-typedef long uae_s32;
-#else
-#error No 4 byte type, you lose.
-#endif
-
-typedef uae_u32 uaecptr;
-
-#undef uae_s64
-#undef uae_u64
-
-#if SIZEOF_LONG_LONG == 8
-#define uae_s64 long long
-#define uae_u64 unsigned long long
-#define VAL64(a) (a ## LL)
-#define UVAL64(a) (a ## uLL)
-#elif SIZEOF___INT64 == 8
-#define uae_s64 __int64
-#define uae_u64 unsigned __int64
-#define VAL64(a) (a)
-#define UVAL64(a) (a)
-#elif SIZEOF_LONG == 8
-#define uae_s64 long;
-#define uae_u64 unsigned long;
-#define VAL64(a) (a ## l)
-#define UVAL64(a) (a ## ul)
-#endif
+#include "uae/types.h"
 
 #ifdef HAVE_STRDUP
 #define my_strdup _tcsdup
@@ -410,7 +374,7 @@ extern void gui_message (const TCHAR *,...);
 
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
   __asm__ (
-		"rev %0, %0"
+	"rev %0, %0"
     : "=r" (v) : "0" (v) ); return v;
 }
 

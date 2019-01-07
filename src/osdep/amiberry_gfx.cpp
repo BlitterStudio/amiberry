@@ -1,22 +1,20 @@
-#include "sysconfig.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+
 #include "sysdeps.h"
-#include "config.h"
 #include "uae.h"
 #include "options.h"
-#include "gui.h"
-#include "memory.h"
-#include "newcpu.h"
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
-#include "inputdevice.h"
 #include "savestate.h"
 #include "picasso96.h"
 #include "amiberry_gfx.h"
 
 #include <png.h>
-#include <SDL.h>
-#include <cmath>
 #ifdef USE_SDL1
 #include <SDL_image.h>
 #include <SDL_gfxPrimitives.h>
@@ -177,7 +175,9 @@ static void *display_thread(void *unused)
 			height = display_height;
 			if (screen_is_picasso)
 			{
-				if (picasso96_state.RGBFormat == RGBFB_R5G6B5 || picasso96_state.RGBFormat == RGBFB_CLUT)
+				if (picasso96_state.RGBFormat == RGBFB_R5G6B5
+					|| picasso96_state.RGBFormat == RGBFB_R5G6B5PC
+					|| picasso96_state.RGBFormat == RGBFB_CLUT)
 				{
 					depth = 16;
 					rgb_mode = VC_IMAGE_RGB565;
@@ -634,7 +634,9 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen_is_picasso)
 	{
-		if (picasso96_state.RGBFormat == RGBFB_R5G6B5 || picasso96_state.RGBFormat == RGBFB_CLUT)
+		if (picasso96_state.RGBFormat == RGBFB_R5G6B5
+			|| picasso96_state.RGBFormat == RGBFB_R5G6B5PC
+			|| picasso96_state.RGBFormat == RGBFB_CLUT)
 		{
 			depth = 16;
 			pixel_format = SDL_PIXELFORMAT_RGB565;
@@ -690,16 +692,22 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_size.width != changed_prefs.gfx_size.width ||
 		currprefs.gfx_resolution != changed_prefs.gfx_resolution ||
 		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
+		currprefs.gfx_iscanlines != changed_prefs.gfx_iscanlines ||
+		currprefs.gfx_pscanlines != changed_prefs.gfx_pscanlines ||
 		currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ||
-		currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode)
+		currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode ||
+		currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler)
 	{
 		cfgfile_configuration_change(1);
 		currprefs.gfx_size.height = changed_prefs.gfx_size.height;
 		currprefs.gfx_size.width = changed_prefs.gfx_size.width;
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
+		currprefs.gfx_iscanlines = changed_prefs.gfx_iscanlines;
+		currprefs.gfx_pscanlines = changed_prefs.gfx_pscanlines;
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.gfx_lores_mode = changed_prefs.gfx_lores_mode;
+		currprefs.gfx_scandoubler = changed_prefs.gfx_scandoubler;
 		update_display(&currprefs);
 		changed = 1;
 	}
@@ -972,7 +980,7 @@ int GetSurfacePixelFormat()
 		: depth == 15 && unit == 16
 		? RGBFB_R5G5B5
 		: depth == 16 && unit == 16
-		? RGBFB_R5G6B5
+		? RGBFB_R5G6B5PC
 		: unit == 24
 		? RGBFB_R8G8B8
 		: unit == 32
@@ -1338,7 +1346,9 @@ void picasso_init_resolutions()
 		for (auto bitdepth : bits)
 		{
 			const auto bit_unit = bitdepth + 1 & 0xF8;
-			const auto rgbFormat = bitdepth == 8 ? RGBFB_CLUT : bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8;
+			const auto rgbFormat = 
+				bitdepth == 8 ? RGBFB_CLUT : 
+			bitdepth == 16 ? RGBFB_R5G6B5PC : RGBFB_R8G8B8A8;
 			auto pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
 			DisplayModes[count].res.width = x_size_table[i];
@@ -1396,7 +1406,8 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 		open_screen(&currprefs);
 		if(screen != nullptr) {
 			picasso_vidinfo.rowbytes = screen->pitch;
-			picasso_vidinfo.rgbformat = screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
+			picasso_vidinfo.rgbformat = 
+				screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5PC;
 		}
 	}
 }

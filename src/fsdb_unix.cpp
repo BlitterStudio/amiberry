@@ -8,12 +8,14 @@
   * Copyright 1999 Bernd Schmidt
   */
 
-#include "sysconfig.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <stdlib.h>
+
 #include "sysdeps.h"
-#include "config.h"
 
 #include "fsdb.h"
-#include "uae.h"
 
 /* these are deadly (but I think allowed on the Amiga): */
 #define NUM_EVILCHARS 7

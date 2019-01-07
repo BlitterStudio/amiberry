@@ -129,7 +129,7 @@ extern int fsdb_exists (const TCHAR *nname);
 
 STATIC_INLINE int same_aname (const TCHAR *an1, const TCHAR *an2)
 {
-  return strcasecmp (an1, an2) == 0;
+  return stricmp(an1, an2) == 0;
 }
 
 /* Filesystem-dependent functions.  */

@@ -1,6 +1,7 @@
-#include <algorithm>
-#include <iostream>
-#include <sstream>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+
 #ifdef USE_SDL1
 #include <guichan.hpp>
 #include <SDL/SDL_ttf.h>
@@ -14,10 +15,8 @@
 #endif
 #include "SelectorEntry.hpp"
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
-#include "gui.h"
 #include "gui_handling.h"
 
 #include "options.h"

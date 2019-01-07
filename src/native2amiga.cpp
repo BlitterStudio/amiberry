@@ -9,16 +9,10 @@
   * and needs thread support.
   */
 
-#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "threaddep/thread.h"
-#include "options.h"
-#include "include/memory.h"
-#include "custom.h"
-#include "newcpu.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "native2amiga.h"
 
 smp_comm_pipe native2amiga_pending;
