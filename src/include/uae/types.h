@@ -24,8 +24,8 @@ typedef uint8_t uae_u8;
 typedef int16_t uae_s16;
 typedef uint16_t uae_u16;
 
-typedef int32_t uae_s32;
-typedef uint32_t uae_u32;
+typedef int uae_s32;
+typedef unsigned int uae_u32;
 
 #ifndef uae_s64
 typedef long long int uae_s64;

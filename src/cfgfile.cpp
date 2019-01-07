@@ -3623,10 +3623,10 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		|| cfgfile_intval(option, value, _T("fatgary"), &p->cs_fatgaryrev, 1)
 		|| cfgfile_intval(option, value, _T("ramsey"), &p->cs_ramseyrev, 1)
 		|| cfgfile_doubleval(option, value, _T("chipset_refreshrate"), &p->chipset_refreshrate)
-		|| cfgfile_intval(option, value, _T("a3000mem_size"), (unsigned int*)&p->mbresmem_low_size, 0x100000)
-		|| cfgfile_intval(option, value, _T("mbresmem_size"), (unsigned int*)&p->mbresmem_high_size, 0x100000)
-		|| cfgfile_intval(option, value, _T("z3mem_start"), (unsigned int*)&p->z3autoconfig_start, 1)
-		|| cfgfile_intval(option, value, _T("bogomem_size"), (unsigned int*)&p->bogomem_size, 0x40000)
+		|| cfgfile_intval(option, value, _T("a3000mem_size"), &p->mbresmem_low_size, 0x100000)
+		|| cfgfile_intval(option, value, _T("mbresmem_size"), &p->mbresmem_high_size, 0x100000)
+		|| cfgfile_intval(option, value, _T("z3mem_start"), &p->z3autoconfig_start, 1)
+		|| cfgfile_intval(option, value, _T("bogomem_size"), &p->bogomem_size, 0x40000)
 		|| cfgfile_intval(option, value, _T("rtg_modes"), &p->picasso96_modeflags, 1)
 		|| cfgfile_intval(option, value, _T("floppy_speed"), &p->floppy_speed, 1)
 		|| cfgfile_intval(option, value, _T("cd_speed"), &p->cd_speed, 1)
@@ -3707,7 +3707,7 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 			_stprintf(tmp, _T("gfxcard%d_size"), i + 1);
 		else
 			_tcscpy(tmp, _T("gfxcard_size"));
-		if (cfgfile_intval(option, value, tmp, (unsigned int*)&rbc->rtgmem_size, 0x100000))
+		if (cfgfile_intval(option, value, tmp, &rbc->rtgmem_size, 0x100000))
 			return 1;
 		if (i > 0)
 			_stprintf(tmp, _T("gfxcard%d_options"), i + 1);
