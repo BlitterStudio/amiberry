@@ -20,6 +20,7 @@
 #include "savestate.h"
 #include "scsi.h"
 #include "ide.h"
+#include "newcpu.h"
 
 /* STATUS bits */
 #define IDE_STATUS_ERR 0x01		// 0

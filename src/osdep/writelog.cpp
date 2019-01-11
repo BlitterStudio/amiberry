@@ -11,9 +11,9 @@
 #include "sysdeps.h"
 #include "uae.h"
 
-
 #define WRITE_LOG_BUF_SIZE 4096
 FILE *debugfile = NULL;
+extern bool write_logfile;
 
 void console_out (const TCHAR *format,...)
 {
@@ -26,36 +26,32 @@ void console_out (const TCHAR *format,...)
     printf(buffer);
 }
 
-#ifdef WITH_LOGGING
-
 void write_log (const char *format,...)
 {
-    int count;
-    int numwritten;
-    TCHAR buffer[WRITE_LOG_BUF_SIZE];
+	if (write_logfile)
+	{
+		TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
-    va_list parms;
-    va_start (parms, format);
-    count = vsnprintf( buffer, WRITE_LOG_BUF_SIZE-1, format, parms );
-    if( debugfile )
-    {
-        fprintf( debugfile, buffer );
-        fflush (debugfile);
-    }
-    va_end (parms);
+		va_list parms;
+		va_start(parms, format);
+		auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+		if (debugfile)
+		{
+			fprintf(debugfile, buffer);
+			fflush(debugfile);
+		}
+		va_end(parms);
+	}
 }
-
-#endif
 
 void jit_abort (const TCHAR *format,...)
 {
     static int happened;
-    int count;
     TCHAR buffer[WRITE_LOG_BUF_SIZE];
     va_list parms;
     va_start (parms, format);
 
-    count = vsnprintf (buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+    auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
     write_log (buffer);
     va_end (parms);
     if (!happened)

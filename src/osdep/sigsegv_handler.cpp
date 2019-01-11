@@ -52,16 +52,11 @@ extern blockinfo* active;
 extern blockinfo* dormant;
 extern void invalidate_block(blockinfo* bi);
 extern void raise_in_cl_list(blockinfo* bi);
-
+extern bool write_logfile;
 
 #define SHOW_DETAILS 2
 
-#ifdef WITH_LOGGING
 #define output_log  write_log
-#else
-#define output_log
-#endif
-
 
 enum transfer_type_t
 {
@@ -89,11 +84,10 @@ static int max_signals = 200;
 
 void init_max_signals(void)
 {
-#ifdef WITH_LOGGING
-  max_signals = 20;
-#else
-	max_signals = 200;
-#endif
+	if (write_logfile)
+		max_signals = 20;
+	else
+		max_signals = 200;
 }
 
 

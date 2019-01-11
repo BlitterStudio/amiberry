@@ -37,16 +37,14 @@
 #include <map>
 #endif
 
-#ifdef WITH_LOGGING
 extern FILE *debugfile;
-#endif
-
 int pause_emulation;
 int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
 bool read_config_descriptions = true;
+bool write_logfile = false;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -90,37 +88,36 @@ int sleep_millis_main(int ms)
 
 void logging_init(void)
 {
-#ifdef WITH_LOGGING
-  static int started;
-  static int first;
-  char debugfilename[MAX_DPATH];
+	if (write_logfile)
+	{
+		static int started;
+		static int first;
+		char debugfilename[MAX_DPATH];
 
-  if (first > 1) {
-  	write_log ("***** RESTART *****\n");
-	  return;
-  }
-  if (first == 1) {
-  	if (debugfile)
-	    fclose (debugfile);
-    debugfile = 0;
-  }
+		if (first > 1) {
+			write_log("***** RESTART *****\n");
+			return;
+		}
+		if (first == 1) {
+			if (debugfile)
+				fclose(debugfile);
+			debugfile = 0;
+		}
 
-	sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
-	if (!debugfile)
-		debugfile = fopen(debugfilename, "wt");
+		sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
+		if (!debugfile)
+			debugfile = fopen(debugfilename, "wt");
 
-	first++;
-	write_log("AMIBERRY Logfile\n\n");
-#endif
+		first++;
+		write_log("AMIBERRY Logfile\n\n");
+	}
 }
 
 void logging_cleanup(void)
 {
-#ifdef WITH_LOGGING
 	if (debugfile)
 		fclose(debugfile);
-	debugfile = 0;
-#endif
+	debugfile = nullptr;
 }
 
 
@@ -564,9 +561,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 
 		if (!isdefault)
 			inputdevice_updateconfig(nullptr, p);
-#ifdef WITH_LOGGING
-		p->leds_on_screen = true;
-#endif
+
 		SetLastActiveConfig(filename);
 	}
 
@@ -721,6 +716,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
+	fputs(buffer, f);
+
 	fclose(f);
 }
 
@@ -833,6 +831,7 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
 					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
 					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
+					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
 				}
 			}
 		}

@@ -24,9 +24,7 @@
 #include <map>
 #endif
 
-#ifdef WITH_LOGGING
 extern FILE *debugfile;
-#endif
 
 #include "fsdb.h"
 #include <libxml/tree.h>
