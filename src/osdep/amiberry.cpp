@@ -662,11 +662,11 @@ void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector
 		sort(files->begin(), files->end());
 }
 
-void saveAdfDir(void)
+void save_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
 
-	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 	const auto f = fopen(path, "we");
 	if (!f)
 		return;
@@ -743,7 +743,7 @@ static void trimwsa(char *s)
 		s[--len] = '\0';
 }
 
-void loadAdfDir(void)
+void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
 	int i;
@@ -771,7 +771,7 @@ void loadAdfDir(void)
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
-	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
 	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh) {
@@ -840,6 +840,20 @@ void loadAdfDir(void)
 	}
 }
 
+void rename_old_adfdir()
+{
+	char old_path[MAX_DPATH];
+	char new_path[MAX_DPATH];
+	snprintf(old_path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(new_path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
+	
+	auto result = rename(old_path, new_path);
+	if (result == 0)
+		write_log("Old adfdir.conf file successfully renamed to amiberry.conf");
+	else
+		write_log("Error while trying to rename old adfdir.conf file to amiberry.conf!");
+}
+
 void target_addtorecent(const TCHAR *name, int t)
 {
 }
@@ -885,7 +899,8 @@ int main(int argc, char* argv[])
 
 	// Get startup path
 	getcwd(start_path_data, MAX_DPATH);
-	loadAdfDir();
+	rename_old_adfdir();
+	load_amiberry_settings();
 	rp9_init();
 
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);

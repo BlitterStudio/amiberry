@@ -47,7 +47,7 @@ public:
 			if (SelectFolder("Folder for System ROMs", tmp))
 			{
 				set_rompath(tmp);
-				saveAdfDir();
+				save_amiberry_settings();
 				RefreshPanelPaths();
 			}
 			cmdSystemROMs->requestFocus();
@@ -58,7 +58,7 @@ public:
 			if (SelectFolder("Folder for configuration files", tmp))
 			{
 				set_configurationpath(tmp);
-				saveAdfDir();
+				save_amiberry_settings();
 				RefreshPanelPaths();
 				RefreshPanelConfig();
 			}
@@ -70,7 +70,7 @@ public:
 			if (SelectFolder("Folder for controller files", tmp))
 			{
 				set_controllerspath(tmp);
-				saveAdfDir();
+				save_amiberry_settings();
 				RefreshPanelPaths();
 			}
 			cmdControllersPath->requestFocus();
@@ -83,7 +83,7 @@ public:
 			if (SelectFile("Select RetroArch Config File", tmp, filter))
 			{
 				set_retroarchfile(tmp);
-				saveAdfDir();
+				save_amiberry_settings();
 				RefreshPanelPaths();
 			}
 			cmdRetroArchFile->requestFocus();

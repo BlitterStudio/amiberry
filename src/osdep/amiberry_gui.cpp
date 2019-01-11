@@ -417,7 +417,7 @@ void gui_exit()
 {
 	sync();
 	stop_sound();
-	saveAdfDir();
+	save_amiberry_settings();
 	ClearConfigFileList();
 	ClearAvailableROMList();
 }
