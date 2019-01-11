@@ -45,6 +45,7 @@ int quickstart_conf = 0;
 bool host_poweroff = false;
 bool read_config_descriptions = true;
 bool write_logfile = false;
+bool scanlines_by_default = false;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -243,7 +244,16 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->vertical_offset = OFFSET_Y_ADJUST;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
-	p->gfx_vresolution = 0; // Disabled by default due performance hit
+	if (scanlines_by_default)
+	{
+		p->gfx_vresolution = VRES_DOUBLE;
+		p->gfx_pscanlines = 1;
+	}
+	else
+	{
+		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due performance hit
+		p->gfx_pscanlines = 0;
+	}
 
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
@@ -667,6 +677,28 @@ void save_amiberry_settings(void)
 		return;
 
 	char buffer[MAX_DPATH];
+
+	// Should the Quickstart Panel be the default when opening the GUI?
+	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
+	fputs(buffer, f);
+
+	// Open each config file and read the Description field? 
+	// This will slow down scanning the config list if it's very large
+	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Write to logfile? 
+	// If enabled, a file named "amiberry_log.txt" will be generated in the startup folder
+	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Scanlines ON by default?
+	// This will only be enabled if the vertical height is enough, as we need Line Doubling set to ON also
+	// Beware this comes with a performance hit, as double the amount of lines need to be drawn on-screen
+	snprintf(buffer, MAX_DPATH, "scanlines_by_default=%s\n", scanlines_by_default ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
 
@@ -682,8 +714,11 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
+	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%d\n", lstAvailableROMs.size());
 	fputs(buffer, f);
+
+	// The ROMs found in the last scan
 	for (auto & lstAvailableROM : lstAvailableROMs)
 	{
 		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROM->Name);
@@ -694,6 +729,7 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 	}
 
+	// Recent disk entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUDiskList=%d\n", lstMRUDiskList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUDiskList)
@@ -702,6 +738,7 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 	}
 
+	// Recent CD entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUCDList)
@@ -709,15 +746,6 @@ void save_amiberry_settings(void)
 		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", i.c_str());
 		fputs(buffer, f);
 	}
-
-	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
-	fputs(buffer, f);
 
 	fclose(f);
 }
@@ -804,7 +832,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 				{
-					auto f = fopen(tmpFile, "rbe");
+					const auto f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -813,7 +841,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
 				{
-					FILE* f = fopen(tmpFile, "rbe");
+					const auto f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -832,6 +860,7 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
 					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
 					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
+					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
 				}
 			}
 		}
