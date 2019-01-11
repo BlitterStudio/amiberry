@@ -47,6 +47,45 @@ bool read_config_descriptions = true;
 bool write_logfile = false;
 bool scanlines_by_default = false;
 
+// Justifications for the numbers set here
+// Frametime is 20000 cycles in PAL
+//              16667 cycles in NTSC
+// The most we can give back is a frame's worth of
+// cycles, but we shouldn't give them ALL back for timing
+// coordination so I have picked 90% of the cycles.
+#ifdef FASTERCYCLES
+int speedup_cycles_jit_pal = 18000;
+int speedup_cycles_jit_ntsc = 15000;
+int speedup_cycles_nonjit = 1024;
+// These are set to give enough time to hit 60 fps
+// on the ASUS tinker board, and giving the rest of the
+// time to the CPU (minus the 10% reserve above).
+// As these numbers are decreased towards -(SPEEDUP_CYCLES),
+// more chipset time is given and the CPU gets slower.
+// For your platform its best to tune these to the point where
+// you hit 60FPS in NTSC and not higher.
+// Do not tune above -(SPEEDUP_CYCLES) or the emulation will
+// become unstable.
+int speedup_timelimit_jit = -10000;
+int speedup_timelimit_nonjit = -960;
+// These define the maximum CPU possible and work well with
+// frameskip on and operation at 30fps at full chipset speed
+// They give the minimum possible chipset time.  Do not make
+// these positive numbers.  Doing so may give you a 500mhz
+// 68040 but your emulation will not be able to reset at this
+// speed.
+int speedup_timelimit_jit_turbo = 0;
+int speedup_timelimit_nonjit_turbo = 0;
+#else
+int speedup_cycles_jit_pal = 10000;
+int speedup_cycles_jit_ntsc = 6667;
+int speedup_cycles_nonjit = 256;
+int speedup_timelimit_jit = -5000;
+int speedup_timelimit_nonjit = -5000;
+int speedup_timelimit_jit_turbo = 0;
+int speedup_timelimit_nonjit_turbo = 0;
+#endif
+
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
@@ -698,6 +737,22 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "scanlines_by_default=%s\n", scanlines_by_default ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Timing settings
+	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_ntsc=%d\n", speedup_cycles_jit_ntsc);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_cycles_nonjit=%d\n", speedup_cycles_nonjit);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit=%d\n", speedup_timelimit_jit);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit=%d\n", speedup_timelimit_nonjit);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit_turbo=%d\n", speedup_timelimit_jit_turbo);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit_turbo=%d\n", speedup_timelimit_nonjit_turbo);
+	fputs(buffer, f);
+
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
@@ -861,6 +916,14 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
 					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
 					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
+
+					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
+					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
+					cfgfile_intval(option, value, "speedup_cycles_nonjit", &speedup_cycles_nonjit, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_jit", &speedup_timelimit_jit, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_nonjit", &speedup_timelimit_nonjit, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_jit_turbo", &speedup_timelimit_jit_turbo, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_nonjit_turbo", &speedup_timelimit_nonjit_turbo, 1);
 				}
 			}
 		}
