@@ -129,9 +129,9 @@ static void addrom(struct romdata* rd, const char* path)
 	char tmpName[MAX_DPATH];
 	const auto tmp = new AvailableROM();
 	getromname(rd, tmpName);
-	strncpy(tmp->Name, tmpName, MAX_DPATH);
+	strncpy(tmp->Name, tmpName, MAX_DPATH - 1);
 	if (path != nullptr)
-		strncpy(tmp->Path, path, MAX_DPATH);
+		strncpy(tmp->Path, path, MAX_DPATH - 1);
 	tmp->ROMType = rd->type;
 	lstAvailableROMs.emplace_back(tmp);
 	romlist_add(path, rd);
@@ -201,7 +201,7 @@ static struct romdata* scan_single_rom(char* path)
 {
 	char tmp[MAX_DPATH];
 
-	strncpy (tmp, path, MAX_DPATH);
+	strncpy (tmp, path, MAX_DPATH - 1);
 	auto rd = getromdatabypath(path);
 	if (rd && rd->crc32 == 0xffffffff)
 		return rd;
@@ -314,11 +314,11 @@ void ReadConfigFileList(void)
 	for (auto & file : files)
 	{
 		auto tmp = new ConfigFileInfo();
-		strncpy(tmp->FullPath, path, MAX_DPATH);
-		strncat(tmp->FullPath, file.c_str(), MAX_DPATH);
-		strncpy(tmp->Name, file.c_str(), MAX_DPATH);
+		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
+		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
+		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
 		removeFileExtension(tmp->Name);
-		strncpy(tmp->Description, _T("rp9"), MAX_DPATH);
+		strncpy(tmp->Description, _T("rp9"), MAX_DPATH - 1);
 		ConfigFilesList.emplace_back(tmp);
 	}
 
@@ -329,9 +329,9 @@ void ReadConfigFileList(void)
 	for (auto & file : files)
 	{
 		auto tmp = new ConfigFileInfo();
-		strncpy(tmp->FullPath, path, MAX_DPATH);
-		strncat(tmp->FullPath, file.c_str(), MAX_DPATH);
-		strncpy(tmp->Name, file.c_str(), MAX_DPATH);
+		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
+		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
+		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
 		removeFileExtension(tmp->Name);
 		// If the user has many (thousands) of configs, this will take a long time
 		if (read_config_descriptions)
@@ -451,7 +451,7 @@ int gui_update()
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
 	else
-		strncpy(tmp, last_loaded_config, MAX_DPATH);
+		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
 
 	strncat(savestate_fname, tmp, MAX_DPATH - 1);
 	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
