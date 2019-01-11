@@ -7,7 +7,7 @@
 #include "uae/types.h"
 #include <string.h>
 
-#ifdef _WIN32_
+#ifdef _WIN32
 /* Make sure the real _tcs* functions are already declared before we
  * re-define them below. */
 #include <tchar.h>
@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #endif
 
-#ifdef _WIN32_
+#ifdef _WIN32
 /* Using the real _tcs* functions */
 #else
 #define _istdigit isdigit

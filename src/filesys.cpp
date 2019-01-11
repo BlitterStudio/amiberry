@@ -7508,7 +7508,7 @@ void filesys_install_code (void)
 	afterdos_initcode = filesys_get_entry(8);
 }
 
-#ifdef _WIN32_
+#ifdef _WIN32
 #include "od-win32/win32_filesys.cpp"
 #endif
 
