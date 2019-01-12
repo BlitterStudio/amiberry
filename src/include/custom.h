@@ -93,7 +93,7 @@ STATIC_INLINE uae_u16 INTREQR (void)
 }
 
 /* maximums for statically allocated tables */
-#ifdef AMIBERRY
+#ifdef UAE_MINI
 /* absolute minimums for basic A500/A1200-emulation */
 #define MAXHPOS 227
 #define MAXVPOS 312
