@@ -37,15 +37,17 @@ struct uae_driveinfo {
 #define HDF_HANDLE_FILE  1
 #define HDF_HANDLE_ZFILE 2
 #define HDF_HANDLE_UNKNOWN 3
+#undef INVALID_HANDLE_VALUE
+#define INVALID_HANDLE_VALUE NULL
 
 #define CACHE_SIZE 16384
 #define CACHE_FLUSH_TIME 5
 
-static const TCHAR *hdz[] = { _T("hdz"), _T("zip"), nullptr };
+static const TCHAR *hdz[] = { _T("hdz"), _T("zip"), _T("7z"), nullptr };
 
 int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 {
-	FILE *f = nullptr;
+	FILE *f = INVALID_HANDLE_VALUE;
 	int i;
 	const auto name = my_strdup(pname);
 	auto zmode = 0;
@@ -60,11 +62,11 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	hfd->virtual_rdb = nullptr;
 	if (!hfd->cache)
 	{
-		write_log(_T("malloc(%d) failed in hdf_open_target\n"), CACHE_SIZE);
+		write_log("malloc(%d) failed in hdf_open_target, error %d\n", CACHE_SIZE, errno);
 		goto end;
 	}
 	hfd->handle = xcalloc(struct hardfilehandle, 1);
-	hfd->handle->f = nullptr;
+	hfd->handle->f = INVALID_HANDLE_VALUE;
 	write_log(_T("hfd attempting to open: '%s'\n"), name);
 
 	ext = _tcsrchr(name, '.');
@@ -78,11 +80,13 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		}
 	}
 	f = fopen(name, (hfd->ci.readonly ? "rb" : "r+b"));
-	if (f == nullptr && !hfd->ci.readonly)
+	if (f == INVALID_HANDLE_VALUE && !hfd->ci.readonly)
 	{
 		f = fopen(name, "rbe");
 		if (f != nullptr)
 			hfd->ci.readonly = true;
+		else
+			goto end;
 	}
 	hfd->handle->f = f;
 	i = _tcslen(name) - 1;
@@ -90,46 +94,57 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	{
 		if ((i > 0 && (name[i - 1] == '/' || name[i - 1] == '\\')) || i == 0)
 		{
+			_tcscpy(hfd->vendor_id, "UAE");
 			_tcsncpy(hfd->product_id, name + i, 15);
+			_tcscpy(hfd->product_rev, "0.4");
 			break;
 		}
 		i--;
 	}
-	_tcscpy(hfd->vendor_id, _T("UAE"));
-	_tcscpy(hfd->product_rev, _T("0.4"));
-	if (f != nullptr)
+	if (f != INVALID_HANDLE_VALUE)
 	{
-		uae_s64 pos = ftell(f);
-		fseek(f, 0, SEEK_END);
-		uae_s64 size = ftell(f);
-		fseek(f, pos, SEEK_SET);
+		// determine size of hdf file
+		int ret;
+		off_t low = -1;
 
-		size &= ~(hfd->ci.blocksize - 1);
-		hfd->physsize = hfd->virtsize = size;
-		if (hfd->physsize < hfd->ci.blocksize || hfd->physsize == 0)
-		{
-			write_log(_T("HDF '%s' is too small\n"), name);
-			goto end;
+		if (low == -1) {
+			// assuming regular file; seek to end and ftell
+			ret = fseeko(f, 0, SEEK_END);
+			if (ret)
+				goto end;
+			low = ftello(f);
+			if (low == -1)
+				goto end;
 		}
+
+		low &= ~(hfd->ci.blocksize - 1);
+		hfd->physsize = hfd->virtsize = low;
+		//if (g_debug) {
+		//	write_log("set physsize = virtsize = %lld (low)\n",
+		//		hfd->virtsize);
+		//}
 		hfd->handle_valid = HDF_HANDLE_FILE;
-		if (hfd->physsize < 64 * 1024 * 1024 && zmode)
-		{
-			write_log(_T("HDF '%s' re-opened in zfile-mode\n"), name);
+		if (hfd->physsize < 64 * 1024 * 1024 && zmode) {
+			write_log("HDF '%s' re-opened in zfile-mode\n", name);
 			fclose(f);
-			hfd->handle->f = 0;
-			hfd->handle->zf = zfile_fopen(name, _T("rb"), ZFD_NORMAL);
+			hfd->handle->f = INVALID_HANDLE_VALUE;
+			hfd->handle->zf = zfile_fopen(name, hfd->ci.readonly ? "rb" : "r+b", ZFD_NORMAL);
 			hfd->handle->zfile = 1;
-			if (!hfd->handle->zf)
+			if (!f)
 				goto end;
 			zfile_fseek(hfd->handle->zf, 0, SEEK_END);
 			hfd->physsize = hfd->virtsize = zfile_ftell(hfd->handle->zf);
+			//if (g_debug) {
+			//	write_log("set physsize = virtsize = %lld\n",
+			//		hfd->virtsize);
+			//}
 			zfile_fseek(hfd->handle->zf, 0, SEEK_SET);
 			hfd->handle_valid = HDF_HANDLE_ZFILE;
-		}
+		}	
 	}
 	else
 	{
-		write_log(_T("HDF '%s' failed to open.\n"), name);
+		write_log("HDF '%s' failed to open. error = %d\n", name, errno);
 	}
 	if (hfd->handle_valid || hfd->drive_empty)
 	{
@@ -143,22 +158,13 @@ end:
 	return 0;
 }
 
-static void freehandle(struct hardfilehandle *h)
-{
-	if (!h)
-		return;
-	if (!h->zfile && h->f != 0)
-		fclose(h->f);
-	if (h->zfile && h->zf)
-		zfile_fclose(h->zf);
-	h->zf = nullptr;
-	h->f = nullptr;
-	h->zfile = 0;
-}
-
 void hdf_close_target(struct hardfiledata *hfd)
 {
-	freehandle(hfd->handle);
+	write_log("hdf_close_target\n");
+	if (hfd->handle && hfd->handle->f) {
+		write_log("closing file handle %p\n", hfd->handle->f);
+		fclose(hfd->handle->f);
+	}
 	xfree(hfd->handle);
 	xfree(hfd->emptyname);
 	hfd->emptyname = nullptr;
@@ -180,15 +186,13 @@ static int hdf_seek(struct hardfiledata *hfd, uae_u64 offset)
 	if (hfd->handle_valid == 0)
 	{
 		target_startup_msg(_T("Internal error"), _T("hd: hdf handle is not valid."));
-		uae_restart(1, nullptr);
-		return -1;
+		abort();
 	}
 	if (offset >= hfd->physsize - hfd->virtual_size)
 	{
 		write_log(_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
 		target_startup_msg(_T("Internal error"), _T("hd: tried to seek out of bounds."));
-		uae_restart(1, nullptr);
-		return -1;
+		abort();
 	}
 	offset += hfd->offset;
 	if (offset & (hfd->ci.blocksize - 1))
@@ -196,14 +200,16 @@ static int hdf_seek(struct hardfiledata *hfd, uae_u64 offset)
 		write_log(_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
 			offset, hfd->ci.blocksize, offset, hfd->ci.blocksize, offset & (hfd->ci.blocksize - 1));
 		target_startup_msg(_T("Internal error"), _T("hd: poscheck failed."));
-		uae_restart(1, nullptr);
-		return -1;
+		abort();
 	}
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
 	{
-		auto ret = fseek(hfd->handle->f, offset, SEEK_SET);
+		auto ret = fseeko(hfd->handle->f, offset, SEEK_SET);
 		if (ret != 0)
+		{
+			write_log("hdf_seek failed\n");
 			return -1;
+		}
 	}
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
 	{
@@ -214,18 +220,19 @@ static int hdf_seek(struct hardfiledata *hfd, uae_u64 offset)
 
 static void poscheck(struct hardfiledata *hfd, int len)
 {
+	int ret;
 	uae_u64 pos = 0;
 
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
 	{
-		pos = ftell(hfd->handle->f);
-		if (pos == -1)
+		ret = fseeko(hfd->handle->f, 0, SEEK_CUR);
+		if (ret)
 		{
 			write_log(_T("hd: poscheck failed. seek failure"));
 			target_startup_msg(_T("Internal error"), _T("hd: poscheck failed. seek failure."));
-			uae_restart(1, nullptr);
-			return;
+			abort();
 		}
+		pos = ftello(hfd->handle->f);
 	}
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
 	{
@@ -235,29 +242,25 @@ static void poscheck(struct hardfiledata *hfd, int len)
 	{
 		write_log(_T("hd: poscheck failed, negative length! (%d)"), len);
 		target_startup_msg(_T("Internal error"), _T("hd: poscheck failed, negative length."));
-		uae_restart(1, nullptr);
-		return;
+		abort();
 	}
 	if (pos < hfd->offset)
 	{
 		write_log(_T("hd: poscheck failed, offset out of bounds! (%I64d < %I64d)"), pos, hfd->offset);
 		target_startup_msg(_T("Internal error"), _T("hd: hd: poscheck failed, offset out of bounds."));
-		uae_restart(1, nullptr);
-		return;
+		abort();
 	}
 	if (pos >= hfd->offset + hfd->physsize - hfd->virtual_size || pos >= hfd->offset + hfd->physsize + len - hfd->virtual_size)
 	{
 		write_log(_T("hd: poscheck failed, offset out of bounds! (%I64d >= %I64d, LEN=%d)"), pos, hfd->offset + hfd->physsize, len);
 		target_startup_msg(_T("Internal error"), _T("hd: hd: poscheck failed, offset out of bounds."));
-		uae_restart(1, nullptr);
-		return;
+		abort();
 	}
 	if (pos & (hfd->ci.blocksize - 1))
 	{
 		write_log(_T("hd: poscheck failed, offset not aligned to blocksize! (%I64X & %04X = %04X\n"), pos, hfd->ci.blocksize, pos & hfd->ci.blocksize);
 		target_startup_msg(_T("Internal error"), _T("hd: poscheck failed, offset not aligned to blocksize."));
-		uae_restart(1, nullptr);
-		return;
+		abort();
 	}
 }
 
