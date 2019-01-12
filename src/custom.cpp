@@ -155,6 +155,17 @@ struct sprite {
 	int armed;
 	int dmastate;
 	int dmacycle;
+	int ptxhpos;
+	int ptxhpos2, ptxvpos2;
+	bool ignoreverticaluntilnextline;
+	int width;
+
+	uae_u16 ctl, pos;
+#ifdef AGA
+	uae_u16 data[4], datb[4];
+#else
+	uae_u16 data[1], datb[1];
+#endif
 };
 
 static struct sprite spr[MAX_SPRITES];
@@ -181,7 +192,7 @@ static unsigned int bplcon0d, bplcon0dd, bplcon0_res, bplcon0_planes, bplcon0_pl
 static unsigned int diwstrt, diwstop, diwhigh;
 static int diwhigh_written;
 static unsigned int ddfstrt, ddfstop;
-static int line_cyclebased, badmode;
+static int line_cyclebased, badmode, diw_change;
 static int hpos_is_zero_bplcon1_hack = -1;
 
 #define SET_LINE_CYCLEBASED line_cyclebased = 2;
@@ -194,14 +205,28 @@ enum diw_states
 };
 
 static int plffirstline, plflastline;
+int plffirstline_total, plflastline_total;
+static int autoscale_bordercolors;
 static int plfstrt, plfstop;
 static int sprite_minx, sprite_maxx;
+static int first_bpl_vpos;
+static int last_ddf_pix_hpos;
 static int last_decide_line_hpos;
 static int last_fetch_hpos, last_sprite_hpos;
 static int diwfirstword, diwlastword;
 static int last_hdiw;
 static enum diw_states diwstate, hdiwstate, ddfstate;
 static int bpl_hstart;
+
+int first_planes_vpos, last_planes_vpos;
+static int first_bplcon0, first_bplcon0_old;
+static int first_planes_vpos_old, last_planes_vpos_old;
+int diwfirstword_total, diwlastword_total;
+int ddffirstword_total, ddflastword_total;
+static int diwfirstword_total_old, diwlastword_total_old;
+static int ddffirstword_total_old, ddflastword_total_old;
+bool vertical_changed, horizontal_changed;
+int firstword_bplcon1;
 
 static int last_copper_hpos;
 static int copper_access;
@@ -803,6 +828,18 @@ static void record_color_change2 (int hpos, int regno, uae_u32 value)
 	curr_color_changes[next_color_change].value = value;
 	next_color_change++;
   curr_color_changes[next_color_change].regno = -1;
+}
+
+static bool isehb(uae_u16 bplcon0, uae_u16 bplcon2)
+{
+	bool bplehb;
+	if (currprefs.chipset_mask & CSMASK_AGA)
+		bplehb = (bplcon0 & 0x7010) == 0x6000;
+	else if (currprefs.chipset_mask & CSMASK_ECS_DENISE)
+		bplehb = ((bplcon0 & 0xFC00) == 0x6000 || (bplcon0 & 0xFC00) == 0x7000);
+	else
+		bplehb = ((bplcon0 & 0xFC00) == 0x6000 || (bplcon0 & 0xFC00) == 0x7000) && !currprefs.cs_denisenoehb;
+	return bplehb;
 }
 
 // OCS/ECS, lores, 7 planes = 4 "real" planes + BPL5DAT and BPL6DAT as static 5th and 6th plane
@@ -2529,18 +2566,23 @@ static bool issprbrd (int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 	return brdsprt && !ce_is_borderblank(current_colors.extra);
 }
 
-static void record_register_change (int hpos, int regno, uae_u16 value)
+static void record_register_change(int hpos, int regno, uae_u16 value)
 {
-  if (regno == 0x100) { // BPLCON0
-	  if (value & 0x800)
-	    thisline_decision.ham_seen = 1;
-		isbrdblank (hpos, value, bplcon3);
-		issprbrd (hpos, value, bplcon3);
-	} else if (regno == 0x106) { // BPLCON3
-		isbrdblank (hpos, bplcon0, value);
-		issprbrd (hpos, bplcon0, value);
-  }
-  record_color_change (hpos, regno + 0x1000, value);
+	if (regno == 0x100) { // BPLCON0
+		if (value & 0x800)
+			thisline_decision.ham_seen = 1;
+		thisline_decision.ehb_seen = isehb(value, bplcon2);
+		isbrdblank(hpos, value, bplcon3);
+		issprbrd(hpos, value, bplcon3);
+	}
+	else if (regno == 0x104) { // BPLCON2
+		thisline_decision.ehb_seen = isehb(bplcon0, value);
+	}
+	else if (regno == 0x106) { // BPLCON3
+		isbrdblank(hpos, bplcon0, value);
+		issprbrd(hpos, bplcon0, value);
+	}
+	record_color_change(hpos, regno + 0x1000, value);
 }
 
 typedef int sprbuf_res_t, cclockres_t, hwres_t, bplres_t;
@@ -3131,6 +3173,7 @@ static void reset_decisions(void)
 	thisline_decision.plfleft = -1;
 	thisline_decision.plflinelen = -1;
 	thisline_decision.ham_seen = !!(bplcon0 & 0x800);
+	thisline_decision.ehb_seen = !!isehb(bplcon0, bplcon2);
 	thisline_decision.ham_at_start = !!(bplcon0 & 0x800);
 	thisline_decision.bordersprite_seen = issprbrd(-1, bplcon0, bplcon3);
 	thisline_decision.xor_seen = (bplcon4 & 0xff00) != 0;
@@ -3203,6 +3246,7 @@ static void reset_decisions(void)
 	reset_bpl_vars();
 
 	last_decide_line_hpos = -(DDF_OFFSET + 1);
+	last_ddf_pix_hpos = -1;
 	last_sprite_hpos = -1;
 	last_fetch_hpos = -1;
 
@@ -3284,7 +3328,7 @@ static bool changed_chipset_refresh (void)
 	return stored_chipset_refresh != get_chipset_refresh ();
 }
 
-static void compute_framesync(void)
+void compute_framesync(void)
 {
 	int islace = interlace_seen ? 1 : 0;
 	bool found = false;
@@ -3557,6 +3601,8 @@ static void calcdiw (void)
 	
 	plfstrt = ddfstrt - DDF_OFFSET;
 	plfstop = ddfstop - DDF_OFFSET;
+
+	diw_change = 2;
 }
 
 /* display mode changed (lores, doubling etc..), recalculate everything */
@@ -4103,14 +4149,17 @@ static void BPLCON0_Denise (int hpos, uae_u16 v, bool immediate)
 		return;
 
 	bplcon0dd = -1;
-
+	// fake unused 0x0080 bit as an EHB bit (see below)
+	if (isehb(bplcon0d, bplcon2))
+		v |= 0x80;
 	if (immediate) {
-		record_register_change (hpos, 0x100, v);
-	} else {
-	  record_register_change (hpos, 0x100, (bplcon0d & ~(0x800 | 0x400 | 0x80)) | (v & (0x0800 | 0x400 | 0x80 | 0x01)));
+		record_register_change(hpos, 0x100, v);
+	}
+	else {
+		record_register_change(hpos, 0x100, (bplcon0d & ~(0x800 | 0x400 | 0x80)) | (v & (0x0800 | 0x400 | 0x80 | 0x01)));
 	}
 
-	bplcon0d = v;
+	bplcon0d = v & ~0x80;
 
 	if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
 		decide_sprites(-1, hpos);
@@ -5570,11 +5619,51 @@ static void init_sprites (void)
 
 static void init_hardware_frame(void)
 {
+	first_bpl_vpos = -1;
 	next_lineno = 0;
 	prev_lineno = -1;
 	nextline_how = nln_normal;
 	diwstate = DIW_waiting_start;
 	ddfstate = DIW_waiting_start;
+	
+	if (first_bplcon0 != first_bplcon0_old) {
+		vertical_changed = horizontal_changed = true;
+	}
+	first_bplcon0_old = first_bplcon0;
+
+	if (first_planes_vpos != first_planes_vpos_old ||
+		last_planes_vpos != last_planes_vpos_old) {
+		vertical_changed = true;
+	}
+	first_planes_vpos_old = first_planes_vpos;
+	last_planes_vpos_old = last_planes_vpos;
+
+	if (diwfirstword_total != diwfirstword_total_old ||
+		diwlastword_total != diwlastword_total_old ||
+		ddffirstword_total != ddffirstword_total_old ||
+		ddflastword_total != ddflastword_total_old) {
+		horizontal_changed = true;
+	}
+	diwfirstword_total_old = diwfirstword_total;
+	diwlastword_total_old = diwlastword_total;
+	ddffirstword_total_old = ddffirstword_total;
+	ddflastword_total_old = ddflastword_total;
+
+	first_planes_vpos = 0;
+	last_planes_vpos = 0;
+	diwfirstword_total = max_diwlastword;
+	diwlastword_total = 0;
+	ddffirstword_total = max_diwlastword;
+	ddflastword_total = 0;
+	plflastline_total = 0;
+	plffirstline_total = current_maxvpos();
+	first_bplcon0 = 0;
+	autoscale_bordercolors = 0;
+
+	for (int i = 0; i < MAX_SPRITES; i++) {
+		spr[i].ptxhpos = MAXHPOS;
+		spr[i].ptxvpos2 = -1;
+	}
 	plf_state = plf_end;
 }
 
@@ -6289,6 +6378,55 @@ static void hsync_handler_post(bool onvsync)
 	/* See if there's a chance of a copper wait ending this line.  */
 	cop_state.hpos = 0;
 	compute_spcflag_copper(maxhpos);
+
+	if (GET_PLANES(bplcon0) > 0 && dmaen(DMA_BITPLANE)) {
+		if (first_bplcon0 == 0)
+			first_bplcon0 = bplcon0;
+		if (vpos > last_planes_vpos)
+			last_planes_vpos = vpos;
+		if (vpos >= minfirstline && first_planes_vpos == 0) {
+			first_planes_vpos = vpos > minfirstline ? vpos - 1 : vpos;
+		}
+		else if (vpos >= current_maxvpos() - 1) {
+			last_planes_vpos = current_maxvpos();
+		}
+	}
+
+	if (diw_change == 0) {
+		if (vpos >= first_planes_vpos && vpos <= last_planes_vpos) {
+			int diwlastword_lores = diwlastword;
+			int diwfirstword_lores = diwfirstword;
+			if (diwlastword_lores > diwlastword_total) {
+				diwlastword_total = diwlastword_lores;
+				if (diwlastword_total > coord_diw_lores_to_window_x(hsyncstartpos * 2))
+					diwlastword_total = coord_diw_lores_to_window_x(hsyncstartpos * 2);
+			}
+			if (diwfirstword_lores < diwfirstword_total) {
+				diwfirstword_total = diwfirstword_lores;
+				if (diwfirstword_total < coord_diw_lores_to_window_x(hsyncendpos * 2))
+					diwfirstword_total = coord_diw_lores_to_window_x(hsyncendpos * 2);
+				firstword_bplcon1 = bplcon1;
+			}
+		}
+		if (diwstate == DIW_waiting_stop) {
+			int f = 8 << fetchmode;
+			if (plfstrt + f < ddffirstword_total + f)
+				ddffirstword_total = plfstrt + f;
+			if (plfstop + 2 * f > ddflastword_total + 2 * f)
+				ddflastword_total = plfstop + 2 * f;
+		}
+		if ((plffirstline < plffirstline_total || (plffirstline_total == minfirstline && vpos > minfirstline)) && plffirstline < maxvpos / 2) {
+			firstword_bplcon1 = bplcon1;
+			if (plffirstline < minfirstline)
+				plffirstline_total = minfirstline;
+			else
+				plffirstline_total = plffirstline;
+		}
+		if (plflastline > plflastline_total && plflastline > plffirstline_total && plflastline > maxvpos / 2)
+			plflastline_total = plflastline;
+	}
+	if (diw_change > 0)
+		diw_change--;
 }
 
 static void init_regtypes (void)

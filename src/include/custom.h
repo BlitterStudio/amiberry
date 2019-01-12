@@ -112,10 +112,12 @@ STATIC_INLINE uae_u16 INTREQR (void)
 
 extern int maxhpos;
 extern int maxvpos, maxvpos_nom, maxvpos_display;
+extern int hsyncstartpos, hsyncendpos;
 extern int minfirstline;
 extern double vblank_hz, fake_vblank_hz;
 extern double hblank_hz;
 extern int doublescan;
+extern bool programmedmode;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002
@@ -177,5 +179,6 @@ extern unsigned long idletime;
 
 extern int current_maxvpos (void);
 extern struct chipset_refresh *get_chipset_refresh (void);
+extern void compute_framesync(void);
 
 #endif /* UAE_CUSTOM_H */
