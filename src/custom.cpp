@@ -39,7 +39,12 @@
 
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
+#define AUTOSCALE_SPRITES 1
+#define ALL_SUBPIXEL 1
 
+#define SPRBORDER 0
+
+#ifdef AMIBERRY
 extern int speedup_cycles_jit_pal;
 extern int speedup_cycles_jit_ntsc;
 extern int speedup_cycles_nonjit;
@@ -47,6 +52,7 @@ extern int speedup_timelimit_jit;
 extern int speedup_timelimit_nonjit;
 extern int speedup_timelimit_jit_turbo;
 extern int speedup_timelimit_nonjit_turbo;
+#endif
 
 STATIC_INLINE bool nocustom (void)
 {
@@ -70,15 +76,32 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
+#ifdef AMIBERRY
 int pissoff_value = speedup_cycles_jit_pal * CYCLE_UNIT;
 int speedup_timelimit = speedup_timelimit_jit;
+#endif
+
+static unsigned int n_consecutive_skipped = 0;
+static unsigned int total_skipped = 0;
+
+extern int cpu_last_stop_vpos, cpu_stopped_lines;
+static int cpu_sleepmode, cpu_sleepmode_cnt;
+
+extern int vsync_activeheight, vsync_totalheight;
+extern float vsync_vblank, vsync_hblank;
+
+STATIC_INLINE void sync_copper(int hpos);
 
 /* Events */
+
+unsigned long int vsync_cycles;
+static int extra_cycle;
 
 static int rpt_did_reset;
 struct ev eventtab[ev_max];
 struct ev2 eventtab2[ev2_max];
 
+int hpos_offset;
 int vpos;
 static int vpos_count, vpos_count_diff;
 int lof_store; // real bit in custom registers
@@ -91,10 +114,15 @@ static int lof_changed = 0, lof_changing = 0, interlace_changed = 0;
 static int lof_changed_previous_field;
 static int vposw_change;
 static bool lof_lace;
+static bool bplcon0_interlace_seen;
+static int scandoubled_line;
 static bool vsync_rendered, frame_rendered, frame_shown;
 static int vsynctimeperline;
 static int frameskiptime;
-static int cia_hsync;
+static int scanlinecount;
+static int cia_hsync; 
+static bool toscr_scanline_complex_bplcon1;
+static bool spr_width_64_seen;
 
 #define LOF_TOGGLES_NEEDED 3
 static int lof_togglecnt_lace, lof_togglecnt_nlace;
@@ -103,7 +131,6 @@ static int vpos_previous, hpos_previous;
 
 static uae_u32 sprtaba[256],sprtabb[256];
 static uae_u32 sprite_ab_merge[256];
-
 /* Tables for collision detection.  */
 static uae_u32 sprclx[16], clxmask[16];
 
@@ -118,16 +145,19 @@ uae_u16 intreq;
 uae_u16 dmacon;
 uae_u16 adkcon; /* used by audio code */
 uae_u32 last_custom_value1;
+uae_u16 last_custom_value2;
 
-static uae_u32 cop1lc,cop2lc,copcon;
+static uae_u32 cop1lc, cop2lc, copcon;
  
 int maxhpos = MAXHPOS_PAL;
+int maxhpos_short = MAXHPOS_PAL;
 int maxvpos = MAXVPOS_PAL;
 int maxvpos_nom = MAXVPOS_PAL; // nominal value (same as maxvpos but "faked" maxvpos in fake 60hz modes)
 int maxvpos_display = MAXVPOS_PAL; // value used for display size
 int hsyncendpos, hsyncstartpos;
 static int maxvpos_total = 511;
 int minfirstline = VBLANK_ENDLINE_PAL;
+int firstblankedline;
 static int equ_vblank_endline = EQU_ENDLINE_PAL;
 static bool equ_vblank_toggle = true;
 double vblank_hz = VBLANK_HZ_PAL, fake_vblank_hz, vblank_hz_nom;
@@ -135,14 +165,19 @@ double hblank_hz;
 static float vblank_hz_lof, vblank_hz_shf, vblank_hz_lace;
 static struct chipset_refresh *stored_chipset_refresh;
 int doublescan;
+bool programmedmode;
 int syncbase;
 static int fmode_saved, fmode;
-static uae_u16 beamcon0, new_beamcon0;
+uae_u16 beamcon0, new_beamcon0;
 static bool varsync_changed;
-static uae_u16 vtotal = MAXVPOS_PAL, htotal = MAXHPOS_PAL;
+uae_u16 vtotal = MAXVPOS_PAL, htotal = MAXHPOS_PAL;
+static int maxvpos_stored, maxhpos_stored;
 static uae_u16 hsstop, hbstrt, hbstop, vsstop, vbstrt, vbstop, hsstrt, vsstrt, hcenter;
+static int ciavsyncmode;
 static int diw_hstrt, diw_hstop;
 static int diw_hcounter;
+static uae_u16 refptr;
+static uae_u32 refptr_val;
 
 #define HSYNCTIME (maxhpos * CYCLE_UNIT)
 
@@ -5943,7 +5978,7 @@ static void vsync_handler_pre(void)
 	if (!vsync_rendered) {
 		frame_time_t start, end;
 		start = read_processor_time();
-		vsync_handle_redraw();
+		vsync_handle_redraw(lof_store, lof_changed, bplcon0, bplcon3, isvsync_chipset() >= 0);
 		vsync_rendered = true;
 		end = read_processor_time();
 		frameskiptime += end - start;
