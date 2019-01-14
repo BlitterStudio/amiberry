@@ -39,7 +39,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -53,7 +53,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
