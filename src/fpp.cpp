@@ -2326,6 +2326,7 @@ void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 
 void fpu_reset (void)
 {
+	currprefs.fpu_mode = changed_prefs.fpu_mode;
 #if defined(CPU_i386) || defined(CPU_x86_64)
 	init_fpucw_x87();
 #endif
