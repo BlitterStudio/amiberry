@@ -316,15 +316,19 @@ int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int 
 
 	if (hfd->drive_empty)
 		return 0;
+
 	if (offset < hfd->virtual_size)
 	{
 		uae_u64 len2 = offset + len <= hfd->virtual_size ? len : hfd->virtual_size - offset;
 		if (!hfd->virtual_rdb)
 			return 0;
 		memcpy(buffer, hfd->virtual_rdb + offset, len2);
-		return len2;
+		len -= len2;
+		if (len <= 0)
+			return len2;
 	}
 	offset -= hfd->virtual_size;
+
 	while (len > 0)
 	{
 		int maxlen;
@@ -332,8 +336,10 @@ int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int 
 		if (hfd->physsize < CACHE_SIZE)
 		{
 			hfd->cache_valid = 0;
-			hdf_seek(hfd, offset);
-			poscheck(hfd, len);
+			if (hdf_seek(hfd, offset))
+				return got;
+			if (hfd->physsize)
+				poscheck(hfd, len);
 			if (hfd->handle_valid == HDF_HANDLE_FILE)
 			{
 				ret = fread(hfd->cache, 1, len, hfd->handle->f);
@@ -368,8 +374,12 @@ static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 		return 0;
 	if (hfd->dangerous)
 		return 0;
+	if (len == 0)
+		return 0;
+
 	hfd->cache_valid = 0;
-	hdf_seek(hfd, offset);
+	if (hdf_seek(hfd, offset))
+		return 0;
 	poscheck(hfd, len);
 	memcpy(hfd->cache, buffer, len);
 	if (hfd->handle_valid == HDF_HANDLE_FILE)

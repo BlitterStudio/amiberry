@@ -863,21 +863,21 @@ void decide_blitter (int hpos)
 	}
 }
 
-static void blitter_force_finish (void)
+static void blitter_force_finish(void)
 {
-  uae_u16 odmacon;
-  if (bltstate == BLT_done)
-    return;
-  if (bltstate != BLT_done) {
-	  /* blitter is currently running
-	   * force finish (no blitter state support yet)
-     */
-	  odmacon = dmacon;
-	  dmacon |= DMA_MASTER | DMA_BLITTER;
-	  actually_do_blit ();
-		blitter_done (current_hpos ());
-	  dmacon = odmacon;
-  }
+	uae_u16 odmacon;
+	if (bltstate == BLT_done)
+		return;
+	if (bltstate != BLT_done) {
+		/* blitter is currently running
+		 * force finish (no blitter state support yet)
+	   */
+		odmacon = dmacon;
+		dmacon |= DMA_MASTER | DMA_BLITTER;
+		actually_do_blit();
+		blitter_done(current_hpos());
+		dmacon = odmacon;
+	}
 }
 
 static bool invstate (void)
