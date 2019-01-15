@@ -2576,32 +2576,33 @@ static bool is_writeprotected(Unit *unit)
 
 static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info, bool disk_info)
 {
-  struct fs_usage fsu;
+	struct fs_usage fsu;
 	int ret, err = ERROR_NO_FREE_STORE;
 	int blocksize, nr;
 	uae_u32 dostype;
 	bool fs = false, media = false;
-	uae_u8 buf[36] =  { 0 }; // InfoData
+	uae_u8 buf[36] = { 0 }; // InfoData
     
 	blocksize = 512;
 	dostype = get_long(unit->volume + 32);
 	nr = unit->unit;
-  if (unit->volflags & MYVOLUMEINFO_ARCHIVE) {
-  	ret = zfile_fs_usage_archive (unit->ui.rootdir, 0, &fsu);
+	if (unit->volflags & MYVOLUMEINFO_ARCHIVE) {
+		ret = zfile_fs_usage_archive(unit->ui.rootdir, 0, &fsu);
 		fs = true;
-		media = filesys_isvolume (unit) != 0;
-	} else {
-	  ret = get_fs_usage (unit->ui.rootdir, 0, &fsu);
-		if (ret)
-			err = dos_errno ();
-		fs = true;
-		media = filesys_isvolume (unit) != 0;
+		media = filesys_isvolume(unit) != 0;
 	}
-  if (ret != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-		PUT_PCK_RES2 (packet, err);
-  	return;
-  }
+	else {
+		ret = get_fs_usage(unit->ui.rootdir, 0, &fsu);
+		if (ret)
+			err = dos_errno();
+		fs = true;
+		media = filesys_isvolume(unit) != 0;
+	}
+	if (ret != 0) {
+		PUT_PCK_RES1(packet, DOS_FALSE);
+		PUT_PCK_RES2(packet, err);
+		return;
+	}
 	put_long_host(buf, 0); /* errors */
 	put_long_host(buf + 4, nr); /* unit number */
 	put_long_host(buf + 8, is_writeprotected(unit) ? 80 : 82); /* state  */
@@ -2609,25 +2610,27 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 	put_long_host(buf + 32, 0); /* inuse */
 	if (unit->ui.unknown_media) {
 		if (!disk_info) {
-			PUT_PCK_RES1 (packet, DOS_FALSE);
-			PUT_PCK_RES2 (packet, ERROR_NOT_A_DOS_DISK);
+			PUT_PCK_RES1(packet, DOS_FALSE);
+			PUT_PCK_RES2(packet, ERROR_NOT_A_DOS_DISK);
 			return;
 		}
 		put_long_host(buf + 12, 0);
 		put_long_host(buf + 16, 0);
 		put_long_host(buf + 24, ('B' << 24) | ('A' << 16) | ('D' << 8) | (0 << 0)); /* ID_UNREADABLE_DISK */
 		put_long_host(buf + 28, 0);
-	} else if (!media) {
+	}
+	else if (!media) {
 		if (!disk_info) {
-			PUT_PCK_RES1 (packet, DOS_FALSE);
-			PUT_PCK_RES2 (packet, ERROR_NO_DISK);
+			PUT_PCK_RES1(packet, DOS_FALSE);
+			PUT_PCK_RES2(packet, ERROR_NO_DISK);
 			return;
 		}
 		put_long_host(buf + 12, 0);
 		put_long_host(buf + 16, 0);
 		put_long_host(buf + 24, -1); /* ID_NO_DISK_PRESENT */
 		put_long_host(buf + 28, 0);
-	} else {
+	}
+	else {
 		if (fs && currprefs.filesys_limit) {
 			if (fsu.total > (uae_s64)currprefs.filesys_limit * 1024) {
 				uae_s64 oldtotal = fsu.total;
@@ -2641,10 +2644,10 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 			numblocks = fsu.total / blocksize;
 			if (numblocks <= 10)
 				numblocks = 10;
-			if (numblocks <= 0x7fffffff)
+			if (numblocks < 0x02000000)
 				break;
 			blocksize *= 2;
-	  }
+		}
 		uae_s64 inuse = (numblocks * blocksize - fsu.avail) / blocksize;
 		if (inuse > numblocks)
 			inuse = numblocks;
@@ -2657,7 +2660,7 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 		put_long_host(buf + 32, (get_long(unit->volume + 28) || unit->keys) ? -1 : 0); /* inuse */
 	}
 	trap_put_bytes(ctx, buf, info, sizeof buf);
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1(packet, DOS_TRUE);
 }
 
 static void action_disk_info(TrapContext *ctx, Unit *unit, dpacket *packet)
