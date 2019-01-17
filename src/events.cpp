@@ -21,19 +21,19 @@ int is_syncline;
 frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
 int vsynctimebase;
 
-void events_schedule (void)
+void events_schedule(void)
 {
-  int i;
+	int i;
 
-  unsigned long int mintime = ~0L;
-  for (i = 0; i < ev_max; i++) {
-  	if (eventtab[i].active) {
-	    unsigned long int eventtime = eventtab[i].evtime - currcycle;
-	    if (eventtime < mintime)
-    		mintime = eventtime;
-  	}
-  }
-  nextevent = currcycle + mintime;
+	unsigned long int mintime = ~0L;
+	for (i = 0; i < ev_max; i++) {
+		if (eventtab[i].active) {
+			unsigned long int eventtime = eventtab[i].evtime - currcycle;
+			if (eventtime < mintime)
+				mintime = eventtime;
+		}
+	}
+	nextevent = currcycle + mintime;
 }
 
 void do_cycles_cpu_fastest (unsigned long cycles_to_add)

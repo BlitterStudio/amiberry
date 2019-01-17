@@ -79,6 +79,7 @@ static int picasso96_BT = BT_uaegfx;
 static int picasso96_GCT = GCT_Unknown;
 static int picasso96_PCT = PCT_Unknown;
 
+int p96refresh_active;
 bool have_done_picasso = true; /* For the JIT compiler */
 static int p96syncrate;
 

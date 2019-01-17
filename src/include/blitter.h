@@ -33,15 +33,15 @@ extern uae_u16 bltcon0,bltcon1;
 extern uae_u32 bltapt,bltbpt,bltcpt,bltdpt;
 
 extern void maybe_blit2 (int);
-STATIC_INLINE void maybe_blit (int hack)
+STATIC_INLINE void maybe_blit(int hack)
 {
-  if (bltstate == BLT_done)
-  	return;
+	if (bltstate == BLT_done)
+		return;
 
-  if (savestate_state)
-  	return;
+	if (savestate_state)
+		return;
 
-  maybe_blit2(hack);
+	maybe_blit2(hack);
 }
 extern void reset_blit (int);
 extern int blitnasty (void);

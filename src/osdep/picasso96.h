@@ -634,6 +634,8 @@ extern void gfx_set_picasso_state (int on);
 extern uae_u8 *gfx_lock_picasso (void);
 extern void gfx_unlock_picasso (bool);
 
+extern int p96refresh_active;
+
 #define LIB_SIZE 34
 #define CARD_FLAGS LIB_SIZE
 #define CARD_EXECBASE (CARD_FLAGS + 2)
