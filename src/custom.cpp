@@ -8281,42 +8281,42 @@ static void gen_custom_tables(void)
 	}
 }
 
-int custom_init (void)
+int custom_init(void)
 {
 
 #ifdef AUTOCONFIG
 	if (uae_boot_rom_type) {
-  	uaecptr pos;
-    pos = here ();
+		uaecptr pos;
+		pos = here();
 
-    org (rtarea_base + 0xFFA0);
-    calltrap (deftrap (timehack_helper));
-    dw (RTS);
+		org(rtarea_base + 0xFFA0);
+		calltrap(deftrap(timehack_helper));
+		dw(RTS);
 
-    org (pos);
-  }
+		org(pos);
+	}
 #endif
 
-  gen_custom_tables ();
-  build_blitfilltable ();
+	gen_custom_tables();
+	build_blitfilltable();
 
-  drawing_init ();
+	drawing_init();
 
-  create_cycle_diagram_table ();
+	create_cycle_diagram_table();
 
-  return 1;
+	return 1;
 }
 
 /* Custom chip memory bank */
 
-static uae_u32 REGPARAM3 custom_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custom_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custom_bget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custom_lgeti (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custom_wgeti (uaecptr) REGPARAM;
-static void REGPARAM3 custom_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 custom_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 custom_bput (uaecptr, uae_u32) REGPARAM;
+static uae_u32 REGPARAM3 custom_lget(uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 custom_wget(uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 custom_bget(uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 custom_lgeti(uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 custom_wgeti(uaecptr) REGPARAM;
+static void REGPARAM3 custom_lput(uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 custom_wput(uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 custom_bput(uaecptr, uae_u32) REGPARAM;
 
 addrbank custom_bank = {
 	custom_lget, custom_wget, custom_bget,
@@ -8453,7 +8453,7 @@ static uae_u32 custom_wget2(uaecptr addr, bool byte)
 	uae_u32 v;
 	int hpos = current_hpos();
 
-	sync_copper_with_cpu(hpos, 1);
+	sync_copper_with_cpu(hpos, 1, addr);
 	v = custom_wget_1(hpos, addr, 0, byte);
 #ifdef ACTION_REPLAY
 #ifdef ACTION_REPLAY_COMMON
@@ -8532,14 +8532,14 @@ static int REGPARAM2 custom_wput_1(int hpos, uaecptr addr, uae_u32 value, int no
 	case 0x044: BLTAFWM(hpos, value); break;
 	case 0x046: BLTALWM(hpos, value); break;
 
-	case 0x050: BLTAPTH(hpos, value); break;
-	case 0x052: BLTAPTL(hpos, value); break;
-	case 0x04C: BLTBPTH(hpos, value); break;
-	case 0x04E: BLTBPTL(hpos, value); break;
-	case 0x048: BLTCPTH(hpos, value); break;
-	case 0x04A: BLTCPTL(hpos, value); break;
-	case 0x054: BLTDPTH(hpos, value); break;
-	case 0x056: BLTDPTL(hpos, value); break;
+	case 0x050: BLTAPTH(value); break;
+	case 0x052: BLTAPTL(value); break;
+	case 0x04C: BLTBPTH(value); break;
+	case 0x04E: BLTBPTL(value); break;
+	case 0x048: BLTCPTH(value); break;
+	case 0x04A: BLTCPTL(value); break;
+	case 0x054: BLTDPTH(value); break;
+	case 0x056: BLTDPTL(value); break;
 
 	case 0x058: BLTSIZE(hpos, value); break;
 
@@ -8549,7 +8549,7 @@ static int REGPARAM2 custom_wput_1(int hpos, uaecptr addr, uae_u32 value, int no
 	case 0x066: BLTDMOD(hpos, value); break;
 
 	case 0x070: BLTCDAT(hpos, value); break;
-	case 0x072: BLTBDAT(hpos, value); break;
+	case 0x072: BLTBDAT(value); break;
 	case 0x074: BLTADAT(hpos, value); break;
 
 	case 0x07E: DSKSYNC(hpos, value); break;
@@ -8674,8 +8674,8 @@ static int REGPARAM2 custom_wput_1(int hpos, uaecptr addr, uae_u32 value, int no
 		break;
 
 	case 0x36: JOYTEST(value); break;
-	case 0x5A: BLTCON0L(hpos, value); break;
-	case 0x5C: BLTSIZV(hpos, value); break;
+	case 0x5A: BLTCON0L(value); break;
+	case 0x5C: BLTSIZV(value); break;
 	case 0x5E: BLTSIZH(hpos, value); break;
 	case 0x1E4: DIWHIGH(hpos, value); break;
 #ifdef AGA
@@ -8703,28 +8703,28 @@ static int REGPARAM2 custom_wput_1(int hpos, uaecptr addr, uae_u32 value, int no
       /* writing to read-only register causes read access */
     default: 
 	    if (!noget) {
-			  custom_wget_1 (hpos, addr, 1);
+			  custom_wget_1 (hpos, addr, 1, false);
       }
 	    return 1;
   }
   return 0;
 }
 
-static void REGPARAM2 custom_wput (uaecptr addr, uae_u32 value)
+static void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
 {
-  int hpos = current_hpos ();
+	int hpos = current_hpos();
 
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
 		return;
 	}
-  sync_copper_with_cpu (hpos, 1, addr);
-  if (addr & 1) {
-  	addr &= ~1;
-  	custom_wput_1 (hpos, addr, (value >> 8) | (value & 0xff00), 0);
-  	custom_wput_1 (hpos, addr + 2, (value << 8) | (value & 0x00ff), 0);
-  	return;
-  }
-  custom_wput_1 (hpos, addr, value, 0);
+	sync_copper_with_cpu(hpos, 1, addr);
+	if (addr & 1) {
+		addr &= ~1;
+		custom_wput_1(hpos, addr, (value >> 8) | (value & 0xff00), 0);
+		custom_wput_1(hpos, addr + 2, (value << 8) | (value & 0x00ff), 0);
+		return;
+	}
+	custom_wput_1(hpos, addr, value, 0);
 }
 
 static void REGPARAM2 custom_bput (uaecptr addr, uae_u32 value)
@@ -8734,23 +8734,26 @@ static void REGPARAM2 custom_bput (uaecptr addr, uae_u32 value)
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
 		return;
 	}
-	if (aga_mode) {
-	  if (addr & 1) {
-		  rval = value & 0xff;
-	  } else {
-		  rval = (value << 8) | (value & 0xFF);
-	  }
-	} else {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
+		if (addr & 1) {
+			rval = value & 0xff;
+		}
+		else {
+			rval = (value << 8) | (value & 0xFF);
+		}
+	}
+	else {
 		rval = (value << 8) | (value & 0xff);
 	}
 
 	if (currprefs.cs_bytecustomwritebug) {
 		if (addr & 1)
-      custom_wput (addr & ~1, rval);
+			custom_wput(addr & ~1, rval);
 		else
-			custom_wput (addr, value << 8);
-	} else {
-		custom_wput (addr & ~1, rval);
+			custom_wput(addr, value << 8);
+	}
+	else {
+		custom_wput(addr & ~1, rval);
 	}
 }
 
@@ -8765,16 +8768,16 @@ static void REGPARAM2 custom_lput(uaecptr addr, uae_u32 value)
 
 #ifdef SAVESTATE
 
-void custom_prepare_savestate (void)
+void custom_prepare_savestate(void)
 {
-  int i;
+	int i;
 
-  for (i = 0; i < ev2_max; i++) {
-  	if (eventtab2[i].active) {
-	    eventtab2[i].active = 0;
-	    eventtab2[i].handler(eventtab2[i].data);
-  	}
-  }
+	for (i = 0; i < ev2_max; i++) {
+		if (eventtab2[i].active) {
+			eventtab2[i].active = 0;
+			eventtab2[i].handler(eventtab2[i].data);
+		}
+	}
 }
 
 #define RB restore_u8 ()
@@ -8783,414 +8786,457 @@ void custom_prepare_savestate (void)
 #define RW restore_u16 ()
 #define RL restore_u32 ()
 
-uae_u8 *restore_custom (uae_u8 *src)
+uae_u8 *restore_custom(uae_u8 *src)
 {
-  uae_u16 dsklen, dskbytr, ru16;
-  int dskpt;
-  int i;
+	uae_u16 dsklen, dskbytr, ru16;
+	int dskpt;
+	int i;
 
-  audio_reset ();
+	audio_reset();
 
-  changed_prefs.chipset_mask = currprefs.chipset_mask = RL & CSMASK_MASK;
-  update_mirrors();
-  blt_info.bltddat = RW;	/* 000 BLTDDAT */
-  ru16 = RW;	    /* 002 DMACONR -> see also 096 */
-  if((ru16 & 0x4000) == 0)
-    bltstate = BLT_done;
-  blt_info.blitzero = (ru16 & 0x2000 ? 1 : 0);
-  RW;				/* 004 VPOSR */
-  RW;				/* 006 VHPOSR */
-  RW;		    /* 008 DSKDATR (dummy register) */
+	changed_prefs.chipset_mask = currprefs.chipset_mask = RL & CSMASK_MASK;
+	update_mirrors();
+	blt_info.bltddat = RW;	/* 000 BLTDDAT */
+	ru16 = RW;	    /* 002 DMACONR -> see also 096 */
+	if ((ru16 & 0x4000) == 0)
+		bltstate = BLT_done;
+	blt_info.blitzero = (ru16 & 0x2000 ? 1 : 0);
+	RW;				/* 004 VPOSR */
+	RW;				/* 006 VHPOSR */
+	RW;		    /* 008 DSKDATR (dummy register) */
 	JOYSET(0, RW);	/* 00A JOY0DAT */
 	JOYSET(1, RW);	/* 00C JOY1DAT */
-  clxdat = RW;		/* 00E CLXDAT */
-  RW;				      /* 010 ADKCONR -> see 09E */
-  RW;				      /* 012 POT0DAT */
-  RW;				      /* 014 POT1DAT */
-  RW;				      /* 016 POTINP -> see 034 */
-  RW;				      /* 018 SERDATR* */
-  dskbytr = RW;		/* 01A DSKBYTR */
-  RW;				      /* 01C INTENAR -> see 09A */
-  RW;				      /* 01E INTREQR -> see 09C */
-  dskpt =  RL;		/* 020-022 DSKPT */
-  dsklen = RW;		/* 024 DSKLEN */
-  RW;				      /* 026 DSKDAT */
-  RW;				      /* 028 REFPTR */
-  i = RW; lof_store = lof_current = (i & 0x8000) ? 1 : 0;	/* 02A VPOSW */
-  RW;				      /* 02C VHPOSW */
-  COPCON(RW);	    /* 02E COPCON */
-  RW;				      /* 030 SERDAT */
-  RW;				      /* 032 SERPER* */
-	potgo_value = 0; POTGO (RW); /* 034 POTGO */
-  RW;				      /* 036 JOYTEST* */
-  RW;				      /* 038 STREQU */
-  RW;				      /* 03A STRVHBL */
-  RW;				      /* 03C STRHOR */
-  RW;				      /* 03E STRLONG */
-  BLTCON0(RW);	  /* 040 BLTCON0 */
-  BLTCON1(RW);	  /* 042 BLTCON1 */
-  BLTAFWM(RW);	  /* 044 BLTAFWM */
-  BLTALWM(RW);	  /* 046 BLTALWM */
-  bltcpt = RL; 	  /* 048-04B BLTCPT */
-  bltbpt = RL; 	  /* 04C-04F BLTBPT */
-  bltapt = RL; 	  /* 050-053 BLTAPT */
-  bltdpt = RL; 	  /* 054-057 BLTDPT */
-  RW;				      /* 058 BLTSIZE */
-  RW;				      /* 05A BLTCON0L -> see 040 */
-  blt_info.vblitsize=RW;  /* 05C BLTSIZV */
-  blt_info.hblitsize=RW;	/* 05E BLTSIZH */
-  blt_info.bltcmod = RW;  /* 060 BLTCMOD */
-  blt_info.bltbmod = RW;  /* 062 BLTBMOD */
-  blt_info.bltamod = RW;  /* 064 BLTAMOD */
-  blt_info.bltdmod = RW;  /* 066 BLTDMOD */
-  RW;				/* 068 ? */
-  RW;				/* 06A ? */
-  RW;				/* 06C ? */
-  RW;				/* 06E ? */
-  blt_info.bltcdat =RW;   /* 070 BLTCDAT */
-  BLTBDAT(RW);	  /* 072 BLTBDAT */
-  blt_info.bltadat=RW;    /* 074 BLTADAT */
-  RW;				/* 076 ? */
-  RW;				/* 078 ? */
-  RW;				/* 07A ? */
-  RW;				/* 07C LISAID */
-  ru16=RW; DSKSYNC(-1, ru16);	/* 07E DSKSYNC */
-  cop1lc =  RL;		/* 080/082 COP1LC */
-  cop2lc =  RL;		/* 084/086 COP2LC */
-  RW;				      /* 088 COPJMP1 */
-  RW;				      /* 08A COPJMP2 */
-  RW;				      /* 08C COPINS */
-  diwstrt = RW;		/* 08E DIWSTRT */
-  diwstop = RW;		/* 090 DIWSTOP */
-  ddfstrt = RW;		/* 092 DDFSTRT */
-  ddfstop = RW;		/* 094 DDFSTOP */
-  dmacon = RW & ~(0x2000|0x4000); /* 096 DMACON */
-  CLXCON(RW);	    /* 098 CLXCON */
-  intena = RW;		/* 09A INTENA */
-  intreq = RW;	  /* 09C INTREQ */
-  adkcon = RW;		/* 09E ADKCON */
-  /* 0A0 - 0DE Audio regs */
-  for (i = 0; i < 8; i++)
-  	bplpt[i] = RL;
-  bplcon0 = RW;		/* 100 BPLCON0 */
-  bplcon1 = RW;		/* 102 BPLCON1 */
-  bplcon2 = RW;		/* 104 BPLCON2 */
-  bplcon3 = RW;		/* 106 BPLCON3 */
-  bpl1mod = RW;		/* 108 BPL1MOD */
-  bpl2mod = RW;		/* 10A BPL2MOD */
-  bplcon4 = RW;		/* 10C BPLCON4 */
-  CLXCON2(RW);	  /* 10E CLXCON2* */
-  for(i = 0; i < 8; i++)
-  	fetched[i] = RW;			/*     BPLXDAT */
-  /* 120 - 17E Sprite regs */
-  for(i = 0; i < 32; i++) {
+	clxdat = RW;		/* 00E CLXDAT */
+	RW;				      /* 010 ADKCONR -> see 09E */
+	RW;				      /* 012 POT0DAT */
+	RW;				      /* 014 POT1DAT */
+	RW;				      /* 016 POTINP -> see 034 */
+	RW;				      /* 018 SERDATR* */
+	dskbytr = RW;		/* 01A DSKBYTR */
+	RW;				      /* 01C INTENAR -> see 09A */
+	RW;				      /* 01E INTREQR -> see 09C */
+	dskpt = RL;		/* 020-022 DSKPT */
+	dsklen = RW;		/* 024 DSKLEN */
+	RW;				      /* 026 DSKDAT */
+	RW;				      /* 028 REFPTR */
+	i = RW; lof_store = lof_current = (i & 0x8000) ? 1 : 0; lol = (i & 0x0080) ? 1 : 0; /* 02A VPOSW */
+	RW;						/* 02C VHPOSW */
+	COPCON(RW);	    /* 02E COPCON */
+	RW;				      /* 030 SERDAT */
+	RW;				      /* 032 SERPER* */
+	potgo_value = 0; POTGO(RW); /* 034 POTGO */
+	RW;				      /* 036 JOYTEST* */
+	RW;				      /* 038 STREQU */
+	RW;				      /* 03A STRVHBL */
+	RW;				      /* 03C STRHOR */
+	RW;				      /* 03E STRLONG */
+	BLTCON0(0, RW);		/* 040 BLTCON0 */
+	BLTCON1(0, RW);		/* 042 BLTCON1 */
+	BLTAFWM(0, RW);		/* 044 BLTAFWM */
+	BLTALWM(0, RW);		/* 046 BLTALWM */
+	BLTCPTH(RW); BLTCPTL(RW);	/* 048-04B BLTCPT */
+	BLTBPTH(RW); BLTBPTL(RW);	/* 04C-04F BLTBPT */
+	BLTAPTH(RW); BLTAPTL(RW);	/* 050-053 BLTAPT */
+	BLTDPTH(RW); BLTDPTL(RW);	/* 054-057 BLTDPT */
+	RW;				      /* 058 BLTSIZE */
+	RW;				      /* 05A BLTCON0L -> see 040 */
+	blt_info.vblitsize = RW;  /* 05C BLTSIZV */
+	blt_info.hblitsize = RW;	/* 05E BLTSIZH */
+	BLTCMOD(0, RW);		/* 060 BLTCMOD */
+	BLTBMOD(0, RW);		/* 062 BLTBMOD */
+	BLTAMOD(0, RW);		/* 064 BLTAMOD */
+	BLTDMOD(0, RW);		/* 066 BLTDMOD */
+	RW;				/* 068 ? */
+	RW;				/* 06A ? */
+	RW;				/* 06C ? */
+	RW;				/* 06E ? */
+	BLTCDAT(0, RW);		/* 070 BLTCDAT */
+	BLTBDAT(RW);		/* 072 BLTBDAT */
+	BLTADAT(0, RW);		/* 074 BLTADAT */
+	RW;				/* 076 ? */
+	RW;				/* 078 ? */
+	RW;				/* 07A ? */
+	RW;				/* 07C LISAID */
+	ru16 = RW; DSKSYNC(-1, ru16);	/* 07E DSKSYNC */
+	cop1lc = RL;		/* 080/082 COP1LC */
+	cop2lc = RL;		/* 084/086 COP2LC */
+	RW;				      /* 088 COPJMP1 */
+	RW;				      /* 08A COPJMP2 */
+	RW;				      /* 08C COPINS */
+	diwstrt = RW;		/* 08E DIWSTRT */
+	diwstop = RW;		/* 090 DIWSTOP */
+	ddfstrt = RW;		/* 092 DDFSTRT */
+	ddfstop = RW;		/* 094 DDFSTOP */
+	dmacon = RW & ~(0x2000 | 0x4000); /* 096 DMACON */
+	CLXCON(RW);			/* 098 CLXCON */
+	intena = intena_internal = RW;	/* 09A INTENA */
+	intreq = RW;			/* 09C INTREQ */
+	intreq_internal = intreq;
+	adkcon = RW;			/* 09E ADKCON */
+	for (i = 0; i < 8; i++)
+		bplptx[i] = bplpt[i] = RL;
+	bplcon0 = RW;			/* 100 BPLCON0 */
+	bplcon1 = RW;			/* 102 BPLCON1 */
+	bplcon2 = RW;			/* 104 BPLCON2 */
+	bplcon3 = RW;			/* 106 BPLCON3 */
+	bpl1mod = RW;			/* 108 BPL1MOD */
+	bpl2mod = RW;			/* 10A BPL2MOD */
+	bplcon4 = RW;			/* 10C BPLCON4 */
+	clxcon2 = RW;			/* 10E CLXCON2* */
+	for (i = 0; i < 8; i++)
+		fetched[i] = RW;			/*     BPLXDAT */
+	  /* 120 - 17E Sprite regs */
+	for (i = 0; i < 32; i++) {
 		uae_u16 v = RW;
-  	current_colors.color_regs_ecs[i] = v & 0xfff; /* 180-1BE COLORxx */
-  }
-  htotal = RW;		/* 1C0 HTOTAL */
-  hsstop = RW;		/* 1C2 HSTOP ? */
-  hbstrt = RW;		/* 1C4 HBSTRT ? */
-  hbstop = RW;		/* 1C6 HBSTOP ? */
-  vtotal = RW;		/* 1C8 VTOTAL */
-  vsstop = RW;		/* 1CA VSSTOP */
-  vbstrt = RW;		/* 1CC VBSTRT */
-  vbstop = RW;		/* 1CE VBSTOP */
-  RW;				/* 1D0 ? */
-  RW;				/* 1D2 ? */
-  RW;				/* 1D4 ? */
-  RW;				/* 1D6 ? */
-  RW;				/* 1D8 ? */
-  RW;				/* 1DA ? */
-  new_beamcon0 = RW;		/* 1DC BEAMCON0 */
-  hsstrt = RW;		/* 1DE HSSTRT */
-  vsstrt = RW;		/* 1E0 VSSTT */
-  hcenter = RW;		/* 1E2 HCENTER */
-  diwhigh = RW;		/* 1E4 DIWHIGH */
-  diwhigh_written = (diwhigh & 0x8000) ? 1 : 0;
-  hdiwstate = (diwhigh & 0x4000) ? DIW_waiting_stop : DIW_waiting_start;
-  diwhigh &= 0x3fff;
-  RW;				/* 1E6 ? */
-  RW;				/* 1E8 ? */
-  RW;				/* 1EA ? */
-  RW;				/* 1EC ? */
-  RW;				/* 1EE ? */
-  RW;				/* 1F0 ? */
-  RW;				/* 1F2 ? */
-  RW;				/* 1F4 ? */
-  RW;				/* 1F6 ? */
-  RW;				/* 1F8 ? */
-  i = RW;					/* 1FA ? */
-  if (i & 0x8000)
-	  currprefs.ntscmode = changed_prefs.ntscmode = i & 1;
+		current_colors.color_regs_ecs[i] = v & 0xfff; /* 180-1BE COLORxx */
+	}
+	htotal = RW;		/* 1C0 HTOTAL */
+	hsstop = RW;		/* 1C2 HSTOP ? */
+	hbstrt = RW;		/* 1C4 HBSTRT ? */
+	hbstop = RW;		/* 1C6 HBSTOP ? */
+	vtotal = RW;		/* 1C8 VTOTAL */
+	vsstop = RW;		/* 1CA VSSTOP */
+	vbstrt = RW;		/* 1CC VBSTRT */
+	vbstop = RW;		/* 1CE VBSTOP */
+	RW;				/* 1D0 ? */
+	RW;				/* 1D2 ? */
+	RW;				/* 1D4 ? */
+	RW;				/* 1D6 ? */
+	RW;				/* 1D8 ? */
+	RW;				/* 1DA ? */
+	new_beamcon0 = RW;		/* 1DC BEAMCON0 */
+	hsstrt = RW;		/* 1DE HSSTRT */
+	vsstrt = RW;		/* 1E0 VSSTT */
+	hcenter = RW;		/* 1E2 HCENTER */
+	diwhigh = RW;		/* 1E4 DIWHIGH */
+	diwhigh_written = (diwhigh & 0x8000) ? 1 : 0;
+	hdiwstate = (diwhigh & 0x4000) ? DIW_waiting_stop : DIW_waiting_start;
+	diwhigh &= 0x3fff;
+	RW;				/* 1E6 ? */
+	RW;				/* 1E8 ? */
+	RW;				/* 1EA ? */
+	RW;				/* 1EC ? */
+	RW;				/* 1EE ? */
+	RW;				/* 1F0 ? */
+	RW;				/* 1F2 ? */
+	RW;				/* 1F4 ? */
+	RW;				/* 1F6 ? */
+	RW;				/* 1F8 ? */
+	i = RW;					/* 1FA ? */
+	if (i & 0x8000)
+		currprefs.ntscmode = changed_prefs.ntscmode = i & 1;
 	fmode = fmode_saved = RW; /* 1FC FMODE */
-  last_custom_value1 = RW;	/* 1FE ? */
+	last_custom_value1 = last_custom_value2 = RW;/* 1FE ? */
 
 	current_colors.extra = 0;
-	if (isbrdblank (-1, bplcon0, bplcon3))
+	if (isbrdblank(-1, bplcon0, bplcon3))
 		current_colors.extra |= 1 << CE_BORDERBLANK;
 	if (issprbrd(-1, bplcon0, bplcon3))
 		current_colors.extra |= 1 << CE_BORDERSPRITE;
+	if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && (bplcon0 & 1) && (bplcon3 & 0x10))
+		current_colors.extra |= 1 << CE_BORDERNTRANS;
 
-  DISK_restore_custom (dskpt, dsklen, dskbytr);
+	DISK_restore_custom(dskpt, dsklen, dskbytr);
 
-	FMODE (0, fmode);
+	FMODE(0, fmode);
 
-  return src;
+	return src;
 }
 
 #define SB save_u8
 #define SW save_u16
 #define SL save_u32
 
-uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
+uae_u8 *save_custom(int *len, uae_u8 *dstptr, int full)
 {
-  uae_u8 *dstbak, *dst;
+	uae_u8 *dstbak, *dst;
 	int i, dummy;
-  uae_u32 dskpt;
-  uae_u16 dsklen, dsksync, dskbytr;
+	uae_u32 dskpt;
+	uae_u16 dsklen, dsksync, dskbytr;
 
-  DISK_save_custom (&dskpt, &dsklen, &dsksync, &dskbytr);
+	DISK_save_custom(&dskpt, &dsklen, &dsksync, &dskbytr);
 
-  if (dstptr)
-  	dstbak = dst = dstptr;
-  else
-    dstbak = dst = xmalloc (uae_u8, 8 + 256 * 2);
+	if (dstptr)
+		dstbak = dst = dstptr;
+	else
+		dstbak = dst = xmalloc(uae_u8, 8 + 256 * 2);
 
-  SL (currprefs.chipset_mask);
-  SW (blt_info.bltddat);	/* 000 BLTDDAT */
-  SW (dmacon);	      /* 002 DMACONR */
-  SW (VPOSR());		    /* 004 VPOSR */
-  SW (VHPOSR());		  /* 006 VHPOSR */
-  SW (0);		          /* 008 DSKDATR */
-  SW (JOYGET (0));		/* 00A JOY0DAT */
-  SW (JOYGET (1));		/* 00C JOY1DAT */
-  SW (clxdat | 0x8000);		/* 00E CLXDAT */
-  SW (ADKCONR());		  /* 010 ADKCONR */
-  SW (POT0DAT());		  /* 012 POT0DAT */
-  SW (POT1DAT());		  /* 014 POT1DAT */
-  SW (0)	;		        /* 016 POTINP * */
-  SW (0);			        /* 018 SERDATR * */
-  SW (dskbytr);		    /* 01A DSKBYTR */
-  SW (INTENAR());		  /* 01C INTENAR */
-  SW (INTREQR());		  /* 01E INTREQR */
-  SL (dskpt);			    /* 020-023 DSKPT */
-  SW (dsklen);		    /* 024 DSKLEN */
-  SW (0);			        /* 026 DSKDAT */
-  SW (0);			        /* 028 REFPTR */
-  SW ((lof_store ? 0x8001 : 0));	/* 02A VPOSW */
-  SW (0);			        /* 02C VHPOSW */
-  SW (copcon);		    /* 02E COPCON */
-  SW (0);		          /* 030 SERDAT * */
-  SW (0);		          /* 032 SERPER * */
-  SW (potgo_value);		/* 034 POTGO */
-  SW (0);			        /* 036 JOYTEST * */
-  SW (0);			        /* 038 STREQU */
-  SW (0);			        /* 03A STRVBL */
-  SW (0);			        /* 03C STRHOR */
-  SW (0);			        /* 03E STRLONG */
-  SW (bltcon0);		    /* 040 BLTCON0 */
-  SW (bltcon1);		    /* 042 BLTCON1 */
-  SW (blt_info.bltafwm);	/* 044 BLTAFWM */
-  SW (blt_info.bltalwm);	/* 046 BLTALWM */
-  SL (bltcpt);		    /* 048-04B BLTCPT */
-  SL (bltbpt);		    /* 04C-04F BLTBPT */
-  SL (bltapt);		    /* 050-053 BLTAPT */
-  SL (bltdpt);		    /* 054-057 BLTDPT */
-  SW (0);			        /* 058 BLTSIZE */
-  SW (0);			        /* 05A BLTCON0L (use BLTCON0 instead) */
-  SW (blt_info.vblitsize);	/* 05C BLTSIZV */
-  SW (blt_info.hblitsize);	/* 05E BLTSIZH */
-  SW (blt_info.bltcmod);	  /* 060 BLTCMOD */
-  SW (blt_info.bltbmod);	  /* 062 BLTBMOD */
-  SW (blt_info.bltamod);	  /* 064 BLTAMOD */
-  SW (blt_info.bltdmod);	  /* 066 BLTDMOD */
-  SW (0);			        /* 068 ? */
-  SW (0);			        /* 06A ? */
-  SW (0);			        /* 06C ? */
-  SW (0);			        /* 06E ? */
-  SW (blt_info.bltcdat);	  /* 070 BLTCDAT */
-  SW (blt_info.bltbdat);	  /* 072 BLTBDAT */
-  SW (blt_info.bltadat);	  /* 074 BLTADAT */
-  SW (0);			        /* 076 ? */
-  SW (0);			        /* 078 ? */
-  SW (0);			        /* 07A ? */
-	SW (DENISEID (&dummy));	  /* 07C DENISEID/LISAID */
-  SW (dsksync);		    /* 07E DSKSYNC */
-  SL (cop1lc);		    /* 080-083 COP1LC */
-  SL (cop2lc);		    /* 084-087 COP2LC */
-  SW (0);			        /* 088 COPJMP1 */
-  SW (0);			        /* 08A COPJMP2 */
-  SW (0);			        /* 08C COPINS */
-  SW (diwstrt);		    /* 08E DIWSTRT */
-  SW (diwstop);		    /* 090 DIWSTOP */
-  SW (ddfstrt);		    /* 092 DDFSTRT */
-  SW (ddfstop);		    /* 094 DDFSTOP */
-  SW (dmacon);		    /* 096 DMACON */
-  SW (clxcon);		    /* 098 CLXCON */
-  SW (intena);		    /* 09A INTENA */
-  SW (intreq);		    /* 09C INTREQ */
-  SW (adkcon);		    /* 09E ADKCON */
-  /* 0A0 - 0DE Audio regs */
-  for (i = 0; full && i < 32; i++)
-    SW (0);
-  for (i = 0; i < 8; i++)
-    SL (bplpt[i]);		/* 0E0-0FE BPLxPT */
-  SW (bplcon0);		/* 100 BPLCON0 */
-  SW (bplcon1);		/* 102 BPLCON1 */
-  SW (bplcon2);		/* 104 BPLCON2 */
-  SW (bplcon3);		/* 106 BPLCON3 */
-  SW (bpl1mod);		/* 108 BPL1MOD */
-  SW (bpl2mod);		/* 10A BPL2MOD */
-  SW (bplcon4);		/* 10C BPLCON4 */
-  SW (clxcon2);		/* 10E CLXCON2 */
-  for (i = 0;i < 8; i++)
-    SW (fetched[i]);			/* 110 BPLxDAT */
-  /* 120 - 17E Sprite regs */
-  if (full) {
-    for (i = 0; i < 8; i++) {
-      SL (spr[i].pt);	    /* 120-13E SPRxPT */
+	SL(currprefs.chipset_mask);
+	SW(blt_info.bltddat);	/* 000 BLTDDAT */
+	SW(dmacon);	      /* 002 DMACONR */
+	SW(VPOSR());		    /* 004 VPOSR */
+	SW(VHPOSR());		  /* 006 VHPOSR */
+	SW(0);		          /* 008 DSKDATR */
+	SW(JOYGET(0));		/* 00A JOY0DAT */
+	SW(JOYGET(1));		/* 00C JOY1DAT */
+	SW(clxdat | 0x8000);		/* 00E CLXDAT */
+	SW(ADKCONR());		  /* 010 ADKCONR */
+	SW(POT0DAT());		  /* 012 POT0DAT */
+	SW(POT1DAT());		  /* 014 POT1DAT */
+	SW(0);		        /* 016 POTINP * */
+	SW(0);			        /* 018 SERDATR * */
+	SW(dskbytr);		    /* 01A DSKBYTR */
+	SW(INTENAR());		  /* 01C INTENAR */
+	SW(INTREQR());		  /* 01E INTREQR */
+	SL(dskpt);			    /* 020-023 DSKPT */
+	SW(dsklen);		    /* 024 DSKLEN */
+	SW(0);			        /* 026 DSKDAT */
+	SW(refptr);			/* 028 REFPTR */
+	SW((lof_store ? 0x8001 : 0) | (lol ? 0x0080 : 0));/* 02A VPOSW */
+	SW(0);			        /* 02C VHPOSW */
+	SW(copcon);		    /* 02E COPCON */
+	SW(0);		          /* 030 SERDAT * */
+	SW(0);		          /* 032 SERPER * */
+	SW(potgo_value);		/* 034 POTGO */
+	SW(0);			        /* 036 JOYTEST * */
+	SW(0);			        /* 038 STREQU */
+	SW(0);			        /* 03A STRVBL */
+	SW(0);			        /* 03C STRHOR */
+	SW(0);			        /* 03E STRLONG */
+	SW(bltcon0);		    /* 040 BLTCON0 */
+	SW(bltcon1);		    /* 042 BLTCON1 */
+	SW(blt_info.bltafwm);	/* 044 BLTAFWM */
+	SW(blt_info.bltalwm);	/* 046 BLTALWM */
+	SL(bltcpt);		    /* 048-04B BLTCPT */
+	SL(bltbpt);		    /* 04C-04F BLTBPT */
+	SL(bltapt);		    /* 050-053 BLTAPT */
+	SL(bltdpt);		    /* 054-057 BLTDPT */
+	SW(0);			        /* 058 BLTSIZE */
+	SW(0);			        /* 05A BLTCON0L (use BLTCON0 instead) */
+	SW(blt_info.vblitsize);	/* 05C BLTSIZV */
+	SW(blt_info.hblitsize);	/* 05E BLTSIZH */
+	SW(blt_info.bltcmod);	  /* 060 BLTCMOD */
+	SW(blt_info.bltbmod);	  /* 062 BLTBMOD */
+	SW(blt_info.bltamod);	  /* 064 BLTAMOD */
+	SW(blt_info.bltdmod);	  /* 066 BLTDMOD */
+	SW(0);			        /* 068 ? */
+	SW(0);			        /* 06A ? */
+	SW(0);			        /* 06C ? */
+	SW(0);			        /* 06E ? */
+	SW(blt_info.bltcdat);	  /* 070 BLTCDAT */
+	SW(blt_info.bltbdat);	  /* 072 BLTBDAT */
+	SW(blt_info.bltadat);	  /* 074 BLTADAT */
+	SW(0);			        /* 076 ? */
+	SW(0);			        /* 078 ? */
+	SW(0);			        /* 07A ? */
+	SW(DENISEID(&dummy));	  /* 07C DENISEID/LISAID */
+	SW(dsksync);		    /* 07E DSKSYNC */
+	SL(cop1lc);		    /* 080-083 COP1LC */
+	SL(cop2lc);		    /* 084-087 COP2LC */
+	SW(0);			        /* 088 COPJMP1 */
+	SW(0);			        /* 08A COPJMP2 */
+	SW(0);			        /* 08C COPINS */
+	SW(diwstrt);		    /* 08E DIWSTRT */
+	SW(diwstop);		    /* 090 DIWSTOP */
+	SW(ddfstrt);		    /* 092 DDFSTRT */
+	SW(ddfstop);		    /* 094 DDFSTOP */
+	SW(dmacon);		    /* 096 DMACON */
+	SW(clxcon);		    /* 098 CLXCON */
+	SW(intena);		    /* 09A INTENA */
+	SW(intreq);		    /* 09C INTREQ */
+	SW(adkcon);		    /* 09E ADKCON */
+	for (i = 0; full && i < 32; i++)
+		SW(0);
+	for (i = 0; i < 8; i++)
+		SL(bplpt[i]);		/* 0E0-0FE BPLxPT */
+	SW(bplcon0);		/* 100 BPLCON0 */
+	SW(bplcon1);		/* 102 BPLCON1 */
+	SW(bplcon2);		/* 104 BPLCON2 */
+	SW(bplcon3);		/* 106 BPLCON3 */
+	SW(bpl1mod);		/* 108 BPL1MOD */
+	SW(bpl2mod);		/* 10A BPL2MOD */
+	SW(bplcon4);		/* 10C BPLCON4 */
+	SW(clxcon2);		/* 10E CLXCON2 */
+	for (i = 0; i < 8; i++)
+		SW(fetched[i]);	/* 110 BPLxDAT */
+	if (full) {
+		for (i = 0; i < 8; i++) {
+			SL(spr[i].pt);	/* 120-13E SPRxPT */
 		}
 		for (i = 0; i < 8; i++) {
-      SW (sprpos[i]);	    /* 1x0 SPRxPOS */
-      SW (sprctl[i]);	    /* 1x2 SPRxPOS */
-      SW (sprdata[i][0]);	    /* 1x4 SPRxDATA */
-      SW (sprdatb[i][0]);	    /* 1x6 SPRxDATB */
-    }
-  }
-  for ( i = 0; i < 32; i++)
-	  SW (current_colors.color_regs_ecs[i]); /* 180-1BE COLORxx */
-  SW (htotal);		/* 1C0 HTOTAL */
-  SW (hsstop);		/* 1C2 HSTOP */
-  SW (hbstrt);		/* 1C4 HBSTRT */
-  SW (hbstop);		/* 1C6 HBSTOP */
-  SW (vtotal);		/* 1C8 VTOTAL */
-  SW (vsstop);		/* 1CA VSSTOP */
-  SW (vbstrt);		/* 1CC VBSTRT */
-  SW (vbstop);		/* 1CE VBSTOP */
-  SW (0);			/* 1D0 */
-  SW (0);			/* 1D2 */
-  SW (0);			/* 1D4 */
-  SW (0);			/* 1D6 */
-  SW (0);			/* 1D8 */
-  SW (0);			/* 1DA */
-  SW (beamcon0);	/* 1DC BEAMCON0 */
-  SW (hsstrt);		/* 1DE HSSTRT */
-  SW (vsstrt);		/* 1E0 VSSTRT */
-  SW (hcenter);		/* 1E2 HCENTER */
-  SW (diwhigh | (diwhigh_written ? 0x8000 : 0) | (hdiwstate == DIW_waiting_stop ? 0x4000 : 0)); /* 1E4 DIWHIGH */
-  SW (0);			/* 1E6 */
-  SW (0);			/* 1E8 */
-  SW (0);			/* 1EA */
-  SW (0);			/* 1EC */
-  SW (0);			/* 1EE */
-  SW (0);			/* 1F0 */
-  SW (0);			/* 1F2 */
-  SW (0);			/* 1F4 */
-  SW (0);			/* 1F6 */
-  SW (0);			/* 1F8 */
-  SW (0x8000 | (currprefs.ntscmode ? 1 : 0));			/* 1FA (re-used for NTSC) */
-  SW (fmode);			/* 1FC FMODE */
-  SW (last_custom_value1);		/* 1FE */
+			struct sprite *s = &spr[i];
+			SW(s->pos);	/* 1x0 SPRxPOS */
+			SW(s->ctl);	/* 1x2 SPRxPOS */
+			SW(s->data[0]);	/* 1x4 SPRxDATA */
+			SW(s->datb[0]);	/* 1x6 SPRxDATB */
+		}
+	}
+	for (i = 0; i < 32; i++) {
+		if (currprefs.chipset_mask & CSMASK_AGA) {
+			uae_u32 v = current_colors.color_regs_aga[i];
+			uae_u16 v2;
+			v &= 0x00f0f0f0;
+			v2 = (v >> 4) & 15;
+			v2 |= ((v >> 12) & 15) << 4;
+			v2 |= ((v >> 20) & 15) << 8;
+			SW(v2);
+		}
+		else {
+			uae_u16 v = current_colors.color_regs_ecs[i];
+			SW(v); /* 180-1BE COLORxx */
+		}
+	}
+	SW(htotal);		/* 1C0 HTOTAL */
+	SW(hsstop);		/* 1C2 HSTOP */
+	SW(hbstrt);		/* 1C4 HBSTRT */
+	SW(hbstop);		/* 1C6 HBSTOP */
+	SW(vtotal);		/* 1C8 VTOTAL */
+	SW(vsstop);		/* 1CA VSSTOP */
+	SW(vbstrt);		/* 1CC VBSTRT */
+	SW(vbstop);		/* 1CE VBSTOP */
+	SW(0);			/* 1D0 */
+	SW(0);			/* 1D2 */
+	SW(0);			/* 1D4 */
+	SW(0);			/* 1D6 */
+	SW(0);			/* 1D8 */
+	SW(0);			/* 1DA */
+	SW(beamcon0);	/* 1DC BEAMCON0 */
+	SW(hsstrt);		/* 1DE HSSTRT */
+	SW(vsstrt);		/* 1E0 VSSTRT */
+	SW(hcenter);		/* 1E2 HCENTER */
+	SW(diwhigh | (diwhigh_written ? 0x8000 : 0) | (hdiwstate == DIW_waiting_stop ? 0x4000 : 0)); /* 1E4 DIWHIGH */
+	SW(0);			/* 1E6 */
+	SW(0);			/* 1E8 */
+	SW(0);			/* 1EA */
+	SW(0);			/* 1EC */
+	SW(0);			/* 1EE */
+	SW(0);			/* 1F0 */
+	SW(0);			/* 1F2 */
+	SW(0);			/* 1F4 */
+	SW(0);			/* 1F6 */
+	SW(0);			/* 1F8 */
+	SW(0x8000 | (currprefs.ntscmode ? 1 : 0));			/* 1FA (re-used for NTSC) */
+	SW(fmode);			/* 1FC FMODE */
+	SW(last_custom_value1);		/* 1FE */
 
-  *len = dst - dstbak;
-  return dstbak;
+	*len = dst - dstbak;
+	return dstbak;
 }
 
-uae_u8 *restore_custom_agacolors (uae_u8 *src)
+uae_u8 *restore_custom_agacolors(uae_u8 *src)
 {
-  int i;
+	int i;
 
-  for (i = 0; i < 256; i++) {
+	for (i = 0; i < 256; i++) {
 		uae_u32 v = RL;
-		v &= 0x00ffffff;
-  	current_colors.color_regs_aga[i] = v;
-  }
-  return src;
+		v &= 0x80ffffff;
+		current_colors.color_regs_aga[i] = v;
+	}
+	return src;
 }
 
-uae_u8 *save_custom_agacolors (int *len, uae_u8 *dstptr)
+uae_u8 *save_custom_agacolors(int *len, uae_u8 *dstptr)
 {
-  uae_u8 *dstbak, *dst;
+	uae_u8 *dstbak, *dst;
 
-  if (dstptr)
-  	dstbak = dst = dstptr;
-  else
-    dstbak = dst = xmalloc (uae_u8, 256 * 4);
-  for (int i = 0; i < 256; i++)
-  	SL (current_colors.color_regs_aga[i]);
-  *len = dst - dstbak;
-  return dstbak;
+	if (dstptr)
+		dstbak = dst = dstptr;
+	else
+		dstbak = dst = xmalloc(uae_u8, 256 * 4);
+	for (int i = 0; i < 256; i++)
+		SL(current_colors.color_regs_aga[i]);
+	*len = dst - dstbak;
+	return dstbak;
 }
 
-uae_u8 *restore_custom_sprite (int num, uae_u8 *src)
+uae_u8 *restore_custom_sprite(int num, uae_u8 *src)
 {
-  memset (&spr[num], 0, sizeof (struct sprite));
-  spr[num].pt = RL;		/* 120-13E SPRxPT */
-  sprpos[num] = RW;		/* 1x0 SPRxPOS */
-  sprctl[num] = RW;		/* 1x2 SPRxPOS */
-  sprdata[num][0] = RW;	/* 1x4 SPRxDATA */
-  sprdatb[num][0] = RW;	/* 1x6 SPRxDATB */
-  sprdata[num][1] = RW;
-  sprdatb[num][1] = RW;
-  sprdata[num][2] = RW;
-  sprdatb[num][2] = RW;
-  sprdata[num][3] = RW;
-  sprdatb[num][3] = RW;
-	spr[num].armed = RB & 1;
-  return src;
+	struct sprite *s = &spr[num];
+	memset(s, 0, sizeof(struct sprite));
+	s->pt = RL;		/* 120-13E SPRxPT */
+	s->pos = RW;		/* 1x0 SPRxPOS */
+	s->ctl = RW;		/* 1x2 SPRxPOS */
+	s->data[0] = RW;	/* 1x4 SPRxDATA */
+	s->datb[0] = RW;	/* 1x6 SPRxDATB */
+	s->data[1] = RW;
+	s->datb[1] = RW;
+	s->data[2] = RW;
+	s->datb[2] = RW;
+	s->data[3] = RW;
+	s->datb[3] = RW;
+	s->armed = RB & 1;
+	return src;
 }
 
 uae_u8 *save_custom_sprite(int num, int *len, uae_u8 *dstptr)
 {
-  uae_u8 *dstbak, *dst;
+	uae_u8 *dstbak, *dst;
+	struct sprite *s = &spr[num];
 
-  if (dstptr)
-  	dstbak = dst = dstptr;
-  else
-    dstbak = dst = xmalloc (uae_u8, 30);
-  SL (spr[num].pt);		/* 120-13E SPRxPT */
-  SW (sprpos[num]);		/* 1x0 SPRxPOS */
-  SW (sprctl[num]);		/* 1x2 SPRxPOS */
-  SW (sprdata[num][0]);	/* 1x4 SPRxDATA */
-  SW (sprdatb[num][0]);	/* 1x6 SPRxDATB */
-  SW (sprdata[num][1]);
-  SW (sprdatb[num][1]);
-  SW (sprdata[num][2]);
-  SW (sprdatb[num][2]);
-  SW (sprdata[num][3]);
-  SW (sprdatb[num][3]);
-  SB (spr[num].armed ? 1 : 0);
-  *len = dst - dstbak;
-  return dstbak;
+	if (dstptr)
+		dstbak = dst = dstptr;
+	else
+		dstbak = dst = xmalloc(uae_u8, 30);
+	SL(s->pt);		/* 120-13E SPRxPT */
+	SW(s->pos);		/* 1x0 SPRxPOS */
+	SW(s->ctl);		/* 1x2 SPRxPOS */
+	SW(s->data[0]);	/* 1x4 SPRxDATA */
+	SW(s->datb[0]);	/* 1x6 SPRxDATB */
+	SW(s->data[1]);
+	SW(s->datb[1]);
+	SW(s->data[2]);
+	SW(s->datb[2]);
+	SW(s->data[3]);
+	SW(s->datb[3]);
+	SB(s->armed ? 1 : 0);
+	*len = dst - dstbak;
+	return dstbak;
 }
 
-uae_u8 *restore_custom_extra (uae_u8 *src)
+uae_u8 *restore_custom_extra(uae_u8 *src)
 {
-	uae_u32 v = restore_u32 ();
+	uae_u32 v = restore_u32();
 
 	if (!(v & 1))
 		v = 0;
 	currprefs.cs_compatible = changed_prefs.cs_compatible = v >> 24;
-	cia_set_overlay ((v & 2) != 0);
+	cia_set_overlay((v & 2) != 0);
 
+	currprefs.genlock = changed_prefs.genlock = RBB;
 	currprefs.cs_rtc = changed_prefs.cs_rtc = RB;
+	currprefs.cs_rtc_adjust = changed_prefs.cs_rtc_adjust = RL;
+
+	currprefs.cs_a1000ram = changed_prefs.cs_a1000ram = RBB;
+	currprefs.cs_slowmemisfast = changed_prefs.cs_slowmemisfast = RBB;
+
+	//currprefs.a2091rom.enabled = changed_prefs.a2091rom.enabled = RBB;
+	//currprefs.a4091rom.enabled = changed_prefs.a4091rom.enabled = RBB;
+	RBB;
+	RBB;
+	RBB;
 
 	currprefs.cs_pcmcia = changed_prefs.cs_pcmcia = RBB;
 	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod = RB;
 	currprefs.cs_ciaoverlay = changed_prefs.cs_ciaoverlay = RBB;
 
+	currprefs.cs_agnusbltbusybug = changed_prefs.cs_agnusbltbusybug = RBB;
+	currprefs.cs_denisenoehb = changed_prefs.cs_denisenoehb = RBB;
+
+	currprefs.cs_agnusrev = changed_prefs.cs_agnusrev = SRB;
+	currprefs.cs_deniserev = changed_prefs.cs_deniserev = SRB;
 	currprefs.cs_fatgaryrev = changed_prefs.cs_fatgaryrev = SRB;
 	currprefs.cs_ramseyrev = changed_prefs.cs_ramseyrev = SRB;
 
 	currprefs.cs_cd32c2p = changed_prefs.cs_cd32c2p = RBB;
 	currprefs.cs_cd32cd = changed_prefs.cs_cd32cd = RBB;
 	currprefs.cs_cd32nvram = changed_prefs.cs_cd32nvram = RBB;
+	currprefs.cs_cdtvcd = changed_prefs.cs_cdtvcd = RBB;
+	currprefs.cs_cdtvram = changed_prefs.cs_cdtvram = RBB;
+	RB;
 
 	currprefs.cs_df0idhw = changed_prefs.cs_df0idhw = RBB;
+	currprefs.cs_dipagnus = changed_prefs.cs_dipagnus = RBB;
 	currprefs.cs_ide = changed_prefs.cs_ide = RB;
+	currprefs.cs_mbdmac = changed_prefs.cs_mbdmac = RB;
 	currprefs.cs_ksmirror_a8 = changed_prefs.cs_ksmirror_a8 = RBB;
 	currprefs.cs_ksmirror_e0 = changed_prefs.cs_ksmirror_e0 = RBB;
+	currprefs.cs_resetwarning = changed_prefs.cs_resetwarning = RBB;
 	currprefs.cs_z3autoconfig = changed_prefs.cs_z3autoconfig = RBB;
+	currprefs.cs_1mchipjumper = changed_prefs.cs_1mchipjumper = RBB;
+	currprefs.cs_bytecustomwritebug = changed_prefs.cs_bytecustomwritebug = RBB;
+	currprefs.cs_color_burst = changed_prefs.cs_color_burst = RBB;
+	currprefs.cs_toshibagary = changed_prefs.cs_toshibagary = RBB;
+	currprefs.cs_romisslow = changed_prefs.cs_romisslow = RBB;
 
 	currprefs.cs_ciatype[0] = changed_prefs.cs_ciatype[0] = RBB;
 	currprefs.cs_ciatype[1] = changed_prefs.cs_ciatype[1] = RBB;
@@ -9198,34 +9244,60 @@ uae_u8 *restore_custom_extra (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_custom_extra (int *len, uae_u8 *dstptr)
+uae_u8 *save_custom_extra(int *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
-		dstbak = dst = xmalloc (uae_u8, 1000);
+		dstbak = dst = xmalloc(uae_u8, 1000);
 
-	SL ((currprefs.cs_compatible << 24) | (&get_mem_bank (0) != &chipmem_bank ? 2 : 0) | 1);
-	SB (currprefs.cs_rtc);
+	SL((currprefs.cs_compatible << 24) | (&get_mem_bank(0) != &chipmem_bank ? 2 : 0) | 1);
+	SB(currprefs.genlock ? 1 : 0);
+	SB(currprefs.cs_rtc);
+	SL(currprefs.cs_rtc_adjust);
 
-	SB (currprefs.cs_pcmcia ? 1 : 0);
-	SB (currprefs.cs_ciaatod);
-	SB (currprefs.cs_ciaoverlay ? 1 : 0);
+	SB(currprefs.cs_a1000ram ? 1 : 0);
+	SB(currprefs.cs_slowmemisfast ? 1 : 0);
 
-	SB (currprefs.cs_fatgaryrev);
-	SB (currprefs.cs_ramseyrev);
+	SB(is_board_enabled(&currprefs, ROMTYPE_A2091, 0) ? 1 : 0);
+	SB(is_board_enabled(&currprefs, ROMTYPE_A4091, 0) ? 1 : 0);
+	SB(0);
 
-	SB (currprefs.cs_cd32c2p);
-	SB (currprefs.cs_cd32cd);
-	SB (currprefs.cs_cd32nvram);
+	SB(currprefs.cs_pcmcia ? 1 : 0);
+	SB(currprefs.cs_ciaatod);
+	SB(currprefs.cs_ciaoverlay ? 1 : 0);
 
-	SB (currprefs.cs_df0idhw ? 1 : 0);
-	SB (currprefs.cs_ide);
-	SB (currprefs.cs_ksmirror_a8 ? 1 : 0);
-	SB (currprefs.cs_ksmirror_e0 ? 1 : 0);
-	SB (currprefs.cs_z3autoconfig ? 1 : 0);
+	SB(currprefs.cs_agnusbltbusybug ? 1 : 0);
+	SB(currprefs.cs_denisenoehb ? 1 : 0);
+
+	SB(currprefs.cs_agnusrev);
+	SB(currprefs.cs_deniserev);
+	SB(currprefs.cs_fatgaryrev);
+	SB(currprefs.cs_ramseyrev);
+
+	SB(currprefs.cs_cd32c2p);
+	SB(currprefs.cs_cd32cd);
+	SB(currprefs.cs_cd32nvram);
+	SB(currprefs.cs_cdtvcd ? 1 : 0);
+	SB(currprefs.cs_cdtvram ? 1 : 0);
+	SB(0);
+
+	SB(currprefs.cs_df0idhw ? 1 : 0);
+	SB(currprefs.cs_dipagnus ? 1 : 0);
+	SB(currprefs.cs_ide);
+	SB(currprefs.cs_mbdmac);
+	SB(currprefs.cs_ksmirror_a8 ? 1 : 0);
+	SB(currprefs.cs_ksmirror_e0 ? 1 : 0);
+	SB(currprefs.cs_resetwarning ? 1 : 0);
+	SB(currprefs.cs_z3autoconfig ? 1 : 0);
+	SB(currprefs.cs_1mchipjumper ? 1 : 0);
+
+	SB(currprefs.cs_bytecustomwritebug ? 1 : 0);
+	SB(currprefs.cs_color_burst ? 1 : 0);
+	SB(currprefs.cs_toshibagary ? 1 : 0);
+	SB(currprefs.cs_romisslow ? 1 : 0);
 	SB(currprefs.cs_ciatype[0]);
 	SB(currprefs.cs_ciatype[1]);
 
@@ -9235,40 +9307,406 @@ uae_u8 *save_custom_extra (int *len, uae_u8 *dstptr)
 
 #endif /* SAVESTATE */
 
-void check_prefs_changed_custom (void)
+void check_prefs_changed_custom(void)
 {
 	if (!config_changed)
 		return;
-  currprefs.gfx_framerate = changed_prefs.gfx_framerate;
-  if (inputdevice_config_change_test ())
-  	inputdevice_copyconfig (&changed_prefs, &currprefs);
-  currprefs.immediate_blits = changed_prefs.immediate_blits;
+	currprefs.gfx_framerate = changed_prefs.gfx_framerate;
+	if (inputdevice_config_change_test())
+		inputdevice_copyconfig(&changed_prefs, &currprefs);
+	currprefs.immediate_blits = changed_prefs.immediate_blits;
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
-  currprefs.collision_level = changed_prefs.collision_level;
-  currprefs.fast_copper = changed_prefs.fast_copper;
+	currprefs.collision_level = changed_prefs.collision_level;
+	currprefs.fast_copper = changed_prefs.fast_copper;
 
-  currprefs.cs_ciaatod = changed_prefs.cs_ciaatod;
+	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod;
 	currprefs.cs_rtc = changed_prefs.cs_rtc;
 	currprefs.cs_cd32cd = changed_prefs.cs_cd32cd;
 	currprefs.cs_cd32c2p = changed_prefs.cs_cd32c2p;
 	currprefs.cs_cd32nvram = changed_prefs.cs_cd32nvram;
+	currprefs.cs_cdtvcd = changed_prefs.cs_cdtvcd;
 	currprefs.cs_ide = changed_prefs.cs_ide;
 	currprefs.cs_pcmcia = changed_prefs.cs_pcmcia;
 	currprefs.cs_fatgaryrev = changed_prefs.cs_fatgaryrev;
 	currprefs.cs_ramseyrev = changed_prefs.cs_ramseyrev;
+	currprefs.cs_agnusrev = changed_prefs.cs_agnusrev;
+	currprefs.cs_deniserev = changed_prefs.cs_deniserev;
+	currprefs.cs_mbdmac = changed_prefs.cs_mbdmac;
 	currprefs.cs_df0idhw = changed_prefs.cs_df0idhw;
+	currprefs.cs_slowmemisfast = changed_prefs.cs_slowmemisfast;
+	currprefs.cs_dipagnus = changed_prefs.cs_dipagnus;
+	currprefs.cs_denisenoehb = changed_prefs.cs_denisenoehb;
 	currprefs.cs_z3autoconfig = changed_prefs.cs_z3autoconfig;
+	currprefs.cs_bytecustomwritebug = changed_prefs.cs_bytecustomwritebug;
+	currprefs.cs_color_burst = changed_prefs.cs_color_burst;
+	currprefs.cs_romisslow = changed_prefs.cs_romisslow;
+	currprefs.cs_toshibagary = changed_prefs.cs_toshibagary;
 	currprefs.cs_unmapped_space = changed_prefs.cs_unmapped_space;
 	currprefs.cs_ciatype[0] = changed_prefs.cs_ciatype[0];
 	currprefs.cs_ciatype[1] = changed_prefs.cs_ciatype[1];
-  
-  if (currprefs.chipset_mask != changed_prefs.chipset_mask ||
-	  currprefs.ntscmode != changed_prefs.ntscmode) {
-	    currprefs.chipset_mask = changed_prefs.chipset_mask;
-      if (currprefs.ntscmode != changed_prefs.ntscmode) {
-	      currprefs.ntscmode = changed_prefs.ntscmode;
-	      new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
-      }
-    	init_custom ();
-  }
+
+	if (currprefs.chipset_mask != changed_prefs.chipset_mask ||
+		currprefs.picasso96_nocustom != changed_prefs.picasso96_nocustom ||
+		currprefs.ntscmode != changed_prefs.ntscmode) {
+		currprefs.picasso96_nocustom = changed_prefs.picasso96_nocustom;
+		currprefs.chipset_mask = changed_prefs.chipset_mask;
+		if (currprefs.ntscmode != changed_prefs.ntscmode) {
+			currprefs.ntscmode = changed_prefs.ntscmode;
+			new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
+		}
+		init_custom();
+	}
+
+	if (currprefs.chipset_hr != changed_prefs.chipset_hr) {
+		currprefs.chipset_hr = changed_prefs.chipset_hr;
+		init_custom();
+	}
+
+#ifdef GFXFILTER
+	struct gfx_filterdata *fd = &currprefs.gf[0];
+	struct gfx_filterdata *fdcp = &changed_prefs.gf[0];
+
+	fd->gfx_filter_horiz_zoom = fdcp->gfx_filter_horiz_zoom;
+	fd->gfx_filter_vert_zoom = fdcp->gfx_filter_vert_zoom;
+	fd->gfx_filter_horiz_offset = fdcp->gfx_filter_horiz_offset;
+	fd->gfx_filter_vert_offset = fdcp->gfx_filter_vert_offset;
+	fd->gfx_filter_scanlines = fdcp->gfx_filter_scanlines;
+
+	fd->gfx_filter_left_border = fdcp->gfx_filter_left_border;
+	fd->gfx_filter_right_border = fdcp->gfx_filter_right_border;
+	fd->gfx_filter_top_border = fdcp->gfx_filter_top_border;
+	fd->gfx_filter_bottom_border = fdcp->gfx_filter_bottom_border;
+#endif
+}
+
+#ifdef CPUEMU_13
+
+STATIC_INLINE void sync_copper(int hpos)
+{
+	if (copper_enabled_thisline)
+		update_copper(hpos);
+}
+
+STATIC_INLINE void decide_fetch_ce(int hpos)
+{
+	if ((line_cyclebased || blitter_dangerous_bpl) && vpos < current_maxvpos())
+		decide_fetch(hpos);
+}
+
+#define BLIT_NASTY 4
+
+// blitter not in nasty mode = CPU gets one cycle if it has been waiting
+// at least 4 cycles (all DMA cycles count, not just blitter cycles, even
+// blitter idle cycles do count!)
+
+extern int cpu_tracer;
+static int dma_cycle(void)
+{
+	int hpos, hpos_old;
+
+	blitter_nasty = 1;
+	if (cpu_tracer < 0)
+		return current_hpos_safe();
+	if (!currprefs.cpu_memory_cycle_exact)
+		return current_hpos_safe();
+	while (currprefs.cpu_memory_cycle_exact) {
+		int bpldma;
+		int blitpri = dmacon & DMA_BLITPRI;
+		hpos_old = current_hpos_safe();
+		hpos = hpos_old + 1;
+		decide_line(hpos);
+		sync_copper(hpos);
+		decide_fetch_ce(hpos);
+		bpldma = is_bitplane_dma(hpos_old);
+		if (bltstate != BLT_done) {
+			if (!blitpri && blitter_nasty >= BLIT_NASTY && (cycle_line[hpos_old] & CYCLE_MASK) == 0 && !bpldma) {
+				alloc_cycle(hpos_old, CYCLE_CPUNASTY);
+				break;
+			}
+			decide_blitter(hpos);
+			// copper may have been waiting for the blitter
+			sync_copper(hpos);
+		}
+		if ((cycle_line[hpos_old] & CYCLE_MASK) == 0 && !bpldma) {
+			alloc_cycle(hpos_old, CYCLE_CPU);
+			break;
+		}
+		do_cycles(1 * CYCLE_UNIT);
+		/* bus was allocated to dma channel, wait for next cycle.. */
+	}
+	return hpos_old;
+}
+
+STATIC_INLINE void checknasty(int hpos, int vpos)
+{
+	if (blitter_nasty >= BLIT_NASTY && !(dmacon & DMA_BLITPRI))
+		record_dma_event(DMA_EVENT_BLITNASTY, hpos, vpos);
+}
+
+static void sync_ce020(void)
+{
+	unsigned long c;
+	int extra;
+
+	c = get_cycles();
+	extra = c & (CYCLE_UNIT - 1);
+	if (extra) {
+		extra = CYCLE_UNIT - extra;
+		do_cycles(extra);
+	}
+}
+
+#define SETIFCHIP \
+	if (addr < 0xd80000) \
+		last_custom_value1 = v;
+
+uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
+{
+	uae_u32 v = 0;
+	int hpos;
+
+	hpos = dma_cycle();
+	x_do_cycles_pre(CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	struct dma_rec *dr = NULL;
+	if (debug_dma) {
+		int reg = 0x1000;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		dr = record_dma(reg, v, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
+		checknasty(hpos, vpos);
+	}
+#endif
+	switch (mode)
+	{
+	case -1:
+		v = get_long(addr);
+		break;
+	case -2:
+		v = get_longi(addr);
+		break;
+	case 1:
+		v = get_word(addr);
+		break;
+	case 2:
+		v = get_wordi(addr);
+		break;
+	case 0:
+		v = get_byte(addr);
+		break;
+	}
+
+#ifdef DEBUGGER
+	if (debug_dma)
+		dr->dat = v;
+#endif
+
+	x_do_cycles_post(CYCLE_UNIT, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_read = v;
+	SETIFCHIP
+		return v;
+}
+
+uae_u32 wait_cpu_cycle_read_ce020(uaecptr addr, int mode)
+{
+	uae_u32 v = 0;
+	int hpos;
+
+	sync_ce020();
+	hpos = dma_cycle();
+	x_do_cycles_pre(CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	struct dma_rec *dr = NULL;
+	if (debug_dma) {
+		int reg = 0x1000;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		dr = record_dma(reg, v, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
+		checknasty(hpos, vpos);
+	}
+#endif
+	switch (mode) {
+	case -1:
+		v = get_long(addr);
+		break;
+	case -2:
+		v = get_longi(addr);
+		break;
+	case 1:
+		v = get_word(addr);
+		break;
+	case 2:
+		v = get_wordi(addr);
+		break;
+	case 0:
+		v = get_byte(addr);
+		break;
+	}
+
+#ifdef DEBUGGER
+	if (debug_dma)
+		dr->dat = v;
+#endif
+
+	x_do_cycles_post(CYCLE_UNIT, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_read = v;
+	SETIFCHIP
+		return v;
+}
+
+void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
+{
+	int hpos;
+
+	hpos = dma_cycle();
+	x_do_cycles_pre(CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	if (debug_dma) {
+		int reg = 0x1100;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		record_dma(reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
+		checknasty(hpos, vpos);
+	}
+#endif
+
+	if (mode < 0)
+		put_long(addr, v);
+	else if (mode > 0)
+		put_word(addr, v);
+	else if (mode == 0)
+		put_byte(addr, v);
+
+	x_do_cycles_post(CYCLE_UNIT, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_write = v;
+	SETIFCHIP
+}
+
+void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
+{
+	int hpos;
+
+	sync_ce020();
+	hpos = dma_cycle();
+	x_do_cycles_pre(CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	if (debug_dma) {
+		int reg = 0x1100;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		record_dma(reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
+		checknasty(hpos, vpos);
+	}
+#endif
+
+	if (mode < 0)
+		put_long(addr, v);
+	else if (mode > 0)
+		put_word(addr, v);
+	else if (mode == 0)
+		put_byte(addr, v);
+
+	x_do_cycles_post(CYCLE_UNIT, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_write = v;
+	SETIFCHIP
+}
+
+void do_cycles_ce(unsigned long cycles)
+{
+	cycles += extra_cycle;
+	while (cycles >= CYCLE_UNIT) {
+		int hpos = current_hpos() + 1;
+		decide_line(hpos);
+		sync_copper(hpos);
+		decide_fetch_ce(hpos);
+		if (bltstate != BLT_done)
+			decide_blitter(hpos);
+		do_cycles(1 * CYCLE_UNIT);
+		cycles -= CYCLE_UNIT;
+	}
+	extra_cycle = cycles;
+}
+
+void do_cycles_ce020(unsigned long cycles)
+{
+	unsigned long c;
+	int extra;
+
+	if (!cycles)
+		return;
+	c = get_cycles();
+	extra = c & (CYCLE_UNIT - 1);
+	if (extra) {
+		extra = CYCLE_UNIT - extra;
+		if (extra >= cycles) {
+			do_cycles(cycles);
+			return;
+		}
+		do_cycles(extra);
+		cycles -= extra;
+	}
+	c = cycles;
+	while (c) {
+		int hpos = current_hpos() + 1;
+		decide_line(hpos);
+		sync_copper(hpos);
+		decide_fetch_ce(hpos);
+		if (bltstate != BLT_done)
+			decide_blitter(hpos);
+		if (c < CYCLE_UNIT)
+			break;
+		do_cycles(1 * CYCLE_UNIT);
+		c -= CYCLE_UNIT;
+	}
+	if (c > 0)
+		do_cycles(c);
+}
+
+
+int is_cycle_ce(void)
+{
+	int hpos = current_hpos();
+	return cycle_line[hpos] & CYCLE_MASK;
+}
+
+#endif
+
+bool isvga(void)
+{
+	if (!(beamcon0 & 0x80))
+		return false;
+	if (hblank_hz >= 20000)
+		return true;
+	return false;
+}
+
+bool ispal(void)
+{
+	if (beamcon0 & 0x80)
+		return currprefs.ntscmode == 0;
+	return maxvpos_display >= MAXVPOS_NTSC + (MAXVPOS_PAL - MAXVPOS_NTSC) / 2;
 }
