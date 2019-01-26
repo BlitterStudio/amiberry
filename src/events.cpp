@@ -21,6 +21,17 @@ int is_syncline;
 frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
 int vsynctimebase;
 
+static void events_fast(void)
+{
+	cycles_do_special();
+}
+
+void events_reset_syncline(void)
+{
+	is_syncline = 0;
+	events_fast();
+}
+
 void events_schedule(void)
 {
 	int i;
@@ -34,6 +45,24 @@ void events_schedule(void)
 		}
 	}
 	nextevent = currcycle + mintime;
+}
+
+static bool event_check_vsync(void)
+{
+	/* Keep only CPU emulation running while waiting for sync point. */
+	if (is_syncline) {
+		int rpt = read_processor_time();
+		int v = rpt - vsyncmintime;
+		if (v > vsynctimebase || v < -vsynctimebase) {
+			v = 0;
+		}
+		if (v < speedup_timelimit) {
+			regs.pissoff = pissoff_value;
+			return true;
+		}
+		events_reset_syncline();
+	}
+	return false;
 }
 
 void do_cycles_cpu_fastest (unsigned long cycles_to_add)

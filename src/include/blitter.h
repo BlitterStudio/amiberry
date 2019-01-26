@@ -26,7 +26,9 @@ extern enum blitter_states {
 
 extern struct bltinfo blt_info;
 
-extern int blit_interrupt;
+extern int blitter_nasty, blit_interrupt, blitter_dangerous_bpl;
+
+extern void check_is_blit_dangerous(uaecptr *bplpt, int planes, int words);
 
 extern uae_u16 bltsize;
 extern uae_u16 bltcon0,bltcon1;

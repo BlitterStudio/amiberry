@@ -87,10 +87,7 @@ STATIC_INLINE void send_interrupt (int num)
 	INTREQ_0 (0x8000 | (1 << num));
 }
 extern void rethink_uae_int(void);
-STATIC_INLINE uae_u16 INTREQR (void)
-{
-  return intreq;
-}
+extern uae_u16 INTREQR(void);
 
 /* maximums for statically allocated tables */
 #ifdef UAE_MINI
@@ -126,8 +123,8 @@ extern int maxhpos, maxhpos_short;
 extern int maxvpos, maxvpos_nom, maxvpos_display;
 extern int hsyncstartpos, hsyncendpos;
 extern int minfirstline, vblank_endline, numscrlines;
-extern double vblank_hz, fake_vblank_hz;
-extern double hblank_hz;
+extern float vblank_hz, fake_vblank_hz;
+extern float hblank_hz;
 extern int vblank_skip, doublescan;
 extern bool programmedmode;
 

@@ -372,6 +372,7 @@ static void blitter_done (int hpos)
 	blitter_done_notify (hpos);
 	event2_remevent (ev2_blitter);
 	unset_special (SPCFLAG_BLTNASTY);
+	blitter_dangerous_bpl = 0;
 }
 
 STATIC_INLINE void chipmem_agnus_wput2 (uaecptr addr, uae_u32 w)
@@ -1131,6 +1132,22 @@ void maybe_blit2 (int hack)
   	return;
 
   blitter_handler (0);
+}
+
+void check_is_blit_dangerous(uaecptr *bplpt, int planes, int words)
+{
+	blitter_dangerous_bpl = 0;
+	if (bltstate == BLT_done || !blitter_cycle_exact)
+		return;
+	// too simple but better than nothing
+	for (int i = 0; i < planes; i++) {
+		uaecptr bpl = bplpt[i];
+		uaecptr dpt = bltdpt & chipmem_bank.mask;
+		if (dpt >= bpl - 2 * words && dpt < bpl + 2 * words) {
+			blitter_dangerous_bpl = 1;
+			return;
+		}
+	}
 }
 
 int blitnasty (void)

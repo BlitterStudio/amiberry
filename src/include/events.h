@@ -34,6 +34,7 @@ typedef void (*do_cycles_func)(unsigned long);
 extern do_cycles_func do_cycles;
 void do_cycles_cpu_fastest (unsigned long cycles_to_add);
 void do_cycles_cpu_norm (unsigned long cycles_to_add);
+extern void events_reset_syncline(void);
 
 typedef unsigned long int evt;
 
@@ -88,20 +89,20 @@ STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
 	regs.pissoff -= cycles_to_add;
 }
 
-STATIC_INLINE unsigned long int get_cycles (void)
+STATIC_INLINE unsigned long int get_cycles(void)
 {
-  return currcycle;
+	return currcycle;
 }
 
-STATIC_INLINE void set_cycles (unsigned long int x)
+STATIC_INLINE void set_cycles(unsigned long int x)
 {
-  currcycle = x;
+	currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
 }
 
-STATIC_INLINE int current_hpos (void)
+STATIC_INLINE int current_hpos(void)
 {
-  int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
+	int hp = (get_cycles() - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
 	return hp;
 }
 
