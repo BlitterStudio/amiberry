@@ -26,7 +26,6 @@ CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
-#WITH_LOGGING=1
 #SANITIZE=1
 
 #
@@ -211,10 +210,6 @@ ifndef DEBUG
     CFLAGS += -Ofast -frename-registers -falign-functions=16
 else
     CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
-endif
-
-ifdef WITH_LOGGING
-    CFLAGS += -DWITH_LOGGING
 endif
 
 ifdef GCC_PROFILE

@@ -37,16 +37,14 @@
 #include <map>
 #endif
 
-#ifdef WITH_LOGGING
 extern FILE *debugfile;
-#endif
-
 int pause_emulation;
 int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
 bool read_config_descriptions = true;
+bool write_logfile = false;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -90,37 +88,36 @@ int sleep_millis_main(int ms)
 
 void logging_init(void)
 {
-#ifdef WITH_LOGGING
-  static int started;
-  static int first;
-  char debugfilename[MAX_DPATH];
+	if (write_logfile)
+	{
+		static int started;
+		static int first;
+		char debugfilename[MAX_DPATH];
 
-  if (first > 1) {
-  	write_log ("***** RESTART *****\n");
-	  return;
-  }
-  if (first == 1) {
-  	if (debugfile)
-	    fclose (debugfile);
-    debugfile = 0;
-  }
+		if (first > 1) {
+			write_log("***** RESTART *****\n");
+			return;
+		}
+		if (first == 1) {
+			if (debugfile)
+				fclose(debugfile);
+			debugfile = 0;
+		}
 
-	sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
-	if (!debugfile)
-		debugfile = fopen(debugfilename, "wt");
+		sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
+		if (!debugfile)
+			debugfile = fopen(debugfilename, "wt");
 
-	first++;
-	write_log("AMIBERRY Logfile\n\n");
-#endif
+		first++;
+		write_log("AMIBERRY Logfile\n\n");
+	}
 }
 
 void logging_cleanup(void)
 {
-#ifdef WITH_LOGGING
 	if (debugfile)
 		fclose(debugfile);
-	debugfile = 0;
-#endif
+	debugfile = nullptr;
 }
 
 
@@ -564,9 +561,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 
 		if (!isdefault)
 			inputdevice_updateconfig(nullptr, p);
-#ifdef WITH_LOGGING
-		p->leds_on_screen = true;
-#endif
+
 		SetLastActiveConfig(filename);
 	}
 
@@ -662,11 +657,11 @@ void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector
 		sort(files->begin(), files->end());
 }
 
-void saveAdfDir(void)
+void save_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
 
-	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 	const auto f = fopen(path, "we");
 	if (!f)
 		return;
@@ -721,6 +716,9 @@ void saveAdfDir(void)
 	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
+	fputs(buffer, f);
+
 	fclose(f);
 }
 
@@ -743,7 +741,7 @@ static void trimwsa(char *s)
 		s[--len] = '\0';
 }
 
-void loadAdfDir(void)
+void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
 	int i;
@@ -771,7 +769,7 @@ void loadAdfDir(void)
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 
-	snprintf(path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
 	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh) {
@@ -833,11 +831,26 @@ void loadAdfDir(void)
 					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
 					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
 					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
+					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
 				}
 			}
 		}
 		zfile_fclose(fh);
 	}
+}
+
+void rename_old_adfdir()
+{
+	char old_path[MAX_DPATH];
+	char new_path[MAX_DPATH];
+	snprintf(old_path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
+	snprintf(new_path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
+	
+	auto result = rename(old_path, new_path);
+	if (result == 0)
+		write_log("Old adfdir.conf file successfully renamed to amiberry.conf");
+	else
+		write_log("Error while trying to rename old adfdir.conf file to amiberry.conf!");
 }
 
 void target_addtorecent(const TCHAR *name, int t)
@@ -885,7 +898,8 @@ int main(int argc, char* argv[])
 
 	// Get startup path
 	getcwd(start_path_data, MAX_DPATH);
-	loadAdfDir();
+	rename_old_adfdir();
+	load_amiberry_settings();
 	rp9_init();
 
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);

@@ -12,7 +12,7 @@
 
 #include "sysdeps.h"
 
-#ifdef _WIN32_
+#ifdef _WIN32
 #include <windows.h>
 #include "win32.h"
 #endif
@@ -676,7 +676,7 @@ static int canrar (void)
 
 	if (israr == 0) {
 		israr = -1;
-#ifdef _WIN32_
+#ifdef _WIN32
 		{
 			HMODULE rarlib;
 
@@ -857,7 +857,7 @@ static aapGetFileInfo aaGetFileInfo;
 static aapExtract aaExtract;
 static aapCloseArchive aaCloseArchive;
 
-#ifdef _WIN32_
+#ifdef _WIN32
 static HMODULE arcacc_mod;
 
 static void arcacc_free (void)

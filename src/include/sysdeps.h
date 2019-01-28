@@ -305,13 +305,7 @@ extern void mallocemu_free (void *ptr);
 #define ASM_SYM_FOR_FUNC(a)
 #endif
 
-#ifndef WITH_LOGGING
-#undef write_log
-#define write_log(FORMATO, RESTO...)
-#define write_log_standard(FORMATO, RESTO...)
-#else
 extern void write_log (const TCHAR *,...);
-#endif
 extern void gui_message (const TCHAR *,...);
 
 #ifndef O_BINARY

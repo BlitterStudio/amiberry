@@ -36,7 +36,7 @@ void wait_for_vsync(void);
 unsigned long target_lastsynctime(void);
 extern int screen_is_picasso;
 
-void saveAdfDir(void);
+void save_amiberry_settings(void);
 void update_display(struct uae_prefs *);
 void black_screen_now(void);
 void graphics_subshutdown (void);

@@ -1591,7 +1591,7 @@ done:
 
 static uae_u32 REGPARAM2 bsdsocklib_GetSocketEvents(TrapContext *ctx)
 {
-#ifdef _WIN32_
+#ifdef _WIN32
 	struct socketbase *sb = get_socketbase(ctx);
 	int i;
 	int flags;

@@ -2806,7 +2806,7 @@ static int handle_input_event(int nr, int state, int max, int autofire)
 	if (nr <= 0 || nr == INPUTEVENT_SPC_CUSTOM_EVENT)
 		return 0;
 
-#ifdef _WIN32_
+#ifdef _WIN32
 	// ignore normal GUI event if forced gui key is in use
 	if (currprefs.win32_guikey >= 0 && nr == INPUTEVENT_SPC_ENTERGUI)
 		return 0;
