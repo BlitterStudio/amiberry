@@ -97,6 +97,8 @@ static const int *joyinputs[MAX_JPORTS];
 
 static int input_acquired;
 
+static int autopause;
+
 static int handle_input_event (int nr, int state, int max, int autofire);
 
 static struct inputdevice_functions idev[IDTYPE_MAX];
@@ -2642,9 +2644,6 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	//		screenshot(1, 1);
 	//	}
 	//	break;
-	case AKS_TOGGLEWINDOWEDFULLSCREEN:
-		toggle_fullscreen();
-		break;
 #ifdef ACTION_REPLAY
 	case AKS_FREEZEBUTTON:
 		action_replay_freeze();
@@ -2702,6 +2701,14 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_EFLOPPY3:
 		disk_eject(3);
 		break;
+	case AKS_PAUSE:
+		pausemode(newstate > 0 ? 1 : newstate);
+		break;
+	case AKS_SINGLESTEP:
+		if (pause_emulation)
+			pausemode(0);
+		autopause = 1;
+		break;
 	case AKS_VOLDOWN:
 		sound_volume(newstate <= 0 ? -1 : 1);
 		break;
@@ -2716,6 +2723,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		break;
 	case AKS_HARDRESET:
 		uae_reset(1, 1);
+		break;
+	case AKS_TOGGLEWINDOWEDFULLSCREEN:
+		toggle_fullscreen();
 		break;
 	case AKS_MOUSEMAP_PORT0_LEFT:
 		(changed_prefs.jports[0].mousemap) ^= 1 << 0;
@@ -3071,6 +3081,13 @@ static void inputdevice_checkconfig (void)
 
 void inputdevice_vsync (void)
 {
+	if (autopause > 0 && pause_emulation == 0) {
+		autopause--;
+		if (!autopause) {
+			pausemode(1);
+		}
+	}
+
 	input_frame++;
 	mouseupdate (0, true);
 
@@ -6113,6 +6130,16 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 int getmousestate (int joy)
 {
 	return mice[joy].enabled;
+}
+
+void pausemode(int mode)
+{
+	if (mode < 0)
+		pause_emulation = pause_emulation ? 0 : 9;
+	else
+		pause_emulation = mode;
+	set_config_changed();
+	setsystime();
 }
 
 int jsem_isjoy (int port, const struct uae_prefs *p)

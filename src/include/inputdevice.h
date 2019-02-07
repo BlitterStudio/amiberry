@@ -282,12 +282,16 @@ extern void inputdevice_acquire (int allmode);
 extern void inputdevice_unacquire (void);
 extern void inputdevice_unacquire(bool emulationactive, int inputmask);
 
+extern void pausemode(int mode);
+
 extern void inputdevice_add_inputcode(int code, int state, const TCHAR *);
 extern void inputdevice_handle_inputcode (void);
 
 extern void inputdevice_tablet_strobe (void);
 
 extern uae_u64 input_getqualifiers (void);
+
+extern void setsystime(void);
 
 #define JSEM_MODE_DEFAULT 0
 #define JSEM_MODE_WHEELMOUSE 1
