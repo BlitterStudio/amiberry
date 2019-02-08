@@ -64,10 +64,10 @@ static void fill_default_controller(void)
 	default_controller_map.lstick_up = -1;
 	default_controller_map.lstick_down = -1;
 	default_controller_map.lstick_axis_y = 1;
-	default_controller_map.lstick_axis_x = 0;        
-        default_controller_map.lstick_axis_y_invert = false;
-        default_controller_map.lstick_axis_x_invert = false;
-        
+	default_controller_map.lstick_axis_x = 0;
+	default_controller_map.lstick_axis_y_invert = false;
+	default_controller_map.lstick_axis_x_invert = false;
+
 	default_controller_map.rstick_button = -1;
 	default_controller_map.rstick_left = -1;
 	default_controller_map.rstick_right = -1;
@@ -75,9 +75,9 @@ static void fill_default_controller(void)
 	default_controller_map.rstick_down = -1;
 	default_controller_map.rstick_axis_y = 3;
 	default_controller_map.rstick_axis_x = 2;
-        default_controller_map.rstick_axis_y_invert = false;
-        default_controller_map.rstick_axis_x_invert = false;
-        
+	default_controller_map.rstick_axis_y_invert = false;
+	default_controller_map.rstick_axis_x_invert = false;
+
 	default_controller_map.is_retroarch = false;
 }
 
@@ -117,9 +117,9 @@ static void fill_blank_controller(void)
 	default_controller_map.lstick_down = -1;
 	default_controller_map.lstick_axis_y = -1;
 	default_controller_map.lstick_axis_x = -1;
-        default_controller_map.lstick_axis_y_invert = false;
-        default_controller_map.lstick_axis_x_invert = false;
-        
+	default_controller_map.lstick_axis_y_invert = false;
+	default_controller_map.lstick_axis_x_invert = false;
+
 	default_controller_map.rstick_button = -1;
 	default_controller_map.rstick_left = -1;
 	default_controller_map.rstick_right = -1;
@@ -127,9 +127,9 @@ static void fill_blank_controller(void)
 	default_controller_map.rstick_down = -1;
 	default_controller_map.rstick_axis_y = -1;
 	default_controller_map.rstick_axis_x = -1;
-        default_controller_map.rstick_axis_y_invert = false;
-        default_controller_map.rstick_axis_x_invert = false;
-        
+	default_controller_map.rstick_axis_y_invert = false;
+	default_controller_map.rstick_axis_x_invert = false;
+
 	default_controller_map.is_retroarch = false;
 }
 
@@ -1138,7 +1138,6 @@ static void read_joystick(void)
 			if (current_controller_map.right_shoulder == current_controller_map.hotkey_button)
 				current_controller_map.right_shoulder = -1;
 
-
 			auto held_offset = 0;
 
 			// detect standalone retroarch hotkeys
@@ -1187,31 +1186,28 @@ static void read_joystick(void)
 				held_offset = 0;
 			}
 
-
 			auto val = 0;
 
-                        // this should allow use to change the tolerance
-                        int lower_bound = -32767;
-                        int upper_bound =  32767;
-                             
-                        
+			// this should allow use to change the tolerance
+			int lower_bound = -32767;
+			int upper_bound = 32767;
+
 			// left stick   
 			if (!currprefs.input_analog_remap)
 			{
 				// handle the X axis  (left stick)
 				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
-                                if (current_controller_map.lstick_axis_x_invert != 0)
-                                    val = val * -1;
-                                                                        
-                                setjoystickstate(hostjoyid + 1, 0, val, upper_bound);
-                             
+				if (current_controller_map.lstick_axis_x_invert != 0)
+					val = val * -1;
+
+				setjoystickstate(hostjoyid + 1, 0, val, upper_bound);
+
 				// handle the Y axis   
 				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
-                                if (current_controller_map.lstick_axis_y_invert != 0)
-                                    val = val * -1;
-                                
-                                setjoystickstate(hostjoyid + 1, 1, val, upper_bound);
-                                                  
+				if (current_controller_map.lstick_axis_y_invert != 0)
+					val = val * -1;
+
+				setjoystickstate(hostjoyid + 1, 1, val, upper_bound);
 			}
 
 			else
@@ -1238,19 +1234,17 @@ static void read_joystick(void)
 			}
 
 			// right stick
-			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);             
-                        if (current_controller_map.rstick_axis_x_invert != 0)
-                            val = val * -1;
-                        
-                        setjoystickstate(hostjoyid + 1, 2, val, upper_bound);
-                       
-			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
-                        if (current_controller_map.rstick_axis_y_invert != 0)
-                            val = val * -1;
-                        
-                        setjoystickstate(hostjoyid + 1, 3, val, upper_bound);
- 
+			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);
+			if (current_controller_map.rstick_axis_x_invert != 0)
+				val = val * -1;
 
+			setjoystickstate(hostjoyid + 1, 2, val, upper_bound);
+
+			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
+			if (current_controller_map.rstick_axis_y_invert != 0)
+				val = val * -1;
+
+			setjoystickstate(hostjoyid + 1, 3, val, upper_bound);
 
 			// cd32 red, blue, green, yellow
 			// south 
@@ -1265,7 +1259,6 @@ static void read_joystick(void)
 			// north
 			setjoybuttonstate(hostjoyid + 1, 3 + held_offset,
 				(SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.north_button) & 1));
-
 
 			// cd32  rwd, ffw, start
 			setjoybuttonstate(hostjoyid + 1, 4 + held_offset,
