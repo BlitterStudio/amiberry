@@ -466,11 +466,10 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	auto posY = 144 + 40;
 	for (i = 0; i < 7; ++i)
 	{
-		category.panel->add(lblCustomAction[i], DISTANCE_BORDER/2, posY);
-		category.panel->add(cboCustomAction[i], DISTANCE_BORDER/2 + lblCustomAction[i]->getWidth() + 4, posY);
+		category.panel->add(lblCustomAction[i], DISTANCE_BORDER / 2, posY);
+		category.panel->add(cboCustomAction[i], DISTANCE_BORDER / 2 + lblCustomAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
-
 
 	posY = 144 + 40;
 	for (i = 7; i < 14; ++i)
@@ -479,8 +478,8 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		category.panel->add(cboCustomAction[i], DISTANCE_BORDER + lblCustomAction[i]->getWidth() + 290 + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
-        
-        category.panel->add(chkAnalogRemap, DISTANCE_BORDER + lblCustomAction[0]->getWidth(), posY);
+
+	category.panel->add(chkAnalogRemap, DISTANCE_BORDER + lblCustomAction[0]->getWidth(), posY);
 	posY += chkAnalogRemap->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblPortInput, DISTANCE_BORDER, 144);

@@ -95,7 +95,7 @@ public:
 			if (strlen(i->Description) > 0)
 			{
 				strncat(tmp, " (", MAX_DPATH - 1);
-				strncat(tmp, i->Description, MAX_DPATH - 1);
+				strncat(tmp, i->Description, MAX_DPATH - 3);
 				strncat(tmp, ")", MAX_DPATH - 1);
 			}
 			configs.emplace_back(tmp);
@@ -142,7 +142,7 @@ public:
 			{
 				fetch_configurationpath(filename, MAX_DPATH);
 				strncat(filename, txtName->getText().c_str(), MAX_DPATH - 1);
-				strncat(filename, ".uae", MAX_DPATH);
+				strncat(filename, ".uae", MAX_DPATH - 1);
 				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 256);
 				if (cfgfile_save(&changed_prefs, filename, 0))
 					RefreshPanelConfig();

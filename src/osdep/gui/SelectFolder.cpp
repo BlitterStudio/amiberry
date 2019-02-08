@@ -125,7 +125,7 @@ public:
 		const auto selected_item = lstFolders->getSelected();
 		strncpy(foldername, workingDir, MAX_DPATH - 1);
 		strncat(foldername, "/", MAX_DPATH - 1);
-		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_DPATH - 1);
+		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_DPATH - 2);
 		volName = dirList.getElementAt(selected_item);
 		checkfoldername(foldername);
 	}
@@ -369,7 +369,7 @@ bool SelectFolder(const char* title, char* value)
 	{
 		strncpy(value, workingDir, MAX_DPATH);
 		if (value[strlen(value) - 1] != '/')
-			strncat(value, "/", MAX_DPATH);
+			strncat(value, "/", MAX_DPATH - 1);
 	}
 	return dialogResult;
 }
