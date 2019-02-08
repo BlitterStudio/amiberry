@@ -332,7 +332,7 @@ int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int 
 	while (len > 0)
 	{
 		int maxlen;
-		int ret;
+		int ret = 0;
 		if (hfd->physsize < CACHE_SIZE)
 		{
 			hfd->cache_valid = 0;
@@ -402,9 +402,7 @@ static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 		}
 	}
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
-	{
 		outlen = zfile_fwrite(hfd->cache, 1, len, hfd->handle->zf);
-	}
 	return outlen;
 }
 
