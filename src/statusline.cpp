@@ -37,13 +37,10 @@ STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc,
 	return v;
 }
 
-static void write_tdnumber(uae_u8* buf, int bpp, int x, int y, int num, uae_u32 c1, uae_u32 c2)
+static void write_tdnumber(uae_u8 *buf, int bpp, int x, int y, int num, uae_u32 c1, uae_u32 c2)
 {
-	int j;
-	const char* numptr;
-
-	numptr = numbers + num * TD_NUM_WIDTH + NUMBERS_NUM * TD_NUM_WIDTH * y;
-	for (j = 0; j < TD_NUM_WIDTH; j++)
+	const char* numptr = numbers + num * TD_NUM_WIDTH + NUMBERS_NUM * TD_NUM_WIDTH * y;
+	for (int j = 0; j < TD_NUM_WIDTH; j++)
 	{
 		if (*numptr == 'x')
 			putpixel(buf, nullptr, bpp, x + j, c1, 1);
@@ -348,10 +345,10 @@ void statusline_clear(void)
 {
 	statusline_text_active = nullptr;
 	statusline_delay = 0;
-	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++)
+	for (auto& i : statusline_data)
 	{
-		xfree(statusline_data[i].text);
-		statusline_data[i].text = nullptr;
+		xfree(i.text);
+		i.text = nullptr;
 	}
 	statusline_update_notification();
 }

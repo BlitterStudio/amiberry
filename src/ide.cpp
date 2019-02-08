@@ -391,9 +391,12 @@ static void ide_identity_buffer(struct ide_hdf *ide)
 
 	v = ide->multiple_mode;
 	pwor(ide, 59, v > 0 ? 0x100 : 0);
-	if (!atapi && cf) {
+	if (!atapi && cf)
+	{
 		pw(ide, 0, 0x848a);
-	} else if (!atapi && !cf) {
+	}
+	else if (!atapi && !cf)
+	{
 		pwand(ide, 0, 0x8000);
 	}
 }
@@ -478,15 +481,18 @@ static void ide_initialize_drive_parameters (struct ide_hdf *ide)
 	ide_interrupt (ide);
 }
 
-static void ide_set_multiple_mode (struct ide_hdf *ide)
+static void ide_set_multiple_mode(struct ide_hdf *ide)
 {
-	write_log (_T("IDE%d drive multiple mode = %d\n"), ide->num, ide->regs.ide_nsector);
-	if (ide->regs.ide_nsector > (ide->max_multiple_mode >> (ide->blocksize / 512 - 1))) {
+	write_log(_T("IDE%d drive multiple mode = %d\n"), ide->num, ide->regs.ide_nsector);
+	if (ide->regs.ide_nsector > (ide->max_multiple_mode >> (ide->blocksize / 512 - 1)))
+	{
 		ide_fail(ide);
-	} else {
-	  ide->multiple_mode = ide->regs.ide_nsector;
 	}
-	ide_interrupt (ide);
+	else
+	{
+		ide->multiple_mode = ide->regs.ide_nsector;
+	}
+	ide_interrupt(ide);
 }
 
 static void ide_set_features (struct ide_hdf *ide)
@@ -517,17 +523,23 @@ static void ide_set_features (struct ide_hdf *ide)
 	}
 }
 
-static void get_lbachs (struct ide_hdf *ide, uae_u64 *lbap, unsigned int *cyl, unsigned int *head, unsigned int *sec)
+static void get_lbachs(struct ide_hdf *ide, uae_u64 *lbap, unsigned int *cyl, unsigned int *head, unsigned int *sec)
 {
-	if (ide->lba48 && ide->lba48cmd && (ide->regs.ide_select & 0x40)) {
+	if (ide->lba48 && ide->lba48cmd && (ide->regs.ide_select & 0x40))
+	{
 		uae_u64 lba;
 		lba = (ide->regs.ide_hcyl << 16) | (ide->regs.ide_lcyl << 8) | ide->regs.ide_sector;
 		lba |= ((ide->regs.ide_hcyl2 << 16) | (ide->regs.ide_lcyl2 << 8) | ide->regs.ide_sector2) << 24;
 		*lbap = lba;
-	} else {
-		if (ide->regs.ide_select & 0x40) {
+	}
+	else
+	{
+		if (ide->regs.ide_select & 0x40)
+		{
 			*lbap = ((ide->regs.ide_select & 15) << 24) | (ide->regs.ide_hcyl << 16) | (ide->regs.ide_lcyl << 8) | ide->regs.ide_sector;
-		} else {
+		}
+		else
+		{
 			*cyl = (ide->regs.ide_hcyl << 8) | ide->regs.ide_lcyl;
 			*head = ide->regs.ide_select & 15;
 			*sec = ide->regs.ide_sector;
