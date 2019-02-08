@@ -451,10 +451,9 @@ bool mapped_malloc(addrbank* ab)
 	}
 
 	struct uae_mman_data md = {0};
-	uaecptr start = ab->start;
 	if (uae_mman_info(ab, &md))
 	{
-		start = md.start;
+		uaecptr start = md.start;
 		ab->baseaddr = regs.natmem_offset + start;
 	}
 
@@ -479,11 +478,11 @@ bool mapped_malloc(addrbank* ab)
 void mapped_free(addrbank* ab)
 {
 	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr)
-	{
-		free(ab->baseaddr);
+	{		
 		write_log("mapped_free(): 0x%08x - 0x%08x (0x%08x - 0x%08x) -> %s (%s)\n",
 			ab->baseaddr - regs.natmem_offset, ab->baseaddr - regs.natmem_offset + ab->allocated_size,
 			ab->baseaddr, ab->baseaddr + ab->allocated_size, ab->name, ab->label);
+		free(ab->baseaddr);
 	}
 	ab->baseaddr = nullptr;
 	ab->allocated_size = 0;
