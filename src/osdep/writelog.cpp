@@ -5,8 +5,9 @@
  *
  * Copyright 2001 Bernd Schmidt
  */
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
+#include <cstdio>
+#include <iostream>
 
 #include "sysdeps.h"
 #include "uae.h"
@@ -23,7 +24,7 @@ void console_out (const TCHAR *format,...)
     va_start (parms, format);
     vsnprintf (buffer, WRITE_LOG_BUF_SIZE-1, format, parms);
     va_end (parms);
-    printf(buffer);
+    cout << buffer << endl;
 }
 
 void write_log (const char *format,...)
@@ -37,7 +38,7 @@ void write_log (const char *format,...)
 		auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
 		if (debugfile)
 		{
-			fprintf(debugfile, buffer);
+			fprintf(debugfile, "%s", buffer);
 			fflush(debugfile);
 		}
 		va_end(parms);

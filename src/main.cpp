@@ -184,7 +184,7 @@ void fixup_cpu(struct uae_prefs *p)
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
 {
-	auto err = 0;
+	//auto err = 0;
 
 	built_in_chipset_prefs(p);
 	fixup_cpu(p);
@@ -199,7 +199,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	{
 		error_log(_T("Unsupported chipmem size %d (0x%x)."), p->chipmem_size, p->chipmem_size);
 		p->chipmem_size = 0x200000;
-		err = 1;
+		//err = 1;
 	}
 
 	for (auto & i : p->fastmem) {
@@ -208,7 +208,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		{
 			error_log(_T("Unsupported fastmem size %d (0x%x)."), i.size, i.size);
 			i.size = 0;
-			err = 1;
+			//err = 1;
 		}
 	}
 
@@ -217,7 +217,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		if (rbc->rtgmem_size > max_z3fastmem && rbc->rtgmem_type == GFXBOARD_UAE_Z3) {
 			error_log(_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), rbc->rtgmem_size, rbc->rtgmem_size, 0x1000000, 0x1000000);
 			rbc->rtgmem_size = 0x1000000;
-			err = 1;
+			//err = 1;
 		}
 
 		if ((rbc->rtgmem_size & (rbc->rtgmem_size - 1)) != 0 || (rbc->rtgmem_size != 0 && (rbc->rtgmem_size < 0x100000))) {
@@ -226,7 +226,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 				rbc->rtgmem_size = max_z3fastmem;
 			else
 				rbc->rtgmem_size = 0;
-			err = 1;
+			//err = 1;
 		}
 	}
 
@@ -235,7 +235,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		{
 			error_log(_T("Unsupported Zorro III fastmem size %d (0x%x)."), i.size, i.size);
 			i.size = 0;
-			err = 1;
+			//err = 1;
 		}
 	}
 
@@ -251,7 +251,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
 		error_log(_T("Unsupported bogomem size %d (0x%x)"), p->bogomem_size, p->bogomem_size);
 		p->bogomem_size = 0;
-		err = 1;
+		//err = 1;
 	}
 
 	if (p->bogomem_size > 0x180000 && (p->cs_fatgaryrev >= 0 || p->cs_ide || p->cs_ramseyrev >= 0)) {
@@ -261,7 +261,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	if (p->chipmem_size > 0x200000 && p->fastmem[0].size > 262144) {
 		error_log(_T("You can't use fastmem and more than 2MB chip at the same time."));
 		p->chipmem_size = 0x200000;
-		err = 1;
+		//err = 1;
 	}
 	if (p->mbresmem_low_size > 0x01000000 || (p->mbresmem_low_size & 0xfffff)) {
 		p->mbresmem_low_size = 0;
@@ -277,7 +277,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		if (p->chipmem_size > 0x200000 && rbc->rtgmem_size && gfxboard_get_configtype(rbc) == 2) {
 			error_log(_T("You can't use Zorro II RTG and more than 2MB chip at the same time."));
 			p->chipmem_size = 0x200000;
-			err = 1;
+			//err = 1;
 		}
 		if (p->address_space_24 && rbc->rtgmem_size && rbc->rtgmem_type == GFXBOARD_UAE_Z3) {
 			error_log(_T("Z3 RTG and 24bit address space are not compatible."));
@@ -294,23 +294,23 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	if (p->produce_sound < 0 || p->produce_sound > 3) {
 		error_log(_T("Bad value for -S parameter: enable value must be within 0..3."));
 		p->produce_sound = 0;
-		err = 1;
+		//err = 1;
 	}
 	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE) {
 		error_log(_T("Bad value for cachesize parameter: value must be within 0..16384."));
 		p->cachesize = 0;
-		err = 1;
+		//err = 1;
 	}
 	if ((p->z3fastmem[0].size) && p->address_space_24) {
 		error_log(_T("Z3 fast memory can't be used if address space is 24-bit."));
 		p->z3fastmem[0].size = 0;
-		err = 1;
+		//err = 1;
 	}
 	for (auto & rtgboard : p->rtgboards) {
 		if ((rtgboard.rtgmem_size > 0 && rtgboard.rtgmem_type == GFXBOARD_UAE_Z3) && p->address_space_24) {
 			error_log(_T("UAEGFX Z3 RTG can't be used if address space is 24-bit."));
 			rtgboard.rtgmem_size = 0;
-			err = 1;
+			//err = 1;
 		}
 	}
 
@@ -329,7 +329,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->floppyslots[1].dfxtype = 0;
 		p->floppyslots[2].dfxtype = -1;
 		p->floppyslots[3].dfxtype = -1;
-		err = 1;
+		//err = 1;
 	}
 
 	if (p->floppy_speed > 0 && p->floppy_speed < 10) {
@@ -339,7 +339,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	if (p->collision_level < 0 || p->collision_level > 3) {
 		error_log(_T("Invalid collision support level.  Using 1."));
 		p->collision_level = 1;
-		err = 1;
+		//err = 1;
 	}
 	if (p->cs_compatible == CP_GENERIC) {
 		p->cs_fatgaryrev = p->cs_ramseyrev = -1;

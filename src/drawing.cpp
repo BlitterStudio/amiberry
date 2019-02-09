@@ -468,11 +468,6 @@ void get_custom_raw_limits(int *pw, int *ph, int *pdx, int *pdy)
 
 void check_custom_limits(void)
 {
-	int vls = visible_left_start;
-	int vrs = visible_right_stop;
-	int vts = visible_top_start;
-	int vbs = visible_bottom_stop;
-
 	struct gfx_filterdata *fd = &currprefs.gf[0];
 	int left = fd->gfx_filter_left_border >> (RES_MAX - currprefs.gfx_resolution);
 	int right = fd->gfx_filter_right_border >> (RES_MAX - currprefs.gfx_resolution);
@@ -720,11 +715,6 @@ void get_custom_mouse_limits(int *pw, int *ph, int *pdx, int *pdy, int dbl)
 
 	if (*ph > 0)
 		h = *ph;
-
-	delay1 = (firstword_bplcon1 & 0x0f) | ((firstword_bplcon1 & 0x0c00) >> 6);
-	delay2 = ((firstword_bplcon1 >> 4) & 0x0f) | (((firstword_bplcon1 >> 4) & 0x0c00) >> 6);
-	//	if (delay1 == delay2)
-	//		dx += delay1;
 
 	dx = xshift(dx, res_shift);
 
@@ -2063,7 +2053,6 @@ static void init_ham_decoding(void)
 static void decode_ham (int pix, int stoppos, int blank)
 {
 	int todraw_amiga = res_shift_from_window(stoppos - pix);
-	int hdp = ham_decode_pixel;
 
 	if (!bplham) {
 		while (todraw_amiga-- > 0) {
@@ -2707,14 +2696,14 @@ void init_row_map(void)
 
 static void init_aspect_maps(void)
 {
-	int i, maxl, h;
+	int i;
 
 	linedbld = linedbl = currprefs.gfx_vresolution;
 	if (doublescan > 0 && interlace_seen <= 0) {
 		linedbl = 0;
 		linedbld = 1;
 	}
-	maxl = (MAXVPOS + 1) << linedbld;
+	const int maxl = (MAXVPOS + 1) << linedbld;
 	min_ypos_for_screen = minfirstline << linedbl;
 	max_drawn_amiga_line = -1;
 
@@ -2724,7 +2713,7 @@ static void init_aspect_maps(void)
 	visible_bottom_stop = MAX_STOP;
 	set_blanking_limits();
 
-	h = gfxvidinfo.drawbuffer.outheight;
+	const int h = gfxvidinfo.drawbuffer.outheight;
 	if (h == 0)
 		/* Do nothing if the gfx driver hasn't initialized the screen yet */
 		return;
@@ -2753,10 +2742,9 @@ static void init_aspect_maps(void)
 		native2amiga_line_map[i] = -1;
 
 	for (i = maxl - 1; i >= min_ypos_for_screen; i--) {
-		int j;
 		if (amiga2aspect_line_map[i] == -1)
 			continue;
-		for (j = amiga2aspect_line_map[i]; j < h && native2amiga_line_map[j] == -1; j++)
+		for (int j = amiga2aspect_line_map[i]; j < h && native2amiga_line_map[j] == -1; j++)
 			native2amiga_line_map[j] = (i + currprefs.vertical_offset) >> linedbl;
 	}
 }
@@ -3340,11 +3328,6 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 
 static void center_image()
 {
-	int prev_x_adjust = visible_left_border;
-	int prev_y_adjust = thisframe_y_adjust;
-
-	int w = gfxvidinfo.drawbuffer.outwidth;
-
 	const int deltaToBorder = (gfxvidinfo.drawbuffer.outwidth >> currprefs.gfx_resolution) - 320;
 
 	visible_left_border = 73 - (deltaToBorder >> 1);
@@ -3381,13 +3364,11 @@ static void init_drawing_frame(void)
 
 	int largest_res = 0;
 	int largest_count = 0;
-	int largest_count_res = 0;
 	for (int i = 0; i <= RES_MAX; i++) {
 		if (resolution_count[i])
 			largest_res = i;
 		if (resolution_count[i] >= largest_count) {
 			largest_count = resolution_count[i];
-			largest_count_res = i;
 		}
 	}
 	if (currprefs.gfx_resolution == changed_prefs.gfx_resolution && lines_count > 0) {
@@ -3904,10 +3885,7 @@ void allocvidbuffer(struct vidbuffer *buf, int width, int height, int depth)
 	buf->outwidth = (width + 7) & ~7;
 	buf->outheight = height;
 
-	int size = width * height * buf->pixbytes;
-
 	buf->rowbytes = width * buf->pixbytes;
-
 }
 
 void freevidbuffer(struct vidbuffer *buf)

@@ -312,6 +312,7 @@ extern void REGPARAM3 MakeFromSR_T0(void) REGPARAM;
 extern void REGPARAM3 Exception (int) REGPARAM;
 extern void REGPARAM3 Exception_cpu(int) REGPARAM;
 extern void NMI (void);
+extern void NMI_delayed(void);
 extern void doint (void);
 extern void dump_counts (void);
 extern int m68k_move2c (int, uae_u32 *);

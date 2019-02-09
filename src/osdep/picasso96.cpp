@@ -101,9 +101,9 @@ struct picasso96_state_struct picasso96_state;
 struct picasso_vidbuf_description picasso_vidinfo;
 static struct PicassoResolution* newmodes = nullptr;
 
-/* These are the maximum resolutions... They are filled in by GetSupportedResolutions() */
-/* have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
-/* data here. */
+/* These are the maximum resolutions... They are filled in by GetSupportedResolutions()
+ have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
+ data here. */
 static struct ScreenResolution planar = { 320, 240 };
 static struct ScreenResolution chunky = { 640, 480 };
 static struct ScreenResolution hicolour = { 640, 480 };
@@ -493,7 +493,7 @@ static void rtg_render(void)
 	{
 		return;
 	}
-	bool full = picasso_vidinfo.full_refresh > 0;
+	//bool full = picasso_vidinfo.full_refresh > 0;
 	if (uaegfx_active)
 	{
 		if (!currprefs.rtg_multithread)
@@ -1494,16 +1494,14 @@ static uaecptr picasso96_amem, picasso96_amemend;
 
 static void CopyLibResolutionStructureU2A(TrapContext* ctx, struct LibResolution* libres, uaecptr amigamemptr)
 {
-	int i;
-
 	trap_set_bytes(ctx, amigamemptr, 0, PSSO_LibResolution_sizeof);
-	for (i = 0; i < strlen(libres->P96ID); i++)
+	for (unsigned int i = 0; i < strlen(libres->P96ID); i++)
 		trap_put_byte(ctx, amigamemptr + PSSO_LibResolution_P96ID + i, libres->P96ID[i]);
 	trap_put_long(ctx, amigamemptr + PSSO_LibResolution_DisplayID, libres->DisplayID);
 	trap_put_word(ctx, amigamemptr + PSSO_LibResolution_Width, libres->Width);
 	trap_put_word(ctx, amigamemptr + PSSO_LibResolution_Height, libres->Height);
 	trap_put_word(ctx, amigamemptr + PSSO_LibResolution_Flags, libres->Flags);
-	for (i = 0; i < MAXMODES; i++)
+	for (int i = 0; i < MAXMODES; i++)
 		trap_put_long(ctx, amigamemptr + PSSO_LibResolution_Modes + i * 4, libres->Modes[i]);
 	trap_put_long(ctx, amigamemptr + 10, amigamemptr + PSSO_LibResolution_P96ID);
 	trap_put_long(ctx, amigamemptr + PSSO_LibResolution_BoardInfo, libres->BoardInfo);
@@ -1614,7 +1612,7 @@ static void picasso96_alloc2(TrapContext* ctx)
 			i++;
 			continue;
 		}
-		j = i;
+		//j = i;
 		size += PSSO_LibResolution_sizeof;
 		while (missmodes[misscnt * 2] == 0)
 			misscnt++;
@@ -2089,16 +2087,16 @@ static uae_u32 REGPARAM2 picasso_SetPanning(TrapContext* ctx)
 	uaecptr bi = trap_get_areg(ctx, 0);
 	uaecptr bmeptr = trap_get_long(ctx, bi + PSSO_BoardInfo_BitMapExtra);  /* Get our BoardInfo ptr's BitMapExtra ptr */
 	uae_u16 bme_width, bme_height;
-	int changed = 0;
+	//int changed = 0;
 	RGBFTYPE rgbf;
 
 	if (oldscr == 0) {
 		oldscr = start_of_screen;
-		changed = 1;
+		//changed = 1;
 	}
 	if (oldscr != start_of_screen) {
 		oldscr = start_of_screen;
-		changed = 1;
+		//changed = 1;
 	}
 
 	bme_width = trap_get_word(ctx, bmeptr + PSSO_BitMapExtra_Width);

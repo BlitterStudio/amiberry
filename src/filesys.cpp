@@ -1467,6 +1467,23 @@ int filesys_eject (int nr)
 }
 
 static uae_u32 heartbeat;
+static int heartbeat_count, heartbeat_count_cont;
+static int heartbeat_task;
+
+bool filesys_heartbeat(void)
+{
+	return heartbeat_count_cont > 0;
+}
+
+// This uses filesystem process to reduce resource usage
+void setsystime(void)
+{
+	if (!currprefs.tod_hack || !rtarea_bank.baseaddr)
+		return;
+	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
+	heartbeat_task = 1;
+	heartbeat_count = 10;
+}
 
 static uae_u32 REGPARAM2 debugger_helper(TrapContext *ctx)
 {

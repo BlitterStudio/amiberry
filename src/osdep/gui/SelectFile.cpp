@@ -109,7 +109,7 @@ public:
 					return;
 				strncpy(tmp, workingDir, MAX_DPATH - 1);
 				strncat(tmp, "/", MAX_DPATH - 1);
-				strncat(tmp, txtFilename->getText().c_str(), MAX_DPATH - 1);
+				strncat(tmp, txtFilename->getText().c_str(), MAX_DPATH - 2);
 				if (strstr(tmp, filefilter[0]) == nullptr)
 					strncat(tmp, filefilter[0], MAX_DPATH - 1);
 				if (my_existsfile(tmp) == 1)
@@ -122,7 +122,7 @@ public:
 				if (fileList->isDir(selected_item))
 					return; // Directory selected -> Ok not possible
 				strncat(workingDir, "/", MAX_DPATH - 1);
-				strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 1);
+				strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 2);
 				dialogResult = true;
 			}
 		}
@@ -176,7 +176,7 @@ public:
 		const auto selected_item = lstFiles->getSelected();
 		strncpy(foldername, workingDir, MAX_DPATH);
 		strncat(foldername, "/", MAX_DPATH - 1);
-		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 1);
+		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 2);
 		if (fileList->isDir(selected_item))
 			checkfoldername(foldername);
 		else if (!createNew)

@@ -258,7 +258,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode = new gcn::Window("Line mode");
 #ifdef USE_SDL2
 	grpLineMode->setPosition(
-		grpScalingMethod->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, 
+		grpScalingMethod->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X,
 		posY - DISTANCE_BORDER - grpScalingMethod->getHeight() - DISTANCE_NEXT_Y);
 #else
 	grpLineMode->setPosition(DISTANCE_BORDER, posY);
