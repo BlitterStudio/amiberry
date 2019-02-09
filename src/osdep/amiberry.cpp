@@ -59,6 +59,27 @@ int action_replay_button = SDLK_PAUSE;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
+#ifdef USE_SDL1
+SDLKey GetKeyFromName(const char *name)
+{
+	if (!name || !*name) {
+		return SDLK_UNKNOWN;
+	}
+
+	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
+	{
+		if (!SDL_GetKeyName(SDLKey(key)))
+			continue;
+		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
+		{
+			return SDLKey(key);
+		}
+	}
+
+	return SDLK_UNKNOWN;
+}
+#endif
+
 void set_key_configs(struct uae_prefs *p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
@@ -1165,27 +1186,6 @@ int main(int argc, char* argv[])
 	  target_shutdown();
 	return 0;
 }
-
-#ifdef USE_SDL1
-SDLKey GetKeyFromName(const char *name)
-{
-	if (!name || !*name) {
-		return SDLK_UNKNOWN;
-	}
-
-	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
-	{
-		if (!SDL_GetKeyName(SDLKey(key)))
-			continue;
-		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
-		{
-			return SDLKey(key);
-		}
-	}
-
-	return SDLK_UNKNOWN;
-}
-#endif
 
 int handle_msgpump()
 {
