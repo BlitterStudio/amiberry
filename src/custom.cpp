@@ -1736,7 +1736,7 @@ STATIC_INLINE void long_fetch_64(int plane, int nwords, int weird_number_of_bits
 		bplpt[plane] += nwords * 2;
 	}
 
-	if (real_pt == 0)
+	if (real_pt == nullptr)
 		/* @@@ Don't do this, fall back on chipmem_wget instead.  */
 		return;
 
@@ -1745,20 +1745,18 @@ STATIC_INLINE void long_fetch_64(int plane, int nwords, int weird_number_of_bits
 	aga_shift(shiftbuffer, delay);
 
 	while (nwords > 0) {
-		int i;
-
 		shiftbuffer[0] |= fetchval;
 
-		for (i = 0; i < 4; i++) {
+		for (int i = 0; i < 4; i++) {
 			uae_u32 t;
-			int bits_left = 32 - tmp_nbits;
+			const int bits_left = 32 - tmp_nbits;
 
 			if (64 - shift > 0) {
-				t = (uae_u32)(shiftbuffer[1] << (64 - shift));
+				t = uae_u32(shiftbuffer[1] << (64 - shift));
 				t |= shiftbuffer[0] >> shift;
 			}
 			else {
-				t = (uae_u32)(shiftbuffer[1] >> (shift - 64));
+				t = uae_u32(shiftbuffer[1] >> (shift - 64));
 			}
 			t &= 0xffff;
 
@@ -1803,10 +1801,10 @@ STATIC_INLINE void long_fetch_64(int plane, int nwords, int weird_number_of_bits
 				v1 |= v1 << 16;
 				v2 &= 0x0000ffff;
 				v2 |= v2 << 16;
-				fetchval = (((uae_u64)v1) << 32) | v2;
+				fetchval = (uae_u64(v1) << 32) | v2;
 			}
 			else {
-				fetchval = ((uae_u64)do_get_mem_long(real_pt1)) << 32;
+				fetchval = uae_u64(do_get_mem_long(real_pt1)) << 32;
 				fetchval |= do_get_mem_long(real_pt2);
 			}
 			real_pt += 2;
@@ -2979,8 +2977,7 @@ static void decide_sprites(int spnr, int hpos, bool quick)
 	int nrs[MAX_SPRITES * 2], posns[MAX_SPRITES * 2];
 	int count, i;
 	int point;
-	int width = sprite_width;
-  int sscanmask = 0x100 << sprite_buffer_res;
+	int sscanmask = 0x100 << sprite_buffer_res;
 	int startnr = 0, endnr = MAX_SPRITES - 1;
 
 	if (thisline_decision.plfleft < 0 && !(bplcon3 & 2))
@@ -3969,6 +3966,22 @@ STATIC_INLINE void copper_stop(void)
 			case COP_read2:
 			  copper_enabled_thisline = -1;
 			  break;
+		  case COP_stop: break;
+		  case COP_waitforever: break;
+		  case COP_read1: break;
+		  case COP_bltwait: break;
+		  case COP_wait_in2: break;
+		  case COP_skip_in2: break;
+		  case COP_wait1: break;
+		  case COP_wait: break;
+		  case COP_skip1: break;
+		  case COP_strobe_delay1: break;
+		  case COP_strobe_delay2: break;
+		  case COP_strobe_delay1x: break;
+		  case COP_strobe_delay2x: break;
+		  case COP_strobe_extra: break;
+		  case COP_start_delay: break;
+		  default: ;
 		}
 	}
 	if (copper_enabled_thisline >= 0) {
@@ -3977,72 +3990,89 @@ STATIC_INLINE void copper_stop(void)
 	}
 }
 
-static void DMACON (int hpos, uae_u16 v)
+static void DMACON(int hpos, uae_u16 v)
 {
 	int oldcop, newcop;
-  uae_u16 changed;
-	
+	uae_u16 changed;
+
 	uae_u16 oldcon = dmacon;
-	
-	decide_line (hpos);
-	decide_fetch_safe (hpos);
-	
-	setclr (&dmacon, v);
+
+	decide_line(hpos);
+	decide_fetch_safe(hpos);
+
+	setclr(&dmacon, v);
 	dmacon &= 0x07FF;
-	
-  changed = dmacon ^ oldcon;
-  oldcop = (oldcon & DMA_COPPER) && (oldcon & DMA_MASTER);
-  newcop = (dmacon & DMA_COPPER) && (dmacon & DMA_MASTER);
 
-  if (oldcop != newcop) {
-	  eventtab[ev_copper].active = 0;
+	changed = dmacon ^ oldcon;
+	oldcop = (oldcon & DMA_COPPER) && (oldcon & DMA_MASTER);
+	newcop = (dmacon & DMA_COPPER) && (dmacon & DMA_MASTER);
 
-  	if (newcop && !oldcop) {
-			compute_spcflag_copper (hpos);
-	  } else if (!newcop) {
+	if (oldcop != newcop)
+	{
+		eventtab[ev_copper].active = 0;
+
+		if (newcop && !oldcop)
+		{
+			compute_spcflag_copper(hpos);
+		}
+		else if (!newcop)
+		{
 			copper_stop();
-    }
+		}
 	}
 
 	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && bltstate != BLT_done)
-		set_special (SPCFLAG_BLTNASTY);
+		set_special(SPCFLAG_BLTNASTY);
 
-	if (dmaen (DMA_BLITTER) && bltstate == BLT_init) {
-	  blitter_check_start ();
+	if (dmaen(DMA_BLITTER) && bltstate == BLT_init)
+	{
+		blitter_check_start();
 	}
 
 	if ((dmacon & (DMA_BLITPRI | DMA_BLITTER | DMA_MASTER)) != (DMA_BLITPRI | DMA_BLITTER | DMA_MASTER))
-		unset_special (SPCFLAG_BLTNASTY);
-	
-  if (changed & (DMA_MASTER | 0x0f))
-		audio_state_machine ();
+		unset_special(SPCFLAG_BLTNASTY);
 
-  if (changed & (DMA_MASTER | DMA_BITPLANE)) {
-	  SET_LINE_CYCLEBASED;
+	if (changed & (DMA_MASTER | 0x0f))
+		audio_state_machine();
+
+	if (changed & (DMA_MASTER | DMA_BITPLANE))
+	{
+		SET_LINE_CYCLEBASED;
 		bitplane_maybe_start_hpos = hpos;
-  }
+	}
 
 	events_schedule();
 }
 
-int intlev (void)
+static int irq_nmi;
+
+void NMI_delayed(void)
 {
-  uae_u16 imask = intreq & intena;
-  if (!(imask && (intena & 0x4000)))
-  	return -1;
-  if (imask & (0x4000 | 0x2000)) // 13 14
-    return 6;
-  if (imask & (0x1000 | 0x0800)) // 11 12
-    return 5;
-  if (imask & (0x0400 | 0x0200 | 0x0100 | 0x0080)) // 7 8 9 10
-    return 4;
-  if (imask & (0x0040 | 0x0020 | 0x0010)) // 4 5 6
-    return 3;
-  if (imask & 0x0008) // 3
-    return 2;
-  if (imask & (0x0001 | 0x0002 | 0x0004)) // 0 1 2
-    return 1;
-  return -1;
+	irq_nmi = 1;
+}
+
+int intlev(void)
+{
+	uae_u16 imask = intreq & intena;
+	if (irq_nmi) {
+		irq_nmi = 0;
+		return 7;
+	}
+	if (!(imask && (intena & 0x4000)))
+		return -1;
+	if (imask & (0x4000 | 0x2000)) // 13 14
+		return 6;
+	if (imask & (0x1000 | 0x0800)) // 11 12
+		return 5;
+	if (imask & (0x0400 | 0x0200 | 0x0100 | 0x0080)) // 7 8 9 10
+		return 4;
+	if (imask & (0x0040 | 0x0020 | 0x0010)) // 4 5 6
+		return 3;
+	if (imask & 0x0008) // 3
+		return 2;
+	if (imask & (0x0001 | 0x0002 | 0x0004)) // 0 1 2
+		return 1;
+	return -1;
 }
 
 void rethink_uae_int(void)
@@ -5515,7 +5545,6 @@ STATIC_INLINE void do_sprites_1(int num, int cycle, int hpos)
 	uae_u16 data;
 	// fetch both sprite pairs even if DMA was switched off between sprites
 	int isdma = dmaen (DMA_SPRITE) || ((num & 1) && spr[num & ~1].dmacycle);
-	bool unaligned = (spr[num].pt & 2) != 0;
 
 	if (isdma && s->dblscan && (fmode & 0x8000) && (vpos & 1) != (s->vstart & 1) && s->dmastate) {
 		spr_arm (num, 1);
@@ -6001,7 +6030,21 @@ static void vsync_handler_pre(void)
 	if (!nodraw() || picasso_on)
 		fpscounter(frameok);
 
-	handle_events();
+	bool waspaused = false;
+	while (handle_events()) {
+		if (!waspaused) {
+			render_screen(true);
+			show_screen(0);
+			waspaused = true;
+		}
+		// we are paused, do all config checks but don't do any emulation
+		if (vsync_handle_check()) {
+			redraw_frame();
+			render_screen(true);
+			show_screen(0);
+		}
+		config_check_vsync();
+	}
 
 	if (quit_program > 0) {
 		/* prevent possible infinite loop at wait_cycles().. */
@@ -6105,7 +6148,6 @@ static void dmal_emu (uae_u32 v)
 	// Disk and Audio DMA bits are ignored by Agnus, Agnus only checks DMAL and master bit
 	if (!(dmacon & DMA_MASTER))
 		return;
-	int hpos = current_hpos ();
 	if (v >= 6) {
 		v -= 6;
 		int nr = v / 2;
@@ -6196,8 +6238,6 @@ static void set_hpos (void)
 // this finishes current line
 static void hsync_handler_pre(bool onvsync)
 {
-	int hpos = current_hpos();
-
 	if (!nocustom()) {
 		/* Using 0x8A makes sure that we don't accidentally trip over the
 		   modified_regtypes check.  */
@@ -6300,7 +6340,7 @@ static void hsync_handler_post(bool onvsync)
 		}
 	}
 
-	inputdevice_hsync();
+	inputdevice_hsync(false);
 
 	if (!nocustom()) {
 		if (bltstate != BLT_done && dmaen(DMA_BITPLANE) && diwstate == DIW_waiting_stop) {

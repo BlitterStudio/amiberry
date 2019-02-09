@@ -1980,16 +1980,30 @@ static void joymousecounter (int joy)
 	}
 }
 
-static int inputdelay;
+static int inputread;
 
 static void inputdevice_read (void)
 {
-	do {
-		handle_msgpump ();
-		idev[IDTYPE_MOUSE].read ();
-		idev[IDTYPE_JOYSTICK].read ();
-		idev[IDTYPE_KEYBOARD].read ();
-	} while (handle_msgpump ());
+	for (;;)
+	{
+		int got = handle_msgpump();
+		if (!got)
+			break;
+	}
+	if (inputread <= 0)
+	{
+		idev[IDTYPE_MOUSE].read();
+		idev[IDTYPE_JOYSTICK].read();
+		idev[IDTYPE_KEYBOARD].read();
+	}
+}
+
+static void maybe_read_input(void)
+{
+	if (inputread >= 0 && (vpos - inputread) <= maxvpos_display / 3)
+		return;
+	inputread = vpos;
+	inputdevice_read();
 }
 
 static uae_u16 getjoystate (int joy)
@@ -2409,7 +2423,7 @@ static void inject_events (const TCHAR *str)
 	}
 }
 
-void inputdevice_hsync (void)
+void inputdevice_hsync(bool forceread)
 {
 	static int cnt;
 	cap_check ();
@@ -2430,12 +2444,14 @@ void inputdevice_hsync (void)
 		}
 	}
 
-	if ((++cnt & 63) == 63 ) {
-		inputdevice_read ();
-	} else if (inputdelay > 0) {
-		inputdelay--;
-		if (inputdelay == 0)
-			inputdevice_read ();
+	if (forceread)
+	{
+		inputread = maxvpos + 1;
+		inputdevice_read();
+	}
+	else
+	{
+		maybe_read_input();
 	}
 }
 
@@ -2613,6 +2629,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 {
 	int newstate, onoffstate;
 
+	if (s != NULL && s[0] == 0)
+		s = NULL;
+
 	if (code == 0)
 		goto end;
 
@@ -2635,6 +2654,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	{
 	case AKS_ENTERGUI:
 		gui_display(-1);
+		setsystime();
 		break;
 	//case AKS_SCREENSHOT_FILE:
 	//	if (state > 1) {
@@ -2657,6 +2677,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		}
 		else {
 			gui_display(0);
+			setsystime();
 		}
 		break;
 	case AKS_FLOPPY1:
@@ -2667,6 +2688,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		}
 		else {
 			gui_display(1);
+			setsystime();
 		}
 		break;
 	case AKS_FLOPPY2:
@@ -2677,6 +2699,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		}
 		else {
 			gui_display(2);
+			setsystime();
 		}
 		break;
 	case AKS_FLOPPY3:
@@ -2687,6 +2710,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		}
 		else {
 			gui_display(3);
+			setsystime();
 		}
 		break;
 	case AKS_EFLOPPY0:
@@ -2701,6 +2725,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_EFLOPPY3:
 		disk_eject(3);
 		break;
+	case AKS_IRQ7:
+		NMI_delayed();
+		break;
 	case AKS_PAUSE:
 		pausemode(newstate > 0 ? 1 : newstate);
 		break;
@@ -2709,12 +2736,30 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 			pausemode(0);
 		autopause = 1;
 		break;
+	//case AKS_WARP:
+	//	warpmode(newstate);
+	//	break;
+	//case AKS_INHIBITSCREEN:
+	//	toggle_inhibit_frame(monid, IHF_SCROLLLOCK);
+	//	break;
 	case AKS_VOLDOWN:
 		sound_volume(newstate <= 0 ? -1 : 1);
 		break;
 	case AKS_VOLUP:
 		sound_volume(newstate <= 0 ? 1 : -1);
 		break;
+	//case AKS_VOLMUTE:
+	//	sound_mute(newstate);
+	//	break;
+	//case AKS_MVOLDOWN:
+	//	master_sound_volume(newstate <= 0 ? -1 : 1);
+	//	break;
+	//case AKS_MVOLUP:
+	//	master_sound_volume(newstate <= 0 ? 1 : -1);
+	//	break;
+	//case AKS_MVOLMUTE:
+	//	master_sound_volume(0);
+	//	break;
 	case AKS_QUIT:
 		uae_quit();
 		break;
@@ -2727,6 +2772,24 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_TOGGLEWINDOWEDFULLSCREEN:
 		toggle_fullscreen();
 		break;
+	case AKS_DECREASEREFRESHRATE:
+	case AKS_INCREASEREFRESHRATE:
+	{
+		struct chipset_refresh *cr = get_chipset_refresh();
+		if (cr) {
+			int dir = code == AKS_INCREASEREFRESHRATE ? 5 : -5;
+			if (cr->rate == 0)
+				cr->rate = currprefs.ntscmode ? 60 : 50;
+			cr->locked = true;
+			cr->rate += dir;
+			if (cr->rate < 10)
+				cr->rate = 10;
+			if (cr->rate > 900)
+				cr->rate = 900;
+			set_config_changed();
+		}
+	}
+	break;
 	case AKS_MOUSEMAP_PORT0_LEFT:
 		(changed_prefs.jports[0].mousemap) ^= 1 << 0;
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
@@ -2780,6 +2843,15 @@ void inputdevice_handle_inputcode(void)
 		int state = i.state;
 		const TCHAR *s = i.s;
 		if (code) {
+#ifdef AMIBERRY
+			if (pause_emulation && state == 0)
+			{
+				got = false;
+				xfree(i.s);
+				i.code = 0;
+				continue;
+			}
+#endif
 			if (!inputdevice_handle_inputcode2(code, state, s)) {
 				xfree(i.s);
 				i.code = 0;
@@ -2811,7 +2883,7 @@ static int handle_input_event(int nr, int state, int max, int autofire)
 {
 	const struct inputevent *ie;
 	int joy;
-	bool isaks = false;
+	bool isaks;
 
 	if (nr <= 0 || nr == INPUTEVENT_SPC_CUSTOM_EVENT)
 		return 0;
@@ -3090,9 +3162,7 @@ void inputdevice_vsync (void)
 
 	input_frame++;
 	mouseupdate (0, true);
-
-	inputdevice_read ();
-	inputdelay = uaerand () % (maxvpos <= 1 ? 1 : maxvpos - 1);
+	inputread = -1;
 
 	inputdevice_handle_inputcode ();
 	if (mousehack_alive_cnt > 0) {
@@ -3106,11 +3176,11 @@ void inputdevice_vsync (void)
 	inputdevice_checkconfig ();
 }
 
-void inputdevice_reset (void)
+void inputdevice_reset(void)
 {
-  mousehack_reset ();
-	if (inputdevice_is_tablet ())
-		mousehack_enable ();
+	mousehack_reset();
+	if (inputdevice_is_tablet())
+		mousehack_enable();
 }
 
 static int getoldport (struct uae_input_device *id)
@@ -3445,38 +3515,41 @@ static void setbuttonstateall (struct uae_input_device *id, struct uae_input_dev
 	if (button >= ID_BUTTON_TOTAL)
 		return;
 
-	if (doit) {
-	  getqualmask (qualmask, id, ID_BUTTON_OFFSET + button, &qualonly);
+	if (doit)
+	{
+		getqualmask(qualmask, id, ID_BUTTON_OFFSET + button, &qualonly);
 
-	  for (i = 0; i < MAX_INPUT_SUB_EVENT; i++) {
-		  int sub = sublevdir[buttonstate == 0 ? 1 : 0][i];
-		  uae_u64 *flagsp = &id->flags[ID_BUTTON_OFFSET + button][sub];
-		  int evt = id->eventid[ID_BUTTON_OFFSET + button][sub];
-		  uae_u64 flags = flagsp[0];
-		  int autofire = (flags & ID_FLAG_AUTOFIRE) ? 1 : 0;
-		  int toggle = (flags & ID_FLAG_TOGGLE) ? 1 : 0;
-		  int inverttoggle = (flags & ID_FLAG_INVERTTOGGLE) ? 1 : 0;
-		  int invert = (flags & ID_FLAG_INVERT) ? 1 : 0;
-		  int setmode = (flags & ID_FLAG_SET_ONOFF) ? 1: 0;
-		  int setval = (flags & ID_FLAG_SET_ONOFF_VAL) ? SET_ONOFF_ON_VALUE : SET_ONOFF_OFF_VALUE;
-		  int state;
+		for (i = 0; i < MAX_INPUT_SUB_EVENT; i++)
+		{
+			int sub = sublevdir[buttonstate == 0 ? 1 : 0][i];
+			uae_u64 *flagsp = &id->flags[ID_BUTTON_OFFSET + button][sub];
+			int evt = id->eventid[ID_BUTTON_OFFSET + button][sub];
+			uae_u64 flags = flagsp[0];
+			int autofire = (flags & ID_FLAG_AUTOFIRE) ? 1 : 0;
+			int toggle = (flags & ID_FLAG_TOGGLE) ? 1 : 0;
+			int inverttoggle = (flags & ID_FLAG_INVERTTOGGLE) ? 1 : 0;
+			int invert = (flags & ID_FLAG_INVERT) ? 1 : 0;
+			int setmode = (flags & ID_FLAG_SET_ONOFF) ? 1 : 0;
+			int setval = (flags & ID_FLAG_SET_ONOFF_VAL) ? SET_ONOFF_ON_VALUE : SET_ONOFF_OFF_VALUE;
+			int state;
 
-		  if (buttonstate < 0) {
-			  state = buttonstate;
-		  } else if (invert) {
-			  state = buttonstate ? 0 : 1;
-		  } else {
-			  state = buttonstate;
-		  }
-		  if (setmode) {
-			  if (state)
-				  state = setval;
-		  }
+			if (buttonstate < 0)
+				state = buttonstate;
+			else if (invert)
+				state = buttonstate ? 0 : 1;
+			else
+				state = buttonstate;
 
-		  setqualifiers (evt, state > 0);
+			if (setmode)
+			{
+				if (state || setval == SET_ONOFF_PRESS_VALUE || setval == SET_ONOFF_PRESSREL_VALUE)
+					state = setval | (buttonstate ? 1 : 0);
+			}
 
-		  if (qualonly)
-			  continue;
+			setqualifiers(evt, state > 0);
+
+			if (qualonly)
+				continue;
 
 #ifndef INPUTDEVICE_SIMPLE
 		  if (state < 0) {

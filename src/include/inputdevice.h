@@ -262,7 +262,7 @@ extern void JOYSET (int num, uae_u16 v);
 extern uae_u16 JOYGET (int num);
 
 extern void inputdevice_vsync (void);
-extern void inputdevice_hsync (void);
+extern void inputdevice_hsync (bool forceread);
 extern void inputdevice_reset (void);
 
 extern void write_inputdevice_config (struct uae_prefs *p, struct zfile *f);

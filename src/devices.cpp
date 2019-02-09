@@ -91,6 +91,11 @@ void devices_rethink(void)
 	rethink_uae_int();
 }
 
+void devices_update_sound(double clk, double syncadjust)
+{
+	update_sound(clk);
+}
+
 void devices_update_sync(double svpos, double syncadjust)
 {
 	cd32_fmv_set_sync(svpos, syncadjust);
@@ -193,4 +198,30 @@ void devices_restore_start(void)
 	}
 	changed_prefs.mbresmem_low_size = 0;
 	changed_prefs.mbresmem_high_size = 0;
+}
+
+void devices_pause(void)
+{
+#ifdef WITH_PPC
+	uae_ppc_pause(1);
+#endif
+	blkdev_entergui();
+#ifdef RETROPLATFORM
+	rp_pause(1);
+#endif
+	//pausevideograb(1);
+	//ethernet_pause(1);
+}
+
+void devices_unpause(void)
+{
+	blkdev_exitgui();
+#ifdef RETROPLATFORM
+	rp_pause(0);
+#endif
+#ifdef WITH_PPC
+	uae_ppc_pause(0);
+#endif
+	//pausevideograb(0);
+	//ethernet_pause(0);
 }

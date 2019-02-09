@@ -295,6 +295,7 @@ extern void init_hardware_for_drawing_frame (void);
 extern void reset_drawing (void);
 extern void drawing_init (void);
 extern bool notice_interlace_seen (bool);
+extern void redraw_frame(void);
 extern void putpixel(uae_u8* buf, uae_u8* genlockbuf, int bpp, int x, xcolnr c8, int opaq);
 extern void check_prefs_picasso(void);
 

@@ -255,6 +255,13 @@ int get_next_key(void)
 
 int record_key(int kc)
 {
+	if (pause_emulation)
+		return 0;
+	return record_key_direct(kc);
+}
+
+int record_key_direct(int kc)
+{
 	int kpb_next = kpb_first + 1;
 
 	//write_log (_T("got kc %02X\n"), ((kc << 7) | (kc >> 1)) & 0xff);
