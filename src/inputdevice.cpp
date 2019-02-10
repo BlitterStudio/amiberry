@@ -2775,7 +2775,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_DECREASEREFRESHRATE:
 	case AKS_INCREASEREFRESHRATE:
 	{
-		struct chipset_refresh *cr = get_chipset_refresh();
+		struct chipset_refresh *cr = get_chipset_refresh(&changed_prefs);
 		if (cr) {
 			int dir = code == AKS_INCREASEREFRESHRATE ? 5 : -5;
 			if (cr->rate == 0)

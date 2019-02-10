@@ -89,6 +89,14 @@ STATIC_INLINE void send_interrupt (int num)
 extern void rethink_uae_int(void);
 extern uae_u16 INTREQR(void);
 
+STATIC_INLINE void safe_interrupt_set(bool i6)
+{
+	uae_u16 v = i6 ? 0x2000 : 0x0008;
+	if (!(intreq & v)) {
+		INTREQ_0(0x8000 | v);
+  }
+}
+
 /* maximums for statically allocated tables */
 #ifdef UAE_MINI
 /* absolute minimums for basic A500/A1200-emulation */
@@ -225,7 +233,7 @@ extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
 extern bool ispal(void);
 extern bool isvga(void);
 extern int current_maxvpos (void);
-extern struct chipset_refresh *get_chipset_refresh (void);
+extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
 extern void compute_framesync(void);
 extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
 
