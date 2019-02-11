@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <cmath>
 
 #include "sysdeps.h"
 #include "uae.h"

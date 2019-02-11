@@ -184,7 +184,7 @@
     </LaunchGDBSettings>
     <GenerateCtrlBreakInsteadOfCtrlC>false</GenerateCtrlBreakInsteadOfCtrlC>
     <DeploymentTargetPath>/home/pi/projects/amiberry/$(TargetFileName)</DeploymentTargetPath>
-    <X11WindowMode>Local</X11WindowMode>
+    <X11WindowMode>Remote</X11WindowMode>
     <KeepConsoleAfterExit>false</KeepConsoleAfterExit>
     <RunGDBUnderSudo>false</RunGDBUnderSudo>
     <DeploymentMode>Auto</DeploymentMode>
