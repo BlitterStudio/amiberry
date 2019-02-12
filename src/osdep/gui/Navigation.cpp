@@ -31,9 +31,8 @@ static NavigationMap navMap[] =
 // main_window
 { "About",            "",               "",               "Reset",            "Paths" },
 { "Paths",            "SystemROMs",     "SystemROMs",     "About",            "Quickstart" },
-{ "Quickstart",       "qsNTSC",         "qscboAModel",    "Paths",            "Booter" },
-{ "Booter",           "SetGameFile",         "GameFile",    "Quickstart",       "Configurations" },
-{ "Configurations",   "ConfigList",     "ConfigList",     "Booter",       "CPU and FPU" },
+{ "Quickstart",       "qsNTSC",         "qscboAModel",    "Paths",            "Configurations" },
+{ "Configurations",   "ConfigList",     "ConfigList",     "Quickstart",       "CPU and FPU" },
 { "CPU and FPU",      "7 Mhz",          "68000",          "Configurations",   "Chipset" },
 { "Chipset",          "Fast copper",    "OCS",            "CPU and FPU",      "ROM" },
 { "ROM",              "MainROM",        "cboMainROM",     "Chipset",          "RAM" },
@@ -99,16 +98,6 @@ static NavigationMap navMap[] =
 { "ConfigLoad",     "Configurations", "ConfigSave",     "ConfigDesc",     "ConfigList" },
 { "ConfigSave",     "ConfigLoad",     "CfgDelete",      "ConfigDesc",     "ConfigList" },
 { "CfgDelete",      "ConfigSave",     "Configurations", "ConfigDesc",     "ConfigList" },
-
-// PanelBooter
-{ "GameFile",        "Booter",          "SetGameFile",      "CustomOptions",    "SlaveFile" },
-{ "SlaveFile",       "Booter",          "Booter",           "GameFile",         "DataPath" },
-{ "DataPath",        "Booter",          "Booter",           "SlaveFile",        "CustomOptions" },
-{ "CustomOptions",   "Booter",          "SetCustomOptions", "DataPath",         "GameFile" },
-{ "SetGameFile",     "GameFile",        "Booter",           "ReadXML",          "SetCustomOptions" },
-{ "SetCustomOptions","CustomOptions",   "Booter",           "SetGameFile",      "ReadXML" },
-{ "ReadXML",         "Booter",          "Booter",           "SetCustomOptions", "SetGameFile" },
-
 
 //  active            move left         move right        move up           move down
 // PanelCPU

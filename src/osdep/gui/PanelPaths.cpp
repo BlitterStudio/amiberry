@@ -100,6 +100,8 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		RescanROMs();
+                SymlinkROMs();
+                
 		import_joysticks();
 		RefreshPanelInput();
 		RefreshPanelCustom();

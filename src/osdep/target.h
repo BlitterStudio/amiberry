@@ -68,6 +68,7 @@ extern void extractPath(char *str, char *buffer);
 extern void removeFileExtension(char *filename);
 extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
+extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
 
 #include <vector>
