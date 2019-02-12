@@ -160,49 +160,31 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optPort0)
-		{
 			SelectedPort = 0;
-		}
 		else if (actionEvent.getSource() == optPort1)
-		{
 			SelectedPort = 1;
-		}
 		else if (actionEvent.getSource() == optPort2)
-		{
 			SelectedPort = 2;
-		}
 		else if (actionEvent.getSource() == optPort3)
-		{
 			SelectedPort = 3;
-		}
 
 		else if (actionEvent.getSource() == optMultiNone)
-		{
 			SelectedFunction = 0;
-		}
 		else if (actionEvent.getSource() == optMultiSelect)
-		{
 			SelectedFunction = 1;
-		}
 		else if (actionEvent.getSource() == optMultiLeft)
-		{
 			SelectedFunction = 2;
-		}
 		else if (actionEvent.getSource() == optMultiRight)
-		{
 			SelectedFunction = 3;
-		}
 
-                
-                else if (actionEvent.getSource() == chkAnalogRemap)
-                        changed_prefs.input_analog_remap = chkAnalogRemap->isSelected();
-                        
+		else if (actionEvent.getSource() == chkAnalogRemap)
+			changed_prefs.input_analog_remap = chkAnalogRemap->isSelected();
+
 		RefreshPanelCustom();
 	}
 };
 
 static GroupActionListener* grpActionListener;
-
 
 class CustomActionListener : public gcn::ActionListener
 {
@@ -330,7 +312,6 @@ public:
 				break;
 			}
 
-
 			// and here, we will scroll through the custom-map and 
 			// push it into the currprefs config file
 
@@ -394,7 +375,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	chkAnalogRemap = new gcn::UaeCheckBox("Remap DPad to left axis");
 	chkAnalogRemap->setId("chkAnalogRemap");
 	chkAnalogRemap->addActionListener(grpActionListener);
-        chkAnalogRemap->setEnabled(true);
+	chkAnalogRemap->setEnabled(true);
         
 	grpPort = new gcn::Window("Joystick Port");
 	grpPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
@@ -466,11 +447,10 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	auto posY = 144 + 40;
 	for (i = 0; i < 7; ++i)
 	{
-		category.panel->add(lblCustomAction[i], DISTANCE_BORDER/2, posY);
-		category.panel->add(cboCustomAction[i], DISTANCE_BORDER/2 + lblCustomAction[i]->getWidth() + 4, posY);
+		category.panel->add(lblCustomAction[i], DISTANCE_BORDER / 2, posY);
+		category.panel->add(cboCustomAction[i], DISTANCE_BORDER / 2 + lblCustomAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
-
 
 	posY = 144 + 40;
 	for (i = 7; i < 14; ++i)
@@ -479,8 +459,8 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		category.panel->add(cboCustomAction[i], DISTANCE_BORDER + lblCustomAction[i]->getWidth() + 290 + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
-        
-        category.panel->add(chkAnalogRemap, DISTANCE_BORDER + lblCustomAction[0]->getWidth(), posY);
+
+	category.panel->add(chkAnalogRemap, DISTANCE_BORDER + lblCustomAction[0]->getWidth(), posY);
 	posY += chkAnalogRemap->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblPortInput, DISTANCE_BORDER, 144);
@@ -507,14 +487,13 @@ void ExitPanelCustom()
 	delete optMultiLeft;
 	delete optMultiRight;
 	delete grpFunction;
-        delete chkAnalogRemap;
+	delete chkAnalogRemap;
 
 	for (auto & i : lblCustomAction)
 	{
 		delete i;
-		//        delete cboCustomAction[i];                   
+		//delete cboCustomAction[i];                   
 	}
-
 
 	delete lblPortInput;
 	delete txtPortInput;

@@ -27,6 +27,7 @@
 #define HDF_SUPPORT_NSD 1
 #define HDF_SUPPORT_TD64 1
 #define HDF_SUPPORT_DS 1
+#define HDF_SUPPORT_DS_PARTITION 0
 
 #undef DEBUGME
 #define hf_log(fmt, ...)
@@ -46,6 +47,8 @@
 #define scsi_log write_log
 #endif
 
+int enable_ds_partition_hdf;
+
 #define MAX_ASYNC_REQUESTS 50
 #define ASYNC_REQUEST_NONE 0
 #define ASYNC_REQUEST_TEMP 1
@@ -56,16 +59,18 @@ struct hardfileprivdata {
 	uae_u8 *d_request_iobuf[MAX_ASYNC_REQUESTS];
 	int d_request_type[MAX_ASYNC_REQUESTS];
 	uae_u32 d_request_data[MAX_ASYNC_REQUESTS];
-  smp_comm_pipe requests;
-  int thread_running;
-  uae_thread_id thread_id;
-  uae_sem_t sync_sem;
-  uaecptr base;
-  int changenum;
-  uaecptr changeint;
+	smp_comm_pipe requests;
+	int thread_running;
+	uae_thread_id thread_id;
+	uae_sem_t sync_sem;
+	uaecptr base;
+	int changenum;
+	uaecptr changeint;
 	struct scsi_data *sd;
 };
 
+#define HFD_CHD_OTHER 5
+#define HFD_CHD_HD 4
 #define HFD_VHD_DYNAMIC 3
 #define HFD_VHD_FIXED 2
 
@@ -125,6 +130,8 @@ static void getchs2 (struct hardfiledata *hfd, int *cyl, int *cylsec, int *head,
 		*tracksec = hfd->ci.sectors;
 		*cylsec = (*head) * (*tracksec);
 		*cyl = (unsigned int)(hfd->virtsize / hfd->ci.blocksize) / ((*tracksec) * (*head));
+		if (*cyl == 0)
+			*cyl = (unsigned int)hfd->ci.max_lba / ((*tracksec) * (*head));
 		return;
 	}
 	/* no, lets guess something.. */
@@ -139,6 +146,8 @@ static void getchs2 (struct hardfiledata *hfd, int *cyl, int *cylsec, int *head,
 	else
 		heads = 255;
 	*cyl = (unsigned int)(hfd->virtsize / hfd->ci.blocksize) / (sectors * heads);
+	if (*cyl == 0)
+		*cyl = (unsigned int)hfd->ci.max_lba / (sectors * heads);
 	*cylsec = sectors * heads;
 	*tracksec = sectors;
 	*head = heads;
@@ -294,6 +303,54 @@ static void rdb_crc (uae_u8 *p)
 	pl (p, 2, sum);
 }
 
+static uae_u32 get_filesys_version(uae_u8 *fs, int size)
+{
+	int ver = -1, rev = -1;
+	for (int i = 0; i < size - 6; i++) {
+		uae_u8 *p = fs + i;
+		if (p[0] == 'V' && p[1] == 'E' && p[2] == 'R' && p[3] == ':' && p[4] == ' ') {
+			uae_u8 *p2;
+			p += 5;
+			p2 = p;
+			while (*p2 && p2 - fs < size)
+				p2++;
+			if (p2[0] == 0) {
+				while (*p && (ver < 0 || rev < 0)) {
+					if (*p == ' ') {
+						p++;
+						ver = atol((char*)p);
+						if (ver < 0)
+							ver = 0;
+						while (*p) {
+							if (*p == ' ')
+								break;
+							if (*p == '.') {
+								p++;
+								rev = atol((char*)p);
+								if (rev < 0)
+									rev = 0;
+							}
+							else {
+								p++;
+							}
+						}
+						break;
+					}
+					else {
+						p++;
+					}
+				}
+			}
+			break;
+		}
+	}
+	if (ver < 0)
+		return 0xffffffff;
+	if (rev < 0)
+		rev = 0;
+	return (ver << 16) | rev;
+}
+
 static void create_virtual_rdb (struct hardfiledata *hfd)
 {
 	uae_u8 *rdb, *part, *denv;
@@ -393,32 +450,35 @@ void hdf_hd_close (struct hd_hardfiledata *hfd)
 	hdf_close (&hfd->hfd);
 }
 
-int hdf_hd_open (struct hd_hardfiledata *hfd)
+int hdf_hd_open(struct hd_hardfiledata *hfd)
 {
 	struct uaedev_config_info *ci = &hfd->hfd.ci;
-	if (hdf_open (&hfd->hfd) <= 0)
+	if (hdf_open(&hfd->hfd) <= 0)
 		return 0;
+	hfd->hfd.unitnum = ci->uae_unitnum;
 	if (ci->physical_geometry) {
 		hfd->cyls = ci->pcyls;
 		hfd->heads = ci->pheads;
 		hfd->secspertrack = ci->psecs;
-	} else if (ci->highcyl && ci->surfaces && ci->sectors) {
+	}
+	else if (ci->highcyl && ci->surfaces && ci->sectors) {
 		hfd->cyls = ci->highcyl;
 		hfd->heads = ci->surfaces;
 		hfd->secspertrack = ci->sectors;
-	} else {
-		getchshd (&hfd->hfd, &hfd->cyls, &hfd->heads, &hfd->secspertrack);
+	}
+	else {
+		getchshd(&hfd->hfd, &hfd->cyls, &hfd->heads, &hfd->secspertrack);
 	}
 	hfd->cyls_def = hfd->cyls;
 	hfd->secspertrack_def = hfd->secspertrack;
 	hfd->heads_def = hfd->heads;
 	if (ci->surfaces && ci->sectors) {
 		uae_u8 buf[512] = { 0 };
-		hdf_read (&hfd->hfd, buf, 0, 512);
-		if (buf[0] != 0 && memcmp (buf, _T("RDSK"), 4)) {
+		hdf_read(&hfd->hfd, buf, 0, 512);
+		if (buf[0] != 0 && memcmp(buf, _T("RDSK"), 4)) {
 			ci->highcyl = (hfd->hfd.virtsize / ci->blocksize) / (ci->sectors * ci->surfaces);
-			ci->dostype = rl (buf);
-			create_virtual_rdb (&hfd->hfd);
+			ci->dostype = rl(buf);
+			create_virtual_rdb(&hfd->hfd);
 			while (ci->highcyl * ci->surfaces * ci->sectors > hfd->cyls_def * hfd->secspertrack_def * hfd->heads_def) {
 				hfd->cyls_def++;
 			}
@@ -426,6 +486,20 @@ int hdf_hd_open (struct hd_hardfiledata *hfd)
 	}
 	hfd->size = hfd->hfd.virtsize;
 	return 1;
+}
+
+static uae_u32 vhd_checksum(uae_u8 *p, int offset)
+{
+	int i;
+	uae_u32 sum;
+
+	sum = 0;
+	for (i = 0; i < 512; i++) {
+		if (offset >= 0 && i >= offset && i < offset + 4)
+			continue;
+		sum += p[i];
+	}
+	return ~sum;
 }
 
 static int hdf_write2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len);
@@ -449,6 +523,8 @@ int hdf_open (struct hardfiledata *hfd, const TCHAR *pname)
 		return 0;
 	hfd->byteswap = 0;
 	hfd->hfd_type = 0;
+	hfd->virtual_size = 0;
+	hfd->virtual_rdb = NULL;
 	if (!pname)
 		pname = hfd->ci.rootdir;
 	ret = hdf_open_target (hfd, pname);

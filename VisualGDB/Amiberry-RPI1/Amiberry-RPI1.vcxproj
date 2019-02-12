@@ -28,18 +28,18 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -53,7 +53,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

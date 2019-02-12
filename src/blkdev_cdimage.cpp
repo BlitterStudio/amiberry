@@ -386,7 +386,7 @@ static cda_audio *cda;
 
 static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 {
-	int cdda_pos;
+	int cdda_pos = cdu->cdda_start;
 	int bufnum;
 	int oldplay;
 	int idleframes = 0;

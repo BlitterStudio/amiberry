@@ -64,10 +64,10 @@ static void fill_default_controller(void)
 	default_controller_map.lstick_up = -1;
 	default_controller_map.lstick_down = -1;
 	default_controller_map.lstick_axis_y = 1;
-	default_controller_map.lstick_axis_x = 0;        
-        default_controller_map.lstick_axis_y_invert = false;
-        default_controller_map.lstick_axis_x_invert = false;
-        
+	default_controller_map.lstick_axis_x = 0;
+	default_controller_map.lstick_axis_y_invert = false;
+	default_controller_map.lstick_axis_x_invert = false;
+
 	default_controller_map.rstick_button = -1;
 	default_controller_map.rstick_left = -1;
 	default_controller_map.rstick_right = -1;
@@ -75,9 +75,9 @@ static void fill_default_controller(void)
 	default_controller_map.rstick_down = -1;
 	default_controller_map.rstick_axis_y = 3;
 	default_controller_map.rstick_axis_x = 2;
-        default_controller_map.rstick_axis_y_invert = false;
-        default_controller_map.rstick_axis_x_invert = false;
-        
+	default_controller_map.rstick_axis_y_invert = false;
+	default_controller_map.rstick_axis_x_invert = false;
+
 	default_controller_map.is_retroarch = false;
 }
 
@@ -117,9 +117,9 @@ static void fill_blank_controller(void)
 	default_controller_map.lstick_down = -1;
 	default_controller_map.lstick_axis_y = -1;
 	default_controller_map.lstick_axis_x = -1;
-        default_controller_map.lstick_axis_y_invert = false;
-        default_controller_map.lstick_axis_x_invert = false;
-        
+	default_controller_map.lstick_axis_y_invert = false;
+	default_controller_map.lstick_axis_x_invert = false;
+
 	default_controller_map.rstick_button = -1;
 	default_controller_map.rstick_left = -1;
 	default_controller_map.rstick_right = -1;
@@ -127,9 +127,9 @@ static void fill_blank_controller(void)
 	default_controller_map.rstick_down = -1;
 	default_controller_map.rstick_axis_y = -1;
 	default_controller_map.rstick_axis_x = -1;
-        default_controller_map.rstick_axis_y_invert = false;
-        default_controller_map.rstick_axis_x_invert = false;
-        
+	default_controller_map.rstick_axis_y_invert = false;
+	default_controller_map.rstick_axis_x_invert = false;
+
 	default_controller_map.is_retroarch = false;
 }
 
@@ -804,7 +804,7 @@ static int init_joystick(void)
 			else
 				sprintf(joystick_name[cpt], "Joystick%d", cpt);
 
-                       // printf("Real Name       >>%s<<\n",joystick_name[cpt]);
+            // printf("Real Name       >>%s<<\n",joystick_name[cpt]);
                         
 			//this now uses controllers path (in tmp)
 			char control_config[255];
@@ -812,27 +812,26 @@ static int init_joystick(void)
 			auto sanitized_name = sanitize_retroarch_name(joystick_name[cpt]);
 			strcat(control_config, sanitized_name.c_str());
 			//strcat(control_config, joystick_name[cpt]);
-                        strcat(control_config, ".cfg");
-                        
-                        //printf("Trying to match >>%s<<\n",control_config);
+            strcat(control_config, ".cfg");
+            
+            //printf("Trying to match >>%s<<\n",control_config);
 
 			if (zfile_exists(control_config))
 			{
 				fill_blank_controller();
 				host_input_buttons[cpt] = default_controller_map;
 
-                                
-                                //printf("Retroarch search for: >>%s<<\n",joystick_name[cpt]);
-                                
+				//printf("Retroarch search for: >>%s<<\n",joystick_name[cpt]);
+
 				host_input_buttons[cpt].is_retroarch = true;
 
 				host_input_buttons[cpt].hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config,
-					host_input_buttons[cpt]);
+																	   host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].quit_button = find_retroarch("input_exit_emulator_btn", control_config,
-					host_input_buttons[cpt]);
+																	 host_input_buttons[cpt]);
 				host_input_buttons[cpt].menu_button = find_retroarch("input_menu_toggle_btn", control_config,
-					host_input_buttons[cpt]);
+																	 host_input_buttons[cpt]);
 				host_input_buttons[cpt].reset_button = find_retroarch("input_reset_btn", control_config, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].east_button = find_retroarch("input_a_btn", control_config, host_input_buttons[cpt]);
@@ -856,41 +855,41 @@ static int init_joystick(void)
 				host_input_buttons[cpt].rstick_button = find_retroarch("input_r3_btn", control_config, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].lstick_axis_x = find_retroarch("input_l_x_plus_axis", control_config,
-					host_input_buttons[cpt]);
+																	   host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_x == -1)
 					host_input_buttons[cpt].lstick_axis_x = find_retroarch("input_right_axis", control_config, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].lstick_axis_y = find_retroarch("input_l_y_plus_axis", control_config,
-					host_input_buttons[cpt]);
+																	   host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_y == -1)
 					host_input_buttons[cpt].lstick_axis_y = find_retroarch("input_down_axis", control_config, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].rstick_axis_x = find_retroarch("input_r_x_plus_axis", control_config,
-					host_input_buttons[cpt]);
+																	   host_input_buttons[cpt]);
 				host_input_buttons[cpt].rstick_axis_y = find_retroarch("input_r_y_plus_axis", control_config,
-					host_input_buttons[cpt]);
+																	   host_input_buttons[cpt]);
 
-                            // specials
-                                // hats 
+                // specials
+                    // hats
 				host_input_buttons[cpt].number_of_hats = find_retroarch("count_hats", control_config, host_input_buttons[cpt]);
-         
-                                // invert on axes
-                                host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_down_axis",control_config);
-                                if (host_input_buttons[cpt].lstick_axis_y_invert == false)       
-                                    host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_l_y_plus_axis",control_config);
-                                 
-                                host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_right_axis",control_config);
-                                if (host_input_buttons[cpt].lstick_axis_x_invert == false)      
-                                    host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_l_x_plus_axis",control_config);
 
-                                host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis",control_config);
-                                host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis",control_config);
-  
-//                               i'll just leave this here for when we have a working debug logging                                
-//                                printf("invert left  y axis: %d\n",host_input_buttons[cpt].lstick_axis_y_invert);
-//                                printf("invert left  x axis: %d\n",host_input_buttons[cpt].lstick_axis_x_invert);
-//                                printf("invert right y axis: %d\n",host_input_buttons[cpt].rstick_axis_y_invert);
-//                                printf("invert right x axis: %d\n",host_input_buttons[cpt].rstick_axis_x_invert);
+				// invert on axes
+				host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_down_axis", control_config);
+				if (!host_input_buttons[cpt].lstick_axis_y_invert)
+					host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_l_y_plus_axis", control_config);
+
+				host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_right_axis", control_config);
+				if (!host_input_buttons[cpt].lstick_axis_x_invert)
+					host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_l_x_plus_axis", control_config);
+
+				host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis", control_config);
+				host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis", control_config);
+
+				//i'll just leave this here for when we have a working debug logging                                
+//              printf("invert left  y axis: %d\n",host_input_buttons[cpt].lstick_axis_y_invert);
+//              printf("invert left  x axis: %d\n",host_input_buttons[cpt].lstick_axis_x_invert);
+//              printf("invert right y axis: %d\n",host_input_buttons[cpt].rstick_axis_y_invert);
+//              printf("invert right x axis: %d\n",host_input_buttons[cpt].rstick_axis_x_invert);
 //                                       
 				//input_state_slot_increase_axis
 				//input_state_slot_decrease_axis
@@ -1138,7 +1137,6 @@ static void read_joystick(void)
 			if (current_controller_map.right_shoulder == current_controller_map.hotkey_button)
 				current_controller_map.right_shoulder = -1;
 
-
 			auto held_offset = 0;
 
 			// detect standalone retroarch hotkeys
@@ -1187,31 +1185,28 @@ static void read_joystick(void)
 				held_offset = 0;
 			}
 
-
 			auto val = 0;
 
-                        // this should allow use to change the tolerance
-                        int lower_bound = -32767;
-                        int upper_bound =  32767;
-                             
-                        
+			// this should allow use to change the tolerance
+			int lower_bound = -32767;
+			int upper_bound = 32767;
+
 			// left stick   
 			if (!currprefs.input_analog_remap)
 			{
 				// handle the X axis  (left stick)
 				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
-                                if (current_controller_map.lstick_axis_x_invert != 0)
-                                    val = val * -1;
-                                                                        
-                                setjoystickstate(hostjoyid + 1, 0, val, upper_bound);
-                             
+				if (current_controller_map.lstick_axis_x_invert != 0)
+					val = val * -1;
+
+				setjoystickstate(hostjoyid + 1, 0, val, upper_bound);
+
 				// handle the Y axis   
 				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
-                                if (current_controller_map.lstick_axis_y_invert != 0)
-                                    val = val * -1;
-                                
-                                setjoystickstate(hostjoyid + 1, 1, val, upper_bound);
-                                                  
+				if (current_controller_map.lstick_axis_y_invert != 0)
+					val = val * -1;
+
+				setjoystickstate(hostjoyid + 1, 1, val, upper_bound);
 			}
 
 			else
@@ -1238,19 +1233,17 @@ static void read_joystick(void)
 			}
 
 			// right stick
-			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);             
-                        if (current_controller_map.rstick_axis_x_invert != 0)
-                            val = val * -1;
-                        
-                        setjoystickstate(hostjoyid + 1, 2, val, upper_bound);
-                       
-			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
-                        if (current_controller_map.rstick_axis_y_invert != 0)
-                            val = val * -1;
-                        
-                        setjoystickstate(hostjoyid + 1, 3, val, upper_bound);
- 
+			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);
+			if (current_controller_map.rstick_axis_x_invert != 0)
+				val = val * -1;
 
+			setjoystickstate(hostjoyid + 1, 2, val, upper_bound);
+
+			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
+			if (current_controller_map.rstick_axis_y_invert != 0)
+				val = val * -1;
+
+			setjoystickstate(hostjoyid + 1, 3, val, upper_bound);
 
 			// cd32 red, blue, green, yellow
 			// south 
@@ -1265,7 +1258,6 @@ static void read_joystick(void)
 			// north
 			setjoybuttonstate(hostjoyid + 1, 3 + held_offset,
 				(SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.north_button) & 1));
-
 
 			// cd32  rwd, ffw, start
 			setjoybuttonstate(hostjoyid + 1, 4 + held_offset,
@@ -1360,20 +1352,17 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 		}
 	}
 
-	//
-
 	// ASSIGN ALL INPUT EVENT ACTIONS, EITHER CUSTOM OR DEFAULT
 	//
 	// set up a temporary control layout/ called 'thismap'
 	struct joypad_map_layout thismap[4];
-
 
 	// here, we will fill thismap with defaults, if a custom value is not set. 
 	// this will do a lot of the 'logic' of the original code.
 
 	thismap[0] = currprefs.jports[port].amiberry_custom_none; // grab the 'no selection' options for the current map
 
-															  // directions
+	// directions
 
 	if (port < 2) // ports 0, 1 ... 
 	{
@@ -1568,11 +1557,11 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 
 	thismap[1] = currprefs.jports[port].amiberry_custom_hotkey; // grab the 'select button' options for the current map
 
-																// currently disabled
-																//	thismap[2] = currprefs.jports[port].amiberry_custom_left_trigger; // grab the 'left trigger'  options for the current map        
-																//	thismap[3] = currprefs.jports[port].amiberry_custom_right_trigger; // grab the 'right trigger' options for the current map
+	// currently disabled
+	//	thismap[2] = currprefs.jports[port].amiberry_custom_left_trigger; // grab the 'left trigger'  options for the current map        
+	//	thismap[3] = currprefs.jports[port].amiberry_custom_right_trigger; // grab the 'right trigger' options for the current map
 
-																//  Now assign the actual buttons VALUES (TRUE/FALSE) to trigger the EVENTS
+	//  Now assign the actual buttons VALUES (TRUE/FALSE) to trigger the EVENTS
 	auto function_offset = 0;
 
 

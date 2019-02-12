@@ -33,6 +33,9 @@
 #include "rtgmodes.h"
 #include "gfxboard.h"
 #include "amiberry_gfx.h"
+#include "gui.h"
+#include "sounddep/sound.h"
+#include "devices.h"
 #ifdef USE_SDL2
 #include <map>
 #endif
@@ -45,6 +48,117 @@ int quickstart_conf = 0;
 bool host_poweroff = false;
 bool read_config_descriptions = true;
 bool write_logfile = false;
+bool scanlines_by_default = false;
+
+// Default Enter GUI key is F12
+int enter_gui_key = SDLK_F12;
+// We don't set a default value for Quitting
+int quit_key = 0;
+// The default value for Action Replay is Pause/Break
+int action_replay_button = SDLK_PAUSE;
+// No default value for Full Screen toggle
+int fullscreen_key = 0;
+
+#ifdef USE_SDL1
+SDLKey GetKeyFromName(const char *name)
+{
+	if (!name || !*name) {
+		return SDLK_UNKNOWN;
+	}
+
+	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
+	{
+		if (!SDL_GetKeyName(SDLKey(key)))
+			continue;
+		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
+		{
+			return SDLKey(key);
+		}
+	}
+
+	return SDLK_UNKNOWN;
+}
+#endif
+
+void set_key_configs(struct uae_prefs *p)
+{
+	if (strncmp(p->open_gui, "", 1) != 0)
+	{
+		// If we have a value in the config, we use that instead
+#ifdef USE_SDL1
+		enter_gui_key = GetKeyFromName(p->open_gui);
+#elif USE_SDL2
+		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
+#endif
+	}
+
+	if (strncmp(p->quit_amiberry, "", 1) != 0)
+	{
+		// If we have a value in the config, we use that instead
+#ifdef USE_SDL1
+		quit_key = GetKeyFromName(p->quit_amiberry);
+#elif USE_SDL2
+		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
+#endif
+	}
+
+	if (strncmp(p->action_replay, "", 1) != 0)
+	{
+#ifdef USE_SDL1
+		action_replay_button = GetKeyFromName(p->action_replay);
+#elif USE_SDL2
+		action_replay_button = SDL_GetKeyFromName(p->action_replay);
+#endif
+	}
+
+	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
+	{
+#ifdef USE_SDL1
+		fullscreen_key = GetKeyFromName(p->fullscreen_toggle);
+#elif USE_SDL2
+		fullscreen_key = SDL_GetKeyFromName(p->fullscreen_toggle);
+#endif
+	}
+}
+
+// Justifications for the numbers set here
+// Frametime is 20000 cycles in PAL
+//              16667 cycles in NTSC
+// The most we can give back is a frame's worth of
+// cycles, but we shouldn't give them ALL back for timing
+// coordination so I have picked 90% of the cycles.
+#ifdef FASTERCYCLES
+int speedup_cycles_jit_pal = 18000;
+int speedup_cycles_jit_ntsc = 15000;
+int speedup_cycles_nonjit = 1024;
+// These are set to give enough time to hit 60 fps
+// on the ASUS tinker board, and giving the rest of the
+// time to the CPU (minus the 10% reserve above).
+// As these numbers are decreased towards -(SPEEDUP_CYCLES),
+// more chipset time is given and the CPU gets slower.
+// For your platform its best to tune these to the point where
+// you hit 60FPS in NTSC and not higher.
+// Do not tune above -(SPEEDUP_CYCLES) or the emulation will
+// become unstable.
+int speedup_timelimit_jit = -10000;
+int speedup_timelimit_nonjit = -960;
+// These define the maximum CPU possible and work well with
+// frameskip on and operation at 30fps at full chipset speed
+// They give the minimum possible chipset time.  Do not make
+// these positive numbers.  Doing so may give you a 500mhz
+// 68040 but your emulation will not be able to reset at this
+// speed.
+int speedup_timelimit_jit_turbo = 0;
+int speedup_timelimit_nonjit_turbo = 0;
+#else
+int speedup_cycles_jit_pal = 10000;
+int speedup_cycles_jit_ntsc = 6667;
+int speedup_cycles_nonjit = 256;
+int speedup_timelimit_jit = -5000;
+int speedup_timelimit_nonjit = -5000;
+int speedup_timelimit_jit_turbo = 0;
+int speedup_timelimit_nonjit_turbo = 0;
+#endif
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -84,6 +198,51 @@ int sleep_millis_main(int ms)
 	usleep(ms * 1000);
 	idletime += read_processor_time() - start;
 	return 0;
+}
+
+static int pausemouseactive;
+void resumesoundpaused(void)
+{
+	resume_sound();
+#ifdef AHI
+	ahi_open_sound();
+	ahi2_pause_sound(0);
+#endif
+}
+void setsoundpaused(void)
+{
+	pause_sound();
+#ifdef AHI
+	ahi_close_sound();
+	ahi2_pause_sound(1);
+#endif
+}
+bool resumepaused(int priority)
+{
+	//write_log (_T("resume %d (%d)\n"), priority, pause_emulation);
+	if (pause_emulation > priority)
+		return false;
+	if (!pause_emulation)
+		return false;
+	devices_unpause();
+	resumesoundpaused();
+	if (pausemouseactive) {
+		pausemouseactive = 0;
+	}
+	pause_emulation = 0;
+	setsystime();
+	return true;
+}
+bool setpaused(int priority)
+{
+	//write_log (_T("pause %d (%d)\n"), priority, pause_emulation);
+	if (pause_emulation > priority)
+		return false;
+	pause_emulation = priority;
+	devices_pause();
+	setsoundpaused();
+	pausemouseactive = 1;
+	return true;
 }
 
 void logging_init(void)
@@ -226,10 +385,11 @@ void target_fixup_options(struct uae_prefs* p)
 	else
 		p->fpu_no_unimplemented = true;
 
-	if (!p->cachesize > 0)
+	if (p->cachesize <= 0)
 		p->compfpu = false;
 
 	fix_apmodes(p);
+	set_key_configs(p);
 }
 
 void target_default_options(struct uae_prefs* p, int type)
@@ -243,7 +403,16 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->vertical_offset = OFFSET_Y_ADJUST;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
-	p->gfx_vresolution = 0; // Disabled by default due performance hit
+	if (scanlines_by_default)
+	{
+		p->gfx_vresolution = VRES_DOUBLE;
+		p->gfx_pscanlines = 1;
+	}
+	else
+	{
+		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due performance hit
+		p->gfx_pscanlines = 0;
+	}
 
 	_tcscpy(p->open_gui, "F12");
 	_tcscpy(p->quit_amiberry, "");
@@ -488,7 +657,6 @@ void set_retroarchfile(char* newpath)
 	strncpy(retroarch_file, newpath, MAX_DPATH);
 }
 
-
 void fetch_rompath(char* out, int size)
 {
 	fixtrailing(rom_path);
@@ -499,7 +667,6 @@ void set_rompath(char *newpath)
 {
 	strncpy(rom_path, newpath, MAX_DPATH);
 }
-
 
 void fetch_rp9path(char *out, int size)
 {
@@ -529,7 +696,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	default_prefs(p, true, 0);
 
 	const char* ptr = strstr(const_cast<char *>(filename), ".rp9");
-	if (ptr > nullptr)
+	if (ptr)
 	{
 		// Load rp9 config
 		result = rp9_parse_file(p, filename);
@@ -539,7 +706,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	else
 	{
 		ptr = strstr(const_cast<char *>(filename), ".uae");
-		if (ptr > nullptr)
+		if (ptr)
 		{
 			auto config_type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
 			result = cfgfile_load(p, filename, &config_type, 0, 1);
@@ -581,10 +748,10 @@ int check_configfile(char *file)
 
 	strncpy(tmp, file, MAX_DPATH);
 	const auto ptr = strstr(tmp, ".uae");
-	if (ptr > nullptr)
+	if (ptr)
 	{
 		*(ptr + 1) = '\0';
-		strncat(tmp, "conf", MAX_DPATH);
+		strncat(tmp, "conf", MAX_DPATH - 1);
 		f = fopen(tmp, "rte");
 		if (f)
 		{
@@ -667,6 +834,44 @@ void save_amiberry_settings(void)
 		return;
 
 	char buffer[MAX_DPATH];
+
+	// Should the Quickstart Panel be the default when opening the GUI?
+	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
+	fputs(buffer, f);
+
+	// Open each config file and read the Description field? 
+	// This will slow down scanning the config list if it's very large
+	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Write to logfile? 
+	// If enabled, a file named "amiberry_log.txt" will be generated in the startup folder
+	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Scanlines ON by default?
+	// This will only be enabled if the vertical height is enough, as we need Line Doubling set to ON also
+	// Beware this comes with a performance hit, as double the amount of lines need to be drawn on-screen
+	snprintf(buffer, MAX_DPATH, "scanlines_by_default=%s\n", scanlines_by_default ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Timing settings
+	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_ntsc=%d\n", speedup_cycles_jit_ntsc);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_cycles_nonjit=%d\n", speedup_cycles_nonjit);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit=%d\n", speedup_timelimit_jit);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit=%d\n", speedup_timelimit_nonjit);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit_turbo=%d\n", speedup_timelimit_jit_turbo);
+	fputs(buffer, f);
+	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit_turbo=%d\n", speedup_timelimit_nonjit_turbo);
+	fputs(buffer, f);
+
+	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
 
@@ -682,8 +887,11 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
+	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%d\n", lstAvailableROMs.size());
 	fputs(buffer, f);
+
+	// The ROMs found in the last scan
 	for (auto & lstAvailableROM : lstAvailableROMs)
 	{
 		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROM->Name);
@@ -694,6 +902,7 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 	}
 
+	// Recent disk entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUDiskList=%d\n", lstMRUDiskList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUDiskList)
@@ -702,6 +911,7 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 	}
 
+	// Recent CD entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUCDList)
@@ -709,15 +919,6 @@ void save_amiberry_settings(void)
 		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", i.c_str());
 		fputs(buffer, f);
 	}
-
-	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
-	fputs(buffer, f);
 
 	fclose(f);
 }
@@ -804,7 +1005,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 				{
-					auto f = fopen(tmpFile, "rbe");
+					const auto f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -813,7 +1014,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
 				{
-					FILE* f = fopen(tmpFile, "rbe");
+					const auto f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -832,6 +1033,15 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
 					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
 					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
+					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
+
+					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
+					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
+					cfgfile_intval(option, value, "speedup_cycles_nonjit", &speedup_cycles_nonjit, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_jit", &speedup_timelimit_jit, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_nonjit", &speedup_timelimit_nonjit, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_jit_turbo", &speedup_timelimit_jit_turbo, 1);
+					cfgfile_intval(option, value, "speedup_timelimit_nonjit_turbo", &speedup_timelimit_nonjit_turbo, 1);
 				}
 			}
 		}
@@ -977,78 +1187,10 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-#ifdef USE_SDL1
-SDLKey GetKeyFromName(const char *name)
-{
-	if (!name || !*name) {
-		return SDLK_UNKNOWN;
-	}
-
-	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
-	{
-		if (!SDL_GetKeyName(SDLKey(key)))
-			continue;
-		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
-		{
-			return SDLKey(key);
-		}
-	}
-
-	return SDLK_UNKNOWN;
-}
-#endif
-
 int handle_msgpump()
 {
 	auto got = 0;
 	SDL_Event rEvent;
-
-	// Default Enter GUI key is F12
-	int enter_gui_key = SDLK_F12;
-	if (strncmp(currprefs.open_gui, "", 1) != 0)
-	{
-		// If we have a value in the config, we use that instead
-		// SDL2-only for now
-#ifdef USE_SDL1
-		enter_gui_key = GetKeyFromName(currprefs.open_gui);
-#elif USE_SDL2
-		enter_gui_key = SDL_GetKeyFromName(currprefs.open_gui);
-#endif
-	}
-
-	// We don't set a default value for Quitting
-	int quit_key = 0;
-	if (strncmp(currprefs.quit_amiberry, "", 1) != 0)
-	{
-		// If we have a value in the config, we use that instead
-#ifdef USE_SDL1
-		quit_key = GetKeyFromName(currprefs.quit_amiberry);
-#elif USE_SDL2
-		quit_key = SDL_GetKeyFromName(currprefs.quit_amiberry);
-#endif
-	}
-
-	// The default value for Action Replay is Pause/Break
-	int action_replay_button = SDLK_PAUSE;
-	if (strncmp(currprefs.action_replay, "", 1) != 0)
-	{
-#ifdef USE_SDL1
-		action_replay_button = GetKeyFromName(currprefs.action_replay);
-#elif USE_SDL2
-		action_replay_button = SDL_GetKeyFromName(currprefs.action_replay);
-#endif
-	}
-
-	// No default value for Full Screen toggle
-	int fullscreen_key = 0;
-	if (strncmp(currprefs.fullscreen_toggle, "", 1) != 0)
-	{
-#ifdef USE_SDL1
-		fullscreen_key = GetKeyFromName(currprefs.fullscreen_toggle);
-#elif USE_SDL2
-		fullscreen_key = SDL_GetKeyFromName(currprefs.fullscreen_toggle);
-#endif
-	}
 
 	while (SDL_PollEvent(&rEvent))
 	{
@@ -1242,6 +1384,39 @@ int handle_msgpump()
 		}
 	}
 	return got;
+}
+
+bool handle_events()
+{
+	static int was_paused = 0;
+
+	if (pause_emulation)
+	{
+		if (was_paused == 0)
+		{
+			setpaused(pause_emulation);
+			was_paused = pause_emulation;
+			gui_fps(0, 0, 0);
+			gui_led(LED_SND, 0, -1);
+			// we got just paused, report it to caller.
+			return true;
+		}
+		SDL_Event event;
+		SDL_WaitEvent(&event);
+
+		inputdevicefunc_keyboard.read();
+		inputdevicefunc_mouse.read();
+		inputdevicefunc_joystick.read();
+		inputdevice_handle_inputcode();
+	}
+	if (was_paused && (!pause_emulation || quit_program)) {
+		//updatedisplayarea();
+		pause_emulation = was_paused;
+		resumepaused(was_paused);
+		was_paused = 0;
+	}
+
+	return pause_emulation != 0;
 }
 
 static uaecptr clipboard_data;

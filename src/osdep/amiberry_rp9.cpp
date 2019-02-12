@@ -27,7 +27,7 @@ static bool clip_no_hires = false;
 void rp9_init()
 {
 	fetch_rp9path(rp9tmp_path, MAX_DPATH);
-	strncat(rp9tmp_path, _T("tmp/"), MAX_DPATH);
+	strncat(rp9tmp_path, _T("tmp/"), MAX_DPATH - 1);
 	lstTmpRP9Files.clear();
 	LIBXML_TEST_VERSION
 }

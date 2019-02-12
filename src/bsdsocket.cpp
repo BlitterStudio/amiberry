@@ -1282,7 +1282,7 @@ static const uae_u32 number_io_error = sizeof (io_errlist) / sizeof (*io_errlist
 
 
 static const TCHAR * const strErr = _T("Errlist lookup error");
-static uae_u32 strErrptr;
+static uae_u32 strErrptr, strReleaseVer;
 
 
 #define TAG_DONE   (0L)		/* terminates array of TagItems. ti_Data unused */
@@ -1572,6 +1572,12 @@ static uae_u32 REGPARAM2 bsdsocklib_SocketBaseTagList(TrapContext *ctx)
 					tagcopy(ctx, currtag, currval, tagptr, &sb->herrnoptr);
 					sb->herrnosize = 4;
 					break;
+				case SBTC_RELEASESTRPTR:
+					BSDTRACE((_T("SBTC_RELEASESTRPTR),0x%x"), currval));
+					if (!(currtag & 1)) {
+						tagcopy(ctx, currtag, currval, tagptr, &strReleaseVer);
+					}
+					break;
 				default:
 					write_log (_T("bsdsocket: WARNING: Unsupported tag type (%08x=%d) in SocketBaseTagList(%x)\n"),
 						currtag, (currtag / 2) & SBTS_CODE, trap_get_areg(ctx, 0));
@@ -1630,6 +1636,7 @@ static uae_u32 REGPARAM2 bsdsocklib_null(TrapContext *ctx)
 
 static uae_u32 REGPARAM2 bsdsocklib_init(TrapContext *ctx)
 {
+	TCHAR verStr[32];
 	uae_u32 tmp1;
 	int i;
 
@@ -1669,6 +1676,7 @@ static uae_u32 REGPARAM2 bsdsocklib_init(TrapContext *ctx)
 	SockLibBase = tmp1;
 
 	/* Install error strings in Amiga memory */
+	_stprintf(verStr, _T("UAE %d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 	tmp1 = 0;
 	for (i = number_sys_error; i--;)
 		tmp1 += _tcslen (errortexts[i]) + 1;
@@ -1678,7 +1686,8 @@ static uae_u32 REGPARAM2 bsdsocklib_init(TrapContext *ctx)
 		tmp1 += _tcslen (sana2io_errlist[i]) + 1;
 	for (i = number_sana2wire_error; i--;)
 		tmp1 += _tcslen (sana2wire_errlist[i]) + 1;
-	tmp1 += _tcslen (strErr) + 1;
+	tmp1 += _tcslen(strErr) + 1;
+	tmp1 += _tcslen(verStr) + 1;
 
 #if NEWTRAP
 	trap_call_add_dreg(ctx, 0, tmp1);
@@ -1704,6 +1713,7 @@ static uae_u32 REGPARAM2 bsdsocklib_init(TrapContext *ctx)
 	for (i = 0; i < (int) (number_sana2wire_error); i++)
 		sana2wiretextptrs[i] = addstr(ctx, &tmp1, sana2wire_errlist[i]);
 	strErrptr = addstr(ctx, &tmp1, strErr);
+	strReleaseVer = addstr(ctx, &tmp1, verStr);
 
 	trap_set_dreg(ctx, 0, 1);
 	return 0;
@@ -1815,11 +1825,8 @@ void bsdlib_install (void)
 			sockdata->sockpoolids[i] = UNIQUE_ID;
 	}
 
-	if (!init_socket_layer ()) {
-	  res_name = 0;
-	  res_id = 0;
+	if (!init_socket_layer ())
 		return;
-  }
 
 	res_name = ds (_T("bsdsocket.library"));
 	res_id = ds (_T("UAE bsdsocket.library 4.1"));

@@ -793,8 +793,8 @@ namespace widgets
 					strncat(tmp, last_loaded_config, MAX_DPATH - 1);
 				else
 				{
-					strncat(tmp, OPTIONSFILENAME, MAX_DPATH);
-					strncat(tmp, ".uae", MAX_DPATH);
+					strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
+					strncat(tmp, ".uae", MAX_DPATH - 10);
 				}
 				uae_restart(-1, tmp);
 				gui_running = false;

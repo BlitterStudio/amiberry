@@ -16,18 +16,20 @@
 /* According to the HRM, pixel data spends a couple of cycles somewhere in the chips
 before it appears on-screen. (TW: display emulation now does this automatically)  */
 #define DIW_DDF_OFFSET 1
+#define DIW_DDF_OFFSET_SHRES (DIW_DDF_OFFSET << 2)
 /* this many cycles starting from hpos=0 are visible on right border */
 #define HBLANK_OFFSET 9
 /* We ignore that many lores pixels at the start of the display. These are
  * invisible anyway due to hardware DDF limits. */
 #define DISPLAY_LEFT_SHIFT 0x38
+#define DISPLAY_LEFT_SHIFT_SHRES (DISPLAY_LEFT_SHIFT << 2)
 
 #define PIXEL_XPOS(HPOS) (((HPOS)*2 - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) << lores_shift)
 
 #define min_diwlastword (0)
 #define max_diwlastword   (PIXEL_XPOS(0x1d4>> 1))
 
-extern int lores_shift, interlace_seen;
+extern int lores_shift, shres_shift, interlace_seen;
 extern bool aga_mode;
 
 STATIC_INLINE int shres_coord_hw_to_window_x (int x)
@@ -48,6 +50,16 @@ STATIC_INLINE int coord_window_to_hw_x (int x)
 {
 	x >>= lores_shift;
   return x + DISPLAY_LEFT_SHIFT;
+}
+
+STATIC_INLINE int coord_diw_lores_to_window_x(int x)
+{
+	return (x - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) << lores_shift;
+}
+
+STATIC_INLINE int coord_diw_shres_to_window_x(int x)
+{
+	return (x - DISPLAY_LEFT_SHIFT_SHRES + DIW_DDF_OFFSET_SHRES - (1 << 2)) >> shres_shift;
 }
 
 STATIC_INLINE int coord_diw_to_window_x (int x)
@@ -277,12 +289,13 @@ enum nln_how {
 
 extern void hsync_record_line_state(int lineno, enum nln_how, int changed);
 extern void halt_draw_frame(void);
-extern void vsync_handle_redraw (void);
+extern void vsync_handle_redraw(int long_field, int lof_changed, uae_u16, uae_u16, bool drawlines);
 extern bool vsync_handle_check (void);
 extern void init_hardware_for_drawing_frame (void);
 extern void reset_drawing (void);
 extern void drawing_init (void);
 extern bool notice_interlace_seen (bool);
+extern void redraw_frame(void);
 extern void putpixel(uae_u8* buf, uae_u8* genlockbuf, int bpp, int x, xcolnr c8, int opaq);
 extern void check_prefs_picasso(void);
 

@@ -617,7 +617,7 @@ static void fp_unimp_datatype(uae_u16 opcode, uae_u16 extra, uae_u32 ea, uaecptr
 				fsave_data.stag = 7; // undocumented
 			} else {
 				fpp_from_exten(src, &fsave_data.et[0], &fsave_data.et[1], &fsave_data.et[2]);
-				fsave_data.stag = get_ftag(src, (opclass == 0) ? -1 : size);
+				fsave_data.stag = get_ftag(src, (opclass == 0) ? -1U : size);
 				if (fsave_data.stag == 5) {
 					fsave_data.et[0] = (size == 1) ? 0x3f800000 : 0x3c000000; // exponent for denormalized single and double
 				}
@@ -2326,6 +2326,7 @@ void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 
 void fpu_reset (void)
 {
+	currprefs.fpu_mode = changed_prefs.fpu_mode;
 #if defined(CPU_i386) || defined(CPU_x86_64)
 	init_fpucw_x87();
 #endif

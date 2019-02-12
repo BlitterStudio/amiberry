@@ -36,65 +36,69 @@ int romlist_count (void)
 	return romlist_cnt;
 }
 
-TCHAR *romlist_get (const struct romdata *rd)
+TCHAR *romlist_get(const struct romdata *rd)
 {
-  int i;
+	int i;
 
-  if (!rd)
-  	return 0;
-  for (i = 0; i < romlist_cnt; i++) {
-  	if (rl[i].rd->id == rd->id)
-	    return rl[i].path;
-  }
-  return 0;
+	if (!rd)
+		return 0;
+	for (i = 0; i < romlist_cnt; i++)
+	{
+		if (rl[i].rd->id == rd->id)
+			return rl[i].path;
+	}
+	return 0;
 }
 
-static struct romlist *romlist_getrl (const struct romdata *rd)
+static struct romlist *romlist_getrl(const struct romdata *rd)
 {
-  int i;
-    
-  if (!rd)
-  	return 0;
-  for (i = 0; i < romlist_cnt; i++) {
-  	if (rl[i].rd == rd)
-	    return &rl[i];
-  }
-  return 0;
+	int i;
+
+	if (!rd)
+		return 0;
+	for (i = 0; i < romlist_cnt; i++)
+	{
+		if (rl[i].rd == rd)
+			return &rl[i];
+	}
+	return 0;
 }
 
 static void romlist_cleanup (void);
-void romlist_add (const TCHAR *path, struct romdata *rd)
+void romlist_add(const TCHAR *path, struct romdata *rd)
 {
-  struct romlist *rl2;
+	struct romlist *rl2;
 
-  if (path == NULL || rd == NULL) {
-  	romlist_cleanup ();
-  	return;
-  }
-  romlist_cnt++;
-  rl = xrealloc (struct romlist, rl, romlist_cnt);
-  rl2 = rl + romlist_cnt - 1;
-  rl2->path = my_strdup (path);
-  rl2->rd = rd;
-	struct romdata *rd2 = getromdatabyid (rd->id);
+	if (path == NULL || rd == NULL)
+	{
+		romlist_cleanup();
+		return;
+	}
+	romlist_cnt++;
+	rl = xrealloc(struct romlist, rl, romlist_cnt);
+	rl2 = rl + romlist_cnt - 1;
+	rl2->path = my_strdup(path);
+	rl2->rd = rd;
+	struct romdata *rd2 = getromdatabyid(rd->id);
 	if (rd2 != rd && rd2) // replace "X" with parent name
 		rd->name = rd2->name;
 }
 
-
-struct romdata *getromdatabypath (const TCHAR *path)
+struct romdata *getromdatabypath(const TCHAR *path)
 {
-  int i;
-  for (i = 0; i < romlist_cnt; i++) {
-  	struct romdata *rd = rl[i].rd;
-  	if (rd->configname && path[0] == ':') {
-	    if (!_tcscmp(path + 1, rd->configname))
-    		return rd;
-  	}
+	int i;
+	for (i = 0; i < romlist_cnt; i++)
+	{
+		struct romdata *rd = rl[i].rd;
+		if (rd->configname && path[0] == ':')
+		{
+			if (!_tcscmp(path + 1, rd->configname))
+				return rd;
+		}
 		if (my_issamepath(rl[i].path, path))
-	    return rl[i].rd;
-  }
-  return NULL;
+			return rl[i].rd;
+	}
+	return NULL;
 }
 
 #define NEXT_ROM_ID 251

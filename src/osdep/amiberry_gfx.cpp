@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <cmath>
 
 #include "sysdeps.h"
 #include "uae.h"
@@ -738,13 +739,17 @@ int check_prefs_changed_gfx()
 
 int lockscr()
 {
+	if (SDL_MUSTLOCK(screen))
+		SDL_LockSurface(screen);
+	init_row_map();
 	return 1;
 }
 
 
 void unlockscr()
 {
-
+	if (SDL_MUSTLOCK(screen))
+		SDL_UnlockSurface(screen);
 }
 
 #ifdef USE_DISPMANX

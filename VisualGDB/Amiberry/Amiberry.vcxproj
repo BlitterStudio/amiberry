@@ -38,30 +38,30 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r3</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -75,7 +75,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -90,7 +90,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -106,7 +106,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
