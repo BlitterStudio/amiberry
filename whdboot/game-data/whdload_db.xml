@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<whdbooter timestamp="2019-01-11 at 03:00:08">
+<whdbooter timestamp="2019-02-11 at 02:00:06">
 	<game filename="1001StolenIdeas_v1.0_Airwalk"  sha1="a24c60e66c9cdb5ca96075d9f4f4ad7eaa900d76">
 		<name>1001 Stolen Ideas</name>
 		<subpath>1001StolenIdeas</subpath>
@@ -327,6 +327,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -452,6 +453,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -580,6 +582,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -614,6 +617,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -971,6 +975,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -1233,6 +1238,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -1250,6 +1256,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -1517,6 +1524,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -1713,6 +1721,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -1767,6 +1776,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -1858,6 +1868,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -1949,6 +1960,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -2080,6 +2092,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -2168,6 +2181,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -2676,6 +2690,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -2767,6 +2782,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -3081,6 +3097,23 @@
 		
 		</hardware>
 	</game>
+	<game filename="DarkHellBBSTrackmo_v1.0_Atomic"  sha1="725a942241f2c52c7871a7ffcaf2d2dc3d3e195d">
+		<name>Dark Hell BBSTrackmo</name>
+		<subpath>DarkHellBBSTrackmo</subpath>
+		<variant_uuid>f060b6e7-ff5c-59f0-a1a8-614d54947e24</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>DarkHellBBSTrackmo.Slave</slave_default>
+		<slave number="1">
+			<filename>DarkHellBBSTrackmo.Slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="Darkroom_v1.0_Stellar"  sha1="3e7d0db01a0e1e366e01e6784d1ee1a82ae6fe3c">
 		<name>Darkroom</name>
 		<subpath>Darkroom</subpath>
@@ -3115,6 +3148,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -3543,6 +3577,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -3705,6 +3740,26 @@
 		
 		</hardware>
 	</game>
+	<game filename="Epilepsia_v1.0_Amnesia"  sha1="a12d9cace6cd0e3821ca45efd3eb31c01752063f">
+		<name>Epilepsia</name>
+		<subpath>Epilepsia</subpath>
+		<variant_uuid>b3cd53d6-0d5e-51dd-b9fd-cbdbb8e57741</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Epilepsia.Slave</slave_default>
+		<slave number="1">
+			<filename>Epilepsia.Slave</filename>
+			<datapath></datapath>
+			<custom>
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="EargasmTunes_v1.00a_Silents"  sha1="a90c8a2394d50ba7b034150743c522ef2dd80248">
 		<name>Eargasm Tunes</name>
 		<subpath>EargasmTunes</subpath>
@@ -3845,6 +3900,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -3899,6 +3955,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		FAST_RAM=8
 		
 		</hardware>
@@ -3945,26 +4002,6 @@
 		<slave_default>Epilepsia2.Slave</slave_default>
 		<slave number="1">
 			<filename>Epilepsia2.Slave</filename>
-			<datapath></datapath>
-			<custom>
-			
-			</custom>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=JOYSTICK
-		PORT0=JOY
-		PORT1=JOY
-		
-		</hardware>
-	</game>
-	<game filename="Epilepsia_v1.0_Amnesia"  sha1="a12d9cace6cd0e3821ca45efd3eb31c01752063f">
-		<name>Epilepsia</name>
-		<subpath>Epilepsia</subpath>
-		<variant_uuid>b3cd53d6-0d5e-51dd-b9fd-cbdbb8e57741</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>Epilepsia.Slave</slave_default>
-		<slave number="1">
-			<filename>Epilepsia.Slave</filename>
 			<datapath></datapath>
 			<custom>
 			
@@ -4055,6 +4092,23 @@
 		
 		</hardware>
 	</game>
+	<game filename="Evolution_v1.0_Desire"  sha1="b864f7d77a44010094edc0d45fcdaccb7917469e">
+		<name>Evolution Desire</name>
+		<subpath>EvolutionDesire</subpath>
+		<variant_uuid>a41a2a98-58c4-5d53-88b4-7e15e0d659bb</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>EvolutionDesire.Slave</slave_default>
+		<slave number="1">
+			<filename>EvolutionDesire.Slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="Exage_v1.0_BurningIndependence"  sha1="c1ae38b3bd60f9efd9ed4ad99d6e6f33b5636e09">
 		<name>Exage</name>
 		<subpath>Exage</subpath>
@@ -4086,6 +4140,26 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="Exile_v1.0_Desire"  sha1="bba01bc1aa354dfcff7c790a0e06d91720d3258c">
+		<name>Exile</name>
+		<subpath>Exile</subpath>
+		<variant_uuid>1a704791-b5da-563e-984f-22fada474d1b</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Exile.Slave</slave_default>
+		<slave number="1">
+			<filename>Exile.Slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		JIT=FALSE
+		SCREEN_HEIGHT=256
+		SCREEN_Y_OFFSET=0
 		
 		</hardware>
 	</game>
@@ -4123,6 +4197,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -4208,6 +4283,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -4435,6 +4511,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -4452,6 +4529,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -4648,6 +4726,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -4665,6 +4744,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -4913,6 +4993,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -5280,6 +5361,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -5297,6 +5379,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -5545,6 +5628,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -5647,6 +5731,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		FAST_RAM=8
 		
 		</hardware>
@@ -5676,6 +5761,23 @@
 		<slave_default>JochenHippelSoundDemo.Slave</slave_default>
 		<slave number="1">
 			<filename>JochenHippelSoundDemo.Slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="JOESlideshow2_v1.0_Scoopex"  sha1="5d3f9be877e6534a9973809024171eb0f32baa7c">
+		<name>JOESlideshow 2</name>
+		<subpath>JOESlideshow2</subpath>
+		<variant_uuid>07ddca5a-8e01-5de3-80ec-2a2b68e577bd</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>JOESlideshow2.Slave</slave_default>
+		<slave number="1">
+			<filename>JOESlideshow2.Slave</filename>
 			<datapath></datapath>
 		</slave>
 		<hardware>
@@ -5976,6 +6078,28 @@
 		
 		</hardware>
 	</game>
+	<game filename="LegalizeIt2_v1.2_Anarchy"  sha1="1edd7478f3d9cfdf23ee5a34d201858301e4880c">
+		<name>Legalize It 2</name>
+		<subpath>LegalizeIt2</subpath>
+		<variant_uuid>40aab6db-05ef-5553-9b82-fb428813decb</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>LegalizeIt2.slave</slave_default>
+		<slave number="1">
+			<filename>LegalizeIt2.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Skip Intro
+			C2:B:Run Hidden Part 1
+			C3:B:Run Hidden Part 2
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="Legoland_v1.0_Desire"  sha1="f1e2fb8637bd2e76286a3f77f73036d403dd288d">
 		<name>Legoland</name>
 		<subpath>Legoland</subpath>
@@ -6173,6 +6297,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -6310,6 +6435,40 @@
 		<slave_default>MusicSelector.Slave</slave_default>
 		<slave number="1">
 			<filename>MusicSelector.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="MusicThingy_v1.01_Exit"  sha1="59e6ca90a44e5f7aa8176dd18e6aafc6788a8ed9">
+		<name>Music Thingy</name>
+		<subpath>MusicThingy</subpath>
+		<variant_uuid>44fbe310-66a3-506a-ae77-2d84a92b83c7</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>MusicThingy.slave</slave_default>
+		<slave number="1">
+			<filename>MusicThingy.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="MusicThingy_v1.0_Exit"  sha1="2c42fb6055386dcc619cffa12049372e505cddf0">
+		<name>Music Thingy</name>
+		<subpath>MusicThingy</subpath>
+		<variant_uuid>54e3220f-a3e3-5ad7-8931-496534f14d4b</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>MusicThingy.Slave</slave_default>
+		<slave number="1">
+			<filename>MusicThingy.Slave</filename>
 			<datapath>data</datapath>
 		</slave>
 		<hardware>
@@ -6651,6 +6810,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -8334,6 +8494,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -8647,6 +8808,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -8664,6 +8826,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -9689,6 +9852,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -9752,6 +9916,26 @@
 		
 		</hardware>
 	</game>
+	<game filename="NoisesOfPansy_v1.0_Exit&amp;Erotic"  sha1="1a33ff884a2bb092dadc5028ed172c2e01bf2746">
+		<name>Noises Of Pansy</name>
+		<subpath>NoisesOfPansy</subpath>
+		<variant_uuid>2003e841-1a2b-5f30-94c5-2df37ec9c92c</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NoisesOfPansy.Slave</slave_default>
+		<slave number="1">
+			<filename>NoisesOfPansy.Slave</filename>
+			<datapath></datapath>
+			<custom>
+			C1:B:Skip Intro
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="NonStopMusic_v1.0_JungleCommand"  sha1="b5e3884273c52c60552e97fd0fca0aa31bc081e3">
 		<name>Non Stop Music</name>
 		<subpath>NonStopMusic</subpath>
@@ -9803,6 +9987,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -9871,6 +10056,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -9952,6 +10138,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10185,6 +10372,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10316,6 +10504,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10333,6 +10522,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10441,6 +10631,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10549,6 +10740,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10796,6 +10988,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10813,6 +11006,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10887,6 +11081,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -10921,6 +11116,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11102,6 +11298,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11323,6 +11520,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11340,6 +11538,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11568,6 +11767,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11582,6 +11782,27 @@
 			<datapath></datapath>
 			<custom>
 			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="SunTracker2_v1.0_Analog&amp;Powerlords&amp;Demons"  sha1="c71547944a8ddcb71fc73950fb5ec2e9038b10cb">
+		<name>Sun Tracker 2</name>
+		<subpath>SunTracker2</subpath>
+		<variant_uuid>8fccd311-66e0-5c65-a753-2439717bdcb5</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>SunTracker2.Slave</slave_default>
+		<slave number="1">
+			<filename>SunTracker2.Slave</filename>
+			<datapath></datapath>
+			<custom>
+			C1:B:Skip Intro
+			C2:B:Disable Blitter Waits
 			</custom>
 		</slave>
 		<hardware>
@@ -11608,6 +11829,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11676,6 +11898,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11693,6 +11916,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11781,6 +12005,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11863,6 +12088,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -11917,6 +12143,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		FAST_RAM=8
 		
 		</hardware>
@@ -12023,6 +12250,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -12040,6 +12268,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -12091,6 +12320,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -12188,6 +12418,24 @@
 		
 		</hardware>
 	</game>
+	<game filename="Soho_v1.0_Nova_AGA"  sha1="120cd20831d93873b62dde7999c9bf25d518414f">
+		<name>Soho [AGA]</name>
+		<subpath>SohoAGA</subpath>
+		<variant_uuid>d342a19b-ecee-5e0b-a046-4620aab7dc9a</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>SohoAGA.Slave</slave_default>
+		<slave number="1">
+			<filename>SohoAGA.Slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		CHIPSET=AGA
+		
+		</hardware>
+	</game>
 	<game filename="SongsOfInfinity_v1.0_Pointless"  sha1="fd57944f846889828e050c11d257da6e64d08378">
 		<name>Songs Of Infinity</name>
 		<subpath>SongsOfInfinity</subpath>
@@ -12222,6 +12470,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -12273,6 +12522,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -13450,6 +13700,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -13467,6 +13718,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -13518,6 +13770,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -13535,6 +13788,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -13791,6 +14045,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -13842,6 +14097,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -14052,6 +14308,23 @@
 		<slave_default>UltimateGameBoySimulator.Slave</slave_default>
 		<slave number="1">
 			<filename>UltimateGameBoySimulator.Slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="Unbelievable_v1.0_Atomic"  sha1="d16a4108fc0ffd450744c83e355bfae9752fa308">
+		<name>Unbelievable</name>
+		<subpath>Unbelievable</subpath>
+		<variant_uuid>e32f0533-140f-558e-bb20-9161c33e0cab</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Unbelievable.Slave</slave_default>
+		<slave number="1">
+			<filename>Unbelievable.Slave</filename>
 			<datapath></datapath>
 		</slave>
 		<hardware>
@@ -14504,6 +14777,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -14578,6 +14852,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -14629,6 +14904,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -14680,6 +14956,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -14891,6 +15168,7 @@
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -14947,6 +15225,7 @@
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -16188,6 +16467,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -16727,6 +17007,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -16976,6 +17257,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -17130,6 +17412,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		
 		</hardware>
@@ -17293,6 +17576,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -17313,6 +17597,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -17333,6 +17618,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -17386,6 +17672,7 @@
 		PORT1=JOY
 		CPU=68040
 		CLOCK=MAX
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=3
 		
@@ -17433,6 +17720,7 @@
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -17592,6 +17880,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=262
 		SCREEN_Y_OFFSET=-2
 		
@@ -18226,6 +18515,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=-6
 		
@@ -18324,6 +18614,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		
 		</hardware>
@@ -18342,6 +18633,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		
 		</hardware>
@@ -19530,6 +19822,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		FAST_RAM=8
 		
 		</hardware>
@@ -20133,6 +20426,8 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=3
 		
@@ -20152,6 +20447,8 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=3
 		
@@ -20543,6 +20840,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		
 		</hardware>
@@ -20561,6 +20859,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -20578,6 +20877,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -20767,6 +21067,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -21127,6 +21428,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -21382,6 +21684,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -21676,6 +21979,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=24
 		
@@ -21804,6 +22108,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=3
 		
@@ -22378,6 +22683,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		CLOCK=28
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -22402,6 +22708,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		CLOCK=28
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -22556,6 +22863,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -23015,6 +23323,46 @@ joyport1_amiberry_custom_none_west=Space
 		
 		</hardware>
 	</game>
+	<game filename="BombJackBeerEdition_v1.0-B"  sha1="fb546c8b6154b86bbeddfef8a90fcdde02e3fdb1">
+		<name>Bomb Jack Beer Edition</name>
+		<subpath>BombJackBeerEdition</subpath>
+		<variant_uuid>88f1c0e4-3649-5a0d-a06d-07889f86cbe6</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BombJackBeerEdition.slave</slave_default>
+		<slave number="1">
+			<filename>BombJackBeerEdition.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="BombJackBeerEdition_v1.0"  sha1="bf413d87c4c7bfa27acf080a52c8882fd80e7989">
+		<name>Bomb Jack Beer Edition</name>
+		<subpath>BombJackBeerEdition</subpath>
+		<variant_uuid>1e263a57-4b29-5de1-b95c-0344232e7deb</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BombJackBeerEdition.slave</slave_default>
+		<slave number="1">
+			<filename>BombJackBeerEdition.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="BombJack_v1.0_1804"  sha1="35800e0725c5774b621dfda83a9e538600130a68">
 		<name>Bomb Jack</name>
 		<subpath>BombJack</subpath>
@@ -23048,6 +23396,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=3
 		
@@ -23417,6 +23766,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -23625,6 +23975,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -23662,6 +24013,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -23699,6 +24051,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -23768,6 +24121,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -23832,6 +24186,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -24162,6 +24517,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -24679,6 +25035,29 @@ joyport1_amiberry_custom_none_west=Space
 		
 		</hardware>
 	</game>
+	<game filename="Cadaver&amp;ThePayoff_v2.3_0900"  sha1="92888baa79859d97facd298b4fa48d3912317e13">
+		<name>Cadaver &amp; The Payoff</name>
+		<subpath>Cadaver&amp;ThePayoff</subpath>
+		<variant_uuid>563733d4-1ba0-5145-a28f-11b3f0c29f0e</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Cadaver&amp;ThePayoff.slave</slave_default>
+		<slave number="1">
+			<filename>Cadaver&amp;ThePayoff.slave</filename>
+			<datapath></datapath>
+			<custom>
+			C2:L:Level set:Original Game,The Payoff
+			C4:X:Trainer - free savegames:0
+			C5:X:Trainer - in game keys:0
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="CadaverDemos_v1.0"  sha1="5b3f30140cb128d61c0efbc8ebad5eeec9ef79c4">
 		<name>Cadaver (Demos)</name>
 		<subpath>CadaverDemos</subpath>
@@ -24984,6 +25363,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		SCREEN_Y_OFFSET=0
 		
@@ -26027,6 +26407,23 @@ joyport1_amiberry_custom_none_west=Space
 		
 		</hardware>
 	</game>
+	<game filename="CastleOfDrBrain_v1.1_De_MT32_0304"  sha1="8828606843228b7307c609e8a07c94c2fdb56bf5">
+		<name>Castle Of Dr Brain De MT 32</name>
+		<subpath>CastleOfDrBrainDeMT32</subpath>
+		<variant_uuid>a3255b19-3c77-57be-a6ad-b18e4d9760b4</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>CastleOfDrBrainDeMT32.Slave</slave_default>
+		<slave number="1">
+			<filename>CastleOfDrBrainDeMT32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="CastleOfDrBrain_v1.1_NTSC_1287"  sha1="df712d8f7cd89bf29e78a509a47c8857eb4047fa">
 		<name>Castle Of Dr Brain (NTSC)</name>
 		<subpath>CastleOfDrBrainNTSC</subpath>
@@ -26035,6 +26432,23 @@ joyport1_amiberry_custom_none_west=Space
 		<slave_default>CastleOfDrBrainNTSC.Slave</slave_default>
 		<slave number="1">
 			<filename>CastleOfDrBrainNTSC.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="CastleOfDrBrain_v1.1_NTSC_MT32_1287"  sha1="f1c0a8480fef23a25e864e0426fd28384de71dbf">
+		<name>Castle Of Dr Brain (NTSC)MT 32</name>
+		<subpath>CastleOfDrBrainNTSCMT32</subpath>
+		<variant_uuid>4af6a25b-050c-545d-96b9-a658f68038bd</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>CastleOfDrBrainNTSCMT32.Slave</slave_default>
+		<slave number="1">
+			<filename>CastleOfDrBrainNTSCMT32.Slave</filename>
 			<datapath>data</datapath>
 		</slave>
 		<hardware>
@@ -26058,6 +26472,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -26237,6 +26652,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -26600,6 +27016,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT1=JOY
 		JIT=FALSE
 		CLOCK=28
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=8
 		
@@ -26727,6 +27144,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=3
 		
@@ -27195,6 +27613,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -27217,6 +27636,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -27620,6 +28040,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=3
 		
@@ -27795,6 +28216,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -28310,6 +28732,78 @@ joyport1_amiberry_custom_none_west=Space
 		PORT1=JOY
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="ConquestsOfTheLongbow_v1.1-B"  sha1="cf8cc55e43e3fa1dba24073bbf32c2d7fdadadfa">
+		<name>Conquests Of The Longbow</name>
+		<subpath>ConquestsOfTheLongbow</subpath>
+		<variant_uuid>6be3afdf-a5b5-592b-adfa-ba5cb3dcc87c</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ConquestsOfTheLongbow.slave</slave_default>
+		<slave number="1">
+			<filename>ConquestsOfTheLongbow.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="ConquestsOfTheLongbow_v1.1-B_MT32"  sha1="0d83126b5a4d7dcb049c27f4cc8a2acdc1e8c48c">
+		<name>Conquests Of The Longbow MT 32</name>
+		<subpath>ConquestsOfTheLongbowMT32</subpath>
+		<variant_uuid>4d025474-758a-5fd9-bf53-5426ce7b5d6c</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ConquestsOfTheLongbowMT32.slave</slave_default>
+		<slave number="1">
+			<filename>ConquestsOfTheLongbowMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="ConquestsOfTheLongbow_v1.1"  sha1="2c046dbd946f82be764c1abdd85ea7626204fa1e">
+		<name>Conquests Of The Longbow</name>
+		<subpath>ConquestsOfTheLongbow</subpath>
+		<variant_uuid>05a33a86-c5d4-5a8b-bba0-0c74e1317a97</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ConquestsOfTheLongbow.slave</slave_default>
+		<slave number="1">
+			<filename>ConquestsOfTheLongbow.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="ConquestsOfTheLongbow_v1.1_MT32"  sha1="91e8715e223c7d8e9c5254968f6425e91d6f114b">
+		<name>Conquests Of The Longbow MT 32</name>
+		<subpath>ConquestsOfTheLongbowMT32</subpath>
+		<variant_uuid>744559a4-e9d1-5c9b-b5d8-79a67f508c31</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ConquestsOfTheLongbowMT32.slave</slave_default>
+		<slave number="1">
+			<filename>ConquestsOfTheLongbowMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
 		
 		</hardware>
 	</game>
@@ -29869,6 +30363,32 @@ joyport1_amiberry_custom_none_west=Space
 		
 		</hardware>
 	</game>
+	<game filename="DynaBlaster_v1.4_0664"  sha1="9518cdbae4c184a31dbd5dda1b7bb9fd90444224">
+		<name>Dyna Blaster</name>
+		<subpath>DynaBlaster</subpath>
+		<variant_uuid>0744ff2f-5f56-552a-becb-99fdb8e443b1</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>DynaBlaster.slave</slave_default>
+		<slave number="1">
+			<filename>DynaBlaster.slave</filename>
+			<datapath></datapath>
+			<custom>
+			C1:B:Enable PAL screen
+			C2:L:Players Max.:3,5 (4-joy alt.),5 (4-joy default)
+			C3:B:Enable Cheat Mode
+			C4:B:12/6 pixels down screen
+			C5:X:Remove flicking text:0
+			C5:X:Fast blinking text:1
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_HEIGHT=262
+		
+		</hardware>
+	</game>
 	<game filename="DynamiteDux_v1.0_1183"  sha1="7ed5731942d9a567b5067288baef47921a8de389">
 		<name>Dynamite Dux</name>
 		<subpath>DynamiteDux</subpath>
@@ -30282,6 +30802,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=30
 		
@@ -30811,6 +31332,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT1=JOY
 		BLITTER=IMMEDIATE
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_Y_OFFSET=-3
 		
 		</hardware>
@@ -30900,6 +31422,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -31045,6 +31568,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -31391,6 +31915,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=MOUSE
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=270
 		SCREEN_Y_OFFSET=0
 		
@@ -31427,6 +31952,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -31587,6 +32113,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		SCREEN_Y_OFFSET=0
 		
@@ -31624,6 +32151,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -31731,6 +32259,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -31857,6 +32386,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -31966,6 +32496,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_Y_OFFSET=3
 		
 		</hardware>
@@ -32144,6 +32675,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -33021,6 +33553,7 @@ joyport1_amiberry_custom_none_west=Space
 		PORT0=MOUSE
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		SCREEN_Y_OFFSET=8
 		
@@ -33135,6 +33668,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=4
 		
@@ -34203,6 +34737,27 @@ joyport1_amiberry_custom_none_west=Space
 		
 		</hardware>
 	</game>
+	<game filename="EnchantedLand_v1.3_3063"  sha1="ffed2e06e9d7e962f30ca21aa683f2b8a31cf242">
+		<name>Enchanted Land</name>
+		<subpath>EnchantedLand</subpath>
+		<variant_uuid>61e52df5-6f50-5396-be40-f8a9a032c0b3</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>EnchantedLand.Slave</slave_default>
+		<slave number="1">
+			<filename>EnchantedLand.Slave</filename>
+			<datapath></datapath>
+			<custom>
+			C1:X:Infinite energy:0
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="Encounter_v1.2_0651"  sha1="7d75210fe69c60eab66ba42a2abe09ce89e0e988">
 		<name>Amiga Encounter</name>
 		<subpath>Encounter</subpath>
@@ -34890,6 +35445,7 @@ joyport1_amiberry_custom_none_west=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -35672,6 +36228,50 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		
 		</hardware>
 	</game>
+	<game filename="FantasticDizzy_v2.0_1904"  sha1="40c004cc3f23c88c191b42e3d888d77615b65850">
+		<name>Fantastic Dizzy</name>
+		<subpath>FantasticDizzy</subpath>
+		<variant_uuid>97e90d3d-e8e3-57b2-8543-a5b4d619e20a</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>FantasticDizzy.slave</slave_default>
+		<slave number="1">
+			<filename>FantasticDizzy.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		JIT=FALSE
+		SCREEN_HEIGHT=240
+		SCREEN_Y_OFFSET=0
+		
+		</hardware>
+	</game>
+	<game filename="FantasticDizzy_v2.0_AGA"  sha1="3101d90f5c46464396d0ecf13a60cdd1f3dd3e6b">
+		<name>Fantastic Dizzy [AGA]</name>
+		<subpath>FantasticDizzyAGA</subpath>
+		<variant_uuid>a0a88c35-70e5-51da-85a0-f09716ab115c</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>FantasticDizzyAGA.slave</slave_default>
+		<slave number="1">
+			<filename>FantasticDizzyAGA.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:X:Infinite lives:0
+			C2:L:Start with lives:2,3,4,5
+			C3:X:Blue button jumps:0
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		CHIPSET=AGA
+		
+		</hardware>
+	</game>
 	<game filename="FantasticVoyage_v1.0_0326"  sha1="f82b70c2919f692aa81dc34225a7db83a7bae9c6">
 		<name>Fantastic Voyage</name>
 		<subpath>FantasticVoyage</subpath>
@@ -35737,6 +36337,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -36113,6 +36714,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PORT0=MOUSE
 		PORT1=JOY
 		CLOCK=28
+		CHIPSET=AGA
 		SCREEN_HEIGHT=262
 		
 		</hardware>
@@ -36126,6 +36728,26 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		<slave number="1">
 			<filename>FederationOfFreeTraders.slave</filename>
 			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="FemmeFatale&amp;DataDisks_v1.0"  sha1="467abbf7b46ccae0bc230a3c7b5b23fced2876a4">
+		<name>Femme Fatale &amp; Data Disks</name>
+		<subpath>FemmeFatale&amp;DataDisks</subpath>
+		<variant_uuid>311ecce9-fed6-5424-8be3-4d908093ee56</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>FemmeFatale&amp;DataDisks.Slave</slave_default>
+		<slave number="1">
+			<filename>FemmeFatale&amp;DataDisks.Slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			
+			</custom>
 		</slave>
 		<hardware>
 		PRIMARY_CONTROL=JOYSTICK
@@ -36665,6 +37287,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -36686,6 +37309,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -36897,6 +37521,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=3
 		
@@ -36957,6 +37582,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_Y_OFFSET=3
 		
 		</hardware>
@@ -37904,6 +38530,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -38067,6 +38694,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -38633,6 +39261,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		BLITTER=IMMEDIATE
 		CPU=68040
 		CLOCK=MAX
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=3
 		
@@ -38887,6 +39516,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=-8
 		
@@ -39072,6 +39702,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PORT1=JOY
 		CPU=68040
 		CLOCK=MAX
+		CHIPSET=AGA
 		SCREEN_Y_OFFSET=3
 		
 		</hardware>
@@ -39141,6 +39772,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -39218,6 +39850,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PORT1=JOY
 		CPU=68040
 		CLOCK=MAX
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -40329,6 +40962,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -40349,6 +40983,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -40396,6 +41031,7 @@ joyport0_amiberry_custom_none_right_shoulder=Numpad 9
 		PORT1=JOY
 		CPU=68040
 		CLOCK=MAX
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -42299,6 +42935,7 @@ joyport1_amiberry_custom_none_right_shoulder=F2
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -43589,6 +44226,7 @@ joyport1_amiberry_custom_none_right_shoulder=F2
 		PORT0=JOY
 		PORT1=JOY
 		FAST_COPPER=FALSE
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -43831,6 +44469,7 @@ joyport1_amiberry_custom_none_right_shoulder=F2
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -45389,6 +46028,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PORT0=MOUSE
 		PORT1=JOY
 		CLOCK=28
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=20
 		
@@ -45985,6 +46625,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -46068,6 +46709,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -46321,6 +46963,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -46374,6 +47017,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		
 		</hardware>
@@ -47813,6 +48457,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -48203,6 +48848,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -48342,6 +48988,23 @@ joyport2_amiberry_custom_none_south=Right Shift
 		
 		</hardware>
 	</game>
+	<game filename="KingsQuest5_v1.3_De_MT32"  sha1="55988ada11f0320e6f0eabcf59124c08591f6117">
+		<name>Kings Quest 5 De MT 32</name>
+		<subpath>KingsQuest5DeMT32</subpath>
+		<variant_uuid>38f2a3b3-89a3-56e2-b89b-b914286b4fc1</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>KingsQuest5DeMT32.slave</slave_default>
+		<slave number="1">
+			<filename>KingsQuest5DeMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="KingsQuest5_v1.3_It"  sha1="875d5f500131632ea447e460a12c1aaf874c7435">
 		<name>Kings Quest 5 (Italiano)</name>
 		<subpath>KingsQuest5It</subpath>
@@ -48350,6 +49013,40 @@ joyport2_amiberry_custom_none_south=Right Shift
 		<slave_default>KingsQuest5It.slave</slave_default>
 		<slave number="1">
 			<filename>KingsQuest5It.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="KingsQuest5_v1.3_It_MT32"  sha1="85c727a9c018b964ceae00cb9b4c43c0b23d5133">
+		<name>Kings Quest 5 It MT 32</name>
+		<subpath>KingsQuest5ItMT32</subpath>
+		<variant_uuid>5b93ab93-6423-575e-8271-64cc09ad7741</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>KingsQuest5ItMT32.slave</slave_default>
+		<slave number="1">
+			<filename>KingsQuest5ItMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="KingsQuest5_v1.3_MT32"  sha1="a20472df951e6e6e0d72354a1085cd7ddfa68d79">
+		<name>Kings Quest 5 MT 32</name>
+		<subpath>KingsQuest5MT32</subpath>
+		<variant_uuid>86e1f6e2-5b07-5e4a-9cb2-7f71a6e12dce</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>KingsQuest5MT32.slave</slave_default>
+		<slave number="1">
+			<filename>KingsQuest5MT32.slave</filename>
 			<datapath>data</datapath>
 		</slave>
 		<hardware>
@@ -48428,6 +49125,23 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PORT1=JOY
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="KingsQuestEnhanced_v1.1b_MT32_1436"  sha1="62d50a5b2ff56c653d25c2e89b8bd66e59cbf4be">
+		<name>Kings Quest Enhanced MT 32</name>
+		<subpath>KingsQuestEnhancedMT32</subpath>
+		<variant_uuid>00d43e13-85cb-531f-be5f-1c73707104fb</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>KingsQuestEnhancedMT32.slave</slave_default>
+		<slave number="1">
+			<filename>KingsQuestEnhancedMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
 		
 		</hardware>
 	</game>
@@ -48589,6 +49303,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -48722,6 +49437,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -48739,6 +49455,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -49270,6 +49987,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -49357,6 +50075,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		SCREEN_Y_OFFSET=3
 		
@@ -49871,6 +50590,7 @@ joyport2_amiberry_custom_none_south=Right Shift
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -50213,6 +50933,40 @@ joyport0_amiberry_custom_none_right_stick=F7
 		
 		</hardware>
 	</game>
+	<game filename="LeisureSuitLarry5_v1.5_De_MT32"  sha1="d144d5873a128dbedd130041d877fd40f7d24e29">
+		<name>Leisure Suit Larry 5 De MT 32</name>
+		<subpath>LeisureSuitLarry5DeMT32</subpath>
+		<variant_uuid>567036e0-4711-54d7-9b9b-ca2f956768fa</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>LeisureSuitLarry5DeMT32.Slave</slave_default>
+		<slave number="1">
+			<filename>LeisureSuitLarry5DeMT32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="LeisureSuitLarry5_v1.5_MT32_2244"  sha1="a53cc2cf9fe3c382f1e6b1b9e22d02074ea378c8">
+		<name>Leisure Suit Larry 5 MT 32</name>
+		<subpath>LeisureSuitLarry5MT32</subpath>
+		<variant_uuid>c84fb17b-1087-5fdd-92c8-2e4bfe973eb9</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>LeisureSuitLarry5MT32.Slave</slave_default>
+		<slave number="1">
+			<filename>LeisureSuitLarry5MT32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="LeisureSuitLarryEnhanced_v1.1"  sha1="cfda018cf52e3eb5af717251f6b6fa150f0a50a8">
 		<name>Leisure Suit Larry In The Land Of The Lounge Lizards (Enhanced)</name>
 		<subpath>LeisureSuitLarryEnhanced</subpath>
@@ -50229,6 +50983,23 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PORT1=JOY
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="LeisureSuitLarryEnhanced_v1.1_MT32"  sha1="c648b19bac4ff3dab4d09b6d8b00d6179910f01b">
+		<name>Leisure Suit Larry Enhnd MT 32</name>
+		<subpath>LeisureSuitLarryEnhndMT32</subpath>
+		<variant_uuid>5d3c0173-0110-5963-b315-d3e3aeaf4aea</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>LeisureSuitLarryEnhndMT32.slave</slave_default>
+		<slave number="1">
+			<filename>LeisureSuitLarryEnhndMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
 		
 		</hardware>
 	</game>
@@ -51692,6 +52463,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=0
 		
@@ -52103,6 +52875,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -52854,6 +53627,76 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		
 		</hardware>
 	</game>
+	<game filename="ManiacMansion_v1.6_1571"  sha1="79803f59b69fa87646aaebb3f2e3c931e9b6f091">
+		<name>Maniac Mansion</name>
+		<subpath>ManiacMansion</subpath>
+		<variant_uuid>82858d7a-7791-50be-a417-1cecbdeffae0</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ManiacMansion.slave</slave_default>
+		<slave number="1">
+			<filename>ManiacMansion.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="ManiacMansion_v1.6_De_0355"  sha1="ecb8637c64a7880ccd3fb6c90080a8a13ce26481">
+		<name>Maniac Mansion (Deutsch)</name>
+		<subpath>ManiacMansionDe</subpath>
+		<variant_uuid>d5aab2f5-f5ea-5c4c-a8ea-29ec14c9555d</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ManiacMansionDe.slave</slave_default>
+		<slave number="1">
+			<filename>ManiacMansionDe.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="ManiacMansion_v1.6_Es"  sha1="a07dff98fc574a9150c3045cd62c7fc31162fd7a">
+		<name>Maniac Mansion (Espanol)</name>
+		<subpath>ManiacMansionEs</subpath>
+		<variant_uuid>83a672d8-2e8c-5776-b927-e0f5581d465f</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ManiacMansionEs.slave</slave_default>
+		<slave number="1">
+			<filename>ManiacMansionEs.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="ManiacMansion_v1.6_Fr_2376"  sha1="3682321c8867cf8c3efff920ebe1f0c0c5bf9e0d">
+		<name>Maniac Mansion (Francais)</name>
+		<subpath>ManiacMansionFr</subpath>
+		<variant_uuid>e542da04-b1d8-5776-8fd3-09b59768cd7a</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ManiacMansionFr.slave</slave_default>
+		<slave number="1">
+			<filename>ManiacMansionFr.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="Maniax_v2.0"  sha1="ba2b5b3f2eb11a1939a2f8c99aac73c7fdeb83eb">
 		<name>Maniax</name>
 		<subpath>Maniax</subpath>
@@ -53045,6 +53888,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -53668,6 +54512,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -53816,6 +54661,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PORT0=MOUSE
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -54327,6 +55173,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -54443,6 +55290,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		SCREEN_Y_OFFSET=0
 		
@@ -55255,6 +56103,7 @@ joyport0_amiberry_custom_none_right_shoulder=Return
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -56061,6 +56910,90 @@ joyport0_amiberry_custom_none_start=Space
 		
 		</hardware>
 	</game>
+	<game filename="NorthAndSouth_v2.0-B_Files_0194"  sha1="aa4073622710c2693deaf3462e5d6ec1e3406d21">
+		<name>North And South (Files)</name>
+		<subpath>NorthAndSouthFiles</subpath>
+		<variant_uuid>02073feb-0364-5979-b7ba-72520c580a85</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthFiles.Slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthFiles.Slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="NorthAndSouth_v2.0-B_Files_NTSC_1780"  sha1="197bf83e5dbf9036eb68c7a5a5e40c37116d21c7">
+		<name>North And South (Files) (NTSC)</name>
+		<subpath>NorthAndSouthFilesNTSC</subpath>
+		<variant_uuid>e30b13cc-ced8-5288-bc0a-9a9d7b5b3e2f</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthFilesNTSC.Slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthFilesNTSC.Slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="NorthAndSouth_v2.0-B_Image_0194"  sha1="81933260ea3d8d573e6f75a5a8b0d33f844614db">
+		<name>North &amp; South (Image)</name>
+		<subpath>NorthAndSouthImage</subpath>
+		<variant_uuid>86939f88-3713-5d08-af37-a8624de5375a</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthImage.Slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthImage.Slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="NorthAndSouth_v2.0-B_Image_NTSC_1780"  sha1="f8aff96fb3f37444de495acf6b8553b8fb09180e">
+		<name>North And South (Image) (NTSC)</name>
+		<subpath>NorthAndSouthImageNTSC</subpath>
+		<variant_uuid>5d7c4b85-62a9-58e2-800e-897efb777807</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthImageNTSC.Slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthImageNTSC.Slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="NorthSeaInferno_v1.1"  sha1="1aa4888a6403e91b52771dbcf2f3c7a9d4b6fd33">
 		<name>North Sea Inferno</name>
 		<subpath>NorthSeaInferno</subpath>
@@ -56331,6 +57264,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -56645,6 +57579,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -56754,6 +57689,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -57203,6 +58139,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -57534,6 +58471,7 @@ joyport0_amiberry_custom_none_start=Space
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -58571,6 +59509,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -58628,6 +59567,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -58650,6 +59590,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=240
 		SCREEN_Y_OFFSET=12
 		
@@ -59406,6 +60347,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -59628,6 +60570,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -59723,6 +60666,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -59863,6 +60807,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -60000,6 +60945,7 @@ joyport0_amiberry_custom_none_start=Space
 		PORT0=MOUSE
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=262
 		SCREEN_Y_OFFSET=-1
 		
@@ -60137,6 +61083,7 @@ joyport0_amiberry_custom_none_start=Space
 		PORT0=MOUSE
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=262
 		SCREEN_Y_OFFSET=-1
 		
@@ -60176,6 +61123,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -60215,6 +61163,7 @@ joyport0_amiberry_custom_none_start=Space
 		PORT0=MOUSE
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=262
 		SCREEN_Y_OFFSET=-1
 		
@@ -60466,6 +61415,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=23
 		
@@ -60626,6 +61576,7 @@ joyport0_amiberry_custom_none_start=Space
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -60899,6 +61850,74 @@ joyport0_amiberry_custom_none_start=Space
 		<slave_default>PoliceQuest3NTSC.slave</slave_default>
 		<slave number="1">
 			<filename>PoliceQuest3NTSC.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="PoliceQuest3_v1.4_De"  sha1="4460dea0f45558e00856ef245393433ebf51b3ea">
+		<name>Police Quest 3 (Deutsch)</name>
+		<subpath>PoliceQuest3De</subpath>
+		<variant_uuid>1a111cd9-99cc-53a2-9f46-436beefd2fb2</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>PoliceQuest3De.slave</slave_default>
+		<slave number="1">
+			<filename>PoliceQuest3De.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="PoliceQuest3_v1.4_De_MT32"  sha1="a817c5de9ba41d643a8685e6a16adda0dd584fcf">
+		<name>Police Quest 3 De MT 32</name>
+		<subpath>PoliceQuest3DeMT32</subpath>
+		<variant_uuid>aa21b7d0-dee6-53a8-be5f-7fb63fded97a</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>PoliceQuest3DeMT32.slave</slave_default>
+		<slave number="1">
+			<filename>PoliceQuest3DeMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="PoliceQuest3_v1.4_NTSC_1341"  sha1="6b46c2d53e2d12438ca9765fbe72d3220b84611d">
+		<name>Police Quest 3 (NTSC)</name>
+		<subpath>PoliceQuest3NTSC</subpath>
+		<variant_uuid>aaf6b70c-9893-55ce-b0a6-3feda3d97789</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>PoliceQuest3NTSC.slave</slave_default>
+		<slave number="1">
+			<filename>PoliceQuest3NTSC.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="PoliceQuest3_v1.4_NTSC_MT32_1341"  sha1="581e3c26131d112d7bcff828a39ec8c2a8a30500">
+		<name>Police Quest 3 (NTSC)MT 32</name>
+		<subpath>PoliceQuest3NTSCMT32</subpath>
+		<variant_uuid>8aaaa5c9-146e-50e9-8fbe-15fa747daaaf</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>PoliceQuest3NTSCMT32.slave</slave_default>
+		<slave number="1">
+			<filename>PoliceQuest3NTSCMT32.slave</filename>
 			<datapath>data</datapath>
 		</slave>
 		<hardware>
@@ -61654,6 +62673,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -62003,6 +63023,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=270
 		SCREEN_Y_OFFSET=-3
 		
@@ -62317,6 +63338,42 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		
 		</hardware>
 	</game>
+	<game filename="QuestForGlory2_v1.3_1868"  sha1="95fdd21ee98b506260a55241b2b9367b978aae00">
+		<name>Quest For Glory II - Trial by Fire</name>
+		<subpath>QuestForGlory2</subpath>
+		<variant_uuid>c6b0445d-459c-58dd-8e08-fa14246ea63b</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>QuestForGlory2.Slave</slave_default>
+		<slave number="1">
+			<filename>QuestForGlory2.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="QuestForGlory2_v1.3_MT32_1868"  sha1="d51c25219b41eecff371c591fad6573e7e6b7357">
+		<name>Quest For Glory 2 MT 32</name>
+		<subpath>QuestForGlory2MT32</subpath>
+		<variant_uuid>773e86e8-3fa8-55b0-a03a-17141ea6a2aa</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>QuestForGlory2MT32.Slave</slave_default>
+		<slave number="1">
+			<filename>QuestForGlory2MT32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="QuestForGlory_v1.3_0795"  sha1="f627c438fac207fdf568dd46f0f16ca0dd3007f1">
 		<name>Quest For Glory - So You Want To Be A Hero</name>
 		<subpath>QuestForGlory</subpath>
@@ -62520,6 +63577,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -62543,6 +63601,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -62580,6 +63639,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -62617,6 +63677,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -63320,6 +64381,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -63916,6 +64978,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -64393,6 +65456,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -64428,6 +65492,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -64546,6 +65611,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -65448,6 +66514,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=CD32
 		PORT1=CD32
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -65521,6 +66588,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -66320,6 +67388,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -66806,6 +67875,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -66823,6 +67893,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -67081,6 +68152,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -68567,6 +69639,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -68809,6 +69882,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -69240,6 +70314,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -69297,6 +70372,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -69862,6 +70938,29 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		
 		</hardware>
 	</game>
+	<game filename="Spaceport_v1.0"  sha1="f3de8bc13d80e52b3bd9d7ffa132254905abb3cc">
+		<name>Spaceport</name>
+		<subpath>Spaceport</subpath>
+		<variant_uuid>30fe5e14-6566-5ae0-bc6a-d37c28f2cf59</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Spaceport.Slave</slave_default>
+		<slave number="1">
+			<filename>Spaceport.Slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:X:Trainer Infinite Lives:0
+			C2:X:Trainer Infinite Fuel:0
+			C3:X:Turn off all speed throttling:0
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="SpaceQuest2_v1.0"  sha1="4493ec97f33f7fbc5d4a00760e6e19855e2b2007">
 		<name>Space Quest II - Vohaul's Revenge</name>
 		<subpath>SpaceQuest2</subpath>
@@ -69913,6 +71012,23 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		
 		</hardware>
 	</game>
+	<game filename="SpaceQuest3_v1.2b_De_MT32_0579"  sha1="3a7cadf4af465d8791c76626d5dfc8718e82b7fe">
+		<name>Space Quest 3 De MT 32</name>
+		<subpath>SpaceQuest3DeMT32</subpath>
+		<variant_uuid>15666dca-abba-5c3b-9f1c-52f86c08d740</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>SpaceQuest3DeMT32.slave</slave_default>
+		<slave number="1">
+			<filename>SpaceQuest3DeMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="SpaceQuest4_v1.1_1177"  sha1="a460d41ce58953c5f9ba02e02a9e0b98e0135092">
 		<name>Space Quest IV - Roger Wilco and the Time Rippers</name>
 		<subpath>SpaceQuest4</subpath>
@@ -69947,6 +71063,23 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		
 		</hardware>
 	</game>
+	<game filename="SpaceQuest4_v1.1_De_MT32_2369"  sha1="d89c8677c49fa55a3567a474ad802cebad97eb8d">
+		<name>Space Quest 4 De MT 32</name>
+		<subpath>SpaceQuest4DeMT32</subpath>
+		<variant_uuid>e1adf2ef-9cac-5158-aa39-992ed8c2409c</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>SpaceQuest4DeMT32.slave</slave_default>
+		<slave number="1">
+			<filename>SpaceQuest4DeMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="SpaceQuest4_v1.1_NTSC_1177"  sha1="5e50030e7f69e5bf205927a9814a10c5604efb65">
 		<name>Space Quest 4 (NTSC)</name>
 		<subpath>SpaceQuest4NTSC</subpath>
@@ -69964,6 +71097,23 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		
 		</hardware>
 	</game>
+	<game filename="SpaceQuest4_v1.1_NTSC_MT32_1177"  sha1="c9cdaa30440ea93659ad8fec34f4bfbe5bc2ab00">
+		<name>Space Quest 4 (NTSC)MT 32</name>
+		<subpath>SpaceQuest4NTSCMT32</subpath>
+		<variant_uuid>9ea9dee4-6faa-57c7-886d-64da3863cbdf</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>SpaceQuest4NTSCMT32.slave</slave_default>
+		<slave number="1">
+			<filename>SpaceQuest4NTSCMT32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
 	<game filename="SpaceQuestEnhanced_v1.2_2222"  sha1="32803f209ce29d592cab184fcadc3dda5b846122">
 		<name>Space Quest I - Roger Wilco in the Sarien Encounter (Enhanced)</name>
 		<subpath>SpaceQuestEnhanced</subpath>
@@ -69972,6 +71122,40 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		<slave_default>SpaceQuestEnhanced.slave</slave_default>
 		<slave number="1">
 			<filename>SpaceQuestEnhanced.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="SpaceQuestEnhanced_v1.3_2222"  sha1="e32738fa07041261c83c8d913366a3f03e18a053">
+		<name>Space Quest I - Roger Wilco in the Sarien Encounter (Enhanced)</name>
+		<subpath>SpaceQuestEnhanced</subpath>
+		<variant_uuid>de890543-3d92-57a4-9b2d-e03916e1c0f8</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>SpaceQuestEnhanced.slave</slave_default>
+		<slave number="1">
+			<filename>SpaceQuestEnhanced.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="SpaceQuestEnhanced_v1.3_MT32_2222"  sha1="c228472f3795092cc207587ff4a2c464f2756d46">
+		<name>Space Quest Enhanced MT 32</name>
+		<subpath>SpaceQuestEnhancedMT32</subpath>
+		<variant_uuid>936f77ba-805a-5054-b70f-b5ecee1754ed</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>SpaceQuestEnhancedMT32.slave</slave_default>
+		<slave number="1">
+			<filename>SpaceQuestEnhancedMT32.slave</filename>
 			<datapath>data</datapath>
 		</slave>
 		<hardware>
@@ -70174,6 +71358,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -70191,6 +71376,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -70352,6 +71538,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -71510,6 +72697,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -71755,6 +72943,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -71772,6 +72961,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -71979,6 +73169,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -72278,6 +73469,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=256
 		
 		</hardware>
@@ -72381,6 +73573,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -72536,6 +73729,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -72604,6 +73798,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -72850,6 +74045,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -73030,6 +74226,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -73073,6 +74270,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -73107,6 +74305,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -74349,6 +75548,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -74557,6 +75757,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -75758,6 +76959,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -76135,6 +77337,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -76205,6 +77408,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -76605,6 +77809,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -76724,6 +77929,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -77026,6 +78232,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -77043,6 +78250,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -77094,6 +78302,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -77644,6 +78853,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		CPU=68040
 		JIT=TRUE
 		CLOCK=MAX
+		CHIPSET=AGA
 		SCREEN_HEIGHT=262
 		SCREEN_Y_OFFSET=-3
 		Z3_RAM=32
@@ -77664,6 +78874,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -77917,6 +79128,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PORT0=JOY
 		PORT1=JOY
 		JIT=FALSE
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=16
 		
@@ -78212,6 +79424,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PORT0=MOUSE
 		PORT1=JOY
 		CLOCK=28
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -78255,6 +79468,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PORT0=MOUSE
 		PORT1=JOY
 		CLOCK=28
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -78407,6 +79621,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -78968,6 +80183,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -78985,6 +80201,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -79020,6 +80237,7 @@ joyport2_amiberry_custom_none_west=Cursor Up
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -80385,6 +81603,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -81021,6 +82240,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PORT1=JOY
 		CPU=68040
 		CLOCK=MAX
+		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=16
 		
@@ -82227,6 +83447,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -82461,6 +83682,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -82478,6 +83700,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -82630,6 +83853,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -83274,6 +84498,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -83293,6 +84518,7 @@ joyport0_amiberry_custom_none_right_stick=F7
 		PRIMARY_CONTROL=MOUSE
 		PORT0=MOUSE
 		PORT1=JOY
+		CHIPSET=AGA
 		SCREEN_HEIGHT=200
 		SCREEN_Y_OFFSET=3
 		
@@ -84109,6 +85335,7 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		CHIPSET=AGA
 		
 		</hardware>
 	</game>
@@ -85990,116 +87217,6 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 			<custom>
 			C1:B:Skip Title
 			</custom>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=JOYSTICK
-		PORT0=JOY
-		PORT1=JOY
-		
-		</hardware>
-	</game>
-	<game filename="BombJackBeerEdition_v1.0"  sha1="bf413d87c4c7bfa27acf080a52c8882fd80e7989">
-		<name>Bomb Jack Beer Edition</name>
-		<subpath>BombJackBeerEdition</subpath>
-		<variant_uuid>1e263a57-4b29-5de1-b95c-0344232e7deb</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>BombJackBeerEdition.slave</slave_default>
-		<slave number="1">
-			<filename>BombJackBeerEdition.slave</filename>
-			<datapath>data</datapath>
-			<custom>
-			
-			</custom>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=JOYSTICK
-		PORT0=JOY
-		PORT1=JOY
-		
-		</hardware>
-	</game>
-	<game filename="FemmeFatale&amp;DataDisks_v1.0"  sha1="467abbf7b46ccae0bc230a3c7b5b23fced2876a4">
-		<name>Femme Fatale &amp; Data Disks</name>
-		<subpath>FemmeFatale&amp;DataDisks</subpath>
-		<variant_uuid>311ecce9-fed6-5424-8be3-4d908093ee56</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>FemmeFatale&amp;DataDisks.Slave</slave_default>
-		<slave number="1">
-			<filename>FemmeFatale&amp;DataDisks.Slave</filename>
-			<datapath>data</datapath>
-			<custom>
-			
-			</custom>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=JOYSTICK
-		PORT0=JOY
-		PORT1=JOY
-		
-		</hardware>
-	</game>
-	<game filename="ManiacMansion_v1.6_1571"  sha1="79803f59b69fa87646aaebb3f2e3c931e9b6f091">
-		<name>Maniac Mansion</name>
-		<subpath>ManiacMansion</subpath>
-		<variant_uuid>82858d7a-7791-50be-a417-1cecbdeffae0</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>ManiacMansion.slave</slave_default>
-		<slave number="1">
-			<filename>ManiacMansion.slave</filename>
-			<datapath>data</datapath>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=MOUSE
-		PORT0=MOUSE
-		PORT1=JOY
-		SCREEN_HEIGHT=200
-		SCREEN_Y_OFFSET=3
-		
-		</hardware>
-	</game>
-	<game filename="ManiacMansion_v1.6_De_0355"  sha1="ecb8637c64a7880ccd3fb6c90080a8a13ce26481">
-		<name>Maniac Mansion (Deutsch)</name>
-		<subpath>ManiacMansionDe</subpath>
-		<variant_uuid>d5aab2f5-f5ea-5c4c-a8ea-29ec14c9555d</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>ManiacMansionDe.slave</slave_default>
-		<slave number="1">
-			<filename>ManiacMansionDe.slave</filename>
-			<datapath>data</datapath>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=JOYSTICK
-		PORT0=JOY
-		PORT1=JOY
-		
-		</hardware>
-	</game>
-	<game filename="ManiacMansion_v1.6_Es"  sha1="a07dff98fc574a9150c3045cd62c7fc31162fd7a">
-		<name>Maniac Mansion (Espanol)</name>
-		<subpath>ManiacMansionEs</subpath>
-		<variant_uuid>83a672d8-2e8c-5776-b927-e0f5581d465f</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>ManiacMansionEs.slave</slave_default>
-		<slave number="1">
-			<filename>ManiacMansionEs.slave</filename>
-			<datapath>data</datapath>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=JOYSTICK
-		PORT0=JOY
-		PORT1=JOY
-		
-		</hardware>
-	</game>
-	<game filename="ManiacMansion_v1.6_Fr_2376"  sha1="3682321c8867cf8c3efff920ebe1f0c0c5bf9e0d">
-		<name>Maniac Mansion (Francais)</name>
-		<subpath>ManiacMansionFr</subpath>
-		<variant_uuid>e542da04-b1d8-5776-8fd3-09b59768cd7a</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>ManiacMansionFr.slave</slave_default>
-		<slave number="1">
-			<filename>ManiacMansionFr.slave</filename>
-			<datapath>data</datapath>
 		</slave>
 		<hardware>
 		PRIMARY_CONTROL=JOYSTICK

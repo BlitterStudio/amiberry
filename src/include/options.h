@@ -101,7 +101,15 @@ struct joypad_map_layout {
 	int dpad_up_action = 0;
 	int dpad_down_action = 0;
 	int lstick_select_action = 0;
+	int lstick_left_action = 0;
+	int lstick_right_action = 0;
+	int lstick_up_action = 0;
+	int lstick_down_action = 0;
 	int rstick_select_action = 0;
+	int rstick_left_action = 0;
+	int rstick_right_action = 0;
+	int rstick_up_action = 0;
+	int rstick_down_action = 0;
 };
 #endif
 
@@ -853,6 +861,9 @@ struct uae_prefs {
 	bool use_retroarch_menu;
 	bool use_retroarch_reset;
 	bool use_retroarch_statebuttons;
+        
+        TCHAR whdload_path[MAX_DPATH];
+        TCHAR whdload_file[MAX_DPATH];
 #endif
 
 	/* ANDROID */
@@ -980,6 +991,8 @@ extern void cfgfile_compatibility_rtg(struct uae_prefs *p);
 
 
 extern void whdload_auto_prefs (struct uae_prefs *p, char* filename);
+extern void cd_auto_prefs (struct uae_prefs *p, char* filename);
+extern void symlink_roms(struct uae_prefs *p);
 
 
 extern void check_prefs_changed_custom (void);
