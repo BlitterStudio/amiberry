@@ -571,7 +571,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
         char selected_slave[4096];  // note!! this should be global later on, and only collected from the XML if set to 'nothing'
         char subpath[4096];
 
-        
+        bool use_slave_libs = false;
         
         strcpy(selected_slave, "");
         
@@ -741,6 +741,21 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
                                             printf("temp node: %s\n",temp_node);
                                             
                                         }
+                                        
+                                        // get slave_libraries
+                                        temp_node = game_node->xmlChildrenNode;
+                                        temp_node = get_node(temp_node, "slave_libraries");
+                                        if (xmlNodeGetContent(temp_node) != nullptr)
+                                        {
+                                               // _stprintf(slave_libs, "%s",
+                                                 //         reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
+                                                
+                                                if (strcmpi(reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)), "true") == 0)
+                                                     use_slave_libs = true;
+                                                    
+                                                write_log("WHDBooter - Libraries:  %s\n",subpath);
+                                                //  process these later
+                                        }
                                         break;
                                 }
                         }
@@ -754,18 +769,22 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
         //printf("selected_slave: %s\n",selected_slave);
         
         // then here, we will write a startup-sequence file (formerly autoboot file) 
+        _stprintf(whd_bootscript,"\n");
         if (strlen(selected_slave) != 0 && !zfile_exists(whd_startup)) 
         {
        // _stprintf(whd_bootscript, "DH3:C/Assign C: DH3:C/ ADD\n");
-       // _stprintf(whd_bootscript, "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n");
-        _stprintf(whd_bootscript, "CD \"Games:%s\"\n",subpath);
+            if (use_slave_libs == true)
+              {
+                _stprintf(whd_bootscript, "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n");
+              }
+        _stprintf(whd_bootscript, "%sCD \"Games:%s\"\n",whd_bootscript,subpath);
         _stprintf(whd_bootscript, "%sWHDLoad SLAVE=\"games:%s/%s\"",whd_bootscript,subpath,selected_slave);
         _stprintf(whd_bootscript, "%s PRELOAD NOWRITECACHE NOREQ SPLASHDELAY=0",whd_bootscript);
         _stprintf(whd_bootscript, "%s SAVEPATH=Saves:Savegames/ SAVEDIR=\"%s\"",whd_bootscript,subpath);
         _stprintf(whd_bootscript, "%s\n",whd_bootscript,subpath);
  
            write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n",whd_bootscript);
-            
+           
            // create a file with save-data/Autoboots/ game name .auto-startup
 
            write_log("WHDBooter - Saved Auto-Startup to %s\n",whd_startup);
