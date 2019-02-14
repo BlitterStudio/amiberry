@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<whdbooter timestamp="2019-02-11 at 02:00:06">
+<whdbooter timestamp="2019-02-14 at 18:43:01">
 	<game filename="1001StolenIdeas_v1.0_Airwalk"  sha1="a24c60e66c9cdb5ca96075d9f4f4ad7eaa900d76">
 		<name>1001 Stolen Ideas</name>
 		<subpath>1001StolenIdeas</subpath>
@@ -30204,25 +30204,6 @@ joyport1_amiberry_custom_none_west=Space
 		CHIPSET=AGA
 		SCREEN_HEIGHT=216
 		SCREEN_Y_OFFSET=16
-		
-		</hardware>
-	</game>
-	<game filename="DungeonMaster_v1.2_0833"  sha1="64fe90194025cbe189949216450c00cacf400c71">
-		<name>Dungeon Master</name>
-		<subpath>DungeonMaster</subpath>
-		<variant_uuid>b7652305-8c12-53cb-a22b-a2930cd15dab</variant_uuid>
-		<slave_count>1</slave_count>
-		<slave_default>DungeonMaster.slave</slave_default>
-		<slave number="1">
-			<filename>DungeonMaster.slave</filename>
-			<datapath></datapath>
-		</slave>
-		<hardware>
-		PRIMARY_CONTROL=MOUSE
-		PORT0=MOUSE
-		PORT1=JOY
-		SCREEN_HEIGHT=200
-		SCREEN_Y_OFFSET=3
 		
 		</hardware>
 	</game>
@@ -87222,6 +87203,2502 @@ joyport0_amiberry_custom_none_dpad_right=Cursor Right
 		PRIMARY_CONTROL=JOYSTICK
 		PORT0=JOY
 		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="BeneathASteelSky_v2.1_0207"  sha1="9b9f3ff6556ba67b9211cac09ccdddea88e4891e">
+		<name>Beneath a Steel Sky</name>
+		<subpath>BeneathAStlSky</subpath>
+		<variant_uuid>01ce0d29-ed0f-57cf-bfa1-d6e0fe44af00</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BeneathAStlSky.slave</slave_default>
+		<slave number="1">
+			<filename>BeneathAStlSky.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=24
+		
+		</hardware>
+	</game>
+	<game filename="BeneathASteelSky_v2.1_CD32"  sha1="6c9920254c734f983f77ba92bfd5705604b98b27">
+		<name>Beneath A Steel Sky [CD32]</name>
+		<subpath>BeneathAStlSkyCD32</subpath>
+		<variant_uuid>9ca0e846-91ce-588f-a4a6-0e712ae2fc62</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BeneathAStlSkyCD32.slave</slave_default>
+		<slave number="1">
+			<filename>BeneathAStlSkyCD32.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		CHIPSET=AGA
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=24
+		
+		</hardware>
+	</game>
+	<game filename="BeneathASteelSky_v2.1_CD32_NoVoice"  sha1="723983ab05722426d1b4bc67e43a6b359993d921">
+		<name>Beneath A Steel Sky [CD32] (No Voice)</name>
+		<subpath>BeneathAStlSkyCD32NoVoice</subpath>
+		<variant_uuid>5e3090b8-f328-556f-8a1e-b1a3d627db28</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BeneathAStlSkyCD32NoVoice.slave</slave_default>
+		<slave number="1">
+			<filename>BeneathAStlSkyCD32NoVoice.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		CHIPSET=AGA
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=24
+		
+		</hardware>
+	</game>
+	<game filename="BeneathASteelSky_v2.1_De_0461"  sha1="5144aa2fad5487181ba18ad5d37508e385b5342e">
+		<name>Beneath A Stl Sky (Deutsch)</name>
+		<subpath>BeneathAStlSkyDe</subpath>
+		<variant_uuid>054600c9-cec2-5658-971f-092ef178ae19</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BeneathAStlSkyDe.slave</slave_default>
+		<slave number="1">
+			<filename>BeneathAStlSkyDe.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="BeneathASteelSky_v2.1_Fr_2340"  sha1="322896cf45b3532e0ebdea9e0ddafdd8f5b7117e">
+		<name>Beneath A Stl Sky (Francais)</name>
+		<subpath>BeneathAStlSkyFr</subpath>
+		<variant_uuid>30daae69-d7dc-5d59-95f2-639a424cdd55</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BeneathAStlSkyFr.slave</slave_default>
+		<slave number="1">
+			<filename>BeneathAStlSkyFr.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="BeneathASteelSky_v2.1_It"  sha1="93d494db79394000d73624b0e3141b48084091bb">
+		<name>Beneath A Stl Sky (Italiano)</name>
+		<subpath>BeneathAStlSkyIt</subpath>
+		<variant_uuid>16823ce2-83e3-501a-a077-492bbb31c5e3</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BeneathAStlSkyIt.slave</slave_default>
+		<slave number="1">
+			<filename>BeneathAStlSkyIt.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="BeneathASteelSky_v2.1_Se"  sha1="6e72c0756e9d6ce7c8de7df6b312c5c6f3d53f75">
+		<name>Beneath A Stl Sky (Svenska)</name>
+		<subpath>BeneathAStlSkySe</subpath>
+		<variant_uuid>fd4c263e-4c99-5688-8340-9d29478da4eb</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>BeneathAStlSkySe.slave</slave_default>
+		<slave number="1">
+			<filename>BeneathAStlSkySe.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="NorthAndSouth_v2.1_Files_0194"  sha1="a828244a477b438ff68529d77d8387da2b9de6df">
+		<name>North And South (Files)</name>
+		<subpath>NorthAndSouthFiles</subpath>
+		<variant_uuid>970c35fc-ebc5-5d88-a173-4abeec50d8e0</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthFiles.slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthFiles.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="NorthAndSouth_v2.1_Files_NTSC_1780"  sha1="60c7453b3267858bc8868c0e542b67ae5ba675dd">
+		<name>North And South (Files) (NTSC)</name>
+		<subpath>NorthAndSouthFilesNTSC</subpath>
+		<variant_uuid>8ea01424-1385-58b4-bb1e-33df93ccaccf</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthFilesNTSC.slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthFilesNTSC.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="NorthAndSouth_v2.1_Image_0194"  sha1="3343788f754196ff838e0aa65a6b98a7f034fec6">
+		<name>North &amp; South (Image)</name>
+		<subpath>NorthAndSouthImage</subpath>
+		<variant_uuid>618af8a1-864e-5272-a024-921dffbd678c</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthImage.slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthImage.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="NorthAndSouth_v2.1_Image_NTSC_1780"  sha1="9c61675a5e2d74b4fc1195e8f6f8df9d31cbe4c7">
+		<name>North And South (Image) (NTSC)</name>
+		<subpath>NorthAndSouthImageNTSC</subpath>
+		<variant_uuid>d5683dc5-63b7-5c00-87c1-5a8157b4f24c</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>NorthAndSouthImageNTSC.slave</slave_default>
+		<slave number="1">
+			<filename>NorthAndSouthImageNTSC.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Forces Joystick or CD32Pad for PL2 (mouse port)
+			
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="ProjectXv2_v1.4_0289"  sha1="60f35e150535bfebb60dcfcf36d79200f0f98631">
+		<name>Project-X (v2)</name>
+		<subpath>ProjectXv2</subpath>
+		<variant_uuid>803ca314-7937-5fea-a41a-84dcf01a66d9</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ProjectXv2.slave</slave_default>
+		<slave number="1">
+			<filename>ProjectXv2.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Enable all the 5 levels in menu
+			C2:B:Disable joystick weapon select
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		
+		</hardware>
+	</game>
+	<game filename="ProjectX_v1.4_0886"  sha1="4087269da136890ac89d4a7d87ecbad45c2c8878">
+		<name>Project-X</name>
+		<subpath>ProjectX</subpath>
+		<variant_uuid>4d5bbb6e-e144-5bb4-86aa-905b9578df30</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>ProjectX.slave</slave_default>
+		<slave number="1">
+			<filename>ProjectX.slave</filename>
+			<datapath>data</datapath>
+			<custom>
+			C1:B:Enable all the 5 levels in menu
+			C2:B:Disable joystick weapon select
+			</custom>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		JIT=FALSE
+		SCREEN_HEIGHT=270
+		SCREEN_Y_OFFSET=-3
+		
+		</hardware>
+	</game>
+	<game filename="MusicForTheLost_v1.0_Abyss"  sha1="98f608f194bd284403325d5cb75a4ad37933e287">
+		<name>Music For The Lost</name>
+		<subpath>MusicForTheLost</subpath>
+		<variant_uuid>8a6cbaad-8efc-5000-8280-957d21365519</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>MusicForTheLost.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>MusicForTheLost.Slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="18HoleGolf-WHDL"  sha1="ffeec22396bdb2561c6b08c646179a9274c0074b">
+		<name>18 Hole Golf</name>
+		<subpath>18HoleGolf</subpath>
+		<variant_uuid>6aa648d6-e1a3-579d-9be6-42152c678896</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="1stPersonPinball-WHDL"  sha1="8cbd9e725972660521baa032ad5681508acad565">
+		<name>1st Person Pinball</name>
+		<subpath>1stPersonPinball</subpath>
+		<variant_uuid>784ea3c5-26e3-5db6-a31e-00943eb49e32</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="20000LieuesMersFR-WHDL"  sha1="03ac71894f0cfb538b11f55c55b1af781a96655c">
+		<name>20000 Lieues Mers (Francais)</name>
+		<subpath>20000LieuesMersFR</subpath>
+		<variant_uuid>8f3df31f-e437-56b2-aeba-ac7dd49b04c0</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>20000LieuesSousLesMers.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>20000LieuesSousLesMers.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="40Thieves-WHDL"  sha1="f7661eaa028ae8d2ccccd848aeb714a27be6b24d">
+		<name>40 Thieves</name>
+		<subpath>40Thieves</subpath>
+		<variant_uuid>51b21d97-c50f-5838-b58c-3ab98517c3fb</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="4GetIt-WHDL"  sha1="1ebccab929e11b0db3714d65d49d3f94c2ff02af">
+		<name>4 Get (Italiano)</name>
+		<subpath>4GetIt</subpath>
+		<variant_uuid>edacd887-2284-5aa6-be6a-474dcab8df6a</variant_uuid>
+		<slave_count>2</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="4Lynx4-WHDL"  sha1="d83cf1ccc6a9e8c64f38d6492bdbf44bbb643d71">
+		<name>4 Lynx 4-NV</name>
+		<subpath>4Lynx4-NV</subpath>
+		<variant_uuid>3d9b47a1-b34c-5803-a19e-67987a61ec7e</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>GenericKick31.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="4WayLynx-WHDL"  sha1="9f3ea65efa7ba65ee35124722048fd3c1a45f429">
+		<name>4 Way Lynx</name>
+		<subpath>4WayLynx</subpath>
+		<variant_uuid>fe1090bd-08ed-55b4-b745-bd9e12599031</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="543210-WHDL"  sha1="783f553aeeb83e83a85cdea7ede891a737f3977a">
+		<name>543210</name>
+		<subpath>543210</subpath>
+		<variant_uuid>ec15ef1f-f57b-50b1-a2a5-8b541fe43533</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>GenericKick31.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="5kInvaders-WHDL"  sha1="d96453a1325f48a586bde8ff7ee9be5e3ae571ad">
+		<name>5k Invaders</name>
+		<subpath>5kInvaders</subpath>
+		<variant_uuid>0a6f1f50-0c37-5fbb-baa7-3ac9c7fe2cce</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="6Tris-WHDL"  sha1="0781badaa785a50e0f5f736330ca3136dcaf511e">
+		<name>6 Tris</name>
+		<subpath>6Tris</subpath>
+		<variant_uuid>cbe9ad08-cd84-5a52-bfa8-bd81dec7bd1b</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="7dni7nocyCZ-WHDL"  sha1="5bc4d6cc2a4f0fdc58ebc1d4e63b95f8f74eee82">
+		<name>7dni 7nocy CZ-NV</name>
+		<subpath>7dni7nocyCZ-NV</subpath>
+		<variant_uuid>0f897384-af1f-550d-814e-37b0cc5f4e9c</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="A320Airbus1-WHDL"  sha1="39c51e9832de38bc1ee4f8031ab6858f9ac2a488">
+		<name>A 320 Airbus 1 USA-NV</name>
+		<subpath>A320Airbus1USA-NV</subpath>
+		<variant_uuid>a1d81c02-d793-5f8c-9094-4b7484734b6d</variant_uuid>
+		<slave_count>12</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="7">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="8">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="9">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="10">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="11">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="12">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="A320Airbus2-WHDL"  sha1="7044d46bb8504588ac375326e8263ea1f830f2d7">
+		<name>A 320 Airbus 2-NV</name>
+		<subpath>A320Airbus2-NV</subpath>
+		<variant_uuid>cb438765-25e9-511d-b199-e40a82e29afa</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="A320Approach-WHDL"  sha1="53bdd0fad647a3289c956dd464d1cded0cad8ee6">
+		<name>A 320 Approach-NV</name>
+		<subpath>A320Approach-NV</subpath>
+		<variant_uuid>451be59f-8ea5-5765-9b38-950694e78a38</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Aardvark-WHDL"  sha1="6b235ad1b621f55204dca8bf6d034380a6f16005">
+		<name>Aardvark</name>
+		<subpath>Aardvark</subpath>
+		<variant_uuid>4fa11aa7-c9db-57f3-bceb-f6a8c1893b2d</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Aardvarks-WHDL"  sha1="4675a7a31496fcb5159ee91c353479354617f161">
+		<name>Aardvarks</name>
+		<subpath>Aardvarks</subpath>
+		<variant_uuid>b3c1cc00-79d9-5c53-b372-460cf5b15caf</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="ABreakingDuoNextAGA-WHDL"  sha1="ccce21e70e18cd8037d5940bdfe7f1886d76c628">
+		<name>A Breaking Duo Next [AGA]</name>
+		<subpath>ABreakingDuoNextAGA</subpath>
+		<variant_uuid>7d37c619-8f69-5a8f-a0f2-c5aefdf81a73</variant_uuid>
+		<slave_count>2</slave_count>
+		<slave_default>Workbench31_32.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AbusimbelProfanation-WHDL"  sha1="7b901e3c6c22c31e0240db7ec95af1efeeaccb18">
+		<name>Abusimbel Profanation</name>
+		<subpath>AbusimbelProfanation</subpath>
+		<variant_uuid>7d8a330d-0297-579e-acff-5489b4931de2</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Accordion-WHDL"  sha1="0fb23e29346730152fa0c0a91bbd7b4512fc61ef">
+		<name>Accordion</name>
+		<subpath>Accordion</subpath>
+		<variant_uuid>52708cfc-69f5-57e5-b3ac-55aa14d9cdf3</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AceSpaceCase-WHDL"  sha1="a920a3201e795a7f20a64a3b5cce2aa1d978bd49">
+		<name>Ace Space Case</name>
+		<subpath>AceSpaceCase</subpath>
+		<variant_uuid>6f93bf1a-7970-5a64-942b-d8ff2deab547</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Acorralado-WHDL"  sha1="495e3889825b6cb8ffc3a17ec1024e098e76b971">
+		<name>Accolorado</name>
+		<subpath>Accolorado</subpath>
+		<variant_uuid>04421156-cc58-5cdb-9c1b-147ab69a165e</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="ActionCat-WHDL"  sha1="aad408582ed0c90333068fb407f2ee283be9b9aa">
+		<name>Action Cat- 2 Mo (Chip)</name>
+		<subpath>ActionCat-2MoChip</subpath>
+		<variant_uuid>20780cef-2ac3-5d17-959c-686cf3f630f8</variant_uuid>
+		<slave_count>2</slave_count>
+		<slave_default>Workbench31_32.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="ActionService-WHDL"  sha1="0b3b0f8aa38c2d9decf9a74b8d8a2af5bfb19ba9">
+		<name>Action Service-NV</name>
+		<subpath>ActionService-NV</subpath>
+		<variant_uuid>a9db2d41-e109-5905-a3c9-85efed1b4e26</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="ActOfWar-WHDL"  sha1="41d34c300003a11feaa55777db26fc1b15227650">
+		<name>Act Of War</name>
+		<subpath>ActOfWar</subpath>
+		<variant_uuid>3eea94ec-e916-5ea4-8157-2e96a521d1bb</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="ActOut-WHDL"  sha1="e8e737e7ec04a7fe5628699e082bd615baa04444">
+		<name>Act Out</name>
+		<subpath>ActOut</subpath>
+		<variant_uuid>aa232875-ebde-5a7e-87c6-7b7dc821347e</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="AdventureAwaitsDE-WHDL"  sha1="143f82f14a291ea9cfa5e1f4dd54219bbdada121">
+		<name>Adventure Awaits DE</name>
+		<subpath>AdventureAwaitsDE</subpath>
+		<variant_uuid>0e339a43-2bea-5589-ae0e-ab3189402ca5</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AdventuresMaddog-WHDL"  sha1="d8c06863ebd10d0eeded031a5bb217dc0992031f">
+		<name>Adventures Maddog</name>
+		<subpath>AdventuresMaddog</subpath>
+		<variant_uuid>34dae398-e35a-5dbd-b2c6-c15aa265b063</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AdvFruitSim-WHDL"  sha1="770adf22bc50889422ffd82d2aa3863357ad7ebd">
+		<name>Adv Fruit Machine Sim-novbrmove-noend</name>
+		<subpath>AdvFruitMachineSim-novbrmove-noend</subpath>
+		<variant_uuid>f4f0305a-a6eb-5827-b9d7-7d8a1bc1d2ff</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Data.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Data.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="Aergern-WHDL"  sha1="74c4754dc574394662a1943a98b8bbcfd9e81088">
+		<name>Aergern</name>
+		<subpath>Aergern</subpath>
+		<variant_uuid>72a1788b-80a2-5e53-8f07-ccef505962ef</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AerialRacers-WHDL"  sha1="46761ce5e0ce72936388cf60484f19edc1f866b2">
+		<name>Aerial Racers</name>
+		<subpath>AerialRacers</subpath>
+		<variant_uuid>9c9ac204-c4ba-5a9f-b935-d9440a2dded6</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AfricaAGA-WHDL"  sha1="88fadf3a6fa9be0d5786eb3c1b541bd40450a59d">
+		<name>Africa [AGA]</name>
+		<subpath>AfricaAGA</subpath>
+		<variant_uuid>8a852511-3725-536f-96b4-bc07cc73a212</variant_uuid>
+		<slave_count>2</slave_count>
+		<slave_default>Workbench31_32.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AgentCzesioPL-WHDL"  sha1="15dd6d8b3da88c7ce7c1f6ea89e40c086bdfd1a4">
+		<name>Agent Czesio PL</name>
+		<subpath>AgentCzesioPL</subpath>
+		<variant_uuid>7e320d19-e3b0-54c3-b9f0-dfafa99b60c9</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="DungeonMaster_v1.2_0833"  sha1="64fe90194025cbe189949216450c00cacf400c71">
+		<name>Dungeon Master</name>
+		<subpath>DungeonMaster</subpath>
+		<variant_uuid>b7652305-8c12-53cb-a22b-a2930cd15dab</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>DungeonMaster.slave</slave_default>
+		<slave_libraries>True</slave_libraries>
+		<slave number="1">
+			<filename>DungeonMaster.slave</filename>
+			<datapath></datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=MOUSE
+		PORT0=MOUSE
+		PORT1=JOY
+		SCREEN_HEIGHT=200
+		SCREEN_Y_OFFSET=3
+		
+		</hardware>
+	</game>
+	<game filename="AgentLux-WHDL"  sha1="64995a8fbdf0223fda87e73284267736736fd95a">
+		<name>Agent Lux</name>
+		<subpath>AgentLux</subpath>
+		<variant_uuid>9fbcd625-926a-5608-b0ab-3d71652a8f9f</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AgeRock-WHDL"  sha1="d8d0a4d396bd6af21675a4bf0884dbdde621aa92">
+		<name>Age Rock</name>
+		<subpath>AgeRock</subpath>
+		<variant_uuid>c1bd2c31-ff45-5c6f-b067-e6a8484bbfa1</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AggressionAGA-WHDL"  sha1="114f21e43b7ae169c136a64376927aabe16a1126">
+		<name>Aggression [AGA]</name>
+		<subpath>AggressionAGA</subpath>
+		<variant_uuid>a7f4ab51-3169-5de4-8d4c-279ad6fedb61</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AirAce2-WHDL"  sha1="1e98cdc5ce560e5a71a12f364e76ae32ebac0f31">
+		<name>Air Ace 2</name>
+		<subpath>AirAce2</subpath>
+		<variant_uuid>17fd4531-3a10-5aef-8d05-a95fb1129d77</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AirBucks1FR-WHDL"  sha1="1d0115ecb99c22f09c23d069b1036b2ac2b4d8b8">
+		<name>Air Bucks 1 FR</name>
+		<subpath>AirBucks1FR</subpath>
+		<variant_uuid>b022eaac-1dd4-5f79-88a8-09ebc316218c</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AirBucks2AGAFR-WHDL"  sha1="500808176ea49629d78f41c11a70fa2db498d723">
+		<name>Air Bucks 2 [AGA] FR</name>
+		<subpath>AirBucks2AGAFR</subpath>
+		<variant_uuid>1236f11a-04e6-50a3-adb3-da2d605f15e1</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AirForceCommander-WHDL"  sha1="d6bfb16be92959b2a25a52bd0669dd65b76173ae">
+		<name>Air Force Commander</name>
+		<subpath>AirForceCommander</subpath>
+		<variant_uuid>bdcd09e9-99ea-5ebe-9f17-de866df7790d</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AirForceCommanderGulf-WHDL"  sha1="4cdeb581e878b347e1c19de821963f421ba21704">
+		<name>Air Force Commander Gulf-langue</name>
+		<subpath>AirForceCommanderGulf-langue</subpath>
+		<variant_uuid>891bec58-e6c0-5bd9-a180-d80ad6d0610d</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AirForceCommanderWWII-WHDL"  sha1="4113ecfa21f2bd1496ed15b7ad68f47706e7f021">
+		<name>Air Force Commander WWII-langue</name>
+		<subpath>AirForceCommanderWWII-langue</subpath>
+		<variant_uuid>4aad0b01-f18b-5bc2-831a-4774bb061fde</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AirTaxi-WHDL"  sha1="612066191417ef02ee879bfe45c3223eae05aaab">
+		<name>Air Taxi</name>
+		<subpath>AirTaxi</subpath>
+		<variant_uuid>8ef5399b-f673-5583-b8e4-d00c861c7a13</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlarcityAGAdemo-WHDL"  sha1="5fc3e22c30630c1d5a1cef8932a44f38984ed73d">
+		<name>Alarcity [AGA] Demo</name>
+		<subpath>AlarcityAGADemo</subpath>
+		<variant_uuid>7ce2ea5a-3b55-57a8-b5e9-cd943ed84e1d</variant_uuid>
+		<slave_count>2</slave_count>
+		<slave_default>Workbench31_32.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlcoCopter-WHDL"  sha1="d5b3858753c83fb16e5bd3096c04ea2304f87397">
+		<name>Alco Copter</name>
+		<subpath>AlcoCopter</subpath>
+		<variant_uuid>c782343b-5cc0-5209-a0c6-3188aee3be04</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlcoCopterDemo-WHDL"  sha1="6785946380995166903ffe9957f2ad0299c1d5fe">
+		<name>Alco Copter Demo</name>
+		<subpath>AlcoCopterDemo</subpath>
+		<variant_uuid>773ccfb8-9716-59e8-b30a-1d8a9df602a1</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Alehop-WHDL"  sha1="2cbe35ad54440285758849331f5ccd8f6c28b2f6">
+		<name>Alehop</name>
+		<subpath>Alehop</subpath>
+		<variant_uuid>6e4bbfcd-8d56-53cb-962a-70e057c22780</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Alert-WHDL"  sha1="c94634f155390b101efbdb3f7564829dd3917312">
+		<name>Alert</name>
+		<subpath>Alert</subpath>
+		<variant_uuid>0f0616e0-da20-56d7-8a5c-6c06724ff5f6</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="AlfaPoker-WHDL"  sha1="8fa3b63d419cf13ef6b0f90f4f6f0ade138ae697">
+		<name>A LFA Poker</name>
+		<subpath>ALFAPoker</subpath>
+		<variant_uuid>5d330966-179b-531a-88ee-077242aa8437</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AliBaba-WHDL"  sha1="e748aec862d25dc5d366fc5b9cc72a19e179ca12">
+		<name>Ali Baba</name>
+		<subpath>AliBaba</subpath>
+		<variant_uuid>4bc9ed19-0222-505f-be02-6baabe9cbf78</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienEscape1DE-WHDL"  sha1="c532e05306c3e9673aff074392792a09c58c608c">
+		<name>Alien Escape 1 DE</name>
+		<subpath>AlienEscape1DE</subpath>
+		<variant_uuid>6da4f7c9-7cd6-524a-92cb-9c5034e0238a</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienEscape2DE-WHDL"  sha1="06691ad17852b1d8a39172766499b5f61b189a13">
+		<name>Alien Escape 2 DE</name>
+		<subpath>AlienEscape2DE</subpath>
+		<variant_uuid>d46fc6f3-a837-5676-bb96-635293e6beed</variant_uuid>
+		<slave_count>5</slave_count>
+		<slave_default>GenericKick31.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienFishFinger131-WHDL"  sha1="a4e4fb08142f570c040d2dd4fc7fc8f85f780f4b">
+		<name>Alien Fish Finger 131</name>
+		<subpath>AlienFishFinger131</subpath>
+		<variant_uuid>279e29f0-40fa-51ec-88e2-66fe8ccc8aa9</variant_uuid>
+		<slave_count>5</slave_count>
+		<slave_default>GenericKick31.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienGenocide-WHDL"  sha1="062cda0d8dcf78bb42c1ac3be842d86eee928951">
+		<name>Alien Genocide</name>
+		<subpath>AlienGenocide</subpath>
+		<variant_uuid>e16c55fe-bf17-5131-9696-bd1c4b2c0837</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>GenericKick31.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienHunter-WHDL"  sha1="083c6264e67f002b686b0d9a54050d4f44064c60">
+		<name>Alien Hunter</name>
+		<subpath>AlienHunter</subpath>
+		<variant_uuid>a943822a-ea7e-5dc3-884d-555c9349e322</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienNetwork-WHDL"  sha1="25c4a17f1b8210c8bd5f128e13d62dbce568f66f">
+		<name>Alien Network</name>
+		<subpath>AlienNetwork</subpath>
+		<variant_uuid>d5679c18-7be5-5cbd-802e-ce1340d96eb8</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienSpace-WHDL"  sha1="6e9abba5e1ff3ba3e2fc96ee31cf2f0b34088e61">
+		<name>Alien Space-NE</name>
+		<subpath>AlienSpace-NE</subpath>
+		<variant_uuid>b8a869d1-de2e-5106-b474-63dd422c4edd</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlienStormSunteam-WHDL"  sha1="aad8710320dcac4845842195f0503d1861db1d6e">
+		<name>Alien Storm Sunteam</name>
+		<subpath>AlienStormSunteam</subpath>
+		<variant_uuid>8ef6990b-fac4-5193-b168-21a7d840f999</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Alphaflight-WHDL"  sha1="657c6fb19d6e3a0489eb9ff7810f3cda0f0ace97">
+		<name>Alphaflight</name>
+		<subpath>Alphaflight</subpath>
+		<variant_uuid>af2bc3bc-4980-5cc6-80ab-6abdeac6590c</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AlterEgo-WHDL"  sha1="c76c519323d380ea125d54c78ed43df3bf947e0b">
+		<name>Alter Ego</name>
+		<subpath>AlterEgo</subpath>
+		<variant_uuid>b6cefa6f-2a98-5adb-841d-a2fc68cfd81c</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Amazed-WHDL"  sha1="ef2b296b26e869a91cb5106624e75add14c39324">
+		<name>Amazed</name>
+		<subpath>Amazed</subpath>
+		<variant_uuid>7f5ed54e-797d-5fae-bc5c-04c22302bdc3</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Workbench13.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="Ambassador-WHDL"  sha1="56dec9cec5bce10c42136bc2b41b7eaef52472c1">
+		<name>Ambassador</name>
+		<subpath>Ambassador</subpath>
+		<variant_uuid>6a9379f3-572c-54f3-8ce3-e2d5c3f88bfd</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AmbermoonArcade-WHDL"  sha1="d0627a0828a1092b564811caa3de8c1a890254f4">
+		<name>Ambermoon Arcade</name>
+		<subpath>AmbermoonArcade</subpath>
+		<variant_uuid>76e7e858-94c9-55f3-acc6-8ccaa6326383</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>GenericKick31.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AmbermoonFR-WHDL"  sha1="91633f73a5cbd7751b8c6e421f0ef52156976767">
+		<name>Amberstar 2 Ambermoon FR</name>
+		<subpath>Amberstar2AmbermoonFR</subpath>
+		<variant_uuid>94699402-ee2f-5268-b184-e7cc8fd36f71</variant_uuid>
+		<slave_count>6</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AmericanPoker-WHDL"  sha1="5a63326ff6c1ad18478a4638ff55ab9abb187e40">
+		<name>American Poker</name>
+		<subpath>AmericanPoker</subpath>
+		<variant_uuid>d9532a19-96ba-5023-83c3-e0c4b795de12</variant_uuid>
+		<slave_count>1</slave_count>
+		<slave_default>Kick13D7.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Kick13D7.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		
+		</hardware>
+	</game>
+	<game filename="AmiBeeDemoAGA-WHDL"  sha1="b35eaa21b38ea339deb2b4338c13aebcdae8a7ec">
+		<name>Ami Bee Demo [AGA]</name>
+		<subpath>AmiBeeDemoAGA</subpath>
+		<variant_uuid>ea9b9d07-35e2-5882-afef-da7b7d270d69</variant_uuid>
+		<slave_count>2</slave_count>
+		<slave_default>Workbench31_32.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AmiBird-WHDL"  sha1="8f8f6356a9ba148197552b148e25b682fc65bc6c">
+		<name>Ami Bird</name>
+		<subpath>AmiBird</subpath>
+		<variant_uuid>6017e8d3-b57c-50f2-b63d-eaffce594c4b</variant_uuid>
+		<slave_count>4</slave_count>
+		<slave_default>GenericKick31.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="Amibox-WHDL"  sha1="6594507530e877dcb1b84cbfca67806683d01db8">
+		<name>Amibox</name>
+		<subpath>Amibox</subpath>
+		<variant_uuid>1b3c34e8-9518-5ea0-80c4-26d3ff13abe0</variant_uuid>
+		<slave_count>3</slave_count>
+		<slave_default>Workbench31_1.Slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
+		
+		</hardware>
+	</game>
+	<game filename="AmigaBridge-WHDL"  sha1="645f39c287be9173c72e7f78c9d58468c62c4310">
+		<name>Amiga Bridge Turbo</name>
+		<subpath>AmigaBridgeTurbo</subpath>
+		<variant_uuid>e83bb879-f7c3-5e4b-af28-60bc324343c3</variant_uuid>
+		<slave_count>12</slave_count>
+		<slave_default>GenericKick13.slave</slave_default>
+		<slave_libraries>False</slave_libraries>
+		<slave number="1">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="2">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="3">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="4">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="5">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="6">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="7">
+			<filename>GenericKick13.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="8">
+			<filename>GenericKick31.slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="9">
+			<filename>Workbench13.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="10">
+			<filename>Workbench31_1.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="11">
+			<filename>Workbench31_32.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<slave number="12">
+			<filename>Workbench31_4.Slave</filename>
+			<datapath>data</datapath>
+		</slave>
+		<hardware>
+		PRIMARY_CONTROL=JOYSTICK
+		PORT0=JOY
+		PORT1=JOY
+		SCREEN_Y_OFFSET=
+		FAST_RAM=8
 		
 		</hardware>
 	</game>
