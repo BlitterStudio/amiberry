@@ -201,15 +201,10 @@ std::string find_whdload_game_option(const TCHAR* find_setting, char* whd_option
 	while (full_line != nullptr)
 	{
             
-            // remove leading tabs  (*** THIS SHOULD BE IMPROVED ***)
-            //if (full_line[0] == '\t' && full_line[1] == '\t')
-            //{
-              //memmove(full_line, full_line + 2, (sizeof(full_line[0]) - 2) / sizeof(full_line[0]));
-            //}
+            // Do checks with and without leading tabs  (*** THIS SHOULD BE IMPROVED ***)
 
             std::string t = full_line;
             
-            //  t.erase(std::remove(t.begin(), t.end(), '\t'), t.end()); // remove tabs
             strcpy(temp_setting_tab, "\t\t");
             strcat(temp_setting_tab, find_setting);
             strcat(temp_setting_tab, "=");
@@ -217,11 +212,11 @@ std::string find_whdload_game_option(const TCHAR* find_setting, char* whd_option
             strcpy(temp_setting, find_setting);
             strcat(temp_setting, "=");
             
+        // this was a previous safety check, possibly redundant now
 	//	if (strlen(full_line) >= strlen(temp_setting))
 	//	{
-                    
-		//  if (strncmp(temp_setting, full_line, strlen(find_setting)) == 0)
-                    // check that the beginging of the full line
+                   
+                    // check the beginning of the full line
                     if (strncmp(temp_setting, full_line, strlen(temp_setting)) == 0)
 			{
 				t.erase(t.begin(), t.begin() + strlen(temp_setting));				
