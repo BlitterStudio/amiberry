@@ -24,7 +24,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 {
 	amiberryLogoImage = gcn::Image::load("data/amiberry-logo.png");
 	icon = new gcn::Icon(amiberryLogoImage);
-	lblEmulatorVersion = new gcn::Label("Amiberry v2.24 (2019-01-14)");
+	lblEmulatorVersion = new gcn::Label("Amiberry v2.25 (2019-02-20)");
 
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
@@ -38,7 +38,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 		"Thomas Navarro Garcia - Amiberry logo\n"
 		"Vasiliki Soufi - Amiberry name\n"
 		"\n"
-		"Dedicated to HeZoR - R.I.P. (1978-2017)\n"
+		"Dedicated to HeZoR - R.I.P. little brother (1978-2017)\n"
 		);
 
 	textBox->setBackgroundColor(gui_baseCol);
