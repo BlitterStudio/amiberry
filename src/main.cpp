@@ -523,7 +523,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			xfree(txt);
 			loaded = true;
 		}
-                // for backwards compatibility only - WHDLoading
+		// for backwards compatibility only - WHDLoading
 		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0) {
 			const auto txt = parsetextpath(argv[i] + 13);
 			whdload_auto_prefs(&currprefs, txt);
@@ -531,37 +531,35 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			firstconfig = false;
 			loaded = true;
 		}
-                // for backwards compatibility only - CDLoading
+		// for backwards compatibility only - CDLoading
 		else if (_tcsncmp(argv[i], _T("-autocd="), 8) == 0) {
 			const auto txt = parsetextpath(argv[i] + 8);
 			cd_auto_prefs(&currprefs, txt);
 			xfree(txt);
 			firstconfig = false;
 			loaded = true;
-		}  
-
-                // autoload ....  .cue / .lha  
-		else if ((_tcsncmp(argv[i], _T("-autoload="), 10) == 0))                
-                {
+		}
+        // autoload ....  .cue / .lha  
+		else if (_tcsncmp(argv[i], _T("-autoload="), 10) == 0)
+		{
 			const auto txt = parsetextpath(argv[i] + 10);
-                        
-                        //const auto txt2 = *GetExtension (txt);                // Extract the extension from the string  (incl '.')
-                        
-//                        if (_tcsncmp(_T(txt2), _T("lha"),3) == 0) 
-//                        {
-//                            printf("WHDLOAD... %s\n", txt);
-//                            whdload_auto_prefs(&currprefs, txt);
-//                        }
-//                        else if (_tcsncmp(txt2, _T(".cue"),3) == 0) 
-//                        {         
-//                            printf("CDTV/CD32... %s\n", txt);
-                            cd_auto_prefs(&currprefs, txt);
-//                        }
-//                        else
-//                        {         
-//                            printf("Cant find extension ... %s\n", txt);
-//                        }
-                }                
+			//const auto txt2 = *GetExtension (txt);                // Extract the extension from the string  (incl '.')
+
+//          if (_tcsncmp(_T(txt2), _T("lha"),3) == 0) 
+//          {
+//              printf("WHDLOAD... %s\n", txt);
+//              whdload_auto_prefs(&currprefs, txt);
+//          }
+//          else if (_tcsncmp(txt2, _T(".cue"),3) == 0) 
+//          {         
+//              printf("CDTV/CD32... %s\n", txt);
+			cd_auto_prefs(&currprefs, txt);
+			//}
+			//else
+			//{         
+			//   printf("Cant find extension ... %s\n", txt);
+			//}
+		}
 		else if (_tcscmp(argv[i], _T("-f")) == 0) {
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
 			if (i + 1 == argc) {

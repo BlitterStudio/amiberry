@@ -254,7 +254,7 @@ static void scan_rom(char *path)
 
 void SymlinkROMs()
 {
-    symlink_roms(&changed_prefs);
+	symlink_roms(&changed_prefs);
 }
 
 void RescanROMs()

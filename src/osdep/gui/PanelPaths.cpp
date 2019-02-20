@@ -108,8 +108,8 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		RescanROMs();
-                SymlinkROMs();
-                
+		SymlinkROMs();
+
 		import_joysticks();
 		RefreshPanelInput();
 		RefreshPanelCustom();
@@ -122,19 +122,16 @@ public:
 
 static RescanROMsButtonActionListener* rescanROMsButtonActionListener;
 
-
-
 int date_cmp(const char *d1, const char *d2)
 {
-    int rc;
-    // compare years
-    rc = strncmp(d1 + 0, d2 + 0, 4);
+	// compare years
+	auto rc = strncmp(d1 + 0, d2 + 0, 4);
     if (rc != 0)
         return rc;
 
-    int n = 0;
+    auto n = 0;
     
-    for (int m = 0; m < 5; ++m)
+    for (auto m = 0; m < 5; ++m)
     {
         switch(m) {
         case 0: n = 5 ; break;   // compare months
@@ -152,8 +149,6 @@ int date_cmp(const char *d1, const char *d2)
     return strncmp(d1, d2, 2);
 }
 
-
-
 static xmlNode* get_node(xmlNode* node, const char* name)
 {
 	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
@@ -163,9 +158,6 @@ static xmlNode* get_node(xmlNode* node, const char* name)
 	}
 	return nullptr;
 }
-
-
-
 
 void copy_file( const char* srce_file, const char* dest_file )
 {
@@ -179,74 +171,68 @@ class DownloadXMLButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-            
-                bool do_download;
-                char original_date [MAX_DPATH] = "2000-01-01 at 00:00:01\n";
-                char updated_date [MAX_DPATH] = "2000-01-01 at 00:00:01\n";
-            
-                char xml_path[MAX_DPATH];
-                char xml2_path[MAX_DPATH];
-                
-                snprintf(xml_path, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
-                snprintf(xml2_path, MAX_DPATH, "/tmp/whdload_db.xml", start_path_data);
+		char original_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
+		char updated_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
 
-                write_log("Checking original %s for date...\n",xml_path);
-                
-                if (zfile_exists(xml_path)) // use local XML 
-                {
-                    const auto doc = xmlParseFile(xml_path);
-                    const auto root_element = xmlDocGetRootElement(doc);                            
-                    _stprintf(original_date,"%s",xmlGetProp(root_element, reinterpret_cast<const xmlChar *>("timestamp")));
-                    write_log(" ... Date from original ...  %s\n",original_date);
-                }
-                else
-                { 
-                    write_log("\n");
-                    do_download = true;
-                }
-                
-            // download the updated XML to /tmp/               
-                FILE* afile = popen("wget -np -nv -O /tmp/whdload_db.xml https://raw.githubusercontent.com/HoraceAndTheSpider/Amiberry-XML-Builder/master/whdload_db.xml","r");
-                pclose(afile);
-                
-            // do i need to pause here??
-                                
-            // check the downloaded file's 
-                    const auto doc = xmlParseFile(xml2_path);
-                    const auto root_element = xmlDocGetRootElement(doc);  
-                    
-                    if (zfile_exists(xml2_path)) // use downloaded XML
-                    {   
-                        _stprintf(updated_date,"%s",xmlGetProp(root_element, reinterpret_cast<const xmlChar *>("timestamp")));   
-                    }
-                                        
-            //do_download     
-                write_log("Checking downloaded whdload_db.xml for date... \n");
-                write_log(" ...Date from download ...  %s\n",updated_date);
-                
-            // do the compare
-                if (date_cmp(original_date, updated_date) < 0 )
-                {
-                    remove(xml_path);
-                    copy_file("/tmp/whdload_db.xml",xml_path);
-                    ShowMessage("XML Downloader", "Updated XML downloaded.", "", "Ok", "");
+		char xml_path[MAX_DPATH];
+		char xml2_path[MAX_DPATH];
+
+		snprintf(xml_path, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
+		snprintf(xml2_path, MAX_DPATH, "/tmp/whdload_db.xml");
+
+		write_log("Checking original %s for date...\n", xml_path);
+
+		if (zfile_exists(xml_path)) // use local XML 
+		{
+			const auto doc = xmlParseFile(xml_path);
+			const auto root_element = xmlDocGetRootElement(doc);
+			_stprintf(original_date, "%s", reinterpret_cast<const char*>(xmlGetProp(root_element, reinterpret_cast<const xmlChar *>("timestamp"))));
+			write_log(" ... Date from original ...  %s\n", original_date);
 		}
-                else if (date_cmp(original_date, updated_date) > 0 )
-                {
-                    ShowMessage("XML Downloader", "Local XML does not require update.", "", "Ok", "");
-                }
-                else
-                {
-                    ShowMessage("XML Downloader", "Local XML does not require update.", "", "Ok", "");
-                }
-                
-            // show message depending on what was done		
+		else
+			write_log("\n");
+
+		// download the updated XML to /tmp/               
+		auto afile = popen("wget -np -nv -O /tmp/whdload_db.xml https://raw.githubusercontent.com/HoraceAndTheSpider/Amiberry-XML-Builder/master/whdload_db.xml", "r");
+		pclose(afile);
+
+		// do i need to pause here??
+
+		// check the downloaded file's 
+		const auto doc = xmlParseFile(xml2_path);
+		const auto root_element = xmlDocGetRootElement(doc);
+
+		if (zfile_exists(xml2_path)) // use downloaded XML
+		{
+			_stprintf(updated_date, "%s", reinterpret_cast<const char*>(xmlGetProp(root_element, reinterpret_cast<const xmlChar *>("timestamp"))));
+		}
+
+		//do_download     
+		write_log("Checking downloaded whdload_db.xml for date... \n");
+		write_log(" ...Date from download ...  %s\n", updated_date);
+
+		// do the compare
+		if (date_cmp(original_date, updated_date) < 0)
+		{
+			remove(xml_path);
+			copy_file("/tmp/whdload_db.xml", xml_path);
+			ShowMessage("XML Downloader", "Updated XML downloaded.", "", "Ok", "");
+		}
+		else if (date_cmp(original_date, updated_date) > 0)
+		{
+			ShowMessage("XML Downloader", "Local XML does not require update.", "", "Ok", "");
+		}
+		else
+		{
+			ShowMessage("XML Downloader", "Local XML does not require update.", "", "Ok", "");
+		}
+
+		// show message depending on what was done		
 		cmdDownloadXML->requestFocus();
 	}
 };
 
 static DownloadXMLButtonActionListener* downloadXMLButtonActionListener;
-
 
 void InitPanelPaths(const struct _ConfigCategory& category)
 {
@@ -329,19 +315,18 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdRescanROMs->setId("RescanROMs");
 	cmdRescanROMs->addActionListener(rescanROMsButtonActionListener);
 
-        downloadXMLButtonActionListener = new DownloadXMLButtonActionListener();
-        cmdDownloadXML = new gcn::Button("Update WHDLoad Database/XML");
+	downloadXMLButtonActionListener = new DownloadXMLButtonActionListener();
+	cmdDownloadXML = new gcn::Button("Update WHDLoad Database/XML");
 	cmdDownloadXML->setSize(cmdDownloadXML->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdDownloadXML->setBaseColor(gui_baseCol);
 	cmdDownloadXML->setId("DownloadXML");
 	cmdDownloadXML->addActionListener(downloadXMLButtonActionListener);
 
 	category.panel->add(cmdRescanROMs, DISTANCE_BORDER, category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
-        category.panel->add(cmdDownloadXML, DISTANCE_BORDER + cmdRescanROMs->getWidth() + 20, category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
+	category.panel->add(cmdDownloadXML, DISTANCE_BORDER + cmdRescanROMs->getWidth() + 20, category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
 
 	RefreshPanelPaths();
 }
-
 
 void ExitPanelPaths()
 {
@@ -363,7 +348,7 @@ void ExitPanelPaths()
 	delete folderButtonActionListener;
 
 	delete cmdRescanROMs;
-	delete cmdDownloadXML;        
+	delete cmdDownloadXML;
 	delete rescanROMsButtonActionListener;
 	delete downloadXMLButtonActionListener;
 }
@@ -383,7 +368,7 @@ void RefreshPanelPaths()
 	txtControllersPath->setText(tmp);
 
 	fetch_retroarchfile(tmp, MAX_DPATH);
-	txtRetroArchFile->setText(tmp); 
+	txtRetroArchFile->setText(tmp);
 }
 
 bool HelpPanelPaths(std::vector<std::string> &helptext)

@@ -856,14 +856,14 @@ struct uae_prefs {
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
-    bool input_analog_remap;
+	bool input_analog_remap;
 	bool use_retroarch_quit;
 	bool use_retroarch_menu;
 	bool use_retroarch_reset;
 	bool use_retroarch_statebuttons;
-        
-        TCHAR whdload_path[MAX_DPATH];
-        TCHAR whdload_file[MAX_DPATH];
+
+	TCHAR whdload_path[MAX_DPATH];
+	TCHAR whdload_file[MAX_DPATH];
 #endif
 
 	/* ANDROID */
