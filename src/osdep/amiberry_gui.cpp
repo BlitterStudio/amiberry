@@ -252,6 +252,10 @@ static void scan_rom(char *path)
 	zfile_zopen(path, scan_rom_2, 0);
 }
 
+void SymlinkROMs()
+{
+	symlink_roms(&changed_prefs);
+}
 
 void RescanROMs()
 {

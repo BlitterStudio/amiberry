@@ -19,6 +19,10 @@ CodeDB
 *.suo
 *.old
 
+### NetBeans ###
+nbproject*
+
+
 ### VSLinux ###
 VSLinux/obj
 VSLinux/bin
