@@ -115,7 +115,7 @@ public:
 		RefreshPanelCustom();
 		RefreshPanelROM();
 
-		ShowMessage("Rescan Paths", "Scan complete", "", "Ok", "");
+		ShowMessage("Rescan Paths", "Scan complete,", "Symlinks recreated.", "Ok", "");
 		cmdRescanROMs->requestFocus();
 	}
 };
