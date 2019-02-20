@@ -200,7 +200,6 @@ std::string find_whdload_game_option(const TCHAR* find_setting, char* whd_option
         
 	while (full_line != nullptr)
 	{
-            
             // Do checks with and without leading tabs  (*** THIS SHOULD BE IMPROVED ***)
 
             std::string t = full_line;
@@ -399,7 +398,6 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 	auto filesize = get_file_size(filepath);
 	// const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
 
-
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE   
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH  
 	strcpy(whd_config, config_path);
@@ -524,7 +522,6 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
-
 	// PORT 1 - JOYSTICK 
 	if (!strcmpi(host_detail.controller1, "nul") == 0)
 	{
@@ -567,10 +564,8 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
         char subpath[4096];
 
         bool use_slave_libs = false;
-        
-        
+         
         write_log("WHDBooter Launched");
-        
         strcpy(selected_slave, "");
         
 	fetch_configurationpath(config_path,MAX_DPATH);
@@ -624,7 +619,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
         my_unlink("/tmp/s/startup-sequence");
         
         write_log("WHDBooter - Looking for %s \n", whd_startup );
-        
+ 
                 // LOAD HOST OPTIONS
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
         
@@ -681,7 +676,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
                 //printf("XML exists %s\n",game_name); 
                 write_log("WHDBooter - Loading whdload_db.xml\n");
                 write_log("WHDBooter - Searching whdload_db.xml for %s\n",game_name);
-                
                 
                 const auto doc = xmlParseFile(whd_config);
                 const auto root_element = xmlDocGetRootElement(doc);
@@ -774,7 +768,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
         {
              write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
         }
-
 
         //printf("selected_slave: %s\n",selected_slave);
         
