@@ -369,7 +369,7 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 	fetch_configurationpath(config_path, MAX_DPATH);
         
 	//      *** GAME DETECTION ***
-	printf("\nCD Autoload: %s  \n\n", filepath);
+	write_log("\nCD Autoload: %s  \n\n", filepath);
 
 	// REMOVE THE FILE PATH AND EXTENSION
 	const auto filename = my_getfilepart(filepath);
@@ -625,9 +625,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 			std::istreambuf_iterator<char>());
 
 		_stprintf(hardware_settings, "%s", contents.c_str());
-
 		write_log("WHDBooter -  Loading hostprefs.conf.\n");
-
 		host_detail = get_host_settings(hardware_settings);
 	}
 
@@ -706,7 +704,6 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 						}
 
 						temp_node = game_node->xmlChildrenNode;
-						printf("temp node: %s\n", temp_node);
 					}
 
 					// get slave_libraries
@@ -732,9 +729,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		xmlCleanupParser();
 	}
 	else
-	{
 		write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
-	}
 
 	//printf("selected_slave: %s\n",selected_slave);
 

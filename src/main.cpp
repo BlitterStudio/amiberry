@@ -492,6 +492,17 @@ void print_usage()
 	exit(1);
 }
 
+std::string get_filename_extension(const TCHAR* filename)
+{
+	std::string fName(filename);
+	size_t pos = fName.rfind('.');
+	if (pos == std::string::npos) // no extension
+		return "";
+	if (pos == 0) // . is at the front, not an extension
+		return "";
+	return fName.substr(pos, fName.length());
+}
+
 static void parse_cmdline(int argc, TCHAR **argv)
 {
 	static bool started;
@@ -543,28 +554,26 @@ static void parse_cmdline(int argc, TCHAR **argv)
 		else if (_tcsncmp(argv[i], _T("-autoload="), 10) == 0)
 		{
 			const auto txt = parsetextpath(argv[i] + 10);
-			//const auto txt2 = *GetExtension (txt);                // Extract the extension from the string  (incl '.')
-
-//          if (_tcsncmp(_T(txt2), _T("lha"),3) == 0) 
-//          {
-//              printf("WHDLOAD... %s\n", txt);
-//              whdload_auto_prefs(&currprefs, txt);
-//          }
-//          else if (_tcsncmp(txt2, _T(".cue"),3) == 0) 
-//          {         
-//              printf("CDTV/CD32... %s\n", txt);
-			cd_auto_prefs(&currprefs, txt);
-			//}
-			//else
-			//{         
-			//   printf("Cant find extension ... %s\n", txt);
-			//}
+			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
+			if (txt2 == ".lha")
+			{
+				write_log("WHDLOAD... %s\n", txt);
+				whdload_auto_prefs(&currprefs, txt);
+				xfree(txt);
+			}
+			else if (txt2 == ".cue")
+			{
+				write_log("CDTV/CD32... %s\n", txt);
+				cd_auto_prefs(&currprefs, txt);
+				xfree(txt);
+			}
+			else
+				write_log("Can't find extension ... %s\n", txt);
 		}
 		else if (_tcscmp(argv[i], _T("-f")) == 0) {
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
-			if (i + 1 == argc) {
+			if (i + 1 == argc)
 				write_log(_T("Missing argument for '-f' option.\n"));
-			}
 			else {
 				const auto txt = parsetextpath(argv[++i]);
 				currprefs.mountitems = 0;
@@ -584,7 +593,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			const auto txt = parsetextpath(argv[i] + 9);
 			const auto txt2 = xmalloc(TCHAR, _tcslen(txt) + 2);
 			_tcscpy(txt2, txt);
-			if (_tcsrchr(txt2, ',') != NULL)
+			if (_tcsrchr(txt2, ',') != nullptr)
 				_tcscat(txt2, _T(","));
 			cfgfile_parse_option(&currprefs, _T("cdimage0"), txt2, 0);
 			xfree(txt2);
@@ -595,7 +604,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			const TCHAR *arg = argv[i] + 2;
 			const int extra_arg = *arg == '\0';
 			if (extra_arg)
-				arg = i + 1 < argc ? argv[i + 1] : 0;
+				arg = i + 1 < argc ? argv[i + 1] : nullptr;
 			const auto ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
 			if (ret == -1)
 				print_usage();
