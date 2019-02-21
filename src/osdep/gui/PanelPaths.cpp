@@ -171,6 +171,12 @@ class DownloadXMLButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		if (!check_internet_connection())
+		{
+			ShowMessage("No Internet Connection", "No Internet Connection was found!", "Please connect to the Internet then try again.", "OK", "");
+			return;
+		}
+
 		char original_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
 		char updated_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
 

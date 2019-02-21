@@ -469,7 +469,7 @@ void print_usage()
 	printf("\nUsage:\n");
 	printf(" -f <file>                  Load a configuration file.\n");
 	printf(" -config=<file>             Load a configuration file.\n");
-	printf(" -autowhdload=<file>        Load a WHDLoad game pack.\n");
+	printf(" -autoload=<file>           Load a WHDLoad game or .CUE CD32 image.\n");
 	printf(" -statefile=<file>          Load a save state file.\n");
 	printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
 	printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
@@ -694,6 +694,23 @@ void leave_program (void)
     do_leave_program ();
 }
 
+bool check_internet_connection()
+{
+	auto result = false;
+	FILE *output;
+
+	if (!((output = popen("/sbin/route -n | grep -c '^0\\.0\\.0\\.0'", "r"))))
+		return result;
+
+	unsigned int i;
+	fscanf(output, "%u", &i);
+	if (i == 1)
+		result = true; // There is internet connection
+	else if (i == 0)
+		result = false; // There is no internet connection
+	pclose(output);
+	return result;
+}
 
 // In case of error, print the error code and close the application
 void check_error_sdl(const bool check, const char* message) {
