@@ -166,6 +166,21 @@ void copy_file( const char* srce_file, const char* dest_file )
     dest << srce.rdbuf() ;
 }
 
+void download_rtb(const char* download_file)
+{    
+        char download_command[MAX_DPATH];
+        char local_path[MAX_DPATH];
+    
+        //  download .rtb
+        snprintf(local_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data,download_file);                                
+        snprintf(download_command, MAX_DPATH, "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true",local_path,download_file);                
+        if (!zfile_exists(local_path)) // ?? 
+        {   auto afile = popen(download_command, "r");
+            write_log("Downloading %s ...\n", download_file);
+            pclose(afile);
+        }
+}
+
 class DownloadXMLButtonActionListener : public gcn::ActionListener
 {
 public:
@@ -179,10 +194,34 @@ public:
 
 		char original_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
 		char updated_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
-
+                
 		char xml_path[MAX_DPATH];
 		char xml2_path[MAX_DPATH];
-
+                char download_command[MAX_DPATH];
+                
+                //  download WHDLOAD
+ 		snprintf(xml_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);                                
+                snprintf(download_command, MAX_DPATH, "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true",xml_path);                
+		if (!zfile_exists(xml_path)) // ?? 
+		{   auto afile = popen(download_command, "r");
+                    pclose(afile);
+                }
+                
+                // download kickstart RTB files for maximum compatibility
+ 		snprintf(xml_path, MAX_DPATH, "kick33180.A500.RTB");                                                
+                download_rtb(xml_path);                        
+ 		snprintf(xml_path, MAX_DPATH, "kick33192.A500.RTB");                                                
+                download_rtb(xml_path);
+ 		snprintf(xml_path, MAX_DPATH, "kick34005.A500.RTB");                                                
+                download_rtb(xml_path);                
+ 		snprintf(xml_path, MAX_DPATH, "kick40063.A600.RTB");                                                
+                download_rtb(xml_path);
+ 		snprintf(xml_path, MAX_DPATH, "kick40068.A1200.RTB");                                                
+                download_rtb(xml_path);
+ 		snprintf(xml_path, MAX_DPATH, "kick40068.A4000.RTB");                                                
+                download_rtb(xml_path);                
+                
+                //
 		snprintf(xml_path, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
 		snprintf(xml2_path, MAX_DPATH, "/tmp/whdload_db.xml");
 
@@ -230,7 +269,7 @@ public:
 		}
 		else
 		{
-			ShowMessage("XML Downloader", "Local XML does not require update.", "", "Ok", "");
+			ShowMessage("XML Downloader", "Local XML is the current version.", "", "Ok", "");
 		}
 
 		// show message depending on what was done		
