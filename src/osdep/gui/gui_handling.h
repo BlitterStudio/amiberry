@@ -195,4 +195,6 @@ extern int delay_savestate_frame;
 
 extern void UpdateGuiScreen();
 
+extern bool check_internet_connection();
+
 #endif // GUI_HANDLING_H
