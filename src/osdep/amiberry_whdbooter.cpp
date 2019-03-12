@@ -738,10 +738,17 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	if (strlen(selected_slave) != 0 && !zfile_exists(whd_startup))
 	{
 		// _stprintf(whd_bootscript, "DH3:C/Assign C: DH3:C/ ADD\n");
-		if (use_slave_libs)
+		_stprintf(whd_bootscript, " \n");  
+                
+                if (use_slave_libs)
 		{
-			_stprintf(whd_bootscript, "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n");
+			_stprintf(whd_bootscript, "%sDH3:C/Assign LIBS: DH3:LIBS/ ADD\n");
 		}
+
+                _stprintf(whd_bootscript, "%sIF NOT EXISTS WHDLoad\n", whd_bootscript);                
+                _stprintf(whd_bootscript, "%sDH3:C/Assign C: DH3:C/ ADD\n", whd_bootscript);
+                _stprintf(whd_bootscript, "%sENDIF\n", whd_bootscript);
+                
 		_stprintf(whd_bootscript, "%sCD \"Games:%s\"\n", whd_bootscript, subpath);
 		_stprintf(whd_bootscript, "%sWHDLoad SLAVE=\"games:%s/%s\"", whd_bootscript, subpath, selected_slave);
 		_stprintf(whd_bootscript, "%s PRELOAD NOWRITECACHE NOREQ SPLASHDELAY=0", whd_bootscript);
