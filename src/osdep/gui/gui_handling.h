@@ -10,7 +10,7 @@
 #define BUTTON_HEIGHT 30
 #define SMALL_BUTTON_WIDTH 30
 #define SMALL_BUTTON_HEIGHT 22
-#define LABEL_HEIGHT 15
+#define LABEL_HEIGHT 20
 #define TEXTFIELD_HEIGHT 20
 #define DROPDOWN_HEIGHT 20
 #define SLIDER_HEIGHT 20
@@ -194,5 +194,7 @@ extern int currentStateNum;
 extern int delay_savestate_frame;
 
 extern void UpdateGuiScreen();
+
+extern bool check_internet_connection();
 
 #endif // GUI_HANDLING_H

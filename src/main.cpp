@@ -469,7 +469,7 @@ void print_usage()
 	printf("\nUsage:\n");
 	printf(" -f <file>                  Load a configuration file.\n");
 	printf(" -config=<file>             Load a configuration file.\n");
-	printf(" -autowhdload=<file>        Load a WHDLoad game pack.\n");
+	printf(" -autoload=<file>           Load a WHDLoad game or .CUE CD32 image.\n");
 	printf(" -statefile=<file>          Load a save state file.\n");
 	printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
 	printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
@@ -490,6 +490,17 @@ void print_usage()
 	printf("It will load A500.uae configuration with the save state named game.\n");
 	printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
 	exit(1);
+}
+
+std::string get_filename_extension(const TCHAR* filename)
+{
+	std::string fName(filename);
+	size_t pos = fName.rfind('.');
+	if (pos == std::string::npos) // no extension
+		return "";
+	if (pos == 0) // . is at the front, not an extension
+		return "";
+	return fName.substr(pos, fName.length());
 }
 
 static void parse_cmdline(int argc, TCHAR **argv)
@@ -523,6 +534,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			xfree(txt);
 			loaded = true;
 		}
+		// for backwards compatibility only - WHDLoading
 		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0) {
 			const auto txt = parsetextpath(argv[i] + 13);
 			whdload_auto_prefs(&currprefs, txt);
@@ -530,11 +542,38 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			firstconfig = false;
 			loaded = true;
 		}
+		// for backwards compatibility only - CDLoading
+		else if (_tcsncmp(argv[i], _T("-autocd="), 8) == 0) {
+			const auto txt = parsetextpath(argv[i] + 8);
+			cd_auto_prefs(&currprefs, txt);
+			xfree(txt);
+			firstconfig = false;
+			loaded = true;
+		}
+        // autoload ....  .cue / .lha  
+		else if (_tcsncmp(argv[i], _T("-autoload="), 10) == 0)
+		{
+			const auto txt = parsetextpath(argv[i] + 10);
+			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
+			if (txt2 == ".lha")
+			{
+				write_log("WHDLOAD... %s\n", txt);
+				whdload_auto_prefs(&currprefs, txt);
+				xfree(txt);
+			}
+			else if (txt2 == ".cue")
+			{
+				write_log("CDTV/CD32... %s\n", txt);
+				cd_auto_prefs(&currprefs, txt);
+				xfree(txt);
+			}
+			else
+				write_log("Can't find extension ... %s\n", txt);
+		}
 		else if (_tcscmp(argv[i], _T("-f")) == 0) {
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
-			if (i + 1 == argc) {
+			if (i + 1 == argc)
 				write_log(_T("Missing argument for '-f' option.\n"));
-			}
 			else {
 				const auto txt = parsetextpath(argv[++i]);
 				currprefs.mountitems = 0;
@@ -554,7 +593,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			const auto txt = parsetextpath(argv[i] + 9);
 			const auto txt2 = xmalloc(TCHAR, _tcslen(txt) + 2);
 			_tcscpy(txt2, txt);
-			if (_tcsrchr(txt2, ',') != NULL)
+			if (_tcsrchr(txt2, ',') != nullptr)
 				_tcscat(txt2, _T(","));
 			cfgfile_parse_option(&currprefs, _T("cdimage0"), txt2, 0);
 			xfree(txt2);
@@ -565,7 +604,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			const TCHAR *arg = argv[i] + 2;
 			const int extra_arg = *arg == '\0';
 			if (extra_arg)
-				arg = i + 1 < argc ? argv[i + 1] : 0;
+				arg = i + 1 < argc ? argv[i + 1] : nullptr;
 			const auto ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
 			if (ret == -1)
 				print_usage();
@@ -655,6 +694,23 @@ void leave_program (void)
     do_leave_program ();
 }
 
+bool check_internet_connection()
+{
+	auto result = false;
+	FILE *output;
+
+	if (!((output = popen("/sbin/route -n | grep -c '^0\\.0\\.0\\.0'", "r"))))
+		return result;
+
+	unsigned int i;
+	fscanf(output, "%u", &i);
+	if (i == 1)
+		result = true; // There is internet connection
+	else if (i == 0)
+		result = false; // There is no internet connection
+	pclose(output);
+	return result;
+}
 
 // In case of error, print the error code and close the application
 void check_error_sdl(const bool check, const char* message) {
