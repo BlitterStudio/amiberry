@@ -1,3 +1,5 @@
+<img src="resources/icon.png" align="right" />
+
 # Amiga emulator for the Raspberry Pi and other ARM SoC
 Amiberry is an optimized Amiga emulator, for ARM-based boards (like the Raspberry Pi, ASUS Tinkerboard, Odroid XU4, etc). The core emulation comes from WinUAE, but stripped down to remove excess stuff in order to achieve good performance in underpowered boards. It includes JIT CPU and FPU support, to get high-performance results on CPU-intensive emulated environments. On top of that, we have some unique features developed only for Amiberry, such as the WHDLoad booter.
 
