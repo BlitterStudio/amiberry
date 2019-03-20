@@ -1,0 +1,177 @@
+# The configurations that used for the recording, feel free to edit them
+config:
+
+  # Specify a command to be executed
+  # like `/bin/bash -l`, `ls`, or any other commands
+  # the default is bash for Linux
+  # or powershell.exe for Windows
+  command: /bin/bash -l
+  
+  # Specify the current working directory path
+  # the default is the current working directory path
+  cwd: /home/pi
+  
+  # Export additional ENV variables
+  env:
+    recording: true
+  
+  # Explicitly set the number of columns
+  # or use `auto` to take the current
+  # number of columns of your shell
+  cols: 95
+  
+  # Explicitly set the number of rows
+  # or use `auto` to take the current
+  # number of rows of your shell
+  rows: 31
+  
+  # Amount of times to repeat GIF
+  # If value is -1, play once
+  # If value is 0, loop indefinitely
+  # If value is a positive number, loop n times
+  repeat: 0
+  
+  # Quality
+  # 1 - 100
+  quality: 100
+  
+  # Delay between frames in ms
+  # If the value is `auto` use the actual recording delays
+  frameDelay: auto
+  
+  # Maximum delay between frames in ms
+  # Ignored if the `frameDelay` isn't set to `auto`
+  # Set to `auto` to prevent limiting the max idle time
+  maxIdleTime: 2000
+  
+  # The surrounding frame box
+  # The `type` can be null, window, floating, or solid`
+  # To hide the title use the value null
+  # Don't forget to add a backgroundColor style with a null as type
+  frameBox:
+    type: solid
+    title: null
+    style:
+      border: 0px black solid
+      # boxShadow: none
+      # margin: 0px
+  
+  # Add a watermark image to the rendered gif
+  # You need to specify an absolute path for
+  # the image on your machine or a URL, and you can also
+  # add your own CSS styles
+  watermark:
+    imagePath: null
+    style:
+      position: absolute
+      right: 15px
+      bottom: 15px
+      width: 100px
+      opacity: 0.9
+  
+  # Cursor style can be one of
+  # `block`, `underline`, or `bar`
+  cursorStyle: block
+  
+  # Font family
+  # You can use any font that is installed on your machine
+  # in CSS-like syntax
+  fontFamily: "Monaco, Lucida Console, Ubuntu Mono, Monospace"
+  
+  # The size of the font
+  fontSize: 12
+  
+  # The height of lines
+  lineHeight: 1
+  
+  # The spacing between letters
+  letterSpacing: 0
+  
+  # Theme
+  theme:
+    background: "#000000"
+    foreground: "#ffffff"
+    cursor: "#ffffff"
+    black: "#000000"
+    red: "#ff5555"
+    green: "#55ff55"
+    yellow: "#ffff55"
+    blue: "#5555ff"
+    magenta: "#ff55ff"
+    cyan: "#55ffff"
+    white: "#ffffff"
+    brightBlack: "#000000"
+    brightRed: "#ff5555"
+    brightGreen: "#55ff55"
+    brightYellow: "#ffff55"
+    brightBlue: "#5555ff"
+    brightMagenta: "#ff55ff"
+    brightCyan: "#55ffff"
+    brightWhite: "#ffffff"
+  
+# Records, feel free to edit them
+records:
+  - delay: 1101
+    content: "\e[?1049h\e[1;31r\e(B\e[m\e[4l\e[?7h\e[H\e[2J\e[?1049l\e[H\e[2J\e[?1h\e=\e[?1000h\e[39;49m\e[?1h\e=\e[?1h\e="
+  - delay: 9
+    content: "\e(B\e[0;1m\e[36m\e[44m retropie.org.uk - RetroPie Setup. Installation folder: /opt/retropie for user pi\e[K\r\n \e(0\e[0;1m\e[36m\e[44mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(B\e[0;1m\e[36m\e[44m\e[K\r\n\e[K\n\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqq\e(B\e[0;1m\e[34m\e[47mRetroPie-Setup Script\e(0\e[0;1m\e[37m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mk\e(B\e[0;1m\e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m Version: 4.4.8\e[59X\e[6;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m Last Commit: 12 days ago (872e2ae6)\e[38X\e[7;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0;1m\e[37m\e[47mk\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[19X\e[9;31H\e(B\e[0;1m\e[31m\e[44mI\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44mBasic install\e(B\e[0m\e[30m\e[47m\e[35X\e[9;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[19X\e[10;31H\e[31m\e[47mU\e[30m\e[47m  Update\e[42X\e[10;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[19X\e[11;31H\e[31m\e[47mP\e[30m\e[47m  Manage packages\e[33X\e[11;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[19X\e[12;31H\e[31m\e[47mC\e[30m\e[47m  Configuration / tools\e[27X\e[12;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[19X\e[13;31H\e[31m\e[47mS\e[30m\e[47m  Update RetroPie-Setup script\e[20X\e[13;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[19X\e[14;31H\e[31m\e[47mX\e[30m\e[47m  Uninstall RetroPie\e[30X\e[14;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[19X\e[15;31H\e[31m\e[47mR\e[30m\e[47m  Perform reboot\e[34X\e[15;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[16;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[17;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[18;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[19;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[20;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[21;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[22;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mm\e(0\e[0;1m\e[37m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mtqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mu\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m\e[74X\e[25;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mm\e(0\e[0m\e[30m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\e[27;10H\e[1K \e[30m\e[40m\e[76X\e[27;87H\e[36m\e[44m\e[K\r\n\e[K\n\e[K\n\e[K\n\e(B\e[0m\e[37m\e[40m I This will install all packages from Core and Main which gives a basic RetroPie install. Fur\e[K\e[23;83H\e[39;49m\e(B\e[m\e[25;25H\e(B\e[0;1m\e[37m\e[44m<\e[33m\e[44m  OK  \e[37m\e[44m>\e[25;41H\e(B\e[0m\e[30m\e[47m<\e(B\e[0;1m\e[30m\e[47m Exit \e(B\e[0m\e[30m\e[47m>\e[25;57H<\e(B\e[0;1m\e[30m\e[47m Help \e(B\e[0m\e[30m\e[47m>\e[25;28H\e[39;49m\e(B\e[m"
+  - delay: 669
+    content: "\e[9;31H\e[31m\e[47mI\e[30m\e[47m  Basic install\e[10;31H\e(B\e[0;1m\e[31m\e[44mU\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44mUpdate\e[31;2H\e(B\e[0m\e[37m\e[40mU Updates RetroPie-Setup and all currently installed packages. Will also allow to update OS p\e[25;28H\e[39;49m\e(B\e[m"
+  - delay: 419
+    content: "\e[10;31H\e[31m\e[47mU\e[30m\e[47m  Update\e[11;31H\e(B\e[0;1m\e[31m\e[44mP\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44mManage packages\e[31;2H\e(B\e[0m\e[37m\e[40mP Install/Remove and Configure the various components of RetroPie, including emulators, ports\e[25;28H\e[39;49m\e(B\e[m"
+  - delay: 610
+    content: "\e[31;95H\e[?1000l\e[31;1H\r\e[?1l\e>"
+  - delay: 1724
+    content: "\e[?1049h\e[1;31r\e(B\e[m\e[4l\e[?7h\e[H\e[2J\e[?1049l\e[H\e[2J\e[?1h\e=\e[?1000h"
+  # - delay: 5
+  #   content: "\e[39;49m\e[?1h\e=\e[?1h\e="
+  - delay: 11
+    content: "\e(B\e[0;1m\e[36m\e[44m retropie.org.uk - RetroPie Setup. Installation folder: /opt/retropie for user pi\e[K\r\n \e(0\e[0;1m\e[36m\e[44mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(B\e[0;1m\e[36m\e[44m\e[K\r\n\e[K\n\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mk\e(B\e[0;1m\e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m Choose an option\e[57X\e[6;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0;1m\e[37m\e[47mk\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[17X\e[8;29H\e(B\e[0;1m\e[31m\e[44mc\e[33m\e[44more\e(B\e[0m\e[30m\e[47m    \e(B\e[0;1m\e[37m\e[44mManage core packages\e(B\e[0m\e[30m\e[47m\e[25X\e[8;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[17X\e[9;29H\e[31m\e[47mm\e(B\e[0;1m\e[34m\e[47main\e(B\e[0m\e[30m\e[47m    Manage main packages\e[25X\e[9;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[17X\e[10;29H\e[31m\e[47mo\e(B\e[0;1m\e[34m\e[47mpt\e(B\e[0m\e[30m\e[47m     Manage optional packages\e[21X\e[10;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[17X\e[11;29H\e[31m\e[47md\e(B\e[0;1m\e[34m\e[47mriver\e(B\e[0m\e[30m\e[47m  Manage driver packages\e[23X\e[11;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[17X\e[12;29H\e[31m\e[47me\e(B\e[0;1m\e[34m\e[47mxp\e(B\e[0m\e[30m\e[47m     Manage experimental packages\e[17X\e[12;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[13;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[14;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[15;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[16;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[17;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[18;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[19;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[20;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[21;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[22;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mm\e(0\e[0;1m\e[37m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mtqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mu\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m\e[74X\e[25;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mm\e(0\e[0m\e[30m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\e[27;10H\e[1K \e[30m\e[40m\e[76X\e[27;87H\e[36m\e[44m\e[K\r\n\e[K\n\e[K\n\e[K\n\e(B\e[0m\e[37m\e[40m core Choose top install/update/configure packages from the core\e[K\e[23;83H\e[39;49m\e(B\e[m\e[25;25H\e(B\e[0;1m\e[37m\e[44m<\e[33m\e[44m  OK  \e[37m\e[44m>\e[25;41H\e(B\e[0m\e[30m\e[47m<\e(B\e[0;1m\e[30m\e[47m Back \e(B\e[0m\e[30m\e[47m>\e[25;57H<\e(B\e[0;1m\e[30m\e[47m Help \e(B\e[0m\e[30m\e[47m>\e[25;28H\e[39;49m\e(B\e[m"
+  - delay: 961
+    content: "\e[8;29H\e[31m\e[47mc\e(B\e[0;1m\e[34m\e[47more\e(B\e[0m\e[30m\e[47m    Manage core packages\e[9;29H\e(B\e[0;1m\e[31m\e[44mm\e[33m\e[44main\e(B\e[0m\e[30m\e[47m    \e(B\e[0;1m\e[37m\e[44mManage main packages\e[31;2H\e(B\e[0m\e[37m\e[40mmain\e[31;61Hmain\e[25;28H\e[39;49m\e(B\e[m"
+  - delay: 514
+    content: "\e[9;29H\e[31m\e[47mm\e(B\e[0;1m\e[34m\e[47main\e(B\e[0m\e[30m\e[47m    Manage main packages\e[10;29H\e(B\e[0;1m\e[31m\e[44mo\e[33m\e[44mpt\e(B\e[0m\e[30m\e[47m     \e(B\e[0;1m\e[37m\e[44mManage optional packages\e[31;2H\e(B\e[0m\e[37m\e[40mopt Choose top install/update/configure packages from the optional\e[25;28H\e[39;49m\e(B\e[m"
+  - delay: 532
+    content: "\e[31;95H\e[?1000l\e[31;1H\r\e[?1l\e>"
+  - delay: 1721
+    content: "\e[?1049h\e[1;31r\e(B\e[m\e[4l\e[?7h\e[H\e[2J\e[?1049l\e[H\e[2J\e[?1h\e=\e[?1000h\e[39;49m\e[?1h\e=\e[?1h\e="
+  - delay: 6
+    content: "\e(B\e[0;1m\e[36m\e[44m retropie.org.uk - RetroPie Setup. Installation folder: /opt/retropie for user pi\e[K\r\n \e(0\e[0;1m\e[36m\e[44mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(B\e[0;1m\e[36m\e[44m\e[K\r\n\e[K\n\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mk\e(B\e[0;1m\e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m Choose an option\e[57X\e[6;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0;1m\e[37m\e[47mk\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e(B\e[0;1m\e[31m\e[44mB\e(B\e[0m\e[30m\e[47m    \e(B\e[0;1m\e[37m\e[44mInstall/Update all optional packages from binary\e(B\e[0m\e[30m\e[47m         \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47mS\e[30m\e[47m    Install/Update all optional packages from source         \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47mX\e[30m\e[47m    Remove all optional packages\e[29X\e[10;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m00\e(B\e[0m\e[30m\e[47m  advmame-0.94\e[45X\e[11;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m01\e(B\e[0m\e[30m\e[47m  advmame-1.4\e[46X\e[12;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m02\e(B\e[0m\e[30m\e[47m  advmame\e[50X\e[13;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m03\e(B\e[0m\e[30m\e[47m  ags\e[54X\e[14;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m04\e(B\e[0m\e[30m\e[47m  amiberry\e[49X\e[15;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m05\e(B\e[0m\e[30m\e[47m  atari800\e[49X\e[16;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m06\e(B\e[0m\e[30m\e[47m  basilisk\e[49X\e[17;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m07\e(B\e[0m\e[30m\e[47m  capricerpi\e[47X\e[18;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m08\e(B\e[0m\e[30m\e[47m  coolcv\e[51X\e[19;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m09\e(B\e[0m\e[30m\e[47m  daphne\e[51X\e[20;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m10\e(B\e[0m\e[30m\e[47m  dgen\e[53X\e[21;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m        \e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m13\e(B\e[0m\e[30m\e[47m  dosbox (Installed)\e[39X\e[22;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mm\e(0\e[0;1m\e[37m\e[47mqqqq\e[32m\e[47mv\e(B\e[0;1m\e[32m\e[47m(+)\e(0\e[0;1m\e[37m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(B\e[0;1m\e[34m\e[47m18%\e(0\e[0;1m\e[37m\e[47mqqqqqj\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mtqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mu\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m\e[74X\e[25;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mm\e(0\e[0m\e[30m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\e[27;10H\e[1K \e[30m\e[40m\e[76X\e[27;87H\e[36m\e[44m\e[K\r\n\e[K\n\e[K\n\e[K\n\e(B\e[0m\e[37m\e[40m This will install all optional packages from binary archives (if available). If a binary arch\e[K\e[23;77H\e[39;49m\e(B\e[m\e[25;25H\e(B\e[0;1m\e[37m\e[44m<\e[33m\e[44m  OK  \e[37m\e[44m>\e[25;41H\e(B\e[0m\e[30m\e[47m<\e(B\e[0;1m\e[30m\e[47m Back \e(B\e[0m\e[30m\e[47m>\e[25;57H<\e(B\e[0;1m\e[30m\e[47m Help \e(B\e[0m\e[30m\e[47m>\e[25;28H\e[39;49m\e(B\e[m"
+  - delay: 618
+    content: "\e[8;20H\e[31m\e[47mB\e[30m\e[47m    Install/Update all optional packages from binary\e[9;20H\e(B\e[0;1m\e[31m\e[44mS\e(B\e[0m\e[30m\e[47m    \e(B\e[0;1m\e[37m\e[44mInstall/Update all optional packages from source\e[31;2H\e(B\e[0m\e[37m\e[40mS This will build and install all the packages from opt from source. Building from source wil\e[23;77H\e[39;49m\e(B\e[m\e[25;28H"
+  - delay: 418
+    content: "\e[9;20H\e[31m\e[47mS\e[30m\e[47m    Install/Update all optional packages from source\e[10;20H\e(B\e[0;1m\e[31m\e[44mX\e(B\e[0m\e[30m\e[47m    \e(B\e[0;1m\e[37m\e[44mRemove all optional packages\e[31;2H\e(B\e[0m\e[37m\e[40mX\e[31;14Hremove all opt packages.\e[K\e[23;77H\e[39;49m\e(B\e[m\e[25;28H"
+  - delay: 390
+    content: "\e[10;20H\e[31m\e[47mX\e[30m\e[47m    Remove all optional packages\e[11;20H\e(B\e[0;1m\e[31m\e[44m1\e[33m\e[44m00\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44madvmame-0.94 \e[31;2H\e(B\e[0m\e[37m\e[40m100 AdvanceMAME v0.94.0\e[K\e[23;77H\e[39;49m\e(B\e[m\e[25;28H"
+  - delay: 409
+    content: "\e[11;20H\e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m00\e(B\e[0m\e[30m\e[47m  advmame-0.94 \e[12;20H\e(B\e[0;1m\e[31m\e[44m1\e[33m\e[44m01\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44madvmame-1.4 \e[31;4H\e(B\e[0m\e[37m\e[40m1\e[31;19H1.4\e[K\e[23;77H\e[39;49m\e(B\e[m\e[25;28H"
+  - delay: 420
+    content: "\e[12;20H\e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m01\e(B\e[0m\e[30m\e[47m  advmame-1.4 \e[13;20H\e(B\e[0;1m\e[31m\e[44m1\e[33m\e[44m02\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44madvmame \e[31;4H\e(B\e[0m\e[37m\e[40m2\e[31;19H3.9\e[23;77H\e[39;49m\e(B\e[m\e[25;28H"
+  - delay: 465
+    content: "\e[13;20H\e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m02\e(B\e[0m\e[30m\e[47m  advmame \e[14;20H\e(B\e[0;1m\e[31m\e[44m1\e[33m\e[44m03\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44mags \e[31;4H\e(B\e[0m\e[37m\e[40m3 Adventure Game Studio - Adventure game engine\e[23;77H\e[39;49m\e(B\e[m\e[25;28H"
+  - delay: 567
+    content: "\e[14;20H\e[31m\e[47m1\e(B\e[0;1m\e[34m\e[47m03\e(B\e[0m\e[30m\e[47m  ags \e[15;20H\e(B\e[0;1m\e[31m\e[44m1\e[33m\e[44m04\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44mamiberry \e[31;4H\e(B\e[0m\e[37m\e[40m4 Amiga emulator with JIT support (forked from uae4arm)\e[23;77H\e[39;49m\e(B\e[m\e[25;28H"
+  - delay: 456
+    content: "\e[31;95H\e[?1000l\e[31;1H\r\e[?1l\e>"
+  - delay: 1787
+    content: "\e[?1049h\e[1;31r\e(B\e[m\e[4l\e[?7h\e[H\e[2J\e[?1049l\e[H\e[2J\e[?1h\e=\e[?1000h\e[39;49m\e[?1h\e=\e[?1h\e="
+  - delay: 5
+    content: "\e[28d\e(B\e[0;1m\e[36m\e[44m\e[J\e[H retropie.org.uk - RetroPie Setup. Installation folder: /opt/retropie for user pi\e[K\r\n \e(0\e[0;1m\e[36m\e[44mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(B\e[0;1m\e[36m\e[44m\e[K\r\n\e[K\n\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mk\e(B\e[0;1m\e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m Choose an option for amiberry (Not installed)\e[28X\e[6;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mlqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0;1m\e[37m\e[47mk\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[24X\e[8;36H\e(B\e[0;1m\e[31m\e[44mB\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44mInstall from binary\e(B\e[0m\e[30m\e[47m\e[24X\e[8;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[24X\e[9;36H\e[31m\e[47mS\e[30m\e[47m  Install from source\e[24X\e[9;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[24X\e[10;36H\e[31m\e[47mZ\e[30m\e[47m  Clean source folder\e[24X\e[10;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0m\e[30m\e[47m\e[24X\e[11;36H\e[31m\e[47mH\e[30m\e[47m  Package Help\e[31X\e[11;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[12;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[13;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[14;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[15;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[16;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[17;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[18;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[19;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[20;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[21;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[37m\e[47m\e[70X\e[22;82H\e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mm\e(0\e[0;1m\e[37m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj\e(B\e[0m\e[30m\e[47m \e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mtqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\e(0\e[0m\e[30m\e[47mu\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mx\e(B\e[0m\e[30m\e[47m\e[74X\e[25;84H\e(0\e[0m\e[30m\e[47mx\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\n\e[8G\e[1K \e(0\e[0;1m\e[37m\e[47mm\e(0\e[0m\e[30m\e[47mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj\e(B\e[0;1m\e[30m\e[40m  \e[36m\e[44m\e[K\e[27;10H\e[1K \e[30m\e[40m\e[76X\e[27;87H\e[36m\e[44m\e[K\e[23;83H\e[39;49m\e(B\e[m\e[25;33H\e(B\e[0;1m\e[37m\e[44m<\e[33m\e[44m  OK  \e[37m\e[44m>\e[25;53H\e(B\e[0m\e[30m\e[47m<\e(B\e[0;1m\e[30m\e[47m Back \e(B\e[0m\e[30m\e[47m>\e[25;36H\e[39;49m\e(B\e[m"
+  - delay: 845
+    content: "\e[8;36H\e[31m\e[47mB\e[30m\e[47m  Install from binary\e[9;36H\e(B\e[0;1m\e[31m\e[44mS\e(B\e[0m\e[30m\e[47m  \e(B\e[0;1m\e[37m\e[44mInstall from source\e[25;36H\e[39;49m\e(B\e[m"
+  - delay: 823
+    content: "\e[27;86H\e[?1000l\e[31;1H\r\e[?1l\e>"
+  - delay: 1711
+    content: "\e[3J\e[H\e[2J"
+  - delay: 55
+    content: "Log started at: Mon Mar 11 08:02:03 UTC 2019\r\n\r\n"
+  - delay: 15
+    content: "RetroPie-Setup version: 4.4.8 (872e2ae6)\r\n"
+  - delay: 11
+    content: "System: Linux retropie 4.14.98-v7+ #1200 SMP Tue Feb 12 20:27:48 GMT 2019 armv7l GNU/Linux\r\n"
+  - delay: 135
+    content: "\r\n= = = = = = = = = = = = = = = = = = = = =\r\nInstalling dependencies for 'amiberry' : Amiga emulator with JIT support (forked from uae4arm)\r\n= = = = = = = = = = = = = = = = = = = = =\r\n\r\n"
+  - delay: 860
+    content: "/home/pi/RetroPie-Setup/tmp/build/amiberry /home/pi\r\n\r\n= = = = = = = = = = = = = = = = = = = = =\r\nGetting sources for 'amiberry' : Amiga emulator with JIT support (forked from uae4arm)\r\n= = = = = = = = = = = = = = = = = = = = =\r\n\r\ngit clone --recursive --depth 1 \"https://github.com/midwan/amiberry/\" \"/home/pi/RetroPie-Setup/tmp/build/amiberry\"\r\n"
+  - delay: 7
+    content: "Cloning into '/home/pi/RetroPie-Setup/tmp/build/amiberry'...\r\n"
