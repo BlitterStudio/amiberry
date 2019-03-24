@@ -381,12 +381,6 @@ void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 	}
 }
 
-void comp_ftrapcc_opp(uae_u32 opcode, uaecptr oldpc)
-{
-	FAIL(1);
-	return;
-}
-
 void comp_fbcc_opp(uae_u32 opcode)
 {
 	const auto start_68k_offset = m68k_pc_offset;
@@ -449,18 +443,6 @@ void comp_fbcc_opp(uae_u32 opcode)
 	}
 }
 
-void comp_fsave_opp(uae_u32 opcode)
-{
-	FAIL(1);
-	return;
-}
-
-void comp_frestore_opp(uae_u32 opcode)
-{
-	FAIL(1);
-	return;
-}
-
 static uae_u32 dhex_pi[] = { 0x54442D18, 0x400921FB };
 static uae_u32 dhex_exp_1[] = { 0x8B145769, 0x4005BF0A };
 static uae_u32 dhex_l2_e[] = { 0x652B82FE, 0x3FF71547 };
@@ -473,9 +455,7 @@ static uae_u32 dhex_1e32[] = { 0xB5056E17, 0x4693B8B5 };
 static uae_u32 dhex_1e64[] = { 0xE93FF9F5, 0x4D384F03 };
 static uae_u32 dhex_1e128[] = { 0xF9301D32, 0x5A827748 };
 static uae_u32 dhex_1e256[] = { 0x7F73BF3C, 0x75154FDD };
-static uae_u32 dhex_inf[] = { 0x00000000, 0x7ff00000 };
-static uae_u32 dhex_nan[] = { 0xffffffff, 0x7fffffff };
-extern double fp_1e8;
+static double fp_1e8;
 
 void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 {

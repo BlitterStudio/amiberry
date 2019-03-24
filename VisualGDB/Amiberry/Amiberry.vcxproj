@@ -62,7 +62,8 @@
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalCOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
+      <AdditionalCPPOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
@@ -141,7 +142,6 @@
     <ClCompile Include="..\..\src\archivers\7z\LzFind.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma2Dec.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c" />
-    <ClCompile Include="..\..\src\archivers\7z\Lzma86Enc.c" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaLib.c" />
     <ClCompile Include="..\..\src\archivers\7z\Sha256.c" />

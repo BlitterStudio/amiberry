@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "cpu_prefetch.h"
+#include "cputbl.h"
 #define CPUFUNC(x) x##_ff
 #define SET_CFLG_ALWAYS(x) SET_CFLG(x)
 #define SET_NFLG_ALWAYS(x) SET_NFLG(x)
@@ -39,6 +40,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0000_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* OR.B #<data>.B,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0010_11)(uae_u32 opcode)
@@ -59,6 +61,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0010_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.B #<data>.B,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0018_11)(uae_u32 opcode)
@@ -80,6 +83,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0018_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.B #<data>.B,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0020_11)(uae_u32 opcode)
@@ -101,6 +105,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0020_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* OR.B #<data>.B,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0028_11)(uae_u32 opcode)
@@ -121,6 +126,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0028_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* OR.B #<data>.B,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0030_11)(uae_u32 opcode)
@@ -141,6 +147,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0030_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* OR.B #<data>.B,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0038_11)(uae_u32 opcode)
@@ -160,6 +167,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0038_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* OR.B #<data>.B,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0039_11)(uae_u32 opcode)
@@ -180,6 +188,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0039_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* ORSR.B #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_003c_11)(uae_u32 opcode)
@@ -196,6 +205,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_003c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 0,0   */
 
 /* OR.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0040_11)(uae_u32 opcode)
@@ -214,6 +224,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0040_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* OR.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0050_11)(uae_u32 opcode)
@@ -239,6 +250,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0050_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0058_11)(uae_u32 opcode)
@@ -265,6 +277,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0058_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0060_11)(uae_u32 opcode)
@@ -291,6 +304,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0060_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* OR.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0068_11)(uae_u32 opcode)
@@ -316,6 +330,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0068_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* OR.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0070_11)(uae_u32 opcode)
@@ -341,6 +356,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0070_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* OR.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0078_11)(uae_u32 opcode)
@@ -365,6 +381,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0078_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* OR.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0079_11)(uae_u32 opcode)
@@ -390,6 +407,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0079_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* ORSR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_007c_11)(uae_u32 opcode)
@@ -406,6 +424,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_007c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 0,0   */
 
 /* OR.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0080_11)(uae_u32 opcode)
@@ -426,6 +445,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0080_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* OR.L #<data>.L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0090_11)(uae_u32 opcode)
@@ -453,6 +473,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0090_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* OR.L #<data>.L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0098_11)(uae_u32 opcode)
@@ -481,6 +502,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0098_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* OR.L #<data>.L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_00a0_11)(uae_u32 opcode)
@@ -509,6 +531,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 0,0   */
 
 /* OR.L #<data>.L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_00a8_11)(uae_u32 opcode)
@@ -536,6 +559,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* OR.L #<data>.L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_00b0_11)(uae_u32 opcode)
@@ -563,6 +587,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 4,0   */
 
 /* OR.L #<data>.L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_00b8_11)(uae_u32 opcode)
@@ -589,6 +614,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* OR.L #<data>.L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_00b9_11)(uae_u32 opcode)
@@ -616,6 +642,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_00b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (10);
 return 36 * CYCLE_UNIT / 2 + count_cycles;
 } /* 36 (7/2) */
+/* 10 0,0   */
 
 /* BTST.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0100_11)(uae_u32 opcode)
@@ -632,6 +659,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0100_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* MVPMR.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0108_11)(uae_u32 opcode)
@@ -648,6 +676,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0108_11)(uae_u32 opcode)
 }}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* BTST.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0110_11)(uae_u32 opcode)
@@ -666,6 +695,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0110_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* BTST.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0118_11)(uae_u32 opcode)
@@ -685,6 +715,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0118_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* BTST.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0120_11)(uae_u32 opcode)
@@ -704,6 +735,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0120_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* BTST.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0128_11)(uae_u32 opcode)
@@ -722,6 +754,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0128_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* BTST.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0130_11)(uae_u32 opcode)
@@ -740,6 +773,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0130_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* BTST.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0138_11)(uae_u32 opcode)
@@ -757,6 +791,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0138_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* BTST.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0139_11)(uae_u32 opcode)
@@ -775,6 +810,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0139_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* BTST.B Dn,(d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_013a_11)(uae_u32 opcode)
@@ -794,6 +830,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_013a_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* BTST.B Dn,(d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_013b_11)(uae_u32 opcode)
@@ -814,6 +851,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_013b_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* BTST.B Dn,#<data>.B */
 uae_u32 REGPARAM2 CPUFUNC(op_013c_11)(uae_u32 opcode)
@@ -829,6 +867,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_013c_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* BCHG.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0140_11)(uae_u32 opcode)
@@ -848,6 +887,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0140_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* MVPMR.L (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0148_11)(uae_u32 opcode)
@@ -866,6 +906,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0148_11)(uae_u32 opcode)
 }}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (6/0) */
+/* 4 0,0   */
 
 /* BCHG.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0150_11)(uae_u32 opcode)
@@ -886,6 +927,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0150_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* BCHG.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0158_11)(uae_u32 opcode)
@@ -907,6 +949,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0158_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* BCHG.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0160_11)(uae_u32 opcode)
@@ -928,6 +971,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0160_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* BCHG.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0168_11)(uae_u32 opcode)
@@ -948,6 +992,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0168_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCHG.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0170_11)(uae_u32 opcode)
@@ -968,6 +1013,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0170_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* BCHG.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0178_11)(uae_u32 opcode)
@@ -987,6 +1033,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0178_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCHG.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0179_11)(uae_u32 opcode)
@@ -1007,6 +1054,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0179_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BCLR.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0180_11)(uae_u32 opcode)
@@ -1026,6 +1074,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0180_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* MVPRM.W Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0188_11)(uae_u32 opcode)
@@ -1042,6 +1091,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0188_11)(uae_u32 opcode)
 }}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* BCLR.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0190_11)(uae_u32 opcode)
@@ -1062,6 +1112,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0190_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* BCLR.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0198_11)(uae_u32 opcode)
@@ -1083,6 +1134,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0198_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* BCLR.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_01a0_11)(uae_u32 opcode)
@@ -1104,6 +1156,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01a0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* BCLR.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_01a8_11)(uae_u32 opcode)
@@ -1124,6 +1177,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01a8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCLR.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_01b0_11)(uae_u32 opcode)
@@ -1144,6 +1198,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01b0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* BCLR.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_01b8_11)(uae_u32 opcode)
@@ -1163,6 +1218,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01b8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCLR.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_01b9_11)(uae_u32 opcode)
@@ -1183,6 +1239,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01b9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BSET.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_01c0_11)(uae_u32 opcode)
@@ -1202,6 +1259,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01c0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* MVPRM.L Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_01c8_11)(uae_u32 opcode)
@@ -1220,6 +1278,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01c8_11)(uae_u32 opcode)
 }}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (2/4) */
+/* 4 0,0   */
 
 /* BSET.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_01d0_11)(uae_u32 opcode)
@@ -1240,6 +1299,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* BSET.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_01d8_11)(uae_u32 opcode)
@@ -1261,6 +1321,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* BSET.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_01e0_11)(uae_u32 opcode)
@@ -1282,6 +1343,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* BSET.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_01e8_11)(uae_u32 opcode)
@@ -1302,6 +1364,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BSET.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_01f0_11)(uae_u32 opcode)
@@ -1322,6 +1385,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* BSET.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_01f8_11)(uae_u32 opcode)
@@ -1341,6 +1405,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BSET.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_01f9_11)(uae_u32 opcode)
@@ -1361,6 +1426,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_01f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* AND.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0200_11)(uae_u32 opcode)
@@ -1379,6 +1445,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0200_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* AND.B #<data>.B,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0210_11)(uae_u32 opcode)
@@ -1399,6 +1466,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0210_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.B #<data>.B,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0218_11)(uae_u32 opcode)
@@ -1420,6 +1488,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0218_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.B #<data>.B,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0220_11)(uae_u32 opcode)
@@ -1441,6 +1510,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0220_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* AND.B #<data>.B,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0228_11)(uae_u32 opcode)
@@ -1461,6 +1531,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0228_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* AND.B #<data>.B,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0230_11)(uae_u32 opcode)
@@ -1481,6 +1552,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0230_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* AND.B #<data>.B,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0238_11)(uae_u32 opcode)
@@ -1500,6 +1572,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0238_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* AND.B #<data>.B,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0239_11)(uae_u32 opcode)
@@ -1520,6 +1593,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0239_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* ANDSR.B #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_023c_11)(uae_u32 opcode)
@@ -1536,6 +1610,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_023c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 0,0   */
 
 /* AND.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0240_11)(uae_u32 opcode)
@@ -1554,6 +1629,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0240_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* AND.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0250_11)(uae_u32 opcode)
@@ -1579,6 +1655,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0250_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0258_11)(uae_u32 opcode)
@@ -1605,6 +1682,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0258_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0260_11)(uae_u32 opcode)
@@ -1631,6 +1709,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0260_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* AND.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0268_11)(uae_u32 opcode)
@@ -1656,6 +1735,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0268_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* AND.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0270_11)(uae_u32 opcode)
@@ -1681,6 +1761,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0270_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* AND.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0278_11)(uae_u32 opcode)
@@ -1705,6 +1786,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0278_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* AND.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0279_11)(uae_u32 opcode)
@@ -1730,6 +1812,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0279_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* ANDSR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_027c_11)(uae_u32 opcode)
@@ -1746,6 +1829,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_027c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 0,0   */
 
 /* AND.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0280_11)(uae_u32 opcode)
@@ -1766,6 +1850,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0280_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* AND.L #<data>.L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0290_11)(uae_u32 opcode)
@@ -1793,6 +1878,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0290_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* AND.L #<data>.L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0298_11)(uae_u32 opcode)
@@ -1821,6 +1907,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0298_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* AND.L #<data>.L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_02a0_11)(uae_u32 opcode)
@@ -1849,6 +1936,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 0,0   */
 
 /* AND.L #<data>.L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_02a8_11)(uae_u32 opcode)
@@ -1876,6 +1964,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* AND.L #<data>.L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_02b0_11)(uae_u32 opcode)
@@ -1903,6 +1992,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 4,0   */
 
 /* AND.L #<data>.L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_02b8_11)(uae_u32 opcode)
@@ -1929,6 +2019,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* AND.L #<data>.L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_02b9_11)(uae_u32 opcode)
@@ -1956,6 +2047,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_02b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (10);
 return 36 * CYCLE_UNIT / 2 + count_cycles;
 } /* 36 (7/2) */
+/* 10 0,0   */
 
 /* SUB.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0400_11)(uae_u32 opcode)
@@ -1979,6 +2071,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0400_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* SUB.B #<data>.B,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0410_11)(uae_u32 opcode)
@@ -2004,6 +2097,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0410_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.B #<data>.B,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0418_11)(uae_u32 opcode)
@@ -2030,6 +2124,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0418_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.B #<data>.B,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0420_11)(uae_u32 opcode)
@@ -2056,6 +2151,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0420_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* SUB.B #<data>.B,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0428_11)(uae_u32 opcode)
@@ -2081,6 +2177,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0428_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUB.B #<data>.B,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0430_11)(uae_u32 opcode)
@@ -2106,6 +2203,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0430_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* SUB.B #<data>.B,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0438_11)(uae_u32 opcode)
@@ -2130,6 +2228,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0438_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUB.B #<data>.B,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0439_11)(uae_u32 opcode)
@@ -2155,6 +2254,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0439_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* SUB.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0440_11)(uae_u32 opcode)
@@ -2178,6 +2278,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0440_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* SUB.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0450_11)(uae_u32 opcode)
@@ -2208,6 +2309,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0450_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0458_11)(uae_u32 opcode)
@@ -2239,6 +2341,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0458_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0460_11)(uae_u32 opcode)
@@ -2270,6 +2373,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0460_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* SUB.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0468_11)(uae_u32 opcode)
@@ -2300,6 +2404,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0468_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUB.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0470_11)(uae_u32 opcode)
@@ -2330,6 +2435,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0470_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* SUB.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0478_11)(uae_u32 opcode)
@@ -2359,6 +2465,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0478_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUB.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0479_11)(uae_u32 opcode)
@@ -2389,6 +2496,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0479_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* SUB.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0480_11)(uae_u32 opcode)
@@ -2414,6 +2522,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0480_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* SUB.L #<data>.L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0490_11)(uae_u32 opcode)
@@ -2446,6 +2555,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0490_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* SUB.L #<data>.L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0498_11)(uae_u32 opcode)
@@ -2479,6 +2589,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0498_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* SUB.L #<data>.L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_04a0_11)(uae_u32 opcode)
@@ -2512,6 +2623,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 0,0   */
 
 /* SUB.L #<data>.L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_04a8_11)(uae_u32 opcode)
@@ -2544,6 +2656,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* SUB.L #<data>.L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_04b0_11)(uae_u32 opcode)
@@ -2576,6 +2689,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 4,0   */
 
 /* SUB.L #<data>.L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_04b8_11)(uae_u32 opcode)
@@ -2607,6 +2721,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* SUB.L #<data>.L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_04b9_11)(uae_u32 opcode)
@@ -2639,6 +2754,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_04b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (10);
 return 36 * CYCLE_UNIT / 2 + count_cycles;
 } /* 36 (7/2) */
+/* 10 0,0   */
 
 /* ADD.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0600_11)(uae_u32 opcode)
@@ -2662,6 +2778,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0600_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* ADD.B #<data>.B,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0610_11)(uae_u32 opcode)
@@ -2687,6 +2804,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0610_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.B #<data>.B,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0618_11)(uae_u32 opcode)
@@ -2713,6 +2831,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0618_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.B #<data>.B,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0620_11)(uae_u32 opcode)
@@ -2739,6 +2858,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0620_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* ADD.B #<data>.B,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0628_11)(uae_u32 opcode)
@@ -2764,6 +2884,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0628_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADD.B #<data>.B,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0630_11)(uae_u32 opcode)
@@ -2789,6 +2910,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0630_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* ADD.B #<data>.B,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0638_11)(uae_u32 opcode)
@@ -2813,6 +2935,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0638_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADD.B #<data>.B,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0639_11)(uae_u32 opcode)
@@ -2838,6 +2961,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0639_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* ADD.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0640_11)(uae_u32 opcode)
@@ -2861,6 +2985,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0640_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* ADD.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0650_11)(uae_u32 opcode)
@@ -2891,6 +3016,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0650_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0658_11)(uae_u32 opcode)
@@ -2922,6 +3048,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0658_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0660_11)(uae_u32 opcode)
@@ -2953,6 +3080,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0660_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* ADD.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0668_11)(uae_u32 opcode)
@@ -2983,6 +3111,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0668_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADD.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0670_11)(uae_u32 opcode)
@@ -3013,6 +3142,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0670_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* ADD.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0678_11)(uae_u32 opcode)
@@ -3042,6 +3172,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0678_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADD.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0679_11)(uae_u32 opcode)
@@ -3072,6 +3203,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0679_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* ADD.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0680_11)(uae_u32 opcode)
@@ -3097,6 +3229,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0680_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* ADD.L #<data>.L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0690_11)(uae_u32 opcode)
@@ -3129,6 +3262,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0690_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* ADD.L #<data>.L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0698_11)(uae_u32 opcode)
@@ -3162,6 +3296,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0698_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* ADD.L #<data>.L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_06a0_11)(uae_u32 opcode)
@@ -3195,6 +3330,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 0,0   */
 
 /* ADD.L #<data>.L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_06a8_11)(uae_u32 opcode)
@@ -3227,6 +3363,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* ADD.L #<data>.L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_06b0_11)(uae_u32 opcode)
@@ -3259,6 +3396,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 4,0   */
 
 /* ADD.L #<data>.L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_06b8_11)(uae_u32 opcode)
@@ -3290,6 +3428,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* ADD.L #<data>.L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_06b9_11)(uae_u32 opcode)
@@ -3322,6 +3461,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_06b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (10);
 return 36 * CYCLE_UNIT / 2 + count_cycles;
 } /* 36 (7/2) */
+/* 10 0,0   */
 
 /* BTST.L #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0800_11)(uae_u32 opcode)
@@ -3337,6 +3477,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0800_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0   */
 
 /* BTST.B #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0810_11)(uae_u32 opcode)
@@ -3354,6 +3495,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0810_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* BTST.B #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0818_11)(uae_u32 opcode)
@@ -3372,6 +3514,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0818_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* BTST.B #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0820_11)(uae_u32 opcode)
@@ -3390,6 +3533,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0820_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 0,0   */
 
 /* BTST.B #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0828_11)(uae_u32 opcode)
@@ -3407,6 +3551,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0828_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* BTST.B #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0830_11)(uae_u32 opcode)
@@ -3424,6 +3569,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0830_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 6 4,0   */
 
 /* BTST.B #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0838_11)(uae_u32 opcode)
@@ -3440,6 +3586,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0838_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* BTST.B #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0839_11)(uae_u32 opcode)
@@ -3457,6 +3604,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0839_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 8 0,0   */
 
 /* BTST.B #<data>.W,(d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_083a_11)(uae_u32 opcode)
@@ -3475,6 +3623,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_083a_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* BTST.B #<data>.W,(d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_083b_11)(uae_u32 opcode)
@@ -3494,6 +3643,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_083b_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 6 4,0   */
 
 /* BCHG.L #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0840_11)(uae_u32 opcode)
@@ -3512,6 +3662,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0840_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10+ (2/0) */
+/* 4 0,0   */
 
 /* BCHG.B #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0850_11)(uae_u32 opcode)
@@ -3531,6 +3682,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0850_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCHG.B #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0858_11)(uae_u32 opcode)
@@ -3551,6 +3703,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0858_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCHG.B #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0860_11)(uae_u32 opcode)
@@ -3571,6 +3724,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0860_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* BCHG.B #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0868_11)(uae_u32 opcode)
@@ -3590,6 +3744,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0868_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BCHG.B #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0870_11)(uae_u32 opcode)
@@ -3609,6 +3764,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0870_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* BCHG.B #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0878_11)(uae_u32 opcode)
@@ -3627,6 +3783,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0878_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BCHG.B #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0879_11)(uae_u32 opcode)
@@ -3646,6 +3803,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0879_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* BCLR.L #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0880_11)(uae_u32 opcode)
@@ -3664,6 +3822,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0880_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (2/0) */
+/* 4 0,0   */
 
 /* BCLR.B #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0890_11)(uae_u32 opcode)
@@ -3683,6 +3842,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0890_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCLR.B #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0898_11)(uae_u32 opcode)
@@ -3703,6 +3863,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0898_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BCLR.B #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_08a0_11)(uae_u32 opcode)
@@ -3723,6 +3884,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08a0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* BCLR.B #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_08a8_11)(uae_u32 opcode)
@@ -3742,6 +3904,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08a8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BCLR.B #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_08b0_11)(uae_u32 opcode)
@@ -3761,6 +3924,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08b0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* BCLR.B #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_08b8_11)(uae_u32 opcode)
@@ -3779,6 +3943,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08b8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BCLR.B #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_08b9_11)(uae_u32 opcode)
@@ -3798,6 +3963,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08b9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* BSET.L #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_08c0_11)(uae_u32 opcode)
@@ -3816,6 +3982,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08c0_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10+ (2/0) */
+/* 4 0,0   */
 
 /* BSET.B #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_08d0_11)(uae_u32 opcode)
@@ -3835,6 +4002,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BSET.B #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_08d8_11)(uae_u32 opcode)
@@ -3855,6 +4023,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* BSET.B #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_08e0_11)(uae_u32 opcode)
@@ -3875,6 +4044,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* BSET.B #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_08e8_11)(uae_u32 opcode)
@@ -3894,6 +4064,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BSET.B #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_08f0_11)(uae_u32 opcode)
@@ -3913,6 +4084,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* BSET.B #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_08f8_11)(uae_u32 opcode)
@@ -3931,6 +4103,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* BSET.B #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_08f9_11)(uae_u32 opcode)
@@ -3950,6 +4123,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_08f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* EOR.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0a00_11)(uae_u32 opcode)
@@ -3968,6 +4142,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a00_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* EOR.B #<data>.B,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a10_11)(uae_u32 opcode)
@@ -3988,6 +4163,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a10_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.B #<data>.B,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0a18_11)(uae_u32 opcode)
@@ -4009,6 +4185,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a18_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.B #<data>.B,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a20_11)(uae_u32 opcode)
@@ -4030,6 +4207,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a20_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* EOR.B #<data>.B,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a28_11)(uae_u32 opcode)
@@ -4050,6 +4228,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a28_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EOR.B #<data>.B,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a30_11)(uae_u32 opcode)
@@ -4070,6 +4249,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a30_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* EOR.B #<data>.B,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0a38_11)(uae_u32 opcode)
@@ -4089,6 +4269,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a38_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EOR.B #<data>.B,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0a39_11)(uae_u32 opcode)
@@ -4109,6 +4290,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a39_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* EORSR.B #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_0a3c_11)(uae_u32 opcode)
@@ -4125,6 +4307,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a3c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 0,0   */
 
 /* EOR.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0a40_11)(uae_u32 opcode)
@@ -4143,6 +4326,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a40_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* EOR.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a50_11)(uae_u32 opcode)
@@ -4168,6 +4352,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a50_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0a58_11)(uae_u32 opcode)
@@ -4194,6 +4379,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a58_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a60_11)(uae_u32 opcode)
@@ -4220,6 +4406,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a60_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* EOR.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a68_11)(uae_u32 opcode)
@@ -4245,6 +4432,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a68_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EOR.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a70_11)(uae_u32 opcode)
@@ -4270,6 +4458,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a70_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* EOR.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0a78_11)(uae_u32 opcode)
@@ -4294,6 +4483,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a78_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EOR.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0a79_11)(uae_u32 opcode)
@@ -4319,6 +4509,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a79_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* EORSR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_0a7c_11)(uae_u32 opcode)
@@ -4335,6 +4526,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a7c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 0,0   */
 
 /* EOR.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0a80_11)(uae_u32 opcode)
@@ -4355,6 +4547,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a80_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* EOR.L #<data>.L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0a90_11)(uae_u32 opcode)
@@ -4382,6 +4575,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a90_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* EOR.L #<data>.L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0a98_11)(uae_u32 opcode)
@@ -4410,6 +4604,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0a98_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* EOR.L #<data>.L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0aa0_11)(uae_u32 opcode)
@@ -4438,6 +4633,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0aa0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 0,0   */
 
 /* EOR.L #<data>.L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0aa8_11)(uae_u32 opcode)
@@ -4465,6 +4661,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0aa8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* EOR.L #<data>.L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0ab0_11)(uae_u32 opcode)
@@ -4492,6 +4689,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ab0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 4,0   */
 
 /* EOR.L #<data>.L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0ab8_11)(uae_u32 opcode)
@@ -4518,6 +4716,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ab8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (8);
 return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* EOR.L #<data>.L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0ab9_11)(uae_u32 opcode)
@@ -4545,6 +4744,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ab9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (10);
 return 36 * CYCLE_UNIT / 2 + count_cycles;
 } /* 36 (7/2) */
+/* 10 0,0   */
 
 #endif
 
@@ -4569,6 +4769,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c00_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* CMP.B #<data>.B,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c10_11)(uae_u32 opcode)
@@ -4592,6 +4793,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c10_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.B #<data>.B,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0c18_11)(uae_u32 opcode)
@@ -4616,6 +4818,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c18_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.B #<data>.B,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c20_11)(uae_u32 opcode)
@@ -4640,6 +4843,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c20_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 0,0   */
 
 /* CMP.B #<data>.B,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c28_11)(uae_u32 opcode)
@@ -4663,6 +4867,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c28_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* CMP.B #<data>.B,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c30_11)(uae_u32 opcode)
@@ -4686,6 +4891,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c30_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 6 4,0   */
 
 /* CMP.B #<data>.B,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0c38_11)(uae_u32 opcode)
@@ -4708,6 +4914,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c38_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* CMP.B #<data>.B,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0c39_11)(uae_u32 opcode)
@@ -4731,6 +4938,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c39_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (8);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 8 0,0   */
 
 /* CMP.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0c40_11)(uae_u32 opcode)
@@ -4752,6 +4960,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c40_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* CMP.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c50_11)(uae_u32 opcode)
@@ -4780,6 +4989,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c50_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0c58_11)(uae_u32 opcode)
@@ -4809,6 +5019,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c58_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c60_11)(uae_u32 opcode)
@@ -4838,6 +5049,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c60_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 0,0   */
 
 /* CMP.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c68_11)(uae_u32 opcode)
@@ -4866,6 +5078,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c68_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* CMP.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c70_11)(uae_u32 opcode)
@@ -4894,6 +5107,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c70_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 6 4,0   */
 
 /* CMP.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0c78_11)(uae_u32 opcode)
@@ -4921,6 +5135,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c78_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* CMP.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0c79_11)(uae_u32 opcode)
@@ -4949,6 +5164,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c79_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 8 0,0   */
 
 /* CMP.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_0c80_11)(uae_u32 opcode)
@@ -4972,6 +5188,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c80_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 6 0,0   */
 
 /* CMP.L #<data>.L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0c90_11)(uae_u32 opcode)
@@ -5002,6 +5219,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c90_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 6 0,0   */
 
 /* CMP.L #<data>.L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_0c98_11)(uae_u32 opcode)
@@ -5033,6 +5251,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0c98_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 6 0,0   */
 
 /* CMP.L #<data>.L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0ca0_11)(uae_u32 opcode)
@@ -5064,6 +5283,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ca0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* CMP.L #<data>.L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_0ca8_11)(uae_u32 opcode)
@@ -5094,6 +5314,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0ca8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (6/0) */
+/* 8 0,0   */
 
 /* CMP.L #<data>.L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_0cb0_11)(uae_u32 opcode)
@@ -5124,6 +5345,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cb0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (6/0) */
+/* 8 4,0   */
 
 /* CMP.L #<data>.L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_0cb8_11)(uae_u32 opcode)
@@ -5153,6 +5375,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cb8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (8);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (6/0) */
+/* 8 0,0   */
 
 /* CMP.L #<data>.L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_0cb9_11)(uae_u32 opcode)
@@ -5183,6 +5406,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_0cb9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (10);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (7/0) */
+/* 10 0,0   */
 
 /* MOVE.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1000_11)(uae_u32 opcode)
@@ -5200,6 +5424,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1000_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVE.B (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1010_11)(uae_u32 opcode)
@@ -5219,6 +5444,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1010_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* MOVE.B (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1018_11)(uae_u32 opcode)
@@ -5239,6 +5465,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1018_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* MOVE.B -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1020_11)(uae_u32 opcode)
@@ -5259,6 +5486,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1020_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* MOVE.B (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1028_11)(uae_u32 opcode)
@@ -5278,6 +5506,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1028_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1030_11)(uae_u32 opcode)
@@ -5297,6 +5526,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1030_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* MOVE.B (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1038_11)(uae_u32 opcode)
@@ -5315,6 +5545,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1038_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVE.B (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_1039_11)(uae_u32 opcode)
@@ -5334,6 +5565,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1039_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* MOVE.B (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_103a_11)(uae_u32 opcode)
@@ -5353,6 +5585,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_103a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_103b_11)(uae_u32 opcode)
@@ -5373,6 +5606,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_103b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* MOVE.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_103c_11)(uae_u32 opcode)
@@ -5389,6 +5623,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_103c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* MOVE.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1080_11)(uae_u32 opcode)
@@ -5408,6 +5643,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1080_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.B (An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1090_11)(uae_u32 opcode)
@@ -5429,6 +5665,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1090_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B (An)+,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1098_11)(uae_u32 opcode)
@@ -5451,6 +5688,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1098_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B -(An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10a0_11)(uae_u32 opcode)
@@ -5473,6 +5711,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10a0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B (d16,An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10a8_11)(uae_u32 opcode)
@@ -5494,6 +5733,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10a8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,An,Xn),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10b0_11)(uae_u32 opcode)
@@ -5515,6 +5755,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10b0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B (xxx).W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10b8_11)(uae_u32 opcode)
@@ -5535,6 +5776,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10b8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (xxx).L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10b9_11)(uae_u32 opcode)
@@ -5556,6 +5798,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10b9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d16,PC),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10ba_11)(uae_u32 opcode)
@@ -5577,6 +5820,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10ba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,PC,Xn),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10bb_11)(uae_u32 opcode)
@@ -5599,6 +5843,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10bb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B #<data>.B,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_10bc_11)(uae_u32 opcode)
@@ -5617,6 +5862,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10bc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10c0_11)(uae_u32 opcode)
@@ -5637,6 +5883,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.B (An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10d0_11)(uae_u32 opcode)
@@ -5659,6 +5906,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B (An)+,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10d8_11)(uae_u32 opcode)
@@ -5682,6 +5930,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B -(An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10e0_11)(uae_u32 opcode)
@@ -5705,6 +5954,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B (d16,An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10e8_11)(uae_u32 opcode)
@@ -5727,6 +5977,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,An,Xn),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10f0_11)(uae_u32 opcode)
@@ -5749,6 +6000,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B (xxx).W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10f8_11)(uae_u32 opcode)
@@ -5770,6 +6022,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (xxx).L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10f9_11)(uae_u32 opcode)
@@ -5792,6 +6045,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d16,PC),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10fa_11)(uae_u32 opcode)
@@ -5814,6 +6068,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,PC,Xn),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10fb_11)(uae_u32 opcode)
@@ -5837,6 +6092,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B #<data>.B,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_10fc_11)(uae_u32 opcode)
@@ -5856,6 +6112,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_10fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1100_11)(uae_u32 opcode)
@@ -5876,6 +6133,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1100_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.B (An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1110_11)(uae_u32 opcode)
@@ -5898,6 +6156,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1110_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B (An)+,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1118_11)(uae_u32 opcode)
@@ -5921,6 +6180,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1118_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1120_11)(uae_u32 opcode)
@@ -5944,6 +6204,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1120_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.B (d16,An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1128_11)(uae_u32 opcode)
@@ -5966,6 +6227,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1128_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,An,Xn),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1130_11)(uae_u32 opcode)
@@ -5988,6 +6250,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1130_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B (xxx).W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1138_11)(uae_u32 opcode)
@@ -6009,6 +6272,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1138_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (xxx).L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1139_11)(uae_u32 opcode)
@@ -6031,6 +6295,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1139_11)(uae_u32 opcode)
 	m68k_incpci (6);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d16,PC),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_113a_11)(uae_u32 opcode)
@@ -6053,6 +6318,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_113a_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d8,PC,Xn),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_113b_11)(uae_u32 opcode)
@@ -6076,6 +6342,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_113b_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B #<data>.B,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_113c_11)(uae_u32 opcode)
@@ -6095,6 +6362,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_113c_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1140_11)(uae_u32 opcode)
@@ -6114,6 +6382,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1140_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.B (An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1150_11)(uae_u32 opcode)
@@ -6135,6 +6404,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1150_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (An)+,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1158_11)(uae_u32 opcode)
@@ -6157,6 +6427,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1158_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B -(An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1160_11)(uae_u32 opcode)
@@ -6179,6 +6450,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1160_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d16,An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1168_11)(uae_u32 opcode)
@@ -6200,6 +6472,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1168_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d8,An,Xn),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1170_11)(uae_u32 opcode)
@@ -6221,6 +6494,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1170_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.B (xxx).W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1178_11)(uae_u32 opcode)
@@ -6241,6 +6515,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1178_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (xxx).L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_1179_11)(uae_u32 opcode)
@@ -6262,6 +6537,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1179_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.B (d16,PC),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_117a_11)(uae_u32 opcode)
@@ -6283,6 +6559,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_117a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d8,PC,Xn),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_117b_11)(uae_u32 opcode)
@@ -6305,6 +6582,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_117b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.B #<data>.B,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_117c_11)(uae_u32 opcode)
@@ -6323,6 +6601,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_117c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* MOVE.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_1180_11)(uae_u32 opcode)
@@ -6342,6 +6621,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1180_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* MOVE.B (An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_1190_11)(uae_u32 opcode)
@@ -6363,6 +6643,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1190_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B (An)+,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_1198_11)(uae_u32 opcode)
@@ -6385,6 +6666,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_1198_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B -(An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11a0_11)(uae_u32 opcode)
@@ -6407,6 +6689,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11a0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.B (d16,An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11a8_11)(uae_u32 opcode)
@@ -6428,6 +6711,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11a8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* MOVE.B (d8,An,Xn),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11b0_11)(uae_u32 opcode)
@@ -6449,6 +6733,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11b0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/1) */
+/* 6 6,4   */
 
 /* MOVE.B (xxx).W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11b8_11)(uae_u32 opcode)
@@ -6469,6 +6754,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11b8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* MOVE.B (xxx).L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11b9_11)(uae_u32 opcode)
@@ -6490,6 +6776,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11b9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (5/1) */
+/* 8 4,0   */
 
 /* MOVE.B (d16,PC),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11ba_11)(uae_u32 opcode)
@@ -6511,6 +6798,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11ba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* MOVE.B (d8,PC,Xn),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11bb_11)(uae_u32 opcode)
@@ -6533,6 +6821,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11bb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/1) */
+/* 6 6,4   */
 
 /* MOVE.B #<data>.B,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_11bc_11)(uae_u32 opcode)
@@ -6551,6 +6840,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11bc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 6 4,0   */
 
 /* MOVE.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11c0_11)(uae_u32 opcode)
@@ -6569,6 +6859,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.B (An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11d0_11)(uae_u32 opcode)
@@ -6589,6 +6880,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (An)+,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11d8_11)(uae_u32 opcode)
@@ -6610,6 +6902,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B -(An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11e0_11)(uae_u32 opcode)
@@ -6631,6 +6924,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.B (d16,An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11e8_11)(uae_u32 opcode)
@@ -6651,6 +6945,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d8,An,Xn),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11f0_11)(uae_u32 opcode)
@@ -6671,6 +6966,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.B (xxx).W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11f8_11)(uae_u32 opcode)
@@ -6690,6 +6986,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (xxx).L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11f9_11)(uae_u32 opcode)
@@ -6710,6 +7007,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.B (d16,PC),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11fa_11)(uae_u32 opcode)
@@ -6730,6 +7028,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d8,PC,Xn),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11fb_11)(uae_u32 opcode)
@@ -6751,6 +7050,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.B #<data>.B,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_11fc_11)(uae_u32 opcode)
@@ -6768,6 +7068,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_11fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* MOVE.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13c0_11)(uae_u32 opcode)
@@ -6787,6 +7088,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* MOVE.B (An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13d0_11)(uae_u32 opcode)
@@ -6809,6 +7111,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (An)+,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13d8_11)(uae_u32 opcode)
@@ -6832,6 +7135,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B -(An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13e0_11)(uae_u32 opcode)
@@ -6855,6 +7159,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.B (d16,An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13e8_11)(uae_u32 opcode)
@@ -6877,6 +7182,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.B (d8,An,Xn),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13f0_11)(uae_u32 opcode)
@@ -6899,6 +7205,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (5/1) */
+/* 8 8,0   */
 
 /* MOVE.B (xxx).W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13f8_11)(uae_u32 opcode)
@@ -6920,6 +7227,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.B (xxx).L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13f9_11)(uae_u32 opcode)
@@ -6942,6 +7250,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (6/1) */
+/* 10 0,0   */
 
 /* MOVE.B (d16,PC),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13fa_11)(uae_u32 opcode)
@@ -6964,6 +7273,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.B (d8,PC,Xn),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13fb_11)(uae_u32 opcode)
@@ -6987,6 +7297,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (5/1) */
+/* 8 8,0   */
 
 /* MOVE.B #<data>.B,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_13fc_11)(uae_u32 opcode)
@@ -7005,6 +7316,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_13fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 8 0,0   */
 
 /* MOVE.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2000_11)(uae_u32 opcode)
@@ -7022,6 +7334,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2000_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVE.L An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2008_11)(uae_u32 opcode)
@@ -7039,6 +7352,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2008_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVE.L (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2010_11)(uae_u32 opcode)
@@ -7063,6 +7377,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2010_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* MOVE.L (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2018_11)(uae_u32 opcode)
@@ -7088,6 +7403,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2018_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* MOVE.L -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2020_11)(uae_u32 opcode)
@@ -7113,6 +7429,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2020_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* MOVE.L (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2028_11)(uae_u32 opcode)
@@ -7137,6 +7454,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2028_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2030_11)(uae_u32 opcode)
@@ -7161,6 +7479,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2030_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 4,0   */
 
 /* MOVE.L (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2038_11)(uae_u32 opcode)
@@ -7184,6 +7503,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2038_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* MOVE.L (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_2039_11)(uae_u32 opcode)
@@ -7208,6 +7528,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2039_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 6 0,0   */
 
 /* MOVE.L (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_203a_11)(uae_u32 opcode)
@@ -7232,6 +7553,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_203a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_203b_11)(uae_u32 opcode)
@@ -7257,6 +7579,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_203b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 4,0   */
 
 /* MOVE.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_203c_11)(uae_u32 opcode)
@@ -7275,6 +7598,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_203c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 6 0,0   */
 
 /* MOVEA.L Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_2040_11)(uae_u32 opcode)
@@ -7289,6 +7613,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2040_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVEA.L An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_2048_11)(uae_u32 opcode)
@@ -7303,6 +7628,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2048_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVEA.L (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_2050_11)(uae_u32 opcode)
@@ -7324,6 +7650,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2050_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* MOVEA.L (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_2058_11)(uae_u32 opcode)
@@ -7346,6 +7673,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2058_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* MOVEA.L -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_2060_11)(uae_u32 opcode)
@@ -7368,6 +7696,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2060_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* MOVEA.L (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_2068_11)(uae_u32 opcode)
@@ -7389,6 +7718,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2068_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* MOVEA.L (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_2070_11)(uae_u32 opcode)
@@ -7410,6 +7740,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2070_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 4,0   */
 
 /* MOVEA.L (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_2078_11)(uae_u32 opcode)
@@ -7430,6 +7761,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2078_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* MOVEA.L (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_2079_11)(uae_u32 opcode)
@@ -7451,6 +7783,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2079_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 6 0,0   */
 
 /* MOVEA.L (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_207a_11)(uae_u32 opcode)
@@ -7472,6 +7805,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_207a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* MOVEA.L (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_207b_11)(uae_u32 opcode)
@@ -7494,6 +7828,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_207b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 4,0   */
 
 /* MOVEA.L #<data>.L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_207c_11)(uae_u32 opcode)
@@ -7509,6 +7844,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_207c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 6 0,0   */
 
 /* MOVE.L Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2080_11)(uae_u32 opcode)
@@ -7533,6 +7869,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2080_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MOVE.L An,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2088_11)(uae_u32 opcode)
@@ -7557,6 +7894,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2088_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MOVE.L (An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2090_11)(uae_u32 opcode)
@@ -7588,6 +7926,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2090_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L (An)+,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2098_11)(uae_u32 opcode)
@@ -7620,6 +7959,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2098_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L -(An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20a0_11)(uae_u32 opcode)
@@ -7652,6 +7992,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20a0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L (d16,An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20a8_11)(uae_u32 opcode)
@@ -7683,6 +8024,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20a8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,An,Xn),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20b0_11)(uae_u32 opcode)
@@ -7714,6 +8056,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20b0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L (xxx).W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20b8_11)(uae_u32 opcode)
@@ -7744,6 +8087,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20b8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (xxx).L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20b9_11)(uae_u32 opcode)
@@ -7775,6 +8119,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20b9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d16,PC),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20ba_11)(uae_u32 opcode)
@@ -7806,6 +8151,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20ba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,PC,Xn),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20bb_11)(uae_u32 opcode)
@@ -7838,6 +8184,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20bb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L #<data>.L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_20bc_11)(uae_u32 opcode)
@@ -7863,6 +8210,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20bc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* MOVE.L Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20c0_11)(uae_u32 opcode)
@@ -7888,6 +8236,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MOVE.L An,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20c8_11)(uae_u32 opcode)
@@ -7913,6 +8262,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MOVE.L (An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20d0_11)(uae_u32 opcode)
@@ -7945,6 +8295,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L (An)+,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20d8_11)(uae_u32 opcode)
@@ -7978,6 +8329,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L -(An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20e0_11)(uae_u32 opcode)
@@ -8011,6 +8363,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L (d16,An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20e8_11)(uae_u32 opcode)
@@ -8043,6 +8396,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,An,Xn),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20f0_11)(uae_u32 opcode)
@@ -8075,6 +8429,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L (xxx).W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20f8_11)(uae_u32 opcode)
@@ -8106,6 +8461,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (xxx).L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20f9_11)(uae_u32 opcode)
@@ -8138,6 +8494,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d16,PC),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20fa_11)(uae_u32 opcode)
@@ -8170,6 +8527,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,PC,Xn),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20fb_11)(uae_u32 opcode)
@@ -8203,6 +8561,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L #<data>.L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_20fc_11)(uae_u32 opcode)
@@ -8229,6 +8588,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_20fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* MOVE.L Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2100_11)(uae_u32 opcode)
@@ -8255,6 +8615,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2100_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MOVE.L An,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2108_11)(uae_u32 opcode)
@@ -8281,6 +8642,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2108_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MOVE.L (An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2110_11)(uae_u32 opcode)
@@ -8314,6 +8676,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2110_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L (An)+,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2118_11)(uae_u32 opcode)
@@ -8348,6 +8711,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2118_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2120_11)(uae_u32 opcode)
@@ -8382,6 +8746,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2120_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* MOVE.L (d16,An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2128_11)(uae_u32 opcode)
@@ -8415,6 +8780,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2128_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,An,Xn),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2130_11)(uae_u32 opcode)
@@ -8448,6 +8814,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2130_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L (xxx).W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2138_11)(uae_u32 opcode)
@@ -8480,6 +8847,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2138_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (xxx).L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2139_11)(uae_u32 opcode)
@@ -8513,6 +8881,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2139_11)(uae_u32 opcode)
 	m68k_incpci (6);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d16,PC),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_213a_11)(uae_u32 opcode)
@@ -8546,6 +8915,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_213a_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d8,PC,Xn),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_213b_11)(uae_u32 opcode)
@@ -8580,6 +8950,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_213b_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L #<data>.L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_213c_11)(uae_u32 opcode)
@@ -8607,6 +8978,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_213c_11)(uae_u32 opcode)
 	m68k_incpci (6);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* MOVE.L Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2140_11)(uae_u32 opcode)
@@ -8631,6 +9003,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2140_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MOVE.L An,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2148_11)(uae_u32 opcode)
@@ -8655,6 +9028,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2148_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MOVE.L (An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2150_11)(uae_u32 opcode)
@@ -8686,6 +9060,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2150_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (An)+,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2158_11)(uae_u32 opcode)
@@ -8718,6 +9093,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2158_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L -(An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2160_11)(uae_u32 opcode)
@@ -8750,6 +9126,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2160_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d16,An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2168_11)(uae_u32 opcode)
@@ -8781,6 +9158,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2168_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d8,An,Xn),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2170_11)(uae_u32 opcode)
@@ -8812,6 +9190,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2170_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 6,0   */
 
 /* MOVE.L (xxx).W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2178_11)(uae_u32 opcode)
@@ -8842,6 +9221,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2178_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (xxx).L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_2179_11)(uae_u32 opcode)
@@ -8873,6 +9253,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2179_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* MOVE.L (d16,PC),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_217a_11)(uae_u32 opcode)
@@ -8904,6 +9285,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_217a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d8,PC,Xn),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_217b_11)(uae_u32 opcode)
@@ -8936,6 +9318,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_217b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 6,0   */
 
 /* MOVE.L #<data>.L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_217c_11)(uae_u32 opcode)
@@ -8961,6 +9344,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_217c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 8 0,0   */
 
 /* MOVE.L Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_2180_11)(uae_u32 opcode)
@@ -8985,6 +9369,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2180_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 4,0   */
 
 /* MOVE.L An,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_2188_11)(uae_u32 opcode)
@@ -9009,6 +9394,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2188_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 4,0   */
 
 /* MOVE.L (An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_2190_11)(uae_u32 opcode)
@@ -9040,6 +9426,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2190_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L (An)+,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_2198_11)(uae_u32 opcode)
@@ -9072,6 +9459,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_2198_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 #endif
 
@@ -9107,6 +9495,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21a0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (4/2) */
+/* 4 4,0   */
 
 /* MOVE.L (d16,An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_21a8_11)(uae_u32 opcode)
@@ -9138,6 +9527,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21a8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 4,0   */
 
 /* MOVE.L (d8,An,Xn),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_21b0_11)(uae_u32 opcode)
@@ -9169,6 +9559,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21b0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (5/2) */
+/* 6 6,4   */
 
 /* MOVE.L (xxx).W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_21b8_11)(uae_u32 opcode)
@@ -9199,6 +9590,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21b8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 4,0   */
 
 /* MOVE.L (xxx).L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_21b9_11)(uae_u32 opcode)
@@ -9230,6 +9622,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21b9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 4,0   */
 
 /* MOVE.L (d16,PC),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_21ba_11)(uae_u32 opcode)
@@ -9261,6 +9654,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21ba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 4,0   */
 
 /* MOVE.L (d8,PC,Xn),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_21bb_11)(uae_u32 opcode)
@@ -9293,6 +9687,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21bb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (5/2) */
+/* 6 6,4   */
 
 /* MOVE.L #<data>.L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_21bc_11)(uae_u32 opcode)
@@ -9318,6 +9713,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21bc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 8 4,0   */
 
 /* MOVE.L Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21c0_11)(uae_u32 opcode)
@@ -9341,6 +9737,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MOVE.L An,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21c8_11)(uae_u32 opcode)
@@ -9364,6 +9761,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MOVE.L (An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21d0_11)(uae_u32 opcode)
@@ -9394,6 +9792,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (An)+,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21d8_11)(uae_u32 opcode)
@@ -9425,6 +9824,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L -(An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21e0_11)(uae_u32 opcode)
@@ -9456,6 +9856,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 0,0   */
 
 /* MOVE.L (d16,An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21e8_11)(uae_u32 opcode)
@@ -9486,6 +9887,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d8,An,Xn),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21f0_11)(uae_u32 opcode)
@@ -9516,6 +9918,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 6,0   */
 
 /* MOVE.L (xxx).W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21f8_11)(uae_u32 opcode)
@@ -9545,6 +9948,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (xxx).L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21f9_11)(uae_u32 opcode)
@@ -9575,6 +9979,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* MOVE.L (d16,PC),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21fa_11)(uae_u32 opcode)
@@ -9605,6 +10010,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d8,PC,Xn),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21fb_11)(uae_u32 opcode)
@@ -9636,6 +10042,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 6,0   */
 
 /* MOVE.L #<data>.L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_21fc_11)(uae_u32 opcode)
@@ -9660,6 +10067,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_21fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 8 0,0   */
 
 /* MOVE.L Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23c0_11)(uae_u32 opcode)
@@ -9684,6 +10092,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* MOVE.L An,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23c8_11)(uae_u32 opcode)
@@ -9708,6 +10117,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* MOVE.L (An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23d0_11)(uae_u32 opcode)
@@ -9740,6 +10150,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (An)+,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23d8_11)(uae_u32 opcode)
@@ -9773,6 +10184,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L -(An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23e0_11)(uae_u32 opcode)
@@ -9806,6 +10218,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 6 0,0   */
 
 /* MOVE.L (d16,An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23e8_11)(uae_u32 opcode)
@@ -9838,6 +10251,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* MOVE.L (d8,An,Xn),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23f0_11)(uae_u32 opcode)
@@ -9870,6 +10284,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 8,0   */
 
 /* MOVE.L (xxx).W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23f8_11)(uae_u32 opcode)
@@ -9901,6 +10316,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* MOVE.L (xxx).L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23f9_11)(uae_u32 opcode)
@@ -9933,6 +10349,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 36 * CYCLE_UNIT / 2 + count_cycles;
 } /* 36 (7/2) */
+/* 10 0,0   */
 
 /* MOVE.L (d16,PC),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23fa_11)(uae_u32 opcode)
@@ -9965,6 +10382,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 32 * CYCLE_UNIT / 2 + count_cycles;
 } /* 32 (6/2) */
+/* 8 0,0   */
 
 /* MOVE.L (d8,PC,Xn),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23fb_11)(uae_u32 opcode)
@@ -9998,6 +10416,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 34 * CYCLE_UNIT / 2 + count_cycles;
 } /* 34 (6/2) */
+/* 8 8,0   */
 
 /* MOVE.L #<data>.L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_23fc_11)(uae_u32 opcode)
@@ -10023,6 +10442,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_23fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 10 0,0   */
 
 /* MOVE.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3000_11)(uae_u32 opcode)
@@ -10040,6 +10460,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3000_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVE.W An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3008_11)(uae_u32 opcode)
@@ -10057,6 +10478,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3008_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVE.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3010_11)(uae_u32 opcode)
@@ -10081,6 +10503,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3010_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* MOVE.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3018_11)(uae_u32 opcode)
@@ -10106,6 +10529,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3018_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* MOVE.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3020_11)(uae_u32 opcode)
@@ -10131,6 +10555,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3020_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* MOVE.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3028_11)(uae_u32 opcode)
@@ -10155,6 +10580,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3028_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3030_11)(uae_u32 opcode)
@@ -10179,6 +10605,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3030_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* MOVE.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3038_11)(uae_u32 opcode)
@@ -10202,6 +10629,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3038_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVE.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_3039_11)(uae_u32 opcode)
@@ -10226,6 +10654,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3039_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* MOVE.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_303a_11)(uae_u32 opcode)
@@ -10250,6 +10679,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_303a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_303b_11)(uae_u32 opcode)
@@ -10275,6 +10705,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_303b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* MOVE.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_303c_11)(uae_u32 opcode)
@@ -10291,6 +10722,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_303c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* MOVEA.W Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_3040_11)(uae_u32 opcode)
@@ -10306,6 +10738,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3040_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVEA.W An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_3048_11)(uae_u32 opcode)
@@ -10321,6 +10754,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3048_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MOVEA.W (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_3050_11)(uae_u32 opcode)
@@ -10343,6 +10777,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3050_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* MOVEA.W (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_3058_11)(uae_u32 opcode)
@@ -10366,6 +10801,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3058_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* MOVEA.W -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_3060_11)(uae_u32 opcode)
@@ -10389,6 +10825,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3060_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* MOVEA.W (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_3068_11)(uae_u32 opcode)
@@ -10411,6 +10848,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3068_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVEA.W (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_3070_11)(uae_u32 opcode)
@@ -10433,6 +10871,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3070_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* MOVEA.W (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_3078_11)(uae_u32 opcode)
@@ -10454,6 +10893,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3078_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVEA.W (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_3079_11)(uae_u32 opcode)
@@ -10476,6 +10916,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3079_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* MOVEA.W (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_307a_11)(uae_u32 opcode)
@@ -10498,6 +10939,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_307a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* MOVEA.W (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_307b_11)(uae_u32 opcode)
@@ -10521,6 +10963,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_307b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* MOVEA.W #<data>.W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_307c_11)(uae_u32 opcode)
@@ -10535,6 +10978,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_307c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* MOVE.W Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3080_11)(uae_u32 opcode)
@@ -10559,6 +11003,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3080_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.W An,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3088_11)(uae_u32 opcode)
@@ -10583,6 +11028,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3088_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.W (An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3090_11)(uae_u32 opcode)
@@ -10614,6 +11060,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3090_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W (An)+,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3098_11)(uae_u32 opcode)
@@ -10646,6 +11093,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3098_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W -(An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30a0_11)(uae_u32 opcode)
@@ -10678,6 +11126,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30a0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W (d16,An),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30a8_11)(uae_u32 opcode)
@@ -10709,6 +11158,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30a8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,An,Xn),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30b0_11)(uae_u32 opcode)
@@ -10740,6 +11190,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30b0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W (xxx).W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30b8_11)(uae_u32 opcode)
@@ -10770,6 +11221,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30b8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (xxx).L,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30b9_11)(uae_u32 opcode)
@@ -10801,6 +11253,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30b9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d16,PC),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30ba_11)(uae_u32 opcode)
@@ -10832,6 +11285,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30ba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,PC,Xn),(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30bb_11)(uae_u32 opcode)
@@ -10864,6 +11318,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30bb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_30bc_11)(uae_u32 opcode)
@@ -10887,6 +11342,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30bc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.W Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30c0_11)(uae_u32 opcode)
@@ -10912,6 +11368,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.W An,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30c8_11)(uae_u32 opcode)
@@ -10937,6 +11394,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.W (An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30d0_11)(uae_u32 opcode)
@@ -10969,6 +11427,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W (An)+,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30d8_11)(uae_u32 opcode)
@@ -11002,6 +11461,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W -(An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30e0_11)(uae_u32 opcode)
@@ -11035,6 +11495,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W (d16,An),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30e8_11)(uae_u32 opcode)
@@ -11067,6 +11528,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,An,Xn),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30f0_11)(uae_u32 opcode)
@@ -11099,6 +11561,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W (xxx).W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30f8_11)(uae_u32 opcode)
@@ -11130,6 +11593,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (xxx).L,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30f9_11)(uae_u32 opcode)
@@ -11162,6 +11626,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d16,PC),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30fa_11)(uae_u32 opcode)
@@ -11194,6 +11659,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,PC,Xn),(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30fb_11)(uae_u32 opcode)
@@ -11227,6 +11693,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_30fc_11)(uae_u32 opcode)
@@ -11251,6 +11718,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_30fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.W Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3100_11)(uae_u32 opcode)
@@ -11276,6 +11744,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3100_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.W An,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3108_11)(uae_u32 opcode)
@@ -11301,6 +11770,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3108_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MOVE.W (An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3110_11)(uae_u32 opcode)
@@ -11333,6 +11803,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3110_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W (An)+,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3118_11)(uae_u32 opcode)
@@ -11366,6 +11837,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3118_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3120_11)(uae_u32 opcode)
@@ -11399,6 +11871,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3120_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* MOVE.W (d16,An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3128_11)(uae_u32 opcode)
@@ -11431,6 +11904,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3128_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,An,Xn),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3130_11)(uae_u32 opcode)
@@ -11463,6 +11937,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3130_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W (xxx).W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3138_11)(uae_u32 opcode)
@@ -11494,6 +11969,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3138_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (xxx).L,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3139_11)(uae_u32 opcode)
@@ -11526,6 +12002,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3139_11)(uae_u32 opcode)
 	m68k_incpci (6);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d16,PC),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_313a_11)(uae_u32 opcode)
@@ -11558,6 +12035,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_313a_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d8,PC,Xn),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_313b_11)(uae_u32 opcode)
@@ -11591,6 +12069,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_313b_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_313c_11)(uae_u32 opcode)
@@ -11615,6 +12094,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_313c_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.W Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3140_11)(uae_u32 opcode)
@@ -11639,6 +12119,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3140_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.W An,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3148_11)(uae_u32 opcode)
@@ -11663,6 +12144,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3148_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.W (An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3150_11)(uae_u32 opcode)
@@ -11694,6 +12176,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3150_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (An)+,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3158_11)(uae_u32 opcode)
@@ -11726,6 +12209,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3158_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W -(An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3160_11)(uae_u32 opcode)
@@ -11758,6 +12242,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3160_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d16,An),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3168_11)(uae_u32 opcode)
@@ -11789,6 +12274,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3168_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d8,An,Xn),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3170_11)(uae_u32 opcode)
@@ -11820,6 +12306,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3170_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.W (xxx).W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3178_11)(uae_u32 opcode)
@@ -11850,6 +12337,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3178_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (xxx).L,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_3179_11)(uae_u32 opcode)
@@ -11881,6 +12369,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3179_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.W (d16,PC),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_317a_11)(uae_u32 opcode)
@@ -11912,6 +12401,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_317a_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d8,PC,Xn),(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_317b_11)(uae_u32 opcode)
@@ -11944,6 +12434,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_317b_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_317c_11)(uae_u32 opcode)
@@ -11967,6 +12458,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_317c_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* MOVE.W Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_3180_11)(uae_u32 opcode)
@@ -11991,6 +12483,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3180_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* MOVE.W An,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_3188_11)(uae_u32 opcode)
@@ -12015,6 +12508,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3188_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* MOVE.W (An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_3190_11)(uae_u32 opcode)
@@ -12046,6 +12540,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3190_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W (An)+,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_3198_11)(uae_u32 opcode)
@@ -12078,6 +12573,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_3198_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W -(An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31a0_11)(uae_u32 opcode)
@@ -12110,6 +12606,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31a0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/1) */
+/* 4 4,0   */
 
 /* MOVE.W (d16,An),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31a8_11)(uae_u32 opcode)
@@ -12141,6 +12638,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31a8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* MOVE.W (d8,An,Xn),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31b0_11)(uae_u32 opcode)
@@ -12172,6 +12670,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31b0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/1) */
+/* 6 6,4   */
 
 /* MOVE.W (xxx).W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31b8_11)(uae_u32 opcode)
@@ -12202,6 +12701,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31b8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* MOVE.W (xxx).L,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31b9_11)(uae_u32 opcode)
@@ -12233,6 +12733,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31b9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (5/1) */
+/* 8 4,0   */
 
 /* MOVE.W (d16,PC),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31ba_11)(uae_u32 opcode)
@@ -12264,6 +12765,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31ba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 4,0   */
 
 /* MOVE.W (d8,PC,Xn),(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31bb_11)(uae_u32 opcode)
@@ -12296,6 +12798,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31bb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/1) */
+/* 6 6,4   */
 
 /* MOVE.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_31bc_11)(uae_u32 opcode)
@@ -12319,6 +12822,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31bc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 6 4,0   */
 
 /* MOVE.W Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31c0_11)(uae_u32 opcode)
@@ -12342,6 +12846,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.W An,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31c8_11)(uae_u32 opcode)
@@ -12365,6 +12870,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MOVE.W (An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31d0_11)(uae_u32 opcode)
@@ -12395,6 +12901,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (An)+,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31d8_11)(uae_u32 opcode)
@@ -12426,6 +12933,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W -(An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31e0_11)(uae_u32 opcode)
@@ -12457,6 +12965,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 0,0   */
 
 /* MOVE.W (d16,An),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31e8_11)(uae_u32 opcode)
@@ -12487,6 +12996,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d8,An,Xn),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31f0_11)(uae_u32 opcode)
@@ -12517,6 +13027,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.W (xxx).W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31f8_11)(uae_u32 opcode)
@@ -12546,6 +13057,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (xxx).L,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31f9_11)(uae_u32 opcode)
@@ -12576,6 +13088,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.W (d16,PC),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31fa_11)(uae_u32 opcode)
@@ -12606,6 +13119,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d8,PC,Xn),(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31fb_11)(uae_u32 opcode)
@@ -12637,6 +13151,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 6,0   */
 
 /* MOVE.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_31fc_11)(uae_u32 opcode)
@@ -12659,6 +13174,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_31fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* MOVE.W Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33c0_11)(uae_u32 opcode)
@@ -12683,6 +13199,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* MOVE.W An,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33c8_11)(uae_u32 opcode)
@@ -12707,6 +13224,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* MOVE.W (An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33d0_11)(uae_u32 opcode)
@@ -12739,6 +13257,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (An)+,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33d8_11)(uae_u32 opcode)
@@ -12772,6 +13291,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W -(An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33e0_11)(uae_u32 opcode)
@@ -12805,6 +13325,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/1) */
+/* 6 0,0   */
 
 /* MOVE.W (d16,An),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33e8_11)(uae_u32 opcode)
@@ -12837,6 +13358,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.W (d8,An,Xn),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33f0_11)(uae_u32 opcode)
@@ -12869,6 +13391,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (5/1) */
+/* 8 8,0   */
 
 /* MOVE.W (xxx).W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33f8_11)(uae_u32 opcode)
@@ -12900,6 +13423,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.W (xxx).L,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33f9_11)(uae_u32 opcode)
@@ -12932,6 +13456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (6/1) */
+/* 10 0,0   */
 
 /* MOVE.W (d16,PC),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33fa_11)(uae_u32 opcode)
@@ -12964,6 +13489,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/1) */
+/* 8 0,0   */
 
 /* MOVE.W (d8,PC,Xn),(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33fb_11)(uae_u32 opcode)
@@ -12997,6 +13523,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (5/1) */
+/* 8 8,0   */
 
 /* MOVE.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_33fc_11)(uae_u32 opcode)
@@ -13020,6 +13547,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_33fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 8 0,0   */
 
 /* NEGX.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4000_11)(uae_u32 opcode)
@@ -13042,6 +13570,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4000_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* NEGX.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4010_11)(uae_u32 opcode)
@@ -13066,6 +13595,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4010_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEGX.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4018_11)(uae_u32 opcode)
@@ -13091,6 +13621,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4018_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEGX.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4020_11)(uae_u32 opcode)
@@ -13116,6 +13647,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4020_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* NEGX.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4028_11)(uae_u32 opcode)
@@ -13140,6 +13672,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4028_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEGX.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4030_11)(uae_u32 opcode)
@@ -13164,6 +13697,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4030_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* NEGX.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4038_11)(uae_u32 opcode)
@@ -13187,6 +13721,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4038_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEGX.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4039_11)(uae_u32 opcode)
@@ -13211,6 +13746,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4039_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* NEGX.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4040_11)(uae_u32 opcode)
@@ -13233,6 +13769,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4040_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* NEGX.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4050_11)(uae_u32 opcode)
@@ -13262,6 +13799,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4050_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEGX.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4058_11)(uae_u32 opcode)
@@ -13292,6 +13830,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4058_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEGX.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4060_11)(uae_u32 opcode)
@@ -13322,6 +13861,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4060_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* NEGX.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4068_11)(uae_u32 opcode)
@@ -13351,6 +13891,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4068_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEGX.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4070_11)(uae_u32 opcode)
@@ -13380,6 +13921,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4070_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* NEGX.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4078_11)(uae_u32 opcode)
@@ -13408,6 +13950,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4078_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEGX.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4079_11)(uae_u32 opcode)
@@ -13437,6 +13980,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4079_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* NEGX.L Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4080_11)(uae_u32 opcode)
@@ -13459,6 +14003,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4080_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* NEGX.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4090_11)(uae_u32 opcode)
@@ -13488,6 +14033,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4090_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* NEGX.L (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4098_11)(uae_u32 opcode)
@@ -13518,6 +14064,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4098_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* NEGX.L -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40a0_11)(uae_u32 opcode)
@@ -13548,6 +14095,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40a0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* NEGX.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40a8_11)(uae_u32 opcode)
@@ -13577,6 +14125,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40a8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* NEGX.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_40b0_11)(uae_u32 opcode)
@@ -13606,6 +14155,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40b0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* NEGX.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_40b8_11)(uae_u32 opcode)
@@ -13634,6 +14184,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40b8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* NEGX.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_40b9_11)(uae_u32 opcode)
@@ -13663,6 +14214,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40b9_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MVSR2.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_40c0_11)(uae_u32 opcode)
@@ -13677,6 +14229,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40c0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* MVSR2.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40d0_11)(uae_u32 opcode)
@@ -13699,6 +14252,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MVSR2.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_40d8_11)(uae_u32 opcode)
@@ -13722,6 +14276,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MVSR2.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40e0_11)(uae_u32 opcode)
@@ -13745,6 +14300,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (1/2) */
+/* 2 0,0   */
 
 /* MVSR2.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40e8_11)(uae_u32 opcode)
@@ -13767,6 +14323,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MVSR2.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_40f0_11)(uae_u32 opcode)
@@ -13789,6 +14346,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 4,0   */
 
 /* MVSR2.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_40f8_11)(uae_u32 opcode)
@@ -13810,6 +14368,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MVSR2.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_40f9_11)(uae_u32 opcode)
@@ -13832,6 +14391,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* CHK.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4180_11)(uae_u32 opcode)
@@ -13856,6 +14416,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4180_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/0) */
+/* 2 0,0   */
 
 /* CHK.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4190_11)(uae_u32 opcode)
@@ -13887,6 +14448,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4190_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/0) */
+/* 2 0,0   */
 
 /* CHK.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4198_11)(uae_u32 opcode)
@@ -13919,6 +14481,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4198_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/0) */
+/* 2 0,0   */
 
 /* CHK.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41a0_11)(uae_u32 opcode)
@@ -13951,6 +14514,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41a0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/0) */
+/* 2 0,0   */
 
 /* CHK.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41a8_11)(uae_u32 opcode)
@@ -13982,6 +14546,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41a8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 4 0,0   */
 
 /* CHK.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41b0_11)(uae_u32 opcode)
@@ -14013,6 +14578,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41b0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 4,0   */
 
 /* CHK.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41b8_11)(uae_u32 opcode)
@@ -14043,6 +14609,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41b8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 4 0,0   */
 
 /* CHK.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41b9_11)(uae_u32 opcode)
@@ -14074,6 +14641,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41b9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/0) */
+/* 6 0,0   */
 
 /* CHK.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41ba_11)(uae_u32 opcode)
@@ -14105,6 +14673,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41ba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 4 0,0   */
 
 /* CHK.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41bb_11)(uae_u32 opcode)
@@ -14137,6 +14706,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41bb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/0) */
+/* 4 4,0   */
 
 /* CHK.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_41bc_11)(uae_u32 opcode)
@@ -14160,6 +14730,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41bc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/0) */
+/* 4 0,0   */
 
 /* LEA.L (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_41d0_11)(uae_u32 opcode)
@@ -14175,6 +14746,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41d0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* LEA.L (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_41e8_11)(uae_u32 opcode)
@@ -14190,6 +14762,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41e8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* LEA.L (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_41f0_11)(uae_u32 opcode)
@@ -14205,6 +14778,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41f0_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 4,0   */
 
 /* LEA.L (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_41f8_11)(uae_u32 opcode)
@@ -14219,6 +14793,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41f8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* LEA.L (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_41f9_11)(uae_u32 opcode)
@@ -14234,6 +14809,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41f9_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 6 0,0   */
 
 /* LEA.L (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_41fa_11)(uae_u32 opcode)
@@ -14249,6 +14825,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41fa_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* LEA.L (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_41fb_11)(uae_u32 opcode)
@@ -14265,6 +14842,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_41fb_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 4,0   */
 
 /* CLR.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4200_11)(uae_u32 opcode)
@@ -14280,6 +14858,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4200_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CLR.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4210_11)(uae_u32 opcode)
@@ -14297,6 +14876,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4210_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* CLR.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4218_11)(uae_u32 opcode)
@@ -14315,6 +14895,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4218_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* CLR.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4220_11)(uae_u32 opcode)
@@ -14333,6 +14914,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4220_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* CLR.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4228_11)(uae_u32 opcode)
@@ -14350,6 +14932,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4228_11)(uae_u32 opcode)
 }}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* CLR.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4230_11)(uae_u32 opcode)
@@ -14367,6 +14950,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4230_11)(uae_u32 opcode)
 }}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* CLR.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4238_11)(uae_u32 opcode)
@@ -14383,6 +14967,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4238_11)(uae_u32 opcode)
 }}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* CLR.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4239_11)(uae_u32 opcode)
@@ -14400,6 +14985,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4239_11)(uae_u32 opcode)
 }}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* CLR.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4240_11)(uae_u32 opcode)
@@ -14415,6 +15001,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4240_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CLR.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4250_11)(uae_u32 opcode)
@@ -14437,6 +15024,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4250_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* CLR.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4258_11)(uae_u32 opcode)
@@ -14460,6 +15048,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4258_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* CLR.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4260_11)(uae_u32 opcode)
@@ -14483,6 +15072,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4260_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* CLR.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4268_11)(uae_u32 opcode)
@@ -14505,6 +15095,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4268_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* CLR.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4270_11)(uae_u32 opcode)
@@ -14527,6 +15118,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4270_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* CLR.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4278_11)(uae_u32 opcode)
@@ -14548,6 +15140,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4278_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* CLR.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4279_11)(uae_u32 opcode)
@@ -14570,6 +15163,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4279_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* CLR.L Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4280_11)(uae_u32 opcode)
@@ -14585,6 +15179,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4280_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CLR.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4290_11)(uae_u32 opcode)
@@ -14607,6 +15202,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4290_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* CLR.L (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4298_11)(uae_u32 opcode)
@@ -14630,6 +15226,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4298_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* CLR.L -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_42a0_11)(uae_u32 opcode)
@@ -14653,6 +15250,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42a0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (1/2) */
+/* 2 0,0   */
 
 /* CLR.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_42a8_11)(uae_u32 opcode)
@@ -14675,6 +15273,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42a8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* CLR.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_42b0_11)(uae_u32 opcode)
@@ -14697,6 +15296,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42b0_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 4,0   */
 
 /* CLR.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_42b8_11)(uae_u32 opcode)
@@ -14718,6 +15318,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42b8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* CLR.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_42b9_11)(uae_u32 opcode)
@@ -14740,6 +15341,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42b9_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* MVSR2.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_42c0_11)(uae_u32 opcode)
@@ -14753,6 +15355,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42c0_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* MVSR2.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_42d0_11)(uae_u32 opcode)
@@ -14773,6 +15376,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42d0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MVSR2.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_42d8_11)(uae_u32 opcode)
@@ -14794,6 +15398,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42d8_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* MVSR2.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_42e0_11)(uae_u32 opcode)
@@ -14815,6 +15420,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42e0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* MVSR2.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_42e8_11)(uae_u32 opcode)
@@ -14835,6 +15441,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42e8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MVSR2.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_42f0_11)(uae_u32 opcode)
@@ -14855,6 +15462,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42f0_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* MVSR2.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_42f8_11)(uae_u32 opcode)
@@ -14874,6 +15482,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42f8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* MVSR2.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_42f9_11)(uae_u32 opcode)
@@ -14894,6 +15503,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42f9_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* NEG.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4400_11)(uae_u32 opcode)
@@ -14916,6 +15526,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4400_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 #endif
 
@@ -14943,6 +15554,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4410_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEG.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4418_11)(uae_u32 opcode)
@@ -14968,6 +15580,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4418_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEG.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4420_11)(uae_u32 opcode)
@@ -14993,6 +15606,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4420_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* NEG.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4428_11)(uae_u32 opcode)
@@ -15017,6 +15631,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4428_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEG.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4430_11)(uae_u32 opcode)
@@ -15041,6 +15656,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4430_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* NEG.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4438_11)(uae_u32 opcode)
@@ -15064,6 +15680,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4438_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEG.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4439_11)(uae_u32 opcode)
@@ -15088,6 +15705,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4439_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* NEG.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4440_11)(uae_u32 opcode)
@@ -15110,6 +15728,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4440_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* NEG.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4450_11)(uae_u32 opcode)
@@ -15139,6 +15758,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4450_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEG.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4458_11)(uae_u32 opcode)
@@ -15169,6 +15789,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4458_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NEG.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4460_11)(uae_u32 opcode)
@@ -15199,6 +15820,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4460_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* NEG.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4468_11)(uae_u32 opcode)
@@ -15228,6 +15850,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4468_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEG.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4470_11)(uae_u32 opcode)
@@ -15257,6 +15880,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4470_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* NEG.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4478_11)(uae_u32 opcode)
@@ -15285,6 +15909,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4478_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NEG.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4479_11)(uae_u32 opcode)
@@ -15314,6 +15939,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4479_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* NEG.L Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4480_11)(uae_u32 opcode)
@@ -15336,6 +15962,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4480_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* NEG.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4490_11)(uae_u32 opcode)
@@ -15365,6 +15992,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4490_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* NEG.L (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4498_11)(uae_u32 opcode)
@@ -15395,6 +16023,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4498_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* NEG.L -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_44a0_11)(uae_u32 opcode)
@@ -15425,6 +16054,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44a0_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* NEG.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_44a8_11)(uae_u32 opcode)
@@ -15454,6 +16084,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44a8_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* NEG.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_44b0_11)(uae_u32 opcode)
@@ -15483,6 +16114,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44b0_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* NEG.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_44b8_11)(uae_u32 opcode)
@@ -15511,6 +16143,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44b8_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* NEG.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_44b9_11)(uae_u32 opcode)
@@ -15540,6 +16173,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44b9_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MV2SR.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_44c0_11)(uae_u32 opcode)
@@ -15557,6 +16191,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 2 0,0   */
 
 /* MV2SR.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_44d0_11)(uae_u32 opcode)
@@ -15581,6 +16216,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* MV2SR.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_44d8_11)(uae_u32 opcode)
@@ -15606,6 +16242,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* MV2SR.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_44e0_11)(uae_u32 opcode)
@@ -15631,6 +16268,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 2 0,0   */
 
 /* MV2SR.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_44e8_11)(uae_u32 opcode)
@@ -15655,6 +16293,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 0,0   */
 
 /* MV2SR.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_44f0_11)(uae_u32 opcode)
@@ -15679,6 +16318,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/0) */
+/* 4 4,0   */
 
 /* MV2SR.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_44f8_11)(uae_u32 opcode)
@@ -15702,6 +16342,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 0,0   */
 
 /* MV2SR.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_44f9_11)(uae_u32 opcode)
@@ -15726,6 +16367,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/0) */
+/* 6 0,0   */
 
 /* MV2SR.B (d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_44fa_11)(uae_u32 opcode)
@@ -15750,6 +16392,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 0,0   */
 
 /* MV2SR.B (d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_44fb_11)(uae_u32 opcode)
@@ -15775,6 +16418,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/0) */
+/* 4 4,0   */
 
 /* MV2SR.B #<data>.B */
 uae_u32 REGPARAM2 CPUFUNC(op_44fc_11)(uae_u32 opcode)
@@ -15791,6 +16435,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_44fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* NOT.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4600_11)(uae_u32 opcode)
@@ -15808,6 +16453,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4600_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* NOT.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4610_11)(uae_u32 opcode)
@@ -15827,6 +16473,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4610_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NOT.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4618_11)(uae_u32 opcode)
@@ -15847,6 +16494,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4618_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NOT.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4620_11)(uae_u32 opcode)
@@ -15867,6 +16515,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4620_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* NOT.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4628_11)(uae_u32 opcode)
@@ -15886,6 +16535,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4628_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NOT.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4630_11)(uae_u32 opcode)
@@ -15905,6 +16555,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4630_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* NOT.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4638_11)(uae_u32 opcode)
@@ -15923,6 +16574,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4638_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NOT.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4639_11)(uae_u32 opcode)
@@ -15942,6 +16594,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4639_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* NOT.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4640_11)(uae_u32 opcode)
@@ -15959,6 +16612,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4640_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* NOT.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4650_11)(uae_u32 opcode)
@@ -15983,6 +16637,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4650_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NOT.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4658_11)(uae_u32 opcode)
@@ -16008,6 +16663,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4658_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NOT.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4660_11)(uae_u32 opcode)
@@ -16033,6 +16689,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4660_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* NOT.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4668_11)(uae_u32 opcode)
@@ -16057,6 +16714,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4668_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NOT.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4670_11)(uae_u32 opcode)
@@ -16081,6 +16739,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4670_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* NOT.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4678_11)(uae_u32 opcode)
@@ -16104,6 +16763,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4678_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NOT.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4679_11)(uae_u32 opcode)
@@ -16128,6 +16788,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4679_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* NOT.L Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4680_11)(uae_u32 opcode)
@@ -16145,6 +16806,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4680_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* NOT.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4690_11)(uae_u32 opcode)
@@ -16169,6 +16831,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4690_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* NOT.L (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4698_11)(uae_u32 opcode)
@@ -16194,6 +16857,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4698_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* NOT.L -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_46a0_11)(uae_u32 opcode)
@@ -16219,6 +16883,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* NOT.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_46a8_11)(uae_u32 opcode)
@@ -16243,6 +16908,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* NOT.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_46b0_11)(uae_u32 opcode)
@@ -16267,6 +16933,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* NOT.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_46b8_11)(uae_u32 opcode)
@@ -16290,6 +16957,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* NOT.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_46b9_11)(uae_u32 opcode)
@@ -16314,6 +16982,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MV2SR.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_46c0_11)(uae_u32 opcode)
@@ -16330,6 +16999,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46c0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 2 0,0   */
 
 /* MV2SR.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_46d0_11)(uae_u32 opcode)
@@ -16353,6 +17023,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46d0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* MV2SR.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_46d8_11)(uae_u32 opcode)
@@ -16377,6 +17048,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46d8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* MV2SR.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_46e0_11)(uae_u32 opcode)
@@ -16401,6 +17073,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46e0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 2 0,0   */
 
 /* MV2SR.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_46e8_11)(uae_u32 opcode)
@@ -16424,6 +17097,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46e8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 0,0   */
 
 /* MV2SR.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_46f0_11)(uae_u32 opcode)
@@ -16447,6 +17121,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46f0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/0) */
+/* 4 4,0   */
 
 /* MV2SR.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_46f8_11)(uae_u32 opcode)
@@ -16469,6 +17144,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46f8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 0,0   */
 
 /* MV2SR.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_46f9_11)(uae_u32 opcode)
@@ -16492,6 +17168,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46f9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (5/0) */
+/* 6 0,0   */
 
 /* MV2SR.W (d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_46fa_11)(uae_u32 opcode)
@@ -16515,6 +17192,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46fa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 0,0   */
 
 /* MV2SR.W (d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_46fb_11)(uae_u32 opcode)
@@ -16539,6 +17217,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46fb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (4/0) */
+/* 4 4,0   */
 
 /* MV2SR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_46fc_11)(uae_u32 opcode)
@@ -16554,6 +17233,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_46fc_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* NBCD.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4800_11)(uae_u32 opcode)
@@ -16581,6 +17261,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4800_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* NBCD.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4810_11)(uae_u32 opcode)
@@ -16610,6 +17291,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4810_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NBCD.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4818_11)(uae_u32 opcode)
@@ -16640,6 +17322,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4818_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* NBCD.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4820_11)(uae_u32 opcode)
@@ -16670,6 +17353,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4820_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* NBCD.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4828_11)(uae_u32 opcode)
@@ -16699,6 +17383,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4828_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NBCD.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4830_11)(uae_u32 opcode)
@@ -16728,6 +17413,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4830_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* NBCD.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4838_11)(uae_u32 opcode)
@@ -16756,6 +17442,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4838_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* NBCD.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4839_11)(uae_u32 opcode)
@@ -16785,6 +17472,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4839_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SWAP.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4840_11)(uae_u32 opcode)
@@ -16802,6 +17490,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4840_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* PEA.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4850_11)(uae_u32 opcode)
@@ -16824,6 +17513,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4850_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* PEA.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4868_11)(uae_u32 opcode)
@@ -16846,6 +17536,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4868_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* PEA.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4870_11)(uae_u32 opcode)
@@ -16868,6 +17559,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4870_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (2/2) */
+/* 4 4,0   */
 
 /* PEA.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4878_11)(uae_u32 opcode)
@@ -16889,6 +17581,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4878_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* PEA.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4879_11)(uae_u32 opcode)
@@ -16911,6 +17604,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4879_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* PEA.L (d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_487a_11)(uae_u32 opcode)
@@ -16933,6 +17627,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_487a_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* PEA.L (d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_487b_11)(uae_u32 opcode)
@@ -16956,6 +17651,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_487b_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (2/2) */
+/* 4 4,0   */
 
 /* EXT.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4880_11)(uae_u32 opcode)
@@ -16973,6 +17669,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4880_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MVMLE.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4890_11)(uae_u32 opcode)
@@ -17005,6 +17702,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4890_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 4 0,0   */
 
 /* MVMLE.W #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_48a0_11)(uae_u32 opcode)
@@ -17038,6 +17736,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48a0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 4 0,0   */
 
 /* MVMLE.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_48a8_11)(uae_u32 opcode)
@@ -17070,6 +17769,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48a8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 6 0,0   */
 
 /* MVMLE.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_48b0_11)(uae_u32 opcode)
@@ -17102,6 +17802,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48b0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14+ (3/0) */
+/* 6 4,0   */
 
 /* MVMLE.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_48b8_11)(uae_u32 opcode)
@@ -17133,6 +17834,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48b8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 6 0,0   */
 
 /* MVMLE.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_48b9_11)(uae_u32 opcode)
@@ -17165,6 +17867,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48b9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 8 0,0   */
 
 /* EXT.L Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_48c0_11)(uae_u32 opcode)
@@ -17182,6 +17885,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48c0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MVMLE.L #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_48d0_11)(uae_u32 opcode)
@@ -17216,6 +17920,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 4 0,0   */
 
 /* MVMLE.L #<data>.W,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_48e0_11)(uae_u32 opcode)
@@ -17252,6 +17957,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 4 0,0   */
 
 /* MVMLE.L #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_48e8_11)(uae_u32 opcode)
@@ -17286,6 +17992,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 6 0,0   */
 
 /* MVMLE.L #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_48f0_11)(uae_u32 opcode)
@@ -17320,6 +18027,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14+ (3/0) */
+/* 6 4,0   */
 
 /* MVMLE.L #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_48f8_11)(uae_u32 opcode)
@@ -17353,6 +18061,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 6 0,0   */
 
 /* MVMLE.L #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_48f9_11)(uae_u32 opcode)
@@ -17387,6 +18096,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_48f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 8 0,0   */
 
 /* TST.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4a00_11)(uae_u32 opcode)
@@ -17402,6 +18112,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a00_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* TST.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a10_11)(uae_u32 opcode)
@@ -17419,6 +18130,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a10_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* TST.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4a18_11)(uae_u32 opcode)
@@ -17437,6 +18149,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a18_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* TST.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a20_11)(uae_u32 opcode)
@@ -17455,6 +18168,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a20_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* TST.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a28_11)(uae_u32 opcode)
@@ -17472,6 +18186,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a28_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* TST.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a30_11)(uae_u32 opcode)
@@ -17489,6 +18204,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a30_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* TST.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4a38_11)(uae_u32 opcode)
@@ -17505,6 +18221,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a38_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* TST.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4a39_11)(uae_u32 opcode)
@@ -17522,6 +18239,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a39_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* TST.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4a40_11)(uae_u32 opcode)
@@ -17537,6 +18255,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a40_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* TST.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a50_11)(uae_u32 opcode)
@@ -17559,6 +18278,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a50_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* TST.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4a58_11)(uae_u32 opcode)
@@ -17582,6 +18302,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a58_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* TST.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a60_11)(uae_u32 opcode)
@@ -17605,6 +18326,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a60_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* TST.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a68_11)(uae_u32 opcode)
@@ -17627,6 +18349,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a68_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* TST.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a70_11)(uae_u32 opcode)
@@ -17649,6 +18372,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a70_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* TST.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4a78_11)(uae_u32 opcode)
@@ -17670,6 +18394,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a78_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* TST.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4a79_11)(uae_u32 opcode)
@@ -17692,6 +18417,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a79_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* TST.L Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4a80_11)(uae_u32 opcode)
@@ -17707,6 +18433,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a80_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* TST.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4a90_11)(uae_u32 opcode)
@@ -17729,6 +18456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a90_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* TST.L (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4a98_11)(uae_u32 opcode)
@@ -17752,6 +18480,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4a98_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* TST.L -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4aa0_11)(uae_u32 opcode)
@@ -17775,6 +18504,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4aa0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* TST.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4aa8_11)(uae_u32 opcode)
@@ -17797,6 +18527,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4aa8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* TST.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ab0_11)(uae_u32 opcode)
@@ -17819,6 +18550,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ab0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 4,0   */
 
 /* TST.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4ab8_11)(uae_u32 opcode)
@@ -17840,6 +18572,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ab8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 4 0,0   */
 
 /* TST.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4ab9_11)(uae_u32 opcode)
@@ -17862,6 +18595,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ab9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 6 0,0   */
 
 /* TAS.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4ac0_11)(uae_u32 opcode)
@@ -17879,6 +18613,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ac0_11)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* TAS.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ad0_11)(uae_u32 opcode)
@@ -17898,6 +18633,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ad0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/1) */
+/* 2 0,0   */
 
 /* TAS.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4ad8_11)(uae_u32 opcode)
@@ -17918,6 +18654,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ad8_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/1) */
+/* 2 0,0   */
 
 /* TAS.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ae0_11)(uae_u32 opcode)
@@ -17938,6 +18675,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ae0_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (2/1) */
+/* 2 0,0   */
 
 /* TAS.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ae8_11)(uae_u32 opcode)
@@ -17957,6 +18695,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ae8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/1) */
+/* 4 0,0   */
 
 /* TAS.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4af0_11)(uae_u32 opcode)
@@ -17976,6 +18715,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4af0_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (3/1) */
+/* 4 4,0   */
 
 /* TAS.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4af8_11)(uae_u32 opcode)
@@ -17994,6 +18734,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4af8_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/1) */
+/* 4 0,0   */
 
 /* TAS.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4af9_11)(uae_u32 opcode)
@@ -18013,6 +18754,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4af9_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/1) */
+/* 6 0,0   */
 
 /* MVMEL.W #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4c90_11)(uae_u32 opcode)
@@ -18046,6 +18788,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c90_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* MVMEL.W #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4c98_11)(uae_u32 opcode)
@@ -18080,6 +18823,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4c98_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* MVMEL.W #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ca8_11)(uae_u32 opcode)
@@ -18113,6 +18857,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ca8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* MVMEL.W #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4cb0_11)(uae_u32 opcode)
@@ -18146,6 +18891,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cb0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18+ (4/0) */
+/* 6 4,0   */
 
 /* MVMEL.W #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4cb8_11)(uae_u32 opcode)
@@ -18178,6 +18924,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cb8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* MVMEL.W #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4cb9_11)(uae_u32 opcode)
@@ -18211,6 +18958,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cb9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20+ (5/0) */
+/* 8 0,0   */
 
 /* MVMEL.W #<data>.W,(d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_4cba_11)(uae_u32 opcode)
@@ -18245,6 +18993,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cba_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* MVMEL.W #<data>.W,(d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4cbb_11)(uae_u32 opcode)
@@ -18280,6 +19029,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cbb_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18+ (4/0) */
+/* 6 4,0   */
 
 /* MVMEL.L #<data>.W,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4cd0_11)(uae_u32 opcode)
@@ -18318,6 +19068,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cd0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* MVMEL.L #<data>.W,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4cd8_11)(uae_u32 opcode)
@@ -18357,6 +19108,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cd8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* MVMEL.L #<data>.W,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ce8_11)(uae_u32 opcode)
@@ -18395,6 +19147,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ce8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* MVMEL.L #<data>.W,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4cf0_11)(uae_u32 opcode)
@@ -18433,6 +19186,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cf0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18+ (4/0) */
+/* 6 4,0   */
 
 /* MVMEL.L #<data>.W,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4cf8_11)(uae_u32 opcode)
@@ -18470,6 +19224,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cf8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* MVMEL.L #<data>.W,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4cf9_11)(uae_u32 opcode)
@@ -18508,6 +19263,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cf9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (8);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20+ (5/0) */
+/* 8 0,0   */
 
 /* MVMEL.L #<data>.W,(d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_4cfa_11)(uae_u32 opcode)
@@ -18547,6 +19303,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cfa_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* MVMEL.L #<data>.W,(d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4cfb_11)(uae_u32 opcode)
@@ -18587,6 +19344,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4cfb_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18+ (4/0) */
+/* 6 4,0   */
 
 /* TRAPQ.L #<data> */
 uae_u32 REGPARAM2 CPUFUNC(op_4e40_11)(uae_u32 opcode)
@@ -18598,6 +19356,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e40_11)(uae_u32 opcode)
 	Exception_cpu(src + 32);
 }}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (0/0) */
+/* 2 0,0   */
 
 /* LINK.W An,#<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e50_11)(uae_u32 opcode)
@@ -18622,6 +19381,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e50_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* UNLK.L An */
 uae_u32 REGPARAM2 CPUFUNC(op_4e58_11)(uae_u32 opcode)
@@ -18645,6 +19405,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e58_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* MVR2USP.L An */
 uae_u32 REGPARAM2 CPUFUNC(op_4e60_11)(uae_u32 opcode)
@@ -18659,6 +19420,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e60_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* MVUSP2R.L An */
 uae_u32 REGPARAM2 CPUFUNC(op_4e68_11)(uae_u32 opcode)
@@ -18672,6 +19434,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e68_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* RESET.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e70_11)(uae_u32 opcode)
@@ -18685,6 +19448,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e70_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 132 * CYCLE_UNIT / 2 + count_cycles;
 } /* 132 (1/0) */
+/* 2 0,0   */
 
 /* NOP.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e71_11)(uae_u32 opcode)
@@ -18695,6 +19459,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e71_11)(uae_u32 opcode)
 }	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* STOP.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e72_11)(uae_u32 opcode)
@@ -18708,6 +19473,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e72_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (0/0) */
+/* 4 0,0   */
 
 /* RTE.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e73_11)(uae_u32 opcode)
@@ -18741,6 +19507,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (6/0) */
+/* 2 0,0 B */
 
 /* RTD.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e74_11)(uae_u32 opcode)
@@ -18767,6 +19534,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e74_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 4 0,0 B */
 
 /* RTS.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e75_11)(uae_u32 opcode)
@@ -18785,6 +19553,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e75_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 2 0,0 B */
 
 /* TRAPV.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e76_11)(uae_u32 opcode)
@@ -18799,6 +19568,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e76_11)(uae_u32 opcode)
 	}
 }return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* RTR.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e77_11)(uae_u32 opcode)
@@ -18839,6 +19609,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e77_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 2 0,0 B */
 
 /* MOVEC2.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e7a_11)(uae_u32 opcode)
@@ -18855,6 +19626,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e7a_11)(uae_u32 opcode)
 l_110771: ;
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* MOVE2C.L #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_4e7b_11)(uae_u32 opcode)
@@ -18871,6 +19643,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e7b_11)(uae_u32 opcode)
 l_110772: ;
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* JSR.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4e90_11)(uae_u32 opcode)
@@ -18893,6 +19666,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e90_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 2 0,0 B */
 
 /* JSR.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ea8_11)(uae_u32 opcode)
@@ -18915,6 +19689,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ea8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 0,0 B */
 
 /* JSR.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4eb0_11)(uae_u32 opcode)
@@ -18938,6 +19713,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (2/2) */
+/* 2 2,0 B */
 
 /* JSR.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4eb8_11)(uae_u32 opcode)
@@ -18959,6 +19735,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 0,0 B */
 
 /* JSR.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4eb9_11)(uae_u32 opcode)
@@ -18981,6 +19758,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eb9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0 B */
 
 /* JSR.L (d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_4eba_11)(uae_u32 opcode)
@@ -19003,6 +19781,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4eba_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 0,0 B */
 
 /* JSR.L (d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ebb_11)(uae_u32 opcode)
@@ -19027,6 +19806,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ebb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (2/2) */
+/* 2 2,0 B */
 
 /* JMP.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ed0_11)(uae_u32 opcode)
@@ -19045,6 +19825,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ed0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0 B */
 
 /* JMP.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ee8_11)(uae_u32 opcode)
@@ -19063,6 +19844,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ee8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* JMP.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4ef0_11)(uae_u32 opcode)
@@ -19081,6 +19863,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef0_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/0) */
+/* 2 2,0 B */
 
 /* JMP.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4ef8_11)(uae_u32 opcode)
@@ -19098,6 +19881,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* JMP.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4ef9_11)(uae_u32 opcode)
@@ -19116,6 +19900,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4ef9_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 6 0,0 B */
 
 /* JMP.L (d16,PC) */
 uae_u32 REGPARAM2 CPUFUNC(op_4efa_11)(uae_u32 opcode)
@@ -19134,6 +19919,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4efa_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* JMP.L (d8,PC,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4efb_11)(uae_u32 opcode)
@@ -19153,6 +19939,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4efb_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/0) */
+/* 2 2,0 B */
 
 /* ADDQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_5000_11)(uae_u32 opcode)
@@ -19177,6 +19964,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5000_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* ADDQ.B #<data>,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5010_11)(uae_u32 opcode)
@@ -19203,6 +19991,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5010_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADDQ.B #<data>,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_5018_11)(uae_u32 opcode)
@@ -19230,6 +20019,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5018_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADDQ.B #<data>,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5020_11)(uae_u32 opcode)
@@ -19257,6 +20047,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5020_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ADDQ.B #<data>,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5028_11)(uae_u32 opcode)
@@ -19283,6 +20074,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5028_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADDQ.B #<data>,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_5030_11)(uae_u32 opcode)
@@ -19309,6 +20101,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5030_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ADDQ.B #<data>,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_5038_11)(uae_u32 opcode)
@@ -19334,6 +20127,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5038_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADDQ.B #<data>,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_5039_11)(uae_u32 opcode)
@@ -19360,6 +20154,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5039_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADDQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_5040_11)(uae_u32 opcode)
@@ -19384,6 +20179,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5040_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* ADDAQ.W #<data>,An */
 uae_u32 REGPARAM2 CPUFUNC(op_5048_11)(uae_u32 opcode)
@@ -19400,6 +20196,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5048_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDQ.W #<data>,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5050_11)(uae_u32 opcode)
@@ -19431,6 +20228,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5050_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADDQ.W #<data>,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_5058_11)(uae_u32 opcode)
@@ -19463,6 +20261,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5058_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADDQ.W #<data>,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5060_11)(uae_u32 opcode)
@@ -19495,6 +20294,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5060_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ADDQ.W #<data>,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5068_11)(uae_u32 opcode)
@@ -19526,6 +20326,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5068_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADDQ.W #<data>,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_5070_11)(uae_u32 opcode)
@@ -19557,6 +20358,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5070_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ADDQ.W #<data>,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_5078_11)(uae_u32 opcode)
@@ -19587,6 +20389,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5078_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADDQ.W #<data>,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_5079_11)(uae_u32 opcode)
@@ -19618,6 +20421,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5079_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADDQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_5080_11)(uae_u32 opcode)
@@ -19642,6 +20446,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5080_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDAQ.L #<data>,An */
 uae_u32 REGPARAM2 CPUFUNC(op_5088_11)(uae_u32 opcode)
@@ -19658,6 +20463,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5088_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDQ.L #<data>,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5090_11)(uae_u32 opcode)
@@ -19689,6 +20495,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5090_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* ADDQ.L #<data>,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_5098_11)(uae_u32 opcode)
@@ -19721,6 +20528,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5098_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* ADDQ.L #<data>,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_50a0_11)(uae_u32 opcode)
@@ -19753,6 +20561,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 #endif
 
@@ -19787,6 +20596,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* ADDQ.L #<data>,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_50b0_11)(uae_u32 opcode)
@@ -19818,6 +20628,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* ADDQ.L #<data>,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_50b8_11)(uae_u32 opcode)
@@ -19848,6 +20659,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* ADDQ.L #<data>,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_50b9_11)(uae_u32 opcode)
@@ -19879,6 +20691,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* Scc.B Dn (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50c0_11)(uae_u32 opcode)
@@ -19893,6 +20706,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50c8_11)(uae_u32 opcode)
@@ -19925,6 +20739,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50d0_11)(uae_u32 opcode)
@@ -19940,6 +20755,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50d8_11)(uae_u32 opcode)
@@ -19956,6 +20772,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50e0_11)(uae_u32 opcode)
@@ -19972,6 +20789,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50e8_11)(uae_u32 opcode)
@@ -19987,6 +20805,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50f0_11)(uae_u32 opcode)
@@ -20002,6 +20821,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50f8_11)(uae_u32 opcode)
@@ -20016,6 +20836,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50f9_11)(uae_u32 opcode)
@@ -20031,6 +20852,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* SUBQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_5100_11)(uae_u32 opcode)
@@ -20055,6 +20877,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5100_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* SUBQ.B #<data>,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5110_11)(uae_u32 opcode)
@@ -20081,6 +20904,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5110_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUBQ.B #<data>,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_5118_11)(uae_u32 opcode)
@@ -20108,6 +20932,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5118_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUBQ.B #<data>,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5120_11)(uae_u32 opcode)
@@ -20135,6 +20960,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5120_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* SUBQ.B #<data>,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5128_11)(uae_u32 opcode)
@@ -20161,6 +20987,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5128_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUBQ.B #<data>,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_5130_11)(uae_u32 opcode)
@@ -20187,6 +21014,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5130_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* SUBQ.B #<data>,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_5138_11)(uae_u32 opcode)
@@ -20212,6 +21040,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5138_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUBQ.B #<data>,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_5139_11)(uae_u32 opcode)
@@ -20238,6 +21067,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5139_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUBQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_5140_11)(uae_u32 opcode)
@@ -20262,6 +21092,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5140_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* SUBAQ.W #<data>,An */
 uae_u32 REGPARAM2 CPUFUNC(op_5148_11)(uae_u32 opcode)
@@ -20278,6 +21109,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5148_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBQ.W #<data>,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5150_11)(uae_u32 opcode)
@@ -20309,6 +21141,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5150_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUBQ.W #<data>,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_5158_11)(uae_u32 opcode)
@@ -20341,6 +21174,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5158_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUBQ.W #<data>,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5160_11)(uae_u32 opcode)
@@ -20373,6 +21207,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5160_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* SUBQ.W #<data>,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5168_11)(uae_u32 opcode)
@@ -20404,6 +21239,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5168_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUBQ.W #<data>,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_5170_11)(uae_u32 opcode)
@@ -20435,6 +21271,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5170_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* SUBQ.W #<data>,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_5178_11)(uae_u32 opcode)
@@ -20465,6 +21302,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5178_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUBQ.W #<data>,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_5179_11)(uae_u32 opcode)
@@ -20496,6 +21334,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5179_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUBQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_5180_11)(uae_u32 opcode)
@@ -20520,6 +21359,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5180_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBAQ.L #<data>,An */
 uae_u32 REGPARAM2 CPUFUNC(op_5188_11)(uae_u32 opcode)
@@ -20536,6 +21376,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5188_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBQ.L #<data>,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_5190_11)(uae_u32 opcode)
@@ -20567,6 +21408,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5190_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* SUBQ.L #<data>,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_5198_11)(uae_u32 opcode)
@@ -20599,6 +21441,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5198_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* SUBQ.L #<data>,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_51a0_11)(uae_u32 opcode)
@@ -20631,6 +21474,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* SUBQ.L #<data>,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_51a8_11)(uae_u32 opcode)
@@ -20662,6 +21506,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* SUBQ.L #<data>,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_51b0_11)(uae_u32 opcode)
@@ -20693,6 +21538,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* SUBQ.L #<data>,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_51b8_11)(uae_u32 opcode)
@@ -20723,6 +21569,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* SUBQ.L #<data>,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_51b9_11)(uae_u32 opcode)
@@ -20754,6 +21601,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* Scc.B Dn (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51c0_11)(uae_u32 opcode)
@@ -20768,6 +21616,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51c8_11)(uae_u32 opcode)
@@ -20800,6 +21649,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51d0_11)(uae_u32 opcode)
@@ -20815,6 +21665,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51d8_11)(uae_u32 opcode)
@@ -20831,6 +21682,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51e0_11)(uae_u32 opcode)
@@ -20847,6 +21699,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51e8_11)(uae_u32 opcode)
@@ -20862,6 +21715,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51f0_11)(uae_u32 opcode)
@@ -20877,6 +21731,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51f8_11)(uae_u32 opcode)
@@ -20891,6 +21746,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51f9_11)(uae_u32 opcode)
@@ -20906,6 +21762,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52c0_11)(uae_u32 opcode)
@@ -20920,6 +21777,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52c8_11)(uae_u32 opcode)
@@ -20952,6 +21810,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52d0_11)(uae_u32 opcode)
@@ -20967,6 +21826,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52d8_11)(uae_u32 opcode)
@@ -20983,6 +21843,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52e0_11)(uae_u32 opcode)
@@ -20999,6 +21860,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52e8_11)(uae_u32 opcode)
@@ -21014,6 +21876,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52f0_11)(uae_u32 opcode)
@@ -21029,6 +21892,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52f8_11)(uae_u32 opcode)
@@ -21043,6 +21907,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52f9_11)(uae_u32 opcode)
@@ -21058,6 +21923,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53c0_11)(uae_u32 opcode)
@@ -21072,6 +21938,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53c8_11)(uae_u32 opcode)
@@ -21104,6 +21971,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53d0_11)(uae_u32 opcode)
@@ -21119,6 +21987,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53d8_11)(uae_u32 opcode)
@@ -21135,6 +22004,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53e0_11)(uae_u32 opcode)
@@ -21151,6 +22021,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53e8_11)(uae_u32 opcode)
@@ -21166,6 +22037,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53f0_11)(uae_u32 opcode)
@@ -21181,6 +22053,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53f8_11)(uae_u32 opcode)
@@ -21195,6 +22068,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53f9_11)(uae_u32 opcode)
@@ -21210,6 +22084,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54c0_11)(uae_u32 opcode)
@@ -21224,6 +22099,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54c8_11)(uae_u32 opcode)
@@ -21256,6 +22132,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54d0_11)(uae_u32 opcode)
@@ -21271,6 +22148,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54d8_11)(uae_u32 opcode)
@@ -21287,6 +22165,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54e0_11)(uae_u32 opcode)
@@ -21303,6 +22182,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54e8_11)(uae_u32 opcode)
@@ -21318,6 +22198,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54f0_11)(uae_u32 opcode)
@@ -21333,6 +22214,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54f8_11)(uae_u32 opcode)
@@ -21347,6 +22229,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54f9_11)(uae_u32 opcode)
@@ -21362,6 +22245,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55c0_11)(uae_u32 opcode)
@@ -21376,6 +22260,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55c8_11)(uae_u32 opcode)
@@ -21408,6 +22293,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55d0_11)(uae_u32 opcode)
@@ -21423,6 +22309,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55d8_11)(uae_u32 opcode)
@@ -21439,6 +22326,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55e0_11)(uae_u32 opcode)
@@ -21455,6 +22343,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55e8_11)(uae_u32 opcode)
@@ -21470,6 +22359,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55f0_11)(uae_u32 opcode)
@@ -21485,6 +22375,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55f8_11)(uae_u32 opcode)
@@ -21499,6 +22390,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55f9_11)(uae_u32 opcode)
@@ -21514,6 +22406,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56c0_11)(uae_u32 opcode)
@@ -21528,6 +22421,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56c8_11)(uae_u32 opcode)
@@ -21560,6 +22454,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56d0_11)(uae_u32 opcode)
@@ -21575,6 +22470,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56d8_11)(uae_u32 opcode)
@@ -21591,6 +22487,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56e0_11)(uae_u32 opcode)
@@ -21607,6 +22504,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56e8_11)(uae_u32 opcode)
@@ -21622,6 +22520,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56f0_11)(uae_u32 opcode)
@@ -21637,6 +22536,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56f8_11)(uae_u32 opcode)
@@ -21651,6 +22551,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56f9_11)(uae_u32 opcode)
@@ -21666,6 +22567,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57c0_11)(uae_u32 opcode)
@@ -21680,6 +22582,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57c8_11)(uae_u32 opcode)
@@ -21712,6 +22615,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57d0_11)(uae_u32 opcode)
@@ -21727,6 +22631,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57d8_11)(uae_u32 opcode)
@@ -21743,6 +22648,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57e0_11)(uae_u32 opcode)
@@ -21759,6 +22665,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57e8_11)(uae_u32 opcode)
@@ -21774,6 +22681,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57f0_11)(uae_u32 opcode)
@@ -21789,6 +22697,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57f8_11)(uae_u32 opcode)
@@ -21803,6 +22712,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57f9_11)(uae_u32 opcode)
@@ -21818,6 +22728,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58c0_11)(uae_u32 opcode)
@@ -21832,6 +22743,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58c8_11)(uae_u32 opcode)
@@ -21864,6 +22776,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58d0_11)(uae_u32 opcode)
@@ -21879,6 +22792,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58d8_11)(uae_u32 opcode)
@@ -21895,6 +22809,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58e0_11)(uae_u32 opcode)
@@ -21911,6 +22826,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58e8_11)(uae_u32 opcode)
@@ -21926,6 +22842,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58f0_11)(uae_u32 opcode)
@@ -21941,6 +22858,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58f8_11)(uae_u32 opcode)
@@ -21955,6 +22873,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58f9_11)(uae_u32 opcode)
@@ -21970,6 +22889,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59c0_11)(uae_u32 opcode)
@@ -21984,6 +22904,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59c8_11)(uae_u32 opcode)
@@ -22016,6 +22937,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59c8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59d0_11)(uae_u32 opcode)
@@ -22031,6 +22953,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59d0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59d8_11)(uae_u32 opcode)
@@ -22047,6 +22970,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59d8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59e0_11)(uae_u32 opcode)
@@ -22063,6 +22987,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59e0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59e8_11)(uae_u32 opcode)
@@ -22078,6 +23003,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59e8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59f0_11)(uae_u32 opcode)
@@ -22093,6 +23019,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59f0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59f8_11)(uae_u32 opcode)
@@ -22107,6 +23034,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59f8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59f9_11)(uae_u32 opcode)
@@ -22122,6 +23050,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59f9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ac0_11)(uae_u32 opcode)
@@ -22136,6 +23065,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ac0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ac8_11)(uae_u32 opcode)
@@ -22168,6 +23098,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ac8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ad0_11)(uae_u32 opcode)
@@ -22183,6 +23114,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ad0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ad8_11)(uae_u32 opcode)
@@ -22199,6 +23131,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ad8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ae0_11)(uae_u32 opcode)
@@ -22215,6 +23148,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ae0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ae8_11)(uae_u32 opcode)
@@ -22230,6 +23164,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ae8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5af0_11)(uae_u32 opcode)
@@ -22245,6 +23180,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5af0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5af8_11)(uae_u32 opcode)
@@ -22259,6 +23195,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5af8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5af9_11)(uae_u32 opcode)
@@ -22274,6 +23211,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5af9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bc0_11)(uae_u32 opcode)
@@ -22288,6 +23226,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bc0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bc8_11)(uae_u32 opcode)
@@ -22320,6 +23259,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bc8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bd0_11)(uae_u32 opcode)
@@ -22335,6 +23275,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bd0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bd8_11)(uae_u32 opcode)
@@ -22351,6 +23292,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bd8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5be0_11)(uae_u32 opcode)
@@ -22367,6 +23309,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5be0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5be8_11)(uae_u32 opcode)
@@ -22382,6 +23325,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5be8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bf0_11)(uae_u32 opcode)
@@ -22397,6 +23341,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bf0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bf8_11)(uae_u32 opcode)
@@ -22411,6 +23356,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bf8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bf9_11)(uae_u32 opcode)
@@ -22426,6 +23372,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bf9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cc0_11)(uae_u32 opcode)
@@ -22440,6 +23387,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cc0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cc8_11)(uae_u32 opcode)
@@ -22472,6 +23420,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cc8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cd0_11)(uae_u32 opcode)
@@ -22487,6 +23436,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cd0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cd8_11)(uae_u32 opcode)
@@ -22503,6 +23453,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cd8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ce0_11)(uae_u32 opcode)
@@ -22519,6 +23470,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ce0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ce8_11)(uae_u32 opcode)
@@ -22534,6 +23486,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ce8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cf0_11)(uae_u32 opcode)
@@ -22549,6 +23502,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cf0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cf8_11)(uae_u32 opcode)
@@ -22563,6 +23517,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cf8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cf9_11)(uae_u32 opcode)
@@ -22578,6 +23533,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cf9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dc0_11)(uae_u32 opcode)
@@ -22592,6 +23548,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dc0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dc8_11)(uae_u32 opcode)
@@ -22624,6 +23581,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dc8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dd0_11)(uae_u32 opcode)
@@ -22639,6 +23597,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dd0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dd8_11)(uae_u32 opcode)
@@ -22655,6 +23614,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dd8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5de0_11)(uae_u32 opcode)
@@ -22671,6 +23631,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5de0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5de8_11)(uae_u32 opcode)
@@ -22686,6 +23647,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5de8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5df0_11)(uae_u32 opcode)
@@ -22701,6 +23663,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5df0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5df8_11)(uae_u32 opcode)
@@ -22715,6 +23678,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5df8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5df9_11)(uae_u32 opcode)
@@ -22730,6 +23694,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5df9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ec0_11)(uae_u32 opcode)
@@ -22744,6 +23709,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ec0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ec8_11)(uae_u32 opcode)
@@ -22776,6 +23742,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ec8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ed0_11)(uae_u32 opcode)
@@ -22791,6 +23758,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ed0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ed8_11)(uae_u32 opcode)
@@ -22807,6 +23775,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ed8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ee0_11)(uae_u32 opcode)
@@ -22823,6 +23792,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ee0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ee8_11)(uae_u32 opcode)
@@ -22838,6 +23808,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ee8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ef0_11)(uae_u32 opcode)
@@ -22853,6 +23824,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ef0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ef8_11)(uae_u32 opcode)
@@ -22867,6 +23839,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ef8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ef9_11)(uae_u32 opcode)
@@ -22882,6 +23855,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ef9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fc0_11)(uae_u32 opcode)
@@ -22896,6 +23870,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fc0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DBcc.W Dn,#<data>.W (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fc8_11)(uae_u32 opcode)
@@ -22928,6 +23903,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fc8_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0 B */
 
 /* Scc.B (An) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fd0_11)(uae_u32 opcode)
@@ -22943,6 +23919,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fd0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fd8_11)(uae_u32 opcode)
@@ -22959,6 +23936,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fd8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fe0_11)(uae_u32 opcode)
@@ -22975,6 +23953,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fe0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (1/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fe8_11)(uae_u32 opcode)
@@ -22990,6 +23969,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fe8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ff0_11)(uae_u32 opcode)
@@ -23005,6 +23985,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ff0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ff8_11)(uae_u32 opcode)
@@ -23019,6 +24000,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ff8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ff9_11)(uae_u32 opcode)
@@ -23034,6 +24016,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ff9_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 6 0,0   */
 
 /* Bcc.W #<data>.W (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_6000_11)(uae_u32 opcode)
@@ -23057,6 +24040,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_6001_11)(uae_u32 opcode)
@@ -23080,6 +24064,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_60ff_11)(uae_u32 opcode)
@@ -23094,6 +24079,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_60ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* BSR.W #<data>.W */
 uae_u32 REGPARAM2 CPUFUNC(op_6100_11)(uae_u32 opcode)
@@ -23112,6 +24098,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6100_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 0,0 B */
 
 /* BSRQ.B #<data> */
 uae_u32 REGPARAM2 CPUFUNC(op_6101_11)(uae_u32 opcode)
@@ -23131,6 +24118,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6101_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 2 0,0 B */
 
 /* BSR.L #<data>.L */
 uae_u32 REGPARAM2 CPUFUNC(op_61ff_11)(uae_u32 opcode)
@@ -23149,6 +24137,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_61ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 2 0,0 B */
 
 /* Bcc.W #<data>.W (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_6200_11)(uae_u32 opcode)
@@ -23172,6 +24161,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_6201_11)(uae_u32 opcode)
@@ -23195,6 +24185,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_62ff_11)(uae_u32 opcode)
@@ -23209,6 +24200,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_62ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_6300_11)(uae_u32 opcode)
@@ -23232,6 +24224,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_6301_11)(uae_u32 opcode)
@@ -23255,6 +24248,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 #endif
 
@@ -23272,6 +24266,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_63ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_6400_11)(uae_u32 opcode)
@@ -23295,6 +24290,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_6401_11)(uae_u32 opcode)
@@ -23318,6 +24314,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_64ff_11)(uae_u32 opcode)
@@ -23332,6 +24329,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_64ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_6500_11)(uae_u32 opcode)
@@ -23355,6 +24353,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_6501_11)(uae_u32 opcode)
@@ -23378,6 +24377,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_65ff_11)(uae_u32 opcode)
@@ -23392,6 +24392,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_65ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6600_11)(uae_u32 opcode)
@@ -23415,6 +24416,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6601_11)(uae_u32 opcode)
@@ -23438,6 +24440,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_66ff_11)(uae_u32 opcode)
@@ -23452,6 +24455,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_66ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_6700_11)(uae_u32 opcode)
@@ -23475,6 +24479,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_6701_11)(uae_u32 opcode)
@@ -23498,6 +24503,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_67ff_11)(uae_u32 opcode)
@@ -23512,6 +24518,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_67ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_6800_11)(uae_u32 opcode)
@@ -23535,6 +24542,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_6801_11)(uae_u32 opcode)
@@ -23558,6 +24566,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_68ff_11)(uae_u32 opcode)
@@ -23572,6 +24581,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_68ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_6900_11)(uae_u32 opcode)
@@ -23595,6 +24605,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_6901_11)(uae_u32 opcode)
@@ -23618,6 +24629,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_69ff_11)(uae_u32 opcode)
@@ -23632,6 +24644,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_69ff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_6a00_11)(uae_u32 opcode)
@@ -23655,6 +24668,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_6a01_11)(uae_u32 opcode)
@@ -23678,6 +24692,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_6aff_11)(uae_u32 opcode)
@@ -23692,6 +24707,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6aff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_6b00_11)(uae_u32 opcode)
@@ -23715,6 +24731,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_6b01_11)(uae_u32 opcode)
@@ -23738,6 +24755,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_6bff_11)(uae_u32 opcode)
@@ -23752,6 +24770,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6bff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6c00_11)(uae_u32 opcode)
@@ -23775,6 +24794,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6c01_11)(uae_u32 opcode)
@@ -23798,6 +24818,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6cff_11)(uae_u32 opcode)
@@ -23812,6 +24833,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6cff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_6d00_11)(uae_u32 opcode)
@@ -23835,6 +24857,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_6d01_11)(uae_u32 opcode)
@@ -23858,6 +24881,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_6dff_11)(uae_u32 opcode)
@@ -23872,6 +24896,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6dff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_6e00_11)(uae_u32 opcode)
@@ -23895,6 +24920,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_6e01_11)(uae_u32 opcode)
@@ -23918,6 +24944,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_6eff_11)(uae_u32 opcode)
@@ -23932,6 +24959,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6eff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* Bcc.W #<data>.W (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6f00_11)(uae_u32 opcode)
@@ -23955,6 +24983,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0 B */
 
 /* BccQ.B #<data> (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6f01_11)(uae_u32 opcode)
@@ -23978,6 +25007,7 @@ didnt_jump:;
 	get_word_000_prefetch (2);
 }}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0 B */
 
 /* Bcc.L #<data>.L (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_6fff_11)(uae_u32 opcode)
@@ -23992,6 +25022,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_6fff_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* MOVEQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_7000_11)(uae_u32 opcode)
@@ -24009,6 +25040,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_7000_11)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* OR.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8000_11)(uae_u32 opcode)
@@ -24028,6 +25060,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8000_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* OR.B (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8010_11)(uae_u32 opcode)
@@ -24049,6 +25082,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8010_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* OR.B (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8018_11)(uae_u32 opcode)
@@ -24071,6 +25105,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8018_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* OR.B -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8020_11)(uae_u32 opcode)
@@ -24093,6 +25128,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8020_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* OR.B (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8028_11)(uae_u32 opcode)
@@ -24114,6 +25150,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8028_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* OR.B (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8030_11)(uae_u32 opcode)
@@ -24135,6 +25172,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8030_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* OR.B (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8038_11)(uae_u32 opcode)
@@ -24155,6 +25193,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8038_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* OR.B (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8039_11)(uae_u32 opcode)
@@ -24176,6 +25215,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8039_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* OR.B (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_803a_11)(uae_u32 opcode)
@@ -24197,6 +25237,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_803a_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* OR.B (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_803b_11)(uae_u32 opcode)
@@ -24219,6 +25260,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_803b_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* OR.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_803c_11)(uae_u32 opcode)
@@ -24237,6 +25279,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_803c_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* OR.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8040_11)(uae_u32 opcode)
@@ -24256,6 +25299,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8040_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* OR.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8050_11)(uae_u32 opcode)
@@ -24282,6 +25326,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8050_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* OR.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8058_11)(uae_u32 opcode)
@@ -24309,6 +25354,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8058_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* OR.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8060_11)(uae_u32 opcode)
@@ -24336,6 +25382,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8060_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* OR.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8068_11)(uae_u32 opcode)
@@ -24362,6 +25409,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8068_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* OR.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8070_11)(uae_u32 opcode)
@@ -24388,6 +25436,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8070_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* OR.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8078_11)(uae_u32 opcode)
@@ -24413,6 +25462,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8078_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* OR.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8079_11)(uae_u32 opcode)
@@ -24439,6 +25489,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8079_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* OR.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_807a_11)(uae_u32 opcode)
@@ -24465,6 +25516,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_807a_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* OR.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_807b_11)(uae_u32 opcode)
@@ -24492,6 +25544,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_807b_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* OR.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_807c_11)(uae_u32 opcode)
@@ -24510,6 +25563,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_807c_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* OR.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8080_11)(uae_u32 opcode)
@@ -24529,6 +25583,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8080_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* OR.L (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8090_11)(uae_u32 opcode)
@@ -24555,6 +25610,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8090_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* OR.L (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8098_11)(uae_u32 opcode)
@@ -24582,6 +25638,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8098_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* OR.L -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80a0_11)(uae_u32 opcode)
@@ -24609,6 +25666,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* OR.L (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80a8_11)(uae_u32 opcode)
@@ -24635,6 +25693,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* OR.L (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80b0_11)(uae_u32 opcode)
@@ -24661,6 +25720,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* OR.L (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80b8_11)(uae_u32 opcode)
@@ -24686,6 +25746,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* OR.L (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80b9_11)(uae_u32 opcode)
@@ -24712,6 +25773,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* OR.L (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80ba_11)(uae_u32 opcode)
@@ -24738,6 +25800,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80ba_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* OR.L (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80bb_11)(uae_u32 opcode)
@@ -24765,6 +25828,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80bb_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* OR.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80bc_11)(uae_u32 opcode)
@@ -24785,6 +25849,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80bc_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* DIVU.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80c0_11)(uae_u32 opcode)
@@ -24818,6 +25883,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80c0_11)(uae_u32 opcode)
 	}
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DIVU.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80d0_11)(uae_u32 opcode)
@@ -24858,6 +25924,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80d0_11)(uae_u32 opcode)
 	}
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 2 0,0   */
 
 /* DIVU.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80d8_11)(uae_u32 opcode)
@@ -24899,6 +25966,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80d8_11)(uae_u32 opcode)
 	}
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 2 0,0   */
 
 /* DIVU.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80e0_11)(uae_u32 opcode)
@@ -24940,6 +26008,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80e0_11)(uae_u32 opcode)
 	}
 }}}}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10+ (2/0) */
+/* 2 0,0   */
 
 /* DIVU.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80e8_11)(uae_u32 opcode)
@@ -24980,6 +26049,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80e8_11)(uae_u32 opcode)
 	}
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* DIVU.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80f0_11)(uae_u32 opcode)
@@ -25020,6 +26090,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80f0_11)(uae_u32 opcode)
 	}
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14+ (3/0) */
+/* 4 4,0   */
 
 /* DIVU.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80f8_11)(uae_u32 opcode)
@@ -25059,6 +26130,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80f8_11)(uae_u32 opcode)
 	}
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* DIVU.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80f9_11)(uae_u32 opcode)
@@ -25099,6 +26171,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80f9_11)(uae_u32 opcode)
 	}
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* DIVU.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80fa_11)(uae_u32 opcode)
@@ -25139,6 +26212,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fa_11)(uae_u32 opcode)
 	}
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* DIVU.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80fb_11)(uae_u32 opcode)
@@ -25180,6 +26254,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fb_11)(uae_u32 opcode)
 	}
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14+ (3/0) */
+/* 4 4,0   */
 
 /* DIVU.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_80fc_11)(uae_u32 opcode)
@@ -25212,6 +26287,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_80fc_11)(uae_u32 opcode)
 	}
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 4 0,0   */
 
 /* SBCD.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_8100_11)(uae_u32 opcode)
@@ -25239,6 +26315,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8100_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* SBCD.B -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8108_11)(uae_u32 opcode)
@@ -25272,6 +26349,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8108_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 2 0,0   */
 
 /* OR.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8110_11)(uae_u32 opcode)
@@ -25293,6 +26371,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8110_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* OR.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_8118_11)(uae_u32 opcode)
@@ -25315,6 +26394,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8118_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* OR.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8120_11)(uae_u32 opcode)
@@ -25337,6 +26417,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8120_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* OR.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8128_11)(uae_u32 opcode)
@@ -25358,6 +26439,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8128_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_8130_11)(uae_u32 opcode)
@@ -25379,6 +26461,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8130_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* OR.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_8138_11)(uae_u32 opcode)
@@ -25399,6 +26482,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8138_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_8139_11)(uae_u32 opcode)
@@ -25420,6 +26504,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8139_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* OR.W Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8150_11)(uae_u32 opcode)
@@ -25446,6 +26531,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8150_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* OR.W Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_8158_11)(uae_u32 opcode)
@@ -25473,6 +26559,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8158_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* OR.W Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8160_11)(uae_u32 opcode)
@@ -25500,6 +26587,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8160_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* OR.W Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8168_11)(uae_u32 opcode)
@@ -25526,6 +26614,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8168_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.W Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_8170_11)(uae_u32 opcode)
@@ -25552,6 +26641,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8170_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* OR.W Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_8178_11)(uae_u32 opcode)
@@ -25577,6 +26667,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8178_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* OR.W Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_8179_11)(uae_u32 opcode)
@@ -25603,6 +26694,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8179_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* OR.L Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_8190_11)(uae_u32 opcode)
@@ -25629,6 +26721,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8190_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* OR.L Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_8198_11)(uae_u32 opcode)
@@ -25656,6 +26749,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_8198_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* OR.L Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_81a0_11)(uae_u32 opcode)
@@ -25683,6 +26777,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* OR.L Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_81a8_11)(uae_u32 opcode)
@@ -25709,6 +26804,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* OR.L Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_81b0_11)(uae_u32 opcode)
@@ -25735,6 +26831,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* OR.L Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_81b8_11)(uae_u32 opcode)
@@ -25760,6 +26857,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* OR.L Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_81b9_11)(uae_u32 opcode)
@@ -25786,6 +26884,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* DIVS.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81c0_11)(uae_u32 opcode)
@@ -25823,6 +26922,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81c0_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* DIVS.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81d0_11)(uae_u32 opcode)
@@ -25867,6 +26967,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81d0_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 2 0,0   */
 
 /* DIVS.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81d8_11)(uae_u32 opcode)
@@ -25912,6 +27013,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81d8_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 2 0,0   */
 
 /* DIVS.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81e0_11)(uae_u32 opcode)
@@ -25957,6 +27059,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81e0_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10+ (2/0) */
+/* 2 0,0   */
 
 /* DIVS.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81e8_11)(uae_u32 opcode)
@@ -26001,6 +27104,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81e8_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* DIVS.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81f0_11)(uae_u32 opcode)
@@ -26045,6 +27149,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81f0_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14+ (3/0) */
+/* 4 4,0   */
 
 /* DIVS.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81f8_11)(uae_u32 opcode)
@@ -26088,6 +27193,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81f8_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* DIVS.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81f9_11)(uae_u32 opcode)
@@ -26132,6 +27238,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81f9_11)(uae_u32 opcode)
 	m68k_incpci (6);
 }}}}}return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16+ (4/0) */
+/* 6 0,0   */
 
 /* DIVS.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81fa_11)(uae_u32 opcode)
@@ -26176,6 +27283,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81fa_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12+ (3/0) */
+/* 4 0,0   */
 
 /* DIVS.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81fb_11)(uae_u32 opcode)
@@ -26221,6 +27329,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81fb_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14+ (3/0) */
+/* 4 4,0   */
 
 /* DIVS.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_81fc_11)(uae_u32 opcode)
@@ -26257,6 +27366,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_81fc_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (2/0) */
+/* 4 0,0   */
 
 /* SUB.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9000_11)(uae_u32 opcode)
@@ -26281,6 +27391,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9000_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* SUB.B (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9010_11)(uae_u32 opcode)
@@ -26307,6 +27418,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9010_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* SUB.B (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9018_11)(uae_u32 opcode)
@@ -26334,6 +27446,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9018_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* SUB.B -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9020_11)(uae_u32 opcode)
@@ -26361,6 +27474,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9020_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* SUB.B (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9028_11)(uae_u32 opcode)
@@ -26387,6 +27501,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9028_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* SUB.B (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9030_11)(uae_u32 opcode)
@@ -26413,6 +27528,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9030_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* SUB.B (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9038_11)(uae_u32 opcode)
@@ -26438,6 +27554,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9038_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* SUB.B (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9039_11)(uae_u32 opcode)
@@ -26464,6 +27581,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9039_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* SUB.B (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_903a_11)(uae_u32 opcode)
@@ -26490,6 +27608,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_903a_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* SUB.B (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_903b_11)(uae_u32 opcode)
@@ -26517,6 +27636,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_903b_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* SUB.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_903c_11)(uae_u32 opcode)
@@ -26540,6 +27660,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_903c_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* SUB.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9040_11)(uae_u32 opcode)
@@ -26564,6 +27685,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9040_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* SUB.W An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9048_11)(uae_u32 opcode)
@@ -26588,6 +27710,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9048_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* SUB.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9050_11)(uae_u32 opcode)
@@ -26619,6 +27742,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9050_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* SUB.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9058_11)(uae_u32 opcode)
@@ -26651,6 +27775,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9058_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* SUB.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9060_11)(uae_u32 opcode)
@@ -26683,6 +27808,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9060_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* SUB.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9068_11)(uae_u32 opcode)
@@ -26714,6 +27840,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9068_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* SUB.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9070_11)(uae_u32 opcode)
@@ -26745,6 +27872,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9070_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* SUB.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9078_11)(uae_u32 opcode)
@@ -26775,6 +27903,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9078_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* SUB.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9079_11)(uae_u32 opcode)
@@ -26806,6 +27935,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9079_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* SUB.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_907a_11)(uae_u32 opcode)
@@ -26837,6 +27967,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_907a_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* SUB.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_907b_11)(uae_u32 opcode)
@@ -26869,6 +28000,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_907b_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* SUB.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_907c_11)(uae_u32 opcode)
@@ -26892,6 +28024,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_907c_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* SUB.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9080_11)(uae_u32 opcode)
@@ -26916,6 +28049,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9080_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUB.L An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9088_11)(uae_u32 opcode)
@@ -26940,6 +28074,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9088_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUB.L (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9090_11)(uae_u32 opcode)
@@ -26971,6 +28106,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9090_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* SUB.L (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9098_11)(uae_u32 opcode)
@@ -27003,6 +28139,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9098_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* SUB.L -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90a0_11)(uae_u32 opcode)
@@ -27035,6 +28172,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* SUB.L (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90a8_11)(uae_u32 opcode)
@@ -27066,6 +28204,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* SUB.L (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90b0_11)(uae_u32 opcode)
@@ -27097,6 +28236,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* SUB.L (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90b8_11)(uae_u32 opcode)
@@ -27127,6 +28267,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* SUB.L (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90b9_11)(uae_u32 opcode)
@@ -27158,6 +28299,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* SUB.L (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90ba_11)(uae_u32 opcode)
@@ -27189,6 +28331,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90ba_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* SUB.L (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90bb_11)(uae_u32 opcode)
@@ -27221,6 +28364,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90bb_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* SUB.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_90bc_11)(uae_u32 opcode)
@@ -27246,6 +28390,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90bc_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* SUBA.W Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_90c0_11)(uae_u32 opcode)
@@ -27262,6 +28407,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBA.W An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_90c8_11)(uae_u32 opcode)
@@ -27278,6 +28424,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90c8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBA.W (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_90d0_11)(uae_u32 opcode)
@@ -27301,6 +28448,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90d0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 2 0,0   */
 
 /* SUBA.W (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_90d8_11)(uae_u32 opcode)
@@ -27325,6 +28473,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90d8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 2 0,0   */
 
 /* SUBA.W -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_90e0_11)(uae_u32 opcode)
@@ -27349,6 +28498,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90e0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/0) */
+/* 2 0,0   */
 
 /* SUBA.W (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_90e8_11)(uae_u32 opcode)
@@ -27372,6 +28522,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90e8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* SUBA.W (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_90f0_11)(uae_u32 opcode)
@@ -27395,6 +28546,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90f0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 4 4,0   */
 
 /* SUBA.W (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_90f8_11)(uae_u32 opcode)
@@ -27417,6 +28569,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90f8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* SUBA.W (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_90f9_11)(uae_u32 opcode)
@@ -27440,6 +28593,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90f9_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 6 0,0   */
 
 /* SUBA.W (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_90fa_11)(uae_u32 opcode)
@@ -27463,6 +28617,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90fa_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* SUBA.W (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_90fb_11)(uae_u32 opcode)
@@ -27487,6 +28642,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90fb_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 4 4,0   */
 
 /* SUBA.W #<data>.W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_90fc_11)(uae_u32 opcode)
@@ -27502,6 +28658,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_90fc_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0   */
 
 /* SUBX.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9100_11)(uae_u32 opcode)
@@ -27526,6 +28683,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9100_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* SUBX.B -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9108_11)(uae_u32 opcode)
@@ -27556,6 +28714,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9108_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 2 0,0   */
 
 /* SUB.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9110_11)(uae_u32 opcode)
@@ -27582,6 +28741,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9110_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUB.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_9118_11)(uae_u32 opcode)
@@ -27609,6 +28769,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9118_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUB.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9120_11)(uae_u32 opcode)
@@ -27636,6 +28797,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9120_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* SUB.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9128_11)(uae_u32 opcode)
@@ -27662,6 +28824,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9128_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_9130_11)(uae_u32 opcode)
@@ -27688,6 +28851,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9130_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* SUB.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_9138_11)(uae_u32 opcode)
@@ -27713,6 +28877,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9138_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_9139_11)(uae_u32 opcode)
@@ -27739,6 +28904,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9139_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUBX.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9140_11)(uae_u32 opcode)
@@ -27763,6 +28929,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9140_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* SUBX.W -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9148_11)(uae_u32 opcode)
@@ -27803,6 +28970,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9148_11)(uae_u32 opcode)
 }}}}}}}}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 2 0,0   */
 
 /* SUB.W Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9150_11)(uae_u32 opcode)
@@ -27834,6 +29002,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9150_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUB.W Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_9158_11)(uae_u32 opcode)
@@ -27866,6 +29035,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9158_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* SUB.W Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9160_11)(uae_u32 opcode)
@@ -27898,6 +29068,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9160_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* SUB.W Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9168_11)(uae_u32 opcode)
@@ -27929,6 +29100,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9168_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.W Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_9170_11)(uae_u32 opcode)
@@ -27960,6 +29132,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9170_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* SUB.W Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_9178_11)(uae_u32 opcode)
@@ -27990,6 +29163,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9178_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* SUB.W Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_9179_11)(uae_u32 opcode)
@@ -28021,6 +29195,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9179_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* SUBX.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_9180_11)(uae_u32 opcode)
@@ -28045,6 +29220,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9180_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBX.L -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9188_11)(uae_u32 opcode)
@@ -28087,6 +29263,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9188_11)(uae_u32 opcode)
 }}}}}}}}}	m68k_incpci (2);
 return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 2 0,0   */
 
 /* SUB.L Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_9190_11)(uae_u32 opcode)
@@ -28118,6 +29295,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9190_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* SUB.L Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_9198_11)(uae_u32 opcode)
@@ -28150,6 +29328,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_9198_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* SUB.L Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_91a0_11)(uae_u32 opcode)
@@ -28182,6 +29361,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* SUB.L Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_91a8_11)(uae_u32 opcode)
@@ -28213,6 +29393,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* SUB.L Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_91b0_11)(uae_u32 opcode)
@@ -28244,6 +29425,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* SUB.L Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_91b8_11)(uae_u32 opcode)
@@ -28274,6 +29456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* SUB.L Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_91b9_11)(uae_u32 opcode)
@@ -28305,6 +29488,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* SUBA.L Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_91c0_11)(uae_u32 opcode)
@@ -28321,6 +29505,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBA.L An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_91c8_11)(uae_u32 opcode)
@@ -28337,6 +29522,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91c8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* SUBA.L (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_91d0_11)(uae_u32 opcode)
@@ -28360,6 +29546,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91d0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* SUBA.L (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_91d8_11)(uae_u32 opcode)
@@ -28384,6 +29571,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91d8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* SUBA.L -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_91e0_11)(uae_u32 opcode)
@@ -28408,6 +29596,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91e0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* SUBA.L (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_91e8_11)(uae_u32 opcode)
@@ -28431,6 +29620,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91e8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* SUBA.L (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_91f0_11)(uae_u32 opcode)
@@ -28454,6 +29644,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91f0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* SUBA.L (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_91f8_11)(uae_u32 opcode)
@@ -28476,6 +29667,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91f8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* SUBA.L (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_91f9_11)(uae_u32 opcode)
@@ -28499,6 +29691,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91f9_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* SUBA.L (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_91fa_11)(uae_u32 opcode)
@@ -28522,6 +29715,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91fa_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* SUBA.L (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_91fb_11)(uae_u32 opcode)
@@ -28546,6 +29740,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91fb_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* SUBA.L #<data>.L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_91fc_11)(uae_u32 opcode)
@@ -28563,6 +29758,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_91fc_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* CMP.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b000_11)(uae_u32 opcode)
@@ -28585,6 +29781,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b000_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CMP.B (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b010_11)(uae_u32 opcode)
@@ -28609,6 +29806,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b010_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* CMP.B (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b018_11)(uae_u32 opcode)
@@ -28634,6 +29832,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b018_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* CMP.B -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b020_11)(uae_u32 opcode)
@@ -28659,6 +29858,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b020_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* CMP.B (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b028_11)(uae_u32 opcode)
@@ -28683,6 +29883,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b028_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.B (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b030_11)(uae_u32 opcode)
@@ -28707,6 +29908,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b030_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* CMP.B (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b038_11)(uae_u32 opcode)
@@ -28730,6 +29932,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b038_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.B (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b039_11)(uae_u32 opcode)
@@ -28754,6 +29957,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b039_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* CMP.B (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b03a_11)(uae_u32 opcode)
@@ -28778,6 +29982,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b03a_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.B (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b03b_11)(uae_u32 opcode)
@@ -28803,6 +30008,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b03b_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* CMP.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b03c_11)(uae_u32 opcode)
@@ -28824,6 +30030,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b03c_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* CMP.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b040_11)(uae_u32 opcode)
@@ -28846,6 +30053,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b040_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CMP.W An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b048_11)(uae_u32 opcode)
@@ -28868,6 +30076,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b048_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CMP.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b050_11)(uae_u32 opcode)
@@ -28897,6 +30106,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b050_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* CMP.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b058_11)(uae_u32 opcode)
@@ -28927,6 +30137,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b058_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* CMP.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b060_11)(uae_u32 opcode)
@@ -28957,6 +30168,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b060_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* CMP.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b068_11)(uae_u32 opcode)
@@ -28986,6 +30198,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b068_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b070_11)(uae_u32 opcode)
@@ -29015,6 +30228,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b070_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* CMP.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b078_11)(uae_u32 opcode)
@@ -29043,6 +30257,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b078_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b079_11)(uae_u32 opcode)
@@ -29072,6 +30287,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b079_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* CMP.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b07a_11)(uae_u32 opcode)
@@ -29101,6 +30317,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b07a_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* CMP.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b07b_11)(uae_u32 opcode)
@@ -29131,6 +30348,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b07b_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* CMP.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b07c_11)(uae_u32 opcode)
@@ -29152,6 +30370,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b07c_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* CMP.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b080_11)(uae_u32 opcode)
@@ -29174,6 +30393,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b080_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CMP.L An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b088_11)(uae_u32 opcode)
@@ -29196,6 +30416,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b088_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CMP.L (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b090_11)(uae_u32 opcode)
@@ -29225,6 +30446,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b090_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* CMP.L (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b098_11)(uae_u32 opcode)
@@ -29255,6 +30477,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b098_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* CMP.L -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0a0_11)(uae_u32 opcode)
@@ -29285,6 +30508,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 #endif
 
@@ -29317,6 +30541,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* CMP.L (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0b0_11)(uae_u32 opcode)
@@ -29346,6 +30571,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* CMP.L (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0b8_11)(uae_u32 opcode)
@@ -29374,6 +30600,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* CMP.L (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0b9_11)(uae_u32 opcode)
@@ -29403,6 +30630,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* CMP.L (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0ba_11)(uae_u32 opcode)
@@ -29432,6 +30660,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0ba_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* CMP.L (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0bb_11)(uae_u32 opcode)
@@ -29462,6 +30691,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0bb_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* CMP.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b0bc_11)(uae_u32 opcode)
@@ -29485,6 +30715,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0bc_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 6 0,0   */
 
 /* CMPA.W Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0c0_11)(uae_u32 opcode)
@@ -29507,6 +30738,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0c0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CMPA.W An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0c8_11)(uae_u32 opcode)
@@ -29529,6 +30761,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0c8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CMPA.W (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0d0_11)(uae_u32 opcode)
@@ -29558,6 +30791,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0d0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* CMPA.W (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0d8_11)(uae_u32 opcode)
@@ -29588,6 +30822,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0d8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* CMPA.W -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0e0_11)(uae_u32 opcode)
@@ -29618,6 +30853,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0e0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 2 0,0   */
 
 /* CMPA.W (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0e8_11)(uae_u32 opcode)
@@ -29647,6 +30883,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0e8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 0,0   */
 
 /* CMPA.W (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0f0_11)(uae_u32 opcode)
@@ -29676,6 +30913,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0f0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 4,0   */
 
 /* CMPA.W (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0f8_11)(uae_u32 opcode)
@@ -29704,6 +30942,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0f8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 0,0   */
 
 /* CMPA.W (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0f9_11)(uae_u32 opcode)
@@ -29733,6 +30972,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0f9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 6 0,0   */
 
 /* CMPA.W (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0fa_11)(uae_u32 opcode)
@@ -29762,6 +31002,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0fa_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 0,0   */
 
 /* CMPA.W (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0fb_11)(uae_u32 opcode)
@@ -29792,6 +31033,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0fb_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 4,0   */
 
 /* CMPA.W #<data>.W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b0fc_11)(uae_u32 opcode)
@@ -29813,6 +31055,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b0fc_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 4 0,0   */
 
 /* EOR.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b100_11)(uae_u32 opcode)
@@ -29832,6 +31075,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b100_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CMPM.B (An)+,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_b108_11)(uae_u32 opcode)
@@ -29860,6 +31104,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b108_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* EOR.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b110_11)(uae_u32 opcode)
@@ -29881,6 +31126,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b110_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* EOR.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_b118_11)(uae_u32 opcode)
@@ -29903,6 +31149,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b118_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* EOR.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b120_11)(uae_u32 opcode)
@@ -29925,6 +31172,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b120_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* EOR.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b128_11)(uae_u32 opcode)
@@ -29946,6 +31194,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b128_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_b130_11)(uae_u32 opcode)
@@ -29967,6 +31216,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b130_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* EOR.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_b138_11)(uae_u32 opcode)
@@ -29987,6 +31237,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b138_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_b139_11)(uae_u32 opcode)
@@ -30008,6 +31259,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b139_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EOR.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b140_11)(uae_u32 opcode)
@@ -30027,6 +31279,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b140_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CMPM.W (An)+,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_b148_11)(uae_u32 opcode)
@@ -30065,6 +31318,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b148_11)(uae_u32 opcode)
 }}}}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 2 0,0   */
 
 /* EOR.W Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b150_11)(uae_u32 opcode)
@@ -30091,6 +31345,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b150_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* EOR.W Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_b158_11)(uae_u32 opcode)
@@ -30118,6 +31373,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b158_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* EOR.W Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b160_11)(uae_u32 opcode)
@@ -30145,6 +31401,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b160_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* EOR.W Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b168_11)(uae_u32 opcode)
@@ -30171,6 +31428,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b168_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.W Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_b170_11)(uae_u32 opcode)
@@ -30197,6 +31455,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b170_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* EOR.W Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_b178_11)(uae_u32 opcode)
@@ -30222,6 +31481,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b178_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* EOR.W Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_b179_11)(uae_u32 opcode)
@@ -30248,6 +31508,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b179_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EOR.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_b180_11)(uae_u32 opcode)
@@ -30267,6 +31528,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b180_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* CMPM.L (An)+,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_b188_11)(uae_u32 opcode)
@@ -30305,6 +31567,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b188_11)(uae_u32 opcode)
 }}}}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 2 0,0   */
 
 /* EOR.L Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b190_11)(uae_u32 opcode)
@@ -30331,6 +31594,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b190_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* EOR.L Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_b198_11)(uae_u32 opcode)
@@ -30358,6 +31622,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b198_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* EOR.L Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b1a0_11)(uae_u32 opcode)
@@ -30385,6 +31650,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* EOR.L Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_b1a8_11)(uae_u32 opcode)
@@ -30411,6 +31677,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* EOR.L Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_b1b0_11)(uae_u32 opcode)
@@ -30437,6 +31704,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* EOR.L Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_b1b8_11)(uae_u32 opcode)
@@ -30462,6 +31730,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* EOR.L Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_b1b9_11)(uae_u32 opcode)
@@ -30488,6 +31757,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* CMPA.L Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1c0_11)(uae_u32 opcode)
@@ -30510,6 +31780,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1c0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CMPA.L An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1c8_11)(uae_u32 opcode)
@@ -30532,6 +31803,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1c8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CMPA.L (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1d0_11)(uae_u32 opcode)
@@ -30561,6 +31833,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1d0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* CMPA.L (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1d8_11)(uae_u32 opcode)
@@ -30591,6 +31864,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1d8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* CMPA.L -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1e0_11)(uae_u32 opcode)
@@ -30621,6 +31895,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1e0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* CMPA.L (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1e8_11)(uae_u32 opcode)
@@ -30650,6 +31925,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1e8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* CMPA.L (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1f0_11)(uae_u32 opcode)
@@ -30679,6 +31955,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1f0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* CMPA.L (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1f8_11)(uae_u32 opcode)
@@ -30707,6 +31984,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1f8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* CMPA.L (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1f9_11)(uae_u32 opcode)
@@ -30736,6 +32014,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1f9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* CMPA.L (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1fa_11)(uae_u32 opcode)
@@ -30765,6 +32044,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1fa_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* CMPA.L (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1fb_11)(uae_u32 opcode)
@@ -30795,6 +32075,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1fb_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* CMPA.L #<data>.L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_b1fc_11)(uae_u32 opcode)
@@ -30818,6 +32099,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_b1fc_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 6 0,0   */
 
 /* AND.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c000_11)(uae_u32 opcode)
@@ -30837,6 +32119,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c000_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* AND.B (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c010_11)(uae_u32 opcode)
@@ -30858,6 +32141,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c010_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* AND.B (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c018_11)(uae_u32 opcode)
@@ -30880,6 +32164,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c018_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* AND.B -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c020_11)(uae_u32 opcode)
@@ -30902,6 +32187,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c020_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* AND.B (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c028_11)(uae_u32 opcode)
@@ -30923,6 +32209,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c028_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* AND.B (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c030_11)(uae_u32 opcode)
@@ -30944,6 +32231,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c030_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* AND.B (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c038_11)(uae_u32 opcode)
@@ -30964,6 +32252,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c038_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* AND.B (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c039_11)(uae_u32 opcode)
@@ -30985,6 +32274,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c039_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* AND.B (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c03a_11)(uae_u32 opcode)
@@ -31006,6 +32296,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c03a_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* AND.B (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c03b_11)(uae_u32 opcode)
@@ -31028,6 +32319,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c03b_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* AND.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c03c_11)(uae_u32 opcode)
@@ -31046,6 +32338,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c03c_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* AND.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c040_11)(uae_u32 opcode)
@@ -31065,6 +32358,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c040_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* AND.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c050_11)(uae_u32 opcode)
@@ -31091,6 +32385,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c050_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* AND.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c058_11)(uae_u32 opcode)
@@ -31118,6 +32413,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c058_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* AND.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c060_11)(uae_u32 opcode)
@@ -31145,6 +32441,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c060_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* AND.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c068_11)(uae_u32 opcode)
@@ -31171,6 +32468,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c068_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* AND.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c070_11)(uae_u32 opcode)
@@ -31197,6 +32495,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c070_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* AND.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c078_11)(uae_u32 opcode)
@@ -31222,6 +32521,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c078_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* AND.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c079_11)(uae_u32 opcode)
@@ -31248,6 +32548,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c079_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* AND.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c07a_11)(uae_u32 opcode)
@@ -31274,6 +32575,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c07a_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* AND.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c07b_11)(uae_u32 opcode)
@@ -31301,6 +32603,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c07b_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* AND.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c07c_11)(uae_u32 opcode)
@@ -31319,6 +32622,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c07c_11)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* AND.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c080_11)(uae_u32 opcode)
@@ -31338,6 +32642,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c080_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* AND.L (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c090_11)(uae_u32 opcode)
@@ -31364,6 +32669,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c090_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* AND.L (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c098_11)(uae_u32 opcode)
@@ -31391,6 +32697,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c098_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* AND.L -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0a0_11)(uae_u32 opcode)
@@ -31418,6 +32725,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* AND.L (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0a8_11)(uae_u32 opcode)
@@ -31444,6 +32752,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* AND.L (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0b0_11)(uae_u32 opcode)
@@ -31470,6 +32779,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* AND.L (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0b8_11)(uae_u32 opcode)
@@ -31495,6 +32805,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* AND.L (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0b9_11)(uae_u32 opcode)
@@ -31521,6 +32832,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* AND.L (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0ba_11)(uae_u32 opcode)
@@ -31547,6 +32859,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0ba_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* AND.L (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0bb_11)(uae_u32 opcode)
@@ -31574,6 +32887,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0bb_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* AND.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0bc_11)(uae_u32 opcode)
@@ -31594,6 +32908,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0bc_11)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* MULU.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0c0_11)(uae_u32 opcode)
@@ -31614,6 +32929,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0c0_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}return 38 * CYCLE_UNIT / 2 + count_cycles;
 } /* 38+ (1/0) */
+/* 2 0,0   */
 
 /* MULU.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0d0_11)(uae_u32 opcode)
@@ -31641,6 +32957,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0d0_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 42 * CYCLE_UNIT / 2 + count_cycles;
 } /* 42+ (2/0) */
+/* 2 0,0   */
 
 /* MULU.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0d8_11)(uae_u32 opcode)
@@ -31669,6 +32986,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0d8_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 42 * CYCLE_UNIT / 2 + count_cycles;
 } /* 42+ (2/0) */
+/* 2 0,0   */
 
 /* MULU.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0e0_11)(uae_u32 opcode)
@@ -31697,6 +33015,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0e0_11)(uae_u32 opcode)
 	m68k_incpci (2);
 }}}}}}return 44 * CYCLE_UNIT / 2 + count_cycles;
 } /* 44+ (2/0) */
+/* 2 0,0   */
 
 /* MULU.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0e8_11)(uae_u32 opcode)
@@ -31724,6 +33043,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0e8_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 46 * CYCLE_UNIT / 2 + count_cycles;
 } /* 46+ (3/0) */
+/* 4 0,0   */
 
 /* MULU.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0f0_11)(uae_u32 opcode)
@@ -31751,6 +33071,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0f0_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 48 * CYCLE_UNIT / 2 + count_cycles;
 } /* 48+ (3/0) */
+/* 4 4,0   */
 
 /* MULU.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0f8_11)(uae_u32 opcode)
@@ -31777,6 +33098,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0f8_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 46 * CYCLE_UNIT / 2 + count_cycles;
 } /* 46+ (3/0) */
+/* 4 0,0   */
 
 /* MULU.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0f9_11)(uae_u32 opcode)
@@ -31804,6 +33126,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0f9_11)(uae_u32 opcode)
 	m68k_incpci (6);
 }}}}}}return 50 * CYCLE_UNIT / 2 + count_cycles;
 } /* 50+ (4/0) */
+/* 6 0,0   */
 
 /* MULU.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0fa_11)(uae_u32 opcode)
@@ -31831,6 +33154,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0fa_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 46 * CYCLE_UNIT / 2 + count_cycles;
 } /* 46+ (3/0) */
+/* 4 0,0   */
 
 /* MULU.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0fb_11)(uae_u32 opcode)
@@ -31859,6 +33183,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0fb_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}}}return 48 * CYCLE_UNIT / 2 + count_cycles;
 } /* 48+ (3/0) */
+/* 4 4,0   */
 
 /* MULU.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c0fc_11)(uae_u32 opcode)
@@ -31878,6 +33203,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c0fc_11)(uae_u32 opcode)
 	m68k_incpci (4);
 }}}}return 42 * CYCLE_UNIT / 2 + count_cycles;
 } /* 42+ (2/0) */
+/* 4 0,0   */
 
 /* ABCD.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c100_11)(uae_u32 opcode)
@@ -31906,6 +33232,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c100_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* ABCD.B -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c108_11)(uae_u32 opcode)
@@ -31940,6 +33267,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c108_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 2 0,0   */
 
 /* AND.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c110_11)(uae_u32 opcode)
@@ -31961,6 +33289,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c110_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* AND.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_c118_11)(uae_u32 opcode)
@@ -31983,6 +33312,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c118_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* AND.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c120_11)(uae_u32 opcode)
@@ -32005,6 +33335,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c120_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* AND.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c128_11)(uae_u32 opcode)
@@ -32026,6 +33357,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c128_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_c130_11)(uae_u32 opcode)
@@ -32047,6 +33379,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c130_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* AND.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_c138_11)(uae_u32 opcode)
@@ -32067,6 +33400,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c138_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_c139_11)(uae_u32 opcode)
@@ -32088,6 +33422,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c139_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EXG.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c140_11)(uae_u32 opcode)
@@ -32104,6 +33439,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c140_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* EXG.L An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_c148_11)(uae_u32 opcode)
@@ -32120,6 +33456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c148_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* AND.W Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c150_11)(uae_u32 opcode)
@@ -32146,6 +33483,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c150_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* AND.W Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_c158_11)(uae_u32 opcode)
@@ -32173,6 +33511,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c158_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* AND.W Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c160_11)(uae_u32 opcode)
@@ -32200,6 +33539,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c160_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* AND.W Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c168_11)(uae_u32 opcode)
@@ -32226,6 +33566,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c168_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.W Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_c170_11)(uae_u32 opcode)
@@ -32252,6 +33593,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c170_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* AND.W Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_c178_11)(uae_u32 opcode)
@@ -32277,6 +33619,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c178_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* AND.W Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_c179_11)(uae_u32 opcode)
@@ -32303,6 +33646,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c179_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* EXG.L Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_c188_11)(uae_u32 opcode)
@@ -32319,6 +33663,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c188_11)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* AND.L Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c190_11)(uae_u32 opcode)
@@ -32345,6 +33690,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c190_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* AND.L Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_c198_11)(uae_u32 opcode)
@@ -32372,6 +33718,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c198_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* AND.L Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c1a0_11)(uae_u32 opcode)
@@ -32399,6 +33746,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1a0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* AND.L Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_c1a8_11)(uae_u32 opcode)
@@ -32425,6 +33773,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1a8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* AND.L Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_c1b0_11)(uae_u32 opcode)
@@ -32451,6 +33800,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1b0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* AND.L Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_c1b8_11)(uae_u32 opcode)
@@ -32476,6 +33826,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1b8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* AND.L Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_c1b9_11)(uae_u32 opcode)
@@ -32502,6 +33853,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1b9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* MULS.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1c0_11)(uae_u32 opcode)
@@ -32522,6 +33874,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 38 * CYCLE_UNIT / 2 + count_cycles;
 } /* 38+ (1/0) */
+/* 2 0,0   */
 
 /* MULS.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1d0_11)(uae_u32 opcode)
@@ -32549,6 +33902,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1d0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 42 * CYCLE_UNIT / 2 + count_cycles;
 } /* 42+ (2/0) */
+/* 2 0,0   */
 
 /* MULS.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1d8_11)(uae_u32 opcode)
@@ -32577,6 +33931,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1d8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 42 * CYCLE_UNIT / 2 + count_cycles;
 } /* 42+ (2/0) */
+/* 2 0,0   */
 
 /* MULS.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1e0_11)(uae_u32 opcode)
@@ -32605,6 +33960,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1e0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 44 * CYCLE_UNIT / 2 + count_cycles;
 } /* 44+ (2/0) */
+/* 2 0,0   */
 
 /* MULS.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1e8_11)(uae_u32 opcode)
@@ -32632,6 +33988,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1e8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 46 * CYCLE_UNIT / 2 + count_cycles;
 } /* 46+ (3/0) */
+/* 4 0,0   */
 
 /* MULS.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1f0_11)(uae_u32 opcode)
@@ -32659,6 +34016,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1f0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 48 * CYCLE_UNIT / 2 + count_cycles;
 } /* 48+ (3/0) */
+/* 4 4,0   */
 
 /* MULS.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1f8_11)(uae_u32 opcode)
@@ -32685,6 +34043,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1f8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 46 * CYCLE_UNIT / 2 + count_cycles;
 } /* 46+ (3/0) */
+/* 4 0,0   */
 
 /* MULS.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1f9_11)(uae_u32 opcode)
@@ -32712,6 +34071,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1f9_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 50 * CYCLE_UNIT / 2 + count_cycles;
 } /* 50+ (4/0) */
+/* 6 0,0   */
 
 /* MULS.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1fa_11)(uae_u32 opcode)
@@ -32739,6 +34099,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1fa_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 46 * CYCLE_UNIT / 2 + count_cycles;
 } /* 46+ (3/0) */
+/* 4 0,0   */
 
 /* MULS.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1fb_11)(uae_u32 opcode)
@@ -32767,6 +34128,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1fb_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 48 * CYCLE_UNIT / 2 + count_cycles;
 } /* 48+ (3/0) */
+/* 4 4,0   */
 
 /* MULS.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_c1fc_11)(uae_u32 opcode)
@@ -32786,6 +34148,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_c1fc_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 42 * CYCLE_UNIT / 2 + count_cycles;
 } /* 42+ (2/0) */
+/* 4 0,0   */
 
 /* ADD.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d000_11)(uae_u32 opcode)
@@ -32810,6 +34173,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d000_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* ADD.B (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d010_11)(uae_u32 opcode)
@@ -32836,6 +34200,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d010_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* ADD.B (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d018_11)(uae_u32 opcode)
@@ -32863,6 +34228,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d018_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* ADD.B -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d020_11)(uae_u32 opcode)
@@ -32890,6 +34256,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d020_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* ADD.B (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d028_11)(uae_u32 opcode)
@@ -32916,6 +34283,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d028_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* ADD.B (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d030_11)(uae_u32 opcode)
@@ -32942,6 +34310,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d030_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* ADD.B (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d038_11)(uae_u32 opcode)
@@ -32967,6 +34336,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d038_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* ADD.B (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d039_11)(uae_u32 opcode)
@@ -32993,6 +34363,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d039_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* ADD.B (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d03a_11)(uae_u32 opcode)
@@ -33019,6 +34390,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d03a_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* ADD.B (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d03b_11)(uae_u32 opcode)
@@ -33046,6 +34418,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d03b_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* ADD.B #<data>.B,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d03c_11)(uae_u32 opcode)
@@ -33069,6 +34442,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d03c_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* ADD.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d040_11)(uae_u32 opcode)
@@ -33093,6 +34467,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d040_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* ADD.W An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d048_11)(uae_u32 opcode)
@@ -33117,6 +34492,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d048_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* ADD.W (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d050_11)(uae_u32 opcode)
@@ -33148,6 +34524,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d050_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* ADD.W (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d058_11)(uae_u32 opcode)
@@ -33180,6 +34557,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d058_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 2 0,0   */
 
 /* ADD.W -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d060_11)(uae_u32 opcode)
@@ -33212,6 +34590,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d060_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 10 * CYCLE_UNIT / 2 + count_cycles;
 } /* 10 (2/0) */
+/* 2 0,0   */
 
 /* ADD.W (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d068_11)(uae_u32 opcode)
@@ -33243,6 +34622,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d068_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* ADD.W (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d070_11)(uae_u32 opcode)
@@ -33274,6 +34654,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d070_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* ADD.W (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d078_11)(uae_u32 opcode)
@@ -33304,6 +34685,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d078_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* ADD.W (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d079_11)(uae_u32 opcode)
@@ -33335,6 +34717,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d079_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (4/0) */
+/* 6 0,0   */
 
 /* ADD.W (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d07a_11)(uae_u32 opcode)
@@ -33366,6 +34749,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d07a_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (3/0) */
+/* 4 0,0   */
 
 /* ADD.W (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d07b_11)(uae_u32 opcode)
@@ -33398,6 +34782,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d07b_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 4 4,0   */
 
 /* ADD.W #<data>.W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d07c_11)(uae_u32 opcode)
@@ -33421,6 +34806,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d07c_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (2/0) */
+/* 4 0,0   */
 
 /* ADD.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d080_11)(uae_u32 opcode)
@@ -33445,6 +34831,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d080_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADD.L An,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d088_11)(uae_u32 opcode)
@@ -33469,6 +34856,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d088_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADD.L (An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d090_11)(uae_u32 opcode)
@@ -33500,6 +34888,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d090_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* ADD.L (An)+,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d098_11)(uae_u32 opcode)
@@ -33532,6 +34921,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d098_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* ADD.L -(An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0a0_11)(uae_u32 opcode)
@@ -33564,6 +34954,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* ADD.L (d16,An),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0a8_11)(uae_u32 opcode)
@@ -33595,6 +34986,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* ADD.L (d8,An,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0b0_11)(uae_u32 opcode)
@@ -33626,6 +35018,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* ADD.L (xxx).W,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0b8_11)(uae_u32 opcode)
@@ -33656,6 +35049,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* ADD.L (xxx).L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0b9_11)(uae_u32 opcode)
@@ -33687,6 +35081,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* ADD.L (d16,PC),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0ba_11)(uae_u32 opcode)
@@ -33718,6 +35113,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0ba_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* ADD.L (d8,PC,Xn),Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0bb_11)(uae_u32 opcode)
@@ -33750,6 +35146,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0bb_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* ADD.L #<data>.L,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d0bc_11)(uae_u32 opcode)
@@ -33775,6 +35172,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0bc_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* ADDA.W Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0c0_11)(uae_u32 opcode)
@@ -33791,6 +35189,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDA.W An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0c8_11)(uae_u32 opcode)
@@ -33807,6 +35206,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0c8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDA.W (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0d0_11)(uae_u32 opcode)
@@ -33830,6 +35230,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0d0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 2 0,0   */
 
 /* ADDA.W (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0d8_11)(uae_u32 opcode)
@@ -33854,6 +35255,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0d8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 2 0,0   */
 
 /* ADDA.W -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0e0_11)(uae_u32 opcode)
@@ -33878,6 +35280,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0e0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/0) */
+/* 2 0,0   */
 
 /* ADDA.W (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0e8_11)(uae_u32 opcode)
@@ -33901,6 +35304,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0e8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* ADDA.W (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0f0_11)(uae_u32 opcode)
@@ -33924,6 +35328,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0f0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 4 4,0   */
 
 /* ADDA.W (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0f8_11)(uae_u32 opcode)
@@ -33946,6 +35351,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0f8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* ADDA.W (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0f9_11)(uae_u32 opcode)
@@ -33969,6 +35375,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0f9_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 6 0,0   */
 
 /* ADDA.W (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0fa_11)(uae_u32 opcode)
@@ -33992,6 +35399,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0fa_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 4 0,0   */
 
 /* ADDA.W (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0fb_11)(uae_u32 opcode)
@@ -34016,6 +35424,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0fb_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/0) */
+/* 4 4,0   */
 
 /* ADDA.W #<data>.W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d0fc_11)(uae_u32 opcode)
@@ -34031,6 +35440,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d0fc_11)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/0) */
+/* 4 0,0   */
 
 /* ADDX.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d100_11)(uae_u32 opcode)
@@ -34055,6 +35465,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d100_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* ADDX.B -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d108_11)(uae_u32 opcode)
@@ -34085,6 +35496,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d108_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 2 0,0   */
 
 /* ADD.B Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d110_11)(uae_u32 opcode)
@@ -34111,6 +35523,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d110_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADD.B Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_d118_11)(uae_u32 opcode)
@@ -34138,6 +35551,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d118_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADD.B Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d120_11)(uae_u32 opcode)
@@ -34165,6 +35579,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d120_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ADD.B Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d128_11)(uae_u32 opcode)
@@ -34191,6 +35606,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d128_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.B Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_d130_11)(uae_u32 opcode)
@@ -34217,6 +35633,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d130_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ADD.B Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_d138_11)(uae_u32 opcode)
@@ -34242,6 +35659,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d138_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.B Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_d139_11)(uae_u32 opcode)
@@ -34268,6 +35686,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d139_11)(uae_u32 opcode)
 }}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADDX.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d140_11)(uae_u32 opcode)
@@ -34292,6 +35711,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d140_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* ADDX.W -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d148_11)(uae_u32 opcode)
@@ -34332,6 +35752,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d148_11)(uae_u32 opcode)
 }}}}}}}}}	m68k_incpci (2);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 2 0,0   */
 
 /* ADD.W Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d150_11)(uae_u32 opcode)
@@ -34363,6 +35784,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d150_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADD.W Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_d158_11)(uae_u32 opcode)
@@ -34395,6 +35817,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d158_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ADD.W Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d160_11)(uae_u32 opcode)
@@ -34427,6 +35850,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d160_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ADD.W Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d168_11)(uae_u32 opcode)
@@ -34458,6 +35882,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d168_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.W Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_d170_11)(uae_u32 opcode)
@@ -34489,6 +35914,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d170_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ADD.W Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_d178_11)(uae_u32 opcode)
@@ -34519,6 +35945,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d178_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ADD.W Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_d179_11)(uae_u32 opcode)
@@ -34550,6 +35977,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d179_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ADDX.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_d180_11)(uae_u32 opcode)
@@ -34574,6 +36002,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d180_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDX.L -(An),-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d188_11)(uae_u32 opcode)
@@ -34616,6 +36045,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d188_11)(uae_u32 opcode)
 }}}}}}}}}	m68k_incpci (2);
 return 30 * CYCLE_UNIT / 2 + count_cycles;
 } /* 30 (5/2) */
+/* 2 0,0   */
 
 /* ADD.L Dn,(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d190_11)(uae_u32 opcode)
@@ -34647,6 +36077,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d190_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* ADD.L Dn,(An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_d198_11)(uae_u32 opcode)
@@ -34679,6 +36110,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d198_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* ADD.L Dn,-(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d1a0_11)(uae_u32 opcode)
@@ -34711,6 +36143,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1a0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* ADD.L Dn,(d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_d1a8_11)(uae_u32 opcode)
@@ -34742,6 +36175,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1a8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* ADD.L Dn,(d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_d1b0_11)(uae_u32 opcode)
@@ -34773,6 +36207,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1b0_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* ADD.L Dn,(xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_d1b8_11)(uae_u32 opcode)
@@ -34803,6 +36238,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1b8_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* ADD.L Dn,(xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_d1b9_11)(uae_u32 opcode)
@@ -34834,6 +36270,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1b9_11)(uae_u32 opcode)
 }}}}}}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 /* ADDA.L Dn,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1c0_11)(uae_u32 opcode)
@@ -34850,6 +36287,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1c0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDA.L An,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1c8_11)(uae_u32 opcode)
@@ -34866,6 +36304,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1c8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8 (1/0) */
+/* 2 0,0   */
 
 /* ADDA.L (An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1d0_11)(uae_u32 opcode)
@@ -34889,6 +36328,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1d0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* ADDA.L (An)+,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1d8_11)(uae_u32 opcode)
@@ -34913,6 +36353,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1d8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (3/0) */
+/* 2 0,0   */
 
 /* ADDA.L -(An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1e0_11)(uae_u32 opcode)
@@ -34937,6 +36378,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1e0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (2);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 2 0,0   */
 
 /* ADDA.L (d16,An),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1e8_11)(uae_u32 opcode)
@@ -34960,6 +36402,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1e8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* ADDA.L (d8,An,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1f0_11)(uae_u32 opcode)
@@ -34983,6 +36426,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1f0_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* ADDA.L (xxx).W,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1f8_11)(uae_u32 opcode)
@@ -35005,6 +36449,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1f8_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* ADDA.L (xxx).L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1f9_11)(uae_u32 opcode)
@@ -35028,6 +36473,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1f9_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (6);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (5/0) */
+/* 6 0,0   */
 
 /* ADDA.L (d16,PC),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1fa_11)(uae_u32 opcode)
@@ -35051,6 +36497,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1fa_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (4/0) */
+/* 4 0,0   */
 
 /* ADDA.L (d8,PC,Xn),An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1fb_11)(uae_u32 opcode)
@@ -35075,6 +36522,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1fb_11)(uae_u32 opcode)
 }}}}}}	m68k_incpci (4);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/0) */
+/* 4 4,0   */
 
 /* ADDA.L #<data>.L,An */
 uae_u32 REGPARAM2 CPUFUNC(op_d1fc_11)(uae_u32 opcode)
@@ -35092,6 +36540,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_d1fc_11)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/0) */
+/* 6 0,0   */
 
 /* ASRQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e000_11)(uae_u32 opcode)
@@ -35127,6 +36576,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e000_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* LSRQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e008_11)(uae_u32 opcode)
@@ -35159,6 +36609,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e008_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXRQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e010_11)(uae_u32 opcode)
@@ -35194,6 +36645,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e010_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* RORQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e018_11)(uae_u32 opcode)
@@ -35224,6 +36676,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e018_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASR.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e020_11)(uae_u32 opcode)
@@ -35259,6 +36712,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e020_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* LSR.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e028_11)(uae_u32 opcode)
@@ -35291,6 +36745,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e028_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXR.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e030_11)(uae_u32 opcode)
@@ -35330,6 +36785,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e030_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROR.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e038_11)(uae_u32 opcode)
@@ -35360,6 +36816,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e038_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASRQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e040_11)(uae_u32 opcode)
@@ -35395,6 +36852,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e040_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 #endif
 
@@ -35430,6 +36888,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e048_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXRQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e050_11)(uae_u32 opcode)
@@ -35465,6 +36924,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e050_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* RORQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e058_11)(uae_u32 opcode)
@@ -35495,6 +36955,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e058_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASR.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e060_11)(uae_u32 opcode)
@@ -35530,6 +36991,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e060_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* LSR.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e068_11)(uae_u32 opcode)
@@ -35562,6 +37024,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e068_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXR.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e070_11)(uae_u32 opcode)
@@ -35600,6 +37063,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e070_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROR.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e078_11)(uae_u32 opcode)
@@ -35630,6 +37094,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e078_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASRQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e080_11)(uae_u32 opcode)
@@ -35665,6 +37130,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e080_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* LSRQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e088_11)(uae_u32 opcode)
@@ -35697,6 +37163,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e088_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ROXRQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e090_11)(uae_u32 opcode)
@@ -35732,6 +37199,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e090_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* RORQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e098_11)(uae_u32 opcode)
@@ -35762,6 +37230,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e098_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ASR.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e0a0_11)(uae_u32 opcode)
@@ -35797,6 +37266,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0a0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* LSR.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e0a8_11)(uae_u32 opcode)
@@ -35829,6 +37299,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0a8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ROXR.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e0b0_11)(uae_u32 opcode)
@@ -35866,6 +37337,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0b0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ROR.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e0b8_11)(uae_u32 opcode)
@@ -35896,6 +37368,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0b8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ASRW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e0d0_11)(uae_u32 opcode)
@@ -35925,6 +37398,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ASRW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e0d8_11)(uae_u32 opcode)
@@ -35955,6 +37429,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ASRW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e0e0_11)(uae_u32 opcode)
@@ -35985,6 +37460,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ASRW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e0e8_11)(uae_u32 opcode)
@@ -36014,6 +37490,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ASRW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e0f0_11)(uae_u32 opcode)
@@ -36043,6 +37520,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ASRW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e0f8_11)(uae_u32 opcode)
@@ -36071,6 +37549,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ASRW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e0f9_11)(uae_u32 opcode)
@@ -36100,6 +37579,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e0f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ASLQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e100_11)(uae_u32 opcode)
@@ -36136,6 +37616,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e100_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* LSLQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e108_11)(uae_u32 opcode)
@@ -36169,6 +37650,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e108_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXLQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e110_11)(uae_u32 opcode)
@@ -36201,6 +37683,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e110_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROLQ.B #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e118_11)(uae_u32 opcode)
@@ -36231,6 +37714,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e118_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASL.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e120_11)(uae_u32 opcode)
@@ -36267,6 +37751,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e120_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* LSL.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e128_11)(uae_u32 opcode)
@@ -36300,6 +37785,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e128_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXL.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e130_11)(uae_u32 opcode)
@@ -36336,6 +37822,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e130_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROL.B Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e138_11)(uae_u32 opcode)
@@ -36367,6 +37854,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e138_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASLQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e140_11)(uae_u32 opcode)
@@ -36403,6 +37891,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e140_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* LSLQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e148_11)(uae_u32 opcode)
@@ -36436,6 +37925,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e148_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXLQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e150_11)(uae_u32 opcode)
@@ -36468,6 +37958,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e150_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROLQ.W #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e158_11)(uae_u32 opcode)
@@ -36498,6 +37989,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e158_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASL.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e160_11)(uae_u32 opcode)
@@ -36534,6 +38026,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e160_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* LSL.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e168_11)(uae_u32 opcode)
@@ -36567,6 +38060,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e168_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROXL.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e170_11)(uae_u32 opcode)
@@ -36602,6 +38096,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e170_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ROL.W Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e178_11)(uae_u32 opcode)
@@ -36633,6 +38128,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e178_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6+ (1/0) */
+/* 2 0,0   */
 
 /* ASLQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e180_11)(uae_u32 opcode)
@@ -36669,6 +38165,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e180_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* LSLQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e188_11)(uae_u32 opcode)
@@ -36702,6 +38199,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e188_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ROXLQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e190_11)(uae_u32 opcode)
@@ -36734,6 +38232,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e190_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ROLQ.L #<data>,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e198_11)(uae_u32 opcode)
@@ -36764,6 +38263,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e198_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ASL.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e1a0_11)(uae_u32 opcode)
@@ -36800,6 +38300,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1a0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* LSL.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e1a8_11)(uae_u32 opcode)
@@ -36833,6 +38334,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1a8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ROXL.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e1b0_11)(uae_u32 opcode)
@@ -36867,6 +38369,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1b0_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ROL.L Dn,Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_e1b8_11)(uae_u32 opcode)
@@ -36898,6 +38401,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1b8_11)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 8 * CYCLE_UNIT / 2 + count_cycles;
 } /* 8+ (1/0) */
+/* 2 0,0   */
 
 /* ASLW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e1d0_11)(uae_u32 opcode)
@@ -36929,6 +38433,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ASLW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e1d8_11)(uae_u32 opcode)
@@ -36961,6 +38466,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ASLW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e1e0_11)(uae_u32 opcode)
@@ -36993,6 +38499,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ASLW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e1e8_11)(uae_u32 opcode)
@@ -37024,6 +38531,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ASLW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e1f0_11)(uae_u32 opcode)
@@ -37055,6 +38563,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ASLW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e1f8_11)(uae_u32 opcode)
@@ -37085,6 +38594,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ASLW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e1f9_11)(uae_u32 opcode)
@@ -37116,6 +38626,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e1f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* LSRW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e2d0_11)(uae_u32 opcode)
@@ -37144,6 +38655,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* LSRW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e2d8_11)(uae_u32 opcode)
@@ -37173,6 +38685,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* LSRW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e2e0_11)(uae_u32 opcode)
@@ -37202,6 +38715,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* LSRW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e2e8_11)(uae_u32 opcode)
@@ -37230,6 +38744,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* LSRW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e2f0_11)(uae_u32 opcode)
@@ -37258,6 +38773,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* LSRW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e2f8_11)(uae_u32 opcode)
@@ -37285,6 +38801,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* LSRW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e2f9_11)(uae_u32 opcode)
@@ -37313,6 +38830,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e2f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* LSLW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e3d0_11)(uae_u32 opcode)
@@ -37341,6 +38859,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* LSLW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e3d8_11)(uae_u32 opcode)
@@ -37370,6 +38889,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* LSLW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e3e0_11)(uae_u32 opcode)
@@ -37399,6 +38919,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* LSLW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e3e8_11)(uae_u32 opcode)
@@ -37427,6 +38948,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* LSLW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e3f0_11)(uae_u32 opcode)
@@ -37455,6 +38977,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* LSLW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e3f8_11)(uae_u32 opcode)
@@ -37482,6 +39005,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* LSLW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e3f9_11)(uae_u32 opcode)
@@ -37510,6 +39034,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e3f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ROXRW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e4d0_11)(uae_u32 opcode)
@@ -37539,6 +39064,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ROXRW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e4d8_11)(uae_u32 opcode)
@@ -37569,6 +39095,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ROXRW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e4e0_11)(uae_u32 opcode)
@@ -37599,6 +39126,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ROXRW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e4e8_11)(uae_u32 opcode)
@@ -37628,6 +39156,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ROXRW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e4f0_11)(uae_u32 opcode)
@@ -37657,6 +39186,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ROXRW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e4f8_11)(uae_u32 opcode)
@@ -37685,6 +39215,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ROXRW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e4f9_11)(uae_u32 opcode)
@@ -37714,6 +39245,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e4f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ROXLW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e5d0_11)(uae_u32 opcode)
@@ -37743,6 +39275,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ROXLW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e5d8_11)(uae_u32 opcode)
@@ -37773,6 +39306,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ROXLW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e5e0_11)(uae_u32 opcode)
@@ -37803,6 +39337,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ROXLW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e5e8_11)(uae_u32 opcode)
@@ -37832,6 +39367,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ROXLW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e5f0_11)(uae_u32 opcode)
@@ -37861,6 +39397,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ROXLW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e5f8_11)(uae_u32 opcode)
@@ -37889,6 +39426,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ROXLW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e5f9_11)(uae_u32 opcode)
@@ -37918,6 +39456,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e5f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* RORW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e6d0_11)(uae_u32 opcode)
@@ -37946,6 +39485,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* RORW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e6d8_11)(uae_u32 opcode)
@@ -37975,6 +39515,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* RORW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e6e0_11)(uae_u32 opcode)
@@ -38004,6 +39545,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* RORW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e6e8_11)(uae_u32 opcode)
@@ -38032,6 +39574,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* RORW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e6f0_11)(uae_u32 opcode)
@@ -38060,6 +39603,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* RORW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e6f8_11)(uae_u32 opcode)
@@ -38087,6 +39631,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* RORW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e6f9_11)(uae_u32 opcode)
@@ -38115,6 +39660,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e6f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* ROLW.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e7d0_11)(uae_u32 opcode)
@@ -38143,6 +39689,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7d0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ROLW.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_e7d8_11)(uae_u32 opcode)
@@ -38172,6 +39719,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7d8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* ROLW.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e7e0_11)(uae_u32 opcode)
@@ -38201,6 +39749,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7e0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* ROLW.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_e7e8_11)(uae_u32 opcode)
@@ -38229,6 +39778,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7e8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ROLW.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_e7f0_11)(uae_u32 opcode)
@@ -38257,6 +39807,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7f0_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* ROLW.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_e7f8_11)(uae_u32 opcode)
@@ -38284,6 +39835,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7f8_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* ROLW.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_e7f9_11)(uae_u32 opcode)
@@ -38312,6 +39864,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_e7f9_11)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 #endif
 
@@ -38346,6 +39899,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40c0_12)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* MVSR2.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40d0_12)(uae_u32 opcode)
@@ -38367,6 +39921,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40d0_12)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MVSR2.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_40d8_12)(uae_u32 opcode)
@@ -38389,6 +39944,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40d8_12)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (1/2) */
+/* 2 0,0   */
 
 /* MVSR2.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40e0_12)(uae_u32 opcode)
@@ -38411,6 +39967,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40e0_12)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (1/2) */
+/* 2 0,0   */
 
 /* MVSR2.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_40e8_12)(uae_u32 opcode)
@@ -38432,6 +39989,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40e8_12)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MVSR2.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_40f0_12)(uae_u32 opcode)
@@ -38453,6 +40011,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40f0_12)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (2/2) */
+/* 4 4,0   */
 
 /* MVSR2.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_40f8_12)(uae_u32 opcode)
@@ -38473,6 +40032,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40f8_12)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (2/2) */
+/* 4 0,0   */
 
 /* MVSR2.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_40f9_12)(uae_u32 opcode)
@@ -38494,6 +40054,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_40f9_12)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 6 0,0   */
 
 /* CLR.B Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4200_12)(uae_u32 opcode)
@@ -38510,6 +40071,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4200_12)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CLR.B (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4210_12)(uae_u32 opcode)
@@ -38528,6 +40090,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4210_12)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* CLR.B (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4218_12)(uae_u32 opcode)
@@ -38547,6 +40110,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4218_12)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* CLR.B -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4220_12)(uae_u32 opcode)
@@ -38566,6 +40130,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4220_12)(uae_u32 opcode)
 }}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* CLR.B (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4228_12)(uae_u32 opcode)
@@ -38584,6 +40149,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4228_12)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* CLR.B (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4230_12)(uae_u32 opcode)
@@ -38602,6 +40168,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4230_12)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* CLR.B (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4238_12)(uae_u32 opcode)
@@ -38619,6 +40186,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4238_12)(uae_u32 opcode)
 }}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* CLR.B (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4239_12)(uae_u32 opcode)
@@ -38637,6 +40205,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4239_12)(uae_u32 opcode)
 }}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* CLR.W Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4240_12)(uae_u32 opcode)
@@ -38653,6 +40222,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4240_12)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (1/0) */
+/* 2 0,0   */
 
 /* CLR.W (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4250_12)(uae_u32 opcode)
@@ -38676,6 +40246,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4250_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* CLR.W (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4258_12)(uae_u32 opcode)
@@ -38700,6 +40271,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4258_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* CLR.W -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4260_12)(uae_u32 opcode)
@@ -38724,6 +40296,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4260_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* CLR.W (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4268_12)(uae_u32 opcode)
@@ -38747,6 +40320,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4268_12)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* CLR.W (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_4270_12)(uae_u32 opcode)
@@ -38770,6 +40344,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4270_12)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* CLR.W (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_4278_12)(uae_u32 opcode)
@@ -38792,6 +40367,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4278_12)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* CLR.W (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_4279_12)(uae_u32 opcode)
@@ -38815,6 +40391,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4279_12)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* CLR.L Dn */
 uae_u32 REGPARAM2 CPUFUNC(op_4280_12)(uae_u32 opcode)
@@ -38831,6 +40408,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4280_12)(uae_u32 opcode)
 }}	m68k_incpci (2);
 return 6 * CYCLE_UNIT / 2 + count_cycles;
 } /* 6 (1/0) */
+/* 2 0,0   */
 
 /* CLR.L (An) */
 uae_u32 REGPARAM2 CPUFUNC(op_4290_12)(uae_u32 opcode)
@@ -38854,6 +40432,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4290_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* CLR.L (An)+ */
 uae_u32 REGPARAM2 CPUFUNC(op_4298_12)(uae_u32 opcode)
@@ -38878,6 +40457,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4298_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (3/2) */
+/* 2 0,0   */
 
 /* CLR.L -(An) */
 uae_u32 REGPARAM2 CPUFUNC(op_42a0_12)(uae_u32 opcode)
@@ -38902,6 +40482,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42a0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 22 * CYCLE_UNIT / 2 + count_cycles;
 } /* 22 (3/2) */
+/* 2 0,0   */
 
 /* CLR.L (d16,An) */
 uae_u32 REGPARAM2 CPUFUNC(op_42a8_12)(uae_u32 opcode)
@@ -38925,6 +40506,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42a8_12)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* CLR.L (d8,An,Xn) */
 uae_u32 REGPARAM2 CPUFUNC(op_42b0_12)(uae_u32 opcode)
@@ -38948,6 +40530,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42b0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 26 * CYCLE_UNIT / 2 + count_cycles;
 } /* 26 (4/2) */
+/* 4 4,0   */
 
 /* CLR.L (xxx).W */
 uae_u32 REGPARAM2 CPUFUNC(op_42b8_12)(uae_u32 opcode)
@@ -38970,6 +40553,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42b8_12)(uae_u32 opcode)
 }}}}	m68k_incpci (4);
 return 24 * CYCLE_UNIT / 2 + count_cycles;
 } /* 24 (4/2) */
+/* 4 0,0   */
 
 /* CLR.L (xxx).L */
 uae_u32 REGPARAM2 CPUFUNC(op_42b9_12)(uae_u32 opcode)
@@ -38993,6 +40577,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_42b9_12)(uae_u32 opcode)
 }}}}	m68k_incpci (6);
 return 28 * CYCLE_UNIT / 2 + count_cycles;
 } /* 28 (5/2) */
+/* 6 0,0   */
 
 #endif
 
@@ -39009,6 +40594,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e72_12)(uae_u32 opcode)
 	m68k_incpci (4);
 }}return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4 (0/0) */
+/* 4 0,0   */
 
 /* RTE.L  */
 uae_u32 REGPARAM2 CPUFUNC(op_4e73_12)(uae_u32 opcode)
@@ -39045,6 +40631,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_4e73_12)(uae_u32 opcode)
 	get_word_000_prefetch (2);
 }}}}}}}}return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (5/0) */
+/* 2 0,0 B */
 
 #endif
 
@@ -39063,6 +40650,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50d0_12)(uae_u32 opcode)
@@ -39079,6 +40667,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50d8_12)(uae_u32 opcode)
@@ -39096,6 +40685,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50e0_12)(uae_u32 opcode)
@@ -39113,6 +40703,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50e8_12)(uae_u32 opcode)
@@ -39129,6 +40720,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50f0_12)(uae_u32 opcode)
@@ -39145,6 +40737,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50f8_12)(uae_u32 opcode)
@@ -39160,6 +40753,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (T) */
 uae_u32 REGPARAM2 CPUFUNC(op_50f9_12)(uae_u32 opcode)
@@ -39176,6 +40770,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_50f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51c0_12)(uae_u32 opcode)
@@ -39191,6 +40786,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51d0_12)(uae_u32 opcode)
@@ -39207,6 +40803,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51d8_12)(uae_u32 opcode)
@@ -39224,6 +40821,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51e0_12)(uae_u32 opcode)
@@ -39241,6 +40839,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51e8_12)(uae_u32 opcode)
@@ -39257,6 +40856,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51f0_12)(uae_u32 opcode)
@@ -39273,6 +40873,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51f8_12)(uae_u32 opcode)
@@ -39288,6 +40889,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (F) */
 uae_u32 REGPARAM2 CPUFUNC(op_51f9_12)(uae_u32 opcode)
@@ -39304,6 +40906,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_51f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52c0_12)(uae_u32 opcode)
@@ -39319,6 +40922,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52d0_12)(uae_u32 opcode)
@@ -39335,6 +40939,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52d8_12)(uae_u32 opcode)
@@ -39352,6 +40957,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52e0_12)(uae_u32 opcode)
@@ -39369,6 +40975,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52e8_12)(uae_u32 opcode)
@@ -39385,6 +40992,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52f0_12)(uae_u32 opcode)
@@ -39401,6 +41009,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52f8_12)(uae_u32 opcode)
@@ -39416,6 +41025,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (HI) */
 uae_u32 REGPARAM2 CPUFUNC(op_52f9_12)(uae_u32 opcode)
@@ -39432,6 +41042,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_52f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53c0_12)(uae_u32 opcode)
@@ -39447,6 +41058,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53d0_12)(uae_u32 opcode)
@@ -39463,6 +41075,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53d8_12)(uae_u32 opcode)
@@ -39480,6 +41093,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53e0_12)(uae_u32 opcode)
@@ -39497,6 +41111,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53e8_12)(uae_u32 opcode)
@@ -39513,6 +41128,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53f0_12)(uae_u32 opcode)
@@ -39529,6 +41145,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53f8_12)(uae_u32 opcode)
@@ -39544,6 +41161,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (LS) */
 uae_u32 REGPARAM2 CPUFUNC(op_53f9_12)(uae_u32 opcode)
@@ -39560,6 +41178,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_53f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54c0_12)(uae_u32 opcode)
@@ -39575,6 +41194,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54d0_12)(uae_u32 opcode)
@@ -39591,6 +41211,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54d8_12)(uae_u32 opcode)
@@ -39608,6 +41229,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54e0_12)(uae_u32 opcode)
@@ -39625,6 +41247,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54e8_12)(uae_u32 opcode)
@@ -39641,6 +41264,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54f0_12)(uae_u32 opcode)
@@ -39657,6 +41281,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54f8_12)(uae_u32 opcode)
@@ -39672,6 +41297,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (CC) */
 uae_u32 REGPARAM2 CPUFUNC(op_54f9_12)(uae_u32 opcode)
@@ -39688,6 +41314,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_54f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55c0_12)(uae_u32 opcode)
@@ -39703,6 +41330,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55d0_12)(uae_u32 opcode)
@@ -39719,6 +41347,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55d8_12)(uae_u32 opcode)
@@ -39736,6 +41365,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55e0_12)(uae_u32 opcode)
@@ -39753,6 +41383,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55e8_12)(uae_u32 opcode)
@@ -39769,6 +41400,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55f0_12)(uae_u32 opcode)
@@ -39785,6 +41417,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55f8_12)(uae_u32 opcode)
@@ -39800,6 +41433,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (CS) */
 uae_u32 REGPARAM2 CPUFUNC(op_55f9_12)(uae_u32 opcode)
@@ -39816,6 +41450,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_55f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56c0_12)(uae_u32 opcode)
@@ -39831,6 +41466,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56d0_12)(uae_u32 opcode)
@@ -39847,6 +41483,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56d8_12)(uae_u32 opcode)
@@ -39864,6 +41501,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56e0_12)(uae_u32 opcode)
@@ -39881,6 +41519,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56e8_12)(uae_u32 opcode)
@@ -39897,6 +41536,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56f0_12)(uae_u32 opcode)
@@ -39913,6 +41553,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56f8_12)(uae_u32 opcode)
@@ -39928,6 +41569,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (NE) */
 uae_u32 REGPARAM2 CPUFUNC(op_56f9_12)(uae_u32 opcode)
@@ -39944,6 +41586,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_56f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57c0_12)(uae_u32 opcode)
@@ -39959,6 +41602,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57d0_12)(uae_u32 opcode)
@@ -39975,6 +41619,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57d8_12)(uae_u32 opcode)
@@ -39992,6 +41637,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57e0_12)(uae_u32 opcode)
@@ -40009,6 +41655,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57e8_12)(uae_u32 opcode)
@@ -40025,6 +41672,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57f0_12)(uae_u32 opcode)
@@ -40041,6 +41689,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57f8_12)(uae_u32 opcode)
@@ -40056,6 +41705,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (EQ) */
 uae_u32 REGPARAM2 CPUFUNC(op_57f9_12)(uae_u32 opcode)
@@ -40072,6 +41722,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_57f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58c0_12)(uae_u32 opcode)
@@ -40087,6 +41738,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58d0_12)(uae_u32 opcode)
@@ -40103,6 +41755,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58d8_12)(uae_u32 opcode)
@@ -40120,6 +41773,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58e0_12)(uae_u32 opcode)
@@ -40137,6 +41791,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58e8_12)(uae_u32 opcode)
@@ -40153,6 +41808,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58f0_12)(uae_u32 opcode)
@@ -40169,6 +41825,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58f8_12)(uae_u32 opcode)
@@ -40184,6 +41841,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (VC) */
 uae_u32 REGPARAM2 CPUFUNC(op_58f9_12)(uae_u32 opcode)
@@ -40200,6 +41858,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_58f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59c0_12)(uae_u32 opcode)
@@ -40215,6 +41874,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59c0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59d0_12)(uae_u32 opcode)
@@ -40231,6 +41891,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59d0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59d8_12)(uae_u32 opcode)
@@ -40248,6 +41909,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59d8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59e0_12)(uae_u32 opcode)
@@ -40265,6 +41927,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59e0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59e8_12)(uae_u32 opcode)
@@ -40281,6 +41944,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59e8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59f0_12)(uae_u32 opcode)
@@ -40297,6 +41961,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59f0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59f8_12)(uae_u32 opcode)
@@ -40312,6 +41977,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59f8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (VS) */
 uae_u32 REGPARAM2 CPUFUNC(op_59f9_12)(uae_u32 opcode)
@@ -40328,6 +41994,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_59f9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ac0_12)(uae_u32 opcode)
@@ -40343,6 +42010,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ac0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ad0_12)(uae_u32 opcode)
@@ -40359,6 +42027,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ad0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ad8_12)(uae_u32 opcode)
@@ -40376,6 +42045,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ad8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ae0_12)(uae_u32 opcode)
@@ -40393,6 +42063,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ae0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ae8_12)(uae_u32 opcode)
@@ -40409,6 +42080,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ae8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5af0_12)(uae_u32 opcode)
@@ -40425,6 +42097,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5af0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5af8_12)(uae_u32 opcode)
@@ -40440,6 +42113,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5af8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (PL) */
 uae_u32 REGPARAM2 CPUFUNC(op_5af9_12)(uae_u32 opcode)
@@ -40456,6 +42130,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5af9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bc0_12)(uae_u32 opcode)
@@ -40471,6 +42146,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bc0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bd0_12)(uae_u32 opcode)
@@ -40487,6 +42163,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bd0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bd8_12)(uae_u32 opcode)
@@ -40504,6 +42181,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bd8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5be0_12)(uae_u32 opcode)
@@ -40521,6 +42199,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5be0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5be8_12)(uae_u32 opcode)
@@ -40537,6 +42216,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5be8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bf0_12)(uae_u32 opcode)
@@ -40553,6 +42233,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bf0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bf8_12)(uae_u32 opcode)
@@ -40568,6 +42249,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bf8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (MI) */
 uae_u32 REGPARAM2 CPUFUNC(op_5bf9_12)(uae_u32 opcode)
@@ -40584,6 +42266,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5bf9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cc0_12)(uae_u32 opcode)
@@ -40599,6 +42282,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cc0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cd0_12)(uae_u32 opcode)
@@ -40615,6 +42299,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cd0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cd8_12)(uae_u32 opcode)
@@ -40632,6 +42317,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cd8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ce0_12)(uae_u32 opcode)
@@ -40649,6 +42335,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ce0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ce8_12)(uae_u32 opcode)
@@ -40665,6 +42352,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ce8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cf0_12)(uae_u32 opcode)
@@ -40681,6 +42369,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cf0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cf8_12)(uae_u32 opcode)
@@ -40696,6 +42385,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cf8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (GE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5cf9_12)(uae_u32 opcode)
@@ -40712,6 +42402,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5cf9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dc0_12)(uae_u32 opcode)
@@ -40727,6 +42418,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dc0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dd0_12)(uae_u32 opcode)
@@ -40743,6 +42435,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dd0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5dd8_12)(uae_u32 opcode)
@@ -40760,6 +42453,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5dd8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5de0_12)(uae_u32 opcode)
@@ -40777,6 +42471,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5de0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5de8_12)(uae_u32 opcode)
@@ -40793,6 +42488,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5de8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5df0_12)(uae_u32 opcode)
@@ -40809,6 +42505,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5df0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5df8_12)(uae_u32 opcode)
@@ -40824,6 +42521,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5df8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (LT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5df9_12)(uae_u32 opcode)
@@ -40840,6 +42538,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5df9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ec0_12)(uae_u32 opcode)
@@ -40855,6 +42554,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ec0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ed0_12)(uae_u32 opcode)
@@ -40871,6 +42571,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ed0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ed8_12)(uae_u32 opcode)
@@ -40888,6 +42589,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ed8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ee0_12)(uae_u32 opcode)
@@ -40905,6 +42607,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ee0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ee8_12)(uae_u32 opcode)
@@ -40921,6 +42624,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ee8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ef0_12)(uae_u32 opcode)
@@ -40937,6 +42641,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ef0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ef8_12)(uae_u32 opcode)
@@ -40952,6 +42657,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ef8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (GT) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ef9_12)(uae_u32 opcode)
@@ -40968,6 +42674,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ef9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 /* Scc.B Dn (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fc0_12)(uae_u32 opcode)
@@ -40983,6 +42690,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fc0_12)(uae_u32 opcode)
 }}}}	m68k_incpci (2);
 return 4 * CYCLE_UNIT / 2 + count_cycles;
 } /* 4+ (1/0) */
+/* 2 0,0   */
 
 /* Scc.B (An) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fd0_12)(uae_u32 opcode)
@@ -40999,6 +42707,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fd0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (An)+ (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fd8_12)(uae_u32 opcode)
@@ -41016,6 +42725,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fd8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 12 * CYCLE_UNIT / 2 + count_cycles;
 } /* 12 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B -(An) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fe0_12)(uae_u32 opcode)
@@ -41033,6 +42743,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fe0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (2);
 return 14 * CYCLE_UNIT / 2 + count_cycles;
 } /* 14 (2/1) */
+/* 2 0,0   */
 
 /* Scc.B (d16,An) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5fe8_12)(uae_u32 opcode)
@@ -41049,6 +42760,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5fe8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (d8,An,Xn) (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ff0_12)(uae_u32 opcode)
@@ -41065,6 +42777,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ff0_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 18 * CYCLE_UNIT / 2 + count_cycles;
 } /* 18 (3/1) */
+/* 4 4,0   */
 
 /* Scc.B (xxx).W (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ff8_12)(uae_u32 opcode)
@@ -41080,6 +42793,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ff8_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (4);
 return 16 * CYCLE_UNIT / 2 + count_cycles;
 } /* 16 (3/1) */
+/* 4 0,0   */
 
 /* Scc.B (xxx).L (LE) */
 uae_u32 REGPARAM2 CPUFUNC(op_5ff9_12)(uae_u32 opcode)
@@ -41096,6 +42810,7 @@ uae_u32 REGPARAM2 CPUFUNC(op_5ff9_12)(uae_u32 opcode)
 }}}}}	m68k_incpci (6);
 return 20 * CYCLE_UNIT / 2 + count_cycles;
 } /* 20 (4/1) */
+/* 6 0,0   */
 
 #endif
 

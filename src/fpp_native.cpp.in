@@ -28,10 +28,6 @@
 #include "newcpu.h"
 #include "fpp.h"
 
-#ifdef JIT
-double fp_1e8 = 1.0e8;
-#endif
-
 static uae_u32 dhex_nan[]   ={0xffffffff, 0x7fffffff};
 static double *fp_nan    = (double *)dhex_nan;
 static const double twoto32 = 4294967296.0;
