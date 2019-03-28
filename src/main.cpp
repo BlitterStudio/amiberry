@@ -744,14 +744,14 @@ static int real_main2 (int argc, TCHAR **argv)
 		fixup_prefs(&currprefs, true);
 	}
 
-	if (!graphics_setup()) {
-		abort();
-	}
-
 	if (restart_config[0])
 		parse_cmdline_and_init_file(argc, argv);
 	else
 		currprefs = changed_prefs;
+	
+	if (!graphics_setup()) {
+		abort();
+	}
 
 	if (!machdep_init()) {
 		restart_program = 0;
