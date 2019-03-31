@@ -467,6 +467,8 @@ static TCHAR *parsetextpath(const TCHAR *s)
 void print_usage()
 {
 	printf("\nUsage:\n");
+	printf(" -h                         Show this help.\n");
+	printf(" --help                     Show this help.\n");
 	printf(" -f <file>                  Load a configuration file.\n");
 	printf(" -config=<file>             Load a configuration file.\n");
 	printf(" -autoload=<file>           Load a WHDLoad game or .CUE CD32 image.\n");
@@ -599,6 +601,10 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			xfree(txt2);
 			xfree(txt);
 			loaded = true;
+		}
+		else if (_tcscmp(argv[i], _T("-h")) == 0 || _tcsncmp(argv[i], _T("--help"), 6) == 0)
+		{
+			print_usage();
 		}
 		else if (argv[i][0] == '-' && argv[i][1] != '\0') {
 			const TCHAR *arg = argv[i] + 2;
@@ -738,14 +744,14 @@ static int real_main2 (int argc, TCHAR **argv)
 		fixup_prefs(&currprefs, true);
 	}
 
-	if (!graphics_setup()) {
-		abort();
-	}
-
 	if (restart_config[0])
 		parse_cmdline_and_init_file(argc, argv);
 	else
 		currprefs = changed_prefs;
+	
+	if (!graphics_setup()) {
+		abort();
+	}
 
 	if (!machdep_init()) {
 		restart_program = 0;
