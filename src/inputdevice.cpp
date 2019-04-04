@@ -1882,7 +1882,6 @@ static void mouseupdate (int pct, bool vsync)
 				mouse_frame_y[i] = mouse_y[i] - v2;
 			}
 
-#ifndef INPUTDEVICE_SIMPLE
 			int v3 = getvelocity (i, 2, pct);
 			/* if v != 0, record mouse wheel key presses
 			 * according to the NewMouse standard */
@@ -1890,7 +1889,7 @@ static void mouseupdate (int pct, bool vsync)
 				record_key (0x7a << 1);
 			else if (v3 < 0)
 				record_key (0x7b << 1);
-#endif
+
 			if (!mouse_deltanoreset[i][2])
 				mouse_delta[i][2] = 0;
 
@@ -3715,9 +3714,7 @@ static void scanevents (struct uae_prefs *p)
 	int n_mouse = idev[IDTYPE_MOUSE].get_num ();
 
 	cd32_pad_enabled[0] = cd32_pad_enabled[1] = 0;
-#if !defined(INPUTDEVICE_SIMPLE) || defined(AMIBERRY)
 	parport_joystick_enabled = 0;
-#endif
 	mouse_port[0] = mouse_port[1] = 0;
 	qualifiers = 0;
 
@@ -3759,7 +3756,6 @@ static void scanevents (struct uae_prefs *p)
 					if (mice[i].eventid[ID_BUTTON_OFFSET + j][k] > 0)
 						use_mice[i] = 1;
 				}
-
 			}
 
 			for (j = 0; j < ID_AXIS_TOTAL; j++) {
