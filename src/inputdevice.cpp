@@ -3714,9 +3714,7 @@ static void scanevents (struct uae_prefs *p)
 	int n_mouse = idev[IDTYPE_MOUSE].get_num ();
 
 	cd32_pad_enabled[0] = cd32_pad_enabled[1] = 0;
-#if !defined(INPUTDEVICE_SIMPLE) || defined(AMIBERRY)
 	parport_joystick_enabled = 0;
-#endif
 	mouse_port[0] = mouse_port[1] = 0;
 	qualifiers = 0;
 
@@ -3758,7 +3756,6 @@ static void scanevents (struct uae_prefs *p)
 					if (mice[i].eventid[ID_BUTTON_OFFSET + j][k] > 0)
 						use_mice[i] = 1;
 				}
-
 			}
 
 			for (j = 0; j < ID_AXIS_TOTAL; j++) {
