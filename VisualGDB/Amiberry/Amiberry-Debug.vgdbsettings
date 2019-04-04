@@ -96,7 +96,7 @@
         <IgnoredHeaders />
       </DiscoverySettings>
       <CheckForClangFormatFiles xsi:nil="true" />
-      <FormattingEngine xsi:nil="true" />
+      <FormattingEngine>ClangFormat</FormattingEngine>
     </ExtraSettings>
     <CodeAnalyzerSettings>
       <Enabled>true</Enabled>

@@ -1882,7 +1882,6 @@ static void mouseupdate (int pct, bool vsync)
 				mouse_frame_y[i] = mouse_y[i] - v2;
 			}
 
-#ifndef INPUTDEVICE_SIMPLE
 			int v3 = getvelocity (i, 2, pct);
 			/* if v != 0, record mouse wheel key presses
 			 * according to the NewMouse standard */
@@ -1890,7 +1889,7 @@ static void mouseupdate (int pct, bool vsync)
 				record_key (0x7a << 1);
 			else if (v3 < 0)
 				record_key (0x7b << 1);
-#endif
+
 			if (!mouse_deltanoreset[i][2])
 				mouse_delta[i][2] = 0;
 

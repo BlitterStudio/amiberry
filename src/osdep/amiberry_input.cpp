@@ -19,12 +19,12 @@ struct host_keyboard_button host_keyboard_buttons[4];
 
 const int remap_buttons = 16;
 #define REMAP_BUTTONS        16
-#define MAX_MOUSE_BUTTONS	  2
-#define MAX_MOUSE_AXES        2
+#define MAX_MOUSE_BUTTONS	  3
+#define MAX_MOUSE_AXES        4
 #define FIRST_MOUSE_AXIS	  0
 #define FIRST_MOUSE_BUTTON	MAX_MOUSE_AXES
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
-#define SET_BIT(var,pos) (var |= 1 << pos)
+#define SET_BIT(var,pos) ((var) |= 1 << (pos))
 
 static int num_mice = 1;
 static int num_keys_as_joys;
@@ -417,8 +417,10 @@ int input_get_default_mouse(struct uae_input_device* uid, const int i, const int
 	{
 		setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ, gp);
 		setid(uid, i, ID_AXIS_OFFSET + 1, 0, port, port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT, gp);
+		setid(uid, i, ID_AXIS_OFFSET + 2, 0, port, port ? 0 : INPUTEVENT_MOUSE1_WHEEL, gp);
 		setid_af(uid, i, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON, af, gp);
 		setid(uid, i, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON, gp);
+		setid(uid, i, ID_BUTTON_OFFSET + 2, 0, port, port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON, gp);
 	}
 
 	else
@@ -1467,7 +1469,6 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 			thismap[0].start_action = thismap[0].start_action ? thismap[0].start_action : INPUTEVENT_KEY_P;
 		}
 
-
 		// shoulder buttons
 		//if (CHECK_BIT(currprefs.jports[port].mousemap,1))
 		if (mode == JSEM_MODE_MOUSE)
@@ -1554,7 +1555,6 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 			: INPUTEVENT_KEY_RETURN;
 	}
 
-
 	thismap[1] = currprefs.jports[port].amiberry_custom_hotkey; // grab the 'select button' options for the current map
 
 	// currently disabled
@@ -1563,7 +1563,6 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 
 	//  Now assign the actual buttons VALUES (TRUE/FALSE) to trigger the EVENTS
 	auto function_offset = 0;
-
 
 	for (auto n = 0; n < 2; ++n) /// temporarily limited to '2' only
 	{
@@ -1614,7 +1613,7 @@ int input_get_default_joystick(struct uae_input_device* uid, const int num, int 
 	return 0;
 }
 
-int input_get_default_joystick_analog(struct uae_input_device* uid, int num, int port, int af, bool joymouseswap)
+int input_get_default_joystick_analog(struct uae_input_device* uid, int i, int port, int af, bool gp, bool joymouseswap)
 {
 	return 0;
 }
