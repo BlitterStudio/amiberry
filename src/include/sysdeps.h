@@ -45,7 +45,7 @@ using namespace std;
 #define CPU_64_BIT 1
 #elif defined(__i386__) || defined(_M_IX86) && !defined(__arm__)
 #define CPU_i386 1
-#elif defined(__arm__) || defined(_M_ARM)
+#elif defined(__arm__) || defined(_M_ARM) || defined(__aarch64__)
 #define CPU_arm 1
 #elif defined(__powerpc__) || defined(_M_PPC)
 #define CPU_powerpc 1
