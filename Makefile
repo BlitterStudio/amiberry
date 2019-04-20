@@ -215,7 +215,7 @@ XML_CFLAGS := $(shell xml2-config --cflags )
 LDFLAGS += -flto -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
-    CFLAGS += -Ofast -frename-registers -falign-functions=16
+    CFLAGS += -Ofast -frename-registers -falign-functions=16 -fpermissive
 else
     CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
 endif
