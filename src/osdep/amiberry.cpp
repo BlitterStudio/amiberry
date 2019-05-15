@@ -1371,10 +1371,19 @@ int handle_msgpump()
 		case SDL_MOUSEWHEEL:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
-				const int valY = rEvent.wheel.y;
-				const int valX = rEvent.wheel.x;
-				setmousestate(0, 2, valY, 0);
-				setmousestate(0, 3, valX, 0);
+				const auto val_y = rEvent.wheel.y;
+				setmousestate(0, 2, val_y, 0);
+				if (val_y < 0)
+					setmousebuttonstate(0, 3 + 0, -1);
+				else if (val_y > 0)
+					setmousebuttonstate(0, 3 + 1, -1);
+
+				const auto val_x = rEvent.wheel.x;
+				setmousestate(0, 3, val_x, 0);
+				if (val_x < 0)
+					setmousebuttonstate(0, 3 + 2, -1);
+				else if (val_x > 0)
+					setmousebuttonstate(0, 3 + 3, -1);
 			}
 			break;
 #endif
