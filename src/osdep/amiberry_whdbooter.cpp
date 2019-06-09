@@ -49,6 +49,7 @@ struct game_options
 	TCHAR cpu_24bit[256] = "nul\0";
 	TCHAR sprites[256] = "nul\0";
 	TCHAR scr_height[256] = "nul\0";
+	TCHAR scr_width[256] = "nul\0";
 	TCHAR y_offset[256] = "nul\0";
 	TCHAR ntsc[256] = "nul\0";
 	TCHAR chip[256] = "nul\0";
@@ -238,6 +239,7 @@ struct game_options get_game_settings(char* HW)
 	strcpy(output_detail.cpu_comp, find_whdload_game_option("CPU_COMPATIBLE", HW).c_str());
 	strcpy(output_detail.sprites, find_whdload_game_option("SPRITES", HW).c_str());
 	strcpy(output_detail.scr_height, find_whdload_game_option("SCREEN_HEIGHT", HW).c_str());
+	strcpy(output_detail.scr_width, find_whdload_game_option("SCREEN_WIDTH", HW).c_str());
 	strcpy(output_detail.y_offset, find_whdload_game_option("SCREEN_Y_OFFSET", HW).c_str());
 	strcpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
 	strcpy(output_detail.fast, find_whdload_game_option("FAST_RAM", HW).c_str());
@@ -796,7 +798,9 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	write_log("WHDBooter - Game: Chipset    : %s  \n", game_detail.chipset);
 	write_log("WHDBooter - Game: JIT        : %s  \n", game_detail.jit);
 	write_log("WHDBooter - Game: CPU Compat : %s  \n", game_detail.cpu_comp);
+	write_log("WHDBooter - Game: Sprite Col : %s  \n", game_detail.sprites);
 	write_log("WHDBooter - Game: Scr Height : %s  \n", game_detail.scr_height);
+	write_log("WHDBooter - Game: Scr Width  : %s  \n", game_detail.scr_width);
 	write_log("WHDBooter - Game: Scr YOffset: %s  \n", game_detail.y_offset);
 	write_log("WHDBooter - Game: NTSC       : %s  \n", game_detail.ntsc);
 	write_log("WHDBooter - Game: Fast Ram   : %s  \n", game_detail.fast);
@@ -1245,6 +1249,16 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
+	else if (strcmpi(game_detail.scr_width, "nul") != 0)
+	{
+		_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
+		cfgfile_parse_line(p, txt2, 0);
+	}        
+        
 	// Y OFFSET
 	if (strcmpi(game_detail.y_offset, "nul") != 0)
 	{
@@ -1253,7 +1267,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// SPRITE COLLISION
-	if (strcmpi(game_detail.scr_height, "nul") != 0)
+	if (strcmpi(game_detail.sprites, "nul") != 0)
 	{
 		_stprintf(txt2, "collision_level=%s", game_detail.sprites);
 		cfgfile_parse_line(p, txt2, 0);
