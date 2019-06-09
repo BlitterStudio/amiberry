@@ -78,6 +78,9 @@ struct host_options
 	TCHAR aspect_ratio[256] = "nul\0";
 	TCHAR line_double[256] = "nul\0";
         TCHAR fixed_height[256] = "nul\0";
+        TCHAR fixed_width[256] = "nul\0";
+        TCHAR fixed_cd32_height[256] = "nul\0";
+        TCHAR fixed_cd32_width[256] = "nul\0";        
 };
 
 static xmlNode* get_node(xmlNode* node, const char* name)
@@ -270,7 +273,10 @@ struct host_options get_host_settings(char* HW)
 	strcpy(output_detail.frameskip, find_whdload_game_option("FRAMESKIP", HW).c_str());
 	strcpy(output_detail.line_double, find_whdload_game_option("LINE_DOUBLING", HW).c_str());
 	strcpy(output_detail.fixed_height, find_whdload_game_option("FIXED_HEIGHT", HW).c_str());
-
+	strcpy(output_detail.fixed_width, find_whdload_game_option("FIXED_WIDTH", HW).c_str());
+	strcpy(output_detail.fixed_cd32_height, find_whdload_game_option("FIXED_CD32_HEIGHT", HW).c_str());
+	strcpy(output_detail.fixed_cd32_width, find_whdload_game_option("FIXED_CD32_WIDTH", HW).c_str());
+        
 	return output_detail;
 }
 
@@ -417,6 +423,17 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 		host_detail = get_host_settings(hardware_settings);
 	}
 
+        
+	write_log("AutoBooter - Host: Controller 1   : %s  \n", host_detail.controller1);
+	write_log("AutoBooter - Host: Controller 2   : %s  \n", host_detail.controller2);
+	write_log("AutoBooter - Host: Controller 3   : %s  \n", host_detail.controller3);
+	write_log("AutoBooter - Host: Controller 4   : %s  \n", host_detail.controller4);
+	write_log("AutoBooter - Host: Mouse 1        : %s  \n", host_detail.mouse1);
+	write_log("AutoBooter - Host: Mouse 2        : %s  \n", host_detail.mouse2);
+	write_log("AutoBooter - Host: Fixed CD32 Hei't: %s  \n", host_detail.fixed_cd32_height);
+	write_log("AutoBooter - Host: Fixed CD32 Width: %s  \n", host_detail.fixed_cd32_width);        
+        
+        
 	//     
 	//      *** EMULATED HARDWARE ***
 	//  
@@ -511,6 +528,29 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 		_stprintf(txt2, "%s=joy1", _T("joyport1"));
 		cfgfile_parse_line(p, txt2, 0);
 	}
+        
+        
+	if (strcmpi(host_detail.fixed_cd32_height, "nul") != 0)
+	{
+		_stprintf(txt2, "gfx_height=%s", host_detail.fixed_cd32_height);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_height_windowed=%s", host_detail.fixed_cd32_height);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_height_fullscreen=%s", host_detail.fixed_cd32_height);
+		cfgfile_parse_line(p, txt2, 0);
+	}
+
+	if (strcmpi(host_detail.fixed_cd32_width, "nul") != 0)
+	{
+		_stprintf(txt2, "gfx_width=%s", host_detail.fixed_cd32_width);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_width_windowed=%s", host_detail.fixed_cd32_width);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_width_fullscreen=%s", host_detail.fixed_cd32_width);
+		cfgfile_parse_line(p, txt2, 0);
+	}
+
+        
 }
                         
                         
@@ -825,6 +865,10 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	//printf("aspect: %s  \n", host_detail.aspect_ratio);
 	//printf("frames: %s  \n", host_detail.frameskip);
 	write_log("WHDBooter - Host: Fixed Height    : %s  \n", host_detail.fixed_height);
+	write_log("WHDBooter - Host: Fixed Width     : %s  \n", host_detail.fixed_width);
+	write_log("WHDBooter - Host: Fixed CD32 Hei't: %s  \n", host_detail.fixed_cd32_height);
+	write_log("WHDBooter - Host: Fixed CD32 Width: %s  \n", host_detail.fixed_cd32_width);
+        
 	//     
 	//      *** EMULATED HARDWARE ***
 	//            
@@ -1249,6 +1293,15 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
+	if (strcmpi(host_detail.fixed_width, "nul") != 0)
+	{
+		_stprintf(txt2, "gfx_width=%s", host_detail.fixed_width);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_width_windowed=%s", host_detail.fixed_width);
+		cfgfile_parse_line(p, txt2, 0);
+		_stprintf(txt2, "gfx_width_fullscreen=%s", host_detail.fixed_width);
+		cfgfile_parse_line(p, txt2, 0);
+	}
 	else if (strcmpi(game_detail.scr_width, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
