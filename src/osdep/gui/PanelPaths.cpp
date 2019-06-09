@@ -206,12 +206,20 @@ public:
 		{   auto afile = popen(download_command, "r");
                     pclose(afile);
                 }
+
+                //  download boot-data.zip
+ 		snprintf(xml_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);                                
+                snprintf(download_command, MAX_DPATH, "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true",xml_path);                
+		if (!zfile_exists(xml_path)) // ?? 
+		{   auto afile = popen(download_command, "r");
+                    pclose(afile);
+                }
                 
                 // download kickstart RTB files for maximum compatibility
  		snprintf(xml_path, MAX_DPATH, "kick33180.A500.RTB");                                                
                 download_rtb(xml_path);                        
- 		snprintf(xml_path, MAX_DPATH, "kick33192.A500.RTB");                                                
-                download_rtb(xml_path);
+ 		//snprintf(xml_path, MAX_DPATH, "kick33192.A500.RTB");                                                
+                //download_rtb(xml_path);
  		snprintf(xml_path, MAX_DPATH, "kick34005.A500.RTB");                                                
                 download_rtb(xml_path);                
  		snprintf(xml_path, MAX_DPATH, "kick40063.A600.RTB");                                                
