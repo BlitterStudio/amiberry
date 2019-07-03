@@ -341,7 +341,7 @@ int graphics_setup(void)
 		}
 	}
 #elif USE_SDL2
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	if (SDL_Init(SDL_INIT_EVERYTHING & ~SDL_INIT_JOYSTICK) != 0) // Everything except joystick, which was initialised earlier
 	{
 		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
