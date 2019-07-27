@@ -731,12 +731,18 @@ static int real_main2 (int argc, TCHAR **argv)
 {
 #ifdef USE_SDL1
 	int ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+#elif USE_SDL2
+	// Some gamepads need this extra time to come up or they wont be detected
+	int ret = SDL_Init(SDL_INIT_JOYSTICK); // Init everything else later when we need it
+#endif
+#if defined (USE_SDL1) || defined (USE_SDL2)
 	if (ret < 0)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
 #endif
+
 	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0]) {
