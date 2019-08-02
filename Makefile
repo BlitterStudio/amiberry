@@ -151,6 +151,47 @@ USE_SDL2 = 1
     HAVE_NEON = 1
     NAME  = amiberry-vero4k
 
+# Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
+else ifneq (,$(findstring AMLG,$(PLATFORM)))
+USE_SDL2 = 1
+    CFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DUSE_RENDER_THREAD -DFASTERCYCLES
+    HAVE_NEON = 1
+
+    ifneq (,$(findstring AMLG12,$(PLATFORM)))
+      ifneq (,$(findstring AMLG12B,$(PLATFORM)))
+        CFLAGS += -mtune=cortex-a73.cortex-a53
+        NAME  = amiberry-AMLG12B
+      else
+        CFLAGS += -mtune=cortex-a53
+        NAME  = amiberry-AMLG12A
+      endif
+    else ifneq (,$(findstring AMLGX,$(PLATFORM)))
+      CFLAGS += -mtune=cortex-a53
+      CPPFLAGS += -DMALI_GPU
+      NAME  = amiberry-AMLGX
+    endif
+
+# Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
+else ifneq (,$(findstring RK,$(PLATFORM)))
+USE_SDL2 = 1
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU
+    HAVE_NEON = 1
+
+    ifneq (,$(findstring RK33,$(PLATFORM)))
+      CFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
+      ifneq (,$(findstring RK3399,$(PLATFORM)))
+        CFLAGS += -mtune=cortex-a72.cortex-a53
+        NAME  = amiberry-RK3399
+      else ifneq (,$(findstring RK3328,$(PLATFORM)))
+        CFLAGS += -mtune=cortex-a53
+        NAME  = amiberry-RK3328
+      endif
+    else ifneq (,$(findstring RK3288,$(PLATFORM)))
+      CFLAGS += -march=armv7ve -mtune=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
+      NAME  = amiberry-RK3288
+    endif
+
 else ifeq ($(PLATFORM),tinker)
 USE_SDL2 = 1
     CFLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
