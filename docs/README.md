@@ -52,6 +52,10 @@ For the Raspberry Pi 1/Zero (SDL1 + Dispmanx), type:
 
 ## Using SDL2 + DispmanX
 
+For the Raspberry Pi 4 (SDL2)
+
+      make -j2 PLATFORM=rpi4-sdl2-dispmanx
+
 For the Raspberry Pi 3(B+) (SDL2)
 
       make -j2 PLATFORM=rpi3-sdl2-dispmanx
@@ -65,6 +69,10 @@ For the Raspberry Pi 1/Zero (SDL2):
       make PLATFORM=rpi1-sdl2-dispmanx
 
 ## Using SDL2 + whatever back-end it was configured with
+
+For the Raspberry Pi 4 (SDL2)
+
+      make -j2 PLATFORM=rpi4-sdl2
 
 For the Raspberry Pi 3(B+) (SDL2)
 
