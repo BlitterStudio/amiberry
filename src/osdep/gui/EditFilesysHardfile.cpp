@@ -620,8 +620,6 @@ bool EditFilesysHardfile(const int unit_no)
 			const auto hfd = get_hardfile_data(uci->configoffset);
 			if (hfd)
 				hardfile_media_change(hfd, &ci, true, false);
-			else
-				hardfile_added(&ci);
 		}
 	}
 
