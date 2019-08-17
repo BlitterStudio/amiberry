@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2016, 2018, 2019 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -54,8 +54,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_OPENGLGRAPHICS_HPP
-#define GCN_OPENGLGRAPHICS_HPP
+#ifndef GCN_SDL2GRAPHICS_HPP
+#define GCN_SDL2GRAPHICS_HPP
+
+#include "SDL.h"
 
 #include "guisan/color.hpp"
 #include "guisan/graphics.hpp"
@@ -63,10 +65,13 @@
 
 namespace gcn
 {
+    class Image;
+    class Rectangle;
+
     /**
-     * OpenGL implementation of the Graphics.
+     * SDL implementation of the Graphics.
      */
-    class GCN_EXTENSION_DECLSPEC OpenGLGraphics: public Graphics
+    class GCN_EXTENSION_DECLSPEC SDL2Graphics : public Graphics
     {
     public:
 
@@ -76,36 +81,50 @@ namespace gcn
         /**
          * Constructor.
          */
-        OpenGLGraphics();
-
+        SDL2Graphics();
+        
         /**
-         * Constructor.
-		 *
-		 * @param width the width of the logical drawing surface. Should be the
-         *              same as the screen resolution.
-		 *
-		 * @param height the height ot the logical drawing surface. Should be
-		 *               the same as the screen resolution.
-		 */
-        OpenGLGraphics(int width, int height);
-
-		/**
-		 * Destructor.
-		 */
-        virtual ~OpenGLGraphics();
-
-        /**
-         * Sets the target plane on where to draw.
-		 *
-		 * @param width the width of the logical drawing surface. Should be the
-		 *              same as the screen resolution.
-		 * @param height the height ot the logical drawing surface. Should be
-		 *               the same as the screen resolution.
+         * Destructor.
          */
-        virtual void setTargetPlane(int width, int height);
+        ~SDL2Graphics();
+        
+        /**
+         *  Sets the target SDL_Renderer to use for drawing. Preferably done only once. 
+         *  
+         *  @param renderer the SDL_Renderer to use for drawing.
+         *  @param width screen width
+         *  @param height screen height
+         */
+        virtual void setTarget(SDL_Renderer* renderer, int width, int height);
+        
+        /**
+         * Gets the target SDL_Renderer.
+         *
+         * @return the target SDL_Renderer.
+         */
+        virtual SDL_Renderer* getTarget() const;
 
+        /**
+         * Draws an SDL_Surface on the target surface. Normally you'll
+         * use drawImage, but if you want to write SDL specific code
+         * this function might come in handy.
+         *
+         * NOTE: The clip areas will be taken into account.
+         */
+        virtual void drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
+                                    SDL_Rect destination);
 
-		// Inherited from Graphics
+        /**
+         * Draws an SDL_Texture on the target surface. Normally you'll
+         * use drawImage, but if you want to write SDL specific code
+         * this function might come in handy.
+         *
+         * NOTE: The clip areas will be taken into account.
+         */
+        virtual void drawSDLTexture(SDL_Texture* texture, SDL_Rect source,
+                                    SDL_Rect destination);
+
+        // Inherited from Graphics
 
         virtual void _beginDraw();
 
@@ -129,13 +148,45 @@ namespace gcn
 
         virtual void setColor(const Color& color);
 
-		virtual const Color& getColor();
+        virtual const Color& getColor();
 
     protected:
-        int mWidth, mHeight;
-		bool mAlpha;
+        /**
+         * Draws a horizontal line.
+         *
+         * @param x1 the start coordinate of the line.
+         * @param y the y coordinate of the line.
+         * @param x2 the end coordinate of the line.
+         */
+        virtual void drawHLine(int x1, int y, int x2);
+
+        /**
+         * Draws a vertical line.
+         *
+         * @param x the x coordinate of the line.
+         * @param y1 the start coordinate of the line.
+         * @param y2 the end coordinate of the line.
+         */
+        virtual void drawVLine(int x, int y1, int y2);
+        
+        /**
+         *  Save the current rendering color before drawing.
+         *  Does not affect the mColor attribute. 
+         */
+        virtual void saveRenderColor();
+        
+        /**
+         *  Restore the rendering color after drawing
+         */
+        virtual void restoreRenderColor();
+
+        SDL_Surface* mTarget;
+        SDL_Renderer* mRenderTarget;
+        SDL_Texture* mTexture;
         Color mColor;
+        Uint8 r, g, b, a; //! to store previous color from renderer
+        bool mAlpha;
     };
 }
 
-#endif // end GCN_OPENGLGRAPHICS_HPP
+#endif // end GCN_SDL2GRAPHICS_HPP

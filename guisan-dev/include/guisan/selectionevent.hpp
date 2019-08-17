@@ -62,30 +62,30 @@
 
 namespace gcn
 {
-	class Widget;
+    class Widget;
 
-	/**
-	 * Represents a selection event.
-	 *
-	 * @author Olof Naessén
-	 * @since 0.8.0
-	 */
-	class GCN_CORE_DECLSPEC SelectionEvent : public Event
-	{
-	public:
+    /**
+     * Represents a selection event.
+     *
+     * @author Olof Naessén
+     * @since 0.8.0
+     */
+    class GCN_CORE_DECLSPEC SelectionEvent: public Event
+    {
+    public:
 
-		/**
-		 * Constructor.
-		 *
-		 * @param source the source widget of the event.
-		 */
-		SelectionEvent(Widget* source);
+        /**
+         * Constructor.
+         *
+         * @param source the source widget of the event.
+         */
+        SelectionEvent(Widget* source);
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~SelectionEvent();
-	};
+        /**
+         * Destructor.
+         */
+        virtual ~SelectionEvent();
+    };
 }
 
 #endif // end GCN_SELECTIONEVENT_HPP

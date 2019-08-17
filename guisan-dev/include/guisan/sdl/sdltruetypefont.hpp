@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004 - 2008 Olof Naessén and Per Larsson
+ * Copyright (c) 2004 - 2008 Olof NaessÃ©n and Per Larsson
  *
  *
  * Per Larsson a.k.a finalman
- * Olof Naessén a.k.a jansem/yakslem
+ * Olof NaessÃ©n a.k.a jansem/yakslem
  *
  * Visit: http://guichan.sourceforge.net
  *
@@ -47,7 +47,7 @@
 #include <map>
 #include <string>
 
-#include <SDL_ttf.h>
+#include "SDL_ttf.h"
 
 #include "guisan/font.hpp"
 #include "guisan/platform.hpp"
@@ -55,7 +55,7 @@
 namespace gcn
 {
 	class Graphics;
-
+	
 	/**
 	 * SDL True Type Font implementation of Font. It uses the SDL_ttf library
 	 * to display True Type Fonts with SDL.
@@ -65,9 +65,9 @@ namespace gcn
 	 *       function.
 	 *
 	 * @author Walluce Pinkham
-	 * @author Olof Naessén
+	 * @author Olof NaessÃ©n
 	 */
-	class GCN_EXTENSION_DECLSPEC SDLTrueTypeFont : public Font
+	class GCN_EXTENSION_DECLSPEC SDLTrueTypeFont: public Font
 	{
 	public:
 
@@ -77,28 +77,28 @@ namespace gcn
 		 * @param filename the filename of the True Type Font.
 		 * @param size the size the font should be in.
 		 */
-		SDLTrueTypeFont(const std::string& filename, int size);
+		SDLTrueTypeFont (const std::string& filename, int size);
 
 		/**
 		 * Destructor.
 		 */
 		virtual ~SDLTrueTypeFont();
-
+  
 		/**
 		 * Sets the spacing between rows in pixels. Default is 0 pixels.
 		 * The spacing can be negative.
 		 *
 		 * @param spacing the spacing in pixels.
 		 */
-		virtual void setRowSpacing(int spacing);
-
+		virtual void setRowSpacing (int spacing);
+  
 		/**
 		 * Gets the spacing between rows in pixels.
 		 *
 		 * @return the spacing.
 		 */
 		virtual int getRowSpacing();
-
+  
 		/**
 		 * Sets the spacing between letters in pixels. Default is 0 pixels.
 		 * The spacing can be negative.
@@ -113,40 +113,41 @@ namespace gcn
 		 * @return the spacing.
 		 */
 		virtual int getGlyphSpacing();
-
+  
 		/**
 		 * Sets the use of anti aliasing..
 		 *
-		 * @param antiAlias true for use of antia aliasing.
+		 * @param antaAlias true for use of antialiasing.
 		 */
 		virtual void setAntiAlias(bool antiAlias);
-
+  
 		/**
 		 * Checks if anti aliasing is used.
 		 *
 		 * @return true if anti aliasing is used.
 		 */
 		virtual bool isAntiAlias();
-
-
+  
+	
 		// Inherited from Font
-
-		int getWidth(const std::string& text) const override;
-
-		int getHeight() const override;
-
-		void drawString(Graphics* graphics, const std::string& text, int x, int y) override;
-
+  
+		virtual int getWidth(const std::string& text) const;
+  
+		virtual int getHeight() const;        
+  
+		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y);
+  
 	protected:
-		TTF_Font* mFont;
-
+		TTF_Font *mFont;
+  
 		int mHeight;
 		int mGlyphSpacing;
 		int mRowSpacing;
-
+  
 		std::string mFilename;
-		bool mAntiAlias;
-	};
+		bool mAntiAlias;      
+	}; 
 }
 
 #endif
+

@@ -68,101 +68,104 @@
 
 namespace gcn
 {
-	Tab::Tab()
-		: mHasMouse(false)
-	{
-		mLabel = new Label();
-		mLabel->setPosition(4, 4);
-		add(mLabel);
-		setBorderSize(1);
+    Tab::Tab()
+            :mHasMouse(false)
+    {
+        mLabel = new Label();
+        mLabel->setPosition(4, 4);
+        add(mLabel);
+        setBorderSize(1);
 
-		addMouseListener(this);
-	}
+        addMouseListener(this);
+    }
+    
+    Tab::~Tab()
+    {
+        delete mLabel;
+    }
+    
+    void Tab::adjustSize()
+    {
+        setHeight(mLabel->getHeight() + 8);
+    }
 
-	Tab::~Tab()
-	{
-		delete mLabel;
-	}
+    void Tab::setTabbedArea(TabbedArea* tabbedArea)
+    {
+        mTabbedArea = tabbedArea;
+    }
 
-	void Tab::adjustSize()
-	{
-		setHeight(mLabel->getHeight() + 8);
-	}
+    TabbedArea* Tab::getTabbedArea()
+    {
+        return mTabbedArea;
+    }
 
-	void Tab::setTabbedArea(TabbedArea* tabbedArea)
-	{
-		mTabbedArea = tabbedArea;
-	}
+    void Tab::setCaption(const std::string& caption)
+    {
+        mCaption = caption;
+        mLabel->setCaption(caption);
+        mLabel->adjustSize();
+    }
+    
+    const std::string& Tab::getCaption() const
+    {
+        return mCaption;
+    }
+        
+    void Tab::draw(Graphics *graphics)
+    {
+        if (mTabbedArea->isTabSelected(this) || mHasMouse)
+        {
+            graphics->setColor(getBaseColor());
+        }
+        else
+        {            
+            graphics->setColor(getBaseColor() - 0x151515);
+        }
 
-	TabbedArea* Tab::getTabbedArea() const
-	{
-		return mTabbedArea;
-	}
+        graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
+        
+        drawChildren(graphics);
 
-	void Tab::setCaption(const std::string& caption)
-	{
-		mCaption = caption;
-		mLabel->setCaption(caption);
-		mLabel->adjustSize();
-	}
+        if (mTabbedArea->isFocused()
+            && mTabbedArea->isTabSelected(this))
+        {
+            graphics->setColor(Color(0x000000));
+            graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4, getHeight() - 4));
+        }
+    }
+    
+    void Tab::drawBorder(Graphics* graphics)
+    {
+        Color faceColor = getBaseColor();
+        Color highlightColor, shadowColor;
+        int alpha = getBaseColor().a;
+        int width = getWidth() + getBorderSize() * 2 - 1;
+        int height = getHeight() + getBorderSize() * 2 - 1;
+        highlightColor = faceColor + 0x303030;
+        highlightColor.a = alpha;
+        shadowColor = faceColor - 0x303030;
+        shadowColor.a = alpha;
 
-	const std::string& Tab::getCaption() const
-	{
-		return mCaption;
-	}
+        unsigned int i;
+        for (i = 0; i < getBorderSize(); ++i)
+        {
+            graphics->setColor(highlightColor);
+            graphics->drawLine(i,i, width - i, i);
+            graphics->drawLine(i,i + 1, i, height - i - 1);
+            graphics->setColor(shadowColor);
+            graphics->drawLine(width - i,i + 1, width - i, height - i);
+            graphics->drawLine(i,height - i, width - i - 1, height - i);
+        }
+    }
+    
+    void Tab::mouseEntered(MouseEvent& mouseEvent)
+    {
+        mHasMouse = true;
+    }
 
-	void Tab::draw(Graphics* graphics)
-	{
-		if (mTabbedArea->isTabSelected(this) || mHasMouse)
-		{
-			graphics->setColor(getBaseColor());
-		}
-		else
-		{
-			graphics->setColor(getBaseColor() - 0x151515);
-		}
-
-		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
-
-		drawChildren(graphics);
-
-		if (mTabbedArea->isFocused()
-			&& mTabbedArea->isTabSelected(this))
-		{
-			graphics->setColor(Color(0x000000));
-			graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4, getHeight() - 4));
-		}
-	}
-
-	void Tab::drawBorder(Graphics* graphics)
-	{
-		auto faceColor = getBaseColor();
-		int alpha = getBaseColor().a;
-		int width = getWidth() + getBorderSize() * 2 - 1;
-		int height = getHeight() + getBorderSize() * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
-		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
-		shadowColor.a = alpha;
-
-		for (unsigned int i = 0; i < getBorderSize(); ++i)
-		{
-			graphics->setColor(highlightColor);
-			graphics->drawLine(i, i, width - i, i);
-			graphics->drawLine(i, i + 1, i, height - i - 1);
-			graphics->setColor(shadowColor);
-			graphics->drawLine(width - i, i + 1, width - i, height - i);
-			graphics->drawLine(i, height - i, width - i - 1, height - i);
-		}
-	}
-
-	void Tab::mouseEntered(MouseEvent& mouseEvent)
-	{
-		mHasMouse = true;
-	}
-
-	void Tab::mouseExited(MouseEvent& mouseEvent)
-	{
-		mHasMouse = false;
-	}
+    void Tab::mouseExited(MouseEvent& mouseEvent)
+    {
+        mHasMouse = false;
+    }
 }
+

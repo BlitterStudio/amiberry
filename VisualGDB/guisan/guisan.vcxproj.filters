@@ -196,6 +196,9 @@
     <ClCompile Include="..\..\guisan-dev\src\widgets\progressbar.cpp">
       <Filter>Source files\widgets</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdl2graphics.cpp">
+      <Filter>Source files\sdl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\guisan-dev\include\guisan.hpp">
@@ -391,6 +394,18 @@
       <Filter>Header files\guisan\widgets</Filter>
     </ClInclude>
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\progressbar.hpp">
+      <Filter>Header files\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdl2graphics.hpp">
+      <Filter>Header files\guisan\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\imagetextbutton.hpp">
+      <Filter>Header files\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\inputbox.hpp">
+      <Filter>Header files\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\messagebox.hpp">
       <Filter>Header files\guisan\widgets</Filter>
     </ClInclude>
   </ItemGroup>

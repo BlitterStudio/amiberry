@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2017, 2018, 2019 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -54,88 +54,91 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_OPENGLGRAPHICS_HPP
-#define GCN_OPENGLGRAPHICS_HPP
+#ifndef GCN_INPUTBOX_HPP
+#define GCN_INPUTBOX_HPP
 
-#include "guisan/color.hpp"
-#include "guisan/graphics.hpp"
+#include <string>
+
+#include "guisan/mouselistener.hpp"
+#include "guisan/actionlistener.hpp"
 #include "guisan/platform.hpp"
+#include "guisan/widgets/window.hpp"
+#include "guisan/widgets/button.hpp"
+#include "guisan/widgets/label.hpp"
+#include "guisan/widgets/textfield.hpp"
+#include "guisan/widgets/icon.hpp"
 
 namespace gcn
 {
     /**
-     * OpenGL implementation of the Graphics.
+     * A non-movable window to get a short string from the user.
      */
-    class GCN_EXTENSION_DECLSPEC OpenGLGraphics: public Graphics
+    class GCN_CORE_DECLSPEC InputBox : public Window
     {
     public:
 
-        // Needed so that drawImage(gcn::Image *, int, int) is visible.
-        using Graphics::drawImage;
-
         /**
-         * Constructor.
+         * Constructor. 
+         *
+         * @param caption the InputBox caption.
+         * @param message the message to display in the InputBox
+         * @param ok the string corresponding to the "OK" button
+         * @param cancel the string corresponding to the "Cancel" button
          */
-        OpenGLGraphics();
+        InputBox(const std::string& caption, const std::string& message, const std::string &ok = "OK", const std::string &cancel = "Cancel");
 
         /**
-         * Constructor.
-		 *
-		 * @param width the width of the logical drawing surface. Should be the
-         *              same as the screen resolution.
-		 *
-		 * @param height the height ot the logical drawing surface. Should be
-		 *               the same as the screen resolution.
-		 */
-        OpenGLGraphics(int width, int height);
-
-		/**
-		 * Destructor.
-		 */
-        virtual ~OpenGLGraphics();
-
-        /**
-         * Sets the target plane on where to draw.
-		 *
-		 * @param width the width of the logical drawing surface. Should be the
-		 *              same as the screen resolution.
-		 * @param height the height ot the logical drawing surface. Should be
-		 *               the same as the screen resolution.
+         * Destructor.
          */
-        virtual void setTargetPlane(int width, int height);
+        virtual ~InputBox();
+        
+        /**
+         * Add this InputBox to a parent container, centered both horizontally and vertically
+         * If instead, you want to place it somewhere else, use Container::add(). 
+         *
+         * @param container parent container
+         */
+        void addToContainer(Container* container);
+        
+        /**
+         * Get the text that was input by the user
+         * Use in conjunction with getClickedButton() to tell an empty string from a cancel operation.
+         * 
+         * @return the text which was typed by the user
+         */
+        std::string getText() const;
+        
+        /**
+         * Get the number of the button that was clicked
+         * @return 0 for OK, 1 for Cancel
+         */
+        int getClickedButton() const;
 
 
-		// Inherited from Graphics
+        // Inherited from Widget
 
-        virtual void _beginDraw();
+        virtual void draw(Graphics* graphics);
 
-        virtual void _endDraw();
+        virtual void drawBorder(Graphics* graphics);
 
-        virtual bool pushClipArea(Rectangle area);
 
-        virtual void popClipArea();
+        // Inherited from MouseListener
 
-        virtual void drawImage(const Image* image, int srcX, int srcY,
-                               int dstX, int dstY, int width,
-                               int height);
+        virtual void mousePressed(MouseEvent& mouseEvent);
 
-        virtual void drawPoint(int x, int y);
+        virtual void mouseDragged(MouseEvent& mouseEvent);
 
-        virtual void drawLine(int x1, int y1, int x2, int y2);
-
-        virtual void drawRectangle(const Rectangle& rectangle);
-
-        virtual void fillRectangle(const Rectangle& rectangle);
-
-        virtual void setColor(const Color& color);
-
-		virtual const Color& getColor();
+        virtual void mouseReleased(MouseEvent& mouseEvent);
 
     protected:
-        int mWidth, mHeight;
-		bool mAlpha;
-        Color mColor;
+        std::string mMessage;
+        int mClickedButton;
+        
+        Button *mButtonOK;
+        Button *mButtonCancel;
+        Label *mLabel;
+        TextField *mText;
     };
 }
 
-#endif // end GCN_OPENGLGRAPHICS_HPP
+#endif // end GCN_INPUTBOX_HPP

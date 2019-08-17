@@ -60,8 +60,7 @@
 
 #include "guisan/opengl.hpp"
 
-extern "C" {
-void gcnOpenGL()
+extern "C"
 {
-}
+    void gcnOpenGL() { }
 }

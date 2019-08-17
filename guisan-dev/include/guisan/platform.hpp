@@ -68,10 +68,10 @@
 #define GCN_CORE_DECLSPEC __declspec(dllimport)
 #define GCN_EXTENSION_DECLSPEC __declspec(dllimport)
 
-#elif defined(_MSC_VER_) && defined(GUICHAN_BUILD)
+#elif defined(_MSC_VER) && defined(GUICHAN_BUILD)
 #define GCN_CORE_DECLSPEC _declspec(dllexport)
 
-#elif defined(_MSC_VER_) && defined(GUICHAN_EXTENSION_BUILD)
+#elif defined(_MSC_VER) && defined(GUICHAN_EXTENSION_BUILD)
 #define GCN_CORE_DECLSPEC _declspec(dllimport)
 #define GCN_EXTENSION_DECLSPEC _declspec(dllexport)
 

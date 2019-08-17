@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2017, 2018, 2019 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -58,7 +58,7 @@
  * For comments regarding functions please see the header file.
  */
 
-#include "guisan/widgets/window.hpp"
+#include "guisan/widgets/inputbox.hpp"
 
 #include "guisan/exception.hpp"
 #include "guisan/font.hpp"
@@ -67,76 +67,75 @@
 
 namespace gcn
 {
-    Window::Window()
-            :mIsMoving(false)
-    {
-        setBorderSize(1);
-        setPadding(2);
-        setTitleBarHeight(16);
-        setAlignment(Graphics::CENTER);
-        addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
-    }
 
-    Window::Window(const std::string& caption)
-            :mIsMoving(false)
+    InputBox::InputBox(const std::string& caption, const std::string& message, const std::string &ok, const std::string &cancel)
+            :Window(caption),mMessage(message),mClickedButton(-1)
     {
         setCaption(caption);
-        setBorderSize(1);
-        setPadding(2);
-        setTitleBarHeight(16);
-        setAlignment(Graphics::CENTER);
         addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
+        setMovable(false);
+        
+        mLabel = new Label(message);
+        mLabel->setAlignment(Graphics::LEFT);
+        mLabel->adjustSize();
+
+        mText = new TextField();
+        
+        mButtonOK = new Button(ok);
+        mButtonOK->setAlignment(Graphics::CENTER);
+        mButtonOK->addMouseListener(this);
+        mButtonOK->adjustSize();
+
+        mButtonCancel = new Button(cancel);
+        mButtonCancel->setAlignment(Graphics::CENTER);
+        mButtonCancel->addMouseListener(this);
+        mButtonCancel->adjustSize();
+        
+        // Look-and-feel: make both buttons the same width
+        if(mButtonCancel->getWidth() > mButtonOK->getWidth())
+        {
+            mButtonOK->setWidth(mButtonCancel->getWidth());
+        }
+        else
+        {
+            mButtonCancel->setWidth(mButtonOK->getWidth());
+        }
+        
+        setHeight((int)getTitleBarHeight() + mLabel->getHeight() + mText->getHeight() + 6 * mPadding + mButtonOK->getHeight() + 2 * getBorderSize());
+        setWidth(mLabel->getWidth() + 2 * mPadding + 2 * getBorderSize());
+        if(2 * mButtonOK->getWidth() + 4 * mPadding + 2 * getBorderSize() > getWidth()) 
+        {
+            setWidth(2 * mButtonOK->getWidth() + 4*mPadding + 2 * getBorderSize());
+        }
+        mText->setWidth(getWidth() - 2 * getBorderSize() - 5 * mPadding);
+        
+        this->add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
+        this->add(mText, 2*mPadding, 2 * mPadding + mLabel->getHeight());
+        int yButtons = getHeight() - (int)getTitleBarHeight() - getBorderSize() - 2*mPadding - mButtonOK->getHeight();
+        this->add(mButtonOK, (getWidth() - 2 * mButtonOK->getWidth())/4, yButtons);
+        this->add(mButtonCancel, getWidth() - 2*getBorderSize() - mButtonOK->getWidth() - mPadding, yButtons);
+        
+        try
+        {
+            requestModalFocus();
+        } 
+        catch (Exception e) 
+        {
+            // Not having modal focus is not critical
+        }
     }
 
-    Window::~Window()
+    InputBox::~InputBox()
     {
+        releaseModalFocus();
+        
+        delete mLabel;
+        delete mButtonOK;
+        delete mButtonCancel;
+        delete mText;
     }
 
-    void Window::setPadding(unsigned int padding)
-    {
-        mPadding = padding;
-    }
-
-    unsigned int Window::getPadding() const
-    {
-        return mPadding;
-    }
-
-    void Window::setTitleBarHeight(unsigned int height)
-    {
-        mTitleBarHeight = height;
-    }
-
-    unsigned int Window::getTitleBarHeight()
-    {
-        return mTitleBarHeight;
-    }
-
-    void Window::setCaption(const std::string& caption)
-    {
-        mCaption = caption;
-    }
-
-    const std::string& Window::getCaption() const
-    {
-        return mCaption;
-    }
-
-    void Window::setAlignment(unsigned int alignment)
-    {
-        mAlignment = alignment;
-    }
-
-    unsigned int Window::getAlignment() const
-    {
-        return mAlignment;
-    }
-
-    void Window::draw(Graphics* graphics)
+    void InputBox::draw(Graphics* graphics)
     {
         Color faceColor = getBaseColor();
         Color highlightColor, shadowColor;
@@ -233,7 +232,7 @@ namespace gcn
         graphics->popClipArea();
     }
 
-    void Window::drawBorder(Graphics* graphics)
+    void InputBox::drawBorder(Graphics* graphics)
     {
         Color faceColor = getBaseColor();
         Color highlightColor, shadowColor;
@@ -257,7 +256,7 @@ namespace gcn
         }
     }
 
-    void Window::mousePressed(MouseEvent& mouseEvent)
+    void InputBox::mousePressed(MouseEvent& mouseEvent)
     {
         if (mouseEvent.getSource() != this)
         {
@@ -275,12 +274,30 @@ namespace gcn
         mIsMoving = mouseEvent.getY() <= (int)mTitleBarHeight;
     }
 
-    void Window::mouseReleased(MouseEvent& mouseEvent)
+    void InputBox::mouseReleased(MouseEvent& mouseEvent)
     {
-        mIsMoving = false;
+        if (mouseEvent.getSource() != this)
+        {           
+            if(mouseEvent.getSource() == mButtonOK)
+            {
+                mClickedButton = 0;
+                generateAction();
+            }
+            if(mouseEvent.getSource() == mButtonCancel)
+            {
+                mClickedButton = 1;
+                setVisible(false);
+                generateAction();
+            }
+         
+        }
+        else
+        {
+            mIsMoving = false;
+        }
     }
 
-    void Window::mouseDragged(MouseEvent& mouseEvent)
+    void InputBox::mouseDragged(MouseEvent& mouseEvent)
     {
         if (mouseEvent.isConsumed() || mouseEvent.getSource() != this)
         {
@@ -295,53 +312,21 @@ namespace gcn
 
         mouseEvent.consume();
     }
-
-    Rectangle Window::getChildrenArea()
+    
+    int InputBox::getClickedButton() const
     {
-        return Rectangle(getPadding(),
-                         getTitleBarHeight(),
-                         getWidth() - getPadding() * 2,
-                         getHeight() - getPadding() - getTitleBarHeight());
+        return mClickedButton;
     }
-
-    void Window::setMovable(bool movable)
+    
+    std::string InputBox::getText() const
     {
-        mMovable = movable;
+        return mText->getText();
     }
-
-    bool Window::isMovable() const
+    
+    void InputBox::addToContainer(Container* container)
     {
-        return mMovable;
-    }
-
-    void Window::setOpaque(bool opaque)
-    {
-        mOpaque = opaque;
-    }
-
-    bool Window::isOpaque()
-    {
-        return mOpaque;
-    }
-
-    void Window::resizeToContent()
-    {
-        WidgetListIterator it;
-
-        int w = 0, h = 0;
-        for (it = mWidgets.begin(); it != mWidgets.end(); it++)
-        {
-            if ((*it)->getX() + (*it)->getWidth() > w)
-            {
-                w = (*it)->getX() + (*it)->getWidth();
-            }
-
-            if ((*it)->getY() + (*it)->getHeight() > h)
-            {
-                h = (*it)->getY() + (*it)->getHeight();
-            }
-        }
-
-        setSize(w + 2* getPadding(), h + getPadding() + getTitleBarHeight());
+        int x = container->getWidth() - getWidth();
+        int y = container->getHeight() - getHeight();
+        container->add(this, x/2, y/2);
     }
 }

@@ -54,88 +54,103 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_OPENGLGRAPHICS_HPP
-#define GCN_OPENGLGRAPHICS_HPP
+#ifndef GCN_IMAGETEXTBUTTON_HPP
+#define GCN_IMAGETEXTBUTTON_HPP
 
-#include "guisan/color.hpp"
-#include "guisan/graphics.hpp"
+#include <string>
+
 #include "guisan/platform.hpp"
+#include "guisan/widgets/imagebutton.hpp"
 
 namespace gcn
 {
+    class Image;
+
     /**
-     * OpenGL implementation of the Graphics.
+     * A simple button that displays an image and a caption.
      */
-    class GCN_EXTENSION_DECLSPEC OpenGLGraphics: public Graphics
+    class GCN_CORE_DECLSPEC ImageTextButton : public gcn::ImageButton
     {
     public:
-
-        // Needed so that drawImage(gcn::Image *, int, int) is visible.
-        using Graphics::drawImage;
+        /**
+         * Constructor.
+         *
+         * @param filename The filename of the image to display.
+         * @param caption The text to display. 
+         */
+        ImageTextButton(const std::string& filename, std::string& caption);
 
         /**
          * Constructor.
+         *
+         * @param image The image to display.
+         * @param caption The text to display.
          */
-        OpenGLGraphics();
+        ImageTextButton(Image* image, std::string& caption);
 
         /**
-         * Constructor.
-		 *
-		 * @param width the width of the logical drawing surface. Should be the
-         *              same as the screen resolution.
-		 *
-		 * @param height the height ot the logical drawing surface. Should be
-		 *               the same as the screen resolution.
-		 */
-        OpenGLGraphics(int width, int height);
-
-		/**
-		 * Destructor.
-		 */
-        virtual ~OpenGLGraphics();
+         * Destructor.
+         */
+        virtual ~ImageTextButton();
 
         /**
-         * Sets the target plane on where to draw.
-		 *
-		 * @param width the width of the logical drawing surface. Should be the
-		 *              same as the screen resolution.
-		 * @param height the height ot the logical drawing surface. Should be
-		 *               the same as the screen resolution.
+         * Adjusts the size of the image button to fit the image.
          */
-        virtual void setTargetPlane(int width, int height);
+        void adjustSize();
+
+        /**
+         * Sets the image to display.
+         *
+         * @param image The image to display.
+         */
+        void setImage(Image* image);
+
+        /**
+         * Gets the image of the image button.
+         *
+         * @return The image of the image button.
+         */
+        Image* getImage();
 
 
-		// Inherited from Graphics
+        // Inherited from Widget
 
-        virtual void _beginDraw();
+        void draw(gcn::Graphics* graphics);
+        
+        /**
+         * Sets the alignment for the caption. The alignment is relative
+         * to the center of the button.
+         *
+         * @param alignment ImageTextButton::TOP, ImageTextButton::RIGHT, ImageTextButton::BOTTOM or ImageTextButton::LEFT.
+         */
+        void setAlignment(unsigned int alignment);
 
-        virtual void _endDraw();
-
-        virtual bool pushClipArea(Rectangle area);
-
-        virtual void popClipArea();
-
-        virtual void drawImage(const Image* image, int srcX, int srcY,
-                               int dstX, int dstY, int width,
-                               int height);
-
-        virtual void drawPoint(int x, int y);
-
-        virtual void drawLine(int x1, int y1, int x2, int y2);
-
-        virtual void drawRectangle(const Rectangle& rectangle);
-
-        virtual void fillRectangle(const Rectangle& rectangle);
-
-        virtual void setColor(const Color& color);
-
-		virtual const Color& getColor();
+        /**
+         * Gets the alignment for the caption. The alignment is relative to
+         * the center of the button.
+         *
+         * @return alignment of caption. ImageTextButton::TOP, ImageTextButton::RIGHT, ImageTextButton::BOTTOM or ImageTextButton::LEFT.
+         */
+        unsigned int getAlignment() const;
+        
+        enum
+        {
+            TOP,
+            RIGHT,
+            BOTTOM,
+            LEFT
+        };
 
     protected:
-        int mWidth, mHeight;
-		bool mAlpha;
-        Color mColor;
+        gcn::Image* mImage;
+
+        /**
+         * True if the image has been loaded internally, false otherwise.
+         * An image not loaded internally should not be deleted in the
+         * destructor.
+         */
+        bool mInternalImage;
+        unsigned int mAlignment;
     };
 }
-
-#endif // end GCN_OPENGLGRAPHICS_HPP
+#endif

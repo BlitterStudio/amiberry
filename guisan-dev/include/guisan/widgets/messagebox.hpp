@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2017 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -54,114 +54,168 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_RADIOBUTTON_HPP
-#define GCN_RADIOBUTTON_HPP
+#ifndef GCN_MESSAGEBOX_HPP
+#define GCN_MESSAGEBOX_HPP
 
-#include <map>
 #include <string>
 
-#include "guisan/keylistener.hpp"
 #include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
-#include "guisan/widget.hpp"
+#include "guisan/widgets/window.hpp"
+#include "guisan/widgets/button.hpp"
+#include "guisan/widgets/label.hpp"
+#include "guisan/widgets/icon.hpp"
 
 namespace gcn
 {
     /**
-     * Implementation of a radio button where a user can select or deselect
-     * the radio button and where the status of the radio button is displayed to the user.
-     * A radio button can belong to a group and when a radio button belongs to a
-     * group only one radio button can be selected in the group. A radio button is
-     * capable of displaying a caption.
-     * 
-     * If a radio button's state changes an action event will be sent to all action 
-     * listeners of the check box.
+     * A non-movable window to display a message with some buttons.
      */
-    class GCN_CORE_DECLSPEC RadioButton :
-        public Widget,
-        public MouseListener,
-        public KeyListener
+    class GCN_CORE_DECLSPEC MessageBox : public Window
     {
     public:
 
         /**
          * Constructor.
+		 * This version only has a single button labeled "OK". 
+         *
+         * @param caption the MessageBox caption.
+         * @param message the message to display in the MessageBox
          */
-        RadioButton();
-
+        MessageBox(const std::string& caption, const std::string& message);
+        
         /**
          * Constructor.
          *
-         * @param caption The caption of the radio button.
-         * @param group The group the radio button should belong to.
-         * @param selected True if the radio button should be selected.
+         * @param caption the MessageBox caption.
+         * @param message the message to display in the MessageBox
+         * @param buttons strings to display as button captions
+         * @param size length of the buttons array
          */
-        RadioButton(const std::string &caption,
-                    const std::string &group,
-                    bool selected = false);
+        MessageBox(const std::string& caption, const std::string& message, const std::string *buttons, int size);
 
         /**
          * Destructor.
          */
-        virtual ~RadioButton();
+        virtual ~MessageBox();
+        
+        /**
+         * Gets the index of the clicked button
+         * 
+         * @return index of clicked button, starting at 0. -1 if not set (i.e., no button clicked yet)
+         */
+        int getClickedButton() const;
 
         /**
-         * Checks if the radio button is selected.
+         * Sets the MessageBox caption.
          *
-         * @return True if the radio button is selecte, false otherwise.
-         * @see setSelected
+         * @param caption the MessageBox caption.
          */
-        bool isSelected() const;
+        void setCaption(const std::string& caption);
 
         /**
-         * Sets the radio button to selected or not.
+         * Gets the MessageBox caption.
          *
-         * @param selected True if the radio button should be selected,
-         *                 false otherwise.
-         * @see isSelected
+         * @return the MessageBox caption.
          */
-        void setSelected(bool selected);
+        const std::string& getCaption() const;
 
         /**
-         * Gets the caption of the radio button.
+         * Sets the alignment for the caption.
          *
-         * @return The caption of the radio button.
-         * @see setCaption
+         * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
          */
-        const std::string &getCaption() const;
+        void setAlignment(unsigned int alignment);
 
         /**
-         * Sets the caption of the radio button. It's advisable to call
-         * adjustSize after setting of the caption to adjust the
-         * radio button's size to fit the caption.
+         * Gets the alignment for the caption.
          *
-         * @param caption The caption of the radio button.
-         * @see getCaption, adjustSize
+         * @return alignment of caption.
          */
-        void setCaption(const std::string caption);
-
+        unsigned int getAlignment() const;
+        
         /**
-         * Sets the group the radio button should belong to. Note that
-         * a radio button group is unique per application, not per Gui object
-         * as the group is stored in a static map.
+         * Sets the position for the button(s) in the MessageBox.
          *
-         * @param group The name of the group.
-         * @see getGroup
+         * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
          */
-        void setGroup(const std::string &group);
+        void setButtonAlignment(unsigned int alignment);
 
         /**
-         * Gets the group the radio button belongs to.
+         * Gets the position for the button(s) in the MessageBox.
          *
-         * @return The group the radio button belongs to.
-         * @see setGroup
+         * @return alignment of buttons.
          */
-        const std::string &getGroup() const;
+        unsigned int getButtonAlignment() const;
 
         /**
-         * Adjusts the radio button's size to fit the caption.
+         * Sets the padding of the window which is the distance between the
+         * window border and the content.
+         *
+         * @param padding the padding value.
          */
-        void adjustSize();
+        void setPadding(unsigned int padding);
+
+        /**
+         * Gets the padding.
+         *
+         * @return the padding value.
+         */
+        unsigned int getPadding() const;
+
+        /**
+         * Sets the title bar height.
+         *
+         * @param height the title height value.
+         */
+        void setTitleBarHeight(unsigned int height);
+
+        /**
+         * Gets the title bar height.
+         *
+         * @return the title bar height.
+         */
+        unsigned int getTitleBarHeight();
+
+        /**
+         * Check if the window is movable.
+         *
+         * @return true or false.
+         */
+        bool isMovable() const;
+
+        /**
+         * Sets the MessageBox to be opaque. If it's not opaque, the content area
+         * will not be filled with a color.
+         *
+         * @param opaque true or false.
+         */
+        void setOpaque(bool opaque);
+
+        /**
+         * Checks if the MessageBox is opaque.
+         *
+         * @return true or false.
+         */
+        bool isOpaque();
+		
+		/**
+		 * Add this MessageBox to a parent container, centered both horizontally and vertically
+		 * If instead, you want to place it somewhere else, use Container::add(). 
+		 *
+		 * @param container parent container
+		 */
+		void addToContainer(Container* container);
+
+        /**
+         * Resizes the container to fit the content exactly.
+         */
+        virtual void resizeToContent();
+
+
+        // Inherited from BasicContainer
+
+        virtual Rectangle getChildrenArea();
 
 
         // Inherited from Widget
@@ -171,55 +225,23 @@ namespace gcn
         virtual void drawBorder(Graphics* graphics);
 
 
-        // Inherited from KeyListener
-
-        virtual void keyPressed(KeyEvent& keyEvent);
-
-
         // Inherited from MouseListener
 
-        virtual void mouseClicked(MouseEvent& mouseEvent);
+        virtual void mousePressed(MouseEvent& mouseEvent);
 
         virtual void mouseDragged(MouseEvent& mouseEvent);
 
+        virtual void mouseReleased(MouseEvent& mouseEvent);
+
     protected:
-        /**
-         * Draws the box.
-         *
-         * @param graphics a Graphics object to draw with.
-         */
-        virtual void drawBox(Graphics *graphics);
-
-        /**
-         * True if the radio button is selected, false otherwise.
-         */
-        bool mSelected;
-
-        /**
-         * Holds the caption of the radio button.
-         */ 
-        std::string mCaption;
-
-        /**
-         * Holds the group of the radio button.
-         */
-        std::string mGroup;
-
-        /**
-         * Typdef.
-         */
-        typedef std::multimap<std::string, RadioButton *> GroupMap;
-
-        /**
-         * Typdef.
-         */
-        typedef GroupMap::iterator GroupIterator;
-
-        /**
-         * Holds all available radio button groups.
-         */
-        static GroupMap mGroupMap;
+        std::string mMessage;
+        int mNbButtons;
+        unsigned int mButtonAlignment;
+        int mClickedButton;
+        
+        Button **mButtons;
+        Label *mLabel;
     };
 }
 
-#endif // end GCN_RADIOBUTTON_HPP
+#endif // end GCN_MESSAGEBOX_HPP

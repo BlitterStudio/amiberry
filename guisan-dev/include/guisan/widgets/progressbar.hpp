@@ -65,147 +65,147 @@
 
 namespace gcn
 {
-	/**
-	 * Implementation of a label capable of displaying a caption and a progress bar.
-	 * 
-	 * Setting both start and end to 0 creates an "infinite" progressbar with a small rectangle
-	 * moving forward and disappearing. In this mode, it is up to the caller to set the progressbar
-	 * value in the range 0-100 (which indicates the start of the rectangle) 
-	 * regularly to achieve animation. 
-	 */
-	class GCN_CORE_DECLSPEC ProgressBar : public Label
-	{
-	public:
-		/**
-		 * Constructor.
-		 */
-		ProgressBar();
+    /**
+     * Implementation of a label capable of displaying a caption and a progress bar.
+     * 
+     * Setting both start and end to 0 creates an "infinite" progressbar with a small rectangle
+     * moving forward and disappearing. In this mode, it is up to the caller to set the progressbar
+     * value in the range 0-100 (which indicates the start of the rectangle) 
+     * regularly to achieve animation. 
+     */
+    class GCN_CORE_DECLSPEC ProgressBar: public Label
+    {
+    public:
+        /**
+         * Constructor.
+         */
+        ProgressBar();
+        
+        /**
+         * Constructor.
+         *
+         * @param start minimum value
+         * @param end maximum value
+         * @param value current value
+         */
+        ProgressBar(const unsigned int start, const unsigned int end, const unsigned int value);
 
-		/**
-		 * Constructor.
-		 *
-		 * @param start minimum value
-		 * @param end maximum value
-		 * @param value current value
-		 */
-		ProgressBar(unsigned int start, unsigned int end, unsigned int value);
+        /**
+         * Constructor.
+         *
+         * @param caption The caption of the label.
+         */
+        ProgressBar(const std::string& caption);
 
-		/**
-		 * Constructor.
-		 *
-		 * @param caption The caption of the label.
-		 */
-		explicit ProgressBar(const std::string& caption);
+        /**
+         * Gets the caption of the label.
+         *
+         * @return The caption of the label.
+         * @see setCaption
+         */
+        const std::string &getCaption() const;
 
-		/**
-		 * Gets the caption of the label.
-		 *
-		 * @return The caption of the label.
-		 * @see setCaption
-		 */
-		const std::string& getCaption() const override;
+        /**
+         * Sets the caption of the label. 
+         *
+         * @param caption The caption of the label.
+         * @see getCaption, adjustSize
+         */
+        void setCaption(const std::string& caption);
 
-		/**
-		 * Sets the caption of the label. 
-		 *
-		 * @param caption The caption of the label.
-		 * @see getCaption, adjustSize
-		 */
-		void setCaption(const std::string& caption) override;
+        /**
+         * Sets the alignment for the caption. The alignment is relative
+         * to the center of the label.
+         *
+         * @param alignemnt Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
+         * @see getAlignment, Graphics
+         */
+        void setAlignment(unsigned int alignment);
 
-		/**
-		 * Sets the alignment for the caption. The alignment is relative
-		 * to the center of the label.
-		 *
-		 * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
-		 * @see getAlignment, Graphics
-		 */
-		void setAlignment(unsigned int alignment) override;
-
-		/**
-		 * Gets the alignment for the caption. The alignment is relative to
-		 * the center of the label.
-		 *
-		 * @return alignment of caption. Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
-		 * @see setAlignment, Graphics
-		 */
-		unsigned int getAlignment() const override;
-
-		/**
-		 * Sets the minimum value.
-		 *
-		 * @param start the minimum value
-		 * @see getStart
-		 */
-		void setStart(unsigned int start);
-
-		/**
-		 * Gets the minimum value.
-		 *
-		 * @return the minimum value
-		 * @see setStart
-		 */
-		unsigned int getStart() const;
-
-		/**
-		 * Sets the maximum value.
-		 *
-		 * @param end the maximum value
-		 * @see getEnd
-		 */
-		void setEnd(unsigned int end);
-
-		/**
-		 * Gets the maximum value.
-		 *
-		 * @return the maximum value
-		 * @see setEnd
-		 */
-		unsigned int getEnd() const;
-
-		/**
-		 * Sets the current progress value.
-		 *
-		 * @param value the current value
-		 * @see getStart
-		 */
-		void setValue(unsigned int value);
-
-		/**
-		 * Gets the current progress value.
-		 * 
-		 * @return progress value
-		 * @see setValue
-		 */
-		unsigned int getValue() const;
-
-		/**
-		 * Adjusts the size of the widget. 
-		 */
-		void adjustSize() override;
+        /**
+         * Gets the alignment for the caption. The alignment is relative to
+         * the center of the label.
+         *
+         * @return alignment of caption. Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
+         * @see setAlignment, Graphics
+         */
+        unsigned int getAlignment() const;
+        
+        /**
+         * Sets the minimum value.
+         *
+         * @param start the minimum value
+         * @see getStart
+         */
+        void setStart(const unsigned int start);
+        
+        /**
+         * Gets the minimum value.
+         *
+         * @return the minimum value
+         * @see setStart
+         */
+        unsigned int getStart() const;
+        
+        /**
+         * Sets the maximum value.
+         *
+         * @param end the maximum value
+         * @see getEnd
+         */
+        void setEnd(const unsigned int end);
+        
+        /**
+         * Gets the maximum value.
+         *
+         * @return the maximum value
+         * @see setEnd
+         */
+        unsigned int getEnd() const;
+        
+        /**
+         * Sets the current progress value.
+         *
+         * @param value the current value
+         * @see getStart
+         */
+        void setValue(const unsigned int value);
+        
+        /**
+         * Gets the current progress value.
+         * 
+         * @return progress value
+         * @see setValue
+         */
+        unsigned int getValue() const;
+        
+        /**
+         * Adjusts the size of the widget. 
+         */
+        void adjustSize();
 
 
-		// Inherited from Widget
+        // Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+        virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+        virtual void drawBorder(Graphics* graphics);
 
-	protected:
-		/**
-		 * Holds the caption of the label.
-		 */
-		std::string mCaption;
+    protected:
+        /**
+         * Holds the caption of the label.
+         */
+        std::string mCaption;
 
-		/**
-		 * Holds the alignment of the caption.
-		 */
-		unsigned int mAlignment;
-
-		unsigned int mStart{}; //! minimum value of the progressbar
-		unsigned int mEnd{}; //! maximum value of the progressbar
-		unsigned int mValue{}; //! current value of the progressbar
-	};
+        /**
+         * Holds the alignment of the caption.
+         */
+        unsigned int mAlignment;
+        
+        unsigned int mStart; //! minimum value of the progressbar
+        unsigned int mEnd;   //! maximum value of the progressbar
+        unsigned int mValue; //! current value of the progressbar
+    };
 }
 
 #endif // end GCN_PROGRESSBAR_HPP

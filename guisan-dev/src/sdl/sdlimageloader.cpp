@@ -67,69 +67,79 @@
 
 namespace gcn
 {
-	Image* SDLImageLoader::load(const std::string& filename,
-	                            bool convertToDisplayFormat)
-	{
-		auto loadedSurface = loadSDLSurface(filename);
+    Image* SDLImageLoader::load(const std::string& filename,
+                                bool convertToDisplayFormat)
+    {
+        SDL_Surface *loadedSurface = loadSDLSurface(filename);
 
-		if (loadedSurface == nullptr)
-		{
-			throw GCN_EXCEPTION(
-				std::string("Unable to load image file: ") + filename);
-		}
+        if (loadedSurface == NULL)
+        {
+            throw GCN_EXCEPTION(
+                    std::string("Unable to load image file: ") + filename);
+        }
 
-		auto surface = convertToStandardFormat(loadedSurface);
-		SDL_FreeSurface(loadedSurface);
+        SDL_Surface *surface = convertToStandardFormat(loadedSurface);
+        SDL_FreeSurface(loadedSurface);
 
-		if (surface == nullptr)
-		{
-			throw GCN_EXCEPTION(
-				std::string("Not enough memory to load: ") + filename);
-		}
+        if (surface == NULL)
+        {
+            throw GCN_EXCEPTION(
+                    std::string("Not enough memory to load: ") + filename);
+        }
 
-		Image* image = new SDLImage(surface, true);
+        Image *image = new SDLImage(surface, true, mRenderer);
 
-		if (convertToDisplayFormat)
-		{
-			image->convertToDisplayFormat();
-		}
+        if (convertToDisplayFormat)
+        {
+            image->convertToDisplayFormat();
+        }
 
-		return image;
+        return image;
+    }
+    
+    void SDLImageLoader::setRenderer(SDL_Renderer* renderer)
+    {
+		mRenderer = renderer;
 	}
 
-	SDL_Surface* SDLImageLoader::loadSDLSurface(const std::string& filename)
-	{
-		return IMG_Load(filename.c_str());
-	}
+    SDL_Surface* SDLImageLoader::loadSDLSurface(const std::string& filename)
+    {
+        return IMG_Load(filename.c_str());
+    }
+    
+    SDL_Texture* SDLImageLoader::loadSDLTexture(const std::string& filename)
+    {
+        return IMG_LoadTexture(mRenderer, filename.c_str());
+    }
 
-	SDL_Surface* SDLImageLoader::convertToStandardFormat(SDL_Surface* surface)
-	{
-		Uint32 rmask, gmask, bmask, amask;
+    SDL_Surface* SDLImageLoader::convertToStandardFormat(SDL_Surface* surface)
+    {
+        Uint32 rmask, gmask, bmask, amask;
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
         rmask = 0xff000000;
         gmask = 0x00ff0000;
         bmask = 0x0000ff00;
         amask = 0x000000ff;
 #else
-		rmask = 0x000000ff;
-		gmask = 0x0000ff00;
-		bmask = 0x00ff0000;
-		amask = 0xff000000;
+        rmask = 0x000000ff;
+        gmask = 0x0000ff00;
+        bmask = 0x00ff0000;
+        amask = 0xff000000;
 #endif
 
-		SDL_Surface* colorSurface = SDL_CreateRGBSurface(SDL_SWSURFACE,
-		                                                 0, 0, 32,
-		                                                 rmask, gmask, bmask, amask);
+        SDL_Surface *colorSurface = SDL_CreateRGBSurface(SDL_SWSURFACE,
+                0, 0, 32,
+                rmask, gmask, bmask, amask);
 
-		SDL_Surface* tmp = nullptr;
+        SDL_Surface *tmp = NULL;
 
-		if (colorSurface != nullptr)
-		{
-			tmp = SDL_ConvertSurface(surface, colorSurface->format,
-			                         SDL_SWSURFACE);
-			SDL_FreeSurface(colorSurface);
-		}
+        if (colorSurface != NULL)
+        {
+            tmp = SDL_ConvertSurface(surface, colorSurface->format,
+                                     SDL_SWSURFACE);
+            SDL_FreeSurface(colorSurface);
+        }
 
-		return tmp;
-	}
+        return tmp;
+    }
 }

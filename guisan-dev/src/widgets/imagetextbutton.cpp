@@ -58,55 +58,77 @@
  * For comments regarding functions please see the header file.
  */
 
-#include "guisan/widgets/imagebutton.hpp"
+#include "guisan/widgets/imagetextbutton.hpp"
 
+#include "guisan/exception.hpp"
+#include "guisan/font.hpp"
 #include "guisan/graphics.hpp"
 #include "guisan/image.hpp"
 
 namespace gcn
 {
-    ImageButton::ImageButton(const std::string& filename)
+    ImageTextButton::ImageTextButton(const std::string& filename, std::string& caption) : ImageButton(filename)
     {
-        mImage = Image::load(filename);
-        mInternalImage = true;
+        setCaption(caption);
         setWidth(mImage->getWidth() + mImage->getWidth() / 2);
         setHeight(mImage->getHeight() + mImage->getHeight() / 2);
+        mAlignment = ImageTextButton::BOTTOM;
     }
 
-    ImageButton::ImageButton(Image* image)
+    ImageTextButton::ImageTextButton(Image* image, std::string& caption) : ImageButton(image)
     {
-        mImage = image;
-        mInternalImage = false;
+        setCaption(caption);
         setWidth(mImage->getWidth() + mImage->getWidth() / 2);
         setHeight(mImage->getHeight() + mImage->getHeight() / 2);
+        mAlignment = ImageTextButton::BOTTOM;
     }
 
-    ImageButton::~ImageButton()
+    ImageTextButton::~ImageTextButton()
     {
-        if (mInternalImage)
+	    if (mInternalImage)
             delete mImage;
     }
+	
+	void ImageTextButton::adjustSize()
+	{
+		switch(getAlignment())
+		{
+			case LEFT: //fallthrough
+			case RIGHT:
+			  setWidth(mImage->getWidth() + getFont()->getWidth(mCaption) + 2*mSpacing);
+			  setHeight(mImage->getHeight() + 2*mSpacing);
+			  break;
+			case TOP: //fallthrough
+			case BOTTOM:
+			  if(mImage->getWidth() > getFont()->getWidth(mCaption))
+			  {
+				  setWidth(mImage->getWidth() + 2*mSpacing);
+			  }
+			  else
+			  {
+				  setWidth(getFont()->getWidth(mCaption) + 2*mSpacing);
+			  }
+			  setHeight(mImage->getHeight() + getFont()->getHeight() + 2*mSpacing);
+			  break;
+			default:
+              throw GCN_EXCEPTION("Unknown alignment.");
+		}
+	}
 
-    void ImageButton::adjustSize()
-    {
-        setWidth(mImage->getWidth());
-        setHeight(mImage->getHeight());
-    }
-
-    void ImageButton::setImage(Image* image)
-    {
+	void ImageTextButton::setImage(Image* image)
+	{
         if (mInternalImage)
             delete mImage;
-        mImage = image;
+		mImage = image;
         mInternalImage = false;
-    }
+	}
 
-    Image* ImageButton::getImage()
-    {
-        return mImage;
-    }
+	Image* ImageTextButton::getImage()
+	{
+		return mImage;
+	}
 
-    void ImageButton::draw(Graphics* graphics)
+    void ImageTextButton::draw(Graphics* graphics)
     {
         gcn::Color faceColor = getBaseColor();
         gcn::Color highlightColor, shadowColor;
@@ -142,16 +164,48 @@ namespace gcn
 
         graphics->setColor(getForegroundColor());
 
-        int textX = getWidth() / 2 - mImage->getWidth() / 2;
-        int textY = getHeight() / 2 - mImage->getHeight() / 2;
+        int imageX, imageY;
+        int textX, textY;
+        
+        switch(getAlignment())
+        {
+            case LEFT: 
+              imageX = mSpacing + getFont()->getWidth(mCaption);
+              textX = mSpacing;
+              imageY = mSpacing;
+              textY = getHeight() / 2 - getFont()->getHeight() / 2;
+              break;
+			case RIGHT:
+			  imageX = mSpacing;
+              textX = mSpacing + mImage->getWidth();
+              imageY = mSpacing;
+              textY = getHeight() / 2 - getFont()->getHeight() / 2;
+			  break;
+			case TOP:
+			  imageY = mSpacing + getFont()->getHeight();
+			  textY = mSpacing;
+			  imageX = getWidth() / 2 - mImage->getWidth() / 2;
+			  textX = getWidth() / 2 - getFont()->getWidth(mCaption) / 2; 
+			  break;
+			case BOTTOM:
+			  imageY = mSpacing;
+			  textY = mSpacing + mImage->getHeight();
+			  imageX = getWidth() / 2 - mImage->getWidth() / 2;
+			  textX = getWidth() / 2 - getFont()->getWidth(mCaption) / 2; 
+			  break;
+			default:
+              throw GCN_EXCEPTION("Unknown alignment.");
+        }
 
         if (isPressed())
         {
-            graphics->drawImage(mImage, textX + 1, textY + 1);
+            graphics->drawImage(mImage, imageX + 1, imageY + 1);
+            graphics->drawText(mCaption, textX + 1, textY + 1, Graphics::LEFT);
         }
         else
         {
-            graphics->drawImage(mImage, textX, textY);
+            graphics->drawImage(mImage, imageX, imageY);
+            graphics->drawText(mCaption, textX, textY, Graphics::LEFT);
            
             if (isFocused())
             {
@@ -161,5 +215,15 @@ namespace gcn
                                                   getHeight() - 4));
             }
         }
+    }
+    
+    void ImageTextButton::setAlignment(unsigned int alignment)
+    {
+        mAlignment = alignment;
+    }
+
+    unsigned int ImageTextButton::getAlignment() const
+    {
+        return mAlignment;
     }
 }

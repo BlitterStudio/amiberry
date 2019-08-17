@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2017 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -58,7 +58,7 @@
  * For comments regarding functions please see the header file.
  */
 
-#include "guisan/widgets/window.hpp"
+#include "guisan/widgets/messagebox.hpp"
 
 #include "guisan/exception.hpp"
 #include "guisan/font.hpp"
@@ -67,76 +67,192 @@
 
 namespace gcn
 {
-    Window::Window()
-            :mIsMoving(false)
-    {
-        setBorderSize(1);
-        setPadding(2);
-        setTitleBarHeight(16);
-        setAlignment(Graphics::CENTER);
-        addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
-    }
 
-    Window::Window(const std::string& caption)
-            :mIsMoving(false)
+    MessageBox::MessageBox(const std::string& caption, const std::string& message)
+            :Window(caption),mMessage(message),mClickedButton(-1)
     {
         setCaption(caption);
-        setBorderSize(1);
-        setPadding(2);
-        setTitleBarHeight(16);
-        setAlignment(Graphics::CENTER);
         addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
+        setMovable(false);
+        
+        mLabel = new Label(message);
+        mLabel->setAlignment(Graphics::LEFT);
+        mLabel->adjustSize();
+        
+        mNbButtons = 1;
+        mButtons = new Button*[1];
+        mButtons[0] = new Button("OK");
+        mButtons[0]->setAlignment(Graphics::CENTER);
+        mButtons[0]->addMouseListener(this);
+        
+        setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
+		setWidth(mLabel->getWidth() + 4*mPadding);
+        if(mButtons[0]->getWidth() + 4*mPadding > getWidth()) 
+        {
+            setWidth(mButtons[0]->getWidth() + 4*mPadding);
+        }
+        
+		this->add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
+        this->add(mButtons[0], (getWidth() - mButtons[0]->getWidth())/2, getHeight() - (int)getTitleBarHeight() - mPadding - mButtons[0]->getHeight());
+        
+        try
+        {
+        	requestModalFocus();
+        } 
+        catch (Exception e) 
+        {
+        	// Not having modal focus is not critical
+        }
     }
-
-    Window::~Window()
+    
+    MessageBox::MessageBox(const std::string& caption, const std::string& message,
+            const std::string *buttons, int size)
+            :Window(caption),mMessage(message),mClickedButton(-1)
     {
+        setCaption(caption);
+        addMouseListener(this);
+        setMovable(false);
+        
+        mLabel = new Label(message);
+        mLabel->setAlignment(Graphics::LEFT);
+        mLabel->adjustSize();
+		setWidth(mLabel->getWidth() + 4*mPadding);
+        
+        //Create buttons and label
+        if(size > 0) 
+        {
+            mNbButtons = size;
+            mButtons = new Button*[size];
+            int maxBtnWidth = 0;
+            
+            for(int i = 0 ; i < size ; i++)
+            {
+                mButtons[i] = new Button(*(buttons+i));
+                mButtons[i]->setAlignment(Graphics::CENTER);
+                mButtons[i]->addMouseListener(this);
+                maxBtnWidth = maxBtnWidth > mButtons[i]->getWidth() ? maxBtnWidth : mButtons[i]->getWidth();
+            }
+            //Find the widest button, apply same width to all
+            for(int i = 0 ; i < size ; i++)
+            {
+                mButtons[i]->setWidth(maxBtnWidth);
+            }
+            
+            //Make sure everything fits into the window
+            int padding = mPadding;
+            if(mButtons[0]->getWidth()*size + 4*mPadding + mPadding*(size-1) > getWidth()) 
+            {
+                setWidth(mButtons[0]->getWidth()*size + 4*mPadding + mPadding*(size-1));
+            } 
+            else 
+            {
+                padding += (getWidth() - (mButtons[0]->getWidth()*size + 4*mPadding + mPadding*(size-1)))/2;
+            }
+			add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
+            
+			setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
+            for(int i = 0 ; i < size ; i++)
+            {
+                add(mButtons[i], padding + (maxBtnWidth + mPadding)*i, getHeight() - (int)getTitleBarHeight() - mPadding - mButtons[0]->getHeight());
+            }			
+        }
+        
+        try
+        {
+        	requestModalFocus();
+        } 
+        catch (Exception e) 
+        {
+        	// Not having modal focus is not critical
+        }
     }
 
-    void Window::setPadding(unsigned int padding)
+    MessageBox::~MessageBox()
+    {
+    	releaseModalFocus();
+    	
+        delete mLabel;
+        for(int i = 0 ; i < mNbButtons ; i++)
+        {
+            delete mButtons[i];
+        }
+        delete mButtons;
+    }
+
+    void MessageBox::setPadding(unsigned int padding)
     {
         mPadding = padding;
     }
 
-    unsigned int Window::getPadding() const
+    unsigned int MessageBox::getPadding() const
     {
         return mPadding;
     }
 
-    void Window::setTitleBarHeight(unsigned int height)
+    void MessageBox::setTitleBarHeight(unsigned int height)
     {
         mTitleBarHeight = height;
     }
 
-    unsigned int Window::getTitleBarHeight()
+    unsigned int MessageBox::getTitleBarHeight()
     {
         return mTitleBarHeight;
     }
 
-    void Window::setCaption(const std::string& caption)
+    void MessageBox::setCaption(const std::string& caption)
     {
         mCaption = caption;
     }
 
-    const std::string& Window::getCaption() const
+    const std::string& MessageBox::getCaption() const
     {
         return mCaption;
     }
 
-    void Window::setAlignment(unsigned int alignment)
+    void MessageBox::setAlignment(unsigned int alignment)
     {
         mAlignment = alignment;
     }
 
-    unsigned int Window::getAlignment() const
+    unsigned int MessageBox::getAlignment() const
     {
         return mAlignment;
     }
+    
+    void MessageBox::setButtonAlignment(unsigned int alignment)
+    {
+        mButtonAlignment = alignment;
+        
+        int leftPadding = mPadding;
+        if(mNbButtons > 0)
+        {
+            switch (alignment)
+            {
+              case Graphics::LEFT:
+                  // Nothing to do
+                  break;
+              case Graphics::CENTER:
+                  leftPadding += (getWidth() - (mButtons[0]->getWidth()*mNbButtons + 2*mPadding + mPadding*(mNbButtons-1)))/2;
+                  break;
+              case Graphics::RIGHT:
+                  leftPadding += (getWidth() - (mButtons[0]->getWidth()*mNbButtons + 2*mPadding + mPadding*(mNbButtons-1)));
+                  break;
+              default:
+                  throw GCN_EXCEPTION("Unknown alignment.");
+            }
+            for(int i = 0 ; i < mNbButtons ; i++)
+            {
+                mButtons[i]->setX(leftPadding + (mButtons[0]->getWidth() + mPadding)*i);
+            }
+        }
+    }
+    
+    unsigned int MessageBox::getButtonAlignment() const
+    {
+        return mButtonAlignment;
+    }
 
-    void Window::draw(Graphics* graphics)
+    void MessageBox::draw(Graphics* graphics)
     {
         Color faceColor = getBaseColor();
         Color highlightColor, shadowColor;
@@ -233,7 +349,7 @@ namespace gcn
         graphics->popClipArea();
     }
 
-    void Window::drawBorder(Graphics* graphics)
+    void MessageBox::drawBorder(Graphics* graphics)
     {
         Color faceColor = getBaseColor();
         Color highlightColor, shadowColor;
@@ -257,7 +373,7 @@ namespace gcn
         }
     }
 
-    void Window::mousePressed(MouseEvent& mouseEvent)
+    void MessageBox::mousePressed(MouseEvent& mouseEvent)
     {
         if (mouseEvent.getSource() != this)
         {
@@ -275,12 +391,27 @@ namespace gcn
         mIsMoving = mouseEvent.getY() <= (int)mTitleBarHeight;
     }
 
-    void Window::mouseReleased(MouseEvent& mouseEvent)
+    void MessageBox::mouseReleased(MouseEvent& mouseEvent)
     {
-        mIsMoving = false;
+        if (mouseEvent.getSource() != this)
+        {
+            for(int i = 0 ; i < mNbButtons ; i++)
+            {
+                if(mouseEvent.getSource() == mButtons[i])
+                {
+                    mClickedButton = i;
+                    generateAction();
+                    break;
+                }
+            }
+        }
+        else
+        {
+            mIsMoving = false;
+        }
     }
 
-    void Window::mouseDragged(MouseEvent& mouseEvent)
+    void MessageBox::mouseDragged(MouseEvent& mouseEvent)
     {
         if (mouseEvent.isConsumed() || mouseEvent.getSource() != this)
         {
@@ -296,7 +427,7 @@ namespace gcn
         mouseEvent.consume();
     }
 
-    Rectangle Window::getChildrenArea()
+    Rectangle MessageBox::getChildrenArea()
     {
         return Rectangle(getPadding(),
                          getTitleBarHeight(),
@@ -304,27 +435,22 @@ namespace gcn
                          getHeight() - getPadding() - getTitleBarHeight());
     }
 
-    void Window::setMovable(bool movable)
-    {
-        mMovable = movable;
-    }
-
-    bool Window::isMovable() const
+    bool MessageBox::isMovable() const
     {
         return mMovable;
     }
 
-    void Window::setOpaque(bool opaque)
+    void MessageBox::setOpaque(bool opaque)
     {
         mOpaque = opaque;
     }
 
-    bool Window::isOpaque()
+    bool MessageBox::isOpaque()
     {
         return mOpaque;
     }
 
-    void Window::resizeToContent()
+    void MessageBox::resizeToContent()
     {
         WidgetListIterator it;
 
@@ -344,4 +470,16 @@ namespace gcn
 
         setSize(w + 2* getPadding(), h + getPadding() + getTitleBarHeight());
     }
+    
+    int MessageBox::getClickedButton() const
+    {
+        return mClickedButton;
+    }
+	
+	void MessageBox::addToContainer(Container* container)
+	{
+		int x = container->getWidth() - getWidth();
+		int y = container->getHeight() - getHeight();
+		container->add(this, x/2, y/2);
+	}
 }

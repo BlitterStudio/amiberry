@@ -62,84 +62,86 @@
 
 namespace gcn
 {
-	KeyInput::KeyInput(const Key& key, int type)
-		: mKey(key),
-		  mType(type), mButton(0),
-		  mShiftPressed(false),
-		  mControlPressed(false),
-		  mAltPressed(false),
-		  mMetaPressed(false),
-		  mNumericPad(false)
-	{
-	}
+    KeyInput::KeyInput(const Key& key, int type)
+            :mKey(key),
+             mType(type),
+             mShiftPressed(false),
+             mControlPressed(false),
+             mAltPressed(false),
+             mMetaPressed(false),
+             mNumericPad(false)
+    {
 
-	void KeyInput::setType(int type)
-	{
-		mType = type;
-	}
+    }
 
-	int KeyInput::getType() const
-	{
-		return mType;
-	}
+    void KeyInput::setType(int type)
+    {
+        mType = type;
+    }
 
-	void KeyInput::setKey(const Key& key)
-	{
-		mKey = key;
-	}
+    int KeyInput::getType() const
+    {
+        return mType;
+    }
 
-	const Key& KeyInput::getKey() const
-	{
-		return mKey;
-	}
+    void KeyInput::setKey(const Key& key)
+    {
+        mKey = key;
+    }
 
-	bool KeyInput::isShiftPressed() const
-	{
-		return mShiftPressed;
-	}
+    const Key& KeyInput::getKey() const
+    {
+        return mKey;
+    }
 
-	void KeyInput::setShiftPressed(bool pressed)
-	{
-		mShiftPressed = pressed;
-	}
+    bool KeyInput::isShiftPressed() const
+    {
+        return mShiftPressed;
+    }
 
-	bool KeyInput::isControlPressed() const
-	{
-		return mControlPressed;
-	}
+    void KeyInput::setShiftPressed(bool pressed)
+    {
+        mShiftPressed = pressed;
+    }
 
-	void KeyInput::setControlPressed(bool pressed)
-	{
-		mControlPressed = pressed;
-	}
+    bool KeyInput::isControlPressed() const
+    {
+        return mControlPressed;
+    }
 
-	bool KeyInput::isAltPressed() const
-	{
-		return mAltPressed;
-	}
+    void KeyInput::setControlPressed(bool pressed)
+    {
+        mControlPressed = pressed;
+    }
 
-	void KeyInput::setAltPressed(bool pressed)
-	{
-		mAltPressed = pressed;
-	}
+    bool KeyInput::isAltPressed() const
+    {
+        return mAltPressed;
+    }
 
-	bool KeyInput::isMetaPressed() const
-	{
-		return mMetaPressed;
-	}
+    void KeyInput::setAltPressed(bool pressed)
+    {
+        mAltPressed = pressed;
+    }
 
-	void KeyInput::setMetaPressed(bool pressed)
-	{
-		mMetaPressed = pressed;
-	}
+    bool KeyInput::isMetaPressed() const
+    {
+        return mMetaPressed;
+    }
 
-	bool KeyInput::isNumericPad() const
-	{
-		return mNumericPad;
-	}
+    void KeyInput::setMetaPressed(bool pressed)
+    {
+        mMetaPressed = pressed;
+    }
 
-	void KeyInput::setNumericPad(bool numpad)
-	{
-		mNumericPad = numpad;
-	}
+    bool KeyInput::isNumericPad() const
+    {
+        return mNumericPad;
+    }
+
+    void KeyInput::setNumericPad(bool numpad)
+    {
+        mNumericPad = numpad;
+    }
 }
+

@@ -66,124 +66,123 @@
 
 namespace gcn
 {
-	/**
-	 * An implementation of a check box where a user can select or deselect
-	 * the check box and where the status of the check box is displayed to the user.
-	 * A check box is capable of displaying a caption. 
-	 * 
-	 * If a check box's state changes an action event will be sent to all action 
-	 * listeners of the check box.
-	 */
-	class GCN_CORE_DECLSPEC CheckBox :
-		public Widget,
-		public MouseListener,
-		public KeyListener
-	{
-	public:
+    /**
+     * An implementation of a check box where a user can select or deselect
+     * the check box and where the status of the check box is displayed to the user.
+     * A check box is capable of displaying a caption. 
+     * 
+     * If a check box's state changes an action event will be sent to all action 
+     * listeners of the check box.
+     */
+    class GCN_CORE_DECLSPEC CheckBox :
+        public Widget,
+        public MouseListener,
+        public KeyListener
+    {
+    public:
 
-		/**
-		 * Contructor.
-		 */
-		CheckBox();
+        /**
+         * Contructor.
+         */
+        CheckBox();
 
-		/**
-		 * Constructor. The check box will be automatically resized
-		 * to fit it's caption.
-		 *
-		 * @param caption The caption of the check box.
-		 * @param selected True if the check box is selected, false otherwise.
-		 */
-		CheckBox(const std::string& caption, bool selected = false);
+        /**
+         * Constructor. The check box will be automatically resized
+         * to fit it's caption.
+         *
+         * @param caption The caption of the check box.
+         * @param marked True if the check box is selected, false otherwise.
+         */
+        CheckBox(const std::string &caption, bool selected = false);
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~CheckBox()
-		= default;
+        /**
+         * Destructor.
+         */
+        virtual ~CheckBox() { }
 
-		/**
-		 * Checks if the check box is selected.
-		 *
-		 * @return True if the check box is selected, false otherwise.
-		 * @see setSelected
-		 */
-		bool isSelected() const;
+        /**
+         * Checks if the check box is selected.
+         *
+         * @return True if the check box is selected, false otherwise.
+         * @see setSelected
+         */
+        bool isSelected() const;
 
-		/**
-		 * Sets the check box to be selected.
-		 *
-		 * @param selected True if the check box should be set as selected.
-		 * @see isSelected
-		 */
-		void setSelected(bool selected);
+        /**
+         * Sets the check box to be selected.
+         *
+         * @param selected True if the check box should be set as selected.
+         * @see isSelected
+         */
+        void setSelected(bool selected);
 
-		/**
-		 * Gets the caption of the check box.
-		 *
-		 * @return The caption of the check box.
-		 * @see setCaption
-		 */
-		const std::string& getCaption() const;
+        /**
+         * Gets the caption of the check box.
+         *
+         * @return The caption of the check box.
+         * @see setCaption
+         */
+        const std::string &getCaption() const;
 
-		/**
-		 * Sets the caption of the check box. It's advisable to call
-		 * adjustSize after setting of the caption to adjust the
-		 * check box's size to fit the caption.
-		 *
-		 * @param caption The caption of the check box.
-		 * @see getCaption, adjustSize
-		 */
-		void setCaption(const std::string& caption);
+        /**
+         * Sets the caption of the check box. It's advisable to call
+         * adjustSize after setting of the caption to adjust the
+         * check box's size to fit the caption.
+         *
+         * @param caption The caption of the check box.
+         * @see getCaption, adjustSize
+         */
+        void setCaption(const std::string& caption);
 
-		/**
-		 * Adjusts the check box's size to fit the caption.
-		 */
-		void adjustSize();
-
-
-		// Inherited from Widget
-
-		void draw(Graphics* graphics) override;
-
-		void drawBorder(Graphics* graphics) override;
+        /**
+         * Adjusts the check box's size to fit the caption.
+         */
+        void adjustSize();
 
 
-		// Inherited from KeyListener
+        // Inherited from Widget
 
-		void keyPressed(KeyEvent& keyEvent) override;
+        virtual void draw(Graphics* graphics);
 
-
-		// Inherited from MouseListener
-
-		void mouseClicked(MouseEvent& mouseEvent) override;
-
-		void mouseDragged(MouseEvent& mouseEvent) override;
+        virtual void drawBorder(Graphics* graphics);
 
 
-	protected:
-		/**
-		 * Draws the box of the check box. 
-		 *
-		 * @param graphics A Graphics object to draw with.
-		 */
-		virtual void drawBox(Graphics* graphics);
+        // Inherited from KeyListener
 
-		/**
-		 * Toggles the check box between being selected and
-		 * not being selected.
-		 */
-		virtual void toggleSelected();
+        virtual void keyPressed(KeyEvent& keyEvent);
 
-		/**
-		 * True if the check box is selected, false otherwise.
-		 */
-		bool mSelected{};
 
-		/**
-		 * Holds the caption of the check box.
-		 */
-		std::string mCaption;
-	};
+        // Inherited from MouseListener
+
+        virtual void mouseClicked(MouseEvent& mouseEvent);
+
+        virtual void mouseDragged(MouseEvent& mouseEvent);
+
+
+    protected:
+        /**
+         * Draws the box of the check box. 
+         *
+         * @param graphics A Graphics object to draw with.
+         */
+        virtual void drawBox(Graphics *graphics);
+
+        /**
+         * Toggles the check box between being selected and
+         * not being selected.
+         */
+        virtual void toggleSelected();
+
+        /**
+         * True if the check box is selected, false otherwise.
+         */
+        bool mSelected;
+
+        /**
+         * Holds the caption of the check box.
+         */
+        std::string mCaption;
+    };
 }
 
 #endif // end GCN_CHECKBOX_HPP

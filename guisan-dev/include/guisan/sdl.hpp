@@ -58,6 +58,7 @@
 #define GCN_SDL_HPP
 
 #include <guisan/sdl/sdlgraphics.hpp>
+#include <guisan/sdl/sdl2graphics.hpp>
 #include <guisan/sdl/sdlimage.hpp>
 #include <guisan/sdl/sdlimageloader.hpp>
 #include <guisan/sdl/sdlinput.hpp>
@@ -65,11 +66,12 @@
 
 #include "platform.hpp"
 
-extern "C" {
-/**
- * Exists to be able to check for Guichan SDL with autotools.
- */
-GCN_EXTENSION_DECLSPEC extern void gcnSDL();
+extern "C"
+{
+    /**
+     * Exists to be able to check for Guichan SDL with autotools.
+     */
+    GCN_EXTENSION_DECLSPEC extern void gcnSDL();
 }
 
 #endif // end GCN_SDL_HPP
