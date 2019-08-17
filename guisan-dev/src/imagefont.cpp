@@ -69,251 +69,255 @@
 
 namespace gcn
 {
-	ImageFont::ImageFont(const std::string& filename, const std::string& glyphs)
-	{
-		mFilename = filename;
-		mImage = Image::load(filename, false);
+    ImageFont::ImageFont(const std::string& filename, const std::string& glyphs)
+    {
+        mFilename = filename;
+        mImage = Image::load(filename, false);
 
-		auto separator = mImage->getPixel(0, 0);
+        Color separator = mImage->getPixel(0, 0);
+                
+        int i = 0;
+        for (i = 0;
+             i < mImage->getWidth() && separator == mImage->getPixel(i, 0);
+             ++i)
+        {
+        }
+        
+        if (i >= mImage->getWidth())
+        {
+            throw GCN_EXCEPTION("Corrupt image.");
+        }
 
-		int i = 0;
-		for (i = 0;
-		     i < mImage->getWidth() && separator == mImage->getPixel(i, 0);
-		     ++i)
-		{
-		}
+        int j = 0;
+        for (j = 0; j < mImage->getHeight(); ++j)
+        {
+            if (separator == mImage->getPixel(i, j))
+            {
+                break;
+            }
+        }
 
-		if (i >= mImage->getWidth())
-		{
-			throw GCN_EXCEPTION("Corrupt image.");
-		}
+        mHeight = j;
+        int x = 0, y = 0;
+        unsigned char k;
 
-		auto j = 0;
-		for (j = 0; j < mImage->getHeight(); ++j)
-		{
-			if (separator == mImage->getPixel(i, j))
-			{
-				break;
-			}
-		}
+        for (i=0; i < (int)glyphs.size(); ++i)
+        {
+            k = glyphs.at(i);
+            addGlyph(k, x, y, separator);
+        }
 
-		mHeight = j;
-		auto x = 0, y = 0;
-		unsigned char k;
+        //int w = mImage->getWidth();
+        //int h = mImage->getHeight();
+        mImage->convertToDisplayFormat();
 
-		for (i = 0; i < int(glyphs.size()); ++i)
-		{
-			k = glyphs.at(i);
-			addGlyph(k, x, y, separator);
-		}
+        mRowSpacing = 0;
+        mGlyphSpacing = 0;
+    }
 
-		//int w = mImage->getWidth();
-		//int h = mImage->getHeight();
-		mImage->convertToDisplayFormat();
+    ImageFont::ImageFont(const std::string& filename, unsigned char glyphsFrom,
+                         unsigned char glyphsTo)
+    {
+        mFilename = filename;
+        mImage = Image::load(filename, false);
 
-		mRowSpacing = 0;
-		mGlyphSpacing = 0;
-	}
+        Color separator = mImage->getPixel(0, 0);
 
-	ImageFont::ImageFont(const std::string& filename, unsigned char glyphsFrom,
-	                     unsigned char glyphsTo)
-	{
-		mFilename = filename;
-		mImage = Image::load(filename, false);
+        int i = 0;
+        for (i=0; separator == mImage->getPixel(i, 0)
+                 && i < mImage->getWidth(); ++i)
+        {
+        }
 
-		auto separator = mImage->getPixel(0, 0);
+        if (i >= mImage->getWidth())
+        {
+            throw GCN_EXCEPTION("Corrupt image.");
+        }
 
-		int i = 0;
-		for (i = 0; separator == mImage->getPixel(i, 0)
-		     && i < mImage->getWidth(); ++i)
-		{
-		}
+        int j = 0;
+        for (j = 0; j < mImage->getHeight(); ++j)
+        {
+            if (separator == mImage->getPixel(i, j))
+            {
+                break;
+            }
+        }
 
-		if (i >= mImage->getWidth())
-		{
-			throw GCN_EXCEPTION("Corrupt image.");
-		}
+        mHeight = j;
+        int x = 0, y = 0;
 
-		auto j = 0;
-		for (j = 0; j < mImage->getHeight(); ++j)
-		{
-			if (separator == mImage->getPixel(i, j))
-			{
-				break;
-			}
-		}
+        for (i=glyphsFrom; i<glyphsTo+1; i++)
+        {
+            addGlyph(i, x, y, separator);
+        }
 
-		mHeight = j;
-		auto x = 0, y = 0;
+        //int w = mImage->getWidth();
+        //int h = mImage->getHeight();
+        mImage->convertToDisplayFormat();
 
-		for (i = glyphsFrom; i < glyphsTo + 1; i++)
-		{
-			addGlyph(i, x, y, separator);
-		}
+        mRowSpacing = 0;
+        mGlyphSpacing = 0;
+    }
 
-		//int w = mImage->getWidth();
-		//int h = mImage->getHeight();
-		mImage->convertToDisplayFormat();
+    ImageFont::~ImageFont()
+    {
+        delete mImage;
+    }
 
-		mRowSpacing = 0;
-		mGlyphSpacing = 0;
-	}
+    int ImageFont::getWidth(unsigned char glyph) const
+    {
+        if (mGlyph[glyph].width == 0)
+        {
+            return mGlyph[(int)(' ')].width + mGlyphSpacing;
+        }
 
-	ImageFont::~ImageFont()
-	{
-		delete mImage;
-	}
+        return mGlyph[glyph].width + mGlyphSpacing;
+    }
 
-	int ImageFont::getWidth(unsigned char glyph) const
-	{
-		if (mGlyph[glyph].width == 0)
-		{
-			return mGlyph[int(' ')].width + mGlyphSpacing;
-		}
+    int ImageFont::getHeight() const
+    {
+        return mHeight + mRowSpacing;
+    }
 
-		return mGlyph[glyph].width + mGlyphSpacing;
-	}
+    int ImageFont::drawGlyph(Graphics* graphics, unsigned char glyph,
+                             int x, int y)
+    {
+        // This is needed for drawing the Glyph in the middle if we have spacing
+        int yoffset = getRowSpacing() >> 1;
 
-	int ImageFont::getHeight() const
-	{
-		return mHeight + mRowSpacing;
-	}
+        if (mGlyph[glyph].width == 0)
+        {
+            graphics->drawRectangle(Rectangle(x, y + 1 + yoffset,
+                                              mGlyph[(int)(' ')].width - 1,
+                                              mGlyph[(int)(' ')].height - 2));
 
-	int ImageFont::drawGlyph(Graphics* graphics, unsigned char glyph,
-	                         int x, int y)
-	{
-		// This is needed for drawing the Glyph in the middle if we have spacing
-		auto yoffset = getRowSpacing() >> 1;
+            return mGlyph[(int)(' ')].width + mGlyphSpacing;
+        }
 
-		if (mGlyph[glyph].width == 0)
-		{
-			graphics->drawRectangle(Rectangle(x, y + 1 + yoffset,
-			                                  mGlyph[int(' ')].width - 1,
-			                                  mGlyph[int(' ')].height - 2));
+        graphics->drawImage(mImage, mGlyph[glyph].x, mGlyph[glyph].y, x,
+                            y + yoffset, mGlyph[glyph].width,
+                            mGlyph[glyph].height);
 
-			return mGlyph[int(' ')].width + mGlyphSpacing;
-		}
+        return mGlyph[glyph].width + mGlyphSpacing;
+    }
 
-		graphics->drawImage(mImage, mGlyph[glyph].x, mGlyph[glyph].y, x,
-		                    y + yoffset, mGlyph[glyph].width,
-		                    mGlyph[glyph].height);
+    void ImageFont::drawString(Graphics* graphics, const std::string& text,
+                               int x, int y)
+    {
+        unsigned int i;
 
-		return mGlyph[glyph].width + mGlyphSpacing;
-	}
+        for (i = 0; i< text.size(); ++i)
+        {
+            drawGlyph(graphics, text.at(i), x, y);
+            x += getWidth(text.at(i));
+        }
+    }
 
-	void ImageFont::drawString(Graphics* graphics, const std::string& text,
-	                           int x, int y)
-	{
-		for (auto i : text)
-		{
-			drawGlyph(graphics, i, x, y);
-			x += getWidth(i);
-		}
-	}
+    void ImageFont::setRowSpacing(int spacing)
+    {
+        mRowSpacing = spacing;
+    }
 
-	void ImageFont::setRowSpacing(int spacing)
-	{
-		mRowSpacing = spacing;
-	}
+    int ImageFont::getRowSpacing()
+    {
+        return mRowSpacing;
+    }
 
-	int ImageFont::getRowSpacing()
-	{
-		return mRowSpacing;
-	}
+    void ImageFont::setGlyphSpacing(int spacing)
+    {
+        mGlyphSpacing = spacing;
+    }
 
-	void ImageFont::setGlyphSpacing(int spacing)
-	{
-		mGlyphSpacing = spacing;
-	}
+    int ImageFont::getGlyphSpacing()
+    {
+        return mGlyphSpacing;
+    }
 
-	int ImageFont::getGlyphSpacing()
-	{
-		return mGlyphSpacing;
-	}
+    void ImageFont::addGlyph(unsigned char c, int &x,
+                             int &y, const Color& separator)
+    {
+        Color color;
+        do
+        {
+            ++x;
 
-	void ImageFont::addGlyph(unsigned char c, int& x,
-	                         int& y, const Color& separator)
-	{
-		Color color;
-		do
-		{
-			++x;
+            if (x >= mImage->getWidth())
+            {
+                y += mHeight + 1;
+                x = 0;
 
-			if (x >= mImage->getWidth())
-			{
-				y += mHeight + 1;
-				x = 0;
+                if (y >= mImage->getHeight())
+                {
+                    std::string str;
+                    std::ostringstream os(str);
+                    os << "Image ";
+                    os << mFilename;
+                    os << " with font is corrupt near character '";
+                    os << c;
+                    os << "'";
+                    throw GCN_EXCEPTION(os.str());
+                }
+            }
 
-				if (y >= mImage->getHeight())
-				{
-					std::string str;
-					std::ostringstream os(str);
-					os << "Image ";
-					os << mFilename;
-					os << " with font is corrupt near character '";
-					os << c;
-					os << "'";
-					throw GCN_EXCEPTION(os.str());
-				}
-			}
+            color = mImage->getPixel(x, y);
 
-			color = mImage->getPixel(x, y);
-		}
-		while (color == separator);
+        } while (color == separator);
 
-		auto w = 0;
+        int w = 0;
 
-		do
-		{
-			++w;
+        do
+        {
+            ++w;
 
-			if (x + w >= mImage->getWidth())
-			{
-				std::string str;
-				std::ostringstream os(str);
-				os << "Image ";
-				os << mFilename;
-				os << " with font is corrupt near character '";
-				os << c;
-				os << "'";
-				throw GCN_EXCEPTION(os.str());
-			}
+            if (x+w >= mImage->getWidth())
+            {
+                std::string str;
+                std::ostringstream os(str);
+                os << "Image ";
+                os << mFilename;
+                os << " with font is corrupt near character '";
+                os << c;
+                os << "'";
+                throw GCN_EXCEPTION(os.str());
+            }
 
-			color = mImage->getPixel(x + w, y);
-		}
-		while (color != separator);
+            color = mImage->getPixel(x + w, y);
 
-		mGlyph[c] = Rectangle(x, y, w, mHeight);
+        } while (color != separator);
 
-		x += w;
-	}
+        mGlyph[c] = Rectangle(x, y, w, mHeight);
 
-	int ImageFont::getWidth(const std::string& text) const
-	{
-		auto size = 0;
+        x += w;
+    }
 
-		for (auto i : text)
-		{
-			size += getWidth(i);
-		}
+    int ImageFont::getWidth(const std::string& text) const
+    {
+        unsigned int i;
+        int size = 0;
+
+        for (i = 0; i < text.size(); ++i)
+        {
+            size += getWidth(text.at(i));
+        }
 
 		return size - mGlyphSpacing;
-	}
+    }
 
-	int ImageFont::getStringIndexAt(const std::string& text, int x)
-	{
-		auto size = 0;
+    int ImageFont::getStringIndexAt(const std::string& text, int x)
+    {
+        unsigned int i;
+        int size = 0;
 
-		for (unsigned int i = 0; i < text.size(); ++i)
-		{
-			size += getWidth(text.at(i));
+        for (i = 0; i < text.size(); ++i)
+        {
+            size += getWidth(text.at(i));
 
-			if (size > x)
-			{
-				return i;
-			}
-		}
+            if (size > x)
+            {
+                return i;
+            }
+        }
 
-		return text.size();
-	}
+        return text.size();
+    }
 }

@@ -64,40 +64,41 @@
 
 namespace gcn
 {
-	OpenGLImage::OpenGLImage(unsigned int* pixels, int width, int height,
-	                         bool convertToDisplayFormat)
-	{
-		mAutoFree = true;
+    OpenGLImage::OpenGLImage(unsigned int* pixels, int width, int height,
+                             bool convertToDisplayFormat)
+    {
+        mAutoFree = true;
 
-		mWidth = width;
-		mHeight = height;
+        mWidth = width;
+        mHeight = height;
 		mTextureWidth = 1, mTextureHeight = 1;
 
-		while (mTextureWidth < mWidth)
-		{
-			mTextureWidth *= 2;
-		}
+        while(mTextureWidth < mWidth)
+        {
+            mTextureWidth *= 2;
+        }
 
-		while (mTextureHeight < mHeight)
-		{
-			mTextureHeight *= 2;
-		}
+        while(mTextureHeight < mHeight)
+        {
+            mTextureHeight *= 2;
+        }
 
 		// Create a new pixel array and copy the pixels into it
 		mPixels = new unsigned int[mTextureWidth * mTextureHeight];
 
 #ifdef __BIG_ENDIAN__
-        const auto magicPink = 0xff00ffff;
+        const unsigned int magicPink = 0xff00ffff;
 #else
-		const auto magicPink = 0xffff00ff;
+        const unsigned int magicPink = 0xffff00ff;
 #endif
-		for (auto y = 0; y < mTextureHeight; y++)
+		int x, y;
+		for (y = 0; y < mTextureHeight; y++)
 		{
-			for (auto x = 0; x < mTextureWidth; x++)
+			for (x = 0; x < mTextureWidth; x++)
 			{
 				if (x < mWidth && y < mHeight)
 				{
-					auto c = pixels[x + y * mWidth];
+					unsigned int c = pixels[x + y * mWidth];
 
 					// Magic pink to transparent
 					if (c == magicPink)
@@ -114,82 +115,82 @@ namespace gcn
 			}
 		}
 
-		if (convertToDisplayFormat)
-		{
-			OpenGLImage::convertToDisplayFormat();
-		}
-	}
+        if (convertToDisplayFormat)
+        {
+            OpenGLImage::convertToDisplayFormat();
+        }
+    }
 
-	OpenGLImage::OpenGLImage(GLuint textureHandle, int width, int height, bool autoFree)
-	{
-		mTextureHandle = textureHandle;
-		mAutoFree = autoFree;
-		mPixels = nullptr;
+    OpenGLImage::OpenGLImage(GLuint textureHandle, int width, int height, bool autoFree)
+    {
+        mTextureHandle = textureHandle;
+        mAutoFree = autoFree;
+		mPixels = NULL;
 
 		mWidth = width;
-		mHeight = height;
+        mHeight = height;
 		mTextureWidth = 1, mTextureHeight = 1;
 
-		while (mTextureWidth < mWidth)
-		{
-			mTextureWidth *= 2;
-		}
+        while(mTextureWidth < mWidth)
+        {
+            mTextureWidth *= 2;
+        }
 
-		while (mTextureHeight < mHeight)
-		{
-			mTextureHeight *= 2;
-		}
-	}
+        while(mTextureHeight < mHeight)
+        {
+            mTextureHeight *= 2;
+        }
+    }
 
-	OpenGLImage::~OpenGLImage()
-	{
-		if (mAutoFree)
-		{
-			OpenGLImage::free();
-		}
-	}
+    OpenGLImage::~OpenGLImage()
+    {
+        if (mAutoFree)
+        {
+            free();
+        }
+    }
 
-	GLuint OpenGLImage::getTextureHandle() const
-	{
-		return mTextureHandle;
-	}
+    GLuint OpenGLImage::getTextureHandle() const
+    {
+        return mTextureHandle;
+    }
 
-	int OpenGLImage::getTextureWidth() const
-	{
+    int OpenGLImage::getTextureWidth() const
+    {
 		return mTextureWidth;
-	}
+    }
 
-	int OpenGLImage::getTextureHeight() const
-	{
+    int OpenGLImage::getTextureHeight() const
+    {
 		return mTextureHeight;
-	}
+    }
 
-	void OpenGLImage::free()
-	{
-		if (mPixels == nullptr)
+    void OpenGLImage::free()
+    {
+		if (mPixels == NULL)
 		{
 			glDeleteTextures(1, &mTextureHandle);
 		}
 		else
 		{
 			delete[] mPixels;
-			mPixels = nullptr;
+			mPixels = NULL;
 		}
-	}
+    }
 
-	int OpenGLImage::getWidth() const
-	{
-		return mWidth;
-	}
+    int OpenGLImage::getWidth() const
+    {
+        return mWidth;
+    }
 
-	int OpenGLImage::getHeight() const
-	{
-		return mHeight;
-	}
+    int OpenGLImage::getHeight() const
+    {
+        return mHeight;
+    }
 
-	Color OpenGLImage::getPixel(int x, int y)
-	{
-		if (mPixels == nullptr)
+    Color OpenGLImage::getPixel(int x, int y)
+    {
+		if (mPixels == NULL)
 		{
 			throw GCN_EXCEPTION("Image has been converted to display format");
 		}
@@ -213,12 +214,12 @@ namespace gcn
 		unsigned char r = c & 0xff;
 #endif
 
-		return Color(r, g, b, a);
-	}
+        return Color(r, g, b, a);
+    }
 
-	void OpenGLImage::putPixel(int x, int y, const Color& color)
-	{
-		if (mPixels == nullptr)
+    void OpenGLImage::putPixel(int x, int y, const Color& color)
+    {
+        if (mPixels == NULL)
 		{
 			throw GCN_EXCEPTION("Image has been converted to display format");
 		}
@@ -235,66 +236,66 @@ namespace gcn
 #endif
 
 		mPixels[x + y * mTextureWidth] = c;
-	}
+    }
 
-	void OpenGLImage::convertToDisplayFormat()
-	{
-		if (mPixels == nullptr)
+    void OpenGLImage::convertToDisplayFormat()
+    {
+		if (mPixels == NULL)
 		{
 			throw GCN_EXCEPTION("Image has already been converted to display format");
 		}
 
-		glGenTextures(1, &mTextureHandle);
-		glBindTexture(GL_TEXTURE_2D, mTextureHandle);
+        glGenTextures(1, &mTextureHandle);
+        glBindTexture(GL_TEXTURE_2D, mTextureHandle);
 
-		glTexImage2D(GL_TEXTURE_2D,
-		             0,
-		             4,
-		             mTextureWidth,
-		             mTextureHeight,
-		             0,
-		             GL_RGBA,
-		             GL_UNSIGNED_BYTE,
-		             mPixels);
+        glTexImage2D(GL_TEXTURE_2D,
+                     0,
+                     4,
+                     mTextureWidth,
+                     mTextureHeight,
+                     0,
+                     GL_RGBA,
+                     GL_UNSIGNED_BYTE,
+                     mPixels);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-		delete[] mPixels;
-		mPixels = nullptr;
+        delete[] mPixels;
+		mPixels = NULL;
 
-		auto error = glGetError();
-		if (error)
-		{
-			std::string errmsg;
-			switch (error)
-			{
-			case GL_INVALID_ENUM:
-				errmsg = "GL_INVALID_ENUM";
-				break;
+        GLenum error = glGetError();
+        if (error)
+        {
+            std::string errmsg;
+            switch (error)
+            {
+              case GL_INVALID_ENUM:
+                  errmsg = "GL_INVALID_ENUM";
+                  break;
 
-			case GL_INVALID_VALUE:
-				errmsg = "GL_INVALID_VALUE";
-				break;
+              case GL_INVALID_VALUE:
+                  errmsg = "GL_INVALID_VALUE";
+                  break;
 
-			case GL_INVALID_OPERATION:
-				errmsg = "GL_INVALID_OPERATION";
-				break;
+              case GL_INVALID_OPERATION:
+                  errmsg = "GL_INVALID_OPERATION";
+                  break;
 
-			case GL_STACK_OVERFLOW:
-				errmsg = "GL_STACK_OVERFLOW";
-				break;
+              case GL_STACK_OVERFLOW:
+                  errmsg = "GL_STACK_OVERFLOW";
+                  break;
 
-			case GL_STACK_UNDERFLOW:
-				errmsg = "GL_STACK_UNDERFLOW";
-				break;
+              case GL_STACK_UNDERFLOW:
+                  errmsg = "GL_STACK_UNDERFLOW";
+                  break;
 
-			case GL_OUT_OF_MEMORY:
-				errmsg = "GL_OUT_OF_MEMORY";
-				break;
-			}
+              case GL_OUT_OF_MEMORY:
+                  errmsg = "GL_OUT_OF_MEMORY";
+                  break;
+            }
 
-			throw GCN_EXCEPTION(std::string("Unable to convert to OpenGL display format, glGetError said: ") + errmsg);
-		}
-	}
+            throw GCN_EXCEPTION(std::string("Unable to convert to OpenGL display format, glGetError said: ") + errmsg);
+        }
+    }
 }

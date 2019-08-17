@@ -69,157 +69,158 @@
 
 namespace gcn
 {
-	class Container;
-	class Tab;
+    class Container;
+    class Tab;
+    
+    /**
+     * With the tabbed area widget several widgets can share the same
+     * space. The widget to view is selected by the user by using tabs.
+     */
+    class GCN_CORE_DECLSPEC TabbedArea:
+        public ActionListener,
+        public BasicContainer,
+        public KeyListener,
+        public MouseListener
+    {
+    public:
 
-	/**
-	 * With the tabbed area widget several widgets can share the same
-	 * space. The widget to view is selected by the user by using tabs.
-	 */
-	class GCN_CORE_DECLSPEC TabbedArea :
-		public ActionListener,
-		public BasicContainer,
-		public KeyListener,
-		public MouseListener
-	{
-	public:
+        /**
+         * Constructor.
+         */
+        TabbedArea();
 
-		/**
-		 * Constructor.
-		 */
-		TabbedArea();
+        /**
+         * Destructor.
+         */
+        virtual ~TabbedArea();
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~TabbedArea();
+        /**
+         * Adds a tab to the tabbed area.
+         *
+         * @param caption The caption of the tab.
+         * @param widget The widget to view when the tab is selected.         
+         */
+        virtual void addTab(const std::string& caption, Widget* widget);
 
-		/**
-		 * Adds a tab to the tabbed area.
-		 *
-		 * @param caption The caption of the tab.
-		 * @param widget The widget to view when the tab is selected.         
-		 */
-		virtual void addTab(const std::string& caption, Widget* widget);
+        /**
+         * Adds a tab to the tabbed area.
+         *
+         * @param tab The tab widget for the tab.
+         * @param widget The widget to view when the tab is selected.         
+         */
+        virtual void addTab(Tab* tab, Widget* widget);
 
-		/**
-		 * Adds a tab to the tabbed area.
-		 *
-		 * @param tab The tab widget for the tab.
-		 * @param widget The widget to view when the tab is selected.         
-		 */
-		virtual void addTab(Tab* tab, Widget* widget);
+        /**
+         * Removes a tab from the tabbed area.
+         *
+         * @param index The index of the tab to remove.
+         */
+        virtual void removeTabWithIndex(unsigned int index);
+        
+        /**
+         * Removes a tab from the tabbed area.
+         *
+         * @param index The tab to remove.
+         */
+        virtual void removeTab(Tab* tab);
 
-		/**
-		 * Removes a tab from the tabbed area.
-		 *
-		 * @param index The index of the tab to remove.
-		 */
-		virtual void removeTabWithIndex(unsigned int index);
+        /**
+         * Checks whether a tab given an index is selected.
+         *
+         * @param index The index of the tab to check.
+         * @return True if the tab is selected, false otherwise.
+         */
+        virtual bool isTabSelected(unsigned int index) const;
+        
+        /**
+         * Checks whether a tab is selected or not.
+         *
+         * @param index The tab to check.
+         * @return True if the tab is selected, false otherwise.
+         */
+        virtual bool isTabSelected(Tab* tab);
 
-		/**
-		 * Removes a tab from the tabbed area.
-		 *
-		 * @param tab The tab to remove.
-		 */
-		virtual void removeTab(Tab* tab);
+        /**
+         * Sets a tab given an index to be selected.
+         *
+         * @param index The index of the tab to be selected.
+         */
+        virtual void setSelectedTabWithIndex(unsigned int index);
 
-		/**
-		 * Checks whether a tab given an index is selected.
-		 *
-		 * @param index The index of the tab to check.
-		 * @return True if the tab is selected, false otherwise.
-		 */
-		virtual bool isTabSelected(unsigned int index) const;
+        /**
+         * Sets a tab to be selected or not.
+         *
+         * @param index The tab to be selected.
+         */
+        virtual void setSelectedTab(Tab* tab);
 
-		/**
-		 * Checks whether a tab is selected or not.
-		 *
-		 * @param tab The tab to check.
-		 * @return True if the tab is selected, false otherwise.
-		 */
-		virtual bool isTabSelected(Tab* tab);
-
-		/**
-		 * Sets a tab given an index to be selected.
-		 *
-		 * @param index The index of the tab to be selected.
-		 */
-		virtual void setSelectedTabWithIndex(unsigned int index);
-
-		/**
-		 * Sets a tab to be selected or not.
-		 *
-		 * @param tab The tab to be selected.
-		 */
-		virtual void setSelectedTab(Tab* tab);
-
-		/**
-		 * Gets the index of the selected tab.
-		 *
-		 * @return The undex of the selected tab.
-		 *         If no tab is selected -1 will be returned.
-		 */
-		virtual int getSelectedTabIndex() const;
-
-		/**
-		 * Gets the selected tab.
-		 *
-		 * @return The selected tab.
-		 */
-		Tab* getSelectedTab() const;
-
-
-		// Inherited from Widget
-
-		void draw(Graphics* graphics) override;
-
-		void drawBorder(Graphics* graphics) override;
-
-		void logic() override;
-
-		void setWidth(int width) override;
-
-		void setHeight(int height) override;
-
-		void setSize(int width, int height) override;
-
-		void setDimension(const Rectangle& dimension) override;
+        /**
+         * Gets the index of the selected tab.
+         *
+         * @return The undex of the selected tab.
+         *         If no tab is selected -1 will be returned.
+         */
+        virtual int getSelectedTabIndex() const;
+        
+        /**
+         * Gets the selected tab.
+         *
+         * @return The selected tab.
+         */
+        Tab* getSelectedTab();
 
 
-		// Inherited from ActionListener
+        // Inherited from Widget
 
-		void action(const ActionEvent& actionEvent) override;
+        virtual void draw(Graphics *graphics);
+
+        virtual void drawBorder(Graphics* graphics);
+
+        virtual void logic();
+
+        void setWidth(int width);
+
+        void setHeight(int height);
+
+        void setSize(int width, int height);
+
+        void setDimension(const Rectangle& dimension);
+
+        
+        // Inherited from ActionListener
+
+        void action(const ActionEvent& actionEvent);
+        
+
+        // Inherited from DeathListener
+
+        virtual void death(const Event& event);
 
 
-		// Inherited from DeathListener
+        // Inherited from KeyListener
 
-		void death(const Event& event) override;
-
-
-		// Inherited from KeyListener
-
-		void keyPressed(KeyEvent& keyEvent) override;
+        virtual void keyPressed(KeyEvent& keyEvent);
 
 
-		// Inherited from MouseListener
+        // Inherited from MouseListener
+        
+        virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mousePressed(MouseEvent& mouseEvent) override;
-
-
-	protected:
-		/**
-		 * Adjusts the size of the tabbed area.
-		 */
-		void adjustSize();
-		void adjustTabPositions();
-
-		Tab* mSelectedTab;
-		Container* mTabContainer;
-		Container* mWidgetContainer;
-		std::vector<Tab*> mTabsToCleanUp;
-		std::vector<std::pair<Tab*, Widget*>> mTabs;
-	};
+        
+    protected:
+        /**
+         * Adjusts the size of the tabbed area.
+         */
+        void adjustSize();
+        void adjustTabPositions();
+        
+        Tab* mSelectedTab;
+        Container* mTabContainer;
+        Container* mWidgetContainer;
+        std::vector<Tab*> mTabsToCleanUp;
+        std::vector<std::pair<Tab*, Widget*> > mTabs;
+        
+    };
 }
 
 #endif // end GCN_TABBEDAREA_HPP

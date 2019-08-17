@@ -63,79 +63,79 @@
 
 namespace gcn
 {
-	/**
-	 * OpenGL implementation of the Graphics.
-	 */
-	class GCN_EXTENSION_DECLSPEC OpenGLGraphics : public Graphics
-	{
-	public:
+    /**
+     * OpenGL implementation of the Graphics.
+     */
+    class GCN_EXTENSION_DECLSPEC OpenGLGraphics: public Graphics
+    {
+    public:
 
-		// Needed so that drawImage(gcn::Image *, int, int) is visible.
-		using Graphics::drawImage;
+        // Needed so that drawImage(gcn::Image *, int, int) is visible.
+        using Graphics::drawImage;
 
-		/**
-		 * Constructor.
+        /**
+         * Constructor.
+         */
+        OpenGLGraphics();
+
+        /**
+         * Constructor.
+		 *
+		 * @param width the width of the logical drawing surface. Should be the
+         *              same as the screen resolution.
+		 *
+		 * @param height the height ot the logical drawing surface. Should be
+		 *               the same as the screen resolution.
 		 */
-		OpenGLGraphics();
-
-		/**
-		 * Constructor.
-		   *
-		   * @param width the width of the logical drawing surface. Should be the
-		 *              same as the screen resolution.
-		   *
-		   * @param height the height ot the logical drawing surface. Should be
-		   *               the same as the screen resolution.
-		   */
-		OpenGLGraphics(int width, int height);
+        OpenGLGraphics(int width, int height);
 
 		/**
 		 * Destructor.
 		 */
-		virtual ~OpenGLGraphics();
+        virtual ~OpenGLGraphics();
 
-		/**
-		 * Sets the target plane on where to draw.
-		   *
-		   * @param width the width of the logical drawing surface. Should be the
-		   *              same as the screen resolution.
-		   * @param height the height ot the logical drawing surface. Should be
-		   *               the same as the screen resolution.
-		 */
-		virtual void setTargetPlane(int width, int height);
+        /**
+         * Sets the target plane on where to draw.
+		 *
+		 * @param width the width of the logical drawing surface. Should be the
+		 *              same as the screen resolution.
+		 * @param height the height ot the logical drawing surface. Should be
+		 *               the same as the screen resolution.
+         */
+        virtual void setTargetPlane(int width, int height);
 
 
 		// Inherited from Graphics
 
-		void _beginDraw() override;
+        virtual void _beginDraw();
 
-		void _endDraw() override;
+        virtual void _endDraw();
 
-		bool pushClipArea(Rectangle area) override;
+        virtual bool pushClipArea(Rectangle area);
 
-		void popClipArea() override;
+        virtual void popClipArea();
 
-		void drawImage(const Image* image, int srcX, int srcY,
-		               int dstX, int dstY, int width,
-		               int height) override;
+        virtual void drawImage(const Image* image, int srcX, int srcY,
+                               int dstX, int dstY, int width,
+                               int height);
 
-		void drawPoint(int x, int y) override;
+        virtual void drawPoint(int x, int y);
 
-		void drawLine(int x1, int y1, int x2, int y2) override;
+        virtual void drawLine(int x1, int y1, int x2, int y2);
 
-		void drawRectangle(const Rectangle& rectangle) override;
+        virtual void drawRectangle(const Rectangle& rectangle);
 
-		void fillRectangle(const Rectangle& rectangle) override;
+        virtual void fillRectangle(const Rectangle& rectangle);
 
-		void setColor(const Color& color) override;
+        virtual void setColor(const Color& color);
 
-		const Color& getColor() override;
+		virtual const Color& getColor();
 
-	protected:
-		int mWidth{}, mHeight{};
-		bool mAlpha{};
-		Color mColor;
-	};
+    protected:
+        int mWidth, mHeight;
+		bool mAlpha;
+        Color mColor;
+    };
 }
 
 #endif // end GCN_OPENGLGRAPHICS_HPP

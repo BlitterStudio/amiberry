@@ -51,20 +51,21 @@
 #include "guisan/image.hpp"
 #include "guisan/graphics.hpp"
 #include "guisan/sdl/sdlgraphics.hpp"
+#include "guisan/sdl/sdl2graphics.hpp"
 
 namespace gcn
 {
-	SDLTrueTypeFont::SDLTrueTypeFont(const std::string& filename, int size): mHeight(0)
+	SDLTrueTypeFont::SDLTrueTypeFont (const std::string& filename, int size)
 	{
 		mRowSpacing = 0;
 		mGlyphSpacing = 0;
-		mAntiAlias = true;
+		mAntiAlias = true;        
 		mFilename = filename;
-		mFont = nullptr;
-
+		mFont = NULL;
+	
 		mFont = TTF_OpenFont(filename.c_str(), size);
-
-		if (mFont == nullptr)
+	
+		if (mFont == NULL)
 		{
 			throw GCN_EXCEPTION("SDLTrueTypeFont::SDLTrueTypeFont. "+std::string(TTF_GetError()));
 		}
@@ -79,7 +80,7 @@ namespace gcn
 	{
 		int w, h;
 		TTF_SizeText(mFont, text.c_str(), &w, &h);
-
+	
 		return w;
 	}
 
@@ -88,32 +89,42 @@ namespace gcn
 		return TTF_FontHeight(mFont) + mRowSpacing;
 	}
 
-	void SDLTrueTypeFont::drawString(Graphics* graphics, const std::string& text, const int x, const int y)
+	void SDLTrueTypeFont::drawString(gcn::Graphics* graphics, const std::string& text, const int x, const int y)
 	{
-		if (text.empty())
+		if (text == "")
 		{
 			return;
 		}
+	
+		gcn::SDLGraphics *sdlGraphics = dynamic_cast<gcn::SDLGraphics *>(graphics);
+		gcn::SDL2Graphics *sdl2Graphics = dynamic_cast<gcn::SDL2Graphics *>(graphics);
+		
 
-		SDLGraphics* sdlGraphics = dynamic_cast<SDLGraphics *>(graphics);
-
-		if (sdlGraphics == nullptr)
+		if (sdlGraphics == NULL && sdl2Graphics == NULL)
 		{
 			throw GCN_EXCEPTION("SDLTrueTypeFont::drawString. Graphics object not an SDL graphics object!");
 			return;
 		}
-
+	
 		// This is needed for drawing the Glyph in the middle if we have spacing
-		auto yoffset = getRowSpacing() / 2;
-
-		auto col = sdlGraphics->getColor();
+		int yoffset = getRowSpacing() / 2;
+	
+		Color col;
+		if (sdlGraphics)
+		{
+			col = sdlGraphics->getColor();
+		}
+		else
+		{
+			col = sdl2Graphics->getColor();
+		}
 
 		SDL_Color sdlCol;
 		sdlCol.b = col.b;
 		sdlCol.r = col.r;
 		sdlCol.g = col.g;
 
-		SDL_Surface* textSurface;
+		SDL_Surface *textSurface;
 		if (mAntiAlias)
 		{
 			textSurface = TTF_RenderText_Blended(mFont, text.c_str(), sdlCol);
@@ -122,7 +133,7 @@ namespace gcn
 		{
 			textSurface = TTF_RenderText_Solid(mFont, text.c_str(), sdlCol);
 		}
-
+	
 		SDL_Rect dst, src;
 		dst.x = x;
 		dst.y = y + yoffset;
@@ -130,9 +141,19 @@ namespace gcn
 		src.h = textSurface->h;
 		src.x = 0;
 		src.y = 0;
-
-		sdlGraphics->drawSDLSurface(textSurface, src, dst);
-		SDL_FreeSurface(textSurface);
+		dst.w = src.w;
+		dst.h = src.h;
+	
+		if (sdlGraphics)
+		{
+			sdlGraphics->drawSDLSurface(textSurface, src, dst);
+		}
+		else
+		{
+			sdl2Graphics->drawSDLSurface(textSurface, src, dst);
+		}
+		
+		SDL_FreeSurface(textSurface);        
 	}
 
 	void SDLTrueTypeFont::setRowSpacing(int spacing)
@@ -162,6 +183,8 @@ namespace gcn
 
 	bool SDLTrueTypeFont::isAntiAlias()
 	{
-		return mAntiAlias;
-	}
+		return mAntiAlias;        
+	}    
+
 }
+
