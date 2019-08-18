@@ -914,6 +914,7 @@ namespace widgets
 		}		
 #endif
 		gcn::Widget::setGlobalFont(gui_font);
+		gui_font->setAntiAlias(false);
 
 		//--------------------------------------------------
 		// Create main buttons

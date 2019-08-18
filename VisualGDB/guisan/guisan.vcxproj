@@ -95,6 +95,7 @@
     <ClCompile Include="..\..\guisan-dev\src\opengl\openglimage.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\rectangle.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdl.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdl2graphics.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdlgraphics.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdlimage.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdlimageloader.cpp" />
@@ -165,6 +166,7 @@
     <ClInclude Include="..\..\guisan-dev\include\guisan\platform.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\rectangle.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdl2graphics.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdlgraphics.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdlimage.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdlimageloader.hpp" />
@@ -181,8 +183,11 @@
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\dropdown.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\icon.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\imagebutton.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\imagetextbutton.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\inputbox.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\label.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\listbox.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\messagebox.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\progressbar.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\radiobutton.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\scrollarea.hpp" />
