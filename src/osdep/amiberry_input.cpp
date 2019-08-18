@@ -531,7 +531,7 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 	std::string line;
 	std::string delimiter = " = ";
 
-	auto tempbutton = -1;
+	auto tempbutton = 0;
 
 	// read each line in
 	while (std::getline(readFile, line))
@@ -552,29 +552,37 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 				param.erase(param.length() - 1, 1);
 
 			//  time to get the output number
-			if (param.at(0) != 'h') // check it isnt some kind of hat starting 'h' (so if D-pad uses buttons)
-				tempbutton = abs(atol(param.c_str()));
+			if (param.find("h") != 0) // check it isnt some kind of hat starting 'h' (so if D-pad uses buttons)
+			{	tempbutton = abs(atol(param.c_str()));
+                        }
+                        else
+                        {
+                            tempbutton = -1;
+                        }   
+                       
 			// gets the parameter
 
-			// this will need something separate to pull out the number of hats 
-			//  use SET_BIT on hX numbers 
-
-			if (strncmp(find_setting, "count_hats", 11) == 0 && param.at(0) == 'h')
-			{
-				if (param.at(1) == '0') { SET_BIT(tempbutton, 0); }
-				if (param.at(1) == '1') { SET_BIT(tempbutton, 1); }
-				if (param.at(1) == '2') { SET_BIT(tempbutton, 2); }
-				if (param.at(1) == '3') { SET_BIT(tempbutton, 3); }
-			}
+                        if (strncmp(find_setting, "count_hats", 10) == 0 &&  param.find("h0") == 0)
+                        {
+                            tempbutton = 1;
+                            break;
+                        }
+                        //else if (param.find("h0") == 0)
+                        //{
+                            
+                        //}
 
 			// ok, this is the 'normal' storing of values
 			if (option == find_setting)
 				break;
 
-			if (strncmp(find_setting, "count_hats", 11) != 0)
-				tempbutton = -1;
+                        // ignore anthing that isnt our special case(s), and keep looping
+			//if (strncmp(find_setting, "count_hats", 10) != 0)
+			//	tempbutton = -1;
 		}
 	}
+
+         write_log("Controller Detection: %s : %d\n",find_setting,tempbutton);
 
 	return tempbutton;
 }
@@ -713,6 +721,8 @@ static int init_joystick(void)
 	{
 		struct host_keyboard_button temp_keyboard_buttons{};
 
+                
+                
 		auto tempkey = find_retroarch_key("input_player1_y", retroarch_file);
 		auto x = find_string_in_array(remap_key_map_list_strings, remap_key_map_list_size, tempkey);
 		temp_keyboard_buttons.north_button = remap_key_map_list[x];
@@ -804,10 +814,9 @@ static int init_joystick(void)
 			if (SDL_JoystickNameForIndex(cpt) != nullptr)
 				strncpy(joystick_name[cpt], SDL_JoystickNameForIndex(cpt), sizeof joystick_name[cpt] - 1);
 #endif
-			else
-				sprintf(joystick_name[cpt], "Joystick%d", cpt);
-
-			// printf("Real Name       >>%s<<\n",joystick_name[cpt]);
+			//else
+			//sprintf(joystick_name[cpt], "Joystick%d", cpt);
+      write_log("Controller Detection for Device: %s \n",joystick_name[cpt]);
 
 			//this now uses controllers path (in tmp)
 			char control_config[255];
@@ -906,22 +915,22 @@ static int init_joystick(void)
 				host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity(
 					"input_right_axis", control_config);
 				if (!host_input_buttons[cpt].lstick_axis_x_invert)
-					host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity(
-						"input_l_x_plus_axis", control_config);
 
-				host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity(
-					"input_r_x_plus_axis", control_config);
-				host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity(
-					"input_r_y_plus_axis", control_config);
+					host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_l_x_plus_axis", control_config);
 
-			//i'll just leave this here for when we have a working debug logging                                
-			//              printf("invert left  y axis: %d\n",host_input_buttons[cpt].lstick_axis_y_invert);
-			//              printf("invert left  x axis: %d\n",host_input_buttons[cpt].lstick_axis_x_invert);
-			//              printf("invert right y axis: %d\n",host_input_buttons[cpt].rstick_axis_y_invert);
-			//              printf("invert right x axis: %d\n",host_input_buttons[cpt].rstick_axis_x_invert);
-			//                                       
-			//input_state_slot_increase_axis
-			//input_state_slot_decrease_axis
+				host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis", control_config);
+				host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis", control_config);
+
+				//i'll just leave this here for when we have a working debug logging    
+
+        write_log("Controller Detection: invert left  y axis: %d\n",host_input_buttons[cpt].lstick_axis_y_invert);
+        write_log("Controller Detection: invert left  x axis: %d\n",host_input_buttons[cpt].lstick_axis_x_invert);
+        write_log("Controller Detection: invert right y axis: %d\n",host_input_buttons[cpt].rstick_axis_y_invert);
+        write_log("Controller Detection: invert right x axis: %d\n",host_input_buttons[cpt].rstick_axis_x_invert);
+				//input_state_slot_increase_axis
+
+				//input_state_slot_decrease_axis
+
 			} // end of .cfg file found
 
 			else // do manual checks if there is no .cfg

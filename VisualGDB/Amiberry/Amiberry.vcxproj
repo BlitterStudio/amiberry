@@ -145,7 +145,6 @@
     <ClCompile Include="..\..\src\archivers\7z\LzFind.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma2Dec.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c" />
-    <ClCompile Include="..\..\src\archivers\7z\Lzma86Enc.c" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp" />
     <ClCompile Include="..\..\src\archivers\7z\LzmaLib.c" />
     <ClCompile Include="..\..\src\archivers\7z\Sha256.c" />
