@@ -113,7 +113,7 @@ void vsync_callback(unsigned int a, void* b)
 	atomic_inc(&vsync_counter);
 }
 
-static void *display_thread(void *unused)
+static int display_thread(void *unused)
 {
 	VC_DISPMANX_ALPHA_T alpha = {
 		DISPMANX_FLAGS_ALPHA_T(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
@@ -303,11 +303,12 @@ static void *display_thread(void *unused)
 			vc_dispmanx_display_close(dispmanxdisplay);
 			bcm_host_deinit();
 			display_tid = nullptr;
-			return nullptr;
+			return 0;
 		default: 
 			break;
 		}
 	}
+	return 0;
 }
 #endif
 
