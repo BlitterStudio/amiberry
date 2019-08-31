@@ -6,18 +6,19 @@
 * Copyright 2007-2015 Toni Wilen
 *
 */
-#include <string.h>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "filesys.h"
 #include "scsi.h"
 
-static const int outcmd[] = { 0x04, 0x0a, 0x0c, 0x11, 0x2a, 0xaa, 0x15, 0x55, 0x0f, -1 };
-static const int incmd[] = { 0x01, 0x03, 0x08, 0x0e, 0x12, 0x1a, 0x5a, 0x25, 0x28, 0x34, 0x37, 0x42, 0x43, 0xa8, 0x51, 0x52, 0xb9, 0xbd, 0xd8, 0xd9, 0xbe, -1 };
-static const int nonecmd[] = { 0x00, 0x05, 0x06, 0x07, 0x09, 0x0b, 0x10, 0x16, 0x17, 0x19, 0x1b, 0x1d, 0x1e, 0x2b, 0x35, 0x45, 0x47, 0x48, 0x49, 0x4b, 0x4e, 0xa5, 0xa9, 0xba, 0xbc, 0xe0, 0xe3, 0xe4, -1 };
-static const int scsicmdsizes[] = { 6, 10, 10, 12, 16, 12, 10, 6 };
+static const uae_s16 outcmd[] = { 0x04, 0x0a, 0x0c, 0x11, 0x2a, 0xaa, 0x15, 0x55, 0x0f, -1 };
+static const uae_s16 incmd[] = { 0x01, 0x03, 0x08, 0x0e, 0x12, 0x1a, 0x5a, 0x25, 0x28, 0x34, 0x37, 0x42, 0x43, 0xa8, 0x51, 0x52, 0xb9, 0xbd, 0xd8, 0xd9, 0xbe, -1 };
+static const uae_s16 nonecmd[] = { 0x00, 0x05, 0x06, 0x07, 0x09, 0x0b, 0x10, 0x16, 0x17, 0x19, 0x1b, 0x1d, 0x1e, 0x2b, 0x35, 0x45, 0x47, 0x48, 0x49, 0x4b, 0x4e, 0xa5, 0xa9, 0xba, 0xbc, 0xe0, 0xe3, 0xe4, -1 };
+static const uae_s16 safescsi[] = { 0x00, 0x01, 0x03, 0x08, 0x0e, 0x0f, 0x12, 0x1a, 0x1b, 0x25, 0x28, 0x35, 0x5a, -1 };
+static const uae_s16 scsicmdsizes[] = { 6, 10, 10, 12, 16, 12, 10, 6 };
 
 static void scsi_illegal_command(struct scsi_data *sd)
 {
@@ -163,6 +164,9 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 		sd->data_len = data_len;
 	}
 	sd->direction = scsi_data_dir (sd);
+	if (sd->direction > 0 && sd->data_len == 0) {
+		sd->direction = 0;
+	}
 	return true;
 nocmd:
 	sd->status = SCSI_STATUS_CHECK_CONDITION;
@@ -171,7 +175,7 @@ nocmd:
 	return false;
 }
 
-void scsi_clear_sense(struct scsi_data *sd)
+static void scsi_clear_sense(struct scsi_data *sd)
 {
 	memset (sd->sense, 0, sizeof (sd->sense));
 	memset (sd->reply, 0, sizeof (sd->reply));
@@ -253,6 +257,17 @@ static bool handle_ca(struct scsi_data *sd)
 	return true;
 }
 
+bool scsi_cmd_is_safe(uae_u8 cmd)
+{
+	for (int i = 0; safescsi[i] >= 0; i++) {
+		if (safescsi[i] == cmd) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
 void scsi_emulate_cmd(struct scsi_data *sd)
 {
 	sd->status = 0;
@@ -264,6 +279,7 @@ void scsi_emulate_cmd(struct scsi_data *sd)
 		sd->cmd[1] |= lun << 5;
 	}
 	if (sd->device_type == UAEDEV_HDF) {
+
 		uae_u32 ua = 0;
 		ua = scsi_hd_emulate(sd->hfd, sd->hdhfd, NULL, 0, 0, 0, 0, 0, 0, 0);
 		if (ua)
@@ -278,8 +294,34 @@ void scsi_emulate_cmd(struct scsi_data *sd)
 				copyreply(sd);
 			}
 		}
+
+	} else if (sd->device_type == UAEDEV_DIR) {
+
+		uae_u32 ua = 0;
+		ua = scsi_hd_emulate(sd->hfd, sd->hdhfd, NULL, 0, 0, 0, 0, 0, 0, 0);
+		if (ua)
+			sd->unit_attention = ua;
+		if (handle_ca(sd)) {
+			if (scsi_cmd_is_safe(sd->cmd[0])) {
+				if (sd->cmd[0] == 0x03) { /* REQUEST SENSE */
+					scsi_hd_emulate(sd->hfd, sd->hdhfd, sd->cmd, 0, 0, 0, 0, 0, sd->sense, &sd->sense_len);
+					copysense(sd);
+				} else {
+					sd->status = scsi_hd_emulate(sd->hfd, sd->hdhfd,
+						sd->cmd, sd->cmd_len, sd->buffer, &sd->data_len, sd->reply, &sd->reply_len, sd->sense, &sd->sense_len);
+					copyreply(sd);
+				}
+			} else {
+				sd->sense[0] = 0x70;
+				sd->sense[2] = 5; /* Illegal Request */
+				sd->sense[12] = 0x20; /* Invalid/unsupported command code */
+				sd->sense_len = 18;
+				sd->status = 2;
+				copyreply(sd);
+			}
+		}
+
 	}
-	sd->offset = 0;
 }
 
 static void allocscsibuf(struct scsi_data *sd)
@@ -288,13 +330,14 @@ static void allocscsibuf(struct scsi_data *sd)
 	sd->buffer = xcalloc(uae_u8, sd->buffer_size);
 }
 
-struct scsi_data *scsi_alloc_generic(struct hardfiledata *hfd, int type)
+struct scsi_data *scsi_alloc_generic(struct hardfiledata *hfd, int type, int uae_unitnum)
 {
 	struct scsi_data *sd = xcalloc(struct scsi_data, 1);
 	sd->hfd = hfd;
 	sd->id = -1;
 	sd->blocksize = hfd->ci.blocksize;
 	sd->device_type = type;
+	sd->uae_unitnum = uae_unitnum;
 	allocscsibuf(sd);
 	return sd;
 }
@@ -305,9 +348,4 @@ void scsi_free(struct scsi_data *sd)
 		return;
 	xfree(sd->buffer);
 	xfree(sd);
-}
-
-void scsi_start_transfer(struct scsi_data *sd)
-{
-	sd->offset = 0;
 }

@@ -56,7 +56,7 @@
 #define _vsntprintf vsnprintf
 #endif
 
-static size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)
+static inline size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)
 {
 	if (size == 0) {
 		return 0;
@@ -71,7 +71,7 @@ static size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)
 	return src_len;
 }
 
-static size_t uae_strlcpy(char *dst, const char *src, size_t size)
+static inline size_t uae_strlcpy(char *dst, const char *src, size_t size)
 {
 	if (size == 0) {
 		return 0;

@@ -21,6 +21,7 @@ extern void CIAB_tod_handler (int);
 extern void cia_diskindex (void);
 
 extern void rethink_cias (void);
+extern int resetwarning_do (int);
 extern void cia_set_overlay (bool);
 
 extern void rtc_hardreset(void);

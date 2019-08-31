@@ -18,7 +18,7 @@
 #define	GRN	1
 #define	BLU	2
 
-unsigned int doMask(int p, int bits, int shift)
+unsigned int doMask (int p, int bits, int shift)
 {
 	/* scale to 0..255, shift to align msb with mask, and apply mask */
 	uae_u32 val;
@@ -99,7 +99,7 @@ static uae_u32 lowbits(int v, int shift, int lsize)
 	return v;
 }
 
-void alloc_colors_picasso(int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt)
+void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uae_u32 *rgbx16)
 {
 #ifdef PICASSO96
 	int byte_swap = 0;
@@ -133,6 +133,8 @@ void alloc_colors_picasso(int rw, int gw, int bw, int rs, int gs, int bs, int rg
 		blue_shift = 0;
 		byte_swap = 1;
 		break;
+	case RGBFB_Y4U2V2:
+	case RGBFB_Y4U1V1:
 	case RGBFB_R5G5B5:
 		red_bits = green_bits = blue_bits = 5;
 		red_shift = 10;
@@ -168,27 +170,25 @@ void alloc_colors_picasso(int rw, int gw, int bw, int rs, int gs, int bs, int rg
 	byte_swap = !byte_swap;
 #endif
 
-	memset(p96_rgbx16, 0, sizeof p96_rgbx16);
+	memset (rgbx16, 0, 65536 * sizeof(uae_u32));
 
-	if (red_bits)
-	{
+	if (red_bits) {
 		int lrbits = 8 - red_bits;
 		int lgbits = 8 - green_bits;
 		int lbbits = 8 - blue_bits;
 		int lrmask = (1 << red_bits) - 1;
 		int lgmask = (1 << green_bits) - 1;
 		int lbmask = (1 << blue_bits) - 1;
-		for (i = 65535; i >= 0; i--)
-		{
+		for (i = 65535; i >= 0; i--) {
 			uae_u32 r, g, b, c;
-			uae_u32 j = byte_swap ? bswap_16(i) : i;
-			r = (((j >> red_shift) & lrmask) << lrbits) | lowbits(j, red_shift, lrbits);
-			g = (((j >> green_shift) & lgmask) << lgbits) | lowbits(j, green_shift, lgbits);
-			b = (((j >> blue_shift) & lbmask) << lbbits) | lowbits(j, blue_shift, lbbits);
+			uae_u32 j = byte_swap ? bswap_16 (i) : i;
+			r = (((j >>   red_shift) & lrmask) << lrbits) | lowbits (j,   red_shift, lrbits);
+			g = (((j >> green_shift) & lgmask) << lgbits) | lowbits (j, green_shift, lgbits);
+			b = (((j >>  blue_shift) & lbmask) << lbbits) | lowbits (j,  blue_shift, lbbits);
 			c = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs);
 			if (bpp <= 16)
 				c *= 0x00010001;
-			p96_rgbx16[i] = c;
+			rgbx16[i] = c;
 		}
 	}
 #endif

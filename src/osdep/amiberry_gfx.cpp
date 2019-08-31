@@ -16,6 +16,7 @@
 #include "amiberry_gfx.h"
 
 #include <png.h>
+#include "inputdevice.h"
 #ifdef USE_SDL1
 #include <SDL_image.h>
 #include <SDL_gfxPrimitives.h>
@@ -432,11 +433,12 @@ static void wait_for_display_thread(void)
 void InitAmigaVidMode(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
-	gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
-	gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8*>(screen->pixels);
-	gfxvidinfo.drawbuffer.outwidth = p->gfx_size.width;
-	gfxvidinfo.drawbuffer.outheight = p->gfx_size.height << p->gfx_vresolution;
-	gfxvidinfo.drawbuffer.rowbytes = screen->pitch;
+	struct amigadisplay *ad = &adisplays;
+	ad->gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
+	ad->gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8*>(screen->pixels);
+	ad->gfxvidinfo.drawbuffer.outwidth = p->gfx_monitor.gfx_size.width;
+	ad->gfxvidinfo.drawbuffer.outheight = p->gfx_monitor.gfx_size.height << p->gfx_vresolution;
+	ad->gfxvidinfo.drawbuffer.rowbytes = screen->pitch;
 }
 
 void graphics_subshutdown()
@@ -566,9 +568,9 @@ static void open_screen(struct uae_prefs* p)
 	}
 	else
 	{
-		p->gfx_resolution = p->gfx_size.width ? (p->gfx_size.width > 600 ? 1 : 0) : 1;
-		display_width = p->gfx_size.width ? p->gfx_size.width : 640;
-		display_height = (p->gfx_size.height ? p->gfx_size.height : 256) << p->gfx_vresolution;
+		p->gfx_resolution = p->gfx_monitor.gfx_size.width ? (p->gfx_monitor.gfx_size.width > 600 ? 1 : 0) : 1;
+		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 640;
+		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 256) << p->gfx_vresolution;
 
 #ifdef USE_SDL2
 		if (p->scaling_method == -1)
@@ -671,20 +673,21 @@ static void open_screen(struct uae_prefs* p)
 
 void update_display(struct uae_prefs* p)
 {
+	struct amigadisplay *ad = &adisplays;
 	open_screen(p);
 #ifdef USE_SDL2
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 #endif
 	SDL_ShowCursor(SDL_DISABLE);
-	framecnt = 1; // Don't draw frame before reset done
+	ad->framecnt = 1; // Don't draw frame before reset done
 }
 
 int check_prefs_changed_gfx()
 {
 	auto changed = 0;
 
-	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height ||
-		currprefs.gfx_size.width != changed_prefs.gfx_size.width ||
+	if (currprefs.gfx_monitor.gfx_size.height != changed_prefs.gfx_monitor.gfx_size.height ||
+		currprefs.gfx_monitor.gfx_size.width != changed_prefs.gfx_monitor.gfx_size.width ||
 		currprefs.gfx_resolution != changed_prefs.gfx_resolution ||
 		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
 		currprefs.gfx_iscanlines != changed_prefs.gfx_iscanlines ||
@@ -693,9 +696,8 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode ||
 		currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler)
 	{
-		cfgfile_configuration_change(1);
-		currprefs.gfx_size.height = changed_prefs.gfx_size.height;
-		currprefs.gfx_size.width = changed_prefs.gfx_size.width;
+		currprefs.gfx_monitor.gfx_size.height = changed_prefs.gfx_monitor.gfx_size.height;
+		currprefs.gfx_monitor.gfx_size.width = changed_prefs.gfx_monitor.gfx_size.width;
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
 		currprefs.gfx_iscanlines = changed_prefs.gfx_iscanlines;
@@ -989,11 +991,13 @@ int GetSurfacePixelFormat()
 
 int graphics_init(bool mousecapture)
 {
+	inputdevice_unacquire();
 	graphics_subinit();
 
 	if (!init_colors())
 		return 0;
 
+	inputdevice_acquire(TRUE);
 	return 1;
 }
 
@@ -1164,7 +1168,8 @@ static int save_thumb(char* path)
 static int currVSyncRate = 0;
 bool vsync_switchmode(int hz)
 {
-	auto changed_height = changed_prefs.gfx_size.height;
+	struct amigadisplay* ad = &adisplays;
+	auto changed_height = changed_prefs.gfx_monitor.gfx_size.height;
 
 	if (hz >= 55)
 		hz = 60;
@@ -1217,8 +1222,8 @@ bool vsync_switchmode(int hz)
 			vsync_modulo = 5; // Amiga draws 5 frames while host has 6 vsyncs -> sync every 5th Amiga frame
 	}
 
-	if (!picasso_on && !picasso_requested_on)
-		changed_prefs.gfx_size.height = changed_height;
+	if (!ad->picasso_on && !ad->picasso_requested_on)
+		changed_prefs.gfx_monitor.gfx_size.height = changed_height;
 
 	return true;
 }
@@ -1227,7 +1232,7 @@ bool target_graphics_buffer_update()
 {
 	auto rate_changed = false;
 
-	if (currprefs.gfx_size.height != changed_prefs.gfx_size.height)
+	if (currprefs.gfx_monitor.gfx_size.height != changed_prefs.gfx_monitor.gfx_size.height)
 	{
 		update_display(&changed_prefs);
 		rate_changed = true;
@@ -1247,22 +1252,21 @@ bool target_graphics_buffer_update()
 
 #ifdef PICASSO96
 
-int picasso_palette(struct MyCLUTEntry *clut)
+int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 {
-	auto changed = 0;
-	for (auto i = 0; i < 256; i++)
-	{
-		int r = clut[i].Red;
-		int g = clut[i].Green;
-		int b = clut[i].Blue;
-		//auto v = CONVERT_RGB(r << 16 | g << 8 | b);
-		uae_u32 v = (doMask256(r, red_bits, red_shift)
-			| doMask256(g, green_bits, green_shift)
-			| doMask256(b, blue_bits, blue_shift))
-			| doMask256(0xff, alpha_bits, alpha_shift);
-		if (v != picasso_vidinfo.clut[i])
-		{
-			picasso_vidinfo.clut[i] = v;
+	int changed = 0;
+
+	for (int i = 0; i < 256; i++) {
+		int r = CLUT[i].Red;
+		int g = CLUT[i].Green;
+		int b = CLUT[i].Blue;
+		uae_u32 v = (doMask256 (r, red_bits, red_shift)
+			| doMask256 (g, green_bits, green_shift)
+			| doMask256 (b, blue_bits, blue_shift))
+			| doMask256 (0xff, alpha_bits, alpha_shift);
+		if (v != clut[i]) {
+			//write_log (_T("%d:%08x\n"), i, v);
+			clut[i] = v;
 			changed = 1;
 		}
 	}
@@ -1413,7 +1417,7 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 
 void gfx_set_picasso_colors(RGBFTYPE rgbfmt)
 {
-	alloc_colors_picasso(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, rgbfmt);
+	alloc_colors_picasso(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, rgbfmt, p96_rgbx16);
 }
 
 uae_u8* gfx_lock_picasso()

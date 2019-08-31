@@ -1,6 +1,5 @@
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
+#include <cstdlib>
+#include "string.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -88,9 +87,14 @@ void alloc_AmigaMem(void)
 		// Allocation successful -> we can use natmem_offset for entire memory access at real address
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
 		z3_base_adr = Z3BASE_REAL;
+#if defined(CPU_AARCH64)
+    write_log("Allocated 16 MB for 24-bit area (0x%016lx) and %d MB for Z3 and RTG at real address (0x%016lx - 0x%016lx)\n", 
+      regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+#else
 		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at real address (0x%08x - 0x%08x)\n",
 			regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER
 		);
+#endif
 		set_expamem_z3_hack_mode(Z3MAPPING_REAL);
 		return;
 	}
@@ -102,9 +106,13 @@ void alloc_AmigaMem(void)
 		// Allocation successful -> we can use natmem_offset for entire memory access at fake address
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
 		z3_base_adr = Z3BASE_UAE;
-		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n",
-			regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER
-		);
+#if defined(CPU_AARCH64)
+    write_log("Allocated 16 MB for 24-bit area (0x%016lx) and %d MB for Z3 and RTG at fake address (0x%016lx - 0x%016lx)\n", 
+      regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+#else
+    write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n", 
+      regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+#endif
 		set_expamem_z3_hack_mode(Z3MAPPING_UAE);
 		return;
 	}
@@ -123,6 +131,10 @@ void alloc_AmigaMem(void)
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
 		z3_base_adr = Z3BASE_UAE;
 		write_log("Allocated %d MB for entire memory\n", natmem_size / (1024 * 1024));
+#if defined(CPU_AARCH64)
+    if(((uae_u64)(regs.natmem_offset + natmem_size + BARRIER) & 0xffffffff00000000) != 0)
+      write_log("Memory address is higher than 32 bit. JIT will crash\n");
+#endif
 		return;
 	}
 
@@ -142,6 +154,10 @@ void alloc_AmigaMem(void)
 
 	write_log("Reserved: %p-%p (0x%08x %dM)\n", regs.natmem_offset, (uae_u8*)regs.natmem_offset + natmem_size,
 		natmem_size, natmem_size >> 20);
+#if defined(CPU_AARCH64)
+  if(((uae_u64)(regs.natmem_offset + natmem_size + BARRIER) & 0xffffffff00000000) != 0)
+    write_log("Memory address is higher than 32 bit. JIT will crash\n");
+#endif
 }
 
 
@@ -565,4 +581,11 @@ bool init_shm(void)
 
 	memory_hardreset(2);
 	return true;
+}
+
+void free_shm (void)
+{
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		ortgmem_type[i] = -1;
+	}
 }

@@ -58,6 +58,8 @@ struct gui_msg gui_msglist[] = {
   { NUMSG_ROMNEED,        "One of the following system ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
   { NUMSG_EXPROMNEED,     "One of the following expansion boot ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
   { NUMSG_NOMEMORY,       "Out of memory or too much Z3 autoconfig space configured." },
+  { NUMSG_NOCAPS,         "capsimg.so not found. CAPS/IPF support not available." },
+  { NUMSG_OLDCAPS,        "Old version of capsimg.so found." },
 
   { -1, "" }
 };
@@ -197,20 +199,6 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	return rd;
 }
 
-static struct romdata* scan_single_rom(char* path)
-{
-	char tmp[MAX_DPATH];
-
-	strncpy (tmp, path, MAX_DPATH - 1);
-	auto rd = getromdatabypath(path);
-	if (rd && rd->crc32 == 0xffffffff)
-		return rd;
-	const auto z = zfile_fopen(path, "rb", ZFD_NORMAL);
-	if (!z)
-		return nullptr;
-	return scan_single_rom_2(z);
-}
-
 static int isromext(char* path)
 {
 	if (!path)
@@ -339,7 +327,13 @@ void ReadConfigFileList(void)
 		removeFileExtension(tmp->Name);
 		// If the user has many (thousands) of configs, this will take a long time
 		if (read_config_descriptions)
-			cfgfile_get_description(tmp->FullPath, tmp->Description);
+		{
+			struct uae_prefs *p = cfgfile_open(tmp->FullPath, NULL);
+			if (p) {
+				cfgfile_get_description(p, NULL, tmp->Description, NULL);
+				cfgfile_close(p);
+			}
+		}
 		ConfigFilesList.emplace_back(tmp);
 	}
 }
@@ -354,23 +348,55 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 	return nullptr;
 }
 
-
-static void prefs_to_gui()
+static void clearallkeys (void)
 {
+	inputdevice_updateconfig (&changed_prefs, &currprefs);
+}
+
+void setmouseactive(int active)
+{
+	if (active) {
+		inputdevice_acquire(TRUE);
+	} else {
+		inputdevice_acquire (FALSE);
+		inputdevice_releasebuttons();
+	}
+}
+
+static void prefs_to_gui(struct uae_prefs *p)
+{
+	default_prefs(&workprefs, false, 0);
+	copy_prefs(p, &workprefs);
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	set_config_changed ();
 }
 
 
 static void gui_to_prefs(void)
 {
+	/* Always copy our prefs to changed_prefs, ... */
+	copy_prefs(&workprefs, &changed_prefs);
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 	fixup_prefs(&changed_prefs, true);
 }
 
+static void get_settings(void)
+{
+	memset (&workprefs, 0, sizeof (struct uae_prefs));
+	prefs_to_gui(&changed_prefs);
+
+	run_gui();
+	gui_to_prefs();
+
+	if(quit_program)
+		screen_is_picasso = 0;
+
+	update_display(&changed_prefs);
+}
 
 static void after_leave_gui()
 {
@@ -402,16 +428,15 @@ int gui_init()
 	if (lstAvailableROMs.empty())
 		RescanROMs();
 
-	prefs_to_gui();
-	run_gui();
-	gui_to_prefs();
+	get_settings();
+	
 	if (quit_program < 0)
 		quit_program = -quit_program;
 	if (quit_program == UAE_QUIT)
 		ret = -2; // Quit without start of emulator
 
-	update_display(&changed_prefs);
-
+	inputdevice_acquire (TRUE);
+	
 	after_leave_gui();
 	emulating = 1;
 	return ret;
@@ -498,26 +523,22 @@ void gui_display(int shortcut)
 
 	graphics_subshutdown();
 
-	prefs_to_gui();
-	run_gui();
-	gui_to_prefs();
-
-	if (quit_program)
-		screen_is_picasso = 0;
+	get_settings();
 
 	black_screen_now();
 
-	update_display(&changed_prefs);
-
-	reset_sound();
-	resume_sound();
-	blkdev_exitgui();
-
-	after_leave_gui();
-
-	gui_update();
-
+	gui_update ();
 	gui_purge_events();
+	
+	reset_sound();
+	after_leave_gui();
+	clearallkeys ();
+	blkdev_exitgui();
+	resume_sound();
+
+	inputdevice_acquire (TRUE);
+	setmouseactive(1);
+	
 	fpscounter_reset();
 	pause_emulation = 0;
 }
@@ -609,7 +630,7 @@ void gui_fps(int fps, int idle, int color)
 	gui_led(LED_SND, (gui_data.sndbuf_status > 1 || gui_data.sndbuf_status < 0) ? 0 : 1, -1);
 }
 
-void gui_led(int led, int on)
+void gui_led(int led, int on, int brightness)
 {
 	unsigned char kbd_led_status;
 
@@ -764,7 +785,7 @@ bool DevicenameExists(const char* name)
 		auto uci = &changed_prefs.mountconfig[i];
 		const auto ci = &uci->ci;
 
-		if (ci->devname[0])
+		if (ci->devname && ci->devname[0])
 		{
 			if (!strcmp(ci->devname, name))
 				return true;

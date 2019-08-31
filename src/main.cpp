@@ -1,19 +1,19 @@
 /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Main program
-  *
-  * Copyright 1995 Ed Hanway
-  * Copyright 1995, 1996, 1997 Bernd Schmidt
-  */
+* UAE - The Un*x Amiga Emulator
+*
+* Main program
+*
+* Copyright 1995 Ed Hanway
+* Copyright 1995, 1996, 1997 Bernd Schmidt
+*/
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <stdbool.h>
 #include <string.h>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
+#include <assert.h>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -33,9 +33,12 @@
 #include "picasso96.h"
 #include "native2amiga.h"
 #include "savestate.h"
+#include "filesys.h"
 #include "blkdev.h"
 #include "gfxboard.h"
 #include "devices.h"
+#include "jit/compemu.h"
+#include <iostream>
 
 #ifdef USE_SDL2
 SDL_Window* sdlWindow;
@@ -59,7 +62,7 @@ bool kickstart_rom = true;
 
 struct gui_info gui_data;
 
-TCHAR optionsfile[256];
+static TCHAR optionsfile[MAX_DPATH];
 
 void my_trim(TCHAR *s)
 {
@@ -124,7 +127,7 @@ static void fixup_prefs_dim2(struct wh *wh)
 
 void fixup_prefs_dimensions(struct uae_prefs *prefs)
 {
-	fixup_prefs_dim2(&prefs->gfx_size);
+	fixup_prefs_dim2(&prefs->gfx_monitor.gfx_size);
 }
 
 void fixup_cpu(struct uae_prefs *p)
@@ -263,11 +266,11 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->chipmem_size = 0x200000;
 		//err = 1;
 	}
-	if (p->mbresmem_low_size > 0x01000000 || (p->mbresmem_low_size & 0xfffff)) {
+	if (p->mbresmem_low_size > 0x04000000 || (p->mbresmem_low_size & 0xfffff)) {
 		p->mbresmem_low_size = 0;
 		error_log(_T("Unsupported Mainboard RAM size"));
 	}
-	if (p->mbresmem_high_size > 0x02000000 || (p->mbresmem_high_size & 0xfffff)) {
+	if (p->mbresmem_high_size > 0x08000000 || (p->mbresmem_high_size & 0xfffff)) {
 		p->mbresmem_high_size = 0;
 		error_log(_T("Unsupported CPU Board RAM size."));
 	}
@@ -384,6 +387,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	blkdev_fix_prefs(p);
 	inputdevice_fix_prefs(p, userconfig);
 	target_fixup_options(p);
+	cfgfile_createconfigstore(p);
 }
 
 int quit_program = 0;
@@ -464,7 +468,7 @@ static TCHAR *parsetextpath(const TCHAR *s)
 	return s3;
 }
 
-void print_usage()
+void usage()
 {
 	printf("\nUsage:\n");
 	printf(" -h                         Show this help.\n");
@@ -604,7 +608,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 		}
 		else if (_tcscmp(argv[i], _T("-h")) == 0 || _tcsncmp(argv[i], _T("--help"), 6) == 0)
 		{
-			print_usage();
+			usage();
 		}
 		else if (argv[i][0] == '-' && argv[i][1] != '\0') {
 			const TCHAR *arg = argv[i] + 2;
@@ -613,7 +617,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 				arg = i + 1 < argc ? argv[i + 1] : nullptr;
 			const auto ret = parse_cmdline_option(&currprefs, argv[i][1], arg);
 			if (ret == -1)
-				print_usage();
+				usage();
 			if (ret && extra_arg)
 				i++;
 		}
@@ -640,7 +644,7 @@ static void parse_cmdline(int argc, TCHAR **argv)
 			else
 			{
 				printf("Unknown option %s\n", argv[i]);
-				print_usage();
+				usage();
 			}
 		}
 	}
@@ -671,7 +675,7 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
  * of start_program() and leave_program() if you need to do anything special.
  * Add #ifdefs around these as appropriate.
  */
-void do_start_program(void)
+static void do_start_program (void)
 {
 	if (quit_program == -UAE_QUIT)
 		return;
@@ -682,7 +686,7 @@ void do_start_program(void)
 	m68k_go(1);
 }
 
-void start_program (void)
+static void start_program (void)
 {
 	char kbd_flags;
 	// set capslock state based upon current "real" state
@@ -695,7 +699,7 @@ void start_program (void)
     do_start_program ();
 }
 
-void leave_program (void)
+static void leave_program (void)
 {
     do_leave_program ();
 }
@@ -752,7 +756,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	if (restart_config[0])
 		parse_cmdline_and_init_file(argc, argv);
 	else
-		currprefs = changed_prefs;
+		copy_prefs(&changed_prefs, &currprefs);
 	
 	if (!graphics_setup()) {
 		abort();
@@ -769,7 +773,8 @@ static int real_main2 (int argc, TCHAR **argv)
 	}
 	inputdevice_init();
 
-	changed_prefs = currprefs;
+	copy_prefs(&currprefs, &changed_prefs);
+
 	no_gui = !currprefs.start_gui;
 	if (restart_program == 2)
 		no_gui = true;
@@ -777,14 +782,13 @@ static int real_main2 (int argc, TCHAR **argv)
 		no_gui = false;
 	restart_program = 0;
 	if (!no_gui) {
-		const int err = gui_init();
-		currprefs = changed_prefs;
+	  int err = gui_init ();
+		copy_prefs(&changed_prefs, &currprefs);
 		set_config_changed();
 		if (err == -1) {
 			write_log(_T("Failed to initialize the GUI\n"));
 			return -1;
-		}
-		if (err == -2) {
+	  } else if (err == -2) {
 			return 1;
 		}
 	}
@@ -803,12 +807,9 @@ static int real_main2 (int argc, TCHAR **argv)
 			uae_restart(-1, nullptr);
 		return 0;
 	}
-#ifdef PICASSO96
-	picasso_reset();
-#endif
 
 	fixup_prefs(&currprefs, true);
-	changed_prefs = currprefs;
+	copy_prefs(&currprefs, &changed_prefs);
 	target_run();
 	/* force sound settings change */
 	currprefs.produce_sound = 0;
@@ -853,7 +854,7 @@ void real_main(int argc, TCHAR **argv)
 	default_config = 1;
 
 	while (restart_program) {
-		changed_prefs = currprefs;
+		copy_prefs(&currprefs, &changed_prefs);
 		real_main2(argc, argv);
 		leave_program();
 		quit_program = 0;

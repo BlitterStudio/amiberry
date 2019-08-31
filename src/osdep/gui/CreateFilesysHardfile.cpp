@@ -404,7 +404,7 @@ bool CreateFilesysHardfile()
 		ci.controller_media_type = 0;
 		ci.unit_feature_level = 1;
 		ci.readonly = false;
-		const auto uci = add_filesys_config(&changed_prefs, -1, &ci);
+		const auto uci = add_filesys_config(&workprefs, -1, &ci);
 		if (uci)
 		{
 			const auto hfd = get_hardfile_data(uci->configoffset);

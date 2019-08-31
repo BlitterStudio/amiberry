@@ -1,10 +1,10 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * custom chip support
-  *
-  * (c) 1995 Bernd Schmidt
-  */
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* custom chip support
+*
+* (c) 1995 Bernd Schmidt
+*/
 
 #ifndef UAE_CUSTOM_H
 #define UAE_CUSTOM_H
@@ -13,7 +13,7 @@
 #include "machdep/rpt.h"
 
 /* These are the masks that are ORed together in the chipset_mask option.
- * If CSMASK_AGA is set, the ECS bits are guaranteed to be set as well.  */
+* If CSMASK_AGA is set, the ECS bits are guaranteed to be set as well.  */
 #define CSMASK_ECS_AGNUS 1
 #define CSMASK_ECS_DENISE 2
 #define CSMASK_AGA 4
@@ -28,7 +28,6 @@
 #define HPOS_SHIFT 3
 
 extern void set_speedup_values(void);
-
 extern int custom_init (void);
 extern void custom_prepare (void);
 extern void custom_reset (bool hardreset, bool keyboardreset);
@@ -87,7 +86,10 @@ STATIC_INLINE void send_interrupt (int num)
 	INTREQ_0 (0x8000 | (1 << num));
 }
 extern void rethink_uae_int(void);
-extern uae_u16 INTREQR(void);
+STATIC_INLINE uae_u16 INTREQR (void)
+{
+  return intreq;
+}
 
 STATIC_INLINE void safe_interrupt_set(bool i6)
 {
@@ -164,9 +166,13 @@ extern unsigned long frametime, timeframes;
 extern uae_u16 htotal, vtotal, beamcon0;
 
 /* 100 words give you 1600 horizontal pixels. Should be more than enough for
- * superhires. Don't forget to update the definition in genp2c.c as well.
- * needs to be larger for superhires support */
+* superhires. Don't forget to update the definition in genp2c.c as well.
+* needs to be larger for superhires support */
+#ifdef CUSTOM_SIMPLE
+#define MAX_WORDS_PER_LINE 50
+#else
 #define MAX_WORDS_PER_LINE 100
+#endif
 
 extern uae_u32 hirestab_h[256][2];
 extern uae_u32 lorestab_h[256][4];
@@ -195,13 +201,13 @@ extern int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 #define RES_SHIFT(res) ((res) == RES_LORES ? 8 : (res) == RES_HIRES ? 4 : 2)
 
 /* get resolution from bplcon0 */
-STATIC_INLINE int GET_RES_DENISE(uae_u16 con0)
+STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)
 {
 	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		con0 &= ~0x40; // SUPERHIRES
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
-STATIC_INLINE int GET_RES_AGNUS(uae_u16 con0)
+STATIC_INLINE int GET_RES_AGNUS (uae_u16 con0)
 {
 	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		con0 &= ~0x40; // SUPERHIRES
@@ -235,8 +241,7 @@ extern bool isvga(void);
 extern int current_maxvpos (void);
 extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
 extern void compute_framesync(void);
-extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
-
+//extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
 void custom_cpuchange(void);
 
 struct custom_store

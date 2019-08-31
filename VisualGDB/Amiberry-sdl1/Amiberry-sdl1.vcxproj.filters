@@ -719,9 +719,6 @@
     <ClCompile Include="..\..\src\archivers\7z\Lzma86Dec.c">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\archivers\7z\Lzma86Enc.c">
-      <Filter>Source files\archivers\7z</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\archivers\7z\LzmaDec.cpp">
       <Filter>Source files\archivers\7z</Filter>
     </ClCompile>

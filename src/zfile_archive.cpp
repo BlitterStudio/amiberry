@@ -22,9 +22,6 @@
 #include "zarchive.h"
 #include "disk.h"
 
-#define unpack_log write_log
-#undef unpack_log
-#define unpack_log(fmt, ...)
 
 static time_t fromdostime (uae_u32 dd)
 {
@@ -138,10 +135,6 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 		diskimg = zfile_is_diskimage (zn->fullname);
 		if (isok) {
 			if (tmphist[0]) {
-#ifndef _CONSOLE
-				if (diskimg >= 0 && canhistory)
-					DISK_history_add (tmphist, -1, diskimg, 1);
-#endif
 				tmphist[0] = 0;
 				first = 0;
 			}
@@ -150,10 +143,6 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 					_tcscpy (tmphist, zn->fullname);
 			} else {
 				_tcscpy (tmphist, zn->fullname);
-#ifndef _CONSOLE
-				if (diskimg >= 0 && canhistory)
-					DISK_history_add (tmphist, -1, diskimg, 1);
-#endif
 				tmphist[0] = 0;
 			}
 			select = 0;
@@ -206,8 +195,6 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 	}
 #ifndef _CONSOLE
 	diskimg = zfile_is_diskimage (zfile_getname (zf));
-	if (diskimg >= 0 && first && tmphist[0] && canhistory)
-		DISK_history_add (zfile_getname (zf), -1, diskimg, 1);
 #endif
 	zfile_fclose_archive (zv);
 	if (z) {
@@ -327,7 +314,7 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 	return zv;
 }
 
-struct zfile *archive_access_tar (struct znode *zn)
+static struct zfile *archive_access_tar (struct znode *zn)
 {
 	return zfile_fopen_parent (zn->volume->archive, zn->fullname, zn->offset, zn->size);
 }
@@ -440,22 +427,16 @@ static struct zfile *archive_do_zip (struct znode *zn, struct zfile *z, int flag
 	if (z) {
 		int err = -1;
 		if (!(flags & FILE_DELAYEDOPEN) || z->size <= PEEK_BYTES) {
-			unpack_log (_T("ZIP: unpacking %s, flags=%d\n"), name, flags);
 			err = unzReadCurrentFile (uz, z->data, z->datasize);
-			unpack_log (_T("ZIP: unpacked, code=%d\n"), err);
 		} else {
 			z->archiveparent = zfile_dup (zn->volume->archive);
 			if (z->archiveparent) {
-				unpack_log (_T("ZIP: delayed open '%s'\n"), name);
 				xfree (z->archiveparent->name);
 				z->archiveparent->name = my_strdup (tmp);
 				z->datasize = PEEK_BYTES;
 				err = unzReadCurrentFile (uz, z->data, z->datasize);
-				unpack_log (_T("ZIP: unpacked, code=%d\n"), err);
 			} else {
-				unpack_log (_T("ZIP: unpacking %s (failed DELAYEDOPEN)\n"), name);
 				err = unzReadCurrentFile (uz, z->data, z->datasize);
-				unpack_log (_T("ZIP: unpacked, code=%d\n"), err);
 			}
 		}
 	}
@@ -710,7 +691,7 @@ static int canrar (void)
 	return israr < 0 ? 0 : 1;
 }
 
-static int CALLBACK RARCallbackProc (UINT msg, LONG UserData, LONG P1, LONG P2)
+static int CALLBACK RARCallbackProc (UINT msg, LPARAM UserData, LPARAM P1, LPARAM P2)
 {
 	if (msg == UCM_PROCESSDATA) {
 		zfile_fwrite ((uae_u8*)P1, 1, P2, rarunpackzf);
@@ -734,9 +715,6 @@ static void archive_close_rar (void *ctx)
 
 struct zvolume *archive_directory_rar (struct zfile *z)
 {
-#ifdef WIN64
-	return archive_directory_arcacc (z, ArchiveFormatRAR);
-#else
 	struct zvolume *zv;
 	struct RARContext *rc;
 	struct zfile *zftmp;
@@ -776,12 +754,10 @@ struct zvolume *archive_directory_rar (struct zfile *z)
 	zv->archive = zftmp;
 	zv->method = ArchiveFormatRAR;
 	return zv;
-#endif
 }
 
 static struct zfile *archive_access_rar (struct znode *zn)
 {
-#ifndef WIN64
 	struct RARContext *rc = (struct RARContext*)zn->volume->handle;
 	int i;
 	struct zfile *zf = NULL;
@@ -812,12 +788,9 @@ static struct zfile *archive_access_rar (struct znode *zn)
 end:
 	pRARCloseArchive(rc->hArcData);
 	return zf;
-#else
-	return NULL;
-#endif
 }
-#endif
 
+#endif
 
 /* ArchiveAccess */
 
@@ -986,7 +959,7 @@ struct zvolume *archive_directory_arcacc (struct zfile *z, unsigned int id)
 
 static struct zfile *archive_access_arcacc (struct znode *zn)
 {
-	struct zfile *zf;
+	struct zfile *zf = NULL;
 	struct zfile *z = zn->volume->archive;
 	int status, id_r, id_w;
 	aaHandle ah;
@@ -1179,27 +1152,6 @@ static uae_u32 gwx (uae_u8 *p)
 static const int secs_per_day = 24 * 60 * 60;
 static const int diff = (8 * 365 + 2) * (24 * 60 * 60);
 static const int diff2 = (-8 * 365 - 2) * (24 * 60 * 60);
-
-static time_t put_time (long days, long mins, long ticks)
-{
-	time_t t;
-
-	if (days < 0)
-		days = 0;
-	if (days > 9900 * 365)
-		days = 9900 * 365; // in future far enough?
-	if (mins < 0 || mins >= 24 * 60)
-		mins = 0;
-	if (ticks < 0 || ticks >= 60 * 50)
-		ticks = 0;
-
-	t = ticks / 50;
-	t += mins * 60;
-	t += ((uae_u64)days) * secs_per_day;
-	t += diff;
-
-	return t;
-}
 
 static int adf_read_block (struct adfhandle *adf, int block)
 {
@@ -2123,7 +2075,6 @@ struct zfile *archive_unpackzfile (struct zfile *zf)
 	struct zfile *zout = NULL;
 	if (!zf->archiveparent)
 		return NULL;
-	unpack_log (_T("delayed unpack '%s'\n"), zf->name);
 	zf->datasize = zf->size;
 	switch (zf->archiveid)
 	{

@@ -1,7 +1,6 @@
 /*
- * compiler/compemu_midfunc_arm.cpp - Native MIDFUNCS for ARM
+ * compiler/compemu_midfunc_armA64.cpp - Native MIDFUNCS for AARCH64
  *
- * Copyright (c) 2014 Jens Heitmann of ARAnyM dev team (see AUTHORS)
  * Copyright (c) 2019 TomB
  *
  * Inspired by Christian Bauer's Basilisk II
@@ -168,7 +167,10 @@ MIDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
   /* d points always to memory in regs struct */
   LOAD_U32(REG_WORK2, s);
   uintptr idx = d - (uintptr) &regs;
-  STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
+    STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
+  else
+    STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 }
 MENDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
 
@@ -187,9 +189,9 @@ MIDFUNC(4,disp_ea20_target_add,(RW4 target, RR4 reg, IM8 shift, IM8 extend))
 	
 	if(extend) {
 		SIGNED16_REG_2_REG(REG_WORK1, reg);
-		ADD_rrrLSLi(target, target, REG_WORK1, shift & 0x1f);
+		ADD_wwwLSLi(target, target, REG_WORK1, shift & 0x1f);
 	} else {
-		ADD_rrrLSLi(target, target, reg, shift & 0x1f);
+		ADD_wwwLSLi(target, target, reg, shift & 0x1f);
 	}
 	
 	unlock2(target);
@@ -212,9 +214,9 @@ MIDFUNC(4,disp_ea20_target_mov,(W4 target, RR4 reg, IM8 shift, IM8 extend))
 	
 	if(extend) {
 		SIGNED16_REG_2_REG(REG_WORK1, reg);
-		LSL_rri(target, REG_WORK1, shift & 0x1f);
+		LSL_wwi(target, REG_WORK1, shift & 0x1f);
 	} else {
-		LSL_rri(target, reg, shift & 0x1f);
+		LSL_wwi(target, reg, shift & 0x1f);
 	}
 	
 	unlock2(target);
@@ -259,11 +261,13 @@ MIDFUNC(3,lea_l_brr,(W4 d, RR4 s, IM32 offset))
 		d = writereg(d);
 	}
 	
-  if(CHECK32(offset)) {
-    ADD_rri(d, s, offset);
+  if(offset >= 0 && offset <= 0xfff) {
+    ADD_wwi(d, s, offset);
+  } else if(offset >= -0xfff && offset < 0) {
+    SUB_wwi(d, s, -offset);
   } else {
     LOAD_U32(REG_WORK1, offset);
-  	ADD_rrr(d, s, REG_WORK1);
+  	ADD_www(d, s, REG_WORK1);
   }
 
 	EXIT_REGS(d,s);
@@ -285,8 +289,8 @@ MIDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor, IM8 offset))
 	if(d == index) {
 	  d = index = rmw(d);
 	} else {
-	  index = readreg(index);
-	  d = writereg(d);
+  	index = readreg(index);
+  	d = writereg(d);
   }
 
 	int shft;
@@ -299,15 +303,15 @@ MIDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor, IM8 offset))
 	}
 
   if(offset >= 0 && offset <= 127) {
-    ADD_rri(REG_WORK1, s, offset);
+    ADD_wwi(REG_WORK1, s, offset);
   } else {
-    SUB_rri(REG_WORK1, s, -offset);
+    SUB_wwi(REG_WORK1, s, -offset);
   }
-	ADD_rrrLSLi(d, REG_WORK1, index, shft);
+  ADD_wwwLSLi(d, REG_WORK1, index, shft);
 
 	unlock2(d);
   if(d != index)
-	  unlock2(index);
+  	unlock2(index);
 	unlock2(s);
 }
 MENDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor, IM8 offset))
@@ -323,8 +327,8 @@ MIDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor))
 	if(d == index) {
 	  d = index = rmw(d);
 	} else {
-	  index = readreg(index);
-	  d = writereg(d);
+  	index = readreg(index);
+  	d = writereg(d);
   }
 
 	int shft;
@@ -336,11 +340,11 @@ MIDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor))
   	default: abort();
 	}
 
-	ADD_rrrLSLi(d, s, index, shft);
+	ADD_wwwLSLi(d, s, index, shft);
 
 	unlock2(d);
   if(d != index)
-	  unlock2(index);
+  	unlock2(index);
 	unlock2(s);
 }
 MENDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor))
@@ -381,7 +385,10 @@ MIDFUNC(2,mov_l_mr,(IMPTR d, RR4 s))
 	s = readreg(s);
 
   uintptr idx = d - (uintptr) &regs;
-  STR_rRI(s, R_REGSTRUCT, idx);
+  if(d == (uintptr)&regs.pc_oldp || d == (uintptr)&regs.pc_p)
+    STR_xXi(s, R_REGSTRUCT, idx);
+  else
+    STR_wXi(s, R_REGSTRUCT, idx);
 
 	unlock2(s);
 }
@@ -393,7 +400,7 @@ MIDFUNC(2,mov_l_rm,(W4 d, IMPTR s))
 	d = writereg(d);
 
   uintptr idx = s - (uintptr) &regs;
-  LDR_rRI(d, R_REGSTRUCT, idx);
+  LDR_wXi(d, R_REGSTRUCT, idx);
 
 	unlock2(d);
 }
@@ -414,9 +421,9 @@ MIDFUNC(2,mov_b_ri,(W1 d, IM8 s))
 	  }
 	  d = rmw(d);
 
-		BIC_rri(d, d, 0xff);
-		ORR_rri(d, d, (s & 0xff));
-	
+		MOV_xi(REG_WORK1, (s & 0xff));
+		BFI_xxii(d, REG_WORK1, 0, 8);
+		
 	  unlock2(d);
   } else {
     set_const(d, s & 0xff);
@@ -435,7 +442,7 @@ MIDFUNC(2,sub_l_ri,(RW4 d, IM8 i))
 
 	d = rmw(d);
 
-  SUB_rri(d, d, i);
+  SUB_xxi(d, d, i);
 
 	unlock2(d);
 }
@@ -449,10 +456,10 @@ MIDFUNC(2,sub_w_ri,(RW2 d, IM8 i))
 
 	d = rmw(d);
 
-	LSL_rri(REG_WORK2, d, 16);
+	LSL_wwi(REG_WORK2, d, 16);
 
-	SUBS_rri(REG_WORK2, REG_WORK2, (i & 0xff) << 16);
-  PKHTB_rrrASRi(d, d, REG_WORK2, 16);
+	SUBS_wwish(REG_WORK2, REG_WORK2, (i & 0xff) << 4, 1);
+	BFXIL_xxii(d, REG_WORK2, 16, 16);
 
 	unlock2(d);
 }
@@ -478,7 +485,7 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 
 	s = readreg(s);
 	d = rmw(d);
-	ADD_rrr(d, d, s);
+	ADD_www(d, d, s);
 	unlock2(d);
 	unlock2(s);
 }
@@ -495,11 +502,16 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
 
 	d = rmw(d);
 
-	if(CHECK32(i)) {
-		ADD_rri(d, d, i);
-	} else {
-    LOAD_U32(REG_WORK1, i);
-		ADD_rrr(d, d, REG_WORK1);
+  if(i >= 0 && i <= 0xfff) {
+		ADD_xxi(d, d, i);
+  } else {
+    if(i > -0x7fff && i < 0x7fff) {
+      SIGNED16_IMM_2_REG(REG_WORK1, i);
+    } else {
+  	  LOAD_U32(REG_WORK1, i);
+      SXTW_xw(REG_WORK1, REG_WORK1);
+    }
+		ADD_xxx(d, d, REG_WORK1);
   }
 	
 	unlock2(d);
@@ -516,7 +528,7 @@ MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 	}
 
 	d = rmw(d);
-	ADD_rri(d, d, i);
+	ADD_xxi(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
@@ -531,34 +543,71 @@ MIDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
 	}
 
 	d = rmw(d);
-	SUB_rri(d, d, i);
+	SUB_xxi(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
 
 
+#ifdef JIT_DEBUG
+#include "aarch64.h"
+
+void disam_range(void *start, void *stop)
+{
+  char disbuf[256];
+  uint64_t disptr = (uint64_t)start;
+  while(disptr < (uint64_t)stop) {
+    disasm(disptr, disbuf);
+    write_log("%016llx  %s\n", disptr, disbuf);
+    disptr += 4;
+  }
+}
+
+#endif
+
 STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
 {
-	register void *_beg __asm ("a1") = start;
-	register void *_end __asm ("a2") = stop;
-	register void *_flg __asm ("a3") = 0;
-	#ifdef __ARM_EABI__
-	   register unsigned long _scno __asm ("r7") = 0xf0002;
-	   __asm __volatile ("swi 0x0		@ sys_cacheflush"
-                            : "=r" (_beg)
-                            : "0" (_beg), "r" (_end), "r" (_flg), "r" (_scno));
-	#else
-	   __asm __volatile ("swi 0x9f0002		@ sys_cacheflush"
-		   		    : "=r" (_beg)
-		   		    : "0" (_beg), "r" (_end), "r" (_flg));
-	#endif
+#ifdef JIT_DEBUG
+  if((uae_u64)stop - (uae_u64)start > 4) {
+    if(disasm_this) {
+      char disbuf[256];
+      uint64_t disptr = (uint64_t)start;
+      while(disptr < (uint64_t)stop) {
+        disasm(disptr, disbuf);
+        write_log("%016llx  %s\n", disptr, disbuf);
+        disptr += 4;
+      }
+      disasm_this = false;
+    }
+  }
+#endif
+
+  //__builtin___clear_cache(start, stop);
+  __clear_cache(start, stop);
 }
 
 
 STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a) 
 {
-	uintptr off = ((uintptr)a - (uintptr)jmpaddr - 8) >> 2;
-	*(jmpaddr) = (*(jmpaddr) & 0xff000000) | (off & 0x00ffffff);
+	uintptr off = (a - (uintptr)jmpaddr) >> 2;
+  if((*(jmpaddr) & 0xfc000000) == 0x14000000) {
+    /* branch always */
+    off = off & 0x3ffffff;
+    *(jmpaddr) = (*(jmpaddr) & 0xfc000000) | off;
+  } else if((*(jmpaddr) & 0x7c000000) == 0x34000000) {
+    /* TBZ/TBNZ/CBZ/CBNZ */
+    if((a > (uintptr)jmpaddr && off > 0x1fff) || (a < (uintptr)jmpaddr && (~off) > 0x1fff))
+      write_log("JIT: TBZ/TBNZ branch to target too long.\n");
+    off = off & 0x3fff;
+    *(jmpaddr) = (*(jmpaddr) & 0xfffc001f) | (off << 5);
+  } else {
+    /* conditional branch */
+    if((a > (uintptr)jmpaddr && off > 0x3ffff) || (a < (uintptr)jmpaddr && (~off) > 0x3ffff))
+      write_log("JIT: Branch to target too long.\n");
+    off = off & 0x7ffff;
+    *(jmpaddr) = (*(jmpaddr) & 0xff00001f) | (off << 5);
+  }
+
   flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
 }
 

@@ -184,7 +184,7 @@ static void SetControlState(const int model)
 		break;
 	}
 
-	chkDFxWriteProtect[0]->setEnabled(df0Editable && !changed_prefs.floppy_read_only);
+	chkDFxWriteProtect[0]->setEnabled(df0Editable && !workprefs.floppy_read_only);
 	cmdDFxInfo[0]->setEnabled(df0Editable);
 	cmdDFxEject[0]->setEnabled(df0Editable);
 	cmdDFxSelect[0]->setEnabled(df0Editable);
@@ -206,9 +206,9 @@ static void SetControlState(const int model)
 
 static void AdjustPrefs(void)
 {
-	//const auto old_cs = changed_prefs.cs_compatible;
+	//const auto old_cs = workprefs.cs_compatible;
 
-	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
+	built_in_prefs(&workprefs, quickstart_model, quickstart_conf, 0, 0);
 	switch (quickstart_model)
 	{
 	case 0: // A500
@@ -220,22 +220,22 @@ static void AdjustPrefs(void)
 	case 6: // A4000
 	case 7: // A4000T
 		// df0 always active
-		changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
+		workprefs.floppyslots[0].dfxtype = DRV_35_DD;
 
 		// No CD available
-		changed_prefs.cdslots[0].inuse = false;
-		changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+		workprefs.cdslots[0].inuse = false;
+		workprefs.cdslots[0].type = SCSI_UNIT_DISABLED;
 		break;
 
 	case 8: // CD32
 	case 9: // CDTV
 		// No floppy drive available, CD available
-		changed_prefs.floppyslots[0].dfxtype = DRV_NONE;
-		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
-		changed_prefs.cdslots[0].inuse = true;
-		changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
-		changed_prefs.gfx_size.width = 768;
-		changed_prefs.gfx_size.height = 270;
+		workprefs.floppyslots[0].dfxtype = DRV_NONE;
+		workprefs.floppyslots[1].dfxtype = DRV_NONE;
+		workprefs.cdslots[0].inuse = true;
+		workprefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+		workprefs.gfx_monitor.gfx_size.width = 768;
+		workprefs.gfx_monitor.gfx_size.height = 270;
 		break;
 	default:
 		break;
@@ -341,25 +341,25 @@ public:
 			//---------------------------------------
 			// Eject CD from drive
 			//---------------------------------------
-			strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+			strncpy(workprefs.cdslots[0].name, "", MAX_DPATH);
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
 		{
 			char tmp[MAX_DPATH];
 
-			if (strlen(changed_prefs.cdslots[0].name) > 0)
-				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
+			if (strlen(workprefs.cdslots[0].name) > 0)
+				strncpy(tmp, workprefs.cdslots[0].name, MAX_DPATH);
 			else
 				strncpy(tmp, currentDir, MAX_DPATH);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
-				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
+				if (strncmp(workprefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp, MAX_DPATH);
-					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					strncpy(workprefs.cdslots[0].name, tmp, MAX_DPATH);
+					workprefs.cdslots[0].inuse = true;
+					workprefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
 					extractPath(tmp, currentDir);
 
@@ -393,18 +393,18 @@ public:
 
 				if (idx < 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+					strncpy(workprefs.cdslots[0].name, "", MAX_DPATH);
 					AdjustDropDownControls();
 				}
 				else
 				{
-					if (cdfileList.getElementAt(idx) != changed_prefs.cdslots[0].name)
+					if (cdfileList.getElementAt(idx) != workprefs.cdslots[0].name)
 					{
-						strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), MAX_DPATH);
-						changed_prefs.cdslots[0].inuse = true;
-						changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+						strncpy(workprefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), MAX_DPATH);
+						workprefs.cdslots[0].inuse = true;
+						workprefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
-						lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
+						lstMRUCDList.insert(lstMRUCDList.begin(), workprefs.cdslots[0].name);
 						bIgnoreListChange = true;
 						cboCDFile->setSelected(0);
 						bIgnoreListChange = false;
@@ -474,13 +474,13 @@ public:
 	{
 		if (chkNTSC->isSelected())
 		{
-			changed_prefs.ntscmode = true;
-			changed_prefs.chipset_refreshrate = 60;
+			workprefs.ntscmode = true;
+			workprefs.chipset_refreshrate = 60;
 		}
 		else
 		{
-			changed_prefs.ntscmode = false;
-			changed_prefs.chipset_refreshrate = 50;
+			workprefs.ntscmode = false;
+			workprefs.chipset_refreshrate = 50;
 		}
 		RefreshPanelChipset();
 	}
@@ -502,18 +502,18 @@ public:
 				// Drive enabled/disabled
 				//---------------------------------------
 				if (chkDFx[i]->isSelected())
-					changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
+					workprefs.floppyslots[i].dfxtype = DRV_35_DD;
 				else
-					changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
+					workprefs.floppyslots[i].dfxtype = DRV_NONE;
 			}
 			else if (actionEvent.getSource() == chkDFxWriteProtect[i])
 			{
 				//---------------------------------------
 				// Write-protect changed
 				//---------------------------------------
-				disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
+				disk_setwriteprotect(&workprefs, i, workprefs.floppyslots[i].df,
 				                     chkDFxWriteProtect[i]->isSelected());
-				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
+				if (disk_getwriteprotect(&workprefs, workprefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
 					isSelected())
 				{
 					// Failed to change write protection -> maybe filesystem doesn't support this
@@ -545,7 +545,7 @@ public:
 				//---------------------------------------
 				// Show info about current disk-image
 				//---------------------------------------
-				//if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0);
+				//if (workprefs.floppyslots[i].dfxtype != DRV_NONE && strlen(workprefs.floppyslots[i].df) > 0);
 				// ToDo: Show info dialog
 			}
 			else if (actionEvent.getSource() == cmdDFxEject[i])
@@ -554,7 +554,7 @@ public:
 				// Eject disk from drive
 				//---------------------------------------
 				disk_eject(i);
-				strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
+				strncpy(workprefs.floppyslots[i].df, "", MAX_DPATH);
 				AdjustDropDownControls();
 			}
 			else if (actionEvent.getSource() == cmdDFxSelect[i])
@@ -564,15 +564,15 @@ public:
 				//---------------------------------------
 				char tmp[MAX_DPATH];
 
-				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
+				if (strlen(workprefs.floppyslots[i].df) > 0)
+					strncpy(tmp, workprefs.floppyslots[i].df, MAX_DPATH);
 				else
 					strncpy(tmp, currentDir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
-					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
+					if (strncmp(workprefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
+						strncpy(workprefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extractPath(tmp, currentDir);
@@ -611,17 +611,17 @@ public:
 					if (idx < 0)
 					{
 						disk_eject(i);
-						strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
+						strncpy(workprefs.floppyslots[i].df, "", MAX_DPATH);
 						AdjustDropDownControls();
 					}
 					else
 					{
-						if (diskfileList.getElementAt(idx) != changed_prefs.floppyslots[i].df)
+						if (diskfileList.getElementAt(idx) != workprefs.floppyslots[i].df)
 						{
-							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
-							disk_insert(i, changed_prefs.floppyslots[i].df);
+							strncpy(workprefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
+							disk_insert(i, workprefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
-							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
+							lstMRUDiskList.insert(lstMRUDiskList.begin(), workprefs.floppyslots[i].df);
 							bIgnoreListChange = true;
 							cboDFxFile[i]->setSelected(0);
 							bIgnoreListChange = false;
@@ -862,11 +862,11 @@ static void AdjustDropDownControls(void)
 	{
 		cboDFxFile[i]->clearSelected();
 
-		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
+		if (workprefs.floppyslots[i].dfxtype != DRV_NONE && strlen(workprefs.floppyslots[i].df) > 0)
 		{
 			for (unsigned int j = 0; j < lstMRUDiskList.size(); ++j)
 			{
-				if (strcmp(lstMRUDiskList[j].c_str(), changed_prefs.floppyslots[i].df) == 0)
+				if (strcmp(lstMRUDiskList[j].c_str(), workprefs.floppyslots[i].df) == 0)
 				{
 					cboDFxFile[i]->setSelected(j);
 					break;
@@ -876,11 +876,11 @@ static void AdjustDropDownControls(void)
 	}
 
 	cboCDFile->clearSelected();
-	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
+	if (workprefs.cdslots[0].inuse && strlen(workprefs.cdslots[0].name) > 0)
 	{
 		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
 		{
-			if (lstMRUCDList[i].c_str() != changed_prefs.cdslots[0].name)
+			if (lstMRUCDList[i].c_str() != workprefs.cdslots[0].name)
 			{
 				cboCDFile->setSelected(i);
 				break;
@@ -896,38 +896,38 @@ void RefreshPanelQuickstart(void)
 {
 	auto prevAvailable = true;
 
-	chkNTSC->setSelected(changed_prefs.ntscmode);
+	chkNTSC->setSelected(workprefs.ntscmode);
 
 	AdjustDropDownControls();
 
-	changed_prefs.nr_floppies = 0;
+	workprefs.nr_floppies = 0;
 	for (auto i = 0; i < 4; ++i)
 	{
-		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
+		const auto driveEnabled = workprefs.floppyslots[i].dfxtype != DRV_NONE;
 		if (i < 2)
 		{
 			chkDFx[i]->setSelected(driveEnabled);
-			chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df));
+			chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&workprefs, workprefs.floppyslots[i].df));
 			if (i == 0)
 				chkDFx[i]->setEnabled(false);
 			else
 				chkDFx[i]->setEnabled(prevAvailable);
 
 			cmdDFxInfo[i]->setEnabled(driveEnabled);
-			chkDFxWriteProtect[i]->setEnabled(driveEnabled && !changed_prefs.floppy_read_only);
+			chkDFxWriteProtect[i]->setEnabled(driveEnabled && !workprefs.floppy_read_only);
 			cmdDFxEject[i]->setEnabled(driveEnabled);
 			cmdDFxSelect[i]->setEnabled(driveEnabled);
 			cboDFxFile[i]->setEnabled(driveEnabled);
 		}
 		prevAvailable = driveEnabled;
 		if (driveEnabled)
-			changed_prefs.nr_floppies = i + 1;
+			workprefs.nr_floppies = i + 1;
 	}
 
-	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
-	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
-	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
-	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
+	chkCD->setSelected(workprefs.cdslots[0].inuse);
+	cmdCDEject->setEnabled(workprefs.cdslots[0].inuse);
+	cmdCDSelect->setEnabled(workprefs.cdslots[0].inuse);
+	cboCDFile->setEnabled(workprefs.cdslots[0].inuse);
 
 	chkQuickstartMode->setSelected(quickstart_start);
 }

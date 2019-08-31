@@ -1,6 +1,8 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
 
+extern struct uae_prefs workprefs;
+
 #define GUI_WIDTH  800
 #define GUI_HEIGHT 480
 #define DISTANCE_BORDER 15

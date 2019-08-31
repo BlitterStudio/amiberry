@@ -66,7 +66,7 @@ public:
 					if (f)
 					{
 						fclose(f);
-						savestate_initsave(savestate_fname, 2, 0, false);
+						savestate_initsave(savestate_fname);
 						savestate_state = STATE_DORESTORE;
 						gui_running = false;
 					}
@@ -86,7 +86,7 @@ public:
 			//------------------------------------------
 			if (emulating)
 			{
-				savestate_initsave(savestate_fname, 2, 0, false);
+				savestate_initsave(savestate_fname);
 				save_state(savestate_fname, "...");
 				savestate_state = STATE_DOSAVE; // Just to create the screenshot
 				delay_savestate_frame = 2;

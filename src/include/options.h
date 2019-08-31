@@ -15,10 +15,8 @@
 #include "traps.h"
 
 #define UAEMAJOR 4
-#define UAEMINOR 1
-#define UAESUBREV 0
-
-#define MAX_AMIGADISPLAYS 1
+#define UAEMINOR 2
+#define UAESUBREV 1
 
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
 
@@ -63,17 +61,6 @@ struct strlist {
 #define SPARE_SUB_EVENT 8
 
 #define INTERNALEVENT_COUNT 1
-
-#if 0
-struct uae_input_device_event
-{
-	uae_s16 eventid[MAX_INPUT_SUB_EVENT_ALL];
-	TCHAR *custom[MAX_INPUT_SUB_EVENT_ALL];
-	uae_u64 flags[MAX_INPUT_SUB_EVENT_ALL];
-	uae_u8 port[MAX_INPUT_SUB_EVENT_ALL];
-	uae_s16 extra;
-};
-#endif
 
 struct uae_input_device {
 	TCHAR *name;
@@ -394,7 +381,7 @@ struct gfx_filterdata
 	float gfx_filter_horiz_offset, gfx_filter_vert_offset;
 	int gfx_filter_left_border, gfx_filter_right_border;
 	int gfx_filter_top_border, gfx_filter_bottom_border;
-	int gfx_filter_filtermode;
+	int gfx_filter_filtermodeh, gfx_filter_filtermodev;
 	int gfx_filter_bilinear;
 	int gfx_filter_noise, gfx_filter_blur;
 	int gfx_filter_saturation, gfx_filter_luminance, gfx_filter_contrast;
@@ -442,7 +429,21 @@ struct rtgboardconfig
 	int device_order;
 	int monitor_id;
 };
-#define MAX_RAM_BOARDS 1
+struct boardloadfile
+{
+	uae_u32 loadoffset;
+	uae_u32 fileoffset, filesize;
+	TCHAR loadfile[MAX_DPATH];
+};
+#define MAX_ROM_BOARDS 4
+struct romboard
+{
+	uae_u32 size;
+	uae_u32 start_address;
+	uae_u32 end_address;
+	struct boardloadfile lf;
+};
+#define MAX_RAM_BOARDS 4
 struct ramboard
 {
 	uae_u32 size;
@@ -457,9 +458,7 @@ struct ramboard
 	uae_u32 end_address;
 	uae_u32 write_address;
 	bool readonly;
-	uae_u32 loadoffset;
-	uae_u32 fileoffset, filesize;
-	TCHAR loadfile[MAX_DPATH];
+	struct boardloadfile lf;
 };
 struct expansion_params
 {
@@ -536,6 +535,7 @@ struct uae_prefs {
 	bool sound_stereo_swap_ahi;
 	bool sound_auto;
 	bool sound_cdaudio;
+	bool sound_volcnt;
 
 	int sampler_freq;
 	int sampler_buffer;
@@ -554,14 +554,13 @@ struct uae_prefs {
 	bool fpu_strict;
 	int fpu_mode;
 
-	struct monconfig gfx_monitor[MAX_AMIGADISPLAYS];
+	struct monconfig gfx_monitor;
 	int gfx_framerate, gfx_autoframerate;
 	bool gfx_autoresolution_vga;
 	int gfx_autoresolution;
 	int gfx_autoresolution_delay;
 	int gfx_autoresolution_minv, gfx_autoresolution_minh;
 	bool gfx_scandoubler;
-	struct wh gfx_size; //TODO take this away?
 	struct apmode gfx_apmode[2];
 	int gfx_resolution;
 	int gfx_vresolution;
@@ -655,6 +654,7 @@ struct uae_prefs {
 	TCHAR filesys_inject_icons_drawer[MAX_DPATH];
 	int uaescsidevmode;
 	bool reset_delay;
+	bool crash_auto_reset;
 
 	int cs_compatible;
 	int cs_ciaatod;
@@ -697,6 +697,7 @@ struct uae_prefs {
 	int cs_unmapped_space;
 	int cs_hacks;
 	int cs_ciatype[2];
+	int cs_kbhandshake;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
@@ -722,14 +723,14 @@ struct uae_prefs {
 	TCHAR quitstatefile[MAX_DPATH];
 	TCHAR statefile[MAX_DPATH];
 	TCHAR inprecfile[MAX_DPATH];
+	TCHAR trainerfile[MAX_DPATH];
 	bool inprec_autoplay;
 	bool refresh_indicator;
 
-	//TODO replace these with multipath structs
-	TCHAR path_floppy[MAX_DPATH];
-	TCHAR path_hardfile[MAX_DPATH];
-	TCHAR path_rom[MAX_DPATH];
-	TCHAR path_cd[MAX_DPATH];
+	struct multipath path_floppy;
+	struct multipath path_hardfile;
+	struct multipath path_rom;
+	struct multipath path_cd;
 
 	int m68k_speed;
 	double m68k_speed_throttle;
@@ -755,6 +756,7 @@ struct uae_prefs {
 	uae_u32 z3autoconfig_start;
 	struct ramboard z3fastmem[MAX_RAM_BOARDS];
 	struct ramboard fastmem[MAX_RAM_BOARDS];
+	struct romboard romboards[MAX_ROM_BOARDS];
 	uae_u32 z3chipmem_size;
 	uae_u32 z3chipmem_start;
 	uae_u32 chipmem_size;
@@ -906,7 +908,7 @@ extern void config_check_vsync (void);
 extern void set_config_changed (void);
 
 /* Contains the filename of .uaerc */
-extern TCHAR optionsfile[];
+//extern TCHAR optionsfile[];
 extern void save_options (struct zfile *, struct uae_prefs *, int);
 
 extern void cfgfile_write (struct zfile *, const TCHAR *option, const TCHAR *format,...);
@@ -935,6 +937,7 @@ extern bool is_error_log (void);
 
 extern void default_prefs (struct uae_prefs *, bool, int);
 extern void discard_prefs (struct uae_prefs *, int);
+extern void copy_prefs(struct uae_prefs *src, struct uae_prefs *dst);
 extern int bip_a500 (struct uae_prefs *p, int rom);
 extern int bip_a500plus (struct uae_prefs *p, int rom);
 extern int bip_a1200 (struct uae_prefs *p, int rom);
@@ -942,7 +945,7 @@ extern int bip_a2000 (struct uae_prefs *p, int rom);
 extern int bip_a4000 (struct uae_prefs *p, int rom);
 extern int bip_cd32 (struct uae_prefs *p, int rom);
 
-int parse_cmdline_option (struct uae_prefs *, TCHAR, const TCHAR *);
+int parse_cmdline_option (struct uae_prefs *, TCHAR, const TCHAR*);
 
 extern int cfgfile_separate_linea (const TCHAR *filename, char *line, TCHAR *line1b, TCHAR *line2b);
 extern int cfgfile_yesno (const TCHAR *option, const TCHAR *value, const TCHAR *name, bool *location);
@@ -975,25 +978,32 @@ extern int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int);
 extern void cfgfile_parse_line (struct uae_prefs *p, TCHAR *, int);
 extern void cfgfile_parse_lines (struct uae_prefs *p, const TCHAR *, int);
 extern int cfgfile_parse_option (struct uae_prefs *p, const TCHAR *option, TCHAR *value, int);
-extern int cfgfile_get_description (const TCHAR *filename, TCHAR *description);
-extern uae_u32 cfgfile_uaelib (TrapContext *ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
-extern uae_u32 cfgfile_uaelib_modify (TrapContext *ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
+extern int cfgfile_get_description (struct uae_prefs *p, const TCHAR *filename, TCHAR *description, int *type);
+extern void cfgfile_show_usage (void);
+extern int cfgfile_searchconfig(const TCHAR *in, int index, TCHAR *out, int outsize);
+extern uae_u32 cfgfile_uaelib(TrapContext *ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
+extern uae_u32 cfgfile_uaelib_modify(TrapContext *ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
 extern uae_u32 cfgfile_modify (uae_u32 index, const TCHAR *parms, uae_u32 size, TCHAR *out, uae_u32 outsize);
 extern void cfgfile_addcfgparam (TCHAR *);
 extern int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int romcheck);
 extern int built_in_chipset_prefs (struct uae_prefs *p);
-extern int cfgfile_configuration_change(int);
+extern int built_in_cpuboard_prefs(struct uae_prefs *p);
+//extern int cmdlineparser (const TCHAR *s, TCHAR *outp[], int max);
 extern void fixup_prefs_dimensions (struct uae_prefs *prefs);
 extern void fixup_prefs (struct uae_prefs *prefs, bool userconfig);
 extern void fixup_cpu (struct uae_prefs *prefs);
 extern void cfgfile_compatibility_romtype(struct uae_prefs *p);
 extern void cfgfile_compatibility_rtg(struct uae_prefs *p);
+extern bool cfgfile_detect_art(struct uae_prefs *p, TCHAR *path);
+extern const TCHAR *cfgfile_getconfigdata(int *len);
+extern bool cfgfile_createconfigstore(struct uae_prefs *p);
+extern void cfgfile_get_shader_config(struct uae_prefs *p, int rtg);
 
-
+#ifdef AMIBERRY
 extern void whdload_auto_prefs (struct uae_prefs *p, char* filename);
 extern void cd_auto_prefs (struct uae_prefs *p, char* filename);
 extern void symlink_roms(struct uae_prefs *p);
-
+#endif
 
 extern void check_prefs_changed_custom (void);
 extern void check_prefs_changed_cpu (void);

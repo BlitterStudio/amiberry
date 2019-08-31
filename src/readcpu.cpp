@@ -5,7 +5,6 @@
 *
 * Copyright 1995,1996 Bernd Schmidt
 */
-#include <stdlib.h>
 
 #include "sysdeps.h"
 #include "readcpu.h"
@@ -123,7 +122,6 @@ struct mnemolookup lookuptab[] = {
 	{ i_FScc, _T("FScc") },
 	{ i_FTRAPcc, _T("FTRAPcc") },
 	{ i_FBcc, _T("FBcc") },
-	{ i_FBcc, _T("FBcc") },
 	{ i_FSAVE, _T("FSAVE") },
 	{ i_FRESTORE, _T("FRESTORE") },
 
@@ -196,7 +194,7 @@ STATIC_INLINE amodes mode_from_mr (int mode, int reg)
 	return (amodes)0;
 }
 
-static void build_insn(int insn)
+static void build_insn (int insn)
 {
 	int find = -1;
 	int variants;
@@ -205,90 +203,61 @@ static void build_insn(int insn)
 	int i, n;
 
 	int flaglive = 0, flagdead = 0;
-	int cflow = 0;
+  int cflow = 0;
 
-	// Mask of flags set/used
-	unsigned char flags_set = 0;
-	unsigned char flags_used = 0;
+  // Mask of flags set/used
+  unsigned char flags_set = 0;
+  unsigned char flags_used = 0;
 
 	id = defs68k[insn];
 
-	// Control flow information
-	cflow = id.cflow;
+  // Control flow information
+  cflow = id.cflow;
 
-	for (i = 0, n = 4; i < 5; i++, n--)
-	{
-		switch (id.flaginfo[i].flagset)
-		{
-		case fa_unset:
-		case fa_isjmp:
-			break;
-		default:
-			flags_set |= (1 << n);
-		}
+  for (i = 0, n = 4; i < 5; i++, n--) {
+  	switch (id.flaginfo[i].flagset) {
+	    case fa_unset: 
+      case fa_isjmp: 
+        break;
+	    default: 
+        flags_set |= (1 << n);
+  	}
 
-		switch (id.flaginfo[i].flaguse)
-		{
-		case fu_unused:
-		case fu_isjmp:
-			break;
-		default:
-			flags_used |= (1 << n);
-		}
-	}
+  	switch (id.flaginfo[i].flaguse) {
+	    case fu_unused: 
+      case fu_isjmp: 
+        break;
+	    default: 
+        flags_used |= (1 << n);
+  	}
+  }
 
-	for (i = 0; i < 5; i++)
-	{
-		switch (id.flaginfo[i].flagset)
-		{
-		case fa_unset:
-			break;
-		case fa_isjmp:
-			break;
-		case fa_zero:
-			flagdead |= 1 << i;
-			break;
-		case fa_one:
-			flagdead |= 1 << i;
-			break;
-		case fa_dontcare:
-			flagdead |= 1 << i;
-			break;
-		case fa_unknown:
-			flagdead = -1;
-			goto out1;
-		case fa_set:
-			flagdead |= 1 << i;
-			break;
+	for (i = 0; i < 5; i++) {
+		switch (id.flaginfo[i].flagset){
+		case fa_unset: break;
+	 	case fa_isjmp: break;
+		case fa_zero: flagdead |= 1 << i; break;
+		case fa_one: flagdead |= 1 << i; break;
+		case fa_dontcare: flagdead |= 1 << i; break;
+		case fa_unknown: flagdead = -1; goto out1;
+		case fa_set: flagdead |= 1 << i; break;
 		}
 	}
 
 out1:
-	for (i = 0; i < 5; i++)
-	{
-		switch (id.flaginfo[i].flaguse)
-		{
-		case fu_unused:
-			break;
-		case fu_isjmp:
-			flaglive |= 1 << i;
-			break;
-		case fu_maybecc:
-			flaglive |= 1 << i;
-			break;
-		case fu_unknown:
-			flaglive = -1;
-			goto out2;
-		case fu_used:
-			flaglive |= 1 << i;
-			break;
+	for (i = 0; i < 5; i++) {
+		switch (id.flaginfo[i].flaguse) {
+		case fu_unused: break;
+		case fu_isjmp: flaglive |= 1 << i; break;
+		case fu_maybecc: flaglive |= 1 << i; break;
+		case fu_unknown: flaglive = -1; goto out2;
+		case fu_used: flaglive |= 1 << i; break;
 		}
 	}
 out2:
 
 	opcstr = id.opcstr;
-	for (variants = 0; variants < (1 << id.n_variable); variants++)
-	{
+	for (variants = 0; variants < (1 << id.n_variable); variants++) {
 		int bitcnt[lastbit];
 		int bitval[lastbit];
 		int bitpos[lastbit];
@@ -307,19 +276,19 @@ out2:
 		int usesrc = 0, usedst = 0;
 		int srctype = 0;
 		int srcpos = -1, dstpos = -1;
+		int usecc = 0;
 
 		amodes srcmode = am_unknown, destmode = am_unknown;
 		int srcreg = -1, destreg = -1;
 
-		for (i = 0; i < lastbit; i++)
+		for (i = 0; i < lastbit; i++) {
 			bitcnt[i] = bitval[i] = 0;
+    }
 
 		vmsk = 1 << id.n_variable;
 
-		for (i = 0, msk = 0x8000; i < 16; i++, msk >>= 1)
-		{
-			if (!(msk & id.mask))
-			{
+		for (i = 0, msk = 0x8000; i < 16; i++, msk >>= 1) {
+			if (!(msk & id.mask)) {
 				int currbit = id.bitpos[bitno++];
 				int bit_set;
 				vmsk >>= 1;
@@ -330,11 +299,12 @@ out2:
 				bitcnt[currbit]++;
 				bitval[currbit] <<= 1;
 				bitval[currbit] |= bit_set;
+				if (currbit == bitC || currbit == bitc)
+					usecc = 1;
 			}
 		}
 
-		if (bitval[bitj] == 0)
-			bitval[bitj] = 8;
+		if (bitval[bitj] == 0) bitval[bitj] = 8;
 		/* first check whether this one does not match after all */
 		if (bitval[bitz] == 3 || bitval[bitC] == 1)
 			continue;
@@ -345,69 +315,40 @@ out2:
 			continue;
 
 		/* bitI and bitC get copied to biti and bitc */
-		if (bitcnt[bitI])
-		{
-			bitval[biti] = bitval[bitI];
-			bitpos[biti] = bitpos[bitI];
+		if (bitcnt[bitI]) {
+			bitval[biti] = bitval[bitI]; bitpos[biti] = bitpos[bitI];
 		}
 		if (bitcnt[bitC])
 			bitval[bitc] = bitval[bitC];
 
 		pos = 0;
-		while (opcstr[pos] && !_istspace(opcstr[pos]))
-		{
-			if (opcstr[pos] == '.')
-			{
+		while (opcstr[pos] && !_istspace(opcstr[pos])) {
+			if (opcstr[pos] == '.') {
 				pos++;
 				unsized = 0;
-				switch (opcstr[pos])
-				{
+				switch (opcstr[pos]) {
 
-				case 'B':
-					sz = sz_byte;
-					break;
-				case 'W':
-					sz = sz_word;
-					break;
-				case 'L':
-					sz = sz_long;
-					break;
+				case 'B': sz = sz_byte; break;
+				case 'W': sz = sz_word; break;
+				case 'L': sz = sz_long; break;
 				case 'z':
-					switch (bitval[bitz])
-					{
-					case 0:
-						sz = sz_byte;
-						break;
-					case 1:
-						sz = sz_word;
-						break;
-					case 2:
-						sz = sz_long;
-						break;
-					default:
-						abort();
+					switch (bitval[bitz]) {
+					case 0: sz = sz_byte; break;
+					case 1: sz = sz_word; break;
+					case 2: sz = sz_long; break;
+					default: abort();
 					}
 					break;
-				default:
-					abort();
+				default: abort();
 				}
-			}
-			else
-			{
+			} else {
 				mnemonic[mnp] = opcstr[pos];
-				if (mnemonic[mnp] == 'f')
-				{
+				if (mnemonic[mnp] == 'f') {
 					find = -1;
-					switch (bitval[bitf])
-					{
-					case 0:
-						mnemonic[mnp] = 'R';
-						break;
-					case 1:
-						mnemonic[mnp] = 'L';
-						break;
-					default:
-						abort();
+					switch (bitval[bitf]) {
+					case 0: mnemonic[mnp] = 'R'; break;
+					case 1: mnemonic[mnp] = 'L'; break;
+					default: abort();
 					}
 				}
 				mnp++;
@@ -426,209 +367,136 @@ out2:
 
 		/* parse the source address */
 		usesrc = 1;
-		switch (opcstr[pos++])
-		{
+		switch (opcstr[pos++]) {
 		case 'D':
 			srcmode = Dreg;
-			switch (opcstr[pos++])
-			{
-			case 'r':
-				srcreg = bitval[bitr];
-				srcgather = 1;
-				srcpos = bitpos[bitr];
-				break;
-			case 'R':
-				srcreg = bitval[bitR];
-				srcgather = 1;
-				srcpos = bitpos[bitR];
-				break;
-			default:
-				abort();
+			switch (opcstr[pos++]) {
+			case 'r': srcreg = bitval[bitr]; srcgather = 1; srcpos = bitpos[bitr]; break;
+			case 'R': srcreg = bitval[bitR]; srcgather = 1; srcpos = bitpos[bitR]; break;
+			default: abort();
 			}
 			break;
 		case 'A':
 			srcmode = Areg;
-			switch (opcstr[pos++])
-			{
-			case 'l':
-				srcmode = absl;
-				break;
-			case 'r':
-				srcreg = bitval[bitr];
-				srcgather = 1;
-				srcpos = bitpos[bitr];
-				break;
-			case 'R':
-				srcreg = bitval[bitR];
-				srcgather = 1;
-				srcpos = bitpos[bitR];
-				break;
-			default:
-				abort();
+			switch (opcstr[pos++]) {
+	    case 'l': srcmode = absl; break;
+			case 'r': srcreg = bitval[bitr]; srcgather = 1; srcpos = bitpos[bitr]; break;
+			case 'R': srcreg = bitval[bitR]; srcgather = 1; srcpos = bitpos[bitR]; break;
+			default: abort();
 			}
-			switch (opcstr[pos])
-			{
-			case 'p':
-				srcmode = Apdi;
-				pos++;
-				break;
-			case 'P':
-				srcmode = Aipi;
-				pos++;
-				break;
-			case 'a':
-				srcmode = Aind;
-				pos++;
-				break;
+			switch (opcstr[pos]) {
+			case 'p': srcmode = Apdi; pos++; break;
+			case 'P': srcmode = Aipi; pos++; break;
+			case 'a': srcmode = Aind; pos++; break;
 			}
 			break;
 		case 'L':
 			srcmode = absl;
 			break;
 		case '#':
-			switch (opcstr[pos++])
-			{
-			case 'z':
-				srcmode = imm;
-				break;
-			case '0':
-				srcmode = imm0;
-				break;
-			case '1':
-				srcmode = imm1;
-				break;
-			case '2':
-				srcmode = imm2;
-				break;
-			case 'i':
-				srcmode = immi;
-				srcreg = (uae_s32)(uae_s8)bitval[biti];
-				if (CPU_EMU_SIZE < 4)
-				{
+			switch (opcstr[pos++]) {
+			case 'z': srcmode = imm; break;
+			case '0': srcmode = imm0; break;
+			case '1': srcmode = imm1; break;
+			case '2': srcmode = imm2; break;
+			case 'i': srcmode = immi; srcreg = (uae_s32)(uae_s8)bitval[biti];
+				if (CPU_EMU_SIZE < 4) {
 					/* Used for branch instructions */
 					srctype = 1;
 					srcgather = 1;
 					srcpos = bitpos[biti];
 				}
 				break;
-			case 'j':
-				srcmode = immi;
-				srcreg = bitval[bitj];
-				if (CPU_EMU_SIZE < 3)
-				{
+			case 'j': srcmode = immi; srcreg = bitval[bitj];
+				if (CPU_EMU_SIZE < 3) {
 					/* 1..8 for ADDQ/SUBQ and rotshi insns */
 					srcgather = 1;
 					srctype = 3;
 					srcpos = bitpos[bitj];
 				}
 				break;
-			case 'J':
-				srcmode = immi;
-				srcreg = bitval[bitJ];
-				if (CPU_EMU_SIZE < 5)
-				{
+			case 'J': srcmode = immi; srcreg = bitval[bitJ];
+				if (CPU_EMU_SIZE < 5) {
 					/* 0..15 */
 					srcgather = 1;
 					srctype = 2;
 					srcpos = bitpos[bitJ];
 				}
 				break;
-			case 'k':
-				srcmode = immi;
-				srcreg = bitval[bitk];
-				if (CPU_EMU_SIZE < 3)
-				{
+			case 'k': srcmode = immi; srcreg = bitval[bitk];
+				if (CPU_EMU_SIZE < 3) {
 					srcgather = 1;
 					srctype = 4;
 					srcpos = bitpos[bitk];
 				}
 				break;
-			case 'K':
-				srcmode = immi;
-				srcreg = bitval[bitK];
-				if (CPU_EMU_SIZE < 5)
-				{
+			case 'K': srcmode = immi; srcreg = bitval[bitK];
+				if (CPU_EMU_SIZE < 5) {
 					/* 0..15 */
 					srcgather = 1;
 					srctype = 5;
 					srcpos = bitpos[bitK];
 				}
 				break;
-			case 'E':
-				srcmode = immi;
-				srcreg = bitval[bitE];
-				if (CPU_EMU_SIZE < 5)
-				{
-					/* 1..255 */
-					srcgather = 1;
-					srctype = 6;
-					srcpos = bitpos[bitE];
-				}
-				break;
-			case 'p':
-				srcmode = immi;
-				srcreg = bitval[bitp];
-				if (CPU_EMU_SIZE < 5)
-				{
+      case 'E': srcmode = immi; srcreg = bitval[bitE];
+		    if (CPU_EMU_SIZE < 5) {
+			    /* 1..255 */
+			    srcgather = 1;
+			    srctype = 6;
+			    srcpos = bitpos[bitE];
+    		}
+    		break;
+      case 'p': srcmode = immi; srcreg = bitval[bitp];
+				if (CPU_EMU_SIZE < 5) {
 					/* 0..3 */
 					srcgather = 1;
 					srctype = 7;
 					srcpos = bitpos[bitp];
 				}
 				break;
-			default:
-				abort();
+			default: abort();
 			}
 			break;
 		case 'd':
 			srcreg = bitval[bitD];
-			srcmode = mode_from_mr(bitval[bitd], bitval[bitD]);
+			srcmode = mode_from_mr(bitval[bitd],bitval[bitD]);
 			if (srcmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 2 &&
-				(srcmode == Areg || srcmode == Dreg || srcmode == Aind || srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi || srcmode == Apdi))
+				(srcmode == Areg || srcmode == Dreg || srcmode == Aind
+				|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
+				|| srcmode == Apdi))
 			{
-				srcgather = 1;
-				srcpos = bitpos[bitD];
+				srcgather = 1; srcpos = bitpos[bitD];
 			}
-			if (opcstr[pos] == '[')
-			{
+			if (opcstr[pos] == '[') {
 				pos++;
-				if (opcstr[pos] == '!')
-				{
+				if (opcstr[pos] == '!') {
 					/* exclusion */
-					do
-					{
+					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == srcmode)
+						if (mode_from_str(opcstr+pos) == srcmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else
-				{
-					if (opcstr[pos + 4] == '-')
-					{
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == srcmode)
-							srcmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == srcmode)
+							srcmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else
-					{
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != srcmode)
-						{
+						while(mode_from_str(opcstr+pos) != srcmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']')
-							pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 						break;
 					}
@@ -640,64 +508,56 @@ out2:
 			break;
 		case 's':
 			srcreg = bitval[bitS];
-			srcmode = mode_from_mr(bitval[bits], bitval[bitS]);
+			srcmode = mode_from_mr(bitval[bits],bitval[bitS]);
 
 			if (srcmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 2 &&
-				(srcmode == Areg || srcmode == Dreg || srcmode == Aind || srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi || srcmode == Apdi))
+				(srcmode == Areg || srcmode == Dreg || srcmode == Aind
+				|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
+				|| srcmode == Apdi))
 			{
-				srcgather = 1;
-				srcpos = bitpos[bitS];
+				srcgather = 1; srcpos = bitpos[bitS];
 			}
-			if (opcstr[pos] == '[')
-			{
+			if (opcstr[pos] == '[') {
 				pos++;
-				if (opcstr[pos] == '!')
-				{
+				if (opcstr[pos] == '!') {
 					/* exclusion */
-					do
-					{
+					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == srcmode)
+						if (mode_from_str(opcstr+pos) == srcmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else
-				{
-					if (opcstr[pos + 4] == '-')
-					{
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == srcmode)
-							srcmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == srcmode)
+							srcmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else
-					{
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != srcmode)
-						{
+						while(mode_from_str(opcstr+pos) != srcmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']')
-							pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 					}
 				}
 			}
 			break;
-		default:
-			abort();
+		default: abort();
 		}
 		/* safety check - might have changed */
-		if (srcmode != Areg && srcmode != Dreg && srcmode != Aind && srcmode != Ad16 && srcmode != Ad8r && srcmode != Aipi && srcmode != Apdi && srcmode != immi)
+		if (srcmode != Areg && srcmode != Dreg && srcmode != Aind
+			&& srcmode != Ad16 && srcmode != Ad8r && srcmode != Aipi
+			&& srcmode != Apdi && srcmode != immi)
 		{
 			srcgather = 0;
 		}
@@ -710,159 +570,91 @@ out2:
 
 		/* parse the destination address */
 		usedst = 1;
-		switch (opcstr[pos++])
-		{
+		switch (opcstr[pos++]) {
 		case 'D':
 			destmode = Dreg;
-			switch (opcstr[pos++])
-			{
-			case 'r':
-				destreg = bitval[bitr];
-				dstgather = 1;
-				dstpos = bitpos[bitr];
-				break;
-			case 'R':
-				destreg = bitval[bitR];
-				dstgather = 1;
-				dstpos = bitpos[bitR];
-				break;
-			default:
-				abort();
+			switch (opcstr[pos++]) {
+			case 'r': destreg = bitval[bitr]; dstgather = 1; dstpos = bitpos[bitr]; break;
+			case 'R': destreg = bitval[bitR]; dstgather = 1; dstpos = bitpos[bitR]; break;
+			default: abort();
 			}
 			if (dstpos < 0 || dstpos >= 32)
-				abort();
+				abort ();
 			break;
 		case 'A':
 			destmode = Areg;
-			switch (opcstr[pos++])
-			{
-			case 'l':
-				destmode = absl;
-				break;
-			case 'r':
-				destreg = bitval[bitr];
-				dstgather = 1;
-				dstpos = bitpos[bitr];
-				break;
-			case 'R':
-				destreg = bitval[bitR];
-				dstgather = 1;
-				dstpos = bitpos[bitR];
-				break;
-			case 'x':
-				destreg = 0;
-				dstgather = 0;
-				dstpos = 0;
-				break;
-			default:
-				abort();
+			switch (opcstr[pos++]) {
+	    case 'l': destmode = absl; break;
+			case 'r': destreg = bitval[bitr]; dstgather = 1; dstpos = bitpos[bitr]; break;
+			case 'R': destreg = bitval[bitR]; dstgather = 1; dstpos = bitpos[bitR]; break;
+			case 'x': destreg = 0; dstgather = 0; dstpos = 0; break;
+			default: abort();
 			}
-			if (destmode != absl && (dstpos < 0 || dstpos >= 32))
-				abort();
-			switch (opcstr[pos])
-			{
-			case 'p':
-				destmode = Apdi;
-				pos++;
-				break;
-			case 'P':
-				destmode = Aipi;
-				pos++;
-				break;
+	    if (destmode != absl && (dstpos < 0 || dstpos >= 32))
+				abort ();
+			switch (opcstr[pos]) {
+			case 'p': destmode = Apdi; pos++; break;
+			case 'P': destmode = Aipi; pos++; break;
 			}
 			break;
 		case 'L':
 			destmode = absl;
 			break;
 		case '#':
-			switch (opcstr[pos++])
-			{
-			case 'z':
-				destmode = imm;
-				break;
-			case '0':
-				destmode = imm0;
-				break;
-			case '1':
-				destmode = imm1;
-				break;
-			case '2':
-				destmode = imm2;
-				break;
-			case 'i':
-				destmode = immi;
-				destreg = (uae_s32)(uae_s8)bitval[biti];
-				break;
-			case 'j':
-				destmode = immi;
-				destreg = bitval[bitj];
-				break;
-			case 'J':
-				destmode = immi;
-				destreg = bitval[bitJ];
-				break;
-			case 'k':
-				destmode = immi;
-				destreg = bitval[bitk];
-				break;
-			case 'K':
-				destmode = immi;
-				destreg = bitval[bitK];
-				break;
-			default:
-				abort();
+			switch (opcstr[pos++]) {
+			case 'z': destmode = imm; break;
+			case '0': destmode = imm0; break;
+			case '1': destmode = imm1; break;
+			case '2': destmode = imm2; break;
+			case 'i': destmode = immi; destreg = (uae_s32)(uae_s8)bitval[biti]; break;
+			case 'j': destmode = immi; destreg = bitval[bitj]; break;
+			case 'J': destmode = immi; destreg = bitval[bitJ]; break;
+			case 'k': destmode = immi; destreg = bitval[bitk]; break;
+			case 'K': destmode = immi; destreg = bitval[bitK]; break;
+			default: abort();
 			}
 			break;
 		case 'd':
 			destreg = bitval[bitD];
-			destmode = mode_from_mr(bitval[bitd], bitval[bitD]);
+			destmode = mode_from_mr(bitval[bitd],bitval[bitD]);
 			if (destmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 1 &&
-				(destmode == Areg || destmode == Dreg || destmode == Aind || destmode == Ad16 || destmode == Ad8r || destmode == Aipi || destmode == Apdi))
+				(destmode == Areg || destmode == Dreg || destmode == Aind
+				|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
+				|| destmode == Apdi))
 			{
-				dstgather = 1;
-				dstpos = bitpos[bitD];
+				dstgather = 1; dstpos = bitpos[bitD];
 			}
 
-			if (opcstr[pos] == '[')
-			{
+			if (opcstr[pos] == '[') {
 				pos++;
-				if (opcstr[pos] == '!')
-				{
+				if (opcstr[pos] == '!') {
 					/* exclusion */
-					do
-					{
+					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == destmode)
+						if (mode_from_str(opcstr+pos) == destmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else
-				{
-					if (opcstr[pos + 4] == '-')
-					{
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == destmode)
-							destmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == destmode)
+							destmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else
-					{
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != destmode)
-						{
+						while(mode_from_str(opcstr+pos) != destmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']')
-							pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 						break;
 					}
@@ -874,101 +666,93 @@ out2:
 			break;
 		case 's':
 			destreg = bitval[bitS];
-			destmode = mode_from_mr(bitval[bits], bitval[bitS]);
+			destmode = mode_from_mr(bitval[bits],bitval[bitS]);
 
 			if (destmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 1 &&
-				(destmode == Areg || destmode == Dreg || destmode == Aind || destmode == Ad16 || destmode == Ad8r || destmode == Aipi || destmode == Apdi))
+				(destmode == Areg || destmode == Dreg || destmode == Aind
+				|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
+				|| destmode == Apdi))
 			{
-				dstgather = 1;
-				dstpos = bitpos[bitS];
+				dstgather = 1; dstpos = bitpos[bitS];
 			}
 
-			if (opcstr[pos] == '[')
-			{
+			if (opcstr[pos] == '[') {
 				pos++;
-				if (opcstr[pos] == '!')
-				{
+				if (opcstr[pos] == '!') {
 					/* exclusion */
-					do
-					{
+					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == destmode)
+						if (mode_from_str(opcstr+pos) == destmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else
-				{
-					if (opcstr[pos + 4] == '-')
-					{
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == destmode)
-							destmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == destmode)
+							destmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else
-					{
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != destmode)
-						{
+						while(mode_from_str(opcstr+pos) != destmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']')
-							pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 					}
 				}
 			}
 			break;
-		default:
-			abort();
+		default: abort();
 		}
 		/* safety check - might have changed */
-		if (destmode != Areg && destmode != Dreg && destmode != Aind && destmode != Ad16 && destmode != Ad8r && destmode != Aipi && destmode != Apdi)
+		if (destmode != Areg && destmode != Dreg && destmode != Aind
+			&& destmode != Ad16 && destmode != Ad8r && destmode != Aipi
+			&& destmode != Apdi)
 		{
 			dstgather = 0;
 		}
 
 		if (destmode == Areg && sz == sz_byte)
 			goto nomatch;
-	endofline:
+endofline:
 		/* now, we have a match */
 		if (table68k[opc].mnemo != i_ILLG)
-			; //write_log (_T("Double match: %x: %s\n"), opc, opcstr);
-		if (find == -1)
-		{
-			for (find = 0;; find++)
-			{
-				if (_tcscmp(mnemonic, lookuptab[find].name) == 0)
-				{
+			;//write_log (_T("Double match: %x: %s\n"), opc, opcstr);
+		if (find == -1) {
+			for (find = 0;; find++) {
+				if (_tcscmp (mnemonic, lookuptab[find].name) == 0) {
 					table68k[opc].mnemo = lookuptab[find].mnemo;
 					break;
 				}
-				if (_tcslen(lookuptab[find].name) == 0)
+				if (_tcslen (lookuptab[find].name) == 0)
 					abort();
 			}
 		}
-		else
-		{
+		else {
 			table68k[opc].mnemo = lookuptab[find].mnemo;
 		}
 		table68k[opc].cc = bitval[bitc];
+		table68k[opc].ccuse = usecc != 0;
+
 		mnemo = table68k[opc].mnemo;
-		if (mnemo == i_BTST || mnemo == i_BSET || mnemo == i_BCLR || mnemo == i_BCHG)
+		if (mnemo == i_BTST
+			|| mnemo == i_BSET
+			|| mnemo == i_BCLR
+			|| mnemo == i_BCHG)
 		{
 			sz = destmode == Dreg ? sz_long : sz_byte;
 			unsized = 0;
 		}
-		if (mnemo == i_JSR || mnemo == i_JMP)
-		{
+		if (mnemo == i_JSR || mnemo == i_JMP) {
 			unsized = 1;
 		}
 
@@ -992,167 +776,108 @@ out2:
 		table68k[opc].clocks = id.clocks;
 		table68k[opc].fetchmode = id.fetchmode;
 
-		// Fix flags used information for Scc, Bcc, TRAPcc, DBcc instructions
-		if (table68k[opc].mnemo == i_Scc || table68k[opc].mnemo == i_Bcc || table68k[opc].mnemo == i_DBcc || table68k[opc].mnemo == i_TRAPcc)
-		{
-			switch (table68k[opc].cc)
-			{
-			// CC mask:	XNZVC
-			// 			 8421
-			case 0:
-				flags_used = 0x00;
-				break; /*  T */
-			case 1:
-				flags_used = 0x00;
-				break; /*  F */
-			case 2:
-				flags_used = 0x05;
-				break; /* HI */
-			case 3:
-				flags_used = 0x05;
-				break; /* LS */
-			case 4:
-				flags_used = 0x01;
-				break; /* CC */
-			case 5:
-				flags_used = 0x01;
-				break; /* CS */
-			case 6:
-				flags_used = 0x04;
-				break; /* NE */
-			case 7:
-				flags_used = 0x04;
-				break; /* EQ */
-			case 8:
-				flags_used = 0x02;
-				break; /* VC */
-			case 9:
-				flags_used = 0x02;
-				break; /* VS */
-			case 10:
-				flags_used = 0x08;
-				break; /* PL */
-			case 11:
-				flags_used = 0x08;
-				break; /* MI */
-			case 12:
-				flags_used = 0x0A;
-				break; /* GE */
-			case 13:
-				flags_used = 0x0A;
-				break; /* LT */
-			case 14:
-				flags_used = 0x0E;
-				break; /* GT */
-			case 15:
-				flags_used = 0x0E;
-				break; /* LE */
-			}
+	// Fix flags used information for Scc, Bcc, TRAPcc, DBcc instructions
+	if	(	table68k[opc].mnemo == i_Scc
+		||	table68k[opc].mnemo == i_Bcc
+		||	table68k[opc].mnemo == i_DBcc
+		||	table68k[opc].mnemo == i_TRAPcc
+		)	{
+		switch (table68k[opc].cc) {
+		// CC mask:	XNZVC
+		// 			 8421
+		case 0: flags_used = 0x00; break;	/*  T */
+		case 1: flags_used = 0x00; break;	/*  F */
+		case 2: flags_used = 0x05; break;	/* HI */
+		case 3: flags_used = 0x05; break;	/* LS */
+		case 4: flags_used = 0x01; break;	/* CC */
+		case 5: flags_used = 0x01; break;	/* CS */
+		case 6: flags_used = 0x04; break;	/* NE */
+		case 7: flags_used = 0x04; break;	/* EQ */
+		case 8: flags_used = 0x02; break;	/* VC */
+		case 9: flags_used = 0x02; break;	/* VS */
+		case 10:flags_used = 0x08; break;	/* PL */
+		case 11:flags_used = 0x08; break;	/* MI */
+		case 12:flags_used = 0x0A; break;	/* GE */
+		case 13:flags_used = 0x0A; break;	/* LT */
+		case 14:flags_used = 0x0E; break;	/* GT */
+		case 15:flags_used = 0x0E; break;	/* LE */
 		}
+	}
 
 #if 1
-		/* gb-- flagdead and flaglive would not have correct information */
-		table68k[opc].flagdead = flags_set;
-		table68k[opc].flaglive = flags_used;
+	/* gb-- flagdead and flaglive would not have correct information */
+	table68k[opc].flagdead = flags_set;
+	table68k[opc].flaglive = flags_used;
 #else
 		table68k[opc].flagdead = flagdead;
 		table68k[opc].flaglive = flaglive;
 #endif
-		table68k[opc].cflow = cflow;
-	nomatch:
+	  table68k[opc].cflow = cflow;
+nomatch:
 		/* FOO! */;
 	}
 }
 
-void read_table68k(void)
+
+void read_table68k (void)
 {
 	int i;
 
-	free(table68k);
-	table68k = xmalloc(struct instr, 65536);
-	for (i = 0; i < 65536; i++)
-	{
+	free (table68k);
+	table68k = xmalloc (struct instr, 65536);
+	for (i = 0; i < 65536; i++) {
 		table68k[i].mnemo = i_ILLG;
 		table68k[i].handler = -1;
 	}
-	for (i = 0; i < n_defs68k; i++)
-	{
-		build_insn(i);
+	for (i = 0; i < n_defs68k; i++) {
+		build_insn (i);
 	}
 }
 
 static int imismatch;
 
-static void handle_merges(long int opcode)
+static void handle_merges (long int opcode)
 {
 	uae_u16 smsk;
 	uae_u16 dmsk;
 	int sbitdst, dstend;
 	int srcreg, dstreg;
 
-	if (table68k[opcode].spos == -1)
-	{
-		sbitdst = 1;
-		smsk = 0;
-	}
-	else
-	{
-		switch (table68k[opcode].stype)
-		{
+	if (table68k[opcode].spos == -1) {
+		sbitdst = 1; smsk = 0;
+	} else {
+		switch (table68k[opcode].stype) {
 		case 0:
-			smsk = 7;
-			sbitdst = 8;
-			break;
+			smsk = 7; sbitdst = 8; break;
 		case 1:
-			smsk = 255;
-			sbitdst = 256;
-			break;
+			smsk = 255; sbitdst = 256; break;
 		case 2:
-			smsk = 15;
-			sbitdst = 16;
-			break;
+			smsk = 15; sbitdst = 16; break;
 		case 3:
-			smsk = 7;
-			sbitdst = 8;
-			break;
+			smsk = 7; sbitdst = 8; break;
 		case 4:
-			smsk = 7;
-			sbitdst = 8;
-			break;
+			smsk = 7; sbitdst = 8; break;
 		case 5:
-			smsk = 63;
-			sbitdst = 64;
-			break;
-		case 6:
-			smsk = 255;
-			sbitdst = 256;
-			break;
+			smsk = 63; sbitdst = 64; break;
+	  case 6:
+	    smsk = 255; sbitdst = 256; break;
 		case 7:
-			smsk = 3;
-			sbitdst = 4;
-			break;
+			smsk = 3; sbitdst = 4; break;
 		default:
-			smsk = 0;
-			sbitdst = 0;
+			smsk = 0; sbitdst = 0;
 			abort();
 			break;
 		}
 		smsk <<= table68k[opcode].spos;
 	}
-	if (table68k[opcode].dpos == -1)
-	{
-		dstend = 1;
-		dmsk = 0;
-	}
-	else
-	{
+	if (table68k[opcode].dpos == -1) {
+		dstend = 1; dmsk = 0;
+	} else {
 		dmsk = 7 << table68k[opcode].dpos;
 		dstend = 8;
 	}
-	for (srcreg = 0; srcreg < sbitdst; srcreg++)
-	{
-		for (dstreg = 0; dstreg < dstend; dstreg++)
-		{
+	for (srcreg=0; srcreg < sbitdst; srcreg++) {
+		for (dstreg=0; dstreg < dstend; dstreg++) {
 			uae_u16 code = (uae_u16)opcode;
 
 			code = (code & ~smsk) | (srcreg << table68k[opcode].spos);
@@ -1161,20 +886,25 @@ static void handle_merges(long int opcode)
 			/* Check whether this is in fact the same instruction.
 			* The instructions should never differ, except for the
 			* Bcc.(BW) case. */
-			if (table68k[code].mnemo != table68k[opcode].mnemo || table68k[code].size != table68k[opcode].size || table68k[code].suse != table68k[opcode].suse || table68k[code].duse != table68k[opcode].duse)
+			if (table68k[code].mnemo != table68k[opcode].mnemo
+				|| table68k[code].size != table68k[opcode].size
+				|| table68k[code].suse != table68k[opcode].suse
+				|| table68k[code].duse != table68k[opcode].duse)
 			{
-				imismatch++;
-				continue;
+				imismatch++; continue;
 			}
-			if (table68k[opcode].suse && (table68k[opcode].spos != table68k[code].spos || table68k[opcode].smode != table68k[code].smode || table68k[opcode].stype != table68k[code].stype))
+			if (table68k[opcode].suse
+				&& (table68k[opcode].spos != table68k[code].spos
+				|| table68k[opcode].smode != table68k[code].smode
+				|| table68k[opcode].stype != table68k[code].stype))
 			{
-				imismatch++;
-				continue;
+				imismatch++; continue;
 			}
-			if (table68k[opcode].duse && (table68k[opcode].dpos != table68k[code].dpos || table68k[opcode].dmode != table68k[code].dmode))
+			if (table68k[opcode].duse
+				&& (table68k[opcode].dpos != table68k[code].dpos
+				|| table68k[opcode].dmode != table68k[code].dmode))
 			{
-				imismatch++;
-				continue;
+				imismatch++; continue;
 			}
 
 			if (code != opcode)
@@ -1183,22 +913,21 @@ static void handle_merges(long int opcode)
 	}
 }
 
-void do_merges(void)
+void do_merges (void)
 {
 	long int opcode;
 	int nr = 0;
 	imismatch = 0;
-	for (opcode = 0; opcode < 65536; opcode++)
-	{
+	for (opcode = 0; opcode < 65536; opcode++) {
 		if (table68k[opcode].handler != -1 || table68k[opcode].mnemo == i_ILLG)
 			continue;
 		nr++;
-		handle_merges(opcode);
+		handle_merges (opcode);
 	}
 	nr_cpuop_funcs = nr;
 }
 
-int get_no_mismatches(void)
+int get_no_mismatches (void)
 {
 	return imismatch;
 }

@@ -13,7 +13,10 @@
 extern int get_next_key (void);
 extern int keys_available (void);
 extern int record_key (int);
-extern int record_key_direct(int);
+extern int record_key_direct (int);
 extern void keybuf_init (void);
+extern int getcapslockstate (void);
+extern void setcapslockstate (int);
+extern void keybuf_inject(const uae_char*);
 
 #endif /* UAE_KEYBUF_H */

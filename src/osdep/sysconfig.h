@@ -18,9 +18,8 @@
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
-
-#ifdef ARMV6T2
 #define JIT /* JIT compiler support */
+#if defined(ARMV6T2) || defined(CPU_AARCH64)
 #define USE_JIT_FPU
 #endif
 /* #define NATMEM_OFFSET regs.natmem_offset */
@@ -60,7 +59,7 @@
 #define PICASSO96 /* Picasso96 display card emulation */
 #define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
 #define BSDSOCKET /* bsdsocket.library emulation */
-#define CAPS  /* CAPS-image support */
+#define CAPS /* CAPS-image support */
 /* #define SCP */ /* SuperCardPro */
 #define FDI2RAW /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
@@ -93,7 +92,6 @@
 /* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
 /* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
 /* #define ADDRESS_SPACE_24BIT */
-#define INPUTDEVICE_SIMPLE /* simplified inputdevice for faster emulation */
 
 /* #define WITH_SCSI_IOCTL */
 /* #define WITH_SCSI_SPTI */
@@ -115,13 +113,17 @@
 
 #include <stdint.h>
 
+#ifdef CPU_AARCH64
+#define SIZEOF_VOID_P 8
+#else
 #define SIZEOF_VOID_P 4
+#endif
 
 #if !defined(AHI)
 #undef ENFORCER
 #endif
 
-typedef long uae_atomic;
+typedef int32_t uae_atomic;
 
 /* src/sysconfig.h.  Generated automatically by configure.  */
 /* src/sysconfig.h.in.  Generated automatically from configure.in by autoheader.  */
@@ -258,7 +260,11 @@ typedef long uae_atomic;
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */
+#ifdef CPU_AARCH64
+#define SIZEOF_LONG 8
+#else
 #define SIZEOF_LONG 4
+#endif
 
 /* The number of bytes in a long long.  */
 #define SIZEOF_LONG_LONG 8
@@ -529,7 +535,7 @@ typedef long uae_atomic;
 #define M68K_SPEED_25MHZ_CYCLES 128
 
 typedef unsigned int WPARAM;
-typedef long LPARAM;
+typedef int LPARAM;
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 

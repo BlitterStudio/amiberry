@@ -28,14 +28,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>$(SolutionDir)..\..\guisan-dev\lib\</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r4</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>$(SolutionDir)..\..\guisan-dev\lib\</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
@@ -43,7 +43,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vcos/pthreads;=/opt/vc/include/interface/vmcs_host/linux;../../guisan-dev/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/include/SDL2;=/opt/vc/include;=/opt/vc/include/interface/vcos/pthreads;=/opt/vc/include/interface/vmcs_host/linux;../../guisan-dev/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;_REENTRANT;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>

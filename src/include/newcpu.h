@@ -20,24 +20,19 @@ extern int movem_index1[256];
 extern int movem_index2[256];
 extern int movem_next[256];
 
-#ifdef FPUEMU
-extern int fpp_movem_index1[256];
-extern int fpp_movem_index2[256];
-extern int fpp_movem_next[256];
-#endif
-
 typedef uae_u32 REGPARAM3 cpuop_func (uae_u32) REGPARAM;
 typedef void REGPARAM3 cpuop_func_ce (uae_u32) REGPARAM;
 
 struct cputbl {
-  cpuop_func *handler;
-  uae_u16 opcode;
+	cpuop_func *handler;
+	uae_u16 opcode;
 	uae_s8 length;
 	uae_s8 disp020[2];
 	uae_u8 branch;
 };
 
 #ifdef JIT
+#define MIN_JIT_CACHE 128
 #define MAX_JIT_CACHE 16384
 typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 
@@ -49,11 +44,12 @@ typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 #define COMP_OPCODE_USES_FPU    0x0020
 
 struct comptbl {
-  compop_func *handler;
-	uae_u32	specific;
-  uae_u32 opcode;
+	compop_func *handler;
+	uae_u32 opcode;
+	int specific;
 };
 #else
+#define MIN_JIT_CACHE 0
 #define MAX_JIT_CACHE 0
 #endif
 
@@ -77,6 +73,11 @@ typedef struct
 {
 	fptype fp;
 } fpdata;
+
+#ifdef JIT
+#include "jit/comptbl.h"
+#include "jit/compemu.h"
+#endif
 
 struct regstruct
 {
@@ -129,6 +130,17 @@ struct regstruct
 
   uae_s32 pissoff;
 	uae_u8* natmem_offset;
+
+#ifdef JIT
+  /* store scratch regs also in this struct to avoid load of mem pointer */
+  uae_u32 scratchregs[VREGS - 16];
+  fpu_register scratchfregs[VFREGS - 8];
+  uae_u32 jit_exception;
+  
+  /* pointer to real arrays/structs for easier access in JIT */
+  uae_u32 *raw_cputbl_count;
+  uintptr mem_banks;
+#endif  
 };
 
 extern struct regstruct regs;
@@ -139,7 +151,7 @@ extern struct regstruct regs;
 
 STATIC_INLINE uae_u32 munge24(uae_u32 x)
 {
-    return x & regs.address_space_mask;
+  return x & regs.address_space_mask;
 }
 
 extern int cpu_cycles;
@@ -148,7 +160,7 @@ extern int m68k_pc_indirect;
 STATIC_INLINE void set_special (uae_u32 x)
 {
 	atomic_or(&regs.spcflags, x);
-  cycles_do_special();
+	cycles_do_special();
 }
 
 STATIC_INLINE void unset_special (uae_u32 x)
@@ -294,7 +306,6 @@ extern void check_t0_trace(void);
 #define x_do_cycles(c) do_cycles(c)
 
 extern void m68k_setstopped (void);
-extern void m68k_resumestopped (void);
 
 #define get_disp_ea_020(base,idx) _get_disp_ea_020(base)
 extern uae_u32 REGPARAM3 _get_disp_ea_020 (uae_u32 base) REGPARAM;
@@ -305,7 +316,6 @@ extern void REGPARAM3 put_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, 
 extern int get_cpu_model(void);
 
 extern void set_cpu_caches (bool flush);
-extern void flush_cpu_caches(bool flush);
 extern void flush_cpu_caches_040(uae_u16 opcode);
 extern void REGPARAM3 MakeSR (void) REGPARAM;
 extern void REGPARAM3 MakeFromSR (void) REGPARAM;
@@ -327,7 +337,19 @@ extern int getDivs68kCycles(uae_s32 dividend, uae_s16 divisor);
 extern void divbyzero_special (bool issigned, uae_s32 dst);
 extern void setdivuoverflowflags(uae_u32 dividend, uae_u16 divisor);
 extern void setdivsoverflowflags(uae_s32 dividend, uae_s16 divisor);
+extern void setchkundefinedflags(uae_s32 src, uae_s32 dst, int size);
+extern void setchk2undefinedflags(uae_u32 lower, uae_u32 upper, uae_u32 val, int size);
 extern void protect_roms (bool);
+extern void Exception_build_stack_frame_common(uae_u32 oldpc, uae_u32 currpc, int nr);
+extern void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int nr, int format);
+extern void Exception_build_68000_address_error_stack_frame(uae_u16 mode, uae_u16 opcode, uaecptr fault_addr, uaecptr pc);
+extern uae_u32 exception_pc(int nr);
+
+void ccr_68000_long_move_ae_LZN(uae_s32 src);
+void ccr_68000_long_move_ae_LN(uae_s32 src);
+void ccr_68000_long_move_ae_HNZ(uae_s32 src);
+void ccr_68000_long_move_ae_normal(uae_s32 src);
+void ccr_68000_word_move_ae_normal(uae_s16 src);
 
 STATIC_INLINE int bitset_count16(uae_u16 data)
 {
@@ -358,7 +380,6 @@ extern void fpu_reset (void);
 
 extern void exception3_read(uae_u32 opcode, uaecptr addr);
 extern void exception3_write(uae_u32 opcode, uaecptr addr);
-extern void exception3_notinstruction(uae_u32 opcode, uaecptr addr);
 extern void exception3i (uae_u32 opcode, uaecptr addr);
 extern void exception3b (uae_u32 opcode, uaecptr addr, bool w, bool i, uaecptr pc);
 extern void exception2 (uaecptr addr, bool read, int size, uae_u32 fc);
@@ -399,8 +420,6 @@ extern void compemu_reset(void);
 #define flush_icache_hard(int) do {} while (0)
 #endif
 bool check_prefs_changed_comp (bool);
-
-extern int movec_illg (int regno);
 
 #define CPU_HALT_BUS_ERROR_DOUBLE_FAULT 1
 #define CPU_HALT_DOUBLE_FAULT 2

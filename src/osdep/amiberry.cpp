@@ -4,7 +4,7 @@
  * Amiberry interface
  *
  */
-#include <stdbool.h>
+
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -295,6 +295,13 @@ void fixtrailing(TCHAR *p)
 	_tcscat(p, "/");
 }
 
+bool samepath(const TCHAR *p1, const TCHAR *p2)
+{
+	if (!_tcsicmp(p1, p2))
+		return true;
+	return false;
+}
+
 void getpathpart(TCHAR *outpath, int size, const TCHAR *inpath)
 {
 	_tcscpy(outpath, inpath);
@@ -371,11 +378,11 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
-	if (p->gfx_size.width == 0)
-		p->gfx_size.width = 640;
-	if (p->gfx_size.height == 0)
-		p->gfx_size.height = 256;
-	p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
+	if (p->gfx_monitor.gfx_size.width == 0)
+		p->gfx_monitor.gfx_size.width = 640;
+	if (p->gfx_monitor.gfx_size.height == 0)
+		p->gfx_monitor.gfx_size.height = 256;
+	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? 1 : 0;
 
 	if (p->gfx_vresolution && !can_have_linedouble) // If there's not enough vertical space, cancel Line Doubling/Scanlines
 		p->gfx_vresolution = 0;
@@ -719,7 +726,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	{
 		for (auto i = 0; i < p->nr_floppies; ++i)
 		{
-			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
+			if (!DISK_validate_filename(p, p->floppyslots[i].df, nullptr, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
 			disk_insert(i, p->floppyslots[i].df);
 			if (strlen(p->floppyslots[i].df) > 0)
@@ -986,7 +993,7 @@ void load_amiberry_settings(void)
 		{
 			trimwsa(linea);
 			if (strlen(linea) > 0) {
-				if (!cfgfile_separate_linea(path, linea, option, value))
+				if (!cfgfile_separate_linea (path, linea, option, value))
 					continue;
 
 				if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
@@ -1063,6 +1070,13 @@ void rename_old_adfdir()
 		write_log("Error while trying to rename old adfdir.conf file to amiberry.conf!");
 }
 
+void target_getdate(int *y, int *m, int *d)
+{
+	*y = GETBDY(AMIBERRYDATE);
+	*m = GETBDM(AMIBERRYDATE);
+	*d = GETBDD(AMIBERRYDATE);
+}
+
 void target_addtorecent(const TCHAR *name, int t)
 {
 }
@@ -1097,6 +1111,11 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 void target_shutdown(void)
 {
 	system("sudo poweroff");
+}
+
+bool target_isrelativemode(void)
+{
+	return true;
 }
 
 int main(int argc, char* argv[])
@@ -1295,11 +1314,11 @@ int handle_msgpump()
 				// Handle all other keys
 #ifdef USE_SDL1
 				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
+					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1, false);
 				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
 #elif USE_SDL2
-				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
 			}
 #endif
 			break;
@@ -1310,11 +1329,11 @@ int handle_msgpump()
 #endif
 #ifdef USE_SDL1
 				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
+					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0, true);
 				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
 #elif USE_SDL2
-				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
 			}
 #endif
 			break;

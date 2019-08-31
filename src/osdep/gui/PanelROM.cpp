@@ -99,7 +99,7 @@ public:
 	{
 		const auto rom = mainROMList->getROMat(cboMainROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
+			strncpy(workprefs.romfile, rom->Path, sizeof(workprefs.romfile));
 	}
 };
 
@@ -113,9 +113,9 @@ public:
 	{
 		const auto rom = extROMList->getROMat(cboExtROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
+			strncpy(workprefs.romextfile, rom->Path, sizeof(workprefs.romextfile));
 		else
-			strncpy(changed_prefs.romextfile, "", sizeof(changed_prefs.romextfile));
+			strncpy(workprefs.romextfile, "", sizeof(workprefs.romextfile));
 	}
 };
 
@@ -128,9 +128,9 @@ public:
 	{
 		const auto rom = cartROMList->getROMat(cboCartROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.cartfile, rom->Path, sizeof changed_prefs.cartfile);
+			strncpy(workprefs.cartfile, rom->Path, sizeof workprefs.cartfile);
 		else
-			strncpy(changed_prefs.cartfile, "", sizeof changed_prefs.cartfile);
+			strncpy(workprefs.cartfile, "", sizeof workprefs.cartfile);
 	}
 };
 static CartROMActionListener* cartROMActionListener;
@@ -154,7 +154,7 @@ public:
 				strncpy(newrom->Path, tmp, MAX_DPATH);
 				newrom->ROMType = ROMTYPE_KICK;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romfile, tmp, sizeof(changed_prefs.romfile));
+				strncpy(workprefs.romfile, tmp, sizeof(workprefs.romfile));
 				RefreshPanelROM();
 			}
 			cmdMainROM->requestFocus();
@@ -170,7 +170,7 @@ public:
 				strncpy(newrom->Path, tmp, MAX_DPATH);
 				newrom->ROMType = ROMTYPE_EXTCDTV;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
+				strncpy(workprefs.romextfile, tmp, sizeof(workprefs.romextfile));
 				RefreshPanelROM();
 			}
 			cmdExtROM->requestFocus();
@@ -186,7 +186,7 @@ public:
 				strncpy(newrom->Path, tmp, MAX_DPATH);
 				newrom->ROMType = ROMTYPE_CD32CART;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romextfile, tmp, sizeof(changed_prefs.romextfile));
+				strncpy(workprefs.romextfile, tmp, sizeof(workprefs.romextfile));
 				RefreshPanelROM();
 			}
 			cmdCartROM->requestFocus();
@@ -297,13 +297,13 @@ void ExitPanelROM()
 
 void RefreshPanelROM()
 {
-	auto idx = mainROMList->InitROMList(changed_prefs.romfile);
+	auto idx = mainROMList->InitROMList(workprefs.romfile);
 	cboMainROM->setSelected(idx);
 
-	idx = extROMList->InitROMList(changed_prefs.romextfile);
+	idx = extROMList->InitROMList(workprefs.romextfile);
 	cboExtROM->setSelected(idx);
 
-	idx = cartROMList->InitROMList(changed_prefs.cartfile);
+	idx = cartROMList->InitROMList(workprefs.cartfile);
 	cboCartROM->setSelected(idx);
 }
 

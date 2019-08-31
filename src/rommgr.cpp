@@ -21,8 +21,6 @@
 #include "autoconf.h"
 #include "filesys.h"
 
-#define SAVE_ROM 0
-
 static struct romlist *rl;
 static int romlist_cnt;
 
@@ -101,7 +99,7 @@ struct romdata *getromdatabypath(const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 251
+#define NEXT_ROM_ID 255
 
 #define ALTROM(id,grp,num,size,flags,crc32,a,b,c,d,e) \
 { _T("X"), 0, 0, 0, 0, 0, size, id, 0, 0, flags, (grp << 16) | num, 0, NULL, crc32, a, b, c, d, e },
@@ -920,12 +918,6 @@ static void romlist_cleanup (void)
   	}
   	i++;
   }
-#if 0
-	for (i = 0; i < romlist_cnt; i++) {
-		struct romlist *rll = &rl[i];
-		write_log (_T("%d: %08x %s (%s)\n"), rll->rd->id, rll->rd->group, rll->rd->name, rll->path);
-	}
-#endif
 }
 
 struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all)
@@ -1206,7 +1198,7 @@ int load_keyring (struct uae_prefs *p, const TCHAR *path)
 			break;
 		case 1:
 	    if (p) {
-    		_tcscpy (tmp, p->path_rom);
+    		_tcscpy (tmp, p->path_rom.path[0]);
     		_tcscat (tmp, _T("rom.key"));
 	    }
     	break;
@@ -1437,9 +1429,7 @@ int decode_rom (uae_u8 *mem, int size, int mode, int real_size)
 {
   if (mode == 1) {
 	  if (!decode_cloanto_rom_do (mem, size, real_size)) {
-#ifndef SINGLEFILE
     	notify_user (NUMSG_NOROMKEY);
-#endif
     	return 0;
     }
     return 1;
@@ -1465,16 +1455,6 @@ struct romdata *getromdatabydata (uae_u8 *rom, int size)
   	rom = tmpbuf;
   	size = tmpsize;
   }
-#if 0
-	if (size > 0x6c + 524288 && !memcmp (rom, "AMIG", 4)) {
-		uae_u8 *tmpbuf = (uae_u8*)xmalloc (uae_u8, size);
-		int tmpsize = size - 0x6c;
-		memcpy (tmpbuf, rom + 0x6c, tmpsize);
-		decode_rom (tmpbuf, tmpsize, 2, tmpsize);
-		rom = tmpbuf;
-		size = tmpsize;
-	}
-#endif
   get_sha1 (rom, size, sha1);
   ret = checkromdata(sha1, size, -1);
   if (!ret) {
@@ -1532,6 +1512,8 @@ void getromname	(const struct romdata *rd, TCHAR *name)
 		_stprintf (name + _tcslen (name), _T(" [%s]"), rd->partnumber);
 }
 
+static struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
+
 struct romlist *getromlistbyromdata (const struct romdata *rd)
 {
   int ids[2];
@@ -1541,7 +1523,7 @@ struct romlist *getromlistbyromdata (const struct romdata *rd)
 	return getromlistbyids(ids, NULL);
 }
 
-struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname)
+static struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname)
 {
 	int i = 0;
 	while (roms[i].name) {
@@ -1563,7 +1545,7 @@ struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname)
 	return NULL;
 }
 
-struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
+static struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
 {
   struct romdata *rd;
   int i, j;
@@ -1666,7 +1648,6 @@ void romwarning (const int *ids)
 	gui_message (tmp3, tmp2);
 }
 
-
 static void byteswap (uae_u8 *buf, int size)
 {
   int i;
@@ -1702,14 +1683,6 @@ static void mergecd32 (uae_u8 *dst, uae_u8 *src, int size)
   	dst[k + 2] = src[j + 1];
   	k += 4;
   }
-#if 0
-	{
-		struct zfile *f;
-		f = zfile_fopen ("c:\\d\\1.rom","wb", ZFD_NORMAL);
-		zfile_fwrite (dst, 1, size, f);
-		zfile_fclose(f);
-	}
-#endif
 }
 
 static void descramble (const struct romdata *rd, uae_u8 *data, int size, int odd)
@@ -1744,17 +1717,7 @@ static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
   return 1;
 }
 
-#if SAVE_ROM
-static void save_rom(uae_u8 *rom, int size)
-{
-	struct zfile *f;
-	f = zfile_fopen (_T("c:\\temp\\1.rom"), _T("wb"));
-	zfile_fwrite (rom, 1, size, f);
-	zfile_fclose(f);
-}
-#endif
-
-struct zfile *read_rom (struct romdata *prd)
+static struct zfile *read_rom (struct romdata *prd)
 {
 	struct romdata *rd2 = prd;
 	struct romdata *rd = prd;
@@ -1864,10 +1827,6 @@ struct zfile *read_rom (struct romdata *prd)
     		}
         add = 2;
       }
-
-#if SAVE_ROM
-			save_rom(buf, size);
-#endif
 
 			if (notcrc32(crc32) || get_crc32(buf, size) == crc32) {
     		ok = 1;
@@ -2019,7 +1978,7 @@ struct zfile *read_rom_name (const TCHAR *filename)
   return f;
 }
 
-struct zfile *read_rom_name_guess (const TCHAR *filename)
+struct zfile *read_rom_name_guess (const TCHAR *filename, TCHAR *out)
 {
 	int i, j;
 	struct zfile *f;
@@ -2046,6 +2005,7 @@ struct zfile *read_rom_name_guess (const TCHAR *filename)
 			f = read_rom (rd);
 			if (f) {
 				write_log (_T("ROM %s not found, using %s\n"), filename, rl[i].path);
+				_tcscpy(out, rl[i].path);
 				return f;
 			}
 		}
@@ -2079,9 +2039,7 @@ void kickstart_fix_checksum (uae_u8 *mem, int size)
 int kickstart_checksum (uae_u8 *mem, int size)
 {
   if (!kickstart_checksum_do (mem, size)) {
-#ifndef	SINGLEFILE
     notify_user (NUMSG_KSROMCRCERROR);
-#endif
     return 0;
   }
   return 1;
@@ -2319,7 +2277,7 @@ static bool isspecialrom(const TCHAR *name)
 	return false;
 }
 
-struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype)
+static struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype)
 {
 	struct zfile *z = NULL;
 	if (isspecialrom(rc->romfile))

@@ -273,9 +273,9 @@ XML_CFLAGS := $(shell xml2-config --cflags )
 LDFLAGS += -flto -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
-    CFLAGS += -Ofast -frename-registers -falign-functions=16
+    CFLAGS += -O3 -funroll-loops
 else
-    CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+    CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
 
 ifdef GCC_PROFILE
@@ -300,10 +300,10 @@ endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
-ASFLAGS += $(CFLAGS) -falign-functions=16
+ASFLAGS += $(CFLAGS) -falign-functions
 
 export CFLAGS +=  -pipe -Wno-shift-overflow -Wno-narrowing $(EXTRA_CFLAGS)
-export CXXFLAGS += $(CFLAGS) -std=gnu++14 -fpermissive
+export CXXFLAGS += $(CFLAGS) -std=gnu++14
 
 C_OBJS= \
 	src/archivers/7z/BraIA64.o \

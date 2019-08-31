@@ -11,11 +11,7 @@
 #define UAE_BSDSOCKET_H
 
 #include "uae/types.h"
-
-#define BSD_TRACING_ENABLED 0
-
-#define ISBSDTRACE (BSD_TRACING_ENABLED) 
-#define BSDTRACE(x) do { if (ISBSDTRACE) { write_log x; } } while(0)
+#include "thread.h"
 
 extern int init_socket_layer (void);
 extern void deinit_socket_layer (void);
@@ -94,7 +90,7 @@ struct socketbase {
     uae_u32 timeout;
     uae_u32 sigmp;
 #endif
-    TrapContext *context;
+	TrapContext *context;
 };
 
 #define LIBRARY_SIZEOF 36

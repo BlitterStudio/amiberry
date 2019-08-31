@@ -45,15 +45,14 @@
     <ToolchainID>
       <ID>com.visualgdb.raspberry_pi</ID>
       <Version>
-        <GCC>6.3.0</GCC>
-        <GDB>7.12</GDB>
-        <Revision>4</Revision>
+        <GCC>8.3.0</GCC>
+        <GDB>8.2.1</GDB>
+        <Revision>1</Revision>
       </Version>
     </ToolchainID>
     <ProjectFile>guisan.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
-      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>

@@ -70,4 +70,6 @@ extern uae_u32 hrtmem_start, hrtmem_size;
 
 extern uae_u8 ar_custom[2*256], ar_ciaa[16], ar_ciab[16];
 
+extern int hrtmon_lang;
+
 #endif /* UAE_AR_H */

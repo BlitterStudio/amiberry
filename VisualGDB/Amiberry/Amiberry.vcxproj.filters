@@ -160,9 +160,6 @@
     <ClCompile Include="..\..\src\custom.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\def_icons.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\devices.cpp">
       <Filter>Source files</Filter>
     </ClCompile>

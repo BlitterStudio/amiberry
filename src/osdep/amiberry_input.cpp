@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include "stdio.h"
+#include "string.h"
+#include <cstdlib>
 
 #include "sysdeps.h"
 #include "options.h"

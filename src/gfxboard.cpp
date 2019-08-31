@@ -7,10 +7,14 @@
 *
 */
 
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "gfxboard.h"
+#include "rommgr.h"
+#include "xwin.h"
+#include "devices.h"
 
 const TCHAR *gfxboard_get_name(int type)
 {
@@ -19,6 +23,20 @@ const TCHAR *gfxboard_get_name(int type)
 	if (type == GFXBOARD_UAE_Z3)
 		return _T("UAE Zorro III (*)");
 	return NULL;
+}
+
+bool gfxboard_set(bool rtg)
+{
+	bool r;
+	struct amigadisplay *ad = &adisplays;
+	r = ad->picasso_on;
+	if (rtg) {
+		ad->picasso_requested_on = 1;
+	} else {
+		ad->picasso_requested_on = 0;
+	}
+	set_config_changed();
+	return r;
 }
 
 const TCHAR *gfxboard_get_configname(int type)

@@ -1,16 +1,17 @@
+#include "sysconfig.h"
 #include "sysdeps.h"
 
+#include "devices.h"
+
 #include "options.h"
-#include "thread.h"
+#include "threaddep/thread.h"
 #include "memory.h"
 #include "audio.h"
 #include "cd32_fmv.h"
 #include "akiko.h"
-#include "gayle.h"
 #include "disk.h"
 #include "cia.h"
 #include "inputdevice.h"
-#include "picasso96.h"
 #include "blkdev.h"
 #include "autoconf.h"
 #include "newcpu.h"
@@ -29,30 +30,173 @@
 #include "jit/compemu.h"
 #endif
 
+#define MAX_DEVICE_ITEMS 64
+
+static void add_device_item(DEVICE_VOID *pp, int *cnt, DEVICE_VOID p)
+{
+	for (int i = 0; i < *cnt; i++) {
+		if (pp[i] == p)
+			return;
+	}
+	if (*cnt >= MAX_DEVICE_ITEMS) {
+		return;
+	}
+	pp[(*cnt)++] = p;
+}
+static void execute_device_items(DEVICE_VOID *pp, int cnt)
+{
+	for (int i = 0; i < cnt; i++) {
+		pp[i]();
+	}
+}
+
+static int device_configs_cnt;
+static DEVICE_VOID device_configs[MAX_DEVICE_ITEMS];
+static int device_vsync_pre_cnt;
+static DEVICE_VOID device_vsyncs_pre[MAX_DEVICE_ITEMS];
+static int device_vsync_post_cnt;
+static DEVICE_VOID device_vsyncs_post[MAX_DEVICE_ITEMS];
+static int device_hsync_cnt;
+static DEVICE_VOID device_hsyncs[MAX_DEVICE_ITEMS];
+static int device_rethink_cnt;
+static DEVICE_VOID device_rethinks[MAX_DEVICE_ITEMS];
+static int device_leave_cnt;
+static DEVICE_VOID device_leaves[MAX_DEVICE_ITEMS];
+static int device_resets_cnt;
+static DEVICE_INT device_resets[MAX_DEVICE_ITEMS];
+static bool device_reset_done[MAX_DEVICE_ITEMS];
+
+static void reset_device_items(void)
+{
+	device_configs_cnt = 0;
+	device_vsync_pre_cnt = 0;
+	device_vsync_post_cnt = 0;
+	device_hsync_cnt = 0;
+	device_rethink_cnt = 0;
+	device_resets_cnt = 0;
+	device_leave_cnt = 0;
+	memset(device_reset_done, 0, sizeof(device_reset_done));
+}
+
+void device_add_vsync_pre(DEVICE_VOID p)
+{
+	add_device_item(device_vsyncs_pre, &device_vsync_pre_cnt, p);
+}
+void device_add_vsync_post(DEVICE_VOID p)
+{
+	add_device_item(device_vsyncs_post, &device_vsync_post_cnt, p);
+}
+void device_add_hsync(DEVICE_VOID p)
+{
+	add_device_item(device_hsyncs, &device_hsync_cnt, p);
+}
+void device_add_rethink(DEVICE_VOID p)
+{
+	add_device_item(device_rethinks, &device_rethink_cnt, p);
+}
+void device_add_check_config(DEVICE_VOID p)
+{
+	add_device_item(device_configs, &device_configs_cnt, p);
+}
+void device_add_exit(DEVICE_VOID p)
+{
+	add_device_item(device_leaves, &device_leave_cnt, p);
+}
+void device_add_reset(DEVICE_INT p)
+{
+	for (int i = 0; i < device_resets_cnt; i++) {
+		if (device_resets[i] == p)
+			return;
+	}
+	device_resets[device_resets_cnt++] = p;
+}
+void device_add_reset_imm(DEVICE_INT p)
+{
+	for (int i = 0; i < device_resets_cnt; i++) {
+		if (device_resets[i] == p)
+			return;
+	}
+	device_reset_done[device_resets_cnt] = true;
+	device_resets[device_resets_cnt++] = p;
+	p(1);
+}
+
 void device_check_config(void)
 {
+	execute_device_items(device_configs, device_configs_cnt);
+
+	//check_prefs_changed_cd();
 	check_prefs_changed_audio();
 	check_prefs_changed_custom();
 	check_prefs_changed_cpu();
 	check_prefs_picasso();
 }
 
+void devices_reset_ext(int hardreset)
+{
+	for (int i = 0; i < device_resets_cnt; i++) {
+		if (!device_reset_done[i]) {
+			device_resets[i](hardreset);
+			device_reset_done[i] = true;
+		}
+	}
+}
+
 void devices_reset(int hardreset)
 {
-	gayle_reset(hardreset);
+	memset(device_reset_done, 0, sizeof(device_reset_done));
+	// must be first
+	init_eventtab();
+	init_shm();
+	memory_reset();
 	DISK_reset();
 	CIA_reset();
-	gayle_reset(0);
+	//a1000_reset();
 #ifdef JIT
 	compemu_reset();
 #endif
+#ifdef WITH_PPC
+	uae_ppc_reset(is_hardreset());
+#endif
+	native2amiga_reset();
+#ifdef SCSIEMU
+	scsi_reset();
+	scsidev_reset();
+	scsidev_start_threads();
+#endif
+#ifdef GFXBOARD
+	gfxboard_reset ();
+#endif
+#ifdef DRIVESOUND
+	driveclick_reset();
+#endif
+	//ethernet_reset();
+#ifdef FILESYS
+	filesys_prepare_reset();
+	filesys_reset();
+#endif
+#if defined (BSDSOCKET)
+	bsdlib_reset();
+#endif
+#ifdef FILESYS
+	filesys_start_threads();
+	hardfile_reset();
+#endif
+#ifdef UAESERIAL
+	uaeserialdev_reset();
+	uaeserialdev_start_threads();
+#endif
+#if defined (PARALLEL_PORT)
+	initparallel();
+#endif
+	//dongle_reset();
+	//sampler_init();
+	device_func_reset();
 #ifdef AUTOCONFIG
-	expamem_reset();
 	rtarea_reset();
 #endif
 	uae_int_requested = 0;
 }
-
 
 void devices_vsync_pre(void)
 {
@@ -61,34 +205,41 @@ void devices_vsync_pre(void)
 	inputdevice_vsync();
 	filesys_vsync();
 	statusline_vsync();
+
+	execute_device_items(device_vsyncs_pre, device_vsync_pre_cnt);
+}
+
+void devices_vsync_post(void)
+{
+	execute_device_items(device_vsyncs_post, device_vsync_post_cnt);
 }
 
 void devices_hsync(void)
 {
-#ifdef CD32
-	AKIKO_hsync_handler();
-	cd32_fmv_hsync_handler();
-#endif
-	decide_blitter(-1);
-
-#ifdef PICASSO96
-	picasso_handle_hsync();
-#endif
 	DISK_hsync();
 	audio_hsync();
-	gayle_hsync();
+	//CIA_hsync_prehandler();
+
+	decide_blitter (-1);
+	//serial_hsynchandler ();
+
+	execute_device_items(device_hsyncs, device_hsync_cnt);
 }
 
-// these really should be dynamically allocated..
+void devices_rethink_all(void func(void))
+{
+	func();
+}
+
 void devices_rethink(void)
 {
-	rethink_cias();
-#ifdef CD32
-	rethink_akiko();
-	rethink_cd32fmv();
-#endif
-	rethink_gayle();
+	rethink_cias ();
+
+	execute_device_items(device_rethinks, device_rethink_cnt);
+
 	rethink_uae_int();
+	/* cpuboard_rethink must be last */
+	//cpuboard_rethink();
 }
 
 void devices_update_sound(double clk, double syncadjust)
@@ -101,51 +252,23 @@ void devices_update_sync(double svpos, double syncadjust)
 	cd32_fmv_set_sync(svpos, syncadjust);
 }
 
-void reset_all_systems(void)
+void do_leave_program (void)
 {
-	init_eventtab();
-
-#ifdef PICASSO96
-	picasso_reset();
+#ifdef WITH_PPC
+	// must be first
+	uae_ppc_free();
 #endif
-#ifdef FILESYS
-	filesys_prepare_reset();
-	filesys_reset();
-#endif
-	init_shm();
-	memory_reset();
-#if defined (BSDSOCKET)
-	bsdlib_reset();
-#endif
-#ifdef FILESYS
-	filesys_start_threads();
-	hardfile_reset();
-#endif
-	native2amiga_reset();
-	device_func_reset();
-	uae_int_requested = 0;
-}
-
-void do_leave_program(void)
-{
-#ifdef JIT
-	compiler_exit();
-#endif
-	picasso_free();
 	graphics_leave();
 	inputdevice_close();
 	DISK_free();
 	close_sound();
 	dump_counts();
-#ifdef CD32
-	akiko_free();
-	cd32_fmv_free();
-#endif
-	gui_exit();
+
+	if (! no_gui)
+		gui_exit ();
 #if defined (USE_SDL1) || defined(USE_SDL2)
 	SDL_Quit();
 #endif
-	hardfile_reset();
 #ifdef AUTOCONFIG
 	expansion_cleanup();
 #endif
@@ -155,18 +278,22 @@ void do_leave_program(void)
 #ifdef BSDSOCKET
 	bsdlib_reset();
 #endif
-	gayle_free();
 	device_func_free();
 	memory_cleanup();
-	cfgfile_addcfgparam(nullptr);
+	free_shm ();
+  cfgfile_addcfgparam (0);
 	machdep_free();
 	rtarea_free();
+
+	execute_device_items(device_leaves, device_leave_cnt);
 }
 
-void virtualdevice_init(void)
+void virtualdevice_init (void)
 {
+	reset_device_items();
+
 #ifdef AUTOCONFIG
-	rtarea_setup();
+	rtarea_setup ();
 #endif
 #ifdef FILESYS
 	rtarea_init();
@@ -178,7 +305,7 @@ void virtualdevice_init(void)
 	emulib_install();
 #endif
 #ifdef FILESYS
-	filesys_install();
+	filesys_install ();
 #endif
 #if defined (BSDSOCKET)
 	bsdlib_install();
@@ -198,6 +325,7 @@ void devices_restore_start(void)
 	}
 	changed_prefs.mbresmem_low_size = 0;
 	changed_prefs.mbresmem_high_size = 0;
+  restore_expansion_boards(NULL);
 }
 
 void devices_pause(void)

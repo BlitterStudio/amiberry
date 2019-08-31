@@ -43,7 +43,7 @@ using namespace std;
 #if defined(__x86_64__) || defined(_M_AMD64)
 #define CPU_x86_64 1
 #define CPU_64_BIT 1
-#elif defined(__i386__) || defined(_M_IX86) && !defined(__arm__)
+#elif defined(__i386__) || defined(_M_IX86) && !defined(__arm__) && !defined(__aarch64__)
 #define CPU_i386 1
 #elif defined(__arm__) || defined(_M_ARM) || defined(__aarch64__)
 #define CPU_arm 1
@@ -54,7 +54,7 @@ using namespace std;
 #endif
 
 #ifndef __STDC__
-#ifndef _MSC_VER_
+#ifndef _MSC_VER
 #error "Your compiler is not ANSI. Get a real one."
 #endif
 #endif
@@ -325,7 +325,7 @@ extern void gui_message (const TCHAR *,...);
 #endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
-#elif _MSC_VER_
+#elif _MSC_VER
 #define STATIC_INLINE static __forceinline
 #define NOINLINE __declspec(noinline)
 #define NORETURN __declspec(noreturn)
@@ -368,7 +368,7 @@ extern void gui_message (const TCHAR *,...);
 
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
   __asm__ (
-	"rev %0, %0"
+		"rev %0, %0"
     : "=r" (v) : "0" (v) ); return v;
 }
 
@@ -380,6 +380,24 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 }
 #define bswap_16(x) do_byteswap_16(x)
 #define bswap_32(x) do_byteswap_32(x)
+
+#elif defined(CPU_AARCH64)
+
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
+  __asm__ (
+		"rev %w0, %w0"
+    : "=r" (v) : "0" (v) ); return v;
+}
+
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
+  __asm__ (
+    "rev16 %w0, %w0\n\t"
+    "uxth %w0, %w0"
+    : "=r" (v) : "0" (v) ); return v;
+}
+#define bswap_16(x) do_byteswap_16(x)
+#define bswap_32(x) do_byteswap_32(x)
+
 #else
 
 /* Try to use system bswap_16/bswap_32 functions. */
@@ -418,8 +436,6 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #define xfree(T) free(T)
 
 #endif
-
-#define DBLEQU(f, i) (abs ((f) - (i)) < 0.000001)
 
 #ifdef HAVE_VAR_ATTRIBUTE_UNUSED
 #define NOWARN_UNUSED(x) __attribute__((unused)) x

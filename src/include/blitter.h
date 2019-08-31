@@ -13,8 +13,8 @@
 
 struct bltinfo {
     int blitzero;
-    int blitashift,blitbshift,blitdownashift,blitdownbshift;
-    uae_u16 bltadat, bltbdat, bltcdat,bltddat;
+    int blitashift, blitbshift, blitdownashift, blitdownbshift;
+    uae_u16 bltadat, bltbdat, bltcdat, bltddat;
     uae_u16 bltaold, bltahold, bltbold, bltbhold, bltafwm, bltalwm;
     int vblitsize,hblitsize;
     int bltamod,bltbmod,bltcmod,bltdmod;
@@ -28,7 +28,7 @@ extern struct bltinfo blt_info;
 
 extern int blitter_nasty, blit_interrupt, blitter_dangerous_bpl;
 
-extern void check_is_blit_dangerous(uaecptr *bplpt, int planes, int words);
+extern void check_is_blit_dangerous (uaecptr *bplpt, int planes, int words);
 
 extern uae_u16 bltsize;
 extern uae_u16 bltcon0,bltcon1;
@@ -47,6 +47,7 @@ STATIC_INLINE void maybe_blit(int hack)
 }
 extern void reset_blit (int);
 extern int blitnasty (void);
+extern int blitnnasty (int);
 extern void blitter_handler (uae_u32);
 extern void build_blitfilltable (void);
 extern void do_blitter (int);

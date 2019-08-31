@@ -71,16 +71,16 @@ char *ua_fs(const TCHAR *s, int defchar)
 
 TCHAR *au_fs_copy(TCHAR *dst, int maxlen, const char *src)
 {
-	dst[0] = 0;
-	strncpy(dst, src, maxlen);
-	return dst;
+  dst[0] = 0;
+  strncpy(dst, src, maxlen - 1);
+  return dst;
 }
 
 char *ua_fs_copy(char *dst, int maxlen, const TCHAR *src, int defchar)
 {
-	dst[0] = 0;
-	strncpy(dst, src, maxlen);
-	return dst;
+  dst[0] = 0;
+  strncpy(dst, src, maxlen - 1);
+  return dst;
 }
 
 void to_lower(TCHAR *s, int len)

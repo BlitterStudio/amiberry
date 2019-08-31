@@ -1,20 +1,23 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * AutoConfig devices
-  *
-  * Copyright 1995, 1996 Bernd Schmidt
-  * Copyright 1996 Ed Hanway
-  */
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* AutoConfig devices
+*
+* Copyright 1995, 1996 Bernd Schmidt
+* Copyright 1996 Ed Hanway
+*/
 
-#include <string.h>
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
 #include "autoconf.h"
+#include "traps.h"
+#include "threaddep/thread.h"
 #include "inputdevice.h"
+#include "devices.h"
 
 /* Commonly used autoconfig strings */
 
@@ -31,7 +34,7 @@ addrbank rtarea_bank = {
 	rtarea_lget, rtarea_wget, rtarea_bget,
 	rtarea_lput, rtarea_wput, rtarea_bput,
 	rtarea_xlate, rtarea_check, NULL, _T("rtarea"), _T("UAE Boot ROM"),
-	rtarea_lget, rtarea_wget,
+	rtarea_wget,
 	ABFLAG_ROMIN, S_READ, S_WRITE
 };
 
@@ -43,13 +46,13 @@ static uae_u8 *REGPARAM2 rtarea_xlate(uaecptr addr)
 	return rtarea_bank.baseaddr + addr;
 }
 
-static int REGPARAM2 rtarea_check(uaecptr addr, uae_u32 size)
+static int REGPARAM2 rtarea_check (uaecptr addr, uae_u32 size)
 {
 	addr &= 0xFFFF;
 	return (addr + size) <= 0xFFFF;
 }
 
-static uae_u32 REGPARAM2 rtarea_lget(uaecptr addr)
+static uae_u32 REGPARAM2 rtarea_lget (uaecptr addr)
 {
 	addr &= 0xFFFF;
 	if (addr & 1)
@@ -59,8 +62,7 @@ static uae_u32 REGPARAM2 rtarea_lget(uaecptr addr)
 	return (rtarea_bank.baseaddr[addr + 0] << 24) | (rtarea_bank.baseaddr[addr + 1] << 16) |
 		(rtarea_bank.baseaddr[addr + 2] << 8) | (rtarea_bank.baseaddr[addr + 3] << 0);
 }
-
-static uae_u32 REGPARAM2 rtarea_wget(uaecptr addr)
+static uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
 {
 	addr &= 0xFFFF;
 	if (addr & 1)
@@ -68,8 +70,7 @@ static uae_u32 REGPARAM2 rtarea_wget(uaecptr addr)
 
 	return (rtarea_bank.baseaddr[addr] << 8) + rtarea_bank.baseaddr[addr + 1];
 }
-
-static uae_u32 REGPARAM2 rtarea_bget(uaecptr addr)
+static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 {
 	addr &= 0xFFFF;
 
@@ -95,7 +96,7 @@ static bool rtarea_write(uaecptr addr)
 	return false;
 }
 
-static void REGPARAM2 rtarea_bput(uaecptr addr, uae_u32 value)
+static void REGPARAM2 rtarea_bput (uaecptr addr, uae_u32 value)
 {
 	addr &= 0xffff;
 	if (!rtarea_write(addr))
@@ -106,7 +107,7 @@ static void REGPARAM2 rtarea_bput(uaecptr addr, uae_u32 value)
 	}
 }
 
-static void REGPARAM2 rtarea_wput(uaecptr addr, uae_u32 value)
+static void REGPARAM2 rtarea_wput (uaecptr addr, uae_u32 value)
 {
 	addr &= 0xffff;
 	value &= 0xffff;
@@ -121,7 +122,7 @@ static void REGPARAM2 rtarea_wput(uaecptr addr, uae_u32 value)
 	rtarea_bank.baseaddr[addr + 1] = (uae_u8)value;
 }
 
-static void REGPARAM2 rtarea_lput(uaecptr addr, uae_u32 value)
+static void REGPARAM2 rtarea_lput (uaecptr addr, uae_u32 value)
 {
 	addr &= 0xffff;
 	if (addr & 1)
@@ -154,23 +155,23 @@ void rtarea_reset(void)
 static int rt_addr;
 static int rt_straddr;
 
-uae_u32 addr(int ptr)
+uae_u32 addr (int ptr)
 {
 	return (uae_u32)ptr + rtarea_base;
 }
 
-void db(uae_u8 data)
+void db (uae_u8 data)
 {
 	rtarea_bank.baseaddr[rt_addr++] = data;
 }
 
-void dw(uae_u16 data)
+void dw (uae_u16 data)
 {
 	rtarea_bank.baseaddr[rt_addr++] = (uae_u8)(data >> 8);
 	rtarea_bank.baseaddr[rt_addr++] = (uae_u8)data;
 }
 
-void dl(uae_u32 data)
+void dl (uae_u32 data)
 {
 	rtarea_bank.baseaddr[rt_addr++] = data >> 24;
 	rtarea_bank.baseaddr[rt_addr++] = data >> 16;
@@ -180,31 +181,31 @@ void dl(uae_u32 data)
 
 uae_u8 dbg(uaecptr addr)
 {
-	addr -= rtarea_base;
+	addr &= 0xffff;
 	return rtarea_bank.baseaddr[addr];
 }
 
 /* store strings starting at the end of the rt area and working
- * backward.  store pointer at current address
- */
+* backward.  store pointer at current address
+*/
 
-uae_u32 ds_ansi(const uae_char *str)
+uae_u32 ds_ansi (const uae_char *str)
 {
 	int len;
 
 	if (!str)
-		return addr(rt_straddr);
-	len = strlen(str) + 1;
+		return addr (rt_straddr);
+	len = strlen (str) + 1;
 	rt_straddr -= len;
-	strcpy((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
-	return addr(rt_straddr);
+	strcpy ((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
+	return addr (rt_straddr);
 }
 
-uae_u32 ds(const TCHAR *str)
+uae_u32 ds (const TCHAR *str)
 {
-	char *s = ua(str);
-	uae_u32 v = ds_ansi(s);
-	xfree(s);
+	char *s = ua (str);
+	uae_u32 v = ds_ansi (s);
+	xfree (s);
 	return v;
 }
 
@@ -251,20 +252,10 @@ static uae_u32 REGPARAM2 nullfunc(TrapContext *ctx)
 
 static uae_u32 REGPARAM2 getchipmemsize(TrapContext *ctx)
 {
-	trap_set_dreg(ctx, 1, 0);
-	trap_set_areg(ctx, 1, 0);
 	return chipmem_bank.allocated_size;
 }
 
-static uae_u32 REGPARAM2 uae_puts(TrapContext *ctx)
-{
-	uae_char buf[MAX_DPATH];
-	trap_get_string(ctx, buf, trap_get_areg(ctx, 0), sizeof(uae_char));
-	write_log(_T("%s"), buf);
-	return 0;
-}
-
-void rtarea_init_mem(void)
+static void rtarea_init_mem (void)
 {
 	rtarea_bank.reserved_size = RTAREA_SIZE;
 	rtarea_bank.start = rtarea_base;
@@ -280,7 +271,6 @@ void rtarea_free(void)
 	mapped_free(&rtarea_bank);
 }
 
-ATTRIBUTE_NO_SANITIZE_ADDRESS
 void rtarea_init(void)
 {
 	uae_u32 a;
@@ -296,10 +286,10 @@ void rtarea_init(void)
 
 	_stprintf(uaever, _T("uae-%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 
-	EXPANSION_uaeversion = ds(uaever);
+  ds (uaever);
 	EXPANSION_explibname = ds(_T("expansion.library"));
 	EXPANSION_doslibname = ds(_T("dos.library"));
-	EXPANSION_uaedevname = ds(_T("uae.device"));
+  ds (_T("uae.device"));
 
 	dw(0);
 	dw(0);
@@ -317,10 +307,6 @@ void rtarea_init(void)
 
 	org(rtarea_base + 0xFF80);
 	calltrap(deftrapres(getchipmemsize, TRAPFLAG_DORET, _T("getchipmemsize")));
-	dw(RTS);
-
-	org(rtarea_base + 0xFF10);
-	calltrap(deftrapres(uae_puts, TRAPFLAG_NO_RETVAL, _T("uae_puts")));
 	dw(RTS);
 
 	org(a);
