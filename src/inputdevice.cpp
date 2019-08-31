@@ -4025,9 +4025,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_EFLOPPY3:
 		disk_eject(3);
 		break;
-	case AKS_IRQ7:
-		NMI_delayed();
-		break;
+	//case AKS_IRQ7:
+	//	NMI_delayed();
+	//	break;
 	case AKS_PAUSE:
 		pausemode(newstate > 0 ? 1 : newstate);
 		break;

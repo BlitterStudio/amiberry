@@ -24,8 +24,8 @@ typedef uae_u32 REGPARAM3 cpuop_func (uae_u32) REGPARAM;
 typedef void REGPARAM3 cpuop_func_ce (uae_u32) REGPARAM;
 
 struct cputbl {
-	cpuop_func *handler;
-	uae_u16 opcode;
+  cpuop_func *handler;
+  uae_u16 opcode;
 	uae_s8 length;
 	uae_s8 disp020[2];
 	uae_u8 branch;
@@ -44,9 +44,9 @@ typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 #define COMP_OPCODE_USES_FPU    0x0020
 
 struct comptbl {
-	compop_func *handler;
-	uae_u32 opcode;
-	int specific;
+  compop_func *handler;
+	uae_u32	specific;
+  uae_u32 opcode;
 };
 #else
 #define MIN_JIT_CACHE 0
@@ -64,8 +64,8 @@ typedef double fptype;
 
 struct mmufixup
 {
-    int reg;
-    uae_u32 value;
+  int reg;
+  uae_u32 value;
 };
 extern struct mmufixup mmufixup[1];
 
@@ -160,7 +160,7 @@ extern int m68k_pc_indirect;
 STATIC_INLINE void set_special (uae_u32 x)
 {
 	atomic_or(&regs.spcflags, x);
-	cycles_do_special();
+  cycles_do_special();
 }
 
 STATIC_INLINE void unset_special (uae_u32 x)
@@ -312,8 +312,7 @@ extern uae_u32 REGPARAM3 _get_disp_ea_020 (uae_u32 base) REGPARAM;
 
 extern uae_u32 REGPARAM3 get_bitfield (uae_u32 src, uae_u32 bdata[2], uae_s32 offset, int width) REGPARAM;
 extern void REGPARAM3 put_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, uae_s32 offset, int width) REGPARAM;
-
-extern int get_cpu_model(void);
+extern int get_cpu_model (void);
 
 extern void set_cpu_caches (bool flush);
 extern void flush_cpu_caches_040(uae_u16 opcode);
@@ -323,7 +322,6 @@ extern void REGPARAM3 MakeFromSR_T0(void) REGPARAM;
 extern void REGPARAM3 Exception (int) REGPARAM;
 extern void REGPARAM3 Exception_cpu(int) REGPARAM;
 extern void NMI (void);
-extern void NMI_delayed(void);
 extern void doint (void);
 extern void dump_counts (void);
 extern int m68k_move2c (int, uae_u32 *);

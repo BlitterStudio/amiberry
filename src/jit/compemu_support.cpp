@@ -28,13 +28,8 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <cstring>
-#include <time.h>
+
+#include <math.h>
 
 #include "sysdeps.h"
 
@@ -592,8 +587,8 @@ STATIC_INLINE uae_u8* get_target(void)
 
 #define DATA_BUFFER_SIZE 768             // Enlarge POPALLSPACE_SIZE if this value is greater than 768
 #define DATA_BUFFER_MAXOFFSET (4096 - 32)  // max range between emit of data and use of data
-static uae_u8* data_writepos = nullptr;
-static uae_u8* data_endpos = nullptr;
+static uae_u8* data_writepos = 0;
+static uae_u8* data_endpos = 0;
 #ifdef DEBUG_DATA_BUFFER
 static uae_u32 data_wasted = 0;
 static uae_u32 data_buffers_used = 0;
