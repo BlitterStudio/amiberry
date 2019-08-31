@@ -2375,11 +2375,9 @@ end:
 
 void inputdevice_tablet (int x, int y, int z, int pressure, uae_u32 buttonbits, int inproximity, int ax, int ay, int az, int devid)
 {
-	if (is_touch_lightpen()) {
-
-		tablet_lightpen(x, y, tablet_maxx, tablet_maxy, inproximity ? 1 : -1, buttonbits, false, devid, -1);
-
-	} else {
+	//if (is_touch_lightpen()) {
+	//	tablet_lightpen(x, y, tablet_maxx, tablet_maxy, inproximity ? 1 : -1, buttonbits, false, devid, -1);
+	//} else {
 		uae_u8 *p;
 		uae_u8 tmp[MH_END];
 
@@ -2437,7 +2435,7 @@ void inputdevice_tablet (int x, int y, int z, int pressure, uae_u32 buttonbits, 
 
 		p[MH_E] = 0xc0 | 2;
 		p[MH_CNT]++;
-	}
+	//}
 }
 
 void inputdevice_tablet_info (int maxx, int maxy, int maxz, int maxax, int maxay, int maxaz, int xres, int yres)
