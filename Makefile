@@ -172,7 +172,7 @@ USE_SDL2 = 1
 else ifneq (,$(findstring AMLG,$(PLATFORM)))
 USE_SDL2 = 1
     CFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DFASTERCYCLES
     HAVE_NEON = 1
 
     ifneq (,$(findstring AMLG12,$(PLATFORM)))
@@ -185,7 +185,7 @@ USE_SDL2 = 1
       endif
     else ifneq (,$(findstring AMLGX,$(PLATFORM)))
       CFLAGS += -mtune=cortex-a53
-      CPPFLAGS += -DMALI_GPU
+      CPPFLAGS += -DUSE_RENDER_THREAD
       NAME  = amiberry-AMLGX
     endif
 
