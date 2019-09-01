@@ -460,7 +460,7 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Wi
 static int p96_framecnt;
 static int doskip (void)
 {
-	if (p96_framecnt > currprefs.gfx_framerate)
+	if (p96_framecnt >= currprefs.gfx_framerate)
 		p96_framecnt = 0;
 	return p96_framecnt > 0;
 }

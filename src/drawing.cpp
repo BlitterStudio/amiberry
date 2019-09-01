@@ -345,7 +345,7 @@ STATIC_INLINE void count_frame(void)
 {
 	struct amigadisplay *ad = &adisplays;
 	ad->framecnt++;
-	if (ad->framecnt > currprefs.gfx_framerate)
+	if (ad->framecnt >= currprefs.gfx_framerate)
 		ad->framecnt = 0;
 	if (ad->inhibit_frame)
 		ad->framecnt = 1;

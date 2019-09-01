@@ -7257,17 +7257,12 @@ static void fpscounter (bool frameok)
 	if (bogusframe || int(last) < 0)
 		return;
 
-	if (currprefs.gfx_framerate)
-		idletime >>= 1;
-
 	mavg(&fps_mavg, last / 10, FPSCOUNTER_MAVG_SIZE);
 	mavg(&idle_mavg, idletime / 10, FPSCOUNTER_MAVG_SIZE);
 	idletime = 0;
 
 	frametime += last;
 	timeframes++;
-	if (currprefs.gfx_framerate)
-		timeframes++;
 
 	if ((timeframes & 7) == 0) {
 		double idle = 1000 - (idle_mavg.mavg == 0 ? 0.0 : double(idle_mavg.mavg) * 1000.0 / vsynctimebase);

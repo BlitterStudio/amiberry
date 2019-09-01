@@ -209,7 +209,7 @@ static uae_u32 emulib_GetUaeConfig(TrapContext *ctx, uaecptr place)
 	trap_put_long(ctx, place + 4, chipmem_bank.allocated_size);
 	trap_put_long(ctx, place + 8, bogomem_bank.allocated_size);
 	trap_put_long(ctx, place + 12, fastmem_bank[0].allocated_size);
-	trap_put_long(ctx, place + 16, currprefs.gfx_framerate + 1);
+	trap_put_long(ctx, place + 16, currprefs.gfx_framerate);
 	trap_put_long(ctx, place + 20, currprefs.produce_sound);
 	trap_put_long(ctx, place + 24, currprefs.jports[0].id | (currprefs.jports[1].id << 8));
 	trap_put_long(ctx, place + 28, currprefs.keyboard_lang);

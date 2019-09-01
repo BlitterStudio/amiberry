@@ -81,7 +81,7 @@ public:
 			}
 		}
 		else if (actionEvent.getSource() == chkFrameskip)
-			workprefs.gfx_framerate = chkFrameskip->isSelected() ? 1 : 0;
+			workprefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
 
 		else if (actionEvent.getSource() == chkAspect)
 			workprefs.gfx_correct_aspect = chkAspect->isSelected();
@@ -320,7 +320,7 @@ void ExitPanelDisplay()
 
 void RefreshPanelDisplay()
 {
-	chkFrameskip->setSelected(workprefs.gfx_framerate);
+	chkFrameskip->setSelected(workprefs.gfx_framerate > 1);
 
 	int i;
 	char tmp[32];
