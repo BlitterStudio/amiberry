@@ -383,6 +383,9 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	p->socket_emu = 0;
 #endif
 
+	if (p->gfx_framerate < 1)
+		p->gfx_framerate = 1;
+	
 	built_in_chipset_prefs(p);
 	blkdev_fix_prefs(p);
 	inputdevice_fix_prefs(p, userconfig);
