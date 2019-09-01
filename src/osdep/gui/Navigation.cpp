@@ -29,7 +29,7 @@ static NavigationMap navMap[] =
 {
 //  active              move left         move right        move up             move down
 // main_window
-{ "About",            "",               "",               "Reset",            "Paths" },
+{ "About",            "",               "",               "Shutdown",         "Paths" },
 { "Paths",            "SystemROMs",     "SystemROMs",     "About",            "Quickstart" },
 { "Quickstart",       "qsNTSC",         "qscboAModel",    "Paths",            "Configurations" },
 { "Configurations",   "ConfigList",     "ConfigList",     "Quickstart",       "CPU and FPU" },
@@ -46,18 +46,19 @@ static NavigationMap navMap[] =
 { "Miscellaneous",    "StatusLine",     "StatusLine",     "Custom controls",  "Savestates" },
 #ifdef ANDROIDSDL
 { "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
-{ "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Reset" },
-{ "Reset",            "Start",          "Quit",           "OnScreen",       "Paths" },
-{ "Quit",             "Reset",          "Help",           "OnScreen",       "Paths" },
+{ "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
+{ "Shutdown",         "Start",          "Quit",           "OnScreen",       "Paths" },
+{ "Quit",             "Shutdown",       "Help",           "OnScreen",       "Paths" },
 { "Help",             "Quit",           "Start",          "OnScreen",       "Paths" },
-{ "Start",            "Help",           "Reset",          "OnScreen",       "Paths" },
+{ "Start",            "Help",           "Shutdown",       "OnScreen",       "Paths" },
 #else
-{ "Savestates",       "State0",         "State0",         "Miscellaneous",  "Reset" },
-{ "Reset",            "Start",          "Quit",           "Savestates",     "Paths" },
-{ "Quit",             "Reset",          "Shutdown",       "Savestates",     "Paths" },
-{ "Shutdown",         "Quit",           "Help",           "Savestates",     "Paths" },
-{ "Help",             "Shutdown",       "Start",          "Savestates",     "Paths" },
-{ "Start",            "Help",           "Reset",          "Savestates",     "Paths" },
+{ "Savestates",       "State0",         "State0",         "Miscellaneous",  "Shutdown" },
+{ "Shutdown",         "Start",          "Quit",           "Savestates",     "Paths" },
+{ "Quit",             "Shutdown",       "Restart",        "Savestates",     "Paths" },
+{ "Restart",          "Quit",           "Help",           "Savestates",     "Paths" },
+{ "Help",             "Restart",        "Reset",          "Savestates",     "Paths" },
+{ "Reset",            "Help",           "Start",          "Savestates",     "Paths" },
+{ "Start",            "Reset",          "Shutdown",       "Savestates",     "Paths" },
 #endif
 
 // PanelPaths
@@ -325,7 +326,7 @@ static NavigationMap navMap[] =
 { "OnScrButton2",   "OnScreen",       "CustomPos",    "OnScrButton1",   "FloatJoy" },
 { "CustomPos",      "OnScrButton2",   "OnScreen",     "OnScrButton6",   "Reset" },
 { "FloatJoy",       "OnScreen",       "CustomPos",    "OnScrButton2",   "DisableMenuVKeyb" },
-{ "DisableMenuVKeyb","OnScreen",       "CustomPos",    "FloatJoy",       "Reset" },
+{ "DisableMenuVKeyb","OnScreen",       "CustomPos",    "FloatJoy",       "Shutdown" },
 #endif
 
 //  active            move left         move right        move up           move down
