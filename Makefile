@@ -406,7 +406,7 @@ OBJS =	\
 	src/archivers/mp2/kjmp2.o \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
-	src/caps/caps_win32.o \
+	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \

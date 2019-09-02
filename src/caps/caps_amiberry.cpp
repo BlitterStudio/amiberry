@@ -4,8 +4,6 @@
 
 #ifdef CAPS
 
-#define FSUAE
-
 #ifdef _WIN32
 #include <shlobj.h>
 #endif
@@ -69,18 +67,10 @@ int caps_init (void)
 
 	if (init)
 		return 1;
-#ifdef FSUAE
-	UAE_DLHANDLE h = uae_dlopen_plugin(_T("capsimg"));
+#ifdef ANDROIDSDL
+	UAE_DLHANDLE h = uae_dlopen_plugin(_T("libcapsimage.so"));
 #else
-	UAE_DLHANDLE h = uae_dlopen_plugin(_T("CAPSImg"));
-	if (!h) {
-		TCHAR tmp[MAX_DPATH];
-		if (SUCCEEDED (SHGetFolderPath (NULL, CSIDL_PROGRAM_FILES_COMMON, NULL, 0, tmp))) {
-			_tcscat (tmp, _T("\\Software Preservation Society\\"));
-			_tcscat (tmp, _T("CAPSImg.dll"));
-			h = uae_dlopen(tmp);
-		}
-	}
+	UAE_DLHANDLE h = uae_dlopen_plugin(_T("capsimg"));
 #endif
 	if (!h) {
 		if (noticed)
