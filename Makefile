@@ -53,12 +53,16 @@ else ifeq ($(PLATFORM),rpi1)
     NAME  = amiberry-rpi1-sdl1
 
 else ifeq ($(PLATFORM),android)
-    CFLAGS += -mfpu=neon -mfloat-abi=soft
+    CFLAGS += -mfpu=vfp
     DEFS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     ANDROID = 1
-    HAVE_NEON = 1
-    HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry
+    NAME  = amiberry-android
+
+else ifeq ($(PLATFORM),android64)
+    DEFS += -DCPU_AARCH64 -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
+    ANDROID = 1
+    AARCH64 = 1
+    NAME  = amiberry-android64
 
 #
 # SDL2 with DispmanX targets (RPI only)
@@ -223,14 +227,6 @@ USE_SDL2 = 1
     HAVE_NEON = 1
     NAME  = amiberry-rockpro64
 	
-else ifeq ($(PLATFORM),android-sdl2)
-USE_SDL2 = 1
-    CFLAGS += -mfpu=neon -mfloat-abi=soft
-    DEFS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
-    ANDROID = 1
-    HAVE_NEON = 1
-    HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry
 endif
 
 RM     = rm -f

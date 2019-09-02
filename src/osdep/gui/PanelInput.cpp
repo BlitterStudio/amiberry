@@ -573,14 +573,14 @@ bool HelpPanelInput(std::vector<std::string> &helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can select the control type for both ports and the rate for autofire.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("Set the emulated mouse speed to .25x, .5x, 1x, 2x and 4x to slow down or ");
 	helptext.emplace_back("speed up the mouse.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
   	helptext.emplace_back("When \"Enable mousehack\" is activated, you can use touch input to set .");
   	helptext.emplace_back("the mouse pointer to the exact position. This works very well on Workbench, ");
   	helptext.emplace_back("but many games using their own mouse handling and will not profit from this mode.");
-  	helptext.emplace_back("");
+  	helptext.emplace_back(" ");
   	helptext.emplace_back("\"Tap Delay\" specifies the time between taping the screen and an emulated ");
   	helptext.emplace_back("mouse button click.");
 	return true;

@@ -47,10 +47,9 @@ static NavigationMap navMap[] =
 #ifdef ANDROIDSDL
 { "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
 { "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
-{ "Shutdown",         "Start",          "Quit",           "OnScreen",       "Paths" },
-{ "Quit",             "Shutdown",       "Help",           "OnScreen",       "Paths" },
+{ "Quit",             "Start",          "Help",           "OnScreen",       "Paths" },
 { "Help",             "Quit",           "Start",          "OnScreen",       "Paths" },
-{ "Start",            "Help",           "Shutdown",       "OnScreen",       "Paths" },
+{ "Start",            "Help",           "Quit",           "OnScreen",       "Paths" },
 #else
 { "Savestates",       "State0",         "State0",         "Miscellaneous",  "Shutdown" },
 { "Shutdown",         "Start",          "Quit",           "Savestates",     "Paths" },

@@ -617,15 +617,15 @@ bool HelpPanelFloppy(std::vector<std::string> &helptext)
 	helptext.emplace_back("on the host filesystem.");
 	helptext.emplace_back("The button \"...\" opens a dialog to select the required");
 	helptext.emplace_back("disk file. With the dropdown control, you can select one of the disks you recently used.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("You can reduce the loading time for lot of games by increasing the floppy drive");
 	helptext.emplace_back("emulation speed. A few games will not load with higher drive speed and you have");
 	helptext.emplace_back("to select 100%.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Save config for disk\" will create a new configuration file with the name of");
 	helptext.emplace_back("the disk in DF0. This configuration will be loaded each time you select the disk");
 	helptext.emplace_back("and have the option \"Load config with same name as disk\" enabled.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(With the buttons "Create 3.5'' DD disk" and "Create 3.5'' HD disk" you can)");
 	helptext.emplace_back("create a new and empty disk.");
 	return true;

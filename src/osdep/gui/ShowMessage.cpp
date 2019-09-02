@@ -53,10 +53,6 @@ public:
 
 static ShowMessageActionListener* showMessageActionListener;
 
-#ifdef ANDROIDSDL
-#include "androidsdl_event.h"
-#endif
-
 static void InitShowMessage()
 {
 	wndShowMessage = new gcn::Window("Message");

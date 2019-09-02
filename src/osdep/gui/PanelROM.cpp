@@ -69,7 +69,7 @@ public:
 		auto currIdx = -1;
 		if (ROMType & (ROMTYPE_ALL_EXT | ROMTYPE_ALL_CART))
 		{
-			roms.push_back("");
+			roms.push_back(" ");
 			idxToAvailableROMs.push_back(-1);
 			currIdx = 0;
 		}
@@ -115,7 +115,7 @@ public:
 		if (rom != nullptr)
 			strncpy(workprefs.romextfile, rom->Path, sizeof(workprefs.romextfile));
 		else
-			strncpy(workprefs.romextfile, "", sizeof(workprefs.romextfile));
+			strncpy(workprefs.romextfile, " ", sizeof(workprefs.romextfile));
 	}
 };
 
@@ -311,9 +311,9 @@ bool HelpPanelROM(std::vector<std::string> &helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Select the required kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video");
 	helptext.emplace_back("playback in CD32. There are also some Action Replay and Freezer cards and the built-in");
 	helptext.emplace_back("HRTMon available.");

@@ -32,6 +32,7 @@
 #ifdef ANDROIDSDL
 #include "androidsdl_event.h"
 #endif
+
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
@@ -190,6 +191,19 @@ public:
 
 static SelectFileActionListener* selectFileActionListener;
 
+#ifdef ANDROID
+class EditFilePathActionListener : public gcn::ActionListener
+{
+  public:
+    void action(const gcn::ActionEvent& actionEvent)
+    {
+       char tmp[MAX_PATH];
+       strncpy(tmp, txtCurrent->getText().c_str(), MAX_PATH - 1);
+       checkfoldername(tmp);
+    }
+};
+static EditFilePathActionListener* editFilePathActionListener;
+#endif
 
 static void InitSelectFile(const char* title)
 {
@@ -219,7 +233,13 @@ static void InitSelectFile(const char* title)
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
-	txtCurrent->setEnabled(false);
+#ifdef ANDROID
+  txtCurrent->setEnabled(true);
+  editFilePathActionListener =  new EditFilePathActionListener();
+  txtCurrent->addActionListener(editFilePathActionListener);
+#else
+  txtCurrent->setEnabled(false);
+#endif
 
 	selectFileActionListener = new SelectFileActionListener();
 	fileList = new SelectFileListModel(".");
@@ -238,7 +258,11 @@ static void InitSelectFile(const char* title)
 #endif
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
-	scrAreaFiles->setScrollbarWidth(20);
+#ifdef ANDROID
+  scrAreaFiles->setScrollbarWidth(30);
+#else
+  scrAreaFiles->setScrollbarWidth(20);
+#endif
 	scrAreaFiles->setBaseColor(gui_baseCol);
 
 	if (createNew)
@@ -283,6 +307,9 @@ static void ExitSelectFile()
 	delete lstFiles;
 	delete scrAreaFiles;
 	delete selectFileActionListener;
+#ifdef ANDROID
+  delete editFilePathActionListener;
+#endif
 	delete fileList;
 	if (createNew)
 	{

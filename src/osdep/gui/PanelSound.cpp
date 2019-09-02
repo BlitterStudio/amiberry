@@ -473,13 +473,13 @@ bool HelpPanelSound(std::vector<std::string> &helptext)
 	helptext.clear();
 	helptext.emplace_back("You can turn on sound emulation with different levels of accuracy and");
 	helptext.emplace_back("choose between Mono and Stereo.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("The different types of interpolation have different impact on performance. ");
 	helptext.emplace_back("Play with the settings to find the type you like most. You may need headphones .");
 	helptext.emplace_back("to really hear the difference between the interpolation types.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"Filter\", you can select the type of the Amiga audio filter.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(With "Stereo separation" and "Stereo delay", you can adjust how the left )");
 	helptext.emplace_back("and right audio channels of the Amiga are mixed to the left and right channels ");
 	helptext.emplace_back("of your device. A value of 70% for separation and no delay is a good start.");

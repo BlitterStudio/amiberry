@@ -354,7 +354,7 @@ bool HelpPanelRAM(vector<string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Select the amount of RAM for each type you want to emulate in your Amiga.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Slow\" is the simple memory extension of an Amiga 500.");
 	helptext.emplace_back("\"Z2 Fast\" is real fast memory in 24 bit address space.");
 	helptext.emplace_back("\"Z3 Fast\" is real fast memory in 32 bit address space and only available if");
@@ -362,7 +362,7 @@ bool HelpPanelRAM(vector<string>& helptext)
 	helptext.emplace_back("\"RTG board\" is the graphics memory used by Picasso96 and only available if");
 	helptext.emplace_back("a 32 bit CPU is selected. If you select some memory for this type,");
 	helptext.emplace_back("the Z3 RTG board will be activated.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("A4000 motherboard and processor board memory is only detected by the Amiga if ");
 	helptext.emplace_back("you choose the correct Kickstart ROM (A4000).");
 	return true;

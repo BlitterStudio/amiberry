@@ -39,7 +39,13 @@
 #include <asm/sigcontext.h>
 #include <signal.h>
 #include <dlfcn.h>
+#ifndef ANDROID
 #include <execinfo.h>
+#else
+int backtrace(void**,int){ return 0; }
+char** backtrace_symbols(void* const*,int){return NULL; }
+void backtrace_symbols_fd(void* const*,int,int){} 
+#endif
 #include <SDL.h>
 
 #ifdef JIT

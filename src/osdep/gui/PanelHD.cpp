@@ -657,16 +657,16 @@ bool HelpPanelHD(std::vector<std::string>& helptext)
 	helptext.emplace_back(R"(Use "Add Directory" to add a folder or "Add Hardfile" to add a HDF file as)");
 	helptext.emplace_back("a hard disk. To edit the settings of a HDD, click on \"...\" left to the entry in");
 	helptext.emplace_back("the list. With the red cross, you can delete an entry.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB.");
 	helptext.emplace_back("For large files, it will take some time to create the new hard disk. You have to");
 	helptext.emplace_back("format the new HDD in the Amiga via the Workbench.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(Activate "CD drive" to emulate CD for CD32. Use "Eject" to remove current CD)");
 	helptext.emplace_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("In current version, WAV, MP3 and FLAC is supported for audio tracks.");
 	return true;
 }

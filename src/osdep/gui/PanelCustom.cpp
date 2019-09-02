@@ -796,17 +796,17 @@ bool HelpPanelCustom(vector<string>& helptext)
 	helptext.clear();
 	helptext.emplace_back("Set up Custom input actions for each Amiga port, such as Keyboard remapping,");
 	helptext.emplace_back("or emulator functions.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("Select the port which you wish to re-map with 'Joystick Port'.");
 	helptext.emplace_back("The currently selected Input Device will then be displayed under 'Input Device'.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("Buttons which are not available on this device (detected with RetroArch ");
 	helptext.emplace_back("configuration files) are unavailable to remap.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("The HotKey button (used for secondary functions) is also unavailable for custom options. ");
 	helptext.emplace_back("The actions performed by pressing the HotKey with other buttons can also be remapped.");
 	helptext.emplace_back("Pre-defined functions such as Quit/Reset/Menu will be displayed as the 'default' option.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("The Function of the individual buttons are selectable via the marked drop-down boxes.");
 	return true;
 }

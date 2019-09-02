@@ -68,6 +68,9 @@ static struct amigamodels amodels[] = {
 			"Basic non-expanded configuration",
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
+#ifdef ANDROID
+         " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -76,6 +79,9 @@ static struct amigamodels amodels[] = {
 			"Basic non-expanded configuration",
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
+#ifdef ANDROID
+         " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -89,6 +95,9 @@ static struct amigamodels amodels[] = {
 		4, "Amiga 1200", {
 			"Basic non-expanded configuration",
 			"4 MB Fast RAM expanded configuration",
+#ifdef ANDROID
+         " ", " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -104,6 +113,9 @@ static struct amigamodels amodels[] = {
 		1, "Amiga 4000", {
 			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
 			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+#ifdef ANDROID
+         " ", " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -118,6 +130,9 @@ static struct amigamodels amodels[] = {
 		3, "CD32", {
 			"CD32",
 			"CD32 with Full Motion Video cartridge",
+#ifdef ANDROID
+         " ", " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -938,10 +953,10 @@ bool HelpPanelQuickstart(vector<string>& helptext)
 	helptext.clear();
 	helptext.emplace_back("Simplified start of emulation by just selecting the Amiga model and the disk/CD");
 	helptext.emplace_back("you want to use.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("After selecting the Amiga model, you can choose from a small list of standard");
 	helptext.emplace_back("configurations for this model to start with.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("When you activate \"Start in Quickstart mode\", the next time you run the emulator,");
 	helptext.emplace_back("it  will start with the QuickStart panel. Otherwise you start in configurations panel.");
 	return true;

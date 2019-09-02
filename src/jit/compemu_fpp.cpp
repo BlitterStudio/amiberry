@@ -544,6 +544,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 		  }
 		  FAIL (1);
 		  return;
+#ifndef ANDROID
 		case 6:
 		case 7:
 		{
@@ -661,6 +662,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			}
 		}
     return;
+#endif
 		case 2: /* from <EA> to FPx */
 		  dont_care_fflags ();
 		  if ((extra & 0xfc00) == 0x5c00) { /* FMOVECR */

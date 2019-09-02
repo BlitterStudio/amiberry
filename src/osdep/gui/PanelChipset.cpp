@@ -397,15 +397,15 @@ bool HelpPanelChipset(std::vector<std::string> &helptext)
 	helptext.emplace_back("an entry in \"Extra\", all internal chipset settings will become the required values");
 	helptext.emplace_back("for the specified Amiga model. For some games, you have to activate \"NTSC\"");
 	helptext.emplace_back("(60 Hz instead of 50 Hz) for correct timing.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("When you see some graphic issues in a game, try \"Immediate\" or \"Wait for blit.\"");
 	helptext.emplace_back("for blitter and/or disable \"Fast copper\".");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Fast copper\" uses a prediction algorithm instead of checking the copper state");
 	helptext.emplace_back("on a more regular basis. This may cause issues but brings a big performance improvement.");
 	helptext.emplace_back("The option was removed in WinUAE in an early state, but for most games, it works fine and");
 	helptext.emplace_back("the better performance is helpful for low powered devices.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("For \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine");
 	helptext.emplace_back("for nearly all games.");
 	return true;

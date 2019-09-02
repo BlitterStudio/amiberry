@@ -9,6 +9,10 @@
 #include "uae/mman.h"
 #include <sys/mman.h>
 
+#ifdef ANDROID
+#define valloc(x) memalign(getpagesize(), x)
+#endif
+
 static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
 

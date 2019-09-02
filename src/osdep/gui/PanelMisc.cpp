@@ -402,13 +402,13 @@ bool HelpPanelMisc(std::vector<std::string> &helptext)
 	helptext.emplace_back("When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and write");
 	helptext.emplace_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
 	helptext.emplace_back("and indicates disk access.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
 	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
 	helptext.emplace_back("the emulation starts directly without showing the GUI.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
 	return true;
 }

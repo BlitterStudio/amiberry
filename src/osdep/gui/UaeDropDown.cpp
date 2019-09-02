@@ -18,7 +18,11 @@ namespace gcn
 	                         ListBox* listBox)
 		: DropDown(listModel, scrollArea, listBox)
 	{
-		mScrollArea->setScrollbarWidth(20);
+#ifdef ANDROID
+    mScrollArea->setScrollbarWidth(30);
+#else
+    mScrollArea->setScrollbarWidth(20);
+#endif
 	}
 
 

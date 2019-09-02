@@ -2338,7 +2338,6 @@ Don't touch this if you don't know what you are doing.  */
 #define DATA_POINTER(n) (line_data[lineno] + (n) * MAX_WORDS_PER_LINE * 2)
 
 #if defined(CPU_AARCH64) || defined(USE_ARMNEON) && !defined(ANDROID)
-// FIXME: these neon helper functions caused text rel  problem on android 
 
 #ifdef __cplusplus
   extern "C" {
