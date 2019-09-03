@@ -130,7 +130,7 @@
     <ClCompile Include="..\..\src\blkdev_cdimage.cpp" />
     <ClCompile Include="..\..\src\bsdsocket.cpp" />
     <ClCompile Include="..\..\src\calc.cpp" />
-    <ClCompile Include="..\..\src\caps\caps_win32.cpp" />
+    <ClCompile Include="..\..\src\caps\caps_amiberry.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp" />
     <ClCompile Include="..\..\src\cdrom.cpp" />

@@ -595,11 +595,11 @@
     <ClCompile Include="..\..\src\dlopen.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\caps\caps_win32.cpp">
-      <Filter>Source files\caps</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\amiberry_whdbooter.cpp">
       <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\caps\caps_amiberry.cpp">
+      <Filter>Source files\caps</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

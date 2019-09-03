@@ -434,9 +434,6 @@
     <ClCompile Include="..\..\src\archivers\zip\unzip.cpp">
       <Filter>Source files\archivers\zip</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\caps\caps_win32.cpp">
-      <Filter>Source files\caps</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\machdep\support.cpp">
       <Filter>Source files\machdep</Filter>
     </ClCompile>
@@ -604,6 +601,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\osdep\amiberry_whdbooter.cpp">
       <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\caps\caps_amiberry.cpp">
+      <Filter>Source files\caps</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
