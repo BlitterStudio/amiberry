@@ -1691,9 +1691,12 @@ void m68k_go (int may_quit)
   }
 
 #ifdef USE_JIT_FPU
-	// This caused crashes in RockChip platforms unless it was inlined like this
+#ifdef CPU_AARCH64
+	save_host_fp_regs(fp_buffer);
+#else
+	// This caused crashes in RockChip 32-bit platforms unless it was inlined like this
 	__asm__ volatile("vstmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
-	//save_host_fp_regs(fp_buffer);
+#endif
 #endif
 
   reset_frame_rate_hack ();
@@ -1812,9 +1815,12 @@ void m68k_go (int may_quit)
   regs.pc_oldp = NULL;
 
 #ifdef USE_JIT_FPU
+#ifdef CPU_AARCH64
+	restore_host_fp_regs(fp_buffer);
+#else
 	// This caused crashes in RockChip platforms unless it was inlined like this
 	__asm__ volatile("vldmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
-	//restore_host_fp_regs(fp_buffer);
+#endif
 #endif
 
   in_m68k_go--;
