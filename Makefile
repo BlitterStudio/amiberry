@@ -168,8 +168,8 @@ else ifeq ($(PLATFORM),n2)
 USE_SDL2 = 1
 AARCH64 = 1
     CFLAGS += -march=armv8-a+crc -mtune=cortex-a73.cortex-a53
-    CPPFLAGS += -D_FILE_OFFSET_BITS=64 -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
-    HAVE_NEON = 1
+    CPPFLAGS += -D_FILE_OFFSET_BITS=64 -DUSE_SDL2 -DMALI_GPU -DFASTERCYCLES
+    #HAVE_NEON = 1
     NAME  = amiberry-n2
 
 else ifeq ($(PLATFORM),vero4k)
