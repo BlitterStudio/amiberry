@@ -468,7 +468,9 @@ ifdef AARCH64
 OBJS += src/osdep/aarch64_helper.o
 src/osdep/aarch64_helper.o: src/osdep/aarch64_helper.s
 	$(CXX) $(CFLAGS) -Wall -o src/osdep/aarch64_helper.o -c src/osdep/aarch64_helper.s
-else ifeq($(PLATFORM),rpi1)
+endif
+
+ifeq($(PLATFORM),rpi1)
 OBJS += src/osdep/arm_helper.o
 src/osdep/arm_helper.o: src/osdep/arm_helper.s
 	$(CXX) $(CFLAGS) -Wall -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
