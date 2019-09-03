@@ -3,18 +3,22 @@ ifeq ($(PLATFORM),)
 	PLATFORM = rpi3-sdl2-dispmanx
 endif
 
+# Raspberry Pi 4 CPU flags
 ifneq (,$(findstring rpi4,$(PLATFORM)))
     CFLAGS += -march=armv8-a -mtune=cortex-a72 -mfpu=neon-fp-armv8
 endif
 
+# Raspberry Pi 3 CPU flags
 ifneq (,$(findstring rpi3,$(PLATFORM)))
     CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
 endif
 
+# Raspberry Pi 2 CPU flags
 ifneq (,$(findstring rpi2,$(PLATFORM)))
     CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
 endif
 
+# Raspberry Pi 1 CPU flags
 ifneq (,$(findstring rpi1,$(PLATFORM)))
     CFLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
 endif
@@ -35,29 +39,34 @@ CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #
 # SDL1 targets
 #
+# Raspberry Pi 3 (SDL1, DispmanX)
 ifeq ($(PLATFORM),rpi3)
     CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl1
-	
+
+# Raspberry Pi 2	
 else ifeq ($(PLATFORM),rpi2)
     CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl1
-	
+
+# Raspberry Pi 1
 else ifeq ($(PLATFORM),rpi1)
     CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL1
     LDFLAGS += ${DISPMANX_LDFLAGS}
     NAME  = amiberry-rpi1-sdl1
 
+# Android 32-bit
 else ifeq ($(PLATFORM),android)
     CFLAGS += -mfpu=vfp
     DEFS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     ANDROID = 1
     NAME  = amiberry-android
 
+# Android 64-bit
 else ifeq ($(PLATFORM),android64)
     DEFS += -DCPU_AARCH64 -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
     ANDROID = 1
@@ -67,6 +76,7 @@ else ifeq ($(PLATFORM),android64)
 #
 # SDL2 with DispmanX targets (RPI only)
 #
+# Raspberry Pi 4 (SDL2, DispmanX)
 else ifeq ($(PLATFORM),rpi4-sdl2-dispmanx)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
@@ -74,6 +84,7 @@ USE_SDL2 = 1
     HAVE_NEON = 1
     NAME  = amiberry-rpi4-sdl2-dispmanx
 
+# Raspberry Pi 3 (SDL2, DispmanX)
 else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
@@ -81,6 +92,7 @@ USE_SDL2 = 1
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl2-dispmanx
 
+# Raspberry Pi 2 (SDL2, DispmanX)
 else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
@@ -88,6 +100,7 @@ USE_SDL2 = 1
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl2-dispmanx
 
+# Raspberry Pi 1 (SDL2, DispmanX)
 else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2 ${DISPMANX_FLAGS}
@@ -96,30 +109,35 @@ USE_SDL2 = 1
 
 #
 # SDL2 targets
-#	
+#
+# Raspberry Pi 4 (SDL2)
 else ifeq ($(PLATFORM),rpi4-sdl2)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi4-sdl2
 
+# Raspberry Pi 3 (SDL2)
 else ifeq ($(PLATFORM),rpi3-sdl2)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi3-sdl2
-	
+
+# Raspberry Pi 2 (SDL2)
 else ifeq ($(PLATFORM),rpi2-sdl2)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
     HAVE_NEON = 1
     NAME  = amiberry-rpi2-sdl2
-	
+
+# Raspberry Pi 1 (SDL2)
 else ifeq ($(PLATFORM),rpi1-sdl2)
 USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2
     NAME  = amiberry-rpi1-sdl2
 
+# OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
 USE_SDL2 = 1
     CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
@@ -132,6 +150,7 @@ USE_SDL2 = 1
         MORE_CFLAGS += -fomit-frame-pointer
     endif
 
+# Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
 USE_SDL2 = 1
     CFLAGS += -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
@@ -144,6 +163,7 @@ USE_SDL2 = 1
         MORE_CFLAGS += -fomit-frame-pointer
     endif
 
+# Odroid C1 (SDL2)
 else ifeq ($(PLATFORM),c1)
 USE_SDL2 = 1
     CFLAGS += -march=armv7-a -mcpu=cortex-a5 -mtune=cortex-a5 -mfpu=neon-vfpv4
@@ -156,6 +176,7 @@ USE_SDL2 = 1
         MORE_CFLAGS += -fomit-frame-pointer
     endif
 
+# Odroid N1/N2 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
 USE_SDL2 = 1
     #CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
@@ -164,6 +185,7 @@ USE_SDL2 = 1
     AARCH64 = 1
     NAME  = amiberry-n2
 
+# Vero 4k (SDL2)
 else ifeq ($(PLATFORM),vero4k)
 USE_SDL2 = 1
     CFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -ftree-vectorize -funsafe-math-optimizations
@@ -213,17 +235,11 @@ USE_SDL2 = 1
       NAME  = amiberry-RK3288
     endif
 
-else ifeq ($(PLATFORM),tinker)
-USE_SDL2 = 1
-    CFLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU
-    HAVE_NEON = 1
-    NAME  = amiberry-tinker
-
+# RockPro64 alt. (SDL2, 32-bit, without -DARMV6T2 - no JIT)
 else ifeq ($(PLATFORM),rockpro64)
 USE_SDL2 = 1
     CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     NAME  = amiberry-rockpro64
 	
