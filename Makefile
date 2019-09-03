@@ -234,14 +234,6 @@ USE_SDL2 = 1
       CFLAGS += -march=armv7ve -mtune=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
       NAME  = amiberry-RK3288
     endif
-
-# RockPro64 alt. (SDL2, 32-bit, without -DARMV6T2 - no JIT)
-else ifeq ($(PLATFORM),rockpro64)
-USE_SDL2 = 1
-    CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
-    HAVE_NEON = 1
-    NAME  = amiberry-rockpro64
 	
 endif
 
