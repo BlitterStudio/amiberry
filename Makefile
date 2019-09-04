@@ -176,10 +176,10 @@ USE_SDL2 = 1
         MORE_CFLAGS += -fomit-frame-pointer
     endif
 
-# Odroid N1/N2 (SDL2 64-bit)
+# Odroid N1/N2, RockPro64 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
 USE_SDL2 = 1
-    #CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+    CFLAGS += -mtune=cortex-a72.cortex-a53
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DUSE_SDL2 -DMALI_GPU -DFASTERCYCLES
     #HAVE_NEON = 1
     AARCH64 = 1
