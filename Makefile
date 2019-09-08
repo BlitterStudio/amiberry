@@ -181,7 +181,6 @@ else ifeq ($(PLATFORM),n2)
 USE_SDL2 = 1
     CFLAGS += -mtune=cortex-a72.cortex-a53
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DUSE_SDL2 -DMALI_GPU -DFASTERCYCLES
-    #HAVE_NEON = 1
     AARCH64 = 1
     NAME  = amiberry-n2
 
