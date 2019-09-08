@@ -107,11 +107,6 @@ SDL_Event gui_event;
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
 SDL_Surface* cursor_surface;
-#ifdef MALI_GPU
-SDL_Texture* swcursor_texture = NULL;
-static SDL_DisplayMode physmode;
-static double mscalex, mscaley;
-#endif // MALI_GPU
 #endif
 
 /*
@@ -230,35 +225,6 @@ static void ShowHelpRequested()
 	}
 }
 
-#ifdef MALI_GPU
-static SDL_Rect dst;
-void swcursor(bool op) {
-	if (op == -1) {
-		SDL_DestroyTexture(swcursor_texture);
-		swcursor_texture = NULL;
-
-	}
-	else if (op == 0) {
-		cursor_surface = SDL_LoadBMP("data/cursor.bmp");
-		swcursor_texture = SDL_CreateTextureFromSurface(renderer, cursor_surface);
-		// Hide real cursor
-		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
-		SDL_ShowCursor(0);
-		// Set cursor width,height to that of loaded bmp
-		dst.w = cursor_surface->w;
-		dst.h = cursor_surface->h;
-		SDL_FreeSurface(cursor_surface);
-
-	}
-	else {
-		SDL_GetMouseState(&dst.x, &dst.y);
-		dst.x *= mscalex * 1.03;
-		dst.y *= mscaley * 1.005;
-		SDL_RenderCopy(renderer, swcursor_texture, nullptr, &dst);
-	}
-}
-#endif
-
 void UpdateGuiScreen()
 {
 #ifdef USE_SDL1
@@ -267,9 +233,6 @@ void UpdateGuiScreen()
 #elif USE_SDL2
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
-#ifdef MALI_GPU
-	swcursor(1);
-#endif
 	SDL_RenderPresent(renderer);
 #endif
 }
@@ -336,10 +299,6 @@ namespace sdl
 		SDL_ShowCursor(SDL_ENABLE);
 #elif USE_SDL2
 #ifdef MALI_GPU
-		swcursor(0);
-		SDL_GetCurrentDisplayMode(0, &physmode);
-		mscalex = ((double)GUI_WIDTH / (double)physmode.w);
-		mscaley = ((double)GUI_HEIGHT / (double)physmode.h);
 #else
 		setup_cursor();
 #endif
@@ -419,13 +378,6 @@ namespace sdl
 			cursor = nullptr;
 		}
 
-#ifdef MALI_GPU
-		if (cursor_surface)
-		{
-			SDL_FreeSurface(cursor_surface);
-			cursor_surface = nullptr;
-		}
-#endif
 		// Clear the screen
 		SDL_RenderClear(renderer);
 		SDL_RenderPresent(renderer);
