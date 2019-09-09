@@ -14,7 +14,7 @@ https://github.com/midwan/amiberry/wiki/Compile-SDL2-from-source
 
 If you are running Amiberry under the full Desktop instead, you can install the packages directly from the Raspbian repository instead:
 
-      sudo apt install libsdl2-dev libsdl2-ttf-dev lbisdl2-image-dev
+      sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
 
 With SDL2 installed, you can proceed to install Amiberry as follows:
 
