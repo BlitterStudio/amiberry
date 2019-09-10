@@ -281,7 +281,7 @@ void do_leave_program (void)
 	device_func_free();
 	memory_cleanup();
 	free_shm ();
-  cfgfile_addcfgparam (0);
+	cfgfile_addcfgparam (0);
 	machdep_free();
 	rtarea_free();
 
