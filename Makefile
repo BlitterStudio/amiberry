@@ -233,7 +233,19 @@ USE_SDL2 = 1
       CFLAGS += -march=armv7ve -mtune=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
       NAME  = amiberry-RK3288
     endif
-	
+
+# sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
+else ifeq ($(PLATFORM),sun8i)
+USE_SDL2 = 1
+    CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
+    HAVE_NEON = 1
+    NAME  = amiberry-sun8i
+    ifdef DEBUG
+	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+        MORE_CFLAGS += -fomit-frame-pointer
+endif
 endif
 
 RM     = rm -f
