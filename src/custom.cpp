@@ -123,9 +123,6 @@ static int scandoubled_line;
 static bool vsync_rendered, frame_rendered, frame_shown;
 static int vsynctimeperline;
 static int frameskiptime;
-static bool genlockhtoggle;
-static bool genlockvtoggle;
-static bool graphicsbuffer_retry;
 static int scanlinecount;
 static int cia_hsync;
 static bool toscr_scanline_complex_bplcon1;
@@ -179,6 +176,7 @@ int syncbase;
 static int fmode_saved, fmode;
 uae_u16 beamcon0, new_beamcon0;
 static uae_u16 beamcon0_saved;
+static uae_u16 bplcon3_saved, bplcon4_saved;
 static bool varsync_changed;
 uae_u16 vtotal = MAXVPOS_PAL, htotal = MAXHPOS_PAL;
 static int maxvpos_stored, maxhpos_stored;
@@ -520,27 +518,36 @@ STATIC_INLINE void setclr (uae_u16 *p, uae_u16 val)
 		*p &= ~val;
 }
 
-STATIC_INLINE void set_chipset_mode(void)
+static int expand_sprres(uae_u16 con0, uae_u16 con3)
 {
-	if (currprefs.chipset_mask & CSMASK_AGA) {
-		fmode = fmode_saved;
-	} else {
-		fmode = 0;
-	}
-	sprite_width = GET_SPRITEWIDTH (fmode);
-}
+	int res;
 
-static void update_mirrors (void)
-{
-	aga_mode = (currprefs.chipset_mask & CSMASK_AGA) != 0;
-	direct_rgb = aga_mode;
-	if (currprefs.chipset_mask & CSMASK_AGA)
-		sprite_sprctlmask = 0x01 | 0x08 | 0x10;
-	else if (currprefs.chipset_mask & CSMASK_ECS_DENISE)
-		sprite_sprctlmask = 0x01 | 0x10;
-	else
-		sprite_sprctlmask = 0x01;
-	set_chipset_mode();
+	switch ((con3 >> 6) & 3)
+	{
+	default:
+		res = RES_LORES;
+		break;
+#ifdef ECS_DENISE
+	case 0: /* ECS defaults (LORES,HIRES=LORES sprite,SHRES=HIRES sprite) */
+		if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && GET_RES_DENISE(con0) == RES_SUPERHIRES)
+			res = RES_HIRES;
+		else
+			res = RES_LORES;
+		break;
+#endif
+#ifdef AGA
+	case 1:
+		res = RES_LORES;
+		break;
+	case 2:
+		res = RES_HIRES;
+		break;
+	case 3:
+		res = RES_SUPERHIRES;
+		break;
+#endif
+	}
+	return res;
 }
 
 STATIC_INLINE uae_u8 *pfield_xlateptr (uaecptr plpt, int bytecount)
@@ -573,21 +580,6 @@ static void docols (struct color_entry *colentry)
 #ifdef AGA
 	}
 #endif
-}
-
-extern struct color_entry colors_for_drawing;
-
-void notice_new_xcolors (void)
-{
-	int i;
-
-	update_mirrors ();
-	docols (&current_colors);
-	docols (&colors_for_drawing);
-	for (i = 0; i < (MAXVPOS + 1) * 2; i++) {
-		docols (color_tables[0] + i);
-		docols (color_tables[1] + i);
-	}
 }
 
 static void do_sprites (int currhp);
@@ -943,6 +935,55 @@ up, we accumulate display data; this variable keeps track of how much.
 Thus, once we do call toscr_nbits (which happens at least every 16 bits),
 we can do more work at once.  */
 static int toscr_nbits;
+
+static void set_chipset_mode(void)
+{
+	if (currprefs.chipset_mask & CSMASK_AGA) {
+		fmode = fmode_saved;
+		bplcon3 = bplcon3_saved;
+		bplcon4 = bplcon4_saved;
+	} else {
+		bplcon3_saved = bplcon3;
+		bplcon4_saved = bplcon4;
+		fmode = 0;
+		bplcon4 = 0x0011;
+		bplcon3 = 0x0c00;
+	}
+	sprres = expand_sprres(bplcon0, bplcon3);
+	sprite_width = GET_SPRITEWIDTH(fmode);
+	for (int i = 0; i < MAX_SPRITES; i++) {
+		spr[i].width = sprite_width;
+	}
+	shdelay_disabled = false;
+}
+
+static void update_mirrors (void)
+{
+	aga_mode = (currprefs.chipset_mask & CSMASK_AGA) != 0;
+	direct_rgb = aga_mode;
+	if (currprefs.chipset_mask & CSMASK_AGA)
+		sprite_sprctlmask = 0x01 | 0x08 | 0x10;
+	else if (currprefs.chipset_mask & CSMASK_ECS_DENISE)
+		sprite_sprctlmask = 0x01 | 0x10;
+	else
+		sprite_sprctlmask = 0x01;
+	set_chipset_mode();
+}
+
+extern struct color_entry colors_for_drawing;
+
+void notice_new_xcolors (void)
+{
+	int i;
+
+	update_mirrors ();
+	docols (&current_colors);
+	docols (&colors_for_drawing);
+	for (i = 0; i < (MAXVPOS + 1) * 2; i++) {
+		docols (color_tables[0] + i);
+		docols (color_tables[1] + i);
+	}
+}
 
 static void record_color_change2 (int hpos, int regno, uae_u32 value)
 {
@@ -3367,38 +3408,6 @@ static void record_register_change (int hpos, int regno, uae_u16 value)
 
 typedef int sprbuf_res_t, cclockres_t, hwres_t,	bplres_t;
 
-static int expand_sprres (uae_u16 con0, uae_u16 con3)
-{
-	int res;
-
-	switch ((con3 >> 6) & 3)
-	{
-	default:
-		res = RES_LORES;
-		break;
-#ifdef ECS_DENISE
-	case 0: /* ECS defaults (LORES,HIRES=LORES sprite,SHRES=HIRES sprite) */
-		if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && GET_RES_DENISE (con0) == RES_SUPERHIRES)
-			res = RES_HIRES;
-		else
-			res = RES_LORES;
-		break;
-#endif
-#ifdef AGA
-	case 1:
-		res = RES_LORES;
-		break;
-	case 2:
-		res = RES_HIRES;
-		break;
-	case 3:
-		res = RES_SUPERHIRES;
-		break;
-#endif
-	}
-	return res;
-}
-
 /* handle very rarely needed playfield collision (CLXDAT bit 0) */
 /* only known game needing this is Rotor */
 static void do_playfield_collisions (void)
@@ -3461,7 +3470,6 @@ static void do_sprite_collisions(void)
 {
 	int nr_sprites = curr_drawinfo[next_lineno].nr_sprites;
 	int first = curr_drawinfo[next_lineno].first_sprite_entry;
-	int i;
 	unsigned int collision_mask = clxmask[clxcon >> 12];
 	int bplres = bplcon0_res;
 	hwres_t ddf_left = thisline_decision.plfleft * 2 << bplres;
@@ -3474,9 +3482,8 @@ static void do_sprite_collisions(void)
 	if ((clxdat & 0x1fe) == 0x1fe)
 		return;
 
-	for (i = 0; i < nr_sprites; i++) {
+	for (int i = 0; i < nr_sprites; i++) {
 		struct sprite_entry *e = curr_sprite_entries + first + i;
-		sprbuf_res_t j;
 		sprbuf_res_t minpos = e->pos;
 		sprbuf_res_t maxpos = e->max;
 		hwres_t minp1 = minpos >> sprite_buffer_res;
@@ -3491,9 +3498,9 @@ static void do_sprite_collisions(void)
 		if (minp1 < thisline_decision.plfleft * 2)
 			minpos = thisline_decision.plfleft * 2 << sprite_buffer_res;
 
-		for (j = minpos; j < maxpos; j++) {
+		for (sprbuf_res_t j = minpos; j < maxpos; j++) {
 			int sprpix = spixels[e->first_pixel + j - e->pos] & collision_mask;
-			int k, offs, match = 1;
+			int offs, match = 1;
 
 			if (sprpix == 0)
 				continue;
@@ -3503,12 +3510,11 @@ static void do_sprite_collisions(void)
 			sprpix <<= 1;
 
 			// both odd and even collision bits already set?
-			if ((clxdat & (sprpix << 0)) && (clxdat & (sprpix << 4)))
+			if (((clxdat & (sprpix << 0)) == (sprpix << 0)) && ((clxdat & (sprpix << 4)) == (sprpix << 4)))
 				continue;
 
 			/* Loop over number of playfields.  */
-			for (k = 1; k >= 0; k--) {
-				int l;
+			for (int k = 1; k >= 0; k--) {
 #ifdef AGA
 				int planes = (currprefs.chipset_mask & CSMASK_AGA) ? 8 : 6;
 #else
@@ -3516,7 +3522,7 @@ static void do_sprite_collisions(void)
 #endif
 				if (bplcon0 & 0x400)
 					match = 1;
-				for (l = k; match && l < planes; l += 2) {
+				for (int l = k; match && l < planes; l += 2) {
 					int t = 0;
 					if (l < thisline_decision.nr_planes) {
 						uae_u32 *ldata = (uae_u32 *)(line_data[next_lineno] + 2 * l * MAX_WORDS_PER_LINE);
