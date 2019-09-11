@@ -564,15 +564,15 @@ static void docols (struct color_entry *colentry)
 #ifdef AGA
 	if (currprefs.chipset_mask & CSMASK_AGA) {
 		for (i = 0; i < 256; i++) {
-			int v = color_reg_get (colentry, i);
+			int v = colentry->color_regs_aga[i];
 			if (v < 0 || v > 16777215)
 				continue;
-			colentry->acolors[i] = getxcolor (v);
+			colentry->acolors[i] = CONVERT_RGB (v);
 		}
 	} else {
 #endif
 		for (i = 0; i < 32; i++) {
-			int v = color_reg_get (colentry, i);
+			int v = colentry->color_regs_ecs[i];
 			if (v < 0 || v > 4095)
 				continue;
 			colentry->acolors[i] = getxcolor (v);
