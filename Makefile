@@ -323,7 +323,7 @@ endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
-ASFLAGS += $(CFLAGS) -falign-functions=16
+ASFLAGS += $(CFLAGS)
 
 export CFLAGS +=  -pipe -Wno-shift-overflow -Wno-narrowing $(EXTRA_CFLAGS)
 export CXXFLAGS += $(CFLAGS) -std=gnu++14
