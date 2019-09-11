@@ -59,8 +59,8 @@ const char* sdl_video_driver;
 
 #ifdef USE_DISPMANX
 static unsigned int current_vsync_frame = 0;
-#endif
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
+#endif
 static unsigned long last_synctime;
 static int vsync_modulo = 1;
 static int host_hz = 50;
@@ -1213,8 +1213,9 @@ bool vsync_switchmode(int hz)
 		black_screen_now();
 #endif
 		fpscounter_reset();
+#ifdef USE_DISPMANX		
 		time_per_frame = 1000 * 1000 / (hz);
-		
+#endif
 		if (hz == host_hz)
 			vsync_modulo = 1;
 		else if (hz > host_hz)
@@ -1245,7 +1246,9 @@ bool target_graphics_buffer_update()
 		black_screen_now();
 #endif
 		fpscounter_reset();
+#ifdef USE_DISPMANX
 		time_per_frame = 1000 * 1000 / currprefs.chipset_refreshrate;
+#endif
 	}
 
 	return true;

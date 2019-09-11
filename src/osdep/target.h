@@ -38,9 +38,9 @@ extern int generic_main (int argc, char *argv[]);
 extern int emulating;
 
 extern int z3_base_adr;
-
+#ifdef USE_DISPMANX
 extern unsigned long time_per_frame;
-
+#endif
 void run_gui(void);
 void InGameMessage(const char *msg);
 void init_max_signals(void);
