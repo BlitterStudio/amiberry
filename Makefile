@@ -184,6 +184,14 @@ USE_SDL2 = 1
     AARCH64 = 1
     NAME  = amiberry-n2
 
+# Raspberry Pi 3/4 (SDL2 64-bit)
+else ifeq ($(PLATFORM),pi64)
+USE_SDL2 = 1
+    CFLAGS += -march=armv8-a -mtune=cortex-a72
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DUSE_SDL2
+    AARCH64 = 1
+    NAME  = amiberry-pi64
+
 # Vero 4k (SDL2)
 else ifeq ($(PLATFORM),vero4k)
 USE_SDL2 = 1
@@ -288,7 +296,7 @@ XML_CFLAGS := $(shell xml2-config --cflags )
 LDFLAGS += -flto -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
-    CFLAGS += -O3 -funroll-loops
+    CFLAGS += -Ofast -frename-registers -falign-functions=16
 else
     CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
@@ -315,7 +323,7 @@ endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
-ASFLAGS += $(CFLAGS) -falign-functions
+ASFLAGS += $(CFLAGS) -falign-functions=16
 
 export CFLAGS +=  -pipe -Wno-shift-overflow -Wno-narrowing $(EXTRA_CFLAGS)
 export CXXFLAGS += $(CFLAGS) -std=gnu++14
