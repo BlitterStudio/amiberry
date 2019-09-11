@@ -879,9 +879,9 @@ void show_screen(int mode)
 
 #ifdef USE_DISPMANX
 	if (last_synctime - next_synctime > time_per_frame - 5000)
-		next_synctime = last_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+		next_synctime = last_synctime + time_per_frame * currprefs.gfx_framerate;
 	else
-		next_synctime = next_synctime + time_per_frame * (1 + currprefs.gfx_framerate);
+		next_synctime = next_synctime + time_per_frame * currprefs.gfx_framerate;
 #endif
 }
 
