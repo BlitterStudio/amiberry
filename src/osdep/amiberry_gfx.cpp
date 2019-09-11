@@ -689,6 +689,8 @@ int check_prefs_changed_gfx()
 
 	if (currprefs.gfx_monitor.gfx_size.height != changed_prefs.gfx_monitor.gfx_size.height ||
 		currprefs.gfx_monitor.gfx_size.width != changed_prefs.gfx_monitor.gfx_size.width ||
+		currprefs.gfx_apmode[0].gfx_fullscreen != changed_prefs.gfx_apmode[0].gfx_fullscreen ||
+		currprefs.gfx_apmode[1].gfx_fullscreen != changed_prefs.gfx_apmode[1].gfx_fullscreen ||
 		currprefs.gfx_resolution != changed_prefs.gfx_resolution ||
 		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
 		currprefs.gfx_iscanlines != changed_prefs.gfx_iscanlines ||
@@ -699,6 +701,8 @@ int check_prefs_changed_gfx()
 	{
 		currprefs.gfx_monitor.gfx_size.height = changed_prefs.gfx_monitor.gfx_size.height;
 		currprefs.gfx_monitor.gfx_size.width = changed_prefs.gfx_monitor.gfx_size.width;
+		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
+		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
 		currprefs.gfx_iscanlines = changed_prefs.gfx_iscanlines;
