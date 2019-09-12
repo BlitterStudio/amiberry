@@ -298,7 +298,7 @@ namespace sdl
 		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 		SDL_ShowCursor(SDL_ENABLE);
 #elif USE_SDL2
-#ifdef MALI_GPU
+#ifdef NO_CUSTOM_CURSOR
 #else
 		setup_cursor();
 #endif
