@@ -238,7 +238,7 @@ namespace gcn
     {
         if (mMousePressed)
         {
-            return mHasMouse;
+            return true;
         }
         else
         {
@@ -268,8 +268,7 @@ namespace gcn
     void Button::mouseReleased(MouseEvent& mouseEvent)
     {
         if (mouseEvent.getButton() == MouseEvent::LEFT
-            && mMousePressed
-            && mHasMouse)
+            && mMousePressed)
         {
             mMousePressed = false;
             generateAction();
