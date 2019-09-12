@@ -38,7 +38,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;_FILE_OFFSET_BITS=64;ARMV6T2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp </AdditionalCOptions>
       <AdditionalCPPOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp </AdditionalCPPOptions>
@@ -53,7 +53,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;ARM_HAS_DIV;USE_SDL2;_FILE_OFFSET_BITS=64;ARMV6T2;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard </AdditionalCPPOptions>
