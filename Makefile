@@ -63,7 +63,7 @@ else ifeq ($(PLATFORM),android64)
 # SDL2 with DispmanX targets (RPI only)
 #
 # Raspberry Pi 1/2/3/4 (SDL2, DispmanX)
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2-sdl2-dispmanx rpi3-sdl2-dispmanx rpi4-sdl2-dispmanx))
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2-dispmanx rpi2-sdl2-dispmanx rpi3-sdl2-dispmanx rpi4-sdl2-dispmanx))
     USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
