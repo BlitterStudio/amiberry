@@ -295,44 +295,7 @@ void toggle_inhibit_frame(int bit)
 	ad->inhibit_frame ^= 1 << bit;
 }
 
-#ifdef XLINECHECK
-static void xlinecheck (unsigned int start, unsigned int end)
-{
-	unsigned int xstart = (unsigned int)xlinebuffer + start * gfxvidinfo.drawbuffer.pixbytes;
-	unsigned int xend = (unsigned int)xlinebuffer + end * gfxvidinfo.drawbuffer.pixbytes;
-	unsigned int end1 = (unsigned int)gfxvidinfo.drawbuffer.bufmem + gfxvidinfo.drawbuffer.rowbytes * gfxvidinfo.drawbuffer.height;
-	int min = linetoscr_x_adjust_bytes / gfxvidinfo.drawbuffer.pixbytes;
-	int ok = 1;
-
-	if (xstart >= gfxvidinfo.drawbuffer.emergmem && xstart < gfxvidinfo.drawbuffer.emergmem + 4096 * gfxvidinfo.drawbuffer.pixbytes &&
-		xend >= gfxvidinfo.drawbuffer.emergmem && xend < gfxvidinfo.drawbuffer.emergmem + 4096 * gfxvidinfo.drawbuffer.pixbytes)
-		return;
-
-	if (xstart < (unsigned int)gfxvidinfo.drawbuffer.bufmem || xend < (unsigned int)gfxvidinfo.drawbuffer.bufmem)
-		ok = 0;
-	if (xend > end1 || xstart >= end1)
-		ok = 0;
-	xstart -= (unsigned int)gfxvidinfo.drawbuffer.bufmem;
-	xend -= (unsigned int)gfxvidinfo.drawbuffer.bufmem;
-	if ((xstart % gfxvidinfo.drawbuffer.rowbytes) >= gfxvidinfo.drawbuffer.width * gfxvidinfo.drawbuffer.pixbytes)
-		ok = 0;
-	if ((xend % gfxvidinfo.drawbuffer.rowbytes) >= gfxvidinfo.drawbuffer.width * gfxvidinfo.drawbuffer.pixbytes)
-		ok = 0;
-	if (xstart >= xend)
-		ok = 0;
-	if (xend - xstart > gfxvidinfo.drawbuffer.width * gfxvidinfo.drawbuffer.pixbytes)
-		ok = 0;
-
-	if (!ok) {
-		write_log(_T("*** %d-%d (%dx%dx%d %d) %p\n"),
-			start - min, end - min, gfxvidinfo.drawbuffer.width, gfxvidinfo.drawbuffer.height,
-			gfxvidinfo.drawbuffer.pixbytes, gfxvidinfo.drawbuffer.rowbytes,
-			xlinebuffer);
-	}
-}
-#else
 #define xlinecheck(start, end)
-#endif
 
 static void reset_decision_table(void)
 {
