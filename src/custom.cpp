@@ -957,7 +957,7 @@ static void set_chipset_mode(void)
 	shdelay_disabled = false;
 }
 
-static void update_mirrors (void)
+static void update_mirrors(void)
 {
 	aga_mode = (currprefs.chipset_mask & CSMASK_AGA) != 0;
 	direct_rgb = aga_mode;
@@ -972,16 +972,16 @@ static void update_mirrors (void)
 
 extern struct color_entry colors_for_drawing;
 
-void notice_new_xcolors (void)
+void notice_new_xcolors(void)
 {
 	int i;
 
-	update_mirrors ();
-	docols (&current_colors);
-	docols (&colors_for_drawing);
+	update_mirrors();
+	docols(&current_colors);
+	docols(&colors_for_drawing);
 	for (i = 0; i < (MAXVPOS + 1) * 2; i++) {
-		docols (color_tables[0] + i);
-		docols (color_tables[1] + i);
+		docols(color_tables[0] + i);
+		docols(color_tables[1] + i);
 	}
 }
 
@@ -1535,7 +1535,7 @@ STATIC_INLINE void do_delays_3_ecs (int nbits)
 			}
 		}
 		if (nbits2)
-			do_tosrc(oddeven, 2, nbits2, 0);
+			do_tosrc (oddeven, 2, nbits2, 0);
 	}
 }
 
@@ -5184,6 +5184,7 @@ static void BEAMCON0 (uae_u16 v)
 				write_log (_T("warning: %04X written to BEAMCON0 PC=%08X\n"), v, M68K_GETPC);
 			}
 		}
+		beamcon0_saved = v;
 		calcdiw();
 	}
 }
@@ -5720,6 +5721,7 @@ STATIC_INLINE void SPRxCTLPOS(int num)
 	sprstartstop (s);
 	sprxp = (s->pos & 0xFF) * 2 + (s->ctl & 1);
 	sprxp <<= sprite_buffer_res;
+	s->dblscan = 0;
 	/* Quite a bit salad in this register... */
 #ifdef AGA
 	if (currprefs.chipset_mask & CSMASK_AGA) {
@@ -5969,6 +5971,7 @@ static void checkautoscalecol0 (void)
 
 static void COLOR_WRITE (int hpos, uae_u16 v, int num)
 {
+	bool colzero = false;
 #ifdef AGA
 	if (currprefs.chipset_mask & CSMASK_AGA) {
 		int r,g,b;
@@ -5998,6 +6001,8 @@ static void COLOR_WRITE (int hpos, uae_u16 v, int num)
 			cb = b + (b << 4);
 		}
 		cval = (cr << 16) | (cg << 8) | cb;
+		if (cval && colreg == 0)
+			colzero = true;
 
 		if (cval == current_colors.color_regs_aga[colreg])
 			return;
@@ -6016,6 +6021,8 @@ static void COLOR_WRITE (int hpos, uae_u16 v, int num)
 		v &= 0x8fff;
 		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 			v &= 0xfff;
+		if (num && v == 0)
+			colzero = true;
 		if (current_colors.color_regs_ecs[num] == v)
 			return;
 		if (num == 0)
@@ -7040,7 +7047,7 @@ void init_hardware_for_drawing_frame (void)
 	if (prev_sprite_entries) {
 		int first_pixel = prev_sprite_entries[0].first_pixel;
 		int npixels = prev_sprite_entries[prev_next_sprite_entry].first_pixel - first_pixel;
-		memset (spixels + first_pixel, 0, npixels * sizeof *spixels);
+		memset(spixels + first_pixel, 0, npixels * sizeof *spixels);
 		memset(spixstate.stb + first_pixel, 0, npixels * sizeof *spixstate.stb);
 		if (currprefs.chipset_mask & CSMASK_AGA) {
 			memset(spixstate.stbfm + first_pixel, 0, npixels * sizeof *spixstate.stbfm);
@@ -7672,6 +7679,20 @@ static bool is_custom_vsync (void)
 	return false;
 }
 
+static bool do_render_slice(int mode, int slicecnt, int lastline)
+{
+	draw_lines(lastline, slicecnt);
+	render_screen(true);
+	return true;
+}
+
+static bool do_display_slice(void)
+{
+	show_screen(-1);
+	inputdevice_hsync(true);
+	return true;
+}
+
 static void set_hpos (void)
 {
 	maxhpos = maxhpos_short + lol;
@@ -8160,7 +8181,7 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		CLXCON (0);
 		CLXCON2 (0);
 		setup_fmodes (0);
-		beamcon0 = new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
+		beamcon0 = new_beamcon0 = beamcon0_saved = currprefs.ntscmode ? 0x00 : 0x20;
 		bltstate = BLT_done;
 		blit_interrupt = 1;
 		init_sprites ();
@@ -9413,11 +9434,20 @@ void check_prefs_changed_custom (void)
 		currprefs.picasso96_nocustom != changed_prefs.picasso96_nocustom ||
 		currprefs.ntscmode != changed_prefs.ntscmode) {
 			currprefs.picasso96_nocustom = changed_prefs.picasso96_nocustom;
-			currprefs.chipset_mask = changed_prefs.chipset_mask;
 			if (currprefs.ntscmode != changed_prefs.ntscmode) {
 				currprefs.ntscmode = changed_prefs.ntscmode;
 				new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
 			}
+			if ((changed_prefs.chipset_mask & CSMASK_ECS_AGNUS) && !(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+				new_beamcon0 = beamcon0_saved;
+			} else if (!(changed_prefs.chipset_mask & CSMASK_ECS_AGNUS) && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+				beamcon0_saved = beamcon0;
+				beamcon0 = new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
+				diwhigh = 0;
+				diwhigh_written = 0;
+				bplcon0 &= ~(0x10 | 0x01);
+			}
+			currprefs.chipset_mask = changed_prefs.chipset_mask;
 			init_custom ();
 	}
 
