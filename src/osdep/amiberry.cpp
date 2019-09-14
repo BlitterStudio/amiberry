@@ -622,75 +622,75 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 
 void fetch_datapath(char *out, int size)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/", size - 1);
 }
 
 void fetch_saveimagepath(char *out, int size, int dir)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/savestates/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/savestates/", size - 1);
 }
 
 void fetch_configurationpath(char *out, int size)
 {
 	fixtrailing(config_path);
-	strncpy(out, config_path, size);
+	strncpy(out, config_path, size - 1);
 }
 
 void set_configurationpath(char *newpath)
 {
-	strncpy(config_path, newpath, MAX_DPATH);
+	strncpy(config_path, newpath, MAX_DPATH - 1);
 }
 
 void fetch_controllerspath(char* out, int size)
 {
 	fixtrailing(controllers_path);
-	strncpy(out, controllers_path, size);
+	strncpy(out, controllers_path, size - 1);
 }
 
 void set_controllerspath(char* newpath)
 {
-	strncpy(controllers_path, newpath, MAX_DPATH);
+	strncpy(controllers_path, newpath, MAX_DPATH - 1);
 }
 
 void fetch_retroarchfile(char* out, int size)
 {
-	strncpy(out, retroarch_file, size);
+	strncpy(out, retroarch_file, size - 1);
 }
 
 void set_retroarchfile(char* newpath)
 {
-	strncpy(retroarch_file, newpath, MAX_DPATH);
+	strncpy(retroarch_file, newpath, MAX_DPATH - 1);
 }
 
 void fetch_rompath(char* out, int size)
 {
 	fixtrailing(rom_path);
-	strncpy(out, rom_path, size);
+	strncpy(out, rom_path, size - 1);
 }
 
 void set_rompath(char *newpath)
 {
-	strncpy(rom_path, newpath, MAX_DPATH);
+	strncpy(rom_path, newpath, MAX_DPATH - 1);
 }
 
 void fetch_rp9path(char *out, int size)
 {
 	fixtrailing(rp9_path);
-	strncpy(out, rp9_path, size);
+	strncpy(out, rp9_path, size - 1);
 }
 
 void fetch_savestatepath(char *out, int size)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/savestates/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/savestates/", size - 1);
 }
 
 void fetch_screenshotpath(char *out, int size)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/screenshots/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/screenshots/", size - 1);
 }
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
@@ -753,7 +753,7 @@ int check_configfile(char *file)
 		return 1;
 	}
 
-	strncpy(tmp, file, MAX_DPATH);
+	strncpy(tmp, file, MAX_DPATH - 1);
 	const auto ptr = strstr(tmp, ".uae");
 	if (ptr)
 	{
@@ -775,12 +775,12 @@ void extractFileName(const char * str, char *buffer)
 	while (*p != '/' && p > str)
 		p--;
 	p++;
-	strncpy(buffer, p, MAX_DPATH);
+	strncpy(buffer, p, MAX_DPATH - 1);
 }
 
 void extractPath(char *str, char *buffer)
 {
-	strncpy(buffer, str, MAX_DPATH);
+	strncpy(buffer, str, MAX_DPATH - 1);
 	auto p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p > buffer)
 		p--;
@@ -954,9 +954,9 @@ void load_amiberry_settings(void)
 	char path[MAX_DPATH];
 	int i;
 #ifdef ANDROID
-	strncpy(currentDir, getenv("SDCARD"), MAX_DPATH);
+	strncpy(currentDir, getenv("SDCARD"), MAX_DPATH - 1);
 #else
-	strncpy(currentDir, start_path_data, MAX_DPATH);
+	strncpy(currentDir, start_path_data, MAX_DPATH - 1);
 #endif
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
@@ -1001,8 +1001,8 @@ void load_amiberry_settings(void)
 					|| cfgfile_intval(option, value, "ROMType", &romType, 1)) {
 					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1) {
 						auto tmp = new AvailableROM();
-						strncpy(tmp->Name, romName, sizeof tmp->Name);
-						strncpy(tmp->Path, romPath, sizeof tmp->Path);
+						strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
+						strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
 						tmp->ROMType = romType;
 						lstAvailableROMs.emplace_back(tmp);
 						strncpy(romName, "", sizeof romName);

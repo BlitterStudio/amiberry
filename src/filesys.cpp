@@ -309,7 +309,7 @@ static void fixcharset (TCHAR *s)
 	if (!s)
 		return;
 	ua_fs_copy (tmp, MAX_DPATH, s, '_');
-	au_fs_copy (s, strlen (tmp) + 1, tmp);
+	au_fs_copy (s, int(strlen (tmp)) + 1, tmp);
 }
 
 TCHAR *validatevolumename (TCHAR *s, const TCHAR *def)

@@ -474,8 +474,8 @@ int gui_update()
 {
 	char tmp[MAX_DPATH];
 
-	fetch_savestatepath(savestate_fname, MAX_DPATH);
-	fetch_screenshotpath(screenshot_filename, MAX_DPATH);
+	fetch_savestatepath(savestate_fname, MAX_DPATH - 1);
+	fetch_screenshotpath(screenshot_filename, MAX_DPATH - 1);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
