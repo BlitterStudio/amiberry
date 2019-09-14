@@ -575,7 +575,7 @@ static void docols (struct color_entry *colentry)
 			int v = colentry->color_regs_ecs[i];
 			if (v < 0 || v > 4095)
 				continue;
-			colentry->acolors[i] = getxcolor (v);
+			colentry->acolors[i] = xcolors[v];
 		}
 #ifdef AGA
 	}
