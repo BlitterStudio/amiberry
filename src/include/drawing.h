@@ -142,7 +142,7 @@ struct color_entry {
 STATIC_INLINE xcolnr getxcolor(int c)
 {
 #ifdef AGA
-	if (direct_rgb)
+	if (aga_mode)
 		return CONVERT_RGB(c);
 	else
 #endif
