@@ -3588,7 +3588,8 @@ static void finish_drawing_frame(bool drawlines)
 			draw_status_line(line, i);
 		}
 	}
-
+		
+	// cd32 fmv
 	if (currprefs.cs_cd32fmv) {
 		if (cd32_fmv_active) {
 			cd32_fmv_genlock(vb, &vidinfo->drawbuffer);
@@ -3695,15 +3696,20 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 		last_redraw_point = 0;
 
 		if (ad->framecnt == 0) {
+#ifdef AMIBERRY
 			if (render_tid) {
 				while (render_thread_busy)
 					sleep_millis(1);
 				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
 				uae_sem_wait(&render_sem);
 			}
+#else
+			finish_drawing_frame(drawlines);
+#endif
 		}
 
 		if (quit_program < 0) {
+#ifdef AMIBERRY
 			if (render_tid) {
 				while (render_thread_busy)
 					sleep_millis(1);
@@ -3717,6 +3723,7 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 				uae_sem_destroy(&render_sem);
 				render_sem = 0;
 			}
+#endif
 
 			quit_program = -quit_program;
 			set_inhibit_frame(IHF_QUIT_PROGRAM);
@@ -3730,6 +3737,7 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 			init_drawing_frame();
 		}
 	}
+
 	gui_flicker_led(-1, 0, 0);
 }
 
@@ -3942,6 +3950,7 @@ void drawing_init(void)
 
 	gen_direct_drawing_table();
 
+#ifdef AMIBERRY
 	uae_sem_init(&gui_sem, 0, 1);
 
 	if (render_pipe == nullptr) {
@@ -3954,6 +3963,7 @@ void drawing_init(void)
 	if (render_tid == nullptr && render_pipe != nullptr && render_sem != nullptr) {
 		uae_start_thread(_T("render"), render_thread, nullptr, &render_tid);
 	}
+#endif
 
 #ifdef PICASSO96
 	if (!isrestore())
