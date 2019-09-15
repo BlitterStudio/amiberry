@@ -2528,39 +2528,60 @@ static void pfield_doline (int lineno)
 
 void init_row_map(void)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	static uae_u8 *oldbufmem;
+	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
+	static uae_u8* oldbufmem;
 	static int oldheight, oldpitch;
-	//static bool oldgenlock;
+	static bool oldgenlock, oldburst;
 	int i, j;
 
-	if (vidinfo->drawbuffer.outheight > max_uae_height) {
-		write_log (_T("Resolution too high, aborting\n"));
-		abort ();
+	if (vidinfo->drawbuffer.outheight > max_uae_height)
+	{
+		write_log(_T("Resolution too high, aborting\n"));
+		abort();
 	}
-	if (!row_map) {
+	if (!row_map)
+	{
 		row_map = xmalloc(uae_u8*, max_uae_height + 1);
+		row_map_genlock = xmalloc(uae_u8*, max_uae_height + 1);
 	}
 
 	if (oldbufmem && oldbufmem == vidinfo->drawbuffer.bufmem &&
 		oldheight == vidinfo->drawbuffer.outheight &&
-		oldpitch == vidinfo->drawbuffer.rowbytes)
+		oldpitch == vidinfo->drawbuffer.rowbytes &&
+		oldgenlock == init_genlock_data &&
+		oldburst == (row_map_color_burst_buffer ? 1 : 0))
 		return;
+	xfree(row_map_genlock_buffer);
+	row_map_genlock_buffer = NULL;
+	if (init_genlock_data) {
+		row_map_genlock_buffer = xcalloc(uae_u8, vidinfo->drawbuffer.outwidth * (vidinfo->drawbuffer.outheight + 2));
+	}
 	xfree(row_map_color_burst_buffer);
 	row_map_color_burst_buffer = NULL;
-	if (currprefs.cs_color_burst) {
+	if (currprefs.cs_color_burst)
+	{
 		row_map_color_burst_buffer = xcalloc(uae_u8, vidinfo->drawbuffer.outheight + 2);
 	}
 	j = oldheight == 0 ? max_uae_height : oldheight;
-  for (i = vidinfo->drawbuffer.outheight; i < max_uae_height + 1 && i < j + 1; i++) {
-    row_map[i] = row_tmp;
-  }
-  for (i = 0, j = 0; i < vidinfo->drawbuffer.outheight; i++, j += vidinfo->drawbuffer.rowbytes) {
+	for (i = vidinfo->drawbuffer.outheight; i < max_uae_height + 1 && i < j + 1; i++)
+	{
+		row_map[i] = row_tmp;
+		row_map_genlock[i] = row_tmp;
+	}
+	for (i = 0, j = 0; i < vidinfo->drawbuffer.outheight; i++, j += vidinfo->drawbuffer.rowbytes)
+	{
 		row_map[i] = vidinfo->drawbuffer.bufmem + j;
-  }
+		if (init_genlock_data) {
+			row_map_genlock[i] = row_map_genlock_buffer + vidinfo->drawbuffer.outwidth * (i + 1);
+		} else {
+			row_map_genlock[i] = NULL;
+		}
+	}
 	oldbufmem = vidinfo->drawbuffer.bufmem;
 	oldheight = vidinfo->drawbuffer.outheight;
 	oldpitch = vidinfo->drawbuffer.rowbytes;
+	oldgenlock = init_genlock_data;
+	oldburst = row_map_color_burst_buffer ? 1 : 0;
 }
 
 static void init_aspect_maps(void)
@@ -3052,9 +3073,15 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 	have_color_changes = is_color_changes(dip_for_drawing);
 	sprite_smaller_than_64_inuse = false;
 
-	xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
+	dh = dh_line;
+	xlinebuffer = vidinfo->drawbuffer.linemem;
+	if (xlinebuffer == 0 && do_double
+		&& (border == 0 || have_color_changes))
+		xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
+	if (xlinebuffer == 0)
+		xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
-	//xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
+	xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
 	if (row_map_color_burst_buffer)
 		row_map_color_burst_buffer[gfx_ypos] = bplcolorburst;
