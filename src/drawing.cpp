@@ -1078,9 +1078,9 @@ static void pfield_do_fill_line (int start, int stop, int blank)
 	case 4: fill_line_32 (xlinebuffer, start, stop, blank); break;
 	default: return;
 	}
-	//if (need_genlock_data) {
-	//	memset(xlinebuffer_genlock + start, 0, stop - start);
-	//}
+	if (need_genlock_data) {
+		memset(xlinebuffer_genlock + start, 0, stop - start);
+	}
 }
 
 static void fill_line2 (int startpos, int len)
@@ -1141,9 +1141,9 @@ STATIC_INLINE void fill_line_border (int lineno)
 		int b = hposblank;
 		hposblank = 3;
 		fill_line2(lastpos, vidinfo->drawbuffer.outwidth);
-		//if (need_genlock_data) {
-		//	memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
-		//}
+		if (need_genlock_data) {
+			memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.outwidth);
+		}
 		hposblank = b;
 		return;
 	}
@@ -1152,17 +1152,17 @@ STATIC_INLINE void fill_line_border (int lineno)
 	if (hposblank) {
 		hposblank = 3;
 		fill_line2(lastpos, vidinfo->drawbuffer.outwidth);
-		//if (need_genlock_data) {
-		//	memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
-		//}
+		if (need_genlock_data) {
+			memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.outwidth);
+		}
 		return;
 	}
 	// hblank not visible
 	if (hblank_left_start <= lastpos && hblank_right_stop >= endpos) {
 		fill_line2(lastpos, vidinfo->drawbuffer.outwidth);
-		//if (need_genlock_data) {
-		//	memset(xlinebuffer_genlock + lastpos, 0, gfxvidinfo.drawbuffer.outwidth);
-		//}
+		if (need_genlock_data) {
+			memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.outwidth);
+		}
 		return;
 	}
 
@@ -2535,13 +2535,11 @@ void init_row_map(void)
 	static bool oldgenlock, oldburst;
 	int i, j;
 
-	if (vidinfo->drawbuffer.outheight > max_uae_height)
-	{
+	if (vidinfo->drawbuffer.outheight > max_uae_height) {
 		write_log(_T("Resolution too high, aborting\n"));
 		abort();
 	}
-	if (!row_map)
-	{
+	if (!row_map) {
 		row_map = xmalloc(uae_u8*, max_uae_height + 1);
 		row_map_genlock = xmalloc(uae_u8*, max_uae_height + 1);
 	}
@@ -3122,13 +3120,12 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 		}
 
 		if (dip_for_drawing->nr_sprites) {
-			int i;
 #ifdef AGA
 			if (ce_is_bordersprite(colors_for_drawing.extra) && dp_for_drawing->bordersprite_seen && !ce_is_borderblank(colors_for_drawing.extra))
 				clear_bitplane_border_aga ();
 #endif
 
-			for (i = 0; i < dip_for_drawing->nr_sprites; i++) {
+			for (int i = 0; i < dip_for_drawing->nr_sprites; i++) {
 #ifdef AGA
 				if (currprefs.chipset_mask & CSMASK_AGA)
 					draw_sprites_aga (curr_sprite_entries + dip_for_drawing->first_sprite_entry + i);
@@ -3190,7 +3187,7 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 			if (do_double) {
 				if (dh == dh_buf) {
 				xlinebuffer = row_map[follow_ypos] - linetoscr_x_adjust_pixbytes;
-				//xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
+				xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
 				fill_line_border(lineno);
 			}
 				/* If dh == dh_line, do_flush_line will re-use the rendered line
@@ -3225,7 +3222,9 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 			if (dh == dh_emerg)
 				memcpy(row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.outwidth);
 			else if (dh == dh_buf)
-				memcpy(row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.outwidth);
+				memcpy (row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.outwidth);
+			if (need_genlock_data)
+				memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.outwidth);
 		}
 
 	} else {
