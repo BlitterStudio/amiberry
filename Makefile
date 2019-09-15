@@ -33,6 +33,7 @@ CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
+#USE_LTO=1
 #SANITIZE=1
 
 #
@@ -231,12 +232,17 @@ endif
 DEFS = $(XML_CFLAGS) -DAMIBERRY
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers $(DEFS)
 XML_CFLAGS := $(shell xml2-config --cflags )
-LDFLAGS += -flto -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
     CFLAGS += -Ofast -frename-registers
 else
     CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
+endif
+
+ifdef USE_LTO
+    export CFLAGS=-flto=4 -march=native -floop=strip-mine -floop-block
+    export LDFLAGS=-flto=4 -fuse-linker-plugin -fuse-ld=gold -march=native
 endif
 
 ifdef GCC_PROFILE
