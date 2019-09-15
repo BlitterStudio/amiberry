@@ -4727,7 +4727,7 @@ static void VHPOSW (uae_u16 v)
 
 	if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_model == 68000) {
 		/* Special hack for Smooth Copper in CoolFridge / Upfront demo */
-		int chp = current_hpos_safe();
+		int chp = current_hpos();
 		int hp = v & 0xff;
 		if (chp >= 0x21 && chp <= 0x29 && hp == 0x2d) {
 			hack_delay_shift = 4;

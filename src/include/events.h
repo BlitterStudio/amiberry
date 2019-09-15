@@ -107,15 +107,10 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 	eventtab[ev_hsync].oldcycles = x;
 }
 
-STATIC_INLINE int current_hpos_safe (void)
-{
-    int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
-	return hp;
-}
-
 STATIC_INLINE int current_hpos (void)
 {
-	return current_hpos_safe();
+  int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
+	return hp;
 }
 
 STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
