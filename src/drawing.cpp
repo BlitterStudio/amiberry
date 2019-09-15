@@ -229,6 +229,7 @@ typedef void (*line_draw_func)(int, int, int);
 
 #ifdef AMIBERRY
 static bool screenlocked = false;
+static int next_line_to_render = 0;
 static int linestate_first_undecided = 0;
 #endif
 
@@ -3274,16 +3275,18 @@ static int autoswitch_old_resolution;
 static void init_drawing_frame(void)
 {
 	struct amigadisplay *ad = &adisplays;
-	int i, maxline;
+	int maxline;
 	static int frame_res_old;
 
 	int largest_res = 0;
 	int largest_count = 0;
+	int largest_count_res = 0;
 	for (int i = 0; i <= RES_MAX; i++) {
 		if (resolution_count[i])
 			largest_res = i;
 		if (resolution_count[i] >= largest_count) {
 			largest_count = resolution_count[i];
+			largest_count_res = i;
 		}
 	}
 	if (currprefs.gfx_resolution == changed_prefs.gfx_resolution && lines_count > 0) {
@@ -3449,20 +3452,60 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 	}
 }
 
+#ifdef AMIBERRY
+static void partial_draw_frame(void)
+{
+	struct amigadisplay *ad = &adisplays;
+	if (ad->framecnt == 0) {
+		struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
+		struct vidbuffer *vb = &vidinfo->drawbuffer;
+
+		if(!screenlocked) {
+			if(!lockscr())
+				return;
+			screenlocked = true;
+		}
+  
+  		for (; next_line_to_render < max_ypos_thisframe; ++next_line_to_render) {
+			int i1 = next_line_to_render + min_ypos_for_screen;
+  			int line = next_line_to_render + thisframe_y_adjust_real;
+			int whereline = amiga2aspect_line_map[i1];
+			int wherenext = amiga2aspect_line_map[i1 + 1];
+
+		    if (whereline >= vb->outheight || line >= linestate_first_undecided)
+  				break;
+		    if (whereline < 0)
+			    continue;
+
+			hposblank = 0;
+  			pfield_draw_line (vb, line, whereline, wherenext);
+  		}
+	}
+}
+#endif
+
 static void draw_frame2()
 {
 	struct amigadisplay *ad = &adisplays;
 	if (ad->framecnt == 0) {
 		struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
   		struct vidbuffer *vb = &vidinfo->drawbuffer;
-		
-	for (int i = 0; i < max_ypos_thisframe; i++) {
-		int i1 = i + min_ypos_for_screen;
-		int line = i + thisframe_y_adjust_real;
-		int whereline = amiga2aspect_line_map[i1];
-		int wherenext = amiga2aspect_line_map[i1 + 1];
 
+#ifdef AMIBERRY
+		for (int i = next_line_to_render; i < max_ypos_thisframe; i++) {
+#else
+		for (int i = 0; i < max_ypos_thisframe; i++) {
+#endif
+			int i1 = i + min_ypos_for_screen;
+			int line = i + thisframe_y_adjust_real;
+			int whereline = amiga2aspect_line_map[i1];
+			int wherenext = amiga2aspect_line_map[i1 + 1];
+
+#ifdef AMIBERRY
+			if (whereline >= vb->outheight || line >= linestate_first_undecided)
+#else
 			if (whereline >= vb->outheight)
+#endif
 				break;
 			if (whereline < 0)
 				continue;
@@ -3554,6 +3597,9 @@ static void finish_drawing_frame(bool drawlines)
 	}
 
 	unlockscr();
+#ifdef AMIBERRY
+	next_line_to_render = 0;
+#endif
 }
 
 void check_prefs_picasso(void)
@@ -3761,6 +3807,7 @@ void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 	}
 
 #ifdef AMIBERRY
+	linestate_first_undecided = lineno + 1;
 	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
 		if (currprefs.gfx_vresolution) {
 			if (!(linestate_first_undecided & 0x3e))
@@ -3821,6 +3868,9 @@ void reset_drawing(void)
 	max_diwstop = 0;
 
 	lores_reset();
+#ifdef AMIBERRY
+	linestate_first_undecided = 0;
+#endif
 
 	reset_decision_table();
 
@@ -3866,7 +3916,7 @@ static int render_thread(void *unused)
 		switch (signal) {
 
 		case RENDER_SIGNAL_PARTIAL:
-			draw_frame2();
+			partial_draw_frame();
 			break;
 
 		case RENDER_SIGNAL_FRAME_DONE:
