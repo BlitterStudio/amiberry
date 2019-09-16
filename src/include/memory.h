@@ -651,5 +651,7 @@ extern void mapped_free (addrbank*);
 extern uaecptr strcpyha_safe (uaecptr dst, const uae_char *src);
 extern void memcpyha_safe (uaecptr dst, const uae_u8 *src, int size);
 extern void memcpyha (uaecptr dst, const uae_u8 *src, int size);
+extern void memcpyah_safe (uae_u8 *dst, uaecptr src, int size);
+extern void memcpyah (uae_u8 *dst, uaecptr src, int size);
 
 #endif /* UAE_MEMORY_H */

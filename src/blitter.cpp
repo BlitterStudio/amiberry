@@ -308,9 +308,9 @@ STATIC_INLINE int channel_pos (int cycles)
 	return cycles;
 }
 
-int blitter_channel_state(void)
+int blitter_channel_state (void)
 {
-	return channel_state(blit_cyclecounter);
+	return channel_state (blit_cyclecounter);
 }
 
 static void reset_channel_mods (void)
@@ -365,8 +365,8 @@ static void blitter_interrupt (void)
 
 static void blitter_done (int hpos)
 {
-	ddat1use = 0;
-	bltstate = BLT_done;
+	ddat1use = ddat2use = 0;
+	bltstate = blit_startcycles == 0 || !blitter_cycle_exact || immediate_blits ? BLT_done : BLT_init;
 	blitter_interrupt ();
 	blitter_done_notify (hpos);
 	event2_remevent (ev2_blitter);
@@ -478,7 +478,7 @@ static void blitter_dofast (void)
 	bltstate = BLT_done;
 }
 
-static void blitter_dofast_desc(void)
+static void blitter_dofast_desc (void)
 {
 	int i,j;
 	uaecptr bltadatptr = 0, bltbdatptr = 0, bltcdatptr = 0, bltddatptr = 0;
@@ -508,9 +508,9 @@ static void blitter_dofast_desc(void)
   }
   else 
   {
-	  uae_u32 blitbhold = blt_info.bltbhold;
-	  uaecptr dstp = 0;
-	  int dodst = 0;
+		uae_u32 blitbhold = blt_info.bltbhold;
+		uaecptr dstp = 0;
+		int dodst = 0;
 
 		for (j = 0; j < blt_info.vblitsize; j++) {
 			blitfc = !!(bltcon1 & 0x4);

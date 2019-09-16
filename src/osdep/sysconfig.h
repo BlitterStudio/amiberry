@@ -545,7 +545,7 @@ typedef unsigned char boolean;
 
 typedef unsigned short USHORT;
 
-#define Sleep(x) usleep(x*1000)
+#define Sleep(x) usleep((x)*1000)
 
 /* Some defines to make it easier to compare files with WinUAE */
 #include "uae/string.h"

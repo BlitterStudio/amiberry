@@ -157,6 +157,10 @@ STATIC_INLINE uae_u32 munge24(uae_u32 x)
 extern int cpu_cycles;
 extern int m68k_pc_indirect;
 
+STATIC_INLINE void set_special_exter(uae_u32 x)
+{
+	atomic_or(&regs.spcflags, x);
+}
 STATIC_INLINE void set_special (uae_u32 x)
 {
 	atomic_or(&regs.spcflags, x);

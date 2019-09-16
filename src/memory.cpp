@@ -1755,6 +1755,18 @@ void memcpyha(uaecptr dst, const uae_u8 *src, int size)
 	while (size--)
 		put_byte(dst++, *src++);
 }
+void memcpyah_safe(uae_u8 *dst, uaecptr src, int size)
+{
+	if (!addr_valid (_T("memcpyah"), src, size))
+		return;
+	while (size--)
+		*dst++ = get_byte (src++);
+}
+void memcpyah (uae_u8 *dst, uaecptr src, int size)
+{
+	while (size--)
+		*dst++ = get_byte (src++);
+}
 uaecptr strcpyha_safe(uaecptr dst, const uae_char *src)
 {
 	uaecptr res = dst;

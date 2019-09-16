@@ -11,32 +11,32 @@ int get_cpu_model(void)
 
 static int movec_illg (int regno)
 {
-  int regno2 = regno & 0x7ff;
+	int regno2 = regno & 0x7ff;
 
   if (currprefs.cpu_model == 68010) {
-  	if (regno2 < 2)
-	    return 0;
-  	return 1;
-  } else if (currprefs.cpu_model == 68020) {
+		if (regno2 < 2)
+			return 0;
+		return 1;
+	} else if (currprefs.cpu_model == 68020) {
 		if (regno == 3)
 			return 1; /* 68040/060 only */
-	  /* 4 is >=68040, but 0x804 is in 68020 */
-	  if (regno2 < 4 || regno == 0x804)
-	    return 0;
-	  return 1;
-  } else if (currprefs.cpu_model == 68030) {
+		/* 4 is >=68040, but 0x804 is in 68020 */
+		if (regno2 < 4 || regno == 0x804)
+			return 0;
+		return 1;
+	} else if (currprefs.cpu_model == 68030) {
 		if (regno2 <= 2)
 			return 0;
-  	if (regno == 0x803 || regno == 0x804)
-	    return 0;
-  	return 1;
-  } else if (currprefs.cpu_model == 68040) {
+		if (regno == 0x803 || regno == 0x804)
+			return 0;
+		return 1;
+	} else if (currprefs.cpu_model == 68040) {
 		if (regno == 0x802)
 			return 1; /* 68020/030 only */
-  	if (regno2 < 8) return 0;
-  	return 1;
-  }
-  return 1;
+		if (regno2 < 8) return 0;
+		return 1;
+	}
+	return 1;
 }
 
 int m68k_move2c (int regno, uae_u32 *regp)

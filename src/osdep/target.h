@@ -165,9 +165,13 @@ STATIC_INLINE void atomic_or(volatile uae_atomic * p, uae_u32 v)
 {
 	__sync_or_and_fetch(p, v);
 }
-STATIC_INLINE void atomic_inc(volatile uae_atomic *p)
+STATIC_INLINE uae_atomic atomic_inc(volatile uae_atomic *p)
 {
-	__sync_add_and_fetch(p, 1);
+	return __sync_add_and_fetch(p, 1);
+}
+STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic *p)
+{
+	return __sync_sub_and_fetch(p, 1);
 }
 STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic * p, uae_u32 v)
 {

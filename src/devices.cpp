@@ -200,10 +200,13 @@ void devices_reset(int hardreset)
 
 void devices_vsync_pre(void)
 {
-	blkdev_vsync();
+//	audio_vsync ();
+	blkdev_vsync ();
 	CIA_vsync_prehandler();
 	inputdevice_vsync();
 	filesys_vsync();
+//	sampler_vsync ();
+//	clipboard_vsync ();
 	statusline_vsync();
 
 	execute_device_items(device_vsyncs_pre, device_vsync_pre_cnt);
@@ -258,31 +261,42 @@ void do_leave_program (void)
 	// must be first
 	uae_ppc_free();
 #endif
-	graphics_leave();
-	inputdevice_close();
-	DISK_free();
-	close_sound();
-	dump_counts();
-
+	free_traps();
+	//sampler_free ();
+	graphics_leave ();
+	inputdevice_close ();
+	DISK_free ();
+	close_sound ();
+	dump_counts ();
+#ifdef SERIAL_PORT
+	serial_exit ();
+#endif
 	if (! no_gui)
 		gui_exit ();
 #if defined (USE_SDL1) || defined(USE_SDL2)
 	SDL_Quit();
 #endif
 #ifdef AUTOCONFIG
-	expansion_cleanup();
+	expansion_cleanup ();
 #endif
 #ifdef FILESYS
-	filesys_cleanup();
+	filesys_cleanup ();
 #endif
 #ifdef BSDSOCKET
-	bsdlib_reset();
+	bsdlib_reset ();
 #endif
 	device_func_free();
-	memory_cleanup();
+#ifdef WITH_LUA
+	uae_lua_free ();
+#endif
+	//gfxboard_free();
+	//savestate_free ();
+	memory_cleanup ();
 	free_shm ();
 	cfgfile_addcfgparam (0);
-	machdep_free();
+	machdep_free ();
+	//driveclick_free();
+	//ethernet_enumerate_free();
 	rtarea_free();
 
 	execute_device_items(device_leaves, device_leave_cnt);
@@ -296,19 +310,36 @@ void virtualdevice_init (void)
 	rtarea_setup ();
 #endif
 #ifdef FILESYS
-	rtarea_init();
-	uaeres_install();
-	hardfile_install();
+	rtarea_init ();
+	uaeres_install ();
+	hardfile_install ();
+#endif
+#ifdef SCSIEMU
+	scsi_reset ();
+	scsidev_install ();
+#endif
+#ifdef SANA2
+	netdev_install ();
+#endif
+#ifdef UAESERIAL
+	uaeserialdev_install ();
 #endif
 #ifdef AUTOCONFIG
-	expansion_init();
-	emulib_install();
+	expansion_init ();
+	emulib_install ();
+	//uaeexe_install ();
 #endif
 #ifdef FILESYS
 	filesys_install ();
 #endif
 #if defined (BSDSOCKET)
-	bsdlib_install();
+	bsdlib_install ();
+#endif
+#ifdef WITH_UAENATIVE
+	uaenative_install ();
+#endif
+#ifdef WITH_TABLETLIBRARY
+	tabletlib_install ();
 #endif
 }
 
@@ -318,14 +349,13 @@ void devices_restore_start(void)
 	restore_blkdev_start();
 	changed_prefs.bogomem_size = 0;
 	changed_prefs.chipmem_size = 0;
-	for (int i = 0; i < MAX_RAM_BOARDS; i++)
-	{
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
 		changed_prefs.fastmem[i].size = 0;
 		changed_prefs.z3fastmem[i].size = 0;
 	}
 	changed_prefs.mbresmem_low_size = 0;
 	changed_prefs.mbresmem_high_size = 0;
-  restore_expansion_boards(NULL);
+	restore_expansion_boards(NULL);
 }
 
 void devices_pause(void)
