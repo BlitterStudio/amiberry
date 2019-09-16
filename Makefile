@@ -240,9 +240,14 @@ else
     CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
 
+#LTO is supposed to reduced code size and increased execution speed. For Amiberry, it does not.
+#at least not yet. In fact, the binary is somewhat bigger and almost the same speed. And the link times goes up
+#a lot.
 ifdef USE_LTO
-    export CFLAGS=-flto=4 -march=native -floop=strip-mine -floop-block
-    export LDFLAGS=-flto=4 -fuse-linker-plugin -fuse-ld=gold -march=native
+    export CFLAGS+=-flto=$(shell nproc) -march=native -fuse-ld=gold -flto-partition=1to1
+    export LDFLAGS+=$(CFLAGS)
+    comma= ,
+    export LDFLAGS:=$(filter-out -Wl$(comma)-O1,$(LDFLAGS))
 endif
 
 ifdef GCC_PROFILE
