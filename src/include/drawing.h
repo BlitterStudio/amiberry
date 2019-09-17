@@ -51,7 +51,7 @@ before it appears on-screen. (TW: display emulation now does this automatically)
 #define max_diwlastword (PIXEL_XPOS(0x1d4 >> 1))
 
 extern int lores_shift, shres_shift, interlace_seen;
-extern bool aga_mode, direct_rgb;
+extern bool aga_mode;
 extern int visible_left_border, visible_right_border;
 extern int detected_screen_resolution;
 

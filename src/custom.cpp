@@ -566,10 +566,10 @@ static int expand_sprres(uae_u16 con0, uae_u16 con3)
 
 STATIC_INLINE uae_u8 *pfield_xlateptr (uaecptr plpt, int bytecount)
 {
-  plpt &= chipmem_bank.mask;
-  if((plpt + bytecount) > chipmem_bank.reserved_size)
-    return NULL;
-  return chipmem_bank.baseaddr + plpt;
+	plpt &= chipmem_bank.mask;
+	if((plpt + bytecount) > chipmem_bank.reserved_size)
+		return NULL;
+	return chipmem_bank.baseaddr + plpt;
 }
 static void docols (struct color_entry *colentry)
 {
@@ -974,7 +974,6 @@ static void set_chipset_mode(void)
 static void update_mirrors(void)
 {
 	aga_mode = (currprefs.chipset_mask & CSMASK_AGA) != 0;
-	direct_rgb = aga_mode;
 	if (currprefs.chipset_mask & CSMASK_AGA)
 		sprite_sprctlmask = 0x01 | 0x08 | 0x10;
 	else if (currprefs.chipset_mask & CSMASK_ECS_DENISE)
@@ -8233,6 +8232,7 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		vsync_counter = 0;
 		currprefs.chipset_mask = changed_prefs.chipset_mask;
 		update_mirrors ();
+		blitter_reset ();
 
 		if (hardreset) {
 			if (!aga_mode) {
@@ -8311,7 +8311,6 @@ void custom_reset (bool hardreset, bool keyboardreset)
 	diwstate = DIW_waiting_start;
 
 	dmal = 0;
-//	new_beamcon0 = currprefs.ntscmode ? 0x00 : 0x20;
 #ifdef USE_DISPMANX
 	time_per_frame = 1000 * 1000 / (currprefs.ntscmode ? 60 : 50);
 #endif
@@ -9512,8 +9511,9 @@ void check_prefs_changed_custom (void)
 	currprefs.immediate_blits = changed_prefs.immediate_blits;
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
 	currprefs.collision_level = changed_prefs.collision_level;
+#ifdef AMIBERRY
 	currprefs.fast_copper = changed_prefs.fast_copper;
-
+#endif
 	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod;
 	currprefs.cs_rtc = changed_prefs.cs_rtc;
 	currprefs.cs_cd32cd = changed_prefs.cs_cd32cd;

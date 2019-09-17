@@ -102,7 +102,6 @@ static void lores_reset (void)
 }
 
 bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
-bool direct_rgb;
 
 /* The shift factor to apply when converting between Amiga coordinates and window
    coordinates.  Zero if the resolution is the same, positive if window coordinates
