@@ -954,11 +954,11 @@ static void set_chipset_mode(void)
 {
 	if (currprefs.chipset_mask & CSMASK_AGA) {
 		fmode = fmode_saved;
-		bplcon3 = bplcon3_saved;
-		bplcon4 = bplcon4_saved;
+		//bplcon3 = bplcon3_saved;
+		//bplcon4 = bplcon4_saved;
 	} else {
-		bplcon3_saved = bplcon3;
-		bplcon4_saved = bplcon4;
+		//bplcon3_saved = bplcon3;
+		//bplcon4_saved = bplcon4;
 		fmode = 0;
 		bplcon4 = 0x0011;
 		bplcon3 = 0x0c00;
