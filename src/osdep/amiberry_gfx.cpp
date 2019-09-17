@@ -942,8 +942,8 @@ static int init_colors()
 	red_shift = mask_shift(screen->format->Rmask);
 	green_shift = mask_shift(screen->format->Gmask);
 	blue_shift = mask_shift(screen->format->Bmask);
-	alpha_bits = 0;
-	alpha_shift = 0;
+	alpha_bits = bits_in_mask(screen->format->Amask);
+	alpha_shift = mask_shift(screen->format->Amask);
 
 	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, alpha_bits, alpha_shift, alpha, 0, false);
 	notice_new_xcolors();
