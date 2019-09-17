@@ -667,6 +667,6 @@ bool HelpPanelHD(std::vector<std::string>& helptext)
 	helptext.emplace_back(R"(Activate "CD drive" to emulate CD for CD32. Use "Eject" to remove current CD)");
 	helptext.emplace_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("In current version, WAV, MP3 and FLAC is supported for audio tracks.");
+	helptext.emplace_back("In current version, WAV, MP3 and FLAC are supported for audio tracks.");
 	return true;
 }
