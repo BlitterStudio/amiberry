@@ -66,6 +66,8 @@ static int picasso96_PCT = PCT_Unknown;
 
 static bool picasso_flushpixels(uae_u8 *src, int offset);
 
+int p96refresh_active;
+
 static smp_comm_pipe* render_pipe;
 static volatile int render_thread_state;
 

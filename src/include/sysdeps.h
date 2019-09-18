@@ -368,7 +368,7 @@ extern void gui_message (const TCHAR *,...);
 
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
   __asm__ (
-		"rev %0, %0"
+	"rev %0, %0"
     : "=r" (v) : "0" (v) ); return v;
 }
 
@@ -385,7 +385,7 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
   __asm__ (
-		"rev %w0, %w0"
+	"rev %w0, %w0"
     : "=r" (v) : "0" (v) ); return v;
 }
 
