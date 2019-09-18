@@ -395,6 +395,11 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->cachesize <= 0)
 		p->compfpu = false;
 
+	if (p->vertical_offset < -16)
+		p->vertical_offset = -16;
+	else if (p->vertical_offset > 16)
+		p->vertical_offset = 16;
+	
 	fix_apmodes(p);
 	set_key_configs(p);
 }
