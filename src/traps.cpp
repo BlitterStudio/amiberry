@@ -551,7 +551,11 @@ static void hardware_trap_ack(TrapContext *ctx)
 
 static int hardware_trap_thread(void *arg)
 {
+#ifdef CPU_AARCH64
+	int tid = *(uae_u32*)arg;
+#else
 	int tid = (uae_u32)arg;
+#endif
 	for (;;) {
 		TrapContext *ctx = (TrapContext*)read_comm_pipe_pvoid_blocking(&trap_thread_pipe[tid]);
 		if (!ctx)
