@@ -51,12 +51,12 @@ STATIC_INLINE long uae_start_thread (const TCHAR *name, int(*f) (void *), void *
   return (long)id;
 }
 
-STATIC_INLINE long uae_start_thread_fast (void *(*f) (void *), void *arg, uae_thread_id *foo)
+STATIC_INLINE long uae_start_thread_fast (int(*f) (void *), void *arg, uae_thread_id *foo)
 {
 #ifdef USE_SDL2
-  uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, "StartThreadFast", arg);
+  uae_thread_id id = SDL_CreateThread (f, "StartThreadFast", arg);
 #else
-  uae_thread_id id = SDL_CreateThread ((int (*)(void *))f, arg);
+  uae_thread_id id = SDL_CreateThread (f, arg);
 #endif
   if(foo != NULL)
     *foo = id;

@@ -261,7 +261,7 @@ static TrapContext *current_context;
 /*
 * Thread body for trap context
 */
-static void *trap_thread (void *arg)
+static int trap_thread (void *arg)
 {
 	TrapContext *context = (TrapContext *) arg;
 
@@ -549,7 +549,7 @@ static void hardware_trap_ack(TrapContext *ctx)
 	xfree(ctx);
 }
 
-static void *hardware_trap_thread(void *arg)
+static int hardware_trap_thread(void *arg)
 {
 	int tid = (uae_u32)arg;
 	for (;;) {
