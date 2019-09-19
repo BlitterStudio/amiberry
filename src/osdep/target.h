@@ -142,7 +142,7 @@ STATIC_INLINE uae_atomic atomic_inc(volatile uae_atomic *p)
 }
 STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic *p)
 {
-	return __atomic_sub_fetch(p, 1);
+	return __atomic_sub_fetch(p, 1, __ATOMIC_ACQ_REL);
 }
 STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic *p, uae_u32 v)
 {
