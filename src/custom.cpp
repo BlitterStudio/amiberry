@@ -2216,15 +2216,8 @@ STATIC_INLINE void long_fetch_16 (int plane, int nwords, int weird_number_of_bit
 		shiftbuffer <<= 16;
 		nwords--;
 		if (dma) {
-#ifdef ARMV6_ASSEMBLY
-			__asm__(
-				"ldrh    %[val], [%[pt]], #2   \n\t"
-				"rev16   %[val], %[val]        \n\t"
-				: [val] "=r" (fetchval), [pt] "+r" (real_pt));
-#else
 			fetchval = do_get_mem_word(real_pt);
 			real_pt++;
-#endif
 		}
 	}
 	fetched[plane] = fetchval;
@@ -2287,14 +2280,7 @@ STATIC_INLINE void long_fetch_32 (int plane, int nwords, int weird_number_of_bit
 		}
 		nwords -= 2;
 		if (dma) {
-#ifdef ARMV6_ASSEMBLY
-			__asm__(
-				"ldr     %[val], [%[pt]], #4   \n\t"
-				"rev     %[val], %[val]        \n\t"
-				: [val] "=r" (fetchval), [pt] "+r" (real_pt));
-#else
 			fetchval = do_get_mem_long (real_pt);
-#endif
 			if (unaligned) {
 				fetchval &= 0x0000ffff;
 				fetchval |= fetchval << 16;
