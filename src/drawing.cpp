@@ -277,9 +277,9 @@ static int plf1pri, plf2pri, bplxor, bpland, bpldelay_sh;
 static uae_u32 plf_sprite_mask;
 static int sbasecol[2] = { 16, 16 };
 static int hposblank;
-static bool ecs_genlock_features_active;
-static uae_u8 ecs_genlock_features_mask;
-static bool ecs_genlock_features_colorkey;
+//static bool ecs_genlock_features_active;
+//static uae_u8 ecs_genlock_features_mask;
+//static bool ecs_genlock_features_colorkey;
 static int hsync_shift_hack;
 static bool sprite_smaller_than_64, sprite_smaller_than_64_inuse;
 
@@ -1266,35 +1266,35 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 	return 0;
 }
 
-static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
-{
-	// border color without BRDNTRAN bit set = transparent
-	if (v == 0 && !ce_is_borderntrans(colors_for_drawing.extra))
-		return false;
-	if (ecs_genlock_features_colorkey) {
-		// color key match?
-		if (currprefs.chipset_mask & CSMASK_AGA) {
-			if (colors_for_drawing.color_regs_aga[v] & 0x80000000)
-				return false;
-		} else {
-			if (colors_for_drawing.color_regs_ecs[v] & 0x8000)
-				return false;
-		}
-	}
-	// plane mask match?
-	if (v & ecs_genlock_features_mask)
-		return false;
-	return true;
-}
+//static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
+//{
+//	// border color without BRDNTRAN bit set = transparent
+//	if (v == 0 && !ce_is_borderntrans(colors_for_drawing.extra))
+//		return false;
+//	if (ecs_genlock_features_colorkey) {
+//		// color key match?
+//		if (currprefs.chipset_mask & CSMASK_AGA) {
+//			if (colors_for_drawing.color_regs_aga[v] & 0x80000000)
+//				return false;
+//		} else {
+//			if (colors_for_drawing.color_regs_ecs[v] & 0x8000)
+//				return false;
+//		}
+//	}
+//	// plane mask match?
+//	if (v & ecs_genlock_features_mask)
+//		return false;
+//	return true;
+//}
 // false = transparent
-STATIC_INLINE bool get_genlock_transparency(uae_u8 v)
-{
-	if (!ecs_genlock_features_active) {
-		return v != 0;
-	} else {
-		return get_genlock_very_rare_and_complex_case(v);
-	}
-}
+//STATIC_INLINE bool get_genlock_transparency(uae_u8 v)
+//{
+//	if (!ecs_genlock_features_active) {
+//		return v != 0;
+//	} else {
+//		return get_genlock_very_rare_and_complex_case(v);
+//	}
+//}
 
 #include "linetoscr.cpp.in"
 
@@ -2720,17 +2720,17 @@ static void pfield_expand_dp_bplcon (void)
 		sprite_smaller_than_64_inuse = true;
 	sprite_smaller_than_64 = (dp_for_drawing->fmode & 0x0c) != 0x0c;
 #endif
-	ecs_genlock_features_active = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
-	if (ecs_genlock_features_active) {
-		ecs_genlock_features_colorkey = false;
-		ecs_genlock_features_mask = 0;
-		if (dp_for_drawing->bplcon3 & 0x0800) {
-			ecs_genlock_features_mask = 1 << ((dp_for_drawing->bplcon2 >> 12) & 7);
-		} 
-		if (dp_for_drawing->bplcon3 & 0x0400) {
-			ecs_genlock_features_colorkey = true;
-		}
-	}
+	//ecs_genlock_features_active = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
+	//if (ecs_genlock_features_active) {
+	//	ecs_genlock_features_colorkey = false;
+	//	ecs_genlock_features_mask = 0;
+	//	if (dp_for_drawing->bplcon3 & 0x0800) {
+	//		ecs_genlock_features_mask = 1 << ((dp_for_drawing->bplcon2 >> 12) & 7);
+	//	} 
+	//	if (dp_for_drawing->bplcon3 & 0x0400) {
+	//		ecs_genlock_features_colorkey = true;
+	//	}
+	//}
 	if (pfield_mode_changed)
 		pfield_set_linetoscr();
 	
@@ -3076,13 +3076,7 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 	have_color_changes = is_color_changes(dip_for_drawing);
 	sprite_smaller_than_64_inuse = false;
 
-	dh = dh_line;
-	xlinebuffer = vidinfo->drawbuffer.linemem;
-	if (xlinebuffer == 0 && do_double
-		&& (border == 0 || have_color_changes))
-		xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
-	if (xlinebuffer == 0)
-		xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
+	xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
 	//xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
