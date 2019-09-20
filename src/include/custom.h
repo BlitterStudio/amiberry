@@ -225,8 +225,8 @@ STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 
 extern void fpscounter_reset (void);
 extern unsigned long idletime;
-extern int lightpen_x[2], lightpen_y[2];
-extern int lightpen_cx[2], lightpen_cy[2], lightpen_active, lightpen_enabled, lightpen_enabled2;
+//extern int lightpen_x[2], lightpen_y[2];
+//extern int lightpen_cx[2], lightpen_cy[2], lightpen_active, lightpen_enabled, lightpen_enabled2;
 
 struct customhack {
 	uae_u16 v;

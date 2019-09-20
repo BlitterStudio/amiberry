@@ -124,7 +124,7 @@ static int vsynctimeperline;
 static int frameskiptime;
 static bool genlockhtoggle;
 static bool genlockvtoggle;
-static bool graphicsbuffer_retry;
+//static bool graphicsbuffer_retry;
 static int scanlinecount;
 static int cia_hsync;
 static bool toscr_scanline_complex_bplcon1;
@@ -157,7 +157,7 @@ static uae_u32 sprclx[16], clxmask[16];
 
 static int REGPARAM3 custom_wput_1 (int, uaecptr, uae_u32, int) REGPARAM;
 
-static uae_u16 cregs[256];
+//static uae_u16 cregs[256];
 
 uae_u16 intena, intreq;
 uae_u16 dmacon;
@@ -189,12 +189,12 @@ int syncbase;
 static int fmode_saved, fmode;
 uae_u16 beamcon0, new_beamcon0;
 static uae_u16 beamcon0_saved;
-static uae_u16 bplcon3_saved, bplcon4_saved;
+//static uae_u16 bplcon3_saved, bplcon4_saved;
 static bool varsync_changed;
 uae_u16 vtotal = MAXVPOS_PAL, htotal = MAXHPOS_PAL;
 static int maxvpos_stored, maxhpos_stored;
 static uae_u16 hsstop, hbstrt, hbstop, vsstop, vbstrt, vbstop, hsstrt, vsstrt, hcenter;
-static int ciavsyncmode;
+//static int ciavsyncmode;
 static int diw_hstrt, diw_hstop;
 static int diw_hcounter;
 static uae_u16 refptr;
@@ -231,7 +231,7 @@ static bool sprite_ignoreverticaluntilnextline;
 uaecptr sprite_0;
 int sprite_0_width, sprite_0_height, sprite_0_doubled;
 uae_u32 sprite_0_colors[4];
-static uae_u8 magic_sprite_mask = 0xff;
+//static uae_u8 magic_sprite_mask = 0xff;
 
 static int sprite_vblank_endline = VBLANK_SPRITE_PAL;
 
@@ -262,7 +262,7 @@ static int diwstrt, diwstop, diwhigh;
 static int diwhigh_written;
 static int ddfstrt, ddfstop;
 static int line_cyclebased, badmode, diw_change;
-static int bplcon1_fetch;
+//static int bplcon1_fetch;
 static int hpos_is_zero_bplcon1_hack = -1;
 
 #define SET_LINE_CYCLEBASED line_cyclebased = 2;
