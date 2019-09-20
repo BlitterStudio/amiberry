@@ -104,26 +104,26 @@ public:
 		{
 			if (i == current_port)
 				continue;
-			if (workprefs.jports[i].id == portListIDs[sel])
+			if (changed_prefs.jports[i].id == portListIDs[sel])
 			{
-				workprefs.jports[i].id = JPORT_NONE;
-				workprefs.jports[i].idc.configname[0] = 0;
-				workprefs.jports[i].idc.name[0] = 0;
-				workprefs.jports[i].idc.shortid[0] = 0;
+				changed_prefs.jports[i].id = JPORT_NONE;
+				changed_prefs.jports[i].idc.configname[0] = 0;
+				changed_prefs.jports[i].idc.name[0] = 0;
+				changed_prefs.jports[i].idc.shortid[0] = 0;
 			}
 		}
 	}
 
 	static void set_port(const int sel, const int current_port)
 	{
-		workprefs.jports[current_port].id = portListIDs[sel];
-		if (workprefs.jports[current_port].id == JPORT_NONE)
+		changed_prefs.jports[current_port].id = portListIDs[sel];
+		if (changed_prefs.jports[current_port].id == JPORT_NONE)
 		{
-			workprefs.jports[current_port].idc.configname[0] = 0;
-			workprefs.jports[current_port].idc.name[0] = 0;
-			workprefs.jports[current_port].idc.shortid[0] = 0;
+			changed_prefs.jports[current_port].idc.configname[0] = 0;
+			changed_prefs.jports[current_port].idc.name[0] = 0;
+			changed_prefs.jports[current_port].idc.shortid[0] = 0;
 		}
-		inputdevice_updateconfig(nullptr, &workprefs);
+		inputdevice_updateconfig(nullptr, &changed_prefs);
 		RefreshPanelInput();
 		RefreshPanelCustom();
 	}
@@ -185,30 +185,30 @@ public:
 		else if (actionEvent.getSource() == cboPort0mode)
 		{
 			if (cboPort0mode->getSelected() == 0)
-				workprefs.jports[0].mode = JSEM_MODE_MOUSE;
+				changed_prefs.jports[0].mode = JSEM_MODE_MOUSE;
 			else if (cboPort0mode->getSelected() == 1)
-				workprefs.jports[0].mode = JSEM_MODE_JOYSTICK;
+				changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK;
 			else if (cboPort0mode->getSelected() == 2)
-				workprefs.jports[0].mode = JSEM_MODE_JOYSTICK_CD32;
+				changed_prefs.jports[0].mode = JSEM_MODE_JOYSTICK_CD32;
 			else
-				workprefs.jports[0].mode = JSEM_MODE_DEFAULT;
+				changed_prefs.jports[0].mode = JSEM_MODE_DEFAULT;
 
-			inputdevice_updateconfig(nullptr, &workprefs);
+			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
 			RefreshPanelCustom();
 		}
 		else if (actionEvent.getSource() == cboPort1mode)
 		{
 			if (cboPort1mode->getSelected() == 0)
-				workprefs.jports[1].mode = JSEM_MODE_MOUSE;
+				changed_prefs.jports[1].mode = JSEM_MODE_MOUSE;
 			else if (cboPort1mode->getSelected() == 1)
-				workprefs.jports[1].mode = JSEM_MODE_JOYSTICK;
+				changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
 			else if (cboPort1mode->getSelected() == 2)
-				workprefs.jports[1].mode = JSEM_MODE_JOYSTICK_CD32;
+				changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK_CD32;
 			else
-				workprefs.jports[1].mode = JSEM_MODE_DEFAULT;
+				changed_prefs.jports[1].mode = JSEM_MODE_DEFAULT;
 
-			inputdevice_updateconfig(nullptr, &workprefs);
+			inputdevice_updateconfig(nullptr, &changed_prefs);
 			RefreshPanelInput();
 			RefreshPanelCustom();
 		}
@@ -216,30 +216,30 @@ public:
 		// mousemap drop-down change
 		else if (actionEvent.getSource() == cboPort0mousemode)
 		{
-			workprefs.jports[0].mousemap = cboPort0mousemode->getSelected();
-			inputdevice_updateconfig(nullptr, &workprefs);
+			changed_prefs.jports[0].mousemap = cboPort0mousemode->getSelected();
+			inputdevice_updateconfig(nullptr, &changed_prefs);
 		}
 		else if (actionEvent.getSource() == cboPort1mousemode)
 		{
-			workprefs.jports[1].mousemap = cboPort1mousemode->getSelected();
-			inputdevice_updateconfig(nullptr, &workprefs);
+			changed_prefs.jports[1].mousemap = cboPort1mousemode->getSelected();
+			inputdevice_updateconfig(nullptr, &changed_prefs);
 		}
 
 		else if (actionEvent.getSource() == cboAutofire)
 		{
 			if (cboAutofire->getSelected() == 0)
-				workprefs.input_autofire_linecnt = 0;
+				changed_prefs.input_autofire_linecnt = 0;
 			else if (cboAutofire->getSelected() == 1)
-				workprefs.input_autofire_linecnt = 12 * 312;
+				changed_prefs.input_autofire_linecnt = 12 * 312;
 			else if (cboAutofire->getSelected() == 2)
-				workprefs.input_autofire_linecnt = 8 * 312;
+				changed_prefs.input_autofire_linecnt = 8 * 312;
 			else
-				workprefs.input_autofire_linecnt = 4 * 312;
+				changed_prefs.input_autofire_linecnt = 4 * 312;
 		}
 
 		else if (actionEvent.getSource() == sldMouseSpeed)
 		{
-			workprefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
+			changed_prefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
 			RefreshPanelInput();
 		}
 
@@ -251,7 +251,7 @@ public:
 			else
 				SDL_ANDROID_SetMouseEmulationMode(1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 #endif
-			workprefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
+			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
 		}
 	}
 };
@@ -461,7 +461,7 @@ void RefreshPanelInput()
 	auto idx = 0;
 	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
-		if (workprefs.jports[0].id == portListIDs[i])
+		if (changed_prefs.jports[0].id == portListIDs[i])
 		{
 			idx = i;
 			break;
@@ -473,7 +473,7 @@ void RefreshPanelInput()
 	idx = 0;
 	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
-		if (workprefs.jports[1].id == portListIDs[i])
+		if (changed_prefs.jports[1].id == portListIDs[i])
 		{
 			idx = i;
 			break;
@@ -485,7 +485,7 @@ void RefreshPanelInput()
 	idx = 0;
 	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
-		if (workprefs.jports[2].id == portListIDs[i])
+		if (changed_prefs.jports[2].id == portListIDs[i])
 		{
 			idx = i;
 			break;
@@ -497,7 +497,7 @@ void RefreshPanelInput()
 	idx = 0;
 	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
 	{
-		if (workprefs.jports[3].id == portListIDs[i])
+		if (changed_prefs.jports[3].id == portListIDs[i])
 		{
 			idx = i;
 			break;
@@ -505,38 +505,38 @@ void RefreshPanelInput()
 	}
 	cboPort3->setSelected(idx);
 
-	if (workprefs.input_autofire_linecnt == 0)
+	if (changed_prefs.input_autofire_linecnt == 0)
 		cboAutofire->setSelected(0);
-	else if (workprefs.input_autofire_linecnt > 10 * 312)
+	else if (changed_prefs.input_autofire_linecnt > 10 * 312)
 		cboAutofire->setSelected(1);
-	else if (workprefs.input_autofire_linecnt > 6 * 312)
+	else if (changed_prefs.input_autofire_linecnt > 6 * 312)
 		cboAutofire->setSelected(2);
 	else
 		cboAutofire->setSelected(3);
 
 
-	if (workprefs.jports[0].mode == JSEM_MODE_MOUSE)
+	if (changed_prefs.jports[0].mode == JSEM_MODE_MOUSE)
 		cboPort0mode->setSelected(0);
-	else if (workprefs.jports[0].mode == JSEM_MODE_JOYSTICK)
+	else if (changed_prefs.jports[0].mode == JSEM_MODE_JOYSTICK)
 		cboPort0mode->setSelected(1);
-	else if (workprefs.jports[0].mode == JSEM_MODE_JOYSTICK_CD32)
+	else if (changed_prefs.jports[0].mode == JSEM_MODE_JOYSTICK_CD32)
 		cboPort0mode->setSelected(2);
 	else
 		cboPort0mode->setSelected(3);
 
 
-	if (workprefs.jports[1].mode == JSEM_MODE_MOUSE)
+	if (changed_prefs.jports[1].mode == JSEM_MODE_MOUSE)
 		cboPort1mode->setSelected(0);
-	else if (workprefs.jports[1].mode == JSEM_MODE_JOYSTICK)
+	else if (changed_prefs.jports[1].mode == JSEM_MODE_JOYSTICK)
 		cboPort1mode->setSelected(1);
-	else if (workprefs.jports[1].mode == JSEM_MODE_JOYSTICK_CD32)
+	else if (changed_prefs.jports[1].mode == JSEM_MODE_JOYSTICK_CD32)
 		cboPort1mode->setSelected(2);
 	else
 		cboPort1mode->setSelected(3);
 
 	// changed mouse map
-	cboPort0mousemode->setSelected(workprefs.jports[0].mousemap);
-	cboPort1mousemode->setSelected(workprefs.jports[1].mousemap);
+	cboPort0mousemode->setSelected(changed_prefs.jports[0].mousemap);
+	cboPort1mousemode->setSelected(changed_prefs.jports[1].mousemap);
 
 	if (cboPort0mode->getSelected() == 0)
 	{
@@ -558,7 +558,7 @@ void RefreshPanelInput()
 
 	for (auto i = 0; i < 5; ++i)
 	{
-		if (workprefs.input_joymouse_multiplier == mousespeed_values[i])
+		if (changed_prefs.input_joymouse_multiplier == mousespeed_values[i])
 		{
 			sldMouseSpeed->setValue(i);
 			lblMouseSpeedInfo->setCaption(mousespeed_list[i]);
@@ -566,7 +566,7 @@ void RefreshPanelInput()
 		}
 	}
 
-	chkMouseHack->setSelected(workprefs.input_tablet == TABLET_MOUSEHACK);
+	chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 }
 
 bool HelpPanelInput(std::vector<std::string> &helptext)

@@ -141,34 +141,34 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optSoundDisabled)
-			workprefs.produce_sound = 0;
+			changed_prefs.produce_sound = 0;
 		else if (actionEvent.getSource() == optSoundDisabledEmu)
-			workprefs.produce_sound = 1;
+			changed_prefs.produce_sound = 1;
 		else if (actionEvent.getSource() == optSoundEmulated)
-			workprefs.produce_sound = 2;
+			changed_prefs.produce_sound = 2;
 		else if (actionEvent.getSource() == optSoundEmulatedBest)
-			workprefs.produce_sound = 3;
+			changed_prefs.produce_sound = 3;
 
 		else if (actionEvent.getSource() == optMono)
-			workprefs.sound_stereo = 0;
+			changed_prefs.sound_stereo = 0;
 		else if (actionEvent.getSource() == optStereo)
-			workprefs.sound_stereo = 1;
+			changed_prefs.sound_stereo = 1;
 
 		else if (actionEvent.getSource() == cboFrequency)
 		{
 			switch (cboFrequency->getSelected())
 			{
 			case 0:
-				workprefs.sound_freq = 11025;
+				changed_prefs.sound_freq = 11025;
 				break;
 			case 1:
-				workprefs.sound_freq = 22050;
+				changed_prefs.sound_freq = 22050;
 				break;
 			case 2:
-				workprefs.sound_freq = 32000;
+				changed_prefs.sound_freq = 32000;
 				break;
 			case 3:
-				workprefs.sound_freq = 44100;
+				changed_prefs.sound_freq = 44100;
 				break;
 			default: 
 				break;
@@ -176,30 +176,30 @@ public:
 		}
 
 		else if (actionEvent.getSource() == cboInterpolation)
-			workprefs.sound_interpol = cboInterpolation->getSelected();
+			changed_prefs.sound_interpol = cboInterpolation->getSelected();
 
 		else if (actionEvent.getSource() == cboFilter)
 		{
 			switch (cboFilter->getSelected())
 			{
 			case 0:
-				workprefs.sound_filter = FILTER_SOUND_OFF;
+				changed_prefs.sound_filter = FILTER_SOUND_OFF;
 				break;
 			case 1:
-				workprefs.sound_filter = FILTER_SOUND_EMUL;
-				workprefs.sound_filter_type = 0;
+				changed_prefs.sound_filter = FILTER_SOUND_EMUL;
+				changed_prefs.sound_filter_type = 0;
 				break;
 			case 2:
-				workprefs.sound_filter = FILTER_SOUND_EMUL;
-				workprefs.sound_filter_type = 1;
+				changed_prefs.sound_filter = FILTER_SOUND_EMUL;
+				changed_prefs.sound_filter_type = 1;
 				break;
 			case 3:
-				workprefs.sound_filter = FILTER_SOUND_ON;
-				workprefs.sound_filter_type = 0;
+				changed_prefs.sound_filter = FILTER_SOUND_ON;
+				changed_prefs.sound_filter_type = 0;
 				break;
 			case 4:
-				workprefs.sound_filter = FILTER_SOUND_ON;
-				workprefs.sound_filter_type = 1;
+				changed_prefs.sound_filter = FILTER_SOUND_ON;
+				changed_prefs.sound_filter_type = 1;
 				break;
 			default: 
 				break;
@@ -209,23 +209,23 @@ public:
 		else if (actionEvent.getSource() == sldSeparation)
 		{
 			if (curr_separation_idx != int(sldSeparation->getValue())
-				&& workprefs.sound_stereo > 0)
+				&& changed_prefs.sound_stereo > 0)
 			{
 				curr_separation_idx = int(sldSeparation->getValue());
-				workprefs.sound_stereo_separation = 10 - curr_separation_idx;
+				changed_prefs.sound_stereo_separation = 10 - curr_separation_idx;
 			}
 		}
 
 		else if (actionEvent.getSource() == sldStereoDelay)
 		{
 			if (curr_stereodelay_idx != int(sldStereoDelay->getValue())
-				&& workprefs.sound_stereo > 0)
+				&& changed_prefs.sound_stereo > 0)
 			{
 				curr_stereodelay_idx = int(sldStereoDelay->getValue());
 				if (curr_stereodelay_idx > 0)
-					workprefs.sound_mixed_stereo_delay = curr_stereodelay_idx;
+					changed_prefs.sound_mixed_stereo_delay = curr_stereodelay_idx;
 				else
-					workprefs.sound_mixed_stereo_delay = -1;
+					changed_prefs.sound_mixed_stereo_delay = -1;
 			}
 		}
 
@@ -383,7 +383,7 @@ void RefreshPanelSound()
 {
 	char tmp[10];
 
-	switch (workprefs.produce_sound)
+	switch (changed_prefs.produce_sound)
 	{
 	case 0:
 		optSoundDisabled->setSelected(true);
@@ -401,12 +401,12 @@ void RefreshPanelSound()
 		break;
 	}
 
-	if (workprefs.sound_stereo == 0)
+	if (changed_prefs.sound_stereo == 0)
 		optMono->setSelected(true);
-	else if (workprefs.sound_stereo == 1)
+	else if (changed_prefs.sound_stereo == 1)
 		optStereo->setSelected(true);
 
-	switch (workprefs.sound_freq)
+	switch (changed_prefs.sound_freq)
 	{
 	case 11025:
 		cboFrequency->setSelected(0);
@@ -422,43 +422,43 @@ void RefreshPanelSound()
 		break;
 	}
 
-	cboInterpolation->setSelected(workprefs.sound_interpol);
+	cboInterpolation->setSelected(changed_prefs.sound_interpol);
 
 	auto i = 0;
-	switch (workprefs.sound_filter)
+	switch (changed_prefs.sound_filter)
 	{
 	case 0:
 		i = 0;
 		break;
 	case 1:
-		i = workprefs.sound_filter_type ? 2 : 1;
+		i = changed_prefs.sound_filter_type ? 2 : 1;
 		break;
 	case 2:
-		i = workprefs.sound_filter_type ? 4 : 3;
+		i = changed_prefs.sound_filter_type ? 4 : 3;
 		break;
 	default: 
 		break;
 	}
 	cboFilter->setSelected(i);
 
-	if (workprefs.sound_stereo == 0)
+	if (changed_prefs.sound_stereo == 0)
 	{
 		curr_separation_idx = 0;
 		curr_stereodelay_idx = 0;
 	}
 	else
 	{
-		curr_separation_idx = 10 - workprefs.sound_stereo_separation;
-		curr_stereodelay_idx = workprefs.sound_mixed_stereo_delay > 0 ? workprefs.sound_mixed_stereo_delay : 0;
+		curr_separation_idx = 10 - changed_prefs.sound_stereo_separation;
+		curr_stereodelay_idx = changed_prefs.sound_mixed_stereo_delay > 0 ? changed_prefs.sound_mixed_stereo_delay : 0;
 	}
 
 	sldSeparation->setValue(curr_separation_idx);
-	sldSeparation->setEnabled(workprefs.sound_stereo >= 1);
+	sldSeparation->setEnabled(changed_prefs.sound_stereo >= 1);
 	snprintf(tmp, 10, "%d%%", 100 - 10 * curr_separation_idx);
 	lblSeparationInfo->setCaption(tmp);
 
 	sldStereoDelay->setValue(curr_stereodelay_idx);
-	sldStereoDelay->setEnabled(workprefs.sound_stereo >= 1);
+	sldStereoDelay->setEnabled(changed_prefs.sound_stereo >= 1);
 	if (curr_stereodelay_idx <= 0)
 		lblStereoDelayInfo->setCaption("-");
 	else

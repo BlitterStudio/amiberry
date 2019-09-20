@@ -357,9 +357,9 @@ bool EditFilesysVirtual(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uci = &workprefs.mountconfig[unit_no];
+		uci = &changed_prefs.mountconfig[unit_no];
 		const auto ci = &uci->ci;
-		get_filesys_unitconfig(&workprefs, unit_no, &mi);
+		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		strdevname.assign(ci->devname);
 		txtDevice->setText(strdevname);
@@ -407,7 +407,7 @@ bool EditFilesysVirtual(const int unit_no)
 		ci.readonly = !chkReadWrite->isSelected();
 		ci.bootpri = bp;
 
-		uci = add_filesys_config(&workprefs, unit_no, &ci);
+		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
 			filesys_media_change (ci.rootdir, 1, uci);

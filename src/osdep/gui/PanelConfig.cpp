@@ -48,7 +48,7 @@ bool LoadConfigByName(const char *name)
 		{
 			txtName->setText(config->Name);
 			txtDesc->setText(config->Description);
-			target_cfgfile_load(&workprefs, config->FullPath, 0, 0);
+			target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
 			strncpy(last_active_config, config->Name, MAX_DPATH);
 			DisableResume();
 			RefreshAllPanels();
@@ -121,13 +121,13 @@ public:
 			if (emulating)
 			{
 				DisableResume();
-				target_cfgfile_load(&workprefs, ConfigFilesList[i]->FullPath, 0, 0);
+				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
 				RefreshAllPanels();
 			}
 			else
 			{
-				target_cfgfile_load(&workprefs, ConfigFilesList[i]->FullPath, 0, 0);
+				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
 				RefreshAllPanels();
 			}
@@ -143,8 +143,8 @@ public:
 				fetch_configurationpath(filename, MAX_DPATH);
 				strncat(filename, txtName->getText().c_str(), MAX_DPATH - 1);
 				strncat(filename, ".uae", MAX_DPATH - 1);
-				strncpy(workprefs.description, txtDesc->getText().c_str(), 256);
-				if (cfgfile_save(&workprefs, filename, 0))
+				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 256);
+				if (cfgfile_save(&changed_prefs, filename, 0))
 					RefreshPanelConfig();
 			}
 		}
@@ -198,7 +198,7 @@ public:
 			//-----------------------------------------------
 			// Second click on selected config -> Load it and start emulation
 			// ----------------------------------------------
-			target_cfgfile_load(&workprefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
+			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
 			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
 
 			if (emulating)
@@ -303,7 +303,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 		}
 	}
 	txtName->setText(last_active_config);
-	txtDesc->setText(workprefs.description);    
+	txtDesc->setText(changed_prefs.description);    
 	ensureVisible = -1;
 	RefreshPanelConfig();
 }

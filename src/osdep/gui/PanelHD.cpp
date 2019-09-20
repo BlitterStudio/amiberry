@@ -72,10 +72,10 @@ static int GetHDType(const int index)
 {
 	struct mountedinfo mi{};
 
-	auto type = get_filesys_unitconfig(&workprefs, index, &mi);
+	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
 	if (type < 0)
 	{
-		const auto uci = &workprefs.mountconfig[index];
+		const auto uci = &changed_prefs.mountconfig[index];
 		type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
 	}
 	return type;
@@ -113,7 +113,7 @@ public:
 		{
 			if (actionEvent.getSource() == listCmdDelete[i])
 			{
-				kill_filesys_unitconfig(&workprefs, i);
+				kill_filesys_unitconfig(&changed_prefs, i);
 				gui_force_rtarea_hdchange();
 				break;
 			}
@@ -217,15 +217,15 @@ public:
 	{
 		if (actionEvent.getSource() == chkCD)
 		{
-			if (workprefs.cdslots[0].inuse)
+			if (changed_prefs.cdslots[0].inuse)
 			{
-				workprefs.cdslots[0].inuse = false;
-				workprefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+				changed_prefs.cdslots[0].inuse = false;
+				changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
 			}
 			else
 			{
-				workprefs.cdslots[0].inuse = true;
-				workprefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+				changed_prefs.cdslots[0].inuse = true;
+				changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 			}
 			RefreshPanelHD();
 			RefreshPanelQuickstart();
@@ -246,25 +246,25 @@ public:
 			//---------------------------------------
 			// Eject CD from drive
 			//---------------------------------------
-			strncpy(workprefs.cdslots[0].name, "", MAX_DPATH);
+			strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
 		{
 			char tmp[MAX_DPATH];
 
-			if (strlen(workprefs.cdslots[0].name) > 0)
-				strncpy(tmp, workprefs.cdslots[0].name, MAX_DPATH);
+			if (strlen(changed_prefs.cdslots[0].name) > 0)
+				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
 				strcpy(tmp, currentDir);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
-				if (strncmp(workprefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
+				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
-					strncpy(workprefs.cdslots[0].name, tmp, sizeof(workprefs.cdslots[0].name));
-					workprefs.cdslots[0].inuse = true;
-					workprefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
+					changed_prefs.cdslots[0].inuse = true;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
 					extractPath(tmp, currentDir);
 
@@ -289,15 +289,15 @@ public:
 		if (actionEvent.getSource() == sldCDVol)
 		{
 			const auto newvol = 100 - int(sldCDVol->getValue());
-			if (workprefs.sound_volume_cd != newvol)
+			if (changed_prefs.sound_volume_cd != newvol)
 			{
-				workprefs.sound_volume_cd = newvol;
+				changed_prefs.sound_volume_cd = newvol;
 				RefreshPanelHD();
 			}
 		}
 		else if (actionEvent.getSource() == chkHDReadOnly)
 		{
-			workprefs.harddrive_read_only = chkHDReadOnly->isSelected();
+			changed_prefs.harddrive_read_only = chkHDReadOnly->isSelected();
 		}
 	}
 };
@@ -321,18 +321,18 @@ public:
 
 			if (idx < 0)
 			{
-				strncpy(workprefs.cdslots[0].name, "", MAX_DPATH);
+				strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
 				AdjustDropDownControls();
 			}
 			else
 			{
-				if (cdfileList.getElementAt(idx) != workprefs.cdslots[0].name)
+				if (cdfileList.getElementAt(idx) != changed_prefs.cdslots[0].name)
 				{
-					strncpy(workprefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof workprefs.cdslots[0].name);
-					workprefs.cdslots[0].inuse = true;
-					workprefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof changed_prefs.cdslots[0].name);
+					changed_prefs.cdslots[0].inuse = true;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
-					lstMRUCDList.insert(lstMRUCDList.begin(), workprefs.cdslots[0].name);
+					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
 					bIgnoreListChange = true;
 					cboCDFile->setSelected(0);
 					bIgnoreListChange = false;
@@ -551,11 +551,11 @@ void ExitPanelHD()
 static void AdjustDropDownControls()
 {
 	cboCDFile->clearSelected();
-	if (workprefs.cdslots[0].inuse && strlen(workprefs.cdslots[0].name) > 0)
+	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
 		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
 		{
-			if (strcmp(lstMRUCDList[i].c_str(), workprefs.cdslots[0].name) == 0)
+			if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
 			{
 				cboCDFile->setSelected(i);
 				break;
@@ -574,11 +574,11 @@ void RefreshPanelHD()
 
 	for (auto row = 0; row < MAX_HD_DEVICES; ++row)
 	{
-		if (row < workprefs.mountitems)
+		if (row < changed_prefs.mountitems)
 		{
-			auto uci = &workprefs.mountconfig[row];
+			auto uci = &changed_prefs.mountconfig[row];
 			const auto ci = &uci->ci;
-			auto type = get_filesys_unitconfig(&workprefs, row, &mi);
+			auto type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
 				type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
@@ -632,16 +632,16 @@ void RefreshPanelHD()
 		}
 	}
 
-	chkHDReadOnly->setSelected(workprefs.harddrive_read_only);
+	chkHDReadOnly->setSelected(changed_prefs.harddrive_read_only);
 
-	chkCD->setSelected(workprefs.cdslots[0].inuse);
-	cmdCDEject->setEnabled(workprefs.cdslots[0].inuse);
-	cmdCDSelect->setEnabled(workprefs.cdslots[0].inuse);
-	cboCDFile->setEnabled(workprefs.cdslots[0].inuse);
-	sldCDVol->setEnabled(workprefs.cdslots[0].inuse);
+	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
+	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
+	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
+	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
+	sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
 
-	sldCDVol->setValue(100 - workprefs.sound_volume_cd);
-	snprintf(tmp, 32, "%d %%", 100 - workprefs.sound_volume_cd);
+	sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
+	snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);
 	lblCDVolInfo->setCaption(tmp);
 }
 

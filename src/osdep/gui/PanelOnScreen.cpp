@@ -48,74 +48,74 @@ class OnScreenActionListener : public gcn::ActionListener
     {
         if (actionEvent.getSource() == checkBox_onscreen_control) {
             if (checkBox_onscreen_control->isSelected())
-                workprefs.onScreen=1;
+                changed_prefs.onScreen=1;
             else
-                workprefs.onScreen=0;
+                changed_prefs.onScreen=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_textinput) {
             if (checkBox_onscreen_textinput->isSelected())
-                workprefs.onScreen_textinput=1;
+                changed_prefs.onScreen_textinput=1;
             else
-                workprefs.onScreen_textinput=0;
+                changed_prefs.onScreen_textinput=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_dpad) {
             if (checkBox_onscreen_dpad->isSelected())
-                workprefs.onScreen_dpad=1;
+                changed_prefs.onScreen_dpad=1;
             else
-                workprefs.onScreen_dpad=0;
+                changed_prefs.onScreen_dpad=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_button1) {
             if (checkBox_onscreen_button1->isSelected())
-                workprefs.onScreen_button1=1;
+                changed_prefs.onScreen_button1=1;
             else
-                workprefs.onScreen_button1=0;
+                changed_prefs.onScreen_button1=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_button2) {
             if (checkBox_onscreen_button2->isSelected())
-                workprefs.onScreen_button2=1;
+                changed_prefs.onScreen_button2=1;
             else
-                workprefs.onScreen_button2=0;
+                changed_prefs.onScreen_button2=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_button3) {
             if (checkBox_onscreen_button3->isSelected())
-                workprefs.onScreen_button3=1;
+                changed_prefs.onScreen_button3=1;
             else
-                workprefs.onScreen_button3=0;
+                changed_prefs.onScreen_button3=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_button4) {
             if (checkBox_onscreen_button4->isSelected())
-                workprefs.onScreen_button4=1;
+                changed_prefs.onScreen_button4=1;
             else
-                workprefs.onScreen_button4=0;
+                changed_prefs.onScreen_button4=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_button5) {
             if (checkBox_onscreen_button5->isSelected())
-                workprefs.onScreen_button5=1;
+                changed_prefs.onScreen_button5=1;
             else
-                workprefs.onScreen_button5=0;
+                changed_prefs.onScreen_button5=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_button6) {
             if (checkBox_onscreen_button6->isSelected())
-                workprefs.onScreen_button6=1;
+                changed_prefs.onScreen_button6=1;
             else
-                workprefs.onScreen_button6=0;
+                changed_prefs.onScreen_button6=0;
         }
         if (actionEvent.getSource() == checkBox_onscreen_custompos) {
             if (checkBox_onscreen_custompos->isSelected())
-                workprefs.custom_position=1;
+                changed_prefs.custom_position=1;
             else
-                workprefs.custom_position=0;
+                changed_prefs.custom_position=0;
         }
         if (actionEvent.getSource() == checkBox_floatingJoystick)
             if (checkBox_floatingJoystick->isSelected())
-                workprefs.floatingJoystick=1;
+                changed_prefs.floatingJoystick=1;
             else
-                workprefs.floatingJoystick=0;
+                changed_prefs.floatingJoystick=0;
         if (actionEvent.getSource() == checkBox_disableMenuVKeyb)
             if (checkBox_disableMenuVKeyb->isSelected())
-                workprefs.disableMenuVKeyb=1;
+                changed_prefs.disableMenuVKeyb=1;
             else
-                workprefs.disableMenuVKeyb=0;
+                changed_prefs.disableMenuVKeyb=0;
         RefreshPanelOnScreen();
     }
 };
@@ -137,41 +137,41 @@ class WindowPosButtonActionListener : public gcn::ActionListener
 public:
     void action(const gcn::ActionEvent& actionEvent) {
         if (actionEvent.getSource() == button_onscreen_ok) {
-            workprefs.pos_x_textinput = window_pos_textinput->getX();
-            workprefs.pos_y_textinput = window_pos_textinput->getY();
-            workprefs.pos_x_dpad = window_pos_dpad->getX();
-            workprefs.pos_y_dpad = window_pos_dpad->getY();
-            workprefs.pos_x_button1 = window_pos_button1->getX();
-            workprefs.pos_y_button1 = window_pos_button1->getY();
-            workprefs.pos_x_button2 = window_pos_button2->getX();
-            workprefs.pos_y_button2 = window_pos_button2->getY();
-            workprefs.pos_x_button3 = window_pos_button3->getX();
-            workprefs.pos_y_button3 = window_pos_button3->getY();
-            workprefs.pos_x_button4 = window_pos_button4->getX();
-            workprefs.pos_y_button4 = window_pos_button4->getY();
-            workprefs.pos_x_button5 = window_pos_button5->getX();
-            workprefs.pos_y_button5 = window_pos_button5->getY();
-            workprefs.pos_x_button6 = window_pos_button6->getX();
-            workprefs.pos_y_button6 = window_pos_button6->getY();
+            changed_prefs.pos_x_textinput = window_pos_textinput->getX();
+            changed_prefs.pos_y_textinput = window_pos_textinput->getY();
+            changed_prefs.pos_x_dpad = window_pos_dpad->getX();
+            changed_prefs.pos_y_dpad = window_pos_dpad->getY();
+            changed_prefs.pos_x_button1 = window_pos_button1->getX();
+            changed_prefs.pos_y_button1 = window_pos_button1->getY();
+            changed_prefs.pos_x_button2 = window_pos_button2->getX();
+            changed_prefs.pos_y_button2 = window_pos_button2->getY();
+            changed_prefs.pos_x_button3 = window_pos_button3->getX();
+            changed_prefs.pos_y_button3 = window_pos_button3->getY();
+            changed_prefs.pos_x_button4 = window_pos_button4->getX();
+            changed_prefs.pos_y_button4 = window_pos_button4->getY();
+            changed_prefs.pos_x_button5 = window_pos_button5->getX();
+            changed_prefs.pos_y_button5 = window_pos_button5->getY();
+            changed_prefs.pos_x_button6 = window_pos_button6->getX();
+            changed_prefs.pos_y_button6 = window_pos_button6->getY();
             window_setup_position->setVisible(false);
         }
         if (actionEvent.getSource() == button_onscreen_reset) {
-            workprefs.pos_x_textinput = 0;
-            workprefs.pos_y_textinput = 0;
-            workprefs.pos_x_dpad = 4;
-            workprefs.pos_y_dpad = 215;
-            workprefs.pos_x_button1 = 430;
-            workprefs.pos_y_button1 = 286;
-            workprefs.pos_x_button2 = 378;
-            workprefs.pos_y_button2 = 286;
-            workprefs.pos_x_button3 = 430;
-            workprefs.pos_y_button3 = 214;
-            workprefs.pos_x_button4 = 378;
-            workprefs.pos_y_button4 = 214;
-            workprefs.pos_x_button5 = 430;
-            workprefs.pos_y_button5 = 142;
-            workprefs.pos_x_button6 = 378;
-            workprefs.pos_y_button6 = 142;
+            changed_prefs.pos_x_textinput = 0;
+            changed_prefs.pos_y_textinput = 0;
+            changed_prefs.pos_x_dpad = 4;
+            changed_prefs.pos_y_dpad = 215;
+            changed_prefs.pos_x_button1 = 430;
+            changed_prefs.pos_y_button1 = 286;
+            changed_prefs.pos_x_button2 = 378;
+            changed_prefs.pos_y_button2 = 286;
+            changed_prefs.pos_x_button3 = 430;
+            changed_prefs.pos_y_button3 = 214;
+            changed_prefs.pos_x_button4 = 378;
+            changed_prefs.pos_y_button4 = 214;
+            changed_prefs.pos_x_button5 = 430;
+            changed_prefs.pos_y_button5 = 142;
+            changed_prefs.pos_x_button6 = 378;
+            changed_prefs.pos_y_button6 = 142;
             window_setup_position->setVisible(false);
         }
     }
@@ -356,82 +356,82 @@ void ExitPanelOnScreen(void)
 
 void RefreshPanelOnScreen(void)
 {
-    if (workprefs.onScreen==0)
+    if (changed_prefs.onScreen==0)
         checkBox_onscreen_control->setSelected(false);
-    else if (workprefs.onScreen==1)
+    else if (changed_prefs.onScreen==1)
         checkBox_onscreen_control->setSelected(true);
-    if (workprefs.onScreen_textinput==0)
+    if (changed_prefs.onScreen_textinput==0)
         checkBox_onscreen_textinput->setSelected(false);
-    else if (workprefs.onScreen_textinput==1)
+    else if (changed_prefs.onScreen_textinput==1)
         checkBox_onscreen_textinput->setSelected(true);
-    if (workprefs.onScreen_dpad==0)
+    if (changed_prefs.onScreen_dpad==0)
         checkBox_onscreen_dpad->setSelected(false);
-    else if (workprefs.onScreen_dpad==1)
+    else if (changed_prefs.onScreen_dpad==1)
         checkBox_onscreen_dpad->setSelected(true);
-    if (workprefs.onScreen_button1==0)
+    if (changed_prefs.onScreen_button1==0)
         checkBox_onscreen_button1->setSelected(false);
-    else if (workprefs.onScreen_button1==1)
+    else if (changed_prefs.onScreen_button1==1)
         checkBox_onscreen_button1->setSelected(true);
-    if (workprefs.onScreen_button2==0)
+    if (changed_prefs.onScreen_button2==0)
         checkBox_onscreen_button2->setSelected(false);
-    else if (workprefs.onScreen_button2==1)
+    else if (changed_prefs.onScreen_button2==1)
         checkBox_onscreen_button2->setSelected(true);
-    if (workprefs.onScreen_button3==0)
+    if (changed_prefs.onScreen_button3==0)
         checkBox_onscreen_button3->setSelected(false);
-    else if (workprefs.onScreen_button3==1)
+    else if (changed_prefs.onScreen_button3==1)
         checkBox_onscreen_button3->setSelected(true);
-    if (workprefs.onScreen_button4==0)
+    if (changed_prefs.onScreen_button4==0)
         checkBox_onscreen_button4->setSelected(false);
-    else if (workprefs.onScreen_button4==1)
+    else if (changed_prefs.onScreen_button4==1)
         checkBox_onscreen_button4->setSelected(true);
-    if (workprefs.onScreen_button5==0)
+    if (changed_prefs.onScreen_button5==0)
         checkBox_onscreen_button5->setSelected(false);
-    else if (workprefs.onScreen_button5==1)
+    else if (changed_prefs.onScreen_button5==1)
         checkBox_onscreen_button5->setSelected(true);
-    if (workprefs.onScreen_button6==0)
+    if (changed_prefs.onScreen_button6==0)
         checkBox_onscreen_button6->setSelected(false);
-    else if (workprefs.onScreen_button6==1)
+    else if (changed_prefs.onScreen_button6==1)
         checkBox_onscreen_button6->setSelected(true);
-    if (workprefs.custom_position==0)
+    if (changed_prefs.custom_position==0)
         checkBox_onscreen_custompos->setSelected(false);
-    else if (workprefs.custom_position==1)
+    else if (changed_prefs.custom_position==1)
         checkBox_onscreen_custompos->setSelected(true);
-    if (workprefs.floatingJoystick)
+    if (changed_prefs.floatingJoystick)
         checkBox_floatingJoystick->setSelected(true);
     else
         checkBox_floatingJoystick->setSelected(false);
-    if (workprefs.disableMenuVKeyb)
+    if (changed_prefs.disableMenuVKeyb)
         checkBox_disableMenuVKeyb->setSelected(true);
     else
         checkBox_disableMenuVKeyb->setSelected(false);
     
-    textInput->disableVirtualKeyboard(workprefs.disableMenuVKeyb);
+    textInput->disableVirtualKeyboard(changed_prefs.disableMenuVKeyb);
     
-    window_pos_textinput->setX(workprefs.pos_x_textinput);
-    window_pos_textinput->setY(workprefs.pos_y_textinput);
-    window_pos_textinput->setVisible(workprefs.onScreen_textinput);
-    window_pos_dpad->setX(workprefs.pos_x_dpad);
-    window_pos_dpad->setY(workprefs.pos_y_dpad);
-    window_pos_dpad->setVisible(workprefs.onScreen_dpad);
-    window_pos_button1->setX(workprefs.pos_x_button1);
-    window_pos_button1->setY(workprefs.pos_y_button1);
-    window_pos_button1->setVisible(workprefs.onScreen_button1);
-    window_pos_button2->setX(workprefs.pos_x_button2);
-    window_pos_button2->setY(workprefs.pos_y_button2);
-    window_pos_button2->setVisible(workprefs.onScreen_button2);
-    window_pos_button3->setX(workprefs.pos_x_button3);
-    window_pos_button3->setY(workprefs.pos_y_button3);
-    window_pos_button3->setVisible(workprefs.onScreen_button3);
-    window_pos_button4->setX(workprefs.pos_x_button4);
-    window_pos_button4->setY(workprefs.pos_y_button4);
-    window_pos_button4->setVisible(workprefs.onScreen_button4);
-    window_pos_button5->setX(workprefs.pos_x_button5);
-    window_pos_button5->setY(workprefs.pos_y_button5);
-    window_pos_button5->setVisible(workprefs.onScreen_button5);
-    window_pos_button6->setX(workprefs.pos_x_button6);
-    window_pos_button6->setY(workprefs.pos_y_button6);
-    window_pos_button6->setVisible(workprefs.onScreen_button6);
-    button_onscreen_pos->setVisible(workprefs.custom_position);
+    window_pos_textinput->setX(changed_prefs.pos_x_textinput);
+    window_pos_textinput->setY(changed_prefs.pos_y_textinput);
+    window_pos_textinput->setVisible(changed_prefs.onScreen_textinput);
+    window_pos_dpad->setX(changed_prefs.pos_x_dpad);
+    window_pos_dpad->setY(changed_prefs.pos_y_dpad);
+    window_pos_dpad->setVisible(changed_prefs.onScreen_dpad);
+    window_pos_button1->setX(changed_prefs.pos_x_button1);
+    window_pos_button1->setY(changed_prefs.pos_y_button1);
+    window_pos_button1->setVisible(changed_prefs.onScreen_button1);
+    window_pos_button2->setX(changed_prefs.pos_x_button2);
+    window_pos_button2->setY(changed_prefs.pos_y_button2);
+    window_pos_button2->setVisible(changed_prefs.onScreen_button2);
+    window_pos_button3->setX(changed_prefs.pos_x_button3);
+    window_pos_button3->setY(changed_prefs.pos_y_button3);
+    window_pos_button3->setVisible(changed_prefs.onScreen_button3);
+    window_pos_button4->setX(changed_prefs.pos_x_button4);
+    window_pos_button4->setY(changed_prefs.pos_y_button4);
+    window_pos_button4->setVisible(changed_prefs.onScreen_button4);
+    window_pos_button5->setX(changed_prefs.pos_x_button5);
+    window_pos_button5->setY(changed_prefs.pos_y_button5);
+    window_pos_button5->setVisible(changed_prefs.onScreen_button5);
+    window_pos_button6->setX(changed_prefs.pos_x_button6);
+    window_pos_button6->setY(changed_prefs.pos_y_button6);
+    window_pos_button6->setVisible(changed_prefs.onScreen_button6);
+    button_onscreen_pos->setVisible(changed_prefs.custom_position);
 }
 
 bool HelpPanelOnScreen(std::vector<std::string> &helptext)

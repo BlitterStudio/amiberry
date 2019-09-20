@@ -85,49 +85,49 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == chkStatusLine)
-			workprefs.leds_on_screen = chkStatusLine->isSelected();
+			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
 
 		else if (actionEvent.getSource() == chkHideIdleLed)
-			workprefs.hide_idle_led = chkHideIdleLed->isSelected();
+			changed_prefs.hide_idle_led = chkHideIdleLed->isSelected();
 
 		else if (actionEvent.getSource() == chkShowGUI)
-			workprefs.start_gui = chkShowGUI->isSelected();
+			changed_prefs.start_gui = chkShowGUI->isSelected();
 
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
-			workprefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
+			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
 			RefreshPanelCustom();
 		}
 			
 		else if (actionEvent.getSource() == chkRetroArchMenu)
 		{
-			workprefs.use_retroarch_menu = chkRetroArchMenu->isSelected();
+			changed_prefs.use_retroarch_menu = chkRetroArchMenu->isSelected();
 			RefreshPanelCustom();
 		}
 			
 		else if (actionEvent.getSource() == chkRetroArchReset)
 		{
-			workprefs.use_retroarch_reset = chkRetroArchReset->isSelected();
+			changed_prefs.use_retroarch_reset = chkRetroArchReset->isSelected();
 			RefreshPanelCustom();
 		}
 			
 		//      else if (actionEvent.getSource() == chkRetroArchSavestate)
-		//        workprefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
+		//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
 
 		else if (actionEvent.getSource() == chkBSDSocket)
-			workprefs.socket_emu = chkBSDSocket->isSelected();
+			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
 		else if (actionEvent.getSource() == chkMasterWP) {
-			workprefs.floppy_read_only = chkMasterWP->isSelected();
+			changed_prefs.floppy_read_only = chkMasterWP->isSelected();
 			RefreshPanelQuickstart();
 			RefreshPanelFloppy();
 		}
 
 		else if (actionEvent.getSource() == cboKBDLed_num)
-			workprefs.kbd_led_num = cboKBDLed_num->getSelected();
+			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
 
 		else if (actionEvent.getSource() == cboKBDLed_scr)
-			workprefs.kbd_led_scr = cboKBDLed_scr->getSelected();
+			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
 
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
@@ -135,7 +135,7 @@ public:
 			if (key != nullptr)
 			{
 				txtOpenGUI->setText(key);
-				strcpy(workprefs.open_gui, key);
+				strcpy(changed_prefs.open_gui, key);
 			}
 		}
 
@@ -145,7 +145,7 @@ public:
 			if (key != nullptr)
 			{
 				txtKeyForQuit->setText(key);
-				strcpy(workprefs.quit_amiberry, key);
+				strcpy(changed_prefs.quit_amiberry, key);
 			}
 		}
 
@@ -155,7 +155,7 @@ public:
 			if (key != nullptr)
 			{
 				txtKeyActionReplay->setText(key);
-				strcpy(workprefs.action_replay, key);
+				strcpy(changed_prefs.action_replay, key);
 			}
 		}
 
@@ -165,7 +165,7 @@ public:
 			if (key != nullptr)
 			{
 				txtKeyFullScreen->setText(key);
-				strcpy(workprefs.fullscreen_toggle, key);
+				strcpy(changed_prefs.fullscreen_toggle, key);
 			}
 		}
 	}
@@ -372,25 +372,25 @@ void ExitPanelMisc()
 
 void RefreshPanelMisc()
 {
-	chkStatusLine->setSelected(workprefs.leds_on_screen);
-	chkHideIdleLed->setSelected(workprefs.hide_idle_led);
-	chkShowGUI->setSelected(workprefs.start_gui);
+	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
+	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
+	chkShowGUI->setSelected(changed_prefs.start_gui);
 
-	chkRetroArchQuit->setSelected(workprefs.use_retroarch_quit);
-	chkRetroArchMenu->setSelected(workprefs.use_retroarch_menu);
-	chkRetroArchReset->setSelected(workprefs.use_retroarch_reset);
-	//chkRetroArchSavestate->setSelected(workprefs.use_retroarch_statebuttons);  
+	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
+	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
+	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
+	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
 
-	chkBSDSocket->setSelected(workprefs.socket_emu);
-	chkMasterWP->setSelected(workprefs.floppy_read_only);
+	chkBSDSocket->setSelected(changed_prefs.socket_emu);
+	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 
-	cboKBDLed_num->setSelected(workprefs.kbd_led_num);
-	cboKBDLed_scr->setSelected(workprefs.kbd_led_scr);
+	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
+	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
 
-	txtOpenGUI->setText(strncmp(workprefs.open_gui, "", 1) != 0 ? workprefs.open_gui : "Click to map");
-	txtKeyForQuit->setText(strncmp(workprefs.quit_amiberry, "", 1) != 0 ? workprefs.quit_amiberry : "Click to map");
-	txtKeyActionReplay->setText(strncmp(workprefs.action_replay, "", 1) != 0 ? workprefs.action_replay : "Click to map");
-	txtKeyFullScreen->setText(strncmp(workprefs.fullscreen_toggle, "", 1) != 0 ? workprefs.fullscreen_toggle : "Click to map");
+	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
+	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0 ? changed_prefs.quit_amiberry : "Click to map");
+	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0 ? changed_prefs.action_replay : "Click to map");
+	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0 ? changed_prefs.fullscreen_toggle : "Click to map");
 }
 
 bool HelpPanelMisc(std::vector<std::string> &helptext)

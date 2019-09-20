@@ -529,9 +529,9 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uci = &workprefs.mountconfig[unit_no];
+		uci = &changed_prefs.mountconfig[unit_no];
 		const auto ci = &uci->ci;
-		get_filesys_unitconfig(&workprefs, unit_no, &mi);
+		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		strdevname.assign(ci->devname);
 		txtDevice->setText(strdevname);
@@ -614,7 +614,7 @@ bool EditFilesysHardfile(const int unit_no)
 		ci.bootpri = bp;
 		ci.physical_geometry = hardfile_testrdb(ci.rootdir);
 
-		uci = add_filesys_config(&workprefs, unit_no, &ci);
+		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
 			const auto hfd = get_hardfile_data(uci->configoffset);

@@ -34,7 +34,6 @@
 #endif
 
 int emulating = 0;
-struct uae_prefs workprefs;
 
 struct gui_msg
 {
@@ -350,7 +349,7 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 
 static void clearallkeys (void)
 {
-	inputdevice_updateconfig (&changed_prefs, &currprefs);
+	inputdevice_updateconfig (NULL, &changed_prefs);
 }
 
 void setmouseactive(int active)
@@ -363,40 +362,22 @@ void setmouseactive(int active)
 	}
 }
 
-static void prefs_to_gui(struct uae_prefs *p)
+static void prefs_to_gui()
 {
-	default_prefs(&workprefs, false, 0);
-	copy_prefs(p, &workprefs);
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
-	set_config_changed ();
 }
 
 
 static void gui_to_prefs(void)
 {
-	/* Always copy our prefs to changed_prefs, ... */
-	copy_prefs(&workprefs, &changed_prefs);
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 	fixup_prefs(&changed_prefs, true);
 }
 
-static void get_settings(void)
-{
-	memset (&workprefs, 0, sizeof (struct uae_prefs));
-	prefs_to_gui(&changed_prefs);
-
-	run_gui();
-	gui_to_prefs();
-
-	if(quit_program)
-		screen_is_picasso = 0;
-
-	update_display(&changed_prefs);
-}
 
 static void after_leave_gui()
 {
@@ -428,15 +409,17 @@ int gui_init()
 	if (lstAvailableROMs.empty())
 		RescanROMs();
 
-	get_settings();
-	
+	prefs_to_gui();
+	run_gui();
+	gui_to_prefs();
 	if (quit_program < 0)
 		quit_program = -quit_program;
 	if (quit_program == UAE_QUIT)
 		ret = -2; // Quit without start of emulator
 
 	inputdevice_acquire (TRUE);
-	
+	update_display(&changed_prefs);
+
 	after_leave_gui();
 	emulating = 1;
 	return ret;
@@ -523,12 +506,15 @@ void gui_display(int shortcut)
 
 	graphics_subshutdown();
 
-	get_settings();
+	prefs_to_gui();
+	run_gui();
+	gui_to_prefs();
 
 	black_screen_now();
 
 	gui_update ();
 	gui_purge_events();
+	update_display(&changed_prefs);
 	
 	reset_sound();
 	after_leave_gui();

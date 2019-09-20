@@ -101,9 +101,9 @@ public:
 				// Chipset selected
 				//---------------------------------------
 				const auto cs = chipsets[cboChipset->getSelected()].compatible;
-				if (workprefs.cs_compatible != cs) {
-					workprefs.cs_compatible = cs;
-					built_in_chipset_prefs(&workprefs);
+				if (changed_prefs.cs_compatible != cs) {
+					changed_prefs.cs_compatible = cs;
+					built_in_chipset_prefs(&changed_prefs);
 					RefreshPanelChipset();
 				}
 			}
@@ -118,13 +118,13 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optOCS)
-			workprefs.chipset_mask = 0;
+			changed_prefs.chipset_mask = 0;
 		else if (actionEvent.getSource() == optECSAgnus)
-			workprefs.chipset_mask = CSMASK_ECS_AGNUS;
+			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
 		else if (actionEvent.getSource() == optECS)
-			workprefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 		else
-			workprefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
 	}
 };
 
@@ -138,13 +138,13 @@ public:
 	{
 		if (chkNTSC->isSelected())
 		{
-			workprefs.ntscmode = true;
-			workprefs.chipset_refreshrate = 60;
+			changed_prefs.ntscmode = true;
+			changed_prefs.chipset_refreshrate = 60;
 		}
 		else
 		{
-			workprefs.ntscmode = false;
-			workprefs.chipset_refreshrate = 50;
+			changed_prefs.ntscmode = false;
+			changed_prefs.chipset_refreshrate = 50;
 		}
 		RefreshPanelQuickstart();
 	}
@@ -158,7 +158,7 @@ class FastCopperActionListener : public gcn::ActionListener
   public:
     void action(const gcn::ActionEvent& actionEvent) override
     {
-	    workprefs.fast_copper = chkFastCopper->isSelected();
+	    changed_prefs.fast_copper = chkFastCopper->isSelected();
     }
 };
 static FastCopperActionListener* fastCopperActionListener;
@@ -169,8 +169,8 @@ class BlitterButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		workprefs.immediate_blits = optBlitImmed->isSelected();
-		workprefs.waiting_blits = optBlitWait->isSelected();
+		changed_prefs.immediate_blits = optBlitImmed->isSelected();
+		changed_prefs.waiting_blits = optBlitWait->isSelected();
 	}
 };
 
@@ -183,13 +183,13 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optCollNone)
-			workprefs.collision_level = 0;
+			changed_prefs.collision_level = 0;
 		else if (actionEvent.getSource() == optCollSprites)
-			workprefs.collision_level = 1;
+			changed_prefs.collision_level = 1;
 		else if (actionEvent.getSource() == optCollPlayfield)
-			workprefs.collision_level = 2;
+			changed_prefs.collision_level = 2;
 		else
-			workprefs.collision_level = 3;
+			changed_prefs.collision_level = 3;
 	}
 };
 
@@ -350,7 +350,7 @@ void RefreshPanelChipset()
 	bIgnoreListChange = true;
 	auto idx = 0;
 	for (auto i = 0; i<numChipsets; ++i) {
-		if (chipsets[i].compatible == workprefs.cs_compatible) {
+		if (chipsets[i].compatible == changed_prefs.cs_compatible) {
 			idx = i;
 			break;
 		}
@@ -358,31 +358,31 @@ void RefreshPanelChipset()
 	cboChipset->setSelected(idx);
 	bIgnoreListChange = false;
 
-	if (workprefs.chipset_mask == 0)
+	if (changed_prefs.chipset_mask == 0)
 		optOCS->setSelected(true);
-	else if (workprefs.chipset_mask == CSMASK_ECS_AGNUS)
+	else if (changed_prefs.chipset_mask == CSMASK_ECS_AGNUS)
 		optECSAgnus->setSelected(true);
-	else if (workprefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE))
+	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE))
 		optECS->setSelected(true);
-	else if (workprefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA))
+	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA))
 		optAGA->setSelected(true);
 
-	chkNTSC->setSelected(workprefs.ntscmode);
+	chkNTSC->setSelected(changed_prefs.ntscmode);
 
-	if (workprefs.immediate_blits)
+	if (changed_prefs.immediate_blits)
 		optBlitImmed->setSelected(true);
-	else if (workprefs.waiting_blits)
+	else if (changed_prefs.waiting_blits)
 		optBlitWait->setSelected(true);
 	else
 		optBlitNormal->setSelected(true);
 
-	chkFastCopper->setSelected(workprefs.fast_copper);
+	chkFastCopper->setSelected(changed_prefs.fast_copper);
 
-	if (workprefs.collision_level == 0)
+	if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);
-	else if (workprefs.collision_level == 1)
+	else if (changed_prefs.collision_level == 1)
 		optCollSprites->setSelected(true);
-	else if (workprefs.collision_level == 2)
+	else if (changed_prefs.collision_level == 2)
 		optCollPlayfield->setSelected(true);
 	else
 		optCollFull->setSelected(true);

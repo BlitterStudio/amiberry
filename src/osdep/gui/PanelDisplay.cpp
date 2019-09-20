@@ -58,45 +58,45 @@ public:
 	{
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
-			if (workprefs.gfx_monitor.gfx_size.width != amigawidth_values[int(sldAmigaWidth->getValue())])
+			if (changed_prefs.gfx_monitor.gfx_size.width != amigawidth_values[int(sldAmigaWidth->getValue())])
 			{
-				workprefs.gfx_monitor.gfx_size.width = amigawidth_values[int(sldAmigaWidth->getValue())];
+				changed_prefs.gfx_monitor.gfx_size.width = amigawidth_values[int(sldAmigaWidth->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
-			if (workprefs.gfx_monitor.gfx_size.height != amigaheight_values[int(sldAmigaHeight->getValue())])
+			if (changed_prefs.gfx_monitor.gfx_size.height != amigaheight_values[int(sldAmigaHeight->getValue())])
 			{
-				workprefs.gfx_monitor.gfx_size.height = amigaheight_values[int(sldAmigaHeight->getValue())];
+				changed_prefs.gfx_monitor.gfx_size.height = amigaheight_values[int(sldAmigaHeight->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
 		else if (actionEvent.getSource() == sldVertPos)
 		{
-			if (workprefs.vertical_offset != int(sldVertPos->getValue()) + OFFSET_Y_ADJUST)
+			if (changed_prefs.vertical_offset != int(sldVertPos->getValue()) + OFFSET_Y_ADJUST)
 			{
-				workprefs.vertical_offset = int(sldVertPos->getValue()) + OFFSET_Y_ADJUST;
+				changed_prefs.vertical_offset = int(sldVertPos->getValue()) + OFFSET_Y_ADJUST;
 				RefreshPanelDisplay();
 			}
 		}
 		else if (actionEvent.getSource() == chkFrameskip)
-			workprefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
+			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
 
 		else if (actionEvent.getSource() == chkAspect)
-			workprefs.gfx_correct_aspect = chkAspect->isSelected();
+			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
 
 		else if (actionEvent.getSource() == chkFullscreen)
 		{
-			if (workprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+			if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 			{
-				workprefs.gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
-				workprefs.gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
+				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
+				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 			}
 			else
 			{
-				workprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
-				workprefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
+				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
+				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
 			}
 		}	
 	}
@@ -111,11 +111,11 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optAuto)
-			workprefs.scaling_method = -1;
+			changed_prefs.scaling_method = -1;
 		else if (actionEvent.getSource() == optNearest)
-			workprefs.scaling_method = 0;
+			changed_prefs.scaling_method = 0;
 		else if (actionEvent.getSource() == optLinear)
-			workprefs.scaling_method = 1;
+			changed_prefs.scaling_method = 1;
 	}
 };
 
@@ -129,18 +129,18 @@ public:
 	{
 		if (action_event.getSource() == optSingle)
 		{
-			workprefs.gfx_vresolution = VRES_NONDOUBLE;
-			workprefs.gfx_pscanlines = 0;
+			changed_prefs.gfx_vresolution = VRES_NONDOUBLE;
+			changed_prefs.gfx_pscanlines = 0;
 		}
 		else if (action_event.getSource() == optDouble)
 		{
-			workprefs.gfx_vresolution = VRES_DOUBLE;
-			workprefs.gfx_pscanlines = 0;
+			changed_prefs.gfx_vresolution = VRES_DOUBLE;
+			changed_prefs.gfx_pscanlines = 0;
 		}
 		else if (action_event.getSource() == optScanlines)
 		{
-			workprefs.gfx_vresolution = VRES_DOUBLE;
-			workprefs.gfx_pscanlines = 1;
+			changed_prefs.gfx_vresolution = VRES_DOUBLE;
+			changed_prefs.gfx_pscanlines = 1;
 		}
 	}
 };
@@ -320,17 +320,17 @@ void ExitPanelDisplay()
 
 void RefreshPanelDisplay()
 {
-	chkFrameskip->setSelected(workprefs.gfx_framerate > 1);
+	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
 
 	int i;
 	char tmp[32];
 
 	for (i = 0; i<6; ++i)
 	{
-		if (workprefs.gfx_monitor.gfx_size.width == amigawidth_values[i])
+		if (changed_prefs.gfx_monitor.gfx_size.width == amigawidth_values[i])
 		{
 			sldAmigaWidth->setValue(i);
-			snprintf(tmp, 32, "%d", workprefs.gfx_monitor.gfx_size.width);
+			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.width);
 			lblAmigaWidthInfo->setCaption(tmp);
 			break;
 		}
@@ -338,36 +338,36 @@ void RefreshPanelDisplay()
 
 	for (i = 0; i<6; ++i)
 	{
-		if (workprefs.gfx_monitor.gfx_size.height == amigaheight_values[i])
+		if (changed_prefs.gfx_monitor.gfx_size.height == amigaheight_values[i])
 		{
 			sldAmigaHeight->setValue(i);
-			snprintf(tmp, 32, "%d", workprefs.gfx_monitor.gfx_size.height);
+			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.height);
 			lblAmigaHeightInfo->setCaption(tmp);
 			break;
 		}
 	}
 
-	chkAspect->setSelected(workprefs.gfx_correct_aspect);
-	chkFullscreen->setSelected(workprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN);
+	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
+	chkFullscreen->setSelected(changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN);
 
 #ifdef USE_SDL2
-	if (workprefs.scaling_method == -1)
+	if (changed_prefs.scaling_method == -1)
 		optAuto->setSelected(true);
-	else if (workprefs.scaling_method == 0)
+	else if (changed_prefs.scaling_method == 0)
 		optNearest->setSelected(true);
-	else if (workprefs.scaling_method == 1)
+	else if (changed_prefs.scaling_method == 1)
 		optLinear->setSelected(true);
 #endif
 
-	if (workprefs.gfx_vresolution == VRES_NONDOUBLE && workprefs.gfx_pscanlines == 0)
+	if (changed_prefs.gfx_vresolution == VRES_NONDOUBLE && changed_prefs.gfx_pscanlines == 0)
 		optSingle->setSelected(true);
-	else if (workprefs.gfx_vresolution == VRES_DOUBLE && workprefs.gfx_pscanlines == 0)
+	else if (changed_prefs.gfx_vresolution == VRES_DOUBLE && changed_prefs.gfx_pscanlines == 0)
 		optDouble->setSelected(true);
-	else if (workprefs.gfx_vresolution == VRES_DOUBLE && workprefs.gfx_pscanlines == 1)
+	else if (changed_prefs.gfx_vresolution == VRES_DOUBLE && changed_prefs.gfx_pscanlines == 1)
 		optScanlines->setSelected(true);
 
-	sldVertPos->setValue(workprefs.vertical_offset - OFFSET_Y_ADJUST);
-	snprintf(tmp, 32, "%d", workprefs.vertical_offset - OFFSET_Y_ADJUST);
+	sldVertPos->setValue(changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
+	snprintf(tmp, 32, "%d", changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
 	lblVertPosInfo->setCaption(tmp);
 }
 

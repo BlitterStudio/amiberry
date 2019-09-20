@@ -740,7 +740,7 @@ int check_prefs_changed_gfx()
 
 int lockscr()
 {
-	if (SDL_MUSTLOCK(screen))
+	if (screen && SDL_MUSTLOCK(screen))
 		SDL_LockSurface(screen);
 	init_row_map();
 	return 1;
@@ -749,7 +749,7 @@ int lockscr()
 
 void unlockscr()
 {
-	if (SDL_MUSTLOCK(screen))
+	if (screen && SDL_MUSTLOCK(screen))
 		SDL_UnlockSurface(screen);
 }
 
