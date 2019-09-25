@@ -2163,7 +2163,7 @@ STATIC_INLINE void draw_sprites_1 (struct sprite_entry *e, int dualpf, int has_a
 	stbuf -= epos;
 	stfmbuf -= epos;
 
-	spr_pos = epos + ((DIW_DDF_OFFSET - DISPLAY_LEFT_SHIFT) << sprite_buffer_res);
+	spr_pos = epos + ((DISPLAY_LEFT_SHIFT - DIW_DDF_OFFSET) << sprite_buffer_res);
 
 	if (spr_pos < sprite_first_x)
 		sprite_first_x = spr_pos;

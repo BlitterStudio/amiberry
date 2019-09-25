@@ -3747,7 +3747,9 @@ static void add_sprite (int *countp, int num, int sprxp, int posns[], int nrs[])
 
 static int tospritexdiw (int diw)
 {
-	return  coord_window_to_hw_x (diw - (DIW_DDF_OFFSET << lores_shift)) << sprite_buffer_res;
+	int v = (coord_window_to_hw_x(diw) - DIW_DDF_OFFSET) << sprite_buffer_res;
+	v -= (1 << sprite_buffer_res) - 1;
+	return v;
 }
 static int tospritexddf (int ddf)
 {
@@ -3801,7 +3803,7 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 	// if sprite is at the very edge of right border
 	point = hpos * 2;
 	if (hpos >= maxhpos)
-		point += ((9 - 2) * 2) * sprite_buffer_res;
+		point += (9 - 2) * 2;
 
 	if (nodraw () || hpos < 0x14 || nr_armed == 0 || point == last_sprite_point)
 		return;
