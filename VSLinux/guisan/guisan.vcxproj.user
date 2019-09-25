@@ -3,4 +3,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
     <RemoteTarget>-1406338439;192.168.1.47 (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM64'">
+    <RemoteTarget>-1406338439;192.168.1.47 (username=, port=22, authentication=Password)</RemoteTarget>
+  </PropertyGroup>
 </Project>
