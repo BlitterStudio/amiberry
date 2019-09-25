@@ -963,6 +963,21 @@ void trap_set_background(TrapContext *ctx)
 	atomic_inc(&ctx->trap_background);
 }
 
+bool trap_valid_string(TrapContext *ctx, uaecptr addr, uae_u32 maxsize)
+{
+	if (!ctx || currprefs.uaeboard < 3) {
+		for (int i = 0; i < maxsize; i++) {
+			if (!valid_address(addr + i, 1))
+				return false;
+			if (get_byte(addr + i) == 0)
+				return true;
+		}
+		return false;
+	}
+	// can't really do any checks..
+	return true;
+}
+
 bool trap_valid_address(TrapContext *ctx, uaecptr addr, uae_u32 size)
 {
 	if (!ctx || currprefs.uaeboard < 3)

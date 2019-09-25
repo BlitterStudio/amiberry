@@ -5807,12 +5807,23 @@ uae_u32 cfgfile_uaelib_modify(TrapContext* ctx, uae_u32 index, uae_u32 parms, ua
 	int i, ret;
 	TCHAR *out_p = nullptr, *parms_in = nullptr;
 
-	if (out)
+	if (outsize >= 32768)
+		return 0;
+	if (out && outsize > 0) {
+		if (!trap_valid_address(ctx, out, 1))
+			return 0;
 		trap_put_byte(ctx, out, 0);
-	if (size == 0)
-	{
-		while (trap_get_byte(ctx, parms + size) != 0)
+	}
+	if (size == 0) {
+		for (;;) {
+			if (!trap_valid_address(ctx, parms + size, 1))
+				return 0;
+			if (trap_get_byte(ctx, parms + size) == 0)
+				break;
 			size++;
+			if (size >= 32768)
+				return 0;
+		}
 	}
 	parms_p = xmalloc (uae_char, size + 1);
 	if (!parms_p)
@@ -5841,9 +5852,10 @@ uae_u32 cfgfile_uaelib_modify(TrapContext* ctx, uae_u32 index, uae_u32 parms, ua
 	parms_in = au(parms_p);
 	ret = cfgfile_modify(index, parms_in, size, out_p, outsize);
 	xfree (parms_in);
-	if (out)
-	{
-		parms_out = ua(out_p);
+	if (out && outsize > 0) {
+		parms_out = ua (out_p);
+		if (!trap_valid_address(ctx, out, strlen(parms_out) + 1 > outsize ? outsize : strlen(parms_out) + 1))
+			return 0;
 		trap_put_string(ctx, parms_out, out, outsize - 1);
 	}
 	xfree (parms_out);
@@ -5869,9 +5881,14 @@ uae_u32 cfgfile_uaelib(TrapContext* ctx, int mode, uae_u32 name, uae_u32 dst, ua
 	TCHAR* str;
 	uae_char tmpa[CONFIG_BLEN];
 
-	if (mode)
+	if (mode || maxlen > CONFIG_BLEN)
 		return 0;
 
+	if (!trap_valid_string(ctx, name, CONFIG_BLEN))
+		return 0;
+	if (!trap_valid_address(ctx, dst, maxlen))
+		return 0;
+	
 	trap_get_string(ctx, tmpa, name, sizeof tmpa);
 	str = au(tmpa);
 	if (str[0] == 0)
