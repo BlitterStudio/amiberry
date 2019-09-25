@@ -9570,7 +9570,7 @@ uae_u8 *restore_custom_extra (uae_u8 *src)
 
 	currprefs.genlock = changed_prefs.genlock = RBB;
 	currprefs.cs_rtc = changed_prefs.cs_rtc = RB;
-	currprefs.cs_rtc_adjust = changed_prefs.cs_rtc_adjust = RL;
+	RL;
 
 	currprefs.cs_a1000ram = changed_prefs.cs_a1000ram = RBB;
 	currprefs.cs_slowmemisfast = changed_prefs.cs_slowmemisfast = RBB;
