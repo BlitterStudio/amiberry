@@ -1417,6 +1417,7 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 	TCHAR *p2, *custom;
 	struct temp_uids *tid = &temp_uid;
 	struct inputdevice_functions *idf = NULL;
+	bool directmode = option[5] == '_';
 
 	option += 6; /* "input." */
 	p = getstring (&option);
@@ -1464,7 +1465,7 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		return;
 	idnum--;
 
-	if (idnum != tid->idnum) {
+	if (idnum != tid->idnum || directmode) {
 		reset_inputdevice_config_temp();
 		tid->idnum = idnum;
 	}
@@ -1520,33 +1521,37 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 	if (devtype != tid->lastdevtype) {
 		tid->lastdevtype = devtype;
 	}
-
-	if (!_tcscmp (p2, _T("name"))) {
-		xfree(tid->configname);
-		tid->configname = my_strdup (value);
+	if (directmode) {
 		tid->joystick = joystick;
 		tid->devtype = devtype;
+	}
+	
+	if (!_tcscmp (p2, _T("name"))) {
+		xfree(tid->configname);
+		tid->configname = my_strdup (value);	
 		tid->custom = false;
 		tid->empty = false;
 		tid->disabled = false;
+		tid->joystick = joystick;
+		tid->devtype = devtype;
 		return;
 	}
 	if (!_tcscmp (p2, _T("friendlyname"))) {
 		xfree (tid->name);
 		tid->name = my_strdup (value);
-		tid->joystick = joystick;
-		tid->devtype = devtype;
 		tid->custom = false;
 		tid->empty = false;
 		tid->disabled = false;
+		tid->joystick = joystick;
+		tid->devtype = devtype;
 		return;
 	}
 	if (!_tcscmp (p2, _T("custom"))) {
 		p = value;
 		tid->custom = getnum(&p);
+		tid->empty = false;
 		tid->joystick = joystick;
 		tid->devtype = devtype;
-		tid->empty = false;
 		return;
 	}
 	if (!_tcscmp(p2, _T("empty"))) {
@@ -1636,7 +1641,7 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		return;
 	}
 
-	if (newdev) {
+	if (newdev && !directmode) {
 		if (!tid->initialized)
 			clear_id(id);
 		if (!tid->empty && tid->devtype == IDTYPE_KEYBOARD && !tid->initialized) {

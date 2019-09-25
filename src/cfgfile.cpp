@@ -2803,9 +2803,8 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	const TCHAR* tmp1;
 	TCHAR* tmp2;
 
-	if (_tcsncmp(option, _T("input."), 6) == 0)
-	{
-		read_inputdevice_config(p, option, value);
+	if (_tcsncmp (option, _T("input."), 6) == 0 || _tcsncmp(option, _T("input_"), 6) == 0) {
+		read_inputdevice_config (p, option, value);
 		return 1;
 	}
 
@@ -5544,11 +5543,15 @@ void cfgfile_addcfgparam(TCHAR* line)
 	}
 	if (!cfgfile_separate_line(line, line1b, line2b))
 		return;
-	u = xcalloc (struct strlist, 1);
-	u->option = my_strdup(line1b);
-	u->value = my_strdup(line2b);
-	u->next = temp_lines;
-	temp_lines = u;
+	if (!_tcsnicmp(line1b, _T("input."), 6)) {
+		line1b[5] = '_';
+	}
+	if (u) {
+		u->option = my_strdup(line1b);
+		u->value = my_strdup(line2b);
+		u->next = temp_lines;
+		temp_lines = u;
+	}
 }
 
 static int cmdlineparser(const TCHAR* s, TCHAR* outp[], int max)
@@ -7332,9 +7335,13 @@ void error_log(const TCHAR* format, ...)
 	va_end(parms);
 
 	strlist* u = xcalloc(struct strlist, 1);
-	u->option = my_strdup(bufp);
-	u->next = error_lines;
-	error_lines = u;
+	if (u) {
+		u->option = my_strdup(bufp);
+		if (u->option) {
+			u->next = error_lines;
+			error_lines = u;
+		}
+	}
 
 	if (bufp != buffer)
 		xfree(bufp);
