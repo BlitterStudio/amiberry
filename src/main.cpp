@@ -624,13 +624,13 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		{
 			const auto txt = parsetextpath(argv[i] + 10);
 			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
-			if (txt2.c_str() == ".lha")
+			if (_tcsncmp(txt2.c_str(), ".lha", 4) == 0)
 			{
 				write_log("WHDLOAD... %s\n", txt);
 				whdload_auto_prefs(&currprefs, txt);
 				xfree(txt);
 			}
-			else if (txt2.c_str() == ".cue")
+			else if (_tcsncmp(txt2.c_str(), ".cue", 4) == 0)
 			{
 				write_log("CDTV/CD32... %s\n", txt);
 				cd_auto_prefs(&currprefs, txt);
