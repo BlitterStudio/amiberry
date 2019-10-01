@@ -21,7 +21,7 @@ uae_u32 max_z3fastmem;
 
 static uae_u8* additional_mem = static_cast<uae_u8*>(MAP_FAILED);
 #define MAX_RTG_MEM 128
-#define ADDITIONAL_MEMSIZE ((256 + MAX_RTG_MEM) * 1024 * 1024)
+#define ADDITIONAL_MEMSIZE ((512 + MAX_RTG_MEM) * 1024 * 1024)
 
 static uae_u8* a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
 static unsigned int a3000_totalsize = 0;
