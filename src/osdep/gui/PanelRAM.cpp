@@ -315,7 +315,9 @@ void RefreshPanelRAM()
 			break;
 		}
 	}
-	sldZ3mem->setEnabled(!changed_prefs.address_space_24);
+	sldZ3mem->setEnabled(!changed_prefs.address_space_24 && !emulating);
+	lblZ3mem->setEnabled(!changed_prefs.address_space_24 && !emulating);
+	lblZ3size->setEnabled(!changed_prefs.address_space_24 && !emulating);
 
 	for (i = 0; i < 9; ++i)
 	{
@@ -326,7 +328,9 @@ void RefreshPanelRAM()
 			break;
 		}
 	}
-	sldGfxmem->setEnabled(!changed_prefs.address_space_24);
+	sldGfxmem->setEnabled(!changed_prefs.address_space_24 && !emulating);
+	lblGfxmem->setEnabled(!changed_prefs.address_space_24 && !emulating);
+	lblGfxsize->setEnabled(!changed_prefs.address_space_24 && !emulating);
 
 	for (i = 0; i < 3; ++i)
 	{

@@ -169,17 +169,8 @@ static int gui_create_rtarea_flag(struct uae_prefs* p)
 	if (count_HDs(p) > 0)
 		flag |= 1;
 
-	if (p->socket_emu)
-		flag |= 4;
-
 	if (p->input_tablet > 0)
 		flag |= 8;
-
-	if (p->rtgboards[0].rtgmem_size)
-		flag |= 16;
-
-	if (p->chipmem_size > 2 * 1024 * 1024)
-		flag |= 32;
 
 	return flag;
 }

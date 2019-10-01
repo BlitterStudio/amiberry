@@ -381,6 +381,7 @@ void RefreshPanelMisc()
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
 	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
 
+	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 
