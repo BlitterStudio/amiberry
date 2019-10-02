@@ -1300,22 +1300,22 @@ void cd32_fmv_set_sync(double svpos, double adjust)
 	fmv_syncadjust = adjust;
 }
 
-static void fmv_next_cd_audio_buffer_callback(int bufnum, void *param)
-{
-	uae_sem_wait(&play_sem);
-	if (bufnum >= 0) {
-		fmv_bufon[bufnum] = 0;
-		bufnum = 1 - bufnum;
-		if (fmv_bufon[bufnum])
-			audio_cda_new_buffer(&cas, (uae_s16*)cda->buffers[bufnum], PCM_SECTORS * KJMP2_SAMPLES_PER_FRAME, bufnum, fmv_next_cd_audio_buffer_callback, param);
-		else
-			bufnum = -1;
-	}
-	if (bufnum < 0) {
-		audio_cda_new_buffer(&cas, NULL, 0, -1, NULL, NULL);
-	}
-	uae_sem_post(&play_sem);
-}
+//static void fmv_next_cd_audio_buffer_callback(int bufnum, void *param)
+//{
+//	uae_sem_wait(&play_sem);
+//	if (bufnum >= 0) {
+//		fmv_bufon[bufnum] = 0;
+//		bufnum = 1 - bufnum;
+//		if (fmv_bufon[bufnum])
+//			audio_cda_new_buffer(&cas, (uae_s16*)cda->buffers[bufnum], PCM_SECTORS * KJMP2_SAMPLES_PER_FRAME, bufnum, fmv_next_cd_audio_buffer_callback, param);
+//		else
+//			bufnum = -1;
+//	}
+//	if (bufnum < 0) {
+//		audio_cda_new_buffer(&cas, NULL, 0, -1, NULL, NULL);
+//	}
+//	uae_sem_post(&play_sem);
+//}
 
 void cd32_fmv_vsync_handler(void)
 {
