@@ -7900,19 +7900,19 @@ static bool is_custom_vsync (void)
 	return false;
 }
 
-static bool do_render_slice(int mode, int slicecnt, int lastline)
-{
-	draw_lines(lastline, slicecnt);
-	render_screen(true);
-	return true;
-}
-
-static bool do_display_slice(void)
-{
-	show_screen(-1);
-	inputdevice_hsync(true);
-	return true;
-}
+//static bool do_render_slice(int mode, int slicecnt, int lastline)
+//{
+//	draw_lines(lastline, slicecnt);
+//	render_screen(true);
+//	return true;
+//}
+//
+//static bool do_display_slice(void)
+//{
+//	show_screen(-1);
+//	inputdevice_hsync(true);
+//	return true;
+//}
 
 static void set_hpos (void)
 {
