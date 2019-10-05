@@ -152,17 +152,17 @@ static void cache_free (uae_u8 *cache, int size)
   munmap(cache, size);
 }
 
-static uae_u8 *cache_alloc (int size)
+static uae_u8* cache_alloc(int size)
 {
-  size = size < getpagesize() ? getpagesize() : size;
+	size = size < getpagesize() ? getpagesize() : size;
 
-  void *cache = mmap(0, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0);
-  if (!cache) {
-    printf ("Cache_Alloc of %d failed. ERR=%d\n", size, errno);
-  }
-  else
-    memset(cache, 0, size);
-  return (uae_u8 *) cache;
+	void* cache = mmap(0, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0);
+	if (!cache) {
+		printf("Cache_Alloc of %d failed. ERR=%d\n", size, errno);
+	}
+	else
+		memset(cache, 0, size);
+	return (uae_u8*)cache;
 }
 
 #endif
@@ -1703,38 +1703,38 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
 
 void set_cache_state(int enabled)
 {
-  if (enabled != letit)
-  	flush_icache_hard(3);
-  letit = enabled;
+	if (enabled != letit)
+		flush_icache_hard(3);
+	letit = enabled;
 }
 
 void alloc_cache(void)
 {
-  if (compiled_code) {
-	  flush_icache_hard(3);
+	if (compiled_code) {
+		flush_icache_hard(3);
 		compiled_code = 0;
-  }
-   
+	}
+
 	cache_size = currprefs.cachesize;
-  if (cache_size == 0)
-  	return;
+	if (cache_size == 0)
+		return;
 
- 	if(popallspace)
-	 	compiled_code = popallspace + POPALLSPACE_SIZE;
+	if (popallspace)
+		compiled_code = popallspace + POPALLSPACE_SIZE;
 
-  if (compiled_code) {
-		write_log("Actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size*1024);
+	if (compiled_code) {
+		write_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size * 1024);
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-  	max_compile_start = compiled_code + cache_size*1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;
+		max_compile_start = compiled_code + cache_size * 1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;
 #else
-  	max_compile_start = compiled_code + cache_size*1024 - BYTES_PER_INST;
+		max_compile_start = compiled_code + cache_size * 1024 - BYTES_PER_INST;
 #endif
-  	current_compile_p = compiled_code;
-  	current_cache_size = 0;
+		current_compile_p = compiled_code;
+		current_cache_size = 0;
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-    reset_data_buffer();
+		reset_data_buffer();
 #endif
-  }
+	}
 }
 
 static void calc_checksum(blockinfo* bi, uae_u32* c1, uae_u32* c2)
@@ -1897,59 +1897,59 @@ STATIC_INLINE void match_states(blockinfo* bi)
 
 STATIC_INLINE void create_popalls(void)
 {
-  int i, r;
+	int i, r;
 
-  if (popallspace == NULL) {
-  	if ((popallspace = cache_alloc (POPALLSPACE_SIZE + MAX_JIT_CACHE * 1024)) == NULL) {
+	if (popallspace == NULL) {
+		if ((popallspace = cache_alloc(POPALLSPACE_SIZE + MAX_JIT_CACHE * 1024)) == NULL) {
 			jit_log("WARNING: Could not allocate popallspace!");
 			/* This is not fatal if JIT is not used. If JIT is
 			 * turned on, it will crash, but it would have crashed
 			 * anyway. */
 			return;
-    }
-  }
+		}
+	}
 	write_log("JIT popallspace: %p-%p\n", popallspace, popallspace + POPALLSPACE_SIZE);
 
-  current_compile_p = popallspace;
-  set_target(current_compile_p);
+	current_compile_p = popallspace;
+	set_target(current_compile_p);
 
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-  reset_data_buffer();
-  data_long(0, 0); // Make sure we emit the branch over the first buffer outside pushall_call_handler
+	reset_data_buffer();
+	data_long(0, 0); // Make sure we emit the branch over the first buffer outside pushall_call_handler
 #endif
-  
+
   /* We need to guarantee 16-byte stack alignment on x86 at any point
-     within the JIT generated code. We have multiple exit points
-     possible but a single entry. A "jmp" is used so that we don't
-     have to generate stack alignment in generated code that has to
-     call external functions (e.g. a generic instruction handler).
+	 within the JIT generated code. We have multiple exit points
+	 possible but a single entry. A "jmp" is used so that we don't
+	 have to generate stack alignment in generated code that has to
+	 call external functions (e.g. a generic instruction handler).
 
-     In summary, JIT generated code is not leaf so we have to deal
-     with it here to maintain correct stack alignment. */
-  current_compile_p = get_target();
-  pushall_call_handler = get_target();
-  raw_push_regs_to_preserve();
+	 In summary, JIT generated code is not leaf so we have to deal
+	 with it here to maintain correct stack alignment. */
+	current_compile_p = get_target();
+	pushall_call_handler = get_target();
+	raw_push_regs_to_preserve();
 #ifdef JIT_DEBUG
-  write_log("Address of regs: 0x%016x, regs.pc_p: 0x%016x\n", &regs, &regs.pc_p);
-  write_log("Address of natmem_offset: 0x%016x, natmem_offset = 0x%016x\n", &regs.natmem_offset, regs.natmem_offset);
-  write_log("Address of cache_tags: 0x%016x\n", cache_tags);
+	write_log("Address of regs: 0x%016x, regs.pc_p: 0x%016x\n", &regs, &regs.pc_p);
+	write_log("Address of natmem_offset: 0x%016x, natmem_offset = 0x%016x\n", &regs.natmem_offset, regs.natmem_offset);
+	write_log("Address of cache_tags: 0x%016x\n", cache_tags);
 #endif
-  compemu_raw_init_r_regstruct((uintptr)&regs);
-  compemu_raw_jmp_pc_tag((uintptr)cache_tags);
+	compemu_raw_init_r_regstruct((uintptr)&regs);
+	compemu_raw_jmp_pc_tag((uintptr)cache_tags);
 
-  /* now the exit points */
-  popall_execute_normal = get_target();
-  raw_pop_preserved_regs();
-  compemu_raw_jmp((uintptr)execute_normal);
+	/* now the exit points */
+	popall_execute_normal = get_target();
+	raw_pop_preserved_regs();
+	compemu_raw_jmp((uintptr)execute_normal);
 
-  popall_check_checksum = get_target();
-  raw_pop_preserved_regs();
-  compemu_raw_jmp((uintptr)check_checksum);
+	popall_check_checksum = get_target();
+	raw_pop_preserved_regs();
+	compemu_raw_jmp((uintptr)check_checksum);
 
-  flush_cpu_icache((void *)popallspace, (void *)target);
+	flush_cpu_icache((void*)popallspace, (void*)target);
 
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-  reset_data_buffer();
+	reset_data_buffer();
 #endif
 }
 
