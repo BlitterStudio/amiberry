@@ -5,6 +5,10 @@ Amiberry is an optimized Amiga emulator, for ARM-based boards (like the Raspberr
 
 Amiberry requires the SDL framework (https://libsdl.org) for graphics display, input handling and audio out. Currently both SDL1.x and SDL2 are supported, but in the future we'll probably drop support for SDL1 as things move forward. On the RPI platform specifically, we offer a special version which uses Dispmanx directly for the emulation screen, for maximum performance.
 
+# Donations
+If you like this project and would like to contribute with a donation, you can use this PayPal pool: https://paypal.me/pools/c/8apqkBQovm
+Donations would help with porting Amiberry to new devices, keeping the motivation going to spend those countless hours on the project, and perhaps getting us some chocolate.
+
 # Getting SDL2
 If you want to run the SDL2 version from the console (i.e. not from the full Desktop), you currently need to compile SDL2 from source on the Raspberry Pi (and possibly other platforms as well). The version bundled with Raspbian is not compiled with support for the "KMSDRM" driver, so it only works under X11.
 
