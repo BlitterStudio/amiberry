@@ -61,7 +61,7 @@ int action_replay_button = SDLK_PAUSE;
 int fullscreen_key = 0;
 
 #ifdef USE_SDL1
-SDLKey GetKeyFromName(const char *name)
+SDLKey GetKeyFromName(const char* name)
 {
 	if (!name || !*name) {
 		return SDLK_UNKNOWN;
@@ -81,7 +81,7 @@ SDLKey GetKeyFromName(const char *name)
 }
 #endif
 
-void set_key_configs(struct uae_prefs *p)
+void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 	{
@@ -974,20 +974,19 @@ void load_amiberry_settings(void)
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
 
 #ifdef ANDROID
-    char afepath[MAX_DPATH];
-    snprintf(afepath, MAX_DPATH, "%s/Android/data/com.cloanto.amigaforever.essentials/files/rom/", getenv("SDCARD"));
-    DIR *afedir = opendir(afepath);
-    if (afedir) {
-        snprintf(rom_path, MAX_DPATH, "%s", afepath);
-        closedir(afedir);
-    }
+	char afepath[MAX_DPATH];
+	snprintf(afepath, MAX_DPATH, "%s/Android/data/com.cloanto.amigaforever.essentials/files/rom/", getenv("SDCARD"));
+	DIR* afedir = opendir(afepath);
+	if (afedir) {
+		snprintf(rom_path, MAX_DPATH, "%s", afepath);
+		closedir(afedir);
+	}
 	else
-        snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
+		snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 #else
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
-
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
 	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
@@ -1074,7 +1073,7 @@ void rename_old_adfdir()
 	char new_path[MAX_DPATH];
 	snprintf(old_path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
 	snprintf(new_path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-	
+
 	auto result = rename(old_path, new_path);
 	if (result == 0)
 		write_log("Old adfdir.conf file successfully renamed to amiberry.conf");
@@ -1082,7 +1081,7 @@ void rename_old_adfdir()
 		write_log("Error while trying to rename old adfdir.conf file to amiberry.conf!");
 }
 
-void target_getdate(int *y, int *m, int *d)
+void target_getdate(int* y, int* m, int* d)
 {
 	*y = GETBDY(AMIBERRYDATE);
 	*m = GETBDM(AMIBERRYDATE);
@@ -1272,16 +1271,29 @@ int handle_msgpump()
 #endif
 			// If the reset combination was pressed, handle it
 #ifdef USE_SDL1
-			// Strangely in FBCON left window is seen as left alt ??
-			if (keyboard_type == 2) // KEYCODE_FBCON
+			if (swap_win_alt_keys)
 			{
-				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+				if (keystate[SDLK_LCTRL] && keystate[SDLK_LALT] && (keystate[SDLK_RALT] || keystate[SDLK_MENU]))
 				{
 					uae_reset(0, 1);
 					break;
 				}
 			}
-			else if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+			else
+				// Strangely in FBCON left window is seen as left alt ??
+				if (keyboard_type == 2) // KEYCODE_FBCON
+				{
+					if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+					{
+						uae_reset(0, 1);
+						break;
+					}
+				}
+				else if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
 #elif USE_SDL2
 			if (swap_win_alt_keys)
 			{
@@ -1338,6 +1350,13 @@ int handle_msgpump()
 				else
 					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
 #elif USE_SDL2
+				if (swap_win_alt_keys)
+				{
+					if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (rEvent.key.keysym.scancode == SDL_SCANCODE_RALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
 			}
 #endif
@@ -1353,6 +1372,13 @@ int handle_msgpump()
 				else
 					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
 #elif USE_SDL2
+				if (swap_win_alt_keys)
+				{
+					if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (rEvent.key.keysym.scancode == SDL_SCANCODE_RALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
 			}
 #endif
