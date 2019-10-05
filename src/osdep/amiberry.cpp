@@ -49,6 +49,7 @@ bool host_poweroff = false;
 bool read_config_descriptions = true;
 bool write_logfile = false;
 bool scanlines_by_default = false;
+bool swap_win_alt_keys = false;
 
 // Default Enter GUI key is F12
 int enter_gui_key = SDLK_F12;
@@ -867,6 +868,11 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "scanlines_by_default=%s\n", scanlines_by_default ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Swap Win keys with Alt keys?
+	// This helps with keyboards that may not have 2 Win keys and no Menu key either
+	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", swap_win_alt_keys ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Timing settings
 	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
 	fputs(buffer, f);
@@ -1046,6 +1052,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
 					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
 					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
+					cfgfile_yesno(option, value, "swap_win_alt_keys", &swap_win_alt_keys);
 
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
@@ -1275,8 +1282,16 @@ int handle_msgpump()
 				}
 			}
 			else if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-#elif USE_SDL2			
-			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
+#elif USE_SDL2
+			if (swap_win_alt_keys)
+			{
+				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
+			}
+			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 #endif
 			{
 				uae_reset(0, 1);
