@@ -7,6 +7,7 @@ Amiberry requires the SDL framework (https://libsdl.org) for graphics display, i
 
 # Donations
 If you like this project and would like to contribute with a donation, you can use this PayPal pool: https://paypal.me/pools/c/8apqkBQovm
+
 Donations would help with porting Amiberry to new devices, keeping the motivation going to spend those countless hours on the project, and perhaps getting us some chocolate.
 
 # Getting SDL2
