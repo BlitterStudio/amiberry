@@ -5118,7 +5118,7 @@ static bool process_custom_event (struct uae_input_device *id, int offset, int s
 	return true;
 }
 
-static void setbuttonstateall (struct uae_input_device *id, struct uae_input_device2 *id2, int button, int buttonstate)
+static void setbuttonstateall(struct uae_input_device* id, struct uae_input_device2* id2, int button, int buttonstate)
 {
 	static frame_time_t switchdevice_timeout;
 	int i;
@@ -5130,21 +5130,22 @@ static void setbuttonstateall (struct uae_input_device *id, struct uae_input_dev
 	bool doit = true;
 
 	if (!id->enabled) {
-		frame_time_t t = read_processor_time ();
+		frame_time_t t = read_processor_time();
 		if (!t)
 			t++;
 
 		if (buttonstate) {
 			switchdevice_timeout = t;
-		} else {
+		}
+		else {
 			if (switchdevice_timeout) {
-			  int port = button;
-			  if (t - switchdevice_timeout >= syncbase) // 1s
-				  port ^= 1;
-			  switchdevice (id, port, true);
+				int port = button;
+				if (t - switchdevice_timeout >= syncbase) // 1s
+					port ^= 1;
+				switchdevice(id, port, true);
 			}
 			switchdevice_timeout = 0;
-	  }
+		}
 		return;
 	}
 	if (button >= ID_BUTTON_TOTAL)
@@ -5161,27 +5162,29 @@ static void setbuttonstateall (struct uae_input_device *id, struct uae_input_dev
 
 		bool didcustom = false;
 
-	  for (i = 0; i < MAX_INPUT_SUB_EVENT; i++) {
+		for (i = 0; i < MAX_INPUT_SUB_EVENT; i++) {
 			int sub = sublevdir[buttonstate == 0 ? 1 : 0][i];
-			uae_u64 *flagsp = &id->flags[ID_BUTTON_OFFSET + button][sub];
+			uae_u64* flagsp = &id->flags[ID_BUTTON_OFFSET + button][sub];
 			int evt = id->eventid[ID_BUTTON_OFFSET + button][sub];
-			TCHAR *custom = id->custom[ID_BUTTON_OFFSET + button][sub];
+			TCHAR* custom = id->custom[ID_BUTTON_OFFSET + button][sub];
 			uae_u64 flags = flagsp[0];
 			int autofire = (flags & ID_FLAG_AUTOFIRE) ? 1 : 0;
 			int toggle = (flags & ID_FLAG_TOGGLE) ? 1 : 0;
 			int inverttoggle = (flags & ID_FLAG_INVERTTOGGLE) ? 1 : 0;
 			int invert = (flags & ID_FLAG_INVERT) ? 1 : 0;
-			int setmode = (flags & ID_FLAG_SET_ONOFF) ? 1: 0;
+			int setmode = (flags & ID_FLAG_SET_ONOFF) ? 1 : 0;
 			int setvalval = (flags & (ID_FLAG_SET_ONOFF_VAL1 | ID_FLAG_SET_ONOFF_VAL2));
 			int setval = setvalval == (ID_FLAG_SET_ONOFF_VAL1 | ID_FLAG_SET_ONOFF_VAL2) ? SET_ONOFF_PRESSREL_VALUE :
 				(setvalval == ID_FLAG_SET_ONOFF_VAL2 ? SET_ONOFF_PRESS_VALUE : (setvalval == ID_FLAG_SET_ONOFF_VAL1 ? SET_ONOFF_ON_VALUE : SET_ONOFF_OFF_VALUE));
 			int state;
 
-		  if (buttonstate < 0) {
+			if (buttonstate < 0) {
 				state = buttonstate;
-		  } else if (invert) {
+			}
+			else if (invert) {
 				state = buttonstate ? 0 : 1;
-		  } else {
+			}
+			else {
 				state = buttonstate;
 			}
 			if (setmode) {
@@ -5190,7 +5193,7 @@ static void setbuttonstateall (struct uae_input_device *id, struct uae_input_dev
 			}
 
 			if (!state) {
-				didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
+				didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
 			}
 
 			setqualifiers(evt, state > 0);
@@ -5198,54 +5201,59 @@ static void setbuttonstateall (struct uae_input_device *id, struct uae_input_dev
 			if (qualonly)
 				continue;
 
-		  if (state < 0) {
-			  if (!checkqualifiers (evt, flags, qualmask, NULL))
-				  continue;
-				handle_input_event (evt, 1, 1, HANDLE_IE_FLAG_CANSTOPPLAYBACK);
-				didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, state, qualmask, 0, i);
-		  } else if (inverttoggle) {
-			  /* pressed = firebutton, not pressed = autofire */
-			  if (state) {
-					queue_input_event (evt, NULL, -1, 0, 0, 1);
-					handle_input_event (evt, 2, 1, HANDLE_IE_FLAG_CANSTOPPLAYBACK);
-			  } else {
-					handle_input_event (evt, 2, 1, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_CANSTOPPLAYBACK);
-			  }
-				didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
-		  } else if (toggle) {
-			  if (!state)
-				  continue;
-			  if (omask & mask)
-				  continue;
-			  if (!checkqualifiers (evt, flags, qualmask, NULL))
-				  continue;
-			  *flagsp ^= ID_FLAG_TOGGLED;
-			  int toggled = (*flagsp & ID_FLAG_TOGGLED) ? 2 : 0;
-				handle_input_event (evt, toggled, 1, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_CANSTOPPLAYBACK);
-				didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, toggled, qualmask, autofire, i);
-		  } else {
-		    if (!checkqualifiers (evt, flags, qualmask, NULL)) {
-			    if (!state && !(flags & ID_FLAG_CANRELEASE)) {
-					  if (!invert)
-				      continue;
-			    } else if (state) {
-				    continue;
-			    }
-		    }
-		    if (!state)
-			    *flagsp &= ~ID_FLAG_CANRELEASE;
-		    else
-			    *flagsp |= ID_FLAG_CANRELEASE;
-		    if ((omask ^ nmask) & mask) {
-					handle_input_event (evt, state, 1, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_CANSTOPPLAYBACK);
+			if (state < 0) {
+				if (!checkqualifiers(evt, flags, qualmask, NULL))
+					continue;
+				handle_input_event(evt, 1, 1, HANDLE_IE_FLAG_CANSTOPPLAYBACK);
+				didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, state, qualmask, 0, i);
+			}
+			else if (inverttoggle) {
+				/* pressed = firebutton, not pressed = autofire */
+				if (state) {
+					queue_input_event(evt, NULL, -1, 0, 0, 1);
+					handle_input_event(evt, 2, 1, HANDLE_IE_FLAG_CANSTOPPLAYBACK);
+				}
+				else {
+					handle_input_event(evt, 2, 1, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_CANSTOPPLAYBACK);
+				}
+				didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
+			}
+			else if (toggle) {
+				if (!state)
+					continue;
+				if (omask & mask)
+					continue;
+				if (!checkqualifiers(evt, flags, qualmask, NULL))
+					continue;
+				*flagsp ^= ID_FLAG_TOGGLED;
+				int toggled = (*flagsp & ID_FLAG_TOGGLED) ? 2 : 0;
+				handle_input_event(evt, toggled, 1, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_CANSTOPPLAYBACK);
+				didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, toggled, qualmask, autofire, i);
+			}
+			else {
+				if (!checkqualifiers(evt, flags, qualmask, NULL)) {
+					if (!state && !(flags & ID_FLAG_CANRELEASE)) {
+						if (!invert)
+							continue;
+					}
+					else if (state) {
+						continue;
+					}
+				}
+				if (!state)
+					*flagsp &= ~ID_FLAG_CANRELEASE;
+				else
+					*flagsp |= ID_FLAG_CANRELEASE;
+				if ((omask ^ nmask) & mask) {
+					handle_input_event(evt, state, 1, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_CANSTOPPLAYBACK);
 					if (state)
-						didcustom |= process_custom_event (id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
-  		  }
-    	}
-	  }
+						didcustom |= process_custom_event(id, ID_BUTTON_OFFSET + button, state, qualmask, autofire, i);
+				}
+			}
+		}
 
 		if (!didcustom)
-			queue_input_event (-1, NULL, -1, 0, 0, 1);
+			queue_input_event(-1, NULL, -1, 0, 0, 1);
 	}
 
 	if (id2 && ((omask ^ nmask) & mask)) {

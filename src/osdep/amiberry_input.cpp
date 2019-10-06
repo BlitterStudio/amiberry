@@ -421,12 +421,9 @@ int input_get_default_mouse(struct uae_input_device* uid, const int i, const int
 		setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ, gp);
 		setid(uid, i, ID_AXIS_OFFSET + 1, 0, port, port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT, gp);
 		setid(uid, i, ID_AXIS_OFFSET + 2, 0, port, port ? 0 : INPUTEVENT_MOUSE1_WHEEL, gp);
-		setid_af(uid, i, ID_BUTTON_OFFSET + 0, 0, port,
-		         port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON, af, gp);
-		setid(uid, i, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON,
-		      gp);
-		setid(uid, i, ID_BUTTON_OFFSET + 2, 0, port, port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON,
-		      gp);
+		setid_af(uid, i, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON, af, gp);
+		setid(uid, i, ID_BUTTON_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON, gp);
+		setid(uid, i, ID_BUTTON_OFFSET + 2, 0, port, port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON, gp);
 	}
 
 	else
@@ -530,7 +527,6 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 	std::ifstream readFile(retroarch_file);
 	std::string line;
 	std::string delimiter = " = ";
-
 	auto tempbutton = 0;
 
 	// read each line in
@@ -553,37 +549,26 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 
 			//  time to get the output number
 			if (param.find("h") != 0) // check it isnt some kind of hat starting 'h' (so if D-pad uses buttons)
-			{	tempbutton = abs(atol(param.c_str()));
-                        }
-                        else
-                        {
-                            tempbutton = -1;
-                        }   
-                       
+			{
+				tempbutton = abs(atol(param.c_str()));
+			}
+			else
+			{
+				tempbutton = -1;
+			}
+
 			// gets the parameter
+			if (strncmp(find_setting, "count_hats", 10) == 0 && param.find("h0") == 0)
+			{
+				tempbutton = 1;
+				break;
+			}
 
-                        if (strncmp(find_setting, "count_hats", 10) == 0 &&  param.find("h0") == 0)
-                        {
-                            tempbutton = 1;
-                            break;
-                        }
-                        //else if (param.find("h0") == 0)
-                        //{
-                            
-                        //}
-
-			// ok, this is the 'normal' storing of values
 			if (option == find_setting)
 				break;
-
-                        // ignore anthing that isnt our special case(s), and keep looping
-			//if (strncmp(find_setting, "count_hats", 10) != 0)
-			//	tempbutton = -1;
 		}
 	}
-
-         write_log("Controller Detection: %s : %d\n",find_setting,tempbutton);
-
+	write_log("Controller Detection: %s : %d\n", find_setting, tempbutton);
 	return tempbutton;
 }
 
@@ -594,7 +579,6 @@ bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file)
 	std::ifstream readFile(retroarch_file);
 	std::string line;
 	std::string delimiter = " = ";
-
 	auto tempbutton = false;
 
 	// read each line in
@@ -627,7 +611,6 @@ bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file)
 			}
 		}
 	}
-
 	return tempbutton;
 }
 
@@ -637,7 +620,6 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting, char* retroarch_file)
 	ifstream read_file(retroarch_file);
 	string line;
 	string delimiter = " = ";
-
 	auto output = "nul";
 
 	// read each line in
@@ -670,7 +652,6 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting, char* retroarch_file)
 			}
 		}
 	}
-
 	return output;
 }
 
@@ -686,7 +667,6 @@ int find_string_in_array(const char* arr[], const int n, const char* key)
 			break;
 		}
 	}
-
 	return index;
 }
 
@@ -705,7 +685,6 @@ static std::string sanitize_retroarch_name(std::string s)
 	{
 		s.erase(remove(s.begin(), s.end(), illegal_chars[i]), s.end());
 	}
-
 	return s;
 }
 
@@ -719,10 +698,8 @@ static int init_joystick(void)
 
 	if (zfile_exists(retroarch_file))
 	{
-		struct host_keyboard_button temp_keyboard_buttons{};
+		struct host_keyboard_button temp_keyboard_buttons {};
 
-                
-                
 		auto tempkey = find_retroarch_key("input_player1_y", retroarch_file);
 		auto x = find_string_in_array(remap_key_map_list_strings, remap_key_map_list_size, tempkey);
 		temp_keyboard_buttons.north_button = remap_key_map_list[x];
@@ -814,96 +791,89 @@ static int init_joystick(void)
 			if (SDL_JoystickNameForIndex(cpt) != nullptr)
 				strncpy(joystick_name[cpt], SDL_JoystickNameForIndex(cpt), sizeof joystick_name[cpt] - 1);
 #endif
-			//else
-			//sprintf(joystick_name[cpt], "Joystick%d", cpt);
-      write_log("Controller Detection for Device: %s \n",joystick_name[cpt]);
+			write_log("Controller Detection for Device: %s \n", joystick_name[cpt]);
 
 			//this now uses controllers path (in tmp)
 			char control_config[255];
 			strcpy(control_config, tmp);
 			auto sanitized_name = sanitize_retroarch_name(joystick_name[cpt]);
 			strcat(control_config, sanitized_name.c_str());
-			//strcat(control_config, joystick_name[cpt]);
 			strcat(control_config, ".cfg");
-
-			//printf("Trying to match >>%s<<\n",control_config);
 
 			if (zfile_exists(control_config))
 			{
 				fill_blank_controller();
 				host_input_buttons[cpt] = default_controller_map;
 
-				//printf("Retroarch search for: >>%s<<\n",joystick_name[cpt]);
-
 				host_input_buttons[cpt].is_retroarch = true;
 
 				host_input_buttons[cpt].hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].quit_button = find_retroarch("input_exit_emulator_btn", control_config,
-				                                                     host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].menu_button = find_retroarch("input_menu_toggle_btn", control_config,
-				                                                     host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].reset_button = find_retroarch("input_reset_btn", control_config,
-				                                                      host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].east_button = find_retroarch("input_a_btn", control_config,
-				                                                     host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].south_button = find_retroarch("input_b_btn", control_config,
-				                                                      host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].north_button = find_retroarch("input_x_btn", control_config,
-				                                                      host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].west_button = find_retroarch("input_y_btn", control_config,
-				                                                     host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].dpad_left = find_retroarch("input_left_btn", control_config,
-				                                                   host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].dpad_right = find_retroarch("input_right_btn", control_config,
-				                                                    host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].dpad_up = find_retroarch("input_up_btn", control_config,
-				                                                 host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].dpad_down = find_retroarch("input_down_btn", control_config,
-				                                                   host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].select_button = find_retroarch("input_select_btn", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].start_button = find_retroarch("input_start_btn", control_config,
-				                                                      host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].left_shoulder = find_retroarch("input_l_btn", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].right_shoulder = find_retroarch("input_r_btn", control_config,
-				                                                        host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].left_trigger = find_retroarch("input_l2_btn", control_config,
-				                                                      host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].right_trigger = find_retroarch("input_r2_btn", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].lstick_button = find_retroarch("input_l3_btn", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].rstick_button = find_retroarch("input_r3_btn", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].lstick_axis_x = find_retroarch("input_l_x_plus_axis", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_x == -1)
 					host_input_buttons[cpt].lstick_axis_x = find_retroarch(
 						"input_right_axis", control_config, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].lstick_axis_y = find_retroarch("input_l_y_plus_axis", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				if (host_input_buttons[cpt].lstick_axis_y == -1)
 					host_input_buttons[cpt].lstick_axis_y = find_retroarch(
 						"input_down_axis", control_config, host_input_buttons[cpt]);
 
 				host_input_buttons[cpt].rstick_axis_x = find_retroarch("input_r_x_plus_axis", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 				host_input_buttons[cpt].rstick_axis_y = find_retroarch("input_r_y_plus_axis", control_config,
-				                                                       host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				// specials
 				// hats
 				host_input_buttons[cpt].number_of_hats = find_retroarch("count_hats", control_config,
-				                                                        host_input_buttons[cpt]);
+					host_input_buttons[cpt]);
 
 				// invert on axes
 				host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity(
@@ -921,28 +891,19 @@ static int init_joystick(void)
 				host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis", control_config);
 				host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis", control_config);
 
-				//i'll just leave this here for when we have a working debug logging    
-
-        write_log("Controller Detection: invert left  y axis: %d\n",host_input_buttons[cpt].lstick_axis_y_invert);
-        write_log("Controller Detection: invert left  x axis: %d\n",host_input_buttons[cpt].lstick_axis_x_invert);
-        write_log("Controller Detection: invert right y axis: %d\n",host_input_buttons[cpt].rstick_axis_y_invert);
-        write_log("Controller Detection: invert right x axis: %d\n",host_input_buttons[cpt].rstick_axis_x_invert);
-				//input_state_slot_increase_axis
-
-				//input_state_slot_decrease_axis
-
+				write_log("Controller Detection: invert left  y axis: %d\n", host_input_buttons[cpt].lstick_axis_y_invert);
+				write_log("Controller Detection: invert left  x axis: %d\n", host_input_buttons[cpt].lstick_axis_x_invert);
+				write_log("Controller Detection: invert right y axis: %d\n", host_input_buttons[cpt].rstick_axis_y_invert);
+				write_log("Controller Detection: invert right x axis: %d\n", host_input_buttons[cpt].rstick_axis_x_invert);
 			} // end of .cfg file found
 
 			else // do manual checks if there is no .cfg
 			{
-				//printf("    No .cfg config file found.\n");
-				//printf("    Using default controller layout: with n/s/e/w mapping.\n");
 				fill_default_controller();
 				host_input_buttons[cpt] = default_controller_map;
 			}
 		}
 	}
-
 	return 1;
 }
 
@@ -1098,7 +1059,7 @@ static int get_joystick_flags(int num)
 }
 
 
-static void read_joystick(void)
+static void read_joystick()
 {
 	for (auto joyid = 0; joyid < MAX_JPORTS; joyid++)
 	{
@@ -1132,14 +1093,12 @@ static void read_joystick(void)
 			setjoybuttonstate(0, 13, keystate[host_keyboard_buttons[hostkeyid].select_button]); // num2
 		}
 
-			// this is what we actually use on the Pi (for joysticks :)
+		// this is what we actually use on the Pi (for joysticks :)
 		else if (jsem_isjoy(joyid, &currprefs) != -1)
 		{
 			// Now we handle real SDL joystick...
 			const auto hostjoyid = currprefs.jports[joyid].id - JSEM_JOYS - num_keys_as_joys;
-
 			static struct host_input_button current_controller_map;
-
 			current_controller_map = host_input_buttons[hostjoyid];
 
 			if (current_controller_map.east_button == current_controller_map.hotkey_button)
@@ -1183,37 +1142,31 @@ static void read_joystick(void)
 				if (current_controller_map.menu_button != -1)
 				{
 					setjoybuttonstate(hostjoyid + 1, 14,
-					                  (SDL_JoystickGetButton(joysticktable[hostjoyid],
-					                                         current_controller_map.menu_button) & 1));
+						SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.menu_button) & 1);
 				}
 				if (current_controller_map.quit_button != -1)
 				{
 					setjoybuttonstate(hostjoyid + 1, 15,
-					                  (SDL_JoystickGetButton(joysticktable[hostjoyid],
-					                                         current_controller_map.quit_button) & 1));
+						SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.quit_button) & 1);
 				}
 				if (current_controller_map.reset_button != -1)
 				{
 					setjoybuttonstate(hostjoyid + 1, 30,
-					                  (SDL_JoystickGetButton(joysticktable[hostjoyid],
-					                                         current_controller_map.reset_button) & 1));
+						SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.reset_button) & 1);
 				}
 			}
-				// temporary solution for retroarch buttons inc. HOTKEY
+			// temporary solution for retroarch buttons inc. HOTKEY
 			else if (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.hotkey_button) & 1)
 			{
 				held_offset = REMAP_BUTTONS;
 				setjoybuttonstate(hostjoyid + 1, 14,
-				                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.menu_button) &
-					                  1));
+					SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.menu_button) &	1);
 				// menu button
 				setjoybuttonstate(hostjoyid + 1, 15,
-				                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.quit_button) &
-					                  1));
+					SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.quit_button) & 1);
 				// quit button
 				setjoybuttonstate(hostjoyid + 1, 30,
-				                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.reset_button)
-					                  & 1));
+					SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.reset_button) & 1);
 				// reset button
 			}
 
@@ -1258,26 +1211,14 @@ static void read_joystick(void)
 				// alternative code for custom remapping the left stick  
 				// handle the Y axis  (left stick)
 				setjoybuttonstate(hostjoyid + 1, 7 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) <=
-				                  lower_bound
-					                  ? 1
-					                  : 0);
+					SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) <=	lower_bound ? 1 : 0);
 				setjoybuttonstate(hostjoyid + 1, 8 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) >=
-				                  upper_bound
-					                  ? 1
-					                  : 0);
+					SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) >= upper_bound ? 1 : 0);
 				// handle the X axis  
 				setjoybuttonstate(hostjoyid + 1, 9 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) <=
-				                  lower_bound
-					                  ? 1
-					                  : 0);
+					SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) <=	lower_bound ? 1 : 0);
 				setjoybuttonstate(hostjoyid + 1, 10 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) >=
-				                  upper_bound
-					                  ? 1
-					                  : 0);
+					SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) >=	upper_bound ? 1 : 0);
 			}
 
 			// right stick
@@ -1296,33 +1237,26 @@ static void read_joystick(void)
 			// cd32 red, blue, green, yellow
 			// south 
 			setjoybuttonstate(hostjoyid + 1, 0 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.south_button) & 1
-			                  ));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.south_button) & 1);
 			// east                    
 			setjoybuttonstate(hostjoyid + 1, 1 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid],
-			                                         current_controller_map.east_button) & 1));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.east_button) & 1);
 			// west
 			setjoybuttonstate(hostjoyid + 1, 2 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid],
-			                                         current_controller_map.west_button) & 1));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.west_button) & 1);
 			// north
-			setjoybuttonstate(hostjoyid + 1, 3 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.north_button) & 1
-			                  ));
+			setjoybuttonstate(hostjoyid + 1, 3 + held_offset, 
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.north_button) & 1);
 
 			// cd32  rwd, ffw, start
 			setjoybuttonstate(hostjoyid + 1, 4 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.left_shoulder) & 1
-			                  ));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.left_shoulder) & 1);
 			// left shoulder
 			setjoybuttonstate(hostjoyid + 1, 5 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.right_shoulder) &
-				                  1));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.right_shoulder) & 1);
 			// right shoulder
 			setjoybuttonstate(hostjoyid + 1, 6 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.start_button) & 1
-			                  ));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.start_button) & 1);
 			// start
 
 			// up down left right
@@ -1330,44 +1264,32 @@ static void read_joystick(void)
 			const int hat = SDL_JoystickGetHat(joysticktable[hostjoyid], 0);
 
 			setjoybuttonstate(hostjoyid + 1, 7 + held_offset, current_controller_map.dpad_up + 1
-				                                                  ? (SDL_JoystickGetButton(
-					                                                  joysticktable[hostjoyid],
-					                                                  current_controller_map.dpad_up) & 1)
-				                                                  : hat & SDL_HAT_UP);
+				? SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.dpad_up) & 1
+				: hat & SDL_HAT_UP);
 			setjoybuttonstate(hostjoyid + 1, 8 + held_offset, current_controller_map.dpad_down + 1
-				                                                  ? (SDL_JoystickGetButton(
-					                                                  joysticktable[hostjoyid],
-					                                                  current_controller_map.dpad_down) & 1)
-				                                                  : hat & SDL_HAT_DOWN);
+				? SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.dpad_down) & 1
+				: hat & SDL_HAT_DOWN);
 			setjoybuttonstate(hostjoyid + 1, 9 + held_offset, current_controller_map.dpad_left + 1
-				                                                  ? (SDL_JoystickGetButton(
-					                                                  joysticktable[hostjoyid],
-					                                                  current_controller_map.dpad_left) & 1)
-				                                                  : hat & SDL_HAT_LEFT);
+				? SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.dpad_left) & 1
+				: hat & SDL_HAT_LEFT);
 			setjoybuttonstate(hostjoyid + 1, 10 + held_offset, current_controller_map.dpad_right + 1
-				                                                   ? (SDL_JoystickGetButton(
-					                                                   joysticktable[hostjoyid],
-					                                                   current_controller_map.dpad_right) & 1)
-				                                                   : hat & SDL_HAT_RIGHT);
+				? SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.dpad_right) & 1
+				: hat & SDL_HAT_RIGHT);
 
 			// stick left/right/select
 			setjoybuttonstate(hostjoyid + 1, 11 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.lstick_button) & 1
-			                  ));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.lstick_button) & 1);
 			// left stick
 			setjoybuttonstate(hostjoyid + 1, 12 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.rstick_button) & 1
-			                  ));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.rstick_button) & 1);
 			// right stick
 
 			setjoybuttonstate(hostjoyid + 1, 13 + held_offset,
-			                  (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.select_button) & 1
-			                  ));
+				SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.select_button) & 1);
 			// select button
 		}
 	}
 }
-
 
 struct inputdevice_functions inputdevicefunc_joystick = {
 	init_joystick, close_joystick, acquire_joystick, unacquire_joystick,
