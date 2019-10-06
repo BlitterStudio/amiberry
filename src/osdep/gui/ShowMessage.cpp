@@ -211,23 +211,23 @@ static void ShowMessageLoop()
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION)
 			{
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
 					{
 						PushFakeKey(SDLK_RETURN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
 					{
 						dialogFinished = true;
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) ||
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) ||
 						(hat & SDL_HAT_LEFT) ||
 						(hat & SDL_HAT_RIGHT))
 

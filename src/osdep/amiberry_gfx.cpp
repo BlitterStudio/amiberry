@@ -29,11 +29,6 @@
 #include "bcm_host.h"
 #include "threaddep/thread.h"
 
-#define DISPLAY_SIGNAL_SETUP 				1
-#define DISPLAY_SIGNAL_SUBSHUTDOWN 			2
-#define DISPLAY_SIGNAL_OPEN 				3
-#define DISPLAY_SIGNAL_SHOW 				4
-#define DISPLAY_SIGNAL_QUIT 				5
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
 static uae_sem_t display_sem = nullptr;

@@ -34,7 +34,10 @@
 #include <android/log.h>
 #endif
 
-SDL_Joystick* GUIjoy;
+#ifdef USE_DISPMANX
+#include "bcm_host.h"
+#endif
+
 std::vector<int> joypad_axis_state; // Keep track of horizontal and vertical axis states
 
 bool gui_running = false;
@@ -101,6 +104,7 @@ enum
 /*
 * SDL Stuff we need
 */
+SDL_Joystick* gui_joystick;
 SDL_Surface* gui_screen;
 SDL_Event gui_event;
 #ifdef USE_SDL2
@@ -427,10 +431,10 @@ namespace sdl
 	// -1 (left or up), 0 (centered) or 1 (right or down)
 	int get_joypad_axis_state(int axis)
 	{
-		if (!GUIjoy)
+		if (!gui_joystick)
 			return 0;
 
-		const auto state = SDL_JoystickGetAxis(GUIjoy, axis);
+		const auto state = SDL_JoystickGetAxis(gui_joystick, axis);
 
 		int result;
 		if (std::abs(state) < 10000)
@@ -464,18 +468,18 @@ namespace sdl
 
 			case SDL_JOYHATMOTION:
 			case SDL_JOYBUTTONDOWN:
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || hat & SDL_HAT_UP) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || hat & SDL_HAT_UP) // dpad
 					{
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || hat & SDL_HAT_DOWN) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || hat & SDL_HAT_DOWN) // dpad
 					{
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
@@ -483,14 +487,14 @@ namespace sdl
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_shoulder)) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].left_shoulder)) // dpad
 					{
 						for (int z = 0; z < 10; ++z)
 						{
 							PushFakeKey(SDLK_UP);
 						}
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].right_shoulder)) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].right_shoulder)) // dpad
 					{
 						for (int z = 0; z < 10; ++z)
 						{
@@ -498,40 +502,40 @@ namespace sdl
 						}
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || hat & SDL_HAT_RIGHT) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || hat & SDL_HAT_RIGHT) // dpad
 					{
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || hat & SDL_HAT_LEFT) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || hat & SDL_HAT_LEFT) // dpad
 					{
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_LEFT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button)) // need this to be X button
 					{
 						PushFakeKey(SDLK_RETURN);
 						continue;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].quit_button) &&
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].quit_button) &&
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
 					{
 						uae_quit();
 						gui_running = false;
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].left_trigger))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].left_trigger))
 					{
 						ShowHelpRequested();
 						widgets::cmdHelp->requestFocus();
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].menu_button)) // use the HOTKEY button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].menu_button)) // use the HOTKEY button
 					{
 						gui_running = false;
 					}
@@ -700,8 +704,8 @@ namespace sdl
 	{
 		if (SDL_NumJoysticks() > 0)
 		{
-			GUIjoy = SDL_JoystickOpen(0);
-			joypad_axis_state.assign(SDL_JoystickNumAxes(GUIjoy), 0);
+			gui_joystick = SDL_JoystickOpen(0);
+			joypad_axis_state.assign(SDL_JoystickNumAxes(gui_joystick), 0);
 		}
 			
 
@@ -728,10 +732,10 @@ namespace sdl
 			UpdateGuiScreen();
 		}
 
-		if (GUIjoy)
+		if (gui_joystick)
 		{
-			SDL_JoystickClose(GUIjoy);
-			GUIjoy = nullptr;
+			SDL_JoystickClose(gui_joystick);
+			gui_joystick = nullptr;
 			joypad_axis_state.clear();
 		}
 			

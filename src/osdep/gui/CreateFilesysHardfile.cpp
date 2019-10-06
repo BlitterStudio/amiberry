@@ -268,45 +268,45 @@ static void CreateFilesysHardfileLoop()
 				gcn::FocusHandler* focusHdl;
 				gcn::Widget* activeWidget;
 
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
 					{
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
 					{
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_LEFT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button)) // need this to be X button
 					{
 						PushFakeKey(SDLK_RETURN);
 						continue;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button)) // need this to be START button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button)) // need this to be START button
 					{
 						dialogFinished = true;
 						break;

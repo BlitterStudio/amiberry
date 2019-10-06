@@ -174,15 +174,15 @@ static void ShowHelpLoop(void)
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN)
 			{
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
 					{
 						PushFakeKey(SDLK_RETURN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
 					{
 						dialogFinished = true;
 						break;

@@ -39,7 +39,7 @@ extern gcn::Color gui_baseCol;
 extern gcn::Color colTextboxBackground;
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
-extern SDL_Joystick* GUIjoy;
+extern SDL_Joystick* gui_joystick;
 
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];

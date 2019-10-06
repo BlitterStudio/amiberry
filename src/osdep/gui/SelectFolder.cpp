@@ -299,42 +299,42 @@ static void SelectFolderLoop()
 			}                        
 			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
 			{
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
 					{
 						PushFakeKey(SDLK_RETURN);
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
 					{
 						dialogFinished = true;
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
 					{
 						navigate_left();
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
 					{
 						navigate_right();
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
 					{
 						PushFakeKey(SDLK_UP);
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
 					{
 						PushFakeKey(SDLK_DOWN);
 						break;

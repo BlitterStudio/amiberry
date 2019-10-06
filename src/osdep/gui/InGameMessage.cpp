@@ -132,11 +132,11 @@ void checkInput()
 		}
 		else if (msg_event.type == SDL_JOYBUTTONDOWN)
 		{
-			if (GUIjoy)
+			if (gui_joystick)
 			{
-				if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button) ||
-					SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button) ||
+					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button))
 
 					msg_done = 1;
 			}
@@ -269,7 +269,7 @@ void gui_run()
 {
 	if (SDL_NumJoysticks() > 0)
 	{
-		GUIjoy = SDL_JoystickOpen(0);
+		gui_joystick = SDL_JoystickOpen(0);
 	}
 
 	// Prepare the screen once
@@ -287,10 +287,10 @@ void gui_run()
 		UpdateScreen();
 	}
 
-	if (GUIjoy)
+	if (gui_joystick)
 	{
-		SDL_JoystickClose(GUIjoy);
-		GUIjoy = nullptr;
+		SDL_JoystickClose(gui_joystick);
+		gui_joystick = nullptr;
 	}
 }
 
