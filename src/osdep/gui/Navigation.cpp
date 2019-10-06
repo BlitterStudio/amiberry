@@ -240,8 +240,9 @@ static NavigationMap navMap[] =
 { "cboInterpol",    "Sound",          "Sound",          "cboFrequency",   "cboFilter" },
 { "cboFilter",      "Sound",          "Sound",          "cboInterpol",    "sldSeparation" },
 { "sldSeparation",  "",               "",               "cboFilter",      "sldStereoDelay" },
-{ "sldStereoDelay", "",               "",               "sldSeparation",  "sndDisable" },
-
+{ "sldStereoDelay", "",               "",               "sldSeparation",  "sdlPaulaVol" },
+{ "sdlPaulaVol",    "",               "",               "sldStereoDelay", "sndDisable" },
+	
 //  active            move left           move right          move up           move down
 // PanelInput
 { "cboPort0",         "Input",          "cboPort0mode",       "cboAutofire",      "cboPort1" },
