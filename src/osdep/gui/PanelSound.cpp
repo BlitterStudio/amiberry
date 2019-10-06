@@ -41,6 +41,9 @@ static gcn::Slider* sldSeparation;
 static gcn::Label* lblStereoDelay;
 static gcn::Label* lblStereoDelayInfo;
 static gcn::Slider* sldStereoDelay;
+static gcn::Label* lblPaulaVol;
+static gcn::Label* lblPaulaVolInfo;
+static gcn::Slider* sldPaulaVol;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
@@ -228,6 +231,11 @@ public:
 					changed_prefs.sound_mixed_stereo_delay = -1;
 			}
 		}
+		else if (actionEvent.getSource() == sldPaulaVol) {
+			int newvol = 100 - int(sldPaulaVol->getValue());
+			if (changed_prefs.sound_volume_paula != newvol)
+				changed_prefs.sound_volume_paula = newvol;
+		}
 
 		RefreshPanelSound();
 	}
@@ -327,6 +335,17 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldStereoDelay->addActionListener(soundActionListener);
 	lblStereoDelayInfo = new gcn::Label("10");
 
+	lblPaulaVol = new gcn::Label("Paula Volume:");
+	lblPaulaVol->setAlignment(gcn::Graphics::RIGHT);
+	sldPaulaVol = new gcn::Slider(0, 100);
+	sldPaulaVol->setSize(160, SLIDER_HEIGHT);
+	sldPaulaVol->setBaseColor(gui_baseCol);
+	sldPaulaVol->setMarkerLength(20);
+	sldPaulaVol->setStepLength(10);
+	sldPaulaVol->setId("sldPaulaVol");
+	sldPaulaVol->addActionListener(soundActionListener);
+	lblPaulaVolInfo = new gcn::Label("80 %");
+	
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
 	category.panel->add(grpMode, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
@@ -347,6 +366,10 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	category.panel->add(lblStereoDelay, DISTANCE_BORDER, posY);
 	category.panel->add(sldStereoDelay, lblStereoDelay->getX() + lblStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
+	category.panel->add(lblPaulaVol, DISTANCE_BORDER, posY);
+	category.panel->add(sldPaulaVol, lblPaulaVol->getX() + lblPaulaVol->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblPaulaVolInfo, sldPaulaVol->getX() + sldPaulaVol->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
 
 	RefreshPanelSound();
@@ -466,6 +489,9 @@ void RefreshPanelSound()
 		snprintf(tmp, 10, "%d", curr_stereodelay_idx);
 		lblStereoDelayInfo->setCaption(tmp);
 	}
+	sldPaulaVol->setValue(100 - changed_prefs.sound_volume_paula);
+	snprintf(tmp, sizeof(tmp) - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
+	lblPaulaVolInfo->setCaption(tmp);
 }
 
 bool HelpPanelSound(std::vector<std::string> &helptext)
@@ -483,5 +509,7 @@ bool HelpPanelSound(std::vector<std::string> &helptext)
 	helptext.emplace_back(R"(With "Stereo separation" and "Stereo delay", you can adjust how the left )");
 	helptext.emplace_back("and right audio channels of the Amiga are mixed to the left and right channels ");
 	helptext.emplace_back("of your device. A value of 70% for separation and no delay is a good start.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The audio volume of the Amiga (not CD) can be adjusted with \"Paula Volume\".");
 	return true;
 }
