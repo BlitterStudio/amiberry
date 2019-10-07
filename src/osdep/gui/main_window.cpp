@@ -703,6 +703,7 @@ namespace sdl
 	void gui_run()
 	{
 		if (SDL_NumJoysticks() > 0)
+	if (gui_joystick_control && SDL_NumJoysticks() > 0)
 		{
 			gui_joystick = SDL_JoystickOpen(0);
 			joypad_axis_state.assign(SDL_JoystickNumAxes(gui_joystick), 0);

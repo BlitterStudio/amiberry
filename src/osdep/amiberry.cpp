@@ -50,6 +50,7 @@ bool read_config_descriptions = true;
 bool write_logfile = false;
 bool scanlines_by_default = false;
 bool swap_win_alt_keys = false;
+bool gui_joystick_control = true;
 
 // Default Enter GUI key is F12
 int enter_gui_key = SDLK_F12;
@@ -873,6 +874,11 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", swap_win_alt_keys ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Disable controller in the GUI?
+	// If you want to disable the default behavior for some reason
+	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", gui_joystick_control ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Timing settings
 	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
 	fputs(buffer, f);
@@ -1052,6 +1058,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
 					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
 					cfgfile_yesno(option, value, "swap_win_alt_keys", &swap_win_alt_keys);
+					cfgfile_yesno(option, value, "gui_joystick_control", &gui_joystick_control);
 
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
