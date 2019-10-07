@@ -1,14 +1,7 @@
 #include <stdbool.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 
@@ -209,13 +202,6 @@ static NavigationMap navMap[] =
 // PanelDisplay
 { "sldWidth",       "",             "",               "Frameskip",      "sldHeight" },
 { "sldHeight",      "",             "",               "sldWidth",       "sldVertPos" },
-#ifdef USE_SDL1
-{ "sldVertPos",     "",             "",               "sldHeight",       "Single" },
-{ "Single",        "Display",       "Display",        "sdlVertPos",      "Double" },
-{ "Double",        "Display",       "Display",        "Single",          "Scanlines" },
-{ "Scanlines",     "Display",       "Display",        "Double",          "Fullscreen" },
-{ "CorrectAR",      "Display",      "Fullscreen",     "Scanlines",       "Frameskip" },
-#elif USE_SDL2
 { "sldVertPos",     "",             "",               "sldHeight",       "Auto" },
 { "Auto",           "Display",      "Single",         "sldVertPos",      "Nearest Neighbor (pixelated)" },
 { "Nearest Neighbor (pixelated)","Display","Double",  "Auto",            "Linear (smooth)" },
@@ -224,7 +210,6 @@ static NavigationMap navMap[] =
 { "Double", "Nearest Neighbor (pixelated)", "Nearest Neighbor (pixelated)", "Single", "Scanlines" },
 { "Scanlines", "Linear (smooth)",   "Linear (smooth)", "Double",         "Fullscreen" },
 { "CorrectAR",      "Display",      "Fullscreen",     "Linear (smooth)", "Frameskip" },
-#endif
 { "Fullscreen",     "CorrectAR",    "CorrectAR",      "Scanlines", "Frameskip" },
 { "Frameskip",      "Display",      "Display",        "CorrectAR",  "sldWidth" },
 
@@ -449,18 +434,6 @@ bool HandleNavigation(int direction)
 	return focusTarget != nullptr;
 }
 
-#ifdef USE_SDL1
-void PushFakeKey(const SDLKey inKey)
-{
-	SDL_Event nuevent;
-
-	nuevent.type = SDL_KEYDOWN;  // and the key up
-	nuevent.key.keysym.sym = inKey;
-	gui_input->pushInput(nuevent); // Fire key down
-	nuevent.type = SDL_KEYUP;  // and the key up
-	gui_input->pushInput(nuevent); // Fire key down
-}
-#elif USE_SDL2
 void PushFakeKey(const SDL_Keycode inKey)
 {
 	SDL_Event nuevent;
@@ -471,4 +444,3 @@ void PushFakeKey(const SDL_Keycode inKey)
 	nuevent.type = SDL_KEYUP;  // and the key up
 	gui_input->pushInput(nuevent); // Fire key down
 }
-#endif

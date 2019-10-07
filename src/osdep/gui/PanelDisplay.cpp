@@ -1,16 +1,9 @@
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -23,12 +16,10 @@
 const int amigawidth_values[] = { 320, 352, 384, 640, 704, 768 };
 const int amigaheight_values[] = { 200, 216, 240, 256, 262, 270 };
 
-#ifdef USE_SDL2
 static gcn::Window* grpScalingMethod;
 static gcn::UaeRadioButton* optAuto;
 static gcn::UaeRadioButton* optNearest;
 static gcn::UaeRadioButton* optLinear;
-#endif
 
 static gcn::Window* grpLineMode;
 static gcn::UaeRadioButton* optSingle;
@@ -104,7 +95,6 @@ public:
 
 AmigaScreenActionListener* amigaScreenActionListener;
 
-#ifdef USE_SDL2
 class ScalingMethodActionListener : public gcn::ActionListener
 {
 public:
@@ -120,7 +110,6 @@ public:
 };
 
 static ScalingMethodActionListener* scalingMethodActionListener;
-#endif
 
 class LineModeActionListener : public gcn::ActionListener
 {
@@ -220,7 +209,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	category.panel->add(grpAmigaScreen);
 	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
 
-#ifdef USE_SDL2
 	scalingMethodActionListener = new ScalingMethodActionListener();
 
 	optAuto = new gcn::UaeRadioButton("Auto", "radioscalingmethodgroup");
@@ -243,7 +231,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	category.panel->add(grpScalingMethod);
 	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
-#endif
 
 	lineModeActionListener = new LineModeActionListener();
 	optSingle = new gcn::UaeRadioButton("Single", "linemodegroup");
@@ -256,13 +243,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	optScanlines->addActionListener(lineModeActionListener);
 
 	grpLineMode = new gcn::Window("Line mode");
-#ifdef USE_SDL2
 	grpLineMode->setPosition(
 		grpScalingMethod->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X,
 		posY - DISTANCE_BORDER - grpScalingMethod->getHeight() - DISTANCE_NEXT_Y);
-#else
-	grpLineMode->setPosition(DISTANCE_BORDER, posY);
-#endif
 	grpLineMode->add(optSingle, 5, 10);
 	grpLineMode->add(optDouble, 5, 40);
 	grpLineMode->add(optScanlines, 5, 70);
@@ -270,10 +253,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER, optScanlines->getY() + optScanlines->getHeight() + 30);
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
-#ifndef USE_SDL2
-	posY += DISTANCE_BORDER + grpLineMode->getHeight() + DISTANCE_NEXT_Y;
-#endif
-
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
 	category.panel->add(chkFullscreen, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
@@ -308,13 +287,11 @@ void ExitPanelDisplay()
 	delete grpLineMode;
 	delete lineModeActionListener;
 
-#ifdef USE_SDL2
 	delete optAuto;
 	delete optNearest;
 	delete optLinear;
 	delete grpScalingMethod;
 	delete scalingMethodActionListener;
-#endif
 }
 
 
@@ -350,14 +327,12 @@ void RefreshPanelDisplay()
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFullscreen->setSelected(changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN);
 
-#ifdef USE_SDL2
 	if (changed_prefs.scaling_method == -1)
 		optAuto->setSelected(true);
 	else if (changed_prefs.scaling_method == 0)
 		optNearest->setSelected(true);
 	else if (changed_prefs.scaling_method == 1)
 		optLinear->setSelected(true);
-#endif
 
 	if (changed_prefs.gfx_vresolution == VRES_NONDOUBLE && changed_prefs.gfx_pscanlines == 0)
 		optSingle->setSelected(true);
@@ -379,14 +354,12 @@ bool HelpPanelDisplay(std::vector<std::string> &helptext)
 	helptext.emplace_back("Demo or Workbench uses HiRes mode and you selected a value for \"Width\" lower than 640,");
 	helptext.emplace_back("you will only see half of the pixels.");
 	helptext.emplace_back(" ");
-#ifdef USE_SDL2
 	helptext.emplace_back("Select the scaling method for the Amiga screen. The default option \"Auto\", ");
 	helptext.emplace_back("will try to find the best looking scaling method depending on your monitor's resolution. ");
 	helptext.emplace_back("\"Nearest Neighbor\" will give you a more pixelated and crisp image, but it may come with ");
 	helptext.emplace_back("some distortion if your resolution is not an exact multiple. ");
 	helptext.emplace_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
 	helptext.emplace_back(" ");
-#endif
 	helptext.emplace_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga ");
 	helptext.emplace_back("screen.");
 	helptext.emplace_back(" ");

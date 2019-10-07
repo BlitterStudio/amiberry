@@ -2,16 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
@@ -366,11 +359,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 		listEntry[row] = new gcn::Container();
 		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, SMALL_BUTTON_HEIGHT + 4);
 		listEntry[row]->setBaseColor(gui_baseCol);
-#ifdef USE_SDL1
-		listEntry[row]->setFrameSize(0);
-#elif USE_SDL2
 		listEntry[row]->setBorderSize(0);
-#endif
 
 		listCmdProps[row] = new gcn::Button("...");
 		listCmdProps[row]->setBaseColor(gui_baseCol);

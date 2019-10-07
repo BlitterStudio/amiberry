@@ -2,16 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#include <SDL/SDL_ttf.h>
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 
 #include "SelectorEntry.hpp"
 #include "UaeCheckBox.hpp"
@@ -330,7 +323,9 @@ static void CreateFilesysHardfileLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#elif USE_SDL2
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -364,7 +359,8 @@ bool CreateFilesysHardfile()
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

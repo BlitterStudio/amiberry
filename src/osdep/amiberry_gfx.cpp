@@ -17,22 +17,20 @@
 
 #include <png.h>
 #include "inputdevice.h"
-#ifdef USE_SDL1
-#include <SDL_image.h>
-#include <SDL_gfxPrimitives.h>
-#include <SDL_ttf.h>
-#endif
+
 #ifdef ANDROIDSDL
 #include <SDL_screenkeyboard.h>
 #endif
 #ifdef USE_DISPMANX
-#include "bcm_host.h"
 #include "threaddep/thread.h"
-
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
 static uae_sem_t display_sem = nullptr;
 static bool volatile display_thread_busy = false;
+static unsigned int current_vsync_frame = 0;
+unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
+#elif USE_SDL2
+const char* sdl_video_driver;
 #endif
 
 #ifdef ANDROIDSDL
@@ -48,14 +46,7 @@ SDL_Surface* screen = nullptr;
 #if (defined USE_SDL2) && (defined USE_RENDER_THREAD)
 SDL_Thread * renderthread = nullptr;
 #endif
-#ifdef USE_SDL2
-const char* sdl_video_driver;
-#endif
 
-#ifdef USE_DISPMANX
-static unsigned int current_vsync_frame = 0;
-unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
-#endif
 static unsigned long last_synctime;
 static int vsync_modulo = 1;
 static int host_hz = 50;
@@ -84,14 +75,14 @@ int delay_savestate_frame = 0;
 #ifdef USE_DISPMANX
 static unsigned long next_synctime = 0;
 
-DISPMANX_DISPLAY_HANDLE_T   dispmanxdisplay;
-DISPMANX_MODEINFO_T         dispmanxdinfo;
-DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_1 = 0;
-DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_amigafb_2 = 0;
-DISPMANX_RESOURCE_HANDLE_T  dispmanxresource_blackfb = 0;
-DISPMANX_ELEMENT_HANDLE_T   dispmanxelement;
-DISPMANX_ELEMENT_HANDLE_T	blackscreenelement;
-DISPMANX_UPDATE_HANDLE_T    dispmanxupdate;
+DISPMANX_DISPLAY_HANDLE_T   displayHandle;
+DISPMANX_MODEINFO_T         modeInfo;
+DISPMANX_RESOURCE_HANDLE_T  amigafb_resource_1 = 0;
+DISPMANX_RESOURCE_HANDLE_T  amigafb_resource_2 = 0;
+DISPMANX_RESOURCE_HANDLE_T  blackfb_resource = 0;
+DISPMANX_ELEMENT_HANDLE_T   elementHandle;
+DISPMANX_ELEMENT_HANDLE_T	blackscreen_element;
+DISPMANX_UPDATE_HANDLE_T    updateHandle;
 VC_RECT_T       src_rect;
 VC_RECT_T       dst_rect;
 VC_RECT_T       blit_rect;
@@ -112,12 +103,10 @@ static int display_thread(void *unused)
 {
 	VC_DISPMANX_ALPHA_T alpha = {
 		DISPMANX_FLAGS_ALPHA_T(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
-		255 /*alpha 0->255*/ , 	0
+		255, 0
 	};
 	uint32_t vc_image_ptr;
-#ifdef USE_SDL1
-	SDL_Surface *dummy_screen;
-#endif
+
 	int width, height, depth;
 	float want_aspect, real_aspect, scale;
 	SDL_Rect viewport;
@@ -129,39 +118,33 @@ static int display_thread(void *unused)
 		
 		switch (signal) {
 		case DISPLAY_SIGNAL_SETUP:
-			bcm_host_init();
-			dispmanxdisplay = vc_dispmanx_display_open(0);
-			vc_dispmanx_vsync_callback(dispmanxdisplay, vsync_callback, nullptr);
+			//bcm_host_init();
+			//displayHandle = vc_dispmanx_display_open(0);
+			vc_dispmanx_vsync_callback(displayHandle, vsync_callback, nullptr);
 			break;
 
 		case DISPLAY_SIGNAL_SUBSHUTDOWN:
 			if (DispManXElementpresent == 1)
 			{
 				DispManXElementpresent = 0;
-				dispmanxupdate = vc_dispmanx_update_start(0);
-				vc_dispmanx_element_remove(dispmanxupdate, dispmanxelement);
-				vc_dispmanx_element_remove(dispmanxupdate, blackscreenelement);
-				vc_dispmanx_update_submit_sync(dispmanxupdate);
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_remove(updateHandle, elementHandle);
+				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+				vc_dispmanx_update_submit_sync(updateHandle);
 			}
 
-			if (dispmanxresource_amigafb_1 != 0) {
-				vc_dispmanx_resource_delete(dispmanxresource_amigafb_1);
-				dispmanxresource_amigafb_1 = 0;
+			if (amigafb_resource_1 != 0) {
+				vc_dispmanx_resource_delete(amigafb_resource_1);
+				amigafb_resource_1 = 0;
 			}
-			if (dispmanxresource_amigafb_2 != 0) {
-				vc_dispmanx_resource_delete(dispmanxresource_amigafb_2);
-				dispmanxresource_amigafb_2 = 0;
+			if (amigafb_resource_2 != 0) {
+				vc_dispmanx_resource_delete(amigafb_resource_2);
+				amigafb_resource_2 = 0;
 			}
-			if (dispmanxresource_blackfb != 0)
+			if (blackfb_resource != 0)
 			{
-				vc_dispmanx_resource_delete(dispmanxresource_blackfb);
-				dispmanxresource_blackfb = 0;
-			}
-
-			if (screen != nullptr)
-			{
-				SDL_FreeSurface(screen);
-				screen = nullptr;
+				vc_dispmanx_resource_delete(blackfb_resource);
+				blackfb_resource = 0;
 			}
 
 			uae_sem_post(&display_sem);
@@ -191,33 +174,27 @@ static int display_thread(void *unused)
 				rgb_mode = VC_IMAGE_RGB565;
 			}
 
-#ifdef USE_SDL1
-			dummy_screen = SDL_SetVideoMode(width, height, depth, SDL_SWSURFACE | SDL_FULLSCREEN);
-			screen = SDL_CreateRGBSurface(SDL_HWSURFACE, width, height, depth,
-				dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
-			SDL_FreeSurface(dummy_screen);
-#elif USE_SDL2
 			screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
-#endif
-			vc_dispmanx_display_get_info(dispmanxdisplay, &dispmanxdinfo);
 
-			dispmanxresource_amigafb_1 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
-			dispmanxresource_amigafb_2 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
-			dispmanxresource_blackfb = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			vc_dispmanx_display_get_info(displayHandle, &modeInfo);
+
+			amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			blackfb_resource = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
 
 			vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
-			vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1, rgb_mode, screen->pitch, screen->pixels, &blit_rect);
-			vc_dispmanx_resource_write_data(dispmanxresource_blackfb, rgb_mode, screen->pitch, screen->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(amigafb_resource_1, rgb_mode, screen->pitch, screen->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(blackfb_resource, rgb_mode, screen->pitch, screen->pixels, &blit_rect);
 			vc_dispmanx_rect_set(&src_rect, 0, 0, width << 16, height << 16);
 
 			// Use the full screen size for the black frame
-			vc_dispmanx_rect_set(&black_rect, 0, 0, dispmanxdinfo.width, dispmanxdinfo.height);
+			vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
 
 			// Correct Aspect Ratio
 			if (changed_prefs.gfx_correct_aspect == 0)
 			{
 				// Fullscreen.
-				vc_dispmanx_rect_set(&dst_rect, 0, 0, dispmanxdinfo.width, dispmanxdinfo.height);
+				vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
 			}
 			else
 			{
@@ -227,23 +204,23 @@ static int display_thread(void *unused)
 					height = display_height * 2 >> changed_prefs.gfx_vresolution;
 
 				want_aspect = float(width) / float(height);
-				real_aspect = float(dispmanxdinfo.width) / float(dispmanxdinfo.height);
+				real_aspect = float(modeInfo.width) / float(modeInfo.height);
 
 				if (want_aspect > real_aspect)
 				{
-					scale = float(dispmanxdinfo.width) / float(display_width);
+					scale = float(modeInfo.width) / float(display_width);
 					viewport.x = 0;
-					viewport.w = dispmanxdinfo.width;
+					viewport.w = modeInfo.width;
 					viewport.h = int(std::ceil(height * scale));
-					viewport.y = (dispmanxdinfo.height - viewport.h) / 2;
+					viewport.y = (modeInfo.height - viewport.h) / 2;
 				}
 				else
 				{
-					scale = float(dispmanxdinfo.height) / float(height);
+					scale = float(modeInfo.height) / float(height);
 					viewport.y = 0;
-					viewport.h = dispmanxdinfo.height;
+					viewport.h = modeInfo.height;
 					viewport.w = int(std::ceil(display_width * scale));
-					viewport.x = (dispmanxdinfo.width - viewport.w) / 2;
+					viewport.x = (modeInfo.width - viewport.w) / 2;
 				}
 
 				vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
@@ -252,17 +229,17 @@ static int display_thread(void *unused)
 			if (DispManXElementpresent == 0)
 			{
 				DispManXElementpresent = 1;
-				dispmanxupdate = vc_dispmanx_update_start(0);
-				blackscreenelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 0,
-					&black_rect, dispmanxresource_blackfb, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 
+				updateHandle = vc_dispmanx_update_start(0);
+				blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+					&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 
 					nullptr, DISPMANX_NO_ROTATE);
 
-				dispmanxelement = vc_dispmanx_element_add(dispmanxupdate, dispmanxdisplay, 10,               // layer
-					&dst_rect, dispmanxresource_amigafb_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+				elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 10,               // layer
+					&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 					nullptr,             // clamp
 					DISPMANX_NO_ROTATE);
 
-				vc_dispmanx_update_submit(dispmanxupdate, nullptr, nullptr);
+				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 			}
 			uae_sem_post(&display_sem);
 			break;
@@ -271,32 +248,32 @@ static int display_thread(void *unused)
 			if (current_resource_amigafb == 1)
 			{
 				current_resource_amigafb = 0;
-				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_1,
+				vc_dispmanx_resource_write_data(amigafb_resource_1,
 					rgb_mode,
 					screen->pitch,
 					screen->pixels,
 					&blit_rect);
-				dispmanxupdate = vc_dispmanx_update_start(0);
-				vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_1);
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_1);
 			}
 			else
 			{
 				current_resource_amigafb = 1;
-				vc_dispmanx_resource_write_data(dispmanxresource_amigafb_2,
+				vc_dispmanx_resource_write_data(amigafb_resource_2,
 					rgb_mode,
 					screen->pitch,
 					screen->pixels,
 					&blit_rect);
-				dispmanxupdate = vc_dispmanx_update_start(0);
-				vc_dispmanx_element_change_source(dispmanxupdate, dispmanxelement, dispmanxresource_amigafb_2);
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_2);
 			}
-			vc_dispmanx_update_submit(dispmanxupdate, nullptr, nullptr);
+			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 			break;
 
 		case DISPLAY_SIGNAL_QUIT:
-			vc_dispmanx_vsync_callback(dispmanxdisplay, nullptr, nullptr);
-			vc_dispmanx_display_close(dispmanxdisplay);
-			bcm_host_deinit();
+			vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
+			vc_dispmanx_display_close(displayHandle);
+			//bcm_host_deinit();
 			display_tid = nullptr;
 			return 0;
 		default: 
@@ -313,12 +290,14 @@ int graphics_setup(void)
 	picasso_init_resolutions();
 	InitPicasso96();
 #endif
-#ifdef USE_SDL1
-	const SDL_VideoInfo* sdl_video_info = SDL_GetVideoInfo();
-	can_have_linedouble = sdl_video_info->current_h >= 540;
-
+#ifdef USE_DISPMANX
+	bcm_host_init();
+	displayHandle = vc_dispmanx_display_open(0);
+	vc_dispmanx_display_get_info(displayHandle, &modeInfo);
+	can_have_linedouble = modeInfo.height >= 540;
+	
 	VCHI_INSTANCE_T vchi_instance;
-	VCHI_CONNECTION_T *vchi_connection;
+	VCHI_CONNECTION_T* vchi_connection;
 	TV_DISPLAY_STATE_T tvstate;
 
 	if (vchi_initialise(&vchi_instance) == 0) {
@@ -330,7 +309,7 @@ int graphics_setup(void)
 				HDMI_PROPERTY_PARAM_T property;
 				property.property = HDMI_PROPERTY_PIXEL_CLOCK_TYPE;
 				vc_tv_hdmi_get_property(&property);
-				const float frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? tvstate.display.hdmi.frame_rate * (1000.0f / 1001.0f) : tvstate.display.hdmi.frame_rate;
+				const auto frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? tvstate.display.hdmi.frame_rate * (1000.0f / 1001.0f) : tvstate.display.hdmi.frame_rate;
 				host_hz = int(frame_rate);
 			}
 			vc_vchi_tv_stop();
@@ -375,17 +354,16 @@ int graphics_setup(void)
 		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 	}
 
-	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		SDL_Log("SDL could not grab the keyboard");
-
-	SDL_ShowCursor(SDL_DISABLE);
-
 	SDL_DisplayMode current;
 	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
 	if (should_be_zero == 0)
 		host_hz = current.refresh_rate;
-#endif
 
+	SDL_ShowCursor(SDL_DISABLE);
+#endif
+	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
+		SDL_Log("SDL could not grab the keyboard");
+	
 	currprefs.gfx_apmode[1].gfx_refreshrate = host_hz;
 
 #ifdef USE_DISPMANX
@@ -407,7 +385,8 @@ int graphics_setup(void)
 
 void toggle_fullscreen()
 {
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 	const Uint32 fullscreen_flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	if (sdlWindow)
 	{
@@ -439,12 +418,18 @@ void InitAmigaVidMode(struct uae_prefs* p)
 
 void graphics_subshutdown()
 {
+	if (screen != nullptr)
+	{
+		SDL_FreeSurface(screen);
+		screen = nullptr;
+	}
 #ifdef USE_DISPMANX
 	if (display_tid != nullptr) {
 		wait_for_display_thread();
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SUBSHUTDOWN, 1);
 		uae_sem_wait(&display_sem);
 	}
+	bcm_host_deinit();
 #elif USE_SDL2
 #if (defined USE_RENDER_THREAD)
 	if (renderthread)
@@ -453,12 +438,6 @@ void graphics_subshutdown()
 		renderthread = NULL;
 	}
 #endif
-
-	if (screen != nullptr)
-	{
-		SDL_FreeSurface(screen);
-		screen = nullptr;
-	}
 	if (texture != nullptr)
 	{
 		SDL_DestroyTexture(texture);
@@ -558,7 +537,9 @@ static void open_screen(struct uae_prefs* p)
 	{
 		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
 		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 256;
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+	//TODO ?
+#elif USE_SDL2
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
 #endif
 	}
@@ -568,7 +549,8 @@ static void open_screen(struct uae_prefs* p)
 		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 640;
 		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 256) << p->gfx_vresolution;
 
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 		if (p->scaling_method == -1)
 		{
 			if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
@@ -951,23 +933,7 @@ static int init_colors()
 */
 static int get_display_depth()
 {
-#ifdef USE_SDL1
-	const SDL_VideoInfo *vid_info;
-	auto depth = 0;
-
-	if ((vid_info = SDL_GetVideoInfo()))
-	{
-		depth = vid_info->vfmt->BitsPerPixel;
-
-		/* Don't trust the answer if it's 16 bits; the display
-		* could actually be 15 bits deep. We'll count the bits
-		* ourselves */
-		if (depth == 16)
-			depth = bits_in_mask(vid_info->vfmt->Rmask) + bits_in_mask(vid_info->vfmt->Gmask) + bits_in_mask(vid_info->vfmt->Bmask);
-	}
-#elif USE_SDL2
 	const int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
-#endif
 	return depth;
 }
 
@@ -1017,8 +983,7 @@ void graphics_leave()
 		uae_sem_destroy(&display_sem);
 		display_sem = nullptr;
 	}
-#endif
-#ifdef  USE_SDL2
+#elif USE_SDL2
 	if (texture)
 	{
 		SDL_DestroyTexture(texture);
@@ -1036,9 +1001,9 @@ void graphics_leave()
 		SDL_DestroyWindow(sdlWindow);
 		sdlWindow = nullptr;
 	}
-#endif
-
+	
 	SDL_VideoQuit();
+#endif
 }
 
 #define  SYSTEM_RED_SHIFT      (screen->format->Rshift)
@@ -1208,9 +1173,6 @@ bool vsync_switchmode(int hz)
 	if (hz != currVSyncRate)
 	{
 		currVSyncRate = hz;
-#ifdef USE_SDL1
-		black_screen_now();
-#endif
 		fpscounter_reset();
 #ifdef USE_DISPMANX		
 		time_per_frame = 1000 * 1000 / (hz);
@@ -1241,9 +1203,6 @@ bool target_graphics_buffer_update()
 
 	if (rate_changed)
 	{
-#ifdef USE_SDL1
-		black_screen_now();
-#endif
 		fpscounter_reset();
 #ifdef USE_DISPMANX
 		time_per_frame = 1000 * 1000 / currprefs.chipset_refreshrate;

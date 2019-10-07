@@ -40,7 +40,8 @@
 #include "jit/compemu.h"
 #include <iostream>
 
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 SDL_Window* sdlWindow;
 SDL_Renderer* renderer;
 SDL_Texture* texture;
@@ -812,18 +813,22 @@ void check_error_sdl(const bool check, const char* message)
 
 static int real_main2(int argc, TCHAR** argv)
 {
-#ifdef USE_SDL1
-	int ret = SDL_Init(SDL_INIT_NOPARACHUTE | SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK);
+#ifdef USE_DISPMANX
+	int ret = SDL_Init(SDL_INIT_TIMER
+		| SDL_INIT_AUDIO
+		| SDL_INIT_JOYSTICK
+		| SDL_INIT_HAPTIC
+		| SDL_INIT_GAMECONTROLLER
+		| SDL_INIT_EVENTS
+		| SDL_INIT_SENSOR) != 0;
 #elif USE_SDL2
 	int ret = SDL_Init(SDL_INIT_EVERYTHING) != 0;
 #endif
-#if defined (USE_SDL1) || defined (USE_SDL2)
 	if (ret < 0)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
-#endif
 
 	keyboard_settrans();
 	set_config_changed();

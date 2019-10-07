@@ -5,14 +5,9 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <guichan/sdl.hpp>
-#endif
-#ifdef USE_SDL2
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
-#endif
+
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
@@ -437,18 +432,6 @@ void gui_exit()
 
 void gui_purge_events()
 {
-#ifdef USE_SDL1
-	auto counter = 0;
-
-	SDL_Event event;
-	SDL_Delay(150);
-	// Strangely PS3 controller always send events, so we need a maximum number of event to purge.
-	while (SDL_PollEvent(&event) && counter < 50)
-	{
-		counter++;
-		SDL_Delay(10);
-	}
-#endif
 	keybuf_init();
 }
 

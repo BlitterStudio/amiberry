@@ -1,17 +1,9 @@
 #include <stdbool.h>
 
 #include "osdep/gui/SelectorEntry.hpp"
-
-#ifdef USE_SDL1
-#include "guichan/widgets/container.hpp"
-#include "guichan/widgets/icon.hpp"
-#include "guichan/widgets/label.hpp"
-
-#elif USE_SDL2
 #include "guisan/widgets/container.hpp"
 #include "guisan/widgets/icon.hpp"
 #include "guisan/widgets/label.hpp"
-#endif
 
 namespace gcn
 {

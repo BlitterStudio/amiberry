@@ -1,18 +1,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include <guisan/gui.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -31,18 +24,15 @@
 
 SDL_Surface* msg_screen;
 SDL_Event msg_event;
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 SDL_Texture* msg_texture;
 #endif
 bool msg_done = false;
 gcn::Gui* msg_gui;
 gcn::SDLGraphics* msg_graphics;
 gcn::SDLInput* msg_input;
-#ifdef USE_SDL1
-gcn::contrib::SDLTrueTypeFont* msg_font;
-#elif USE_SDL2
 gcn::SDLTrueTypeFont* msg_font;
-#endif
 
 gcn::Color msg_baseCol;
 gcn::Container* msg_top;
@@ -62,7 +52,7 @@ public:
 
 static DoneActionListener* doneActionListener;
 
-void gui_halt()
+void message_gui_halt()
 {
 	msg_top->remove(wndMsg);
 
@@ -83,7 +73,9 @@ void gui_halt()
 		SDL_FreeSurface(msg_screen);
 		msg_screen = nullptr;
 	}
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+	//TODO
+#elif USE_SDL2
 	if (msg_texture != nullptr)
 	{
 		SDL_DestroyTexture(msg_texture);
@@ -95,11 +87,10 @@ void gui_halt()
 #endif
 }
 
-void UpdateScreen()
+void message_UpdateScreen()
 {
-#ifdef USE_SDL1
-	wait_for_vsync();
-	SDL_Flip(msg_screen);
+#ifdef USE_DISPMANX
+	//TODO 
 #elif USE_SDL2
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, msg_texture, nullptr, nullptr);
@@ -107,7 +98,7 @@ void UpdateScreen()
 #endif
 }
 
-void checkInput()
+void message_checkInput()
 {
 	//-------------------------------------------------
 	// Check user input
@@ -158,24 +149,20 @@ void checkInput()
 		msg_gui->logic();
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+		message_UpdateScreen();
+#elif USE_SDL2
 		SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
 	}
 	// Finally we update the screen.
-	UpdateScreen();
+	message_UpdateScreen();
 }
 
-void gui_init(const char* msg)
+void message_gui_init(const char* msg)
 {
-#ifdef USE_SDL1
-	if (msg_screen == nullptr)
-	{
-		auto dummy_screen = SDL_SetVideoMode(GUI_WIDTH, GUI_HEIGHT, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
-		msg_screen = SDL_CreateRGBSurface(SDL_HWSURFACE, GUI_WIDTH, GUI_HEIGHT, 16,
-			dummy_screen->format->Rmask, dummy_screen->format->Gmask, dummy_screen->format->Bmask, dummy_screen->format->Amask);
-		SDL_FreeSurface(dummy_screen);
-	}
+#ifdef USE_DISPMANX
+	// TODO
 #elif USE_SDL2
 	if (sdlWindow == nullptr)
 	{
@@ -220,7 +207,7 @@ void gui_init(const char* msg)
 	msg_gui->setInput(msg_input);
 }
 
-void widgets_init(const char* msg)
+void message_widgets_init(const char* msg)
 {
 	msg_baseCol = gcn::Color(170, 170, 170);
 
@@ -230,11 +217,7 @@ void widgets_init(const char* msg)
 	msg_gui->setTop(msg_top);
 
 	TTF_Init();
-#ifdef USE_SDL1
-	msg_font = new gcn::contrib::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
-#elif USE_SDL2
 	msg_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
-#endif
 	gcn::Widget::setGlobalFont(msg_font);
 
 	wndMsg = new gcn::Window("InGameMessage");
@@ -265,7 +248,7 @@ void widgets_init(const char* msg)
 	wndMsg->requestModalFocus();
 }
 
-void gui_run()
+void message_gui_run()
 {
 	if (SDL_NumJoysticks() > 0)
 	{
@@ -275,16 +258,18 @@ void gui_run()
 	// Prepare the screen once
 	msg_gui->logic();
 	msg_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+	//TODO
+#elif USE_SDL2
 	SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
-	UpdateScreen();
+	message_UpdateScreen();
 
 	while (!msg_done)
 	{
 		// Poll input
-		checkInput();
-		UpdateScreen();
+		message_checkInput();
+		message_UpdateScreen();
 	}
 
 	if (gui_joystick)
@@ -296,11 +281,11 @@ void gui_run()
 
 void InGameMessage(const char* msg)
 {
-	gui_init(msg);
-	widgets_init(msg);
+	message_gui_init(msg);
+	message_widgets_init(msg);
 
-	gui_run();
+	message_gui_run();
 
-	gui_halt();
+	message_gui_halt();
 	SDL_ShowCursor(SDL_DISABLE);
 }

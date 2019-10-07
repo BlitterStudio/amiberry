@@ -37,10 +37,6 @@
 #define cfgfile_warning write_log
 #define cfgfile_warning_obsolete write_log
 
-#ifdef USE_SDL1
-#include "SDL_keysym.h"
-#endif
-
 static int config_newfilesystem;
 static struct strlist* temp_lines;
 static struct strlist* error_lines;

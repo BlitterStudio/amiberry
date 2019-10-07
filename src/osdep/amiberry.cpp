@@ -36,9 +36,7 @@
 #include "gui.h"
 #include "sounddep/sound.h"
 #include "devices.h"
-#ifdef USE_SDL2
 #include <map>
-#endif
 
 extern FILE *debugfile;
 int pause_emulation;
@@ -61,65 +59,28 @@ int action_replay_button = SDLK_PAUSE;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
-#ifdef USE_SDL1
-SDLKey GetKeyFromName(const char* name)
-{
-	if (!name || !*name) {
-		return SDLK_UNKNOWN;
-	}
-
-	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
-	{
-		if (!SDL_GetKeyName(SDLKey(key)))
-			continue;
-		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
-		{
-			return SDLKey(key);
-		}
-	}
-
-	return SDLK_UNKNOWN;
-}
-#endif
-
 void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 	{
 		// If we have a value in the config, we use that instead
-#ifdef USE_SDL1
-		enter_gui_key = GetKeyFromName(p->open_gui);
-#elif USE_SDL2
 		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
-#endif
 	}
 
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 	{
 		// If we have a value in the config, we use that instead
-#ifdef USE_SDL1
-		quit_key = GetKeyFromName(p->quit_amiberry);
-#elif USE_SDL2
 		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
-#endif
 	}
 
 	if (strncmp(p->action_replay, "", 1) != 0)
 	{
-#ifdef USE_SDL1
-		action_replay_button = GetKeyFromName(p->action_replay);
-#elif USE_SDL2
 		action_replay_button = SDL_GetKeyFromName(p->action_replay);
-#endif
 	}
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
 	{
-#ifdef USE_SDL1
-		fullscreen_key = GetKeyFromName(p->fullscreen_toggle);
-#elif USE_SDL2
 		fullscreen_key = SDL_GetKeyFromName(p->fullscreen_toggle);
-#endif
 	}
 }
 
@@ -1232,11 +1193,8 @@ int handle_msgpump()
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
-#ifdef USE_SDL1
-		Uint8* keystate = SDL_GetKeyState(nullptr);
-#elif USE_SDL2
 		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
-#endif
+
 		switch (rEvent.type)
 		{
 		case SDL_QUIT:
@@ -1244,10 +1202,8 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
-#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
-#endif
 				// If the Enter GUI key was pressed, handle it
 				if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key)
 				{
@@ -1273,35 +1229,8 @@ int handle_msgpump()
 					inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
 					break;
 				}
-#ifdef USE_SDL2
 			}
-#endif
 			// If the reset combination was pressed, handle it
-#ifdef USE_SDL1
-			if (swap_win_alt_keys)
-			{
-				if (keystate[SDLK_LCTRL] && keystate[SDLK_LALT] && (keystate[SDLK_RALT] || keystate[SDLK_MENU]))
-				{
-					uae_reset(0, 1);
-					break;
-				}
-			}
-			else
-				// Strangely in FBCON left window is seen as left alt ??
-				if (keyboard_type == 2) // KEYCODE_FBCON
-				{
-					if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-					{
-						uae_reset(0, 1);
-						break;
-					}
-				}
-				else if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-				{
-					uae_reset(0, 1);
-					break;
-				}
-#elif USE_SDL2
 			if (swap_win_alt_keys)
 			{
 				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
@@ -1311,21 +1240,13 @@ int handle_msgpump()
 				}
 			}
 			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
-#endif
 			{
 				uae_reset(0, 1);
 				break;
 			}
 
-#ifdef USE_SDL1
-			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
-			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
-				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
-#endif
-#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
-#endif
 				if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
 				{
 					// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
@@ -1351,12 +1272,6 @@ int handle_msgpump()
 				}
 
 				// Handle all other keys
-#ifdef USE_SDL1
-				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1, false);
-				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
-#elif USE_SDL2
 				if (swap_win_alt_keys)
 				{
 					if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
@@ -1366,19 +1281,10 @@ int handle_msgpump()
 				}
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
 			}
-#endif
 			break;
 		case SDL_KEYUP:
-#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
-#endif
-#ifdef USE_SDL1
-				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0, true);
-				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
-#elif USE_SDL2
 				if (swap_win_alt_keys)
 				{
 					if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
@@ -1388,7 +1294,6 @@ int handle_msgpump()
 				}
 				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
 			}
-#endif
 			break;
 
 		case SDL_MOUSEBUTTONDOWN:
@@ -1439,7 +1344,6 @@ int handle_msgpump()
 			}
 			break;
 
-#ifdef USE_SDL2
 		case SDL_MOUSEWHEEL:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
@@ -1458,7 +1362,6 @@ int handle_msgpump()
 					setmousebuttonstate(0, 3 + 3, -1);
 			}
 			break;
-#endif
 
 		default:
 			break;

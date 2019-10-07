@@ -19,9 +19,6 @@
 #include "rommgr.h"
 #include "zfile.h"
 
-#ifdef USE_SDL2
-#endif
-
 extern FILE *debugfile;
 
 #include "fsdb.h"

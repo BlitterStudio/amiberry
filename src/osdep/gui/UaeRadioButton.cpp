@@ -1,15 +1,6 @@
 #include "UaeRadioButton.hpp"
-#ifdef USE_SDL1
-#include "guichan/widgets/radiobutton.hpp"
-
-#include "guichan/font.hpp"
-#include "guichan/graphics.hpp"
-#include "guichan/key.hpp"
-#include "guichan/mouseinput.hpp"
-#elif USE_SDL2
 #include <guisan/widgets/radiobutton.hpp>
 #include <guisan/graphics.hpp>
-#endif
 
 namespace gcn
 {

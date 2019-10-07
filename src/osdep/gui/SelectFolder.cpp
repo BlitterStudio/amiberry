@@ -5,17 +5,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -192,11 +185,7 @@ static void InitSelectFolder(const char* title)
 	lstFolders->addActionListener(listBoxActionListener);
 
 	scrAreaFolders = new gcn::ScrollArea(lstFolders);
-#ifdef USE_SDL1
-	scrAreaFolders->setFrameSize(1);
-#elif USE_SDL2
 	scrAreaFolders->setBorderSize(1);
-#endif
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
 #ifdef ANDROID
@@ -358,7 +347,9 @@ static void SelectFolderLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#elif USE_SDL2
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -380,7 +371,9 @@ bool SelectFolder(const char* title, char* value)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+	//TODO ?
+#elif USE_SDL2
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

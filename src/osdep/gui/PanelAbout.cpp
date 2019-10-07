@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -24,7 +17,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 {
 	amiberryLogoImage = gcn::Image::load("data/amiberry-logo.png");
 	icon = new gcn::Icon(amiberryLogoImage);
-	lblEmulatorVersion = new gcn::Label("Amiberry beta (2019-10-05)");
+	lblEmulatorVersion = new gcn::Label("Amiberry beta (2019-10-07)");
 
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
@@ -47,11 +40,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	textBoxScrollArea->setBaseColor(gui_baseCol);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	textBoxScrollArea->setHeight(100);
-#ifdef USE_SDL1
-	textBoxScrollArea->setFrameSize(1);
-#elif USE_SDL2
 	textBoxScrollArea->setBorderSize(1);
-#endif
 
 	auto pos_y = DISTANCE_BORDER;
 	category.panel->add(icon, DISTANCE_BORDER, pos_y);

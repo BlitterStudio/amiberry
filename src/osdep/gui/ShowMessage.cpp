@@ -2,17 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -134,15 +127,14 @@ static void ShowMessageWaitInputLoop()
 					break;
 				}
 			}
-// This only works in SDL2 for now
-#ifdef USE_SDL2
+
 			if (event.type == SDL_CONTROLLERBUTTONDOWN)
 			{
 				dialogControlPressed = SDL_GameControllerGetStringForButton(SDL_GameControllerButton(event.cbutton.button));
 				dialogFinished = true;
 				break;
 			}
-#endif
+
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
@@ -154,7 +146,9 @@ static void ShowMessageWaitInputLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#elif USE_SDL2
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -254,7 +248,9 @@ static void ShowMessageLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#elif USE_SDL2
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -286,7 +282,8 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();
@@ -312,7 +309,8 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#elif USE_SDL2
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

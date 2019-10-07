@@ -15,9 +15,7 @@
 #define DROPDOWN_HEIGHT 20
 #define SLIDER_HEIGHT 20
 #define TITLEBAR_HEIGHT 24
-#ifdef USE_SDL2
 #include <guisan/sdl/sdlinput.hpp>
-#endif
 
 typedef struct _ConfigCategory
 {
@@ -28,7 +26,7 @@ typedef struct _ConfigCategory
 	void (*InitFunc)(const struct _ConfigCategory& category);
 	void (*ExitFunc)();
 	void (*RefreshFunc)();
-	bool(*HelpFunc) (std::vector<std::string>&);
+	bool (*HelpFunc) (std::vector<std::string>&);
 } ConfigCategory;
 
 extern bool gui_running;
@@ -179,11 +177,7 @@ enum
 };
 
 bool HandleNavigation(int direction);
-#ifdef USE_SDL1
-void PushFakeKey(SDLKey inKey);
-#elif USE_SDL2
 void PushFakeKey(SDL_Keycode inKey);
-#endif
 
 #define MAX_HD_DEVICES 6
 extern void CreateDefaultDevicename(char* name);

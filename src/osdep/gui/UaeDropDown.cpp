@@ -1,15 +1,6 @@
 #include "UaeDropDown.hpp"
-#ifdef USE_SDL1
-#include "guichan/widgets/dropdown.hpp"
-
-#include "guichan/font.hpp"
-#include "guichan/graphics.hpp"
-#include "guichan/key.hpp"
-#include "guichan/mouseinput.hpp"
-#elif USE_SDL2
 #include <guisan/widgets/dropdown.hpp>
 #include <guisan/key.hpp>
-#endif
 
 namespace gcn
 {
@@ -47,21 +38,13 @@ namespace gcn
 		{
 			setSelected(getSelected() - 1);
 			keyEvent.consume();
-#ifdef USE_SDL1
-			distributeActionEvent();
-#elif USE_SDL2
 			distributeValueChangedEvent();
-#endif
 		}
 		else if (key.getValue() == Key::DOWN)
 		{
 			setSelected(getSelected() + 1);
 			keyEvent.consume();
-#ifdef USE_SDL1
-			distributeActionEvent();
-#elif USE_SDL2
 			distributeValueChangedEvent();
-#endif
 		}
 	}
 

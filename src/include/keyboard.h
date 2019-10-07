@@ -8,15 +8,6 @@
 
 #pragma once
 
-#ifdef USE_SDL1
-#define KEYCODE_UNK    0
-#define KEYCODE_X11    1
-#define KEYCODE_FBCON  2
-
-extern char keyboard_type;
-extern void  init_keyboard(void);
-#endif
-
 /* First, two dummies */
 #define AK_mousestuff 0x100
 #define AK_inhibit 0x101

@@ -4,17 +4,9 @@
 #include <map>
 #include <string>
 
-#ifdef USE_SDL1
-#include "guichan/keylistener.hpp"
-#include "guichan/mouselistener.hpp"
-#include "guichan/platform.hpp"
-#include "guichan/widget.hpp"
-#include "guichan/widgets/checkbox.hpp"
-#elif USE_SDL2
 #include <guisan/platform.hpp>
 #include <guisan/widget.hpp>
 #include <guisan/widgets/checkbox.hpp>
-#endif
 
 namespace gcn
 {
