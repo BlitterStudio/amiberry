@@ -164,15 +164,15 @@ void message_gui_init(const char* msg)
 #ifdef USE_DISPMANX
 	// TODO
 #elif USE_SDL2
-	if (sdlWindow == nullptr)
+	if (sdl_window == nullptr)
 	{
-		sdlWindow = SDL_CreateWindow("Amiberry-GUI",
+		sdl_window = SDL_CreateWindow("Amiberry-GUI",
 		                             SDL_WINDOWPOS_UNDEFINED,
 		                             SDL_WINDOWPOS_UNDEFINED,
 		                             0,
 		                             0,
 		                             SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(sdlWindow == nullptr, "Unable to create window");
+		check_error_sdl(sdl_window == nullptr, "Unable to create window");
 	}
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -185,7 +185,7 @@ void message_gui_init(const char* msg)
 
 	if (renderer == nullptr)
 	{
-		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	}

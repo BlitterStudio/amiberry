@@ -40,14 +40,6 @@
 #include "jit/compemu.h"
 #include <iostream>
 
-#ifdef USE_DISPMANX
-#elif USE_SDL2
-SDL_Window* sdlWindow;
-SDL_Renderer* renderer;
-SDL_Texture* texture;
-SDL_DisplayMode sdlMode;
-#endif
-
 #include <linux/kd.h>
 #include <sys/ioctl.h>
 #include "keyboard.h"

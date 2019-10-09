@@ -31,7 +31,11 @@ static unsigned int current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 #elif USE_SDL2
 const char* sdl_video_driver;
+SDL_Texture* texture;
+SDL_DisplayMode sdlMode;
 #endif
+
+SDL_Renderer* renderer;
 
 #ifdef ANDROIDSDL
 #include <android/log.h>
@@ -118,7 +122,6 @@ static int display_thread(void *unused)
 		
 		switch (signal) {
 		case DISPLAY_SIGNAL_SETUP:
-			//bcm_host_init();
 			//displayHandle = vc_dispmanx_display_open(0);
 			vc_dispmanx_vsync_callback(displayHandle, vsync_callback, nullptr);
 			break;
@@ -176,7 +179,7 @@ static int display_thread(void *unused)
 
 			screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
 
-			vc_dispmanx_display_get_info(displayHandle, &modeInfo);
+			displayHandle = vc_dispmanx_display_open(0);
 
 			amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
 			amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
@@ -272,8 +275,8 @@ static int display_thread(void *unused)
 
 		case DISPLAY_SIGNAL_QUIT:
 			vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
-			vc_dispmanx_display_close(displayHandle);
-			//bcm_host_deinit();
+			if (displayHandle)
+				vc_dispmanx_display_close(displayHandle);
 			display_tid = nullptr;
 			return 0;
 		default: 
@@ -292,7 +295,8 @@ int graphics_setup(void)
 #endif
 #ifdef USE_DISPMANX
 	bcm_host_init();
-	displayHandle = vc_dispmanx_display_open(0);
+	if (!displayHandle)
+		displayHandle = vc_dispmanx_display_open(0);
 	vc_dispmanx_display_get_info(displayHandle, &modeInfo);
 	can_have_linedouble = modeInfo.height >= 540;
 	
@@ -316,6 +320,18 @@ int graphics_setup(void)
 			vchi_disconnect(vchi_instance);
 		}
 	}
+
+	if (sdl_window == nullptr)
+	{
+		sdl_window = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			800,
+			480,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(sdl_window == nullptr, "Unable to create window");
+	}
+
 #elif USE_SDL2
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	Uint32 sdl_window_mode;
@@ -331,28 +347,22 @@ int graphics_setup(void)
 		sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 
-	if (sdlWindow == nullptr)
+	if (sdl_window == nullptr)
 	{
-		sdlWindow = SDL_CreateWindow("Amiberry",
+		sdl_window = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_CENTERED,
 			SDL_WINDOWPOS_CENTERED,
 			800,
 			480,
 			sdl_window_mode);
-		check_error_sdl(sdlWindow == nullptr, "Unable to create window");		
+		check_error_sdl(sdl_window == nullptr, "Unable to create window");		
 	}
 	
-	if (SDL_GetWindowDisplayMode(sdlWindow, &sdlMode) != 0)
+	if (SDL_GetWindowDisplayMode(sdl_window, &sdlMode) != 0)
 	{
-		SDL_Log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
+		write_log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
 	}
 	can_have_linedouble = sdlMode.h >= 540;
-
-	if (renderer == nullptr)
-	{
-		renderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
-	}
 
 	SDL_DisplayMode current;
 	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
@@ -361,8 +371,15 @@ int graphics_setup(void)
 
 	SDL_ShowCursor(SDL_DISABLE);
 #endif
+	
+	if (renderer == nullptr)
+	{
+		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+	}
+	
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		SDL_Log("SDL could not grab the keyboard");
+		write_log("SDL could not grab the keyboard");
 	
 	currprefs.gfx_apmode[1].gfx_refreshrate = host_hz;
 
@@ -388,10 +405,10 @@ void toggle_fullscreen()
 #ifdef USE_DISPMANX
 #elif USE_SDL2
 	const Uint32 fullscreen_flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
-	if (sdlWindow)
+	if (sdl_window)
 	{
-		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & fullscreen_flag;
-		SDL_SetWindowFullscreen(sdlWindow, is_fullscreen ? 0 : fullscreen_flag);
+		const bool is_fullscreen = SDL_GetWindowFlags(sdl_window) & fullscreen_flag;
+		SDL_SetWindowFullscreen(sdl_window, is_fullscreen ? 0 : fullscreen_flag);
 		SDL_ShowCursor(is_fullscreen);
 	}
 #endif
@@ -429,7 +446,6 @@ void graphics_subshutdown()
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SUBSHUTDOWN, 1);
 		uae_sem_wait(&display_sem);
 	}
-	bcm_host_deinit();
 #elif USE_SDL2
 #if (defined USE_RENDER_THREAD)
 	if (renderthread)
@@ -578,29 +594,29 @@ static void open_screen(struct uae_prefs* p)
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 
-	if (sdlWindow && strcmp(sdl_video_driver, "x11") == 0)
+	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
 	{
-		const bool is_fullscreen = SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP;
+		const bool is_fullscreen = SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
 			// Switch to Fullscreen mode, if we don't have it already
 			if (!is_fullscreen)
-				SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
+				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
 		else
 		{
 			// Switch to Window mode, if we don't have it already
 			if (is_fullscreen)
-				SDL_SetWindowFullscreen(sdlWindow, 0);
+				SDL_SetWindowFullscreen(sdl_window, 0);
 		}
 
 		if (!is_fullscreen)
-			if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
+			if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
 			{
 				if (screen_is_picasso)
-					SDL_SetWindowSize(sdlWindow, display_width, display_height);
+					SDL_SetWindowSize(sdl_window, display_width, display_height);
 				else
-					SDL_SetWindowSize(sdlWindow, display_width, display_height * 2 >> p->gfx_vresolution);
+					SDL_SetWindowSize(sdl_window, display_width, display_height * 2 >> p->gfx_vresolution);
 			}	
 	}
 
@@ -653,9 +669,7 @@ void update_display(struct uae_prefs* p)
 {
 	struct amigadisplay *ad = &adisplays;
 	open_screen(p);
-#ifdef USE_SDL2
 	SDL_SetRelativeMouseMode(SDL_TRUE);
-#endif
 	SDL_ShowCursor(SDL_DISABLE);
 	ad->framecnt = 1; // Don't draw frame before reset done
 }
@@ -983,25 +997,27 @@ void graphics_leave()
 		uae_sem_destroy(&display_sem);
 		display_sem = nullptr;
 	}
+	bcm_host_deinit();
 #elif USE_SDL2
 	if (texture)
 	{
 		SDL_DestroyTexture(texture);
 		texture = nullptr;
 	}
-
+#endif
+	
 	if (renderer)
 	{
 		SDL_DestroyRenderer(renderer);
 		renderer = nullptr;
 	}
 
-	if (sdlWindow)
+	if (sdl_window)
 	{
-		SDL_DestroyWindow(sdlWindow);
-		sdlWindow = nullptr;
+		SDL_DestroyWindow(sdl_window);
+		sdl_window = nullptr;
 	}
-	
+#ifdef USE_SDL2
 	SDL_VideoQuit();
 #endif
 }

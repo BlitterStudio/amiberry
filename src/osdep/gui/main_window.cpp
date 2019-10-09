@@ -96,8 +96,12 @@ enum
 SDL_Joystick* gui_joystick;
 SDL_Surface* gui_screen;
 SDL_Event gui_event;
+SDL_Window* sdl_window;
 #ifdef USE_DISPMANX
 DISPMANX_RESOURCE_HANDLE_T gui_resource;
+DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
+int element_present = 0;
+int current_resource = 0;
 #elif USE_SDL2
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
@@ -304,31 +308,72 @@ void amiberry_gui_init()
 	//-------------------------------------------------
 	// Create new screen for GUI
 	//-------------------------------------------------
-	gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+	if (!gui_screen)
+		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 	check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 
 #ifdef USE_DISPMANX
-	uint32_t vc_image_ptr;
-	gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_image_ptr);
-
+	if (!displayHandle)
+		displayHandle = vc_dispmanx_display_open(0);
+	
+	uint32_t vc_gui_image_ptr;
+	if (!gui_resource)
+		gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
+	if (!black_gui_resource)
+		black_gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
+	
 	vc_dispmanx_rect_set(&blit_rect, 0, 0, GUI_WIDTH, GUI_HEIGHT);
 	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
+	vc_dispmanx_resource_write_data(black_gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
 	vc_dispmanx_rect_set(&src_rect, 0, 0, GUI_WIDTH << 16, GUI_HEIGHT << 16);
-	vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
+	vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
+	// Full screen destination rectangle
+	//vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
 
-	updateHandle = vc_dispmanx_update_start(0);
+	// Scaled display with correct Aspect Ratio
+	auto want_aspect = float(GUI_WIDTH) / float(GUI_HEIGHT);
+	auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
 
-	VC_DISPMANX_ALPHA_T alpha;
-	alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
-	alpha.opacity = 255;
-	alpha.mask = 0;
+	SDL_Rect viewport;
+	if (want_aspect > real_aspect)
+	{
+		auto scale = float(modeInfo.width) / float(GUI_WIDTH);
+		viewport.x = 0;
+		viewport.w = modeInfo.width;
+		viewport.h = int(std::ceil(GUI_HEIGHT * scale));
+		viewport.y = (modeInfo.height - viewport.h) / 2;
+	}
+	else
+	{
+		auto scale = float(modeInfo.height) / float(GUI_HEIGHT);
+		viewport.y = 0;
+		viewport.h = modeInfo.height;
+		viewport.w = int(std::ceil(GUI_WIDTH * scale));
+		viewport.x = (modeInfo.width - viewport.w) / 2;
+	}
+	vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
 
-	elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 10,
-		&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-		nullptr,             // clamp
-		DISPMANX_NO_ROTATE);
-	vc_dispmanx_update_submit_sync(updateHandle);
+	if (!element_present)
+	{
+		element_present = 1;
+		updateHandle = vc_dispmanx_update_start(0);
 
+		VC_DISPMANX_ALPHA_T alpha;
+		alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
+		alpha.opacity = 255;
+		alpha.mask = 0;
+
+		blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+			&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+			nullptr, DISPMANX_NO_ROTATE);
+
+		elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
+			&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+			nullptr,             // clamp
+			DISPMANX_NO_ROTATE);
+
+		vc_dispmanx_update_submit_sync(updateHandle);
+	}
 #elif USE_SDL2
 #ifdef SOFTWARE_CURSOR
 	swcursor(0);
@@ -339,23 +384,23 @@ void amiberry_gui_init()
 	setup_cursor();
 #endif
 
-	if (sdlWindow && strcmp(sdl_video_driver, "x11") == 0)
+	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
 	{
 		// Only resize the window if we're under x11, otherwise we're fullscreen anyway
-		if ((SDL_GetWindowFlags(sdlWindow) & SDL_WINDOW_MAXIMIZED) == 0)
-			SDL_SetWindowSize(sdlWindow, GUI_WIDTH, GUI_HEIGHT);
+		if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
+			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
 	}
 
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 
 	gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
 #endif
+	SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	SDL_ShowCursor(SDL_ENABLE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
-
+	
 	//-------------------------------------------------
 	// Create helpers for GUI framework
 	//-------------------------------------------------
@@ -387,13 +432,28 @@ void amiberry_gui_halt()
 		gui_screen = nullptr;
 	}
 #ifdef USE_DISPMANX
-	//updateHandle = vc_dispmanx_update_start(0);
-	//vc_dispmanx_element_remove(updateHandle, elementHandle);
-	//vc_dispmanx_update_submit_sync(updateHandle);
-
+	if (element_present == 1)
+	{
+		element_present = 0;
+		updateHandle = vc_dispmanx_update_start(0);
+		vc_dispmanx_element_remove(updateHandle, elementHandle);
+		vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+		vc_dispmanx_update_submit_sync(updateHandle);
+	}
+	
 	if (gui_resource)
+	{
 		vc_dispmanx_resource_delete(gui_resource);
-	//vc_dispmanx_display_close(displayHandle);
+		gui_resource = 0;
+	}
+
+	if (black_gui_resource)
+	{
+		vc_dispmanx_resource_delete(black_gui_resource);
+		black_gui_resource = 0;
+	}
+	if (displayHandle)
+		vc_dispmanx_display_close(displayHandle);
 #elif USE_SDL2
 	if (gui_texture != nullptr)
 	{
@@ -684,7 +744,6 @@ void checkInput()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 #ifdef USE_DISPMANX
-		vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
 #elif USE_SDL2
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
@@ -727,8 +786,7 @@ void amiberry_gui_run()
 		SDL_JoystickClose(gui_joystick);
 		gui_joystick = nullptr;
 		joypad_axis_state.clear();
-	}
-		
+	}	
 }
 
 class MainButtonActionListener : public gcn::ActionListener
