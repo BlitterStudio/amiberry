@@ -811,8 +811,7 @@ static int real_main2(int argc, TCHAR** argv)
 		| SDL_INIT_JOYSTICK
 		| SDL_INIT_HAPTIC
 		| SDL_INIT_GAMECONTROLLER
-		| SDL_INIT_EVENTS
-		| SDL_INIT_SENSOR) != 0;
+		| SDL_INIT_EVENTS) != 0;
 #elif USE_SDL2
 	int ret = SDL_Init(SDL_INIT_EVERYTHING) != 0;
 #endif
