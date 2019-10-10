@@ -1,6 +1,6 @@
-# Default platform is rpi3 / SDL2 / Dispmanx
+# Default platform is rpi4 / SDL2 / Dispmanx
 ifeq ($(PLATFORM),)
-	PLATFORM = rpi3-sdl2-dispmanx
+	PLATFORM = rpi4
 endif
 
 # Raspberry Pi 4 CPU flags
@@ -24,7 +24,7 @@ ifneq (,$(findstring rpi1,$(PLATFORM)))
 endif
 
 #
-# DispmanX Common flags for both SDL1 and SDL2 (RPI-specific)
+# DispmanX Common flags (RPI-specific)
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
@@ -37,38 +37,14 @@ CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #SANITIZE=1
 
 #
-# SDL1 targets
-#
-# Raspberry Pi 1/2/3 (SDL1, DispmanX)
-ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3))
-    CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL1
-    LDFLAGS += ${DISPMANX_LDFLAGS}
-    ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2 rpi3))
-       CPPFLAGS += -DUSE_ARMNEON -DARM_HAS_DIV
-       HAVE_NEON = 1
-    endif
-
-# Android 32-bit
-else ifeq ($(PLATFORM),android)
-    CPUFLAGS += -mfpu=vfp
-    DEFS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
-    ANDROID = 1
-
-# Android 64-bit
-else ifeq ($(PLATFORM),android64)
-    DEFS += -DCPU_AARCH64 -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
-    ANDROID = 1
-    AARCH64 = 1
-
-#
 # SDL2 with DispmanX targets (RPI only)
 #
 # Raspberry Pi 1/2/3/4 (SDL2, DispmanX)
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2-dispmanx rpi2-sdl2-dispmanx rpi3-sdl2-dispmanx rpi4-sdl2-dispmanx))
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
     USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
-    ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2-sdl2-dispmanx rpi3-sdl2-dispmanx rpi4-sdl2-dispmanx))
+    ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2 rpi3 rpi4))
        CPPFLAGS += -DUSE_ARMNEON -DARM_HAS_DIV
        HAVE_NEON = 1
     endif    
@@ -201,18 +177,6 @@ CC     = gcc
 CXX    = g++
 STRIP  ?= strip
 PROG   = amiberry
-#
-# SDL1 options
-#
-ifndef USE_SDL2
-all: $(PROG)
-
-SDL_CFLAGS := $(shell sdl-config --cflags)
-SDL_LDFLAGS := $(shell sdl-config --libs)
-
-export CPPFLAGS += $(SDL_CFLAGS)
-LDFLAGS += $(SDL_LDFLAGS) -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
-endif
 
 #
 # SDL2 options
