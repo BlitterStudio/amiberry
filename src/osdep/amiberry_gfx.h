@@ -11,7 +11,6 @@
 extern DISPMANX_DISPLAY_HANDLE_T displayHandle;
 extern DISPMANX_MODEINFO_T modeInfo;
 extern DISPMANX_UPDATE_HANDLE_T updateHandle;
-extern DISPMANX_ELEMENT_HANDLE_T elementHandle;
 extern DISPMANX_ELEMENT_HANDLE_T blackscreen_element;
 extern VC_RECT_T src_rect;
 extern VC_RECT_T dst_rect;

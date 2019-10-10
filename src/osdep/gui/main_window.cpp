@@ -100,6 +100,7 @@ SDL_Window* sdl_window;
 #ifdef USE_DISPMANX
 DISPMANX_RESOURCE_HANDLE_T gui_resource;
 DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
+DISPMANX_ELEMENT_HANDLE_T gui_element;
 int element_present = 0;
 int current_resource = 0;
 #elif USE_SDL2
@@ -248,7 +249,7 @@ void UpdateGuiScreen()
 #ifdef USE_DISPMANX
 	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
 	updateHandle = vc_dispmanx_update_start(0);
-	vc_dispmanx_element_change_source(updateHandle, elementHandle, gui_resource);
+	vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
 #elif USE_SDL2
 	SDL_RenderClear(renderer);
@@ -313,8 +314,7 @@ void amiberry_gui_init()
 	check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
 
 #ifdef USE_DISPMANX
-	if (!displayHandle)
-		displayHandle = vc_dispmanx_display_open(0);
+	displayHandle = vc_dispmanx_display_open(0);
 	
 	uint32_t vc_gui_image_ptr;
 	if (!gui_resource)
@@ -331,13 +331,13 @@ void amiberry_gui_init()
 	//vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
 
 	// Scaled display with correct Aspect Ratio
-	auto want_aspect = float(GUI_WIDTH) / float(GUI_HEIGHT);
-	auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
+	const auto want_aspect = float(GUI_WIDTH) / float(GUI_HEIGHT);
+	const auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
 
 	SDL_Rect viewport;
 	if (want_aspect > real_aspect)
 	{
-		auto scale = float(modeInfo.width) / float(GUI_WIDTH);
+		const auto scale = float(modeInfo.width) / float(GUI_WIDTH);
 		viewport.x = 0;
 		viewport.w = modeInfo.width;
 		viewport.h = int(std::ceil(GUI_HEIGHT * scale));
@@ -345,7 +345,7 @@ void amiberry_gui_init()
 	}
 	else
 	{
-		auto scale = float(modeInfo.height) / float(GUI_HEIGHT);
+		const auto scale = float(modeInfo.height) / float(GUI_HEIGHT);
 		viewport.y = 0;
 		viewport.h = modeInfo.height;
 		viewport.w = int(std::ceil(GUI_WIDTH * scale));
@@ -367,7 +367,7 @@ void amiberry_gui_init()
 			&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 			nullptr, DISPMANX_NO_ROTATE);
 
-		elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
+		gui_element = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
 			&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 			nullptr,             // clamp
 			DISPMANX_NO_ROTATE);
@@ -436,8 +436,10 @@ void amiberry_gui_halt()
 	{
 		element_present = 0;
 		updateHandle = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_remove(updateHandle, elementHandle);
+		vc_dispmanx_element_remove(updateHandle, gui_element);
+		gui_element = 0;
 		vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+		blackscreen_element = 0;
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
 	

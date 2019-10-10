@@ -112,7 +112,6 @@ static int display_thread(void *unused)
 	uint32_t vc_image_ptr;
 
 	int width, height, depth;
-	float want_aspect, real_aspect, scale;
 	SDL_Rect viewport;
 
 	for (;;) {
@@ -122,7 +121,6 @@ static int display_thread(void *unused)
 		
 		switch (signal) {
 		case DISPLAY_SIGNAL_SETUP:
-			//displayHandle = vc_dispmanx_display_open(0);
 			vc_dispmanx_vsync_callback(displayHandle, vsync_callback, nullptr);
 			break;
 
@@ -132,19 +130,21 @@ static int display_thread(void *unused)
 				DispManXElementpresent = 0;
 				updateHandle = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_remove(updateHandle, elementHandle);
+				elementHandle = 0;
 				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+				blackscreen_element = 0;
 				vc_dispmanx_update_submit_sync(updateHandle);
 			}
 
-			if (amigafb_resource_1 != 0) {
+			if (amigafb_resource_1) {
 				vc_dispmanx_resource_delete(amigafb_resource_1);
 				amigafb_resource_1 = 0;
 			}
-			if (amigafb_resource_2 != 0) {
+			if (amigafb_resource_2) {
 				vc_dispmanx_resource_delete(amigafb_resource_2);
 				amigafb_resource_2 = 0;
 			}
-			if (blackfb_resource != 0)
+			if (blackfb_resource)
 			{
 				vc_dispmanx_resource_delete(blackfb_resource);
 				blackfb_resource = 0;
@@ -177,13 +177,17 @@ static int display_thread(void *unused)
 				rgb_mode = VC_IMAGE_RGB565;
 			}
 
-			screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
+			if (!screen)
+				screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
 
 			displayHandle = vc_dispmanx_display_open(0);
 
-			amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
-			amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
-			blackfb_resource = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			if (!amigafb_resource_1)
+				amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			if (!amigafb_resource_2)
+				amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
+			if (!blackfb_resource)
+				blackfb_resource = vc_dispmanx_resource_create(rgb_mode, width, height, &vc_image_ptr);
 
 			vc_dispmanx_rect_set(&blit_rect, 0, 0, width, height);
 			vc_dispmanx_resource_write_data(amigafb_resource_1, rgb_mode, screen->pitch, screen->pixels, &blit_rect);
@@ -206,12 +210,12 @@ static int display_thread(void *unused)
 				else
 					height = display_height * 2 >> changed_prefs.gfx_vresolution;
 
-				want_aspect = float(width) / float(height);
-				real_aspect = float(modeInfo.width) / float(modeInfo.height);
+				const auto want_aspect = float(width) / float(height);
+				const auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
 
 				if (want_aspect > real_aspect)
 				{
-					scale = float(modeInfo.width) / float(display_width);
+					const auto scale = float(modeInfo.width) / float(display_width);
 					viewport.x = 0;
 					viewport.w = modeInfo.width;
 					viewport.h = int(std::ceil(height * scale));
@@ -219,7 +223,7 @@ static int display_thread(void *unused)
 				}
 				else
 				{
-					scale = float(modeInfo.height) / float(height);
+					const auto scale = float(modeInfo.height) / float(height);
 					viewport.y = 0;
 					viewport.h = modeInfo.height;
 					viewport.w = int(std::ceil(display_width * scale));
@@ -237,7 +241,7 @@ static int display_thread(void *unused)
 					&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 
 					nullptr, DISPMANX_NO_ROTATE);
 
-				elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 10,               // layer
+				elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 2,               // layer
 					&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 					nullptr,             // clamp
 					DISPMANX_NO_ROTATE);
@@ -275,8 +279,7 @@ static int display_thread(void *unused)
 
 		case DISPLAY_SIGNAL_QUIT:
 			vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
-			if (displayHandle)
-				vc_dispmanx_display_close(displayHandle);
+			vc_dispmanx_display_close(displayHandle);
 			display_tid = nullptr;
 			return 0;
 		default: 
@@ -295,8 +298,7 @@ int graphics_setup(void)
 #endif
 #ifdef USE_DISPMANX
 	bcm_host_init();
-	if (!displayHandle)
-		displayHandle = vc_dispmanx_display_open(0);
+	displayHandle = vc_dispmanx_display_open(0);
 	vc_dispmanx_display_get_info(displayHandle, &modeInfo);
 	can_have_linedouble = modeInfo.height >= 540;
 	
@@ -417,7 +419,7 @@ void toggle_fullscreen()
 #ifdef USE_DISPMANX
 static void wait_for_display_thread(void)
 {
-	while(display_thread_busy)
+	while (display_thread_busy)
 		usleep(10);
 }
 #endif
@@ -425,7 +427,7 @@ static void wait_for_display_thread(void)
 void InitAmigaVidMode(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
-	struct amigadisplay *ad = &adisplays;
+	auto ad = &adisplays;
 	ad->gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
 	ad->gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8*>(screen->pixels);
 	ad->gfxvidinfo.drawbuffer.outwidth = p->gfx_monitor.gfx_size.width;
@@ -435,11 +437,6 @@ void InitAmigaVidMode(struct uae_prefs* p)
 
 void graphics_subshutdown()
 {
-	if (screen != nullptr)
-	{
-		SDL_FreeSurface(screen);
-		screen = nullptr;
-	}
 #ifdef USE_DISPMANX
 	if (display_tid != nullptr) {
 		wait_for_display_thread();
@@ -460,6 +457,11 @@ void graphics_subshutdown()
 		texture = nullptr;
 	}
 #endif
+	if (screen)
+	{
+		SDL_FreeSurface(screen);
+		screen = nullptr;
+	}
 }
 
 #ifdef ANDROIDSDL
