@@ -40,7 +40,7 @@ CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 # SDL2 with DispmanX targets (RPI only)
 #
 # Raspberry Pi 1/2/3/4 (SDL2, DispmanX)
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
+ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
     USE_SDL2 = 1
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
