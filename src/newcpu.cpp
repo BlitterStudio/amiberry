@@ -455,13 +455,53 @@ static void prefs_changed_cpu(void)
 	check_prefs_changed_comp(false);
 	currprefs.cpu_model = changed_prefs.cpu_model;
 	currprefs.fpu_model = changed_prefs.fpu_model;
+	//if (currprefs.mmu_model != changed_prefs.mmu_model) {
+	//	int oldmmu = currprefs.mmu_model;
+	//	currprefs.mmu_model = changed_prefs.mmu_model;
+	//	if (currprefs.mmu_model >= 68040) {
+	//		uae_u32 tcr = regs.tcr;
+	//		mmu_reset();
+	//		mmu_set_tc(tcr);
+	//		mmu_set_super(regs.s != 0);
+	//		mmu_tt_modified();
+	//	}
+	//	else if (currprefs.mmu_model == 68030) {
+	//		mmu030_reset(-1);
+	//		mmu030_flush_atc_all();
+	//		tc_030 = fake_tc_030;
+	//		tt0_030 = fake_tt0_030;
+	//		tt1_030 = fake_tt1_030;
+	//		srp_030 = fake_srp_030;
+	//		crp_030 = fake_crp_030;
+	//		mmu030_decode_tc(tc_030, false);
+	//	}
+	//	else if (oldmmu == 68030) {
+	//		fake_tc_030 = tc_030;
+	//		fake_tt0_030 = tt0_030;
+	//		fake_tt1_030 = tt1_030;
+	//		fake_srp_030 = srp_030;
+	//		fake_crp_030 = crp_030;
+	//	}
+	//}
+	currprefs.mmu_ec = changed_prefs.mmu_ec;
 	if (currprefs.cpu_compatible != changed_prefs.cpu_compatible)
 	{
 		currprefs.cpu_compatible = changed_prefs.cpu_compatible;
 		flush_cpu_caches(true);
+		//invalidate_cpu_data_caches();
+	}
+	if (currprefs.cpu_data_cache != changed_prefs.cpu_data_cache) {
+		currprefs.cpu_data_cache = changed_prefs.cpu_data_cache;
+		//invalidate_cpu_data_caches();
 	}
 	currprefs.address_space_24 = changed_prefs.address_space_24;
 	currprefs.fpu_no_unimplemented = changed_prefs.fpu_no_unimplemented;
+	currprefs.address_space_24 = changed_prefs.address_space_24;
+	currprefs.cpu_cycle_exact = changed_prefs.cpu_cycle_exact;
+	currprefs.cpu_memory_cycle_exact = changed_prefs.cpu_memory_cycle_exact;
+	currprefs.int_no_unimplemented = changed_prefs.int_no_unimplemented;
+	currprefs.fpu_no_unimplemented = changed_prefs.fpu_no_unimplemented;
+	currprefs.blitter_cycle_exact = changed_prefs.blitter_cycle_exact;
 }
 
 static int check_prefs_changed_cpu2(void)
@@ -474,13 +514,24 @@ static int check_prefs_changed_cpu2(void)
 	if (changed
 		|| currprefs.cpu_model != changed_prefs.cpu_model
 		|| currprefs.fpu_model != changed_prefs.fpu_model
+		|| currprefs.mmu_model != changed_prefs.mmu_model
+		|| currprefs.mmu_ec != changed_prefs.mmu_ec
+		|| currprefs.cpu_data_cache != changed_prefs.cpu_data_cache
+		|| currprefs.int_no_unimplemented != changed_prefs.int_no_unimplemented
 		|| currprefs.fpu_no_unimplemented != changed_prefs.fpu_no_unimplemented
-		|| currprefs.cpu_compatible != changed_prefs.cpu_compatible)
+		|| currprefs.cpu_compatible != changed_prefs.cpu_compatible
+		|| currprefs.cpu_cycle_exact != changed_prefs.cpu_cycle_exact
+		|| currprefs.cpu_memory_cycle_exact != changed_prefs.cpu_memory_cycle_exact
+		|| currprefs.fpu_mode != changed_prefs.fpu_mode)
 	{
 		cpu_prefs_changed_flag |= 1;
 	}
 	if (changed
-		|| currprefs.m68k_speed != changed_prefs.m68k_speed)
+		|| currprefs.m68k_speed != changed_prefs.m68k_speed
+		|| currprefs.m68k_speed_throttle != changed_prefs.m68k_speed_throttle
+		|| currprefs.cpu_clock_multiplier != changed_prefs.cpu_clock_multiplier
+		|| currprefs.reset_delay != changed_prefs.reset_delay
+		|| currprefs.cpu_frequency != changed_prefs.cpu_frequency)
 	{
 		cpu_prefs_changed_flag |= 2;
 	}
@@ -492,6 +543,11 @@ void check_prefs_changed_cpu(void)
 	if (!config_changed)
 		return;
 
+	currprefs.cpu_idle = changed_prefs.cpu_idle;
+	currprefs.ppc_cpu_idle = changed_prefs.ppc_cpu_idle;
+	currprefs.reset_delay = changed_prefs.reset_delay;
+	currprefs.cpuboard_settings = changed_prefs.cpuboard_settings;
+	
 	if (check_prefs_changed_cpu2())
 	{
 		set_special(SPCFLAG_MODE_CHANGE);
