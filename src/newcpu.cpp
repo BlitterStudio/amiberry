@@ -523,9 +523,7 @@ void init_m68k(void)
 	read_table68k();
 	do_merges();
 
-	build_cpufunctbl();
-	set_x_funcs();
-	set_speedup_values();
+	write_log (_T("%d CPU functions\n"), nr_cpuop_funcs);
 }
 
 struct regstruct regs;
