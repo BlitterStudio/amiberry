@@ -357,7 +357,7 @@ int graphics_setup(void)
 			800,
 			480,
 			sdl_window_mode);
-		check_error_sdl(sdl_window == nullptr, "Unable to create window");		
+		check_error_sdl(sdl_window == nullptr, "Unable to create window:");		
 	}
 	
 	if (SDL_GetWindowDisplayMode(sdl_window, &sdlMode) != 0)
@@ -377,7 +377,7 @@ int graphics_setup(void)
 	if (renderer == nullptr)
 	{
 		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+		check_error_sdl(renderer == nullptr, "Unable to create a renderer:");
 	}
 	
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)

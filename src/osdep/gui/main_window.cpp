@@ -311,7 +311,7 @@ void amiberry_gui_init()
 	//-------------------------------------------------
 	if (!gui_screen)
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
-	check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface");
+	check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 
 #ifdef USE_DISPMANX
 	displayHandle = vc_dispmanx_display_open(0);
@@ -395,7 +395,7 @@ void amiberry_gui_init()
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
-	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture");
+	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
 	SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	SDL_ShowCursor(SDL_ENABLE);
