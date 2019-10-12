@@ -1179,14 +1179,17 @@ typedef struct {
 
 #pragma pack()
 
-static int parsemds (struct cdunit *cdu, struct zfile *zmds, const TCHAR *img)
+static int parsemds(struct cdunit* cdu, struct zfile* zmds, const TCHAR* img, const TCHAR* curdir, const TCHAR* occurdir)
 {
 	MDS_Header *head;
 	struct cdtoc *t;
 	uae_u8 *mds = NULL;
 	uae_u64 size;
 	MDS_SessionBlock *sb;
-  
+
+	if (curdir)
+		my_setcurrentdir(occurdir, NULL);
+	
 	write_log (_T("MDS TOC: '%s'\n"), img);
 	size = zfile_size (zmds);
 	mds = xmalloc (uae_u8, size);
@@ -1270,7 +1273,7 @@ end:
 	return cdu->tracks;
 }
 
-static int parseccd (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
+static int parseccd(struct cdunit* cdu, struct zfile* zcue, const TCHAR* img, const TCHAR* curdir, const TCHAR* ocurdir)
 {
 	int mode;
 	int num, tracknum, trackmode;
@@ -1299,6 +1302,9 @@ static int parseccd (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
 	if (zsub)
 		write_log (_T("CCD: '%s' detected\n"), fname);
 
+	if (curdir)
+		my_setcurrentdir(ocurdir, NULL);
+	
 	num = -1;
 	mode = -1;
 	for (;;) {
@@ -1401,7 +1407,7 @@ static int parseccd (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
 	return cdu->tracks;
 }
 
-static int parsecue (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
+static int parsecue(struct cdunit* cdu, struct zfile* zcue, const TCHAR* img, const TCHAR* curdir, const TCHAR* ocurdir)
 {
 	int tracknum, pregap, postgap, lastpregap, lastpostgap;
 	int newfile, secoffset;
@@ -1666,7 +1672,7 @@ static int parsecue (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img)
 	return cdu->tracks;
 }
 
-static int parsenrg(struct cdunit *cdu, struct zfile *znrg, const TCHAR *img)
+static int parsenrg(struct cdunit* cdu, struct zfile* znrg, const TCHAR* img, const TCHAR* curdir, const TCHAR* ocurdir)
 {
 	uae_s64 size;
 	uae_s64 offset;
@@ -1676,6 +1682,9 @@ static int parsenrg(struct cdunit *cdu, struct zfile *znrg, const TCHAR *img)
 	uae_u32 lastlba = 0;
 	bool gotsession = false;
 
+	if (curdir)
+		my_setcurrentdir(ocurdir, NULL);
+	
 	size = zfile_size(znrg);
 	zfile_fseek(znrg, size - 12, SEEK_SET);
 	zfile_fread(buf, 12, 1, znrg);
@@ -1854,28 +1863,31 @@ static int parse_image (struct cdunit *cdu, const TCHAR *img)
 	if (ext) {
 		TCHAR curdir[MAX_DPATH];
 		TCHAR oldcurdir[MAX_DPATH], *p;
-
+		TCHAR* pcurdir = NULL;
+		
 		ext++;
 		oldcurdir[0] = 0;
 		_tcscpy (curdir, img);
-		p = curdir + _tcslen (curdir);
+		p = curdir + _tcslen(curdir);
 		while (p > curdir) {
 			if (*p == '/' || *p == '\\')
 				break;
 			p--;
 		}
 		*p = 0;
-		if (p > curdir)
-			my_setcurrentdir (curdir, oldcurdir);
+		if (p > curdir) {
+			pcurdir = curdir;
+			my_setcurrentdir(pcurdir, oldcurdir);
+		}
 
 		if (!_tcsicmp (ext, _T("cue"))) {
-			parsecue (cdu, zcue, img);
+			parsecue(cdu, zcue, img, pcurdir, oldcurdir);
 		} else if (!_tcsicmp (ext, _T("ccd"))) {
-			parseccd (cdu, zcue, img);
+			parseccd(cdu, zcue, img, pcurdir, oldcurdir);
 		} else if (!_tcsicmp (ext, _T("mds"))) {
-			parsemds (cdu, zcue, img);
+			parsemds(cdu, zcue, img, pcurdir, oldcurdir);
 		} else if (!_tcsicmp(ext, _T("nrg"))) {
-			parsenrg(cdu, zcue, img);
+			parsenrg(cdu, zcue, img, pcurdir, oldcurdir);
 		}
 
 		if (oldcurdir[0])
