@@ -6577,9 +6577,6 @@ static int bip_a4000(struct uae_prefs* p, int config, int compa, int romcheck)
 	p->immediate_blits = false;
 	p->produce_sound = 2;
 	p->cachesize = MAX_JIT_CACHE;
-	p->compfpu = true;
-
-	p->nr_floppies = 2;
 	p->floppyslots[0].dfxtype = DRV_35_HD;
 	p->floppyslots[1].dfxtype = DRV_35_HD;
 	p->floppy_speed = 0;
