@@ -29,5 +29,6 @@ extern SDL_Window* sdl_window;
 extern SDL_Surface* gui_screen;
 
 extern bool can_have_linedouble;
+extern bool use_sdl2_render_thread;
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
