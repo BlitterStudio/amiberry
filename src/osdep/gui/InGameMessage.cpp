@@ -25,6 +25,10 @@
 SDL_Surface* msg_screen;
 SDL_Event msg_event;
 #ifdef USE_DISPMANX
+DISPMANX_RESOURCE_HANDLE_T message_resource;
+DISPMANX_RESOURCE_HANDLE_T black_bg_resource;
+DISPMANX_ELEMENT_HANDLE_T message_element;
+int message_element_present = 0;
 #elif USE_SDL2
 SDL_Texture* msg_texture;
 #endif
@@ -74,7 +78,30 @@ void message_gui_halt()
 		msg_screen = nullptr;
 	}
 #ifdef USE_DISPMANX
-	//TODO
+	if (message_element_present == 1)
+	{
+		message_element_present = 0;
+		updateHandle = vc_dispmanx_update_start(0);
+		vc_dispmanx_element_remove(updateHandle, message_element);
+		message_element = 0;
+		vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+		blackscreen_element = 0;
+		vc_dispmanx_update_submit_sync(updateHandle);
+	}
+
+	if (message_resource)
+	{
+		vc_dispmanx_resource_delete(message_resource);
+		message_resource = 0;
+	}
+
+	if (black_bg_resource)
+	{
+		vc_dispmanx_resource_delete(black_bg_resource);
+		black_bg_resource = 0;
+	}
+	if (displayHandle)
+		vc_dispmanx_display_close(displayHandle);
 #elif USE_SDL2
 	if (msg_texture != nullptr)
 	{
@@ -90,7 +117,10 @@ void message_gui_halt()
 void message_UpdateScreen()
 {
 #ifdef USE_DISPMANX
-	//TODO 
+	vc_dispmanx_resource_write_data(message_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
+	updateHandle = vc_dispmanx_update_start(0);
+	vc_dispmanx_element_change_source(updateHandle, message_element, message_resource);
+	vc_dispmanx_update_submit_sync(updateHandle);
 #elif USE_SDL2
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, msg_texture, nullptr, nullptr);
@@ -150,7 +180,6 @@ void message_checkInput()
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 #ifdef USE_DISPMANX
-		message_UpdateScreen();
 #elif USE_SDL2
 		SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
@@ -161,42 +190,95 @@ void message_checkInput()
 
 void message_gui_init(const char* msg)
 {
-#ifdef USE_DISPMANX
-	// TODO
-#elif USE_SDL2
 	if (sdl_window == nullptr)
 	{
-		sdl_window = SDL_CreateWindow("Amiberry-GUI",
-		                             SDL_WINDOWPOS_UNDEFINED,
-		                             SDL_WINDOWPOS_UNDEFINED,
-		                             0,
-		                             0,
-		                             SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(sdl_window == nullptr, "Unable to create window");
+		sdl_window = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			0,
+			0,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(sdl_window == nullptr, "Unable to create window:");
 	}
-	// make the scaled rendering look smoother (linear scaling).
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-
 	if (msg_screen == nullptr)
 	{
-		msg_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 32, 0, 0, 0, 0);
-		check_error_sdl(msg_screen == nullptr, "Unable to create SDL surface");
+		msg_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+		check_error_sdl(msg_screen == nullptr, "Unable to create SDL surface:");
 	}
-
 	if (renderer == nullptr)
 	{
 		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(renderer == nullptr, "Unable to create a renderer");
+		check_error_sdl(renderer == nullptr, "Unable to create a renderer:");
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
+	SDL_ShowCursor(SDL_ENABLE);
+#ifdef USE_DISPMANX
+	displayHandle = vc_dispmanx_display_open(0);
+	uint32_t vc_gui_image_ptr;
+
+	if (!message_resource)
+		message_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
+	if (!black_bg_resource)
+		black_bg_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
+	vc_dispmanx_rect_set(&blit_rect, 0, 0, GUI_WIDTH, GUI_HEIGHT);
+	vc_dispmanx_resource_write_data(message_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
+	vc_dispmanx_resource_write_data(black_bg_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
+	vc_dispmanx_rect_set(&src_rect, 0, 0, GUI_WIDTH << 16, GUI_HEIGHT << 16);
+	vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
+
+	// Scaled display with correct Aspect Ratio
+	const auto want_aspect = float(GUI_WIDTH) / float(GUI_HEIGHT);
+	const auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
+
+	SDL_Rect viewport;
+	if (want_aspect > real_aspect)
+	{
+		const auto scale = float(modeInfo.width) / float(GUI_WIDTH);
+		viewport.x = 0;
+		viewport.w = modeInfo.width;
+		viewport.h = int(std::ceil(GUI_HEIGHT * scale));
+		viewport.y = (modeInfo.height - viewport.h) / 2;
+	}
+	else
+	{
+		const auto scale = float(modeInfo.height) / float(GUI_HEIGHT);
+		viewport.y = 0;
+		viewport.h = modeInfo.height;
+		viewport.w = int(std::ceil(GUI_WIDTH * scale));
+		viewport.x = (modeInfo.width - viewport.w) / 2;
+	}
+	vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
+
+	if (!message_element_present)
+	{
+		message_element_present = 1;
+		updateHandle = vc_dispmanx_update_start(0);
+
+		VC_DISPMANX_ALPHA_T alpha;
+		alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
+		alpha.opacity = 255;
+		alpha.mask = 0;
+
+		blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+			&black_rect, black_bg_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+			nullptr, DISPMANX_NO_ROTATE);
+
+		message_element = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
+			&dst_rect, message_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+			nullptr,             // clamp
+			DISPMANX_NO_ROTATE);
+
+		vc_dispmanx_update_submit_sync(updateHandle);
+	}
+#elif USE_SDL2
+	// make the scaled rendering look smoother (linear scaling).
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	if (msg_texture == nullptr)
 	{
-		msg_texture = SDL_CreateTexture(renderer, msg_screen->format->format, SDL_TEXTUREACCESS_STREAMING, msg_screen->w,
-		                                msg_screen->h);
+		msg_texture = SDL_CreateTexture(renderer, msg_screen->format->format, SDL_TEXTUREACCESS_STREAMING, msg_screen->w, msg_screen->h);
 		check_error_sdl(msg_texture == nullptr, "Unable to create texture from Surface");
 	}
-	SDL_ShowCursor(SDL_ENABLE);
 #endif
 
 	msg_graphics = new gcn::SDLGraphics();
@@ -259,7 +341,6 @@ void message_gui_run()
 	msg_gui->logic();
 	msg_gui->draw();
 #ifdef USE_DISPMANX
-	//TODO
 #elif USE_SDL2
 	SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif

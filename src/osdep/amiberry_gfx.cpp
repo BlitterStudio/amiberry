@@ -326,10 +326,10 @@ int graphics_setup(void)
 	if (sdl_window == nullptr)
 	{
 		sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			800,
-			480,
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			0,
+			0,
 			SDL_WINDOW_FULLSCREEN_DESKTOP);
 		check_error_sdl(sdl_window == nullptr, "Unable to create window");
 	}
@@ -556,7 +556,7 @@ static void open_screen(struct uae_prefs* p)
 		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
 		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 256;
 #ifdef USE_DISPMANX
-	//TODO ?
+	//TODO Check if we can implement this in DISPMANX
 #elif USE_SDL2
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
 #endif

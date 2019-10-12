@@ -382,7 +382,6 @@ bool EditFilesysVirtual(const int unit_no)
 	uae_gui->logic();
 	uae_gui->draw();
 #ifdef USE_DISPMANX
-	//TODO ?
 #elif USE_SDL2
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif

@@ -102,7 +102,6 @@ DISPMANX_RESOURCE_HANDLE_T gui_resource;
 DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
 DISPMANX_ELEMENT_HANDLE_T gui_element;
 int element_present = 0;
-int current_resource = 0;
 #elif USE_SDL2
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
