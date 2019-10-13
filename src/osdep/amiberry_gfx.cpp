@@ -330,7 +330,7 @@ int graphics_setup(void)
 		check_error_sdl(sdl_window == nullptr, "Unable to create window");
 	}
 
-#elif USE_SDL2
+#else
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	Uint32 sdl_window_mode;
 
@@ -401,7 +401,7 @@ int graphics_setup(void)
 void toggle_fullscreen()
 {
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 	const Uint32 fullscreen_flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	if (sdl_window)
 	{
@@ -439,7 +439,7 @@ void graphics_subshutdown()
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SUBSHUTDOWN, 1);
 		uae_sem_wait(&display_sem);
 	}
-#elif USE_SDL2
+#else
 
 	if (renderthread)
 	{
@@ -525,14 +525,12 @@ void update_onscreen()
 }
 #endif
 
-#ifdef USE_SDL2
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
 bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int height)
 {
 	return mode->w % width == 0 && mode->h % height == 0;
 }
-#endif
 
 static void open_screen(struct uae_prefs* p)
 {
@@ -553,7 +551,7 @@ static void open_screen(struct uae_prefs* p)
 		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 256;
 #ifdef USE_DISPMANX
 	//TODO Check if we can implement this in DISPMANX
-#elif USE_SDL2
+#else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
 #endif
 	}
@@ -564,7 +562,7 @@ static void open_screen(struct uae_prefs* p)
 		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 256) << p->gfx_vresolution;
 
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 		if (p->scaling_method == -1)
 		{
 			if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
@@ -588,7 +586,7 @@ static void open_screen(struct uae_prefs* p)
 	vsync_counter = 0;
 	current_vsync_frame = 2;
 
-#elif USE_SDL2
+#else
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 
@@ -843,7 +841,7 @@ void show_screen(int mode)
 #ifdef USE_DISPMANX
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
-#elif USE_SDL2
+#else
 	if (use_sdl2_render_thread)
 	{
 		// Wait for the last thread to finish before rendering it.
@@ -861,7 +859,7 @@ void show_screen(int mode)
 		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 		SDL_RenderPresent(renderer);
 	}
-#endif //USE_SDL2
+#endif
 
 	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
@@ -995,7 +993,7 @@ void graphics_leave()
 		display_sem = nullptr;
 	}
 	bcm_host_deinit();
-#elif USE_SDL2
+#else
 	if (texture)
 	{
 		SDL_DestroyTexture(texture);
@@ -1014,9 +1012,8 @@ void graphics_leave()
 		SDL_DestroyWindow(sdl_window);
 		sdl_window = nullptr;
 	}
-#ifdef USE_SDL2
+
 	SDL_VideoQuit();
-#endif
 }
 
 #define  SYSTEM_RED_SHIFT      (screen->format->Rshift)

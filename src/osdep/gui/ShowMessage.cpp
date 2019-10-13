@@ -148,7 +148,7 @@ static void ShowMessageWaitInputLoop()
 			uae_gui->draw();
 #ifdef USE_DISPMANX
 			UpdateGuiScreen();
-#elif USE_SDL2
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -250,7 +250,7 @@ static void ShowMessageLoop()
 			uae_gui->draw();
 #ifdef USE_DISPMANX
 			UpdateGuiScreen();
-#elif USE_SDL2
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -283,7 +283,7 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	uae_gui->logic();
 	uae_gui->draw();
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();
@@ -310,7 +310,7 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 	uae_gui->logic();
 	uae_gui->draw();
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

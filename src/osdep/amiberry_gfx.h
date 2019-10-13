@@ -17,7 +17,7 @@ extern VC_RECT_T dst_rect;
 extern VC_RECT_T blit_rect;
 extern VC_RECT_T black_rect;
 extern VC_IMAGE_TYPE_T rgb_mode;
-#elif USE_SDL2
+#else
 extern SDL_Texture* texture;
 extern SDL_Cursor* cursor;
 extern SDL_Texture* gui_texture;

@@ -41,7 +41,7 @@ CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #
 # Raspberry Pi 1/2/3/4 (SDL2, DispmanX)
 ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2 ${DISPMANX_FLAGS}
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2 rpi3 rpi4))
        CPPFLAGS += -DUSE_ARMNEON -DARM_HAS_DIV
@@ -53,7 +53,7 @@ ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
 #
 # Raspberry Pi 1/2/3/4 (SDL2)
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-sdl2))
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2
     ifeq ($(PLATFORM),$(filter $(PLATFORM), rpi2-sdl2 rpi3-sdl2 rpi4-sdl2))
        CPPFLAGS += -DUSE_ARMNEON -DARM_HAS_DIV
        HAVE_NEON = 1
@@ -62,7 +62,7 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-s
 # OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
     CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -73,7 +73,7 @@ else ifeq ($(PLATFORM),orangepi-pc)
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
     CPUFLAGS += -mcpu=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -84,7 +84,7 @@ else ifeq ($(PLATFORM),xu4)
 # Odroid C1 (SDL2)
 else ifeq ($(PLATFORM),c1)
     CPUFLAGS += -mcpu=cortex-a5 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -95,27 +95,27 @@ else ifeq ($(PLATFORM),c1)
 # Odroid N1/N2, RockPro64 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
     CPUFLAGS += -mcpu=cortex-a72.cortex-a53
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DUSE_SDL2 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
     AARCH64 = 1
 
 # Raspberry Pi 3/4 (SDL2 64-bit)
 else ifeq ($(PLATFORM),pi64)
     CPUFLAGS += -mcpu=cortex-a72
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DUSE_SDL2
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
 # Vero 4k (SDL2)
 else ifeq ($(PLATFORM),vero4k)
     CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
     CFLAGS += -ftree-vectorize -funsafe-math-optimizations
-    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
 
 # Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
 else ifneq (,$(findstring AMLG,$(PLATFORM)))
     CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DFASTERCYCLES
     HAVE_NEON = 1
 
     ifneq (,$(findstring AMLG12,$(PLATFORM)))
@@ -133,7 +133,7 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 
 # Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DSOFTWARE_CURSOR
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DUSE_RENDER_THREAD -DSOFTWARE_CURSOR
     HAVE_NEON = 1
 
     ifneq (,$(findstring RK33,$(PLATFORM)))
@@ -150,7 +150,7 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
 else ifeq ($(PLATFORM),sun8i)
     CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     NAME  = amiberry-sun8i
     ifdef DEBUG

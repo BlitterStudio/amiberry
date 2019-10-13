@@ -29,7 +29,7 @@ DISPMANX_RESOURCE_HANDLE_T message_resource;
 DISPMANX_RESOURCE_HANDLE_T black_bg_resource;
 DISPMANX_ELEMENT_HANDLE_T message_element;
 int message_element_present = 0;
-#elif USE_SDL2
+#else
 SDL_Texture* msg_texture;
 #endif
 bool msg_done = false;
@@ -102,7 +102,7 @@ void message_gui_halt()
 	}
 	if (displayHandle)
 		vc_dispmanx_display_close(displayHandle);
-#elif USE_SDL2
+#else
 	if (msg_texture != nullptr)
 	{
 		SDL_DestroyTexture(msg_texture);
@@ -121,7 +121,7 @@ void message_UpdateScreen()
 	updateHandle = vc_dispmanx_update_start(0);
 	vc_dispmanx_element_change_source(updateHandle, message_element, message_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
-#elif USE_SDL2
+#else
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, msg_texture, nullptr, nullptr);
 	SDL_RenderPresent(renderer);
@@ -180,7 +180,7 @@ void message_checkInput()
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 		SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
 	}
@@ -270,7 +270,7 @@ void message_gui_init(const char* msg)
 
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
-#elif USE_SDL2
+#else
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
@@ -341,7 +341,7 @@ void message_gui_run()
 	msg_gui->logic();
 	msg_gui->draw();
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 	SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
 	message_UpdateScreen();

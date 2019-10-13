@@ -197,7 +197,7 @@ static void ShowHelpLoop(void)
 			uae_gui->draw();
 #ifdef USE_DISPMANX
 			UpdateGuiScreen();
-#elif USE_SDL2
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -222,7 +222,7 @@ void ShowHelp(const char* title, const vector<string>& text)
 	// Now we let the Gui object draw itself.
 	uae_gui->draw();
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

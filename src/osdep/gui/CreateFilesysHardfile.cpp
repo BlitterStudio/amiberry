@@ -325,7 +325,7 @@ static void CreateFilesysHardfileLoop()
 			uae_gui->draw();
 #ifdef USE_DISPMANX
 			UpdateGuiScreen();
-#elif USE_SDL2
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
@@ -360,7 +360,7 @@ bool CreateFilesysHardfile()
 	uae_gui->logic();
 	uae_gui->draw();
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

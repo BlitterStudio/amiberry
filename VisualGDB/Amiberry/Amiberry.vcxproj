@@ -61,7 +61,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
     </ClCompile>
@@ -76,7 +76,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
     </ClCompile>
@@ -92,7 +92,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
     </ClCompile>
@@ -109,7 +109,7 @@
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
       <AdditionalIncludeDirectories>=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../guisan-dev/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/usr/local/include/SDL2;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_SDL2;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
     </ClCompile>

@@ -102,7 +102,7 @@ DISPMANX_RESOURCE_HANDLE_T gui_resource;
 DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
 DISPMANX_ELEMENT_HANDLE_T gui_element;
 int element_present = 0;
-#elif USE_SDL2
+#else
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
 SDL_Surface* cursor_surface;
@@ -250,7 +250,7 @@ void UpdateGuiScreen()
 	updateHandle = vc_dispmanx_update_start(0);
 	vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
-#elif USE_SDL2
+#else
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 #ifdef SOFTWARE_CURSOR
@@ -261,7 +261,7 @@ void UpdateGuiScreen()
 }
 
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 // Sets the cursor image up
 void setup_cursor() 
 {
@@ -373,7 +373,7 @@ void amiberry_gui_init()
 
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
-#elif USE_SDL2
+#else
 #ifdef SOFTWARE_CURSOR
 	swcursor(0);
 	SDL_GetCurrentDisplayMode(0, &physmode);
@@ -455,7 +455,7 @@ void amiberry_gui_halt()
 	}
 	if (displayHandle)
 		vc_dispmanx_display_close(displayHandle);
-#elif USE_SDL2
+#else
 	if (gui_texture != nullptr)
 	{
 		SDL_DestroyTexture(gui_texture);
@@ -745,7 +745,7 @@ void checkInput()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 #ifdef USE_DISPMANX
-#elif USE_SDL2
+#else
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	}
