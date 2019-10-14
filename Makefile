@@ -392,7 +392,7 @@ ifdef AARCH64
 OBJS += src/osdep/aarch64_helper.o
 src/osdep/aarch64_helper.o: src/osdep/aarch64_helper.s
 	$(AS) $(ASFLAGS) -o src/osdep/aarch64_helper.o -c src/osdep/aarch64_helper.s
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi1-sdl2 rpi1-sdl2-dispmanx))
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi1-sdl2))
 OBJS += src/osdep/arm_helper.o
 src/osdep/arm_helper.o: src/osdep/arm_helper.s
 	$(AS) $(ASFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
