@@ -1,7 +1,5 @@
-# Default platform is rpi4 / SDL2 / Dispmanx
-ifeq ($(PLATFORM),)
-	PLATFORM = rpi4
-endif
+# Specify "make PLATFORM=<platform>" to compile for a specific target.
+# Check the supported list of platforms below for a ful list
 
 # Raspberry Pi 4 CPU flags
 ifneq (,$(findstring rpi4,$(PLATFORM)))
