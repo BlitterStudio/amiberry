@@ -70,7 +70,7 @@ else ifeq ($(PLATFORM),orangepi-pc)
 
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
-    CPUFLAGS += -mcpu=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
+    CPUFLAGS += -mcpu=cortex-a15 -mfpu=neon-vfpv4
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
     ifdef DEBUG
@@ -92,7 +92,7 @@ else ifeq ($(PLATFORM),c1)
 
 # Odroid N1/N2, RockPro64 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
-    CPUFLAGS += -mcpu=cortex-a72.cortex-a53
+    CPUFLAGS += -mcpu=cortex-a72
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
     AARCH64 = 1
 
@@ -137,7 +137,7 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
     ifneq (,$(findstring RK33,$(PLATFORM)))
       CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
       ifneq (,$(findstring RK3399,$(PLATFORM)))
-        CPUFLAGS += -mcpu=cortex-a72.cortex-a53
+        CPUFLAGS += -mcpu=cortex-a72
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a53
       endif
