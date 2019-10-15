@@ -118,7 +118,7 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 
     ifneq (,$(findstring AMLG12,$(PLATFORM)))
       ifneq (,$(findstring AMLG12B,$(PLATFORM)))
-        CPUFLAGS += -mcpu=cortex-a73.cortex-a53
+        CPUFLAGS += -mcpu=cortex-a73
         NAME  = amiberry-AMLG12B
       else
         CPUFLAGS += -mcpu=cortex-a53
