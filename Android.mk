@@ -2,9 +2,12 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := main
+LOCAL_MODULE := amiberry
 
 SDL_PATH := ../SDL
+LIBMPEG2_PATH := ../mpeg2
+LIBPNG_PATH := ../SDL_image/external/libpng-1.6.37
+LIBXML_PATH := ../xml2
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/osdep \
@@ -12,12 +15,16 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/include \
                     $(LOCAL_PATH)/src/archivers \
                     $(LOCAL_PATH)/guisan-dev/include \
-                    $(LOCAL_PATH)/$(SDL_PATH)/include
+                    $(LOCAL_PATH)/$(SDL_PATH)/include \
+                    $(LOCAL_PATH)/$(LIBMPEG2_PATH)/include \
+                    $(LOCAL_PATH)/$(LIBPNG_PATH) \
+                    $(LOCAL_PATH)/$(LIBXML_PATH)/include
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DANDROIDSDL -DAMIBERRY -D_REENTRANT
+    LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DANDROIDSDL -DAMIBERRY -D_REENTRANT
+    LOCAL_ARM_NEON := true
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-LOCAL_CFLAGS := -DCPU_AARCH64 -DANDROIDSDL -DAMIBERRY
+    LOCAL_CFLAGS := -DCPU_AARCH64 -DANDROIDSDL -DAMIBERRY -D_REENTRANT
 endif
 
 LOCAL_CPPFLAGS := -std=gnu++14  -pipe -frename-registers -Wno-shift-overflow -Wno-narrowing -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
@@ -178,9 +185,9 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/gui/PanelOnScreen.cpp
 
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-LOCAL_SRC_FILES += src/osdep/aarch64_helper.s
+    LOCAL_SRC_FILES += src/osdep/aarch64_helper.s
 else ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-LOCAL_SRC_FILES += src/osdep/arm_helper.s
+    LOCAL_SRC_FILES += src/osdep/arm_helper.s
 endif
 
 LOCAL_SRC_FILES += src/newcpu.cpp \
