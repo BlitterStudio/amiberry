@@ -168,7 +168,7 @@ void message_checkInput()
 		// Send event to gui-controls
 		//-------------------------------------------------
 #ifdef ANDROIDSDL
-		androidsdl_event(event, msg_input);
+		androidsdl_event(msg_event, msg_input);
 #else
 		msg_input->pushInput(msg_event);
 #endif

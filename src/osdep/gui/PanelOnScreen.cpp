@@ -1,6 +1,6 @@
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
+#include <guisan.hpp>
+#include <SDL_ttf.h>
+#include <guisan/sdl.hpp>
 #include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
@@ -405,7 +405,7 @@ void RefreshPanelOnScreen(void)
     else
         checkBox_disableMenuVKeyb->setSelected(false);
     
-    textInput->disableVirtualKeyboard(changed_prefs.disableMenuVKeyb);
+    //textInput->disableVirtualKeyboard(changed_prefs.disableMenuVKeyb);
     
     window_pos_textinput->setX(changed_prefs.pos_x_textinput);
     window_pos_textinput->setY(changed_prefs.pos_y_textinput);

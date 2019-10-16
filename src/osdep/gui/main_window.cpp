@@ -22,8 +22,8 @@
 
 #if defined(ANDROIDSDL)
 #include "androidsdl_event.h"
-#include <SDL_screenkeyboard.h>
-#include <SDL_android.h>
+//#include <SDL_screenkeyboard.h>
+//#include <SDL_android.h>
 #include <android/log.h>
 #endif
 
@@ -733,7 +733,7 @@ void checkInput()
 		// Send event to gui-controls
 		//-------------------------------------------------
 #ifdef ANDROIDSDL
-		androidsdl_event(event, gui_input);
+		androidsdl_event(gui_event, gui_input);
 #else
 		gui_input->pushInput(gui_event);
 #endif
@@ -1094,9 +1094,11 @@ void DisableResume()
 
 void run_gui()
 {
+#if 0
 #ifdef ANDROIDSDL
 	SDL_ANDROID_SetScreenKeyboardShown(0);
 	SDL_ANDROID_SetSystemMousePointerVisible(1);
+#endif
 #endif
 	gui_running = true;
 	gui_rtarea_flags_onenter = gui_create_rtarea_flag(&currprefs);
@@ -1117,13 +1119,15 @@ void run_gui()
 		amiberry_gui_run();
 		gui_widgets_halt();
 		amiberry_gui_halt();
+#if 0
 #ifdef ANDROIDSDL
 		if (currprefs.onScreen != 0)
 		{
 			SDL_ANDROID_SetScreenKeyboardShown(1);
 			SDL_ANDROID_SetSystemMousePointerVisible(0);
 		}
-#endif 
+#endif
+#endif
 	}
 
 	// Catch all GUI framework exceptions.

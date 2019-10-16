@@ -190,8 +190,8 @@ class EditFilePathActionListener : public gcn::ActionListener
   public:
     void action(const gcn::ActionEvent& actionEvent)
     {
-       char tmp[MAX_PATH];
-       strncpy(tmp, txtCurrent->getText().c_str(), MAX_PATH - 1);
+       char tmp[MAX_DPATH];
+       strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
        checkfoldername(tmp);
     }
 };

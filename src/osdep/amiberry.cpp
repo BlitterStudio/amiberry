@@ -526,7 +526,7 @@ TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
 #ifdef ANDROIDSDL
-		|| cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
+	int result = (cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
 		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
 		|| cfgfile_intval(option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
 		|| cfgfile_intval(option, value, "onscreen_button1", &p->onScreen_button1, 1)
@@ -554,8 +554,17 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		|| cfgfile_intval(option, value, "pos_y_button6", &p->pos_y_button6, 1)
 		|| cfgfile_intval(option, value, "floating_joystick", &p->floatingJoystick, 1)
 		|| cfgfile_intval(option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
+		);
+	if (result)
+		return 1;
 #endif
-
+	
+	if (cfgfile_intval(option, value, "vertical_offset", &p->vertical_offset, 1))
+	{
+		p->vertical_offset += OFFSET_Y_ADJUST;
+		return 1;
+	}
+	
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))
@@ -563,19 +572,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
-		return 1;
-                
-                
+		return 1;          
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
 		return 1;
-
-	if (cfgfile_intval(option, value, "vertical_offset", &p->vertical_offset, 1))
-	{
-		p->vertical_offset += OFFSET_Y_ADJUST;
-		return 1;
-	}
 	if (cfgfile_intval(option, value, "hide_idle_led", &p->hide_idle_led, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
@@ -1344,9 +1345,9 @@ int handle_msgpump()
 						x = -4;
 					if (rEvent.motion.y == 0 && y > -4)
 						y = -4;
-					if (rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
+					if (rEvent.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
 						x = 4;
-					if (rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
+					if (rEvent.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
 						y = 4;
 #endif //ANDROIDSDL
 					setmousestate(0, 0, x * mouseScale, 0);

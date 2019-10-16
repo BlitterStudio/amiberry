@@ -18,9 +18,12 @@
 #include <png.h>
 #include "inputdevice.h"
 
+#if 0
 #ifdef ANDROIDSDL
 #include <SDL_screenkeyboard.h>
 #endif
+#endif
+
 #ifdef USE_DISPMANX
 #include "threaddep/thread.h"
 static uae_thread_id display_tid = nullptr;
@@ -460,6 +463,7 @@ void graphics_subshutdown()
 	}
 }
 
+#if 0 // Disabled until we see how this is implemented in SDL2
 #ifdef ANDROIDSDL
 void update_onscreen()
 {
@@ -524,6 +528,7 @@ void update_onscreen()
 	}
 }
 #endif
+#endif
 
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
@@ -542,9 +547,12 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_height = 1080;
 	}
 
+#if 0
 #ifdef ANDROIDSDL
 	update_onscreen();
 #endif
+#endif
+	
 	if (screen_is_picasso)
 	{
 		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;

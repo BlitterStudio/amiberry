@@ -496,10 +496,12 @@ static void sample16i_crux_handler(void)
 	data3p &= audio_channel[3].data.adk_mask;
 
 	{
+		struct audio_channel_data *cdp;
+		uae_u32 ratio, ratio1;
 #define INTERVAL (scaled_sample_evtime * 3)
-		auto cdp = audio_channel + 0;
-		unsigned long ratio1 = cdp->per - cdp->evtime;
-		auto ratio = ulong((ratio1 << 12) / INTERVAL);
+		cdp = audio_channel + 0;
+		ratio1 = cdp->per - cdp->evtime;
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data0 = (data0 * ratio + data0p * (4096 - ratio)) >> 12;
@@ -513,14 +515,14 @@ static void sample16i_crux_handler(void)
 
 		cdp = audio_channel + 2;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data2 = (data2 * ratio + data2p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 3;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data3 = (data3 * ratio + data3p * (4096 - ratio)) >> 12;
@@ -611,31 +613,33 @@ static void sample16si_crux_handler(void)
 	data3p &= audio_channel[3].data.adk_mask;
 
 	{
+		struct audio_channel_data* cdp;
+		uae_u32 ratio, ratio1;
 #define INTERVAL (scaled_sample_evtime * 3)
-		auto cdp = audio_channel + 0;
-		unsigned long ratio1 = cdp->per - cdp->evtime;
-		auto ratio = ulong((ratio1 << 12) / INTERVAL);
+		cdp = audio_channel + 0;
+		ratio1 = cdp->per - cdp->evtime;
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data0 = (data0 * ratio + data0p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 1;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data1 = (data1 * ratio + data1p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 2;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data2 = (data2 * ratio + data2p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 3;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data3 = (data3 * ratio + data3p * (4096 - ratio)) >> 12;
@@ -1276,6 +1280,7 @@ void update_audio(void)
 	n_cycles = get_cycles() - last_cycles;
 	while (n_cycles > 0) {
 		auto best_evtime = n_cycles + 1;
+		uae_u32 rounded;
 		int i;
 
 		for (i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
@@ -1284,7 +1289,7 @@ void update_audio(void)
 		}
 
 		/* next_sample_evtime >= 0 so floor() behaves as expected */
-		auto rounded = ulong(floorf(next_sample_evtime));
+		rounded = floorf(next_sample_evtime);
 		if (next_sample_evtime - rounded >= 0.5)
 			rounded++;
 

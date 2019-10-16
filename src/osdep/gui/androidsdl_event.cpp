@@ -1,10 +1,6 @@
-#ifdef USE_SDL1
-#include <guichan/sdl.hpp>
-#elif USE_SDL2
 #include <guisan/sdl.hpp>
-#endif
 
-void androidsdl_event(SDL_Event event, gcn::SDLInput* gui_input) {
+void androidsdl_event(SDL_Event gui_event, gcn::SDLInput* gui_input) {
             /*
              * Now that we are done polling and using SDL events we pass
              * the leftovers to the SDLInput object to later be handled by
@@ -12,26 +8,26 @@ void androidsdl_event(SDL_Event event, gcn::SDLInput* gui_input) {
              * label doesn't use input. But will do it anyway to show how to
              * set up an SDL application with Guichan.)
              */
-            if (event.type == SDL_MOUSEMOTION ||
-                event.type == SDL_MOUSEBUTTONDOWN ||
-                event.type == SDL_MOUSEBUTTONUP) {
+            if (gui_event.type == SDL_MOUSEMOTION ||
+                    gui_event.type == SDL_MOUSEBUTTONDOWN ||
+                    gui_event.type == SDL_MOUSEBUTTONUP) {
                 // Filter emulated mouse events for Guichan, we wand absolute input
             } else {
                 // Convert multitouch event to SDL mouse event
                 static int x = 0, y = 0, buttons = 0, wx=0, wy=0, pr=0;
                 SDL_Event event2;
-                memcpy(&event2, &event, sizeof(event));
-                if (event.type == SDL_JOYBALLMOTION &&
-                    event.jball.which == 0 &&
-                    event.jball.ball == 0) {
+                memcpy(&event2, &gui_event, sizeof(gui_event));
+                if (gui_event.type == SDL_JOYBALLMOTION &&
+                        gui_event.jball.which == 0 &&
+                        gui_event.jball.ball == 0) {
                     event2.type = SDL_MOUSEMOTION;
                     event2.motion.which = 0;
                     event2.motion.state = buttons;
-                    event2.motion.xrel = event.jball.xrel - x;
-                    event2.motion.yrel = event.jball.yrel - y;
-                    if (event.jball.xrel!=0) {
-                        x = event.jball.xrel;
-                        y = event.jball.yrel;
+                    event2.motion.xrel = gui_event.jball.xrel - x;
+                    event2.motion.yrel = gui_event.jball.yrel - y;
+                    if (gui_event.jball.xrel!=0) {
+                        x = gui_event.jball.xrel;
+                        y = gui_event.jball.yrel;
                     }
                     event2.motion.x = x;
                     event2.motion.y = y;
@@ -49,9 +45,9 @@ void androidsdl_event(SDL_Event event, gcn::SDLInput* gui_input) {
                         //__android_log_print(ANDROID_LOG_INFO, "GUICHAN","Mouse button %d coords %d %d", buttons, x, y);
                     }
                 }
-                if (event.type == SDL_JOYBUTTONUP &&
-                    event.jbutton.which == 0 &&
-                    event.jbutton.button == 0) {
+                if (gui_event.type == SDL_JOYBUTTONUP &&
+                        gui_event.jbutton.which == 0 &&
+                        gui_event.jbutton.button == 0) {
                     // Do not push button down event here, because we need mouse motion event first
                     buttons = 0;
                     event2.type = SDL_MOUSEBUTTONUP;

@@ -24,7 +24,7 @@
 
 #include "cda_play.h"
 #include "archivers/mp2/kjmp2.h"
-#ifndef _WIN32
+#if (!defined _WIN32 && !defined ANDROID)
 extern "C" {
 #include "mpeg2dec/mpeg2.h"
 #include "mpeg2dec/mpeg2convert.h"

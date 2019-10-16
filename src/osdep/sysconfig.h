@@ -570,6 +570,3 @@ typedef char TCHAR;
 #define _wunlink(x)         unlink(x)
 #define _istalnum(x)        isalnum(x)
 
-#if defined(ANDROID) && !defined(CPU_AARCH64)
-#define log2l(x)            (log(x)/log(2))
-#endif
