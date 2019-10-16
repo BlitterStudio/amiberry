@@ -69,7 +69,6 @@ set(SRC_FILES
         src/cia.cpp
         src/crc32.cpp
         src/custom.cpp
-        src/def_icons.cpp
         src/devices.cpp
         src/disk.cpp
         src/diskutil.cpp
@@ -150,7 +149,7 @@ set(SRC_FILES
         src/archivers/mp2/kjmp2.cpp
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
-        src/caps/caps_win32.cpp
+        src/caps/caps_amiberry.cpp
         src/machdep/support.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
@@ -247,17 +246,17 @@ if(BUILD_PSP2)
   set(FLAGS
           -Wno-write-strings
           -DVERSION=\"${BUILD_DATE}\"
-          -DAMIBERRY -D__PSP2__ -DUSE_SDL2
+          -DAMIBERRY -D__PSP2__
           -DGCCCONSTFUNC="__attribute__\(\(const\)\)" -DUSE_UNDERSCORE
           -DSHM_SUPPORT_LINKS=0 -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS -DOS_WITHOUT_MEMORY_MANAGEMENT
           -DROM_PATH_PREFIX=\"ux0:/data/amiberry/roms/\" -DDATA_PREFIX=\"app0:/data/\" -DSAVE_PREFIX=\"ux0:/data/amiberry/saves/\"
           -DUSE_AMIBERRY_VKBD
-          -DUSE_ARMV7
           -DARMV6_ASSEMBLY
           -DARMV6T2
           -DUSE_ARMNEON
           -DARM_HAS_DIV
-          -marm -mfpu=neon -mcpu=cortex-a9 -march=armv7-a -mfloat-abi=hard -ffast-math
+          -D_FILE_OFFSET_BITS=64
+          -marm -mfpu=neon -mcpu=cortex-a9 -mfloat-abi=hard -ffast-math
           -fno-asynchronous-unwind-tables -funroll-loops
           -mword-relocations -fno-unwind-tables -fno-optimize-sibling-calls
           -mvectorize-with-neon-quad -funsafe-math-optimizations

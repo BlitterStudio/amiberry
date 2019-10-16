@@ -6,16 +6,22 @@ LOCAL_MODULE := main
 
 SDL_PATH := ../SDL
 
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include $(LOCAL_PATH)/src $(LOCAL_PATH)/src/osdep $(LOCAL_PATH)/src/threaddep $(LOCAL_PATH)/src/include $(LOCAL_PATH)/src/archivers $(LOCAL_PATH)/guisan-dev/include
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
+                    $(LOCAL_PATH)/src/osdep \
+                    $(LOCAL_PATH)/src/threaddep \
+                    $(LOCAL_PATH)/src/include \
+                    $(LOCAL_PATH)/src/archivers \
+                    $(LOCAL_PATH)/guisan-dev/include \
+                    $(LOCAL_PATH)/$(SDL_PATH)/include
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DANDROIDSDL -DAMIBERRY
+LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DANDROIDSDL -DAMIBERRY -D_REENTRANT
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
 LOCAL_CFLAGS := -DCPU_AARCH64 -DANDROIDSDL -DAMIBERRY
 endif
 
-LOCAL_CPPFLAGS := -std=gnu++14  -pipe -Wno-shift-overflow -Wno-narrowing -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
-LOCAL_LDFLAGS += -frename-registers -fuse-ld=gold -Lguisan-dev/lib
+LOCAL_CPPFLAGS := -std=gnu++14  -pipe -frename-registers -Wno-shift-overflow -Wno-narrowing -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+LOCAL_LDFLAGS += -fuse-ld=gold -Lguisan-dev/lib
 
 # Add your application source files here...
 LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
@@ -169,8 +175,15 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/gui/main_window.cpp \
                     src/osdep/gui/Navigation.cpp \
                     src/osdep/gui/androidsdl_event.cpp \
-                    src/osdep/gui/PanelOnScreen.cpp \
-                    src/newcpu.cpp \
+                    src/osdep/gui/PanelOnScreen.cpp
+
+ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+LOCAL_SRC_FILES += src/osdep/aarch64_helper.s
+else ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+LOCAL_SRC_FILES += src/osdep/arm_helper.s
+endif
+
+LOCAL_SRC_FILES += src/newcpu.cpp \
                     src/newcpu_common.cpp \
                     src/readcpu.cpp \
                     src/cpudefs.cpp \
@@ -187,6 +200,6 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
 
 LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer xml2 mpeg2
 
-LOCAL_LDLIBS := -lGLESv1_CM -lGLESv2 -llog
+LOCAL_LDLIBS := -ldl -lGLESv1_CM -lGLESv2 -llog -lz
 
 include $(BUILD_SHARED_LIBRARY)
