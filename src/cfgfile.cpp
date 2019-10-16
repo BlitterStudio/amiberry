@@ -2595,8 +2595,8 @@ static int cfgfile_multipath (const TCHAR *option, const TCHAR *value, const TCH
 	for (int i = 0; i < MAX_PATHS; i++) {
 		if (mp->path[i][0] == 0 || (i == 0 && (!_tcscmp (mp->path[i], _T(".\\")) || !_tcscmp (mp->path[i], _T("./"))))) {
 			TCHAR *s = target_expand_environment (tmploc, NULL, 0);
-			_tcsncpy (mp->path[i], s, PATH_MAX - 1);
-			mp->path[i][PATH_MAX - 1] = 0;
+			_tcsncpy (mp->path[i], s, MAX_DPATH - 1);
+			mp->path[i][MAX_DPATH - 1] = 0;
 			fixtrailing (mp->path[i]);
 			xfree (s);
 			//target_multipath_modified(p);
