@@ -49,7 +49,6 @@ endif(BUILD_PSP2)
 set(TITLEID "AMIBERRY00")
 
 set(SRC_FILES
-        src/osdep/vkbd/vkbd.cpp
         src/akiko.cpp
         src/ar.cpp
         src/aros.rom.cpp
@@ -223,8 +222,6 @@ include_directories(
         src
         src/osdep
         src/osdep/psp2
-        src/osdep/switch
-        src/osdep/vkbd
         src/include
         src/threaddep
         src/archivers
