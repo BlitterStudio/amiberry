@@ -14,19 +14,11 @@
 
 #define __USE_ISOC9X  /* We might be able to pick up a NaN */
 
-#include <cmath>
-#include <cfloat>
-#include <cfenv>
-
-#include "sysconfig.h"
-#include "sysdeps.h"
+#include <math.h>
+#include <float.h>
+#include <fenv.h>
 
 #define USE_HOST_ROUNDING 1
-
-#include "options.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "fpp.h"
 
 static uae_u32 dhex_nan[]   ={0xffffffff, 0x7fffffff};
 static double *fp_nan    = (double *)dhex_nan;
