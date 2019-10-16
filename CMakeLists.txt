@@ -71,7 +71,6 @@ set(SRC_FILES
         src/devices.cpp
         src/disk.cpp
         src/diskutil.cpp
-        src/dlopen.cpp
         src/drawing.cpp
         src/events.cpp
         src/expansion.cpp
@@ -148,7 +147,6 @@ set(SRC_FILES
         src/archivers/mp2/kjmp2.cpp
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
-        src/caps/caps_amiberry.cpp
         src/machdep/support.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
