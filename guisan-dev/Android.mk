@@ -4,8 +4,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := guisan
 
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../SDL2/include $(LOCAL_PATH)/include \
-					$(LOCAL_PATH)/../SDL2_image $(LOCAL_PATH)/../SDL2_ttf/include
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../SDL/include $(LOCAL_PATH)/include \
+					$(LOCAL_PATH)/../SDL_image $(LOCAL_PATH)/../SDL_ttf/include
 LOCAL_CFLAGS := -DHAVE_CONFIG_H -D_GNU_SOURCE=1 -D_REENTRANT -fexceptions -frtti
 
 LOCAL_SRC_FILES := \

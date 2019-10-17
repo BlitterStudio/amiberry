@@ -1,5 +1,9 @@
-LOCAL_PATH := $(call my-dir)
+AMIBERRY_LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
+LOCAL_PATH := $(AMIBERRY_LOCAL_PATH)
 
+include $(LOCAL_PATH)/guisan-dev/Android.mk
+LOCAL_PATH := $(AMIBERRY_LOCAL_PATH)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := amiberry
@@ -22,13 +26,14 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DANDROIDSDL -DAMIBERRY -D_REENTRANT
-    LOCAL_ARM_NEON := true
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_CFLAGS := -DCPU_AARCH64 -DANDROIDSDL -DAMIBERRY -D_REENTRANT
 endif
 
-LOCAL_CPPFLAGS := -std=gnu++14  -pipe -frename-registers -Wno-shift-overflow -Wno-narrowing -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
-LOCAL_LDFLAGS += -fuse-ld=gold -Lguisan-dev/lib
+LOCAL_CPPFLAGS := -std=gnu++14 -pipe -frename-registers \
+                    -Wno-shift-overflow -Wno-narrowing -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+
+LOCAL_LDFLAGS += -fuse-ld=gold
 
 # Add your application source files here...
 LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
@@ -205,7 +210,7 @@ LOCAL_SRC_FILES += src/newcpu.cpp \
                     src/jit/compemu_fpp.cpp \
                     src/jit/compemu_support.cpp
 
-LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer xml2 mpeg2
+LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer xml2 mpeg2 mpg123 guisan
 
 LOCAL_LDLIBS := -ldl -lGLESv1_CM -lGLESv2 -llog -lz
 
