@@ -115,7 +115,7 @@ static void ShowMessageWaitInputLoop()
 			gotEvent = 1;
 			if (event.type == SDL_KEYDOWN)
 			{
-				switch (event.key.keysym.scancode)
+				switch (event.key.keysym.sym)
 				{
 				case VK_ESCAPE:
 					dialogFinished = true;
