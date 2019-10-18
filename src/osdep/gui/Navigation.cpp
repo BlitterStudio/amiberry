@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include <guisan.hpp>
+#include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
@@ -355,22 +356,22 @@ static NavigationMap navMap[] =
 
 bool HandleNavigation(int direction)
 {
-	const auto focusHdl = gui_top->_getFocusHandler();
+	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
 	gcn::Widget* focusTarget = nullptr;
 
 	if (focusHdl != nullptr)
 	{
-		auto activeWidget = focusHdl->getFocused();
+		gcn::Widget* activeWidget = focusHdl->getFocused();
 
 		if (activeWidget != nullptr && activeWidget->getId().length() > 0)
 		{
-			auto activeName = activeWidget->getId();
-			auto bFoundEnabled = false;
-			auto tries = 10;
+			std::string activeName = activeWidget->getId();
+			bool bFoundEnabled = false;
+			int tries = 10;
 
 			while (!bFoundEnabled && tries > 0)
 			{
-				string searchFor;
+				std::string searchFor;
 
 				for (auto i = 0; navMap[i].activeWidget != "END"; ++i)
 				{
@@ -421,7 +422,7 @@ bool HandleNavigation(int direction)
 			{
 				if (activeWidget->getId().substr(0, 3) == "cbo" || activeWidget->getId().substr(0, 5) == "qscbo")
 				{
-					const auto dropdown = dynamic_cast<gcn::UaeDropDown *>(activeWidget);
+					gcn::UaeDropDown* dropdown = (gcn::UaeDropDown*) activeWidget;
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
 						focusTarget = nullptr; // Up/down navigates in list if dropped down
 				}
