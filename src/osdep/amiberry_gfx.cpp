@@ -19,7 +19,7 @@
 #include "inputdevice.h"
 
 #if 0
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include <SDL_screenkeyboard.h>
 #endif
 #endif
@@ -42,7 +42,7 @@ SDL_Thread * renderthread = nullptr;
 SDL_Renderer* renderer;
 const char* sdl_video_driver;
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include <android/log.h>
 #endif
 
@@ -464,7 +464,7 @@ void graphics_subshutdown()
 }
 
 #if 0 // Disabled until we see how this is implemented in SDL2
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 void update_onscreen()
 {
 	SDL_ANDROID_SetScreenKeyboardFloatingJoystick(changed_prefs.floatingJoystick);
@@ -548,7 +548,7 @@ static void open_screen(struct uae_prefs* p)
 	}
 
 #if 0
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	update_onscreen();
 #endif
 #endif

@@ -405,7 +405,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->use_retroarch_menu = true;
 	p->use_retroarch_reset = false;
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	p->onScreen = 1;
 	p->onScreen_textinput = 1;
 	p->onScreen_dpad = 1;
@@ -476,7 +476,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
 	cfgfile_write(f, "amiberry.onscreen_dpad", "%d", p->onScreen_dpad);
@@ -525,7 +525,7 @@ TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	int result = (cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
 		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
 		|| cfgfile_intval(option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
@@ -1340,7 +1340,7 @@ int handle_msgpump()
 					const auto mouseScale = currprefs.input_joymouse_multiplier / 2;
 					auto x = rEvent.motion.xrel;
 					auto y = rEvent.motion.yrel;
-#if defined (ANDROIDSDL)
+#if defined (ANDROID)
 					if (rEvent.motion.x == 0 && x > -4)
 						x = -4;
 					if (rEvent.motion.y == 0 && y > -4)
@@ -1349,7 +1349,7 @@ int handle_msgpump()
 						x = 4;
 					if (rEvent.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
 						y = 4;
-#endif //ANDROIDSDL
+#endif //ANDROID
 					setmousestate(0, 0, x * mouseScale, 0);
 					setmousestate(0, 1, y * mouseScale, 0);
 				}

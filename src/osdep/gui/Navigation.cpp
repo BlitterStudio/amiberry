@@ -38,7 +38,7 @@ static NavigationMap navMap[] =
 { "Input",            "cboPort0mode",   "cboPort0",       "Sound",            "Custom controls" },
 { "Custom controls",  "Right Trigger",  "0: Mouse",       "Input",            "Miscellaneous" },
 { "Miscellaneous",    "StatusLine",     "StatusLine",     "Custom controls",  "Savestates" },
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 { "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
 { "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
 { "Quit",             "Start",          "Help",           "OnScreen",       "Paths" },
@@ -299,7 +299,7 @@ static NavigationMap navMap[] =
 { "LoadState", "Savestates", "SaveState", "State3", "State0" },
 { "SaveState", "LoadState", "Savestates", "State3", "State0" },
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 // PanelOnScreen
 { "OnScrCtrl",      "OnScreen",       "OnScrButton3", "DisableMenuVKeyb", "OnScrTextInput" },
 { "OnScrButton3",   "OnScrCtrl",      "OnScreen",     "CustomPos",     "OnScrButton4" },

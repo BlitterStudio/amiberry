@@ -12,7 +12,7 @@
 #include "inputdevice.h"
 
 #if 0
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include <SDL_android.h>
 #endif
 #endif
@@ -241,7 +241,7 @@ public:
 		else if (actionEvent.getSource() == chkMouseHack)
 		{
 #if 0
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 			if (chkMouseHack->isSelected())
 				SDL_ANDROID_SetMouseEmulationMode(0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 			else

@@ -869,7 +869,7 @@ struct uae_prefs {
 #endif
 
 	/* ANDROID */
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	int onScreen;
 	int onScreen_textinput;
 	int onScreen_dpad;

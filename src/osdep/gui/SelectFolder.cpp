@@ -20,7 +20,7 @@
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include "androidsdl_event.h"
 #endif
 
@@ -335,7 +335,7 @@ static void SelectFolderLoop()
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 			androidsdl_event(event, gui_input);
 #else
 			gui_input->pushInput(event);

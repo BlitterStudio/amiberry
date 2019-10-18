@@ -15,7 +15,7 @@
 #include "amiberry_gfx.h"
 #include "inputdevice.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include "androidsdl_event.h"
 #endif
 
@@ -167,7 +167,7 @@ void message_checkInput()
 		//-------------------------------------------------
 		// Send event to gui-controls
 		//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 		androidsdl_event(msg_event, msg_input);
 #else
 		msg_input->pushInput(msg_event);

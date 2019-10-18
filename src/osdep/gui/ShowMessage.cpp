@@ -12,7 +12,7 @@
 #include "config.h"
 #include "gui_handling.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include "androidsdl_event.h"
 #endif
 
@@ -236,7 +236,7 @@ static void ShowMessageLoop()
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 			androidsdl_event(event, gui_input);
 #else
 			gui_input->pushInput(event);

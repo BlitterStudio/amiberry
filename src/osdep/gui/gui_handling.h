@@ -138,7 +138,7 @@ void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);
 bool HelpPanelSavestate(std::vector<std::string> &helptext);
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 void InitPanelOnScreen(const struct _ConfigCategory& category);
 void ExitPanelOnScreen(void);
 void RefreshPanelOnScreen(void);

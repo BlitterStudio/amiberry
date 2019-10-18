@@ -20,7 +20,7 @@
 
 #include "inputdevice.h"
 
-#if defined(ANDROIDSDL)
+#if defined(ANDROID)
 #include "androidsdl_event.h"
 //#include <SDL_screenkeyboard.h>
 //#include <SDL_android.h>
@@ -60,7 +60,7 @@ ConfigCategory categories[] = {
 	{ "Custom controls",  "data/controller.png",  nullptr, nullptr, InitPanelCustom,     ExitPanelCustom,     RefreshPanelCustom,      HelpPanelCustom },
 	{ "Miscellaneous",    "data/misc.ico",      nullptr, nullptr, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
 	{ "Savestates",       "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
-#ifdef ANDROIDSDL  
+#ifdef ANDROID  
 	{ "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
 	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
@@ -84,7 +84,7 @@ enum
 	PANEL_CUSTOM,
 	PANEL_MISC,
 	PANEL_SAVESTATES,
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	PANEL_ONSCREEN,
 #endif
 	NUM_PANELS
@@ -732,7 +732,7 @@ void checkInput()
 		//-------------------------------------------------
 		// Send event to gui-controls
 		//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 		androidsdl_event(gui_event, gui_input);
 #else
 		gui_input->pushInput(gui_event);
@@ -1017,7 +1017,7 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	// Place everything on main form
 	//--------------------------------------------------
-#ifndef ANDROIDSDL
+#ifndef ANDROID
 	gui_top->add(cmdShutdown, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 #endif
 	gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
@@ -1095,7 +1095,7 @@ void DisableResume()
 void run_gui()
 {
 #if 0
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	SDL_ANDROID_SetScreenKeyboardShown(0);
 	SDL_ANDROID_SetSystemMousePointerVisible(1);
 #endif
@@ -1120,7 +1120,7 @@ void run_gui()
 		gui_widgets_halt();
 		amiberry_gui_halt();
 #if 0
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 		if (currprefs.onScreen != 0)
 		{
 			SDL_ANDROID_SetScreenKeyboardShown(1);
