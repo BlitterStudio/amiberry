@@ -28,7 +28,9 @@
 /* #define ENFORCER */ /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
+#ifndef ANDROID
 #define CD32 /* CD32 emulation */
+#endif
 /* #define CDTV */ /* CDTV emulation */
 /* #define PARALLEL_PORT */ /* parallel port emulation */
 /* #define PARALLEL_DIRECT */ /* direct parallel port emulation */

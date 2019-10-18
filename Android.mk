@@ -9,7 +9,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := amiberry
 
 SDL_PATH := ../SDL
-LIBMPEG2_PATH := ../mpeg2
+#LIBMPEG2_PATH := ../mpeg2
 LIBPNG_PATH := ../SDL_image/external/libpng-1.6.37
 LIBXML_PATH := ../xml2
 
@@ -20,20 +20,19 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/archivers \
                     $(LOCAL_PATH)/guisan-dev/include \
                     $(LOCAL_PATH)/$(SDL_PATH)/include \
-                    $(LOCAL_PATH)/$(LIBMPEG2_PATH)/include \
                     $(LOCAL_PATH)/$(LIBPNG_PATH) \
                     $(LOCAL_PATH)/$(LIBXML_PATH)/include
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-    LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DAMIBERRY -D_REENTRANT
+    LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DAMIBERRY -D_REENTRANT -D_FILE_OFFSET_BITS=64
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-    LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_REENTRANT
+    LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_REENTRANT -D_FILE_OFFSET_BITS=64
 endif
 
 LOCAL_CPPFLAGS := -std=gnu++14 -pipe -frename-registers \
                     -Wno-shift-overflow -Wno-narrowing -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
-LOCAL_LDFLAGS += -fuse-ld=gold
+LOCAL_LDFLAGS +=
 
 # Add your application source files here...
 LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
@@ -53,8 +52,6 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/blkdev_cdimage.cpp \
                     src/bsdsocket.cpp \
                     src/calc.cpp \
-                    src/cd32_fmv.cpp \
-                    src/cd32_fmv_genlock.cpp \
                     src/cdrom.cpp \
                     src/cfgfile.cpp \
                     src/cia.cpp \
@@ -210,7 +207,7 @@ LOCAL_SRC_FILES += src/newcpu.cpp \
                     src/jit/compemu_fpp.cpp \
                     src/jit/compemu_support.cpp
 
-LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer xml2 mpeg2 mpg123 guisan
+LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer xml2 mpg123 guisan
 
 LOCAL_LDLIBS := -ldl -lGLESv1_CM -lGLESv2 -llog -lz
 

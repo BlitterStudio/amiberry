@@ -47,7 +47,9 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "drawing.h"
 #include "savestate.h"
 #include "statusline.h"
+#ifdef CD32
 #include "cd32_fmv.h"
+#endif
 #include "audio.h"
 #include "devices.h"
 
@@ -3585,7 +3587,7 @@ static void finish_drawing_frame(bool drawlines)
 			draw_status_line(line, i);
 		}
 	}
-		
+#ifdef CD32
 	// cd32 fmv
 	if (currprefs.cs_cd32fmv) {
 		if (cd32_fmv_active) {
@@ -3593,7 +3595,7 @@ static void finish_drawing_frame(bool drawlines)
 			setnativeposition(vb);
 		}
 	}
-
+#endif
 	unlockscr();
 #ifdef AMIBERRY
 	next_line_to_render = 0;

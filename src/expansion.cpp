@@ -21,7 +21,9 @@
 #include "newcpu.h"
 #include "savestate.h"
 #include "gfxboard.h"
+#ifdef CD32
 #include "cd32_fmv.h"
+#endif
 #include "gayle.h"
 #include "autoconf.h"
 #include "devices.h"
@@ -2631,12 +2633,14 @@ void restore_expansion_finish(void)
 
 const struct expansionromtype expansionroms[] = {
 
-		/* built-in controllers */
+	/* built-in controllers */
+#ifdef CD32
 	{
 		_T("cd32fmv"), _T("CD32 FMV"), _T("Commodore"),
 		expamem_init_cd32fmv, NULL, ROMTYPE_CD32CART, BOARD_AUTOCONFIG_Z2, 
 		EXPANSIONTYPE_INTERNAL
 	},
+#endif
 	{
 		_T("ide_mb"), _T("A600/A1200/A4000 IDE"), _T("Commodore"),
 		gayle_ide_init, gayle_add_ide_unit, ROMTYPE_MB_IDE | ROMTYPE_NOT, BOARD_NONAUTOCONFIG_BEFORE,

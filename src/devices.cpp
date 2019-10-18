@@ -7,8 +7,10 @@
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "audio.h"
+#ifdef CD32
 #include "cd32_fmv.h"
 #include "akiko.h"
+#endif
 #include "disk.h"
 #include "cia.h"
 #include "inputdevice.h"
@@ -252,7 +254,9 @@ void devices_update_sound(double clk, double syncadjust)
 
 void devices_update_sync(double svpos, double syncadjust)
 {
+#ifdef CD32
 	cd32_fmv_set_sync(svpos, syncadjust);
+#endif
 }
 
 void do_leave_program (void)
