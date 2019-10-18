@@ -3,10 +3,12 @@
 We'd be really happy to get more people involved in the project! If you want to help, please follow these guidelines.
 
 If you haven't already, come find us in one of these platforms:
+
 * [Amiberry MeWe page](https://mewe.com/p/amiberry)
+
 * [Amiberry Facebook page](https://fb.me/amiberry.emulator)
 
-## Did you find a bug?
+## If you found a bug
 
 Bug reporting is an important part of making Amiberry better. If you believe you have found a bug, then please follow these steps:
 
@@ -49,4 +51,3 @@ on something similar, or perhaps this change could create a problem you haven't 
 * Please use the relevant **pull request template** when submitting a PR.
 
 * Please ensure that all your commits are atomic (one feature per commit).
-
