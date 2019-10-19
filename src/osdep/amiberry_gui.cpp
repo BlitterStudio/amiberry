@@ -754,7 +754,7 @@ bool DevicenameExists(const char* name)
 		auto uci = &changed_prefs.mountconfig[i];
 		const auto ci = &uci->ci;
 
-		if (ci->devname && ci->devname[0])
+		if (ci->devname[0])
 		{
 			if (!strcmp(ci->devname, name))
 				return true;

@@ -884,7 +884,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 
 	// The number of ROMs in the last scan
-	snprintf(buffer, MAX_DPATH, "ROMs=%d\n", lstAvailableROMs.size());
+	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
 	fputs(buffer, f);
 
 	// The ROMs found in the last scan
@@ -899,7 +899,7 @@ void save_amiberry_settings(void)
 	}
 
 	// Recent disk entries (these are used in the dropdown controls)
-	snprintf(buffer, MAX_DPATH, "MRUDiskList=%d\n", lstMRUDiskList.size());
+	snprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUDiskList)
 	{
@@ -908,7 +908,7 @@ void save_amiberry_settings(void)
 	}
 
 	// Recent CD entries (these are used in the dropdown controls)
-	snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
+	snprintf(buffer, MAX_DPATH, "MRUCDList=%zu\n", lstMRUCDList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUCDList)
 	{

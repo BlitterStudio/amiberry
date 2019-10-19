@@ -61,12 +61,7 @@ extern void raise_in_cl_list(blockinfo* bi);
 
 #define SHOW_DETAILS 2
 
-#ifdef WITH_LOGGING
-#define output_log  write_log
-#else
-#define output_log
-#endif
-
+#define output_log SDL_Log
 
 enum transfer_type_t {
 	TYPE_UNKNOWN,
@@ -96,9 +91,9 @@ static int max_signals = 200;
 void init_max_signals(void)
 {
 #ifdef WITH_LOGGING
-  max_signals = 20;
+	max_signals = 20;
 #else
-  max_signals = 200;  
+	max_signals = 200;
 #endif
 }
 
@@ -127,348 +122,347 @@ static int delete_trigger(blockinfo *bi, void *pc)
 
 typedef uae_u64 uintptr;
 
-static int handle_exception(mcontext_t *sigcont, long fault_addr)  
+static int handle_exception(mcontext_t* sigcont, long fault_addr)
 {
-  int handled = HANDLE_EXCEPTION_NONE;
-	uintptr fault_pc = (uintptr)sigcont->pc;
-  
+	int handled = HANDLE_EXCEPTION_NONE;
+	uintptr fault_pc = uintptr(sigcont->pc);
+
 	if (fault_pc == 0) {
-    output_log(_T("PC is NULL.\n"));
-	  return HANDLE_EXCEPTION_NONE;
-  }
+		output_log(_T("PC is NULL.\n"));
+		return HANDLE_EXCEPTION_NONE;
+	}
 
 	// Check for exception in handler
 	if (in_handler > 0) {
-    output_log(_T("Segmentation fault in handler.\n"));
-    return HANDLE_EXCEPTION_NONE;
-  }
-  ++in_handler;
+		output_log(_T("Segmentation fault in handler.\n"));
+		return HANDLE_EXCEPTION_NONE;
+	}
+	++in_handler;
 
 #ifdef JIT
-  for(;;) {
-  	// We analyse only exceptions from JIT
-    if(currprefs.cachesize == 0) {
-      output_log(_T("JIT not in use.\n"));
-      break;
-    }
+	for (;;) {
+		// We analyze only exceptions from JIT
+		if (currprefs.cachesize == 0) {
+			output_log(_T("JIT not in use.\n"));
+			break;
+		}
 
-    // Did the error happens in compiled code?
-  	if (fault_pc >= (uintptr)compiled_code && fault_pc < (uintptr)current_compile_p)
-  	  output_log(_T("Error in compiled code.\n"));
-  	else if(fault_pc >= (uintptr)popallspace && fault_pc < (uintptr)(popallspace + POPALLSPACE_SIZE))
-  	  output_log(_T("Error in popallspace code.\n"));
-  	else {
-  	  output_log(_T("Error not in JIT code.\n"));
-  		break;
-  	}
+		// Did the error happen in compiled code?
+		if (fault_pc >= uintptr(compiled_code) && fault_pc < uintptr(current_compile_p))
+			output_log(_T("Error in compiled code.\n"));
+		else if (fault_pc >= uintptr(popallspace) && fault_pc < uintptr(popallspace + POPALLSPACE_SIZE))
+			output_log(_T("Error in popallspace code.\n"));
+		else {
+			output_log(_T("Error not in JIT code.\n"));
+			break;
+		}
 
-    // Get Amiga address of illegal memory address
-    long amiga_addr = (long) fault_addr - (long) regs.natmem_offset;
-  
-    // Check for stupid RAM detection of kickstart
-    if(a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
-      output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08x.\n"), amiga_addr);
-      sigcont->pc += 4;
-      handled = HANDLE_EXCEPTION_A4000RAM;
-      break;
-    }
-  
-    // Check for stupid RAM detection of kickstart
-    if(a3000hmem_bank.allocated_size > 0 && amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size && amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
-      output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08x.\n"), amiga_addr);
-      sigcont->pc += 4;
-      handled = HANDLE_EXCEPTION_A4000RAM;
-      break;
-    }
-  
-    // Get memory bank of address
-  	addrbank *ab = &get_mem_bank(amiga_addr);
-  	if (ab)
-  		output_log(_T("JIT: Address bank: %s, address %08x\n"), ab->name ? ab->name : _T("NONE"), amiga_addr);
-    
-    // Analyse AARCH64 instruction
-	  const unsigned int opcode = ((uae_u32*)fault_pc)[0];
+		// Get Amiga address of illegal memory address
+		long amiga_addr = long(fault_addr) - long(regs.natmem_offset);
+
+		// Check for stupid RAM detection of kickstart
+		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
+			output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08lx.\n"), amiga_addr);
+			sigcont->pc += 4;
+			handled = HANDLE_EXCEPTION_A4000RAM;
+			break;
+		}
+
+		// Check for stupid RAM detection of kickstart
+		if (a3000hmem_bank.allocated_size > 0 && amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size && amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
+			output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08lx.\n"), amiga_addr);
+			sigcont->pc += 4;
+			handled = HANDLE_EXCEPTION_A4000RAM;
+			break;
+		}
+
+		// Get memory bank of address
+		addrbank* ab = &get_mem_bank(amiga_addr);
+		if (ab)
+			output_log(_T("JIT: Address bank: %s, address %08lx\n"), ab->name ? ab->name : _T("NONE"), amiga_addr);
+
+		// Analyze AARCH64 instruction
+		const unsigned int opcode = ((uae_u32*)fault_pc)[0];
 		output_log(_T("JIT: AARCH64 opcode = 0x%08x\n"), opcode);
 #ifdef JIT_DEBUG
-extern void disam_range(void *start, void *stop);
-    disam_range((void*)(fault_pc - 128), (void*)(fault_pc + 32));
+		extern void disam_range(void* start, void* stop);
+		disam_range((void*)(fault_pc - 128), (void*)(fault_pc + 32));
 #endif
-    transfer_type_t transfer_type = TYPE_UNKNOWN;
-	  int transfer_size = SIZE_UNKNOWN;
+		transfer_type_t transfer_type = TYPE_UNKNOWN;
+		int transfer_size = SIZE_UNKNOWN;
 
-    unsigned int masked_op = opcode & 0xfffffc00;
-    switch(masked_op) {
-      case 0x383b6800: // STRB_wXx
-				transfer_size = SIZE_BYTE;
-				transfer_type = TYPE_STORE;
-        break;
+		unsigned int masked_op = opcode & 0xfffffc00;
+		switch (masked_op) {
+		case 0x383b6800: // STRB_wXx
+			transfer_size = SIZE_BYTE;
+			transfer_type = TYPE_STORE;
+			break;
 
-      case 0x783b6800: // STRH_wXx
-				transfer_size = SIZE_WORD;
-				transfer_type = TYPE_STORE;
-        break;
+		case 0x783b6800: // STRH_wXx
+			transfer_size = SIZE_WORD;
+			transfer_type = TYPE_STORE;
+			break;
 
-      case 0xb83b6800: // STR_wXx
-				transfer_size = SIZE_INT;
-				transfer_type = TYPE_STORE;
-        break;
+		case 0xb83b6800: // STR_wXx
+			transfer_size = SIZE_INT;
+			transfer_type = TYPE_STORE;
+			break;
 
-      case 0x387b6800: // LDRB_wXx
-				transfer_size = SIZE_BYTE;
-				transfer_type = TYPE_LOAD;
-        break;
+		case 0x387b6800: // LDRB_wXx
+			transfer_size = SIZE_BYTE;
+			transfer_type = TYPE_LOAD;
+			break;
 
-      case 0x787b6800: // LDRH_wXx
-				transfer_size = SIZE_WORD;
-				transfer_type = TYPE_LOAD;
-        break;
+		case 0x787b6800: // LDRH_wXx
+			transfer_size = SIZE_WORD;
+			transfer_type = TYPE_LOAD;
+			break;
 
-      case 0xb87b6800: // LDR_wXx
-				transfer_size = SIZE_INT;
-				transfer_type = TYPE_LOAD;
-        break;
+		case 0xb87b6800: // LDR_wXx
+			transfer_size = SIZE_INT;
+			transfer_type = TYPE_LOAD;
+			break;
 
-  		default:
-  			output_log(_T("AARCH64: Handling of instruction 0x%08x not supported.\n"), opcode);
-    }
+		default:
+			output_log(_T("AARCH64: Handling of instruction 0x%08x not supported.\n"), opcode);
+		}
 
-  	if (transfer_size != SIZE_UNKNOWN) {
-      // Get AARCH64 register
-      int rd = opcode & 0x1f;
+		if (transfer_size != SIZE_UNKNOWN) {
+			// Get AARCH64 register
+			int rd = opcode & 0x1f;
 
-      output_log(_T("%s %s register x%d\n"), 
-        transfer_size == SIZE_BYTE ? _T("byte") : transfer_size == SIZE_WORD ? _T("word") :	transfer_size == SIZE_INT ? _T("long") : _T("unknown"),
-    		transfer_type == TYPE_LOAD ? _T("load to") : _T("store from"),
-    		rd);
+			output_log(_T("%s %s register x%d\n"),
+				transfer_size == SIZE_BYTE ? _T("byte") : transfer_size == SIZE_WORD ? _T("word") : transfer_size == SIZE_INT ? _T("long") : _T("unknown"),
+				transfer_type == TYPE_LOAD ? _T("load to") : _T("store from"),
+				rd);
 
-    	if (transfer_type == TYPE_LOAD) {
-    	  // Perform load via indirect memory call
-    	  uae_u32 oldval = sigcont->regs[rd];
-    		switch(transfer_size) {
-    		  case SIZE_BYTE:
-    		    sigcont->regs[rd] = (uae_u8)get_byte(amiga_addr);
-    		    break;
+			if (transfer_type == TYPE_LOAD) {
+				// Perform load via indirect memory call
+				uae_u32 oldval = sigcont->regs[rd];
+				switch (transfer_size) {
+				case SIZE_BYTE:
+					sigcont->regs[rd] = (uae_u8)get_byte(amiga_addr);
+					break;
 
-    		  case SIZE_WORD:
-    		    sigcont->regs[rd] = bswap_16((uae_u16)get_word(amiga_addr));
-    		    break;
+				case SIZE_WORD:
+					sigcont->regs[rd] = bswap_16((uae_u16)get_word(amiga_addr));
+					break;
 
-    		  case SIZE_INT:
-    		    sigcont->regs[rd] = bswap_32(get_long(amiga_addr));
-    		    break;
-    		}
-    	  output_log(_T("New value in x%d: 0x%08x (old: 0x%08x)\n"), rd, sigcont->regs[rd], oldval);
-    	} else {
-    	  // Perform store via indirect memory call
-    		switch(transfer_size) {
-    		  case SIZE_BYTE: {
-    		    put_byte(amiga_addr, sigcont->regs[rd]);
-    		    break;
-    		  }
-    		  case SIZE_WORD: {
-    		    put_word(amiga_addr, bswap_16(sigcont->regs[rd]));
-    		    break;
-    		  }
-    		  case SIZE_INT: {
-    		    put_long(amiga_addr, bswap_32(sigcont->regs[rd]));
-    		    break;
-    		  }
-    		}
-    	  output_log(_T("Stored value from x%d to 0x%08x\n"), rd, amiga_addr);
-    	}
-     	
-     	// Go to next instruction
-      sigcont->pc += 4;
-    	handled = HANDLE_EXCEPTION_OK;
-    	
-    	if (!delete_trigger(active, (void*)fault_pc)) {
-      	/* Not found in the active list. Might be a rom routine that
-      	 * is in the dormant list */
-      	delete_trigger(dormant, (void*)fault_pc);
-    	}
-    }
+				case SIZE_INT:
+					sigcont->regs[rd] = bswap_32(get_long(amiga_addr));
+					break;
+				}
+				output_log(_T("New value in x%d: 0x%08llx (old: 0x%08x)\n"), rd, sigcont->regs[rd], oldval);
+			}
+			else {
+				// Perform store via indirect memory call
+				switch (transfer_size) {
+				case SIZE_BYTE: {
+					put_byte(amiga_addr, sigcont->regs[rd]);
+					break;
+				}
+				case SIZE_WORD: {
+					put_word(amiga_addr, bswap_16(sigcont->regs[rd]));
+					break;
+				}
+				case SIZE_INT: {
+					put_long(amiga_addr, bswap_32(sigcont->regs[rd]));
+					break;
+				}
+				}
+				output_log(_T("Stored value from x%d to 0x%08lx\n"), rd, amiga_addr);
+			}
 
-    break;
-  }
+			// Go to next instruction
+			sigcont->pc += 4;
+			handled = HANDLE_EXCEPTION_OK;
+
+			if (!delete_trigger(active, (void*)fault_pc)) {
+				/* Not found in the active list. Might be a rom routine that
+				 * is in the dormant list */
+				delete_trigger(dormant, (void*)fault_pc);
+			}
+		}
+
+		break;
+	}
 #endif
 
-  in_handler--;
+	in_handler--;
 	return handled;
-} 
+}
 
-void signal_segv(int signum, siginfo_t* info, void*ptr) 
+void signal_segv(int signum, siginfo_t* info, void* ptr)
 {
-  int handled = HANDLE_EXCEPTION_NONE;
-  ucontext_t *ucontext = (ucontext_t*)ptr;
-  Dl_info dlinfo;
+	int handled = HANDLE_EXCEPTION_NONE;
+	ucontext_t* ucontext = (ucontext_t*)ptr;
+	Dl_info dlinfo;
 
-  output_log(_T("--- New exception ---\n"));
+	output_log(_T("--- New exception ---\n"));
 
 #ifdef TRACER
 	trace_end();
 #endif
 
-	mcontext_t *context = &(ucontext->uc_mcontext);
+	mcontext_t* context = &(ucontext->uc_mcontext);
 
-	unsigned long long *regs = context->regs;
+	unsigned long long* regs = context->regs;
 	uintptr addr = (uintptr)info->si_addr;
 
-  handled = handle_exception(context, addr);
+	handled = handle_exception(context, addr);
 
 #if SHOW_DETAILS
-  if(handled != HANDLE_EXCEPTION_A4000RAM) {
-    if(signum == 4)
-      output_log(_T("Illegal Instruction\n"));
-    else
-      output_log(_T("Segmentation Fault\n"));
-  
-    output_log(_T("info.si_signo = %d\n"), signum);
-    output_log(_T("info.si_errno = %d\n"), info->si_errno);
-    output_log(_T("info.si_code = %d\n"), info->si_code);
-    output_log(_T("info.si_addr = %08x\n"), info->si_addr);
-    if(signum == 4)
-      output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
+	if (handled != HANDLE_EXCEPTION_A4000RAM) {
+		if (signum == 4)
+			output_log(_T("Illegal Instruction\n"));
+		else
+			output_log(_T("Segmentation Fault\n"));
 
-    for(int i=0; i < 31; ++i)
-      output_log(_T("x%02d  = 0x%016lx\n"), i, ucontext->uc_mcontext.regs[i]);
-    output_log(_T("SP  = 0x%016lx\n"), ucontext->uc_mcontext.sp);
-    output_log(_T("PC  = 0x%016lx\n"), ucontext->uc_mcontext.pc);
-    output_log(_T("Fault Address = 0x%016lx\n"), ucontext->uc_mcontext.fault_address);
-    output_log(_T("pstate  = 0x%016lx\n"), ucontext->uc_mcontext.pstate);
-  
-    void *getaddr = (void *)ucontext->uc_mcontext.regs[30];
-    if(dladdr(getaddr, &dlinfo))
-  	  output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
-    else
-      output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
-  }
+		output_log(_T("info.si_signo = %d\n"), signum);
+		output_log(_T("info.si_errno = %d\n"), info->si_errno);
+		output_log(_T("info.si_code = %d\n"), info->si_code);
+		output_log(_T("info.si_addr = %08x\n"), info->si_addr);
+		if (signum == 4)
+			output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
+
+		for (int i = 0; i < 31; ++i)
+			output_log(_T("x%02d  = 0x%016llx\n"), i, ucontext->uc_mcontext.regs[i]);
+		output_log(_T("SP  = 0x%016llx\n"), ucontext->uc_mcontext.sp);
+		output_log(_T("PC  = 0x%016llx\n"), ucontext->uc_mcontext.pc);
+		output_log(_T("Fault Address = 0x%016llx\n"), ucontext->uc_mcontext.fault_address);
+		output_log(_T("pstate  = 0x%016llx\n"), ucontext->uc_mcontext.pstate);
+
+		void* getaddr = (void*)ucontext->uc_mcontext.regs[30];
+		if (dladdr(getaddr, &dlinfo))
+			output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
+		else
+			output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
+	}
 #endif
 
 #if SHOW_DETAILS > 1
- if(handled != HANDLE_EXCEPTION_A4000RAM) {
-  	output_log(_T("Stack trace:\n"));
-  
-    #define MAX_BACKTRACE 20
-    
-    void *array[MAX_BACKTRACE];
-    int size = backtrace(array, MAX_BACKTRACE);
-    for(int i=0; i<size; ++i)
-    {
-      if (dladdr(array[i], &dlinfo)) {
-        const char *symname = dlinfo.dli_sname;
-    	  output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-          (unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-      }
-    }
-  
-  	output_log(_T("Stack trace (non-dedicated):\n"));
-    char **strings;
-    void *bt[100];
-    int sz = backtrace(bt, 100);
-    strings = backtrace_symbols(bt, sz);
-    for(int i = 0; i < sz; ++i)
-      output_log(_T("%s\n"), strings[i]);
-  	output_log(_T("End of stack trace.\n"));
-  }
+	if (handled != HANDLE_EXCEPTION_A4000RAM) {
+		output_log(_T("Stack trace:\n"));
+
+#define MAX_BACKTRACE 20
+
+		void* array[MAX_BACKTRACE];
+		int size = backtrace(array, MAX_BACKTRACE);
+		for (int i = 0; i < size; ++i)
+		{
+			if (dladdr(array[i], &dlinfo)) {
+				const char* symname = dlinfo.dli_sname;
+				output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
+					(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+			}
+		}
+
+		output_log(_T("Stack trace (non-dedicated):\n"));
+		char** strings;
+		void* bt[100];
+		int sz = backtrace(bt, 100);
+		strings = backtrace_symbols(bt, sz);
+		for (int i = 0; i < sz; ++i)
+			output_log(_T("%s\n"), strings[i]);
+		output_log(_T("End of stack trace.\n"));
+	}
 #endif
 
-  output_log(_T("--- end exception ---\n"));
+	output_log(_T("--- end exception ---\n"));
 
-  if (handled != HANDLE_EXCEPTION_A4000RAM) {
-    --max_signals;
-    if(max_signals <= 0) {
-      target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
-      uae_restart(1, NULL);
-      return;
-    }
-  }
+	if (handled != HANDLE_EXCEPTION_A4000RAM) {
+		--max_signals;
+		if (max_signals <= 0) {
+			target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
+			uae_restart(1, NULL);
+			return;
+		}
+	}
 
 	if (handled != HANDLE_EXCEPTION_NONE)
-	  return;
+		return;
 
-  SDL_Quit();
-  exit(1);
+	SDL_Quit();
+	exit(1);
 }
 
-
-void signal_buserror(int signum, siginfo_t* info, void*ptr) 
+void signal_buserror(int signum, siginfo_t* info, void* ptr)
 {
-  ucontext_t *ucontext = (ucontext_t*)ptr;
-  Dl_info dlinfo;
+	ucontext_t* ucontext = (ucontext_t*)ptr;
+	Dl_info dlinfo;
 
-  output_log(_T("--- New exception ---\n"));
+	output_log(_T("--- New exception ---\n"));
 
 #ifdef TRACER
 	trace_end();
 #endif
 
-	mcontext_t *context = &(ucontext->uc_mcontext);
+	mcontext_t* context = &(ucontext->uc_mcontext);
 
-	unsigned long long *regs = context->regs;
+	unsigned long long* regs = context->regs;
 	uintptr_t addr = (uintptr_t)info->si_addr;
 
-  output_log(_T("info.si_signo = %d\n"), signum);
-  output_log(_T("info.si_errno = %d\n"), info->si_errno);
-  output_log(_T("info.si_code = %d\n"), info->si_code);
-  output_log(_T("info.si_addr = %08x\n"), info->si_addr);
-  if(signum == 4)
-    output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
+	output_log(_T("info.si_signo = %d\n"), signum);
+	output_log(_T("info.si_errno = %d\n"), info->si_errno);
+	output_log(_T("info.si_code = %d\n"), info->si_code);
+	output_log(_T("info.si_addr = %08x\n"), info->si_addr);
+	if (signum == 4)
+		output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
 
-  for(int i=0; i < 31; ++i)
-    output_log(_T("x%02d  = 0x%016lx\n"), i, ucontext->uc_mcontext.regs[i]);
-  output_log(_T("SP  = 0x%016lx\n"), ucontext->uc_mcontext.sp);
-  output_log(_T("PC  = 0x%016lx\n"), ucontext->uc_mcontext.pc);
-  output_log(_T("Fault Address = 0x%016lx\n"), ucontext->uc_mcontext.fault_address);
-  output_log(_T("pstate  = 0x%016lx\n"), ucontext->uc_mcontext.pstate);
+	for (int i = 0; i < 31; ++i)
+		output_log(_T("x%02d  = 0x%016llx\n"), i, ucontext->uc_mcontext.regs[i]);
+	output_log(_T("SP  = 0x%016llx\n"), ucontext->uc_mcontext.sp);
+	output_log(_T("PC  = 0x%016llx\n"), ucontext->uc_mcontext.pc);
+	output_log(_T("Fault Address = 0x%016llx\n"), ucontext->uc_mcontext.fault_address);
+	output_log(_T("pstate  = 0x%016llx\n"), ucontext->uc_mcontext.pstate);
 
-  void *getaddr = (void *)ucontext->uc_mcontext.regs[30];
-  if(dladdr(getaddr, &dlinfo))
-	  output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
-  else
-    output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
+	void* getaddr = (void*)ucontext->uc_mcontext.regs[30];
+	if (dladdr(getaddr, &dlinfo))
+		output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
+	else
+		output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
 
 	output_log(_T("Stack trace:\n"));
 
-  #define MAX_BACKTRACE 20
-  
-  void *array[MAX_BACKTRACE];
-  int size = backtrace(array, MAX_BACKTRACE);
-  for(int i=0; i<size; ++i)
-  {
-    if (dladdr(array[i], &dlinfo)) {
-      const char *symname = dlinfo.dli_sname;
-  	  output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-        (unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-    }
-  }
+#define MAX_BACKTRACE 20
+
+	void* array[MAX_BACKTRACE];
+	int size = backtrace(array, MAX_BACKTRACE);
+	for (int i = 0; i < size; ++i)
+	{
+		if (dladdr(array[i], &dlinfo)) {
+			const char* symname = dlinfo.dli_sname;
+			output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
+				(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+		}
+	}
 
 	output_log(_T("Stack trace (non-dedicated):\n"));
-  char **strings;
-  void *bt[100];
-  int sz = backtrace(bt, 100);
-  strings = backtrace_symbols(bt, sz);
-  for(int i = 0; i < sz; ++i)
-    output_log(_T("%s\n"), strings[i]);
+	char** strings;
+	void* bt[100];
+	int sz = backtrace(bt, 100);
+	strings = backtrace_symbols(bt, sz);
+	for (int i = 0; i < sz; ++i)
+		output_log(_T("%s\n"), strings[i]);
 	output_log(_T("End of stack trace.\n"));
 
-  output_log(_T("--- end exception ---\n"));
+	output_log(_T("--- end exception ---\n"));
 
-  SDL_Quit();
-  exit(1);
+	SDL_Quit();
+	exit(1);
 }
 
 #else
 
 enum {
-  ARM_REG_PC = 15,
-  ARM_REG_CPSR = 16
+	ARM_REG_PC = 15,
+	ARM_REG_CPSR = 16
 };
 
-static const char * reg_names[] = {
+static const char* reg_names[] = {
 	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
 	"r8", "r9", "r10/sl", "r11/fp", "r12/ip", "r13/sp", "r14/lr", "r15/pc"
 };
-
 
 #ifdef JIT
 static int delete_trigger(blockinfo *bi, void *pc)
@@ -490,412 +484,412 @@ static int delete_trigger(blockinfo *bi, void *pc)
 #endif
 
 
-static int handle_exception(unsigned long *pregs, long fault_addr)  
+static int handle_exception(unsigned long* pregs, long fault_addr)
 {
-  int handled = HANDLE_EXCEPTION_NONE;
-	unsigned int *fault_pc = (unsigned int *)pregs[ARM_REG_PC];
-  
+	int handled = HANDLE_EXCEPTION_NONE;
+	unsigned int* fault_pc = (unsigned int*)pregs[ARM_REG_PC];
+
 	if (fault_pc == 0) {
-    output_log(_T("PC is NULL.\n"));
-	  return HANDLE_EXCEPTION_NONE;
-  }
+		output_log(_T("PC is NULL.\n"));
+		return HANDLE_EXCEPTION_NONE;
+	}
 
 	// Check for exception in handler
 	if (in_handler > 0) {
-    output_log(_T("Segmentation fault in handler.\n"));
-    return HANDLE_EXCEPTION_NONE;
-  }
-  ++in_handler;
+		output_log(_T("Segmentation fault in handler.\n"));
+		return HANDLE_EXCEPTION_NONE;
+	}
+	++in_handler;
 
 #ifdef JIT
-  for(;;) {
-  	// We analyse only exceptions from JIT
-    if(currprefs.cachesize == 0) {
-      output_log(_T("JIT not in use.\n"));
-      break;
-    }
+	for (;;) {
+		// We analyse only exceptions from JIT
+		if (currprefs.cachesize == 0) {
+			output_log(_T("JIT not in use.\n"));
+			break;
+		}
 
-    // Did the error happens in compiled code?
-  	if ((uae_u8*)fault_pc >= compiled_code && (uae_u8*)fault_pc < current_compile_p)
-  	  output_log(_T("Error in compiled code.\n"));
-  	else if((uae_u8*)fault_pc >= popallspace && (uae_u8*)fault_pc < popallspace + POPALLSPACE_SIZE)
-  	  output_log(_T("Error in popallspace code.\n"));
-  	else {
-  	  output_log(_T("Error not in JIT code.\n"));
-  		break;
-  	}
+		// Did the error happens in compiled code?
+		if ((uae_u8*)fault_pc >= compiled_code && (uae_u8*)fault_pc < current_compile_p)
+			output_log(_T("Error in compiled code.\n"));
+		else if ((uae_u8*)fault_pc >= popallspace && (uae_u8*)fault_pc < popallspace + POPALLSPACE_SIZE)
+			output_log(_T("Error in popallspace code.\n"));
+		else {
+			output_log(_T("Error not in JIT code.\n"));
+			break;
+		}
 
-    // Get Amiga address of illegal memory address
-    long amiga_addr = (long) fault_addr - (long) regs.natmem_offset;
+		// Get Amiga address of illegal memory address
+		long amiga_addr = (long)fault_addr - (long)regs.natmem_offset;
+
+		// Check for stupid RAM detection of kickstart
+		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
+			output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08x.\n"), amiga_addr);
+			pregs[ARM_REG_PC] += 4;
+			handled = HANDLE_EXCEPTION_A4000RAM;
+			break;
+		}
+
+		// Check for stupid RAM detection of kickstart
+		if (a3000hmem_bank.allocated_size > 0 && amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size && amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
+			output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08x.\n"), amiga_addr);
+			pregs[ARM_REG_PC] += 4;
+			handled = HANDLE_EXCEPTION_A4000RAM;
+			break;
+		}
   
-    // Check for stupid RAM detection of kickstart
-    if(a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
-      output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08x.\n"), amiga_addr);
-      pregs[ARM_REG_PC] += 4;
-      handled = HANDLE_EXCEPTION_A4000RAM;
-      break;
-    }
-  
-    // Check for stupid RAM detection of kickstart
-    if(a3000hmem_bank.allocated_size > 0 && amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size && amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
-      output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08x.\n"), amiga_addr);
-      pregs[ARM_REG_PC] += 4;
-      handled = HANDLE_EXCEPTION_A4000RAM;
-      break;
-    }
-  
-    // Get memory bank of address
-  	addrbank *ab = &get_mem_bank(amiga_addr);
-  	if (ab)
-  		output_log(_T("JIT: Address bank: %s, address %08x\n"), ab->name ? ab->name : _T("NONE"), amiga_addr);
-    
-    // Analyse ARM instruction
-	  const unsigned int opcode = fault_pc[0];
-    transfer_type_t transfer_type = TYPE_UNKNOWN;
-	  int transfer_size = SIZE_UNKNOWN;
-	  int style = STYLE_UNSIGNED;
+		// Get memory bank of address
+		addrbank* ab = &get_mem_bank(amiga_addr);
+		if (ab)
+			output_log(_T("JIT: Address bank: %s, address %08x\n"), ab->name ? ab->name : _T("NONE"), amiga_addr);
+
+		// Analyse ARM instruction
+		const unsigned int opcode = fault_pc[0];
+		transfer_type_t transfer_type = TYPE_UNKNOWN;
+		int transfer_size = SIZE_UNKNOWN;
+		int style = STYLE_UNSIGNED;
 		output_log(_T("JIT: ARM opcode = 0x%08x\n"), opcode);
-	  
-  	// Handle load/store instructions only
-	  switch ((opcode >> 25) & 7) {
-		  case 0: // Halfword and Signed Data Transfer (LDRH, STRH, LDRSB, LDRSH)
-			  // Determine transfer size (S/H bits)
-  			switch ((opcode >> 5) & 3) {
-  				case 0: // SWP instruction
-  					output_log(_T("ARM: SWP Instruction, not supported (0x%08x)\n"), opcode);
-  					break;
-  				case 1: // Unsigned halfwords
-	  				transfer_size = SIZE_WORD;
-	  				break;
-  				case 3: // Signed halfwords
-  					style = STYLE_SIGNED;
-	  				transfer_size = SIZE_WORD;
-	  				break;
-  				case 2: // Signed byte
-  					style = STYLE_SIGNED;
-				  	transfer_size = SIZE_BYTE;
-	  				break;
-  			}
-  			break;
 
-  		case 2:
-	  	case 3: // Single Data Transfer (LDR, STR)
-  			style = STYLE_UNSIGNED;
-  			// Determine transfer size (B bit)
-  			if (((opcode >> 22) & 1) == 1)
-    			transfer_size = SIZE_BYTE;
-  			else
-    			transfer_size = SIZE_INT;
-  			break;
+		// Handle load/store instructions only
+		switch ((opcode >> 25) & 7) {
+		case 0: // Halfword and Signed Data Transfer (LDRH, STRH, LDRSB, LDRSH)
+			// Determine transfer size (S/H bits)
+			switch ((opcode >> 5) & 3) {
+			case 0: // SWP instruction
+				output_log(_T("ARM: SWP Instruction, not supported (0x%08x)\n"), opcode);
+				break;
+			case 1: // Unsigned halfwords
+				transfer_size = SIZE_WORD;
+				break;
+			case 3: // Signed halfwords
+				style = STYLE_SIGNED;
+				transfer_size = SIZE_WORD;
+				break;
+			case 2: // Signed byte
+				style = STYLE_SIGNED;
+				transfer_size = SIZE_BYTE;
+				break;
+			}
+			break;
 
-  		default:
-  			output_log(_T("ARM: Handling of instruction 0x%08x not supported.\n"), opcode);
-  	}
+		case 2:
+		case 3: // Single Data Transfer (LDR, STR)
+			style = STYLE_UNSIGNED;
+			// Determine transfer size (B bit)
+			if (((opcode >> 22) & 1) == 1)
+				transfer_size = SIZE_BYTE;
+			else
+				transfer_size = SIZE_INT;
+			break;
 
-  	// Determine transfer type (L bit)
-  	if (((opcode >> 20) & 1) == 1)
-  		transfer_type = TYPE_LOAD;
-  	else
-  		transfer_type = TYPE_STORE;
+		default:
+			output_log(_T("ARM: Handling of instruction 0x%08x not supported.\n"), opcode);
+		}
 
-    // Get ARM register
-    int rd = (opcode >> 12) & 0xf;
+		// Determine transfer type (L bit)
+		if (((opcode >> 20) & 1) == 1)
+			transfer_type = TYPE_LOAD;
+		else
+			transfer_type = TYPE_STORE;
 
-    output_log(_T("%s %s register %s\n"), 
-      transfer_size == SIZE_BYTE ? _T("byte") : transfer_size == SIZE_WORD ? _T("word") :	transfer_size == SIZE_INT ? _T("long") : _T("unknown"),
-  		transfer_type == TYPE_LOAD ? _T("load to") : _T("store from"),
-  		reg_names[rd]);
-    
-  	if (transfer_size != SIZE_UNKNOWN) {
-    	if (transfer_type == TYPE_LOAD) {
-    	  // Perform load via indirect memory call
-    	  uae_u32 oldval = pregs[rd];
-    		switch(transfer_size) {
-    		  case SIZE_BYTE:
-    		    pregs[rd] = style == STYLE_SIGNED ? (uae_s8)get_byte(amiga_addr) : (uae_u8)get_byte(amiga_addr);
-    		    break;
+		// Get ARM register
+		int rd = (opcode >> 12) & 0xf;
 
-    		  case SIZE_WORD:
-    		    pregs[rd] = bswap_16(style == STYLE_SIGNED ? (uae_s16)get_word(amiga_addr) : (uae_u16)get_word(amiga_addr));
-    		    break;
+		output_log(_T("%s %s register %s\n"),
+			transfer_size == SIZE_BYTE ? _T("byte") : transfer_size == SIZE_WORD ? _T("word") : transfer_size == SIZE_INT ? _T("long") : _T("unknown"),
+			transfer_type == TYPE_LOAD ? _T("load to") : _T("store from"),
+			reg_names[rd]);
 
-    		  case SIZE_INT:
-    		    pregs[rd] = bswap_32(get_long(amiga_addr));
-    		    break;
-    		}
-    	  output_log(_T("New value in %s: 0x%08x (old: 0x%08x)\n"), reg_names[rd], pregs[rd], oldval);
-    	} else {
-    	  // Perform store via indirect memory call
-    		switch(transfer_size) {
-    		  case SIZE_BYTE: {
-    		    put_byte(amiga_addr, pregs[rd]);
-    		    break;
-    		  }
-    		  case SIZE_WORD: {
-    		    put_word(amiga_addr, bswap_16(pregs[rd]));
-    		    break;
-    		  }
-    		  case SIZE_INT: {
-    		    put_long(amiga_addr, bswap_32(pregs[rd]));
-    		    break;
-    		  }
-    		}
-    	  output_log(_T("Stored value from %s to 0x%08x\n"), reg_names[rd], amiga_addr);
-    	}
-     	
-     	// Go to next instruction
-      pregs[ARM_REG_PC] += 4;
-    	handled = HANDLE_EXCEPTION_OK;
-    	
-    	if (!delete_trigger(active, fault_pc)) {
-      	/* Not found in the active list. Might be a rom routine that
-      	 * is in the dormant list */
-      	delete_trigger(dormant, fault_pc);
-    	}
-    }
-  
-    break;
+		if (transfer_size != SIZE_UNKNOWN) {
+			if (transfer_type == TYPE_LOAD) {
+				// Perform load via indirect memory call
+				uae_u32 oldval = pregs[rd];
+				switch (transfer_size) {
+				case SIZE_BYTE:
+					pregs[rd] = style == STYLE_SIGNED ? (uae_s8)get_byte(amiga_addr) : (uae_u8)get_byte(amiga_addr);
+					break;
+
+				case SIZE_WORD:
+					pregs[rd] = bswap_16(style == STYLE_SIGNED ? (uae_s16)get_word(amiga_addr) : (uae_u16)get_word(amiga_addr));
+					break;
+
+				case SIZE_INT:
+					pregs[rd] = bswap_32(get_long(amiga_addr));
+					break;
+				}
+				output_log(_T("New value in %s: 0x%08x (old: 0x%08x)\n"), reg_names[rd], pregs[rd], oldval);
+			}
+			else {
+				// Perform store via indirect memory call
+				switch (transfer_size) {
+				case SIZE_BYTE: {
+					put_byte(amiga_addr, pregs[rd]);
+					break;
+				}
+				case SIZE_WORD: {
+					put_word(amiga_addr, bswap_16(pregs[rd]));
+					break;
+				}
+				case SIZE_INT: {
+					put_long(amiga_addr, bswap_32(pregs[rd]));
+					break;
+				}
+				}
+				output_log(_T("Stored value from %s to 0x%08x\n"), reg_names[rd], amiga_addr);
+			}
+
+			// Go to next instruction
+			pregs[ARM_REG_PC] += 4;
+			handled = HANDLE_EXCEPTION_OK;
+
+			if (!delete_trigger(active, fault_pc)) {
+				/* Not found in the active list. Might be a rom routine that
+				 * is in the dormant list */
+				delete_trigger(dormant, fault_pc);
+			}
+		}
+
+		break;
   }
 #endif
 
   in_handler--;
-	return handled;
-} 
+  return handled;
+}
 
-void signal_segv(int signum, siginfo_t* info, void*ptr) 
+void signal_segv(int signum, siginfo_t* info, void* ptr)
 {
-  int handled = HANDLE_EXCEPTION_NONE;
-  ucontext_t *ucontext = (ucontext_t*)ptr;
-  Dl_info dlinfo;
+	int handled = HANDLE_EXCEPTION_NONE;
+	ucontext_t* ucontext = (ucontext_t*)ptr;
+	Dl_info dlinfo;
 
-  output_log(_T("--- New exception ---\n"));
+	output_log(_T("--- New exception ---\n"));
 
 #ifdef TRACER
 	trace_end();
 #endif
 
-	mcontext_t *context = &(ucontext->uc_mcontext);
+	mcontext_t* context = &(ucontext->uc_mcontext);
 
-	unsigned long *regs = &context->arm_r0;
+	unsigned long* regs = &context->arm_r0;
 	uintptr addr = (uintptr)info->si_addr;
 
-  handled = handle_exception(regs, addr);
+	handled = handle_exception(regs, addr);
 
 #if SHOW_DETAILS
-  if(handled != HANDLE_EXCEPTION_A4000RAM) {
-    if(signum == 4)
-      output_log(_T("Illegal Instruction\n"));
-    else
-      output_log(_T("Segmentation Fault\n"));
-  
-    output_log(_T("info.si_signo = %d\n"), signum);
-    output_log(_T("info.si_errno = %d\n"), info->si_errno);
-    output_log(_T("info.si_code = %d\n"), info->si_code);
-    output_log(_T("info.si_addr = %08x\n"), info->si_addr);
-    if(signum == 4)
-      output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
-    output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.arm_r0);
-    output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.arm_r1);
-    output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.arm_r2);
-    output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.arm_r3);
-    output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.arm_r4);
-    output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.arm_r5);
-    output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.arm_r6);
-    output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.arm_r7);
-    output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.arm_r8);
-    output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.arm_r9);
-    output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.arm_r10);
-    output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.arm_fp);
-    output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.arm_ip);
-    output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.arm_sp);
-    output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.arm_lr);
-    output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.arm_pc);
-    output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.arm_cpsr);
-    output_log(_T("Fault Address = 0x%08x\n"), ucontext->uc_mcontext.fault_address);
-    output_log(_T("Trap no = 0x%08x\n"), ucontext->uc_mcontext.trap_no);
-    output_log(_T("Err Code = 0x%08x\n"), ucontext->uc_mcontext.error_code);
-    output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_mcontext.oldmask);
-  
-    void *getaddr = (void *)ucontext->uc_mcontext.arm_lr;
-    if(dladdr(getaddr, &dlinfo))
-  	  output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
-    else
-      output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
-  }
+	if (handled != HANDLE_EXCEPTION_A4000RAM) {
+		if (signum == 4)
+			output_log(_T("Illegal Instruction\n"));
+		else
+			output_log(_T("Segmentation Fault\n"));
+
+		output_log(_T("info.si_signo = %d\n"), signum);
+		output_log(_T("info.si_errno = %d\n"), info->si_errno);
+		output_log(_T("info.si_code = %d\n"), info->si_code);
+		output_log(_T("info.si_addr = %08x\n"), info->si_addr);
+		if (signum == 4)
+			output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
+		output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.arm_r0);
+		output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.arm_r1);
+		output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.arm_r2);
+		output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.arm_r3);
+		output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.arm_r4);
+		output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.arm_r5);
+		output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.arm_r6);
+		output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.arm_r7);
+		output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.arm_r8);
+		output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.arm_r9);
+		output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.arm_r10);
+		output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.arm_fp);
+		output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.arm_ip);
+		output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.arm_sp);
+		output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.arm_lr);
+		output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.arm_pc);
+		output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.arm_cpsr);
+		output_log(_T("Fault Address = 0x%08x\n"), ucontext->uc_mcontext.fault_address);
+		output_log(_T("Trap no = 0x%08x\n"), ucontext->uc_mcontext.trap_no);
+		output_log(_T("Err Code = 0x%08x\n"), ucontext->uc_mcontext.error_code);
+		output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_mcontext.oldmask);
+
+		void* getaddr = (void*)ucontext->uc_mcontext.arm_lr;
+		if (dladdr(getaddr, &dlinfo))
+			output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
+		else
+			output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
+	}
 #endif
 
 #if SHOW_DETAILS > 1
- if(handled != HANDLE_EXCEPTION_A4000RAM) {
-  	output_log(_T("Stack trace:\n"));
-  
-    #define MAX_BACKTRACE 20
-    
-    void *array[MAX_BACKTRACE];
-    int size = backtrace(array, MAX_BACKTRACE);
-    for(int i=0; i<size; ++i)
-    {
-      if (dladdr(array[i], &dlinfo)) {
-        const char *symname = dlinfo.dli_sname;
-    	  output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-          (unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-      }
-    }
-  
-    void *ip = (void*)ucontext->uc_mcontext.arm_r10;
-    void **bp = (void**)ucontext->uc_mcontext.arm_r10;
-    int f = 0;
-    while(bp && ip) {
-      if (!dladdr(ip, &dlinfo)) {
-        output_log(_T("IP out of range\n"));
-        break;
-      }
-      const char *symname = dlinfo.dli_sname;
-  	  output_log(_T("%02d: 0x%08x <%s + 0x%08x> (%s)\n"), ++f, ip, symname,
-        (unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-  	  if(dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
-        break;
-      ip = bp[1];
-      bp = (void**)bp[0];
-    }
-  
-  	output_log(_T("Stack trace (non-dedicated):\n"));
-    char **strings;
-    void *bt[100];
-    int sz = backtrace(bt, 100);
-    strings = backtrace_symbols(bt, sz);
-    for(int i = 0; i < sz; ++i)
-      output_log(_T("%s\n"), strings[i]);
-  	output_log(_T("End of stack trace.\n"));
-  }
+	if (handled != HANDLE_EXCEPTION_A4000RAM) {
+		output_log(_T("Stack trace:\n"));
+
+#define MAX_BACKTRACE 20
+
+		void* array[MAX_BACKTRACE];
+		int size = backtrace(array, MAX_BACKTRACE);
+		for (int i = 0; i < size; ++i)
+		{
+			if (dladdr(array[i], &dlinfo)) {
+				const char* symname = dlinfo.dli_sname;
+				output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
+					(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+			}
+		}
+
+		void* ip = (void*)ucontext->uc_mcontext.arm_r10;
+		void** bp = (void**)ucontext->uc_mcontext.arm_r10;
+		int f = 0;
+		while (bp && ip) {
+			if (!dladdr(ip, &dlinfo)) {
+				output_log(_T("IP out of range\n"));
+				break;
+			}
+			const char* symname = dlinfo.dli_sname;
+			output_log(_T("%02d: 0x%08x <%s + 0x%08x> (%s)\n"), ++f, ip, symname,
+				(unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+			if (dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
+				break;
+			ip = bp[1];
+			bp = (void**)bp[0];
+		}
+
+		output_log(_T("Stack trace (non-dedicated):\n"));
+		char** strings;
+		void* bt[100];
+		int sz = backtrace(bt, 100);
+		strings = backtrace_symbols(bt, sz);
+		for (int i = 0; i < sz; ++i)
+			output_log(_T("%s\n"), strings[i]);
+		output_log(_T("End of stack trace.\n"));
+	}
 #endif
 
-  output_log(_T("--- end exception ---\n"));
+	output_log(_T("--- end exception ---\n"));
 
-  if (handled != HANDLE_EXCEPTION_A4000RAM) {
-    --max_signals;
-    if(max_signals <= 0) {
-      target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
-      uae_restart(1, NULL);
-      return;
-    }
-  }
+	if (handled != HANDLE_EXCEPTION_A4000RAM) {
+		--max_signals;
+		if (max_signals <= 0) {
+			target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
+			uae_restart(1, NULL);
+			return;
+		}
+	}
 
 	if (handled != HANDLE_EXCEPTION_NONE)
-	  return;
+		return;
 
-  SDL_Quit();
-  exit(1);
+	SDL_Quit();
+	exit(1);
 }
 
 
-void signal_buserror(int signum, siginfo_t* info, void*ptr) 
+void signal_buserror(int signum, siginfo_t* info, void* ptr)
 {
-  ucontext_t *ucontext = (ucontext_t*)ptr;
-  Dl_info dlinfo;
+	ucontext_t* ucontext = (ucontext_t*)ptr;
+	Dl_info dlinfo;
 
-  output_log(_T("--- New exception ---\n"));
+	output_log(_T("--- New exception ---\n"));
 
 #ifdef TRACER
 	trace_end();
 #endif
 
-	mcontext_t *context = &(ucontext->uc_mcontext);
+	mcontext_t* context = &(ucontext->uc_mcontext);
 
-	unsigned long *regs = &context->arm_r0;
+	unsigned long* regs = &context->arm_r0;
 	uintptr_t addr = (uintptr_t)info->si_addr;
 
-  output_log(_T("info.si_signo = %d\n"), signum);
-  output_log(_T("info.si_errno = %d\n"), info->si_errno);
-  output_log(_T("info.si_code = %d\n"), info->si_code);
-  output_log(_T("info.si_addr = %08x\n"), info->si_addr);
-  if(signum == 4)
-    output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
-  output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.arm_r0);
-  output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.arm_r1);
-  output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.arm_r2);
-  output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.arm_r3);
-  output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.arm_r4);
-  output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.arm_r5);
-  output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.arm_r6);
-  output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.arm_r7);
-  output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.arm_r8);
-  output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.arm_r9);
-  output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.arm_r10);
-  output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.arm_fp);
-  output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.arm_ip);
-  output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.arm_sp);
-  output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.arm_lr);
-  output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.arm_pc);
-  output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.arm_cpsr);
-  output_log(_T("Trap no = 0x%08x\n"), ucontext->uc_mcontext.trap_no);
-  output_log(_T("Err Code = 0x%08x\n"), ucontext->uc_mcontext.error_code);
-  output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_mcontext.oldmask);
-  output_log(_T("Fault Address = 0x%08x\n"), ucontext->uc_mcontext.fault_address);
+	output_log(_T("info.si_signo = %d\n"), signum);
+	output_log(_T("info.si_errno = %d\n"), info->si_errno);
+	output_log(_T("info.si_code = %d\n"), info->si_code);
+	output_log(_T("info.si_addr = %08x\n"), info->si_addr);
+	if (signum == 4)
+		output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
+	output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.arm_r0);
+	output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.arm_r1);
+	output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.arm_r2);
+	output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.arm_r3);
+	output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.arm_r4);
+	output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.arm_r5);
+	output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.arm_r6);
+	output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.arm_r7);
+	output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.arm_r8);
+	output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.arm_r9);
+	output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.arm_r10);
+	output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.arm_fp);
+	output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.arm_ip);
+	output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.arm_sp);
+	output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.arm_lr);
+	output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.arm_pc);
+	output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.arm_cpsr);
+	output_log(_T("Trap no = 0x%08x\n"), ucontext->uc_mcontext.trap_no);
+	output_log(_T("Err Code = 0x%08x\n"), ucontext->uc_mcontext.error_code);
+	output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_mcontext.oldmask);
+	output_log(_T("Fault Address = 0x%08x\n"), ucontext->uc_mcontext.fault_address);
 
-  void *getaddr = (void *)ucontext->uc_mcontext.arm_lr;
-  if(dladdr(getaddr, &dlinfo))
-	  output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
-  else
-    output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
+	void* getaddr = (void*)ucontext->uc_mcontext.arm_lr;
+	if (dladdr(getaddr, &dlinfo))
+		output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
+	else
+		output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
 
 	output_log(_T("Stack trace:\n"));
 
-  #define MAX_BACKTRACE 20
-  
-  void *array[MAX_BACKTRACE];
-  int size = backtrace(array, MAX_BACKTRACE);
-  for(int i=0; i<size; ++i)
-  {
-    if (dladdr(array[i], &dlinfo)) {
-      const char *symname = dlinfo.dli_sname;
-  	  output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-        (unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-    }
-  }
+#define MAX_BACKTRACE 20
 
-  void *ip = (void*)ucontext->uc_mcontext.arm_r10;
-  void **bp = (void**)ucontext->uc_mcontext.arm_r10;
-  int f = 0;
-  while(bp && ip) {
-    if (!dladdr(ip, &dlinfo)) {
-      output_log(_T("IP out of range\n"));
-      break;
-    }
-    const char *symname = dlinfo.dli_sname;
-	  output_log(_T("%02d: 0x%08x <%s + 0x%08x> (%s)\n"), ++f, ip, symname,
-      (unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-	  if(dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
-      break;
-    ip = bp[1];
-    bp = (void**)bp[0];
-  }
+	void* array[MAX_BACKTRACE];
+	int size = backtrace(array, MAX_BACKTRACE);
+	for (int i = 0; i < size; ++i)
+	{
+		if (dladdr(array[i], &dlinfo)) {
+			const char* symname = dlinfo.dli_sname;
+			output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
+				(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+		}
+	}
+
+	void* ip = (void*)ucontext->uc_mcontext.arm_r10;
+	void** bp = (void**)ucontext->uc_mcontext.arm_r10;
+	int f = 0;
+	while (bp && ip) {
+		if (!dladdr(ip, &dlinfo)) {
+			output_log(_T("IP out of range\n"));
+			break;
+		}
+		const char* symname = dlinfo.dli_sname;
+		output_log(_T("%02d: 0x%08x <%s + 0x%08x> (%s)\n"), ++f, ip, symname,
+			(unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+		if (dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
+			break;
+		ip = bp[1];
+		bp = (void**)bp[0];
+	}
 
 	output_log(_T("Stack trace (non-dedicated):\n"));
-  char **strings;
-  void *bt[100];
-  int sz = backtrace(bt, 100);
-  strings = backtrace_symbols(bt, sz);
-  for(int i = 0; i < sz; ++i)
-    output_log(_T("%s\n"), strings[i]);
+	char** strings;
+	void* bt[100];
+	int sz = backtrace(bt, 100);
+	strings = backtrace_symbols(bt, sz);
+	for (int i = 0; i < sz; ++i)
+		output_log(_T("%s\n"), strings[i]);
 	output_log(_T("End of stack trace.\n"));
 
-  output_log(_T("--- end exception ---\n"));
+	output_log(_T("--- end exception ---\n"));
 
-  SDL_Quit();
-  exit(1);
+	SDL_Quit();
+	exit(1);
 }
 
 #endif
 
-
-void signal_term(int signum, siginfo_t* info, void*ptr) 
+void signal_term(int signum, siginfo_t* info, void* ptr)
 {
-  output_log(_T("--- SIGTERM ---\n"));
+	output_log(_T("--- SIGTERM ---\n"));
 
 #ifdef TRACER
 	trace_end();
 #endif
 
-  SDL_Quit();
-  exit(1);
+	SDL_Quit();
+	exit(1);
 }

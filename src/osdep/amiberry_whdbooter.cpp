@@ -498,12 +498,12 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 
 	// WHAT IS THE MAIN CONTROL?
 // PORT 0 - MOUSE      
-	if (static_cast<bool>(is_cd32) && !strcmpi(host_detail.controller2, "nul") == 0)
+	if (static_cast<bool>(is_cd32) && !(strcmpi(host_detail.controller2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
 		cfgfile_parse_line(p, txt2, 0);
 	}
-	else if (!strcmpi(host_detail.mouse1, "nul") == 0)
+	else if (!(strcmpi(host_detail.mouse1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
 		cfgfile_parse_line(p, txt2, 0);
@@ -515,7 +515,7 @@ void cd_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// PORT 1 - JOYSTICK 
-	if (!strcmpi(host_detail.controller1, "nul") == 0)
+	if (!(strcmpi(host_detail.controller1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
 		cfgfile_parse_line(p, txt2, 0);
@@ -779,20 +779,20 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		// _stprintf(whd_bootscript, "DH3:C/Assign C: DH3:C/ ADD\n");
 		_stprintf(whd_bootscript, " \n");  
                 
-                if (use_slave_libs)
+        if (use_slave_libs)
 		{
-			_stprintf(whd_bootscript, "%sDH3:C/Assign LIBS: DH3:LIBS/ ADD\n");
+			_stprintf(whd_bootscript, "%sDH3:C/Assign LIBS: DH3:LIBS/ ADD\n", whd_bootscript);
 		}
 
-                _stprintf(whd_bootscript, "%sIF NOT EXISTS WHDLoad\n", whd_bootscript);                
-                _stprintf(whd_bootscript, "%sDH3:C/Assign C: DH3:C/ ADD\n", whd_bootscript);
-                _stprintf(whd_bootscript, "%sENDIF\n", whd_bootscript);
+        _stprintf(whd_bootscript, "%sIF NOT EXISTS WHDLoad\n", whd_bootscript);
+        _stprintf(whd_bootscript, "%sDH3:C/Assign C: DH3:C/ ADD\n", whd_bootscript);
+        _stprintf(whd_bootscript, "%sENDIF\n", whd_bootscript);
                 
 		_stprintf(whd_bootscript, "%sCD \"Games:%s\"\n", whd_bootscript, subpath);
 		_stprintf(whd_bootscript, "%sWHDLoad SLAVE=\"games:%s/%s\"", whd_bootscript, subpath, selected_slave);
 		_stprintf(whd_bootscript, "%s PRELOAD NOWRITECACHE NOREQ SPLASHDELAY=0", whd_bootscript);
 		_stprintf(whd_bootscript, "%s SAVEPATH=Saves:Savegames/ SAVEDIR=\"%s\"", whd_bootscript, subpath);
-		_stprintf(whd_bootscript, "%s\n", whd_bootscript, subpath);
+		_stprintf(whd_bootscript, "%s\n", whd_bootscript);
 
 		write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript);
 
@@ -968,12 +968,12 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
  
 	// APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	//  CD32
-	if (static_cast<bool>(is_cd32) && strcmpi(game_detail.port0, "nul") == 0
-		|| strcmpi(game_detail.port0, "cd32") == 0)
+	if (static_cast<bool>(is_cd32) && (strcmpi(game_detail.port0, "nul") == 0
+		|| strcmpi(game_detail.port0, "cd32") == 0))
 		p->jports[0].mode = 7;
 
-	if (static_cast<bool>(is_cd32) && strcmpi(game_detail.port1, "nul") == 0
-		|| strcmpi(game_detail.port1, "cd32") == 0)
+	if (static_cast<bool>(is_cd32) && (strcmpi(game_detail.port1, "nul") == 0
+		|| strcmpi(game_detail.port1, "cd32") == 0))
 		p->jports[1].mode = 7;
 
 	// JOY
@@ -999,7 +999,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 
 	// WHAT IS THE MAIN CONTROL?
 	// PORT 0 - MOUSE GAMES     
-	if (strcmpi(game_detail.control, "mouse") == 0 && !strcmpi(host_detail.mouse1, "nul") == 0)
+	if (strcmpi(game_detail.control, "mouse") == 0 && !(strcmpi(host_detail.mouse1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
 		cfgfile_parse_line(p, txt2, 0);
@@ -1007,7 +1007,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// PORT 0 -  JOYSTICK GAMES 
-	else if (!strcmpi(host_detail.controller2, "nul") == 0)
+	else if (!(strcmpi(host_detail.controller2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
 		cfgfile_parse_line(p, txt2, 0);
@@ -1021,14 +1021,14 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// PORT 1 - MOUSE GAMES    
-	if (strcmpi(game_detail.control, "mouse") == 0 && !strcmpi(host_detail.mouse2, "nul") == 0)
+	if (strcmpi(game_detail.control, "mouse") == 0 && !(strcmpi(host_detail.mouse2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.mouse2));
 		cfgfile_parse_line(p, txt2, 0);
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 	// PORT 1 - JOYSTICK GAMES
-	else if (!strcmpi(host_detail.controller1, "nul") == 0)
+	else if (!(strcmpi(host_detail.controller1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
 		cfgfile_parse_line(p, txt2, 0);
@@ -1057,7 +1057,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	if (strlen(custom_settings) > 0)
 		parse_custom_settings(p, custom_settings);
 
-	if (!strcmpi(host_detail.deadzone, "nul") == 0)
+	if (!(strcmpi(host_detail.deadzone, "nul") == 0))
 	{
 		_stprintf(txt2, "input.joymouse_deadzone=%s", _T(host_detail.deadzone));
 		cfgfile_parse_line(p, txt2, 0);
@@ -1066,36 +1066,36 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 	}
 
 	// RETROARCH CONTROLS
-	if (!strcmpi(host_detail.ra_quit, "nul") == 0)
+	if (!(strcmpi(host_detail.ra_quit, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.use_retroarch_quit=%s", _T(host_detail.ra_quit));
 		cfgfile_parse_line(p, txt2, 0);
 	}
-	if (!strcmpi(host_detail.ra_menu, "nul") == 0)
+	if (!(strcmpi(host_detail.ra_menu, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.use_retroarch_menu=%s", _T(host_detail.ra_menu));
 		cfgfile_parse_line(p, txt2, 0);
 	}
-	if (!strcmpi(host_detail.ra_reset, "nul") == 0)
+	if (!(strcmpi(host_detail.ra_reset, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.use_retroarch_reset=%s", _T(host_detail.ra_reset));
 		cfgfile_parse_line(p, txt2, 0);
 	}
 	// KEYBOARD CONTROLS
 
-	if (!strcmpi(host_detail.key_quit, "nul") == 0)
+	if (!(strcmpi(host_detail.key_quit, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.quit_amiberry=%s", _T(host_detail.key_quit));
 		cfgfile_parse_line(p, txt2, 0);
 	}
-	if (!strcmpi(host_detail.key_gui, "nul") == 0)
+	if (!(strcmpi(host_detail.key_gui, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.open_gui=%s", _T(host_detail.key_gui));
 		cfgfile_parse_line(p, txt2, 0);
 	}
 	// GRAPHICS OPTIONS
 
-	if (!strcmpi(host_detail.aspect_ratio, "nul") == 0)
+	if (!(strcmpi(host_detail.aspect_ratio, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.gfx_correct_aspect=%s", _T(host_detail.aspect_ratio));
 		cfgfile_parse_line(p, txt2, 0);
@@ -1112,7 +1112,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
-	if (!strcmpi(host_detail.frameskip, "nul") == 0)
+	if (!(strcmpi(host_detail.frameskip, "nul") == 0))
 	{
 		_stprintf(txt2, "gfx_framerate=%s", _T(host_detail.frameskip));
 		cfgfile_parse_line(p, txt2, 0);
@@ -1125,7 +1125,7 @@ void whdload_auto_prefs(struct uae_prefs* p, char* filepath)
 		_stprintf(txt2, "sound_output=none");
 		cfgfile_parse_line(p, txt2, 0);
 	}
-	if (!strcmpi(host_detail.stereo_split, "nul") == 0)
+	if (!(strcmpi(host_detail.stereo_split, "nul") == 0))
 	{
 		_stprintf(txt2, "sound_stereo_separation=%s", _T(host_detail.stereo_split));
 		cfgfile_parse_line(p, txt2, 0);
