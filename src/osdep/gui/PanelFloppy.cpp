@@ -30,7 +30,7 @@ static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
-static const char *diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0" };
+static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
 static const char* drivespeedlist[] = {"100% (compatible)", "200%", "400%", "800%"};
 static const int drivespeedvalues[] = {100, 200, 400, 800};
 
@@ -41,7 +41,7 @@ static bool bIgnoreListChange = false;
 class DriveTypeListModel : public gcn::ListModel
 {
 private:
-    std::vector<std::string> types{};
+	std::vector<std::string> types{};
 
 public:
 	DriveTypeListModel()
@@ -136,11 +136,15 @@ public:
 					//---------------------------------------
 					// Write-protect changed
 					//---------------------------------------
-					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, chkDFxWriteProtect[i]->isSelected());
-					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->isSelected()) {
+					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
+					                     chkDFxWriteProtect[i]->isSelected());
+					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
+						isSelected())
+					{
 						// Failed to change write protection -> maybe filesystem doesn't support this
 						chkDFxWriteProtect[i]->setSelected(!chkDFxWriteProtect[i]->isSelected());
-						ShowMessage("Set/Clear write protect", "Failed to change write permission.", "Maybe underlying filesystem doesn't support this.", "Ok", "");
+						ShowMessage("Set/Clear write protect", "Failed to change write permission.",
+						            "Maybe underlying filesystem doesn't support this.", "Ok", "");
 						chkDFxWriteProtect[i]->requestFocus();
 					}
 					DISK_reinsert(i);
@@ -192,7 +196,7 @@ public:
 					strncpy(tmp, currentDir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
-					if(strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
@@ -396,7 +400,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		chkDFxWriteProtect[i] = new gcn::UaeCheckBox("Write-protected");
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
 		snprintf(tmp, 20, "chkWP%d", i);
-	  	chkDFxWriteProtect[i]->setId(tmp);
+		chkDFxWriteProtect[i]->setId(tmp);
 
 		cmdDFxInfo[i] = new gcn::Button("?");
 		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -474,10 +478,10 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
 		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
-	  	category.panel->add(cmdDFxSelect[i], posX, posY);
-	  	posY += cmdDFxEject[i]->getHeight() + 8;
+		category.panel->add(cmdDFxSelect[i], posX, posY);
+		posY += cmdDFxEject[i]->getHeight() + 8;
 
-	  	category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
+		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
 		if (i == 0)
 		{
 			posY += cboDFxFile[i]->getHeight() + 8;
@@ -599,7 +603,7 @@ void RefreshPanelFloppy()
 	}
 }
 
-bool HelpPanelFloppy(std::vector<std::string> &helptext)
+bool HelpPanelFloppy(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can enable/disable each drive by clicking the checkbox next to DFx or select");

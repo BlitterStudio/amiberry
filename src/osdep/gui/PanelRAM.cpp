@@ -10,18 +10,20 @@
 #include "gui_handling.h"
 
 
-static const char* ChipMem_list[] = { "512 K", "1 MB", "2 MB", "4 MB", "8 MB" };
-static unsigned int ChipMem_values[] = { 0x080000, 0x100000, 0x200000, 0x400000, 0x800000 };
-static const char* SlowMem_list[] = { "None", "512 K", "1 MB", "1.5 MB", "1.8 MB" };
-static unsigned int SlowMem_values[] = { 0x000000, 0x080000, 0x100000, 0x180000, 0x1c0000 };
-static const char* FastMem_list[] = { "None", "1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB", "256 MB", "512 MB" };
+static const char* ChipMem_list[] = {"512 K", "1 MB", "2 MB", "4 MB", "8 MB"};
+static unsigned int ChipMem_values[] = {0x080000, 0x100000, 0x200000, 0x400000, 0x800000};
+static const char* SlowMem_list[] = {"None", "512 K", "1 MB", "1.5 MB", "1.8 MB"};
+static unsigned int SlowMem_values[] = {0x000000, 0x080000, 0x100000, 0x180000, 0x1c0000};
+static const char* FastMem_list[] = {
+	"None", "1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB", "256 MB", "512 MB"
+};
 static unsigned int FastMem_values[] = {
 	0x000000, 0x100000, 0x200000, 0x400000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000, 0x10000000, 0x20000000
 };
-static const char* A3000LowMem_list[] = { "None", "8 MB", "16 MB" };
-static unsigned int A3000LowMem_values[] = { 0x080000, 0x800000, 0x1000000 };
-static const char* A3000HighMem_list[] = { "None", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB" };
-static unsigned int A3000HighMem_values[] = { 0x080000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000 };
+static const char* A3000LowMem_list[] = {"None", "8 MB", "16 MB"};
+static unsigned int A3000LowMem_values[] = {0x080000, 0x800000, 0x1000000};
+static const char* A3000HighMem_list[] = {"None", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB"};
+static unsigned int A3000HighMem_values[] = {0x080000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000};
 
 static gcn::Window* grpRAM;
 static gcn::Label* lblChipmem;
@@ -224,7 +226,8 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	grpRAM->add(lblA3000Highmem, 8, posY);
 	grpRAM->add(sldA3000Highmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblA3000Highsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Highmem->getWidth() + 12, posY);
+	grpRAM->add(lblA3000Highsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Highmem->getWidth() + 12,
+	            posY);
 	posY += sldA3000Highmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);

@@ -19,9 +19,9 @@ static gcn::Button* cmdMainROM;
 static gcn::Label* lblExtROM;
 static gcn::UaeDropDown* cboExtROM;
 static gcn::Button* cmdExtROM;
-static gcn::Label *lblCartROM;
+static gcn::Label* lblCartROM;
 static gcn::UaeDropDown* cboCartROM;
-static gcn::Button *cmdCartROM;
+static gcn::Button* cmdCartROM;
 
 class ROMListModel : public gcn::ListModel
 {
@@ -50,7 +50,7 @@ public:
 	AvailableROM* getROMat(const int i)
 	{
 		if (i >= 0 && i < idxToAvailableROMs.size())
-			return idxToAvailableROMs[i] < 0 ? NULL : lstAvailableROMs[idxToAvailableROMs[i]];
+			return idxToAvailableROMs[i] < 0 ? nullptr : lstAvailableROMs[idxToAvailableROMs[i]];
 		return nullptr;
 	}
 
@@ -66,7 +66,7 @@ public:
 			idxToAvailableROMs.push_back(-1);
 			currIdx = 0;
 		}
-		
+
 		for (auto i = 0; i < lstAvailableROMs.size(); ++i)
 		{
 			if (lstAvailableROMs[i]->ROMType & ROMType)
@@ -83,7 +83,7 @@ public:
 
 static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
-static ROMListModel *cartROMList;
+static ROMListModel* cartROMList;
 
 class MainROMActionListener : public gcn::ActionListener
 {
@@ -126,6 +126,7 @@ public:
 			strncpy(changed_prefs.cartfile, "", sizeof changed_prefs.cartfile);
 	}
 };
+
 static CartROMActionListener* cartROMActionListener;
 
 class ROMButtonActionListener : public gcn::ActionListener
@@ -300,7 +301,7 @@ void RefreshPanelROM()
 	cboCartROM->setSelected(idx);
 }
 
-bool HelpPanelROM(std::vector<std::string> &helptext)
+bool HelpPanelROM(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Select the required kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");

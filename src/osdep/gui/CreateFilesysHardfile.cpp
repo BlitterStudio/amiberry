@@ -24,31 +24,30 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 202
 
-static const char* harddisk_filter[] = {".hdf", "\0"};
+static const char *harddisk_filter[] = {".hdf", "\0"};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool fileSelected = false;
 
-static gcn::Window* wndCreateFilesysHardfile;
-static gcn::Button* cmdOK;
-static gcn::Button* cmdCancel;
-static gcn::Label* lblDevice;
-static gcn::TextField* txtDevice;
-static gcn::UaeCheckBox* chkAutoboot;
-static gcn::Label* lblBootPri;
-static gcn::TextField* txtBootPri;
-static gcn::Label* lblPath;
-static gcn::TextField* txtPath;
-static gcn::Button* cmdPath;
-static gcn::Label* lblSize;
-static gcn::TextField* txtSize;
-
+static gcn::Window *wndCreateFilesysHardfile;
+static gcn::Button *cmdOK;
+static gcn::Button *cmdCancel;
+static gcn::Label *lblDevice;
+static gcn::TextField *txtDevice;
+static gcn::UaeCheckBox *chkAutoboot;
+static gcn::Label *lblBootPri;
+static gcn::TextField *txtBootPri;
+static gcn::Label *lblPath;
+static gcn::TextField *txtPath;
+static gcn::Button *cmdPath;
+static gcn::Label *lblSize;
+static gcn::TextField *txtSize;
 
 class CreateFilesysHardfileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent) override
+	void action(const gcn::ActionEvent &actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
@@ -84,8 +83,7 @@ public:
 	}
 };
 
-static CreateFilesysHardfileActionListener* createFilesysHardfileActionListener;
-
+static CreateFilesysHardfileActionListener *createFilesysHardfileActionListener;
 
 static void InitCreateFilesysHardfile()
 {
@@ -101,7 +99,7 @@ static void InitCreateFilesysHardfile()
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
-	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->setId("createHdfOK");
 	cmdOK->addActionListener(createFilesysHardfileActionListener);
@@ -109,7 +107,7 @@ static void InitCreateFilesysHardfile()
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
-	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->setId("createHdfCancel");
 	cmdCancel->addActionListener(createFilesysHardfileActionListener);
@@ -166,7 +164,7 @@ static void InitCreateFilesysHardfile()
 	wndCreateFilesysHardfile->add(lblPath, DISTANCE_BORDER, posY);
 	wndCreateFilesysHardfile->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);
 	wndCreateFilesysHardfile->add(cmdPath, wndCreateFilesysHardfile->getWidth() - DISTANCE_BORDER - SMALL_BUTTON_WIDTH,
-	                              posY);
+								  posY);
 	posY += txtPath->getHeight() + DISTANCE_NEXT_Y;
 
 	wndCreateFilesysHardfile->add(lblSize, lblDevice->getX(), posY);
@@ -180,7 +178,6 @@ static void InitCreateFilesysHardfile()
 	txtDevice->requestFocus();
 	wndCreateFilesysHardfile->requestModalFocus();
 }
-
 
 static void ExitCreateFilesysHardfile()
 {
@@ -204,7 +201,6 @@ static void ExitCreateFilesysHardfile()
 
 	delete wndCreateFilesysHardfile;
 }
-
 
 static void CreateFilesysHardfileLoop()
 {
@@ -250,7 +246,7 @@ static void CreateFilesysHardfileLoop()
 					event.key.keysym.sym = SDLK_RETURN;
 
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP; // and the key up
+					event.type = SDL_KEYUP;		 // and the key up
 					break;
 				default:
 					break;
@@ -258,21 +254,23 @@ static void CreateFilesysHardfileLoop()
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
 			{
-				gcn::FocusHandler* focusHdl;
-				gcn::Widget* activeWidget;
+				gcn::FocusHandler *focusHdl;
+				gcn::Widget *activeWidget;
 
 				if (gui_joystick)
 				{
 					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
 					{
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
@@ -286,20 +284,23 @@ static void CreateFilesysHardfileLoop()
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_LEFT);
 						break;
 					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button)) // need this to be X button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
+					// need this to be X button
 					{
 						PushFakeKey(SDLK_RETURN);
 						continue;
 					}
 					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button)) // need this to be START button
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
+					// need this to be START button
 					{
 						dialogFinished = true;
 						break;
@@ -335,7 +336,6 @@ static void CreateFilesysHardfileLoop()
 	}
 }
 
-
 bool CreateFilesysHardfile()
 {
 	string strroot;
@@ -365,7 +365,7 @@ bool CreateFilesysHardfile()
 #endif
 	UpdateGuiScreen();
 	CreateFilesysHardfileLoop();
-	
+
 	if (dialogResult)
 	{
 		auto size = atoi(txtSize->getText().c_str());
@@ -385,7 +385,9 @@ bool CreateFilesysHardfile()
 		fwrite(&zero, 1, 1, newFile);
 		fclose(newFile);
 
-		struct uaedev_config_info ci {};
+		struct uaedev_config_info ci
+		{
+		};
 
 		uci_set_defaults(&ci, false);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);

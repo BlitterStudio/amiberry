@@ -203,7 +203,7 @@ public:
 			case 3:
 				tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger;
 				break;
-			default: 
+			default:
 				break;
 			}
 
@@ -301,7 +301,7 @@ public:
 			case 3:
 				changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger = tempmap;
 				break;
-			default: 
+			default:
 				break;
 			}
 
@@ -369,7 +369,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	chkAnalogRemap->setId("chkAnalogRemap");
 	chkAnalogRemap->addActionListener(grpActionListener);
 	chkAnalogRemap->setEnabled(true);
-        
+
 	grpPort = new gcn::Window("Joystick Port");
 	grpPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpPort->add(optPort0, 10, 5);
@@ -404,7 +404,9 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	lblRetroarch = new gcn::Label("[-]");
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
 
-	txtPortInput->setSize(grpFunction->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()), TEXTFIELD_HEIGHT);
+	txtPortInput->setSize(
+		grpFunction->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()),
+		TEXTFIELD_HEIGHT);
 
 	lblCustomAction[0] = new gcn::Label("DPad Up:");
 	lblCustomAction[1] = new gcn::Label("DPad Down:");
@@ -428,7 +430,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		lblCustomAction[i]->setAlignment(gcn::Graphics::RIGHT);
 
 		cboCustomAction[i] = new gcn::UaeDropDown(&CustomEventList);
-		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth()*2, cboCustomAction[i]->getHeight());
+		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth() * 2, cboCustomAction[i]->getHeight());
 		cboCustomAction[i]->setBaseColor(gui_baseCol);
 		cboCustomAction[i]->setBackgroundColor(colTextboxBackground);
 
@@ -482,7 +484,7 @@ void ExitPanelCustom()
 	delete grpFunction;
 	delete chkAnalogRemap;
 
-	for (auto & i : lblCustomAction)
+	for (auto& i : lblCustomAction)
 	{
 		delete i;
 		//delete cboCustomAction[i];                   
@@ -510,7 +512,7 @@ void RefreshPanelCustom(void)
 	//  optMultiRight->setSelected(SelectedFunction == 3);
 
 	chkAnalogRemap->setSelected(changed_prefs.input_analog_remap);
-        
+
 	// you'll want to refresh the drop-down section here
 	// get map
 	struct joypad_map_layout tempmap;
@@ -528,7 +530,7 @@ void RefreshPanelCustom(void)
 	case 3:
 		tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger;
 		break;
-	default: 
+	default:
 		break;
 	}
 
@@ -616,7 +618,7 @@ void RefreshPanelCustom(void)
 					temp_button = host_input_buttons[hostjoyid].rstick_button;
 					break;
 				}
-			default: 
+			default:
 				break;
 			}
 
@@ -631,7 +633,8 @@ void RefreshPanelCustom(void)
 				cboCustomAction[n]->setSelected(0);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].quit_button && temp_button != -1 && SelectedFunction == 1 &&
+			else if (temp_button == host_input_buttons[hostjoyid].quit_button && temp_button != -1 && SelectedFunction
+				== 1 &&
 				changed_prefs.use_retroarch_quit)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
@@ -639,7 +642,8 @@ void RefreshPanelCustom(void)
 				cboCustomAction[n]->setSelected(0);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].menu_button && temp_button != -1 && SelectedFunction == 1 &&
+			else if (temp_button == host_input_buttons[hostjoyid].menu_button && temp_button != -1 && SelectedFunction
+				== 1 &&
 				changed_prefs.use_retroarch_menu)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
@@ -647,7 +651,8 @@ void RefreshPanelCustom(void)
 				cboCustomAction[n]->setSelected(0);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].reset_button && temp_button != -1 && SelectedFunction == 1 &&
+			else if (temp_button == host_input_buttons[hostjoyid].reset_button && temp_button != -1 && SelectedFunction
+				== 1 &&
 				changed_prefs.use_retroarch_reset)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
@@ -663,10 +668,10 @@ void RefreshPanelCustom(void)
 
 		if (host_input_buttons[hostjoyid].number_of_hats > 0 || changed_prefs.input_analog_remap == true)
 		{
-			cboCustomAction[ 0]->setEnabled(true);
-			cboCustomAction[ 1]->setEnabled(true);
-			cboCustomAction[ 2]->setEnabled(true);
-			cboCustomAction[ 3]->setEnabled(true);
+			cboCustomAction[0]->setEnabled(true);
+			cboCustomAction[1]->setEnabled(true);
+			cboCustomAction[2]->setEnabled(true);
+			cboCustomAction[3]->setEnabled(true);
 		}
 
 		if (host_input_buttons[hostjoyid].is_retroarch)
@@ -678,7 +683,7 @@ void RefreshPanelCustom(void)
 	else
 	{
 		_stprintf(tmp, _T("%s"), "Not a valid Input Controller for Joystick Emulation.");
-		for (auto & n : cboCustomAction)
+		for (auto& n : cboCustomAction)
 		{
 			n->setListModel(&CustomEventList);
 			n->setEnabled(false);
@@ -767,7 +772,7 @@ void RefreshPanelCustom(void)
 				eventnum = tempmap.rstick_select_action;
 				break;
 			}
-		default: 
+		default:
 			break;
 		}
 		const auto x = find_in_array(RemapEventList, RemapEventListSize, eventnum);

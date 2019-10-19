@@ -13,8 +13,8 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = { 320, 352, 384, 640, 704, 768 };
-const int amigaheight_values[] = { 200, 216, 240, 256, 262, 270 };
+const int amigawidth_values[] = {320, 352, 384, 640, 704, 768};
+const int amigaheight_values[] = {200, 216, 240, 256, 262, 270};
 
 static gcn::Window* grpScalingMethod;
 static gcn::UaeRadioButton* optAuto;
@@ -26,7 +26,7 @@ static gcn::UaeRadioButton* optSingle;
 static gcn::UaeRadioButton* optDouble;
 static gcn::UaeRadioButton* optScanlines;
 
-static gcn::Window *grpAmigaScreen;
+static gcn::Window* grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;
 static gcn::Label* lblAmigaWidthInfo;
 static gcn::Slider* sldAmigaWidth;
@@ -89,7 +89,7 @@ public:
 				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
 				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
 			}
-		}	
+		}
 	}
 };
 
@@ -194,7 +194,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	grpAmigaScreen->add(lblAmigaHeight, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldAmigaHeight, lblAmigaHeight->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
-	grpAmigaScreen->add(lblAmigaHeightInfo, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(lblAmigaHeightInfo, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_X,
+	                    posY);
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->add(lblVertPos, DISTANCE_BORDER, posY);
@@ -203,7 +204,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(lblVertPos->getX() + lblVertPos->getWidth() + sldVertPos->getWidth() + lblVertPosInfo->getWidth() + (DISTANCE_BORDER*2), posY + DISTANCE_BORDER);
+	grpAmigaScreen->setSize(
+		lblVertPos->getX() + lblVertPos->getWidth() + sldVertPos->getWidth() + lblVertPosInfo->getWidth() + (
+			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpAmigaScreen);
@@ -226,7 +229,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->add(optNearest, 5, 40);
 	grpScalingMethod->add(optLinear, 5, 70);
 	grpScalingMethod->setMovable(false);
-	grpScalingMethod->setSize(optNearest->getWidth() + DISTANCE_BORDER, optLinear->getY() + optLinear->getHeight() + 30);
+	grpScalingMethod->setSize(optNearest->getWidth() + DISTANCE_BORDER,
+	                          optLinear->getY() + optLinear->getHeight() + 30);
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
@@ -250,7 +254,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->add(optDouble, 5, 40);
 	grpLineMode->add(optScanlines, 5, 70);
 	grpLineMode->setMovable(false);
-	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER, optScanlines->getY() + optScanlines->getHeight() + 30);
+	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER,
+	                     optScanlines->getY() + optScanlines->getHeight() + 30);
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
@@ -302,7 +307,7 @@ void RefreshPanelDisplay()
 	int i;
 	char tmp[32];
 
-	for (i = 0; i<6; ++i)
+	for (i = 0; i < 6; ++i)
 	{
 		if (changed_prefs.gfx_monitor.gfx_size.width == amigawidth_values[i])
 		{
@@ -313,7 +318,7 @@ void RefreshPanelDisplay()
 		}
 	}
 
-	for (i = 0; i<6; ++i)
+	for (i = 0; i < 6; ++i)
 	{
 		if (changed_prefs.gfx_monitor.gfx_size.height == amigaheight_values[i])
 		{
@@ -346,7 +351,7 @@ void RefreshPanelDisplay()
 	lblVertPosInfo->setCaption(tmp);
 }
 
-bool HelpPanelDisplay(std::vector<std::string> &helptext)
+bool HelpPanelDisplay(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Select the required width and height of the Amiga screen. If you select \"NTSC\"");
@@ -363,7 +368,8 @@ bool HelpPanelDisplay(std::vector<std::string> &helptext)
 	helptext.emplace_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga ");
 	helptext.emplace_back("screen.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Activate line doubling to remove flicker in interlace modes, or Scanlines for the CRT effect.");
+	helptext.emplace_back(
+		"Activate line doubling to remove flicker in interlace modes, or Scanlines for the CRT effect.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("When you activate \"Frameskip\", only every second frame is drawn.");
 	helptext.emplace_back("This will improve performance and some more games are playable.");

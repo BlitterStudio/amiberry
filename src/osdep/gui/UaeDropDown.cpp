@@ -12,7 +12,7 @@ namespace gcn
 #ifdef ANDROID
     mScrollArea->setScrollbarWidth(30);
 #else
-    mScrollArea->setScrollbarWidth(20);
+		mScrollArea->setScrollbarWidth(20);
 #endif
 	}
 

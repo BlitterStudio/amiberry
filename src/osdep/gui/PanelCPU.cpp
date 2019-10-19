@@ -208,13 +208,14 @@ class FPUActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == chkFPUstrict) {
+		if (actionEvent.getSource() == chkFPUstrict)
+		{
 			changed_prefs.fpu_strict = chkFPUstrict->isSelected();
-
 		}
 		RefreshPanelCPU();
 	}
 };
+
 static FPUActionListener* fpuActionListener;
 
 void InitPanelCPU(const struct _ConfigCategory& category)
@@ -432,7 +433,7 @@ void RefreshPanelCPU()
 		optTurbo->setSelected(true);
 }
 
-bool HelpPanelCPU(std::vector<std::string> &helptext)
+bool HelpPanelCPU(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Select the required Amiga CPU (68000 - 68040).");

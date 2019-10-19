@@ -27,7 +27,7 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 272
 
-static const char* harddisk_filter[] = {".hdf", "\0"};
+static const char *harddisk_filter[] = {".hdf", "\0"};
 
 struct controller_map
 {
@@ -38,39 +38,37 @@ struct controller_map
 static struct controller_map controller[] = {
 	{HD_CONTROLLER_TYPE_UAE, "UAE"},
 	{HD_CONTROLLER_TYPE_IDE_FIRST, "A600/A1200/A4000 IDE"},
-	{-1}
-};
+	{-1}};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool fileSelected = false;
 
+static gcn::Window *wndEditFilesysHardfile;
+static gcn::Button *cmdOK;
+static gcn::Button *cmdCancel;
+static gcn::Label *lblDevice;
+static gcn::TextField *txtDevice;
+static gcn::UaeCheckBox *chkReadWrite;
+static gcn::UaeCheckBox *chkAutoboot;
+static gcn::Label *lblBootPri;
+static gcn::TextField *txtBootPri;
+static gcn::Label *lblPath;
+static gcn::TextField *txtPath;
+static gcn::Button *cmdPath;
+static gcn::Label *lblSurfaces;
+static gcn::TextField *txtSurfaces;
+static gcn::Label *lblReserved;
+static gcn::TextField *txtReserved;
+static gcn::Label *lblSectors;
+static gcn::TextField *txtSectors;
+static gcn::Label *lblBlocksize;
+static gcn::TextField *txtBlocksize;
+static gcn::Label *lblController;
+static gcn::UaeDropDown *cboController;
+static gcn::UaeDropDown *cboUnit;
 
-static gcn::Window* wndEditFilesysHardfile;
-static gcn::Button* cmdOK;
-static gcn::Button* cmdCancel;
-static gcn::Label* lblDevice;
-static gcn::TextField* txtDevice;
-static gcn::UaeCheckBox* chkReadWrite;
-static gcn::UaeCheckBox* chkAutoboot;
-static gcn::Label* lblBootPri;
-static gcn::TextField* txtBootPri;
-static gcn::Label* lblPath;
-static gcn::TextField* txtPath;
-static gcn::Button* cmdPath;
-static gcn::Label* lblSurfaces;
-static gcn::TextField* txtSurfaces;
-static gcn::Label* lblReserved;
-static gcn::TextField* txtReserved;
-static gcn::Label* lblSectors;
-static gcn::TextField* txtSectors;
-static gcn::Label* lblBlocksize;
-static gcn::TextField* txtBlocksize;
-static gcn::Label* lblController;
-static gcn::UaeDropDown* cboController;
-static gcn::UaeDropDown* cboUnit;
-
-static void check_rdb(const TCHAR* filename)
+static void check_rdb(const TCHAR *filename)
 {
 	const auto isrdb = hardfile_testrdb(filename);
 	if (isrdb)
@@ -86,12 +84,10 @@ static void check_rdb(const TCHAR* filename)
 	txtBootPri->setEnabled(!isrdb);
 }
 
-
 class ControllerListModel : public gcn::ListModel
 {
 public:
-	ControllerListModel()
-	= default;
+	ControllerListModel() = default;
 
 	int getNumberOfElements() override
 	{
@@ -108,12 +104,10 @@ public:
 
 static ControllerListModel controllerListModel;
 
-
 class UnitListModel : public gcn::ListModel
 {
 public:
-	UnitListModel()
-	= default;
+	UnitListModel() = default;
 
 	int getNumberOfElements() override
 	{
@@ -136,7 +130,7 @@ static UnitListModel unitListModel;
 class FilesysHardfileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent) override
+	void action(const gcn::ActionEvent &actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
@@ -186,8 +180,7 @@ public:
 	}
 };
 
-static FilesysHardfileActionListener* filesysHardfileActionListener;
-
+static FilesysHardfileActionListener *filesysHardfileActionListener;
 
 static void InitEditFilesysHardfile()
 {
@@ -219,7 +212,7 @@ static void InitEditFilesysHardfile()
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
-	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->setId("hdfOK");
 	cmdOK->addActionListener(filesysHardfileActionListener);
@@ -227,7 +220,7 @@ static void InitEditFilesysHardfile()
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
-	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->setId("hdfCancel");
 	cmdCancel->addActionListener(filesysHardfileActionListener);
@@ -337,7 +330,7 @@ static void InitEditFilesysHardfile()
 	wndEditFilesysHardfile->add(lblController, DISTANCE_BORDER, posY);
 	wndEditFilesysHardfile->add(cboController, DISTANCE_BORDER + lblController->getWidth() + 8, posY);
 	wndEditFilesysHardfile->add(cboUnit, cboController->getX() + cboController->getWidth() + 8, posY);
-	
+
 	wndEditFilesysHardfile->add(cmdOK);
 	wndEditFilesysHardfile->add(cmdCancel);
 
@@ -346,7 +339,6 @@ static void InitEditFilesysHardfile()
 	txtDevice->requestFocus();
 	wndEditFilesysHardfile->requestModalFocus();
 }
-
 
 static void ExitEditFilesysHardfile()
 {
@@ -380,7 +372,6 @@ static void ExitEditFilesysHardfile()
 
 	delete wndEditFilesysHardfile;
 }
-
 
 static void EditFilesysHardfileLoop()
 {
@@ -425,7 +416,7 @@ static void EditFilesysHardfileLoop()
 				case VK_Green:
 					event.key.keysym.sym = SDLK_RETURN;
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP; // and the key up
+					event.type = SDL_KEYUP;		 // and the key up
 					break;
 				default:
 					break;
@@ -433,8 +424,8 @@ static void EditFilesysHardfileLoop()
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
 			{
-				gcn::FocusHandler* focusHdl;
-				gcn::Widget* activeWidget;
+				gcn::FocusHandler *focusHdl;
+				gcn::Widget *activeWidget;
 
 				if (gui_joystick)
 				{
@@ -503,17 +494,18 @@ static void EditFilesysHardfileLoop()
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
 }
 
-
 bool EditFilesysHardfile(const int unit_no)
 {
-	struct mountedinfo mi{};
-	struct uaedev_config_data* uci;
+	struct mountedinfo mi
+	{
+	};
+	struct uaedev_config_data *uci;
 	string strdevname, strroot;
 	char tmp[32];
 
@@ -588,7 +580,9 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (dialogResult)
 	{
-		struct uaedev_config_info ci{};
+		struct uaedev_config_info ci
+		{
+		};
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 

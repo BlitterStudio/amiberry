@@ -14,7 +14,7 @@
 #include "uae.h"
 #include "gui_handling.h"
 
-static char last_active_config[MAX_DPATH] = { '\0' };
+static char last_active_config[MAX_DPATH] = {'\0'};
 static int ensureVisible = -1;
 
 static gcn::Button* cmdLoad;
@@ -28,7 +28,7 @@ static gcn::UaeListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
 
 
-bool LoadConfigByName(const char *name)
+bool LoadConfigByName(const char* name)
 {
 	ConfigFileInfo* config = SearchConfigInList(name);
 	if (config != nullptr)
@@ -64,7 +64,7 @@ class ConfigsListModel : public gcn::ListModel
 
 public:
 	ConfigsListModel()
-		= default;
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -81,7 +81,7 @@ public:
 	void InitConfigsList(void)
 	{
 		configs.clear();
-		for (auto & i : ConfigFilesList)
+		for (auto& i : ConfigFilesList)
 		{
 			char tmp[MAX_DPATH];
 			strncpy(tmp, i->Name, MAX_DPATH);
@@ -178,7 +178,8 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		const int selected_item = lstConfigs->getSelected();
-		if (txtName->getText() != ConfigFilesList[selected_item]->Name || txtDesc->getText() != ConfigFilesList[selected_item]->Description)
+		if (txtName->getText() != ConfigFilesList[selected_item]->Name || txtDesc->getText() != ConfigFilesList[
+			selected_item]->Description)
 		{
 			//-----------------------------------------------
 			// Selected a config -> Update Name and Description fields
@@ -276,10 +277,13 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
 	category.panel->add(scrAreaConfigs);
 
-	category.panel->add(lblName, DISTANCE_BORDER, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(lblName, DISTANCE_BORDER,
+	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8,
+	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
 	category.panel->add(lblDesc, DISTANCE_BORDER, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8,
+	                    txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 	if (strlen(last_active_config) == 0)
 	{
@@ -292,7 +296,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 		}
 	}
 	txtName->setText(last_active_config);
-	txtDesc->setText(changed_prefs.description);    
+	txtDesc->setText(changed_prefs.description);
 	ensureVisible = -1;
 	RefreshPanelConfig();
 }
@@ -347,7 +351,7 @@ void RefreshPanelConfig()
 	}
 }
 
-bool HelpPanelConfig(std::vector<std::string> &helptext)
+bool HelpPanelConfig(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\".");

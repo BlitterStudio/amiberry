@@ -8,7 +8,7 @@ namespace gcn
 	= default;
 
 	UaeCheckBox::UaeCheckBox(const std::string& caption,
-		const bool selected)
+	                         const bool selected)
 		: CheckBox(caption, selected)
 	{
 		setId(caption);
@@ -32,9 +32,9 @@ namespace gcn
 		{
 			graphics->setColor(Color(0x000000));
 			graphics->drawRectangle(Rectangle(0,
-				0,
-				getWidth(),
-				getHeight()));
+			                                  0,
+			                                  getWidth(),
+			                                  getHeight()));
 		}
 	}
 

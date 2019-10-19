@@ -166,7 +166,7 @@ public:
 			case 3:
 				changed_prefs.sound_freq = 44100;
 				break;
-			default: 
+			default:
 				break;
 			}
 		}
@@ -197,7 +197,7 @@ public:
 				changed_prefs.sound_filter = FILTER_SOUND_ON;
 				changed_prefs.sound_filter_type = 1;
 				break;
-			default: 
+			default:
 				break;
 			}
 		}
@@ -224,7 +224,8 @@ public:
 					changed_prefs.sound_mixed_stereo_delay = -1;
 			}
 		}
-		else if (actionEvent.getSource() == sldPaulaVol) {
+		else if (actionEvent.getSource() == sldPaulaVol)
+		{
 			int newvol = 100 - int(sldPaulaVol->getValue());
 			if (changed_prefs.sound_volume_paula != newvol)
 				changed_prefs.sound_volume_paula = newvol;
@@ -338,7 +339,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldPaulaVol->setId("sldPaulaVol");
 	sldPaulaVol->addActionListener(soundActionListener);
 	lblPaulaVolInfo = new gcn::Label("80 %");
-	
+
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
 	category.panel->add(grpMode, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
@@ -347,7 +348,8 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	category.panel->add(cboFrequency, lblFrequency->getX() + lblFrequency->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboFrequency->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblInterpolation, DISTANCE_BORDER, posY);
-	category.panel->add(cboInterpolation, lblInterpolation->getX() + lblInterpolation->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cboInterpolation, lblInterpolation->getX() + lblInterpolation->getWidth() + DISTANCE_NEXT_X,
+	                    posY);
 	posY += cboInterpolation->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblFilter, DISTANCE_BORDER, posY);
 	category.panel->add(cboFilter, lblFilter->getX() + lblFilter->getWidth() + DISTANCE_NEXT_X, posY);
@@ -358,7 +360,8 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
 	category.panel->add(lblStereoDelay, DISTANCE_BORDER, posY);
 	category.panel->add(sldStereoDelay, lblStereoDelay->getX() + lblStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + DISTANCE_NEXT_X,
+	                    posY);
 	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
 	category.panel->add(lblPaulaVol, DISTANCE_BORDER, posY);
 	category.panel->add(sldPaulaVol, lblPaulaVol->getX() + lblPaulaVol->getWidth() + DISTANCE_NEXT_X, posY);
@@ -413,7 +416,7 @@ void RefreshPanelSound()
 	case 3:
 		optSoundEmulatedBest->setSelected(true);
 		break;
-	default: 
+	default:
 		break;
 	}
 
@@ -452,7 +455,7 @@ void RefreshPanelSound()
 	case 2:
 		i = changed_prefs.sound_filter_type ? 4 : 3;
 		break;
-	default: 
+	default:
 		break;
 	}
 	cboFilter->setSelected(i);
@@ -487,7 +490,7 @@ void RefreshPanelSound()
 	lblPaulaVolInfo->setCaption(tmp);
 }
 
-bool HelpPanelSound(std::vector<std::string> &helptext)
+bool HelpPanelSound(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can turn on sound emulation with different levels of accuracy and");

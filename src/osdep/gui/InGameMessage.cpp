@@ -50,7 +50,7 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdDone)
-			msg_done = 1;
+			msg_done = true;
 	}
 };
 
@@ -145,7 +145,7 @@ void message_checkInput()
 			case VK_Blue:
 			case VK_Green:
 			case SDLK_RETURN:
-				msg_done = 1;
+				msg_done = true;
 				break;
 			default:
 				break;
@@ -159,7 +159,7 @@ void message_checkInput()
 					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button) ||
 					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button))
 
-					msg_done = 1;
+					msg_done = true;
 			}
 			break;
 		}
@@ -193,11 +193,11 @@ void message_gui_init(const char* msg)
 	if (sdl_window == nullptr)
 	{
 		sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			0,
-			0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		                              SDL_WINDOWPOS_UNDEFINED,
+		                              SDL_WINDOWPOS_UNDEFINED,
+		                              0,
+		                              0,
+		                              SDL_WINDOW_FULLSCREEN_DESKTOP);
 		check_error_sdl(sdl_window == nullptr, "Unable to create window:");
 	}
 	if (msg_screen == nullptr)
@@ -276,7 +276,8 @@ void message_gui_init(const char* msg)
 
 	if (msg_texture == nullptr)
 	{
-		msg_texture = SDL_CreateTexture(renderer, msg_screen->format->format, SDL_TEXTUREACCESS_STREAMING, msg_screen->w, msg_screen->h);
+		msg_texture = SDL_CreateTexture(renderer, msg_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
+		                                msg_screen->w, msg_screen->h);
 		check_error_sdl(msg_texture == nullptr, "Unable to create texture from Surface");
 	}
 #endif
@@ -314,7 +315,7 @@ void message_widgets_init(const char* msg)
 	cmdDone = new gcn::Button("Ok");
 	cmdDone->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdDone->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
-		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	                     DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdDone->setBaseColor(msg_baseCol);
 	cmdDone->setId("Done");
 	cmdDone->addActionListener(doneActionListener);

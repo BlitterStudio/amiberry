@@ -32,7 +32,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 		"Vasiliki Soufi - Amiberry name\n"
 		"\n"
 		"Dedicated to HeZoR - R.I.P. little brother (1978-2017)\n"
-		);
+	);
 
 	textBox->setBackgroundColor(gui_baseCol);
 	textBoxScrollArea = new gcn::ScrollArea(textBox);
@@ -65,10 +65,9 @@ void ExitPanelAbout()
 
 void RefreshPanelAbout()
 {
-	
 }
 
-bool HelpPanelAbout(std::vector<std::string> &helptext)
+bool HelpPanelAbout(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Here you can see the version information as well as");

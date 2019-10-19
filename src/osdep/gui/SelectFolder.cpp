@@ -48,7 +48,6 @@ public:
 		if (actionEvent.getSource() == cmdOK)
 		{
 			dialogResult = true;
-			
 		}
 		dialogFinished = true;
 	}
@@ -173,7 +172,7 @@ static void InitSelectFolder(const char* title)
   editDirPathActionListener = new EditDirPathActionListener();
   txtCurrent->addActionListener(editDirPathActionListener);
 #else
-  txtCurrent->setEnabled(false);
+	txtCurrent->setEnabled(false);
 #endif
 
 	listBoxActionListener = new ListBoxActionListener();
@@ -191,7 +190,7 @@ static void InitSelectFolder(const char* title)
 #ifdef ANDROID
   scrAreaFolders->setScrollbarWidth(30);
 #else
-  scrAreaFolders->setScrollbarWidth(20);
+	scrAreaFolders->setScrollbarWidth(20);
 #endif
 	scrAreaFolders->setBaseColor(gui_baseCol);
 
@@ -285,8 +284,9 @@ static void SelectFolderLoop()
 				default:
 					break;
 				}
-			}                        
-			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
+			}
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type ==
+				SDL_JOYAXISMOTION)
 			{
 				if (gui_joystick)
 				{
@@ -305,25 +305,29 @@ static void SelectFolderLoop()
 						break;
 					}
 
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
 					{
 						navigate_left();
 						break;
 					}
 
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)
+						|| SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
 					{
 						navigate_right();
 						break;
 					}
 
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
 					{
 						PushFakeKey(SDLK_UP);
 						break;
 					}
 
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
 					{
 						PushFakeKey(SDLK_DOWN);
 						break;
@@ -353,7 +357,7 @@ static void SelectFolderLoop()
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}

@@ -91,26 +91,27 @@ public:
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
 			RefreshPanelCustom();
 		}
-			
+
 		else if (actionEvent.getSource() == chkRetroArchMenu)
 		{
 			changed_prefs.use_retroarch_menu = chkRetroArchMenu->isSelected();
 			RefreshPanelCustom();
 		}
-			
+
 		else if (actionEvent.getSource() == chkRetroArchReset)
 		{
 			changed_prefs.use_retroarch_reset = chkRetroArchReset->isSelected();
 			RefreshPanelCustom();
 		}
-			
-		//      else if (actionEvent.getSource() == chkRetroArchSavestate)
-		//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
+
+			//      else if (actionEvent.getSource() == chkRetroArchSavestate)
+			//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
 
 		else if (actionEvent.getSource() == chkBSDSocket)
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
-		else if (actionEvent.getSource() == chkMasterWP) {
+		else if (actionEvent.getSource() == chkMasterWP)
+		{
 			changed_prefs.floppy_read_only = chkMasterWP->isSelected();
 			RefreshPanelQuickstart();
 			RefreshPanelFloppy();
@@ -382,12 +383,18 @@ void RefreshPanelMisc()
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
 
 	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
-	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0 ? changed_prefs.quit_amiberry : "Click to map");
-	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0 ? changed_prefs.action_replay : "Click to map");
-	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0 ? changed_prefs.fullscreen_toggle : "Click to map");
+	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0
+		                       ? changed_prefs.quit_amiberry
+		                       : "Click to map");
+	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0
+		                            ? changed_prefs.action_replay
+		                            : "Click to map");
+	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0
+		                          ? changed_prefs.fullscreen_toggle
+		                          : "Click to map");
 }
 
-bool HelpPanelMisc(std::vector<std::string> &helptext)
+bool HelpPanelMisc(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("\"Status Line\" Shows/Hides the status line indicator.");

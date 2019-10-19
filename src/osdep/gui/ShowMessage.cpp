@@ -86,7 +86,6 @@ static void InitShowMessage()
 	wndShowMessage->requestModalFocus();
 }
 
-
 static void ExitShowMessage()
 {
 	wndShowMessage->releaseModalFocus();
@@ -130,7 +129,8 @@ static void ShowMessageWaitInputLoop()
 
 			if (event.type == SDL_CONTROLLERBUTTONDOWN)
 			{
-				dialogControlPressed = SDL_GameControllerGetStringForButton(SDL_GameControllerButton(event.cbutton.button));
+				dialogControlPressed = SDL_GameControllerGetStringForButton(
+					SDL_GameControllerButton(event.cbutton.button));
 				dialogFinished = true;
 				break;
 			}
@@ -152,7 +152,7 @@ static void ShowMessageWaitInputLoop()
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
@@ -258,7 +258,6 @@ static void ShowMessageLoop()
 		UpdateGuiScreen();
 	}
 }
-
 
 bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2)
 {

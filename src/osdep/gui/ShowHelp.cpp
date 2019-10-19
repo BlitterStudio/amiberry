@@ -56,7 +56,6 @@ public:
 
 static HelpListModel* helpList;
 
-
 class ShowHelpActionListener : public gcn::ActionListener
 {
 public:
@@ -67,7 +66,6 @@ public:
 };
 
 static ShowHelpActionListener* showHelpActionListener;
-
 
 static void InitShowHelp(const vector<string>& helptext)
 {
@@ -114,7 +112,6 @@ static void InitShowHelp(const vector<string>& helptext)
 	wndShowHelp->requestModalFocus();
 }
 
-
 static void ExitShowHelp(void)
 {
 	wndShowHelp->releaseModalFocus();
@@ -129,7 +126,6 @@ static void ExitShowHelp(void)
 
 	delete wndShowHelp;
 }
-
 
 static void ShowHelpLoop(void)
 {
@@ -201,12 +197,11 @@ static void ShowHelpLoop(void)
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
 }
-
 
 void ShowHelp(const char* title, const vector<string>& text)
 {

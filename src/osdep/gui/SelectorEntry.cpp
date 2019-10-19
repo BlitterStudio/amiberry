@@ -31,7 +31,6 @@ namespace gcn
 		setId(caption);
 	}
 
-
 	SelectorEntry::~SelectorEntry()
 	{
 		removeWidgetListener(this);
@@ -40,14 +39,12 @@ namespace gcn
 		delete icon;
 	}
 
-
 	void SelectorEntry::draw(Graphics* graphics)
 	{
 		container->draw(graphics);
 		if (isFocused())
 			graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4, getHeight() - 4));
 	}
-
 
 	void SelectorEntry::setInactiveColor(const Color& color)
 	{
@@ -56,14 +53,12 @@ namespace gcn
 			container->setBaseColor(color);
 	}
 
-
 	void SelectorEntry::setActiveColor(const Color& color)
 	{
 		activeColor = color;
 		if (active)
 			container->setBaseColor(color);
 	}
-
 
 	void SelectorEntry::setActive(const bool active)
 	{
@@ -74,12 +69,10 @@ namespace gcn
 			container->setBaseColor(inactiveColor);
 	}
 
-
 	bool SelectorEntry::getActive() const
 	{
 		return active;
 	}
-
 
 	void SelectorEntry::widgetResized(const Event& event)
 	{

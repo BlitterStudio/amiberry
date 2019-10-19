@@ -20,13 +20,13 @@ static gcn::UaeRadioButton* optECSAgnus;
 static gcn::UaeRadioButton* optECS;
 static gcn::UaeRadioButton* optAGA;
 static gcn::UaeCheckBox* chkNTSC;
-static gcn::Label *lblChipset;
+static gcn::Label* lblChipset;
 static gcn::UaeDropDown* cboChipset;
 static gcn::Window* grpBlitter;
 static gcn::UaeRadioButton* optBlitNormal;
 static gcn::UaeRadioButton* optBlitImmed;
 static gcn::UaeRadioButton* optBlitWait;
-static gcn::Window *grpCopper;
+static gcn::Window* grpCopper;
 static gcn::UaeCheckBox* chkFastCopper;
 static gcn::Window* grpCollisionLevel;
 static gcn::UaeRadioButton* optCollNone;
@@ -34,29 +34,31 @@ static gcn::UaeRadioButton* optCollSprites;
 static gcn::UaeRadioButton* optCollPlayfield;
 static gcn::UaeRadioButton* optCollFull;
 
-struct chipset {
+struct chipset
+{
 	int compatible;
 	char name[32];
 };
+
 static struct chipset chipsets[] = {
-	{ CP_GENERIC, "Generic" },
-	{ CP_CDTV,	  "CDTV" },
-	{ CP_CDTVCR,  "CDTV-CR" },
-	{ CP_CD32,    "CD32" },
-	{ CP_A500,    "A500" },
-	{ CP_A500P,   "A500+" },
-	{ CP_A600,    "A600" },
-	{ CP_A1000,   "A1000" },
-	{ CP_A1200,   "A1200" },
-	{ CP_A2000,   "A2000" },
-	{ CP_A3000,   "A3000" },
-	{ CP_A3000T,  "A3000T" },
-	{ CP_A4000,   "A4000" },
-	{ CP_A4000T,  "A4000T" },
-	{ CP_VELVET,  "Velvet" },
-	{ CP_CASABLANCA, "Casablanca" },
-	{ CP_DRACO,  "DraCo" },
-	{ -1, "" }
+	{CP_GENERIC, "Generic"},
+	{CP_CDTV, "CDTV"},
+	{CP_CDTVCR, "CDTV-CR"},
+	{CP_CD32, "CD32"},
+	{CP_A500, "A500"},
+	{CP_A500P, "A500+"},
+	{CP_A600, "A600"},
+	{CP_A1000, "A1000"},
+	{CP_A1200, "A1200"},
+	{CP_A2000, "A2000"},
+	{CP_A3000, "A3000"},
+	{CP_A3000T, "A3000T"},
+	{CP_A4000, "A4000"},
+	{CP_A4000T, "A4000T"},
+	{CP_VELVET, "Velvet"},
+	{CP_CASABLANCA, "Casablanca"},
+	{CP_DRACO, "DraCo"},
+	{-1, ""}
 };
 
 static const int numChipsets = 17;
@@ -79,6 +81,7 @@ public:
 		return chipsets[i].name;
 	}
 };
+
 static ChipsetListModel chipsetList;
 static bool bIgnoreListChange = true;
 
@@ -88,13 +91,16 @@ class ChipsetActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (!bIgnoreListChange) {
-			if (actionEvent.getSource() == cboChipset) {
+		if (!bIgnoreListChange)
+		{
+			if (actionEvent.getSource() == cboChipset)
+			{
 				//---------------------------------------
 				// Chipset selected
 				//---------------------------------------
 				const auto cs = chipsets[cboChipset->getSelected()].compatible;
-				if (changed_prefs.cs_compatible != cs) {
+				if (changed_prefs.cs_compatible != cs)
+				{
 					changed_prefs.cs_compatible = cs;
 					built_in_chipset_prefs(&changed_prefs);
 					RefreshPanelChipset();
@@ -103,6 +109,7 @@ public:
 		}
 	}
 };
+
 static ChipsetActionListener* chipsetActionListener;
 
 class ChipsetButtonActionListener : public gcn::ActionListener
@@ -148,12 +155,13 @@ static NTSCButtonActionListener* ntscButtonActionListener;
 
 class FastCopperActionListener : public gcn::ActionListener
 {
-  public:
-    void action(const gcn::ActionEvent& actionEvent) override
-    {
-	    changed_prefs.fast_copper = chkFastCopper->isSelected();
-    }
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		changed_prefs.fast_copper = chkFastCopper->isSelected();
+	}
 };
+
 static FastCopperActionListener* fastCopperActionListener;
 
 
@@ -265,7 +273,8 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	chkFastCopper->addActionListener(fastCopperActionListener);
 
 	grpCopper = new gcn::Window("Copper");
-	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
+	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X,
+	                       grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
 	grpCopper->add(chkFastCopper, 5, 10);
 	grpCopper->setMovable(false);
 	grpCopper->setSize(chkFastCopper->getWidth() + DISTANCE_BORDER, 55);
@@ -342,8 +351,10 @@ void RefreshPanelChipset()
 {
 	bIgnoreListChange = true;
 	auto idx = 0;
-	for (auto i = 0; i<numChipsets; ++i) {
-		if (chipsets[i].compatible == changed_prefs.cs_compatible) {
+	for (auto i = 0; i < numChipsets; ++i)
+	{
+		if (chipsets[i].compatible == changed_prefs.cs_compatible)
+		{
 			idx = i;
 			break;
 		}
@@ -381,7 +392,7 @@ void RefreshPanelChipset()
 		optCollFull->setSelected(true);
 }
 
-bool HelpPanelChipset(std::vector<std::string> &helptext)
+bool HelpPanelChipset(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games,");

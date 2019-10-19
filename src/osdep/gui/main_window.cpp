@@ -44,26 +44,50 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 }
 
 ConfigCategory categories[] = {
-	{ "About",            "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout,     RefreshPanelAbout,      HelpPanelAbout },
-	{ "Paths",            "data/paths.ico", nullptr, nullptr, InitPanelPaths,     ExitPanelPaths,     RefreshPanelPaths,      HelpPanelPaths },
-	{ "Quickstart",       "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart,  ExitPanelQuickstart,  RefreshPanelQuickstart, HelpPanelQuickstart },
-	{ "Configurations",   "data/file.ico", nullptr, nullptr, InitPanelConfig,    ExitPanelConfig,    RefreshPanelConfig,     HelpPanelConfig },
-	{ "CPU and FPU",      "data/cpu.ico", nullptr, nullptr, InitPanelCPU,       ExitPanelCPU,       RefreshPanelCPU,        HelpPanelCPU },
-	{ "Chipset",          "data/cpu.ico", nullptr, nullptr, InitPanelChipset,   ExitPanelChipset,   RefreshPanelChipset,    HelpPanelChipset },
-	{ "ROM",              "data/chip.ico", nullptr, nullptr, InitPanelROM,       ExitPanelROM,       RefreshPanelROM,        HelpPanelROM },
-	{ "RAM",              "data/chip.ico", nullptr, nullptr, InitPanelRAM,       ExitPanelRAM,       RefreshPanelRAM,        HelpPanelRAM },
-	{ "Floppy drives",    "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy,    ExitPanelFloppy,    RefreshPanelFloppy,     HelpPanelFloppy },
-	{ "Hard drives/CD",   "data/drive.ico", nullptr, nullptr, InitPanelHD,        ExitPanelHD,        RefreshPanelHD,         HelpPanelHD },
-	{ "Display",          "data/screen.ico", nullptr, nullptr, InitPanelDisplay,   ExitPanelDisplay,   RefreshPanelDisplay,    HelpPanelDisplay },
-	{ "Sound",            "data/sound.ico", nullptr, nullptr, InitPanelSound,     ExitPanelSound,     RefreshPanelSound,      HelpPanelSound },
-	{ "Input",            "data/joystick.ico", nullptr, nullptr, InitPanelInput,     ExitPanelInput,     RefreshPanelInput,      HelpPanelInput },
-	{ "Custom controls",  "data/controller.png",  nullptr, nullptr, InitPanelCustom,     ExitPanelCustom,     RefreshPanelCustom,      HelpPanelCustom },
-	{ "Miscellaneous",    "data/misc.ico",      nullptr, nullptr, InitPanelMisc,      ExitPanelMisc,      RefreshPanelMisc,       HelpPanelMisc },
-	{ "Savestates",       "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate, RefreshPanelSavestate,  HelpPanelSavestate },
-#ifdef ANDROID  
+	{
+		"About", "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
+		HelpPanelAbout
+	},
+	{"Paths", "data/paths.ico", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths, HelpPanelPaths},
+	{
+		"Quickstart", "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
+		RefreshPanelQuickstart, HelpPanelQuickstart
+	},
+	{
+		"Configurations", "data/file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
+		HelpPanelConfig
+	},
+	{"CPU and FPU", "data/cpu.ico", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU, HelpPanelCPU},
+	{
+		"Chipset", "data/cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
+		HelpPanelChipset
+	},
+	{"ROM", "data/chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM, HelpPanelROM},
+	{"RAM", "data/chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM, HelpPanelRAM},
+	{
+		"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
+		HelpPanelFloppy
+	},
+	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
+	{
+		"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
+		HelpPanelDisplay
+	},
+	{"Sound", "data/sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
+	{"Input", "data/joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
+	{
+		"Custom controls", "data/controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
+		RefreshPanelCustom, HelpPanelCustom
+	},
+	{"Miscellaneous", "data/misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
+	{
+		"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
+		RefreshPanelSavestate, HelpPanelSavestate
+	},
+#ifdef ANDROID
 	{ "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
-	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }
+	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
 
 enum
@@ -263,7 +287,7 @@ void UpdateGuiScreen()
 #ifdef USE_DISPMANX
 #else
 // Sets the cursor image up
-void setup_cursor() 
+void setup_cursor()
 {
 	// Detect resolution and load appropriate cursor image
 	if (strcmp(sdl_video_driver, "x11") != 0 && sdlMode.w > 1280)
@@ -274,7 +298,7 @@ void setup_cursor()
 	{
 		cursor_surface = SDL_LoadBMP("data/cursor.bmp");
 	}
-	
+
 	if (!cursor_surface)
 	{
 		// Load failed. Log error.
@@ -289,7 +313,7 @@ void setup_cursor()
 		cursor = SDL_CreateColorCursor(formattedSurface, 0, 0);
 		SDL_FreeSurface(formattedSurface);
 	}
-	
+
 	if (!cursor)
 	{
 		// Cursor creation failed. Log error and free surface
@@ -393,13 +417,14 @@ void amiberry_gui_init()
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-	gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w, gui_screen->h);
+	gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
+	                                gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
 	SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	SDL_ShowCursor(SDL_ENABLE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
-	
+
 	//-------------------------------------------------
 	// Create helpers for GUI framework
 	//-------------------------------------------------
@@ -552,7 +577,8 @@ void checkInput()
 					}
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || hat & SDL_HAT_RIGHT) // dpad
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || hat & SDL_HAT_RIGHT)
+					// dpad
 				{
 					if (HandleNavigation(DIRECTION_RIGHT))
 						continue; // Don't change value when enter Slider -> don't send event to control
@@ -775,7 +801,7 @@ void amiberry_gui_run()
 
 		if (refreshFuncAfterDraw != nullptr)
 		{
-			void(*currFunc)() = refreshFuncAfterDraw;
+			void (*currFunc)() = refreshFuncAfterDraw;
 			refreshFuncAfterDraw = nullptr;
 			currFunc();
 		}
@@ -787,7 +813,7 @@ void amiberry_gui_run()
 		SDL_JoystickClose(gui_joystick);
 		gui_joystick = nullptr;
 		joypad_axis_state.clear();
-	}	
+	}
 }
 
 class MainButtonActionListener : public gcn::ActionListener
@@ -921,7 +947,7 @@ void gui_widgets_init()
 	{
 		gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
 	}
-	catch(const std::exception& ex)
+	catch (const std::exception& ex)
 	{
 		write_log("Could not open data/AmigaTopaz.ttf!\n");
 		abort();
@@ -930,7 +956,7 @@ void gui_widgets_init()
 	{
 		write_log("An error occurred while trying to open data/AmigaTopaz.ttf!\n");
 		abort();
-	}		
+	}
 
 	gcn::Widget::setGlobalFont(gui_font);
 	gui_font->setAntiAlias(false);
@@ -1020,10 +1046,14 @@ void gui_widgets_init()
 #ifndef ANDROID
 	gui_top->add(cmdShutdown, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 #endif
-	gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
-	gui_top->add(cmdRestart, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
-	gui_top->add(cmdHelp, DISTANCE_BORDER + 3 * BUTTON_WIDTH + 3 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
-	gui_top->add(cmdReset, DISTANCE_BORDER + 5 * BUTTON_WIDTH + 5 * DISTANCE_NEXT_X, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+	gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X,
+	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+	gui_top->add(cmdRestart, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X,
+	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+	gui_top->add(cmdHelp, DISTANCE_BORDER + 3 * BUTTON_WIDTH + 3 * DISTANCE_NEXT_X,
+	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+	gui_top->add(cmdReset, DISTANCE_BORDER + 5 * BUTTON_WIDTH + 5 * DISTANCE_NEXT_X,
+	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
 	gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
@@ -1130,21 +1160,21 @@ void run_gui()
 #endif
 	}
 
-	// Catch all GUI framework exceptions.
-	catch (gcn::Exception &e)
+		// Catch all GUI framework exceptions.
+	catch (gcn::Exception& e)
 	{
 		std::cout << e.getMessage() << std::endl;
 		uae_quit();
 	}
 
-	// Catch all Std exceptions.
-	catch (exception &e)
+		// Catch all Std exceptions.
+	catch (exception& e)
 	{
 		std::cout << "Std exception: " << e.what() << std::endl;
 		uae_quit();
 	}
 
-	// Catch all unknown exceptions.
+		// Catch all unknown exceptions.
 	catch (...)
 	{
 		std::cout << "Unknown exception" << std::endl;
