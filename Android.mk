@@ -24,13 +24,14 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/$(LIBXML_PATH)/include
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-    LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DAMIBERRY -D_REENTRANT -D_FILE_OFFSET_BITS=64
+    LOCAL_ARM_NEON := true
+    LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_ARMNEON
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-    LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_REENTRANT -D_FILE_OFFSET_BITS=64
+    LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_FILE_OFFSET_BITS=64
 endif
 
 LOCAL_CPPFLAGS := -std=gnu++14 -pipe -frename-registers \
-                    -Wno-shift-overflow -Wno-narrowing -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+                    -Wno-shift-overflow -Wno-narrowing
 
 LOCAL_LDFLAGS +=
 
