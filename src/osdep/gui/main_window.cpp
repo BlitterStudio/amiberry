@@ -333,7 +333,7 @@ void amiberry_gui_init()
 
 #ifdef USE_DISPMANX
 	displayHandle = vc_dispmanx_display_open(0);
-	
+	rgb_mode = VC_IMAGE_RGB565;
 	uint32_t vc_gui_image_ptr;
 	if (!gui_resource)
 		gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
