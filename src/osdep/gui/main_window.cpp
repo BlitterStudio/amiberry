@@ -241,12 +241,7 @@ static void ShowHelpRequested()
 #ifdef SOFTWARE_CURSOR
 static SDL_Rect dst;
 void swcursor(bool op) {
-	if (op == -1) {
-		SDL_DestroyTexture(swcursor_texture);
-		swcursor_texture = NULL;
-
-	}
-	else if (op == 0) {
+	if (!op) {
 		cursor_surface = SDL_LoadBMP("data/cursor.bmp");
 		swcursor_texture = SDL_CreateTextureFromSurface(renderer, cursor_surface);
 		// Hide real cursor
@@ -278,7 +273,7 @@ void UpdateGuiScreen()
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
 #ifdef SOFTWARE_CURSOR
-	swcursor(1);
+	swcursor(true);
 #endif
 	SDL_RenderPresent(renderer);
 #endif
@@ -305,7 +300,7 @@ void setup_cursor()
 		SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
 		return;
 	}
-	auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
+	auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_BGR565, 0);
 	if (formattedSurface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
@@ -399,10 +394,10 @@ void amiberry_gui_init()
 	}
 #else
 #ifdef SOFTWARE_CURSOR
-	swcursor(0);
+	swcursor(false);
 	SDL_GetCurrentDisplayMode(0, &physmode);
-	mscalex = ((double)GUI_WIDTH / (double)physmode.w);
-	mscaley = ((double)GUI_HEIGHT / (double)physmode.h);
+	mscalex = (double(GUI_WIDTH) / double(physmode.w));
+	mscaley = (double(GUI_HEIGHT) / double(physmode.h));
 #else
 	setup_cursor();
 #endif
@@ -487,14 +482,20 @@ void amiberry_gui_halt()
 		gui_texture = nullptr;
 	}
 
-	if (cursor)
+	if (cursor != nullptr)
 	{
 		SDL_FreeCursor(cursor);
 		cursor = nullptr;
 	}
 
 #ifdef SOFTWARE_CURSOR
-	if (cursor_surface)
+	if (swcursor_texture != nullptr)
+	{
+		SDL_DestroyTexture(swcursor_texture);
+		swcursor_texture = nullptr;
+	}
+	
+	if (cursor_surface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
 		cursor_surface = nullptr;
@@ -1160,21 +1161,21 @@ void run_gui()
 #endif
 	}
 
-		// Catch all GUI framework exceptions.
+	// Catch all GUI framework exceptions.
 	catch (gcn::Exception& e)
 	{
 		std::cout << e.getMessage() << std::endl;
 		uae_quit();
 	}
 
-		// Catch all Std exceptions.
+	// Catch all Std exceptions.
 	catch (exception& e)
 	{
 		std::cout << "Std exception: " << e.what() << std::endl;
 		uae_quit();
 	}
 
-		// Catch all unknown exceptions.
+	// Catch all unknown exceptions.
 	catch (...)
 	{
 		std::cout << "Unknown exception" << std::endl;
