@@ -732,7 +732,7 @@ addrbank mbres_bank = {
 	ABFLAG_IO, S_READ, S_WRITE, mbres_sub_banks
 };
 
-static int pcmcia_common_size, pcmcia_attrs_size;
+static int pcmcia_common_size, pcmcia_attrs_size, pcmcia_attrs_full;
 static uae_u8 *pcmcia_common;
 static uae_u8 *pcmcia_attrs;
 static int pcmcia_write_min, pcmcia_write_max;
@@ -829,7 +829,12 @@ static uae_u32 gayle_attr_read (uaecptr addr)
 			}
 		}
 	}
-	v = pcmcia_attrs[addr / 2];
+	if (pcmcia_attrs_full) {
+		v = pcmcia_attrs[addr];
+	}
+	else {
+		v = pcmcia_attrs[addr / 2];
+	}
 	return v;
 }
 
@@ -1091,6 +1096,7 @@ static int freepcmcia (int reset)
 	xfree (pcmcia_attrs);
 	pcmcia_common = NULL;
 	pcmcia_attrs = NULL;
+	pcmcia_attrs_full = 0;
 	pcmcia_common_size = 0;
 	pcmcia_attrs_size = 0;
 
@@ -1125,21 +1131,30 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 			readonly = 1;
 		pcmcia_common_size = 0;
 		pcmcia_readonly = readonly;
-		pcmcia_attrs_size = 256;
+		pcmcia_attrs_size = 0x40000;
 		pcmcia_attrs = xcalloc (uae_u8, pcmcia_attrs_size);
 		pcmcia_type = type;
 
 		if (!pcmcia_disk->hfd.drive_empty) {
+			int extrasize = 0;
 			pcmcia_common_size = pcmcia_disk->hfd.virtsize;
 			if (pcmcia_disk->hfd.virtsize > 4 * 1024 * 1024) {
 				write_log (_T("PCMCIA SRAM: too large device, %llu bytes\n"), pcmcia_disk->hfd.virtsize);
+				extrasize = pcmcia_disk->hfd.virtsize - 4 * 1024 * 1024;
 				pcmcia_common_size = 4 * 1024 * 1024;
 			}
 			pcmcia_common = xcalloc (uae_u8, pcmcia_common_size);
-			write_log (_T("PCMCIA SRAM: '%s' open, size=%d\n"), path, pcmcia_common_size);
 			hdf_read (&pcmcia_disk->hfd, pcmcia_common, 0, pcmcia_common_size);
 			pcmcia_card = 1;
-			initsramattr (pcmcia_common_size, readonly);
+			if (extrasize >= 256 && extrasize < 1 * 1024 * 1024) {
+				hdf_read(&pcmcia_disk->hfd, pcmcia_attrs, pcmcia_common_size, 0x40000);
+				write_log(_T("PCMCIA SRAM: Attribute data read\n"));
+				pcmcia_attrs_full = 1;
+			}
+			else {
+				initsramattr(pcmcia_common_size, readonly);
+			}
+			write_log(_T("PCMCIA SRAM: '%s' open, size=%d\n"), path, pcmcia_common_size);
 		}
 
 	} else if (type == PCMCIA_IDE) {
