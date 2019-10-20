@@ -226,9 +226,9 @@ struct color_change {
 
 struct sprite_entry
 {
-	unsigned short pos;
-	unsigned short max;
-	unsigned int first_pixel;
+	uae_u16 pos;
+	uae_u16 max;
+	uae_u32 first_pixel;
 	bool has_attached;
 };
 
