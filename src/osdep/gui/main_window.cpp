@@ -494,12 +494,6 @@ void amiberry_gui_halt()
 		SDL_DestroyTexture(swcursor_texture);
 		swcursor_texture = nullptr;
 	}
-	
-	if (cursor_surface != nullptr)
-	{
-		SDL_FreeSurface(cursor_surface);
-		cursor_surface = nullptr;
-	}
 #endif
 	// Clear the screen
 	SDL_RenderClear(renderer);
