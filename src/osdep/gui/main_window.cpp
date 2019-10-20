@@ -300,7 +300,7 @@ void setup_cursor()
 		SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
 		return;
 	}
-	auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_BGR565, 0);
+	auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
 	if (formattedSurface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
