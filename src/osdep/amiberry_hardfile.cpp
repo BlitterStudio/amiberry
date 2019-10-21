@@ -108,10 +108,10 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 
 		if (low == -1) {
 			// assuming regular file; seek to end and ftell
-			ret = fseeko(f, 0, SEEK_END);
+			ret = _fseeki64(f, 0, SEEK_END);
 			if (ret)
 				goto end;
-			low = ftello(f);
+			low = _ftelli64(f);
 			if (low == -1)
 				goto end;
 		}
@@ -203,7 +203,7 @@ static int hdf_seek(struct hardfiledata *hfd, uae_u64 offset)
 	}
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
 	{
-		auto ret = fseeko(hfd->handle->f, offset, SEEK_SET);
+		auto ret = _fseeki64(hfd->handle->f, offset, SEEK_SET);
 		if (ret != 0)
 		{
 			write_log("hdf_seek failed\n");
@@ -224,14 +224,14 @@ static void poscheck(struct hardfiledata *hfd, int len)
 
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
 	{
-		ret = fseeko(hfd->handle->f, 0, SEEK_CUR);
+		ret = _fseeki64(hfd->handle->f, 0, SEEK_CUR);
 		if (ret)
 		{
 			write_log(_T("hd: poscheck failed. seek failure"));
 			target_startup_msg(_T("Internal error"), _T("hd: poscheck failed. seek failure."));
 			abort();
 		}
-		pos = ftello(hfd->handle->f);
+		pos = _ftelli64(hfd->handle->f);
 	}
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
 	{

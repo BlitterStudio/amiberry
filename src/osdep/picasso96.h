@@ -711,6 +711,7 @@ extern int p96refresh_active;
 #define CARD_END (CARD_IRQCODE + 11 * 2)
 #define CARD_SIZEOF CARD_END
 
+#ifndef ANDROID
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -719,6 +720,7 @@ extern int p96refresh_active;
   void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
 #ifdef __cplusplus
   }
+#endif
 #endif
 
 #endif

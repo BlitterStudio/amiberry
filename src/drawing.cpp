@@ -2304,7 +2304,7 @@ Don't touch this if you don't know what you are doing.  */
 #define GETLONG(P) (*(uae_u32 *)P)
 #define GETLONG64(P) (*(uae_u64 *)P)
 
-#if defined(CPU_AARCH64) || defined(USE_ARMNEON) && !defined(ANDROID)
+#if (defined(CPU_AARCH64) || defined(USE_ARMNEON)) && !defined(ANDROID)
 
 #ifdef __cplusplus
   extern "C" {
@@ -2482,7 +2482,7 @@ static void pfield_doline (int lineno)
 
 #define DATA_POINTER(n) ((debug_bpl_mask & (1 << n)) ? (line_data[lineno] + (n) * MAX_WORDS_PER_LINE * 2) : (debug_bpl_mask_one ? all_ones : all_zeros))
 
-#if defined(CPU_AARCH64) || defined(USE_ARMNEON) && !defined(ANDROID)
+#if (defined(CPU_AARCH64) || defined(USE_ARMNEON)) && !defined(ANDROID)
 	pfield_doline_n[bplplanecnt](data, wordcount, lineno);
 #else
 	real_bplpt[0] = DATA_POINTER(0);
