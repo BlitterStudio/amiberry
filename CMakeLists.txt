@@ -262,7 +262,7 @@ if(BUILD_PSP2)
           SDL2 SDL2_image SDL2_ttf guisan FLAC mpg123 dl mpeg2convert mpeg2
           ${CMAKE_SOURCE_DIR}/src/osdep/psp2/vita2d_fbo/lib/libvita2d.a
           ${CMAKE_SOURCE_DIR}/src/osdep/psp2/vita-shader-collection/lib/libvitashaders.a
-          ${CMAKE_SOURCE_DIR}/guisan-dev/lib/libguisan.a
+          ${CMAKE_SOURCE_DIR}/external/libguisan/lib/libguisan.a
           SceSysmodule_stub SceDisplay_stub SceGxm_stub
           SceCtrl_stub ScePgf_stub ScePower_stub SceCommonDialog_stub
           SceAudio_stub SceShellSvc_stub SceHid_stub SceTouch_stub png jpeg z m c
