@@ -174,8 +174,8 @@ all: guisan $(PROG)
 export SDL_CFLAGS := $(shell sdl2-config --cflags)
 export SDL_LDFLAGS := $(shell sdl2-config --libs)
 
-CPPFLAGS += $(SDL_CFLAGS) -Iguisan-dev/include
-LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
+CPPFLAGS += $(SDL_CFLAGS) -Iexterna/libguisan/include
+LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
 
 #
 # Common options
@@ -437,6 +437,6 @@ bootrom:
 	touch src/filesys.cpp
 
 guisan:
-	$(MAKE) -C guisan-dev
+	$(MAKE) -C external/libguisan
 	
 -include $(DEPS)

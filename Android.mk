@@ -2,26 +2,29 @@ AMIBERRY_LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_PATH := $(AMIBERRY_LOCAL_PATH)
 
-include $(LOCAL_PATH)/guisan-dev/Android.mk
+include $(LOCAL_PATH)/external/libguisan/Android.mk
+LOCAL_PATH := $(AMIBERRY_LOCAL_PATH)
+include $(CLEAR_VARS)
+
+include $(LOCAL_PATH)/external/libxml2/Android.mk
 LOCAL_PATH := $(AMIBERRY_LOCAL_PATH)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := amiberry
 
-SDL_PATH := /home/midwan/projects/amiberry-android/app/jni/SDL
+SDL_PATH := D:/Github/amiberry-android/app/jni/SDL
 #LIBMPEG2_PATH := ../mpeg2
-LIBPNG_PATH := /home/midwan/projects/amiberry-android/app/jni/SDL_image/external/libpng-1.6.37
-LIBXML_PATH := /home/midwan/projects/amiberry-android/app/jni/xml2
+LIBPNG_PATH := D:/Github/amiberry-android/app/jni/SDL_image/external/libpng-1.6.37
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/osdep \
                     $(LOCAL_PATH)/src/threaddep \
                     $(LOCAL_PATH)/src/include \
                     $(LOCAL_PATH)/src/archivers \
-                    $(LOCAL_PATH)/guisan-dev/include \
+                    $(LOCAL_PATH)/external/libguisan/include \
+                    $(LOCAL_PATH)/external/libxml2/include \
                     $(SDL_PATH)/include \
                     $(LIBPNG_PATH) \
-                    $(LIBXML_PATH)/include
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_ARM_NEON := true
@@ -208,7 +211,8 @@ LOCAL_SRC_FILES += src/newcpu.cpp \
                     src/jit/compemu_fpp.cpp \
                     src/jit/compemu_support.cpp
 
-LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer xml2 mpg123 guisan
+LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer mpg123 guisan
+LOCAL_STATIC_LIBRARIES := xml2
 
 LOCAL_LDLIBS := -ldl -lGLESv1_CM -lGLESv2 -llog -lz
 
