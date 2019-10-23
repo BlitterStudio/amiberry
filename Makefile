@@ -162,8 +162,8 @@ endif
 
 RM     = rm -f
 AS     = as
-CC     = gcc
-CXX    = g++
+CC     ?= gcc
+CXX    ?= g++
 STRIP  ?= strip
 PROG   = amiberry
 
@@ -174,7 +174,7 @@ all: guisan $(PROG)
 export SDL_CFLAGS := $(shell sdl2-config --cflags)
 export SDL_LDFLAGS := $(shell sdl2-config --libs)
 
-CPPFLAGS += $(SDL_CFLAGS) -Iexterna/libguisan/include
+CPPFLAGS += $(SDL_CFLAGS) -Iexternal/libguisan/include
 LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
 
 #
@@ -427,7 +427,7 @@ endif
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
-	$(MAKE) -C guisan-dev clean
+	$(MAKE) -C external/libguisan clean
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
