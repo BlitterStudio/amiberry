@@ -1,4 +1,3 @@
-#ifdef USE_SDL2
 #include <SDL.h>
 
 static SDL_Window* window = NULL;
@@ -126,4 +125,3 @@ void SDL_Flip(SDL_Surface *surface) {
 		}
 	}
 }
-#endif
