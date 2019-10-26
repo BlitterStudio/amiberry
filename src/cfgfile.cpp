@@ -6215,10 +6215,10 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	_tcscpy(p->cartfile, _T(""));
 	_tcscpy (p->rtcfile, _T(""));
 
-	sprintf (p->path_rom.path[0], _T("%s/kickstarts/"), start_path_data);
-	sprintf (p->path_floppy.path[0], _T("%s/disks/"), start_path_data);
-	sprintf (p->path_hardfile.path[0], _T("%s/"), start_path_data);
-	sprintf (p->path_cd.path[0], _T("%s/cd32/"), start_path_data);
+	_tcscpy(p->path_rom.path[0], _T("./"));
+	_tcscpy(p->path_floppy.path[0], _T("./"));
+	_tcscpy(p->path_hardfile.path[0], _T("./"));
+	_tcscpy(p->path_cd.path[0], _T("./"));
 
 	p->prtname[0] = 0;
 	p->sername[0] = 0;
