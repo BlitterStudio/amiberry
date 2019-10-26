@@ -2,12 +2,14 @@
 #include "string.h"
 #include <cstdlib>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
-#include "options.h"
+#include "custom.h"
 #include "inputdevice.h"
+#include "options.h"
 
-#include "zfile.h"  /// Horace added
-#include <fstream>  /// Horace added 
+#include "zfile.h"  // Horace added
+#include <fstream>  // Horace added 
 #include <algorithm>
 
 static struct host_input_button default_controller_map;
