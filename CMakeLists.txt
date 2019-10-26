@@ -304,20 +304,22 @@ if(BUILD_NX)
     ${DEVKITPRO}/portlibs/switch/include/SDL2
     ${DEVKITPRO}/libnx/include
     ${DEVKITPRO}/portlibs/switch/include
+    src
+    src/osdep
+    src/osdep/switch
+    src/include
+    src/threaddep
+    src/archivers
   )
   
   add_definitions(
     -DVERSION=\"${BUILD_DATE}\"
-    -DGP2X
-    -DPANDORA
     -D__SWITCH__
     -D__64BIT__
     -DUSE_AUTOCONFIG
     -DUSE_ZFILE
     -DUSE_FAME_CORE
     -DWITH_TESTMODE
-    -DUSE_SDL
-    -DUSE_SDL2
     -DGCCCONSTFUNC=\"__attribute__\(\(const\)\)\"
     -DUSE_UNDERSCORE
     -DSHM_SUPPORT_LINKS=0
@@ -328,6 +330,9 @@ if(BUILD_NX)
     -DDATA_PREFIX=\"./data/\"
     -DSAVE_PREFIX=\"./saves/\"
     -DUSE_AMIBERRY_VKBD
+    -DAMIBERRY
+    -D_FILE_OFFSET_BITS=64
+    -DCPU_AARCH64
   )
 
   set(FLAGS
@@ -347,7 +352,7 @@ if(BUILD_NX)
     -mlittle-endian
     -ffunction-sections
     -fno-rtti
-    -fno-exceptions
+    -fexceptions
 #    -fomit-frame-pointer
 #    -fno-strict-aliasing
 #    -fexpensive-optimizations		
@@ -363,6 +368,8 @@ if(BUILD_NX)
   set(LIBS
     SDL2 
     SDL2_image
+    SDL2_ttf
+    xml2
     EGL
     GLESv2
     glapi
