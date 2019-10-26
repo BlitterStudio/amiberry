@@ -27,7 +27,6 @@ static gcn::TextField* txtDesc;
 static gcn::UaeListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
 
-
 bool LoadConfigByName(const char* name)
 {
 	ConfigFileInfo* config = SearchConfigInList(name);
@@ -57,7 +56,6 @@ void SetLastActiveConfig(const char* filename)
 	removeFileExtension(last_active_config);
 }
 
-
 class ConfigsListModel : public gcn::ListModel
 {
 	vector<string> configs;
@@ -73,7 +71,7 @@ public:
 
 	string getElementAt(int i) override
 	{
-		if (i >= configs.size() || i < 0)
+		if (i >= int(configs.size()) || i < 0)
 			return "---";
 		return configs[i];
 	}
@@ -97,7 +95,6 @@ public:
 };
 
 static ConfigsListModel* configsList;
-
 
 class ConfigButtonActionListener : public gcn::ActionListener
 {
@@ -170,7 +167,6 @@ public:
 };
 
 static ConfigButtonActionListener* configButtonActionListener;
-
 
 class ConfigsListActionListener : public gcn::ActionListener
 {
