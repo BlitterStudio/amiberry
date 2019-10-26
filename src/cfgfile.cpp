@@ -6544,7 +6544,8 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->floppy_speed = 0;
 	p->cpu_idle = 150;
 	p->cs_compatible = CP_A3000;
-	p->mbresmem_low_size = 8 * 1024 * 1024;
+	//p->mbresmem_low_size = 8 * 1024 * 1024;
+	p->z3fastmem[0].size = 8 * 1024 * 1024;
 	built_in_chipset_prefs (p);
 	p->cs_ciaatod = p->ntscmode ? 2 : 1;
 	return configure_rom (p, roms, romcheck);
@@ -6561,7 +6562,8 @@ static int bip_a4000(struct uae_prefs* p, int config, int compa, int romcheck)
 
 	p->bogomem_size = 0;
 	p->chipmem_size = 0x200000;
-	p->mbresmem_low_size = 8 * 1024 * 1024;
+	//p->mbresmem_low_size = 8 * 1024 * 1024;
+	p->z3fastmem[0].size = 8 * 1024 * 1024;
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
 	switch (config)
@@ -6588,7 +6590,6 @@ static int bip_a4000(struct uae_prefs* p, int config, int compa, int romcheck)
 }
 static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 {
-
 	int roms[8];
 
 	roms[0] = 16;
@@ -6598,7 +6599,8 @@ static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 
 	p->bogomem_size = 0;
 	p->chipmem_size = 0x200000;
-	p->mbresmem_low_size = 8 * 1024 * 1024;
+	//p->mbresmem_low_size = 8 * 1024 * 1024;
+	p->z3fastmem[0].size = 8 * 1024 * 1024;
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
 	if (config > 0) {
