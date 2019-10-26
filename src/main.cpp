@@ -49,7 +49,7 @@ long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 struct uae_prefs currprefs, changed_prefs;
 int config_changed;
 
-bool no_gui = false;
+bool no_gui = false, quit_to_gui = false;
 bool cloanto_rom = false;
 bool kickstart_rom = true;
 
@@ -829,15 +829,15 @@ static int real_main2(int argc, TCHAR** argv)
 		fixup_prefs(&currprefs, true);
 	}
 
-	if (restart_config[0])
-		parse_cmdline_and_init_file(argc, argv);
-	else
-		copy_prefs(&changed_prefs, &currprefs);
-
 	if (!graphics_setup())
 	{
 		abort();
 	}
+	
+	if (restart_config[0])
+		parse_cmdline_and_init_file(argc, argv);
+	else
+		copy_prefs(&changed_prefs, &currprefs);
 
 	if (!machdep_init())
 	{
@@ -936,13 +936,14 @@ void real_main(int argc, TCHAR** argv)
 
 	fetch_configurationpath(restart_config, sizeof restart_config / sizeof(TCHAR));
 	_tcscat(restart_config, OPTIONSFILENAME);
-	_tcscat(restart_config, ".uae");
 	default_config = 1;
 
 	while (restart_program)
 	{
 		copy_prefs(&currprefs, &changed_prefs);
-		real_main2(argc, argv);
+		auto ret = real_main2(argc, argv);
+		if (ret == 0 && quit_to_gui)
+			restart_program = 1;
 		leave_program();
 		quit_program = 0;
 	}

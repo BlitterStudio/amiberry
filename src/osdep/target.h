@@ -11,7 +11,7 @@
 
 #define NO_MAIN_IN_MAIN_C
 
-#define OPTIONSFILENAME "uaeconfig"
+#define OPTIONSFILENAME _T("default.uae")
 
 #if !defined(ARMV6T2) && !defined(CPU_AARCH64)
 #undef USE_JIT_FPU
