@@ -363,11 +363,11 @@ bool HandleNavigation(int direction)
 	{
 		gcn::Widget* activeWidget = focusHdl->getFocused();
 
-		if (activeWidget != nullptr && activeWidget->getId().length() > 0)
+		if (activeWidget != nullptr && activeWidget->getId().length() > 0 && activeWidget->getId().substr(0, 3) != "txt")
 		{
 			std::string activeName = activeWidget->getId();
-			bool bFoundEnabled = false;
-			int tries = 10;
+			auto bFoundEnabled = false;
+			auto tries = 10;
 
 			while (!bFoundEnabled && tries > 0)
 			{
@@ -422,7 +422,7 @@ bool HandleNavigation(int direction)
 			{
 				if (activeWidget->getId().substr(0, 3) == "cbo" || activeWidget->getId().substr(0, 5) == "qscbo")
 				{
-					gcn::UaeDropDown* dropdown = static_cast<gcn::UaeDropDown*>(activeWidget);
+					auto dropdown = dynamic_cast<gcn::UaeDropDown*>(activeWidget);
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
 						focusTarget = nullptr; // Up/down navigates in list if dropped down
 				}
@@ -437,11 +437,11 @@ bool HandleNavigation(int direction)
 
 void PushFakeKey(const SDL_Keycode inKey)
 {
-	SDL_Event nuevent;
+	SDL_Event event;
 
-	nuevent.type = SDL_KEYDOWN; // and the key up
-	nuevent.key.keysym.sym = inKey;
-	gui_input->pushInput(nuevent); // Fire key down
-	nuevent.type = SDL_KEYUP; // and the key up
-	gui_input->pushInput(nuevent); // Fire key down
+	event.type = SDL_KEYDOWN; // and the key up
+	event.key.keysym.sym = inKey;
+	gui_input->pushInput(event); // Fire key down
+	event.type = SDL_KEYUP; // and the key up
+	gui_input->pushInput(event); // Fire key down
 }
