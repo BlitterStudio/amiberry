@@ -2,11 +2,9 @@
 #include "string.h"
 #include <cstdlib>
 
-#include "sysconfig.h"
 #include "sysdeps.h"
-#include "custom.h"
-#include "inputdevice.h"
 #include "options.h"
+#include "inputdevice.h"
 
 #include "zfile.h"  // Horace added
 #include <fstream>  // Horace added 
