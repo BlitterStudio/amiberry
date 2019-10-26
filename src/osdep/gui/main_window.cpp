@@ -559,14 +559,14 @@ void checkInput()
 
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].left_shoulder)) // dpad
 				{
-					for (int z = 0; z < 10; ++z)
+					for (auto z = 0; z < 10; ++z)
 					{
 						PushFakeKey(SDLK_UP);
 					}
 				}
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].right_shoulder)) // dpad
 				{
-					for (int z = 0; z < 10; ++z)
+					for (auto z = 0; z < 10; ++z)
 					{
 						PushFakeKey(SDLK_DOWN);
 					}
