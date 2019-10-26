@@ -6,7 +6,6 @@
 void gayle_add_ide_unit (int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 bool gayle_ide_init(struct autoconfig_info*);
 void gayle_free_units (void);
-void gayle_map_pcmcia (void);
 bool gayle_init_pcmcia(struct autoconfig_info *aci);
 bool gayle_init_board_io_pcmcia(struct autoconfig_info *aci);
 bool gayle_init_board_common_pcmcia(struct autoconfig_info *aci);
