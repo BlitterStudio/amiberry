@@ -59,6 +59,7 @@ void keyboard_settrans();
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
+extern bool can_have_1gb();
 
 extern void fetch_configurationpath(char *out, int size);
 extern void set_configurationpath(char *newpath);

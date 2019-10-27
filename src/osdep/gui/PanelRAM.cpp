@@ -8,7 +8,7 @@
 #include "include/memory.h"
 #include "gfxboard.h"
 #include "gui_handling.h"
-
+#include "target.h"
 
 static const char* ChipMem_list[] = {"512 K", "1 MB", "2 MB", "4 MB", "8 MB"};
 static unsigned int ChipMem_values[] = {0x080000, 0x100000, 0x200000, 0x400000, 0x800000};
@@ -151,7 +151,10 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	lblFastsize = new gcn::Label("None   ");
 
 	lblZ3mem = new gcn::Label("Z3 fast:");
-	sldZ3mem = new gcn::Slider(0, 11);
+	if (can_have_1gb())
+		sldZ3mem = new gcn::Slider(0, 11);
+	else
+		sldZ3mem = new gcn::Slider(0, 10);
 	sldZ3mem->setSize(sldWidth, SLIDER_HEIGHT);
 	sldZ3mem->setBaseColor(gui_baseCol);
 	sldZ3mem->setMarkerLength(markerLength);
@@ -302,7 +305,10 @@ void RefreshPanelRAM()
 		}
 	}
 
-	for (i = 0; i < 12; ++i)
+	auto counter = 11;
+	if (can_have_1gb())
+		counter = 12;
+	for (i = 0; i < counter; ++i)
 	{
 		if (changed_prefs.z3fastmem[0].size == FastMem_values[i])
 		{
