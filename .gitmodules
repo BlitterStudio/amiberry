@@ -4,3 +4,6 @@
 [submodule "external/capsimg"]
 	path = external/capsimg
 	url = https://github.com/FrodeSolheim/capsimg
+[submodule "external/libxml2"]
+	path = external/libxml2
+	url = https://github.com/midwan/libxml2
