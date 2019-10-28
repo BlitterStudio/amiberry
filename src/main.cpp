@@ -101,15 +101,15 @@ void discard_prefs(struct uae_prefs* p, int type)
 
 static void fixup_prefs_dim2(struct wh* wh)
 {
-	if (wh->width < 320)
+	if (wh->width < 160)
 	{
-		error_log(_T("Width (%d) must be at least 320."), wh->width);
-		wh->width = 320;
+		error_log(_T("Width (%d) must be at least 160."), wh->width);
+		wh->width = 160;
 	}
-	if (wh->height < 200)
+	if (wh->height < 128)
 	{
-		error_log(_T("Height (%d) must be at least 200."), wh->height);
-		wh->height = 200;
+		error_log(_T("Height (%d) must be at least 128."), wh->height);
+		wh->height = 128;
 	}
 	if (wh->width > 1920)
 	{

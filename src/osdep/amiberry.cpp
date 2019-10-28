@@ -347,9 +347,9 @@ void target_fixup_options(struct uae_prefs* p)
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 	if (p->gfx_monitor.gfx_size.width == 0)
-		p->gfx_monitor.gfx_size.width = 640;
+		p->gfx_monitor.gfx_size.width = 720;
 	if (p->gfx_monitor.gfx_size.height == 0)
-		p->gfx_monitor.gfx_size.height = 256;
+		p->gfx_monitor.gfx_size.height = 288;
 	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? 1 : 0;
 
 	if (p->gfx_vresolution && !can_have_linedouble) // If there's not enough vertical space, cancel Line Doubling/Scanlines

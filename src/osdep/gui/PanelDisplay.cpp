@@ -13,8 +13,8 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = {320, 352, 384, 640, 704, 768};
-const int amigaheight_values[] = {200, 216, 240, 256, 262, 270};
+const int amigawidth_values[] = {320, 352, 384, 640, 704, 720};
+const int amigaheight_values[] = {200, 216, 240, 256, 262, 288};
 
 static gcn::Window* grpScalingMethod;
 static gcn::UaeRadioButton* optAuto;
