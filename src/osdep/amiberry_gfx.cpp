@@ -205,16 +205,22 @@ static int display_thread(void *unused)
 			else
 			{
 				if (screen_is_picasso)
+				{
+					width = display_width;
 					height = display_height;
+				}
 				else
+				{
+					width = display_width * 2 >> changed_prefs.gfx_resolution;
 					height = display_height * 2 >> changed_prefs.gfx_vresolution;
+				}
 
 				const auto want_aspect = float(width) / float(height);
 				const auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
 
 				if (want_aspect > real_aspect)
 				{
-					const auto scale = float(modeInfo.width) / float(display_width);
+					const auto scale = float(modeInfo.width) / float(width);
 					viewport.x = 0;
 					viewport.w = modeInfo.width;
 					viewport.h = int(std::ceil(height * scale));
@@ -225,7 +231,7 @@ static int display_thread(void *unused)
 					const auto scale = float(modeInfo.height) / float(height);
 					viewport.y = 0;
 					viewport.h = modeInfo.height;
-					viewport.w = int(std::ceil(display_width * scale));
+					viewport.w = int(std::ceil(width * scale));
 					viewport.x = (modeInfo.width - viewport.w) / 2;
 				}
 
@@ -573,7 +579,7 @@ static void open_screen(struct uae_prefs* p)
 			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
 		
 		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 720;
-		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 283) << p->gfx_vresolution;;
+		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 283) << p->gfx_vresolution;
 
 #ifdef USE_DISPMANX
 #else
