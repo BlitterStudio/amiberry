@@ -350,7 +350,7 @@ void target_fixup_options(struct uae_prefs* p)
 		p->gfx_monitor.gfx_size.width = 720;
 	if (p->gfx_monitor.gfx_size.height == 0)
 		p->gfx_monitor.gfx_size.height = 288;
-	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? 1 : 0;
+	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? RES_HIRES : RES_LORES;
 
 	if (p->gfx_vresolution && !can_have_linedouble) // If there's not enough vertical space, cancel Line Doubling/Scanlines
 		p->gfx_vresolution = 0;
@@ -362,11 +362,6 @@ void target_fixup_options(struct uae_prefs* p)
 
 	if (p->cachesize <= 0)
 		p->compfpu = false;
-
-	if (p->vertical_offset < -16)
-		p->vertical_offset = -16;
-	else if (p->vertical_offset > 16)
-		p->vertical_offset = 16;
 	
 	fix_apmodes(p);
 	set_key_configs(p);
@@ -380,7 +375,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
-	p->vertical_offset = OFFSET_Y_ADJUST;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
 	if (scanlines_by_default)
@@ -390,7 +384,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	}
 	else
 	{
-		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due performance hit
+		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due to performance hit
 		p->gfx_pscanlines = 0;
 	}
 
@@ -459,7 +453,6 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	cfgfile_write(f, "amiberry.vertical_offset", "%d", p->vertical_offset - OFFSET_Y_ADJUST);
 	cfgfile_write(f, "amiberry.hide_idle_led", "%d", p->hide_idle_led);
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
@@ -558,12 +551,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (result)
 		return 1;
 #endif
-	
-	if (cfgfile_intval(option, value, "vertical_offset", &p->vertical_offset, 1))
-	{
-		p->vertical_offset += OFFSET_Y_ADJUST;
-		return 1;
-	}
 	
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;

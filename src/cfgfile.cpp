@@ -134,11 +134,13 @@ static const TCHAR *linemode[] = {
 	nullptr
 };
 static const TCHAR* speedmode[] = {_T("max"), _T("real"), _T("turbo"), nullptr};
+static const TCHAR* colormode1[] = { _T("8bit"), _T("15bit"), _T("16bit"), _T("8bit_dither"), _T("4bit_dither"), _T("32bit"), 0 };
+static const TCHAR* colormode2[] = { _T("8"), _T("15"), _T("16"), _T("8d"), _T("4d"), _T("32"), 0 };
 static const TCHAR* soundmode1[] = {_T("none"), _T("interrupts"), _T("normal"), _T("exact"), nullptr};
 static const TCHAR* soundmode2[] = {_T("none"), _T("interrupts"), _T("good"), _T("best"), nullptr};
-static const TCHAR* stereomode[] = {
-	_T("mono"), _T("stereo"), _T("clonedstereo"), _T("4ch"), _T("clonedstereo6ch"), _T("6ch"), _T("mixed"), nullptr
-};
+static const TCHAR* centermode1[] = { _T("none"), _T("simple"), _T("smart"), 0 };
+static const TCHAR* centermode2[] = { _T("false"), _T("true"), _T("smart"), 0 };
+static const TCHAR* stereomode[] = { _T("mono"), _T("stereo"), _T("clonedstereo"), _T("4ch"), _T("clonedstereo6ch"), _T("6ch"), _T("mixed"), nullptr};
 static const TCHAR* interpolmode[] = {_T("none"), _T("anti"), _T("sinc"), _T("rh"), _T("crux"), nullptr};
 static const TCHAR* collmode[] = {_T("none"), _T("sprites"), _T("playfields"), _T("full"), nullptr};
 static const TCHAR* soundfiltermode1[] = {_T("off"), _T("emulated"), _T("on"), nullptr};
@@ -162,6 +164,9 @@ static const TCHAR *qsmodes[] = {
 	_T("A500"), _T("A500+"), _T("A600"), _T("A1000"), _T("A1200"), _T("A3000"), _T("A4000"), _T(""), _T("CD32"), _T("CDTV"), _T("CDTV-CR"), _T("ARCADIA"), NULL };
 /* 3-state boolean! */
 static const TCHAR *fullmodes[] = { _T("false"), _T("true"), /* "FILE_NOT_FOUND", */ _T("fullwindow"), nullptr };
+static const TCHAR* scsimode[] = { _T("false"), _T("true"), _T("scsi"), 0 };
+static const TCHAR* maxhoriz[] = { _T("lores"), _T("hires"), _T("superhires"), 0 };
+static const TCHAR* maxvert[] = { _T("nointerlace"), _T("interlace"), 0 };
 static const TCHAR* abspointers[] = {_T("none"), _T("mousehack"), _T("tablet"), nullptr};
 static const TCHAR* joyportmodes[] = {
 	_T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), nullptr
@@ -2081,7 +2086,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write_str(f, _T("gfx_linemode"), p->gfx_vresolution > 0 ? linemode[p->gfx_iscanlines * 4 + p->gfx_pscanlines + 1] : linemode[0]);
 	cfgfile_write_str(f, _T("gfx_fullscreen_amiga"), fullmodes[p->gfx_apmode[0].gfx_fullscreen]);
 	cfgfile_write_str(f, _T("gfx_fullscreen_picasso"), fullmodes[p->gfx_apmode[1].gfx_fullscreen]);
-
+	cfgfile_write_str(f, _T("gfx_center_horizontal"), centermode1[p->gfx_xcenter]);
+	cfgfile_write_str(f, _T("gfx_center_vertical"), centermode1[p->gfx_ycenter]);
+	
 	cfgfile_write_bool(f, _T("ntsc"), p->ntscmode);
 
 	cfg_write(_T("; "), f);
@@ -3000,6 +3007,25 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		|| cfgfile_yesno(option, value, _T("floppy1wp"), &p->floppyslots[1].forcedwriteprotect)
 		|| cfgfile_yesno(option, value, _T("floppy2wp"), &p->floppyslots[2].forcedwriteprotect)
 		|| cfgfile_yesno(option, value, _T("floppy3wp"), &p->floppyslots[3].forcedwriteprotect)
+		|| cfgfile_yesno(option, value, _T("sampler_stereo"), &p->sampler_stereo)
+		|| cfgfile_yesno(option, value, _T("sound_auto"), &p->sound_auto)
+		|| cfgfile_yesno(option, value, _T("sound_cdaudio"), &p->sound_cdaudio)
+		|| cfgfile_yesno(option, value, _T("sound_volcnt"), &p->sound_volcnt)
+		|| cfgfile_yesno(option, value, _T("sound_stereo_swap_paula"), &p->sound_stereo_swap_paula)
+		|| cfgfile_yesno(option, value, _T("sound_stereo_swap_ahi"), &p->sound_stereo_swap_ahi)
+		|| cfgfile_yesno(option, value, _T("log_illegal_mem"), &p->illegal_mem)
+		|| cfgfile_yesno(option, value, _T("filesys_no_fsdb"), &p->filesys_no_uaefsdb)
+		|| cfgfile_yesno(option, value, _T("gfx_monochrome"), &p->gfx_grayscale)
+		|| cfgfile_yesno(option, value, _T("gfx_blacker_than_black"), &p->gfx_blackerthanblack)
+		|| cfgfile_yesno(option, value, _T("gfx_black_frame_insertion"), &p->lightboost_strobo)
+		|| cfgfile_yesno(option, value, _T("gfx_flickerfixer"), &p->gfx_scandoubler)
+		|| cfgfile_yesno(option, value, _T("gfx_autoresolution_vga"), &p->gfx_autoresolution_vga)
+		|| cfgfile_yesno(option, value, _T("show_refresh_indicator"), &p->refresh_indicator)
+		|| cfgfile_yesno(option, value, _T("warp"), &p->turbo_emulation)
+		|| cfgfile_yesno(option, value, _T("headless"), &p->headless)
+		|| cfgfile_yesno(option, value, _T("clipboard_sharing"), &p->clipboard_sharing)
+		|| cfgfile_yesno(option, value, _T("native_code"), &p->native_code)
+		|| cfgfile_yesno(option, value, _T("tablet_library"), &p->tablet_library)
 		|| cfgfile_yesno(option, value, _T("bsdsocket_emu"), &p->socket_emu))
 		return 1;
 
@@ -3016,6 +3042,20 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		|| cfgfile_strval(option, value, _T("gfx_lores_mode"), &p->gfx_lores_mode, loresmode, 0)
 		|| cfgfile_strval(option, value, _T("gfx_fullscreen_amiga"), &p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen, fullmodes, 0)
 		|| cfgfile_strval(option, value, _T("gfx_fullscreen_picasso"), &p->gfx_apmode[APMODE_RTG].gfx_fullscreen, fullmodes, 0)
+		|| cfgfile_strval(option, value, _T("gfx_center_horizontal"), &p->gfx_xcenter, centermode1, 1)
+		|| cfgfile_strval(option, value, _T("gfx_center_vertical"), &p->gfx_ycenter, centermode1, 1)
+		|| cfgfile_strval(option, value, _T("gfx_center_horizontal"), &p->gfx_xcenter, centermode2, 0)
+		|| cfgfile_strval(option, value, _T("gfx_center_vertical"), &p->gfx_ycenter, centermode2, 0)
+		|| cfgfile_strval(option, value, _T("gfx_colour_mode"), &p->color_mode, colormode1, 1)
+		|| cfgfile_strval(option, value, _T("gfx_colour_mode"), &p->color_mode, colormode2, 0)
+		|| cfgfile_strval(option, value, _T("gfx_color_mode"), &p->color_mode, colormode1, 1)
+		|| cfgfile_strval(option, value, _T("gfx_color_mode"), &p->color_mode, colormode2, 0)
+		|| cfgfile_strval(option, value, _T("gfx_max_horizontal"), &p->gfx_max_horizontal, maxhoriz, 0)
+		|| cfgfile_strval(option, value, _T("gfx_max_vertical"), &p->gfx_max_vertical, maxvert, 0)
+		//|| cfgfile_strval(option, value, _T("gfx_api"), &p->gfx_api, filterapi, 0)
+		//|| cfgfile_strval(option, value, _T("gfx_api_options"), &p->gfx_api_options, filterapiopts, 0)
+		//|| cfgfile_strval(option, value, _T("gfx_atari_palette_fix"), &p->gfx_threebitcolors, threebitcolors, 0)
+		//|| cfgfile_strval(option, value, _T("magic_mousecursor"), &p->input_magic_mouse_cursor, magiccursors, 0)
 		|| cfgfile_strval(option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
 
@@ -3066,6 +3106,8 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	{
 		cfgfile_intval (option, value, _T("gfx_width"), &p->gfx_monitor.gfx_size.width, 1);
 		cfgfile_intval (option, value, _T("gfx_height"), &p->gfx_monitor.gfx_size.height, 1);
+		p->gfx_monitor.gfx_size_fs.width = p->gfx_monitor.gfx_size_win.width = p->gfx_monitor.gfx_size.width;
+		p->gfx_monitor.gfx_size_fs.height = p->gfx_monitor.gfx_size_win.height = p->gfx_monitor.gfx_size.height;
 		return 1;
 	}
 
@@ -6124,14 +6166,18 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 
 	p->gfx_framerate = 1;
 	p->gfx_autoframerate = 50;
-	p->gfx_monitor.gfx_size.width = 640; //TODO: Default WinUAE prefs indicate this should be 720x568
-	p->gfx_monitor.gfx_size.height = 256;
+	p->gfx_monitor.gfx_size_fs.width = 800;
+	p->gfx_monitor.gfx_size_fs.height = 600;
+	p->gfx_monitor.gfx_size_win.width = 720;
+	p->gfx_monitor.gfx_size_win.height = 568;
+	p->gfx_monitor.gfx_size.width = 724;
+	p->gfx_monitor.gfx_size.height = 283;
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_NONDOUBLE;
 	p->gfx_iscanlines = 0;
 	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
-	p->gfx_xcenter = 0; p->gfx_ycenter = 0;
+	p->gfx_xcenter = 2; p->gfx_ycenter = 2;
 	p->gfx_xcenter_pos = -1;
 	p->gfx_ycenter_pos = -1;
 	p->gfx_xcenter_size = -1;

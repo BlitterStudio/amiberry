@@ -4360,50 +4360,77 @@ void compute_framesync(void)
 	lof_togglecnt_lace = 0;
 	lof_togglecnt_nlace = 0;
 	lof_changing = 0;
-
+	vidinfo->drawbuffer.inxoffset = -1;
+	vidinfo->drawbuffer.inyoffset = -1;
+	
 	if (beamcon0 & 0x80) {
-		static bool warned = false;
-		if (!warned) {
-			warned = true;
-			gui_message(_T("Variable beam counter comparator enabled. Not supported in Amiberry."));
-		}
+		int res = GET_RES_AGNUS(bplcon0);
+		int vres = islace ? 1 : 0;
+		int res2, vres2;
+
+		res2 = currprefs.gfx_resolution;
+		if (doublescan > 0)
+			res2++;
+		if (res2 > RES_MAX)
+			res2 = RES_MAX;
+
+		vres2 = currprefs.gfx_vresolution;
+		if (doublescan > 0 && !islace)
+			vres2--;
+
+		if (vres2 < 0)
+			vres2 = 0;
+		if (vres2 > VRES_QUAD)
+			vres2 = VRES_QUAD;
+
+		int start = hsyncstartpos; //hbstrt;
+		int stop = hsyncendpos; //hbstop;
+
+		vidinfo->drawbuffer.inwidth = ((maxhpos - (maxhpos - start + DISPLAY_LEFT_SHIFT / 2) + 1) * 2) << res2;
+		vidinfo->drawbuffer.inxoffset = stop * 2;
+
+		vidinfo->drawbuffer.extrawidth = 0;
+		vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.inwidth;
+
+		vidinfo->drawbuffer.inheight = ((firstblankedline < maxvpos ? firstblankedline : maxvpos) - minfirstline + 1) << vres2;
+		vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.inheight;
+		
 	} else {
 
-		//vidinfo->drawbuffer.outwidth = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
-		//vidinfo->drawbuffer.extrawidth = currprefs.gfx_extrawidth ? currprefs.gfx_extrawidth : -1;
-		//vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.inwidth;
-		//vidinfo->drawbuffer.outheight = (maxvpos_display - minfirstline + 1) << currprefs.gfx_vresolution;
-		//vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.inheight;
-
+		vidinfo->drawbuffer.inwidth = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
+		vidinfo->drawbuffer.extrawidth = currprefs.gfx_extrawidth ? currprefs.gfx_extrawidth : -1;
+		vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.inwidth;
+		vidinfo->drawbuffer.inheight = (maxvpos_display - minfirstline + 1) << currprefs.gfx_vresolution;
+		vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.inheight;
 	}
 
-	if (vidinfo->drawbuffer.outwidth < 16)
-		vidinfo->drawbuffer.outwidth = 16;
-	//if (vidinfo->drawbuffer.inwidth2 < 16)
-		//vidinfo->drawbuffer.inwidth2 = 16;
-	if (vidinfo->drawbuffer.outheight < 1)
-		vidinfo->drawbuffer.outheight = 1;
-	//if (vidinfo->drawbuffer.inheight2 < 1)
-		//vidinfo->drawbuffer.inheight2 = 1;
+	if (vidinfo->drawbuffer.inwidth < 16)
+		vidinfo->drawbuffer.inwidth = 16;
+	if (vidinfo->drawbuffer.inwidth2 < 16)
+		vidinfo->drawbuffer.inwidth2 = 16;
+	if (vidinfo->drawbuffer.inheight < 1)
+		vidinfo->drawbuffer.inheight = 1;
+	if (vidinfo->drawbuffer.inheight2 < 1)
+		vidinfo->drawbuffer.inheight2 = 1;
 
-	//if (vidinfo->drawbuffer.inwidth > vidinfo->drawbuffer.width_allocated)
-		//vidinfo->drawbuffer.inwidth = vidinfo->drawbuffer.width_allocated;
-	//if (vidinfo->drawbuffer.inwidth2 > vidinfo->drawbuffer.width_allocated)
-		//vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.width_allocated;
+	if (vidinfo->drawbuffer.inwidth > vidinfo->drawbuffer.width_allocated)
+		vidinfo->drawbuffer.inwidth = vidinfo->drawbuffer.width_allocated;
+	if (vidinfo->drawbuffer.inwidth2 > vidinfo->drawbuffer.width_allocated)
+		vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.width_allocated;
 
-	//if (vidinfo->drawbuffer.inheight > vidinfo->drawbuffer.height_allocated)
-		//vidinfo->drawbuffer.inheight = vidinfo->drawbuffer.height_allocated;
-	//if (vidinfo->drawbuffer.inheight2 > vidinfo->drawbuffer.height_allocated)
-		//vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.height_allocated;
+	if (vidinfo->drawbuffer.inheight > vidinfo->drawbuffer.height_allocated)
+		vidinfo->drawbuffer.inheight = vidinfo->drawbuffer.height_allocated;
+	if (vidinfo->drawbuffer.inheight2 > vidinfo->drawbuffer.height_allocated)
+		vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.height_allocated;
 
-	//vidinfo->drawbuffer.outwidth = vidinfo->drawbuffer.inwidth;
-	//vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.inheight;
+	vidinfo->drawbuffer.outwidth = vidinfo->drawbuffer.inwidth;
+	vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.inheight;
 
-	//if (vidinfo->drawbuffer.outwidth > vidinfo->drawbuffer.width_allocated)
-		//vidinfo->drawbuffer.outwidth = vidinfo->drawbuffer.width_allocated;
+	if (vidinfo->drawbuffer.outwidth > vidinfo->drawbuffer.width_allocated)
+		vidinfo->drawbuffer.outwidth = vidinfo->drawbuffer.width_allocated;
 
-	//if (vidinfo->drawbuffer.outheight > vidinfo->drawbuffer.height_allocated)
-		//vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.height_allocated;
+	if (vidinfo->drawbuffer.outheight > vidinfo->drawbuffer.height_allocated)
+		vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.height_allocated;
 
 	memset (line_decisions, 0, sizeof line_decisions);
 	memset (line_drawinfo, 0, sizeof line_drawinfo);
@@ -4513,11 +4540,57 @@ static void init_hz (bool checkvposw)
 
 	if (beamcon0 & 0x80) {
 		// programmable scanrates (ECS Agnus)
-		static bool warned = false;
-		if (!warned) {
-			warned = true;
-			gui_message(_T("Programmable scanrates (ECS Agnus) not supported."));
+		if (vtotal >= MAXVPOS)
+			vtotal = MAXVPOS - 1;
+		maxvpos = vtotal + 1;
+		firstblankedline = maxvpos + 1;
+		if (htotal >= MAXHPOS)
+			htotal = MAXHPOS - 1;
+		maxhpos = htotal + 1;
+		vblank_hz_nom = vblank_hz = 227.0 * 312.0 * 50.0 / (maxvpos * maxhpos);
+		vblank_hz_shf = (float)vblank_hz;
+		vblank_hz_lof = (float)(227.0 * 313.0 * 50.0 / (maxvpos * maxhpos));
+		vblank_hz_lace = (float)(227.0 * 312.5 * 50.0 / (maxvpos * maxhpos));
+
+		if ((beamcon0 & 0x1000) && (beamcon0 & 0x0200)) { // VARVBEN + VARVSYEN
+			minfirstline = vsstop > vbstop ? vsstop : vbstop;
+			if (minfirstline > maxvpos / 2)
+				minfirstline = vsstop > vbstop ? vbstop : vsstop;
+			firstblankedline = vbstrt;
 		}
+		else if (beamcon0 & 0x0200) {
+			minfirstline = vsstop;
+			if (minfirstline > maxvpos / 2)
+				minfirstline = 0;
+		}
+		else if (beamcon0 & 0x1000) {
+			minfirstline = vbstop;
+			if (minfirstline > maxvpos / 2)
+				minfirstline = 0;
+			firstblankedline = vbstrt;
+		}
+
+		if (minfirstline < 2)
+			minfirstline = 2;
+		if (minfirstline >= maxvpos)
+			minfirstline = maxvpos - 1;
+
+		if (firstblankedline < minfirstline)
+			firstblankedline = maxvpos + 1;
+
+		sprite_vblank_endline = minfirstline - 2;
+		maxvpos_nom = maxvpos;
+		maxvpos_display = maxvpos;
+		equ_vblank_endline = -1;
+		doublescan = htotal <= 164 && vtotal >= 350 ? 1 : 0;
+		// if superhires and wide enough: not doublescan
+		if (doublescan && htotal >= 140 && (bplcon0 & 0x0040))
+			doublescan = 0;
+		programmedmode = true;
+		varsync_changed = true;
+		vpos_count = maxvpos_nom;
+		vpos_count_diff = maxvpos_nom;
+		hzc = 1;
 	}
 	if (maxvpos_nom >= MAXVPOS)
 		maxvpos_nom = MAXVPOS;

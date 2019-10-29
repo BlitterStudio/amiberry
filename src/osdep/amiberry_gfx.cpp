@@ -428,9 +428,10 @@ void allocsoftbuffer(struct uae_prefs* p)
 	/* Initialize structure for Amiga video modes */
 	auto ad = &adisplays;
 	ad->gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
+	ad->gfxvidinfo.drawbuffer.width_allocated = screen->w;
+	ad->gfxvidinfo.drawbuffer.height_allocated = screen->h;
+	
 	ad->gfxvidinfo.drawbuffer.bufmem = static_cast<uae_u8*>(screen->pixels);
-	ad->gfxvidinfo.drawbuffer.outwidth = p->gfx_monitor.gfx_size.width;
-	ad->gfxvidinfo.drawbuffer.outheight = p->gfx_monitor.gfx_size.height << p->gfx_vresolution;
 	ad->gfxvidinfo.drawbuffer.rowbytes = screen->pitch;
 }
 
@@ -539,6 +540,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 
 static void open_screen(struct uae_prefs* p)
 {
+	struct vidbuf_description* avidinfo = &adisplays.gfxvidinfo;
 	graphics_subshutdown();
 
 	if (max_uae_width == 0 || max_uae_height == 0)
@@ -555,8 +557,8 @@ static void open_screen(struct uae_prefs* p)
 	
 	if (screen_is_picasso)
 	{
-		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 720;
-		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 288;
+		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 724;
+		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 283;
 #ifdef USE_DISPMANX
 	//TODO Check if we can implement this in DISPMANX
 #else
@@ -565,9 +567,13 @@ static void open_screen(struct uae_prefs* p)
 	}
 	else
 	{
-		p->gfx_resolution = p->gfx_monitor.gfx_size.width ? (p->gfx_monitor.gfx_size.width > 600 ? 1 : 0) : 1;
-		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 640;
-		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 256) << p->gfx_vresolution;
+		if (currprefs.gfx_resolution > avidinfo->gfx_resolution_reserved)
+			avidinfo->gfx_resolution_reserved = currprefs.gfx_resolution;
+		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
+			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
+		
+		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 724;
+		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 283) << p->gfx_vresolution;;
 
 #ifdef USE_DISPMANX
 #else
@@ -620,7 +626,7 @@ static void open_screen(struct uae_prefs* p)
 				if (screen_is_picasso)
 					SDL_SetWindowSize(sdl_window, display_width, display_height);
 				else
-					SDL_SetWindowSize(sdl_window, display_width, display_height * 2 >> p->gfx_vresolution);
+					SDL_SetWindowSize(sdl_window, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
 			}	
 	}
 
@@ -654,7 +660,7 @@ static void open_screen(struct uae_prefs* p)
 	if (screen_is_picasso)
 		SDL_RenderSetLogicalSize(renderer, display_width, display_height);
 	else
-		SDL_RenderSetLogicalSize(renderer, display_width, display_height * 2 >> p->gfx_vresolution);
+		SDL_RenderSetLogicalSize(renderer, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
 
 	texture = SDL_CreateTexture(renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
@@ -709,12 +715,10 @@ int check_prefs_changed_gfx()
 		changed = 1;
 	}
 	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen ||
-		currprefs.hide_idle_led != changed_prefs.hide_idle_led || 
-		currprefs.vertical_offset != changed_prefs.vertical_offset)
+		currprefs.hide_idle_led != changed_prefs.hide_idle_led)
 	{
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
 		currprefs.hide_idle_led = changed_prefs.hide_idle_led;
-		currprefs.vertical_offset = changed_prefs.vertical_offset;
 		changed = 1;
 	}
 	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)

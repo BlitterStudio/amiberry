@@ -13,8 +13,8 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = {320, 352, 384, 640, 704, 720};
-const int amigaheight_values[] = {200, 216, 240, 256, 262, 288};
+const int amigawidth_values[] = {320, 362, 384, 640, 704, 724};
+const int amigaheight_values[] = {200, 216, 240, 256, 262, 283};
 
 static gcn::Window* grpScalingMethod;
 static gcn::UaeRadioButton* optAuto;
@@ -33,10 +33,6 @@ static gcn::Slider* sldAmigaWidth;
 static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
-
-static gcn::Label* lblVertPos;
-static gcn::Label* lblVertPosInfo;
-static gcn::Slider* sldVertPos;
 
 static gcn::UaeCheckBox* chkFrameskip;
 static gcn::UaeCheckBox* chkAspect;
@@ -60,14 +56,6 @@ public:
 			if (changed_prefs.gfx_monitor.gfx_size.height != amigaheight_values[int(sldAmigaHeight->getValue())])
 			{
 				changed_prefs.gfx_monitor.gfx_size.height = amigaheight_values[int(sldAmigaHeight->getValue())];
-				RefreshPanelDisplay();
-			}
-		}
-		else if (actionEvent.getSource() == sldVertPos)
-		{
-			if (changed_prefs.vertical_offset != int(sldVertPos->getValue()) + OFFSET_Y_ADJUST)
-			{
-				changed_prefs.vertical_offset = int(sldVertPos->getValue()) + OFFSET_Y_ADJUST;
 				RefreshPanelDisplay();
 			}
 		}
@@ -163,17 +151,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
-	lblVertPos = new gcn::Label("V. offset:");
-	lblVertPos->setAlignment(gcn::Graphics::RIGHT);
-	sldVertPos = new gcn::Slider(-16, 16);
-	sldVertPos->setSize(160, SLIDER_HEIGHT);
-	sldVertPos->setBaseColor(gui_baseCol);
-	sldVertPos->setMarkerLength(20);
-	sldVertPos->setStepLength(1);
-	sldVertPos->setId("sldVertPos");
-	sldVertPos->addActionListener(amigaScreenActionListener);
-	lblVertPosInfo = new gcn::Label("000");
-
 	chkAspect = new gcn::UaeCheckBox("Correct Aspect Ratio");
 	chkAspect->setId("CorrectAR");
 	chkAspect->addActionListener(amigaScreenActionListener);
@@ -198,14 +175,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	                    posY);
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 
-	grpAmigaScreen->add(lblVertPos, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(sldVertPos, lblVertPos->getX() + lblVertPos->getWidth() + DISTANCE_NEXT_X, posY);
-	grpAmigaScreen->add(lblVertPosInfo, sldVertPos->getX() + sldVertPos->getWidth() + 12, posY);
-	posY += sldVertPos->getHeight() + DISTANCE_NEXT_Y;
-
 	grpAmigaScreen->setMovable(false);
 	grpAmigaScreen->setSize(
-		lblVertPos->getX() + lblVertPos->getWidth() + sldVertPos->getWidth() + lblVertPosInfo->getWidth() + (
+		lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + (
 			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 
@@ -278,9 +250,9 @@ void ExitPanelDisplay()
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete lblAmigaHeightInfo;
-	delete lblVertPos;
-	delete sldVertPos;
-	delete lblVertPosInfo;
+	//delete lblVertPos;
+	//delete sldVertPos;
+	//delete lblVertPosInfo;
 	delete grpAmigaScreen;
 
 	delete chkAspect;
@@ -345,10 +317,6 @@ void RefreshPanelDisplay()
 		optDouble->setSelected(true);
 	else if (changed_prefs.gfx_vresolution == VRES_DOUBLE && changed_prefs.gfx_pscanlines == 1)
 		optScanlines->setSelected(true);
-
-	sldVertPos->setValue(changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
-	snprintf(tmp, 32, "%d", changed_prefs.vertical_offset - OFFSET_Y_ADJUST);
-	lblVertPosInfo->setCaption(tmp);
 }
 
 bool HelpPanelDisplay(std::vector<std::string>& helptext)
@@ -364,9 +332,6 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back("\"Nearest Neighbor\" will give you a more pixelated and crisp image, but it may come with ");
 	helptext.emplace_back("some distortion if your resolution is not an exact multiple. ");
 	helptext.emplace_back("\"Linear\" will give you a smoother scaling but some people might find it a bit blurry.");
-	helptext.emplace_back(" ");
-	helptext.emplace_back("With \"Vert. offset\" you can adjust the position of the first drawn line of the Amiga ");
-	helptext.emplace_back("screen.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back(
 		"Activate line doubling to remove flicker in interlace modes, or Scanlines for the CRT effect.");

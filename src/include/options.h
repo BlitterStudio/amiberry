@@ -821,7 +821,6 @@ struct uae_prefs {
 
 	int gfx_correct_aspect;
 	int scaling_method;
-	int vertical_offset;
 	int hide_idle_led;
 
 	TCHAR open_gui[256];

@@ -107,9 +107,27 @@ struct vidbuffer
     int rowbytes; /* Bytes per row in the memory pointed at by bufmem. */
     int pixbytes; /* Bytes per pixel. */
 	/* size of this buffer */
+	int width_allocated;
+	int height_allocated;
 	/* size of max visible image */
 	int outwidth;
 	int outheight;
+	/* nominal size of image for centering */
+	int inwidth;
+	int inheight;
+	/* same but doublescan multiplier included */
+	int inwidth2;
+	int inheight2;
+
+	/* extra width, chipset hpos extra in right border */
+	int extrawidth;
+	
+	int xoffset; /* superhires pixels from left edge */
+	int yoffset; /* lines from top edge */
+	
+	int inxoffset; /* positive if sync positioning */
+	int inyoffset;
+	
 	int last_drawn_line;
 };
 
@@ -118,6 +136,11 @@ extern int max_uae_width, max_uae_height;
 struct vidbuf_description
 {
     struct vidbuffer drawbuffer;
+
+	int gfx_resolution_reserved; // reserved space for currprefs.gfx_resolution
+	int gfx_vresolution_reserved; // reserved space for currprefs.gfx_resolution
+	int xchange; /* how many superhires pixels in one pixel in buffer */
+	int ychange; /* how many interlaced lines in one line in buffer */
 };
 
 struct amigadisplay

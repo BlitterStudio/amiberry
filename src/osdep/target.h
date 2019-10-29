@@ -33,8 +33,6 @@ STATIC_INLINE FILE *uae_tfopen(const TCHAR *path, const TCHAR *mode)
 extern void fix_apmodes(struct uae_prefs *p);
 extern int generic_main (int argc, char *argv[]);
 
-#define OFFSET_Y_ADJUST 18
-
 extern int emulating;
 
 extern int z3_base_adr;
