@@ -512,15 +512,6 @@ void gui_display(int shortcut)
 	pause_emulation = 0;
 }
 
-void moveVertical(int value)
-{
-	changed_prefs.vertical_offset += value;
-	if (changed_prefs.vertical_offset < -16 + OFFSET_Y_ADJUST)
-		changed_prefs.vertical_offset = -16 + OFFSET_Y_ADJUST;
-	else if (changed_prefs.vertical_offset > 16 + OFFSET_Y_ADJUST)
-		changed_prefs.vertical_offset = 16 + OFFSET_Y_ADJUST;
-}
-
 static void gui_flicker_led2(int led, int unitnum, int status)
 {
 	static int resetcounter[LED_MAX];

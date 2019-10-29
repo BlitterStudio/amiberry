@@ -423,7 +423,7 @@ static void wait_for_display_thread(void)
 }
 #endif
 
-void InitAmigaVidMode(struct uae_prefs* p)
+void allocsoftbuffer(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
 	auto ad = &adisplays;
@@ -555,8 +555,8 @@ static void open_screen(struct uae_prefs* p)
 	
 	if (screen_is_picasso)
 	{
-		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
-		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 256;
+		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 720;
+		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 288;
 #ifdef USE_DISPMANX
 	//TODO Check if we can implement this in DISPMANX
 #else
@@ -654,7 +654,7 @@ static void open_screen(struct uae_prefs* p)
 	if (screen_is_picasso)
 		SDL_RenderSetLogicalSize(renderer, display_width, display_height);
 	else
-		SDL_RenderSetLogicalSize(renderer, display_width, (display_height * 2) >> p->gfx_vresolution);
+		SDL_RenderSetLogicalSize(renderer, display_width, display_height * 2 >> p->gfx_vresolution);
 
 	texture = SDL_CreateTexture(renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
@@ -663,7 +663,7 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen != nullptr)
 	{
-		InitAmigaVidMode(p);
+		allocsoftbuffer(p);
 		notice_screen_contents_lost();
 		init_row_map();
 	}
@@ -919,7 +919,7 @@ static void graphics_subinit()
 	else
 	{
 		SDL_ShowCursor(SDL_DISABLE);
-		InitAmigaVidMode(&currprefs);
+		allocsoftbuffer(&currprefs);
 	}
 }
 
@@ -1164,10 +1164,10 @@ bool vsync_switchmode(int hz)
 		{
 		case 200: changed_height = 240; break;
 		case 216: changed_height = 262; break;
-		case 240: changed_height = 270; break;
-		case 256: changed_height = 270; break;
-		case 262: changed_height = 270; break;
-		case 270: changed_height = 270; break;
+		case 240: changed_height = 288; break;
+		case 256: changed_height = 288; break;
+		case 262: changed_height = 288; break;
+		case 288: changed_height = 288; break;
 		default: break;
 		}
 	}
@@ -1181,7 +1181,7 @@ bool vsync_switchmode(int hz)
 		case 240: changed_height = 200; break;
 		case 256: changed_height = 216; break;
 		case 262: changed_height = 216; break;
-		case 270: changed_height = 240; break;
+		case 288: changed_height = 240; break;
 		default: break;
 		}
 	}

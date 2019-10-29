@@ -3948,9 +3948,8 @@ void drawing_init(void)
 
 	gen_direct_drawing_table();
 
-#ifdef AMIBERRY
 	uae_sem_init(&gui_sem, 0, 1);
-
+#ifdef AMIBERRY
 	if (render_pipe == nullptr) {
 		render_pipe = xmalloc(smp_comm_pipe, 1);
 		init_comm_pipe(render_pipe, 20, 1);
