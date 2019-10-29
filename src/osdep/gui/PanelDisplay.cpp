@@ -13,7 +13,7 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = {320, 362, 384, 640, 704, 724};
+const int amigawidth_values[] = {320, 362, 384, 640, 704, 720};
 const int amigaheight_values[] = {200, 216, 240, 256, 262, 283};
 
 static gcn::Window* grpScalingMethod;

@@ -6170,7 +6170,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->gfx_monitor.gfx_size_fs.height = 600;
 	p->gfx_monitor.gfx_size_win.width = 720;
 	p->gfx_monitor.gfx_size_win.height = 568;
-	p->gfx_monitor.gfx_size.width = 724;
+	p->gfx_monitor.gfx_size.width = 720;
 	p->gfx_monitor.gfx_size.height = 283;
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_NONDOUBLE;
