@@ -214,8 +214,6 @@ static void SetControlState(const int model)
 
 static void AdjustPrefs(void)
 {
-	//const auto old_cs = changed_prefs.cs_compatible;
-
 	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 	switch (quickstart_model)
 	{
