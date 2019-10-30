@@ -2700,7 +2700,7 @@ static void pfield_expand_dp_bplcon (void)
 		bplcolorburst_field = 0;
 #ifdef ECS_DENISE
 	int oecsshres = ecsshres;
-	ecsshres = bplres == RES_SUPERHIRES && (currprefs.chipset_mask & CSMASK_ECS_DENISE) && !(currprefs.chipset_mask & CSMASK_AGA);
+	ecsshres = bplres == RES_SUPERHIRES && (currprefs.chipset_mask & CSMASK_ECS_DENISE) && !(currprefs.chipset_mask & CSMASK_AGA) && (dp_for_drawing->bplcon0 & 0x40);
 	pfield_mode_changed = oecsshres != ecsshres;
 #endif
 
