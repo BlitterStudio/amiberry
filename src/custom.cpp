@@ -189,6 +189,7 @@ int syncbase;
 static int fmode_saved, fmode;
 uae_u16 beamcon0, new_beamcon0;
 static uae_u16 beamcon0_saved;
+static uae_u16 bplcon0_saved, bplcon1_saved, bplcon2_saved;
 static uae_u16 bplcon3_saved, bplcon4_saved;
 static bool varsync_changed;
 uae_u16 vtotal = MAXVPOS_PAL, htotal = MAXHPOS_PAL;
@@ -278,7 +279,7 @@ static int plffirstline, plflastline;
 int plffirstline_total, plflastline_total;
 static int autoscale_bordercolors;
 static int plfstrt, plfstop;
-static int sprite_minx, sprite_maxx;
+static int sprite_minx;
 static int first_bpl_vpos;
 static int last_ddf_pix_hpos;
 static int last_decide_line_hpos;
@@ -949,18 +950,32 @@ Thus, once we do call toscr_nbits (which happens at least every 16 bits),
 we can do more work at once.  */
 static int toscr_nbits;
 
+static void calcdiw(void);
 static void set_chipset_mode(void)
 {
-	if (currprefs.chipset_mask & CSMASK_AGA) {
-		fmode = fmode_saved;
-		bplcon3 = bplcon3_saved;
-		bplcon4 = bplcon4_saved;
-	} else {
-		bplcon3_saved = bplcon3;
-		bplcon4_saved = bplcon4;
+	fmode = fmode_saved;
+	bplcon0 = bplcon0_saved;
+	bplcon1 = bplcon1_saved;
+	bplcon2 = bplcon2_saved;
+	bplcon3 = bplcon3_saved;
+	bplcon4 = bplcon4_saved;
+	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		fmode = 0;
+		bplcon0 &= ~(0x0010 | 0x0020);
+		bplcon1 &= ~(0xff00);
+		bplcon2 &= ~(0x0100 | 0x0080);
+		bplcon3 &= 0x003f;
+		bplcon3 |= 0x0c00;
 		bplcon4 = 0x0011;
-		bplcon3 = 0x0c00;
+		if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+			bplcon0 &= ~0x0080;
+			diwhigh_written = 0;
+		}
+		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE)) {
+			bplcon0 &= ~0x0001;
+			bplcon2 &= 0x007f;
+			bplcon3 = 0x0c00;
+		}
 	}
 	sprres = expand_sprres(bplcon0, bplcon3);
 	sprite_width = GET_SPRITEWIDTH(fmode);
@@ -968,6 +983,7 @@ static void set_chipset_mode(void)
 		spr[i].width = sprite_width;
 	}
 	shdelay_disabled = false;
+	calcdiw();
 }
 
 static void update_mirrors(void)
@@ -4734,6 +4750,10 @@ static void calcdiw (void)
 
 	plfstrt = ddfstrt - DDF_OFFSET;
 	plfstop = ddfstop - DDF_OFFSET;
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+		plfstrt &= 0x00fc;
+		plfstop &= 0x00fc;
+	}
 
 	diw_change = 2;
 }
@@ -5529,6 +5549,7 @@ static void BPLCON0_Denise (int hpos, uae_u16 v, bool immediate)
 
 static void BPLCON0 (int hpos, uae_u16 v)
 {
+	bplcon0_saved = v;
 	if (! (currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		v &= ~0x00F1;
 	else if (! (currprefs.chipset_mask & CSMASK_AGA))
@@ -5576,6 +5597,7 @@ static void BPLCON0 (int hpos, uae_u16 v)
 
 STATIC_INLINE void BPLCON1 (int hpos, uae_u16 v)
 {
+	bplcon1_saved = v;
 	if (!(currprefs.chipset_mask & CSMASK_AGA))
 		v &= 0xff;
 	if (bplcon1 == v)
@@ -5590,6 +5612,7 @@ STATIC_INLINE void BPLCON1 (int hpos, uae_u16 v)
 
 STATIC_INLINE void BPLCON2(int hpos, uae_u16 v)
 {
+	bplcon2_saved = v;
 	if (!(currprefs.chipset_mask & CSMASK_AGA))
 		v &= ~(0x100 | 0x80); // RDRAM and SOGEN
 	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
@@ -5605,13 +5628,12 @@ STATIC_INLINE void BPLCON2(int hpos, uae_u16 v)
 #ifdef ECS_DENISE
 STATIC_INLINE void BPLCON3(int hpos, uae_u16 v)
 {
+	bplcon3_saved = v;
 	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		return;
 	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		v &= 0x003f;
 		v |= 0x0c00;
-	} else {
-		bplcon3_saved = v;
 	}
 #if SPRBORDER
 	v |= 2;
@@ -5628,13 +5650,13 @@ STATIC_INLINE void BPLCON3(int hpos, uae_u16 v)
 #ifdef AGA
 STATIC_INLINE void BPLCON4(int hpos, uae_u16 v)
 {
+	bplcon4_saved = v;
 	if (!(currprefs.chipset_mask & CSMASK_AGA))
 		return;
 	if (bplcon4 == v)
 		return;
 	decide_line (hpos);
 	bplcon4 = v;
-	bplcon4_saved = v;
 	record_register_change (hpos, 0x10c, v);
 }
 #endif
@@ -6683,6 +6705,7 @@ static void update_copper (int until_hpos)
 
 		case COP_strobe_delay1x:
 			// First cycle after COPJMP and Copper was waiting.
+			// Cycle can be free and copper won't allocate it.
 			cop_state.state = COP_strobe_delay2x;
 			break;
 		case COP_strobe_delay2x:
@@ -8524,8 +8547,12 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		bplcon0 = 0;
 		bplcon4 = 0x0011; /* Get AGA chipset into ECS compatibility mode */
 		bplcon3 = 0x0C00;
-		bplcon4_saved = bplcon4;
+
+		bplcon0_saved = bplcon0;
+		bplcon1_saved = bplcon1;
+		bplcon2_saved = bplcon2;
 		bplcon3_saved = bplcon3;
+		bplcon4_saved = bplcon4;
 		
 		diwhigh = 0;
 		diwhigh_written = 0;
@@ -9351,6 +9378,9 @@ uae_u8 *restore_custom (uae_u8 *src)
 	fmode = RW; /* 1FC FMODE */
 	last_custom_value1 = last_custom_value2 = RW;/* 1FE ? */
 
+	bplcon0_saved = bplcon0;
+	bplcon1_saved = bplcon1;
+	bplcon2_saved = bplcon2;
 	bplcon3_saved = bplcon3;
 	bplcon4_saved = bplcon4;
 	fmode_saved = fmode;
