@@ -3577,7 +3577,7 @@ static void record_sprite_1 (int sprxp, uae_u16 *buf, uae_u32 datab, int num, in
 		unsigned int col = 0;
 		unsigned coltmp = 0;
 
-		if ((sprxp >= sprite_minx && sprxp < sprite_maxx) || brdspractive())
+		if (sprxp >= sprite_minx || brdspractive())
 			col = (datab & 3) << (2 * num);
 
 		if ((j & mask) == 0) {
@@ -3761,10 +3761,7 @@ static int fromspritexdiw (int ddf)
 
 static void calcsprite (void)
 {
-	sprite_maxx = 0x7fff;
 	sprite_minx = 0;
-	if (thisline_decision.diwlastword >= 0)
-		sprite_maxx = tospritexdiw (thisline_decision.diwlastword);
 	if (thisline_decision.diwfirstword >= 0)
 		sprite_minx = tospritexdiw (thisline_decision.diwfirstword);
 	if (thisline_decision.plfleft >= 0) {
