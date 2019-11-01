@@ -1132,7 +1132,7 @@ addrbank cia_bank = {
 	cia_lget, cia_wget, cia_bget,
 	cia_lput, cia_wput, cia_bput,
 	default_xlate, default_check, NULL, NULL, _T("CIA"),
-	cia_wgeti,
+	cia_lgeti, cia_wgeti,
 	ABFLAG_IO | ABFLAG_CIA, S_READ, S_WRITE, NULL, 0x3f01, 0xbfc000
 };
 
@@ -1329,9 +1329,15 @@ static uae_u32 REGPARAM2 cia_lget (uaecptr addr)
 
 static uae_u32 REGPARAM2 cia_wgeti (uaecptr addr)
 {
-  if (currprefs.cpu_model >= 68020)
-  	return dummy_wgeti(addr);
-  return cia_wget(addr);
+	if (currprefs.cpu_model >= 68020)
+		return dummy_wgeti (addr);
+	return cia_wget (addr);
+}
+static uae_u32 REGPARAM2 cia_lgeti (uaecptr addr)
+{
+	if (currprefs.cpu_model >= 68020)
+		return dummy_lgeti (addr);
+	return cia_lget (addr);
 }
 
 static void REGPARAM2 cia_bput (uaecptr addr, uae_u32 value)
@@ -1414,7 +1420,7 @@ addrbank clock_bank = {
   clock_lget, clock_wget, clock_bget,
   clock_lput, clock_wput, clock_bput,
 	default_xlate, default_check, NULL, NULL, _T("Battery backed up clock (none)"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, NULL, 0x3f, 0xd80000
 };
 

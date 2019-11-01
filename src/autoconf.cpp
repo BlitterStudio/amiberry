@@ -43,8 +43,8 @@ addrbank rtarea_bank = {
 	rtarea_lget, rtarea_wget, rtarea_bget,
 	rtarea_lput, rtarea_wput, rtarea_bput,
 	rtarea_xlate, rtarea_check, NULL, _T("rtarea"), _T("UAE Boot ROM"),
-	rtarea_wget,
-	ABFLAG_ROMIN, S_READ, S_WRITE
+	rtarea_lget, rtarea_wget,
+	ABFLAG_ROMIN | ABFLAG_PPCIOSPACE, S_READ, S_WRITE
 };
 
 #define MAX_ABSOLUTE_ROM_ADDRESS 1024
@@ -96,6 +96,7 @@ static void rethink_traps(void)
 	rethink_traps2();
 }
 
+
 #define RTAREA_WRITEOFFSET 0xfff0
 
 static bool rtarea_trap_data(uaecptr addr)
@@ -123,7 +124,7 @@ static bool rtarea_trap_status_extra(uaecptr addr)
 	return false;
 }
 
-static uae_u8 *REGPARAM2 rtarea_xlate(uaecptr addr)
+static uae_u8 *REGPARAM2 rtarea_xlate (uaecptr addr)
 {
 	addr &= 0xFFFF;
 	return rtarea_bank.baseaddr + addr;
@@ -444,54 +445,54 @@ void add_rom_absolute(uaecptr addr)
 	save_rom_absolute(h);
 }
 
-//uae_u32 boot_rom_copy(TrapContext *ctx, uaecptr rombase, int mode)
-//{
-//	uaecptr reloc = 0;
-//	if (currprefs.uaeboard < 3)
-//		return 0;
-//	if (!mode) {
-//		rtarea_write_enabled = true;
-//		protect_roms(false);
-//		rombase_new = rombase;
-//		int size = 4 + 2 + 4;
-//		for (int i = 0; i < absolute_rom_address; i++) {
-//			uae_u32 a = absolute_rom_addresses[i];
-//			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
-//				size += 2;
-//			} else {
-//				size += 4;
-//			}
-//		}
-//		reloc = uaeboard_alloc_ram(size);
-//		uae_u8 *p = uaeboard_map_ram(reloc);
-//		put_long_host(p, rtarea_base);
-//		p += 4;
-//		for (int i = 0; i < absolute_rom_address; i++) {
-//			uae_u32 a = absolute_rom_addresses[i];
-//			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
-//				put_word_host(p, a & 0xffff);
-//				p += 2;
-//			}
-//		}
-//		put_word_host(p, 0);
-//		p += 2;
-//		for (int i = 0; i < absolute_rom_address; i++) {
-//			uae_u32 a = absolute_rom_addresses[i];
-//			if (a < rtarea_base || a >= rtarea_base + 0x10000) {
-//				put_long_host(p, a);
-//				p += 4;
-//			}
-//		}
-//		put_long_host(p, 0);
-//		write_log(_T("ROMBASE %08x RAMBASE %08x RELOC %08x (%d)\n"), rtarea_base, rombase, reloc, absolute_rom_address);
-//	} else {
-//		rtarea_write_enabled = false;
-//		protect_roms(true);
-//		write_log(_T("ROMBASE changed.\n"), absolute_rom_address);
-//		reloc = 1;
-//	}
-//	return reloc;
-//}
+uae_u32 boot_rom_copy(TrapContext *ctx, uaecptr rombase, int mode)
+{
+	uaecptr reloc = 0;
+	if (currprefs.uaeboard < 3)
+		return 0;
+	if (!mode) {
+		rtarea_write_enabled = true;
+		protect_roms(false);
+		rombase_new = rombase;
+		int size = 4 + 2 + 4;
+		for (int i = 0; i < absolute_rom_address; i++) {
+			uae_u32 a = absolute_rom_addresses[i];
+			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
+				size += 2;
+			} else {
+				size += 4;
+			}
+		}
+		reloc = uaeboard_alloc_ram(size);
+		uae_u8 *p = uaeboard_map_ram(reloc);
+		put_long_host(p, rtarea_base);
+		p += 4;
+		for (int i = 0; i < absolute_rom_address; i++) {
+			uae_u32 a = absolute_rom_addresses[i];
+			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
+				put_word_host(p, a & 0xffff);
+				p += 2;
+			}
+		}
+		put_word_host(p, 0);
+		p += 2;
+		for (int i = 0; i < absolute_rom_address; i++) {
+			uae_u32 a = absolute_rom_addresses[i];
+			if (a < rtarea_base || a >= rtarea_base + 0x10000) {
+				put_long_host(p, a);
+				p += 4;
+			}
+		}
+		put_long_host(p, 0);
+		write_log(_T("ROMBASE %08x RAMBASE %08x RELOC %08x (%d)\n"), rtarea_base, rombase, reloc, absolute_rom_address);
+	} else {
+		rtarea_write_enabled = false;
+		protect_roms(true);
+		write_log(_T("ROMBASE changed.\n"), absolute_rom_address);
+		reloc = 1;
+	}
+	return reloc;
+}
 
 void calltrap (uae_u32 n)
 {
@@ -536,23 +537,29 @@ static uae_u32 REGPARAM2 nullfunc(TrapContext *ctx)
 
 static uae_u32 REGPARAM2 getchipmemsize (TrapContext *ctx)
 {
-	//trap_set_dreg(ctx, 1, z3chipmem_bank.allocated_size);
-	//trap_set_areg(ctx, 1, z3chipmem_bank.start);
+	trap_set_dreg(ctx, 1, z3chipmem_bank.allocated_size);
+	trap_set_areg(ctx, 1, z3chipmem_bank.start);
 	return chipmem_bank.allocated_size;
 }
 
-static uae_u32 REGPARAM2 uae_puts (TrapContext *ctx)
+static uae_u32 REGPARAM2 uae_puts(TrapContext* ctx)
 {
 	uae_char buf[MAX_DPATH];
 	trap_get_string(ctx, buf, trap_get_areg(ctx, 0), sizeof (uae_char));
-	TCHAR *s = au(buf);
+	TCHAR* s = au(buf);
 	write_log(_T("%s"), s);
 	xfree(s);
 	return 0;
 }
 
-static void rtarea_init_mem (void)
+void rtarea_init_mem (void)
 {
+	if (need_uae_boot_rom(&currprefs)) {
+		rtarea_bank.flags &= ~ABFLAG_ALLOCINDIRECT;
+	} else {
+		// not enabled and something else may use same address space
+		rtarea_bank.flags |= ABFLAG_ALLOCINDIRECT;
+	}
 	rtarea_bank.reserved_size = RTAREA_SIZE;
 	rtarea_bank.start = rtarea_base;
 	if (!mapped_malloc(&rtarea_bank)) {

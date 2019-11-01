@@ -188,10 +188,12 @@ static int cd32_nvram_size;
 static void *cd32_eeprom;
 static uae_u8 cd32_i2c_direction;
 static bool cd32_i2c_data_scl, cd32_i2c_data_sda;
-static struct zfile *cd32_flashfile;
+struct zfile *cd32_flashfile;
+//extern uae_u8 *cubo_nvram;
 
 static void nvram_read (void)
 {
+	//cubo_nvram = NULL;
 	zfile_fclose(cd32_flashfile);
 	cd32_flashfile = NULL;
 	eeprom_free(cd32_eeprom);
@@ -201,11 +203,16 @@ static void nvram_read (void)
 	if (!currprefs.cs_cd32nvram)
 		return;
 	int maxlen = currprefs.cs_cd32nvram_size;
+	if (is_board_enabled(&currprefs, ROMTYPE_CUBO, 0))
+		maxlen += 2048 + 16;
 	if (!cd32_nvram || cd32_nvram_size != maxlen) {
 		xfree(cd32_nvram);
 		cd32_nvram = xmalloc(uae_u8, maxlen);
 	}
 	memset(cd32_nvram, 0, maxlen);
+	//if (is_board_enabled(&currprefs, ROMTYPE_CUBO, 0)) {
+	//	cubo_nvram = cd32_nvram + currprefs.cs_cd32nvram_size;
+	//}
 	TCHAR path[MAX_DPATH];
 	cfgfile_resolve_path_out_load(currprefs.flashfile, path, MAX_DPATH, PATH_ROM);
 	cd32_flashfile = zfile_fopen (path, _T("rb+"), ZFD_NORMAL);
@@ -213,6 +220,8 @@ static void nvram_read (void)
 		cd32_flashfile = zfile_fopen (path, _T("wb"), 0);
 	if (cd32_flashfile) {
 		int size = zfile_fread(cd32_nvram, 1, currprefs.cs_cd32nvram_size, cd32_flashfile);
+		//if (size == currprefs.cs_cd32nvram_size && maxlen > currprefs.cs_cd32nvram_size)
+		//	size += zfile_fread(cubo_nvram, 1, maxlen - currprefs.cs_cd32nvram_size, cd32_flashfile);
 		if (size < maxlen)
 			zfile_fwrite(cd32_nvram + size, 1, maxlen - size, cd32_flashfile);
 	}
@@ -410,6 +419,7 @@ static uae_u8 cdrom_command;
 static uae_u8 cdrom_last_rx;
 
 static int cdrom_toc_counter;
+static uae_u32 cdrom_toc_crc;
 static uae_u8 cdrom_toc_buffer[MAX_TOC_ENTRIES * 13];
 static struct cd_toc_head cdrom_toc_cd_buffer;
 static uae_u8 qcode_buf[SUBQ_SIZE];
@@ -434,7 +444,7 @@ static int sector_buffer_sector_1, sector_buffer_sector_2;
 static uae_u8 *sector_buffer_info_1, *sector_buffer_info_2;
 
 static int unitnum = -1;
-static const uae_u8 cdrom_door = 1;
+static uae_u8 cdrom_door = 1;
 static bool akiko_inited;
 static volatile int mediachanged, mediacheckcounter;
 static volatile int frame2counter;
@@ -695,6 +705,7 @@ static int get_cdrom_toc (void)
 		if (s->point >= 2 && s->point < 100 && (s->control & 0x0c) != 0x04 && !secondtrack)
 			secondtrack = addr;
 	}
+	cdrom_toc_crc = get_crc32 (cdrom_toc_buffer, cdrom_toc_cd_buffer.points * 13);
 	return 0;
 }
 static bool is_valid_data_sector(int sector)
@@ -811,6 +822,13 @@ static int cdrom_command_led (void)
 		return 2;
 	}
 	return 0;
+}
+
+static int cdrom_command_idle_status (void)
+{
+	cdrom_result_buffer[0] = 0x0a;
+	cdrom_result_buffer[1] = 0x70;
+	return 2;
 }
 
 static int cdrom_command_media_status (void)
@@ -1459,6 +1477,8 @@ STATIC_INLINE void akiko_put_long (uae_u32 *p, int offset, int v)
 static uae_u32 REGPARAM3 akiko_lget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 akiko_wget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 akiko_bget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 akiko_lgeti (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 akiko_wgeti (uaecptr) REGPARAM;
 static void REGPARAM3 akiko_lput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 akiko_wput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 akiko_bput (uaecptr, uae_u32) REGPARAM;
@@ -1529,18 +1549,21 @@ static uae_u32 akiko_bget2 (uaecptr addr, int msg)
 
 		// 0x18-0x1b are mirrored to 0x10, 0x14 and 0x1c
 		case 0x18:
+
 		case 0x10:
 		case 0x14:
 		case 0x1c:
 			v = cdrom_subcodeoffset;
 			break;
 		case 0x19:
+
 		case 0x11:
 		case 0x15:
 		case 0x1d:
 			v = cdcomtxinx;
 			break;
 		case 0x1a:
+
 		case 0x12:
 		case 0x16:
 		case 0x1e:
@@ -1793,30 +1816,30 @@ addrbank akiko_bank = {
 	akiko_lget, akiko_wget, akiko_bget,
 	akiko_lput, akiko_wput, akiko_bput,
 	default_xlate, default_check, NULL, NULL, _T("Akiko"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
 
 static const uae_u8 patchdata[]={0x0c,0x82,0x00,0x00,0x03,0xe8,0x64,0x00,0x00,0x46};
 static void patchrom (void)
 {
-  int i;
+	int i;
 	if (currprefs.cpu_model > 68020 || currprefs.cachesize || currprefs.m68k_speed != 0) {
-		uae_u8 *p = extendedkickmem_bank.baseaddr;
+		uae_u8* p = extendedkickmem_bank.baseaddr;
 		if (p) {
-			for (i = 0; i < 524288 - sizeof (patchdata); i++) {
-				if (!memcmp (p + i, patchdata, sizeof(patchdata))) {
-					protect_roms (false);
+			for (i = 0; i < 524288 - sizeof(patchdata); i++) {
+				if (!memcmp(p + i, patchdata, sizeof(patchdata))) {
+					protect_roms(false);
 					p[i + 6] = 0x4e;
 					p[i + 7] = 0x71;
 					p[i + 8] = 0x4e;
 					p[i + 9] = 0x71;
-					protect_roms (true);
-					write_log (_T("CD32: extended rom delay loop patched at 0x%08x\n"), i + 6 + 0xe00000);
+					protect_roms(true);
+					write_log(_T("CD32: extended rom delay loop patched at 0x%08x\n"), i + 6 + 0xe00000);
 					return;
 				}
 			}
-			write_log (_T("CD32: couldn't patch extended rom\n"));
+			write_log(_T("CD32: couldn't patch extended rom\n"));
 		}
 	}
 }
@@ -1834,7 +1857,7 @@ static void akiko_cdrom_free (void)
 	sector_buffer_info_2 = 0;
 }
 
-void akiko_reset (int hardreset)
+void akiko_reset(int hardreset)
 {
 	cdaudiostop_do ();
 	nvram_read ();
@@ -1966,7 +1989,7 @@ uae_u8 *save_akiko (int *len, uae_u8 *dstptr)
 	save_u8 (cdrom_speed);
 	save_u8 (cdrom_current_sector);
 
-	save_u32 (0);
+	save_u32 (cdrom_toc_crc);
 	save_u8 (cdrom_toc_cd_buffer.points);
 	save_u32 (cdrom_toc_cd_buffer.lastaddress);
 

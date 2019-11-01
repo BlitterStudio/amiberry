@@ -1950,6 +1950,11 @@ static int in_m68k_go = 0;
 
 static bool cpu_hardreset;
 
+bool is_hardreset(void)
+{
+	return cpu_hardreset;
+}
+
 #ifdef USE_JIT_FPU
 static uae_u8 fp_buffer[9 * 16];
 #endif

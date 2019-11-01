@@ -416,6 +416,12 @@ void blkdev_exitgui (void)
 	}
 }
 
+void check_prefs_changed_cd(void)
+{
+	if (!config_changed)
+		return;
+}
+
 static void check_changes (int unitnum)
 {
 	struct blkdevstate *st = &state[unitnum];

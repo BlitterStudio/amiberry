@@ -8772,6 +8772,7 @@ int custom_init (void)
 static uae_u32 REGPARAM3 custom_lget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_bget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 custom_lgeti (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wgeti (uaecptr) REGPARAM;
 static void REGPARAM3 custom_lput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 custom_wput (uaecptr, uae_u32) REGPARAM;
@@ -8781,7 +8782,7 @@ addrbank custom_bank = {
 	custom_lget, custom_wget, custom_bget,
 	custom_lput, custom_wput, custom_bput,
 	default_xlate, default_check, NULL, NULL, _T("Custom chipset"),
-	custom_wgeti,
+	custom_lgeti, custom_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, NULL, 0x1ff, 0xdff000
 };
 
@@ -8790,6 +8791,12 @@ static uae_u32 REGPARAM2 custom_wgeti (uaecptr addr)
 	if (currprefs.cpu_model >= 68020)
 		return dummy_wgeti (addr);
 	return custom_wget (addr);
+}
+static uae_u32 REGPARAM2 custom_lgeti (uaecptr addr)
+{
+	if (currprefs.cpu_model >= 68020)
+		return dummy_lgeti (addr);
+	return custom_lget (addr);
 }
 
 STATIC_INLINE uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput)

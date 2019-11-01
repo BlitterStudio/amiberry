@@ -462,21 +462,21 @@ static addrbank hrtmem_bank = {
 	hrtmem_lget, hrtmem_wget, hrtmem_bget,
 	hrtmem_lput, hrtmem_wput, hrtmem_bput,
 	hrtmem_xlate, hrtmem_check, NULL, NULL, _T("Cartridge Bank"),
-	hrtmem_wget,
+	hrtmem_lget, hrtmem_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 static addrbank hrtmem2_bank = {
 	hrtmem2_lget, hrtmem2_wget, hrtmem2_bget,
 	hrtmem2_lput, hrtmem2_wput, hrtmem2_bput,
 	hrtmem2_xlate, hrtmem2_check, NULL, NULL, _T("Cartridge Bank 2"),
-	hrtmem2_wget,
+	hrtmem2_lget, hrtmem2_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 static addrbank hrtmem3_bank = {
 	hrtmem3_lget, hrtmem3_wget, hrtmem3_bget,
 	hrtmem3_lput, hrtmem3_wput, hrtmem3_bput,
 	hrtmem3_xlate, hrtmem3_check, NULL, NULL, _T("Cartridge Bank 3"),
-	hrtmem3_wget,
+	hrtmem3_lget, hrtmem3_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 
@@ -639,6 +639,29 @@ void REGPARAM2 chipmem_wput_actionreplay23 (uaecptr addr, uae_u32 w)
 		action_replay_chipwrite();
 }
 
+
+static uae_u32 REGPARAM3 arram_lget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 arram_wget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 arram_bget (uaecptr) REGPARAM;
+static void  REGPARAM3 arram_lput (uaecptr, uae_u32) REGPARAM;
+static void  REGPARAM3 arram_wput (uaecptr, uae_u32) REGPARAM;
+static void  REGPARAM3 arram_bput (uaecptr, uae_u32) REGPARAM;
+static int  REGPARAM3 arram_check (uaecptr addr, uae_u32 size) REGPARAM;
+static uae_u8 *REGPARAM3 arram_xlate (uaecptr addr) REGPARAM;
+
+static uae_u32 REGPARAM3 arrom_lget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 arrom_wget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 arrom_bget (uaecptr) REGPARAM;
+static void REGPARAM3 arrom_lput (uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 arrom_wput (uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 arrom_bput (uaecptr, uae_u32) REGPARAM;
+static int  REGPARAM3 arrom_check (uaecptr addr, uae_u32 size) REGPARAM;
+static uae_u8 *REGPARAM3 arrom_xlate (uaecptr addr) REGPARAM;
+static void action_replay_unmap_banks (void);
+
+static uae_u32 action_replay_calculate_checksum(void);
+static uae_u8* get_checksum_location(void);
+static void disable_rom_test(void);
 
 static uae_u32 ar_null(int size)
 {
@@ -803,14 +826,14 @@ static addrbank arrom_bank = {
 	arrom_lget, arrom_wget, arrom_bget,
 	arrom_lput, arrom_wput, arrom_bput,
 	arrom_xlate, arrom_check, NULL, NULL, _T("Action Replay ROM"),
-	arrom_wget,
+	arrom_lget, arrom_wget,
 	ABFLAG_ROM, S_READ, S_WRITE
 };
 static addrbank arram_bank = {
 	arram_lget, arram_wget, arram_bget,
 	arram_lput, arram_wput, arram_bput,
 	arram_xlate, arram_check, NULL, NULL, _T("Action Replay RAM"),
-	arram_wget,
+	arram_lget, arram_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 
@@ -1258,6 +1281,18 @@ static uae_u8* get_checksum_location (void)
 	return (uae_u8*)checksum_end;
 }
 
+/* Replaces the existing cart checksum with a correct one. */
+/* Useful if you want to patch the rom. */
+static void action_replay_fixup_checksum (uae_u32 new_checksum)
+{
+	uae_u32* checksum = (uae_u32*)get_checksum_location();
+	if (checksum)
+		do_put_mem_long (checksum, new_checksum);
+	else
+		write_log (_T("Unable to locate Checksum in ROM.\n"));
+	return;
+}
+
 /* Longword search on word boundary
 * the search_value is assumed to already be in the local endian format
 * return 0 on failure
@@ -1421,6 +1456,7 @@ int action_replay_unload (int in_memory_reset)
 static int superiv_init (struct romdata *rd, struct zfile *f)
 {
 	uae_u32 chip = currprefs.chipmem_size - 0x10000;
+	int subtype = rd->id;
 	int flags = rd->type & ROMTYPE_MASK;
 	const TCHAR *memname1, *memname2, *memname3;
 

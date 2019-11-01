@@ -304,7 +304,7 @@ static addrbank fmv_bank = {
 	fmv_lget, fmv_wget, fmv_bget,
 	fmv_lput, fmv_wput, fmv_bput,
 	default_xlate, default_check, NULL, NULL, _T("CD32 FMV IO"),
-	fmv_wget,
+	fmv_lget, fmv_wget,
 	ABFLAG_IO, S_READ, S_WRITE
 };
 
@@ -313,7 +313,7 @@ static addrbank fmv_rom_bank = {
 	fmv_rom_lget, fmv_rom_wget, fmv_rom_bget,
 	fmv_rom_lput, fmv_rom_wput, fmv_rom_bput,
 	fmv_rom_xlate, fmv_rom_check, NULL, _T("*"), _T("CD32 FMV ROM"),
-	fmv_rom_wget,
+	fmv_rom_lget, fmv_rom_wget,
 	ABFLAG_ROM, S_READ, S_WRITE
 };
 
@@ -322,7 +322,7 @@ static addrbank fmv_ram_bank = {
 	fmv_ram_lget, fmv_ram_wget, fmv_ram_bget,
 	fmv_ram_lput, fmv_ram_wput, fmv_ram_bput,
 	fmv_ram_xlate, fmv_ram_check, NULL, _T("*"), _T("CD32 FMV RAM"),
-	fmv_ram_wget,
+	fmv_ram_lget, fmv_ram_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 
