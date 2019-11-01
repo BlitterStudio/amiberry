@@ -1080,46 +1080,46 @@ void cia_set_overlay (bool overlay)
 	oldovl = overlay;
 }
 
-void CIA_reset (void)
+void CIA_reset(void)
 {
-  kblostsynccnt = 0;
+	kblostsynccnt = 0;
 	oldcd32mute = 1;
 	ciab_tod_event_state = 0;
 
-  if (!savestate_state) {
+	if (!savestate_state) {
 		oldovl = true;
-    kbstate = 0;
-    ciaatlatch = ciabtlatch = 0;
-    ciaapra = 0;  ciaadra = 0;
-    ciaatod = ciabtod = 0; ciaatodon = ciabtodon = 0;
-    ciaaicr = ciabicr = ciaaimask = ciabimask = 0;
-    ciaacra = ciaacrb = ciabcra = ciabcrb = 0x4; /* outmode = toggle; */
-    ciaala = ciaalb = ciabla = ciablb = ciaata = ciaatb = ciabta = ciabtb = 0xFFFF;
-	  ciaaalarm = ciabalarm = 0;
-  	ciabpra = 0x8C; ciabdra = 0;
-    div10 = 0;
-  	ciaasdr_cnt = 0; ciaasdr = 0;
-  	ciabsdr_cnt = 0; ciabsdr = 0;
-    ciaata_passed = ciaatb_passed = ciabta_passed = ciabtb_passed = 0;
-    ciaatol = ciabtol = ciaaprb = ciaadrb = ciabprb = ciabdrb = 0;
-    CIA_calctimers ();
-	  DISK_select_set (ciabprb);
-  }
-	map_overlay (0);
-	check_led ();
-  if (savestate_state) {
+		kbstate = 0;
+		ciaatlatch = ciabtlatch = 0;
+		ciaapra = 0;  ciaadra = 0;
+		ciaatod = ciabtod = 0; ciaatodon = ciabtodon = 0;
+		ciaaicr = ciabicr = ciaaimask = ciabimask = 0;
+		ciaacra = ciaacrb = ciabcra = ciabcrb = 0x4; /* outmode = toggle; */
+		ciaala = ciaalb = ciabla = ciablb = ciaata = ciaatb = ciabta = ciabtb = 0xFFFF;
+		ciaaalarm = ciabalarm = 0;
+		ciabpra = 0x8C; ciabdra = 0;
+		div10 = 0;
+		ciaasdr_cnt = 0; ciaasdr = 0;
+		ciabsdr_cnt = 0; ciabsdr = 0;
+		ciaata_passed = ciaatb_passed = ciabta_passed = ciabtb_passed = 0;
+		ciaatol = ciabtol = ciaaprb = ciaadrb = ciabprb = ciabdrb = 0;
+		CIA_calctimers();
+		DISK_select_set(ciabprb);
+	}
+	map_overlay(0);
+	check_led();
+	if (savestate_state) {
 		if (currprefs.cs_ciaoverlay) {
 			oldovl = true;
 		}
-    bfe001_change ();
+		bfe001_change();
 		if (!currprefs.cs_ciaoverlay) {
-			map_overlay (oldovl ? 0 : 1);
+			map_overlay(oldovl ? 0 : 1);
 		}
-  }
+	}
 #ifdef CD32
-	if (!isrestore ()) {
-		akiko_reset (1);
-		if (!akiko_init ())
+	if (!isrestore()) {
+		akiko_reset(1);
+		if (!akiko_init())
 			currprefs.cs_cd32cd = changed_prefs.cs_cd32cd = 0;
 	}
 #endif
