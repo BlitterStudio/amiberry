@@ -14,6 +14,7 @@
 
 #include "threaddep/thread.h"
 #include "options.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "filesys.h"
 #include "execlib.h"

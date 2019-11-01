@@ -11,6 +11,7 @@
 
 #include "sysdeps.h"
 #include "options.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "filesys.h"
 #include "blkdev.h"

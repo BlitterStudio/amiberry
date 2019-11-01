@@ -12,6 +12,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "gui_handling.h"
 
