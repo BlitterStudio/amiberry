@@ -8439,14 +8439,14 @@ static void hsync_handler (void)
 	hsync_handler_post (vs);
 }
 
-void init_eventtab (void)
+void init_eventtab(void)
 {
 	int i;
 
 	nextevent = 0;
 	for (i = 0; i < ev_max; i++) {
 		eventtab[i].active = 0;
-		eventtab[i].oldcycles = get_cycles ();
+		eventtab[i].oldcycles = get_cycles();
 	}
 	for (i = 0; i < ev2_max; i++) {
 		eventtab2[i].active = 0;
@@ -8454,7 +8454,7 @@ void init_eventtab (void)
 
 	eventtab[ev_cia].handler = CIA_handler;
 	eventtab[ev_hsync].handler = hsync_handler;
-	eventtab[ev_hsync].evtime = get_cycles () + HSYNCTIME;
+	eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
 	eventtab[ev_hsync].active = 1;
 #ifdef AMIBERRY
 	eventtab[ev_copper].handler = copper_handler;
@@ -8466,7 +8466,7 @@ void init_eventtab (void)
 	eventtab2[ev2_blitter].handler = blitter_handler;
 	eventtab2[ev2_disk].handler = DISK_handler;
 
-	events_schedule ();
+	events_schedule();
 }
 
 void custom_prepare (void)
