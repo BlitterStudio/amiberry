@@ -1878,7 +1878,8 @@ int akiko_init (void)
 {
 	if (!currprefs.cs_cd32cd)
 		return 0;
-	device_add_reset_imm(akiko_reset);
+	// This line caused issues when resetting CD32
+	//device_add_reset_imm(akiko_reset);
 	akiko_free ();
 	akiko_precalculate ();
 	unitnum = -1;
