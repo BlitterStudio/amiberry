@@ -24,7 +24,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 {
 	amiberryLogoImage = gcn::Image::load("data/amiberry-logo.png");
 	icon = new gcn::Icon(amiberryLogoImage);
-	lblEmulatorVersion = new gcn::Label("Amiberry v2.25 (2019-02-20)");
+	lblEmulatorVersion = new gcn::Label("Amiberry v2.25.1 (2019-11-08)");
 
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
