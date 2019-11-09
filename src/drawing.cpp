@@ -923,6 +923,7 @@ static void pfield_init_linetoscr (bool border)
 			playfield_end = visible_right_border;
 		sprite_playfield_start = 0;
 		may_require_hard_way = 1;
+		sprite_end = max;
 	}
 #endif
 
