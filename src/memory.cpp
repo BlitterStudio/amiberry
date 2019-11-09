@@ -1889,7 +1889,7 @@ static void allocate_memory(void)
 #endif
 
 #ifdef AGA
-	chipmem_bank_ce2.baseaddr = chipmem_bank.baseaddr;
+//	chipmem_bank_ce2.baseaddr = chipmem_bank.baseaddr;
 #endif
 	bootrom_filepos = 0;
 	chip_filepos = 0;
