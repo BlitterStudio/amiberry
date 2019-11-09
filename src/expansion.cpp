@@ -2616,6 +2616,7 @@ void restore_expansion_finish(void)
 			ec->aci.doinit = false;
 			ec->aci.start = ec->base;
 			ec->aci.size = ec->size;
+			ec->aci.prefs = &currprefs;
 			_tcscpy(ec->aci.name, ec->ert->friendlyname);
 			if (ec->ert->init) {
 				if (ec->ert->init(&ec->aci)) {
