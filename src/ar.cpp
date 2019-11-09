@@ -218,6 +218,13 @@
 #include "xwin.h"
 #include "gfxboard.h"
 
+#define DEBUG
+#ifdef DEBUG
+#define write_log_debug write_log
+#else
+#define write_log_debug
+#endif
+
 static const TCHAR *cart_memnames[] = { NULL, _T("hrtmon"), _T("arhrtmon"), _T("superiv") };
 
 // Action Replay 2/3
@@ -262,7 +269,7 @@ void check_prefs_changed_carts (int in_memory_reset);
 
 static int stored_picasso_on = -1;
 
-static void cartridge_enter (void)
+static void cartridge_enter(void)
 {
 	stored_picasso_on = gfxboard_set(false) ? 1 : 0;
 }
@@ -1696,6 +1703,8 @@ void action_replay_cleanup()
 #define TRUE 1
 #endif
 
+int hrtmon_lang = 0;
+
 static void hrtmon_configure(void)
 {
 	HRTCFG *cfg = (HRTCFG*)hrtmemory;
@@ -1709,7 +1718,7 @@ static void hrtmon_configure(void)
 	cfg->novbr = TRUE;
 	cfg->hexmode = TRUE;
 	cfg->entered = 0;
-	cfg->keyboard = 0;
+	cfg->keyboard = hrtmon_lang;
 	do_put_mem_long (&cfg->max_chip, currprefs.chipmem_size);
 	do_put_mem_long (&cfg->mon_size, 0x800000);
 	cfg->ide = currprefs.cs_ide ? 1 : 0;

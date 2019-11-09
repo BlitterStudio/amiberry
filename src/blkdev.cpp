@@ -7,18 +7,27 @@
 *
 */
 
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
-
+#include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
+#include "memory.h"
 
+#include "traps.h"
 #include "blkdev.h"
+//#include "scsidev.h"
 #include "savestate.h"
 #include "crc32.h"
 #include "threaddep/thread.h"
+//#include "execio.h"
 #include "zfile.h"
+//#include "scsi.h"
+#include "statusline.h"
+#include "fsdb.h"
+#ifdef RETROPLATFORM
+#include "rp.h"
+#endif
+
+int log_scsiemu = 0;
 
 #define PRE_INSERT_DELAY (3 * (currprefs.ntscmode ? 60 : 50))
 

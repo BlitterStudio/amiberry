@@ -14,6 +14,8 @@
 #include "memory.h"
 #include "rommgr.h"
 #include "custom.h"
+#include "newcpu.h"
+#include "zfile.h"
 #include "cd32_fmv.h"
 #include "uae.h"
 //#include "debug.h"

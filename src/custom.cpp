@@ -17,7 +17,10 @@
 
 #include "options.h"
 #include "uae.h"
+//#include "gensound.h"
 #include "audio.h"
+#include "sounddep/sound.h"
+//#include "events.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -27,17 +30,31 @@
 #include "blitter.h"
 #include "xwin.h"
 #include "inputdevice.h"
+//#include "serial.h"
 #include "autoconf.h"
+#include "traps.h"
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"
 #include "ar.h"
+//#include "debug.h"
 #include "akiko.h"
+#if defined(ENFORCER)
+#include "enforcer.h"
+#endif
+#include "threaddep/thread.h"
+//#include "luascript.h"
 #include "devices.h"
 #include "rommgr.h"
+//#include "specialmonitors.h"
 
+#define CUSTOM_DEBUG 0
+#define SPRITE_DEBUG 0
+#define SPRITE_DEBUG_MINY 0
+#define SPRITE_DEBUG_MAXY 0x30
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
+#define SPEEDUP 1
 #define AUTOSCALE_SPRITES 1
 #define ALL_SUBPIXEL 1
 
@@ -52,6 +69,8 @@ extern int speedup_timelimit_nonjit;
 extern int speedup_timelimit_jit_turbo;
 extern int speedup_timelimit_nonjit_turbo;
 #endif
+
+extern uae_u16 serper;
 
 STATIC_INLINE bool nocustom (void)
 {
@@ -8115,13 +8134,12 @@ static void hsync_handler_post (bool onvsync)
 	bool ciahsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && (!currprefs.ntscmode || genlockhtoggle));
 	bool ciavsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && genlockvtoggle);
 
-	CIA_hsync_posthandler(false);
+	CIA_hsync_posthandler(false, false);
 	if (currprefs.cs_cd32cd) {
-		CIA_hsync_posthandler(true);
+		CIA_hsync_posthandler(true, true);
 		CIAB_tod_handler(18);
-	}
-	else if (ciahsyncs) {
-		CIA_hsync_posthandler(true);
+	} else if (ciahsyncs) {
+		CIA_hsync_posthandler(true, ciahsyncs);
 		if (beamcon0 & (0x80 | 0x100)) {
 			if (hsstop < (maxhpos & ~1) && hsstrt < maxhpos)
 				CIAB_tod_handler(hsstop);
