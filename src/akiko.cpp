@@ -1821,13 +1821,12 @@ addrbank akiko_bank = {
 };
 
 static const uae_u8 patchdata[]={0x0c,0x82,0x00,0x00,0x03,0xe8,0x64,0x00,0x00,0x46};
-static void patchrom (void)
+static void patchrom(void)
 {
-	int i;
 	if (currprefs.cpu_model > 68020 || currprefs.cachesize || currprefs.m68k_speed != 0) {
 		uae_u8* p = extendedkickmem_bank.baseaddr;
 		if (p) {
-			for (i = 0; i < 524288 - sizeof(patchdata); i++) {
+			for (unsigned int i = 0; i < 524288 - sizeof patchdata; i++) {
 				if (!memcmp(p + i, patchdata, sizeof(patchdata))) {
 					protect_roms(false);
 					p[i + 6] = 0x4e;
@@ -1902,7 +1901,8 @@ int akiko_init (void)
 {
 	if (!currprefs.cs_cd32cd)
 		return 0;
-	device_add_reset_imm(akiko_reset);
+	// This line caused issues when resetting CD32
+	//device_add_reset_imm(akiko_reset);
 	akiko_free ();
 	akiko_precalculate ();
 	unitnum = -1;

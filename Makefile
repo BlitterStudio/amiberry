@@ -102,6 +102,13 @@ else ifeq ($(PLATFORM),pi64)
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
+# Raspberry Pi 3/4 (SDL2 64-bit with DispmanX)
+else ifeq ($(PLATFORM),pi64-dispmanx)
+    CPUFLAGS += -mcpu=cortex-a72
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${DISPMANX_FLAGS}
+    LDFLAGS += ${DISPMANX_LDFLAGS}
+    AARCH64 = 1
+
 # Vero 4k (SDL2)
 else ifeq ($(PLATFORM),vero4k)
     CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
@@ -186,7 +193,7 @@ XML_CFLAGS := $(shell xml2-config --cflags )
 LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
-    CFLAGS += -Ofast -frename-registers
+    CFLAGS += -Ofast -frename-registers -fPIC
 else
     CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif

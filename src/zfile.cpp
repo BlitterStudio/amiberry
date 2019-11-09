@@ -1656,89 +1656,92 @@ struct zfile *zfile_fopen (const TCHAR *name, const TCHAR *mode, int mask, int i
 	return zfile_fopenx (name, mode, mask, index);
 }
 
-struct zfile *zfile_dup (struct zfile *zf)
+struct zfile* zfile_dup(struct zfile* zf)
 {
-  struct zfile *nzf;
-  if (!zf)
-  	return NULL;
+	struct zfile* nzf;
+	if (!zf)
+		return NULL;
 	if (zf->archiveparent)
-		checkarchiveparent (zf);
+		checkarchiveparent(zf);
 	if (zf->data) {
-		nzf = zfile_create (zf, NULL);
-    nzf->data = xmalloc (uae_u8, zf->size);
+		nzf = zfile_create(zf, NULL);
+		nzf->data = xmalloc(uae_u8, zf->size);
 		if (!nzf->data) {
 			write_log(_T("Out of memory: %s\n"), zfile_getname(zf));
 			return NULL;
 		}
-    memcpy (nzf->data, zf->data, zf->size);
-    nzf->size = zf->size;
-	  nzf->datasize = zf->datasize;
-	} else if (zf->useparent) {
+		memcpy(nzf->data, zf->data, zf->size);
+		nzf->size = zf->size;
+		nzf->datasize = zf->datasize;
+	}
+	else if (zf->useparent) {
 		nzf = zfile_fopen_parent(zf, zf->name, 0, zf->size);
 		return nzf;
-  } else {
-    if (zf->zipname) {
-  	  nzf = openzip (zf->name);
-	  	if (nzf)
-    	  return nzf;
-    }
+	}
+	else {
+		if (zf->zipname) {
+			nzf = openzip(zf->name);
+			if (nzf)
+				return nzf;
+		}
 		if (!zf->name || !zf->mode)
 			return NULL;
-		FILE *ff = uae_tfopen (zf->name, zf->mode);
+		FILE* ff = uae_tfopen(zf->name, zf->mode);
 		if (!ff)
 			return NULL;
-		nzf = zfile_create (zf, NULL);
-    nzf->f = ff;
-  }
-  zfile_fseek (nzf, zf->seek, SEEK_SET);
-  if (zf->name)
-      nzf->name = my_strdup (zf->name);
-  if (nzf->zipname)
-      nzf->zipname = my_strdup (zf->zipname);
-  nzf->zfdmask = zf->zfdmask;
-  nzf->mode = my_strdup (zf->mode);
+		nzf = zfile_create(zf, NULL);
+		nzf->f = ff;
+	}
+	zfile_fseek(nzf, zf->seek, SEEK_SET);
+	if (zf->name)
+		nzf->name = my_strdup(zf->name);
+	if (nzf->zipname)
+		nzf->zipname = my_strdup(zf->zipname);
+	nzf->zfdmask = zf->zfdmask;
+	nzf->mode = my_strdup(zf->mode);
 	nzf->size = zf->size;
-  return nzf;
+	return nzf;
 }
 
-int zfile_exists (const TCHAR *name)
+int zfile_exists(const TCHAR* name)
 {
-  struct zfile *z;
+	struct zfile* z;
 
-  if (my_existsfile (name))
-  	return 1;
-  z = zfile_fopen (name, _T("rb"), ZFD_NORMAL | ZFD_CHECKONLY);
-  if (!z)
-  	return 0;
-  zfile_fclose (z);
-  return 1;
+	if (my_existsfile(name))
+		return 1;
+	z = zfile_fopen(name, _T("rb"), ZFD_NORMAL | ZFD_CHECKONLY);
+	if (!z)
+		return 0;
+	zfile_fclose(z);
+	return 1;
 }
 
-int zfile_iscompressed (struct zfile *z)
+int zfile_iscompressed(struct zfile* z)
 {
-  return z->data ? 1 : 0;
+	return z->data ? 1 : 0;
 }
 
-struct zfile *zfile_fopen_empty (struct zfile *prev, const TCHAR *name, uae_u64 size)
+struct zfile* zfile_fopen_empty(struct zfile* prev, const TCHAR* name, uae_u64 size)
 {
-  struct zfile *l;
-	l = zfile_create (prev, NULL);
-  l->name = my_strdup (name ? name : _T(""));
-  if (size) {
-	  l->data = xcalloc (uae_u8, size);
-    if (!l->data)  {
-      xfree (l);
-      return NULL;
-    }
-    l->size = size;
-	  l->datasize = size;
-  	l->allocsize = size;
-  } else {
-	  l->data = xcalloc (uae_u8, 1000);
-  	l->size = 0;
+	struct zfile* l;
+	l = zfile_create(prev, NULL);
+	l->name = my_strdup(name ? name : _T(""));
+	if (size) {
+		l->data = xcalloc(uae_u8, size);
+		if (!l->data) {
+			xfree(l);
+			return NULL;
+		}
+		l->size = size;
+		l->datasize = size;
+		l->allocsize = size;
+	}
+	else {
+		l->data = xcalloc(uae_u8, 1000);
+		l->size = 0;
 		l->allocsize = 1000;
-  }
-  return l;
+	}
+	return l;
 }
 struct zfile *zfile_fopen_empty (struct zfile *prev, const TCHAR *name)
 {
