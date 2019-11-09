@@ -132,7 +132,8 @@ extern bool debugmem_initialized;
 
 bool real_address_allowed(void)
 {
-	return debugmem_initialized == false;
+	return true;
+	//return debugmem_initialized == false;
 }
 
 int addr_valid(const TCHAR* txt, uaecptr addr, uae_u32 len)
