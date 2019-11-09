@@ -20,6 +20,13 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "savestate.h"
+#include "zfile.h"
+//#include "catweasel.h"
+//#include "cdtv.h"
+//#include "cdtvcr.h"
+#include "threaddep/thread.h"
+//#include "a2091.h"
+//#include "a2065.h"
 #include "gfxboard.h"
 #ifdef CD32
 #include "cd32_fmv.h"
@@ -30,6 +37,7 @@
 
 
 #define CARD_FLAG_CAN_Z3 1
+#define CARD_FLAG_CHILD 8
 
 // More information in first revision HRM Appendix_G
 #define BOARD_PROTOAUTOCONFIG 1
@@ -42,6 +50,8 @@
 #define BOARD_IGNORE 7
 
 #define KS12_BOOT_HACK 1
+
+#define EXP_DEBUG 0
 
 #define MAX_EXPANSION_BOARD_SPACE 16
 
@@ -81,7 +91,18 @@
 /* Manufacturer */
 #define commodore_g	 513 /* Commodore Braunschweig (Germany) */
 #define commodore	 514 /* Commodore West Chester */
+#define gvp		2017 /* GVP */
+#define ass		2102 /* Advanced Systems & Software */
 #define hackers_id	2011 /* Special ID for test cards */
+
+/* Card Type */
+#define commodore_a2091	    3 /* A2091 / A590 Card from C= */
+#define commodore_a2091_ram 10 /* A2091 / A590 Ram on HD-Card */
+#define commodore_a2232	    70 /* A2232 Multiport Expansion */
+#define ass_nexus_scsi	    1 /* Nexus SCSI Controller */
+
+#define gvp_series_2_scsi   11
+#define gvp_iv_24_gfx	    32
 
 /* ********************************************************** */
 /* 08 - 0A  */
@@ -131,6 +152,7 @@
 #define rom_install	(0x01<<12) /* run code at install time */
 #define rom_binddrv	(0x02<<12) /* run code with binddrivers */
 
+uaecptr ROM_filesys_resname, ROM_filesys_resid;
 uaecptr ROM_filesys_diagentry;
 uaecptr ROM_hardfile_resname, ROM_hardfile_resid;
 uaecptr ROM_hardfile_init;
@@ -158,6 +180,7 @@ struct card_data
 	uae_u32 size;
 	// parsing updated fields
 	const struct expansionromtype *ert;
+	const struct cpuboardsubtype *cst;
 	struct autoconfig_info aci;
 };
 
@@ -211,6 +234,7 @@ static bool ks11orolder(void)
 
 /* Autoconfig address space at 0xE80000 */
 static uae_u8 expamem[65536 + 4];
+static uae_u8 expamem_write_space[65536 + 4];
 #define AUTOMATIC_AUTOCONFIG_MAX_ADDRESS 0x80
 static int expamem_autoconfig_mode;
 static addrbank*(*expamem_map)(struct autoconfig_info*);
@@ -219,6 +243,7 @@ static uae_u8 expamem_lo;
 static uae_u16 expamem_hi;
 uaecptr expamem_z3_pointer_real, expamem_z3_pointer_uae;
 uaecptr expamem_z3_highram_real, expamem_z3_highram_uae;
+uaecptr expamem_highmem_pointer;
 uae_u32 expamem_board_size;
 uaecptr expamem_board_pointer;
 static uae_u8 slots_e8[8] = { 0 };
@@ -283,13 +308,13 @@ static void addextrachip (uae_u32 sysbase)
 			first = get_long (next);
 		}
 		if (next) {
-		  uae_u32 bytes = get_long (next + 4);
-		  if (next + bytes == 0x00200000) {
-			  put_long (next + 4, currprefs.chipmem_size - next);
-		  } else {
-			  put_long (0x00200000 + 0, 0);
-			  put_long (0x00200000 + 4, added);
-			  put_long (next, 0x00200000);
+			uae_u32 bytes = get_long(next + 4);
+			if (next + bytes == 0x00200000) {
+				put_long(next + 4, currprefs.chipmem_size - next);
+			} else {
+				put_long(0x00200000 + 0, 0);
+				put_long(0x00200000 + 4, added);
+				put_long(next, 0x00200000);
 			}
 	  }
 		return;
@@ -373,16 +398,16 @@ static uae_u8 REGPARAM2 expamem_read(int addr)
 	return b;
 }
 
-static void REGPARAM2 expamem_write (uaecptr addr, uae_u32 value)
+static void REGPARAM2 expamem_write(uaecptr addr, uae_u32 value)
 {
-  addr &= 0xffff;
-  if (addr == 00 || addr == 02 || addr == 0x40 || addr == 0x42) {
+	addr &= 0xffff;
+	if (addr == 00 || addr == 02 || addr == 0x40 || addr == 0x42) {
 		expamem[addr] = (value & 0xf0);
 		expamem[addr + 2] = (value & 0x0f) << 4;
-  } else {
+	} else {
 		expamem[addr] = ~(value & 0xf0);
 		expamem[addr + 2] = ~((value & 0x0f) << 4);
-  }
+	}
 }
 
 static int REGPARAM2 expamem_type (void)
@@ -456,22 +481,22 @@ static void call_card_init(int index)
 			map_banks(&expamemz3_bank, AUTOCONFIG_Z3 >> 16, 1, 0);
 			map_banks(&dummy_bank, 0xE8, 1, 0);
 		} else {
-		  map_banks(&expamem_bank, 0xE8, 1, 0);
-		  if (!currprefs.address_space_24)
-			  map_banks(&dummy_bank, AUTOCONFIG_Z3 >> 16, 1, 0);
-    }
+			map_banks(&expamem_bank, 0xE8, 1, 0);
+			if (!currprefs.address_space_24)
+				map_banks(&dummy_bank, AUTOCONFIG_Z3 >> 16, 1, 0);
+		}
 	} else {
 		if ((cd->flags & CARD_FLAG_CAN_Z3) && currprefs.cs_z3autoconfig && !currprefs.address_space_24) {
 			map_banks(&expamemz3_bank, AUTOCONFIG_Z3 >> 16, 1, 0);
 			map_banks(&dummy_bank, 0xE8, 1, 0);
 			expamem_bank_current = &expamem_bank;
-	  } else {
-		  map_banks(&expamem_bank, 0xE8, 1, 0);
-		  if (!currprefs.address_space_24)
-			  map_banks(&dummy_bank, AUTOCONFIG_Z3 >> 16, 1, 0);
-		  expamem_bank_current = NULL;
+		} else {
+			map_banks(&expamem_bank, 0xE8, 1, 0);
+			if (!currprefs.address_space_24)
+				map_banks(&dummy_bank, AUTOCONFIG_Z3 >> 16, 1, 0);
+			expamem_bank_current = NULL;
 		}
-  }
+	}
 }
 
 static void boardmessage(addrbank *mapped, bool success)
@@ -493,7 +518,7 @@ static void boardmessage(addrbank *mapped, bool success)
 		success ? _T("") : _T(" [SHUT UP]"));
 }
 
-void expamem_next(addrbank* mapped, addrbank* next)
+void expamem_next(addrbank *mapped, addrbank *next)
 {
 	if (mapped)
 		boardmessage(mapped, mapped->start != 0xffffffff);
@@ -504,7 +529,7 @@ void expamem_next(addrbank* mapped, addrbank* next)
 		++ecard;
 		if (ecard >= cardno)
 			break;
-		struct card_data* ec = cards[ecard];
+		struct card_data *ec = cards[ecard];
 		if (ec->zorro == 3 && ec->base == 0xffffffff) {
 			write_log(_T("Autoconfig chain enumeration aborted, 32-bit address space overflow.\n"));
 			ecard = cardno;
@@ -516,8 +541,7 @@ void expamem_next(addrbank* mapped, addrbank* next)
 			aci.prefs = &currprefs;
 			aci.rc = cards[ecard]->rc;
 			ec->initrc(&aci);
-		}
-		else {
+		} else {
 			call_card_init(ecard);
 			break;
 		}
@@ -541,6 +565,42 @@ static void expamemz3_map(void)
 	}
 }
 
+// only for custom autoconfig device development purposes, not in use in any normal config
+static uae_u32 REGPARAM2 expamem_write_lget(uaecptr addr)
+{
+	addr &= 0xffff;
+	return (expamem_write_space[addr + 0] << 24) | (expamem_write_space[addr + 1] << 16) | (expamem_write_space[addr + 2] << 8) | (expamem_write_space[addr + 3] << 0);
+}
+static uae_u32 REGPARAM2 expamem_write_wget(uaecptr addr)
+{
+	addr &= 0xffff;
+	return (expamem_write_space[addr + 0] << 8) | (expamem_write_space[addr + 1] << 0);
+}
+static uae_u32 REGPARAM2 expamem_write_bget(uaecptr addr)
+{
+	addr &= 0xffff;
+	return expamem_write_space[addr];
+}
+static void REGPARAM2 expamem_write_lput(uaecptr addr, uae_u32 value)
+{
+	addr &= 0xffff;
+	expamem_write_space[addr + 0] = value >> 24;
+	expamem_write_space[addr + 1] = value >> 16;
+	expamem_write_space[addr + 2] = value >>  8;
+	expamem_write_space[addr + 3] = value >>  0;
+}
+static void REGPARAM2 expamem_write_wput(uaecptr addr, uae_u32 value)
+{
+	addr &= 0xffff;
+	expamem_write_space[addr + 0] = value >> 8;
+	expamem_write_space[addr + 1] = value;
+}
+static void REGPARAM2 expamem_write_bput(uaecptr addr, uae_u32 value)
+{
+	addr &= 0xffff;
+	expamem_write_space[addr] = value;
+}
+
 static uae_u32 REGPARAM2 expamem_lget (uaecptr addr)
 {
 	if (expamem_bank_current && expamem_bank_current != &expamem_bank) {
@@ -550,7 +610,7 @@ static uae_u32 REGPARAM2 expamem_lget (uaecptr addr)
 		return expamem_bank_current->sub_banks ? expamem_bank_current->sub_banks[0].bank->lget(addr) : expamem_bank_current->lget(addr);
 	}
 	write_log (_T("warning: Z2 READ.L from address $%08x PC=%x\n"), addr, M68K_GETPC);
-  return (expamem_wget (addr) << 16) | expamem_wget (addr + 2);
+	return (expamem_wget (addr) << 16) | expamem_wget (addr + 2);
 }
 
 static uae_u32 REGPARAM2 expamem_wget (uaecptr addr)
