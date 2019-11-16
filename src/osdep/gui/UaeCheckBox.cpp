@@ -1,15 +1,6 @@
 #include "UaeCheckBox.hpp"
-#ifdef USE_SDL1
-#include "guichan/widgets/checkbox.hpp"
-
-#include "guichan/font.hpp"
-#include "guichan/graphics.hpp"
-#include "guichan/key.hpp"
-#include "guichan/mouseinput.hpp"
-#elif USE_SDL2
 #include <guisan/widgets/checkbox.hpp>
 #include <guisan/graphics.hpp>
-#endif
 
 namespace gcn
 {
@@ -17,7 +8,7 @@ namespace gcn
 	= default;
 
 	UaeCheckBox::UaeCheckBox(const std::string& caption,
-		const bool selected)
+	                         const bool selected)
 		: CheckBox(caption, selected)
 	{
 		setId(caption);
@@ -41,9 +32,9 @@ namespace gcn
 		{
 			graphics->setColor(Color(0x000000));
 			graphics->drawRectangle(Rectangle(0,
-				0,
-				getWidth(),
-				getHeight()));
+			                                  0,
+			                                  getWidth(),
+			                                  getHeight()));
 		}
 	}
 

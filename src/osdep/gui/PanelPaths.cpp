@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include <stdio.h>
@@ -26,17 +19,17 @@ static gcn::Label* lblSystemROMs;
 static gcn::TextField* txtSystemROMs;
 static gcn::Button* cmdSystemROMs;
 
-static gcn::Label *lblControllersPath;
-static gcn::TextField *txtControllersPath;
-static gcn::Button *cmdControllersPath;
+static gcn::Label* lblControllersPath;
+static gcn::TextField* txtControllersPath;
+static gcn::Button* cmdControllersPath;
 
 static gcn::Label* lblConfigPath;
 static gcn::TextField* txtConfigPath;
 static gcn::Button* cmdConfigPath;
 
-static gcn::Label *lblRetroArchFile;
-static gcn::TextField *txtRetroArchFile;
-static gcn::Button *cmdRetroArchFile;
+static gcn::Label* lblRetroArchFile;
+static gcn::TextField* txtRetroArchFile;
+static gcn::Button* cmdRetroArchFile;
 
 static gcn::Button* cmdRescanROMs;
 static gcn::Button* cmdDownloadXML;
@@ -86,7 +79,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdRetroArchFile)
 		{
-			const char *filter[] = { "retroarch.cfg", "\0" };
+			const char* filter[] = {"retroarch.cfg", "\0"};
 			fetch_retroarchfile(tmp, MAX_DPATH);
 			if (SelectFile("Select RetroArch Config File", tmp, filter))
 			{
@@ -122,63 +115,72 @@ public:
 
 static RescanROMsButtonActionListener* rescanROMsButtonActionListener;
 
-int date_cmp(const char *d1, const char *d2)
+int date_cmp(const char* d1, const char* d2)
 {
 	// compare years
 	auto rc = strncmp(d1 + 0, d2 + 0, 4);
-    if (rc != 0)
-        return rc;
+	if (rc != 0)
+		return rc;
 
-    auto n = 0;
-    
-    for (auto m = 0; m < 5; ++m)
-    {
-        switch(m) {
-        case 0: n = 5 ; break;   // compare months
-        case 1: n = 8 ; break;   // compare days
-        case 2: n = 14; break;   // compare hours
-        case 3: n = 17; break;   // compare minutes
-        case 4: n = 20; break;   // compare seconds
-        }
-    
-        rc = strncmp(d1 + n, d2 + n, 2);
-        if (rc != 0)
-            return rc;
-    } 
-            
-    return strncmp(d1, d2, 2);
+	auto n = 0;
+
+	for (auto m = 0; m < 5; ++m)
+	{
+		switch (m)
+		{
+		case 0: n = 5;
+			break; // compare months
+		case 1: n = 8;
+			break; // compare days
+		case 2: n = 14;
+			break; // compare hours
+		case 3: n = 17;
+			break; // compare minutes
+		case 4: n = 20;
+			break; // compare seconds
+		}
+
+		rc = strncmp(d1 + n, d2 + n, 2);
+		if (rc != 0)
+			return rc;
+	}
+
+	return strncmp(d1, d2, 2);
 }
 
 static xmlNode* get_node(xmlNode* node, const char* name)
 {
 	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
 	{
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char *>(curr_node->name), name) == 0)
+		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char*>(curr_node->name), name) == 0)
 			return curr_node->children;
 	}
 	return nullptr;
 }
 
-void copy_file( const char* srce_file, const char* dest_file )
+void copy_file(const char* srce_file, const char* dest_file)
 {
-    std::ifstream srce( srce_file, std::ios::binary ) ;
-    std::ofstream dest( dest_file, std::ios::binary ) ;
-    dest << srce.rdbuf() ;
+	std::ifstream srce(srce_file, std::ios::binary);
+	std::ofstream dest(dest_file, std::ios::binary);
+	dest << srce.rdbuf();
 }
 
 void download_rtb(const char* download_file)
-{    
-        char download_command[MAX_DPATH];
-        char local_path[MAX_DPATH];
-    
-        //  download .rtb
-        snprintf(local_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data,download_file);                                
-        snprintf(download_command, MAX_DPATH, "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true",local_path,download_file);                
-        if (!zfile_exists(local_path)) // ?? 
-        {   auto afile = popen(download_command, "r");
-            write_log("Downloading %s ...\n", download_file);
-            pclose(afile);
-        }
+{
+	char download_command[MAX_DPATH];
+	char local_path[MAX_DPATH];
+
+	//  download .rtb
+	snprintf(local_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, download_file);
+	snprintf(download_command, MAX_DPATH,
+	         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true",
+	         local_path, download_file);
+	if (!zfile_exists(local_path)) // ?? 
+	{
+		auto afile = popen(download_command, "r");
+		write_log("Downloading %s ...\n", download_file);
+		pclose(afile);
+	}
 }
 
 class DownloadXMLButtonActionListener : public gcn::ActionListener
@@ -188,48 +190,55 @@ public:
 	{
 		if (!check_internet_connection())
 		{
-			ShowMessage("No Internet Connection", "No Internet Connection was found!", "Please connect to the Internet then try again.", "OK", "");
+			ShowMessage("No Internet Connection", "No Internet Connection was found!",
+			            "Please connect to the Internet then try again.", "OK", "");
 			return;
 		}
 
 		char original_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
 		char updated_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
-                
+
 		char xml_path[MAX_DPATH];
 		char xml2_path[MAX_DPATH];
-                char download_command[MAX_DPATH];
-                
-                //  download WHDLOAD
- 		snprintf(xml_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);                                
-                snprintf(download_command, MAX_DPATH, "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true",xml_path);                
-		if (!zfile_exists(xml_path)) // ?? 
-		{   auto afile = popen(download_command, "r");
-                    pclose(afile);
-                }
+		char download_command[MAX_DPATH];
 
-                //  download boot-data.zip
- 		snprintf(xml_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);                                
-                snprintf(download_command, MAX_DPATH, "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true",xml_path);                
+		//  download WHDLOAD
+		snprintf(xml_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
+		snprintf(download_command, MAX_DPATH,
+		         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true",
+		         xml_path);
 		if (!zfile_exists(xml_path)) // ?? 
-		{   auto afile = popen(download_command, "r");
-                    pclose(afile);
-                }
-                
-                // download kickstart RTB files for maximum compatibility
- 		snprintf(xml_path, MAX_DPATH, "kick33180.A500.RTB");                                                
-                download_rtb(xml_path);                        
- 		//snprintf(xml_path, MAX_DPATH, "kick33192.A500.RTB");                                                
-                //download_rtb(xml_path);
- 		snprintf(xml_path, MAX_DPATH, "kick34005.A500.RTB");                                                
-                download_rtb(xml_path);                
- 		snprintf(xml_path, MAX_DPATH, "kick40063.A600.RTB");                                                
-                download_rtb(xml_path);
- 		snprintf(xml_path, MAX_DPATH, "kick40068.A1200.RTB");                                                
-                download_rtb(xml_path);
- 		snprintf(xml_path, MAX_DPATH, "kick40068.A4000.RTB");                                                
-                download_rtb(xml_path);                
-                
-                //
+		{
+			auto afile = popen(download_command, "r");
+			pclose(afile);
+		}
+
+		//  download boot-data.zip
+		snprintf(xml_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
+		snprintf(download_command, MAX_DPATH,
+		         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true",
+		         xml_path);
+		if (!zfile_exists(xml_path)) // ?? 
+		{
+			auto afile = popen(download_command, "r");
+			pclose(afile);
+		}
+
+		// download kickstart RTB files for maximum compatibility
+		snprintf(xml_path, MAX_DPATH, "kick33180.A500.RTB");
+		download_rtb(xml_path);
+		//snprintf(xml_path, MAX_DPATH, "kick33192.A500.RTB");                                                
+		//download_rtb(xml_path);
+		snprintf(xml_path, MAX_DPATH, "kick34005.A500.RTB");
+		download_rtb(xml_path);
+		snprintf(xml_path, MAX_DPATH, "kick40063.A600.RTB");
+		download_rtb(xml_path);
+		snprintf(xml_path, MAX_DPATH, "kick40068.A1200.RTB");
+		download_rtb(xml_path);
+		snprintf(xml_path, MAX_DPATH, "kick40068.A4000.RTB");
+		download_rtb(xml_path);
+
+		//
 		snprintf(xml_path, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
 		snprintf(xml2_path, MAX_DPATH, "/tmp/whdload_db.xml");
 
@@ -239,14 +248,18 @@ public:
 		{
 			const auto doc = xmlParseFile(xml_path);
 			const auto root_element = xmlDocGetRootElement(doc);
-			_stprintf(original_date, "%s", reinterpret_cast<const char*>(xmlGetProp(root_element, reinterpret_cast<const xmlChar *>("timestamp"))));
+			_stprintf(original_date, "%s",
+			          reinterpret_cast<const char*>(xmlGetProp(root_element,
+			                                                   reinterpret_cast<const xmlChar*>("timestamp"))));
 			write_log(" ... Date from original ...  %s\n", original_date);
 		}
 		else
 			write_log("\n");
 
 		// download the updated XML to /tmp/               
-		auto afile = popen("wget -np -nv -O /tmp/whdload_db.xml https://raw.githubusercontent.com/HoraceAndTheSpider/Amiberry-XML-Builder/master/whdload_db.xml", "r");
+		auto afile = popen(
+			"wget -np -nv -O /tmp/whdload_db.xml https://raw.githubusercontent.com/HoraceAndTheSpider/Amiberry-XML-Builder/master/whdload_db.xml",
+			"r");
 		pclose(afile);
 
 		// do i need to pause here??
@@ -257,7 +270,9 @@ public:
 
 		if (zfile_exists(xml2_path)) // use downloaded XML
 		{
-			_stprintf(updated_date, "%s", reinterpret_cast<const char*>(xmlGetProp(root_element, reinterpret_cast<const xmlChar *>("timestamp"))));
+			_stprintf(updated_date, "%s",
+			          reinterpret_cast<const char*>(xmlGetProp(root_element,
+			                                                   reinterpret_cast<const xmlChar*>("timestamp"))));
 		}
 
 		//do_download     
@@ -376,7 +391,8 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdDownloadXML->addActionListener(downloadXMLButtonActionListener);
 
 	category.panel->add(cmdRescanROMs, DISTANCE_BORDER, category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
-	category.panel->add(cmdDownloadXML, DISTANCE_BORDER + cmdRescanROMs->getWidth() + 20, category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
+	category.panel->add(cmdDownloadXML, DISTANCE_BORDER + cmdRescanROMs->getWidth() + 20,
+	                    category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
 
 	RefreshPanelPaths();
 }
@@ -424,13 +440,13 @@ void RefreshPanelPaths()
 	txtRetroArchFile->setText(tmp);
 }
 
-bool HelpPanelPaths(std::vector<std::string> &helptext)
+bool HelpPanelPaths(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Specify the location of your kickstart roms and the folders where the configurations");
 	helptext.emplace_back("and controller files should be stored. With the button \"...\" you can open a dialog");
 	helptext.emplace_back("to choose the folder.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("After changing the location of the kickstart roms, click on \"Rescan\" to refresh");
 	helptext.emplace_back("the list of the available ROMs.");
 	return true;

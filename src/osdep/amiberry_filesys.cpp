@@ -89,28 +89,28 @@ int my_readdir(struct my_opendir_s* mod, char* name)
 
 struct my_openfile_s
 {
-	void* h;
+	int h;
 };
 
 
 void my_close(struct my_openfile_s* mos)
 {
 	if (mos)
-		close(int(mos->h));
+		close(mos->h);
 	xfree (mos);
 }
 
 
 uae_s64 my_lseek(struct my_openfile_s* mos,const uae_s64 offset, const int pos)
 {
-	return lseek(int(mos->h), offset, pos);
+	return lseek(mos->h, offset, pos);
 }
 
 
 uae_s64 my_fsize(struct my_openfile_s* mos)
 {
-	uae_s64 pos = lseek(int(mos->h), 0, SEEK_CUR);
-	uae_s64 size = lseek(int(mos->h), 0, SEEK_END);
+	uae_s64 pos = lseek(mos->h, 0, SEEK_CUR);
+	uae_s64 size = lseek(mos->h, 0, SEEK_END);
 	lseek(int(mos->h), pos, SEEK_SET);
 	return size;
 }
@@ -118,13 +118,13 @@ uae_s64 my_fsize(struct my_openfile_s* mos)
 
 unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 {
-	return read(int(mos->h), b, size);
+	return read(mos->h, b, size);
 }
 
 
 unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
 {
-	return write(int(mos->h), b, size);
+	return write(mos->h, b, size);
 }
 
 
@@ -161,9 +161,9 @@ struct my_openfile_s* my_open(const TCHAR* name, const int flags)
 	if (!mos)
 		return nullptr;
 	if (flags & O_CREAT)
-		mos->h = reinterpret_cast<void *>(open(name, flags, 0660));
+		mos->h = open(name, flags, 0660);
 	else
-		mos->h = reinterpret_cast<void *>(open(name, flags));
+		mos->h = open(name, flags);
 	if (!mos->h)
 	{
 		xfree (mos);

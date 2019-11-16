@@ -21,11 +21,25 @@
 typedef int8_t uae_s8;
 typedef uint8_t uae_u8;
 
-typedef int16_t uae_s16;
-typedef uint16_t uae_u16;
+#if SIZEOF_SHORT == 2
+typedef unsigned short uae_u16;
+typedef short uae_s16;
+#elif SIZEOF_INT == 2
+typedef unsigned int uae_u16;
+typedef int uae_s16;
+#else
+#error No 2 byte type, you lose.
+#endif
 
-typedef int uae_s32;
+#if SIZEOF_INT == 4
 typedef unsigned int uae_u32;
+typedef int uae_s32;
+#elif SIZEOF_LONG == 4
+typedef unsigned long uae_u32;
+typedef long uae_s32;
+#else
+#error No 4 byte type, you lose.
+#endif
 
 #ifndef uae_s64
 typedef long long int uae_s64;

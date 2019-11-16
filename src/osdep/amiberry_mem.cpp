@@ -1,6 +1,5 @@
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
+#include <cstdlib>
+#include "string.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -9,6 +8,12 @@
 #include "autoconf.h"
 #include "uae/mman.h"
 #include <sys/mman.h>
+#include "sys/types.h"
+#include "sys/sysinfo.h"
+
+#ifdef ANDROID
+#define valloc(x) memalign(getpagesize(), x)
+#endif
 
 static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
@@ -16,20 +21,17 @@ uae_u32 max_z3fastmem;
 /* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
 #define BARRIER 32
 
-static uae_u8* additional_mem = (uae_u8*)MAP_FAILED;
-#define MAX_RTG_MEM 128
-#define ADDITIONAL_MEMSIZE ((128 + MAX_RTG_MEM) * 1024 * 1024)
+static uae_u8* additional_mem = static_cast<uae_u8*>(MAP_FAILED);
+#define MAX_RTG_MEM (128 * 1024 * 1024)
+#define ADDITIONAL_MEMSIZE (max_z3fastmem + MAX_RTG_MEM)
 
-static uae_u8* a3000_mem = (uae_u8*)MAP_FAILED;
-static int a3000_totalsize = 0;
+static uae_u8* a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
+static unsigned int a3000_totalsize = 0;
 #define A3000MEM_START 0x08000000
 
 static unsigned int last_low_size = 0;
 static unsigned int last_high_size = 0;
-
-
 int z3_base_adr = 0;
-
 
 void free_AmigaMem(void)
 {
@@ -45,16 +47,27 @@ void free_AmigaMem(void)
 	if (additional_mem != MAP_FAILED)
 	{
 		munmap(additional_mem, ADDITIONAL_MEMSIZE + BARRIER);
-		additional_mem = (uae_u8*)MAP_FAILED;
+		additional_mem = static_cast<uae_u8*>(MAP_FAILED);
 	}
 	if (a3000_mem != MAP_FAILED)
 	{
 		munmap(a3000_mem, a3000_totalsize);
-		a3000_mem = (uae_u8*)MAP_FAILED;
+		a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
 		a3000_totalsize = 0;
 	}
 }
 
+bool can_have_1gb()
+{
+	struct sysinfo mem_info{};
+	sysinfo(&mem_info);
+	long long total_phys_mem = mem_info.totalram;
+	total_phys_mem *= mem_info.mem_unit;
+	// Do we have more than 1GB in the system?
+	if (total_phys_mem > 1024 * 1024 * 1024)
+		return true;
+	return false;
+}
 
 void alloc_AmigaMem(void)
 {
@@ -70,41 +83,55 @@ void alloc_AmigaMem(void)
 	natmem_size = 16 * 1024 * 1024;
 #ifdef AMIBERRY
 	// address returned by valloc() too high for later mmap() calls. Use mmap() also for first area.
-	regs.natmem_offset = (uae_u8*)mmap(reinterpret_cast<void *>(0x20000000), natmem_size + BARRIER,
-	                                   PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+	regs.natmem_offset = static_cast<uae_u8*>(mmap(reinterpret_cast<void *>(0x20000000), natmem_size + BARRIER,
+	                                               PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
 #else
 	regs.natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
 #endif
-	max_z3fastmem = ADDITIONAL_MEMSIZE - (MAX_RTG_MEM * 1024 * 1024);
+	
+	if (can_have_1gb())
+		max_z3fastmem = 1024 * 1024 * 1024;
+	else
+		max_z3fastmem = 512 * 1024 * 1024;
+	
 	if (!regs.natmem_offset)
 	{
 		write_log("Can't allocate 16M of virtual address space!?\n");
 		abort();
 	}
-	additional_mem = (uae_u8*)mmap(regs.natmem_offset + Z3BASE_REAL, ADDITIONAL_MEMSIZE + BARRIER,
-	                               PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+	additional_mem = static_cast<uae_u8*>(mmap(regs.natmem_offset + Z3BASE_REAL, ADDITIONAL_MEMSIZE + BARRIER,
+	                                           PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
 	if (additional_mem != MAP_FAILED)
 	{
 		// Allocation successful -> we can use natmem_offset for entire memory access at real address
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
 		z3_base_adr = Z3BASE_REAL;
+#if defined(CPU_AARCH64)
+		write_log("Allocated 16 MB for 24-bit area (0x%016lx) and %d MB for Z3 and RTG at real address (0x%016lx - 0x%016lx)\n",
+			regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+#else
 		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at real address (0x%08x - 0x%08x)\n",
 			regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER
 		);
+#endif
 		set_expamem_z3_hack_mode(Z3MAPPING_REAL);
 		return;
 	}
 
-	additional_mem = (uae_u8*)mmap(regs.natmem_offset + Z3BASE_UAE, ADDITIONAL_MEMSIZE + BARRIER,
-	                               PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+	additional_mem = static_cast<uae_u8*>(mmap(regs.natmem_offset + Z3BASE_UAE, ADDITIONAL_MEMSIZE + BARRIER,
+	                                           PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
 	if (additional_mem != MAP_FAILED)
 	{
 		// Allocation successful -> we can use natmem_offset for entire memory access at fake address
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
 		z3_base_adr = Z3BASE_UAE;
+#if defined(CPU_AARCH64)
+		write_log("Allocated 16 MB for 24-bit area (0x%016lx) and %d MB for Z3 and RTG at fake address (0x%016lx - 0x%016lx)\n",
+			regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+#else
 		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n",
-			regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER
-		);
+			regs.natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
+#endif
 		set_expamem_z3_hack_mode(Z3MAPPING_UAE);
 		return;
 	}
@@ -116,19 +143,23 @@ void alloc_AmigaMem(void)
 
 	// Next attempt: allocate huge memory block for entire area
 	natmem_size = ADDITIONAL_MEMSIZE + 256 * 1024 * 1024;
-	regs.natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
+	regs.natmem_offset = static_cast<uae_u8*>(valloc(natmem_size + BARRIER));
 	if (regs.natmem_offset)
 	{
 		// Allocation successful
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
 		z3_base_adr = Z3BASE_UAE;
 		write_log("Allocated %d MB for entire memory\n", natmem_size / (1024 * 1024));
+#if defined(CPU_AARCH64)
+		if (((uae_u64)(regs.natmem_offset + natmem_size + BARRIER) & 0xffffffff00000000) != 0)
+			write_log("Memory address is higher than 32 bit. JIT will crash\n");
+#endif
 		return;
 	}
 
 	// No mem for Z3 or RTG at all
 	natmem_size = 16 * 1024 * 1024;
-	regs.natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
+	regs.natmem_offset = static_cast<uae_u8*>(valloc(natmem_size + BARRIER));
 
 	if (!regs.natmem_offset)
 	{
@@ -140,14 +171,17 @@ void alloc_AmigaMem(void)
 	z3_base_adr = 0x00000000;
 	max_z3fastmem = 0;
 
-	write_log("Reserved: %p-%p (0x%08x %dM)\n", regs.natmem_offset, (uae_u8*)regs.natmem_offset + natmem_size,
+	write_log("Reserved: %p-%p (0x%08x %dM)\n", regs.natmem_offset, static_cast<uae_u8*>(regs.natmem_offset) + natmem_size,
 		natmem_size, natmem_size >> 20);
+#if defined(CPU_AARCH64)
+	if (((uae_u64)(regs.natmem_offset + natmem_size + BARRIER) & 0xffffffff00000000) != 0)
+		write_log("Memory address is higher than 32 bit. JIT will crash\n");
+#endif
 }
-
 
 static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
 {
-	bool result = true;
+	auto result = true;
 
 	if (lowsize == last_low_size && highsize == last_high_size)
 		return result;
@@ -156,7 +190,7 @@ static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
 	{
 		write_log("HandleA3000Mem(): Free A3000 memory (0x%08x). %d MB.\n", a3000_mem, a3000_totalsize / (1024 * 1024));
 		munmap(a3000_mem, a3000_totalsize);
-		a3000_mem = (uae_u8*)MAP_FAILED;
+		a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
 		a3000_totalsize = 0;
 		last_low_size = 0;
 		last_high_size = 0;
@@ -167,8 +201,8 @@ static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
 		write_log("Try to get A3000 memory at correct place (0x%08x). %d MB and %d MB.\n", A3000MEM_START,
 			lowsize / (1024 * 1024), highsize / (1024 * 1024));
 		a3000_totalsize = lowsize + highsize;
-		a3000_mem = (uae_u8*)mmap(regs.natmem_offset + (A3000MEM_START - lowsize), a3000_totalsize,
-		                          PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+		a3000_mem = static_cast<uae_u8*>(mmap(regs.natmem_offset + (A3000MEM_START - lowsize), a3000_totalsize,
+		                                      PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
 		if (a3000_mem != MAP_FAILED)
 		{
 			last_low_size = lowsize;
@@ -186,21 +220,19 @@ static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
 	return result;
 }
 
-
 static bool A3000MemAvailable(void)
 {
 	return (a3000_mem != MAP_FAILED);
 }
 
-
 bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 {
-	bool got = false;
-	bool readonly = false;
+	auto got = false;
+	auto readonly = false;
 	uaecptr start;
-	uae_u32 size = ab->reserved_size;
-	uae_u32 readonlysize = size;
-	bool barrier = false;
+	auto size = ab->reserved_size;
+	auto readonlysize = size;
+	auto barrier = false;
 
 	if (!_tcscmp(ab->label, _T("*")))
 	{
@@ -432,7 +464,6 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 	return got;
 }
 
-
 bool mapped_malloc(addrbank* ab)
 {
 	if (ab->allocated_size)
@@ -453,7 +484,7 @@ bool mapped_malloc(addrbank* ab)
 	struct uae_mman_data md = {0};
 	if (uae_mman_info(ab, &md))
 	{
-		uaecptr start = md.start;
+		const auto start = md.start;
 		ab->baseaddr = regs.natmem_offset + start;
 	}
 
@@ -474,7 +505,6 @@ bool mapped_malloc(addrbank* ab)
 	return (ab->baseaddr != nullptr);
 }
 
-
 void mapped_free(addrbank* ab)
 {
 	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr)
@@ -487,7 +517,6 @@ void mapped_free(addrbank* ab)
 	ab->baseaddr = nullptr;
 	ab->allocated_size = 0;
 }
-
 
 void protect_roms(bool protect)
 {
@@ -514,14 +543,12 @@ if(filesysory != NULL)
 */
 }
 
-
 static int doinit_shm(void)
 {
 	expansion_scan_autoconfig(&currprefs, true);
 
 	return 1;
 }
-
 
 static uae_u32 oz3fastmem_size[MAX_RAM_BOARDS];
 static uae_u32 ofastmem_size[MAX_RAM_BOARDS];
@@ -565,4 +592,12 @@ bool init_shm(void)
 
 	memory_hardreset(2);
 	return true;
+}
+
+void free_shm (void)
+{
+	for (auto& i : ortgmem_type)
+	{
+		i = -1;
+	}
 }

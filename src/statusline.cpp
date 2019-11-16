@@ -1,6 +1,5 @@
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 #include "sysdeps.h"
 
@@ -52,6 +51,7 @@ static void write_tdnumber(uae_u8 *buf, int bpp, int x, int y, int num, uae_u32 
 
 void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
+	struct amigadisplay *ad = &adisplays;
 	int x_start, j, led, border;
 	uae_u32 c1, c2, cb;
 
@@ -71,7 +71,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
 		int half = 0;
 
-		if (!(currprefs.leds_on_screen_mask[picasso_on ? 1 : 0] & (1 << led)))
+		if (!(currprefs.leds_on_screen_mask[ad->picasso_on ? 1 : 0] & (1 << led)))
 			continue;
 
 		pen_rgb = c1;

@@ -4,7 +4,7 @@
  * Amiberry interface
  *
  */
-#include <stdbool.h>
+
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -36,9 +36,7 @@
 #include "gui.h"
 #include "sounddep/sound.h"
 #include "devices.h"
-#ifdef USE_SDL2
 #include <map>
-#endif
 
 extern FILE *debugfile;
 int pause_emulation;
@@ -49,6 +47,13 @@ bool host_poweroff = false;
 bool read_config_descriptions = true;
 bool write_logfile = false;
 bool scanlines_by_default = false;
+bool swap_win_alt_keys = false;
+bool gui_joystick_control = true;
+#ifdef USE_RENDER_THREAD
+bool use_sdl2_render_thread = true;
+#else
+bool use_sdl2_render_thread = false;
+#endif
 
 // Default Enter GUI key is F12
 int enter_gui_key = SDLK_F12;
@@ -59,65 +64,28 @@ int action_replay_button = SDLK_PAUSE;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
-#ifdef USE_SDL1
-SDLKey GetKeyFromName(const char *name)
-{
-	if (!name || !*name) {
-		return SDLK_UNKNOWN;
-	}
-
-	for (int key = SDLK_FIRST; key < SDLK_LAST; key++)
-	{
-		if (!SDL_GetKeyName(SDLKey(key)))
-			continue;
-		if (SDL_strcasecmp(name, SDL_GetKeyName(SDLKey(key))) == 0)
-		{
-			return SDLKey(key);
-		}
-	}
-
-	return SDLK_UNKNOWN;
-}
-#endif
-
-void set_key_configs(struct uae_prefs *p)
+void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 	{
 		// If we have a value in the config, we use that instead
-#ifdef USE_SDL1
-		enter_gui_key = GetKeyFromName(p->open_gui);
-#elif USE_SDL2
 		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
-#endif
 	}
 
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 	{
 		// If we have a value in the config, we use that instead
-#ifdef USE_SDL1
-		quit_key = GetKeyFromName(p->quit_amiberry);
-#elif USE_SDL2
 		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
-#endif
 	}
 
 	if (strncmp(p->action_replay, "", 1) != 0)
 	{
-#ifdef USE_SDL1
-		action_replay_button = GetKeyFromName(p->action_replay);
-#elif USE_SDL2
 		action_replay_button = SDL_GetKeyFromName(p->action_replay);
-#endif
 	}
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
 	{
-#ifdef USE_SDL1
-		fullscreen_key = GetKeyFromName(p->fullscreen_toggle);
-#elif USE_SDL2
 		fullscreen_key = SDL_GetKeyFromName(p->fullscreen_toggle);
-#endif
 	}
 }
 
@@ -295,6 +263,13 @@ void fixtrailing(TCHAR *p)
 	_tcscat(p, "/");
 }
 
+bool samepath(const TCHAR *p1, const TCHAR *p2)
+{
+	if (!_tcsicmp(p1, p2))
+		return true;
+	return false;
+}
+
 void getpathpart(TCHAR *outpath, int size, const TCHAR *inpath)
 {
 	_tcscpy(outpath, inpath);
@@ -371,11 +346,11 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
-	if (p->gfx_size.width == 0)
-		p->gfx_size.width = 640;
-	if (p->gfx_size.height == 0)
-		p->gfx_size.height = 256;
-	p->gfx_resolution = p->gfx_size.width > 600 ? 1 : 0;
+	if (p->gfx_monitor.gfx_size.width == 0)
+		p->gfx_monitor.gfx_size.width = 720;
+	if (p->gfx_monitor.gfx_size.height == 0)
+		p->gfx_monitor.gfx_size.height = 288;
+	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? RES_HIRES : RES_LORES;
 
 	if (p->gfx_vresolution && !can_have_linedouble) // If there's not enough vertical space, cancel Line Doubling/Scanlines
 		p->gfx_vresolution = 0;
@@ -387,7 +362,7 @@ void target_fixup_options(struct uae_prefs* p)
 
 	if (p->cachesize <= 0)
 		p->compfpu = false;
-
+	
 	fix_apmodes(p);
 	set_key_configs(p);
 }
@@ -400,7 +375,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
-	p->vertical_offset = OFFSET_Y_ADJUST;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
 	if (scanlines_by_default)
@@ -410,7 +384,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	}
 	else
 	{
-		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due performance hit
+		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due to performance hit
 		p->gfx_pscanlines = 0;
 	}
 
@@ -425,7 +399,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->use_retroarch_menu = true;
 	p->use_retroarch_reset = false;
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	p->onScreen = 1;
 	p->onScreen_textinput = 1;
 	p->onScreen_dpad = 1;
@@ -479,7 +453,6 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	cfgfile_write(f, "amiberry.vertical_offset", "%d", p->vertical_offset - OFFSET_Y_ADJUST);
 	cfgfile_write(f, "amiberry.hide_idle_led", "%d", p->hide_idle_led);
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
@@ -496,7 +469,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
 	cfgfile_write(f, "amiberry.onscreen_dpad", "%d", p->onScreen_dpad);
@@ -545,8 +518,8 @@ TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
-#ifdef ANDROIDSDL
-		|| cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
+#ifdef ANDROID
+	int result = (cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
 		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
 		|| cfgfile_intval(option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
 		|| cfgfile_intval(option, value, "onscreen_button1", &p->onScreen_button1, 1)
@@ -574,8 +547,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		|| cfgfile_intval(option, value, "pos_y_button6", &p->pos_y_button6, 1)
 		|| cfgfile_intval(option, value, "floating_joystick", &p->floatingJoystick, 1)
 		|| cfgfile_intval(option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
+		);
+	if (result)
+		return 1;
 #endif
-
+	
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))
@@ -583,19 +559,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
-		return 1;
-                
-                
+		return 1;          
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
 		return 1;
-
-	if (cfgfile_intval(option, value, "vertical_offset", &p->vertical_offset, 1))
-	{
-		p->vertical_offset += OFFSET_Y_ADJUST;
-		return 1;
-	}
 	if (cfgfile_intval(option, value, "hide_idle_led", &p->hide_idle_led, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
@@ -615,75 +583,75 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 
 void fetch_datapath(char *out, int size)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/", size - 1);
 }
 
 void fetch_saveimagepath(char *out, int size, int dir)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/savestates/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/savestates/", size - 1);
 }
 
 void fetch_configurationpath(char *out, int size)
 {
 	fixtrailing(config_path);
-	strncpy(out, config_path, size);
+	strncpy(out, config_path, size - 1);
 }
 
 void set_configurationpath(char *newpath)
 {
-	strncpy(config_path, newpath, MAX_DPATH);
+	strncpy(config_path, newpath, MAX_DPATH - 1);
 }
 
 void fetch_controllerspath(char* out, int size)
 {
 	fixtrailing(controllers_path);
-	strncpy(out, controllers_path, size);
+	strncpy(out, controllers_path, size - 1);
 }
 
 void set_controllerspath(char* newpath)
 {
-	strncpy(controllers_path, newpath, MAX_DPATH);
+	strncpy(controllers_path, newpath, MAX_DPATH - 1);
 }
 
 void fetch_retroarchfile(char* out, int size)
 {
-	strncpy(out, retroarch_file, size);
+	strncpy(out, retroarch_file, size - 1);
 }
 
 void set_retroarchfile(char* newpath)
 {
-	strncpy(retroarch_file, newpath, MAX_DPATH);
+	strncpy(retroarch_file, newpath, MAX_DPATH - 1);
 }
 
 void fetch_rompath(char* out, int size)
 {
 	fixtrailing(rom_path);
-	strncpy(out, rom_path, size);
+	strncpy(out, rom_path, size - 1);
 }
 
 void set_rompath(char *newpath)
 {
-	strncpy(rom_path, newpath, MAX_DPATH);
+	strncpy(rom_path, newpath, MAX_DPATH - 1);
 }
 
 void fetch_rp9path(char *out, int size)
 {
 	fixtrailing(rp9_path);
-	strncpy(out, rp9_path, size);
+	strncpy(out, rp9_path, size - 1);
 }
 
 void fetch_savestatepath(char *out, int size)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/savestates/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/savestates/", size - 1);
 }
 
 void fetch_screenshotpath(char *out, int size)
 {
-	strncpy(out, start_path_data, size);
-	strncat(out, "/screenshots/", size);
+	strncpy(out, start_path_data, size - 1);
+	strncat(out, "/screenshots/", size - 1);
 }
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
@@ -719,7 +687,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	{
 		for (auto i = 0; i < p->nr_floppies; ++i)
 		{
-			if (!DISK_validate_filename(p, p->floppyslots[i].df, 0, nullptr, nullptr, nullptr))
+			if (!DISK_validate_filename(p, p->floppyslots[i].df, nullptr, 0, nullptr, nullptr, nullptr))
 				p->floppyslots[i].df[0] = 0;
 			disk_insert(i, p->floppyslots[i].df);
 			if (strlen(p->floppyslots[i].df) > 0)
@@ -746,7 +714,7 @@ int check_configfile(char *file)
 		return 1;
 	}
 
-	strncpy(tmp, file, MAX_DPATH);
+	strncpy(tmp, file, MAX_DPATH - 1);
 	const auto ptr = strstr(tmp, ".uae");
 	if (ptr)
 	{
@@ -768,12 +736,12 @@ void extractFileName(const char * str, char *buffer)
 	while (*p != '/' && p > str)
 		p--;
 	p++;
-	strncpy(buffer, p, MAX_DPATH);
+	strncpy(buffer, p, MAX_DPATH - 1);
 }
 
 void extractPath(char *str, char *buffer)
 {
-	strncpy(buffer, str, MAX_DPATH);
+	strncpy(buffer, str, MAX_DPATH - 1);
 	auto p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p > buffer)
 		p--;
@@ -855,6 +823,21 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "scanlines_by_default=%s\n", scanlines_by_default ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Swap Win keys with Alt keys?
+	// This helps with keyboards that may not have 2 Win keys and no Menu key either
+	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", swap_win_alt_keys ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Disable controller in the GUI?
+	// If you want to disable the default behavior for some reason
+	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", gui_joystick_control ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Use a separate render thread uner SDL2?
+	// This might give a performance boost, but it's not supported on all SDL2 back-ends
+	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", use_sdl2_render_thread ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Timing settings
 	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
 	fputs(buffer, f);
@@ -888,7 +871,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 
 	// The number of ROMs in the last scan
-	snprintf(buffer, MAX_DPATH, "ROMs=%d\n", lstAvailableROMs.size());
+	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
 	fputs(buffer, f);
 
 	// The ROMs found in the last scan
@@ -903,7 +886,7 @@ void save_amiberry_settings(void)
 	}
 
 	// Recent disk entries (these are used in the dropdown controls)
-	snprintf(buffer, MAX_DPATH, "MRUDiskList=%d\n", lstMRUDiskList.size());
+	snprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUDiskList)
 	{
@@ -912,7 +895,7 @@ void save_amiberry_settings(void)
 	}
 
 	// Recent CD entries (these are used in the dropdown controls)
-	snprintf(buffer, MAX_DPATH, "MRUCDList=%d\n", lstMRUCDList.size());
+	snprintf(buffer, MAX_DPATH, "MRUCDList=%zu\n", lstMRUCDList.size());
 	fputs(buffer, f);
 	for (auto & i : lstMRUCDList)
 	{
@@ -947,29 +930,28 @@ void load_amiberry_settings(void)
 	char path[MAX_DPATH];
 	int i;
 #ifdef ANDROID
-	strncpy(currentDir, getenv("SDCARD"), MAX_DPATH);
+	strncpy(currentDir, getenv("SDCARD"), MAX_DPATH - 1);
 #else
-	strncpy(currentDir, start_path_data, MAX_DPATH);
+	strncpy(currentDir, start_path_data, MAX_DPATH - 1);
 #endif
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
 
 #ifdef ANDROID
-    char afepath[MAX_DPATH];
-    snprintf(afepath, MAX_DPATH, "%s/Android/data/com.cloanto.amigaforever.essentials/files/rom/", getenv("SDCARD"));
-    DIR *afedir = opendir(afepath);
-    if (afedir) {
-        snprintf(rom_path, MAX_DPATH, "%s", afepath);
-        closedir(afedir);
-    }
+	char afepath[MAX_DPATH];
+	snprintf(afepath, MAX_DPATH, "%s/Android/data/com.cloanto.amigaforever.essentials/files/rom/", getenv("SDCARD"));
+	DIR* afedir = opendir(afepath);
+	if (afedir) {
+		snprintf(rom_path, MAX_DPATH, "%s", afepath);
+		closedir(afedir);
+	}
 	else
-        snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
+		snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 #else
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
-
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
 	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
@@ -986,7 +968,7 @@ void load_amiberry_settings(void)
 		{
 			trimwsa(linea);
 			if (strlen(linea) > 0) {
-				if (!cfgfile_separate_linea(path, linea, option, value))
+				if (!cfgfile_separate_linea (path, linea, option, value))
 					continue;
 
 				if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
@@ -994,8 +976,8 @@ void load_amiberry_settings(void)
 					|| cfgfile_intval(option, value, "ROMType", &romType, 1)) {
 					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1) {
 						auto tmp = new AvailableROM();
-						strncpy(tmp->Name, romName, sizeof tmp->Name);
-						strncpy(tmp->Path, romPath, sizeof tmp->Path);
+						strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
+						strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
 						tmp->ROMType = romType;
 						lstAvailableROMs.emplace_back(tmp);
 						strncpy(romName, "", sizeof romName);
@@ -1034,6 +1016,9 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
 					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
 					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
+					cfgfile_yesno(option, value, "swap_win_alt_keys", &swap_win_alt_keys);
+					cfgfile_yesno(option, value, "gui_joystick_control", &gui_joystick_control);
+					cfgfile_yesno(option, value, "use_sdl2_render_thread", &use_sdl2_render_thread);
 
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
@@ -1055,12 +1040,19 @@ void rename_old_adfdir()
 	char new_path[MAX_DPATH];
 	snprintf(old_path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
 	snprintf(new_path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-	
+
 	auto result = rename(old_path, new_path);
 	if (result == 0)
 		write_log("Old adfdir.conf file successfully renamed to amiberry.conf");
 	else
 		write_log("Error while trying to rename old adfdir.conf file to amiberry.conf!");
+}
+
+void target_getdate(int* y, int* m, int* d)
+{
+	*y = GETBDY(AMIBERRYDATE);
+	*m = GETBDM(AMIBERRYDATE);
+	*d = GETBDD(AMIBERRYDATE);
 }
 
 void target_addtorecent(const TCHAR *name, int t)
@@ -1097,6 +1089,11 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
 void target_shutdown(void)
 {
 	system("sudo poweroff");
+}
+
+bool target_isrelativemode(void)
+{
+	return true;
 }
 
 int main(int argc, char* argv[])
@@ -1182,8 +1179,8 @@ int main(int argc, char* argv[])
 
 	logging_cleanup();
 
-	if(host_poweroff)
-	  target_shutdown();
+	if (host_poweroff)
+		target_shutdown();
 	return 0;
 }
 
@@ -1195,11 +1192,8 @@ int handle_msgpump()
 	while (SDL_PollEvent(&rEvent))
 	{
 		got = 1;
-#ifdef USE_SDL1
-		Uint8* keystate = SDL_GetKeyState(nullptr);
-#elif USE_SDL2
 		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
-#endif
+
 		switch (rEvent.type)
 		{
 		case SDL_QUIT:
@@ -1207,10 +1201,8 @@ int handle_msgpump()
 			break;
 
 		case SDL_KEYDOWN:
-#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
-#endif
 				// If the Enter GUI key was pressed, handle it
 				if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key)
 				{
@@ -1236,38 +1228,24 @@ int handle_msgpump()
 					inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
 					break;
 				}
-#ifdef USE_SDL2
 			}
-#endif
 			// If the reset combination was pressed, handle it
-#ifdef USE_SDL1
-			// Strangely in FBCON left window is seen as left alt ??
-			if (keyboard_type == 2) // KEYCODE_FBCON
+			if (swap_win_alt_keys)
 			{
-				if (keystate[SDLK_LCTRL] && (keystate[SDLK_LSUPER] || keystate[SDLK_LALT]) && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
+				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
 				{
 					uae_reset(0, 1);
 					break;
 				}
 			}
-			else if (keystate[SDLK_LCTRL] && keystate[SDLK_LSUPER] && (keystate[SDLK_RSUPER] || keystate[SDLK_MENU]))
-#elif USE_SDL2			
-			if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
-#endif
+			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
 			{
 				uae_reset(0, 1);
 				break;
 			}
 
-#ifdef USE_SDL1
-			// fix Caps Lock keypress shown as SDLK_UNKNOWN (scancode = 58)
-			if (rEvent.key.keysym.scancode == 58 && rEvent.key.keysym.sym == SDLK_UNKNOWN)
-				rEvent.key.keysym.sym = SDLK_CAPSLOCK;
-#endif
-#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
-#endif
 				if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
 				{
 					// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
@@ -1293,30 +1271,28 @@ int handle_msgpump()
 				}
 
 				// Handle all other keys
-#ifdef USE_SDL1
-				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 1);
-				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
-#elif USE_SDL2
-				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1);
+				if (swap_win_alt_keys)
+				{
+					if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (rEvent.key.keysym.scancode == SDL_SCANCODE_RALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
+				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
 			}
-#endif
 			break;
 		case SDL_KEYUP:
-#ifdef USE_SDL2
 			if (rEvent.key.repeat == 0)
 			{
-#endif
-#ifdef USE_SDL1
-				if (keyboard_type == KEYCODE_UNK)
-					inputdevice_translatekeycode(0, rEvent.key.keysym.sym, 0);
-				else
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
-#elif USE_SDL2
-				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0);
+				if (swap_win_alt_keys)
+				{
+					if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (rEvent.key.keysym.scancode == SDL_SCANCODE_RALT)
+						rEvent.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
+				inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
 			}
-#endif
 			break;
 
 		case SDL_MOUSEBUTTONDOWN:
@@ -1351,23 +1327,22 @@ int handle_msgpump()
 					const auto mouseScale = currprefs.input_joymouse_multiplier / 2;
 					auto x = rEvent.motion.xrel;
 					auto y = rEvent.motion.yrel;
-#if defined (ANDROIDSDL)
+#if defined (ANDROID)
 					if (rEvent.motion.x == 0 && x > -4)
 						x = -4;
 					if (rEvent.motion.y == 0 && y > -4)
 						y = -4;
-					if (rEvent.motion.x == currprefs.gfx_size.width - 1 && x < 4)
+					if (rEvent.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
 						x = 4;
-					if (rEvent.motion.y == currprefs.gfx_size.height - 1 && y < 4)
+					if (rEvent.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
 						y = 4;
-#endif //ANDROIDSDL
+#endif //ANDROID
 					setmousestate(0, 0, x * mouseScale, 0);
 					setmousestate(0, 1, y * mouseScale, 0);
 				}
 			}
 			break;
 
-#ifdef USE_SDL2
 		case SDL_MOUSEWHEEL:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
@@ -1386,7 +1361,6 @@ int handle_msgpump()
 					setmousebuttonstate(0, 3 + 3, -1);
 			}
 			break;
-#endif
 
 		default:
 			break;

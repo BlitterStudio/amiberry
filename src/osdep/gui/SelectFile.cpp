@@ -6,17 +6,10 @@
 #include <strings.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -29,9 +22,10 @@
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include "androidsdl_event.h"
 #endif
+
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
@@ -190,6 +184,19 @@ public:
 
 static SelectFileActionListener* selectFileActionListener;
 
+#ifdef ANDROID
+class EditFilePathActionListener : public gcn::ActionListener
+{
+  public:
+    void action(const gcn::ActionEvent& actionEvent)
+    {
+       char tmp[MAX_DPATH];
+       strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
+       checkfoldername(tmp);
+    }
+};
+static EditFilePathActionListener* editFilePathActionListener;
+#endif
 
 static void InitSelectFile(const char* title)
 {
@@ -219,7 +226,13 @@ static void InitSelectFile(const char* title)
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
+#ifdef ANDROID
+  txtCurrent->setEnabled(true);
+  editFilePathActionListener =  new EditFilePathActionListener();
+  txtCurrent->addActionListener(editFilePathActionListener);
+#else
 	txtCurrent->setEnabled(false);
+#endif
 
 	selectFileActionListener = new SelectFileActionListener();
 	fileList = new SelectFileListModel(".");
@@ -231,14 +244,14 @@ static void InitSelectFile(const char* title)
 	lstFiles->addActionListener(selectFileActionListener);
 
 	scrAreaFiles = new gcn::ScrollArea(lstFiles);
-#ifdef USE_SDL1
-	scrAreaFiles->setFrameSize(1);
-#elif USE_SDL2
 	scrAreaFiles->setBorderSize(1);
-#endif
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
+#ifdef ANDROID
+  scrAreaFiles->setScrollbarWidth(30);
+#else
 	scrAreaFiles->setScrollbarWidth(20);
+#endif
 	scrAreaFiles->setBaseColor(gui_baseCol);
 
 	if (createNew)
@@ -283,6 +296,9 @@ static void ExitSelectFile()
 	delete lstFiles;
 	delete scrAreaFiles;
 	delete selectFileActionListener;
+#ifdef ANDROID
+  delete editFilePathActionListener;
+#endif
 	delete fileList;
 	if (createNew)
 	{
@@ -340,7 +356,6 @@ static void SelectFileLoop()
 
 	while (!dialogFinished)
 	{
-		
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -371,39 +386,44 @@ static void SelectFileLoop()
 					break;
 				}
 			}
-			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type ==
+				SDL_JOYAXISMOTION)
 			{
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
 					{
 						PushFakeKey(SDLK_RETURN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
 					{
 						dialogFinished = true;
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
 					{
 						navigate_left();
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)
+						|| SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
 					{
 						navigate_right();
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
 					{
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
 					{
 						PushFakeKey(SDLK_DOWN);
 						break;
@@ -415,24 +435,26 @@ static void SelectFileLoop()
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 			androidsdl_event(event, gui_input);
 #else
 			gui_input->pushInput(event);
 #endif
 		}
-		
+
 		if (gotEvent)
 		{
 			// Now we let the Gui object perform its logic.
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
@@ -455,7 +477,8 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

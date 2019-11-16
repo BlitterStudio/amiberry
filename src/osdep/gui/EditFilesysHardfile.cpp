@@ -2,17 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
@@ -20,6 +13,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "filesys.h"
 #include "gui_handling.h"
@@ -27,14 +21,14 @@
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include "androidsdl_event.h"
 #endif
 
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 272
 
-static const char* harddisk_filter[] = {".hdf", "\0"};
+static const char *harddisk_filter[] = {".hdf", "\0"};
 
 struct controller_map
 {
@@ -45,39 +39,37 @@ struct controller_map
 static struct controller_map controller[] = {
 	{HD_CONTROLLER_TYPE_UAE, "UAE"},
 	{HD_CONTROLLER_TYPE_IDE_FIRST, "A600/A1200/A4000 IDE"},
-	{-1}
-};
+	{-1}};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool fileSelected = false;
 
+static gcn::Window *wndEditFilesysHardfile;
+static gcn::Button *cmdOK;
+static gcn::Button *cmdCancel;
+static gcn::Label *lblDevice;
+static gcn::TextField *txtDevice;
+static gcn::UaeCheckBox *chkReadWrite;
+static gcn::UaeCheckBox *chkAutoboot;
+static gcn::Label *lblBootPri;
+static gcn::TextField *txtBootPri;
+static gcn::Label *lblPath;
+static gcn::TextField *txtPath;
+static gcn::Button *cmdPath;
+static gcn::Label *lblSurfaces;
+static gcn::TextField *txtSurfaces;
+static gcn::Label *lblReserved;
+static gcn::TextField *txtReserved;
+static gcn::Label *lblSectors;
+static gcn::TextField *txtSectors;
+static gcn::Label *lblBlocksize;
+static gcn::TextField *txtBlocksize;
+static gcn::Label *lblController;
+static gcn::UaeDropDown *cboController;
+static gcn::UaeDropDown *cboUnit;
 
-static gcn::Window* wndEditFilesysHardfile;
-static gcn::Button* cmdOK;
-static gcn::Button* cmdCancel;
-static gcn::Label* lblDevice;
-static gcn::TextField* txtDevice;
-static gcn::UaeCheckBox* chkReadWrite;
-static gcn::UaeCheckBox* chkAutoboot;
-static gcn::Label* lblBootPri;
-static gcn::TextField* txtBootPri;
-static gcn::Label* lblPath;
-static gcn::TextField* txtPath;
-static gcn::Button* cmdPath;
-static gcn::Label* lblSurfaces;
-static gcn::TextField* txtSurfaces;
-static gcn::Label* lblReserved;
-static gcn::TextField* txtReserved;
-static gcn::Label* lblSectors;
-static gcn::TextField* txtSectors;
-static gcn::Label* lblBlocksize;
-static gcn::TextField* txtBlocksize;
-static gcn::Label* lblController;
-static gcn::UaeDropDown* cboController;
-static gcn::UaeDropDown* cboUnit;
-
-static void check_rdb(const TCHAR* filename)
+static void check_rdb(const TCHAR *filename)
 {
 	const auto isrdb = hardfile_testrdb(filename);
 	if (isrdb)
@@ -93,12 +85,10 @@ static void check_rdb(const TCHAR* filename)
 	txtBootPri->setEnabled(!isrdb);
 }
 
-
 class ControllerListModel : public gcn::ListModel
 {
 public:
-	ControllerListModel()
-	= default;
+	ControllerListModel() = default;
 
 	int getNumberOfElements() override
 	{
@@ -115,12 +105,10 @@ public:
 
 static ControllerListModel controllerListModel;
 
-
 class UnitListModel : public gcn::ListModel
 {
 public:
-	UnitListModel()
-	= default;
+	UnitListModel() = default;
 
 	int getNumberOfElements() override
 	{
@@ -143,7 +131,7 @@ static UnitListModel unitListModel;
 class FilesysHardfileActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent) override
+	void action(const gcn::ActionEvent &actionEvent) override
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
@@ -193,8 +181,7 @@ public:
 	}
 };
 
-static FilesysHardfileActionListener* filesysHardfileActionListener;
-
+static FilesysHardfileActionListener *filesysHardfileActionListener;
 
 static void InitEditFilesysHardfile()
 {
@@ -226,7 +213,7 @@ static void InitEditFilesysHardfile()
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
-	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->setId("hdfOK");
 	cmdOK->addActionListener(filesysHardfileActionListener);
@@ -234,7 +221,7 @@ static void InitEditFilesysHardfile()
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
-	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->setId("hdfCancel");
 	cmdCancel->addActionListener(filesysHardfileActionListener);
@@ -285,7 +272,6 @@ static void InitEditFilesysHardfile()
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
-	txtPath->setEnabled(false);
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdPath->setBaseColor(gui_baseCol);
@@ -344,7 +330,7 @@ static void InitEditFilesysHardfile()
 	wndEditFilesysHardfile->add(lblController, DISTANCE_BORDER, posY);
 	wndEditFilesysHardfile->add(cboController, DISTANCE_BORDER + lblController->getWidth() + 8, posY);
 	wndEditFilesysHardfile->add(cboUnit, cboController->getX() + cboController->getWidth() + 8, posY);
-	
+
 	wndEditFilesysHardfile->add(cmdOK);
 	wndEditFilesysHardfile->add(cmdCancel);
 
@@ -353,7 +339,6 @@ static void InitEditFilesysHardfile()
 	txtDevice->requestFocus();
 	wndEditFilesysHardfile->requestModalFocus();
 }
-
 
 static void ExitEditFilesysHardfile()
 {
@@ -387,7 +372,6 @@ static void ExitEditFilesysHardfile()
 
 	delete wndEditFilesysHardfile;
 }
-
 
 static void EditFilesysHardfileLoop()
 {
@@ -432,7 +416,7 @@ static void EditFilesysHardfileLoop()
 				case VK_Green:
 					event.key.keysym.sym = SDLK_RETURN;
 					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP; // and the key up
+					event.type = SDL_KEYUP;		 // and the key up
 					break;
 				default:
 					break;
@@ -440,48 +424,48 @@ static void EditFilesysHardfileLoop()
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
 			{
-				gcn::FocusHandler* focusHdl;
-				gcn::Widget* activeWidget;
+				gcn::FocusHandler *focusHdl;
+				gcn::Widget *activeWidget;
 
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
 					{
 						if (HandleNavigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
 					{
 						if (HandleNavigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
 					{
 						if (HandleNavigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_LEFT);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button)) // need this to be X button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button)) // need this to be X button
 					{
 						PushFakeKey(SDLK_RETURN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button)) // need this to be START button
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button)) // need this to be START button
 					{
 						dialogFinished = true;
 						break;
@@ -492,7 +476,7 @@ static void EditFilesysHardfileLoop()
 			//-------------------------------------------------
 			// Send event to guichan-controls
 			//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 			androidsdl_event(event, gui_input);
 #else
 			gui_input->pushInput(event);
@@ -504,21 +488,24 @@ static void EditFilesysHardfileLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
 }
 
-
 bool EditFilesysHardfile(const int unit_no)
 {
-	struct mountedinfo mi{};
-	struct uaedev_config_data* uci;
+	struct mountedinfo mi
+	{
+	};
+	struct uaedev_config_data *uci;
 	string strdevname, strroot;
 	char tmp[32];
 
@@ -583,7 +570,8 @@ bool EditFilesysHardfile(const int unit_no)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();
@@ -592,7 +580,9 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (dialogResult)
 	{
-		struct uaedev_config_info ci{};
+		struct uaedev_config_info ci
+		{
+		};
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 

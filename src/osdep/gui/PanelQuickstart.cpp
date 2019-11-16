@@ -2,17 +2,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
@@ -68,6 +61,9 @@ static struct amigamodels amodels[] = {
 			"Basic non-expanded configuration",
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
+#ifdef ANDROID
+         " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -76,6 +72,9 @@ static struct amigamodels amodels[] = {
 			"Basic non-expanded configuration",
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
+#ifdef ANDROID
+         " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -89,6 +88,9 @@ static struct amigamodels amodels[] = {
 		4, "Amiga 1200", {
 			"Basic non-expanded configuration",
 			"4 MB Fast RAM expanded configuration",
+#ifdef ANDROID
+         " ", " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -104,6 +106,9 @@ static struct amigamodels amodels[] = {
 		1, "Amiga 4000", {
 			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
 			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+#ifdef ANDROID
+         " ", " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -118,6 +123,9 @@ static struct amigamodels amodels[] = {
 		3, "CD32", {
 			"CD32",
 			"CD32 with Full Motion Video cartridge",
+#ifdef ANDROID
+         " ", " ", " ", " ",
+#endif
 			"\0"
 		}
 	},
@@ -206,8 +214,6 @@ static void SetControlState(const int model)
 
 static void AdjustPrefs(void)
 {
-	//const auto old_cs = changed_prefs.cs_compatible;
-
 	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 	switch (quickstart_model)
 	{
@@ -234,8 +240,8 @@ static void AdjustPrefs(void)
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 		changed_prefs.cdslots[0].inuse = true;
 		changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
-		changed_prefs.gfx_size.width = 768;
-		changed_prefs.gfx_size.height = 270;
+		changed_prefs.gfx_monitor.gfx_size.width = 720;
+		changed_prefs.gfx_monitor.gfx_size.height = 283;
 		break;
 	default:
 		break;
@@ -938,10 +944,10 @@ bool HelpPanelQuickstart(vector<string>& helptext)
 	helptext.clear();
 	helptext.emplace_back("Simplified start of emulation by just selecting the Amiga model and the disk/CD");
 	helptext.emplace_back("you want to use.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("After selecting the Amiga model, you can choose from a small list of standard");
 	helptext.emplace_back("configurations for this model to start with.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("When you activate \"Start in Quickstart mode\", the next time you run the emulator,");
 	helptext.emplace_back("it  will start with the QuickStart panel. Otherwise you start in configurations panel.");
 	return true;

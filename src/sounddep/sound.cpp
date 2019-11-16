@@ -15,7 +15,7 @@
 #include "sounddep/sound.h"
 #include "gui.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include <android/log.h>
 #endif
 

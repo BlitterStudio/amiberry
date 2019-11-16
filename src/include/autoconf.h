@@ -16,6 +16,7 @@
 
 #define RTAREA_DEFAULT 0xf00000
 #define RTAREA_BACKUP  0xef0000
+#define RTAREA_BACKUP_2 0xdb0000
 #define RTAREA_SIZE 0x10000
 
 #define RTAREA_TRAPS 0x3000
@@ -61,7 +62,9 @@ extern uae_u32 addr (int);
 extern void db (uae_u8);
 extern void dw (uae_u16);
 extern void dl (uae_u32);
-extern uae_u32 ds_ansi (const uae_char*);
+extern void df(uae_u8 b, int len);
+extern uae_u32 dsf(uae_u8, int);
+extern uae_u32 ds_ansi(const uae_char*);
 extern uae_u32 ds (const TCHAR*);
 extern uae_u32 ds_bstr_ansi (const uae_char*);
 extern uae_u8 dbg (uaecptr);
@@ -69,6 +72,9 @@ extern void calltrap (uae_u32);
 extern void org (uae_u32);
 extern uae_u32 here (void);
 extern uaecptr makedatatable (uaecptr resid, uaecptr resname, uae_u8 type, uae_s8 priority, uae_u16 ver, uae_u16 rev);
+extern uae_u32 boot_rom_copy(TrapContext*, uaecptr, int);
+extern void add_rom_absolute(uaecptr addr);
+extern void save_rom_absolute(uaecptr addr);
 
 extern void align (int);
 
@@ -88,18 +94,18 @@ extern uaecptr ROM_hardfile_resname, ROM_hardfile_resid;
 extern uaecptr ROM_hardfile_init;
 extern uaecptr filesys_initcode, filesys_initcode_ptr, filesys_initcode_real;
 
-extern int is_hardfile (int unit_no);
+//extern int is_hardfile (int unit_no);
 extern int nr_units (void);
 extern int nr_directory_units (struct uae_prefs*);
 extern uaecptr need_uae_boot_rom(struct uae_prefs*);
 
 struct mountedinfo
 {
-  uae_s64 size;
-  bool ismounted;
-  bool ismedia;
+    uae_s64 size;
+    bool ismounted;
+    bool ismedia;
 	int error;
-  int nrcyls;
+    int nrcyls;
 	TCHAR rootdir[MAX_DPATH];
 };
 
@@ -110,7 +116,7 @@ extern TCHAR *validatedevicename (TCHAR *s, const TCHAR *def);
 extern TCHAR *validatevolumename (TCHAR *s, const TCHAR *def);
 
 int filesys_insert (int nr, const TCHAR *volume, const TCHAR *rootdir, bool readonly, int flags);
-int filesys_eject (int nr);
+//int filesys_eject (int nr);
 int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_config_data *uci);
 
 extern TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct zvolume *zv, const TCHAR *def);
@@ -123,7 +129,7 @@ extern void filesys_cleanup (void);
 extern void filesys_prepare_reset (void);
 extern void filesys_start_threads (void);
 extern void filesys_flush_cache (void);
-extern void filesys_free_handles (void);
+//extern void filesys_free_handles (void);
 extern void filesys_vsync (void);
 
 extern void filesys_install (void);

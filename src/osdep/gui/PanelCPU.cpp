@@ -1,16 +1,9 @@
 #include <stdbool.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeCheckBox.hpp"
@@ -215,13 +208,14 @@ class FPUActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == chkFPUstrict) {
+		if (actionEvent.getSource() == chkFPUstrict)
+		{
 			changed_prefs.fpu_strict = chkFPUstrict->isSelected();
-
 		}
 		RefreshPanelCPU();
 	}
 };
+
 static FPUActionListener* fpuActionListener;
 
 void InitPanelCPU(const struct _ConfigCategory& category)
@@ -439,7 +433,7 @@ void RefreshPanelCPU()
 		optTurbo->setSelected(true);
 }
 
-bool HelpPanelCPU(std::vector<std::string> &helptext)
+bool HelpPanelCPU(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Select the required Amiga CPU (68000 - 68040).");
@@ -447,17 +441,17 @@ bool HelpPanelCPU(std::vector<std::string> &helptext)
 	helptext.emplace_back("addressing (68020). The option \"More compatible\" is only available if 68000 or 68010");
 	helptext.emplace_back("is selected and emulates simple prefetch of the 68000. This may improve compatibility");
 	helptext.emplace_back("in few situations but is not required for most games and demos.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("JIT enables the Just-in-time compiler. This may break compatibility in some games.");
 	helptext.emplace_back("");
 	helptext.emplace_back("The available FPU models depending on the selected CPU.");
 	helptext.emplace_back("The option \"More compatible\" activates more accurate rounding and compare of two floats.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"CPU Speed\" you can choose the clock rate of the Amiga.");
 	helptext.emplace_back("Use 7MHz for A500 games or 14MHz for A1200 ones. Fastest uses more emulation time");
 	helptext.emplace_back("for the CPU, and Turbo will give only the minimum time to the chipset, using as");
 	helptext.emplace_back("much as possible for the CPU, usually resulting in dropping frames also.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("In current version, you will not see a difference in the performance for 68020,");
 	helptext.emplace_back("68030 and 68040 CPUs. The CPU cycles for the opcodes are based on 68020. The different");
 	helptext.emplace_back("cycles for 68030 and 68040 may come in a later version.");

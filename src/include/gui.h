@@ -14,17 +14,22 @@
 extern int gui_init (void);
 extern int gui_update (void);
 extern void gui_exit (void);
-#ifdef WIN32
 extern void gui_led (int, int, int);
-#else
-STATIC_INLINE void gui_led (int led, int on, int brightness) { }
-#endif
+extern void gui_handle_events (void);
 extern void gui_filename (int, const TCHAR *);
-extern void gui_fps(int fps, int idle, int color);
+extern void gui_fps (int fps, int idle, int color);
+extern void gui_changesettings (void);
+extern void gui_lock (void);
+extern void gui_unlock (void);
 extern void gui_flicker_led (int, int, int);
+extern void gui_disk_image_change (int, const TCHAR *, bool writeprotected);
+extern unsigned int gui_ledstate;
 extern void gui_display (int shortcut);
 
-extern bool no_gui;
+//extern void gui_gameport_button_change (int port, int button, int onoff);
+//extern void gui_gameport_axis_change (int port, int axis, int state, int max);
+
+extern bool no_gui, quit_to_gui;
 
 #define LED_CD_ACTIVE 1
 #define LED_CD_ACTIVE2 2
@@ -46,29 +51,32 @@ extern bool no_gui;
 
 struct gui_info
 {
-    bool drive_motor[4];    /* motor on off */
-    uae_u8 drive_track[4];    /* rw-head track */
-    bool drive_writing[4];  /* drive is writing */
-    bool drive_disabled[4];	/* drive is disabled */
-    bool powerled;          /* state of power led */
-	uae_u8 powerled_brightness;	/* 0 to 255 */
-    uae_s8 drive_side;				/* floppy side */
-    uae_s8 hd;			          /* harddrive */
-    uae_s8 cd;			          /* CD */
+    bool drive_motor[4];		/* motor on off */
+    uae_u8 drive_track[4];		/* rw-head track */
+    bool drive_writing[4];		/* drive is writing */
+    bool drive_disabled[4];		/* drive is disabled */
+    bool powerled;				/* state of power led */
+    uae_u8 powerled_brightness;	/* 0 to 255 */
+    uae_s8 drive_side;			/* floppy side */
+    uae_s8 hd;					/* harddrive */
+    uae_s8 cd;					/* CD */
 	uae_s8 md;					/* CD32 or CDTV internal storage */
 	uae_s8 net;					/* network */
     int cpu_halted;
-    int fps, idle;
+	int fps, idle;
 	int fps_color;
     int sndbuf, sndbuf_status;
 	bool sndbuf_avail;
-    TCHAR df[4][256];		    /* inserted image */
-    uae_u32 crc32[4];		    /* crc32 of image */
+    TCHAR df[4][256];			/* inserted image */
+    uae_u32 crc32[4];			/* crc32 of image */
 };
 #define NUM_LEDS (LED_MAX)
 #define VISIBLE_LEDS (LED_MAX - 1)
 
 extern struct gui_info gui_data;
+
+/* Functions to be called when prefs are changed by non-gui code.  */
+extern void gui_update_gfx (void);
 
 void notify_user (int msg);
 void notify_user_parms (int msg, const TCHAR *parms, ...);

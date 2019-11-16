@@ -1,22 +1,10 @@
 #ifndef GCN_UAEDROPDOWN_HPP
 #define GCN_UAEDROPDOWN_HPP
 
-#ifdef USE_SDL1
-#include <map>
-#include "guichan/keylistener.hpp"
-#include "guichan/mouselistener.hpp"
-#include "guichan/platform.hpp"
-#include "guichan/widget.hpp"
-#include "guichan/widgets/dropdown.hpp"
-#elif USE_SDL2
 #include <guisan/keylistener.hpp>
 #include <guisan/platform.hpp>
 #include <guisan/widget.hpp>
 #include <guisan/widgets/dropdown.hpp>
-#endif
-
-#include <string>
-
 
 namespace gcn
 {

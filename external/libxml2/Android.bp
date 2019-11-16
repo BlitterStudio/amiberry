@@ -1,0 +1,156 @@
+//
+// Copyright (C) 2014 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+//
+// To update:
+//
+
+//  git merge aosp/upstream-master
+//  mma -j
+//  # (Make any necessary Android.bp changes and test the new libxml2.)
+//  git push aosp HEAD:master  # Push directly, avoiding gerrit.
+//  git push aosp HEAD:refs/for/master  # Push to gerrit.
+//
+//  # Now commit any necessary Android.bp changes like normal:
+//  repo start post-sync .
+//  git commit -a
+//
+
+// This comes from the automake-generated Makefile.
+// We deliberately exclude nanoftp.c and nanohttp.c, the trio library, and zlib.
+cc_defaults {
+    name: "libxml2-defaults",
+    srcs: [
+        "SAX.c",
+        "entities.c",
+        "encoding.c",
+        "error.c",
+        "parserInternals.c",
+        "parser.c",
+        "tree.c",
+        "hash.c",
+        "list.c",
+        "xmlIO.c",
+        "xmlmemory.c",
+        "uri.c",
+        "valid.c",
+        "xlink.c",
+        "debugXML.c",
+        "xpath.c",
+        "xpointer.c",
+        "xinclude.c",
+        "DOCBparser.c",
+        "catalog.c",
+        "globals.c",
+        "threads.c",
+        "c14n.c",
+        "xmlstring.c",
+        "buf.c",
+        "xmlregexp.c",
+        "xmlschemas.c",
+        "xmlschemastypes.c",
+        "xmlunicode.c",
+        "xmlreader.c",
+        "relaxng.c",
+        "dict.c",
+        "SAX2.c",
+        "xmlwriter.c",
+        "legacy.c",
+        "chvalid.c",
+        "pattern.c",
+        "xmlsave.c",
+        "xmlmodule.c",
+        "schematron.c",
+    ],
+    export_include_dirs: ["include"],
+    cflags: [
+        "-DLIBXML_THREAD_ENABLED=1",
+
+        // Poison various things that should not be defined.
+        "-DLIBXML_LEGACY_ENABLED=NO",
+        "-DLIBXML_FTP_ENABLED=NO",
+        "-DLIBXML_HTML_ENABLED=NO",
+        "-DLIBXML_HTTP_ENABLED=NO",
+        "-DLIBXML_ICONV_ENABLED=NO",
+        "-DLIBXML_LZMA_ENABLED=NO",
+        "-DLIBXML_ZLIB_ENABLED=NO",
+        // And this one depends on whether or not we're building for the VNDK.
+        "-DLIBXML_ICU_ENABLED=NO",
+
+        "-Wall",
+        "-Werror",
+        "-Wno-error=ignored-attributes",
+        "-Wno-missing-field-initializers",
+        "-Wno-self-assign",
+        "-Wno-sign-compare",
+        "-Wno-tautological-pointer-compare",
+        "-Wno-unused-function",
+        "-Wno-unused-parameter",
+    ],
+    static: {
+        cflags: [
+            "-fvisibility=hidden",
+            "-DSTATIC_LIBXML=1",
+        ],
+    },
+}
+
+cc_library {
+    name: "libxml2",
+    defaults: ["libxml2-defaults"],
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+    host_supported: true,
+    target: {
+       android: {
+           shared_libs: ["libandroidicu"],
+           export_shared_lib_headers: ["libandroidicu"],
+       },
+       host: {
+           shared_libs: [
+               "libicui18n",
+               "libicuuc",
+           ],
+           export_shared_lib_headers: [
+               "libicui18n",
+               "libicuuc",
+           ],
+       },
+       vendor: {
+           exclude_shared_libs: ["libandroidicu"],
+       },
+    },
+}
+
+cc_library_static {
+    name: "libxml2_ndk",
+    defaults: ["libxml2-defaults"],
+    sdk_version: "current",
+}
+
+cc_binary_host {
+    name: "xmllint",
+    srcs: ["xmllint.c"],
+    cflags: [
+        "-DLIBXML_THREAD_ENABLED=1",
+
+        "-Wall",
+        "-Werror",
+    ],
+    shared_libs: ["libxml2"],
+}

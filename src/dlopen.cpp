@@ -1,8 +1,6 @@
 #include "sysdeps.h"
 #include "uae/dlopen.h"
 
-#define FSUAE
-
 #ifdef _WIN32
 #include "windows.h"
 #else
@@ -36,11 +34,6 @@ UAE_DLHANDLE uae_dlopen(const TCHAR *path)
 
 void *uae_dlsym(UAE_DLHANDLE handle, const char *name)
 {
-#if 0
-	if (handle == NULL) {
-		return NULL;
-	}
-#endif
 #ifdef _WIN32
 	return (void *) GetProcAddress(handle, name);
 #else
@@ -57,7 +50,7 @@ void uae_dlclose(UAE_DLHANDLE handle)
 #endif
 }
 
-#ifdef FSUAE // NL
+#ifdef AMIBERRY
 #include "uae/uae.h"
 static amiga_plugin_lookup_function plugin_lookup;
 /*UAE_EXTERN_C*/ void amiga_set_plugin_lookup_function(
@@ -69,7 +62,7 @@ static amiga_plugin_lookup_function plugin_lookup;
 
 UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 {
-#if defined(FSUAE) // ME
+#if defined(AMIBERRY) // ME
 	const TCHAR *path = NULL;
 	if (plugin_lookup) {
 		path = plugin_lookup(name);

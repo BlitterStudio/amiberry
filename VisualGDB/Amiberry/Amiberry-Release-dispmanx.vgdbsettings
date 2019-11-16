@@ -6,11 +6,8 @@
       <Directories />
       <PathStyle>MinGWUnixSlash</PathStyle>
     </CustomSourceDirectories>
-    <BuildHost>
-      <Transport>None</Transport>
-    </BuildHost>
     <DeploymentHost>
-      <HostName>192.168.1.233</HostName>
+      <HostName>192.168.1.142</HostName>
       <Transport>SSH</Transport>
       <UserName>pi</UserName>
     </DeploymentHost>

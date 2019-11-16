@@ -5,17 +5,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -27,7 +20,7 @@
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include "androidsdl_event.h"
 #endif
 
@@ -55,7 +48,6 @@ public:
 		if (actionEvent.getSource() == cmdOK)
 		{
 			dialogResult = true;
-			
 		}
 		dialogFinished = true;
 	}
@@ -133,6 +125,19 @@ public:
 
 static ListBoxActionListener* listBoxActionListener;
 
+#ifdef ANDROID
+class EditDirPathActionListener : public gcn::ActionListener
+{
+  public:
+    void action(const gcn::ActionEvent& actionEvent)
+    {
+       char tmp[MAX_DPATH];
+       strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
+       checkfoldername(tmp);
+    }
+};
+static EditDirPathActionListener* editDirPathActionListener;
+#endif
 
 static void InitSelectFolder(const char* title)
 {
@@ -162,7 +167,13 @@ static void InitSelectFolder(const char* title)
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
+#ifdef ANDROID
+  txtCurrent->setEnabled(true);
+  editDirPathActionListener = new EditDirPathActionListener();
+  txtCurrent->addActionListener(editDirPathActionListener);
+#else
 	txtCurrent->setEnabled(false);
+#endif
 
 	listBoxActionListener = new ListBoxActionListener();
 
@@ -173,14 +184,14 @@ static void InitSelectFolder(const char* title)
 	lstFolders->addActionListener(listBoxActionListener);
 
 	scrAreaFolders = new gcn::ScrollArea(lstFolders);
-#ifdef USE_SDL1
-	scrAreaFolders->setFrameSize(1);
-#elif USE_SDL2
 	scrAreaFolders->setBorderSize(1);
-#endif
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
+#ifdef ANDROID
+  scrAreaFolders->setScrollbarWidth(30);
+#else
 	scrAreaFolders->setScrollbarWidth(20);
+#endif
 	scrAreaFolders->setBaseColor(gui_baseCol);
 
 	wndSelectFolder->add(cmdOK);
@@ -273,45 +284,50 @@ static void SelectFolderLoop()
 				default:
 					break;
 				}
-			}                        
-			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
+			}
+			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type ==
+				SDL_JOYAXISMOTION)
 			{
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					const int hat = SDL_JoystickGetHat(GUIjoy, 0);
+					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
 					{
 						PushFakeKey(SDLK_RETURN);
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
 					{
 						dialogFinished = true;
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
 					{
 						navigate_left();
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_x) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)
+						|| SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
 					{
 						navigate_right();
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == -32768)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
 					{
 						PushFakeKey(SDLK_UP);
 						break;
 					}
 
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(GUIjoy, host_input_buttons[0].lstick_axis_y) == 32767)
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) ||
+						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
 					{
 						PushFakeKey(SDLK_DOWN);
 						break;
@@ -323,7 +339,7 @@ static void SelectFolderLoop()
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 			androidsdl_event(event, gui_input);
 #else
 			gui_input->pushInput(event);
@@ -335,11 +351,13 @@ static void SelectFolderLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
@@ -357,7 +375,8 @@ bool SelectFolder(const char* title, char* value)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

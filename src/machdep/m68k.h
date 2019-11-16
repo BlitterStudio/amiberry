@@ -124,7 +124,7 @@ STATIC_INLINE int cctrue (int cc)
 
 #endif /* REGS_DEFINED */
 
-#elif defined(CPU_arm) && defined(ARMV6_ASSEMBLY)
+#elif defined(CPU_arm)
 
 #ifndef REGS_DEFINED
 

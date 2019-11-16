@@ -2,22 +2,16 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "filesys.h"
 #include "blkdev.h"
@@ -328,7 +322,8 @@ public:
 			{
 				if (cdfileList.getElementAt(idx) != changed_prefs.cdslots[0].name)
 				{
-					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), sizeof changed_prefs.cdslots[0].name);
+					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(),
+					        sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -366,11 +361,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 		listEntry[row] = new gcn::Container();
 		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, SMALL_BUTTON_HEIGHT + 4);
 		listEntry[row]->setBaseColor(gui_baseCol);
-#ifdef USE_SDL1
-		listEntry[row]->setFrameSize(0);
-#elif USE_SDL2
 		listEntry[row]->setBorderSize(0);
-#endif
 
 		listCmdProps[row] = new gcn::Button("...");
 		listCmdProps[row]->setBaseColor(gui_baseCol);
@@ -490,7 +481,8 @@ void InitPanelHD(const struct _ConfigCategory& category)
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
 	category.panel->add(cmdCDEject,
-	                    category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth() -
+	                    category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth()
+	                    -
 	                    DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelect, category.panel->getWidth() - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
 	posY += cmdCDSelect->getHeight() + DISTANCE_NEXT_Y;
@@ -657,16 +649,16 @@ bool HelpPanelHD(std::vector<std::string>& helptext)
 	helptext.emplace_back(R"(Use "Add Directory" to add a folder or "Add Hardfile" to add a HDF file as)");
 	helptext.emplace_back("a hard disk. To edit the settings of a HDD, click on \"...\" left to the entry in");
 	helptext.emplace_back("the list. With the red cross, you can delete an entry.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB.");
 	helptext.emplace_back("For large files, it will take some time to create the new hard disk. You have to");
 	helptext.emplace_back("format the new HDD in the Amiga via the Workbench.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(Activate "CD drive" to emulate CD for CD32. Use "Eject" to remove current CD)");
 	helptext.emplace_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
-	helptext.emplace_back("");
-	helptext.emplace_back("In current version, WAV, MP3 and FLAC is supported for audio tracks.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("In current version, WAV, MP3 and FLAC are supported for audio tracks.");
 	return true;
 }

@@ -5,14 +5,9 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <guichan/sdl.hpp>
-#endif
-#ifdef USE_SDL2
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
-#endif
+
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
@@ -34,7 +29,6 @@
 #endif
 
 int emulating = 0;
-struct uae_prefs workprefs;
 
 struct gui_msg
 {
@@ -58,6 +52,8 @@ struct gui_msg gui_msglist[] = {
   { NUMSG_ROMNEED,        "One of the following system ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
   { NUMSG_EXPROMNEED,     "One of the following expansion boot ROMs is required:\n\n%s\n\nCheck the System ROM path in the Paths panel and click Rescan ROMs." },
   { NUMSG_NOMEMORY,       "Out of memory or too much Z3 autoconfig space configured." },
+  { NUMSG_NOCAPS,         "capsimg.so not found. CAPS/IPF support not available." },
+  { NUMSG_OLDCAPS,        "Old version of capsimg.so found." },
 
   { -1, "" }
 };
@@ -197,20 +193,6 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	return rd;
 }
 
-static struct romdata* scan_single_rom(char* path)
-{
-	char tmp[MAX_DPATH];
-
-	strncpy (tmp, path, MAX_DPATH - 1);
-	auto rd = getromdatabypath(path);
-	if (rd && rd->crc32 == 0xffffffff)
-		return rd;
-	const auto z = zfile_fopen(path, "rb", ZFD_NORMAL);
-	if (!z)
-		return nullptr;
-	return scan_single_rom_2(z);
-}
-
 static int isromext(char* path)
 {
 	if (!path)
@@ -339,7 +321,13 @@ void ReadConfigFileList(void)
 		removeFileExtension(tmp->Name);
 		// If the user has many (thousands) of configs, this will take a long time
 		if (read_config_descriptions)
-			cfgfile_get_description(tmp->FullPath, tmp->Description);
+		{
+			struct uae_prefs *p = cfgfile_open(tmp->FullPath, NULL);
+			if (p) {
+				cfgfile_get_description(p, NULL, tmp->Description, NULL);
+				cfgfile_close(p);
+			}
+		}
 		ConfigFilesList.emplace_back(tmp);
 	}
 }
@@ -354,6 +342,20 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 	return nullptr;
 }
 
+static void clearallkeys (void)
+{
+	inputdevice_updateconfig (NULL, &changed_prefs);
+}
+
+void setmouseactive(int active)
+{
+	if (active) {
+		inputdevice_acquire(TRUE);
+	} else {
+		inputdevice_acquire (FALSE);
+		inputdevice_releasebuttons();
+	}
+}
 
 static void prefs_to_gui()
 {
@@ -410,6 +412,7 @@ int gui_init()
 	if (quit_program == UAE_QUIT)
 		ret = -2; // Quit without start of emulator
 
+	inputdevice_acquire (TRUE);
 	update_display(&changed_prefs);
 
 	after_leave_gui();
@@ -429,18 +432,6 @@ void gui_exit()
 
 void gui_purge_events()
 {
-#ifdef USE_SDL1
-	auto counter = 0;
-
-	SDL_Event event;
-	SDL_Delay(150);
-	// Strangely PS3 controller always send events, so we need a maximum number of event to purge.
-	while (SDL_PollEvent(&event) && counter < 50)
-	{
-		counter++;
-		SDL_Delay(10);
-	}
-#endif
 	keybuf_init();
 }
 
@@ -449,8 +440,8 @@ int gui_update()
 {
 	char tmp[MAX_DPATH];
 
-	fetch_savestatepath(savestate_fname, MAX_DPATH);
-	fetch_screenshotpath(screenshot_filename, MAX_DPATH);
+	fetch_savestatepath(savestate_fname, MAX_DPATH - 1);
+	fetch_screenshotpath(screenshot_filename, MAX_DPATH - 1);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);
@@ -502,33 +493,23 @@ void gui_display(int shortcut)
 	run_gui();
 	gui_to_prefs();
 
-	if (quit_program)
-		screen_is_picasso = 0;
-
 	black_screen_now();
 
-	update_display(&changed_prefs);
-
-	reset_sound();
-	resume_sound();
-	blkdev_exitgui();
-
-	after_leave_gui();
-
-	gui_update();
-
+	gui_update ();
 	gui_purge_events();
+	update_display(&changed_prefs);
+	
+	reset_sound();
+	after_leave_gui();
+	clearallkeys ();
+	blkdev_exitgui();
+	resume_sound();
+
+	inputdevice_acquire (TRUE);
+	setmouseactive(1);
+	
 	fpscounter_reset();
 	pause_emulation = 0;
-}
-
-void moveVertical(int value)
-{
-	changed_prefs.vertical_offset += value;
-	if (changed_prefs.vertical_offset < -16 + OFFSET_Y_ADJUST)
-		changed_prefs.vertical_offset = -16 + OFFSET_Y_ADJUST;
-	else if (changed_prefs.vertical_offset > 16 + OFFSET_Y_ADJUST)
-		changed_prefs.vertical_offset = 16 + OFFSET_Y_ADJUST;
 }
 
 static void gui_flicker_led2(int led, int unitnum, int status)
@@ -609,7 +590,7 @@ void gui_fps(int fps, int idle, int color)
 	gui_led(LED_SND, (gui_data.sndbuf_status > 1 || gui_data.sndbuf_status < 0) ? 0 : 1, -1);
 }
 
-void gui_led(int led, int on)
+void gui_led(int led, int on, int brightness)
 {
 	unsigned char kbd_led_status;
 

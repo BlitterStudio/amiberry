@@ -36,7 +36,6 @@
 #define MMU_TTR_BIT_ENABLED					(1 << 15)
 #define MMU_TTR_BIT_SFIELD_ENABLED			(1 << 14)
 #define MMU_TTR_BIT_SFIELD_SUPER			(1 << 13)
-#define MMU_TTR_SFIELD_SHIFT				13
 #define MMU_TTR_BIT_WRITE_PROTECT			(1 << 2)
 
 #define MMU_MMUSR_T						(1 << 1)

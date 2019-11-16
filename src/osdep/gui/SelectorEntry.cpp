@@ -1,17 +1,9 @@
 #include <stdbool.h>
 
 #include "osdep/gui/SelectorEntry.hpp"
-
-#ifdef USE_SDL1
-#include "guichan/widgets/container.hpp"
-#include "guichan/widgets/icon.hpp"
-#include "guichan/widgets/label.hpp"
-
-#elif USE_SDL2
 #include "guisan/widgets/container.hpp"
 #include "guisan/widgets/icon.hpp"
 #include "guisan/widgets/label.hpp"
-#endif
 
 namespace gcn
 {
@@ -39,7 +31,6 @@ namespace gcn
 		setId(caption);
 	}
 
-
 	SelectorEntry::~SelectorEntry()
 	{
 		removeWidgetListener(this);
@@ -48,14 +39,12 @@ namespace gcn
 		delete icon;
 	}
 
-
 	void SelectorEntry::draw(Graphics* graphics)
 	{
 		container->draw(graphics);
 		if (isFocused())
 			graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4, getHeight() - 4));
 	}
-
 
 	void SelectorEntry::setInactiveColor(const Color& color)
 	{
@@ -64,14 +53,12 @@ namespace gcn
 			container->setBaseColor(color);
 	}
 
-
 	void SelectorEntry::setActiveColor(const Color& color)
 	{
 		activeColor = color;
 		if (active)
 			container->setBaseColor(color);
 	}
-
 
 	void SelectorEntry::setActive(const bool active)
 	{
@@ -82,12 +69,10 @@ namespace gcn
 			container->setBaseColor(inactiveColor);
 	}
 
-
 	bool SelectorEntry::getActive() const
 	{
 		return active;
 	}
-
 
 	void SelectorEntry::widgetResized(const Event& event)
 	{

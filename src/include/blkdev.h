@@ -9,9 +9,6 @@
 #define SCSI_UNIT_DEFAULT 0
 #define SCSI_UNIT_IMAGE 1
 
-//#define device_debug write_log
-#define device_debug
-
 #define	INQ_DASD	0x00		/* Direct-access device (disk) */
 #define	INQ_SEQD	0x01		/* Sequential-access device (tape) */
 #define	INQ_PRTD	0x02 		/* Printer device */
@@ -31,7 +28,6 @@
 #define	INQ_NOTPR	0x1F		/* Logical unit not present (SCSI-1) */
 
 #define MAX_TOC_ENTRIES 103
-
 struct cd_toc
 {
 	uae_u8 adr, control;
@@ -43,7 +39,6 @@ struct cd_toc
 	uae_u8 zero;
 	uae_u8 crc[2];
 };
-
 struct cd_toc_head
 {
 	int first_track, first_track_offset;
@@ -69,23 +64,12 @@ struct cd_toc_head
 struct device_info
 {
 	bool open;
-	int type;
-	int media_inserted;
+  int type;
+  int media_inserted;
 	int audio_playing;
-	int removable;
-	int write_protected;
-	int cylinders;
-	int trackspercylinder;
-	int sectorspertrack;
-	int bytespersector;
-	int bus, target, lun;
-	int unitnum;
-	TCHAR label[MAX_DPATH];
+  int unitnum;
+  TCHAR label[MAX_DPATH];
 	TCHAR mediapath[MAX_DPATH];
-	TCHAR vendorid[10];
-	TCHAR productid[18];
-	TCHAR revision[6];
-	const TCHAR* backend;
 	struct cd_toc_head toc;
 	TCHAR system_id[33];
 	TCHAR volume_id[33];
@@ -146,34 +130,23 @@ struct device_functions
 	toc_func toc;
 	read_func read;
 	rawread_func rawread;
-	write_func write;
 
-	isatapi_func isatapi;
 	ismedia_func ismedia;
-
-	scsiemu_func scsiemu;
 };
 
-extern int device_func_init(int flags);
+static int device_func_init(int flags);
 extern void device_func_free(void);
 extern void device_func_reset(void);
-extern int sys_command_open(int unitnum);
-extern void sys_command_close(int unitnum);
-extern struct device_info* sys_command_info(int unitnum, struct device_info* di, int);
-extern int sys_command_cd_pause(int unitnum, int paused);
-extern void sys_command_cd_stop(int unitnum);
-extern int sys_command_cd_play(int unitnum, int startlsn, int endlsn, int);
-extern int sys_command_cd_play(int unitnum, int startlsn, int endlsn, int scan, play_status_callback statusfunc,
-                               play_subchannel_callback subfunc);
-extern uae_u32 sys_command_cd_volume(int unitnum, uae_u16 volume_left, uae_u16 volume_right);
-extern int sys_command_cd_qcode(int unitnum, uae_u8*, int lsn, bool all);
-extern int sys_command_cd_toc(int unitnum, struct cd_toc_head*);
-extern int sys_command_cd_read(int unitnum, uae_u8* data, int block, int size);
-extern int sys_command_cd_rawread(int unitnum, uae_u8* data, int sector, int size, int sectorsize);
-int sys_command_cd_rawread(int unitnum, uae_u8* data, int sector, int size, int sectorsize, uae_u8 sectortype,
-                           uae_u8 scsicmd9, uae_u8 subs);
-extern int sys_command_ismedia(int unitnum, int quick);
-extern struct device_info* sys_command_info_session(int unitnum, struct device_info* di, int, int);
+extern void sys_command_close (int unitnum);
+extern struct device_info *sys_command_info (int unitnum, struct device_info *di, int);
+extern int sys_command_cd_pause (int unitnum, int paused);
+extern void sys_command_cd_stop (int unitnum);
+extern int sys_command_cd_play (int unitnum, int startlsn, int endlsn, int scan, play_status_callback statusfunc, play_subchannel_callback subfunc);
+extern uae_u32 sys_command_cd_volume (int unitnum, uae_u16 volume_left, uae_u16 volume_right);
+extern int sys_command_cd_qcode (int unitnum, uae_u8*, int lsn, bool all);
+extern int sys_command_cd_toc (int unitnum, struct cd_toc_head*);
+extern int sys_command_cd_rawread (int unitnum, uae_u8 *data, int sector, int size, int sectorsize);
+extern int sys_command_ismedia (int unitnum, int quick);
 
 extern void blkdev_vsync(void);
 extern void restore_blkdev_start(void);
@@ -185,12 +158,10 @@ extern uae_u8 tobcd(uae_u8 v);
 extern int fromlongbcd(uae_u8 * p);
 extern void tolongbcd(uae_u8* p, int v);
 
-extern void blkdev_default_prefs(struct uae_prefs* p);
-extern void blkdev_fix_prefs(struct uae_prefs* p);
-extern int isaudiotrack(struct cd_toc_head*, int block);
-extern int isdatatrack(struct cd_toc_head*, int block);
-void sub_to_interleaved(const uae_u8* s, uae_u8* d);
-void sub_to_deinterleaved(const uae_u8* s, uae_u8* d);
+extern void blkdev_default_prefs (struct uae_prefs *p);
+extern void blkdev_fix_prefs (struct uae_prefs *p);
+extern int isaudiotrack (struct cd_toc_head*, int block);
+void sub_to_interleaved (const uae_u8 *s, uae_u8 *d);
 
 enum cd_standard_unit
 {

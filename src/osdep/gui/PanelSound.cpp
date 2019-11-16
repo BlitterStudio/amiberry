@@ -1,16 +1,9 @@
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
@@ -41,6 +34,9 @@ static gcn::Slider* sldSeparation;
 static gcn::Label* lblStereoDelay;
 static gcn::Label* lblStereoDelayInfo;
 static gcn::Slider* sldStereoDelay;
+static gcn::Label* lblPaulaVol;
+static gcn::Label* lblPaulaVolInfo;
+static gcn::Slider* sldPaulaVol;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
@@ -170,7 +166,7 @@ public:
 			case 3:
 				changed_prefs.sound_freq = 44100;
 				break;
-			default: 
+			default:
 				break;
 			}
 		}
@@ -201,7 +197,7 @@ public:
 				changed_prefs.sound_filter = FILTER_SOUND_ON;
 				changed_prefs.sound_filter_type = 1;
 				break;
-			default: 
+			default:
 				break;
 			}
 		}
@@ -227,6 +223,12 @@ public:
 				else
 					changed_prefs.sound_mixed_stereo_delay = -1;
 			}
+		}
+		else if (actionEvent.getSource() == sldPaulaVol)
+		{
+			int newvol = 100 - int(sldPaulaVol->getValue());
+			if (changed_prefs.sound_volume_paula != newvol)
+				changed_prefs.sound_volume_paula = newvol;
 		}
 
 		RefreshPanelSound();
@@ -327,6 +329,17 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldStereoDelay->addActionListener(soundActionListener);
 	lblStereoDelayInfo = new gcn::Label("10");
 
+	lblPaulaVol = new gcn::Label("Paula Volume:");
+	lblPaulaVol->setAlignment(gcn::Graphics::RIGHT);
+	sldPaulaVol = new gcn::Slider(0, 100);
+	sldPaulaVol->setSize(160, SLIDER_HEIGHT);
+	sldPaulaVol->setBaseColor(gui_baseCol);
+	sldPaulaVol->setMarkerLength(20);
+	sldPaulaVol->setStepLength(10);
+	sldPaulaVol->setId("sldPaulaVol");
+	sldPaulaVol->addActionListener(soundActionListener);
+	lblPaulaVolInfo = new gcn::Label("80 %");
+
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
 	category.panel->add(grpMode, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
@@ -335,7 +348,8 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	category.panel->add(cboFrequency, lblFrequency->getX() + lblFrequency->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboFrequency->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblInterpolation, DISTANCE_BORDER, posY);
-	category.panel->add(cboInterpolation, lblInterpolation->getX() + lblInterpolation->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cboInterpolation, lblInterpolation->getX() + lblInterpolation->getWidth() + DISTANCE_NEXT_X,
+	                    posY);
 	posY += cboInterpolation->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblFilter, DISTANCE_BORDER, posY);
 	category.panel->add(cboFilter, lblFilter->getX() + lblFilter->getWidth() + DISTANCE_NEXT_X, posY);
@@ -346,7 +360,12 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
 	category.panel->add(lblStereoDelay, DISTANCE_BORDER, posY);
 	category.panel->add(sldStereoDelay, lblStereoDelay->getX() + lblStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + DISTANCE_NEXT_X,
+	                    posY);
+	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
+	category.panel->add(lblPaulaVol, DISTANCE_BORDER, posY);
+	category.panel->add(sldPaulaVol, lblPaulaVol->getX() + lblPaulaVol->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblPaulaVolInfo, sldPaulaVol->getX() + sldPaulaVol->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
 
 	RefreshPanelSound();
@@ -397,7 +416,7 @@ void RefreshPanelSound()
 	case 3:
 		optSoundEmulatedBest->setSelected(true);
 		break;
-	default: 
+	default:
 		break;
 	}
 
@@ -436,7 +455,7 @@ void RefreshPanelSound()
 	case 2:
 		i = changed_prefs.sound_filter_type ? 4 : 3;
 		break;
-	default: 
+	default:
 		break;
 	}
 	cboFilter->setSelected(i);
@@ -466,22 +485,27 @@ void RefreshPanelSound()
 		snprintf(tmp, 10, "%d", curr_stereodelay_idx);
 		lblStereoDelayInfo->setCaption(tmp);
 	}
+	sldPaulaVol->setValue(100 - changed_prefs.sound_volume_paula);
+	snprintf(tmp, sizeof(tmp) - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
+	lblPaulaVolInfo->setCaption(tmp);
 }
 
-bool HelpPanelSound(std::vector<std::string> &helptext)
+bool HelpPanelSound(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can turn on sound emulation with different levels of accuracy and");
 	helptext.emplace_back("choose between Mono and Stereo.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("The different types of interpolation have different impact on performance. ");
 	helptext.emplace_back("Play with the settings to find the type you like most. You may need headphones .");
 	helptext.emplace_back("to really hear the difference between the interpolation types.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"Filter\", you can select the type of the Amiga audio filter.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(With "Stereo separation" and "Stereo delay", you can adjust how the left )");
 	helptext.emplace_back("and right audio channels of the Amiga are mixed to the left and right channels ");
 	helptext.emplace_back("of your device. A value of 70% for separation and no delay is a good start.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The audio volume of the Amiga (not CD) can be adjusted with \"Paula Volume\".");
 	return true;
 }

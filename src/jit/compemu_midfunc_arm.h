@@ -33,29 +33,28 @@
 
 // Arm optimized midfunc
 DECLARE_MIDFUNC(arm_ADD_l(RW4 d, RR4 s));
-DECLARE_MIDFUNC(arm_ADD_l_ri(RW4 d, IMM i));
-DECLARE_MIDFUNC(arm_ADD_l_ri8(RW4 d, IMM i));
-DECLARE_MIDFUNC(arm_SUB_l_ri8(RW4 d, IMM i));
+DECLARE_MIDFUNC(arm_ADD_l_ri(RW4 d, IM32 i));
+DECLARE_MIDFUNC(arm_ADD_l_ri8(RW4 d, IM8 i));
+DECLARE_MIDFUNC(arm_SUB_l_ri8(RW4 d, IM8 i));
 
 // Emulated midfunc
-DECLARE_MIDFUNC(disp_ea20_target_add(RW4 target, RR4 reg, IMM shift, IMM extend));
-DECLARE_MIDFUNC(disp_ea20_target_mov(W4 target, RR4 reg, IMM shift, IMM extend));
+DECLARE_MIDFUNC(disp_ea20_target_add(RW4 target, RR4 reg, IM8 shift, IM8 extend));
+DECLARE_MIDFUNC(disp_ea20_target_mov(W4 target, RR4 reg, IM8 shift, IM8 extend));
 
-DECLARE_MIDFUNC(mov_l_mi(IMM d, IMM s));
+DECLARE_MIDFUNC(mov_l_mi(IMPTR d, IM32 s));
 DECLARE_MIDFUNC(pop_l(W4 d));
 DECLARE_MIDFUNC(push_l(RR4 s));
 DECLARE_MIDFUNC(sign_extend_16_rr(W4 d, RR2 s));
-DECLARE_MIDFUNC(lea_l_brr(W4 d, RR4 s, IMM offset));
-DECLARE_MIDFUNC(lea_l_brr_indexed(W4 d, RR4 s, RR4 index, IMM factor, IMM offset));
-DECLARE_MIDFUNC(lea_l_rr_indexed(W4 d, RR4 s, RR4 index, IMM factor));
+DECLARE_MIDFUNC(lea_l_brr(W4 d, RR4 s, IM32 offset));
+DECLARE_MIDFUNC(lea_l_brr_indexed(W4 d, RR4 s, RR4 index, IM8 factor, IM8 offset));
+DECLARE_MIDFUNC(lea_l_rr_indexed(W4 d, RR4 s, RR4 index, IM8 factor));
 DECLARE_MIDFUNC(mov_l_rr(W4 d, RR4 s));
-DECLARE_MIDFUNC(mov_l_mr(IMM d, RR4 s));
-DECLARE_MIDFUNC(mov_l_rm(W4 d, IMM s));
-DECLARE_MIDFUNC(mov_b_rm(W1 d, IMM s));
-DECLARE_MIDFUNC(mov_l_ri(W4 d, IMM s));
-DECLARE_MIDFUNC(mov_b_ri(W1 d, IMM s));
-DECLARE_MIDFUNC(sub_l_ri(RW4 d, IMM i));
-DECLARE_MIDFUNC(sub_w_ri(RW2 d, IMM i));
+DECLARE_MIDFUNC(mov_l_mr(IMPTR d, RR4 s));
+DECLARE_MIDFUNC(mov_l_rm(W4 d, IMPTR s));
+DECLARE_MIDFUNC(mov_l_ri(W4 d, IM32 s));
+DECLARE_MIDFUNC(mov_b_ri(W1 d, IM8 s));
+DECLARE_MIDFUNC(sub_l_ri(RW4 d, IM8 i));
+DECLARE_MIDFUNC(sub_w_ri(RW2 d, IM8 i));
 DECLARE_MIDFUNC(live_flags(void));
 DECLARE_MIDFUNC(dont_care_flags(void));
 DECLARE_MIDFUNC(make_flags_live(void));
@@ -70,8 +69,8 @@ DECLARE_MIDFUNC(fmov_s_rr(FW d, RR4 s));
 DECLARE_MIDFUNC(fmov_w_rr(FW d, RR2 s));
 DECLARE_MIDFUNC(fmov_b_rr(FW d, RR1 s));
 DECLARE_MIDFUNC(fmov_d_rrr(FW d, RR4 s1, RR4 s2));
-DECLARE_MIDFUNC(fmov_l_ri(FW d, IMM i));
-DECLARE_MIDFUNC(fmov_s_ri(FW d, IMM i));
+DECLARE_MIDFUNC(fmov_l_ri(FW d, IM32 i));
+DECLARE_MIDFUNC(fmov_s_ri(FW d, IM32 i));
 DECLARE_MIDFUNC(fmov_to_l_rr(W4 d, FR s));
 DECLARE_MIDFUNC(fmov_to_s_rr(W4 d, FR s));
 DECLARE_MIDFUNC(fmov_to_w_rr(W4 d, FR s));
@@ -108,4 +107,4 @@ DECLARE_MIDFUNC(fp_to_exten_rm(FW d, RR4 adr));
 DECLARE_MIDFUNC(fp_from_double_mr(RR4 adr, FR s));
 DECLARE_MIDFUNC(fp_to_double_rm(FW d, RR4 adr));
 DECLARE_MIDFUNC(fp_fscc_ri(RW4, int cc));
-DECLARE_MIDFUNC(roundingmode(IMM mode));
+DECLARE_MIDFUNC(roundingmode(IM32 mode));

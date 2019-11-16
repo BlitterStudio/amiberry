@@ -234,6 +234,18 @@
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\progressbar.hpp">
       <Filter>include\guisan\widgets</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\imagetextbutton.hpp">
+      <Filter>include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\inputbox.hpp">
+      <Filter>include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\messagebox.hpp">
+      <Filter>include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdl2graphics.hpp">
+      <Filter>include\guisan\sdl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\guisan-dev\src\actionevent.cpp">
@@ -385,6 +397,9 @@
     </ClCompile>
     <ClCompile Include="..\..\guisan-dev\src\guisan.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdl2graphics.cpp">
+      <Filter>src\sdl</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

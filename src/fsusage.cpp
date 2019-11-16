@@ -90,8 +90,6 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 
 #else /* ! _WIN32 */
 
-int statfs ();
-
 #if HAVE_UNISTD_H
 # include <unistd.h>
 #endif

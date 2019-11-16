@@ -18,9 +18,8 @@
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
-
-#ifdef ARMV6T2
 #define JIT /* JIT compiler support */
+#if defined(ARMV6T2) || defined(CPU_AARCH64)
 #define USE_JIT_FPU
 #endif
 /* #define NATMEM_OFFSET regs.natmem_offset */
@@ -29,7 +28,9 @@
 /* #define ENFORCER */ /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
+#ifndef ANDROID
 #define CD32 /* CD32 emulation */
+#endif
 /* #define CDTV */ /* CDTV emulation */
 /* #define PARALLEL_PORT */ /* parallel port emulation */
 /* #define PARALLEL_DIRECT */ /* direct parallel port emulation */
@@ -60,7 +61,7 @@
 #define PICASSO96 /* Picasso96 display card emulation */
 #define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
 #define BSDSOCKET /* bsdsocket.library emulation */
-#define CAPS  /* CAPS-image support */
+#define CAPS /* CAPS-image support */
 /* #define SCP */ /* SuperCardPro */
 #define FDI2RAW /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
@@ -93,7 +94,6 @@
 /* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
 /* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
 /* #define ADDRESS_SPACE_24BIT */
-#define INPUTDEVICE_SIMPLE /* simplified inputdevice for faster emulation */
 
 /* #define WITH_SCSI_IOCTL */
 /* #define WITH_SCSI_SPTI */
@@ -115,13 +115,17 @@
 
 #include <stdint.h>
 
+#ifdef CPU_AARCH64
+#define SIZEOF_VOID_P 8
+#else
 #define SIZEOF_VOID_P 4
+#endif
 
 #if !defined(AHI)
 #undef ENFORCER
 #endif
 
-typedef long uae_atomic;
+typedef int32_t uae_atomic;
 
 /* src/sysconfig.h.  Generated automatically by configure.  */
 /* src/sysconfig.h.in.  Generated automatically from configure.in by autoheader.  */
@@ -258,7 +262,11 @@ typedef long uae_atomic;
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */
+#ifdef CPU_AARCH64
+#define SIZEOF_LONG 8
+#else
 #define SIZEOF_LONG 4
+#endif
 
 /* The number of bytes in a long long.  */
 #define SIZEOF_LONG_LONG 8
@@ -476,6 +484,11 @@ typedef long uae_atomic;
 /* Define if you have the <sys/time.h> header file.  */
 #define HAVE_SYS_TIME_H 1
 
+/* Define if you have the <sys/timeb.h> header file. */
+#ifndef ANDROID
+#define HAVE_SYS_TIMEB_H 1
+#endif
+
 /* Define if you have the <sys/types.h> header file.  */
 #define HAVE_SYS_TYPES_H 1
 
@@ -529,7 +542,7 @@ typedef long uae_atomic;
 #define M68K_SPEED_25MHZ_CYCLES 128
 
 typedef unsigned int WPARAM;
-typedef long LPARAM;
+typedef int LPARAM;
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 
@@ -539,7 +552,7 @@ typedef unsigned char boolean;
 
 typedef unsigned short USHORT;
 
-#define Sleep(x) usleep(x*1000)
+#define Sleep(x) usleep((x)*1000)
 
 /* Some defines to make it easier to compare files with WinUAE */
 #include "uae/string.h"
@@ -564,27 +577,3 @@ typedef char TCHAR;
 #define _wunlink(x)         unlink(x)
 #define _istalnum(x)        isalnum(x)
 
-#ifdef ANDROID
-#define fmodl(x,y)          fmod(x,y)
-#define remainderl(x,y)     remainder(x,y)
-#define sinhl(x)            sinh(x)
-#define sqrtl(x)            sqrt(x)
-#define log1pl(x)           log1p(x)
-#define expm1l(x)           expm1(x)
-#define tanhl(x)            tanh(x)
-#define atanl(x)            atan(x)
-#define atanhl(x)           atanh(x)
-#define sinl(x)             sin(x)
-#define asinl(x)            asin(x)
-#define tanl(x)             tan(x)
-#define expl(x)             exp(x)
-#define powl(x,y)           pow(x,y)
-#define logl(x)             log(x)
-#define log10l(x)           log10(x)
-#define log2l(x)            (log(x)/log(2))
-#define lrintl(x)           lrint(x)
-#define rintl(x)            rint(x)
-#define coshl(x)            cosh(x)
-#define acosl(x)            acos(x)
-#define cosl(x)             cos(x)
-#endif

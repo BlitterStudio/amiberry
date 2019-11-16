@@ -12,25 +12,30 @@
   *
   */
 
-#include <cstring>
-#include <cmath>
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
+#include "autoconf.h"
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "savestate.h"
 #include "gui.h"
+#include "xwin.h"
+#include "threaddep/thread.h"
+
+#include <math.h>
 
 #define PERIOD_MIN 4
 #define PERIOD_MIN_NONCE 60
 
+int audio_channel_mask = 15;
 volatile bool cd_audio_mode_changed;
 
-STATIC_INLINE bool isaudio(void)
+STATIC_INLINE bool isaudio (void)
 {
 	return currprefs.produce_sound != 0;
 }
@@ -59,7 +64,8 @@ struct audio_channel_data2
 	sinc_queue_t sinc_queue[SINC_QUEUE_LENGTH];
 	int sinc_queue_time;
 	int sinc_queue_head;
-	int vol;
+	int audvol;
+	int mixvol;
 	unsigned int adk_mask;
 };
 
@@ -94,25 +100,23 @@ static void (*sample_prehandler) (unsigned long best_evtime);
 float scaled_sample_evtime;
 
 int sound_cd_volume[2];
-static int sound_paula_volume[2];
+int sound_paula_volume[2];
 
 static unsigned long last_cycles;
 static float next_sample_evtime;
 
 typedef uae_s8 sample8_t;
-#define DO_CHANNEL_1(v, c) do { (v) *= audio_channel[c].data.vol; } while (0)
+#define DO_CHANNEL_1(v, c) do { (v) *= audio_channel[c].data.mixvol; } while (0)
+#define SBASEVAL16(logn) ((logn) == 1 ? SOUND16_BASE_VAL >> 1 : SOUND16_BASE_VAL)
 
 STATIC_INLINE int FINISH_DATA(int data, int bits, int ch)
 {
-	if (bits == 16) {
-		return data;
-	}
-	else if (bits - 16 > 0) {
-		data >>= bits - 16;
-	}
-	else {
+	if (bits < 16) {
 		int shift = 16 - bits;
 		data <<= shift;
+	} else {
+		int shift = bits - 16;
+		data >>= shift;
 	}
 	data = data * sound_paula_volume[ch] / 32768;
 	return data;
@@ -120,19 +124,21 @@ STATIC_INLINE int FINISH_DATA(int data, int bits, int ch)
 
 static uae_u32 right_word_saved[SOUND_MAX_DELAY_BUFFER];
 static uae_u32 left_word_saved[SOUND_MAX_DELAY_BUFFER];
-static int saved_ptr;
+static uae_u32 right2_word_saved[SOUND_MAX_DELAY_BUFFER];
+static uae_u32 left2_word_saved[SOUND_MAX_DELAY_BUFFER];
+static int saved_ptr, saved_ptr2;
 
 static int mixed_on, mixed_stereo_size, mixed_mul1, mixed_mul2;
 static int led_filter_forced, sound_use_filter, sound_use_filter_sinc, led_filter_on;
 
 /* denormals are very small floating point numbers that force FPUs into slow
-   mode. All lowpass filters using floats are suspectible to denormals unless
-   a small offset is added to avoid very small floating point numbers. */
+mode. All lowpass filters using floats are suspectible to denormals unless
+a small offset is added to avoid very small floating point numbers. */
 #define DENORMAL_OFFSET (1E-10)
 
 static struct filter_state {
-    float rc1, rc2, rc3, rc4, rc5;
-} sound_filter_state[2];
+	float rc1, rc2, rc3, rc4, rc5;
+} sound_filter_state[AUDIO_CHANNELS_PAULA];
 
 static float a500e_filter1_a0;
 static float a500e_filter2_a0;
@@ -145,19 +151,19 @@ enum {
 };
 
 /* Amiga has two separate filtering circuits per channel, a static RC filter
- * on A500 and the LED filter. This code emulates both.
- * 
- * The Amiga filtering circuitry depends on Amiga model. Older Amigas seem
- * to have a 6 dB/oct RC filter with cutoff frequency such that the -6 dB
- * point for filter is reached at 6 kHz, while newer Amigas have no filtering.
- *
- * The LED filter is complicated, and we are modelling it with a pair of
- * RC filters, the other providing a highboost. The LED starts to cut
- * into signal somewhere around 5-6 kHz, and there's some kind of highboost
- * in effect above 12 kHz. Better measurements are required.
- *
- * The current filtering should be accurate to 2 dB with the filter on,
- * and to 1 dB with the filter off.
+* on A500 and the LED filter. This code emulates both.
+*
+* The Amiga filtering circuitry depends on Amiga model. Older Amigas seem
+* to have a 6 dB/oct RC filter with cutoff frequency such that the -6 dB
+* point for filter is reached at 6 kHz, while newer Amigas have no filtering.
+*
+* The LED filter is complicated, and we are modelling it with a pair of
+* RC filters, the other providing a highboost. The LED starts to cut
+* into signal somewhere around 5-6 kHz, and there's some kind of highboost
+* in effect above 12 kHz. Better measurements are required.
+*
+* The current filtering should be accurate to 2 dB with the filter on,
+* and to 1 dB with the filter off.
 */
 
 static int filter(int input, struct filter_state *fs)
@@ -174,8 +180,8 @@ static int filter(int input, struct filter_state *fs)
 		normal_output = fs->rc2;
 
 		fs->rc3 = filter_a0 * normal_output + (1 - filter_a0) * fs->rc3;
-		fs->rc4 = filter_a0 * fs->rc3 + (1 - filter_a0) * fs->rc4;
-		fs->rc5 = filter_a0 * fs->rc4 + (1 - filter_a0) * fs->rc5;
+		fs->rc4 = filter_a0 * fs->rc3       + (1 - filter_a0) * fs->rc4;
+		fs->rc5 = filter_a0 * fs->rc4       + (1 - filter_a0) * fs->rc5;
 
 		led_output = fs->rc5;
 		break;
@@ -184,8 +190,8 @@ static int filter(int input, struct filter_state *fs)
 		normal_output = input;
 
 		fs->rc2 = filter_a0 * normal_output + (1 - filter_a0) * fs->rc2 + DENORMAL_OFFSET;
-		fs->rc3 = filter_a0 * fs->rc2 + (1 - filter_a0) * fs->rc3;
-		fs->rc4 = filter_a0 * fs->rc3 + (1 - filter_a0) * fs->rc4;
+		fs->rc3 = filter_a0 * fs->rc2       + (1 - filter_a0) * fs->rc3;
+		fs->rc4 = filter_a0 * fs->rc3       + (1 - filter_a0) * fs->rc4;
 
 		led_output = fs->rc4;
 		break;
@@ -284,13 +290,13 @@ static void anti_prehandler(unsigned long best_evtime)
 	/* Handle accumulator antialiasiation */
 	for (i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
 		acd = audio_data[i];
-		output = (acd->current_sample * acd->vol) & acd->adk_mask;
+  	output = (acd->current_sample * acd->mixvol) & acd->adk_mask;
 		acd->sample_accum += output * best_evtime;
 		acd->sample_accum_time += best_evtime;
 	}
 }
 
-STATIC_INLINE void samplexx_anti_handler(int *datasp)
+static void samplexx_anti_handler (int *datasp)
 {
 	for (auto i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
 		auto acd = audio_data[i];
@@ -302,11 +308,13 @@ STATIC_INLINE void samplexx_anti_handler(int *datasp)
 
 static void sinc_prehandler_paula(unsigned long best_evtime)
 {
-	for (auto& i : audio_data)
-	{
-		auto acd = i;
-		auto vol = acd->vol;
-		int output = (acd->current_sample * vol) & acd->adk_mask;
+	int i, output;
+  struct audio_channel_data2 *acd;
+
+  for (i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
+		acd = audio_data[i];
+		int vol = acd->mixvol;
+		output = (acd->current_sample * vol) & acd->adk_mask;
 
 		/* if output state changes, record the state change and also
 		 * write data into sinc queue for mixing in the BLEP */
@@ -323,7 +331,7 @@ static void sinc_prehandler_paula(unsigned long best_evtime)
 
 /* this interpolator performs BLEP mixing (bleps are shaped like integrated sinc
  * functions) with a type of BLEP that matches the filtering configuration. */
-STATIC_INLINE void samplexx_sinc_handler(int *datasp)
+static void samplexx_sinc_handler (int *datasp)
 {
 	int n;
 
@@ -375,15 +383,15 @@ void sample16_handler(void)
 {
 	int data;
 	if (audio_channel[0].data.adk_mask)
-		data = audio_channel[0].data.current_sample * audio_channel[0].data.vol;
+    data = audio_channel[0].data.current_sample * audio_channel[0].data.mixvol;
 	else
 		data = 0;
 	if (audio_channel[1].data.adk_mask)
-		data += audio_channel[1].data.current_sample * audio_channel[1].data.vol;
+    data += audio_channel[1].data.current_sample * audio_channel[1].data.mixvol;
 	if (audio_channel[2].data.adk_mask)
-		data += audio_channel[2].data.current_sample * audio_channel[2].data.vol;
+    data += audio_channel[2].data.current_sample * audio_channel[2].data.mixvol;
 	if (audio_channel[3].data.adk_mask)
-		data += audio_channel[3].data.current_sample * audio_channel[3].data.vol;
+    data += audio_channel[3].data.current_sample * audio_channel[3].data.mixvol;
 
 	data = FINISH_DATA(data, 16, 0);
 
@@ -407,14 +415,17 @@ static void sample16i_anti_handler(void)
 
 static void sample16i_rh_handler(void)
 {
-	auto data0 = audio_channel[0].data.current_sample;
-	auto data1 = audio_channel[1].data.current_sample;
-	auto data2 = audio_channel[2].data.current_sample;
-	auto data3 = audio_channel[3].data.current_sample;
-	auto data0p = audio_channel[0].data.last_sample;
-	auto data1p = audio_channel[1].data.last_sample;
-	auto data2p = audio_channel[2].data.last_sample;
-	auto data3p = audio_channel[3].data.last_sample;
+  unsigned long delta, ratio;
+
+	int data0 = audio_channel[0].data.current_sample;
+	int data1 = audio_channel[1].data.current_sample;
+	int data2 = audio_channel[2].data.current_sample;
+	int data3 = audio_channel[3].data.current_sample;
+	int data0p = audio_channel[0].data.last_sample;
+	int data1p = audio_channel[1].data.last_sample;
+	int data2p = audio_channel[2].data.last_sample;
+	int data3p = audio_channel[3].data.last_sample;
+	int data;
 
 	DO_CHANNEL_1(data0, 0);
 	DO_CHANNEL_1(data1, 1);
@@ -435,8 +446,8 @@ static void sample16i_rh_handler(void)
 	data3p &= audio_channel[3].data.adk_mask;
 
 	/* linear interpolation and summing up... */
-	unsigned long delta = audio_channel[0].per;
-	auto ratio = ((audio_channel[0].evtime % delta) << 8) / delta;
+  delta = audio_channel[0].per;
+  ratio = ((audio_channel[0].evtime % delta) << 8) / delta;
 	data0 = (data0 * (256 - ratio) + data0p * ratio) >> 8;
 	delta = audio_channel[1].per;
 	ratio = ((audio_channel[1].evtime % delta) << 8) / delta;
@@ -447,7 +458,7 @@ static void sample16i_rh_handler(void)
 	delta = audio_channel[3].per;
 	ratio = ((audio_channel[3].evtime % delta) << 8) / delta;
 	data0 += (data3 * (256 - ratio) + data3p * ratio) >> 8;
-	auto data = data0;
+	data = data0;
 	data = FINISH_DATA(data, 16, 0);
 
 	put_sound_word_mono_func(data);
@@ -456,14 +467,15 @@ static void sample16i_rh_handler(void)
 
 static void sample16i_crux_handler(void)
 {
-	auto data0 = audio_channel[0].data.current_sample;
-	auto data1 = audio_channel[1].data.current_sample;
-	auto data2 = audio_channel[2].data.current_sample;
-	auto data3 = audio_channel[3].data.current_sample;
-	auto data0p = audio_channel[0].data.last_sample;
-	auto data1p = audio_channel[1].data.last_sample;
-	auto data2p = audio_channel[2].data.last_sample;
-	auto data3p = audio_channel[3].data.last_sample;
+	int data0 = audio_channel[0].data.current_sample;
+	int data1 = audio_channel[1].data.current_sample;
+	int data2 = audio_channel[2].data.current_sample;
+	int data3 = audio_channel[3].data.current_sample;
+	int data0p = audio_channel[0].data.last_sample;
+	int data1p = audio_channel[1].data.last_sample;
+	int data2p = audio_channel[2].data.last_sample;
+	int data3p = audio_channel[3].data.last_sample;
+	int data;
 
 	DO_CHANNEL_1(data0, 0);
 	DO_CHANNEL_1(data1, 1);
@@ -484,10 +496,12 @@ static void sample16i_crux_handler(void)
 	data3p &= audio_channel[3].data.adk_mask;
 
 	{
+		struct audio_channel_data *cdp;
+		uae_u32 ratio, ratio1;
 #define INTERVAL (scaled_sample_evtime * 3)
-		auto cdp = audio_channel + 0;
-		unsigned long ratio1 = cdp->per - cdp->evtime;
-		auto ratio = ulong((ratio1 << 12) / INTERVAL);
+		cdp = audio_channel + 0;
+		ratio1 = cdp->per - cdp->evtime;
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data0 = (data0 * ratio + data0p * (4096 - ratio)) >> 12;
@@ -501,14 +515,14 @@ static void sample16i_crux_handler(void)
 
 		cdp = audio_channel + 2;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data2 = (data2 * ratio + data2p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 3;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data3 = (data3 * ratio + data3p * (4096 - ratio)) >> 12;
@@ -516,14 +530,12 @@ static void sample16i_crux_handler(void)
 	data1 += data2;
 	data0 += data3;
 	data0 += data1;
-	auto data = data0;
+	data = data0;
 	data = FINISH_DATA(data, 16, 0);
 
 	put_sound_word_mono_func(data);
 	check_sound_buffers();
 }
-
-#ifdef HAVE_STEREO_SUPPORT
 
 /* This interpolator examines sample points when Paula switches the output
  * voltage and computes the average of Paula's output */
@@ -558,12 +570,12 @@ static void sample16si_sinc_handler(void)
 
 void sample16s_handler(void)
 {
-	auto data_l = audio_channel[0].data.adk_mask ? audio_channel[0].data.current_sample * audio_channel[0].data.vol : 0;
-	auto data_r = audio_channel[1].data.adk_mask ? audio_channel[1].data.current_sample * audio_channel[1].data.vol : 0;
+  int data_l = audio_channel[0].data.adk_mask ? audio_channel[0].data.current_sample * audio_channel[0].data.mixvol : 0;
+  int data_r = audio_channel[1].data.adk_mask ? audio_channel[1].data.current_sample * audio_channel[1].data.mixvol : 0;
 	if (audio_channel[2].data.adk_mask)
-		data_r += audio_channel[2].data.current_sample * audio_channel[2].data.vol;
+    data_r += audio_channel[2].data.current_sample * audio_channel[2].data.mixvol;
 	if (audio_channel[3].data.adk_mask)
-		data_l += audio_channel[3].data.current_sample * audio_channel[3].data.vol;
+    data_l += audio_channel[3].data.current_sample * audio_channel[3].data.mixvol;
 	data_l = FINISH_DATA(data_l, 15, 0);
 	data_r = FINISH_DATA(data_r, 15, 1);
 
@@ -601,31 +613,33 @@ static void sample16si_crux_handler(void)
 	data3p &= audio_channel[3].data.adk_mask;
 
 	{
+		struct audio_channel_data* cdp;
+		uae_u32 ratio, ratio1;
 #define INTERVAL (scaled_sample_evtime * 3)
-		auto cdp = audio_channel + 0;
-		unsigned long ratio1 = cdp->per - cdp->evtime;
-		auto ratio = ulong((ratio1 << 12) / INTERVAL);
+		cdp = audio_channel + 0;
+		ratio1 = cdp->per - cdp->evtime;
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data0 = (data0 * ratio + data0p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 1;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data1 = (data1 * ratio + data1p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 2;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data2 = (data2 * ratio + data2p * (4096 - ratio)) >> 12;
 
 		cdp = audio_channel + 3;
 		ratio1 = cdp->per - cdp->evtime;
-		ratio = ulong((ratio1 << 12) / INTERVAL);
+		ratio = (ratio1 << 12) / INTERVAL;
 		if (cdp->evtime < scaled_sample_evtime || ratio1 >= INTERVAL)
 			ratio = 4096;
 		data3 = (data3 * ratio + data3p * (4096 - ratio)) >> 12;
@@ -687,21 +701,6 @@ static void sample16si_rh_handler(void)
 	put_sound_word_stereo_func(data0, data1);
 	check_sound_buffers();
 }
-
-#else
-void sample16s_handler(void)
-{
-	sample16_handler();
-}
-static void sample16si_crux_handler(void)
-{
-	sample16i_crux_handler();
-}
-static void sample16si_rh_handler(void)
-{
-	sample16i_rh_handler();
-}
-#endif
 
 static int audio_work_to_do;
 
@@ -772,14 +771,15 @@ STATIC_INLINE int is_audio_active(void)
 	return audio_work_to_do;
 }
 
-STATIC_INLINE void update_volume(int nr, uae_u16 v)
+static void update_volume(int nr, uae_u16 v)
 {
 	auto cdp = audio_channel + nr;
 	// 7 bit register in Paula.
 	v &= 127;
 	if (v > 64)
 		v = 64;
-	cdp->data.vol = v;
+	cdp->data.audvol = v;
+	cdp->data.mixvol = v;
 }
 
 uae_u16 audio_dmal(void)
@@ -801,7 +801,7 @@ static int isirq(int nr)
 	return INTREQR() & (0x80 << nr);
 }
 
-STATIC_INLINE void setirq(int nr, int which)
+static void setirq (int nr, int which)
 {
 	INTREQ_0(0x8000 | (0x80 << nr));
 }
@@ -851,7 +851,7 @@ static void loaddat(int nr)
 	loaddat(nr, false);
 }
 
-STATIC_INLINE void loadper(int nr)
+static void loadper (int nr)
 {
 	auto cdp = audio_channel + nr;
 
@@ -1046,8 +1046,8 @@ void audio_reset(void)
 		{
 			auto cdp = &i;
 			memset(cdp, 0, sizeof *audio_channel);
-			cdp->per = PERIOD_MAX - 1;
-			cdp->data.vol = 0;
+			cdp->per = int(PERIOD_MAX - 1);
+			cdp->data.mixvol = 0;
 			cdp->evtime = MAX_EV;
 		}
 	}
@@ -1100,7 +1100,7 @@ static float rc_calculate_a0(int sample_rate, int cutoff_freq)
 	return out;
 }
 
-void check_prefs_changed_audio(void)
+void check_prefs_changed_audio (void)
 {
 	if (sound_available) {
 		auto ch = sound_prefs_changed();
@@ -1114,7 +1114,7 @@ void check_prefs_changed_audio(void)
 	}
 }
 
-void set_audio(void)
+void set_audio (void)
 {
 	const auto old_mixed_size = mixed_stereo_size;
 
@@ -1224,8 +1224,10 @@ void set_audio(void)
 	else if (sample_handler == sample16si_anti_handler || sample_handler == sample16i_anti_handler) {
 		sample_prehandler = anti_prehandler;
 	}
-	for (auto i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
-		audio_data[i] = &audio_channel[i].data;
+	for (int i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
+		struct audio_channel_data *cdp = audio_channel + i;
+		audio_data[i] = &cdp->data;
+		cdp->data.mixvol = cdp->data.audvol;
 	}
 
 	if (currprefs.sound_stereo) {
@@ -1278,6 +1280,7 @@ void update_audio(void)
 	n_cycles = get_cycles() - last_cycles;
 	while (n_cycles > 0) {
 		auto best_evtime = n_cycles + 1;
+		uae_u32 rounded;
 		int i;
 
 		for (i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
@@ -1286,7 +1289,7 @@ void update_audio(void)
 		}
 
 		/* next_sample_evtime >= 0 so floor() behaves as expected */
-		auto rounded = ulong(floorf(next_sample_evtime));
+		rounded = floorf(next_sample_evtime);
 		if (next_sample_evtime - rounded >= 0.5)
 			rounded++;
 
@@ -1506,7 +1509,7 @@ uae_u8 *restore_audio(int nr, uae_u8 *src)
 
 	zerostate(nr);
 	acd->state = restore_u8();
-	acd->data.vol = restore_u8();
+	acd->data.audvol = restore_u8();
 	acd->intreq2 = restore_u8() != 0;
 	const auto flags = restore_u8();
 	acd->dr = acd->dsr = false;
@@ -1523,6 +1526,7 @@ uae_u8 *restore_audio(int nr, uae_u8 *src)
 	acd->pt = restore_u32();
 	acd->evtime = restore_u32();
 	acd->dmaenstore = (dmacon & DMA_MASTER) && (dmacon & (1 << nr));
+  acd->data.mixvol = acd->data.audvol;
 	return src;
 }
 
@@ -1536,7 +1540,7 @@ uae_u8 *save_audio(int nr, int *len, uae_u8 *dstptr)
 	else
 		dstbak = dst = xmalloc(uae_u8, 100);
 	save_u8(acd->state);
-	save_u8(acd->data.vol);
+	save_u8 (acd->data.audvol);
 	save_u8(acd->intreq2);
 	save_u8((acd->dr ? 1 : 0) | (acd->dsr ? 2 : 0) | 0x80);
 	save_u16(acd->len);

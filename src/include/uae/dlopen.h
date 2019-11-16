@@ -14,7 +14,7 @@
 #ifdef _WIN32
 #define UAE_DLHANDLE HINSTANCE
 #else
- #define UAE_DLHANDLE void *
+#define UAE_DLHANDLE void *
 #endif
 
 /* General loadable module support */

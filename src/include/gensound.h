@@ -25,6 +25,9 @@ extern int init_sound (void);
 extern void close_sound (void);
 
 extern void sample16_handler (void);
+extern void sample8_handler (void);
 extern void sample16s_handler (void);
+extern void sample16ss_handler (void);
+extern void sample8s_handler (void);
 
 #endif /* UAE_GENSOUND_H */

@@ -2,17 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -23,7 +16,7 @@
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
 
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 #include "androidsdl_event.h"
 #endif
 
@@ -63,7 +56,6 @@ public:
 
 static HelpListModel* helpList;
 
-
 class ShowHelpActionListener : public gcn::ActionListener
 {
 public:
@@ -74,7 +66,6 @@ public:
 };
 
 static ShowHelpActionListener* showHelpActionListener;
-
 
 static void InitShowHelp(const vector<string>& helptext)
 {
@@ -97,11 +88,7 @@ static void InitShowHelp(const vector<string>& helptext)
 	lstHelp->setWrappingEnabled(true);
 
 	scrAreaHelp = new gcn::ScrollArea(lstHelp);
-#ifdef USE_SDL1
-	scrAreaHelp->setFrameSize(1);
-#elif USE_SDL2
 	scrAreaHelp->setBorderSize(1);
-#endif
 	scrAreaHelp->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
@@ -125,7 +112,6 @@ static void InitShowHelp(const vector<string>& helptext)
 	wndShowHelp->requestModalFocus();
 }
 
-
 static void ExitShowHelp(void)
 {
 	wndShowHelp->releaseModalFocus();
@@ -140,7 +126,6 @@ static void ExitShowHelp(void)
 
 	delete wndShowHelp;
 }
-
 
 static void ShowHelpLoop(void)
 {
@@ -174,15 +159,15 @@ static void ShowHelpLoop(void)
 			}
 			else if (event.type == SDL_JOYBUTTONDOWN)
 			{
-				if (GUIjoy)
+				if (gui_joystick)
 				{
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].south_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
 					{
 						PushFakeKey(SDLK_RETURN);
 						break;
 					}
-					if (SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(GUIjoy, host_input_buttons[0].start_button))
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
 					{
 						dialogFinished = true;
 						break;
@@ -194,7 +179,7 @@ static void ShowHelpLoop(void)
 			//-------------------------------------------------
 			// Send event to guisan-controls
 			//-------------------------------------------------
-#ifdef ANDROIDSDL
+#ifdef ANDROID
 			androidsdl_event(event, gui_input);
 #else
 			gui_input->pushInput(event);
@@ -206,16 +191,17 @@ static void ShowHelpLoop(void)
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+			UpdateGuiScreen();
+#else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 		}
-		
+
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
 }
-
 
 void ShowHelp(const char* title, const vector<string>& text)
 {
@@ -230,7 +216,8 @@ void ShowHelp(const char* title, const vector<string>& text)
 	uae_gui->logic();
 	// Now we let the Gui object draw itself.
 	uae_gui->draw();
-#ifdef USE_SDL2
+#ifdef USE_DISPMANX
+#else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();

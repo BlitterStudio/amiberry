@@ -49,7 +49,6 @@ endif(BUILD_PSP2)
 set(TITLEID "AMIBERRY00")
 
 set(SRC_FILES
-        src/osdep/vkbd/vkbd.cpp
         src/akiko.cpp
         src/ar.cpp
         src/aros.rom.cpp
@@ -69,11 +68,9 @@ set(SRC_FILES
         src/cia.cpp
         src/crc32.cpp
         src/custom.cpp
-        src/def_icons.cpp
         src/devices.cpp
         src/disk.cpp
         src/diskutil.cpp
-        src/dlopen.cpp
         src/drawing.cpp
         src/events.cpp
         src/expansion.cpp
@@ -150,7 +147,6 @@ set(SRC_FILES
         src/archivers/mp2/kjmp2.cpp
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
-        src/caps/caps_win32.cpp
         src/machdep/support.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
@@ -224,8 +220,6 @@ include_directories(
         src
         src/osdep
         src/osdep/psp2
-        src/osdep/switch
-        src/osdep/vkbd
         src/include
         src/threaddep
         src/archivers
@@ -247,17 +241,17 @@ if(BUILD_PSP2)
   set(FLAGS
           -Wno-write-strings
           -DVERSION=\"${BUILD_DATE}\"
-          -DAMIBERRY -D__PSP2__ -DUSE_SDL2
+          -DAMIBERRY -D__PSP2__
           -DGCCCONSTFUNC="__attribute__\(\(const\)\)" -DUSE_UNDERSCORE
           -DSHM_SUPPORT_LINKS=0 -DUNALIGNED_PROFITABLE -DOPTIMIZED_FLAGS -DOS_WITHOUT_MEMORY_MANAGEMENT
           -DROM_PATH_PREFIX=\"ux0:/data/amiberry/roms/\" -DDATA_PREFIX=\"app0:/data/\" -DSAVE_PREFIX=\"ux0:/data/amiberry/saves/\"
           -DUSE_AMIBERRY_VKBD
-          -DUSE_ARMV7
           -DARMV6_ASSEMBLY
           -DARMV6T2
           -DUSE_ARMNEON
           -DARM_HAS_DIV
-          -marm -mfpu=neon -mcpu=cortex-a9 -march=armv7-a -mfloat-abi=hard -ffast-math
+          -D_FILE_OFFSET_BITS=64
+          -marm -mfpu=neon -mcpu=cortex-a9 -mfloat-abi=hard -ffast-math
           -fno-asynchronous-unwind-tables -funroll-loops
           -mword-relocations -fno-unwind-tables -fno-optimize-sibling-calls
           -mvectorize-with-neon-quad -funsafe-math-optimizations
@@ -268,7 +262,7 @@ if(BUILD_PSP2)
           SDL2 SDL2_image SDL2_ttf guisan FLAC mpg123 dl mpeg2convert mpeg2
           ${CMAKE_SOURCE_DIR}/src/osdep/psp2/vita2d_fbo/lib/libvita2d.a
           ${CMAKE_SOURCE_DIR}/src/osdep/psp2/vita-shader-collection/lib/libvitashaders.a
-          ${CMAKE_SOURCE_DIR}/guisan-dev/lib/libguisan.a
+          ${CMAKE_SOURCE_DIR}/external/libguisan/lib/libguisan.a
           SceSysmodule_stub SceDisplay_stub SceGxm_stub
           SceCtrl_stub ScePgf_stub ScePower_stub SceCommonDialog_stub
           SceAudio_stub SceShellSvc_stub SceHid_stub SceTouch_stub png jpeg z m c
@@ -310,20 +304,22 @@ if(BUILD_NX)
     ${DEVKITPRO}/portlibs/switch/include/SDL2
     ${DEVKITPRO}/libnx/include
     ${DEVKITPRO}/portlibs/switch/include
+    src
+    src/osdep
+    src/osdep/switch
+    src/include
+    src/threaddep
+    src/archivers
   )
   
   add_definitions(
     -DVERSION=\"${BUILD_DATE}\"
-    -DGP2X
-    -DPANDORA
     -D__SWITCH__
     -D__64BIT__
     -DUSE_AUTOCONFIG
     -DUSE_ZFILE
     -DUSE_FAME_CORE
     -DWITH_TESTMODE
-    -DUSE_SDL
-    -DUSE_SDL2
     -DGCCCONSTFUNC=\"__attribute__\(\(const\)\)\"
     -DUSE_UNDERSCORE
     -DSHM_SUPPORT_LINKS=0
@@ -334,6 +330,9 @@ if(BUILD_NX)
     -DDATA_PREFIX=\"./data/\"
     -DSAVE_PREFIX=\"./saves/\"
     -DUSE_AMIBERRY_VKBD
+    -DAMIBERRY
+    -D_FILE_OFFSET_BITS=64
+    -DCPU_AARCH64
   )
 
   set(FLAGS
@@ -353,7 +352,7 @@ if(BUILD_NX)
     -mlittle-endian
     -ffunction-sections
     -fno-rtti
-    -fno-exceptions
+    -fexceptions
 #    -fomit-frame-pointer
 #    -fno-strict-aliasing
 #    -fexpensive-optimizations		
@@ -369,6 +368,8 @@ if(BUILD_NX)
   set(LIBS
     SDL2 
     SDL2_image
+    SDL2_ttf
+    xml2
     EGL
     GLESv2
     glapi

@@ -2,17 +2,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
@@ -37,7 +30,7 @@ static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
-static const char *diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0" };
+static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
 static const char* drivespeedlist[] = {"100% (compatible)", "200%", "400%", "800%"};
 static const int drivespeedvalues[] = {100, 200, 400, 800};
 
@@ -48,7 +41,7 @@ static bool bIgnoreListChange = false;
 class DriveTypeListModel : public gcn::ListModel
 {
 private:
-    std::vector<std::string> types{};
+	std::vector<std::string> types{};
 
 public:
 	DriveTypeListModel()
@@ -143,11 +136,15 @@ public:
 					//---------------------------------------
 					// Write-protect changed
 					//---------------------------------------
-					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, chkDFxWriteProtect[i]->isSelected());
-					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->isSelected()) {
+					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
+					                     chkDFxWriteProtect[i]->isSelected());
+					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
+						isSelected())
+					{
 						// Failed to change write protection -> maybe filesystem doesn't support this
 						chkDFxWriteProtect[i]->setSelected(!chkDFxWriteProtect[i]->isSelected());
-						ShowMessage("Set/Clear write protect", "Failed to change write permission.", "Maybe underlying filesystem doesn't support this.", "Ok", "");
+						ShowMessage("Set/Clear write protect", "Failed to change write permission.",
+						            "Maybe underlying filesystem doesn't support this.", "Ok", "");
 						chkDFxWriteProtect[i]->requestFocus();
 					}
 					DISK_reinsert(i);
@@ -199,7 +196,7 @@ public:
 					strncpy(tmp, currentDir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
-					if(strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
@@ -403,7 +400,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		chkDFxWriteProtect[i] = new gcn::UaeCheckBox("Write-protected");
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
 		snprintf(tmp, 20, "chkWP%d", i);
-	  	chkDFxWriteProtect[i]->setId(tmp);
+		chkDFxWriteProtect[i]->setId(tmp);
 
 		cmdDFxInfo[i] = new gcn::Button("?");
 		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -481,10 +478,10 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
 		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
-	  	category.panel->add(cmdDFxSelect[i], posX, posY);
-	  	posY += cmdDFxEject[i]->getHeight() + 8;
+		category.panel->add(cmdDFxSelect[i], posX, posY);
+		posY += cmdDFxEject[i]->getHeight() + 8;
 
-	  	category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
+		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
 		if (i == 0)
 		{
 			posY += cboDFxFile[i]->getHeight() + 8;
@@ -606,7 +603,7 @@ void RefreshPanelFloppy()
 	}
 }
 
-bool HelpPanelFloppy(std::vector<std::string> &helptext)
+bool HelpPanelFloppy(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can enable/disable each drive by clicking the checkbox next to DFx or select");
@@ -617,15 +614,15 @@ bool HelpPanelFloppy(std::vector<std::string> &helptext)
 	helptext.emplace_back("on the host filesystem.");
 	helptext.emplace_back("The button \"...\" opens a dialog to select the required");
 	helptext.emplace_back("disk file. With the dropdown control, you can select one of the disks you recently used.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("You can reduce the loading time for lot of games by increasing the floppy drive");
 	helptext.emplace_back("emulation speed. A few games will not load with higher drive speed and you have");
 	helptext.emplace_back("to select 100%.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Save config for disk\" will create a new configuration file with the name of");
 	helptext.emplace_back("the disk in DF0. This configuration will be loaded each time you select the disk");
 	helptext.emplace_back("and have the option \"Load config with same name as disk\" enabled.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(With the buttons "Create 3.5'' DD disk" and "Create 3.5'' HD disk" you can)");
 	helptext.emplace_back("create a new and empty disk.");
 	return true;

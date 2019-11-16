@@ -1,14 +1,7 @@
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
@@ -18,8 +11,10 @@
 #include "gui_handling.h"
 #include "inputdevice.h"
 
-#ifdef ANDROIDSDL
+#if 0
+#ifdef ANDROID
 #include <SDL_android.h>
+#endif
 #endif
 
 static const char* mousespeed_list[] = {".25", ".5", "1x", "2x", "4x"};
@@ -55,8 +50,8 @@ static gcn::UaeCheckBox* chkMouseHack;
 
 class StringListModel : public gcn::ListModel
 {
-  private:
-    std::vector<std::string> values;
+private:
+	std::vector<std::string> values;
 public:
 	StringListModel(const char* entries[], const int count)
 	{
@@ -213,7 +208,7 @@ public:
 			RefreshPanelCustom();
 		}
 
-		// mousemap drop-down change
+			// mousemap drop-down change
 		else if (actionEvent.getSource() == cboPort0mousemode)
 		{
 			changed_prefs.jports[0].mousemap = cboPort0mousemode->getSelected();
@@ -245,11 +240,13 @@ public:
 
 		else if (actionEvent.getSource() == chkMouseHack)
 		{
-#ifdef ANDROIDSDL
+#if 0
+#ifdef ANDROID
 			if (chkMouseHack->isSelected())
 				SDL_ANDROID_SetMouseEmulationMode(0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 			else
 				SDL_ANDROID_SetMouseEmulationMode(1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+#endif
 #endif
 			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
 		}
@@ -288,12 +285,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	}
 
 	inputActionListener = new InputActionListener();
-	const auto textFieldWidth = category.panel->getWidth() - (2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X);
-	
+	const auto textFieldWidth = category.panel->getWidth() - (2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X
+	);
+
 	lblPort0 = new gcn::Label("Port 0 [Mouse]:");
 	lblPort0->setAlignment(gcn::Graphics::RIGHT);
 	cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort0->setSize(textFieldWidth/2, cboPort0->getHeight());
+	cboPort0->setSize(textFieldWidth / 2, cboPort0->getHeight());
 	cboPort0->setBaseColor(gui_baseCol);
 	cboPort0->setBackgroundColor(colTextboxBackground);
 	cboPort0->setId("cboPort0");
@@ -310,7 +308,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort1->setAlignment(gcn::Graphics::RIGHT);
 	lblPort0->setSize(lblPort1->getWidth(), lblPort0->getHeight());
 	cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort1->setSize(textFieldWidth/2, cboPort1->getHeight());
+	cboPort1->setSize(textFieldWidth / 2, cboPort1->getHeight());
 	cboPort1->setBaseColor(gui_baseCol);
 	cboPort1->setBackgroundColor(colTextboxBackground);
 	cboPort1->setId("cboPort1");
@@ -326,7 +324,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort2 = new gcn::Label("Port 2 [Parallel 1]:");
 	lblPort2->setAlignment(gcn::Graphics::LEFT);
 	cboPort2 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort2->setSize(textFieldWidth/2, cboPort2->getHeight());
+	cboPort2->setSize(textFieldWidth / 2, cboPort2->getHeight());
 	cboPort2->setBaseColor(gui_baseCol);
 	cboPort2->setBackgroundColor(colTextboxBackground);
 	cboPort2->setId("cboPort2");
@@ -335,7 +333,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort3 = new gcn::Label("Port 3 [Parallel 2]:");
 	lblPort3->setAlignment(gcn::Graphics::LEFT);
 	cboPort3 = new gcn::UaeDropDown(&ctrlPortList);
-	cboPort3->setSize(textFieldWidth/2, cboPort3->getHeight());
+	cboPort3->setSize(textFieldWidth / 2, cboPort3->getHeight());
 	cboPort3->setBaseColor(gui_baseCol);
 	cboPort3->setBackgroundColor(colTextboxBackground);
 	cboPort3->setId("cboPort3");
@@ -379,10 +377,10 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->addActionListener(inputActionListener);
 	lblMouseSpeedInfo = new gcn::Label(".25");
 
-  	chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
-  	chkMouseHack->setId("MouseHack");
-  	chkMouseHack->addActionListener(inputActionListener);
-	
+	chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
+	chkMouseHack->setId("MouseHack");
+	chkMouseHack->addActionListener(inputActionListener);
+
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
 	category.panel->add(cboPort0, DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
@@ -400,12 +398,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	category.panel->add(lblPort3, DISTANCE_BORDER, posY);
 	category.panel->add(cboPort3, DISTANCE_BORDER + lblPort3->getWidth() + 8, posY);
-	posY += cboPort3->getHeight() + DISTANCE_NEXT_Y*2;
+	posY += cboPort3->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblPort0mousemode, DISTANCE_BORDER, posY);
 	category.panel->add(cboPort0mousemode, lblPort0mousemode->getX() + lblPort0mousemode->getWidth() + 8, posY);
 
-	category.panel->add(lblMouseSpeed, cboPort0mousemode->getX() + cboPort0mousemode->getWidth() + (DISTANCE_NEXT_X * 2), posY);
+	category.panel->add(lblMouseSpeed,
+	                    cboPort0mousemode->getX() + cboPort0mousemode->getWidth() + (DISTANCE_NEXT_X * 2), posY);
 	category.panel->add(sldMouseSpeed, lblMouseSpeed->getX() + lblMouseSpeed->getWidth() + 8, posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 8, posY);
 	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
@@ -449,7 +448,7 @@ void ExitPanelInput()
 	delete sldMouseSpeed;
 	delete lblMouseSpeedInfo;
 
-  	delete chkMouseHack;
+	delete chkMouseHack;
 
 	delete inputActionListener;
 }
@@ -569,19 +568,19 @@ void RefreshPanelInput()
 	chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
 }
 
-bool HelpPanelInput(std::vector<std::string> &helptext)
+bool HelpPanelInput(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can select the control type for both ports and the rate for autofire.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("Set the emulated mouse speed to .25x, .5x, 1x, 2x and 4x to slow down or ");
 	helptext.emplace_back("speed up the mouse.");
-	helptext.emplace_back("");
-  	helptext.emplace_back("When \"Enable mousehack\" is activated, you can use touch input to set .");
-  	helptext.emplace_back("the mouse pointer to the exact position. This works very well on Workbench, ");
-  	helptext.emplace_back("but many games using their own mouse handling and will not profit from this mode.");
-  	helptext.emplace_back("");
-  	helptext.emplace_back("\"Tap Delay\" specifies the time between taping the screen and an emulated ");
-  	helptext.emplace_back("mouse button click.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("When \"Enable mousehack\" is activated, you can use touch input to set .");
+	helptext.emplace_back("the mouse pointer to the exact position. This works very well on Workbench, ");
+	helptext.emplace_back("but many games using their own mouse handling and will not profit from this mode.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Tap Delay\" specifies the time between taping the screen and an emulated ");
+	helptext.emplace_back("mouse button click.");
 	return true;
 }

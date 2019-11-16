@@ -14,23 +14,11 @@
 
 #define __USE_ISOC9X  /* We might be able to pick up a NaN */
 
-#include <cmath>
-#include <cfloat>
-#include <cfenv>
-
-#include "sysconfig.h"
-#include "sysdeps.h"
+#include <math.h>
+#include <float.h>
+#include <fenv.h>
 
 #define USE_HOST_ROUNDING 1
-
-#include "options.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "fpp.h"
-
-#ifdef JIT
-double fp_1e8 = 1.0e8;
-#endif
 
 static uae_u32 dhex_nan[]   ={0xffffffff, 0x7fffffff};
 static double *fp_nan    = (double *)dhex_nan;
@@ -92,11 +80,11 @@ static void fpp_set_mode(uae_u32 mode_control)
 /* Functions for detecting float type */
 static bool fpp_is_nan (fpdata *fpd)
 {
-  return std::isnan(fpd->fp) != 0;
+  return isnan(fpd->fp) != 0;
 }
 static bool fpp_is_infinity (fpdata *fpd)
 {
-  return std::isinf(fpd->fp) != 0;
+  return isinf(fpd->fp) != 0;
 }
 static bool fpp_is_zero(fpdata *fpd)
 {

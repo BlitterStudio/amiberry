@@ -1,19 +1,25 @@
-#include <stdio.h>
+#include <cstdio>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include "sysdeps.h"
+#include "config.h"
+#include "uae.h"
 #include "options.h"
+#include "gui.h"
 #include "disk.h"
 #include "fsdb.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
 #include "filesys.h"
+#include "autoconf.h"
 #include "zfile.h"
 #include "archivers/zip/unzip.h"
 #include <libxml/tree.h>
+#include <libxml/parser.h>
+#include <vector>
+
 
 #define RP9_MANIFEST _T("rp9-manifest.xml")
 #define MAX_MANIFEST_ENTRY 256
@@ -190,7 +196,6 @@ static void parse_clip(struct uae_prefs* p, xmlNode* node)
 			if (attr != nullptr)
 			{
 				top = atoi(reinterpret_cast<const char *>(attr)) / 2;
-				p->vertical_offset = top - 41 + OFFSET_Y_ADJUST;
 				xmlFree(attr);
 			}
 			attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("width"));
@@ -202,17 +207,17 @@ static void parse_clip(struct uae_prefs* p, xmlNode* node)
 				else
 					width = width / 4; // Use Lores in OCS/ECS
 				if (width <= 320)
-					p->gfx_size.width = 320;
+					p->gfx_monitor.gfx_size.width = 320;
 				else if (width <= 352)
-					p->gfx_size.width = 352;
+					p->gfx_monitor.gfx_size.width = 352;
 				else if (width <= 384)
-					p->gfx_size.width = 384;
+					p->gfx_monitor.gfx_size.width = 384;
 				else if (width <= 640)
-					p->gfx_size.width = 640;
+					p->gfx_monitor.gfx_size.width = 640;
 				else if (width <= 704)
-					p->gfx_size.width = 704;
+					p->gfx_monitor.gfx_size.width = 704;
 				else
-					p->gfx_size.width = 768;
+					p->gfx_monitor.gfx_size.width = 720;
 				xmlFree(attr);
 			}
 			attr = xmlGetProp(curr_node, reinterpret_cast<const xmlChar *>("height"));
@@ -220,17 +225,17 @@ static void parse_clip(struct uae_prefs* p, xmlNode* node)
 			{
 				height = atoi(reinterpret_cast<const char *>(attr)) / 2;
 				if (height <= 200)
-					p->gfx_size.height = 200;
+					p->gfx_monitor.gfx_size.height = 200;
 				else if (height <= 216)
-					p->gfx_size.height = 216;
+					p->gfx_monitor.gfx_size.height = 216;
 				else if (height <= 240)
-					p->gfx_size.height = 240;
+					p->gfx_monitor.gfx_size.height = 240;
 				else if (height <= 256)
-					p->gfx_size.height = 256;
+					p->gfx_monitor.gfx_size.height = 256;
 				else if (height <= 262)
-					p->gfx_size.height = 262;
+					p->gfx_monitor.gfx_size.height = 262;
 				else
-					p->gfx_size.height = 270;
+					p->gfx_monitor.gfx_size.height = 288;
 				xmlFree(attr);
 			}
 			break;

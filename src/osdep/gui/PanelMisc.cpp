@@ -1,17 +1,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
 #include "UaeCheckBox.hpp"
@@ -98,26 +91,27 @@ public:
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
 			RefreshPanelCustom();
 		}
-			
+
 		else if (actionEvent.getSource() == chkRetroArchMenu)
 		{
 			changed_prefs.use_retroarch_menu = chkRetroArchMenu->isSelected();
 			RefreshPanelCustom();
 		}
-			
+
 		else if (actionEvent.getSource() == chkRetroArchReset)
 		{
 			changed_prefs.use_retroarch_reset = chkRetroArchReset->isSelected();
 			RefreshPanelCustom();
 		}
-			
-		//      else if (actionEvent.getSource() == chkRetroArchSavestate)
-		//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
+
+			//      else if (actionEvent.getSource() == chkRetroArchSavestate)
+			//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
 
 		else if (actionEvent.getSource() == chkBSDSocket)
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
-		else if (actionEvent.getSource() == chkMasterWP) {
+		else if (actionEvent.getSource() == chkMasterWP)
+		{
 			changed_prefs.floppy_read_only = chkMasterWP->isSelected();
 			RefreshPanelQuickstart();
 			RefreshPanelFloppy();
@@ -381,6 +375,7 @@ void RefreshPanelMisc()
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
 	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
 
+	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 
@@ -388,12 +383,18 @@ void RefreshPanelMisc()
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
 
 	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
-	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0 ? changed_prefs.quit_amiberry : "Click to map");
-	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0 ? changed_prefs.action_replay : "Click to map");
-	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0 ? changed_prefs.fullscreen_toggle : "Click to map");
+	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0
+		                       ? changed_prefs.quit_amiberry
+		                       : "Click to map");
+	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0
+		                            ? changed_prefs.action_replay
+		                            : "Click to map");
+	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0
+		                          ? changed_prefs.fullscreen_toggle
+		                          : "Click to map");
 }
 
-bool HelpPanelMisc(std::vector<std::string> &helptext)
+bool HelpPanelMisc(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("\"Status Line\" Shows/Hides the status line indicator.");
@@ -402,13 +403,13 @@ bool HelpPanelMisc(std::vector<std::string> &helptext)
 	helptext.emplace_back("When you have a HDD in your Amiga emulation, the HD indicator shows read (blue) and write");
 	helptext.emplace_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
 	helptext.emplace_back("and indicates disk access.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
 	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
 	helptext.emplace_back("the emulation starts directly without showing the GUI.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
 	return true;
 }

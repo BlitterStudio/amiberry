@@ -81,6 +81,7 @@ extern uae_u32 CallFunc (TrapContext *context, uaecptr func);
  * Initialization
  */
 void init_traps(void);
+void free_traps(void);
 void init_extended_traps(void);
 
 #define deftrap(f) define_trap((f), 0, _T(#f))
@@ -89,10 +90,23 @@ void init_extended_traps(void);
 
 /* New trap system */
 
+void call_hardware_trap(uae_u8*, uaecptr, int);
+void trap_set_background(TrapContext *ctx);
+void trap_background_set_complete(TrapContext *ctx);
 bool trap_valid_address(TrapContext *ctx, uaecptr addr, uae_u32 size);
+bool trap_valid_string(TrapContext *ctx, uaecptr addr, uae_u32 maxsize);
+bool trap_is_indirect(void);
+void trap_dos_active(void);
+void trap_reset(void);
+typedef uae_u32 (*TRAP_CALLBACK)(TrapContext*, void*);
+void trap_callback(TRAP_CALLBACK, void*);
 
 void trap_memcpyha_safe(TrapContext *ctx, uaecptr dst, const uae_u8 *src, int size);
 void trap_memcpyah_safe(TrapContext *ctx, uae_u8 *dst, uaecptr src, int size);
+
+TrapContext *alloc_host_main_trap_context(void);
+TrapContext *alloc_host_thread_trap_context(void);
+void free_host_trap_context(TrapContext*);
 
 uae_u32 trap_get_dreg(TrapContext *ctx, int reg);
 uae_u32 trap_get_areg(TrapContext *ctx, int reg);

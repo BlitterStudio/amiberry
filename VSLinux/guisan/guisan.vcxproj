@@ -5,6 +5,10 @@
       <Configuration>Debug-rockpro64</Configuration>
       <Platform>ARM</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-rockpro64|ARM64">
+      <Configuration>Debug-rockpro64</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug-rockpro64|x64">
       <Configuration>Debug-rockpro64</Configuration>
       <Platform>x64</Platform>
@@ -16,6 +20,10 @@
     <ProjectConfiguration Include="Debug-xu4|ARM">
       <Configuration>Debug-xu4</Configuration>
       <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-xu4|ARM64">
+      <Configuration>Debug-xu4</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug-xu4|x64">
       <Configuration>Debug-xu4</Configuration>
@@ -29,9 +37,17 @@
       <Configuration>Debug</Configuration>
       <Platform>ARM</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release-xu4|ARM">
       <Configuration>Release-xu4</Configuration>
       <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-xu4|ARM64">
+      <Configuration>Release-xu4</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release-xu4|x64">
       <Configuration>Release-xu4</Configuration>
@@ -48,6 +64,10 @@
     <ProjectConfiguration Include="Debug|x86">
       <Configuration>Debug</Configuration>
       <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x86">
       <Configuration>Release</Configuration>
@@ -76,27 +96,52 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteRootDir>~/projects/Amiberry-sdl2/src</RemoteRootDir>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteRootDir>~/projects/Amiberry</RemoteRootDir>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteRootDir>~/projects/Amiberry</RemoteRootDir>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteRootDir>~/projects/Amiberry-sdl2/src</RemoteRootDir>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteRootDir>~/projects/Amiberry-sdl2/src</RemoteRootDir>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteRootDir>~/projects/Amiberry/src</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -144,12 +189,27 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make all</RemoteBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean</RemoteCleanCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make all</RemoteBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
     <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make all</RemoteBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make all</RemoteBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM64'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make all</RemoteBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean</RemoteCleanCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
@@ -163,15 +223,36 @@
     <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM64'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make all</RemoteBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make all</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make all</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make all</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM64'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make all</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean; make all</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-sdl2/guisan-dev/; make clean</RemoteCleanCommandLine>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-dev</RemoteProjectDir>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\guisan-dev\lib\.keep">
@@ -217,6 +298,7 @@
     <ClInclude Include="..\..\guisan-dev\include\guisan\platform.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\rectangle.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdl2graphics.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdlgraphics.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdlimage.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\sdl\sdlimageloader.hpp" />
@@ -233,8 +315,11 @@
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\dropdown.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\icon.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\imagebutton.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\imagetextbutton.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\inputbox.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\label.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\listbox.hpp" />
+    <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\messagebox.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\progressbar.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\radiobutton.hpp" />
     <ClInclude Include="..\..\guisan-dev\include\guisan\widgets\scrollarea.hpp" />
@@ -273,6 +358,7 @@
     <ClCompile Include="..\..\guisan-dev\src\opengl\openglimage.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\rectangle.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdl.cpp" />
+    <ClCompile Include="..\..\guisan-dev\src\sdl\sdl2graphics.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdlgraphics.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdlimage.cpp" />
     <ClCompile Include="..\..\guisan-dev\src\sdl\sdlimageloader.cpp" />

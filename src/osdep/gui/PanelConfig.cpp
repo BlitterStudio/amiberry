@@ -2,17 +2,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeListBox.hpp"
 
@@ -21,7 +14,7 @@
 #include "uae.h"
 #include "gui_handling.h"
 
-static char last_active_config[MAX_DPATH] = { '\0' };
+static char last_active_config[MAX_DPATH] = {'\0'};
 static int ensureVisible = -1;
 
 static gcn::Button* cmdLoad;
@@ -34,8 +27,7 @@ static gcn::TextField* txtDesc;
 static gcn::UaeListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
 
-
-bool LoadConfigByName(const char *name)
+bool LoadConfigByName(const char* name)
 {
 	ConfigFileInfo* config = SearchConfigInList(name);
 	if (config != nullptr)
@@ -64,14 +56,13 @@ void SetLastActiveConfig(const char* filename)
 	removeFileExtension(last_active_config);
 }
 
-
 class ConfigsListModel : public gcn::ListModel
 {
 	vector<string> configs;
 
 public:
 	ConfigsListModel()
-		= default;
+	= default;
 
 	int getNumberOfElements() override
 	{
@@ -80,7 +71,7 @@ public:
 
 	string getElementAt(int i) override
 	{
-		if (i >= configs.size() || i < 0)
+		if (i >= int(configs.size()) || i < 0)
 			return "---";
 		return configs[i];
 	}
@@ -88,7 +79,7 @@ public:
 	void InitConfigsList(void)
 	{
 		configs.clear();
-		for (auto & i : ConfigFilesList)
+		for (auto& i : ConfigFilesList)
 		{
 			char tmp[MAX_DPATH];
 			strncpy(tmp, i->Name, MAX_DPATH);
@@ -104,7 +95,6 @@ public:
 };
 
 static ConfigsListModel* configsList;
-
 
 class ConfigButtonActionListener : public gcn::ActionListener
 {
@@ -178,14 +168,14 @@ public:
 
 static ConfigButtonActionListener* configButtonActionListener;
 
-
 class ConfigsListActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		const int selected_item = lstConfigs->getSelected();
-		if (txtName->getText() != ConfigFilesList[selected_item]->Name || txtDesc->getText() != ConfigFilesList[selected_item]->Description)
+		if (txtName->getText() != ConfigFilesList[selected_item]->Name || txtDesc->getText() != ConfigFilesList[
+			selected_item]->Description)
 		{
 			//-----------------------------------------------
 			// Selected a config -> Update Name and Description fields
@@ -276,21 +266,20 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	lstConfigs->addActionListener(configsListActionListener);
 
 	scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
-#ifdef USE_SDL1
-	scrAreaConfigs->setFrameSize(1);
-#elif USE_SDL2
 	scrAreaConfigs->setBorderSize(1);
-#endif
 	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
 	scrAreaConfigs->setScrollbarWidth(20);
 	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
 	category.panel->add(scrAreaConfigs);
 
-	category.panel->add(lblName, DISTANCE_BORDER, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(lblName, DISTANCE_BORDER,
+	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8,
+	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
 	category.panel->add(lblDesc, DISTANCE_BORDER, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8,
+	                    txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 	if (strlen(last_active_config) == 0)
 	{
@@ -303,7 +292,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 		}
 	}
 	txtName->setText(last_active_config);
-	txtDesc->setText(changed_prefs.description);    
+	txtDesc->setText(changed_prefs.description);
 	ensureVisible = -1;
 	RefreshPanelConfig();
 }
@@ -358,15 +347,15 @@ void RefreshPanelConfig()
 	}
 }
 
-bool HelpPanelConfig(std::vector<std::string> &helptext)
+bool HelpPanelConfig(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\".");
 	helptext.emplace_back("If you doubleclick on an entry in the list, the emulation starts with this configuration.");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("If you want to create a new configuration, setup all options, enter a new name in");
 	helptext.emplace_back(R"("Name", provide a short description and then click on "Save".)");
-	helptext.emplace_back("");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Delete\" will delete the selected configuration.");
 	return true;
 }

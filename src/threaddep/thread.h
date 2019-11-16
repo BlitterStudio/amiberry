@@ -1,20 +1,20 @@
 /*
-* UAE - The Un*x Amiga Emulator
-*
-* Threading support, using SDL
-*
-* Copyright 1997, 2001 Bernd Schmidt
-*/
+  * UAE - The Un*x Amiga Emulator
+  * 
+  * Threading support, using SDL
+  * 
+  * Copyright 1997, 2001 Bernd Schmidt
+  */
 
 #pragma once
 #include <SDL.h>
 #include <SDL_thread.h>
 
 /* Sempahores. We use POSIX semaphores; if you are porting this to a machine
-* with different ones, make them look like POSIX semaphores. */
-typedef SDL_sem *uae_sem_t;
+ * with different ones, make them look like POSIX semaphores. */
+typedef SDL_sem* uae_sem_t;
 
-STATIC_INLINE int uae_sem_init(uae_sem_t *sem, int dummy, int init)
+STATIC_INLINE int uae_sem_init(uae_sem_t* sem, int dummy, int init)
 {
 	*sem = SDL_CreateSemaphore(init);
 	return (*sem == nullptr);
@@ -28,50 +28,32 @@ STATIC_INLINE int uae_sem_init(uae_sem_t *sem, int dummy, int init)
 
 #include "commpipe.h"
 
-typedef SDL_Thread *uae_thread_id;
+typedef SDL_Thread* uae_thread_id;
 #define BAD_THREAD 0
 
-STATIC_INLINE void uae_set_thread_priority(uae_thread_id *id, int pri)
+STATIC_INLINE void uae_set_thread_priority(uae_thread_id* id, int pri)
 {
 }
 
-STATIC_INLINE void uae_end_thread(uae_thread_id *tid)
+STATIC_INLINE void uae_end_thread(uae_thread_id* tid)
 {
 }
 
-#ifdef USE_SDL1
-STATIC_INLINE int uae_start_thread(const TCHAR *name, void *(*f) (void *), void *arg, uae_thread_id *foo)
+STATIC_INLINE long uae_start_thread(const TCHAR* name, int (*f)(void*), void* arg, uae_thread_id* foo)
 {
-	auto id = SDL_CreateThread(reinterpret_cast<int(*)(void*)>(f), arg);
+	uae_thread_id id = SDL_CreateThread(f, "StartThread", arg);
 	if (foo != nullptr)
 		*foo = id;
-	return int(id);
+	return (long)id;
 }
 
-STATIC_INLINE int uae_start_thread_fast(void *(*f) (void *), void *arg, uae_thread_id *foo)
+STATIC_INLINE long uae_start_thread_fast(int (*f)(void*), void* arg, uae_thread_id* foo)
 {
-	auto id = SDL_CreateThread(reinterpret_cast<int(*)(void*)>(f), arg);
+	uae_thread_id id = SDL_CreateThread(f, "StartThreadFast", arg);
 	if (foo != nullptr)
 		*foo = id;
-	return int(id);
+	return (long)id;
 }
-#elif USE_SDL2
-STATIC_INLINE uae_thread_id uae_start_thread(const TCHAR* name, void*(*f)(void*), void* arg, uae_thread_id* foo)
-{
-	uae_thread_id id = SDL_CreateThread(reinterpret_cast<int(*)(void*)>(f), "StartThread", arg);
-	if (foo != NULL)
-		*foo = id;
-	return id;
-}
-
-STATIC_INLINE uae_thread_id uae_start_thread_fast(void*(*f)(void*), void* arg, uae_thread_id* foo)
-{
-	uae_thread_id id = SDL_CreateThread(reinterpret_cast<int(*)(void*)>(f), "StartThreadFast", arg);
-	if (foo != NULL)
-		*foo = id;
-	return id;
-}
-#endif
 
 STATIC_INLINE void uae_wait_thread(uae_thread_id thread)
 {

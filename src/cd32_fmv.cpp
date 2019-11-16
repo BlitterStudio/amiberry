@@ -7,11 +7,7 @@
 *
 */
 
-#include <stdbool.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
@@ -19,10 +15,16 @@
 #include "rommgr.h"
 #include "custom.h"
 #include "cd32_fmv.h"
+#include "uae.h"
+//#include "debug.h"
+#include "custom.h"
+#include "audio.h"
+#include "devices.h"
+#include "threaddep/thread.h"
 
 #include "cda_play.h"
 #include "archivers/mp2/kjmp2.h"
-#ifndef WIN32
+#if (!defined _WIN32 && !defined ANDROID)
 extern "C" {
 #include "mpeg2dec/mpeg2.h"
 #include "mpeg2dec/mpeg2convert.h"
@@ -222,7 +224,11 @@ static uae_u16 cl450_threshold;
 static int cl450_buffer_offset;
 static int cl450_buffer_empty_cnt;
 static int libmpeg_offset;
+static bool audio_mode;
+static uae_sem_t play_sem;
+static volatile bool fmv_bufon[2];
 static double fmv_syncadjust;
+static struct cd_audio_state cas;
 
 struct cl450_videoram
 {
@@ -266,9 +272,7 @@ static const mpeg2_info_t *mpeg_info;
 
 static void do_irq(void)
 {
-	if (!(intreq & 8)) {
-		INTREQ_0(0x8000 | 0x0008);
-	}
+	safe_interrupt_set(false);
 }
 
 static bool l64111_checkint(bool enabled)
@@ -300,7 +304,7 @@ static addrbank fmv_bank = {
 	fmv_lget, fmv_wget, fmv_bget,
 	fmv_lput, fmv_wput, fmv_bput,
 	default_xlate, default_check, NULL, NULL, _T("CD32 FMV IO"),
-	fmv_lget, fmv_wget,
+	fmv_wget,
 	ABFLAG_IO, S_READ, S_WRITE
 };
 
@@ -309,7 +313,7 @@ static addrbank fmv_rom_bank = {
 	fmv_rom_lget, fmv_rom_wget, fmv_rom_bget,
 	fmv_rom_lput, fmv_rom_wput, fmv_rom_bput,
 	fmv_rom_xlate, fmv_rom_check, NULL, _T("*"), _T("CD32 FMV ROM"),
-	fmv_rom_lget, fmv_rom_wget,
+	fmv_rom_wget,
 	ABFLAG_ROM, S_READ, S_WRITE
 };
 
@@ -318,14 +322,14 @@ static addrbank fmv_ram_bank = {
 	fmv_ram_lget, fmv_ram_wget, fmv_ram_bget,
 	fmv_ram_lput, fmv_ram_wput, fmv_ram_bput,
 	fmv_ram_xlate, fmv_ram_check, NULL, _T("*"), _T("CD32 FMV RAM"),
-	fmv_ram_lget, fmv_ram_wget,
+	fmv_ram_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 
 MEMORY_FUNCTIONS(fmv_rom);
 MEMORY_FUNCTIONS(fmv_ram);
 
-void rethink_cd32fmv(void)
+static void rethink_cd32fmv(void)
 {
 	if (!fmv_ram_bank.baseaddr)
 		return;
@@ -373,7 +377,11 @@ static void l64111_setvolume(void)
 		return;
 	write_log(_T("L64111 mute %d\n"), volume ? 0 : 1);
 	if (cda) {
-		cda->setvolume(volume, volume);
+		//if (audio_mode) {
+		//	audio_cda_volume(&cas, volume, volume);
+		//} else {
+			cda->setvolume(volume, volume);
+		//}
 	}
 }
 
@@ -795,7 +803,7 @@ static void cl450_parse_frame(void)
 			}
 			break;
 			case STATE_SEQUENCE:
-				cl450_frame_pixbytes = 2;
+				cl450_frame_pixbytes = currprefs.color_mode != 5 ? 2 : 4;
 				mpeg2_convert(mpeg_decoder, cl450_frame_pixbytes == 2 ? mpeg2convert_rgb16 : mpeg2convert_rgb32, NULL);
 				cl450_set_status(CL_INT_SEQ_V);
 				cl450_frame_rate = mpeg_info->sequence->frame_period ? 27000000 / mpeg_info->sequence->frame_period : 0;
@@ -930,13 +938,11 @@ static void cl450_reset_cmd(void)
 
 static void cl450_newcmd(void)
 {
-//	write_log(_T("* CL450 Command %04x\n"), cl450_hmem[0]);
-//	for (int i = 1; i <= 4; i++)
-//		write_log(_T("%02d: %04x\n"), i, cl450_hmem[i]);
 	switch (cl450_hmem[0])
 	{
 		case CL_Play:
 			cl450_play = 1;
+			audio_mode = currprefs.sound_cdaudio;
 			write_log(_T("CL450 PLAY\n"));
 			break;
 		case CL_Pause:
@@ -996,6 +1002,7 @@ static void cl450_newcmd(void)
 		case CL_Reset:
 			write_log(_T("CL450 Reset\n"));
 			cl450_reset_cmd();
+			audio_mode = currprefs.sound_cdaudio;
 			break;
 		case CL_FlushBitStream:
 			write_log(_T("CL450 CL_FlushBitStream\n"));
@@ -1214,7 +1221,7 @@ static void io_wput(uaecptr addr, uae_u16 v)
 
 static uae_u32 REGPARAM2 fmv_wget (uaecptr addr)
 {
-	uae_u32 v;
+	uae_u32 v = 0;
 	addr -= fmv_start & fmv_bank.mask;
 	addr &= fmv_bank.mask;
 	int mask = addr & BANK_MASK;
@@ -1237,7 +1244,7 @@ static uae_u32 REGPARAM2 fmv_lget (uaecptr addr)
 
 static uae_u32 REGPARAM2 fmv_bget (uaecptr addr)
 {
-	uae_u32 v;
+	uae_u32 v = 0;
 	addr -= fmv_start & fmv_bank.mask;
 	addr &= fmv_bank.mask;
 	int mask = addr & BANK_MASK;
@@ -1293,6 +1300,27 @@ void cd32_fmv_set_sync(double svpos, double adjust)
 	fmv_syncadjust = adjust;
 }
 
+//static void fmv_next_cd_audio_buffer_callback(int bufnum, void *param)
+//{
+//	uae_sem_wait(&play_sem);
+//	if (bufnum >= 0) {
+//		fmv_bufon[bufnum] = 0;
+//		bufnum = 1 - bufnum;
+//		if (fmv_bufon[bufnum])
+//			audio_cda_new_buffer(&cas, (uae_s16*)cda->buffers[bufnum], PCM_SECTORS * KJMP2_SAMPLES_PER_FRAME, bufnum, fmv_next_cd_audio_buffer_callback, param);
+//		else
+//			bufnum = -1;
+//	}
+//	if (bufnum < 0) {
+//		audio_cda_new_buffer(&cas, NULL, 0, -1, NULL, NULL);
+//	}
+//	uae_sem_post(&play_sem);
+//}
+
+void cd32_fmv_vsync_handler(void)
+{
+}
+
 static void cd32_fmv_audio_handler(void)
 {
 	int bufnum;
@@ -1302,7 +1330,19 @@ static void cd32_fmv_audio_handler(void)
 	if (!fmv_ram_bank.baseaddr)
 		return;
 
-	cd_audio_mode_changed = false;
+	if (cd_audio_mode_changed || (cl450_play && !cda)) {
+		cd_audio_mode_changed = false;
+		if (cl450_play) {
+			//if (audio_mode) {
+			//	audio_cda_new_buffer(&cas, NULL, -1, -1, NULL, NULL);
+			//}
+			audio_mode = currprefs.sound_cdaudio;
+			fmv_bufon[0] = fmv_bufon[1] = 0;
+			delete cda;
+			cda = new cda_audio(PCM_SECTORS, KJMP2_SAMPLES_PER_FRAME * 4, 44100);
+			l64111_setvolume();
+		}
+	}
 
 	if (cl450_buffer_offset == 0) {
 		if (cl450_buffer_empty_cnt >= 2)
@@ -1315,8 +1355,13 @@ static void cd32_fmv_audio_handler(void)
 
 	if (!cda || !(l64111_regs[A_CONTROL1] & 1))
 		return;
-	play0 = cda->isplaying(0);
-	play1 = cda->isplaying(1);
+	//if (audio_mode) {
+	//	play0 = fmv_bufon[0];
+	//	play1 = fmv_bufon[1];
+	//} else {
+		play0 = cda->isplaying(0);
+		play1 = cda->isplaying(1);
+	//}
 	needsectors = PCM_SECTORS;
 	if (!play0 && !play1) {
 		needsectors *= 2;
@@ -1340,14 +1385,22 @@ static void cd32_fmv_audio_handler(void)
 		memcpy(cda->buffers[bufnum] + i * KJMP2_SAMPLES_PER_FRAME * 4, pcmaudio[offset2].pcm, KJMP2_SAMPLES_PER_FRAME * 4);
 		pcmaudio[offset2].ready = false;
 	}
-	cda->play(bufnum);
+	//if (audio_mode) {
+	//	if (!play0 && !play1) {
+	//		fmv_bufon[bufnum] = 1;
+	//		fmv_next_cd_audio_buffer_callback(1 - bufnum, NULL);
+	//	}
+	//	fmv_bufon[bufnum] = 1;
+	//} else {
+		cda->play(bufnum);
+	//}
 	offset += PCM_SECTORS;
 	offset &= l64111_cb_mask;
 	l64111_regs[A_CB_READ] = offset;
 	l64111_regs[A_CB_STATUS] -= PCM_SECTORS;
 }
 
-void cd32_fmv_hsync_handler(void)
+static void cd32_fmv_hsync_handler(void)
 {
 	if (!fmv_ram_bank.baseaddr)
 		return;
@@ -1398,14 +1451,14 @@ void cd32_fmv_hsync_handler(void)
 }
 
 
-void cd32_fmv_reset(void)
+static void cd32_fmv_reset(int hardreset)
 {
 	if (fmv_ram_bank.baseaddr)
 		memset(fmv_ram_bank.baseaddr, 0, fmv_ram_bank.allocated_size);
 	cd32_fmv_state(0);
 }
 
-void cd32_fmv_free(void)
+static void cd32_fmv_free(void)
 {
 	mapped_free(&fmv_rom_bank);
 	mapped_free(&fmv_ram_bank);
@@ -1414,11 +1467,16 @@ void cd32_fmv_free(void)
 	xfree(videoram);
 	videoram = NULL;
 	if (cda) {
-		cda->wait(0);
-		cda->wait(1);
+		//if (audio_mode) {
+		//	fmv_next_cd_audio_buffer_callback(-1, NULL);
+		//} else {
+			cda->wait(0);
+			cda->wait(1);
+		//}
 		delete cda;
 	}
 	cda = NULL;
+	uae_sem_destroy(&play_sem);
 	xfree(pcmaudio);
 	pcmaudio = NULL;
 	if (mpeg_decoder)
@@ -1430,6 +1488,7 @@ void cd32_fmv_free(void)
 
 addrbank *cd32_fmv_init (struct autoconfig_info *aci)
 {
+	device_add_reset_imm(cd32_fmv_reset);
 	cd32_fmv_free();
 	write_log (_T("CD32 FMV mapped @$%x\n"), expamem_board_pointer);
 	if (expamem_board_pointer != fmv_start) {
@@ -1461,20 +1520,23 @@ addrbank *cd32_fmv_init (struct autoconfig_info *aci)
 	mapped_malloc(&fmv_ram_bank);
 	if (!pcmaudio)
 		pcmaudio = xcalloc(struct fmv_pcmaudio, L64111_CHANNEL_BUFFERS);
-
 	kjmp2_init(&mp2);
-	if (!cda) {
-		cda = new cda_audio(PCM_SECTORS, KJMP2_SAMPLES_PER_FRAME * 4, 44100);
-		l64111_setvolume();
-	}
 	if (!mpeg_decoder) {
 		mpeg_decoder = mpeg2_init();
 		mpeg_info = mpeg2_info(mpeg_decoder);
 	}
+	memset(&cas, 0, sizeof(cas));
 	fmv_bank.mask = fmv_board_size - 1;
 	map_banks(&fmv_rom_bank, (fmv_start + ROM_BASE) >> 16, fmv_rom_size >> 16, 0);
 	map_banks(&fmv_ram_bank, (fmv_start + RAM_BASE) >> 16, fmv_ram_size >> 16, 0);
 	map_banks(&fmv_bank, (fmv_start + IO_BASE) >> 16, (RAM_BASE - IO_BASE) >> 16, 0);
-	cd32_fmv_reset();
+	uae_sem_init(&play_sem, 0, 1);
+	cd32_fmv_reset(1);
+
+	device_add_hsync(cd32_fmv_hsync_handler);
+	device_add_vsync_pre(cd32_fmv_vsync_handler);
+	device_add_exit(cd32_fmv_free);
+	device_add_rethink(rethink_cd32fmv);
+
 	return &fmv_rom_bank;
 }

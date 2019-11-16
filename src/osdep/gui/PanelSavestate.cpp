@@ -2,19 +2,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#ifdef USE_SDL1
-#include <guichan.hpp>
-#include <SDL/SDL_ttf.h>
-#include <SDL/SDL_image.h>
-#include <guichan/sdl.hpp>
-#include "sdltruetypefont.hpp"
-#elif USE_SDL2
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#endif
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 
@@ -66,7 +58,7 @@ public:
 					if (f)
 					{
 						fclose(f);
-						savestate_initsave(savestate_fname, 2, 0, false);
+						savestate_initsave(savestate_fname);
 						savestate_state = STATE_DORESTORE;
 						gui_running = false;
 					}
@@ -86,7 +78,7 @@ public:
 			//------------------------------------------
 			if (emulating)
 			{
-				savestate_initsave(savestate_fname, 2, 0, false);
+				savestate_initsave(savestate_fname);
 				save_state(savestate_fname, "...");
 				savestate_state = STATE_DOSAVE; // Just to create the screenshot
 				delay_savestate_frame = 2;
@@ -154,7 +146,8 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	lblWarningHDDon = new gcn::Label("State saves do not support harddrive emulation.");
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
-	category.panel->add(wndScreenshot, grpNumber->getX() + grpNumber ->getWidth() + DISTANCE_NEXT_X * 2, DISTANCE_BORDER);
+	category.panel->add(wndScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X * 2,
+	                    DISTANCE_BORDER);
 	const int posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdLoadState, DISTANCE_BORDER, posY);
 	category.panel->add(cmdSaveState, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, posY);
@@ -214,7 +207,7 @@ void RefreshPanelSavestate()
 	case 3:
 		optState3->setSelected(true);
 		break;
-	default: 
+	default:
 		break;
 	}
 
@@ -231,7 +224,10 @@ void RefreshPanelSavestate()
 			{
 				SDL_Rect source = {0, 0, 0, 0};
 				SDL_Rect target = {0, 0, 0, 0};
-				SDL_Surface* scaled = SDL_CreateRGBSurface(loadedImage->flags, rect.width, rect.height, loadedImage->format->BitsPerPixel, loadedImage->format->Rmask, loadedImage->format->Gmask, loadedImage->format->Bmask, loadedImage->format->Amask);
+				SDL_Surface* scaled = SDL_CreateRGBSurface(loadedImage->flags, rect.width, rect.height,
+				                                           loadedImage->format->BitsPerPixel,
+				                                           loadedImage->format->Rmask, loadedImage->format->Gmask,
+				                                           loadedImage->format->Bmask, loadedImage->format->Amask);
 				source.w = loadedImage->w;
 				source.h = loadedImage->h;
 				target.w = rect.width;
@@ -257,16 +253,16 @@ void RefreshPanelSavestate()
 	lblWarningHDDon->setVisible(!enabled);
 }
 
-bool HelpPanelSavestate(std::vector<std::string> &helptext)
+bool HelpPanelSavestate(std::vector<std::string>& helptext)
 {
-  helptext.clear();
-  helptext.emplace_back("Savestates are stored with the name of the disk in drive DF0 attached");
-  helptext.emplace_back("with the selected number.");
-  helptext.emplace_back("");
-  helptext.emplace_back("When you hold left shoulder button and press 'l' during emulation, ");
-  helptext.emplace_back("the state of the last active number will be loaded. Hold left shoulder ");
-  helptext.emplace_back("button and press 's' to save the current state in the last active slot.");
-  helptext.emplace_back("");
-  helptext.emplace_back("Note: Savestates will not work with HDDs.");
-  return true;
+	helptext.clear();
+	helptext.emplace_back("Savestates are stored with the name of the disk in drive DF0 attached");
+	helptext.emplace_back("with the selected number.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("When you hold left shoulder button and press 'l' during emulation, ");
+	helptext.emplace_back("the state of the last active number will be loaded. Hold left shoulder ");
+	helptext.emplace_back("button and press 's' to save the current state in the last active slot.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Note: Savestates will not work with HDDs.");
+	return true;
 }

@@ -7,8 +7,6 @@
 *
 */
 
-#include <string.h>
-
 #include "sysdeps.h"
 
 #include "xwin.h"
@@ -62,7 +60,6 @@ void cd32_fmv_state(int state)
 }
 
 // slow software method but who cares.
-
 
 static void genlock_32(struct vidbuffer *vbin, struct vidbuffer *vbout, int w, int h, int d, int hoffset, int voffset, int mult)
 {
@@ -179,7 +176,7 @@ void cd32_fmv_genlock(struct vidbuffer *vbin, struct vidbuffer *vbout)
 		if(mult == 1)
 		  genlock_16_nomult(vbin, vbout, w, h, d, hoffset, voffset);
 		else
-  		genlock_16(vbin, vbout, w, h, d, hoffset, voffset, mult);
+		  genlock_16(vbin, vbout, w, h, d, hoffset, voffset, mult);
 	}
 	else
 		genlock_32(vbin, vbout, w, h, d, hoffset, voffset, mult);

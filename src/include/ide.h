@@ -27,6 +27,8 @@ struct ide_registers
 struct ide_thread_state;
 struct ide_hdf;
 
+typedef void (*hsync_func)(struct ide_board*);
+
 #define MAX_IDE_PORTS_BOARD 3
 struct ide_board
 {
@@ -44,10 +46,20 @@ struct ide_board
 	bool irq;
 	bool intena;
 	bool enabled;
+	bool intlev6;
 	int state;
+	uae_u8 state2[8];
 	int type;
+	int userdata;
+	int subtype;
 	uae_u16 data_latch;
+	uae_u32 dma_ptr;
+	uae_u32 dma_cnt;
+	int hsync_cnt;
+	hsync_func hsync_code;
+	struct romconfig *rc, *original_rc;
 	struct ide_board **self_ptr;
+	struct autoconfig_info *aci;
 };
 
 struct ide_hdf
@@ -60,6 +72,7 @@ struct ide_hdf
 	struct ide_hdf *pair; // master<>slave
 	struct ide_thread_state *its;
 	bool byteswap;
+	bool adide;
 
 	uae_u8 *secbuf;
 	int secbuf_size;
@@ -69,6 +82,7 @@ struct ide_hdf
 	int data_multi;
 	int direction; // 0 = read, 1 = write
 	bool intdrq;
+	bool lba;
 	bool lba48;
 	bool lba48cmd;
 	uae_u64 start_lba;
@@ -86,8 +100,10 @@ struct ide_hdf
 	int ide_drv;
 	int media_type;
 	bool mode_8bit;
+	int uae_unitnum;
 
 	bool atapi;
+	int atapi_device_type;
 	bool atapi_drdy;
 	int cd_unit_num;
 	int packet_state;
@@ -122,8 +138,15 @@ void remove_ide_unit(struct ide_hdf **idetable, int ch);
 void alloc_ide_mem (struct ide_hdf **ide, int max, struct ide_thread_state *its);
 void ide_reset_device(struct ide_hdf *ide);
 
+//void ata_byteswapidentity(uae_u8 *d);
+void ata_parse_identity(uae_u8 *out, struct uaedev_config_info *uci, bool *lba48, int *max_multiple);
+bool ata_get_identity(struct ini_data *ini, uae_u8 *out, bool overwrite);
+
 void start_ide_thread(struct ide_thread_state *its);
 void stop_ide_thread(struct ide_thread_state *its);
+
+uae_u16 adide_decode_word(uae_u16 w);
+uae_u16 adide_encode_word(uae_u16 w);
 
 uae_u8 *ide_save_state(uae_u8 *dst, struct ide_hdf *ide);
 uae_u8 *ide_restore_state(uae_u8 *src, struct ide_hdf *ide);

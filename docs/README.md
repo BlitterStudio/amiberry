@@ -1,115 +1,111 @@
 <img src="resources/icon.png" align="right" />
 
 # Amiga emulator for the Raspberry Pi and other ARM SoC
-Amiberry is an optimized Amiga emulator, for ARM-based boards (like the Raspberry Pi, ASUS Tinkerboard, Odroid XU4, etc). The core emulation comes from WinUAE, but stripped down to remove excess stuff in order to achieve good performance in underpowered boards. It includes JIT CPU and FPU support, to get high-performance results on CPU-intensive emulated environments. On top of that, we have some unique features developed only for Amiberry, such as the WHDLoad booter.
 
-Amiberry requires the SDL framework (https://libsdl.org) for graphics display, input handling and audio out. Currently both SDL1.x and SDL2 are supported, but in the future we'll probably drop support for SDL1 as things move forward. On the RPI platform specifically, we offer a special version which uses Dispmanx directly for the emulation screen, for maximum performance.
+Amiberry is an optimized Amiga emulator, for ARM-based boards (like the Raspberry Pi, ASUS Tinkerboard, Odroid XU4, etc). The core emulation comes from WinUAE, but stripped down somewhat in order to achieve good performance in underpowered boards. It includes JIT CPU and FPU support, to get high-performance results on CPU-intensive emulated environments. On top of that, we have some unique features developed only for Amiberry, such as the WHDLoad booter and support for RetroArch controller mapping.
 
-# Getting SDL2
-If you want to run the SDL2 version from the console (i.e. not from the full Desktop), you currently need to compile SDL2 from source on the Raspberry Pi (and possibly other platforms as well). The version bundled with Raspbian is not compiled with support for the "KMSDRM" driver, so it only works under X11.
+Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display, input handling and audio output. On the RPI platform specifically, we offer a special alternative version which uses Dispmanx directly for the emulation screen, for maximum performance.
 
-Follow these steps to download, compile and install SDL2 from source:
+# Donations
 
-https://github.com/midwan/amiberry/wiki/Compile-SDL2-from-source
+If you like this project and would like to contribute with a donation, you can use this PayPal pool: [Amiberry PayPal pool](https://paypal.me/pools/c/8apqkBQovm)
 
-If you are running Amiberry under the full Desktop instead, you can install the packages directly from the Raspbian repository instead:
+Donations would help with porting Amiberry to new devices, keeping the motivation going to spend those countless hours on the project, and perhaps getting us some chocolate.
 
-      sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
+# Requirements
 
-With SDL2 installed, you can proceed to install Amiberry as follows:
+Amiberry has been tested on Debian/Raspbian Buster, and requires the following packages to run:
 
-# Pre-requisites
-Amiberry requires the following packages, besides SDL (v1 or v2) itself:
+      sudo apt-get install libsdl2 libsdl2-ttf libsdl2-image libxml2 libflac libmpg123 libpng libmpeg2-4
 
-      sudo apt-get install libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
+If you want to compile Amiberry from source, you'll need the `-dev` version of the same packages instead:
+
+      sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
 
 # Getting Amiberry
-You can clone this repo, like so:
-      
+
+The latest stable releases come with binaries, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area.
+Several popular distros (like RetroPie, DietPi, Amibian, and others) already include Amiberry either pre-installed, or through their package management systems.
+Please follow the methods provided in those distros for a smoother experience.
+
+Alternatively, you can compile the latest from source yourself. Clone this repo, like so:
+
       cd ~
       git clone https://github.com/midwan/amiberry
       cd amiberry
-      
-# Choosing a target
-Amiberry's makefile includes several targets, to cover various platforms. For the Raspberry Pi platform specifically, we offer multiple combinations to get the best performance out of the platform, depending on the environment used:
-- SDL1 with DispmanX back-end for graphics
-- SDL2 with DispmanX back-end for graphics
+
+## Choosing a target
+
+Amiberry's Makefile includes several targets, to cover various platforms. For the Raspberry Pi platform specifically, we offer a special Dispmanx version for maximum performance:
+
+- SDL2 with DispmanX back-end for graphics (RPI platforms only)
 - SDL2 with whatever back-end it was configured with (e.g. KMS, OpenGL, X11, etc.)
 
-For the Raspberry Pi specifically, the best performance can be gained by using the DispmanX back-end, because none of the other options offer multi-threaded graphics updates, unfortunately. For other platforms (e.g. using the Mali GPU), multi-threaded updates can be supported using pure SDL2 (and DispmanX is an RPI-only feature anyway).
+## Compiling a target
 
-# Compiling a target
-You can specify the Platform you want to build as a parameter to the `make` command. If you do not specify one, the default used will be `rpi3-sdl2-dispmanx`.
+You must specify the Platform you want to build as a parameter to the `make` command. The process will abort if you use an incorrect platform or no platform at all.
+Some example platforms are shown below, but feel free to explore the full list within the Makefile.
 
-## Using SDL1 + DispmanX
-For the Raspberry Pi 3(B+) (SDL1 + Dispmanx), type:
+### Raspberry Pi with SDL2 + DispmanX
+
+Use the following command line options for compiling the special RPI-specific versions with Dispmanx:
+
+For the Raspberry Pi 4
+
+      make -j2 PLATFORM=rpi4
+
+For the Raspberry Pi 3(B+)
 
       make -j2 PLATFORM=rpi3
 
-For the Raspberry Pi 2 (SDL1 + Dispmanx), type:
+For the Raspberry Pi 2
 
       make -j2 PLATFORM=rpi2
 
-For the Raspberry Pi 1/Zero (SDL1 + Dispmanx), type:
+For the Raspberry Pi 1/Zero
 
       make PLATFORM=rpi1
 
-## Using SDL2 + DispmanX
+### SDL2 Platforms
 
-For the Raspberry Pi 4 (SDL2)
+Below is an example list of several available targets in the Makefile, and what command line option to use when compiling for them:
 
-      make -j2 PLATFORM=rpi4-sdl2-dispmanx
-
-For the Raspberry Pi 3(B+) (SDL2)
-
-      make -j2 PLATFORM=rpi3-sdl2-dispmanx
-
-For the Raspberry Pi 2 (SDL2):
-
-      make -j2 PLATFORM=rpi2-sdl2-dispmanx
-      
-For the Raspberry Pi 1/Zero (SDL2):
-
-      make PLATFORM=rpi1-sdl2-dispmanx
-
-## Using SDL2 + whatever back-end it was configured with
-
-For the Raspberry Pi 4 (SDL2)
+For the Raspberry Pi 4
 
       make -j2 PLATFORM=rpi4-sdl2
 
-For the Raspberry Pi 3(B+) (SDL2)
+For the Raspberry Pi 3(B+)
 
       make -j2 PLATFORM=rpi3-sdl2
 
-For the Raspberry Pi 2 (SDL2):
+For the Raspberry Pi 2
 
       make -j2 PLATFORM=rpi2-sdl2
-      
-For the Raspberry Pi 1/Zero (SDL2):
+
+For the Raspberry Pi 1/Zero
 
       make PLATFORM=rpi1-sdl2
 
-For the Odroid XU4 (SDL2):
+For the Odroid XU4
 
       make -j6 PLATFORM=xu4
-      
-For the ASUS Tinker board (SDL2):
+
+For the ASUS Tinker board
 
       make -j6 PLATFORM=tinker
-      
-For the Odroid C1 (SDL2):
+
+For the Odroid C1
 
       make -j4 PLATFORM=c1
 
-For the Vero 4k (SDL2):
+For the Vero 4k
 
       make -j4 PLATFORM=vero4k
-     
-For the OrangePi PC (SDL2):
+
+For the OrangePi PC
 
       make -j2 PLATFORM=orangepi-pc
-      
+
 You can check the Makefile for a full list of supported platforms!
 
 For more documentation subjects, please check the [Wiki page](https://github.com/midwan/amiberry/wiki)

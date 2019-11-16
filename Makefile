@@ -1,281 +1,188 @@
-# Default platform is rpi3 / SDL2 / Dispmanx
-ifeq ($(PLATFORM),)
-	PLATFORM = rpi3-sdl2-dispmanx
-endif
+# Specify "make PLATFORM=<platform>" to compile for a specific target.
+# Check the supported list of platforms below for a ful list
 
+# Raspberry Pi 4 CPU flags
 ifneq (,$(findstring rpi4,$(PLATFORM)))
-    CFLAGS += -march=armv8-a -mtune=cortex-a72 -mfpu=neon-fp-armv8
+    CPUFLAGS = -mcpu=cortex-a72 -mfpu=neon-fp-armv8
 endif
 
+# Raspberry Pi 3 CPU flags
 ifneq (,$(findstring rpi3,$(PLATFORM)))
-    CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
+    CPUFLAGS = -mcpu=cortex-a53 -mfpu=neon-fp-armv8
 endif
 
+# Raspberry Pi 2 CPU flags
 ifneq (,$(findstring rpi2,$(PLATFORM)))
-    CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
+    CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
 endif
 
+# Raspberry Pi 1 CPU flags
 ifneq (,$(findstring rpi1,$(PLATFORM)))
-    CFLAGS += -march=armv6zk -mtune=arm1176jzf-s -mfpu=vfp
+    CPUFLAGS = -mcpu=arm1176jzf-s -mfpu=vfp
 endif
 
 #
-# DispmanX Common flags for both SDL1 and SDL2 (RPI-specific)
+# DispmanX Common flags (RPI-specific)
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
 CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
-
 #DEBUG=1
 #GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
+#USE_LTO=1
 #SANITIZE=1
-
-#
-# SDL1 targets
-#
-ifeq ($(PLATFORM),rpi3)
-    CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
-    LDFLAGS += ${DISPMANX_LDFLAGS}
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl1
-	
-else ifeq ($(PLATFORM),rpi2)
-    CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
-    LDFLAGS += ${DISPMANX_LDFLAGS}
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl1
-	
-else ifeq ($(PLATFORM),rpi1)
-    CPPFLAGS += ${DISPMANX_FLAGS} -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL1
-    LDFLAGS += ${DISPMANX_LDFLAGS}
-    NAME  = amiberry-rpi1-sdl1
-
-else ifeq ($(PLATFORM),android)
-    CFLAGS += -mfpu=neon -mfloat-abi=soft
-    DEFS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL1
-    ANDROID = 1
-    HAVE_NEON = 1
-    HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry
 
 #
 # SDL2 with DispmanX targets (RPI only)
 #
-else ifeq ($(PLATFORM),rpi4-sdl2-dispmanx)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
+# Raspberry Pi 1/2/3/4 (SDL2, DispmanX)
+ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi4-sdl2-dispmanx
-
-else ifeq ($(PLATFORM),rpi3-sdl2-dispmanx)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
-    LDFLAGS += ${DISPMANX_LDFLAGS}
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl2-dispmanx
-
-else ifeq ($(PLATFORM),rpi2-sdl2-dispmanx)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 ${DISPMANX_FLAGS}
-    LDFLAGS += ${DISPMANX_LDFLAGS}
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl2-dispmanx
-
-else ifeq ($(PLATFORM),rpi1-sdl2-dispmanx)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2 ${DISPMANX_FLAGS}
-    LDFLAGS += ${DISPMANX_LDFLAGS}
-    NAME  = amiberry-rpi1-sdl2-dispmanx
+    ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2 rpi3 rpi4))
+       CPPFLAGS += -DUSE_ARMNEON -DARM_HAS_DIV
+       HAVE_NEON = 1
+    endif    
 
 #
 # SDL2 targets
-#	
-else ifeq ($(PLATFORM),rpi4-sdl2)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi4-sdl2
+#
+# Raspberry Pi 1/2/3/4 (SDL2)
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-sdl2))
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2
+    ifeq ($(PLATFORM),$(filter $(PLATFORM), rpi2-sdl2 rpi3-sdl2 rpi4-sdl2))
+       CPPFLAGS += -DUSE_ARMNEON -DARM_HAS_DIV
+       HAVE_NEON = 1
+    endif
 
-else ifeq ($(PLATFORM),rpi3-sdl2)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi3-sdl2
-	
-else ifeq ($(PLATFORM),rpi2-sdl2)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
-    HAVE_NEON = 1
-    NAME  = amiberry-rpi2-sdl2
-	
-else ifeq ($(PLATFORM),rpi1-sdl2)
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_SDL2
-    NAME  = amiberry-rpi1-sdl2
-
+# OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
-USE_SDL2 = 1
-    CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
+    CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     HAVE_NEON = 1
-    NAME  = amiberry-orangepi-pc
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
 
+# Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
-USE_SDL2 = 1
-    CFLAGS += -mcpu=cortex-a15.cortex-a7 -mtune=cortex-a15.cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPUFLAGS += -mcpu=cortex-a15 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
-    NAME  = amiberry-xu4
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
 
+# Odroid C1 (SDL2)
 else ifeq ($(PLATFORM),c1)
-USE_SDL2 = 1
-    CFLAGS += -march=armv7-a -mcpu=cortex-a5 -mtune=cortex-a5 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPUFLAGS += -mcpu=cortex-a5 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
     HAVE_NEON = 1
-    NAME  = amiberry-c1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
     endif
 
-else ifeq ($(PLATFORM),n1)
-USE_SDL2 = 1
-AARCH64 = 1
-    #CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CPPFLAGS += -D_FILE_OFFSET_BITS=64 -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
-    #HAVE_NEON = 1
-    NAME  = amiberry-n1
+# Odroid N1/N2, RockPro64 (SDL2 64-bit)
+else ifeq ($(PLATFORM),n2)
+    CPUFLAGS += -mcpu=cortex-a72
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    AARCH64 = 1
 
+# Raspberry Pi 3/4 (SDL2 64-bit)
+else ifeq ($(PLATFORM),pi64)
+    CPUFLAGS += -mcpu=cortex-a72
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
+    AARCH64 = 1
+
+# Raspberry Pi 3/4 (SDL2 64-bit with DispmanX)
+else ifeq ($(PLATFORM),pi64-dispmanx)
+    CPUFLAGS += -mcpu=cortex-a72
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${DISPMANX_FLAGS}
+    LDFLAGS += ${DISPMANX_LDFLAGS}
+    AARCH64 = 1
+
+# Vero 4k (SDL2)
 else ifeq ($(PLATFORM),vero4k)
-USE_SDL2 = 1
-    CFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard -ftree-vectorize -funsafe-math-optimizations
-    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+    CFLAGS += -ftree-vectorize -funsafe-math-optimizations
+    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
-    NAME  = amiberry-vero4k
 
 # Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
 else ifneq (,$(findstring AMLG,$(PLATFORM)))
-USE_SDL2 = 1
-    CFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DFASTERCYCLES
     HAVE_NEON = 1
 
     ifneq (,$(findstring AMLG12,$(PLATFORM)))
       ifneq (,$(findstring AMLG12B,$(PLATFORM)))
-        CFLAGS += -mtune=cortex-a73.cortex-a53
+        CPUFLAGS += -mcpu=cortex-a73
         NAME  = amiberry-AMLG12B
       else
-        CFLAGS += -mtune=cortex-a53
+        CPUFLAGS += -mcpu=cortex-a53
         NAME  = amiberry-AMLG12A
       endif
     else ifneq (,$(findstring AMLGX,$(PLATFORM)))
-      CFLAGS += -mtune=cortex-a53
-      CPPFLAGS += -DMALI_GPU
-      NAME  = amiberry-AMLGX
+      CPUFLAGS += -mcpu=cortex-a53
+      CPPFLAGS += -DUSE_RENDER_THREAD
     endif
 
 # Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
-USE_SDL2 = 1
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DUSE_RENDER_THREAD -DSOFTWARE_CURSOR
     HAVE_NEON = 1
 
     ifneq (,$(findstring RK33,$(PLATFORM)))
-      CFLAGS += -march=armv8-a+crc -mfloat-abi=hard -mfpu=neon-fp-armv8
+      CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
       ifneq (,$(findstring RK3399,$(PLATFORM)))
-        CFLAGS += -mtune=cortex-a72.cortex-a53
-        NAME  = amiberry-RK3399
+        CPUFLAGS += -mcpu=cortex-a72
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
-        CFLAGS += -mtune=cortex-a53
-        NAME  = amiberry-RK3328
+        CPUFLAGS += -mcpu=cortex-a53
       endif
     else ifneq (,$(findstring RK3288,$(PLATFORM)))
-      CFLAGS += -march=armv7ve -mtune=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
-      NAME  = amiberry-RK3288
+      CPUFLAGS += -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
     endif
-
-else ifeq ($(PLATFORM),tinker)
-USE_SDL2 = 1
-    CFLAGS += -march=armv7-a -mtune=cortex-a17 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DFASTERCYCLES -DUSE_RENDER_THREAD -DMALI_GPU
-    HAVE_NEON = 1
-    NAME  = amiberry-tinker
-
-else ifeq ($(PLATFORM),rockpro64)
-USE_SDL2 = 1
-    CFLAGS += -march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD -DFASTERCYCLES
-    HAVE_NEON = 1
-    NAME  = amiberry-rockpro64
 
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
 else ifeq ($(PLATFORM),sun8i)
-USE_SDL2 = 1
-    CFLAGS += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2 -DMALI_GPU -DUSE_RENDER_THREAD
+    CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     NAME  = amiberry-sun8i
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
-endif
-	
-else ifeq ($(PLATFORM),android-sdl2)
-USE_SDL2 = 1
-    CFLAGS += -mfpu=neon -mfloat-abi=soft
-    DEFS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DANDROIDSDL -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_SDL2
-    ANDROID = 1
-    HAVE_NEON = 1
-    HAVE_SDL_DISPLAY = 1
-    NAME  = amiberry
+	endif
+else
+$(error Unknown platform:$(PLATFORM))
 endif
 
 RM     = rm -f
+AS     = as
 CC     ?= gcc
 CXX    ?= g++
 STRIP  ?= strip
-PROG   = $(NAME)
-
-#
-# SDL1 options
-#
-ifndef USE_SDL2
-all: $(PROG)
-
-SDL_CFLAGS := $(shell sdl-config --cflags)
-SDL_LDFLAGS := $(shell sdl-config --libs)
-
-export CPPFLAGS += $(SDL_CFLAGS)
-LDFLAGS += $(SDL_LDFLAGS) -lSDL_image -lSDL_ttf -lguichan_sdl -lguichan
-endif
+PROG   = amiberry
 
 #
 # SDL2 options
 #
-ifdef USE_SDL2
 all: guisan $(PROG)
 export SDL_CFLAGS := $(shell sdl2-config --cflags)
 export SDL_LDFLAGS := $(shell sdl2-config --libs)
 
-CPPFLAGS += $(SDL_CFLAGS) -Iguisan-dev/include
-LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lguisan-dev/lib
-endif
+CPPFLAGS += $(SDL_CFLAGS) -Iexternal/libguisan/include
+LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
 
 #
 # Common options
@@ -283,12 +190,22 @@ endif
 DEFS = $(XML_CFLAGS) -DAMIBERRY
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers $(DEFS)
 XML_CFLAGS := $(shell xml2-config --cflags )
-LDFLAGS += -flto -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
-    CFLAGS += -Ofast -frename-registers -falign-functions=16
+    CFLAGS += -Ofast -frename-registers -fPIC
 else
-    CFLAGS += -g -rdynamic -funwind-tables -mapcs-frame -DDEBUG -Wl,--export-dynamic
+    CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
+endif
+
+#LTO is supposed to reduced code size and increased execution speed. For Amiberry, it does not.
+#at least not yet. In fact, the binary is somewhat bigger and almost the same speed. And the link times goes up
+#a lot.
+ifdef USE_LTO
+    export CFLAGS+=-flto=$(shell nproc) -march=native -fuse-ld=gold -flto-partition=1to1
+    export LDFLAGS+=$(CFLAGS)
+    comma= ,
+    export LDFLAGS:=$(filter-out -Wl$(comma)-O1,$(LDFLAGS))
 endif
 
 ifdef GCC_PROFILE
@@ -312,11 +229,10 @@ ifdef SANITIZE
 endif
 
 LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
+export ASFLAGS = $(CPUFLAGS)
 
-ASFLAGS += $(CFLAGS) -falign-functions=16
-
-export CFLAGS +=  -pipe -Wno-shift-overflow -Wno-narrowing $(EXTRA_CFLAGS)
-export CXXFLAGS += $(CFLAGS) -std=gnu++14 -fpermissive
+export CFLAGS := $(CPUFLAGS) $(CFLAGS) -pipe -Wno-shift-overflow -Wno-narrowing $(EXTRA_CFLAGS)
+export CXXFLAGS += $(CFLAGS) -std=gnu++14
 
 C_OBJS= \
 	src/archivers/7z/BraIA64.o \
@@ -345,7 +261,6 @@ OBJS =	\
 	src/cia.o \
 	src/crc32.o \
 	src/custom.o \
-	src/def_icons.o \
 	src/devices.o \
 	src/disk.o \
 	src/diskutil.o \
@@ -420,7 +335,7 @@ OBJS =	\
 	src/archivers/mp2/kjmp2.o \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
-	src/caps/caps_win32.o \
+	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -473,26 +388,23 @@ OBJS =	\
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o
 
-ifndef USE_SDL2
-OBJS += src/osdep/gui/sdltruetypefont.o
-endif
-	
 ifeq ($(ANDROID), 1)
 OBJS += src/osdep/gui/androidsdl_event.o \
 	src/osdep/gui/PanelOnScreen.o
 endif
 
-# disable NEON helpers for AARCH64
-ifndef AARCH64
-ifdef HAVE_NEON
-OBJS += src/osdep/neon_helper.o
-src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(CXX) $(CFLAGS) -Wall -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
-else
+ifdef AARCH64
+OBJS += src/osdep/aarch64_helper.o
+src/osdep/aarch64_helper.o: src/osdep/aarch64_helper.s
+	$(AS) $(ASFLAGS) -o src/osdep/aarch64_helper.o -c src/osdep/aarch64_helper.s
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi1-sdl2))
 OBJS += src/osdep/arm_helper.o
 src/osdep/arm_helper.o: src/osdep/arm_helper.s
-	$(CXX) $(CFLAGS) -Wall -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
-endif
+	$(AS) $(ASFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
+else
+OBJS += src/osdep/neon_helper.o
+src/osdep/neon_helper.o: src/osdep/neon_helper.s
+	$(AS) $(ASFLAGS) -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 endif
 
 OBJS += src/newcpu.o \
@@ -522,7 +434,7 @@ endif
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
-	$(MAKE) -C guisan-dev clean
+	$(MAKE) -C external/libguisan clean
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
@@ -532,6 +444,6 @@ bootrom:
 	touch src/filesys.cpp
 
 guisan:
-	$(MAKE) -C guisan-dev
+	$(MAKE) -C external/libguisan
 	
 -include $(DEPS)

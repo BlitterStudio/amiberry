@@ -50,6 +50,7 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_TYPHOON2	0x0004001d
 #define ROMTYPE_CB_QUIKPAK	0x0004001e
 #define ROMTYPE_CB_12GAUGE	0x0004001f
+#define ROMTYPE_CB_HARMS3KP	0x00040020
 
 #define ROMTYPE_FREEZER		0x00080000
 #define ROMTYPE_AR			0x00080001
@@ -179,6 +180,18 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_SBISA		0x00100075
 #define ROMTYPE_X86MOUSE	0x00100076
 #define ROMTYPE_ACCESSX		0x00100077
+#define ROMTYPE_OVERDRIVE	0x00100078
+#define ROMTYPE_IVSTC		0x00100079
+#define ROMTYPE_IVST500AT	0x0010007a
+#define ROMTYPE_TRIFECTA	0x0010007b
+#define ROMTYPE_PRELUDE		0x0010007c
+#define ROMTYPE_PRELUDE1200	0x0010007d
+#define ROMTYPE_TANDEM		0x0010007e
+#define ROMTYPE_ARCHOSHD	0x0010007f
+#define ROMTYPE_PCMCIASRAM	0x00100080
+#define ROMTYPE_PCMCIAIDE	0x00100081
+#define ROMTYPE_SSQUIRREL	0x00100082
+#define ROMTYPE_MASTERCARD	0x00100083
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
@@ -237,17 +250,17 @@ extern struct romdata *getarcadiarombyname (const TCHAR *name);
 extern struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all);
 extern void getromname (const struct romdata*, TCHAR*);
 extern struct romdata *getromdatabyname (const TCHAR*);
-extern struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
-extern struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname);
+//extern struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
+//extern struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname);
 extern void romwarning(const int *ids);
 extern void romwarning(int romtype);
 extern struct romlist *getromlistbyromdata (const struct romdata *rd);
 extern void romlist_add (const TCHAR *path, struct romdata *rd);
 extern TCHAR *romlist_get (const struct romdata *rd);
 extern void romlist_clear (void);
-extern struct zfile *read_rom (struct romdata *rd);
+//extern struct zfile *read_rom (struct romdata *rd);
 extern struct zfile *read_rom_name (const TCHAR *filename);
-extern struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype);
+//extern struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype);
 
 extern int load_keyring (struct uae_prefs *p, const TCHAR *path);
 extern uae_u8 *target_load_keyfile (struct uae_prefs *p, const TCHAR *path, int *size, TCHAR *name);
@@ -258,7 +271,7 @@ extern void descramble_nordicpro (uae_u8*, int, int);
 extern int kickstart_checksum (uae_u8 *mem, int size);
 extern int decode_rom (uae_u8 *mem, int size, int mode, int real_size);
 extern struct zfile *rom_fopen (const TCHAR *name, const TCHAR *mode, int mask);
-extern struct zfile *read_rom_name_guess (const TCHAR *filename);
+extern struct zfile *read_rom_name_guess (const TCHAR *filename, TCHAR *out);
 extern void addkeydir (const TCHAR *path);
 extern void addkeyfile (const TCHAR *path);
 extern int romlist_count (void);
