@@ -352,6 +352,8 @@ int coord_native_to_amiga_x (int x)
 
 int coord_native_to_amiga_y (int y)
 {
+	if (!native2amiga_line_map)
+		return -1;
 	return native2amiga_line_map[y] + thisframe_y_adjust - minfirstline;
 }
 
@@ -2580,18 +2582,15 @@ void init_row_map(void)
 	//}
 	xfree(row_map_color_burst_buffer);
 	row_map_color_burst_buffer = NULL;
-	if (currprefs.cs_color_burst)
-	{
+	if (currprefs.cs_color_burst) {
 		row_map_color_burst_buffer = xcalloc(uae_u8, vidinfo->drawbuffer.height_allocated + 2);
 	}
 	j = oldheight == 0 ? max_uae_height : oldheight;
-	for (i = vidinfo->drawbuffer.height_allocated; i < max_uae_height + 1 && i < j + 1; i++)
-	{
+	for (i = vidinfo->drawbuffer.height_allocated; i < max_uae_height + 1 && i < j + 1; i++) {
 		row_map[i] = row_tmp;
 		//row_map_genlock[i] = row_tmp;
 	}
-	for (i = 0, j = 0; i < vidinfo->drawbuffer.height_allocated; i++, j += vidinfo->drawbuffer.rowbytes)
-	{
+	for (i = 0, j = 0; i < vidinfo->drawbuffer.height_allocated; i++, j += vidinfo->drawbuffer.rowbytes) {
 		row_map[i] = vidinfo->drawbuffer.bufmem + j;
 		//if (init_genlock_data) {
 		//	row_map_genlock[i] = row_map_genlock_buffer + vidinfo->drawbuffer.width_allocated * (i + 1);
@@ -2609,19 +2608,19 @@ void init_row_map(void)
 static void init_aspect_maps(void)
 {
 	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	int i;
+	int i, maxl, h;
 
 	linedbld = linedbl = currprefs.gfx_vresolution;
 	if (doublescan > 0 && interlace_seen <= 0) {
 		linedbl = 0;
 		linedbld = 1;
 	}
-	const int maxl = (MAXVPOS + 1) << linedbld;
+	maxl = (MAXVPOS + 1) << linedbld;
 	min_ypos_for_screen = minfirstline << linedbl;
 	max_drawn_amiga_line = -1;
 
-	//vidinfo->xchange = 1 << (RES_MAX - currprefs.gfx_resolution);
-	//vidinfo->ychange = linedbl ? 1 : 2;
+	vidinfo->xchange = 1 << (RES_MAX - currprefs.gfx_resolution);
+	vidinfo->ychange = linedbl ? 1 : 2;
 
 	visible_left_start = 0;
 	visible_right_stop = MAX_STOP;
@@ -2629,7 +2628,7 @@ static void init_aspect_maps(void)
 	visible_bottom_stop = MAX_STOP;
 	set_blanking_limits();
 
-	const int h = vidinfo->drawbuffer.height_allocated;
+	h = vidinfo->drawbuffer.height_allocated;
 	if (h == 0)
 		/* Do nothing if the gfx driver hasn't initialized the screen yet */
 		return;
@@ -3273,7 +3272,7 @@ static void center_image(void)
 			visible_left_border = (max_diwstop - min_diwstart - w) / 2 + min_diwstart;
 		else
 			visible_left_border = max_diwstop - w - (max_diwstop - min_diwstart - w) / 2;
-		visible_left_border &= ~((xshift(1, lores_shift)) - 1);
+		visible_left_border &= ~((xshift (1, lores_shift)) - 1);
 #if 1
 		if (!center_reset && !vertical_changed) {
 			/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
@@ -3283,17 +3282,14 @@ static void center_image(void)
 			}
 		}
 #endif
-	}
-	else if (vidinfo->drawbuffer.extrawidth) {
+	} else if (vidinfo->drawbuffer.extrawidth) {
 		visible_left_border = max_diwlastword - w;
 		if (vidinfo->drawbuffer.extrawidth > 0)
 			visible_left_border += vidinfo->drawbuffer.extrawidth << currprefs.gfx_resolution;
-	}
-	else {
+	} else {
 		if (vidinfo->drawbuffer.inxoffset < 0) {
 			visible_left_border = 0;
-		}
-		else {
+		} else {
 			visible_left_border = vidinfo->drawbuffer.inxoffset - DISPLAY_LEFT_SHIFT;
 		}
 	}
@@ -3302,7 +3298,7 @@ static void center_image(void)
 		visible_left_border = max_diwlastword - 32;
 	if (visible_left_border < 0)
 		visible_left_border = 0;
-	visible_left_border &= ~((xshift(1, lores_shift)) - 1);
+	visible_left_border &= ~((xshift (1, lores_shift)) - 1);
 
 	//write_log (_T("%d %d %d %d %d\n"), max_diwlastword, vidinfo->drawbuffer.width, lores_shift, currprefs.gfx_resolution, visible_left_border);
 
@@ -3317,8 +3313,7 @@ static void center_image(void)
 	if (max_drawn_amiga_line_tmp > vidinfo->drawbuffer.inheight)
 		max_drawn_amiga_line_tmp = vidinfo->drawbuffer.inheight;
 	max_drawn_amiga_line_tmp >>= linedbl;
-
-	//thisframe_y_adjust = minfirstline + currprefs.gfx_monitor.gfx_size.y;
+	
 	thisframe_y_adjust = minfirstline;
 	if (currprefs.gfx_ycenter && thisframe_first_drawn_line >= 0 && !currprefs.gf[0].gfx_filter_autoscale) {
 
@@ -3362,7 +3357,7 @@ static void center_image(void)
 	horizontal_changed = false;
 	vertical_changed = false;
 }
-	
+
 static int frame_res_cnt;
 static int autoswitch_old_resolution;
 static void init_drawing_frame (void)
@@ -3727,8 +3722,8 @@ bool draw_frame(struct vidbuffer *vb)
 	uae_u8 oldstate[LINESTATE_SIZE];
 	struct vidbuffer oldvb{};
 
-	memcpy(&oldvb, &vidinfo->drawbuffer, sizeof(struct vidbuffer));
-	memcpy(&vidinfo->drawbuffer, vb, sizeof(struct vidbuffer));
+	memcpy (&oldvb, &vidinfo->drawbuffer, sizeof (struct vidbuffer));
+	memcpy (&vidinfo->drawbuffer, vb, sizeof (struct vidbuffer));
 	init_row_map();
 	memcpy (oldstate, linestate, LINESTATE_SIZE);
 	for (int i = 0; i < LINESTATE_SIZE; i++) {
@@ -3744,8 +3739,8 @@ bool draw_frame(struct vidbuffer *vb)
 		} else if (v == LINE_DONE) {
 			v = LINE_DECIDED;
 		}
-		//		if (i < maxvpos)
-		//			write_log (_T("%d: %d -> %d\n"), i, linestate[i], v);
+//		if (i < maxvpos)
+//			write_log (_T("%d: %d -> %d\n"), i, linestate[i], v);
 		linestate[i] = v;
 	}
 	last_drawn_line = 0;
@@ -3755,9 +3750,9 @@ bool draw_frame(struct vidbuffer *vb)
 	last_drawn_line = 0;
 	first_drawn_line = 32767;
 	drawing_color_matches = -1;
-	memcpy(linestate, oldstate, LINESTATE_SIZE);
+	memcpy (linestate, oldstate, LINESTATE_SIZE);
 	memcpy (&vidinfo->drawbuffer, &oldvb, sizeof (struct vidbuffer));
-	init_row_map();
+	init_row_map ();
 	return true;
 }
 
@@ -4093,29 +4088,32 @@ void reset_drawing(void)
 {
 	max_diwstop = 0;
 
-	lores_reset();
+	lores_reset ();
+
 #ifdef AMIBERRY
 	linestate_first_undecided = 0;
 #endif
 
 	reset_decision_table();
 
-	init_aspect_maps();
+	init_aspect_maps ();
 
-	init_row_map();
+	init_row_map ();
 
 	last_redraw_point = 0;
 
-	memset(spixels, 0, sizeof spixels);
-	memset(&spixstate, 0, sizeof spixstate);
+	memset (spixels, 0, sizeof spixels);
+	memset (&spixstate, 0, sizeof spixstate);
 
 	notice_screen_contents_lost();
-	init_drawing_frame();
+	init_drawing_frame ();
 	pfield_set_linetoscr();
 
 	frame_res_cnt = currprefs.gfx_autoresolution_delay;
+	//lightpen_y1[0] = lightpen_y2[0] = -1;
+	//lightpen_y1[1] = lightpen_y2[1] = -1;
 
-	reset_custom_limits();
+	reset_custom_limits ();
 
 	center_reset = true;
 	bplcolorburst_field = 1;

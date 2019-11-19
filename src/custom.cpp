@@ -5915,7 +5915,6 @@ static void BLTCMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltcmod = u
 static void BLTDMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltdmod = uae_s16(v & 0xFFFE); reset_blit (0); }
 
 static void BLTCON0 (int hpos, uae_u16 v) { maybe_blit (2); bltcon0 = v; reset_blit(1); }
-
 /* The next category is "Most useless hardware register".
 * And the winner is... */
 static void BLTCON0L (int hpos, uae_u16 v)
@@ -8104,10 +8103,10 @@ static void hsync_handler_pre (bool onvsync)
 		hsync_record_line_state (next_lineno, nextline_how, thisline_changed);
 
 		/* reset light pen latch */
-		//if (vpos == sprite_vblank_endline) {
+		if (vpos == sprite_vblank_endline) {
 		//	lightpen_triggered = 0;
-		//	sprite_0 = 0;
-		//}
+			sprite_0 = 0;
+		}
 
 		//if (!lightpen_triggered && vpos >= sprite_vblank_endline && (bplcon0 & 8)) {
 		//	// lightpen always triggers at the beginning of the last line
