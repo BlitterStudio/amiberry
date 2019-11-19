@@ -6177,7 +6177,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->gfx_iscanlines = 0;
 	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
-	p->gfx_xcenter = 2; p->gfx_ycenter = 2;
+	p->gfx_xcenter = 0; p->gfx_ycenter = 0;
 	p->gfx_xcenter_pos = -1;
 	p->gfx_ycenter_pos = -1;
 	p->gfx_xcenter_size = -1;
