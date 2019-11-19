@@ -6171,7 +6171,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->gfx_monitor.gfx_size_win.width = 720;
 	p->gfx_monitor.gfx_size_win.height = 568;
 	p->gfx_monitor.gfx_size.width = 720;
-	p->gfx_monitor.gfx_size.height = 283;
+	p->gfx_monitor.gfx_size.height = 284;
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_NONDOUBLE;
 	p->gfx_iscanlines = 0;
@@ -6827,7 +6827,7 @@ static int bip_cd32(struct uae_prefs* p, int config, int compa, int romcheck)
 	p->cdslots[0].type = SCSI_UNIT_IMAGE;
 	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
 	p->gfx_monitor.gfx_size.width = 720;
-	p->gfx_monitor.gfx_size.height = 283;
+	p->gfx_monitor.gfx_size.height = 284;
 	
 	return 1;
 }
