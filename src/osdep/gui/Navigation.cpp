@@ -203,17 +203,18 @@ static NavigationMap navMap[] =
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
 	{"sldWidth", "", "", "Frameskip", "sldHeight"},
-	{"sldHeight", "", "", "sldWidth", "sldVertPos"},
-	{"sldVertPos", "", "", "sldHeight", "Auto"},
-	{"Auto", "Display", "Single", "sldVertPos", "Nearest Neighbor (pixelated)"},
+	{"sldHeight", "", "", "sldWidth", "Auto"},
+	{"Auto", "Display", "Single", "sldHeight", "Nearest Neighbor (pixelated)"},
 	{"Nearest Neighbor (pixelated)", "Display", "Double", "Auto", "Linear (smooth)"},
 	{"Linear (smooth)", "Display", "Scanlines", "Nearest Neighbor (pixelated)", "CorrectAR"},
-	{"Single", "Auto", "Auto", "sdlVertPos", "Double"},
+	{"Single", "Auto", "Auto", "Vertical", "Double"},
 	{"Double", "Nearest Neighbor (pixelated)", "Nearest Neighbor (pixelated)", "Single", "Scanlines"},
 	{"Scanlines", "Linear (smooth)", "Linear (smooth)", "Double", "Fullscreen"},
 	{"CorrectAR", "Display", "Fullscreen", "Linear (smooth)", "Frameskip"},
 	{"Fullscreen", "CorrectAR", "CorrectAR", "Scanlines", "Frameskip"},
 	{"Frameskip", "Display", "Display", "CorrectAR", "sldWidth"},
+	{"Vertical", "", "", "Horizontal", "Single"},
+	{"Horizontal", "", "", "", "Vertical"},
 
 	//  active            move left           move right          move up           move down
 	//PanelSound

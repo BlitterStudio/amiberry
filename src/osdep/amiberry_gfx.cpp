@@ -720,6 +720,29 @@ int check_prefs_changed_gfx()
 		update_display(&currprefs);
 		changed = 1;
 	}
+
+	if (currprefs.gf[0].gfx_filter_autoscale != changed_prefs.gf[0].gfx_filter_autoscale ||
+		currprefs.gfx_xcenter_pos != changed_prefs.gfx_xcenter_pos ||
+		currprefs.gfx_ycenter_pos != changed_prefs.gfx_ycenter_pos ||
+		currprefs.gfx_xcenter_size != changed_prefs.gfx_xcenter_size ||
+		currprefs.gfx_ycenter_size != changed_prefs.gfx_ycenter_size ||
+		currprefs.gfx_xcenter != changed_prefs.gfx_xcenter ||
+		currprefs.gfx_ycenter != changed_prefs.gfx_ycenter)
+	{
+		currprefs.gfx_xcenter_pos = changed_prefs.gfx_xcenter_pos;
+		currprefs.gfx_ycenter_pos = changed_prefs.gfx_ycenter_pos;
+		currprefs.gfx_xcenter_size = changed_prefs.gfx_xcenter_size;
+		currprefs.gfx_ycenter_size = changed_prefs.gfx_ycenter_size;
+		currprefs.gfx_xcenter = changed_prefs.gfx_xcenter;
+		currprefs.gfx_ycenter = changed_prefs.gfx_ycenter;
+		currprefs.gf[0].gfx_filter_autoscale = changed_prefs.gf[0].gfx_filter_autoscale;
+
+		get_custom_limits(NULL, NULL, NULL, NULL, NULL);
+		fixup_prefs_dimensions(&changed_prefs);
+
+		return 1;
+	}
+	
 	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen ||
 		currprefs.hide_idle_led != changed_prefs.hide_idle_led)
 	{
