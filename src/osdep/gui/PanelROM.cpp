@@ -22,6 +22,8 @@ static gcn::Button* cmdExtROM;
 static gcn::Label* lblCartROM;
 static gcn::UaeDropDown* cboCartROM;
 static gcn::Button* cmdCartROM;
+static gcn::Label* lblUAEROM;
+static gcn::UaeDropDown* cboUAEROM;
 
 class ROMListModel : public gcn::ListModel
 {
@@ -84,6 +86,30 @@ public:
 static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
 static ROMListModel* cartROMList;
+
+static const TCHAR* uaeList[] = { _T("ROM disabled"), _T("Original UAE (FS + F0 ROM)"), _T("New UAE (64k + F0 ROM)") };
+static const int numRoms = 3;
+
+class UaeROMListModel : public gcn::ListModel
+{
+public:
+	UaeROMListModel()
+		= default;
+
+	int getNumberOfElements() override
+	{
+		return numRoms;
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= numRoms)
+			return "---";
+		return uaeList[i];
+	}
+};
+
+static UaeROMListModel uaeROMList;
 
 class MainROMActionListener : public gcn::ActionListener
 {
@@ -185,6 +211,17 @@ public:
 			}
 			cmdCartROM->requestFocus();
 		}
+		else if (actionEvent.getSource() == cboUAEROM) {
+			int v = cboUAEROM->getSelected();
+			if (v > 0) {
+				changed_prefs.uaeboard = v - 1;
+				changed_prefs.boot_rom = 0;
+			}
+			else {
+				changed_prefs.uaeboard = 0;
+				changed_prefs.boot_rom = 1; // disabled
+			}
+		}
 	}
 };
 
@@ -242,6 +279,14 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdCartROM->setBaseColor(gui_baseCol);
 	cmdCartROM->addActionListener(romButtonActionListener);
 
+	lblUAEROM = new gcn::Label("Advanced UAE expansion board/Boot ROM:");
+	cboUAEROM = new gcn::UaeDropDown(&uaeROMList);
+	cboUAEROM->setSize(textFieldWidth, cboUAEROM->getHeight());
+	cboUAEROM->setBaseColor(gui_baseCol);
+	cboUAEROM->setBackgroundColor(colTextboxBackground);
+	cboUAEROM->setId("cboUAEROM");
+	cboUAEROM->addActionListener(romButtonActionListener);
+
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
 	posY += lblMainROM->getHeight() + 4;
@@ -260,6 +305,11 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	category.panel->add(cboCartROM, DISTANCE_BORDER, posY);
 	category.panel->add(cmdCartROM, DISTANCE_BORDER + cboCartROM->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboCartROM->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblUAEROM, DISTANCE_BORDER, posY);
+	posY += lblUAEROM->getHeight() + 4;
+	category.panel->add(cboUAEROM, DISTANCE_BORDER, posY);
+	posY += cboUAEROM->getHeight() + DISTANCE_NEXT_Y;
 
 	RefreshPanelROM();
 }
@@ -285,6 +335,8 @@ void ExitPanelROM()
 	delete cartROMList;
 	delete cartROMActionListener;
 
+	delete lblUAEROM;
+	delete cboUAEROM;
 	delete romButtonActionListener;
 }
 
@@ -329,6 +381,14 @@ void RefreshPanelROM()
 
 	idx = cartROMList->init_rom_list(changed_prefs.cartfile);
 	cboCartROM->setSelected(idx);
+
+	if (changed_prefs.boot_rom == 1) {
+		cboUAEROM->setSelected(0);
+	}
+	else {
+		cboUAEROM->setSelected(changed_prefs.uaeboard + 1);
+	}
+	cboUAEROM->setEnabled(!emulating);
 }
 
 bool HelpPanelROM(std::vector<std::string>& helptext)
