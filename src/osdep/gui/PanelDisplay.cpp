@@ -14,7 +14,7 @@
 #include "gui_handling.h"
 
 const int amigawidth_values[] = {320, 362, 384, 640, 704, 720};
-const int amigaheight_values[] = {200, 216, 240, 256, 262, 283};
+const int amigaheight_values[] = {200, 216, 240, 256, 262, 284};
 
 static gcn::Window* grpScalingMethod;
 static gcn::UaeRadioButton* optAuto;
@@ -37,6 +37,10 @@ static gcn::Slider* sldAmigaHeight;
 static gcn::UaeCheckBox* chkFrameskip;
 static gcn::UaeCheckBox* chkAspect;
 static gcn::UaeCheckBox* chkFullscreen;
+
+static gcn::Window* grpCentering;
+static gcn::UaeCheckBox* chkHorizontal;
+static gcn::UaeCheckBox* chkVertical;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -78,6 +82,12 @@ public:
 				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
 			}
 		}
+
+		else if (actionEvent.getSource() == chkHorizontal)
+			changed_prefs.gfx_xcenter = chkHorizontal->isSelected() ? 2 : 0;
+		
+		else if (actionEvent.getSource() == chkVertical)
+			changed_prefs.gfx_ycenter = chkVertical->isSelected() ? 2 : 0;
 	}
 };
 
@@ -151,6 +161,11 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
+	chkHorizontal = new gcn::UaeCheckBox("Horizontal");
+	chkHorizontal->addActionListener(amigaScreenActionListener);
+	chkVertical = new gcn::UaeCheckBox("Vertical");
+	chkVertical->addActionListener(amigaScreenActionListener);
+	
 	chkAspect = new gcn::UaeCheckBox("Correct Aspect Ratio");
 	chkAspect->setId("CorrectAR");
 	chkAspect->addActionListener(amigaScreenActionListener);
@@ -180,8 +195,17 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 		lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + (
 			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
-
 	category.panel->add(grpAmigaScreen);
+
+	grpCentering = new gcn::Window("Centering");
+	grpCentering->setPosition(DISTANCE_BORDER + grpAmigaScreen->getWidth() + DISTANCE_BORDER, DISTANCE_BORDER);
+	grpCentering->add(chkHorizontal, DISTANCE_BORDER, DISTANCE_BORDER);
+	grpCentering->add(chkVertical, DISTANCE_BORDER, chkHorizontal->getY() + chkHorizontal->getHeight() + DISTANCE_NEXT_Y);
+	grpCentering->setMovable(false);
+	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 2, posY + DISTANCE_BORDER);
+	grpCentering->setBaseColor(gui_baseCol);
+	category.panel->add(grpCentering);
+	
 	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
 
 	scalingMethodActionListener = new ScalingMethodActionListener();
@@ -250,11 +274,12 @@ void ExitPanelDisplay()
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete lblAmigaHeightInfo;
-	//delete lblVertPos;
-	//delete sldVertPos;
-	//delete lblVertPosInfo;
 	delete grpAmigaScreen;
 
+	delete chkHorizontal;
+	delete chkVertical;
+	delete grpCentering;
+	
 	delete chkAspect;
 	delete chkFullscreen;
 
@@ -301,6 +326,9 @@ void RefreshPanelDisplay()
 		}
 	}
 
+	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
+	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
+	
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFullscreen->setSelected(changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN);
 

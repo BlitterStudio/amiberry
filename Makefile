@@ -193,7 +193,7 @@ XML_CFLAGS := $(shell xml2-config --cflags )
 LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
-    CFLAGS += -Ofast -frename-registers -fPIC
+    CFLAGS += -Ofast
 else
     CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif

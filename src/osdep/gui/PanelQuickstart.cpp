@@ -241,7 +241,7 @@ static void AdjustPrefs(void)
 		changed_prefs.cdslots[0].inuse = true;
 		changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 		changed_prefs.gfx_monitor.gfx_size.width = 720;
-		changed_prefs.gfx_monitor.gfx_size.height = 283;
+		changed_prefs.gfx_monitor.gfx_size.height = 284;
 		break;
 	default:
 		break;

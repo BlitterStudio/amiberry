@@ -214,11 +214,9 @@ const char* remap_key_map_list_strings[] = {
 	"minus", "slash", "semicolon", "equals", "leftbracket",
 	"backslash", "rightbracket",
 	"kp_period", "kp_equals", "rctrl", "ralt"
-
 };
 
 const int remap_key_map_list_size = sizeof remap_key_map_list / sizeof remap_key_map_list[0];
-
 
 static int init_mouse()
 {
@@ -489,7 +487,7 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 		{
 			if (option != find_setting)
 				continue;
-			
+
 			// using the " = " to work out which is the option, and which is the parameter.
 			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 
@@ -1107,7 +1105,7 @@ static void read_joystick()
 					                                        current_controller_map.reset_button) & 1);
 				}
 			}
-			// temporary solution for retroarch buttons inc. HOTKEY
+				// temporary solution for retroarch buttons inc. HOTKEY
 			else if (SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.hotkey_button) & 1)
 			{
 				held_offset = REMAP_BUTTONS;
@@ -1125,12 +1123,12 @@ static void read_joystick()
 				// reset button
 			}
 
-			// this *should* allow us to handle function buttons (l2/r2/select)  <<<  except there were issues this work, picking a fixed number!!                            
-			// these two cannot be used whilst we are limtied to 32 buttons, since 'REMAP_BUTTONS' = 14
-			// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].left_trigger) & 1)
-			//     held_offset = REMAP_BUTTONS * 2;
-			// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].right_trigger) & 1)
-			//     held_offset = REMAP_BUTTONS * 3;
+				// this *should* allow us to handle function buttons (l2/r2/select)  <<<  except there were issues this work, picking a fixed number!!                            
+				// these two cannot be used whilst we are limtied to 32 buttons, since 'REMAP_BUTTONS' = 14
+				// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].left_trigger) & 1)
+				//     held_offset = REMAP_BUTTONS * 2;
+				// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].right_trigger) & 1)
+				//     held_offset = REMAP_BUTTONS * 3;
 
 			else
 			{
@@ -1140,8 +1138,8 @@ static void read_joystick()
 			auto val = 0;
 
 			// this should allow use to change the tolerance
-			int lower_bound = -32767;
-			int upper_bound = 32767;
+			auto lower_bound = -32767;
+			auto upper_bound = 32767;
 
 			// left stick   
 			if (!currprefs.input_analog_remap)

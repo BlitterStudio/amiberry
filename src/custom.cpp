@@ -5934,7 +5934,6 @@ static void BLTCMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltcmod = u
 static void BLTDMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltdmod = uae_s16(v & 0xFFFE); reset_blit (0); }
 
 static void BLTCON0 (int hpos, uae_u16 v) { maybe_blit (2); bltcon0 = v; reset_blit(1); }
-
 /* The next category is "Most useless hardware register".
 * And the winner is... */
 static void BLTCON0L (int hpos, uae_u16 v)
@@ -8123,10 +8122,10 @@ static void hsync_handler_pre (bool onvsync)
 		hsync_record_line_state (next_lineno, nextline_how, thisline_changed);
 
 		/* reset light pen latch */
-		//if (vpos == sprite_vblank_endline) {
+		if (vpos == sprite_vblank_endline) {
 		//	lightpen_triggered = 0;
-		//	sprite_0 = 0;
-		//}
+			sprite_0 = 0;
+		}
 
 		//if (!lightpen_triggered && vpos >= sprite_vblank_endline && (bplcon0 & 8)) {
 		//	// lightpen always triggers at the beginning of the last line
@@ -8406,96 +8405,74 @@ static void init_regtypes(void)
 {
 	int i;
 	for (i = 0; i < 512; i += 2) {
-    if((i >= 0x40 && i <= 0x66) || (i >= 0x70 && i <= 0x74))
-      regtypes[i] = REGTYPE_BLITTER | FORCE_HPOS;
-      
-    else if((i >= 0xA0 && i <= 0xAA) || (i >= 0xB0 && i <= 0xBA) || (i >= 0xC0 && i <= 0xCA) || (i >= 0xD0 && i <= 0xDA))
+		regtypes[i] = REGTYPE_ALL;
+		if ((i >= 0x20 && i < 0x26) || i == 0x7E)
+			regtypes[i] = REGTYPE_DISK;
+		else if (i >= 0x68 && i < 0x70)
+			regtypes[i] = REGTYPE_NONE;
+		else if (i >= 0x40 && i < 0x76)
+			regtypes[i] = REGTYPE_BLITTER;
+		else if (i >= 0xA0 && i < 0xE0 && (i & 0xF) < 0xC)
 			regtypes[i] = REGTYPE_AUDIO;
-    
-    else if ((i >= 0xE0 && i <= 0xFE) || (i >= 0x110 && i <= 0x11E))
-      regtypes[i] = REGTYPE_PLANE | FORCE_HPOS;
-    
-    else if (i >= 0x120 && i <= 0x17E)
-      regtypes[i] = REGTYPE_SPRITE | FORCE_HPOS;
-
-    else if (i >= 0x180 && i <= 0x1BE)
-      regtypes[i] = REGTYPE_COLOR | FORCE_HPOS;
-
-    else if ((i >= 0x1C0 && i <= 0x1DA) || (i >= 0x1E6 && i <= 0x1FA))
+		else if ((i >= 0xA0 && i < 0xE0) || (i >= 0x1C0 && i < 0x1E4) || (i >= 0x1E6 && i < 0x1FC))
 			regtypes[i] = REGTYPE_NONE;
-
-    else {
-      switch(i) {
-        case 0x00: case 0x08: case 0x18: case 0x26: /* BPLDDAT, DSKDATR, SERDATR, DSKDAT */
-        case 0x30: case 0x32: /* SERDAT, SERPER */
-        case 0x38: case 0x3A: case 0x3C: case 0x3E: /* STREQU, STRVBL, STRHOR, STRLONG */
-        case 0x68: case 0x6A: case 0x6C: case 0x6E: /* ?, ?, ?, ? */
-        case 0x76: case 0x78: case 0x7A: case 0x7C: /* ?, ?, ?, DENISEID */
-        case 0x8C: /* COPINS */
-        case 0xAC: case 0xAE: case 0xBC: case 0xBE: /* ?, ?, ?, ? */
-        case 0xCC: case 0xCE: case 0xDC: case 0xDE: /* ?, ?, ?, ? */
-        case 0x1DE: case 0x1E0: case 0x1E2: /* HSSTRT, VSSTRT, HCENTER */
-        case 0x1FE: /* ? */
+		else if ((i >= 0xE0 && i < 0x100) || (i >= 0x110 && i < 0x120))
+			regtypes[i] = REGTYPE_PLANE;
+		else if (i >= 0x120 && i < 0x180)
+			regtypes[i] = REGTYPE_SPRITE;
+		else if (i >= 0x180 && i < 0x1C0)
+			regtypes[i] = REGTYPE_COLOR;
+		else switch (i) {
+		case 0x00:
+		case 0x08:
+		case 0x18:
+		case 0x26: case 0x28:
+		case 0x30: case 0x32:
+		case 0x38: case 0x3A: case 0x3C: case 0x3E:
+		case 0x76: case 0x78: case 0x7A: case 0x7C:
+		case 0x8C:
+		case 0x1FE:
 			regtypes[i] = REGTYPE_NONE;
 			break;
-        
-        case 0x02: /* DMACONR */
-        case 0x1C: case 0x1E: case 0x9A: case 0x9C: /* INTENAR, INTREQR, INTENA, INTREQ */
-          regtypes[i] = REGTYPE_ALL;
-          break;
-
-        case 0x2E: /* COPCON */
-        case 0x80: case 0x82: case 0x84: case 0x86: /* COP1LCH, COP1LCL, COP2LCH, COP2LCL */
-        case 0x88: case 0x8A: /* COPJMP1, COPJMP2 */
-        case 0x8E: case 0x90: case 0x92: case 0x94: /* DIWSTRT, DIWSTOP, DDFSTRT, DDFSTOP */
-        case 0x96: /* DMACON */
-        case 0x100: /* BPLCON0 */
-        case 0x1DC: /* BEAMCON0 */
-        case 0x1E4: /* DIWHIGH */
-        case 0x1FC: /* FMODE */
-          regtypes[i] = REGTYPE_FORCE;
+		case 0x02:
+			/* DMACONR - setting this to REGTYPE_BLITTER will cause it to
+		   conflict with DMACON (since that is REGTYPE_ALL), and the
+		   blitter registers (for the BBUSY bit), but nothing else,
+		   which is (I think) what we want. */
+			regtypes[i] = REGTYPE_BLITTER;
 			break;
-                
-        case 0x04: case 0x06: case 0x2A: case 0x2C: /* VPOSR, VHPOSR, VPOSW, VHPOSW */
+		case 0x04: case 0x06: case 0x2A: case 0x2C:
+		case 0x0A: case 0x0C: /* Mouse position is calculated with vpos */
 			regtypes[i] = REGTYPE_POS;
 			break;
-        
-        case 0x0A: case 0x0C: /* JOY0DAT, JOY1DAT */
-    		case 0x12: case 0x14: case 0x16: /* POT0DAT, POT1DAT, POTGOR */
-    	  case 0x34: case 0x36: /* POTGO, JOYTEST */
-          regtypes[i] = REGTYPE_JOYPORT | REGTYPE_POS;
-          break;
-
-        case 0x0E: case 0x98: case 0x10E: /* CLXDAT, CLXCON, CLXCON2 */
-          regtypes[i] = REGTYPE_SPRITE | REGTYPE_PLANE;
+		case 0x0E:
+			regtypes[i] = REGTYPE_SPRITE;
 			break;
-                
-  		  case 0x10: /* ADKCONR */
+		case 0x10: case 0x9E:
 			regtypes[i] = REGTYPE_AUDIO | REGTYPE_DISK;
 			break;
-
-  		  case 0x9E: /* ADKCON */
-  		    regtypes[i] = REGTYPE_AUDIO | REGTYPE_DISK | REGTYPE_POS | FORCE_HPOS;
-  		    break;
-
-    		case 0x1A: case 0x24: case 0x7E: /* DSKBYTR, DSKLEN, DSKSYNC */
-    		  regtypes[i] = REGTYPE_DISK | FORCE_HPOS;
+		case 0x12: case 0x14: case 0x16:
+		case 0x34: case 0x36:
+			regtypes[i] = REGTYPE_JOYPORT;
 			break;
-    		case 0x20: case 0x22: /* DSKPTH, DSKPTL */
+		case 0x1A:
 			regtypes[i] = REGTYPE_DISK;
 			break;
-    		  
-    		case 0x28: /* REFPTR */
-    		case 0x102: case 0x104: case 0x106: /* BPLCON1, BPLCON2, BPLCON3 */
-    		case 0x108: case 0x10A: /* BPL1MOD, BPL2MOD */
-    		  regtypes[i] = REGTYPE_PLANE | FORCE_HPOS;
+		case 0x102:	case 0x104:	case 0x106:	case 0x108:
+		case 0x10A:
+			regtypes[i] = REGTYPE_PLANE;
 			break;
-
-    		case 0x10C: /* BPLCON4 */
-    		  regtypes[i] = REGTYPE_PLANE | REGTYPE_SPRITE | FORCE_HPOS;
+		case 0x10C:
+			regtypes[i] = REGTYPE_PLANE | REGTYPE_SPRITE;
+			break;
+		case 0x88: case 0x8A:
+		case 0x8E: case 0x90: case 0x92: case 0x94:
+		case 0x96:
+		case 0x100:
+		case 0x1FC:
+			regtypes[i] |= REGTYPE_FORCE;
 			break;
 		}
-	}
 }
 }
 #endif
