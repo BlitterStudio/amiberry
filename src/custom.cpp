@@ -7635,6 +7635,9 @@ static void fpscounter (bool frameok)
 	if (bogusframe || int(last) < 0)
 		return;
 
+	if (currprefs.gfx_framerate == 2)
+		idletime >>= 1;
+	
 	mavg (&fps_mavg, last / 10, FPSCOUNTER_MAVG_SIZE);
 	mavg (&idle_mavg, idletime / 10, FPSCOUNTER_MAVG_SIZE);
 	idletime = 0;
