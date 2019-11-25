@@ -3710,7 +3710,7 @@ static void draw_frame2()
 #ifdef AMIBERRY
 			if (whereline >= vb->inheight || line >= linestate_first_undecided)
 #else
-			if (whereline >= vb->outheight)
+			if (whereline >= vb->inheight)
 #endif
 				break;
 			if (whereline < 0)
