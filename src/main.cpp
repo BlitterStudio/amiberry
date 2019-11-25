@@ -517,6 +517,7 @@ static TCHAR* parsetextpath(const TCHAR* s)
 
 void usage()
 {
+	printf("\nAmiberry - Amiga emulator v3.0.4 (2019-11-26)\n");
 	printf("\nUsage:\n");
 	printf(" -h                         Show this help.\n");
 	printf(" --help                     Show this help.\n");
