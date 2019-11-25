@@ -32,6 +32,7 @@ static uae_sem_t display_sem = nullptr;
 static bool volatile display_thread_busy = false;
 static unsigned int current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
+static int vsync_modulo = 1;
 #endif
 
 /* SDL Surface for output of emulation */
@@ -51,7 +52,6 @@ static int display_height;
 bool can_have_linedouble;
 
 static unsigned long last_synctime;
-static int vsync_modulo = 1;
 static int host_hz = 50;
 
 /* Possible screen modes (x and y resolutions) */
@@ -687,7 +687,6 @@ void update_display(struct uae_prefs* p)
 	open_screen(p);
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 	SDL_ShowCursor(SDL_DISABLE);
-	ad->framecnt = 1; // Don't draw frame before reset done
 }
 
 int check_prefs_changed_gfx()
@@ -875,8 +874,7 @@ void show_screen(int mode)
 			++current_vsync_frame;
 		}
 	}
-
-	current_vsync_frame += currprefs.gfx_framerate;
+	
 #endif
 
 #ifdef USE_DISPMANX
@@ -1225,13 +1223,14 @@ bool vsync_switchmode(int hz)
 		fpscounter_reset();
 #ifdef USE_DISPMANX		
 		time_per_frame = 1000 * 1000 / (hz);
-#endif
+
 		if (hz == host_hz)
 			vsync_modulo = 1;
 		else if (hz > host_hz)
 			vsync_modulo = 6; // Amiga draws 6 frames while host has 5 vsyncs -> sync every 6th Amiga frame
 		else
 			vsync_modulo = 5; // Amiga draws 5 frames while host has 6 vsyncs -> sync every 5th Amiga frame
+#endif
 	}
 
 	if (!ad->picasso_on && !ad->picasso_requested_on)
