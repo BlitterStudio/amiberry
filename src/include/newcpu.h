@@ -388,7 +388,7 @@ extern void exception3b (uae_u32 opcode, uaecptr addr, bool w, bool i, uaecptr p
 extern void exception2 (uaecptr addr, bool read, int size, uae_u32 fc);
 extern void cpureset (void);
 extern void cpu_halt (int id);
-extern void cpu_sleep_millis(int ms);
+extern int cpu_sleep_millis(int ms);
 
 extern void fill_prefetch (void);
 

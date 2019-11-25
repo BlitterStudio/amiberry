@@ -10,13 +10,20 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "newcpu.h"
+#include "xwin.h"
+#include "audio.h"
+
+static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
 
 unsigned long int nextevent, currcycle;
-int is_syncline;
+int is_syncline, is_syncline_end;
+unsigned long start_cycles;
+bool event_wait;
 
-frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
+frame_time_t vsyncmintime, vsyncmintimepre;
+frame_time_t vsyncmaxtime, vsyncwaittime;
 int vsynctimebase;
 
 static void events_fast(void)
@@ -68,11 +75,16 @@ static bool event_check_vsync(void)
 
 void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 {
-	if ((regs.pissoff -= cycles_to_add) > 0)
-		return;
+	if (!currprefs.cpu_thread) {
+		if ((regs.pissoff -= cycles_to_add) > 0)
+			return;
 
-	cycles_to_add = -regs.pissoff;
-	regs.pissoff = 0;
+		cycles_to_add = -regs.pissoff;
+		regs.pissoff = 0;
+	}
+	else {
+		regs.pissoff = 0x40000000;
+	}
 
 	if (is_syncline)
 	{

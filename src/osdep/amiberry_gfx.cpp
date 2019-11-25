@@ -96,10 +96,10 @@ VC_IMAGE_TYPE_T rgb_mode = VC_IMAGE_RGB565;
 static int DispManXElementpresent = 0;
 static unsigned char current_resource_amigafb = 0;
 
-static volatile uae_atomic vsync_counter = 0;
+static volatile uae_atomic rpi_vsync_counter = 0;
 void vsync_callback(unsigned int a, void* b)
 {
-	atomic_inc(&vsync_counter);
+	atomic_inc(&rpi_vsync_counter);
 }
 
 static int display_thread(void *unused)
@@ -603,7 +603,7 @@ static void open_screen(struct uae_prefs* p)
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_OPEN, 1);
 	uae_sem_wait(&display_sem);
 
-	vsync_counter = 0;
+	rpi_vsync_counter = 0;
 	current_vsync_frame = 2;
 
 #else
@@ -789,7 +789,7 @@ void wait_for_vsync()
 	do
 	{
 		usleep(10);
-		current_vsync_frame = vsync_counter;
+		current_vsync_frame = rpi_vsync_counter;
 	} while (wait_till >= current_vsync_frame && read_processor_time() - start < 20000);
 }
 #endif
@@ -835,7 +835,7 @@ void show_screen(int mode)
 		do
 		{
 			usleep(10);
-			current_vsync_frame = vsync_counter;
+			current_vsync_frame = rpi_vsync_counter;
 		} while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
 		if (wait_till + 1 != current_vsync_frame)
 		{
@@ -853,11 +853,11 @@ void show_screen(int mode)
 			if (start < wait_till_time)
 			{
 				// We are in time, wait for vsync
-				atomic_set(&vsync_counter, current_vsync_frame);
+				atomic_set(&rpi_vsync_counter, current_vsync_frame);
 				do
 				{
 					usleep(10);
-					current_vsync_frame = vsync_counter;
+					current_vsync_frame = rpi_vsync_counter;
 				} while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
 			}
 			else
@@ -1238,6 +1238,18 @@ bool vsync_switchmode(int hz)
 		changed_prefs.gfx_monitor.gfx_size.height = changed_height;
 
 	return true;
+}
+
+int vsync_isdone(frame_time_t* dt)
+{
+	if (isvsync() == 0)
+		return -1;
+	//if (waitvblankthread_mode <= 0)
+	//	return -2;
+	//if (dt)
+	//	*dt = wait_vblank_timestamp;
+	//return vsync_active ? 1 : 0;
+	return 1;
 }
 
 bool target_graphics_buffer_update()

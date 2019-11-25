@@ -590,6 +590,12 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 			ddffirstword_total = min;
 		if (ddflastword_total > max)
 			ddflastword_total = max;
+		if (0 && !(currprefs.chipset_mask & CSMASK_AGA)) {
+			if (ddffirstword_total > diwfirstword_total)
+				diwfirstword_total = ddffirstword_total;
+			if (ddflastword_total < diwlastword_total)
+				diwlastword_total = ddflastword_total;
+		}
 	}
 
 	w = diwlastword_total - diwfirstword_total;
