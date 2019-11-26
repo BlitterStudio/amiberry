@@ -21,6 +21,8 @@ Amiberry has been tested on Debian/Raspbian Buster, and requires the following p
 If you want to compile Amiberry from source, you'll need the `-dev` version of the same packages instead:
 
       sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
+      # On Raspberry Pi, additionally:
+      sudo apt-get install libraspberrypi-dev
 
 # Getting Amiberry
 
