@@ -58,6 +58,11 @@ extern struct inputdevice_functions inputdevicefunc_joystick;
 extern struct inputdevice_functions inputdevicefunc_mouse;
 extern struct inputdevice_functions inputdevicefunc_keyboard;
 extern int pause_emulation;
+extern int num_keys_as_joys;
+extern int input_default_mouse_speed ;
+extern int input_keyboard_as_joystick_stop_keypresses ;
+
+extern bool KeyUsedInPluggedInRetroarchJoystick(int scancode) ;
 
 struct uae_input_device_default_node
 {
@@ -441,6 +446,10 @@ struct host_keyboard_button {
 	int start_button;
 	int lstick_button;
 	int rstick_button;
+	
+	int hotkey_button;
+	int quit_button;
+	int menu_button;
 
 	bool is_retroarch;
 };
