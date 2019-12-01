@@ -517,32 +517,32 @@ static TCHAR* parsetextpath(const TCHAR* s)
 
 void usage()
 {
-	printf("\nAmiberry - Amiga emulator v3.0.4 (2019-11-26)\n");
-	printf("\nUsage:\n");
-	printf(" -h                         Show this help.\n");
-	printf(" --help                     Show this help.\n");
-	printf(" -f <file>                  Load a configuration file.\n");
-	printf(" -config=<file>             Load a configuration file.\n");
-	printf(" -autoload=<file>           Load a WHDLoad game or .CUE CD32 image.\n");
-	printf(" -statefile=<file>          Load a save state file.\n");
-	printf(" -s <config param>=<value>  Set the configuration parameter with value.\n");
-	printf("                            Edit a configuration file in order to know valid parameters and settings.\n");
-	printf("\nAdditional options:\n");
-	printf(" -0 <filename>              Set adf for drive 0.\n");
-	printf(" -1 <filename>              Set adf for drive 1.\n");
-	printf(" -2 <filename>              Set adf for drive 2.\n");
-	printf(" -3 <filename>              Set adf for drive 3.\n");
-	printf(" -r <filename>              Set kickstart rom file.\n");
-	printf(" -G                         Start directly into emulation.\n");
-	printf(" -c <value>                 Size of chip memory (in number of 512 KBytes chunks).\n");
-	printf(" -F <value>                 Size of fast memory (in number of 1024 KBytes chunks).\n");
-	printf("\nNote:\n");
-	printf("Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used.\n");
-	printf("File names should be with absolute path.\n");
-	printf("\nExample:\n");
-	printf("amiberry -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no\n");
-	printf("It will load A500.uae configuration with the save state named game.\n");
-	printf("It will override use_gui to 'no' so that it enters emulation directly.\n");
+	std::cout << get_version_string() << std::endl;
+	std::cout << "Usage:" << std::endl;
+	std::cout << " -h                         Show this help." << std::endl;
+	std::cout << " --help                     Show this help." << std::endl;
+	std::cout << " -f <file>                  Load a configuration file." << std::endl;
+	std::cout << " -config=<file>             Load a configuration file." << std::endl;
+	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image." << std::endl;
+	std::cout << " -statefile=<file>          Load a save state file." << std::endl;
+	std::cout << " -s <config param>=<value>  Set the configuration parameter with value." << std::endl;
+	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
+	std::cout << "\nAdditional options:" << std::endl;
+	std::cout << " -0 <filename>              Set adf for drive 0." << std::endl;
+	std::cout << " -1 <filename>              Set adf for drive 1." << std::endl;
+	std::cout << " -2 <filename>              Set adf for drive 2." << std::endl;
+	std::cout << " -3 <filename>              Set adf for drive 3." << std::endl;
+	std::cout << " -r <filename>              Set kickstart rom file." << std::endl;
+	std::cout << " -G                         Start directly into emulation." << std::endl;
+	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
+	std::cout << " -F <value>                 Size of fast memory (in number of 1024 KBytes chunks)." << std::endl;
+	std::cout << "\nNote:" << std::endl;
+	std::cout << "Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used." << std::endl;
+	std::cout << "File names should be with absolute path." << std::endl;
+	std::cout << "\nExample:" << std::endl;
+	std::cout << "amiberry -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no" << std::endl;
+	std::cout << "It will load A500.uae configuration with the save state named game." << std::endl;
+	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
 	exit(1);
 }
 
@@ -798,7 +798,7 @@ void check_error_sdl(const bool check, const char* message)
 {
 	if (check)
 	{
-		cout << message << " " << SDL_GetError() << endl;
+		std::cout << message << " " << SDL_GetError() << std::endl;
 		SDL_Quit();
 		exit(-1);
 	}

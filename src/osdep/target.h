@@ -7,7 +7,7 @@
 #pragma once
 #include <SDL.h>
 
-#define TARGET_NAME "amiberry"
+#define TARGET_NAME _T("Amiberry")
 
 #define NO_MAIN_IN_MAIN_C
 
@@ -19,11 +19,13 @@
 
 #define MAKEBD(x,y,z) ((((x) - 2000) * 10000 + (y)) * 100 + (z))
 #define GETBDY(x) ((x) / 1000000 + 2000)
-#define GETBDM(x) (((x) - ((x / 10000) * 10000)) / 100)
+#define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
+#define AMIBERRYVERSION _T("v3.0.4 (2019-12-01)")
+#define AMIBERRYDATE MAKEBD(2019, 12, 01)
 
-#define AMIBERRYDATE MAKEBD(2019, 5, 17)
+extern std::string get_version_string();
 
 STATIC_INLINE FILE *uae_tfopen(const TCHAR *path, const TCHAR *mode)
 {
