@@ -146,7 +146,7 @@ extern void expansion_clear (void);
 extern uaecptr expansion_startaddress(struct uae_prefs*, uaecptr addr, uae_u32 size);
 extern void expansion_scan_autoconfig(struct uae_prefs*, bool);
 extern void expansion_generate_autoconfig_info(struct uae_prefs *p);
-extern struct autoconfig_info *expansion_get_autoconfig_by_address(struct uae_prefs *p, uaecptr addr);
+extern struct autoconfig_info* expansion_get_autoconfig_by_address(struct uae_prefs* p, uaecptr addr, int index);
 extern void expansion_map(void);
 
 extern void uaegfx_install_code (uaecptr);
