@@ -1844,6 +1844,7 @@ static void toscr_1 (int nbits, int fm)
 
 	out_nbits += nbits;
 	if (out_nbits == 32) {
+		if (out_offs < MAX_WORDS_PER_LINE / 4) {
 		int i;
 		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
 		for (i = 0; i < thisline_decision.nr_planes; i++) {
@@ -1856,6 +1857,7 @@ static void toscr_1 (int nbits, int fm)
 			dataptr += MAX_WORDS_PER_LINE * 2;
 		}
 		out_offs++;
+		}
 		out_nbits = 0;
 	}
 }
@@ -1875,6 +1877,7 @@ static void toscr_1_hr(int nbits, int fm)
 
 	out_nbits += nbits;
 	if (out_nbits == 64) {
+		if (out_offs < MAX_WORDS_PER_LINE / 4 - 1) {
 		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
 		for (int i = 0; i < thisline_decision.nr_planes; i++) {
 			uae_u64 *dataptr64 = (uae_u64 *)dataptr;
@@ -1887,6 +1890,7 @@ static void toscr_1_hr(int nbits, int fm)
 			dataptr += MAX_WORDS_PER_LINE * 2;
 		}
 		out_offs += 2;
+		}
 		out_nbits = 0;
 	}
 }
@@ -1979,15 +1983,9 @@ static int flush_plane_data_n(int fm)
 		toscr_1(32 - out_nbits, fm);
 	}
 
-	i += 32;
-	toscr_1(16, fm);
-	toscr_1(16, fm);
-
-	if (fm == 2) {
-		/* flush AGA full 64-bit shift register + possible data in todisplay */
-		i += 32;
-		toscr_1(16, fm);
-		toscr_1(16, fm);
+	for (int j = 0; j < (fm == 2 ? 3 : 1); j++) {
+		if (out_offs >= MAX_WORDS_PER_LINE / 4 - 1)
+			break;
 		i += 32;
 		toscr_1(16, fm);
 		toscr_1(16, fm);
@@ -2010,10 +2008,12 @@ static int flush_plane_data_hr(int fm)
 		toscr_1_hr(64 - out_nbits, fm);
 	}
 
+	for (int j = 0; j < 4; j++) {
+		if (out_offs >= MAX_WORDS_PER_LINE / 4 - 1)
+			break;
 	toscr_1_hr(32, fm);
 	i += 32;
-	toscr_1_hr(32, fm);
-	i += 32;
+	}
 
 	int toshift = 32 << fm;
 	while (i < toshift) {
