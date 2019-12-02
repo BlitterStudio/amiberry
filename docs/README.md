@@ -96,7 +96,7 @@ For the Odroid XU4
 
 For the ASUS Tinker board
 
-      make -j6 PLATFORM=RK3328
+      make -j6 PLATFORM=RK3288
 
 For the Odroid C1
 
