@@ -2238,8 +2238,10 @@ void expansion_generate_autoconfig_info(struct uae_prefs *p)
 	expansion_scan_autoconfig(p, true);
 }
 
-struct autoconfig_info *expansion_get_autoconfig_by_address(struct uae_prefs *p, uaecptr addr)
+struct autoconfig_info* expansion_get_autoconfig_by_address(struct uae_prefs* p, uaecptr addr, int index)
 {
+	if (index >= cardno)
+		return NULL;
 	for (int i = 0; i < cardno; i++) {
 		struct card_data *cd = cards[i];
 		if (addr >= cd->base && addr < cd->base + cd->size)

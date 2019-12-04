@@ -874,6 +874,9 @@ void show_screen(int mode)
 			++current_vsync_frame;
 		}
 	}
+
+	if (currprefs.gfx_framerate == 2)
+		current_vsync_frame++;
 	
 #endif
 

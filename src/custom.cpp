@@ -1863,6 +1863,7 @@ static void toscr_1 (int nbits, int fm)
 
 	out_nbits += nbits;
 	if (out_nbits == 32) {
+		if (out_offs < MAX_WORDS_PER_LINE / 4) {
 		int i;
 		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
 		for (i = 0; i < thisline_decision.nr_planes; i++) {
@@ -1875,6 +1876,7 @@ static void toscr_1 (int nbits, int fm)
 			dataptr += MAX_WORDS_PER_LINE * 2;
 		}
 		out_offs++;
+		}
 		out_nbits = 0;
 	}
 }
@@ -1894,6 +1896,7 @@ static void toscr_1_hr(int nbits, int fm)
 
 	out_nbits += nbits;
 	if (out_nbits == 64) {
+		if (out_offs < MAX_WORDS_PER_LINE / 4 - 1) {
 		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
 		for (int i = 0; i < thisline_decision.nr_planes; i++) {
 			uae_u64 *dataptr64 = (uae_u64 *)dataptr;
@@ -1906,6 +1909,7 @@ static void toscr_1_hr(int nbits, int fm)
 			dataptr += MAX_WORDS_PER_LINE * 2;
 		}
 		out_offs += 2;
+		}
 		out_nbits = 0;
 	}
 }
@@ -1998,15 +2002,9 @@ static int flush_plane_data_n(int fm)
 		toscr_1(32 - out_nbits, fm);
 	}
 
-	i += 32;
-	toscr_1(16, fm);
-	toscr_1(16, fm);
-
-	if (fm == 2) {
-		/* flush AGA full 64-bit shift register + possible data in todisplay */
-		i += 32;
-		toscr_1(16, fm);
-		toscr_1(16, fm);
+	for (int j = 0; j < (fm == 2 ? 3 : 1); j++) {
+		if (out_offs >= MAX_WORDS_PER_LINE / 4 - 1)
+			break;
 		i += 32;
 		toscr_1(16, fm);
 		toscr_1(16, fm);
@@ -2029,10 +2027,12 @@ static int flush_plane_data_hr(int fm)
 		toscr_1_hr(64 - out_nbits, fm);
 	}
 
+	for (int j = 0; j < 4; j++) {
+		if (out_offs >= MAX_WORDS_PER_LINE / 4 - 1)
+			break;
 	toscr_1_hr(32, fm);
 	i += 32;
-	toscr_1_hr(32, fm);
-	i += 32;
+	}
 
 	int toshift = 32 << fm;
 	while (i < toshift) {
@@ -7234,7 +7234,7 @@ static void do_sprites_1(int num, int cycle, int hpos)
 		posctl = 1;
 		if (dma) {
 			uae_u32 data321, data322;
-			sprite_fetch_full(s, hpos, cycle, true, &data, &data321, &data322);
+			sprite_fetch_full(s, hpos, cycle, false, &data, &data321, &data322);
 			//write_log (_T("%d:%d: %04X=%04X\n"), vpos, hpos, 0x140 + cycle * 2 + num * 8, data);
 			if (cycle == 0) {
 				if (start_before_dma && s->armed) {
@@ -7259,7 +7259,7 @@ static void do_sprites_1(int num, int cycle, int hpos)
 	}
 	if (s->dmastate && !posctl && dma) {
 		uae_u32 data321, data322;
-		sprite_fetch_full(s, hpos, cycle, false, &data, &data321, &data322);
+		sprite_fetch_full(s, hpos, cycle, true, &data, &data321, &data322);
 		if (cycle == 0) {
 			// if xpos is earlier than this cycle, decide it first.
 			if (start_before_dma) {

@@ -64,6 +64,14 @@ int action_replay_button = SDLK_PAUSE;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
+std::string get_version_string()
+{
+	std::string label_text = TARGET_NAME;
+	label_text += " ";
+	label_text += AMIBERRYVERSION;
+	return label_text;
+}
+
 void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)

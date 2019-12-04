@@ -22,6 +22,10 @@ If you want to compile Amiberry from source, you'll need the `-dev` version of t
 
       sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
 
+On the Raspberry Pi, if you're not running Raspbian you'll also need this:
+
+      sudo apt-get install libraspberrypi-dev
+
 # Getting Amiberry
 
 The latest stable releases come with binaries, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area.
@@ -92,7 +96,7 @@ For the Odroid XU4
 
 For the ASUS Tinker board
 
-      make -j6 PLATFORM=tinker
+      make -j6 PLATFORM=RK3288
 
 For the Odroid C1
 

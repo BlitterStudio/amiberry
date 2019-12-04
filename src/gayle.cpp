@@ -1361,14 +1361,32 @@ static void gayle_map_pcmcia (void)
 {
 	if (currprefs.cs_pcmcia == 0)
 		return;
-	struct autoconfig_info *aci = expansion_get_autoconfig_by_address(&currprefs, 6 * 1024 * 1024);
+	int idx = 0;
+	bool pcmcia_override = false;
+	while (!pcmcia_override) {
+		int cnt = 0;
+		for (int i = 0; i < 8; i++) {
+			struct autoconfig_info* aci = expansion_get_autoconfig_by_address(&currprefs, 6 * 1024 * 1024 + i * 512 * 1024, idx);
+			if (aci) {
+				if (aci->zorro > 0) {
+					pcmcia_override = true;
+				}
+			}
+			else {
+				cnt++;
+			}
+		}
+		if (cnt >= 8)
+			break;
+		idx++;
+	}
 	if (pcmcia_card == 0 || (gayle_cs & GAYLE_CS_DIS)) {
 		map_banks_cond (&dummy_bank, 0xa0, 8, 0);
-		if (currprefs.chipmem_size <= 4 * 1024 * 1024 && (!aci || aci->zorro == 0))
+		if (currprefs.chipmem_size <= 4 * 1024 * 1024 && !pcmcia_override)
 			map_banks_cond (&dummy_bank, PCMCIA_COMMON_START >> 16, PCMCIA_COMMON_SIZE >> 16, 0);
 	} else {
 		map_banks_cond (&gayle_attr_bank, 0xa0, 8, 0);
-		if (currprefs.chipmem_size <= 4 * 1024 * 1024 && (!aci || aci->zorro == 0))
+		if (currprefs.chipmem_size <= 4 * 1024 * 1024 && !pcmcia_override)
 			map_banks_cond (&gayle_common_bank, PCMCIA_COMMON_START >> 16, PCMCIA_COMMON_SIZE >> 16, 0);
 	}
 }
