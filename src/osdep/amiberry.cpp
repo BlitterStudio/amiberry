@@ -738,10 +738,10 @@ int check_configfile(char *file)
 	return 0;
 }
 
-void extractFileName(const char * str, char *buffer)
+void extractFileName(const char* str, char* buffer)
 {
 	auto p = str + strlen(str) - 1;
-	while (*p != '/' && p > str)
+	while (*p != '/' && p >= str)
 		p--;
 	p++;
 	strncpy(buffer, p, MAX_DPATH - 1);
@@ -751,7 +751,7 @@ void extractPath(char *str, char *buffer)
 {
 	strncpy(buffer, str, MAX_DPATH - 1);
 	auto p = buffer + strlen(buffer) - 1;
-	while (*p != '/' && p > buffer)
+	while (*p != '/' && p >= buffer)
 		p--;
 	p[1] = '\0';
 }
@@ -759,7 +759,7 @@ void extractPath(char *str, char *buffer)
 void removeFileExtension(char *filename)
 {
 	auto p = filename + strlen(filename) - 1;
-	while (p > filename && *p != '.')
+	while (p >= filename && *p != '.')
 	{
 		*p = '\0';
 		--p;
