@@ -66,9 +66,7 @@ int fullscreen_key = 0;
 
 std::string get_version_string()
 {
-	std::string label_text = TARGET_NAME;
-	label_text += " ";
-	label_text += AMIBERRYVERSION;
+	std::string label_text = AMIBERRYVERSION;
 	return label_text;
 }
 

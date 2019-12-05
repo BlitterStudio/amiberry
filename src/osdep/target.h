@@ -7,7 +7,7 @@
 #pragma once
 #include <SDL.h>
 
-#define TARGET_NAME _T("Amiberry")
+#define TARGET_NAME _T("amiberry")
 
 #define NO_MAIN_IN_MAIN_C
 
@@ -22,7 +22,7 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("v3.0.6 (2019-12-05)")
+#define AMIBERRYVERSION _T("Amiberry v3.0.7 (2019-12-05)")
 #define AMIBERRYDATE MAKEBD(2019, 12, 01)
 
 extern std::string get_version_string();
