@@ -3434,15 +3434,6 @@ static void record_register_change (int hpos, int regno, uae_u16 value)
 
 typedef int sprbuf_res_t, cclockres_t, hwres_t,	bplres_t;
 
-#define DO_PLAYFIELD_COLLISIONS \
-{ \
-   if (!clxcon_bpl_enable) \
-      clxdat |= 1; \
-   else \
-      if (!(clxdat & 1)) \
-         do_playfield_collisions (); \
-}
-
 /* handle very rarely needed playfield collision (CLXDAT bit 0) */
 /* only known game needing this is Rotor */
 static void do_playfield_collisions (void)
@@ -3458,13 +3449,13 @@ static void do_playfield_collisions (void)
 	int planes = 6;
 #endif
 
-	//if (clxcon_bpl_enable == 0) {
-	//	clxdat |= 1;
-	//	return;
-	//}
-	//// collision bit already set?
-	//if (clxdat & 1)
-	//	return;
+	if (clxcon_bpl_enable == 0) {
+		clxdat |= 1;
+		return;
+	}
+	// collision bit already set?
+	if (clxdat & 1)
+		return;
 
 	collided = 0;
 	minpos = thisline_decision.plfleft * 2;
@@ -3499,15 +3490,6 @@ static void do_playfield_collisions (void)
 		clxdat |= 1;
 }
 
-#define DO_SPRITE_COLLISIONS \
-{ \
-  if (clxcon_bpl_enable == 0 && !curr_drawinfo[next_lineno].nr_sprites) { \
-    /* all sprite to bitplane collision bits already set? */ \
-    if ((clxdat & 0x1fe) != 0x1fe) \
-      do_sprite_collisions (); \
-  } \
-}
-
 /* Sprite-to-sprite collisions are taken care of in record_sprite.  This one does
 playfield/sprite collisions. */
 static void do_sprite_collisions (void)
@@ -3520,11 +3502,11 @@ static void do_sprite_collisions (void)
 	hwres_t hw_diwlast = coord_window_to_diw_x (thisline_decision.diwlastword);
 	hwres_t hw_diwfirst = coord_window_to_diw_x (thisline_decision.diwfirstword);
 
-	//if (clxcon_bpl_enable == 0 && !nr_sprites)
-	//	return;
-	//// all sprite to bitplane collision bits already set?
-	//if ((clxdat & 0x1fe) == 0x1fe)
-	//	return;
+	if (clxcon_bpl_enable == 0 && !nr_sprites)
+		return;
+	// all sprite to bitplane collision bits already set?
+	if ((clxdat & 0x1fe) == 0x1fe)
+		return;
 
 	for (int i = 0; i < nr_sprites; i++) {
 		struct sprite_entry *e = curr_sprite_entries + first + i;
@@ -8099,9 +8081,9 @@ static void hsync_handler_pre (bool onvsync)
 		finish_decisions ();
 		if (thisline_decision.plfleft >= 0) {
 			if (currprefs.collision_level > 1)
-				DO_SPRITE_COLLISIONS
+				do_sprite_collisions();
 			if (currprefs.collision_level > 2)
-				DO_PLAYFIELD_COLLISIONS
+				do_playfield_collisions();
 		}
 		hsync_record_line_state (next_lineno, nextline_how, thisline_changed);
 
