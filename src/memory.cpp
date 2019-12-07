@@ -57,6 +57,9 @@ static bool canjit (void)
 		return false;
 	return true;
 }
+#ifdef DEBUG
+bool jit_direct_compatible_memory = false ;
+#endif
 static bool needmman (void)
 {
 	if (!jit_direct_compatible_memory)
