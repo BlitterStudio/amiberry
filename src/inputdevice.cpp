@@ -110,9 +110,6 @@ static int bouncy;
 static signed long bouncy_cycles;
 static int autopause;
 
-int input_default_mouse_speed = 100 ;
-int input_keyboard_as_joystick_stop_keypresses = 0 ;
-
 #define HANDLE_IE_FLAG_CANSTOPPLAYBACK 1
 #define HANDLE_IE_FLAG_PLAYBACKEVENT 2
 #define HANDLE_IE_FLAG_AUTOFIRE 4

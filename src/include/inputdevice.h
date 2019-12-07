@@ -58,11 +58,6 @@ extern struct inputdevice_functions inputdevicefunc_joystick;
 extern struct inputdevice_functions inputdevicefunc_mouse;
 extern struct inputdevice_functions inputdevicefunc_keyboard;
 extern int pause_emulation;
-extern int num_keys_as_joys;
-extern int input_default_mouse_speed ;
-extern int input_keyboard_as_joystick_stop_keypresses ;
-
-extern bool KeyUsedInPluggedInRetroarchJoystick(int scancode) ;
 
 struct uae_input_device_default_node
 {
@@ -399,9 +394,9 @@ struct host_input_button {
 
 	int lstick_button;
 	int lstick_axis_y;
-        bool lstick_axis_y_invert;
+	bool lstick_axis_y_invert;
 	int lstick_axis_x;
-        bool lstick_axis_x_invert;
+	bool lstick_axis_x_invert;
 	int lstick_left;
 	int lstick_right;
 	int lstick_up;
@@ -409,9 +404,9 @@ struct host_input_button {
 
 	int rstick_button;
 	int rstick_axis_y;
-        bool rstick_axis_y_invert;
+	bool rstick_axis_y_invert;
 	int rstick_axis_x;
-        bool rstick_axis_x_invert;
+	bool rstick_axis_x_invert;
 	int rstick_left;
 	int rstick_right;
 	int rstick_up;
@@ -446,7 +441,7 @@ struct host_keyboard_button {
 	int start_button;
 	int lstick_button;
 	int rstick_button;
-	
+
 	int hotkey_button;
 	int quit_button;
 	int menu_button;
@@ -457,6 +452,11 @@ struct host_keyboard_button {
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 extern int multipler_maps[MAX_JPORTS];
 extern int find_in_array(const int arr[], int n, int key);
+extern int num_keys_as_joys;
+extern int input_default_mouse_speed;
+extern int input_keyboard_as_joystick_stop_keypresses;
+
+extern bool key_used_by_retroarch_joy(int scancode);
 #endif
 
 #endif /* UAE_INPUTDEVICE_H */
