@@ -1229,70 +1229,73 @@ static void read_joystick()
 				held_offset = 0;
 			}
 
-			auto val = 0;
-
-			// this should allow use to change the tolerance
-			auto lower_bound = -32767;
-			auto upper_bound = 32767;
-
-			// left stick   
-			if (!currprefs.input_analog_remap)
+			if (SDL_JoystickNumAxes(joysticktable[hostjoyid]) > 0)
 			{
-				// handle the X axis  (left stick)
-				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
-				if (current_controller_map.lstick_axis_x_invert != 0)
+				int val;
+
+				// this should allow use to change the tolerance
+				const auto lower_bound = -32767;
+				const auto upper_bound = 32767;
+
+				// left stick   
+				if (!currprefs.input_analog_remap)
+				{
+					// handle the X axis  (left stick)
+					val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
+					if (current_controller_map.lstick_axis_x_invert != 0)
+						val = val * -1;
+
+					setjoystickstate(hostjoyid + joy_offset, 0, val, upper_bound);
+
+					// handle the Y axis   
+					val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
+					if (current_controller_map.lstick_axis_y_invert != 0)
+						val = val * -1;
+					
+					setjoystickstate(hostjoyid + joy_offset, 1, val, upper_bound);
+				}
+
+				else
+				{
+					// alternative code for custom remapping the left stick  
+					// handle the Y axis  (left stick)
+					setjoybuttonstate(hostjoyid + joy_offset, 7 + held_offset,
+					                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) <=
+					                  lower_bound
+						                  ? 1
+						                  : 0);
+					setjoybuttonstate(hostjoyid + joy_offset, 8 + held_offset,
+					                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) >=
+					                  upper_bound
+						                  ? 1
+						                  : 0);
+					// handle the X axis  
+					setjoybuttonstate(hostjoyid + joy_offset, 9 + held_offset,
+					                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) <=
+					                  lower_bound
+						                  ? 1
+						                  : 0);
+					setjoybuttonstate(hostjoyid + joy_offset, 10 + held_offset,
+					                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) >=
+					                  upper_bound
+						                  ? 1
+						                  : 0);
+				}
+
+				// right stick
+				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);
+				if (current_controller_map.rstick_axis_x_invert != 0)
 					val = val * -1;
 
-				setjoystickstate(hostjoyid + joy_offset, 0, val, upper_bound);
+				setjoystickstate(hostjoyid + joy_offset, 2, val, upper_bound);
 
-				// handle the Y axis   
-				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
-				if (current_controller_map.lstick_axis_y_invert != 0)
+				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
+				if (current_controller_map.rstick_axis_y_invert != 0)
 					val = val * -1;
 
-				setjoystickstate(hostjoyid + joy_offset, 1, val, upper_bound);
+				setjoystickstate(hostjoyid + joy_offset, 3, val, upper_bound);
 			}
-
-			else
-			{
-				// alternative code for custom remapping the left stick  
-				// handle the Y axis  (left stick)
-				setjoybuttonstate(hostjoyid + joy_offset, 7 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) <=
-				                  lower_bound
-					                  ? 1
-					                  : 0);
-				setjoybuttonstate(hostjoyid + joy_offset, 8 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y) >=
-				                  upper_bound
-					                  ? 1
-					                  : 0);
-				// handle the X axis  
-				setjoybuttonstate(hostjoyid + joy_offset, 9 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) <=
-				                  lower_bound
-					                  ? 1
-					                  : 0);
-				setjoybuttonstate(hostjoyid + joy_offset, 10 + held_offset,
-				                  SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x) >=
-				                  upper_bound
-					                  ? 1
-					                  : 0);
-			}
-
-			// right stick
-			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);
-			if (current_controller_map.rstick_axis_x_invert != 0)
-				val = val * -1;
-
-			setjoystickstate(hostjoyid + joy_offset, 2, val, upper_bound);
-
-			val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
-			if (current_controller_map.rstick_axis_y_invert != 0)
-				val = val * -1;
-
-			setjoystickstate(hostjoyid + joy_offset, 3, val, upper_bound);
-
+		
 			// cd32 red, blue, green, yellow
 			// south 
 			setjoybuttonstate(hostjoyid + joy_offset, 0 + held_offset,
