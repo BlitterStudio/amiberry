@@ -1,3 +1,5 @@
+[![Gitter](https://badges.gitter.im/amiberry/Amiberry.svg)](https://gitter.im/amiberry/Amiberry?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 <img src="resources/icon.png" align="right" />
 
 # Amiga emulator for the Raspberry Pi and other ARM SoC
