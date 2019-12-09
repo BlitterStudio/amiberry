@@ -1845,9 +1845,8 @@ static void toscr_1 (int nbits, int fm)
 	out_nbits += nbits;
 	if (out_nbits == 32) {
 		if (out_offs < MAX_WORDS_PER_LINE / 4) {
-		int i;
 		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
-		for (i = 0; i < thisline_decision.nr_planes; i++) {
+		for (int i = 0; i < thisline_decision.nr_planes; i++) {
 			uae_u32 *dataptr32 = (uae_u32 *)dataptr;
 			if (*dataptr32 != outword[i]) {
 				thisline_changed = 1;
@@ -1877,7 +1876,7 @@ static void toscr_1_hr(int nbits, int fm)
 
 	out_nbits += nbits;
 	if (out_nbits == 64) {
-		if (out_offs < MAX_WORDS_PER_LINE / 4 - 1) {
+		if (out_offs < MAX_WORDS_PER_LINE * 2 / 4 - 1) {
 		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
 		for (int i = 0; i < thisline_decision.nr_planes; i++) {
 			uae_u64 *dataptr64 = (uae_u64 *)dataptr;
@@ -1984,8 +1983,6 @@ static int flush_plane_data_n(int fm)
 	}
 
 	for (int j = 0; j < (fm == 2 ? 3 : 1); j++) {
-		if (out_offs >= MAX_WORDS_PER_LINE / 4 - 1)
-			break;
 		i += 32;
 		toscr_1(16, fm);
 		toscr_1(16, fm);
@@ -2009,8 +2006,6 @@ static int flush_plane_data_hr(int fm)
 	}
 
 	for (int j = 0; j < 4; j++) {
-		if (out_offs >= MAX_WORDS_PER_LINE / 4 - 1)
-			break;
 	toscr_1_hr(32, fm);
 	i += 32;
 	}
