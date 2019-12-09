@@ -729,7 +729,16 @@ static int init_joystick()
 	for (auto cpt = 0; cpt < nr_joysticks; cpt++)
 	{
 		joysticktable[cpt] = SDL_JoystickOpen(cpt);
-
+		if (SDL_JoystickNumAxes(joysticktable[cpt]) == 0 
+			&& SDL_JoystickNumButtons(joysticktable[cpt]) == 0) 
+		{
+			if (SDL_JoystickNameForIndex(cpt) != nullptr)
+				strncpy(joystick_name[cpt], SDL_JoystickNameForIndex(cpt), sizeof joystick_name[cpt] - 1);
+			write_log("Controller %s has no Axes or Buttons - Skipping... \n", joystick_name[cpt]);
+			SDL_JoystickClose(joysticktable[cpt]);
+			joysticktable[cpt] = nullptr;
+		}
+		
 		if (joysticktable[cpt] != nullptr)
 		{
 			if (SDL_JoystickNameForIndex(cpt) != nullptr)
@@ -867,7 +876,8 @@ static void close_joystick()
 {
 	for (auto cpt = 0; cpt < nr_joysticks; cpt++)
 	{
-		SDL_JoystickClose(joysticktable[cpt]);
+		if (joysticktable[cpt] != nullptr)
+			SDL_JoystickClose(joysticktable[cpt]);
 	}
 	nr_joysticks = 0;
 }
