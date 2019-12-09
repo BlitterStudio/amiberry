@@ -1833,7 +1833,31 @@ static void akiko_cdrom_free (void)
 	sector_buffer_info_2 = 0;
 }
 
-void akiko_reset (int hardreset)
+static int akiko_thread_do(int start)
+{
+	if (!start) {
+		if (akiko_thread_running > 0) {
+			cdaudiostop();
+			akiko_thread_running = 0;
+			while (akiko_thread_running == 0)
+				sleep_millis(10);
+			akiko_thread_running = 0;
+			destroy_comm_pipe(&requests);
+			return 1;
+		}
+	}
+	else {
+		if (!akiko_thread_running) {
+			akiko_thread_running = 1;
+			init_comm_pipe(&requests, 100, 1);
+			uae_start_thread(_T("akiko"), akiko_thread, 0, nullptr);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static void akiko_reset (int hardreset)
 {
 	cdaudiostop_do ();
 	nvram_read ();
@@ -1850,6 +1874,7 @@ void akiko_reset (int hardreset)
 		cdrom_intreq = CDINTERRUPT_SUBCODE;
 		cdrom_subcodeoffset = 0xc2;
 		cdrom_intena = 0;
+		cdrom_flags = 0;
 	}
 	cdrom_led = 0;
 	cdrom_receive_length = 0;
@@ -1870,8 +1895,10 @@ void akiko_reset (int hardreset)
 
 static void akiko_free(void)
 {
-	akiko_reset(1);
+	akiko_thread_do(0);
 	akiko_cdrom_free();
+	mediacheckcounter = 0;
+	akiko_inited = false;
 }
 
 int akiko_init (void)
@@ -1898,11 +1925,7 @@ int akiko_init (void)
 		cdrom_data_offset = -1;
 	}
 	patchrom ();
-	if (!akiko_thread_running) {
-		akiko_thread_running = 1;
-		init_comm_pipe (&requests, 100, 1);
-		uae_start_thread (_T("akiko"), akiko_thread, 0, NULL);
-	}
+	akiko_thread_do(1);
 	gui_flicker_led (LED_HD, 0, -1);
 	akiko_inited = true;
 

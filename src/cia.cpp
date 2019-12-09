@@ -1116,13 +1116,6 @@ void CIA_reset(void)
 			map_overlay(oldovl ? 0 : 1);
 		}
 	}
-#ifdef CD32
-	if (!isrestore()) {
-		akiko_reset(1);
-		if (!akiko_init())
-			currprefs.cs_cd32cd = changed_prefs.cs_cd32cd = 0;
-	}
-#endif
 }
 
 /* CIA memory access */
