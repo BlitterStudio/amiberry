@@ -191,21 +191,38 @@ void getchsgeometry (uae_u64 size, int *pcyl, int *phead, int *psectorspertrack)
 	getchsgeometry2 (size, pcyl, phead, psectorspertrack, 0);
 }
 
+// partition hdf default
+void gethdfgeometry(uae_u64 size, struct uaedev_config_info* ci)
+{
+	int head = 1;
+	int sectorspertrack = 32;
+	if (size >= 1048576000) { // >=1000M
+		head = 16;
+		while ((size / 512) / ((uae_u64)head * sectorspertrack) >= 32768 && sectorspertrack < 32768) {
+			sectorspertrack *= 2;
+		}
+	}
+	ci->surfaces = head;
+	ci->sectors = sectorspertrack;
+	ci->reserved = 2;
+	ci->blocksize = 512;
+}
+
 void getchspgeometry (uae_u64 total, int *pcyl, int *phead, int *psectorspertrack, bool idegeometry)
 {
 	uae_u64 blocks = total / 512;
 
-	if (blocks > 16515072) {
-		/* >8G, CHS=16383/16/63 */
-		*pcyl = 16383;
-		*phead = 16;
-		*psectorspertrack = 63;
-		return;
-	}
 	if (idegeometry) {
 		*phead = 16;
 		*psectorspertrack = 63;
 		*pcyl = blocks / ((*psectorspertrack) * (*phead));
+		if (blocks > 16515072) {
+			/* >8G, CHS=16383/16/63 */
+			*pcyl = 16383;
+			*phead = 16;
+			*psectorspertrack = 63;
+			return;
+		}
 		return;
 	}
 	getchsgeometry (total, pcyl, phead, psectorspertrack);
