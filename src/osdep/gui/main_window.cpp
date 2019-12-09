@@ -664,7 +664,7 @@ void checkInput()
 						break;
 					}
 				}
-			}			
+			}
 			break;
 
 		case SDL_KEYDOWN:
@@ -778,18 +778,24 @@ void checkInput()
 
 void amiberry_gui_run()
 {
-	if (gui_joystick_control && SDL_NumJoysticks() > 0)
+	if (gui_joystick_control)
 	{
-		gui_joystick = SDL_JoystickOpen(0);
-		// Some joysticks have no axes or buttons (e.g. Wii Remote IR), skip those
-		if (SDL_JoystickNumAxes(gui_joystick) > 0 && SDL_JoystickNumButtons(gui_joystick) > 0) 
+		const auto available_joysticks = SDL_NumJoysticks();
+		if (available_joysticks > 0)
 		{
-			joypad_axis_state.assign(SDL_JoystickNumAxes(gui_joystick), 0);
-		}
-		else 
-		{
-			SDL_JoystickClose(gui_joystick);
-			gui_joystick = nullptr;
+			for (auto j = 0; j <= available_joysticks; j++)
+			{
+				gui_joystick = SDL_JoystickOpen(j);
+				// Some joysticks have no axes or buttons (e.g. Wii Remote IR), skip those
+				if (SDL_JoystickNumAxes(gui_joystick) > 0 && SDL_JoystickNumButtons(gui_joystick) > 0)
+				{
+					joypad_axis_state.assign(SDL_JoystickNumAxes(gui_joystick), 0);
+					break;
+				}
+
+				SDL_JoystickClose(gui_joystick);
+				gui_joystick = nullptr;
+			}
 		}
 	}
 
