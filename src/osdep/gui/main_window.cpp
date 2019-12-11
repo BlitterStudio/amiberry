@@ -615,51 +615,54 @@ void checkInput()
 			break;
 
 		case SDL_JOYAXISMOTION:
-			// Deadzone
-			if (std::abs(gui_event.jaxis.value) >= 10000 || std::abs(gui_event.jaxis.value) <= 5000)
+			if (gui_joystick)
 			{
-				int axis_state = 0;
-				int axis = gui_event.jaxis.axis;
-				int value = gui_event.jaxis.value;
-				if (std::abs(value) < 10000)
-					axis_state = 0;
-				else
-					axis_state = value > 0 ? 1 : -1;
+				// Deadzone
+				if (std::abs(gui_event.jaxis.value) >= 10000 || std::abs(gui_event.jaxis.value) <= 5000)
+				{
+					int axis_state = 0;
+					int axis = gui_event.jaxis.axis;
+					int value = gui_event.jaxis.value;
+					if (std::abs(value) < 10000)
+						axis_state = 0;
+					else
+						axis_state = value > 0 ? 1 : -1;
 
-				if (joypad_axis_state[axis] == axis_state)
-				{
-					// ignore repeated axis movement state
-					break;
-				}
-				joypad_axis_state[axis] = axis_state;
+					if (joypad_axis_state[axis] == axis_state)
+					{
+						// ignore repeated axis movement state
+						break;
+					}
+					joypad_axis_state[axis] = axis_state;
 
-				if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == -1)
-				{
-					if (HandleNavigation(DIRECTION_UP))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_UP);
-					break;
-				}
-				if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == 1)
-				{
-					if (HandleNavigation(DIRECTION_DOWN))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_DOWN);
-					break;
-				}
-				if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == 1)
-				{
-					if (HandleNavigation(DIRECTION_RIGHT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_RIGHT);
-					break;
-				}
-				if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == -1)
-				{
-					if (HandleNavigation(DIRECTION_LEFT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					PushFakeKey(SDLK_LEFT);
-					break;
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == -1)
+					{
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_y) == 1)
+					{
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == 1)
+					{
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_RIGHT);
+						break;
+					}
+					if (get_joypad_axis_state(host_input_buttons[0].lstick_axis_x) == -1)
+					{
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_LEFT);
+						break;
+					}
 				}
 			}
 			break;
@@ -775,10 +778,25 @@ void checkInput()
 
 void amiberry_gui_run()
 {
-	if (gui_joystick_control && SDL_NumJoysticks() > 0)
+	if (gui_joystick_control)
 	{
-		gui_joystick = SDL_JoystickOpen(0);
-		joypad_axis_state.assign(SDL_JoystickNumAxes(gui_joystick), 0);
+		const auto available_joysticks = SDL_NumJoysticks();
+		if (available_joysticks > 0)
+		{
+			for (auto j = 0; j <= available_joysticks; j++)
+			{
+				gui_joystick = SDL_JoystickOpen(j);
+				// Some joysticks have no axes or buttons (e.g. Wii Remote IR), skip those
+				if (SDL_JoystickNumAxes(gui_joystick) > 0 && SDL_JoystickNumButtons(gui_joystick) > 0)
+				{
+					joypad_axis_state.assign(SDL_JoystickNumAxes(gui_joystick), 0);
+					break;
+				}
+
+				SDL_JoystickClose(gui_joystick);
+				gui_joystick = nullptr;
+			}
+		}
 	}
 
 	// Prepare the screen once

@@ -126,10 +126,8 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
     ifneq (,$(findstring AMLG12,$(PLATFORM)))
       ifneq (,$(findstring AMLG12B,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a73
-        NAME  = amiberry-AMLG12B
       else
         CPUFLAGS += -mcpu=cortex-a53
-        NAME  = amiberry-AMLG12A
       endif
     else ifneq (,$(findstring AMLGX,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a53
@@ -157,12 +155,18 @@ else ifeq ($(PLATFORM),sun8i)
     CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     HAVE_NEON = 1
-    NAME  = amiberry-sun8i
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
         MORE_CFLAGS += -fomit-frame-pointer
 	endif
+
+# LePotato Libre Computer
+else ifeq ($(PLATFORM),lePotato)
+   CPUFLAGS += -mcpu=cortex-a53 -mabi=lp64
+   CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+   AARCH64 = 1
+
 else
 $(error Unknown platform:$(PLATFORM))
 endif
