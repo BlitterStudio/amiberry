@@ -1157,89 +1157,119 @@ static void read_joystick()
 				if (!currprefs.input_analog_remap)
 				{
 					// handle the X axis  (left stick)
-					val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
-					if (current_controller_map.lstick_axis_x_invert != 0)
-						val = val * -1;
+					if (current_controller_map.lstick_axis_x != -1)
+					{
+						val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_x);
+						if (current_controller_map.lstick_axis_x_invert != 0)
+							val = val * -1;
 
-					setjoystickstate(hostjoyid + 1, 0, val, upper_bound);
+						setjoystickstate(hostjoyid + 1, 0, val, upper_bound);
+					}
 
-					// handle the Y axis   
-					val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
-					if (current_controller_map.lstick_axis_y_invert != 0)
-						val = val * -1;
+					// handle the Y axis
+					if (current_controller_map.lstick_axis_y != -1)
+					{
+						val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.lstick_axis_y);
+						if (current_controller_map.lstick_axis_y_invert != 0)
+							val = val * -1;
 
-					setjoystickstate(hostjoyid + 1, 1, val, upper_bound);
+						setjoystickstate(hostjoyid + 1, 1, val, upper_bound);
+					}
 				}
-
 				else
 				{
 					// alternative code for custom remapping the left stick  
 					// handle the Y axis  (left stick)
-					setjoybuttonstate(hostjoyid + 1, 7 + held_offset,
-					                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
-					                                      current_controller_map.lstick_axis_y) <=
-					                  lower_bound
-						                  ? 1
-						                  : 0);
-					setjoybuttonstate(hostjoyid + 1, 8 + held_offset,
-					                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
-					                                      current_controller_map.lstick_axis_y) >=
-					                  upper_bound
-						                  ? 1
-						                  : 0);
-					// handle the X axis  
-					setjoybuttonstate(hostjoyid + 1, 9 + held_offset,
-					                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
-					                                      current_controller_map.lstick_axis_x) <=
-					                  lower_bound
-						                  ? 1
-						                  : 0);
-					setjoybuttonstate(hostjoyid + 1, 10 + held_offset,
-					                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
-					                                      current_controller_map.lstick_axis_x) >=
-					                  upper_bound
-						                  ? 1
-						                  : 0);
+					if (current_controller_map.lstick_axis_y != -1)
+					{
+						setjoybuttonstate(hostjoyid + 1, 7 + held_offset,
+						                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
+						                                      current_controller_map.lstick_axis_y) <=
+						                  lower_bound
+							                  ? 1
+							                  : 0);
+						setjoybuttonstate(hostjoyid + 1, 8 + held_offset,
+						                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
+						                                      current_controller_map.lstick_axis_y) >=
+						                  upper_bound
+							                  ? 1
+							                  : 0);
+					}
+					// handle the X axis
+					if (current_controller_map.lstick_axis_x != -1)
+					{
+						setjoybuttonstate(hostjoyid + 1, 9 + held_offset,
+						                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
+						                                      current_controller_map.lstick_axis_x) <=
+						                  lower_bound
+							                  ? 1
+							                  : 0);
+						setjoybuttonstate(hostjoyid + 1, 10 + held_offset,
+						                  SDL_JoystickGetAxis(joysticktable[hostjoyid],
+						                                      current_controller_map.lstick_axis_x) >=
+						                  upper_bound
+							                  ? 1
+							                  : 0);
+					}
 				}
 
 				// right stick
-				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);
-				if (current_controller_map.rstick_axis_x_invert != 0)
-					val = val * -1;
+				if (current_controller_map.rstick_axis_x != -1)
+				{
+					val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_x);
+					if (current_controller_map.rstick_axis_x_invert != 0)
+						val = val * -1;
 
-				setjoystickstate(hostjoyid + 1, 2, val, upper_bound);
+					setjoystickstate(hostjoyid + 1, 2, val, upper_bound);
+				}
 
-				val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
-				if (current_controller_map.rstick_axis_y_invert != 0)
-					val = val * -1;
+				if (current_controller_map.rstick_axis_y != -1)
+				{
+					val = SDL_JoystickGetAxis(joysticktable[hostjoyid], current_controller_map.rstick_axis_y);
+					if (current_controller_map.rstick_axis_y_invert != 0)
+						val = val * -1;
 
-				setjoystickstate(hostjoyid + 1, 3, val, upper_bound);
+					setjoystickstate(hostjoyid + 1, 3, val, upper_bound);
+				}
 			}
 			// cd32 red, blue, green, yellow
-			// south 
-			setjoybuttonstate(hostjoyid + 1, 0 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.south_button) & 1);
-			// east                    
-			setjoybuttonstate(hostjoyid + 1, 1 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.east_button) & 1);
+			// south
+			if (current_controller_map.south_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 0 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.south_button) &
+				                  1);
+			// east
+			if (current_controller_map.east_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 1 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.east_button) &
+				                  1);
 			// west
-			setjoybuttonstate(hostjoyid + 1, 2 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.west_button) & 1);
+			if (current_controller_map.west_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 2 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.west_button) &
+				                  1);
 			// north
-			setjoybuttonstate(hostjoyid + 1, 3 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.north_button) & 1);
+			if (current_controller_map.north_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 3 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.north_button) &
+				                  1);
 
 			// cd32  rwd, ffw, start
-			setjoybuttonstate(hostjoyid + 1, 4 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid],
-			                                        current_controller_map.left_shoulder) & 1);
+			if (current_controller_map.left_shoulder != -1)
+				setjoybuttonstate(hostjoyid + 1, 4 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
+				                                        current_controller_map.left_shoulder) & 1);
 			// left shoulder
-			setjoybuttonstate(hostjoyid + 1, 5 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.right_shoulder) &
-			                  1);
+			if (current_controller_map.right_shoulder != -1)
+				setjoybuttonstate(hostjoyid + 1, 5 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
+				                                        current_controller_map.right_shoulder) &
+				                  1);
 			// right shoulder
-			setjoybuttonstate(hostjoyid + 1, 6 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.start_button) & 1);
+			if (current_controller_map.start_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 6 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.start_button) &
+				                  1);
 			// start
 
 			// up down left right
@@ -1268,19 +1298,21 @@ static void read_joystick()
 				                                                   : hat & SDL_HAT_RIGHT);
 
 			// stick left/right/select
-			setjoybuttonstate(hostjoyid + 1, 11 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid],
-			                                        current_controller_map.lstick_button) & 1);
 			// left stick
-			setjoybuttonstate(hostjoyid + 1, 12 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid],
-			                                        current_controller_map.rstick_button) & 1);
+			if (current_controller_map.lstick_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 11 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
+				                                        current_controller_map.lstick_button) & 1);
 			// right stick
-
-			setjoybuttonstate(hostjoyid + 1, 13 + held_offset,
-			                  SDL_JoystickGetButton(joysticktable[hostjoyid],
-			                                        current_controller_map.select_button) & 1);
+			if (current_controller_map.rstick_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 12 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
+				                                        current_controller_map.rstick_button) & 1);
 			// select button
+			if (current_controller_map.select_button != -1)
+				setjoybuttonstate(hostjoyid + 1, 13 + held_offset,
+				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
+				                                        current_controller_map.select_button) & 1);
 		}
 	}
 }
