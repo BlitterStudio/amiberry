@@ -38,7 +38,7 @@
 #include "devices.h"
 #include <map>
 
-extern FILE *debugfile;
+extern FILE* debugfile;
 int pause_emulation;
 int quickstart_start = 1;
 int quickstart_model = 0;
@@ -175,6 +175,7 @@ int sleep_millis_main(int ms)
 }
 
 static int pausemouseactive;
+
 void resumesoundpaused(void)
 {
 	resume_sound();
@@ -183,6 +184,7 @@ void resumesoundpaused(void)
 	ahi2_pause_sound(0);
 #endif
 }
+
 void setsoundpaused(void)
 {
 	pause_sound();
@@ -191,6 +193,7 @@ void setsoundpaused(void)
 	ahi2_pause_sound(1);
 #endif
 }
+
 bool resumepaused(int priority)
 {
 	//write_log (_T("resume %d (%d)\n"), priority, pause_emulation);
@@ -200,13 +203,15 @@ bool resumepaused(int priority)
 		return false;
 	devices_unpause();
 	resumesoundpaused();
-	if (pausemouseactive) {
+	if (pausemouseactive)
+	{
 		pausemouseactive = 0;
 	}
 	pause_emulation = 0;
 	setsystime();
 	return true;
 }
+
 bool setpaused(int priority)
 {
 	//write_log (_T("pause %d (%d)\n"), priority, pause_emulation);
@@ -227,14 +232,16 @@ void logging_init(void)
 		static int first;
 		char debugfilename[MAX_DPATH];
 
-		if (first > 1) {
+		if (first > 1)
+		{
 			write_log("***** RESTART *****\n");
 			return;
 		}
-		if (first == 1) {
+		if (first == 1)
+		{
 			if (debugfile)
 				fclose(debugfile);
-			debugfile = 0;
+			debugfile = nullptr;
 		}
 
 		sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
@@ -254,13 +261,13 @@ void logging_cleanup(void)
 }
 
 
-void stripslashes(TCHAR *p)
+void stripslashes(TCHAR* p)
 {
 	while (_tcslen(p) > 0 && (p[_tcslen(p) - 1] == '\\' || p[_tcslen(p) - 1] == '/'))
 		p[_tcslen(p) - 1] = 0;
 }
 
-void fixtrailing(TCHAR *p)
+void fixtrailing(TCHAR* p)
 {
 	if (_tcslen(p) == 0)
 		return;
@@ -269,14 +276,14 @@ void fixtrailing(TCHAR *p)
 	_tcscat(p, "/");
 }
 
-bool samepath(const TCHAR *p1, const TCHAR *p2)
+bool samepath(const TCHAR* p1, const TCHAR* p2)
 {
 	if (!_tcsicmp(p1, p2))
 		return true;
 	return false;
 }
 
-void getpathpart(TCHAR *outpath, int size, const TCHAR *inpath)
+void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
 {
 	_tcscpy(outpath, inpath);
 	const auto p = _tcsrchr(outpath, '/');
@@ -285,7 +292,7 @@ void getpathpart(TCHAR *outpath, int size, const TCHAR *inpath)
 	fixtrailing(outpath);
 }
 
-void getfilepart(TCHAR *out, int size, const TCHAR *path)
+void getfilepart(TCHAR* out, int size, const TCHAR* path)
 {
 	out[0] = 0;
 	const auto p = _tcsrchr(path, '/');
@@ -295,7 +302,7 @@ void getfilepart(TCHAR *out, int size, const TCHAR *path)
 		_tcscpy(out, path);
 }
 
-uae_u8 *target_load_keyfile(struct uae_prefs *p, const char *path, int *sizep, char *name)
+uae_u8* target_load_keyfile(struct uae_prefs* p, const char* path, int* sizep, char* name)
 {
 	return nullptr;
 }
@@ -310,7 +317,7 @@ void target_quit(void)
 {
 }
 
-void fix_apmodes(struct uae_prefs *p)
+void fix_apmodes(struct uae_prefs* p)
 {
 	if (p->ntscmode)
 	{
@@ -330,24 +337,28 @@ void target_fixup_options(struct uae_prefs* p)
 {
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 
-	if (z3_base_adr == Z3BASE_REAL) {
+	if (z3_base_adr == Z3BASE_REAL)
+	{
 		// map Z3 memory at real address (0x40000000)
 		p->z3_mapping_mode = Z3MAPPING_REAL;
 		p->z3autoconfig_start = z3_base_adr;
 	}
-	else {
+	else
+	{
 		// map Z3 memory at UAE address (0x10000000)
 		p->z3_mapping_mode = Z3MAPPING_UAE;
 		p->z3autoconfig_start = z3_base_adr;
 	}
 
-	if (p->cs_cd32cd && p->cs_cd32nvram && (p->cs_compatible == CP_GENERIC || p->cs_compatible == 0)) {
+	if (p->cs_cd32cd && p->cs_cd32nvram && (p->cs_compatible == CP_GENERIC || p->cs_compatible == 0))
+	{
 		// Old config without cs_compatible, but other cd32-flags
 		p->cs_compatible = CP_CD32;
 		built_in_chipset_prefs(p);
 	}
 
-	if (p->cs_cd32cd && p->cartfile[0]) {
+	if (p->cs_cd32cd && p->cartfile[0])
+	{
 		p->cs_cd32fmv = true;
 	}
 
@@ -358,7 +369,8 @@ void target_fixup_options(struct uae_prefs* p)
 		p->gfx_monitor.gfx_size.height = 288;
 	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? RES_HIRES : RES_LORES;
 
-	if (p->gfx_vresolution && !can_have_linedouble) // If there's not enough vertical space, cancel Line Doubling/Scanlines
+	if (p->gfx_vresolution && !can_have_linedouble)
+		// If there's not enough vertical space, cancel Line Doubling/Scanlines
 		p->gfx_vresolution = 0;
 
 	if (p->cachesize > 0)
@@ -368,7 +380,7 @@ void target_fixup_options(struct uae_prefs* p)
 
 	if (p->cachesize <= 0)
 		p->compfpu = false;
-	
+
 	fix_apmodes(p);
 	set_key_configs(p);
 }
@@ -469,7 +481,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 	cfgfile_dwrite_str(f, _T("amiberry.action_replay"), p->action_replay);
 	cfgfile_dwrite_str(f, _T("amiberry.fullscreen_toggle"), p->fullscreen_toggle);
-	cfgfile_write_bool(f, _T("amiberry.use_analogue_remap"), p->input_analog_remap);        
+	cfgfile_write_bool(f, _T("amiberry.use_analogue_remap"), p->input_analog_remap);
 
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
@@ -513,7 +525,7 @@ void target_restart(void)
 	gui_restart();
 }
 
-TCHAR *target_expand_environment(const TCHAR *path, TCHAR *out, int maxlen)
+TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen)
 {
 	if (out == nullptr)
 		return strdup(path);
@@ -557,7 +569,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (result)
 		return 1;
 #endif
-	
+
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))
@@ -565,7 +577,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
-		return 1;          
+		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
@@ -587,25 +599,25 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	return 0;
 }
 
-void fetch_datapath(char *out, int size)
+void fetch_datapath(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/", size - 1);
 }
 
-void fetch_saveimagepath(char *out, int size, int dir)
+void fetch_saveimagepath(char* out, int size, int dir)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/savestates/", size - 1);
 }
 
-void fetch_configurationpath(char *out, int size)
+void fetch_configurationpath(char* out, int size)
 {
 	fixtrailing(config_path);
 	strncpy(out, config_path, size - 1);
 }
 
-void set_configurationpath(char *newpath)
+void set_configurationpath(char* newpath)
 {
 	strncpy(config_path, newpath, MAX_DPATH - 1);
 }
@@ -637,24 +649,24 @@ void fetch_rompath(char* out, int size)
 	strncpy(out, rom_path, size - 1);
 }
 
-void set_rompath(char *newpath)
+void set_rompath(char* newpath)
 {
 	strncpy(rom_path, newpath, MAX_DPATH - 1);
 }
 
-void fetch_rp9path(char *out, int size)
+void fetch_rp9path(char* out, int size)
 {
 	fixtrailing(rp9_path);
 	strncpy(out, rp9_path, size - 1);
 }
 
-void fetch_savestatepath(char *out, int size)
+void fetch_savestatepath(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/savestates/", size - 1);
 }
 
-void fetch_screenshotpath(char *out, int size)
+void fetch_screenshotpath(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/screenshots/", size - 1);
@@ -669,7 +681,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	discard_prefs(p, type);
 	default_prefs(p, true, 0);
 
-	const char* ptr = strstr(const_cast<char *>(filename), ".rp9");
+	const char* ptr = strstr(const_cast<char*>(filename), ".rp9");
 	if (ptr)
 	{
 		// Load rp9 config
@@ -679,7 +691,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	}
 	else
 	{
-		ptr = strstr(const_cast<char *>(filename), ".uae");
+		ptr = strstr(const_cast<char*>(filename), ".uae");
 		if (ptr)
 		{
 			auto config_type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
@@ -709,7 +721,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	return result;
 }
 
-int check_configfile(char *file)
+int check_configfile(char* file)
 {
 	char tmp[MAX_DPATH];
 
@@ -745,7 +757,7 @@ void extractFileName(const char* str, char* buffer)
 	strncpy(buffer, p, MAX_DPATH - 1);
 }
 
-void extractPath(char *str, char *buffer)
+void extractPath(char* str, char* buffer)
 {
 	strncpy(buffer, str, MAX_DPATH - 1);
 	auto p = buffer + strlen(buffer) - 1;
@@ -754,7 +766,7 @@ void extractPath(char *str, char *buffer)
 	p[1] = '\0';
 }
 
-void removeFileExtension(char *filename)
+void removeFileExtension(char* filename)
 {
 	auto p = filename + strlen(filename) - 1;
 	while (p >= filename && *p != '.')
@@ -765,9 +777,9 @@ void removeFileExtension(char *filename)
 	*p = '\0';
 }
 
-void ReadDirectory(const char *path, std::vector<std::string> *dirs, std::vector<std::string> *files)
+void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector<std::string>* files)
 {
-	struct dirent *dent;
+	struct dirent* dent;
 
 	if (dirs != nullptr)
 		dirs->clear();
@@ -881,7 +893,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 
 	// The ROMs found in the last scan
-	for (auto & lstAvailableROM : lstAvailableROMs)
+	for (auto& lstAvailableROM : lstAvailableROMs)
 	{
 		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROM->Name);
 		fputs(buffer, f);
@@ -894,7 +906,7 @@ void save_amiberry_settings(void)
 	// Recent disk entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
 	fputs(buffer, f);
-	for (auto & i : lstMRUDiskList)
+	for (auto& i : lstMRUDiskList)
 	{
 		snprintf(buffer, MAX_DPATH, "Diskfile=%s\n", i.c_str());
 		fputs(buffer, f);
@@ -903,7 +915,7 @@ void save_amiberry_settings(void)
 	// Recent CD entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUCDList=%zu\n", lstMRUCDList.size());
 	fputs(buffer, f);
-	for (auto & i : lstMRUCDList)
+	for (auto& i : lstMRUCDList)
 	{
 		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", i.c_str());
 		fputs(buffer, f);
@@ -912,7 +924,7 @@ void save_amiberry_settings(void)
 	fclose(f);
 }
 
-void get_string(FILE *f, char *dst, int size)
+void get_string(FILE* f, char* dst, int size)
 {
 	char buffer[MAX_DPATH];
 	fgets(buffer, MAX_DPATH, f);
@@ -923,7 +935,7 @@ void get_string(FILE *f, char *dst, int size)
 	strncpy(dst, buffer, size);
 }
 
-static void trimwsa(char *s)
+static void trimwsa(char* s)
 {
 	/* Delete trailing whitespace.  */
 	int len = strlen(s);
@@ -961,26 +973,30 @@ void load_amiberry_settings(void)
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
 	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
-	if (fh) {
+	if (fh)
+	{
 		char linea[CONFIG_BLEN];
 		TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
 		int numROMs, numDisks, numCDs;
 		auto romType = -1;
-		char romName[MAX_DPATH] = { '\0' };
-		char romPath[MAX_DPATH] = { '\0' };
+		char romName[MAX_DPATH] = {'\0'};
+		char romPath[MAX_DPATH] = {'\0'};
 		char tmpFile[MAX_DPATH];
 
 		while (zfile_fgetsa(linea, sizeof linea, fh) != nullptr)
 		{
 			trimwsa(linea);
-			if (strlen(linea) > 0) {
-				if (!cfgfile_separate_linea (path, linea, option, value))
+			if (strlen(linea) > 0)
+			{
+				if (!cfgfile_separate_linea(path, linea, option, value))
 					continue;
 
 				if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
 					|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
-					|| cfgfile_intval(option, value, "ROMType", &romType, 1)) {
-					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1) {
+					|| cfgfile_intval(option, value, "ROMType", &romType, 1))
+				{
+					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
+					{
 						auto tmp = new AvailableROM();
 						strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
 						strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
@@ -1009,7 +1025,8 @@ void load_amiberry_settings(void)
 						lstMRUCDList.emplace_back(tmpFile);
 					}
 				}
-				else {
+				else
+				{
 					cfgfile_string(option, value, "path", currentDir, sizeof currentDir);
 					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
 					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
@@ -1061,7 +1078,7 @@ void target_getdate(int* y, int* m, int* d)
 	*d = GETBDD(AMIBERRYDATE);
 }
 
-void target_addtorecent(const TCHAR *name, int t)
+void target_addtorecent(const TCHAR* name, int t)
 {
 }
 
@@ -1075,14 +1092,16 @@ bool target_can_autoswitchdevice(void)
 	return true;
 }
 
-uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32 *low)
+uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 {
 	*low = 0;
-	if (v == 1) {
+	if (v == 1)
+	{
 		*low = 1e+9; /* We have nano seconds */
 		return 0;
 	}
-	if (v == 2) {
+	if (v == 2)
+	{
 		struct timespec ts{};
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		const int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
@@ -1238,13 +1257,15 @@ int handle_msgpump()
 			// If the reset combination was pressed, handle it
 			if (swap_win_alt_keys)
 			{
-				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
+				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] ||
+					keystate[SDL_SCANCODE_APPLICATION]))
 				{
 					uae_reset(0, 1);
 					break;
 				}
 			}
-			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
+			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] ||
+				keystate[SDL_SCANCODE_APPLICATION]))
 			{
 				uae_reset(0, 1);
 				break;
@@ -1398,7 +1419,8 @@ bool handle_events()
 		inputdevicefunc_joystick.read();
 		inputdevice_handle_inputcode();
 	}
-	if (was_paused && (!pause_emulation || quit_program)) {
+	if (was_paused && (!pause_emulation || quit_program))
+	{
 		//updatedisplayarea();
 		pause_emulation = was_paused;
 		resumepaused(was_paused);
