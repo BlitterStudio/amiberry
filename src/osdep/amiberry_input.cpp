@@ -1134,7 +1134,7 @@ static void read_joystick()
 			}
 
 				// this *should* allow us to handle function buttons (l2/r2/select)  <<<  except there were issues this work, picking a fixed number!!                            
-				// these two cannot be used whilst we are limtied to 32 buttons, since 'REMAP_BUTTONS' = 14
+				// these two cannot be used whilst we are limited to 32 buttons, since 'REMAP_BUTTONS' = 14
 				// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].left_trigger) & 1)
 				//     held_offset = REMAP_BUTTONS * 2;
 				// else if (SDL_JoystickGetButton(joysticktable[hostjoyid], host_input_buttons[hostjoyid].right_trigger) & 1)
@@ -1255,22 +1255,22 @@ static void read_joystick()
 				                  1);
 
 			// cd32  rwd, ffw, start
+			// left shoulder
 			if (current_controller_map.left_shoulder != -1)
 				setjoybuttonstate(hostjoyid + 1, 4 + held_offset,
 				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
 				                                        current_controller_map.left_shoulder) & 1);
-			// left shoulder
+			// right shoulder
 			if (current_controller_map.right_shoulder != -1)
 				setjoybuttonstate(hostjoyid + 1, 5 + held_offset,
 				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
 				                                        current_controller_map.right_shoulder) &
 				                  1);
-			// right shoulder
+			// start
 			if (current_controller_map.start_button != -1)
 				setjoybuttonstate(hostjoyid + 1, 6 + held_offset,
 				                  SDL_JoystickGetButton(joysticktable[hostjoyid], current_controller_map.start_button) &
 				                  1);
-			// start
 
 			// up down left right
 			// HAT Handling *or* D-PAD buttons     
@@ -1308,6 +1308,7 @@ static void read_joystick()
 				setjoybuttonstate(hostjoyid + 1, 12 + held_offset,
 				                  SDL_JoystickGetButton(joysticktable[hostjoyid],
 				                                        current_controller_map.rstick_button) & 1);
+
 			// select button
 			if (current_controller_map.select_button != -1)
 				setjoybuttonstate(hostjoyid + 1, 13 + held_offset,
