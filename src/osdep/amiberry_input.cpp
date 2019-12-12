@@ -1130,13 +1130,15 @@ static void read_joystick()
 			setjoybuttonstate(kb, 13, keystate[host_keyboard_buttons[kb].select_button] & 1); // num2
 
 			// hotkey?
-			if (keystate[host_keyboard_buttons[kb].hotkey_button] & 1)
+			if (host_keyboard_buttons[kb].hotkey_button != -1 && keystate[host_keyboard_buttons[kb].hotkey_button] & 1)
 			{
 				//held_offset = REMAP_BUTTONS;
 				// menu button
-				setjoybuttonstate(kb, 14, keystate[host_keyboard_buttons[kb].menu_button] & 1);
+				if (host_keyboard_buttons[kb].menu_button != -1)
+					setjoybuttonstate(kb, 14, keystate[host_keyboard_buttons[kb].menu_button] & 1);
 				// quit button
-				setjoybuttonstate(kb, 15, keystate[host_keyboard_buttons[kb].quit_button] & 1);
+				if (host_keyboard_buttons[kb].quit_button != -1)
+					setjoybuttonstate(kb, 15, keystate[host_keyboard_buttons[kb].quit_button] & 1);
 				// reset button
 				//setjoybuttonstate(kb, 30,keystate[host_keyboard_buttons[kb].reset_button] & 1) ;
 			}

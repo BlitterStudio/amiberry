@@ -454,7 +454,7 @@ extern int multipler_maps[MAX_JPORTS];
 extern int find_in_array(const int arr[], int n, int key);
 extern int num_keys_as_joys;
 extern int input_default_mouse_speed;
-extern int input_keyboard_as_joystick_stop_keypresses;
+extern bool input_keyboard_as_joystick_stop_keypresses;
 
 extern bool key_used_by_retroarch_joy(int scancode);
 #endif
