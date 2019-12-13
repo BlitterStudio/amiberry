@@ -1046,6 +1046,8 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &use_sdl2_render_thread);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &input_default_mouse_speed, 1);
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &input_keyboard_as_joystick_stop_keypresses);
+					cfgfile_intval(option, value, "input_default_mouse_speed", &input_default_mouse_speed, 1);
+					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &input_keyboard_as_joystick_stop_keypresses);
 					
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
@@ -1054,10 +1056,6 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "speedup_timelimit_nonjit", &speedup_timelimit_nonjit, 1);
 					cfgfile_intval(option, value, "speedup_timelimit_jit_turbo", &speedup_timelimit_jit_turbo, 1);
 					cfgfile_intval(option, value, "speedup_timelimit_nonjit_turbo", &speedup_timelimit_nonjit_turbo, 1);
-
-					// 
-					cfgfile_intval(option, value, "input_default_mouse_speed", &input_default_mouse_speed,1);
-					cfgfile_intval(option, value, "input_keyboard_as_joystick_stop_keypresses", &input_keyboard_as_joystick_stop_keypresses,1);
 				}
 			}
 		}
