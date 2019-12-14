@@ -95,6 +95,7 @@ set(SRC_FILES
         src/rommgr.cpp
         src/rtc.cpp
         src/savestate.cpp
+		src/scp.cpp
         src/scsi.cpp
         src/statusline.cpp
         src/traps.cpp
