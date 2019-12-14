@@ -293,7 +293,7 @@ OBJS =	\
 	src/rommgr.o \
 	src/rtc.o \
 	src/savestate.o \
-	src/scp.cpp \
+	src/scp.o \
 	src/scsi.o \
 	src/statusline.o \
 	src/traps.o \
