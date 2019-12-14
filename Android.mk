@@ -12,9 +12,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := amiberry
 
-SDL_PATH := D:/Github/amiberry-android/app/jni/SDL
 #LIBMPEG2_PATH := ../mpeg2
-LIBPNG_PATH := D:/Github/amiberry-android/app/jni/SDL_image/external/libpng-1.6.37
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/osdep \
