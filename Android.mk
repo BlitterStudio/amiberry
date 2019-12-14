@@ -33,7 +33,7 @@ else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DSTATIC_LIBXML
 endif
 
-LOCAL_CPPFLAGS := -std=gnu++14 -pipe -frename-registers \
+LOCAL_CPPFLAGS := -std=c++14 -pipe -frename-registers \
                     -Wno-shift-overflow -Wno-narrowing
 
 LOCAL_LDFLAGS += -fuse-ld=gold
