@@ -12,9 +12,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := amiberry
 
-SDL_PATH := D:/Github/amiberry-android/app/jni/SDL
 #LIBMPEG2_PATH := ../mpeg2
-LIBPNG_PATH := D:/Github/amiberry-android/app/jni/SDL_image/external/libpng-1.6.37
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/osdep \
@@ -33,7 +31,7 @@ else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DSTATIC_LIBXML
 endif
 
-LOCAL_CPPFLAGS := -std=gnu++14 -pipe -frename-registers \
+LOCAL_CPPFLAGS := -std=c++14 -pipe -frename-registers \
                     -Wno-shift-overflow -Wno-narrowing
 
 LOCAL_LDFLAGS += -fuse-ld=gold
