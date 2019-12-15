@@ -912,13 +912,15 @@ static void pfield_init_linetoscr (bool border)
 			if (x > max)
 				max = x;
 		}
-		min = coord_hw_to_window_x (min >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
-		max = coord_hw_to_window_x (max >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
+#if 0
+		min = coord_hw_to_window_x(min >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
 
 		if (min < playfield_start)
 			playfield_start = min;
 		if (playfield_start < visible_left_border)
 			playfield_start = visible_left_border;
+#endif
+		max = coord_hw_to_window_x(max >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
 		if (max > playfield_end)
 			playfield_end = max;
 		if (playfield_end > visible_right_border)
