@@ -213,3 +213,4 @@ Thumbs.db
 .com.apple.timemachine.supported
 *.user
 *___jb_old___
+*.orig
