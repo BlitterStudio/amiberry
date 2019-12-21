@@ -78,7 +78,9 @@ void alloc_AmigaMem(void)
 	free_AmigaMem();
 	set_expamem_z3_hack_mode(Z3MAPPING_AUTO);
 
-	// First attempt: allocate 16 MB for all memory in 24-bit area 
+// This crashes on Android
+#ifndef ANDROID
+	// First attempt: allocate 16 MB for all memory in 24-bit area
 	// and additional mem for Z3 and RTG at correct offset
 	natmem_size = 16 * 1024 * 1024;
 #ifdef AMIBERRY
@@ -88,12 +90,12 @@ void alloc_AmigaMem(void)
 #else
 	regs.natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
 #endif
-	
+
 	if (can_have_1gb())
 		max_z3fastmem = 1024 * 1024 * 1024;
 	else
 		max_z3fastmem = 512 * 1024 * 1024;
-	
+
 	if (!regs.natmem_offset)
 	{
 		write_log("Can't allocate 16M of virtual address space!?\n");
@@ -156,6 +158,7 @@ void alloc_AmigaMem(void)
 #endif
 		return;
 	}
+#endif
 
 	// No mem for Z3 or RTG at all
 	natmem_size = 16 * 1024 * 1024;
