@@ -35,6 +35,9 @@
 #ifdef CAPS
 #include "uae/caps.h"
 #endif
+#ifdef SCP
+#include "scp.h"
+#endif
 #include "crc32.h"
 #include "fsdb.h"
 
@@ -131,7 +134,7 @@ typedef struct {
 #define DRIVE_ID_35HD  0xAAAAAAAA
 #define DRIVE_ID_525SD 0x55555555 /* 40 track 5.25 drive , kickstart does not recognize this */
 
-typedef enum { ADF_NONE = -1, ADF_NORMAL, ADF_EXT1, ADF_EXT2, ADF_FDI, ADF_IPF, ADF_PCDOS, ADF_KICK, ADF_SKICK } drive_filetype;
+typedef enum { ADF_NONE = -1, ADF_NORMAL, ADF_EXT1, ADF_EXT2, ADF_FDI, ADF_IPF, ADF_SCP, ADF_CATWEASEL, ADF_PCDOS, ADF_KICK, ADF_SKICK } drive_filetype;
 typedef struct {
 	struct zfile *diskfile;
 	struct zfile *writediskfile;
@@ -589,6 +592,11 @@ static void drive_image_free(drive *drv)
 	case ADF_IPF:
 #ifdef CAPS
 		caps_unloadimage(drv - floppy);
+#endif
+		break;
+	case ADF_SCP:
+#ifdef SCP
+		scp_close(drv - floppy);
 #endif
 		break;
 	case ADF_FDI:
@@ -1093,6 +1101,19 @@ static int drive_insert(drive* drv, struct uae_prefs* p, int dnum, const TCHAR* 
 		}
 		drv->num_tracks = num_tracks;
 		drv->filetype = ADF_IPF;
+#endif
+#ifdef SCP
+	}
+	else if (strncmp((char*)buffer, "SCP", 3) == 0) {
+
+		drv->wrprot = true;
+		if (!scp_open(drv->diskfile, drv - floppy, &num_tracks)) {
+			zfile_fclose(drv->diskfile);
+			drv->diskfile = 0;
+			return 0;
+		}
+		drv->num_tracks = num_tracks;
+		drv->filetype = ADF_SCP;
 #endif
 #ifdef FDI2RAW
 	}
@@ -1799,8 +1820,12 @@ static void drive_fill_bigbuf(drive * drv, int force)
 #ifdef CAPS
 		caps_loadtrack(drv->bigmfmbuf, drv->tracktiming, drv - floppy, tr, &drv->tracklen, &drv->multi_revolution, &drv->skipoffset, &drv->lastrev, retrytrack);
 #endif
-	}
-	else if (drv->filetype == ADF_FDI) {
+	} else if (drv->filetype == ADF_SCP) {
+
+#ifdef SCP
+		scp_loadtrack(drv->bigmfmbuf, drv->tracktiming, drv - floppy, tr, &drv->tracklen, &drv->multi_revolution, &drv->skipoffset, &drv->lastrev, retrytrack);
+#endif
+	} else if (drv->filetype == ADF_FDI) {
 
 #ifdef FDI2RAW
 		fdi2raw_loadtrack(drv->fdi, drv->bigmfmbuf, drv->tracktiming, tr, &drv->tracklen, &drv->indexoffset, &drv->multi_revolution, 1);
@@ -1810,17 +1835,14 @@ static void drive_fill_bigbuf(drive * drv, int force)
 	else if (ti->type == TRACK_PCDOS) {
 
 		decode_pcdos(drv);
-
 	}
 	else if (ti->type == TRACK_AMIGADOS) {
 
 		decode_amigados(drv);
-
 	}
 	else if (ti->type == TRACK_DISKSPARE) {
 
 		decode_diskspare(drv);
-
 	}
 	else if (ti->type == TRACK_NONE) {
 
@@ -2803,6 +2825,11 @@ static void fetchnextrevolution(drive *drv)
 	case ADF_IPF:
 #ifdef CAPS
 		caps_loadrevolution(drv->bigmfmbuf, drv->tracktiming, drv - floppy, drv->cyl * 2 + side, &drv->tracklen, &drv->lastrev, drv->track_access_done);
+#endif
+		break;
+	case ADF_SCP:
+#ifdef SCP
+		scp_loadrevolution(drv->bigmfmbuf, drv - floppy, drv->tracktiming, &drv->tracklen);
 #endif
 		break;
 	case ADF_FDI:

@@ -601,6 +601,9 @@
     <ClCompile Include="..\..\src\caps\caps_amiberry.cpp">
       <Filter>Source files\caps</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\scp.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -988,6 +991,9 @@
       <Filter>Source files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\cputbl.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\scp.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
