@@ -29,6 +29,12 @@ void console_out (const TCHAR *format,...)
 
 void write_log (const char *format,...)
 {
+    // Redirect logging to Android's logcat
+#ifdef ANDROID
+    va_list parms;
+    va_start(parms, format);
+    SDL_Log(format, parms);
+#else
 	if (write_logfile)
 	{
 		TCHAR buffer[WRITE_LOG_BUF_SIZE];
@@ -43,6 +49,7 @@ void write_log (const char *format,...)
 		}
 		va_end(parms);
 	}
+#endif
 }
 
 void jit_abort (const TCHAR *format,...)
