@@ -1,13 +1,4 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <string.h>
-#include <fcntl.h>
-
-#include "sysdeps.h"
-#include "options.h"
+#include "amiberry_filesys.hpp"
 
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
@@ -44,13 +35,6 @@ int my_rename(const char* oldname, const char* newname)
 	return rename(oldname, newname);
 }
 
-
-struct my_opendir_s
-{
-	void* h;
-};
-
-
 struct my_opendir_s* my_opendir(const char* name)
 {
 	auto * mod = xmalloc (struct my_opendir_s, 1);
@@ -85,12 +69,6 @@ int my_readdir(struct my_opendir_s* mod, char* name)
 	strncpy(name, de->d_name, MAX_DPATH);
 	return 1;
 }
-
-
-struct my_openfile_s
-{
-	int h;
-};
 
 
 void my_close(struct my_openfile_s* mos)
