@@ -3,7 +3,7 @@
 string prefix_with_application_directory_path(string currentpath)
 {
 #ifdef ANDROID
-	return getenv("EXTERNAL_FILES_DIR") + currentpath;
+	return getenv("EXTERNAL_FILES_DIR") + ("/" + currentpath);
 #else
 	return currentpath;
 #endif
