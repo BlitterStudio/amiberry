@@ -23,6 +23,14 @@ struct my_openfile_s
     int h;
 };
 
+/**
+ * Gets the current application directory and appends the given path,
+ * if necessary on current platform.
+ * @param currentpath Path without leading '/'
+ * @return appdir + currentpath OR currentpath
+ */
+string prefix_with_application_directory_path(string currentpath);
+
 struct my_opendir_s* my_opendir(const char* name);
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur);
 int my_mkdir(const char* name);

@@ -1,5 +1,13 @@
 #include "amiberry_filesys.hpp"
 
+string prefix_with_application_directory_path(string currentpath)
+{
+#ifdef ANDROID
+	return getenv("EXTERNAL_FILES_DIR") + currentpath;
+#else
+	return currentpath;
+#endif
+}
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
 {
