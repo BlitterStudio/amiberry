@@ -4458,7 +4458,7 @@ void compute_framesync(void)
 	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (islinetoggle() ? 0.5 : 0));
 
 	// Crashes on Android
-#ifndef Android
+#ifndef ANDROID
 	write_log (_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
 		isntsc ? _T("NTSC") : _T("PAL"),
 		islace ? _T(" lace") : (lof_lace ? _T(" loflace") : _T("")),
