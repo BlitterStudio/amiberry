@@ -2023,8 +2023,7 @@ static int akiko_thread_do(int start)
 			destroy_comm_pipe(&requests);
 			return 1;
 		}
-	}
-	else {
+	} else {
 		if (!akiko_thread_running) {
 			akiko_thread_running = 1;
 			init_comm_pipe(&requests, 100, 1);
@@ -2035,7 +2034,7 @@ static int akiko_thread_do(int start)
 	return 0;
 }
 
-static void akiko_reset (int hardreset)
+static void akiko_reset(int hardreset)
 {
 	cdaudiostop_do ();
 	nvram_read ();
@@ -2058,17 +2057,7 @@ static void akiko_reset (int hardreset)
 	cdrom_receive_length = 0;
 	cdrom_receive_offset = 0;
 	cd_initialized = 0;
-
-	if (akiko_thread_running > 0) {
-		cdaudiostop ();
-		akiko_thread_running = 0;
-		while(akiko_thread_running == 0)
-			sleep_millis (10);
-		akiko_thread_running = 0;
-	}
-	akiko_cdrom_free ();
 	mediacheckcounter = 0;
-	akiko_inited = false;
 }
 
 static void akiko_free(void)
@@ -2083,8 +2072,7 @@ int akiko_init (void)
 {
 	if (!currprefs.cs_cd32cd)
 		return 0;
-	// This line caused issues when resetting CD32
-	//device_add_reset_imm(akiko_reset);
+	device_add_reset_imm(akiko_reset);
 	akiko_free ();
 	akiko_precalculate ();
 	unitnum = -1;
