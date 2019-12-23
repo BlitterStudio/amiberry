@@ -1873,6 +1873,8 @@ static void allocate_memory(void)
 #ifdef SAVESTATE
 	if (savestate_state == STATE_RESTORE) {
 		if (bootrom_filepos) {
+			if (currprefs.uaeboard < 0)
+				currprefs.uaeboard = 0;
 			protect_roms(false);
 			restore_ram(bootrom_filepos, rtarea_bank.baseaddr);
 			protect_roms(true);
