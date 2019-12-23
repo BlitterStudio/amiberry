@@ -909,10 +909,10 @@ static void map_banks_set(addrbank *bank, int start, int size, int realsize)
 
 static void allocate_memory(void)
 {
-  if (chipmem_bank.reserved_size != currprefs.chipmem_size) {
+	if (chipmem_bank.reserved_size != currprefs.chipmem_size) {
 		int memsize;
 		mapped_free(&chipmem_bank);
-	  if (currprefs.chipmem_size > 2 * 1024 * 1024) {
+		if (currprefs.chipmem_size > 2 * 1024 * 1024) {
 			free_fastmemory(0);
 		}
 
@@ -930,14 +930,15 @@ static void allocate_memory(void)
 		if (chipmem_bank.baseaddr == 0) {
 			write_log(_T("Fatal error: out of memory for chipmem.\n"));
 			chipmem_bank.reserved_size = 0;
-    } else {
+		}
+		else {
 			if (memsize > chipmem_bank.allocated_size)
 				memset(chipmem_bank.baseaddr + chipmem_bank.allocated_size, 0xff, memsize - chipmem_bank.allocated_size);
 		}
 		currprefs.chipset_mask = changed_prefs.chipset_mask;
 		chipmem_full_mask = chipmem_bank.allocated_size - 1;
 		if (!currprefs.cachesize) {
-		  if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
+			if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
 				if (chipmem_bank.allocated_size < 0x100000)
 					chipmem_full_mask = 0x100000 - 1;
 				if (chipmem_bank.allocated_size > 0x100000 && chipmem_bank.allocated_size < 0x200000)
@@ -946,13 +947,13 @@ static void allocate_memory(void)
 		}
 	}
 
-  if (bogomem_bank.reserved_size != currprefs.bogomem_size) {
+	if (bogomem_bank.reserved_size != currprefs.bogomem_size) {
 		mapped_free(&bogomem_bank);
 		bogomem_bank.reserved_size = 0;
 
 		if (currprefs.bogomem_size > 0x1c0000)
 			currprefs.bogomem_size = 0x1c0000;
-    if (currprefs.bogomem_size > 0x180000 && ((currprefs.chipset_mask & CSMASK_AGA) || (currprefs.cpu_model >= 68020)))
+		if (currprefs.bogomem_size > 0x180000 && ((currprefs.chipset_mask & CSMASK_AGA) || (currprefs.cpu_model >= 68020)))
 			currprefs.bogomem_size = 0x180000;
 
 		bogomem_bank.reserved_size = currprefs.bogomem_size;
@@ -962,7 +963,7 @@ static void allocate_memory(void)
 		bogomem_bank.start = bogomem_start_addr;
 
 		if (bogomem_bank.reserved_size) {
-				if (!mapped_malloc (&bogomem_bank)) {
+			if (!mapped_malloc(&bogomem_bank)) {
 				write_log(_T("Out of memory for bogomem.\n"));
 				bogomem_bank.reserved_size = 0;
 			}
@@ -975,7 +976,7 @@ static void allocate_memory(void)
 		a3000lmem_bank.mask = a3000lmem_bank.reserved_size - 1;
 		a3000lmem_bank.start = 0x08000000 - a3000lmem_bank.reserved_size;
 		if (a3000lmem_bank.reserved_size) {
-			if (!mapped_malloc (&a3000lmem_bank)) {
+			if (!mapped_malloc(&a3000lmem_bank)) {
 				write_log(_T("Out of memory for a3000lowmem.\n"));
 				a3000lmem_bank.reserved_size = 0;
 			}
@@ -988,7 +989,7 @@ static void allocate_memory(void)
 		a3000hmem_bank.mask = a3000hmem_bank.reserved_size - 1;
 		a3000hmem_bank.start = 0x08000000;
 		if (a3000hmem_bank.reserved_size) {
-			if (!mapped_malloc (&a3000hmem_bank)) {
+			if (!mapped_malloc(&a3000hmem_bank)) {
 				write_log(_T("Out of memory for a3000highmem.\n"));
 				a3000hmem_bank.reserved_size = 0;
 			}
@@ -997,8 +998,10 @@ static void allocate_memory(void)
 
 	allocate_memory_custombanks();
 
-  if (savestate_state == STATE_RESTORE) {
-    if (bootrom_filepos) {
+	if (savestate_state == STATE_RESTORE) {
+		if (bootrom_filepos) {
+			if (currprefs.uaeboard < 0)
+				currprefs.uaeboard = 0;
 			protect_roms(false);
 			restore_ram(bootrom_filepos, rtarea_bank.baseaddr);
 			protect_roms(true);
