@@ -949,11 +949,7 @@ void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
 	int i;
-#ifdef ANDROID
-	strncpy(currentDir, getenv("SDCARD"), MAX_DPATH - 1);
-#else
 	strncpy(currentDir, start_path_data, MAX_DPATH - 1);
-#endif
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
@@ -1133,7 +1129,11 @@ int main(int argc, char* argv[])
 	max_uae_height = 1080;
 
 	// Get startup path
+#ifdef ANDROID
+    strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
+#else
 	getcwd(start_path_data, MAX_DPATH);
+#endif
 	rename_old_adfdir();
 	load_amiberry_settings();
 	rp9_init();

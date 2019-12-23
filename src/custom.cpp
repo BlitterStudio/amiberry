@@ -4437,6 +4437,8 @@ void compute_framesync(void)
 
 	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (islinetoggle() ? 0.5 : 0));
 
+	// Crashes on Android
+#ifndef ANDROID
 	write_log (_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
 		isntsc ? _T("NTSC") : _T("PAL"),
 		islace ? _T(" lace") : (lof_lace ? _T(" loflace") : _T("")),
@@ -4448,7 +4450,8 @@ void compute_framesync(void)
 		cr != NULL && cr->label != NULL ? cr->label : _T("<?>"),
 		currprefs.gfx_apmode[ad->picasso_on ? 1 : 0].gfx_display, ad->picasso_on, ad->picasso_requested_on
 	);
-
+#endif
+	
 	set_config_changed ();
 
 	if (target_graphics_buffer_update()) {
