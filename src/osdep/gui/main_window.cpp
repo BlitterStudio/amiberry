@@ -17,6 +17,7 @@
 #include "uae.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
+#include "amiberry_filesys.hpp"
 #include "autoconf.h"
 
 #include "inputdevice.h"
@@ -288,11 +289,11 @@ void setup_cursor()
 	// Detect resolution and load appropriate cursor image
 	if (strcmp(sdl_video_driver, "x11") != 0 && sdlMode.w > 1280)
 	{
-		cursor_surface = SDL_LoadBMP("data/cursor-x2.bmp");
+		cursor_surface = SDL_LoadBMP(prefix_with_application_directory_path("data/cursor-x2.bmp").c_str());
 	}
 	else
 	{
-		cursor_surface = SDL_LoadBMP("data/cursor.bmp");
+		cursor_surface = SDL_LoadBMP(prefix_with_application_directory_path("data/cursor.bmp").c_str());
 	}
 
 	if (!cursor_surface)
@@ -959,7 +960,7 @@ void gui_widgets_init()
 
 	try
 	{
-		gui_font = new gcn::SDLTrueTypeFont("data/AmigaTopaz.ttf", 15);
+		gui_font = new gcn::SDLTrueTypeFont(prefix_with_application_directory_path("data/AmigaTopaz.ttf"), 15);
 	}
 	catch (const std::exception& ex)
 	{
@@ -1031,7 +1032,7 @@ void gui_widgets_init()
 	panelFocusListener = new PanelFocusListener();
 	for (i = 0; categories[i].category != nullptr; ++i)
 	{
-		categories[i].selector = new gcn::SelectorEntry(categories[i].category, categories[i].imagepath);
+		categories[i].selector = new gcn::SelectorEntry(categories[i].category, prefix_with_application_directory_path(categories[i].imagepath));
 		categories[i].selector->setActiveColor(colSelectorActive);
 		categories[i].selector->setInactiveColor(colSelectorInactive);
 		categories[i].selector->setSize(150, 24);

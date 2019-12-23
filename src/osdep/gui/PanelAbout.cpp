@@ -6,6 +6,7 @@
 
 #include "sysdeps.h"
 #include "gui_handling.h"
+#include "amiberry_filesys.hpp"
 
 static gcn::Label* lblEmulatorVersion;
 static gcn::Icon* icon;
@@ -15,7 +16,7 @@ static gcn::ScrollArea* textBoxScrollArea;
 
 void InitPanelAbout(const struct _ConfigCategory& category)
 {
-	amiberryLogoImage = gcn::Image::load("data/amiberry-logo.png");
+	amiberryLogoImage = gcn::Image::load(prefix_with_application_directory_path("data/amiberry-logo.png"));
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
 

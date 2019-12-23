@@ -12,8 +12,6 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := amiberry
 
-#LIBMPEG2_PATH := ../mpeg2
-
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/osdep \
                     $(LOCAL_PATH)/src/threaddep \
@@ -31,6 +29,7 @@ else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DSTATIC_LIBXML
 endif
 
+#LOCAL_CPPFLAGS := -std=gnu++14 -pipe -frename-registers 
 LOCAL_CPPFLAGS := -std=c++14 -pipe -frename-registers \
                     -Wno-shift-overflow -Wno-narrowing
 
@@ -87,6 +86,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/rommgr.cpp \
                     src/rtc.cpp \
                     src/savestate.cpp \
+                    src/scp.cpp \
                     src/scsi.cpp \
                     src/statusline.cpp \
                     src/traps.cpp \

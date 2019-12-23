@@ -16,6 +16,7 @@
 #include "filesys.h"
 #include "blkdev.h"
 #include "gui_handling.h"
+#include "amiberry_filesys.hpp"
 
 enum
 {
@@ -370,7 +371,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 		listCmdProps[row]->setId(tmp);
 		listCmdProps[row]->addActionListener(hdEditActionListener);
 
-		listCmdDelete[row] = new gcn::ImageButton("data/delete.png");
+		listCmdDelete[row] = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
 		listCmdDelete[row]->setBaseColor(gui_baseCol);
 		listCmdDelete[row]->setSize(SMALL_BUTTON_HEIGHT, SMALL_BUTTON_HEIGHT);
 		snprintf(tmp, 20, "cmdDel%d", row);
