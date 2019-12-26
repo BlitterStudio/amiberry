@@ -23,7 +23,6 @@
 #define DIALOG_HEIGHT 200
 
 SDL_Surface* msg_screen;
-SDL_Event msg_event;
 #ifdef USE_DISPMANX
 DISPMANX_RESOURCE_HANDLE_T message_resource;
 DISPMANX_RESOURCE_HANDLE_T black_bg_resource;
@@ -135,57 +134,105 @@ void message_checkInput()
 	//-------------------------------------------------	
 
 	int gotEvent = 0;
-	while (SDL_PollEvent(&msg_event))
+	while (!msg_done)
 	{
-		gotEvent = 1;
-		if (msg_event.type == SDL_KEYDOWN)
+		SDL_Event msg_event;
+		SDL_Event touch_event;
+		while (SDL_PollEvent(&msg_event))
 		{
-			switch (msg_event.key.keysym.sym)
+			gotEvent = 1;
+			switch(msg_event.type)
 			{
-			case VK_Blue:
-			case VK_Green:
-			case SDLK_RETURN:
-				msg_done = true;
+			case SDL_KEYDOWN:
+				switch (msg_event.key.keysym.sym)
+				{
+				case VK_ESCAPE:
+					msg_done = true;
+					break;
+					
+				case VK_Blue:
+				case VK_Green:
+				case SDLK_RETURN:
+					msg_event.key.keysym.sym = SDLK_RETURN;
+					msg_input->pushInput(msg_event);
+					msg_event.type = SDL_KEYUP;
+					//msg_done = true;
+					break;
+				default:
+					break;
+				}
 				break;
+
+			case SDL_JOYBUTTONDOWN:
+				if (gui_joystick)
+				{
+					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button) ||
+						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button))
+
+						msg_done = true;
+				}
+				break;
+
+			case SDL_FINGERDOWN:
+				memcpy(&touch_event, &msg_event, sizeof msg_event);
+				touch_event.type = SDL_MOUSEBUTTONDOWN;
+				touch_event.button.which = 0;
+				touch_event.button.button = SDL_BUTTON_LEFT;
+				touch_event.button.state = SDL_PRESSED;
+				touch_event.button.x = msg_graphics->getTarget()->w * msg_event.tfinger.x;
+				touch_event.button.y = msg_graphics->getTarget()->h * msg_event.tfinger.y;
+				gui_input->pushInput(touch_event);
+				break;
+
+			case SDL_FINGERUP:
+				memcpy(&touch_event, &msg_event, sizeof msg_event);
+				touch_event.type = SDL_MOUSEBUTTONUP;
+				touch_event.button.which = 0;
+				touch_event.button.button = SDL_BUTTON_LEFT;
+				touch_event.button.state = SDL_RELEASED;
+				touch_event.button.x = msg_graphics->getTarget()->w * msg_event.tfinger.x;
+				touch_event.button.y = msg_graphics->getTarget()->h * msg_event.tfinger.y;
+				gui_input->pushInput(touch_event);
+				break;
+
+			case SDL_FINGERMOTION:
+				memcpy(&touch_event, &msg_event, sizeof msg_event);
+				touch_event.type = SDL_MOUSEMOTION;
+				touch_event.motion.which = 0;
+				touch_event.motion.state = 0;
+				touch_event.motion.x = msg_graphics->getTarget()->w * msg_event.tfinger.x;
+				touch_event.motion.y = msg_graphics->getTarget()->h * msg_event.tfinger.y;
+				gui_input->pushInput(touch_event);
+				break;
+				
 			default:
 				break;
 			}
-		}
-		else if (msg_event.type == SDL_JOYBUTTONDOWN)
-		{
-			if (gui_joystick)
-			{
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button))
 
-					msg_done = true;
-			}
-			break;
-		}
-
-		//-------------------------------------------------
-		// Send event to gui-controls
-		//-------------------------------------------------
+			//-------------------------------------------------
+			// Send event to gui-controls
+			//-------------------------------------------------
 #ifdef ANDROID
-		androidsdl_event(msg_event, msg_input);
+			androidsdl_event(msg_event, msg_input);
 #else
-		msg_input->pushInput(msg_event);
+			msg_input->pushInput(msg_event);
 #endif
-	}
-	if (gotEvent)
-	{
-		// Now we let the Gui object perform its logic.
-		msg_gui->logic();
-		// Now we let the Gui object draw itself.
-		msg_gui->draw();
+		}
+		if (gotEvent)
+		{
+			// Now we let the Gui object perform its logic.
+			msg_gui->logic();
+			// Now we let the Gui object draw itself.
+			msg_gui->draw();
 #ifdef USE_DISPMANX
 #else
-		SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
+			SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 #endif
+		}
+		// Finally we update the screen.
+		message_UpdateScreen();
 	}
-	// Finally we update the screen.
-	message_UpdateScreen();
 }
 
 void message_gui_init(const char* msg)

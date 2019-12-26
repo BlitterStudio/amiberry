@@ -215,15 +215,17 @@ static void EditFilesysVirtualLoop()
 {
 	FocusBugWorkaround(wndEditFilesysVirtual);
 
+	int gotEvent = 0;
 	while (!dialogFinished)
-	{
-		int gotEvent = 0;
+	{		
 		SDL_Event event;
+		SDL_Event touch_event;
 		while (SDL_PollEvent(&event))
 		{
 			gotEvent = 1;
-			if (event.type == SDL_KEYDOWN)
+			switch (event.type)
 			{
+			case SDL_KEYDOWN:
 				switch (event.key.keysym.sym)
 				{
 				case VK_ESCAPE:
@@ -259,12 +261,11 @@ static void EditFilesysVirtualLoop()
 				default:
 					break;
 				}
-			}
-			else if (event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYHATMOTION || event.type == SDL_JOYAXISMOTION)
-			{
-				gcn::FocusHandler* focusHdl;
-				gcn::Widget* activeWidget;
+				break;
 
+			case SDL_JOYBUTTONDOWN:
+			case SDL_JOYHATMOTION:
+			case SDL_JOYAXISMOTION:
 				if (gui_joystick)
 				{
 					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
@@ -310,7 +311,43 @@ static void EditFilesysVirtualLoop()
 					}
 				}
 				break;
+
+			case SDL_FINGERDOWN:
+				memcpy(&touch_event, &event, sizeof event);
+				touch_event.type = SDL_MOUSEBUTTONDOWN;
+				touch_event.button.which = 0;
+				touch_event.button.button = SDL_BUTTON_LEFT;
+				touch_event.button.state = SDL_PRESSED;
+				touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
+				touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+				gui_input->pushInput(touch_event);
+				break;
+
+			case SDL_FINGERUP:
+				memcpy(&touch_event, &event, sizeof event);
+				touch_event.type = SDL_MOUSEBUTTONUP;
+				touch_event.button.which = 0;
+				touch_event.button.button = SDL_BUTTON_LEFT;
+				touch_event.button.state = SDL_RELEASED;
+				touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
+				touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+				gui_input->pushInput(touch_event);
+				break;
+
+			case SDL_FINGERMOTION:
+				memcpy(&touch_event, &event, sizeof event);
+				touch_event.type = SDL_MOUSEMOTION;
+				touch_event.motion.which = 0;
+				touch_event.motion.state = 0;
+				touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
+				touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
+				gui_input->pushInput(touch_event);
+				break;
+
+			default:
+				break;
 			}
+
 			//-------------------------------------------------
 			// Send event to guichan-controls
 			//-------------------------------------------------
