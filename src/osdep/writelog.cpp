@@ -34,6 +34,7 @@ void write_log (const char *format,...)
     va_list parms;
     va_start(parms, format);
     SDL_Log(format, parms);
+    va_end(parms);
 #else
 	if (write_logfile)
 	{
