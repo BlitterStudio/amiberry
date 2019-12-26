@@ -122,6 +122,7 @@ enum
 SDL_Joystick* gui_joystick;
 SDL_Surface* gui_screen;
 SDL_Event gui_event;
+SDL_Event touch_event;
 SDL_Window* sdl_window;
 #ifdef USE_DISPMANX
 DISPMANX_RESOURCE_HANDLE_T gui_resource;
@@ -750,6 +751,38 @@ void checkInput()
 				default:
 					break;
 				}
+			break;
+
+		case SDL_FINGERDOWN: 
+			memcpy(&touch_event, &gui_event, sizeof gui_event);
+			touch_event.type = SDL_MOUSEBUTTONDOWN;
+			touch_event.button.which = 0;
+			touch_event.button.button = SDL_BUTTON_LEFT;
+			touch_event.button.state = SDL_PRESSED;
+			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_FINGERUP: 
+			memcpy(&touch_event, &gui_event, sizeof gui_event);
+			touch_event.type = SDL_MOUSEBUTTONUP;
+			touch_event.button.which = 0;
+			touch_event.button.button = SDL_BUTTON_LEFT;
+			touch_event.button.state = SDL_RELEASED;
+			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_FINGERMOTION: 
+			memcpy(&touch_event, &gui_event, sizeof gui_event);
+			touch_event.type = SDL_MOUSEMOTION;
+			touch_event.motion.which = 0;
+			touch_event.motion.state = 0;
+			touch_event.motion.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
+			touch_event.motion.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			gui_input->pushInput(touch_event);
 			break;
 
 		default:
