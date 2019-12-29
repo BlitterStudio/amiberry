@@ -1,5 +1,7 @@
 [![Gitter](https://badges.gitter.im/amiberry/Amiberry.svg)](https://gitter.im/amiberry/Amiberry?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
+[![Backers on Open Collective](https://opencollective.com/amiberry/backers/badge.svg)](#backers) [![Sponsors on Open Collective](https://opencollective.com/amiberry/sponsors/badge.svg)](#sponsors)
+
 <img src="resources/icon.png" align="right" />
 
 # Amiga emulator for the Raspberry Pi and other ARM SoC
@@ -7,12 +9,6 @@
 Amiberry is an optimized Amiga emulator, for ARM-based boards (like the Raspberry Pi, ASUS Tinkerboard, Odroid XU4, etc). The core emulation comes from WinUAE, but stripped down somewhat in order to achieve good performance in underpowered boards. It includes JIT CPU and FPU support, to get high-performance results on CPU-intensive emulated environments. On top of that, we have some unique features developed only for Amiberry, such as the WHDLoad booter and support for RetroArch controller mapping.
 
 Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display, input handling and audio output. On the RPI platform specifically, we offer a special alternative version which uses Dispmanx directly for the emulation screen, for maximum performance.
-
-# Donations
-
-If you like this project and would like to contribute with a donation, you can use this PayPal pool: [Amiberry PayPal pool](https://paypal.me/pools/c/8apqkBQovm)
-
-Donations would help with porting Amiberry to new devices, keeping the motivation going to spend those countless hours on the project, and perhaps getting us some chocolate.
 
 # Requirements
 
@@ -115,3 +111,23 @@ For the OrangePi PC
 You can check the Makefile for a full list of supported platforms!
 
 For more documentation subjects, please check the [Wiki page](https://github.com/midwan/amiberry/wiki)
+
+## Contributors
+This project exists thanks to all the people who contribute. [[Contribute]](CONTRIBUTING.md).
+<a href="graphs/contributors"><img src="https://opencollective.com/amiberry/contributors.svg?width=890" /></a>
+## Backers
+Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/amiberry#backer)]
+<a href="https://opencollective.com/amiberry#backers" target="_blank"><img src="https://opencollective.com/amiberry/backers.svg?width=890"></a>
+## Sponsors
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [[Become a sponsor](https://opencollective.com/amiberry#sponsor)]
+<a href="https://opencollective.com/amiberry/sponsor/0/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/0/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/1/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/1/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/2/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/2/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/3/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/3/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/4/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/4/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/5/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/5/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/6/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/6/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/7/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/7/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/8/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/8/avatar.svg"></a>
+<a href="https://opencollective.com/amiberry/sponsor/9/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/9/avatar.svg"></a>
+
