@@ -27,29 +27,32 @@ void console_out (const TCHAR *format,...)
     cout << buffer << endl;
 }
 
-void write_log (const char *format,...)
+void write_log(const char* format, ...)
 {
-    // Redirect logging to Android's logcat
+    if (write_logfile)
+    {
+        // Redirect logging to Android's logcat
 #ifdef ANDROID
-    va_list parms;
-    va_start(parms, format);
-    SDL_Log(format, parms);
+        va_list parms;
+        va_start(parms, format);
+        SDL_Log(format, parms);
+        va_end(parms);
 #else
-	if (write_logfile)
-	{
-		TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
-		va_list parms;
-		va_start(parms, format);
-		auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
-		if (debugfile)
-		{
-			fprintf(debugfile, "%s", buffer);
-			fflush(debugfile);
-		}
-		va_end(parms);
-	}
+        TCHAR buffer[WRITE_LOG_BUF_SIZE];
+
+        va_list parms;
+        va_start(parms, format);
+        auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+        if (debugfile)
+        {
+            fprintf(debugfile, "%s", buffer);
+            fflush(debugfile);
+        }
+        va_end(parms);
+
 #endif
+    }
 }
 
 void jit_abort (const TCHAR *format,...)

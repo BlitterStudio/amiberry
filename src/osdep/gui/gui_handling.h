@@ -38,6 +38,7 @@ extern gcn::Color colTextboxBackground;
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
+extern gcn::SDLGraphics* gui_graphics;
 extern bool gui_joystick_control;
 
 extern char currentDir[MAX_DPATH];

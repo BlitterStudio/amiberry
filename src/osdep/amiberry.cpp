@@ -1215,15 +1215,16 @@ int main(int argc, char* argv[])
 
 int handle_msgpump()
 {
-	auto got = 0;
-	SDL_Event rEvent;
-
-	while (SDL_PollEvent(&rEvent))
+	auto gotEvent = 0;
+	SDL_Event event;
+	int mouseScale, x, y;
+	
+	while (SDL_PollEvent(&event))
 	{
-		got = 1;
+		gotEvent = 1;
 		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
 
-		switch (rEvent.type)
+		switch (event.type)
 		{
 		case SDL_QUIT:
 			uae_quit();
@@ -1236,32 +1237,32 @@ int handle_msgpump()
 			// if we want to use the KB
 			// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
 			// which starts a replay!!!
-			auto ok_to_use = !key_used_by_retroarch_joy(rEvent.key.keysym.scancode);
+			auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 			if (ok_to_use)
 			{
-				if (rEvent.key.repeat == 0)
+				if (event.key.repeat == 0)
 				{
 					// If the Enter GUI key was pressed, handle it
-					if (enter_gui_key && rEvent.key.keysym.sym == enter_gui_key)
+					if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
 					{
 						inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 						break;
 					}
 
 					// If the Quit emulator key was pressed, handle it
-					if (quit_key && rEvent.key.keysym.sym == quit_key)
+					if (quit_key && event.key.keysym.sym == quit_key)
 					{
 						inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
 						break;
 					}
 
-					if (action_replay_button && rEvent.key.keysym.sym == action_replay_button)
+					if (action_replay_button && event.key.keysym.sym == action_replay_button)
 					{
 						inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
 						break;
 					}
 
-					if (fullscreen_key && rEvent.key.keysym.sym == fullscreen_key)
+					if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
 					{
 						inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
 						break;
@@ -1282,9 +1283,9 @@ int handle_msgpump()
 					break;
 				}
 
-				if (rEvent.key.repeat == 0)
+				if (event.key.repeat == 0)
 				{
-					if (rEvent.key.keysym.sym == SDLK_CAPSLOCK)
+					if (event.key.keysym.sym == SDLK_CAPSLOCK)
 					{
 						// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
 						ioctl(0, KDGKBLED, &kbd_flags);
@@ -1311,76 +1312,93 @@ int handle_msgpump()
 					// Handle all other keys
 					if (swap_win_alt_keys)
 					{
-						if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
-							rEvent.key.keysym.scancode = SDL_SCANCODE_LGUI;
-						else if (rEvent.key.keysym.scancode == SDL_SCANCODE_RALT)
-							rEvent.key.keysym.scancode = SDL_SCANCODE_RGUI;
+						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+							event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+						else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+							event.key.keysym.scancode = SDL_SCANCODE_RGUI;
 					}
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 1, false);
+					inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
 				}
 			}
 		}
 		break;
 		case SDL_KEYUP:
 		{
-			auto ok_to_use = !key_used_by_retroarch_joy(rEvent.key.keysym.scancode);
+			auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 			if (ok_to_use)
 			{
-				if (rEvent.key.repeat == 0)
+				if (event.key.repeat == 0)
 				{
 					if (swap_win_alt_keys)
 					{
-						if (rEvent.key.keysym.scancode == SDL_SCANCODE_LALT)
-							rEvent.key.keysym.scancode = SDL_SCANCODE_LGUI;
-						else if (rEvent.key.keysym.scancode == SDL_SCANCODE_RALT)
-							rEvent.key.keysym.scancode = SDL_SCANCODE_RGUI;
+						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+							event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+						else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+							event.key.keysym.scancode = SDL_SCANCODE_RGUI;
 					}
-					inputdevice_translatekeycode(0, rEvent.key.keysym.scancode, 0, true);
+					inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
 				}
 			}
 		}
 		break;
 
+		case SDL_FINGERDOWN:
+			setmousebuttonstate(0, 0, 0);
+			break;
+			
 		case SDL_MOUSEBUTTONDOWN:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
-				if (rEvent.button.button == SDL_BUTTON_LEFT)
+				if (event.button.button == SDL_BUTTON_LEFT)
 					setmousebuttonstate(0, 0, 1);
-				if (rEvent.button.button == SDL_BUTTON_RIGHT)
+				if (event.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 1);
-				if (rEvent.button.button == SDL_BUTTON_MIDDLE)
+				if (event.button.button == SDL_BUTTON_MIDDLE)
 					setmousebuttonstate(0, 2, 1);
 			}
 			break;
 
+		case SDL_FINGERUP:
+			setmousebuttonstate(0, 0, 0);
+			break;
+			
 		case SDL_MOUSEBUTTONUP:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
-				if (rEvent.button.button == SDL_BUTTON_LEFT)
+				if (event.button.button == SDL_BUTTON_LEFT)
 					setmousebuttonstate(0, 0, 0);
-				if (rEvent.button.button == SDL_BUTTON_RIGHT)
+				if (event.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 0);
-				if (rEvent.button.button == SDL_BUTTON_MIDDLE)
+				if (event.button.button == SDL_BUTTON_MIDDLE)
 					setmousebuttonstate(0, 2, 0);
 			}
 			break;
 
+		case SDL_FINGERMOTION:
+			//TODO this doesn't work yet
+			mouseScale = currprefs.input_joymouse_multiplier / 2;
+			x = event.motion.xrel;
+			y = event.motion.yrel;
+			setmousestate(0, 0, x* mouseScale, 0);
+			setmousestate(0, 1, y* mouseScale, 0);
+			break;
+			
 		case SDL_MOUSEMOTION:
 			if (currprefs.input_tablet == TABLET_OFF)
 			{
 				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 				{
-					const auto mouseScale = currprefs.input_joymouse_multiplier / 2;
-					auto x = rEvent.motion.xrel;
-					auto y = rEvent.motion.yrel;
+					mouseScale = currprefs.input_joymouse_multiplier / 2;
+					x = event.motion.xrel;
+					y = event.motion.yrel;
 #if defined (ANDROID)
-					if (rEvent.motion.x == 0 && x > -4)
+					if (event.motion.x == 0 && x > -4)
 						x = -4;
-					if (rEvent.motion.y == 0 && y > -4)
+					if (event.motion.y == 0 && y > -4)
 						y = -4;
-					if (rEvent.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
+					if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
 						x = 4;
-					if (rEvent.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
+					if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
 						y = 4;
 #endif //ANDROID
 					setmousestate(0, 0, x * mouseScale, 0);
@@ -1392,14 +1410,14 @@ int handle_msgpump()
 		case SDL_MOUSEWHEEL:
 			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 			{
-				const auto val_y = rEvent.wheel.y;
+				const auto val_y = event.wheel.y;
 				setmousestate(0, 2, val_y, 0);
 				if (val_y < 0)
 					setmousebuttonstate(0, 3 + 0, -1);
 				else if (val_y > 0)
 					setmousebuttonstate(0, 3 + 1, -1);
 
-				const auto val_x = rEvent.wheel.x;
+				const auto val_x = event.wheel.x;
 				setmousestate(0, 3, val_x, 0);
 				if (val_x < 0)
 					setmousebuttonstate(0, 3 + 2, -1);
@@ -1412,7 +1430,7 @@ int handle_msgpump()
 			break;
 		}
 	}
-	return got;
+	return gotEvent;
 }
 
 bool handle_events()
