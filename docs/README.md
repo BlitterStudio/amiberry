@@ -113,7 +113,7 @@ You can check the Makefile for a full list of supported platforms!
 For more documentation subjects, please check the [Wiki page](https://github.com/midwan/amiberry/wiki)
 
 ## Contributors
-This project exists thanks to all the people who contribute. [[Contribute]](CONTRIBUTING.md).
+This project exists thanks to all the people who contribute. [[Contribute]](../.github/CONTRIBUTING.md).
 <a href="graphs/contributors"><img src="https://opencollective.com/amiberry/contributors.svg?width=890" /></a>
 ## Backers
 Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/amiberry#backer)]
