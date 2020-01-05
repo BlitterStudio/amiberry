@@ -1211,7 +1211,7 @@ static int parsemds(struct cdunit* cdu, struct zfile* zmds, const TCHAR* img, co
 		goto end;
 
 	head = (MDS_Header*)mds;
-	if (!memcmp (head->signature, MEDIA_DESCRIPTOR, strlen (MEDIA_DESCRIPTOR)))
+	if (!memcmp (head->signature, MEDIA_DESCRIPTOR, sizeof(MEDIA_DESCRIPTOR)))
 		goto end;
 	if (head->version[0] != 1) {
 		write_log (_T("unsupported MDS version %d, only v.1 supported\n"), head->version[0]);

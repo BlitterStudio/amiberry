@@ -136,7 +136,7 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 
 # Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DUSE_RENDER_THREAD -DSOFTWARE_CURSOR
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DSOFTWARE_CURSOR
     HAVE_NEON = 1
 
     ifneq (,$(findstring RK33,$(PLATFORM)))
@@ -145,9 +145,11 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a72
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a53
+        CPPFLAGS += -DUSE_RENDER_THREAD
       endif
     else ifneq (,$(findstring RK3288,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
+      CPPFLAGS += -DUSE_RENDER_THREAD
     endif
 
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
