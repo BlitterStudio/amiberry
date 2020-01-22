@@ -66,6 +66,8 @@ int action_replay_button = SDLK_PAUSE;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
+bool mouse_grabbed = true;
+
 std::string get_version_string()
 {
 	std::string label_text = AMIBERRYVERSION;
@@ -1370,7 +1372,22 @@ int handle_msgpump()
 				if (event.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 0);
 				if (event.button.button == SDL_BUTTON_MIDDLE)
+				{
 					setmousebuttonstate(0, 2, 0);
+					// Release mouse
+					if (mouse_grabbed)
+					{
+						mouse_grabbed = false;
+						SDL_ShowCursor(SDL_ENABLE);
+						SDL_SetRelativeMouseMode(SDL_FALSE);
+					}
+					else
+					{
+						mouse_grabbed = true;
+						SDL_ShowCursor(SDL_DISABLE);
+						SDL_SetRelativeMouseMode(SDL_TRUE);
+					}
+				}
 			}
 			break;
 
