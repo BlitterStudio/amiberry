@@ -174,7 +174,13 @@ else ifeq ($(PLATFORM),jetson-nano)
     CPUFLAGS += -mcpu=cortex-a57
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
     AARCH64 = 1
-	
+
+# Odroid GO Advance (SDL2 64-bit)
+else ifeq ($(PLATFORM),odroid-go)
+    CPUFLAGS += -mcpu=cortex-a35
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    AARCH64 = 1
+
 else
 $(error Unknown platform:$(PLATFORM))
 endif
