@@ -192,8 +192,9 @@ PROG   = amiberry
 # SDL2 options
 #
 all: guisan $(PROG)
-export SDL_CFLAGS := $(shell sdl2-config --cflags)
-export SDL_LDFLAGS := $(shell sdl2-config --libs)
+SDL_CONFIG ?= sdl2-config
+export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
+export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
 CPPFLAGS += $(SDL_CFLAGS) -Iexternal/libguisan/include
 LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
