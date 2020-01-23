@@ -146,7 +146,9 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a53
         CPPFLAGS += -DUSE_RENDER_THREAD
-      endif
+      else ifneq (,$(findstring RK3326,$(PLATFORM)))
+        CPUFLAGS += -mcpu=cortex-a35
+	  endif
     else ifneq (,$(findstring RK3288,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
       CPPFLAGS += -DUSE_RENDER_THREAD
@@ -172,12 +174,6 @@ else ifeq ($(PLATFORM),lePotato)
 # Nvidia Jetson Nano (SDL2 64-bit)
 else ifeq ($(PLATFORM),jetson-nano)
     CPUFLAGS += -mcpu=cortex-a57
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
-    AARCH64 = 1
-
-# Odroid GO Advance (SDL2 64-bit)
-else ifeq ($(PLATFORM),odroid-go)
-    CPUFLAGS += -mcpu=cortex-a35
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
     AARCH64 = 1
 
