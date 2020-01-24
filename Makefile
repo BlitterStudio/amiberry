@@ -26,6 +26,13 @@ endif
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
+
+#
+# libgo2 flags (Odroid Go Advance)
+#
+LIBGO2_FLAGS = -DUSE_LIBGO2 -Iexternal/libgo2/src
+LIBGO2_LDFLAGS = -lgo2
+
 CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #DEBUG=1
 #GCC_PROFILE=1
@@ -133,6 +140,13 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a53
       CPPFLAGS += -DUSE_RENDER_THREAD
     endif
+
+# Odroid Go Advance special target (libgo2, 64-bit)
+else ifeq ($(PLATFORM),go-advance)
+    CPUFLAGS += -mcpu=cortex-a35
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES ${LIBGO2_FLAGS}
+    LDFLAGS += ${LIBGO2_LDFLAGS}
+    AARCH64 = 1
 
 # Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
