@@ -523,6 +523,7 @@ void usage()
 	std::cout << " --help                     Show this help." << std::endl;
 	std::cout << " -f <file>                  Load a configuration file." << std::endl;
 	std::cout << " -config=<file>             Load a configuration file." << std::endl;
+	std::cout << " -model=<Amiga Model>       Amiga model to emulate, from the QuickStart options." << std::endl;
 	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image." << std::endl;
 	std::cout << " -statefile=<file>          Load a save state file." << std::endl;
 	std::cout << " -s <config param>=<value>  Set the configuration parameter with value." << std::endl;
@@ -540,6 +541,10 @@ void usage()
 	std::cout << "Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used." << std::endl;
 	std::cout << "File names should be with absolute path." << std::endl;
 	std::cout << "\nExample:" << std::endl;
+	std::cout << "amiberry -model=A1200 -G" << std::endl;
+	std::cout << "It will use the A1200 default settings as found in the QuickStart panel." << std::endl;
+	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
+	std::cout << "\nExample 2:" << std::endl;
 	std::cout << "amiberry -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no" << std::endl;
 	std::cout << "It will load A500.uae configuration with the save state named game." << std::endl;
 	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
@@ -586,6 +591,25 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			xfree(txt);
 			firstconfig = false;
 			loaded = true;
+		}
+		else if (_tcsncmp(argv[i], _T("-model="), 7) == 0)
+		{
+			const auto txt = parsetextpath(argv[i] + 7);
+			if (_tcsncmp(txt, _T("A500"), 4) == 0) {
+				bip_a500(&currprefs, -1);
+			}
+			else if (_tcsncmp(txt, _T("A500P"), 5) == 0) {
+				bip_a500plus(&currprefs, -1);
+			}
+			else if (_tcsncmp(txt, _T("A1200"), 5) == 0) {
+				bip_a1200(&currprefs, -1);
+			}
+			else if (_tcsncmp(txt, _T("A4000"), 5) == 0) {
+				bip_a4000(&currprefs, -1);
+			}
+			else if (_tcsncmp(txt, _T("CD32"), 4) == 0) {
+				bip_cd32(&currprefs, -1);
+			}
 		}
 		else if (_tcsncmp(argv[i], _T("-statefile="), 11) == 0)
 		{
