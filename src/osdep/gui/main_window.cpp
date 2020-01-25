@@ -260,7 +260,7 @@ void swcursor(bool op) {
 		SDL_GetMouseState(&dst.x, &dst.y);
 		dst.x *= mscalex * 1.03;
 		dst.y *= mscaley * 1.005;
-		SDL_RenderCopy(renderer, swcursor_texture, nullptr, &dst);
+		SDL_RenderCopyEx(renderer, swcursor_texture, nullptr, &dst, rotation_angle, nullptr, SDL_FLIP_NONE);
 	}
 }
 #endif
@@ -274,7 +274,7 @@ void UpdateGuiScreen()
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
 	SDL_RenderClear(renderer);
-	SDL_RenderCopy(renderer, gui_texture, nullptr, nullptr);
+	SDL_RenderCopyEx(renderer, gui_texture, nullptr, nullptr, rotation_angle, nullptr, SDL_FLIP_NONE);
 #ifdef SOFTWARE_CURSOR
 	swcursor(true);
 #endif

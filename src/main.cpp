@@ -805,7 +805,7 @@ bool check_internet_connection()
 	auto result = false;
 	FILE* output;
 
-	if (!((output = popen("/sbin/route -n | grep -c '^0\\.0\\.0\\.0'", "r"))))
+	if (!((output = popen("route -n | grep -c '^0\\.0\\.0\\.0'", "r"))))
 		return result;
 
 	unsigned int i;

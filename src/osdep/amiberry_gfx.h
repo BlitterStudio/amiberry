@@ -27,6 +27,7 @@ extern const char* sdl_video_driver;
 extern SDL_Renderer* renderer;
 extern SDL_Window* sdl_window;
 extern SDL_Surface* gui_screen;
+extern int rotation_angle;
 
 extern bool can_have_linedouble;
 extern bool use_sdl2_render_thread;

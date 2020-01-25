@@ -148,7 +148,10 @@ else ifeq ($(PLATFORM),go-advance)
     LDFLAGS += ${LIBGO2_LDFLAGS}
     AARCH64 = 1
 
-# Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
+# RK3288 e.g. Asus Tinker Board
+# RK3328 e.g. PINE64 Rock64 
+# RK3399 e.g. PINE64 RockPro64 
+# RK3326 e.g. Odroid Go Advance - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DSOFTWARE_CURSOR
     HAVE_NEON = 1

@@ -122,7 +122,7 @@ void message_UpdateScreen()
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
 	SDL_RenderClear(renderer);
-	SDL_RenderCopy(renderer, msg_texture, nullptr, nullptr);
+	SDL_RenderCopyEx(renderer, msg_texture, nullptr, nullptr, rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(renderer);
 #endif
 }
