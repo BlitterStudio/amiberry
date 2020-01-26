@@ -409,7 +409,12 @@ void amiberry_gui_init()
 	{
 		// Only resize the window if we're under x11, otherwise we're fullscreen anyway
 		if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
-			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
+		{
+			if (rotation_angle != 0 && rotation_angle != 180)
+				SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
+			else
+				SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
+		}
 	}
 
 	// make the scaled rendering look smoother (linear scaling).

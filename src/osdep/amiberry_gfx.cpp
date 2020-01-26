@@ -49,6 +49,7 @@ const char* sdl_video_driver;
 
 static int display_width;
 static int display_height;
+int window_width = 800, window_height = 600;
 bool can_have_linedouble;
 
 static unsigned long last_synctime;
@@ -356,15 +357,27 @@ int graphics_setup(void)
 	}
 
 	write_log("Trying to create window...\n");
-	
+
 	if (sdl_window == nullptr)
 	{
-		sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			800,
-			480,
-			sdl_window_mode);
+		if (rotation_angle != 0 && rotation_angle != 180)
+		{
+			sdl_window = SDL_CreateWindow("Amiberry",
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
+				window_height,
+				window_width,
+				sdl_window_mode);
+		}
+		else
+		{
+			sdl_window = SDL_CreateWindow("Amiberry",
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
+				window_width,
+				window_height,
+				sdl_window_mode);
+		}
 		check_error_sdl(sdl_window == nullptr, "Unable to create window:");		
 	}
 	
