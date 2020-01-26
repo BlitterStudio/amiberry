@@ -14,7 +14,7 @@ Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display,
 
 Amiberry has been tested on Debian/Raspbian Buster, and requires the following packages to run:
 
-      sudo apt-get install sdl2 dl2-ttf sdl2-image libxml2 flac mpg123 libmpeg2
+      sudo apt-get install libsdl2 libsdl2-ttf libsdl2-image libxml2 flac mpg123 libmpeg2
 
 If you want to compile Amiberry from source, you'll need the `-dev` version of the same packages instead:
 
