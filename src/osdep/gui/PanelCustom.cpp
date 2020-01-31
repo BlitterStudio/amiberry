@@ -44,7 +44,7 @@ static int SelectedFunction = 0;
 class StringListModel : public gcn::ListModel
 {
 private:
-	vector<string> values;
+	std::vector<std::string> values;
 public:
 	StringListModel(const char* entries[], const int count)
 	{
@@ -70,7 +70,7 @@ public:
 		return 0;
 	}
 
-	string getElementAt(int i) override
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= values.size())
 			return "---";
@@ -784,7 +784,7 @@ void RefreshPanelCustom(void)
 }
 
 
-bool HelpPanelCustom(vector<string>& helptext)
+bool HelpPanelCustom(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Set up Custom input actions for each Amiga port, such as Keyboard remapping,");

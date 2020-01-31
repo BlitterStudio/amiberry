@@ -1,4 +1,3 @@
-#include <strings.h>
 #include <string.h>
 
 #include <guisan.hpp>
@@ -27,8 +26,8 @@ static gcn::UaeDropDown* cboUAEROM;
 
 class ROMListModel : public gcn::ListModel
 {
-	vector<string> roms;
-	vector<int> idxToAvailableROMs;
+	std::vector<std::string> roms;
+	std::vector<int> idxToAvailableROMs;
 	int ROMType;
 
 public:

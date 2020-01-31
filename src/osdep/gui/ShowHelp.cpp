@@ -33,10 +33,10 @@ static gcn::ScrollArea* scrAreaHelp;
 
 class HelpListModel : public gcn::ListModel
 {
-	vector<string> lines;
+	std::vector<std::string> lines;
 
 public:
-	HelpListModel(const vector<string>& helptext)
+	HelpListModel(const std::vector<std::string>& helptext)
 	{
 		lines = helptext;
 	}
@@ -46,7 +46,7 @@ public:
 		return lines.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i >= 0 && i < lines.size())
 			return lines[i];
@@ -67,7 +67,7 @@ public:
 
 static ShowHelpActionListener* showHelpActionListener;
 
-static void InitShowHelp(const vector<string>& helptext)
+static void InitShowHelp(const std::vector<std::string>& helptext)
 {
 	wndShowHelp = new gcn::Window("Help");
 	wndShowHelp->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -237,7 +237,7 @@ static void ShowHelpLoop(void)
 	}
 }
 
-void ShowHelp(const char* title, const vector<string>& text)
+void ShowHelp(const char* title, const std::vector<std::string>& text)
 {
 	dialogFinished = false;
 

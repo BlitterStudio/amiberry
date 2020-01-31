@@ -44,7 +44,7 @@ static int curr_stereodelay_idx;
 
 class FrequencyListModel : public gcn::ListModel
 {
-	vector<string> freq;
+	std::vector<std::string> freq;
 
 public:
 	FrequencyListModel()
@@ -60,7 +60,7 @@ public:
 		return freq.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= freq.size())
 			return "---";
@@ -73,7 +73,7 @@ static FrequencyListModel frequencyTypeList;
 
 class InterpolationListModel : public gcn::ListModel
 {
-	vector<string> entry;
+	std::vector<std::string> entry;
 
 public:
 	InterpolationListModel()
@@ -90,7 +90,7 @@ public:
 		return entry.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= entry.size())
 			return "---";
@@ -103,7 +103,7 @@ static InterpolationListModel interpolationTypeList;
 
 class FilterListModel : public gcn::ListModel
 {
-	vector<string> entry;
+	std::vector<std::string> entry;
 
 public:
 	FilterListModel()
@@ -120,7 +120,7 @@ public:
 		return entry.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= entry.size())
 			return "---";

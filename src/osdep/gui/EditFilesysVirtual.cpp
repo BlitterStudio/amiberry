@@ -26,7 +26,7 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 202
 
-extern string volName;
+extern std::string volName;
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -379,7 +379,7 @@ bool EditFilesysVirtual(const int unit_no)
 {
 	struct mountedinfo mi{};
 	struct uaedev_config_data* uci;
-	string strdevname, strvolname, strroot;
+	std::string strdevname, strvolname, strroot;
 	char tmp[32];
 
 	dialogResult = false;

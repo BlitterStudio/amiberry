@@ -260,7 +260,7 @@ public:
 		return numModels;
 	}
 
-	string getElementAt(int i) override
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= numModels)
 			return "---";
@@ -282,7 +282,7 @@ public:
 		return numModelConfigs;
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (quickstart_model < 0 || i < 0 || i >= numModelConfigs)
 			return "---";
@@ -304,7 +304,7 @@ public:
 		return lstMRUDiskList.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= lstMRUDiskList.size())
 			return "---";
@@ -326,7 +326,7 @@ public:
 		return lstMRUCDList.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= lstMRUCDList.size())
 			return "---";
@@ -939,7 +939,7 @@ void RefreshPanelQuickstart(void)
 }
 
 
-bool HelpPanelQuickstart(vector<string>& helptext)
+bool HelpPanelQuickstart(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Simplified start of emulation by just selecting the Amiga model and the disk/CD");

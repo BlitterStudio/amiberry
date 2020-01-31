@@ -10,7 +10,7 @@
 
 #include "sysdeps.h"
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "newcpu.h"
 #include "gui_handling.h"
 

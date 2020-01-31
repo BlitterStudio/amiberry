@@ -5,17 +5,16 @@
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "UaeDropDown.hpp"
-
 #include "sysdeps.h"
 #include "gui_handling.h"
 
 typedef struct
 {
-	string activeWidget;
-	string leftWidget;
-	string rightWidget;
-	string upWidget;
-	string downWidget;
+	std::string activeWidget;
+	std::string leftWidget;
+	std::string rightWidget;
+	std::string upWidget;
+	std::string downWidget;
 } NavigationMap;
 
 

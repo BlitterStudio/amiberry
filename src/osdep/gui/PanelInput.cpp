@@ -70,7 +70,7 @@ public:
 		return 0;
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || static_cast<unsigned int>(i) >= values.size())
 			return "---";

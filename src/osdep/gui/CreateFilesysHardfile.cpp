@@ -373,7 +373,7 @@ static void CreateFilesysHardfileLoop()
 
 bool CreateFilesysHardfile()
 {
-	string strroot;
+	std::string strroot;
 	char tmp[32];
 	char zero = 0;
 
