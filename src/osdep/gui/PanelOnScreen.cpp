@@ -1,7 +1,6 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include "sdltruetypefont.hpp"
 #include "SelectorEntry.hpp"
 #include "UaeRadioButton.hpp"
 #include "UaeDropDown.hpp"
