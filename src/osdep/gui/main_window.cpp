@@ -274,7 +274,11 @@ void UpdateGuiScreen()
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
 	SDL_RenderClear(renderer);
-	SDL_RenderCopyEx(renderer, gui_texture, nullptr, nullptr, rotation_angle, nullptr, SDL_FLIP_NONE);
+	if (rotation_angle == 0 || rotation_angle == 180)
+		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+	else
+		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
+	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
 #ifdef SOFTWARE_CURSOR
 	swcursor(true);
 #endif
@@ -331,7 +335,9 @@ void amiberry_gui_init()
 	// Create new screen for GUI
 	//-------------------------------------------------
 	if (!gui_screen)
+	{
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+	}
 	check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 
 #ifdef USE_DISPMANX
@@ -405,16 +411,10 @@ void amiberry_gui_init()
 	setup_cursor();
 #endif
 
-	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
+	if (sdl_window)
 	{
-		// Only resize the window if we're under x11, otherwise we're fullscreen anyway
-		if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
-		{
-			if (rotation_angle != 0 && rotation_angle != 180)
-				SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
-			else
-				SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
-		}
+		if (rotation_angle != 0 && rotation_angle != 180)
+			SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
 	}
 
 	// make the scaled rendering look smoother (linear scaling).
@@ -424,7 +424,12 @@ void amiberry_gui_init()
 	                                gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
-	SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
+	
+	if (rotation_angle == 0 || rotation_angle == 180)
+		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
+	else
+		SDL_RenderSetLogicalSize(renderer, GUI_HEIGHT, GUI_WIDTH);
+	
 	SDL_ShowCursor(SDL_ENABLE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 
