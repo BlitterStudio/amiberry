@@ -39,6 +39,7 @@ static int vsync_modulo = 1;
 SDL_DisplayMode sdlMode;
 SDL_Surface* screen = nullptr;
 SDL_Texture* texture;
+SDL_Rect renderQuad;
 SDL_Thread * renderthread = nullptr;
 SDL_Renderer* renderer;
 const char* sdl_video_driver;
@@ -680,9 +681,19 @@ static void open_screen(struct uae_prefs* p)
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
 	if (screen_is_picasso)
-		SDL_RenderSetLogicalSize(renderer, display_width, display_height);
+	{
+		if (rotation_angle == 0 || rotation_angle == 180)
+			SDL_RenderSetLogicalSize(renderer, display_width, display_height);
+		else
+			SDL_RenderSetLogicalSize(renderer, display_height, display_width);
+	}
 	else
-		SDL_RenderSetLogicalSize(renderer, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
+	{
+		if (rotation_angle == 0 || rotation_angle == 180)
+			SDL_RenderSetLogicalSize(renderer, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
+		else
+			SDL_RenderSetLogicalSize(renderer, display_height * 2 >> p->gfx_vresolution, display_width * 2 >> p->gfx_resolution);
+	}
 
 	texture = SDL_CreateTexture(renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
@@ -835,7 +846,11 @@ int sdl2_render_thread(void *ptr) {
 
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
-	SDL_RenderCopyEx(renderer, texture, nullptr, nullptr, rotation_angle, nullptr, SDL_FLIP_NONE);
+	if (rotation_angle == 0 || rotation_angle == 180)
+		renderQuad = { 0, 0, screen->w, screen->h };
+	else
+		renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, screen->w, screen->h };
+	SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
 	return 0;
 }
 
@@ -915,7 +930,11 @@ void show_screen(int mode)
 	{
 		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 		SDL_RenderClear(renderer);
-		SDL_RenderCopyEx(renderer, texture, nullptr, nullptr, rotation_angle, nullptr, SDL_FLIP_NONE);
+		if (rotation_angle == 0 || rotation_angle == 180)
+			renderQuad = { 0, 0, screen->w, screen->h };
+		else
+			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, screen->w, screen->h };
+		SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(renderer);
 	}
 #endif
@@ -1367,7 +1386,7 @@ void picasso_init_resolutions()
 	Displays[0].rect.left = 0;
 	Displays[0].rect.top = 0;
 	Displays[0].rect.right = 800;
-	Displays[0].rect.bottom = 480;
+	Displays[0].rect.bottom = 600;
 	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.right, Displays[0].rect.bottom);
 	Displays[0].name = my_strdup(tmp);
 	Displays[0].name2 = my_strdup("Display");
