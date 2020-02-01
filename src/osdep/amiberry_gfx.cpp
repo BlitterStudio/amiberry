@@ -670,30 +670,40 @@ static void open_screen(struct uae_prefs* p)
 			depth = 32;
 			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
+
+		if (rotation_angle == 0 || rotation_angle == 180)
+		{
+			SDL_RenderSetLogicalSize(renderer, display_width, display_height);
+			renderQuad = { 0, 0, display_width, display_height };
+		}
+		else
+		{
+			SDL_RenderSetLogicalSize(renderer, display_height, display_width);
+			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
+		}
 	}
 	else
 	{
 		depth = 16;
 		pixel_format = SDL_PIXELFORMAT_RGB565;
+		const auto width = display_width * 2 >> p->gfx_resolution;
+		const auto height = display_height * 2 >> p->gfx_vresolution;
+
+		if (rotation_angle == 0 || rotation_angle == 180)
+		{
+			SDL_RenderSetLogicalSize(renderer, width, height);
+			renderQuad = { 0, 0, width, height };
+		}
+			
+		else
+		{
+			SDL_RenderSetLogicalSize(renderer, height, width);
+			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
+		}
 	}
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
-
-	if (screen_is_picasso)
-	{
-		if (rotation_angle == 0 || rotation_angle == 180)
-			SDL_RenderSetLogicalSize(renderer, display_width, display_height);
-		else
-			SDL_RenderSetLogicalSize(renderer, display_height, display_width);
-	}
-	else
-	{
-		if (rotation_angle == 0 || rotation_angle == 180)
-			SDL_RenderSetLogicalSize(renderer, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
-		else
-			SDL_RenderSetLogicalSize(renderer, display_height * 2 >> p->gfx_vresolution, display_width * 2 >> p->gfx_resolution);
-	}
 
 	texture = SDL_CreateTexture(renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
 	check_error_sdl(texture == nullptr, "Unable to create texture");
@@ -846,10 +856,6 @@ int sdl2_render_thread(void *ptr) {
 
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
-	if (rotation_angle == 0 || rotation_angle == 180)
-		renderQuad = { 0, 0, screen->w, screen->h };
-	else
-		renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, screen->w, screen->h };
 	SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
 	return 0;
 }
@@ -930,10 +936,6 @@ void show_screen(int mode)
 	{
 		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 		SDL_RenderClear(renderer);
-		if (rotation_angle == 0 || rotation_angle == 180)
-			renderQuad = { 0, 0, screen->w, screen->h };
-		else
-			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, screen->w, screen->h };
 		SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(renderer);
 	}
