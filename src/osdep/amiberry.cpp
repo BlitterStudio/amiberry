@@ -89,6 +89,9 @@ void set_key_configs(struct uae_prefs* p)
 		// Otherwise we go for the default found in amiberry.conf
 		enter_gui_key = SDL_GetKeyFromName(default_open_gui_key);
 	}
+	// if nothing was found in amiberry.conf either, let's default back to F12
+	if (enter_gui_key == 0)
+		enter_gui_key = SDLK_F12;
 
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 	{
