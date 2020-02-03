@@ -140,6 +140,7 @@ struct regstruct
   /* pointer to real arrays/structs for easier access in JIT */
   uae_u32 *raw_cputbl_count;
   uintptr mem_banks;
+  uintptr cache_tags;
 #endif  
 };
 

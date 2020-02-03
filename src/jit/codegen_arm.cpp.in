@@ -242,22 +242,6 @@ LOWFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 }
 LENDFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 
-LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_m,(MEMR s))
-{
-  uintptr idx;
-  if(s >= (uintptr) &regs && s < ((uintptr) &regs) + sizeof(struct regstruct)) {
-    idx = s - (uintptr) & regs;
-    LDR_rRI(REG_WORK1, R_REGSTRUCT, idx);
-  } else {
-    LOAD_U32(REG_WORK1, s);
-	  LDR_rR(REG_WORK1, REG_WORK1);
-  }
-
-  idx = (uintptr) &(regs.pc_p) - (uintptr) &regs;
-  STR_rRI(REG_WORK1, R_REGSTRUCT, idx);
-}
-LENDFUNC(NONE,WRITE,1,compemu_raw_set_pc_m,(MEMR s))
-
 LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
 {
   LOAD_U32(REG_WORK2, s);
@@ -439,21 +423,49 @@ STATIC_INLINE void compemu_raw_handle_except(IM32 cycles)
 	branchadd = (uae_u32*)get_target();
 	BEQ_i(0);		// no exception, jump to next instruction
 	
-  raw_pop_preserved_regs();
   LOAD_U32(REG_PAR1, cycles);
-  LDR_rRI(RPC_INDEX, RPC_INDEX, -4); // <execute_exception>
-	emit_long((uintptr)execute_exception);
+  uae_u32* branchadd2 = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd2, (uintptr)popall_execute_exception);
 	
 	// Write target of next instruction
 	write_jmp_target(branchadd, (uintptr)get_target());
 }
 
-STATIC_INLINE void compemu_raw_maybe_recompile(uintptr t)
+LOWFUNC(NONE,WRITE,1,compemu_raw_execute_normal,(MEMR s))
 {
-  BGE_i(2);
-  raw_pop_preserved_regs();
-  LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
-  emit_long(t);
+  LOAD_U32(REG_WORK1, s);
+  LDR_rR(REG_WORK1, REG_WORK1);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd, (uintptr)popall_execute_normal_setpc);
+}
+LENDFUNC(NONE,WRITE,1,compemu_raw_execute_normal,(MEMR s))
+
+LOWFUNC(NONE,WRITE,1,compemu_raw_check_checksum,(MEMR s))
+{
+  LOAD_U32(REG_WORK1, s);
+  LDR_rR(REG_WORK1, REG_WORK1);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd, (uintptr)popall_check_checksum_setpc);
+}
+LENDFUNC(NONE,WRITE,1,compemu_raw_check_checksum,(MEMR s))
+
+LOWFUNC(NONE,WRITE,1,compemu_raw_exec_nostats,(IMPTR s))
+{
+  LOAD_U32(REG_WORK1, s);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd, (uintptr)popall_exec_nostats_setpc);
+}
+LENDFUNC(NONE,WRITE,1,compemu_raw_exec_nostats,(IMPTR s))
+
+STATIC_INLINE void compemu_raw_maybe_recompile(void)
+{
+  uae_u32* branchadd = (uae_u32*)get_target();
+  BLT_i(0);
+  write_jmp_target(branchadd, (uintptr)popall_recompile_block);
 }
 
 STATIC_INLINE void compemu_raw_jmp(uintptr t)
@@ -468,24 +480,23 @@ STATIC_INLINE void compemu_raw_jmp(uintptr t)
 	}
 }
 
-STATIC_INLINE void compemu_raw_jmp_pc_tag(uintptr base)
+STATIC_INLINE void compemu_raw_jmp_pc_tag(void)
 {
   uintptr idx = (uintptr)&regs.pc_p - (uintptr)&regs;
   LDRH_rRI(REG_WORK1, R_REGSTRUCT, idx);
-	LDR_rR(REG_WORK2, RPC_INDEX);
+	idx = (uintptr)&regs.cache_tags - (uintptr)&regs;
+	LDR_rRI(REG_WORK2, R_REGSTRUCT, idx);
 	LDR_rRR_LSLi(RPC_INDEX, REG_WORK2, REG_WORK1, 2);
-	emit_long(base);
 }
 
-STATIC_INLINE void compemu_raw_maybe_cachemiss(uintptr t)
+STATIC_INLINE void compemu_raw_maybe_cachemiss(void)
 {
-  BEQ_i(2);
-  raw_pop_preserved_regs();
-  LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
-  emit_long(t);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  BNE_i(0);
+  write_jmp_target(branchadd, (uintptr)popall_cache_miss);
 }
 
-STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles, uintptr adr)
+STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles)
 {
   clobber_flags();
 
@@ -505,9 +516,9 @@ STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles, uintptr adr)
   }
   STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
 
-  raw_pop_preserved_regs();
-  LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
-  emit_long(adr);
+  uae_u32* branchadd2 = (uae_u32*)get_target();
+  B_i(0);
+  write_jmp_target(branchadd2, (uintptr)popall_do_nothing);
 
   // <end>
   write_jmp_target((uae_u32*)branchadd, (uintptr)get_target());
@@ -545,22 +556,18 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
   }
 	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
 
+  uae_u32* branchadd = (uae_u32*)get_target();
+	CC_B_i(NATIVE_CC_MI, 0);
+  write_jmp_target(branchadd, (uintptr)popall_do_nothing);
 #ifdef ARMV6T2
-	CC_B_i(NATIVE_CC_MI, 2);
 	BFC_rii(rr_pc, 16, 31); // apply TAGMASK
 #else
-	CC_B_i(NATIVE_CC_MI, 3);
 	BIC_rri(rr_pc, rr_pc, 0x00ff0000);
 	BIC_rri(rr_pc, rr_pc, 0xff000000);
 #endif
-  LDR_rRI(REG_WORK1, RPC_INDEX, 8); // <cache_tags>
+	offs = (uintptr)(&regs.cache_tags) - (uintptr)&regs;
+	LDR_rRI(REG_WORK1, R_REGSTRUCT, offs);
 	LDR_rRR_LSLi(RPC_INDEX, REG_WORK1, rr_pc, 2);
-
-  raw_pop_preserved_regs();
-  LDR_rRI(RPC_INDEX, RPC_INDEX, 0); // <do_nothing>
-
-	emit_long((uintptr)cache_tags);
-	emit_long((uintptr)do_nothing);
 }
 LENDFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
 
@@ -584,14 +591,14 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 	tba = (uae_u32*)get_target();
   CC_B_i(NATIVE_CC_MI^1, 0); // <target set by caller>
   
-  LDR_rRI(REG_WORK1, RPC_INDEX, 8); // <v>
+  LDR_rRI(REG_WORK1, RPC_INDEX, 4); // <v>
   offs = (uintptr)&regs.pc_p - (uintptr)&regs;
   STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
-  raw_pop_preserved_regs();
-  LDR_rRI(RPC_INDEX, RPC_INDEX, 0); // <do_nothing>
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0);
+  write_jmp_target(branchadd, (uintptr)popall_do_nothing);
 
 	emit_long(v);
-	emit_long((uintptr)do_nothing);
 
 	return tba;  
 }
