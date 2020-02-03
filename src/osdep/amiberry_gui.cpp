@@ -29,6 +29,7 @@
 #endif
 
 int emulating = 0;
+bool config_loaded = false;
 
 struct gui_msg
 {

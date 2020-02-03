@@ -819,7 +819,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	SetControlState(quickstart_model);
 
 	// Only change the current prefs if we're not already emulating
-	if (!emulating)
+	if (!emulating && !config_loaded)
 		AdjustPrefs();
 
 	RefreshPanelQuickstart();

@@ -36,6 +36,7 @@ extern void fix_apmodes(struct uae_prefs *p);
 extern int generic_main (int argc, char *argv[]);
 
 extern int emulating;
+extern bool config_loaded;
 
 extern int z3_base_adr;
 #ifdef USE_DISPMANX

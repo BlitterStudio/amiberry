@@ -861,7 +861,10 @@ static int real_main2(int argc, TCHAR** argv)
 	}
 	
 	if (restart_config[0])
+	{
 		parse_cmdline_and_init_file(argc, argv);
+		config_loaded = true;
+	}
 	else
 		copy_prefs(&changed_prefs, &currprefs);
 
