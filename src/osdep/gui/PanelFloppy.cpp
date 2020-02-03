@@ -58,7 +58,7 @@ public:
 		return types.size();
 	}
 
-	string getElementAt(int i) override
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= types.size())
 			return "---";
@@ -79,7 +79,7 @@ public:
 		return lstMRUDiskList.size();
 	}
 
-	string getElementAt(int i) override
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= lstMRUDiskList.size())
 			return "---";

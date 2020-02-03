@@ -58,7 +58,7 @@ void SetLastActiveConfig(const char* filename)
 
 class ConfigsListModel : public gcn::ListModel
 {
-	vector<string> configs;
+	std::vector<std::string> configs;
 
 public:
 	ConfigsListModel()
@@ -69,7 +69,7 @@ public:
 		return configs.size();
 	}
 
-	string getElementAt(int i) override
+	std::string getElementAt(int i) override
 	{
 		if (i >= int(configs.size()) || i < 0)
 			return "---";

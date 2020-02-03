@@ -56,15 +56,20 @@ bool use_sdl2_render_thread = false;
 #endif
 int input_default_mouse_speed = 100;
 bool input_keyboard_as_joystick_stop_keypresses = false;
+static char default_open_gui_key[128];
+static char default_quit_key[128];
+int rotation_angle = 0;
 
 // Default Enter GUI key is F12
-int enter_gui_key = SDLK_F12;
+int enter_gui_key = 0;
 // We don't set a default value for Quitting
 int quit_key = 0;
 // The default value for Action Replay is Pause/Break
 int action_replay_button = SDLK_PAUSE;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
+
+bool mouse_grabbed = true;
 
 std::string get_version_string()
 {
@@ -79,11 +84,23 @@ void set_key_configs(struct uae_prefs* p)
 		// If we have a value in the config, we use that instead
 		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
 	}
+	else
+	{
+		// Otherwise we go for the default found in amiberry.conf
+		enter_gui_key = SDL_GetKeyFromName(default_open_gui_key);
+	}
+	// if nothing was found in amiberry.conf either, let's default back to F12
+	if (enter_gui_key == 0)
+		enter_gui_key = SDLK_F12;
 
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 	{
 		// If we have a value in the config, we use that instead
 		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
+	}
+	else
+	{
+		quit_key = SDL_GetKeyFromName(default_quit_key);
 	}
 
 	if (strncmp(p->action_replay, "", 1) != 0)
@@ -408,8 +425,8 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_pscanlines = 0;
 	}
 
-	_tcscpy(p->open_gui, "F12");
-	_tcscpy(p->quit_amiberry, "");
+	_tcscpy(p->open_gui, default_open_gui_key);
+	_tcscpy(p->quit_amiberry, default_quit_key);
 	_tcscpy(p->action_replay, "Pause");
 	_tcscpy(p->fullscreen_toggle, "");
 
@@ -853,11 +870,23 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", gui_joystick_control ? "yes" : "no");
 	fputs(buffer, f);
 
-	// Use a separate render thread uner SDL2?
+	// Use a separate render thread under SDL2?
 	// This might give a performance boost, but it's not supported on all SDL2 back-ends
 	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", use_sdl2_render_thread ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Default key for opening the GUI (e.g. "F12")
+	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", default_open_gui_key);
+	fputs(buffer, f);
+
+	// Default key for Quitting the emulator
+	snprintf(buffer, MAX_DPATH, "default_quit_key=%s\n", default_quit_key);
+	fputs(buffer, f);
+
+	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
+	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", rotation_angle);
+	fputs(buffer, f);
+	
 	// Timing settings
 	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
 	fputs(buffer, f);
@@ -1042,7 +1071,10 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &use_sdl2_render_thread);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &input_default_mouse_speed, 1);
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &input_keyboard_as_joystick_stop_keypresses);
-
+					cfgfile_string(option, value, "default_open_gui_key", default_open_gui_key, sizeof default_open_gui_key);
+					cfgfile_string(option, value, "default_quit_key", default_quit_key, sizeof default_quit_key);
+					cfgfile_intval(option, value, "rotation_angle", &rotation_angle, 1);
+					
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
 					cfgfile_intval(option, value, "speedup_cycles_nonjit", &speedup_cycles_nonjit, 1);
@@ -1370,7 +1402,22 @@ int handle_msgpump()
 				if (event.button.button == SDL_BUTTON_RIGHT)
 					setmousebuttonstate(0, 1, 0);
 				if (event.button.button == SDL_BUTTON_MIDDLE)
+				{
 					setmousebuttonstate(0, 2, 0);
+					// Release mouse
+					if (mouse_grabbed)
+					{
+						mouse_grabbed = false;
+						SDL_ShowCursor(SDL_ENABLE);
+						SDL_SetRelativeMouseMode(SDL_FALSE);
+					}
+					else
+					{
+						mouse_grabbed = true;
+						SDL_ShowCursor(SDL_DISABLE);
+						SDL_SetRelativeMouseMode(SDL_TRUE);
+					}
+				}
 			}
 			break;
 

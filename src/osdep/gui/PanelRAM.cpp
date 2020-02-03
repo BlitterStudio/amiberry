@@ -5,7 +5,7 @@
 #include "SelectorEntry.hpp"
 #include "sysdeps.h"
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "gfxboard.h"
 #include "gui_handling.h"
 #include "target.h"
@@ -356,7 +356,7 @@ void RefreshPanelRAM()
 }
 
 
-bool HelpPanelRAM(vector<string>& helptext)
+bool HelpPanelRAM(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("Select the amount of RAM for each type you want to emulate in your Amiga.");

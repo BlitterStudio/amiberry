@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-#include "osdep/gui/SelectorEntry.hpp"
+#include "SelectorEntry.hpp"
 #include "guisan/widgets/container.hpp"
 #include "guisan/widgets/icon.hpp"
 #include "guisan/widgets/label.hpp"

@@ -3,7 +3,6 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdlib.h>
-#include <strings.h>
 #include <stdio.h>
 
 #include <guisan.hpp>
@@ -48,8 +47,8 @@ static gcn::TextField* txtFilename;
 
 class SelectFileListModel : public gcn::ListModel
 {
-	vector<string> dirs;
-	vector<string> files;
+	std::vector<std::string> dirs;
+	std::vector<std::string> files;
 
 public:
 	SelectFileListModel(const char* path)
@@ -62,7 +61,7 @@ public:
 		return dirs.size() + files.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i >= dirs.size() + files.size() || i < 0)
 			return "---";

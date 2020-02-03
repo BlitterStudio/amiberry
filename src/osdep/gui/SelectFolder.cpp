@@ -27,7 +27,7 @@
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
-string volName;
+std::string volName;
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static char workingDir[MAX_DPATH];
@@ -58,7 +58,7 @@ static FolderRequesterButtonActionListener* folderButtonActionListener;
 
 class SelectDirListModel : public gcn::ListModel
 {
-	vector<string> dirs;
+	std::vector<std::string> dirs;
 
 public:
 	SelectDirListModel(const char* path)
@@ -71,7 +71,7 @@ public:
 		return dirs.size();
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i >= dirs.size() || i < 0)
 			return "---";

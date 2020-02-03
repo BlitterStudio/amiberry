@@ -95,7 +95,7 @@ public:
 		return 2;
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= 2)
 			return "---";
@@ -115,7 +115,7 @@ public:
 		return 4;
 	}
 
-	string getElementAt(const int i) override
+	std::string getElementAt(const int i) override
 	{
 		char num[8];
 
@@ -542,7 +542,7 @@ bool EditFilesysHardfile(const int unit_no)
 	{
 	};
 	struct uaedev_config_data *uci;
-	string strdevname, strroot;
+	std::string strdevname, strroot;
 	char tmp[32];
 
 	dialogResult = false;

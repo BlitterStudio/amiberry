@@ -613,8 +613,13 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
   if(mem >= (uintptr) &regs && mem < (uintptr) &regs + 1020 && ((mem - (uintptr) &regs) & 0x3) == 0) {
     VSTR64_dRi(s, R_REGSTRUCT, (mem - (uintptr) &regs));
   } else {
-    LOAD_U32(REG_WORK1, mem);
-    VSTR64_dRi(s, REG_WORK1, 0);
+    LOAD_U32(REG_WORK3, mem);
+    if((mem & 0x3) == 0)
+      VSTR64_dRi(s, REG_WORK3, 0);
+    else {
+      VMOV64_rrd(REG_WORK1, REG_WORK2, s);
+      STRD_rRI(REG_WORK1, REG_WORK3, 0);
+    }
   }
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
@@ -624,8 +629,13 @@ LOWFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMR mem))
   if(mem >= (uintptr) &regs && mem < (uintptr) &regs + 1020 && ((mem - (uintptr) &regs) & 0x3) == 0) {
     VLDR64_dRi(d, R_REGSTRUCT, (mem - (uintptr) &regs));
   } else {
-    LOAD_U32(REG_WORK1, mem);
-    VLDR64_dRi(d, REG_WORK1, 0);
+    LOAD_U32(REG_WORK3, mem);
+    if((mem & 0x3) == 0)
+      VLDR64_dRi(d, REG_WORK3, 0);
+    else {
+    	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+    	VMOV64_drr(d, REG_WORK1, REG_WORK2);
+    }
   }
 }
 LENDFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMW mem))
@@ -739,8 +749,13 @@ LENDFUNC(NONE,NONE,1,raw_fmov_d_ri_10,(FW r))
 
 LOWFUNC(NONE,READ,2,raw_fmov_d_rm,(FW r, MEMR m))
 {
-  LOAD_U32(REG_WORK1, m);
-  VLDR64_dRi(r, REG_WORK1, 0);
+  LOAD_U32(REG_WORK3, m);
+  if((m & 0x3) == 0)
+    VLDR64_dRi(r, REG_WORK3, 0);
+  else {
+  	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+  	VMOV64_drr(r, REG_WORK1, REG_WORK2);
+  }
 }
 LENDFUNC(NONE,READ,2,raw_fmov_d_rm,(FW r, MEMR m))
 
@@ -1035,14 +1050,16 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_double_mr,(RR4 adr, FR s))
 {
 	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 	VREV64_8_dd(SCRATCH_F64_1, s);
-  VSTR64_dRi(SCRATCH_F64_1, REG_WORK3, 0);
+  VMOV64_rrd(REG_WORK1, REG_WORK2, SCRATCH_F64_1);
+  STRD_rRI(REG_WORK1, REG_WORK3, 0);
 }
 LENDFUNC(NONE,WRITE,2,raw_fp_from_double_mr,(RR4 adr, FR s))
 
 LOWFUNC(NONE,READ,2,raw_fp_to_double_rm,(FW d, RR4 adr))
 {
 	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
-  VLDR64_dRi(d, REG_WORK3, 0);
+	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+	VMOV64_drr(d, REG_WORK1, REG_WORK2);
   VREV64_8_dd(d, d);
 }
 LENDFUNC(NONE,READ,2,raw_fp_to_double_rm,(FW d, RR4 adr))

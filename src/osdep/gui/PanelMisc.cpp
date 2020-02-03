@@ -1,5 +1,4 @@
 #include <string.h>
-#include <unistd.h>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -48,7 +47,7 @@ static gcn::Button* cmdKeyFullScreen;
 
 class StringListModel : public gcn::ListModel
 {
-	vector<string> values;
+	std::vector<std::string> values;
 public:
 	StringListModel(const char* entries[], const int count)
 	{
@@ -61,7 +60,7 @@ public:
 		return values.size();
 	}
 
-	string getElementAt(int i) override
+	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= values.size())
 			return "---";

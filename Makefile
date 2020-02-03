@@ -26,6 +26,13 @@ endif
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
+
+#
+# libgo2 flags (Odroid Go Advance)
+#
+LIBGO2_FLAGS = -DUSE_LIBGO2 -Iexternal/libgo2/src
+LIBGO2_LDFLAGS = -lgo2
+
 CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #DEBUG=1
 #GCC_PROFILE=1
@@ -99,13 +106,13 @@ else ifeq ($(PLATFORM),n2)
 # Raspberry Pi 3/4 (SDL2 64-bit)
 else ifeq ($(PLATFORM),pi64)
     CPUFLAGS += -mcpu=cortex-a72
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DFASTERCYCLES
     AARCH64 = 1
 
 # Raspberry Pi 3/4 (SDL2 64-bit with DispmanX)
 else ifeq ($(PLATFORM),pi64-dispmanx)
     CPUFLAGS += -mcpu=cortex-a72
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${DISPMANX_FLAGS}
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${DISPMANX_FLAGS} -DFASTERCYCLES
     LDFLAGS += ${DISPMANX_LDFLAGS}
     AARCH64 = 1
 
@@ -134,7 +141,23 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
       CPPFLAGS += -DUSE_RENDER_THREAD
     endif
 
-# Rockchip RK3288 e.g. Asus Tinker Board / RK3328 e.g. PINE64 Rock64 / RK3399 e.g. PINE64 RockPro64 - 32-bit userspace
+# Odroid Go Advance target (SDL2, 64-bit)
+else ifeq ($(PLATFORM),go-advance)
+    CPUFLAGS += -mcpu=cortex-a35
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    AARCH64 = 1
+
+# Odroid Go Advance special target (libgo2, 64-bit)
+else ifeq ($(PLATFORM),go-advance-libgo2)
+    CPUFLAGS += -mcpu=cortex-a35
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES ${LIBGO2_FLAGS}
+    LDFLAGS += ${LIBGO2_LDFLAGS}
+    AARCH64 = 1
+
+# RK3288 e.g. Asus Tinker Board
+# RK3328 e.g. PINE64 Rock64 
+# RK3399 e.g. PINE64 RockPro64 
+# RK3326 e.g. Odroid Go Advance - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
     CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DSOFTWARE_CURSOR
     HAVE_NEON = 1
@@ -146,7 +169,9 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a53
         CPPFLAGS += -DUSE_RENDER_THREAD
-      endif
+      else ifneq (,$(findstring RK3326,$(PLATFORM)))
+        CPUFLAGS += -mcpu=cortex-a35
+	  endif
     else ifneq (,$(findstring RK3288,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
       CPPFLAGS += -DUSE_RENDER_THREAD
@@ -174,7 +199,7 @@ else ifeq ($(PLATFORM),jetson-nano)
     CPUFLAGS += -mcpu=cortex-a57
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
     AARCH64 = 1
-	
+
 else
 $(error Unknown platform:$(PLATFORM))
 endif
@@ -190,8 +215,9 @@ PROG   = amiberry
 # SDL2 options
 #
 all: guisan $(PROG)
-export SDL_CFLAGS := $(shell sdl2-config --cflags)
-export SDL_LDFLAGS := $(shell sdl2-config --libs)
+SDL_CONFIG ?= sdl2-config
+export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
+export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
 CPPFLAGS += $(SDL_CFLAGS) -Iexternal/libguisan/include
 LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
