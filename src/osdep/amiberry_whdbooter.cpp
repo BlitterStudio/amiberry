@@ -47,7 +47,6 @@ struct game_options
 	TCHAR sprites[256] = "nul\0";
 	TCHAR scr_height[256] = "nul\0";
 	TCHAR scr_width[256] = "nul\0";
-	TCHAR y_offset[256] = "nul\0";
 	TCHAR ntsc[256] = "nul\0";
 	TCHAR chip[256] = "nul\0";
 	TCHAR fast[256] = "nul\0";
@@ -242,7 +241,6 @@ struct game_options get_game_settings(char *HW)
 	strcpy(output_detail.sprites, find_whdload_game_option("SPRITES", HW).c_str());
 	strcpy(output_detail.scr_height, find_whdload_game_option("SCREEN_HEIGHT", HW).c_str());
 	strcpy(output_detail.scr_width, find_whdload_game_option("SCREEN_WIDTH", HW).c_str());
-	strcpy(output_detail.y_offset, find_whdload_game_option("SCREEN_Y_OFFSET", HW).c_str());
 	strcpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
 	strcpy(output_detail.fast, find_whdload_game_option("FAST_RAM", HW).c_str());
 	strcpy(output_detail.z3, find_whdload_game_option("Z3_RAM", HW).c_str());
@@ -422,14 +420,14 @@ void cd_auto_prefs(struct uae_prefs *p, char *filepath)
 		host_detail = get_host_settings(hardware_settings);
 	}
 
-	write_log("AutoBooter - Host: Controller 1   : %s  \n", host_detail.controller1);
-	write_log("AutoBooter - Host: Controller 2   : %s  \n", host_detail.controller2);
-	write_log("AutoBooter - Host: Controller 3   : %s  \n", host_detail.controller3);
-	write_log("AutoBooter - Host: Controller 4   : %s  \n", host_detail.controller4);
-	write_log("AutoBooter - Host: Mouse 1        : %s  \n", host_detail.mouse1);
-	write_log("AutoBooter - Host: Mouse 2        : %s  \n", host_detail.mouse2);
-	write_log("AutoBooter - Host: Fixed CD32 Hei't: %s  \n", host_detail.fixed_cd32_height);
-	write_log("AutoBooter - Host: Fixed CD32 Width: %s  \n", host_detail.fixed_cd32_width);
+	write_log("AutoBooter - Host: Controller 1     : %s  \n", host_detail.controller1);
+	write_log("AutoBooter - Host: Controller 2     : %s  \n", host_detail.controller2);
+	write_log("AutoBooter - Host: Controller 3     : %s  \n", host_detail.controller3);
+	write_log("AutoBooter - Host: Controller 4     : %s  \n", host_detail.controller4);
+	write_log("AutoBooter - Host: Mouse 1          : %s  \n", host_detail.mouse1);
+	write_log("AutoBooter - Host: Mouse 2          : %s  \n", host_detail.mouse2);
+	write_log("AutoBooter - Host: Fixed CD32 Height: %s  \n", host_detail.fixed_cd32_height);
+	write_log("AutoBooter - Host: Fixed CD32 Width : %s  \n", host_detail.fixed_cd32_width);
 
 	//
 	//      *** EMULATED HARDWARE ***
@@ -834,7 +832,6 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	write_log("WHDBooter - Game: Sprite Col : %s  \n", game_detail.sprites);
 	write_log("WHDBooter - Game: Scr Height : %s  \n", game_detail.scr_height);
 	write_log("WHDBooter - Game: Scr Width  : %s  \n", game_detail.scr_width);
-	write_log("WHDBooter - Game: Scr YOffset: %s  \n", game_detail.y_offset);
 	write_log("WHDBooter - Game: NTSC       : %s  \n", game_detail.ntsc);
 	write_log("WHDBooter - Game: Fast Ram   : %s  \n", game_detail.fast);
 	write_log("WHDBooter - Game: Z3 Ram     : %s  \n", game_detail.z3);
@@ -852,15 +849,15 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	//printf("ky_qut: %s  \n", host_detail.key_quit);
 	//printf("ky_gui: %s  \n", host_detail.key_gui);
 	//printf("deadzn: %s  \n", host_detail.stereo_split);
-	write_log("WHDBooter - Host: Sound On       : %s  \n", host_detail.sound_on);
-	write_log("WHDBooter - Host: Sound Mode     : %s  \n", host_detail.sound_mode);
-	write_log("WHDBooter - Host: Stereo Split   : %s  \n", host_detail.stereo_split);
+	write_log("WHDBooter - Host: Sound On        : %s  \n", host_detail.sound_on);
+	write_log("WHDBooter - Host: Sound Mode      : %s  \n", host_detail.sound_mode);
+	write_log("WHDBooter - Host: Stereo Split    : %s  \n", host_detail.stereo_split);
 	//printf("aspect: %s  \n", host_detail.aspect_ratio);
 	//printf("frames: %s  \n", host_detail.frameskip);
-	write_log("WHDBooter - Host: Fixed Height    : %s  \n", host_detail.fixed_height);
-	write_log("WHDBooter - Host: Fixed Width     : %s  \n", host_detail.fixed_width);
-	write_log("WHDBooter - Host: Fixed CD32 Hei't: %s  \n", host_detail.fixed_cd32_height);
-	write_log("WHDBooter - Host: Fixed CD32 Width: %s  \n", host_detail.fixed_cd32_width);
+	write_log("WHDBooter - Host: Fixed Height     : %s  \n", host_detail.fixed_height);
+	write_log("WHDBooter - Host: Fixed Width      : %s  \n", host_detail.fixed_width);
+	write_log("WHDBooter - Host: Fixed CD32 Height: %s  \n", host_detail.fixed_cd32_height);
+	write_log("WHDBooter - Host: Fixed CD32 Width : %s  \n", host_detail.fixed_cd32_width);
 
 	//
 	//      *** EMULATED HARDWARE ***
