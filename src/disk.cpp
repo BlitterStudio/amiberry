@@ -1005,14 +1005,15 @@ static bool diskfile_iswriteprotect (struct uae_prefs *p, const TCHAR *fname_in,
 	return wrprot1;
 }
 
-static bool isrecognizedext (const TCHAR *name)
+static bool isrecognizedext(const TCHAR* name)
 {
-	const TCHAR *ext = _tcsrchr (name, '.');
+	const TCHAR* ext = _tcsrchr(name, '.');
 	if (ext) {
 		ext++;
-		if (!_tcsicmp (ext, _T("adf")) || !_tcsicmp (ext, _T("adz")) || !_tcsicmp (ext, _T("st")) || !_tcsicmp (ext, _T("ima")) || !_tcsicmp (ext, _T("img"))) 
+		if (!_tcsicmp(ext, _T("adf")) || !_tcsicmp(ext, _T("adz")) || !_tcsicmp(ext, _T("st")) ||
+			!_tcsicmp(ext, _T("ima")) || !_tcsicmp(ext, _T("img")) || !_tcsicmp(ext, _T("dsk")))
 			return true;
-  }
+	}
 	return false;
 }
 
