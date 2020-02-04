@@ -14,7 +14,7 @@
 #include "gui_handling.h"
 
 const int amigawidth_values[] = {320, 362, 384, 640, 704, 720};
-const int amigaheight_values[] = {200, 216, 240, 256, 262, 284};
+const int amigaheight_values[] = {200, 216, 240, 256, 262, 270, 284};
 
 static gcn::Window* grpScalingMethod;
 static gcn::UaeRadioButton* optAuto;
@@ -141,7 +141,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	lblAmigaWidth = new gcn::Label("Width:");
 	lblAmigaWidth->setAlignment(gcn::Graphics::RIGHT);
-	sldAmigaWidth = new gcn::Slider(0, 5);
+	sldAmigaWidth = new gcn::Slider(0, AMIGAWIDTH_COUNT - 1);
 	sldAmigaWidth->setSize(160, SLIDER_HEIGHT);
 	sldAmigaWidth->setBaseColor(gui_baseCol);
 	sldAmigaWidth->setMarkerLength(20);
@@ -152,7 +152,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	lblAmigaHeight = new gcn::Label("Height:");
 	lblAmigaHeight->setAlignment(gcn::Graphics::RIGHT);
-	sldAmigaHeight = new gcn::Slider(0, 5);
+	sldAmigaHeight = new gcn::Slider(0, AMIGAHEIGHT_COUNT - 1);
 	sldAmigaHeight->setSize(160, SLIDER_HEIGHT);
 	sldAmigaHeight->setBaseColor(gui_baseCol);
 	sldAmigaHeight->setMarkerLength(20);
@@ -304,7 +304,7 @@ void RefreshPanelDisplay()
 	int i;
 	char tmp[32];
 
-	for (i = 0; i < 6; ++i)
+	for (i = 0; i < AMIGAWIDTH_COUNT; ++i)
 	{
 		if (changed_prefs.gfx_monitor.gfx_size.width == amigawidth_values[i])
 		{
@@ -313,13 +313,27 @@ void RefreshPanelDisplay()
 			lblAmigaWidthInfo->setCaption(tmp);
 			break;
 		}
+		// if we reached the end and didn't find anything, set the maximum value
+		if (i == AMIGAWIDTH_COUNT - 1)
+		{
+			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.width);
+			lblAmigaWidthInfo->setCaption(tmp);
+			break;
+		}
 	}
 
-	for (i = 0; i < 6; ++i)
+	for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
 	{
 		if (changed_prefs.gfx_monitor.gfx_size.height == amigaheight_values[i])
 		{
 			sldAmigaHeight->setValue(i);
+			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.height);
+			lblAmigaHeightInfo->setCaption(tmp);
+			break;
+		}
+		// if we reached the end and didn't find anything, set the maximum value
+		if (i == AMIGAHEIGHT_COUNT - 1)
+		{
 			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.height);
 			lblAmigaHeightInfo->setCaption(tmp);
 			break;

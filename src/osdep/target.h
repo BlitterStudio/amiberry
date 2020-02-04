@@ -103,7 +103,7 @@ extern std::vector<std::string> lstMRUCDList;
 extern void AddFileToCDList(const char *file, int moveToTop);
 
 #define AMIGAWIDTH_COUNT 6
-#define AMIGAHEIGHT_COUNT 6
+#define AMIGAHEIGHT_COUNT 7
 extern const int amigawidth_values[AMIGAWIDTH_COUNT];
 extern const int amigaheight_values[AMIGAHEIGHT_COUNT];
 
