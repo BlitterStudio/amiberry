@@ -144,13 +144,13 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 # Odroid Go Advance target (SDL2, 64-bit)
 else ifeq ($(PLATFORM),go-advance)
     CPUFLAGS += -mcpu=cortex-a35
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
     AARCH64 = 1
 
 # Odroid Go Advance special target (libgo2, 64-bit)
 else ifeq ($(PLATFORM),go-advance-libgo2)
     CPUFLAGS += -mcpu=cortex-a35
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES ${LIBGO2_FLAGS}
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR ${LIBGO2_FLAGS}
     LDFLAGS += ${LIBGO2_LDFLAGS}
     AARCH64 = 1
 
