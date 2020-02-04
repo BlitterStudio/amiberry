@@ -1381,15 +1381,18 @@ static int drive_insert(drive* drv, struct uae_prefs* p, int dnum, const TCHAR* 
   return 1;
 }
 
-static void rand_shifter (drive *drv)
+static void rand_shifter(drive* drv)
 {
-  int r = ((uaerand () >> 4) & 7) + 1;
-  while (r-- > 0) {
-	  word <<= 1;
-	  word |= (uaerand () & 0x1000) ? 1 : 0;
-	  bitoffset++;
-	  bitoffset &= 15;
-  }
+	if (selected & (1 << (drv - floppy)))
+		return;
+
+	int r = ((uaerand() >> 4) & 7) + 1;
+	while (r-- > 0) {
+		word <<= 1;
+		word |= (uaerand() & 0x1000) ? 1 : 0;
+		bitoffset++;
+		bitoffset &= 15;
+	}
 }
 
 static void set_steplimit (drive *drv)
