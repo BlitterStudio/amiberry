@@ -804,7 +804,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		}
 	}
 
-	// now we should have a startup-file (if we dont, we are going to use the orignal booter)
+	// now we should have a startup-file (if we dont, we are going to use the original booter)
 	if (zfile_exists(whd_startup))
 	{
 		write_log("WHDBooter - Found Auto-Startup to SymLink\n");
@@ -1232,7 +1232,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	// JIT
 	if (strcmpi(game_detail.jit, "true") == 0)
 	{
-		_stprintf(txt2, "cachesize=8192");
+		_stprintf(txt2, "cachesize=16384");
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
@@ -1297,13 +1297,6 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
 		cfgfile_parse_line(p, txt2, 0);
 		_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
-		cfgfile_parse_line(p, txt2, 0);
-	}
-
-	// Y OFFSET
-	if (strcmpi(game_detail.y_offset, "nul") != 0)
-	{
-		_stprintf(txt2, "amiberry.vertical_offset=%s", game_detail.y_offset);
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
