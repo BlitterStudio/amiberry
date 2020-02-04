@@ -159,22 +159,24 @@ else ifeq ($(PLATFORM),go-advance-libgo2)
 # RK3399 e.g. PINE64 RockPro64 
 # RK3326 e.g. Odroid Go Advance - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DSOFTWARE_CURSOR
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR
     HAVE_NEON = 1
 
     ifneq (,$(findstring RK33,$(PLATFORM)))
       CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
       ifneq (,$(findstring RK3399,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a72
+        CPPFLAGS += -DFASTERCYCLES
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a53
-        CPPFLAGS += -DUSE_RENDER_THREAD
+        CPPFLAGS += -DUSE_RENDER_THREAD -DFASTERCYCLES
       else ifneq (,$(findstring RK3326,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a35
+        CPPFLAGS += -DUSE_RENDER_THREAD
 	  endif
     else ifneq (,$(findstring RK3288,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
-      CPPFLAGS += -DUSE_RENDER_THREAD
+      CPPFLAGS += -DUSE_RENDER_THREAD -DFASTERCYCLES
     endif
 
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
