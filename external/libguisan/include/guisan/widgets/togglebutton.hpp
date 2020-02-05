@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
- *
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
+ * Copyright (c) 2020 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -54,76 +54,85 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_GUISAN_HPP
-#define GCN_GUISAN_HPP
+#ifndef GCN_TOGGLEBUTTON_HPP
+#define GCN_TOGGLEBUTTON_HPP
 
-#include <guisan/actionevent.hpp>
-#include <guisan/actionlistener.hpp>
-#include <guisan/cliprectangle.hpp>
-#include <guisan/color.hpp>
-#include <guisan/deathlistener.hpp>
-#include <guisan/event.hpp>
-#include <guisan/exception.hpp>
-#include <guisan/focushandler.hpp>
-#include <guisan/focuslistener.hpp>
-#include <guisan/font.hpp>
-#include <guisan/genericinput.hpp>
-#include <guisan/graphics.hpp>
-#include <guisan/gui.hpp>
-#include <guisan/image.hpp>
-#include <guisan/imagefont.hpp>
-#include <guisan/imageloader.hpp>
-#include <guisan/input.hpp>
-#include <guisan/inputevent.hpp>
-#include <guisan/key.hpp>
-#include <guisan/keyevent.hpp>
-#include <guisan/keyinput.hpp>
-#include <guisan/keylistener.hpp>
-#include <guisan/listmodel.hpp>
-#include <guisan/mouseevent.hpp>
-#include <guisan/mouseinput.hpp>
-#include <guisan/mouselistener.hpp>
-#include <guisan/rectangle.hpp>
-#include <guisan/selectionevent.hpp>
-#include <guisan/selectionlistener.hpp>
-#include <guisan/widget.hpp>
-#include <guisan/widgetlistener.hpp>
+#include <string>
 
-#include <guisan/widgets/button.hpp>
-#include <guisan/widgets/checkbox.hpp>
-#include <guisan/widgets/container.hpp>
-#include <guisan/widgets/dropdown.hpp>
-#include <guisan/widgets/icon.hpp>
-#include <guisan/widgets/imagebutton.hpp>
-#include <guisan/widgets/imagetextbutton.hpp>
-#include <guisan/widgets/inputbox.hpp>
-#include <guisan/widgets/label.hpp>
-#include <guisan/widgets/listbox.hpp>
-#include <guisan/widgets/messagebox.hpp>
-#include <guisan/widgets/progressbar.hpp>
-#include <guisan/widgets/scrollarea.hpp>
-#include <guisan/widgets/slider.hpp>
-#include <guisan/widgets/radiobutton.hpp>
-#include <guisan/widgets/tab.hpp>
-#include <guisan/widgets/tabbedarea.hpp>
-#include <guisan/widgets/textbox.hpp>
-#include <guisan/widgets/textfield.hpp>
-#include <guisan/widgets/togglebutton.hpp>
-#include <guisan/widgets/window.hpp>
-
+#include "guisan/focuslistener.hpp"
+#include "guisan/keylistener.hpp"
+#include "guisan/mouseevent.hpp"
+#include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
+#include "guisan/widget.hpp"
+#include "guisan/widgets/button.hpp"
 
-class Widget;
-
-extern "C"
+namespace gcn
 {
     /**
-     * Gets the the version of Guisan. As it is a C function
-     * it can be used to check for Guichan with autotools.
+     * A toggle button, which can stay selected. Think of it as a checkbox,
+     * but dressed as a regular button. Add an ActionListener to it to know when it
+     * has been clicked.
      *
-     * @return the version of Guisan.
      */
-    GCN_CORE_DECLSPEC extern const char* gcnGuisanVersion();
+    class GCN_CORE_DECLSPEC ToggleButton : public Button
+    {
+    public:
+        /**
+         * Constructor.
+         */
+        ToggleButton();
+
+        /**
+         * Constructor.
+         *
+         * @param caption the caption of the ToggleButton.
+         */
+        ToggleButton(const std::string& caption);
+        
+        /**
+         * Checks if the button is selected.
+         *
+         * @return True if the button is selected, false otherwise.
+         * @see setSelected
+         */
+        bool isSelected() const;
+
+        /**
+         * Sets the button to be selected.
+         *
+         * @param selected True if the button should be set as selected.
+         * @see isSelected
+         */
+        void setSelected(bool selected);
+
+
+        //Inherited from Widget
+
+        virtual void draw(Graphics* graphics);
+
+
+        // Inherited from MouseListener
+
+        virtual void mouseReleased(MouseEvent& mouseEvent);
+
+
+        // Inherited from KeyListener
+
+        virtual void keyReleased(KeyEvent& keyEvent);
+
+    protected:
+        /**
+         * Toggles the button between being selected and
+         * not being selected.
+         */
+        virtual void toggleSelected();
+    
+        /**
+         * True if the button is selected, false otherwise. 
+         */
+        bool mSelected;
+    };
 }
 
-#endif // end GCN_GUISAN_HPP
+#endif // end GCN_TOGGLEBUTTON_HPP
