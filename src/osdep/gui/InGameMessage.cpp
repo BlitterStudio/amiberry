@@ -140,10 +140,10 @@ void message_checkInput()
 		SDL_Event touch_event;
 		while (SDL_PollEvent(&msg_event))
 		{
-			gotEvent = 1;
 			switch(msg_event.type)
 			{
 			case SDL_KEYDOWN:
+				gotEvent = 1;
 				switch (msg_event.key.keysym.sym)
 				{
 				case VK_ESCAPE:
@@ -166,6 +166,7 @@ void message_checkInput()
 			case SDL_JOYBUTTONDOWN:
 				if (gui_joystick)
 				{
+					gotEvent = 1;
 					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
 						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button) ||
 						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button))
@@ -175,6 +176,7 @@ void message_checkInput()
 				break;
 
 			case SDL_FINGERDOWN:
+				gotEvent = 1;
 				memcpy(&touch_event, &msg_event, sizeof msg_event);
 				touch_event.type = SDL_MOUSEBUTTONDOWN;
 				touch_event.button.which = 0;
@@ -186,6 +188,7 @@ void message_checkInput()
 				break;
 
 			case SDL_FINGERUP:
+				gotEvent = 1;
 				memcpy(&touch_event, &msg_event, sizeof msg_event);
 				touch_event.type = SDL_MOUSEBUTTONUP;
 				touch_event.button.which = 0;
@@ -197,6 +200,7 @@ void message_checkInput()
 				break;
 
 			case SDL_FINGERMOTION:
+				gotEvent = 1;
 				memcpy(&touch_event, &msg_event, sizeof msg_event);
 				touch_event.type = SDL_MOUSEMOTION;
 				touch_event.motion.which = 0;
@@ -204,6 +208,13 @@ void message_checkInput()
 				touch_event.motion.x = msg_graphics->getTarget()->w * msg_event.tfinger.x;
 				touch_event.motion.y = msg_graphics->getTarget()->h * msg_event.tfinger.y;
 				gui_input->pushInput(touch_event);
+				break;
+
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+			case SDL_MOUSEMOTION:
+			case SDL_MOUSEWHEEL:
+				gotEvent = 1;
 				break;
 				
 			default:

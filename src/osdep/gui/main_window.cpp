@@ -539,13 +539,13 @@ void checkInput()
 	int gotEvent = 0;
 	while (SDL_PollEvent(&gui_event))
 	{
-		gotEvent = 1;
 		switch (gui_event.type)
 		{
 		case SDL_QUIT:
 			//-------------------------------------------------
 			// Quit entire program via SQL-Quit
 			//-------------------------------------------------
+			gotEvent = 1;
 			uae_quit();
 			gui_running = false;
 			break;
@@ -554,6 +554,7 @@ void checkInput()
 		case SDL_JOYBUTTONDOWN:
 			if (gui_joystick)
 			{
+				gotEvent = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || hat & SDL_HAT_UP) // dpad
@@ -630,6 +631,7 @@ void checkInput()
 		case SDL_JOYAXISMOTION:
 			if (gui_joystick)
 			{
+				gotEvent = 1;
 				// Deadzone
 				if (std::abs(gui_event.jaxis.value) >= 10000 || std::abs(gui_event.jaxis.value) <= 5000)
 				{
@@ -681,6 +683,7 @@ void checkInput()
 			break;
 
 		case SDL_KEYDOWN:
+			gotEvent = 1;
 			if (gui_event.key.keysym.sym == key_for_gui)
 			{
 				if (emulating && cmdStart->isEnabled())
@@ -763,7 +766,8 @@ void checkInput()
 				}
 			break;
 
-		case SDL_FINGERDOWN: 
+		case SDL_FINGERDOWN:
+			gotEvent = 1;
 			memcpy(&touch_event, &gui_event, sizeof gui_event);
 			touch_event.type = SDL_MOUSEBUTTONDOWN;
 			touch_event.button.which = 0;
@@ -774,7 +778,8 @@ void checkInput()
 			gui_input->pushInput(touch_event);
 			break;
 
-		case SDL_FINGERUP: 
+		case SDL_FINGERUP:
+			gotEvent = 1;
 			memcpy(&touch_event, &gui_event, sizeof gui_event);
 			touch_event.type = SDL_MOUSEBUTTONUP;
 			touch_event.button.which = 0;
@@ -785,7 +790,8 @@ void checkInput()
 			gui_input->pushInput(touch_event);
 			break;
 
-		case SDL_FINGERMOTION: 
+		case SDL_FINGERMOTION:
+			gotEvent = 1;
 			memcpy(&touch_event, &gui_event, sizeof gui_event);
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
@@ -795,6 +801,14 @@ void checkInput()
 			gui_input->pushInput(touch_event);
 			break;
 
+
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+		case SDL_MOUSEMOTION:
+		case SDL_MOUSEWHEEL:
+			gotEvent = 1;
+			break;
+			
 		default:
 			break;
 		}
@@ -847,7 +861,11 @@ void amiberry_gui_run()
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-
+#ifdef USE_DISPMANX
+#else
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+#endif
+	
 	//-------------------------------------------------
 	// The main loop
 	//-------------------------------------------------

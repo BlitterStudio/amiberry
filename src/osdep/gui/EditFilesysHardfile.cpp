@@ -384,10 +384,10 @@ static void EditFilesysHardfileLoop()
 		SDL_Event touch_event;
 		while (SDL_PollEvent(&event))
 		{
-			gotEvent = 1;
 			switch (event.type)
 			{
 			case SDL_KEYDOWN:
+				gotEvent = 1;
 				switch (event.key.keysym.sym)
 				{
 				case VK_ESCAPE:
@@ -430,6 +430,7 @@ static void EditFilesysHardfileLoop()
 			case SDL_JOYAXISMOTION:
 				if (gui_joystick)
 				{
+					gotEvent = 1;
 					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
 					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
@@ -475,6 +476,7 @@ static void EditFilesysHardfileLoop()
 				break;
 
 			case SDL_FINGERDOWN:
+				gotEvent = 1;
 				memcpy(&touch_event, &event, sizeof event);
 				touch_event.type = SDL_MOUSEBUTTONDOWN;
 				touch_event.button.which = 0;
@@ -486,6 +488,7 @@ static void EditFilesysHardfileLoop()
 				break;
 
 			case SDL_FINGERUP:
+				gotEvent = 1;
 				memcpy(&touch_event, &event, sizeof event);
 				touch_event.type = SDL_MOUSEBUTTONUP;
 				touch_event.button.which = 0;
@@ -497,6 +500,7 @@ static void EditFilesysHardfileLoop()
 				break;
 
 			case SDL_FINGERMOTION:
+				gotEvent = 1;
 				memcpy(&touch_event, &event, sizeof event);
 				touch_event.type = SDL_MOUSEMOTION;
 				touch_event.motion.which = 0;
@@ -506,6 +510,13 @@ static void EditFilesysHardfileLoop()
 				gui_input->pushInput(touch_event);
 				break;
 
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+			case SDL_MOUSEMOTION:
+			case SDL_MOUSEWHEEL:
+				gotEvent = 1;
+				break;
+				
 			default:
 				break;
 			}

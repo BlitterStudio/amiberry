@@ -111,9 +111,9 @@ static void ShowMessageWaitInputLoop()
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
-			gotEvent = 1;
 			if (event.type == SDL_KEYDOWN)
 			{
+				gotEvent = 1;
 				switch (event.key.keysym.sym)
 				{
 				case VK_ESCAPE:
@@ -129,6 +129,7 @@ static void ShowMessageWaitInputLoop()
 
 			if (event.type == SDL_CONTROLLERBUTTONDOWN)
 			{
+				gotEvent = 1;
 				dialogControlPressed = SDL_GameControllerGetStringForButton(
 					SDL_GameControllerButton(event.cbutton.button));
 				dialogFinished = true;
@@ -179,10 +180,10 @@ static void ShowMessageLoop()
 		SDL_Event touch_event;
 		while (SDL_PollEvent(&event))
 		{
-			gotEvent = 1;
 			switch (event.type)
 			{
 			case SDL_KEYDOWN:
+				gotEvent = 1;
 				switch (event.key.keysym.sym)
 				{
 				case VK_ESCAPE:
@@ -210,6 +211,7 @@ static void ShowMessageLoop()
 			case SDL_JOYHATMOTION:
 				if (gui_joystick)
 				{
+					gotEvent = 1;
 					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
 					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
@@ -236,6 +238,7 @@ static void ShowMessageLoop()
 				break;
 
 			case SDL_FINGERDOWN:
+				gotEvent = 1;
 				memcpy(&touch_event, &event, sizeof event);
 				touch_event.type = SDL_MOUSEBUTTONDOWN;
 				touch_event.button.which = 0;
@@ -247,6 +250,7 @@ static void ShowMessageLoop()
 				break;
 
 			case SDL_FINGERUP:
+				gotEvent = 1;
 				memcpy(&touch_event, &event, sizeof event);
 				touch_event.type = SDL_MOUSEBUTTONUP;
 				touch_event.button.which = 0;
@@ -258,6 +262,7 @@ static void ShowMessageLoop()
 				break;
 
 			case SDL_FINGERMOTION:
+				gotEvent = 1;
 				memcpy(&touch_event, &event, sizeof event);
 				touch_event.type = SDL_MOUSEMOTION;
 				touch_event.motion.which = 0;
@@ -267,6 +272,13 @@ static void ShowMessageLoop()
 				gui_input->pushInput(touch_event);
 				break;
 
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+			case SDL_MOUSEMOTION:
+			case SDL_MOUSEWHEEL:
+				gotEvent = 1;
+				break;
+				
 			default:
 				break;
 			}
