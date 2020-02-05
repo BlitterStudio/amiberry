@@ -832,6 +832,7 @@ void checkInput()
 #else
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
+		UpdateGuiScreen();
 	}
 }
 
@@ -871,6 +872,7 @@ void amiberry_gui_run()
 	//-------------------------------------------------
 	while (gui_running)
 	{
+		auto time = SDL_GetTicks();
 		checkInput();
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
@@ -882,7 +884,10 @@ void amiberry_gui_run()
 			refreshFuncAfterDraw = nullptr;
 			currFunc();
 		}
-		UpdateGuiScreen();
+
+		if (SDL_GetTicks() - time < 10) {
+			SDL_Delay(10);
+		}
 	}
 
 	if (gui_joystick)

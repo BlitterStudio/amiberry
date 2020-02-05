@@ -207,6 +207,7 @@ static void CreateFilesysHardfileLoop()
 
 	while (!dialogFinished)
 	{
+		auto time = SDL_GetTicks();
 		int gotEvent = 0;
 		SDL_Event event;
 		SDL_Event touch_event;
@@ -353,7 +354,6 @@ static void CreateFilesysHardfileLoop()
 				
 			default:
 				break;
-				
 			}
 
 			//-------------------------------------------------
@@ -372,13 +372,17 @@ static void CreateFilesysHardfileLoop()
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
 #ifdef USE_DISPMANX
-			UpdateGuiScreen();
 #else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
+			// Finally we update the screen.
+			UpdateGuiScreen();
 		}
-		// Finally we update the screen.
-		UpdateGuiScreen();
+		
+		// Rendering and event handling
+		if (SDL_GetTicks() - time < 10) {
+			SDL_Delay(10);
+		}
 	}
 }
 
@@ -410,6 +414,7 @@ bool CreateFilesysHardfile()
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
 	UpdateGuiScreen();
+	
 	CreateFilesysHardfileLoop();
 
 	if (dialogResult)

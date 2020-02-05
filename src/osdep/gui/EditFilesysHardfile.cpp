@@ -285,6 +285,7 @@ static void InitEditFilesysHardfile()
 	cboController->setBaseColor(gui_baseCol);
 	cboController->setId("hdfController");
 	cboController->addActionListener(filesysHardfileActionListener);
+	
 	cboUnit = new gcn::UaeDropDown(&unitListModel);
 	cboUnit->setSize(60, DROPDOWN_HEIGHT);
 	cboUnit->setBaseColor(gui_baseCol);
@@ -377,9 +378,10 @@ static void EditFilesysHardfileLoop()
 {
 	FocusBugWorkaround(wndEditFilesysHardfile);
 
-	int gotEvent = 0;
 	while (!dialogFinished)
 	{
+		auto time = SDL_GetTicks();
+		int gotEvent = 0;
 		SDL_Event event;
 		SDL_Event touch_event;
 		while (SDL_PollEvent(&event))
@@ -537,13 +539,16 @@ static void EditFilesysHardfileLoop()
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
 #ifdef USE_DISPMANX
-			UpdateGuiScreen();
 #else
 			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
+			// Finally we update the screen.
+			UpdateGuiScreen();
 		}
-		// Finally we update the screen.
-		UpdateGuiScreen();
+
+		if (SDL_GetTicks() - time < 10) {
+			SDL_Delay(10);
+		}
 	}
 }
 
