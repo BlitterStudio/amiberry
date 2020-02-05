@@ -86,12 +86,10 @@ static NavigationMap navMap[] =
 	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "qscboAModel"},
 
 	// PanelConfig
-	{"ConfigList", "Configurations", "ConfigName", "", ""},
-	{"ConfigName", "Configurations", "Configurations", "ConfigList", "ConfigDesc"},
-	{"ConfigDesc", "Configurations", "Configurations", "ConfigName", "ConfigLoad"},
-	{"ConfigLoad", "Configurations", "ConfigSave", "ConfigDesc", "ConfigList"},
-	{"ConfigSave", "ConfigLoad", "CfgDelete", "ConfigDesc", "ConfigList"},
-	{"CfgDelete", "ConfigSave", "Configurations", "ConfigDesc", "ConfigList"},
+	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
+	{"ConfigLoad", "Configurations", "ConfigSave", "ConfigList", "ConfigList"},
+	{"ConfigSave", "ConfigLoad", "CfgDelete", "ConfigList", "ConfigList"},
+	{"CfgDelete", "ConfigSave", "Configurations", "ConfigList", "ConfigList"},
 
 	//  active            move left         move right        move up           move down
 	// PanelCPU
@@ -364,7 +362,9 @@ bool HandleNavigation(int direction)
 	{
 		gcn::Widget* activeWidget = focusHdl->getFocused();
 
-		if (activeWidget != nullptr && activeWidget->getId().length() > 0 && activeWidget->getId().substr(0, 3) != "txt")
+		if (activeWidget != nullptr 
+			&& activeWidget->getId().length() > 0 
+			&& activeWidget->getId().substr(0, 3) != "txt")
 		{
 			std::string activeName = activeWidget->getId();
 			auto bFoundEnabled = false;
@@ -421,7 +421,8 @@ bool HandleNavigation(int direction)
 
 			if (focusTarget != nullptr)
 			{
-				if (activeWidget->getId().substr(0, 3) == "cbo" || activeWidget->getId().substr(0, 5) == "qscbo")
+				if (activeWidget->getId().substr(0, 3) == "cbo" 
+					|| activeWidget->getId().substr(0, 5) == "qscbo")
 				{
 					auto dropdown = dynamic_cast<gcn::UaeDropDown*>(activeWidget);
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
