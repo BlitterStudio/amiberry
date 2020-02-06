@@ -411,7 +411,7 @@ bool CreateFilesysHardfile()
 
 	if (dialogResult)
 	{
-		auto size = atoi(txtSize->getText().c_str());
+		long long size = atoi(txtSize->getText().c_str());
 		if (size < 1)
 			size = 1;
 
@@ -420,13 +420,23 @@ bool CreateFilesysHardfile()
 		const auto newFile = fopen(txtPath->getText().c_str(), "wbe");
 		if (!newFile)
 		{
-			ShowMessage("Create Hardfile", "Unable to create new file.", "", "Ok", "");
+			write_log("Unable to create new file.");
+			ExitCreateFilesysHardfile();
 			return false;
 		}
-		fseek(newFile, size * 1024 * 1024 - 1, SEEK_SET);
-		fwrite(&zero, 1, 1, newFile);
-		fclose(newFile);
-
+		if (_fseeki64(newFile, size * 1024 * 1024 - 1, SEEK_SET) == 0)
+		{
+			fwrite(&zero, 1, 1, newFile);
+			fclose(newFile);
+		}
+		else
+		{
+			write_log("Unable to create new file size.");
+			fclose(newFile);
+			ExitCreateFilesysHardfile();
+			return false;
+		}
+		
 		struct uaedev_config_info ci
 		{
 		};
