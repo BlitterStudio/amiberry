@@ -121,7 +121,7 @@ void message_UpdateScreen()
 	vc_dispmanx_element_change_source(updateHandle, message_element, message_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
-	SDL_RenderClear(renderer);
+	SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
 	SDL_RenderCopyEx(renderer, msg_texture, nullptr, nullptr, rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(renderer);
 #endif
@@ -234,10 +234,6 @@ void message_checkInput()
 		msg_gui->logic();
 		// Now we let the Gui object draw itself.
 		msg_gui->draw();
-#ifdef USE_DISPMANX
-#else
-		SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
-#endif
 		message_UpdateScreen();
 	}
 
@@ -396,10 +392,6 @@ void message_gui_run()
 	// Prepare the screen once
 	msg_gui->logic();
 	msg_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
-#endif
 	message_UpdateScreen();
 
 	while (!msg_done)

@@ -273,11 +273,12 @@ void UpdateGuiScreen()
 	vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
-	SDL_RenderClear(renderer);
+	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	if (rotation_angle == 0 || rotation_angle == 180)
 		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
 	else
 		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
+	
 	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
 #ifdef SOFTWARE_CURSOR
 	swcursor(true);
@@ -828,10 +829,7 @@ void checkInput()
 		uae_gui->logic();
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
+
 		UpdateGuiScreen();
 	}
 }
@@ -862,10 +860,6 @@ void amiberry_gui_run()
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 	
 	//-------------------------------------------------

@@ -142,20 +142,17 @@ static void ShowMessageWaitInputLoop()
 			//-------------------------------------------------
 			gui_input->pushInput(event);
 		}
+
 		if (gotEvent)
 		{
 			// Now we let the Gui object perform its logic.
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_DISPMANX
-			UpdateGuiScreen();
-#else
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 			// Finally we update the screen.
 			UpdateGuiScreen();
 		}
+
 		if (SDL_GetTicks() - time < 10) {
 			SDL_Delay(10);
 		}
@@ -296,19 +293,17 @@ static void ShowMessageLoop()
 			gui_input->pushInput(event);
 #endif
 		}
+
 		if (gotEvent)
 		{
 			// Now we let the Gui object perform its logic.
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 			// Finally we update the screen.
 			UpdateGuiScreen();
 		}
+
 		if (SDL_GetTicks() - time < 10) {
 			SDL_Delay(10);
 		}
@@ -337,10 +332,6 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 
 	ShowMessageLoop();
@@ -364,10 +355,6 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 
 	ShowMessageWaitInputLoop();

@@ -158,7 +158,6 @@ static void checkfilename(char* current)
 	}
 }
 
-
 class SelectFileActionListener : public gcn::ActionListener
 {
 public:
@@ -485,14 +484,9 @@ static void SelectFileLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_DISPMANX
+			// Finally we update the screen.
 			UpdateGuiScreen();
-#else
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 		}
-		// Finally we update the screen.
-		UpdateGuiScreen();
 	}
 }
 
@@ -513,10 +507,6 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 
 	SelectFileLoop();

@@ -389,14 +389,9 @@ static void SelectFolderLoop()
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_DISPMANX
+			// Finally we update the screen.
 			UpdateGuiScreen();
-#else
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 		}
-		// Finally we update the screen.
-		UpdateGuiScreen();
 	}
 }
 
@@ -412,10 +407,6 @@ bool SelectFolder(const char* title, char* value)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 
 	SelectFolderLoop();

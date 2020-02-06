@@ -234,20 +234,17 @@ static void ShowHelpLoop(void)
 			gui_input->pushInput(event);
 #endif
 		}
+
 		if (gotEvent)
 		{
 			// Now we let the Gui object perform its logic.
 			uae_gui->logic();
 			// Now we let the Gui object draw itself.
 			uae_gui->draw();
-#ifdef USE_DISPMANX
-			UpdateGuiScreen();
-#else
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 			// Finally we update the screen.
 			UpdateGuiScreen();
 		}
+
 		if (SDL_GetTicks() - time < 10) {
 			SDL_Delay(10);
 		}
@@ -267,10 +264,6 @@ void ShowHelp(const char* title, const std::vector<std::string>& text)
 	uae_gui->logic();
 	// Now we let the Gui object draw itself.
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 
 	ShowHelpLoop();
