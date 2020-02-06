@@ -190,7 +190,7 @@ extern int currentStateNum;
 extern int delay_savestate_frame;
 
 extern void UpdateGuiScreen();
-
+extern void cap_fps(Uint64 start, int fps);
 extern bool check_internet_connection();
 
 #endif // GUI_HANDLING_H

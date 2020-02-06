@@ -265,6 +265,16 @@ void swcursor(bool op) {
 }
 #endif
 
+void cap_fps(Uint64 start, int fps)
+{
+	const auto end = SDL_GetPerformanceCounter();
+	const auto elapsed_ms = float(end - start) / float(SDL_GetPerformanceFrequency()) * 1000.0f;
+	if (fps == 60)
+		SDL_Delay(floor(16.666f - elapsed_ms));
+	else if (fps == 50)
+		SDL_Delay(floor(20.000f - elapsed_ms));
+}
+
 void UpdateGuiScreen()
 {
 #ifdef USE_DISPMANX
@@ -538,15 +548,16 @@ void checkInput()
 {
 	const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 	int gotEvent = 0;
+	
 	while (SDL_PollEvent(&gui_event))
 	{
 		switch (gui_event.type)
 		{
 		case SDL_QUIT:
+			gotEvent = 1;
 			//-------------------------------------------------
 			// Quit entire program via SQL-Quit
 			//-------------------------------------------------
-			gotEvent = 1;
 			uae_quit();
 			gui_running = false;
 			break;
@@ -629,14 +640,15 @@ void checkInput()
 			}
 			break;
 
-		case SDL_JOYAXISMOTION:
+		case SDL_CONTROLLER_AXIS_LEFTX:
+		case SDL_CONTROLLER_AXIS_LEFTY:
 			if (gui_joystick)
 			{
 				gotEvent = 1;
 				// Deadzone
 				if (std::abs(gui_event.jaxis.value) >= 10000 || std::abs(gui_event.jaxis.value) <= 5000)
 				{
-					int axis_state = 0;
+					int axis_state;
 					int axis = gui_event.jaxis.axis;
 					int value = gui_event.jaxis.value;
 					if (std::abs(value) < 10000)
@@ -802,7 +814,8 @@ void checkInput()
 			gui_input->pushInput(touch_event);
 			break;
 
-
+		case SDL_KEYUP:
+		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
@@ -823,6 +836,7 @@ void checkInput()
 		gui_input->pushInput(gui_event);
 #endif
 	}
+	
 	if (gotEvent)
 	{
 		// Now we let the Gui object perform its logic.
@@ -867,7 +881,7 @@ void amiberry_gui_run()
 	//-------------------------------------------------
 	while (gui_running)
 	{
-		auto time = SDL_GetTicks();
+		const auto start = SDL_GetPerformanceCounter();
 		checkInput();
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
@@ -880,9 +894,7 @@ void amiberry_gui_run()
 			currFunc();
 		}
 
-		if (SDL_GetTicks() - time < 10) {
-			SDL_Delay(10);
-		}
+		cap_fps(start, 60);
 	}
 
 	if (gui_joystick)

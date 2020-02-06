@@ -131,8 +131,9 @@ void message_checkInput()
 {
 	//-------------------------------------------------
 	// Check user input
-	//-------------------------------------------------	
-
+	//-------------------------------------------------
+	//
+	const auto start = SDL_GetPerformanceCounter();
 	int gotEvent = 0;
 	SDL_Event msg_event;
 	SDL_Event touch_event;
@@ -208,6 +209,8 @@ void message_checkInput()
 			gui_input->pushInput(touch_event);
 			break;
 
+		case SDL_KEYUP:
+		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
@@ -227,7 +230,10 @@ void message_checkInput()
 #else
 		msg_input->pushInput(msg_event);
 #endif
+
+		cap_fps(start, 60);
 	}
+	
 	if (gotEvent)
 	{
 		// Now we let the Gui object perform its logic.
@@ -236,7 +242,7 @@ void message_checkInput()
 		msg_gui->draw();
 		message_UpdateScreen();
 	}
-
+	cap_fps(start, 60);
 }
 
 void message_gui_init(const char* msg)
@@ -396,13 +402,8 @@ void message_gui_run()
 
 	while (!msg_done)
 	{
-		auto time = SDL_GetTicks();
 		// Poll input
 		message_checkInput();
-
-		if (SDL_GetTicks() - time < 10) {
-			SDL_Delay(10);
-		}
 	}
 
 	if (gui_joystick)
