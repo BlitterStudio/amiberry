@@ -866,6 +866,7 @@ void amiberry_gui_run()
 #else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 #endif
+	UpdateGuiScreen();
 	
 	//-------------------------------------------------
 	// The main loop
