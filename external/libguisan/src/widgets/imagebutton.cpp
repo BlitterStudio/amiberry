@@ -108,9 +108,9 @@ namespace gcn
 
     void ImageButton::draw(Graphics* graphics)
     {
-        gcn::Color faceColor = getBaseColor();
-        gcn::Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
+	    auto faceColor = getBaseColor();
+        Color highlightColor, shadowColor;
+	    const auto alpha = getBaseColor().a;
 
         if (isPressed())
         {
@@ -142,16 +142,16 @@ namespace gcn
 
         graphics->setColor(getForegroundColor());
 
-        int textX = getWidth() / 2 - mImage->getWidth() / 2;
-        int textY = getHeight() / 2 - mImage->getHeight() / 2;
+	    const auto text_x = getWidth() / 2 - mImage->getWidth() / 2;
+	    const auto text_y = getHeight() / 2 - mImage->getHeight() / 2;
 
         if (isPressed())
         {
-            graphics->drawImage(mImage, textX + 1, textY + 1);
+            graphics->drawImage(mImage, text_x + 1, text_y + 1);
         }
         else
         {
-            graphics->drawImage(mImage, textX, textY);
+            graphics->drawImage(mImage, text_x, text_y);
            
             if (isFocused())
             {

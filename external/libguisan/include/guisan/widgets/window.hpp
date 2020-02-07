@@ -203,13 +203,13 @@ namespace gcn
 
     protected:
         std::string mCaption;
-        unsigned int mAlignment;
-        unsigned int mPadding;
-        unsigned int mTitleBarHeight;
-        bool mMovable;
-        bool mOpaque;
-        int mDragOffsetX;
-        int mDragOffsetY;
+        unsigned int mAlignment{};
+        unsigned int mPadding{};
+        unsigned int mTitleBarHeight{};
+        bool mMovable{};
+        bool mOpaque{};
+        int mDragOffsetX{};
+        int mDragOffsetY{};
         bool mIsMoving;
     };
 }

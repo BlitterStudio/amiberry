@@ -107,15 +107,14 @@ namespace gcn
         graphics->setColor(getForegroundColor());
         graphics->setFont(getFont());
 
-        int i, fontHeight;
-        int y = 0;
+        auto y = 0;
 
-        fontHeight = getFont()->getHeight();
+        const auto fontHeight = getFont()->getHeight();
 
         /**
          * @todo Check cliprects so we do not have to iterate over elements in the list model
          */
-        for (i = 0; i < mListModel->getNumberOfElements(); ++i)
+        for (auto i = 0; i < mListModel->getNumberOfElements(); ++i)
         {
             if (i == mSelected)
             {
@@ -132,18 +131,16 @@ namespace gcn
 
     void ListBox::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(shadowColor);
             graphics->drawLine(i,i, width - i, i);
@@ -185,7 +182,7 @@ namespace gcn
                 mSelected = selected;
             }
 
-            Widget *par = getParent();
+            auto par = getParent();
             if (par == NULL)
             {
                 return;
@@ -341,12 +338,10 @@ namespace gcn
 
     void ListBox::distributeValueChangedEvent()
     {
-        SelectionListenerIterator iter;
-
-        for (iter = mSelectionListeners.begin(); iter != mSelectionListeners.end(); ++iter)
-        {
+	    for (auto& mSelectionListener : mSelectionListeners)
+	    {
             SelectionEvent event(this);
-            (*iter)->valueChanged(event);
+            mSelectionListener->valueChanged(event);
         }
     }
 }

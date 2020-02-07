@@ -136,18 +136,16 @@ namespace gcn
     
     void Tab::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(highlightColor);
             graphics->drawLine(i,i, width - i, i);

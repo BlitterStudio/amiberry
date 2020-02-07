@@ -83,9 +83,9 @@ namespace gcn
 
     void ToggleButton::draw(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
+	    auto faceColor = getBaseColor();
         Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
+	    const auto alpha = getBaseColor().a;
 
         if (isPressed() || isSelected())
         {
@@ -117,19 +117,19 @@ namespace gcn
 
         graphics->setColor(getForegroundColor());
 
-        int textX;
-        int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+        int text_x;
+	    const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
 
         switch (getAlignment())
         {
           case Graphics::LEFT:
-              textX = mSpacing;
+              text_x = int(mSpacing);
               break;
           case Graphics::CENTER:
-              textX = getWidth() / 2;
+              text_x = getWidth() / 2;
               break;
           case Graphics::RIGHT:
-              textX = getWidth() - mSpacing;
+              text_x = getWidth() - int(mSpacing);
               break;
           default:
               throw GCN_EXCEPTION("Unknown alignment.");
@@ -139,11 +139,11 @@ namespace gcn
 
         if (isPressed() || isSelected())
         {
-            graphics->drawText(getCaption(), textX + 1, textY + 1, getAlignment());
+            graphics->drawText(getCaption(), text_x + 1, text_y + 1, getAlignment());
         }
         else
         {
-            graphics->drawText(getCaption(), textX, textY, getAlignment());
+            graphics->drawText(getCaption(), text_x, text_y, getAlignment());
 
             if (isFocused())
             {
@@ -183,7 +183,7 @@ namespace gcn
 
     void ToggleButton::keyReleased(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if ((key.getValue() == Key::ENTER
              || key.getValue() == Key::SPACE)

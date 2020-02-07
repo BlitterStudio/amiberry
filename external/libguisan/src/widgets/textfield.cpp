@@ -107,7 +107,7 @@ namespace gcn
 
     void TextField::draw(Graphics* graphics)
     {
-        Color faceColor = getBackgroundColor();
+	    const auto faceColor = getBackgroundColor();
         graphics->setColor(faceColor);
         graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
@@ -123,18 +123,16 @@ namespace gcn
 
     void TextField::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(shadowColor);
             graphics->drawLine(i,i, width - i, i);
@@ -167,7 +165,7 @@ namespace gcn
     
     void TextField::keyPressed(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if (key.getValue() == Key::LEFT && mCaretPosition > 0)
         {
@@ -210,11 +208,11 @@ namespace gcn
         {
             if(keyEvent.isShiftPressed() && key.isLetter())
             {
-                mText.insert(mCaretPosition, std::string(1,(char)(key.getValue() - 32)));
+                mText.insert(mCaretPosition, std::string(1,char(key.getValue() - 32)));
             }
             else
             {
-                mText.insert(mCaretPosition, std::string(1,(char)key.getValue()));
+                mText.insert(mCaretPosition, std::string(1,char(key.getValue())));
             }
             ++mCaretPosition;
         }
@@ -244,7 +242,7 @@ namespace gcn
     {
         if (isFocused())
         {
-            int caretX = getFont()->getWidth(mText.substr(0, mCaretPosition));
+	        const auto caretX = getFont()->getWidth(mText.substr(0, mCaretPosition));
 
             if (caretX - mXScroll > getWidth() - 4)
             {
