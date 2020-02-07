@@ -103,8 +103,6 @@ static void ExitShowMessage()
 
 static void ShowMessageWaitInputLoop()
 {
-	FocusBugWorkaround(wndShowMessage);
-
 	int gotEvent = 0;
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
@@ -164,8 +162,6 @@ static void navigate_left_right()
 
 static void ShowMessageLoop()
 {
-	FocusBugWorkaround(wndShowMessage);
-
 	int gotEvent = 0;
 	SDL_Event event;
 	SDL_Event touch_event;

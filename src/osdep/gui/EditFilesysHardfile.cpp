@@ -371,7 +371,7 @@ static void ExitEditFilesysHardfile()
 
 static void EditFilesysHardfileLoop()
 {
-	FocusBugWorkaround(wndEditFilesysHardfile);
+	//FocusBugWorkaround(wndEditFilesysHardfile);
 
 	int gotEvent = 0;
 	SDL_Event event;

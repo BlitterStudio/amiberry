@@ -211,7 +211,7 @@ static void ExitEditFilesysVirtual()
 
 static void EditFilesysVirtualLoop()
 {
-	FocusBugWorkaround(wndEditFilesysVirtual);
+	//FocusBugWorkaround(wndEditFilesysVirtual);
 
 	int gotEvent = 0;
 	SDL_Event event;
@@ -359,7 +359,7 @@ static void EditFilesysVirtualLoop()
 		}
 
 		//-------------------------------------------------
-		// Send event to guichan-controls
+		// Send event to guisan-controls
 		//-------------------------------------------------
 #ifdef ANDROID
 		androidsdl_event(event, gui_input);

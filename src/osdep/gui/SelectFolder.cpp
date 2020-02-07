@@ -73,7 +73,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i >= dirs.size() || i < 0)
+		if (i >= int(dirs.size()) || i < 0)
 			return "---";
 		return dirs[i];
 	}
@@ -187,11 +187,7 @@ static void InitSelectFolder(const char* title)
 	scrAreaFolders->setBorderSize(1);
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
-#ifdef ANDROID
-  scrAreaFolders->setScrollbarWidth(30);
-#else
-	scrAreaFolders->setScrollbarWidth(20);
-#endif
+	scrAreaFolders->setScrollbarWidth(30);
 	scrAreaFolders->setBaseColor(gui_baseCol);
 
 	wndSelectFolder->add(cmdOK);
@@ -250,9 +246,7 @@ static void navigate_left()
 
 static void SelectFolderLoop()
 {
-	FocusBugWorkaround(wndSelectFolder);
-
-	int gotEvent = 0;
+	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
 	while (SDL_PollEvent(&event))
@@ -260,7 +254,7 @@ static void SelectFolderLoop()
 		switch (event.type)
 		{
 		case SDL_KEYDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
@@ -292,7 +286,7 @@ static void SelectFolderLoop()
 		case SDL_CONTROLLER_AXIS_LEFTY:
 			if (gui_joystick)
 			{
-				gotEvent = 1;
+				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
@@ -339,37 +333,37 @@ static void SelectFolderLoop()
 			break;
 
 		case SDL_FINGERDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONDOWN;
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
+			touch_event.button.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
 			gui_input->pushInput(touch_event);
 			break;
 
 		case SDL_FINGERUP:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONUP;
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
+			touch_event.button.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
 			gui_input->pushInput(touch_event);
 			break;
 
 		case SDL_FINGERMOTION:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
-			touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.motion.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
+			touch_event.motion.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -379,7 +373,7 @@ static void SelectFolderLoop()
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
 		case SDL_MOUSEWHEEL:
-			gotEvent = 1;
+			got_event = 1;
 			break;
 
 		default:
@@ -396,7 +390,7 @@ static void SelectFolderLoop()
 #endif
 	}
 
-	if (gotEvent)
+	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();

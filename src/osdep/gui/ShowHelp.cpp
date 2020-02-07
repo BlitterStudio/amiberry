@@ -129,8 +129,6 @@ static void ExitShowHelp(void)
 
 static void ShowHelpLoop(void)
 {
-	FocusBugWorkaround(wndShowHelp);
-
 	int gotEvent = 0;
 	SDL_Event event;
 	SDL_Event touch_event;

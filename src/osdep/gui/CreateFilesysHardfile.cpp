@@ -200,7 +200,7 @@ static void ExitCreateFilesysHardfile()
 
 static void CreateFilesysHardfileLoop()
 {
-	FocusBugWorkaround(wndCreateFilesysHardfile);
+	//FocusBugWorkaround(wndCreateFilesysHardfile);
 
 	int gotEvent = 0;
 	SDL_Event event;
