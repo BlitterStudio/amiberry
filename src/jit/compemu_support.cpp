@@ -51,7 +51,6 @@
 
 #define jit_log(format, ...) \
   write_log("JIT: " format "\n", ##__VA_ARGS__);
-#define jit_log2(format, ...)
 
 #ifdef JIT_DEBUG
 #undef abort
@@ -326,15 +325,9 @@ STATIC_INLINE void adjust_jmpdep(dependency* d, cpuop_func* a)
 
 STATIC_INLINE void set_dhtu(blockinfo* bi, cpuop_func* dh)
 {
-  jit_log2("bi is %p", bi);
   if (dh != bi->direct_handler_to_use) {
     dependency* x = bi->deplist;
-    jit_log2("bi->deplist=%p", bi->deplist);
     while (x) {
-      jit_log2("x is %p", x);
-      jit_log2("x->next is %p", x->next);
-      jit_log2("x->prev_p is %p", x->prev_p);
-
       if (x->jmp_off) {
         adjust_jmpdep(x, dh);
       }
@@ -1205,7 +1198,7 @@ void sync_m68k_pc(void)
 void compiler_exit(void)
 {
   if(current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
-    jit_log("JIT used size: %8d bytes\n", current_compile_p - compiled_code);
+    jit_log("used size: %8d bytes", current_compile_p - compiled_code);
     
 #ifdef PROFILE_COMPILE_TIME
   emul_end_time = clock();
@@ -1830,7 +1823,6 @@ STATIC_INLINE int block_check_checksum(blockinfo* bi)
     isgood = called_check_checksum(bi) != 0;
   }
   if (isgood) {
-    jit_log2("reactivate %p/%p (%x %x/%x %x)", bi, bi->pc_p, c1, c2, bi->c1, bi->c2);
     remove_from_list(bi);
     add_to_active(bi);
     raise_in_cl_list(bi);
@@ -1838,7 +1830,6 @@ STATIC_INLINE int block_check_checksum(blockinfo* bi)
   } else {
     /* This block actually changed. We need to invalidate it,
        and set it up to be recompiled */
-    jit_log2("discard %p/%p (%x %x/%x %x)", bi, bi->pc_p, c1, c2, bi->c1, bi->c2);
     invalidate_block(bi);
     raise_in_cl_list(bi);
   }
@@ -2125,7 +2116,7 @@ void build_comp(void)
 void flush_icache_hard(int n)
 {
   if(current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
-    jit_log("JIT used size: %8d bytes\n", current_compile_p - compiled_code);
+    jit_log("used size: %8d bytes", current_compile_p - compiled_code);
   
   blockinfo* bi, *dbi;
 

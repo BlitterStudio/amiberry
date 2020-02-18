@@ -188,7 +188,7 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 #define PC_P 16
 #define FLAGX 17
 #define FLAGTMP 18
-// Is S4 ever in use?
+
 #define S1 19
 #define S2 20
 #define S3 21
@@ -200,9 +200,11 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 #define SCRATCH_F64_1  1
 #define SCRATCH_F64_2  2
 #define SCRATCH_F64_3  3
+#define SCRATCH_F64_4  4
 #define SCRATCH_F32_1  2
 #define SCRATCH_F32_2  4
 #define SCRATCH_F32_3  6
+#define SCRATCH_F32_4  8
 
 typedef struct {
   uae_u32 touched;

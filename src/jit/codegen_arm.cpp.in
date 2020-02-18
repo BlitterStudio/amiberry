@@ -223,9 +223,9 @@ LOWFUNC(WRITE,RMW,2,compemu_raw_inc_opcount,(IM16 op))
   uae_s32 offs = data_long_offs(op);
   LDR_rRI(REG_WORK3, RPC_INDEX, offs);
 #endif
-  LDR_rRr_LSLi(REG_WORK1, REG_WORK2, REG_WORK3, 2);
+  LDR_rRR_LSLi(REG_WORK1, REG_WORK2, REG_WORK3, 2);
   ADD_rri(REG_WORK1, REG_WORK1, 1);
-  STR_rRr_LSLi(REG_WORK1, REG_WORK2, REG_WORK3, 2);
+  STR_rRR_LSLi(REG_WORK1, REG_WORK2, REG_WORK3, 2);
 }
 LENDFUNC(WRITE,RMW,1,compemu_raw_inc_opcount,(IM16 op))
 
