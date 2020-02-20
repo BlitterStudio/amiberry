@@ -96,25 +96,23 @@ namespace gcn
         graphics->setFont(getFont());
         graphics->setColor(getForegroundColor());
 
-        int h = getHeight() + getHeight() / 2;
+        const auto h = getHeight() + getHeight() / 2;
 
         graphics->drawText(getCaption(), h - 2, 0);
     }
 
     void CheckBox::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(shadowColor);
             graphics->drawLine(i,i, width - i, i);
@@ -127,14 +125,14 @@ namespace gcn
 
     void CheckBox::drawBox(Graphics *graphics)
     {
-        int h = getHeight() - 2;
+	    const auto h = getHeight() - 2;
 
-        int alpha = getBaseColor().a;
-        Color faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    auto faceColor = getBaseColor();
         faceColor.a = alpha;
-        Color highlightColor = faceColor + 0x303030;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        Color shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
         graphics->setColor(shadowColor);
@@ -187,7 +185,7 @@ namespace gcn
 
     void CheckBox::keyPressed(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if (key.getValue() == Key::ENTER ||
             key.getValue() == Key::SPACE)
@@ -212,7 +210,7 @@ namespace gcn
 
     void CheckBox::adjustSize()
     {
-        int height = getFont()->getHeight();
+	    const auto height = getFont()->getHeight();
 
         setHeight(height);
         setWidth(getFont()->getWidth(mCaption) + height + height / 2);

@@ -93,8 +93,7 @@ namespace gcn
     }
 
     Window::~Window()
-    {
-    }
+    = default;
 
     void Window::setPadding(unsigned int padding)
     {
@@ -138,17 +137,16 @@ namespace gcn
 
     void Window::draw(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
         //int width = getWidth() + getBorderSize() * 2 - 1;
         //int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        Rectangle d = getChildrenArea();
+	    auto d = getChildrenArea();
 
         // Fill the background around the content
         graphics->setColor(faceColor);
@@ -206,21 +204,20 @@ namespace gcn
 
         drawChildren(graphics);
 
-        int textX;
-        int textY;
+        int text_x;
 
-        textY = ((int)getTitleBarHeight() - getFont()->getHeight()) / 2;
+	    const auto text_y = (int(getTitleBarHeight()) - getFont()->getHeight()) / 2;
 
         switch (getAlignment())
         {
           case Graphics::LEFT:
-              textX = 4;
+              text_x = 4;
               break;
           case Graphics::CENTER:
-              textX = getWidth() / 2;
+              text_x = getWidth() / 2;
               break;
           case Graphics::RIGHT:
-              textX = getWidth() - 4;
+              text_x = getWidth() - 4;
               break;
           default:
               throw GCN_EXCEPTION("Unknown alignment.");
@@ -228,25 +225,23 @@ namespace gcn
 
         graphics->setColor(getForegroundColor());
         graphics->setFont(getFont());
-        graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
-        graphics->drawText(getCaption(), textX, textY, getAlignment());
+        graphics->pushClipArea(Rectangle(0, 0, getWidth(), int(getTitleBarHeight() - 1)));
+        graphics->drawText(getCaption(), text_x, text_y, getAlignment());
         graphics->popClipArea();
     }
 
     void Window::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(highlightColor);
             graphics->drawLine(i,i, width - i, i);
@@ -272,7 +267,7 @@ namespace gcn
         mDragOffsetX = mouseEvent.getX();
         mDragOffsetY = mouseEvent.getY();
         
-        mIsMoving = mouseEvent.getY() <= (int)mTitleBarHeight;
+        mIsMoving = mouseEvent.getY() <= int(mTitleBarHeight);
     }
 
     void Window::mouseReleased(MouseEvent& mouseEvent)
@@ -298,10 +293,10 @@ namespace gcn
 
     Rectangle Window::getChildrenArea()
     {
-        return Rectangle(getPadding(),
-                         getTitleBarHeight(),
-                         getWidth() - getPadding() * 2,
-                         getHeight() - getPadding() - getTitleBarHeight());
+        return Rectangle(int(getPadding()),
+                         int(getTitleBarHeight()),
+                         int(getWidth() - getPadding() * 2),
+                         int(getHeight() - getPadding() - getTitleBarHeight()));
     }
 
     void Window::setMovable(bool movable)
@@ -326,22 +321,20 @@ namespace gcn
 
     void Window::resizeToContent()
     {
-        WidgetListIterator it;
-
-        int w = 0, h = 0;
-        for (it = mWidgets.begin(); it != mWidgets.end(); it++)
+	    auto w = 0, h = 0;
+        for (auto& mWidget : mWidgets)
         {
-            if ((*it)->getX() + (*it)->getWidth() > w)
+            if (mWidget->getX() + mWidget->getWidth() > w)
             {
-                w = (*it)->getX() + (*it)->getWidth();
+                w = mWidget->getX() + mWidget->getWidth();
             }
 
-            if ((*it)->getY() + (*it)->getHeight() > h)
+            if (mWidget->getY() + mWidget->getHeight() > h)
             {
-                h = (*it)->getY() + (*it)->getHeight();
+                h = mWidget->getY() + mWidget->getHeight();
             }
         }
 
-        setSize(w + 2* getPadding(), h + getPadding() + getTitleBarHeight());
+        setSize(w + 2* int(getPadding()), h + int(getPadding()) + int(getTitleBarHeight()));
     }
 }

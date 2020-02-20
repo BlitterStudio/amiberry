@@ -148,12 +148,12 @@ namespace gcn
             h = getHeight();
         }
 
-        int alpha = getBaseColor().a;
-        Color faceColor = getBaseColor();
+        const auto alpha = getBaseColor().a;
+        auto faceColor = getBaseColor();
         faceColor.a = alpha;
-        Color highlightColor = faceColor + 0x303030;
+        auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        Color shadowColor = faceColor - 0x303030;
+        auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
 
@@ -192,14 +192,13 @@ namespace gcn
 
     void DropDown::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
         unsigned int i;
@@ -218,7 +217,7 @@ namespace gcn
     {
         Color faceColor, highlightColor, shadowColor;
         int offset;
-        int alpha = getBaseColor().a;
+        const auto alpha = getBaseColor().a;
 
         if (mPushed)
         {
@@ -250,8 +249,8 @@ namespace gcn
         {
             h = getHeight();
         }
-        int x = getWidth() - h;
-        int y = 0;
+        const auto x = getWidth() - h;
+        const auto y = 0;
 
         graphics->setColor(faceColor);
         graphics->fillRectangle(Rectangle(x + 1, 
@@ -280,11 +279,10 @@ namespace gcn
                            y + h - 1);
         graphics->setColor(getForegroundColor());
 
-        int i;
-        int hh = h / 3;
-        int hx = x + h / 2;
-        int hy = y + (h * 2) / 3;
-        for (i = 0; i < hh; i++)
+        const auto hh = h / 3;
+        const auto hx = x + h / 2;
+        const auto hy = y + (h * 2) / 3;
+        for (auto i = 0; i < hh; i++)
         {
             graphics->drawLine(hx - i + offset,
                                hy - i + offset,
@@ -308,7 +306,7 @@ namespace gcn
 
     void DropDown::keyPressed(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if ((key.getValue() == Key::ENTER || key.getValue() == Key::SPACE)
             && !mDroppedDown)
@@ -429,17 +427,17 @@ namespace gcn
 	if (mListBox == NULL)
 		throw GCN_EXCEPTION("List box has been deleted.");
 
-        int listBoxHeight = mListBox->getHeight();
-        int h2 = getFont()->getHeight();
+        const auto listBoxHeight = mListBox->getHeight();
+        const auto h2 = getFont()->getHeight();
 
         setHeight(h2);
 
-        // The addition/subtraction of 2 compensates for the seperation lines
-        // seperating the selected element view and the scroll area.
+        // The addition/subtraction of 2 compensates for the separation lines
+        // separating the selected element view and the scroll area.
 
         if (mDroppedDown && getParent())
         {
-            int h = getParent()->getChildrenArea().height - getY();
+	        const auto h = getParent()->getChildrenArea().height - getY();
 
             if (listBoxHeight > h - h2 - 2)
             {
@@ -632,12 +630,10 @@ namespace gcn
 
     void DropDown::distributeValueChangedEvent()
     {
-        SelectionListenerIterator iter;
-
-        for (iter = mSelectionListeners.begin(); iter != mSelectionListeners.end(); ++iter)
-        {
+	    for (auto& mSelectionListener : mSelectionListeners)
+	    {
             SelectionEvent event(this);
-            (*iter)->valueChanged(event);
+            mSelectionListener->valueChanged(event);
         }
     }
 }

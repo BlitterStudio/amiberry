@@ -79,7 +79,7 @@ namespace gcn
 
         addMouseListener(this);
         addKeyListener(this);
-        adjustSize();
+        TextBox::adjustSize();
         setBorderSize(1);
         setText("");
     }
@@ -97,7 +97,7 @@ namespace gcn
 
         addMouseListener(this);
         addKeyListener(this);
-        adjustSize();
+        TextBox::adjustSize();
         setBorderSize(1);
     }
 
@@ -112,17 +112,17 @@ namespace gcn
         int length;
         do
         {
-            pos = text.find("\n", lastPos);
+            pos = text.find('\n', lastPos);
 
             if (pos != std::string::npos)
             {
-                length = pos - lastPos;
+                length = int(pos - lastPos);
             }
             else
             {
-                length = text.size() - lastPos;
+                length = int(text.size() - lastPos);
             }
-            std::string sub = text.substr(lastPos, length);
+            auto sub = text.substr(lastPos, length);
             mTextRows.push_back(sub);
             lastPos = pos + 1;
 
@@ -133,9 +133,7 @@ namespace gcn
 
     void TextBox::draw(Graphics* graphics)
     {
-        unsigned int i;
-
-        if (mOpaque)
+	    if (mOpaque)
         {
             graphics->setColor(getBackgroundColor());
             graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
@@ -149,7 +147,7 @@ namespace gcn
         graphics->setColor(getForegroundColor());
         graphics->setFont(getFont());
 
-        for (i = 0; i < mTextRows.size(); i++)
+        for (auto i = 0; i < int(mTextRows.size()); i++)
         {
             // Move the text one pixel so we can have a caret before a letter.
             graphics->drawText(mTextRows[i], 1, i * getFont()->getHeight());
@@ -158,13 +156,12 @@ namespace gcn
 
     void TextBox::drawBorder(Graphics* graphics)
     {
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
 
         graphics->setColor(getBackgroundColor());
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+        for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->drawLine(i,i, width - i, i);
             graphics->drawLine(i,i + 1, i, height - i - 1);
@@ -185,9 +182,9 @@ namespace gcn
         {
             mCaretRow = mouseEvent.getY() / getFont()->getHeight();
 
-            if (mCaretRow >= (int)mTextRows.size())
+            if (mCaretRow >= int(mTextRows.size()))
             {
-                mCaretRow = mTextRows.size() - 1;
+                mCaretRow = int(mTextRows.size()) - 1;
             }
 
             mCaretColumn = getFont()->getStringIndexAt(mTextRows[mCaretRow], mouseEvent.getX());
@@ -201,7 +198,7 @@ namespace gcn
 
     void TextBox::keyPressed(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if (key.getValue() == Key::LEFT)
         {
@@ -225,13 +222,13 @@ namespace gcn
         else if (key.getValue() == Key::RIGHT)
         {
             ++mCaretColumn;
-            if (mCaretColumn > (int)mTextRows[mCaretRow].size())
+            if (mCaretColumn > int(mTextRows[mCaretRow].size()))
             {
                 ++mCaretRow;
 
-                if (mCaretRow >= (int)mTextRows.size())
+                if (mCaretRow >= int(mTextRows.size()))
                 {
-                    mCaretRow = mTextRows.size() - 1;
+                    mCaretRow = int(mTextRows.size()) - 1;
                     if (mCaretRow < 0)
                     {
                         mCaretRow = 0;
@@ -295,15 +292,15 @@ namespace gcn
         }
 
         else if (key.getValue() == Key::DELETE
-                 && mCaretColumn < (int)mTextRows[mCaretRow].size()
+                 && mCaretColumn < int(mTextRows[mCaretRow].size())
                  && mEditable)
         {
             mTextRows[mCaretRow].erase(mCaretColumn, 1);
         }
 
         else if (key.getValue() == Key::DELETE
-                 && mCaretColumn == (int)mTextRows[mCaretRow].size()
-                 && mCaretRow < ((int)mTextRows.size() - 1)
+                 && mCaretColumn == int(mTextRows[mCaretRow].size())
+                 && mCaretRow < int(mTextRows.size()) - 1
                  && mEditable)
         {
             mTextRows[mCaretRow] += mTextRows[mCaretRow + 1];
@@ -312,11 +309,11 @@ namespace gcn
 
         else if(key.getValue() == Key::PAGE_UP)
         {
-            Widget* par = getParent();
+	        auto par = getParent();
 
             if (par != NULL)
             {
-                int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
+	            const auto rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
                 mCaretRow -= rowsPerPage;
 
                 if (mCaretRow < 0)
@@ -328,16 +325,16 @@ namespace gcn
 
         else if(key.getValue() == Key::PAGE_DOWN)
         {
-            Widget* par = getParent();
+	        auto par = getParent();
 
             if (par != NULL)
             {
-                int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
+	            const auto rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
                 mCaretRow += rowsPerPage;
 
-                if (mCaretRow >= (int)mTextRows.size())
+                if (mCaretRow >= int(mTextRows.size()))
                 {
-                    mCaretRow = mTextRows.size() - 1;
+                    mCaretRow = int(mTextRows.size()) - 1;
                 }
             }
         }
@@ -354,7 +351,7 @@ namespace gcn
         {
             if(keyEvent.isShiftPressed() && key.isLetter())
             {
-                mTextRows[mCaretRow].insert(mCaretColumn,std::string(1,(char)(key.getValue() - 32)));
+                mTextRows[mCaretRow].insert(mCaretColumn,std::string(1,char(key.getValue() - 32)));
             }
             else
             {
@@ -371,11 +368,10 @@ namespace gcn
 
     void TextBox::adjustSize()
     {
-        unsigned int i;
-        int width = 0;
-        for (i = 0; i < mTextRows.size(); ++i)
+	    auto width = 0;
+        for (const auto& mTextRow : mTextRows)
         {
-            int w = getFont()->getWidth(mTextRows[i]);
+	        const auto w = getFont()->getWidth(mTextRow);
             if (width < w)
             {
                 width = w;
@@ -383,37 +379,32 @@ namespace gcn
         }
 
         setWidth(width + 1);
-        setHeight(getFont()->getHeight() * mTextRows.size());
+        setHeight(getFont()->getHeight() * int(mTextRows.size()));
     }
 
     void TextBox::setCaretPosition(unsigned int position)
     {
-        int row;
-
-        for (row = 0; row < (int)mTextRows.size(); row++)
+	    for (auto row = 0; row < int(mTextRows.size()); row++)
         {
             if (position <= mTextRows[row].size())
             {
                 mCaretRow = row;
-                mCaretColumn = position;
+                mCaretColumn = int(position);
                 return; // we are done
             }
-            else
-            {
-                position--;
-            }
+            position--;
         }
 
         // position beyond end of text
-        mCaretRow = mTextRows.size() - 1;
+        mCaretRow = int(mTextRows.size()) - 1;
         mCaretColumn = mTextRows[mCaretRow].size();
     }
 
     unsigned int TextBox::getCaretPosition() const
     {
-        int pos = 0, row;
+	    auto pos = 0;
 
-        for (row = 0; row < mCaretRow; row++)
+        for (auto row = 0; row < mCaretRow; row++)
         {
             pos += mTextRows[row].size();
         }
@@ -431,9 +422,9 @@ namespace gcn
     {
         mCaretRow = row;
 
-        if (mCaretRow >= (int)mTextRows.size())
+        if (mCaretRow >= int(mTextRows.size()))
         {
-            mCaretRow = mTextRows.size() - 1;
+            mCaretRow = int(mTextRows.size()) - 1;
         }
 
         if (mCaretRow < 0)
@@ -453,7 +444,7 @@ namespace gcn
     {
         mCaretColumn = column;
 
-        if (mCaretColumn > (int)mTextRows[mCaretRow].size())
+        if (mCaretColumn > int(mTextRows[mCaretRow].size()))
         {
             mCaretColumn = mTextRows[mCaretRow].size();
         }
@@ -493,7 +484,7 @@ namespace gcn
 
     std::string TextBox::getText() const
     {
-        if (mTextRows.size() == 0)
+        if (mTextRows.empty())
         {
             return std::string("");
         }
@@ -501,12 +492,12 @@ namespace gcn
         int i;
         std::string text;
 
-        for (i = 0; i < (int)mTextRows.size() - 1; ++i)
+        for (i = 0; i < int(mTextRows.size()) - 1; ++i)
         {
-            text = text + mTextRows[i] + "\n";
+            text = text.append(mTextRows[i]).append("\n");
         }
 
-        text = text + mTextRows[i];
+        text += mTextRows[i];
 
         return text;
     }
@@ -518,7 +509,7 @@ namespace gcn
 
     void TextBox::scrollToCaret()
     {
-        Widget *par = getParent();
+	    auto par = getParent();
         if (par == NULL)
         {
             return;

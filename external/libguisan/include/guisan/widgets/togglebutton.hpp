@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2020 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -54,164 +54,85 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_WINDOW_HPP
-#define GCN_WINDOW_HPP
+#ifndef GCN_TOGGLEBUTTON_HPP
+#define GCN_TOGGLEBUTTON_HPP
 
 #include <string>
 
+#include "guisan/focuslistener.hpp"
+#include "guisan/keylistener.hpp"
+#include "guisan/mouseevent.hpp"
 #include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
-#include "guisan/widgets/container.hpp"
+#include "guisan/widget.hpp"
+#include "guisan/widgets/button.hpp"
 
 namespace gcn
 {
     /**
-     * A movable window which can contain another Widgets.
+     * A toggle button, which can stay selected. Think of it as a checkbox,
+     * but dressed as a regular button. Add an ActionListener to it to know when it
+     * has been clicked.
+     *
      */
-    class GCN_CORE_DECLSPEC Window : public Container,
-                                     public MouseListener
+    class GCN_CORE_DECLSPEC ToggleButton : public Button
     {
     public:
         /**
          * Constructor.
          */
-        Window();
+        ToggleButton();
 
         /**
          * Constructor.
          *
-         * @param caption the Window caption.
+         * @param caption the caption of the ToggleButton.
          */
-        Window(const std::string& caption);
-
+        ToggleButton(const std::string& caption);
+        
         /**
-         * Destructor.
-         */
-        virtual ~Window();
-
-        /**
-         * Sets the Window caption.
+         * Checks if the button is selected.
          *
-         * @param caption the Window caption.
+         * @return True if the button is selected, false otherwise.
+         * @see setSelected
          */
-        void setCaption(const std::string& caption);
+        bool isSelected() const;
 
         /**
-         * Gets the Window caption.
+         * Sets the button to be selected.
          *
-         * @return the Window caption.
+         * @param selected True if the button should be set as selected.
+         * @see isSelected
          */
-        const std::string& getCaption() const;
-
-        /**
-         * Sets the alignment for the caption.
-         *
-         * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
-         */
-        void setAlignment(unsigned int alignment);
-
-        /**
-         * Gets the alignment for the caption.
-         *
-         * @return alignment of caption.
-         */
-        unsigned int getAlignment() const;
-
-        /**
-         * Sets the padding of the window which is the distance between the
-         * window border and the content.
-         *
-         * @param padding the padding value.
-         */
-        void setPadding(unsigned int padding);
-
-        /**
-         * Gets the padding.
-         *
-         * @return the padding value.
-         */
-        unsigned int getPadding() const;
-
-        /**
-         * Sets the title bar height.
-         *
-         * @param height the title height value.
-         */
-        void setTitleBarHeight(unsigned int height);
-
-        /**
-         * Gets the title bar height.
-         *
-         * @return the title bar height.
-         */
-        unsigned int getTitleBarHeight();
-
-        /**
-         * Sets the Window to be moveble.
-         *
-         * @param movable true or false.
-         */
-        void setMovable(bool movable);
-
-        /**
-         * Check if the window is movable.
-         *
-         * @return true or false.
-         */
-        bool isMovable() const;
-
-        /**
-         * Sets the Window to be opaque. If it's not opaque, the content area
-         * will not be filled with a color.
-         *
-         * @param opaque true or false.
-         */
-        void setOpaque(bool opaque);
-
-        /**
-         * Checks if the Window is opaque.
-         *
-         * @return true or false.
-         */
-        bool isOpaque();
-
-        /**
-         * Resizes the container to fit the content exactly.
-         */
-        virtual void resizeToContent();
+        void setSelected(bool selected);
 
 
-        // Inherited from BasicContainer
-
-        virtual Rectangle getChildrenArea();
-
-
-        // Inherited from Widget
+        //Inherited from Widget
 
         virtual void draw(Graphics* graphics);
-
-        virtual void drawBorder(Graphics* graphics);
 
 
         // Inherited from MouseListener
 
-        virtual void mousePressed(MouseEvent& mouseEvent);
-
-        virtual void mouseDragged(MouseEvent& mouseEvent);
-
         virtual void mouseReleased(MouseEvent& mouseEvent);
 
+
+        // Inherited from KeyListener
+
+        virtual void keyReleased(KeyEvent& keyEvent);
+
     protected:
-        std::string mCaption;
-        unsigned int mAlignment{};
-        unsigned int mPadding{};
-        unsigned int mTitleBarHeight{};
-        bool mMovable{};
-        bool mOpaque{};
-        int mDragOffsetX{};
-        int mDragOffsetY{};
-        bool mIsMoving;
+        /**
+         * Toggles the button between being selected and
+         * not being selected.
+         */
+        virtual void toggleSelected();
+    
+        /**
+         * True if the button is selected, false otherwise. 
+         */
+        bool mSelected;
     };
 }
 
-#endif // end GCN_WINDOW_HPP
+#endif // end GCN_TOGGLEBUTTON_HPP

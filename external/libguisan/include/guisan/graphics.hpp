@@ -59,6 +59,7 @@
 
 #include <iosfwd>
 #include <stack>
+#include <string>
 
 #include "guisan/cliprectangle.hpp"
 #include "guisan/platform.hpp"

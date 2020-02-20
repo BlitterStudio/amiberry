@@ -86,12 +86,10 @@ static NavigationMap navMap[] =
 	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "qscboAModel"},
 
 	// PanelConfig
-	{"ConfigList", "Configurations", "ConfigName", "", ""},
-	{"ConfigName", "Configurations", "Configurations", "ConfigList", "ConfigDesc"},
-	{"ConfigDesc", "Configurations", "Configurations", "ConfigName", "ConfigLoad"},
-	{"ConfigLoad", "Configurations", "ConfigSave", "ConfigDesc", "ConfigList"},
-	{"ConfigSave", "ConfigLoad", "CfgDelete", "ConfigDesc", "ConfigList"},
-	{"CfgDelete", "ConfigSave", "Configurations", "ConfigDesc", "ConfigList"},
+	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
+	{"ConfigLoad", "Configurations", "ConfigSave", "ConfigList", "ConfigList"},
+	{"ConfigSave", "ConfigLoad", "CfgDelete", "ConfigList", "ConfigList"},
+	{"CfgDelete", "ConfigSave", "Configurations", "ConfigList", "ConfigList"},
 
 	//  active            move left         move right        move up           move down
 	// PanelCPU
@@ -318,38 +316,26 @@ static NavigationMap navMap[] =
 
 	//  active            move left         move right        move up           move down
 	// EditFilesysVirtual
-	{"virtDev", "virtRW", "virtRW", "virtOK", "virtVol"},
-	{"virtVol", "virtBootpri", "virtAutoboot", "virtDev", "virtPath"},
-	{"virtPath", "", "", "virtBootpri", "virtCancel"},
-	{"virtRW", "virtDev", "virtDev", "virtOK", "virtAutoboot"},
-	{"virtAutoboot", "virtVol", "virtBootpri", "virtRW", "virtPath"},
-	{"virtBootpri", "virtAutoboot", "virtVol", "virtRW", "virtPath"},
+	{"virtPath", "", "", "txtVirtBootPri", "virtCancel"},
+	{"virtRW", "txtVirtDev", "txtVirtDev", "virtOK", "virtAutoboot"},
+	{"virtAutoboot", "txtVirtVol", "txtVirtBootPri", "virtRW", "virtPath"},
 	{"virtOK", "virtCancel", "virtCancel", "virtPath", "virtRW"},
 	{"virtCancel", "virtOK", "virtOK", "virtPath", "virtRW"},
 
 	// EditFilesysHardfile
-	{"hdfDev", "hdfBootPri", "hdfRW", "hdfOK", "hdfPath"},
-	{"hdfRW", "hdfDev", "hdfAutoboot", "hdfOK", "hdfPath"},
-	{"hdfAutoboot", "hdfRW", "hdfBootPri", "hdfOK", "hdfPath"},
-	{"hdfBootPri", "hdfAutoboot", "hdfDev", "hdfCancel", "hdfPath"},
-	{"hdfSurface", "hdfReserved", "hdfReserved", "hdfPath", "hdfSectors"},
-	{"hdfReserved", "hdfSurface", "hdfSurface", "hdfPath", "hdfBlocksize"},
-	{"hdfSectors", "hdfBlocksize", "hdfBlocksize", "hdfSurface", "hdfController"},
-	{"hdfBlocksize", "hdfSectors", "hdfSectors", "hdfReserved", "hdfUnit"},
-	{"hdfPath", "", "", "hdfBootPri", "hdfReserved"},
-	{"hdfController", "hdfUnit", "hdfUnit", "hdfSectors", "hdfOK"},
+	{"hdfRW", "txtHdfDev", "hdfAutoboot", "hdfOK", "hdfPath"},
+	{"hdfAutoboot", "hdfRW", "txtHdfBootPri", "hdfOK", "hdfPath"},
+	{"hdfPath", "txtHdfPath", "txtHdfPath", "txtHdfBootPri", "txtHdfReserved"},
+	{"hdfController", "hdfUnit", "hdfUnit", "txtHdfSectors", "hdfOK"},
 	{"hdfUnit", "hdfController", "hdfController", "hdfBlocksize", "hdfOK"},
-	{"hdfOK", "hdfCancel", "hdfCancel", "hdfUnit", "hdfBootPri"},
-	{"hdfCancel", "hdfOK", "hdfOK", "hdfUnit", "hdfBootPri"},
+	{"hdfOK", "hdfCancel", "hdfCancel", "hdfUnit", "txtHdfBootPri"},
+	{"hdfCancel", "hdfOK", "hdfOK", "hdfUnit", "txtHdfBootPri"},
 
 	// CreateFilesysHardfile
-	{"createHdfDev", "createHdfBootPri", "createHdfAutoboot", "createHdfOK", "createHdfPath"},
-	{"createHdfAutoboot", "createHdfDev", "createHdfBootPri", "createHdfOK", "createHdfPath"},
-	{"createHdfBootPri", "createHdfAutoboot", "createHdfDev", "createHdfOK", "createHdfPath"},
-	{"createHdfSize", "", "", "createHdfPath", "createHdfOK"},
-	{"createHdfPath", "", "", "createHdfBootPri", "createHdfSize"},
-	{"createHdfOK", "createHdfCancel", "createHdfCancel", "createHdfSize", "createHdfBootPri"},
-	{"createHdfCancel", "createHdfOK", "createHdfOK", "createHdfSize", "createHdfBootPri"},
+	{"createHdfAutoboot", "createHdfPath", "createHdfPath", "createHdfOK", "createHdfOK"},
+	{"createHdfPath", "createHdfAutoboot", "createHdfOK", "createHdfAutoboot", "createHdfOK"},
+	{"createHdfOK", "createHdfCancel", "createHdfCancel", "createHdfPath", "createHdfAutoboot"},
+	{"createHdfCancel", "createHdfOK", "createHdfOK", "createHdfPath", "createHdfAutoboot"},
 
 	{"END", "", "", "", ""}
 };
@@ -364,7 +350,9 @@ bool HandleNavigation(int direction)
 	{
 		gcn::Widget* activeWidget = focusHdl->getFocused();
 
-		if (activeWidget != nullptr && activeWidget->getId().length() > 0 && activeWidget->getId().substr(0, 3) != "txt")
+		if (activeWidget != nullptr 
+			&& activeWidget->getId().length() > 0 
+			&& activeWidget->getId().substr(0, 3) != "txt")
 		{
 			std::string activeName = activeWidget->getId();
 			auto bFoundEnabled = false;
@@ -421,7 +409,8 @@ bool HandleNavigation(int direction)
 
 			if (focusTarget != nullptr)
 			{
-				if (activeWidget->getId().substr(0, 3) == "cbo" || activeWidget->getId().substr(0, 5) == "qscbo")
+				if (activeWidget->getId().substr(0, 3) == "cbo" 
+					|| activeWidget->getId().substr(0, 5) == "qscbo")
 				{
 					auto dropdown = dynamic_cast<gcn::UaeDropDown*>(activeWidget);
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))

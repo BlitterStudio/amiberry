@@ -91,6 +91,11 @@ MENDFUNC(3,jnf_ADD_im8,(W4 d, RR4 s, IM8 v))
 
 MIDFUNC(2,jnf_ADD_b_imm,(RW1 d, IM8 v))
 {
+	if (isconst(d)) {
+	  live.state[d].val = (live.state[d].val & 0xffffff00) | ((live.state[d].val + v) & 0x000000ff);
+    return;
+  }
+
 	INIT_REG_b(d);
 	
 	if(targetIsReg) {
@@ -626,6 +631,11 @@ MENDFUNC(2,jnf_AND_b,(RW1 d, RR1 s))
 
 MIDFUNC(2,jnf_AND_w_imm,(RW2 d, IM16 v))
 {
+	if (isconst(d)) {
+    live.state[d].val = (live.state[d].val & 0xffff0000) | ((live.state[d].val & v) & 0x0000ffff);
+    return;
+  }
+
 	INIT_REG_w(d);
 
   MOVN_xi(REG_WORK1, (~v));
@@ -1149,6 +1159,8 @@ MIDFUNC(2,jnf_ASR_b_imm,(RW1 d, IM8 i))
 		d = rmw(d);
 
 		SIGNED8_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	ASR_wwi(REG_WORK1, REG_WORK1, i);
 	  BFI_xxii(d, REG_WORK1, 0, 8);
 
@@ -1163,6 +1175,8 @@ MIDFUNC(2,jnf_ASR_w_imm,(RW2 d, IM8 i))
 		d = rmw(d);
 
 		SIGNED16_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	ASR_wwi(REG_WORK1, REG_WORK1, i);
 	  BFI_xxii(d, REG_WORK1, 0, 16);
 
@@ -1176,6 +1190,8 @@ MIDFUNC(2,jnf_ASR_l_imm,(RW4 d, IM8 i))
 	if(i) {
 		d = rmw(d);
 
+    if(i > 31)
+      i = 31;
   	ASR_wwi(d, d, i);
 
 		unlock2(d);
@@ -1192,6 +1208,8 @@ MIDFUNC(2,jff_ASR_b_imm,(RW1 d, IM8 i))
 
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	if (i) {
+    if(i > 31)
+      i = 31;
 		ASR_wwi(REG_WORK2, REG_WORK1, i);
 	  BFI_wwii(d, REG_WORK2, 0, 8);
 	  TST_ww(REG_WORK2, REG_WORK2);
@@ -1222,6 +1240,8 @@ MIDFUNC(2,jff_ASR_w_imm,(RW2 d, IM8 i))
 
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	if (i) {
+    if(i > 31)
+      i = 31;
 		ASR_wwi(REG_WORK2, REG_WORK1, i);
 	  BFI_wwii(d, REG_WORK2, 0, 16);
 	  TST_ww(REG_WORK2, REG_WORK2);
@@ -1252,6 +1272,10 @@ MIDFUNC(2,jff_ASR_l_imm,(RW4 d, IM8 i))
 
 	if (i) {
 		MOV_ww(REG_WORK1, d);
+		if(i > 31) {
+      ASR_wwi(d, d, 1); // make sure, msb is shifted out at least once
+      i = 31;
+    }
 		ASR_wwi(d, d, i);
 		TST_ww(d, d);
 		
@@ -3077,6 +3101,8 @@ MIDFUNC(2,jnf_LSL_b_imm,(RW1 d, IM8 i))
 		
 		INIT_REG_b(d);
 	  
+    if(i > 31)
+      i = 31;
   	LSL_wwi(REG_WORK1, d, i);
 	  BFI_wwii(d, REG_WORK1, 0, 8);
 	
@@ -3095,6 +3121,8 @@ MIDFUNC(2,jnf_LSL_w_imm,(RW2 d, IM8 i))
 
 		INIT_REG_w(d);
 	  
+    if(i > 31)
+      i = 31;
   	LSL_wwi(REG_WORK1, d, i);
 	  BFI_wwii(d, REG_WORK1, 0, 16);
 	
@@ -3448,6 +3476,8 @@ MIDFUNC(2,jnf_LSR_b_imm,(RW1 d, IM8 i))
 		INIT_REG_b(d);
 
 		UNSIGNED8_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	LSR_wwi(REG_WORK1, REG_WORK1, i);
 	  BFI_wwii(d, REG_WORK1, 0, 8);
 
@@ -3467,6 +3497,8 @@ MIDFUNC(2,jnf_LSR_w_imm,(RW2 d, IM8 i))
 		INIT_REG_w(d);
 
 		UNSIGNED16_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	LSR_wwi(REG_WORK1, REG_WORK1, i);
 	  BFI_wwii(d, REG_WORK1, 0, 16);
 

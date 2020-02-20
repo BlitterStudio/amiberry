@@ -102,19 +102,19 @@ namespace gcn
 
     void Label::draw(Graphics* graphics)
     {
-        int textX;
-        int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+        int text_x;
+        const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
 
         switch (getAlignment())
         {
           case Graphics::LEFT:
-              textX = 0;
+              text_x = 0;
               break;
           case Graphics::CENTER:
-              textX = getWidth() / 2;
+              text_x = getWidth() / 2;
               break;
           case Graphics::RIGHT:
-              textX = getWidth();
+              text_x = getWidth();
               break;
           default:
               throw GCN_EXCEPTION("Unknown alignment.");
@@ -122,23 +122,21 @@ namespace gcn
 
         graphics->setFont(getFont());
         graphics->setColor(getForegroundColor());
-        graphics->drawText(getCaption(), textX, textY, getAlignment());
+        graphics->drawText(getCaption(), text_x, text_y, getAlignment());
     }
 
     void Label::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const int width = getWidth() + getBorderSize() * 2 - 1;
+	    const int height = getHeight() + getBorderSize() * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (int i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(shadowColor);
             graphics->drawLine(i,i, width - i, i);

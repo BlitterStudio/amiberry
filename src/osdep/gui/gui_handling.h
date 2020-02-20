@@ -149,8 +149,6 @@ bool HelpPanelOnScreen(std::vector<std::string> &helptext);
 void RefreshAllPanels(void);
 void RegisterRefreshFunc(void (*func)(void));
 
-void FocusBugWorkaround(gcn::Window* wnd);
-
 void DisableResume(void);
 
 bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2);
@@ -190,7 +188,7 @@ extern int currentStateNum;
 extern int delay_savestate_frame;
 
 extern void UpdateGuiScreen();
-
+extern void cap_fps(Uint64 start, int fps);
 extern bool check_internet_connection();
 
 #endif // GUI_HANDLING_H

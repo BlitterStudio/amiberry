@@ -199,6 +199,9 @@
     <ClCompile Include="..\..\external\libguisan\src\sdl\sdl2graphics.cpp">
       <Filter>Source files\sdl</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\external\libguisan\src\widgets\togglebutton.cpp">
+      <Filter>Source files\widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\external\libguisan\include\guisan.hpp">
@@ -406,6 +409,9 @@
       <Filter>Header files\guisan\widgets</Filter>
     </ClInclude>
     <ClInclude Include="..\..\external\libguisan\include\guisan\widgets\messagebox.hpp">
+      <Filter>Header files\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\libguisan\include\guisan\widgets\togglebutton.hpp">
       <Filter>Header files\guisan\widgets</Filter>
     </ClInclude>
   </ItemGroup>

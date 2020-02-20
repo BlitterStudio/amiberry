@@ -108,6 +108,7 @@
 #include <guisan/widgets/tabbedarea.hpp>
 #include <guisan/widgets/textbox.hpp>
 #include <guisan/widgets/textfield.hpp>
+#include <guisan/widgets/togglebutton.hpp>
 #include <guisan/widgets/window.hpp>
 
 #include "guisan/platform.hpp"

@@ -134,9 +134,9 @@ namespace gcn
 
     void Button::draw(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
+	    auto faceColor = getBaseColor();
         Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
+	    const auto alpha = getBaseColor().a;
 
         if (isPressed())
         {
@@ -168,19 +168,19 @@ namespace gcn
 
         graphics->setColor(getForegroundColor());
 
-        int textX;
-        int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+        int text_x;
+	    const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
 
         switch (getAlignment())
         {
           case Graphics::LEFT:
-              textX = mSpacing;
+              text_x = int(mSpacing);
               break;
           case Graphics::CENTER:
-              textX = getWidth() / 2;
+              text_x = getWidth() / 2;
               break;
           case Graphics::RIGHT:
-              textX = getWidth() - mSpacing;
+              text_x = getWidth() - int(mSpacing);
               break;
           default:
               throw GCN_EXCEPTION("Unknown alignment.");
@@ -190,11 +190,11 @@ namespace gcn
 
         if (isPressed())
         {
-            graphics->drawText(getCaption(), textX + 1, textY + 1, getAlignment());
+            graphics->drawText(getCaption(), text_x + 1, text_y + 1, getAlignment());
         }
         else
         {
-            graphics->drawText(getCaption(), textX, textY, getAlignment());
+            graphics->drawText(getCaption(), text_x, text_y, getAlignment());
 
             if (isFocused())
             {
@@ -206,18 +206,16 @@ namespace gcn
 
     void Button::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(shadowColor);
             graphics->drawLine(i,i, width - i, i);
@@ -230,8 +228,8 @@ namespace gcn
 
     void Button::adjustSize()
     {
-        setWidth(getFont()->getWidth(mCaption) + 2*mSpacing);
-        setHeight(getFont()->getHeight() + 2*mSpacing);
+        setWidth(getFont()->getWidth(mCaption) + 2* int(mSpacing));
+        setHeight(getFont()->getHeight() + 2* int(mSpacing));
     }
 
     bool Button::isPressed() const
@@ -240,10 +238,7 @@ namespace gcn
         {
             return true;
         }
-        else
-        {
-            return mKeyPressed;
-        }
+        return mKeyPressed;
     }
 
     void Button::mousePressed(MouseEvent& mouseEvent)
@@ -288,7 +283,7 @@ namespace gcn
 
     void Button::keyPressed(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if (key.getValue() == Key::ENTER
             || key.getValue() == Key::SPACE)
@@ -300,7 +295,7 @@ namespace gcn
 
     void Button::keyReleased(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if ((key.getValue() == Key::ENTER
              || key.getValue() == Key::SPACE)

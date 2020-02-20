@@ -5757,7 +5757,8 @@ uae_u32 cfgfile_modify(uae_u32 index, const TCHAR* parms, uae_u32 size, TCHAR* o
 	uae_u32 err;
 	static TCHAR* configsearch;
 
-	*out = 0;
+	if (out)
+		*out = 0;
 	err = 0;
 	argv = 0;
 	p = nullptr;

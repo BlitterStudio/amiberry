@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3 BETA (2019-12-13)")
-#define AMIBERRYDATE MAKEBD(2019, 12, 01)
+#define AMIBERRYVERSION _T("Amiberry v3.1.2 (2020-02-18)")
+#define AMIBERRYDATE MAKEBD(2020, 02, 18)
 
 extern std::string get_version_string();
 
@@ -36,6 +36,7 @@ extern void fix_apmodes(struct uae_prefs *p);
 extern int generic_main (int argc, char *argv[]);
 
 extern int emulating;
+extern bool config_loaded;
 
 extern int z3_base_adr;
 #ifdef USE_DISPMANX
@@ -102,7 +103,7 @@ extern std::vector<std::string> lstMRUCDList;
 extern void AddFileToCDList(const char *file, int moveToTop);
 
 #define AMIGAWIDTH_COUNT 6
-#define AMIGAHEIGHT_COUNT 6
+#define AMIGAHEIGHT_COUNT 7
 extern const int amigawidth_values[AMIGAWIDTH_COUNT];
 extern const int amigaheight_values[AMIGAHEIGHT_COUNT];
 

@@ -255,12 +255,12 @@ namespace gcn
         virtual int getMarkerPosition() const;
 
         bool mMouseDrag;
-        double mValue;
-        double mStepLength;
-        int mMarkerLength;
+        double mValue{};
+        double mStepLength{};
+        int mMarkerLength{};
         double mScaleStart;
         double mScaleEnd;
-        unsigned int mOrientation;
+        unsigned int mOrientation{};
     };
 }
 

@@ -202,9 +202,9 @@ namespace gcn
          */
         unsigned int mAlignment;
         
-        unsigned int mStart; //! minimum value of the progressbar
-        unsigned int mEnd;   //! maximum value of the progressbar
-        unsigned int mValue; //! current value of the progressbar
+        unsigned int mStart{}; //! minimum value of the progressbar
+        unsigned int mEnd{};   //! maximum value of the progressbar
+        unsigned int mValue{}; //! current value of the progressbar
     };
 }
 

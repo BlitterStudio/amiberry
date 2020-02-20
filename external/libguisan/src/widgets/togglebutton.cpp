@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2020 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -58,112 +58,146 @@
  * For comments regarding functions please see the header file.
  */
 
-#include "guisan/widgets/tab.hpp"
+#include "guisan/widgets/togglebutton.hpp"
 
+#include "guisan/exception.hpp"
 #include "guisan/font.hpp"
 #include "guisan/graphics.hpp"
-#include "guisan/widgets/button.hpp"
-#include "guisan/widgets/label.hpp"
-#include "guisan/widgets/tabbedarea.hpp"
+#include "guisan/key.hpp"
+#include "guisan/mouseevent.hpp"
+#include "guisan/mouseinput.hpp"
 
 namespace gcn
 {
-    Tab::Tab()
-            :mHasMouse(false)
+    ToggleButton::ToggleButton()
+        : Button(), mSelected(false)
     {
-        mLabel = new Label();
-        mLabel->setPosition(4, 4);
-        add(mLabel);
-        setBorderSize(1);
-
-        addMouseListener(this);
-    }
     
-    Tab::~Tab()
-    {
-        delete mLabel;
     }
+
+    ToggleButton::ToggleButton(const std::string& caption)
+            : Button(caption), mSelected(false)
+    {
     
-    void Tab::adjustSize()
-    {
-        setHeight(mLabel->getHeight() + 8);
     }
 
-    void Tab::setTabbedArea(TabbedArea* tabbedArea)
+    void ToggleButton::draw(Graphics* graphics)
     {
-        mTabbedArea = tabbedArea;
-    }
+	    auto faceColor = getBaseColor();
+        Color highlightColor, shadowColor;
+	    const auto alpha = getBaseColor().a;
 
-    TabbedArea* Tab::getTabbedArea()
-    {
-        return mTabbedArea;
-    }
-
-    void Tab::setCaption(const std::string& caption)
-    {
-        mCaption = caption;
-        mLabel->setCaption(caption);
-        mLabel->adjustSize();
-    }
-    
-    const std::string& Tab::getCaption() const
-    {
-        return mCaption;
-    }
-        
-    void Tab::draw(Graphics *graphics)
-    {
-        if (mTabbedArea->isTabSelected(this) || mHasMouse)
+        if (isPressed() || isSelected())
         {
-            graphics->setColor(getBaseColor());
+            faceColor = faceColor - 0x303030;
+            faceColor.a = alpha;
+            highlightColor = faceColor - 0x303030;
+            highlightColor.a = alpha;
+            shadowColor = faceColor + 0x303030;
+            shadowColor.a = alpha;
         }
         else
-        {            
-            graphics->setColor(getBaseColor() - 0x151515);
+        {
+            highlightColor = faceColor + 0x303030;
+            highlightColor.a = alpha;
+            shadowColor = faceColor - 0x303030;
+            shadowColor.a = alpha;
         }
 
-        graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
-        
-        drawChildren(graphics);
+        graphics->setColor(faceColor);
+        graphics->fillRectangle(Rectangle(1, 1, getDimension().width-1, getHeight() - 1));
 
-        if (mTabbedArea->isFocused()
-            && mTabbedArea->isTabSelected(this))
+        graphics->setColor(highlightColor);
+        graphics->drawLine(0, 0, getWidth() - 1, 0);
+        graphics->drawLine(0, 1, 0, getHeight() - 1);
+
+        graphics->setColor(shadowColor);
+        graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
+        graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
+
+        graphics->setColor(getForegroundColor());
+
+        int text_x;
+	    const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
+
+        switch (getAlignment())
         {
-            graphics->setColor(Color(0x000000));
-            graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4, getHeight() - 4));
+          case Graphics::LEFT:
+              text_x = int(mSpacing);
+              break;
+          case Graphics::CENTER:
+              text_x = getWidth() / 2;
+              break;
+          case Graphics::RIGHT:
+              text_x = getWidth() - int(mSpacing);
+              break;
+          default:
+              throw GCN_EXCEPTION("Unknown alignment.");
+        }
+
+        graphics->setFont(getFont());
+
+        if (isPressed() || isSelected())
+        {
+            graphics->drawText(getCaption(), text_x + 1, text_y + 1, getAlignment());
+        }
+        else
+        {
+            graphics->drawText(getCaption(), text_x, text_y, getAlignment());
+
+            if (isFocused())
+            {
+                graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4,
+                                                  getHeight() - 4));
+            }
         }
     }
     
-    void Tab::drawBorder(Graphics* graphics)
+    bool ToggleButton::isSelected() const
     {
-	    const auto faceColor = getBaseColor();
-	    const auto alpha = getBaseColor().a;
-	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
-	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
-	    auto highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-	    auto shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+        return mSelected;
+    }
 
-	    for (auto i = 0; i < int(getBorderSize()); ++i)
+    void ToggleButton::setSelected(bool selected)
+    {
+        mSelected = selected;
+    }
+
+    void ToggleButton::mouseReleased(MouseEvent& mouseEvent)
+    {
+        if (mouseEvent.getButton() == MouseEvent::LEFT
+            && mMousePressed
+            && mHasMouse)
         {
-            graphics->setColor(highlightColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(shadowColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
+            mMousePressed = false;
+            toggleSelected();
+            generateAction();
+            mouseEvent.consume();
+        }
+        else if (mouseEvent.getButton() == MouseEvent::LEFT)
+        {
+            mMousePressed = false;
+            mouseEvent.consume();
+        }
+    }
+
+    void ToggleButton::keyReleased(KeyEvent& keyEvent)
+    {
+	    const auto key = keyEvent.getKey();
+
+        if ((key.getValue() == Key::ENTER
+             || key.getValue() == Key::SPACE)
+            && mKeyPressed)
+        {
+            mKeyPressed = false;
+            toggleSelected();
+            generateAction();
+            keyEvent.consume();
         }
     }
     
-    void Tab::mouseEntered(MouseEvent& mouseEvent)
+    void ToggleButton::toggleSelected()
     {
-        mHasMouse = true;
-    }
-
-    void Tab::mouseExited(MouseEvent& mouseEvent)
-    {
-        mHasMouse = false;
+        mSelected = !mSelected;
     }
 }
-

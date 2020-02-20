@@ -140,44 +140,44 @@ namespace gcn
         graphics->setColor(getBackgroundColor());
         graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
         
-        int textX;
-        int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+        int text_x;
+        const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
         
         graphics->setColor(getSelectionColor());
-        int progressWidth;
+        int progress_width;
         if(mStart == 0 && mEnd == 0)
         {
             // Infinite scrollbar
-            progressWidth = getWidth() / 5;
-            int barX = getWidth() * mValue / 100;
+            progress_width = getWidth() / 5;
+            const auto bar_x = getWidth() * int(mValue) / 100;
             
-            if(barX + progressWidth > getWidth())
+            if(bar_x + progress_width > getWidth())
             {
-                graphics->fillRectangle(Rectangle(barX, 0, getWidth() - barX, getHeight()));
-                graphics->fillRectangle(Rectangle(0, 0, progressWidth - (getWidth() - barX), getHeight()));
+                graphics->fillRectangle(Rectangle(bar_x, 0, getWidth() - bar_x, getHeight()));
+                graphics->fillRectangle(Rectangle(0, 0, progress_width - (getWidth() - bar_x), getHeight()));
             }
             else
             {
-                graphics->fillRectangle(Rectangle(barX,0,progressWidth,getHeight()));
+                graphics->fillRectangle(Rectangle(bar_x,0,progress_width,getHeight()));
             }
         }
         else
         {
             // Standard scrollbar
-            progressWidth = getWidth() * mValue / (mEnd - mStart);
-            graphics->fillRectangle(Rectangle(0,0,progressWidth,getHeight()));
+            progress_width = getWidth() * int(mValue) / int(mEnd - mStart);
+            graphics->fillRectangle(Rectangle(0,0,progress_width,getHeight()));
         }
 
         switch (getAlignment())
         {
           case Graphics::LEFT:
-              textX = 0;
+              text_x = 0;
               break;
           case Graphics::CENTER:
-              textX = getWidth() / 2;
+              text_x = getWidth() / 2;
               break;
           case Graphics::RIGHT:
-              textX = getWidth();
+              text_x = getWidth();
               break;
           default:
               throw GCN_EXCEPTION("Unknown alignment.");
@@ -185,23 +185,21 @@ namespace gcn
 
         graphics->setFont(getFont());
         graphics->setColor(getForegroundColor());
-        graphics->drawText(getCaption(), textX, textY, getAlignment());
+        graphics->drawText(getCaption(), text_x, text_y, getAlignment());
     }
 
     void ProgressBar::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (int i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(shadowColor);
             graphics->drawLine(i,i, width - i, i);

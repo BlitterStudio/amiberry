@@ -344,11 +344,21 @@ int graphics_setup(void)
 #else
 	write_log("Trying to get Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
-	Uint32 sdl_window_mode;
-
-	if (sdl_video_driver != nullptr && strcmp(sdl_video_driver,"x11") == 0)
+	
+	SDL_DisplayMode current_mode;
+	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current_mode);
+	if (should_be_zero == 0)
 	{
-		// Only enable Windowed mode if we're running under x11
+		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(current_mode.format), SDL_GetPixelFormatName(current_mode.format), current_mode.w, current_mode.h, current_mode.refresh_rate);
+		host_hz = current_mode.refresh_rate;
+		can_have_linedouble = current_mode.h >= 540;
+	}
+
+	Uint32 sdl_window_mode;
+	if (sdl_video_driver != nullptr && strcmp(sdl_video_driver,"x11") == 0 
+		&& current_mode.w >= 800 && current_mode.h >= 600)
+	{
+		// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 		sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 	}
 	else
@@ -381,18 +391,6 @@ int graphics_setup(void)
 		}
 		check_error_sdl(sdl_window == nullptr, "Unable to create window:");		
 	}
-	
-	if (SDL_GetWindowDisplayMode(sdl_window, &sdlMode) != 0)
-	{
-		write_log("Could not get information about SDL Mode! SDL_Error: %s\n", SDL_GetError());
-	}
-	can_have_linedouble = sdlMode.h >= 540;
-
-	SDL_DisplayMode current;
-	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current);
-	if (should_be_zero == 0)
-		host_hz = current.refresh_rate;
-
 	SDL_ShowCursor(SDL_DISABLE);
 #endif
 	

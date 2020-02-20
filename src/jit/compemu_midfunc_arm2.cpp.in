@@ -1161,6 +1161,8 @@ MIDFUNC(2,jnf_ASR_b_imm,(RW1 d, IM8 i))
 		d = rmw(d);
 
 		SIGNED8_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	ASR_rri(REG_WORK1, REG_WORK1, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -1181,6 +1183,8 @@ MIDFUNC(2,jnf_ASR_w_imm,(RW2 d, IM8 i))
 		d = rmw(d);
 
 		SIGNED16_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
 	  PKHTB_rrrASRi(d, d, REG_WORK1, i);
 
 		unlock2(d);
@@ -1193,6 +1197,8 @@ MIDFUNC(2,jnf_ASR_l_imm,(RW4 d, IM8 i))
 	if(i) {
 		d = rmw(d);
 
+    if(i > 31)
+      i = 31;
   	ASR_rri(d, d, i);
 
 		unlock2(d);
@@ -1210,6 +1216,8 @@ MIDFUNC(2,jff_ASR_b_imm,(RW1 d, IM8 i))
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	MSR_CPSRf_i(0);
 	if (i) {
+    if(i > 31)
+      i = 31;
 		ASRS_rri(REG_WORK1, REG_WORK1, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -1239,6 +1247,8 @@ MIDFUNC(2,jff_ASR_w_imm,(RW2 d, IM8 i))
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	MSR_CPSRf_i(0);
 	if (i) {
+    if(i > 31)
+      i = 31;
 		ASRS_rri(REG_WORK1, REG_WORK1, i);
 	  PKHTB_rrr(d, d, REG_WORK1);
     flags_carry_inverted = false;
@@ -1261,6 +1271,10 @@ MIDFUNC(2,jff_ASR_l_imm,(RW4 d, IM8 i))
 
 	MSR_CPSRf_i(0);
 	if (i) {
+    if (i > 31) {
+      ASR_rri(d, d, 1); // make sure, msb is shifted out at least once
+      i = 31;
+    }
 		ASRS_rri(d, d, i);
     flags_carry_inverted = false;
 		DUPLICACTE_CARRY
@@ -2158,8 +2172,8 @@ MENDFUNC(2,jff_CMP_b,(RR1 d, RR1 s))
 MIDFUNC(2,jff_CMP_w,(RR2 d, RR2 s))
 {
 	if (isconst(d) && isconst(s)) {
-	  SIGNED16_IMM_2_REG(REG_WORK1, live.state[d].val & 0xff);
-	  SIGNED16_IMM_2_REG(REG_WORK2, live.state[s].val & 0xff);
+	  SIGNED16_IMM_2_REG(REG_WORK1, live.state[d].val & 0xffff);
+	  SIGNED16_IMM_2_REG(REG_WORK2, live.state[s].val & 0xffff);
 	  CMP_rr(REG_WORK1, REG_WORK2);
 	} else {
 	  INIT_RREGS_w(d, s);
@@ -3079,6 +3093,8 @@ MIDFUNC(2,jnf_LSL_b_imm,(RW1 d, IM8 i))
 		
 		INIT_REG_b(d);
 	  
+    if(i > 31)
+      i = 31;
   	LSL_rri(REG_WORK1, d, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -3103,6 +3119,8 @@ MIDFUNC(2,jnf_LSL_w_imm,(RW2 d, IM8 i))
 
 		INIT_REG_w(d);
 	  
+    if(i > 31)
+      i = 31;
   	LSL_rri(REG_WORK1, d, i);
 	  PKHTB_rrr(d, d, REG_WORK1);
 	
@@ -3438,6 +3456,8 @@ MIDFUNC(2,jnf_LSR_b_imm,(RW1 d, IM8 i))
 		INIT_REG_b(d);
 
 		UNSIGNED8_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	LSR_rri(REG_WORK1, REG_WORK1, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -3463,6 +3483,8 @@ MIDFUNC(2,jnf_LSR_w_imm,(RW2 d, IM8 i))
 		INIT_REG_w(d);
 
 		UNSIGNED16_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
 	  PKHTB_rrrASRi(d, d, REG_WORK1, i);
 
 		unlock2(d);

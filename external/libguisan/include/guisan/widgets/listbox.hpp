@@ -222,7 +222,7 @@ namespace gcn
         /**
          * The list model to use.
          */
-        ListModel *mListModel;
+        ListModel *mListModel{};
 
         /**
          * The selected item as an index in the list model.

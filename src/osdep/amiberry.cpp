@@ -59,6 +59,9 @@ bool input_keyboard_as_joystick_stop_keypresses = false;
 static char default_open_gui_key[128];
 static char default_quit_key[128];
 int rotation_angle = 0;
+bool default_horizontal_centering = false;
+bool default_vertical_centering = false;
+int default_scaling_method = -1;
 
 // Default Enter GUI key is F12
 int enter_gui_key = 0;
@@ -425,6 +428,19 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_pscanlines = 0;
 	}
 
+	if (default_horizontal_centering)
+		p->gfx_xcenter = 2;
+	
+	if (default_vertical_centering)
+		p->gfx_ycenter = 2;
+
+	if (default_scaling_method != -1)
+	{
+		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
+		if (default_scaling_method == 0 || default_scaling_method == 1)
+			p->scaling_method = default_scaling_method;
+	}
+	
 	_tcscpy(p->open_gui, default_open_gui_key);
 	_tcscpy(p->quit_amiberry, default_quit_key);
 	_tcscpy(p->action_replay, "Pause");
@@ -886,6 +902,19 @@ void save_amiberry_settings(void)
 	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
 	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", rotation_angle);
 	fputs(buffer, f);
+
+	// Enable Horizontal Centering by default?
+	snprintf(buffer, MAX_DPATH, "default_horizontal_centering=%s\n", default_horizontal_centering ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable Vertical Centering by default?
+	snprintf(buffer, MAX_DPATH, "default_vertical_centering=%s\n", default_vertical_centering ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Scaling method to use by default?
+	// Valid options are: -1 Auto, 0 Nearest Neighbor, 1 Linear
+	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", default_scaling_method);
+	fputs(buffer, f);
 	
 	// Timing settings
 	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
@@ -1074,6 +1103,9 @@ void load_amiberry_settings(void)
 					cfgfile_string(option, value, "default_open_gui_key", default_open_gui_key, sizeof default_open_gui_key);
 					cfgfile_string(option, value, "default_quit_key", default_quit_key, sizeof default_quit_key);
 					cfgfile_intval(option, value, "rotation_angle", &rotation_angle, 1);
+					cfgfile_yesno(option, value, "default_horizontal_centering", &default_horizontal_centering);
+					cfgfile_yesno(option, value, "default_vertical_centering", &default_vertical_centering);
+					cfgfile_intval(option, value, "default_scaling_method", &default_scaling_method, 1);
 					
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);

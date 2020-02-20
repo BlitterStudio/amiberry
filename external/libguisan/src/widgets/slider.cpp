@@ -131,8 +131,8 @@ namespace gcn
 
     void Slider::draw(gcn::Graphics* graphics)
     {
-        Color shadowColor = getBaseColor() - 0x101010;
-        int alpha = getBaseColor().a;
+	    auto shadowColor = getBaseColor() - 0x101010;
+	    const auto alpha = getBaseColor().a;
          shadowColor.a = alpha;
 
         graphics->setColor(shadowColor);
@@ -143,18 +143,16 @@ namespace gcn
 
     void Slider::drawBorder(gcn::Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(shadowColor);
             graphics->drawLine(i,i, width - i, i);
@@ -167,19 +165,18 @@ namespace gcn
 
     void Slider::drawMarker(gcn::Graphics* graphics)
     {
-        gcn::Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
         graphics->setColor(faceColor);
 
         if (getOrientation() == HORIZONTAL)
         {
-            int v = getMarkerPosition();
+	        const auto v = getMarkerPosition();
             graphics->fillRectangle(gcn::Rectangle(v + 1, 1, getMarkerLength() - 2, getHeight() - 2));
             graphics->setColor(highlightColor);
             graphics->drawLine(v, 0, v + getMarkerLength() - 1,0);
@@ -196,7 +193,7 @@ namespace gcn
         }
         else
         {
-            int v = (getHeight() - getMarkerLength()) - getMarkerPosition();
+	        const auto v = (getHeight() - getMarkerLength()) - getMarkerPosition();
             graphics->fillRectangle(gcn::Rectangle(1, v + 1, getWidth() - 2, getMarkerLength() - 2));
             graphics->setColor(highlightColor);
             graphics->drawLine(0, v, 0, v + getMarkerLength() - 1);
@@ -284,7 +281,7 @@ namespace gcn
 
     void Slider::keyPressed(KeyEvent& keyEvent)
     {
-        Key key = keyEvent.getKey();
+	    const auto key = keyEvent.getKey();
 
         if (getOrientation() == HORIZONTAL)
         {
@@ -340,7 +337,7 @@ namespace gcn
             w = getHeight();
         }
 
-        double pos = v / ((double)w - getMarkerLength());
+        const auto pos = v / (double(w) - getMarkerLength());
         return (1.0 - pos) * getScaleStart() + pos * getScaleEnd();
 
     }
@@ -357,9 +354,9 @@ namespace gcn
             v = getHeight();
         }
 
-        int w =  (int)((v - getMarkerLength())
-                       * (value  - getScaleStart())
-                       / (getScaleEnd() - getScaleStart()));
+        const auto w =  int((v - getMarkerLength())
+	        * (value - getScaleStart())
+	        / (getScaleEnd() - getScaleStart()));
 
         if (w < 0)
         {

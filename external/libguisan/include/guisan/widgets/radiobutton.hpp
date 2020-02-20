@@ -193,7 +193,7 @@ namespace gcn
         /**
          * True if the radio button is selected, false otherwise.
          */
-        bool mSelected;
+        bool mSelected{};
 
         /**
          * Holds the caption of the radio button.

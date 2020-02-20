@@ -58,14 +58,14 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return dirs.size() + files.size();
+		return int(dirs.size() + files.size());
 	}
 
 	std::string getElementAt(const int i) override
 	{
-		if (i >= dirs.size() + files.size() || i < 0)
+		if (i >= int(dirs.size() + files.size()) || i < 0)
 			return "---";
-		if (i < dirs.size())
+		if (i < int(dirs.size()))
 			return dirs[i];
 		return files[i - dirs.size()];
 	}
@@ -78,7 +78,7 @@ public:
 		FilterFiles(&files, filefilter);
 	}
 
-	bool isDir(unsigned int i) const
+	[[nodiscard]] bool isDir(const unsigned int i) const
 	{
 		return (i < dirs.size());
 	}
@@ -134,7 +134,7 @@ static void checkfoldername(char* current)
 	if ((dir = opendir(current)))
 	{
 		fileList->changeDir(current);
-		char* ptr = realpath(current, actualpath);
+		const auto ptr = realpath(current, actualpath);
 		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
@@ -157,7 +157,6 @@ static void checkfilename(char* current)
 		}
 	}
 }
-
 
 class SelectFileActionListener : public gcn::ActionListener
 {
@@ -226,9 +225,9 @@ static void InitSelectFile(const char* title)
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
 #ifdef ANDROID
-  txtCurrent->setEnabled(true);
-  editFilePathActionListener =  new EditFilePathActionListener();
-  txtCurrent->addActionListener(editFilePathActionListener);
+	txtCurrent->setEnabled(true);
+	editFilePathActionListener =  new EditFilePathActionListener();
+	txtCurrent->addActionListener(editFilePathActionListener);
 #else
 	txtCurrent->setEnabled(false);
 #endif
@@ -246,11 +245,7 @@ static void InitSelectFile(const char* title)
 	scrAreaFiles->setBorderSize(1);
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
-#ifdef ANDROID
-  scrAreaFiles->setScrollbarWidth(30);
-#else
-	scrAreaFiles->setScrollbarWidth(20);
-#endif
+	scrAreaFiles->setScrollbarWidth(30);
 	scrAreaFiles->setBaseColor(gui_baseCol);
 
 	if (createNew)
@@ -344,153 +339,151 @@ static void navigate_left()
 
 static void SelectFileLoop()
 {
-	FocusBugWorkaround(wndSelectFile);
-	
-	int gotEvent = 0;
-	if (selectedOnStart >= 0)
+	auto got_event = 0;
+	SDL_Event event;
+	SDL_Event touch_event;
+	while (SDL_PollEvent(&event))
 	{
-		scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 15);
-		gotEvent = 1;
-	}
-
-	while (!dialogFinished)
-	{
-		SDL_Event event;
-		SDL_Event touch_event;
-		while (SDL_PollEvent(&event))
+		switch (event.type)
 		{
-			gotEvent = 1;
-			switch (event.type)
+		case SDL_KEYDOWN:
+			got_event = 1;
+			switch (event.key.keysym.sym)
 			{
-			case SDL_KEYDOWN:
-				switch (event.key.keysym.sym)
-				{
-				case VK_ESCAPE:
-					dialogFinished = true;
-					break;
-
-				case VK_LEFT:
-					navigate_left();
-					break;
-
-				case VK_RIGHT:
-					navigate_right();
-					break;
-
-				case VK_Red:
-				case VK_Green:
-					event.key.keysym.sym = SDLK_RETURN;
-					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP; // and the key up
-					break;
-				default:
-					break;
-				}
+			case VK_ESCAPE:
+				dialogFinished = true;
 				break;
 
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYHATMOTION:
-			case SDL_JOYAXISMOTION:
-				if (gui_joystick)
-				{
-					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
-
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
-					{
-						PushFakeKey(SDLK_RETURN);
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
-					{
-						dialogFinished = true;
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) ||
-						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
-					{
-						navigate_left();
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)
-						|| SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
-					{
-						navigate_right();
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) ||
-						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
-					{
-						PushFakeKey(SDLK_UP);
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) ||
-						SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
-					{
-						PushFakeKey(SDLK_DOWN);
-						break;
-					}
-				}
+			case VK_LEFT:
+				navigate_left();
 				break;
 
-			case SDL_FINGERDOWN:
-				memcpy(&touch_event, &event, sizeof event);
-				touch_event.type = SDL_MOUSEBUTTONDOWN;
-				touch_event.button.which = 0;
-				touch_event.button.button = SDL_BUTTON_LEFT;
-				touch_event.button.state = SDL_PRESSED;
-				touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-				touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
-				gui_input->pushInput(touch_event);
+			case VK_RIGHT:
+				navigate_right();
 				break;
 
-			case SDL_FINGERUP:
-				memcpy(&touch_event, &event, sizeof event);
-				touch_event.type = SDL_MOUSEBUTTONUP;
-				touch_event.button.which = 0;
-				touch_event.button.button = SDL_BUTTON_LEFT;
-				touch_event.button.state = SDL_RELEASED;
-				touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-				touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
-				gui_input->pushInput(touch_event);
+			case VK_Red:
+			case VK_Green:
+				event.key.keysym.sym = SDLK_RETURN;
+				gui_input->pushInput(event); // Fire key down
+				event.type = SDL_KEYUP; // and the key up
 				break;
-
-			case SDL_FINGERMOTION:
-				memcpy(&touch_event, &event, sizeof event);
-				touch_event.type = SDL_MOUSEMOTION;
-				touch_event.motion.which = 0;
-				touch_event.motion.state = 0;
-				touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
-				touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
-				gui_input->pushInput(touch_event);
-				break;
-
 			default:
 				break;
 			}
+			break;
 
-			//-------------------------------------------------
-			// Send event to guisan-controls
-			//-------------------------------------------------
+		case SDL_JOYBUTTONDOWN:
+		case SDL_JOYHATMOTION:
+		case SDL_CONTROLLER_AXIS_LEFTX:
+		case SDL_CONTROLLER_AXIS_LEFTY:
+			if (gui_joystick)
+			{
+				got_event = 1;
+				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
+
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
+				{
+					PushFakeKey(SDLK_RETURN);
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
+				{
+					dialogFinished = true;
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) ||
+					SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
+				{
+					navigate_left();
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)
+					|| SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
+				{
+					navigate_right();
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) ||
+					SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
+				{
+					PushFakeKey(SDLK_UP);
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) ||
+					SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
+				{
+					PushFakeKey(SDLK_DOWN);
+					break;
+				}
+			}
+			break;
+
+		case SDL_FINGERDOWN:
+			got_event = 1;
+			memcpy(&touch_event, &event, sizeof event);
+			touch_event.type = SDL_MOUSEBUTTONDOWN;
+			touch_event.button.which = 0;
+			touch_event.button.button = SDL_BUTTON_LEFT;
+			touch_event.button.state = SDL_PRESSED;
+			touch_event.button.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
+			touch_event.button.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_FINGERUP:
+			got_event = 1;
+			memcpy(&touch_event, &event, sizeof event);
+			touch_event.type = SDL_MOUSEBUTTONUP;
+			touch_event.button.which = 0;
+			touch_event.button.button = SDL_BUTTON_LEFT;
+			touch_event.button.state = SDL_RELEASED;
+			touch_event.button.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
+			touch_event.button.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_FINGERMOTION:
+			got_event = 1;
+			memcpy(&touch_event, &event, sizeof event);
+			touch_event.type = SDL_MOUSEMOTION;
+			touch_event.motion.which = 0;
+			touch_event.motion.state = 0;
+			touch_event.motion.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
+			touch_event.motion.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_KEYUP:
+		case SDL_JOYBUTTONUP:
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+		case SDL_MOUSEMOTION:
+		case SDL_MOUSEWHEEL:
+			got_event = 1;
+			break;
+
+		default:
+			break;
+		}
+
+		//-------------------------------------------------
+		// Send event to guisan-controls
+		//-------------------------------------------------
 #ifdef ANDROID
-			androidsdl_event(event, gui_input);
+		androidsdl_event(event, gui_input);
 #else
-			gui_input->pushInput(event);
-#endif
-		}
+		gui_input->pushInput(event);
+#endif	
+	}
 
-		if (gotEvent)
-		{
-			// Now we let the Gui object perform its logic.
-			uae_gui->logic();
-			// Now we let the Gui object draw itself.
-			uae_gui->draw();
-#ifdef USE_DISPMANX
-			UpdateGuiScreen();
-#else
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
-		}
+	if (got_event)
+	{
+		// Now we let the Gui object perform its logic.
+		uae_gui->logic();
+		// Now we let the Gui object draw itself.
+		uae_gui->draw();
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
@@ -510,16 +503,22 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	checkfoldername(workingDir);
 	checkfilename(value);
 
+	if (selectedOnStart >= 0)
+	{
+		scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 15);
+	}
+	
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 
-	SelectFileLoop();
+	while (!dialogFinished)
+	{
+		const auto start = SDL_GetPerformanceCounter();
+		SelectFileLoop();
+		cap_fps(start, 60);
+	}
 
 	ExitSelectFile();
 

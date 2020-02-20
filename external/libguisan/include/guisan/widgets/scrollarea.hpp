@@ -468,8 +468,8 @@ namespace gcn
         int mScrollbarWidth;
         unsigned int mHPolicy;
         unsigned int mVPolicy;
-        bool mVBarVisible;
-        bool mHBarVisible;
+        bool mVBarVisible{};
+        bool mHBarVisible{};
         bool mUpButtonPressed;
         bool mDownButtonPressed;
         bool mLeftButtonPressed;
@@ -480,8 +480,8 @@ namespace gcn
         int mRightButtonScrollAmount;
         bool mIsVerticalMarkerDragged;
         bool mIsHorizontalMarkerDragged;
-        int mHorizontalMarkerDragOffset;
-        int mVerticalMarkerDragOffset;
+        int mHorizontalMarkerDragOffset{};
+        int mVerticalMarkerDragOffset{};
     };
 }
 

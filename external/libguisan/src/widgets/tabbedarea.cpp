@@ -90,22 +90,21 @@ namespace gcn
 
     TabbedArea::~TabbedArea()
     {
-        remove(mTabContainer);
-        remove(mWidgetContainer);
+	    BasicContainer::remove(mTabContainer);
+	    BasicContainer::remove(mWidgetContainer);
         
         delete mTabContainer;
         delete mWidgetContainer;
 
-        unsigned int i;
-        for (i = 0; i < mTabsToCleanUp.size(); i++)
-        {
-            delete mTabsToCleanUp[i];
+	    for (auto& i : mTabsToCleanUp)
+	    {
+            delete i;
         }
     }
 
     void TabbedArea::addTab(const std::string& caption, Widget* widget)
-    {        
-        Tab* tab = new Tab();
+    {
+	    auto tab = new Tab();
         tab->setSize(70, 20);
         tab->setCaption(caption);
         mTabsToCleanUp.push_back(tab);
@@ -119,7 +118,7 @@ namespace gcn
         tab->addActionListener(this);        
 
         mTabContainer->add(tab);        
-        mTabs.push_back(std::pair<Tab*, Widget*>(tab, widget));
+        mTabs.emplace_back(tab, widget);
 
 
         if (mSelectedTab == NULL)
@@ -143,18 +142,18 @@ namespace gcn
 
     void TabbedArea::removeTab(Tab* tab)
     {
-        int tabIndexToBeSelected = - 1;
+	    auto tabIndexToBeSelected = - 1;
         
         if (tab == mSelectedTab)
         {
-            int index = getSelectedTabIndex();
+	        auto index = getSelectedTabIndex();
             
-            if (index == (int)mTabs.size() - 1
+            if (index == int(mTabs.size()) - 1
                 && mTabs.size() >= 2)
             {
                 tabIndexToBeSelected = index--;
             }
-            else if (index == (int)mTabs.size() - 1
+            else if (index == int(mTabs.size()) - 1
                      && mTabs.size() == 1)
             {
                 tabIndexToBeSelected = -1;
@@ -165,8 +164,7 @@ namespace gcn
             }
         }
 
-        std::vector<std::pair<Tab*, Widget*> >::iterator iter;
-        for (iter = mTabs.begin(); iter != mTabs.end(); iter++)
+	    for (auto iter = mTabs.begin(); iter != mTabs.end(); ++iter)
         {            
             if (iter->first == tab)
             {
@@ -175,9 +173,8 @@ namespace gcn
                 break;
             }
         }
-                
-        std::vector<Tab*>::iterator iter2;
-        for (iter2 = mTabsToCleanUp.begin(); iter2 != mTabsToCleanUp.end(); iter2++)
+
+	    for (auto iter2 = mTabsToCleanUp.begin(); iter2 != mTabsToCleanUp.end(); ++iter2)
         {
             if (*iter2 == tab)
             {
@@ -249,8 +246,7 @@ namespace gcn
 
     int TabbedArea::getSelectedTabIndex() const
     {
-        unsigned int i;
-        for (i = 0; i < mTabs.size(); i++)
+	    for (auto i = 0; i < int(mTabs.size()); i++)
         {
             if (mTabs[i].first == mSelectedTab)
             {
@@ -290,18 +286,16 @@ namespace gcn
     
     void TabbedArea::drawBorder(Graphics* graphics)
     {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
+	    const auto faceColor = getBaseColor();
+	    const auto alpha = getBaseColor().a;
+	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
+	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
+	    auto highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
+	    auto shadowColor = faceColor - 0x303030;
         shadowColor.a = alpha;
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
+	    for (auto i = 0; i < int(getBorderSize()); ++i)
         {
             graphics->setColor(highlightColor);
             graphics->drawLine(i,i + mWidgetContainer->getY(), i, height - i - 1);
@@ -319,25 +313,24 @@ namespace gcn
 
     void TabbedArea::adjustSize()
     {
-        int maxTabHeight = 0;
-        unsigned int i;
-        for (i = 0; i < mTabs.size(); i++)
-        {
-            if (mTabs[i].first->getHeight() > maxTabHeight)
+	    auto max_tab_height = 0;
+	    for (auto& mTab : mTabs)
+	    {
+            if (mTab.first->getHeight() > max_tab_height)
             {
-                maxTabHeight = mTabs[i].first->getHeight();
+                max_tab_height = mTab.first->getHeight();
             }
         }
         
-        if (getHeight() < maxTabHeight)
+        if (getHeight() < max_tab_height)
         {
-            mTabContainer->setHeight(maxTabHeight);
+            mTabContainer->setHeight(max_tab_height);
         }
         else
         {
-            mTabContainer->setHeight(maxTabHeight);
-            mWidgetContainer->setHeight(getHeight() - maxTabHeight - 1);
-            mWidgetContainer->setY(maxTabHeight + 1);
+            mTabContainer->setHeight(max_tab_height);
+            mWidgetContainer->setHeight(getHeight() - max_tab_height - 1);
+            mWidgetContainer->setY(max_tab_height + 1);
         }
 
         mTabContainer->setWidth(getWidth());
@@ -346,20 +339,20 @@ namespace gcn
 
     void TabbedArea::adjustTabPositions()
     {
-        int maxTabHeight = 0;
+	    auto max_tab_height = 0;
         unsigned int i;
         for (i = 0; i < mTabs.size(); i++)
         {
-            if (mTabs[i].first->getHeight() > maxTabHeight)
+            if (mTabs[i].first->getHeight() > max_tab_height)
             {
-                maxTabHeight = mTabs[i].first->getHeight();
+                max_tab_height = mTabs[i].first->getHeight();
             }
         }
 
-        int x = 0;
+	    auto x = 0;
         for (i = 0; i < mTabs.size(); i++)            
         {
-            Tab* tab = mTabs[i].first;
+	        auto tab = mTabs[i].first;
 
             if (x == 0)
             {
@@ -368,15 +361,15 @@ namespace gcn
             
             tab->setX(x);
 
-            if (tab->getHeight() < maxTabHeight)
+            if (tab->getHeight() < max_tab_height)
             {
-                tab->setY(maxTabHeight
+                tab->setY(max_tab_height
                           - tab->getHeight()
-                          + tab->getBorderSize());
+                          + int(tab->getBorderSize()));
             }
             else
             {
-                tab->setY(mTabs[i].first->getBorderSize());
+                tab->setY(int(mTabs[i].first->getBorderSize()));
             }
             
             x += tab->getWidth() + tab->getBorderSize() * 2;
@@ -419,7 +412,7 @@ namespace gcn
         
         if (keyEvent.getKey().getValue() == Key::LEFT)
         {
-            int index = getSelectedTabIndex();
+	        auto index = getSelectedTabIndex();
             index--;
             
             if (index < 0)
@@ -435,10 +428,10 @@ namespace gcn
         }
         else if (keyEvent.getKey().getValue() == Key::RIGHT)
         {
-            int index = getSelectedTabIndex();
+	        auto index = getSelectedTabIndex();
             index++;
             
-            if (index >= (int)mTabs.size())
+            if (index >= int(mTabs.size()))
             {
                 return;
             }
@@ -462,8 +455,8 @@ namespace gcn
         
         if (mouseEvent.getButton() == MouseEvent::LEFT)
         {
-            Widget* widget = mTabContainer->getWidgetAt(mouseEvent.getX(), mouseEvent.getY());
-            Tab* tab = dynamic_cast<Tab*>(widget);
+	        const auto widget = mTabContainer->getWidgetAt(mouseEvent.getX(), mouseEvent.getY());
+	        const auto tab = dynamic_cast<Tab*>(widget);
 
             if (tab != NULL)
             {
@@ -476,8 +469,8 @@ namespace gcn
 
     void TabbedArea::death(const Event& event)
     {
-        Widget* source = event.getSource();
-        Tab* tab = dynamic_cast<Tab*>(source);
+	    const auto source = event.getSource();
+	    const auto tab = dynamic_cast<Tab*>(source);
 
         if (tab != NULL)
         {
@@ -491,8 +484,8 @@ namespace gcn
 
     void TabbedArea::action(const ActionEvent& actionEvent)
     {
-        Widget* source = actionEvent.getSource();
-        Tab* tab = dynamic_cast<Tab*>(source);
+	    const auto source = actionEvent.getSource();
+	    const auto tab = dynamic_cast<Tab*>(source);
 
         if (tab == NULL)
         {

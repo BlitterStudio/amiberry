@@ -176,7 +176,7 @@ namespace gcn
         /**
          * True if the check box is selected, false otherwise.
          */
-        bool mSelected;
+        bool mSelected{};
 
         /**
          * Holds the caption of the check box.

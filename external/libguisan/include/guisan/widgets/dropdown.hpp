@@ -268,7 +268,7 @@ namespace gcn
          * checking if the list of the drop down was clicked or if the upper part
          * of the drop down was clicked on a mouse click
          */
-        int mFoldedUpHeight;
+        int mFoldedUpHeight{};
         
         /**
          * The scroll area used.

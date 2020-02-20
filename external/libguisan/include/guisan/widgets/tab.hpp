@@ -137,7 +137,7 @@ namespace gcn
         
     protected:
         Label* mLabel;
-        TabbedArea* mTabbedArea;
+        TabbedArea* mTabbedArea{};
         std::string mCaption;
         bool mHasMouse;
     };

@@ -120,18 +120,17 @@ static void InitEditFilesysVirtual()
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
-	txtDevice->setId("virtDev");
 
 	lblVolume = new gcn::Label("Volume Label:");
 	lblVolume->setAlignment(gcn::Graphics::RIGHT);
 	txtVolume = new gcn::TextField();
 	txtVolume->setSize(60, TEXTFIELD_HEIGHT);
-	txtVolume->setId("virtVol");
 
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(338, TEXTFIELD_HEIGHT);
+	
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdPath->setBaseColor(gui_baseCol);
@@ -148,7 +147,6 @@ static void InitEditFilesysVirtual()
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
-	txtBootPri->setId("virtBootpri");
 
 	auto posY = DISTANCE_BORDER;
 	auto posX = DISTANCE_BORDER;
@@ -213,162 +211,169 @@ static void ExitEditFilesysVirtual()
 
 static void EditFilesysVirtualLoop()
 {
-	FocusBugWorkaround(wndEditFilesysVirtual);
+	//FocusBugWorkaround(wndEditFilesysVirtual);
 
 	int gotEvent = 0;
-	while (!dialogFinished)
-	{		
-		SDL_Event event;
-		SDL_Event touch_event;
-		while (SDL_PollEvent(&event))
+	SDL_Event event;
+	SDL_Event touch_event;
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
 		{
+		case SDL_KEYDOWN:
 			gotEvent = 1;
-			switch (event.type)
+			switch (event.key.keysym.sym)
 			{
-			case SDL_KEYDOWN:
-				switch (event.key.keysym.sym)
-				{
-				case VK_ESCAPE:
-					dialogFinished = true;
-					break;
-
-				case VK_UP:
-					if (HandleNavigation(DIRECTION_UP))
-						continue; // Don't change value when enter ComboBox -> don't send event to control
-					break;
-
-				case VK_DOWN:
-					if (HandleNavigation(DIRECTION_DOWN))
-						continue; // Don't change value when enter ComboBox -> don't send event to control
-					break;
-
-				case VK_LEFT:
-					if (HandleNavigation(DIRECTION_LEFT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					break;
-
-				case VK_RIGHT:
-					if (HandleNavigation(DIRECTION_RIGHT))
-						continue; // Don't change value when enter Slider -> don't send event to control
-					break;
-
-				case VK_Blue:
-				case VK_Green:
-					event.key.keysym.sym = SDLK_RETURN;
-					gui_input->pushInput(event); // Fire key down
-					event.type = SDL_KEYUP; // and the key up
-					break;
-				default:
-					break;
-				}
+			case VK_ESCAPE:
+				dialogFinished = true;
 				break;
 
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYHATMOTION:
-			case SDL_JOYAXISMOTION:
-				if (gui_joystick)
-				{
-					const int hat = SDL_JoystickGetHat(gui_joystick, 0);
-
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
-					{
-						if (HandleNavigation(DIRECTION_UP))
-							continue; // Don't change value when enter Slider -> don't send event to control
-						PushFakeKey(SDLK_UP);
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
-					{
-						if (HandleNavigation(DIRECTION_DOWN))
-							continue; // Don't change value when enter Slider -> don't send event to control
-						PushFakeKey(SDLK_DOWN);
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
-					{
-						if (HandleNavigation(DIRECTION_RIGHT))
-							continue; // Don't change value when enter Slider -> don't send event to control
-						PushFakeKey(SDLK_RIGHT);
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
-					{
-						if (HandleNavigation(DIRECTION_LEFT))
-							continue; // Don't change value when enter Slider -> don't send event to control
-						PushFakeKey(SDLK_LEFT);
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button)) // need this to be X button
-					{
-						PushFakeKey(SDLK_RETURN);
-						break;
-					}
-					if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
-						SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button)) // need this to be START button
-					{
-						dialogFinished = true;
-						break;
-					}
-				}
+			case VK_UP:
+				if (HandleNavigation(DIRECTION_UP))
+					continue; // Don't change value when enter ComboBox -> don't send event to control
 				break;
 
-			case SDL_FINGERDOWN:
-				memcpy(&touch_event, &event, sizeof event);
-				touch_event.type = SDL_MOUSEBUTTONDOWN;
-				touch_event.button.which = 0;
-				touch_event.button.button = SDL_BUTTON_LEFT;
-				touch_event.button.state = SDL_PRESSED;
-				touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-				touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
-				gui_input->pushInput(touch_event);
+			case VK_DOWN:
+				if (HandleNavigation(DIRECTION_DOWN))
+					continue; // Don't change value when enter ComboBox -> don't send event to control
 				break;
 
-			case SDL_FINGERUP:
-				memcpy(&touch_event, &event, sizeof event);
-				touch_event.type = SDL_MOUSEBUTTONUP;
-				touch_event.button.which = 0;
-				touch_event.button.button = SDL_BUTTON_LEFT;
-				touch_event.button.state = SDL_RELEASED;
-				touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-				touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
-				gui_input->pushInput(touch_event);
+			case VK_LEFT:
+				if (HandleNavigation(DIRECTION_LEFT))
+					continue; // Don't change value when enter Slider -> don't send event to control
 				break;
 
-			case SDL_FINGERMOTION:
-				memcpy(&touch_event, &event, sizeof event);
-				touch_event.type = SDL_MOUSEMOTION;
-				touch_event.motion.which = 0;
-				touch_event.motion.state = 0;
-				touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
-				touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
-				gui_input->pushInput(touch_event);
+			case VK_RIGHT:
+				if (HandleNavigation(DIRECTION_RIGHT))
+					continue; // Don't change value when enter Slider -> don't send event to control
 				break;
 
+			case VK_Blue:
+			case VK_Green:
+				event.key.keysym.sym = SDLK_RETURN;
+				gui_input->pushInput(event); // Fire key down
+				event.type = SDL_KEYUP; // and the key up
+				break;
 			default:
 				break;
 			}
+			break;
 
-			//-------------------------------------------------
-			// Send event to guichan-controls
-			//-------------------------------------------------
+		case SDL_JOYBUTTONDOWN:
+		case SDL_JOYHATMOTION:
+		case SDL_CONTROLLER_AXIS_LEFTX:
+		case SDL_CONTROLLER_AXIS_LEFTY:
+			if (gui_joystick)
+			{
+				gotEvent = 1;
+				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
+
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768) // dpad
+				{
+					if (HandleNavigation(DIRECTION_UP))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_UP);
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767) // dpad
+				{
+					if (HandleNavigation(DIRECTION_DOWN))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_DOWN);
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767) // dpad
+				{
+					if (HandleNavigation(DIRECTION_RIGHT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_RIGHT);
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) || SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768) // dpad
+				{
+					if (HandleNavigation(DIRECTION_LEFT))
+						continue; // Don't change value when enter Slider -> don't send event to control
+					PushFakeKey(SDLK_LEFT);
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button)) // need this to be X button
+				{
+					PushFakeKey(SDLK_RETURN);
+					break;
+				}
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
+					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button)) // need this to be START button
+				{
+					dialogFinished = true;
+					break;
+				}
+			}
+			break;
+
+		case SDL_FINGERDOWN:
+			gotEvent = 1;
+			memcpy(&touch_event, &event, sizeof event);
+			touch_event.type = SDL_MOUSEBUTTONDOWN;
+			touch_event.button.which = 0;
+			touch_event.button.button = SDL_BUTTON_LEFT;
+			touch_event.button.state = SDL_PRESSED;
+			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_FINGERUP:
+			gotEvent = 1;
+			memcpy(&touch_event, &event, sizeof event);
+			touch_event.type = SDL_MOUSEBUTTONUP;
+			touch_event.button.which = 0;
+			touch_event.button.button = SDL_BUTTON_LEFT;
+			touch_event.button.state = SDL_RELEASED;
+			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_FINGERMOTION:
+			gotEvent = 1;
+			memcpy(&touch_event, &event, sizeof event);
+			touch_event.type = SDL_MOUSEMOTION;
+			touch_event.motion.which = 0;
+			touch_event.motion.state = 0;
+			touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
+			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			gui_input->pushInput(touch_event);
+			break;
+
+		case SDL_KEYUP:
+		case SDL_JOYBUTTONUP:
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+		case SDL_MOUSEMOTION:
+		case SDL_MOUSEWHEEL:
+			gotEvent = 1;
+			break;
+			
+		default:
+			break;
+		}
+
+		//-------------------------------------------------
+		// Send event to guisan-controls
+		//-------------------------------------------------
 #ifdef ANDROID
-			androidsdl_event(event, gui_input);
+		androidsdl_event(event, gui_input);
 #else
-			gui_input->pushInput(event);
+		gui_input->pushInput(event);
 #endif
-		}
-		if (gotEvent)
-		{
-			// Now we let the Gui object perform its logic.
-			uae_gui->logic();
-			// Now we let the Gui object draw itself.
-			uae_gui->draw();
-#ifdef USE_DISPMANX
-			UpdateGuiScreen();
-#else
-			SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
-		}
+	}
+	
+	if (gotEvent)
+	{
+		// Now we let the Gui object perform its logic.
+		uae_gui->logic();
+		// Now we let the Gui object draw itself.
+		uae_gui->draw();
 		// Finally we update the screen.
 		UpdateGuiScreen();
 	}
@@ -418,13 +423,14 @@ bool EditFilesysVirtual(const int unit_no)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-#ifdef USE_DISPMANX
-#else
-	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-#endif
 	UpdateGuiScreen();
 
-	EditFilesysVirtualLoop();
+	while (!dialogFinished)
+	{
+		const auto start = SDL_GetPerformanceCounter();
+		EditFilesysVirtualLoop();
+		cap_fps(start, 60);
+	}
 
 	if (dialogResult)
 	{
