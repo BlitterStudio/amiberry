@@ -802,20 +802,10 @@ static void leave_program(void)
 
 bool check_internet_connection()
 {
-	auto result = false;
-	FILE* output;
-
-	if (!((output = popen("route -n | grep -c '^0\\.0\\.0\\.0'", "r"))))
-		return result;
-
-	unsigned int i;
-	fscanf(output, "%u", &i);
-	if (i == 1)
-		result = true; // There is internet connection
-	else if (i == 0)
-		result = false; // There is no internet connection
-	pclose(output);
-	return result;
+	if (system("ping -c1 -s1 www.google.com"))
+		return false;
+	else
+		return true;
 }
 
 // In case of error, print the error code and close the application
