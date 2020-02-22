@@ -174,18 +174,6 @@ STATIC_INLINE void raw_pop_preserved_regs(void) {
   LDP_xxXpost(27, 28, RSP_INDEX, 16);
 }
 
-STATIC_INLINE void raw_flags_evicted(int r)
-{
-  live.state[FLAGTMP].status = INMEM;
-  live.state[FLAGTMP].realreg = -1;
-  /* We just "evicted" FLAGTMP. */
-  if (live.nat[r].nholds != 1) {
-    /* Huh? */
-    abort();
-  }
-  live.nat[r].nholds = 0;
-}
-
 STATIC_INLINE void raw_flags_to_reg(int r)
 {
   uintptr idx = (uintptr) &(regs.ccrflags.nzcv) - (uintptr) &regs;
@@ -196,7 +184,11 @@ STATIC_INLINE void raw_flags_to_reg(int r)
 	  flags_carry_inverted = false;
 	}
 	STR_wXi(r, R_REGSTRUCT, idx);
-	raw_flags_evicted(r);
+
+  live.state[FLAGTMP].status = INMEM;
+  live.state[FLAGTMP].realreg = -1;
+  /* We just "evicted" FLAGTMP. */
+  live.nat[r].nholds = 0;
 }
 
 STATIC_INLINE void raw_reg_to_flags(int r)

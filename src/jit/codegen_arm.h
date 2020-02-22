@@ -1474,6 +1474,9 @@ enum {
 #define CC_VMSR_r(cc,Rt)  							_W(((cc) << 28) | (0xe << 24) | (0xe << 20) | (0x1 << 16) | ((Rt) << 12) | (0xa << 8) | (0x1 << 4))
 #define VMSR_r(Rt)											CC_VMSR_r(NATIVE_CC_AL,Rt)
 
+#define VBIT64_ddd(Dd,Dn,Dm)            _W(((0xf) << 28) | (0x3 << 24) | (0x2 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
+#define VBIF64_ddd(Dd,Dn,Dm)            _W(((0xf) << 28) | (0x3 << 24) | (0x3 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
+
 // Immediate values for VBIC, VMOV (I32), VMVN (I32) and VORR
 #define FIMMVAL(imm)             ((((imm) & 0x80) << 17) | (((imm) & 0x70) << 12) | (((imm) & 0x0f) << 0))
 #define FIMM32(imm)               (((imm) & 0xffffff00) == 0 ? (FIMMVAL((imm) >>  0) | (0x0 << 8)) : \
@@ -1499,6 +1502,7 @@ enum {
 #define VSHL64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x2 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(imm))
 #define VSHR64_ddi(Dd,Dm,imm)       		_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x0 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(64-(imm)))
 #define VSLI64_ddi(Dd,Dm,i)      				_W((0xf << 28) | (0x3 << 24) | (0x8 << 20) | (0x5 << 8) | (0x9 << 4) | MAKE_Dd(Dd) | MAKE_Dm(Dm) | FIMM6(i))
+#define VSHL64_ddd(Dd,Dm,Dn)       		  _W((0xf << 28) | (0x3 << 24) | (0x3 << 20) | (0x4 << 8) | (0x0 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
 
 #define VORR_ddd(Dd,Dn,Dm)       				_W((0xf << 28) | (0x2 << 24) | (0x2 << 20) | (0x1 << 8) | (0x1 << 4) | MAKE_Dd(Dd) | MAKE_Dn(Dn) | MAKE_Dm(Dm))
 

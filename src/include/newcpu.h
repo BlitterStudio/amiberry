@@ -133,7 +133,7 @@ struct regstruct
 
 #ifdef JIT
   /* store scratch regs also in this struct to avoid load of mem pointer */
-  uae_u32 scratchregs[VREGS - 16];
+  uae_u32 scratchregs[VREGS - S1];
   fpu_register scratchfregs[VFREGS - 8];
   uae_u32 jit_exception;
   

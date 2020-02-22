@@ -143,6 +143,8 @@
 #define STRH_wXi(Wt,Xn,i)         _W((0b0111100100 << 22) | ((((i)/2) &0xfff) << 10) | ((Xn) << 5) | (Wt))
 #define STRH_wXx(Wt,Xn,Xm)        _W((0b01111000001 << 21) | ((Xm) << 16) | (0b011 << 13) | (0 << 12) | (0b10 << 10) | ((Xn) << 5) | (Wt))
 
+#define STUR_wXi(Wt,Xn,i)         _W((0b10111000000 << 21) | ((i & 0x1ff) << 12) | ((Xn) << 5) | (Wt))
+#define STURH_wXi(Wt,Xn,i)        _W((0b01111000000 << 21) | ((i & 0x1ff) << 12) | ((Xn) << 5) | (Wt))
 
 /*----------------------------------------
  * move immediate/register 
@@ -275,12 +277,16 @@
 /* AND */
 #define AND_www(Wd,Wn,Wm)         _W((0b00001010000 << 21) | ((Wm) << 16) | (0 << 10) | ((Wn) << 5) | (Wd))
 #define AND_xxx(Xd,Xn,Xm)         _W((0b10001010000 << 21) | ((Xm) << 16) | (0 << 10) | ((Xn) << 5) | (Xd))
+#define AND_xx1f(Xd,Xn)           _W((0b100100100 << 23) | immEncode(1,0b000000,0b000100) | ((Xn) << 5) | (Xd))
 #define AND_ww3f(Wd,Wn)           _W((0b000100100 << 23) | immEncode(0,0b000000,0b000101) | ((Wn) << 5) | (Wd))
+#define AND_ww1f(Wd,Wn)           _W((0b000100100 << 23) | immEncode(0,0b000000,0b000100) | ((Wn) << 5) | (Wd))
 #define ANDS_www(Wd,Wn,Wm)        _W((0b01101010000 << 21) | ((Wm) << 16) | (0 << 10) | ((Wn) << 5) | (Wd))
 #define ANDS_xxx(Xd,Xn,Xm)        _W((0b11101010000 << 21) | ((Xm) << 16) | (0 << 10) | ((Xn) << 5) | (Xd))
 #define ANDS_xx7fff(Xd,Xn)        _W((0b111100100 << 23) | immEncode(1,0b000000,0b001110) | ((Xn) << 5) | (Xd))
+#define ANDS_xx1f(Xd,Xn)          _W((0b111100100 << 23) | immEncode(1,0b000000,0b000100) | ((Xn) << 5) | (Xd))
 #define ANDS_ww7f(Wd,Wn)          _W((0b011100100 << 23) | immEncode(0,0b000000,0b000110) | ((Wn) << 5) | (Wd))
 #define ANDS_ww3f(Wd,Wn)          _W((0b011100100 << 23) | immEncode(0,0b000000,0b000101) | ((Wn) << 5) | (Wd))
+#define ANDS_ww1f(Wd,Wn)          _W((0b011100100 << 23) | immEncode(0,0b000000,0b000100) | ((Wn) << 5) | (Wd))
 
 /* EOR */
 #define EOR_www(Wd,Wn,Wm)         _W((0b01001010000 << 21) | ((Wm) << 16) | (0 << 10) | ((Wn) << 5) | (Wd))

@@ -49,6 +49,12 @@
 #endif
 //#define PROFILE_UNTRANSLATED_INSNS    1
 
+#if defined(CPU_AARCH64)
+#define PRINT_PTR "%016llx"
+#else
+#define PRINT_PTR "%08x"
+#endif
+
 #define jit_log(format, ...) \
   write_log("JIT: " format "\n", ##__VA_ARGS__);
 
@@ -1271,8 +1277,8 @@ static void init_comp(void)
     if (i < 16) { /* First 16 registers map to 68k registers */
       live.state[i].mem = &regs.regs[i];
       set_status(i, INMEM);
-    } else {
-      live.state[i].mem = &regs.scratchregs[i - 16];
+    } else if(i >= S1) {
+      live.state[i].mem = &regs.scratchregs[i - S1];
     }
   }
   live.state[PC_P].mem = (uae_u32*)&(regs.pc_p);
@@ -1327,7 +1333,7 @@ static void init_comp(void)
 }
 
 /* Only do this if you really mean it! The next call should be to init!*/
-void flush(int save_regs)
+static void flush(int save_regs)
 {
   int i;
 
@@ -2302,7 +2308,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         needed_flags = (liveflags[i + 1] & prop[opcode].set_flags);
         special_mem = pc_hist[i].specmem;
 #ifdef JIT_DEBUG
-        write_log("    location=0x%016llx, opcode=0x%04x, target=0x%016llx, need_flags=%d\n", pc_hist[i].location, opcode, get_target(), needed_flags);
+        write_log("    location=0x" PRINT_PTR ", opcode=0x%04x, target=0x" PRINT_PTR ", need_flags=%d\n", pc_hist[i].location, opcode, get_target(), needed_flags);
 #endif
         if (!needed_flags) {
           cputbl = cpufunctbl;
@@ -2368,7 +2374,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bigstate tmp;
         blockinfo* tbi;
 #ifdef JIT_DEBUG
-        write_log("    branch detected: t1=0x%016llx, t2=0x%016llx, cc=%d\n", t1, t2, cc);
+        write_log("    branch detected: t1=0x%016llx, t2=0x" PRINT_PTR ", cc=%d\n", t1, t2, cc);
 #endif
   
         if (taken_pc_p < next_pc_p) {
