@@ -375,8 +375,7 @@ static void SelectFileLoop()
 
 		case SDL_JOYBUTTONDOWN:
 		case SDL_JOYHATMOTION:
-		case SDL_CONTROLLER_AXIS_LEFTX:
-		case SDL_CONTROLLER_AXIS_LEFTY:
+		case SDL_JOYAXISMOTION:
 			if (gui_joystick)
 			{
 				got_event = 1;
