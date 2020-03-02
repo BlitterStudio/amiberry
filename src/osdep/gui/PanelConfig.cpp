@@ -108,6 +108,8 @@ public:
 			// Load selected configuration
 			//-----------------------------------------------
 			i = lstConfigs->getSelected();
+			if (i == -1) return;
+			
 			if (emulating)
 			{
 				DisableResume();
