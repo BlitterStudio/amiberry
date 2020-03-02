@@ -6909,9 +6909,9 @@ static int bip_a500p(struct uae_prefs* p, int config, int compa, int romcheck)
 
 static int bip_a500(struct uae_prefs* p, int config, int compa, int romcheck)
 {
-	int roms[4];
+	int roms[3];
 
-	roms[0] = roms[1] = roms[2] = roms[3] = -1;
+	roms[0] = roms[1] = roms[2] = -1;
 	switch (config)
 	{
 	case 0: // KS 1.3, OCS Agnus, 0.5M Chip + 0.5M Slow
@@ -6940,7 +6940,6 @@ static int bip_a500(struct uae_prefs* p, int config, int compa, int romcheck)
 	case 4: // KS 1.2, OCS Agnus, 0.5M Chip
 		roms[0] = 5;
 		roms[1] = 4;
-		roms[2] = 3;
 		p->bogomem_size = 0;
 		p->chipset_mask = 0;
 		p->cs_rtc = 0;
@@ -6949,7 +6948,6 @@ static int bip_a500(struct uae_prefs* p, int config, int compa, int romcheck)
 	case 5: // KS 1.2, OCS Agnus, 0.5M Chip + 0.5M Slow
 		roms[0] = 5;
 		roms[1] = 4;
-		roms[2] = 3;
 		p->chipset_mask = 0;
 		break;
 	}
