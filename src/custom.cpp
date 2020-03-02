@@ -5273,16 +5273,14 @@ void NMI_delayed (void)
 	irq_nmi = 1;
 }
 
-static uae_u16 intreq_internal, intena_internal;
-
 int intlev (void)
 {
-	uae_u16 imask = intreq_internal & intena_internal;
+	uae_u16 imask = intreq & intena;
 	if (irq_nmi) {
 		irq_nmi = 0;
 		return 7;
 	}
-	if (!(imask && (intena_internal & 0x4000)))
+	if (!(imask && (intena & 0x4000)))
 		return -1;
 	if (imask & (0x4000 | 0x2000))						// 13 14
 		return 6;
@@ -5298,15 +5296,6 @@ int intlev (void)
 		return 1;
 	return -1;
 }
-
-#define INT_PROCESSING_DELAY (3 * CYCLE_UNIT)
-STATIC_INLINE int use_eventmode (uae_u16 v)
-{
-	if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_model <= 68020)
-		return 1;
-	return 0;
-}
-
 
 void rethink_uae_int(void)
 {
@@ -5343,53 +5332,50 @@ static void send_interrupt_do (uae_u32 v)
 	INTREQ_0 (0x8000 | (1 << v));
 }
 
+// external delayed interrupt (4 CCKs minimum)
 void send_interrupt (int num, int delay)
 {
-	if (use_eventmode (0x8000) && delay > 0) {
-		// always queue interrupt if it is active because
-		// next instruction in bad code can switch it off..
-		// Absolute Inebriation / Virtual Dreams "big glenz" part
-		if (!(intreq & (1 << num)) || (intena & (1 << num)))
-			event2_newevent_xx (-1, delay, num, send_interrupt_do);
+	if (delay > 0 && (currprefs.cpu_cycle_exact || currprefs.cpu_compatible)) {
+		event2_newevent_xx (-1, delay, num, send_interrupt_do);
 	} else {
-		send_interrupt_do (num);
+		send_interrupt_do(num);
 	}
 }
 
-static int int_recursive; // yes, bad idea.
-
-static void send_intena_do (uae_u32 v)
+static void doint_delay_do (uae_u32 v)
 {
-	setclr (&intena_internal, v);
-	doint ();
+	doint();
 }
 
-static void send_intreq_do (uae_u32 v)
+static void doint_delay ()
 {
-	setclr (&intreq_internal, v);
-	int_recursive++;
-	rethink_intreq ();
-	int_recursive--;
-	doint ();
+	if (currprefs.cpu_compatible)
+	{
+		event2_newevent_xx(-1, CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
+	}
+	else
+	{
+		doint();
+	}
 }
 
 static void INTENA (uae_u16 v)
 {
 	uae_u16 old = intena;
 	setclr (&intena, v);
-
-	if (!(v & 0x8000) && old == intena && intena == intena_internal)
-		return;
-
-		intena_internal = intena;
-		if (v & 0x8000)
-			doint ();
+	if ((v & 0x8000) && old != intena)
+	{
+		doint_delay();
+	}
 }
 
 void INTREQ_f (uae_u16 v)
 {
-		setclr (&intreq, v);
-		setclr (&intreq_internal, v);
+	uae_u16 old = intreq;
+	setclr(&intreq, v);
+	if ((old & 0x0800) && !(intreq & 0x0800)) {
+		//serial_rbf_clear();
+	}
 }
 
 bool INTREQ_0 (uae_u16 v)
@@ -5397,18 +5383,16 @@ bool INTREQ_0 (uae_u16 v)
 	uae_u16 old = intreq;
 	setclr (&intreq, v);
 
-		uae_u16 old2 = intreq_internal;
-		intreq_internal = intreq;
-		if (old == intreq && old2 == intreq_internal)
-			return false;
-		if (v & 0x8000)
-			doint ();
-		return true;
+	if ((old & 0x0800) && !(intreq & 0x0800))
+		return false;
+	if ((v & 0x8000) && old != v)
+		doint_delay();
+	return true;
 }
 
 void INTREQ (uae_u16 data)
 {
-	if (INTREQ_0 (data))
+	if (INTREQ_0(data))
 		rethink_intreq ();
 }
 
@@ -8495,8 +8479,8 @@ void custom_cpuchange(void)
 {
 	// both values needs to be same but also different
 	// after CPU mode changes
-	intreq_internal = intreq | 0x8000;
-	intena_internal = intena | 0x8000;
+	intreq = intreq | 0x8000;
+	intena = intena | 0x8000;
 }
 
 void custom_reset (bool hardreset, bool keyboardreset)
@@ -8554,8 +8538,8 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		memset (spr, 0, sizeof spr);
 
 		dmacon = 0;
-		intreq_internal = 0;
-		intena = intena_internal = 0;
+		intreq = 0;
+		intena = 0;
 
 		copcon = 0;
 		DSKLEN (0, 0);
@@ -9338,9 +9322,8 @@ uae_u8 *restore_custom (uae_u8 *src)
 	ddfstop = RW;			/* 094 DDFSTOP */
 	dmacon = RW & ~(0x2000|0x4000); /* 096 DMACON */
 	CLXCON (RW);			/* 098 CLXCON */
-	intena = intena_internal = RW;	/* 09A INTENA */
+	intena = RW;	/* 09A INTENA */
 	intreq = RW;			/* 09C INTREQ */
-	intreq_internal = intreq;
 	adkcon = RW;			/* 09E ADKCON */
 	for (i = 0; i < 8; i++)
 		bplptx[i] = bplpt[i] = RL;
