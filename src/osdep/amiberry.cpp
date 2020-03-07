@@ -388,7 +388,7 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->gfx_monitor.gfx_size.width == 0)
 		p->gfx_monitor.gfx_size.width = 720;
 	if (p->gfx_monitor.gfx_size.height == 0)
-		p->gfx_monitor.gfx_size.height = 288;
+		p->gfx_monitor.gfx_size.height = 284;
 	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? RES_HIRES : RES_LORES;
 
 	if (p->gfx_vresolution && !can_have_linedouble)
