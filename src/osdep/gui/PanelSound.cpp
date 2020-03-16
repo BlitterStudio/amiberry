@@ -496,8 +496,8 @@ bool HelpPanelSound(std::vector<std::string>& helptext)
 	helptext.emplace_back("You can turn on sound emulation with different levels of accuracy and");
 	helptext.emplace_back("choose between Mono and Stereo.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("The different types of interpolation have different impact on performance. ");
-	helptext.emplace_back("Play with the settings to find the type you like most. You may need headphones .");
+	helptext.emplace_back("The different types of interpolation have different impact on performance.");
+	helptext.emplace_back("Play with the settings to find the type you like most. You may need headphones");
 	helptext.emplace_back("to really hear the difference between the interpolation types.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"Filter\", you can select the type of the Amiga audio filter.");

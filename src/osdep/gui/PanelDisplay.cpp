@@ -369,6 +369,14 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back("Demo or Workbench uses HiRes mode and you selected a value for \"Width\" lower than 640,");
 	helptext.emplace_back("you will only see half of the pixels.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("You can use the Horizontal/Vertical centering options to center the image automatically");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The Aspect Ratio option allows you to choose if you want the correct Aspect Ratio");
+	helptext.emplace_back("to be kept always (default), or have the image stretched to fill the screen instead.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The Full Screen option allows you to switch from Windowed to Full screen and back.");
+	helptext.emplace_back("This only works when running under X11 with SDL2, as KMSDRM is always Fullscreen.");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("Select the scaling method for the Amiga screen. The default option \"Auto\", ");
 	helptext.emplace_back("will try to find the best looking scaling method depending on your monitor's resolution. ");
 	helptext.emplace_back("\"Nearest Neighbor\" will give you a more pixelated and crisp image, but it may come with ");

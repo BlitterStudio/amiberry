@@ -403,12 +403,18 @@ bool HelpPanelMisc(std::vector<std::string>& helptext)
 	helptext.emplace_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
 	helptext.emplace_back("and indicates disk access.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
+	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration");
 	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
 	helptext.emplace_back("the emulation starts directly without showing the GUI.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
+	helptext.emplace_back("You don't need to use a TCP stack (e.g. AmiTCP/Genesis/Roadshow) when this option is enabled.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can set some of the keyboard LEDs to react on drive activity, using the relevant options.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Finally, you can assign the desired hotkeys to Open the GUI, Quit the emulator,");
+	helptext.emplace_back("open Action Replay/HRTMon or toggle Fullscreen mode ON/OFF.");
 	return true;
 }

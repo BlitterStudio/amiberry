@@ -612,8 +612,8 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 	helptext.emplace_back("The option \"Write-protected\" indicates if the emulator can write to the ADF.");
 	helptext.emplace_back("Changing the write protection of the disk file may fail because of missing rights");
 	helptext.emplace_back("on the host filesystem.");
-	helptext.emplace_back("The button \"...\" opens a dialog to select the required");
-	helptext.emplace_back("disk file. With the dropdown control, you can select one of the disks you recently used.");
+	helptext.emplace_back("The button \"...\" opens a dialog to select the required disk file.");
+	helptext.emplace_back("With the dropdown control, you can select one of the disks you recently used.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can reduce the loading time for lot of games by increasing the floppy drive");
 	helptext.emplace_back("emulation speed. A few games will not load with higher drive speed and you have");

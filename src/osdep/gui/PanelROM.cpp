@@ -393,12 +393,17 @@ void RefreshPanelROM()
 bool HelpPanelROM(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Select the required kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
+	helptext.emplace_back("Select the required Kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video");
 	helptext.emplace_back("playback in CD32. There are also some Action Replay and Freezer cards and the built-in");
 	helptext.emplace_back("HRTMon available.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The Advanced UAE Expansion/Boot ROM option allows you to set the following:");
+	helptext.emplace_back("Rom Disabled: All UAE expansions are disabled. Only needed if you want to force it.");
+	helptext.emplace_back("Original UAE: Autoconfig board + F0 ROM.");
+	helptext.emplace_back("New UAE: 64k + F0 ROM - not very useful (per Toni Wilen).");
 	return true;
 }

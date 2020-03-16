@@ -351,10 +351,10 @@ bool HelpPanelConfig(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\".");
-	helptext.emplace_back("If you doubleclick on an entry in the list, the emulation starts with this configuration.");
+	helptext.emplace_back("If you double-click on an entry in the list, the emulation starts with this configuration.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("If you want to create a new configuration, setup all options, enter a new name in");
-	helptext.emplace_back(R"("Name", provide a short description and then click on "Save".)");
+	helptext.emplace_back("If you want to create a new configuration, set all options, enter a new name in");
+	helptext.emplace_back(R"("Name", optionally provide a short description and then click on "Save".)");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Delete\" will delete the selected configuration.");
 	return true;

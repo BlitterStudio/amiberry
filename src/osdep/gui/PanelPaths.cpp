@@ -443,11 +443,14 @@ void RefreshPanelPaths()
 bool HelpPanelPaths(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Specify the location of your kickstart roms and the folders where the configurations");
-	helptext.emplace_back("and controller files should be stored. With the button \"...\" you can open a dialog");
+	helptext.emplace_back("Specify the location of your Kickstart ROMs and the folders where the configurations");
+	helptext.emplace_back("and controller files should be stored. With the \"...\" button you can open a dialog");
 	helptext.emplace_back("to choose the folder.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("After changing the location of the kickstart roms, click on \"Rescan\" to refresh");
+	helptext.emplace_back("After changing the location of the Kickstart ROMs, click on \"Rescan\" to refresh");
 	helptext.emplace_back("the list of the available ROMs.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can download the latest version of the WHDLoad Booter XML file, using the");
+	helptext.emplace_back("relevant button. You will need an internet connection for this to work.");
 	return true;
 }

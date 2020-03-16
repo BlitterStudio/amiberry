@@ -369,7 +369,7 @@ bool HelpPanelRAM(std::vector<std::string>& helptext)
 	helptext.emplace_back("a 32 bit CPU is selected. If you select some memory for this type,");
 	helptext.emplace_back("the Z3 RTG board will be activated.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("A4000 motherboard and processor board memory is only detected by the Amiga if ");
+	helptext.emplace_back("A4000 motherboard and processor board memory is only detected by the Amiga if");
 	helptext.emplace_back("you choose the correct Kickstart ROM (A4000).");
 	return true;
 }
