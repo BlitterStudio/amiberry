@@ -831,6 +831,21 @@ void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector
 				if (dirs != nullptr)
 					dirs->push_back(dent->d_name);
 			}
+			else if (dent->d_type == DT_LNK)
+			{
+				struct stat stbuf{};
+				stat(dent->d_name, &stbuf);
+				if (S_ISDIR(stbuf.st_mode))
+				{
+					if (dirs != nullptr)
+						dirs->push_back(dent->d_name);
+				}
+				else
+				{
+					if (files != nullptr)
+						files->push_back(dent->d_name);
+				}
+			}
 			else if (files != nullptr)
 				files->push_back(dent->d_name);
 		}
