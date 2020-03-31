@@ -58,6 +58,7 @@ static uae_u32 rgbmuldiv(uae_u32 rgb, int mul, int div)
 		v /= div;
 		out |= v << (i * 8);
 	}
+	out |= rgb & 0xff000000;
 	return out;
 }
 
@@ -80,9 +81,10 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		int side, pos, num1 = -1, num2 = -1, num3 = -1, num4 = -1;
 		int x, c, on = 0, am = 2;
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
-		int half = 0;
+		int half = 0, extraborder = 0;
+
 		cb = ledcolor(TD_BORDER, rc, gc, bc, alpha);
-		
+
 		if (!(currprefs.leds_on_screen_mask[ad->picasso_on ? 1 : 0] & (1 << led)))
 			continue;
 
@@ -108,9 +110,9 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				half = gui_data.drive_side ? 1 : -1;
 				if (gid->df[0] == 0) {
 					pen_rgb = ledcolor(0x00aaaaaa, rc, gc, bc, alpha);
-				}
-				else if (gid->floppy_protected) {
-					cb = ledcolor(0xff8040, rc, gc, bc, alpha);
+				} else if (gid->floppy_protected) {
+					cb = ledcolor(0x00cc00, rc, gc, bc, alpha);
+					extraborder = 1;
 				}
 			}
 			side = gui_data.drive_side;
@@ -292,14 +294,19 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		on_rgb |= 0x33000000;
 		off_rgb |= 0x33000000;
 		if (half > 0) {
-			c = ledcolor(on ? (y >= TD_TOTAL_HEIGHT / 2 ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
-		}
-		else if (half < 0) {
-			c = ledcolor(on ? (y < TD_TOTAL_HEIGHT / 2 ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
-		}
-		else {
+			int halfon = y >= TD_TOTAL_HEIGHT / 2;
+			c = ledcolor(on ? (halfon ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
+			if (!halfon && on && extraborder)
+				cb = rgbmuldiv(cb, 2, 3);
+		} else if (half < 0) {
+			int halfon = y < TD_TOTAL_HEIGHT / 2;
+			c = ledcolor(on ? (halfon ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
+			if (!halfon && on && extraborder)
+				cb = rgbmuldiv(cb, 2, 3);
+		} else {
 			c = ledcolor(on ? on_rgb : off_rgb, rc, gc, bc, alpha);
 		}
+
 		border = 0;
 		if (y == 0 || y == TD_TOTAL_HEIGHT - 1) {
 			c = cb;
@@ -335,13 +342,11 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 }
 
 #define MAX_STATUSLINE_QUEUE 8
-
 struct statusline_struct
 {
 	TCHAR* text;
 	int type;
 };
-
 struct statusline_struct statusline_data[MAX_STATUSLINE_QUEUE];
 static TCHAR* statusline_text_active;
 static int statusline_delay;
