@@ -524,8 +524,9 @@ void usage()
 	std::cout << " -f <file>                  Load a configuration file." << std::endl;
 	std::cout << " -config=<file>             Load a configuration file." << std::endl;
 	std::cout << " -model=<Amiga Model>       Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << "                            Available options are: A500, A500P, A1200, A4000." << std::endl;
-	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image." << std::endl;
+	std::cout << "                            Available options are: A500, A500P, A1200, A4000 and CD32." << std::endl;
+	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
+	std::cout << " -cdimage=<file>            Load the CD image provided when starting emulation (for CD32)." << std::endl;
 	std::cout << " -statefile=<file>          Load a save state file." << std::endl;
 	std::cout << " -s <config param>=<value>  Set the configuration parameter with value." << std::endl;
 	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
