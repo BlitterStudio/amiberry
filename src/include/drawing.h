@@ -211,7 +211,7 @@ STATIC_INLINE void color_reg_cpy (struct color_entry *dst, struct color_entry *s
 struct color_change {
 	int linepos;
 	int regno;
-	unsigned int value;
+	uae_u32 value;
 };
 
 /* 440 rather than 880, since sprites are always lores.  */
@@ -268,7 +268,7 @@ struct decision {
 
 	uae_u16 bplcon0, bplcon2;
 #ifdef AGA
-	uae_u16 bplcon3, bplcon4;
+	uae_u16 bplcon3, bplcon4bm, bplcon4sp;
 	uae_u16 fmode;
 #endif
 	uae_u8 nr_planes;

@@ -809,7 +809,7 @@ static void finish_playfield_line (void)
 		|| line_decisions[next_lineno].bplcon3 != thisline_decision.bplcon3
 #endif
 #ifdef AGA
-		|| line_decisions[next_lineno].bplcon4 != thisline_decision.bplcon4
+		|| line_decisions[next_lineno].bplcon4bm != thisline_decision.bplcon4bm
 		|| line_decisions[next_lineno].fmode != thisline_decision.fmode
 #endif
 		)
@@ -1013,29 +1013,40 @@ void notice_new_xcolors(void)
 	}
 }
 
-static void record_color_change2 (int hpos, int regno, uae_u32 value)
+static void record_color_change2(int hpos, int regno, uae_u32 value)
 {
 	int pos = (hpos * 2) * 4;
 
 	// AGA has extra hires pixel delay in color changes
-	if (currprefs.chipset_mask & CSMASK_AGA) {
+	if ((regno < 0x1000 || regno == 0x1000 + 0x10c) && (currprefs.chipset_mask & CSMASK_AGA)) {
 		if (currprefs.chipset_hr)
 			pos += 2;
 		if (regno == 0x1000 + 0x10c) {
-			// BPLCON4 change adds another extra hires pixel delay
-			pos += 2;
+			// BPLCON4:
+			// Bitplane XOR change: 2 hires pixel delay
+			// Sprite bank change: 1 hires pixel delay
 			if (!currprefs.chipset_hr)
 				pos += 2;
 			if (value & 0xff00)
 				thisline_decision.xor_seen = true;
+			pos += 2;
+			if ((value & 0x00ff) != (bplcon4 & 0x00ff)) {
+				// Sprite bank delay
+				color_change *ccs = &curr_color_changes[next_color_change];
+				ccs->linepos = pos;
+				ccs->regno = regno | 1;
+				ccs->value = value;
+				next_color_change++;
+			}
+			pos += 2;
 		}
 	}
-
-	curr_color_changes[next_color_change].linepos = pos;
-	curr_color_changes[next_color_change].regno = regno;
-	curr_color_changes[next_color_change].value = value;
+	color_change *cc = &curr_color_changes[next_color_change];
+	cc->linepos = pos;
+	cc->regno = regno;
+	cc->value = value;
 	next_color_change++;
-	curr_color_changes[next_color_change].regno = -1;
+	cc[1].regno = -1;
 }
 
 static bool isehb (uae_u16 bplcon0, uae_u16 bplcon2)
@@ -2043,7 +2054,7 @@ STATIC_INLINE void flush_display (int fm)
 	toscr_nbits = 0;
 }
 
-static void record_color_change(int hpos, int regno, unsigned long value);
+static void record_color_change(int hpos, int regno, uae_u32 value);
 
 static void hack_shres_delay(int hpos)
 {
@@ -3322,19 +3333,19 @@ static void decide_line (int hpos)
 
 /* Called when a color is about to be changed (write to a color register),
 * but the new color has not been entered into the table yet. */
-static void record_color_change (int hpos, int regno, unsigned long value)
+static void record_color_change (int hpos, int regno, uae_u32 value)
 {
-	if (regno < 0x1000 && nodraw ())
+	if (regno < 0x1000 && nodraw())
 		return;
 	/* Early positions don't appear on-screen. */
 	if (vpos < minfirstline)
 		return;
 
-	decide_diw (hpos);
-	decide_line (hpos);
+	decide_diw(hpos);
+	decide_line(hpos);
 
 	if (thisline_decision.ctable < 0)
-		remember_ctable ();
+		remember_ctable();
 
 	if  ((regno < 0x1000 || regno == 0x1000 + 0x10c) && hpos < HBLANK_OFFSET && !(beamcon0 & 0x80) && prev_lineno >= 0) {
 		struct draw_info *pdip = curr_drawinfo + prev_lineno;
@@ -3361,7 +3372,7 @@ static void record_color_change (int hpos, int regno, unsigned long value)
 			curr_color_changes[idx + 1].regno = -1;
 		}
 	}
-	record_color_change2 (hpos, regno, value);
+	record_color_change2(hpos, regno, value);
 }
 
 static bool isbrdblank (int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
@@ -4170,7 +4181,8 @@ static void reset_decisions (void)
 	thisline_decision.bplcon3 = bplcon3;
 #endif
 #ifdef AGA
-	thisline_decision.bplcon4 = bplcon4;
+	thisline_decision.bplcon4bm = bplcon4;
+	thisline_decision.bplcon4sp = bplcon4;
 	thisline_decision.fmode = fmode;
 #endif
 	bplcon0d_old = -1;
@@ -5650,9 +5662,9 @@ static void BPLCON4(int hpos, uae_u16 v)
 		return;
 	if (bplcon4 == v)
 		return;
-	decide_line (hpos);
+	decide_line(hpos);
+	record_register_change(hpos, 0x10c, v);
 	bplcon4 = v;
-	record_register_change (hpos, 0x10c, v);
 }
 #endif
 
