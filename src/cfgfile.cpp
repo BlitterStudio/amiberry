@@ -2952,18 +2952,19 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 					next2 = _tcschr(next, ':');
 					if (next2)
 						*next2++ = 0;
-					cfgfile_intval(option, next, tmp, &unitnum, 1);
+					cfgfile_intval (option, next, tmp, &unitnum, 1);
 				}
+				if (_tcslen (value) > 0) {
+					_tcsncpy (p->cdslots[i].name, value, sizeof(p->cdslots[i].name) / sizeof (TCHAR));
+				}
+				p->cdslots[i].name[sizeof(p->cdslots[i].name) / sizeof(TCHAR) - 1] = 0;
+				p->cdslots[i].inuse = true;
+				p->cdslots[i].type = type;
 				if (value[0] == 0 || !_tcsicmp(value, _T("empty")) || !_tcscmp(value, _T("."))) {
 					value[0] = 0;
 					p->cdslots[i].name[0] = 0;
+					p->cdslots[i].inuse = false;
 				}
-				if (_tcslen (value) > 0) {
-					_tcsncpy (p->cdslots[i].name, value, sizeof p->cdslots[i].name / sizeof (TCHAR));
-				}
-				p->cdslots[i].name[sizeof p->cdslots[i].name - 1] = 0;
-				p->cdslots[i].inuse = true;
-				p->cdslots[i].type = type;
 			}
 			// disable all following units
 			i++;
