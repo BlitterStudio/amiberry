@@ -99,8 +99,8 @@ public:
 			RefreshPanelCustom();
 		}
 
-			//      else if (actionEvent.getSource() == chkRetroArchSavestate)
-			//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
+		//else if (actionEvent.getSource() == chkRetroArchSavestate)
+		//   changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
 
 		else if (actionEvent.getSource() == chkBSDSocket)
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
@@ -130,7 +130,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyForQuit)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyForQuit->setText(key);
@@ -140,7 +140,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyActionReplay)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyActionReplay->setText(key);
@@ -150,7 +150,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyFullScreen)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyFullScreen->setText(key);
