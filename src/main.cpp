@@ -686,11 +686,11 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-cdimage="), 9) == 0)
 		{
-			const auto txt = parsetextpath(argv[i] + 9);
-			const auto txt2 = xmalloc(TCHAR, _tcslen(txt) + 2);
+			auto* const txt = parsetextpath(argv[i] + 9);
+			auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 5);
 			_tcscpy(txt2, txt);
-			if (_tcsrchr(txt2, ',') != nullptr)
-				_tcscat(txt2, _T(","));
+			if (_tcsrchr(txt2, ',') == nullptr)
+				_tcscat(txt2, _T(",image"));
 			cfgfile_parse_option(&currprefs, _T("cdimage0"), txt2, 0);
 			xfree(txt2);
 			xfree(txt);
