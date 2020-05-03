@@ -67,8 +67,8 @@ public:
 	}
 };
 
-static const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD"};
-static StringListModel KBDLedList(listValues, 9);
+static const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD"};
+static StringListModel KBDLedList(listValues, 8);
 
 class MiscActionListener : public gcn::ActionListener
 {
@@ -113,14 +113,14 @@ public:
 		}
 
 		else if (actionEvent.getSource() == cboKBDLed_num)
-			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
+			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
 
 		else if (actionEvent.getSource() == cboKBDLed_scr)
-			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
+			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected() - 1;
 
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
 			if (key != nullptr)
 			{
 				txtOpenGUI->setText(key);
