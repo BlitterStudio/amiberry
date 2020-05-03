@@ -18,7 +18,6 @@ static gcn::UaeCheckBox* chkRetroArchReset;
 //static gcn::UaeCheckBox* chkRetroArchSaveState;
 
 static gcn::UaeCheckBox* chkStatusLine;
-static gcn::UaeCheckBox* chkHideIdleLed;
 static gcn::UaeCheckBox* chkShowGUI;
 
 static gcn::UaeCheckBox* chkBSDSocket;
@@ -78,9 +77,6 @@ public:
 	{
 		if (actionEvent.getSource() == chkStatusLine)
 			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
-
-		else if (actionEvent.getSource() == chkHideIdleLed)
-			changed_prefs.hide_idle_led = chkHideIdleLed->isSelected();
 
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
@@ -174,10 +170,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkStatusLine = new gcn::UaeCheckBox("Status Line");
 	chkStatusLine->setId("StatusLine");
 	chkStatusLine->addActionListener(miscActionListener);
-
-	chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
-	chkHideIdleLed->setId("HideIdle");
-	chkHideIdleLed->addActionListener(miscActionListener);
 
 	chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
 	chkShowGUI->setId("ShowGUI");
@@ -274,8 +266,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkHideIdleLed, DISTANCE_BORDER, posY);
-	posY += chkHideIdleLed->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
 
@@ -290,7 +280,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
 
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
-	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
 	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
 
@@ -328,7 +318,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 void ExitPanelMisc()
 {
 	delete chkStatusLine;
-	delete chkHideIdleLed;
 	delete chkShowGUI;
 
 	delete chkRetroArchQuit;
@@ -366,7 +355,6 @@ void ExitPanelMisc()
 void RefreshPanelMisc()
 {
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
-	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);

@@ -778,11 +778,9 @@ int check_prefs_changed_gfx()
 		return 1;
 	}
 	
-	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen ||
-		currprefs.hide_idle_led != changed_prefs.hide_idle_led)
+	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen)
 	{
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
-		currprefs.hide_idle_led = changed_prefs.hide_idle_led;
 		changed = 1;
 	}
 	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)
