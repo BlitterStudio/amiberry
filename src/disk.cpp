@@ -642,45 +642,43 @@ static bool drive_writeprotected(drive* drv)
 
 static void reset_drive(int num)
 {
-  drive *drv = &floppy[num];
+	drive* drv = &floppy[num];
 
-  drive_image_free (drv);
-  drv->motoroff = 1;
-  drv->idbit = 0;
-  drv->drive_id = 0;
-  drv->drive_id_scnt = 0;
+	drive_image_free(drv);
+	drv->motoroff = 1;
+	drv->idbit = 0;
+	drv->drive_id = 0;
+	drv->drive_id_scnt = 0;
 	drv->lastdataacesstrack = -1;
-  disabled &= ~(1 << num);
+	disabled &= ~(1 << num);
 	if (currprefs.floppyslots[num].dfxtype < 0 || ispcbridgedrive(num))
-    disabled |= 1 << num;
-  reset_drive_gui(num);
-  /* most internal Amiga floppy drives won't enable
-   * diskready until motor is running at full speed
-   * and next indexsync has been passed
-   */
-  drv->indexhackmode = 0;
-  if (num == 0 && currprefs.floppyslots[num].dfxtype == 0)
-  	drv->indexhackmode = 1;
-  drv->dskchange_time = 0;
-  drv->dskchange = false;
-  drv->dskready_down_time = 0;
-  drv->dskready_up_time = 0;
-  drv->buffered_cyl = -1;
-  drv->buffered_side = -1;
-  gui_led (num + LED_DF0, 0, -1);
-  drive_settype_id (drv);
-  _tcscpy (currprefs.floppyslots[num].df, changed_prefs.floppyslots[num].df);
-  drv->newname[0] = 0;
+		disabled |= 1 << num;
+	reset_drive_gui(num);
+	/* most internal Amiga floppy drives won't enable
+	 * diskready until motor is running at full speed
+	 * and next indexsync has been passed
+	 */
+	drv->indexhackmode = 0;
+	if (num == 0 && currprefs.floppyslots[num].dfxtype == 0)
+		drv->indexhackmode = 1;
+	drv->dskchange_time = 0;
+	drv->dskchange = false;
+	drv->dskready_down_time = 0;
+	drv->dskready_up_time = 0;
+	drv->buffered_cyl = -1;
+	drv->buffered_side = -1;
+	gui_led(num + LED_DF0, 0, -1);
+	drive_settype_id(drv);
+	_tcscpy(currprefs.floppyslots[num].df, changed_prefs.floppyslots[num].df);
+	drv->newname[0] = 0;
 	drv->newnamewriteprotected = false;
-	if (!drive_insert (drv, &currprefs, num, currprefs.floppyslots[num].df, false, false))
-    disk_eject (num);
+	if (!drive_insert(drv, &currprefs, num, currprefs.floppyslots[num].df, false, false))
+		disk_eject(num);
 }
 
 /* code for track display */
 static void update_drive_gui(int num, bool force)
 {
-	if (num >= currprefs.nr_floppies)
-		return;
 	drive* drv = floppy + num;
 	bool writ = dskdmaen == DSKDMA_WRITE && drv->state && !((selected | disabled) & (1 << num));
 	struct gui_info_drive* gid = &gui_data.drives[num];
@@ -995,6 +993,10 @@ static bool diskfile_iswriteprotect (struct uae_prefs *p, const TCHAR *fname_in,
 	zfile_fread(buffer, sizeof(char), 25, zf1);
 	zfile_fclose(zf1);
 	if (strncmp((uae_char*)buffer, "CAPS", 4) == 0) {
+		*needwritefile = 1;
+		return wrprot2;
+	}
+	if (strncmp ((uae_char*) buffer, "SCP", 3) == 0) {
 		*needwritefile = 1;
 		return wrprot2;
 	}
@@ -2297,6 +2299,8 @@ static void drive_write_data (drive * drv)
     return;
 	case ADF_IPF:
 		break;
+	case ADF_SCP:
+		break;
   case ADF_PCDOS:
 		ret = drive_write_pcdos (drv, drv->diskfile, 0);
 		if (ret < 0)
@@ -2558,14 +2562,14 @@ int disk_setwriteprotect (struct uae_prefs *p, int num, const TCHAR *fname_in, b
   return 1;
 }
 
-void disk_eject (int num)
+void disk_eject(int num)
 {
-	set_config_changed ();
-  gui_filename (num, _T(""));
-  drive_eject (floppy + num);
-  *currprefs.floppyslots[num].df = *changed_prefs.floppyslots[num].df = 0;
-  floppy[num].newname[0] = 0;
-	update_drive_gui (num, true);
+	set_config_changed();
+	gui_filename(num, _T(""));
+	drive_eject(floppy + num);
+	*currprefs.floppyslots[num].df = *changed_prefs.floppyslots[num].df = 0;
+	floppy[num].newname[0] = 0;
+	update_drive_gui(num, true);
 }
 
 static void disk_insert_2 (int num, const TCHAR *name, bool forced, bool forcedwriteprotect)
@@ -2663,63 +2667,64 @@ void DISK_select_set (uae_u8 data)
 	fetch_DISK_select (data);
 }
 
-void DISK_select (uae_u8 data)
+void DISK_select(uae_u8 data)
 {
-  int step_pulse, prev_selected, dr;
+	int step_pulse, prev_selected, dr;
 
-  prev_selected = selected;
+	prev_selected = selected;
 
-  fetch_DISK_select (data);
-  step_pulse = data & 1;
+	fetch_DISK_select(data);
+	step_pulse = data & 1;
 
-  if ((prev_data & 0x80) != (data & 0x80)) {
-  	for (dr = 0; dr < 4; dr++) {
+	if ((prev_data & 0x80) != (data & 0x80)) {
+		for (dr = 0; dr < 4; dr++) {
 			if (floppy[dr].indexhackmode > 1 && !((selected | disabled) & (1 << dr))) {
-		    floppy[dr].indexhack = 1;
-	    }
-	  }
-  }
+				floppy[dr].indexhack = 1;
+			}
+		}
+	}
 
 	// step goes high and drive was selected when step pulse changes: step
-  if (prev_step != step_pulse) {
-  	prev_step = step_pulse;
-  	if (prev_step && !savestate_state) {
-	    for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
-    		if (!((prev_selected | disabled) & (1 << dr))) {
-  				drive_step (floppy + dr, direction);
-  		    if (floppy[dr].indexhackmode > 1 && (data & 0x80))
-      			floppy[dr].indexhack = 1;
-    		}
-	    }
-  	}
-  }
+	if (prev_step != step_pulse) {
+		prev_step = step_pulse;
+		if (prev_step && !savestate_state) {
+			for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+				if (!((prev_selected | disabled) & (1 << dr))) {
+					drive_step(floppy + dr, direction);
+					if (floppy[dr].indexhackmode > 1 && (data & 0x80))
+						floppy[dr].indexhack = 1;
+				}
+			}
+		}
+	}
 
-  if (!savestate_state) {
-  	for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
-	    drive *drv = floppy + dr;
-	    /* motor on/off workings tested with small assembler code on real Amiga 1200. */
-	    /* motor/id flipflop is set only when drive select goes from high to low */
-			if (!((selected | disabled) & (1 << dr)) && (prev_selected & (1 << dr)) ) {
-		    drv->drive_id_scnt++;
-		    drv->drive_id_scnt &= 31;
-		    drv->idbit = (drv->drive_id & (1L << (31 - drv->drive_id_scnt))) ? 1 : 0;
-		    if (!(disabled & (1 << dr))) {
-  		    if ((prev_data & 0x80) == 0 || (data & 0x80) == 0) {
-      			/* motor off: if motor bit = 0 in prevdata or data -> turn motor on */
-      			drive_motor (drv, 0);
-  		    } else if (prev_data & 0x80) {
-			      /* motor on: if motor bit = 1 in prevdata only (motor flag state in data has no effect)
-	         -> turn motor off */
-			      drive_motor (drv, 1);
-  		    }
-        }
+	if (!savestate_state) {
+		for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+			drive* drv = floppy + dr;
+			/* motor on/off workings tested with small assembler code on real Amiga 1200. */
+			/* motor/id flipflop is set only when drive select goes from high to low */
+			if (!((selected | disabled) & (1 << dr)) && (prev_selected & (1 << dr))) {
+				drv->drive_id_scnt++;
+				drv->drive_id_scnt &= 31;
+				drv->idbit = (drv->drive_id & (1L << (31 - drv->drive_id_scnt))) ? 1 : 0;
+				if (!(disabled & (1 << dr))) {
+					if ((prev_data & 0x80) == 0 || (data & 0x80) == 0) {
+						/* motor off: if motor bit = 0 in prevdata or data -> turn motor on */
+						drive_motor(drv, 0);
+					}
+					else if (prev_data & 0x80) {
+						/* motor on: if motor bit = 1 in prevdata only (motor flag state in data has no effect)
+				   -> turn motor off */
+						drive_motor(drv, 1);
+					}
+				}
 				if (!currprefs.cs_df0idhw && dr == 0)
-		      drv->idbit = 0;
-      }
-    }
-  }
+					drv->idbit = 0;
+			}
+		}
+	}
 
-  for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+	for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 		// selected
 		if (!(selected & (1 << dr)) && floppy[dr].selected_delay < 0) {
 			floppy[dr].selected_delay = 2;
@@ -2731,49 +2736,52 @@ void DISK_select (uae_u8 data)
 		// external drives usually (always?) light activity led when selected. Internal only when motor is running.
 		bool selected_led = !(selected & (1 << dr)) && floppy[dr].selected_delay == 0 && dr > 0;
 		floppy[dr].state = selected_led || !floppy[dr].motoroff;
-		update_drive_gui (dr, false);
-  }
-  prev_data = data;
+		update_drive_gui(dr, false);
+	}
+	prev_data = data;
 }
 
 uae_u8 DISK_status_ciaa(void)
 {
-  uae_u8 st = 0x3c;
+	uae_u8 st = 0x3c;
 
-  for (int dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
-  	drive *drv = floppy + dr;
-    if (!((selected | disabled) & (1 << dr))) {
-	    if (drive_running (drv)) {
-    		if (drv->dskready && !drv->indexhack && currprefs.floppyslots[dr].dfxtype != DRV_35_DD_ESCOM)
-	        st &= ~0x20;
-	    } else {
+	for (int dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+		drive* drv = floppy + dr;
+		if (!((selected | disabled) & (1 << dr))) {
+			if (drive_running(drv)) {
+				if (drv->dskready && !drv->indexhack && currprefs.floppyslots[dr].dfxtype != DRV_35_DD_ESCOM)
+					st &= ~0x20;
+			}
+			else {
 				if (currprefs.cs_df0idhw || dr > 0) {
-		      /* report drive ID */
-		      if (drv->idbit && currprefs.floppyslots[dr].dfxtype != DRV_35_DD_ESCOM)
-		        st &= ~0x20;
-		    } else {
-		      /* non-ID internal drive: mirror real dskready */
-		      if (drv->dskready)
-		      	st &= ~0x20;
-		    }
-		    /* dskrdy needs some cycles after switching the motor off.. (Pro Tennis Tour) */
+					/* report drive ID */
+					if (drv->idbit && currprefs.floppyslots[dr].dfxtype != DRV_35_DD_ESCOM)
+						st &= ~0x20;
+				}
+				else {
+					/* non-ID internal drive: mirror real dskready */
+					if (drv->dskready)
+						st &= ~0x20;
+				}
+				/* dskrdy needs some cycles after switching the motor off.. (Pro Tennis Tour) */
 				if (!currprefs.cs_df0idhw && dr == 0 && drv->motordelay)
-		      st &= ~0x20;
-	    }
-	    if (drive_track0 (drv))
-    		st &= ~0x10;
-	    if (drive_writeprotected (drv))
-    		st &= ~8;
-  	  if (drv->dskchange && currprefs.floppyslots[dr].dfxtype != DRV_525_SD) {
-  		  st &= ~4;
-  	  }
-		} else if (!((selected | disabled) & (1 << dr))) {
-	    if (drv->idbit)
-    		st &= ~0x20;
-  	}
-  }
+					st &= ~0x20;
+			}
+			if (drive_track0(drv))
+				st &= ~0x10;
+			if (drive_writeprotected(drv))
+				st &= ~8;
+			if (drv->dskchange && currprefs.floppyslots[dr].dfxtype != DRV_525_SD) {
+				st &= ~4;
+			}
+		}
+		else if (!((selected | disabled) & (1 << dr))) {
+			if (drv->idbit)
+				st &= ~0x20;
+		}
+	}
 
-  return st;
+	return st;
 }
 
 static bool unformatted (drive *drv)
@@ -3252,21 +3260,21 @@ static void DISK_start (void)
 
 static int linecounter;
 
-void DISK_hsync (void)
+void DISK_hsync(void)
 {
-  int dr;
+	int dr;
 
-  for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
-  	drive *drv = &floppy[dr];
-  	if (drv->steplimit)
-	    drv->steplimit--;
+	for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+		drive* drv = &floppy[dr];
+		if (drv->steplimit)
+			drv->steplimit--;
 		if (drv->revolution_check)
 			drv->revolution_check--;
 
 		if (drv->dskready_down_time > 0)
 			drv->dskready_down_time--;
 		/* emulate drive motor turn on time */
-		if (drv->dskready_up_time > 0 && !drive_empty (drv)) {
+		if (drv->dskready_up_time > 0 && !drive_empty(drv)) {
 			drv->dskready_up_time--;
 			if (drv->dskready_up_time == 0 && !drv->motoroff)
 				drv->dskready = true;
@@ -3275,20 +3283,20 @@ void DISK_hsync (void)
 		if (drv->dskchange_time > 0) {
 			drv->dskchange_time--;
 			if (drv->dskchange_time == 0) {
-				drive_insert (drv, &currprefs, dr, drv->newname, false, drv->newnamewriteprotected);
-				update_drive_gui (dr, false);
+				drive_insert(drv, &currprefs, dr, drv->newname, false, drv->newnamewriteprotected);
+				update_drive_gui(dr, false);
 			}
 		}
-  }
+	}
 	if (indexdecay)
 		indexdecay--;
-  if (linecounter) {
-  	linecounter--;
-  	if (! linecounter)
-     disk_dmafinished ();
-	  return;
-  }
-	DISK_update (maxhpos);
+	if (linecounter) {
+		linecounter--;
+		if (!linecounter)
+			disk_dmafinished();
+		return;
+	}
+	DISK_update(maxhpos);
 }
 
 void DISK_update (int tohpos)
