@@ -75,7 +75,7 @@ TCHAR* my_strdup_trim(const TCHAR* s)
 	int len = _tcslen(s);
 	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		len--;
-	auto out = xmalloc(TCHAR, len + 1);
+	auto* out = xmalloc(TCHAR, len + 1);
 	memcpy(out, s, len * sizeof(TCHAR));
 	out[len] = 0;
 	return out;
@@ -83,10 +83,10 @@ TCHAR* my_strdup_trim(const TCHAR* s)
 
 void discard_prefs(struct uae_prefs* p, int type)
 {
-	auto ps = &p->all_lines;
+	auto* ps = &p->all_lines;
 	while (*ps)
 	{
-		auto s = *ps;
+		auto* s = *ps;
 		*ps = s->next;
 		xfree(s->value);
 		xfree(s->option);
@@ -194,8 +194,6 @@ void fixup_cpu(struct uae_prefs* p)
 
 void fixup_prefs(struct uae_prefs* p, bool userconfig)
 {
-	//auto err = 0;
-
 	built_in_chipset_prefs(p);
 	fixup_cpu(p);
 	cfgfile_compatibility_rtg(p);
@@ -225,7 +223,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 
 	for (auto& rtgboard : p->rtgboards)
 	{
-		const auto rbc = &rtgboard;
+		auto* const rbc = &rtgboard;
 		if (rbc->rtgmem_size > max_z3fastmem && rbc->rtgmem_type == GFXBOARD_UAE_Z3)
 		{
 			error_log(
@@ -299,7 +297,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 
 	for (auto& rtgboard : p->rtgboards)
 	{
-		const auto rbc = &rtgboard;
+		auto* const rbc = &rtgboard;
 		if (p->chipmem_size > 0x200000 && rbc->rtgmem_size && gfxboard_get_configtype(rbc) == 2)
 		{
 			error_log(_T("You can't use Zorro II RTG and more than 2MB chip at the same time."));
@@ -493,7 +491,7 @@ static TCHAR* parsetext(const TCHAR* s)
 	if (*s == '"' || *s == '\'')
 	{
 		const auto c = *s++;
-		const auto d = my_strdup(s);
+		auto* const d = my_strdup(s);
 		for (unsigned int i = 0; i < _tcslen(d); i++)
 		{
 			if (d[i] == c)
@@ -509,8 +507,8 @@ static TCHAR* parsetext(const TCHAR* s)
 
 static TCHAR* parsetextpath(const TCHAR* s)
 {
-	const auto s2 = parsetext(s);
-	const auto s3 = target_expand_environment(s2, nullptr, 0);
+	auto* const s2 = parsetext(s);
+	auto* const s3 = target_expand_environment(s2, nullptr, 0);
 	xfree(s2);
 	return s3;
 }
@@ -584,7 +582,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-config="), 8) == 0)
 		{
-			const auto txt = parsetextpath(argv[i] + 8);
+			auto* const txt = parsetextpath(argv[i] + 8);
 			currprefs.mountitems = 0;
 			target_cfgfile_load(&currprefs, txt,
 			                    firstconfig
@@ -596,7 +594,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-model="), 7) == 0)
 		{
-			const auto txt = parsetextpath(argv[i] + 7);
+			auto* const txt = parsetextpath(argv[i] + 7);
 			if (_tcsncmp(txt, _T("A500"), 4) == 0) {
 				bip_a500(&currprefs, -1);
 			}
@@ -615,7 +613,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-statefile="), 11) == 0)
 		{
-			const auto txt = parsetextpath(argv[i] + 11);
+			auto* const txt = parsetextpath(argv[i] + 11);
 			savestate_state = STATE_DORESTORE;
 			_tcscpy(savestate_fname, txt);
 			xfree(txt);
@@ -624,7 +622,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// for backwards compatibility only - WHDLoading
 		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0)
 		{
-			const auto txt = parsetextpath(argv[i] + 13);
+			auto* const txt = parsetextpath(argv[i] + 13);
 			whdload_auto_prefs(&currprefs, txt);
 			xfree(txt);
 			firstconfig = false;
@@ -633,7 +631,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// for backwards compatibility only - CDLoading
 		else if (_tcsncmp(argv[i], _T("-autocd="), 8) == 0)
 		{
-			const auto txt = parsetextpath(argv[i] + 8);
+			auto* const txt = parsetextpath(argv[i] + 8);
 			cd_auto_prefs(&currprefs, txt);
 			xfree(txt);
 			firstconfig = false;
@@ -642,11 +640,11 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// autoload ....  .cue / .lha  
 		else if (_tcsncmp(argv[i], _T("-autoload="), 10) == 0)
 		{
-			const auto txt = parsetextpath(argv[i] + 10);
+			auto* const txt = parsetextpath(argv[i] + 10);
 			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
 			if (_tcsncmp(txt2.c_str(), ".lha", 4) == 0)
 			{
-				write_log("WHDLOAD... %s\n", txt);
+				write_log("WHDLoad... %s\n", txt);
 				whdload_auto_prefs(&currprefs, txt);
 				xfree(txt);
 			}
@@ -666,7 +664,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 				write_log(_T("Missing argument for '-f' option.\n"));
 			else
 			{
-				const auto txt = parsetextpath(argv[++i]);
+				auto* const txt = parsetextpath(argv[++i]);
 				currprefs.mountitems = 0;
 				target_cfgfile_load(&currprefs, txt,
 				                    firstconfig
@@ -718,8 +716,8 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// check if it is config file or statefile
 			if (!loaded)
 			{
-				const auto txt = parsetextpath(argv[i]);
-				const auto z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
+				auto* const txt = parsetextpath(argv[i]);
+				auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
 				if (z)
 				{
 					const auto type = zfile_gettype(z);
@@ -805,8 +803,7 @@ bool check_internet_connection()
 {
 	if (system("ping -c1 -s1 www.google.com"))
 		return false;
-	else
-		return true;
+	return true;
 }
 
 // In case of error, print the error code and close the application
@@ -830,7 +827,7 @@ static int real_main2(int argc, TCHAR** argv)
 		| SDL_INIT_GAMECONTROLLER
 		| SDL_INIT_EVENTS) != 0;
 #else
-	int ret = SDL_Init(SDL_INIT_EVERYTHING) != 0;
+	const int ret = SDL_Init(SDL_INIT_EVERYTHING) != 0;
 #endif
 	if (ret < 0)
 	{
@@ -962,7 +959,7 @@ void real_main(int argc, TCHAR** argv)
 	while (restart_program)
 	{
 		copy_prefs(&currprefs, &changed_prefs);
-		auto ret = real_main2(argc, argv);
+		const auto ret = real_main2(argc, argv);
 		if (ret == 0 && quit_to_gui)
 			restart_program = 1;
 		leave_program();
