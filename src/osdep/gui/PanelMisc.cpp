@@ -366,8 +366,8 @@ void RefreshPanelMisc()
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 
-	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
-	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
+	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
+	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
 
 	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
 	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0
