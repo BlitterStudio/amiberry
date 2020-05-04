@@ -150,7 +150,7 @@ int date_cmp(const char* d1, const char* d2)
 
 static xmlNode* get_node(xmlNode* node, const char* name)
 {
-	for (auto curr_node = node; curr_node; curr_node = curr_node->next)
+	for (auto* curr_node = node; curr_node; curr_node = curr_node->next)
 	{
 		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char*>(curr_node->name), name) == 0)
 			return curr_node->children;
@@ -177,7 +177,7 @@ void download_rtb(const char* download_file)
 	         local_path, download_file);
 	if (!zfile_exists(local_path)) // ?? 
 	{
-		auto afile = popen(download_command, "r");
+		auto* afile = popen(download_command, "r");
 		write_log("Downloading %s ...\n", download_file);
 		pclose(afile);
 	}
@@ -196,10 +196,7 @@ public:
 		}
 
 		char original_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
-		char updated_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
-
 		char xml_path[MAX_DPATH];
-		char xml2_path[MAX_DPATH];
 		char download_command[MAX_DPATH];
 
 		//  download WHDLOAD
@@ -207,10 +204,9 @@ public:
 		snprintf(download_command, MAX_DPATH,
 		         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true",
 		         xml_path);
-		if (!zfile_exists(xml_path)) // ?? 
+		if (!zfile_exists(xml_path))
 		{
-			auto afile = popen(download_command, "r");
-			pclose(afile);
+			system(download_command);
 		}
 
 		//  download boot-data.zip
@@ -218,84 +214,63 @@ public:
 		snprintf(download_command, MAX_DPATH,
 		         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true",
 		         xml_path);
-		if (!zfile_exists(xml_path)) // ?? 
+		if (!zfile_exists(xml_path))
 		{
-			auto afile = popen(download_command, "r");
-			pclose(afile);
+			system(download_command);
 		}
 
 		// download kickstart RTB files for maximum compatibility
 		snprintf(xml_path, MAX_DPATH, "kick33180.A500.RTB");
-		download_rtb(xml_path);
-		//snprintf(xml_path, MAX_DPATH, "kick33192.A500.RTB");                                                
-		//download_rtb(xml_path);
+		if (!zfile_exists(xml_path))
+			download_rtb(xml_path);
 		snprintf(xml_path, MAX_DPATH, "kick34005.A500.RTB");
-		download_rtb(xml_path);
+		if (!zfile_exists(xml_path))
+			download_rtb(xml_path);
 		snprintf(xml_path, MAX_DPATH, "kick40063.A600.RTB");
-		download_rtb(xml_path);
+		if (!zfile_exists(xml_path))
+			download_rtb(xml_path);
 		snprintf(xml_path, MAX_DPATH, "kick40068.A1200.RTB");
-		download_rtb(xml_path);
+		if (!zfile_exists(xml_path))
+			download_rtb(xml_path);
 		snprintf(xml_path, MAX_DPATH, "kick40068.A4000.RTB");
-		download_rtb(xml_path);
+		if (!zfile_exists(xml_path))
+			download_rtb(xml_path);
 
-		//
 		snprintf(xml_path, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
-		snprintf(xml2_path, MAX_DPATH, "/tmp/whdload_db.xml");
 
 		write_log("Checking original %s for date...\n", xml_path);
-
-		if (zfile_exists(xml_path)) // use local XML 
+		if (zfile_exists(xml_path))
 		{
-			const auto doc = xmlParseFile(xml_path);
-			const auto root_element = xmlDocGetRootElement(doc);
+			auto* const doc = xmlParseFile(xml_path);
+			auto* const root_element = xmlDocGetRootElement(doc);
 			_stprintf(original_date, "%s",
 			          reinterpret_cast<const char*>(xmlGetProp(root_element,
 			                                                   reinterpret_cast<const xmlChar*>("timestamp"))));
-			write_log(" ... Date from original ...  %s\n", original_date);
+			write_log("Date from original: %s\n", original_date);
 		}
 		else
-			write_log("\n");
+			write_log("No WHDLoad_db.xml found locally.\n");
 
-		// download the updated XML to /tmp/               
-		auto afile = popen(
-			"wget -np -nv -O /tmp/whdload_db.xml https://raw.githubusercontent.com/HoraceAndTheSpider/Amiberry-XML-Builder/master/whdload_db.xml",
-			"r");
-		pclose(afile);
+		// Download latest XML
+		snprintf(download_command, MAX_DPATH,
+			"wget -np -nv -O %s https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true",
+			xml_path);
+		system(download_command);
 
-		// do i need to pause here??
-
-		// check the downloaded file's 
-		const auto doc = xmlParseFile(xml2_path);
-		const auto root_element = xmlDocGetRootElement(doc);
-
-		if (zfile_exists(xml2_path)) // use downloaded XML
+		write_log("Checking downloaded %s for date...\n", xml_path);
+		if (zfile_exists(xml_path))
 		{
-			_stprintf(updated_date, "%s",
-			          reinterpret_cast<const char*>(xmlGetProp(root_element,
-			                                                   reinterpret_cast<const xmlChar*>("timestamp"))));
-		}
-
-		//do_download     
-		write_log("Checking downloaded whdload_db.xml for date... \n");
-		write_log(" ...Date from download ...  %s\n", updated_date);
-
-		// do the compare
-		if (date_cmp(original_date, updated_date) < 0)
-		{
-			remove(xml_path);
-			copy_file("/tmp/whdload_db.xml", xml_path);
-			ShowMessage("XML Downloader", "Updated XML downloaded.", "", "Ok", "");
-		}
-		else if (date_cmp(original_date, updated_date) > 0)
-		{
-			ShowMessage("XML Downloader", "Local XML does not require update.", "", "Ok", "");
+			auto* const doc = xmlParseFile(xml_path);
+			auto* const root_element = xmlDocGetRootElement(doc);
+			_stprintf(original_date, "%s",
+				reinterpret_cast<const char*>(xmlGetProp(root_element,
+					reinterpret_cast<const xmlChar*>("timestamp"))));
+			write_log("Date from newly downloaded: %s\n", original_date);
 		}
 		else
-		{
-			ShowMessage("XML Downloader", "Local XML is the current version.", "", "Ok", "");
-		}
-
-		// show message depending on what was done		
+			write_log("No WHDLoad_db.xml found locally.\n");
+		
+		ShowMessage("XML Downloader", "Updated XML downloaded.", "", "Ok", "");		
 		cmdDownloadXML->requestFocus();
 	}
 };
