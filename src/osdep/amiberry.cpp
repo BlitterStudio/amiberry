@@ -1306,6 +1306,17 @@ int handle_msgpump()
 			uae_quit();
 			break;
 
+		case SDL_JOYDEVICEADDED:
+		case SDL_CONTROLLERDEVICEADDED:
+			write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
+			import_joysticks();
+			break;
+
+		case SDL_JOYDEVICEREMOVED:
+		case SDL_CONTROLLERDEVICEREMOVED:
+			write_log("SDL Controller/Joystick device removed!\n");
+			break;
+			
 		case SDL_KEYDOWN:
 		{
 			// if the key belongs to a "retro arch joystick" ignore it
