@@ -23,7 +23,7 @@
 #define GETBDD(x) ((x) % 100)
 
 #define AMIBERRYVERSION _T("Amiberry v3.1.4 beta (2020-05-08)")
-#define AMIBERRYDATE MAKEBD(2020, 05, 08)
+#define AMIBERRYDATE MAKEBD(2020, 5, 8)
 
 extern std::string get_version_string();
 
