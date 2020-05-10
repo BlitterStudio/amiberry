@@ -41,7 +41,7 @@ extern bool softstatusline(void);
 extern bool createstatusline(int);
 extern void deletestatusline(int);
 extern void statusline_render(int, uae_u8 *buf, int bpp, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
-//extern void statusline_add_message(int statustype, const TCHAR *format, ...);
+extern void statusline_add_message(int statustype, const TCHAR *format, ...);
 extern void statusline_clear(void);
 extern void statusline_vsync(void);
 extern void statusline_updated(int);

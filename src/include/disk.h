@@ -83,8 +83,8 @@ extern bool disk_creatediskfile (struct uae_prefs *p, const TCHAR *name, int typ
 extern void dumpdisk (const TCHAR*);
 extern int DISK_history_add (const TCHAR *name, int idx, int type, int donotcheck);
 extern TCHAR *DISK_history_get (int idx, int type);
-//int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di);
-//extern TCHAR *DISK_get_saveimagepath(const TCHAR *name, int type);
+int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di);
+extern TCHAR *DISK_get_saveimagepath(const TCHAR *name, int type);
 extern void DISK_reinsert (int num);
 extern int disk_prevnext (int drive, int dir);
 extern int disk_prevnext_name (TCHAR *img, int dir);

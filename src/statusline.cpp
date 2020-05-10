@@ -4,6 +4,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "uae.h"
 #include "xwin.h"
 #include "gui.h"
 #include "custom.h"
@@ -379,6 +380,70 @@ void statusline_clear(void)
 const TCHAR* statusline_fetch(void)
 {
 	return statusline_text_active;
+}
+
+void statusline_add_message(int statustype, const TCHAR *format, ...)
+{
+	va_list parms;
+	TCHAR buffer[256];
+
+	if (isguiactive())
+		return;
+
+	va_start(parms, format);
+	buffer[0] = ' ';
+	_vsntprintf(buffer + 1, 256 - 2, format, parms);
+	_tcscat(buffer, _T(" "));
+
+	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+		if (statusline_data[i].text != NULL && statusline_data[i].type == statustype) {
+			xfree(statusline_data[i].text);
+			statusline_data[i].text = NULL;
+			for (int j = i + 1; j < MAX_STATUSLINE_QUEUE; j++) {
+				memcpy(&statusline_data[j - 1], &statusline_data[j], sizeof(struct statusline_struct));
+			}
+			statusline_data[MAX_STATUSLINE_QUEUE - 1].text = NULL;
+		}
+	}
+
+	if (statusline_data[1].text) {
+		for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+			if (statusline_data[i].text && !_tcscmp(statusline_data[i].text, buffer)) {
+				xfree(statusline_data[i].text);
+				for (int j = i + 1; j < MAX_STATUSLINE_QUEUE; j++) {
+					memcpy(&statusline_data[j - 1], &statusline_data[j], sizeof(struct statusline_struct));
+				}
+				statusline_data[MAX_STATUSLINE_QUEUE - 1].text = NULL;
+				i = 0;
+			}
+		}
+	} else if (statusline_data[0].text) {
+		if (!_tcscmp(statusline_data[0].text, buffer))
+			return;
+	}
+
+	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+		if (statusline_data[i].text == NULL) {
+			statusline_data[i].text = my_strdup(buffer);
+			statusline_data[i].type = statustype;
+			if (i == 0)
+				statusline_delay = STATUSLINE_MS * vblank_hz / (1000 * 1);
+			statusline_text_active = statusline_data[0].text;
+			statusline_update_notification();
+			return;
+		}
+	}
+	statusline_text_active = NULL;
+	xfree(statusline_data[0].text);
+	for (int i = 1; i < MAX_STATUSLINE_QUEUE; i++) {
+		memcpy(&statusline_data[i - 1], &statusline_data[i], sizeof(struct statusline_struct));
+	}
+	statusline_data[MAX_STATUSLINE_QUEUE - 1].text = my_strdup(buffer);
+	statusline_data[MAX_STATUSLINE_QUEUE - 1].type = statustype;
+	statusline_text_active = statusline_data[0].text;
+	statusline_update_notification();
+
+	va_end(parms);
 }
 
 void statusline_vsync(void)
