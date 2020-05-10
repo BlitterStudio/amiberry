@@ -148,6 +148,7 @@ public:
 	{
 		changed_prefs.address_space_24 = chk24Bit->isSelected();
 		RefreshPanelCPU();
+		RefreshPanelRAM();
 	}
 };
 
