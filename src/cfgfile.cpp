@@ -1,18 +1,13 @@
 /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Config file handling
-  * This still needs some thought before it's complete...
-  *
-  * Copyright 1998 Brian King, Bernd Schmidt
-  */
+* UAE - The Un*x Amiga Emulator
+*
+* Config file handling
+* This still needs some thought before it's complete...
+*
+* Copyright 1998 Brian King, Bernd Schmidt
+*/
 
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdlib.h>
-
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
@@ -42,6 +37,7 @@ static struct strlist* temp_lines;
 static struct strlist* error_lines;
 static struct zfile *default_file, *configstore;
 static int uaeconfig;
+static int unicode_config = 0;
 
 /* @@@ need to get rid of this... just cut part of the manual and print that
  * as a help text.  */
@@ -3116,22 +3112,22 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 
 	if (_tcscmp(option, _T("joyportfriendlyname0")) == 0 || _tcscmp(option, _T("joyportfriendlyname1")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportfriendlyname0")) == 0 ? 0 : 1, -1, 2);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportfriendlyname0")) == 0 ? 0 : 1, -1, -1, 2);
 		return 1;
 	}
 	if (_tcscmp(option, _T("joyportfriendlyname2")) == 0 || _tcscmp(option, _T("joyportfriendlyname3")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportfriendlyname2")) == 0 ? 2 : 3, -1, 2);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportfriendlyname2")) == 0 ? 2 : 3, -1, -1, 2);
 		return 1;
 	}
 	if (_tcscmp(option, _T("joyportname0")) == 0 || _tcscmp(option, _T("joyportname1")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportname0")) == 0 ? 0 : 1, -1, 1);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportname0")) == 0 ? 0 : 1, -1, -1, 1);
 		return 1;
 	}
 	if (_tcscmp(option, _T("joyportname2")) == 0 || _tcscmp(option, _T("joyportname3")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportname2")) == 0 ? 2 : 3, -1, 1);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyportname2")) == 0 ? 2 : 3, -1, -1, 1);
 		return 1;
 	}
 
@@ -3139,34 +3135,34 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	// new versions  
 	if (_tcscmp(option, _T("joyport0_friendlyname")) == 0 || _tcscmp(option, _T("joyport1_friendlyname")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0_friendlyname")) == 0 ? 0 : 1, -1, 2);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0_friendlyname")) == 0 ? 0 : 1, -1, -1, 2);
 		return 1;
 	}
 	if (_tcscmp(option, _T("joyport2_friendlyname")) == 0 || _tcscmp(option, _T("joyport3_friendlyname")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2_friendlyname")) == 0 ? 2 : 3, -1, 2);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2_friendlyname")) == 0 ? 2 : 3, -1, -1, 2);
 		return 1;
 	}
 	if (_tcscmp(option, _T("joyport0_name")) == 0 || _tcscmp(option, _T("joyport1_name")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0_name")) == 0 ? 0 : 1, -1, 1);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0_name")) == 0 ? 0 : 1, -1, -1, 1);
 		return 1;
 	}
 	if (_tcscmp(option, _T("joyport2_name")) == 0 || _tcscmp(option, _T("joyport3_name")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2_name")) == 0 ? 2 : 3, -1, 1);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2_name")) == 0 ? 2 : 3, -1, -1, 1);
 		return 1;
 	}
 
 	// old version only 
 	if (_tcscmp(option, _T("joyport0")) == 0 || _tcscmp(option, _T("joyport1")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0")) == 0 ? 0 : 1, -1, 0);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport0")) == 0 ? 0 : 1, -1, -1, 0);
 		return 1;
 	}
 	if (_tcscmp(option, _T("joyport2")) == 0 || _tcscmp(option, _T("joyport3")) == 0)
 	{
-		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2")) == 0 ? 2 : 3, -1, 0);
+		inputdevice_joyport_config_store(p, value, _tcscmp(option, _T("joyport2")) == 0 ? 2 : 3, -1, -1, 0);
 		return 1;
 	}
 
@@ -6134,8 +6130,8 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->jports[3].id = -1;
 	if (reset)
 	{
-		inputdevice_joyport_config_store(p, _T("mouse"), 0, -1, 0);
-		inputdevice_joyport_config_store(p, _T("joy1"), 1, -1, 0);
+		inputdevice_joyport_config_store(p, _T("mouse"), 0, -1, -1, 0);
+		inputdevice_joyport_config_store(p, _T("joy1"), 1, -1, -1, 0);
 	}
 	p->keyboard_lang = KBD_LANG_US;
 	p->keyboard_connected = true;

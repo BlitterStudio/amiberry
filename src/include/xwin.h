@@ -103,7 +103,10 @@ struct vidbuffer
     uae_u8 *linemem;
     uae_u8 *emergmem;
 
-	uae_u8 *bufmem;
+	uae_u8 *bufmem, *bufmemend;
+    uae_u8 *realbufmem;
+	uae_u8 *bufmem_allocated;
+	bool bufmem_lockable;
     int rowbytes; /* Bytes per row in the memory pointed at by bufmem. */
     int pixbytes; /* Bytes per pixel. */
 	/* size of this buffer */
@@ -118,24 +121,33 @@ struct vidbuffer
 	/* same but doublescan multiplier included */
 	int inwidth2;
 	int inheight2;
-
+	/* use drawbuffer instead */
+	bool nativepositioning;
+	/* tempbuffer in use */
+	bool tempbufferinuse;
 	/* extra width, chipset hpos extra in right border */
 	int extrawidth;
-	
+
 	int xoffset; /* superhires pixels from left edge */
 	int yoffset; /* lines from top edge */
-	
+
 	int inxoffset; /* positive if sync positioning */
 	int inyoffset;
 	
 	int last_drawn_line;
 };
 
+extern bool isnativevidbuf(int monid);
 extern int max_uae_width, max_uae_height;
 
 struct vidbuf_description
 {
     struct vidbuffer drawbuffer;
+	/* output buffer when using A2024 emulation */
+	struct vidbuffer tempbuffer;
+
+	struct vidbuffer *inbuffer;
+	struct vidbuffer *outbuffer;
 
 	int gfx_resolution_reserved; // reserved space for currprefs.gfx_resolution
 	int gfx_vresolution_reserved; // reserved space for currprefs.gfx_resolution
