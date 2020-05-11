@@ -1457,3 +1457,8 @@ void gfx_unlock_picasso(const bool dorender)
 }
 
 #endif // PICASSO96
+
+float target_getcurrentvblankrate()
+{
+	return static_cast<float>(host_hz);
+}

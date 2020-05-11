@@ -177,9 +177,24 @@ struct BitMap
 	uae_u8 Depth;
 	uae_u16 pad;
 	uae_u8* Planes[8];
+    uaecptr APlanes[8];
 };
 
 /************************************************************************/
+
+#define	SETTINGSNAMEMAXCHARS	30
+#define	BOARDNAMEMAXCHARS	30
+
+struct Settings {
+    uae_u32			BoardType;
+    /* a value describing assignment to nth board local to boardtype
+     * to be used for reassignment when boards are added or removed.  */
+    uae_u16			LocalOrdering;
+    uae_s16			LastSelected;
+    char			NameField[SETTINGSNAMEMAXCHARS];
+    /* neu! */
+    char* BoardName;
+};
 
 #define MAXRESOLUTIONNAMELENGTH 22
 
