@@ -1175,6 +1175,25 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
+        // COMPATIBLE CPU
+	if (strcmpi(game_detail.cpu_comp, "true") == 0)
+	{
+		_stprintf(txt2, "cpu_compatible=true");
+		cfgfile_parse_line(p, txt2, 0);
+	}
+	else if (strcmpi(game_detail.cpu_comp, "false") == 0)
+	{
+		_stprintf(txt2, "cpu_compatible=false");
+		cfgfile_parse_line(p, txt2, 0);
+	}
+
+	// COMPATIBLE CPU
+	if (strcmpi(game_detail.cpu_24bit, "false") == 0 || strcmpi(game_detail.z3, "nul") != 0)
+	{
+		_stprintf(txt2, "cpu_24bit_addressing=false");
+		cfgfile_parse_line(p, txt2, 0);
+	}
+        
 	//FAST / Z3 MEMORY REQUIREMENTS
 
 	int temp_ram;
@@ -1239,24 +1258,6 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		cfgfile_parse_line(p, txt2, 0);
 	}
 
-	// COMPATIBLE CPU
-	if (strcmpi(game_detail.cpu_comp, "true") == 0)
-	{
-		_stprintf(txt2, "cpu_compatible=true");
-		cfgfile_parse_line(p, txt2, 0);
-	}
-	else if (strcmpi(game_detail.cpu_comp, "false") == 0)
-	{
-		_stprintf(txt2, "cpu_compatible=false");
-		cfgfile_parse_line(p, txt2, 0);
-	}
-
-	// COMPATIBLE CPU
-	if (strcmpi(game_detail.cpu_comp, "false") == 0)
-	{
-		_stprintf(txt2, "cpu_24bit_addressing=false");
-		cfgfile_parse_line(p, txt2, 0);
-	}
 
 	// NTSC
 	if (strcmpi(game_detail.ntsc, "true") == 0)
