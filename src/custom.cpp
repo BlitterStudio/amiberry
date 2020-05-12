@@ -2017,8 +2017,8 @@ static int flush_plane_data_hr(int fm)
 	}
 
 	for (int j = 0; j < 4; j++) {
-	toscr_1_hr(32, fm);
-	i += 32;
+		toscr_1_hr(32, fm);
+		i += 32;
 	}
 
 	int toshift = 32 << fm;
@@ -3278,7 +3278,8 @@ static void decide_line (int hpos)
 				start_bpl_dma (hstart);
 				// if ECS: pre-set plf_end_hpos if we have already passed virtual ddfstop
 				if (ecs) {
-					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET) {
+					// DDFSTRT=$18: always skip this condition. For some unknown reason.
+					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET && hstart != HARD_DDF_START_REAL + DDF_OFFSET) {
 						plf_end_hpos = plfstop + DDF_OFFSET;
 						nextstate = plf_passed_stop;
 					}
@@ -3426,14 +3427,14 @@ static void record_register_change (int hpos, int regno, uae_u16 value)
 	if (regno == 0x100) { // BPLCON0
 		if (value & 0x800)
 			thisline_decision.ham_seen = 1;
-		thisline_decision.ehb_seen = isehb (value, bplcon2);
-		isbrdblank (hpos, value, bplcon3);
-		issprbrd (hpos, value, bplcon3);
+		thisline_decision.ehb_seen = isehb(value, bplcon2);
+		isbrdblank(hpos, value, bplcon3);
+		issprbrd(hpos, value, bplcon3);
 	} else if (regno == 0x104) { // BPLCON2
-		thisline_decision.ehb_seen = isehb (bplcon0, value);
+		thisline_decision.ehb_seen = isehb(bplcon0, value);
 	} else if (regno == 0x106) { // BPLCON3
-		isbrdblank (hpos, bplcon0, value);
-		issprbrd (hpos, bplcon0, value);
+		isbrdblank(hpos, bplcon0, value);
+		issprbrd(hpos, bplcon0, value);
 	}
 	record_color_change (hpos, regno + 0x1000, value);
 }

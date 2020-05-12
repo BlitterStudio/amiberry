@@ -197,6 +197,9 @@ void devices_reset(int hardreset)
 #ifdef AUTOCONFIG
 	rtarea_reset();
 #endif
+#ifdef RETROPLATFORM
+	rp_reset();
+#endif
 	uae_int_requested = 0;
 }
 
@@ -307,7 +310,7 @@ void do_leave_program (void)
 void virtualdevice_init (void)
 {
 	reset_device_items();
-	
+
 #ifdef CD32
 	akiko_init();
 #endif
