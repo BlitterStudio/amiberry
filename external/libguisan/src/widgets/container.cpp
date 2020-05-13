@@ -65,81 +65,80 @@
 
 namespace gcn
 {
+	Container::Container()
+	{
+		mOpaque = true;
+	}
 
-    Container::Container()
-    {
-        mOpaque = true;
-    }
+	Container::~Container()
+	= default;
 
-    Container::~Container()
-    = default;
+	void Container::draw(Graphics* graphics)
+	{
+		if (isOpaque())
+		{
+			graphics->setColor(getBaseColor());
+			graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
+		}
 
-    void Container::draw(Graphics* graphics)
-    {
-        if (isOpaque())
-        {
-            graphics->setColor(getBaseColor());
-            graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
-        }
+		drawChildren(graphics);
+	}
 
-        drawChildren(graphics);
-    }
+	void Container::drawBorder(Graphics* graphics)
+	{
+		const auto faceColor = getBaseColor();
+		const auto alpha = getBaseColor().a;
+		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		auto highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		auto shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-    void Container::drawBorder(Graphics* graphics)
-    {
-	    const auto faceColor = getBaseColor();
-	    const auto alpha = getBaseColor().a;
-	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
-	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
-	    auto highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-	    auto shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		{
+			graphics->setColor(shadowColor);
+			graphics->drawLine(i, i, width - i, i);
+			graphics->drawLine(i, i + 1, i, height - i - 1);
+			graphics->setColor(highlightColor);
+			graphics->drawLine(width - i, i + 1, width - i, height - i);
+			graphics->drawLine(i, height - i, width - i - 1, height - i);
+		}
+	}
 
-	    for (auto i = 0; i < int(getBorderSize()); ++i)
-        {
-            graphics->setColor(shadowColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(highlightColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
-    }
+	void Container::setOpaque(bool opaque)
+	{
+		mOpaque = opaque;
+	}
 
-    void Container::setOpaque(bool opaque)
-    {
-        mOpaque = opaque;
-    }
+	bool Container::isOpaque() const
+	{
+		return mOpaque;
+	}
 
-    bool Container::isOpaque() const
-    {
-        return mOpaque;
-    }
+	void Container::add(Widget* widget)
+	{
+		BasicContainer::add(widget);
+	}
 
-    void Container::add(Widget* widget)
-    {
-        BasicContainer::add(widget);
-    }
+	void Container::add(Widget* widget, int x, int y)
+	{
+		widget->setPosition(x, y);
+		BasicContainer::add(widget);
+	}
 
-    void Container::add(Widget* widget, int x, int y)
-    {
-        widget->setPosition(x, y);
-        BasicContainer::add(widget);
-    }
+	void Container::remove(Widget* widget)
+	{
+		BasicContainer::remove(widget);
+	}
 
-    void Container::remove(Widget* widget)
-    {
-        BasicContainer::remove(widget);
-    }
+	void Container::clear()
+	{
+		BasicContainer::clear();
+	}
 
-    void Container::clear()
-    {
-        BasicContainer::clear();
-    }
-
-    Widget* Container::findWidgetById(const std::string &id)
-    {
-        return BasicContainer::findWidgetById(id);
-    }
+	Widget* Container::findWidgetById(const std::string& id)
+	{
+		return BasicContainer::findWidgetById(id);
+	}
 }

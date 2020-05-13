@@ -403,18 +403,6 @@
     <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\gui\UaeCheckBox.cpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\jit\compemu.cpp">
       <Filter>Source files\jit</Filter>
     </ClCompile>
@@ -640,18 +628,6 @@
       <Filter>Source files\osdep\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\osdep\gui\UaeCheckBox.hpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\osdep\gui\UaeDropDown.hpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\akiko.h">

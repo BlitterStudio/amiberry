@@ -63,51 +63,51 @@
 
 namespace gcn
 {
-    /**
-     * Implements an icon capable of displaying an image.
-     */
-    class GCN_CORE_DECLSPEC Icon: public Widget
-    {
-    public:
-        /**
-         * Constructor.
-         *
-         * @param filename The filename of the image to display.
-         */
-        Icon(const std::string& filename);
+	/**
+	 * Implements an icon capable of displaying an image.
+	 */
+	class GCN_CORE_DECLSPEC Icon : public Widget
+	{
+	public:
+		/**
+		 * Constructor.
+		 *
+		 * @param filename The filename of the image to display.
+		 */
+		Icon(const std::string& filename);
 
-        /**
-         * Constructor.
-         *
-         * @param image The image to display.
-         */
-        Icon(Image* image);
+		/**
+		 * Constructor.
+		 *
+		 * @param image The image to display.
+		 */
+		Icon(Image* image);
 
-        /**
-         * Descructor.
-         */
-        virtual ~Icon();
+		/**
+		 * Descructor.
+		 */
+		virtual ~Icon();
 
 
-        // Inherited from Widget
+		// Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
+		void draw(Graphics* graphics) override;
 
-        virtual void drawBorder(Graphics* graphics);
+		void drawBorder(Graphics* graphics) override;
 
-    protected:
-        /**
-         * The image to display.
-         */
-        Image* mImage;
+	protected:
+		/**
+		 * The image to display.
+		 */
+		Image* mImage;
 
-        /**
-         * True if the image has been loaded internally, false otherwise.
-         * An image not loaded internally should not be deleted in the
-         * destructor.
-         */
-        bool mInternalImage;
-    };
+		/**
+		 * True if the image has been loaded internally, false otherwise.
+		 * An image not loaded internally should not be deleted in the
+		 * destructor.
+		 */
+		bool mInternalImage;
+	};
 }
 
 #endif // end GCN_ICON_HPP

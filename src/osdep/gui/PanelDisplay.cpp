@@ -5,8 +5,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -17,14 +15,14 @@ const int amigawidth_values[] = {320, 362, 384, 640, 704, 720};
 const int amigaheight_values[] = {200, 216, 240, 256, 262, 270, 284};
 
 static gcn::Window* grpScalingMethod;
-static gcn::UaeRadioButton* optAuto;
-static gcn::UaeRadioButton* optNearest;
-static gcn::UaeRadioButton* optLinear;
+static gcn::RadioButton* optAuto;
+static gcn::RadioButton* optNearest;
+static gcn::RadioButton* optLinear;
 
 static gcn::Window* grpLineMode;
-static gcn::UaeRadioButton* optSingle;
-static gcn::UaeRadioButton* optDouble;
-static gcn::UaeRadioButton* optScanlines;
+static gcn::RadioButton* optSingle;
+static gcn::RadioButton* optDouble;
+static gcn::RadioButton* optScanlines;
 
 static gcn::Window* grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;
@@ -34,13 +32,13 @@ static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
 
-static gcn::UaeCheckBox* chkFrameskip;
-static gcn::UaeCheckBox* chkAspect;
-static gcn::UaeCheckBox* chkFullscreen;
+static gcn::CheckBox* chkFrameskip;
+static gcn::CheckBox* chkAspect;
+static gcn::CheckBox* chkFullscreen;
 
 static gcn::Window* grpCentering;
-static gcn::UaeCheckBox* chkHorizontal;
-static gcn::UaeCheckBox* chkVertical;
+static gcn::CheckBox* chkHorizontal;
+static gcn::CheckBox* chkVertical;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -161,19 +159,19 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
-	chkHorizontal = new gcn::UaeCheckBox("Horizontal");
+	chkHorizontal = new gcn::CheckBox("Horizontal");
 	chkHorizontal->addActionListener(amigaScreenActionListener);
-	chkVertical = new gcn::UaeCheckBox("Vertical");
+	chkVertical = new gcn::CheckBox("Vertical");
 	chkVertical->addActionListener(amigaScreenActionListener);
 	
-	chkAspect = new gcn::UaeCheckBox("Correct Aspect Ratio");
+	chkAspect = new gcn::CheckBox("Correct Aspect Ratio");
 	chkAspect->setId("CorrectAR");
 	chkAspect->addActionListener(amigaScreenActionListener);
 
-	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
+	chkFrameskip = new gcn::CheckBox("Frameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
-	chkFullscreen = new gcn::UaeCheckBox("Fullscreen");
+	chkFullscreen = new gcn::CheckBox("Fullscreen");
 	chkFullscreen->addActionListener(amigaScreenActionListener);
 
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
@@ -210,13 +208,13 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	scalingMethodActionListener = new ScalingMethodActionListener();
 
-	optAuto = new gcn::UaeRadioButton("Auto", "radioscalingmethodgroup");
+	optAuto = new gcn::RadioButton("Auto", "radioscalingmethodgroup");
 	optAuto->addActionListener(scalingMethodActionListener);
 
-	optNearest = new gcn::UaeRadioButton("Nearest Neighbor (pixelated)", "radioscalingmethodgroup");
+	optNearest = new gcn::RadioButton("Nearest Neighbor (pixelated)", "radioscalingmethodgroup");
 	optNearest->addActionListener(scalingMethodActionListener);
 
-	optLinear = new gcn::UaeRadioButton("Linear (smooth)", "radioscalingmethodgroup");
+	optLinear = new gcn::RadioButton("Linear (smooth)", "radioscalingmethodgroup");
 	optLinear->addActionListener(scalingMethodActionListener);
 
 	grpScalingMethod = new gcn::Window("Scaling method");
@@ -233,13 +231,13 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 
 	lineModeActionListener = new LineModeActionListener();
-	optSingle = new gcn::UaeRadioButton("Single", "linemodegroup");
+	optSingle = new gcn::RadioButton("Single", "linemodegroup");
 	optSingle->addActionListener(lineModeActionListener);
 
-	optDouble = new gcn::UaeRadioButton("Double", "linemodegroup");
+	optDouble = new gcn::RadioButton("Double", "linemodegroup");
 	optDouble->addActionListener(lineModeActionListener);
 
-	optScanlines = new gcn::UaeRadioButton("Scanlines", "linemodegroup");
+	optScanlines = new gcn::RadioButton("Scanlines", "linemodegroup");
 	optScanlines->addActionListener(lineModeActionListener);
 
 	grpLineMode = new gcn::Window("Line mode");

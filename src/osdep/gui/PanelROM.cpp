@@ -5,7 +5,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -13,16 +12,16 @@
 #include "gui_handling.h"
 
 static gcn::Label* lblMainROM;
-static gcn::UaeDropDown* cboMainROM;
+static gcn::DropDown* cboMainROM;
 static gcn::Button* cmdMainROM;
 static gcn::Label* lblExtROM;
-static gcn::UaeDropDown* cboExtROM;
+static gcn::DropDown* cboExtROM;
 static gcn::Button* cmdExtROM;
 static gcn::Label* lblCartROM;
-static gcn::UaeDropDown* cboCartROM;
+static gcn::DropDown* cboCartROM;
 static gcn::Button* cmdCartROM;
 static gcn::Label* lblUAEROM;
-static gcn::UaeDropDown* cboUAEROM;
+static gcn::DropDown* cboUAEROM;
 
 class ROMListModel : public gcn::ListModel
 {
@@ -240,7 +239,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cartROMList = new ROMListModel(ROMTYPE_ALL_CART);
 
 	lblMainROM = new gcn::Label("Main ROM File:");
-	cboMainROM = new gcn::UaeDropDown(mainROMList);
+	cboMainROM = new gcn::DropDown(mainROMList);
 	cboMainROM->setSize(textFieldWidth, cboMainROM->getHeight());
 	cboMainROM->setBaseColor(gui_baseCol);
 	cboMainROM->setBackgroundColor(colTextboxBackground);
@@ -253,7 +252,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdMainROM->addActionListener(romButtonActionListener);
 
 	lblExtROM = new gcn::Label("Extended ROM File:");
-	cboExtROM = new gcn::UaeDropDown(extROMList);
+	cboExtROM = new gcn::DropDown(extROMList);
 	cboExtROM->setSize(textFieldWidth, cboExtROM->getHeight());
 	cboExtROM->setBaseColor(gui_baseCol);
 	cboExtROM->setBackgroundColor(colTextboxBackground);
@@ -266,7 +265,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdExtROM->addActionListener(romButtonActionListener);
 
 	lblCartROM = new gcn::Label("Cartridge ROM File:");
-	cboCartROM = new gcn::UaeDropDown(cartROMList);
+	cboCartROM = new gcn::DropDown(cartROMList);
 	cboCartROM->setSize(textFieldWidth, cboCartROM->getHeight());
 	cboCartROM->setBaseColor(gui_baseCol);
 	cboCartROM->setBackgroundColor(colTextboxBackground);
@@ -279,7 +278,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdCartROM->addActionListener(romButtonActionListener);
 
 	lblUAEROM = new gcn::Label("Advanced UAE expansion board/Boot ROM:");
-	cboUAEROM = new gcn::UaeDropDown(&uaeROMList);
+	cboUAEROM = new gcn::DropDown(&uaeROMList);
 	cboUAEROM->setSize(textFieldWidth, cboUAEROM->getHeight());
 	cboUAEROM->setBaseColor(gui_baseCol);
 	cboUAEROM->setBackgroundColor(colTextboxBackground);

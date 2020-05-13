@@ -69,70 +69,70 @@
 
 namespace gcn
 {
-    /**
-     * A toggle button, which can stay selected. Think of it as a checkbox,
-     * but dressed as a regular button. Add an ActionListener to it to know when it
-     * has been clicked.
-     *
-     */
-    class GCN_CORE_DECLSPEC ToggleButton : public Button
-    {
-    public:
-        /**
-         * Constructor.
-         */
-        ToggleButton();
+	/**
+	 * A toggle button, which can stay selected. Think of it as a checkbox,
+	 * but dressed as a regular button. Add an ActionListener to it to know when it
+	 * has been clicked.
+	 *
+	 */
+	class GCN_CORE_DECLSPEC ToggleButton : public Button
+	{
+	public:
+		/**
+		 * Constructor.
+		 */
+		ToggleButton();
 
-        /**
-         * Constructor.
-         *
-         * @param caption the caption of the ToggleButton.
-         */
-        ToggleButton(const std::string& caption);
-        
-        /**
-         * Checks if the button is selected.
-         *
-         * @return True if the button is selected, false otherwise.
-         * @see setSelected
-         */
-        bool isSelected() const;
+		/**
+		 * Constructor.
+		 *
+		 * @param caption the caption of the ToggleButton.
+		 */
+		ToggleButton(const std::string& caption);
 
-        /**
-         * Sets the button to be selected.
-         *
-         * @param selected True if the button should be set as selected.
-         * @see isSelected
-         */
-        void setSelected(bool selected);
+		/**
+		 * Checks if the button is selected.
+		 *
+		 * @return True if the button is selected, false otherwise.
+		 * @see setSelected
+		 */
+		[[nodiscard]] bool isSelected() const;
 
-
-        //Inherited from Widget
-
-        virtual void draw(Graphics* graphics);
+		/**
+		 * Sets the button to be selected.
+		 *
+		 * @param selected True if the button should be set as selected.
+		 * @see isSelected
+		 */
+		void setSelected(bool selected);
 
 
-        // Inherited from MouseListener
+		//Inherited from Widget
 
-        virtual void mouseReleased(MouseEvent& mouseEvent);
+		void draw(Graphics* graphics) override;
 
 
-        // Inherited from KeyListener
+		// Inherited from MouseListener
 
-        virtual void keyReleased(KeyEvent& keyEvent);
+		void mouseReleased(MouseEvent& mouseEvent) override;
 
-    protected:
-        /**
-         * Toggles the button between being selected and
-         * not being selected.
-         */
-        virtual void toggleSelected();
-    
-        /**
-         * True if the button is selected, false otherwise. 
-         */
-        bool mSelected;
-    };
+
+		// Inherited from KeyListener
+
+		void keyReleased(KeyEvent& keyEvent) override;
+
+	protected:
+		/**
+		 * Toggles the button between being selected and
+		 * not being selected.
+		 */
+		virtual void toggleSelected();
+
+		/**
+		 * True if the button is selected, false otherwise. 
+		 */
+		bool mSelected;
+	};
 }
 
 #endif // end GCN_TOGGLEBUTTON_HPP

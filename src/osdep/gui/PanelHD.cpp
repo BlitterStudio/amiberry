@@ -6,8 +6,6 @@
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -54,9 +52,9 @@ static gcn::ImageButton* listCmdDelete[MAX_HD_DEVICES];
 static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
 static gcn::Button* cmdCreateHardfile;
-static gcn::UaeCheckBox* chkHDReadOnly;
-static gcn::UaeCheckBox* chkCD;
-static gcn::UaeDropDown* cboCDFile;
+static gcn::CheckBox* chkHDReadOnly;
+static gcn::CheckBox* chkCD;
+static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
 static gcn::Button* cmdCDSelect;
 static gcn::Label* lblCDVol;
@@ -410,11 +408,11 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cdFileActionListener = new CDFileActionListener();
 	genericActionListener = new GenericActionListener();
 
-	chkHDReadOnly = new gcn::UaeCheckBox("Master harddrive write protection");
+	chkHDReadOnly = new gcn::CheckBox("Master harddrive write protection");
 	chkHDReadOnly->setId("chkHDRO");
 	chkHDReadOnly->addActionListener(genericActionListener);
 
-	chkCD = new gcn::UaeCheckBox("CD drive");
+	chkCD = new gcn::CheckBox("CD drive");
 	chkCD->addActionListener(cdCheckActionListener);
 
 	cmdCDEject = new gcn::Button("Eject");
@@ -429,7 +427,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cmdCDSelect->setId("CDSelect");
 	cmdCDSelect->addActionListener(cdButtonActionListener);
 
-	cboCDFile = new gcn::UaeDropDown(&cdfileList);
+	cboCDFile = new gcn::DropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_baseCol);
 	cboCDFile->setBackgroundColor(colTextboxBackground);

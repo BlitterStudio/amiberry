@@ -417,7 +417,7 @@ void amiberry_gui_init()
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
-	                                gui_screen->h);
+									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
 	
@@ -1120,13 +1120,13 @@ void gui_widgets_init()
 	gui_top->add(cmdShutdown, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 #endif
 	gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdRestart, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdHelp, DISTANCE_BORDER + 3 * BUTTON_WIDTH + 3 * DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdReset, DISTANCE_BORDER + 5 * BUTTON_WIDTH + 5 * DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
 	gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);

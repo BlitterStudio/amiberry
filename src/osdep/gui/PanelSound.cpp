@@ -5,8 +5,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
-#include "UaeDropDown.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -15,19 +13,19 @@
 
 
 static gcn::Window* grpSound;
-static gcn::UaeRadioButton* optSoundDisabled;
-static gcn::UaeRadioButton* optSoundDisabledEmu;
-static gcn::UaeRadioButton* optSoundEmulated;
-static gcn::UaeRadioButton* optSoundEmulatedBest;
+static gcn::RadioButton* optSoundDisabled;
+static gcn::RadioButton* optSoundDisabledEmu;
+static gcn::RadioButton* optSoundEmulated;
+static gcn::RadioButton* optSoundEmulatedBest;
 static gcn::Window* grpMode;
-static gcn::UaeRadioButton* optMono;
-static gcn::UaeRadioButton* optStereo;
+static gcn::RadioButton* optMono;
+static gcn::RadioButton* optStereo;
 static gcn::Label* lblFrequency;
-static gcn::UaeDropDown* cboFrequency;
+static gcn::DropDown* cboFrequency;
 static gcn::Label* lblInterpolation;
-static gcn::UaeDropDown* cboInterpolation;
+static gcn::DropDown* cboInterpolation;
 static gcn::Label* lblFilter;
-static gcn::UaeDropDown* cboFilter;
+static gcn::DropDown* cboFilter;
 static gcn::Label* lblSeparation;
 static gcn::Label* lblSeparationInfo;
 static gcn::Slider* sldSeparation;
@@ -242,19 +240,19 @@ void InitPanelSound(const struct _ConfigCategory& category)
 {
 	soundActionListener = new SoundActionListener();
 
-	optSoundDisabled = new gcn::UaeRadioButton("Disabled", "radiosoundgroup");
+	optSoundDisabled = new gcn::RadioButton("Disabled", "radiosoundgroup");
 	optSoundDisabled->setId("sndDisable");
 	optSoundDisabled->addActionListener(soundActionListener);
 
-	optSoundDisabledEmu = new gcn::UaeRadioButton("Disabled, but emulated", "radiosoundgroup");
+	optSoundDisabledEmu = new gcn::RadioButton("Disabled, but emulated", "radiosoundgroup");
 	optSoundDisabledEmu->setId("sndDisEmu");
 	optSoundDisabledEmu->addActionListener(soundActionListener);
 
-	optSoundEmulated = new gcn::UaeRadioButton("Enabled", "radiosoundgroup");
+	optSoundEmulated = new gcn::RadioButton("Enabled", "radiosoundgroup");
 	optSoundEmulated->setId("sndEmulate");
 	optSoundEmulated->addActionListener(soundActionListener);
 
-	optSoundEmulatedBest = new gcn::UaeRadioButton("Enabled, most accurate", "radiosoundgroup");
+	optSoundEmulatedBest = new gcn::RadioButton("Enabled, most accurate", "radiosoundgroup");
 	optSoundEmulatedBest->setId("sndEmuBest");
 	optSoundEmulatedBest->addActionListener(soundActionListener);
 
@@ -269,17 +267,17 @@ void InitPanelSound(const struct _ConfigCategory& category)
 
 	lblFrequency = new gcn::Label("Frequency:");
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
-	cboFrequency = new gcn::UaeDropDown(&frequencyTypeList);
+	cboFrequency = new gcn::DropDown(&frequencyTypeList);
 	cboFrequency->setSize(160, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
 	cboFrequency->addActionListener(soundActionListener);
 
-	optMono = new gcn::UaeRadioButton("Mono", "radiosoundmodegroup");
+	optMono = new gcn::RadioButton("Mono", "radiosoundmodegroup");
 	optMono->addActionListener(soundActionListener);
 
-	optStereo = new gcn::UaeRadioButton("Stereo", "radiosoundmodegroup");
+	optStereo = new gcn::RadioButton("Stereo", "radiosoundmodegroup");
 	optStereo->addActionListener(soundActionListener);
 
 	grpMode = new gcn::Window("Mode");
@@ -291,7 +289,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 
 	lblInterpolation = new gcn::Label("Interpolation:");
 	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
-	cboInterpolation = new gcn::UaeDropDown(&interpolationTypeList);
+	cboInterpolation = new gcn::DropDown(&interpolationTypeList);
 	cboInterpolation->setSize(160, cboInterpolation->getHeight());
 	cboInterpolation->setBaseColor(gui_baseCol);
 	cboInterpolation->setBackgroundColor(colTextboxBackground);
@@ -300,7 +298,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 
 	lblFilter = new gcn::Label("Filter:");
 	lblFilter->setAlignment(gcn::Graphics::RIGHT);
-	cboFilter = new gcn::UaeDropDown(&filterTypeList);
+	cboFilter = new gcn::DropDown(&filterTypeList);
 	cboFilter->setSize(160, cboFilter->getHeight());
 	cboFilter->setBaseColor(gui_baseCol);
 	cboFilter->setBackgroundColor(colTextboxBackground);

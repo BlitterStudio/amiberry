@@ -67,225 +67,225 @@
 
 namespace gcn
 {
-    TextField::TextField()
-    {
-        mCaretPosition = 0;
-        mXScroll = 0;
+	TextField::TextField()
+	{
+		mCaretPosition = 0;
+		mXScroll = 0;
 
-        setFocusable(true);
+		setFocusable(true);
 
-        addMouseListener(this);
-        addKeyListener(this);
-        adjustHeight();
-        setBorderSize(1);
-    }
+		addMouseListener(this);
+		addKeyListener(this);
+		adjustHeight();
+		setBorderSize(1);
+	}
 
-    TextField::TextField(const std::string& text)
-    {
-        mCaretPosition = 0;
-        mXScroll = 0;
+	TextField::TextField(const std::string& text)
+	{
+		mCaretPosition = 0;
+		mXScroll = 0;
 
-        mText = text;
-        adjustSize();
-        setBorderSize(1);
+		mText = text;
+		adjustSize();
+		setBorderSize(1);
 
-        setFocusable(true);
+		setFocusable(true);
 
-        addMouseListener(this);
-        addKeyListener(this);
-    }
+		addMouseListener(this);
+		addKeyListener(this);
+	}
 
-    void TextField::setText(const std::string& text)
-    {
-        if(text.size() < mCaretPosition )
-        {
-            mCaretPosition = text.size();
-        }
+	void TextField::setText(const std::string& text)
+	{
+		if (text.size() < mCaretPosition)
+		{
+			mCaretPosition = text.size();
+		}
 
-        mText = text;
-    }
+		mText = text;
+	}
 
-    void TextField::draw(Graphics* graphics)
-    {
-	    const auto faceColor = getBackgroundColor();
-        graphics->setColor(faceColor);
-        graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
+	void TextField::draw(Graphics* graphics)
+	{
+		const auto faceColor = getBackgroundColor();
+		graphics->setColor(faceColor);
+		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
-        if (isFocused())
-        {
-            drawCaret(graphics, getFont()->getWidth(mText.substr(0, mCaretPosition)) - mXScroll);
-        }
+		if (isFocused())
+		{
+			drawCaret(graphics, getFont()->getWidth(mText.substr(0, mCaretPosition)) - mXScroll);
+		}
 
-        graphics->setColor(getForegroundColor());
-        graphics->setFont(getFont());
-        graphics->drawText(mText, 1 - mXScroll, 1);
-    }
+		graphics->setColor(getForegroundColor());
+		graphics->setFont(getFont());
+		graphics->drawText(mText, 1 - mXScroll, 1);
+	}
 
-    void TextField::drawBorder(Graphics* graphics)
-    {
-	    const auto faceColor = getBaseColor();
-	    const auto alpha = getBaseColor().a;
-	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
-	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
-	    auto highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-	    auto shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+	void TextField::drawBorder(Graphics* graphics)
+	{
+		const auto faceColor = getBaseColor();
+		const auto alpha = getBaseColor().a;
+		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		auto highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		auto shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-	    for (auto i = 0; i < int(getBorderSize()); ++i)
-        {
-            graphics->setColor(shadowColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(highlightColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
-    }
+		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		{
+			graphics->setColor(shadowColor);
+			graphics->drawLine(i, i, width - i, i);
+			graphics->drawLine(i, i + 1, i, height - i - 1);
+			graphics->setColor(highlightColor);
+			graphics->drawLine(width - i, i + 1, width - i, height - i);
+			graphics->drawLine(i, height - i, width - i - 1, height - i);
+		}
+	}
 
-    void TextField::drawCaret(Graphics* graphics, int x)
-    {
-        graphics->setColor(getForegroundColor());
-        graphics->drawLine(x, getHeight() - 2, x, 1);
-    }
+	void TextField::drawCaret(Graphics* graphics, int x)
+	{
+		graphics->setColor(getForegroundColor());
+		graphics->drawLine(x, getHeight() - 2, x, 1);
+	}
 
-    void TextField::mousePressed(MouseEvent& mouseEvent)
-    {
-        if (mouseEvent.getButton() == MouseEvent::LEFT)
-        {
-            mCaretPosition = getFont()->getStringIndexAt(mText, mouseEvent.getX() + mXScroll);
-            fixScroll();
-        }
-    }
+	void TextField::mousePressed(MouseEvent& mouseEvent)
+	{
+		if (mouseEvent.getButton() == MouseEvent::LEFT)
+		{
+			mCaretPosition = getFont()->getStringIndexAt(mText, mouseEvent.getX() + mXScroll);
+			fixScroll();
+		}
+	}
 
-    void TextField::mouseDragged(MouseEvent& mouseEvent)
-    {
-        mouseEvent.consume();
-    }
-    
-    void TextField::keyPressed(KeyEvent& keyEvent)
-    {
-	    const auto key = keyEvent.getKey();
+	void TextField::mouseDragged(MouseEvent& mouseEvent)
+	{
+		mouseEvent.consume();
+	}
 
-        if (key.getValue() == Key::LEFT && mCaretPosition > 0)
-        {
-            --mCaretPosition;
-        }
+	void TextField::keyPressed(KeyEvent& keyEvent)
+	{
+		const auto key = keyEvent.getKey();
 
-        else if (key.getValue() == Key::RIGHT && mCaretPosition < mText.size())
-        {
-            ++mCaretPosition;
-        }
+		if (key.getValue() == Key::LEFT && mCaretPosition > 0)
+		{
+			--mCaretPosition;
+		}
 
-        else if (key.getValue() == Key::DELETE && mCaretPosition < mText.size())
-        {
-            mText.erase(mCaretPosition, 1);
-        }
+		else if (key.getValue() == Key::RIGHT && mCaretPosition < mText.size())
+		{
+			++mCaretPosition;
+		}
 
-        else if (key.getValue() == Key::BACKSPACE && mCaretPosition > 0)
-        {
-            mText.erase(mCaretPosition - 1, 1);
-            --mCaretPosition;
-        }
+		else if (key.getValue() == Key::DELETE && mCaretPosition < mText.size())
+		{
+			mText.erase(mCaretPosition, 1);
+		}
 
-        else if (key.getValue() == Key::ENTER)
-        {
-            generateAction();
-        }
+		else if (key.getValue() == Key::BACKSPACE && mCaretPosition > 0)
+		{
+			mText.erase(mCaretPosition - 1, 1);
+			--mCaretPosition;
+		}
 
-        else if (key.getValue() == Key::HOME)
-        {
-            mCaretPosition = 0;
-        }
+		else if (key.getValue() == Key::ENTER)
+		{
+			generateAction();
+		}
 
-        else if (key.getValue() == Key::END)
-        {
-            mCaretPosition = mText.size();
-        }
+		else if (key.getValue() == Key::HOME)
+		{
+			mCaretPosition = 0;
+		}
 
-        else if (key.isCharacter()
-                 && key.getValue() != Key::TAB)
-        {
-            if(keyEvent.isShiftPressed() && key.isLetter())
-            {
-                mText.insert(mCaretPosition, std::string(1,char(key.getValue() - 32)));
-            }
-            else
-            {
-                mText.insert(mCaretPosition, std::string(1,char(key.getValue())));
-            }
-            ++mCaretPosition;
-        }
+		else if (key.getValue() == Key::END)
+		{
+			mCaretPosition = mText.size();
+		}
 
-        if (key.getValue() != Key::TAB)
-        {
-            keyEvent.consume();
-        }
-        
-        fixScroll();
-    }
+		else if (key.isCharacter()
+			&& key.getValue() != Key::TAB)
+		{
+			if (keyEvent.isShiftPressed() && key.isLetter())
+			{
+				mText.insert(mCaretPosition, std::string(1, static_cast<char>(key.getValue() - 32)));
+			}
+			else
+			{
+				mText.insert(mCaretPosition, std::string(1, static_cast<char>(key.getValue())));
+			}
+			++mCaretPosition;
+		}
 
-    void TextField::adjustSize()
-    {
-        setWidth(getFont()->getWidth(mText) + 4);
-        adjustHeight();
+		if (key.getValue() != Key::TAB)
+		{
+			keyEvent.consume();
+		}
 
-        fixScroll();
-    }
+		fixScroll();
+	}
 
-    void TextField::adjustHeight()
-    {
-        setHeight(getFont()->getHeight() + 2);
-    }
+	void TextField::adjustSize()
+	{
+		setWidth(getFont()->getWidth(mText) + 4);
+		adjustHeight();
 
-    void TextField::fixScroll()
-    {
-        if (isFocused())
-        {
-	        const auto caretX = getFont()->getWidth(mText.substr(0, mCaretPosition));
+		fixScroll();
+	}
 
-            if (caretX - mXScroll > getWidth() - 4)
-            {
-                mXScroll = caretX - getWidth() + 4;
-            }
-            else if (caretX - mXScroll < getFont()->getWidth(" "))
-            {
-                mXScroll = caretX - getFont()->getWidth(" ");
+	void TextField::adjustHeight()
+	{
+		setHeight(getFont()->getHeight() + 2);
+	}
 
-                if (mXScroll < 0)
-                {
-                    mXScroll = 0;
-                }
-            }
-        }
-    }
+	void TextField::fixScroll()
+	{
+		if (isFocused())
+		{
+			const auto caretX = getFont()->getWidth(mText.substr(0, mCaretPosition));
 
-    void TextField::setCaretPosition(unsigned int position)
-    {
-        if (position > mText.size())
-        {
-            mCaretPosition = mText.size();
-        }
-        else
-        {
-            mCaretPosition = position;
-        }
+			if (caretX - mXScroll > getWidth() - 4)
+			{
+				mXScroll = caretX - getWidth() + 4;
+			}
+			else if (caretX - mXScroll < getFont()->getWidth(" "))
+			{
+				mXScroll = caretX - getFont()->getWidth(" ");
 
-        fixScroll();
-    }
+				if (mXScroll < 0)
+				{
+					mXScroll = 0;
+				}
+			}
+		}
+	}
 
-    unsigned int TextField::getCaretPosition() const
-    {
-        return mCaretPosition;
-    }
+	void TextField::setCaretPosition(unsigned int position)
+	{
+		if (position > mText.size())
+		{
+			mCaretPosition = mText.size();
+		}
+		else
+		{
+			mCaretPosition = position;
+		}
 
-    const std::string& TextField::getText() const
-    {
-        return mText;
-    }
+		fixScroll();
+	}
 
-    void TextField::fontChanged()
-    {
-        fixScroll();
-    }
+	unsigned int TextField::getCaretPosition() const
+	{
+		return mCaretPosition;
+	}
+
+	const std::string& TextField::getText() const
+	{
+		return mText;
+	}
+
+	void TextField::fontChanged()
+	{
+		fixScroll();
+	}
 }

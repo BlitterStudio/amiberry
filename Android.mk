@@ -154,10 +154,6 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/amiberry_whdbooter.cpp \
                     src/osdep/sigsegv_handler.cpp \
                     src/sounddep/sound.cpp \
-                    src/osdep/gui/UaeRadioButton.cpp \
-                    src/osdep/gui/UaeDropDown.cpp \
-                    src/osdep/gui/UaeCheckBox.cpp \
-                    src/osdep/gui/UaeListBox.cpp \
                     src/osdep/gui/InGameMessage.cpp \
                     src/osdep/gui/SelectorEntry.cpp \
                     src/osdep/gui/ShowHelp.cpp \

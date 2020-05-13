@@ -397,10 +397,6 @@ OBJS =	\
 	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
 	src/sounddep/sound.o \
-	src/osdep/gui/UaeRadioButton.o \
-	src/osdep/gui/UaeDropDown.o \
-	src/osdep/gui/UaeCheckBox.o \
-	src/osdep/gui/UaeListBox.o \
 	src/osdep/gui/InGameMessage.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \

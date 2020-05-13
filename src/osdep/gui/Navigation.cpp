@@ -4,7 +4,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
 #include "sysdeps.h"
 #include "gui_handling.h"
 
@@ -24,7 +23,7 @@ static NavigationMap navMap[] =
 	// main_window
 	{"About", "", "", "Shutdown", "Paths"},
 	{"Paths", "SystemROMs", "SystemROMs", "About", "Quickstart"},
-	{"Quickstart", "qsNTSC", "qscboAModel", "Paths", "Configurations"},
+	{"Quickstart", "qsNTSC", "cboAModel", "Paths", "Configurations"},
 	{"Configurations", "ConfigList", "ConfigList", "Quickstart", "CPU and FPU"},
 	{"CPU and FPU", "7 Mhz", "68000", "Configurations", "Chipset"},
 	{"Chipset", "Fast copper", "OCS", "CPU and FPU", "ROM"},
@@ -63,27 +62,27 @@ static NavigationMap navMap[] =
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
-	{"qscboAModel", "Quickstart", "qsNTSC", "cmdSetConfig", "qscboAConfig"},
-	{"qsNTSC", "qscboAModel", "Quickstart", "qsMode", "qscboAConfig"},
-	{"qscboAConfig", "Quickstart", "Quickstart", "qscboAModel", "qscmdSel0"},
-	{"qsDF0", "Quickstart", "qsWP0", "qscboAConfig", "qscboDisk0"},
-	{"qsWP0", "qsDF0", "qscmdEject0", "qscboAConfig", "qscboDisk0"},
+	{"cboAModel", "Quickstart", "qsNTSC", "cmdSetConfig", "cboAConfig"},
+	{"qsNTSC", "cboAModel", "Quickstart", "qsMode", "cboAConfig"},
+	{"cboAConfig", "Quickstart", "Quickstart", "cboAModel", "qscmdSel0"},
+	{"qsDF0", "Quickstart", "qsWP0", "cboAConfig", "cboDisk0"},
+	{"qsWP0", "qsDF0", "qscmdEject0", "cboAConfig", "cboDisk0"},
 	//  { "qsInfo0",        "Quickstart",     "",     "",               "" },
-	{"qscmdEject0", "qsWP0", "qscmdSel0", "qscboAConfig", "qscboDisk0"},
-	{"qscmdSel0", "qscmdEject0", "Quickstart", "qscboAConfig", "qscboDisk0"},
-	{"qscboDisk0", "Quickstart", "Quickstart", "qscmdSel0", "qscmdSel1"},
-	{"qsDF1", "Quickstart", "qsWP1", "qscboDisk0", "qscboDisk1"},
-	{"qsWP1", "qsDF1", "qscmdEject1", "qscboDisk0", "qscboDisk1"},
+	{"qscmdEject0", "qsWP0", "qscmdSel0", "cboAConfig", "cboDisk0"},
+	{"qscmdSel0", "qscmdEject0", "Quickstart", "cboAConfig", "cboDisk0"},
+	{"cboDisk0", "Quickstart", "Quickstart", "qscmdSel0", "qscmdSel1"},
+	{"qsDF1", "Quickstart", "qsWP1", "cboDisk0", "cboDisk1"},
+	{"qsWP1", "qsDF1", "qscmdEject1", "cboDisk0", "cboDisk1"},
 	//  { "qsInfo1",        "Quickstart",     "",     "",               "" },
-	{"qscmdEject1", "qsWP1", "qscmdSel1", "qscboDisk0", "qscboDisk1"},
-	{"qscmdSel1", "qscmdEject1", "Quickstart", "qscboDisk0", "qscboDisk1"},
-	{"qscboDisk1", "Quickstart", "Quickstart", "qsDF1", "qsCDSelect"},
-	{"qsCD drive", "Quickstart", "qscdEject", "qscboDisk1", "qscboCD"},
-	{"qscdEject", "qsCD drive", "qsCDSelect", "qscboDisk1", "qscboCD"},
-	{"qsCDSelect", "qscdEject", "Quickstart", "qscboDisk1", "qscboCD"},
-	{"qscboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
-	{"qsMode", "Quickstart", "Quickstart", "qscboCD", "cmdSetConfig"},
-	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "qscboAModel"},
+	{"qscmdEject1", "qsWP1", "qscmdSel1", "cboDisk0", "cboDisk1"},
+	{"qscmdSel1", "qscmdEject1", "Quickstart", "cboDisk0", "cboDisk1"},
+	{"cboDisk1", "Quickstart", "Quickstart", "qsDF1", "qsCDSelect"},
+	{"qsCD drive", "Quickstart", "qscdEject", "cboDisk1", "cboCD"},
+	{"qscdEject", "qsCD drive", "qsCDSelect", "cboDisk1", "cboCD"},
+	{"qsCDSelect", "qscdEject", "Quickstart", "cboDisk1", "cboCD"},
+	{"cboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
+	{"qsMode", "Quickstart", "Quickstart", "cboCD", "cmdSetConfig"},
+	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cboAModel"},
 
 	// PanelConfig
 	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
@@ -409,10 +408,9 @@ bool HandleNavigation(int direction)
 
 			if (focusTarget != nullptr)
 			{
-				if (activeWidget->getId().substr(0, 3) == "cbo" 
-					|| activeWidget->getId().substr(0, 5) == "qscbo")
+				if (activeWidget->getId().substr(0, 3) == "cbo")
 				{
-					auto dropdown = dynamic_cast<gcn::UaeDropDown*>(activeWidget);
+					auto* dropdown = dynamic_cast<gcn::DropDown*>(activeWidget);
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
 						focusTarget = nullptr; // Up/down navigates in list if dropped down
 				}

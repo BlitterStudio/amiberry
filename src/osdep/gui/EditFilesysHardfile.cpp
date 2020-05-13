@@ -7,8 +7,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "config.h"
@@ -50,8 +48,8 @@ static gcn::Button *cmdOK;
 static gcn::Button *cmdCancel;
 static gcn::Label *lblDevice;
 static gcn::TextField *txtDevice;
-static gcn::UaeCheckBox *chkReadWrite;
-static gcn::UaeCheckBox *chkAutoboot;
+static gcn::CheckBox *chkReadWrite;
+static gcn::CheckBox *chkAutoboot;
 static gcn::Label *lblBootPri;
 static gcn::TextField *txtBootPri;
 static gcn::Label *lblPath;
@@ -66,8 +64,8 @@ static gcn::TextField *txtSectors;
 static gcn::Label *lblBlocksize;
 static gcn::TextField *txtBlocksize;
 static gcn::Label *lblController;
-static gcn::UaeDropDown *cboController;
-static gcn::UaeDropDown *cboUnit;
+static gcn::DropDown *cboController;
+static gcn::DropDown *cboUnit;
 
 static void check_rdb(const TCHAR *filename)
 {
@@ -231,10 +229,10 @@ static void InitEditFilesysHardfile()
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
 
-	chkReadWrite = new gcn::UaeCheckBox("Read/Write", true);
+	chkReadWrite = new gcn::CheckBox("Read/Write", true);
 	chkReadWrite->setId("hdfRW");
 
-	chkAutoboot = new gcn::UaeCheckBox("Bootable", true);
+	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("hdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
@@ -275,13 +273,13 @@ static void InitEditFilesysHardfile()
 
 	lblController = new gcn::Label("Controller:");
 	lblController->setAlignment(gcn::Graphics::RIGHT);
-	cboController = new gcn::UaeDropDown(&controllerListModel);
+	cboController = new gcn::DropDown(&controllerListModel);
 	cboController->setSize(180, DROPDOWN_HEIGHT);
 	cboController->setBaseColor(gui_baseCol);
 	cboController->setId("hdfController");
 	cboController->addActionListener(filesysHardfileActionListener);
 	
-	cboUnit = new gcn::UaeDropDown(&unitListModel);
+	cboUnit = new gcn::DropDown(&unitListModel);
 	cboUnit->setSize(60, DROPDOWN_HEIGHT);
 	cboUnit->setBaseColor(gui_baseCol);
 	cboUnit->setId("hdfUnit");
