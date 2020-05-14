@@ -118,7 +118,7 @@ namespace gcn
 
 		graphics->setColor(getForegroundColor());
 		graphics->setFont(getFont());
-		graphics->drawText(mText, 1 - mXScroll, 1);
+		graphics->drawText(mText, 1 - mXScroll, 2);
 	}
 
 	void TextField::drawBorder(Graphics* graphics)

@@ -151,7 +151,7 @@ namespace gcn
 		for (auto i = 0; i < static_cast<int>(mTextRows.size()); i++)
 		{
 			// Move the text one pixel so we can have a caret before a letter.
-			graphics->drawText(mTextRows[i], 1, i * getFont()->getHeight());
+			graphics->drawText(mTextRows[i], 2, i * (getFont()->getHeight() + 2));
 		}
 	}
 

@@ -76,8 +76,8 @@ namespace gcn
 		mCaption = caption;
 		mAlignment = Graphics::LEFT;
 
-		setWidth(getFont()->getWidth(caption));
-		setHeight(getFont()->getHeight());
+		Widget::setWidth(getFont()->getWidth(caption));
+		Widget::setHeight(getFont()->getHeight() + 2);
 	}
 
 	const std::string& Label::getCaption() const

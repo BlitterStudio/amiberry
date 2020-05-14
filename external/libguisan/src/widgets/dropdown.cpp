@@ -101,7 +101,7 @@ namespace gcn
 		}
 
 		mScrollArea->setContent(mListBox);
-		add(mScrollArea);
+		BasicContainer::add(mScrollArea);
 
 		mListBox->addActionListener(this);
 		mListBox->addSelectionListener(this);
@@ -174,7 +174,7 @@ namespace gcn
 
 		if (mListBox->getListModel() && mListBox->getSelected() >= 0)
 		{
-			graphics->drawText(mListBox->getListModel()->getElementAt(mListBox->getSelected()), 1, 0);
+			graphics->drawText(mListBox->getListModel()->getElementAt(mListBox->getSelected()), 2, 1);
 		}
 
 		drawButton(graphics);
@@ -439,7 +439,7 @@ namespace gcn
 		const auto listBoxHeight = mListBox->getHeight();
 		const auto h2 = getFont()->getHeight();
 
-		setHeight(h2);
+		setHeight(h2 + 2);
 
 		// The addition/subtraction of 2 compensates for the separation lines
 		// separating the selected element view and the scroll area.
