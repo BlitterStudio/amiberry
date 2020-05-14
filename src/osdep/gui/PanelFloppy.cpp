@@ -386,6 +386,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		char tmp[20];
 		snprintf(tmp, 20, "DF%d:", i);
 		chkDFx[i] = new gcn::CheckBox(tmp);
+		chkDFx[i]->setId(tmp);
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 
 		cboDFxType[i] = new gcn::DropDown(&driveTypeList);

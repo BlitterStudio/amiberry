@@ -273,11 +273,10 @@ static NavigationMap navMap[] =
 	// PanelMisc
 	//  active            move left           move right          move up           move down
 
-	{"StatusLine", "Miscellaneous", "RetroArchQuit", "cboScrolllock", "HideIdle"},
-	{"HideIdle", "Miscellaneous", "RetroArchMenu", "StatusLine", "ShowGUI"},
-	{"ShowGUI", "Miscellaneous", "RetroArchReset", "HideIdle", "BSDSocket"},
+	{"StatusLine", "Miscellaneous", "RetroArchQuit", "cboScrolllock", "ShowGUI"},
+	{"ShowGUI", "Miscellaneous", "RetroArchMenu", "StatusLine", "BSDSocket"},
 	{"RetroArchQuit", "StatusLine", "Miscellaneous", "KeyForQuit", "RetroArchMenu"},
-	{"RetroArchMenu", "HideIdle", "Miscellaneous", "RetroArchQuit", "RetroArchReset"},
+	{"RetroArchMenu", "ShowGUI", "Miscellaneous", "RetroArchQuit", "RetroArchReset"},
 	{"RetroArchReset", "ShowGUI", "Miscellaneous", "RetroArchMenu", "BSDSocket"},
 
 	{"BSDSocket", "Miscellaneous", "Miscellaneous", "ShowGUI", "MasterWP"},

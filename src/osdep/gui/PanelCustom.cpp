@@ -345,21 +345,29 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	grpActionListener = new GroupActionListener();
 
 	optPort0 = new gcn::RadioButton("0: Mouse", "radioportgroup");
+	optPort0->setId("0: Mouse");
 	optPort0->addActionListener(grpActionListener);
 	optPort1 = new gcn::RadioButton("1: Joystick", "radioportgroup");
+	optPort1->setId("1: Joystick");
 	optPort1->addActionListener(grpActionListener);
 	optPort2 = new gcn::RadioButton("2: Parallel 1", "radioportgroup");
+	optPort2->setId("2: Parallel 1");
 	optPort2->addActionListener(grpActionListener);
 	optPort3 = new gcn::RadioButton("3: Parallel 2", "radioportgroup");
+	optPort3->setId("3: Parallel 2");
 	optPort3->addActionListener(grpActionListener);
 
 	optMultiNone = new gcn::RadioButton("None", "radiomultigroup");
+	optMultiNone->setId("None");
 	optMultiNone->addActionListener(grpActionListener);
 	optMultiSelect = new gcn::RadioButton("HotKey", "radiomultigroup");
+	optMultiSelect->setId("HotKey");
 	optMultiSelect->addActionListener(grpActionListener);
 	//	optMultiLeft = new gcn::RadioButton("Left Trigger", "radiomultigroup");
+	//	optMultiLeft->setId("Left Trigger");
 	//	optMultiLeft->addActionListener(grpActionListener);
 	//	optMultiRight = new gcn::RadioButton("Right Trigger", "radiomultigroup");
+	//	optMultiRight->setId("Right Trigger");
 	//	optMultiRight->addActionListener(grpActionListener);
 
 	chkAnalogRemap = new gcn::CheckBox("Remap DPad to left axis");

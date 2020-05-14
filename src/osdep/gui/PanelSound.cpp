@@ -275,9 +275,11 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboFrequency->addActionListener(soundActionListener);
 
 	optMono = new gcn::RadioButton("Mono", "radiosoundmodegroup");
+	optMono->setId("Mono");
 	optMono->addActionListener(soundActionListener);
 
 	optStereo = new gcn::RadioButton("Stereo", "radiosoundmodegroup");
+	optStereo->setId("Stereo");
 	optStereo->addActionListener(soundActionListener);
 
 	grpMode = new gcn::Window("Mode");

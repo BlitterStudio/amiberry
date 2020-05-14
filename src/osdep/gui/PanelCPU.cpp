@@ -226,14 +226,19 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	fpuActionListener = new FPUActionListener();
 
 	optCPU68000 = new gcn::RadioButton("68000", "radiocpugroup");
+	optCPU68000->setId("68000");
 	optCPU68000->addActionListener(cpuButtonActionListener);
 	optCPU68010 = new gcn::RadioButton("68010", "radiocpugroup");
+	optCPU68010->setId("68010");
 	optCPU68010->addActionListener(cpuButtonActionListener);
 	optCPU68020 = new gcn::RadioButton("68020", "radiocpugroup");
+	optCPU68020->setId("68020");
 	optCPU68020->addActionListener(cpuButtonActionListener);
 	optCPU68030 = new gcn::RadioButton("68030", "radiocpugroup");
+	optCPU68030->setId("68030");
 	optCPU68030->addActionListener(cpuButtonActionListener);
 	optCPU68040 = new gcn::RadioButton("68040", "radiocpugroup");
+	optCPU68040->setId("68040");
 	optCPU68040->addActionListener(cpuButtonActionListener);
 
 	chk24Bit = new gcn::CheckBox("24-bit addressing", true);
@@ -271,12 +276,15 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	optFPUnone->addActionListener(fpuButtonActionListener);
 
 	optFPU68881 = new gcn::RadioButton("68881", "radiofpugroup");
+	optFPU68881->setId("68881");
 	optFPU68881->addActionListener(fpuButtonActionListener);
 
 	optFPU68882 = new gcn::RadioButton("68882", "radiofpugroup");
+	optFPU68882->setId("68882");
 	optFPU68882->addActionListener(fpuButtonActionListener);
 
 	optFPUinternal = new gcn::RadioButton("CPU internal", "radiofpugroup");
+	optFPUinternal->setId("CPU internal");
 	optFPUinternal->addActionListener(fpuButtonActionListener);
 
 	chkFPUstrict = new gcn::CheckBox("More compatible", true);
@@ -304,18 +312,23 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	cpuSpeedButtonActionListener = new CPUSpeedButtonActionListener();
 
 	opt7Mhz = new gcn::RadioButton("7 Mhz", "radiocpuspeedgroup");
+	opt7Mhz->setId("7 Mhz");
 	opt7Mhz->addActionListener(cpuSpeedButtonActionListener);
 
 	opt14Mhz = new gcn::RadioButton("14 Mhz", "radiocpuspeedgroup");
+	opt14Mhz->setId("14 Mhz");
 	opt14Mhz->addActionListener(cpuSpeedButtonActionListener);
 
 	opt28Mhz = new gcn::RadioButton("25 Mhz", "radiocpuspeedgroup");
+	opt28Mhz->setId("25 Mhz");
 	opt28Mhz->addActionListener(cpuSpeedButtonActionListener);
 
 	optFastest = new gcn::RadioButton("Fastest", "radiocpuspeedgroup");
+	optFastest->setId("Fastest");
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
 
 	optTurbo = new gcn::RadioButton("Turbo", "radiocpuspeedgroup");
+	optTurbo->setId("Turbo");
 	optTurbo->addActionListener(cpuSpeedButtonActionListener);
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");

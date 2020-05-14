@@ -47,17 +47,17 @@ public:
 	{
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
-			if (changed_prefs.gfx_monitor.gfx_size.width != amigawidth_values[int(sldAmigaWidth->getValue())])
+			if (changed_prefs.gfx_monitor.gfx_size.width != amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())])
 			{
-				changed_prefs.gfx_monitor.gfx_size.width = amigawidth_values[int(sldAmigaWidth->getValue())];
+				changed_prefs.gfx_monitor.gfx_size.width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
-			if (changed_prefs.gfx_monitor.gfx_size.height != amigaheight_values[int(sldAmigaHeight->getValue())])
+			if (changed_prefs.gfx_monitor.gfx_size.height != amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())])
 			{
-				changed_prefs.gfx_monitor.gfx_size.height = amigaheight_values[int(sldAmigaHeight->getValue())];
+				changed_prefs.gfx_monitor.gfx_size.height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
@@ -160,8 +160,10 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	lblAmigaHeightInfo = new gcn::Label("200");
 
 	chkHorizontal = new gcn::CheckBox("Horizontal");
+	chkHorizontal->setId("Horizontal");
 	chkHorizontal->addActionListener(amigaScreenActionListener);
 	chkVertical = new gcn::CheckBox("Vertical");
+	chkVertical->setId("Vertical");
 	chkVertical->addActionListener(amigaScreenActionListener);
 	
 	chkAspect = new gcn::CheckBox("Correct Aspect Ratio");
@@ -169,9 +171,11 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkAspect->addActionListener(amigaScreenActionListener);
 
 	chkFrameskip = new gcn::CheckBox("Frameskip");
+	chkFrameskip->setId("Frameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
 	chkFullscreen = new gcn::CheckBox("Fullscreen");
+	chkFullscreen->setId("Fullscreen");
 	chkFullscreen->addActionListener(amigaScreenActionListener);
 
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
@@ -209,12 +213,15 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	scalingMethodActionListener = new ScalingMethodActionListener();
 
 	optAuto = new gcn::RadioButton("Auto", "radioscalingmethodgroup");
+	optAuto->setId("Auto");
 	optAuto->addActionListener(scalingMethodActionListener);
 
 	optNearest = new gcn::RadioButton("Nearest Neighbor (pixelated)", "radioscalingmethodgroup");
+	optNearest->setId("Nearest Neighbor (pixelated)");
 	optNearest->addActionListener(scalingMethodActionListener);
 
 	optLinear = new gcn::RadioButton("Linear (smooth)", "radioscalingmethodgroup");
+	optLinear->setId("Linear (smooth)");
 	optLinear->addActionListener(scalingMethodActionListener);
 
 	grpScalingMethod = new gcn::Window("Scaling method");
@@ -232,12 +239,15 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	lineModeActionListener = new LineModeActionListener();
 	optSingle = new gcn::RadioButton("Single", "linemodegroup");
+	optSingle->setId("Single");
 	optSingle->addActionListener(lineModeActionListener);
 
 	optDouble = new gcn::RadioButton("Double", "linemodegroup");
+	optDouble->setId("Double");
 	optDouble->addActionListener(lineModeActionListener);
 
 	optScanlines = new gcn::RadioButton("Scanlines", "linemodegroup");
+	optScanlines->setId("Scanlines");
 	optScanlines->addActionListener(lineModeActionListener);
 
 	grpLineMode = new gcn::Window("Line mode");

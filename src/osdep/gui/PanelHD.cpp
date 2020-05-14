@@ -413,6 +413,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	chkHDReadOnly->addActionListener(genericActionListener);
 
 	chkCD = new gcn::CheckBox("CD drive");
+	chkCD->setId("CD drive");
 	chkCD->addActionListener(cdCheckActionListener);
 
 	cmdCDEject = new gcn::Button("Eject");

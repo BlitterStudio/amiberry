@@ -201,18 +201,23 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	ntscButtonActionListener = new NTSCButtonActionListener();
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
+	optOCS->setId("OCS");
 	optOCS->addActionListener(chipsetButtonActionListener);
 
 	optECSAgnus = new gcn::RadioButton("ECS Agnus", "radiochipsetgroup");
+	optECSAgnus->setId("ECS Agnus");
 	optECSAgnus->addActionListener(chipsetButtonActionListener);
 
 	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
+	optECS->setId("Full ECS");
 	optECS->addActionListener(chipsetButtonActionListener);
 
 	optAGA = new gcn::RadioButton("AGA", "radiochipsetgroup");
+	optAGA->setId("AGA");
 	optAGA->addActionListener(chipsetButtonActionListener);
 
 	chkNTSC = new gcn::CheckBox("NTSC");
+	chkNTSC->setId("NTSC");
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
 	lblChipset = new gcn::Label("Extra:");
@@ -247,6 +252,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	optBlitNormal->addActionListener(blitterButtonActionListener);
 
 	optBlitImmed = new gcn::RadioButton("Immediate", "radiocblittergroup");
+	optBlitImmed->setId("Immediate");
 	optBlitImmed->addActionListener(blitterButtonActionListener);
 
 	optBlitWait = new gcn::RadioButton("Wait for blit.", "radiocblittergroup");
@@ -267,6 +273,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	fastCopperActionListener = new FastCopperActionListener();
 
 	chkFastCopper = new gcn::CheckBox("Fast copper");
+	chkFastCopper->setId("Fast copper");
 	chkFastCopper->addActionListener(fastCopperActionListener);
 
 	grpCopper = new gcn::Window("Copper");
@@ -286,6 +293,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	optCollNone->addActionListener(collisionButtonActionListener);
 
 	optCollSprites = new gcn::RadioButton("Sprites only", "radioccollisiongroup");
+	optCollSprites->setId("Sprites only");
 	optCollSprites->addActionListener(collisionButtonActionListener);
 
 	optCollPlayfield = new gcn::RadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
