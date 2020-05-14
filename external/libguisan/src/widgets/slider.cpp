@@ -130,11 +130,17 @@ namespace gcn
 
 	void Slider::draw(Graphics* graphics)
 	{
-		auto shadowColor = getBaseColor() - 0x101010;
 		const auto alpha = getBaseColor().a;
-		shadowColor.a = alpha;
+		auto faceColor = getBaseColor();
+		faceColor.a = alpha;
 
-		graphics->setColor(shadowColor);
+		auto backCol = getBackgroundColor();
+		if (isEnabled())
+			backCol = backCol - 0x303030;
+		else
+			backCol = faceColor - 0x101010;
+		
+		graphics->setColor(backCol);
 		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
 		drawMarker(graphics);
