@@ -382,6 +382,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	grpPort->add(optPort2, 290, 5);
 	grpPort->add(optPort3, 430, 5);
 	grpPort->setSize(580, 50);
+	grpPort->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpPort->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpPort);
@@ -393,6 +394,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	//	grpFunction->add(optMultiLeft,   290, 5);
 	//	grpFunction->add(optMultiRight,  430, 5);
 	grpFunction->setSize(580, 50);
+	grpFunction->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFunction->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpFunction);

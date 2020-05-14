@@ -53,7 +53,7 @@ public:
 			{
 				if (strlen(savestate_fname) > 0)
 				{
-					const auto f = fopen(savestate_fname, "rbe");
+					auto* const f = fopen(savestate_fname, "rbe");
 					if (f)
 					{
 						fclose(f);
@@ -122,12 +122,14 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	grpNumber->add(optState2, 5, 70);
 	grpNumber->add(optState3, 5, 100);
 	grpNumber->setMovable(false);
-	grpNumber->setSize(BUTTON_WIDTH, 145);
+	grpNumber->setSize(BUTTON_WIDTH, 155);
+	grpNumber->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpNumber->setBaseColor(gui_baseCol);
 
 	wndScreenshot = new gcn::Window("State screen");
 	wndScreenshot->setMovable(false);
 	wndScreenshot->setSize(300, 300);
+	wndScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
 	wndScreenshot->setBaseColor(gui_baseCol);
 
 	cmdLoadState = new gcn::Button("Load State");

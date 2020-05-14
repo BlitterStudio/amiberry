@@ -40,7 +40,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	textBoxScrollArea->setBackgroundColor(gui_baseCol);
 	textBoxScrollArea->setBaseColor(gui_baseCol);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
-	textBoxScrollArea->setHeight(200);
+	textBoxScrollArea->setHeight(220);
 	textBoxScrollArea->setBorderSize(1);
 
 	auto pos_y = DISTANCE_BORDER;

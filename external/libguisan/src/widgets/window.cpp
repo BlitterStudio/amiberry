@@ -72,7 +72,7 @@ namespace gcn
 	{
 		setBorderSize(1);
 		Window::setPadding(2);
-		Window::setTitleBarHeight(16);
+		Window::setTitleBarHeight(getFont()->getHeight() + 2);
 		Window::setAlignment(Graphics::CENTER);
 		addMouseListener(this);
 		setMovable(true);
@@ -85,7 +85,7 @@ namespace gcn
 		Window::setCaption(caption);
 		setBorderSize(1);
 		Window::setPadding(2);
-		Window::setTitleBarHeight(16);
+		Window::setTitleBarHeight(getFont()->getHeight() + 2);
 		Window::setAlignment(Graphics::CENTER);
 		addMouseListener(this);
 		setMovable(true);

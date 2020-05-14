@@ -119,7 +119,7 @@ namespace gcn
 		/**
 		 * Draws the widget border. A border is drawn around a widget.
 		 * The width and height of the border is therefore the widgets
-		 * height+2*bordersize. Think of a painting that has a certain size,
+		 * height + 2 * border size. Think of a painting that has a certain size,
 		 * the border surrounds the painting.
 		 *
 		 * @param graphics a Graphics object to draw with.

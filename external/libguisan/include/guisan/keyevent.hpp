@@ -104,21 +104,21 @@ namespace gcn
          *
          * @return the type of the event.
          */
-        unsigned int getType() const;
+        [[nodiscard]] unsigned int getType() const;
 
         /**
          * Checks whether the key event occured on the numeric pad.
          *
          * @return true if key event occured on the numeric pad.
          */
-        bool isNumericPad() const;
+        [[nodiscard]] bool isNumericPad() const;
 
         /**
          * Gets the key of the event.
          *
          * @return the key of the event.
          */
-        const Key& getKey() const;
+        [[nodiscard]] const Key& getKey() const;
 
         /**
          * Key event types.

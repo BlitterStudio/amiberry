@@ -842,8 +842,8 @@ namespace gcn
 
 		if (!getContent())
 		{
-			mHBarVisible = (mHPolicy == SHOW_ALWAYS);
-			mVBarVisible = (mVPolicy == SHOW_ALWAYS);
+			mHBarVisible = mHPolicy == SHOW_ALWAYS;
+			mVBarVisible = mVPolicy == SHOW_ALWAYS;
 			return;
 		}
 
@@ -926,7 +926,7 @@ namespace gcn
 		}
 	}
 
-	Rectangle ScrollArea::getUpButtonDimension()
+	Rectangle ScrollArea::getUpButtonDimension() const
 	{
 		if (!mVBarVisible)
 		{
@@ -939,7 +939,7 @@ namespace gcn
 						 mScrollbarWidth);
 	}
 
-	Rectangle ScrollArea::getDownButtonDimension()
+	Rectangle ScrollArea::getDownButtonDimension() const
 	{
 		if (!mVBarVisible)
 		{
@@ -960,7 +960,7 @@ namespace gcn
 						 mScrollbarWidth);
 	}
 
-	Rectangle ScrollArea::getLeftButtonDimension()
+	Rectangle ScrollArea::getLeftButtonDimension() const
 	{
 		if (!mHBarVisible)
 		{
@@ -973,7 +973,7 @@ namespace gcn
 						 mScrollbarWidth);
 	}
 
-	Rectangle ScrollArea::getRightButtonDimension()
+	Rectangle ScrollArea::getRightButtonDimension() const
 	{
 		if (!mHBarVisible)
 		{
@@ -1015,7 +1015,7 @@ namespace gcn
 		return Rectangle(0, 0, getWidth(), getHeight());
 	}
 
-	Rectangle ScrollArea::getVerticalBarDimension()
+	Rectangle ScrollArea::getVerticalBarDimension() const
 	{
 		if (!mVBarVisible)
 		{
@@ -1041,7 +1041,7 @@ namespace gcn
 						 - getDownButtonDimension().height);
 	}
 
-	Rectangle ScrollArea::getHorizontalBarDimension()
+	Rectangle ScrollArea::getHorizontalBarDimension() const
 	{
 		if (!mHBarVisible)
 		{
@@ -1099,7 +1099,7 @@ namespace gcn
 
 		if (getVerticalMaxScroll() != 0)
 		{
-			pos = ((barDim.height - length) * getVerticalScrollAmount())
+			pos = (barDim.height - length) * getVerticalScrollAmount()
 				/ getVerticalMaxScroll();
 		}
 		else
@@ -1142,7 +1142,7 @@ namespace gcn
 
 		if (getHorizontalMaxScroll() != 0)
 		{
-			pos = ((barDim.width - length) * getHorizontalScrollAmount())
+			pos = (barDim.width - length) * getHorizontalScrollAmount()
 				/ getHorizontalMaxScroll();
 		}
 		else

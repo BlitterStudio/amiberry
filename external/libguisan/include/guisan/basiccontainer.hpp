@@ -143,8 +143,8 @@ namespace gcn
 		 * Finds a widget given an id.
 		 *
 		 * @param id the id to find a widget by.
-		 * @return the widget with the corrosponding id, 
-		           NULL of no widget is found.
+		 * @return the widget with the corresponding id, 
+				   NULL of no widget is found.
 		 */
 		virtual Widget* findWidgetById(const std::string& id);
 

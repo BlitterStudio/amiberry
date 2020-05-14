@@ -181,7 +181,7 @@ namespace gcn
 		 * Returns the current Dropdown status
 		 */
 		[[nodiscard]] virtual bool isDroppedDown() const;
-		
+
 		// Inherited from Widget
 
 		void draw(Graphics* graphics) override;

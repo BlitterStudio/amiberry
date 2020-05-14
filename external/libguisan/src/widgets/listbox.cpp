@@ -110,7 +110,7 @@ namespace gcn
 		// Check the current clip area so we don't draw unnecessary items
 		// that are not visible.
 		const auto currentClipArea = graphics->getCurrentClipArea();
-		const int rowHeight = getFont()->getHeight();
+		const int rowHeight = getFont()->getHeight() + 2;
 
 		// Calculate the number of rows to draw by checking the clip area.
 		// The addition of two makes covers a partial visible row at the top
@@ -124,7 +124,7 @@ namespace gcn
 
 		// Calculate which row to start drawing. If the list box
 		// has a negative y coordinate value we should check if
-		// we should drop rows in the begining of the list as
+		// we should drop rows in the beginning of the list as
 		// they might not be visible. A negative y value is very
 		// common if the list box for instance resides in a scroll
 		// area and the user has scrolled the list box downwards.
@@ -160,11 +160,11 @@ namespace gcn
 			// draw the text with a center vertical alignment.
 			if (rowHeight > getFont()->getHeight())
 			{
-				graphics->drawText(mListModel->getElementAt(i), 1, y + rowHeight / 2 - getFont()->getHeight() / 2);
+				graphics->drawText(mListModel->getElementAt(i), 2, y + rowHeight / 2 - getFont()->getHeight() / 2);
 			}
 			else
 			{
-				graphics->drawText(mListModel->getElementAt(i), 1, y);
+				graphics->drawText(mListModel->getElementAt(i), 2, y);
 			}
 
 			y += rowHeight;

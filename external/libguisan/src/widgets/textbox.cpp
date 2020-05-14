@@ -380,7 +380,7 @@ namespace gcn
 		}
 
 		setWidth(width + 1);
-		setHeight(getFont()->getHeight() * static_cast<int>(mTextRows.size()));
+		setHeight((getFont()->getHeight() + 2) * static_cast<int>(mTextRows.size()));
 	}
 
 	void TextBox::setCaretPosition(unsigned int position)

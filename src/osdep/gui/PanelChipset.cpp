@@ -240,7 +240,8 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpChipset->add(cboChipset, 145 + lblChipset->getWidth() + 8, 10);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 185);
+	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 195);
+	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpChipset->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpChipset);
@@ -265,7 +266,8 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpBlitter->add(optBlitImmed, 5, 40);
 	grpBlitter->add(optBlitWait, 5, 70);
 	grpBlitter->setMovable(false);
-	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER, 115);
+	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER, 125);
+	grpBlitter->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpBlitter->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpBlitter);
@@ -281,7 +283,8 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	                       grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
 	grpCopper->add(chkFastCopper, 5, 10);
 	grpCopper->setMovable(false);
-	grpCopper->setSize(chkFastCopper->getWidth() + DISTANCE_BORDER, 55);
+	grpCopper->setSize(chkFastCopper->getWidth() + DISTANCE_BORDER, 65);
+	grpCopper->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCopper->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCopper);
@@ -311,7 +314,8 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpCollisionLevel->add(optCollPlayfield, 5, 70);
 	grpCollisionLevel->add(optCollFull, 5, 100);
 	grpCollisionLevel->setMovable(false);
-	grpCollisionLevel->setSize(optCollPlayfield->getWidth() + DISTANCE_BORDER, 145);
+	grpCollisionLevel->setSize(optCollPlayfield->getWidth() + DISTANCE_BORDER, 155);
+	grpCollisionLevel->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCollisionLevel->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCollisionLevel);

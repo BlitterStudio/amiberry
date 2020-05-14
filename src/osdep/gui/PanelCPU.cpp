@@ -264,7 +264,8 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpCPU->add(chkCPUCompatible, 5, 200);
 	grpCPU->add(chkJIT, 5, 230);
 	grpCPU->setMovable(false);
-	grpCPU->setSize(175, 275);
+	grpCPU->setSize(175, 285);
+	grpCPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPU->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCPU);
@@ -304,7 +305,8 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpFPU->add(chkFPUstrict, 5, 140);
 	grpFPU->add(chkFPUJIT, 5, 170);
 	grpFPU->setMovable(false);
-	grpFPU->setSize(185, 215);
+	grpFPU->setSize(185, 225);
+	grpFPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFPU->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpFPU);
@@ -339,7 +341,8 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpCPUSpeed->add(optFastest, 5, 100);
 	grpCPUSpeed->add(optTurbo, 5, 130);
 	grpCPUSpeed->setMovable(false);
-	grpCPUSpeed->setSize(95, 200);
+	grpCPUSpeed->setSize(100, 200);
+	grpCPUSpeed->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPUSpeed->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCPUSpeed);

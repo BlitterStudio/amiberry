@@ -234,7 +234,8 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	posY += sldA3000Highmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);
-	grpRAM->setSize(400, posY + DISTANCE_BORDER);
+	grpRAM->setSize(400, posY + DISTANCE_BORDER * 2);
+	grpRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpRAM->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpRAM);

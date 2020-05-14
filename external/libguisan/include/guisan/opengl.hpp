@@ -62,12 +62,11 @@
 
 #include "guisan/platform.hpp"
 
-extern "C"
-{
-    /**
-     * Exists to be able to check for Guichan OpenGL with autotools.
-     */
-    GCN_EXTENSION_DECLSPEC extern void gcnOpenGL();
+extern "C" {
+/**
+ * Exists to be able to check for Guichan OpenGL with autotools.
+ */
+GCN_EXTENSION_DECLSPEC extern void gcnOpenGL();
 }
 
 #endif // end GCN_OPENGL_HPP

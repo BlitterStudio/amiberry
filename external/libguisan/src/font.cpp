@@ -64,21 +64,20 @@
 
 namespace gcn
 {
-    int Font::getStringIndexAt(const std::string& text, int x)
-    {
-        unsigned int i;
-        int size = 0;
+	int Font::getStringIndexAt(const std::string& text, int x)
+	{
+		auto size = 0;
 
-        for (i = 0; i < text.size(); ++i)
-        {
-            size = getWidth(text.substr(0,i));
+		for (unsigned int i = 0; i < text.size(); ++i)
+		{
+			size = getWidth(text.substr(0, i));
 
-            if (size > x)
-            {
-                return i;
-            }
-        }
+			if (size > x)
+			{
+				return i;
+			}
+		}
 
-        return text.size();
-    }
+		return text.size();
+	}
 }

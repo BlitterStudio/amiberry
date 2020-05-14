@@ -202,20 +202,20 @@ public:
 
 		else if (actionEvent.getSource() == sldSeparation)
 		{
-			if (curr_separation_idx != int(sldSeparation->getValue())
+			if (curr_separation_idx != static_cast<int>(sldSeparation->getValue())
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_separation_idx = int(sldSeparation->getValue());
+				curr_separation_idx = static_cast<int>(sldSeparation->getValue());
 				changed_prefs.sound_stereo_separation = 10 - curr_separation_idx;
 			}
 		}
 
 		else if (actionEvent.getSource() == sldStereoDelay)
 		{
-			if (curr_stereodelay_idx != int(sldStereoDelay->getValue())
+			if (curr_stereodelay_idx != static_cast<int>(sldStereoDelay->getValue())
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_stereodelay_idx = int(sldStereoDelay->getValue());
+				curr_stereodelay_idx = static_cast<int>(sldStereoDelay->getValue());
 				if (curr_stereodelay_idx > 0)
 					changed_prefs.sound_mixed_stereo_delay = curr_stereodelay_idx;
 				else
@@ -224,7 +224,7 @@ public:
 		}
 		else if (actionEvent.getSource() == sldPaulaVol)
 		{
-			int newvol = 100 - int(sldPaulaVol->getValue());
+			const auto newvol = 100 - static_cast<int>(sldPaulaVol->getValue());
 			if (changed_prefs.sound_volume_paula != newvol)
 				changed_prefs.sound_volume_paula = newvol;
 		}
@@ -263,6 +263,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpSound->add(optSoundEmulatedBest, 5, 100);
 	grpSound->setMovable(false);
 	grpSound->setSize(optSoundEmulatedBest->getWidth() + DISTANCE_BORDER, 150);
+	grpSound->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpSound->setBaseColor(gui_baseCol);
 
 	lblFrequency = new gcn::Label("Frequency:");
@@ -287,6 +288,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpMode->add(optStereo, 5, 40);
 	grpMode->setMovable(false);
 	grpMode->setSize(90, 90);
+	grpMode->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpMode->setBaseColor(gui_baseCol);
 
 	lblInterpolation = new gcn::Label("Interpolation:");

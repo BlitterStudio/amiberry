@@ -68,128 +68,128 @@
 
 namespace gcn
 {
-    /**
-     * A regular button. Add an ActionListener to it to know when it
-     * has been clicked.
-     *
-     * NOTE: You can only have text (a caption) on the button. If you want it
-     *       to handle, for instance images, you can implement an ImageButton
-     *       of your own and overload member functions from Button.
-     */
-    class GCN_CORE_DECLSPEC Button : public Widget,
-                                     public MouseListener,
-                                     public KeyListener,
-                                     public FocusListener
-    {
-    public:
-        /**
-         * Constructor.
-         */
-        Button();
+	/**
+	 * A regular button. Add an ActionListener to it to know when it
+	 * has been clicked.
+	 *
+	 * NOTE: You can only have text (a caption) on the button. If you want it
+	 *       to handle, for instance images, you can implement an ImageButton
+	 *       of your own and overload member functions from Button.
+	 */
+	class GCN_CORE_DECLSPEC Button : public Widget,
+	                                 public MouseListener,
+	                                 public KeyListener,
+	                                 public FocusListener
+	{
+	public:
+		/**
+		 * Constructor.
+		 */
+		Button();
 
-        /**
-         * Constructor.
-         *
-         * @param caption the caption of the Button.
-         */
-        explicit Button(std::string caption);
+		/**
+		 * Constructor.
+		 *
+		 * @param caption the caption of the Button.
+		 */
+		explicit Button(std::string caption);
 
-        /**
-         * Sets the Button caption.
-         *
-         * @param caption the Button caption.
-         */
-        void setCaption(const std::string& caption);
+		/**
+		 * Sets the Button caption.
+		 *
+		 * @param caption the Button caption.
+		 */
+		void setCaption(const std::string& caption);
 
-        /**
-         * Gets the Button caption.
-         *
-         * @return the Button caption.
-         */
-        [[nodiscard]] const std::string& getCaption() const;
+		/**
+		 * Gets the Button caption.
+		 *
+		 * @return the Button caption.
+		 */
+		[[nodiscard]] const std::string& getCaption() const;
 
-        /**
-         * Sets the alignment for the caption.
-         *
-         * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT
-         * @see Graphics
-         */
-        virtual void setAlignment(unsigned int alignment);
+		/**
+		 * Sets the alignment for the caption.
+		 *
+		 * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT
+		 * @see Graphics
+		 */
+		virtual void setAlignment(unsigned int alignment);
 
-        /**
-         * Gets the alignment for the caption.
-         *
-         * @return alignment of caption.
-         */
-        [[nodiscard]] virtual unsigned int getAlignment() const;
+		/**
+		 * Gets the alignment for the caption.
+		 *
+		 * @return alignment of caption.
+		 */
+		[[nodiscard]] virtual unsigned int getAlignment() const;
 
-        /**
-         * Sets the spacing between the border of this button and its caption.
-         *
-         * @param spacing is a number between 0 and 255. The default value for 
-                          spacing is 4 and can be changed using this method.
-         */
-        void setSpacing(unsigned int spacing);
+		/**
+		 * Sets the spacing between the border of this button and its caption.
+		 *
+		 * @param spacing is a number between 0 and 255. The default value for 
+		                  spacing is 4 and can be changed using this method.
+		 */
+		void setSpacing(unsigned int spacing);
 
-        /**
-         * Gets the spacing between the border of this button and its caption.
-         *
-         * @return spacing.
-         */
-        [[nodiscard]] unsigned int getSpacing() const;
+		/**
+		 * Gets the spacing between the border of this button and its caption.
+		 *
+		 * @return spacing.
+		 */
+		[[nodiscard]] unsigned int getSpacing() const;
 
-        /**
-         * Adjusts the buttons size to fit the content.
-         */
-        virtual void adjustSize();
+		/**
+		 * Adjusts the buttons size to fit the content.
+		 */
+		virtual void adjustSize();
 
-        /**
-         * Checks if the button is pressed down. Useful when drawing.
-         *
-         * @return true if the button is pressed down.
-         */
-        [[nodiscard]] bool isPressed() const;
-
-
-        //Inherited from Widget
-
-        void draw(Graphics* graphics) override;
-
-        void drawBorder(Graphics* graphics) override;
+		/**
+		 * Checks if the button is pressed down. Useful when drawing.
+		 *
+		 * @return true if the button is pressed down.
+		 */
+		[[nodiscard]] bool isPressed() const;
 
 
-        // Inherited from FocusListener
+		//Inherited from Widget
 
-        void focusLost(const Event& event) override;
+		void draw(Graphics* graphics) override;
 
-
-        // Inherited from MouseListener
-
-        void mousePressed(MouseEvent& mouseEvent) override;
-
-        void mouseReleased(MouseEvent& mouseEvent) override;
-
-        void mouseEntered(MouseEvent& mouseEvent) override;
-
-        void mouseExited(MouseEvent& mouseEvent) override;
-
-        void mouseDragged(MouseEvent& mouseEvent) override;
+		void drawBorder(Graphics* graphics) override;
 
 
-        // Inherited from KeyListener
+		// Inherited from FocusListener
 
-        void keyPressed(KeyEvent& keyEvent) override;
+		void focusLost(const Event& event) override;
 
-        void keyReleased(KeyEvent& keyEvent) override;
 
-    protected:
-        std::string mCaption;
-        bool mHasMouse;
-        bool mKeyPressed;
-        bool mMousePressed;
-        unsigned int mAlignment;
-        unsigned int mSpacing;
-    };
+		// Inherited from MouseListener
+
+		void mousePressed(MouseEvent& mouseEvent) override;
+
+		void mouseReleased(MouseEvent& mouseEvent) override;
+
+		void mouseEntered(MouseEvent& mouseEvent) override;
+
+		void mouseExited(MouseEvent& mouseEvent) override;
+
+		void mouseDragged(MouseEvent& mouseEvent) override;
+
+
+		// Inherited from KeyListener
+
+		void keyPressed(KeyEvent& keyEvent) override;
+
+		void keyReleased(KeyEvent& keyEvent) override;
+
+	protected:
+		std::string mCaption;
+		bool mHasMouse;
+		bool mKeyPressed;
+		bool mMousePressed;
+		unsigned int mAlignment;
+		unsigned int mSpacing;
+	};
 }
 
 #endif // end GCN_BUTTON_HPP

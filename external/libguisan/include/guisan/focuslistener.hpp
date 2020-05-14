@@ -57,45 +57,48 @@
 #ifndef GCN_FOCUSLISTENER_HPP
 #define GCN_FOCUSLISTENER_HPP
 
-#include <string>
-
 #include "guisan/event.hpp"
 #include "guisan/platform.hpp"
 
 namespace gcn
 {
-    /**
-     * Listener of focus events from Widgets. To be able to listen for 
-     * focus events you must make a class which inherits from this class 
-     * and implements it's functions.
-     *
-     * @see Widget::addFocusListener
-     * @author Olof Naessén
-     * @since 0.7.0
-     */
-    class GCN_CORE_DECLSPEC FocusListener
-    {
-    public:
+	/**
+	 * Listener of focus events from Widgets. To be able to listen for 
+	 * focus events you must make a class which inherits from this class 
+	 * and implements it's functions.
+	 *
+	 * @see Widget::addFocusListener
+	 * @author Olof Naessén
+	 * @since 0.7.0
+	 */
+	class GCN_CORE_DECLSPEC FocusListener
+	{
+	public:
 
-        /**
-         * Destructor.
-         */
-        virtual ~FocusListener() { }
+		/**
+		 * Destructor.
+		 */
+		virtual ~FocusListener()
+		= default;
 
-        /**
-         * Called when a widget gains focus. 
-         *
-         * @param event discribes the event.
-         */
-        virtual void focusGained(const Event& event) { };
+		/**
+		 * Called when a widget gains focus. 
+		 *
+		 * @param event describes the event.
+		 */
+		virtual void focusGained(const Event& event)
+		{
+		};
 
-        /**
-         * Called when a widget loses focus. 
-         *
-         * @param event discribes the event.
-         */
-        virtual void focusLost(const Event& event) { };
-    };
+		/**
+		 * Called when a widget loses focus. 
+		 *
+		 * @param event discribes the event.
+		 */
+		virtual void focusLost(const Event& event)
+		{
+		};
+	};
 }
 
 #endif // end GCN_FOCUSLISTENER_HPP

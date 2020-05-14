@@ -195,7 +195,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->setMovable(false);
 	grpAmigaScreen->setSize(
 		lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + (
-			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER);
+			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER * 2);
+	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 	category.panel->add(grpAmigaScreen);
 
@@ -204,7 +205,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpCentering->add(chkHorizontal, DISTANCE_BORDER, DISTANCE_BORDER);
 	grpCentering->add(chkVertical, DISTANCE_BORDER, chkHorizontal->getY() + chkHorizontal->getHeight() + DISTANCE_NEXT_Y);
 	grpCentering->setMovable(false);
-	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 2, posY + DISTANCE_BORDER);
+	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 2, posY + DISTANCE_BORDER * 2);
+	grpCentering->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCentering->setBaseColor(gui_baseCol);
 	category.panel->add(grpCentering);
 	
@@ -231,7 +233,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->add(optLinear, 5, 70);
 	grpScalingMethod->setMovable(false);
 	grpScalingMethod->setSize(optNearest->getWidth() + DISTANCE_BORDER,
-	                          optLinear->getY() + optLinear->getHeight() + 30);
+	                          optLinear->getY() + optLinear->getHeight() + DISTANCE_BORDER * 3);
+	grpScalingMethod->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
@@ -259,7 +262,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->add(optScanlines, 5, 70);
 	grpLineMode->setMovable(false);
 	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER,
-	                     optScanlines->getY() + optScanlines->getHeight() + 30);
+	                     optScanlines->getY() + optScanlines->getHeight() + DISTANCE_BORDER * 3);
+	grpLineMode->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
