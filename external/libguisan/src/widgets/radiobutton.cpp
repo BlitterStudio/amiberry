@@ -165,7 +165,10 @@ namespace gcn
 		auto shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		graphics->setColor(getBackgroundColor());
+		auto backCol = getBackgroundColor();
+		if (!isEnabled())
+			backCol = backCol - 0x303030;
+		graphics->setColor(backCol);
 
 		int i;
 		const auto hh = (h + 1) / 2;
