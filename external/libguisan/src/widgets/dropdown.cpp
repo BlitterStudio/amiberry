@@ -437,9 +437,9 @@ namespace gcn
 			throw GCN_EXCEPTION("List box has been deleted.");
 
 		const auto listBoxHeight = mListBox->getHeight();
-		const auto h2 = getFont()->getHeight();
+		const auto h2 = getFont()->getHeight() + 2;
 
-		setHeight(h2 + 2);
+		setHeight(h2);
 
 		// The addition/subtraction of 2 compensates for the separation lines
 		// separating the selected element view and the scroll area.
