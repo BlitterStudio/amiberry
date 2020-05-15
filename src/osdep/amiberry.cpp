@@ -190,7 +190,7 @@ void sleep_millis(int ms)
 
 int sleep_millis_main(int ms)
 {
-	unsigned long start = read_processor_time();
+	const auto start = read_processor_time();
 	usleep(ms * 1000);
 	idletime += read_processor_time() - start;
 	return 0;
@@ -308,7 +308,7 @@ bool samepath(const TCHAR* p1, const TCHAR* p2)
 void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
 {
 	_tcscpy(outpath, inpath);
-	const auto p = _tcsrchr(outpath, '/');
+	auto* const p = _tcsrchr(outpath, '/');
 	if (p)
 		p[0] = 0;
 	fixtrailing(outpath);
@@ -317,7 +317,7 @@ void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
 void getfilepart(TCHAR* out, int size, const TCHAR* path)
 {
 	out[0] = 0;
-	const auto p = _tcsrchr(path, '/');
+	const auto* const p = _tcsrchr(path, '/');
 	if (p)
 		_tcscpy(out, p + 1);
 	else
@@ -757,7 +757,7 @@ int check_configfile(char* file)
 {
 	char tmp[MAX_DPATH];
 
-	auto f = fopen(file, "rte");
+	auto* f = fopen(file, "rte");
 	if (f)
 	{
 		fclose(f);
@@ -765,7 +765,7 @@ int check_configfile(char* file)
 	}
 
 	strncpy(tmp, file, MAX_DPATH - 1);
-	const auto ptr = strstr(tmp, ".uae");
+	auto* const ptr = strstr(tmp, ".uae");
 	if (ptr)
 	{
 		*(ptr + 1) = '\0';
@@ -782,7 +782,7 @@ int check_configfile(char* file)
 
 void extractFileName(const char* str, char* buffer)
 {
-	auto p = str + strlen(str) - 1;
+	const auto* p = str + strlen(str) - 1;
 	while (*p != '/' && p >= str)
 		p--;
 	p++;
@@ -792,7 +792,7 @@ void extractFileName(const char* str, char* buffer)
 void extractPath(char* str, char* buffer)
 {
 	strncpy(buffer, str, MAX_DPATH - 1);
-	auto p = buffer + strlen(buffer) - 1;
+	auto* p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p >= buffer)
 		p--;
 	p[1] = '\0';
@@ -800,7 +800,7 @@ void extractPath(char* str, char* buffer)
 
 void removeFileExtension(char* filename)
 {
-	auto p = filename + strlen(filename) - 1;
+	auto* p = filename + strlen(filename) - 1;
 	while (p >= filename && *p != '.')
 	{
 		*p = '\0';
@@ -818,7 +818,7 @@ void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector
 	if (files != nullptr)
 		files->clear();
 
-	const auto dir = opendir(path);
+	auto* const dir = opendir(path);
 	if (dir != nullptr)
 	{
 		while ((dent = readdir(dir)) != nullptr)
@@ -862,7 +862,7 @@ void save_amiberry_settings(void)
 	char path[MAX_DPATH];
 
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-	const auto f = fopen(path, "we");
+	auto* const f = fopen(path, "we");
 	if (!f)
 		return;
 
@@ -1040,7 +1040,7 @@ void load_amiberry_settings(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
-	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
+	auto* const fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh)
 	{
 		char linea[CONFIG_BLEN];
@@ -1065,7 +1065,7 @@ void load_amiberry_settings(void)
 				{
 					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
 					{
-						auto tmp = new AvailableROM();
+						auto* tmp = new AvailableROM();
 						strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
 						strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
 						tmp->ROMType = romType;
@@ -1077,7 +1077,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 				{
-					const auto f = fopen(tmpFile, "rbe");
+					auto* const f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -1086,7 +1086,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
 				{
-					const auto f = fopen(tmpFile, "rbe");
+					auto* const f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -1140,7 +1140,7 @@ void rename_old_adfdir()
 	snprintf(old_path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
 	snprintf(new_path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
-	auto result = rename(old_path, new_path);
+	const auto result = rename(old_path, new_path);
 	if (result == 0)
 		write_log("Old adfdir.conf file successfully renamed to amiberry.conf");
 	else
@@ -1180,7 +1180,7 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 	{
 		struct timespec ts{};
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		const int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+		const auto time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 		*low = uae_u32(time & 0xffffffff);
 		return uae_u32(time >> 32);
 	}
@@ -1298,7 +1298,7 @@ int handle_msgpump()
 	while (SDL_PollEvent(&event))
 	{
 		gotEvent = 1;
-		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
+		const auto* keystate = SDL_GetKeyboardState(nullptr);
 
 		switch (event.type)
 		{
@@ -1324,7 +1324,7 @@ int handle_msgpump()
 			// if we want to use the KB
 			// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
 			// which starts a replay!!!
-			auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 			if (ok_to_use)
 			{
 				if (event.key.repeat == 0)
@@ -1411,7 +1411,7 @@ int handle_msgpump()
 		break;
 		case SDL_KEYUP:
 		{
-			auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 			if (ok_to_use)
 			{
 				if (event.key.repeat == 0)
@@ -1537,7 +1537,7 @@ int handle_msgpump()
 
 bool handle_events()
 {
-	static int was_paused = 0;
+	static auto was_paused = 0;
 
 	if (pause_emulation)
 	{
