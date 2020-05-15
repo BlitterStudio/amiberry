@@ -110,7 +110,7 @@ namespace gcn
 		// Check the current clip area so we don't draw unnecessary items
 		// that are not visible.
 		const auto currentClipArea = graphics->getCurrentClipArea();
-		const int rowHeight = getFont()->getHeight() + 2;
+		const int rowHeight = getFont()->getHeight();
 
 		// Calculate the number of rows to draw by checking the clip area.
 		// The addition of two makes covers a partial visible row at the top

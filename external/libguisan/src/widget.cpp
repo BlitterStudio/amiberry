@@ -591,7 +591,7 @@ namespace gcn
 
 		if (getParent() != nullptr)
 		{
-			return (mFocusHandler->getModalFocused() == this) || getParent()->hasModalFocus();
+			return mFocusHandler->getModalFocused() == this || getParent()->hasModalFocus();
 		}
 
 		return mFocusHandler->getModalFocused() == this;
@@ -606,7 +606,7 @@ namespace gcn
 
 		if (getParent() != nullptr)
 		{
-			return (mFocusHandler->getModalMouseInputFocused() == this) || getParent()->hasModalMouseInputFocus();
+			return mFocusHandler->getModalMouseInputFocused() == this || getParent()->hasModalMouseInputFocus();
 		}
 
 		return mFocusHandler->getModalMouseInputFocused() == this;

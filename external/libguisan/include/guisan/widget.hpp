@@ -172,7 +172,7 @@ namespace gcn
 		 *
 		 * @return the widget height in pixels.
 		 */
-		auto getHeight() const -> int;
+		[[nodiscard]] auto getHeight() const -> int;
 
 		/**
 		 * Sets the size of the widget.
